@@ -1,5 +1,5 @@
-hash: c7a3018c4f92487bff133fb25c512cdb38589291bd9b90a504699e03b1e07488
-updated: 2016-07-20T13:13:26.158519207+01:00
+hash: d76fed5ff13ea5edf16d70740371c06faf9c0da92dcf8ae62f31e0e448ae2195
+updated: 2016-07-20T16:18:17.468240846+01:00
 imports:
 - name: github.com/cloudfoundry-incubator/candiedyaml
   version: 99c3df83b51532e3615f851d8c2dbb638f5313bf
@@ -13,7 +13,7 @@ imports:
   - pkg/fileutil
   - pkg/tlsutil
 - name: github.com/coreos/go-systemd
-  version: d4039021cfc2d0ea21d34afda21631314e83f75a
+  version: d6c05a1dcbb5ac02b7653da4d99e5db340c20778
   subpackages:
   - journal
 - name: github.com/coreos/pkg
@@ -29,7 +29,9 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: 91921eb4cf999321cdbeebdba5a03555800d493b
 - name: github.com/tigera/libcalico-go
-  version: 20590a93a2870b728e42d5e23d9278c9e665faeb
+  version: 30adcfd8ff538711f648a56950cf3cbba3f20dcf
+  repo: git@github.com:fasaxc/libcalico-go.git
+  vcs: git
   subpackages:
   - calicoctl/commands
   - etcd-driver/etcd

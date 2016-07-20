@@ -37,9 +37,9 @@ else
 fi
 DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-#sed -i "s/__BUILD_DATE__/${DATE}/" calicoctl/commands/build_info.go
-#sed -i "s/__GIT_REVISION__/${REVISION}/" calicoctl/commands/build_info.go
-#sed -i "s/__GIT_DESCRIPTION__/${DESCRIPTION}/" calicoctl/commands/build_info.go
+sed -i "s/__BUILD_DATE__/${DATE}/" calicoq/commands/build_info.go
+sed -i "s/__GIT_REVISION__/${REVISION}/" calicoq/commands/build_info.go
+sed -i "s/__GIT_DESCRIPTION__/${DESCRIPTION}/" calicoq/commands/build_info.go
 
 go build -o /calicoq/release/calicoq-$DESCRIPTION calicoq/*.go
 cd /calicoq/release

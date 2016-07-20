@@ -12,7 +12,8 @@ import (
 )
 
 const usage = `Usage:
-  calicoq <hostname>
+  calicoq host <hostname>
+  calicoq version
 `
 
 func main() {
@@ -32,7 +33,11 @@ func main() {
 	}
 	glog.V(0).Info("Command line arguments: ", arguments)
 
-	err = commands.DescribeHost(arguments["<hostname>"].(string))
+	if arguments["version"].(bool) {
+		err = commands.Version([]string{})
+	} else {
+		err = commands.DescribeHost(arguments["<hostname>"].(string))
+	}
 
 	if err != nil {
 		os.Exit(1)
