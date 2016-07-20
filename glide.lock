@@ -1,10 +1,10 @@
 hash: d76fed5ff13ea5edf16d70740371c06faf9c0da92dcf8ae62f31e0e448ae2195
-updated: 2016-07-20T16:18:17.468240846+01:00
+updated: 2016-07-20T17:01:13.131718507+01:00
 imports:
 - name: github.com/cloudfoundry-incubator/candiedyaml
   version: 99c3df83b51532e3615f851d8c2dbb638f5313bf
 - name: github.com/coreos/etcd
-  version: 6e290abee217b222178051cc8f5ea6f163cdf1bd
+  version: edcfcae332679cf02396d8a0f743bed047a06768
   subpackages:
   - client
   - pkg/transport
@@ -29,7 +29,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: 91921eb4cf999321cdbeebdba5a03555800d493b
 - name: github.com/tigera/libcalico-go
-  version: 30adcfd8ff538711f648a56950cf3cbba3f20dcf
+  version: e21457ba34ba1c291c5041ccdb5fd39fa7e7ed64
   repo: git@github.com:fasaxc/libcalico-go.git
   vcs: git
   subpackages:
