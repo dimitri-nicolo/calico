@@ -16,7 +16,7 @@ force:
 
 bin/calicoq: force
 	mkdir -p bin
-	go build -o "$@" "./calicoq/main.go"
+	go build -o "$@" "./calicoq/calicoq.go"
 
 #release/calicoq: force
 #	mkdir -p release

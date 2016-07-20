@@ -1,0 +1,4 @@
+package: github.com/tigera/calicoq
+version: ""
+import:
+- package: github.com/docopt/docopt-go

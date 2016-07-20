@@ -1,0 +1,65 @@
+hash: c7a3018c4f92487bff133fb25c512cdb38589291bd9b90a504699e03b1e07488
+updated: 2016-07-20T13:13:26.158519207+01:00
+imports:
+- name: github.com/cloudfoundry-incubator/candiedyaml
+  version: 99c3df83b51532e3615f851d8c2dbb638f5313bf
+- name: github.com/coreos/etcd
+  version: 6e290abee217b222178051cc8f5ea6f163cdf1bd
+  subpackages:
+  - client
+  - pkg/transport
+  - pkg/pathutil
+  - pkg/types
+  - pkg/fileutil
+  - pkg/tlsutil
+- name: github.com/coreos/go-systemd
+  version: d4039021cfc2d0ea21d34afda21631314e83f75a
+  subpackages:
+  - journal
+- name: github.com/coreos/pkg
+  version: a48e304ff9331be6d5df352b6b47bd1395ab5dd7
+  subpackages:
+  - capnslog
+- name: github.com/docopt/docopt-go
+  version: 784ddc588536785e7299f7272f39101f7faccc3f
+- name: github.com/ghodss/yaml
+  version: aa0c862057666179de291b67d9f093d12b5a8473
+- name: github.com/golang/glog
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+- name: github.com/kelseyhightower/envconfig
+  version: 91921eb4cf999321cdbeebdba5a03555800d493b
+- name: github.com/tigera/libcalico-go
+  version: 20590a93a2870b728e42d5e23d9278c9e665faeb
+  subpackages:
+  - calicoctl/commands
+  - etcd-driver/etcd
+  - etcd-driver/ipsets
+  - etcd-driver/store
+  - lib/backend
+  - lib/api
+  - lib/api/unversioned
+  - lib/client
+  - lib/common
+  - datastructures/hwm
+  - datastructures/labels
+  - datastructures/tags
+  - lib/hash
+  - lib/selector
+  - datastructures/multidict
+  - lib/selector/parser
+  - lib/selector/tokenizer
+- name: github.com/ugorji/go
+  version: b94837a2404ab90efe9289e77a70694c355739cb
+  subpackages:
+  - codec
+- name: golang.org/x/net
+  version: 4d38db76854b199960801a1734443fd02870d7e1
+  subpackages:
+  - context
+- name: gopkg.in/go-playground/validator.v8
+  version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
+- name: gopkg.in/tchap/go-patricia.v2
+  version: 8304b1f670ec9603eb3eebcb3bd08e13a8a2630b
+  subpackages:
+  - patricia
+devImports: []
