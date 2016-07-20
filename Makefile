@@ -18,10 +18,10 @@ bin/calicoq: force
 	mkdir -p bin
 	go build -o "$@" "./calicoq/calicoq.go"
 
-#release/calicoq: force
-#	mkdir -p release
-#	cd build-calicoctl && docker build -t calicoctl-build .
-#	docker run --rm -v `pwd`:/libcalico-go calicoctl-build /libcalico-go/build-calicoctl/build.sh
+release/calicoq: force
+	mkdir -p release
+	cd build-container && docker build -t calicoq-build .
+	docker run --rm -v `pwd`:/calicoq calicoq-build /calicoq/build-container/build.sh
 
 clean:
 	-rm -f *.created
