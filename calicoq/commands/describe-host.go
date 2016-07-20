@@ -25,6 +25,10 @@ func DescribeHost(hostname string) (err error) {
 	cbs.activeRulesCalculator = arc
 
 	filterUpdate := func(update *store.ParsedUpdate) {
+		if update.Value == nil {
+			glog.V(1).Infof("Skipping bad update: %v %v", update.Key, update.ParseErr)
+			return
+		}
 		switch key := update.Key.(type) {
 		case backend.HostEndpointKey:
 			if key.Hostname != hostname {
@@ -45,6 +49,20 @@ func DescribeHost(hostname string) (err error) {
 		cbs.epIDToPolIDs[update.Key] = make(map[backend.PolicyKey]bool, 0)
 		arc.OnUpdate(update)
 	}
+
+	checkValid := func(update *store.ParsedUpdate) {
+		if update.Value == nil {
+			fmt.Printf("WARNING: failed to parse value of key %v; "+
+				"ignoring.\n  Parse error: %v\n\n", update.RawUpdate.Key, update.ParseErr)
+		}
+	}
+
+	disp.Register(backend.WorkloadEndpointKey{}, checkValid)
+	disp.Register(backend.HostEndpointKey{}, checkValid)
+	disp.Register(backend.PolicyKey{}, checkValid)
+	disp.Register(backend.TierKey{}, checkValid)
+	disp.Register(backend.ProfileLabelsKey{}, checkValid)
+	disp.Register(backend.ProfileRulesKey{}, checkValid)
 
 	disp.Register(backend.WorkloadEndpointKey{}, filterUpdate)
 	disp.Register(backend.HostEndpointKey{}, filterUpdate)
