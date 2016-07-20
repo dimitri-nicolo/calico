@@ -3,20 +3,22 @@
 package commands
 
 import (
-	"github.com/tigera/libcalico-go/etcd-driver/etcd"
-	"github.com/tigera/libcalico-go/etcd-driver/store"
-	"github.com/tigera/libcalico-go/etcd-driver/ipsets"
-	"github.com/tigera/libcalico-go/lib/backend"
-	"github.com/golang/glog"
 	"fmt"
+	"github.com/golang/glog"
+	"github.com/tigera/libcalico-go/etcd-driver/etcd"
+	"github.com/tigera/libcalico-go/etcd-driver/ipsets"
+	"github.com/tigera/libcalico-go/etcd-driver/store"
+	"github.com/tigera/libcalico-go/lib/backend"
+	"sort"
 )
 
 func DescribeHost(hostname string) (err error) {
 	disp := store.NewDispatcher()
 	cbs := &describeCmd{
-		dispatcher: disp,
-		done: make(chan bool),
-		epIDToPolIDs: make(map[interface{}][]backend.PolicyKey),
+		dispatcher:   disp,
+		done:         make(chan bool),
+		epIDToPolIDs: make(map[interface{}]map[backend.PolicyKey]bool),
+		policySorter: NewPolicySorter(),
 	}
 	arc := ipsets.NewActiveRulesCalculator(nil, nil, cbs)
 	cbs.activeRulesCalculator = arc
@@ -32,16 +34,18 @@ func DescribeHost(hostname string) (err error) {
 				return
 			}
 		}
-		// Insert an empty slice so we'll list this endpoint even if
+		// Insert an empty map so we'll list this endpoint even if
 		// no policies match it.
 		glog.V(2).Infof("Found active endpoint %#v", update.Key)
-		cbs.epIDToPolIDs[update.Key] = make([]backend.PolicyKey, 0)
+		cbs.epIDToPolIDs[update.Key] = make(map[backend.PolicyKey]bool, 0)
 		arc.OnUpdate(update)
 	}
 
 	disp.Register(backend.WorkloadEndpointKey{}, filterUpdate)
 	disp.Register(backend.HostEndpointKey{}, filterUpdate)
 	disp.Register(backend.PolicyKey{}, arc.OnUpdate)
+	disp.Register(backend.PolicyKey{}, cbs.policySorter.OnUpdate)
+	disp.Register(backend.TierKey{}, cbs.policySorter.OnUpdate)
 	disp.Register(backend.ProfileLabelsKey{}, arc.OnUpdate)
 	disp.Register(backend.ProfileRulesKey{}, arc.OnUpdate)
 
@@ -61,23 +65,82 @@ type describeCmd struct {
 	// their rules become active/inactive.
 	activeRulesCalculator *ipsets.ActiveRulesCalculator
 	dispatcher            *store.Dispatcher
-	epIDToPolIDs          map[interface{}][]backend.PolicyKey
+	epIDToPolIDs          map[interface{}]map[backend.PolicyKey]bool
+	policySorter          *PolicySorter
 
-	done                  chan bool
+	done chan bool
 }
 
 func (cbs *describeCmd) OnConfigLoaded(globalConfig map[string]string,
-hostConfig map[string]string) {
+	hostConfig map[string]string) {
 	// Ignore for now
+}
+
+type endpointDatum struct {
+	epID   interface{}
+	polIDs map[backend.PolicyKey]bool
+}
+
+func (epd endpointDatum) EndpointName() string {
+	var epName string
+	switch epID := epd.epID.(type) {
+	case backend.WorkloadEndpointKey:
+		epName = fmt.Sprintf("Workload endpoint %v/%v/%v", epID.OrchestratorID, epID.WorkloadID, epID.EndpointID)
+	case backend.HostEndpointKey:
+		epName = fmt.Sprintf("Host endpoint %v", epID.EndpointID)
+	}
+	return epName
+}
+
+type ByName []endpointDatum
+func (a ByName) Len() int      { return len(a) }
+func (a ByName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ByName) Less(i, j int) bool {
+	return a[i].EndpointName() < a[j].EndpointName()
 }
 
 func (cbs *describeCmd) OnStatusUpdated(status store.DriverStatus) {
 	if status == store.InSync {
 		fmt.Println("Policies that match each endpoint:")
+		tiers := cbs.policySorter.Sorted()
+
+		epData := make([]endpointDatum, 0)
+
 		for epID, polIDs := range cbs.epIDToPolIDs {
-			fmt.Printf("\nEndpoint %v\n", epID)
-			for _, polID := range polIDs {
-				fmt.Printf("  %v/%v\n", polID.Tier, polID.Name)
+			epData = append(epData, endpointDatum{epID, polIDs})
+		}
+		sort.Sort(ByName(epData))
+		for _, epDatum := range epData {
+			epName := epDatum.EndpointName()
+			epID := epDatum.epID
+			polIDs := epDatum.polIDs
+			glog.V(2).Infof("Looking at endpoint %v with policies %v", epID, polIDs)
+			fmt.Printf("\n%v\n", epName)
+			for _, tier := range tiers {
+				glog.V(2).Infof("Looking at tier %v", tier)
+				tierMatches := false
+				for _, pol := range tier.Policies {
+					glog.V(2).Infof("Looking at policy %v", pol.PolicyKey)
+					if polIDs[pol.PolicyKey] {
+						if !tierMatches {
+							order := "default"
+							if !tier.Valid {
+								fmt.Printf("\n  WARNING: tier metadata missing; tier will be skipped")
+								order = "missing"
+							}
+							tierMatches = true
+							if tier.Order != nil {
+								order = fmt.Sprint(*tier.Order)
+							}
+							fmt.Printf("\n  (%v) Tier %v:\n", order, tier.Name)
+						}
+						order := "default"
+						if pol.Order != nil {
+							order = fmt.Sprint(*pol.Order)
+						}
+						fmt.Printf("    (%v) Policy %v\n", order, pol.Name)
+					}
+				}
 			}
 		}
 		cbs.done <- true
@@ -97,7 +160,97 @@ func (cbs *describeCmd) OnKeysUpdated(updates []store.Update) {
 
 func (cbs *describeCmd) OnPolicyMatch(policyKey backend.PolicyKey, endpointKey interface{}) {
 	glog.V(2).Infof("Policy %v/%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
-	cbs.epIDToPolIDs[endpointKey] =
-		append(cbs.epIDToPolIDs[policyKey.Tier], policyKey)
+	cbs.epIDToPolIDs[endpointKey][policyKey] = true
 }
 
+type PolicySorter struct {
+	tiers map[string]*TierInfo
+}
+
+func NewPolicySorter() *PolicySorter {
+	return &PolicySorter{
+		tiers: make(map[string]*TierInfo),
+	}
+}
+
+func (poc *PolicySorter) OnUpdate(update *store.ParsedUpdate) {
+	if update.Value == nil {
+		glog.Warningf("Ignoring deletion of %v", update.Key)
+		return
+	}
+	switch key := update.Key.(type) {
+	case backend.TierKey:
+		tier := update.Value.(*backend.Tier)
+		tierInfo := poc.tiers[key.Name]
+		if tierInfo == nil {
+			tierInfo = &TierInfo{Name: key.Name}
+			poc.tiers[key.Name] = tierInfo
+		}
+		tierInfo.Order = tier.Order
+		tierInfo.Valid = true
+	case backend.PolicyKey:
+		policy := update.Value.(*backend.Policy)
+		tierInfo := poc.tiers[key.Tier]
+		if tierInfo == nil {
+			tierInfo = &TierInfo{Name: key.Tier}
+			poc.tiers[key.Tier] = tierInfo
+		}
+		tierInfo.Policies = append(tierInfo.Policies, policy)
+	}
+}
+
+func (poc *PolicySorter) Sorted() []*TierInfo {
+	tiers := make([]*TierInfo, 0, len(poc.tiers))
+	for _, tier := range poc.tiers {
+		tiers = append(tiers, tier)
+	}
+	sort.Sort(TierByOrder(tiers))
+	for _, tierInfo := range poc.tiers {
+		sort.Sort(PolicyByOrder(tierInfo.Policies))
+	}
+	return tiers
+}
+
+type TierByOrder []*TierInfo
+
+func (a TierByOrder) Len() int      { return len(a) }
+func (a TierByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a TierByOrder) Less(i, j int) bool {
+	if !a[i].Valid {
+		return false
+	} else if !a[j].Valid {
+		return true
+	}
+	if a[i].Order == nil {
+		return false
+	} else if a[j].Order == nil {
+		return true
+	}
+	if *a[i].Order == *a[j].Order {
+		return a[i].Name < a[j].Name
+	}
+	return *a[i].Order < *a[j].Order
+}
+
+type PolicyByOrder []*backend.Policy
+
+func (a PolicyByOrder) Len() int      { return len(a) }
+func (a PolicyByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a PolicyByOrder) Less(i, j int) bool {
+	if a[i].Order == nil {
+		return false
+	} else if a[j].Order == nil {
+		return true
+	}
+	if *a[i].Order == *a[j].Order {
+		return a[i].Name < a[j].Name
+	}
+	return *a[i].Order < *a[j].Order
+}
+
+type TierInfo struct {
+	Name     string
+	Valid    bool
+	Order    *float32
+	Policies []*backend.Policy
+}
