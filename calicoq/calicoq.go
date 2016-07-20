@@ -34,7 +34,7 @@ func main() {
 	glog.V(0).Info("Command line arguments: ", arguments)
 
 	if arguments["version"].(bool) {
-		err = commands.Version([]string{})
+		err = commands.Version()
 	} else {
 		err = commands.DescribeHost(arguments["<hostname>"].(string))
 	}

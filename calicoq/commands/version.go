@@ -3,20 +3,11 @@ package commands
 
 import (
 	"fmt"
-	"github.com/docopt/docopt-go"
 )
 
-const VERSION = "0.1.0-go"
+const VERSION = "0.1.0"
 
-func Version(args []string) error {
-	doc := `Usage:
-calicoctl version
-
-Description:
-  Display the version of calicoctl`
-
-	_, _ = docopt.Parse(doc, args, true, "calicoq", false, false)
-
+func Version() error {
 	fmt.Println("Version:     ", VERSION)
 	fmt.Println("Build date:  ", BUILD_DATE)
 	fmt.Println("Git tag ref: ", GIT_DESCRIPTION)
