@@ -3,12 +3,12 @@
 package main
 
 import (
-	"os"
 	"flag"
 	"github.com/docopt/docopt-go"
+	"github.com/golang/glog"
 	"github.com/tigera/calicoq/calicoq/commands"
 	ctlcommands "github.com/tigera/libcalico-go/calicoctl/commands"
-	"github.com/golang/glog"
+	"os"
 )
 
 const usage = `Usage:

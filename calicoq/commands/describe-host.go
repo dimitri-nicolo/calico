@@ -15,10 +15,11 @@ import (
 func DescribeHost(hostname string) (err error) {
 	disp := store.NewDispatcher()
 	cbs := &describeCmd{
-		dispatcher:   disp,
-		done:         make(chan bool),
-		epIDToPolIDs: make(map[interface{}]map[backend.PolicyKey]bool),
-		policySorter: NewPolicySorter(),
+		dispatcher:       disp,
+		done:             make(chan bool),
+		epIDToPolIDs:     make(map[interface{}]map[backend.PolicyKey]bool),
+		epIDToProfileIDs: make(map[interface{}][]string),
+		policySorter:     NewPolicySorter(),
 	}
 	arc := ipsets.NewActiveRulesCalculator(nil, nil, cbs)
 	cbs.activeRulesCalculator = arc
@@ -29,10 +30,14 @@ func DescribeHost(hostname string) (err error) {
 			if key.Hostname != hostname {
 				return
 			}
+			ep := update.Value.(*backend.HostEndpoint)
+			cbs.epIDToProfileIDs[key] = ep.ProfileIDs
 		case backend.WorkloadEndpointKey:
 			if key.Hostname != hostname {
 				return
 			}
+			ep := update.Value.(*backend.WorkloadEndpoint)
+			cbs.epIDToProfileIDs[key] = ep.ProfileIDs
 		}
 		// Insert an empty map so we'll list this endpoint even if
 		// no policies match it.
@@ -66,6 +71,7 @@ type describeCmd struct {
 	activeRulesCalculator *ipsets.ActiveRulesCalculator
 	dispatcher            *store.Dispatcher
 	epIDToPolIDs          map[interface{}]map[backend.PolicyKey]bool
+	epIDToProfileIDs      map[interface{}][]string
 	policySorter          *PolicySorter
 
 	done chan bool
@@ -93,6 +99,7 @@ func (epd endpointDatum) EndpointName() string {
 }
 
 type ByName []endpointDatum
+
 func (a ByName) Len() int      { return len(a) }
 func (a ByName) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ByName) Less(i, j int) bool {
@@ -116,6 +123,7 @@ func (cbs *describeCmd) OnStatusUpdated(status store.DriverStatus) {
 			polIDs := epDatum.polIDs
 			glog.V(2).Infof("Looking at endpoint %v with policies %v", epID, polIDs)
 			fmt.Printf("\n%v\n", epName)
+			fmt.Println("  Policies:")
 			for _, tier := range tiers {
 				glog.V(2).Infof("Looking at tier %v", tier)
 				tierMatches := false
@@ -125,21 +133,30 @@ func (cbs *describeCmd) OnStatusUpdated(status store.DriverStatus) {
 						if !tierMatches {
 							order := "default"
 							if !tier.Valid {
-								fmt.Printf("\n  WARNING: tier metadata missing; tier will be skipped")
 								order = "missing"
 							}
 							tierMatches = true
 							if tier.Order != nil {
 								order = fmt.Sprint(*tier.Order)
 							}
-							fmt.Printf("\n  (%v) Tier %v:\n", order, tier.Name)
+							fmt.Printf("    Tier %#v (order %v):\n", tier.Name, order)
+							if !tier.Valid {
+								fmt.Printf("    WARNING: tier metadata missing; packets will skip tier\n")
+							}
 						}
 						order := "default"
 						if pol.Order != nil {
 							order = fmt.Sprint(*pol.Order)
 						}
-						fmt.Printf("    (%v) Policy %v\n", order, pol.Name)
+						fmt.Printf("      Policy %#v (order %v; selector '%v')\n", pol.Name, order, pol.Selector)
 					}
+				}
+			}
+			profIDs := cbs.epIDToProfileIDs[epID]
+			if len(profIDs) > 0 {
+				fmt.Printf("  Profiles:\n")
+				for _, profID := range cbs.epIDToProfileIDs[epID] {
+					fmt.Printf("    Profile %v\n", profID)
 				}
 			}
 		}
