@@ -14,6 +14,7 @@ const usage = `Calico query tool.
 
 Usage:
   calicoq host [-s|--hide-selectors] <hostname>
+  calicoq eval <selector>
   calicoq version
 
 Options:
@@ -40,6 +41,8 @@ func main() {
 
 	if arguments["version"].(bool) {
 		err = commands.Version()
+	} else if arguments["eval"].(bool) {
+		err = commands.EvalSelector(arguments["<selector>"].(string))
 	} else {
 		err = commands.DescribeHost(arguments["<hostname>"].(string),
 			arguments["--hide-selectors"].(bool))
