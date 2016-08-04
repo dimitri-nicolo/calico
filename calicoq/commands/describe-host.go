@@ -12,9 +12,10 @@ import (
 	"sort"
 )
 
-func DescribeHost(hostname string) (err error) {
+func DescribeHost(hostname string, hideSelectors bool) (err error) {
 	disp := store.NewDispatcher()
 	cbs := &describeCmd{
+		hideSelectors:    hideSelectors,
 		dispatcher:       disp,
 		done:             make(chan bool),
 		epIDToPolIDs:     make(map[interface{}]map[backend.PolicyKey]bool),
@@ -83,6 +84,9 @@ func DescribeHost(hostname string) (err error) {
 }
 
 type describeCmd struct {
+	// Config.
+	hideSelectors bool
+
 	// ActiveRulesCalculator matches policies/profiles against local
 	// endpoints and notifies the ActiveSelectorCalculator when
 	// their rules become active/inactive.
@@ -166,7 +170,11 @@ func (cbs *describeCmd) OnStatusUpdated(status store.DriverStatus) {
 						if pol.Order != nil {
 							order = fmt.Sprint(*pol.Order)
 						}
-						fmt.Printf("      Policy %#v (order %v; selector '%v')\n", pol.Name, order, pol.Selector)
+						if cbs.hideSelectors {
+							fmt.Printf("      Policy %#v (order %v)\n", pol.Name, order)
+						} else {
+							fmt.Printf("      Policy %#v (order %v; selector '%v')\n", pol.Name, order, pol.Selector)
+						}
 					}
 				}
 			}
