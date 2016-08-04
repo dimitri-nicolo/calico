@@ -13,6 +13,7 @@ import (
 
 const usage = `Usage:
   calicoq host <hostname>
+  calicoq eval <selector>
   calicoq version
 `
 
@@ -35,6 +36,8 @@ func main() {
 
 	if arguments["version"].(bool) {
 		err = commands.Version()
+	} else if arguments["eval"].(bool) {
+		err = commands.EvalSelector(arguments["<selector>"].(string))
 	} else {
 		err = commands.DescribeHost(arguments["<hostname>"].(string))
 	}
