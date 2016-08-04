@@ -25,6 +25,9 @@ Options:
 func main() {
 	var err error
 
+	flag.CommandLine.Usage = func() {
+		println(usage)
+	}
 	flag.Parse()
 
 	if os.Getenv("GLOG") != "" {
