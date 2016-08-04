@@ -19,8 +19,6 @@ set -x
 GOPATH=/go
 PATH=$PATH:$GOPATH/bin
 
-
-
 mkdir -p $GOPATH/src/github.com/tigera/
 cp -r /calicoq $GOPATH/src/github.com/tigera/
 
@@ -41,8 +39,19 @@ sed -i "s/__BUILD_DATE__/${DATE}/" calicoq/commands/build_info.go
 sed -i "s/__GIT_REVISION__/${REVISION}/" calicoq/commands/build_info.go
 sed -i "s/__GIT_DESCRIPTION__/${DESCRIPTION}/" calicoq/commands/build_info.go
 
-go build -o /calicoq/release/calicoq-$DESCRIPTION calicoq/*.go
+# Build the executable.  We pass -ldflags="-s -w" to strip debug symbols;
+# this makes is harder to use a debugger as well as making the executable
+# smaller.
+go build \
+   -ldflags="-s -w" \
+   -o /calicoq/release/calicoq-$DESCRIPTION \
+   calicoq/*.go
 cd /calicoq/release
+
+# Compress the executable with upx.  We get 4:1 compression with '-8'; the
+# more agressive --best gives a 0.5% improvement but takes several minutes.
+upx -8 calicoq-$DESCRIPTION
+
 ln -f calicoq-$DESCRIPTION calicoq
 
 set +x
