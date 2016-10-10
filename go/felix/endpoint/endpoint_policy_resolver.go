@@ -25,7 +25,7 @@ import (
 type PolicyResolver struct {
 	policyIDToEndpointIDs multidict.IfaceToIface
 	endpointIDToPolicyIDs multidict.IfaceToIface
-	sortedTierData        *TierInfo
+	sortedTierData        []*TierInfo
 	endpoints             map[model.Key]interface{}
 	dirtyEndpoints        set.Set
 	sortRequired          bool
@@ -42,7 +42,6 @@ func NewPolicyResolver() *PolicyResolver {
 	return &PolicyResolver{
 		policyIDToEndpointIDs: multidict.NewIfaceToIface(),
 		endpointIDToPolicyIDs: multidict.NewIfaceToIface(),
-		sortedTierData:        NewTierInfo("default"),
 		endpoints:             make(map[model.Key]interface{}),
 		dirtyEndpoints:        set.New(),
 		policySorter:          NewPolicySorter(),
@@ -63,6 +62,10 @@ func (pr *PolicyResolver) OnUpdate(update model.KVPair) (filterOut bool) {
 		log.Debugf("Policy update: %v", key)
 		policiesDirty = pr.policySorter.OnUpdate(update)
 		pr.markEndpointsMatchingPolicyDirty(key)
+	case model.TierKey:
+		log.Debugf("Tier update: %v", key)
+		policiesDirty = pr.policySorter.OnUpdate(update)
+		pr.markAllEndpointsDirty()
 	}
 	pr.sortRequired = pr.sortRequired || policiesDirty
 	pr.maybeFlush()
@@ -134,24 +137,30 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 		return nil
 	}
 	applicableTiers := []TierInfo{}
-	tier := pr.sortedTierData
-	tierMatches := false
-	filteredTier := TierInfo{
-		Name:  tier.Name,
-		Order: tier.Order,
-	}
-	for _, polKV := range tier.OrderedPolicies {
-		log.Debugf("Checking if policy %v matches %v", polKV.Key, endpointID)
-		if pr.endpointIDToPolicyIDs.Contains(endpointID, polKV.Key) {
-			log.Debugf("Policy %v matches %v", polKV.Key, endpointID)
-			tierMatches = true
-			filteredTier.OrderedPolicies = append(filteredTier.OrderedPolicies,
-				polKV)
+	for _, tier := range pr.sortedTierData {
+		if !tier.Valid {
+			log.Debugf("Tier %v invalid, skipping", tier.Name)
+			continue
 		}
-	}
-	if tierMatches {
-		log.Debugf("Tier %v matches %v", tier.Name, endpointID)
-		applicableTiers = append(applicableTiers, filteredTier)
+		tierMatches := false
+		filteredTier := TierInfo{
+			Name:  tier.Name,
+			Order: tier.Order,
+			Valid: true,
+		}
+		for _, polKV := range tier.OrderedPolicies {
+			log.Debugf("Checking if policy %v matches %v", polKV.Key, endpointID)
+			if pr.endpointIDToPolicyIDs.Contains(endpointID, polKV.Key) {
+				log.Debugf("Policy %v matches %v", polKV.Key, endpointID)
+				tierMatches = true
+				filteredTier.OrderedPolicies = append(filteredTier.OrderedPolicies,
+					polKV)
+			}
+		}
+		if tierMatches {
+			log.Debugf("Tier %v matches %v", tier.Name, endpointID)
+			applicableTiers = append(applicableTiers, filteredTier)
+		}
 	}
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
 	pr.Callbacks.OnEndpointTierUpdate(endpointID.(model.Key),

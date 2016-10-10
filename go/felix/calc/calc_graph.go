@@ -175,6 +175,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, hostname string) (sourceDi
 	// Hook up the inputs to the policy resolver.
 	activeRulesCalc.PolicyMatchListener = polResolver
 	sourceDispatcher.Register(model.PolicyKey{}, polResolver)
+	sourceDispatcher.Register(model.TierKey{}, polResolver)
 	localEndpointDispatcher.Register(model.WorkloadEndpointKey{}, polResolver)
 	localEndpointDispatcher.Register(model.HostEndpointKey{}, polResolver)
 	// And hook its output to the callbacks.

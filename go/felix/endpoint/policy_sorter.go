@@ -22,32 +22,61 @@ import (
 )
 
 type PolicySorter struct {
-	tier *TierInfo
+	tiers map[string]*TierInfo
 }
 
 func NewPolicySorter() *PolicySorter {
 	return &PolicySorter{
-		tier: &TierInfo{
-
-			Name:     "default",
-			Policies: make(map[model.PolicyKey]*model.Policy),
-		},
+		tiers: make(map[string]*TierInfo),
 	}
 }
 
 func (poc *PolicySorter) OnUpdate(update model.KVPair) (dirty bool) {
 	switch key := update.Key.(type) {
+	case model.TierKey:
+		tierName := key.Name
+		tierInfo := poc.tiers[tierName]
+		if update.Value != nil {
+			newTier := update.Value.(*model.Tier)
+			if tierInfo == nil {
+				tierInfo = NewTierInfo(key.Name)
+				poc.tiers[tierName] = tierInfo
+				dirty = true
+			}
+			if tierInfo.Order != newTier.Order {
+				tierInfo.Order = newTier.Order
+				dirty = true
+			}
+			tierInfo.Valid = true
+		} else {
+			// Deletion.
+			if tierInfo != nil {
+				tierInfo.Valid = false
+				if len(tierInfo.Policies) == 0 {
+					delete(poc.tiers, tierName)
+				}
+				dirty = true
+			}
+		}
 	case model.PolicyKey:
-		oldPolicy := poc.tier.Policies[key]
+		tierInfo := poc.tiers[key.Tier]
+		var oldPolicy *model.Policy
+		if tierInfo != nil {
+			oldPolicy = tierInfo.Policies[key]
+		}
 		if update.Value != nil {
 			newPolicy := update.Value.(*model.Policy)
+			if tierInfo == nil {
+				tierInfo = NewTierInfo(key.Tier)
+				poc.tiers[key.Tier] = tierInfo
+			}
 			if oldPolicy == nil || oldPolicy.Order != newPolicy.Order {
 				dirty = true
 			}
-			poc.tier.Policies[key] = newPolicy
+			tierInfo.Policies[key] = newPolicy
 		} else {
 			if oldPolicy != nil {
-				delete(poc.tier.Policies, key)
+				delete(tierInfo.Policies, key)
 				dirty = true
 			}
 		}
@@ -55,31 +84,58 @@ func (poc *PolicySorter) OnUpdate(update model.KVPair) (dirty bool) {
 	return
 }
 
-func (poc *PolicySorter) Sorted() *TierInfo {
-	tierInfo := poc.tier
-	tierInfo.OrderedPolicies = make([]PolKV, 0, len(tierInfo.Policies))
-	for k, v := range tierInfo.Policies {
-		tierInfo.OrderedPolicies = append(tierInfo.OrderedPolicies,
-			PolKV{Key: k, Value: v})
+func (poc *PolicySorter) Sorted() []*TierInfo {
+	tiers := make([]*TierInfo, 0, len(poc.tiers))
+	for _, tier := range poc.tiers {
+		tiers = append(tiers, tier)
 	}
-	if log.GetLevel() >= log.DebugLevel {
-		names := make([]string, len(tierInfo.OrderedPolicies))
-		for ii, kv := range tierInfo.OrderedPolicies {
-			names[ii] = fmt.Sprintf("%v(%v)",
-				kv.Key.Name, *kv.Value.Order)
+	sort.Sort(TierByOrder(tiers))
+	for _, tierInfo := range poc.tiers {
+		tierInfo.OrderedPolicies = make([]PolKV, 0, len(tierInfo.Policies))
+		for k, v := range tierInfo.Policies {
+			tierInfo.OrderedPolicies = append(tierInfo.OrderedPolicies,
+				PolKV{Key: k, Value: v})
 		}
-		log.Infof("Before sorting policies: %v", names)
-	}
-	sort.Sort(PolicyByOrder(tierInfo.OrderedPolicies))
-	if log.GetLevel() >= log.DebugLevel {
-		names := make([]string, len(tierInfo.OrderedPolicies))
-		for ii, kv := range tierInfo.OrderedPolicies {
-			names[ii] = fmt.Sprintf("%v(%v)",
-				kv.Key.Name, *kv.Value.Order)
+		if log.GetLevel() >= log.DebugLevel {
+			names := make([]string, len(tierInfo.OrderedPolicies))
+			for ii, kv := range tierInfo.OrderedPolicies {
+				names[ii] = fmt.Sprintf("%v(%v)",
+					kv.Key.Name, *kv.Value.Order)
+			}
+			log.Infof("Before sorting policies: %v", names)
 		}
-		log.Infof("After sorting policies: %v", names)
+		sort.Sort(PolicyByOrder(tierInfo.OrderedPolicies))
+		if log.GetLevel() >= log.DebugLevel {
+			names := make([]string, len(tierInfo.OrderedPolicies))
+			for ii, kv := range tierInfo.OrderedPolicies {
+				names[ii] = fmt.Sprintf("%v(%v)",
+					kv.Key.Name, *kv.Value.Order)
+			}
+			log.Infof("After sorting policies: %v", names)
+		}
 	}
-	return tierInfo
+	return tiers
+}
+
+type TierByOrder []*TierInfo
+
+func (a TierByOrder) Len() int      { return len(a) }
+func (a TierByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a TierByOrder) Less(i, j int) bool {
+	if !a[i].Valid {
+		return false
+	} else if !a[j].Valid {
+		return true
+	}
+	if a[i].Order == nil {
+		return false
+	} else if a[j].Order == nil {
+		return true
+	}
+	if *a[i].Order == *a[j].Order {
+		return a[i].Name < a[j].Name
+	}
+	return *a[i].Order < *a[j].Order
 }
 
 type PolKV struct {

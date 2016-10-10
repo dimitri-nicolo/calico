@@ -159,6 +159,18 @@ var order10 = float64(10)
 var order20 = float64(20)
 var order30 = float64(30)
 
+var tier1_order10 = Tier{
+	Order: &order10,
+}
+
+var tier1_order20 = Tier{
+	Order: &order20,
+}
+
+var tier1_order30 = Tier{
+	Order: &order30,
+}
+
 var policy1_order20 = Policy{
 	Order:    &order20,
 	Selector: "a == 'a'",
@@ -223,7 +235,8 @@ var initialisedStore = empty.withKVUpdates(
 
 // withPolicy adds a tier and policy containing selectors for all and b=="b"
 var withPolicy = initialisedStore.withKVUpdates(
-	KVPair{Key: PolicyKey{Tier: "default", Name: "pol-1"}, Value: &policy1_order20},
+	KVPair{Key: TierKey{"tier-1"}, Value: &tier1_order20},
+	KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-1"}, Value: &policy1_order20},
 ).withName("with policy")
 
 // localEp1WithPolicy adds a local endpoint to the mix.  It matches all and b=="b".
@@ -240,11 +253,11 @@ var localEp1WithPolicy = withPolicy.withKVUpdates(
 	"10.0.0.2",
 	"fc00:fe11::2",
 }).withActivePolicies(
-	proto.PolicyID{"default", "pol-1"},
+	proto.PolicyID{"tier-1", "pol-1"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]tierInfo{
-		{"default", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}},
 	},
 ).withName("ep1 local, policy")
 
@@ -261,11 +274,11 @@ var hostEp1WithPolicy = withPolicy.withKVUpdates(
 	"10.0.0.2",
 	"fc00:fe11::2",
 }).withActivePolicies(
-	proto.PolicyID{"default", "pol-1"},
+	proto.PolicyID{"tier-1", "pol-1"},
 ).withEndpoint(
 	hostEpWithNameId,
 	[]tierInfo{
-		{"default", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}},
 	},
 ).withName("host ep1, policy")
 
@@ -277,11 +290,11 @@ var hostEp2WithPolicy = withPolicy.withKVUpdates(
 	"10.0.0.3", // ep2
 	"fc00:fe11::3",
 }).withIPSet(bEqBSelectorId, []string{}).withActivePolicies(
-	proto.PolicyID{"default", "pol-1"},
+	proto.PolicyID{"tier-1", "pol-1"},
 ).withEndpoint(
 	hostEpNoNameId,
 	[]tierInfo{
-		{"default", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}},
 	},
 ).withName("host ep2, policy")
 
@@ -312,9 +325,10 @@ func policyOrderState(policyOrders [3]float64, expectedOrder [3]string) State {
 	}
 	state := initialisedStore.withKVUpdates(
 		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
-		KVPair{Key: PolicyKey{Tier: "default", Name: "pol-1"}, Value: &policies[0]},
-		KVPair{Key: PolicyKey{Tier: "default", Name: "pol-2"}, Value: &policies[1]},
-		KVPair{Key: PolicyKey{Tier: "default", Name: "pol-3"}, Value: &policies[2]},
+		KVPair{Key: TierKey{"tier-1"}, Value: &tier1_order20},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-1"}, Value: &policies[0]},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-2"}, Value: &policies[1]},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-3"}, Value: &policies[2]},
 	).withIPSet(allSelectorId, []string{
 		"10.0.0.1", // ep1
 		"fc00:fe11::1",
@@ -326,15 +340,75 @@ func policyOrderState(policyOrders [3]float64, expectedOrder [3]string) State {
 		"10.0.0.2",
 		"fc00:fe11::2",
 	}).withActivePolicies(
-		proto.PolicyID{"default", "pol-1"},
-		proto.PolicyID{"default", "pol-2"},
-		proto.PolicyID{"default", "pol-3"},
+		proto.PolicyID{"tier-1", "pol-1"},
+		proto.PolicyID{"tier-1", "pol-2"},
+		proto.PolicyID{"tier-1", "pol-3"},
 	).withEndpoint(
 		localWlEp1Id,
 		[]tierInfo{
-			{"default", expectedOrder[:]},
+			{"tier-1", expectedOrder[:]},
 		},
 	).withName(fmt.Sprintf("ep1 local, 1 tier, policies %v", expectedOrder[:]))
+	return state
+}
+
+// Tier ordering tests.  We keep the names of the tiers constant but adjust
+// their orders.
+var localEp1WithTiers123 = tierOrderState(
+	[3]float64{order10, order20, order30},
+	[3]string{"tier-1", "tier-2", "tier-3"},
+)
+var localEp1WithTiers321 = tierOrderState(
+	[3]float64{order30, order20, order10},
+	[3]string{"tier-3", "tier-2", "tier-1"},
+)
+
+// These tests use the same order for each tier, checking that the name is
+// used as a tie breaker.
+var localEp1WithTiersAlpha = tierOrderState(
+	[3]float64{order10, order10, order10},
+	[3]string{"tier-1", "tier-2", "tier-3"},
+)
+var localEp1WithTiersAlpha2 = tierOrderState(
+	[3]float64{order20, order20, order20},
+	[3]string{"tier-1", "tier-2", "tier-3"},
+)
+var localEp1WithTiersAlpha3 = tierOrderState(
+	[3]float64{order20, order20, order10},
+	[3]string{"tier-3", "tier-1", "tier-2"},
+)
+
+func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
+	tiers := [3]Tier{}
+	for i := range tiers {
+		tiers[i] = Tier{
+			Order: &tierOrders[i],
+		}
+	}
+	state := initialisedStore.withKVUpdates(
+		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+		KVPair{Key: TierKey{"tier-1"}, Value: &tiers[0]},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "tier-1-pol"}, Value: &policy1_order20},
+		KVPair{Key: TierKey{"tier-2"}, Value: &tiers[1]},
+		KVPair{Key: PolicyKey{Tier: "tier-2", Name: "tier-2-pol"}, Value: &policy1_order20},
+		KVPair{Key: TierKey{"tier-3"}, Value: &tiers[2]},
+		KVPair{Key: PolicyKey{Tier: "tier-3", Name: "tier-3-pol"}, Value: &policy1_order20},
+	).withIPSet(
+		allSelectorId, ep1IPs,
+	).withIPSet(
+		bEqBSelectorId, ep1IPs,
+	).withActivePolicies(
+		proto.PolicyID{"tier-1", "tier-1-pol"},
+		proto.PolicyID{"tier-2", "tier-2-pol"},
+		proto.PolicyID{"tier-3", "tier-3-pol"},
+	).withEndpoint(
+		localWlEp1Id,
+		[]tierInfo{
+			{expectedOrder[0], []string{expectedOrder[0] + "-pol"}},
+			{expectedOrder[1], []string{expectedOrder[1] + "-pol"}},
+			{expectedOrder[2], []string{expectedOrder[2] + "-pol"}},
+		},
+	).withName(fmt.Sprintf("ep1 local, tiers %v", expectedOrder[:]))
 	return state
 }
 
@@ -350,11 +424,11 @@ var localEp2WithPolicy = withPolicy.withKVUpdates(
 }).withIPSet(
 	bEqBSelectorId, []string{},
 ).withActivePolicies(
-	proto.PolicyID{"default", "pol-1"},
+	proto.PolicyID{"tier-1", "pol-1"},
 ).withEndpoint(
 	localWlEp2Id,
 	[]tierInfo{
-		{"default", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}},
 	},
 ).withName("ep2 local, policy")
 
@@ -378,16 +452,16 @@ var localEpsWithPolicy = withPolicy.withKVUpdates(
 	"10.0.0.2",
 	"fc00:fe11::2",
 }).withActivePolicies(
-	proto.PolicyID{"default", "pol-1"},
+	proto.PolicyID{"tier-1", "pol-1"},
 ).withEndpoint(
 	localWlEp1Id,
 	[]tierInfo{
-		{"default", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}},
 	},
 ).withEndpoint(
 	localWlEp2Id,
 	[]tierInfo{
-		{"default", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}},
 	},
 ).withName("2 local, overlapping IPs & a policy")
 
@@ -497,16 +571,26 @@ var baseTests = []StateList{
 	// Test mutating the profile list of some endpoints.
 	{localEpsWithNonMatchingProfile, localEpsWithProfile},
 
+	// And tier ordering.
+	{localEp1WithTiers123,
+		localEp1WithTiers321,
+		localEp1WithTiersAlpha,
+		localEp1WithTiersAlpha2,
+		localEp1WithTiers321,
+		localEp1WithTiersAlpha3},
+
 	// String together some complex updates with profiles and policies
 	// coming and going.
 	{localEpsWithProfile,
 		localEp1WithOneTierPolicy123,
+		localEp1WithTiers321,
 		localEpsWithNonMatchingProfile,
 		localEpsWithPolicy,
 		localEpsWithUpdatedProfile,
 		localEpsWithNonMatchingProfile,
 		localEpsWithUpdatedProfileNegatedTags,
 		localEp1WithPolicy,
+		localEp1WithTiersAlpha2,
 		localEpsWithProfile},
 
 	// Host endpoint tests.
