@@ -20,14 +20,14 @@ or supply details in a config file.
 
 Display one or many resources identified by file, stdin or resource type and name.
 
-Valid resource kinds are bgpPeer, hostEndpoint, policy, pool and profile.  The <KIND>
+Valid resource kinds are bgpPeer, hostEndpoint, policy, pool, profile and tier.  The <KIND>
 parameter is case insensitive and may be pluralized.
 
 By specifying the output as 'go-template' and providing a Go template as the value
 of the --go-template flag, you can filter the attributes of the fetched resource(s).
 
 Usage:
-  calicoctl get ([--hostname=<HOSTNAME>] [--scope=<SCOPE>] (<KIND> [<NAME>]) |
+  calicoctl get ([--tier=<TIER>] [--hostname=<HOSTNAME>] [--scope=<SCOPE>] (<KIND> [<NAME>]) |
                  --filename=<FILENAME>)
                 [--output=<OUTPUT>] [--config=<CONFIG>]
 
@@ -43,6 +43,7 @@ Options:
   -f --filename=<FILENAME>     Filename to use to get the resource.  If set to "-" loads from stdin.
   -o --output=<OUTPUT FORMAT>  Output format.  One of: ps, wide, custom-columns=..., yaml, json,
                                go-template=..., go-template-file=...   [Default: ps]
+  -t --tier=<TIER>             The policy tier.
   -n --hostname=<HOSTNAME>     The hostname.
   --scope=<SCOPE>              The scope of the resource type.  One of global, node.  This is only valid
                                for BGP peers and is used to indicate whether the peer is a global peer
@@ -59,11 +60,11 @@ by type and identifiers.  JSON and YAML formats are accepted for file and stdin 
 Attempting to get resources that do not exist will simply return no results.
 
 When getting resources by type, only a single type may be specified at a time.  The name
-and other identifiers (hostname, scope) are optional, and are wildcarded when omitted.
+and other identifiers (hostname, tier, scope) are optional, and are wildcarded when omitted.
 Thus if you specify no identifiers at all (other than type), then all configured resources of
 the requested type will be returned.
 
-Possible resource types are bgppeer, hostendpoint, policy, pool and profile.  The <TYPE> is
+Possible resource types are bgppeer, hostendpoint, policy, pool, profile and tier.  The <TYPE> is
 case insensitive and may be pluralized.
 
 By default the results are output in a ps-style table output.  There are alternative ways to display
@@ -75,6 +76,8 @@ as input to all the resource management commands (create, apply, replace, delete
   -f --filename=<FILENAME>     Filename to use to delete the resource.  If set to "-" loads from stdin.
   -o --output=<OUTPUT FORMAT>  Output format.  One of: ps, wide, custom-columns=..., yaml, json,
                                go-template=..., go-template-file=...   [Default: ps]
+  -t --tier=<TIER>             The policy tier.  This is used when deleting policy resources, if not
+                               specified it defaults to the "default" tier.
      --scope=<SCOPE>           The scope of the resource type.  One of global, node.  This is required
                                for BGP peers and is used to indicate whether the scope of the peer 
                                resource is a global or node-specific.
@@ -184,7 +187,7 @@ endpoint1,eth0,
 ### See also
 -  [Resources](../resources/README.md) for details on all valid resources, including file format
    and schema
--  [Policy](../resources/policy.md) for details on the Calico label-based policy model
+-  [Policy](../resources/policy.md) for details on the Calico tiered policy model
 -  [calicoctl configuration](../general/config.md) for details on configuring `calicoctl` to access
    the Calico datastore.
 

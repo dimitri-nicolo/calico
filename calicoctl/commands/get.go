@@ -26,17 +26,18 @@ import (
 func Get(args []string) error {
 	doc := EtcdIntro + `Display one or many resources identified by file, stdin or resource type and name.
 
-Valid resource kinds are bgpPeer, hostEndpoint, workloadEndpoint, policy, pool and profile.
+Valid resource kinds are bgpPeer, hostEndpoint, workloadEndpoint, policy, pool, profile and tier.
 The <KIND> parameter is case insensitive and may be pluralized.
 
 By specifying the output as 'go-template' and providing a Go template as the value
 of the --go-template flag, you can filter the attributes of the fetched resource(s).
 
 Usage:
-  calicoctl get ([--hostname=<HOSTNAME>] [--orchestrator=<ORCH>] [--workload=<WORKLOAD>] [--scope=<SCOPE>]
+  calicoctl get ([--tier=<TIER>] [--hostname=<HOSTNAME>] [--orchestrator=<ORCH>] [--workload=<WORKLOAD>] [--scope=<SCOPE>]
                  (<KIND> [<NAME>]) |
                  --filename=<FILENAME>)
                 [--output=<OUTPUT>] [--config=<CONFIG>]
+
 
 Examples:
   # List all policy in default output format.
@@ -49,6 +50,7 @@ Options:
   -f --filename=<FILENAME>     Filename to use to get the resource.  If set to "-" loads from stdin.
   -o --output=<OUTPUT FORMAT>  Output format.  One of: ps, wide, custom-columns=..., yaml, json,
                                go-template=..., go-template-file=...   [Default: ps]
+  -t --tier=<TIER>             The policy tier.
   -n --hostname=<HOSTNAME>     The hostname.
      --orchestrator=<ORCH>     The orchestrator (only used for workload endpoints).
      --workload=<WORKLOAD>     The workload (only used for workload endpoints).

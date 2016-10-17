@@ -94,6 +94,7 @@ func convertToSliceOfResources(loaded interface{}) []unversioned.Resource {
 func getResourceFromArguments(args map[string]interface{}) (unversioned.Resource, error) {
 	kind := args["<KIND>"].(string)
 	name := argStringOrBlank(args, "<NAME>")
+	tier := argStringOrBlank(args, "--tier")
 	hostname := argStringOrBlank(args, "--hostname")
 	workload := argStringOrBlank(args, "--workload")
 	orchestrator := argStringOrBlank(args, "--orchestrator")
@@ -115,6 +116,12 @@ func getResourceFromArguments(args map[string]interface{}) (unversioned.Resource
 		h.Metadata.WorkloadID = workload
 		h.Metadata.Hostname = hostname
 		return *h, nil
+	case "tiers":
+		fallthrough
+	case "tier":
+		t := api.NewTier()
+		t.Metadata.Name = name
+		return *t, nil
 	case "profiles":
 		fallthrough
 	case "profile":
@@ -126,6 +133,7 @@ func getResourceFromArguments(args map[string]interface{}) (unversioned.Resource
 	case "policy":
 		p := api.NewPolicy()
 		p.Metadata.Name = name
+		p.Metadata.Tier = tier
 		return *p, nil
 	case "pools":
 		fallthrough

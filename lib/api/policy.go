@@ -18,45 +18,59 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/api/unversioned"
 )
 
-// Policy contains information about a security Policy resource.  This contains a set of
-// security rules to apply.  Security policies allow a label-based security model which can override
-// the security profiles directly referenced by an endpoint.
+// Policy contains information about a tiered security Policy resource.  This contains a set of
+// security rules to apply.  Security policies allow a tiered security model which can override the
+// security profiles directly referenced by an endpoint.
 //
 // Each policy must do one of the following:
 //
+//  	- Match the packet and apply a “next-tier” action; this skips the rest of the tier, deferring
+//        to the next tier (or the explicit profiles if this is the last tier.
 //  	- Match the packet and apply an “allow” action; this immediately accepts the packet, skipping
-//        all further policies and profiles. This is not recommended in general, because it prevents
+//        all further tiers and profiles. This is not recommended in general, because it prevents
 //        further policy from being executed.
 // 	- Match the packet and apply a “deny” action; this drops the packet immediately, skipping all
-//        further policy and profiles.
-// 	- Fail to match the packet; in which case the packet proceeds to the next policy. If there
-// 	  are no more policies then the packet is dropped.
+//        further tiers and profiles.
+// 	- Fail to match the packet; in which case the packet proceeds to the next policy in the tier.
+//        If there are no more policies in the tier then the packet is dropped.
+//
+// Note:
+// 	If no policies in a tier match an endpoint then the packet skips the tier completely. The
+// 	“default deny” behavior described above only applies if some of the policies in a tier match
+// 	the endpoint.
 //
 // Calico implements the security policy for each endpoint individually and only the policies that
 // have matching selectors are implemented. This ensures that the number of rules that actually need
 // to be inserted into the kernel is proportional to the number of local endpoints rather than the
-// total amount of policy.
+// total amount of policy. If no policies in a tier match a given endpoint then that tier is skipped.
 type Policy struct {
 	unversioned.TypeMetadata
 	Metadata PolicyMetadata `json:"metadata,omitempty"`
 	Spec     PolicySpec     `json:"spec,omitempty"`
 }
 
-// PolicyMetadata contains the metadata for a label-based security Policy resource.
+// PolicyMetadata contains the metadata for a tiered security Policy resource.
 type PolicyMetadata struct {
 	unversioned.ObjectMetadata
 
-	// The name of the label-based security policy.
+	// The name of the tiered security policy.
 	Name string `json:"name,omitempty" validate:"omitempty,name"`
+
+	// The name of the tier that this policy belongs to.  If this is omitted, the default
+	// tier (name is "default") is assumed.  The specified tier must exist in order to create
+	// security policies within the tier, the "default" tier is created automatically if it
+	// does not exist, this means for deployments requiring only a single Tier, the tier name
+	// may be omitted on all policy management requests.
+	Tier string `json:"tier,omitempty" validate:"omitempty,name"`
 }
 
-// PolicySpec contains the specification for a label-based security Policy resource.
+// PolicySpec contains the specification for a tiered security Policy resource.
 type PolicySpec struct {
-	// Order is an optional field that specifies the order in which the policy is applied.
-	// Policies with higher "order" are applied after those with lower
+	// Order is an optional field that specifies the order in which the policy is applied
+	// within a given tier.  Policies with higher "order" are applied after those with lower
 	// order.  If the order is omitted, it may be considered to be "infinite" - i.e. the
-	// policy will be applied last.  Policies with identical order will be applied in
-	// alphanumerical order based on the Policy "Name".
+	// policy will be applied last.  Policies with identical order and within the same Tier
+	// will be applied in alphanumerical order based on the Policy "Name".
 	Order *float64 `json:"order,omitempty"`
 
 	// The ordered set of ingress rules.  Each rule contains a set of packet match criteria and
@@ -106,7 +120,7 @@ func NewPolicy() *Policy {
 	}
 }
 
-// PolicyList contains a list of label-based security Policy resources.  List types are returned from List()
+// PolicyList contains a list of tier security Policy resources.  List types are returned from List()
 // enumerations on the client interface.
 type PolicyList struct {
 	unversioned.TypeMetadata

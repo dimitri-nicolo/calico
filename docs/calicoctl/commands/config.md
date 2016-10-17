@@ -192,7 +192,7 @@ on the workloads requiring IP-in-IP connectivity.
 ### See also
 -  [Resources](../resources/README.md) for details on all valid resources, including file format
    and schema
--  [Policy](../resources/policy.md) for details on the Calico label-based policy model
+-  [Policy](../resources/policy.md) for details on the Calico tiered policy model
 -  [calicoctl configuration](../general/config.md) for details on configuring `calicoctl` to access
    the Calico datastore.
 

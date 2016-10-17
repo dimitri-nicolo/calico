@@ -9,8 +9,8 @@ through `calicoctl`.
 ## Overview of resource YAML file structure
 The calicoctl commands for resource management (create, delete, replace, get)
 all take YAML files as input.  The YAML file may contain a single resource type
-(e.g. a profile resource), or a list of multiple resource types (e.g. a profile and two
-hostEndpoint resources).
+(e.g. a tier resource), or a list of multiple resource types (e.g. a tier and two
+policy resources).
 
 ### A single resource
 The general structure of a single resource is as follows:
@@ -32,35 +32,25 @@ spec:
 | name     | description                                               | requirements                                                                     | schema |
 |----------|-----------------------------------------------------------|----------------------------------------------------------------------------------|--------|
 | apiVersion     | Indicates the version of the API that the data corresponds to.                           | Currently only `v1` is accepted. | string |
-| kind    | Specifies the type of resource described by the YAML document. | Can be [`bgppeer`](bgppeer.md), [`hostendpoint`](hostendpoint.md), [`policy`](policy.md), [`pool`](pool.md), [`profile`](profile.md), or [`workloadendpoint`](workloadendpoint.md) | string |
+| kind    | Specifies the type of resource described by the YAML document. | Can be [`bgppeer`](bgppeer.md), [`hostendpoint`](hostendpoint.md), [`policy`](policy.md), [`pool`](pool.md), [`profile`](profile.md), [`tier`](tier.md), or [`workloadendpoint`](workloadendpoint.md) | string |
 | metadata | Contains sub-fields which are used identify the particular instance of the resource. | | YAML |
 | spec | contains the resource specification, i.e. the configuration for the resource. | | YAML |
 
 ### Multiple resources in a single file
-A file may contain multiple resource documents specified in a YAML list format. For example, the following is the contents of a file containing two `hostEndpoint` resources:
+A file may contain multiple resource documents specified in a YAML list format. For example, the following is the contents of a file containing two `tier` resources:
 ```
 - apiVersion: v1
-  kind: hostEndpoint
+  kind: tier
   metadata:
-    name: endpoint1
-    hostname: host1
-    labels:
-      type: database
+    name: tier1
   spec:
-    interface: eth0
-    profiles: [prof1, prof2]
-    expectedIPs: [1.2.3.4, "00:bb::aa"]
+    order: 10
 - apiVersion: v1
-  kind: hostEndpoint
+  kind: tier
   metadata:
-    name: endpoint2
-    hostname: host1
-    labels:
-      type: frontend
+    name: tier2
   spec:
-    interface: eth1
-    profiles: [prof1, prof2]
-    expectedIPs: [1.2.3.5]
+    order: 20
 ```
 
 [![Analytics](https://calico-ga-beacon.appspot.com/UA-52125893-3/libcalico-go/docs/calicoctl/resources/README.md?pixel)](https://github.com/igrigorik/ga-beacon)

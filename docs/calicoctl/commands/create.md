@@ -62,9 +62,9 @@ $ calicoctl create -f ./resources.yaml
 Successfully created 8 resource(s)
 
 # Create the same set of resources reading from stdin.
-# Results indicate failure because the first resource (in this case a Profile) already exists.
+# Results indicate failure because the first resource (in this case a Tier) already exists.
 $ cat resources.yaml | calicoctl apply -f -
-Failed to create any resources: resource already exists: Profile(name=profile1)
+Failed to create any resources: resource already exists: Tier(name=tier1)
 ```
 
 
@@ -84,7 +84,7 @@ Failed to create any resources: resource already exists: Profile(name=profile1)
 ### See also
 -  [Resources](../resources/README.md) for details on all valid resources, including file format
    and schema
--  [Policy](../resources/policy.md) for details on the Calico label-based policy model
+-  [Policy](../resources/policy.md) for details on the Calico tiered policy model
 -  [calicoctl configuration](../general/config.md) for details on configuring `calicoctl` to access
    the Calico datastore.
 
