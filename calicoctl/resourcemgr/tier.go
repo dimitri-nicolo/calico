@@ -22,35 +22,33 @@ import (
 
 func init() {
 	registerResource(
-		api.NewPolicy(),
-		api.NewPolicyList(),
-		[]string{"NAME", "TIER"},
-		[]string{"NAME", "TIER", "ORDER", "SELECTOR"},
+		api.NewTier(),
+		api.NewTierList(),
+		[]string{"NAME", "ORDER"},
+		[]string{"NAME", "ORDER"},
 		map[string]string{
-			"NAME":     "{{.Metadata.Name}}",
-			"TIER":     "{{.Metadata.Tier}}",
-			"ORDER":    "{{.Spec.Order}}",
-			"SELECTOR": "{{.Spec.Selector}}",
+			"NAME":  "{{.Metadata.Name}}",
+			"ORDER": "{{.Spec.Order}}",
 		},
 		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Policy)
-			return client.Policies().Apply(&r)
+			r := resource.(api.Tier)
+			return client.Tiers().Apply(&r)
 		},
 		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Policy)
-			return client.Policies().Create(&r)
+			r := resource.(api.Tier)
+			return client.Tiers().Create(&r)
 		},
 		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Policy)
-			return client.Policies().Update(&r)
+			r := resource.(api.Tier)
+			return client.Tiers().Update(&r)
 		},
 		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Policy)
-			return nil, client.Policies().Delete(r.Metadata)
+			r := resource.(api.Tier)
+			return nil, client.Tiers().Delete(r.Metadata)
 		},
 		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Policy)
-			return client.Policies().List(r.Metadata)
+			r := resource.(api.Tier)
+			return client.Tiers().List(r.Metadata)
 		},
 	)
 }

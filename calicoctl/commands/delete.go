@@ -25,11 +25,11 @@ import (
 func Delete(args []string) error {
 	doc := EtcdIntro + `Delete a resource identified by file, stdin or resource type and name.
 
-Valid resource kinds are bgpPeer, hostEndpoint, workloadEndpoint, policy, pool and profile.
+Valid resource kinds are bgpPeer, hostEndpoint, workloadEndpoint, policy, pool, profile and tier.
 The <KIND> parameter is case insensitive and may be pluralized.
 
 Usage:
-  calicoctl delete ([--hostname=<HOSTNAME>] [--orchestrator=<ORCH>] [--workload=<WORKLOAD>] [--scope=<SCOPE>]
+  calicoctl delete ([--tier=<TIER>] [--hostname=<HOSTNAME>] [--orchestrator=<ORCH>] [--workload=<WORKLOAD>] [--scope=<SCOPE>]
                     (<KIND> [<NAME>]) |
                     --filename=<FILE>)
                    [--skip-not-exists] [--config=<CONFIG>]
@@ -41,12 +41,16 @@ Examples:
   # Delete a policy based on the type and name in the YAML passed into stdin.
   cat policy.yaml | calicoctl delete -f -
 
-  # Delete policy with name "foo"
+  # Delete policy in the default tier with name "foo"
   calicoctl delete policy foo
+
+  # Delete policy in the tier "bar" with name "foo"
+  calicoctl delete policy --tier=bar foo
 
 Options:
   -s --skip-not-exists         Skip over and treat as successful, resources that don't exist.
   -f --filename=<FILENAME>     Filename to use to delete the resource.  If set to "-" loads from stdin.
+  -t --tier=<TIER>             The policy tier.
   -n --hostname=<HOSTNAME>     The hostname.
      --orchestrator=<ORCH>     The orchestrator (only used for workload endpoints).
      --workload=<WORKLOAD>     The workload (only used for workload endpoints).

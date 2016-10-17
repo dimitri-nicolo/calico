@@ -20,11 +20,11 @@ or supply details in a config file.
 
 Delete a resource identified by file, stdin or resource type and name.
 
-Valid resource kinds are bgpPeer, hostEndpoint, policy, pool and profile.  The <KIND>
+Valid resource kinds are bgpPeer, hostEndpoint, policy, pool, profile and tier.  The <KIND>
 parameter is case insensitive and may be pluralized.
 
 Usage:
-  calicoctl delete ([--hostname=<HOSTNAME>] [--scope=<SCOPE>] <KIND> <NAME>) |
+  calicoctl delete (([--tier=<TIER>] [--hostname=<HOSTNAME>] [--scope=<SCOPE>] <KIND> <NAME>) |
                     --filename=<FILE>)
                    [--skip-not-exists] [--config=<CONFIG>]
 
@@ -35,12 +35,16 @@ Examples:
   # Delete a policy based on the type and name in the YAML passed into stdin.
   cat policy.yaml | calicoctl delete -f -
 
-  # Delete policy with name "foo"
+  # Delete policy in the default tier with name "foo"
   calicoctl delete policy foo
+
+  # Delete policy in the tier "bar" with name "foo"
+  calicoctl delete policy --tier=bar foo
 
 Options:
   -s --skip-not-exists         Skip over and treat as successful, resources that don't exist.
   -f --filename=<FILENAME>     Filename to use to delete the resource.  If set to "-" loads from stdin.
+  -t --tier=<TIER>             The policy tier.
   -n --hostname=<HOSTNAME>     The hostname.
   --scope=<SCOPE>              The scope of the resource type.  One of global, node.  This is only valid
                                for BGP peers and is used to indicate whether the peer is a global peer
@@ -59,9 +63,10 @@ Attempting to delete a resource that does not exists is treated as a terminating
    
 When deleting resources by type, only a single type may be specified at a time.  The name
 is required along with any and other identifiers required to uniquely identify a resource of the
-specified type.
+specified type.  The only exception is that the `--tier` need not be specified for a policy resource
+where, if omitted, is assumed to be in the "default" tier.
 
-Possible resource types are bgppeer, hostendpoint, policy, pool and profile.  The <TYPE> is
+Possible resource types are bgppeer, hostendpoint, policy, pool, profile and tier.  The <TYPE> is
 case insensitive and may be pluralized.
 
 The output of the command indicates how many resources were successfully deleted, and the error
@@ -79,8 +84,9 @@ number of resources successfully deleted.
 $ calicoctl delete -f ./resources.yaml
 Successfully deleted 8 resource(s)
 
-# Delete a policy resource by name.  The policy is called "policy1".
-$ bin/calicoctl delete policy policy1
+# Delete a policy resource by name.  The policy is called "policy1" and is in tier "tier1".
+# Note that the --tier option is specified to uniquely identify the resource.
+$ bin/calicoctl delete policy policy1 --tier=tier1
 Successfully deleted 1 'policy' resource(s)
 ```
 
@@ -89,6 +95,8 @@ Successfully deleted 1 'policy' resource(s)
 ```
   -s --skip-not-exists         Skip over and treat as successful, resources that don't exist.
   -f --filename=<FILENAME>     Filename to use to delete the resource.  If set to "-" loads from stdin.
+  -t --tier=<TIER>             The policy tier.  This is used when deleting policy resources, if not
+                               specified it defaults to the "default" tier.
      --scope=<SCOPE>           The scope of the resource type.  One of global, node.  This is required
                                for BGP peers and is used to indicate whether the scope of the peer 
                                resource is a global or node-specific.
@@ -105,7 +113,7 @@ Successfully deleted 1 'policy' resource(s)
 ### See also
 -  [Resources](../resources/README.md) for details on all valid resources, including file format
    and schema
--  [Policy](../resources/policy.md) for details on the Calico label-based policy model
+-  [Policy](../resources/policy.md) for details on the Calico tiered policy model
 -  [calicoctl configuration](../general/config.md) for details on configuring `calicoctl` to access
    the Calico datastore.
 

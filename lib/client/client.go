@@ -48,6 +48,11 @@ func New(config api.ClientConfig) (*Client, error) {
 	return &cc, err
 }
 
+// Tiers returns an interface for managing tier resources.
+func (c *Client) Tiers() TierInterface {
+	return newTiers(c)
+}
+
 // Policies returns an interface for managing policy resources.
 func (c *Client) Policies() PolicyInterface {
 	return newPolicies(c)

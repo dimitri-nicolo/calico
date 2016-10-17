@@ -56,7 +56,7 @@ See Calico's [See selector expression documentation](http://docs.projectcalico.o
 | name   | description  | requirements                  | schema |
 |--------|--------------|-------------------------------|--------|
 | name   | The name of the profile. | Required for `create`/`update`/`delete`. If omitted on `get`, calicoctl enumerates over all profiles. | string |
-| labels | A set of labels to apply to endpoints using this profile. |  | map of string key to string values |
+| labels | A set of labels to apply to endpoints using this profile. | If omitted, assumed to mean the "default" tier - which is automatically created by calicoctl and is the last tier to be acted on. | list of strings where the key and value are colon-separated. |
 
 #### PolicySpec
 | name     | description                                                          | requirements | schema |
@@ -68,7 +68,7 @@ See Calico's [See selector expression documentation](http://docs.projectcalico.o
 #### RuleSpec
 | name        | description                                | requirements | schema |
 |-------------|--------------------------------------------|----------------|--------|
-| action      | Action to perform when matching this rule.  Can be one of: `allow`, `deny`, `log` |  | string |
+| action      | Action to perform when matching this rule.  Can be one of: `nextTier`, `allow`, `deny` |  | string |
 | protocol    | Positive protocol match.  | Can be one of: `tcp`, `udp`, `icmp`, `icmpv6`, `sctp`, `udplite`, or an integer 1-255. | string |
 | icmp        | ICMP match criteria.     | | [ICMPSpec](#icmpspec) |
 | "!protocol" | Negative protocol match. | Can be one of: `tcp`, `udp`, `icmp`, `icmpv6`, `sctp`, `udplite`, or an integer 1-255. | string |

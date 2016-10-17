@@ -1,11 +1,18 @@
 - apiVersion: v1
+  kind: tier
+  metadata:
+    name: tier1
+  spec:
+    order: 12.345
+- apiVersion: v1
   kind: policy
   metadata:
     name: policy1
+    tier: tier1
   spec:
     order: 9999.9999
     ingress:
-      - action: deny
+      - action: nextTier
         protocol: udp
         icmp:
           type: 10
@@ -33,6 +40,7 @@
   kind: policy
   metadata:
     name: policy2
+    tier: tier2
   spec:
     order: 0
 - apiVersion: v1

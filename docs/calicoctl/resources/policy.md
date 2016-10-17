@@ -1,5 +1,5 @@
 # Policy Resource
-Policy objects can be thought of as being applied to a set of endpoints (rather than being a property of the endpoint) to give more flexible policy arrangements that can override or augment any ACLs directly associated with an endpoint through a profile.
+Policy objects can be thought of as being applied to a set of endpoints (rather than being a property of the endpoint) to give more flexible policy arrangements, including support for multiple tiers of policy (e.g. net sec, ops, dev team) that can override or augment any ACLs directly associated with an endpoint through a profile.
 
 Each policy has a label/tag based selector predicate, such as “type == ‘webserver’ && role == ‘frontend’”, that selects which endpoints it should apply to, and an ordering number that specifies the policy’s priority. For each endpoint, Calico applies the security policies that apply to it, in priority order, and then that endpoint’s security profiles.
 
@@ -9,6 +9,7 @@ apiVersion: v1
 kind: policy
 metadata:
   name: policy1
+  tier: tier1
 spec:
   order: 100
   selector: type=='database'
@@ -51,6 +52,7 @@ spec:
 | name | description  | requirements                  | schema |
 |------|--------------|-------------------------------|--------|
 | name | The name of the policy. | | string |
+| tier | The name of the parent tier. | If omitted, assumed to mean the "default" tier.  A "default" tier is automatically created if required, with default order (i.e. applied last) - the order of this tier may be modified after it is created. | string |
 
 
 #### PolicySpec
@@ -64,7 +66,7 @@ spec:
 #### RuleSpec
 | name        | description                                | requirements | schema |
 |-------------|--------------------------------------------|----------------|--------|
-| action      | Action to perform when matching this rule.  Can be one of: `allow`, `deny`, `log` |  | string |
+| action      | Action to perform when matching this rule.  Can be one of: `nextTier`, `allow`, `deny` |  | string |
 | protocol    | Positive protocol match.  | Can be one of: `tcp`, `udp`, `icmp`, `icmpv6`, `sctp`, `udplite`, or an integer 1-255. | string |
 | icmp        | ICMP match criteria.     | | [ICMPSpec](#icmpspec) |
 | "!protocol" | Negative protocol match. | Can be one of: `tcp`, `udp`, `icmp`, `icmpv6`, `sctp`, `udplite`, or an integer 1-255. | string |
