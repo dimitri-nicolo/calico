@@ -92,9 +92,6 @@ type NetlinkNetfilterAttr struct {
 	Value	[]byte
 }
 
-func NewNetlinkNetfilterAttr(attrType int, value []byte) NetlinkNetfilterAttr {
-}
-
 func ParseNetfilterAttr(b []byte) ([]NetlinkNetfilterAttr, error) {
 	var attrs []NetlinkNetfilterAttr
 	for len(b) >= SizeofNfAttr {
