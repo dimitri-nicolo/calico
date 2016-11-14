@@ -23,7 +23,7 @@ const NLA_TYPE_MASK int = ^(syscall.NLA_F_NESTED | syscall.NLA_F_NET_BYTEORDER)
 
 const (
 	SizeofNfGenMsg = 0x4
-	SizeofNfAttr = syscall.SizeofNlAttr
+	SizeofNfAttr   = syscall.SizeofNlAttr
 )
 
 type NlMsghdr struct {
@@ -95,8 +95,8 @@ func (msg *NfAttr) Len() int {
 }
 
 type NetlinkNetfilterAttr struct {
-	Attr	NfAttr
-	Value	[]byte
+	Attr  NfAttr
+	Value []byte
 }
 
 func ParseNetfilterAttr(b []byte) ([]NetlinkNetfilterAttr, error) {
