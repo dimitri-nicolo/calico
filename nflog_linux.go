@@ -21,7 +21,7 @@ const (
 	ProtoUdp  = 17
 )
 
-func NflogSubscribe(ch chan<- NflogPacket, done <-chan struct{}) error {
+func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) error {
 	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
 	if err != nil {
 		return err
@@ -51,8 +51,7 @@ func NflogSubscribe(ch chan<- NflogPacket, done <-chan struct{}) error {
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
-	// TODO(doublek): htons(20) -> 5120. Hardcoded, fix it please.
-	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_INET, nfnl.NFNETLINK_V0, 5120)
+	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_INET, nfnl.NFNETLINK_V0, groupNum)
 	req.AddData(nfgenmsg)
 	nflogcmd = nfnl.NewNflogMsgConfigCmd(nfnl.NFULNL_CFG_CMD_BIND)
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_CMD, nflogcmd.Serialize())
@@ -62,8 +61,7 @@ func NflogSubscribe(ch chan<- NflogPacket, done <-chan struct{}) error {
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
-	// TODO(doublek): htons(20) -> 5120. Hardcoded, fix it please.
-	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, 5120)
+	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
 	req.AddData(nfgenmsg)
 	nflogcfg := nfnl.NewNflogMsgConfigMode(0xFF, nfnl.NFULNL_COPY_PACKET)
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_MODE, nflogcfg.Serialize())

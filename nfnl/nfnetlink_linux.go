@@ -1,6 +1,7 @@
 package nfnl
 
 import (
+	"encoding/binary"
 	"syscall"
 	"unsafe"
 )
@@ -47,11 +48,17 @@ type NfGenMsg struct {
 	ResId   uint16
 }
 
+func htons(num uint16) uint16 {
+	data := make([]byte, 2)
+	binary.BigEndian.PutUint16(data, num)
+	return binary.LittleEndian.Uint16(data)
+}
+
 func NewNfGenMsg(family int, version int, resId int) *NfGenMsg {
 	return &NfGenMsg{
-		Family:	uint8(family),
+		Family:  uint8(family),
 		Version: uint8(version),
-		ResId: uint16(resId),
+		ResId:   htons(uint16(resId)),
 	}
 }
 

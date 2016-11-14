@@ -44,11 +44,13 @@ import (
 	"github.com/tigera/nfnetlink"
 )
 
+const GroupNum = 20
+
 func nflog() {
 	ch := make(chan nfnetlink.NflogPacket)
 	done := make(chan struct{})
 	defer close(done)
-	err := nfnetlink.NflogSubscribe(ch, done)
+	err := nfnetlink.NflogSubscribe(GroupNum, ch, done)
 	if err != nil {
 		fmt.Println("Error: ", err)
 	}
