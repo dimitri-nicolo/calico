@@ -51,6 +51,7 @@ func NflogSubscribe(ch chan<- NflogPacket, done <-chan struct{}) error {
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
+	// TODO(doublek): htons(20) -> 5120. Hardcoded, fix it please.
 	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_INET, nfnl.NFNETLINK_V0, 5120)
 	req.AddData(nfgenmsg)
 	nflogcmd = nfnl.NewNflogMsgConfigCmd(nfnl.NFULNL_CFG_CMD_BIND)
@@ -61,6 +62,7 @@ func NflogSubscribe(ch chan<- NflogPacket, done <-chan struct{}) error {
 	}
 
 	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
+	// TODO(doublek): htons(20) -> 5120. Hardcoded, fix it please.
 	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, 5120)
 	req.AddData(nfgenmsg)
 	nflogcfg := nfnl.NewNflogMsgConfigMode(0xFF, nfnl.NFULNL_COPY_PACKET)
