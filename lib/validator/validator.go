@@ -33,8 +33,8 @@ var (
 	nameRegex          = regexp.MustCompile("^[a-zA-Z0-9_.-]+$")
 	interfaceRegex     = regexp.MustCompile("^[a-zA-Z0-9_-]{1,15}$")
 	labelRegex         = regexp.MustCompile("^[a-zA-Z_./-][a-zA-Z0-9_./-]*$")
-	actionRegex        = regexp.MustCompile("^(nextTier|allow|deny|log)$")
-	backendActionRegex = regexp.MustCompile("^(next-tier|allow|deny|log|)$")
+	actionRegex        = regexp.MustCompile("^(nextTier|allow|deny|log|pass)$")
+	backendActionRegex = regexp.MustCompile("^(allow|deny|log|next-tier|)$")
 	protocolRegex      = regexp.MustCompile("^(tcp|udp|icmp|icmpv6|sctp|udplite)$")
 )
 
@@ -60,9 +60,10 @@ func init() {
 	registerStructValidator(validateIPNAT, api.IPNAT{})
 	registerStructValidator(validateWorkloadEndpointSpec, api.WorkloadEndpointSpec{})
 	registerStructValidator(validateHostEndpointSpec, api.HostEndpointSpec{})
-	registerStructValidator(validatePoolMetadata, api.PoolMetadata{})
+	registerStructValidator(validatePoolMetadata, api.IPPoolMetadata{})
 	registerStructValidator(validateICMPFields, api.ICMPFields{})
 	registerStructValidator(validateRule, api.Rule{})
+	registerStructValidator(validateNodeSpec, api.NodeSpec{})
 }
 
 func registerFieldValidator(key string, fn validator.Func) {
@@ -81,7 +82,7 @@ func Validate(current interface{}) error {
 
 	verr := errors.ErrorValidation{}
 	for _, f := range err.(validator.ValidationErrors) {
-		verr.ErrFields = append(verr.ErrFields,
+		verr.ErroredFields = append(verr.ErroredFields,
 			errors.ErroredField{Name: f.Name, Value: f.Value})
 	}
 	return verr
@@ -177,6 +178,11 @@ func validatePort(v *validator.Validate, structLevel *validator.StructLevel) {
 	if p.MinPort > p.MaxPort {
 		structLevel.ReportError(reflect.ValueOf(p.MaxPort), "Port", "port", "port range invalid")
 	}
+
+	// No need to check for the upperbound (65536) because we use uint16.
+	if p.MinPort < 1 || p.MaxPort < 1 {
+		structLevel.ReportError(reflect.ValueOf(p.MaxPort), "Port", "port", "port range invalid, port number must be between 0 and 65536")
+	}
 }
 
 func validateIPNAT(v *validator.Validate, structLevel *validator.StructLevel) {
@@ -235,7 +241,7 @@ func validateHostEndpointSpec(v *validator.Validate, structLevel *validator.Stru
 }
 
 func validatePoolMetadata(v *validator.Validate, structLevel *validator.StructLevel) {
-	pool := structLevel.CurrentStruct.Interface().(api.PoolMetadata)
+	pool := structLevel.CurrentStruct.Interface().(api.IPPoolMetadata)
 
 	// The Calico IPAM places restrictions on the minimum IP pool size, check that the
 	// pool is at least the minimum size.
@@ -276,5 +282,13 @@ func validateRule(v *validator.Validate, structLevel *validator.StructLevel) {
 		if len(rule.Destination.NotPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.NotPorts), "Destination.NotPorts", "destination !ports", "port is not valid for protocol")
 		}
+	}
+}
+
+func validateNodeSpec(v *validator.Validate, structLevel *validator.StructLevel) {
+	ns := structLevel.CurrentStruct.Interface().(api.NodeSpec)
+
+	if ns.BGP != nil && ns.BGP.IPv4Address == nil && ns.BGP.IPv6Address == nil {
+		structLevel.ReportError(reflect.ValueOf(ns.BGP.IPv4Address), "BGP.IPv4Address", "ipv4Address", "no BGP IP address specified")
 	}
 }

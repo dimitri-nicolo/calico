@@ -19,8 +19,8 @@ import (
 )
 
 // Policy contains information about a tiered security Policy resource.  This contains a set of
-// security rules to apply.  Security policies allow a tiered security model which can override the
-// security profiles directly referenced by an endpoint.
+// security rules to apply.  Security policies allow a selector-based security model which can override
+// the security profiles directly referenced by an endpoint.
 //
 // Each policy must do one of the following:
 //
@@ -49,11 +49,11 @@ type Policy struct {
 	Spec     PolicySpec     `json:"spec,omitempty"`
 }
 
-// PolicyMetadata contains the metadata for a tiered security Policy resource.
+// PolicyMetadata contains the metadata for a selector-based security Policy resource.
 type PolicyMetadata struct {
 	unversioned.ObjectMetadata
 
-	// The name of the tiered security policy.
+	// The name of the selector-based security policy.
 	Name string `json:"name,omitempty" validate:"omitempty,name"`
 
 	// The name of the tier that this policy belongs to.  If this is omitted, the default
@@ -64,7 +64,7 @@ type PolicyMetadata struct {
 	Tier string `json:"tier,omitempty" validate:"omitempty,name"`
 }
 
-// PolicySpec contains the specification for a tiered security Policy resource.
+// PolicySpec contains the specification for a selector-based security Policy resource.
 type PolicySpec struct {
 	// Order is an optional field that specifies the order in which the policy is applied
 	// within a given tier.  Policies with higher "order" are applied after those with lower
@@ -120,7 +120,7 @@ func NewPolicy() *Policy {
 	}
 }
 
-// PolicyList contains a list of tier security Policy resources.  List types are returned from List()
+// PolicyList contains a list of selector-based security Policy resources.  List types are returned from List()
 // enumerations on the client interface.
 type PolicyList struct {
 	unversioned.TypeMetadata

@@ -95,9 +95,9 @@ func (w *workloadEndpoints) setCreateDefaults(wep *api.WorkloadEndpoint) {
 func (w *workloadEndpoints) convertMetadataToListInterface(m unversioned.ResourceMetadata) (model.ListInterface, error) {
 	hm := m.(api.WorkloadEndpointMetadata)
 	l := model.WorkloadEndpointListOptions{
-		Hostname:       hm.Hostname,
-		OrchestratorID: hm.OrchestratorID,
-		WorkloadID:     hm.WorkloadID,
+		Hostname:       hm.Node,
+		OrchestratorID: hm.Orchestrator,
+		WorkloadID:     hm.Workload,
 		EndpointID:     hm.Name,
 	}
 	return l, nil
@@ -108,9 +108,9 @@ func (w *workloadEndpoints) convertMetadataToListInterface(m unversioned.Resourc
 func (w *workloadEndpoints) convertMetadataToKey(m unversioned.ResourceMetadata) (model.Key, error) {
 	hm := m.(api.WorkloadEndpointMetadata)
 	k := model.WorkloadEndpointKey{
-		Hostname:       hm.Hostname,
-		OrchestratorID: hm.OrchestratorID,
-		WorkloadID:     hm.WorkloadID,
+		Hostname:       hm.Node,
+		OrchestratorID: hm.Orchestrator,
+		WorkloadID:     hm.Workload,
 		EndpointID:     hm.Name,
 	}
 	return k, nil
@@ -186,16 +186,24 @@ func (w *workloadEndpoints) convertKVPairToAPI(d *model.KVPair) (unversioned.Res
 	}
 
 	ah := api.NewWorkloadEndpoint()
-	ah.Metadata.Hostname = bk.Hostname
-	ah.Metadata.OrchestratorID = bk.OrchestratorID
-	ah.Metadata.WorkloadID = bk.WorkloadID
+	ah.Metadata.Node = bk.Hostname
+	ah.Metadata.Orchestrator = bk.OrchestratorID
+	ah.Metadata.Workload = bk.WorkloadID
 	ah.Metadata.Name = bk.EndpointID
 	ah.Metadata.Labels = bh.Labels
 	ah.Spec.InterfaceName = bh.Name
 	ah.Spec.MAC = bh.Mac
 	ah.Spec.Profiles = bh.ProfileIDs
-	ah.Spec.IPNetworks = nets
-	ah.Spec.IPNATs = nats
+	if len(nets) == 0 {
+		ah.Spec.IPNetworks = nil
+	} else {
+		ah.Spec.IPNetworks = nets
+	}
+	if len(nats) == 0 {
+		ah.Spec.IPNATs = nil
+	} else {
+		ah.Spec.IPNATs = nats
+	}
 	ah.Spec.IPv4Gateway = bh.IPv4Gateway
 	ah.Spec.IPv6Gateway = bh.IPv6Gateway
 

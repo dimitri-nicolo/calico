@@ -123,7 +123,7 @@ type SyncerCallbacks interface {
 	//
 	// When a recursive delete is made, deleting many leaf keys, the Syncer
 	// generates deletion updates for all the leaf keys.
-	OnUpdates(updates []model.KVPair)
+	OnUpdates(updates []Update)
 }
 
 // SyncerParseFailCallbacks is an optional interface that can be implemented
@@ -132,3 +132,18 @@ type SyncerCallbacks interface {
 type SyncerParseFailCallbacks interface {
 	ParseFailed(rawKey string, rawValue *string)
 }
+
+// Update from the Syncer.  A KV pair plus extra metadata.
+type Update struct {
+	model.KVPair
+	UpdateType UpdateType
+}
+
+type UpdateType uint8
+
+const (
+	UpdateTypeKVUnknown UpdateType = iota
+	UpdateTypeKVNew
+	UpdateTypeKVUpdated
+	UpdateTypeKVDeleted
+)

@@ -22,7 +22,7 @@ import (
 // ruleActionAPIToBackend converts the rule action field value from the API
 // value to the equivalent backend value.
 func ruleActionAPIToBackend(action string) string {
-	if action == "nextTier" {
+	if action == "nextTier" || action == "pass" {
 		return "next-tier"
 	}
 	return action
@@ -31,11 +31,10 @@ func ruleActionAPIToBackend(action string) string {
 // ruleActionBackendToAPI converts the rule action field value from the backend
 // value to the equivalent API value.
 func ruleActionBackendToAPI(action string) string {
-	if action == "next-tier" {
-		return "nextTier"
-	}
 	if action == "" {
 		return "allow"
+	} else if action == "next-tier" {
+		return "nextTier"
 	}
 	return action
 }

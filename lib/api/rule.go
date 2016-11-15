@@ -19,7 +19,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
-// A Rule encapsulates a set of match criteria and an action.  Both tiered security Policy
+// A Rule encapsulates a set of match criteria and an action.  Both selector-based security Policy
 // and security Profiles reference rules - separated out as a list of rules for both
 // ingress and egress packet matching.
 //
@@ -31,7 +31,7 @@ type Rule struct {
 
 	// IPVersion is an optional field that restricts the rule to only match a specific IP
 	// version.
-	IPVersion *int `json:"ip_version,omitempty" validate:"omitempty,ipversion"`
+	IPVersion *int `json:"ipVersion,omitempty" validate:"omitempty,ipversion"`
 
 	// Protocol is an optional field that restricts the rule to only apply to traffic of
 	// a specific IP protocol. Required if any of the EntityRules contain Ports
@@ -47,10 +47,10 @@ type Rule struct {
 	ICMP *ICMPFields `json:"icmp,omitempty" validate:"omitempty"`
 
 	// NotProtocol is the negated version of the Protocol field.
-	NotProtocol *numorstring.Protocol `json:"!protocol,omitempty" validate:"omitempty"`
+	NotProtocol *numorstring.Protocol `json:"notProtocol,omitempty" validate:"omitempty"`
 
 	// NotICMP is the negated version of the ICMP field.
-	NotICMP *ICMPFields `json:"!icmp,omitempty" validate:"omitempty"`
+	NotICMP *ICMPFields `json:"notICMP,omitempty" validate:"omitempty"`
 
 	// Source contains the match criteria that apply to source entity.
 	Source EntityRule `json:"source,omitempty" validate:"omitempty"`
@@ -113,18 +113,18 @@ type EntityRule struct {
 	Ports []numorstring.Port `json:"ports,omitempty" validate:"omitempty,dive"`
 
 	// NotTag is the negated version of the Tag field.
-	NotTag string `json:"!tag,omitempty" validate:"omitempty,tag"`
+	NotTag string `json:"notTag,omitempty" validate:"omitempty,tag"`
 
 	// NotNet is the negated version of the Net field.
-	NotNet *net.IPNet `json:"!net,omitempty" validate:"omitempty"`
+	NotNet *net.IPNet `json:"notNet,omitempty" validate:"omitempty"`
 
 	// NotSelector is the negated version of the Selector field.  See Selector field for
 	// subtleties with negated selectors.
-	NotSelector string `json:"!selector,omitempty" validate:"omitempty,selector"`
+	NotSelector string `json:"notSelector,omitempty" validate:"omitempty,selector"`
 
 	// NotPorts is the negated version of the Ports field.
 	//
 	// Since only some protocols have ports, if any ports are specified it requires the
 	// Protocol match in the Rule to be set to "tcp" or "udp".
-	NotPorts []numorstring.Port `json:"!ports,omitempty" validate:"omitempty,dive"`
+	NotPorts []numorstring.Port `json:"notPorts,omitempty" validate:"omitempty,dive"`
 }

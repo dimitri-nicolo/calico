@@ -39,7 +39,7 @@ type WorkloadEndpointKey struct {
 
 func (key WorkloadEndpointKey) defaultPath() (string, error) {
 	if key.Hostname == "" {
-		return "", errors.ErrorInsufficientIdentifiers{Name: "hostname"}
+		return "", errors.ErrorInsufficientIdentifiers{Name: "node"}
 	}
 	if key.OrchestratorID == "" {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "orchestrator"}
@@ -60,7 +60,7 @@ func (key WorkloadEndpointKey) defaultDeletePath() (string, error) {
 
 func (key WorkloadEndpointKey) defaultDeleteParentPaths() ([]string, error) {
 	if key.Hostname == "" {
-		return nil, errors.ErrorInsufficientIdentifiers{Name: "hostname"}
+		return nil, errors.ErrorInsufficientIdentifiers{Name: "node"}
 	}
 	if key.OrchestratorID == "" {
 		return nil, errors.ErrorInsufficientIdentifiers{Name: "orchestrator"}
@@ -79,7 +79,7 @@ func (key WorkloadEndpointKey) valueType() reflect.Type {
 }
 
 func (key WorkloadEndpointKey) String() string {
-	return fmt.Sprintf("WorkloadEndpoint(hostname=%s, orchestrator=%s, workload=%s, name=%s)",
+	return fmt.Sprintf("WorkloadEndpoint(node=%s, orchestrator=%s, workload=%s, name=%s)",
 		key.Hostname, key.OrchestratorID, key.WorkloadID, key.EndpointID)
 }
 
@@ -150,15 +150,15 @@ type WorkloadEndpoint struct {
 	// TODO: Validation for workload endpoint.
 	State       string            `json:"state"`
 	Name        string            `json:"name"`
-	Mac         net.MAC           `json:"mac"`
+	Mac         *net.MAC          `json:"mac"`
 	ProfileIDs  []string          `json:"profile_ids"`
 	IPv4Nets    []net.IPNet       `json:"ipv4_nets"`
 	IPv6Nets    []net.IPNet       `json:"ipv6_nets"`
-	IPv4NAT     []IPNAT           `json:"ipv4_nat"`
-	IPv6NAT     []IPNAT           `json:"ipv6_nat"`
-	Labels      map[string]string `json:"labels"`
-	IPv4Gateway net.IP            `json:"ipv4_gateway,omitempty" validate:"omitempty,ipv4"`
-	IPv6Gateway net.IP            `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
+	IPv4NAT     []IPNAT           `json:"ipv4_nat,omitempty"`
+	IPv6NAT     []IPNAT           `json:"ipv6_nat,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	IPv4Gateway *net.IP           `json:"ipv4_gateway,omitempty" validate:"omitempty,ipv4"`
+	IPv6Gateway *net.IP           `json:"ipv6_gateway,omitempty" validate:"omitempty,ipv6"`
 }
 
 // IPNat contains a single NAT mapping for a WorkloadEndpoint resource.

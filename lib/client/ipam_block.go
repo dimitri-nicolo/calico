@@ -77,9 +77,9 @@ func (b *allocationBlock) autoAssign(
 
 	// Determine if we need to check for affinity.
 	checkAffinity := b.StrictAffinity || affinityCheck
-	if checkAffinity && b.HostAffinity != nil && host != *b.HostAffinity {
+	if checkAffinity && b.Affinity != nil && !hostAffinityMatches(host, b.AllocationBlock) {
 		// Affinity check is enabled but the host does not match - error.
-		s := fmt.Sprintf("Block affinity (%s) does not match provided (%s)", *b.HostAffinity, host)
+		s := fmt.Sprintf("Block affinity (%s) does not match provided (%s)", *b.Affinity, host)
 		return nil, errors.New(s)
 	}
 
@@ -103,7 +103,7 @@ func (b *allocationBlock) autoAssign(
 }
 
 func (b *allocationBlock) assign(address cnet.IP, handleID *string, attrs map[string]string, host string) error {
-	if b.StrictAffinity && b.HostAffinity != nil && host != *b.HostAffinity {
+	if b.StrictAffinity && b.Affinity != nil && !hostAffinityMatches(host, b.AllocationBlock) {
 		// Affinity check is enabled but the host does not match - error.
 		return errors.New("Block host affinity does not match")
 	}
@@ -131,6 +131,11 @@ func (b *allocationBlock) assign(address cnet.IP, handleID *string, attrs map[st
 		}
 	}
 	return nil
+}
+
+// hostAffinityMatches checks if the provided host matches the provided affinity.
+func hostAffinityMatches(host string, block *model.AllocationBlock) bool {
+	return *block.Affinity == "host:"+host
 }
 
 func (b allocationBlock) numFreeAddresses() int {
@@ -361,11 +366,10 @@ func getIPVersion(ip cnet.IP) ipVersion {
 	return ipv4
 }
 
-func largerThanBlock(blockCIDR cnet.IPNet) bool {
-	ones, bits := blockCIDR.Mask.Size()
-	prefixLength := bits - ones
+func largerThanOrEqualToBlock(blockCIDR cnet.IPNet) bool {
+	ones, _ := blockCIDR.Mask.Size()
 	ipVersion := getIPVersion(cnet.IP{blockCIDR.IP})
-	return prefixLength < ipVersion.BlockPrefixLength
+	return ones <= ipVersion.BlockPrefixLength
 }
 
 func intInSlice(searchInt int, slice []int) bool {

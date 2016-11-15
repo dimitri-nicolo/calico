@@ -1,5 +1,5 @@
-// Copyright (c) 2016 projectcalico, Inc. All rights reserved.
-
+// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -233,7 +233,7 @@ func (c ipams) autoAssign(num int, handleID *string, attrs map[string]string, po
 		pools := []net.IPNet{}
 		if pool == nil {
 			// Default to all configured pools.
-			allPools, err := c.client.Pools().List(api.PoolMetadata{})
+			allPools, err := c.client.IPPools().List(api.IPPoolMetadata{})
 			if err != nil {
 				log.Errorf("Error reading configured pools: %s", err)
 				return ips, nil
@@ -423,7 +423,7 @@ func (c ipams) releaseIPsFromBlock(ips []net.IP, blockCIDR net.IPNet) ([]net.IP,
 		// the Value since we have updated the structure pointed to in the
 		// KVPair.
 		var updateErr error
-		if b.empty() && b.HostAffinity == nil {
+		if b.empty() && b.Affinity == nil {
 			log.Debugf("Deleting non-affine block '%s'", b.CIDR.String())
 			updateErr = c.client.backend.Delete(obj)
 		} else {
@@ -486,7 +486,7 @@ func (c ipams) assignFromExistingBlock(
 
 		// Update the block using CAS by passing back the original
 		// KVPair.
-		obj.Value = &b.AllocationBlock
+		obj.Value = b.AllocationBlock
 		_, err = c.client.backend.Update(obj)
 		if err != nil {
 			log.Infof("Failed to update block '%s' - try again", b.CIDR.String())
@@ -507,7 +507,7 @@ func (c ipams) assignFromExistingBlock(
 // If an empty string is passed as the host, then the value of os.Hostname is used.
 func (c ipams) ClaimAffinity(cidr net.IPNet, host string) ([]net.IPNet, []net.IPNet, error) {
 	// Validate that the given CIDR is at least as big as a block.
-	if !largerThanBlock(cidr) {
+	if !largerThanOrEqualToBlock(cidr) {
 		estr := fmt.Sprintf("The requested CIDR (%s) is smaller than the minimum.", cidr.String())
 		return nil, nil, invalidSizeError(estr)
 	}
@@ -556,7 +556,7 @@ func (c ipams) ClaimAffinity(cidr net.IPNet, host string) ([]net.IPNet, []net.IP
 // If an empty string is passed as the host, then the value of os.Hostname is used.
 func (c ipams) ReleaseAffinity(cidr net.IPNet, host string) error {
 	// Validate that the given CIDR is at least as big as a block.
-	if !largerThanBlock(cidr) {
+	if !largerThanOrEqualToBlock(cidr) {
 		estr := fmt.Sprintf("The requested CIDR (%s) is smaller than the minimum.", cidr.String())
 		return invalidSizeError(estr)
 	}
@@ -760,7 +760,7 @@ func (c ipams) releaseByHandle(handleID string, blockCIDR net.IPNet) error {
 			return nil
 		}
 
-		if block.empty() && block.HostAffinity == nil {
+		if block.empty() && block.Affinity == nil {
 			err = c.client.backend.Delete(&model.KVPair{
 				Key: model.BlockKey{blockCIDR},
 			})
