@@ -15,31 +15,13 @@
 
 # Shell script for running the Calico unit test suite.
 #
-# Invoke as './run-unit-test.sh'. Arguments to this script are passed directly
-# to tox: e.g., to force a rebuild of tox's virtual environments, invoke this
-# script as './run-unit-test.sh -r'.
+# Invoke as './run-unit-test.sh'.
 set -e
 
-if [ -n "$VIRTUAL_ENV" ]; then
-  echo "run-unit-test.sh cannot be run from within a virtualenv"
-  exit 1
-fi
-
-# Set up the tox venv so that we can use its version of coverage.  This
-# avoids errors if the system coverage binary is not present or is of a
-# different version.
-tox --notest "$@"
-
-source .tox/py27/bin/activate
 coverage erase
-deactivate
-
-tox "$@"
-
-# Make sure we run the following coverage html command with the recent
-# coverage.
-source .tox/py27/bin/activate
+./tox-cover.sh thread calico.test
+./tox-cover.sh gevent calico.felix
+coverage report -m
 coverage html
 coverage xml
-diff-cover coverage.xml --compare-branch=origin/master
-deactivate
+diff-cover coverage.xml --compare-branch="${COMPARE_BRANCH:-origin/master}"

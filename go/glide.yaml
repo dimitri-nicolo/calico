@@ -6,6 +6,7 @@ owners:
   email: rob@tigera.io
 import:
 - package: github.com/coreos/etcd
+  version: ea057115224138376622d63a51b699133310ea31
   subpackages:
   - client
   - pkg/transport
@@ -21,11 +22,13 @@ import:
 - package: github.com/go-ini/ini
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
-  version: smc-merged-fixes
-  repo: https://github.com/fasaxc/libcalico-go.git
   subpackages:
   - lib
 - package: github.com/Sirupsen/logrus
-  version: ^0.10.0
+  version: 4b6ea7319e214d98c938f12692336f7ca9348d6b
 - package: github.com/kardianos/osext
 - package: github.com/mipearson/rfw
+- package: github.com/prometheus/client_golang
+  version: c5b7fccd204277076155f10851dad72b76a49317
+- package: github.com/gogo/protobuf
+  version: ^0.3.0

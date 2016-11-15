@@ -16,14 +16,14 @@ package calc
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/felix/go/datastructures/ip"
-	"github.com/projectcalico/felix/go/datastructures/multidict"
-	"github.com/projectcalico/felix/go/datastructures/set"
 	"github.com/projectcalico/felix/go/felix/config"
-	"github.com/projectcalico/felix/go/felix/endpoint"
+	"github.com/projectcalico/felix/go/felix/ip"
+	"github.com/projectcalico/felix/go/felix/multidict"
 	"github.com/projectcalico/felix/go/felix/proto"
+	"github.com/projectcalico/felix/go/felix/set"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
+	"strings"
 )
 
 type EventHandler func(message interface{})
@@ -244,7 +244,7 @@ func (buf *EventBuffer) OnProfileInactive(key model.ProfileRulesKey) {
 
 func (buf *EventBuffer) OnEndpointTierUpdate(endpointKey model.Key,
 	endpoint interface{},
-	filteredTiers []endpoint.TierInfo) {
+	filteredTiers []tierInfo) {
 	log.Debugf("Endpoint/tier update: %v", endpointKey)
 	tiers := tierInfoToProtoTierInfo(filteredTiers)
 	switch key := endpointKey.(type) {
@@ -261,6 +261,11 @@ func (buf *EventBuffer) OnEndpointTierUpdate(endpointKey model.Key,
 			return
 		}
 		ep := endpoint.(*model.WorkloadEndpoint)
+
+		mac := ""
+		if ep.Mac != nil {
+			mac = ep.Mac.String()
+		}
 		buf.pendingUpdates = append(buf.pendingUpdates,
 			&proto.WorkloadEndpointUpdate{
 				Id: &proto.WorkloadEndpointID{
@@ -272,7 +277,7 @@ func (buf *EventBuffer) OnEndpointTierUpdate(endpointKey model.Key,
 				Endpoint: &proto.WorkloadEndpoint{
 					State:      ep.State,
 					Name:       ep.Name,
-					Mac:        ep.Mac.String(),
+					Mac:        mac,
 					ProfileIds: ep.ProfileIDs,
 					Ipv4Nets:   netsToStrings(ep.IPv4Nets),
 					Ipv6Nets:   netsToStrings(ep.IPv6Nets),
@@ -307,6 +312,10 @@ func (buf *EventBuffer) OnEndpointTierUpdate(endpointKey model.Key,
 }
 
 func (buf *EventBuffer) OnHostIPUpdate(hostname string, ip *net.IP) {
+	log.WithFields(log.Fields{
+		"hostname": hostname,
+		"ip":       ip,
+	}).Debug("HostIP update")
 	buf.pendingUpdates = append(buf.pendingUpdates,
 		&proto.HostMetadataUpdate{
 			Hostname: hostname,
@@ -315,13 +324,41 @@ func (buf *EventBuffer) OnHostIPUpdate(hostname string, ip *net.IP) {
 }
 
 func (buf *EventBuffer) OnHostIPRemove(hostname string) {
+	log.WithField("hostname", hostname).Debug("HostIP removed")
 	buf.pendingUpdates = append(buf.pendingUpdates,
 		&proto.HostMetadataRemove{
 			Hostname: hostname,
 		})
 }
 
-func tierInfoToProtoTierInfo(filteredTiers []endpoint.TierInfo) []*proto.TierInfo {
+func (buf *EventBuffer) OnIPPoolUpdate(key model.IPPoolKey, pool *model.IPPool) {
+	log.WithFields(log.Fields{
+		"key":  key,
+		"pool": pool,
+	}).Debug("IPPool update")
+	buf.pendingUpdates = append(buf.pendingUpdates,
+		&proto.IPAMPoolUpdate{
+			Id: cidrToIPPoolID(key),
+			Pool: &proto.IPAMPool{
+				Cidr:       pool.CIDR.String(),
+				Masquerade: pool.Masquerade,
+			},
+		})
+}
+
+func (buf *EventBuffer) OnIPPoolRemove(key model.IPPoolKey) {
+	log.WithField("key", key).Debug("IPPool removed")
+	buf.pendingUpdates = append(buf.pendingUpdates,
+		&proto.IPAMPoolRemove{
+			Id: cidrToIPPoolID(key),
+		})
+}
+
+func cidrToIPPoolID(key model.IPPoolKey) string {
+	return strings.Replace(key.CIDR.String(), "/", "-", 1)
+}
+
+func tierInfoToProtoTierInfo(filteredTiers []tierInfo) []*proto.TierInfo {
 	tiers := make([]*proto.TierInfo, len(filteredTiers))
 	if len(filteredTiers) > 0 {
 		for ii, ti := range filteredTiers {

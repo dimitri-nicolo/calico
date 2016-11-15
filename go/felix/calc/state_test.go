@@ -16,8 +16,9 @@ package calc_test
 
 import (
 	"fmt"
-	"github.com/projectcalico/felix/go/datastructures/set"
 	"github.com/projectcalico/felix/go/felix/proto"
+	"github.com/projectcalico/felix/go/felix/set"
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
 	"reflect"
 )
@@ -161,7 +162,7 @@ func (s State) Keys() set.Set {
 	return set
 }
 
-func (s State) KVs() map[Key]interface{} {
+func (s State) KVsCopy() map[Key]interface{} {
 	kvs := make(map[Key]interface{})
 	for _, kv := range s.DatastoreState {
 		kvs[kv.Key] = kv.Value
@@ -169,24 +170,35 @@ func (s State) KVs() map[Key]interface{} {
 	return kvs
 }
 
-func (s State) KVDeltas(prev State) []KVPair {
-	updatedKVs := s.KVs()
+func (s State) KVDeltas(prev State) []api.Update {
+	newAndUpdatedKVs := s.KVsCopy()
+	updatedKVs := make(map[Key]bool)
 	for _, kv := range prev.DatastoreState {
-		if reflect.DeepEqual(updatedKVs[kv.Key], kv.Value) {
+		if reflect.DeepEqual(newAndUpdatedKVs[kv.Key], kv.Value) {
 			// Key had same value in both states so we ignore it.
-			delete(updatedKVs, kv.Key)
+			delete(newAndUpdatedKVs, kv.Key)
+		} else {
+			// Key has changed
+			updatedKVs[kv.Key] = true
 		}
 	}
 	currentKeys := s.Keys()
-	deltas := make([]KVPair, 0)
+	deltas := make([]api.Update, 0)
 	for _, kv := range prev.DatastoreState {
 		if !currentKeys.Contains(kv.Key) {
-			deltas = append(deltas, KVPair{Key: kv.Key})
+			deltas = append(
+				deltas,
+				api.Update{KVPair{Key: kv.Key}, api.UpdateTypeKVDeleted},
+			)
 		}
 	}
 	for _, kv := range s.DatastoreState {
-		if _, ok := updatedKVs[kv.Key]; ok {
-			deltas = append(deltas, kv)
+		if _, ok := newAndUpdatedKVs[kv.Key]; ok {
+			updateType := api.UpdateTypeKVNew
+			if updatedKVs[kv.Key] {
+				updateType = api.UpdateTypeKVUpdated
+			}
+			deltas = append(deltas, api.Update{kv, updateType})
 		}
 	}
 	return deltas

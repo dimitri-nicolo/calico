@@ -16,9 +16,10 @@ package calc
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/felix/go/datastructures/labels"
-	"github.com/projectcalico/felix/go/datastructures/multidict"
-	"github.com/projectcalico/felix/go/datastructures/tags"
+	"github.com/projectcalico/felix/go/felix/dispatcher"
+	"github.com/projectcalico/felix/go/felix/labelindex"
+	"github.com/projectcalico/felix/go/felix/multidict"
+	"github.com/projectcalico/felix/go/felix/tagindex"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/selector"
@@ -51,10 +52,10 @@ type ActiveRulesCalculator struct {
 	profileIDToEndpointKeys multidict.IfaceToIface
 
 	// Label index, matching policy selectors against local endpoints.
-	labelIndex *labels.InheritIndex
+	labelIndex *labelindex.InheritIndex
 
 	// Cache of profile IDs by local endpoint.
-	endpointKeyToProfileIDs *tags.EndpointKeyToProfileIDMap
+	endpointKeyToProfileIDs *tagindex.EndpointKeyToProfileIDMap
 
 	// Callback objects.
 	RuleScanner         ruleScanner
@@ -72,13 +73,24 @@ func NewActiveRulesCalculator() *ActiveRulesCalculator {
 		profileIDToEndpointKeys: multidict.NewIfaceToIface(),
 
 		// Cache of profile IDs by local endpoint.
-		endpointKeyToProfileIDs: tags.NewEndpointKeyToProfileIDMap(),
+		endpointKeyToProfileIDs: tagindex.NewEndpointKeyToProfileIDMap(),
 	}
-	arc.labelIndex = labels.NewInheritIndex(arc.onMatchStarted, arc.onMatchStopped)
+	arc.labelIndex = labelindex.NewInheritIndex(arc.onMatchStarted, arc.onMatchStopped)
 	return arc
 }
 
-func (arc *ActiveRulesCalculator) OnUpdate(update model.KVPair) (filterOut bool) {
+func (arc *ActiveRulesCalculator) RegisterWith(localEndpointDispatcher, allUpdDispatcher *dispatcher.Dispatcher) {
+	// It needs the filtered endpoints...
+	localEndpointDispatcher.Register(model.WorkloadEndpointKey{}, arc.OnUpdate)
+	localEndpointDispatcher.Register(model.HostEndpointKey{}, arc.OnUpdate)
+	// ...as well as all the policies and profiles.
+	allUpdDispatcher.Register(model.PolicyKey{}, arc.OnUpdate)
+	allUpdDispatcher.Register(model.ProfileRulesKey{}, arc.OnUpdate)
+	allUpdDispatcher.Register(model.ProfileLabelsKey{}, arc.OnUpdate)
+	allUpdDispatcher.Register(model.ProfileTagsKey{}, arc.OnUpdate)
+}
+
+func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (filterOut bool) {
 	switch key := update.Key.(type) {
 	case model.WorkloadEndpointKey:
 		if update.Value != nil {
@@ -104,6 +116,8 @@ func (arc *ActiveRulesCalculator) OnUpdate(update model.KVPair) (filterOut bool)
 		}
 		arc.labelIndex.OnUpdate(update)
 	case model.ProfileLabelsKey:
+		arc.labelIndex.OnUpdate(update)
+	case model.ProfileTagsKey:
 		arc.labelIndex.OnUpdate(update)
 	case model.ProfileRulesKey:
 		if update.Value != nil {
@@ -158,11 +172,7 @@ func (arc *ActiveRulesCalculator) OnUpdate(update model.KVPair) (filterOut bool)
 	return
 }
 
-func (arc *ActiveRulesCalculator) OnDatamodelStatus(status api.SyncStatus) {
-
-}
-
-func (arc *ActiveRulesCalculator) updateEndpointProfileIDs(key endpointKey, profileIDs []string) {
+func (arc *ActiveRulesCalculator) updateEndpointProfileIDs(key model.Key, profileIDs []string) {
 	// Figure out which profiles have been added/removed.
 	log.Debugf("Endpoint %#v now has profile IDs: %v", key, profileIDs)
 	removedIDs, addedIDs := arc.endpointKeyToProfileIDs.Update(key, profileIDs)
