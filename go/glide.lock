@@ -1,10 +1,10 @@
 hash: 99fd4f7385d7834c552168cf8140f34a333fc3cf6aa13e4dfaee0f5b84a0b248
-updated: 2016-10-14T17:07:25.472373235+01:00
+updated: 2016-10-17T10:53:21.086909944+01:00
 imports:
 - name: github.com/cloudfoundry-incubator/candiedyaml
   version: 99c3df83b51532e3615f851d8c2dbb638f5313bf
 - name: github.com/coreos/etcd
-  version: 84508697ceb13d757d6b9666b4ea858e66f63893
+  version: cc96f91156ed35caaf57ed987b4e9f75d142813a
   subpackages:
   - client
   - pkg/fileutil
@@ -27,7 +27,7 @@ imports:
 - name: github.com/go-ini/ini
   version: 6e4869b434bd001f6983749881c7ead3545887d8
 - name: github.com/gogo/protobuf
-  version: 99cb9b23110011cc45571c901ecae6f6f5e65cd3
+  version: 50d1bd39ce4e7a96b75e3e040be9caf79dbb4c61
   subpackages:
   - proto
 - name: github.com/golang/glog
@@ -39,7 +39,7 @@ imports:
 - name: github.com/mipearson/rfw
   version: b66ec87bd85055de3f749a8640e9e4c8053052e4
 - name: github.com/onsi/ginkgo
-  version: acfa16ac8e9e0d2c6b11cfe78c79d8652c3ee3fd
+  version: 39549e585f5005ce588e6217d4538a4c99a472c9
   subpackages:
   - config
   - extensions/table
@@ -55,9 +55,11 @@ imports:
   - internal/writer
   - reporters
   - reporters/stenographer
+  - reporters/stenographer/support/go-colorable
+  - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/projectcalico/libcalico-go
-  version: c6fadb082397fb7c1b0ca5787b9fb1a2a2455204
+  version: 0de0d697efbbccba99fdb1b6560d473e6489f644
   repo: https://github.com/fasaxc/libcalico-go.git
   subpackages:
   - lib
@@ -95,7 +97,7 @@ imports:
   subpackages:
   - context
 - name: golang.org/x/sys
-  version: 9bb9f0998d48b31547d975974935ae9b48c7a03c
+  version: 002cbb5f952456d0c50e0d2aff17ea5eca716979
   subpackages:
   - unix
 - name: gopkg.in/go-playground/validator.v8
