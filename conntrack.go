@@ -11,21 +11,21 @@ const (
 )
 
 type CtCounters struct {
-	Packets uint64
-	Bytes   uint64
+	Packets int
+	Bytes   int
 }
 
 type CtL4Src struct {
-	Port uint16 // TCP, UDP
-	Id   uint16 // ICMP
-	All  uint16 // Others
+	Port int // TCP, UDP
+	Id   int // ICMP
+	All  int // Others
 }
 
 type CtL4Dst struct {
-	Port uint16 // TCP, UDP
-	Type uint8  // ICMP
-	Code uint8  // ICMP
-	All  uint16 // Others
+	Port int // TCP, UDP
+	Type int // ICMP
+	Code int // ICMP
+	All  int // Others
 }
 
 // TODO(doublek): Methods to increment and reset packet counters

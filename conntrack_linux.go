@@ -153,21 +153,21 @@ func parseTupleProto(tuple *CtTuple, value []byte) error {
 		case nfnl.CTA_PROTO_SRC_PORT:
 			switch tuple.ProtoNum {
 			case nfnl.TCP_PROTO, nfnl.UDP_PROTO:
-				tuple.L4Src.Port = native.Uint16(attr.Value)
+				tuple.L4Src.Port = int(native.Uint16(attr.Value))
 			case nfnl.ICMP_PROTO:
-				tuple.L4Src.Id = native.Uint16(attr.Value)
+				tuple.L4Src.Id = int(native.Uint16(attr.Value))
 			default:
-				tuple.L4Src.All = native.Uint16(attr.Value)
+				tuple.L4Src.All = int(native.Uint16(attr.Value))
 			}
 		case nfnl.CTA_PROTO_DST_PORT:
 			switch tuple.ProtoNum {
 			case nfnl.TCP_PROTO, nfnl.UDP_PROTO:
-				tuple.L4Dst.Port = native.Uint16(attr.Value)
+				tuple.L4Dst.Port = int(native.Uint16(attr.Value))
 			case nfnl.ICMP_PROTO:
-				tuple.L4Dst.Type = attr.Value[1]
-				tuple.L4Dst.Code = attr.Value[0]
+				tuple.L4Dst.Type = int(attr.Value[1])
+				tuple.L4Dst.Code = int(attr.Value[0])
 			default:
-				tuple.L4Dst.All = native.Uint16(attr.Value)
+				tuple.L4Dst.All = int(native.Uint16(attr.Value))
 			}
 		}
 	}
@@ -184,13 +184,13 @@ func parseConntrackCounters(value []byte) (CtCounters, error) {
 	for _, attr := range attrs {
 		switch attr.Attr.Type {
 		case nfnl.CTA_COUNTERS_PACKETS:
-			counters.Packets = native.Uint64(attr.Value[0:8])
+			counters.Packets = int(native.Uint64(attr.Value[0:8]))
 		case nfnl.CTA_COUNTERS_BYTES:
-			counters.Bytes = native.Uint64(attr.Value[0:8])
+			counters.Bytes = int(native.Uint64(attr.Value[0:8]))
 		case nfnl.CTA_COUNTERS32_PACKETS:
-			counters.Packets = uint64(native.Uint32(attr.Value[0:8]))
+			counters.Packets = int(native.Uint32(attr.Value[0:8]))
 		case nfnl.CTA_COUNTERS32_BYTES:
-			counters.Bytes = uint64(native.Uint32(attr.Value[0:8]))
+			counters.Bytes = int(native.Uint32(attr.Value[0:8]))
 		}
 	}
 	return counters, err
