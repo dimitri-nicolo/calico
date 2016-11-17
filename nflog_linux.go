@@ -79,10 +79,9 @@ func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) e
 	Recvloop:
 		for {
 			var res [][]byte
-			fmt.Println("NflogSubscribe: Receiving:")
 			msgs, err := sock.Receive()
 			if err != nil {
-				fmt.Println("NflogSubscribe: ERROR: ", err)
+				fmt.Println("NflogSubscribe: ERROR: ", err, "Group:", groupNum)
 				return
 			}
 			for _, m := range msgs {
@@ -100,7 +99,6 @@ func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) e
 				}
 				res = append(res, m.Data)
 				if mFlags&syscall.NLM_F_MULTI == 0 {
-					fmt.Println("End of multi part message", mType)
 					break
 				}
 			}
