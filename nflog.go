@@ -36,4 +36,5 @@ type NflogPacket struct {
 	Prefix    string
 	GroupId   int
 	Tuple     NflogPacketTuple
+	Bytes     int
 }
