@@ -23,12 +23,12 @@ import (
 )
 
 type PolicySorter struct {
-	tiers map[string]*TierInfo
+	tiers map[string]*tierInfo
 }
 
 func NewPolicySorter() *PolicySorter {
 	return &PolicySorter{
-		tiers: make(map[string]*TierInfo),
+		tiers: make(map[string]*tierInfo),
 	}
 }
 
@@ -85,8 +85,8 @@ func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 	return
 }
 
-func (poc *PolicySorter) Sorted() []*TierInfo {
-	tiers := make([]*TierInfo, 0, len(poc.tiers))
+func (poc *PolicySorter) Sorted() []*tierInfo {
+	tiers := make([]*tierInfo, 0, len(poc.tiers))
 	for _, tier := range poc.tiers {
 		tiers = append(tiers, tier)
 	}
@@ -118,7 +118,7 @@ func (poc *PolicySorter) Sorted() []*TierInfo {
 	return tiers
 }
 
-type TierByOrder []*TierInfo
+type TierByOrder []*tierInfo
 
 func (a TierByOrder) Len() int      { return len(a) }
 func (a TierByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }

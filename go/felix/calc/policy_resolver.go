@@ -26,7 +26,7 @@ import (
 type PolicyResolver struct {
 	policyIDToEndpointIDs multidict.IfaceToIface
 	endpointIDToPolicyIDs multidict.IfaceToIface
-	sortedTierData        []*TierInfo
+	sortedTierData        []*tierInfo
 	endpoints             map[model.Key]interface{}
 	dirtyEndpoints        set.Set
 	sortRequired          bool
