@@ -86,9 +86,7 @@ func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) e
 			}
 			for _, m := range msgs {
 				mType := m.Header.Type
-				mFlags := m.Header.Flags
 				if mType == syscall.NLMSG_DONE {
-					fmt.Println("NLMSG_DONE")
 					break
 				}
 				if mType == syscall.NLMSG_ERROR {
@@ -98,9 +96,6 @@ func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) e
 					continue Recvloop
 				}
 				res = append(res, m.Data)
-				if mFlags&syscall.NLM_F_MULTI == 0 {
-					break
-				}
 			}
 			for _, m := range res {
 				msg := nfnl.DeserializeNfGenMsg(m)
