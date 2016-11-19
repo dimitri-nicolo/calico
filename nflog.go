@@ -34,7 +34,7 @@ type NflogPacket struct {
 	Mark      int
 	Timestamp NflogPacketTimestamp
 	Prefix    string
-	GroupId   int
+	Gid       int
 	Tuple     NflogPacketTuple
 	Bytes     int
 }

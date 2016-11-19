@@ -135,7 +135,7 @@ func parseNflog(m []byte) (NflogPacket, error) {
 		case nfnl.NFULA_PREFIX:
 			nflogPacket.Prefix = string(attr.Value)
 		case nfnl.NFULA_GID:
-			nflogPacket.GroupId = int(native.Uint32(attr.Value[0:4]))
+			nflogPacket.Gid = int(native.Uint32(attr.Value[0:4]))
 		}
 	}
 	return nflogPacket, nil
