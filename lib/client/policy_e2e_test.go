@@ -160,7 +160,7 @@ var _ = Describe("Policy tests", func() {
 			_, outError = c.Policies().Get(meta1)
 
 			// Expect an error since the policy was deleted.
-			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(name=policy1)").Error()))
+			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(tier=default, name=policy1)").Error()))
 
 			// Delete the second policy with meta2.
 			outError1 = c.Policies().Delete(meta2)
