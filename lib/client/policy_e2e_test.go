@@ -79,7 +79,7 @@ var _ = Describe("Policy tests", func() {
 			_, outError := c.Policies().Update(&api.Policy{Metadata: meta1, Spec: spec1})
 
 			// Should return an error.
-			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(name=policy1)").Error()))
+			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(tier=default, name=policy1)").Error()))
 
 			By("Create, Apply, Get and compare")
 
