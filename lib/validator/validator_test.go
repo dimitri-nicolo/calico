@@ -79,7 +79,7 @@ func init() {
 		// (API) Actions.
 		Entry("should accept allow action", api.Rule{Action: "allow"}, true),
 		Entry("should accept deny action", api.Rule{Action: "deny"}, true),
-		Entry("should accept next-tier action", api.Rule{Action: "nextTier"}, true),
+		Entry("should accept pass action", api.Rule{Action: "pass"}, true),
 		Entry("should accept log action", api.Rule{Action: "log"}, true),
 		Entry("should reject unknown action", api.Rule{Action: "unknown"}, false),
 		Entry("should reject unknown action", api.Rule{Action: "allowfoo"}, false),

@@ -33,7 +33,7 @@ var (
 	nameRegex          = regexp.MustCompile("^[a-zA-Z0-9_.-]+$")
 	interfaceRegex     = regexp.MustCompile("^[a-zA-Z0-9_-]{1,15}$")
 	labelRegex         = regexp.MustCompile("^[a-zA-Z_./-][a-zA-Z0-9_./-]*$")
-	actionRegex        = regexp.MustCompile("^(nextTier|allow|deny|log|pass)$")
+	actionRegex        = regexp.MustCompile("^(allow|deny|log|pass)$")
 	backendActionRegex = regexp.MustCompile("^(allow|deny|log|next-tier|)$")
 	protocolRegex      = regexp.MustCompile("^(tcp|udp|icmp|icmpv6|sctp|udplite)$")
 )
