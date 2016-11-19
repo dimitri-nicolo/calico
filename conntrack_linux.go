@@ -151,24 +151,15 @@ func parseTupleProto(tuple *CtTuple, value []byte) error {
 		case nfnl.CTA_PROTO_NUM:
 			tuple.ProtoNum = int(attr.Value[0])
 		case nfnl.CTA_PROTO_SRC_PORT:
-			switch tuple.ProtoNum {
-			case nfnl.TCP_PROTO, nfnl.UDP_PROTO:
-				tuple.L4Src.Port = int(native.Uint16(attr.Value))
-			case nfnl.ICMP_PROTO:
-				tuple.L4Src.Id = int(native.Uint16(attr.Value))
-			default:
-				tuple.L4Src.All = int(native.Uint16(attr.Value))
-			}
+			tuple.L4Src.Port = int(native.Uint16(attr.Value))
 		case nfnl.CTA_PROTO_DST_PORT:
-			switch tuple.ProtoNum {
-			case nfnl.TCP_PROTO, nfnl.UDP_PROTO:
-				tuple.L4Dst.Port = int(native.Uint16(attr.Value))
-			case nfnl.ICMP_PROTO:
-				tuple.L4Dst.Type = int(attr.Value[1])
-				tuple.L4Dst.Code = int(attr.Value[0])
-			default:
-				tuple.L4Dst.All = int(native.Uint16(attr.Value))
-			}
+			tuple.L4Dst.Port = int(native.Uint16(attr.Value))
+		case nfnl.CTA_PROTO_ICMP_ID:
+			tuple.L4Src.Id = int(native.Uint16(attr.Value))
+		case nfnl.CTA_PROTO_ICMP_TYPE:
+			tuple.L4Dst.Type = int(attr.Value[0])
+		case nfnl.CTA_PROTO_ICMP_CODE:
+			tuple.L4Dst.Code = int(attr.Value[0])
 		}
 	}
 	return err
