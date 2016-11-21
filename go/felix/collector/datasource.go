@@ -61,6 +61,17 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 	wlEpKeySrc := lookupEndpoint(nflogTuple.Src)
 	wlEpKeyDst := lookupEndpoint(nflogTuple.Dst)
 	tp := lookupRule(nPkt.Prefix)
+	var numPkts, numBytes int
+	if tp.Action == stats.DenyAction {
+		// NFLog based counters make sense only for denied packets.
+		// Allowed packet counters are updated via conntrack datasource.
+		// FIXME(doublek): The above assumption is not true in the case of NOTRACK.
+		numPkts = 1
+		numBytes = nPkt.Bytes
+	} else {
+		numPkts = 0
+		numBytes = 0
+	}
 
 	// FIXME(doublek): We should not increase packet counters for the same packet
 	// hitting multiple rules more than once. Right now it is.
@@ -73,20 +84,20 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 		var su *stats.StatUpdate
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
 		if ds.direction == stats.DirIn {
-			su = stats.NewStatUpdate(tuple, *wlEpKeyDst, 1, nPkt.Bytes, 0, 0, tp)
+			su = stats.NewStatUpdate(tuple, *wlEpKeyDst, numPkts, numBytes, 0, 0, tp)
 		} else {
-			su = stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, 1, nPkt.Bytes, tp)
+			su = stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, numPkts, numBytes, tp)
 		}
 		statUpdates = append(statUpdates, *su)
 	case wlEpKeySrc != nil:
 		// Locally originating packet
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
-		su := stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, 1, nPkt.Bytes, tp)
+		su := stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, numPkts, numBytes, tp)
 		statUpdates = append(statUpdates, *su)
 	case wlEpKeyDst != nil:
 		// Locally terminating packet
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
-		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, 1, nPkt.Bytes, 0, 0, tp)
+		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, numPkts, numBytes, 0, 0, tp)
 		statUpdates = append(statUpdates, *su)
 	}
 	return statUpdates, nil
