@@ -40,8 +40,17 @@ func (c *Collector) Start() {
 }
 
 func (c *Collector) startStatsCollectionAndReporting() {
-	for update := range c.mux {
-		c.applyStatUpdate(update)
+	// 1. c.mux for incoming datasources
+	// 2. a agetimeout channel where all timeouts are sent in say from
+	//    registerAgeTimeout
+	// 3. A periodic send thingy.
+	// 4. A done channel for stopping and cleaning up stats collector.
+
+	for {
+		select {
+		case update := <-c.mux:
+			c.applyStatUpdate(update)
+		}
 	}
 }
 
@@ -58,9 +67,7 @@ func (c *Collector) mergeDataSources() {
 }
 
 func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
-	c.epStats.RLock()
 	data, ok := c.epStats.entries[update.Tuple]
-	c.epStats.RUnlock()
 	// If the tuple entry does not exist, create it.
 	if !ok {
 		data = stats.NewData(
@@ -73,9 +80,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		if update.Tp != (stats.TracePoint{}) {
 			data.AddTrace(update.Tp)
 		}
-		c.epStats.Lock()
 		c.epStats.entries[update.Tuple] = data
-		c.epStats.Unlock()
 		return
 	}
 	// If it does exist then update it, carefully.
@@ -84,9 +89,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		// done with it.
 		data.SetCountersIn(update.InPackets, update.InBytes)
 		data.SetCountersOut(update.OutPackets, update.OutBytes)
-		c.epStats.Lock()
 		c.epStats.entries[update.Tuple] = data
-		c.epStats.Unlock()
 		return
 	}
 	data.UpdateCountersIn(update.InPackets, update.InBytes)
@@ -97,14 +100,10 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		data.ResetCounters()
 		data.ReplaceTrace(update.Tp)
 	}
-	c.epStats.Lock()
 	c.epStats.entries[update.Tuple] = data
-	c.epStats.Unlock()
 }
 
 func (c *Collector) PrintStats() {
-	c.epStats.RLock()
-	defer c.epStats.RUnlock()
 	fmt.Printf("Number of Entries: %v\n", len(c.epStats.entries))
 	for k, v := range c.epStats.entries {
 		fmt.Printf("%+v: %+v Trace: %+v\n", k, *v, *(v.Trace()))
