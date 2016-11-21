@@ -44,9 +44,6 @@ type TracePoint struct {
 	Index    int
 }
 
-func (tp *TracePoint) cmp(other *TracePoint) {
-}
-
 // Represents a trace of the rules that a packet hit
 type Trace struct {
 	path   []TracePoint
@@ -88,7 +85,6 @@ func (t *Trace) add(tp TracePoint) error {
 }
 
 func (t *Trace) replace(tp TracePoint) {
-	//existingTp := t.path[tp.Index]
 	if tp.Action == NextTierAction {
 		t.path[tp.Index] = tp
 		return
