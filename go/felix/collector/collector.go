@@ -5,9 +5,13 @@ package collector
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/tigera/felix-private/go/felix/collector/stats"
 )
+
+// TODO(doublek): Need to hook age timeout into config
+const DefaultAgeTimeout = time.Duration(10) * time.Second
 
 type Collector struct {
 	sources []<-chan stats.StatUpdate
@@ -16,7 +20,8 @@ type Collector struct {
 		sync.RWMutex
 		entries map[stats.Tuple]*stats.Data
 	}
-	mux chan stats.StatUpdate
+	mux            chan stats.StatUpdate
+	statAgeTimeout chan *stats.Data
 }
 
 func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data) *Collector {
@@ -27,7 +32,8 @@ func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data)
 			sync.RWMutex
 			entries map[stats.Tuple]*stats.Data
 		}{entries: make(map[stats.Tuple]*stats.Data)},
-		mux: make(chan stats.StatUpdate),
+		mux:            make(chan stats.StatUpdate),
+		statAgeTimeout: make(chan *stats.Data),
 	}
 }
 
@@ -50,6 +56,8 @@ func (c *Collector) startStatsCollectionAndReporting() {
 		select {
 		case update := <-c.mux:
 			c.applyStatUpdate(update)
+		case data := <-c.statAgeTimeout:
+			c.expireEntry(data)
 		}
 	}
 }
@@ -76,10 +84,12 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 			update.InPackets,
 			update.InBytes,
 			update.OutPackets,
-			update.OutBytes)
+			update.OutBytes,
+			DefaultAgeTimeout)
 		if update.Tp != (stats.TracePoint{}) {
 			data.AddTrace(update.Tp)
 		}
+		c.registerAgeTimeout(data.AgeTimer(), data)
 		c.epStats.entries[update.Tuple] = data
 		return
 	}
@@ -101,6 +111,21 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		data.ReplaceTrace(update.Tp)
 	}
 	c.epStats.entries[update.Tuple] = data
+}
+
+func (c *Collector) expireEntry(data *stats.Data) {
+	fmt.Println("expireEntry: Timer expired for data: ", data)
+	tuple := data.Tuple()
+	delete(c.epStats.entries, tuple)
+}
+
+func (c *Collector) registerAgeTimeout(timer *time.Timer, data *stats.Data) {
+	// Wait for timer to fire and send the corresponding expired data to be
+	// deleted.
+	go func() {
+		<-timer.C
+		c.statAgeTimeout <- data
+	}()
 }
 
 func (c *Collector) PrintStats() {

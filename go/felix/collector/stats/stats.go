@@ -120,12 +120,15 @@ func NewTuple(src net.IP, dst net.IP, proto int, l4Src int, l4Dst int) *Tuple {
 }
 
 type Data struct {
-	tuple       Tuple
-	wlEpKey     model.WorkloadEndpointKey
-	ctrIn       Counter
-	ctrOut      Counter
-	trace       *Trace
-	lastUpdated time.Time
+	tuple      Tuple
+	wlEpKey    model.WorkloadEndpointKey
+	ctrIn      Counter
+	ctrOut     Counter
+	trace      *Trace
+	createdAt  time.Time
+	updatedAt  time.Time
+	ageTimeout time.Duration
+	ageTimer   *time.Timer
 }
 
 func NewData(tuple Tuple,
@@ -133,19 +136,32 @@ func NewData(tuple Tuple,
 	inPackets int,
 	inBytes int,
 	outPackets int,
-	outBytes int) *Data {
+	outBytes int,
+	duration time.Duration) *Data {
 	return &Data{
-		tuple:       tuple,
-		wlEpKey:     wlEpKey,
-		ctrIn:       Counter{packets: inPackets, bytes: inBytes},
-		ctrOut:      Counter{packets: inPackets, bytes: inBytes},
-		trace:       NewTrace(),
-		lastUpdated: time.Now(),
+		tuple:      tuple,
+		wlEpKey:    wlEpKey,
+		ctrIn:      Counter{packets: inPackets, bytes: inBytes},
+		ctrOut:     Counter{packets: inPackets, bytes: inBytes},
+		trace:      NewTrace(),
+		createdAt:  time.Now(),
+		updatedAt:  time.Now(),
+		ageTimeout: duration,
+		ageTimer:   time.NewTimer(duration),
 	}
 }
 
 func (d *Data) touch() {
-	d.lastUpdated = time.Now()
+	d.updatedAt = time.Now()
+	d.ResetAgeTimeout()
+}
+
+func (d *Data) AgeTimer() *time.Timer {
+	return d.ageTimer
+}
+
+func (d *Data) ResetAgeTimeout() {
+	d.ageTimer.Reset(d.ageTimeout)
 }
 
 func (d *Data) Trace() *Trace {
@@ -154,6 +170,10 @@ func (d *Data) Trace() *Trace {
 
 func (d *Data) Action() RuleAction {
 	return d.trace.action
+}
+
+func (d *Data) Tuple() Tuple {
+	return d.tuple
 }
 
 func (d *Data) UpdateCountersIn(packets int, bytes int) {
