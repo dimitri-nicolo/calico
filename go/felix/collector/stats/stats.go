@@ -189,12 +189,20 @@ func (d *Data) UpdateCountersOut(packets int, bytes int) {
 }
 
 func (d *Data) SetCountersIn(packets int, bytes int) {
+	if d.ctrIn.packets == packets && d.ctrIn.bytes == bytes {
+		// Counters are exactly the same. Don't make any changes.
+		return
+	}
 	d.ctrIn.packets = packets
 	d.ctrIn.bytes = bytes
 	d.touch()
 }
 
 func (d *Data) SetCountersOut(packets int, bytes int) {
+	if d.ctrOut.packets == packets && d.ctrOut.bytes == bytes {
+		// Counters are exactly the same. Don't make any changes.
+		return
+	}
 	d.ctrOut.packets = packets
 	d.ctrOut.bytes = bytes
 	d.touch()
