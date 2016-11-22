@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/projectcalico/felix/go/felix/jitter"
 	"github.com/tigera/libcalico-go-private/lib/backend/model"
 )
 
@@ -116,15 +117,17 @@ func NewTuple(src net.IP, dst net.IP, proto int, l4Src int, l4Dst int) *Tuple {
 }
 
 type Data struct {
-	tuple      Tuple
-	wlEpKey    model.WorkloadEndpointKey
-	ctrIn      Counter
-	ctrOut     Counter
-	trace      *Trace
-	createdAt  time.Time
-	updatedAt  time.Time
-	ageTimeout time.Duration
-	ageTimer   *time.Timer
+	Tuple          Tuple
+	WlEpKey        model.WorkloadEndpointKey
+	ctrIn          Counter
+	ctrOut         Counter
+	Trace          *Trace
+	createdAt      time.Time
+	updatedAt      time.Time
+	ageTimeout     time.Duration
+	ageTimer       *time.Timer
+	exportTicker   *jitter.Ticker
+	stopTickerChan chan bool
 }
 
 func NewData(tuple Tuple,
@@ -133,17 +136,20 @@ func NewData(tuple Tuple,
 	inBytes int,
 	outPackets int,
 	outBytes int,
-	duration time.Duration) *Data {
+	duration time.Duration,
+	exportInterval time.Duration) *Data {
 	return &Data{
-		tuple:      tuple,
-		wlEpKey:    wlEpKey,
-		ctrIn:      Counter{packets: inPackets, bytes: inBytes},
-		ctrOut:     Counter{packets: inPackets, bytes: inBytes},
-		trace:      NewTrace(),
-		createdAt:  time.Now(),
-		updatedAt:  time.Now(),
-		ageTimeout: duration,
-		ageTimer:   time.NewTimer(duration),
+		Tuple:          tuple,
+		WlEpKey:        wlEpKey,
+		ctrIn:          Counter{packets: inPackets, bytes: inBytes},
+		ctrOut:         Counter{packets: inPackets, bytes: inBytes},
+		Trace:          NewTrace(),
+		createdAt:      time.Now(),
+		updatedAt:      time.Now(),
+		ageTimeout:     duration,
+		ageTimer:       time.NewTimer(duration),
+		exportTicker:   jitter.NewTicker(exportInterval, exportInterval/10),
+		stopTickerChan: make(chan bool),
 	}
 }
 
@@ -156,20 +162,31 @@ func (d *Data) AgeTimer() *time.Timer {
 	return d.ageTimer
 }
 
+func (d *Data) ExportTicker() *jitter.Ticker {
+	return d.exportTicker
+}
+
+func (d *Data) StopTickerChan() chan bool {
+	return d.stopTickerChan
+}
+
 func (d *Data) ResetAgeTimeout() {
+	// FIXME(doublek): Resetting a timer is a more complex operation. The call to
+	// Reset() here will not work according to docs which define the correct way
+	// to do this.
 	d.ageTimer.Reset(d.ageTimeout)
 }
 
-func (d *Data) Trace() *Trace {
-	return d.trace
-}
-
 func (d *Data) Action() RuleAction {
-	return d.trace.action
+	return d.Trace.action
 }
 
-func (d *Data) Tuple() Tuple {
-	return d.tuple
+func (d *Data) CountersIn() Counter {
+	return d.ctrIn
+}
+
+func (d *Data) CountersOut() Counter {
+	return d.ctrOut
 }
 
 func (d *Data) UpdateCountersIn(packets int, bytes int) {
@@ -213,7 +230,7 @@ func (d *Data) ResetCounters() {
 }
 
 func (d *Data) AddTrace(tp TracePoint) error {
-	err := d.trace.add(tp)
+	err := d.Trace.add(tp)
 	if err == nil {
 		d.touch()
 	}
@@ -221,7 +238,7 @@ func (d *Data) AddTrace(tp TracePoint) error {
 }
 
 func (d *Data) ReplaceTrace(tp TracePoint) {
-	d.trace.replace(tp)
+	d.Trace.replace(tp)
 	d.touch()
 }
 
