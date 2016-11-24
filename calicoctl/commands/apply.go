@@ -49,7 +49,7 @@ Description:
   or stdin.  JSON and YAML formats are accepted.
 
   Valid resource types are node, bgpPeer, hostEndpoint, workloadEndpoint,
-  ipPool, policy, and profile.
+  ipPool, tier, policy, and profile.
 
   When applying a resource:
   -  if the resource does not already exist (as determined by it's primary

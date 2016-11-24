@@ -51,7 +51,7 @@ Description:
   JSON and YAML formats are accepted.
 
   Valid resource types are node, bgpPeer, hostEndpoint, workloadEndpoint,
-  ipPool, policy, and profile.
+  ipPool, tier, policy, and profile.
 
   Attempting to create a resource that already exists is treated as a
   terminating error unless the --skip-exists flag is set.  If this flag is set,
