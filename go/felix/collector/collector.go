@@ -8,6 +8,7 @@ import (
 
 	"github.com/projectcalico/felix/go/felix/jitter"
 	"github.com/tigera/felix-private/go/felix/collector/stats"
+	"github.com/tigera/felix-private/go/felix/ipfix"
 )
 
 // TODO(doublek): Need to hook these into configuration
@@ -22,9 +23,10 @@ type Collector struct {
 	mux            chan stats.StatUpdate
 	statAgeTimeout chan *stats.Data
 	statTicker     *jitter.Ticker
+	exportSink     chan<- *ipfix.ExportRecord
 }
 
-func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data) *Collector {
+func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data, exportSink chan<- *ipfix.ExportRecord) *Collector {
 	return &Collector{
 		sources:        sources,
 		sinks:          sinks,
@@ -32,6 +34,7 @@ func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data)
 		mux:            make(chan stats.StatUpdate),
 		statAgeTimeout: make(chan *stats.Data),
 		statTicker:     jitter.NewTicker(ExportingInterval, ExportingInterval/10),
+		exportSink:     exportSink,
 	}
 }
 
@@ -132,7 +135,7 @@ func (c *Collector) exportStat() {
 }
 
 func (c *Collector) exportEntry(data *stats.Data) {
-	fmt.Println("exportEntry: data: ", fmtEntry(data))
+	c.exportSink <- data.ToExportRecord()
 }
 
 func (c *Collector) PrintStats() {

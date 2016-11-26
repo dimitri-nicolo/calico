@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/projectcalico/felix/go/felix/jitter"
+	"github.com/tigera/felix-private/go/felix/ipfix"
 	"github.com/tigera/libcalico-go-private/lib/backend/model"
 )
 
@@ -227,6 +227,25 @@ func (d *Data) AddRuleTracePoint(tp RuleTracePoint) error {
 func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
 	d.RuleTrace.replaceRuleTracePoint(tp)
 	d.touch()
+}
+
+func (d *Data) ToExportRecord() *ipfix.ExportRecord {
+	return &ipfix.ExportRecord{
+		FlowStart:               d.createdAt,
+		FlowEnd:                 time.Now(),
+		OctetTotalCount:         d.ctrIn.bytes,
+		ReverseOctetTotalCount:  d.ctrOut.bytes,
+		PacketTotalCount:        d.ctrIn.packets,
+		ReversePacketTotalCount: d.ctrOut.packets,
+
+		SourceIPv4Address:      net.ParseIP(d.Tuple.src),
+		DestinationIPv4Address: net.ParseIP(d.Tuple.dst),
+
+		SourceTransportPort:      d.Tuple.l4Src,
+		DestinationTransportPort: d.Tuple.l4Dst,
+		ProtocolIdentifier:       d.Tuple.proto,
+		FlowEndReason:            0x01,
+	}
 }
 
 type CounterType string
