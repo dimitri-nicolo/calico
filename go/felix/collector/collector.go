@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/projectcalico/felix/go/felix/jitter"
 	"github.com/tigera/felix-private/go/felix/collector/stats"
 )
 
@@ -24,7 +25,7 @@ type Collector struct {
 	}
 	mux            chan stats.StatUpdate
 	statAgeTimeout chan *stats.Data
-	statExporter   chan stats.Data
+	statTicker     *jitter.Ticker
 }
 
 func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data) *Collector {
@@ -37,7 +38,7 @@ func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data)
 		}{entries: make(map[stats.Tuple]*stats.Data)},
 		mux:            make(chan stats.StatUpdate),
 		statAgeTimeout: make(chan *stats.Data),
-		statExporter:   make(chan stats.Data),
+		statTicker:     jitter.NewTicker(ExportingInterval, ExportingInterval/10),
 	}
 }
 
@@ -58,8 +59,8 @@ func (c *Collector) startStatsCollectionAndReporting() {
 			c.applyStatUpdate(update)
 		case data := <-c.statAgeTimeout:
 			c.expireEntry(data)
-		case data := <-c.statExporter:
-			c.exportEntry(data)
+		case <-c.statTicker.C:
+			c.exportStat()
 		}
 	}
 }
@@ -87,13 +88,11 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 			update.InBytes,
 			update.OutPackets,
 			update.OutBytes,
-			DefaultAgeTimeout,
-			ExportingInterval)
-		if update.Tp != (stats.TracePoint{}) {
-			data.AddTrace(update.Tp)
+			DefaultAgeTimeout)
+		if update.Tp != (stats.RuleTracePoint{}) {
+			data.AddRuleTracePoint(update.Tp)
 		}
 		c.registerAgeTimer(data)
-		c.registerPeriodicExporter(data)
 		c.epStats.entries[update.Tuple] = data
 		return
 	}
@@ -108,11 +107,11 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 	}
 	data.UpdateCountersIn(update.InPackets, update.InBytes)
 	data.UpdateCountersOut(update.OutPackets, update.OutBytes)
-	err := data.AddTrace(update.Tp)
+	err := data.AddRuleTracePoint(update.Tp)
 	if err != nil {
-		c.exportEntry(*data)
+		c.exportEntry(data)
 		data.ResetCounters()
-		data.ReplaceTrace(update.Tp)
+		data.ReplaceRuleTracePoint(update.Tp)
 	}
 	c.epStats.entries[update.Tuple] = data
 }
@@ -120,8 +119,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 func (c *Collector) expireEntry(data *stats.Data) {
 	fmt.Println("expireEntry: Timer expired for data: ", fmtEntry(data))
 	tuple := data.Tuple
-	data.StopTickerChan() <- true
-	c.exportEntry(*data)
+	c.exportEntry(data)
 	delete(c.epStats.entries, tuple)
 }
 
@@ -135,30 +133,15 @@ func (c *Collector) registerAgeTimer(data *stats.Data) {
 	}()
 }
 
-func (c *Collector) registerPeriodicExporter(data *stats.Data) {
-	ticker := data.ExportTicker()
-	go func() {
-		defer func() {
-			ticker.Stop()
-		}()
-		select {
-		case <-time.After(InitialExportDelayTime):
-		case <-data.StopTickerChan():
-			return
-		}
-		for {
-			select {
-			case <-ticker.C:
-				c.statExporter <- *data
-			case <-data.StopTickerChan():
-				return
-			}
-		}
-	}()
+func (c *Collector) exportStat() {
+	//fmt.Println("exportEntry: data: ", fmtEntry(&data))
+	for _, data := range c.epStats.entries {
+		c.exportEntry(data)
+	}
 }
 
-func (c *Collector) exportEntry(data stats.Data) {
-	fmt.Println("exportEntry: data: ", fmtEntry(&data))
+func (c *Collector) exportEntry(data *stats.Data) {
+	fmt.Println("exportEntry: data: ", fmtEntry(data))
 }
 
 func (c *Collector) PrintStats() {
@@ -169,5 +152,5 @@ func (c *Collector) PrintStats() {
 }
 
 func fmtEntry(data *stats.Data) string {
-	return fmt.Sprintf("%+v: %+v Trace: %+v", data.Tuple, *data, *(data.Trace))
+	return fmt.Sprintf("%+v: %+v RuleTrace: %+v", data.Tuple, *data, *(data.RuleTrace))
 }

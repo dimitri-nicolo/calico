@@ -11,11 +11,11 @@ import (
 	"github.com/tigera/libcalico-go-private/lib/backend/model"
 )
 
-const TracePathInitLen = 10
+const RuleTracePathInitLen = 10
 
 var (
-	TracePointConflict = errors.New("Conflict in TracePoint")
-	TracePointExists   = errors.New("TracePoint Exists")
+	RuleTracePointConflict = errors.New("Conflict in RuleTracePoint")
+	RuleTracePointExists   = errors.New("RuleTracePoint Exists")
 )
 
 type RuleAction string
@@ -38,7 +38,7 @@ type Counter struct {
 	bytes   int
 }
 
-type TracePoint struct {
+type RuleTracePoint struct {
 	TierID   string
 	PolicyID string
 	Action   RuleAction
@@ -46,30 +46,30 @@ type TracePoint struct {
 }
 
 // Represents a trace of the rules that a packet hit
-type Trace struct {
-	path   []TracePoint
+type RuleTrace struct {
+	path   []RuleTracePoint
 	action RuleAction
 }
 
-func NewTrace() *Trace {
-	return &Trace{
-		path: make([]TracePoint, TracePathInitLen),
+func NewRuleTrace() *RuleTrace {
+	return &RuleTrace{
+		path: make([]RuleTracePoint, RuleTracePathInitLen),
 	}
 }
 
-func (t *Trace) Len() int {
+func (t *RuleTrace) Len() int {
 	return len(t.path)
 }
 
-func (t *Trace) add(tp TracePoint) error {
+func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	existingTp := t.path[tp.Index]
 	switch {
-	case existingTp == (TracePoint{}):
+	case existingTp == (RuleTracePoint{}):
 		// Position is empty, insert and be done.
 		t.path[tp.Index] = tp
 	case t.Len() < tp.Index:
 		// Insertion point greater than current length. Grow and then insert.
-		newPath := make([]TracePoint, t.Len()+TracePathInitLen)
+		newPath := make([]RuleTracePoint, t.Len()+RuleTracePathInitLen)
 		copy(newPath, t.path)
 		t.path = newPath
 		t.path[tp.Index] = tp
@@ -77,7 +77,7 @@ func (t *Trace) add(tp TracePoint) error {
 		// Nothing to do here - maybe a duplicate notification or kernel conntrack
 		// expired. Just skip.
 	default:
-		return TracePointConflict
+		return RuleTracePointConflict
 	}
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
@@ -85,14 +85,14 @@ func (t *Trace) add(tp TracePoint) error {
 	return nil
 }
 
-func (t *Trace) replace(tp TracePoint) {
+func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	if tp.Action == NextTierAction {
 		t.path[tp.Index] = tp
 		return
 	}
 	// New tracepoint is not a next-tier action truncate at this index.
 	t.path[tp.Index] = tp
-	newPath := make([]TracePoint, t.Len())
+	newPath := make([]RuleTracePoint, t.Len())
 	copy(newPath, t.path[:tp.Index])
 	t.path = newPath
 	t.action = tp.Action
@@ -117,17 +117,15 @@ func NewTuple(src net.IP, dst net.IP, proto int, l4Src int, l4Dst int) *Tuple {
 }
 
 type Data struct {
-	Tuple          Tuple
-	WlEpKey        model.WorkloadEndpointKey
-	ctrIn          Counter
-	ctrOut         Counter
-	Trace          *Trace
-	createdAt      time.Time
-	updatedAt      time.Time
-	ageTimeout     time.Duration
-	ageTimer       *time.Timer
-	exportTicker   *jitter.Ticker
-	stopTickerChan chan bool
+	Tuple      Tuple
+	WlEpKey    model.WorkloadEndpointKey
+	ctrIn      Counter
+	ctrOut     Counter
+	RuleTrace  *RuleTrace
+	createdAt  time.Time
+	updatedAt  time.Time
+	ageTimeout time.Duration
+	ageTimer   *time.Timer
 }
 
 func NewData(tuple Tuple,
@@ -136,20 +134,17 @@ func NewData(tuple Tuple,
 	inBytes int,
 	outPackets int,
 	outBytes int,
-	duration time.Duration,
-	exportInterval time.Duration) *Data {
+	duration time.Duration) *Data {
 	return &Data{
-		Tuple:          tuple,
-		WlEpKey:        wlEpKey,
-		ctrIn:          Counter{packets: inPackets, bytes: inBytes},
-		ctrOut:         Counter{packets: inPackets, bytes: inBytes},
-		Trace:          NewTrace(),
-		createdAt:      time.Now(),
-		updatedAt:      time.Now(),
-		ageTimeout:     duration,
-		ageTimer:       time.NewTimer(duration),
-		exportTicker:   jitter.NewTicker(exportInterval, exportInterval/10),
-		stopTickerChan: make(chan bool),
+		Tuple:      tuple,
+		WlEpKey:    wlEpKey,
+		ctrIn:      Counter{packets: inPackets, bytes: inBytes},
+		ctrOut:     Counter{packets: outPackets, bytes: outBytes},
+		RuleTrace:  NewRuleTrace(),
+		createdAt:  time.Now(),
+		updatedAt:  time.Now(),
+		ageTimeout: duration,
+		ageTimer:   time.NewTimer(duration),
 	}
 }
 
@@ -162,14 +157,6 @@ func (d *Data) AgeTimer() *time.Timer {
 	return d.ageTimer
 }
 
-func (d *Data) ExportTicker() *jitter.Ticker {
-	return d.exportTicker
-}
-
-func (d *Data) StopTickerChan() chan bool {
-	return d.stopTickerChan
-}
-
 func (d *Data) ResetAgeTimeout() {
 	// FIXME(doublek): Resetting a timer is a more complex operation. The call to
 	// Reset() here will not work according to docs which define the correct way
@@ -178,7 +165,7 @@ func (d *Data) ResetAgeTimeout() {
 }
 
 func (d *Data) Action() RuleAction {
-	return d.Trace.action
+	return d.RuleTrace.action
 }
 
 func (d *Data) CountersIn() Counter {
@@ -229,16 +216,16 @@ func (d *Data) ResetCounters() {
 	d.touch()
 }
 
-func (d *Data) AddTrace(tp TracePoint) error {
-	err := d.Trace.add(tp)
+func (d *Data) AddRuleTracePoint(tp RuleTracePoint) error {
+	err := d.RuleTrace.addRuleTracePoint(tp)
 	if err == nil {
 		d.touch()
 	}
 	return err
 }
 
-func (d *Data) ReplaceTrace(tp TracePoint) {
-	d.Trace.replace(tp)
+func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
+	d.RuleTrace.replaceRuleTracePoint(tp)
 	d.touch()
 }
 
@@ -252,7 +239,7 @@ type StatUpdate struct {
 	OutPackets int
 	OutBytes   int
 	Dir        int
-	Tp         TracePoint
+	Tp         RuleTracePoint
 }
 
 func NewStatUpdate(tuple Tuple,
@@ -261,7 +248,7 @@ func NewStatUpdate(tuple Tuple,
 	inBytes int,
 	outPackets int,
 	outBytes int,
-	tp TracePoint) *StatUpdate {
+	tp RuleTracePoint) *StatUpdate {
 	return &StatUpdate{
 		Tuple:      tuple,
 		WlEpKey:    wlEpKey,

@@ -174,7 +174,7 @@ func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error)
 	wlEpKeySrc := lookupEndpoint(ctTuple.Src)
 	wlEpKeyDst := lookupEndpoint(ctTuple.Dst)
 	// Force conntrack to have empty tracep
-	tp := stats.TracePoint{}
+	tp := stats.RuleTracePoint{}
 	switch {
 	case wlEpKeySrc != nil && wlEpKeyDst != nil:
 		// Local to Local Traffic
@@ -257,7 +257,7 @@ func lookupEndpoint(ipAddr net.IP) *model.WorkloadEndpointKey {
 	}
 }
 
-func lookupRule(prefix string) stats.TracePoint {
+func lookupRule(prefix string) stats.RuleTracePoint {
 	var action stats.RuleAction
 	switch prefix[4] {
 	case 'A':
@@ -268,7 +268,7 @@ func lookupRule(prefix string) stats.TracePoint {
 		action = stats.NextTierAction
 	}
 	idx, _ := strconv.Atoi(prefix[5 : len(prefix)-1])
-	return stats.TracePoint{
+	return stats.RuleTracePoint{
 		TierID:   prefix[0:2],
 		PolicyID: prefix[2:4],
 		Action:   action,
