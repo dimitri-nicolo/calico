@@ -96,22 +96,20 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		c.epStats.entries[update.Tuple] = data
 		return
 	}
-	// If it does exist then update it, carefully.
-	if update.Tp == (stats.TracePoint{}) {
-		// We don't have to mess with the trace. Simply update the counters and be
-		// done with it.
+	if update.CtrType == stats.AbsoluteCounter {
 		data.SetCountersIn(update.InPackets, update.InBytes)
 		data.SetCountersOut(update.OutPackets, update.OutBytes)
-		c.epStats.entries[update.Tuple] = data
-		return
+	} else {
+		data.IncreaseCountersIn(update.InPackets, update.InBytes)
+		data.IncreaseCountersOut(update.OutPackets, update.OutBytes)
 	}
-	data.UpdateCountersIn(update.InPackets, update.InBytes)
-	data.UpdateCountersOut(update.OutPackets, update.OutBytes)
-	err := data.AddRuleTracePoint(update.Tp)
-	if err != nil {
-		c.exportEntry(data)
-		data.ResetCounters()
-		data.ReplaceRuleTracePoint(update.Tp)
+	if update.Tp != (stats.RuleTracePoint{}) {
+		err := data.AddRuleTracePoint(update.Tp)
+		if err != nil {
+			c.exportEntry(data)
+			data.ResetCounters()
+			data.ReplaceRuleTracePoint(update.Tp)
+		}
 	}
 	c.epStats.entries[update.Tuple] = data
 }

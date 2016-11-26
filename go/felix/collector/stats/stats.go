@@ -176,13 +176,13 @@ func (d *Data) CountersOut() Counter {
 	return d.ctrOut
 }
 
-func (d *Data) UpdateCountersIn(packets int, bytes int) {
+func (d *Data) IncreaseCountersIn(packets int, bytes int) {
 	d.ctrIn.packets += packets
 	d.ctrIn.bytes += bytes
 	d.touch()
 }
 
-func (d *Data) UpdateCountersOut(packets int, bytes int) {
+func (d *Data) IncreaseCountersOut(packets int, bytes int) {
 	d.ctrOut.packets += packets
 	d.ctrOut.bytes += bytes
 	d.touch()
@@ -229,6 +229,13 @@ func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
 	d.touch()
 }
 
+type CounterType string
+
+const (
+	AbsoluteCounter CounterType = "absolute"
+	DeltaCounter    CounterType = "delta"
+)
+
 // TODO(doublek): The current StatUpdate doesn't support deletes. Always
 // assumes that it is a add or update.
 type StatUpdate struct {
@@ -238,6 +245,7 @@ type StatUpdate struct {
 	InBytes    int
 	OutPackets int
 	OutBytes   int
+	CtrType    CounterType
 	Dir        int
 	Tp         RuleTracePoint
 }
@@ -248,6 +256,7 @@ func NewStatUpdate(tuple Tuple,
 	inBytes int,
 	outPackets int,
 	outBytes int,
+	ctrType CounterType,
 	tp RuleTracePoint) *StatUpdate {
 	return &StatUpdate{
 		Tuple:      tuple,
@@ -256,6 +265,7 @@ func NewStatUpdate(tuple Tuple,
 		InBytes:    inBytes,
 		OutPackets: outPackets,
 		OutBytes:   outBytes,
+		CtrType:    ctrType,
 		Tp:         tp,
 	}
 }

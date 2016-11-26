@@ -84,20 +84,20 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 		var su *stats.StatUpdate
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
 		if ds.direction == stats.DirIn {
-			su = stats.NewStatUpdate(tuple, *wlEpKeyDst, numPkts, numBytes, 0, 0, tp)
+			su = stats.NewStatUpdate(tuple, *wlEpKeyDst, numPkts, numBytes, 0, 0, stats.DeltaCounter, tp)
 		} else {
-			su = stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, numPkts, numBytes, tp)
+			su = stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, numPkts, numBytes, stats.DeltaCounter, tp)
 		}
 		statUpdates = append(statUpdates, *su)
 	case wlEpKeySrc != nil:
 		// Locally originating packet
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
-		su := stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, numPkts, numBytes, tp)
+		su := stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, numPkts, numBytes, stats.DeltaCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	case wlEpKeyDst != nil:
 		// Locally terminating packet
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
-		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, numPkts, numBytes, 0, 0, tp)
+		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, numPkts, numBytes, 0, 0, stats.DeltaCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	}
 	return statUpdates, nil
@@ -183,26 +183,26 @@ func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error)
 		tuple = extractTupleFromCtEntryTuple(ctTuple)
 		su = stats.NewStatUpdate(tuple, *wlEpKeySrc,
 			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
-			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes, tp)
+			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes, stats.AbsoluteCounter, tp)
 		statUpdates = append(statUpdates, *su)
 		tuple = extractTupleFromCtEntryTupleReverse(ctTuple)
 		su = stats.NewStatUpdate(tuple, *wlEpKeyDst,
 			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes, tp)
+			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes, stats.AbsoluteCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	case wlEpKeySrc != nil:
 		// Locally originating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple)
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
 			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
-			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes, tp)
+			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes, stats.AbsoluteCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	case wlEpKeyDst != nil:
 		// Locally terminating packet
 		tuple := extractTupleFromCtEntryTupleReverse(ctTuple)
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
 			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes, tp)
+			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes, stats.AbsoluteCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	}
 	return statUpdates, nil
