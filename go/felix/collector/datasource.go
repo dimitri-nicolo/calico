@@ -79,20 +79,20 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 	// rule is hit.
 	if wlEpKeySrc != nil {
 		// Locally originating packet
-		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
+		tuple := extractTupleFromNflogTuple(nPkt.Tuple, false)
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, numPkts, numBytes, stats.DeltaCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	}
 	if wlEpKeyDst != nil {
 		// Locally terminating packet
-		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
+		tuple := extractTupleFromNflogTuple(nPkt.Tuple, false)
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, numPkts, numBytes, 0, 0, stats.DeltaCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	}
 	return statUpdates, nil
 }
 
-func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) stats.Tuple {
+func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse bool) stats.Tuple {
 	var l4Src, l4Dst int
 	if nflogTuple.Proto == 1 {
 		l4Src = nflogTuple.L4Src.Id
@@ -101,19 +101,11 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) stats.Tup
 		l4Src = nflogTuple.L4Src.Port
 		l4Dst = nflogTuple.L4Dst.Port
 	}
-	return *stats.NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
-}
-
-func extractTupleFromNflogTupleReverse(nflogTuple nfnetlink.NflogPacketTuple) stats.Tuple {
-	var l4Src, l4Dst int
-	if nflogTuple.Proto == 1 {
-		l4Src = nflogTuple.L4Src.Id
-		l4Dst = int(uint16(nflogTuple.L4Dst.Type)<<8 | uint16(nflogTuple.L4Dst.Code))
+	if !reverse {
+		return *stats.NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
 	} else {
-		l4Src = nflogTuple.L4Src.Port
-		l4Dst = nflogTuple.L4Dst.Port
+		return *stats.NewTuple(nflogTuple.Dst, nflogTuple.Src, nflogTuple.Proto, l4Dst, l4Src)
 	}
-	return *stats.NewTuple(nflogTuple.Dst, nflogTuple.Src, nflogTuple.Proto, l4Dst, l4Src)
 }
 
 type ConntrackDataSource struct {
@@ -166,7 +158,7 @@ func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error)
 	tp := stats.RuleTracePoint{}
 	if wlEpKeySrc != nil {
 		// Locally originating packet
-		tuple := extractTupleFromCtEntryTuple(ctTuple)
+		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
 			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
 			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes, stats.AbsoluteCounter, tp)
@@ -174,7 +166,7 @@ func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error)
 	}
 	if wlEpKeyDst != nil {
 		// Locally terminating packet
-		tuple := extractTupleFromCtEntryTupleReverse(ctTuple)
+		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
 			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
 			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes, stats.AbsoluteCounter, tp)
@@ -183,7 +175,7 @@ func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error)
 	return statUpdates, nil
 }
 
-func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) stats.Tuple {
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats.Tuple {
 	var l4Src, l4Dst int
 	if ctTuple.ProtoNum == 1 {
 		l4Src = ctTuple.L4Src.Id
@@ -192,19 +184,11 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) stats.Tuple {
 		l4Src = ctTuple.L4Src.Port
 		l4Dst = ctTuple.L4Dst.Port
 	}
-	return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
-}
-
-func extractTupleFromCtEntryTupleReverse(ctTuple nfnetlink.CtTuple) stats.Tuple {
-	var l4Src, l4Dst int
-	if ctTuple.ProtoNum == 1 {
-		l4Src = ctTuple.L4Src.Id
-		l4Dst = int(uint16(ctTuple.L4Dst.Type)<<8 | uint16(ctTuple.L4Dst.Code))
+	if !reverse {
+		return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
 	} else {
-		l4Src = ctTuple.L4Src.Port
-		l4Dst = ctTuple.L4Dst.Port
+		return *stats.NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
 	}
-	return *stats.NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
 }
 
 // Stubs
