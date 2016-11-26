@@ -125,7 +125,7 @@ var _ = Describe("with config option API tests", func() {
 		By("checking default unset value")
 		asn, err = config.GetGlobalASNumber()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(asn).To(Equal(numorstring.ASNumber(64511)))
+		Expect(asn).To(Equal(numorstring.ASNumber(64512)))
 
 		By("checking default set value to true")
 		err = config.SetGlobalASNumber(11111)
@@ -196,5 +196,137 @@ var _ = Describe("with config option API tests", func() {
 		ip, err = config.GetNodeIPIPTunnelAddress("node1")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ip).To(BeNil())
+	})
+
+	It("should handle global felix config", func() {
+		var err error
+		var value string
+		var set bool
+
+		By("checking unset value")
+		value, set, err = config.GetFelixConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+
+		By("setting value and checking it")
+		err = config.SetFelixConfig("TEST", "", "VALUE")
+		Expect(err).NotTo(HaveOccurred())
+
+		value, set, err = config.GetFelixConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal("VALUE"))
+		Expect(set).To(BeTrue())
+
+		By("unsetting value and checking it")
+		err = config.UnsetFelixConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		value, set, err = config.GetFelixConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+	})
+
+	It("should handle per-node felix config", func() {
+		var err error
+		var value string
+		var set bool
+
+		By("checking unset value")
+		value, set, err = config.GetFelixConfig("TEST", "NODE")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+
+		By("setting value and checking it")
+		err = config.SetFelixConfig("TEST", "NODE", "VALUE")
+		Expect(err).NotTo(HaveOccurred())
+
+		value, set, err = config.GetFelixConfig("TEST", "NODE")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal("VALUE"))
+		Expect(set).To(BeTrue())
+
+		By("checking global value is still unset")
+		value, set, err = config.GetFelixConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+
+		By("unsetting value and checking it")
+		err = config.UnsetFelixConfig("TEST", "NODE")
+		Expect(err).NotTo(HaveOccurred())
+
+		value, set, err = config.GetFelixConfig("TEST", "NODE")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+	})
+
+	It("should handle global BGP config", func() {
+		var err error
+		var value string
+		var set bool
+
+		By("checking unset value")
+		value, set, err = config.GetBGPConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+
+		By("setting value and checking it")
+		err = config.SetBGPConfig("TEST", "", "VALUE")
+		Expect(err).NotTo(HaveOccurred())
+
+		value, set, err = config.GetBGPConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal("VALUE"))
+		Expect(set).To(BeTrue())
+
+		By("unsetting value and checking it")
+		err = config.UnsetBGPConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		value, set, err = config.GetBGPConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+	})
+
+	It("should handle per-node BGP config", func() {
+		var err error
+		var value string
+		var set bool
+
+		By("checking unset value")
+		value, set, err = config.GetBGPConfig("TEST", "NODE")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+
+		By("setting value and checking it")
+		err = config.SetBGPConfig("TEST", "NODE", "VALUE")
+		Expect(err).NotTo(HaveOccurred())
+
+		value, set, err = config.GetBGPConfig("TEST", "NODE")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal("VALUE"))
+		Expect(set).To(BeTrue())
+
+		By("checking global value is still unset")
+		value, set, err = config.GetBGPConfig("TEST", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
+
+		By("unsetting value and checking it")
+		err = config.UnsetBGPConfig("TEST", "NODE")
+		Expect(err).NotTo(HaveOccurred())
+
+		value, set, err = config.GetBGPConfig("TEST", "NODE")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(value).To(Equal(""))
+		Expect(set).To(BeFalse())
 	})
 })
