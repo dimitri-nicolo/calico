@@ -61,7 +61,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 	wlEpKeySrc := lookupEndpoint(nflogTuple.Src)
 	wlEpKeyDst := lookupEndpoint(nflogTuple.Dst)
 	tp := lookupRule(nPkt.Prefix)
-	var numPkts, numBytes int
+	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
 	if tp.Action == stats.DenyAction {
 		// NFLog based counters make sense only for denied packets.
 		// Allowed packet counters are updated via conntrack datasource.
@@ -73,6 +73,18 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 		numBytes = 0
 	}
 
+	if ds.direction == stats.DirIn {
+		inPkts = numPkts
+		inBytes = numBytes
+		outPkts = 0
+		outBytes = 0
+	} else {
+		inPkts = 0
+		inBytes = 0
+		outPkts = numPkts
+		outBytes = numBytes
+	}
+
 	// FIXME(doublek): We should not increase packet counters for the same packet
 	// hitting multiple rules more than once. Right now it is.
 	// One way to do this could be, only increment counters when the actual "allow/deny"
@@ -80,13 +92,13 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 	if wlEpKeySrc != nil {
 		// Locally originating packet
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple, false)
-		su := stats.NewStatUpdate(tuple, *wlEpKeySrc, 0, 0, numPkts, numBytes, stats.DeltaCounter, tp)
+		su := stats.NewStatUpdate(tuple, *wlEpKeySrc, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	}
 	if wlEpKeyDst != nil {
 		// Locally terminating packet
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple, false)
-		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, numPkts, numBytes, 0, 0, stats.DeltaCounter, tp)
+		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	}
 	return statUpdates, nil
