@@ -4,7 +4,6 @@ package collector
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/projectcalico/felix/go/felix/jitter"
@@ -17,12 +16,9 @@ const InitialExportDelayTime = time.Duration(2) * time.Second
 const ExportingInterval = time.Duration(1) * time.Second
 
 type Collector struct {
-	sources []<-chan stats.StatUpdate
-	sinks   []chan<- *stats.Data
-	epStats struct {
-		sync.RWMutex
-		entries map[stats.Tuple]*stats.Data
-	}
+	sources        []<-chan stats.StatUpdate
+	sinks          []chan<- *stats.Data
+	epStats        map[stats.Tuple]*stats.Data
 	mux            chan stats.StatUpdate
 	statAgeTimeout chan *stats.Data
 	statTicker     *jitter.Ticker
@@ -30,12 +26,9 @@ type Collector struct {
 
 func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data) *Collector {
 	return &Collector{
-		sources: sources,
-		sinks:   sinks,
-		epStats: struct {
-			sync.RWMutex
-			entries map[stats.Tuple]*stats.Data
-		}{entries: make(map[stats.Tuple]*stats.Data)},
+		sources:        sources,
+		sinks:          sinks,
+		epStats:        make(map[stats.Tuple]*stats.Data),
 		mux:            make(chan stats.StatUpdate),
 		statAgeTimeout: make(chan *stats.Data),
 		statTicker:     jitter.NewTicker(ExportingInterval, ExportingInterval/10),
@@ -78,7 +71,7 @@ func (c *Collector) mergeDataSources() {
 }
 
 func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
-	data, ok := c.epStats.entries[update.Tuple]
+	data, ok := c.epStats[update.Tuple]
 	// If the tuple entry does not exist, create it.
 	if !ok {
 		data = stats.NewData(
@@ -93,7 +86,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 			data.AddRuleTracePoint(update.Tp)
 		}
 		c.registerAgeTimer(data)
-		c.epStats.entries[update.Tuple] = data
+		c.epStats[update.Tuple] = data
 		return
 	}
 	if update.CtrType == stats.AbsoluteCounter {
@@ -111,14 +104,14 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 			data.ReplaceRuleTracePoint(update.Tp)
 		}
 	}
-	c.epStats.entries[update.Tuple] = data
+	c.epStats[update.Tuple] = data
 }
 
 func (c *Collector) expireEntry(data *stats.Data) {
 	fmt.Println("expireEntry: Timer expired for data: ", fmtEntry(data))
 	tuple := data.Tuple
 	c.exportEntry(data)
-	delete(c.epStats.entries, tuple)
+	delete(c.epStats, tuple)
 }
 
 func (c *Collector) registerAgeTimer(data *stats.Data) {
@@ -133,7 +126,7 @@ func (c *Collector) registerAgeTimer(data *stats.Data) {
 
 func (c *Collector) exportStat() {
 	//fmt.Println("exportEntry: data: ", fmtEntry(&data))
-	for _, data := range c.epStats.entries {
+	for _, data := range c.epStats {
 		c.exportEntry(data)
 	}
 }
@@ -143,8 +136,8 @@ func (c *Collector) exportEntry(data *stats.Data) {
 }
 
 func (c *Collector) PrintStats() {
-	fmt.Printf("Number of Entries: %v\n", len(c.epStats.entries))
-	for _, v := range c.epStats.entries {
+	fmt.Printf("Number of Entries: %v\n", len(c.epStats))
+	for _, v := range c.epStats {
 		fmt.Println(fmtEntry(v))
 	}
 }
