@@ -164,6 +164,9 @@ var (
 
 type FlowEndReasonType int
 
+// Valid values of ExportRecord.FlowEndReason. Refer to
+// http://www.iana.org/assignments/ipfix/ipfix.xhtml
+// for an explanation of the different values below.
 const (
 	IdleTimeout     FlowEndReasonType = 0x01
 	ActiveTimeout   FlowEndReasonType = 0x02
@@ -172,6 +175,9 @@ const (
 	LackOfResources FlowEndReasonType = 0x05
 )
 
+// An IPFIX record that is exported to IPFIX collectors. Refer to
+// http://www.iana.org/assignments/ipfix/ipfix.xhtml
+// for descriptions of the different fields that are exported.
 type ExportRecord struct {
 	FlowStart               time.Time
 	FlowEnd                 time.Time
@@ -201,6 +207,10 @@ type IPFIXExporter struct {
 	source     <-chan *ExportRecord
 }
 
+// IPFIXExporter connects (and/or sends) IPFIX messages (ExportRecord objects),
+// that are sent over the source channel, to a IPFIX collector listening on
+// `host:port` over `transport`. transport can be either "tcp" or "udp" depending
+// on the IPFIX collectors configuration.
 func NewIPFIXExporter(host net.IP, port int, transport string, source <-chan *ExportRecord) *IPFIXExporter {
 	fbData := C.fixbuf_init(C.CString(string(host)), C.CString(strconv.Itoa(port)), fbTransport[transport])
 	return &IPFIXExporter{

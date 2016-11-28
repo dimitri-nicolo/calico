@@ -16,6 +16,11 @@ const DefaultAgeTimeout = time.Duration(10) * time.Second
 const InitialExportDelayTime = time.Duration(2) * time.Second
 const ExportingInterval = time.Duration(1) * time.Second
 
+// A Collector (a StatsManager really) collects StatUpdates from data sources
+// and stores them as a stats.Data object in a map keyed by stats.Tuple.
+// It also periodically exports all entries of this map to a IPFIX exporter.
+// All data source channels and IPFIX exporter channel must be specified when
+// creating the collector.
 type Collector struct {
 	sources        []<-chan stats.StatUpdate
 	sinks          []chan<- *stats.Data
@@ -44,11 +49,11 @@ func (c *Collector) Start() {
 }
 
 func (c *Collector) startStatsCollectionAndReporting() {
-	// 1. c.mux for incoming datasources
-	// 2. a agetimeout channel where all timeouts are sent in say from
-	//    registerAgeTimer
-	// 3. A periodic send thingy.
-	// 4. A done channel for stopping and cleaning up stats collector.
+	// When a collector is started, we respond to the following events:
+	// 1. StatUpdates for incoming datasources (chan c.mux).
+	// 2. stats.Data age timeouts via the c.statAgeTimeout channel.
+	// 3. A periodic exporter via the c.statTicker channel.
+	// 4. A done channel for stopping and cleaning up stats collector (TODO).
 	for {
 		select {
 		case update := <-c.mux:
@@ -75,8 +80,8 @@ func (c *Collector) mergeDataSources() {
 
 func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 	data, ok := c.epStats[update.Tuple]
-	// If the tuple entry does not exist, create it.
 	if !ok {
+		// The entry does not exist. Go ahead and create one.
 		data = stats.NewData(
 			update.Tuple,
 			update.WlEpKey,
@@ -92,6 +97,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		c.epStats[update.Tuple] = data
 		return
 	}
+	// Entry does exists. Go agead and update it.
 	if update.CtrType == stats.AbsoluteCounter {
 		data.SetCountersIn(update.InPackets, update.InBytes)
 		data.SetCountersOut(update.OutPackets, update.OutBytes)

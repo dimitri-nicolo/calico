@@ -47,7 +47,9 @@ type RuleTracePoint struct {
 
 var EmptyRuleTracePoint = RuleTracePoint{}
 
-// Represents a trace of the rules that a packet hit
+// Represents the list of rules (i.e, a Trace) that a packet hits. The action
+// of a RuleTrace object is the final RuleTracePoint action that is not a
+// next-tier action.
 type RuleTrace struct {
 	path   []RuleTracePoint
 	action RuleAction
@@ -100,6 +102,8 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	t.action = tp.Action
 }
 
+// Tuple represents a 5-Tuple value that identifies a connection. This is
+// a hashable object and can be used as a map's key.
 type Tuple struct {
 	src   string
 	dst   string
@@ -118,6 +122,14 @@ func NewTuple(src net.IP, dst net.IP, proto int, l4Src int, l4Dst int) *Tuple {
 	}
 }
 
+// A Data object contains metadata and statistics such as rule counters and
+// age of a connection represented as a Tuple.
+// Age Timer Implementation Note: Each Data entry's age is implemented using
+// time.Timer. Any actions that modifiy statistics or metadata of a Data entry
+// object will extend the life timer of the object. Each method of Data will
+// specify if it updates or doesn't update the age timer. When creating a new Data
+// object a timeout is specified and this fires when the there have been no updates
+// on the object for specified duration.
 type Data struct {
 	Tuple      Tuple
 	WlEpKey    model.WorkloadEndpointKey
@@ -152,20 +164,23 @@ func NewData(tuple Tuple,
 
 func (d *Data) touch() {
 	d.updatedAt = time.Now()
-	d.ResetAgeTimeout()
+	d.resetAgeTimeout()
 }
 
-func (d *Data) AgeTimer() *time.Timer {
-	return d.ageTimer
-}
-
-func (d *Data) ResetAgeTimeout() {
+func (d *Data) resetAgeTimeout() {
 	// FIXME(doublek): Resetting a timer is a more complex operation. The call to
 	// Reset() here will not work according to docs which define the correct way
 	// to do this.
 	d.ageTimer.Reset(d.ageTimeout)
 }
 
+// Return the internal Timer object. Use the Timers internal channel to detect
+// when the object's age expires.
+func (d *Data) AgeTimer() *time.Timer {
+	return d.ageTimer
+}
+
+// Returns the final action of the RuleTrace
 func (d *Data) Action() RuleAction {
 	return d.RuleTrace.action
 }
@@ -178,18 +193,24 @@ func (d *Data) CountersOut() Counter {
 	return d.ctrOut
 }
 
+// Add packets and bytes to the In Counters' values. Use the IncreaseCounters*
+// methods when the source of packets/bytes are delta values.
 func (d *Data) IncreaseCountersIn(packets int, bytes int) {
 	d.ctrIn.packets += packets
 	d.ctrIn.bytes += bytes
 	d.touch()
 }
 
+// Add packets and bytes to the Out Counters' values. Use the IncreaseCounters*
+// methods when the source of packets/bytes are delta values.
 func (d *Data) IncreaseCountersOut(packets int, bytes int) {
 	d.ctrOut.packets += packets
 	d.ctrOut.bytes += bytes
 	d.touch()
 }
 
+// Set In Counters' values to packets and bytes. Use the SetCounters* methods
+// when the source if packets/bytes are absolute values.
 func (d *Data) SetCountersIn(packets int, bytes int) {
 	if d.ctrIn.packets == packets && d.ctrIn.bytes == bytes {
 		// Counters are exactly the same. Don't make any changes.
@@ -200,6 +221,8 @@ func (d *Data) SetCountersIn(packets int, bytes int) {
 	d.touch()
 }
 
+// Set In Counters' values to packets and bytes. Use the SetCounters* methods
+// when the source if packets/bytes are absolute values.
 func (d *Data) SetCountersOut(packets int, bytes int) {
 	if d.ctrOut.packets == packets && d.ctrOut.bytes == bytes {
 		// Counters are exactly the same. Don't make any changes.
@@ -257,8 +280,11 @@ const (
 	DeltaCounter    CounterType = "delta"
 )
 
-// TODO(doublek): The current StatUpdate doesn't support deletes. Always
-// assumes that it is a add or update.
+// A StatUpdate represents an statistics update to be made on a `Tuple`.
+// All attributes are required. However, when a RuleTracePoint cannot be
+// specified, use the `EmptyRuleTracePoint` value to specify this.
+// The current StatUpdate doesn't support deletes and all StatUpdate-s are
+// either "Add" or "Update" operations.
 type StatUpdate struct {
 	Tuple      Tuple
 	WlEpKey    model.WorkloadEndpointKey
@@ -267,7 +293,6 @@ type StatUpdate struct {
 	OutPackets int
 	OutBytes   int
 	CtrType    CounterType
-	Dir        int
 	Tp         RuleTracePoint
 }
 

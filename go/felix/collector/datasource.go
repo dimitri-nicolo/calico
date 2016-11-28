@@ -65,7 +65,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 	if tp.Action == stats.DenyAction {
 		// NFLog based counters make sense only for denied packets.
 		// Allowed packet counters are updated via conntrack datasource.
-		// FIXME(doublek): The above assumption is not true in the case of NOTRACK.
+		// FIXME(doublek): This assumption is not true in the case of NOTRACK.
 		numPkts = 1
 		numBytes = nPkt.Bytes
 	} else {
@@ -159,7 +159,7 @@ func (ds *ConntrackDataSource) startPolling() {
 }
 
 func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error) {
-	// There can be a maximum of 2 stat updates per Nflog Packet, in the case of
+	// There can be a maximum of 2 stat updates per ctentry, in the case of
 	// local-to-local traffic.
 	statUpdates := []stats.StatUpdate{}
 	// The last entry is the tuple entry for endpoints
