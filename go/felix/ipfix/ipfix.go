@@ -165,11 +165,11 @@ var (
 type FlowEndReasonType int
 
 const (
-	IdleTimeout     = 0x01
-	ActiveTimeout   = 0x02
-	EndOfFlow       = 0x03
-	ForcedEnd       = 0x04
-	LackOfResources = 0x05
+	IdleTimeout     FlowEndReasonType = 0x01
+	ActiveTimeout   FlowEndReasonType = 0x02
+	EndOfFlow       FlowEndReasonType = 0x03
+	ForcedEnd       FlowEndReasonType = 0x04
+	LackOfResources FlowEndReasonType = 0x05
 )
 
 type ExportRecord struct {
