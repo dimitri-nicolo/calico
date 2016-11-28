@@ -102,7 +102,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 	if update.Tp != (stats.RuleTracePoint{}) {
 		err := data.AddRuleTracePoint(update.Tp)
 		if err != nil {
-			c.exportEntry(data)
+			c.exportEntry(data.ToExportRecord(ipfix.ForcedEnd))
 			data.ResetCounters()
 			data.ReplaceRuleTracePoint(update.Tp)
 		}
@@ -113,7 +113,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 func (c *Collector) expireEntry(data *stats.Data) {
 	fmt.Println("expireEntry: Timer expired for data: ", fmtEntry(data))
 	tuple := data.Tuple
-	c.exportEntry(data)
+	c.exportEntry(data.ToExportRecord(ipfix.IdleTimeout))
 	delete(c.epStats, tuple)
 }
 
@@ -130,12 +130,12 @@ func (c *Collector) registerAgeTimer(data *stats.Data) {
 func (c *Collector) exportStat() {
 	//fmt.Println("exportEntry: data: ", fmtEntry(&data))
 	for _, data := range c.epStats {
-		c.exportEntry(data)
+		c.exportEntry(data.ToExportRecord(ipfix.ActiveTimeout))
 	}
 }
 
-func (c *Collector) exportEntry(data *stats.Data) {
-	c.exportSink <- data.ToExportRecord()
+func (c *Collector) exportEntry(record *ipfix.ExportRecord) {
+	c.exportSink <- record
 }
 
 func (c *Collector) PrintStats() {

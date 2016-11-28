@@ -229,7 +229,7 @@ func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
 	d.touch()
 }
 
-func (d *Data) ToExportRecord() *ipfix.ExportRecord {
+func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecord {
 	return &ipfix.ExportRecord{
 		FlowStart:               d.createdAt,
 		FlowEnd:                 time.Now(),
@@ -244,7 +244,7 @@ func (d *Data) ToExportRecord() *ipfix.ExportRecord {
 		SourceTransportPort:      d.Tuple.l4Src,
 		DestinationTransportPort: d.Tuple.l4Dst,
 		ProtocolIdentifier:       d.Tuple.proto,
-		FlowEndReason:            0x01,
+		FlowEndReason:            reason,
 	}
 }
 

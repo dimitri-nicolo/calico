@@ -55,13 +55,13 @@ typedef struct fixbufData_st {
 
 static fbInfoModel_t *infoModel;
 
-fixbufData_t fixbuf_init(char *host, char *port) {
+fixbufData_t fixbuf_init(char *host, char *port, fbTransport_t transport) {
 	GError *err = NULL;
 	infoModel = fbInfoModelAlloc();
 
 	fbConnSpec_t exSocketDef;
 
-	exSocketDef.transport = FB_TCP;
+	exSocketDef.transport = transport;
 	exSocketDef.host = host;
 	exSocketDef.svc = port;
 	// TODO(doublek): SSL Support.
@@ -162,6 +162,16 @@ var (
 	IPFIXExporterError = errors.New("Conflict in RuleTracePoint")
 )
 
+type FlowEndReasonType int
+
+const (
+	IdleTimeout     = 0x01
+	ActiveTimeout   = 0x02
+	EndOfFlow       = 0x03
+	ForcedEnd       = 0x04
+	LackOfResources = 0x05
+)
+
 type ExportRecord struct {
 	FlowStart               time.Time
 	FlowEnd                 time.Time
@@ -176,7 +186,12 @@ type ExportRecord struct {
 	SourceTransportPort      int
 	DestinationTransportPort int
 	ProtocolIdentifier       int
-	FlowEndReason            int
+	FlowEndReason            FlowEndReasonType
+}
+
+var fbTransport = map[string]C.fbTransport_t{
+	"tcp": C.FB_TCP,
+	"udp": C.FB_UDP,
 }
 
 type IPFIXExporter struct {
@@ -186,8 +201,8 @@ type IPFIXExporter struct {
 	source     <-chan *ExportRecord
 }
 
-func NewIPFIXExporter(host net.IP, port int, source <-chan *ExportRecord) *IPFIXExporter {
-	fbData := C.fixbuf_init(C.CString(string(host)), C.CString(strconv.Itoa(port)))
+func NewIPFIXExporter(host net.IP, port int, transport string, source <-chan *ExportRecord) *IPFIXExporter {
+	fbData := C.fixbuf_init(C.CString(string(host)), C.CString(strconv.Itoa(port)), fbTransport[transport])
 	return &IPFIXExporter{
 		host:       host,
 		port:       port,
