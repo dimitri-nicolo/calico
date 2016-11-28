@@ -167,13 +167,13 @@ func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error)
 	wlEpKeySrc := lookupEndpoint(ctTuple.Src)
 	wlEpKeyDst := lookupEndpoint(ctTuple.Dst)
 	// Force conntrack to have empty tracep
-	tp := stats.RuleTracePoint{}
 	if wlEpKeySrc != nil {
 		// Locally originating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
 			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
-			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes, stats.AbsoluteCounter, tp)
+			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
+			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
 	if wlEpKeyDst != nil {
@@ -181,7 +181,8 @@ func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error)
 		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
 			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes, stats.AbsoluteCounter, tp)
+			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
+			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
 	return statUpdates, nil

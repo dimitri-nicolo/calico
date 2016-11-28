@@ -85,7 +85,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 			update.OutPackets,
 			update.OutBytes,
 			DefaultAgeTimeout)
-		if update.Tp != (stats.RuleTracePoint{}) {
+		if update.Tp != stats.EmptyRuleTracePoint {
 			data.AddRuleTracePoint(update.Tp)
 		}
 		c.registerAgeTimer(data)
@@ -99,7 +99,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		data.IncreaseCountersIn(update.InPackets, update.InBytes)
 		data.IncreaseCountersOut(update.OutPackets, update.OutBytes)
 	}
-	if update.Tp != (stats.RuleTracePoint{}) {
+	if update.Tp != stats.EmptyRuleTracePoint {
 		err := data.AddRuleTracePoint(update.Tp)
 		if err != nil {
 			c.exportEntry(data.ToExportRecord(ipfix.ForcedEnd))

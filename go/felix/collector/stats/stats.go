@@ -45,6 +45,8 @@ type RuleTracePoint struct {
 	Index    int
 }
 
+var EmptyRuleTracePoint = RuleTracePoint{}
+
 // Represents a trace of the rules that a packet hit
 type RuleTrace struct {
 	path   []RuleTracePoint
