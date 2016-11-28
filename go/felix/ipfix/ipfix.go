@@ -55,6 +55,10 @@ typedef struct fixbufData_st {
 
 static fbInfoModel_t *infoModel;
 
+char *gchar_to_char(gchar *text) {
+	return (char *)text;
+}
+
 fixbufData_t fixbuf_init(char *host, char *port, fbTransport_t transport) {
 	GError *err = NULL;
 	infoModel = fbInfoModelAlloc();
@@ -123,15 +127,12 @@ GError * fixbuf_export(fixbufData_t fbData, exportRecord_t rec) {
 	}
 
 	if(!fBufSetInternalTemplate(fbData.ebuf, fbData.etid, &err)) {
-		printf("Couldn't fBufSetInternalTemplate %s\n", err->message);
 		return err;
 	}
 	if(!fBufSetExportTemplate(fbData.ebuf, fbData.etid_ext, &err)) {
-		printf("error fBufSetExportTemplate %s\n", err->message);
 		return err;
 	}
 	if(!fBufAppend(fbData.ebuf, (uint8_t*)&myrec, sizeof(myrec), &err)) {
-		printf("error fBufAppend %s\n", err->message);
 		//if(!fBufEmit(fbData.ebuf, &err)){
 		//	printf("error fBufEmit %s\n", err->message);
 		//	return err;
@@ -150,16 +151,12 @@ import "C"
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"time"
-)
 
-// TODO(doublek): Convert Gerror to errors type
-var (
-	IPFIXExporterError = errors.New("Conflict in RuleTracePoint")
+	log "github.com/Sirupsen/logrus"
 )
 
 type FlowEndReasonType int
@@ -226,9 +223,12 @@ func (ie *IPFIXExporter) Start() {
 }
 
 func (ie *IPFIXExporter) startExporting() {
-	for er := range ie.source {
-		fmt.Println("exporting --- ", er)
-		ie.export(er)
+	for erec := range ie.source {
+		log.Debugf("IPFIXExporter: Exporting %v", erec)
+		err := ie.export(erec)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 }
 
@@ -248,12 +248,9 @@ func (ie *IPFIXExporter) export(data *ExportRecord) error {
 		protocolIdentifier:       C.uint8_t(data.ProtocolIdentifier),
 		flowEndReason:            C.uint8_t(data.FlowEndReason),
 	}
-	fmt.Println("--- ", rec)
 	gerror := C.fixbuf_export(ie.fixbufData, rec)
 	if gerror != nil {
-		// TODO(doublek): Convert Gerror to error
-		fmt.Println("Error:", gerror.message)
-		return IPFIXExporterError
+		return fmt.Errorf("Couldn't export %v Reason: %v", rec, C.GoString(C.gchar_to_char(gerror.message)))
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/jitter"
 	"github.com/tigera/felix-private/go/felix/collector/stats"
 	"github.com/tigera/felix-private/go/felix/ipfix"
@@ -117,7 +118,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 }
 
 func (c *Collector) expireEntry(data *stats.Data) {
-	fmt.Println("expireEntry: Timer expired for data: ", fmtEntry(data))
+	log.Infof("Timer expired for entry: %v", fmtEntry(data))
 	tuple := data.Tuple
 	c.exportEntry(data.ToExportRecord(ipfix.IdleTimeout))
 	delete(c.epStats, tuple)
@@ -134,20 +135,21 @@ func (c *Collector) registerAgeTimer(data *stats.Data) {
 }
 
 func (c *Collector) exportStat() {
-	//fmt.Println("exportEntry: data: ", fmtEntry(&data))
+	log.Debug("Exporting Stats")
 	for _, data := range c.epStats {
 		c.exportEntry(data.ToExportRecord(ipfix.ActiveTimeout))
 	}
 }
 
 func (c *Collector) exportEntry(record *ipfix.ExportRecord) {
+	log.Debugf("Exporting entry %v", record)
 	c.exportSink <- record
 }
 
 func (c *Collector) PrintStats() {
-	fmt.Printf("Number of Entries: %v\n", len(c.epStats))
+	log.Infof("Number of Entries: %v", len(c.epStats))
 	for _, v := range c.epStats {
-		fmt.Println(fmtEntry(v))
+		log.Info(fmtEntry(v))
 	}
 }
 

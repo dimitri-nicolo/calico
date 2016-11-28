@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/tigera/felix-private/go/felix/collector/stats"
 	"github.com/tigera/libcalico-go-private/lib/backend/model"
 	"github.com/tigera/nfnetlink"
@@ -29,7 +30,7 @@ func NewNflogDataSource(sink chan<- stats.StatUpdate, groupNum int, dir stats.Di
 }
 
 func (ds *NflogDataSource) Start() {
-	fmt.Println("Starting NFLOG Data Source for direction", ds.direction)
+	log.Infof("Starting NFLOG Data Source for direction %v group %v", ds.direction, ds.groupNum)
 	seedRand()
 	go ds.subscribeToNflog()
 }
@@ -40,13 +41,13 @@ func (ds *NflogDataSource) subscribeToNflog() {
 	defer close(done)
 	err := nfnetlink.NflogSubscribe(ds.groupNum, ch, done)
 	if err != nil {
-		fmt.Println("Error: ", err)
+		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
 	}
 	for nflogPacket := range ch {
 		statUpdates, err := ds.convertNflogPktToStat(nflogPacket)
 		if err != nil {
-			fmt.Println("Error: ", err)
+			log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacket)
 			continue
 		}
 		for _, su := range statUpdates {
@@ -131,7 +132,7 @@ func NewConntrackDataSource(sink chan<- stats.StatUpdate) *ConntrackDataSource {
 }
 
 func (ds *ConntrackDataSource) Start() {
-	fmt.Println("Starting Conntrack Data Source")
+	log.Info("Starting Conntrack Data Source")
 	seedRand()
 	go ds.startPolling()
 }
@@ -141,14 +142,14 @@ func (ds *ConntrackDataSource) startPolling() {
 	for _ = range c {
 		ctentries, err := nfnetlink.ConntrackList()
 		if err != nil {
-			fmt.Println("Error: ", err)
+			log.Errorf("Error: ConntrackList: %v", err)
 			return
 		}
 		// TODO(doublek): Possibly do this in a separate goroutine?
 		for _, ctentry := range ctentries {
 			statUpdates, err := convertCtEntryToStat(ctentry)
 			if err != nil {
-				fmt.Println("Error: ", err)
+				log.Errorf("Couldn't convert ctentry %v to StatUpdate", ctentry)
 				continue
 			}
 			for _, su := range statUpdates {
