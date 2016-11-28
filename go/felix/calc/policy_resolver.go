@@ -144,22 +144,33 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 			nil, []tierInfo{})
 		return nil
 	}
+
 	applicableTiers := []tierInfo{}
-	tier := pr.sortedTierData
-	tierMatches := false
-	filteredTier := tierInfo{
-		Name:  tier.Name,
-		Order: tier.Order,
-	}
-	for _, polKV := range tier.OrderedPolicies {
-		log.Debugf("Checking if policy %v matches %v", polKV.Key, endpointID)
-		if pr.endpointIDToPolicyIDs.Contains(endpointID, polKV.Key) {
-			log.Debugf("Policy %v matches %v", polKV.Key, endpointID)
-			tierMatches = true
-			filteredTier.OrderedPolicies = append(filteredTier.OrderedPolicies,
-				polKV)
+	for _, tier := range pr.sortedTierData {
+		if !tier.Valid {
+			log.Debugf("Tier %v invalid, skipping", tier.Name)
+		}
+		tierMatches := false
+		filteredTier := tierInfo{
+			Name:  tier.Name,
+			Order: tier.Order,
+			Valid: true,
+		}
+		for _, polKV := range tier.OrderedPolicies {
+			log.Debugf("Checking if policy %v matches %v", polKV.Key, endpointID)
+			if pr.endpointIDToPolicyIDs.Contains(endpointID, polKV.Key) {
+				log.Debugf("Policy %v matches %v", polKV.Key, endpointID)
+				tierMatches = true
+				filteredTier.OrderedPolicies = append(filteredTier.OrderedPolicies,
+					polKV)
+			}
+		}
+		if tierMatches {
+			log.Debugf("Tier %v matches %v", tier.Name, endpointID)
+			applicableTiers = append(applicableTiers, filteredTier)
 		}
 	}
+
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
 	pr.Callbacks.OnEndpointTierUpdate(endpointID.(model.Key),
 		endpoint, applicableTiers)
