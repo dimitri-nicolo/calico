@@ -11,21 +11,6 @@ import (
 	"github.com/tigera/libcalico-go-private/lib/backend/model"
 )
 
-const RuleTracePathInitLen = 10
-
-var (
-	RuleTracePointConflict = errors.New("Conflict in RuleTracePoint")
-	RuleTracePointExists   = errors.New("RuleTracePoint Exists")
-)
-
-type RuleAction string
-
-const (
-	AllowAction    RuleAction = "allow"
-	DenyAction     RuleAction = "deny"
-	NextTierAction RuleAction = "next-tier"
-)
-
 type Direction string
 
 const (
@@ -38,6 +23,24 @@ type Counter struct {
 	bytes   int
 }
 
+type RuleAction string
+
+const (
+	AllowAction    RuleAction = "allow"
+	DenyAction     RuleAction = "deny"
+	NextTierAction RuleAction = "next-tier"
+)
+
+const RuleTraceInitLen = 10
+
+var (
+	RuleTracePointConflict = errors.New("Conflict in RuleTracePoint")
+	RuleTracePointExists   = errors.New("RuleTracePoint Exists")
+)
+
+// A RuleTracePoint represents a rule and the tier and a policy that contains
+// it. The `Index` specifies the absolute position of a RuleTracePoint in the
+// RuleTrace list.
 type RuleTracePoint struct {
 	TierID   string
 	PolicyID string
@@ -57,7 +60,7 @@ type RuleTrace struct {
 
 func NewRuleTrace() *RuleTrace {
 	return &RuleTrace{
-		path: make([]RuleTracePoint, RuleTracePathInitLen),
+		path: make([]RuleTracePoint, RuleTraceInitLen),
 	}
 }
 
