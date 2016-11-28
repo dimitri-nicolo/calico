@@ -215,10 +215,6 @@ func (d *Data) IncreaseCountersOut(packets int, bytes int) {
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetCountersIn(packets int, bytes int) {
-	if d.ctrIn.packets == packets && d.ctrIn.bytes == bytes {
-		// Counters are exactly the same. Don't make any changes.
-		return
-	}
 	d.ctrIn.packets = packets
 	d.ctrIn.bytes = bytes
 	d.touch()
@@ -227,10 +223,6 @@ func (d *Data) SetCountersIn(packets int, bytes int) {
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetCountersOut(packets int, bytes int) {
-	if d.ctrOut.packets == packets && d.ctrOut.bytes == bytes {
-		// Counters are exactly the same. Don't make any changes.
-		return
-	}
 	d.ctrOut.packets = packets
 	d.ctrOut.bytes = bytes
 	d.touch()
