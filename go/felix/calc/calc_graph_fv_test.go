@@ -254,7 +254,7 @@ var initialisedStore = empty.withKVUpdates(
 
 // withPolicy adds a tier and policy containing selectors for all and b=="b"
 var withPolicy = initialisedStore.withKVUpdates(
-	KVPair{Key: PolicyKey{Name: "pol-1"}, Value: &policy1_order20},
+	KVPair{Key: PolicyKey{Name: "pol-1", Tier: "default"}, Value: &policy1_order20},
 ).withName("with policy")
 
 // localEp1WithPolicy adds a local endpoint to the mix.  It matches all and b=="b".
@@ -343,9 +343,9 @@ func policyOrderState(policyOrders [3]float64, expectedOrder [3]string) State {
 	}
 	state := initialisedStore.withKVUpdates(
 		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
-		KVPair{Key: PolicyKey{Name: "pol-1"}, Value: &policies[0]},
-		KVPair{Key: PolicyKey{Name: "pol-2"}, Value: &policies[1]},
-		KVPair{Key: PolicyKey{Name: "pol-3"}, Value: &policies[2]},
+		KVPair{Key: PolicyKey{Name: "pol-1", Tier: "default"}, Value: &policies[0]},
+		KVPair{Key: PolicyKey{Name: "pol-2", Tier: "default"}, Value: &policies[1]},
+		KVPair{Key: PolicyKey{Name: "pol-3", Tier: "default"}, Value: &policies[2]},
 	).withIPSet(allSelectorId, []string{
 		"10.0.0.1", // ep1
 		"fc00:fe11::1",
