@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/tigera/felix-private/go/felix/ipfix"
-	"github.com/tigera/libcalico-go-private/lib/backend/model"
+	"github.com/projectcalico/felix/go/felix/ipfix"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 type Direction string

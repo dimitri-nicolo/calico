@@ -10,8 +10,8 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/tigera/felix-private/go/felix/collector/stats"
-	"github.com/tigera/libcalico-go-private/lib/backend/model"
+	"github.com/projectcalico/felix/go/felix/collector/stats"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
 

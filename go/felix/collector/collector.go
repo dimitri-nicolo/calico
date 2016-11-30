@@ -7,9 +7,9 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/projectcalico/felix/go/felix/collector/stats"
+	"github.com/projectcalico/felix/go/felix/ipfix"
 	"github.com/projectcalico/felix/go/felix/jitter"
-	"github.com/tigera/felix-private/go/felix/collector/stats"
-	"github.com/tigera/felix-private/go/felix/ipfix"
 )
 
 // TODO(doublek): Need to hook these into configuration
