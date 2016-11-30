@@ -169,6 +169,10 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 		return []iptables.Rule{
 			{
 				Match:  match,
+				Action: iptables.SetMarkAction{r.IptablesMarkDrop},
+			},
+			{
+				Match:  iptables.Match().MarkSet(r.IptablesMarkDrop),
 				Action: iptables.DropAction{},
 			},
 		}

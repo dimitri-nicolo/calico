@@ -173,6 +173,7 @@ configRetry:
 				IptablesMarkAccept:    0x1,
 				IptablesMarkNextTier:  0x2,
 				IptablesMarkEndpoints: 0x4,
+				IptablesMarkDrop:      0x8,
 			},
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)

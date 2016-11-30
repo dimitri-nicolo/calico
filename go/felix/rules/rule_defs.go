@@ -83,6 +83,7 @@ type Config struct {
 
 	IptablesMarkAccept    uint32
 	IptablesMarkNextTier  uint32
+	IptablesMarkDrop      uint32
 	IptablesMarkEndpoints uint32
 }
 
