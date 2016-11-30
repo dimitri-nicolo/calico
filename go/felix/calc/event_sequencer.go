@@ -239,7 +239,7 @@ func (buf *EventSequencer) flushPolicyDeletes() {
 	buf.pendingPolicyDeletes.Iter(func(item interface{}) error {
 		buf.Callback(&proto.ActivePolicyRemove{
 			Id: &proto.PolicyID{
-				Tier: key.Tier,
+				Tier: item.(model.PolicyKey).Tier,
 				Name: item.(model.PolicyKey).Name,
 			},
 		})
