@@ -43,10 +43,9 @@ var logrusToSyslogLevel = map[log.Level]syslog.Priority{
 	log.PanicLevel: syslog.LOG_CRIT,
 }
 
-// ConfigureEarlyLogging does minimal logging config for early startup.
-// It either disables non-panic logging entirely or, if the
-// FELIX_LOGSEVERITYSCREEN environment variable is set, enables the given log
-// level to screen.
+// ConfigureEarlyLogging installs our logging adapters, and enables early logging to stderr
+// if it is enabled by either the FELIX_EARLYLOGSEVERITYSCREEN or FELIX_LOGSEVERITYSCREEN
+// environment variable.
 func ConfigureEarlyLogging() {
 	// Replace logrus' formatter with a custom one using our time format,
 	// shared with the Python code.
@@ -55,11 +54,24 @@ func ConfigureEarlyLogging() {
 	// Install a hook that adds file/line no information.
 	log.AddHook(&ContextHook{})
 
-	logLevelScreen := log.PanicLevel
-	if rawLogLevel := os.Getenv("FELIX_LOGSEVERITYSCREEN"); rawLogLevel != "" {
+	// First try the early-only environment variable.  Since the normal
+	// config processing doesn't know about that variable, normal config
+	// will override it once it's loaded.
+	rawLogLevel := os.Getenv("FELIX_EARLYLOGSEVERITYSCREEN")
+	if rawLogLevel == "" {
+		// Early-only flag not set, look for the normal config-owned
+		// variable.
+		rawLogLevel = os.Getenv("FELIX_LOGSEVERITYSCREEN")
+	}
+
+	// Default to logging errors.
+	logLevelScreen := log.ErrorLevel
+	if rawLogLevel != "" {
 		parsedLevel, err := log.ParseLevel(rawLogLevel)
 		if err == nil {
 			logLevelScreen = parsedLevel
+		} else {
+			log.WithError(err).Error("Failed to parse early log level, defaulting to error.")
 		}
 	}
 	log.SetLevel(logLevelScreen)
@@ -174,17 +186,26 @@ func (f *Formatter) Format(entry *log.Entry) ([]byte, error) {
 	stamp := entry.Time.Format("2006-01-02 15:04:05.000")
 	levelStr := strings.ToUpper(entry.Level.String())
 	pid := os.Getpid()
-	fileName := entry.Data["file"]
-	lineNo := entry.Data["line"]
+	fileName := entry.Data["__file__"]
+	lineNo := entry.Data["__line__"]
 	formatted := fmt.Sprintf("%s [%s][%d] %v %v: %v",
 		stamp, levelStr, pid, fileName, lineNo, entry.Message)
 	b.WriteString(formatted)
 
 	for _, key := range keys {
-		if key == "file" || key == "line" {
+		if key == "__file__" || key == "__line__" {
 			continue
 		}
-		b.WriteString(fmt.Sprintf(" %v=%v", key, entry.Data[key]))
+		var value interface{} = entry.Data[key]
+		var stringifiedValue string
+		if stringer, ok := value.(fmt.Stringer); ok {
+			// Trust the value's String() method.
+			stringifiedValue = stringer.String()
+		} else {
+			// No string method, use %#v to get a more thorough dump.
+			stringifiedValue = fmt.Sprintf("%#v", value)
+		}
+		b.WriteString(fmt.Sprintf(" %v=%v", key, stringifiedValue))
 	}
 
 	b.WriteByte('\n')
@@ -212,8 +233,8 @@ func (hook ContextHook) Fire(entry *log.Entry) error {
 		for {
 			frame, more := frames.Next()
 			if !shouldSkipFrame(frame) {
-				entry.Data["file"] = path.Base(frame.File)
-				entry.Data["line"] = frame.Line
+				entry.Data["__file__"] = path.Base(frame.File)
+				entry.Data["__line__"] = frame.Line
 				break
 			}
 			if !more {

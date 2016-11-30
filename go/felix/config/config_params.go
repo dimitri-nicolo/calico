@@ -87,8 +87,8 @@ func (source Source) Local() bool {
 // We use tags to control the parsing and validation.
 type Config struct {
 	// Configuration parameters.
-
-	DataplaneDriver string `config:"file(must-exist,executable);calico-iptables-plugin;non-zero,die-on-fail,skip-default-validation"`
+	UseInternalDataplaneDriver bool   `config:"bool;true"`
+	DataplaneDriver            string `config:"file(must-exist,executable);calico-iptables-plugin;non-zero,die-on-fail,skip-default-validation"`
 
 	DatastoreType string `config:"oneof(kubernetes,etcdv2);etcdv2;non-zero,die-on-fail"`
 
@@ -258,7 +258,7 @@ func (config *Config) EndpointReportingDelay() time.Duration {
 	return time.Duration(config.EndpointReportingDelaySecs*1000000) * time.Microsecond
 }
 
-func (config *Config) DatastoreConfig() api.ClientConfig {
+func (config *Config) DatastoreConfig() api.CalicoAPIConfig {
 	if config.DatastoreType == "kubernetes" {
 		// Create a new Client.  The client will be configured
 		// based on the provided environment.
@@ -274,15 +274,17 @@ func (config *Config) DatastoreConfig() api.ClientConfig {
 		} else {
 			etcdEndpoints = strings.Join(config.EtcdEndpoints, ",")
 		}
-		etcdCfg := &etcd.EtcdConfig{
+		etcdCfg := etcd.EtcdConfig{
 			EtcdEndpoints:  etcdEndpoints,
 			EtcdKeyFile:    config.EtcdKeyFile,
 			EtcdCertFile:   config.EtcdCertFile,
 			EtcdCACertFile: config.EtcdCaFile,
 		}
-		return api.ClientConfig{
-			BackendType:   api.EtcdV2,
-			BackendConfig: etcdCfg,
+		return api.CalicoAPIConfig{
+			Spec: api.CalicoAPIConfigSpec{
+				DatastoreType: api.EtcdV2,
+				EtcdConfig:    etcdCfg,
+			},
 		}
 	}
 }
