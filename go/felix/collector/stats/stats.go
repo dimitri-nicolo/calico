@@ -76,7 +76,7 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 		t.path[tp.Index] = tp
 	case t.Len() < tp.Index:
 		// Insertion point greater than current length. Grow and then insert.
-		newPath := make([]RuleTracePoint, t.Len()+RuleTracePathInitLen)
+		newPath := make([]RuleTracePoint, t.Len()+RuleTraceInitLen)
 		copy(newPath, t.path)
 		t.path = newPath
 		t.path[tp.Index] = tp
