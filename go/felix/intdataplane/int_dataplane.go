@@ -17,7 +17,7 @@ package intdataplane
 import (
 	"net"
 	"os"
-	"signal"
+	"os/signal"
 	"syscall"
 
 	log "github.com/Sirupsen/logrus"
