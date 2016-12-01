@@ -27,6 +27,7 @@ RUN cat /group >> /etc/group
 RUN chmod -R a+wX $GOPATH /usr/local/go
 
 # Disable cgo so that binaries we build will be fully static.
-ENV CGO_ENABLED=0
+# TODO(Matt) Properly enable CGO
+# ENV CGO_ENABLED=0
 
 WORKDIR /go/src/github.com/projectcalico/felix
