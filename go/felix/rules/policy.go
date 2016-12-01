@@ -54,7 +54,7 @@ func (r *ruleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVer
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
-		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, prefix+"-"+string(ii))...)
+		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, prefix+"-"+fmt.Sprintf("%d", ii))...)
 	}
 	return rules
 }
