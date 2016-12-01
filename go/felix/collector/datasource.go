@@ -232,7 +232,8 @@ func lookupEndpoint(ipAddr net.IP) *model.WorkloadEndpointKey {
 
 func lookupRule(prefix string) stats.RuleTracePoint {
 	var action stats.RuleAction
-	switch prefix[4] {
+	log.Infof("Looking up rule prefix %s", prefix)
+	switch prefix[0] {
 	case 'A':
 		action = stats.AllowAction
 	case 'D':
@@ -240,10 +241,11 @@ func lookupRule(prefix string) stats.RuleTracePoint {
 	case 'N':
 		action = stats.NextTierAction
 	}
-	idx, _ := strconv.Atoi(prefix[5 : len(prefix)-1])
+	// TODO (Matt): This doesn't really work
+	idx, _ := strconv.Atoi(prefix[8 : len(prefix)-1])
 	return stats.RuleTracePoint{
-		TierID:   prefix[0:2],
-		PolicyID: prefix[2:4],
+		TierID:   prefix[1:2],
+		PolicyID: prefix[3:5],
 		Action:   action,
 		Index:    idx,
 	}

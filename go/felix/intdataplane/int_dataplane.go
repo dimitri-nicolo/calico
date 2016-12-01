@@ -15,7 +15,11 @@
 package intdataplane
 
 import (
+	"os"
+
 	log "github.com/Sirupsen/logrus"
+	"github.com/projectcalico/felix/go/felix/collector"
+	"github.com/projectcalico/felix/go/felix/collector/stats"
 	"github.com/projectcalico/felix/go/felix/ifacemonitor"
 	"github.com/projectcalico/felix/go/felix/ipsets"
 	"github.com/projectcalico/felix/go/felix/iptables"
@@ -143,6 +147,42 @@ func (d *InternalDataplane) Start() {
 	go d.loopUpdatingDataplane()
 	go d.loopReportingStatus()
 	go d.ifaceMonitor.MonitorInterfaces()
+
+	// TODO (Matt): This isn't really in keeping with the surrounding code.
+	ctSink := make(chan stats.StatUpdate)
+	conntrackDataSource := collector.NewConntrackDataSource(ctSink)
+	conntrackDataSource.Start()
+
+	nfIngressSink := make(chan stats.StatUpdate)
+	nflogIngressDataSource := collector.NewNflogDataSource(nfIngressSink, 9597, stats.DirIn)
+	nflogIngressDataSource.Start()
+
+	nfEgressSink := make(chan stats.StatUpdate)
+	nflogEgressDataSource := collector.NewNflogDataSource(nfEgressSink, 9598, stats.DirOut)
+	nflogEgressDataSource.Start()
+
+	printSink := make(chan *stats.Data)
+	datasources := []<-chan stats.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
+	datasinks := []chan<- *stats.Data{printSink}
+	statsCollector := collector.NewCollector(datasources, datasinks)
+	statsCollector.Start()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGUSR2)
+
+	go func() {
+		for {
+			<-sigChan
+			statsCollector.PrintStats()
+		}
+	}()
+
+	// TODO (Matt): Replace with ipfix emit code once I'm happy up to here.
+	go func() {
+		for data := range printSink {
+			log.Info("MD4 test output data: ", data)
+		}
+	}
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
