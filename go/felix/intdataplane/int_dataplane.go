@@ -169,8 +169,7 @@ func (d *InternalDataplane) Start() {
 	//ipfixExporter := ipfix.NewIPFIXExporter(net.ParseIP("127.0.0.1"), 4739, "udp", ipfixExportSink)
 	//ipfixExporter.Start()
 	go func() {
-		for {
-			fix <- ipfixExportSink
+		for fix := range ipfixExportSink {
 			log.Info("Received ipfix export: ", fix)
 		}
 	}()
