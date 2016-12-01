@@ -145,9 +145,9 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 	// TODO(smc) Implement log action.
 	// TODO(smc) Implement log prefix.
 	// TODO(Matt) Refactor out heavily duplicated code.
-	nflogGroup uint16 := 1
+	nflogGroup := uint16(2)
 	if inbound {
-		nflogGroup = 2
+		nflogGroup = uint16(1)
 	}
 	switch protoRule.Action {
 	case "", "allow":
