@@ -165,7 +165,7 @@ func (d *InternalDataplane) Start() {
 	nflogEgressDataSource := collector.NewNflogDataSource(nfEgressSink, 2, stats.DirOut)
 	nflogEgressDataSource.Start()
 
-	ipfixExportSink := make(chan ipfix.ExportRecord)
+	ipfixExportSink := make(chan *ipfix.ExportRecord)
 	ipfixExporter := ipfix.NewIPFIXExporter(net.ParseIP("127.0.0.1"), 4739, "udp", ipfixExportSink)
 	ipfixExporter.Start()
 
