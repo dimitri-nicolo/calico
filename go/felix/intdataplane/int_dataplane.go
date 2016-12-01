@@ -165,8 +165,15 @@ func (d *InternalDataplane) Start() {
 	nflogEgressDataSource.Start()
 
 	ipfixExportSink := make(chan *ipfix.ExportRecord)
+	// TODO (Matt): Replace with real ipfix emitter
 	//ipfixExporter := ipfix.NewIPFIXExporter(net.ParseIP("127.0.0.1"), 4739, "udp", ipfixExportSink)
 	//ipfixExporter.Start()
+	go func() {
+		for {
+			fix <- ipfixExportSink
+			log.Info("Received ipfix export: ", fix)
+		}
+	}()
 
 	printSink := make(chan *stats.Data)
 	datasources := []<-chan stats.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
