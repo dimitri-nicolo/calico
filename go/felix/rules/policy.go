@@ -41,11 +41,11 @@ func (r *ruleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *
 func (r *ruleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
 	inbound := iptables.Chain{
 		Name:  ProfileChainName(PolicyInboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, true, policyID.Tier+"-"+policyID.Name),
+		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, true, profileID.Name),
 	}
 	outbound := iptables.Chain{
 		Name:  ProfileChainName(PolicyOutboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, false, policyID.Tier+"-"+policyID.Name),
+		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, false, profileID.Name),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -157,8 +157,11 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 				Action: iptables.SetMarkAction{r.IptablesMarkAccept},
 			},
 			{
-				Match:  iptables.Match().MarkSet(r.IptablesMarkAccept),
-				Action: iptables.NflogAction{nflogGroup, "A" + prefix},
+				Match: iptables.Match().MarkSet(r.IptablesMarkAccept),
+				Action: iptables.NflogAction{
+					Group:  nflogGroup,
+					Prefix: "A" + prefix,
+				},
 			},
 			{
 				Match:  iptables.Match().MarkSet(r.IptablesMarkAccept),
@@ -172,8 +175,11 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 				Action: iptables.SetMarkAction{r.IptablesMarkNextTier},
 			},
 			{
-				Match:  iptables.Match().MarkSet(r.IptablesMarkNextTier),
-				Action: iptables.NflogAction{nflogGroup, "N" + prefix},
+				Match: iptables.Match().MarkSet(r.IptablesMarkNextTier),
+				Action: iptables.NflogAction{
+					Group:  nflogGroup,
+					Prefix: "N" + prefix,
+				},
 			},
 			{
 				Match:  iptables.Match().MarkSet(r.IptablesMarkNextTier),
@@ -187,8 +193,11 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 				Action: iptables.SetMarkAction{r.IptablesMarkDrop},
 			},
 			{
-				Match:  iptables.Match().MarkSet(r.IptablesMarkDrop),
-				Action: iptables.NflogAction{nflogGroup, "D" + prefix},
+				Match: iptables.Match().MarkSet(r.IptablesMarkDrop),
+				Action: iptables.NflogAction{
+					Group:  nflogGroup,
+					Prefix: "D" + prefix,
+				},
 			},
 			{
 				Match:  iptables.Match().MarkSet(r.IptablesMarkDrop),

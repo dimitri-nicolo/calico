@@ -68,7 +68,7 @@ func (g AcceptAction) ToFragment() string {
 }
 
 type NflogAction struct {
-	Group  int
+	Group  uint16
 	Prefix string
 }
 
