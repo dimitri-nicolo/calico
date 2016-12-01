@@ -58,10 +58,13 @@ func (c *Collector) startStatsCollectionAndReporting() {
 	for {
 		select {
 		case update := <-c.mux:
+			log.Info("Stats collector received update: ", update)
 			c.applyStatUpdate(update)
 		case data := <-c.statAgeTimeout:
+			log.Info("Stats entry timed out: ", data)
 			c.expireEntry(data)
 		case <-c.statTicker.C:
+			log.Info("Stats export timer ticked")
 			c.exportStat()
 		}
 	}

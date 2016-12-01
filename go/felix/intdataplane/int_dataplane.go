@@ -15,7 +15,6 @@
 package intdataplane
 
 import (
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -166,8 +165,8 @@ func (d *InternalDataplane) Start() {
 	nflogEgressDataSource.Start()
 
 	ipfixExportSink := make(chan *ipfix.ExportRecord)
-	ipfixExporter := ipfix.NewIPFIXExporter(net.ParseIP("127.0.0.1"), 4739, "udp", ipfixExportSink)
-	ipfixExporter.Start()
+	//ipfixExporter := ipfix.NewIPFIXExporter(net.ParseIP("127.0.0.1"), 4739, "udp", ipfixExportSink)
+	//ipfixExporter.Start()
 
 	printSink := make(chan *stats.Data)
 	datasources := []<-chan stats.StatUpdate{ctSink, nfIngressSink, nfEgressSink}

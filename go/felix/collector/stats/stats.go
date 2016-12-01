@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/ipfix"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -73,9 +74,11 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	switch {
 	case existingTp == (RuleTracePoint{}):
 		// Position is empty, insert and be done.
+		log.Debug("Got new rule trace: ", tp)
 		t.path[tp.Index] = tp
 	case t.Len() < tp.Index:
 		// Insertion point greater than current length. Grow and then insert.
+		log.Debug("Got new rule trace: ", tp)
 		newPath := make([]RuleTracePoint, t.Len()+RuleTraceInitLen)
 		copy(newPath, t.path)
 		t.path = newPath
@@ -93,6 +96,7 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 }
 
 func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
+	log.Debug("Replacing rule trace: ", tp)
 	if tp.Action == NextTierAction {
 		t.path[tp.Index] = tp
 		return
