@@ -67,6 +67,15 @@ func (g AcceptAction) ToFragment() string {
 	return "--jump ACCEPT"
 }
 
+type NflogAction struct {
+	Group  int
+	Prefix string
+}
+
+func (n NflogAction) ToFragment() string {
+	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, n.Prefix)
+}
+
 type ClearMarkAction struct {
 	Mark uint32
 }

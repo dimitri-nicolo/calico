@@ -26,13 +26,14 @@ import (
 // ruleRenderer defined in rules_defs.go.
 
 func (r *ruleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain {
+	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
 	inbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyInboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion),
+		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, true, policyID.Tier+"-"+policyID.Name),
 	}
 	outbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyOutboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion),
+		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, false, policyID.Tier+"-"+policyID.Name),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -40,24 +41,25 @@ func (r *ruleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *
 func (r *ruleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
 	inbound := iptables.Chain{
 		Name:  ProfileChainName(PolicyInboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion),
+		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, true, policyID.Tier+"-"+policyID.Name),
 	}
 	outbound := iptables.Chain{
 		Name:  ProfileChainName(PolicyOutboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion),
+		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, false, policyID.Tier+"-"+policyID.Name),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
 
-func (r *ruleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8) []iptables.Rule {
+func (r *ruleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule {
 	var rules []iptables.Rule
-	for _, protoRule := range protoRules {
-		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion)...)
+	for ii, protoRule := range protoRules {
+		// TODO (Matt): Need rule hash when that's cleaned up.
+		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, prefix+"-"+string(ii))...)
 	}
 	return rules
 }
 
-func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion uint8) []iptables.Rule {
+func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule {
 	// TODO(smc) handle > 15 ports in a rule (iptables limitation)
 	match := iptables.Match()
 
@@ -142,12 +144,21 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 
 	// TODO(smc) Implement log action.
 	// TODO(smc) Implement log prefix.
+	// TODO(Matt) Refactor out heavily duplicated code.
+	nflogGroup uint16 := 1
+	if inbound {
+		nflogGroup = 2
+	}
 	switch protoRule.Action {
 	case "", "allow":
 		return []iptables.Rule{
 			{
 				Match:  match,
 				Action: iptables.SetMarkAction{r.IptablesMarkAccept},
+			},
+			{
+				Match:  iptables.Match().MarkSet(r.IptablesMarkAccept),
+				Action: iptables.NflogAction{nflogGroup, "A" + prefix},
 			},
 			{
 				Match:  iptables.Match().MarkSet(r.IptablesMarkAccept),
@@ -162,6 +173,10 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 			},
 			{
 				Match:  iptables.Match().MarkSet(r.IptablesMarkNextTier),
+				Action: iptables.NflogAction{nflogGroup, "N" + prefix},
+			},
+			{
+				Match:  iptables.Match().MarkSet(r.IptablesMarkNextTier),
 				Action: iptables.ReturnAction{},
 			},
 		}
@@ -170,6 +185,10 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 			{
 				Match:  match,
 				Action: iptables.SetMarkAction{r.IptablesMarkDrop},
+			},
+			{
+				Match:  iptables.Match().MarkSet(r.IptablesMarkDrop),
+				Action: iptables.NflogAction{nflogGroup, "D" + prefix},
 			},
 			{
 				Match:  iptables.Match().MarkSet(r.IptablesMarkDrop),
