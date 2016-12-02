@@ -77,6 +77,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		routeTableV4,
 		4,
 		config.RulesConfig.WorkloadIfacePrefixes))
+	dp.RegisterManager(newLookupManager())
 
 	if !config.DisableIPv6 {
 		natTableV6 := iptables.NewTable("nat", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix)
