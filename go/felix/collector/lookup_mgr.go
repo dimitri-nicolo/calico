@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/ip"
 	"github.com/projectcalico/felix/go/felix/proto"
@@ -34,7 +34,7 @@ type lookupManager struct {
 func newLookupManager() *lookupManager {
 	return &lookupManager{
 		endpoints: map[net.IP]*proto.WorkloadEndpointID{},
-		mutex      sync.Mutex{}
+		mutex:     sync.Mutex{},
 	}
 }
 
@@ -75,7 +75,7 @@ func (m *lookupManager) CompleteDeferredWork() error {
 }
 
 // TODO (Matt): Review return types.
-func (m *lookupManager) GetEndpointID(net.IP addr) *proto.WorkloadEndpointID {
+func (m *lookupManager) GetEndpointID(addr net.IP) *proto.WorkloadEndpointID {
 	m.mutex.Lock()
 	epID := reflect.m.endpoints[addr]
 	m.mutex.Unlock()
