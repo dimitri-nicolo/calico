@@ -15,15 +15,11 @@
 package collector
 
 import (
-	"fmt"
 	"net"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/felix/go/felix/ip"
 	"github.com/projectcalico/felix/go/felix/proto"
-	"github.com/projectcalico/felix/go/felix/rules"
-	"github.com/projectcalico/felix/go/felix/set"
 )
 
 type lookupManager struct {
@@ -42,24 +38,24 @@ func (m *lookupManager) OnUpdate(protoBufMsg interface{}) {
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
 		m.mutex.Lock()
-		// TODO (Matt): IPv6
-		for _, ipv4 := range msg.Endpoint.ipv4_nets {
+		// TODO (Matt): IPv6; also IP.String() does funny things to IPv6 mapped IPv4 addresses.
+		for _, ipv4 := range msg.Endpoint.Ipv4Nets {
 			addr, _, err := net.ParseCIDR(ipv4)
 			if err != nil {
 				log.Warn("Error parsing CIDR ", ipv4)
 			}
-			m.endpoints[ipv4] = *msg.Id
+			m.endpoints[addr.String()] = *msg.Id
 		}
 		m.mutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
 		m.mutex.Lock()
 		// TODO (Matt): IPv6
-		for _, ipv4 := range msg.Endpoint.ipv4_nets {
+		for _, ipv4 := range msg.Id.Ipv4Nets {
 			addr, _, err := net.ParseCIDR(ipv4)
 			if err != nil {
 				log.Warn("Error parsing CIDR ", ipv4)
 			}
-			delete(m.endpoints, ipv4)
+			delete(m.endpoints, addr.String())
 		}
 		m.mutex.Unlock()
 	case *proto.HostEndpointUpdate:
@@ -69,6 +65,7 @@ func (m *lookupManager) OnUpdate(protoBufMsg interface{}) {
 		// TODO(smc) Host endpoint updates
 		log.WithField("msg", msg).Warn("Message not implemented")
 	}
+	return
 }
 
 func (m *lookupManager) CompleteDeferredWork() error {
@@ -77,7 +74,7 @@ func (m *lookupManager) CompleteDeferredWork() error {
 // TODO (Matt): Review return types.
 func (m *lookupManager) GetEndpointID(addr net.IP) *proto.WorkloadEndpointID {
 	m.mutex.Lock()
-	epID := reflect.m.endpoints[addr]
+	epID := m.endpoints[addr.String()]
 	m.mutex.Unlock()
 	return epID
 }
