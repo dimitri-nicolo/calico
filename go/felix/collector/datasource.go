@@ -20,7 +20,7 @@ type NflogDataSource struct {
 	sink      chan<- stats.StatUpdate
 	groupNum  int
 	direction stats.Direction
-	lookup    *lookup.LookupManager
+	lum       *lookup.LookupManager
 }
 
 func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction) *NflogDataSource {
@@ -125,8 +125,8 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse b
 }
 
 type ConntrackDataSource struct {
-	sink   chan<- stats.StatUpdate
-	lookup *lookup.LookupManager
+	sink chan<- stats.StatUpdate
+	lum  *lookup.LookupManager
 }
 
 func NewConntrackDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate) *ConntrackDataSource {
