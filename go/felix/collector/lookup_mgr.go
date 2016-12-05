@@ -45,21 +45,14 @@ func (m *lookupManager) OnUpdate(protoBufMsg interface{}) {
 				log.Warn("Error parsing CIDR ", ipv4)
 			}
 			m.endpoints[addr.String()] = msg.Id
-			m.endpointsReverse()
 		}
 		m.mutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
 		m.mutex.Lock()
 		// TODO (Matt): IPv6
-		for _, ipv4 := range msg.Id.Ipv4Nets {
-			addr, _, err := net.ParseCIDR(ipv4)
-			if err != nil {
-				log.Warn("Error parsing CIDR ", ipv4)
-			}
-			// TODO (Matt): Wow this is slow; need to maintain a reverse map...
-			// Actually let's fix it later; the remove message doesn't include the IPs.
-			//delete(m.endpoints, addr.String())
-		}
+		// TODO (Matt): Wow this is slow; need to maintain a reverse map...
+		// Actually let's fix it later; the remove message doesn't include the IPs.
+		//delete(m.endpoints, addr.String())
 		m.mutex.Unlock()
 	case *proto.HostEndpointUpdate:
 		// TODO(smc) Host endpoint updates
