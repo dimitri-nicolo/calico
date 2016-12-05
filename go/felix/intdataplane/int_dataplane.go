@@ -84,7 +84,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		routeTableV4,
 		4,
 		config.RulesConfig.WorkloadIfacePrefixes))
-	dp.lookupManager := lookup.NewLookupManager()
+	dp.lookupManager = lookup.NewLookupManager()
 	dp.RegisterManager(dp.lookupManager)
 
 	if !config.DisableIPv6 {
