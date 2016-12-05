@@ -83,7 +83,8 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		routeTableV4,
 		4,
 		config.RulesConfig.WorkloadIfacePrefixes))
-	dp.RegisterManager(newLookupManager())
+	dp.lookupManager := newLookupManager()
+	dp.RegisterManager(dp.lookupManager)
 
 	if !config.DisableIPv6 {
 		natTableV6 := iptables.NewTable(
@@ -147,6 +148,8 @@ type InternalDataplane struct {
 
 	ruleRenderer rules.RuleRenderer
 
+	lookupManager *LookupManager
+
 	interfacePrefixes []string
 
 	routeTables []*routetable.RouteTable
@@ -166,15 +169,15 @@ func (d *InternalDataplane) Start() {
 
 	// TODO (Matt): This isn't really in keeping with the surrounding code.
 	ctSink := make(chan stats.StatUpdate)
-	conntrackDataSource := collector.NewConntrackDataSource(ctSink)
+	conntrackDataSource := collector.NewConntrackDataSource(d.lookupManager, ctSink)
 	conntrackDataSource.Start()
 
 	nfIngressSink := make(chan stats.StatUpdate)
-	nflogIngressDataSource := collector.NewNflogDataSource(nfIngressSink, 1, stats.DirIn)
+	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, stats.DirIn)
 	nflogIngressDataSource.Start()
 
 	nfEgressSink := make(chan stats.StatUpdate)
-	nflogEgressDataSource := collector.NewNflogDataSource(nfEgressSink, 2, stats.DirOut)
+	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, stats.DirOut)
 	nflogEgressDataSource.Start()
 
 	ipfixExportSink := make(chan *ipfix.ExportRecord)

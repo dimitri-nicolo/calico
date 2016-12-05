@@ -22,19 +22,20 @@ import (
 	"github.com/projectcalico/felix/go/felix/proto"
 )
 
-type lookupManager struct {
+// TODO (Matt): Important: do I need to watch more (/ extend the API): are WorkloadEndpointUpdates only for local endpoints?  I think so.
+type LookupManager struct {
 	endpoints map[string]*proto.WorkloadEndpointID
 	mutex     sync.Mutex
 }
 
-func newLookupManager() *lookupManager {
-	return &lookupManager{
+func newLookupManager() *LookupManager {
+	return &LookupManager{
 		endpoints: map[string]*proto.WorkloadEndpointID{},
 		mutex:     sync.Mutex{},
 	}
 }
 
-func (m *lookupManager) OnUpdate(protoBufMsg interface{}) {
+func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
 		m.mutex.Lock()
@@ -63,12 +64,12 @@ func (m *lookupManager) OnUpdate(protoBufMsg interface{}) {
 	}
 }
 
-func (m *lookupManager) CompleteDeferredWork() error {
+func (m *LookupManager) CompleteDeferredWork() error {
 	return nil
 }
 
 // TODO (Matt): Review return types.
-func (m *lookupManager) GetEndpointID(addr net.IP) *proto.WorkloadEndpointID {
+func (m *LookupManager) GetEndpointID(addr net.IP) *proto.WorkloadEndpointID {
 	m.mutex.Lock()
 	epID := m.endpoints[addr.String()]
 	m.mutex.Unlock()

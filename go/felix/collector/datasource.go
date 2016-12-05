@@ -11,6 +11,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/collector/stats"
+	"github.com/projectcalico/felix/go/felix/intdataplane"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
@@ -19,13 +20,15 @@ type NflogDataSource struct {
 	sink      chan<- stats.StatUpdate
 	groupNum  int
 	direction stats.Direction
+	lookup    *intdataplane.LookupManager
 }
 
-func NewNflogDataSource(sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction) *NflogDataSource {
+func NewNflogDataSource(lm *intdataplane.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction) *NflogDataSource {
 	return &NflogDataSource{
 		sink:      sink,
 		groupNum:  groupNum,
 		direction: dir,
+		lookup:    lm,
 	}
 }
 
@@ -59,8 +62,8 @@ func (ds *NflogDataSource) subscribeToNflog() {
 func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]stats.StatUpdate, error) {
 	statUpdates := []stats.StatUpdate{}
 	nflogTuple := nPkt.Tuple
-	wlEpKeySrc := lookupEndpoint(nflogTuple.Src)
-	wlEpKeyDst := lookupEndpoint(nflogTuple.Dst)
+	wlEpKeySrc := lookupEndpoint(ds.lookup, nflogTuple.Src)
+	wlEpKeyDst := lookupEndpoint(ds.lookup, nflogTuple.Dst)
 	tp := lookupRule(nPkt.Prefix)
 	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
 	if tp.Action == stats.DenyAction {
@@ -122,12 +125,14 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse b
 }
 
 type ConntrackDataSource struct {
-	sink chan<- stats.StatUpdate
+	sink   chan<- stats.StatUpdate
+	lookup *intdataplane.LookupManager
 }
 
-func NewConntrackDataSource(sink chan<- stats.StatUpdate) *ConntrackDataSource {
+func NewConntrackDataSource(lm *intdataplane.LookupManager, sink chan<- stats.StatUpdate) *ConntrackDataSource {
 	return &ConntrackDataSource{
-		sink: sink,
+		sink:   sink,
+		lookup: lm,
 	}
 }
 
@@ -147,7 +152,7 @@ func (ds *ConntrackDataSource) startPolling() {
 		}
 		// TODO(doublek): Possibly do this in a separate goroutine?
 		for _, ctentry := range ctentries {
-			statUpdates, err := convertCtEntryToStat(ctentry)
+			statUpdates, err := ds.convertCtEntryToStat(ctentry)
 			if err != nil {
 				log.Errorf("Couldn't convert ctentry %v to StatUpdate", ctentry)
 				continue
@@ -159,14 +164,14 @@ func (ds *ConntrackDataSource) startPolling() {
 	}
 }
 
-func convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error) {
+func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error) {
 	// There can be a maximum of 2 stat updates per ctentry, in the case of
 	// local-to-local traffic.
 	statUpdates := []stats.StatUpdate{}
 	// The last entry is the tuple entry for endpoints
 	ctTuple := ctEntry.OrigTuples[len(ctEntry.OrigTuples)-1]
-	wlEpKeySrc := lookupEndpoint(ctTuple.Src)
-	wlEpKeyDst := lookupEndpoint(ctTuple.Dst)
+	wlEpKeySrc := lookupEndpoint(ds.lookup, ctTuple.Src)
+	wlEpKeyDst := lookupEndpoint(ds.lookup, ctTuple.Dst)
 	// Force conntrack to have empty tracep
 	if wlEpKeySrc != nil {
 		// Locally originating packet
@@ -218,15 +223,14 @@ func randomName(prefix string) string {
 	return fmt.Sprintf("%v-%v", prefix, r.Int())
 }
 
-func lookupEndpoint(ipAddr net.IP) *model.WorkloadEndpointKey {
+func lookupEndpoint(lookup *intdataplane.LookupManager, ipAddr net.IP) *model.WorkloadEndpointKey {
 	// TODO(doublek): Look at IP and return appropriately.
-	workloadId := randomName("workload")
-	endpointId := randomName("endpoint")
+	epid := lookup.GetEndpointID(ipAddr)
 	return &model.WorkloadEndpointKey{
-		Hostname:       "MyHost",
-		OrchestratorID: "ASDF",
-		WorkloadID:     workloadId,
-		EndpointID:     endpointId,
+		Hostname:       "matt-k8s",
+		OrchestratorID: epid.OrchestratorId,
+		WorkloadID:     epid.WorkloadId,
+		EndpointID:     epid.EndpointId,
 	}
 }
 
@@ -241,7 +245,7 @@ func lookupRule(prefix string) stats.RuleTracePoint {
 	case 'N':
 		action = stats.NextTierAction
 	}
-	// TODO (Matt): This doesn't really work
+	// TODO (Matt): This doesn't really work.  Also need to pass in the endpoint to get the real index (for policy ordering).
 	idx, _ := strconv.Atoi(prefix[8 : len(prefix)-1])
 	return stats.RuleTracePoint{
 		TierID:   prefix[1:2],
