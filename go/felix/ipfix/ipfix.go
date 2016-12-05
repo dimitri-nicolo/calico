@@ -248,6 +248,7 @@ func (ie *IPFIXExporter) export(data *ExportRecord) error {
 		protocolIdentifier:       C.uint8_t(data.ProtocolIdentifier),
 		flowEndReason:            C.uint8_t(data.FlowEndReason),
 	}
+	log.Info("Produced record for export: ", rec)
 	gerror := C.fixbuf_export(ie.fixbufData, rec)
 	if gerror != nil {
 		return fmt.Errorf("Couldn't export %v Reason: %v", rec, C.GoString(C.gchar_to_char(gerror.message)))
