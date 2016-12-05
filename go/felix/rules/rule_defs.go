@@ -18,15 +18,18 @@ import (
 	"github.com/projectcalico/felix/go/felix/ipsets"
 	"github.com/projectcalico/felix/go/felix/iptables"
 	"github.com/projectcalico/felix/go/felix/proto"
+	"net"
 )
 
 const (
 	ChainNamePrefix = "cali"
 	IPSetNamePrefix = "cali"
 
-	InputChainName   = ChainNamePrefix + "-INPUT"
-	ForwardChainName = ChainNamePrefix + "-FORWARD"
-	OutputChainName  = ChainNamePrefix + "-OUTPUT"
+	FilterInputChainName   = ChainNamePrefix + "-INPUT"
+	FilterForwardChainName = ChainNamePrefix + "-FORWARD"
+	FilterOutputChainName  = ChainNamePrefix + "-OUTPUT"
+
+	NATPreroutingChainName = ChainNamePrefix + "-PREROUTING"
 
 	PolicyInboundPfx  = ChainNamePrefix + "pi-"
 	PolicyOutboundPfx = ChainNamePrefix + "po-"
@@ -44,6 +47,19 @@ const (
 	HostFromEndpointPfx = ChainNamePrefix + "fh-"
 
 	RuleHashPrefix = "cali:"
+
+	// HistoricNATRuleInsertRegex is a regex pattern to match to match
+	// special-case rules inserted by old versions of felix.  Specifically,
+	// Python felix used to insert a masquerade rule directly into the
+	// POSTROUTING chain.
+	//
+	// Note: this regex depends on the output format of iptables-save so,
+	// where possible, it's best to match only on part of the rule that
+	// we're sure can't change (such as the ipset name in the masquerade
+	// rule).
+	HistoricInsertedNATRuleRegex =
+		`-A POSTROUTING .* felix-masq-ipam-pools .*|` +
+		`-A POSTROUTING -o tunl0 -m addrtype ! --src-type LOCAL --limit-iface-out -m addrtype --src-type LOCAL -j MASQUERADE`
 )
 
 var (
@@ -60,6 +76,7 @@ var (
 
 type RuleRenderer interface {
 	StaticFilterTableChains() []*iptables.Chain
+	StaticNATTableChains(ipVersion uint8) []*iptables.Chain
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
 	WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndpointID, endpoint *proto.WorkloadEndpoint) []*iptables.Chain
@@ -85,6 +102,10 @@ type Config struct {
 	IptablesMarkNextTier  uint32
 	IptablesMarkDrop      uint32
 	IptablesMarkEndpoints uint32
+
+	WhitelistDHCPToHost   bool
+	OpenStackMetadataIP   net.IP
+	OpenStackMetadataPort uint16
 }
 
 func NewRenderer(config Config) RuleRenderer {

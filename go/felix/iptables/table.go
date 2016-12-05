@@ -44,7 +44,8 @@ var (
 
 // Table represents a single one of the iptables tables i.e. "raw", "nat", "filter", etc.
 type Table struct {
-	Name string
+	Name      string
+	IPVersion uint8
 
 	// chainToInsertedRules maps from chain name to a list of rules to be inserted at the start
 	// of that chain.  Rules are written with rule hash comments.  The Table cleans up inserted
@@ -88,6 +89,7 @@ func NewTable(
 	ipVersion uint8,
 	historicChainPrefixes []string,
 	hashPrefix string,
+	extraCleanupRegexPattern string,
 ) *Table {
 	hashCommentRegexp := regexp.MustCompile(`--comment "?` + hashPrefix + `([a-zA-Z0-9_-]+)"?`)
 	ourChainsPattern := "^(" + strings.Join(historicChainPrefixes, "|") + ")"
@@ -97,6 +99,9 @@ func NewTable(
 	for _, prefix := range historicChainPrefixes {
 		part := fmt.Sprintf("-j %s", prefix)
 		oldInsertRegexpParts = append(oldInsertRegexpParts, part)
+	}
+	if extraCleanupRegexPattern != "" {
+		oldInsertRegexpParts = append(oldInsertRegexpParts, extraCleanupRegexPattern)
 	}
 	oldInsertPattern := strings.Join(oldInsertRegexpParts, "|")
 	oldInsertRegexp := regexp.MustCompile(oldInsertPattern)
@@ -112,6 +117,7 @@ func NewTable(
 
 	table := &Table{
 		Name:                   name,
+		IPVersion:              ipVersion,
 		chainToInsertedRules:   inserts,
 		dirtyInserts:           dirtyInserts,
 		chainNameToChain:       map[string]*Chain{},

@@ -76,6 +76,15 @@ func (n NflogAction) ToFragment() string {
 	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, n.Prefix)
 }
 
+type DNATAction struct {
+	DestAddr string
+	DestPort uint16
+}
+
+func (g DNATAction) ToFragment() string {
+	return fmt.Sprintf("--jump DNAT --to-destination %s:%d", g.DestAddr, g.DestPort)
+}
+
 type ClearMarkAction struct {
 	Mark uint32
 }

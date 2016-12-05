@@ -23,6 +23,7 @@ import (
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/vishvananda/netlink"
 	"net"
+	"os/exec"
 	"regexp"
 	"strings"
 	"syscall"
@@ -34,7 +35,15 @@ var (
 	IfaceDown    = errors.New("interface was down")
 )
 
+type Target struct {
+	CIDR    ip.CIDR
+	DestMAC net.HardwareAddr
+}
+
 type RouteTable struct {
+	logCxt *log.Entry
+
+	ipVersion uint8
 	netlinkFamily int
 
 	activeUpIfaces set.Set
@@ -43,7 +52,7 @@ type RouteTable struct {
 	ifacePrefixes     set.Set
 	ifacePrefixRegexp *regexp.Regexp
 
-	ifaceNameToRoutes map[string]set.Set
+	ifaceNameToTargets map[string][]Target
 
 	inSync bool
 }
@@ -67,35 +76,37 @@ func New(interfacePrefixes []string, ipVersion uint8) *RouteTable {
 	}
 
 	return &RouteTable{
-		netlinkFamily:     family,
-		ifacePrefixes:     prefixSet,
-		ifacePrefixRegexp: regexp.MustCompile(ifaceNamePattern),
-		ifaceNameToRoutes: map[string]set.Set{},
-		activeUpIfaces:    set.New(),
-		dirtyIfaces:       set.New(),
+		logCxt: log.WithFields(log.Fields{
+			"ipVersion": ipVersion,
+		}),
+		ipVersion: ipVersion,
+		netlinkFamily:      family,
+		ifacePrefixes:      prefixSet,
+		ifacePrefixRegexp:  regexp.MustCompile(ifaceNamePattern),
+		ifaceNameToTargets: map[string][]Target{},
+		activeUpIfaces:     set.New(),
+		dirtyIfaces:        set.New(),
 	}
 }
 
 func (r *RouteTable) OnIfaceStateChanged(ifaceName string, state ifacemonitor.State) {
 	if state == ifacemonitor.StateUp {
+		r.logCxt.WithField("ifaceName", ifaceName).Debug("Interface up, marking for route sync")
 		r.activeUpIfaces.Add(ifaceName)
 		r.dirtyIfaces.Add(ifaceName)
 	} else {
+		r.logCxt.WithField("ifaceName", ifaceName).Debug("Interface down, blacklisting from route sync")
 		r.activeUpIfaces.Discard(ifaceName)
 		r.dirtyIfaces.Discard(ifaceName) // Can't update routes if it's down.
 	}
 }
 
-func (r *RouteTable) SetRoutes(ifaceName string, routes []ip.CIDR) {
-	if len(routes) == 0 {
-		delete(r.ifaceNameToRoutes, ifaceName)
+func (r *RouteTable) SetRoutes(ifaceName string, targets []Target) {
+	if len(targets) == 0 {
+		delete(r.ifaceNameToTargets, ifaceName)
 		return
 	}
-	routesSet := set.New()
-	for _, route := range routes {
-		routesSet.Add(route)
-	}
-	r.ifaceNameToRoutes[ifaceName] = routesSet
+	r.ifaceNameToTargets[ifaceName] = targets
 	r.dirtyIfaces.Add(ifaceName)
 }
 
@@ -103,7 +114,7 @@ func (r *RouteTable) Apply() error {
 	if !r.inSync {
 		links, err := netlink.LinkList()
 		if err != nil {
-			log.WithError(err).Error("Failed to list interfaces, retrying...")
+			r.logCxt.WithError(err).Error("Failed to list interfaces, retrying...")
 			return ListFailed
 		}
 		// Clear the dirty set; there's no point trying to update non-existent interfaces.
@@ -115,6 +126,8 @@ func (r *RouteTable) Apply() error {
 			}
 			ifaceName := attrs.Name
 			if r.ifacePrefixRegexp.MatchString(ifaceName) {
+				r.logCxt.WithField("ifaceName", ifaceName	).Debug(
+					"Resync: found calico-owned interface")
 				r.dirtyIfaces.Add(ifaceName)
 			}
 		}
@@ -124,13 +137,13 @@ func (r *RouteTable) Apply() error {
 	r.dirtyIfaces.Iter(func(item interface{}) error {
 		retries := 2
 		ifaceName := item.(string)
-		logCxt := log.WithField("ifaceName", ifaceName)
+		logCxt := r.logCxt.WithField("ifaceName", ifaceName)
 		for retries > 0 {
 			link, err := netlink.LinkByName(ifaceName)
 			if err != nil {
 				if strings.Contains(err.Error(), "not found") {
-					// Interface has been deleted from under us.  Give up.
-					logCxt.Warn("Route sync failed: interface is gone.")
+					// Interface has been deleted from under us (or isn't yet present).  Give up.
+					logCxt.Info("Unable to sync routes: interface not present.")
 					break
 				} else {
 					// Unexpected error, maybe retry.
@@ -157,7 +170,7 @@ func (r *RouteTable) Apply() error {
 	})
 
 	if r.dirtyIfaces.Len() > 0 {
-		log.Warn("Some interfaces still out-of sync.")
+		r.logCxt.Warn("Some interfaces still out-of sync.")
 		r.inSync = false
 		return UpdateFailed
 	}
@@ -168,17 +181,14 @@ func (r *RouteTable) Apply() error {
 func (r *RouteTable) syncRoutesForLink(link netlink.Link) error {
 	linkAttrs := link.Attrs()
 	ifaceName := linkAttrs.Name
-	logCxt := log.WithField("ifaceName", ifaceName)
+	logCxt := r.logCxt.WithField("ifaceName", ifaceName)
 	logCxt.Debug("Syncing interface routes")
 	if linkAttrs.Flags&net.FlagUp == 0 || linkAttrs.RawFlags&syscall.IFF_RUNNING == 0 {
 		// Interface must have gone down but the monitoring thread hasn't told us yet.
 		logCxt.Debug("Interface is down, skipping")
 		return IfaceDown
 	}
-	expectedRoutes := r.ifaceNameToRoutes[ifaceName]
-	if expectedRoutes == nil {
-		expectedRoutes = set.Empty()
-	}
+
 	routes, err := netlink.RouteList(link, r.netlinkFamily)
 	if err != nil {
 		logCxt.WithError(err).WithField("link", ifaceName).Error(
@@ -186,14 +196,20 @@ func (r *RouteTable) syncRoutesForLink(link netlink.Link) error {
 		return ListFailed
 	}
 
+	expectedTargets := r.ifaceNameToTargets[ifaceName]
+	expectedCIDRs := set.New()
+	for _, t := range expectedTargets {
+		expectedCIDRs.Add(t.CIDR)
+	}
+
 	updatesFailed := false
-	seenRoutes := set.New()
+	seenCIDRs := set.New()
 	for _, route := range routes {
 		var dest ip.CIDR
 		if route.Dst != nil {
 			dest = ip.CIDRFromIPNet(calinet.IPNet{*route.Dst})
 		}
-		if !expectedRoutes.Contains(dest) {
+		if !expectedCIDRs.Contains(dest) {
 			logCxt := logCxt.WithField("dest", dest)
 			logCxt.Debug("Found unexpected route, deleting it")
 			if err := netlink.RouteDel(&route); err != nil {
@@ -203,13 +219,13 @@ func (r *RouteTable) syncRoutesForLink(link netlink.Link) error {
 				updatesFailed = true
 			}
 		}
-		seenRoutes.Add(dest)
+		seenCIDRs.Add(dest)
 	}
 
-	expectedRoutes.Iter(func(item interface{}) error {
-		cidr := item.(ip.CIDR)
-		if !seenRoutes.Contains(cidr) {
-			logCxt := logCxt.WithField("dest", cidr)
+	for _, target := range expectedTargets {
+		cidr := target.CIDR
+		if !seenCIDRs.Contains(cidr) {
+			logCxt := logCxt.WithField("dest", target)
 			logCxt.Debug("Adding missing route")
 			ipNet := cidr.ToIPNet()
 			route := netlink.Route{
@@ -217,14 +233,25 @@ func (r *RouteTable) syncRoutesForLink(link netlink.Link) error {
 				Dst:       &ipNet,
 				Type:      syscall.RTN_UNICAST,
 				Protocol:  syscall.RTPROT_BOOT,
+				Scope:     netlink.SCOPE_LINK,
 			}
 			if err := netlink.RouteAdd(&route); err != nil {
 				logCxt.WithError(err).Warn("Failed to add route")
 				updatesFailed = true
 			}
 		}
-		return nil
-	})
+		if r.ipVersion == 4 && target.DestMAC != nil {
+			// TODO(smc) clean up/sync old ARP entries
+			cmd := exec.Command("arp",
+				"-s", cidr.Addr().String(), target.DestMAC.String(),
+				"-i", ifaceName)
+			err := cmd.Run()
+			if err != nil {
+				logCxt.WithError(err).WithField("cmd", cmd).Warn("Failed to set ARP entry")
+				updatesFailed = true
+			}
+		}
+	}
 
 	if updatesFailed {
 		return UpdateFailed

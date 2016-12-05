@@ -28,7 +28,6 @@ import:
 - package: github.com/tigera/nfnetlink
   repo:    git@github.com:tigera/nfnetlink
 - package: github.com/Sirupsen/logrus
-  version: 4b6ea7319e214d98c938f12692336f7ca9348d6b
 - package: github.com/kardianos/osext
 - package: github.com/mipearson/rfw
 - package: github.com/prometheus/client_golang

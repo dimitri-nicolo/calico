@@ -56,9 +56,15 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 
 	dp.ifaceMonitor.Callback = dp.onIfaceStateChange
 
-	natTableV4 := iptables.NewTable("nat", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix)
-	rawTableV4 := iptables.NewTable("raw", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix)
-	filterTableV4 := iptables.NewTable("filter", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix)
+	natTableV4 := iptables.NewTable(
+		"nat",
+		4,
+		rules.AllHistoricChainNamePrefixes,
+		rules.RuleHashPrefix,
+		rules.HistoricInsertedNATRuleRegex,
+	)
+	rawTableV4 := iptables.NewTable("raw", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
+	filterTableV4 := iptables.NewTable("filter", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
 	ipSetsConfigV4 := config.RulesConfig.IPSetConfigV4
 	ipSetsV4 := ipsets.NewIPSets(ipSetsConfigV4)
 	dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV4)
@@ -80,9 +86,15 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	dp.RegisterManager(newLookupManager())
 
 	if !config.DisableIPv6 {
-		natTableV6 := iptables.NewTable("nat", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix)
-		rawTableV6 := iptables.NewTable("raw", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix)
-		filterTableV6 := iptables.NewTable("filter", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix)
+		natTableV6 := iptables.NewTable(
+			"nat",
+			6,
+			rules.AllHistoricChainNamePrefixes,
+			rules.RuleHashPrefix,
+			rules.HistoricInsertedNATRuleRegex,
+		)
+		rawTableV6 := iptables.NewTable("raw", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
+		filterTableV6 := iptables.NewTable("filter", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
 
 		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
 		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6)
@@ -237,7 +249,14 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	for _, t := range d.iptablesFilterTables {
 		t.UpdateChains(d.ruleRenderer.StaticFilterTableChains())
 		t.SetRuleInsertions("FORWARD", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.ForwardChainName},
+			Action: iptables.JumpAction{rules.FilterForwardChainName},
+		}})
+	}
+
+	for _, t := range d.iptablesNATTables {
+		t.UpdateChains(d.ruleRenderer.StaticNATTableChains(t.IPVersion))
+		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
+			Action: iptables.JumpAction{rules.NATPreroutingChainName},
 		}})
 	}
 
@@ -257,20 +276,16 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 
 			case *proto.WorkloadEndpointUpdate:
 				// TODO(smc) For now, report every workload endpoint as "UP".
-				d.fromDataplane <- &proto.FromDataplane_WorkloadEndpointStatusUpdate{
-					WorkloadEndpointStatusUpdate: &proto.WorkloadEndpointStatusUpdate{
-						Id: msg.Id,
-						Status: &proto.EndpointStatus{
-							Status: "up",
-						},
+				d.fromDataplane <- &proto.WorkloadEndpointStatusUpdate{
+					Id: msg.Id,
+					Status: &proto.EndpointStatus{
+						Status: "up",
 					},
 				}
 			case *proto.WorkloadEndpointRemove:
 				// TODO(smc) For now, report every workload endpoint as "UP".
-				d.fromDataplane <- &proto.FromDataplane_WorkloadEndpointStatusRemove{
-					WorkloadEndpointStatusRemove: &proto.WorkloadEndpointStatusRemove{
-						Id: msg.Id,
-					},
+				d.fromDataplane <- &proto.WorkloadEndpointStatusRemove{
+					Id: msg.Id,
 				}
 			case *proto.InSync:
 				// TODO(smc) need to generate InSync message after each flush of the EventSequencer?
@@ -282,6 +297,9 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			log.WithField("msg", ifaceUpdate).Info("Received interface update")
 			for _, mgr := range d.allManagers {
 				mgr.OnUpdate(ifaceUpdate)
+			}
+			for _, routeTable := range d.routeTables {
+				routeTable.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
 			}
 			d.dataplaneNeedsSync = true
 		case <-retryTicker.C:
@@ -350,5 +368,15 @@ func (d *InternalDataplane) apply() {
 
 func (d *InternalDataplane) loopReportingStatus() {
 	log.Info("Started internal status report thread")
-	// TODO(smc) Implement status reporting.
+	start := time.Now()
+	for {
+		time.Sleep(10 * time.Second)
+		now := time.Now()
+		uptimeNanos := float64(now.Sub(start))
+		uptimeSecs := uptimeNanos / 1000000000
+		d.fromDataplane <- &proto.ProcessStatusUpdate{
+			IsoTimestamp: now.UTC().Format(time.RFC3339),
+			Uptime:       uptimeSecs,
+		}
+	}
 }

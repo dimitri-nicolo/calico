@@ -25,6 +25,7 @@ import (
 	"github.com/projectcalico/felix/go/felix/rules"
 	"github.com/projectcalico/felix/go/felix/set"
 	"io"
+	"net"
 	"os"
 	"reflect"
 	"regexp"
@@ -105,17 +106,6 @@ func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
 }
 
 func (m *endpointManager) CompleteDeferredWork() error {
-	// Rewrite the dispatch chains if they've changed.
-	// TODO(smc) avoid re-rendering chains if nothing has changed.  (Slightly tricky because
-	// the dispatch chains depend on the interface names and maybe later the IPs in the data.)
-	newDispatchChains := m.ruleRenderer.WorkloadDispatchChains(m.activeEndpoints)
-	if !reflect.DeepEqual(newDispatchChains, m.activeDispatchChains) {
-		log.Info("Workloads changed, updating dispatch chains.")
-		m.filterTable.RemoveChains(m.activeDispatchChains)
-		m.filterTable.UpdateChains(newDispatchChains)
-		m.activeDispatchChains = newDispatchChains
-	}
-
 	for ifaceName, state := range m.pendingIfaceUpdates {
 		if state == ifacemonitor.StateUp {
 			m.activeUpIfaces.Add(ifaceName)
@@ -142,16 +132,29 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			} else {
 				ipStrings = workload.Ipv6Nets
 			}
-			ipNets := make([]ip.CIDR, len(ipStrings))
-			for i, s := range ipStrings {
-				ipNets[i] = ip.MustParseCIDR(s)
-			}
+
 			if oldWorkload != nil && oldWorkload.Name != workload.Name {
 				logCxt.Debug("Interface name changed, cleaning up old routes")
 				m.routeTable.SetRoutes(oldWorkload.Name, nil)
 				m.activeIfacesNeedingConfig.Discard(oldWorkload.Name)
 			}
-			m.routeTable.SetRoutes(workload.Name, ipNets)
+			var mac net.HardwareAddr
+			if workload.Mac != "" {
+				var err error
+				mac, err = net.ParseMAC(workload.Mac)
+				if err != nil {
+					logCxt.WithError(err).Error(
+						"Failed to parse endpoint's MAC address")
+				}
+			}
+			routeTargets := make([]routetable.Target, len(ipStrings))
+			for i, s := range ipStrings {
+				routeTargets[i] = routetable.Target{
+					CIDR:    ip.MustParseCIDR(s),
+					DestMAC: mac,
+				}
+			}
+			m.routeTable.SetRoutes(workload.Name, routeTargets)
 			m.activeIfacesNeedingConfig.Add(workload.Name)
 			m.activeEndpoints[id] = workload
 			delete(m.pendingEndpointUpdates, id)
@@ -166,6 +169,17 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			delete(m.activeEndpoints, id)
 			delete(m.pendingEndpointUpdates, id)
 		}
+	}
+
+	// Rewrite the dispatch chains if they've changed.
+	// TODO(smc) avoid re-rendering chains if nothing has changed.  (Slightly tricky because
+	// the dispatch chains depend on the interface names and maybe later the IPs in the data.)
+	newDispatchChains := m.ruleRenderer.WorkloadDispatchChains(m.activeEndpoints)
+	if !reflect.DeepEqual(newDispatchChains, m.activeDispatchChains) {
+		log.Info("Workloads changed, updating dispatch chains.")
+		m.filterTable.RemoveChains(m.activeDispatchChains)
+		m.filterTable.UpdateChains(newDispatchChains)
+		m.activeDispatchChains = newDispatchChains
 	}
 
 	m.activeIfacesNeedingConfig.Iter(func(item interface{}) error {
