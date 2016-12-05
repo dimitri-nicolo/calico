@@ -11,7 +11,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/collector/stats"
-	"github.com/projectcalico/felix/go/felix/intdataplane"
+	"github.com/projectcalico/felix/go/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
@@ -20,15 +20,15 @@ type NflogDataSource struct {
 	sink      chan<- stats.StatUpdate
 	groupNum  int
 	direction stats.Direction
-	lookup    *intdataplane.LookupManager
+	lookup    *lookup.LookupManager
 }
 
-func NewNflogDataSource(lm *intdataplane.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction) *NflogDataSource {
+func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction) *NflogDataSource {
 	return &NflogDataSource{
 		sink:      sink,
 		groupNum:  groupNum,
 		direction: dir,
-		lookup:    lm,
+		lum:       lm,
 	}
 }
 
@@ -62,8 +62,8 @@ func (ds *NflogDataSource) subscribeToNflog() {
 func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]stats.StatUpdate, error) {
 	statUpdates := []stats.StatUpdate{}
 	nflogTuple := nPkt.Tuple
-	wlEpKeySrc := lookupEndpoint(ds.lookup, nflogTuple.Src)
-	wlEpKeyDst := lookupEndpoint(ds.lookup, nflogTuple.Dst)
+	wlEpKeySrc := lookupEndpoint(ds.lum, nflogTuple.Src)
+	wlEpKeyDst := lookupEndpoint(ds.lum, nflogTuple.Dst)
 	tp := lookupRule(nPkt.Prefix)
 	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
 	if tp.Action == stats.DenyAction {
@@ -126,13 +126,13 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse b
 
 type ConntrackDataSource struct {
 	sink   chan<- stats.StatUpdate
-	lookup *intdataplane.LookupManager
+	lookup *lookup.LookupManager
 }
 
-func NewConntrackDataSource(lm *intdataplane.LookupManager, sink chan<- stats.StatUpdate) *ConntrackDataSource {
+func NewConntrackDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate) *ConntrackDataSource {
 	return &ConntrackDataSource{
-		sink:   sink,
-		lookup: lm,
+		sink: sink,
+		lum:  lm,
 	}
 }
 
@@ -170,8 +170,8 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	statUpdates := []stats.StatUpdate{}
 	// The last entry is the tuple entry for endpoints
 	ctTuple := ctEntry.OrigTuples[len(ctEntry.OrigTuples)-1]
-	wlEpKeySrc := lookupEndpoint(ds.lookup, ctTuple.Src)
-	wlEpKeyDst := lookupEndpoint(ds.lookup, ctTuple.Dst)
+	wlEpKeySrc := lookupEndpoint(ds.lum, ctTuple.Src)
+	wlEpKeyDst := lookupEndpoint(ds.lum, ctTuple.Dst)
 	// Force conntrack to have empty tracep
 	if wlEpKeySrc != nil {
 		// Locally originating packet
@@ -223,9 +223,9 @@ func randomName(prefix string) string {
 	return fmt.Sprintf("%v-%v", prefix, r.Int())
 }
 
-func lookupEndpoint(lookup *intdataplane.LookupManager, ipAddr net.IP) *model.WorkloadEndpointKey {
+func lookupEndpoint(lum *lookup.LookupManager, ipAddr net.IP) *model.WorkloadEndpointKey {
 	// TODO(doublek): Look at IP and return appropriately.
-	epid := lookup.GetEndpointID(ipAddr)
+	epid := lum.GetEndpointID(ipAddr)
 	return &model.WorkloadEndpointKey{
 		Hostname:       "matt-k8s",
 		OrchestratorID: epid.OrchestratorId,

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package intdataplane
+package lookup
 
 import (
 	"net"
@@ -28,7 +28,7 @@ type LookupManager struct {
 	mutex     sync.Mutex
 }
 
-func newLookupManager() *LookupManager {
+func NewLookupManager() *LookupManager {
 	return &LookupManager{
 		endpoints: map[string]*proto.WorkloadEndpointID{},
 		mutex:     sync.Mutex{},

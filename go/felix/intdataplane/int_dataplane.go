@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/felix/go/felix/ipfix"
 	"github.com/projectcalico/felix/go/felix/ipsets"
 	"github.com/projectcalico/felix/go/felix/iptables"
+	"github.com/projectcalico/felix/go/felix/lookup"
 	"github.com/projectcalico/felix/go/felix/proto"
 	"github.com/projectcalico/felix/go/felix/routetable"
 	"github.com/projectcalico/felix/go/felix/rules"
@@ -83,7 +84,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		routeTableV4,
 		4,
 		config.RulesConfig.WorkloadIfacePrefixes))
-	dp.lookupManager := newLookupManager()
+	dp.lookupManager := lookup.NewLookupManager()
 	dp.RegisterManager(dp.lookupManager)
 
 	if !config.DisableIPv6 {
@@ -148,7 +149,7 @@ type InternalDataplane struct {
 
 	ruleRenderer rules.RuleRenderer
 
-	lookupManager *LookupManager
+	lookupManager *lookup.LookupManager
 
 	interfacePrefixes []string
 
