@@ -226,11 +226,15 @@ func randomName(prefix string) string {
 func lookupEndpoint(lum *lookup.LookupManager, ipAddr net.IP) *model.WorkloadEndpointKey {
 	// TODO(doublek): Look at IP and return appropriately.
 	epid := lum.GetEndpointID(ipAddr)
-	return &model.WorkloadEndpointKey{
-		Hostname:       "matt-k8s",
-		OrchestratorID: epid.OrchestratorId,
-		WorkloadID:     epid.WorkloadId,
-		EndpointID:     epid.EndpointId,
+	if epid == nil {
+		return nil
+	} else {
+		return &model.WorkloadEndpointKey{
+			Hostname:       "matt-k8s",
+			OrchestratorID: epid.OrchestratorId,
+			WorkloadID:     epid.WorkloadId,
+			EndpointID:     epid.EndpointId,
+		}
 	}
 }
 
