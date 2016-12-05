@@ -23,13 +23,13 @@ import (
 )
 
 type lookupManager struct {
-	endpoints map[net.IP]*proto.WorkloadEndpointID
+	endpoints map[string]*proto.WorkloadEndpointID
 	mutex     sync.Mutex
 }
 
 func newLookupManager() *lookupManager {
 	return &lookupManager{
-		endpoints: map[net.IP]*proto.WorkloadEndpointID{},
+		endpoints: map[string]*proto.WorkloadEndpointID{},
 		mutex:     sync.Mutex{},
 	}
 }
@@ -44,7 +44,8 @@ func (m *lookupManager) OnUpdate(protoBufMsg interface{}) {
 			if err != nil {
 				log.Warn("Error parsing CIDR ", ipv4)
 			}
-			m.endpoints[addr.String()] = *msg.Id
+			m.endpoints[addr.String()] = msg.Id
+			m.endpointsReverse()
 		}
 		m.mutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
@@ -55,7 +56,9 @@ func (m *lookupManager) OnUpdate(protoBufMsg interface{}) {
 			if err != nil {
 				log.Warn("Error parsing CIDR ", ipv4)
 			}
-			delete(m.endpoints, addr.String())
+			// TODO (Matt): Wow this is slow; need to maintain a reverse map...
+			// Actually let's fix it later; the remove message doesn't include the IPs.
+			//delete(m.endpoints, addr.String())
 		}
 		m.mutex.Unlock()
 	case *proto.HostEndpointUpdate:
@@ -65,10 +68,10 @@ func (m *lookupManager) OnUpdate(protoBufMsg interface{}) {
 		// TODO(smc) Host endpoint updates
 		log.WithField("msg", msg).Warn("Message not implemented")
 	}
-	return
 }
 
 func (m *lookupManager) CompleteDeferredWork() error {
+	return nil
 }
 
 // TODO (Matt): Review return types.
