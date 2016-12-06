@@ -82,6 +82,7 @@ func (c *Collector) mergeDataSources() {
 	}
 }
 
+// TODO (Matt): Fix bug - counts aren't being updated (showing 0 for conntracked connections)
 func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 	data, ok := c.epStats[update.Tuple]
 	if !ok {
