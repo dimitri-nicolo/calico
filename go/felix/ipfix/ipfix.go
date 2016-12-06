@@ -121,7 +121,8 @@ GError * fixbuf_export(fixbufData_t fbData, exportRecord_t rec) {
 	myrec.destinationTransportPort = rec.destinationTransportPort;
 	myrec.protocolIdentifier = rec.protocolIdentifier;
 	myrec.flowEndReason = rec.flowEndReason;
-
+	// TODO (Matt): The packets this actually emits alternate between a template packet (defining the fields), and the data packets.
+	//              This seems wrong: it feels like we should be emitting fewer packets.
 	if(!fbSessionExportTemplates(fbData.exsession, &err)) {
 		return err;
 	}

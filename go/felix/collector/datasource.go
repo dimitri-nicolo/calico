@@ -105,6 +105,9 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
 		statUpdates = append(statUpdates, *su)
 	}
+	for _, update := range statUpdates {
+		log.Debug("Built NFLOG stat update: ", update)
+	}
 	return statUpdates, nil
 }
 
@@ -190,6 +193,9 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
 			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
+	}
+	for _, update := range statUpdates {
+		log.Debug("Built conntrack stat update: ", update)
 	}
 	return statUpdates, nil
 }
