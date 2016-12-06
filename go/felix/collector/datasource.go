@@ -3,8 +3,6 @@
 package collector
 
 import (
-	"fmt"
-	"math/rand"
 	"net"
 	"strconv"
 	"time"
@@ -34,7 +32,6 @@ func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, 
 
 func (ds *NflogDataSource) Start() {
 	log.Infof("Starting NFLOG Data Source for direction %v group %v", ds.direction, ds.groupNum)
-	seedRand()
 	go ds.subscribeToNflog()
 }
 
@@ -141,7 +138,6 @@ func NewConntrackDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpda
 
 func (ds *ConntrackDataSource) Start() {
 	log.Info("Starting Conntrack Data Source")
-	seedRand()
 	go ds.startPolling()
 }
 
@@ -217,24 +213,13 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats
 }
 
 // Stubs
-const Seed = 72
-
-var r *rand.Rand
-
-func seedRand() {
-	r = rand.New(rand.NewSource(Seed))
-}
-
-func randomName(prefix string) string {
-	return fmt.Sprintf("%v-%v", prefix, r.Int())
-}
 
 func lookupEndpoint(lum *lookup.LookupManager, ipAddr net.IP) *model.WorkloadEndpointKey {
-	// TODO(doublek): Look at IP and return appropriately.
 	epid := lum.GetEndpointID(ipAddr)
 	if epid == nil {
 		return nil
 	} else {
+		// TODO (Matt): Need to lookup hostname.
 		return &model.WorkloadEndpointKey{
 			Hostname:       "matt-k8s",
 			OrchestratorID: epid.OrchestratorId,

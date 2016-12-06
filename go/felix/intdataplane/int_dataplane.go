@@ -193,6 +193,7 @@ func (d *InternalDataplane) Start() {
 	statsCollector := collector.NewCollector(datasources, datasinks, ipfixExportSink)
 	statsCollector.Start()
 
+	// TODO (Matt): fix signal channel
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGUSR2)
 
