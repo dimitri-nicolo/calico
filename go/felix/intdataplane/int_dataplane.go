@@ -251,6 +251,9 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	// Felix being able to configure it.
 	writeProcSys("/proc/sys/net/ipv4/conf/default/rp_filter", "1")
 
+	// Enable conntrack packet and byte accounting.
+	writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")
+
 	for _, t := range d.iptablesFilterTables {
 		t.UpdateChains(d.ruleRenderer.StaticFilterTableChains())
 		t.SetRuleInsertions("FORWARD", []iptables.Rule{{
