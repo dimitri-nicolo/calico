@@ -22,7 +22,7 @@ import (
 	"github.com/projectcalico/felix/go/felix/proto"
 )
 
-// TODO (Matt): Important: do I need to watch more (/ extend the API): are WorkloadEndpointUpdates only for local endpoints?  I think so.
+// TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
 type LookupManager struct {
 	endpoints map[string]*proto.WorkloadEndpointID
 	mutex     sync.Mutex
@@ -51,15 +51,14 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 	case *proto.WorkloadEndpointRemove:
 		m.mutex.Lock()
 		// TODO (Matt): IPv6
-		// TODO (Matt): Wow this is slow; need to maintain a reverse map...
-		// Actually let's fix it later; the remove message doesn't include the IPs.
+		// Need reverse map; the remove message doesn't include the IPs.
 		//delete(m.endpoints, addr.String())
 		m.mutex.Unlock()
 	case *proto.HostEndpointUpdate:
-		// TODO(smc) Host endpoint updates
+		// TODO(Matt) Host endpoint updates
 		log.WithField("msg", msg).Warn("Message not implemented")
 	case *proto.HostEndpointRemove:
-		// TODO(smc) Host endpoint updates
+		// TODO(Matt) Host endpoint updates
 		log.WithField("msg", msg).Warn("Message not implemented")
 	}
 }
