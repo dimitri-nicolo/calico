@@ -256,8 +256,7 @@ vendor go/vendor go/vendor/.up-to-date: go/glide.lock
 #
 # We use -B to insert a build ID note into the executable, without which, the
 # RPM build tools complain.
-LDFLAGS:=-ldflags "-extldflags '-static' \
-        -X github.com/projectcalico/felix/go/felix/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
+LDFLAGS:=-ldflags "-X github.com/projectcalico/felix/go/felix/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
         -X github.com/projectcalico/felix/go/felix/buildinfo.BuildDate=$(DATE) \
         -X github.com/projectcalico/felix/go/felix/buildinfo.GitRevision=$(GIT_COMMIT) \
         -B 0x$(GIT_COMMIT)"
