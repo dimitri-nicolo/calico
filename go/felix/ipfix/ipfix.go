@@ -210,7 +210,7 @@ type IPFIXExporter struct {
 // on the IPFIX collectors configuration.
 func NewIPFIXExporter(host net.IP, port int, transport string, source <-chan *ExportRecord) *IPFIXExporter {
 	log.Info("Creating IPFIX exporter to host ", host, " port ", port)
-	fbData := C.fixbuf_init(C.CString(host.String())), C.CString(strconv.Itoa(port)), fbTransport[transport])
+	fbData := C.fixbuf_init(C.CString(host.String()), C.CString(strconv.Itoa(port)), fbTransport[transport])
 	return &IPFIXExporter{
 		host:       host,
 		port:       port,
