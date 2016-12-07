@@ -12,7 +12,6 @@ import (
 	"github.com/projectcalico/felix/go/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
-	"github.com/tigera/libcalico-go/lib/backend/model"
 )
 
 type NflogDataSource struct {
