@@ -59,7 +59,8 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (st
 	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
 	var statUpdate stats.StatUpdate
 	var reverse bool
-	if tp.Action == stats.DenyAction {
+	var wlEpKey *model.WorkloadEndpointKey
+	if lookupAction(nPkt.Prefix) == stats.DenyAction {
 		// NFLog based counters make sense only for denied packets.
 		numPkts = 1
 		numBytes = nPkt.Bytes
@@ -78,21 +79,21 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (st
 		inBytes = numBytes
 		outPkts = 0
 		outBytes = 0
-		wlEpKey = lookupEndpoint(nflogTuple.Dst)
+		wlEpKey = lookupEndpoint(ds.lum, nflogTuple.Dst)
 		reverse = true
 	} else {
 		inPkts = 0
 		inBytes = 0
 		outPkts = numPkts
 		outBytes = numBytes
-		wlEpKey = lookupEndpoint(nflogTuple.Src)
+		wlEpKey = lookupEndpoint(ds.lum, nflogTuple.Src)
 		reverse = false
 	}
 
 	if wlEpKey != nil {
 		tp := lookupRule(nPkt.Prefix, wlEpKey)
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple, reverse)
-		statUpdate = stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
+		statUpdate = *stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
 	} else {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
@@ -224,24 +225,29 @@ func lookupEndpoint(lum *lookup.LookupManager, ipAddr net.IP) *model.WorkloadEnd
 	}
 }
 
-func lookupRule(prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
-	var action stats.RuleAction
-	log.Infof("Looking up rule prefix %s", prefix)
+func lookupAction(prefix string) stats.RuleAction {
 	switch prefix[0] {
 	case 'A':
-		action = stats.AllowAction
+		return stats.AllowAction
 	case 'D':
-		action = stats.DenyAction
+		return stats.DenyAction
 	case 'N':
-		action = stats.NextTierAction
+		return stats.NextTierAction
+	default:
+		log.Error("Unknown action in ", prefix)
+		return stats.NextTierAction
 	}
+}
+
+func lookupRule(prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
+	log.Infof("Looking up rule prefix %s", prefix)
 	// TODO (Matt): This doesn't really work.
 	idx, _ := strconv.Atoi(prefix[8 : len(prefix)-1])
 	return stats.RuleTracePoint{
 		TierID:   prefix[1:2],
 		PolicyID: prefix[3:5],
 		Rule:     "no",
-		Action:   action,
+		Action:   lookupAction(prefix),
 		Index:    idx,
 	}
 }
