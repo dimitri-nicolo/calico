@@ -80,14 +80,14 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 		inBytes = numBytes
 		outPkts = 0
 		outBytes = 0
-		wlEpKey = lookupEndpoint(ds.lum, nflogTuple.Dst)
+		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Dst)
 		reverse = true
 	} else {
 		inPkts = 0
 		inBytes = 0
 		outPkts = numPkts
 		outBytes = numBytes
-		wlEpKey = lookupEndpoint(ds.lum, nflogTuple.Src)
+		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Src)
 		reverse = false
 	}
 
@@ -166,8 +166,8 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	statUpdates := []stats.StatUpdate{}
 	// The last entry is the tuple entry for endpoints
 	ctTuple := ctEntry.OrigTuples[len(ctEntry.OrigTuples)-1]
-	wlEpKeySrc := lookupEndpoint(ds.lum, ctTuple.Src)
-	wlEpKeyDst := lookupEndpoint(ds.lum, ctTuple.Dst)
+	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
+	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
 	// Force conntrack to have empty tracep
 	if wlEpKeySrc != nil {
 		// Locally originating packet
@@ -211,21 +211,6 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats
 
 // Stubs
 // TODO (Matt): Refactor these in better.
-
-func lookupEndpoint(lum *lookup.LookupManager, ipAddr net.IP) *model.WorkloadEndpointKey {
-	epid := lum.GetEndpointID(ipAddr)
-	if epid == nil {
-		return nil
-	} else {
-		// TODO (Matt): Need to lookup hostname.
-		return &model.WorkloadEndpointKey{
-			Hostname:       "matt-k8s",
-			OrchestratorID: epid.OrchestratorId,
-			WorkloadID:     epid.WorkloadId,
-			EndpointID:     epid.EndpointId,
-		}
-	}
-}
 
 func lookupAction(prefix string) stats.RuleAction {
 	switch prefix[0] {

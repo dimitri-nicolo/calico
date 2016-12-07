@@ -21,39 +21,71 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/tigera/libcalico-go/lib/backend/model"
 )
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
 type LookupManager struct {
-	endpoints map[string]*proto.WorkloadEndpointID
-	mutex     sync.Mutex
+	endpoints        map[string]*model.WorkloadEndpointID
+	endpointsReverse map[model.WorkloadEndpointKey]*string
+	mutex            sync.Mutex
 }
 
 func NewLookupManager() *LookupManager {
 	return &LookupManager{
-		endpoints: map[string]*proto.WorkloadEndpointID{},
-		mutex:     sync.Mutex{},
+		// Map indexed by IP (as IP.String()).
+		endpoints:        map[string]*model.WorkloadEndpointKey{},
+		endpointsReverse: map[model.WorkloadEndpointKey]*string,
+		mutex:            sync.Mutex{},
 	}
 }
 
 func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
+		// TODO (Matt): Need to lookup hostname.
+		wlEpKey := model.WorkloadEndpointKey{
+			Hostname:       "matt-k8s",
+			OrchestratorID: msg.Id.OrchestratorId,
+			WorkloadID:     msg.Id.WorkloadId,
+			EndpointID:     msg.Id.EndpointId,
+		}
 		m.mutex.Lock()
-		// TODO (Matt): IPv6; also IP.String() does funny things to IPv6 mapped IPv4 addresses.
 		for _, ipv4 := range msg.Endpoint.Ipv4Nets {
 			addr, _, err := net.ParseCIDR(ipv4)
 			if err != nil {
 				log.Warn("Error parsing CIDR ", ipv4)
+				continue
 			}
-			m.endpoints[addr.String()] = msg.Id
+			log.Debug("Stored IPv4 endpoint: ", wlEpKey, ": ", addr.String())
+			m.endpoints[addr.String()] = &wlEpKey
+			m.EndpointsReverse[wlEpKey] = &addr.String()
+		}
+		for _, ipv6 := range msg.Endpoint.Ipv6Nets {
+			addr, _, err := net.ParseCIDR(ipv6)
+			if err != nil {
+				log.Warn("Error parsing CIDR ", ipv6)
+				continue
+			}
+			// TODO (Matt): IP.String() does funny things to IPv6 mapped IPv4 addresses.
+			log.Debug("Stored IPv6 endpoint: ", wlEpKey, ": ", addr.String())
+			m.endpoints[addr.String()] = &wlEpKey
+			m.EndpointsReverse[wlEpKey] = &addr.String()
 		}
 		m.mutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
+		wlEpKey := model.WorkloadEndpointKey{
+			Hostname:       "matt-k8s",
+			OrchestratorID: msg.Id.OrchestratorId,
+			WorkloadID:     msg.Id.WorkloadId,
+			EndpointID:     msg.Id.EndpointId,
+		}
 		m.mutex.Lock()
-		// TODO (Matt): IPv6
-		// Need reverse map; the remove message doesn't include the IPs.
-		//delete(m.endpoints, addr.String())
+		epIp := m.endpointsReverse[wlEpKey]
+		if epIp != nil {
+			delete(m.endpoints, epIp)
+			delete(m.endpointsReverse, wlEpKey)
+		}
 		m.mutex.Unlock()
 	case *proto.HostEndpointUpdate:
 		// TODO(Matt) Host endpoint updates
@@ -68,16 +100,18 @@ func (m *LookupManager) CompleteDeferredWork() error {
 	return nil
 }
 
-// TODO (Matt): Review return types.  Convert the proto.s to model.s when we get them.
-func (m *LookupManager) GetEndpointID(addr net.IP) *proto.WorkloadEndpointID {
+func (m *LookupManager) GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey {
 	m.mutex.Lock()
-	epID := m.endpoints[addr.String()]
+	// There's no need to copy the result because we never modify fields,
+	// only delete or replace.
+	epKey := m.endpoints[addr.String()]
 	m.mutex.Unlock()
-	return epID
+	return epKey
 }
 
 func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
 	// TODO (Matt): Need to handle profiles as well as tiered policy.
+
 	ti := ep.TierInfo
 	if profile return fold(sum, len(Policies) in TierInfos in ep.Tiers)
 	else walk tiers until policyKey.Tier, summing len(Policies) then + index(policy in tier)
