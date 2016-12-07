@@ -45,6 +45,7 @@ var (
 type RuleTracePoint struct {
 	TierID   string
 	PolicyID string
+	Rule     string
 	Action   RuleAction
 	Index    int
 }
@@ -254,6 +255,7 @@ func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
 }
 
 func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecord {
+	// TODO (Matt): Proper rule exporting
 	return &ipfix.ExportRecord{
 		FlowStart:               d.createdAt,
 		FlowEnd:                 time.Now(),

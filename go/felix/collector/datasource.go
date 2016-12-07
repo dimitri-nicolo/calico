@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/felix/go/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
+	"github.com/tigera/libcalico-go/lib/backend/model"
 )
 
 type NflogDataSource struct {
@@ -45,67 +46,62 @@ func (ds *NflogDataSource) subscribeToNflog() {
 		return
 	}
 	for nflogPacket := range ch {
-		statUpdates, err := ds.convertNflogPktToStat(nflogPacket)
+		statUpdate, err := ds.convertNflogPktToStat(nflogPacket)
 		if err != nil {
 			log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacket)
 			continue
 		}
-		for _, su := range statUpdates {
-			ds.sink <- su
-		}
+		ds.sink <- statUpdate
 	}
 }
 
-func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) ([]stats.StatUpdate, error) {
-	statUpdates := []stats.StatUpdate{}
+func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (stats.StatUpdate, error) {
 	nflogTuple := nPkt.Tuple
-	wlEpKeySrc := lookupEndpoint(ds.lum, nflogTuple.Src)
-	wlEpKeyDst := lookupEndpoint(ds.lum, nflogTuple.Dst)
-	tp := lookupRule(nPkt.Prefix)
 	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
+	var statUpdate stats.StatUpdate{}
+	var reverse bool
 	if tp.Action == stats.DenyAction {
 		// NFLog based counters make sense only for denied packets.
-		// Allowed packet counters are updated via conntrack datasource.
-		// FIXME(doublek): This assumption is not true in the case of NOTRACK.
 		numPkts = 1
 		numBytes = nPkt.Bytes
 	} else {
+		// Allowed packet counters are updated via conntrack datasource.
+		// Don't update packet counts for NextTierAction to avoid multiply counting.
+		// FIXME(doublek): This assumption is not true in the case of NOTRACK.
 		numPkts = 0
 		numBytes = 0
 	}
 
+	// Determine the endpoint that this packet hit a rule for.  This depends on the direction
+	// because local -> local packets we be NFLOGed twice.
 	if ds.direction == stats.DirIn {
 		inPkts = numPkts
 		inBytes = numBytes
 		outPkts = 0
 		outBytes = 0
+		wlEpKey = lookupEndpoint(nflogTuple.Dst)
+		reverse = true
 	} else {
 		inPkts = 0
 		inBytes = 0
 		outPkts = numPkts
 		outBytes = numBytes
+		wlEpKey = lookupEndpoint(nflogTuple.Src)
+		reverse = false
 	}
 
-	// FIXME(doublek): We should not increase packet counters for the same packet
-	// hitting multiple rules more than once. Right now it is.
-	// One way to do this could be, only increment counters when the actual "allow/deny"
-	// rule is hit.
-	if wlEpKeySrc != nil {
-		// Locally originating packet
-		tuple := extractTupleFromNflogTuple(nPkt.Tuple, false)
-		su := stats.NewStatUpdate(tuple, *wlEpKeySrc, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
-		statUpdates = append(statUpdates, *su)
+	if wlEpKey != nil {
+		tp := lookupRule(nPkt.Prefix, wlEpKey)
+		tuple := extractTupleFromNflogTuple(nPkt.Tuple, reverse)
+		statUpdate = stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
+	} else {
+		// TODO (Matt): This branch becomes much more interesting with graceful restart.
+		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
+		return nil, errors.New("Couldn't find endpoint info for NFLOG packet")
 	}
-	if wlEpKeyDst != nil {
-		// Locally terminating packet
-		tuple := extractTupleFromNflogTuple(nPkt.Tuple, false)
-		su := stats.NewStatUpdate(tuple, *wlEpKeyDst, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
-		statUpdates = append(statUpdates, *su)
-	}
-	for _, update := range statUpdates {
-		log.Debug("Built NFLOG stat update: ", update)
-	}
-	return statUpdates, nil
+
+	log.Debug("Built NFLOG stat update: ", statUpdate)
+	return statUpdate, nil
 }
 
 func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse bool) stats.Tuple {
@@ -229,7 +225,7 @@ func lookupEndpoint(lum *lookup.LookupManager, ipAddr net.IP) *model.WorkloadEnd
 	}
 }
 
-func lookupRule(prefix string) stats.RuleTracePoint {
+func lookupRule(prefix string, *model.WorkloadEndpointKey) stats.RuleTracePoint {
 	var action stats.RuleAction
 	log.Infof("Looking up rule prefix %s", prefix)
 	switch prefix[0] {
@@ -240,11 +236,12 @@ func lookupRule(prefix string) stats.RuleTracePoint {
 	case 'N':
 		action = stats.NextTierAction
 	}
-	// TODO (Matt): This doesn't really work.  Also need to pass in the endpoint to get the real index (for policy ordering).
+	// TODO (Matt): This doesn't really work.
 	idx, _ := strconv.Atoi(prefix[8 : len(prefix)-1])
 	return stats.RuleTracePoint{
 		TierID:   prefix[1:2],
 		PolicyID: prefix[3:5],
+		Rule:     "no"
 		Action:   action,
 		Index:    idx,
 	}
