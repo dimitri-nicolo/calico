@@ -240,7 +240,7 @@ func lookupRule(prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTrace
 	return stats.RuleTracePoint{
 		TierID:   prefix[1:2],
 		PolicyID: prefix[3:5],
-		Rule:     "no"
+		Rule:     "no",
 		Action:   action,
 		Index:    idx,
 	}
