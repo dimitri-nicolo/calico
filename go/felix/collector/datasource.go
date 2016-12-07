@@ -57,7 +57,7 @@ func (ds *NflogDataSource) subscribeToNflog() {
 func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (stats.StatUpdate, error) {
 	nflogTuple := nPkt.Tuple
 	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
-	var statUpdate stats.StatUpdate{}
+	var statUpdate stats.StatUpdate
 	var reverse bool
 	if tp.Action == stats.DenyAction {
 		// NFLog based counters make sense only for denied packets.
@@ -224,7 +224,7 @@ func lookupEndpoint(lum *lookup.LookupManager, ipAddr net.IP) *model.WorkloadEnd
 	}
 }
 
-func lookupRule(prefix string, *model.WorkloadEndpointKey) stats.RuleTracePoint {
+func lookupRule(prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
 	var action stats.RuleAction
 	log.Infof("Looking up rule prefix %s", prefix)
 	switch prefix[0] {
