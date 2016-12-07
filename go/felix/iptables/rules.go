@@ -73,6 +73,7 @@ type NflogAction struct {
 }
 
 func (n NflogAction) ToFragment() string {
+	// TODO (Matt): Review number of bytes
 	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, n.Prefix)
 }
 

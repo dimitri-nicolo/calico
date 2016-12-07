@@ -29,11 +29,11 @@ func (r *ruleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *
 	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
 	inbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyInboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, true, policyID.Tier+"-"+policyID.Name),
+		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, true, policyID.Name+"/"+policyID.Tier),
 	}
 	outbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyOutboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, false, policyID.Tier+"-"+policyID.Name),
+		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, false, policyID.Name+"/"+policyID.Tier),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -54,7 +54,7 @@ func (r *ruleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVer
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
-		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, prefix+"-"+fmt.Sprintf("%d", ii))...)
+		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, fmt.Sprintf("%d", ii)+"/"+prefix)...)
 	}
 	return rules
 }
@@ -160,7 +160,7 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 				Match: iptables.Match().MarkSet(r.IptablesMarkAccept),
 				Action: iptables.NflogAction{
 					Group:  nflogGroup,
-					Prefix: "A" + prefix,
+					Prefix: "A/" + prefix,
 				},
 			},
 			{
@@ -178,7 +178,7 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 				Match: iptables.Match().MarkSet(r.IptablesMarkNextTier),
 				Action: iptables.NflogAction{
 					Group:  nflogGroup,
-					Prefix: "N" + prefix,
+					Prefix: "N/" + prefix,
 				},
 			},
 			{
@@ -196,7 +196,7 @@ func (r *ruleRenderer) ProtoRuleToIptablesRules(protoRule *proto.Rule, ipVersion
 				Match: iptables.Match().MarkSet(r.IptablesMarkDrop),
 				Action: iptables.NflogAction{
 					Group:  nflogGroup,
-					Prefix: "D" + prefix,
+					Prefix: "D/" + prefix,
 				},
 			},
 			{
