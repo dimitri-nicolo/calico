@@ -26,16 +26,18 @@ import (
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
 type LookupManager struct {
-	endpoints        map[string]*model.WorkloadEndpointID
+	// `string`s are IP.String().
+	endpoints        map[string]*model.WorkloadEndpointKey
 	endpointsReverse map[model.WorkloadEndpointKey]*string
+	endpointTiers    map[model.WorkloadEndpointKey]*[]TierInfo
 	mutex            sync.Mutex
 }
 
 func NewLookupManager() *LookupManager {
 	return &LookupManager{
-		// Map indexed by IP (as IP.String()).
 		endpoints:        map[string]*model.WorkloadEndpointKey{},
 		endpointsReverse: map[model.WorkloadEndpointKey]*string,
+		endpointTiers:    map[model.WorkloadEndpointKey]*[]proto.TierInfo,
 		mutex:            sync.Mutex{},
 	}
 }
@@ -51,6 +53,9 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			EndpointID:     msg.Id.EndpointId,
 		}
 		m.mutex.Lock()
+		// Store tiers and policies
+		m.endpointTiers[wlEpKey] = msg.Endpoint.Tiers
+		// Store IP addresses
 		for _, ipv4 := range msg.Endpoint.Ipv4Nets {
 			addr, _, err := net.ParseCIDR(ipv4)
 			if err != nil {
@@ -85,6 +90,7 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		if epIp != nil {
 			delete(m.endpoints, epIp)
 			delete(m.endpointsReverse, wlEpKey)
+			delete(m.endpointTiers, wlEpKey)
 		}
 		m.mutex.Unlock()
 	case *proto.HostEndpointUpdate:
@@ -111,9 +117,8 @@ func (m *LookupManager) GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey {
 
 func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
 	// TODO (Matt): Need to handle profiles as well as tiered policy.
-
-	ti := ep.TierInfo
-	if profile return fold(sum, len(Policies) in TierInfos in ep.Tiers)
-	else walk tiers until policyKey.Tier, summing len(Policies) then + index(policy in tier)
+	ti := m.endpointTiers[*epKey]
+	//if profile return fold(sum, len(Policies) in TierInfos in ep.Tiers)
+	//else walk tiers until policyKey.Tier, summing len(Policies) then + index(policy in tier)
 	return 3
 }
