@@ -5,7 +5,6 @@ package collector
 import (
 	"errors"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
