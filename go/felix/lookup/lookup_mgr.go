@@ -21,7 +21,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/tigera/libcalico-go/lib/backend/model"
 )
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
