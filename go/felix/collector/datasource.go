@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -92,7 +93,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	}
 
 	if wlEpKey != nil {
-		tp := lookupRule(nPkt.Prefix, wlEpKey)
+		tp := lookupRule(ds.lum, nPkt.Prefix, wlEpKey)
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple, reverse)
 		statUpdate = stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
 	} else {
@@ -210,6 +211,7 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats
 }
 
 // Stubs
+// TODO (Matt): Refactor these in better.
 
 func lookupEndpoint(lum *lookup.LookupManager, ipAddr net.IP) *model.WorkloadEndpointKey {
 	epid := lum.GetEndpointID(ipAddr)
@@ -240,16 +242,32 @@ func lookupAction(prefix string) stats.RuleAction {
 	}
 }
 
-func lookupRule(prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
+func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
 	log.Infof("Looking up rule prefix %s", prefix)
-	// TODO (Matt): This doesn't really work.
-	idx, _ := strconv.Atoi(prefix[8 : len(prefix)-1])
+	var tier, policy string
+	// Prefix formats are:
+	// - A/rule index/profile name
+	// - D/rule index/policy name / tier name
+	// TODO (Matt): Add sensible rule UUIDs
+	prefixChunks := strings.Split(prefix, "/")
+	if len(prefixChunks) == 3 {
+		// Profile
+		tier = "profile"
+		policy = prefixChunks[2]
+	} else if len(prefixChunks) == 4 {
+		// Tiered Policy
+		tier = prefixChunks[3]
+		policy = prefixChunks[2]
+	} else {
+		log.Error("Unable to parse NFLOG prefix ", prefix)
+	}
+
 	return stats.RuleTracePoint{
-		TierID:   prefix[1:2],
-		PolicyID: prefix[3:5],
-		Rule:     "no",
+		TierID:   tier,
+		PolicyID: policy,
+		Rule:     prefixChunks[1],
 		Action:   lookupAction(prefix),
-		Index:    idx,
+		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
 	}
 }
 

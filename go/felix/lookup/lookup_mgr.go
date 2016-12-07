@@ -67,10 +67,14 @@ func (m *LookupManager) CompleteDeferredWork() error {
 	return nil
 }
 
-// TODO (Matt): Review return types.
+// TODO (Matt): Review return types.  Convert the proto.s to model.s when we get them.
 func (m *LookupManager) GetEndpointID(addr net.IP) *proto.WorkloadEndpointID {
 	m.mutex.Lock()
 	epID := m.endpoints[addr.String()]
 	m.mutex.Unlock()
 	return epID
+}
+
+func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
+	return 3
 }
