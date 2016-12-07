@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"errors"
 	"net"
 	"strconv"
 	"time"
@@ -50,14 +51,14 @@ func (ds *NflogDataSource) subscribeToNflog() {
 			log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacket)
 			continue
 		}
-		ds.sink <- statUpdate
+		ds.sink <- *statUpdate
 	}
 }
 
-func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (stats.StatUpdate, error) {
+func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*stats.StatUpdate, error) {
 	nflogTuple := nPkt.Tuple
 	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
-	var statUpdate stats.StatUpdate
+	var statUpdate *stats.StatUpdate
 	var reverse bool
 	var wlEpKey *model.WorkloadEndpointKey
 	if lookupAction(nPkt.Prefix) == stats.DenyAction {
@@ -93,7 +94,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (st
 	if wlEpKey != nil {
 		tp := lookupRule(nPkt.Prefix, wlEpKey)
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple, reverse)
-		statUpdate = *stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
+		statUpdate = stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
 	} else {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
