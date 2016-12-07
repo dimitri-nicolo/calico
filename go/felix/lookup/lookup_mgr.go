@@ -77,5 +77,9 @@ func (m *LookupManager) GetEndpointID(addr net.IP) *proto.WorkloadEndpointID {
 }
 
 func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
+	// TODO (Matt): Need to handle profiles as well as tiered policy.
+	ti := ep.TierInfo
+	if profile return fold(sum, len(Policies) in TierInfos in ep.Tiers)
+	else walk tiers until policyKey.Tier, summing len(Policies) then + index(policy in tier)
 	return 3
 }
