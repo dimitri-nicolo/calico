@@ -28,7 +28,7 @@ type LookupManager struct {
 	// `string`s are IP.String().
 	endpoints        map[string]*model.WorkloadEndpointKey
 	endpointsReverse map[model.WorkloadEndpointKey]*string
-	endpointTiers    map[model.WorkloadEndpointKey]*[]TierInfo
+	endpointTiers    map[model.WorkloadEndpointKey]*[]proto.TierInfo
 	mutex            sync.Mutex
 }
 
