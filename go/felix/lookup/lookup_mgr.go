@@ -35,8 +35,8 @@ type LookupManager struct {
 func NewLookupManager() *LookupManager {
 	return &LookupManager{
 		endpoints:        map[string]*model.WorkloadEndpointKey{},
-		endpointsReverse: map[model.WorkloadEndpointKey{}]*string,
-		endpointTiers:    map[model.WorkloadEndpointKey{}][]*proto.TierInfo{},
+		endpointsReverse: map[model.WorkloadEndpointKey]*string{},
+		endpointTiers:    map[model.WorkloadEndpointKey][]*proto.TierInfo{},
 		mutex:            sync.Mutex{},
 	}
 }
@@ -116,10 +116,17 @@ func (m *LookupManager) GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey {
 	return epKey
 }
 
+// Return the number of tiers that have been traversed before reaching a given Policy.
+// For a profile, this means it returns the total number of tiers that apply.
 func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
-	// TODO (Matt): Need to handle profiles as well as tiered policy.
-	ti := m.endpointTiers[*epKey]
-	//if profile return fold(sum, len(Policies) in TierInfos in ep.Tiers)
-	//else walk tiers until policyKey.Tier, summing len(Policies) then + index(policy in tier)
-	return 3
+	tiers := m.endpointTiers[*epKey]
+	tiersBefore := 0
+	for _, tier := range tiers {
+		if tier.Name == policyKey.Tier {
+			break
+		} else {
+			tiersBefore++
+		}
+	}
+	return tiersBefore
 }

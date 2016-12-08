@@ -231,11 +231,13 @@ func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadE
 	var tier, policy string
 	// Prefix formats are:
 	// - A/rule index/profile name
-	// - D/rule index/policy name / tier name
+	// - A/rule index/policy name/tier name
 	// TODO (Matt): Add sensible rule UUIDs
 	prefixChunks := strings.Split(prefix, "/")
 	if len(prefixChunks) == 3 {
 		// Profile
+		// TODO (Matt): Need something better than profile;
+		//              it won't work if that's the name of a tier.
 		tier = "profile"
 		policy = prefixChunks[2]
 	} else if len(prefixChunks) == 4 {
