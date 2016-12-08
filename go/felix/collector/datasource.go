@@ -4,7 +4,6 @@ package collector
 
 import (
 	"errors"
-	"net"
 	"strings"
 	"time"
 
