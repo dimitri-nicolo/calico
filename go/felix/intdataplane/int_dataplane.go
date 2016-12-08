@@ -87,6 +87,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		config.RulesConfig.WorkloadIfacePrefixes))
 	dp.lookupManager = lookup.NewLookupManager()
 	dp.RegisterManager(dp.lookupManager)
+	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, 1000000, 4))
 
 	if !config.DisableIPv6 {
 		natTableV6 := iptables.NewTable(
@@ -117,6 +118,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 			routeTableV6,
 			6,
 			config.RulesConfig.WorkloadIfacePrefixes))
+		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, 1000000, 6))
 	}
 	return dp
 }
@@ -261,6 +263,9 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		t.UpdateChains(d.ruleRenderer.StaticNATTableChains(t.IPVersion))
 		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
 			Action: iptables.JumpAction{rules.NATPreroutingChainName},
+		}})
+		t.SetRuleInsertions("POSTROUTING", []iptables.Rule{{
+			Action: iptables.JumpAction{rules.NATPostroutingChainName},
 		}})
 	}
 

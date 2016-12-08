@@ -444,9 +444,9 @@ type DataplaneConnector struct {
 	datastore                  bapi.Client
 	statusReporter             *statusrep.EndpointStatusReporter
 
-	datastoreInSync            bool
+	datastoreInSync bool
 
-	firstStatusReportSent      bool
+	firstStatusReportSent bool
 }
 
 type Startable interface {

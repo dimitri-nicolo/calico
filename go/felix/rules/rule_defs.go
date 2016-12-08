@@ -15,6 +15,7 @@
 package rules
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/ipsets"
 	"github.com/projectcalico/felix/go/felix/iptables"
 	"github.com/projectcalico/felix/go/felix/proto"
@@ -29,7 +30,12 @@ const (
 	FilterForwardChainName = ChainNamePrefix + "-FORWARD"
 	FilterOutputChainName  = ChainNamePrefix + "-OUTPUT"
 
-	NATPreroutingChainName = ChainNamePrefix + "-PREROUTING"
+	NATPreroutingChainName  = ChainNamePrefix + "-PREROUTING"
+	NATPostroutingChainName = ChainNamePrefix + "-POSTROUTING"
+	NATOutgoingChainName    = ChainNamePrefix + "-nat-outgoing"
+
+	NATOutgoingAllIPsSetID  = "all-ipam-pools"
+	NATOutgoingMasqIPsSetID = "masq-ipam-pools"
 
 	PolicyInboundPfx  = ChainNamePrefix + "pi-"
 	PolicyOutboundPfx = ChainNamePrefix + "po-"
@@ -57,8 +63,7 @@ const (
 	// where possible, it's best to match only on part of the rule that
 	// we're sure can't change (such as the ipset name in the masquerade
 	// rule).
-	HistoricInsertedNATRuleRegex =
-		`-A POSTROUTING .* felix-masq-ipam-pools .*|` +
+	HistoricInsertedNATRuleRegex = `-A POSTROUTING .* felix-masq-ipam-pools .*|` +
 		`-A POSTROUTING -o tunl0 -m addrtype ! --src-type LOCAL --limit-iface-out -m addrtype --src-type LOCAL -j MASQUERADE`
 )
 
@@ -86,10 +91,23 @@ type RuleRenderer interface {
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
 	ProfileToIptablesChains(policyID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
+
+	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
 }
 
 type ruleRenderer struct {
 	Config
+}
+
+func (r *ruleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
+	if ipVersion == 4 {
+		return r.IPSetConfigV4
+	} else if ipVersion == 6 {
+		return r.IPSetConfigV6
+	} else {
+		log.WithField("version", ipVersion).Panic("Unknown IP version")
+		return nil
+	}
 }
 
 type Config struct {
