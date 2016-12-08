@@ -28,15 +28,15 @@ type LookupManager struct {
 	// `string`s are IP.String().
 	endpoints        map[string]*model.WorkloadEndpointKey
 	endpointsReverse map[model.WorkloadEndpointKey]*string
-	endpointTiers    map[model.WorkloadEndpointKey]*[]proto.TierInfo
+	endpointTiers    map[model.WorkloadEndpointKey][]*proto.TierInfo
 	mutex            sync.Mutex
 }
 
 func NewLookupManager() *LookupManager {
 	return &LookupManager{
 		endpoints:        map[string]*model.WorkloadEndpointKey{},
-		endpointsReverse: map[model.WorkloadEndpointKey]*string,
-		endpointTiers:    map[model.WorkloadEndpointKey]*[]proto.TierInfo,
+		endpointsReverse: map[model.WorkloadEndpointKey{}]*string,
+		endpointTiers:    map[model.WorkloadEndpointKey{}][]*proto.TierInfo{},
 		mutex:            sync.Mutex{},
 	}
 }
@@ -61,9 +61,10 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 				log.Warn("Error parsing CIDR ", ipv4)
 				continue
 			}
-			log.Debug("Stored IPv4 endpoint: ", wlEpKey, ": ", addr.String())
-			m.endpoints[addr.String()] = &wlEpKey
-			m.EndpointsReverse[wlEpKey] = &addr.String()
+			addrStr := addr.String()
+			log.Debug("Stored IPv4 endpoint: ", wlEpKey, ": ", addrStr)
+			m.endpoints[addrStr] = &wlEpKey
+			m.endpointsReverse[wlEpKey] = &addrStr
 		}
 		for _, ipv6 := range msg.Endpoint.Ipv6Nets {
 			addr, _, err := net.ParseCIDR(ipv6)
@@ -72,9 +73,10 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 				continue
 			}
 			// TODO (Matt): IP.String() does funny things to IPv6 mapped IPv4 addresses.
-			log.Debug("Stored IPv6 endpoint: ", wlEpKey, ": ", addr.String())
-			m.endpoints[addr.String()] = &wlEpKey
-			m.EndpointsReverse[wlEpKey] = &addr.String()
+			addrStr := addr.String()
+			log.Debug("Stored IPv6 endpoint: ", wlEpKey, ": ", addrStr)
+			m.endpoints[addrStr] = &wlEpKey
+			m.endpointsReverse[wlEpKey] = &addrStr
 		}
 		m.mutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
@@ -87,7 +89,7 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		m.mutex.Lock()
 		epIp := m.endpointsReverse[wlEpKey]
 		if epIp != nil {
-			delete(m.endpoints, epIp)
+			delete(m.endpoints, *epIp)
 			delete(m.endpointsReverse, wlEpKey)
 			delete(m.endpointTiers, wlEpKey)
 		}
