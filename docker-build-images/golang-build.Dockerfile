@@ -8,8 +8,10 @@ ARG GID
 # Install build pre-reqs:
 # - bsdmainutils contains the "column" command, used to format the coverage
 #   data.
+# - libfixbuf3 is used for ipfix emission (via CGO).
+# - glib2.0 is required by CGO.
 RUN apt-get update && \
-    apt-get install -y bsdmainutils && \
+    apt-get install -y bsdmainutils libfixbuf3-dev libglib2.0-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -27,7 +29,7 @@ RUN groupadd --force --gid=$GID user && useradd -o --home=/ --gid=$GID --uid=$UI
 RUN chmod -R a+wX $GOPATH /usr/local/go
 
 # Disable cgo so that binaries we build will be fully static.
-# TODO(Matt) Properly enable CGO
+# TODO (Matt): Review these builds.  Consider at least licensing and staticness.
 # ENV CGO_ENABLED=0
 
 WORKDIR /go/src/github.com/projectcalico/felix
