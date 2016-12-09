@@ -273,8 +273,6 @@ bin/calico-felix: $(GO_FILES) \
 	    -v $${PWD}:/go/src/github.com/projectcalico/felix:rw \
 	    calico-build/golang \
 	    go build -o $@ $(LDFLAGS) "./go/felix/felix.go"
-	# Check that the executable is correctly statically linked.
-	ldd bin/calico-felix | grep -q "not a dynamic executable"
 
 # Build the pyinstaller bundle, which is an output artefact in its own right
 # as well as being the input to our Deb and RPM builds.
