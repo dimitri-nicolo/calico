@@ -119,6 +119,7 @@ func (m *LookupManager) GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey {
 // Return the number of tiers that have been traversed before reaching a given Policy.
 // For a profile, this means it returns the total number of tiers that apply.
 func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
+	m.mutex.Lock()
 	tiers := m.endpointTiers[*epKey]
 	tiersBefore := 0
 	log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
@@ -131,5 +132,6 @@ func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyK
 		}
 	}
 	log.Debug("TiersBefore: ", tiersBefore)
+	m.mutex.Unlock()
 	return tiersBefore
 }
