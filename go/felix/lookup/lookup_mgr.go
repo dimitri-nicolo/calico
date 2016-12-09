@@ -121,12 +121,15 @@ func (m *LookupManager) GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey {
 func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
 	tiers := m.endpointTiers[*epKey]
 	tiersBefore := 0
+	log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
 	for _, tier := range tiers {
+		log.Debug("Checking endpoint tier ", tier)
 		if tier.Name == policyKey.Tier {
 			break
 		} else {
 			tiersBefore++
 		}
 	}
+	log.Debug("TiersBefore: ", tiersBefore)
 	return tiersBefore
 }
