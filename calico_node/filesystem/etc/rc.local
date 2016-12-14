@@ -74,4 +74,4 @@ if [ "$CALICO_LIBNETWORK_ENABLED" == "true" ]; then
 	mv /etc/service/available/libnetwork  /etc/service/enabled/
 fi
 
-echo "Calico node started successfully"
+echo "Calico node (enterprise) started successfully"
