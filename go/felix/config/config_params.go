@@ -146,6 +146,9 @@ type Config struct {
 	FailsafeInboundHostPorts  []int `config:"port-list;22;die-on-fail"`
 	FailsafeOutboundHostPorts []int `config:"port-list;2379,2380,4001,7001;die-on-fail"`
 
+	IpfixCollectorAddr string `config:"hostname;127.0.0.1;die-on-fail"`
+	IpfixCollectorPort int    `config:"int(0,65535);4739;die-on-fail"`
+
 	UsageReportingEnabled bool   `config:"bool;true"`
 	ClusterGUID           string `config:"string;baddecaf"`
 	ClusterType           string `config:"string;"`

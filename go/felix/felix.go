@@ -178,6 +178,8 @@ configRetry:
 				IptablesMarkEndpoints: 0x4,
 				IptablesMarkDrop:      0x8,
 			},
+			IpfixAddr: net.ParseIP(configParams.IpfixCollectorAddr),
+			IpfixPort: configParams.IpfixCollectorPort,
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()

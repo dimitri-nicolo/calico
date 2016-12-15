@@ -37,6 +37,8 @@ import (
 type Config struct {
 	DisableIPv6          bool
 	RuleRendererOverride rules.RuleRenderer
+	IpfixPort            int
+	IpfixAddr            net.IP
 
 	RulesConfig rules.Config
 }
@@ -54,6 +56,8 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		cleanupPending:    true,
 		ifaceMonitor:      ifacemonitor.New(),
 		ifaceUpdates:      make(chan *ifaceUpdate, 100),
+		ipfixAddr:         config.IpfixAddr,
+		ipfixPort:         config.IpfixPort,
 	}
 
 	dp.ifaceMonitor.Callback = dp.onIfaceStateChange
@@ -154,6 +158,9 @@ type InternalDataplane struct {
 
 	lookupManager *lookup.LookupManager
 
+	ipfixPort int
+	ipfixAddr net.IP
+
 	interfacePrefixes []string
 
 	routeTables []*routetable.RouteTable
@@ -185,8 +192,7 @@ func (d *InternalDataplane) Start() {
 	nflogEgressDataSource.Start()
 
 	ipfixExportSink := make(chan *ipfix.ExportRecord)
-	// TODO (Matt): Configurable ipfix collector address.
-	ipfixExporter := ipfix.NewIPFIXExporter(net.ParseIP("127.0.0.1"), 4739, "udp", ipfixExportSink)
+	ipfixExporter := ipfix.NewIPFIXExporter(d.ipfixAddr, d.ipfixPort, "udp", ipfixExportSink)
 	ipfixExporter.Start()
 
 	printSink := make(chan *stats.Data)
