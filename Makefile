@@ -340,7 +340,7 @@ LDFLAGS=-ldflags "-X github.com/projectcalico/calico-containers/calicoctl/comman
 	-X github.com/projectcalico/calico-containers/calicoctl/commands.BUILD_DATE=$(CALICOCTL_BUILD_DATE) \
 	-X github.com/projectcalico/calico-containers/calicoctl/commands.GIT_REVISION=$(CALICOCTL_GIT_REVISION) -s -w"
 
-GLIDE_CONTAINER_NAME=calico/glide
+GLIDE_CONTAINER_NAME=calico-build/glide
 GLIDE_CONTAINER_MARKER=calico-build/glide_container.created
 TEST_CALICOCTL_CONTAINER_NAME=calico/calicoctl_test_container
 TEST_CALICOCTL_CONTAINER_MARKER=calicoctl_test_container.created
