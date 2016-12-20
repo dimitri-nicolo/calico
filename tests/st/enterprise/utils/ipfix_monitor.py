@@ -15,7 +15,7 @@ import copy
 import multiprocessing
 import netaddr
 import os
-import queue
+import Queue
 import select
 import signal
 import subprocess32 as subprocess
@@ -26,10 +26,15 @@ from tests.st.utils.utils import debug_failures
 devnull = open(os.devnull, 'wb')
 
 
-class IpfixFlow():
+class IpfixFlow(object):
+
     """
+
     Represents an IPFIX flow for verification.  Values of None will not be matched against.
+    Note that the packets and octets fields take the form "X,Y", where X is packets/octets out, and Y in.
+
     """
+
     def __init__(self, srcaddr, dstaddr, protocol=None, srcport=None, dstport=None, packets=None, octets=None):
         self.e_protocol = protocol
         self.e_srcaddr = srcaddr
@@ -62,8 +67,11 @@ class IpfixFlow():
             return False
         return True
 
+    def __str__(self):
+        return "Flow: " + self.e_srcaddr + " -> " + self.e_dstaddr
 
-class IpfixMonitor():
+
+class IpfixMonitor(object):
     def __init__(self):
         # netcat actually listens on the ipfix port (needed for template emission).
         # Without the template, tshark is unable to decode the data packets.
@@ -82,7 +90,7 @@ class IpfixMonitor():
         def _tshark_loop(flows_queue):
             tshark = subprocess.Popen(
                 [
-                    "tshark", "-i", "lo", "-f", "port 4739", "-T", "fields",
+                    "tshark", "-l", "-i", "lo", "-f", "port 4739", "-T", "fields",
                     "-e", "cflow.flowset_id",
                     "-e", "cflow.protocol",
                     "-e", "cflow.srcaddr",
