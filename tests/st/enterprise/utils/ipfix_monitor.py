@@ -15,6 +15,7 @@ import copy
 import multiprocessing
 import netaddr
 import os
+import queue
 import select
 import signal
 import subprocess32 as subprocess
@@ -100,7 +101,7 @@ class IpfixMonitor():
                 if "\t" in line:
                     flows_queue.put(line)
 
-        self.tshark_process = multiprocessing.Process(target=_tshark_loop, args=self.flows_queue)
+        self.tshark_process = multiprocessing.Process(target=_tshark_loop, args=(self.flows_queue,))
         self.tshark_process.start()
 
     def __del__(self):
@@ -135,7 +136,7 @@ class IpfixMonitor():
                     if flow.check_tshark(line):
                         flows_left.remove(flow)
                         break
-        except multiprocessing.Queue.Empty:
+        except Queue.Empty:
             pass
         except TimeoutError:
             pass
@@ -153,11 +154,11 @@ class IpfixMonitor():
         while --size > -10:
             try:
                 self.flows_queue.get(timeout=0.1)
-            except multiprocessing.Queue.Empty:
+            except Queue.Empty:
                 return
 
 # Test (must be root!!!):
 import ipfix_monitor
 mon = ipfix_monitor.IpfixMonitor()
 fl = ipfix_monitor.IpfixFlow("192.168.123.131", "192.168.123.132")
-mon.assert_flows_present([fl])
+mon.assert_flows_present([fl], 10)
