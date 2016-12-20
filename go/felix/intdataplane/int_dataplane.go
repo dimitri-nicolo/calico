@@ -39,8 +39,8 @@ type Config struct {
 	RuleRendererOverride rules.RuleRenderer
 	IpfixPort            int
 	IpfixAddr            net.IP
-
-	RulesConfig rules.Config
+	IPIPMTU              int
+	RulesConfig          rules.Config
 }
 
 func NewIntDataplaneDriver(config Config) *InternalDataplane {
@@ -56,8 +56,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		cleanupPending:    true,
 		ifaceMonitor:      ifacemonitor.New(),
 		ifaceUpdates:      make(chan *ifaceUpdate, 100),
-		ipfixAddr:         config.IpfixAddr,
-		ipfixPort:         config.IpfixPort,
+		config:            config,
 	}
 
 	dp.ifaceMonitor.Callback = dp.onIfaceStateChange
@@ -92,7 +91,10 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	dp.lookupManager = lookup.NewLookupManager()
 	dp.RegisterManager(dp.lookupManager)
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, 1000000, 4))
-
+	if config.RulesConfig.IPIPEnabled {
+		// Add a manger to keep the all-hosts IP set up to date.
+		dp.RegisterManager(newIPIPManager(ipSetsV4, 1000000)) // IPv4-only
+	}
 	if !config.DisableIPv6 {
 		natTableV6 := iptables.NewTable(
 			"nat",
@@ -158,15 +160,14 @@ type InternalDataplane struct {
 
 	lookupManager *lookup.LookupManager
 
-	ipfixPort int
-	ipfixAddr net.IP
-
 	interfacePrefixes []string
 
 	routeTables []*routetable.RouteTable
 
 	dataplaneNeedsSync bool
 	cleanupPending     bool
+
+	config Config
 }
 
 func (d *InternalDataplane) RegisterManager(mgr Manager) {
@@ -192,7 +193,7 @@ func (d *InternalDataplane) Start() {
 	nflogEgressDataSource.Start()
 
 	ipfixExportSink := make(chan *ipfix.ExportRecord)
-	ipfixExporter := ipfix.NewIPFIXExporter(d.ipfixAddr, d.ipfixPort, "udp", ipfixExportSink)
+	ipfixExporter := ipfix.NewIPFIXExporter(d.config.IpfixAddr, d.config.IpfixPort, "udp", ipfixExportSink)
 	ipfixExporter.Start()
 
 	printSink := make(chan *stats.Data)
@@ -259,10 +260,24 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")
 
 	for _, t := range d.iptablesFilterTables {
-		t.UpdateChains(d.ruleRenderer.StaticFilterTableChains())
+		filterChains := d.ruleRenderer.StaticFilterTableChains(t.IPVersion)
+		t.UpdateChains(filterChains)
 		t.SetRuleInsertions("FORWARD", []iptables.Rule{{
 			Action: iptables.JumpAction{rules.FilterForwardChainName},
 		}})
+	}
+
+	if d.config.RulesConfig.IPIPEnabled {
+		err := configureIPIPDevice(d.config.IPIPMTU,
+			d.config.RulesConfig.IPIPTunnelAddress)
+		if err != nil {
+			log.WithError(err).Warn("Failed configure IPIP tunnel device, retrying...")
+			err := configureIPIPDevice(d.config.IPIPMTU,
+				d.config.RulesConfig.IPIPTunnelAddress)
+			if err != nil {
+				log.WithError(err).Panic("IPIP enabled but failed to configure tunnel.")
+			}
+		}
 	}
 
 	for _, t := range d.iptablesNATTables {

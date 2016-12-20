@@ -177,9 +177,13 @@ configRetry:
 				IptablesMarkNextTier:  0x2,
 				IptablesMarkEndpoints: 0x4,
 				IptablesMarkDrop:      0x8,
+
+				IPIPEnabled:       configParams.IpInIpEnabled,
+				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
 			},
 			IpfixAddr: net.ParseIP(configParams.IpfixCollectorAddr),
 			IpfixPort: configParams.IpfixCollectorPort,
+			IPIPMTU:   configParams.IpInIpMtu,
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()
