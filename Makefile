@@ -46,7 +46,7 @@ NODE_CONTAINER_FILES=$(shell find $(NODE_CONTAINER_DIR)/filesystem -type f)
 NODE_CONTAINER_CREATED=$(NODE_CONTAINER_DIR)/.calico_node.created
 NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
 NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
-FELIX_CONTAINER_NAME?=calico/felix:2.0.0-beta.3
+FELIX_CONTAINER_NAME?=calico/felix:latest
 LIBNETWORK_PLUGIN_CONTAINER_NAME?=calico/libnetwork-plugin:v1.0.0-beta
 
 calico/node: $(NODE_CONTAINER_CREATED)    ## Create the calico/node image
@@ -61,7 +61,7 @@ calico-node-latest.aci: calico-node.tar
 
 # Build calico/node docker image - explicitly depend on the container binaries.
 $(NODE_CONTAINER_CREATED): $(NODE_CONTAINER_DIR)/Dockerfile $(NODE_CONTAINER_FILES) $(addprefix $(NODE_CONTAINER_BIN_DIR)/,$(NODE_CONTAINER_BINARIES))
-	docker build -t $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_DIR)
+	docker build -t $(NODE_CONTAINER_NAME) -f $(NODE_CONTAINER_DIR)/Dockerfile.Debian $(NODE_CONTAINER_DIR)
 	touch $@
 
 # Build binary from python files, e.g. startup.py or allocate-ipip-addr.py
@@ -75,6 +75,7 @@ $(NODE_CONTAINER_BIN_DIR)/calico-felix:
 	-docker rm -f calico-felix
 	# Latest felix binaries are stored in automated builds of calico/felix.
 	# To get them, we pull that image, then copy the binaries out to our host
+	docker images
 	docker create --name calico-felix $(FELIX_CONTAINER_NAME)
 	docker cp calico-felix:/code/. $(@D)
 	-docker rm -f calico-felix
@@ -520,7 +521,8 @@ clean:
 
 	# Retag and remove external images so that they will be pulled again
 	# We avoid just deleting the image. We didn't build them here so it would be impolite to delete it.
-	docker tag $(FELIX_CONTAINER_NAME) $(FELIX_CONTAINER_NAME)-backup && docker rmi $(FELIX_CONTAINER_NAME) || true
+	# Don't delete the Felix image, since we need to build it locally.
+	# docker tag $(FELIX_CONTAINER_NAME) $(FELIX_CONTAINER_NAME)-backup && docker rmi $(FELIX_CONTAINER_NAME) || true
 	docker tag $(PYTHON_BUILD_CONTAINER_NAME) $(PYTHON_BUILD_CONTAINER_NAME)-backup && docker rmi $(PYTHON_BUILD_CONTAINER_NAME) || true
 	docker tag $(SYSTEMTEST_CONTAINER):latest $(SYSTEMTEST_CONTAINER):latest-backup && docker rmi $(SYSTEMTEST_CONTAINER):latest || true
 

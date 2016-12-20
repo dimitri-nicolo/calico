@@ -231,7 +231,7 @@ def main():
     # require any of the etcd interactions below.
     if os.getenv("DATASTORE_TYPE", "") == "kubernetes":
         print "Using k8s backend"
-        with open('startup.env', 'w') as f:
+        with open('/etc/startup.env', 'w') as f:
             f.write("DATASTORE_TYPE=kubernetes\n")
             f.write("HOSTNAME=%s\n" % hostname)
         return
@@ -290,7 +290,7 @@ def main():
     # just been detected.
     # This is required because the confd templates expect to be able to fill in
     # some templates by fetching them from the environment.
-    with open('startup.env', 'w') as f:
+    with open('/etc/startup.env', 'w') as f:
         f.write("IP=%s\n" % ip)
         f.write("HOSTNAME=%s\n" % hostname)
 
