@@ -23,14 +23,15 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  vcs:     git
   subpackages:
   - lib
+- package: github.com/tigera/nfnetlink
+  repo:    git@github.com:tigera/nfnetlink
 - package: github.com/Sirupsen/logrus
-  version: 4b6ea7319e214d98c938f12692336f7ca9348d6b
 - package: github.com/kardianos/osext
 - package: github.com/mipearson/rfw
 - package: github.com/prometheus/client_golang
   version: c5b7fccd204277076155f10851dad72b76a49317
 - package: github.com/gogo/protobuf
   version: ^0.3.0
+- package: github.com/vishvananda/netlink

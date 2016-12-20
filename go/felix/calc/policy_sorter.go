@@ -16,7 +16,6 @@ package calc
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"sort"
@@ -97,23 +96,7 @@ func (poc *PolicySorter) Sorted() []*tierInfo {
 			tierInfo.OrderedPolicies = append(tierInfo.OrderedPolicies,
 				PolKV{Key: k, Value: v})
 		}
-		if log.GetLevel() >= log.DebugLevel {
-			names := make([]string, len(tierInfo.OrderedPolicies))
-			for ii, kv := range tierInfo.OrderedPolicies {
-				names[ii] = fmt.Sprintf("%v(%v)",
-					kv.Key.Name, *kv.Value.Order)
-			}
-			log.Infof("Before sorting policies: %v", names)
-		}
 		sort.Sort(PolicyByOrder(tierInfo.OrderedPolicies))
-		if log.GetLevel() >= log.DebugLevel {
-			names := make([]string, len(tierInfo.OrderedPolicies))
-			for ii, kv := range tierInfo.OrderedPolicies {
-				names[ii] = fmt.Sprintf("%v(%v)",
-					kv.Key.Name, *kv.Value.Order)
-			}
-			log.Infof("After sorting policies: %v", names)
-		}
 	}
 	return tiers
 }
