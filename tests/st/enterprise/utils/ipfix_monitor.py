@@ -73,6 +73,33 @@ class IpfixMonitor():
                                        stderr=devnull)
         # Output will be lines with tab separated values for each of the fields set with "-e".
         self.flows_queue = multiprocessing.Queue()
+
+        """
+        Run an instance of tshark to capture and decode ipfix data and write the output lines to self.flows_queue.
+        Each line contains the fields selected with "-e", tab separated.
+        """
+        def _tshark_loop(flows_queue):
+            tshark = subprocess.Popen(
+                [
+                    "tshark", "-i", "lo", "-f", "port 4739", "-T", "fields",
+                    "-e", "cflow.flowset_id",
+                    "-e", "cflow.protocol",
+                    "-e", "cflow.srcaddr",
+                    "-e", "cflow.srcport",
+                    "-e", "cflow.dstaddr",
+                    "-e", "cflow.dstport",
+                    "-e", "cflow.permanent_packets",
+                    "-e", "cflow.permanent_octets",
+                ],
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=devnull)
+            while True:
+                line = tshark.stdout.readline()
+                # For some reason we get a blank line between each real pair.
+                if "\t" in line:
+                    flows_queue.put(line)
+
         self.tshark_process = multiprocessing.Process(target=_tshark_loop, args=self.flows_queue)
         self.tshark_process.start()
 
@@ -80,33 +107,6 @@ class IpfixMonitor():
         # It might be nicer to refactor this to use __enter__/__exit__, and invoke using 'with'.
         self.tshark_process.terminate()
         self.netcat.terminate()
-
-    """
-    Run an instance of tshark to capture and decode ipfix data and write the output lines to self.flows_queue.
-    Each line contains the fields selected with "-e", tab separated.
-    """
-    @staticmethod
-    def _tshark_loop(flows_queue):
-        tshark = subprocess.Popen(
-            [
-                "tshark", "-i", "lo", "-f", "port 4739", "-T", "fields",
-                "-e", "cflow.flowset_id",
-                "-e", "cflow.protocol",
-                "-e", "cflow.srcaddr",
-                "-e", "cflow.srcport",
-                "-e", "cflow.dstaddr",
-                "-e", "cflow.dstport",
-                "-e", "cflow.permanent_packets",
-                "-e", "cflow.permanent_octets",
-            ],
-            shell=False,
-            stdout=subprocess.PIPE,
-            stderr=devnull)
-        while True:
-            line = tshark.stdout.readline()
-            # For some reason we get a blank line between each real pair.
-            if "\t" in line:
-                flows_queue.put(line)
 
     """
     Assert that the collected IPFIX flows are as expected within `timeout` seconds.
