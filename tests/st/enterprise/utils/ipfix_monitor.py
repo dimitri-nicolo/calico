@@ -53,8 +53,8 @@ class IpfixFlow(object):
          a_dstaddr,
          a_dstport,
          a_packets,
-         a_octets) = tshark_line.split("\t")
-        if not a_flowset_id.startswith("256"):
+         a_octets) = tshark_line.rstrip("\n").split("\t")
+        if a_flowset_id == "2":
             # A template, rather than a flow.
             return False
         if self.e_protocol is not None and a_protocol != self.e_protocol:
