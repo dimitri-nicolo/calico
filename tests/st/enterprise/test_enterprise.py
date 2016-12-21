@@ -74,7 +74,7 @@ class MultiHostIpfix(TestBase):
             print "==== Checking ping reported by ipfix ===="
             n1_workloads[0].check_can_ping(n1_workloads[1].ip, retries=0)
             ping_flow = IpfixFlow(n1_workloads[0].ip, n1_workloads[1].ip, packets="1,1", octets="84,84")
-            mon.assert_flows_present([ping_flow], 10)
+            mon.assert_flows_present([ping_flow], 10, allow_others=False)
 
             host1.remove_workloads()
             host2.remove_workloads()

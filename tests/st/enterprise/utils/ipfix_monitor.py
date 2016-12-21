@@ -126,9 +126,8 @@ class IpfixMonitor(object):
     """
     Assert that the collected IPFIX flows are as expected within `timeout` seconds.
     """
-    # TODO (Matt): Also need to be able to assert no unexpected flows.
     @debug_failures
-    def assert_flows_present(self, flows, timeout):
+    def assert_flows_present(self, flows, timeout, allow_others=True):
         flows_left = copy.copy(flows)
         flows_seen = collections.defaultdict(int)
 
@@ -144,8 +143,12 @@ class IpfixMonitor(object):
             signal.alarm(timeout)
 
             # Look for each expected flow.
-            while len(flows_left) > 0:
+            while len(flows_left) > 0 or not allow_others:
                 line = self.flows_queue.get(timeout=timeout)
+                if line == "2\t\t\t\t\t\t\t\n" or line == "256\t\t\t\t\t\t\t\n":
+                    # Skip these lines: the 2... lines are data templates, which tshark needs but don't contain flows.
+                    # The 256... lines are data packets received before the template, so tshark couldn't decode them.
+                    continue
                 flows_seen[line] += 1
                 for flow in flows_left:
                     if flow.check_tshark(line):
@@ -157,10 +160,13 @@ class IpfixMonitor(object):
             pass
         finally:
             signal.alarm(0)
-        assert len(flows_left) == 0, ("Ipfix check error!\r\n" +
-                                      "Expected flows:\r\n %s\r\n" % flows +
-                                      "Missing flows:\r\n %s\r\n" % flows_left +
-                                      "Observed flows:\r\n %s\r\n" % flows_seen)
+
+        # Check we observed all the expected flows, and optionally no others.
+        flows_msg = "Expected flows:\r\n %s\r\n" % flows + \
+                    "Missing flows:\r\n %s\r\n" % flows_left + \
+                    "Observed flows:\r\n %s\r\n" % flows_seen
+        assert allow_others or len(flows_seen) == len(flows), ("Ipfix check error: superfluous flows!\r\n" + flows_msg)
+        assert len(flows_left) == 0, ("Ipfix check error: missing flows!\r\n" + flows_msg)
 
     def reset_flows(self):
         # This isn't entirely deterministic, since flows could be coming in constantly.
