@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import collections
 import copy
 import multiprocessing
 import netaddr
@@ -53,17 +54,22 @@ class IpfixFlow(object):
          a_dstport,
          a_packets,
          a_octets) = tshark_line.split("\t")
-        if a_flowset_id.startswith("FlowSet Id: Data Template"):
+        if not a_flowset_id.startswith("256"):
             # A template, rather than a flow.
             return False
-        # TODO (Matt): Check the other fields as well!
         if self.e_protocol is not None and a_protocol != self.e_protocol:
             return False
         if self.e_srcaddr is not None and a_srcaddr != self.e_srcaddr:
             return False
+        if self.e_srcport is not None and a_srcport != self.e_srcport:
+            return False
         if self.e_dstaddr is not None and a_dstaddr != self.e_dstaddr:
             return False
+        if self.e_dstport is not None and a_dstport != self.e_dstport:
+            return False
         if self.e_packets is not None and a_packets != self.e_packets:
+            return False
+        if self.e_octets is not None and a_octets != self.e_octets:
             return False
         return True
 
@@ -124,6 +130,7 @@ class IpfixMonitor(object):
     @debug_failures
     def assert_flows_present(self, flows, timeout):
         flows_left = copy.copy(flows)
+        flows_seen = collections.defaultdict(int)
 
         class TimeoutError(Exception):
             pass
@@ -139,7 +146,7 @@ class IpfixMonitor(object):
             # Look for each expected flow.
             while len(flows_left) > 0:
                 line = self.flows_queue.get(timeout=timeout)
-                print line
+                flows_seen[line] += 1
                 for flow in flows_left:
                     if flow.check_tshark(line):
                         flows_left.remove(flow)
@@ -152,7 +159,8 @@ class IpfixMonitor(object):
             signal.alarm(0)
         assert len(flows_left) == 0, ("Ipfix check error!\r\n" +
                                       "Expected flows:\r\n %s\r\n" % flows +
-                                      "Missing flows:\r\n %s\r\n" % flows_left)
+                                      "Missing flows:\r\n %s\r\n" % flows_left +
+                                      "Observed flows:\r\n %s\r\n" % flows_seen)
 
     def reset_flows(self):
         # This isn't entirely deterministic, since flows could be coming in constantly.
@@ -163,10 +171,4 @@ class IpfixMonitor(object):
             try:
                 self.flows_queue.get(timeout=0.1)
             except Queue.Empty:
-                return
-
-# Test (must be root!!!):
-import ipfix_monitor
-mon = ipfix_monitor.IpfixMonitor()
-fl = ipfix_monitor.IpfixFlow("192.168.123.131", "192.168.123.132")
-mon.assert_flows_present([fl], 10)
+                pass

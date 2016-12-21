@@ -64,84 +64,30 @@ class MultiHostIpfix(TestBase):
                            additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
                            post_docker_commands=POST_DOCKER_COMMANDS,
                            start_calico=False) as host2:
-            (n1_workloads, n2_workloads, networks) = \
-                self._setup_workloads(host1, host2)
+            (n1_workloads, network) = self._setup_workloads(host1, host2)
 
-            # Get the original profiles:
-            output = host1.calicoctl("get profile -o yaml")
-            original_profiles = yaml.safe_load(output)
-            # Make a copy of the profiles to mess about with.
-            new_profiles = copy.deepcopy(original_profiles)
+            # Start monitoring flows.  When writing tests be aware that flows will continue to be reported
+            # for a short while after they the actual packets stop.
+            mon = IpfixMonitor()
 
-            profile0_tag = new_profiles[0]['metadata']['tags'][0]
-            profile1_tag = new_profiles[1]['metadata']['tags'][0]
-            rule0 = {'action': 'allow',
-                     'source':
-                         {'tag': profile1_tag}}
-            rule1 = {'action': 'allow',
-                     'source':
-                         {'tag': profile0_tag}}
-            new_profiles[0]['spec']['ingress'].append(rule0)
-            new_profiles[1]['spec']['ingress'].append(rule1)
-            self._apply_new_profile(new_profiles, host1)
-            # Check everything can contact everything else now
-            self.assert_connectivity(retries=2,
-                                     pass_list=n1_workloads + n2_workloads)
+            # Send a single ping packet between two workloads, and ensure it's reported in the ipfix output.
+            print "==== Checking ping reported by ipfix ===="
+            n1_workloads[0].check_can_ping(n1_workloads[1].ip, retries=0)
+            ping_flow = IpfixFlow(n1_workloads[0].ip, n1_workloads[1].ip, packets=1, octets=84)
+            mon.assert_flows_present([ping_flow], 10)
 
-            # Now restore the original profile and check it all works as before
-            self._apply_new_profile(original_profiles, host1)
-            host1.calicoctl("get profile -o yaml")
-            self._check_original_connectivity(n1_workloads, n2_workloads)
-
-            # Tidy up
             host1.remove_workloads()
             host2.remove_workloads()
-            for network in networks:
-                network.delete()
-
-    @staticmethod
-    def _get_profiles(profiles):
-        """
-        Sorts and returns the profiles for the networks.
-        :param profiles: the list of profiles
-        :return: tuple: profile for network1, profile for network2
-        """
-        prof_n1 = None
-        prof_n2 = None
-        for profile in profiles:
-            if profile['metadata']['name'] == "testnet1":
-                prof_n1 = profile
-            elif profile['metadata']['name'] == "testnet2":
-                prof_n2 = profile
-        assert prof_n1 is not None, "Could not find testnet1 profile"
-        assert prof_n2 is not None, "Could not find testnet2 profile"
-        return prof_n1, prof_n2
-
-    @staticmethod
-    def _apply_new_profile(new_profile, host):
-        # Apply new profiles
-        host.writefile("new_profiles",
-                       yaml.dump(new_profile, default_flow_style=False))
-        host.calicoctl("apply -f new_profiles")
+            network.delete()
 
     def _setup_workloads(self, host1, host2):
-        # TODO work IPv6 into this test too
         host1.start_calico_node()
         host2.start_calico_node()
 
-        # Create the networks on host1, but it should be usable from all
-        # hosts.  We create one network using the default driver, and the
-        # other using the Calico driver.
         network1 = host1.create_network("testnet1")
-        network2 = host1.create_network("testnet2")
-        networks = [network1, network2]
-
-        # Assert that the networks can be seen on host2
-        assert_network(host2, network2)
         assert_network(host2, network1)
 
         n1_workloads = []
-        n2_workloads = []
 
         # Create two workloads on host1 and one on host2 all in network 1.
         n1_workloads.append(host2.create_workload("workload_h2n1_1",
@@ -154,52 +100,12 @@ class MultiHostIpfix(TestBase):
                                                   image="workload",
                                                   network=network1))
 
-        # Create similar workloads in network 2.
-        n2_workloads.append(host1.create_workload("workload_h1n2_1",
-                                                  image="workload",
-                                                  network=network2))
-        n2_workloads.append(host1.create_workload("workload_h1n2_2",
-                                                  image="workload",
-                                                  network=network2))
-        n2_workloads.append(host2.create_workload("workload_h2n2_1",
-                                                  image="workload",
-                                                  network=network2))
-        print "*******************"
-        print "Network1 is:\n%s\n%s" % (
-            [x.ip for x in n1_workloads],
-            [x.name for x in n1_workloads])
-        print "Network2 is:\n%s\n%s" % (
-            [x.ip for x in n2_workloads],
-            [x.name for x in n2_workloads])
-        print "*******************"
-
         # Assert that endpoints are in Calico
-        assert_number_endpoints(host1, 4)
-        assert_number_endpoints(host2, 2)
-
-        self._check_original_connectivity(n1_workloads, n2_workloads)
+        assert_number_endpoints(host1, 2)
+        assert_number_endpoints(host2, 1)
 
         # Test deleting the network. It will fail if there are any
         # endpoints connected still.
         self.assertRaises(CommandExecError, network1.delete)
-        self.assertRaises(CommandExecError, network2.delete)
 
-        return n1_workloads, n2_workloads, networks
-
-    def _check_original_connectivity(self, n1_workloads, n2_workloads,
-                                     types=None):
-        # Assert that workloads can communicate with each other on network
-        # 1, and not those on network 2.  Ping using IP for all workloads,
-        # and by hostname for workloads on the same network (note that
-        # a workloads own hostname does not work).
-        if types is None:
-            types = ['icmp', 'tcp', 'udp']
-        self.assert_connectivity(retries=2,
-                                 pass_list=n1_workloads,
-                                 fail_list=n2_workloads,
-                                 type_list=types)
-
-        # Repeat with network 2.
-        self.assert_connectivity(pass_list=n2_workloads,
-                                 fail_list=n1_workloads,
-                                 type_list=types)
+        return n1_workloads, network1
