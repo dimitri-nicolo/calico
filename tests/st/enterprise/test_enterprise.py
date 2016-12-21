@@ -68,7 +68,7 @@ class MultiHostIpfix(TestBase):
 
             # Start monitoring flows.  When writing tests be aware that flows will continue to be reported
             # for a short while after they the actual packets stop.
-            mon = IpfixMonitor(get_ip(), 13579)
+            mon = IpfixMonitor(get_ip(), 4739)
 
             # Send a single ping packet between two workloads, and ensure it's reported in the ipfix output.
             print "==== Checking ping reported by ipfix ===="
@@ -83,7 +83,8 @@ class MultiHostIpfix(TestBase):
     def _setup_workloads(self, host1, host2):
         # Configure the address of the ipfix collector.
         host1.calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
-        host1.calicoctl("config set IpfixCollectorPort 13579 --raw=felix")
+        # Disappointingly, tshark only appears to be able to decode IPFIX when the UDP port is 4739.
+        host1.calicoctl("config set IpfixCollectorPort 4739 --raw=felix")
 
         host1.start_calico_node()
         host2.start_calico_node()

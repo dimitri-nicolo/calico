@@ -120,7 +120,7 @@ class IpfixMonitor(object):
 
     def __del__(self):
         # It might be nicer to refactor this to use __enter__/__exit__, and invoke using 'with'.
-        # TODO (Matt) clean up tshark!!!
+        self.tshark_process.terminate()
         self.netcat.terminate()
 
     """
