@@ -73,16 +73,16 @@ class IpfixFlow(object):
             return False
         return True
 
-    def __str__(self):
+    def __repr__(self):
         return "Flow: " + self.e_srcaddr + " -> " + self.e_dstaddr
 
 
 class IpfixMonitor(object):
-    def __init__(self):
+    def __init__(self, collector_addr, collector_port):
         # netcat actually listens on the ipfix port (needed for template emission).
         # Without the template, tshark is unable to decode the data packets.
         # A real collector will always have the socket open anyway.
-        self.netcat = subprocess.Popen(["nc", "-ul", "4739"],
+        self.netcat = subprocess.Popen(["nc", "-ul", collector_addr, collector_port],
                                        shell=False,
                                        stdout=devnull,
                                        stderr=devnull)
@@ -96,7 +96,7 @@ class IpfixMonitor(object):
         def _tshark_loop(flows_queue):
             tshark = subprocess.Popen(
                 [
-                    "tshark", "-l", "-i", "lo", "-f", "port 4739", "-T", "fields",
+                    "tshark", "-l", "-i", "any", "-f", "port " + collector_port, "-T", "fields",
                     "-e", "cflow.flowset_id",
                     "-e", "cflow.protocol",
                     "-e", "cflow.srcaddr",

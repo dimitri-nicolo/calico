@@ -68,12 +68,12 @@ class MultiHostIpfix(TestBase):
 
             # Start monitoring flows.  When writing tests be aware that flows will continue to be reported
             # for a short while after they the actual packets stop.
-            mon = IpfixMonitor()
+            mon = IpfixMonitor(get_ip(), 13579)
 
             # Send a single ping packet between two workloads, and ensure it's reported in the ipfix output.
             print "==== Checking ping reported by ipfix ===="
             n1_workloads[0].check_can_ping(n1_workloads[1].ip, retries=0)
-            ping_flow = IpfixFlow(n1_workloads[0].ip, n1_workloads[1].ip, packets=1, octets=84)
+            ping_flow = IpfixFlow(n1_workloads[0].ip, n1_workloads[1].ip, packets="1,1", octets="84,84")
             mon.assert_flows_present([ping_flow], 10)
 
             host1.remove_workloads()
@@ -81,6 +81,10 @@ class MultiHostIpfix(TestBase):
             network.delete()
 
     def _setup_workloads(self, host1, host2):
+        # Configure the address of the ipfix collector.
+        host1.calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
+        host1.calicoctl("config set IpfixCollectorPort 13579 --raw=felix")
+
         host1.start_calico_node()
         host2.start_calico_node()
 
