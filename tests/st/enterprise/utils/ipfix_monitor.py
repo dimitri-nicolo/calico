@@ -82,7 +82,7 @@ class IpfixMonitor(object):
         # netcat actually listens on the ipfix port (needed for template emission).
         # Without the template, tshark is unable to decode the data packets.
         # A real collector will always have the socket open anyway.
-        self.netcat = subprocess.Popen(["netcat", "-ul", "4739"],
+        self.netcat = subprocess.Popen(["nc", "-ul", "4739"],
                                        shell=False,
                                        stdout=devnull,
                                        stderr=devnull)
