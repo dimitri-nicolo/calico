@@ -71,10 +71,12 @@ class MultiHostIpfix(TestBase):
             mon = IpfixMonitor(get_ip(), 4739)
 
             # Send a single ping packet between two workloads, and ensure it's reported in the ipfix output.
+            # The flow is recorded at both ends, so it appears twice.
             print "==== Checking ping reported by ipfix ===="
             n1_workloads[0].check_can_ping(n1_workloads[1].ip, retries=0)
-            ping_flow = IpfixFlow(n1_workloads[0].ip, n1_workloads[1].ip, packets="1,1", octets="84,84")
-            mon.assert_flows_present([ping_flow], 10, allow_others=False)
+            ping_flows = [IpfixFlow(n1_workloads[0].ip, n1_workloads[1].ip, packets="1,1", octets="84,84"),
+                          IpfixFlow(n1_workloads[1].ip, n1_workloads[0].ip, packets="1,1", octets="84,84")]
+            mon.assert_flows_present(ping_flows, 10, allow_others=False)
 
             host1.remove_workloads()
             host2.remove_workloads()
