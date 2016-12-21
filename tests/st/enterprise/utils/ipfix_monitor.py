@@ -165,7 +165,7 @@ class IpfixMonitor(object):
         flows_msg = "Expected flows:\r\n %s\r\n" % flows + \
                     "Missing flows:\r\n %s\r\n" % flows_left + \
                     "Observed flows:\r\n %s\r\n" % flows_seen
-        assert allow_others or len(flows_seen) == len(flows), ("Ipfix check error: superfluous flows!\r\n" + flows_msg)
+        assert allow_others or len(flows_seen) <= len(flows), ("Ipfix check error: superfluous flows!\r\n" + flows_msg)
         assert len(flows_left) == 0, ("Ipfix check error: missing flows!\r\n" + flows_msg)
 
     def reset_flows(self):
