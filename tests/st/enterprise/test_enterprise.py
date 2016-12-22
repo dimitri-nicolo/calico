@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+import logging
 import netaddr
 import yaml
 from nose_parameterized import parameterized
@@ -23,6 +24,9 @@ from tests.st.utils.exceptions import CommandExecError
 from tests.st.utils.utils import assert_network, assert_profile, \
     assert_number_endpoints, get_profile_name, ETCD_CA, ETCD_CERT, \
     ETCD_KEY, ETCD_HOSTNAME_SSL, ETCD_SCHEME, get_ip
+
+_log = logging.getLogger(__name__)
+_log.setLevel(logging.DEBUG)
 
 POST_DOCKER_COMMANDS = ["docker load -i /code/calico-node.tar",
                         "docker load -i /code/busybox.tar",
@@ -41,7 +45,57 @@ else:
 
 
 class MultiHostIpfix(TestBase):
-    def test_multi_host(self):
+    @classmethod
+    def setUpClass(cls):
+        super(TestBase, cls).setUpClass()
+        cls.hosts = []
+        cls.hosts.append(DockerHost("host1",
+                                    additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
+                                    post_docker_commands=POST_DOCKER_COMMANDS,
+                                    start_calico=False))
+        cls.hosts.append(DockerHost("host2",
+                                    additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
+                                    post_docker_commands=POST_DOCKER_COMMANDS,
+                                    start_calico=False))
+
+        # Configure the address of the ipfix collector.
+        cls.hosts[0].calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
+        # Disappointingly, tshark only appears to be able to decode IPFIX when the UDP port is 4739.
+        cls.hosts[0].calicoctl("config set IpfixCollectorPort 4739 --raw=felix")
+
+        cls.hosts[0].start_calico_node()
+        cls.hosts[1].start_calico_node()
+        cls.networks = []
+        cls.networks.append(cls.hosts[0].create_network("testnet1"))
+
+        cls.n1_workloads = []
+        # Create two workloads on cls.hosts[0] and one on cls.hosts[1] all in network 1.
+        cls.n1_workloads.append(cls.hosts[1].create_workload("workload_h2n1_1",
+                                                             image="workload",
+                                                             network=cls.networks[0]))
+        cls.n1_workloads.append(cls.hosts[0].create_workload("workload_h1n1_1",
+                                                             image="workload",
+                                                             network=cls.networks[0]))
+        cls.n1_workloads.append(cls.hosts[0].create_workload("workload_h1n1_2",
+                                                             image="workload",
+                                                             network=cls.networks[0]))
+        # Assert that endpoints are in Calico
+        assert_number_endpoints(cls.hosts[0], 2)
+        assert_number_endpoints(cls.hosts[1], 1)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Tidy up
+        for host in cls.hosts:
+            host.remove_workloads()
+        for network in cls.networks:
+            network.delete()
+        for host in cls.hosts:
+            host.cleanup()
+            del host
+
+    @parameterized.expand(["1", "2"])
+    def test_multi_host(self, iteration):
         """
         Run a mainline multi-host test with IPFIX.
         Because multihost tests are slow to setup, this tests most mainline
@@ -56,63 +110,22 @@ class MultiHostIpfix(TestBase):
         - Re-apply the original profile
         - Check that connectivity goes back to what it was originally.
         """
-        with DockerHost("host1",
-                        additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
-                        post_docker_commands=POST_DOCKER_COMMANDS,
-                        start_calico=False) as host1, \
-                DockerHost("host2",
-                           additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
-                           post_docker_commands=POST_DOCKER_COMMANDS,
-                           start_calico=False) as host2:
-            (n1_workloads, network) = self._setup_workloads(host1, host2)
+        _log.debug("*"*80)
+        _log.debug("Iteration %s", iteration)
+        # Start monitoring flows.  When writing tests be aware that flows will continue
+        # to be reported for a short while after they the actual packets stop.
+        mon = IpfixMonitor(get_ip(), 4739)
 
-            # Start monitoring flows.  When writing tests be aware that flows will continue to be reported
-            # for a short while after they the actual packets stop.
-            mon = IpfixMonitor(get_ip(), 4739)
-
-            # Send a single ping packet between two workloads, and ensure it's reported in the ipfix output.
-            # The flow is recorded at both ends, so it appears twice.
-            print "==== Checking ping reported by ipfix ===="
-            n1_workloads[0].check_can_ping(n1_workloads[1].ip, retries=0)
-            ping_flows = [IpfixFlow(n1_workloads[0].ip, n1_workloads[1].ip, packets="1,1", octets="84,84"),
-                          IpfixFlow(n1_workloads[1].ip, n1_workloads[0].ip, packets="1,1", octets="84,84")]
-            mon.assert_flows_present(ping_flows, 10, allow_others=False)
-
-            host1.remove_workloads()
-            host2.remove_workloads()
-            network.delete()
-
-    def _setup_workloads(self, host1, host2):
-        # Configure the address of the ipfix collector.
-        host1.calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
-        # Disappointingly, tshark only appears to be able to decode IPFIX when the UDP port is 4739.
-        host1.calicoctl("config set IpfixCollectorPort 4739 --raw=felix")
-
-        host1.start_calico_node()
-        host2.start_calico_node()
-
-        network1 = host1.create_network("testnet1")
-        assert_network(host2, network1)
-
-        n1_workloads = []
-
-        # Create two workloads on host1 and one on host2 all in network 1.
-        n1_workloads.append(host2.create_workload("workload_h2n1_1",
-                                                  image="workload",
-                                                  network=network1))
-        n1_workloads.append(host1.create_workload("workload_h1n1_1",
-                                                  image="workload",
-                                                  network=network1))
-        n1_workloads.append(host1.create_workload("workload_h1n1_2",
-                                                  image="workload",
-                                                  network=network1))
-
-        # Assert that endpoints are in Calico
-        assert_number_endpoints(host1, 2)
-        assert_number_endpoints(host2, 1)
-
-        # Test deleting the network. It will fail if there are any
-        # endpoints connected still.
-        self.assertRaises(CommandExecError, network1.delete)
-
-        return n1_workloads, network1
+        # Send a single ping packet between two workloads, and ensure it's reported in the
+        # ipfix output. The flow is recorded at both ends, so it appears twice.
+        print "==== Checking ping reported by ipfix ===="
+        self.n1_workloads[0].check_can_ping(self.n1_workloads[1].ip, retries=0)
+        ping_flows = [IpfixFlow(self.n1_workloads[0].ip,
+                                self.n1_workloads[1].ip,
+                                packets="1,1",
+                                octets="84,84"),
+                      IpfixFlow(self.n1_workloads[1].ip,
+                                self.n1_workloads[0].ip,
+                                packets="1,1",
+                                octets="84,84")]
+        mon.assert_flows_present(ping_flows, 10, allow_others=False)
