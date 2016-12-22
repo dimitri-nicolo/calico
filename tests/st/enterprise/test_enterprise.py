@@ -107,9 +107,6 @@ class MultiHostIpfix(TestBase):
         # Reset flows before every test
         self.mon.reset_flows()
 
-    def test_dummy(self):
-        import pdb; pdb.set_trace()
-
     @parameterized.expand(["1", "2", "3", "4", "5"])
     def test_multi_host(self, iteration):
         """
