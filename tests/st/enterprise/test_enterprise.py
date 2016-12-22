@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+import functools
 import logging
 import netaddr
 import yaml
 from nose_parameterized import parameterized
+from multiprocessing.dummy import Pool
 
 from tests.st.test_base import TestBase
 from tests.st.enterprise.utils.ipfix_monitor import IpfixFlow, IpfixMonitor
@@ -48,23 +50,26 @@ class MultiHostIpfix(TestBase):
     @classmethod
     def setUpClass(cls):
         super(TestBase, cls).setUpClass()
+        num_hosts = 2
         cls.hosts = []
-        cls.hosts.append(DockerHost("host1",
-                                    additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
-                                    post_docker_commands=POST_DOCKER_COMMANDS,
-                                    start_calico=False))
-        cls.hosts.append(DockerHost("host2",
-                                    additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
-                                    post_docker_commands=POST_DOCKER_COMMANDS,
-                                    start_calico=False))
+        makehost = functools.partial(DockerHost,
+                                     additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
+                                     post_docker_commands=POST_DOCKER_COMMANDS,
+                                     start_calico=True)
+
+        hostnames = []
+        for i in range(num_hosts):
+            hostnames.append("host%s" % i)
+        pool = Pool(num_hosts)
+        cls.hosts = pool.map(makehost, hostnames)
+        pool.close()
+        pool.join()
 
         # Configure the address of the ipfix collector.
         cls.hosts[0].calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
         # Disappointingly, tshark only appears to be able to decode IPFIX when the UDP port is 4739.
         cls.hosts[0].calicoctl("config set IpfixCollectorPort 4739 --raw=felix")
 
-        cls.hosts[0].start_calico_node()
-        cls.hosts[1].start_calico_node()
         cls.networks = []
         cls.networks.append(cls.hosts[0].create_network("testnet1"))
 
@@ -83,6 +88,10 @@ class MultiHostIpfix(TestBase):
         assert_number_endpoints(cls.hosts[0], 2)
         assert_number_endpoints(cls.hosts[1], 1)
 
+        # Start monitoring flows.  When writing tests be aware that flows will continue
+        # to be reported for a short while after they the actual packets stop.
+        cls.mon = IpfixMonitor(get_ip(), 4739)
+
     @classmethod
     def tearDownClass(cls):
         # Tidy up
@@ -94,7 +103,14 @@ class MultiHostIpfix(TestBase):
             host.cleanup()
             del host
 
-    @parameterized.expand(["1", "2"])
+    def setUp(self):
+        # Reset flows before every test
+        self.mon.reset_flows()
+
+    def test_dummy(self):
+        import pdb; pdb.set_trace()
+
+    @parameterized.expand(["1", "2", "3", "4", "5"])
     def test_multi_host(self, iteration):
         """
         Run a mainline multi-host test with IPFIX.
@@ -112,9 +128,6 @@ class MultiHostIpfix(TestBase):
         """
         _log.debug("*"*80)
         _log.debug("Iteration %s", iteration)
-        # Start monitoring flows.  When writing tests be aware that flows will continue
-        # to be reported for a short while after they the actual packets stop.
-        mon = IpfixMonitor(get_ip(), 4739)
 
         # Send a single ping packet between two workloads, and ensure it's reported in the
         # ipfix output. The flow is recorded at both ends, so it appears twice.
@@ -128,4 +141,4 @@ class MultiHostIpfix(TestBase):
                                 self.n1_workloads[0].ip,
                                 packets="1,1",
                                 octets="84,84")]
-        mon.assert_flows_present(ping_flows, 10, allow_others=False)
+        self.mon.assert_flows_present(ping_flows, 10, allow_others=False)
