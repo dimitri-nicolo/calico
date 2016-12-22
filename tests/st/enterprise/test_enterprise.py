@@ -45,6 +45,128 @@ else:
     ADDITIONAL_DOCKER_OPTIONS = "--cluster-store=etcd://%s:2379 " % \
                                 get_ip()
 
+POLICY_DIR = "/calico/v1/policy/tier"
+# Canned policies, all of which should apply to all the computes.  We use
+# a variety of selectors just to hit different code paths.
+POLICY_ALLOW_CALICO_TRAFFIC_COMPUTE = {
+    "selector": "role == 'compute'",
+    "order": 0,
+    "inbound_rules": [
+        {"protocol": "tcp", "dst_ports": [
+            179,    # BGP
+            2379,   # etcd
+            2380,   # etcd
+            4001,   # etcd
+            5672],  # AMQP
+         "action": "allow",
+         "dst_selector": "role == 'compute' || role == 'control'"},
+        # Otherwise defer to next tier.
+        {"action": "next-tier"},
+    ],
+    "outbound_rules": [
+        {"protocol": "tcp", "dst_ports": [
+            80],
+         "action": "allow",
+         "dst_selector": "role == 'compute' || role == 'control'"},
+        {"action": "next-tier"},
+    ]
+}
+POLICY_ALLOW_CALICO_TRAFFIC_CONTROL = {
+    "selector": "role == 'control'",
+    "order": 0,
+    "inbound_rules": [
+        {"protocol": "tcp",
+         "dst_ports": [
+            80,     # Horizon UI
+            443,    # Horizon UI
+            2379,   # etcd
+            2380,   # etcd
+            4001,   # etcd
+            5672,   # AMQP
+            5000,   # keystone
+            8773,   # nova
+            8774,   # nova
+            8775,   # nova
+            9191,   # glance registry
+            9292,   # glance api
+            9696,   # neutron
+            35357   # keystone (openstack api)
+            ],
+         "action": "allow",
+         "dst_selector": "role == 'control'",
+         },
+        {"protocol": "udp", "action": "allow"},
+        # Otherwise defer to next tier.
+        {"action": "next-tier"},
+    ],
+    "outbound_rules": [
+        {"protocol": "tcp",
+         "dst_ports": [
+            2379,    # etcd
+            2380,    # etcd
+            4001,    # etcd
+            5672],   # AMQP
+         "action": "allow",
+         "dst_selector": "role == 'compute' || role == 'control'",
+         },
+        {"protocol": "udp", "action": "allow"},
+        {"action": "next-tier"},
+    ]
+}
+POLICY_ALLOW_ALL = {
+    "selector": "role == 'compute'",
+    "order": 10,
+    "inbound_rules": [
+        {"action": "allow"}
+    ],
+    "outbound_rules": [
+        {"action": "allow"}
+    ]
+}
+POLICY_DENY_ALL = {
+    "selector": "role != 'control'",
+    "order": 10,
+    "inbound_rules": [
+        {"action": "deny"}
+    ],
+    "outbound_rules": [
+        {"action": "deny"}
+    ]
+}
+POLICY_NEXT_ALL = {
+    "selector": "role != 'control' && role == 'compute'",
+    "order": 10,
+    "inbound_rules": [
+        {"action": "next-tier"}
+    ],
+    "outbound_rules": [
+        {"action": "next-tier"}
+    ]
+}
+POLICY_NONE_ALL = {
+    "selector": "all()",
+    "order": 10,
+    "inbound_rules": [
+    ],
+    "outbound_rules": [
+    ]
+}
+
+@staticmethod
+def parallel_host_setup(num_hosts):
+    makehost = functools.partial(DockerHost,
+                                 additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
+                                 post_docker_commands=POST_DOCKER_COMMANDS,
+                                 start_calico=False)
+
+    hostnames = []
+    for i in range(num_hosts):
+        hostnames.append("host%s" % i)
+    pool = Pool(num_hosts)
+    hosts = pool.map(makehost, hostnames)
+    pool.close()
+    pool.join()
+    return hosts
 
 class MultiHostIpfix(TestBase):
     @classmethod
@@ -108,7 +230,7 @@ class MultiHostIpfix(TestBase):
         _log.debug("Deleting flow monitor after test")
         del self.mon
 
-    def test_multi_host(self, iteration=1):
+    def test_multi_host_ping(self, iteration=1):
         """
         Run a mainline multi-host test with IPFIX.
         Because multihost tests are slow to setup, this tests most mainline
@@ -139,3 +261,69 @@ class MultiHostIpfix(TestBase):
                                 packets="1,1",
                                 octets="84,84")]
         self.mon.assert_flows_present(ping_flows, 20, allow_others=False)
+
+    def test_multi_host_tcp(self, iteration=1):
+        """
+        Run a mainline multi-host test with IPFIX.
+        Because multihost tests are slow to setup, this tests most mainline
+        functionality in a single test.
+        - Create two hosts
+        - Create a network using the Calico IPAM driver, and a workload on
+          each host assigned to that network.
+        - Check that hosts on the same network can ping each other.
+        - Check that hosts on different networks cannot ping each other.
+        - Modify the profile rules
+        - Check that connectivity has changed to match the profile we set up
+        - Re-apply the original profile
+        - Check that connectivity goes back to what it was originally.
+        """
+        _log.debug("*"*80)
+        _log.debug("Iteration %s", iteration)
+
+        # Send a single ping packet between two workloads, and ensure it's reported in the
+        # ipfix output. The flow is recorded at both ends, so it appears twice.
+        print "==== Checking tcp reported by ipfix ===="
+        self.n1_workloads[0].check_can_tcp(self.n1_workloads[1].ip, retries=0)
+        ping_flows = [IpfixFlow(self.n1_workloads[0].ip,
+                                self.n1_workloads[1].ip,
+                                packets="4,6",
+                                octets="222,326"),
+                      IpfixFlow(self.n1_workloads[1].ip,
+                                self.n1_workloads[0].ip,
+                                packets="6,4",
+                                octets="326,222")]
+        self.mon.assert_flows_present(ping_flows, 20, allow_others=False)
+
+    def test_multi_host_udp(self, iteration=1):
+        """
+        Run a mainline multi-host test with IPFIX.
+        Because multihost tests are slow to setup, this tests most mainline
+        functionality in a single test.
+        - Create two hosts
+        - Create a network using the Calico IPAM driver, and a workload on
+          each host assigned to that network.
+        - Check that hosts on the same network can ping each other.
+        - Check that hosts on different networks cannot ping each other.
+        - Modify the profile rules
+        - Check that connectivity has changed to match the profile we set up
+        - Re-apply the original profile
+        - Check that connectivity goes back to what it was originally.
+        """
+        _log.debug("*"*80)
+        _log.debug("Iteration %s", iteration)
+
+        # Send a single ping packet between two workloads, and ensure it's reported in the
+        # ipfix output. The flow is recorded at both ends, so it appears twice.
+        print "==== Checking udp reported by ipfix ===="
+        self.n1_workloads[0].check_can_udp(self.n1_workloads[1].ip, retries=0)
+        ping_flows = [IpfixFlow(self.n1_workloads[0].ip,
+                                self.n1_workloads[1].ip,
+                                packets="1,1",
+                                octets="34,34"),
+                      IpfixFlow(self.n1_workloads[1].ip,
+                                self.n1_workloads[0].ip,
+                                packets="1,1",
+                                octets="34,34")]
+        self.mon.assert_flows_present(ping_flows, 20, allow_others=False)
+
+
