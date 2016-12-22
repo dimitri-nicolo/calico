@@ -148,6 +148,7 @@ type Data struct {
 	updatedAt  time.Time
 	ageTimeout time.Duration
 	ageTimer   *time.Timer
+	dirty      bool
 }
 
 func NewData(tuple Tuple,
@@ -167,12 +168,25 @@ func NewData(tuple Tuple,
 		updatedAt:  time.Now(),
 		ageTimeout: duration,
 		ageTimer:   time.NewTimer(duration),
+		dirty:      true,
 	}
 }
 
 func (d *Data) touch() {
 	d.updatedAt = time.Now()
 	d.resetAgeTimeout()
+}
+
+func (d *Data) setDirtyFlag() {
+	d.dirty = true
+}
+
+func (d *Data) clearDirtyFlag() {
+	d.dirty = false
+}
+
+func (d *Data) IsDirty() bool {
+	return d.dirty
 }
 
 func (d *Data) resetAgeTimeout() {
@@ -201,50 +215,58 @@ func (d *Data) CountersOut() Counter {
 	return d.ctrOut
 }
 
-// Add packets and bytes to the In Counters' values. Use the IncreaseCounters*
-// methods when the source of packets/bytes are delta values.
-func (d *Data) IncreaseCountersIn(packets int, bytes int) {
-	d.ctrIn.packets += packets
-	d.ctrIn.bytes += bytes
-	d.touch()
-}
-
-// Add packets and bytes to the Out Counters' values. Use the IncreaseCounters*
-// methods when the source of packets/bytes are delta values.
-func (d *Data) IncreaseCountersOut(packets int, bytes int) {
-	d.ctrOut.packets += packets
-	d.ctrOut.bytes += bytes
-	d.touch()
-}
-
-// Set In Counters' values to packets and bytes. Use the SetCounters* methods
-// when the source if packets/bytes are absolute values.
-func (d *Data) SetCountersIn(packets int, bytes int) {
+func (d *Data) setCountersIn(packets int, bytes int) {
+	if packets != d.ctrIn.packets && bytes != d.ctrIn.bytes {
+		d.setDirtyFlag()
+	}
 	d.ctrIn.packets = packets
 	d.ctrIn.bytes = bytes
 	d.touch()
 }
 
-// Set In Counters' values to packets and bytes. Use the SetCounters* methods
-// when the source if packets/bytes are absolute values.
-func (d *Data) SetCountersOut(packets int, bytes int) {
+func (d *Data) setCountersOut(packets int, bytes int) {
+	if packets != d.ctrOut.packets && bytes != d.ctrOut.bytes {
+		d.setDirtyFlag()
+	}
 	d.ctrOut.packets = packets
 	d.ctrOut.bytes = bytes
 	d.touch()
 }
 
+// Add packets and bytes to the In Counters' values. Use the IncreaseCounters*
+// methods when the source of packets/bytes are delta values.
+func (d *Data) IncreaseCountersIn(packets int, bytes int) {
+	d.setCountersIn(d.ctrIn.packets+packets, d.ctrIn.bytes+bytes)
+}
+
+// Add packets and bytes to the Out Counters' values. Use the IncreaseCounters*
+// methods when the source of packets/bytes are delta values.
+func (d *Data) IncreaseCountersOut(packets int, bytes int) {
+	d.setCountersOut(d.ctrOut.packets+packets, d.ctrOut.bytes+bytes)
+}
+
+// Set In Counters' values to packets and bytes. Use the SetCounters* methods
+// when the source if packets/bytes are absolute values.
+func (d *Data) SetCountersIn(packets int, bytes int) {
+	d.setCountersIn(packets, bytes)
+}
+
+// Set In Counters' values to packets and bytes. Use the SetCounters* methods
+// when the source if packets/bytes are absolute values.
+func (d *Data) SetCountersOut(packets int, bytes int) {
+	d.setCountersOut(packets, bytes)
+}
+
 func (d *Data) ResetCounters() {
-	d.ctrIn.packets = 0
-	d.ctrIn.bytes = 0
-	d.ctrOut.packets = 0
-	d.ctrOut.bytes = 0
-	d.touch()
+	d.setCountersIn(0, 0)
+	d.setCountersOut(0, 0)
 }
 
 func (d *Data) AddRuleTracePoint(tp RuleTracePoint) error {
 	err := d.RuleTrace.addRuleTracePoint(tp)
 	if err == nil {
 		d.touch()
+		d.setDirtyFlag()
 	}
 	return err
 }
@@ -252,9 +274,11 @@ func (d *Data) AddRuleTracePoint(tp RuleTracePoint) error {
 func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
 	d.RuleTrace.replaceRuleTracePoint(tp)
 	d.touch()
+	d.setDirtyFlag()
 }
 
 func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecord {
+	d.clearDirtyFlag()
 	// TODO (Matt): Proper rule exporting
 	return &ipfix.ExportRecord{
 		FlowStart:               d.createdAt,
