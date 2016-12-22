@@ -255,7 +255,19 @@ func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
 }
 
 func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecord {
-	// TODO (Matt): Proper rule exporting
+	rtRecs := []ipfix.RuleTraceRecord{}
+	for _, tp := range d.RuleTrace.path {
+		if tp == EmptyRuleTracePoint {
+			continue
+		}
+		rtRecs = append(rtRecs, ipfix.RuleTraceRecord{
+			TierID:     tp.TierID,
+			PolicyID:   tp.PolicyID,
+			Rule:       tp.Rule,
+			RuleAction: string(tp.Action),
+			RuleIndex:  tp.Index,
+		})
+	}
 	return &ipfix.ExportRecord{
 		FlowStart:               d.createdAt,
 		FlowEnd:                 time.Now(),
@@ -271,6 +283,8 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 		DestinationTransportPort: d.Tuple.l4Dst,
 		ProtocolIdentifier:       d.Tuple.proto,
 		FlowEndReason:            reason,
+
+		RuleTrace: rtRecs,
 	}
 }
 
