@@ -107,7 +107,6 @@ class MultiHostIpfix(TestBase):
         # Reset flows before every test
         self.mon.reset_flows()
 
-    @parameterized.expand(["1", "2", "3", "4", "5"])
     def test_multi_host(self, iteration):
         """
         Run a mainline multi-host test with IPFIX.
