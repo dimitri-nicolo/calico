@@ -52,18 +52,16 @@ class MultiHostIpfix(TestBase):
         super(TestBase, cls).setUpClass()
         num_hosts = 2
         cls.hosts = []
-        makehost = functools.partial(DockerHost,
-                                     additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
-                                     post_docker_commands=POST_DOCKER_COMMANDS,
-                                     start_calico=True)
-
-        hostnames = []
-        for i in range(num_hosts):
-            hostnames.append("host%s" % i)
-        pool = Pool(num_hosts)
-        cls.hosts = pool.map(makehost, hostnames)
-        pool.close()
-        pool.join()
+        cls.hosts.append(DockerHost("host1",
+                                    additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
+                                    post_docker_commands=POST_DOCKER_COMMANDS,
+                                    start_calico=False))
+        cls.hosts.append(DockerHost("host2",
+                                    additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
+                                    post_docker_commands=POST_DOCKER_COMMANDS,
+                                    start_calico=False))
+        for host in cls.hosts:
+            host.start_calico_node()
 
         # Configure the address of the ipfix collector.
         cls.hosts[0].calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
@@ -88,10 +86,6 @@ class MultiHostIpfix(TestBase):
         assert_number_endpoints(cls.hosts[0], 2)
         assert_number_endpoints(cls.hosts[1], 1)
 
-        # Start monitoring flows.  When writing tests be aware that flows will continue
-        # to be reported for a short while after they the actual packets stop.
-        cls.mon = IpfixMonitor(get_ip(), 4739)
-
     @classmethod
     def tearDownClass(cls):
         # Tidy up
@@ -104,10 +98,17 @@ class MultiHostIpfix(TestBase):
             del host
 
     def setUp(self):
-        # Reset flows before every test
-        self.mon.reset_flows()
+        # Start monitoring flows.  When writing tests be aware that flows will continue
+        # to be reported for a short while after they the actual packets stop.
+        _log.debug("Create flow monitor for each test")
+        self.mon = IpfixMonitor(get_ip(), 4739)
 
-    def test_multi_host(self, iteration):
+    def tearDown(self):
+        # Reset flows after every test
+        _log.debug("Deleting flow monitor after test")
+        del self.mon
+
+    def test_multi_host(self, iteration=1):
         """
         Run a mainline multi-host test with IPFIX.
         Because multihost tests are slow to setup, this tests most mainline
@@ -137,4 +138,4 @@ class MultiHostIpfix(TestBase):
                                 self.n1_workloads[0].ip,
                                 packets="1,1",
                                 octets="84,84")]
-        self.mon.assert_flows_present(ping_flows, 10, allow_others=False)
+        self.mon.assert_flows_present(ping_flows, 20, allow_others=False)

@@ -13,6 +13,7 @@
 # limitations under the License.
 import collections
 import copy
+import logging
 import multiprocessing
 import netaddr
 import os
@@ -26,6 +27,8 @@ from tests.st.utils.utils import debug_failures
 
 devnull = open(os.devnull, 'wb')
 
+_log = logging.getLogger(__name__)
+_log.setLevel(logging.DEBUG)
 
 class IpfixFlow(object):
 
@@ -172,6 +175,7 @@ class IpfixMonitor(object):
         # This isn't entirely deterministic, since flows could be coming in constantly.
         # It should at least clear out all flows that were queued before this call,
         # plus min(10 flows, 1 second) more.
+        _log.debug("Resetting flows")
         size = self.flows_queue.qsize()
         while --size > -10:
             try:
