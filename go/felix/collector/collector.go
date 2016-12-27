@@ -141,6 +141,11 @@ func (c *Collector) registerAgeTimer(data *stats.Data) {
 func (c *Collector) exportStat() {
 	log.Debug("Exporting Stats")
 	for _, data := range c.epStats {
+		// TODO(doublek): If we haven't send an update in a while, we may be required
+		// to send one out. Check RFC and implement if required.
+		if !data.IsDirty() {
+			continue
+		}
 		c.exportEntry(data.ToExportRecord(ipfix.ActiveTimeout))
 	}
 }
