@@ -177,6 +177,18 @@ fixbufData_t fixbuf_init(char *host, char *port, fbTransport_t transport) {
 	return fbData;
 }
 
+GError * fixbuf_export_templates(fixbufData_t fbData) {
+	GError *err = NULL;
+
+	if(!fbSessionExportTemplates(fbData.exsession, &err)) {
+		return err;
+	}
+	if(!fBufEmit(fbData.ebuf, &err)){
+		return err;
+	}
+	return NULL;
+}
+
 void fixbuf_fill_varfield(fbVarfield_t *varfield, char *value) {
 	char *data;
 	data = malloc(strlen(value));
@@ -186,7 +198,7 @@ void fixbuf_fill_varfield(fbVarfield_t *varfield, char *value) {
 	varfield->buf = (uint8_t *)data;
 }
 
-GError * fixbuf_export(fixbufData_t fbData, exportRecord_t rec, ruleTraceShim_t *ruleTraceShimPtr, int numTraces) {
+GError * fixbuf_export_data(fixbufData_t fbData, exportRecord_t rec, ruleTraceShim_t *ruleTraceShimPtr, int numTraces) {
 	int i;
 	GError *err = NULL;
 	exportRecord_t myrec;
@@ -218,12 +230,6 @@ GError * fixbuf_export(fixbufData_t fbData, exportRecord_t rec, ruleTraceShim_t 
 		ruleTraceShimPtr++;
 	}
 
-	// TODO (Matt): The packets this actually emits alternate between a template packet (defining the fields), and the data packets.
-	//              This seems wrong: it feels like we should be emitting fewer packets.
-	if(!fbSessionExportTemplates(fbData.exsession, &err)) {
-		return err;
-	}
-
 	if(!fBufSetInternalTemplate(fbData.ebuf, fbData.exportId, &err)) {
 		return err;
 	}
@@ -252,7 +258,10 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/projectcalico/felix/go/felix/jitter"
 )
+
+const ExportingInterval = time.Duration(1) * time.Second
 
 type FlowEndReasonType int
 
@@ -303,10 +312,11 @@ var fbTransport = map[string]C.fbTransport_t{
 }
 
 type IPFIXExporter struct {
-	host       net.IP
-	port       int
-	fixbufData C.fixbufData_t
-	source     <-chan *ExportRecord
+	host           net.IP
+	port           int
+	fixbufData     C.fixbufData_t
+	templateTicker *jitter.Ticker
+	source         <-chan *ExportRecord
 }
 
 // IPFIXExporter connects (and/or sends) IPFIX messages (ExportRecord objects),
@@ -317,10 +327,11 @@ func NewIPFIXExporter(host net.IP, port int, transport string, source <-chan *Ex
 	log.Info("Creating IPFIX exporter to host ", host, " port ", port)
 	fbData := C.fixbuf_init(C.CString(host.String()), C.CString(strconv.Itoa(port)), fbTransport[transport])
 	return &IPFIXExporter{
-		host:       host,
-		port:       port,
-		fixbufData: fbData,
-		source:     source,
+		host:           host,
+		port:           port,
+		fixbufData:     fbData,
+		source:         source,
+		templateTicker: jitter.NewTicker(ExportingInterval, ExportingInterval/10),
 	}
 }
 
@@ -329,16 +340,30 @@ func (ie *IPFIXExporter) Start() {
 }
 
 func (ie *IPFIXExporter) startExporting() {
-	for erec := range ie.source {
-		log.Debugf("IPFIXExporter: Exporting %v", erec)
-		err := ie.export(erec)
-		if err != nil {
-			log.Error(err)
+	for {
+		select {
+		case erec := <-ie.source:
+			log.Debugf("IPFIXExporter: Exporting %v", erec)
+			err := ie.exportData(erec)
+			if err != nil {
+				log.Error(err)
+			}
+		case <-ie.templateTicker.C:
+			log.Debug("Template export timer ticked")
+			ie.exportTemplate()
 		}
 	}
 }
 
-func (ie *IPFIXExporter) export(data *ExportRecord) error {
+func (ie *IPFIXExporter) exportTemplate() error {
+	gerror := C.fixbuf_export_templates(ie.fixbufData)
+	if gerror != nil {
+		return fmt.Errorf("Couldn't export Templates Reason: %v", C.GoString(C.gchar_to_char(gerror.message)))
+	}
+	return nil
+}
+
+func (ie *IPFIXExporter) exportData(data *ExportRecord) error {
 	// TODO(doublek): Maybe we can reflect this information?
 	// TODO(doublek): Move this as a method to the ExportRecord struct.
 	rec := C.struct_exportRecord_st{
@@ -366,10 +391,18 @@ func (ie *IPFIXExporter) export(data *ExportRecord) error {
 			ruleIdx:    C.uint16_t(rt.RuleIndex),
 		})
 	}
-	log.Info("Produced record for export: ", rec, " with rule trace: ", rtRec)
-	gerror := C.fixbuf_export(ie.fixbufData, rec, (*C.struct_ruleTraceShim_st)(&rtRec[0]), C.int(len(rtRec)))
-	if gerror != nil {
-		return fmt.Errorf("Couldn't export %v Reason: %v", rec, C.GoString(C.gchar_to_char(gerror.message)))
+	log.Debug("Produced record for export: ", rec, " with rule trace: ", rtRec)
+	var err error = nil
+	if len(rtRec) != 0 {
+		gerror := C.fixbuf_export_data(ie.fixbufData, rec, (*C.struct_ruleTraceShim_st)(&rtRec[0]), C.int(len(rtRec)))
+		if gerror != nil {
+			err = fmt.Errorf("Couldn't export %v Reason: %v", rec, C.GoString(C.gchar_to_char(gerror.message)))
+		}
+	} else {
+		gerror := C.fixbuf_export_data(ie.fixbufData, rec, nil, C.int(len(rtRec)))
+		if gerror != nil {
+			err = fmt.Errorf("Couldn't export %v Reason: %v", rec, C.GoString(C.gchar_to_char(gerror.message)))
+		}
 	}
-	return nil
+	return err
 }
