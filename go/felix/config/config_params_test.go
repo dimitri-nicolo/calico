@@ -61,6 +61,8 @@ var _ = DescribeTable("Config parsing",
 	Entry("InterfacePrefix", "InterfacePrefix", "tap", "tap"),
 	Entry("InterfacePrefix list", "InterfacePrefix", "tap,cali", "tap,cali"),
 
+	Entry("ChainInsertMode append", "ChainInsertMode", "append", "append"),
+
 	Entry("DefaultEndpointToHostAction", "DefaultEndpointToHostAction",
 		"RETURN", "RETURN"),
 	Entry("DefaultEndpointToHostAction", "DefaultEndpointToHostAction",
@@ -118,6 +120,6 @@ var _ = DescribeTable("Config parsing",
 	Entry("PrometheusMetricsEnabled", "PrometheusMetricsEnabled", "true", true),
 	Entry("PrometheusMetricsPort", "PrometheusMetricsPort", "1234", int(1234)),
 
-	Entry("FailsafeInboundHostPorts", "FailsafeInboundHostPorts", "1,2,3,4", []int{1, 2, 3, 4}),
-	Entry("FailsafeOutboundHostPorts", "FailsafeOutboundHostPorts", "1,2,3,4", []int{1, 2, 3, 4}),
+	Entry("FailsafeInboundHostPorts", "FailsafeInboundHostPorts", "1,2,3,4", []uint16{1, 2, 3, 4}),
+	Entry("FailsafeOutboundHostPorts", "FailsafeOutboundHostPorts", "1,2,3,4", []uint16{1, 2, 3, 4}),
 )

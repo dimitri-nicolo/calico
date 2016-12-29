@@ -115,6 +115,7 @@ type Config struct {
 
 	InterfacePrefix string `config:"iface-list;cali;non-zero,die-on-fail"`
 
+	ChainInsertMode             string `config:"oneof(insert,append);insert;non-zero,die-on-fail"`
 	DefaultEndpointToHostAction string `config:"oneof(DROP,RETURN,ACCEPT);DROP;non-zero,die-on-fail"`
 	DropActionOverride          string `config:"oneof(DROP,ACCEPT,LOG-and-DROP,LOG-and-ACCEPT);DROP;non-zero,die-on-fail"`
 
@@ -143,8 +144,8 @@ type Config struct {
 	PrometheusMetricsPort                int  `config:"int(0,65535);9091"`
 	DataplaneDriverPrometheusMetricsPort int  `config:"int(0,65535);9092"`
 
-	FailsafeInboundHostPorts  []int `config:"port-list;22;die-on-fail"`
-	FailsafeOutboundHostPorts []int `config:"port-list;2379,2380,4001,7001;die-on-fail"`
+	FailsafeInboundHostPorts  []uint16 `config:"port-list;22;die-on-fail"`
+	FailsafeOutboundHostPorts []uint16 `config:"port-list;2379,2380,4001,7001;die-on-fail"`
 
 	IpfixCollectorAddr string `config:"hostname;127.0.0.1;die-on-fail"`
 	IpfixCollectorPort int    `config:"int(0,65535);4739;die-on-fail"`
@@ -176,6 +177,33 @@ func (config *Config) UpdateFrom(rawData map[string]string, source Source) (chan
 
 	changed, err = config.resolve()
 	return
+}
+
+func (c *Config) InterfacePrefixes() []string {
+	return strings.Split(c.InterfacePrefix, ",")
+}
+
+func (config *Config) OpenstackActive() bool {
+	if strings.Contains(strings.ToLower(config.ClusterType), "openstack") {
+		log.Debug("Cluster type contains OpenStack")
+		return true
+	}
+	if config.MetadataAddr != "127.0.0.1" {
+		log.Debug("OpenStack metadata IP set to non-default, assuming OpenStack active")
+		return true
+	}
+	if config.MetadataPort != 8775 {
+		log.Debug("OpenStack metadata port set to non-default, assuming OpenStack active")
+		return true
+	}
+	for _, prefix := range config.InterfacePrefixes() {
+		if prefix == "tap" {
+			log.Debug("Interface prefix list contains 'tap', assuming OpenStack")
+			return true
+		}
+	}
+	log.Debug("No evidence this is an OpenStack deployment; diabling OpenStack special-cases")
+	return false
 }
 
 func (config *Config) resolve() (changed bool, err error) {

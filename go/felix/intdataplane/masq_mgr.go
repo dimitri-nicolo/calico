@@ -24,9 +24,20 @@ import (
 	"strings"
 )
 
+// masqManager manages the ipsets and iptables chains used to implement the "NAT outgoing" or
+// "masquerade" feature.  The feature adds a boolean flag to each IPAM pool, which controls how
+// outgoing traffic to non-Calico destinations is handled.  If the "masquerade" flag is set,
+// outgoing traffic is source-NATted to appear to come from the host's IP address.
+//
+// The masqManager maintains two CIDR IP sets: one contains the CIDRs for all Calico
+// IPAM pools, the other contains only the NAT-enabled pools.
+//
+// When NAT-enabled pools are present, the masqManager inserts the iptables masquerade rule
+// to trigger NAT of outgoing packets from NAT-enabled pools.  Traffic to any Calico-owned
+// pool is excluded.
 type masqManager struct {
 	ipVersion    uint8
-	ipsets       *ipsets.IPSets
+	ipsetReg     *ipsets.Registry
 	natTable     *iptables.Table
 	activePools  map[string]*proto.IPAMPool
 	masqPools    set.Set
@@ -37,7 +48,7 @@ type masqManager struct {
 }
 
 func newMasqManager(
-	ipsetsMgr *ipsets.IPSets,
+	ipSetReg *ipsets.Registry,
 	natTable *iptables.Table,
 	ruleRenderer rules.RuleRenderer,
 	maxIPSetSize int,
@@ -46,20 +57,20 @@ func newMasqManager(
 	// Make sure our IP sets exist.  We set the contents to empty here
 	// but the IPSets object will defer writing the IP sets until we're
 	// in sync, by which point we'll have added all our CIDRs into the sets.
-	ipsetsMgr.AddOrReplaceIPSet(ipsets.IPSetMetadata{
+	ipSetReg.AddOrReplaceIPSet(ipsets.IPSetMetadata{
 		MaxSize: maxIPSetSize,
-		SetID:   rules.NATOutgoingAllIPsSetID,
+		SetID:   rules.IPSetIDNATOutgoingAllPools,
 		Type:    ipsets.IPSetTypeHashNet,
 	}, []string{})
-	ipsetsMgr.AddOrReplaceIPSet(ipsets.IPSetMetadata{
+	ipSetReg.AddOrReplaceIPSet(ipsets.IPSetMetadata{
 		MaxSize: maxIPSetSize,
-		SetID:   rules.NATOutgoingMasqIPsSetID,
+		SetID:   rules.IPSetIDNATOutgoingMasqPools,
 		Type:    ipsets.IPSetTypeHashNet,
 	}, []string{})
 
 	return &masqManager{
 		ipVersion:    ipVersion,
-		ipsets:       ipsetsMgr,
+		ipsetReg:     ipSetReg,
 		natTable:     natTable,
 		activePools:  map[string]*proto.IPAMPool{},
 		masqPools:    set.New(),
@@ -92,10 +103,10 @@ func (d *masqManager) OnUpdate(msg interface{}) {
 		// defers and coalesces the update so removing then adding the
 		// same IP is a no-op anyway.
 		logCxt.Debug("Removing old pool.")
-		d.ipsets.RemoveMembers(rules.NATOutgoingAllIPsSetID, []string{oldPool.Cidr})
+		d.ipsetReg.RemoveMembers(rules.IPSetIDNATOutgoingAllPools, []string{oldPool.Cidr})
 		if oldPool.Masquerade {
 			logCxt.Debug("Masquerade was enabled on pool.")
-			d.ipsets.RemoveMembers(rules.NATOutgoingMasqIPsSetID, []string{oldPool.Cidr})
+			d.ipsetReg.RemoveMembers(rules.IPSetIDNATOutgoingMasqPools, []string{oldPool.Cidr})
 		}
 		delete(d.activePools, poolID)
 		d.masqPools.Discard(poolID)
@@ -111,10 +122,10 @@ func (d *masqManager) OnUpdate(msg interface{}) {
 
 		// Update the IP sets.
 		logCxt.Debug("Adding IPAM pool to IP sets.")
-		d.ipsets.AddMembers(rules.NATOutgoingAllIPsSetID, []string{newPool.Cidr})
+		d.ipsetReg.AddMembers(rules.IPSetIDNATOutgoingAllPools, []string{newPool.Cidr})
 		if newPool.Masquerade {
 			logCxt.Debug("IPAM has masquerade enabled.")
-			d.ipsets.AddMembers(rules.NATOutgoingMasqIPsSetID, []string{newPool.Cidr})
+			d.ipsetReg.AddMembers(rules.IPSetIDNATOutgoingMasqPools, []string{newPool.Cidr})
 			d.masqPools.Add(poolID)
 		}
 		d.activePools[poolID] = newPool

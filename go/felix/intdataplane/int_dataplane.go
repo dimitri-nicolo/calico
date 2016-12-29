@@ -31,6 +31,7 @@ import (
 	"github.com/projectcalico/felix/go/felix/proto"
 	"github.com/projectcalico/felix/go/felix/routetable"
 	"github.com/projectcalico/felix/go/felix/rules"
+	"github.com/projectcalico/felix/go/felix/set"
 	"time"
 )
 
@@ -43,105 +44,34 @@ type Config struct {
 	RulesConfig          rules.Config
 }
 
-func NewIntDataplaneDriver(config Config) *InternalDataplane {
-	ruleRenderer := config.RuleRendererOverride
-	if ruleRenderer == nil {
-		ruleRenderer = rules.NewRenderer(config.RulesConfig)
-	}
-	dp := &InternalDataplane{
-		toDataplane:       make(chan interface{}, 100),
-		fromDataplane:     make(chan interface{}, 100),
-		ruleRenderer:      ruleRenderer,
-		interfacePrefixes: config.RulesConfig.WorkloadIfacePrefixes,
-		cleanupPending:    true,
-		ifaceMonitor:      ifacemonitor.New(),
-		ifaceUpdates:      make(chan *ifaceUpdate, 100),
-		config:            config,
-	}
-
-	dp.ifaceMonitor.Callback = dp.onIfaceStateChange
-
-	natTableV4 := iptables.NewTable(
-		"nat",
-		4,
-		rules.AllHistoricChainNamePrefixes,
-		rules.RuleHashPrefix,
-		rules.HistoricInsertedNATRuleRegex,
-	)
-	rawTableV4 := iptables.NewTable("raw", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
-	filterTableV4 := iptables.NewTable("filter", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
-	ipSetsConfigV4 := config.RulesConfig.IPSetConfigV4
-	ipSetsV4 := ipsets.NewIPSets(ipSetsConfigV4)
-	dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV4)
-	dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV4)
-	dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV4)
-	dp.ipsetsWriters = append(dp.ipsetsWriters, ipSetsV4)
-
-	routeTableV4 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 4)
-	dp.routeTables = append(dp.routeTables, routeTableV4)
-
-	dp.RegisterManager(newIPSetsManager(ipSetsV4))
-	dp.RegisterManager(newPolicyManager(filterTableV4, ruleRenderer, 4))
-	dp.RegisterManager(newEndpointManager(
-		filterTableV4,
-		ruleRenderer,
-		routeTableV4,
-		4,
-		config.RulesConfig.WorkloadIfacePrefixes))
-	dp.lookupManager = lookup.NewLookupManager()
-	dp.RegisterManager(dp.lookupManager)
-	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, 1000000, 4))
-	if config.RulesConfig.IPIPEnabled {
-		// Add a manger to keep the all-hosts IP set up to date.
-		dp.RegisterManager(newIPIPManager(ipSetsV4, 1000000)) // IPv4-only
-	}
-	if !config.DisableIPv6 {
-		natTableV6 := iptables.NewTable(
-			"nat",
-			6,
-			rules.AllHistoricChainNamePrefixes,
-			rules.RuleHashPrefix,
-			rules.HistoricInsertedNATRuleRegex,
-		)
-		rawTableV6 := iptables.NewTable("raw", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
-		filterTableV6 := iptables.NewTable("filter", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
-
-		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
-		ipSetsV6 := ipsets.NewIPSets(ipSetsConfigV6)
-		dp.ipsetsWriters = append(dp.ipsetsWriters, ipSetsV6)
-		dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV6)
-		dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV6)
-		dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV6)
-
-		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6)
-		dp.routeTables = append(dp.routeTables, routeTableV6)
-
-		dp.RegisterManager(newIPSetsManager(ipSetsV6))
-		dp.RegisterManager(newPolicyManager(filterTableV6, ruleRenderer, 6))
-		dp.RegisterManager(newEndpointManager(
-			filterTableV6,
-			ruleRenderer,
-			routeTableV6,
-			6,
-			config.RulesConfig.WorkloadIfacePrefixes))
-		dp.RegisterManager(newMasqManager(ipSetsV6, natTableV6, ruleRenderer, 1000000, 6))
-	}
-	return dp
-}
-
-type Manager interface {
-	// TODO(smc) add machinery to send only the required messages to each Manager.
-
-	// OnUpdate is called for each protobuf message from the datastore.  May either directly
-	// send updates to the IPSets and iptables.Table objects (which will queue the updates
-	// until the main loop instructs them to act) or (for efficiency) may wait until
-	// a call to CompleteDeferredWork() to flush updates to the dataplane.
-	OnUpdate(protoBufMsg interface{})
-	// Called before the main loop flushes updates to the dataplane to allow for batched
-	// work to be completed.
-	CompleteDeferredWork() error
-}
-
+// InternalDataplane implements an in-process Felix dataplane driver based on iptables
+// and ipsets.  It communicates with the datastore-facing part of Felix via the
+// Send/RecvMessage methods, which operate on the protobuf-defined API objects.
+//
+// Architecture
+//
+// The internal dataplane driver is organised around a main event loop, which handles
+// update events from the datastore and dataplane.
+//
+// Each pass around the main loop has two phases.  In the first phase, updates are fanned
+// out to "manager" objects, which calculate the changes that are needed and pass them to
+// the dataplane programming layer.  In the second phase, the dataplane layer applies the
+// updates in a consistent sequence.  The second phase is skipped until the datastore is
+// in sync; this ensures that the first update to the dataplane applies a consistent
+// snapshot.
+//
+// Having the dataplane layer batch updates has several advantages.  It is much more
+// efficient to batch updates, since each call to iptables/ipsets has a high fixed cost.
+// In addition, it allows for different managers to make updates without having to
+// coordinate on their sequencing.
+//
+// Requirements on the API
+//
+// The internal dataplane does not do consistency checks on the incoming data (as the
+// old Python-based driver used to do).  It expects to be told about dependent resources
+// before they are needed and for their lifetime to exceed that of the resources that
+// depend on them.  For example, it is important the the datastore layer send an
+// IP set create event before it sends a rule that references that IP set.
 type InternalDataplane struct {
 	toDataplane   chan interface{}
 	fromDataplane chan interface{}
@@ -149,10 +79,13 @@ type InternalDataplane struct {
 	iptablesNATTables    []*iptables.Table
 	iptablesRawTables    []*iptables.Table
 	iptablesFilterTables []*iptables.Table
-	ipsetsWriters        []*ipsets.IPSets
+	ipSetRegistries      []*ipsets.Registry
 
-	ifaceMonitor *ifacemonitor.InterfaceMonitor
-	ifaceUpdates chan *ifaceUpdate
+	ifaceMonitor     *ifacemonitor.InterfaceMonitor
+	ifaceUpdates     chan *ifaceUpdate
+	ifaceAddrUpdates chan *ifaceAddrsUpdate
+
+	endpointStatusCombiner *endpointStatusCombiner
 
 	allManagers []Manager
 
@@ -168,6 +101,111 @@ type InternalDataplane struct {
 	cleanupPending     bool
 
 	config Config
+}
+
+func NewIntDataplaneDriver(config Config) *InternalDataplane {
+	ruleRenderer := config.RuleRendererOverride
+	if ruleRenderer == nil {
+		ruleRenderer = rules.NewRenderer(config.RulesConfig)
+	}
+	dp := &InternalDataplane{
+		toDataplane:       make(chan interface{}, 100),
+		fromDataplane:     make(chan interface{}, 100),
+		ruleRenderer:      ruleRenderer,
+		interfacePrefixes: config.RulesConfig.WorkloadIfacePrefixes,
+		cleanupPending:    true,
+		ifaceMonitor:      ifacemonitor.New(),
+		ifaceUpdates:      make(chan *ifaceUpdate, 100),
+		ifaceAddrUpdates:  make(chan *ifaceAddrsUpdate, 100),
+		config:            config,
+	}
+
+	dp.ifaceMonitor.Callback = dp.onIfaceStateChange
+	dp.ifaceMonitor.AddrCallback = dp.onIfaceAddrsChange
+
+	natTableV4 := iptables.NewTable(
+		"nat",
+		4,
+		rules.AllHistoricChainNamePrefixes,
+		rules.RuleHashPrefix,
+		rules.HistoricInsertedNATRuleRegex,
+	)
+	rawTableV4 := iptables.NewTable("raw", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
+	filterTableV4 := iptables.NewTable("filter", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
+	ipSetsConfigV4 := config.RulesConfig.IPSetConfigV4
+	ipSetRegV4 := ipsets.NewRegistry(ipSetsConfigV4)
+	dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV4)
+	dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV4)
+	dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV4)
+	dp.ipSetRegistries = append(dp.ipSetRegistries, ipSetRegV4)
+
+	routeTableV4 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 4)
+	dp.routeTables = append(dp.routeTables, routeTableV4)
+
+	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, !config.DisableIPv6)
+
+	dp.RegisterManager(newIPSetsManager(ipSetRegV4))
+	dp.RegisterManager(newPolicyManager(filterTableV4, ruleRenderer, 4))
+	dp.RegisterManager(newEndpointManager(
+		filterTableV4,
+		ruleRenderer,
+		routeTableV4,
+		4,
+		config.RulesConfig.WorkloadIfacePrefixes,
+		dp.endpointStatusCombiner.OnWorkloadEndpointStatusUpdate))
+	dp.lookupManager = lookup.NewLookupManager()
+	dp.RegisterManager(dp.lookupManager)
+	dp.RegisterManager(newMasqManager(ipSetRegV4, natTableV4, ruleRenderer, 1000000, 4))
+	if config.RulesConfig.IPIPEnabled {
+		// Add a manger to keep the all-hosts IP set up to date.
+		dp.RegisterManager(newIPIPManager(ipSetRegV4, 1000000)) // IPv4-only
+	}
+	if !config.DisableIPv6 {
+		natTableV6 := iptables.NewTable(
+			"nat",
+			6,
+			rules.AllHistoricChainNamePrefixes,
+			rules.RuleHashPrefix,
+			rules.HistoricInsertedNATRuleRegex,
+		)
+		rawTableV6 := iptables.NewTable("raw", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
+		filterTableV6 := iptables.NewTable("filter", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
+
+		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
+		ipSetRegV6 := ipsets.NewRegistry(ipSetsConfigV6)
+		dp.ipSetRegistries = append(dp.ipSetRegistries, ipSetRegV6)
+		dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV6)
+		dp.iptablesRawTables = append(dp.iptablesRawTables, rawTableV6)
+		dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV6)
+
+		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6)
+		dp.routeTables = append(dp.routeTables, routeTableV6)
+
+		dp.RegisterManager(newIPSetsManager(ipSetRegV6))
+		dp.RegisterManager(newPolicyManager(filterTableV6, ruleRenderer, 6))
+		dp.RegisterManager(newEndpointManager(
+			filterTableV6,
+			ruleRenderer,
+			routeTableV6,
+			6,
+			config.RulesConfig.WorkloadIfacePrefixes,
+			dp.endpointStatusCombiner.OnWorkloadEndpointStatusUpdate))
+		dp.RegisterManager(newMasqManager(ipSetRegV6, natTableV6, ruleRenderer, 1000000, 6))
+	}
+	return dp
+}
+
+type Manager interface {
+	// TODO(smc) add machinery to send only the required messages to each Manager.
+
+	// OnUpdate is called for each protobuf message from the datastore.  May either directly
+	// send updates to the IPSets and iptables.Table objects (which will queue the updates
+	// until the main loop instructs them to act) or (for efficiency) may wait until
+	// a call to CompleteDeferredWork() to flush updates to the dataplane.
+	OnUpdate(protoBufMsg interface{})
+	// Called before the main loop flushes updates to the dataplane to allow for batched
+	// work to be completed.
+	CompleteDeferredWork() error
 }
 
 func (d *InternalDataplane) RegisterManager(mgr Manager) {
@@ -237,6 +275,24 @@ type ifaceUpdate struct {
 	State ifacemonitor.State
 }
 
+// onIfaceAddrsChange is our interface address monitor callback.  It gets called
+// from the monitor's thread.
+func (d *InternalDataplane) onIfaceAddrsChange(ifaceName string, addrs set.Set) {
+	log.WithFields(log.Fields{
+		"ifaceName": ifaceName,
+		"addrs":     addrs,
+	}).Info("Linux interface addrs changed.")
+	d.ifaceAddrUpdates <- &ifaceAddrsUpdate{
+		Name:  ifaceName,
+		Addrs: addrs,
+	}
+}
+
+type ifaceAddrsUpdate struct {
+	Name  string
+	Addrs set.Set
+}
+
 func (d *InternalDataplane) SendMessage(msg interface{}) error {
 	d.toDataplane <- msg
 	return nil
@@ -263,15 +319,24 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		filterChains := d.ruleRenderer.StaticFilterTableChains(t.IPVersion)
 		t.UpdateChains(filterChains)
 		t.SetRuleInsertions("FORWARD", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.FilterForwardChainName},
+			Action: iptables.JumpAction{rules.ChainFilterForward},
+		}})
+		t.SetRuleInsertions("INPUT", []iptables.Rule{{
+			Action: iptables.JumpAction{rules.ChainFilterInput},
+		}})
+		t.SetRuleInsertions("OUTPUT", []iptables.Rule{{
+			Action: iptables.JumpAction{rules.ChainFilterOutput},
 		}})
 	}
 
 	if d.config.RulesConfig.IPIPEnabled {
+		// TODO(smc) Should we maintain this IP (and replace it if someone removes it by
+		// accident)
 		err := configureIPIPDevice(d.config.IPIPMTU,
 			d.config.RulesConfig.IPIPTunnelAddress)
 		if err != nil {
 			log.WithError(err).Warn("Failed configure IPIP tunnel device, retrying...")
+			time.Sleep(1 * time.Second)
 			err := configureIPIPDevice(d.config.IPIPMTU,
 				d.config.RulesConfig.IPIPTunnelAddress)
 			if err != nil {
@@ -283,10 +348,10 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	for _, t := range d.iptablesNATTables {
 		t.UpdateChains(d.ruleRenderer.StaticNATTableChains(t.IPVersion))
 		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.NATPreroutingChainName},
+			Action: iptables.JumpAction{rules.ChainNATPrerouting},
 		}})
 		t.SetRuleInsertions("POSTROUTING", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.NATPostroutingChainName},
+			Action: iptables.JumpAction{rules.ChainNATPostrouting},
 		}})
 	}
 
@@ -301,24 +366,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			for _, mgr := range d.allManagers {
 				mgr.OnUpdate(msg)
 			}
-
-			switch msg := msg.(type) {
-
-			case *proto.WorkloadEndpointUpdate:
-				// TODO(smc) For now, report every workload endpoint as "UP".
-				d.fromDataplane <- &proto.WorkloadEndpointStatusUpdate{
-					Id: msg.Id,
-					Status: &proto.EndpointStatus{
-						Status: "up",
-					},
-				}
-			case *proto.WorkloadEndpointRemove:
-				// TODO(smc) For now, report every workload endpoint as "UP".
-				d.fromDataplane <- &proto.WorkloadEndpointStatusRemove{
-					Id: msg.Id,
-				}
+			switch msg.(type) {
 			case *proto.InSync:
-				// TODO(smc) need to generate InSync message after each flush of the EventSequencer?
 				log.Info("Datastore in sync, flushing the dataplane for the first time...")
 				datastoreInSync = true
 			}
@@ -330,6 +379,12 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			}
 			for _, routeTable := range d.routeTables {
 				routeTable.OnIfaceStateChanged(ifaceUpdate.Name, ifaceUpdate.State)
+			}
+			d.dataplaneNeedsSync = true
+		case ifaceAddrsUpdate := <-d.ifaceAddrUpdates:
+			log.WithField("msg", ifaceAddrsUpdate).Info("Received interface addresses update")
+			for _, mgr := range d.allManagers {
+				mgr.OnUpdate(ifaceAddrsUpdate)
 			}
 			d.dataplaneNeedsSync = true
 		case <-retryTicker.C:
@@ -359,7 +414,7 @@ func (d *InternalDataplane) apply() {
 
 	// Next, create/update IP sets.  We defer deletions of IP sets until after we update
 	// iptables.
-	for _, w := range d.ipsetsWriters {
+	for _, w := range d.ipSetRegistries {
 		w.ApplyUpdates()
 	}
 
@@ -384,12 +439,15 @@ func (d *InternalDataplane) apply() {
 	}
 
 	// Now clean up any left-over IP sets.
-	for _, w := range d.ipsetsWriters {
+	for _, w := range d.ipSetRegistries {
 		w.ApplyDeletions()
 	}
 
+	// And publish and status updates.
+	d.endpointStatusCombiner.Apply()
+
 	if d.cleanupPending {
-		for _, w := range d.ipsetsWriters {
+		for _, w := range d.ipSetRegistries {
 			w.AttemptCleanup()
 		}
 		d.cleanupPending = false

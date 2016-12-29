@@ -19,13 +19,15 @@ import (
 	"github.com/projectcalico/felix/go/felix/proto"
 )
 
+// ipSetsManager simply passes through IP set updates from the datastore to the ipsets.IPSets
+// dataplane layer.
 type ipSetsManager struct {
-	ipsets *ipsets.IPSets
+	ipsetReg *ipsets.Registry
 }
 
-func newIPSetsManager(ipsets *ipsets.IPSets) *ipSetsManager {
+func newIPSetsManager(ipsets *ipsets.Registry) *ipSetsManager {
 	return &ipSetsManager{
-		ipsets: ipsets,
+		ipsetReg: ipsets,
 	}
 }
 
@@ -33,16 +35,16 @@ func (d *ipSetsManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
 	// IP set-related messages, these are extremely common.
 	case *proto.IPSetDeltaUpdate:
-		d.ipsets.AddMembers(msg.Id, msg.AddedMembers)
-		d.ipsets.RemoveMembers(msg.Id, msg.RemovedMembers)
+		d.ipsetReg.AddMembers(msg.Id, msg.AddedMembers)
+		d.ipsetReg.RemoveMembers(msg.Id, msg.RemovedMembers)
 	case *proto.IPSetUpdate:
-		d.ipsets.AddOrReplaceIPSet(ipsets.IPSetMetadata{
+		d.ipsetReg.AddOrReplaceIPSet(ipsets.IPSetMetadata{
 			Type:    ipsets.IPSetTypeHashIP,
 			SetID:   msg.Id,
 			MaxSize: 1024 * 1024,
 		}, msg.Members)
 	case *proto.IPSetRemove:
-		d.ipsets.RemoveIPSet(msg.Id)
+		d.ipsetReg.RemoveIPSet(msg.Id)
 	}
 }
 

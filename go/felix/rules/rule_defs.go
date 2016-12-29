@@ -20,33 +20,38 @@ import (
 	"github.com/projectcalico/felix/go/felix/iptables"
 	"github.com/projectcalico/felix/go/felix/proto"
 	"net"
+	"strings"
 )
 
 const (
 	ChainNamePrefix = "cali"
 	IPSetNamePrefix = "cali"
 
-	FilterInputChainName   = ChainNamePrefix + "-INPUT"
-	FilterForwardChainName = ChainNamePrefix + "-FORWARD"
-	FilterOutputChainName  = ChainNamePrefix + "-OUTPUT"
+	ChainFilterInput   = ChainNamePrefix + "-INPUT"
+	ChainFilterForward = ChainNamePrefix + "-FORWARD"
+	ChainFilterOutput  = ChainNamePrefix + "-OUTPUT"
 
-	NATPreroutingChainName  = ChainNamePrefix + "-PREROUTING"
-	NATPostroutingChainName = ChainNamePrefix + "-POSTROUTING"
-	NATOutgoingChainName    = ChainNamePrefix + "-nat-outgoing"
+	ChainFailsafeIn  = ChainNamePrefix + "-FAILSAFE-IN"
+	ChainFailsafeOut = ChainNamePrefix + "-FAILSAFE-OUT"
 
-	NATOutgoingAllIPsSetID  = "all-ipam-pools"
-	NATOutgoingMasqIPsSetID = "masq-ipam-pools"
+	ChainNATPrerouting  = ChainNamePrefix + "-PREROUTING"
+	ChainNATPostrouting = ChainNamePrefix + "-POSTROUTING"
+	ChainNATOutgoing    = ChainNamePrefix + "-nat-outgoing"
 
-	AllHostIPsSetID = "all-hosts"
+	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
+	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
+
+	IPSetIDAllHostIPs = "all-hosts"
 
 	PolicyInboundPfx  = ChainNamePrefix + "pi-"
 	PolicyOutboundPfx = ChainNamePrefix + "po-"
 
-	DispatchToWorkloadEndpoint   = ChainNamePrefix + "-to-wl-endpoint"
-	DispatchFromWorkloadEndpoint = ChainNamePrefix + "-from-wl-endpoint"
+	ChainWorkloadToHost       = ChainNamePrefix + "-wl-to-host"
+	ChainFromWorkloadDispatch = ChainNamePrefix + "-from-wl-dispatch"
+	ChainToWorkloadDispatch   = ChainNamePrefix + "-to-wl-dispatch"
 
-	DispatchToHostEndpoint   = ChainNamePrefix + "-to-host-endpoint"
-	DispatchFromHostEndpoint = ChainNamePrefix + "-from-host-endpoint"
+	ChainDispatchToHostEndpoint   = ChainNamePrefix + "-to-host-endpoint"
+	ChainDispatchFromHostEndpoint = ChainNamePrefix + "-from-host-endpoint"
 
 	WorkloadToEndpointPfx   = ChainNamePrefix + "tw-"
 	WorkloadFromEndpointPfx = ChainNamePrefix + "fw-"
@@ -88,17 +93,21 @@ type RuleRenderer interface {
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
 	WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndpointID, endpoint *proto.WorkloadEndpoint) []*iptables.Chain
 
-	HostDispatchChains(map[proto.HostEndpointID]*proto.HostEndpoint) []*iptables.Chain
-	HostEndpointToIptablesChains(epID *proto.HostEndpointID, endpoint *proto.HostEndpoint) []*iptables.Chain
+	HostDispatchChains(map[string]proto.HostEndpointID) []*iptables.Chain
+	HostEndpointToIptablesChains(ifaceName string, endpoint *proto.HostEndpoint) []*iptables.Chain
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
 	ProfileToIptablesChains(policyID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
+	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule
 
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
 }
 
 type ruleRenderer struct {
 	Config
+
+	dropActions        []iptables.Action
+	inputAcceptActions []iptables.Action
 }
 
 func (r *ruleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
@@ -118,19 +127,57 @@ type Config struct {
 
 	WorkloadIfacePrefixes []string
 
-	IptablesMarkAccept    uint32
-	IptablesMarkNextTier  uint32
-	IptablesMarkDrop      uint32
-	IptablesMarkEndpoints uint32
+	IptablesMarkAccept   uint32
+	IptablesMarkNextTier uint32
+	IptablesMarkDrop     uint32
 
-	WhitelistDHCPToHost   bool
-	OpenStackMetadataIP   net.IP
-	OpenStackMetadataPort uint16
+	OpenStackMetadataIP          net.IP
+	OpenStackMetadataPort        uint16
+	OpenStackSpecialCasesEnabled bool
 
 	IPIPEnabled       bool
 	IPIPTunnelAddress net.IP
+
+	ActionOnDrop         string
+	EndpointToHostAction string
+
+	FailsafeInboundHostPorts  []uint16
+	FailsafeOutboundHostPorts []uint16
 }
 
 func NewRenderer(config Config) RuleRenderer {
-	return &ruleRenderer{config}
+	// Convert configured actions to rule slices.  First, what should we actually do when we'd
+	// normally drop a packet?  For sandbox mode, we support allowing the packet instead, or
+	// logging it.
+	var dropActions []iptables.Action
+	if strings.HasPrefix(config.ActionOnDrop, "LOG-") {
+		log.Warn("Action on drop includes LOG.  All dropped packets will be logged.")
+		dropActions = append(dropActions, iptables.LogAction{Prefix: "calico-drop"})
+	}
+	if strings.HasSuffix(config.ActionOnDrop, "ACCEPT") {
+		log.Warn("Action on drop set to ACCEPT.  Calico security is disabled!")
+		dropActions = append(dropActions, iptables.AcceptAction{})
+	} else {
+		dropActions = append(dropActions, iptables.DropAction{})
+	}
+
+	// Second, what should we do with packets that come from workloads to the host itself.
+	var inputAcceptActions []iptables.Action
+	switch config.EndpointToHostAction {
+	case "DROP":
+		log.Info("Workload to host packets will be dropped.")
+		inputAcceptActions = dropActions
+	case "ACCEPT":
+		log.Info("Workload to host packets will be accepted.")
+		inputAcceptActions = []iptables.Action{iptables.AcceptAction{}}
+	default:
+		log.Info("Workload to host packets will be returned to INPUT chain.")
+		inputAcceptActions = []iptables.Action{iptables.ReturnAction{}}
+	}
+
+	return &ruleRenderer{
+		Config:             config,
+		dropActions:        dropActions,
+		inputAcceptActions: inputAcceptActions,
+	}
 }

@@ -3,7 +3,7 @@
 Name:           felix
 Summary:        Project Calico virtual networking for cloud data centers
 Version:        2.0.0
-Release:        0.1.rc3%{?dist}
+Release:        1%{?dist}
 License:        Apache-2
 URL:            http://projectcalico.org
 Source0:        felix-%{version}.tar.gz
@@ -164,6 +164,22 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Dec 16 2016 Neil Jerram <neil@tigera.io> 2.0.0-1
+  - Felix 2.0.0 (from Git commit de9ffc2).
+    - Rev libcalico-go to 1.0.0-rc5.
+    - Update to use libcalico-go 1.0.0
+
+* Wed Dec 07 2016 Neil Jerram <neil@tigera.io> 2.0.0-0.1.rc4
+  - Felix 2.0.0-rc4 (from Git commit 706bb9c).
+    Felix version 2.0.0-rc4
+    
+    - Record Deb/RPM packaging for Felix 2.0.0-rc3
+    - If an interface is down, make sure we remove its routes.
+    - Make rule generation tolerate missing IP version for ICMP.
+    - Skip rules that have CIDRs for different IP versions.
+    - Use libcalico-go v1.0.0-rc4
+    - Use realpath instead of readlink -f
+
 * Mon Dec 05 2016 Neil Jerram <neil@tigera.io> 2.0.0-0.1.rc3
   - Felix 2.0.0-rc3 (from Git commit 6bdd086).
     Felix version 2.0.0-rc3

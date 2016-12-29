@@ -41,7 +41,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"reflect"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -56,6 +55,32 @@ Options:
   --version                  Print the version and exit.
 `
 
+// main is the entry point to the calico-felix binary.
+//
+// Its main role is to sequence Felix's startup by:
+//
+// Initialising early logging config (log format and early debug settings).
+//
+// Parsing command line parameters.
+//
+// Loading datastore configuration from the environment or config file.
+//
+// Loading more configuration from the datastore (this is retried until success).
+//
+// Starting the configured internal (golang) or external dataplane driver.
+//
+// Starting the background processing goroutines, which load and keep in sync with the
+// state from the datastore, the "calculation graph".
+//
+// Starting the usage reporting and prometheus metrics endpoint threads (if configured).
+//
+// Then, it defers to monitorAndManageShutdown(), which blocks until one of the components
+// fails, then attempts a graceful shutdown.  At that point, all the processing is in
+// background goroutines.
+//
+// To avoid having to maintain rarely-used code paths, Felix handles updates to its
+// main config parameters by exiting and allowing itself to be restarted by the init
+// daemon.
 func main() {
 	// Special-case handling for environment variable-configured logging:
 	// Initialise early so we can trace out config parsing.
@@ -154,32 +179,38 @@ configRetry:
 		log.Info("Using internal dataplane driver.")
 		dpConfig := intdataplane.Config{
 			RulesConfig: rules.Config{
-				WorkloadIfacePrefixes: strings.Split(configParams.InterfacePrefix, ","),
+				WorkloadIfacePrefixes: configParams.InterfacePrefixes(),
 
-				IPSetConfigV4: ipsets.NewIPSetConfig(
+				IPSetConfigV4: ipsets.NewIPVersionConfig(
 					ipsets.IPFamilyV4,
 					rules.IPSetNamePrefix,
 					rules.AllHistoricIPSetNamePrefixes,
 					rules.LegacyV4IPSetNames,
 				),
-				IPSetConfigV6: ipsets.NewIPSetConfig(
+				IPSetConfigV6: ipsets.NewIPVersionConfig(
 					ipsets.IPFamilyV6,
 					rules.IPSetNamePrefix,
 					rules.AllHistoricIPSetNamePrefixes,
 					nil,
 				),
 
-				OpenStackMetadataIP:   net.ParseIP(configParams.MetadataAddr),
-				OpenStackMetadataPort: uint16(configParams.MetadataPort),
+				OpenStackSpecialCasesEnabled: configParams.OpenstackActive(),
+				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
+				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
 				// TODO(smc) honour config of iptables mark marks.
-				IptablesMarkAccept:    0x1,
-				IptablesMarkNextTier:  0x2,
-				IptablesMarkEndpoints: 0x4,
-				IptablesMarkDrop:      0x8,
+				IptablesMarkAccept:   0x1,
+				IptablesMarkNextTier: 0x2,
+				IptablesMarkDrop:     0x8,
 
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
+
+				ActionOnDrop:         configParams.DropActionOverride,
+				EndpointToHostAction: configParams.DefaultEndpointToHostAction,
+
+				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
+				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
 			},
 			IpfixAddr: net.ParseIP(configParams.IpfixCollectorAddr),
 			IpfixPort: configParams.IpfixCollectorPort,
@@ -486,6 +517,7 @@ func (fc *DataplaneConnector) readMessagesFromDataplane() {
 			log.WithError(err).Error("Failed to read from front-end socket")
 			fc.shutDownProcess("Failed to read from front-end socket")
 		}
+		log.WithField("payload", payload).Debug("New message from dataplane")
 		switch msg := payload.(type) {
 		case *proto.ProcessStatusUpdate:
 			fc.handleProcessStatusUpdate(msg)
