@@ -217,17 +217,19 @@ GError * fixbuf_export_data(fixbufData_t fbData, exportRecord_t rec, ruleTraceSh
 	myrec.protocolIdentifier = rec.protocolIdentifier;
 	myrec.flowEndReason = rec.flowEndReason;
 
-	ruleTracePtr = (ruleTrace_t*)fbSubTemplateListInit(&(myrec.ruleTrace),
-							0, fbData.ruleTraceId, fbData.ruleTraceTmpl, numTraces);
-	for (i=0; i < numTraces; i++) {
-		fixbuf_fill_varfield(&(ruleTracePtr->tierId), ruleTraceShimPtr->tierId);
-		fixbuf_fill_varfield(&(ruleTracePtr->policyId), ruleTraceShimPtr->policyId);
-		fixbuf_fill_varfield(&(ruleTracePtr->rule), ruleTraceShimPtr->rule);
-		fixbuf_fill_varfield(&(ruleTracePtr->ruleAction), ruleTraceShimPtr->ruleAction);
-		ruleTracePtr->ruleIdx = ruleTraceShimPtr->ruleIdx;
+	if (numTraces != 0) {
+		ruleTracePtr = (ruleTrace_t*)fbSubTemplateListInit(&(myrec.ruleTrace),
+								0, fbData.ruleTraceId, fbData.ruleTraceTmpl, numTraces);
+		for (i=0; i < numTraces; i++) {
+			fixbuf_fill_varfield(&(ruleTracePtr->tierId), ruleTraceShimPtr->tierId);
+			fixbuf_fill_varfield(&(ruleTracePtr->policyId), ruleTraceShimPtr->policyId);
+			fixbuf_fill_varfield(&(ruleTracePtr->rule), ruleTraceShimPtr->rule);
+			fixbuf_fill_varfield(&(ruleTracePtr->ruleAction), ruleTraceShimPtr->ruleAction);
+			ruleTracePtr->ruleIdx = ruleTraceShimPtr->ruleIdx;
 
-		ruleTracePtr++;
-		ruleTraceShimPtr++;
+			ruleTracePtr++;
+			ruleTraceShimPtr++;
+		}
 	}
 
 	if(!fBufSetInternalTemplate(fbData.ebuf, fbData.exportId, &err)) {
@@ -238,6 +240,10 @@ GError * fixbuf_export_data(fixbufData_t fbData, exportRecord_t rec, ruleTraceSh
 	}
 
 	if(!fBufAppend(fbData.ebuf, (uint8_t*)&myrec, sizeof(myrec), &err)) {
+		return err;
+	}
+
+	if(!fBufEmit(fbData.ebuf, &err)){
 		return err;
 	}
 
