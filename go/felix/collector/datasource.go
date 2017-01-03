@@ -172,8 +172,8 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 		// Locally originating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
 			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
+			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
 			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
@@ -181,8 +181,8 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 		// Locally terminating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
-			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
 			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
+			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
 			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
