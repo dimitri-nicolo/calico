@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 package stats
 
@@ -96,25 +96,40 @@ func (t *RuleTrace) Len() int {
 	return len(t.path)
 }
 
+func (t *RuleTrace) Path() []RuleTracePoint {
+	path := []RuleTracePoint{}
+	for _, tp := range t.path {
+		if tp == EmptyRuleTracePoint {
+			continue
+		}
+		path = append(path, tp)
+	}
+	return path
+}
+
 func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
-	existingTp := t.path[tp.Index]
-	switch {
-	case existingTp == (RuleTracePoint{}):
-		// Position is empty, insert and be done.
+	if tp.Index > t.Len() {
 		log.Debug("Got new rule trace: ", tp)
-		t.path[tp.Index] = tp
-	case t.Len() < tp.Index:
-		// Insertion point greater than current length. Grow and then insert.
-		log.Debug("Got new rule trace: ", tp)
-		newPath := make([]RuleTracePoint, t.Len()+RuleTraceInitLen)
+		// Insertion index greater than current length. Grow the path slice as long
+		// as necessary.
+		newPath := make([]RuleTracePoint, tp.Index)
 		copy(newPath, t.path)
-		t.path = newPath
+		nextSize := (tp.Index / RuleTraceInitLen) * RuleTraceInitLen
+		t.path = append(t.path, make([]RuleTracePoint, nextSize)...)
 		t.path[tp.Index] = tp
-	case existingTp == tp:
-		// Nothing to do here - maybe a duplicate notification or kernel conntrack
-		// expired. Just skip.
-	default:
-		return RuleTracePointConflict
+	} else {
+		existingTp := t.path[tp.Index]
+		switch {
+		case existingTp == (RuleTracePoint{}):
+			// Position is empty, insert and be done.
+			log.Debug("Got new rule trace: ", tp)
+			t.path[tp.Index] = tp
+		case existingTp == tp:
+			// Nothing to do here - maybe a duplicate notification or kernel conntrack
+			// expired. Just skip.
+		default:
+			return RuleTracePointConflict
+		}
 	}
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
@@ -131,7 +146,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	// New tracepoint is not a next-tier action truncate at this index.
 	t.path[tp.Index] = tp
 	newPath := make([]RuleTracePoint, t.Len())
-	copy(newPath, t.path[:tp.Index])
+	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
 	t.action = tp.Action
 }
