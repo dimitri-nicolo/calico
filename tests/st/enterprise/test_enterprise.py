@@ -13,8 +13,11 @@
 # limitations under the License.
 import copy
 import functools
+import json
 import logging
 import netaddr
+import subprocess
+import unittest
 import yaml
 from nose_parameterized import parameterized
 from multiprocessing.dummy import Pool
@@ -61,6 +64,46 @@ def parallel_host_setup(num_hosts):
     return hosts
 
 
+def wipe_etcd():
+    # Delete /calico if it exists. This ensures each test has an empty data
+    # store at start of day.
+    curl_etcd(get_ip(), "calico", options=["-XDELETE"])
+
+    # Disable Usage Reporting to usage.projectcalico.org
+    # We want to avoid polluting analytics data with unit test noise
+    curl_etcd(get_ip(),
+              "calico/v1/config/UsageReportingEnabled",
+              options=["-XPUT -d value=False"])
+
+
+def curl_etcd(ip, path, options=None, recursive=True):
+    """
+    Perform a curl to etcd, returning JSON decoded response.
+    :param ip: IP address of etcd server
+    :param path:  The key path to query
+    :param options:  Additional options to include in the curl
+    :param recursive:  Whether we want recursive query or not
+    :return:  The JSON decoded response.
+    """
+    if options is None:
+        options = []
+    if ETCD_SCHEME == "https":
+        # Etcd is running with SSL/TLS, require key/certificates
+        rc = subprocess.check_output(
+            "curl --cacert %s --cert %s --key %s "
+            "-sL https://%s:2379/v2/keys/%s?recursive=%s %s"
+            % (ETCD_CA, ETCD_CERT, ETCD_KEY, ETCD_HOSTNAME_SSL,
+               path, str(recursive).lower(), " ".join(options)),
+            shell=True)
+    else:
+        rc = subprocess.check_output(
+            "curl -sL http://%s:2379/v2/keys/%s?recursive=%s %s"
+            % (ip, path, str(recursive).lower(), " ".join(options)),
+            shell=True)
+
+    return json.loads(rc.strip())
+
+
 class MultiHostIpfix(TestBase):
     @classmethod
     def setUpClass(cls):
@@ -103,10 +146,6 @@ class MultiHostIpfix(TestBase):
     @classmethod
     def tearDownClass(cls):
         # Tidy up
-        for host in cls.hosts:
-            host.remove_workloads()
-        for network in cls.networks:
-            network.delete()
         for host in cls.hosts:
             host.cleanup()
             del host
@@ -222,7 +261,7 @@ class MultiHostIpfix(TestBase):
 class TieredPolicyWorkloads(TestBase):
     @classmethod
     def setUpClass(cls):
-        super(TestBase, cls).setUpClass()
+        wipe_etcd()
         cls.hosts = []
         cls.hosts.append(DockerHost("host1",
                                     additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
@@ -266,6 +305,12 @@ class TieredPolicyWorkloads(TestBase):
         self._do_tier_order_test("tier-c", 1,
                                  "tier-b", 2,
                                  "tier-a", 3)
+
+    def test_tier_ordering_implicit(self):
+        """Check correct ordering of tiers by name as tie-breaker."""
+        self._do_tier_order_test("tier-1", 1,
+                                 "tier-2", 1,
+                                 "tier-3", 1)
 
     def set_tier(self, name=None, order=10):
         _log.debug("Setting tier data: \n"
