@@ -212,9 +212,10 @@ configRetry:
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
 			},
-			IpfixAddr: net.ParseIP(configParams.IpfixCollectorAddr),
-			IpfixPort: configParams.IpfixCollectorPort,
-			IPIPMTU:   configParams.IpInIpMtu,
+			IpfixAddr:         net.ParseIP(configParams.IpfixCollectorAddr),
+			IpfixPort:         configParams.IpfixCollectorPort,
+			StatsDumpFilePath: configParams.StatsDumpFilePath,
+			IPIPMTU:           configParams.IpInIpMtu,
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()

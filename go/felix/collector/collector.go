@@ -3,10 +3,16 @@
 package collector
 
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"os/signal"
+	"path"
+	"syscall"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/mipearson/rfw"
 	"github.com/projectcalico/felix/go/felix/collector/stats"
 	"github.com/projectcalico/felix/go/felix/ipfix"
 	"github.com/projectcalico/felix/go/felix/jitter"
@@ -16,6 +22,10 @@ import (
 const DefaultAgeTimeout = time.Duration(10) * time.Second
 const InitialExportDelayTime = time.Duration(2) * time.Second
 const ExportingInterval = time.Duration(1) * time.Second
+
+type Config struct {
+	StatsDumpFilePath string
+}
 
 // A Collector (a StatsManager really) collects StatUpdates from data sources
 // and stores them as a stats.Data object in a map keyed by stats.Tuple.
@@ -30,9 +40,12 @@ type Collector struct {
 	statAgeTimeout chan *stats.Data
 	statTicker     *jitter.Ticker
 	exportSink     chan<- *ipfix.ExportRecord
+	sigChan        chan os.Signal
+	config         *Config
+	dumpLog        *log.Logger
 }
 
-func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data, exportSink chan<- *ipfix.ExportRecord) *Collector {
+func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data, exportSink chan<- *ipfix.ExportRecord, config *Config) *Collector {
 	return &Collector{
 		sources:        sources,
 		sinks:          sinks,
@@ -41,11 +54,15 @@ func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data,
 		statAgeTimeout: make(chan *stats.Data),
 		statTicker:     jitter.NewTicker(ExportingInterval, ExportingInterval/10),
 		exportSink:     exportSink,
+		sigChan:        make(chan os.Signal, 1),
+		config:         config,
+		dumpLog:        log.New(),
 	}
 }
 
 func (c *Collector) Start() {
 	c.mergeDataSources()
+	c.setupStatsDumping()
 	go c.startStatsCollectionAndReporting()
 }
 
@@ -54,7 +71,8 @@ func (c *Collector) startStatsCollectionAndReporting() {
 	// 1. StatUpdates for incoming datasources (chan c.mux).
 	// 2. stats.Data age timeouts via the c.statAgeTimeout channel.
 	// 3. A periodic exporter via the c.statTicker channel.
-	// 4. A done channel for stopping and cleaning up stats collector (TODO).
+	// 4. A signal handler that will dump logs on receiving SIGUSR2.
+	// 5. A done channel for stopping and cleaning up stats collector (TODO).
 	for {
 		select {
 		case update := <-c.mux:
@@ -66,8 +84,33 @@ func (c *Collector) startStatsCollectionAndReporting() {
 		case <-c.statTicker.C:
 			log.Info("Stats export timer ticked")
 			c.exportStat()
+		case <-c.sigChan:
+			c.dumpStats()
 		}
 	}
+}
+
+func (c *Collector) setupStatsDumping() {
+	// TODO (doublek): This may not be the best place to put this. Consider
+	// moving the signal handler and logging to file logic out of the collector
+	// and simply out to appropriate sink on different messages.
+	signal.Notify(c.sigChan, syscall.SIGUSR2)
+
+	err := os.MkdirAll(path.Dir(c.config.StatsDumpFilePath), 0755)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to create log dir")
+	}
+
+	rotAwareFile, err := rfw.Open(c.config.StatsDumpFilePath, 0644)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to open log file")
+	}
+
+	// Attributes have to be directly set for instantiated logger as opposed
+	// to the module level log object.
+	c.dumpLog.Formatter = &MessageOnlyFormatter{}
+	c.dumpLog.Level = log.InfoLevel
+	c.dumpLog.Out = rotAwareFile
 }
 
 func (c *Collector) mergeDataSources() {
@@ -155,13 +198,32 @@ func (c *Collector) exportEntry(record *ipfix.ExportRecord) {
 	c.exportSink <- record
 }
 
-func (c *Collector) PrintStats() {
-	log.Infof("Number of Entries: %v", len(c.epStats))
+// Write stats to file pointed by Config.StatsDumpFilePath.
+// When called, clear the contents of the file Config.StatsDumpFilePath before
+// writing the stats to it.
+func (c *Collector) dumpStats() {
+	log.Debugf("Dumping Stats to %v", c.config.StatsDumpFilePath)
+
+	os.Truncate(c.config.StatsDumpFilePath, 0)
+	c.dumpLog.Infof("Stats Dump Started: %v", time.Now().Format("2006-01-02 15:04:05.000"))
+	c.dumpLog.Infof("Number of Entries: %v", len(c.epStats))
 	for _, v := range c.epStats {
-		log.Info(fmtEntry(v))
+		c.dumpLog.Info(fmtEntry(v))
 	}
+	c.dumpLog.Infof("Stats Dump Completed: %v", time.Now().Format("2006-01-02 15:04:05.000"))
 }
 
 func fmtEntry(data *stats.Data) string {
 	return fmt.Sprintf("%+v: %+v RuleTrace: %+v", data.Tuple, *data, *(data.RuleTrace))
+}
+
+// Logrus Formatter that strips the log entry of formatting such as time, log
+// level and simply outputs *only* the message.
+type MessageOnlyFormatter struct{}
+
+func (f *MessageOnlyFormatter) Format(entry *log.Entry) ([]byte, error) {
+	b := &bytes.Buffer{}
+	b.WriteString(entry.Message)
+	b.WriteByte('\n')
+	return b.Bytes(), nil
 }
