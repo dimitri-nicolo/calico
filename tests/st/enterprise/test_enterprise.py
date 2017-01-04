@@ -65,6 +65,7 @@ def parallel_host_setup(num_hosts):
 
 
 def wipe_etcd():
+    _log.debug("Wiping etcd")
     # Delete /calico if it exists. This ensures each test has an empty data
     # store at start of day.
     curl_etcd(get_ip(), "calico", options=["-XDELETE"])
@@ -74,6 +75,9 @@ def wipe_etcd():
     curl_etcd(get_ip(),
               "calico/v1/config/UsageReportingEnabled",
               options=["-XPUT -d value=False"])
+    curl_etcd(get_ip(),
+              "calico/v1/config/LogSeverityScreen",
+              options=["-XPUT -d value=debug"])
 
 
 def curl_etcd(ip, path, options=None, recursive=True):
@@ -89,18 +93,15 @@ def curl_etcd(ip, path, options=None, recursive=True):
         options = []
     if ETCD_SCHEME == "https":
         # Etcd is running with SSL/TLS, require key/certificates
-        rc = subprocess.check_output(
-            "curl --cacert %s --cert %s --key %s "
-            "-sL https://%s:2379/v2/keys/%s?recursive=%s %s"
-            % (ETCD_CA, ETCD_CERT, ETCD_KEY, ETCD_HOSTNAME_SSL,
-               path, str(recursive).lower(), " ".join(options)),
-            shell=True)
+        command = "curl --cacert %s --cert %s --key %s " \
+                  "-sL https://%s:2379/v2/keys/%s?recursive=%s %s" % \
+                  (ETCD_CA, ETCD_CERT, ETCD_KEY, ETCD_HOSTNAME_SSL, path,
+                   str(recursive).lower(), " ".join(options))
     else:
-        rc = subprocess.check_output(
-            "curl -sL http://%s:2379/v2/keys/%s?recursive=%s %s"
-            % (ip, path, str(recursive).lower(), " ".join(options)),
-            shell=True)
-
+        command = "curl -sL http://%s:2379/v2/keys/%s?recursive=%s %s" % \
+                  (ip, path, str(recursive).lower(), " ".join(options))
+    _log.debug("Running: %s", command)
+    rc = subprocess.check_output(command, shell=True)
     return json.loads(rc.strip())
 
 
@@ -257,11 +258,58 @@ class MultiHostIpfix(TestBase):
                                 octets="34,34")]
         self.mon.assert_flows_present(ping_flows, 20, allow_others=False)
 
+policy_next_all = {
+    "apiVersion": "v1",
+    "kind": "policy",
+    "metadata": {"name": "policy_next_all"},
+    "spec": {
+        "order": 10,
+        "ingress": [{"action": "next-tier"}],
+        "egress": [{"action": "next-tier"}]
+    }
+}
+
+policy_allow_all = {
+    "apiVersion": "v1",
+    "kind": "policy",
+    "metadata": {"name": "policy_allow_all"},
+    "spec": {
+        "order": 10,
+        "ingress": [{"action": "allow"}],
+        "egress": [{"action": "allow"}]
+    }
+}
+
+policy_deny_all = {
+    "apiVersion": "v1",
+    "kind": "policy",
+    "metadata": {"name": "policy_deny_all"},
+    "spec": {
+        "order": 10,
+        "ingress": [{"action": "deny"}],
+        "egress": [{"action": "deny"}]}
+}
+policy_none_all = {
+    "apiVersion": "v1",
+    "kind": "policy",
+    "metadata": {"name": "policy_none_all"},
+    "spec": {
+        "selector": "all()",
+        "order": 10,
+        "ingress": [],
+        "egress": []}
+}
+
 
 class TieredPolicyWorkloads(TestBase):
+    def setUp(self):
+        _log.debug("Override the TestBase setUp() method which wipes etcd. Do nothing.")
+
     @classmethod
     def setUpClass(cls):
         wipe_etcd()
+        cls.policy_tier_name = "default"
+        cls.next_tier_allowed = False
         cls.hosts = []
         cls.hosts.append(DockerHost("host1",
                                     additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
@@ -302,12 +350,16 @@ class TieredPolicyWorkloads(TestBase):
 
     def test_tier_ordering_explicit(self):
         """Check correct ordering of tiers by their explicit order field."""
+        self.policy_tier_name = "the-tier"
+        self.next_tier_allowed = True
         self._do_tier_order_test("tier-c", 1,
                                  "tier-b", 2,
                                  "tier-a", 3)
 
     def test_tier_ordering_implicit(self):
         """Check correct ordering of tiers by name as tie-breaker."""
+        self.policy_tier_name = "the-tier"
+        self.next_tier_allowed = True
         self._do_tier_order_test("tier-1", 1,
                                  "tier-2", 1,
                                  "tier-3", 1)
@@ -327,38 +379,6 @@ class TieredPolicyWorkloads(TestBase):
 
     def _do_tier_order_test(self, first_tier, first_tier_order, second_tier,
                             second_tier_order, third_tier, third_tier_order):
-        policy_next_all = {
-            "apiVersion": "v1",
-            "kind": "policy",
-            "metadata": {"name": "policy_next_all"},
-            "spec": {
-                "order": 10,
-                "ingress": [{"action": "next-tier"}],
-                "egress": [{"action": "next-tier"}]
-            }
-        }
-
-        policy_allow_all = {
-            "apiVersion": "v1",
-            "kind": "policy",
-            "metadata": {"name": "policy_allow_all"},
-            "spec": {
-                "order": 10,
-                "inbound_rules": [{"action": "allow"}],
-                "outbound_rules": [{"action": "allow"}]
-            }
-        }
-
-        policy_deny_all = {
-            "apiVersion": "v1",
-            "kind": "policy",
-            "metadata": {"name": "policy_deny_all"},
-            "spec": {
-                "order": 10,
-                "inbound_rules": [{"action": "deny"}],
-                "outbound_rules": [{"action": "deny"}]}
-        }
-
         # Note that the following tests need to check that connectivity to
         # the rpcbind service alternates between succeeding and failing so
         # that we spot if felix hasn't actually changed anything.
@@ -429,8 +449,17 @@ class TieredPolicyWorkloads(TestBase):
         data = copy.deepcopy(data)
         if order is not None:
             data["order"] = order
+
+        if not self.next_tier_allowed:
+            for dirn in ["ingress", "egress"]:
+                if dirn in data:
+                    def f(rule):
+                        return rule != {"action": "next-tier"}
+                    data[dirn] = filter(f, data[dirn])
+
         data["metadata"]["name"] = policy_name
-        data["metadata"]["tier"] = tier
+        if tier != "default":
+            data["metadata"]["tier"] = tier
 
         self._apply_data(data, self.hosts[0])
 
@@ -446,6 +475,87 @@ class TieredPolicyWorkloads(TestBase):
             the_rest = [wl for wl in workload_list if wl is not workload]
             self.assert_connectivity([workload], fail_list=the_rest,
                                      retries=retries, type_list=type_list)
+
+    def test_policy_ordering_explicit(self):
+        """Check correct ordering of policies by their explicit order
+        field."""
+        self.policy_tier_name = "default"
+        self.next_tier_allowed = False
+        self._do_policy_order_test("pol-c", 1,
+                                   "pol-b", 2,
+                                   "pol-a", 3)
+
+    def test_policy_ordering_implicit(self):
+        """Check correct ordering of policies by name as tie-breaker."""
+        self.policy_tier_name = "default"
+        self.next_tier_allowed = False
+        self._do_policy_order_test("pol-1", 1,
+                                   "pol-2", 1,
+                                   "pol-3", 1)
+
+    def _do_policy_order_test(self,
+                              first_pol, first_pol_order,
+                              second_pol, second_pol_order,
+                              third_pol, third_pol_order):
+        """Checks that policies are ordered correctly."""
+        # Note that the following tests need to check that connectivity to
+        # the rpcbind service alternates between succeeding and failing so
+        # that we spot if felix hasn't actually changed anything.
+
+        _log.info("Check we start with connectivity.")
+        self.assert_connectivity(self.n1_workloads)
+        _log.info("Apply a single deny policy")
+        self.set_policy(self.policy_tier_name, first_pol, policy_deny_all,
+                        order=first_pol_order)
+        _log.info("Check we now cannot access tcp service")
+        self.assert_no_connectivity(self.n1_workloads)
+        _log.info("Allow in first tier only, should allow.")
+        self.set_policy(self.policy_tier_name, first_pol, policy_allow_all,
+                        order=first_pol_order)
+        self.set_policy(self.policy_tier_name, second_pol, policy_deny_all,
+                        order=second_pol_order)
+        self.set_policy(self.policy_tier_name, third_pol, policy_deny_all,
+                        order=third_pol_order)
+        self.assert_connectivity(self.n1_workloads)
+
+        # Fix up second tier
+        self.set_policy(self.policy_tier_name, second_pol, policy_deny_all,
+                        order=second_pol_order)
+
+        # Deny in all tiers, should drop.
+        _log.info("Deny in all tiers, should drop.")
+        self.set_policy(self.policy_tier_name, first_pol, policy_deny_all,
+                        order=first_pol_order)
+        self.assert_no_connectivity(self.n1_workloads)
+
+        # Allow in first tier, should allow.
+        _log.info("Allow in first tier, should allow.")
+        self.set_policy(self.policy_tier_name, first_pol, policy_allow_all,
+                        order=first_pol_order)
+        self.assert_connectivity(self.n1_workloads)
+
+        # Switch, now the first policy drops but the later ones allow.
+        _log.info("Switch, now the first tier drops but the later ones "
+                  "allow.")
+        self.set_policy(self.policy_tier_name, first_pol, policy_deny_all,
+                        order=first_pol_order)
+        self.set_policy(self.policy_tier_name, second_pol, policy_allow_all,
+                        order=second_pol_order)
+        self.set_policy(self.policy_tier_name, third_pol, policy_allow_all,
+                        order=third_pol_order)
+        self.assert_no_connectivity(self.n1_workloads)
+
+        # Fall through to second policy.
+        _log.info("Fall through to second policy.")
+        self.set_policy(self.policy_tier_name, first_pol, policy_none_all,
+                        order=first_pol_order)
+        self.assert_connectivity(self.n1_workloads)
+
+        # Swap the second tier for a drop.
+        _log.info("Swap the second tier for a drop.")
+        self.set_policy(self.policy_tier_name, second_pol,  policy_deny_all,
+                        order=second_pol_order)
+        self.assert_no_connectivity(self.n1_workloads)
 
 
 class IpNotFound(Exception):
