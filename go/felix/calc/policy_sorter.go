@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"sort"
+	"strings"
 )
 
 type PolicySorter struct {
@@ -36,9 +37,11 @@ func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 	switch key := update.Key.(type) {
 	case model.TierKey:
 		tierName := key.Name
+		logCxt := log.WithField("tierName", tierName)
 		tierInfo := poc.tiers[tierName]
 		if update.Value != nil {
 			newTier := update.Value.(*model.Tier)
+			logCxt.WithField("order", newTier.Order).Debug("Tier update")
 			if tierInfo == nil {
 				tierInfo = NewTierInfo(key.Name)
 				poc.tiers[tierName] = tierInfo
@@ -90,7 +93,10 @@ func (poc *PolicySorter) Sorted() []*tierInfo {
 	for _, tier := range poc.tiers {
 		tiers = append(tiers, tier)
 	}
-	sort.Sort(TierByOrder(tiers))
+	tiersByOrder := TierByOrder(tiers)
+	log.Debugf("Order before sorting tiers: %v", tiersByOrder)
+	sort.Sort(tiersByOrder)
+	log.Debugf("Order after sorting tiers: %v", tiersByOrder)
 	for _, tierInfo := range poc.tiers {
 		tierInfo.OrderedPolicies = make([]PolKV, 0, len(tierInfo.Policies))
 		for k, v := range tierInfo.Policies {
@@ -125,6 +131,17 @@ func (a TierByOrder) Less(i, j int) bool {
 		return a[i].Name < a[j].Name
 	}
 	return *a[i].Order < *a[j].Order
+}
+func (a TierByOrder) String() string {
+	parts := make([]string, len(a))
+	for i, ti := range a {
+		order := "default"
+		if ti.Order != nil {
+			order = fmt.Sprintf("%f", *ti.Order)
+		}
+		parts[i] = fmt.Sprintf("%s(%s)", ti.Name, order)
+	}
+	return strings.Join(parts, ", ")
 }
 
 type PolKV struct {
