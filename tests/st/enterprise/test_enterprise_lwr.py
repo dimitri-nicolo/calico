@@ -17,6 +17,7 @@ import json
 import logging
 import netaddr
 import subprocess
+import time
 import unittest
 import yaml
 from nose_parameterized import parameterized
@@ -264,8 +265,8 @@ policy_next_all = {
     "metadata": {"name": "policy_next_all"},
     "spec": {
         "order": 10,
-        "ingress": [{"action": "next-tier"}],
-        "egress": [{"action": "next-tier"}]
+        "ingress": [{"action": "pass"}],
+        "egress": [{"action": "pass"}]
     }
 }
 
@@ -304,6 +305,21 @@ policy_none_all = {
 class TieredPolicyWorkloads(TestBase):
     def setUp(self):
         _log.debug("Override the TestBase setUp() method which wipes etcd. Do nothing.")
+        # Wipe policies and tiers before each test
+        self.delete_all("pol")
+        self.delete_all("tier")
+
+    def delete_all(self, resource):
+        # Grab all objects of a resource type
+        objects = yaml.load(self.hosts[0].calicoctl("get %s -o yaml" % resource))
+        # and delete them (if there are any)
+        if len(objects) > 0:
+            self._delete_data(objects, self.hosts[0])
+
+    @staticmethod
+    def sleep(length):
+        _log.debug("Sleeping for %s" % length)
+        time.sleep(length)
 
     @classmethod
     def setUpClass(cls):
@@ -323,13 +339,15 @@ class TieredPolicyWorkloads(TestBase):
             host.start_calico_node()
 
         cls.networks = []
-        cls.networks.append(cls.hosts[0].create_network("testnet1"))
+        cls.networks.append(cls.hosts[0].create_network("testnet2"))
+        cls.sleep(10)
 
         cls.n1_workloads = []
         # Create two workloads on cls.hosts[0] and one on cls.hosts[1] all in network 1.
         cls.n1_workloads.append(cls.hosts[1].create_workload("workload_h2n1_1",
                                                              image="workload",
                                                              network=cls.networks[0]))
+        cls.sleep(2)
         cls.n1_workloads.append(cls.hosts[0].create_workload("workload_h1n1_1",
                                                              image="workload",
                                                              network=cls.networks[0]))
@@ -437,24 +455,31 @@ class TieredPolicyWorkloads(TestBase):
         self.set_policy(second_tier, "pol-1", policy_deny_all)
         self.assert_no_connectivity(self.n1_workloads)
 
-    @staticmethod
-    def _apply_data(data, host):
+    def _apply_data(self, data, host):
         _log.debug("Applying data with calicoctl: %s", data)
-        # Apply new profiles
+        self._use_calicoctl("apply", data, host)
+
+    def _delete_data(self, data, host):
+        _log.debug("Deleting data with calicoctl: %s", data)
+        self._use_calicoctl("delete", data, host)
+
+    @staticmethod
+    def _use_calicoctl(action, data, host):
+        # use calicoctl with data
         host.writefile("new_profile",
                        yaml.dump(data, default_flow_style=False))
-        host.calicoctl("apply -f new_profile")
+        host.calicoctl("%s -f new_profile" % action)
 
     def set_policy(self, tier, policy_name, data, order=None):
         data = copy.deepcopy(data)
         if order is not None:
-            data["order"] = order
+            data["spec"]["order"] = order
 
         if not self.next_tier_allowed:
             for dirn in ["ingress", "egress"]:
                 if dirn in data:
                     def f(rule):
-                        return rule != {"action": "next-tier"}
+                        return rule != {"action": "pass"}
                     data[dirn] = filter(f, data[dirn])
 
         data["metadata"]["name"] = policy_name
