@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -802,6 +802,10 @@ func squashStates(baseTests StateList) (desc string, mappedTests []StateList) {
 // is also likely to fail.  A good strategy for debugging is to focus on the
 // base tests first.
 var _ = Describe("Calculation graph state sequencing tests:", func() {
+	describeSyncTests(baseTests)
+})
+
+func describeSyncTests(baseTests []StateList) {
 	for _, test := range baseTests {
 		baseTest := test
 		for _, expander := range testExpanders {
@@ -822,7 +826,7 @@ var _ = Describe("Calculation graph state sequencing tests:", func() {
 			}
 		}
 	}
-})
+}
 
 // These tests use the same expansion logic as the synchronous tests above
 // but they drive the calculation graph via its asynchronous channel interface.
@@ -834,6 +838,10 @@ var _ = Describe("Calculation graph state sequencing tests:", func() {
 // synchronous test above is passing.  It's much easier to debug a
 // deterministic test!
 var _ = Describe("Async calculation graph state sequencing tests:", func() {
+	describeAsyncTests(baseTests)
+})
+
+func describeAsyncTests(baseTests []StateList) {
 	for _, test := range baseTests {
 		if len(test) == 0 {
 			continue
@@ -925,7 +933,7 @@ var _ = Describe("Async calculation graph state sequencing tests:", func() {
 			}
 		}
 	}
-})
+}
 
 type flushStrategy int
 
@@ -966,7 +974,8 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 					ii, lastState.Name, state.Name))
 				kvDeltas := state.KVDeltas(lastState)
 				for _, kv := range kvDeltas {
-					fmt.Fprintf(GinkgoWriter, "       -> Injecting KV: %v\n", kv)
+					fmt.Fprintf(GinkgoWriter, "       -> Injecting KV: %#v = %#v\n",
+						kv.Key, kv.Value)
 					validationFilter.OnUpdates([]api.Update{kv})
 					if flushStrategy == afterEachKV {
 						if !sentInSync {
