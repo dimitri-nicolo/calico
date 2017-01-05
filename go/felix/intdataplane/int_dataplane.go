@@ -16,9 +16,6 @@ package intdataplane
 
 import (
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/collector"
@@ -41,6 +38,7 @@ type Config struct {
 	RuleRendererOverride    rules.RuleRenderer
 	IpfixPort               int
 	IpfixAddr               net.IP
+  StatsDumpFilePath    string
 	IPIPMTU                 int
 	IptablesRefreshInterval time.Duration
 	RulesConfig             rules.Config
@@ -247,23 +245,16 @@ func (d *InternalDataplane) Start() {
 	ipfixExporter := ipfix.NewIPFIXExporter(d.config.IpfixAddr, d.config.IpfixPort, "udp", ipfixExportSink)
 	ipfixExporter.Start()
 
+	collectorConfig := &collector.Config{
+		StatsDumpFilePath: d.config.StatsDumpFilePath,
+	}
 	printSink := make(chan *stats.Data)
 	datasources := []<-chan stats.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
 	datasinks := []chan<- *stats.Data{printSink}
-	statsCollector := collector.NewCollector(datasources, datasinks, ipfixExportSink)
+	statsCollector := collector.NewCollector(datasources, datasinks, ipfixExportSink, collectorConfig)
 	statsCollector.Start()
 
-	// TODO (Matt): fix signal channel
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGUSR2)
-
-	go func() {
-		for {
-			<-sigChan
-			statsCollector.PrintStats()
-		}
-	}()
-
+	// TODO (doublek): The printSink is unused for now. It should be used to hook into dumping stats.
 	go func() {
 		for data := range printSink {
 			log.Info("MD4 test output data: ", data)
