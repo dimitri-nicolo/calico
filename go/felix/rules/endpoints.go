@@ -189,7 +189,22 @@ func (r *ruleRenderer) endpointToIptablesChains(
 					Comment: "Return if policy accepted",
 				})
 		}
+
 		// If no policy in the tier marked the packet as next-tier, drop the packet.
+		toRules = append(toRules, Rule{
+			Match: Match(),
+			Action: NflogAction{
+				Group:  1,
+				Prefix: "D/0/" + tier.Name + "/no-policy-match-inbound",
+			},
+		})
+		fromRules = append(fromRules, Rule{
+			Match: Match(),
+			Action: NflogAction{
+				Group:  2,
+				Prefix: "D/0/" + tier.Name + "/no-policy-match-outbound",
+			},
+		})
 		toRules = append(toRules, r.DropRules(Match().MarkClear(r.IptablesMarkNextTier), "Drop if no policies passed packet")...)
 		fromRules = append(fromRules, r.DropRules(Match().MarkClear(r.IptablesMarkNextTier), "Drop if no policies passed packet")...)
 	}
@@ -218,6 +233,23 @@ func (r *ruleRenderer) endpointToIptablesChains(
 			})
 	}
 
+	// TODO (Matt): This (and the policy equivalent just above) can probably be refactored.
+	//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
+	// No profile matched the packet: drop it.
+	toRules = append(toRules, Rule{
+		Match: Match(),
+		Action: NflogAction{
+			Group:  1,
+			Prefix: "D/0/no-profile-match-inbound",
+		},
+	})
+	fromRules = append(fromRules, Rule{
+		Match: Match(),
+		Action: NflogAction{
+			Group:  2,
+			Prefix: "D/0/no-profile-match-outbound",
+		},
+	})
 	toRules = append(toRules, r.DropRules(Match(), "Drop if no profiles matched")...)
 	fromRules = append(fromRules, r.DropRules(Match(), "Drop if no profiles matched")...)
 
