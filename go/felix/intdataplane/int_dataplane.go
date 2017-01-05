@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"github.com/projectcalico/felix/go/felix/ipfix"
 	"github.com/projectcalico/felix/go/felix/ipsets"
 	"github.com/projectcalico/felix/go/felix/iptables"
+	"github.com/projectcalico/felix/go/felix/jitter"
 	"github.com/projectcalico/felix/go/felix/lookup"
 	"github.com/projectcalico/felix/go/felix/proto"
 	"github.com/projectcalico/felix/go/felix/routetable"
@@ -36,12 +37,13 @@ import (
 )
 
 type Config struct {
-	DisableIPv6          bool
-	RuleRendererOverride rules.RuleRenderer
-	IpfixPort            int
-	IpfixAddr            net.IP
-	IPIPMTU              int
-	RulesConfig          rules.Config
+	DisableIPv6             bool
+	RuleRendererOverride    rules.RuleRenderer
+	IpfixPort               int
+	IpfixAddr               net.IP
+	IPIPMTU                 int
+	IptablesRefreshInterval time.Duration
+	RulesConfig             rules.Config
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -76,6 +78,7 @@ type InternalDataplane struct {
 	toDataplane   chan interface{}
 	fromDataplane chan interface{}
 
+	allIptablesTables    []*iptables.Table
 	iptablesNATTables    []*iptables.Table
 	iptablesRawTables    []*iptables.Table
 	iptablesFilterTables []*iptables.Table
@@ -98,6 +101,7 @@ type InternalDataplane struct {
 	routeTables []*routetable.RouteTable
 
 	dataplaneNeedsSync bool
+	refreshIptables    bool
 	cleanupPending     bool
 
 	config Config
@@ -192,12 +196,21 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 			dp.endpointStatusCombiner.OnWorkloadEndpointStatusUpdate))
 		dp.RegisterManager(newMasqManager(ipSetRegV6, natTableV6, ruleRenderer, 1000000, 6))
 	}
+
+	for _, t := range dp.iptablesNATTables {
+		dp.allIptablesTables = append(dp.allIptablesTables, t)
+	}
+	for _, t := range dp.iptablesFilterTables {
+		dp.allIptablesTables = append(dp.allIptablesTables, t)
+	}
+	for _, t := range dp.iptablesRawTables {
+		dp.allIptablesTables = append(dp.allIptablesTables, t)
+	}
+
 	return dp
 }
 
 type Manager interface {
-	// TODO(smc) add machinery to send only the required messages to each Manager.
-
 	// OnUpdate is called for each protobuf message from the datastore.  May either directly
 	// send updates to the IPSets and iptables.Table objects (which will queue the updates
 	// until the main loop instructs them to act) or (for efficiency) may wait until
@@ -330,19 +343,20 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	}
 
 	if d.config.RulesConfig.IPIPEnabled {
-		// TODO(smc) Should we maintain this IP (and replace it if someone removes it by
-		// accident)
-		err := configureIPIPDevice(d.config.IPIPMTU,
-			d.config.RulesConfig.IPIPTunnelAddress)
-		if err != nil {
-			log.WithError(err).Warn("Failed configure IPIP tunnel device, retrying...")
-			time.Sleep(1 * time.Second)
-			err := configureIPIPDevice(d.config.IPIPMTU,
-				d.config.RulesConfig.IPIPTunnelAddress)
-			if err != nil {
-				log.WithError(err).Panic("IPIP enabled but failed to configure tunnel.")
+		log.Info("IPIP enabled, starting thread to keep tunnel configuration in sync.")
+		go func() {
+			log.Info("IPIP thread started.")
+			for {
+				err := configureIPIPDevice(d.config.IPIPMTU,
+					d.config.RulesConfig.IPIPTunnelAddress)
+				if err != nil {
+					log.WithError(err).Warn("Failed configure IPIP tunnel device, retrying...")
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				time.Sleep(10 * time.Second)
 			}
-		}
+		}()
 	}
 
 	for _, t := range d.iptablesNATTables {
@@ -357,6 +371,14 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 
 	// Retry any failed operations every 10s.
 	retryTicker := time.NewTicker(10 * time.Second)
+	var refreshC <-chan time.Time
+	if d.config.IptablesRefreshInterval > 0 {
+		refreshTicker := jitter.NewTicker(
+			d.config.IptablesRefreshInterval,
+			d.config.IptablesRefreshInterval/10,
+		)
+		refreshC = refreshTicker.C
+	}
 
 	datastoreInSync := false
 	for {
@@ -386,6 +408,10 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			for _, mgr := range d.allManagers {
 				mgr.OnUpdate(ifaceAddrsUpdate)
 			}
+			d.dataplaneNeedsSync = true
+		case <-refreshC:
+			log.Debug("Refreshing iptables dataplane state")
+			d.refreshIptables = true
 			d.dataplaneNeedsSync = true
 		case <-retryTicker.C:
 		}
@@ -418,14 +444,14 @@ func (d *InternalDataplane) apply() {
 		w.ApplyUpdates()
 	}
 
+	if d.refreshIptables {
+		for _, t := range d.allIptablesTables {
+			t.InvalidateDataplaneCache()
+		}
+		d.refreshIptables = false
+	}
 	// Update iptables, this should sever any references to now-unused IP sets.
-	for _, t := range d.iptablesFilterTables {
-		t.Apply()
-	}
-	for _, t := range d.iptablesNATTables {
-		t.Apply()
-	}
-	for _, t := range d.iptablesRawTables {
+	for _, t := range d.allIptablesTables {
 		t.Apply()
 	}
 

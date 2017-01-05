@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -177,6 +177,14 @@ configRetry:
 	var dpDriverCmd *exec.Cmd
 	if configParams.UseInternalDataplaneDriver {
 		log.Info("Using internal dataplane driver.")
+		markAccept := configParams.NthIPTablesMark(0)
+		markNextTier := configParams.NthIPTablesMark(1)
+		markDrop := configParams.NthIPTablesMark(2)
+		log.WithFields(log.Fields{
+			"acceptMark": markAccept,
+			"nextMark":   markNextTier,
+			"dropMark":   markDrop,
+		}).Info("Calculated iptables mark bits")
 		dpConfig := intdataplane.Config{
 			RulesConfig: rules.Config{
 				WorkloadIfacePrefixes: configParams.InterfacePrefixes(),
@@ -198,10 +206,9 @@ configRetry:
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				// TODO(smc) honour config of iptables mark marks.
-				IptablesMarkAccept:   0x1,
-				IptablesMarkNextTier: 0x2,
-				IptablesMarkDrop:     0x8,
+				IptablesMarkAccept:   markAccept,
+				IptablesMarkNextTier: markNextTier,
+				IptablesMarkDrop:     markDrop,
 
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
@@ -212,9 +219,10 @@ configRetry:
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
 			},
-			IpfixAddr: net.ParseIP(configParams.IpfixCollectorAddr),
-			IpfixPort: configParams.IpfixCollectorPort,
-			IPIPMTU:   configParams.IpInIpMtu,
+			IpfixAddr:               net.ParseIP(configParams.IpfixCollectorAddr),
+			IpfixPort:               configParams.IpfixCollectorPort,
+			IPIPMTU:                 configParams.IpInIpMtu,
+			IptablesRefreshInterval: time.Duration(configParams.IptablesRefreshInterval) * time.Second,
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()
