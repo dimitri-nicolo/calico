@@ -17,6 +17,13 @@ const DefaultAgeTimeout = time.Duration(10) * time.Second
 const InitialExportDelayTime = time.Duration(2) * time.Second
 const ExportingInterval = time.Duration(1) * time.Second
 
+type Config struct {
+	// TODO (doublek): Use IpfixExportingEnabled to enable/disable IPFIX
+	// functionality.
+	IpfixExportingEnabled bool
+	IpfixExportOnDrop     bool
+}
+
 // A Collector (a StatsManager really) collects StatUpdates from data sources
 // and stores them as a stats.Data object in a map keyed by stats.Tuple.
 // It also periodically exports all entries of this map to a IPFIX exporter.
@@ -143,7 +150,7 @@ func (c *Collector) exportStat() {
 	for _, data := range c.epStats {
 		// TODO(doublek): If we haven't send an update in a while, we may be required
 		// to send one out. Check RFC and implement if required.
-		if !data.IsDirty() {
+		if !data.IsDirty() && !data.IsExportEnabled() {
 			continue
 		}
 		c.exportEntry(data.ToExportRecord(ipfix.ActiveTimeout))

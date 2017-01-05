@@ -47,6 +47,7 @@ type RuleTracePoint struct {
 	PolicyID string
 	Rule     string
 	Action   RuleAction
+	Export   bool
 	Index    int
 }
 
@@ -58,6 +59,7 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 type RuleTrace struct {
 	path   []RuleTracePoint
 	action RuleAction
+	export bool
 }
 
 func NewRuleTrace() *RuleTrace {
@@ -92,6 +94,7 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	}
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
+		t.export = tp.Export
 	}
 	return nil
 }
@@ -108,6 +111,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	copy(newPath, t.path[:tp.Index])
 	t.path = newPath
 	t.action = tp.Action
+	t.export = tp.Export
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection. This is
@@ -205,6 +209,11 @@ func (d *Data) AgeTimer() *time.Timer {
 // Returns the final action of the RuleTrace
 func (d *Data) Action() RuleAction {
 	return d.RuleTrace.action
+}
+
+// Returns the if export is requested or not.
+func (d *Data) IsExportEnabled() bool {
+	return d.RuleTrace.export
 }
 
 func (d *Data) CountersIn() Counter {

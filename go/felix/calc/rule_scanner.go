@@ -221,6 +221,8 @@ type ParsedRule struct {
 	NotDstIPSetIDs []string
 
 	LogPrefix string
+
+	ExportIpfix string
 }
 
 func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allTagOrSels []tagOrSel, err error) {
@@ -256,6 +258,8 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allTagOrSels []
 		NotDstIPSetIDs: tosSlice(notDst).ToUIDs(),
 
 		LogPrefix: rule.LogPrefix,
+
+		ExportIpfix: rule.Ipfix,
 	}
 
 	allTagOrSels = append(allTagOrSels, src...)

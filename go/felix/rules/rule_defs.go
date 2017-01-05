@@ -143,6 +143,9 @@ type Config struct {
 
 	FailsafeInboundHostPorts  []uint16
 	FailsafeOutboundHostPorts []uint16
+
+	IpfixExportingEnabled bool
+	IpfixExportOnDrop     bool
 }
 
 func NewRenderer(config Config) RuleRenderer {

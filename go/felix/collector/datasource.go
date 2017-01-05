@@ -4,6 +4,7 @@ package collector
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -211,16 +212,16 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats
 // Stubs
 // TODO (Matt): Refactor these in better.
 
-func lookupAction(prefix string) stats.RuleAction {
-	switch prefix[0] {
-	case 'A':
+func lookupAction(action string) stats.RuleAction {
+	switch action {
+	case "A":
 		return stats.AllowAction
-	case 'D':
+	case "D":
 		return stats.DenyAction
-	case 'N':
+	case "N":
 		return stats.NextTierAction
 	default:
-		log.Error("Unknown action in ", prefix)
+		log.Error("Unknown action ", action)
 		return stats.NextTierAction
 	}
 }
@@ -229,29 +230,33 @@ func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadE
 	log.Infof("Looking up rule prefix %s", prefix)
 	var tier, policy string
 	// Prefix formats are:
-	// - A/rule index/profile name
-	// - A/rule index/policy name/tier name
+	// - T/A/rule index/profile name
+	// - T/A/rule index/policy name/tier name
 	// TODO (Matt): Add sensible rule UUIDs
 	prefixChunks := strings.Split(prefix, "/")
-	if len(prefixChunks) == 3 {
+	if len(prefixChunks) == 4 {
 		// Profile
 		// TODO (Matt): Need something better than profile;
 		//              it won't work if that's the name of a tier.
 		tier = "profile"
-		policy = prefixChunks[2]
-	} else if len(prefixChunks) == 4 {
+	} else if len(prefixChunks) == 5 {
 		// Tiered Policy
-		tier = prefixChunks[3]
-		policy = prefixChunks[2]
+		tier = prefixChunks[4]
 	} else {
 		log.Error("Unable to parse NFLOG prefix ", prefix)
 	}
 
+	export, err := strconv.ParseBool(prefixChunks[0])
+	if err != nil {
+		log.Error("Unable to parse export flag ", prefixChunks[0])
+		export = false
+	}
 	return stats.RuleTracePoint{
 		TierID:   tier,
-		PolicyID: policy,
-		Rule:     prefixChunks[1],
-		Action:   lookupAction(prefix),
+		PolicyID: prefixChunks[3],
+		Rule:     prefixChunks[2],
+		Action:   lookupAction(prefixChunks[1]),
+		Export:   export,
 		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
 	}
 }

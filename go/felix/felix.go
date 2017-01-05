@@ -211,6 +211,9 @@ configRetry:
 
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
+
+				IpfixExportingEnabled: configParams.IpfixExportingEnabled,
+				IpfixExportOnDrop:     configParams.IpfixExportOnDrop,
 			},
 			IpfixAddr: net.ParseIP(configParams.IpfixCollectorAddr),
 			IpfixPort: configParams.IpfixCollectorPort,
