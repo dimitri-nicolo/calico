@@ -10,9 +10,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	k8sapi "k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/unversioned"
-	"k8s.io/kubernetes/pkg/apis/extensions"
+	"k8s.io/client-go/pkg/api/unversioned"
+	k8sapi "k8s.io/client-go/pkg/api/v1"
+	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 // cb implements the callback interface required for the
@@ -63,6 +63,12 @@ func CreateClientAndStartSyncer() *KubeClient {
 		K8sAPIEndpoint: "http://localhost:8080",
 	}
 	c, err := NewKubeClient(&cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	// Ensure the backend is initialized.
+	err = c.EnsureInitialized()
 	if err != nil {
 		panic(err)
 	}
@@ -167,19 +173,29 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 				},
 			},
 		}
-		_, err := c.clientSet.NetworkPolicies("default").Create(&np)
+		res := c.clientSet.Extensions().RESTClient().
+			Post().
+			Resource("networkpolicies").
+			Namespace("default").
+			Body(&np).
+			Do()
 
 		// Make sure we clean up after ourselves.
 		defer func() {
-			err = c.clientSet.NetworkPolicies("default").Delete(np.ObjectMeta.Name, &k8sapi.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			res := c.clientSet.Extensions().RESTClient().
+				Delete().
+				Resource("networkpolicies").
+				Namespace("default").
+				Name(np.ObjectMeta.Name).
+				Do()
+			Expect(res.Error()).NotTo(HaveOccurred())
 		}()
 
 		// Check to see if the create succeeded.
-		Expect(err).NotTo(HaveOccurred())
+		Expect(res.Error()).NotTo(HaveOccurred())
 
 		// Perform a List and ensure it shows up in the Calico API.
-		_, err = c.List(model.PolicyListOptions{})
+		_, err := c.List(model.PolicyListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Perform a Get and ensure no error in the Calico API.
@@ -191,7 +207,13 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 	defer func() {
 		log.Warnf("[TEST] Waiting for policies to tear down")
 		It("should clean up all policies", func() {
-			nps, err := c.clientSet.NetworkPolicies("default").List(k8sapi.ListOptions{})
+			nps := extensions.NetworkPolicyList{}
+			err := c.clientSet.Extensions().RESTClient().
+				Get().
+				Resource("networkpolicies").
+				Namespace("default").
+				Timeout(10 * time.Second).
+				Do().Into(&nps)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Loop until no network policies exist.
@@ -199,7 +221,13 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 				if len(nps.Items) == 0 {
 					return
 				}
-				nps, err = c.clientSet.NetworkPolicies("default").List(k8sapi.ListOptions{})
+				nps := extensions.NetworkPolicyList{}
+				err := c.clientSet.Extensions().RESTClient().
+					Get().
+					Resource("networkpolicies").
+					Namespace("default").
+					Timeout(10 * time.Second).
+					Do().Into(&nps)
 				Expect(err).NotTo(HaveOccurred())
 				time.Sleep(1 * time.Second)
 			}
@@ -261,7 +289,9 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		Expect(len(weps)).To(Equal(1))
 
 		// Perform a Get and ensure no error in the Calico API.
-		_, err = c.Get(model.WorkloadEndpointKey{WorkloadID: fmt.Sprintf("default.%s", pod.ObjectMeta.Name)})
+		wep, err := c.Get(model.WorkloadEndpointKey{WorkloadID: fmt.Sprintf("default.%s", pod.ObjectMeta.Name)})
+		Expect(err).NotTo(HaveOccurred())
+		_, err = c.Apply(wep)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -289,5 +319,87 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		objs, err := c.List(model.BGPPeerListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(objs)).To(Equal(0))
+	})
+
+	It("should support setting and getting GlobalConfig", func() {
+		gc := &model.KVPair{
+			Key: model.GlobalConfigKey{
+				Name: "ClusterGUID",
+			},
+			Value: "someguid",
+		}
+		var updGC *model.KVPair
+		var err error
+
+		By("creating a new object", func() {
+			updGC, err = c.Create(gc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updGC.Value.(string)).To(Equal(gc.Value.(string)))
+			Expect(updGC.Key.(model.GlobalConfigKey).Name).To(Equal("ClusterGUID"))
+			Expect(updGC.Revision).NotTo(BeNil())
+		})
+
+		By("getting an existing object", func() {
+			updGC, err = c.Get(gc.Key)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updGC.Value.(string)).To(Equal(gc.Value.(string)))
+			Expect(updGC.Key.(model.GlobalConfigKey).Name).To(Equal("ClusterGUID"))
+			Expect(updGC.Revision).NotTo(BeNil())
+		})
+
+		By("updating an existing object", func() {
+			updGC.Value = "someotherguid"
+			updGC, err = c.Update(updGC)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updGC.Value.(string)).To(Equal("someotherguid"))
+		})
+
+		By("getting the updated object", func() {
+			updGC, err = c.Get(gc.Key)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updGC.Value.(string)).To(Equal("someotherguid"))
+			Expect(updGC.Key.(model.GlobalConfigKey).Name).To(Equal("ClusterGUID"))
+			Expect(updGC.Revision).NotTo(BeNil())
+		})
+
+		By("applying an existing object", func() {
+			updGC.Value = "somenewguid"
+			updGC, err = c.Apply(updGC)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updGC.Value.(string)).To(Equal("somenewguid"))
+		})
+
+		By("getting the applied object", func() {
+			updGC, err = c.Get(gc.Key)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updGC.Value.(string)).To(Equal("somenewguid"))
+			Expect(updGC.Key.(model.GlobalConfigKey).Name).To(Equal("ClusterGUID"))
+			Expect(updGC.Revision).NotTo(BeNil())
+		})
+
+		By("deleting an existing object", func() {
+			err = c.Delete(gc)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("getting a non-existing object", func() {
+			updGC, err = c.Get(gc.Key)
+			Expect(err).To(HaveOccurred())
+			Expect(updGC).To(BeNil())
+		})
+
+		By("applying a new object", func() {
+			updGC, err = c.Apply(gc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updGC.Value.(string)).To(Equal(gc.Value.(string)))
+		})
+
+		By("getting the applied object", func() {
+			updGC, err = c.Get(gc.Key)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(updGC.Value.(string)).To(Equal(gc.Value.(string)))
+			Expect(updGC.Key.(model.GlobalConfigKey).Name).To(Equal("ClusterGUID"))
+			Expect(updGC.Revision).NotTo(BeNil())
+		})
 	})
 })

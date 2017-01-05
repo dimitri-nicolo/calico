@@ -83,10 +83,10 @@ func (options PolicyListOptions) defaultPathRoot() string {
 }
 
 func (options PolicyListOptions) KeyFromDefaultPath(path string) Key {
-	log.Infof("Get Policy key from %s", path)
+	log.Debugf("Get Policy key from %s", path)
 	r := matchPolicy.FindAllStringSubmatch(path, -1)
 	if len(r) != 1 {
-		log.Infof("Didn't match regex")
+		log.Debugf("Didn't match regex")
 		return nil
 	}
 	tier := r[0][1]
@@ -96,7 +96,7 @@ func (options PolicyListOptions) KeyFromDefaultPath(path string) Key {
 		return nil
 	}
 	if options.Name != "" && name != options.Name {
-		log.Infof("Didn't match name %s != %s", options.Name, name)
+		log.Debugf("Didn't match name %s != %s", options.Name, name)
 		return nil
 	}
 	return PolicyKey{Tier: tier, Name: name}
