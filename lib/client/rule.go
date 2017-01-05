@@ -79,6 +79,8 @@ func ruleAPIToBackend(ar api.Rule) model.Rule {
 		NotDstNet:      ar.Destination.NotNet,
 		NotDstSelector: ar.Destination.NotSelector,
 		NotDstPorts:    ar.Destination.NotPorts,
+
+		Ipfix: ar.Ipfix,
 	}
 }
 
@@ -125,6 +127,8 @@ func ruleBackendToAPI(br model.Rule) api.Rule {
 			NotSelector: br.NotDstSelector,
 			NotPorts:    br.NotDstPorts,
 		},
+
+		Ipfix: br.Ipfix,
 	}
 }
 

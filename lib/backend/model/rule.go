@@ -55,6 +55,8 @@ type Rule struct {
 	NotDstPorts    []numorstring.Port `json:"!dst_ports,omitempty" validate:"omitempty"`
 
 	LogPrefix string `json:"log_prefix,omitempty" validate:"omitempty"`
+
+	Ipfix bool `json:"ipfix,omitempty" validate:"omitempty"`
 }
 
 func (r Rule) String() string {
@@ -165,6 +167,15 @@ func (r Rule) String() string {
 		parts = append(parts, "to")
 		parts = append(parts, toParts...)
 	}
+
+	// Ipfix.
+	// TODO (doublek): Uncommenting below will fail stringify tests, which should be fixed
+	// before uncommenting below.
+	//if r.Ipfix != "" {
+	//	parts = append(parts, "ipfix", r.Ipfix)
+	//} else {
+	//	parts = append(parts, "ipfix", "off")
+	//}
 
 	return strings.Join(parts, " ")
 }
