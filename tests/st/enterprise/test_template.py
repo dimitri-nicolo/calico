@@ -173,7 +173,8 @@ class MultiHostIpfix(TestBase):
         """
         Describe the test here
         """
-        import pdb; pdb.set_trace()
+        # Replace this with your test!
+        pass
 
 
 class IpNotFound(Exception):
