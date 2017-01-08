@@ -192,7 +192,7 @@ message Rule {
   // An opaque ID/hash for the rule.
   string rule_id = 201;
 
-  string export_ipfix = 202;
+  bool export_ipfix = 202;
 }
 
 message IcmpTypeAndCode {

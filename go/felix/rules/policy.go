@@ -158,10 +158,10 @@ func (r *ruleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *pro
 	}
 
 	var exportIpfix string
-	if pRule.ExportIpfix == "" || pRule.ExportIpfix == "off" {
-		exportIpfix = "F/"
-	} else {
+	if pRule.ExportIpfix {
 		exportIpfix = "T/"
+	} else {
+		exportIpfix = "F/"
 	}
 
 	switch pRule.Action {

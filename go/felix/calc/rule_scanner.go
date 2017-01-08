@@ -222,7 +222,7 @@ type ParsedRule struct {
 
 	LogPrefix string
 
-	ExportIpfix string
+	ExportIpfix bool
 }
 
 func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allTagOrSels []tagOrSel, err error) {

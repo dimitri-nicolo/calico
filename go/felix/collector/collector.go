@@ -161,7 +161,9 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 	if update.Tp != stats.EmptyRuleTracePoint {
 		err := data.AddRuleTracePoint(update.Tp)
 		if err != nil {
-			c.exportEntry(data.ToExportRecord(ipfix.ForcedEnd))
+			if data.IsExportEnabled() {
+				c.exportEntry(data.ToExportRecord(ipfix.ForcedEnd))
+			}
 			data.ResetCounters()
 			data.ReplaceRuleTracePoint(update.Tp)
 		}
@@ -172,7 +174,9 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 func (c *Collector) expireEntry(data *stats.Data) {
 	log.Infof("Timer expired for entry: %v", fmtEntry(data))
 	tuple := data.Tuple
-	c.exportEntry(data.ToExportRecord(ipfix.IdleTimeout))
+	if data.IsExportEnabled() {
+		c.exportEntry(data.ToExportRecord(ipfix.IdleTimeout))
+	}
 	delete(c.epStats, tuple)
 }
 
@@ -191,7 +195,8 @@ func (c *Collector) exportStat() {
 	for _, data := range c.epStats {
 		// TODO(doublek): If we haven't send an update in a while, we may be required
 		// to send one out. Check RFC and implement if required.
-		if !data.IsDirty() && !data.IsExportEnabled() {
+		if !data.IsDirty() || !data.IsExportEnabled() {
+			log.Debug("Skipping exporting ", fmtEntry(data))
 			continue
 		}
 		c.exportEntry(data.ToExportRecord(ipfix.ActiveTimeout))
