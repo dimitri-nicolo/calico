@@ -2,7 +2,7 @@ startup-go || exit 1
 startup || exit 1
 
 # Source any additional environment that was added by the startup script
-. startup.env
+. /etc/startup.env
 
 case "$CALICO_DISABLE_FILE_LOGGING" in
     "true" )
