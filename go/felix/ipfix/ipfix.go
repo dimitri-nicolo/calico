@@ -37,8 +37,9 @@ static fbInfoElementSpec_t exportTemplate[] = {
 	{"sourceTransportPort",		0, 0 },
 	{"destinationTransportPort",	0, 0 },
 	{"protocolIdentifier",		0, 0 },
+	{"forwardingStatus",		1, 0 },
 	{"flowEndReason",		0, 0 },
-	{"paddingOctets",		2, 0 },
+	{"paddingOctets",               1, 0 },
 	{"subTemplateList",		0, 0 },
 	FB_IESPEC_NULL
 };
@@ -57,8 +58,9 @@ typedef struct exportRecord_st {
 	uint16_t    sourceTransportPort;
 	uint16_t    destinationTransportPort;
 	uint8_t     protocolIdentifier;
+	uint8_t     forwardingStatus;
 	uint8_t     flowEndReason;
-	uint8_t     paddingOctets[2];
+	uint8_t     paddingOctets[1];
 
 	fbSubTemplateList_t	ruleTrace;
 
@@ -215,6 +217,7 @@ GError * fixbuf_export_data(fixbufData_t fbData, exportRecord_t rec, ruleTraceSh
 	myrec.sourceTransportPort = rec.sourceTransportPort;
 	myrec.destinationTransportPort = rec.destinationTransportPort;
 	myrec.protocolIdentifier = rec.protocolIdentifier;
+	myrec.forwardingStatus = rec.forwardingStatus;
 	myrec.flowEndReason = rec.flowEndReason;
 
 	if (numTraces != 0) {
@@ -282,6 +285,19 @@ const (
 	LackOfResources FlowEndReasonType = 0x05
 )
 
+type ForwardingStatusType int
+
+// Valid values of ExportRecord.ForwardingStatus. Refer to
+// http://www.iana.org/assignments/ipfix/ipfix.xhtml
+// for an explanation of the different values below.
+// TODO(doublek): Support for Reason Codes.
+const (
+	Unknown   ForwardingStatusType = 0
+	Forwarded ForwardingStatusType = 64
+	Dropped   ForwardingStatusType = 128
+	Consumed  ForwardingStatusType = 192
+)
+
 // An IPFIX record that is exported to IPFIX collectors. Refer to
 // http://www.iana.org/assignments/ipfix/ipfix.xhtml
 // for descriptions of the different fields that are exported.
@@ -299,6 +315,7 @@ type ExportRecord struct {
 	SourceTransportPort      int
 	DestinationTransportPort int
 	ProtocolIdentifier       int
+	ForwardingStatus         ForwardingStatusType
 	FlowEndReason            FlowEndReasonType
 
 	RuleTrace []RuleTraceRecord
@@ -384,6 +401,7 @@ func (ie *IPFIXExporter) exportData(data *ExportRecord) error {
 		sourceTransportPort:      C.uint16_t(data.SourceTransportPort),
 		destinationTransportPort: C.uint16_t(data.DestinationTransportPort),
 		protocolIdentifier:       C.uint8_t(data.ProtocolIdentifier),
+		forwardingStatus:         C.uint8_t(data.ForwardingStatus),
 		flowEndReason:            C.uint8_t(data.FlowEndReason),
 	}
 	rtRec := []C.struct_ruleTraceShim_st{}
