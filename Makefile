@@ -214,7 +214,7 @@ st: dist/calicoctl busybox.tar routereflector.tar calico-node.tar workload.tar r
 	           -v /var/run/docker.sock:/var/run/docker.sock \
 	           -v $(SOURCE_DIR):/code \
 	           $(SYSTEMTEST_CONTAINER) \
-	           sh -c 'cp -ra tests/st/* /tests/st && cd / && nosetests $(ST_TO_RUN) -sv --nologcapture --with-xunit --with-timer $(ST_OPTIONS)'
+	           sh -c 'cp -ra tests/st/* /tests/st && cd / && nosetests $(ST_TO_RUN) -sv --nologcapture --with-xunit --xunit-file="/code/nosetests.xml" --with-timer $(ST_OPTIONS)'
 	$(MAKE) stop-etcd
 
 ## Run the STs in a container using etcd with SSL certificate/key/CA verification.
