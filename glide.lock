@@ -177,7 +177,7 @@ imports:
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 29ec01144a11c980e23cd6089dcba2be300dbb55
+  version: ecfc62d45403b1dd0932221f960638ccc3c9a6ee
   subpackages:
   - lib/api
   - lib/api/unversioned
