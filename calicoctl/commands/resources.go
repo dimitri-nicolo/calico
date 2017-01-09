@@ -17,14 +17,15 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/ghodss/yaml"
 	"github.com/projectcalico/calico-containers/calicoctl/commands/argutils"
 	"github.com/projectcalico/calico-containers/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calico-containers/calicoctl/resourcemgr"
+	yaml "github.com/projectcalico/go-yaml-wrapper"
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/api/unversioned"
 	"github.com/projectcalico/libcalico-go/lib/client"
@@ -186,6 +187,10 @@ type commandResults struct {
 
 	// The results returned from each invocation
 	resources []unversioned.Resource
+
+	// The Calico API client used for the requests (useful if required
+	// again).
+	client *client.Client
 }
 
 // executeConfigCommand is main function called by all of the resource management commands
@@ -240,13 +245,14 @@ func executeConfigCommand(args map[string]interface{}, action action) commandRes
 	cf := args["--config"].(string)
 	client, err := clientmgr.NewClient(cf)
 	if err != nil {
-		return commandResults{err: err}
+		fmt.Printf("Failed to create Calico API client: %s\n", err)
+		os.Exit(1)
 	}
 	log.Infof("Client: %v", client)
 
 	// Initialise the command results with the number of resources and the name of the
 	// kind of resource (if only dealing with a single resource).
-	var results commandResults
+	results := commandResults{client: client}
 	var kind string
 	count := make(map[string]int)
 	for _, r := range resources {

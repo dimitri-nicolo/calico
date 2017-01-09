@@ -42,6 +42,8 @@ const (
 
 var (
 	checkLogTimeout = 10 * time.Second
+	ifprefixMatch   = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+	backendMatch    = regexp.MustCompile("^(none|bird|gobgp)$")
 )
 
 var VERSION string
@@ -60,20 +62,29 @@ func Run(args []string) {
                      [--dryrun]
                      [--init-system]
                      [--disable-docker-networking]
+                     [--docker-networking-ifprefix=<IFPREFIX>]
 
 Options:
   -h --help                Show this screen.
-     --as=<AS_NUM>         The default AS number for this node.  If this is not
-                           specified, the node will use the global AS number
-                           (see 'calicoctl config' for details).
      --name=<NAME>         The name of the Calico node.  If this is not
                            supplied it defaults to the host name.
-     --ip=<IP>             The local management address to use.  If this is not
-                           specified, the node will attempt to auto-discover
-                           the local IP address to use - however, it is
-                           recommended to specify the required address to use.
-     --ip6=<IP6>           The local IPv6 management address to use.  If this
-                           is not specified, the node will not route IPv6.
+     --as=<AS_NUM>         Set the AS number for this node.  If omitted, it
+                           will use the value configured on the node resource.
+                           If there is no configured value and --as option is
+                           omitted, the node will inherit the global AS number
+                           (see 'calicoctl config' for details).
+     --ip=<IP>             Set the local IPv4 routing address for this node.
+                           If omitted, it will use the value configured on the
+                           node resource.  If there is no configured value
+                           and the --ip option is omitted, the node will
+                           attempt to autodetect an IP address to use.  Use a
+                           value of 'autodetect' to always force autodetection
+                           of the IP each time the node starts.
+     --ip6=<IP6>           Set the local IPv6 routing address for this node.
+                           If omitted, it will use the value configured on the
+                           node resource.  If there is no configured value
+                           and the --ip6 option is omitted, the node will not
+                           route IPv6.
      --log-dir=<LOG_DIR>   The directory containing Calico logs.
                            [default: /var/log/calico]
      --node-image=<DOCKER_IMAGE_NAME>
@@ -94,6 +105,11 @@ Options:
                            and there are no pre-existing Calico IP pools.
      --disable-docker-networking
                            Disable Docker networking.
+     --docker-networking-ifprefix=<IFPREFIX>
+                           Interface prefix to use for the network interface
+                           within the Docker containers that have been networked
+                           by the Calico driver.
+                           [default: cali]
   -c --config=<CONFIG>     Path to the file containing connection
                            configuration in YAML or JSON format.
                            [default: /etc/calico/calicoctl.cfg]
@@ -125,9 +141,10 @@ Description:
 	config := argutils.ArgStringOrBlank(arguments, "--config")
 	disableDockerNw := argutils.ArgBoolOrFalse(arguments, "--disable-docker-networking")
 	initSystem := argutils.ArgBoolOrFalse(arguments, "--init-system")
+	ifprefix := argutils.ArgStringOrBlank(arguments, "--docker-networking-ifprefix")
 
 	// Validate parameters.
-	if ipv4 != "" {
+	if ipv4 != "" && ipv4 != "autodetect" {
 		ip := argutils.ValidateIP(ipv4)
 		if ip.Version() != 4 {
 			fmt.Println("Error executing command: --ip is wrong IP version")
@@ -146,13 +163,16 @@ Description:
 		// the AS number, so convert.
 		asNumber = argutils.ValidateASNumber(asNumber).String()
 	}
-	backendMatch := regexp.MustCompile("^(none|bird|gobgp)$")
+
 	if !backendMatch.MatchString(backend) {
 		fmt.Printf("Error executing command: unknown backend '%s'\n", backend)
 		os.Exit(1)
 	}
 
-	// Use the hostname if a name is not specified.
+	// Use the hostname if a name is not specified.  We should always
+	// pass in a fixed value to the node container so that if the user
+	// changes the hostname, the calico/node won't start using a different
+	// name.
 	if name == "" {
 		name, err = os.Hostname()
 		if err != nil || name == "" {
@@ -181,13 +201,32 @@ Description:
 
 	// Create a mapping of environment variables to values.
 	envs := map[string]string{
-		"HOSTNAME": name,
-		"IP":       ipv4,
-		"IP6":      ipv6,
+		"NODENAME":                  name,
 		"CALICO_NETWORKING_BACKEND": backend,
-		"AS":                        asNumber,
 		"NO_DEFAULT_POOLS":          noPoolsString,
 		"CALICO_LIBNETWORK_ENABLED": fmt.Sprint(!disableDockerNw),
+	}
+
+	// Validate the ifprefix to only allow alphanumeric characters
+	if !ifprefixMatch.MatchString(ifprefix) {
+		fmt.Printf("Error executing command: invalid interface prefix '%s'\n", ifprefix)
+		os.Exit(1)
+	}
+
+	// Set CALICO_LIBNETWORK_IFPREFIX env variable if Docker network is enabled.
+	if !disableDockerNw {
+		envs["CALICO_LIBNETWORK_IFPREFIX"] = ifprefix
+	}
+
+	// Add in optional environments.
+	if asNumber != "" {
+		envs["AS"] = asNumber
+	}
+	if ipv4 != "" {
+		envs["IP"] = ipv4
+	}
+	if ipv6 != "" {
+		envs["IP6"] = ipv6
 	}
 
 	// Create a map of read only bindings.
@@ -224,9 +263,11 @@ Description:
 	}
 
 	// Create the Docker command to execute (or display).  Start with the
-	// fixed parts.  If this is a dry-run, then don't include the "detach"
-	// flag of the "restart" flag since we write out the command for use
-	// in an init system.
+	// fixed parts.  If this is not for an init system, we'll include the
+	// detach flag (to prevent the command blocking), and use Dockers built
+	// in restart mechanism.  If this is for an init-system we want the
+	// command to remain attached and for Docker to remove the dead
+	// container so that it can be restarted by the init system.
 	cmd := []string{"docker", "run", "--net=host", "--privileged",
 		"--name=calico-node"}
 	if initSystem {
@@ -277,10 +318,21 @@ Description:
 		setNFConntrackMax()
 	}
 
-	// Run the docker command.
-	fmt.Println("Running the following command:")
-	fmt.Printf("\n%s\n\n", strings.Join(cmd, " "))
+	// Make sure the calico-node is not already running before we attempt
+	// to start the node.
+	fmt.Println("Removing old calico-node container (if running).")
+	err = exec.Command("docker", "rm", "-f", "calico-node").Run()
+	if err != nil {
+		log.WithError(err).Debug("Unable to remove calico-node container (ok if container was not running)")
+	}
 
+	// Run the docker command.
+	fmt.Println("Running the following command to start calico-node:")
+	fmt.Printf("\n%s\n\n", strings.Join(cmd, " "))
+	fmt.Println("Image may take a short time to download if it is not available locally.")
+
+	// Now execute the actual Docker run command and check for the
+	// unable to find image message.
 	err = exec.Command(cmd[0], cmd[1:]...).Run()
 	if err != nil {
 		fmt.Printf("Error executing command: %v\n", err)
@@ -288,7 +340,8 @@ Description:
 	}
 
 	// Create the command to follow the docker logs for the calico/node
-	logCmd := exec.Command("docker", "logs", "calico-node", "--follow")
+	fmt.Println("Container started, checking progress logs.")
+	logCmd := exec.Command("docker", "logs", "--follow", "calico-node")
 
 	// Get the stdout pipe
 	outPipe, err := logCmd.StdoutPipe()
