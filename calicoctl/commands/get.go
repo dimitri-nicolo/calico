@@ -164,12 +164,15 @@ Description:
 	results := executeConfigCommand(parsedArgs, actionList)
 	log.Infof("results: %+v", results)
 
-	if results.err != nil {
-		fmt.Printf("Error getting resources: %v\n", results.err)
+	if results.fileInvalid {
+		fmt.Printf("Failed to execute command: %v\n", results.err)
+		os.Exit(1)
+	} else if results.err != nil {
+		fmt.Printf("Failed to get resources: %v\n", results.err)
 		os.Exit(1)
 	}
 
-	err = rp.print(results.resources)
+	err = rp.print(results.client, results.resources)
 	if err != nil {
 		fmt.Println(err)
 	}

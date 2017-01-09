@@ -1,9 +1,9 @@
-.PHONY: all binary calico/node test ut ut-circle st st-ssl clean run-etcd run-etcd-ssl help
+.PHONY: all binary calico/node test ut st st-ssl clean run-etcd run-etcd-ssl help
 default: help
 all: test                                 ## Run all the tests
 test: st test-containerized               ## Run all the tests
 ssl-certs: certs/.certificates.created    ## Generate self-signed SSL certificates
-all: dist/calicoctl dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64 test-containerized
+all: dist/calicoctl dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64.exe test-containerized
 
 # Determine which OS / ARCH.
 OS := $(shell uname -s | tr A-Z a-z)
@@ -22,14 +22,14 @@ SOURCE_DIR:=$(abspath $(SOURCE_DIR))
 # confd binary
 CONFD_URL?=https://github.com/projectcalico/confd/releases/download/v0.10.0-scale/confd.static
 # bird binaries
-BIRD_URL?=https://github.com/projectcalico/calico-bird/releases/download/v0.1.0/bird
-BIRD6_URL?=https://github.com/projectcalico/calico-bird/releases/download/v0.1.0/bird6
-BIRDCL_URL?=https://github.com/projectcalico/calico-bird/releases/download/v0.1.0/birdcl
-CALICO_BGP_DAEMON_URL?=https://github.com/projectcalico/calico-bgp-daemon/releases/download/v0.1.0/calico-bgp-daemon
-GOBGP_URL?=https://github.com/projectcalico/calico-bgp-daemon/releases/download/v0.1.0/gobgp
+BIRD_URL?=https://github.com/projectcalico/calico-bird/releases/download/v0.2.0/bird
+BIRD6_URL?=https://github.com/projectcalico/calico-bird/releases/download/v0.2.0/bird6
+BIRDCL_URL?=https://github.com/projectcalico/calico-bird/releases/download/v0.2.0/birdcl
+CALICO_BGP_DAEMON_URL?=https://github.com/projectcalico/calico-bgp-daemon/releases/download/v0.1.1/calico-bgp-daemon
+GOBGP_URL?=https://github.com/projectcalico/calico-bgp-daemon/releases/download/v0.1.1/gobgp
 
 # we can use "custom" build image and test image name
-PYTHON_BUILD_CONTAINER_NAME?=calico/build:v0.18.0
+PYTHON_BUILD_CONTAINER_NAME?=calico/build:v0.19.0
 SYSTEMTEST_CONTAINER?=calico/test
 
 # calicoctl and calico/node current share a single version - this is it.
@@ -45,9 +45,9 @@ NODE_CONTAINER_NAME?=calico/node
 NODE_CONTAINER_FILES=$(shell find $(NODE_CONTAINER_DIR)/filesystem -type f)
 NODE_CONTAINER_CREATED=$(NODE_CONTAINER_DIR)/.calico_node.created
 NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
-NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
+NODE_CONTAINER_BINARIES=startup startup-go allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
 FELIX_CONTAINER_NAME?=calico/felix:latest
-LIBNETWORK_PLUGIN_CONTAINER_NAME?=calico/libnetwork-plugin:v1.0.0-beta
+LIBNETWORK_PLUGIN_CONTAINER_NAME?=calico/libnetwork-plugin:v1.0.0
 
 calico/node: $(NODE_CONTAINER_CREATED)    ## Create the calico/node image
 
@@ -96,17 +96,21 @@ $(NODE_CONTAINER_BIN_DIR)/confd:
 
 # Get the calico-bgp-daemon binary
 $(NODE_CONTAINER_BIN_DIR)/calico-bgp-daemon:
+	$(CURL) -L $(GOBGP_URL) -o $(@D)/gobgp
 	$(CURL) -L $(CALICO_BGP_DAEMON_URL) -o $@
-	chmod +x $@
+	chmod +x $(@D)/*
 
 # Get bird binaries
 $(NODE_CONTAINER_BIN_DIR)/bird:
 	# This make target actually downloads the bird6 and birdcl binaries too
 	# Copy patched BIRD daemon with tunnel support.
-	$(CURL) -L $(BIRD_URL) -o $@
 	$(CURL) -L $(BIRD6_URL) -o $(@D)/bird6
 	$(CURL) -L $(BIRDCL_URL) -o $(@D)/birdcl
+	$(CURL) -L $(BIRD_URL) -o $@
 	chmod +x $(@D)/*
+
+$(NODE_CONTAINER_BIN_DIR)/startup-go: dist/startup-go
+	cp dist/startup-go $(NODE_CONTAINER_BIN_DIR)
 
 ###############################################################################
 # Tests
@@ -114,7 +118,7 @@ $(NODE_CONTAINER_BIN_DIR)/bird:
 # - Running UTs and STs
 ###############################################################################
 # These variables can be overridden by setting an environment variable.
-LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
+LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 ST_TO_RUN?=tests/st/
 UT_TO_RUN?=tests/unit/
 
@@ -161,7 +165,8 @@ run-etcd-st:
 	$(MAKE) stop-etcd
 	docker run --detach \
 	--net=host \
-	--name calico-etcd quay.io/coreos/etcd:v2.0.11 \
+	--name calico-etcd quay.io/coreos/etcd \
+	etcd \
 	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379" \
 	--listen-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379"
 
@@ -263,14 +268,22 @@ semaphore: clean
 	bash -c 'rm -rf /home/runner/{.npm,.phpbrew,.phpunit,.kerl,.kiex,.lein,.nvm,.npm,.phpbrew,.rbenv}'
 
 	# Actually run the tests (refreshing the images as required), we only run a
-	# small subset of the tests for testing SSL support.
-	CALICOCTL_NODE_VERSION=$$BRANCH_NAME $(MAKE) calico/ctl calico/node st
-	CALICOCTL_NODE_VERSION=$$BRANCH_NAME ST_TO_RUN=tests/st/policy $(MAKE) st-ssl
+	# small subset of the tests for testing SSL support.  These tests are run
+	# using "latest" tagged images.
+	$(MAKE) calico/ctl calico/node st
+	ST_TO_RUN=tests/st/policy $(MAKE) st-ssl
+
+	# Make sure that calicoctl builds cross-platform.
+	$(MAKE) dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64.exe
 
 	# Assumes that a few environment variables exist - BRANCH_NAME PULL_REQUEST_NUMBER
-	# If this isn't a PR, then push :BRANCHNAME tagged images to Dockerhub and quay for both calico/node and calico/ctl
+	# If this isn't a PR, then push :BRANCHNAME tagged and :CALICOCONTAINERS_VERSION
+	# tagged images to Dockerhub and quay for both calico/node and calico/ctl.  This
+	# requires a rebuild of calico/ctl in both cases.
 	set -e; \
 	if [ -z $$PULL_REQUEST_NUMBER ]; then \
+		rm dist/calicoctl ;\
+		CALICOCTL_NODE_VERSION=$$BRANCHNAME $(MAKE) calico/ctl ;\
 		docker tag $(NODE_CONTAINER_NAME) quay.io/$(NODE_CONTAINER_NAME):$$BRANCH_NAME && \
 		docker push quay.io/$(NODE_CONTAINER_NAME):$$BRANCH_NAME; \
 		docker tag $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_NAME):$$BRANCH_NAME && \
@@ -388,6 +401,20 @@ $(CTL_CONTAINER_CREATED): calicoctl/Dockerfile.calicoctl dist/calicoctl
 	docker build -t $(CTL_CONTAINER_NAME) -f calicoctl/Dockerfile.calicoctl .
 	touch $@
 
+## Build startup.go
+startup-go:
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -v -o dist/startup-go $(LDFLAGS) "./calico_node/startup.go"
+
+dist/startup-go: $(CALICOCTL_FILES) vendor
+	mkdir -p dist
+	docker run --rm \
+	  -v ${PWD}:/go/src/github.com/projectcalico/calico-containers:ro \
+	  -v ${PWD}/dist:/go/src/github.com/projectcalico/calico-containers/dist \
+	  golang:1.7 bash -c '\
+	    cd /go/src/github.com/projectcalico/calico-containers && \
+	    make startup-go && \
+	    chown -R $(shell id -u):$(shell id -u) dist'
+
 ## Build calicoctl
 binary: $(CALICOCTL_FILES) vendor
 	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -v -o dist/calicoctl-$(OS)-$(ARCH) $(LDFLAGS) "./calicoctl/calicoctl.go"
@@ -402,21 +429,26 @@ dist/calicoctl-linux-amd64: $(CALICOCTL_FILES) vendor
 dist/calicoctl-darwin-amd64: $(CALICOCTL_FILES) vendor
 	$(MAKE) OS=darwin ARCH=amd64 binary-containerized
 
-dist/calicoctl-windows-amd64: $(CALICOCTL_FILES) vendor
+dist/calicoctl-windows-amd64.exe: $(CALICOCTL_FILES) vendor
 	$(MAKE) OS=windows ARCH=amd64 binary-containerized
-
+	mv dist/calicoctl-windows-amd64 dist/calicoctl-windows-amd64.exe
 
 ## Run the build in a container. Useful for CI
 binary-containerized: $(CALICOCTL_FILES) vendor
 	mkdir -p dist
 	docker run --rm \
 	  -e OS=$(OS) -e ARCH=$(ARCH) \
+	  -e CALICOCONTAINERS_VERSION=$(CALICOCONTAINERS_VERSION) -e CALICOCTL_NODE_VERSION=$(CALICOCTL_NODE_VERSION) \
+	  -e CALICOCTL_BUILD_DATE=$(CALICOCTL_BUILD_DATE) -e CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
 	  -v ${PWD}:/go/src/github.com/projectcalico/calico-containers:ro \
 	  -v ${PWD}/dist:/go/src/github.com/projectcalico/calico-containers/dist \
 	  golang:1.7 bash -c '\
 	    cd /go/src/github.com/projectcalico/calico-containers && \
-	    make OS=$(OS) ARCH=$(ARCH) binary && \
-	    chown -R $(shell id -u):$(shell id -u) dist'
+	    make OS=$(OS) ARCH=$(ARCH) \
+	         CALICOCONTAINERS_VERSION=$(CALICOCONTAINERS_VERSION) CALICOCTL_NODE_VERSION=$(CALICOCTL_NODE_VERSION) \
+	         CALICOCTL_BUILD_DATE=$(CALICOCTL_BUILD_DATE) CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
+	         binary && \
+	      chown -R $(shell id -u):$(shell id -u) dist'
 
 ## Etcd is used by the tests
 .PHONY: run-etcd
@@ -424,7 +456,8 @@ run-etcd:
 	@-docker rm -f calico-etcd
 	docker run --detach \
 	-p 2379:2379 \
-	--name calico-etcd quay.io/coreos/etcd:v2.3.6 \
+	--name calico-etcd quay.io/coreos/etcd \
+	etcd \
 	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
 	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
 
@@ -434,7 +467,8 @@ run-etcd-host:
 	@-docker rm -f calico-etcd
 	docker run --detach \
 	--net=host \
-	--name calico-etcd quay.io/coreos/etcd:v2.3.6 \
+	--name calico-etcd quay.io/coreos/etcd \
+	etcd \
 	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
 	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
 
@@ -471,20 +505,21 @@ endif
 	git tag $(VERSION)
 
 	# Build the calicoctl binaries, as well as the calico/ctl and calico/node images.
-	CALICOCTL_NODE_VERSION=$(VERSION) $(MAKE) dist/calicoctl dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64
+	CALICOCTL_NODE_VERSION=$(VERSION) $(MAKE) dist/calicoctl dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64.exe
 	CALICOCTL_NODE_VERSION=$(VERSION) $(MAKE) calico/ctl calico/node
 
 	# Check that the version output includes the version specified.
-# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
-# Release is currently supported on darwin / linux only.
-	if ! docker run calico/ctl:$(VERSION) version | grep 'Version:\s*$(VERSION)$$'; then echo "Reported version:" `docker run calico/ctl:$(VERSION) version` "\nExpected version: $(VERSION)"; false; else echo "Version check passed\n"; fi
+	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
+	# Release is currently supported on darwin / linux only.
+	if ! docker run $(CTL_CONTAINER_NAME) version | grep 'Version:\s*$(VERSION)$$'; then echo "Reported version:" `docker run $(CTL_CONTAINER_NAME) version` "\nExpected version: $(VERSION)"; false; else echo "Version check passed\n"; fi
 
 	# Retag images with corect version and quay
 	docker tag $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_NAME):$(VERSION)
 	docker tag $(CTL_CONTAINER_NAME) $(CTL_CONTAINER_NAME):$(VERSION)
 	docker tag $(NODE_CONTAINER_NAME) quay.io/$(NODE_CONTAINER_NAME):$(VERSION)
 	docker tag $(CTL_CONTAINER_NAME) quay.io/$(CTL_CONTAINER_NAME):$(VERSION)
-
+	docker tag $(NODE_CONTAINER_NAME) quay.io/$(NODE_CONTAINER_NAME):latest
+	docker tag $(CTL_CONTAINER_NAME) quay.io/$(CTL_CONTAINER_NAME):latest
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME)
