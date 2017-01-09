@@ -34,6 +34,7 @@ func Node(args []string) {
     status       View the current status of a Calico node.
     diags        Gather a diagnostics bundle for a Calico node.
     checksystem  Verify the compute host is able to run a Calico node instance.
+    dumpstats    Dump policy counters/statistics to file.
 
 Options:
   -h --help      Show this screen.
@@ -65,6 +66,8 @@ Description:
 		node.Checksystem(args)
 	case "run":
 		node.Run(args)
+	case "dumpstats":
+		node.Dumpstats(args)
 	default:
 		fmt.Println(doc)
 	}
