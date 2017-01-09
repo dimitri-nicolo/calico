@@ -121,6 +121,8 @@ class MultiHostIpfix(TestBase):
                                     start_calico=False))
         for host in cls.hosts:
             host.start_calico_node()
+        # Allow time for calico-node to load
+        time.sleep(10)
 
         # Configure the address of the ipfix collector.
         cls.hosts[0].calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
@@ -337,6 +339,8 @@ class TieredPolicyWorkloads(TestBase):
                                     start_calico=False))
         for host in cls.hosts:
             host.start_calico_node()
+        # Allow time for calico-node to load
+        time.sleep(10)
 
         cls.networks = []
         cls.networks.append(cls.hosts[0].create_network("testnet2"))
