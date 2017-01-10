@@ -165,7 +165,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 }
 
 func (c *Collector) expireEntry(data *stats.Data) {
-	log.Infof("Timer expired for entry: %v", fmtEntry(data))
+	log.Infof("Timer expired for entry: %v", data)
 	tuple := data.Tuple
 	c.exportEntry(data.ToExportRecord(ipfix.IdleTimeout))
 	delete(c.epStats, tuple)
@@ -214,7 +214,7 @@ func (c *Collector) dumpStats() {
 }
 
 func fmtEntry(data *stats.Data) string {
-	return fmt.Sprintf("%+v: %+v RuleTrace: %+v", data.Tuple, *data, *(data.RuleTrace))
+	return fmt.Sprintf("%v", data)
 }
 
 // Logrus Formatter that strips the log entry of formatting such as time, log

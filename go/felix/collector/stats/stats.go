@@ -4,7 +4,9 @@ package stats
 
 import (
 	"errors"
+	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -22,6 +24,10 @@ const (
 type Counter struct {
 	packets int
 	bytes   int
+}
+
+func (c Counter) String() string {
+	return fmt.Sprintf("packets=%v bytes=%v", c.packets, c.bytes)
 }
 
 type RuleAction string
@@ -55,6 +61,10 @@ type RuleTracePoint struct {
 	Index    int
 }
 
+func (rtp RuleTracePoint) String() string {
+	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index)
+}
+
 var EmptyRuleTracePoint = RuleTracePoint{}
 
 // Represents the list of rules (i.e, a Trace) that a packet hits. The action
@@ -69,6 +79,17 @@ func NewRuleTrace() *RuleTrace {
 	return &RuleTrace{
 		path: make([]RuleTracePoint, RuleTraceInitLen),
 	}
+}
+
+func (t *RuleTrace) String() string {
+	rtParts := make([]string, 0)
+	for _, tp := range t.path {
+		if tp == EmptyRuleTracePoint {
+			continue
+		}
+		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
+	}
+	return fmt.Sprintf("path=[%v], action=%v", strings.Join(rtParts, ", "), t.action)
 }
 
 func (t *RuleTrace) Len() int {
@@ -135,6 +156,10 @@ func NewTuple(src net.IP, dst net.IP, proto int, l4Src int, l4Dst int) *Tuple {
 	}
 }
 
+func (t *Tuple) String() string {
+	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", t.src, t.dst, t.proto, t.l4Src, t.l4Dst)
+}
+
 // A Data object contains metadata and statistics such as rule counters and
 // age of a connection represented as a Tuple.
 // Age Timer Implementation Note: Each Data entry's age is implemented using
@@ -175,6 +200,11 @@ func NewData(tuple Tuple,
 		ageTimer:   time.NewTimer(duration),
 		dirty:      true,
 	}
+}
+
+func (d *Data) String() string {
+	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ruleTrace={%v} workloadId=%v endpointId=%v",
+		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.RuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
 }
 
 func (d *Data) touch() {
