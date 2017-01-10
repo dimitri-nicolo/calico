@@ -586,6 +586,455 @@ class TieredPolicyWorkloads(TestBase):
                         order=second_pol_order)
         self.assert_no_connectivity(self.n1_workloads)
 
+    @parameterized.expand([
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true1"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source": {"selector": "test == 'True'"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination": {"selector": "test == 'True'"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "True"},
+         True
+         ),
+
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true2"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source": {"selector": "test != 'True'"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination": {"selector": "test != 'True'"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "False"},
+         False
+         ),
+
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true3"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source": {"selector": "has(test)"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination": {"selector": "has(test)"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "any_old_value"},
+         True
+         ),
+
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true4"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source": {"selector": "!has(test)"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination": {"selector": "!has(test)"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "no_one_cares"},
+         False
+         ),
+
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true5"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source": {"selector": "test in {'true', 'false'}"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination": {"selector": "test in {'true', 'false'}"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "true"},
+         True
+         ),
+
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true6"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source": {"selector": "test in {'true', 'false'}"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination": {"selector": "test in {'true', 'false'}"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "false"},
+         True
+         ),
+
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true7"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source": {"selector": "test not in {'true', 'false'}"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination": {"selector": "test not in {'true', 'false'}"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "neither"},
+         False
+         ),
+
+        ([{"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true8a"},
+           "spec":
+               {
+                   "selector": "test == 'true'",
+                   "ingress": [
+                       {"action": "deny"},
+                   ],
+                   "egress": [
+                       {"action": "deny"},
+                   ]
+               }
+           },
+          {"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true8b"},
+           "spec":
+               {
+                   "ingress": [
+                       {"action": "allow"},
+                   ],
+                   "egress": [
+                       {"action": "allow"},
+                   ]
+               }
+           }
+          ],
+         {"test": "true"},
+         True
+         ),
+
+        ([{"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true9a"},
+           "spec":
+               {
+                   "selector": "test != 'true'",
+                   "ingress": [
+                       {"action": "deny"},
+                   ],
+                   "egress": [
+                       {"action": "deny"},
+                   ]
+               }
+           },
+          {"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true9b"},
+           "spec":
+               {
+                   "ingress": [
+                       {"action": "allow"},
+                   ],
+                   "egress": [
+                       {"action": "allow"},
+                   ]
+               }
+           }
+          ],
+         {"test": "true"},
+         False
+         ),
+
+        ([{"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true10a"},
+           "spec":
+               {
+                   "selector": "has(test)",
+                   "ingress": [
+                       {"action": "deny"},
+                   ],
+                   "egress": [
+                       {"action": "deny"},
+                   ]
+               }
+           },
+          {"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true10b"},
+           "spec":
+               {
+                   "ingress": [
+                       {"action": "allow"},
+                   ],
+                   "egress": [
+                       {"action": "allow"},
+                   ]
+               }
+           }
+          ],
+         {"test": "true"},
+         True
+         ),
+
+        ([{"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true11a"},
+           "spec":
+               {
+                   "selector": "!has(test)",
+                   "ingress": [
+                       {"action": "deny"},
+                   ],
+                   "egress": [
+                       {"action": "deny"},
+                   ]
+               }
+           },
+          {"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true11b"},
+           "spec":
+               {
+                   "ingress": [
+                       {"action": "allow"},
+                   ],
+                   "egress": [
+                       {"action": "allow"},
+                   ]
+               }
+           }
+          ],
+         {"test": "true"},
+         False
+         ),
+
+        ([{"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true12a"},
+           "spec":
+               {
+                   "selector": "test in {'true', 'false'}",
+                   "ingress": [
+                       {"action": "deny"},
+                   ],
+                   "egress": [
+                       {"action": "deny"},
+                   ]
+               }
+           },
+          {"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true12b"},
+           "spec":
+               {
+                   "ingress": [
+                       {"action": "allow"},
+                   ],
+                   "egress": [
+                       {"action": "allow"},
+                   ]
+               }
+           }
+          ],
+         {"test": "true"},
+         True
+         ),
+
+        ([{"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true13a"},
+           "spec":
+               {
+                   "selector": "test in {'true', 'false'}",
+                   "ingress": [
+                       {"action": "deny"},
+                   ],
+                   "egress": [
+                       {"action": "deny"},
+                   ]
+               }
+           },
+          {"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true13b"},
+           "spec":
+               {
+                   "ingress": [
+                       {"action": "allow"},
+                   ],
+                   "egress": [
+                       {"action": "allow"},
+                   ]
+               }
+           }
+          ],
+         {"test": "false"},
+         True
+         ),
+
+        ([{"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true14a"},
+           "spec":
+               {
+                   "selector": "test not in {'true', 'false'}",
+                   "ingress": [
+                       {"action": "deny"},
+                   ],
+                   "egress": [
+                       {"action": "deny"},
+                   ]
+               }
+           },
+          {"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true14b"},
+           "spec":
+               {
+                   "ingress": [
+                       {"action": "allow"},
+                   ],
+                   "egress": [
+                       {"action": "allow"},
+                   ]
+               }
+           }
+          ],
+         {"test": "neither"},
+         False
+         ),
+
+        ([{"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true15a"},
+           "spec":
+               {
+                   "selector": "has(test) && test in {'true', 'false'} && test == 'true'",
+                   "ingress": [
+                       {"action": "deny"},
+                   ],
+                   "egress": [
+                       {"action": "deny"},
+                   ]
+               }
+           },
+          {"apiVersion": "v1",
+           "kind": "policy",
+           "metadata": {"name": "deny-test-true15b"},
+           "spec":
+               {
+                   "ingress": [
+                       {"action": "allow"},
+                   ],
+                   "egress": [
+                       {"action": "allow"},
+                   ]
+               }
+           }
+          ],
+         {"test": "true"},
+         True
+         ),
+
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true16"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source":
+                      {"selector": "has(test) && test in {'True', 'False'} && test == 'True'"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination":
+                       {"selector": "has(test) && test in {'True', 'False'} && test == 'True'"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "True"},
+         True
+         ),
+    ])
+    def test_selectors(self, policy, workload_label, no_label_expected_result):
+        """
+        Tests selectors in policy.
+        :param policy: The policy to apply
+        :param workload_label: The label to add to one of the workload endpoints
+        :param no_label_expected_result: Whether we'd expect the policy to block connectivity if
+        the workloads do not have the label.
+        :return:
+        """
+        # set workload config
+        host = self.hosts[0]
+        weps = yaml.load(host.calicoctl("get wep -o yaml"))
+        wep_old = weps[0]
+        wep = copy.deepcopy(wep_old)
+        wep['metadata']['labels'] = workload_label
+        self._apply_data(wep, host)
+        # check connectivity OK
+        self.assert_connectivity(self.n1_workloads)
+        # set up policy
+        self._apply_data(policy, host)
+        # check connectivity not OK
+        self.assert_no_connectivity(self.n1_workloads)
+        # Restore workload config (i.e. remove the label)
+        self._apply_data(wep_old, host)
+        if no_label_expected_result:
+            # check connectivity OK again
+            self.assert_connectivity(self.n1_workloads)
+        else:
+            self.assert_no_connectivity(self.n1_workloads)
+
 
 class IpNotFound(Exception):
     pass
