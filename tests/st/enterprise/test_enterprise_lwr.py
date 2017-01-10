@@ -1004,6 +1004,30 @@ class TieredPolicyWorkloads(TestBase):
          {"test": "True"},
          True
          ),
+
+        ({"apiVersion": "v1",
+          "kind": "policy",
+          "metadata": {"name": "deny-test-true17"},
+          "spec": {
+              "ingress": [{
+                  "action": "deny",
+                  "source":
+                      {"selector":
+                           "has(test) && test not in {'True', 'False'} && test == 'Sausage'"},
+              },
+                  {"action": "allow"}
+              ],
+              "egress": [
+                  {"action": "deny",
+                   "destination":
+                       {"selector":
+                            "has(test) && test not in {'True', 'False'} && test == 'Sausage'"}},
+                  {"action": "allow"}
+              ]},
+          },
+         {"test": "Sausage"},
+         True
+         ),
     ])
     def test_selectors(self, policy, workload_label, no_label_expected_result):
         """
