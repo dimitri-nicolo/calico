@@ -32,6 +32,11 @@ const (
 	NextTierAction RuleAction = "next-tier"
 )
 
+var fwdStatus = map[RuleAction]ipfix.ForwardingStatusType{
+	"allow": ipfix.Forwarded,
+	"deny":  ipfix.Dropped,
+}
+
 const RuleTraceInitLen = 10
 
 var (
@@ -292,6 +297,10 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 			RuleIndex:  tp.Index,
 		})
 	}
+	fs, ok := fwdStatus[d.Action()]
+	if !ok {
+		fs = ipfix.Unknown
+	}
 	return &ipfix.ExportRecord{
 		FlowStart:               d.createdAt,
 		FlowEnd:                 time.Now(),
@@ -306,6 +315,7 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 		SourceTransportPort:      d.Tuple.l4Src,
 		DestinationTransportPort: d.Tuple.l4Dst,
 		ProtocolIdentifier:       d.Tuple.proto,
+		ForwardingStatus:         fs,
 		FlowEndReason:            reason,
 
 		RuleTrace: rtRecs,
