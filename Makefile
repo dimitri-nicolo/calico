@@ -380,7 +380,6 @@ vendor: $(GLIDE_CONTAINER_MARKER) glide.lock
           SSH_AGENT_FORWARD="-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
 	fi; \
 	docker run --rm \
-		-v ${HOME}/.glide:/root/.glide:rw \
 		-v ${PWD}:/go/src/github.com/projectcalico/calico-containers:rw \
 		$$EXTRA_DOCKER_BIND $$SSH_AGENT_FORWARD \
       --entrypoint /bin/sh $(GLIDE_CONTAINER_NAME) -e -c ' \
