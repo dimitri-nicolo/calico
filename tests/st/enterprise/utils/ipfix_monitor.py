@@ -13,6 +13,7 @@
 # limitations under the License.
 import collections
 import copy
+import logging
 import multiprocessing
 import netaddr
 import os
@@ -26,6 +27,8 @@ from tests.st.utils.utils import debug_failures
 
 devnull = open(os.devnull, 'wb')
 
+_log = logging.getLogger(__name__)
+_log.setLevel(logging.DEBUG)
 
 class IpfixFlow(object):
 
@@ -165,13 +168,14 @@ class IpfixMonitor(object):
         flows_msg = "Expected flows:\r\n %s\r\n" % flows + \
                     "Missing flows:\r\n %s\r\n" % flows_left + \
                     "Observed flows:\r\n %s\r\n" % flows_seen
-        assert allow_others or len(flows_seen) == len(flows), ("Ipfix check error: superfluous flows!\r\n" + flows_msg)
+        assert allow_others or len(flows_seen) <= len(flows), ("Ipfix check error: superfluous flows!\r\n" + flows_msg)
         assert len(flows_left) == 0, ("Ipfix check error: missing flows!\r\n" + flows_msg)
 
     def reset_flows(self):
         # This isn't entirely deterministic, since flows could be coming in constantly.
         # It should at least clear out all flows that were queued before this call,
         # plus min(10 flows, 1 second) more.
+        _log.debug("Resetting flows")
         size = self.flows_queue.qsize()
         while --size > -10:
             try:
