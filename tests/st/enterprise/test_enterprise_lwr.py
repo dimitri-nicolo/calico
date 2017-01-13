@@ -151,6 +151,10 @@ class MultiHostIpfix(TestBase):
     def tearDownClass(cls):
         # Tidy up
         for host in cls.hosts:
+            host.remove_workloads()
+        for network in cls.networks:
+            network.delete()
+        for host in cls.hosts:
             host.cleanup()
             del host
 
