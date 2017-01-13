@@ -148,13 +148,20 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
-		prefix := pRule.LogPrefix
-		if prefix == "" {
-			prefix = "calico-packet"
+		logPrefix := pRule.LogPrefix
+		if logPrefix == "" {
+			logPrefix = "calico-packet"
 		}
 		actions = append(actions, iptables.LogAction{
-			Prefix: prefix,
+			Prefix: logPrefix,
 		})
+	}
+
+	var exportIpfix string
+	if pRule.ExportIpfix {
+		exportIpfix = "T/"
+	} else {
+		exportIpfix = "F/"
 	}
 
 	switch pRule.Action {
@@ -164,7 +171,7 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		mark = r.IptablesMarkAccept
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: "A/" + prefix,
+			Prefix: exportIpfix + "A/" + prefix,
 		})
 		actions = append(actions, iptables.ReturnAction{})
 	case "next-tier":
@@ -173,7 +180,7 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		mark = r.IptablesMarkNextTier
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: "N/" + prefix,
+			Prefix: exportIpfix + "N/" + prefix,
 		})
 		actions = append(actions, iptables.ReturnAction{})
 	case "deny":
@@ -181,7 +188,7 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		mark = r.IptablesMarkDrop
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: "D/" + prefix,
+			Prefix: exportIpfix + "D/" + prefix,
 		})
 		actions = append(actions, r.DropActions()...)
 	case "log":

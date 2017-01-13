@@ -58,11 +58,12 @@ type RuleTracePoint struct {
 	PolicyID string
 	Rule     string
 	Action   RuleAction
+	Export   bool
 	Index    int
 }
 
 func (rtp RuleTracePoint) String() string {
-	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index)
+	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v export=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index, rtp.Export)
 }
 
 var EmptyRuleTracePoint = RuleTracePoint{}
@@ -73,6 +74,7 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 type RuleTrace struct {
 	path   []RuleTracePoint
 	action RuleAction
+	export bool
 }
 
 func NewRuleTrace() *RuleTrace {
@@ -89,7 +91,7 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
 	}
-	return fmt.Sprintf("path=[%v], action=%v", strings.Join(rtParts, ", "), t.action)
+	return fmt.Sprintf("path=[%v], action=%v export=%v", strings.Join(rtParts, ", "), t.action, t.export)
 }
 
 func (t *RuleTrace) Len() int {
@@ -133,6 +135,7 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	}
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
+		t.export = tp.Export
 	}
 	return nil
 }
@@ -149,6 +152,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
 	t.action = tp.Action
+	t.export = tp.Export
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection. This is
@@ -255,6 +259,11 @@ func (d *Data) AgeTimer() *time.Timer {
 // Returns the final action of the RuleTrace
 func (d *Data) Action() RuleAction {
 	return d.RuleTrace.action
+}
+
+// Returns the if export is requested or not.
+func (d *Data) IsExportEnabled() bool {
+	return d.RuleTrace.export
 }
 
 func (d *Data) CountersIn() Counter {
