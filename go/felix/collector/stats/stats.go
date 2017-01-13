@@ -1,10 +1,12 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 package stats
 
 import (
 	"errors"
+	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -24,6 +26,10 @@ type Counter struct {
 	bytes   int
 }
 
+func (c Counter) String() string {
+	return fmt.Sprintf("packets=%v bytes=%v", c.packets, c.bytes)
+}
+
 type RuleAction string
 
 const (
@@ -31,6 +37,11 @@ const (
 	DenyAction     RuleAction = "deny"
 	NextTierAction RuleAction = "next-tier"
 )
+
+var fwdStatus = map[RuleAction]ipfix.ForwardingStatusType{
+	"allow": ipfix.Forwarded,
+	"deny":  ipfix.Dropped,
+}
 
 const RuleTraceInitLen = 10
 
@@ -51,6 +62,10 @@ type RuleTracePoint struct {
 	Index    int
 }
 
+func (rtp RuleTracePoint) String() string {
+	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index)
+}
+
 var EmptyRuleTracePoint = RuleTracePoint{}
 
 // Represents the list of rules (i.e, a Trace) that a packet hits. The action
@@ -68,29 +83,55 @@ func NewRuleTrace() *RuleTrace {
 	}
 }
 
+func (t *RuleTrace) String() string {
+	rtParts := make([]string, 0)
+	for _, tp := range t.path {
+		if tp == EmptyRuleTracePoint {
+			continue
+		}
+		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
+	}
+	return fmt.Sprintf("path=[%v], action=%v", strings.Join(rtParts, ", "), t.action)
+}
+
 func (t *RuleTrace) Len() int {
 	return len(t.path)
 }
 
+func (t *RuleTrace) Path() []RuleTracePoint {
+	path := []RuleTracePoint{}
+	for _, tp := range t.path {
+		if tp == EmptyRuleTracePoint {
+			continue
+		}
+		path = append(path, tp)
+	}
+	return path
+}
+
 func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
-	existingTp := t.path[tp.Index]
-	switch {
-	case existingTp == (RuleTracePoint{}):
-		// Position is empty, insert and be done.
+	if tp.Index > t.Len() {
 		log.Debug("Got new rule trace: ", tp)
-		t.path[tp.Index] = tp
-	case t.Len() < tp.Index:
-		// Insertion point greater than current length. Grow and then insert.
-		log.Debug("Got new rule trace: ", tp)
-		newPath := make([]RuleTracePoint, t.Len()+RuleTraceInitLen)
+		// Insertion index greater than current length. Grow the path slice as long
+		// as necessary.
+		newPath := make([]RuleTracePoint, tp.Index)
 		copy(newPath, t.path)
-		t.path = newPath
+		nextSize := (tp.Index / RuleTraceInitLen) * RuleTraceInitLen
+		t.path = append(t.path, make([]RuleTracePoint, nextSize)...)
 		t.path[tp.Index] = tp
-	case existingTp == tp:
-		// Nothing to do here - maybe a duplicate notification or kernel conntrack
-		// expired. Just skip.
-	default:
-		return RuleTracePointConflict
+	} else {
+		existingTp := t.path[tp.Index]
+		switch {
+		case existingTp == (RuleTracePoint{}):
+			// Position is empty, insert and be done.
+			log.Debug("Got new rule trace: ", tp)
+			t.path[tp.Index] = tp
+		case existingTp == tp:
+			// Nothing to do here - maybe a duplicate notification or kernel conntrack
+			// expired. Just skip.
+		default:
+			return RuleTracePointConflict
+		}
 	}
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
@@ -108,7 +149,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	// New tracepoint is not a next-tier action truncate at this index.
 	t.path[tp.Index] = tp
 	newPath := make([]RuleTracePoint, t.Len())
-	copy(newPath, t.path[:tp.Index])
+	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
 	t.action = tp.Action
 	t.export = tp.Export
@@ -132,6 +173,10 @@ func NewTuple(src net.IP, dst net.IP, proto int, l4Src int, l4Dst int) *Tuple {
 		l4Src: l4Src,
 		l4Dst: l4Dst,
 	}
+}
+
+func (t *Tuple) String() string {
+	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", t.src, t.dst, t.proto, t.l4Src, t.l4Dst)
 }
 
 // A Data object contains metadata and statistics such as rule counters and
@@ -174,6 +219,11 @@ func NewData(tuple Tuple,
 		ageTimer:   time.NewTimer(duration),
 		dirty:      true,
 	}
+}
+
+func (d *Data) String() string {
+	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ruleTrace={%v} workloadId=%v endpointId=%v",
+		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.RuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
 }
 
 func (d *Data) touch() {
@@ -301,6 +351,10 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 			RuleIndex:  tp.Index,
 		})
 	}
+	fs, ok := fwdStatus[d.Action()]
+	if !ok {
+		fs = ipfix.Unknown
+	}
 	return &ipfix.ExportRecord{
 		FlowStart:               d.createdAt,
 		FlowEnd:                 time.Now(),
@@ -315,6 +369,7 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 		SourceTransportPort:      d.Tuple.l4Src,
 		DestinationTransportPort: d.Tuple.l4Dst,
 		ProtocolIdentifier:       d.Tuple.proto,
+		ForwardingStatus:         fs,
 		FlowEndReason:            reason,
 
 		RuleTrace: rtRecs,
