@@ -191,7 +191,7 @@ func (r *ruleRenderer) endpointToIptablesChains(
 		}
 
 		var exportIpfix string
-		if r.Config.IpfixExportDefaultTierDropRules {
+		if r.Config.IpfixExportTierDropRules {
 			exportIpfix = "T/"
 		} else {
 			exportIpfix = "F/"
@@ -244,7 +244,7 @@ func (r *ruleRenderer) endpointToIptablesChains(
 	//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
 	// No profile matched the packet: drop it.
 	var exportIpfix string
-	if r.Config.IpfixExportDefaultTierDropRules {
+	if r.Config.IpfixExportTierDropRules {
 		exportIpfix = "T/"
 	} else {
 		exportIpfix = "F/"

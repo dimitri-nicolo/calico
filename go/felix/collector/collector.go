@@ -26,7 +26,7 @@ const ExportingInterval = time.Duration(1) * time.Second
 type Config struct {
 	StatsDumpFilePath string
 
-	IpfixExportDefaultTierDropRules bool
+	IpfixExportTierDropRules bool
 }
 
 // A Collector (a StatsManager really) collects StatUpdates from data sources

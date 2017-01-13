@@ -219,7 +219,7 @@ configRetry:
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
 
-				IpfixExportDefaultTierDropRules: configParams.IpfixExportDefaultTierDropRules,
+				IpfixExportTierDropRules: configParams.IpfixExportTierDropRules,
 			},
 			IpfixAddr:               net.ParseIP(configParams.IpfixCollectorAddr),
 			IpfixPort:               configParams.IpfixCollectorPort,
