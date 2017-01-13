@@ -106,6 +106,7 @@ type InternalDataplane struct {
 }
 
 func NewIntDataplaneDriver(config Config) *InternalDataplane {
+	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
 		ruleRenderer = rules.NewRenderer(config.RulesConfig)
@@ -348,6 +349,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 				time.Sleep(10 * time.Second)
 			}
 		}()
+	} else {
+		log.Info("IPIP disabled. Not starting tunnel update thread.")
 	}
 
 	for _, t := range d.iptablesNATTables {

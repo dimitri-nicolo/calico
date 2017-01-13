@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jitter
+package routetable_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -26,7 +26,7 @@ func init() {
 	testutils.HookLogrusForGinkgo()
 }
 
-func TestJitter(t *testing.T) {
+func TestRules(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Jitter Suite")
+	RunSpecs(t, "RouteTable Suite")
 }

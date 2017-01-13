@@ -31,8 +31,8 @@ const (
 	ChainFilterForward = ChainNamePrefix + "-FORWARD"
 	ChainFilterOutput  = ChainNamePrefix + "-OUTPUT"
 
-	ChainFailsafeIn  = ChainNamePrefix + "-FAILSAFE-IN"
-	ChainFailsafeOut = ChainNamePrefix + "-FAILSAFE-OUT"
+	ChainFailsafeIn  = ChainNamePrefix + "-failsafe-in"
+	ChainFailsafeOut = ChainNamePrefix + "-failsafe-out"
 
 	ChainNATPrerouting  = ChainNamePrefix + "-PREROUTING"
 	ChainNATPostrouting = ChainNamePrefix + "-POSTROUTING"
@@ -103,14 +103,14 @@ type RuleRenderer interface {
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
 }
 
-type ruleRenderer struct {
+type DefaultRuleRenderer struct {
 	Config
 
 	dropActions        []iptables.Action
 	inputAcceptActions []iptables.Action
 }
 
-func (r *ruleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
+func (r *DefaultRuleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
 	if ipVersion == 4 {
 		return r.IPSetConfigV4
 	} else if ipVersion == 6 {
@@ -176,7 +176,7 @@ func NewRenderer(config Config) RuleRenderer {
 		inputAcceptActions = []iptables.Action{iptables.ReturnAction{}}
 	}
 
-	return &ruleRenderer{
+	return &DefaultRuleRenderer{
 		Config:             config,
 		dropActions:        dropActions,
 		inputAcceptActions: inputAcceptActions,

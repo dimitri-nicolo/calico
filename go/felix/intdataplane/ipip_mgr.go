@@ -22,15 +22,15 @@ import (
 	"github.com/vishvananda/netlink"
 	"net"
 	"os/exec"
-	"reflect"
 )
 
 // configureIPIPDevice ensures the IPIP tunneld evice is up and configures correctly.
 func configureIPIPDevice(mtu int, address net.IP) error {
-	log.WithFields(log.Fields{
+	logCxt := log.WithFields(log.Fields{
 		"mtu":        mtu,
 		"tunnelAddr": address,
-	}).Debug("Configuring IPIP tunnel")
+	})
+	logCxt.Debug("Configuring IPIP tunnel")
 	link, err := netlink.LinkByName("tunl0")
 	if err != nil {
 		log.WithError(err).Info("Failed to get IPIP tunnel device, assuming it isn't present")
@@ -49,13 +49,24 @@ func configureIPIPDevice(mtu int, address net.IP) error {
 			return err
 		}
 	}
-	if err := netlink.LinkSetMTU(link, mtu); err != nil {
-		log.WithError(err).Warn("Failed to set tunnel device MTU")
-		return err
+
+	attrs := link.Attrs()
+	oldMTU := attrs.MTU
+	if oldMTU != mtu {
+		logCxt.WithField("oldMTU", oldMTU).Info("Tunnel device MTU needs to be updated")
+		if err := netlink.LinkSetMTU(link, mtu); err != nil {
+			log.WithError(err).Warn("Failed to set tunnel device MTU")
+			return err
+		}
+		logCxt.Info("Updated tunnel MTU")
 	}
-	if err := netlink.LinkSetUp(link); err != nil {
-		log.WithError(err).Warn("Failed to set tunnel device up")
-		return err
+	if attrs.Flags&net.FlagUp == 0 {
+		logCxt.WithField("flags", attrs.Flags).Info("Tunnel wasn't admin up, enabling it")
+		if err := netlink.LinkSetUp(link); err != nil {
+			log.WithError(err).Warn("Failed to set tunnel device up")
+			return err
+		}
+		logCxt.Info("Set tunnel admin up")
 	}
 
 	if err := setLinkAddressV4("tunl0", address); err != nil {
@@ -72,7 +83,7 @@ func setLinkAddressV4(linkName string, address net.IP) error {
 		"link": linkName,
 		"addr": address,
 	})
-	logCxt.Info("Setting local IPv4 address on link.")
+	logCxt.Debug("Setting local IPv4 address on link.")
 	link, err := netlink.LinkByName(linkName)
 	if err != nil {
 		log.WithError(err).WithField("name", linkName).Warning("Failed to get device")
@@ -86,14 +97,14 @@ func setLinkAddressV4(linkName string, address net.IP) error {
 	}
 
 	found := false
-	for _, addr := range addrs {
-		if reflect.DeepEqual(addr.IP, address) {
-			logCxt.Info("Address already present.")
+	for _, oldAddr := range addrs {
+		if address != nil && oldAddr.IP.Equal(address) {
+			logCxt.Debug("Address already present.")
 			found = true
 			continue
 		}
-		logCxt.WithField("oldAddr", addr).Info("Removing old address")
-		if err := netlink.AddrDel(link, &addr); err != nil {
+		logCxt.WithField("oldAddr", oldAddr).Info("Removing old address")
+		if err := netlink.AddrDel(link, &oldAddr); err != nil {
 			log.WithError(err).Warn("Failed to delete address")
 			return err
 		}
@@ -113,7 +124,7 @@ func setLinkAddressV4(linkName string, address net.IP) error {
 			return err
 		}
 	}
-	logCxt.Info("Address set.")
+	logCxt.Debug("Address set.")
 
 	return nil
 }
