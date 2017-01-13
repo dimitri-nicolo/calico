@@ -63,7 +63,7 @@ type RuleTracePoint struct {
 }
 
 func (rtp RuleTracePoint) String() string {
-	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index)
+	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v export=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index, rtp.Export)
 }
 
 var EmptyRuleTracePoint = RuleTracePoint{}
@@ -91,7 +91,7 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
 	}
-	return fmt.Sprintf("path=[%v], action=%v", strings.Join(rtParts, ", "), t.action)
+	return fmt.Sprintf("path=[%v], action=%v export=%v", strings.Join(rtParts, ", "), t.action, t.export)
 }
 
 func (t *RuleTrace) Len() int {
