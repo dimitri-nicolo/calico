@@ -1,8 +1,9 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
+	"bytes"
 	"errors"
 	"strings"
 	"time"
@@ -241,7 +242,9 @@ func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadE
 		policy = prefixChunks[2]
 	} else if len(prefixChunks) == 4 {
 		// Tiered Policy
-		tier = prefixChunks[3]
+		// TODO(doublek): Should fix where the null character was introduced,
+		// which could be nfnetlink.
+		tier = string(bytes.Trim([]byte(prefixChunks[3]), "\x00"))
 		policy = prefixChunks[2]
 	} else {
 		log.Error("Unable to parse NFLOG prefix ", prefix)
