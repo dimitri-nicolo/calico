@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -191,7 +191,7 @@ func (r *ruleRenderer) endpointToIptablesChains(
 		}
 
 		var exportIpfix string
-		if r.Config.IpfixExportOnDrop {
+		if r.Config.IpfixExportDefaultTierDropRules {
 			exportIpfix = "T/"
 		} else {
 			exportIpfix = "F/"
@@ -244,7 +244,7 @@ func (r *ruleRenderer) endpointToIptablesChains(
 	//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
 	// No profile matched the packet: drop it.
 	var exportIpfix string
-	if r.Config.IpfixExportOnDrop {
+	if r.Config.IpfixExportDefaultTierDropRules {
 		exportIpfix = "T/"
 	} else {
 		exportIpfix = "F/"

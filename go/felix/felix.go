@@ -219,12 +219,11 @@ configRetry:
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
 
-				IpfixExportingEnabled: configParams.IpfixExportingEnabled,
-				IpfixExportOnDrop:     configParams.IpfixExportOnDrop,
+				IpfixExportDefaultTierDropRules: configParams.IpfixExportDefaultTierDropRules,
 			},
 			IpfixAddr:               net.ParseIP(configParams.IpfixCollectorAddr),
 			IpfixPort:               configParams.IpfixCollectorPort,
-      StatsDumpFilePath:       configParams.StatsDumpFilePath,
+			StatsDumpFilePath:       configParams.StatsDumpFilePath,
 			IPIPMTU:                 configParams.IpInIpMtu,
 			IptablesRefreshInterval: time.Duration(configParams.IptablesRefreshInterval) * time.Second,
 		}

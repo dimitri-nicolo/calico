@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -26,10 +26,7 @@ const ExportingInterval = time.Duration(1) * time.Second
 type Config struct {
 	StatsDumpFilePath string
 
-	// TODO (doublek): Use IpfixExportingEnabled to enable/disable IPFIX
-	// functionality.
-	IpfixExportingEnabled bool
-	IpfixExportOnDrop     bool
+	IpfixExportDefaultTierDropRules bool
 }
 
 // A Collector (a StatsManager really) collects StatUpdates from data sources
