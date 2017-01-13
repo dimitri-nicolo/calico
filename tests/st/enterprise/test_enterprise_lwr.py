@@ -106,7 +106,6 @@ def curl_etcd(ip, path, options=None, recursive=True):
     return json.loads(rc.strip())
 
 
-#@unittest.skip("Disabled until Matt updates IPFix monitor")
 class MultiHostIpfix(TestBase):
     @classmethod
     def setUpClass(cls):
@@ -169,6 +168,7 @@ class MultiHostIpfix(TestBase):
         _log.debug("Deleting flow monitor after test")
         del self.mon
 
+    @unittest.skip("Disabled until Matt updates IPFix monitor")
     def test_multi_host_ping(self, iteration=1):
         """
         Run a mainline multi-host test with IPFIX.
@@ -201,6 +201,7 @@ class MultiHostIpfix(TestBase):
                                 octets="84,84")]
         self.mon.assert_flows_present(ping_flows, 20, allow_others=False)
 
+    @unittest.skip("Disabled until Matt updates IPFix monitor")
     def test_multi_host_tcp(self, iteration=1):
         """
         Run a mainline multi-host test with IPFIX.
@@ -233,6 +234,7 @@ class MultiHostIpfix(TestBase):
                                 octets="326,222")]
         self.mon.assert_flows_present(ping_flows, 20, allow_others=False)
 
+    @unittest.skip("Disabled until Matt updates IPFix monitor")
     def test_multi_host_udp(self, iteration=1):
         """
         Run a mainline multi-host test with IPFIX.
