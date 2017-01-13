@@ -192,14 +192,14 @@ func (r *ruleRenderer) endpointToIptablesChains(
 
 		// If no policy in the tier marked the packet as next-tier, drop the packet.
 		toRules = append(toRules, Rule{
-			Match: Match(),
+			Match: Match().MarkClear(r.IptablesMarkNextTier),
 			Action: NflogAction{
 				Group:  1,
 				Prefix: "D/0/" + tier.Name + "/no-policy-match-inbound",
 			},
 		})
 		fromRules = append(fromRules, Rule{
-			Match: Match(),
+			Match: Match().MarkClear(r.IptablesMarkNextTier),
 			Action: NflogAction{
 				Group:  2,
 				Prefix: "D/0/" + tier.Name + "/no-policy-match-outbound",
