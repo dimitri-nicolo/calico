@@ -56,7 +56,7 @@ type Rule struct {
 
 	LogPrefix string `json:"log_prefix,omitempty" validate:"omitempty"`
 
-	Ipfix bool `json:"ipfix,omitempty" validate:"omitempty"`
+	ExportIpfix bool `json:"export_ipfix,omitempty" validate:"omitempty"`
 }
 
 func (r Rule) String() string {
@@ -169,12 +169,12 @@ func (r Rule) String() string {
 	}
 
 	// Ipfix.
-	// TODO (doublek): Uncommenting below will fail stringify tests, which should be fixed
+	// TODO (doublek): Uncommenting below will fail stringify UT's, which should be fixed
 	// before uncommenting below.
-	//if r.Ipfix != "" {
-	//	parts = append(parts, "ipfix", r.Ipfix)
+	//if r.ExportIpfix != "" {
+	//	parts = append(parts, "export_ipfix", r.ExportIpfix)
 	//} else {
-	//	parts = append(parts, "ipfix", "off")
+	//	parts = append(parts, "export_ipfix", "off")
 	//}
 
 	return strings.Join(parts, " ")

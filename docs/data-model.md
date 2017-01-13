@@ -463,7 +463,7 @@ Each rule sub-object has the following JSON-encoded structure:
 
   # Toggle flow statistics of matched packets to be exported via the
   # IPFIX protocol.
-  "ipfix": "on | off",
+  "export_ipfix": <boolean>,
 
   "action": "deny | allow",
 }
@@ -575,9 +575,10 @@ uses iptables LOG action, which results in a log to syslog.
 For iptables compatibility, Calico will truncate the prefix to 27 
 characters and limit the character set.
 
-`ipfix`: if present, toggle IPFIX packet/flow statistics export for matched
-packets. Should be one of `on`, which enables IPFIX exporting, or `off`,
-which disables IPFIX exporting. If not present, `ipfix` defaults to `off`.
+`export_ipfix`: if present, toggle IPFIX packet/flow statistics export for
+matched packets. Should be one of boolean `true`, which enables IPFIX
+exporting, or boolean `false` which disables IPFIX exporting. If not present,
+`export_ipfix` defaults to `false`.
   
 `action`: what action to take when traffic matches this rule. One of `deny`,
 which drops the packet immediately, `allow`, which accepts the

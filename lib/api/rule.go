@@ -58,7 +58,7 @@ type Rule struct {
 	// Destination contains the match criteria that apply to destination entity.
 	Destination EntityRule `json:"destination,omitempty" validate:"omitempty"`
 
-	Ipfix bool `json:"ipfix,omitempty" validate:"omitempty"`
+	ExportIpfix bool `json:"export_ipfix,omitempty" validate:"omitempty"`
 }
 
 // ICMPFields defines structure for ICMP and NotICMP sub-struct for ICMP code and type
