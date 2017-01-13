@@ -38,7 +38,7 @@ type Config struct {
 	RuleRendererOverride    rules.RuleRenderer
 	IpfixPort               int
 	IpfixAddr               net.IP
-  StatsDumpFilePath    string
+	StatsDumpFilePath       string
 	IPIPMTU                 int
 	IptablesRefreshInterval time.Duration
 	RulesConfig             rules.Config
