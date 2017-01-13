@@ -66,7 +66,7 @@ var fullyLoadedParsedRule = ParsedRule{
 
 	LogPrefix: "foobar",
 
-	ExportIpfix: "on",
+	ExportIpfix: true,
 }
 
 var fullyLoadedProtoRule = proto.Rule{
@@ -109,7 +109,7 @@ var fullyLoadedProtoRule = proto.Rule{
 
 	LogPrefix: "foobar",
 
-	ExportIpfix: "on",
+	ExportIpfix: true,
 }
 
 var _ = DescribeTable("ParsedRulesToProtoRules",
