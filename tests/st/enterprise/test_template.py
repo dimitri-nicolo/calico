@@ -105,6 +105,7 @@ def curl_etcd(ip, path, options=None, recursive=True):
     return json.loads(rc.strip())
 
 
+@unittest.skip("Skip the template!")
 class MultiHostIpfix(TestBase):
     @classmethod
     def setUpClass(cls):

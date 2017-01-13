@@ -121,13 +121,12 @@ class MultiHostIpfix(TestBase):
                                     start_calico=False))
         for host in cls.hosts:
             host.start_calico_node()
-        # Allow time for calico-node to load
-        time.sleep(10)
 
         # Configure the address of the ipfix collector.
         cls.hosts[0].calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
         # Disappointingly, tshark only appears to be able to decode IPFIX when the UDP port is 4739.
         cls.hosts[0].calicoctl("config set IpfixCollectorPort 4739 --raw=felix")
+        time.sleep(10)
 
         cls.networks = []
         cls.networks.append(cls.hosts[0].create_network("testnet1"))
@@ -151,6 +150,10 @@ class MultiHostIpfix(TestBase):
     def tearDownClass(cls):
         # Tidy up
         for host in cls.hosts:
+            host.remove_workloads()
+        for network in cls.networks:
+            network.delete()
+        for host in cls.hosts:
             host.cleanup()
             del host
 
@@ -165,6 +168,7 @@ class MultiHostIpfix(TestBase):
         _log.debug("Deleting flow monitor after test")
         del self.mon
 
+    @unittest.skip("Disabled until Matt updates IPFix monitor")
     def test_multi_host_ping(self, iteration=1):
         """
         Run a mainline multi-host test with IPFIX.
@@ -197,6 +201,7 @@ class MultiHostIpfix(TestBase):
                                 octets="84,84")]
         self.mon.assert_flows_present(ping_flows, 20, allow_others=False)
 
+    @unittest.skip("Disabled until Matt updates IPFix monitor")
     def test_multi_host_tcp(self, iteration=1):
         """
         Run a mainline multi-host test with IPFIX.
@@ -229,6 +234,7 @@ class MultiHostIpfix(TestBase):
                                 octets="326,222")]
         self.mon.assert_flows_present(ping_flows, 20, allow_others=False)
 
+    @unittest.skip("Disabled until Matt updates IPFix monitor")
     def test_multi_host_udp(self, iteration=1):
         """
         Run a mainline multi-host test with IPFIX.
