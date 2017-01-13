@@ -106,7 +106,7 @@ def curl_etcd(ip, path, options=None, recursive=True):
     return json.loads(rc.strip())
 
 
-@unittest.skip("Disabled until Matt updates IPFix monitor")
+#@unittest.skip("Disabled until Matt updates IPFix monitor")
 class MultiHostIpfix(TestBase):
     @classmethod
     def setUpClass(cls):
@@ -122,13 +122,12 @@ class MultiHostIpfix(TestBase):
                                     start_calico=False))
         for host in cls.hosts:
             host.start_calico_node()
-        # Allow time for calico-node to load
-        time.sleep(10)
 
         # Configure the address of the ipfix collector.
         cls.hosts[0].calicoctl("config set IpfixCollectorAddr " + get_ip() + " --raw=felix")
         # Disappointingly, tshark only appears to be able to decode IPFIX when the UDP port is 4739.
         cls.hosts[0].calicoctl("config set IpfixCollectorPort 4739 --raw=felix")
+        time.sleep(10)
 
         cls.networks = []
         cls.networks.append(cls.hosts[0].create_network("testnet1"))
