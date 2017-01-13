@@ -259,7 +259,7 @@ func ruleToParsedRule(rule *model.Rule) (parsedRule *ParsedRule, allTagOrSels []
 
 		LogPrefix: rule.LogPrefix,
 
-		ExportIpfix: rule.Ipfix,
+		ExportIpfix: rule.ExportIpfix,
 	}
 
 	allTagOrSels = append(allTagOrSels, src...)
