@@ -22,7 +22,7 @@ const (
 	ProtoUdp  = 17
 )
 
-func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) error {
+func NflogSubscribe(groupNum int, bufSize int, ch chan<- NflogPacket, done <-chan struct{}) error {
 	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
 	if err != nil {
 		return err
@@ -66,6 +66,16 @@ func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) e
 	req.AddData(nfgenmsg)
 	nflogcfg := nfnl.NewNflogMsgConfigMode(0xFF, nfnl.NFULNL_COPY_PACKET)
 	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_MODE, nflogcfg.Serialize())
+	req.AddData(nfattr)
+	if err := sock.Send(req); err != nil {
+		return err
+	}
+
+	req = nl.NewNetlinkRequest(nlMsgType, nlMsgFlags)
+	nfgenmsg = nfnl.NewNfGenMsg(syscall.AF_UNSPEC, nfnl.NFNETLINK_V0, groupNum)
+	req.AddData(nfgenmsg)
+	nflogbufsiz := nfnl.NewNflogMsgConfigBufSiz(bufSize)
+	nfattr = nl.NewRtAttr(nfnl.NFULA_CFG_NLBUFSIZ, nflogbufsiz.Serialize())
 	req.AddData(nfattr)
 	if err := sock.Send(req); err != nil {
 		return err

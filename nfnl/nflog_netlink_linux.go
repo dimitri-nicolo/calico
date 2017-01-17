@@ -9,6 +9,7 @@ const (
 	SizeofNflogMsgPktHw        = 0xC
 	SizeofNflogMsgPktTimestamp = 0x10
 	SizeofNflogMsgConfigCmd    = 0x1
+	SizeofNflogMsgConfigBufSiz = 0x4
 	SizeofNflogMsgConfigMode   = 0x6
 )
 
@@ -74,4 +75,26 @@ func (msg *NflogMsgConfigMode) Len() int {
 
 func (msg *NflogMsgConfigMode) Serialize() []byte {
 	return (*(*[SizeofNflogMsgConfigMode]byte)(unsafe.Pointer(msg)))[:]
+}
+
+type NflogMsgConfigBufSiz struct {
+	bufsiz uint32
+}
+
+func NewNflogMsgConfigBufSiz(bufsiz int) *NflogMsgConfigBufSiz {
+	return &NflogMsgConfigBufSiz{
+		bufsiz: uint32(bufsiz),
+	}
+}
+
+func DeserializeNflogMsgConfigBufSiz(b []byte) *NflogMsgConfigBufSiz {
+	return (*NflogMsgConfigBufSiz)(unsafe.Pointer(&b[0:SizeofNflogMsgConfigBufSiz][0]))
+}
+
+func (msg *NflogMsgConfigBufSiz) Len() int {
+	return SizeofNflogMsgConfigBufSiz
+}
+
+func (msg *NflogMsgConfigBufSiz) Serialize() []byte {
+	return (*(*[SizeofNflogMsgConfigBufSiz]byte)(unsafe.Pointer(msg)))[:]
 }
