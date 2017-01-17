@@ -223,6 +223,7 @@ configRetry:
 			},
 			IpfixAddr:               net.ParseIP(configParams.IpfixCollectorAddr),
 			IpfixPort:               configParams.IpfixCollectorPort,
+			NfNetlinkBufSize:        configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:       configParams.StatsDumpFilePath,
 			IPIPMTU:                 configParams.IpInIpMtu,
 			IptablesRefreshInterval: time.Duration(configParams.IptablesRefreshInterval) * time.Second,

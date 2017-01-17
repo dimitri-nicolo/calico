@@ -151,6 +151,8 @@ type Config struct {
 	IpfixCollectorPort       int    `config:"int(0,65535);4739;die-on-fail"`
 	IpfixExportTierDropRules bool   `config:"bool;true"`
 
+	NfNetlinkBufSize int  `config:"int;65536"`
+
 	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
 	UsageReportingEnabled bool   `config:"bool;true"`

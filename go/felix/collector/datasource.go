@@ -20,14 +20,16 @@ type NflogDataSource struct {
 	sink      chan<- stats.StatUpdate
 	groupNum  int
 	direction stats.Direction
+	nlBufSiz  int
 	lum       *lookup.LookupManager
 }
 
-func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction) *NflogDataSource {
+func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction, nlBufSiz int) *NflogDataSource {
 	return &NflogDataSource{
 		sink:      sink,
 		groupNum:  groupNum,
 		direction: dir,
+		nlBufSiz:  nlBufSiz,
 		lum:       lm,
 	}
 }
@@ -41,7 +43,7 @@ func (ds *NflogDataSource) subscribeToNflog() {
 	ch := make(chan nfnetlink.NflogPacket)
 	done := make(chan struct{})
 	defer close(done)
-	err := nfnetlink.NflogSubscribe(ds.groupNum, ch, done)
+	err := nfnetlink.NflogSubscribe(ds.groupNum, ds.nlBufSiz, ch, done)
 	if err != nil {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
