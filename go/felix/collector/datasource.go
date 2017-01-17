@@ -16,6 +16,9 @@ import (
 	"github.com/tigera/nfnetlink"
 )
 
+// TODO(doublek): Add to config params
+const NfNetlinkBufSize = 1048575
+
 type NflogDataSource struct {
 	sink      chan<- stats.StatUpdate
 	groupNum  int
@@ -41,7 +44,7 @@ func (ds *NflogDataSource) subscribeToNflog() {
 	ch := make(chan nfnetlink.NflogPacket)
 	done := make(chan struct{})
 	defer close(done)
-	err := nfnetlink.NflogSubscribe(ds.groupNum, ch, done)
+	err := nfnetlink.NflogSubscribe(ds.groupNum, NfNetlinkBufSize, ch, done)
 	if err != nil {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
