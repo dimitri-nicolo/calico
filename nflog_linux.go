@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"syscall"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/tigera/nfnetlink/nfnl"
 	"github.com/tigera/nfnetlink/pkt"
 	"github.com/vishvananda/netlink/nl"
@@ -76,13 +77,16 @@ func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) e
 	}()
 	go func() {
 		defer close(ch)
+		logCtx := log.WithFields(log.Fields{
+			"groupNum": groupNum,
+		})
 	Recvloop:
 		for {
 			var res [][]byte
 			msgs, err := sock.Receive()
 			if err != nil {
-				fmt.Println("NflogSubscribe: ERROR: ", err, "Group:", groupNum)
-				return
+				logCtx.Warnf("NflogSubscribe Receive: %v", err)
+				continue
 			}
 			for _, m := range msgs {
 				mType := m.Header.Type
@@ -92,7 +96,7 @@ func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) e
 				if mType == syscall.NLMSG_ERROR {
 					native := binary.LittleEndian
 					err := int32(native.Uint32(m.Data[0:4]))
-					fmt.Println("NLMSG_ERROR: ", syscall.Errno(-err))
+					logCtx.Warnf("NLMSG_ERROR: %v", syscall.Errno(-err))
 					continue Recvloop
 				}
 				res = append(res, m.Data)
@@ -101,7 +105,7 @@ func NflogSubscribe(groupNum int, ch chan<- NflogPacket, done <-chan struct{}) e
 				msg := nfnl.DeserializeNfGenMsg(m)
 				nflogPacket, err := parseNflog(m[msg.Len():])
 				if err != nil {
-					fmt.Println("Error parsing NFLOG", err)
+					logCtx.Warnf("Error parsing NFLOG %v", err)
 					continue
 				}
 				ch <- nflogPacket
