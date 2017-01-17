@@ -38,6 +38,7 @@ type Config struct {
 	RuleRendererOverride    rules.RuleRenderer
 	IpfixPort               int
 	IpfixAddr               net.IP
+	NfNetlinkBufSize        int
 	StatsDumpFilePath       string
 	IPIPMTU                 int
 	IptablesRefreshInterval time.Duration
@@ -235,11 +236,11 @@ func (d *InternalDataplane) Start() {
 	conntrackDataSource.Start()
 
 	nfIngressSink := make(chan stats.StatUpdate)
-	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, stats.DirIn)
+	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, stats.DirIn, d.config.NfNetlinkBufSize)
 	nflogIngressDataSource.Start()
 
 	nfEgressSink := make(chan stats.StatUpdate)
-	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, stats.DirOut)
+	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, stats.DirOut, d.config.NfNetlinkBufSize)
 	nflogEgressDataSource.Start()
 
 	ipfixExportSink := make(chan *ipfix.ExportRecord)
