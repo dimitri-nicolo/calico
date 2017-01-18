@@ -64,7 +64,9 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	var statUpdate *stats.StatUpdate
 	var reverse bool
 	var wlEpKey *model.WorkloadEndpointKey
-	if lookupAction(nPkt.Prefix) == stats.DenyAction {
+	var prefixAction stats.RuleAction
+	_, _, _, prefixAction, _ = parsePrefix(nPkt.Prefix)
+	if prefixAction == stats.DenyAction {
 		// NFLog based counters make sense only for denied packets.
 		numPkts = 1
 		numBytes = nPkt.Bytes
@@ -229,9 +231,7 @@ func lookupAction(action string) stats.RuleAction {
 	}
 }
 
-func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
-	log.Infof("Looking up rule prefix %s", prefix)
-	var tier, policy string
+func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAction, export bool) {
 	// Prefix formats are:
 	// - T/A/rule index/profile name
 	// - T/A/rule index/policy name/tier name
@@ -251,16 +251,25 @@ func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadE
 		log.Error("Unable to parse NFLOG prefix ", prefix)
 	}
 
+	action = lookupAction(prefixChunks[1])
+	rule = prefixChunks[2]
+	policy = prefixChunks[3]
 	export, err := strconv.ParseBool(prefixChunks[0])
 	if err != nil {
 		log.Error("Unable to parse export flag ", prefixChunks[0])
 		export = false
 	}
+	return
+}
+
+func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
+	log.Infof("Looking up rule prefix %s", prefix)
+	tier, policy, rule, action, export := parsePrefix(prefix)
 	return stats.RuleTracePoint{
 		TierID:   tier,
-		PolicyID: prefixChunks[3],
-		Rule:     prefixChunks[2],
-		Action:   lookupAction(prefixChunks[1]),
+		PolicyID: policy,
+		Rule:     rule,
+		Action:   action,
 		Export:   export,
 		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
 	}
