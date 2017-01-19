@@ -35,7 +35,7 @@ type RuleAction string
 const (
 	AllowAction    RuleAction = "allow"
 	DenyAction     RuleAction = "deny"
-	NextTierAction RuleAction = "next-tier"
+	NextTierAction RuleAction = "pass"
 )
 
 var fwdStatus = map[RuleAction]ipfix.ForwardingStatusType{
