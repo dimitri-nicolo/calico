@@ -62,7 +62,6 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	nflogTuple := nPkt.Tuple
 	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
 	var statUpdate *stats.StatUpdate
-	var reverse bool
 	var wlEpKey *model.WorkloadEndpointKey
 	var prefixAction stats.RuleAction
 	_, _, _, prefixAction, _ = parsePrefix(nPkt.Prefix)
@@ -86,20 +85,18 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 		outPkts = 0
 		outBytes = 0
 		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Dst)
-		reverse = true
 	} else {
 		inPkts = 0
 		inBytes = 0
 		outPkts = numPkts
 		outBytes = numBytes
 		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Src)
-		reverse = false
 	}
 
 	if wlEpKey != nil {
 		tp := lookupRule(ds.lum, nPkt.Prefix, wlEpKey)
-		tuple := extractTupleFromNflogTuple(nPkt.Tuple, reverse)
-		statUpdate = stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
+		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
+		statUpdate = stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, ds.direction, tp)
 	} else {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
@@ -110,7 +107,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	return statUpdate, nil
 }
 
-func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse bool) stats.Tuple {
+func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) stats.Tuple {
 	var l4Src, l4Dst int
 	if nflogTuple.Proto == 1 {
 		l4Src = nflogTuple.L4Src.Id
@@ -119,11 +116,7 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse b
 		l4Src = nflogTuple.L4Src.Port
 		l4Dst = nflogTuple.L4Dst.Port
 	}
-	if !reverse {
-		return *stats.NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
-	} else {
-		return *stats.NewTuple(nflogTuple.Dst, nflogTuple.Src, nflogTuple.Proto, l4Dst, l4Src)
-	}
+	return *stats.NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
 }
 
 type ConntrackDataSource struct {
@@ -173,23 +166,22 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	ctTuple := ctEntry.OrigTuples[len(ctEntry.OrigTuples)-1]
 	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
 	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
+	tuple := extractTupleFromCtEntryTuple(ctTuple)
 	// Force conntrack to have empty tracep
 	if wlEpKeySrc != nil {
 		// Locally originating packet
-		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
 			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
 			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
-			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+			stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
 	if wlEpKeyDst != nil {
 		// Locally terminating packet
-		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
 			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
-			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
+			stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
 	for _, update := range statUpdates {
@@ -198,7 +190,7 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	return statUpdates, nil
 }
 
-func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats.Tuple {
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) stats.Tuple {
 	var l4Src, l4Dst int
 	if ctTuple.ProtoNum == 1 {
 		l4Src = ctTuple.L4Src.Id
@@ -207,11 +199,7 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats
 		l4Src = ctTuple.L4Src.Port
 		l4Dst = ctTuple.L4Dst.Port
 	}
-	if !reverse {
-		return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
-	} else {
-		return *stats.NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
-	}
+	return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
 }
 
 // Stubs

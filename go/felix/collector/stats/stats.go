@@ -17,8 +17,9 @@ import (
 type Direction string
 
 const (
-	DirIn  Direction = "in"
-	DirOut Direction = "out"
+	DirIn      Direction = "in"
+	DirOut     Direction = "out"
+	DirUnknown Direction = "unknown"
 )
 
 type Counter struct {
@@ -188,16 +189,17 @@ func (t *Tuple) String() string {
 // object a timeout is specified and this fires when the there have been no updates
 // on the object for specified duration.
 type Data struct {
-	Tuple      Tuple
-	WlEpKey    model.WorkloadEndpointKey
-	ctrIn      Counter
-	ctrOut     Counter
-	RuleTrace  *RuleTrace
-	createdAt  time.Time
-	updatedAt  time.Time
-	ageTimeout time.Duration
-	ageTimer   *time.Timer
-	dirty      bool
+	Tuple            Tuple
+	WlEpKey          model.WorkloadEndpointKey
+	ctrIn            Counter
+	ctrOut           Counter
+	IngressRuleTrace *RuleTrace
+	EgressRuleTrace  *RuleTrace
+	createdAt        time.Time
+	updatedAt        time.Time
+	ageTimeout       time.Duration
+	ageTimer         *time.Timer
+	dirty            bool
 }
 
 func NewData(tuple Tuple,
@@ -208,22 +210,23 @@ func NewData(tuple Tuple,
 	outBytes int,
 	duration time.Duration) *Data {
 	return &Data{
-		Tuple:      tuple,
-		WlEpKey:    wlEpKey,
-		ctrIn:      Counter{packets: inPackets, bytes: inBytes},
-		ctrOut:     Counter{packets: outPackets, bytes: outBytes},
-		RuleTrace:  NewRuleTrace(),
-		createdAt:  time.Now(),
-		updatedAt:  time.Now(),
-		ageTimeout: duration,
-		ageTimer:   time.NewTimer(duration),
-		dirty:      true,
+		Tuple:            tuple,
+		WlEpKey:          wlEpKey,
+		ctrIn:            Counter{packets: inPackets, bytes: inBytes},
+		ctrOut:           Counter{packets: outPackets, bytes: outBytes},
+		IngressRuleTrace: NewRuleTrace(),
+		EgressRuleTrace:  NewRuleTrace(),
+		createdAt:        time.Now(),
+		updatedAt:        time.Now(),
+		ageTimeout:       duration,
+		ageTimer:         time.NewTimer(duration),
+		dirty:            true,
 	}
 }
 
 func (d *Data) String() string {
-	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ruleTrace={%v} workloadId=%v endpointId=%v",
-		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.RuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
+	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v} workloadId=%v endpointId=%v",
+		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
 }
 
 func (d *Data) touch() {
@@ -257,13 +260,18 @@ func (d *Data) AgeTimer() *time.Timer {
 }
 
 // Returns the final action of the RuleTrace
-func (d *Data) Action() RuleAction {
-	return d.RuleTrace.action
+func (d *Data) IngressAction() RuleAction {
+	return d.IngressRuleTrace.action
+}
+
+// Returns the final action of the RuleTrace
+func (d *Data) EgressAction() RuleAction {
+	return d.EgressRuleTrace.action
 }
 
 // Returns the if export is requested or not.
 func (d *Data) IsExportEnabled() bool {
-	return d.RuleTrace.export
+	return d.IngressRuleTrace.export || d.EgressRuleTrace.export
 }
 
 func (d *Data) CountersIn() Counter {
@@ -321,8 +329,13 @@ func (d *Data) ResetCounters() {
 	d.setCountersOut(0, 0)
 }
 
-func (d *Data) AddRuleTracePoint(tp RuleTracePoint) error {
-	err := d.RuleTrace.addRuleTracePoint(tp)
+func (d *Data) AddRuleTracePoint(tp RuleTracePoint, dir Direction) error {
+	var err error
+	if dir == DirIn {
+		err = d.IngressRuleTrace.addRuleTracePoint(tp)
+	} else {
+		err = d.EgressRuleTrace.addRuleTracePoint(tp)
+	}
 	if err == nil {
 		d.touch()
 		d.setDirtyFlag()
@@ -330,20 +343,28 @@ func (d *Data) AddRuleTracePoint(tp RuleTracePoint) error {
 	return err
 }
 
-func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
-	d.RuleTrace.replaceRuleTracePoint(tp)
+func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint, dir Direction) {
+	if dir == DirIn {
+		d.IngressRuleTrace.replaceRuleTracePoint(tp)
+	} else {
+		d.EgressRuleTrace.replaceRuleTracePoint(tp)
+	}
 	d.touch()
 	d.setDirtyFlag()
 }
 
-func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecord {
+func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) []*ipfix.ExportRecord {
 	d.clearDirtyFlag()
-	rtRecs := []ipfix.RuleTraceRecord{}
-	for _, tp := range d.RuleTrace.path {
+	// TODO (doublek): They way we convert one to another will be much nicer if
+	// we sprinkle some interface magic.
+	var er []*ipfix.ExportRecord
+
+	ingressRtRecs := []ipfix.RuleTraceRecord{}
+	for _, tp := range d.IngressRuleTrace.path {
 		if tp == EmptyRuleTracePoint {
 			continue
 		}
-		rtRecs = append(rtRecs, ipfix.RuleTraceRecord{
+		ingressRtRecs = append(ingressRtRecs, ipfix.RuleTraceRecord{
 			TierID:     tp.TierID,
 			PolicyID:   tp.PolicyID,
 			Rule:       tp.Rule,
@@ -351,11 +372,12 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 			RuleIndex:  tp.Index,
 		})
 	}
-	fs, ok := fwdStatus[d.Action()]
+	inFs, ok := fwdStatus[d.IngressAction()]
 	if !ok {
-		fs = ipfix.Unknown
+		inFs = ipfix.Unknown
 	}
-	return &ipfix.ExportRecord{
+
+	er = append(er, &ipfix.ExportRecord{
 		FlowStart:               d.createdAt,
 		FlowEnd:                 time.Now(),
 		OctetTotalCount:         d.ctrIn.bytes,
@@ -369,11 +391,51 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 		SourceTransportPort:      d.Tuple.l4Src,
 		DestinationTransportPort: d.Tuple.l4Dst,
 		ProtocolIdentifier:       d.Tuple.proto,
-		ForwardingStatus:         fs,
+		ForwardingStatus:         inFs,
 		FlowEndReason:            reason,
+		FlowDirection:            ipfix.Ingress,
 
-		RuleTrace: rtRecs,
+		RuleTrace: ingressRtRecs,
+	})
+
+	egressRtRecs := []ipfix.RuleTraceRecord{}
+	for _, tp := range d.IngressRuleTrace.path {
+		if tp == EmptyRuleTracePoint {
+			continue
+		}
+		egressRtRecs = append(egressRtRecs, ipfix.RuleTraceRecord{
+			TierID:     tp.TierID,
+			PolicyID:   tp.PolicyID,
+			Rule:       tp.Rule,
+			RuleAction: string(tp.Action),
+			RuleIndex:  tp.Index,
+		})
 	}
+	outFs, ok := fwdStatus[d.EgressAction()]
+	if !ok {
+		outFs = ipfix.Unknown
+	}
+	er = append(er, &ipfix.ExportRecord{
+		FlowStart:               d.createdAt,
+		FlowEnd:                 time.Now(),
+		OctetTotalCount:         d.ctrIn.bytes,
+		ReverseOctetTotalCount:  d.ctrOut.bytes,
+		PacketTotalCount:        d.ctrIn.packets,
+		ReversePacketTotalCount: d.ctrOut.packets,
+
+		SourceIPv4Address:      net.ParseIP(d.Tuple.src),
+		DestinationIPv4Address: net.ParseIP(d.Tuple.dst),
+
+		SourceTransportPort:      d.Tuple.l4Src,
+		DestinationTransportPort: d.Tuple.l4Dst,
+		ProtocolIdentifier:       d.Tuple.proto,
+		ForwardingStatus:         outFs,
+		FlowEndReason:            reason,
+		FlowDirection:            ipfix.Egress,
+
+		RuleTrace: egressRtRecs,
+	})
+	return er
 }
 
 type CounterType string
@@ -396,6 +458,7 @@ type StatUpdate struct {
 	OutPackets int
 	OutBytes   int
 	CtrType    CounterType
+	Dir        Direction
 	Tp         RuleTracePoint
 }
 
@@ -406,6 +469,7 @@ func NewStatUpdate(tuple Tuple,
 	outPackets int,
 	outBytes int,
 	ctrType CounterType,
+	dir Direction,
 	tp RuleTracePoint) *StatUpdate {
 	return &StatUpdate{
 		Tuple:      tuple,
@@ -415,6 +479,7 @@ func NewStatUpdate(tuple Tuple,
 		OutPackets: outPackets,
 		OutBytes:   outBytes,
 		CtrType:    ctrType,
+		Dir:        dir,
 		Tp:         tp,
 	}
 }

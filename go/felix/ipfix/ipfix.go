@@ -39,7 +39,7 @@ static fbInfoElementSpec_t exportTemplate[] = {
 	{"protocolIdentifier",		0, 0 },
 	{"forwardingStatus",		1, 0 },
 	{"flowEndReason",		0, 0 },
-	{"paddingOctets",               1, 0 },
+	{"flowDirection",		0, 0 },
 	{"subTemplateList",		0, 0 },
 	FB_IESPEC_NULL
 };
@@ -60,7 +60,7 @@ typedef struct exportRecord_st {
 	uint8_t     protocolIdentifier;
 	uint8_t     forwardingStatus;
 	uint8_t     flowEndReason;
-	uint8_t     paddingOctets[1];
+	uint8_t     flowDirection;
 
 	fbSubTemplateList_t	ruleTrace;
 
@@ -219,6 +219,7 @@ GError * fixbuf_export_data(fixbufData_t fbData, exportRecord_t rec, ruleTraceSh
 	myrec.protocolIdentifier = rec.protocolIdentifier;
 	myrec.forwardingStatus = rec.forwardingStatus;
 	myrec.flowEndReason = rec.flowEndReason;
+	myrec.flowDirection = rec.flowDirection;
 
 	if (numTraces != 0) {
 		ruleTracePtr = (ruleTrace_t*)fbSubTemplateListInit(&(myrec.ruleTrace),
@@ -298,6 +299,16 @@ const (
 	Consumed  ForwardingStatusType = 192
 )
 
+type FlowDirectionType int
+
+// Valid values of ExportRecord.FlowDirection. Refer to
+// http://www.iana.org/assignments/ipfix/ipfix.xhtml
+// for an explanation of the different values below.
+const (
+	Ingress FlowDirectionType = 0x00
+	Egress  FlowDirectionType = 0x01
+)
+
 // An IPFIX record that is exported to IPFIX collectors. Refer to
 // http://www.iana.org/assignments/ipfix/ipfix.xhtml
 // for descriptions of the different fields that are exported.
@@ -317,6 +328,7 @@ type ExportRecord struct {
 	ProtocolIdentifier       int
 	ForwardingStatus         ForwardingStatusType
 	FlowEndReason            FlowEndReasonType
+	FlowDirection            FlowDirectionType
 
 	RuleTrace []RuleTraceRecord
 }
@@ -403,6 +415,7 @@ func (ie *IPFIXExporter) exportData(data *ExportRecord) error {
 		protocolIdentifier:       C.uint8_t(data.ProtocolIdentifier),
 		forwardingStatus:         C.uint8_t(data.ForwardingStatus),
 		flowEndReason:            C.uint8_t(data.FlowEndReason),
+		flowDirection:            C.uint8_t(data.FlowDirection),
 	}
 	rtRec := []C.struct_ruleTraceShim_st{}
 	for _, rt := range data.RuleTrace {

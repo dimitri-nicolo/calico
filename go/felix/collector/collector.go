@@ -141,7 +141,7 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 			update.OutBytes,
 			DefaultAgeTimeout)
 		if update.Tp != stats.EmptyRuleTracePoint {
-			data.AddRuleTracePoint(update.Tp)
+			data.AddRuleTracePoint(update.Tp, update.Dir)
 		}
 		c.registerAgeTimer(data)
 		c.epStats[update.Tuple] = data
@@ -156,13 +156,13 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		data.IncreaseCountersOut(update.OutPackets, update.OutBytes)
 	}
 	if update.Tp != stats.EmptyRuleTracePoint {
-		err := data.AddRuleTracePoint(update.Tp)
+		err := data.AddRuleTracePoint(update.Tp, update.Dir)
 		if err != nil {
 			if data.IsExportEnabled() {
 				c.exportEntry(data.ToExportRecord(ipfix.ForcedEnd))
 			}
 			data.ResetCounters()
-			data.ReplaceRuleTracePoint(update.Tp)
+			data.ReplaceRuleTracePoint(update.Tp, update.Dir)
 		}
 	}
 	c.epStats[update.Tuple] = data
@@ -200,9 +200,11 @@ func (c *Collector) exportStat() {
 	}
 }
 
-func (c *Collector) exportEntry(record *ipfix.ExportRecord) {
-	log.Debugf("Exporting entry %v", record)
-	c.exportSink <- record
+func (c *Collector) exportEntry(records []*ipfix.ExportRecord) {
+	for _, record := range records {
+		log.Debugf("Exporting entry %v", record)
+		c.exportSink <- record
+	}
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.
