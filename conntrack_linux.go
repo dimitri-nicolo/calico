@@ -25,7 +25,7 @@ func ConntrackList() ([]CtEntry, error) {
 	var res []CtEntry
 	for _, m := range msgs {
 		msg := nfnl.DeserializeNfGenMsg(m)
-		ctentry, err := ConntrackEntryFromNfAttrs(m[msg.Len():], msg.Family)
+		ctentry, err := conntrackEntryFromNfAttrs(m[msg.Len():], msg.Family)
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +34,7 @@ func ConntrackList() ([]CtEntry, error) {
 	return res, nil
 }
 
-func ConntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
+func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 	ctentry := CtEntry{}
 	attrs, err := nfnl.ParseNetfilterAttr(m)
 	if err != nil {

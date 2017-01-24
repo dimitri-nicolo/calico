@@ -1,7 +1,10 @@
 package nfnetlink
 
 import (
+	"errors"
 	"net"
+
+	"github.com/tigera/nfnetlink/nfnl"
 )
 
 const (
@@ -40,6 +43,8 @@ type CtTuple struct {
 	L4Dst      CtL4Dst
 }
 
+var EmptyCtTuple = CtTuple{}
+
 type CtNat struct {
 	MinIp net.IP
 	MaxIP net.IP
@@ -65,4 +70,56 @@ type CtEntry struct {
 
 	//Snat		CtNat
 	//Dnat		CtNat
+}
+
+func (cte *CtEntry) IsNAT() bool {
+	if cte.Status&nfnl.IPS_NAT_MASK != 0 {
+		return true
+	}
+	return false
+}
+
+func (cte *CtEntry) IsSNAT() bool {
+	if cte.Status&nfnl.IPS_SRC_NAT != 0 {
+		return true
+	}
+	return false
+}
+
+func (cte *CtEntry) IsDNAT() bool {
+	if cte.Status&nfnl.IPS_DST_NAT != 0 {
+		return true
+	}
+	return false
+}
+
+func (cte *CtEntry) OrigTuple() (CtTuple, error) {
+	l := len(cte.OrigTuples)
+	if l == 0 {
+		return EmptyCtTuple, errors.New("OrigTuples is empty")
+	}
+	return cte.OrigTuples[l-1], nil
+}
+
+func (cte *CtEntry) ReplTuple() (CtTuple, error) {
+	l := len(cte.ReplTuples)
+	if l == 0 {
+		return EmptyCtTuple, errors.New("ReplTuples is empty")
+	}
+	return cte.ReplTuples[l-1], nil
+}
+
+func (cte *CtEntry) OrigTupleWithoutDNAT() (CtTuple, error) {
+	if !cte.IsDNAT() {
+		return EmptyCtTuple, errors.New("Entry is not DNAT-ed")
+	}
+	repl, err := cte.ReplTuple()
+	if err != nil {
+		return EmptyCtTuple, err
+	}
+	orig, err := cte.OrigTuple()
+	if err != nil {
+		return EmptyCtTuple, err
+	}
+	return CtTuple{repl.Dst, repl.Src, orig.L3ProtoNum, orig.ProtoNum, orig.Zone, orig.L4Src, orig.L4Dst}, nil
 }
