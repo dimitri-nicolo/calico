@@ -121,5 +121,19 @@ func (cte *CtEntry) OrigTupleWithoutDNAT() (CtTuple, error) {
 	if err != nil {
 		return EmptyCtTuple, err
 	}
-	return CtTuple{repl.Dst, repl.Src, orig.L3ProtoNum, orig.ProtoNum, orig.Zone, orig.L4Src, orig.L4Dst}, nil
+
+	var src CtL4Src
+	var dst CtL4Dst
+	if orig.ProtoNum == nfnl.ICMP_PROTO {
+		src = CtL4Src{Id: repl.L4Src.Id}
+		dst = CtL4Dst{Type: repl.L4Dst.Type, Code: repl.L4Dst.Code}
+	} else if orig.ProtoNum == nfnl.TCP_PROTO || orig.ProtoNum == nfnl.UDP_PROTO {
+		src = CtL4Src{Port: repl.L4Dst.Port}
+		dst = CtL4Dst{Port: repl.L4Src.Port}
+	} else {
+		src = CtL4Src{All: repl.L4Dst.All}
+		dst = CtL4Dst{All: repl.L4Src.All}
+	}
+
+	return CtTuple{orig.Src, repl.Src, orig.L3ProtoNum, orig.ProtoNum, orig.Zone, src, dst}, nil
 }
