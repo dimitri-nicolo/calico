@@ -49,6 +49,7 @@ func (ds *NflogDataSource) subscribeToNflog() {
 		return
 	}
 	for nflogPacket := range ch {
+		log.Debugf("Processing NFLOG packet: %+v", nflogPacket)
 		statUpdate, err := ds.convertNflogPktToStat(nflogPacket)
 		if err != nil {
 			log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacket)
@@ -76,8 +77,8 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 		numBytes = 0
 	}
 
-	// Determine the endpoint that this packet hit a rule for.  This depends on the direction
-	// because local -> local packets we be NFLOGed twice.
+	// Determine the endpoint that this packet hit a rule for. This depends on the direction
+	// because local -> local packets will be NFLOGed twice.
 	if ds.direction == stats.DirIn {
 		inPkts = numPkts
 		inBytes = numBytes
@@ -151,6 +152,7 @@ func (ds *ConntrackDataSource) startPolling() {
 		}
 		// TODO(doublek): Possibly do this in a separate goroutine?
 		for _, ctentry := range ctentries {
+			log.Debugf("Processing conntrack entry %+v", ctentry)
 			statUpdates, err := ds.convertCtEntryToStat(ctentry)
 			if err != nil {
 				log.Errorf("Couldn't convert ctentry %v to StatUpdate", ctentry)
@@ -168,10 +170,24 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	// local-to-local traffic.
 	statUpdates := []stats.StatUpdate{}
 	// The last entry is the tuple entry for endpoints
-	ctTuple := ctEntry.OrigTuples[len(ctEntry.OrigTuples)-1]
-	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
-	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
-	// Force conntrack to have empty tracep
+	ctTuple, err := ctEntry.OrigTuple()
+	if err != nil {
+		log.Error("Error when extracting OrigTuple:", err)
+		return statUpdates, err
+	}
+
+	// We care about DNAT only which modifies the destination parts of the OrigTuple.
+	if ctEntry.IsDNAT() {
+		log.Debugf("Entry is DNAT %+v", ctEntry)
+		ctTuple, err := ctEntry.OrigTupleWithoutDNAT()
+		if err != nil {
+			log.Error("Error when extracting tuple without DNAT:", err)
+		}
+	}
+	wlEpKeySrc = ds.lum.GetEndpointKey(origTuple.Src)
+	wlEpKeyDst = ds.lum.GetEndpointKey(origTuple.Dst)
+
+	// Force conntrack to have empty tracepoint
 	if wlEpKeySrc != nil {
 		// Locally originating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
