@@ -13,7 +13,7 @@ package ipfix
 #define TIGERA_IENUM_TIERID		10
 #define TIGERA_IENUM_POLICYID		11
 #define TIGERA_IENUM_RULE		12
-#define TIGERA_IENUM_RULE_IDX		13
+#define TIGERA_IENUM_POLICY_IDX		13
 #define TIGERA_IENUM_RULE_ACTION	14
 
 static fbInfoElement_t tigeraElements[] = {
@@ -21,7 +21,7 @@ static fbInfoElement_t tigeraElements[] = {
 	FB_IE_INIT("policyId", TIGERA_PEN, TIGERA_IENUM_POLICYID, FB_IE_VARLEN, 0),
 	FB_IE_INIT("rule", TIGERA_PEN, TIGERA_IENUM_RULE, FB_IE_VARLEN, 0),
 	FB_IE_INIT("ruleAction", TIGERA_PEN, TIGERA_IENUM_RULE_ACTION, FB_IE_VARLEN, 0),
-	FB_IE_INIT("ruleIdx", TIGERA_PEN, TIGERA_IENUM_RULE_IDX, 2, 0),
+	FB_IE_INIT("policyIdx", TIGERA_PEN, TIGERA_IENUM_POLICY_IDX, 2, 0),
 	FB_IESPEC_NULL
 };
 
@@ -71,7 +71,7 @@ static fbInfoElementSpec_t  ruleTraceTemplate[] = {
 	{"policyId",		0, 0 },
 	{"rule",		0, 0 },
 	{"ruleAction",		0, 0 },
-	{"ruleIdx",		0, 0 },
+	{"policyIdx",		0, 0 },
 	{"paddingOctets",	6, 0 },
 	FB_IESPEC_NULL
 };
@@ -81,7 +81,7 @@ typedef struct ruleTrace_st {
 	fbVarfield_t	policyId;
 	fbVarfield_t	rule;
 	fbVarfield_t	ruleAction;
-	uint16_t	ruleIdx;
+	uint16_t	policyIdx;
 	uint8_t		paddingOctets[6];
 } ruleTrace_t;
 
@@ -96,7 +96,7 @@ typedef struct ruleTraceShim_st {
 	char		*policyId;
 	char		*rule;
 	char		*ruleAction;
-	uint16_t	 ruleIdx;
+	uint16_t	 policyIdx;
 } ruleTraceShim_t;
 
 typedef struct fixbufData_st {
@@ -228,7 +228,7 @@ GError * fixbuf_export_data(fixbufData_t fbData, exportRecord_t rec, ruleTraceSh
 			fixbuf_fill_varfield(&(ruleTracePtr->policyId), ruleTraceShimPtr->policyId);
 			fixbuf_fill_varfield(&(ruleTracePtr->rule), ruleTraceShimPtr->rule);
 			fixbuf_fill_varfield(&(ruleTracePtr->ruleAction), ruleTraceShimPtr->ruleAction);
-			ruleTracePtr->ruleIdx = ruleTraceShimPtr->ruleIdx;
+			ruleTracePtr->policyIdx = ruleTraceShimPtr->policyIdx;
 
 			ruleTracePtr++;
 			ruleTraceShimPtr++;
@@ -322,11 +322,11 @@ type ExportRecord struct {
 }
 
 type RuleTraceRecord struct {
-	TierID     string
-	PolicyID   string
-	Rule       string
-	RuleAction string
-	RuleIndex  int
+	TierID      string
+	PolicyID    string
+	Rule        string
+	RuleAction  string
+	PolicyIndex int
 }
 
 var fbTransport = map[string]C.fbTransport_t{
@@ -412,7 +412,7 @@ func (ie *IPFIXExporter) exportData(data *ExportRecord) error {
 			policyId:   C.CString(rt.PolicyID),
 			rule:       C.CString(rt.Rule),
 			ruleAction: C.CString(rt.RuleAction),
-			ruleIdx:    C.uint16_t(rt.RuleIndex),
+			policyIdx:  C.uint16_t(rt.PolicyIndex),
 		})
 	}
 	log.Debug("Produced record for export: ", rec, " with rule trace: ", rtRec)

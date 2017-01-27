@@ -218,14 +218,14 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 			Match: Match().MarkClear(r.IptablesMarkNextTier),
 			Action: NflogAction{
 				Group:  1,
-				Prefix: exportIpfix + "D/0/" + tier.Name + "/no-policy-match-inbound",
+				Prefix: exportIpfix + "D/0/" + "no-policy-match-inbound/" + tier.Name,
 			},
 		})
 		fromRules = append(fromRules, Rule{
 			Match: Match().MarkClear(r.IptablesMarkNextTier),
 			Action: NflogAction{
 				Group:  2,
-				Prefix: exportIpfix + "D/0/" + tier.Name + "/no-policy-match-outbound",
+				Prefix: exportIpfix + "D/0/" + "no-policy-match-outbound/" + tier.Name,
 			},
 		})
 		toRules = append(toRules, r.DropRules(
