@@ -32,6 +32,10 @@ import (
 	"strings"
 )
 
+type routeTable interface {
+	SetRoutes(ifaceName string, targets []routetable.Target)
+}
+
 // endpointManager manages the dataplane resources that belong to each endpoint as well as
 // the "dispatch chains" that fan out packets to the right per-endpoint chain.
 //
@@ -43,48 +47,93 @@ import (
 // to CompleteDeferredWork().  This is also the basis of our failure handling; updates
 // that fail are left in the pending state so they can be retried later.
 type endpointManager struct {
+	// Config.
 	ipVersion      uint8
 	wlIfacesRegexp *regexp.Regexp
 
 	// Our dependencies.
-	filterTable  *iptables.Table
+	rawTable     iptablesTable
+	filterTable  iptablesTable
 	ruleRenderer rules.RuleRenderer
-	routeTable   *routetable.RouteTable
+	routeTable   routeTable
+	writeProcSys procSysWriter
+
+	// Pending updates, cleared in CompleteDeferredWork as the data is copied to the activeXYZ
+	// fields.
+	pendingWlEpUpdates  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	pendingIfaceUpdates map[string]ifacemonitor.State
 
 	// Active state, updated in CompleteDeferredWork.
-	activeEndpoints      map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-	activeIfaceNameToID  map[string]proto.WorkloadEndpointID
-	activeUpIfaces       set.Set
-	activeIdToChains     map[proto.WorkloadEndpointID][]*iptables.Chain
-	activeDispatchChains []*iptables.Chain
+	activeWlEndpoints     map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	activeWlIfaceNameToID map[string]proto.WorkloadEndpointID
+	activeUpIfaces        set.Set
+	activeWlIDToChains    map[proto.WorkloadEndpointID][]*iptables.Chain
+	activeDispatchChains  []*iptables.Chain
 
-	ifaceNamesToReconfigure set.Set
-	ifaceIDsToUpdateStatus  set.Set
+	// wlIfaceNamesToReconfigure contains names of workload interfaces that need to have
+	// their configuration (sysctls etc.) refreshed.
+	wlIfaceNamesToReconfigure set.Set
 
-	// Pending updates, cleared in CompleteDeferredWork.
-	pendingEndpointUpdates map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-	pendingIfaceUpdates    map[string]ifacemonitor.State
+	// epIDsToUpdateStatus contains IDs of endpoints that we need to report status for.
+	// Mix of host and workload endpoint IDs.
+	epIDsToUpdateStatus set.Set
 
-	// Host endpoint processing.
-	ifaceAddrs               map[string]set.Set
-	rawHostEndpoints         map[proto.HostEndpointID]*proto.HostEndpoint
-	dirtyHostEndpoints       bool
-	activeHostIdToChains     map[proto.HostEndpointID][]*iptables.Chain
-	activeHostDispatchChains []*iptables.Chain
+	// hostIfaceToAddrs maps host interface name to the set of IPs on that interface (reported
+	// fro the dataplane).
+	hostIfaceToAddrs map[string]set.Set
+	// rawHostEndpoints contains the raw (i.e. not resolved to interface) host endpoints.
+	rawHostEndpoints map[proto.HostEndpointID]*proto.HostEndpoint
+	// hostEndpointsDirty is set to true when host endpoints are updated.
+	hostEndpointsDirty bool
+	// activeHostIfaceToChains maps host interface name to the chains that we've programmed.
+	activeHostIfaceToRawChains  map[string][]*iptables.Chain
+	activeHostIfaceToFiltChains map[string][]*iptables.Chain
+	// Dispatch chains that we've programmed for host endpoints.
+	activeHostRawDispatchChains  []*iptables.Chain
+	activeHostFiltDispatchChains []*iptables.Chain
+	// activeHostEpIDToIfaceNames records which interfaces we resolved each host endpoint to.
+	activeHostEpIDToIfaceNames map[proto.HostEndpointID][]string
+	// activeIfaceNameToHostEpID records which endpoint we resolved each host interface to.
+	activeIfaceNameToHostEpID map[string]proto.HostEndpointID
 
 	// Callbacks
-	OnWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback
+	OnEndpointStatusUpdate EndpointStatusUpdateCallback
 }
 
-type EndpointStatusUpdateCallback func(ipVersion uint8, id proto.WorkloadEndpointID, status string)
+type EndpointStatusUpdateCallback func(ipVersion uint8, id interface{}, status string)
+
+type procSysWriter func(path, value string) error
 
 func newEndpointManager(
-	filterTable *iptables.Table,
+	rawTable iptablesTable,
+	filterTable iptablesTable,
 	ruleRenderer rules.RuleRenderer,
-	routeTable *routetable.RouteTable,
+	routeTable routeTable,
 	ipVersion uint8,
 	wlInterfacePrefixes []string,
 	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
+) *endpointManager {
+	return newEndpointManagerWithShims(
+		rawTable,
+		filterTable,
+		ruleRenderer,
+		routeTable,
+		ipVersion,
+		wlInterfacePrefixes,
+		onWorkloadEndpointStatusUpdate,
+		writeProcSys,
+	)
+}
+
+func newEndpointManagerWithShims(
+	rawTable iptablesTable,
+	filterTable iptablesTable,
+	ruleRenderer rules.RuleRenderer,
+	routeTable routeTable,
+	ipVersion uint8,
+	wlInterfacePrefixes []string,
+	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
+	procSysWriter procSysWriter,
 ) *endpointManager {
 	wlIfacesPattern := "^(" + strings.Join(wlInterfacePrefixes, "|") + ").*"
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)
@@ -93,50 +142,57 @@ func newEndpointManager(
 		ipVersion:      ipVersion,
 		wlIfacesRegexp: wlIfacesRegexp,
 
+		rawTable:     rawTable,
 		filterTable:  filterTable,
 		ruleRenderer: ruleRenderer,
 		routeTable:   routeTable,
+		writeProcSys: procSysWriter,
 
-		activeEndpoints:     map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
-		activeIfaceNameToID: map[string]proto.WorkloadEndpointID{},
-		activeUpIfaces:      set.New(),
-		activeIdToChains:    map[proto.WorkloadEndpointID][]*iptables.Chain{},
+		// Pending updates, we store these up as OnUpdate is called, then process them
+		// in CompleteDeferredWork and transfer the important data to the activeXYX fields.
+		pendingWlEpUpdates:  map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		pendingIfaceUpdates: map[string]ifacemonitor.State{},
 
-		ifaceNamesToReconfigure: set.New(),
-		ifaceIDsToUpdateStatus:  set.New(),
+		activeUpIfaces: set.New(),
 
-		pendingEndpointUpdates:   map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
-		pendingIfaceUpdates:      map[string]ifacemonitor.State{},
-		ifaceAddrs:               map[string]set.Set{},
-		rawHostEndpoints:         map[proto.HostEndpointID]*proto.HostEndpoint{},
-		dirtyHostEndpoints:       true,
-		activeHostIdToChains:     map[proto.HostEndpointID][]*iptables.Chain{},
-		activeHostDispatchChains: nil,
+		activeWlEndpoints:     map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint{},
+		activeWlIfaceNameToID: map[string]proto.WorkloadEndpointID{},
+		activeWlIDToChains:    map[proto.WorkloadEndpointID][]*iptables.Chain{},
 
-		OnWorkloadEndpointStatusUpdate: onWorkloadEndpointStatusUpdate,
+		wlIfaceNamesToReconfigure: set.New(),
+
+		epIDsToUpdateStatus: set.New(),
+
+		hostIfaceToAddrs:   map[string]set.Set{},
+		rawHostEndpoints:   map[proto.HostEndpointID]*proto.HostEndpoint{},
+		hostEndpointsDirty: true,
+
+		activeHostIfaceToRawChains:  map[string][]*iptables.Chain{},
+		activeHostIfaceToFiltChains: map[string][]*iptables.Chain{},
+
+		OnEndpointStatusUpdate: onWorkloadEndpointStatusUpdate,
 	}
 }
 
 func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
+	log.WithField("msg", protoBufMsg).Debug("Received message")
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
-		m.pendingEndpointUpdates[*msg.Id] = msg.Endpoint
+		m.pendingWlEpUpdates[*msg.Id] = msg.Endpoint
 	case *proto.WorkloadEndpointRemove:
-		m.pendingEndpointUpdates[*msg.Id] = nil
+		m.pendingWlEpUpdates[*msg.Id] = nil
 	case *proto.HostEndpointUpdate:
 		log.WithField("msg", msg).Debug("Host endpoint update")
 		m.rawHostEndpoints[*msg.Id] = msg.Endpoint
-		m.dirtyHostEndpoints = true
+		m.hostEndpointsDirty = true
+		m.epIDsToUpdateStatus.Add(*msg.Id)
 	case *proto.HostEndpointRemove:
 		log.WithField("msg", msg).Debug("Host endpoint removed")
 		delete(m.rawHostEndpoints, *msg.Id)
-		m.dirtyHostEndpoints = true
+		m.hostEndpointsDirty = true
+		m.epIDsToUpdateStatus.Add(*msg.Id)
 	case *ifaceUpdate:
 		log.WithField("update", msg).Debug("Interface state changed.")
-		if !m.wlIfacesRegexp.MatchString(msg.Name) {
-			log.WithField("update", msg).Debug("Not workload interface, ignoring.")
-			return
-		}
 		m.pendingIfaceUpdates[msg.Name] = msg.State
 	case *ifaceAddrsUpdate:
 		log.WithField("update", msg).Debug("Interface addrs changed.")
@@ -145,78 +201,207 @@ func (m *endpointManager) OnUpdate(protoBufMsg interface{}) {
 			return
 		}
 		if msg.Addrs != nil {
-			m.ifaceAddrs[msg.Name] = msg.Addrs
+			m.hostIfaceToAddrs[msg.Name] = msg.Addrs
 		} else {
-			delete(m.ifaceAddrs, msg.Name)
+			delete(m.hostIfaceToAddrs, msg.Name)
 		}
-		m.dirtyHostEndpoints = true
+		m.hostEndpointsDirty = true
 	}
 }
 
 func (m *endpointManager) CompleteDeferredWork() error {
-	// Copy the pending interface updates to the active set.  Mark any interfaces that
-	// have come up to be reconfigured.
+	// Copy the pending interface state to the active set and mark any interfaces that have
+	// changed state for reconfiguration by resolveWorkload/HostEndpoints()
 	for ifaceName, state := range m.pendingIfaceUpdates {
 		if state == ifacemonitor.StateUp {
 			m.activeUpIfaces.Add(ifaceName)
-			m.ifaceNamesToReconfigure.Add(ifaceName)
+			if m.wlIfacesRegexp.MatchString(ifaceName) {
+				log.WithField("ifaceName", ifaceName).Info(
+					"Workload interface came up, marking for reconfiguration.")
+				m.wlIfaceNamesToReconfigure.Add(ifaceName)
+			}
 		} else {
 			m.activeUpIfaces.Discard(ifaceName)
 		}
-		logCxt := log.WithField("ifaceName", ifaceName)
-		if epID, ok := m.activeIfaceNameToID[ifaceName]; ok {
-			logCxt.Info("Interface state changed; marking for status update.")
-			m.ifaceIDsToUpdateStatus.Add(epID)
-		} else {
-			// We don't know about this interface yet (or it's already been deleted).
-			// If the endpoint gets created, we'll do the update then. If it's been
-			// deleted, we've already cleaned it up.
-			logCxt.Debug("Ignoring interface state change for unknown interface.")
-		}
+		// If this interface is linked to any already-existing endpoints, mark the endpoint
+		// status for recalculation.  If the matching endpoint changes when we do
+		// resolveHostEndpoints() then that will mark old and new matching endpoints for
+		// update.
+		m.markEndpointStatusDirtyByIface(ifaceName)
+		// Clean up as we go...
 		delete(m.pendingIfaceUpdates, ifaceName)
 	}
 
-	if err := m.resolveWorkloadEndpoints(); err != nil {
-		log.WithError(err).Warn("Failed to resolve workload endpoints")
-		return err
+	m.resolveWorkloadEndpoints()
+
+	if m.hostEndpointsDirty {
+		log.Debug("Host endpoints updated, resolving them.")
+		m.resolveHostEndpoints()
+		m.hostEndpointsDirty = false
 	}
 
-	if m.dirtyHostEndpoints {
-		if err := m.resolveHostEndpoints(); err != nil {
-			log.WithError(err).Warn("Failed to resolve host endpoints")
-			return err
-		}
-		m.dirtyHostEndpoints = false
-	}
+	// Now send any endpoint status updates.
+	m.updateEndpointStatuses()
 
 	return nil
 }
 
-func (m *endpointManager) resolveWorkloadEndpoints() error {
+func (m *endpointManager) markEndpointStatusDirtyByIface(ifaceName string) {
+	logCxt := log.WithField("ifaceName", ifaceName)
+	if epID, ok := m.activeWlIfaceNameToID[ifaceName]; ok {
+		logCxt.Info("Workload interface state changed; marking for status update.")
+		m.epIDsToUpdateStatus.Add(epID)
+	} else if epID, ok := m.activeIfaceNameToHostEpID[ifaceName]; ok {
+		logCxt.Info("Host interface state changed; marking for status update.")
+		m.epIDsToUpdateStatus.Add(epID)
+	} else {
+		// We don't know about this interface yet (or it's already been deleted).
+		// If the endpoint gets created, we'll do the update then. If it's been
+		// deleted, we've already cleaned it up.
+		logCxt.Debug("Ignoring interface state change for unknown interface.")
+	}
+}
+
+func (m *endpointManager) updateEndpointStatuses() {
+	log.WithField("dirtyEndpoints", m.epIDsToUpdateStatus).Debug("Reporting endpoint status.")
+	m.epIDsToUpdateStatus.Iter(func(item interface{}) error {
+		switch id := item.(type) {
+		case proto.WorkloadEndpointID:
+			status := m.calculateWorkloadEndpointStatus(id)
+			m.OnEndpointStatusUpdate(m.ipVersion, id, status)
+		case proto.HostEndpointID:
+			status := m.calculateHostEndpointStatus(id)
+			m.OnEndpointStatusUpdate(m.ipVersion, id, status)
+		}
+
+		return set.RemoveItem
+	})
+}
+
+func (m *endpointManager) calculateWorkloadEndpointStatus(id proto.WorkloadEndpointID) string {
+	logCxt := log.WithField("workloadEndpointID", id)
+	logCxt.Debug("Re-evaluating workload endpoint status")
+	var operUp, adminUp, failed bool
+	workload, known := m.activeWlEndpoints[id]
+	if known {
+		adminUp = workload.State == "active"
+		operUp = m.activeUpIfaces.Contains(workload.Name)
+		failed = m.wlIfaceNamesToReconfigure.Contains(workload.Name)
+	}
+
+	// Note: if endpoint is not known (i.e. has been deleted), status will be "", which signals
+	// a deletion.
+	var status string
+	if known {
+		if failed {
+			status = "error"
+		} else if operUp && adminUp {
+			status = "up"
+		} else {
+			status = "down"
+		}
+	}
+	logCxt = logCxt.WithFields(log.Fields{
+		"known":   known,
+		"failed":  failed,
+		"operUp":  operUp,
+		"adminUp": adminUp,
+		"status":  status,
+	})
+	logCxt.Info("Re-evaluated workload endpoint status")
+	return status
+}
+
+func (m *endpointManager) calculateHostEndpointStatus(id proto.HostEndpointID) (status string) {
+	logCxt := log.WithField("hostEndpointID", id)
+	logCxt.Debug("Re-evaluating host endpoint status")
+	var resolved, operUp bool
+	_, known := m.rawHostEndpoints[id]
+
+	// Note: if endpoint is not known (i.e. has been deleted), status will be "", which signals
+	// a deletion.
+	if known {
+		ifaceNames := m.activeHostEpIDToIfaceNames[id]
+		if len(ifaceNames) > 0 {
+			resolved = true
+			operUp = true
+			for _, ifaceName := range ifaceNames {
+				ifaceUp := m.activeUpIfaces.Contains(ifaceName)
+				logCxt.WithFields(log.Fields{
+					"ifaceName": ifaceName,
+					"ifaceUp":   ifaceUp,
+				}).Debug("Status of matching interface.")
+				operUp = operUp && ifaceUp
+			}
+		}
+
+		if resolved && operUp {
+			status = "up"
+		} else if resolved {
+			status = "down"
+		} else {
+			// Known but failed to resolve, map that to error.
+			status = "error"
+		}
+	}
+
+	logCxt = logCxt.WithFields(log.Fields{
+		"known":    known,
+		"resolved": resolved,
+		"operUp":   operUp,
+		"status":   status,
+	})
+	logCxt.Info("Re-evaluated host endpoint status")
+	return status
+}
+
+func (m *endpointManager) resolveWorkloadEndpoints() {
+	// Optimisation, only recalculate the dispatch chains if we've never done so or if the
+	// workloads have changed in some way.
+	needToCheckDispatchChains := m.activeDispatchChains == nil || len(m.pendingWlEpUpdates) > 0
+
 	// Update any dirty endpoints.
-	for id, workload := range m.pendingEndpointUpdates {
+	for id, workload := range m.pendingWlEpUpdates {
 		logCxt := log.WithField("id", id)
-		oldWorkload := m.activeEndpoints[id]
+		oldWorkload := m.activeWlEndpoints[id]
 		if workload != nil {
 			logCxt.Info("Updating per-endpoint chains.")
-			chains := m.ruleRenderer.WorkloadEndpointToIptablesChains(&id, workload)
-			m.filterTable.UpdateChains(chains)
-			m.activeIdToChains[id] = chains
-
-			logCxt.Info("Updating endpoint routes.")
-			var ipStrings []string
-			if m.ipVersion == 4 {
-				ipStrings = workload.Ipv4Nets
-			} else {
-				ipStrings = workload.Ipv6Nets
-			}
-
 			if oldWorkload != nil && oldWorkload.Name != workload.Name {
 				logCxt.Debug("Interface name changed, cleaning up old state")
+				m.filterTable.RemoveChains(m.activeWlIDToChains[id])
 				m.routeTable.SetRoutes(oldWorkload.Name, nil)
-				m.ifaceNamesToReconfigure.Discard(oldWorkload.Name)
-				delete(m.activeIfaceNameToID, oldWorkload.Name)
+				m.wlIfaceNamesToReconfigure.Discard(oldWorkload.Name)
+				delete(m.activeWlIfaceNameToID, oldWorkload.Name)
 			}
+			chains := m.ruleRenderer.WorkloadEndpointToIptablesChains(&id, workload)
+			m.filterTable.UpdateChains(chains)
+			m.activeWlIDToChains[id] = chains
+
+			// Collect the IP prefixes that we want to route locally to this endpoint:
+			logCxt.Info("Updating endpoint routes.")
+			var (
+				ipStrings  []string
+				natInfos   []*proto.NatInfo
+				addrSuffix string
+			)
+			if m.ipVersion == 4 {
+				ipStrings = workload.Ipv4Nets
+				natInfos = workload.Ipv4Nat
+				addrSuffix = "/32"
+			} else {
+				ipStrings = workload.Ipv6Nets
+				natInfos = workload.Ipv6Nat
+				addrSuffix = "/128"
+			}
+			if len(natInfos) != 0 {
+				old := ipStrings
+				ipStrings = make([]string, len(old)+len(natInfos))
+				copy(ipStrings, old)
+				for ii, natInfo := range natInfos {
+					ipStrings[len(old)+ii] = natInfo.ExtIp + addrSuffix
+				}
+			}
+
 			var mac net.HardwareAddr
 			if workload.Mac != "" {
 				var err error
@@ -234,41 +419,41 @@ func (m *endpointManager) resolveWorkloadEndpoints() error {
 				}
 			}
 			m.routeTable.SetRoutes(workload.Name, routeTargets)
-			m.ifaceNamesToReconfigure.Add(workload.Name)
-			m.activeEndpoints[id] = workload
-			m.activeIfaceNameToID[workload.Name] = id
-			delete(m.pendingEndpointUpdates, id)
+			m.wlIfaceNamesToReconfigure.Add(workload.Name)
+			m.activeWlEndpoints[id] = workload
+			m.activeWlIfaceNameToID[workload.Name] = id
+			delete(m.pendingWlEpUpdates, id)
 		} else {
 			logCxt.Info("Workload removed, deleting its chains.")
-			m.filterTable.RemoveChains(m.activeIdToChains[id])
-			if oldWorkload := m.activeEndpoints[id]; oldWorkload != nil {
+			m.filterTable.RemoveChains(m.activeWlIDToChains[id])
+			if oldWorkload != nil {
 				// Remove any routes from the routing table.  The RouteTable will
 				// remove any conntrack entries as a side-effect.
 				logCxt.Info("Workload removed, deleting old state.")
 				m.routeTable.SetRoutes(oldWorkload.Name, nil)
-				m.ifaceNamesToReconfigure.Discard(oldWorkload.Name)
-				delete(m.activeIfaceNameToID, oldWorkload.Name)
+				m.wlIfaceNamesToReconfigure.Discard(oldWorkload.Name)
+				delete(m.activeWlIfaceNameToID, oldWorkload.Name)
 			}
-			delete(m.activeEndpoints, id)
-			delete(m.pendingEndpointUpdates, id)
+			delete(m.activeWlEndpoints, id)
+			delete(m.pendingWlEpUpdates, id)
 		}
 
 		// Update or deletion, make sure we update the interface status.
-		m.ifaceIDsToUpdateStatus.Add(id)
+		m.epIDsToUpdateStatus.Add(id)
 	}
 
-	// Rewrite the dispatch chains if they've changed.
-	// TODO(smc) avoid re-rendering chains if nothing has changed.  (Slightly tricky because
-	// the dispatch chains depend on the interface names and maybe later the IPs in the data.)
-	newDispatchChains := m.ruleRenderer.WorkloadDispatchChains(m.activeEndpoints)
-	if !reflect.DeepEqual(newDispatchChains, m.activeDispatchChains) {
-		log.Info("Workloads changed, updating dispatch chains.")
-		m.filterTable.RemoveChains(m.activeDispatchChains)
-		m.filterTable.UpdateChains(newDispatchChains)
-		m.activeDispatchChains = newDispatchChains
+	if needToCheckDispatchChains {
+		// Rewrite the dispatch chains if they've changed.
+		newDispatchChains := m.ruleRenderer.WorkloadDispatchChains(m.activeWlEndpoints)
+		if !reflect.DeepEqual(newDispatchChains, m.activeDispatchChains) {
+			log.Info("Workloads changed, updating dispatch chains.")
+			m.filterTable.RemoveChains(m.activeDispatchChains)
+			m.filterTable.UpdateChains(newDispatchChains)
+			m.activeDispatchChains = newDispatchChains
+		}
 	}
 
-	m.ifaceNamesToReconfigure.Iter(func(item interface{}) error {
+	m.wlIfaceNamesToReconfigure.Iter(func(item interface{}) error {
 		ifaceName := item.(string)
 		err := m.configureInterface(ifaceName)
 		if err != nil {
@@ -277,47 +462,9 @@ func (m *endpointManager) resolveWorkloadEndpoints() error {
 		}
 		return set.RemoveItem
 	})
-
-	m.ifaceIDsToUpdateStatus.Iter(func(item interface{}) error {
-		logCxt := log.WithField("workloadID", item)
-		logCxt.Debug("Re-evaluating endpoint status")
-		workloadID := item.(proto.WorkloadEndpointID)
-		var known, operUp, adminUp, failed bool
-
-		workload, known := m.activeEndpoints[workloadID]
-		if known {
-			adminUp = workload.State == "active"
-			operUp = m.activeUpIfaces.Contains(workload.Name)
-			failed = m.ifaceNamesToReconfigure.Contains(workload.Name)
-		}
-
-		var status string
-		if known {
-			if failed {
-				status = "error"
-			} else if operUp && adminUp {
-				status = "up"
-			} else {
-				status = "down"
-			}
-		}
-		logCxt = logCxt.WithFields(log.Fields{
-			"known":   known,
-			"failed":  failed,
-			"operUp":  operUp,
-			"adminUp": adminUp,
-			"status":  status,
-		})
-		logCxt.Info("Re-evaluated endpoint status")
-		m.OnWorkloadEndpointStatusUpdate(m.ipVersion, workloadID, status)
-
-		return set.RemoveItem
-	})
-
-	return nil
 }
 
-func (m *endpointManager) resolveHostEndpoints() error {
+func (m *endpointManager) resolveHostEndpoints() {
 
 	// Host endpoint resolution
 	// ------------------------
@@ -345,13 +492,16 @@ func (m *endpointManager) resolveHostEndpoints() error {
 	// own.  Rather it is looking at the set of local non-workload interfaces and
 	// seeing which of them are matched by the current set of HostEndpoints as a
 	// whole.
-	resolvedHostEpIds := map[string]proto.HostEndpointID{}
-	for ifaceName, ifaceAddrs := range m.ifaceAddrs {
+	newIfaceNameToHostEpID := map[string]proto.HostEndpointID{}
+	newUntrackedIfaceNameToHostEpID := map[string]proto.HostEndpointID{}
+	newHostEpIDToIfaceNames := map[proto.HostEndpointID][]string{}
+	for ifaceName, ifaceAddrs := range m.hostIfaceToAddrs {
 		ifaceCxt := log.WithFields(log.Fields{
 			"ifaceName":  ifaceName,
 			"ifaceAddrs": ifaceAddrs,
 		})
 		bestHostEpId := proto.HostEndpointID{}
+		var bestHostEp proto.HostEndpoint
 	HostEpLoop:
 		for id, hostEp := range m.rawHostEndpoints {
 			logCxt := ifaceCxt.WithField("id", id)
@@ -367,6 +517,7 @@ func (m *endpointManager) resolveHostEndpoints() error {
 				// interface.
 				logCxt.Debug("Match on explicit iface name")
 				bestHostEpId = id
+				bestHostEp = *hostEp
 				continue
 			} else if hostEp.Name != "" {
 				// The HostEndpoint has an explicit name that isn't this
@@ -383,52 +534,120 @@ func (m *endpointManager) resolveHostEndpoints() error {
 						// that is on this interface.
 						logCxt.Debug("Match on address")
 						bestHostEpId = id
+						bestHostEp = *hostEp
 						continue HostEpLoop
 					}
 				}
 			}
 		}
 		if bestHostEpId.EndpointId != "" {
-			log.WithFields(log.Fields{
+			logCxt := log.WithFields(log.Fields{
 				"ifaceName":    ifaceName,
 				"bestHostEpId": bestHostEpId,
-			}).Debug("Got HostEp for interface")
-			resolvedHostEpIds[ifaceName] = bestHostEpId
+			})
+			logCxt.Debug("Got HostEp for interface")
+			newIfaceNameToHostEpID[ifaceName] = bestHostEpId
+			if len(bestHostEp.UntrackedTiers) > 0 {
+				// Optimisation: only add the endpoint chains to the raw (untracked)
+				// table if there's some untracked policy to apply.  This reduces
+				// per-packet latency since every packet has to traverse the raw
+				// table.
+				logCxt.Debug("Endpoint has untracked policies.")
+				newUntrackedIfaceNameToHostEpID[ifaceName] = bestHostEpId
+			}
+			// Note, in contrast to the check above, we unconditionally record the
+			// match in newHostEpIDToIfaceNames so that we always render the endpoint
+			// into the filter table.  This ensures that we get the correct "default
+			// drop" behaviour and that failsafe rules are applied correctly.
+			newHostEpIDToIfaceNames[bestHostEpId] = append(
+				newHostEpIDToIfaceNames[bestHostEpId], ifaceName)
+		}
+
+		oldID, wasKnown := m.activeIfaceNameToHostEpID[ifaceName]
+		newID, isKnown := newIfaceNameToHostEpID[ifaceName]
+		if oldID != newID {
+			logCxt := ifaceCxt.WithFields(log.Fields{
+				"oldID": m.activeIfaceNameToHostEpID[ifaceName],
+				"newID": newIfaceNameToHostEpID[ifaceName],
+			})
+			logCxt.Info("Endpoint matching interface changed")
+			if wasKnown {
+				logCxt.Debug("Endpoint was known, updating old endpoint status")
+				m.epIDsToUpdateStatus.Add(oldID)
+			}
+			if isKnown {
+				logCxt.Debug("Endpoint is known, updating new endpoint status")
+				m.epIDsToUpdateStatus.Add(newID)
+			}
 		}
 	}
 
 	// Set up programming for the host endpoints that are now to be used.
-	newHostEpChains := map[proto.HostEndpointID][]*iptables.Chain{}
-	for ifaceName, id := range resolvedHostEpIds {
+	newHostIfaceFiltChains := map[string][]*iptables.Chain{}
+	for ifaceName, id := range newIfaceNameToHostEpID {
 		log.WithField("id", id).Info("Updating host endpoint chains.")
 		hostEp := m.rawHostEndpoints[id]
-		chains := m.ruleRenderer.HostEndpointToIptablesChains(ifaceName, hostEp)
-		m.filterTable.UpdateChains(chains)
-		newHostEpChains[id] = chains
-		delete(m.activeHostIdToChains, id)
+
+		// Update the filter chain, for normal traffic.
+		filtChains := m.ruleRenderer.HostEndpointToFilterChains(ifaceName, hostEp)
+		if !reflect.DeepEqual(filtChains, m.activeHostIfaceToFiltChains[ifaceName]) {
+			m.filterTable.UpdateChains(filtChains)
+		}
+		newHostIfaceFiltChains[ifaceName] = filtChains
+		delete(m.activeHostIfaceToFiltChains, ifaceName)
+	}
+
+	newHostIfaceRawChains := map[string][]*iptables.Chain{}
+	for ifaceName, id := range newUntrackedIfaceNameToHostEpID {
+		log.WithField("id", id).Info("Updating host endpoint raw chains.")
+		hostEp := m.rawHostEndpoints[id]
+
+		// Update the raw chain, for untracked traffic.
+		rawChains := m.ruleRenderer.HostEndpointToRawChains(ifaceName, hostEp)
+		if !reflect.DeepEqual(rawChains, m.activeHostIfaceToRawChains[ifaceName]) {
+			m.rawTable.UpdateChains(rawChains)
+		}
+		newHostIfaceRawChains[ifaceName] = rawChains
+		delete(m.activeHostIfaceToRawChains, ifaceName)
 	}
 
 	// Remove programming for host endpoints that are not now in use.
-	for id, chains := range m.activeHostIdToChains {
-		log.WithField("id", id).Info("HostEp removed, deleting its chains.")
+	for ifaceName, chains := range m.activeHostIfaceToFiltChains {
+		log.WithField("ifaceName", ifaceName).Info(
+			"Host interface no longer protected, deleting its tracked chains.")
 		m.filterTable.RemoveChains(chains)
+	}
+	for ifaceName, chains := range m.activeHostIfaceToRawChains {
+		log.WithField("ifaceName", ifaceName).Info(
+			"Host interface no longer protected, deleting its untracked chains.")
+		m.rawTable.RemoveChains(chains)
 	}
 
 	// Remember the host endpoints that are now in use.
-	m.activeHostIdToChains = newHostEpChains
+	m.activeIfaceNameToHostEpID = newIfaceNameToHostEpID
+	m.activeHostEpIDToIfaceNames = newHostEpIDToIfaceNames
+	m.activeHostIfaceToFiltChains = newHostIfaceFiltChains
+	m.activeHostIfaceToRawChains = newHostIfaceRawChains
 
-	// Rewrite the dispatch chains if they've changed.
-	// TODO(smc) avoid re-rendering chains if nothing has changed.  (Slightly tricky because
-	// the dispatch chains depend on the interface names and maybe later the IPs in the data.)
-	newDispatchChains := m.ruleRenderer.HostDispatchChains(resolvedHostEpIds)
-	if !reflect.DeepEqual(newDispatchChains, m.activeHostDispatchChains) {
-		log.Info("HostEps changed, updating dispatch chains.")
-		m.filterTable.RemoveChains(m.activeHostDispatchChains)
-		m.filterTable.UpdateChains(newDispatchChains)
-		m.activeHostDispatchChains = newDispatchChains
+	// Rewrite the filter dispatch chains if they've changed.
+	log.WithField("resolvedHostEpIds", newIfaceNameToHostEpID).Debug("Rewrite dispatch chains?")
+	newFiltDispatchChains := m.ruleRenderer.HostDispatchChains(newIfaceNameToHostEpID)
+	if !reflect.DeepEqual(newFiltDispatchChains, m.activeHostFiltDispatchChains) {
+		log.Info("HostEps changed, updating filter dispatch chains.")
+		m.filterTable.RemoveChains(m.activeHostFiltDispatchChains)
+		m.filterTable.UpdateChains(newFiltDispatchChains)
+		m.activeHostFiltDispatchChains = newFiltDispatchChains
 	}
 
-	return nil
+	// Rewrite the raw dispatch chains if they've changed.
+	newRawDispatchChains := m.ruleRenderer.HostDispatchChains(newUntrackedIfaceNameToHostEpID)
+	if !reflect.DeepEqual(newRawDispatchChains, m.activeHostRawDispatchChains) {
+		log.Info("HostEps changed, updating raw dispatch chains.")
+		m.rawTable.RemoveChains(m.activeHostRawDispatchChains)
+		m.rawTable.UpdateChains(newRawDispatchChains)
+		m.activeHostRawDispatchChains = newRawDispatchChains
+	}
+	log.Debug("Done resolving host endpoints.")
 }
 
 func (m *endpointManager) configureInterface(name string) error {
@@ -440,24 +659,24 @@ func (m *endpointManager) configureInterface(name string) error {
 	log.WithField("ifaceName", name).Info(
 		"Applying /proc/sys configuration to interface.")
 	if m.ipVersion == 4 {
-		err := writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "1")
+		err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "1")
 		if err != nil {
 			return err
 		}
-		err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/route_localnet", name), "1")
+		err = m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/route_localnet", name), "1")
 		if err != nil {
 			return err
 		}
-		err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/proxy_arp", name), "1")
+		err = m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/proxy_arp", name), "1")
 		if err != nil {
 			return err
 		}
-		err = writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/neigh/%s/proxy_delay", name), "0")
+		err = m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/neigh/%s/proxy_delay", name), "0")
 		if err != nil {
 			return err
 		}
 	} else {
-		err := writeProcSys(fmt.Sprintf("/proc/sys/net/ipv6/conf/%s/proxy_ndp", name), "1")
+		err := m.writeProcSys(fmt.Sprintf("/proc/sys/net/ipv6/conf/%s/proxy_ndp", name), "1")
 		if err != nil {
 			return err
 		}

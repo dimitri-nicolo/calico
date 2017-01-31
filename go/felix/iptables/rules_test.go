@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,14 +22,14 @@ import (
 
 var (
 	rules1 = []Rule{
-		{Match: MatchCriteria{"-m foobar --foobar baz"}, Action: JumpAction{"biff"}},
+		{Match: MatchCriteria{"-m foobar --foobar baz"}, Action: JumpAction{Target: "biff"}},
 	}
 	rules2 = []Rule{
-		{Match: MatchCriteria{"-m foobar --foobar baz"}, Action: JumpAction{"boff"}},
+		{Match: MatchCriteria{"-m foobar --foobar baz"}, Action: JumpAction{Target: "boff"}},
 	}
 	rules3 = []Rule{
-		{Match: MatchCriteria{"-m foobar --foobar baz"}, Action: JumpAction{"biff"}},
-		{Match: MatchCriteria{"-m foobar --foobar baz"}, Action: JumpAction{"boff"}},
+		{Match: MatchCriteria{"-m foobar --foobar baz"}, Action: JumpAction{Target: "biff"}},
+		{Match: MatchCriteria{"-m foobar --foobar baz"}, Action: JumpAction{Target: "boff"}},
 	}
 )
 
@@ -68,9 +68,11 @@ var _ = Describe("Hash extraction tests", func() {
 		table = NewTable(
 			"filter",
 			4,
-			[]string{"felix-", "cali"},
 			"cali:",
-			"an-old-rule",
+			TableOptions{
+				HistoricChainPrefixes:    []string{"felix-", "cali"},
+				ExtraCleanupRegexPattern: "an-old-rule",
+			},
 		)
 	})
 

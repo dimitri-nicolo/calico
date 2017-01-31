@@ -31,17 +31,24 @@ const (
 	ChainFilterForward = ChainNamePrefix + "-FORWARD"
 	ChainFilterOutput  = ChainNamePrefix + "-OUTPUT"
 
+	ChainRawPrerouting = ChainNamePrefix + "-PREROUTING"
+	ChainRawOutput     = ChainNamePrefix + "-OUTPUT"
+
 	ChainFailsafeIn  = ChainNamePrefix + "-failsafe-in"
 	ChainFailsafeOut = ChainNamePrefix + "-failsafe-out"
 
 	ChainNATPrerouting  = ChainNamePrefix + "-PREROUTING"
 	ChainNATPostrouting = ChainNamePrefix + "-POSTROUTING"
+	ChainNATOutput      = ChainNamePrefix + "-OUTPUT"
 	ChainNATOutgoing    = ChainNamePrefix + "-nat-outgoing"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
 
 	IPSetIDAllHostIPs = "all-hosts"
+
+	ChainFIPDnat = ChainNamePrefix + "-fip-dnat"
+	ChainFIPSnat = ChainNamePrefix + "-fip-snat"
 
 	PolicyInboundPfx  = ChainNamePrefix + "pi-"
 	PolicyOutboundPfx = ChainNamePrefix + "po-"
@@ -89,18 +96,23 @@ var (
 type RuleRenderer interface {
 	StaticFilterTableChains(ipVersion uint8) []*iptables.Chain
 	StaticNATTableChains(ipVersion uint8) []*iptables.Chain
+	StaticRawTableChains(ipVersion uint8) []*iptables.Chain
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
 	WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndpointID, endpoint *proto.WorkloadEndpoint) []*iptables.Chain
 
 	HostDispatchChains(map[string]proto.HostEndpointID) []*iptables.Chain
-	HostEndpointToIptablesChains(ifaceName string, endpoint *proto.HostEndpoint) []*iptables.Chain
+	HostEndpointToFilterChains(ifaceName string, endpoint *proto.HostEndpoint) []*iptables.Chain
+	HostEndpointToRawChains(ifaceName string, endpoint *proto.HostEndpoint) []*iptables.Chain
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
-	ProfileToIptablesChains(policyID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
+	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
 	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule
 
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
+
+	DNATsToIptablesChains(dnats map[string]string) []*iptables.Chain
+	SNATsToIptablesChains(snats map[string]string) []*iptables.Chain
 }
 
 type DefaultRuleRenderer struct {
@@ -127,9 +139,10 @@ type Config struct {
 
 	WorkloadIfacePrefixes []string
 
-	IptablesMarkAccept   uint32
-	IptablesMarkNextTier uint32
-	IptablesMarkDrop     uint32
+	IptablesMarkAccept       uint32
+	IptablesMarkNextTier     uint32
+	IptablesMarkDrop         uint32
+	IptablesMarkFromWorkload uint32
 
 	OpenStackMetadataIP          net.IP
 	OpenStackMetadataPort        uint16
@@ -138,6 +151,7 @@ type Config struct {
 	IPIPEnabled       bool
 	IPIPTunnelAddress net.IP
 
+	DropLogPrefix        string
 	ActionOnDrop         string
 	EndpointToHostAction string
 
@@ -155,7 +169,11 @@ func NewRenderer(config Config) RuleRenderer {
 	var dropActions []iptables.Action
 	if strings.HasPrefix(config.ActionOnDrop, "LOG-") {
 		log.Warn("Action on drop includes LOG.  All dropped packets will be logged.")
-		dropActions = append(dropActions, iptables.LogAction{Prefix: "calico-drop"})
+		logPrefix := "calico-drop"
+		if config.DropLogPrefix != "" {
+			logPrefix = config.DropLogPrefix
+		}
+		dropActions = append(dropActions, iptables.LogAction{Prefix: logPrefix})
 	}
 	if strings.HasSuffix(config.ActionOnDrop, "ACCEPT") {
 		log.Warn("Action on drop set to ACCEPT.  Calico security is disabled!")

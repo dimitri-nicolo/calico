@@ -34,15 +34,21 @@ import (
 )
 
 type Config struct {
-	DisableIPv6             bool
-	RuleRendererOverride    rules.RuleRenderer
-	IpfixPort               int
-	IpfixAddr               net.IP
-	NfNetlinkBufSize        int
-	StatsDumpFilePath       string
-	IPIPMTU                 int
+	DisableIPv6          bool
+	RuleRendererOverride rules.RuleRenderer
+	IPIPMTU              int
+
+	IpfixPort         int
+	IpfixAddr         net.IP
+	NfNetlinkBufSize  int
+	StatsDumpFilePath string
+
+	MaxIPSetSize int
+
 	IptablesRefreshInterval time.Duration
-	RulesConfig             rules.Config
+	IptablesInsertMode      string
+
+	RulesConfig rules.Config
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -82,6 +88,8 @@ type InternalDataplane struct {
 	iptablesRawTables    []*iptables.Table
 	iptablesFilterTables []*iptables.Table
 	ipSetRegistries      []*ipsets.Registry
+
+	ipipManager *ipipManager
 
 	ifaceMonitor     *ifacemonitor.InterfaceMonitor
 	ifaceUpdates     chan *ifaceUpdate
@@ -130,12 +138,26 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	natTableV4 := iptables.NewTable(
 		"nat",
 		4,
-		rules.AllHistoricChainNamePrefixes,
 		rules.RuleHashPrefix,
-		rules.HistoricInsertedNATRuleRegex,
+		iptables.TableOptions{
+			HistoricChainPrefixes:    rules.AllHistoricChainNamePrefixes,
+			ExtraCleanupRegexPattern: rules.HistoricInsertedNATRuleRegex,
+		},
 	)
-	rawTableV4 := iptables.NewTable("raw", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
-	filterTableV4 := iptables.NewTable("filter", 4, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
+	rawTableV4 := iptables.NewTable(
+		"raw",
+		4,
+		rules.RuleHashPrefix,
+		iptables.TableOptions{
+			HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
+		})
+	filterTableV4 := iptables.NewTable(
+		"filter",
+		4,
+		rules.RuleHashPrefix,
+		iptables.TableOptions{
+			HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
+		})
 	ipSetsConfigV4 := config.RulesConfig.IPSetConfigV4
 	ipSetRegV4 := ipsets.NewRegistry(ipSetsConfigV4)
 	dp.iptablesNATTables = append(dp.iptablesNATTables, natTableV4)
@@ -148,32 +170,51 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, !config.DisableIPv6)
 
-	dp.RegisterManager(newIPSetsManager(ipSetRegV4))
-	dp.RegisterManager(newPolicyManager(filterTableV4, ruleRenderer, 4))
+	dp.RegisterManager(newIPSetsManager(ipSetRegV4, config.MaxIPSetSize))
+	dp.RegisterManager(newPolicyManager(rawTableV4, filterTableV4, ruleRenderer, 4))
 	dp.RegisterManager(newEndpointManager(
+		rawTableV4,
 		filterTableV4,
 		ruleRenderer,
 		routeTableV4,
 		4,
 		config.RulesConfig.WorkloadIfacePrefixes,
-		dp.endpointStatusCombiner.OnWorkloadEndpointStatusUpdate))
+		dp.endpointStatusCombiner.OnEndpointStatusUpdate))
+	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4))
 	dp.lookupManager = lookup.NewLookupManager()
 	dp.RegisterManager(dp.lookupManager)
-	dp.RegisterManager(newMasqManager(ipSetRegV4, natTableV4, ruleRenderer, 1000000, 4))
+	dp.RegisterManager(newMasqManager(ipSetRegV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
 		// Add a manger to keep the all-hosts IP set up to date.
-		dp.RegisterManager(newIPIPManager(ipSetRegV4, 1000000)) // IPv4-only
+		dp.ipipManager = newIPIPManager(ipSetRegV4, config.MaxIPSetSize)
+		dp.RegisterManager(dp.ipipManager) // IPv4-only
 	}
 	if !config.DisableIPv6 {
 		natTableV6 := iptables.NewTable(
 			"nat",
 			6,
-			rules.AllHistoricChainNamePrefixes,
 			rules.RuleHashPrefix,
-			rules.HistoricInsertedNATRuleRegex,
+			iptables.TableOptions{
+				HistoricChainPrefixes:    rules.AllHistoricChainNamePrefixes,
+				ExtraCleanupRegexPattern: rules.HistoricInsertedNATRuleRegex,
+			},
 		)
-		rawTableV6 := iptables.NewTable("raw", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
-		filterTableV6 := iptables.NewTable("filter", 6, rules.AllHistoricChainNamePrefixes, rules.RuleHashPrefix, "")
+		rawTableV6 := iptables.NewTable(
+			"raw",
+			6,
+			rules.RuleHashPrefix,
+			iptables.TableOptions{
+				HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
+			},
+		)
+		filterTableV6 := iptables.NewTable(
+			"filter",
+			6,
+			rules.RuleHashPrefix,
+			iptables.TableOptions{
+				HistoricChainPrefixes: rules.AllHistoricChainNamePrefixes,
+			},
+		)
 
 		ipSetsConfigV6 := config.RulesConfig.IPSetConfigV6
 		ipSetRegV6 := ipsets.NewRegistry(ipSetsConfigV6)
@@ -185,16 +226,18 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6)
 		dp.routeTables = append(dp.routeTables, routeTableV6)
 
-		dp.RegisterManager(newIPSetsManager(ipSetRegV6))
-		dp.RegisterManager(newPolicyManager(filterTableV6, ruleRenderer, 6))
+		dp.RegisterManager(newIPSetsManager(ipSetRegV6, config.MaxIPSetSize))
+		dp.RegisterManager(newPolicyManager(rawTableV6, filterTableV6, ruleRenderer, 6))
 		dp.RegisterManager(newEndpointManager(
+			rawTableV6,
 			filterTableV6,
 			ruleRenderer,
 			routeTableV6,
 			6,
 			config.RulesConfig.WorkloadIfacePrefixes,
-			dp.endpointStatusCombiner.OnWorkloadEndpointStatusUpdate))
-		dp.RegisterManager(newMasqManager(ipSetRegV6, natTableV6, ruleRenderer, 1000000, 6))
+			dp.endpointStatusCombiner.OnEndpointStatusUpdate))
+		dp.RegisterManager(newFloatingIPManager(natTableV6, ruleRenderer, 6))
+		dp.RegisterManager(newMasqManager(ipSetRegV6, natTableV6, ruleRenderer, config.MaxIPSetSize, 6))
 	}
 
 	for _, t := range dp.iptablesNATTables {
@@ -321,35 +364,37 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	// Enable conntrack packet and byte accounting.
 	writeProcSys("/proc/sys/net/netfilter/nf_conntrack_acct", "1")
 
+	for _, t := range d.iptablesRawTables {
+		rawChains := d.ruleRenderer.StaticRawTableChains(t.IPVersion)
+		t.UpdateChains(rawChains)
+		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
+			Action: iptables.JumpAction{Target: rules.ChainRawPrerouting},
+		}})
+		t.SetRuleInsertions("OUTPUT", []iptables.Rule{{
+			Action: iptables.JumpAction{Target: rules.ChainRawOutput},
+		}})
+	}
+
 	for _, t := range d.iptablesFilterTables {
 		filterChains := d.ruleRenderer.StaticFilterTableChains(t.IPVersion)
 		t.UpdateChains(filterChains)
 		t.SetRuleInsertions("FORWARD", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.ChainFilterForward},
+			Action: iptables.JumpAction{Target: rules.ChainFilterForward},
 		}})
 		t.SetRuleInsertions("INPUT", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.ChainFilterInput},
+			Action: iptables.JumpAction{Target: rules.ChainFilterInput},
 		}})
 		t.SetRuleInsertions("OUTPUT", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.ChainFilterOutput},
+			Action: iptables.JumpAction{Target: rules.ChainFilterOutput},
 		}})
 	}
 
 	if d.config.RulesConfig.IPIPEnabled {
 		log.Info("IPIP enabled, starting thread to keep tunnel configuration in sync.")
-		go func() {
-			log.Info("IPIP thread started.")
-			for {
-				err := configureIPIPDevice(d.config.IPIPMTU,
-					d.config.RulesConfig.IPIPTunnelAddress)
-				if err != nil {
-					log.WithError(err).Warn("Failed configure IPIP tunnel device, retrying...")
-					time.Sleep(1 * time.Second)
-					continue
-				}
-				time.Sleep(10 * time.Second)
-			}
-		}()
+		go d.ipipManager.KeepIPIPDeviceInSync(
+			d.config.IPIPMTU,
+			d.config.RulesConfig.IPIPTunnelAddress,
+		)
 	} else {
 		log.Info("IPIP disabled. Not starting tunnel update thread.")
 	}
@@ -357,10 +402,10 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 	for _, t := range d.iptablesNATTables {
 		t.UpdateChains(d.ruleRenderer.StaticNATTableChains(t.IPVersion))
 		t.SetRuleInsertions("PREROUTING", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.ChainNATPrerouting},
+			Action: iptables.JumpAction{Target: rules.ChainNATPrerouting},
 		}})
 		t.SetRuleInsertions("POSTROUTING", []iptables.Rule{{
-			Action: iptables.JumpAction{rules.ChainNATPostrouting},
+			Action: iptables.JumpAction{Target: rules.ChainNATPostrouting},
 		}})
 	}
 
@@ -488,4 +533,12 @@ func (d *InternalDataplane) loopReportingStatus() {
 			Uptime:       uptimeSecs,
 		}
 	}
+}
+
+// iptablesTable is a shim interface for iptables.Table.
+type iptablesTable interface {
+	UpdateChain(chain *iptables.Chain)
+	UpdateChains([]*iptables.Chain)
+	RemoveChains([]*iptables.Chain)
+	RemoveChainByName(name string)
 }

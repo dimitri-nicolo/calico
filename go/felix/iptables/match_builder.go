@@ -32,7 +32,7 @@ func (m MatchCriteria) Render() string {
 }
 
 func (m MatchCriteria) String() string {
-	return m.Render()
+	return fmt.Sprintf("MatchCriteria[%s]", m.Render())
 }
 
 func (m MatchCriteria) MarkClear(mark uint32) MatchCriteria {
@@ -55,6 +55,14 @@ func (m MatchCriteria) InInterface(ifaceMatch string) MatchCriteria {
 
 func (m MatchCriteria) OutInterface(ifaceMatch string) MatchCriteria {
 	return append(m, fmt.Sprintf("--out-interface %s", ifaceMatch))
+}
+
+func (m MatchCriteria) RPFCheckPassed() MatchCriteria {
+	return append(m, "-m rpfilter")
+}
+
+func (m MatchCriteria) RPFCheckFailed() MatchCriteria {
+	return append(m, "-m rpfilter --invert")
 }
 
 type AddrType string

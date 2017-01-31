@@ -102,13 +102,6 @@ func (pr *PolicyResolver) refreshSortOrder() {
 	log.Debugf("New sort order: %v", pr.sortedTierData)
 }
 
-func (pr *PolicyResolver) markAllEndpointsDirty() {
-	log.Debugf("Marking all endpoints dirty")
-	pr.endpointIDToPolicyIDs.IterKeys(func(epID interface{}) {
-		pr.dirtyEndpoints.Add(epID)
-	})
-}
-
 func (pr *PolicyResolver) markEndpointsMatchingPolicyDirty(polKey model.PolicyKey) {
 	log.Debugf("Marking all endpoints matching %v dirty", polKey)
 	pr.policyIDToEndpointIDs.Iter(polKey, func(epID interface{}) {

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,13 +24,20 @@ import (
 // policyManager simply renders policy/profile updates into iptables.Chain objects and sends
 // them to the dataplane layer.
 type policyManager struct {
-	filterTable  *iptables.Table
-	ruleRenderer rules.RuleRenderer
+	rawTable     iptablesTable
+	filterTable  iptablesTable
+	ruleRenderer policyRenderer
 	ipVersion    uint8
 }
 
-func newPolicyManager(filterTable *iptables.Table, ruleRenderer rules.RuleRenderer, ipVersion uint8) *policyManager {
+type policyRenderer interface {
+	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
+	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
+}
+
+func newPolicyManager(rawTable, filterTable iptablesTable, ruleRenderer policyRenderer, ipVersion uint8) *policyManager {
 	return &policyManager{
+		rawTable:     rawTable,
 		filterTable:  filterTable,
 		ruleRenderer: ruleRenderer,
 		ipVersion:    ipVersion,
@@ -42,6 +49,7 @@ func (m *policyManager) OnUpdate(msg interface{}) {
 	case *proto.ActivePolicyUpdate:
 		log.WithField("id", msg.Id).Debug("Updating policy chains")
 		chains := m.ruleRenderer.PolicyToIptablesChains(msg.Id, msg.Policy, m.ipVersion)
+		m.rawTable.UpdateChains(chains)
 		m.filterTable.UpdateChains(chains)
 	case *proto.ActivePolicyRemove:
 		log.WithField("id", msg.Id).Debug("Removing policy chains")
@@ -49,6 +57,8 @@ func (m *policyManager) OnUpdate(msg interface{}) {
 		outName := rules.PolicyChainName(rules.PolicyOutboundPfx, msg.Id)
 		m.filterTable.RemoveChainByName(inName)
 		m.filterTable.RemoveChainByName(outName)
+		m.rawTable.RemoveChainByName(inName)
+		m.rawTable.RemoveChainByName(outName)
 	case *proto.ActiveProfileUpdate:
 		log.WithField("id", msg.Id).Debug("Updating profile chains")
 		chains := m.ruleRenderer.ProfileToIptablesChains(msg.Id, msg.Profile, m.ipVersion)

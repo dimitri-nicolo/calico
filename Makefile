@@ -368,6 +368,19 @@ go-ut-no-cover: go/vendor/.up-to-date $(GO_FILES)
 	    calico-build/golang \
 	    ginkgo -r
 
+.PHONY: go-ut-watch
+go-ut-watch: go/vendor/.up-to-date $(GO_FILES)
+	@echo Watching go UTs for changes...
+	$(MAKE) calico-build/golang
+	mkdir -p .go-pkg-cache
+	$(DOCKER_RUN_RM) \
+	    --net=host \
+	    -v $${PWD}:/go/src/github.com/projectcalico/felix:rw \
+	    -v $${PWD}/.go-pkg-cache:/go/pkg/:rw \
+	    -w /go/src/github.com/projectcalico/felix/go \
+	    calico-build/golang \
+	    ginkgo watch -r
+
 # Launch a browser with Go coverage stats for the whole project.
 .PHONY: go-cover-browser
 go-cover-browser: go/combined.coverprofile
@@ -397,6 +410,13 @@ bin/calico-felix.transfer-url: bin/calico-felix
 .PHONY: patch-script
 patch-script: bin/calico-felix.transfer-url
 	utils/make-patch-script.sh $$(cat bin/calico-felix.transfer-url)
+
+bin/calico-felix.transfer-url-inc-python: $(BUNDLE_FILENAME)
+	curl --upload-file $(BUNDLE_FILENAME) https://transfer.sh/calico-felix-inc-python > $@
+
+.PHONY: patch-script-inc-python
+patch-script-inc-python: bin/calico-felix.transfer-url-inc-python
+	utils/make-patch-script-inc-python.sh $$(cat bin/calico-felix.transfer-url-inc-python)
 
 # Generate a diagram of Felix's internal calculation graph.
 go/docs/calc.pdf: go/docs/calc.dot

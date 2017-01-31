@@ -180,10 +180,12 @@ configRetry:
 		markAccept := configParams.NthIPTablesMark(0)
 		markNextTier := configParams.NthIPTablesMark(1)
 		markDrop := configParams.NthIPTablesMark(2)
+		markWorkload := configParams.NthIPTablesMark(3)
 		log.WithFields(log.Fields{
-			"acceptMark": markAccept,
-			"nextMark":   markNextTier,
-			"dropMark":   markDrop,
+			"acceptMark":   markAccept,
+			"nextMark":     markNextTier,
+			"dropMark":     markDrop,
+			"workloadMark": markWorkload,
 		}).Info("Calculated iptables mark bits")
 		dpConfig := intdataplane.Config{
 			RulesConfig: rules.Config{
@@ -206,13 +208,15 @@ configRetry:
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				IptablesMarkAccept:   markAccept,
-				IptablesMarkNextTier: markNextTier,
-				IptablesMarkDrop:     markDrop,
+				IptablesMarkAccept:       markAccept,
+				IptablesMarkNextTier:     markNextTier,
+				IptablesMarkDrop:         markDrop,
+				IptablesMarkFromWorkload: markWorkload,
 
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
 
+				DropLogPrefix:        configParams.LogPrefix,
 				ActionOnDrop:         configParams.DropActionOverride,
 				EndpointToHostAction: configParams.DefaultEndpointToHostAction,
 
@@ -227,6 +231,8 @@ configRetry:
 			StatsDumpFilePath:       configParams.StatsDumpFilePath,
 			IPIPMTU:                 configParams.IpInIpMtu,
 			IptablesRefreshInterval: time.Duration(configParams.IptablesRefreshInterval) * time.Second,
+			IptablesInsertMode:      configParams.ChainInsertMode,
+			MaxIPSetSize:            configParams.MaxIpsetSize,
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()

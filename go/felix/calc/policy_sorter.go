@@ -74,7 +74,9 @@ func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 				tierInfo = NewTierInfo(key.Tier)
 				poc.tiers[key.Tier] = tierInfo
 			}
-			if oldPolicy == nil || oldPolicy.Order != newPolicy.Order {
+			if oldPolicy == nil ||
+				oldPolicy.Order != newPolicy.Order ||
+				oldPolicy.DoNotTrack != newPolicy.DoNotTrack {
 				dirty = true
 			}
 			tierInfo.Policies[key] = newPolicy
@@ -205,7 +207,11 @@ func NewTierInfo(name string) *tierInfo {
 func (t tierInfo) String() string {
 	policies := make([]string, len(t.OrderedPolicies))
 	for ii, pol := range t.OrderedPolicies {
-		policies[ii] = pol.Key.Name
+		untracked := "t"
+		if pol.Value != nil && pol.Value.DoNotTrack {
+			untracked = "u"
+		}
+		policies[ii] = fmt.Sprintf("%v(%v)", pol.Key.Name, untracked)
 	}
 	return fmt.Sprintf("%v -> %v", t.Name, policies)
 }

@@ -17,12 +17,15 @@ package set
 import (
 	"errors"
 	log "github.com/Sirupsen/logrus"
+	"reflect"
 )
 
 type Set interface {
 	Len() int
 	Add(interface{})
+	AddAll(itemArray interface{})
 	Discard(interface{})
+	Clear()
 	Contains(interface{}) bool
 	Iter(func(item interface{}) error)
 	Copy() Set
@@ -42,6 +45,18 @@ func New() Set {
 	return make(mapSet)
 }
 
+func From(members ...interface{}) Set {
+	s := New()
+	s.AddAll(members)
+	return s
+}
+
+func FromArray(membersArray interface{}) Set {
+	s := New()
+	s.AddAll(membersArray)
+	return s
+}
+
 func Empty() Set {
 	return mapSet(nil)
 }
@@ -56,8 +71,22 @@ func (set mapSet) Add(item interface{}) {
 	set[item] = emptyValue
 }
 
+func (set mapSet) AddAll(itemArray interface{}) {
+
+	arrVal := reflect.ValueOf(itemArray)
+	for i := 0; i < arrVal.Len(); i++ {
+		set.Add(arrVal.Index(i).Interface())
+	}
+}
+
 func (set mapSet) Discard(item interface{}) {
 	delete(set, item)
+}
+
+func (set mapSet) Clear() {
+	for item := range set {
+		delete(set, item)
+	}
 }
 
 func (set mapSet) Contains(item interface{}) bool {

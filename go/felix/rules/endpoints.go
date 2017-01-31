@@ -20,86 +20,6 @@ import (
 	"github.com/projectcalico/felix/go/felix/proto"
 )
 
-func (r *DefaultRuleRenderer) WorkloadDispatchChains(endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*Chain {
-
-	// Extract endpoint names.
-	names := make([]string, 0, len(endpoints))
-	for _, endpoint := range endpoints {
-		names = append(names, endpoint.Name)
-	}
-
-	return r.dispatchChains(
-		names,
-		WorkloadFromEndpointPfx,
-		WorkloadToEndpointPfx,
-		ChainFromWorkloadDispatch,
-		ChainToWorkloadDispatch,
-		true,
-	)
-}
-
-func (r *DefaultRuleRenderer) HostDispatchChains(endpoints map[string]proto.HostEndpointID) []*Chain {
-
-	// Extract endpoint names.
-	names := make([]string, 0, len(endpoints))
-	for ifaceName, _ := range endpoints {
-		names = append(names, ifaceName)
-	}
-
-	return r.dispatchChains(
-		names,
-		HostFromEndpointPfx,
-		HostToEndpointPfx,
-		ChainDispatchFromHostEndpoint,
-		ChainDispatchToHostEndpoint,
-		false,
-	)
-}
-
-func (r *DefaultRuleRenderer) dispatchChains(
-	names []string,
-	fromEndpointPfx,
-	toEndpointPfx,
-	dispatchFromEndpoint,
-	dispatchToEndpoint string,
-	dropAtEndOfChain bool,
-) []*Chain {
-	toEndpointRules := make([]Rule, 0, len(names)+1)
-	fromEndpointRules := make([]Rule, 0, len(names)+1)
-	for _, name := range names {
-		fromEndpointRules = append(fromEndpointRules, Rule{
-			Match: Match().InInterface(name),
-			Action: GotoAction{
-				Target: EndpointChainName(fromEndpointPfx, name),
-			},
-		})
-		toEndpointRules = append(toEndpointRules, Rule{
-			Match: Match().OutInterface(name),
-			Action: GotoAction{
-				Target: EndpointChainName(toEndpointPfx, name),
-			},
-		})
-	}
-
-	if dropAtEndOfChain {
-		fromEndpointRules = append(fromEndpointRules,
-			r.DropRules(Match(), "Unknown interface")...)
-		toEndpointRules = append(toEndpointRules,
-			r.DropRules(Match(), "Unknown interface")...)
-	}
-
-	fromEndpointDispatchChain := Chain{
-		Name:  dispatchFromEndpoint,
-		Rules: fromEndpointRules,
-	}
-	toEndpointDispatchChain := Chain{
-		Name:  dispatchToEndpoint,
-		Rules: toEndpointRules,
-	}
-
-	return []*Chain{&toEndpointDispatchChain, &fromEndpointDispatchChain}
-}
-
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndpointID, endpoint *proto.WorkloadEndpoint) []*Chain {
 	return r.endpointToIptablesChains(
 		endpoint.Tiers,
@@ -109,10 +29,48 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(epID *proto.Workl
 		PolicyOutboundPfx,
 		WorkloadToEndpointPfx,
 		WorkloadFromEndpointPfx,
-		"",
-		"",
+		"", // No fail-safe chains for workloads.
+		"", // No fail-safe chains for workloads.
+		chainTypeTracked,
 	)
 }
+
+func (r *DefaultRuleRenderer) HostEndpointToFilterChains(ifaceName string, endpoint *proto.HostEndpoint) []*Chain {
+	return r.endpointToIptablesChains(
+		endpoint.Tiers,
+		endpoint.ProfileIds,
+		ifaceName,
+		PolicyOutboundPfx,
+		PolicyInboundPfx,
+		HostToEndpointPfx,
+		HostFromEndpointPfx,
+		ChainFailsafeOut,
+		ChainFailsafeIn,
+		chainTypeTracked,
+	)
+}
+
+func (r *DefaultRuleRenderer) HostEndpointToRawChains(ifaceName string, endpoint *proto.HostEndpoint) []*Chain {
+	return r.endpointToIptablesChains(
+		endpoint.UntrackedTiers,
+		endpoint.ProfileIds,
+		ifaceName,
+		PolicyOutboundPfx,
+		PolicyInboundPfx,
+		HostToEndpointPfx,
+		HostFromEndpointPfx,
+		ChainFailsafeOut,
+		ChainFailsafeIn,
+		chainTypeUntracked, // Render "untracked" version of chain for the raw table.
+	)
+}
+
+type endpointChainType int
+
+const (
+	chainTypeTracked endpointChainType = iota
+	chainTypeUntracked
+)
 
 func (r *DefaultRuleRenderer) endpointToIptablesChains(
 	tiers []*proto.TierInfo,
@@ -124,6 +82,7 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 	fromEndpointPrefix string,
 	toFailsafeChain string,
 	fromFailsafeChain string,
+	chainType endpointChainType,
 ) []*Chain {
 	toRules := []Rule{}
 	fromRules := []Rule{}
@@ -140,16 +99,16 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 		})
 	}
 
-	// Start by ensuring that the accept mark bit is clear, policies set that bit to indicate
-	// that they accepted the packet.
+	// Start by ensuring that the accept and drop mark bits are clear, policies set those bits to indicate
+	// that they accepted / dropped the packet.
 	toRules = append(toRules, Rule{
 		Action: ClearMarkAction{
-			Mark: r.IptablesMarkAccept,
+			Mark: r.IptablesMarkAccept + r.IptablesMarkDrop,
 		},
 	})
 	fromRules = append(fromRules, Rule{
 		Action: ClearMarkAction{
-			Mark: r.IptablesMarkAccept,
+			Mark: r.IptablesMarkAccept + r.IptablesMarkDrop,
 		},
 	})
 
@@ -176,115 +135,148 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 				toPolicyPrefix,
 				&proto.PolicyID{Tier: tier.Name, Name: polID},
 			)
-			toRules = append(toRules,
-				Rule{
-					Match:  Match().MarkClear(r.IptablesMarkNextTier),
-					Action: JumpAction{Target: toPolChainName},
-				},
-				// If policy marked packet as accepted, it returns, setting the
-				// accept mark bit.  If that is set, return from this chain.
-				Rule{
-					Match:   Match().MarkSet(r.IptablesMarkAccept),
-					Action:  ReturnAction{},
-					Comment: "Return if policy accepted",
+			// If a previous policy didn't set the "next-tier" mark, jump to the policy.
+			toRules = append(toRules, Rule{
+				Match:  Match().MarkClear(r.IptablesMarkNextTier),
+				Action: JumpAction{Target: toPolChainName},
+			})
+			// If policy marked packet as accepted, it returns, setting the accept
+			// mark bit.
+			if chainType == chainTypeUntracked {
+				// For an untracked policy, map allow to "NOTRACK and ALLOW".
+				toRules = append(toRules, Rule{
+					Match:  Match().MarkSet(r.IptablesMarkAccept),
+					Action: NoTrackAction{},
 				})
+			}
+			// If accept bit is set, return from this chain.  We don't immediately
+			// accept because there may be other policy still to apply.
+			toRules = append(toRules, Rule{
+				Match:   Match().MarkSet(r.IptablesMarkAccept),
+				Action:  ReturnAction{},
+				Comment: "Return if policy accepted",
+			})
+
 			fromPolChainName := PolicyChainName(
 				fromPolicyPrefix,
 				&proto.PolicyID{Tier: tier.Name, Name: polID},
 			)
-			fromRules = append(fromRules,
-				Rule{
-					Match:  Match().MarkClear(r.IptablesMarkNextTier),
-					Action: JumpAction{Target: fromPolChainName},
+			// If a previous policy didn't set the "next-tier" mark, jump to the policy.
+			fromRules = append(fromRules, Rule{
+				Match:  Match().MarkClear(r.IptablesMarkNextTier),
+				Action: JumpAction{Target: fromPolChainName},
+			})
+			// If policy marked packet as accepted, it returns, setting the accept
+			// mark bit.
+			if chainType == chainTypeUntracked {
+				// For an untracked policy, map allow to "NOTRACK and ALLOW".
+				fromRules = append(fromRules, Rule{
+					Match:  Match().MarkSet(r.IptablesMarkAccept),
+					Action: NoTrackAction{},
+				})
+			}
+			// If accept bit is set, return from this chain.  We don't immediately
+			// accept because there may be other policy still to apply.
+			fromRules = append(fromRules, Rule{
+				Match:   Match().MarkSet(r.IptablesMarkAccept),
+				Action:  ReturnAction{},
+				Comment: "Return if policy accepted",
+			})
+		}
+
+		if chainType == chainTypeTracked {
+			// When rendering normal rules, if no policy in the tier marked the packet
+			// as next-tier, drop the packet.
+			//
+			// For untracked rules, we don't do that because there may be tracked rules
+			// still to be applied to the packet in the filter table.
+			var exportIpfix string
+			if r.Config.IpfixExportTierDropRules {
+				exportIpfix = "T/"
+			} else {
+				exportIpfix = "F/"
+			}
+
+			toRules = append(toRules, Rule{
+				Match: Match().MarkClear(r.IptablesMarkNextTier),
+				Action: NflogAction{
+					Group:  1,
+					Prefix: exportIpfix + "D/0/" + "no-policy-match-inbound/" + tier.Name,
 				},
+			})
+			fromRules = append(fromRules, Rule{
+				Match: Match().MarkClear(r.IptablesMarkNextTier),
+				Action: NflogAction{
+					Group:  2,
+					Prefix: exportIpfix + "D/0/" + "no-policy-match-outbound/" + tier.Name,
+				},
+			})
+
+			toRules = append(toRules, r.DropRules(
+				Match().MarkClear(r.IptablesMarkNextTier),
+				"Drop if no policies passed packet")...)
+			fromRules = append(fromRules, r.DropRules(
+				Match().MarkClear(r.IptablesMarkNextTier),
+				"Drop if no policies passed packet")...)
+		}
+	}
+
+	if chainType == chainTypeTracked {
+		// Then, jump to each profile in turn.
+		for _, profileID := range profileIds {
+			toProfChainName := ProfileChainName(toPolicyPrefix, &proto.ProfileID{Name: profileID})
+			fromProfChainName := ProfileChainName(fromPolicyPrefix, &proto.ProfileID{Name: profileID})
+			toRules = append(toRules,
+				Rule{Action: JumpAction{Target: toProfChainName}},
 				// If policy marked packet as accepted, it returns, setting the
 				// accept mark bit.  If that is set, return from this chain.
 				Rule{
 					Match:   Match().MarkSet(r.IptablesMarkAccept),
 					Action:  ReturnAction{},
-					Comment: "Return if policy accepted",
+					Comment: "Return if profile accepted",
+				})
+			fromRules = append(fromRules,
+				Rule{Action: JumpAction{Target: fromProfChainName}},
+				// If policy marked packet as accepted, it returns, setting the
+				// accept mark bit.  If that is set, return from this chain.
+				Rule{
+					Match:   Match().MarkSet(r.IptablesMarkAccept),
+					Action:  ReturnAction{},
+					Comment: "Return if profile accepted",
 				})
 		}
 
+		// When rendering normal rules, if no profile marked the packet as accepted, drop
+		// the packet.
+		//
+		// For untracked rules, we don't do that because there may be tracked rules
+		// still to be applied to the packet in the filter table.
+		// TODO (Matt): This (and the policy equivalent just above) can probably be refactored.
+		//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
+		// No profile matched the packet: drop it.
 		var exportIpfix string
 		if r.Config.IpfixExportTierDropRules {
 			exportIpfix = "T/"
 		} else {
 			exportIpfix = "F/"
 		}
-
-		// If no policy in the tier marked the packet as next-tier, drop the packet.
 		toRules = append(toRules, Rule{
-			Match: Match().MarkClear(r.IptablesMarkNextTier),
+			Match: Match(),
 			Action: NflogAction{
 				Group:  1,
-				Prefix: exportIpfix + "D/0/" + "no-policy-match-inbound/" + tier.Name,
+				Prefix: exportIpfix + "D/0/no-profile-match-inbound",
 			},
 		})
 		fromRules = append(fromRules, Rule{
-			Match: Match().MarkClear(r.IptablesMarkNextTier),
+			Match: Match(),
 			Action: NflogAction{
 				Group:  2,
-				Prefix: exportIpfix + "D/0/" + "no-policy-match-outbound/" + tier.Name,
+				Prefix: exportIpfix + "D/0/no-profile-match-outbound",
 			},
 		})
-		toRules = append(toRules, r.DropRules(
-			Match().MarkClear(r.IptablesMarkNextTier),
-			"Drop if no policies passed packet")...)
-		fromRules = append(fromRules, r.DropRules(
-			Match().MarkClear(r.IptablesMarkNextTier),
-			"Drop if no policies passed packet")...)
+		toRules = append(toRules, r.DropRules(Match(), "Drop if no profiles matched")...)
+		fromRules = append(fromRules, r.DropRules(Match(), "Drop if no profiles matched")...)
 	}
-
-	// Then, jump to each profile in turn.
-	for _, profileID := range profileIds {
-		toProfChainName := ProfileChainName(toPolicyPrefix, &proto.ProfileID{Name: profileID})
-		fromProfChainName := ProfileChainName(fromPolicyPrefix, &proto.ProfileID{Name: profileID})
-		toRules = append(toRules,
-			Rule{Action: JumpAction{Target: toProfChainName}},
-			// If policy marked packet as accepted, it returns, setting the
-			// accept mark bit.  If that is set, return from this chain.
-			Rule{
-				Match:   Match().MarkSet(r.IptablesMarkAccept),
-				Action:  ReturnAction{},
-				Comment: "Return if profile accepted",
-			})
-		fromRules = append(fromRules,
-			Rule{Action: JumpAction{Target: fromProfChainName}},
-			// If policy marked packet as accepted, it returns, setting the
-			// accept mark bit.  If that is set, return from this chain.
-			Rule{
-				Match:   Match().MarkSet(r.IptablesMarkAccept),
-				Action:  ReturnAction{},
-				Comment: "Return if profile accepted",
-			})
-	}
-
-	// TODO (Matt): This (and the policy equivalent just above) can probably be refactored.
-	//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
-	// No profile matched the packet: drop it.
-	var exportIpfix string
-	if r.Config.IpfixExportTierDropRules {
-		exportIpfix = "T/"
-	} else {
-		exportIpfix = "F/"
-	}
-	toRules = append(toRules, Rule{
-		Match: Match(),
-		Action: NflogAction{
-			Group:  1,
-			Prefix: exportIpfix + "D/0/no-profile-match-inbound",
-		},
-	})
-	fromRules = append(fromRules, Rule{
-		Match: Match(),
-		Action: NflogAction{
-			Group:  2,
-			Prefix: exportIpfix + "D/0/no-profile-match-outbound",
-		},
-	})
-	toRules = append(toRules, r.DropRules(Match(), "Drop if no profiles matched")...)
-	fromRules = append(fromRules, r.DropRules(Match(), "Drop if no profiles matched")...)
 
 	toEndpointChain := Chain{
 		Name:  EndpointChainName(toEndpointPrefix, name),
@@ -295,20 +287,6 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 		Rules: fromRules,
 	}
 	return []*Chain{&toEndpointChain, &fromEndpointChain}
-}
-
-func (r *DefaultRuleRenderer) HostEndpointToIptablesChains(ifaceName string, endpoint *proto.HostEndpoint) []*Chain {
-	return r.endpointToIptablesChains(
-		endpoint.Tiers,
-		endpoint.ProfileIds,
-		ifaceName,
-		PolicyOutboundPfx,
-		PolicyInboundPfx,
-		HostToEndpointPfx,
-		HostFromEndpointPfx,
-		ChainFailsafeOut,
-		ChainFailsafeIn,
-	)
 }
 
 func EndpointChainName(prefix string, ifaceName string) string {
