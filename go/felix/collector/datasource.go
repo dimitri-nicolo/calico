@@ -5,16 +5,25 @@ package collector
 import (
 	"bytes"
 	"errors"
+	"net"
 	"strconv"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/collector/stats"
+	"github.com/projectcalico/felix/go/felix/jitter"
 	"github.com/projectcalico/felix/go/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
+
+type epLookup interface {
+	GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey
+	GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int
+}
+
+const PollingInterval = time.Duration(1) * time.Second
 
 type NflogDataSource struct {
 	sink      chan<- stats.StatUpdate
@@ -128,33 +137,49 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse b
 }
 
 type ConntrackDataSource struct {
-	sink chan<- stats.StatUpdate
-	lum  *lookup.LookupManager
+	poller    *jitter.Ticker
+	pollerC   <-chan time.Time
+	converter chan []nfnetlink.CtEntry
+	sink      chan<- stats.StatUpdate
+	lum       epLookup
 }
 
 func NewConntrackDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate) *ConntrackDataSource {
+	poller := jitter.NewTicker(PollingInterval, PollingInterval/10)
+	converter := make(chan []nfnetlink.CtEntry)
+	return newConntrackDataSource(lm, sink, poller, poller.C, converter)
+}
+
+// Internal constructor to help mocking from UTs.
+func newConntrackDataSource(lm epLookup, sink chan<- stats.StatUpdate, poller *jitter.Ticker, pollerC <-chan time.Time, converter chan []nfnetlink.CtEntry) *ConntrackDataSource {
 	return &ConntrackDataSource{
-		sink: sink,
-		lum:  lm,
+		poller:    poller,
+		pollerC:   pollerC,
+		converter: converter,
+		sink:      sink,
+		lum:       lm,
 	}
 }
 
 func (ds *ConntrackDataSource) Start() {
 	log.Info("Starting Conntrack Data Source")
 	go ds.startPolling()
+	go ds.startProcessor()
 }
 
 func (ds *ConntrackDataSource) startPolling() {
-	c := time.Tick(time.Second)
-	for _ = range c {
-		ctentries, err := nfnetlink.ConntrackList()
+	for _ = range ds.pollerC {
+		cte, err := nfnetlink.ConntrackList()
 		if err != nil {
 			log.Errorf("Error: ConntrackList: %v", err)
 			return
 		}
-		// TODO(doublek): Possibly do this in a separate goroutine?
+		ds.converter <- cte
+	}
+}
+func (ds *ConntrackDataSource) startProcessor() {
+	for ctentries := range ds.converter {
 		for _, ctentry := range ctentries {
-			log.Debugf("Processing conntrack entry %+v", ctentry)
 			statUpdates, err := ds.convertCtEntryToStat(ctentry)
 			if err != nil {
 				log.Errorf("Couldn't convert ctentry %v to StatUpdate", ctentry)
@@ -278,7 +303,7 @@ func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAct
 	return
 }
 
-func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
+func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
 	log.Infof("Looking up rule prefix %s", prefix)
 	tier, policy, rule, action, export := parsePrefix(prefix)
 	return stats.RuleTracePoint{
