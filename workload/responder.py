@@ -9,6 +9,17 @@ logging.basicConfig(level=logging.DEBUG,
 logger = logging.getLogger(__name__)
 
 
+class EchoRequestHandlerTCPAsym(SocketServer.BaseRequestHandler):
+    def handle(self):
+        logger.debug('handle')
+        # Echo the back to the client
+        data = self.request.recv(1024)
+        data = data*2
+        logger.debug('received (tcp) from %s: "%s"',
+                     self.client_address, data)
+        self.request.send(data)
+        return
+
 class EchoRequestHandlerTCP(SocketServer.BaseRequestHandler):
     def handle(self):
         logger.debug('handle')
@@ -66,10 +77,12 @@ if __name__ == '__main__':
 
     tcp_addr = "0.0.0.0"
     tcp_port = 80
+    tcp_port_asym = 8080
     udp_addr = "0.0.0.0"
     udp_port = 69
 
     tcp_server = EchoServerTCP((tcp_addr, tcp_port), EchoRequestHandlerTCP)
+    tcp_server_asym = EchoServerTCP((tcp_addr, tcp_port_asym), EchoRequestHandlerTCPAsym)
     udp_server = EchoServerUDP((udp_addr, udp_port), EchoRequestHandlerUDP)
 
     try:
@@ -79,9 +92,13 @@ if __name__ == '__main__':
         t2 = threading.Thread(target=udp_server.serve_forever)
         t2.setDaemon(True)  # don't hang on exit
         t2.start()
+        t3 = threading.Thread(target=tcp_server_asym.serve_forever)
+        t3.setDaemon(True)  # don't hang on exit
+        t3.start()
 
         logger.info('TCP Server on %s:%s', tcp_addr, tcp_port)
         logger.info('UDP Server on %s:%s', udp_addr, udp_port)
+        logger.info('TCP Asym Server on %s:%s', tcp_addr, tcp_port_asym)
 
         logger.debug('checking tcp server')
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -96,6 +113,14 @@ if __name__ == '__main__':
         s.connect((udp_addr, udp_port))
         check_socket(s)
         s.close()
+        
+        logger.debug('checking tcp asym server')
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        logger.debug('connecting to server')
+        s.connect((tcp_addr, tcp_port_asym))
+        check_socket(s)
+        s.close()
+
         while True:
             time.sleep(10)
     finally:
@@ -103,4 +128,5 @@ if __name__ == '__main__':
         logger.debug('done')
         tcp_server.socket.close()
         udp_server.socket.close()
+        tcp_server_asym.socket.close()
         logger.debug('closed sockets')
