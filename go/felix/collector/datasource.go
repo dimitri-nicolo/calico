@@ -181,13 +181,13 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	// We care about DNAT only which modifies the destination parts of the OrigTuple.
 	if ctEntry.IsDNAT() {
 		log.Debugf("Entry is DNAT %+v", ctEntry)
-		ctTuple, err := ctEntry.OrigTupleWithoutDNAT()
+		ctTuple, err = ctEntry.OrigTupleWithoutDNAT()
 		if err != nil {
 			log.Error("Error when extracting tuple without DNAT:", err)
 		}
 	}
-	wlEpKeySrc = ds.lum.GetEndpointKey(origTuple.Src)
-	wlEpKeyDst = ds.lum.GetEndpointKey(origTuple.Dst)
+	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
+	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
 
 	// Force conntrack to have empty tracepoint
 	if wlEpKeySrc != nil {
