@@ -10,9 +10,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"k8s.io/client-go/pkg/api/unversioned"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	k8sapi "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
 )
 
 // cb implements the callback interface required for the
@@ -43,16 +44,17 @@ func (c cb) OnUpdates(updates []api.Update) {
 	for _, u := range updates {
 		switch u.UpdateType {
 		case api.UpdateTypeKVNew:
-			// Value should not be nil.
-			Expect(u.Value).NotTo(BeNil())
+			// Sometimes the value is nil (e.g ProfileTags)
+			log.Infof("[TEST] Syncer received new: %+v", u)
 		case api.UpdateTypeKVUpdated:
-			// Value should not be nil.
-			Expect(u.Value).NotTo(BeNil())
+			// Sometimes the value is nil (e.g ProfileTags)
+			log.Infof("[TEST] Syncer received updated: %+v", u)
 		case api.UpdateTypeKVDeleted:
-			// Ensure the value is nil.
+			// Ensure the value is nil for deletes.
+			log.Infof("[TEST] Syncer received deleted: %+v", u)
 			Expect(u.Value).To(BeNil())
 		case api.UpdateTypeKVUnknown:
-			panic(fmt.Sprintf("Received unkown update: %+v", u))
+			panic(fmt.Sprintf("[TEST] Syncer received unkown update: %+v", u))
 		}
 	}
 }
@@ -112,9 +114,16 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		_, err = c.List(model.ProfileListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
+		_, err = c.List(model.PolicyListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
 		// Perform a Get and ensure no error in the Calico API.
 		_, err = c.Get(model.ProfileKey{Name: fmt.Sprintf("default.%s", ns.ObjectMeta.Name)})
 		Expect(err).NotTo(HaveOccurred())
+
+		_, err = c.Get(model.PolicyKey{Name: fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)})
+		Expect(err).NotTo(HaveOccurred())
+
 	})
 
 	It("should handle a Namespace without DefaultDeny", func() {
@@ -138,12 +147,26 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Perform a List and ensure it shows up in the Calico API.
-		_, err = c.List(model.ProfileListOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		By("listing Profiles", func() {
+			_, err = c.List(model.ProfileListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("listing Policies", func() {
+			_, err = c.List(model.PolicyListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
 
 		// Perform a Get and ensure no error in the Calico API.
-		_, err = c.Get(model.ProfileKey{Name: fmt.Sprintf("default.%s", ns.ObjectMeta.Name)})
-		Expect(err).NotTo(HaveOccurred())
+		By("getting a Profile", func() {
+			_, err = c.Get(model.ProfileKey{Name: fmt.Sprintf("default.%s", ns.ObjectMeta.Name)})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("getting a Policy", func() {
+			_, err = c.Get(model.PolicyKey{Name: fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)})
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	It("should handle a basic NetworkPolicy", func() {
@@ -152,7 +175,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 				Name: "test-syncer-basic-net-policy",
 			},
 			Spec: extensions.NetworkPolicySpec{
-				PodSelector: unversioned.LabelSelector{
+				PodSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"label": "value"},
 				},
 				Ingress: []extensions.NetworkPolicyIngressRule{
@@ -162,7 +185,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 						},
 						From: []extensions.NetworkPolicyPeer{
 							extensions.NetworkPolicyPeer{
-								PodSelector: &unversioned.LabelSelector{
+								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
 										"k": "v",
 									},
@@ -199,7 +222,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Perform a Get and ensure no error in the Calico API.
-		_, err = c.Get(model.PolicyKey{Name: fmt.Sprintf("default.%s", np.ObjectMeta.Name)})
+		_, err = c.Get(model.PolicyKey{Name: fmt.Sprintf("np.projectcalico.org/default.%s", np.ObjectMeta.Name)})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -264,7 +287,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		// Wait up to 120s for pod to start running.
 		log.Warnf("[TEST] Waiting for pod %s to start", pod.ObjectMeta.Name)
 		for i := 0; i < 120; i++ {
-			p, err := c.clientSet.Pods("default").Get(pod.ObjectMeta.Name)
+			p, err := c.clientSet.Pods("default").Get(pod.ObjectMeta.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			if p.Status.Phase == k8sapi.PodRunning {
 				// Pod is running
@@ -272,7 +295,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			}
 			time.Sleep(1 * time.Second)
 		}
-		p, err := c.clientSet.Pods("default").Get(pod.ObjectMeta.Name)
+		p, err := c.clientSet.Pods("default").Get(pod.ObjectMeta.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(p.Status.Phase).To(Equal(k8sapi.PodRunning))
 
@@ -400,6 +423,56 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			Expect(updGC.Value.(string)).To(Equal(gc.Value.(string)))
 			Expect(updGC.Key.(model.GlobalConfigKey).Name).To(Equal("ClusterGUID"))
 			Expect(updGC.Revision).NotTo(BeNil())
+		})
+	})
+
+	It("should support setting and getting IP Pools", func() {
+		By("listing IP pools when none have been created", func() {
+			_, err := c.List(model.IPPoolListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("creating an IP Pool and getting it back", func() {
+			_, cidr, _ := cnet.ParseCIDR("192.168.0.0/16")
+			pool := &model.KVPair{
+				Key: model.IPPoolKey{
+					CIDR: *cidr,
+				},
+				Value: &model.IPPool{
+					CIDR:          *cidr,
+					IPIPInterface: "tunl0",
+					Masquerade:    true,
+					IPAM:          true,
+					Disabled:      true,
+				},
+			}
+			_, err := c.Create(pool)
+			Expect(err).NotTo(HaveOccurred())
+
+			receivedPool, err := c.Get(pool.Key)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(receivedPool.Value.(*model.IPPool).CIDR).To(Equal(*cidr))
+			Expect(receivedPool.Value.(*model.IPPool).IPIPInterface).To(Equal("tunl0"))
+			Expect(receivedPool.Value.(*model.IPPool).Masquerade).To(Equal(true))
+			Expect(receivedPool.Value.(*model.IPPool).IPAM).To(Equal(true))
+			Expect(receivedPool.Value.(*model.IPPool).Disabled).To(Equal(true))
+		})
+
+		By("deleting the IP Pool", func() {
+			_, cidr, _ := cnet.ParseCIDR("192.168.0.0/16")
+			err := c.Delete(&model.KVPair{
+				Key: model.IPPoolKey{
+					CIDR: *cidr,
+				},
+				Value: &model.IPPool{
+					CIDR:          *cidr,
+					IPIPInterface: "tunl0",
+					Masquerade:    true,
+					IPAM:          true,
+					Disabled:      true,
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

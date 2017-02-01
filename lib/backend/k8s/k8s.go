@@ -23,6 +23,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/resources"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/thirdparty"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/errors"
@@ -32,6 +33,7 @@ import (
 	kerrors "k8s.io/client-go/pkg/api/errors"
 	kapiv1 "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/runtime"
 	"k8s.io/client-go/pkg/runtime/schema"
 	"k8s.io/client-go/pkg/runtime/serializer"
@@ -50,6 +52,9 @@ type KubeClient struct {
 	// Contains methods for converting Kubernetes resources to
 	// Calico resources.
 	converter converter
+
+	// Clients for interacting with Calico resources.
+	ipPoolClient api.Client
 }
 
 type KubeConfig struct {
@@ -96,13 +101,13 @@ func NewKubeClient(kc *KubeConfig) (*KubeClient, error) {
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&loadingRules, configOverrides).ClientConfig()
 	if err != nil {
-		return nil, k8sErrorToCalico(err, nil)
+		return nil, resources.K8sErrorToCalico(err, nil)
 	}
 
 	// Create the clientset
 	cs, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, k8sErrorToCalico(err, nil)
+		return nil, resources.K8sErrorToCalico(err, nil)
 	}
 	log.Debugf("Created k8s clientSet: %+v", cs)
 
@@ -114,6 +119,9 @@ func NewKubeClient(kc *KubeConfig) (*KubeClient, error) {
 		clientSet: cs,
 		tprClient: tprClient,
 	}
+
+	// Create the Calico sub-clients.
+	kubeClient.ipPoolClient = resources.NewIPPools(cs, tprClient)
 
 	return kubeClient, nil
 }
@@ -137,18 +145,27 @@ func (c *KubeClient) EnsureInitialized() error {
 	return nil
 }
 
+func (c *KubeClient) EnsureCalicoNodeInitialized(node string) error {
+	log.WithField("Node", node).Info("Ensuring node is initialized")
+	return nil
+}
+
 // ensureThirdPartyResources ensures the necessary thirdparty resources are created
 // and will retry every second for 30 seconds or until they exist.
 func (c *KubeClient) ensureThirdPartyResources() error {
 	return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) {
-		return c.createThirdPartyResources()
+		if err := c.createThirdPartyResources(); err != nil {
+			return false, err
+		}
+		return true, nil
 	})
 }
 
 // createThirdPartyResources creates the necessary third party resources if they
 // do not already exist.
-func (c *KubeClient) createThirdPartyResources() (bool, error) {
+func (c *KubeClient) createThirdPartyResources() error {
 	// Ensure a resource exists for Calico global configuration.
+	log.Info("Ensuring GlobalConfig ThirdPartyResource exists")
 	tpr := extensions.ThirdPartyResource{
 		ObjectMeta: kapiv1.ObjectMeta{
 			Name:      "global-config.projectcalico.org",
@@ -161,10 +178,12 @@ func (c *KubeClient) createThirdPartyResources() (bool, error) {
 	if err != nil {
 		// Don't care if it already exists.
 		if !kerrors.IsAlreadyExists(err) {
-			return false, goerrors.New(fmt.Sprintf("failed to create ThirdPartyResource %s: %s", tpr.ObjectMeta.Name, err))
+			return resources.K8sErrorToCalico(err, tpr)
 		}
 	}
-	return true, nil
+
+	// Ensure the IP Pool TPR exists.
+	return c.ipPoolClient.EnsureInitialized()
 }
 
 // waitForClusterType polls until GlobalConfig is ready, or until 30 seconds have passed.
@@ -239,6 +258,8 @@ func buildTPRClient(baseConfig *rest.Config) (*rest.RESTClient, error) {
 				*cfg.GroupVersion,
 				&thirdparty.GlobalConfig{},
 				&thirdparty.GlobalConfigList{},
+				&thirdparty.IpPool{},
+				&thirdparty.IpPoolList{},
 				&kapiv1.ListOptions{},
 				&kapiv1.DeleteOptions{},
 			)
@@ -258,6 +279,8 @@ func (c *KubeClient) Create(d *model.KVPair) (*model.KVPair, error) {
 	switch d.Key.(type) {
 	case model.GlobalConfigKey:
 		return c.createGlobalConfig(d)
+	case model.IPPoolKey:
+		return c.ipPoolClient.Create(d)
 	default:
 		log.Warn("Attempt to 'Create' using kubernetes backend is not supported.")
 		return nil, errors.ErrorOperationNotSupported{
@@ -273,6 +296,8 @@ func (c *KubeClient) Update(d *model.KVPair) (*model.KVPair, error) {
 	switch d.Key.(type) {
 	case model.GlobalConfigKey:
 		return c.updateGlobalConfig(d)
+	case model.IPPoolKey:
+		return c.ipPoolClient.Update(d)
 	default:
 		// If the resource isn't supported, then this is a no-op.
 		log.Infof("'Update' for %+v is no-op", d.Key)
@@ -288,6 +313,8 @@ func (c *KubeClient) Apply(d *model.KVPair) (*model.KVPair, error) {
 		return c.applyWorkloadEndpoint(d)
 	case model.GlobalConfigKey:
 		return c.applyGlobalConfig(d)
+	case model.IPPoolKey:
+		return c.ipPoolClient.Apply(d)
 	default:
 		log.Infof("'Apply' for %s is no-op", d.Key)
 		return d, nil
@@ -299,6 +326,8 @@ func (c *KubeClient) Delete(d *model.KVPair) error {
 	switch d.Key.(type) {
 	case model.GlobalConfigKey:
 		return c.deleteGlobalConfig(d)
+	case model.IPPoolKey:
+		return c.ipPoolClient.Delete(d)
 	default:
 		log.Warn("Attempt to 'Delete' using kubernetes backend is not supported.")
 		return nil
@@ -321,6 +350,8 @@ func (c *KubeClient) Get(k model.Key) (*model.KVPair, error) {
 		return c.getGlobalConfig(k.(model.GlobalConfigKey))
 	case model.ReadyFlagKey:
 		return c.getReadyStatus(k.(model.ReadyFlagKey))
+	case model.IPPoolKey:
+		return c.ipPoolClient.Get(k.(model.IPPoolKey))
 	default:
 		return nil, errors.ErrorOperationNotSupported{
 			Identifier: k,
@@ -344,6 +375,8 @@ func (c *KubeClient) List(l model.ListInterface) ([]*model.KVPair, error) {
 		return c.listGlobalConfig(l.(model.GlobalConfigListOptions))
 	case model.HostConfigListOptions:
 		return c.listHostConfig(l.(model.HostConfigListOptions))
+	case model.IPPoolListOptions:
+		return c.ipPoolClient.List(l.(model.IPPoolListOptions))
 	default:
 		return []*model.KVPair{}, nil
 	}
@@ -363,7 +396,7 @@ func (c *KubeClient) listProfiles(l model.ProfileListOptions) ([]*model.KVPair, 
 	// Otherwise, enumerate all.
 	namespaces, err := c.clientSet.Namespaces().List(kapiv1.ListOptions{})
 	if err != nil {
-		return nil, k8sErrorToCalico(err, l)
+		return nil, resources.K8sErrorToCalico(err, l)
 	}
 
 	// For each Namespace, return a profile.
@@ -387,9 +420,9 @@ func (c *KubeClient) getProfile(k model.ProfileKey) (*model.KVPair, error) {
 	if err != nil {
 		return nil, err
 	}
-	namespace, err := c.clientSet.Namespaces().Get(namespaceName)
+	namespace, err := c.clientSet.Namespaces().Get(namespaceName, metav1.GetOptions{})
 	if err != nil {
-		return nil, k8sErrorToCalico(err, k)
+		return nil, resources.K8sErrorToCalico(err, k)
 	}
 
 	return c.converter.namespaceToProfile(namespace)
@@ -402,14 +435,14 @@ func (c *KubeClient) applyWorkloadEndpoint(k *model.KVPair) (*model.KVPair, erro
 	if len(ips) > 0 {
 		log.Debugf("Applying workload with IPs: %+v", ips)
 		ns, name := c.converter.parseWorkloadID(k.Key.(model.WorkloadEndpointKey).WorkloadID)
-		pod, err := c.clientSet.Pods(ns).Get(name)
+		pod, err := c.clientSet.Pods(ns).Get(name, metav1.GetOptions{})
 		if err != nil {
-			return nil, k8sErrorToCalico(err, k.Key)
+			return nil, resources.K8sErrorToCalico(err, k.Key)
 		}
 		pod.Status.PodIP = ips[0].IP.String()
 		pod, err = c.clientSet.Pods(ns).UpdateStatus(pod)
 		if err != nil {
-			return nil, k8sErrorToCalico(err, k.Key)
+			return nil, resources.K8sErrorToCalico(err, k.Key)
 		}
 		log.Debugf("Successfully applied pod: %+v", pod)
 		return c.converter.podToWorkloadEndpoint(pod)
@@ -440,7 +473,7 @@ func (c *KubeClient) listWorkloadEndpoints(l model.WorkloadEndpointListOptions) 
 	// We don't yet support hostname, orchestratorID, for the k8s backend.
 	pods, err := c.clientSet.Pods("").List(kapiv1.ListOptions{})
 	if err != nil {
-		return nil, k8sErrorToCalico(err, l)
+		return nil, resources.K8sErrorToCalico(err, l)
 	}
 
 	// For each Pod, return a workload endpoint.
@@ -466,9 +499,9 @@ func (c *KubeClient) getWorkloadEndpoint(k model.WorkloadEndpointKey) (*model.KV
 	// can find the correct namespace to get the pod.
 	namespace, podName := c.converter.parseWorkloadID(k.WorkloadID)
 
-	pod, err := c.clientSet.Pods(namespace).Get(podName)
+	pod, err := c.clientSet.Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
-		return nil, k8sErrorToCalico(err, k)
+		return nil, resources.K8sErrorToCalico(err, k)
 	}
 
 	// Decide if this pod should be displayed.
@@ -497,13 +530,26 @@ func (c *KubeClient) listPolicies(l model.PolicyListOptions) ([]*model.KVPair, e
 		Timeout(10 * time.Second).
 		Do().Into(&networkPolicies)
 	if err != nil {
-		return nil, k8sErrorToCalico(err, l)
+		return nil, resources.K8sErrorToCalico(err, l)
 	}
 
 	// For each policy, turn it into a Policy and generate the list.
 	ret := []*model.KVPair{}
 	for _, p := range networkPolicies.Items {
 		kvp, err := c.converter.networkPolicyToPolicy(&p)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, kvp)
+	}
+
+	// List all Namespaces and turn them into Policies as well.
+	namespaces, err := c.clientSet.Namespaces().List(kapiv1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, ns := range namespaces.Items {
+		kvp, err := c.converter.namespaceToPolicy(&ns)
 		if err != nil {
 			return nil, err
 		}
@@ -518,20 +564,44 @@ func (c *KubeClient) getPolicy(k model.PolicyKey) (*model.KVPair, error) {
 	if k.Name == "" {
 		return nil, goerrors.New("Missing policy name")
 	}
-	namespace, policyName := c.converter.parsePolicyName(k.Name)
 
-	networkPolicy := extensions.NetworkPolicy{}
-	err := c.clientSet.Extensions().RESTClient().
-		Get().
-		Resource("networkpolicies").
-		Namespace(namespace).
-		Name(policyName).
-		Timeout(10 * time.Second).
-		Do().Into(&networkPolicy)
-	if err != nil {
-		return nil, k8sErrorToCalico(err, k)
+	// Check to see if this is backed by a NetworkPolicy or a Namespace.
+	if strings.HasPrefix(k.Name, "np.projectcalico.org/") {
+		// Backed by a NetworkPolicy. Parse out the namespace / name.
+		namespace, policyName, err := c.converter.parsePolicyNameNetworkPolicy(k.Name)
+		if err != nil {
+			return nil, errors.ErrorResourceDoesNotExist{Err: err, Identifier: k}
+		}
+
+		// Get the NetworkPolicy from the API and convert it.
+		networkPolicy := extensions.NetworkPolicy{}
+		err = c.clientSet.Extensions().RESTClient().
+			Get().
+			Resource("networkpolicies").
+			Namespace(namespace).
+			Name(policyName).
+			Timeout(10 * time.Second).
+			Do().Into(&networkPolicy)
+		if err != nil {
+			return nil, resources.K8sErrorToCalico(err, k)
+		}
+		return c.converter.networkPolicyToPolicy(&networkPolicy)
+	} else if strings.HasPrefix(k.Name, "ns.projectcalico.org/") {
+		// This is backed by a Namespace.
+		namespace, err := c.converter.parsePolicyNameNamespace(k.Name)
+		if err != nil {
+			return nil, errors.ErrorResourceDoesNotExist{Err: err, Identifier: k}
+		}
+
+		ns, err := c.clientSet.Namespaces().Get(namespace, metav1.GetOptions{})
+		if err != nil {
+			return nil, resources.K8sErrorToCalico(err, k)
+		}
+		return c.converter.namespaceToPolicy(ns)
+	} else {
+		// Received a Get() for a Policy that doesn't exist.
+		return nil, errors.ErrorResourceDoesNotExist{Identifier: k}
 	}
-	return c.converter.networkPolicyToPolicy(&networkPolicy)
 }
 
 func (c *KubeClient) getReadyStatus(k model.ReadyFlagKey) (*model.KVPair, error) {
@@ -569,7 +639,7 @@ func (c *KubeClient) updateGlobalConfig(kvp *model.KVPair) (*model.KVPair, error
 		Name(gcfg.Metadata.Name)
 	err := req.Do().Into(&res)
 	if err != nil {
-		return nil, k8sErrorToCalico(err, kvp.Key)
+		return nil, resources.K8sErrorToCalico(err, kvp.Key)
 	}
 	kvp.Revision = gcfg.Metadata.ResourceVersion
 	return kvp, nil
@@ -586,7 +656,7 @@ func (c *KubeClient) createGlobalConfig(kvp *model.KVPair) (*model.KVPair, error
 		Body(&gcfg)
 	err := req.Do().Into(&res)
 	if err != nil {
-		return nil, k8sErrorToCalico(err, kvp.Key)
+		return nil, resources.K8sErrorToCalico(err, kvp.Key)
 	}
 	kvp.Revision = gcfg.Metadata.ResourceVersion
 	return kvp, nil
@@ -601,7 +671,7 @@ func (c *KubeClient) getGlobalConfig(k model.GlobalConfigKey) (*model.KVPair, er
 		Name(strings.ToLower(k.Name)).
 		Do().Into(&cfg)
 	if err != nil {
-		return nil, k8sErrorToCalico(err, k)
+		return nil, resources.K8sErrorToCalico(err, k)
 	}
 
 	return c.converter.tprToGlobalConfig(&cfg), nil
@@ -625,7 +695,7 @@ func (c *KubeClient) listGlobalConfig(l model.GlobalConfigListOptions) ([]*model
 		// means thre are no GlobalConfigs, and we should return
 		// an empty list.
 		if !kerrors.IsNotFound(err) {
-			return nil, k8sErrorToCalico(err, l)
+			return nil, resources.K8sErrorToCalico(err, l)
 		}
 	}
 
@@ -644,11 +714,14 @@ func (c *KubeClient) deleteGlobalConfig(k *model.KVPair) error {
 		Namespace("kube-system").
 		Name(strings.ToLower(k.Key.(model.GlobalConfigKey).Name)).
 		Do()
-	return result.Error()
+	return resources.K8sErrorToCalico(result.Error(), k.Key)
 }
 
 func (c *KubeClient) getHostConfig(k model.HostConfigKey) (*model.KVPair, error) {
-	return nil, goerrors.New("Get for HostConfig not supported in kubernetes backend")
+	return &model.KVPair{
+		Key:   k,
+		Value: nil,
+	}, nil
 }
 
 func (c *KubeClient) listHostConfig(l model.HostConfigListOptions) ([]*model.KVPair, error) {

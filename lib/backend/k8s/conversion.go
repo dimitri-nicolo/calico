@@ -29,9 +29,10 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	kapi "k8s.io/client-go/pkg/api"
-	"k8s.io/client-go/pkg/api/unversioned"
 	kapiv1 "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
+	"k8s.io/client-go/pkg/util/intstr"
 )
 
 var (
@@ -63,13 +64,32 @@ func (c converter) parseWorkloadID(workloadID string) (string, string) {
 	return splits[0], splits[1]
 }
 
-// parsePolicyName extracts the Namespace and NetworkPolicy name from the given Policy name.
-func (c converter) parsePolicyName(name string) (string, string) {
-	splits := strings.SplitN(name, ".", 2)
-	if len(splits) != 2 {
-		return "", ""
+// parsePolicyNameNamespace extracts the Kubernetes Namespace that backs the given Policy.
+func (c converter) parsePolicyNameNamespace(name string) (string, error) {
+	// Policy objects backed by Namespaces have form "ns.projectcalico.org/<ns_name>"
+	if !strings.HasPrefix(name, "ns.projectcalico.org/") {
+		// This is not backed by a Kubernetes Namespace.
+		return "", fmt.Errorf("Policy %s not backed by a Namespace", name)
 	}
-	return splits[0], splits[1]
+
+	return strings.TrimPrefix(name, "ns.projectcalico.org/"), nil
+
+}
+
+// parsePolicyNameNetworkPolicy extracts the Kubernetes Namespace and NetworkPolicy that backs the given Policy.
+func (c converter) parsePolicyNameNetworkPolicy(name string) (string, string, error) {
+	// Policies backed by NetworkPolicies have form "np.projectcalico.org/<ns_name>.<np_name>
+	if !strings.HasPrefix(name, "np.projectcalico.org/") {
+		// This is not backed by a Kubernetes NetworkPolicy.
+		return "", "", fmt.Errorf("Policy %s not backed by a NetworkPolicy", name)
+	}
+
+	splits := strings.SplitN(strings.TrimPrefix(name, "np.projectcalico.org/"), ".", 2)
+	if len(splits) != 2 {
+		return "", "", fmt.Errorf("Name does not include both Namespace and NetworkPolicy: %s", name)
+	}
+	// Return Namespace, NetworkPolicy name.
+	return splits[0], splits[1], nil
 }
 
 // parseProfileName extracts the Namespace name from the given Profile name.
@@ -81,14 +101,19 @@ func (c converter) parseProfileName(profileName string) (string, error) {
 	return splits[1], nil
 }
 
-func (c converter) namespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, error) {
+// namespaceToPolicy converts a Namespace to a Policy.  We create a Policy per-Namespace
+// to implement per-Namespace ingress behavior (e.g DefaultDeny).  It also ensures that
+// every k8s Pod is selected by at least one Policy that allows egress traffic.
+func (c converter) namespaceToPolicy(ns *kapiv1.Namespace) (*model.KVPair, error) {
 	// Determine the ingress action based off the DefaultDeny annotation.
 	ingressAction := "allow"
 	for k, v := range ns.ObjectMeta.Annotations {
 		if k == policyAnnotation {
 			np := namespacePolicy{}
 			if err := json.Unmarshal([]byte(v), &np); err != nil {
-				return nil, goerrors.New(fmt.Sprint("failed to parse annotation: %s", err))
+				// We want to handle this case gracefully since this can
+				// occur due to user error.
+				log.Warnf("Failed to parse annotation on Namespace '%s'.", ns.Name)
 			}
 			if np.Ingress.Isolation == "DefaultDeny" {
 				ingressAction = "deny"
@@ -96,22 +121,40 @@ func (c converter) namespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, erro
 		}
 	}
 
-	// Generate the labels to apply to the profile.
+	name := fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)
+	kvp := model.KVPair{
+		Key: model.PolicyKey{Name: name},
+		Value: &model.Policy{
+			Selector:      fmt.Sprintf("calico/k8s_ns == '%s'", ns.Name),
+			InboundRules:  []model.Rule{model.Rule{Action: ingressAction}},
+			OutboundRules: []model.Rule{model.Rule{Action: "allow"}},
+		},
+		Revision: ns.ObjectMeta.ResourceVersion,
+	}
+	return &kvp, nil
+}
+
+// namespaceToProfile converts a Namespace to a Calico Profile.  The Profile stores
+// labels from the Namespace which are inherited by the WorkloadEndpoints within
+// the Profile, however no rules are populated.  Per-Namespace network
+// policy rules are implemented in namespaceToPolicy.
+func (c converter) namespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, error) {
+	// Generate the labels to apply to the profile, using a special prefix
+	// to indicate that these are the labels from the parent Kubernetes Namespace.
 	labels := map[string]string{}
 	for k, v := range ns.ObjectMeta.Labels {
 		labels[fmt.Sprintf("k8s_ns/label/%s", k)] = v
 	}
 
-	name := fmt.Sprintf("k8s_ns.%s", ns.ObjectMeta.Name)
+	name := fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)
 	kvp := model.KVPair{
 		Key: model.ProfileKey{Name: name},
 		Value: &model.Profile{
-			Rules: model.ProfileRules{
-				InboundRules:  []model.Rule{model.Rule{Action: ingressAction}},
-				OutboundRules: []model.Rule{model.Rule{Action: "allow"}},
-			},
-			Tags:   []string{name},
 			Labels: labels,
+			Rules: model.ProfileRules{
+				InboundRules:  []model.Rule{},
+				OutboundRules: []model.Rule{},
+			},
 		},
 		Revision: ns.ObjectMeta.ResourceVersion,
 	}
@@ -162,7 +205,7 @@ func (c converter) hasIPAddress(pod *kapiv1.Pod) bool {
 
 func (c converter) podToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error) {
 	// Pull out the profile and workload ID based on pod name and Namespace.
-	profile := fmt.Sprintf("k8s_ns.%s", pod.ObjectMeta.Namespace)
+	profile := fmt.Sprintf("ns.projectcalico.org/%s", pod.ObjectMeta.Namespace)
 	workload := fmt.Sprintf("%s.%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 
 	// If the pod doesn't have an IP address yet, then it hasn't gone through CNI.
@@ -211,7 +254,7 @@ func (c converter) podToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 // networkPolicyToPolicy converts a k8s NetworkPolicy to a model.KVPair.
 func (c converter) networkPolicyToPolicy(np *extensions.NetworkPolicy) (*model.KVPair, error) {
 	// Pull out important fields.
-	policyName := fmt.Sprintf("%s.%s", np.ObjectMeta.Namespace, np.ObjectMeta.Name)
+	policyName := fmt.Sprintf("np.projectcalico.org/%s.%s", np.ObjectMeta.Namespace, np.ObjectMeta.Name)
 	order := float64(1000.0)
 
 	// Generate the inbound rules list.
@@ -237,7 +280,7 @@ func (c converter) networkPolicyToPolicy(np *extensions.NetworkPolicy) (*model.K
 
 // k8sSelectorToCalico takes a namespaced k8s label selector and returns the Calico
 // equivalent.
-func (c converter) k8sSelectorToCalico(s *unversioned.LabelSelector, ns *string) string {
+func (c converter) k8sSelectorToCalico(s *metav1.LabelSelector, ns *string) string {
 	// If this is a podSelector, it needs to be namespaced, and it
 	// uses a different prefix.  Otherwise, treat this as a NamespaceSelector.
 	selectors := []string{}
@@ -259,13 +302,13 @@ func (c converter) k8sSelectorToCalico(s *unversioned.LabelSelector, ns *string)
 
 		// Each selector is formatted differently based on the operator.
 		switch e.Operator {
-		case unversioned.LabelSelectorOpIn:
+		case metav1.LabelSelectorOpIn:
 			selectors = append(selectors, fmt.Sprintf("%s%s in { '%s' }", prefix, e.Key, valueList))
-		case unversioned.LabelSelectorOpNotIn:
+		case metav1.LabelSelectorOpNotIn:
 			selectors = append(selectors, fmt.Sprintf("%s%s not in { '%s' }", prefix, e.Key, valueList))
-		case unversioned.LabelSelectorOpExists:
+		case metav1.LabelSelectorOpExists:
 			selectors = append(selectors, fmt.Sprintf("has(%s%s)", prefix, e.Key))
-		case unversioned.LabelSelectorOpDoesNotExist:
+		case metav1.LabelSelectorOpDoesNotExist:
 			selectors = append(selectors, fmt.Sprintf("! has(%s%s)", prefix, e.Key))
 		}
 	}
@@ -280,10 +323,26 @@ func (c converter) k8sIngressRuleToCalico(r extensions.NetworkPolicyIngressRule,
 
 	// Built up a list of the sources and a list of the destinations.
 	for _, f := range r.From {
-		peers = append(peers, &f)
+		// We need to add a copy of the peer so all the rules don't
+		// point to the same location.
+		peers = append(peers, &extensions.NetworkPolicyPeer{
+			NamespaceSelector: f.NamespaceSelector,
+			PodSelector:       f.PodSelector,
+		})
 	}
 	for _, p := range r.Ports {
-		ports = append(ports, &p)
+		// We need to add a copy of the port so all the rules don't
+		// point to the same location.
+		port := extensions.NetworkPolicyPort{}
+		if p.Port != nil {
+			portval := intstr.FromString(p.Port.String())
+			port.Port = &portval
+		}
+		if p.Protocol != nil {
+			protval := kapiv1.Protocol(fmt.Sprintf("%s", *p.Protocol))
+			port.Protocol = &protval
+		}
+		ports = append(ports, &port)
 	}
 
 	// If there no peers, or no ports, represent that as nil.
@@ -295,6 +354,8 @@ func (c converter) k8sIngressRuleToCalico(r extensions.NetworkPolicyIngressRule,
 	}
 
 	// Combine desintations with sources to generate rules.
+	// TODO: This currently creates a lot of rules by making every combination of from / ports
+	// into a rule.  We can combine these so that we don't need as many rules!
 	for _, port := range ports {
 		for _, peer := range peers {
 			// Build rule and append to list.
