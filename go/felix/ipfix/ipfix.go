@@ -13,7 +13,7 @@ package ipfix
 #define TIGERA_IENUM_TIERID		10
 #define TIGERA_IENUM_POLICYID		11
 #define TIGERA_IENUM_RULE		12
-#define TIGERA_IENUM_RULE_IDX		13
+#define TIGERA_IENUM_POLICY_IDX		13
 #define TIGERA_IENUM_RULE_ACTION	14
 
 static fbInfoElement_t tigeraElements[] = {
@@ -21,7 +21,7 @@ static fbInfoElement_t tigeraElements[] = {
 	FB_IE_INIT("policyId", TIGERA_PEN, TIGERA_IENUM_POLICYID, FB_IE_VARLEN, 0),
 	FB_IE_INIT("rule", TIGERA_PEN, TIGERA_IENUM_RULE, FB_IE_VARLEN, 0),
 	FB_IE_INIT("ruleAction", TIGERA_PEN, TIGERA_IENUM_RULE_ACTION, FB_IE_VARLEN, 0),
-	FB_IE_INIT("ruleIdx", TIGERA_PEN, TIGERA_IENUM_RULE_IDX, 2, 0),
+	FB_IE_INIT("policyIdx", TIGERA_PEN, TIGERA_IENUM_POLICY_IDX, 2, 0),
 	FB_IESPEC_NULL
 };
 
@@ -37,8 +37,9 @@ static fbInfoElementSpec_t exportTemplate[] = {
 	{"sourceTransportPort",		0, 0 },
 	{"destinationTransportPort",	0, 0 },
 	{"protocolIdentifier",		0, 0 },
+	{"forwardingStatus",		1, 0 },
 	{"flowEndReason",		0, 0 },
-	{"paddingOctets",		2, 0 },
+	{"paddingOctets",               1, 0 },
 	{"subTemplateList",		0, 0 },
 	FB_IESPEC_NULL
 };
@@ -57,8 +58,9 @@ typedef struct exportRecord_st {
 	uint16_t    sourceTransportPort;
 	uint16_t    destinationTransportPort;
 	uint8_t     protocolIdentifier;
+	uint8_t     forwardingStatus;
 	uint8_t     flowEndReason;
-	uint8_t     paddingOctets[2];
+	uint8_t     paddingOctets[1];
 
 	fbSubTemplateList_t	ruleTrace;
 
@@ -69,7 +71,7 @@ static fbInfoElementSpec_t  ruleTraceTemplate[] = {
 	{"policyId",		0, 0 },
 	{"rule",		0, 0 },
 	{"ruleAction",		0, 0 },
-	{"ruleIdx",		0, 0 },
+	{"policyIdx",		0, 0 },
 	{"paddingOctets",	6, 0 },
 	FB_IESPEC_NULL
 };
@@ -79,7 +81,7 @@ typedef struct ruleTrace_st {
 	fbVarfield_t	policyId;
 	fbVarfield_t	rule;
 	fbVarfield_t	ruleAction;
-	uint16_t	ruleIdx;
+	uint16_t	policyIdx;
 	uint8_t		paddingOctets[6];
 } ruleTrace_t;
 
@@ -94,7 +96,7 @@ typedef struct ruleTraceShim_st {
 	char		*policyId;
 	char		*rule;
 	char		*ruleAction;
-	uint16_t	 ruleIdx;
+	uint16_t	 policyIdx;
 } ruleTraceShim_t;
 
 typedef struct fixbufData_st {
@@ -215,6 +217,7 @@ GError * fixbuf_export_data(fixbufData_t fbData, exportRecord_t rec, ruleTraceSh
 	myrec.sourceTransportPort = rec.sourceTransportPort;
 	myrec.destinationTransportPort = rec.destinationTransportPort;
 	myrec.protocolIdentifier = rec.protocolIdentifier;
+	myrec.forwardingStatus = rec.forwardingStatus;
 	myrec.flowEndReason = rec.flowEndReason;
 
 	if (numTraces != 0) {
@@ -225,7 +228,7 @@ GError * fixbuf_export_data(fixbufData_t fbData, exportRecord_t rec, ruleTraceSh
 			fixbuf_fill_varfield(&(ruleTracePtr->policyId), ruleTraceShimPtr->policyId);
 			fixbuf_fill_varfield(&(ruleTracePtr->rule), ruleTraceShimPtr->rule);
 			fixbuf_fill_varfield(&(ruleTracePtr->ruleAction), ruleTraceShimPtr->ruleAction);
-			ruleTracePtr->ruleIdx = ruleTraceShimPtr->ruleIdx;
+			ruleTracePtr->policyIdx = ruleTraceShimPtr->policyIdx;
 
 			ruleTracePtr++;
 			ruleTraceShimPtr++;
@@ -282,6 +285,19 @@ const (
 	LackOfResources FlowEndReasonType = 0x05
 )
 
+type ForwardingStatusType int
+
+// Valid values of ExportRecord.ForwardingStatus. Refer to
+// http://www.iana.org/assignments/ipfix/ipfix.xhtml
+// for an explanation of the different values below.
+// TODO(doublek): Support for Reason Codes.
+const (
+	Unknown   ForwardingStatusType = 0
+	Forwarded ForwardingStatusType = 64
+	Dropped   ForwardingStatusType = 128
+	Consumed  ForwardingStatusType = 192
+)
+
 // An IPFIX record that is exported to IPFIX collectors. Refer to
 // http://www.iana.org/assignments/ipfix/ipfix.xhtml
 // for descriptions of the different fields that are exported.
@@ -299,17 +315,18 @@ type ExportRecord struct {
 	SourceTransportPort      int
 	DestinationTransportPort int
 	ProtocolIdentifier       int
+	ForwardingStatus         ForwardingStatusType
 	FlowEndReason            FlowEndReasonType
 
 	RuleTrace []RuleTraceRecord
 }
 
 type RuleTraceRecord struct {
-	TierID     string
-	PolicyID   string
-	Rule       string
-	RuleAction string
-	RuleIndex  int
+	TierID      string
+	PolicyID    string
+	Rule        string
+	RuleAction  string
+	PolicyIndex int
 }
 
 var fbTransport = map[string]C.fbTransport_t{
@@ -384,6 +401,7 @@ func (ie *IPFIXExporter) exportData(data *ExportRecord) error {
 		sourceTransportPort:      C.uint16_t(data.SourceTransportPort),
 		destinationTransportPort: C.uint16_t(data.DestinationTransportPort),
 		protocolIdentifier:       C.uint8_t(data.ProtocolIdentifier),
+		forwardingStatus:         C.uint8_t(data.ForwardingStatus),
 		flowEndReason:            C.uint8_t(data.FlowEndReason),
 	}
 	rtRec := []C.struct_ruleTraceShim_st{}
@@ -394,7 +412,7 @@ func (ie *IPFIXExporter) exportData(data *ExportRecord) error {
 			policyId:   C.CString(rt.PolicyID),
 			rule:       C.CString(rt.Rule),
 			ruleAction: C.CString(rt.RuleAction),
-			ruleIdx:    C.uint16_t(rt.RuleIndex),
+			policyIdx:  C.uint16_t(rt.PolicyIndex),
 		})
 	}
 	log.Debug("Produced record for export: ", rec, " with rule trace: ", rtRec)

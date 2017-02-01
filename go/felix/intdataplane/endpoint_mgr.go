@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -279,7 +279,8 @@ func (m *endpointManager) resolveWorkloadEndpoints() error {
 	})
 
 	m.ifaceIDsToUpdateStatus.Iter(func(item interface{}) error {
-		log.WithField("workloadID", item).Info("Re-evaluating endpoint status")
+		logCxt := log.WithField("workloadID", item)
+		logCxt.Debug("Re-evaluating endpoint status")
 		workloadID := item.(proto.WorkloadEndpointID)
 		var known, operUp, adminUp, failed bool
 
@@ -300,6 +301,14 @@ func (m *endpointManager) resolveWorkloadEndpoints() error {
 				status = "down"
 			}
 		}
+		logCxt = logCxt.WithFields(log.Fields{
+			"known":   known,
+			"failed":  failed,
+			"operUp":  operUp,
+			"adminUp": adminUp,
+			"status":  status,
+		})
+		logCxt.Info("Re-evaluated endpoint status")
 		m.OnWorkloadEndpointStatusUpdate(m.ipVersion, workloadID, status)
 
 		return set.RemoveItem
@@ -342,12 +351,12 @@ func (m *endpointManager) resolveHostEndpoints() error {
 			"ifaceName":  ifaceName,
 			"ifaceAddrs": ifaceAddrs,
 		})
-		var bestHostEpId *proto.HostEndpointID = nil
+		bestHostEpId := proto.HostEndpointID{}
 	HostEpLoop:
 		for id, hostEp := range m.rawHostEndpoints {
 			logCxt := ifaceCxt.WithField("id", id)
-			logCxt.Debug("See if HostEp matches interface")
-			if (bestHostEpId != nil) && (bestHostEpId.EndpointId < id.EndpointId) {
+			logCxt.WithField("bestHostEpId", bestHostEpId).Debug("See if HostEp matches interface")
+			if (bestHostEpId.EndpointId != "") && (bestHostEpId.EndpointId < id.EndpointId) {
 				// We already have a HostEndpointId that is better than
 				// this one, so no point looking any further.
 				logCxt.Debug("No better than existing match")
@@ -357,7 +366,7 @@ func (m *endpointManager) resolveHostEndpoints() error {
 				// The HostEndpoint has an explicit name that matches the
 				// interface.
 				logCxt.Debug("Match on explicit iface name")
-				bestHostEpId = &id
+				bestHostEpId = id
 				continue
 			} else if hostEp.Name != "" {
 				// The HostEndpoint has an explicit name that isn't this
@@ -373,15 +382,18 @@ func (m *endpointManager) resolveHostEndpoints() error {
 						// The HostEndpoint expects an IP address
 						// that is on this interface.
 						logCxt.Debug("Match on address")
-						bestHostEpId = &id
+						bestHostEpId = id
 						continue HostEpLoop
 					}
 				}
 			}
 		}
-		if bestHostEpId != nil {
-			log.WithField("ifaceName", ifaceName).WithField("bestHostEpId", bestHostEpId).Debug("Got HostEp for interface")
-			resolvedHostEpIds[ifaceName] = *bestHostEpId
+		if bestHostEpId.EndpointId != "" {
+			log.WithFields(log.Fields{
+				"ifaceName":    ifaceName,
+				"bestHostEpId": bestHostEpId,
+			}).Debug("Got HostEp for interface")
+			resolvedHostEpIds[ifaceName] = bestHostEpId
 		}
 	}
 
@@ -428,7 +440,6 @@ func (m *endpointManager) configureInterface(name string) error {
 	log.WithField("ifaceName", name).Info(
 		"Applying /proc/sys configuration to interface.")
 	if m.ipVersion == 4 {
-		// TODO(smc) Retry, don't panic!
 		err := writeProcSys(fmt.Sprintf("/proc/sys/net/ipv4/conf/%s/rp_filter", name), "1")
 		if err != nil {
 			return err

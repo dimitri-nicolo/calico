@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"github.com/projectcalico/felix/go/felix/proto"
 )
 
-func (r *ruleRenderer) WorkloadDispatchChains(endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*Chain {
+func (r *DefaultRuleRenderer) WorkloadDispatchChains(endpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*Chain {
 
 	// Extract endpoint names.
 	names := make([]string, 0, len(endpoints))
@@ -28,23 +28,41 @@ func (r *ruleRenderer) WorkloadDispatchChains(endpoints map[proto.WorkloadEndpoi
 		names = append(names, endpoint.Name)
 	}
 
-	return dispatchChains(
+	return r.dispatchChains(
 		names,
 		WorkloadFromEndpointPfx,
 		WorkloadToEndpointPfx,
 		ChainFromWorkloadDispatch,
 		ChainToWorkloadDispatch,
-		DropAction{},
+		true,
 	)
 }
 
-func dispatchChains(
+func (r *DefaultRuleRenderer) HostDispatchChains(endpoints map[string]proto.HostEndpointID) []*Chain {
+
+	// Extract endpoint names.
+	names := make([]string, 0, len(endpoints))
+	for ifaceName, _ := range endpoints {
+		names = append(names, ifaceName)
+	}
+
+	return r.dispatchChains(
+		names,
+		HostFromEndpointPfx,
+		HostToEndpointPfx,
+		ChainDispatchFromHostEndpoint,
+		ChainDispatchToHostEndpoint,
+		false,
+	)
+}
+
+func (r *DefaultRuleRenderer) dispatchChains(
 	names []string,
 	fromEndpointPfx,
 	toEndpointPfx,
 	dispatchFromEndpoint,
 	dispatchToEndpoint string,
-	unknownInterfaceAction Action,
+	dropAtEndOfChain bool,
 ) []*Chain {
 	toEndpointRules := make([]Rule, 0, len(names)+1)
 	fromEndpointRules := make([]Rule, 0, len(names)+1)
@@ -63,14 +81,12 @@ func dispatchChains(
 		})
 	}
 
-	fromEndpointRules = append(fromEndpointRules, Rule{
-		Action:  unknownInterfaceAction,
-		Comment: "Unknown interface",
-	})
-	toEndpointRules = append(toEndpointRules, Rule{
-		Action:  unknownInterfaceAction,
-		Comment: "Unknown interface",
-	})
+	if dropAtEndOfChain {
+		fromEndpointRules = append(fromEndpointRules,
+			r.DropRules(Match(), "Unknown interface")...)
+		toEndpointRules = append(toEndpointRules,
+			r.DropRules(Match(), "Unknown interface")...)
+	}
 
 	fromEndpointDispatchChain := Chain{
 		Name:  dispatchFromEndpoint,
@@ -84,7 +100,7 @@ func dispatchChains(
 	return []*Chain{&toEndpointDispatchChain, &fromEndpointDispatchChain}
 }
 
-func (r *ruleRenderer) WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndpointID, endpoint *proto.WorkloadEndpoint) []*Chain {
+func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndpointID, endpoint *proto.WorkloadEndpoint) []*Chain {
 	return r.endpointToIptablesChains(
 		endpoint.Tiers,
 		endpoint.ProfileIds,
@@ -98,7 +114,7 @@ func (r *ruleRenderer) WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndp
 	)
 }
 
-func (r *ruleRenderer) endpointToIptablesChains(
+func (r *DefaultRuleRenderer) endpointToIptablesChains(
 	tiers []*proto.TierInfo,
 	profileIds []string,
 	name string,
@@ -189,9 +205,35 @@ func (r *ruleRenderer) endpointToIptablesChains(
 					Comment: "Return if policy accepted",
 				})
 		}
+
+		var exportIpfix string
+		if r.Config.IpfixExportTierDropRules {
+			exportIpfix = "T/"
+		} else {
+			exportIpfix = "F/"
+		}
+
 		// If no policy in the tier marked the packet as next-tier, drop the packet.
-		toRules = append(toRules, r.DropRules(Match().MarkClear(r.IptablesMarkNextTier), "Drop if no policies passed packet")...)
-		fromRules = append(fromRules, r.DropRules(Match().MarkClear(r.IptablesMarkNextTier), "Drop if no policies passed packet")...)
+		toRules = append(toRules, Rule{
+			Match: Match().MarkClear(r.IptablesMarkNextTier),
+			Action: NflogAction{
+				Group:  1,
+				Prefix: exportIpfix + "D/0/" + "no-policy-match-inbound/" + tier.Name,
+			},
+		})
+		fromRules = append(fromRules, Rule{
+			Match: Match().MarkClear(r.IptablesMarkNextTier),
+			Action: NflogAction{
+				Group:  2,
+				Prefix: exportIpfix + "D/0/" + "no-policy-match-outbound/" + tier.Name,
+			},
+		})
+		toRules = append(toRules, r.DropRules(
+			Match().MarkClear(r.IptablesMarkNextTier),
+			"Drop if no policies passed packet")...)
+		fromRules = append(fromRules, r.DropRules(
+			Match().MarkClear(r.IptablesMarkNextTier),
+			"Drop if no policies passed packet")...)
 	}
 
 	// Then, jump to each profile in turn.
@@ -218,6 +260,29 @@ func (r *ruleRenderer) endpointToIptablesChains(
 			})
 	}
 
+	// TODO (Matt): This (and the policy equivalent just above) can probably be refactored.
+	//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
+	// No profile matched the packet: drop it.
+	var exportIpfix string
+	if r.Config.IpfixExportTierDropRules {
+		exportIpfix = "T/"
+	} else {
+		exportIpfix = "F/"
+	}
+	toRules = append(toRules, Rule{
+		Match: Match(),
+		Action: NflogAction{
+			Group:  1,
+			Prefix: exportIpfix + "D/0/no-profile-match-inbound",
+		},
+	})
+	fromRules = append(fromRules, Rule{
+		Match: Match(),
+		Action: NflogAction{
+			Group:  2,
+			Prefix: exportIpfix + "D/0/no-profile-match-outbound",
+		},
+	})
 	toRules = append(toRules, r.DropRules(Match(), "Drop if no profiles matched")...)
 	fromRules = append(fromRules, r.DropRules(Match(), "Drop if no profiles matched")...)
 
@@ -232,25 +297,7 @@ func (r *ruleRenderer) endpointToIptablesChains(
 	return []*Chain{&toEndpointChain, &fromEndpointChain}
 }
 
-func (r *ruleRenderer) HostDispatchChains(endpoints map[string]proto.HostEndpointID) []*Chain {
-
-	// Extract endpoint names.
-	names := make([]string, 0, len(endpoints))
-	for ifaceName, _ := range endpoints {
-		names = append(names, ifaceName)
-	}
-
-	return dispatchChains(
-		names,
-		HostFromEndpointPfx,
-		HostToEndpointPfx,
-		ChainDispatchFromHostEndpoint,
-		ChainDispatchToHostEndpoint,
-		ReturnAction{},
-	)
-}
-
-func (r *ruleRenderer) HostEndpointToIptablesChains(ifaceName string, endpoint *proto.HostEndpoint) []*Chain {
+func (r *DefaultRuleRenderer) HostEndpointToIptablesChains(ifaceName string, endpoint *proto.HostEndpoint) []*Chain {
 	return r.endpointToIptablesChains(
 		endpoint.Tiers,
 		endpoint.ProfileIds,

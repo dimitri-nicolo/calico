@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import (
 	"strings"
 )
 
-func (r *ruleRenderer) StaticFilterTableChains(ipVersion uint8) (chains []*Chain) {
+func (r *DefaultRuleRenderer) StaticFilterTableChains(ipVersion uint8) (chains []*Chain) {
 	chains = append(chains, r.StaticFilterForwardChains()...)
 	chains = append(chains, r.StaticFilterInputChains(ipVersion)...)
 	chains = append(chains, r.StaticFilterOutputChains()...)
@@ -32,7 +32,7 @@ const (
 	ProtoICMPv6 = 58
 )
 
-func (r *ruleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain {
+func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain {
 	return []*Chain{
 		r.filterInputChain(ipVersion),
 		r.filterWorkloadToHostChain(ipVersion),
@@ -40,7 +40,7 @@ func (r *ruleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain {
 	}
 }
 
-func (r *ruleRenderer) filterInputChain(ipVersion uint8) *Chain {
+func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	var inputRules []Rule
 
 	if ipVersion == 4 && r.IPIPEnabled {
@@ -56,10 +56,6 @@ func (r *ruleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	// Allow established connections via the conntrack table.
 	inputRules = append(inputRules, r.DropRules(Match().ConntrackState("INVALID"))...)
 	inputRules = append(inputRules,
-		Rule{
-			Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
-			Action: AcceptAction{},
-		},
 		Rule{
 			Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
 			Action: AcceptAction{},
@@ -87,7 +83,7 @@ func (r *ruleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	}
 }
 
-func (r *ruleRenderer) filterWorkloadToHostChain(ipVersion uint8) *Chain {
+func (r *DefaultRuleRenderer) filterWorkloadToHostChain(ipVersion uint8) *Chain {
 	var rules []Rule
 
 	// For IPv6, we need to white-list certain ICMP traffic from workloads in order to to act
@@ -116,6 +112,7 @@ func (r *ruleRenderer) filterWorkloadToHostChain(ipVersion uint8) *Chain {
 	}
 
 	if r.OpenStackSpecialCasesEnabled {
+		log.Info("Adding OpenStack special-case rules.")
 		if ipVersion == 4 && r.OpenStackMetadataIP != nil {
 			// For OpenStack compatibility, we support a special-case to allow incoming traffic
 			// to the OpenStack metadata IP/port.
@@ -181,7 +178,7 @@ func (r *ruleRenderer) filterWorkloadToHostChain(ipVersion uint8) *Chain {
 	}
 }
 
-func (r *ruleRenderer) filterFailsafeInChain() *Chain {
+func (r *DefaultRuleRenderer) filterFailsafeInChain() *Chain {
 	rules := []Rule{}
 
 	for _, port := range r.Config.FailsafeInboundHostPorts {
@@ -197,7 +194,7 @@ func (r *ruleRenderer) filterFailsafeInChain() *Chain {
 	}
 }
 
-func (r *ruleRenderer) filterFailsafeOutChain() *Chain {
+func (r *DefaultRuleRenderer) filterFailsafeOutChain() *Chain {
 	rules := []Rule{}
 
 	for _, port := range r.Config.FailsafeOutboundHostPorts {
@@ -213,38 +210,31 @@ func (r *ruleRenderer) filterFailsafeOutChain() *Chain {
 	}
 }
 
-func (r *ruleRenderer) StaticFilterForwardChains() []*Chain {
+func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 	rules := []Rule{}
 
-	// To handle multiple interface prefixes, we want 3 batches of rules.
+	// conntrack rules to reject invalid packets and accept established connections.
+	// Ideally, we'd limit these rules to the interfaces that we're managing so that we
+	// co-exist better with the user's other rules. However, to do that we'd have to push
+	// them down into the per-endpoint chains, which would increase per-packet overhead.
+	rules = append(rules, r.DropRules(Match().ConntrackState("INVALID"))...)
+	rules = append(rules,
+		Rule{
+			Match:  Match().ConntrackState("RELATED,ESTABLISHED"),
+			Action: AcceptAction{},
+		},
+	)
+
+	// To handle multiple workload interface prefixes, we want 2 batches of rules.
 	//
-	// The first batch handles conntrack, accepting packets from established flows.
-	//
-	// The second dispatches the packet to our dispatch chains if it is going to/from an
+	// The first dispatches the packet to our dispatch chains if it is going to/from an
 	// interface that we're responsible for.  Note: the dispatch chains represent "allow" by
 	// returning to this chain for further processing; this is required to handle traffic that
 	// is going between endpoints on the same host.  In that case we need to apply the egress
 	// policy for one endpoint and the ingress policy for the other.
 	//
-	// The third batch actually accepts the packets if they passed through the policy
+	// The second batch actually accepts the packets if they passed through the workload policy
 	// and were returned.
-
-	// conntrack rules.
-	for _, prefix := range r.WorkloadIfacePrefixes {
-		log.WithField("ifacePrefix", prefix).Debug("Adding workload match rules")
-		ifaceMatch := prefix + "+"
-		rules = append(rules, r.DropRules(Match().InInterface(ifaceMatch).ConntrackState("INVALID"))...)
-		rules = append(rules,
-			Rule{
-				Match:  Match().InInterface(ifaceMatch).ConntrackState("RELATED,ESTABLISHED"),
-				Action: AcceptAction{},
-			},
-			Rule{
-				Match:  Match().OutInterface(ifaceMatch).ConntrackState("RELATED,ESTABLISHED"),
-				Action: AcceptAction{},
-			},
-		)
-	}
 
 	// Jump to dispatch chains.
 	for _, prefix := range r.WorkloadIfacePrefixes {
@@ -278,20 +268,32 @@ func (r *ruleRenderer) StaticFilterForwardChains() []*Chain {
 		)
 	}
 
+	// If we get here, the packet is not going to or from a workload, but, since we're in the
+	// FORWARD chain, it is being forwarded.  Apply host endpoint rules in that case.  This
+	// allows Calico to police traffic that is flowing through a NAT gateway or router.
+	rules = append(rules,
+		Rule{
+			Action: JumpAction{Target: ChainDispatchFromHostEndpoint},
+		},
+		Rule{
+			Action: JumpAction{Target: ChainDispatchToHostEndpoint},
+		},
+	)
+
 	return []*Chain{{
 		Name:  ChainFilterForward,
 		Rules: rules,
 	}}
 }
 
-func (r *ruleRenderer) StaticFilterOutputChains() []*Chain {
+func (r *DefaultRuleRenderer) StaticFilterOutputChains() []*Chain {
 	return []*Chain{
 		r.filterOutputChain(),
 		r.filterFailsafeOutChain(),
 	}
 }
 
-func (r *ruleRenderer) filterOutputChain() *Chain {
+func (r *DefaultRuleRenderer) filterOutputChain() *Chain {
 	rules := []Rule{}
 
 	// conntrack rules.
@@ -333,16 +335,16 @@ func (r *ruleRenderer) filterOutputChain() *Chain {
 	}
 }
 
-func (r *ruleRenderer) StaticNATTableChains(ipVersion uint8) (chains []*Chain) {
+func (r *DefaultRuleRenderer) StaticNATTableChains(ipVersion uint8) (chains []*Chain) {
 	chains = append(chains, r.StaticNATPreroutingChains(ipVersion)...)
 	chains = append(chains, r.StaticNATPostroutingChains(ipVersion)...)
 	return
 }
 
-func (r *ruleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*Chain {
+func (r *DefaultRuleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*Chain {
 	rules := []Rule{}
 
-	if ipVersion == 4 && r.OpenStackMetadataIP != nil {
+	if ipVersion == 4 && r.OpenStackSpecialCasesEnabled && r.OpenStackMetadataIP != nil {
 		rules = append(rules, Rule{
 			Match: Match().
 				Protocol("tcp").
@@ -361,13 +363,13 @@ func (r *ruleRenderer) StaticNATPreroutingChains(ipVersion uint8) []*Chain {
 	}}
 }
 
-func (r *ruleRenderer) StaticNATPostroutingChains(ipVersion uint8) []*Chain {
+func (r *DefaultRuleRenderer) StaticNATPostroutingChains(ipVersion uint8) []*Chain {
 	rules := []Rule{
 		{
 			Action: JumpAction{Target: ChainNATOutgoing},
 		},
 	}
-	if r.IPIPEnabled && len(r.IPIPTunnelAddress) > 0 {
+	if ipVersion == 4 && r.IPIPEnabled && len(r.IPIPTunnelAddress) > 0 {
 		// Add a rule to catch packets that are being sent down the IPIP tunnel from an
 		// incorrect local IP address of the host and NAT them to use the tunnel IP as its
 		// source.  This happens if:
@@ -406,7 +408,7 @@ func (r *ruleRenderer) StaticNATPostroutingChains(ipVersion uint8) []*Chain {
 	}}
 }
 
-func (r ruleRenderer) DropRules(matchCriteria MatchCriteria, comments ...string) []Rule {
+func (r DefaultRuleRenderer) DropRules(matchCriteria MatchCriteria, comments ...string) []Rule {
 	rules := []Rule{}
 
 	for _, action := range r.DropActions() {
@@ -420,6 +422,6 @@ func (r ruleRenderer) DropRules(matchCriteria MatchCriteria, comments ...string)
 	return rules
 }
 
-func (r *ruleRenderer) DropActions() []Action {
+func (r *DefaultRuleRenderer) DropActions() []Action {
 	return r.dropActions
 }

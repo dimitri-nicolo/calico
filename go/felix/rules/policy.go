@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 package rules
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/hashutils"
 	"github.com/projectcalico/felix/go/felix/iptables"
@@ -26,7 +26,7 @@ import (
 
 // ruleRenderer defined in rules_defs.go.
 
-func (r *ruleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain {
+func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain {
 	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
 	inbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyInboundPfx, policyID),
@@ -39,7 +39,7 @@ func (r *ruleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, policy *
 	return []*iptables.Chain{&inbound, &outbound}
 }
 
-func (r *ruleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
+func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
 	inbound := iptables.Chain{
 		Name:  ProfileChainName(PolicyInboundPfx, profileID),
 		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, true, profileID.Name),
@@ -51,7 +51,7 @@ func (r *ruleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profi
 	return []*iptables.Chain{&inbound, &outbound}
 }
 
-func (r *ruleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule {
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
@@ -60,7 +60,7 @@ func (r *ruleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVer
 	return rules
 }
 
-func (r *ruleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule {
 	rules := []iptables.Rule{}
 	ruleCopy := *pRule
 
@@ -138,7 +138,7 @@ func SplitPortList(ports []*proto.PortRange) (splits [][]*proto.PortRange) {
 	return
 }
 
-func (r *ruleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) (mark uint32, actions []iptables.Action) {
+func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) (mark uint32, actions []iptables.Action) {
 	actions = []iptables.Action{}
 
 	nflogGroup := uint16(2)
@@ -148,13 +148,20 @@ func (r *ruleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *pro
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
-		prefix := pRule.LogPrefix
-		if prefix == "" {
-			prefix = "calico-packet"
+		logPrefix := pRule.LogPrefix
+		if logPrefix == "" {
+			logPrefix = "calico-packet"
 		}
 		actions = append(actions, iptables.LogAction{
-			Prefix: prefix,
+			Prefix: logPrefix,
 		})
+	}
+
+	var exportIpfix string
+	if pRule.ExportIpfix {
+		exportIpfix = "T/"
+	} else {
+		exportIpfix = "F/"
 	}
 
 	switch pRule.Action {
@@ -164,7 +171,7 @@ func (r *ruleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *pro
 		mark = r.IptablesMarkAccept
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: "A/" + prefix,
+			Prefix: exportIpfix + "A/" + prefix,
 		})
 		actions = append(actions, iptables.ReturnAction{})
 	case "next-tier":
@@ -173,7 +180,7 @@ func (r *ruleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *pro
 		mark = r.IptablesMarkNextTier
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: "N/" + prefix,
+			Prefix: exportIpfix + "N/" + prefix,
 		})
 		actions = append(actions, iptables.ReturnAction{})
 	case "deny":
@@ -181,7 +188,7 @@ func (r *ruleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *pro
 		mark = r.IptablesMarkDrop
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: "D/" + prefix,
+			Prefix: exportIpfix + "D/" + prefix,
 		})
 		actions = append(actions, r.DropActions()...)
 	case "log":
@@ -194,7 +201,7 @@ func (r *ruleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *pro
 
 var SkipRule = errors.New("Rule skipped")
 
-func (r *ruleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion uint8) (iptables.MatchCriteria, error) {
+func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion uint8) (iptables.MatchCriteria, error) {
 	match := iptables.Match()
 
 	logCxt := log.WithFields(log.Fields{

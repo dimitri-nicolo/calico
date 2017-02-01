@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -147,8 +147,13 @@ type Config struct {
 	FailsafeInboundHostPorts  []uint16 `config:"port-list;22;die-on-fail"`
 	FailsafeOutboundHostPorts []uint16 `config:"port-list;2379,2380,4001,7001;die-on-fail"`
 
-	IpfixCollectorAddr string `config:"hostname;127.0.0.1;die-on-fail"`
-	IpfixCollectorPort int    `config:"int(0,65535);4739;die-on-fail"`
+	IpfixCollectorAddr       string `config:"hostname;127.0.0.1;die-on-fail"`
+	IpfixCollectorPort       int    `config:"int(0,65535);4739;die-on-fail"`
+	IpfixExportTierDropRules bool   `config:"bool;true"`
+
+	NfNetlinkBufSize int  `config:"int;65536"`
+
+	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
 	UsageReportingEnabled bool   `config:"bool;true"`
 	ClusterGUID           string `config:"string;baddecaf"`
@@ -206,6 +211,24 @@ func (config *Config) OpenstackActive() bool {
 	return false
 }
 
+func (config *Config) NthIPTablesMark(n int) uint32 {
+	numBitsFound := 0
+	for shift := uint(0); shift < 32; shift++ {
+		candidate := uint32(1) << shift
+		if config.IptablesMarkMask&candidate > 0 {
+			if numBitsFound == n {
+				return candidate
+			}
+			numBitsFound += 1
+		}
+	}
+	log.WithFields(log.Fields{
+		"IptablesMarkMask": config.IptablesMarkMask,
+		"requestedMark":    n,
+	}).Panic("Not enough iptables mark bits available.")
+	return 0
+}
+
 func (config *Config) resolve() (changed bool, err error) {
 	newRawValues := make(map[string]string)
 	nameToSource := make(map[string]Source)
@@ -252,14 +275,14 @@ func (config *Config) resolve() (changed bool, err error) {
 			} else {
 				value, err = param.Parse(rawValue)
 				if err != nil {
-					log.Errorf("%v (source %v)", err, source)
+					logCxt := log.WithError(err).WithField("source", source)
 					if metadata.DieOnParseFailure {
-						log.Errorf("Cannot continue with invalid value for %v.", name)
+						logCxt.Error("Invalid (required) config value.")
 						config.Err = err
 						return
 					} else {
-						log.Errorf("Replacing invalid value with default value for %v: %v",
-							name, metadata.Default)
+						logCxt.WithField("default", metadata.Default).Warn(
+							"Replacing invalid value with default")
 						value = metadata.Default
 						err = nil
 					}

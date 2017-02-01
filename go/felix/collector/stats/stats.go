@@ -4,7 +4,9 @@ package stats
 
 import (
 	"errors"
+	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -24,13 +26,22 @@ type Counter struct {
 	bytes   int
 }
 
+func (c Counter) String() string {
+	return fmt.Sprintf("packets=%v bytes=%v", c.packets, c.bytes)
+}
+
 type RuleAction string
 
 const (
 	AllowAction    RuleAction = "allow"
 	DenyAction     RuleAction = "deny"
-	NextTierAction RuleAction = "next-tier"
+	NextTierAction RuleAction = "pass"
 )
+
+var fwdStatus = map[RuleAction]ipfix.ForwardingStatusType{
+	"allow": ipfix.Forwarded,
+	"deny":  ipfix.Dropped,
+}
 
 const RuleTraceInitLen = 10
 
@@ -47,7 +58,12 @@ type RuleTracePoint struct {
 	PolicyID string
 	Rule     string
 	Action   RuleAction
+	Export   bool
 	Index    int
+}
+
+func (rtp RuleTracePoint) String() string {
+	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v export=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index, rtp.Export)
 }
 
 var EmptyRuleTracePoint = RuleTracePoint{}
@@ -58,12 +74,24 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 type RuleTrace struct {
 	path   []RuleTracePoint
 	action RuleAction
+	export bool
 }
 
 func NewRuleTrace() *RuleTrace {
 	return &RuleTrace{
 		path: make([]RuleTracePoint, RuleTraceInitLen),
 	}
+}
+
+func (t *RuleTrace) String() string {
+	rtParts := make([]string, 0)
+	for _, tp := range t.path {
+		if tp == EmptyRuleTracePoint {
+			continue
+		}
+		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
+	}
+	return fmt.Sprintf("path=[%v], action=%v export=%v", strings.Join(rtParts, ", "), t.action, t.export)
 }
 
 func (t *RuleTrace) Len() int {
@@ -107,6 +135,7 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	}
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
+		t.export = tp.Export
 	}
 	return nil
 }
@@ -123,6 +152,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
 	t.action = tp.Action
+	t.export = tp.Export
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection. This is
@@ -143,6 +173,10 @@ func NewTuple(src net.IP, dst net.IP, proto int, l4Src int, l4Dst int) *Tuple {
 		l4Src: l4Src,
 		l4Dst: l4Dst,
 	}
+}
+
+func (t *Tuple) String() string {
+	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", t.src, t.dst, t.proto, t.l4Src, t.l4Dst)
 }
 
 // A Data object contains metadata and statistics such as rule counters and
@@ -187,6 +221,11 @@ func NewData(tuple Tuple,
 	}
 }
 
+func (d *Data) String() string {
+	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ruleTrace={%v} workloadId=%v endpointId=%v",
+		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.RuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
+}
+
 func (d *Data) touch() {
 	d.updatedAt = time.Now()
 	d.resetAgeTimeout()
@@ -220,6 +259,11 @@ func (d *Data) AgeTimer() *time.Timer {
 // Returns the final action of the RuleTrace
 func (d *Data) Action() RuleAction {
 	return d.RuleTrace.action
+}
+
+// Returns the if export is requested or not.
+func (d *Data) IsExportEnabled() bool {
+	return d.RuleTrace.export
 }
 
 func (d *Data) CountersIn() Counter {
@@ -300,12 +344,16 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 			continue
 		}
 		rtRecs = append(rtRecs, ipfix.RuleTraceRecord{
-			TierID:     tp.TierID,
-			PolicyID:   tp.PolicyID,
-			Rule:       tp.Rule,
-			RuleAction: string(tp.Action),
-			RuleIndex:  tp.Index,
+			TierID:      tp.TierID,
+			PolicyID:    tp.PolicyID,
+			Rule:        tp.Rule,
+			RuleAction:  string(tp.Action),
+			PolicyIndex: tp.Index,
 		})
+	}
+	fs, ok := fwdStatus[d.Action()]
+	if !ok {
+		fs = ipfix.Unknown
 	}
 	return &ipfix.ExportRecord{
 		FlowStart:               d.createdAt,
@@ -321,6 +369,7 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecor
 		SourceTransportPort:      d.Tuple.l4Src,
 		DestinationTransportPort: d.Tuple.l4Dst,
 		ProtocolIdentifier:       d.Tuple.proto,
+		ForwardingStatus:         fs,
 		FlowEndReason:            reason,
 
 		RuleTrace: rtRecs,

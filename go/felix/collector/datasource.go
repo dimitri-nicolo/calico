@@ -1,9 +1,11 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
+	"bytes"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,14 +20,16 @@ type NflogDataSource struct {
 	sink      chan<- stats.StatUpdate
 	groupNum  int
 	direction stats.Direction
+	nlBufSiz  int
 	lum       *lookup.LookupManager
 }
 
-func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction) *NflogDataSource {
+func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction, nlBufSiz int) *NflogDataSource {
 	return &NflogDataSource{
 		sink:      sink,
 		groupNum:  groupNum,
 		direction: dir,
+		nlBufSiz:  nlBufSiz,
 		lum:       lm,
 	}
 }
@@ -39,7 +43,7 @@ func (ds *NflogDataSource) subscribeToNflog() {
 	ch := make(chan nfnetlink.NflogPacket)
 	done := make(chan struct{})
 	defer close(done)
-	err := nfnetlink.NflogSubscribe(ds.groupNum, ch, done)
+	err := nfnetlink.NflogSubscribe(ds.groupNum, ds.nlBufSiz, ch, done)
 	if err != nil {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
@@ -60,7 +64,9 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	var statUpdate *stats.StatUpdate
 	var reverse bool
 	var wlEpKey *model.WorkloadEndpointKey
-	if lookupAction(nPkt.Prefix) == stats.DenyAction {
+	var prefixAction stats.RuleAction
+	_, _, _, prefixAction, _ = parsePrefix(nPkt.Prefix)
+	if prefixAction == stats.DenyAction {
 		// NFLog based counters make sense only for denied packets.
 		numPkts = 1
 		numBytes = nPkt.Bytes
@@ -211,47 +217,60 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats
 // Stubs
 // TODO (Matt): Refactor these in better.
 
-func lookupAction(prefix string) stats.RuleAction {
-	switch prefix[0] {
-	case 'A':
+func lookupAction(action string) stats.RuleAction {
+	switch action {
+	case "A":
 		return stats.AllowAction
-	case 'D':
+	case "D":
 		return stats.DenyAction
-	case 'N':
+	case "N":
 		return stats.NextTierAction
 	default:
-		log.Error("Unknown action in ", prefix)
+		log.Error("Unknown action ", action)
 		return stats.NextTierAction
 	}
 }
 
-func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
-	log.Infof("Looking up rule prefix %s", prefix)
-	var tier, policy string
+func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAction, export bool) {
 	// Prefix formats are:
-	// - A/rule index/profile name
-	// - A/rule index/policy name/tier name
+	// - T/A/rule index/profile name
+	// - T/A/rule index/policy name/tier name
 	// TODO (Matt): Add sensible rule UUIDs
 	prefixChunks := strings.Split(prefix, "/")
-	if len(prefixChunks) == 3 {
+	if len(prefixChunks) == 4 {
 		// Profile
 		// TODO (Matt): Need something better than profile;
 		//              it won't work if that's the name of a tier.
 		tier = "profile"
-		policy = prefixChunks[2]
-	} else if len(prefixChunks) == 4 {
+	} else if len(prefixChunks) == 5 {
 		// Tiered Policy
-		tier = prefixChunks[3]
-		policy = prefixChunks[2]
+		// TODO(doublek): Should fix where the null character was introduced,
+		// which could be nfnetlink.
+		tier = string(bytes.Trim([]byte(prefixChunks[4]), "\x00"))
 	} else {
 		log.Error("Unable to parse NFLOG prefix ", prefix)
 	}
 
+	action = lookupAction(prefixChunks[1])
+	rule = prefixChunks[2]
+	policy = prefixChunks[3]
+	export, err := strconv.ParseBool(prefixChunks[0])
+	if err != nil {
+		log.Error("Unable to parse export flag ", prefixChunks[0])
+		export = false
+	}
+	return
+}
+
+func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
+	log.Infof("Looking up rule prefix %s", prefix)
+	tier, policy, rule, action, export := parsePrefix(prefix)
 	return stats.RuleTracePoint{
 		TierID:   tier,
 		PolicyID: policy,
-		Rule:     prefixChunks[1],
-		Action:   lookupAction(prefix),
+		Rule:     rule,
+		Action:   action,
+		Export:   export,
 		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
 	}
 }

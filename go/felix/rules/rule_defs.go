@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ const (
 	ChainFilterForward = ChainNamePrefix + "-FORWARD"
 	ChainFilterOutput  = ChainNamePrefix + "-OUTPUT"
 
-	ChainFailsafeIn  = ChainNamePrefix + "-FAILSAFE-IN"
-	ChainFailsafeOut = ChainNamePrefix + "-FAILSAFE-OUT"
+	ChainFailsafeIn  = ChainNamePrefix + "-failsafe-in"
+	ChainFailsafeOut = ChainNamePrefix + "-failsafe-out"
 
 	ChainNATPrerouting  = ChainNamePrefix + "-PREROUTING"
 	ChainNATPostrouting = ChainNamePrefix + "-POSTROUTING"
@@ -103,14 +103,14 @@ type RuleRenderer interface {
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
 }
 
-type ruleRenderer struct {
+type DefaultRuleRenderer struct {
 	Config
 
 	dropActions        []iptables.Action
 	inputAcceptActions []iptables.Action
 }
 
-func (r *ruleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
+func (r *DefaultRuleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
 	if ipVersion == 4 {
 		return r.IPSetConfigV4
 	} else if ipVersion == 6 {
@@ -143,9 +143,12 @@ type Config struct {
 
 	FailsafeInboundHostPorts  []uint16
 	FailsafeOutboundHostPorts []uint16
+
+	IpfixExportTierDropRules bool
 }
 
 func NewRenderer(config Config) RuleRenderer {
+	log.WithField("config", config).Info("Creating rule renderer.")
 	// Convert configured actions to rule slices.  First, what should we actually do when we'd
 	// normally drop a packet?  For sandbox mode, we support allowing the packet instead, or
 	// logging it.
@@ -175,7 +178,7 @@ func NewRenderer(config Config) RuleRenderer {
 		inputAcceptActions = []iptables.Action{iptables.ReturnAction{}}
 	}
 
-	return &ruleRenderer{
+	return &DefaultRuleRenderer{
 		Config:             config,
 		dropActions:        dropActions,
 		inputAcceptActions: inputAcceptActions,

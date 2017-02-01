@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,17 +24,18 @@ import (
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/vishvananda/netlink"
 	"net"
-	"os/exec"
 	"regexp"
 	"strings"
 	"syscall"
 )
 
 var (
-	ListFailed        = errors.New("netlink list operation failed")
-	UpdateFailed      = errors.New("netlink update operation failed")
-	IfaceDown         = errors.New("interface was down")
-	IfaceNotPresent   = errors.New("interface not present")
+	GetFailed       = errors.New("netlink get operation failed")
+	ListFailed      = errors.New("netlink list operation failed")
+	UpdateFailed    = errors.New("netlink update operation failed")
+	IfaceNotPresent = errors.New("interface not present")
+	IfaceDown       = errors.New("interface down")
+
 	ipV6LinkLocalCIDR = ip.MustParseCIDR("fe80::/64")
 )
 
@@ -49,8 +50,7 @@ type RouteTable struct {
 	ipVersion     uint8
 	netlinkFamily int
 
-	activeUpIfaces set.Set
-	dirtyIfaces    set.Set
+	dirtyIfaces set.Set
 
 	ifacePrefixes     set.Set
 	ifacePrefixRegexp *regexp.Regexp
@@ -59,9 +59,18 @@ type RouteTable struct {
 	pendingIfaceNameToTargets map[string][]Target
 
 	inSync bool
+
+	// dataplane is our shim for the netlink/arp interface.  In production, it maps directly
+	// through to calls to the netlink package and the arp command.
+	dataplane dataplaneIface
 }
 
 func New(interfacePrefixes []string, ipVersion uint8) *RouteTable {
+	return NewWithShims(interfacePrefixes, ipVersion, realDataplane{conntrack: conntrack.New()})
+}
+
+// NewWithShims is a test constructor, which allows netlink to be replaced by a shim.
+func NewWithShims(interfacePrefixes []string, ipVersion uint8, nl dataplaneIface) *RouteTable {
 	prefixSet := set.New()
 	regexpParts := []string{}
 	for _, prefix := range interfacePrefixes {
@@ -89,8 +98,8 @@ func New(interfacePrefixes []string, ipVersion uint8) *RouteTable {
 		ifacePrefixRegexp:         regexp.MustCompile(ifaceNamePattern),
 		ifaceNameToTargets:        map[string][]Target{},
 		pendingIfaceNameToTargets: map[string][]Target{},
-		activeUpIfaces:            set.New(),
 		dirtyIfaces:               set.New(),
+		dataplane:                 nl,
 	}
 }
 
@@ -102,11 +111,7 @@ func (r *RouteTable) OnIfaceStateChanged(ifaceName string, state ifacemonitor.St
 	}
 	if state == ifacemonitor.StateUp {
 		logCxt.Debug("Interface up, marking for route sync")
-		r.activeUpIfaces.Add(ifaceName)
 		r.dirtyIfaces.Add(ifaceName)
-	} else {
-		logCxt.Debug("Interface down, blacklisting from route sync")
-		r.activeUpIfaces.Discard(ifaceName)
 	}
 }
 
@@ -117,7 +122,7 @@ func (r *RouteTable) SetRoutes(ifaceName string, targets []Target) {
 
 func (r *RouteTable) Apply() error {
 	if !r.inSync {
-		links, err := netlink.LinkList()
+		links, err := r.dataplane.LinkList()
 		if err != nil {
 			r.logCxt.WithError(err).Error("Failed to list interfaces, retrying...")
 			return ListFailed
@@ -148,8 +153,11 @@ func (r *RouteTable) Apply() error {
 			if err == IfaceNotPresent {
 				logCxt.Info("Interface missing, will retry if it appears.")
 				break
+			} else if err == IfaceDown {
+				logCxt.Info("Interface down, will retry if it goes up.")
+				break
 			} else if err != nil {
-				logCxt.WithError(err).Warn("Failed to syncronise interface routes.")
+				logCxt.WithError(err).Warn("Failed to syncronise routes.")
 				retries--
 				continue
 			}
@@ -157,7 +165,9 @@ func (r *RouteTable) Apply() error {
 			break
 		}
 		if retries == 0 {
-			logCxt.Error("Failed to sync routes to interface. Leaving it dirty.")
+			// The interface might be flapping or being deleted.
+			logCxt.Warn("Failed to sync routes to interface even after retries. " +
+				"Leaving it dirty.")
 			return nil
 		}
 		return set.RemoveItem
@@ -205,103 +215,127 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string) error {
 		oldCIDRs.Discard(ipV6LinkLocalCIDR)
 	}
 
-	updatesFailed := false
-	linkFound := false
-
-	link, err := netlink.LinkByName(ifaceName)
-	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
-			// Unexpected error, return it.
-			logCxt.WithError(err).Error("Route sync failed: failed to get interface.")
-			return err
-		} else {
-			logCxt.Info("Unable to sync interface routes, interface is not present.")
-		}
-	} else {
-		// Got the link try to sync its routes.
-		linkFound = true
-		linkAttrs := link.Attrs()
-		if linkAttrs.Flags&net.FlagUp == 0 || linkAttrs.RawFlags&syscall.IFF_RUNNING == 0 {
-			// Interface must have gone down but the monitoring thread hasn't told us yet.
-			logCxt.Debug("Interface is down, skipping")
-			return IfaceDown
-		}
-
-		oldRoutes, err := netlink.RouteList(link, r.netlinkFamily)
-		if err != nil {
-			logCxt.WithError(err).WithField("link", ifaceName).Error(
-				"Failed to list routes.")
-			return ListFailed
-		}
-
-		seenCIDRs := set.New()
-		for _, route := range oldRoutes {
-			var dest ip.CIDR
-			if route.Dst != nil {
-				dest = ip.CIDRFromIPNet(calinet.IPNet{*route.Dst})
-			}
-			if !expectedCIDRs.Contains(dest) {
-				logCxt := logCxt.WithField("dest", dest)
-				logCxt.Info("Syncing routes: removing old route.")
-				if err := netlink.RouteDel(&route); err != nil {
-					// Probably a race with the interface being deleted.
-					logCxt.WithError(err).Info(
-						"Route deletion failed, assuming someone got there first.")
-					updatesFailed = true
-				}
-				if dest != nil {
-					// Collect any old route CIDRs that we find in the dataplane so we
-					// can remove their conntrack entries later.
-					oldCIDRs.Add(dest)
-				}
-			}
-			seenCIDRs.Add(dest)
-		}
-		for _, target := range expectedTargets {
-			cidr := target.CIDR
-			if !seenCIDRs.Contains(cidr) {
-				logCxt := logCxt.WithField("targetCIDR", target.CIDR)
-				logCxt.Info("Syncing routes: adding new route.")
-				ipNet := cidr.ToIPNet()
-				route := netlink.Route{
-					LinkIndex: linkAttrs.Index,
-					Dst:       &ipNet,
-					Type:      syscall.RTN_UNICAST,
-					Protocol:  syscall.RTPROT_BOOT,
-					Scope:     netlink.SCOPE_LINK,
-				}
-				if err := netlink.RouteAdd(&route); err != nil {
-					logCxt.WithError(err).Warn("Failed to add route")
-					updatesFailed = true
-				}
-			}
-			if r.ipVersion == 4 && target.DestMAC != nil {
-				// TODO(smc) clean up/sync old ARP entries
-				cmd := exec.Command("arp",
-					"-s", cidr.Addr().String(), target.DestMAC.String(),
-					"-i", ifaceName)
-				err := cmd.Run()
-				if err != nil {
-					logCxt.WithError(err).WithField("cmd", cmd).Warn("Failed to set ARP entry")
-					updatesFailed = true
-				}
-			}
-		}
-	}
-
-	// Now remove and conntrack entries that should no longer be there.
-	oldCIDRs.Iter(func(item interface{}) error {
+	// The code below may add some more CIDRs to clean up before it is done, make sure we
+	// remove conntrack entries in any case.
+	defer oldCIDRs.Iter(func(item interface{}) error {
+		// Remove and conntrack entries that should no longer be there.
 		dest := item.(ip.CIDR)
-		conntrack.RemoveConntrackFlows(dest.Version(), dest.Addr().AsNetIP())
+		r.dataplane.RemoveConntrackFlows(dest.Version(), dest.Addr().AsNetIP())
 		return nil
 	})
 
-	if !linkFound {
-		return IfaceNotPresent
+	// Try to get the link.  This may fail if it's been deleted out from under us.
+	link, err := r.dataplane.LinkByName(ifaceName)
+	if err != nil {
+		// Filter the error so that we don't spam errors if the interface is being torn
+		// down.
+		filteredErr := r.filterErrorByIfaceState(ifaceName, GetFailed)
+		if filteredErr == GetFailed {
+			logCxt.WithError(err).Error("Failed to get interface.")
+		} else {
+			logCxt.WithError(err).Info("Failed to get interface; it's down/gone.")
+		}
+		return filteredErr
 	}
+
+	// Got the link; try to sync its routes.  Note: We used to check if the interface
+	// was oper down before we tried to do the sync but that prevented us from removing
+	// routes from an interface in some corner cases (such as being admin up but oper
+	// down).
+	linkAttrs := link.Attrs()
+	oldRoutes, err := r.dataplane.RouteList(link, r.netlinkFamily)
+	if err != nil {
+		// Filter the error so that we don't spam errors if the interface is being torn
+		// down.
+		filteredErr := r.filterErrorByIfaceState(ifaceName, ListFailed)
+		if filteredErr == ListFailed {
+			logCxt.WithError(err).Error("Error listing routes")
+		} else {
+			logCxt.WithError(err).Info("Failed to list routes; interface down/gone.")
+		}
+		return filteredErr
+	}
+
+	seenCIDRs := set.New()
+	updatesFailed := false
+	for _, route := range oldRoutes {
+		var dest ip.CIDR
+		if route.Dst != nil {
+			dest = ip.CIDRFromIPNet(calinet.IPNet{*route.Dst})
+		}
+		if !expectedCIDRs.Contains(dest) {
+			logCxt := logCxt.WithField("dest", dest)
+			logCxt.Info("Syncing routes: removing old route.")
+			if err := r.dataplane.RouteDel(&route); err != nil {
+				// Probably a race with the interface being deleted.
+				logCxt.WithError(err).Info(
+					"Route deletion failed, assuming someone got there first.")
+				updatesFailed = true
+			}
+			if dest != nil {
+				// Collect any old route CIDRs that we find in the dataplane so we
+				// can remove their conntrack entries later.
+				oldCIDRs.Add(dest)
+			}
+		}
+		seenCIDRs.Add(dest)
+	}
+	for _, target := range expectedTargets {
+		cidr := target.CIDR
+		if !seenCIDRs.Contains(cidr) {
+			logCxt := logCxt.WithField("targetCIDR", target.CIDR)
+			logCxt.Info("Syncing routes: adding new route.")
+			ipNet := cidr.ToIPNet()
+			route := netlink.Route{
+				LinkIndex: linkAttrs.Index,
+				Dst:       &ipNet,
+				Type:      syscall.RTN_UNICAST,
+				Protocol:  syscall.RTPROT_BOOT,
+				Scope:     netlink.SCOPE_LINK,
+			}
+			if err := r.dataplane.RouteAdd(&route); err != nil {
+				logCxt.WithError(err).Warn("Failed to add route")
+				updatesFailed = true
+			}
+		}
+		if r.ipVersion == 4 && target.DestMAC != nil {
+			// TODO(smc) clean up/sync old ARP entries
+			err := r.dataplane.AddStaticArpEntry(cidr, target.DestMAC, ifaceName)
+			if err != nil {
+				logCxt.WithError(err).Warn("Failed to set ARP entry")
+				updatesFailed = true
+			}
+		}
+	}
+
 	if updatesFailed {
-		return UpdateFailed
+		// Recheck whether the interface exists so we don't produce spammy logs during
+		// interface removal.
+		return r.filterErrorByIfaceState(ifaceName, UpdateFailed)
 	}
 
 	return nil
+}
+
+// filterErrorByIfaceState checks the current state of the interface; it's down or gone, it returns
+// IfaceDown or IfaceError, otherwise, it returns the given defaultErr.
+func (r *RouteTable) filterErrorByIfaceState(ifaceName string, defaultErr error) error {
+	logCxt := r.logCxt.WithField("ifaceName", ifaceName)
+	if link, err := r.dataplane.LinkByName(ifaceName); err == nil {
+		// Link still exists.  Check if it's up.
+		if link.Attrs().Flags&net.FlagUp != 0 {
+			// Link exists and it's up, no reason that we expect to fail.
+			return defaultErr
+		} else {
+			// Special case: Link exists and it's down.  Assume that's the problem.
+			return IfaceDown
+		}
+	} else if strings.Contains(err.Error(), "not found") {
+		// Special case: Link no longer exists.
+		return IfaceNotPresent
+	} else {
+		// Failed to list routes, then failed to check if interface exists.
+		logCxt.WithError(err).Error("Failed to access interface after a failure")
+		return defaultErr
+	}
 }

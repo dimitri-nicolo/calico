@@ -11,9 +11,12 @@ ARG GID
 # - libfixbuf3 is used for ipfix emission (via CGO).
 # - glib2.0 is required by CGO.
 RUN apt-get update && \
-    apt-get install -y bsdmainutils libfixbuf3-dev libglib2.0-dev && \
+    apt-get install -y bsdmainutils openssh-client libfixbuf3-dev libglib2.0-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN mkdir /.ssh
+RUN echo 'StrictHostKeyChecking no' > /.ssh/config
 
 RUN go get github.com/Masterminds/glide \
            github.com/onsi/ginkgo/ginkgo \

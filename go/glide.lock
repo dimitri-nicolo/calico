@@ -1,5 +1,5 @@
 hash: 65ea1ee16e6ba27e02a0e377bdd2c2b12a1fe3395a1d22bb134a23fe49d19b9b
-updated: 2016-12-09T18:45:20.995916844Z
+updated: 2017-01-13T22:37:08.119922509Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -63,7 +63,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 6e4869b434bd001f6983749881c7ead3545887d8
+  version: 6f66b0e091edb3c7b380f7c4f0f884274d550b67
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -80,7 +80,7 @@ imports:
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
-  version: 8616e8ee5e20a1704615e6c8d7afcdac06087a67
+  version: 4bd1920723d7b7c925de087aa32e2187708897f7
   subpackages:
   - proto
 - name: github.com/google/gofuzz
@@ -94,7 +94,7 @@ imports:
 - name: github.com/kardianos/osext
   version: c2c54e542fb797ad986b31721e1baedf214ca413
 - name: github.com/kelseyhightower/envconfig
-  version: 9aca109c9aec4633fced9717c4a09ecab3d33111
+  version: 5c008110b20b657eb7e005b83d0a5f6aa6bb5f4b
 - name: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -136,7 +136,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 5a344be706dd6676dff60fc167e1caefe1bb2963
+  version: 91a66e22cd722aa421e87e2a4dd5af3707d78df6
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -190,7 +190,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
 - name: github.com/tigera/nfnetlink
-  version: 79440e7686155cce30230c3f8cdacf9522adb8b0
+  version: e8820c834330614aced47d0512a0afbd235d0c51
   repo: git@github.com:tigera/nfnetlink
   subpackages:
   - nfnl
@@ -227,7 +227,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 30237cf4eefd639b184d1f2cb77a581ea0be8947
+  version: 478fcf54317e52ab69f40bb4c7a1520288d7f7ea
   subpackages:
   - unix
 - name: golang.org/x/text
@@ -265,9 +265,23 @@ imports:
   - patricia
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
-- name: k8s.io/kubernetes
-  version: 5c918def7a61a6882316ba3a385a572d21a94228
+- name: k8s.io/client-go
+  version: 41a99d711af778a177f07402217b85d456b50da1
   subpackages:
+  - discovery
+  - kubernetes
+  - kubernetes/typed/apps/v1beta1
+  - kubernetes/typed/authentication/v1beta1
+  - kubernetes/typed/authorization/v1beta1
+  - kubernetes/typed/autoscaling/v1
+  - kubernetes/typed/batch/v1
+  - kubernetes/typed/batch/v2alpha1
+  - kubernetes/typed/certificates/v1alpha1
+  - kubernetes/typed/core/v1
+  - kubernetes/typed/extensions/v1beta1
+  - kubernetes/typed/policy/v1beta1
+  - kubernetes/typed/rbac/v1alpha1
+  - kubernetes/typed/storage/v1beta1
   - pkg/api
   - pkg/api/errors
   - pkg/api/install
@@ -299,9 +313,6 @@ imports:
   - pkg/apis/certificates
   - pkg/apis/certificates/install
   - pkg/apis/certificates/v1alpha1
-  - pkg/apis/componentconfig
-  - pkg/apis/componentconfig/install
-  - pkg/apis/componentconfig/v1alpha1
   - pkg/apis/extensions
   - pkg/apis/extensions/install
   - pkg/apis/extensions/v1beta1
@@ -315,36 +326,13 @@ imports:
   - pkg/apis/storage/install
   - pkg/apis/storage/v1beta1
   - pkg/auth/user
-  - pkg/client/clientset_generated/internalclientset
-  - pkg/client/clientset_generated/internalclientset/typed/apps/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/authentication/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/authorization/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/autoscaling/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/batch/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/certificates/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/core/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/extensions/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/policy/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/rbac/internalversion
-  - pkg/client/clientset_generated/internalclientset/typed/storage/internalversion
-  - pkg/client/metrics
-  - pkg/client/restclient
-  - pkg/client/transport
-  - pkg/client/typed/discovery
-  - pkg/client/unversioned/auth
-  - pkg/client/unversioned/clientcmd
-  - pkg/client/unversioned/clientcmd/api
-  - pkg/client/unversioned/clientcmd/api/latest
-  - pkg/client/unversioned/clientcmd/api/v1
   - pkg/conversion
   - pkg/conversion/queryparams
   - pkg/fields
   - pkg/genericapiserver/openapi/common
-  - pkg/kubelet/qos
-  - pkg/kubelet/types
   - pkg/labels
-  - pkg/master/ports
   - pkg/runtime
+  - pkg/runtime/schema
   - pkg/runtime/serializer
   - pkg/runtime/serializer/json
   - pkg/runtime/serializer/protobuf
@@ -352,11 +340,13 @@ imports:
   - pkg/runtime/serializer/streaming
   - pkg/runtime/serializer/versioning
   - pkg/selection
+  - pkg/third_party/forked/golang/reflect
+  - pkg/third_party/forked/golang/template
   - pkg/types
   - pkg/util
   - pkg/util/cert
   - pkg/util/clock
-  - pkg/util/config
+  - pkg/util/diff
   - pkg/util/errors
   - pkg/util/flowcontrol
   - pkg/util/framer
@@ -383,15 +373,20 @@ imports:
   - plugin/pkg/client/auth
   - plugin/pkg/client/auth/gcp
   - plugin/pkg/client/auth/oidc
-  - third_party/forked/golang/reflect
-  - third_party/forked/golang/template
+  - rest
+  - tools/auth
+  - tools/cache
+  - tools/clientcmd
+  - tools/clientcmd/api
+  - tools/clientcmd/api/latest
+  - tools/clientcmd/api/v1
+  - tools/metrics
+  - transport
 testImports:
 - name: github.com/onsi/gomega
   version: d59fa0ac68bb5dd932ee8d24eed631cdd519efc3
   subpackages:
   - format
-  - gstruct
-  - gstruct/errors
   - internal/assertion
   - internal/asyncassertion
   - internal/oraclematcher
