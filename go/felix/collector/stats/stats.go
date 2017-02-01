@@ -36,7 +36,7 @@ type RuleAction string
 const (
 	AllowAction    RuleAction = "allow"
 	DenyAction     RuleAction = "deny"
-	NextTierAction RuleAction = "next-tier"
+	NextTierAction RuleAction = "pass"
 )
 
 var fwdStatus = map[RuleAction]ipfix.ForwardingStatusType{
@@ -365,11 +365,11 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) []*ipfix.ExportRec
 			continue
 		}
 		ingressRtRecs = append(ingressRtRecs, ipfix.RuleTraceRecord{
-			TierID:     tp.TierID,
-			PolicyID:   tp.PolicyID,
-			Rule:       tp.Rule,
-			RuleAction: string(tp.Action),
-			RuleIndex:  tp.Index,
+			TierID:      tp.TierID,
+			PolicyID:    tp.PolicyID,
+			Rule:        tp.Rule,
+			RuleAction:  string(tp.Action),
+			PolicyIndex: tp.Index,
 		})
 	}
 	inFs, ok := fwdStatus[d.IngressAction()]
@@ -404,11 +404,11 @@ func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) []*ipfix.ExportRec
 			continue
 		}
 		egressRtRecs = append(egressRtRecs, ipfix.RuleTraceRecord{
-			TierID:     tp.TierID,
-			PolicyID:   tp.PolicyID,
-			Rule:       tp.Rule,
-			RuleAction: string(tp.Action),
-			RuleIndex:  tp.Index,
+			TierID:      tp.TierID,
+			PolicyID:    tp.PolicyID,
+			Rule:        tp.Rule,
+			RuleAction:  string(tp.Action),
+			PolicyIndex: tp.Index,
 		})
 	}
 	outFs, ok := fwdStatus[d.EgressAction()]
