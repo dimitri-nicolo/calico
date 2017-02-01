@@ -26,39 +26,51 @@ type epLookup interface {
 const PollingInterval = time.Duration(1) * time.Second
 
 type NflogDataSource struct {
-	sink      chan<- stats.StatUpdate
-	groupNum  int
-	direction stats.Direction
-	nlBufSiz  int
-	lum       *lookup.LookupManager
+	sink          chan<- stats.StatUpdate
+	groupNum      int
+	direction     stats.Direction
+	nlBufSiz      int
+	lum           epLookup
+	nflogChan     chan nfnetlink.NflogPacket
+	nflogDoneChan chan struct{}
 }
 
 func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction, nlBufSiz int) *NflogDataSource {
+	nflogChan := make(chan nfnetlink.NflogPacket)
+	done := make(chan struct{})
+	return newNflogDataSource(lm, sink, groupNum, dir, nlBufSiz, nflogChan, done)
+}
+
+// Internal constructor to help mocking from UTs.
+func newNflogDataSource(lm epLookup, sink chan<- stats.StatUpdate, gn int, dir stats.Direction, nbs int, nc chan nfnetlink.NflogPacket, done chan struct{}) *NflogDataSource {
 	return &NflogDataSource{
-		sink:      sink,
-		groupNum:  groupNum,
-		direction: dir,
-		nlBufSiz:  nlBufSiz,
-		lum:       lm,
+		sink:          sink,
+		groupNum:      gn,
+		direction:     dir,
+		nlBufSiz:      nbs,
+		lum:           lm,
+		nflogChan:     nc,
+		nflogDoneChan: done,
 	}
 }
 
 func (ds *NflogDataSource) Start() {
 	log.Infof("Starting NFLOG Data Source for direction %v group %v", ds.direction, ds.groupNum)
-	go ds.subscribeToNflog()
-}
-
-func (ds *NflogDataSource) subscribeToNflog() {
-	ch := make(chan nfnetlink.NflogPacket)
-	done := make(chan struct{})
-	defer close(done)
-	err := nfnetlink.NflogSubscribe(ds.groupNum, ds.nlBufSiz, ch, done)
+	err := ds.subscribeToNflog()
 	if err != nil {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
 	}
-	for nflogPacket := range ch {
-		log.Debugf("Processing NFLOG packet: %+v", nflogPacket)
+	go ds.startProcessingPackets()
+}
+
+func (ds *NflogDataSource) subscribeToNflog() error {
+	return nfnetlink.NflogSubscribe(ds.groupNum, ds.nlBufSiz, ds.nflogChan, ds.nflogDoneChan)
+}
+
+func (ds *NflogDataSource) startProcessingPackets() {
+	defer close(ds.nflogDoneChan)
+	for nflogPacket := range ds.nflogChan {
 		statUpdate, err := ds.convertNflogPktToStat(nflogPacket)
 		if err != nil {
 			log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacket)
