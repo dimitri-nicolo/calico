@@ -167,7 +167,6 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
 	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
 	tuple := extractTupleFromCtEntryTuple(ctTuple)
-	// Force conntrack to have empty tracep
 	if wlEpKeySrc != nil {
 		// Locally originating packet
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
@@ -190,7 +189,7 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	return statUpdates, nil
 }
 
-func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) stats.Tuple {
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats.Tuple {
 	var l4Src, l4Dst int
 	if ctTuple.ProtoNum == 1 {
 		l4Src = ctTuple.L4Src.Id
@@ -199,7 +198,11 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) stats.Tuple {
 		l4Src = ctTuple.L4Src.Port
 		l4Dst = ctTuple.L4Dst.Port
 	}
-	return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
+	if !reverse {
+		return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
+	} else {
+		return *stats.NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
+	}
 }
 
 // Stubs
