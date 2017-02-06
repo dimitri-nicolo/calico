@@ -271,7 +271,7 @@ var withPolicy = initialisedStore.withKVUpdates(
 
 // withUntrackedPolicy adds a tier and policy containing selectors for all and b=="b"
 var withUntrackedPolicy = initialisedStore.withKVUpdates(
-	KVPair{Key: PolicyKey{Name: "pol-1"}, Value: &policy1_order20_untracked},
+	KVPair{Key: PolicyKey{Name: "pol-1", Tier: "default"}, Value: &policy1_order20_untracked},
 ).withName("with untracked policy")
 
 // localEp1WithPolicy adds a local endpoint to the mix.  It matches all and b=="b".
@@ -354,7 +354,7 @@ var hostEp1WithUntrackedPolicy = withUntrackedPolicy.withKVUpdates(
 ).withName("host ep1, untracked policy")
 
 var hostEp1WithTrackedAndUntrackedPolicy = hostEp1WithUntrackedPolicy.withKVUpdates(
-	KVPair{Key: PolicyKey{Name: "pol-2"}, Value: &policy1_order20},
+	KVPair{Key: PolicyKey{Name: "pol-2", Tier: "default"}, Value: &policy1_order20},
 ).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 	proto.PolicyID{"default", "pol-2"},

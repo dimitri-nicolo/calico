@@ -189,19 +189,28 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
 		IptablesMarkAccept:   0x8,
 		IptablesMarkNextTier: 0x10,
+		IptablesMarkDrop:     0x0a,
 	}
 
 	DescribeTable(
 		"Allow rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
+			in.ExportIpfix = false
 			rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
 			// For allow, should be one match rule that sets the mark, then one that reads the
 			// mark and returns.
-			Expect(len(rules)).To(Equal(2))
+			Expect(len(rules)).To(Equal(3))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x8}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x8),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/A/foo",
+				},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSet(0x8),
 				Action: iptables.ReturnAction{},
 			}))
@@ -218,14 +227,22 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"next-tier rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
+			in.ExportIpfix = false
 			in.Action = "next-tier"
 			rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
 			// For next-tier, should be one match rule that sets the mark, then one
 			// that reads the mark and returns.
-			Expect(len(rules)).To(Equal(2))
+			Expect(len(rules)).To(Equal(3))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x10}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x10),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/N/foo",
+				},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSet(0x10),
 				Action: iptables.ReturnAction{},
 			}))
@@ -238,10 +255,11 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
 			in.LogPrefix = "logme"
+			in.ExportIpfix = false
 			rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
 			// For allow, should be one match rule that sets the mark, then one that reads the
 			// mark and returns.
-			Expect(len(rules)).To(Equal(3))
+			Expect(len(rules)).To(Equal(4))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
 			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x8}))
 			Expect(rules[1]).To(Equal(iptables.Rule{
@@ -249,6 +267,13 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Action: iptables.LogAction{Prefix: "logme"},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x8),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/A/foo",
+				},
+			}))
+			Expect(rules[3]).To(Equal(iptables.Rule{
 				Match:  iptables.Match().MarkSet(0x8),
 				Action: iptables.ReturnAction{},
 			}))
@@ -291,9 +316,19 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer), true, "foo")
 			// For deny, should be one match rule that just does the DROP.
-			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.DropAction{}))
+			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x0a}))
+			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x0a),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/D/foo",
+				},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSet(0x0a),
+				Action: iptables.DropAction{},
+			}))
 		},
 		ruleTestData...,
 	)
@@ -309,11 +344,26 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer), true, "foo")
 			// For LOG-and-DROP, should get two rules with the same match criteria;
 			// first should log, second should drop.
-			Expect(len(rules)).To(Equal(2))
+			Expect(len(rules)).To(Equal(4))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-drop"}))
-			Expect(rules[1].Match.Render()).To(Equal(expMatch))
-			Expect(rules[1].Action).To(Equal(iptables.DropAction{}))
+			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x0a}))
+			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x0a),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/D/foo",
+				},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x0a),
+				Action: iptables.LogAction{
+					Prefix: "calico-drop",
+				},
+			}))
+			Expect(rules[3]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSet(0x0a),
+				Action: iptables.DropAction{},
+			}))
 		},
 		ruleTestData...,
 	)
@@ -327,13 +377,28 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule := in
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer), true, "foo")
-			// For LOG-and-DROP, should get two rules with the same match criteria;
+			// For LOG-and-ACCEPT, should get two rules with the same match criteria;
 			// first should log, second should accept.
-			Expect(len(rules)).To(Equal(2))
+			Expect(len(rules)).To(Equal(4))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-drop"}))
-			Expect(rules[1].Match.Render()).To(Equal(expMatch))
-			Expect(rules[1].Action).To(Equal(iptables.AcceptAction{}))
+			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x0a}))
+			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x0a),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/D/foo",
+				},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x0a),
+				Action: iptables.LogAction{
+					Prefix: "calico-drop",
+				},
+			}))
+			Expect(rules[3]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSet(0x0a),
+				Action: iptables.AcceptAction{},
+			}))
 		},
 		ruleTestData...,
 	)
@@ -348,9 +413,20 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 			denyRule.Action = "deny"
 			rules := renderer.ProtoRuleToIptablesRules(&denyRule, uint8(ipVer), true, "foo")
 			// For ACCEPT, should get a single accept rule.
-			Expect(len(rules)).To(Equal(1))
+			Expect(len(rules)).To(Equal(3))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.AcceptAction{}))
+			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x0a}))
+			Expect(rules[1]).To(Equal(iptables.Rule{
+				Match: iptables.Match().MarkSet(0x0a),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/D/foo",
+				},
+			}))
+			Expect(rules[2]).To(Equal(iptables.Rule{
+				Match:  iptables.Match().MarkSet(0x0a),
+				Action: iptables.AcceptAction{},
+			}))
 		},
 		ruleTestData...,
 	)
@@ -440,12 +516,26 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					DestPortRanges(dstPorts[:7]),
 				Action: iptables.SetMarkAction{Mark: 0x8},
 			},
+			{
+				Match: iptables.Match().MarkSet(0x8),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/A/foo",
+				},
+			},
 			{Match: iptables.Match().MarkSet(0x8), Action: iptables.ReturnAction{}},
 			{
 				Match: iptables.Match().Protocol("tcp").
 					SourcePortRanges(srcPorts[:7]).
 					DestPortRanges(dstPorts[7:8]),
 				Action: iptables.SetMarkAction{Mark: 0x8},
+			},
+			{
+				Match: iptables.Match().MarkSet(0x8),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/A/foo",
+				},
 			},
 			{Match: iptables.Match().MarkSet(0x8), Action: iptables.ReturnAction{}},
 			{
@@ -454,12 +544,26 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					DestPortRanges(dstPorts[:7]),
 				Action: iptables.SetMarkAction{Mark: 0x8},
 			},
+			{
+				Match: iptables.Match().MarkSet(0x8),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/A/foo",
+				},
+			},
 			{Match: iptables.Match().MarkSet(0x8), Action: iptables.ReturnAction{}},
 			{
 				Match: iptables.Match().Protocol("tcp").
 					SourcePortRanges(srcPorts[7:8]).
 					DestPortRanges(dstPorts[7:8]),
 				Action: iptables.SetMarkAction{Mark: 0x8},
+			},
+			{
+				Match: iptables.Match().MarkSet(0x8),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/A/foo",
+				},
 			},
 			{Match: iptables.Match().MarkSet(0x8), Action: iptables.ReturnAction{}},
 		}))

@@ -117,7 +117,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 		}
 		outRules = append(outRules, iptables.Rule{
 			Match:  iptables.Match(),
-			Action: iptables.ClearMarkAction{Mark: 8},
+			Action: iptables.ClearMarkAction{Mark: 18}, // 0x8 + 0x0a (IptablesMarkAccept + IptablesMarkDrop)
 		})
 		if tierName != "" && (raw == untracked) {
 			outRules = append(outRules, iptables.Rule{
@@ -145,6 +145,13 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 				// we consider the policy as unfinished, because some of the
 				// policy may live in the filter chain.
 				outRules = append(outRules, iptables.Rule{
+					Match: iptables.Match().MarkClear(16),
+					Action: iptables.NflogAction{
+						Group:  1,
+						Prefix: "F/D/0/no-policy-match-inbound/" + tierName,
+					},
+				})
+				outRules = append(outRules, iptables.Rule{
 					Match:   iptables.Match().MarkClear(16),
 					Action:  iptables.DropAction{},
 					Comment: "Drop if no policies passed packet",
@@ -153,6 +160,13 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 		}
 
 		if !raw {
+			outRules = append(outRules, iptables.Rule{
+				Match: iptables.Match(),
+				Action: iptables.NflogAction{
+					Group:  1,
+					Prefix: "F/D/0/no-profile-match-inbound",
+				},
+			})
 			outRules = append(outRules, iptables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.DropAction{},
@@ -169,7 +183,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 		}
 		inRules = append(inRules, iptables.Rule{
 			Match:  iptables.Match(),
-			Action: iptables.ClearMarkAction{Mark: 8},
+			Action: iptables.ClearMarkAction{Mark: 18}, // 0x8 + 0x0a (IptablesMarkAccept + IptablesMarkDrop)
 		})
 		if tierName != "" && (raw == untracked) {
 			inRules = append(inRules, iptables.Rule{
@@ -197,6 +211,13 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 				// we consider the policy as unfinished, because some of the
 				// policy may live in the filter chain.
 				inRules = append(inRules, iptables.Rule{
+					Match: iptables.Match().MarkClear(16),
+					Action: iptables.NflogAction{
+						Group:  2,
+						Prefix: "F/D/0/no-policy-match-outbound/" + tierName,
+					},
+				})
+				inRules = append(inRules, iptables.Rule{
 					Match:   iptables.Match().MarkClear(16),
 					Action:  iptables.DropAction{},
 					Comment: "Drop if no policies passed packet",
@@ -204,6 +225,13 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 			}
 		}
 		if !raw {
+			inRules = append(inRules, iptables.Rule{
+				Match: iptables.Match(),
+				Action: iptables.NflogAction{
+					Group:  2,
+					Prefix: "F/D/0/no-profile-match-outbound",
+				},
+			})
 			inRules = append(inRules, iptables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.DropAction{},
@@ -331,6 +359,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
 				IptablesMarkAccept:   0x8,
 				IptablesMarkNextTier: 0x10,
+				IptablesMarkDrop:     0x0a,
 			}
 			eth0Addrs = set.New()
 			eth0Addrs.Add(ipv4)
