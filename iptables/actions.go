@@ -105,7 +105,7 @@ func (n NflogAction) ToFragment() string {
 	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, n.Prefix)
 }
 
-func (g NflogAction) String() string {
+func (n NflogAction) String() string {
 	return fmt.Sprintf("Nflog:g=%d,p=%s", n.Group, n.Prefix)
 }
 
