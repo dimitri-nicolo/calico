@@ -265,6 +265,7 @@ import (
 	"net"
 	"strconv"
 	"time"
+	"unsafe"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/jitter"
@@ -348,6 +349,7 @@ type IPFIXExporter struct {
 // on the IPFIX collectors configuration.
 func NewIPFIXExporter(host net.IP, port int, transport string, source <-chan *ExportRecord) *IPFIXExporter {
 	log.Info("Creating IPFIX exporter to host ", host, " port ", port)
+	// TODO (doublek): Free the CStrings
 	fbData := C.fixbuf_init(C.CString(host.String()), C.CString(strconv.Itoa(port)), fbTransport[transport])
 	return &IPFIXExporter{
 		host:           host,
@@ -407,12 +409,23 @@ func (ie *IPFIXExporter) exportData(data *ExportRecord) error {
 	rtRec := []C.struct_ruleTraceShim_st{}
 	for _, rt := range data.RuleTrace {
 		// TODO(doublek): Move this as a method to the RuleTrace struct.
+		// CStrings are malloced in the C programs heap and the GC will have nothing
+		// to do with it. It is up to us to free the memory.
+		tierID := C.CString(rt.TierID)
+		defer C.free(unsafe.Pointer(tierID))
+		policyId := C.CString(rt.PolicyID)
+		defer C.free(unsafe.Pointer(policyId))
+		rule := C.CString(rt.Rule)
+		defer C.free(unsafe.Pointer(rule))
+		ruleAction := C.CString(rt.RuleAction)
+		defer C.free(unsafe.Pointer(ruleAction))
+		policyIdx := C.uint16_t(rt.PolicyIndex)
 		rtRec = append(rtRec, C.struct_ruleTraceShim_st{
-			tierId:     C.CString(rt.TierID),
-			policyId:   C.CString(rt.PolicyID),
-			rule:       C.CString(rt.Rule),
-			ruleAction: C.CString(rt.RuleAction),
-			policyIdx:  C.uint16_t(rt.PolicyIndex),
+			tierId:     tierID,
+			policyId:   policyId,
+			rule:       rule,
+			ruleAction: ruleAction,
+			policyIdx:  policyIdx,
 		})
 	}
 	log.Debug("Produced record for export: ", rec, " with rule trace: ", rtRec)
