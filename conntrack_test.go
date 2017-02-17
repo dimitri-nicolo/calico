@@ -12,10 +12,10 @@ import (
 
 var _ = Describe("Conntrack Entry DNAT", func() {
 	var cte nfnetlink.CtEntry
-	var orig_dnat, repl nfnetlink.CtTuple
+	var original_dnat, reply nfnetlink.CtTuple
 
 	BeforeEach(func() {
-		orig_dnat = nfnetlink.CtTuple{
+		original_dnat = nfnetlink.CtTuple{
 			Src:        net.ParseIP("1.1.1.1"),
 			Dst:        net.ParseIP("3.3.3.3"),
 			L3ProtoNum: 2048,
@@ -27,7 +27,7 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 				Port: 80,
 			},
 		}
-		repl = nfnetlink.CtTuple{
+		reply = nfnetlink.CtTuple{
 			Src:        net.ParseIP("2.2.2.2"),
 			Dst:        net.ParseIP("1.1.1.1"),
 			L3ProtoNum: 2048,
@@ -40,8 +40,8 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 			},
 		}
 		cte = nfnetlink.CtEntry{
-			OrigTuples: []nfnetlink.CtTuple{orig_dnat},
-			ReplTuples: []nfnetlink.CtTuple{repl},
+			OriginalTuples: []nfnetlink.CtTuple{original_dnat},
+			ReplyTuples:    []nfnetlink.CtTuple{reply},
 		}
 	})
 	Describe("Check DNAT", func() {
@@ -57,20 +57,20 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 		It("should return false for SNAT check", func() {
 			Expect(cte.IsSNAT()).To(Equal(false))
 		})
-		It("should return orig tuple", func() {
-			Expect(cte.OrigTuple()).To(Equal(orig_dnat))
+		It("should return original tuple", func() {
+			Expect(cte.OriginalTuple()).To(Equal(original_dnat))
 		})
-		It("should return repl tuple", func() {
-			Expect(cte.ReplTuple()).To(Equal(repl))
+		It("should return reply tuple", func() {
+			Expect(cte.ReplyTuple()).To(Equal(reply))
 		})
 		It("should return tuple after parsing DNAT info", func() {
-			t, _ := cte.OrigTupleWithoutDNAT()
-			Expect(t.Src).To(Equal(repl.Dst))
-			Expect(t.Dst).To(Equal(repl.Src))
-			Expect(t.L3ProtoNum).To(Equal(orig_dnat.L3ProtoNum))
-			Expect(t.ProtoNum).To(Equal(orig_dnat.ProtoNum))
-			Expect(t.L4Src).To(Equal(orig_dnat.L4Src))
-			Expect(t.L4Dst).To(Equal(orig_dnat.L4Dst))
+			t, _ := cte.OriginalTupleWithoutDNAT()
+			Expect(t.Src).To(Equal(reply.Dst))
+			Expect(t.Dst).To(Equal(reply.Src))
+			Expect(t.L3ProtoNum).To(Equal(original_dnat.L3ProtoNum))
+			Expect(t.ProtoNum).To(Equal(original_dnat.ProtoNum))
+			Expect(t.L4Src).To(Equal(original_dnat.L4Src))
+			Expect(t.L4Dst).To(Equal(original_dnat.L4Dst))
 		})
 
 	})

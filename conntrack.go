@@ -55,18 +55,18 @@ type CtNat struct {
 // TODO(doublek): Methods to compare conntrackTuple's
 
 type CtEntry struct {
-	OrigTuples []CtTuple
-	ReplTuples []CtTuple
-	Timeout    int
-	Mark       int
-	Secmark    int
-	Status     int
-	Use        int
-	Id         int
-	Zone       int
+	OriginalTuples []CtTuple
+	ReplyTuples    []CtTuple
+	Timeout        int
+	Mark           int
+	Secmark        int
+	Status         int
+	Use            int
+	Id             int
+	Zone           int
 
-	OrigCounters CtCounters
-	ReplCounters CtCounters
+	OriginalCounters CtCounters
+	ReplyCounters    CtCounters
 
 	//Snat		CtNat
 	//Dnat		CtNat
@@ -93,47 +93,47 @@ func (cte *CtEntry) IsDNAT() bool {
 	return false
 }
 
-func (cte *CtEntry) OrigTuple() (CtTuple, error) {
-	l := len(cte.OrigTuples)
+func (cte *CtEntry) OriginalTuple() (CtTuple, error) {
+	l := len(cte.OriginalTuples)
 	if l == 0 {
-		return EmptyCtTuple, errors.New("OrigTuples is empty")
+		return EmptyCtTuple, errors.New("OriginalTuples is empty")
 	}
-	return cte.OrigTuples[l-1], nil
+	return cte.OriginalTuples[l-1], nil
 }
 
-func (cte *CtEntry) ReplTuple() (CtTuple, error) {
-	l := len(cte.ReplTuples)
+func (cte *CtEntry) ReplyTuple() (CtTuple, error) {
+	l := len(cte.ReplyTuples)
 	if l == 0 {
-		return EmptyCtTuple, errors.New("ReplTuples is empty")
+		return EmptyCtTuple, errors.New("ReplyTuples is empty")
 	}
-	return cte.ReplTuples[l-1], nil
+	return cte.ReplyTuples[l-1], nil
 }
 
-func (cte *CtEntry) OrigTupleWithoutDNAT() (CtTuple, error) {
+func (cte *CtEntry) OriginalTupleWithoutDNAT() (CtTuple, error) {
 	if !cte.IsDNAT() {
 		return EmptyCtTuple, errors.New("Entry is not DNAT-ed")
 	}
-	repl, err := cte.ReplTuple()
+	reply, err := cte.ReplyTuple()
 	if err != nil {
 		return EmptyCtTuple, err
 	}
-	orig, err := cte.OrigTuple()
+	original, err := cte.OriginalTuple()
 	if err != nil {
 		return EmptyCtTuple, err
 	}
 
 	var src CtL4Src
 	var dst CtL4Dst
-	if orig.ProtoNum == nfnl.ICMP_PROTO {
-		src = CtL4Src{Id: repl.L4Src.Id}
-		dst = CtL4Dst{Type: repl.L4Dst.Type, Code: repl.L4Dst.Code}
-	} else if orig.ProtoNum == nfnl.TCP_PROTO || orig.ProtoNum == nfnl.UDP_PROTO {
-		src = CtL4Src{Port: repl.L4Dst.Port}
-		dst = CtL4Dst{Port: repl.L4Src.Port}
+	if original.ProtoNum == nfnl.ICMP_PROTO {
+		src = CtL4Src{Id: reply.L4Src.Id}
+		dst = CtL4Dst{Type: reply.L4Dst.Type, Code: reply.L4Dst.Code}
+	} else if original.ProtoNum == nfnl.TCP_PROTO || original.ProtoNum == nfnl.UDP_PROTO {
+		src = CtL4Src{Port: reply.L4Dst.Port}
+		dst = CtL4Dst{Port: reply.L4Src.Port}
 	} else {
-		src = CtL4Src{All: repl.L4Dst.All}
-		dst = CtL4Dst{All: repl.L4Src.All}
+		src = CtL4Src{All: reply.L4Dst.All}
+		dst = CtL4Dst{All: reply.L4Src.All}
 	}
 
-	return CtTuple{orig.Src, repl.Src, orig.L3ProtoNum, orig.ProtoNum, orig.Zone, src, dst}, nil
+	return CtTuple{original.Src, reply.Src, original.L3ProtoNum, original.ProtoNum, original.Zone, src, dst}, nil
 }
