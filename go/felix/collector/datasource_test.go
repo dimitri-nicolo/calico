@@ -61,7 +61,7 @@ var remoteWlEPKey1 = &model.WorkloadEndpointKey{
 
 // Entry remoteIp1:srcPort -> localIp1:dstPort
 var inCtEntry = nfnetlink.CtEntry{
-	OrigTuples: []nfnetlink.CtTuple{
+	OriginalTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        remoteIp1,
 			Dst:        localIp1,
@@ -71,7 +71,7 @@ var inCtEntry = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
 		},
 	},
-	ReplTuples: []nfnetlink.CtTuple{
+	ReplyTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        localIp1,
 			Dst:        remoteIp1,
@@ -81,12 +81,12 @@ var inCtEntry = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 		},
 	},
-	OrigCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
-	ReplCounters: nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
 }
 
 var outCtEntry = nfnetlink.CtEntry{
-	OrigTuples: []nfnetlink.CtTuple{
+	OriginalTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        localIp1,
 			Dst:        remoteIp1,
@@ -96,7 +96,7 @@ var outCtEntry = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
 		},
 	},
-	ReplTuples: []nfnetlink.CtTuple{
+	ReplyTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        remoteIp1,
 			Dst:        localIp1,
@@ -106,12 +106,12 @@ var outCtEntry = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 		},
 	},
-	OrigCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
-	ReplCounters: nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
 }
 
 var localCtEntry = nfnetlink.CtEntry{
-	OrigTuples: []nfnetlink.CtTuple{
+	OriginalTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        localIp1,
 			Dst:        localIp2,
@@ -121,7 +121,7 @@ var localCtEntry = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
 		},
 	},
-	ReplTuples: []nfnetlink.CtTuple{
+	ReplyTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        localIp2,
 			Dst:        localIp1,
@@ -131,14 +131,14 @@ var localCtEntry = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 		},
 	},
-	OrigCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
-	ReplCounters: nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
 }
 
 // DNAT Conntrack Entries
 // DNAT from localIp1DNAT:dstPortDNAT --> localIp1:dstPort
 var inCtEntryWithDNAT = nfnetlink.CtEntry{
-	OrigTuples: []nfnetlink.CtTuple{
+	OriginalTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        remoteIp1,
 			Dst:        localIp1DNAT,
@@ -148,7 +148,7 @@ var inCtEntryWithDNAT = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
 		},
 	},
-	ReplTuples: []nfnetlink.CtTuple{
+	ReplyTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        localIp1,
 			Dst:        remoteIp1,
@@ -158,14 +158,14 @@ var inCtEntryWithDNAT = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 		},
 	},
-	Status:       nfnl.IPS_DST_NAT,
-	OrigCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
-	ReplCounters: nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+	Status:           nfnl.IPS_DST_NAT,
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
 }
 
 // DNAT from localIp2DNAT:dstPortDNAT --> localIp2:dstPort
 var localCtEntryWithDNAT = nfnetlink.CtEntry{
-	OrigTuples: []nfnetlink.CtTuple{
+	OriginalTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        localIp1,
 			Dst:        localIp2DNAT,
@@ -175,7 +175,7 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
 		},
 	},
-	ReplTuples: []nfnetlink.CtTuple{
+	ReplyTuples: []nfnetlink.CtTuple{
 		nfnetlink.CtTuple{
 			Src:        localIp2,
 			Dst:        localIp1,
@@ -185,9 +185,9 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 		},
 	},
-	Status:       nfnl.IPS_DST_NAT,
-	OrigCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
-	ReplCounters: nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+	Status:           nfnl.IPS_DST_NAT,
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
 }
 
 var _ = Describe("Conntrack Datasource", func() {
@@ -211,8 +211,8 @@ var _ = Describe("Conntrack Datasource", func() {
 		It("should receive a single stat update", func() {
 			t := stats.NewTuple(localIp1, remoteIp1, proto_tcp, dstPort, srcPort)
 			su := stats.NewStatUpdate(*t, *localWlEPKey1,
-				inCtEntry.ReplCounters.Packets, inCtEntry.ReplCounters.Bytes,
-				inCtEntry.OrigCounters.Packets, inCtEntry.OrigCounters.Bytes,
+				inCtEntry.ReplyCounters.Packets, inCtEntry.ReplyCounters.Bytes,
+				inCtEntry.OriginalCounters.Packets, inCtEntry.OriginalCounters.Bytes,
 				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{inCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su)))
@@ -222,8 +222,8 @@ var _ = Describe("Conntrack Datasource", func() {
 		It("should receive a single stat update", func() {
 			t := stats.NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 			su := stats.NewStatUpdate(*t, *localWlEPKey1,
-				outCtEntry.OrigCounters.Packets, outCtEntry.OrigCounters.Bytes,
-				outCtEntry.ReplCounters.Packets, outCtEntry.ReplCounters.Bytes,
+				outCtEntry.OriginalCounters.Packets, outCtEntry.OriginalCounters.Bytes,
+				outCtEntry.ReplyCounters.Packets, outCtEntry.ReplyCounters.Bytes,
 				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{outCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su)))
@@ -233,13 +233,13 @@ var _ = Describe("Conntrack Datasource", func() {
 		It("should receive two stat updates - one for each endpoint", func() {
 			t1 := stats.NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 			su1 := stats.NewStatUpdate(*t1, *localWlEPKey1,
-				localCtEntry.OrigCounters.Packets, localCtEntry.OrigCounters.Bytes,
-				localCtEntry.ReplCounters.Packets, localCtEntry.ReplCounters.Bytes,
+				localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes,
+				localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes,
 				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 			t2 := stats.NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
 			su2 := stats.NewStatUpdate(*t2, *localWlEPKey2,
-				localCtEntry.ReplCounters.Packets, localCtEntry.ReplCounters.Bytes,
-				localCtEntry.OrigCounters.Packets, localCtEntry.OrigCounters.Bytes,
+				localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes,
+				localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes,
 				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{localCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su1)))
@@ -250,8 +250,8 @@ var _ = Describe("Conntrack Datasource", func() {
 		It("should receive a single stat update with correct tuple extracted", func() {
 			t := stats.NewTuple(localIp1, remoteIp1, proto_tcp, dstPort, srcPort)
 			su := stats.NewStatUpdate(*t, *localWlEPKey1,
-				inCtEntryWithDNAT.ReplCounters.Packets, inCtEntryWithDNAT.ReplCounters.Bytes,
-				inCtEntryWithDNAT.OrigCounters.Packets, inCtEntryWithDNAT.OrigCounters.Bytes,
+				inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes,
+				inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes,
 				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{inCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su)))
@@ -261,17 +261,17 @@ var _ = Describe("Conntrack Datasource", func() {
 		It("should receive two stat updates - one for each endpoint - with correct tuple extracted", func() {
 			t1 := stats.NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 			su1 := stats.NewStatUpdate(*t1, *localWlEPKey1,
-				localCtEntryWithDNAT.OrigCounters.Packets,
-				localCtEntryWithDNAT.OrigCounters.Bytes,
-				localCtEntryWithDNAT.ReplCounters.Packets,
-				localCtEntryWithDNAT.ReplCounters.Bytes,
+				localCtEntryWithDNAT.OriginalCounters.Packets,
+				localCtEntryWithDNAT.OriginalCounters.Bytes,
+				localCtEntryWithDNAT.ReplyCounters.Packets,
+				localCtEntryWithDNAT.ReplyCounters.Bytes,
 				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 			t2 := stats.NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
 			su2 := stats.NewStatUpdate(*t2, *localWlEPKey2,
-				localCtEntryWithDNAT.ReplCounters.Packets,
-				localCtEntryWithDNAT.ReplCounters.Bytes,
-				localCtEntryWithDNAT.OrigCounters.Packets,
-				localCtEntryWithDNAT.OrigCounters.Bytes,
+				localCtEntryWithDNAT.ReplyCounters.Packets,
+				localCtEntryWithDNAT.ReplyCounters.Bytes,
+				localCtEntryWithDNAT.OriginalCounters.Packets,
+				localCtEntryWithDNAT.OriginalCounters.Bytes,
 				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{localCtEntryWithDNAT}
 			Eventually(sink).Should(Receive(Equal(*su1)))

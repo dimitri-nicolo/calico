@@ -209,16 +209,16 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	// local-to-local traffic.
 	statUpdates := []stats.StatUpdate{}
 	// The last entry is the tuple entry for endpoints
-	ctTuple, err := ctEntry.OrigTuple()
+	ctTuple, err := ctEntry.OriginalTuple()
 	if err != nil {
-		log.Error("Error when extracting OrigTuple:", err)
+		log.Error("Error when extracting OriginalTuple:", err)
 		return statUpdates, err
 	}
 
-	// We care about DNAT only which modifies the destination parts of the OrigTuple.
+	// We care about DNAT only which modifies the destination parts of the OriginalTuple.
 	if ctEntry.IsDNAT() {
 		log.Debugf("Entry is DNAT %+v", ctEntry)
-		ctTuple, err = ctEntry.OrigTupleWithoutDNAT()
+		ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
 		if err != nil {
 			log.Error("Error when extracting tuple without DNAT:", err)
 		}
@@ -231,8 +231,8 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 		// Locally originating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
-			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
+			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
+			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
@@ -240,8 +240,8 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 		// Locally terminating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
-			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
+			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
+			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
