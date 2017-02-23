@@ -13,7 +13,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/collector/stats"
 	"github.com/projectcalico/felix/go/felix/jitter"
-	"github.com/projectcalico/felix/go/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
@@ -35,7 +34,7 @@ type NflogDataSource struct {
 	nflogDoneChan chan struct{}
 }
 
-func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction, nlBufSiz int) *NflogDataSource {
+func NewNflogDataSource(lm epLookup, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction, nlBufSiz int) *NflogDataSource {
 	nflogChan := make(chan nfnetlink.NflogPacket)
 	done := make(chan struct{})
 	return newNflogDataSource(lm, sink, groupNum, dir, nlBufSiz, nflogChan, done)
@@ -156,7 +155,7 @@ type ConntrackDataSource struct {
 	lum       epLookup
 }
 
-func NewConntrackDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate) *ConntrackDataSource {
+func NewConntrackDataSource(lm epLookup, sink chan<- stats.StatUpdate) *ConntrackDataSource {
 	poller := jitter.NewTicker(PollingInterval, PollingInterval/10)
 	converter := make(chan []nfnetlink.CtEntry)
 	return newConntrackDataSource(lm, sink, poller, poller.C, converter)
