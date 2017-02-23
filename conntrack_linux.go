@@ -25,7 +25,7 @@ func ConntrackList() ([]CtEntry, error) {
 	var res []CtEntry
 	for _, m := range msgs {
 		msg := nfnl.DeserializeNfGenMsg(m)
-		ctentry, err := ConntrackEntryFromNfAttrs(m[msg.Len():], msg.Family)
+		ctentry, err := conntrackEntryFromNfAttrs(m[msg.Len():], msg.Family)
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +34,7 @@ func ConntrackList() ([]CtEntry, error) {
 	return res, nil
 }
 
-func ConntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
+func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 	ctentry := CtEntry{}
 	attrs, err := nfnl.ParseNetfilterAttr(m)
 	if err != nil {
@@ -54,13 +54,13 @@ func ConntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			tuple, _ := parseConntrackTuple(attr.Value, family)
-			ctentry.OrigTuples = append(ctentry.OrigTuples, tuple)
+			ctentry.OriginalTuples = append(ctentry.OriginalTuples, tuple)
 		case nfnl.CTA_TUPLE_REPLY:
 			if !isNestedAttr {
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			tuple, _ := parseConntrackTuple(attr.Value, family)
-			ctentry.ReplTuples = append(ctentry.ReplTuples, tuple)
+			ctentry.ReplyTuples = append(ctentry.ReplyTuples, tuple)
 		case nfnl.CTA_STATUS:
 			ctentry.Status = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_TIMEOUT:
@@ -71,12 +71,12 @@ func ConntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 			if !isNestedAttr {
 				return ctentry, errors.New("Nested attribute value expected")
 			}
-			ctentry.OrigCounters, _ = parseConntrackCounters(attr.Value)
+			ctentry.OriginalCounters, _ = parseConntrackCounters(attr.Value)
 		case nfnl.CTA_COUNTERS_REPLY:
 			if !isNestedAttr {
 				return ctentry, errors.New("Nested attribute value expected")
 			}
-			ctentry.ReplCounters, _ = parseConntrackCounters(attr.Value)
+			ctentry.ReplyCounters, _ = parseConntrackCounters(attr.Value)
 		case nfnl.CTA_ID:
 			ctentry.Id = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_ZONE:
