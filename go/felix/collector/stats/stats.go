@@ -30,6 +30,14 @@ func (c Counter) String() string {
 	return fmt.Sprintf("packets=%v bytes=%v", c.packets, c.bytes)
 }
 
+func (c Counter) Packets() int {
+	return c.packets
+}
+
+func (c Counter) Bytes() int {
+	return c.bytes
+}
+
 type RuleAction string
 
 const (
@@ -107,6 +115,12 @@ func (t *RuleTrace) Path() []RuleTracePoint {
 		path = append(path, tp)
 	}
 	return path
+}
+
+func (t *RuleTrace) ToString() string {
+	path := t.Path()
+	p := path[len(path)-1]
+	return fmt.Sprintf("%v/%v/%v/%v", p.TierID, p.PolicyID, p.Rule, p.Action)
 }
 
 func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
@@ -224,6 +238,10 @@ func NewData(tuple Tuple,
 func (d *Data) String() string {
 	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ruleTrace={%v} workloadId=%v endpointId=%v",
 		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.RuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
+}
+
+func (d *Data) SourceIp() string {
+	return d.Tuple.src
 }
 
 func (d *Data) touch() {

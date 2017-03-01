@@ -41,6 +41,7 @@ type Collector struct {
 	mux            chan stats.StatUpdate
 	statAgeTimeout chan *stats.Data
 	statTicker     *jitter.Ticker
+	reporterTicker *jitter.Ticker
 	exportSink     chan<- *ipfix.ExportRecord
 	sigChan        chan os.Signal
 	config         *Config
@@ -55,6 +56,7 @@ func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data,
 		mux:            make(chan stats.StatUpdate),
 		statAgeTimeout: make(chan *stats.Data),
 		statTicker:     jitter.NewTicker(ExportingInterval, ExportingInterval/10),
+		reporterTicker: jitter.NewTicker(ExportingInterval, ExportingInterval/10),
 		exportSink:     exportSink,
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
@@ -86,6 +88,9 @@ func (c *Collector) startStatsCollectionAndReporting() {
 		case <-c.statTicker.C:
 			log.Info("Stats export timer ticked")
 			c.exportStat()
+		case <-c.reporterTicker.C:
+			log.Info("Metrics reporter timer ticked")
+			c.reportMetrics()
 		case <-c.sigChan:
 			c.dumpStats()
 		}
@@ -203,6 +208,46 @@ func (c *Collector) exportStat() {
 func (c *Collector) exportEntry(record *ipfix.ExportRecord) {
 	log.Debugf("Exporting entry %v", record)
 	c.exportSink <- record
+}
+
+func (c *Collector) reportMetrics() {
+	log.Debug("Aggregating and reporting metrics")
+	var ok bool
+	var sipStats map[string]Metrics
+	agg := make(map[string]map[string]Metrics)
+	for _, data := range c.epStats {
+		if data.Action() != stats.DenyAction {
+			continue
+		}
+		srcIP := data.SourceIp()
+		k := data.RuleTrace.ToString()
+		sipStats, ok = agg[k]
+		if !ok {
+			sipStats = make(map[string]Metrics)
+			entry := Metrics{
+				Bytes:   data.CountersIn().Bytes(),
+				Packets: data.CountersIn().Packets(),
+			}
+			sipStats[srcIP] = entry
+		} else {
+			entry, ok := sipStats[srcIP]
+			if !ok {
+				entry = Metrics{
+					Bytes:   data.CountersIn().Bytes(),
+					Packets: data.CountersIn().Packets(),
+				}
+			} else {
+				entry.Bytes += data.CountersIn().Bytes()
+				entry.Packets += data.CountersIn().Packets()
+			}
+			sipStats[srcIP] = entry
+		}
+		agg[k] = sipStats
+	}
+	log.Debugf("Aggregated stats %+v", agg)
+	for policy, sipStats := range agg {
+		UpdateMetrics(policy, sipStats)
+	}
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.
