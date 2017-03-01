@@ -217,10 +217,9 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	}
 	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
 	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
-	tuple := extractTupleFromCtEntryTuple(ctTuple)
-	// Force conntrack to have empty tracepoint
 	if wlEpKeySrc != nil {
 		// Locally originating packet
+		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
@@ -229,9 +228,10 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	}
 	if wlEpKeyDst != nil {
 		// Locally terminating packet
+		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
-			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
+			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
@@ -241,7 +241,7 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	return statUpdates, nil
 }
 
-func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) stats.Tuple {
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats.Tuple {
 	var l4Src, l4Dst int
 	if ctTuple.ProtoNum == 1 {
 		l4Src = ctTuple.L4Src.Id
@@ -250,7 +250,11 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) stats.Tuple {
 		l4Src = ctTuple.L4Src.Port
 		l4Dst = ctTuple.L4Dst.Port
 	}
-	return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
+	if !reverse {
+		return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
+	} else {
+		return *stats.NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
+	}
 }
 
 // Stubs
