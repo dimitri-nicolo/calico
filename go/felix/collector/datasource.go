@@ -5,50 +5,71 @@ package collector
 import (
 	"bytes"
 	"errors"
+	"net"
 	"strconv"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/collector/stats"
-	"github.com/projectcalico/felix/go/felix/lookup"
+	"github.com/projectcalico/felix/go/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
 
-type NflogDataSource struct {
-	sink      chan<- stats.StatUpdate
-	groupNum  int
-	direction stats.Direction
-	nlBufSiz  int
-	lum       *lookup.LookupManager
+type epLookup interface {
+	GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey
+	GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int
 }
 
-func NewNflogDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction, nlBufSiz int) *NflogDataSource {
+const PollingInterval = time.Duration(1) * time.Second
+
+type NflogDataSource struct {
+	sink          chan<- stats.StatUpdate
+	groupNum      int
+	direction     stats.Direction
+	nlBufSiz      int
+	lum           epLookup
+	nflogChan     chan nfnetlink.NflogPacket
+	nflogDoneChan chan struct{}
+}
+
+func NewNflogDataSource(lm epLookup, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction, nlBufSiz int) *NflogDataSource {
+	nflogChan := make(chan nfnetlink.NflogPacket)
+	done := make(chan struct{})
+	return newNflogDataSource(lm, sink, groupNum, dir, nlBufSiz, nflogChan, done)
+}
+
+// Internal constructor to help mocking from UTs.
+func newNflogDataSource(lm epLookup, sink chan<- stats.StatUpdate, gn int, dir stats.Direction, nbs int, nc chan nfnetlink.NflogPacket, done chan struct{}) *NflogDataSource {
 	return &NflogDataSource{
-		sink:      sink,
-		groupNum:  groupNum,
-		direction: dir,
-		nlBufSiz:  nlBufSiz,
-		lum:       lm,
+		sink:          sink,
+		groupNum:      gn,
+		direction:     dir,
+		nlBufSiz:      nbs,
+		lum:           lm,
+		nflogChan:     nc,
+		nflogDoneChan: done,
 	}
 }
 
 func (ds *NflogDataSource) Start() {
 	log.Infof("Starting NFLOG Data Source for direction %v group %v", ds.direction, ds.groupNum)
-	go ds.subscribeToNflog()
-}
-
-func (ds *NflogDataSource) subscribeToNflog() {
-	ch := make(chan nfnetlink.NflogPacket)
-	done := make(chan struct{})
-	defer close(done)
-	err := nfnetlink.NflogSubscribe(ds.groupNum, ds.nlBufSiz, ch, done)
+	err := ds.subscribeToNflog()
 	if err != nil {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
 	}
-	for nflogPacket := range ch {
+	go ds.startProcessingPackets()
+}
+
+func (ds *NflogDataSource) subscribeToNflog() error {
+	return nfnetlink.NflogSubscribe(ds.groupNum, ds.nlBufSiz, ds.nflogChan, ds.nflogDoneChan)
+}
+
+func (ds *NflogDataSource) startProcessingPackets() {
+	defer close(ds.nflogDoneChan)
+	for nflogPacket := range ds.nflogChan {
 		statUpdate, err := ds.convertNflogPktToStat(nflogPacket)
 		if err != nil {
 			log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacket)
@@ -77,8 +98,8 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 		numBytes = 0
 	}
 
-	// Determine the endpoint that this packet hit a rule for.  This depends on the direction
-	// because local -> local packets we be NFLOGed twice.
+	// Determine the endpoint that this packet hit a rule for. This depends on the direction
+	// because local -> local packets will be NFLOGed twice.
 	if ds.direction == stats.DirIn {
 		inPkts = numPkts
 		inBytes = numBytes
@@ -120,31 +141,48 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) stats.Tup
 }
 
 type ConntrackDataSource struct {
-	sink chan<- stats.StatUpdate
-	lum  *lookup.LookupManager
+	poller    *jitter.Ticker
+	pollerC   <-chan time.Time
+	converter chan []nfnetlink.CtEntry
+	sink      chan<- stats.StatUpdate
+	lum       epLookup
 }
 
-func NewConntrackDataSource(lm *lookup.LookupManager, sink chan<- stats.StatUpdate) *ConntrackDataSource {
+func NewConntrackDataSource(lm epLookup, sink chan<- stats.StatUpdate) *ConntrackDataSource {
+	poller := jitter.NewTicker(PollingInterval, PollingInterval/10)
+	converter := make(chan []nfnetlink.CtEntry)
+	return newConntrackDataSource(lm, sink, poller, poller.C, converter)
+}
+
+// Internal constructor to help mocking from UTs.
+func newConntrackDataSource(lm epLookup, sink chan<- stats.StatUpdate, poller *jitter.Ticker, pollerC <-chan time.Time, converter chan []nfnetlink.CtEntry) *ConntrackDataSource {
 	return &ConntrackDataSource{
-		sink: sink,
-		lum:  lm,
+		poller:    poller,
+		pollerC:   pollerC,
+		converter: converter,
+		sink:      sink,
+		lum:       lm,
 	}
 }
 
 func (ds *ConntrackDataSource) Start() {
 	log.Info("Starting Conntrack Data Source")
 	go ds.startPolling()
+	go ds.startProcessor()
 }
 
 func (ds *ConntrackDataSource) startPolling() {
-	c := time.Tick(time.Second)
-	for _ = range c {
-		ctentries, err := nfnetlink.ConntrackList()
+	for _ = range ds.pollerC {
+		cte, err := nfnetlink.ConntrackList()
 		if err != nil {
 			log.Errorf("Error: ConntrackList: %v", err)
 			return
 		}
-		// TODO(doublek): Possibly do this in a separate goroutine?
+		ds.converter <- cte
+	}
+}
+func (ds *ConntrackDataSource) startProcessor() {
+	for ctentries := range ds.converter {
 		for _, ctentry := range ctentries {
 			statUpdates, err := ds.convertCtEntryToStat(ctentry)
 			if err != nil {
@@ -163,23 +201,37 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	// local-to-local traffic.
 	statUpdates := []stats.StatUpdate{}
 	// The last entry is the tuple entry for endpoints
-	ctTuple := ctEntry.OrigTuples[len(ctEntry.OrigTuples)-1]
+	ctTuple, err := ctEntry.OriginalTuple()
+	if err != nil {
+		log.Error("Error when extracting OriginalTuple:", err)
+		return statUpdates, err
+	}
+
+	// We care about DNAT only which modifies the destination parts of the OriginalTuple.
+	if ctEntry.IsDNAT() {
+		log.Debugf("Entry is DNAT %+v", ctEntry)
+		ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
+		if err != nil {
+			log.Error("Error when extracting tuple without DNAT:", err)
+		}
+	}
 	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
 	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
 	tuple := extractTupleFromCtEntryTuple(ctTuple)
+	// Force conntrack to have empty tracepoint
 	if wlEpKeySrc != nil {
 		// Locally originating packet
 		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
-			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
+			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
+			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 			stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
 	if wlEpKeyDst != nil {
 		// Locally terminating packet
 		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
-			ctEntry.OrigCounters.Packets, ctEntry.OrigCounters.Bytes,
-			ctEntry.ReplCounters.Packets, ctEntry.ReplCounters.Bytes,
+			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
+			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 			stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
@@ -189,7 +241,7 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	return statUpdates, nil
 }
 
-func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats.Tuple {
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) stats.Tuple {
 	var l4Src, l4Dst int
 	if ctTuple.ProtoNum == 1 {
 		l4Src = ctTuple.L4Src.Id
@@ -198,11 +250,7 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats
 		l4Src = ctTuple.L4Src.Port
 		l4Dst = ctTuple.L4Dst.Port
 	}
-	if !reverse {
-		return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
-	} else {
-		return *stats.NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
-	}
+	return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
 }
 
 // Stubs
@@ -253,7 +301,7 @@ func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAct
 	return
 }
 
-func lookupRule(lum *lookup.LookupManager, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
+func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
 	log.Infof("Looking up rule prefix %s", prefix)
 	tier, policy, rule, action, export := parsePrefix(prefix)
 	return stats.RuleTracePoint{
