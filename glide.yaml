@@ -4,5 +4,4 @@ import:
 - package: github.com/docopt/docopt-go
 - package: github.com/tigera/libcalico-go
   vcs: git
-  version: etcd-driver
-  repo: git@github.com:fasaxc/libcalico-go.git
+  repo: git@github.com:tigera/libcalico-go-private.git

@@ -5,9 +5,6 @@ package commands
 import (
 	"fmt"
 	"github.com/golang/glog"
-	"github.com/tigera/libcalico-go/datastructures/labels"
-	"github.com/tigera/libcalico-go/etcd-driver/etcd"
-	"github.com/tigera/libcalico-go/etcd-driver/store"
 	"github.com/tigera/libcalico-go/lib/backend"
 	"github.com/tigera/libcalico-go/lib/selector"
 	"os"
