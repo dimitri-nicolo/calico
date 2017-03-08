@@ -46,6 +46,7 @@ type Collector struct {
 	sigChan        chan os.Signal
 	config         *Config
 	dumpLog        *log.Logger
+	aggStats       map[string]map[string]Metrics
 }
 
 func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data, exportSink chan<- *ipfix.ExportRecord, config *Config) *Collector {
@@ -61,6 +62,7 @@ func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data,
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
 		dumpLog:        log.New(),
+		aggStats:       make(map[string]map[string]Metrics),
 	}
 }
 
@@ -179,6 +181,7 @@ func (c *Collector) expireEntry(data *stats.Data) {
 	if data.IsExportEnabled() {
 		c.exportEntry(data.ToExportRecord(ipfix.IdleTimeout))
 	}
+	c.removeSourceIP(data.RuleTrace.ToString(), data.SourceIp())
 	delete(c.epStats, tuple)
 }
 
@@ -212,42 +215,77 @@ func (c *Collector) exportEntry(record *ipfix.ExportRecord) {
 
 func (c *Collector) reportMetrics() {
 	log.Debug("Aggregating and reporting metrics")
-	var ok bool
-	var sipStats map[string]Metrics
-	agg := make(map[string]map[string]Metrics)
+	var (
+		ok       bool
+		sipStats map[string]Metrics
+		bytes    int
+		packets  int
+		rt       string
+		srcIP    string
+	)
 	for _, data := range c.epStats {
 		if data.Action() != stats.DenyAction {
 			continue
 		}
-		srcIP := data.SourceIp()
-		k := data.RuleTrace.ToString()
-		sipStats, ok = agg[k]
+		srcIP = data.SourceIp()
+		rt = data.RuleTrace.ToString()
+		bytes = data.CountersIn().Bytes()
+		packets = data.CountersIn().Packets()
+		// TODO(doublek): This is a temporary workaround until direction awareness
+		// of tuples/data via NFLOG makes its way in.
+		if packets == 0 {
+			bytes = data.CountersOut().Bytes()
+			packets = data.CountersOut().Packets()
+		}
+		sipStats, ok = c.aggStats[rt]
 		if !ok {
 			sipStats = make(map[string]Metrics)
 			entry := Metrics{
-				Bytes:   data.CountersIn().Bytes(),
-				Packets: data.CountersIn().Packets(),
+				Bytes:   bytes,
+				Packets: packets,
 			}
 			sipStats[srcIP] = entry
 		} else {
 			entry, ok := sipStats[srcIP]
 			if !ok {
 				entry = Metrics{
-					Bytes:   data.CountersIn().Bytes(),
-					Packets: data.CountersIn().Packets(),
+					Bytes:   bytes,
+					Packets: packets,
 				}
 			} else {
-				entry.Bytes += data.CountersIn().Bytes()
-				entry.Packets += data.CountersIn().Packets()
+				entry.Bytes = bytes
+				entry.Packets = packets
 			}
 			sipStats[srcIP] = entry
 		}
-		agg[k] = sipStats
+		c.aggStats[rt] = sipStats
 	}
-	log.Debugf("Aggregated stats %+v", agg)
-	for policy, sipStats := range agg {
+	log.Debugf("Aggregated stats %+v", c.aggStats)
+	for policy, sipStats := range c.aggStats {
 		UpdateMetrics(policy, sipStats)
 	}
+}
+
+func (c *Collector) removeSourceIP(ruleTrace string, srcIP string) {
+	log.Debugf("removeSourceIP: RuleTrace %v Source IP: %v", ruleTrace, srcIP)
+	sipStats, ok := c.aggStats[ruleTrace]
+	if !ok {
+		log.Infof("removeSourceIP: RuleTrace %v not present in aggregate stats", ruleTrace)
+		return
+	}
+	_, ok = sipStats[srcIP]
+	if !ok {
+		log.Infof("removeSourceIP: Source IP %v not present in aggregate stats", srcIP)
+		return
+	}
+	DeleteMetric(ruleTrace, srcIP)
+	delete(sipStats, srcIP)
+	if len(sipStats) == 0 {
+		delete(c.aggStats, ruleTrace)
+	} else {
+		c.aggStats[ruleTrace] = sipStats
+	}
+	return
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.

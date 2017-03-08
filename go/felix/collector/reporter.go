@@ -44,3 +44,8 @@ func UpdateMetrics(policy string, sipStats map[string]Metrics) {
 		gaugeDeniedBytes.WithLabelValues(srcIP, policy).Set(float64(metric.Bytes))
 	}
 }
+
+func DeleteMetric(policy string, srcIP string) {
+	gaugeDeniedPackets.DeleteLabelValues(srcIP, policy)
+	gaugeDeniedBytes.DeleteLabelValues(srcIP, policy)
+}
