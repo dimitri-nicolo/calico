@@ -190,25 +190,19 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 			//
 			// For untracked rules, we don't do that because there may be tracked rules
 			// still to be applied to the packet in the filter table.
-			var exportIpfix string
-			if r.Config.IpfixExportTierDropRules {
-				exportIpfix = "T/"
-			} else {
-				exportIpfix = "F/"
-			}
 
 			toRules = append(toRules, Rule{
 				Match: Match().MarkClear(r.IptablesMarkNextTier),
 				Action: NflogAction{
 					Group:  1,
-					Prefix: exportIpfix + "D/0/" + "no-policy-match-inbound/" + tier.Name,
+					Prefix: "D/0/" + "no-policy-match-inbound/" + tier.Name,
 				},
 			})
 			fromRules = append(fromRules, Rule{
 				Match: Match().MarkClear(r.IptablesMarkNextTier),
 				Action: NflogAction{
 					Group:  2,
-					Prefix: exportIpfix + "D/0/" + "no-policy-match-outbound/" + tier.Name,
+					Prefix: "D/0/" + "no-policy-match-outbound/" + tier.Name,
 				},
 			})
 
@@ -254,24 +248,18 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 		// TODO (Matt): This (and the policy equivalent just above) can probably be refactored.
 		//              At least the magic 1 and 2 need to be combined with the equivalent in CalculateActions.
 		// No profile matched the packet: drop it.
-		var exportIpfix string
-		if r.Config.IpfixExportTierDropRules {
-			exportIpfix = "T/"
-		} else {
-			exportIpfix = "F/"
-		}
 		toRules = append(toRules, Rule{
 			Match: Match(),
 			Action: NflogAction{
 				Group:  1,
-				Prefix: exportIpfix + "D/0/no-profile-match-inbound",
+				Prefix: "D/0/no-profile-match-inbound",
 			},
 		})
 		fromRules = append(fromRules, Rule{
 			Match: Match(),
 			Action: NflogAction{
 				Group:  2,
-				Prefix: exportIpfix + "D/0/no-profile-match-outbound",
+				Prefix: "D/0/no-profile-match-outbound",
 			},
 		})
 		toRules = append(toRules, r.DropRules(Match(), "Drop if no profiles matched")...)

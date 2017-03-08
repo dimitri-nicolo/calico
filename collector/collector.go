@@ -14,48 +14,36 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/mipearson/rfw"
 	"github.com/projectcalico/felix/collector/stats"
-	"github.com/projectcalico/felix/ipfix"
-	"github.com/projectcalico/felix/jitter"
 )
 
 // TODO(doublek): Need to hook these into configuration
 const DefaultAgeTimeout = time.Duration(10) * time.Second
-const InitialExportDelayTime = time.Duration(2) * time.Second
-const ExportingInterval = time.Duration(1) * time.Second
 
 type Config struct {
 	StatsDumpFilePath string
-
-	IpfixExportTierDropRules bool
 }
 
 // A Collector (a StatsManager really) collects StatUpdates from data sources
 // and stores them as a stats.Data object in a map keyed by stats.Tuple.
-// It also periodically exports all entries of this map to a IPFIX exporter.
-// All data source channels and IPFIX exporter channel must be specified when
-// creating the collector.
+// All data source channels must be specified when creating the collector.
 type Collector struct {
 	sources        []<-chan stats.StatUpdate
 	sinks          []chan<- *stats.Data
 	epStats        map[stats.Tuple]*stats.Data
 	mux            chan stats.StatUpdate
 	statAgeTimeout chan *stats.Data
-	statTicker     *jitter.Ticker
-	exportSink     chan<- *ipfix.ExportRecord
 	sigChan        chan os.Signal
 	config         *Config
 	dumpLog        *log.Logger
 }
 
-func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data, exportSink chan<- *ipfix.ExportRecord, config *Config) *Collector {
+func NewCollector(sources []<-chan stats.StatUpdate, sinks []chan<- *stats.Data, config *Config) *Collector {
 	return &Collector{
 		sources:        sources,
 		sinks:          sinks,
 		epStats:        make(map[stats.Tuple]*stats.Data),
 		mux:            make(chan stats.StatUpdate),
 		statAgeTimeout: make(chan *stats.Data),
-		statTicker:     jitter.NewTicker(ExportingInterval, ExportingInterval/10),
-		exportSink:     exportSink,
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
 		dumpLog:        log.New(),
@@ -72,9 +60,8 @@ func (c *Collector) startStatsCollectionAndReporting() {
 	// When a collector is started, we respond to the following events:
 	// 1. StatUpdates for incoming datasources (chan c.mux).
 	// 2. stats.Data age timeouts via the c.statAgeTimeout channel.
-	// 3. A periodic exporter via the c.statTicker channel.
-	// 4. A signal handler that will dump logs on receiving SIGUSR2.
-	// 5. A done channel for stopping and cleaning up stats collector (TODO).
+	// 3. A signal handler that will dump logs on receiving SIGUSR2.
+	// 4. A done channel for stopping and cleaning up stats collector (TODO).
 	for {
 		select {
 		case update := <-c.mux:
@@ -83,9 +70,6 @@ func (c *Collector) startStatsCollectionAndReporting() {
 		case data := <-c.statAgeTimeout:
 			log.Info("Stats entry timed out: ", data)
 			c.expireEntry(data)
-		case <-c.statTicker.C:
-			log.Info("Stats export timer ticked")
-			c.exportStat()
 		case <-c.sigChan:
 			c.dumpStats()
 		}
@@ -158,9 +142,6 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 	if update.Tp != stats.EmptyRuleTracePoint {
 		err := data.AddRuleTracePoint(update.Tp)
 		if err != nil {
-			if data.IsExportEnabled() {
-				c.exportEntry(data.ToExportRecord(ipfix.ForcedEnd))
-			}
 			data.ResetCounters()
 			data.ReplaceRuleTracePoint(update.Tp)
 		}
@@ -171,9 +152,6 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 func (c *Collector) expireEntry(data *stats.Data) {
 	log.Infof("Timer expired for entry: %v", data)
 	tuple := data.Tuple
-	if data.IsExportEnabled() {
-		c.exportEntry(data.ToExportRecord(ipfix.IdleTimeout))
-	}
 	delete(c.epStats, tuple)
 }
 
@@ -185,24 +163,6 @@ func (c *Collector) registerAgeTimer(data *stats.Data) {
 		<-timer.C
 		c.statAgeTimeout <- data
 	}()
-}
-
-func (c *Collector) exportStat() {
-	log.Debug("Exporting Stats")
-	for _, data := range c.epStats {
-		// TODO(doublek): If we haven't send an update in a while, we may be required
-		// to send one out. Check RFC and implement if required.
-		if !data.IsDirty() || !data.IsExportEnabled() {
-			log.Debug("Skipping exporting ", fmtEntry(data))
-			continue
-		}
-		c.exportEntry(data.ToExportRecord(ipfix.ActiveTimeout))
-	}
-}
-
-func (c *Collector) exportEntry(record *ipfix.ExportRecord) {
-	log.Debugf("Exporting entry %v", record)
-	c.exportSink <- record
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.

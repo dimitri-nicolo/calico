@@ -100,8 +100,6 @@ func parsedRuleToProtoRule(in *ParsedRule) *proto.Rule {
 		NotDstIpSetIds: in.NotDstIPSetIDs,
 
 		LogPrefix: in.LogPrefix,
-
-		ExportIpfix: in.ExportIpfix,
 	}
 
 	// Fill in the ICMP fields.  We can't follow the pattern and make a

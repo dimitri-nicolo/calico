@@ -157,13 +157,6 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		})
 	}
 
-	var exportIpfix string
-	if pRule.ExportIpfix {
-		exportIpfix = "T/"
-	} else {
-		exportIpfix = "F/"
-	}
-
 	switch pRule.Action {
 	case "", "allow":
 		// Allow needs to set the accept mark, and then return to the calling chain for
@@ -171,7 +164,7 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		mark = r.IptablesMarkAccept
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: exportIpfix + "A/" + prefix,
+			Prefix: "A/" + prefix,
 		})
 		actions = append(actions, iptables.ReturnAction{})
 	case "next-tier":
@@ -180,7 +173,7 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		mark = r.IptablesMarkNextTier
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: exportIpfix + "N/" + prefix,
+			Prefix: "N/" + prefix,
 		})
 		actions = append(actions, iptables.ReturnAction{})
 	case "deny":
@@ -188,7 +181,7 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		mark = r.IptablesMarkDrop
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
-			Prefix: exportIpfix + "D/" + prefix,
+			Prefix: "D/" + prefix,
 		})
 		actions = append(actions, r.DropActions()...)
 	case "log":

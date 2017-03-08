@@ -192,8 +192,6 @@ message Rule {
   string log_prefix = 200;
   // An opaque ID/hash for the rule.
   string rule_id = 201;
-
-  bool export_ipfix = 202;
 }
 
 message IcmpTypeAndCode {
