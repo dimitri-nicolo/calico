@@ -10,7 +10,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/felix/go/felix/ipfix"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
@@ -38,11 +37,6 @@ const (
 	NextTierAction RuleAction = "pass"
 )
 
-var fwdStatus = map[RuleAction]ipfix.ForwardingStatusType{
-	"allow": ipfix.Forwarded,
-	"deny":  ipfix.Dropped,
-}
-
 const RuleTraceInitLen = 10
 
 var (
@@ -58,12 +52,11 @@ type RuleTracePoint struct {
 	PolicyID string
 	Rule     string
 	Action   RuleAction
-	Export   bool
 	Index    int
 }
 
 func (rtp RuleTracePoint) String() string {
-	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v export=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index, rtp.Export)
+	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index)
 }
 
 var EmptyRuleTracePoint = RuleTracePoint{}
@@ -74,7 +67,6 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 type RuleTrace struct {
 	path   []RuleTracePoint
 	action RuleAction
-	export bool
 }
 
 func NewRuleTrace() *RuleTrace {
@@ -91,7 +83,7 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
 	}
-	return fmt.Sprintf("path=[%v], action=%v export=%v", strings.Join(rtParts, ", "), t.action, t.export)
+	return fmt.Sprintf("path=[%v], action=%v", strings.Join(rtParts, ", "), t.action)
 }
 
 func (t *RuleTrace) Len() int {
@@ -135,7 +127,6 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	}
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
-		t.export = tp.Export
 	}
 	return nil
 }
@@ -152,7 +143,6 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
 	t.action = tp.Action
-	t.export = tp.Export
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection. This is
@@ -261,11 +251,6 @@ func (d *Data) Action() RuleAction {
 	return d.RuleTrace.action
 }
 
-// Returns the if export is requested or not.
-func (d *Data) IsExportEnabled() bool {
-	return d.RuleTrace.export
-}
-
 func (d *Data) CountersIn() Counter {
 	return d.ctrIn
 }
@@ -334,46 +319,6 @@ func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint) {
 	d.RuleTrace.replaceRuleTracePoint(tp)
 	d.touch()
 	d.setDirtyFlag()
-}
-
-func (d *Data) ToExportRecord(reason ipfix.FlowEndReasonType) *ipfix.ExportRecord {
-	d.clearDirtyFlag()
-	rtRecs := []ipfix.RuleTraceRecord{}
-	for _, tp := range d.RuleTrace.path {
-		if tp == EmptyRuleTracePoint {
-			continue
-		}
-		rtRecs = append(rtRecs, ipfix.RuleTraceRecord{
-			TierID:      tp.TierID,
-			PolicyID:    tp.PolicyID,
-			Rule:        tp.Rule,
-			RuleAction:  string(tp.Action),
-			PolicyIndex: tp.Index,
-		})
-	}
-	fs, ok := fwdStatus[d.Action()]
-	if !ok {
-		fs = ipfix.Unknown
-	}
-	return &ipfix.ExportRecord{
-		FlowStart:               d.createdAt,
-		FlowEnd:                 time.Now(),
-		OctetTotalCount:         d.ctrIn.bytes,
-		ReverseOctetTotalCount:  d.ctrOut.bytes,
-		PacketTotalCount:        d.ctrIn.packets,
-		ReversePacketTotalCount: d.ctrOut.packets,
-
-		SourceIPv4Address:      net.ParseIP(d.Tuple.src),
-		DestinationIPv4Address: net.ParseIP(d.Tuple.dst),
-
-		SourceTransportPort:      d.Tuple.l4Src,
-		DestinationTransportPort: d.Tuple.l4Dst,
-		ProtocolIdentifier:       d.Tuple.proto,
-		ForwardingStatus:         fs,
-		FlowEndReason:            reason,
-
-		RuleTrace: rtRecs,
-	}
 }
 
 type CounterType string

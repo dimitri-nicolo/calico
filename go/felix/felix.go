@@ -218,11 +218,7 @@ configRetry:
 
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
-
-				IpfixExportTierDropRules: configParams.IpfixExportTierDropRules,
 			},
-			IpfixAddr:               net.ParseIP(configParams.IpfixCollectorAddr),
-			IpfixPort:               configParams.IpfixCollectorPort,
 			NfNetlinkBufSize:        configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:       configParams.StatsDumpFilePath,
 			IPIPMTU:                 configParams.IpInIpMtu,
