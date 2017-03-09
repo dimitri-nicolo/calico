@@ -1,4 +1,4 @@
-.PHONEY: all test ut update-vendor
+.PHONY: all test ut update-vendor
 
 default: all
 all: test
@@ -10,7 +10,7 @@ update-vendor:
 ut:
 	./run-uts
 
-.PHONEY: force
+.PHONY: force
 force:
 	true
 
@@ -22,6 +22,16 @@ release/calicoq: force
 	mkdir -p release
 	cd build-container && docker build -t calicoq-build .
 	docker run --rm -v `pwd`:/calicoq calicoq-build /calicoq/build-container/build.sh
+
+# Generate the protobuf bindings for Felix.
+.PHONY: protobuf
+protobuf: force vendor/github.com/projectcalico/felix/go/felix/proto/felixbackend.pb.go
+	true
+vendor/github.com/projectcalico/felix/go/felix/proto/felixbackend.pb.go: vendor/github.com/projectcalico/felix/go/felix/proto/felixbackend.proto
+	docker run --rm -v `pwd`/vendor/github.com/projectcalico/felix/go/felix/proto:/src:rw \
+	              calico/protoc \
+	              --gogofaster_out=. \
+	              felixbackend.proto
 
 clean:
 	-rm -f *.created
