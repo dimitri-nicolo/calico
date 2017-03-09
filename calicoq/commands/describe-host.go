@@ -8,6 +8,7 @@ import (
 	"github.com/projectcalico/felix/go/felix/calc"
 	"github.com/projectcalico/felix/go/felix/dispatcher"
 	"github.com/projectcalico/libcalico-go/lib/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/client"
 	"os"
