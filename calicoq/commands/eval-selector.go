@@ -33,8 +33,7 @@ func EvalSelector(sel string) (err error) {
 	checkValid := func(update api.Update) (filterOut bool) {
 		if update.Value == nil {
 			fmt.Printf("WARNING: failed to parse value of key %v; "+
-				"ignoring.\n  Parse error: %v\n\n",
-				update.RawUpdate.Key, update.ParseErr)
+				"ignoring.\n\n\n", update)
 			return true
 		}
 		return false
@@ -77,7 +76,7 @@ func endpointName(key interface{}) string {
 
 type evalCmd struct {
 	dispatcher *dispatcher.Dispatcher
-	index      labelindex.InheritIndex
+	index      *labelindex.InheritIndex
 	matches    []interface{}
 
 	done chan bool
@@ -103,9 +102,9 @@ func (cbs *evalCmd) OnKeysUpdated(updates []api.Update) {
 	}
 }
 
-func (cbs *evalCmd) OnUpdate(update api.Update) {
+func (cbs *evalCmd) OnUpdate(update api.Update) (filterOut bool) {
 	if update.Value == nil {
-		return
+		return true
 	}
 	switch k := update.Key.(type) {
 	case model.WorkloadEndpointKey:
@@ -119,6 +118,16 @@ func (cbs *evalCmd) OnUpdate(update api.Update) {
 		cbs.index.UpdateParentLabels(k.Name, v)
 	default:
 		glog.Errorf("Unexpected update type: %#v", update)
+		return true
+	}
+	return false
+}
+
+func (cbs *evalCmd) OnUpdates(updates []api.Update) {
+	glog.V(3).Info("Update: ", updates)
+	for _, update := range updates {
+		// MATT: Removed some handling of empty key: don't understand how it can happen.
+		cbs.dispatcher.OnUpdate(update)
 	}
 }
 
