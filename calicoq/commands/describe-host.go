@@ -215,7 +215,7 @@ func (cbs *describeCmd) OnUpdates(updates []api.Update) {
 	glog.V(3).Info("Update: ", updates)
 	for _, update := range updates {
 		// MATT: Removed some handling of empty key: don't understand how it can happen.
-		cbs.dispatcher.OnUpdate(&update)
+		cbs.dispatcher.OnUpdate(update)
 	}
 }
 
