@@ -4,6 +4,7 @@ package main
 
 import (
 	"flag"
+	"github.com/Sirupsen/logrus"
 	"github.com/docopt/docopt-go"
 	"github.com/golang/glog"
 	"github.com/tigera/calicoq/calicoq/commands"
@@ -33,6 +34,7 @@ func main() {
 	if os.Getenv("GLOG") != "" {
 		flag.Lookup("logtostderr").Value.Set("true")
 		flag.Lookup("v").Value.Set(os.Getenv("GLOG"))
+		logrus.SetLevel(logrus.DebugLevel)
 	}
 
 	arguments, err := docopt.Parse(usage, nil, true, "calicoq", false, false)

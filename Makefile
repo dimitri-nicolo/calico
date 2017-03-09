@@ -5,7 +5,7 @@ all: test
 test: ut
 
 update-vendor:
-	glide up
+	glide up --strip-vendor
 
 ut:
 	./run-uts
