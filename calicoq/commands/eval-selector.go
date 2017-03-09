@@ -5,18 +5,23 @@ package commands
 import (
 	"fmt"
 	"github.com/golang/glog"
+	"github.com/projectcalico/felix/go/felix/dispatcher"
+	"github.com/projectcalico/felix/go/felix/labelindex"
 	"github.com/projectcalico/libcalico-go/lib/backend"
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/client"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	"os"
 )
 
 func EvalSelector(sel string) (err error) {
-	disp := store.NewDispatcher()
+	disp := dispatcher.NewDispatcher()
 	cbs := &evalCmd{
 		dispatcher: disp,
 		done:       make(chan bool),
 	}
-	cbs.index = labels.NewInheritanceIndex(cbs.onMatchStarted, cbs.onMatchStopped)
+	cbs.index = labelindex.NewInheritIndex(cbs.onMatchStarted, cbs.onMatchStopped)
 	parsedSel, err := selector.Parse(sel)
 	if err != nil {
 		fmt.Printf("Invalid selector: %#v. %v.", sel, err)
@@ -25,26 +30,35 @@ func EvalSelector(sel string) (err error) {
 
 	cbs.index.UpdateSelector("the selector", parsedSel)
 
-	checkValid := func(update *store.ParsedUpdate) {
+	checkValid := func(update api.Update) (filterOut bool) {
 		if update.Value == nil {
 			fmt.Printf("WARNING: failed to parse value of key %v; "+
 				"ignoring.\n  Parse error: %v\n\n",
 				update.RawUpdate.Key, update.ParseErr)
+			return true
 		}
+		return false
 	}
 
-	disp.Register(backend.WorkloadEndpointKey{}, checkValid)
-	disp.Register(backend.HostEndpointKey{}, checkValid)
+	disp.Register(model.WorkloadEndpointKey{}, checkValid)
+	disp.Register(model.HostEndpointKey{}, checkValid)
 
-	disp.Register(backend.WorkloadEndpointKey{}, cbs.OnUpdate)
-	disp.Register(backend.HostEndpointKey{}, cbs.OnUpdate)
-	disp.Register(backend.ProfileLabelsKey{}, cbs.OnUpdate)
+	disp.Register(model.WorkloadEndpointKey{}, cbs.OnUpdate)
+	disp.Register(model.HostEndpointKey{}, cbs.OnUpdate)
+	disp.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
 
-	config := &store.DriverConfiguration{
-		OneShot: true,
+	apiConfig, err := client.LoadClientConfig("")
+	if err != nil {
+		glog.Fatal("Failed loading client config")
+		os.Exit(1)
 	}
-	datastore, err := etcd.New(cbs, config)
-	datastore.Start()
+	bclient, err := backend.NewClient(*apiConfig)
+	if err != nil {
+		glog.Fatal("Failed to create client")
+		os.Exit(1)
+	}
+	syncer := bclient.Syncer(cbs)
+	syncer.Start()
 
 	<-cbs.done
 	return
@@ -53,17 +67,17 @@ func EvalSelector(sel string) (err error) {
 func endpointName(key interface{}) string {
 	var epName string
 	switch epID := key.(type) {
-	case backend.WorkloadEndpointKey:
+	case model.WorkloadEndpointKey:
 		epName = fmt.Sprintf("Workload endpoint %v/%v/%v", epID.OrchestratorID, epID.WorkloadID, epID.EndpointID)
-	case backend.HostEndpointKey:
+	case model.HostEndpointKey:
 		epName = fmt.Sprintf("Host endpoint %v", epID.EndpointID)
 	}
 	return epName
 }
 
 type evalCmd struct {
-	dispatcher *store.Dispatcher
-	index      labels.LabelInheritanceIndex
+	dispatcher *dispatcher.Dispatcher
+	index      labelindex.InheritIndex
 	matches    []interface{}
 
 	done chan bool
@@ -74,36 +88,33 @@ func (cbs *evalCmd) OnConfigLoaded(globalConfig map[string]string,
 	// Ignore for now
 }
 
-func (cbs *evalCmd) OnStatusUpdated(status store.DriverStatus) {
-	if status == store.InSync {
+func (cbs *evalCmd) OnStatusUpdated(status api.SyncStatus) {
+	if status == api.InSync {
 		glog.V(0).Info("Datamodel in sync, we're done.")
 		cbs.done <- true
 	}
 }
 
-func (cbs *evalCmd) OnKeysUpdated(updates []store.Update) {
+func (cbs *evalCmd) OnKeysUpdated(updates []api.Update) {
 	glog.V(3).Info("Update: ", updates)
 	for _, update := range updates {
-		if len(update.Key) == 0 {
-			glog.Fatal("Bug: Key/Value update had empty key")
-		}
-
-		cbs.dispatcher.DispatchUpdate(&update)
+		// Also removed empty key handling: don't understand it.
+		cbs.dispatcher.OnUpdate(update)
 	}
 }
 
-func (cbs *evalCmd) OnUpdate(update *store.ParsedUpdate) {
+func (cbs *evalCmd) OnUpdate(update api.Update) {
 	if update.Value == nil {
 		return
 	}
 	switch k := update.Key.(type) {
-	case backend.WorkloadEndpointKey:
-		v := update.Value.(*backend.WorkloadEndpoint)
+	case model.WorkloadEndpointKey:
+		v := update.Value.(*model.WorkloadEndpoint)
 		cbs.index.UpdateLabels(update.Key, v.Labels, v.ProfileIDs)
-	case backend.HostEndpointKey:
-		v := update.Value.(*backend.HostEndpoint)
+	case model.HostEndpointKey:
+		v := update.Value.(*model.HostEndpoint)
 		cbs.index.UpdateLabels(update.Key, v.Labels, v.ProfileIDs)
-	case backend.ProfileLabelsKey:
+	case model.ProfileLabelsKey:
 		v := update.Value.(map[string]string)
 		cbs.index.UpdateParentLabels(k.Name, v)
 	default:

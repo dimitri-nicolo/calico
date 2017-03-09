@@ -74,6 +74,7 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 
 	// MATT: It's very opaque why some of these need to be checked,
 	//       and some can just be passed straight to the arc/sorter.
+	// LOL I'm an idiot.
 	disp.Register(model.WorkloadEndpointKey{}, checkValid)
 	disp.Register(model.HostEndpointKey{}, checkValid)
 	disp.Register(model.PolicyKey{}, checkValid)
