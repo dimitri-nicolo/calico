@@ -284,10 +284,10 @@ var _ = Describe("Conntrack Datasource", func() {
 // NFLOG datasource test parameters
 
 var (
-	defTierAllow = "F/A/0/policy1/default"
-	defTierDeny  = "F/D/0/policy2/default"
-	tier1Allow   = "F/A/0/policy3/tier1"
-	tier1Deny    = "F/D/0/polic4/tier1"
+	defTierAllow = "A/0/policy1/default"
+	defTierDeny  = "D/0/policy2/default"
+	tier1Allow   = "A/0/policy3/tier1"
+	tier1Deny    = "D/0/polic4/tier1"
 )
 
 var defTierAllowTp = stats.RuleTracePoint{
@@ -295,7 +295,6 @@ var defTierAllowTp = stats.RuleTracePoint{
 	PolicyID: "policy1",
 	Rule:     "0",
 	Action:   stats.AllowAction,
-	Export:   false,
 	Index:    0,
 }
 var defTierDenyTp = stats.RuleTracePoint{
@@ -303,7 +302,6 @@ var defTierDenyTp = stats.RuleTracePoint{
 	PolicyID: "policy2",
 	Rule:     "0",
 	Action:   stats.DenyAction,
-	Export:   false,
 	Index:    0,
 }
 var tier1AllowTp = stats.RuleTracePoint{
@@ -311,7 +309,6 @@ var tier1AllowTp = stats.RuleTracePoint{
 	PolicyID: "policy3",
 	Rule:     "0",
 	Action:   stats.AllowAction,
-	Export:   false,
 	Index:    1,
 }
 var tier1DenyTp = stats.RuleTracePoint{
@@ -319,7 +316,6 @@ var tier1DenyTp = stats.RuleTracePoint{
 	PolicyID: "policy4",
 	Rule:     "0",
 	Action:   stats.DenyAction,
-	Export:   false,
 	Index:    1,
 }
 

@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"errors"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
@@ -86,7 +85,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	var reverse bool
 	var wlEpKey *model.WorkloadEndpointKey
 	var prefixAction stats.RuleAction
-	_, _, _, prefixAction, _ = parsePrefix(nPkt.Prefix)
+	_, _, _, prefixAction = parsePrefix(nPkt.Prefix)
 	if prefixAction == stats.DenyAction {
 		// NFLog based counters make sense only for denied packets.
 		numPkts = 1
@@ -283,46 +282,40 @@ func lookupAction(action string) stats.RuleAction {
 	}
 }
 
-func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAction, export bool) {
+func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAction) {
 	// Prefix formats are:
-	// - T/A/rule index/profile name
-	// - T/A/rule index/policy name/tier name
+	// - A/rule index/profile name
+	// - A/rule index/policy name/tier name
 	// TODO (Matt): Add sensible rule UUIDs
 	prefixChunks := strings.Split(prefix, "/")
-	if len(prefixChunks) == 4 {
+	if len(prefixChunks) == 3 {
 		// Profile
 		// TODO (Matt): Need something better than profile;
 		//              it won't work if that's the name of a tier.
 		tier = "profile"
-	} else if len(prefixChunks) == 5 {
+	} else if len(prefixChunks) == 4 {
 		// Tiered Policy
 		// TODO(doublek): Should fix where the null character was introduced,
 		// which could be nfnetlink.
-		tier = string(bytes.Trim([]byte(prefixChunks[4]), "\x00"))
+		tier = string(bytes.Trim([]byte(prefixChunks[3]), "\x00"))
 	} else {
 		log.Error("Unable to parse NFLOG prefix ", prefix)
 	}
 
-	action = lookupAction(prefixChunks[1])
-	rule = prefixChunks[2]
-	policy = prefixChunks[3]
-	export, err := strconv.ParseBool(prefixChunks[0])
-	if err != nil {
-		log.Error("Unable to parse export flag ", prefixChunks[0])
-		export = false
-	}
+	action = lookupAction(prefixChunks[0])
+	rule = prefixChunks[1]
+	policy = prefixChunks[2]
 	return
 }
 
 func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
 	log.Infof("Looking up rule prefix %s", prefix)
-	tier, policy, rule, action, export := parsePrefix(prefix)
+	tier, policy, rule, action := parsePrefix(prefix)
 	return stats.RuleTracePoint{
 		TierID:   tier,
 		PolicyID: policy,
 		Rule:     rule,
 		Action:   action,
-		Export:   export,
 		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
 	}
 }

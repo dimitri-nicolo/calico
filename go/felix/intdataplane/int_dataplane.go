@@ -15,13 +15,10 @@
 package intdataplane
 
 import (
-	"net"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/go/felix/collector"
 	"github.com/projectcalico/felix/go/felix/collector/stats"
 	"github.com/projectcalico/felix/go/felix/ifacemonitor"
-	"github.com/projectcalico/felix/go/felix/ipfix"
 	"github.com/projectcalico/felix/go/felix/ipsets"
 	"github.com/projectcalico/felix/go/felix/iptables"
 	"github.com/projectcalico/felix/go/felix/jitter"
@@ -36,8 +33,6 @@ import (
 type Config struct {
 	DisableIPv6             bool
 	RuleRendererOverride    rules.RuleRenderer
-	IpfixPort               int
-	IpfixAddr               net.IP
 	NfNetlinkBufSize        int
 	StatsDumpFilePath       string
 	IPIPMTU                 int
@@ -243,17 +238,13 @@ func (d *InternalDataplane) Start() {
 	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, stats.DirOut, d.config.NfNetlinkBufSize)
 	nflogEgressDataSource.Start()
 
-	ipfixExportSink := make(chan *ipfix.ExportRecord)
-	ipfixExporter := ipfix.NewIPFIXExporter(d.config.IpfixAddr, d.config.IpfixPort, "udp", ipfixExportSink)
-	ipfixExporter.Start()
-
 	collectorConfig := &collector.Config{
 		StatsDumpFilePath: d.config.StatsDumpFilePath,
 	}
 	printSink := make(chan *stats.Data)
 	datasources := []<-chan stats.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
 	datasinks := []chan<- *stats.Data{printSink}
-	statsCollector := collector.NewCollector(datasources, datasinks, ipfixExportSink, collectorConfig)
+	statsCollector := collector.NewCollector(datasources, datasinks, collectorConfig)
 	statsCollector.Start()
 
 	// TODO (doublek): The printSink is unused for now. It should be used to hook into dumping stats.
