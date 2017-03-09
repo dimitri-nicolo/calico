@@ -5,77 +5,102 @@ package commands
 import (
 	"fmt"
 	"github.com/golang/glog"
-	"github.com/tigera/libcalico-go/lib/backend"
+	"github.com/projectcalico/felix/go/felix/calc"
+	"github.com/projectcalico/felix/go/felix/dispatcher"
+	"github.com/projectcalico/libcalico-go/lib/api"
+	"github.com/projectcalico/libcalico-go/lib/backend"
+	"github.com/projectcalico/libcalico-go/lib/client"
+	"os"
 	"sort"
 )
 
 func DescribeHost(hostname string, hideSelectors bool) (err error) {
-	disp := store.NewDispatcher()
+	disp := dispatcher.NewDispatcher()
 	cbs := &describeCmd{
 		hideSelectors:    hideSelectors,
 		dispatcher:       disp,
 		done:             make(chan bool),
-		epIDToPolIDs:     make(map[interface{}]map[backend.PolicyKey]bool),
+		epIDToPolIDs:     make(map[interface{}]map[model.PolicyKey]bool),
 		epIDToProfileIDs: make(map[interface{}][]string),
-		policySorter:     NewPolicySorter(),
+		policySorter:     calc.NewPolicySorter(),
 	}
-	arc := ipsets.NewActiveRulesCalculator(nil, nil, cbs)
+	arc := calc.NewActiveRulesCalculator()
+	arc.PolicyMatchListener = cbs
 	cbs.activeRulesCalculator = arc
 
-	filterUpdate := func(update *store.ParsedUpdate) {
+	// MATT This approach won't be suitable for not-yet-configured endpoints.
+	//      To support them, we'd need to be able to build a fake endpoint kv
+	//      for them from the yaml for that endpoint.
+	filterUpdate := func(update api.Update) {
 		if update.Value == nil {
+			// MATT: Why is this so much lower priority than checkValid?
 			glog.V(1).Infof("Skipping bad update: %v %v", update.Key, update.ParseErr)
 			return
 		}
 		switch key := update.Key.(type) {
-		case backend.HostEndpointKey:
+		case model.HostEndpointKey:
 			if key.Hostname != hostname {
 				return
 			}
-			ep := update.Value.(*backend.HostEndpoint)
+			ep := update.Value.(*model.HostEndpoint)
 			cbs.epIDToProfileIDs[key] = ep.ProfileIDs
-		case backend.WorkloadEndpointKey:
+		case model.WorkloadEndpointKey:
 			if key.Hostname != hostname {
 				return
 			}
-			ep := update.Value.(*backend.WorkloadEndpoint)
+			ep := update.Value.(*model.WorkloadEndpoint)
 			cbs.epIDToProfileIDs[key] = ep.ProfileIDs
 		}
 		// Insert an empty map so we'll list this endpoint even if
 		// no policies match it.
 		glog.V(2).Infof("Found active endpoint %#v", update.Key)
-		cbs.epIDToPolIDs[update.Key] = make(map[backend.PolicyKey]bool, 0)
+		cbs.epIDToPolIDs[update.Key] = make(map[model.PolicyKey]bool, 0)
 		arc.OnUpdate(update)
 	}
 
-	checkValid := func(update *store.ParsedUpdate) {
+	// MATT TODO: Compare this to the Felix ValidationFilter.  How is this deficient?
+	checkValid := func(update api.Update) {
 		if update.Value == nil {
 			fmt.Printf("WARNING: failed to parse value of key %v; "+
 				"ignoring.\n  Parse error: %v\n\n", update.RawUpdate.Key, update.ParseErr)
 		}
 	}
 
-	disp.Register(backend.WorkloadEndpointKey{}, checkValid)
-	disp.Register(backend.HostEndpointKey{}, checkValid)
-	disp.Register(backend.PolicyKey{}, checkValid)
-	disp.Register(backend.TierKey{}, checkValid)
-	disp.Register(backend.ProfileLabelsKey{}, checkValid)
-	disp.Register(backend.ProfileRulesKey{}, checkValid)
+	// MATT: It's very opaque why some of these need to be checked,
+	//       and some can just be passed straight to the arc/sorter.
+	disp.Register(model.WorkloadEndpointKey{}, checkValid)
+	disp.Register(model.HostEndpointKey{}, checkValid)
+	disp.Register(model.PolicyKey{}, checkValid)
+	disp.Register(model.TierKey{}, checkValid)
+	disp.Register(model.ProfileLabelsKey{}, checkValid)
+	disp.Register(model.ProfileRulesKey{}, checkValid)
 
-	disp.Register(backend.WorkloadEndpointKey{}, filterUpdate)
-	disp.Register(backend.HostEndpointKey{}, filterUpdate)
-	disp.Register(backend.PolicyKey{}, arc.OnUpdate)
-	disp.Register(backend.PolicyKey{}, cbs.policySorter.OnUpdate)
-	disp.Register(backend.TierKey{}, cbs.policySorter.OnUpdate)
-	disp.Register(backend.ProfileLabelsKey{}, arc.OnUpdate)
-	disp.Register(backend.ProfileRulesKey{}, arc.OnUpdate)
+	disp.Register(model.WorkloadEndpointKey{}, filterUpdate)
+	disp.Register(model.HostEndpointKey{}, filterUpdate)
+	disp.Register(model.PolicyKey{}, arc.OnUpdate)
+	disp.Register(model.PolicyKey{}, cbs.policySorter.OnUpdate)
+	disp.Register(model.TierKey{}, cbs.policySorter.OnUpdate)
+	disp.Register(model.ProfileLabelsKey{}, arc.OnUpdate)
+	disp.Register(model.ProfileRulesKey{}, arc.OnUpdate)
 
-	config := &store.DriverConfiguration{
-		OneShot: true,
+	apiConfig, err := client.LoadClientConfig("")
+	if err != nil {
+		glog.Fatal("Failed loading client config")
+		os.Exit(1)
 	}
-	datastore, err := etcd.New(cbs, config)
-	datastore.Start()
+	client, err := client.New(*apiConfig)
+	if err != nil {
+		glog.Fatal("Failed to create client")
+		os.Exit(1)
+	}
+	syncer, err := client.Syncer(cbs)
+	if err != nil {
+		glog.Fatal("Failed to create syncer")
+		os.Exit(1)
+	}
+	syncer.Start()
 
+	// The describeCmd will notify us once it's in sync and has finished outputting.
 	<-cbs.done
 	return
 }
@@ -87,11 +112,11 @@ type describeCmd struct {
 	// ActiveRulesCalculator matches policies/profiles against local
 	// endpoints and notifies the ActiveSelectorCalculator when
 	// their rules become active/inactive.
-	activeRulesCalculator *ipsets.ActiveRulesCalculator
-	dispatcher            *store.Dispatcher
-	epIDToPolIDs          map[interface{}]map[backend.PolicyKey]bool
+	activeRulesCalculator *calc.ActiveRulesCalculator
+	dispatcher            *dispatcher.Dispatcher
+	epIDToPolIDs          map[interface{}]map[model.PolicyKey]bool
 	epIDToProfileIDs      map[interface{}][]string
-	policySorter          *PolicySorter
+	policySorter          *calc.PolicySorter
 
 	done chan bool
 }
@@ -103,15 +128,15 @@ func (cbs *describeCmd) OnConfigLoaded(globalConfig map[string]string,
 
 type endpointDatum struct {
 	epID   interface{}
-	polIDs map[backend.PolicyKey]bool
+	polIDs map[model.PolicyKey]bool
 }
 
 func (epd endpointDatum) EndpointName() string {
 	var epName string
 	switch epID := epd.epID.(type) {
-	case backend.WorkloadEndpointKey:
+	case model.WorkloadEndpointKey:
 		epName = fmt.Sprintf("Workload endpoint %v/%v/%v", epID.OrchestratorID, epID.WorkloadID, epID.EndpointID)
-	case backend.HostEndpointKey:
+	case model.HostEndpointKey:
 		epName = fmt.Sprintf("Host endpoint %v", epID.EndpointID)
 	}
 	return epName
@@ -125,8 +150,8 @@ func (a ByName) Less(i, j int) bool {
 	return a[i].EndpointName() < a[j].EndpointName()
 }
 
-func (cbs *describeCmd) OnStatusUpdated(status store.DriverStatus) {
-	if status == store.InSync {
+func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
+	if status == api.InSync {
 		fmt.Println("Policies that match each endpoint:")
 		tiers := cbs.policySorter.Sorted()
 
@@ -187,7 +212,7 @@ func (cbs *describeCmd) OnStatusUpdated(status store.DriverStatus) {
 	}
 }
 
-func (cbs *describeCmd) OnKeysUpdated(updates []store.Update) {
+func (cbs *describeCmd) OnUpdates(updates []api.Update) {
 	glog.V(3).Info("Update: ", updates)
 	for _, update := range updates {
 		if len(update.Key) == 0 {
@@ -198,99 +223,14 @@ func (cbs *describeCmd) OnKeysUpdated(updates []store.Update) {
 	}
 }
 
-func (cbs *describeCmd) OnPolicyMatch(policyKey backend.PolicyKey, endpointKey interface{}) {
+func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey interface{}) {
 	glog.V(2).Infof("Policy %v/%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
 	cbs.epIDToPolIDs[endpointKey][policyKey] = true
-}
-
-type PolicySorter struct {
-	tiers map[string]*TierInfo
-}
-
-func NewPolicySorter() *PolicySorter {
-	return &PolicySorter{
-		tiers: make(map[string]*TierInfo),
-	}
-}
-
-func (poc *PolicySorter) OnUpdate(update *store.ParsedUpdate) {
-	if update.Value == nil {
-		glog.Warningf("Ignoring deletion of %v", update.Key)
-		return
-	}
-	switch key := update.Key.(type) {
-	case backend.TierKey:
-		tier := update.Value.(*backend.Tier)
-		tierInfo := poc.tiers[key.Name]
-		if tierInfo == nil {
-			tierInfo = &TierInfo{Name: key.Name}
-			poc.tiers[key.Name] = tierInfo
-		}
-		tierInfo.Order = tier.Order
-		tierInfo.Valid = true
-	case backend.PolicyKey:
-		policy := update.Value.(*backend.Policy)
-		tierInfo := poc.tiers[key.Tier]
-		if tierInfo == nil {
-			tierInfo = &TierInfo{Name: key.Tier}
-			poc.tiers[key.Tier] = tierInfo
-		}
-		tierInfo.Policies = append(tierInfo.Policies, policy)
-	}
-}
-
-func (poc *PolicySorter) Sorted() []*TierInfo {
-	tiers := make([]*TierInfo, 0, len(poc.tiers))
-	for _, tier := range poc.tiers {
-		tiers = append(tiers, tier)
-	}
-	sort.Sort(TierByOrder(tiers))
-	for _, tierInfo := range poc.tiers {
-		sort.Sort(PolicyByOrder(tierInfo.Policies))
-	}
-	return tiers
-}
-
-type TierByOrder []*TierInfo
-
-func (a TierByOrder) Len() int      { return len(a) }
-func (a TierByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a TierByOrder) Less(i, j int) bool {
-	if !a[i].Valid {
-		return false
-	} else if !a[j].Valid {
-		return true
-	}
-	if a[i].Order == nil {
-		return false
-	} else if a[j].Order == nil {
-		return true
-	}
-	if *a[i].Order == *a[j].Order {
-		return a[i].Name < a[j].Name
-	}
-	return *a[i].Order < *a[j].Order
-}
-
-type PolicyByOrder []*backend.Policy
-
-func (a PolicyByOrder) Len() int      { return len(a) }
-func (a PolicyByOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a PolicyByOrder) Less(i, j int) bool {
-	if a[i].Order == nil {
-		return false
-	} else if a[j].Order == nil {
-		return true
-	}
-	if *a[i].Order == *a[j].Order {
-		return a[i].Name < a[j].Name
-	}
-	return *a[i].Order < *a[j].Order
 }
 
 type TierInfo struct {
 	Name     string
 	Valid    bool
 	Order    *float32
-	Policies []*backend.Policy
+	Policies []*model.Policy
 }

@@ -5,8 +5,8 @@ package commands
 import (
 	"fmt"
 	"github.com/golang/glog"
-	"github.com/tigera/libcalico-go/lib/backend"
-	"github.com/tigera/libcalico-go/lib/selector"
+	"github.com/projectcalico/libcalico-go/lib/backend"
+	"github.com/projectcalico/libcalico-go/lib/selector"
 	"os"
 )
 
