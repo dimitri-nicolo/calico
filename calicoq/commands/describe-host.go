@@ -7,6 +7,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/projectcalico/felix/go/felix/calc"
 	"github.com/projectcalico/felix/go/felix/dispatcher"
+	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/client"
@@ -31,22 +32,22 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 	// MATT This approach won't be suitable for not-yet-configured endpoints.
 	//      To support them, we'd need to be able to build a fake endpoint kv
 	//      for them from the yaml for that endpoint.
-	filterUpdate := func(update api.Update) {
+	filterUpdate := func(update api.Update) (filterOut bool) {
 		if update.Value == nil {
 			// MATT: Why is this so much lower priority than checkValid?
 			glog.V(1).Infof("Skipping bad update: %v", update.Key)
-			return
+			return true
 		}
 		switch key := update.Key.(type) {
 		case model.HostEndpointKey:
 			if key.Hostname != hostname {
-				return
+				return true
 			}
 			ep := update.Value.(*model.HostEndpoint)
 			cbs.epIDToProfileIDs[key] = ep.ProfileIDs
 		case model.WorkloadEndpointKey:
 			if key.Hostname != hostname {
-				return
+				return true
 			}
 			ep := update.Value.(*model.WorkloadEndpoint)
 			cbs.epIDToProfileIDs[key] = ep.ProfileIDs
@@ -56,6 +57,7 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 		glog.V(2).Infof("Found active endpoint %#v", update.Key)
 		cbs.epIDToPolIDs[update.Key] = make(map[model.PolicyKey]bool, 0)
 		arc.OnUpdate(update)
+		return false
 	}
 
 	// MATT TODO: Compare this to the Felix ValidationFilter.  How is this deficient?
@@ -90,12 +92,12 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 		glog.Fatal("Failed loading client config")
 		os.Exit(1)
 	}
-	client, err := client.New(*apiConfig)
+	bclient, err := backend.NewClient(*apiConfig)
 	if err != nil {
 		glog.Fatal("Failed to create client")
 		os.Exit(1)
 	}
-	syncer, err := client.Syncer(cbs)
+	syncer, err := bclient.Syncer(cbs)
 	if err != nil {
 		glog.Fatal("Failed to create syncer")
 		os.Exit(1)
