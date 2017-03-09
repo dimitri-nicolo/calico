@@ -132,7 +132,7 @@ func (cbs *evalCmd) OnUpdates(updates []api.Update) {
 }
 
 func (cbs *evalCmd) onMatchStarted(selId, labelId interface{}) {
-	println(endpointName(labelId))
+	fmt.Printf("%v\n", endpointName(labelId))
 }
 
 func (cbs *evalCmd) onMatchStopped(selId, labelId interface{}) {
