@@ -25,8 +25,10 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 		epIDToProfileIDs: make(map[interface{}][]string),
 		policySorter:     calc.NewPolicySorter(),
 	}
+	nrs := &noopRuleScanner{}
 	arc := calc.NewActiveRulesCalculator()
 	arc.PolicyMatchListener = cbs
+	arc.RuleScanner = nrs
 	cbs.activeRulesCalculator = arc
 
 	// MATT This approach won't be suitable for not-yet-configured endpoints.
@@ -102,6 +104,27 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 
 	// The describeCmd will notify us once it's in sync and has finished outputting.
 	<-cbs.done
+	return
+}
+
+// MATT: Might want to integrate this into the describeCmd and use these callbacks to
+//       save-off rules that reference stuff?
+type noopRuleScanner struct {
+}
+
+func (rs *noopRuleScanner) OnPolicyActive(model.PolicyKey, *model.Policy) {
+	return
+}
+
+func (rs *noopRuleScanner) OnPolicyInactive(model.PolicyKey) {
+	return
+}
+
+func (rs *noopRuleScanner) OnProfileActive(model.ProfileRulesKey, *model.ProfileRules) {
+	return
+}
+
+func (rs *noopRuleScanner) OnProfileInactive(model.ProfileRulesKey) {
 	return
 }
 
