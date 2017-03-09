@@ -2,11 +2,6 @@
 
 package commands
 
-func EvalSelector(sel string) (err error) {
-	return
-}
-
-/*
 import (
 	"fmt"
 	"github.com/golang/glog"
@@ -123,4 +118,3 @@ func (cbs *evalCmd) onMatchStarted(selId, labelId interface{}) {
 func (cbs *evalCmd) onMatchStopped(selId, labelId interface{}) {
 	glog.Errorf("Unexpected match stopped event: %v, %v", selId, labelId)
 }
-*/
