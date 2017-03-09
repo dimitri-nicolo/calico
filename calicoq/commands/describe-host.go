@@ -97,11 +97,7 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 		glog.Fatal("Failed to create client")
 		os.Exit(1)
 	}
-	syncer, err := bclient.Syncer(cbs)
-	if err != nil {
-		glog.Fatal("Failed to create syncer")
-		os.Exit(1)
-	}
+	syncer := bclient.Syncer(cbs)
 	syncer.Start()
 
 	// The describeCmd will notify us once it's in sync and has finished outputting.
@@ -157,8 +153,7 @@ func (a ByName) Less(i, j int) bool {
 func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 	if status == api.InSync {
 		fmt.Println("Policies that match each endpoint:")
-		tiers := cbs.policySorter.Sorted()
-
+		tiers := cbs.policySorter.Sorted() // MATT: map[model.PolicyKey]*model.Policy
 		epData := make([]endpointDatum, 0)
 
 		for epID, polIDs := range cbs.epIDToPolIDs {
@@ -175,9 +170,9 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			for _, tier := range tiers {
 				glog.V(2).Infof("Looking at tier %v", tier)
 				tierMatches := false
-				for _, pol := range tier.Policies {
-					glog.V(2).Infof("Looking at policy %v", pol.PolicyKey)
-					if polIDs[pol.PolicyKey] {
+				for _, pol := range tier.OrderedPolicies { // pol is a PolKV
+					glog.V(2).Infof("Looking at policy %v", pol.Key)
+					if polIDs[pol.Key] {
 						if !tierMatches {
 							order := "default"
 							if !tier.Valid {
@@ -193,13 +188,13 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 							}
 						}
 						order := "default"
-						if pol.Order != nil {
-							order = fmt.Sprint(*pol.Order)
+						if pol.Value.Order != nil {
+							order = fmt.Sprint(*pol.Value.Order)
 						}
 						if cbs.hideSelectors {
-							fmt.Printf("      Policy %#v (order %v)\n", pol.Name, order)
+							fmt.Printf("      Policy %#v (order %v)\n", pol.Key.Name, order)
 						} else {
-							fmt.Printf("      Policy %#v (order %v; selector '%v')\n", pol.Name, order, pol.Selector)
+							fmt.Printf("      Policy %#v (order %v; selector '%v')\n", pol.Key.Name, order, pol.Value.Selector)
 						}
 					}
 				}
@@ -219,11 +214,8 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 func (cbs *describeCmd) OnUpdates(updates []api.Update) {
 	glog.V(3).Info("Update: ", updates)
 	for _, update := range updates {
-		if len(update.Key) == 0 {
-			glog.Fatal("Bug: Key/Value update had empty key")
-		}
-
-		cbs.dispatcher.DispatchUpdate(&update)
+		// MATT: Removed some handling of empty key: don't understand how it can happen.
+		cbs.dispatcher.OnUpdate(&update)
 	}
 }
 
