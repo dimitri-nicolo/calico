@@ -7,7 +7,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/projectcalico/felix/go/felix/calc"
 	"github.com/projectcalico/felix/go/felix/dispatcher"
-	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/client"
@@ -35,7 +34,7 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 	filterUpdate := func(update api.Update) {
 		if update.Value == nil {
 			// MATT: Why is this so much lower priority than checkValid?
-			glog.V(1).Infof("Skipping bad update: %v %v", update.Key, update.ParseErr)
+			glog.V(1).Infof("Skipping bad update: %v", update.Key)
 			return
 		}
 		switch key := update.Key.(type) {
@@ -60,11 +59,13 @@ func DescribeHost(hostname string, hideSelectors bool) (err error) {
 	}
 
 	// MATT TODO: Compare this to the Felix ValidationFilter.  How is this deficient?
-	checkValid := func(update api.Update) {
+	checkValid := func(update api.Update) (filterOut bool) {
 		if update.Value == nil {
 			fmt.Printf("WARNING: failed to parse value of key %v; "+
-				"ignoring.\n  Parse error: %v\n\n", update.RawUpdate.Key, update.ParseErr)
+				"ignoring.\n\n", update)
+			return true
 		}
+		return false
 	}
 
 	// MATT: It's very opaque why some of these need to be checked,
@@ -227,6 +228,11 @@ func (cbs *describeCmd) OnUpdates(updates []api.Update) {
 func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey interface{}) {
 	glog.V(2).Infof("Policy %v/%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
 	cbs.epIDToPolIDs[endpointKey][policyKey] = true
+}
+
+func (cbs *describeCmd) OnPolicyMatchStopped(policyKey model.PolicyKey, endpointKey interface{}) {
+	// Matt: Maybe we should remove something here, but it's an edge case
+	return
 }
 
 type TierInfo struct {
