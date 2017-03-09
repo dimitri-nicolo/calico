@@ -11,7 +11,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/collector/stats"
-	"github.com/projectcalico/felix/go/felix/jitter"
+	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
