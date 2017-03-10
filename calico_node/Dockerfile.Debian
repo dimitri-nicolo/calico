@@ -20,7 +20,7 @@ ENV DOCKER_API_VERSION 1.21
 # TODO (Matt): Move to musl or something instead of this Ubuntu based node.
 RUN apt update
 RUN DEBIAN_FRONTEND=noninteractive apt install -y runit
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libglib2.0 ipset libfixbuf3 conntrack net-tools
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libglib2.0 ipset conntrack net-tools
 
 # Copy in the filesystem - this contains felix, bird, gobgp etc...
 COPY filesystem /
