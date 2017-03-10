@@ -148,7 +148,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 					Match: iptables.Match().MarkClear(16),
 					Action: iptables.NflogAction{
 						Group:  1,
-						Prefix: "F/D/0/no-policy-match-inbound/" + tierName,
+						Prefix: "D/0/no-policy-match-inbound/" + tierName,
 					},
 				})
 				outRules = append(outRules, iptables.Rule{
@@ -164,7 +164,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/D/0/no-profile-match-inbound",
+					Prefix: "D/0/no-profile-match-inbound",
 				},
 			})
 			outRules = append(outRules, iptables.Rule{
@@ -214,7 +214,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 					Match: iptables.Match().MarkClear(16),
 					Action: iptables.NflogAction{
 						Group:  2,
-						Prefix: "F/D/0/no-policy-match-outbound/" + tierName,
+						Prefix: "D/0/no-policy-match-outbound/" + tierName,
 					},
 				})
 				inRules = append(inRules, iptables.Rule{
@@ -229,7 +229,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  2,
-					Prefix: "F/D/0/no-profile-match-outbound",
+					Prefix: "D/0/no-profile-match-outbound",
 				},
 			})
 			inRules = append(inRules, iptables.Rule{

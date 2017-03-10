@@ -196,7 +196,6 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"Allow rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
-			in.ExportIpfix = false
 			rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
 			// For allow, should be one match rule that sets the mark, then one that reads the
 			// mark and returns.
@@ -207,7 +206,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x8),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/A/foo",
+					Prefix: "A/foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -227,7 +226,6 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		"next-tier rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
-			in.ExportIpfix = false
 			in.Action = "next-tier"
 			rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
 			// For next-tier, should be one match rule that sets the mark, then one
@@ -239,7 +237,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x10),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/N/foo",
+					Prefix: "N/foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -255,7 +253,6 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
 			in.LogPrefix = "logme"
-			in.ExportIpfix = false
 			rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
 			// For allow, should be one match rule that sets the mark, then one that reads the
 			// mark and returns.
@@ -270,7 +267,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x8),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/A/foo",
+					Prefix: "A/foo",
 				},
 			}))
 			Expect(rules[3]).To(Equal(iptables.Rule{
@@ -322,7 +319,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x0a),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/D/foo",
+					Prefix: "D/foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -351,7 +348,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x0a),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/D/foo",
+					Prefix: "D/foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -386,7 +383,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x0a),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/D/foo",
+					Prefix: "D/foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -420,7 +417,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x0a),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/D/foo",
+					Prefix: "D/foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -520,7 +517,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x8),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/A/foo",
+					Prefix: "A/foo",
 				},
 			},
 			{Match: iptables.Match().MarkSet(0x8), Action: iptables.ReturnAction{}},
@@ -534,7 +531,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x8),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/A/foo",
+					Prefix: "A/foo",
 				},
 			},
 			{Match: iptables.Match().MarkSet(0x8), Action: iptables.ReturnAction{}},
@@ -548,7 +545,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x8),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/A/foo",
+					Prefix: "A/foo",
 				},
 			},
 			{Match: iptables.Match().MarkSet(0x8), Action: iptables.ReturnAction{}},
@@ -562,7 +559,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x8),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "F/A/foo",
+					Prefix: "A/foo",
 				},
 			},
 			{Match: iptables.Match().MarkSet(0x8), Action: iptables.ReturnAction{}},
