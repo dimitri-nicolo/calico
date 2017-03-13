@@ -16,20 +16,37 @@ import (
 )
 
 func EvalSelector(sel string) (err error) {
+	cbs = NewEvalCmd()
+	cbs.AddSelector("the selector", sel)
+	cbs.Start()
+
+	<-cbs.done
+	return
+}
+
+// Restructuring like this should also be useful for a permanently running webserver variant too.
+func NewEvalCmd() (cbs *evalCmd) {
 	disp := dispatcher.NewDispatcher()
 	cbs := &evalCmd{
 		dispatcher: disp,
 		done:       make(chan bool),
 	}
 	cbs.index = labelindex.NewInheritIndex(cbs.onMatchStarted, cbs.onMatchStopped)
-	parsedSel, err := selector.Parse(sel)
+	return &cbs
+}
+
+func (cbs *evalCmd) AddSelector(selectorName string, selector string) {
+	parsedSel, err := selector.Parse(selector)
 	if err != nil {
 		fmt.Printf("Invalid selector: %#v. %v.", sel, err)
 		os.Exit(1)
 	}
 
-	cbs.index.UpdateSelector("the selector", parsedSel)
+	cbs.index.UpdateSelector(selectorName, parsedSel)
+}
 
+// Call this once you've AddSelector'ed the selectors you want to add.
+func (cbs *evalCmd) Start() {
 	checkValid := func(update api.Update) (filterOut bool) {
 		if update.Value == nil {
 			fmt.Printf("WARNING: failed to parse value of key %v; "+
@@ -39,12 +56,12 @@ func EvalSelector(sel string) (err error) {
 		return false
 	}
 
-	disp.Register(model.WorkloadEndpointKey{}, checkValid)
-	disp.Register(model.HostEndpointKey{}, checkValid)
+	cbs.dispatcher.Register(model.WorkloadEndpointKey{}, checkValid)
+	cbs.dispatcher.Register(model.HostEndpointKey{}, checkValid)
 
-	disp.Register(model.WorkloadEndpointKey{}, cbs.OnUpdate)
-	disp.Register(model.HostEndpointKey{}, cbs.OnUpdate)
-	disp.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
+	cbs.dispatcher.Register(model.WorkloadEndpointKey{}, cbs.OnUpdate)
+	cbs.dispatcher.Register(model.HostEndpointKey{}, cbs.OnUpdate)
+	cbs.dispatcher.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
 
 	apiConfig, err := client.LoadClientConfig("")
 	if err != nil {
@@ -58,9 +75,16 @@ func EvalSelector(sel string) (err error) {
 	}
 	syncer := bclient.Syncer(cbs)
 	syncer.Start()
+}
 
+// For the final version of this we probably will want to be able to call AddSelector()
+// while everything's running and join this function into that so you make the call and
+// then a little bit later it returns the results.
+// However solving that now would be more effort, so for this version everything must be
+// added before Start()ing.
+func (cbs *evalCmd) GetMatches() map[string]string {
 	<-cbs.done
-	return
+	return cbs.matches
 }
 
 func endpointName(key interface{}) string {
@@ -131,10 +155,10 @@ func (cbs *evalCmd) OnUpdates(updates []api.Update) {
 	}
 }
 
-func (cbs *evalCmd) onMatchStarted(selId, labelId interface{}) {
-	fmt.Printf("%v\n", endpointName(labelId))
+func (cbs *evalCmd) onMatchStarted(selId, epId interface{}) {
+	fmt.Printf("%v\n", endpointName(epId))
 }
 
-func (cbs *evalCmd) onMatchStopped(selId, labelId interface{}) {
-	glog.Errorf("Unexpected match stopped event: %v, %v", selId, labelId)
+func (cbs *evalCmd) onMatchStopped(selId, epId interface{}) {
+	glog.Errorf("Unexpected match stopped event: %v, %v", selId, epId)
 }

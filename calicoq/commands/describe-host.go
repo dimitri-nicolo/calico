@@ -15,10 +15,14 @@ import (
 	"sort"
 )
 
-func DescribeHost(hostname string, hideSelectors bool) (err error) {
+// MATT: How to make includeRules actually work?
+// Will need to be able to call eval selector and get the output programmatically (not printed).
+// Do that for each rule in each policy (globally, not just selected).
+func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) (err error) {
 	disp := dispatcher.NewDispatcher()
 	cbs := &describeCmd{
 		hideSelectors:    hideSelectors,
+		includeRules:     includeRuleMatches,
 		dispatcher:       disp,
 		done:             make(chan bool),
 		epIDToPolIDs:     make(map[interface{}]map[model.PolicyKey]bool),
@@ -132,6 +136,7 @@ func (rs *noopRuleScanner) OnProfileInactive(model.ProfileRulesKey) {
 type describeCmd struct {
 	// Config.
 	hideSelectors bool
+	includeRules  bool
 
 	// ActiveRulesCalculator matches policies/profiles against local
 	// endpoints and notifies the ActiveSelectorCalculator when

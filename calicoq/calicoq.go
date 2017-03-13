@@ -14,7 +14,7 @@ import (
 const usage = `Calico query tool.
 
 Usage:
-  calicoq host [-s|--hide-selectors] <hostname>
+  calicoq host [-s|--hide-selectors] [-r|--include-rule-matches] <hostname>
   calicoq eval <selector>
   calicoq version
 
@@ -50,7 +50,8 @@ func main() {
 		err = commands.EvalSelector(arguments["<selector>"].(string))
 	} else {
 		err = commands.DescribeHost(arguments["<hostname>"].(string),
-			arguments["--hide-selectors"].(bool))
+			arguments["--hide-selectors"].(bool),
+			arguments["--include-rule-matches"].(bool))
 	}
 
 	if err != nil {
