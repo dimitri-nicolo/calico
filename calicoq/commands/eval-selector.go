@@ -16,29 +16,35 @@ import (
 )
 
 func EvalSelector(sel string) (err error) {
-	cbs = NewEvalCmd()
+	cbs := NewEvalCmd()
 	cbs.AddSelector("the selector", sel)
-	cbs.Start()
+	noopFilter := func(update api.Update) (filterOut bool) {
+		return false
+	}
+	cbs.Start(noopFilter)
 
-	<-cbs.done
+	matches := cbs.GetMatches()
+	if selMatches, ok := matches["the selector"]; ok {
+		fmt.Printf("Output stuff: %v\n", selMatches)
+	}
 	return
 }
 
 // Restructuring like this should also be useful for a permanently running webserver variant too.
-func NewEvalCmd() (cbs *evalCmd) {
+func NewEvalCmd() (cbs *EvalCmd) {
 	disp := dispatcher.NewDispatcher()
-	cbs := &evalCmd{
+	cbs = &EvalCmd{
 		dispatcher: disp,
 		done:       make(chan bool),
 	}
 	cbs.index = labelindex.NewInheritIndex(cbs.onMatchStarted, cbs.onMatchStopped)
-	return &cbs
+	return cbs
 }
 
-func (cbs *evalCmd) AddSelector(selectorName string, selector string) {
-	parsedSel, err := selector.Parse(selector)
+func (cbs *EvalCmd) AddSelector(selectorName string, selectorExpression string) {
+	parsedSel, err := selector.Parse(selectorExpression)
 	if err != nil {
-		fmt.Printf("Invalid selector: %#v. %v.", sel, err)
+		fmt.Printf("Invalid selector: %#v. %v.\n", selectorExpression, err)
 		os.Exit(1)
 	}
 
@@ -46,7 +52,8 @@ func (cbs *evalCmd) AddSelector(selectorName string, selector string) {
 }
 
 // Call this once you've AddSelector'ed the selectors you want to add.
-func (cbs *evalCmd) Start() {
+// We'll always do checkValid, but allow insertion of an additional EP filter.
+func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 	checkValid := func(update api.Update) (filterOut bool) {
 		if update.Value == nil {
 			fmt.Printf("WARNING: failed to parse value of key %v; "+
@@ -58,6 +65,9 @@ func (cbs *evalCmd) Start() {
 
 	cbs.dispatcher.Register(model.WorkloadEndpointKey{}, checkValid)
 	cbs.dispatcher.Register(model.HostEndpointKey{}, checkValid)
+
+	cbs.dispatcher.Register(model.WorkloadEndpointKey{}, endpointFilter)
+	cbs.dispatcher.Register(model.HostEndpointKey{}, endpointFilter)
 
 	cbs.dispatcher.Register(model.WorkloadEndpointKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.HostEndpointKey{}, cbs.OnUpdate)
@@ -82,7 +92,7 @@ func (cbs *evalCmd) Start() {
 // then a little bit later it returns the results.
 // However solving that now would be more effort, so for this version everything must be
 // added before Start()ing.
-func (cbs *evalCmd) GetMatches() map[string]string {
+func (cbs *EvalCmd) GetMatches() map[string]string {
 	<-cbs.done
 	return cbs.matches
 }
@@ -98,27 +108,27 @@ func endpointName(key interface{}) string {
 	return epName
 }
 
-type evalCmd struct {
+type EvalCmd struct {
 	dispatcher *dispatcher.Dispatcher
 	index      *labelindex.InheritIndex
-	matches    []interface{}
+	matches    map[string]string
 
 	done chan bool
 }
 
-func (cbs *evalCmd) OnConfigLoaded(globalConfig map[string]string,
+func (cbs *EvalCmd) OnConfigLoaded(globalConfig map[string]string,
 	hostConfig map[string]string) {
 	// Ignore for now
 }
 
-func (cbs *evalCmd) OnStatusUpdated(status api.SyncStatus) {
+func (cbs *EvalCmd) OnStatusUpdated(status api.SyncStatus) {
 	if status == api.InSync {
 		glog.V(0).Info("Datamodel in sync, we're done.")
 		cbs.done <- true
 	}
 }
 
-func (cbs *evalCmd) OnKeysUpdated(updates []api.Update) {
+func (cbs *EvalCmd) OnKeysUpdated(updates []api.Update) {
 	glog.V(3).Info("Update: ", updates)
 	for _, update := range updates {
 		// Also removed empty key handling: don't understand it.
@@ -126,7 +136,7 @@ func (cbs *evalCmd) OnKeysUpdated(updates []api.Update) {
 	}
 }
 
-func (cbs *evalCmd) OnUpdate(update api.Update) (filterOut bool) {
+func (cbs *EvalCmd) OnUpdate(update api.Update) (filterOut bool) {
 	if update.Value == nil {
 		return true
 	}
@@ -147,7 +157,7 @@ func (cbs *evalCmd) OnUpdate(update api.Update) (filterOut bool) {
 	return false
 }
 
-func (cbs *evalCmd) OnUpdates(updates []api.Update) {
+func (cbs *EvalCmd) OnUpdates(updates []api.Update) {
 	glog.V(3).Info("Update: ", updates)
 	for _, update := range updates {
 		// MATT: Removed some handling of empty key: don't understand how it can happen.
@@ -155,10 +165,10 @@ func (cbs *evalCmd) OnUpdates(updates []api.Update) {
 	}
 }
 
-func (cbs *evalCmd) onMatchStarted(selId, epId interface{}) {
+func (cbs *EvalCmd) onMatchStarted(selId, epId interface{}) {
 	fmt.Printf("%v\n", endpointName(epId))
 }
 
-func (cbs *evalCmd) onMatchStopped(selId, epId interface{}) {
+func (cbs *EvalCmd) onMatchStopped(selId, epId interface{}) {
 	glog.Errorf("Unexpected match stopped event: %v, %v", selId, epId)
 }
