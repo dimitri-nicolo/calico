@@ -30,6 +30,7 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 		epIDToPolIDs:     make(map[interface{}]map[model.PolicyKey]bool),
 		epIDToProfileIDs: make(map[interface{}][]string),
 		policySorter:     calc.NewPolicySorter(),
+		evalCmd:          nil,
 	}
 	nrs := &noopRuleScanner{}
 	arc := calc.NewActiveRulesCalculator()
@@ -87,6 +88,18 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 	disp.Register(model.TierKey{}, checkValid)
 	disp.Register(model.ProfileLabelsKey{}, checkValid)
 	disp.Register(model.ProfileRulesKey{}, checkValid)
+
+	if cbs.includeRules {
+		// MATT: Would be nice to have a single dispatcher: wouldn't need to worry about
+		// the two not working on the same data and giving weird results.
+		cbs.evalCmd = NewEvalCmd()
+		polRules := func(update api.Update) (filterOut bool) {
+			// Go through the rules, and generate a selector for each.
+			cbs.evalCmd.AddSelector("policy-name-rule-index", "TODO-selector-expression")
+			return false
+		}
+		disp.Register(model.PolicyKey{}, polRules)
+	}
 
 	disp.Register(model.WorkloadEndpointKey{}, filterUpdate)
 	disp.Register(model.HostEndpointKey{}, filterUpdate)
@@ -149,6 +162,8 @@ type describeCmd struct {
 	epIDToProfileIDs      map[interface{}][]string
 	policySorter          *calc.PolicySorter
 
+	evalCmd *EvalCmd
+
 	done chan bool
 }
 
@@ -183,6 +198,15 @@ func (a ByName) Less(i, j int) bool {
 
 func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 	if status == api.InSync {
+		matches := nil
+		if cbs.includeRules {
+			endpointMatch := func(update api.Update) (filterOut bool) {
+				return false // TODO
+			}
+			cbs.evalCmd.Start(endpointMatch)
+			matches = &cbs.evalCmd.GetMatches()
+		}
+
 		fmt.Println("Policies that match each endpoint:")
 		tiers := cbs.policySorter.Sorted() // MATT: map[model.PolicyKey]*model.Policy
 		epData := make([]endpointDatum, 0)
@@ -237,7 +261,14 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 					fmt.Printf("    Profile %v\n", profID)
 				}
 			}
+
+			if cbs.includeRules {
+				if policies, ok := matches[epID]; ok {
+					fmt.Printf("Some policy matches this EP: %v\n", policies)
+				}
+			}
 		}
+
 		cbs.done <- true
 	}
 }

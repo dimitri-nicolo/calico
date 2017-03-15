@@ -36,6 +36,7 @@ func NewEvalCmd() (cbs *EvalCmd) {
 	cbs = &EvalCmd{
 		dispatcher: disp,
 		done:       make(chan bool),
+		matches:    make(map[interface{}]string),
 	}
 	cbs.index = labelindex.NewInheritIndex(cbs.onMatchStarted, cbs.onMatchStopped)
 	return cbs
@@ -90,9 +91,11 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 // For the final version of this we probably will want to be able to call AddSelector()
 // while everything's running and join this function into that so you make the call and
 // then a little bit later it returns the results.
+// Ideally it probably wouldn't even have an AddSelector(), and this could just be accomplished
+// with some custom filter functions on a single dispatcher.
 // However solving that now would be more effort, so for this version everything must be
 // added before Start()ing.
-func (cbs *EvalCmd) GetMatches() map[string]string {
+func (cbs *EvalCmd) GetMatches() map[interface{}]string {
 	<-cbs.done
 	return cbs.matches
 }
@@ -111,7 +114,7 @@ func endpointName(key interface{}) string {
 type EvalCmd struct {
 	dispatcher *dispatcher.Dispatcher
 	index      *labelindex.InheritIndex
-	matches    map[string]string
+	matches    map[interface{}]string
 
 	done chan bool
 }
@@ -167,6 +170,11 @@ func (cbs *EvalCmd) OnUpdates(updates []api.Update) {
 
 func (cbs *EvalCmd) onMatchStarted(selId, epId interface{}) {
 	fmt.Printf("%v\n", endpointName(epId))
+	if pols, ok := cbs.matches[epId]; ok {
+		cbs.matches[epId] = cbs.matches[epId].append(selId.(string))
+	} else {
+		cbs.matches[epId] = [selId.(string)]
+	}
 }
 
 func (cbs *EvalCmd) onMatchStopped(selId, epId interface{}) {
