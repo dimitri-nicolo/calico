@@ -13,10 +13,12 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mipearson/rfw"
+	"github.com/projectcalico/felix/jitter"
 )
 
 // TODO(doublek): Need to hook these into configuration
 const DefaultAgeTimeout = time.Duration(10) * time.Second
+const ExportingInterval = time.Duration(1) * time.Second
 
 type Config struct {
 	StatsDumpFilePath string
@@ -35,7 +37,7 @@ type Collector struct {
 	sigChan        chan os.Signal
 	config         *Config
 	dumpLog        *log.Logger
-	aggStats       map[string]map[string]Metrics
+	reporters      []MetricsReporter
 }
 
 func NewCollector(sources []<-chan StatUpdate, sinks []chan<- *Data, config *Config) *Collector {
@@ -49,7 +51,7 @@ func NewCollector(sources []<-chan StatUpdate, sinks []chan<- *Data, config *Con
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
 		dumpLog:        log.New(),
-		aggStats:       make(map[string]map[string]Metrics),
+		reporters:      []MetricsReporter{NewPrometheusReporter(), NewSyslogReporter()},
 	}
 }
 
@@ -148,6 +150,9 @@ func (c *Collector) applyStatUpdate(update StatUpdate) {
 	if update.Tp != EmptyRuleTracePoint {
 		err := data.AddRuleTracePoint(update.Tp)
 		if err != nil {
+			for _, r := range c.reporters {
+				r.Update(*data)
+			}
 			data.ResetCounters()
 			data.ReplaceRuleTracePoint(update.Tp)
 		}
@@ -159,7 +164,7 @@ func (c *Collector) expireEntry(data *Data) {
 	log.Infof("Timer expired for entry: %v", data)
 	tuple := data.Tuple
 	for _, r := range c.reporters {
-		r.Delete(data)
+		r.Delete(*data)
 	}
 	delete(c.epStats, tuple)
 }
@@ -176,77 +181,15 @@ func (c *Collector) registerAgeTimer(data *Data) {
 
 func (c *Collector) reportMetrics() {
 	log.Debug("Aggregating and reporting metrics")
-	var (
-		ok       bool
-		sipStats map[string]Metrics
-		bytes    int
-		packets  int
-		rt       string
-		srcIP    string
-	)
 	for _, data := range c.epStats {
-		if data.Action() != stats.DenyAction {
-			continue
+		for _, r := range c.reporters {
+			r.Update(*data)
 		}
-		srcIP = data.SourceIp()
-		rt = data.RuleTrace.ToString()
-		bytes = data.CountersIn().Bytes()
-		packets = data.CountersIn().Packets()
-		// TODO(doublek): This is a temporary workaround until direction awareness
-		// of tuples/data via NFLOG makes its way in.
-		if packets == 0 {
-			bytes = data.CountersOut().Bytes()
-			packets = data.CountersOut().Packets()
-		}
-		sipStats, ok = c.aggStats[rt]
-		if !ok {
-			sipStats = make(map[string]Metrics)
-			entry := Metrics{
-				Bytes:   bytes,
-				Packets: packets,
-			}
-			sipStats[srcIP] = entry
-		} else {
-			entry, ok := sipStats[srcIP]
-			if !ok {
-				entry = Metrics{
-					Bytes:   bytes,
-					Packets: packets,
-				}
-			} else {
-				entry.Bytes = bytes
-				entry.Packets = packets
-			}
-			sipStats[srcIP] = entry
-		}
-		c.aggStats[rt] = sipStats
+		data.clearDirtyFlag()
 	}
-	log.Debugf("Aggregated stats %+v", c.aggStats)
-	for policy, sipStats := range c.aggStats {
-		UpdateMetrics(policy, sipStats)
+	for _, r := range c.reporters {
+		r.Flush()
 	}
-}
-
-func (c *Collector) removeSourceIP(ruleTrace string, srcIP string) {
-	log.Debugf("removeSourceIP: RuleTrace %v Source IP: %v", ruleTrace, srcIP)
-	sipStats, ok := c.aggStats[ruleTrace]
-	if !ok {
-		log.Infof("removeSourceIP: RuleTrace %v not present in aggregate stats", ruleTrace)
-		return
-	}
-	_, ok = sipStats[srcIP]
-	if !ok {
-		log.Infof("removeSourceIP: Source IP %v not present in aggregate stats", srcIP)
-		return
-	}
-	DeleteMetric(ruleTrace, srcIP)
-	delete(sipStats, srcIP)
-	if len(sipStats) == 0 {
-		delete(c.aggStats, ruleTrace)
-	} else {
-		c.aggStats[ruleTrace] = sipStats
-	}
-	return
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.

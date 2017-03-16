@@ -8,7 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/projectcalico/felix/collector/stats"
+	. "github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
