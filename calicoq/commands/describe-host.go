@@ -25,6 +25,7 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 	cbs := &describeCmd{
 		hideSelectors:    hideSelectors,
 		includeRules:     includeRuleMatches,
+		hostname:         hostname,
 		dispatcher:       disp,
 		done:             make(chan bool),
 		epIDToPolIDs:     make(map[interface{}]map[model.PolicyKey]bool),
@@ -152,6 +153,7 @@ type describeCmd struct {
 	// Config.
 	hideSelectors bool
 	includeRules  bool
+	hostname      string
 
 	// ActiveRulesCalculator matches policies/profiles against local
 	// endpoints and notifies the ActiveSelectorCalculator when
@@ -198,13 +200,28 @@ func (a ByName) Less(i, j int) bool {
 
 func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 	if status == api.InSync {
-		matches := nil
+		var matches map[interface{}][]string
 		if cbs.includeRules {
 			endpointMatch := func(update api.Update) (filterOut bool) {
-				return false // TODO
+				if update.Value == nil {
+					// MATT: Why is this so much lower priority than checkValid?
+					glog.V(1).Infof("Skipping bad update: %v", update.Key)
+					return true
+				}
+				switch key := update.Key.(type) {
+				case model.HostEndpointKey:
+					if key.Hostname != cbs.hostname {
+						return true
+					}
+				case model.WorkloadEndpointKey:
+					if key.Hostname != cbs.hostname {
+						return true
+					}
+				}
+				return false
 			}
 			cbs.evalCmd.Start(endpointMatch)
-			matches = &cbs.evalCmd.GetMatches()
+			matches = cbs.evalCmd.GetMatches()
 		}
 
 		fmt.Println("Policies that match each endpoint:")

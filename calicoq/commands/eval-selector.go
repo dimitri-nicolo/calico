@@ -24,8 +24,8 @@ func EvalSelector(sel string) (err error) {
 	cbs.Start(noopFilter)
 
 	matches := cbs.GetMatches()
-	if selMatches, ok := matches["the selector"]; ok {
-		fmt.Printf("Output stuff: %v\n", selMatches)
+	for endpoint := range matches {
+		fmt.Printf("Output stuff: %v\n", endpointName(endpoint))
 	}
 	return
 }
@@ -36,7 +36,7 @@ func NewEvalCmd() (cbs *EvalCmd) {
 	cbs = &EvalCmd{
 		dispatcher: disp,
 		done:       make(chan bool),
-		matches:    make(map[interface{}]string),
+		matches:    make(map[interface{}][]string),
 	}
 	cbs.index = labelindex.NewInheritIndex(cbs.onMatchStarted, cbs.onMatchStopped)
 	return cbs
@@ -95,7 +95,9 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 // with some custom filter functions on a single dispatcher.
 // However solving that now would be more effort, so for this version everything must be
 // added before Start()ing.
-func (cbs *EvalCmd) GetMatches() map[interface{}]string {
+// Returns a map from endpoint key (model.Host/WorkloadEndpointKey) to a list of strings containing the
+// names of the selectors that matched them.
+func (cbs *EvalCmd) GetMatches() map[interface{}][]string {
 	<-cbs.done
 	return cbs.matches
 }
@@ -114,7 +116,7 @@ func endpointName(key interface{}) string {
 type EvalCmd struct {
 	dispatcher *dispatcher.Dispatcher
 	index      *labelindex.InheritIndex
-	matches    map[interface{}]string
+	matches    map[interface{}][]string
 
 	done chan bool
 }
@@ -169,11 +171,11 @@ func (cbs *EvalCmd) OnUpdates(updates []api.Update) {
 }
 
 func (cbs *EvalCmd) onMatchStarted(selId, epId interface{}) {
-	fmt.Printf("%v\n", endpointName(epId))
+	fmt.Printf("OLD %v\n", endpointName(epId))
 	if pols, ok := cbs.matches[epId]; ok {
-		cbs.matches[epId] = cbs.matches[epId].append(selId.(string))
+		cbs.matches[epId] = append(pols, selId.(string))
 	} else {
-		cbs.matches[epId] = [selId.(string)]
+		cbs.matches[epId] = []string{selId.(string)}
 	}
 }
 
