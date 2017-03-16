@@ -1,6 +1,6 @@
 // Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
-package stats
+package collector
 
 import (
 	"errors"

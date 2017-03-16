@@ -17,7 +17,6 @@ package intdataplane
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/collector/stats"
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
@@ -269,24 +268,24 @@ func (d *InternalDataplane) Start() {
 	go d.ifaceMonitor.MonitorInterfaces()
 
 	// TODO (Matt): This isn't really in keeping with the surrounding code.
-	ctSink := make(chan stats.StatUpdate)
+	ctSink := make(chan collector.StatUpdate)
 	conntrackDataSource := collector.NewConntrackDataSource(d.lookupManager, ctSink)
 	conntrackDataSource.Start()
 
-	nfIngressSink := make(chan stats.StatUpdate)
-	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, stats.DirIn, d.config.NfNetlinkBufSize)
+	nfIngressSink := make(chan collector.StatUpdate)
+	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, collector.DirIn, d.config.NfNetlinkBufSize)
 	nflogIngressDataSource.Start()
 
-	nfEgressSink := make(chan stats.StatUpdate)
-	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, stats.DirOut, d.config.NfNetlinkBufSize)
+	nfEgressSink := make(chan collector.StatUpdate)
+	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, collector.DirOut, d.config.NfNetlinkBufSize)
 	nflogEgressDataSource.Start()
 
 	collectorConfig := &collector.Config{
 		StatsDumpFilePath: d.config.StatsDumpFilePath,
 	}
-	printSink := make(chan *stats.Data)
-	datasources := []<-chan stats.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
-	datasinks := []chan<- *stats.Data{printSink}
+	printSink := make(chan *collector.Data)
+	datasources := []<-chan collector.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
+	datasinks := []chan<- *collector.Data{printSink}
 	statsCollector := collector.NewCollector(datasources, datasinks, collectorConfig)
 	statsCollector.Start()
 

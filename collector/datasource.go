@@ -10,7 +10,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/felix/collector/stats"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
@@ -24,23 +23,23 @@ type epLookup interface {
 const PollingInterval = time.Duration(1) * time.Second
 
 type NflogDataSource struct {
-	sink          chan<- stats.StatUpdate
+	sink          chan<- StatUpdate
 	groupNum      int
-	direction     stats.Direction
+	direction     Direction
 	nlBufSiz      int
 	lum           epLookup
 	nflogChan     chan nfnetlink.NflogPacket
 	nflogDoneChan chan struct{}
 }
 
-func NewNflogDataSource(lm epLookup, sink chan<- stats.StatUpdate, groupNum int, dir stats.Direction, nlBufSiz int) *NflogDataSource {
+func NewNflogDataSource(lm epLookup, sink chan<- StatUpdate, groupNum int, dir Direction, nlBufSiz int) *NflogDataSource {
 	nflogChan := make(chan nfnetlink.NflogPacket)
 	done := make(chan struct{})
 	return newNflogDataSource(lm, sink, groupNum, dir, nlBufSiz, nflogChan, done)
 }
 
 // Internal constructor to help mocking from UTs.
-func newNflogDataSource(lm epLookup, sink chan<- stats.StatUpdate, gn int, dir stats.Direction, nbs int, nc chan nfnetlink.NflogPacket, done chan struct{}) *NflogDataSource {
+func newNflogDataSource(lm epLookup, sink chan<- StatUpdate, gn int, dir Direction, nbs int, nc chan nfnetlink.NflogPacket, done chan struct{}) *NflogDataSource {
 	return &NflogDataSource{
 		sink:          sink,
 		groupNum:      gn,
@@ -78,15 +77,15 @@ func (ds *NflogDataSource) startProcessingPackets() {
 	}
 }
 
-func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*stats.StatUpdate, error) {
+func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*StatUpdate, error) {
 	nflogTuple := nPkt.Tuple
 	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
-	var statUpdate *stats.StatUpdate
+	var statUpdate *StatUpdate
 	var reverse bool
 	var wlEpKey *model.WorkloadEndpointKey
-	var prefixAction stats.RuleAction
+	var prefixAction RuleAction
 	_, _, _, prefixAction = parsePrefix(nPkt.Prefix)
-	if prefixAction == stats.DenyAction {
+	if prefixAction == DenyAction {
 		// NFLog based counters make sense only for denied packets.
 		numPkts = 1
 		numBytes = nPkt.Bytes
@@ -100,7 +99,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 
 	// Determine the endpoint that this packet hit a rule for. This depends on the direction
 	// because local -> local packets will be NFLOGed twice.
-	if ds.direction == stats.DirIn {
+	if ds.direction == DirIn {
 		inPkts = numPkts
 		inBytes = numBytes
 		outPkts = 0
@@ -119,7 +118,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	if wlEpKey != nil {
 		tp := lookupRule(ds.lum, nPkt.Prefix, wlEpKey)
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple, reverse)
-		statUpdate = stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, tp)
+		statUpdate = NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, DeltaCounter, tp)
 	} else {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
@@ -130,7 +129,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	return statUpdate, nil
 }
 
-func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse bool) stats.Tuple {
+func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse bool) Tuple {
 	var l4Src, l4Dst int
 	if nflogTuple.Proto == 1 {
 		l4Src = nflogTuple.L4Src.Id
@@ -140,9 +139,9 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse b
 		l4Dst = nflogTuple.L4Dst.Port
 	}
 	if !reverse {
-		return *stats.NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
+		return *NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
 	} else {
-		return *stats.NewTuple(nflogTuple.Dst, nflogTuple.Src, nflogTuple.Proto, l4Dst, l4Src)
+		return *NewTuple(nflogTuple.Dst, nflogTuple.Src, nflogTuple.Proto, l4Dst, l4Src)
 	}
 }
 
@@ -150,18 +149,18 @@ type ConntrackDataSource struct {
 	poller    *jitter.Ticker
 	pollerC   <-chan time.Time
 	converter chan []nfnetlink.CtEntry
-	sink      chan<- stats.StatUpdate
+	sink      chan<- StatUpdate
 	lum       epLookup
 }
 
-func NewConntrackDataSource(lm epLookup, sink chan<- stats.StatUpdate) *ConntrackDataSource {
+func NewConntrackDataSource(lm epLookup, sink chan<- StatUpdate) *ConntrackDataSource {
 	poller := jitter.NewTicker(PollingInterval, PollingInterval/10)
 	converter := make(chan []nfnetlink.CtEntry)
 	return newConntrackDataSource(lm, sink, poller, poller.C, converter)
 }
 
 // Internal constructor to help mocking from UTs.
-func newConntrackDataSource(lm epLookup, sink chan<- stats.StatUpdate, poller *jitter.Ticker, pollerC <-chan time.Time, converter chan []nfnetlink.CtEntry) *ConntrackDataSource {
+func newConntrackDataSource(lm epLookup, sink chan<- StatUpdate, poller *jitter.Ticker, pollerC <-chan time.Time, converter chan []nfnetlink.CtEntry) *ConntrackDataSource {
 	return &ConntrackDataSource{
 		poller:    poller,
 		pollerC:   pollerC,
@@ -202,10 +201,10 @@ func (ds *ConntrackDataSource) startProcessor() {
 	}
 }
 
-func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]stats.StatUpdate, error) {
+func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]StatUpdate, error) {
 	// There can be a maximum of 2 stat updates per ctentry, in the case of
 	// local-to-local traffic.
-	statUpdates := []stats.StatUpdate{}
+	statUpdates := []StatUpdate{}
 	// The last entry is the tuple entry for endpoints
 	ctTuple, err := ctEntry.OriginalTuple()
 	if err != nil {
@@ -228,19 +227,19 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	if wlEpKeySrc != nil {
 		// Locally originating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
-		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
+		su := NewStatUpdate(tuple, *wlEpKeySrc,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
-			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+			AbsoluteCounter, EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
 	if wlEpKeyDst != nil {
 		// Locally terminating packet
 		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
-		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
+		su := NewStatUpdate(tuple, *wlEpKeyDst,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-			stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+			AbsoluteCounter, EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
 	for _, update := range statUpdates {
@@ -249,7 +248,7 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	return statUpdates, nil
 }
 
-func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats.Tuple {
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) Tuple {
 	var l4Src, l4Dst int
 	if ctTuple.ProtoNum == 1 {
 		l4Src = ctTuple.L4Src.Id
@@ -259,30 +258,30 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) stats
 		l4Dst = ctTuple.L4Dst.Port
 	}
 	if !reverse {
-		return *stats.NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
+		return *NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
 	} else {
-		return *stats.NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
+		return *NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
 	}
 }
 
 // Stubs
 // TODO (Matt): Refactor these in better.
 
-func lookupAction(action string) stats.RuleAction {
+func lookupAction(action string) RuleAction {
 	switch action {
 	case "A":
-		return stats.AllowAction
+		return AllowAction
 	case "D":
-		return stats.DenyAction
+		return DenyAction
 	case "N":
-		return stats.NextTierAction
+		return NextTierAction
 	default:
 		log.Error("Unknown action ", action)
-		return stats.NextTierAction
+		return NextTierAction
 	}
 }
 
-func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAction) {
+func parsePrefix(prefix string) (tier, policy, rule string, action RuleAction) {
 	// Prefix formats are:
 	// - A/rule index/profile name
 	// - A/rule index/policy name/tier name
@@ -308,10 +307,10 @@ func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAct
 	return
 }
 
-func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
+func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) RuleTracePoint {
 	log.Infof("Looking up rule prefix %s", prefix)
 	tier, policy, rule, action := parsePrefix(prefix)
-	return stats.RuleTracePoint{
+	return RuleTracePoint{
 		TierID:   tier,
 		PolicyID: policy,
 		Rule:     rule,

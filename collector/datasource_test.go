@@ -7,7 +7,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/felix/collector/stats"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
@@ -192,7 +191,7 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 
 var _ = Describe("Conntrack Datasource", func() {
 	var ctSource *ConntrackDataSource
-	var sink chan stats.StatUpdate
+	var sink chan StatUpdate
 	var dataFeeder chan []nfnetlink.CtEntry
 	BeforeEach(func() {
 		epMap := map[string]*model.WorkloadEndpointKey{
@@ -200,7 +199,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			string(localIp2): localWlEPKey2,
 		}
 		lm := newMockLookupManager(epMap)
-		sink = make(chan stats.StatUpdate)
+		sink = make(chan StatUpdate)
 		poller := jitter.NewTicker(time.Second, time.Second/10)
 		mockTickerChan := make(chan time.Time)
 		dataFeeder = make(chan []nfnetlink.CtEntry)
@@ -209,38 +208,38 @@ var _ = Describe("Conntrack Datasource", func() {
 	})
 	Describe("Test local destination", func() {
 		It("should receive a single stat update", func() {
-			t := stats.NewTuple(localIp1, remoteIp1, proto_tcp, dstPort, srcPort)
-			su := stats.NewStatUpdate(*t, *localWlEPKey1,
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, dstPort, srcPort)
+			su := NewStatUpdate(*t, *localWlEPKey1,
 				inCtEntry.ReplyCounters.Packets, inCtEntry.ReplyCounters.Bytes,
 				inCtEntry.OriginalCounters.Packets, inCtEntry.OriginalCounters.Bytes,
-				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+				AbsoluteCounter, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{inCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su)))
 		})
 	})
 	Describe("Test local source", func() {
 		It("should receive a single stat update", func() {
-			t := stats.NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
-			su := stats.NewStatUpdate(*t, *localWlEPKey1,
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			su := NewStatUpdate(*t, *localWlEPKey1,
 				outCtEntry.OriginalCounters.Packets, outCtEntry.OriginalCounters.Bytes,
 				outCtEntry.ReplyCounters.Packets, outCtEntry.ReplyCounters.Bytes,
-				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+				AbsoluteCounter, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{outCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su)))
 		})
 	})
 	Describe("Test local source to local destination", func() {
 		It("should receive two stat updates - one for each endpoint", func() {
-			t1 := stats.NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			su1 := stats.NewStatUpdate(*t1, *localWlEPKey1,
+			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			su1 := NewStatUpdate(*t1, *localWlEPKey1,
 				localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes,
 				localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes,
-				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
-			t2 := stats.NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
-			su2 := stats.NewStatUpdate(*t2, *localWlEPKey2,
+				AbsoluteCounter, EmptyRuleTracePoint)
+			t2 := NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
+			su2 := NewStatUpdate(*t2, *localWlEPKey2,
 				localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes,
 				localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes,
-				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+				AbsoluteCounter, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{localCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su1)))
 			Eventually(sink).Should(Receive(Equal(*su2)))
@@ -248,31 +247,31 @@ var _ = Describe("Conntrack Datasource", func() {
 	})
 	Describe("Test local destination with DNAT", func() {
 		It("should receive a single stat update with correct tuple extracted", func() {
-			t := stats.NewTuple(localIp1, remoteIp1, proto_tcp, dstPort, srcPort)
-			su := stats.NewStatUpdate(*t, *localWlEPKey1,
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, dstPort, srcPort)
+			su := NewStatUpdate(*t, *localWlEPKey1,
 				inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes,
 				inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes,
-				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+				AbsoluteCounter, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{inCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su)))
 		})
 	})
 	Describe("Test local source to local destination with DNAT", func() {
 		It("should receive two stat updates - one for each endpoint - with correct tuple extracted", func() {
-			t1 := stats.NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			su1 := stats.NewStatUpdate(*t1, *localWlEPKey1,
+			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			su1 := NewStatUpdate(*t1, *localWlEPKey1,
 				localCtEntryWithDNAT.OriginalCounters.Packets,
 				localCtEntryWithDNAT.OriginalCounters.Bytes,
 				localCtEntryWithDNAT.ReplyCounters.Packets,
 				localCtEntryWithDNAT.ReplyCounters.Bytes,
-				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
-			t2 := stats.NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
-			su2 := stats.NewStatUpdate(*t2, *localWlEPKey2,
+				AbsoluteCounter, EmptyRuleTracePoint)
+			t2 := NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
+			su2 := NewStatUpdate(*t2, *localWlEPKey2,
 				localCtEntryWithDNAT.ReplyCounters.Packets,
 				localCtEntryWithDNAT.ReplyCounters.Bytes,
 				localCtEntryWithDNAT.OriginalCounters.Packets,
 				localCtEntryWithDNAT.OriginalCounters.Bytes,
-				stats.AbsoluteCounter, stats.EmptyRuleTracePoint)
+				AbsoluteCounter, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{localCtEntryWithDNAT}
 			Eventually(sink).Should(Receive(Equal(*su1)))
 			Eventually(sink).Should(Receive(Equal(*su2)))
@@ -290,32 +289,32 @@ var (
 	tier1Deny    = "D/0/polic4/tier1"
 )
 
-var defTierAllowTp = stats.RuleTracePoint{
+var defTierAllowTp = RuleTracePoint{
 	TierID:   "default",
 	PolicyID: "policy1",
 	Rule:     "0",
-	Action:   stats.AllowAction,
+	Action:   AllowAction,
 	Index:    0,
 }
-var defTierDenyTp = stats.RuleTracePoint{
+var defTierDenyTp = RuleTracePoint{
 	TierID:   "default",
 	PolicyID: "policy2",
 	Rule:     "0",
-	Action:   stats.DenyAction,
+	Action:   DenyAction,
 	Index:    0,
 }
-var tier1AllowTp = stats.RuleTracePoint{
+var tier1AllowTp = RuleTracePoint{
 	TierID:   "tier1",
 	PolicyID: "policy3",
 	Rule:     "0",
-	Action:   stats.AllowAction,
+	Action:   AllowAction,
 	Index:    1,
 }
-var tier1DenyTp = stats.RuleTracePoint{
+var tier1DenyTp = RuleTracePoint{
 	TierID:   "tier1",
 	PolicyID: "policy4",
 	Rule:     "0",
-	Action:   stats.DenyAction,
+	Action:   DenyAction,
 	Index:    1,
 }
 
@@ -348,16 +347,16 @@ var _ = Describe("NFLOG Datasource", func() {
 		// Inject info nflogChan
 		// expect a single packet in sink
 		var nflogSource *NflogDataSource
-		var sink chan stats.StatUpdate
+		var sink chan StatUpdate
 		var dataFeeder chan nfnetlink.NflogPacket
-		dir := stats.DirIn
+		dir := DirIn
 		BeforeEach(func() {
 			epMap := map[string]*model.WorkloadEndpointKey{
 				string(localIp1): localWlEPKey1,
 				string(localIp2): localWlEPKey2,
 			}
 			lm := newMockLookupManager(epMap)
-			sink = make(chan stats.StatUpdate)
+			sink = make(chan StatUpdate)
 			done := make(chan struct{})
 			dataFeeder = make(chan nfnetlink.NflogPacket)
 			gn := 1200
@@ -366,18 +365,18 @@ var _ = Describe("NFLOG Datasource", func() {
 		})
 		Describe("Test local destination", func() {
 			It("should receive a single stat update with allow rule tracepoint", func() {
-				t := stats.NewTuple(localIp1, remoteIp1, proto_tcp, dstPort, srcPort)
-				su := stats.NewStatUpdate(*t, *localWlEPKey1, 0, 0, 0, 0,
-					stats.DeltaCounter, defTierAllowTp)
+				t := NewTuple(localIp1, remoteIp1, proto_tcp, dstPort, srcPort)
+				su := NewStatUpdate(*t, *localWlEPKey1, 0, 0, 0, 0,
+					DeltaCounter, defTierAllowTp)
 				dataFeeder <- inPkt
 				Eventually(sink).Should(Receive(Equal(*su)))
 			})
 		})
 		Describe("Test local to local", func() {
 			It("should receive a single stat update with deny rule tracepoint", func() {
-				t := stats.NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
-				su := stats.NewStatUpdate(*t, *localWlEPKey2, 1, 100, 0, 0,
-					stats.DeltaCounter, defTierDenyTp)
+				t := NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
+				su := NewStatUpdate(*t, *localWlEPKey2, 1, 100, 0, 0,
+					DeltaCounter, defTierDenyTp)
 				dataFeeder <- localPkt
 				Eventually(sink).Should(Receive(Equal(*su)))
 			})
