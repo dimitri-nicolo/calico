@@ -27,6 +27,7 @@ var (
 	localIp1     = net.ParseIP("10.0.0.1")
 	localIp2     = net.ParseIP("10.0.0.2")
 	remoteIp1    = net.ParseIP("20.0.0.1")
+	remoteIp2    = net.ParseIP("20.0.0.2")
 	localIp1DNAT = net.ParseIP("192.168.0.1")
 	localIp2DNAT = net.ParseIP("192.168.0.2")
 )
