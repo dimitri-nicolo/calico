@@ -96,10 +96,33 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 		cbs.evalCmd = NewEvalCmd()
 		polRules := func(update api.Update) (filterOut bool) {
 			// Go through the rules, and generate a selector for each.
-			cbs.evalCmd.AddSelector("policy-name-rule-index", "TODO-selector-expression")
+			polId := update.Key.(model.Key).String()
+			policy := update.Value.(*model.Policy)
+			for i, rule := range policy.InboundRules {
+				if rule.SrcSelector != "" {
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v inbound source match", polId, i),
+						rule.SrcSelector)
+				}
+				if rule.DstSelector != "" {
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v inbound destination match", polId, i),
+						rule.DstSelector)
+				}
+				if rule.NotSrcSelector != "" {
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v inbound negative source match", polId, i),
+						rule.NotSrcSelector)
+				}
+				if rule.NotDstSelector != "" {
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v inbound negative destination match", polId, i),
+						rule.NotDstSelector)
+				}
+			}
+			//for rule := range policy.OutboundRules {
+			// TODO: Also refactor this because it's too copy-pasty.
+			//}
 			return false
 		}
 		disp.Register(model.PolicyKey{}, polRules)
+		// TODO: Do a profile version?
 	}
 
 	disp.Register(model.WorkloadEndpointKey{}, filterUpdate)
