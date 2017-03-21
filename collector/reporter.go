@@ -70,7 +70,7 @@ func NewPrometheusReporter() *PrometheusReporter {
 }
 
 func (pr *PrometheusReporter) Update(data Data) error {
-	if data.Action() != DenyAction {
+	if data.Action() != DenyAction || !data.IsDirty() {
 		return nil
 	}
 	key := AggregateKey{data.RuleTrace.ToString(), data.Tuple.src}
@@ -84,8 +84,9 @@ func (pr *PrometheusReporter) Update(data Data) error {
 	}
 	value, ok := pr.aggStats[key]
 	if ok {
-		value.bytes += ctr.bytes
-		value.packets += ctr.packets
+		dp, db := ctr.DeltaValues()
+		value.packets += dp
+		value.bytes += db
 		value.refs.Add(data.Tuple)
 	} else {
 		l := prometheus.Labels{
@@ -137,7 +138,6 @@ func (pr *PrometheusReporter) Flush() error {
 		}).Debug("Setting prometheus metrics.")
 		value.gaugeDeniedPackets.Set(float64(value.packets))
 		value.gaugeDeniedBytes.Set(float64(value.bytes))
-		value.Counter.Zero()
 		pr.aggStats[key] = value
 	}
 	return nil
@@ -161,7 +161,7 @@ func NewSyslogReporter() *SyslogReporter {
 }
 
 func (sr *SyslogReporter) Update(data Data) error {
-	if data.Action() != DenyAction {
+	if data.Action() != DenyAction || !data.IsDirty() {
 		return nil
 	}
 	var bytes, packets int

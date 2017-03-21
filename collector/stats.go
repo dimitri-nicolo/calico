@@ -20,14 +20,58 @@ const (
 	DirOut Direction = "out"
 )
 
+// Counter stores packet and byte statistics. It also maintains a delta of
+// changes made until a `Reset` is called. They can never be set to 0, except
+// when creating a new Counter.
 type Counter struct {
-	packets int
-	bytes   int
+	packets      int
+	bytes        int
+	deltaPackets int
+	deltaBytes   int
 }
 
-func (c *Counter) Zero() {
-	c.packets = 0
-	c.bytes = 0
+func NewCounter(packets int, bytes int) *Counter {
+	return &Counter{packets, bytes, packets, bytes}
+}
+
+// Values returns packet and bytes stored in a Counter object.
+func (c *Counter) Values() (packets, bytes int) {
+	return c.packets, c.bytes
+}
+
+// DeltaValues returns the packet and byte deltas since the last `Reset()`.
+func (c *Counter) DeltaValues() (packets, bytes int) {
+	return c.deltaPackets, c.deltaBytes
+}
+
+// Set packet and byte values to `packets` and `bytes`. Returns true if value
+// was changed and false otherwise.
+func (c *Counter) Set(packets int, bytes int) (changed bool) {
+	if packets != 0 && bytes != 0 && packets > c.packets && bytes > c.bytes {
+		changed = true
+		dp := packets - c.packets
+		db := packets - c.packets
+		c.packets = packets
+		c.bytes = bytes
+		c.deltaPackets += dp
+		c.deltaBytes += db
+	}
+	return
+}
+
+// Increase packet and byte values by `packets` and `bytes`. Always returns
+// true.
+func (c *Counter) Increase(packets int, bytes int) (changed bool) {
+	c.Set(c.packets+packets, c.bytes+bytes)
+	changed = true
+	return
+}
+
+// Reset sets the delta packet and byte values to zero. Non-delta packet and
+// bytes cannot be reset or set to zero.
+func (c *Counter) Reset() {
+	c.deltaPackets = 0
+	c.deltaBytes = 0
 }
 
 func (c *Counter) IsZero() bool {
@@ -215,8 +259,8 @@ func NewData(tuple Tuple,
 	return &Data{
 		Tuple:      tuple,
 		WlEpKey:    wlEpKey,
-		ctrIn:      Counter{packets: inPackets, bytes: inBytes},
-		ctrOut:     Counter{packets: outPackets, bytes: outBytes},
+		ctrIn:      *NewCounter(inPackets, inBytes),
+		ctrOut:     *NewCounter(outPackets, outBytes),
 		RuleTrace:  NewRuleTrace(),
 		createdAt:  time.Now(),
 		updatedAt:  time.Now(),
@@ -228,7 +272,7 @@ func NewData(tuple Tuple,
 
 func (d *Data) String() string {
 	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ruleTrace={%v} workloadId=%v endpointId=%v",
-		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.RuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
+		&(d.Tuple), d.ctrIn.String(), d.ctrOut.String(), d.updatedAt, d.RuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
 }
 
 func (d *Data) touch() {
@@ -242,6 +286,8 @@ func (d *Data) setDirtyFlag() {
 
 func (d *Data) clearDirtyFlag() {
 	d.dirty = false
+	d.ctrIn.Reset()
+	d.ctrOut.Reset()
 }
 
 func (d *Data) IsDirty() bool {
@@ -274,51 +320,45 @@ func (d *Data) CountersOut() Counter {
 	return d.ctrOut
 }
 
-func (d *Data) setCountersIn(packets int, bytes int) {
-	if packets != d.ctrIn.packets && bytes != d.ctrIn.bytes {
-		d.setDirtyFlag()
-	}
-	d.ctrIn.packets = packets
-	d.ctrIn.bytes = bytes
-	d.touch()
-}
-
-func (d *Data) setCountersOut(packets int, bytes int) {
-	if packets != d.ctrOut.packets && bytes != d.ctrOut.bytes {
-		d.setDirtyFlag()
-	}
-	d.ctrOut.packets = packets
-	d.ctrOut.bytes = bytes
-	d.touch()
-}
-
 // Add packets and bytes to the In Counters' values. Use the IncreaseCounters*
 // methods when the source of packets/bytes are delta values.
 func (d *Data) IncreaseCountersIn(packets int, bytes int) {
-	d.setCountersIn(d.ctrIn.packets+packets, d.ctrIn.bytes+bytes)
+	d.ctrIn.Increase(packets, bytes)
+	d.setDirtyFlag()
+	d.touch()
 }
 
 // Add packets and bytes to the Out Counters' values. Use the IncreaseCounters*
 // methods when the source of packets/bytes are delta values.
 func (d *Data) IncreaseCountersOut(packets int, bytes int) {
-	d.setCountersOut(d.ctrOut.packets+packets, d.ctrOut.bytes+bytes)
+	d.ctrOut.Increase(packets, bytes)
+	d.setDirtyFlag()
+	d.touch()
 }
 
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetCountersIn(packets int, bytes int) {
-	d.setCountersIn(packets, bytes)
+	changed := d.ctrIn.Set(packets, bytes)
+	if changed {
+		d.setDirtyFlag()
+	}
+	d.touch()
 }
 
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetCountersOut(packets int, bytes int) {
-	d.setCountersOut(packets, bytes)
+	changed := d.ctrOut.Set(packets, bytes)
+	if changed {
+		d.setDirtyFlag()
+	}
+	d.touch()
 }
 
 func (d *Data) ResetCounters() {
-	d.setCountersIn(0, 0)
-	d.setCountersOut(0, 0)
+	d.ctrIn = *NewCounter(0, 0)
+	d.ctrOut = *NewCounter(0, 0)
 }
 
 func (d *Data) AddRuleTracePoint(tp RuleTracePoint) error {
