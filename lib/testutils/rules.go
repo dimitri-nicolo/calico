@@ -28,10 +28,10 @@ var numProtocol1 = numorstring.ProtocolFromInt(240)
 var icmpType1 = 100
 var icmpCode1 = 200
 
-var cidr1 = MustParseCIDR("10.0.0.1/24")
-var cidr2 = MustParseCIDR("20.0.0.1/24")
-var cidrv61 = MustParseCIDR("abcd:5555::/120")
-var cidrv62 = MustParseCIDR("abcd:2345::/120")
+var cidr1 = MustParseNetwork("10.0.0.1/24")
+var cidr2 = MustParseNetwork("20.0.0.1/24")
+var cidrv61 = MustParseNetwork("abcd:5555::/120")
+var cidrv62 = MustParseNetwork("abcd:2345::/120")
 
 var icmp1 = api.ICMPFields{
 	Type: &icmpType1,
@@ -46,7 +46,7 @@ var InRule1 = api.Rule{
 	Source: api.EntityRule{
 		Tag:      "tag1",
 		Net:      &cidr1,
-		Selector: "selector1",
+		Selector: "label1 == 'value1'",
 	},
 }
 
@@ -58,7 +58,7 @@ var InRule2 = api.Rule{
 	Source: api.EntityRule{
 		Tag:      "tag2",
 		Net:      &cidrv61,
-		Selector: "selector2",
+		Selector: "has(label2)",
 	},
 }
 
@@ -70,7 +70,7 @@ var EgressRule1 = api.Rule{
 	Source: api.EntityRule{
 		Tag:      "tag3",
 		Net:      &cidr2,
-		Selector: "selector3",
+		Selector: "all()",
 	},
 }
 
@@ -82,6 +82,6 @@ var EgressRule2 = api.Rule{
 	Source: api.EntityRule{
 		Tag:      "tag4",
 		Net:      &cidrv62,
-		Selector: "selector4",
+		Selector: "label2 == '1234'",
 	},
 }

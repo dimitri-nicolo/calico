@@ -99,9 +99,17 @@ func (syn *kubeSyncer) updateTracker(updates []api.Update) {
 		if upd.UpdateType == api.UpdateTypeKVDeleted {
 			log.Debugf("Delete from tracker: %+v", upd.KVPair.Key)
 			delete(syn.tracker, upd.KVPair.Key.String())
+			switch key := upd.KVPair.Key.(type) {
+			case model.WorkloadEndpointKey:
+				delete(syn.labelCache, key.WorkloadID)
+			}
 		} else {
 			log.Debugf("Update tracker: %+v: %+v", upd.KVPair.Key, upd.KVPair.Revision)
 			syn.tracker[upd.KVPair.Key.String()] = upd.KVPair.Key
+			switch key := upd.KVPair.Key.(type) {
+			case model.WorkloadEndpointKey:
+				syn.labelCache[key.WorkloadID] = upd.KVPair.Value.(*model.WorkloadEndpoint).Labels
+			}
 		}
 	}
 }
@@ -142,7 +150,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 		// If we need to resync, do so.
 		if needsResync {
 			// Set status to ResyncInProgress.
-			log.Warnf("Resync required - latest versions: %+v", latestVersions)
+			log.Debugf("Resync required - latest versions: %+v", latestVersions)
 			syn.callbacks.OnStatusUpdated(api.ResyncInProgress)
 
 			// Get snapshot from datastore.
@@ -155,8 +163,14 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			// Send the snapshot through.
 			syn.sendUpdates(snap)
 
-			log.Warnf("Snapshot complete - start watch from %+v", latestVersions)
+			log.Debugf("Snapshot complete - start watch from %+v", latestVersions)
 			syn.callbacks.OnStatusUpdated(api.InSync)
+
+			// Don't start watches if we're in oneshot mode.
+			if syn.OneShot {
+				log.Info("OneShot mode, do not start watches")
+				return
+			}
 
 			// Create the Kubernetes API watchers.
 			opts = k8sapi.ListOptions{ResourceVersion: latestVersions.namespaceVersion}
@@ -224,18 +238,13 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			needsResync = false
 		}
 
-		// Don't start watches if we're in oneshot mode.
-		if syn.OneShot {
-			return
-		}
-
 		// Select on the various watch channels.
 		select {
 		case event = <-nsChan:
 			log.Debugf("Incoming Namespace watch event. Type=%s", event.Type)
 			if needsResync = syn.eventTriggersResync(event); needsResync {
 				// We need to resync.  Break out into the sync loop.
-				log.Warn("Event triggered resync: %+v", event)
+				log.Warnf("Event triggered resync: %+v", event)
 				continue
 			}
 
@@ -248,7 +257,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			log.Debugf("Incoming Pod watch event. Type=%s", event.Type)
 			if needsResync = syn.eventTriggersResync(event); needsResync {
 				// We need to resync.  Break out into the sync loop.
-				log.Warn("Event triggered resync: %+v", event)
+				log.Warnf("Event triggered resync: %+v", event)
 				continue
 			}
 
@@ -263,7 +272,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			log.Debugf("Incoming NetworkPolicy watch event. Type=%s", event.Type)
 			if needsResync = syn.eventTriggersResync(event); needsResync {
 				// We need to resync.  Break out into the sync loop.
-				log.Warn("Event triggered resync: %+v", event)
+				log.Warnf("Event triggered resync: %+v", event)
 				continue
 			}
 
@@ -275,7 +284,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			log.Debugf("Incoming GlobalConfig watch event. Type=%s", event.Type)
 			if needsResync = syn.eventTriggersResync(event); needsResync {
 				// We need to resync.  Break out into the sync loop.
-				log.Warn("Event triggered resync: %+v", event)
+				log.Warnf("Event triggered resync: %+v", event)
 				continue
 			}
 
@@ -287,7 +296,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			log.Debugf("Incoming IPPool watch event. Type=%s", event.Type)
 			if needsResync = syn.eventTriggersResync(event); needsResync {
 				// We need to resync.  Break out into the sync loop.
-				log.Warn("Event triggered resync: %+v", event)
+				log.Warnf("Event triggered resync: %+v", event)
 				continue
 			}
 
@@ -339,6 +348,8 @@ func (syn *kubeSyncer) performSnapshot() ([]model.KVPair, map[string]bool, resou
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		log.Info("Received Namespace List() response")
+
 		versions.namespaceVersion = nsList.ListMeta.ResourceVersion
 		for _, ns := range nsList.Items {
 			// The Syncer API expects a profile to be broken into its underlying
@@ -378,6 +389,7 @@ func (syn *kubeSyncer) performSnapshot() ([]model.KVPair, map[string]bool, resou
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		log.Info("Received NetworkPolicy List() response")
 
 		versions.networkPolicyVersion = npList.ListMeta.ResourceVersion
 		for _, np := range npList.Items {
@@ -394,23 +406,35 @@ func (syn *kubeSyncer) performSnapshot() ([]model.KVPair, map[string]bool, resou
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		log.Info("Received Pod List() response")
 
 		versions.podVersion = poList.ListMeta.ResourceVersion
 		for _, po := range poList.Items {
-			wep, _ := syn.kc.converter.podToWorkloadEndpoint(&po)
-			if wep != nil {
-				snap = append(snap, *wep)
-				keys[wep.Key.String()] = true
+			// Ignore any updates for pods which are not ready / valid.
+			if !syn.kc.converter.isCalicoPod(&po) {
+				log.Debugf("Skipping pod %s/%s", po.ObjectMeta.Namespace, po.ObjectMeta.Name)
+				continue
 			}
+
+			// Convert to a workload endpoint.
+			wep, err := syn.kc.converter.podToWorkloadEndpoint(&po)
+			if err != nil {
+				log.WithError(err).Error("Failed to convert pod to workload endpoint")
+				continue
+			}
+			snap = append(snap, *wep)
+			keys[wep.Key.String()] = true
 		}
 
 		// Sync GlobalConfig.
+		log.Info("Syncing GlobalConfig")
 		confList, err := syn.kc.listGlobalConfig(model.GlobalConfigListOptions{})
 		if err != nil {
 			log.Warnf("Error querying GlobalConfig during snapshot, retrying: %s", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		log.Info("Received GlobalConfig List() response")
 
 		for _, c := range confList {
 			snap = append(snap, *c)
@@ -418,12 +442,14 @@ func (syn *kubeSyncer) performSnapshot() ([]model.KVPair, map[string]bool, resou
 		}
 
 		// Sync IP Pools.
+		log.Info("Syncing IP Pools")
 		poolList, err := syn.kc.List(model.IPPoolListOptions{})
 		if err != nil {
 			log.Warnf("Error querying IP Pools during snapshot, retrying: %s", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		log.Info("Received IP Pools List() response")
 
 		for _, p := range poolList {
 			snap = append(snap, *p)
@@ -500,16 +526,18 @@ func (syn *kubeSyncer) parsePodEvent(e watch.Event) *model.KVPair {
 		log.Panicf("Invalid pod event. Type: %s, Object: %+v", e.Type, e.Object)
 	}
 
-	// Ignore any updates for host networked pods.
-	if syn.kc.converter.isHostNetworked(pod) {
-		log.Debugf("Skipping host networked pod %s/%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+	// Ignore updates for Pods that aren't ready / valid.
+	if !syn.kc.converter.isCalicoPod(pod) {
+		log.Debugf("Skipping pod %s/%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 		return nil
 	}
 
-	// Convert the received Namespace into a KVPair.
+	// Convert the received Pod into a KVPair.
 	kvp, err := syn.kc.converter.podToWorkloadEndpoint(pod)
 	if err != nil {
-		log.Panicf("%s", err)
+		// If we fail to parse, then ignore this update and emit a log.
+		log.WithField("error", err).Error("Failed to parse Pod event")
+		return nil
 	}
 
 	// We behave differently based on the event type.
@@ -518,19 +546,8 @@ func (syn *kubeSyncer) parsePodEvent(e watch.Event) *model.KVPair {
 		// For deletes, we need to nil out the Value part of the KVPair.
 		log.Debugf("Delete for pod %s/%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 		kvp.Value = nil
-
-		// Remove it from the cache, if it is there.
-		workload := kvp.Key.(model.WorkloadEndpointKey).WorkloadID
-		delete(syn.labelCache, workload)
 	default:
-		// Adds and modifies are treated the same.  First, if the pod doesn't have an
-		// IP address, we ignore it until it does.
-		if !syn.kc.converter.hasIPAddress(pod) {
-			log.Debugf("Skipping pod with no IP: %s/%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
-			return nil
-		}
-
-		// If it does have an address, we only send if the labels have changed.
+		// Only send an update if the labels have changed.
 		workload := kvp.Key.(model.WorkloadEndpointKey).WorkloadID
 		labels := kvp.Value.(*model.WorkloadEndpoint).Labels
 		if reflect.DeepEqual(syn.labelCache[workload], labels) {
@@ -538,9 +555,6 @@ func (syn *kubeSyncer) parsePodEvent(e watch.Event) *model.KVPair {
 			log.Debugf("Skipping pod event - labels didn't change: %s/%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 			return nil
 		}
-
-		// Labels have changed on a running pod - update the label cache.
-		syn.labelCache[workload] = labels
 	}
 
 	return kvp

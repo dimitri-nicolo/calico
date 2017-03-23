@@ -30,19 +30,21 @@ package client_test
 import (
 	"errors"
 	"log"
+	"reflect"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/libcalico-go/lib/api"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 
 var _ = Describe("Node tests", func() {
-	ipv4 := testutils.MustParseIP("1.2.3.4")
-	ipv6 := testutils.MustParseIP("aa::bb:dd")
+	cidrv4 := testutils.MustParseCIDR("1.2.3.5/24")
+	cidrv6 := testutils.MustParseCIDR("aa::bb00:0001/104")
 	asn := numorstring.ASNumber(12345)
 
 	DescribeTable("Node e2e tests",
@@ -158,31 +160,32 @@ var _ = Describe("Node tests", func() {
 			Expect(len(nodeList.Items)).To(Equal(0))
 		},
 
-		// Test 1: One IPv4 and one IPv6 nodespecs.  One with ASNumber, one without.
+		// Test 1: One IPv4 and one IPv6 nodespecs (+ opposite versioned networks).
+		//         One with ASNumber, one without.
 		Entry("Two fully populated NodeSpecs",
 			api.NodeMetadata{Name: "node1"},
 			api.NodeMetadata{Name: "node2"},
 			api.NodeSpec{
 				BGP: &api.NodeBGPSpec{
-					IPv4Address: &ipv4,
+					IPv4Address: &cidrv4,
 				},
 			},
 			api.NodeSpec{
 				BGP: &api.NodeBGPSpec{
-					IPv6Address: &ipv6,
+					IPv6Address: &cidrv6,
 					ASNumber:    &asn,
 				},
 			}),
 
-		// Test 2: BGP IPv4 and 6, and no BGP.
+		// Test 2: One with BGP IPv4 and 6, and one with no BGP.
 		Entry("Two fully populated NodeSpecs",
 			api.NodeMetadata{Name: "node1"},
 			api.NodeMetadata{Name: "node2"},
 			api.NodeSpec{},
 			api.NodeSpec{
 				BGP: &api.NodeBGPSpec{
-					IPv4Address: &ipv4,
-					IPv6Address: &ipv6,
+					IPv4Address: &cidrv4,
+					IPv6Address: &cidrv6,
 					ASNumber:    &asn,
 				},
 			}),
@@ -234,4 +237,34 @@ var _ = Describe("Node tests", func() {
 		})
 	})
 
+	Describe("Checking delete/get/list operations perform data validation", func() {
+		testutils.CleanEtcd()
+		c, _ := testutils.NewClient("")
+		var err error
+		valErrorType := reflect.TypeOf(cerrors.ErrorValidation{})
+
+		// Step-1: Test data validation occurs on get.
+		It("should invoke validation failure", func() {
+			By("Getting a node with an invalid name")
+			_, err = c.Nodes().Get(api.NodeMetadata{Name: "abc/def"})
+			Expect(err).To(HaveOccurred())
+			Expect(reflect.TypeOf(err)).To(Equal(valErrorType))
+		})
+
+		// Step-2: Test data validation occurs on list.
+		It("should invoke validation failure", func() {
+			By("Listing a node with an invalid name")
+			_, err = c.Nodes().List(api.NodeMetadata{Name: "abc/def"})
+			Expect(err).To(HaveOccurred())
+			Expect(reflect.TypeOf(err)).To(Equal(valErrorType))
+		})
+
+		// Step-3: Test data validation occurs on delete.
+		It("should invoke validation failure", func() {
+			By("Deleting a node with an invalid name")
+			err = c.Nodes().Delete(api.NodeMetadata{Name: "abc/def"})
+			Expect(err).To(HaveOccurred())
+			Expect(reflect.TypeOf(err)).To(Equal(valErrorType))
+		})
+	})
 })

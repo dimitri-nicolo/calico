@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,19 +24,21 @@ import (
 	"encoding/json"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s/thirdparty"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	kapi "k8s.io/client-go/pkg/api"
 	kapiv1 "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
 	"k8s.io/client-go/pkg/util/intstr"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/thirdparty"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	cnet "github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 var (
 	policyAnnotation = "net.beta.kubernetes.io/network-policy"
+	protoTCP         = kapiv1.ProtocolTCP
 )
 
 type namespacePolicy struct {
@@ -192,7 +194,21 @@ func (c converter) globalConfigToTPR(kvp *model.KVPair) thirdparty.GlobalConfig 
 // isCalicoPod returns true if the pod should be shown as a workloadEndpoint
 // in the Calico API and false otherwise.
 func (c converter) isCalicoPod(pod *kapiv1.Pod) bool {
-	return !c.isHostNetworked(pod) && c.hasIPAddress(pod)
+	if c.isHostNetworked(pod) {
+		log.WithField("pod", pod.Name).Debug("Pod is host networked.")
+		return false
+	} else if !c.hasIPAddress(pod) {
+		log.WithField("pod", pod.Name).Debug("Pod does not have an IP address.")
+		return false
+	} else if !c.isScheduled(pod) {
+		log.WithField("pod", pod.Name).Debug("Pod is not scheduled.")
+		return false
+	}
+	return true
+}
+
+func (c converter) isScheduled(pod *kapiv1.Pod) bool {
+	return pod.Spec.NodeName != ""
 }
 
 func (c converter) isHostNetworked(pod *kapiv1.Pod) bool {
@@ -208,16 +224,18 @@ func (c converter) podToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 	profile := fmt.Sprintf("ns.projectcalico.org/%s", pod.ObjectMeta.Namespace)
 	workload := fmt.Sprintf("%s.%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 
-	// If the pod doesn't have an IP address yet, then it hasn't gone through CNI.
-	ipNets := []cnet.IPNet{}
-	if c.hasIPAddress(pod) {
-		// Parse the Pod's IP address.
-		_, ipNet, err := cnet.ParseCIDR(fmt.Sprintf("%s/32", pod.Status.PodIP))
-		if err != nil {
-			return nil, err
-		}
-		ipNets = []cnet.IPNet{*ipNet}
+	// If the pod isn't ready, we can't parse it.
+	if !c.isCalicoPod(pod) {
+		return nil, fmt.Errorf("Pod is not ready / valid. pod=%s", pod.Name)
 	}
+
+	// Parse the Pod's IP address.
+	_, ipNet, err := cnet.ParseCIDR(fmt.Sprintf("%s/32", pod.Status.PodIP))
+	if err != nil {
+		log.WithFields(log.Fields{"ip": pod.Status.PodIP, "pod": pod.Name}).WithError(err).Error("Failed to parse pod IP")
+		return nil, err
+	}
+	ipNets := []cnet.IPNet{*ipNet}
 
 	// Generate the interface name and MAC based on workload.  This must match
 	// the host-side veth configured by the CNI plugin.
@@ -337,6 +355,11 @@ func (c converter) k8sIngressRuleToCalico(r extensions.NetworkPolicyIngressRule,
 		if p.Port != nil {
 			portval := intstr.FromString(p.Port.String())
 			port.Port = &portval
+
+			// TCP is the implicit default (as per the definition of NetworkPolicyPort).
+			// Make the default explicit here because our data-model always requires
+			// the protocol to be specified if we're doing a port match.
+			port.Protocol = &protoTCP
 		}
 		if p.Protocol != nil {
 			protval := kapiv1.Protocol(fmt.Sprintf("%s", *p.Protocol))

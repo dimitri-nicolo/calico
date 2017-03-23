@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,15 +42,17 @@ func init() {
 	ipv4_2 := testutils.MustParseIP("100.200.0.0")
 	ipv6_1 := testutils.MustParseIP("aabb:aabb::ffff")
 	ipv6_2 := testutils.MustParseIP("aabb::abcd")
-	netv4_1 := testutils.MustParseCIDR("1.2.3.4/32")
-	netv4_2 := testutils.MustParseCIDR("1.2.0.0/32")
-	netv4_3 := testutils.MustParseCIDR("1.2.3.0/26")
-	netv4_4 := testutils.MustParseCIDR("1.2.3.4/10")
-	netv4_5 := testutils.MustParseCIDR("1.2.3.4/27")
-	netv6_1 := testutils.MustParseCIDR("aabb:aabb::ffff/128")
-	netv6_2 := testutils.MustParseCIDR("aabb:aabb::/128")
-	netv6_3 := testutils.MustParseCIDR("aabb:aabb::ffff/122")
-	netv6_4 := testutils.MustParseCIDR("aabb:aabb::ffff/10")
+	netv4_1 := testutils.MustParseNetwork("1.2.3.4/32")
+	netv4_2 := testutils.MustParseNetwork("1.2.0.0/32")
+	netv4_3 := testutils.MustParseNetwork("1.2.3.0/26")
+	netv4_4 := testutils.MustParseNetwork("1.2.3.4/10")
+	netv4_5 := testutils.MustParseNetwork("1.2.3.4/27")
+	netv6_1 := testutils.MustParseNetwork("aabb:aabb::ffff/128")
+	netv6_2 := testutils.MustParseNetwork("aabb:aabb::/128")
+	netv6_3 := testutils.MustParseNetwork("aabb:aabb::ffff/122")
+	netv6_4 := testutils.MustParseNetwork("aabb:aabb::ffff/10")
+
+	protoTCP := numorstring.ProtocolFromString("tcp")
 
 	// Perform basic validation of different fields and structures to test simple valid/invalid
 	// scenarios.  This does not test precise error strings - but does cover a lot of the validation
@@ -89,6 +91,24 @@ func init() {
 		Entry("should accept IP version 4 (m)", model.Rule{IPVersion: &V4}, true),
 		Entry("should accept IP version 6 (m)", model.Rule{IPVersion: &V6}, true),
 		Entry("should reject IP version 0 (m)", model.Rule{IPVersion: &V0}, false),
+
+		// (Backend model) Ports.
+		Entry("should accept ports with tcp protocol (m)", model.Rule{
+			Protocol: &protoTCP,
+			SrcPorts: []numorstring.Port{numorstring.SinglePort(80)},
+		}, true),
+		Entry("should reject src ports with no protocol (m)", model.Rule{
+			SrcPorts: []numorstring.Port{numorstring.SinglePort(80)},
+		}, false),
+		Entry("should reject dst ports with no protocol (m)", model.Rule{
+			DstPorts: []numorstring.Port{numorstring.SinglePort(80)},
+		}, false),
+		Entry("should reject !src ports with no protocol (m)", model.Rule{
+			NotSrcPorts: []numorstring.Port{numorstring.SinglePort(80)},
+		}, false),
+		Entry("should reject !dst ports with no protocol (m)", model.Rule{
+			NotDstPorts: []numorstring.Port{numorstring.SinglePort(80)},
+		}, false),
 
 		// (API) IP version.
 		Entry("should accept IP version 4", api.Rule{Action: "allow", IPVersion: &V4}, true),
@@ -263,12 +283,38 @@ func init() {
 			}, false),
 
 		// (API) PoolMetadata
-		Entry("should accept IP pool with IPv4 CIDR /26", api.IPPoolMetadata{CIDR: netv4_3}, true),
-		Entry("should accept IP pool with IPv4 CIDR /10", api.IPPoolMetadata{CIDR: netv4_4}, true),
-		Entry("should accept IP pool with IPv6 CIDR /122", api.IPPoolMetadata{CIDR: netv6_3}, true),
-		Entry("should accept IP pool with IPv6 CIDR /10", api.IPPoolMetadata{CIDR: netv6_4}, true),
-		Entry("should reject IP pool with IPv4 CIDR /27", api.IPPoolMetadata{CIDR: netv4_5}, false),
-		Entry("should reject IP pool with IPv6 CIDR /128", api.IPPoolMetadata{CIDR: netv6_1}, false),
+		Entry("should accept IP pool with IPv4 CIDR /26", api.IPPool{Metadata: api.IPPoolMetadata{CIDR: netv4_3}}, true),
+		Entry("should accept IP pool with IPv4 CIDR /10", api.IPPool{Metadata: api.IPPoolMetadata{CIDR: netv4_4}}, true),
+		Entry("should accept IP pool with IPv6 CIDR /122", api.IPPool{Metadata: api.IPPoolMetadata{CIDR: netv6_3}}, true),
+		Entry("should accept IP pool with IPv6 CIDR /10", api.IPPool{Metadata: api.IPPoolMetadata{CIDR: netv6_4}}, true),
+		Entry("should accept a disabled IP pool with IPv4 CIDR /27",
+			api.IPPool{
+				Metadata: api.IPPoolMetadata{CIDR: netv4_5},
+				Spec:     api.IPPoolSpec{Disabled: true},
+			}, true),
+		Entry("should accept a disabled IP pool with IPv6 CIDR /128",
+			api.IPPool{
+				Metadata: api.IPPoolMetadata{CIDR: netv6_1},
+				Spec:     api.IPPoolSpec{Disabled: true},
+			}, true),
+		Entry("should reject IP pool with IPv4 CIDR /27", api.IPPool{Metadata: api.IPPoolMetadata{CIDR: netv4_5}}, false),
+		Entry("should reject IP pool with IPv6 CIDR /128", api.IPPool{Metadata: api.IPPoolMetadata{CIDR: netv6_1}}, false),
+		Entry("should reject IPIP enabled IP pool for IPv6",
+			api.IPPool{
+				Metadata: api.IPPoolMetadata{CIDR: netv6_3},
+				Spec: api.IPPoolSpec{
+					IPIP: &api.IPIPConfiguration{Enabled: true},
+				},
+			}, false),
+
+		// (API) IPIPConfiguration
+		Entry("should accept IPIP disabled", api.IPIPConfiguration{Enabled: false}, true),
+		Entry("should reject IPIP disabled with mode badVal", api.IPIPConfiguration{Enabled: false, Mode: "badVal"}, false),
+		Entry("should accept IPIP enabled with no mode", api.IPIPConfiguration{Enabled: true}, true),
+		Entry("should reject IPIP enabled with mode off", api.IPIPConfiguration{Enabled: true, Mode: "off"}, false),
+		Entry("should reject IPIP enabled with mode badVal", api.IPIPConfiguration{Enabled: true, Mode: "badVal"}, false),
+		Entry("should accept IPIP enabled with mode always", api.IPIPConfiguration{Enabled: true, Mode: "always"}, true),
+		Entry("should accept IPIP enabled with mode cross-subnet", api.IPIPConfiguration{Enabled: true, Mode: "cross-subnet"}, true),
 
 		// (API) ICMPFields
 		Entry("should accept ICMP with no config", api.ICMPFields{}, true),
@@ -326,6 +372,13 @@ func init() {
 					Ports: []numorstring.Port{numorstring.SinglePort(1)},
 				},
 			}, true),
+		Entry("should reject Rule with dest ports and no protocol",
+			api.Rule{
+				Action: "allow",
+				Destination: api.EntityRule{
+					Ports: []numorstring.Port{numorstring.SinglePort(1)},
+				},
+			}, false),
 		Entry("should reject Rule with invalid port (port 0)",
 			api.Rule{
 				Action:   "allow",
@@ -424,10 +477,12 @@ func init() {
 			}, false),
 
 		// (API) NodeSpec
-		Entry("should accept node with IPv4 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4Address: &ipv4_1}}, true),
-		Entry("should accept node with IPv6 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv6Address: &ipv6_1}}, true),
+		Entry("should accept node with IPv4 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4Address: &netv4_1}}, true),
+		Entry("should accept node with IPv6 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv6Address: &netv6_1}}, true),
 		Entry("should accept node with no BGP", api.NodeSpec{}, true),
 		Entry("should reject node with BGP but no IPs", api.NodeSpec{BGP: &api.NodeBGPSpec{}}, false),
+		Entry("should reject node with IPv6 address in IPv4 field", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4Address: &netv6_1}}, false),
+		Entry("should reject node with IPv4 address in IPv6 field", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv6Address: &netv4_1}}, false),
 	)
 }
 

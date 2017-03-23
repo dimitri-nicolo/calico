@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package validator
 import (
 	"reflect"
 	"regexp"
-
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -28,6 +27,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	"github.com/projectcalico/libcalico-go/lib/selector/tokenizer"
 
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"gopkg.in/go-playground/validator.v8"
 )
 
@@ -41,7 +41,10 @@ var (
 	actionRegex        = regexp.MustCompile("^(allow|deny|log|pass)$")
 	backendActionRegex = regexp.MustCompile("^(allow|deny|log|next-tier|)$")
 	protocolRegex      = regexp.MustCompile("^(tcp|udp|icmp|icmpv6|sctp|udplite)$")
+	ipipModeRegex      = regexp.MustCompile("^(always|cross-subnet|)$")
 	reasonString       = "Reason: "
+	poolSmallIPv4      = "IP pool size is too small (min /26) for use with Calico IPAM"
+	poolSmallIPv6      = "IP pool size is too small (min /122) for use with Calico IPAM"
 )
 
 // Validate is used to validate the supplied structure according to the
@@ -79,6 +82,7 @@ func init() {
 	registerFieldValidator("labels", validateLabels)
 	registerFieldValidator("scopeglobalornode", validateScopeGlobalOrNode)
 	registerFieldValidator("ipversion", validateIPVersion)
+	registerFieldValidator("ipipmode", validateIPIPMode)
 
 	// Register struct validators.
 	registerStructValidator(validateProtocol, numorstring.Protocol{})
@@ -86,9 +90,10 @@ func init() {
 	registerStructValidator(validateIPNAT, api.IPNAT{})
 	registerStructValidator(validateWorkloadEndpointSpec, api.WorkloadEndpointSpec{})
 	registerStructValidator(validateHostEndpointSpec, api.HostEndpointSpec{})
-	registerStructValidator(validatePoolMetadata, api.IPPoolMetadata{})
+	registerStructValidator(validateIPPool, api.IPPool{})
 	registerStructValidator(validateICMPFields, api.ICMPFields{})
 	registerStructValidator(validateRule, api.Rule{})
+	registerStructValidator(validateBackendRule, model.Rule{})
 	registerStructValidator(validateNodeSpec, api.NodeSpec{})
 }
 
@@ -144,6 +149,12 @@ func validateIPVersion(v *validator.Validate, topStruct reflect.Value, currentSt
 	ver := field.Int()
 	log.Debugf("Validate ip version: %d", ver)
 	return ver == 4 || ver == 6
+}
+
+func validateIPIPMode(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate name: %s", s)
+	return ipipModeRegex.MatchString(s)
 }
 
 func validateSelector(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
@@ -240,13 +251,23 @@ func validateWorkloadEndpointSpec(v *validator.Validate, structLevel *validator.
 		}
 	}
 
+	if w.IPv4Gateway != nil && w.IPv4Gateway.Version() != 4 {
+		structLevel.ReportError(reflect.ValueOf(w.IPv4Gateway),
+			"IPv4Gateway", "", reason("invalid IPv4 gateway address specified"))
+	}
+
+	if w.IPv6Gateway != nil && w.IPv6Gateway.Version() != 6 {
+		structLevel.ReportError(reflect.ValueOf(w.IPv6Gateway),
+			"IPv6Gateway", "", reason("invalid IPv6 gateway address specified"))
+	}
+
 	// If NATs have been specified, then they should each be within the configured networks of
 	// the endpoint.
 	if len(w.IPNATs) > 0 {
-		// Check each NAT to ensure it is within the configured networks.  If any
-		// are not then exit without further checks.
 		valid := false
 		for _, nat := range w.IPNATs {
+			// Check each NAT to ensure it is within the configured networks.  If any
+			// are not then exit without further checks.
 			valid = false
 			for _, nw := range w.IPNetworks {
 				if nw.Contains(nat.InternalIP.IP) {
@@ -276,19 +297,37 @@ func validateHostEndpointSpec(v *validator.Validate, structLevel *validator.Stru
 	}
 }
 
-func validatePoolMetadata(v *validator.Validate, structLevel *validator.StructLevel) {
-	pool := structLevel.CurrentStruct.Interface().(api.IPPoolMetadata)
+func validateIPPool(v *validator.Validate, structLevel *validator.StructLevel) {
+	pool := structLevel.CurrentStruct.Interface().(api.IPPool)
 
-	// The Calico IPAM places restrictions on the minimum IP pool size, check that the
-	// pool is at least the minimum size.
-	if pool.CIDR.IP != nil {
-		ones, bits := pool.CIDR.Mask.Size()
-		log.Debugf("Pool CIDR: %s, num bits: %d", pool.CIDR, bits-ones)
-		if bits-ones < 6 {
-			structLevel.ReportError(reflect.ValueOf(pool.CIDR),
-				"CIDR", "", reason("IP pool is too small"))
+	// Validation of the data occurs before checking whether Metadata
+	// fields are complete, so need to check whether CIDR is assigned before
+	// performing cross-checks.  If CIDR is not assigned this will be
+	// picked up during Metadata->Key conversion.
+	if pool.Metadata.CIDR.IP != nil {
+		// IPIP cannot be enabled for IPv6.
+		if pool.Metadata.CIDR.Version() == 6 && pool.Spec.IPIP != nil && pool.Spec.IPIP.Enabled {
+			structLevel.ReportError(reflect.ValueOf(pool.Spec.IPIP.Enabled),
+				"IPIP.Enabled", "", reason("IPIP is not supported on an IPv6 IP pool"))
+		}
+
+		// The Calico IPAM places restrictions on the minimum IP pool size.  If
+		// the pool is enabled, check that the pool is at least the minimum size.
+		if !pool.Spec.Disabled {
+			ones, bits := pool.Metadata.CIDR.Mask.Size()
+			log.Debugf("Pool CIDR: %s, num bits: %d", pool.Metadata.CIDR, bits-ones)
+			if bits-ones < 6 {
+				if pool.Metadata.CIDR.Version() == 4 {
+					structLevel.ReportError(reflect.ValueOf(pool.Metadata.CIDR),
+						"CIDR", "", reason(poolSmallIPv4))
+				} else {
+					structLevel.ReportError(reflect.ValueOf(pool.Metadata.CIDR),
+						"CIDR", "", reason(poolSmallIPv6))
+				}
+			}
 		}
 	}
+
 }
 
 func validateICMPFields(v *validator.Validate, structLevel *validator.StructLevel) {
@@ -327,11 +366,49 @@ func validateRule(v *validator.Validate, structLevel *validator.StructLevel) {
 	}
 }
 
+func validateBackendRule(v *validator.Validate, structLevel *validator.StructLevel) {
+	rule := structLevel.CurrentStruct.Interface().(model.Rule)
+
+	// If the protocol is neither tcp (6) nor udp (17) check that the port values have not
+	// been specified.
+	if rule.Protocol == nil || !rule.Protocol.SupportsPorts() {
+		if len(rule.SrcPorts) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.SrcPorts),
+				"SrcPorts", "", reason("protocol does not support ports"))
+		}
+		if len(rule.NotSrcPorts) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.NotSrcPorts),
+				"NotSrcPorts", "", reason("protocol does not support ports"))
+		}
+
+		if len(rule.DstPorts) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.DstPorts),
+				"DstPorts", "", reason("protocol does not support ports"))
+		}
+		if len(rule.NotDstPorts) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.NotDstPorts),
+				"NotDstPorts", "", reason("protocol does not support ports"))
+		}
+	}
+}
+
 func validateNodeSpec(v *validator.Validate, structLevel *validator.StructLevel) {
 	ns := structLevel.CurrentStruct.Interface().(api.NodeSpec)
 
-	if ns.BGP != nil && ns.BGP.IPv4Address == nil && ns.BGP.IPv6Address == nil {
-		structLevel.ReportError(reflect.ValueOf(ns.BGP.IPv4Address),
-			"BGP.IPv4Address", "", reason("no BGP IP address specified"))
+	if ns.BGP != nil {
+		if ns.BGP.IPv4Address == nil && ns.BGP.IPv6Address == nil {
+			structLevel.ReportError(reflect.ValueOf(ns.BGP.IPv4Address),
+				"BGP.IPv4Address", "", reason("no BGP IP address and subnet specified"))
+		}
+
+		if ns.BGP.IPv4Address != nil && ns.BGP.IPv4Address.Version() != 4 {
+			structLevel.ReportError(reflect.ValueOf(ns.BGP.IPv4Address),
+				"BGP.IPv4Address", "", reason("invalid IPv4 address and subnet specified"))
+		}
+
+		if ns.BGP.IPv6Address != nil && ns.BGP.IPv6Address.Version() != 6 {
+			structLevel.ReportError(reflect.ValueOf(ns.BGP.IPv6Address),
+				"BGP.IPv6Address", "", reason("invalid IPv6 address and subnet specified"))
+		}
 	}
 }
