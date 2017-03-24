@@ -17,11 +17,13 @@ package rules
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
+
 	"github.com/projectcalico/felix/hashutils"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
-	"strings"
 )
 
 // ruleRenderer defined in rules_defs.go.
@@ -41,11 +43,11 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 
 func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
 	inbound := iptables.Chain{
-		Name:  ProfileChainName(PolicyInboundPfx, profileID),
+		Name:  ProfileChainName(ProfileInboundPfx, profileID),
 		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, true, profileID.Name),
 	}
 	outbound := iptables.Chain{
-		Name:  ProfileChainName(PolicyOutboundPfx, profileID),
+		Name:  ProfileChainName(ProfileOutboundPfx, profileID),
 		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, false, profileID.Name),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
@@ -150,7 +152,7 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		// This rule should log (and possibly do something else too).
 		logPrefix := pRule.LogPrefix
 		if logPrefix == "" {
-			logPrefix = "calico-packet"
+			logPrefix = "calico-drop"
 		}
 		actions = append(actions, iptables.LogAction{
 			Prefix: logPrefix,
@@ -167,10 +169,10 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 			Prefix: "A/" + prefix,
 		})
 		actions = append(actions, iptables.ReturnAction{})
-	case "next-tier":
-		// Next tier needs to set the next-tier mark, and then return to the calling chain
-		// for further processing.
-		mark = r.IptablesMarkNextTier
+	case "next-tier", "pass":
+		// pass (called next-tier in the API for historical reasons) needs to set the pass
+		// mark, and then return to the calling chain for further processing.
+		mark = r.IptablesMarkPass
 		actions = append(actions, iptables.NflogAction{
 			Group:  nflogGroup,
 			Prefix: "N/" + prefix,
@@ -184,6 +186,8 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 			Prefix: "D/" + prefix,
 		})
 		actions = append(actions, r.DropActions()...)
+		//mark = r.IptablesMarkPass
+		//actions = append(actions, iptables.ReturnAction{})
 	case "log":
 		// Handled above.
 	default:
@@ -427,17 +431,17 @@ func (r *DefaultRuleRenderer) CalculateRuleMatch(pRule *proto.Rule, ipVersion ui
 	return match, nil
 }
 
-func PolicyChainName(prefix string, polID *proto.PolicyID) string {
+func PolicyChainName(prefix PolicyChainNamePrefix, polID *proto.PolicyID) string {
 	return hashutils.GetLengthLimitedID(
-		prefix,
+		string(prefix),
 		polID.Tier+"/"+polID.Name,
 		iptables.MaxChainNameLength,
 	)
 }
 
-func ProfileChainName(prefix string, profID *proto.ProfileID) string {
+func ProfileChainName(prefix ProfileChainNamePrefix, profID *proto.ProfileID) string {
 	return hashutils.GetLengthLimitedID(
-		prefix,
+		string(prefix),
 		profID.Name,
 		iptables.MaxChainNameLength,
 	)

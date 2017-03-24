@@ -17,10 +17,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/libcalico-go/lib/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/etcd"
-	"github.com/projectcalico/libcalico-go/lib/client"
 	"net"
 	"os"
 	"reflect"
@@ -28,6 +24,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/etcd"
+	"github.com/projectcalico/libcalico-go/lib/client"
 )
 
 var (
@@ -104,11 +106,7 @@ type Config struct {
 	Ipv6Support    bool `config:"bool;true"`
 	IgnoreLooseRPF bool `config:"bool;false"`
 
-	StartupCleanupDelay       int `config:"int;30"`
-	PeriodicResyncInterval    int `config:"int;3600"`
-	HostInterfacePollInterval int `config:"int;10"`
-
-	IptablesRefreshInterval int `config:"int;60"`
+	IptablesRefreshInterval int `config:"int;10"`
 
 	MetadataAddr string `config:"hostname;127.0.0.1;die-on-fail"`
 	MetadataPort int    `config:"int(0,65535);8775;die-on-fail"`
@@ -120,8 +118,7 @@ type Config struct {
 	DropActionOverride          string `config:"oneof(DROP,ACCEPT,LOG-and-DROP,LOG-and-ACCEPT);DROP;non-zero,die-on-fail"`
 	LogPrefix                   string `config:"string;calico-drop"`
 
-	LogFilePath           string `config:"file;/var/log/calico/felix.log;die-on-fail"`
-	EtcdDriverLogFilePath string `config:"file;/var/log/calico/felix-etcd.log"`
+	LogFilePath string `config:"file;/var/log/calico/felix.log;die-on-fail"`
 
 	LogSeverityFile   string `config:"oneof(DEBUG,INFO,WARNING,ERROR,CRITICAL);INFO"`
 	LogSeverityScreen string `config:"oneof(DEBUG,INFO,WARNING,ERROR,CRITICAL);INFO"`
@@ -141,14 +138,13 @@ type Config struct {
 
 	IptablesMarkMask uint32 `config:"mark-bitmask;0xff000000;non-zero,die-on-fail"`
 
-	PrometheusMetricsEnabled             bool `config:"bool;false"`
-	PrometheusMetricsPort                int  `config:"int(0,65535);9091"`
-	DataplaneDriverPrometheusMetricsPort int  `config:"int(0,65535);9092"`
+	PrometheusMetricsEnabled bool `config:"bool;false"`
+	PrometheusMetricsPort    int  `config:"int(0,65535);9091"`
 
 	FailsafeInboundHostPorts  []uint16 `config:"port-list;22;die-on-fail"`
 	FailsafeOutboundHostPorts []uint16 `config:"port-list;2379,2380,4001,7001;die-on-fail"`
 
-	NfNetlinkBufSize int  `config:"int;65536"`
+	NfNetlinkBufSize int `config:"int;65536"`
 
 	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
@@ -175,6 +171,14 @@ func (config *Config) UpdateFrom(rawData map[string]string, source Source) (chan
 	// a mutable map by mistake.
 	rawDataCopy := make(map[string]string)
 	for k, v := range rawData {
+		if v == "" {
+			log.WithFields(log.Fields{
+				"name":   k,
+				"source": source,
+			}).Info("Ignoring empty configuration parameter. Use value 'none' if " +
+				"your intention is to explicitly disable the default value.")
+			continue
+		}
 		rawDataCopy[k] = v
 	}
 	config.sourceToRawConfig[source] = rawDataCopy
@@ -266,6 +270,10 @@ func (config *Config) resolve() (changed bool, err error) {
 				name, rawValue, source)
 			var value interface{}
 			if strings.ToLower(rawValue) == "none" {
+				// Special case: we allow a value of "none" to force the value to
+				// the zero value for a field.  The zero value often differs from
+				// the default value.  Typically, the zero value means "turn off
+				// the feature".
 				if metadata.NonZero {
 					err = errors.New("Non-zero field cannot be set to none")
 					log.Errorf(

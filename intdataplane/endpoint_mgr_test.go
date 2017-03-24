@@ -16,9 +16,12 @@ package intdataplane
 
 import (
 	"errors"
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
@@ -27,7 +30,6 @@ import (
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/set"
 	"github.com/projectcalico/felix/testutils"
-	"strings"
 )
 
 var wlDispatchEmpty = []*iptables.Chain{
@@ -77,6 +79,11 @@ func wlChainsForIfaces(ifaceTierNames []string) []*iptables.Chain {
 }
 
 func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.Chain {
+	log.WithFields(log.Fields{
+		"ifaces": ifaceTierNames,
+		"host":   host,
+		"raw":    raw,
+	}).Debug("Calculating chains for interface")
 	chains := []*iptables.Chain{}
 	dispatchOut := []iptables.Rule{}
 	dispatchIn := []iptables.Rule{}
@@ -91,14 +98,20 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 		nameParts := strings.Split(ifaceTierName, "_")
 		var untracked bool
 		if len(nameParts) == 1 {
+			// Just an interface name "eth0", apply no tweaks.
+			log.Debug("Interface name only")
 			ifaceName = nameParts[0]
 			tierName = ""
 			untracked = false
 		} else if len(nameParts) == 2 {
+			// Interface name and a policy name  "eth0_tierA".
+			log.Debug("Interface name and tier name")
 			ifaceName = nameParts[0]
 			tierName = nameParts[1]
 			untracked = false
 		} else {
+			// Interface name, policy name and untracked "eth0_tierA_untracked".
+			log.Debug("Interface name tier name and untracked")
 			ifaceName = nameParts[0]
 			tierName = nameParts[1]
 			untracked = true
@@ -125,11 +138,10 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 				Action:  iptables.ClearMarkAction{Mark: 16},
 				Comment: "Start of tier " + tierName,
 			})
-			if raw {
-				// For untracked policy, we expect a tier with a policy in it.
+			if untracked {
 				outRules = append(outRules, iptables.Rule{
 					Match:  iptables.Match().MarkClear(16),
-					Action: iptables.JumpAction{Target: "calipo-" + tierName + "/a"},
+					Action: iptables.JumpAction{Target: "cali-po-" + tierName + "/a"},
 				})
 				outRules = append(outRules, iptables.Rule{
 					Match:  iptables.Match().MarkSet(8),
@@ -140,7 +152,8 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 					Action:  iptables.ReturnAction{},
 					Comment: "Return if policy accepted",
 				})
-			} else {
+			}
+			if !raw {
 				// Only end with a drop rule in the filter chain.  In the raw chain,
 				// we consider the policy as unfinished, because some of the
 				// policy may live in the filter chain.
@@ -191,11 +204,11 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 				Action:  iptables.ClearMarkAction{Mark: 16},
 				Comment: "Start of tier " + tierName,
 			})
-			if raw {
+			if untracked {
 				// For untracked policy, we expect a tier with a policy in it.
 				inRules = append(inRules, iptables.Rule{
 					Match:  iptables.Match().MarkClear(16),
-					Action: iptables.JumpAction{Target: "calipi-" + tierName + "/a"},
+					Action: iptables.JumpAction{Target: "cali-pi-" + tierName + "/a"},
 				})
 				inRules = append(inRules, iptables.Rule{
 					Match:  iptables.Match().MarkSet(8),
@@ -206,7 +219,8 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 					Action:  iptables.ReturnAction{},
 					Comment: "Return if policy accepted",
 				})
-			} else {
+			}
+			if !untracked {
 				// Only end with a drop rule in the filter chain.  In the raw chain,
 				// we consider the policy as unfinished, because some of the
 				// policy may live in the filter chain.
@@ -240,24 +254,24 @@ func chainsForIfaces(ifaceTierNames []string, host bool, raw bool) []*iptables.C
 		}
 		chains = append(chains,
 			&iptables.Chain{
-				Name:  "calit" + hostOrWlLetter + "-" + ifaceName,
+				Name:  "cali-t" + hostOrWlLetter + "-" + ifaceName,
 				Rules: outRules,
 			},
 			&iptables.Chain{
-				Name:  "calif" + hostOrWlLetter + "-" + ifaceName,
+				Name:  "cali-f" + hostOrWlLetter + "-" + ifaceName,
 				Rules: inRules,
 			},
 		)
 		dispatchOut = append(dispatchOut,
 			iptables.Rule{
 				Match:  iptables.Match().OutInterface(ifaceName),
-				Action: iptables.GotoAction{Target: "calit" + hostOrWlLetter + "-" + ifaceName},
+				Action: iptables.GotoAction{Target: "cali-t" + hostOrWlLetter + "-" + ifaceName},
 			},
 		)
 		dispatchIn = append(dispatchIn,
 			iptables.Rule{
 				Match:  iptables.Match().InInterface(ifaceName),
-				Action: iptables.GotoAction{Target: "calif" + hostOrWlLetter + "-" + ifaceName},
+				Action: iptables.GotoAction{Target: "cali-f" + hostOrWlLetter + "-" + ifaceName},
 			},
 		)
 	}
@@ -353,13 +367,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 		BeforeEach(func() {
 			rrConfigNormal = rules.Config{
-				IPIPEnabled:          true,
-				IPIPTunnelAddress:    nil,
-				IPSetConfigV4:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				IptablesMarkAccept:   0x8,
-				IptablesMarkNextTier: 0x10,
-				IptablesMarkDrop:     0x0a,
+				IPIPEnabled:        true,
+				IPIPTunnelAddress:  nil,
+				IPSetConfigV4:      ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:      ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				IptablesMarkAccept: 0x8,
+				IptablesMarkPass:   0x10,
+				IptablesMarkDrop:   0x0a,
 			}
 			eth0Addrs = set.New()
 			eth0Addrs.Add(ipv4)
@@ -409,7 +423,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 						Policies: []string{"a"},
 					})
 				} else {
-					panic("Failed to parse tier name " + spec.tierName)
+					panic("Failed to parse policy name " + spec.tierName)
 				}
 			}
 			return func() {
@@ -961,7 +975,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 							epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 								Id: &wlEPID1,
 								Endpoint: &proto.WorkloadEndpoint{
-									State:      "up",
+									State:      "active",
 									Mac:        "01:02:03:04:05:06",
 									Name:       "cali12345-ab",
 									ProfileIds: []string{},
@@ -1086,6 +1100,54 @@ func endpointManagerTests(ipVersion uint8) func() {
 							}
 						})
 					})
+				})
+			})
+
+			Context("with an inactiveworkload endpoint", func() {
+				wlEPID1 := proto.WorkloadEndpointID{
+					OrchestratorId: "k8s",
+					WorkloadId:     "pod-11",
+					EndpointId:     "endpoint-id-11",
+				}
+				JustBeforeEach(func() {
+					epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
+						Id: &wlEPID1,
+						Endpoint: &proto.WorkloadEndpoint{
+							State:      "inactive",
+							Mac:        "01:02:03:04:05:06",
+							Name:       "cali12345-ab",
+							ProfileIds: []string{},
+							Tiers:      []*proto.TierInfo{},
+							Ipv4Nets:   []string{"10.0.240.2/24"},
+							Ipv6Nets:   []string{"2001:db8:2::2/128"},
+						},
+					})
+					epMgr.CompleteDeferredWork()
+				})
+
+				It("should have expected chains", func() {
+					Expect(filterTable.currentChains["cali-tw-cali12345-ab"]).To(Equal(
+						&iptables.Chain{
+							Name: "cali-tw-cali12345-ab",
+							Rules: []iptables.Rule{{
+								Action:  iptables.DropAction{},
+								Comment: "Endpoint admin disabled",
+							}},
+						},
+					))
+					Expect(filterTable.currentChains["cali-fw-cali12345-ab"]).To(Equal(
+						&iptables.Chain{
+							Name: "cali-fw-cali12345-ab",
+							Rules: []iptables.Rule{{
+								Action:  iptables.DropAction{},
+								Comment: "Endpoint admin disabled",
+							}},
+						},
+					))
+				})
+
+				It("should remove routes", func() {
+					routeTable.checkRoutes("cali12345-ab", nil)
 				})
 			})
 		})

@@ -18,15 +18,17 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/projectcalico/felix/iptables"
-	"github.com/projectcalico/felix/set"
 	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	. "github.com/projectcalico/felix/iptables"
+	"github.com/projectcalico/felix/set"
 )
 
 // This file contains shared test infrastructure for testing the iptables package.
@@ -53,12 +55,19 @@ type mockDataplane struct {
 	ChainMods       set.Set
 	DeletedChains   set.Set
 	Cmds            []CmdIface
+	CmdNames        []string
 	FailNextRestore bool
 	FailAllRestores bool
 	OnPreRestore    func()
 	FailNextSave    bool
 	FailAllSaves    bool
 	CumulativeSleep time.Duration
+	Time            time.Time
+}
+
+func (d *mockDataplane) ResetCmds() {
+	d.Cmds = nil
+	d.CmdNames = nil
 }
 
 func (d *mockDataplane) newCmd(name string, arg ...string) CmdIface {
@@ -72,6 +81,7 @@ func (d *mockDataplane) newCmd(name string, arg ...string) CmdIface {
 	}).Info("Simulating new command.")
 
 	var cmd CmdIface
+	d.CmdNames = append(d.CmdNames, name)
 
 	switch name {
 	case "iptables-restore", "ip6tables-restore":
@@ -95,6 +105,15 @@ func (d *mockDataplane) newCmd(name string, arg ...string) CmdIface {
 
 func (d *mockDataplane) sleep(duration time.Duration) {
 	d.CumulativeSleep += duration
+	d.Time = d.Time.Add(duration)
+}
+
+func (d *mockDataplane) now() time.Time {
+	return d.Time
+}
+
+func (d *mockDataplane) AdvanceTimeBy(amount time.Duration) {
+	d.Time = d.Time.Add(amount)
 }
 
 func (d *mockDataplane) ChainFlushed(chainName string) bool {
