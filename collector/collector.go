@@ -118,7 +118,6 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		// The entry does not exist. Go ahead and create one.
 		data = stats.NewData(
 			update.Tuple,
-			update.WlEpKey,
 			update.InPackets,
 			update.InBytes,
 			update.OutPackets,

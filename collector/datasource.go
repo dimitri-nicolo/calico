@@ -116,7 +116,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	if wlEpKey != nil {
 		tp := lookupRule(ds.lum, nPkt.Prefix, wlEpKey)
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
-		statUpdate = stats.NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, ds.direction, tp)
+		statUpdate = stats.NewStatUpdate(tuple, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, ds.direction, tp)
 	} else {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
@@ -216,19 +216,23 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	}
 	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
 	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
-	if wlEpKeySrc != nil {
-		// Locally originating packet
-		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
-		su := stats.NewStatUpdate(tuple, *wlEpKeySrc,
-			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
-			stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
-		statUpdates = append(statUpdates, *su)
+	if wlEpKeySrc == nil && wlEpKeyDst == nil {
+		// We always expect unknown entries for conntrack for things such as
+		// management or local traffic. This log can get spammy if we log everything
+		// because of which we don't return an error and log at debug level.
+		log.Debugf("No known endpoints found for %v", ctEntry)
+		return nil, nil
 	}
-	if wlEpKeyDst != nil {
-		// Locally terminating packet
+	tuple := extractTupleFromCtEntryTuple(ctTuple, false)
+	su := stats.NewStatUpdate(tuple,
+		ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
+		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
+		stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
+	statUpdates = append(statUpdates, *su)
+	if wlEpKeySrc != nil && wlEpKeyDst != nil {
+		// Locally to local packet will require a reversed tuple to collect reply stats.
 		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
-		su := stats.NewStatUpdate(tuple, *wlEpKeyDst,
+		su := stats.NewStatUpdate(tuple,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
@@ -308,6 +312,7 @@ func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) s
 		Rule:     rule,
 		Action:   action,
 		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
+		WlEpKey:  *epKey,
 	}
 }
 

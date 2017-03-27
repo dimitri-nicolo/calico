@@ -13,12 +13,25 @@ import (
 )
 
 var (
+	wlEpKey1 = model.WorkloadEndpointKey{
+		Hostname:       "MyHost",
+		OrchestratorID: "ASDF",
+		WorkloadID:     "workload1",
+		EndpointID:     "endpoint1",
+	}
+	wlEpKey2 = model.WorkloadEndpointKey{
+		Hostname:       "MyHost",
+		OrchestratorID: "ASDF",
+		WorkloadID:     "workload2",
+		EndpointID:     "endpoint2",
+	}
 	allowTp0 = RuleTracePoint{
 		TierID:   "T1",
 		PolicyID: "P1",
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    0,
+		WlEpKey:  wlEpKey1,
 	}
 	denyTp0 = RuleTracePoint{
 		TierID:   "T1",
@@ -26,6 +39,7 @@ var (
 		Rule:     "R2",
 		Action:   DenyAction,
 		Index:    0,
+		WlEpKey:  wlEpKey1,
 	}
 	allowTp1 = RuleTracePoint{
 		TierID:   "T1",
@@ -33,6 +47,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    1,
+		WlEpKey:  wlEpKey1,
 	}
 	denyTp1 = RuleTracePoint{
 		TierID:   "T1",
@@ -40,6 +55,7 @@ var (
 		Rule:     "R2",
 		Action:   DenyAction,
 		Index:    1,
+		WlEpKey:  wlEpKey1,
 	}
 	allowTp2 = RuleTracePoint{
 		TierID:   "T2",
@@ -47,6 +63,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    2,
+		WlEpKey:  wlEpKey1,
 	}
 	denyTp2 = RuleTracePoint{
 		TierID:   "T2",
@@ -54,6 +71,7 @@ var (
 		Rule:     "R2",
 		Action:   DenyAction,
 		Index:    2,
+		WlEpKey:  wlEpKey1,
 	}
 	nextTierTp0 = RuleTracePoint{
 		TierID:   "T1",
@@ -61,6 +79,7 @@ var (
 		Rule:     "R3",
 		Action:   NextTierAction,
 		Index:    0,
+		WlEpKey:  wlEpKey1,
 	}
 	nextTierTp1 = RuleTracePoint{
 		TierID:   "T2",
@@ -68,6 +87,7 @@ var (
 		Rule:     "R4",
 		Action:   NextTierAction,
 		Index:    1,
+		WlEpKey:  wlEpKey1,
 	}
 	allowTp11 = RuleTracePoint{
 		TierID:   "T1",
@@ -75,6 +95,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    11,
+		WlEpKey:  wlEpKey1,
 	}
 	denyTp11 = RuleTracePoint{
 		TierID:   "T1",
@@ -82,6 +103,7 @@ var (
 		Rule:     "R1",
 		Action:   DenyAction,
 		Index:    11,
+		WlEpKey:  wlEpKey1,
 	}
 	allowTp21 = RuleTracePoint{
 		TierID:   "T1",
@@ -89,6 +111,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    21,
+		WlEpKey:  wlEpKey1,
 	}
 	denyTp21 = RuleTracePoint{
 		TierID:   "T1",
@@ -96,23 +119,17 @@ var (
 		Rule:     "R1",
 		Action:   DenyAction,
 		Index:    21,
-	}
-	wlEpKey = model.WorkloadEndpointKey{
-		Hostname:       "MyHost",
-		OrchestratorID: "ASDF",
-		WorkloadID:     "workload",
-		EndpointID:     "endpoint",
+		WlEpKey:  wlEpKey1,
 	}
 )
 
 var _ = Describe("Rule Trace", func() {
 	var data *Data
 	var tuple *Tuple
-	var wlEpKey model.WorkloadEndpointKey
 
 	BeforeEach(func() {
 		tuple = NewTuple(net.IP("127.0.0,1"), net.IP("127.0.0.1"), 6, 12345, 80)
-		data = NewData(*tuple, wlEpKey, 0, 0, 0, 0, time.Duration(10)*time.Second)
+		data = NewData(*tuple, 0, 0, 0, 0, time.Duration(10)*time.Second)
 	})
 
 	Describe("Data with no ingress or egress rule trace ", func() {

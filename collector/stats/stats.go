@@ -47,13 +47,15 @@ var (
 
 // A RuleTracePoint represents a rule and the tier and a policy that contains
 // it. The `Index` specifies the absolute position of a RuleTracePoint in the
-// RuleTrace list.
+// RuleTrace list. The `WlEpKey` contains the corresponding workload endpoint
+// that the policy applied to.
 type RuleTracePoint struct {
 	TierID   string
 	PolicyID string
 	Rule     string
 	Action   RuleAction
 	Index    int
+	WlEpKey  model.WorkloadEndpointKey
 }
 
 func (rtp RuleTracePoint) String() string {
@@ -64,10 +66,12 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 
 // Represents the list of rules (i.e, a Trace) that a packet hits. The action
 // of a RuleTrace object is the final RuleTracePoint action that is not a
-// next-tier action.
+// next-tier action. A RuleTrace also contains a workload endpoint, which
+// identifies the corresponding endpoint that the rule trace applied to.
 type RuleTrace struct {
-	path   []RuleTracePoint
-	action RuleAction
+	path    []RuleTracePoint
+	action  RuleAction
+	wlEpKey model.WorkloadEndpointKey
 }
 
 func NewRuleTrace() *RuleTrace {
@@ -84,7 +88,8 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
 	}
-	return fmt.Sprintf("path=[%v], action=%v", strings.Join(rtParts, ", "), t.action)
+	return fmt.Sprintf("path=[%v], action=%v workloadEndpoint={workload=%v endpoint=%v}",
+		strings.Join(rtParts, ", "), t.action, t.wlEpKey.WorkloadID, t.wlEpKey.EndpointID)
 }
 
 func (t *RuleTrace) Len() int {
@@ -129,6 +134,7 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
 	}
+	t.wlEpKey = tp.WlEpKey
 	return nil
 }
 
@@ -144,6 +150,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
 	t.action = tp.Action
+	t.wlEpKey = tp.WlEpKey
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection. This is
@@ -171,7 +178,10 @@ func (t *Tuple) String() string {
 }
 
 // A Data object contains metadata and statistics such as rule counters and
-// age of a connection represented as a Tuple.
+// age of a connection represented as a Tuple. Each Data object also contains
+// 2 RuleTrace's - Ingress and Egress - each providing information on the where
+// the policy was applied, with additional information on corresponding workload
+// endpoint.
 // Age Timer Implementation Note: Each Data entry's age is implemented using
 // time.Timer. Any actions that modifiy statistics or metadata of a Data entry
 // object will extend the life timer of the object. Each method of Data will
@@ -180,7 +190,6 @@ func (t *Tuple) String() string {
 // on the object for specified duration.
 type Data struct {
 	Tuple            Tuple
-	WlEpKey          model.WorkloadEndpointKey
 	ctrIn            Counter
 	ctrOut           Counter
 	IngressRuleTrace *RuleTrace
@@ -193,7 +202,6 @@ type Data struct {
 }
 
 func NewData(tuple Tuple,
-	wlEpKey model.WorkloadEndpointKey,
 	inPackets int,
 	inBytes int,
 	outPackets int,
@@ -201,7 +209,6 @@ func NewData(tuple Tuple,
 	duration time.Duration) *Data {
 	return &Data{
 		Tuple:            tuple,
-		WlEpKey:          wlEpKey,
 		ctrIn:            Counter{packets: inPackets, bytes: inBytes},
 		ctrOut:           Counter{packets: outPackets, bytes: outBytes},
 		IngressRuleTrace: NewRuleTrace(),
@@ -215,8 +222,8 @@ func NewData(tuple Tuple,
 }
 
 func (d *Data) String() string {
-	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v} workloadId=%v endpointId=%v",
-		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace, d.WlEpKey.WorkloadID, d.WlEpKey.EndpointID)
+	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
+		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
 }
 
 func (d *Data) touch() {
@@ -352,7 +359,6 @@ const (
 // either "Add" or "Update" operations.
 type StatUpdate struct {
 	Tuple      Tuple
-	WlEpKey    model.WorkloadEndpointKey
 	InPackets  int
 	InBytes    int
 	OutPackets int
@@ -363,7 +369,6 @@ type StatUpdate struct {
 }
 
 func NewStatUpdate(tuple Tuple,
-	wlEpKey model.WorkloadEndpointKey,
 	inPackets int,
 	inBytes int,
 	outPackets int,
@@ -373,7 +378,6 @@ func NewStatUpdate(tuple Tuple,
 	tp RuleTracePoint) *StatUpdate {
 	return &StatUpdate{
 		Tuple:      tuple,
-		WlEpKey:    wlEpKey,
 		InPackets:  inPackets,
 		InBytes:    inBytes,
 		OutPackets: outPackets,
