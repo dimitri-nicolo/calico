@@ -355,7 +355,7 @@ var _ = Describe("NFLOG Datasource", func() {
 		Describe("Test local destination", func() {
 			It("should receive a single stat update with allow rule tracepoint", func() {
 				t := stats.NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-				su := stats.NewStatUpdate(*t, 0, 0, 0, 0,
+				su := stats.NewStatUpdate(*t, 1, 100, 0, 0,
 					stats.DeltaCounter, stats.DirIn, defTierAllowTp)
 				dataFeeder <- inPkt
 				Eventually(sink).Should(Receive(Equal(*su)))

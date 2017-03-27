@@ -85,14 +85,15 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	var wlEpKey *model.WorkloadEndpointKey
 	var prefixAction stats.RuleAction
 	_, _, _, prefixAction = parsePrefix(nPkt.Prefix)
-	if prefixAction == stats.DenyAction {
-		// NFLog based counters make sense only for denied packets.
+	if prefixAction == stats.DenyAction || prefixAction == stats.AllowAction {
+		// NFLog based counters make sense only for denied packets or allowed packets
+		// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
+		// counters will overwrite these values anyway.
 		numPkts = 1
 		numBytes = nPkt.Bytes
 	} else {
 		// Allowed packet counters are updated via conntrack datasource.
 		// Don't update packet counts for NextTierAction to avoid multiply counting.
-		// FIXME(doublek): This assumption is not true in the case of NOTRACK.
 		numPkts = 0
 		numBytes = 0
 	}
