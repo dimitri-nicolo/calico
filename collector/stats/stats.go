@@ -190,8 +190,8 @@ func (t *Tuple) String() string {
 // on the object for specified duration.
 type Data struct {
 	Tuple            Tuple
-	ctrIn            Counter
-	ctrOut           Counter
+	ctr              Counter
+	ctrReverse       Counter
 	IngressRuleTrace *RuleTrace
 	EgressRuleTrace  *RuleTrace
 	createdAt        time.Time
@@ -202,15 +202,15 @@ type Data struct {
 }
 
 func NewData(tuple Tuple,
-	inPackets int,
-	inBytes int,
-	outPackets int,
-	outBytes int,
+	packets int,
+	bytes int,
+	reversePackets int,
+	reverseBytes int,
 	duration time.Duration) *Data {
 	return &Data{
 		Tuple:            tuple,
-		ctrIn:            Counter{packets: inPackets, bytes: inBytes},
-		ctrOut:           Counter{packets: outPackets, bytes: outBytes},
+		ctr:              Counter{packets: packets, bytes: bytes},
+		ctrReverse:       Counter{packets: reversePackets, bytes: reverseBytes},
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        time.Now(),
@@ -222,8 +222,8 @@ func NewData(tuple Tuple,
 }
 
 func (d *Data) String() string {
-	return fmt.Sprintf("tuple={%v}, counterIn={%v}, countersOut={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
-		&(d.Tuple), d.ctrIn, d.ctrOut, d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
+	return fmt.Sprintf("tuple={%v}, counters={%v}, countersReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
+		&(d.Tuple), d.ctr, d.ctrReverse, d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
 }
 
 func (d *Data) touch() {
@@ -266,59 +266,59 @@ func (d *Data) EgressAction() RuleAction {
 	return d.EgressRuleTrace.action
 }
 
-func (d *Data) CountersIn() Counter {
-	return d.ctrIn
+func (d *Data) Counters() Counter {
+	return d.ctr
 }
 
-func (d *Data) CountersOut() Counter {
-	return d.ctrOut
+func (d *Data) CountersReverse() Counter {
+	return d.ctrReverse
 }
 
-func (d *Data) setCountersIn(packets int, bytes int) {
-	if packets != d.ctrIn.packets && bytes != d.ctrIn.bytes {
+func (d *Data) setCounters(packets int, bytes int) {
+	if packets != d.ctr.packets && bytes != d.ctr.bytes {
 		d.setDirtyFlag()
 	}
-	d.ctrIn.packets = packets
-	d.ctrIn.bytes = bytes
+	d.ctr.packets = packets
+	d.ctr.bytes = bytes
 	d.touch()
 }
 
-func (d *Data) setCountersOut(packets int, bytes int) {
-	if packets != d.ctrOut.packets && bytes != d.ctrOut.bytes {
+func (d *Data) setCountersReverse(packets int, bytes int) {
+	if packets != d.ctrReverse.packets && bytes != d.ctrReverse.bytes {
 		d.setDirtyFlag()
 	}
-	d.ctrOut.packets = packets
-	d.ctrOut.bytes = bytes
+	d.ctrReverse.packets = packets
+	d.ctrReverse.bytes = bytes
 	d.touch()
 }
 
-// Add packets and bytes to the In Counters' values. Use the IncreaseCounters*
+// Add packets and bytes to the Counters' values. Use the IncreaseCounters*
 // methods when the source of packets/bytes are delta values.
-func (d *Data) IncreaseCountersIn(packets int, bytes int) {
-	d.setCountersIn(d.ctrIn.packets+packets, d.ctrIn.bytes+bytes)
+func (d *Data) IncreaseCounters(packets int, bytes int) {
+	d.setCounters(d.ctr.packets+packets, d.ctr.bytes+bytes)
 }
 
-// Add packets and bytes to the Out Counters' values. Use the IncreaseCounters*
+// Add packets and bytes to the Reverse Counters' values. Use the IncreaseCounters*
 // methods when the source of packets/bytes are delta values.
-func (d *Data) IncreaseCountersOut(packets int, bytes int) {
-	d.setCountersOut(d.ctrOut.packets+packets, d.ctrOut.bytes+bytes)
+func (d *Data) IncreaseCountersReverse(packets int, bytes int) {
+	d.setCountersReverse(d.ctrReverse.packets+packets, d.ctrReverse.bytes+bytes)
 }
 
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
-func (d *Data) SetCountersIn(packets int, bytes int) {
-	d.setCountersIn(packets, bytes)
+func (d *Data) SetCounters(packets int, bytes int) {
+	d.setCounters(packets, bytes)
 }
 
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
-func (d *Data) SetCountersOut(packets int, bytes int) {
-	d.setCountersOut(packets, bytes)
+func (d *Data) SetCountersReverse(packets int, bytes int) {
+	d.setCountersReverse(packets, bytes)
 }
 
 func (d *Data) ResetCounters() {
-	d.setCountersIn(0, 0)
-	d.setCountersOut(0, 0)
+	d.setCounters(0, 0)
+	d.setCountersReverse(0, 0)
 }
 
 func (d *Data) AddRuleTracePoint(tp RuleTracePoint, dir Direction) error {
@@ -358,32 +358,32 @@ const (
 // The current StatUpdate doesn't support deletes and all StatUpdate-s are
 // either "Add" or "Update" operations.
 type StatUpdate struct {
-	Tuple      Tuple
-	InPackets  int
-	InBytes    int
-	OutPackets int
-	OutBytes   int
-	CtrType    CounterType
-	Dir        Direction
-	Tp         RuleTracePoint
+	Tuple          Tuple
+	Packets        int
+	Bytes          int
+	ReversePackets int
+	ReverseBytes   int
+	CtrType        CounterType
+	Dir            Direction
+	Tp             RuleTracePoint
 }
 
 func NewStatUpdate(tuple Tuple,
-	inPackets int,
-	inBytes int,
-	outPackets int,
-	outBytes int,
+	packets int,
+	bytes int,
+	reversePackets int,
+	reverseBytes int,
 	ctrType CounterType,
 	dir Direction,
 	tp RuleTracePoint) *StatUpdate {
 	return &StatUpdate{
-		Tuple:      tuple,
-		InPackets:  inPackets,
-		InBytes:    inBytes,
-		OutPackets: outPackets,
-		OutBytes:   outBytes,
-		CtrType:    ctrType,
-		Dir:        dir,
-		Tp:         tp,
+		Tuple:          tuple,
+		Packets:        packets,
+		Bytes:          bytes,
+		ReversePackets: reversePackets,
+		ReverseBytes:   reverseBytes,
+		CtrType:        ctrType,
+		Dir:            dir,
+		Tp:             tp,
 	}
 }

@@ -80,7 +80,7 @@ func (ds *NflogDataSource) startProcessingPackets() {
 
 func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*stats.StatUpdate, error) {
 	nflogTuple := nPkt.Tuple
-	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
+	var numPkts, numBytes int
 	var statUpdate *stats.StatUpdate
 	var wlEpKey *model.WorkloadEndpointKey
 	var prefixAction stats.RuleAction
@@ -100,23 +100,15 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	// Determine the endpoint that this packet hit a rule for. This depends on the direction
 	// because local -> local packets will be NFLOGed twice.
 	if ds.direction == stats.DirIn {
-		inPkts = numPkts
-		inBytes = numBytes
-		outPkts = 0
-		outBytes = 0
 		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Dst)
 	} else {
-		inPkts = 0
-		inBytes = 0
-		outPkts = numPkts
-		outBytes = numBytes
 		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Src)
 	}
 
 	if wlEpKey != nil {
 		tp := lookupRule(ds.lum, nPkt.Prefix, wlEpKey)
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
-		statUpdate = stats.NewStatUpdate(tuple, inPkts, inBytes, outPkts, outBytes, stats.DeltaCounter, ds.direction, tp)
+		statUpdate = stats.NewStatUpdate(tuple, numPkts, numBytes, 0, 0, stats.DeltaCounter, ds.direction, tp)
 	} else {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
