@@ -11,6 +11,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/projectcalico/felix/set"
 )
 
 var (
@@ -69,7 +71,7 @@ type AggregateKey struct {
 
 type AggregateValue struct {
 	Counter
-	refs int
+	refs               set.Set
 }
 
 type PrometheusReporter struct {
@@ -99,11 +101,11 @@ func (pr *PrometheusReporter) Update(data Data) error {
 	if ok {
 		value.bytes += ctr.bytes
 		value.packets += ctr.packets
-		value.refs++
+		value.refs.Add(data.Tuple)
 	} else {
 		value = AggregateValue{
 			Counter: ctr,
-			refs:    1,
+			refs:    set.FromArray([]Tuple{data.Tuple}),
 		}
 	}
 	pr.aggStats[key] = value
@@ -118,9 +120,12 @@ func (pr *PrometheusReporter) Delete(data Data) error {
 	if !ok {
 		return nil
 	}
-	value.refs--
+	if !value.refs.Contains(data.Tuple) {
+		return nil
+	}
+	value.refs.Discard(data.Tuple)
 	pr.aggStats[key] = value
-	if value.refs == 0 {
+	if value.refs.Len() == 0 {
 		f := Fields{
 			"policy": ruleTrace,
 			"srcIP":  srcIP,

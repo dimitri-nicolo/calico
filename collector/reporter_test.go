@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/projectcalico/felix/set"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
@@ -16,10 +17,10 @@ var (
 )
 
 var (
-	tuple1 = Tuple{string(localIp1), string(remoteIp1), proto_tcp, srcPort1, dstPort}
-	tuple2 = Tuple{string(localIp1), string(remoteIp2), proto_tcp, srcPort2, dstPort}
-	tuple3 = Tuple{string(localIp2), string(remoteIp1), proto_tcp, srcPort1, dstPort}
-	tuple4 = Tuple{string(localIp2), string(remoteIp2), proto_tcp, srcPort2, dstPort}
+	tuple1 = Tuple{localIp1.String(), remoteIp1.String(), proto_tcp, srcPort1, dstPort}
+	tuple2 = Tuple{localIp1.String(), remoteIp2.String(), proto_tcp, srcPort2, dstPort}
+	tuple3 = Tuple{localIp2.String(), remoteIp1.String(), proto_tcp, srcPort1, dstPort}
+	tuple4 = Tuple{localIp2.String(), remoteIp2.String(), proto_tcp, srcPort2, dstPort}
 )
 
 var defTierAllowT1 = &RuleTrace{
@@ -178,14 +179,17 @@ var _ = Describe("Prometheus Reporter", func() {
 			Describe("Same policy and source IP but different connections", func() {
 				var key AggregateKey
 				var value AggregateValue
+				var refs set.Set
 				BeforeEach(func() {
 					pr.Update(*denyPacketTuple1DenyT3)
 					pr.Update(*denyPacketTuple2DenyT3)
 					key = AggregateKey{
-						srcIP:  string(localIp1),
+						srcIP:  localIp1.String(),
 						policy: defTierDenyT3.ToString(),
 					}
 					value, _ = pr.aggStats[key]
+					refs = set.New()
+					refs.AddAll([]Tuple{tuple1, tuple2})
 				})
 				It("should have 1 aggregated stats entry", func() {
 					Expect(pr.aggStats).Should(HaveLen(1))
@@ -195,26 +199,31 @@ var _ = Describe("Prometheus Reporter", func() {
 					Expect(value.packets).To(Equal(2))
 				})
 				It("should have ref count 2", func() {
-					Expect(value.refs).To(Equal(2))
+					Expect(value.refs.Equals(refs)).To(BeTrue())
 				})
 			})
 			Describe("Different source IPs and Policies", func() {
 				var key1, key2 AggregateKey
 				var value1, value2 AggregateValue
+				var refs1, refs2 set.Set
 				BeforeEach(func() {
 					pr.Update(*denyPacketTuple1DenyT3)
 					pr.Update(*denyPacketTuple2DenyT3)
 					pr.Update(*denyPacketTuple3DenyT4)
 					key1 = AggregateKey{
-						srcIP:  string(localIp1),
+						srcIP:  localIp1.String(),
 						policy: defTierDenyT3.ToString(),
 					}
 					key2 = AggregateKey{
-						srcIP:  string(localIp2),
+						srcIP:  localIp2.String(),
 						policy: defTierDenyT4.ToString(),
 					}
 					value1, _ = pr.aggStats[key1]
 					value2, _ = pr.aggStats[key2]
+					refs1 = set.New()
+					refs1.AddAll([]Tuple{tuple1, tuple2})
+					refs2 = set.New()
+					refs2.AddAll([]Tuple{tuple3})
 				})
 				It("should have 2 aggregated stats entries", func() {
 					Expect(pr.aggStats).Should(HaveLen(2))
@@ -226,8 +235,8 @@ var _ = Describe("Prometheus Reporter", func() {
 					Expect(value2.packets).To(Equal(1))
 				})
 				It("should have correct ref counts", func() {
-					Expect(value1.refs).To(Equal(2))
-					Expect(value2.refs).To(Equal(1))
+					Expect(value1.refs.Equals(refs1)).To(BeTrue())
+					Expect(value2.refs.Equals(refs2)).To(BeTrue())
 				})
 			})
 		})
@@ -237,11 +246,11 @@ var _ = Describe("Prometheus Reporter", func() {
 		var value1, value2 AggregateValue
 		BeforeEach(func() {
 			key1 = AggregateKey{
-				srcIP:  string(localIp1),
+				srcIP:  localIp1.String(),
 				policy: defTierDenyT3.ToString(),
 			}
 			key2 = AggregateKey{
-				srcIP:  string(localIp2),
+				srcIP:  localIp2.String(),
 				policy: defTierDenyT4.ToString(),
 			}
 			value1 = AggregateValue{
@@ -249,24 +258,29 @@ var _ = Describe("Prometheus Reporter", func() {
 					packets: 3,
 					bytes:   3,
 				},
-				refs: 2,
+				refs: set.FromArray([]Tuple{tuple1, tuple2}),
 			}
 			value2 = AggregateValue{
 				Counter: Counter{
 					packets: 2,
 					bytes:   4,
 				},
-				refs: 1,
+				refs: set.FromArray([]Tuple{tuple3}),
 			}
 			pr.aggStats[key1] = value1
 			pr.aggStats[key2] = value2
 		})
 		Describe("Delete a entry has more than one reference", func() {
 			var v1, v2 AggregateValue
+			var refs1, refs2 set.Set
 			BeforeEach(func() {
 				pr.Delete(*denyPacketTuple1DenyT3)
 				v1 = pr.aggStats[key1]
 				v2 = pr.aggStats[key2]
+				refs1 = set.New()
+				refs1.AddAll([]Tuple{tuple2})
+				refs2 = set.New()
+				refs2.AddAll([]Tuple{tuple3})
 			})
 			It("should have 2 aggregated stats entries", func() {
 				Expect(pr.aggStats).Should(HaveLen(2))
@@ -278,15 +292,17 @@ var _ = Describe("Prometheus Reporter", func() {
 				Expect(v2.packets).To(Equal(2))
 			})
 			It("should have correct ref counts", func() {
-				Expect(v1.refs).To(Equal(1))
-				Expect(v2.refs).To(Equal(1))
+				Expect(v1.refs.Equals(refs1)).To(BeTrue())
+				Expect(v2.refs.Equals(refs2)).To(BeTrue())
 			})
 		})
 		Describe("Delete a entry has only one reference", func() {
 			var v1 AggregateValue
+			var refs1 set.Set
 			BeforeEach(func() {
 				pr.Delete(*denyPacketTuple3DenyT4)
 				v1 = pr.aggStats[key1]
+				refs1 = set.FromArray([]Tuple{tuple1, tuple2})
 			})
 			It("should have 1 aggregated stats entries", func() {
 				Expect(pr.aggStats).Should(HaveLen(1))
@@ -296,7 +312,7 @@ var _ = Describe("Prometheus Reporter", func() {
 				Expect(v1.packets).To(Equal(3))
 			})
 			It("should have correct ref counts", func() {
-				Expect(v1.refs).To(Equal(2))
+				Expect(v1.refs.Equals(refs1)).To(BeTrue())
 			})
 			It("should not have the deleted key", func() {
 				Expect(pr.aggStats).ShouldNot(HaveKey(key2))
