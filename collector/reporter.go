@@ -35,8 +35,6 @@ func init() {
 	prometheus.MustRegister(gaugeDeniedBytes)
 }
 
-type Fields map[string]string
-
 type MetricsReporter interface {
 	Update(data Data) error
 	Delete(data Data) error
@@ -45,7 +43,6 @@ type MetricsReporter interface {
 
 // TODO(doublek): When we want different ways of aggregating, this will
 // need to be dynamic and a KeyType.
-// TODO(doublek): Converting from a AggregateKey to a Field.
 type AggregateKey struct {
 	policy string
 	srcIP  string
