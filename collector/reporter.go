@@ -17,13 +17,13 @@ import (
 
 var (
 	gaugeDeniedPackets = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "felix_denied_packets",
+		Name: "felix_collector_denied_packets",
 		Help: "Packets denied.",
 	},
 		[]string{"srcIP", "policy"},
 	)
 	gaugeDeniedBytes = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "felix_denied_bytes",
+		Name: "felix_collector_denied_bytes",
 		Help: "Bytes denied.",
 	},
 		[]string{"srcIP", "policy"},
@@ -41,24 +41,6 @@ type MetricsReporter interface {
 	Update(data Data) error
 	Delete(data Data) error
 	Flush() error
-	Report(fields Fields, bytes int, packets int) error
-	Clear(fields Fields) error
-}
-
-func convertFieldsToPrometheusLabels(fields Fields) prometheus.Labels {
-	l := make(prometheus.Labels)
-	for k, v := range fields {
-		l[k] = v
-	}
-	return l
-}
-
-func convertFieldsToLogrusFields(fields Fields) log.Fields {
-	f := make(log.Fields)
-	for k, v := range fields {
-		f[k] = v
-	}
-	return f
 }
 
 // TODO(doublek): When we want different ways of aggregating, this will
@@ -71,6 +53,9 @@ type AggregateKey struct {
 
 type AggregateValue struct {
 	Counter
+	labels             prometheus.Labels
+	gaugeDeniedPackets prometheus.Gauge
+	gaugeDeniedBytes   prometheus.Gauge
 	refs               set.Set
 }
 
@@ -103,9 +88,16 @@ func (pr *PrometheusReporter) Update(data Data) error {
 		value.packets += ctr.packets
 		value.refs.Add(data.Tuple)
 	} else {
+		l := prometheus.Labels{
+			"srcIP":  key.srcIP,
+			"policy": key.policy,
+		}
 		value = AggregateValue{
-			Counter: ctr,
-			refs:    set.FromArray([]Tuple{data.Tuple}),
+			Counter:            ctr,
+			labels:             l,
+			gaugeDeniedPackets: gaugeDeniedPackets.With(l),
+			gaugeDeniedBytes:   gaugeDeniedBytes.With(l),
+			refs:               set.FromArray([]Tuple{data.Tuple}),
 		}
 	}
 	pr.aggStats[key] = value
@@ -126,11 +118,11 @@ func (pr *PrometheusReporter) Delete(data Data) error {
 	value.refs.Discard(data.Tuple)
 	pr.aggStats[key] = value
 	if value.refs.Len() == 0 {
-		f := Fields{
-			"policy": ruleTrace,
-			"srcIP":  srcIP,
-		}
-		pr.Clear(f)
+		log.WithFields(log.Fields{
+			"labels": value.labels,
+		}).Debug("Deleting prometheus metrics.")
+		gaugeDeniedPackets.Delete(value.labels)
+		gaugeDeniedBytes.Delete(value.labels)
 		delete(pr.aggStats, key)
 	}
 	return nil
@@ -138,36 +130,16 @@ func (pr *PrometheusReporter) Delete(data Data) error {
 
 func (pr *PrometheusReporter) Flush() error {
 	for key, value := range pr.aggStats {
-		f := Fields{
-			"policy": key.policy,
-			"srcIP":  key.srcIP,
-		}
-		pr.Report(f, value.bytes, value.packets)
-		value.Counter.Reset()
+		log.WithFields(log.Fields{
+			"labels":  value.labels,
+			"bytes":   value.bytes,
+			"packets": value.packets,
+		}).Debug("Setting prometheus metrics.")
+		value.gaugeDeniedPackets.Set(float64(value.packets))
+		value.gaugeDeniedBytes.Set(float64(value.bytes))
+		value.Counter.Zero()
 		pr.aggStats[key] = value
 	}
-	return nil
-}
-
-func (pr *PrometheusReporter) Report(fields Fields, bytes int, packets int) error {
-	l := convertFieldsToPrometheusLabels(fields)
-	log.WithFields(log.Fields{
-		"labels":  l,
-		"bytes":   bytes,
-		"packets": packets,
-	}).Debug("Setting prometheus metrics.")
-	gaugeDeniedPackets.With(l).Set(float64(packets))
-	gaugeDeniedBytes.With(l).Set(float64(bytes))
-	return nil
-}
-
-func (pr *PrometheusReporter) Clear(fields Fields) error {
-	l := convertFieldsToPrometheusLabels(fields)
-	log.WithFields(log.Fields{
-		"labels": l,
-	}).Debug("Deleting prometheus metrics.")
-	gaugeDeniedPackets.Delete(l)
-	gaugeDeniedBytes.Delete(l)
 	return nil
 }
 
@@ -192,14 +164,6 @@ func (sr *SyslogReporter) Update(data Data) error {
 	if data.Action() != DenyAction {
 		return nil
 	}
-	f := Fields{
-		"proto":   strconv.Itoa(data.Tuple.proto),
-		"srcIp":   data.Tuple.src,
-		"srcPort": strconv.Itoa(data.Tuple.l4Src),
-		"dstIp":   data.Tuple.dst,
-		"dstPort": strconv.Itoa(data.Tuple.l4Dst),
-		"policy":  data.RuleTrace.ToString(),
-	}
 	var bytes, packets int
 	if data.ctrIn.packets != 0 {
 		bytes = data.ctrIn.bytes
@@ -208,7 +172,19 @@ func (sr *SyslogReporter) Update(data Data) error {
 		bytes = data.ctrOut.bytes
 		packets = data.ctrOut.packets
 	}
-	return sr.Report(f, bytes, packets)
+	f := log.Fields{
+		"proto":   strconv.Itoa(data.Tuple.proto),
+		"srcIP":   data.Tuple.src,
+		"srcPort": strconv.Itoa(data.Tuple.l4Src),
+		"dstIP":   data.Tuple.dst,
+		"dstPort": strconv.Itoa(data.Tuple.l4Dst),
+		"policy":  data.RuleTrace.ToString(),
+		"action":  DenyAction,
+		"packets": packets,
+		"bytes":   bytes,
+	}
+	sr.slog.WithFields(f).Info("")
+	return nil
 }
 
 func (sr *SyslogReporter) Delete(data Data) error {
@@ -216,20 +192,6 @@ func (sr *SyslogReporter) Delete(data Data) error {
 }
 
 func (sr *SyslogReporter) Flush() error {
-	return nil
-}
-
-func (sr *SyslogReporter) Report(fields Fields, bytes int, packets int) error {
-	f := convertFieldsToLogrusFields(fields)
-	f["action"] = DenyAction
-	f["packets"] = packets
-	f["bytes"] = bytes
-	sr.slog.WithFields(f).Info("")
-	return nil
-}
-
-func (sr *SyslogReporter) Clear(fields Fields) error {
-	// We don't maintain any state, so nothing to do here.
 	return nil
 }
 

@@ -25,16 +25,16 @@ type Counter struct {
 	bytes   int
 }
 
-func (c Counter) Reset() {
+func (c *Counter) Zero() {
 	c.packets = 0
 	c.bytes = 0
 }
 
-func (c Counter) IsZero() bool {
+func (c *Counter) IsZero() bool {
 	return (c.packets == 0 && c.bytes == 0)
 }
 
-func (c Counter) String() string {
+func (c *Counter) String() string {
 	return fmt.Sprintf("packets=%v bytes=%v", c.packets, c.bytes)
 }
 
