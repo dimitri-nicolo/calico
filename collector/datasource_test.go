@@ -237,8 +237,14 @@ var _ = Describe("Conntrack Datasource", func() {
 				localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes,
 				localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes,
 				stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
+			t2 := stats.NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
+			su2 := stats.NewStatUpdate(*t2,
+				localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes,
+				localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes,
+				stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{localCtEntry}
 			Eventually(sink).Should(Receive(Equal(*su1)))
+			Eventually(sink).Should(Receive(Equal(*su2)))
 		})
 	})
 	Describe("Test local destination with DNAT", func() {
@@ -261,8 +267,16 @@ var _ = Describe("Conntrack Datasource", func() {
 				localCtEntryWithDNAT.ReplyCounters.Packets,
 				localCtEntryWithDNAT.ReplyCounters.Bytes,
 				stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
+			t2 := stats.NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
+			su2 := stats.NewStatUpdate(*t2,
+				localCtEntryWithDNAT.ReplyCounters.Packets,
+				localCtEntryWithDNAT.ReplyCounters.Bytes,
+				localCtEntryWithDNAT.OriginalCounters.Packets,
+				localCtEntryWithDNAT.OriginalCounters.Bytes,
+				stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{localCtEntryWithDNAT}
 			Eventually(sink).Should(Receive(Equal(*su1)))
+			Eventually(sink).Should(Receive(Equal(*su2)))
 		})
 	})
 
