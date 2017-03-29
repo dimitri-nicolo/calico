@@ -36,10 +36,10 @@ type Collector struct {
 	sigChan        chan os.Signal
 	config         *Config
 	dumpLog        *log.Logger
-	reporters      []MetricsReporter
+	reporterMgr    *ReporterManager
 }
 
-func NewCollector(sources []<-chan StatUpdate, reporters []MetricsReporter, config *Config) *Collector {
+func NewCollector(sources []<-chan StatUpdate, rm *ReporterManager, config *Config) *Collector {
 	return &Collector{
 		sources:        sources,
 		epStats:        make(map[Tuple]*Data),
@@ -49,7 +49,7 @@ func NewCollector(sources []<-chan StatUpdate, reporters []MetricsReporter, conf
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
 		dumpLog:        log.New(),
-		reporters:      reporters,
+		reporterMgr:    rm,
 	}
 }
 
@@ -148,9 +148,7 @@ func (c *Collector) applyStatUpdate(update StatUpdate) {
 	if update.Tp != EmptyRuleTracePoint {
 		err := data.AddRuleTracePoint(update.Tp)
 		if err != nil {
-			for _, r := range c.reporters {
-				r.Update(*data)
-			}
+			c.reporterMgr.ReportChan <- *data
 			data.ResetCounters()
 			data.ReplaceRuleTracePoint(update.Tp)
 		}
@@ -161,9 +159,7 @@ func (c *Collector) applyStatUpdate(update StatUpdate) {
 func (c *Collector) expireEntry(data *Data) {
 	log.Infof("Timer expired for entry: %v", data)
 	tuple := data.Tuple
-	for _, r := range c.reporters {
-		r.Delete(*data)
-	}
+	c.reporterMgr.ExpireChan <- *data
 	delete(c.epStats, tuple)
 }
 
@@ -180,9 +176,7 @@ func (c *Collector) registerAgeTimer(data *Data) {
 func (c *Collector) reportMetrics() {
 	log.Debug("Aggregating and reporting metrics")
 	for _, data := range c.epStats {
-		for _, r := range c.reporters {
-			r.Update(*data)
-		}
+		c.reporterMgr.ReportChan <- *data
 		data.clearDirtyFlag()
 	}
 }

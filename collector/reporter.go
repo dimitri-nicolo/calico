@@ -40,8 +40,8 @@ func init() {
 
 type MetricsReporter interface {
 	Start()
-	Update(data Data) error
-	Delete(data Data) error
+	Report(data Data) error
+	Expire(data Data) error
 }
 
 // TODO(doublek): When we want different ways of aggregating, this will
@@ -58,25 +58,66 @@ type AggregateValue struct {
 	refs    set.Set
 }
 
+type ReporterManager struct {
+	ReportChan chan Data
+	ExpireChan chan Data
+	reporters  []MetricsReporter
+}
+
+func NewReporterManager() *ReporterManager {
+	return &ReporterManager{
+		ReportChan: make(chan Data),
+		ExpireChan: make(chan Data),
+	}
+}
+
+func (r *ReporterManager) RegisterMetricsReporter(mr MetricsReporter) {
+	r.reporters = append(r.reporters, mr)
+}
+
+func (r *ReporterManager) Start() {
+	for _, reporter := range r.reporters {
+		reporter.Start()
+	}
+	go r.startManaging()
+}
+
+func (r *ReporterManager) startManaging() {
+	log.Info("Staring ReporterManager")
+	for {
+		// TODO(doublek): Channel for stopping the reporter.
+		select {
+		case data := <-r.ReportChan:
+			for _, reporter := range r.reporters {
+				reporter.Report(data)
+			}
+		case data := <-r.ExpireChan:
+			for _, reporter := range r.reporters {
+				reporter.Expire(data)
+			}
+		}
+	}
+}
+
 // PrometheusReporter records denied packets and bytes statistics in prometheus metrics.
 //
 type PrometheusReporter struct {
-	aggStats        map[AggregateKey]AggregateValue
-	dropCandidates  set.Set
-	dropChan        chan AggregateKey
-	updateChan      chan Data
-	deleteChan      chan Data
-	retentionTimers map[AggregateKey]*time.Timer
+	aggStats         map[AggregateKey]AggregateValue
+	deleteCandidates set.Set
+	deleteChan       chan AggregateKey
+	reportChan       chan Data
+	expireChan       chan Data
+	retentionTimers  map[AggregateKey]*time.Timer
 }
 
 func NewPrometheusReporter() *PrometheusReporter {
 	return &PrometheusReporter{
-		aggStats:        make(map[AggregateKey]AggregateValue),
-		dropCandidates:  set.New(),
-		dropChan:        make(chan AggregateKey),
-		updateChan:      make(chan Data),
-		deleteChan:      make(chan Data),
-		retentionTimers: make(map[AggregateKey]*time.Timer),
+		aggStats:         make(map[AggregateKey]AggregateValue),
+		deleteCandidates: set.New(),
+		deleteChan:       make(chan AggregateKey),
+		reportChan:       make(chan Data),
+		expireChan:       make(chan Data),
+		retentionTimers:  make(map[AggregateKey]*time.Timer),
 	}
 }
 
@@ -88,22 +129,25 @@ func (pr *PrometheusReporter) startReporter() {
 	log.Info("Staring PrometheusReporter")
 	for {
 		select {
-		case key := <-pr.dropChan:
-			pr.dropMetric(key)
-		case data := <-pr.updateChan:
-			pr.updateMetric(data)
-		case data := <-pr.deleteChan:
-			pr.deleteMetric(data)
+		case key := <-pr.deleteChan:
+			// Check if we were signalled because of a stopped timer.
+			if _, exists := pr.retentionTimers[key]; exists {
+				pr.deleteMetric(key)
+			}
+		case data := <-pr.reportChan:
+			pr.reportMetric(data)
+		case data := <-pr.expireChan:
+			pr.expireMetric(data)
 		}
 	}
 }
 
-func (pr *PrometheusReporter) Update(data Data) error {
-	pr.updateChan <- data
+func (pr *PrometheusReporter) Report(data Data) error {
+	pr.reportChan <- data
 	return nil
 }
 
-func (pr *PrometheusReporter) updateMetric(data Data) {
+func (pr *PrometheusReporter) reportMetric(data Data) {
 	if data.Action() != DenyAction || !data.IsDirty() {
 		return
 	}
@@ -118,8 +162,8 @@ func (pr *PrometheusReporter) updateMetric(data Data) {
 	}
 	value, ok := pr.aggStats[key]
 	if ok {
-		if pr.dropCandidates.Contains(key) {
-			pr.dropCandidates.Discard(key)
+		if pr.deleteCandidates.Contains(key) {
+			pr.deleteCandidates.Discard(key)
 			pr.cleanupRetentionTimer(key)
 		}
 		value.refs.Add(data.Tuple)
@@ -139,15 +183,16 @@ func (pr *PrometheusReporter) updateMetric(data Data) {
 	value.packets.Add(float64(dp))
 	value.bytes.Add(float64(db))
 	pr.aggStats[key] = value
+	log.Debugf("Metric is %+v", value.packets)
 	return
 }
 
-func (pr *PrometheusReporter) Delete(data Data) error {
-	pr.deleteChan <- data
+func (pr *PrometheusReporter) Expire(data Data) error {
+	pr.expireChan <- data
 	return nil
 }
 
-func (pr *PrometheusReporter) deleteMetric(data Data) {
+func (pr *PrometheusReporter) expireMetric(data Data) {
 	ruleTrace := data.RuleTrace.ToString()
 	srcIP := data.Tuple.src
 	key := AggregateKey{ruleTrace, srcIP}
@@ -155,6 +200,8 @@ func (pr *PrometheusReporter) deleteMetric(data Data) {
 	if !ok {
 		return
 	}
+	// TODO(doublek): We need to do a add some counters here so that we don't
+	// lose the last counter update (if any).
 	if !value.refs.Contains(data.Tuple) {
 		return
 	}
@@ -163,40 +210,42 @@ func (pr *PrometheusReporter) deleteMetric(data Data) {
 	// TODO(doublek): We are deleting too early. We should probably hang on to
 	// counter value for a little bit before deleting the metric value labels.
 	if value.refs.Len() == 0 {
-		pr.markForDrop(key)
+		pr.markForDeletion(key)
 	}
 	return
 }
 
-func (pr *PrometheusReporter) markForDrop(key AggregateKey) {
-	log.WithField("key", key).Debug("Marking for dropping metric.")
-	pr.dropCandidates.Add(key)
+func (pr *PrometheusReporter) markForDeletion(key AggregateKey) {
+	log.WithField("key", key).Debug("Marking metric for deletion.")
+	pr.deleteCandidates.Add(key)
 	timer := time.NewTimer(RetentionTime)
 	pr.retentionTimers[key] = timer
 	go func() {
+		log.Debugf("Starting retention timer for key %+v", key)
 		<-timer.C
-		pr.dropChan <- key
+		pr.deleteChan <- key
 	}()
 }
 
-func (pr *PrometheusReporter) dropMetric(key AggregateKey) {
-	log.WithField("key", key).Debug("Cleaning up candidate marked to be dropped.")
+func (pr *PrometheusReporter) deleteMetric(key AggregateKey) {
+	log.WithField("key", key).Debug("Cleaning up candidate marked to be deleted.")
 	value, ok := pr.aggStats[key]
 	if ok {
 		gaugeDeniedPackets.Delete(value.labels)
 		gaugeDeniedBytes.Delete(value.labels)
 		delete(pr.aggStats, key)
 	}
-	pr.dropCandidates.Discard(key)
+	pr.deleteCandidates.Discard(key)
 	pr.cleanupRetentionTimer(key)
 }
 
 func (pr *PrometheusReporter) cleanupRetentionTimer(key AggregateKey) {
+	log.Debugf("Cleaning up retention timer for key %+v", key)
 	timer, exists := pr.retentionTimers[key]
-	if exists && !timer.Stop() {
-		<-timer.C
+	if exists {
+		delete(pr.retentionTimers, key)
+		timer.Stop()
 	}
-	delete(pr.retentionTimers, key)
 }
 
 type SyslogReporter struct {
@@ -220,7 +269,7 @@ func (sr *SyslogReporter) Start() {
 	log.Info("Staring SyslogReporter")
 }
 
-func (sr *SyslogReporter) Update(data Data) error {
+func (sr *SyslogReporter) Report(data Data) error {
 	if data.Action() != DenyAction || !data.IsDirty() {
 		return nil
 	}
@@ -245,7 +294,7 @@ func (sr *SyslogReporter) Update(data Data) error {
 	return nil
 }
 
-func (sr *SyslogReporter) Delete(data Data) error {
+func (sr *SyslogReporter) Expire(data Data) error {
 	return nil
 }
 

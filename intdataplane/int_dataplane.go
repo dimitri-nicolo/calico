@@ -283,12 +283,12 @@ func (d *InternalDataplane) Start() {
 	collectorConfig := &collector.Config{
 		StatsDumpFilePath: d.config.StatsDumpFilePath,
 	}
+	rm := collector.NewReporterManager()
+	rm.RegisterMetricsReporter(collector.NewPrometheusReporter())
+	rm.RegisterMetricsReporter(collector.NewSyslogReporter())
+	rm.Start()
 	datasources := []<-chan collector.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
-	reporters := []collector.MetricsReporter{collector.NewPrometheusReporter(), collector.NewSyslogReporter()}
-	for _, r := range reporters {
-		r.Start()
-	}
-	statsCollector := collector.NewCollector(datasources, reporters, collectorConfig)
+	statsCollector := collector.NewCollector(datasources, rm, collectorConfig)
 	statsCollector.Start()
 }
 
