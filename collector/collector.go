@@ -29,7 +29,6 @@ type Config struct {
 // All data source channels must be specified when creating the collector.
 type Collector struct {
 	sources        []<-chan StatUpdate
-	sinks          []chan<- *Data
 	epStats        map[Tuple]*Data
 	mux            chan StatUpdate
 	statAgeTimeout chan *Data
@@ -40,10 +39,9 @@ type Collector struct {
 	reporters      []MetricsReporter
 }
 
-func NewCollector(sources []<-chan StatUpdate, sinks []chan<- *Data, config *Config) *Collector {
+func NewCollector(sources []<-chan StatUpdate, reporters []MetricsReporter, config *Config) *Collector {
 	return &Collector{
 		sources:        sources,
-		sinks:          sinks,
 		epStats:        make(map[Tuple]*Data),
 		mux:            make(chan StatUpdate),
 		statAgeTimeout: make(chan *Data),
@@ -51,7 +49,7 @@ func NewCollector(sources []<-chan StatUpdate, sinks []chan<- *Data, config *Con
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
 		dumpLog:        log.New(),
-		reporters:      []MetricsReporter{NewPrometheusReporter(), NewSyslogReporter()},
+		reporters:      reporters,
 	}
 }
 

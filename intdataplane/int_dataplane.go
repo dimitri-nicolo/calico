@@ -17,11 +17,11 @@ package intdataplane
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
@@ -283,18 +283,13 @@ func (d *InternalDataplane) Start() {
 	collectorConfig := &collector.Config{
 		StatsDumpFilePath: d.config.StatsDumpFilePath,
 	}
-	printSink := make(chan *collector.Data)
 	datasources := []<-chan collector.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
-	datasinks := []chan<- *collector.Data{printSink}
-	statsCollector := collector.NewCollector(datasources, datasinks, collectorConfig)
+	reporters := []collector.MetricsReporter{collector.NewPrometheusReporter(), collector.NewSyslogReporter()}
+	for _, r := range reporters {
+		r.Start()
+	}
+	statsCollector := collector.NewCollector(datasources, reporters, collectorConfig)
 	statsCollector.Start()
-
-	// TODO (doublek): The printSink is unused for now. It should be used to hook into dumping stats.
-	go func() {
-		for data := range printSink {
-			log.Info("MD4 test output data: ", data)
-		}
-	}()
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
