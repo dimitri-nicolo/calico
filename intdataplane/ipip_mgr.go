@@ -15,13 +15,15 @@
 package intdataplane
 
 import (
+	"net"
+	"time"
+
 	log "github.com/Sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
-	"github.com/vishvananda/netlink"
-	"net"
-	"time"
 )
 
 // ipipManager manages the all-hosts IP set, which is used by some rules in our static chains
@@ -30,7 +32,7 @@ import (
 //
 // ipipManager also takes care of the configuration of the IPIP tunnel device.
 type ipipManager struct {
-	ipsetReg ipsetsRegistry
+	ipsetsDataplane ipsetsDataplane
 
 	// activeHostnameToIP maps hostname to string IP address.  We don't bother to parse into
 	// net.IPs because we're going to pass them directly to the IPSet API.
@@ -45,19 +47,19 @@ type ipipManager struct {
 }
 
 func newIPIPManager(
-	ipSetReg *ipsets.Registry,
+	ipsetsDataplane ipsetsDataplane,
 	maxIPSetSize int,
 ) *ipipManager {
-	return newIPIPManagerWithShim(ipSetReg, maxIPSetSize, realIPIPNetlink{})
+	return newIPIPManagerWithShim(ipsetsDataplane, maxIPSetSize, realIPIPNetlink{})
 }
 
 func newIPIPManagerWithShim(
-	ipSetReg ipsetsRegistry,
+	ipsetsDataplane ipsetsDataplane,
 	maxIPSetSize int,
 	dataplane ipipDataplane,
 ) *ipipManager {
 	ipipMgr := &ipipManager{
-		ipsetReg:           ipSetReg,
+		ipsetsDataplane:    ipsetsDataplane,
 		activeHostnameToIP: map[string]string{},
 		dataplane:          dataplane,
 		ipSetMetadata: ipsets.IPSetMetadata{
@@ -214,14 +216,14 @@ func (m *ipipManager) CompleteDeferredWork() error {
 		for _, ip := range m.activeHostnameToIP {
 			members = append(members, ip)
 		}
-		m.ipsetReg.AddOrReplaceIPSet(m.ipSetMetadata, members)
+		m.ipsetsDataplane.AddOrReplaceIPSet(m.ipSetMetadata, members)
 		m.ipSetInSync = true
 	}
 	return nil
 }
 
-// ipsetsRegistry is a shim interface for mocking the IPSet Registry.
-type ipsetsRegistry interface {
+// ipsetsDataplane is a shim interface for mocking the IPSets object.
+type ipsetsDataplane interface {
 	AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members []string)
 	AddMembers(setID string, newMembers []string)
 	RemoveMembers(setID string, removedMembers []string)

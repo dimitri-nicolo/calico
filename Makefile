@@ -33,7 +33,8 @@
 #                           |                   docker build
 #                           v                         |
 #            +----------------------------+           |
-#            |  RPM packages for Centos7  |           v
+#            |  RPM packages for Centos7  |           |
+#            |  RPM packages for Centos6  |           v
 #            | Debian packages for Xenial |    +--------------+
 #            | Debian packages for Trusty |    | calico/felix |
 #            +----------------------------+    +--------------+
@@ -79,7 +80,7 @@ help:
 all: deb rpm calico/felix
 test: ut
 
-GO_BUILD_CONTAINER?=calico/go-build:v0.1
+GO_BUILD_CONTAINER?=calico/go-build:v0.4
 
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
@@ -122,6 +123,16 @@ calico-build/centos7:
 	  --build-arg=GID=$(MY_GID) \
 	  -f centos7-build.Dockerfile \
 	  -t calico-build/centos7 .
+
+# Construct a docker image for building Centos 6 RPMs.
+.PHONY: calico-build/centos6
+calico-build/centos6:
+	cd docker-build-images && \
+	  docker build \
+	  --build-arg=UID=$(MY_UID) \
+	  --build-arg=GID=$(MY_GID) \
+	  -f centos6-build.Dockerfile \
+	  -t calico-build/centos6 .
 
 # Build the calico/felix docker image, which contains only Felix.
 .PHONY: calico/felix
@@ -171,6 +182,7 @@ ifeq ($(GIT_COMMIT),<unknown>)
 	$(error Package builds must be done from a git working copy in order to calculate version numbers.)
 endif
 	$(MAKE) calico-build/centos7
+	$(MAKE) calico-build/centos6
 	utils/make-packages.sh rpm
 
 .PHONY: protobuf
@@ -189,7 +201,9 @@ proto/felixbackend.pb.go: proto/felixbackend.proto
 # want to use the vendor target to install the versions from glide.lock.
 .PHONY: update-vendor
 update-vendor:
+	mkdir -p $$HOME/.glide
 	$(DOCKER_GO_BUILD) glide up --strip-vendor
+	touch vendor/.up-to-date
 
 # vendor is a shortcut for force rebuilding the go vendor directory.
 .PHONY: vendor
@@ -215,7 +229,9 @@ bin/calico-felix: $(GO_FILES) vendor/.up-to-date
 	@echo Building felix...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -i -o $@ -v $(LDFLAGS) "github.com/projectcalico/felix"'
+	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "github.com/projectcalico/felix" && \
+               ( ldd bin/calico-felix 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: bin/calico-felix was not statically linked"; false ) )'
 
 dist/calico-felix/calico-felix: bin/calico-felix
 	mkdir -p dist/calico-felix/
@@ -228,17 +244,42 @@ update-tools:
 	go get -u github.com/onsi/ginkgo/ginkgo
 
 # Run go fmt on all our go files.
-.PHONY: go-fmt
-go-fmt:
-	$(DOCKER_GO_BUILD) sh -c 'glide nv | xargs go fmt'
+.PHONY: go-fmt goimports
+go-fmt goimports:
+	$(DOCKER_GO_BUILD) sh -c 'glide nv -x | \
+	                          grep -v -e "^\\.$$" | \
+	                          xargs goimports -w -local github.com/projectcalico/ *.go'
+
+check-licenses/dependency-licenses.txt: vendor/.up-to-date
+	$(DOCKER_GO_BUILD) sh -c 'licenses . > check-licenses/dependency-licenses.txt'
 
 .PHONY: ut
 ut combined.coverprofile: vendor/.up-to-date $(GO_FILES)
 	@echo Running Go UTs.
 	$(DOCKER_GO_BUILD) ./utils/run-coverage
 
+bin/check-licenses: $(GO_FILES)
+	$(DOCKER_GO_BUILD) go build -v -i -o $@ "github.com/projectcalico/felix/check-licenses"
+
+.PHONY: check-licenses
+check-licenses: check-licenses/dependency-licenses.txt bin/check-licenses
+	@echo Checking dependency licenses
+	$(DOCKER_GO_BUILD) bin/check-licenses
+
+.PHONY: go-meta-linter
+go-meta-linter: vendor/.up-to-date
+	$(DOCKER_GO_BUILD) gometalinter --deadline=300s \
+	                                --disable-all \
+	                                --enable=goimports \
+	                                --enable=staticcheck \
+	                                --vendor ./...
+
+.PHONY: static-checks
+static-checks:
+	$(MAKE) go-meta-linter check-licenses
+
 .PHONY: ut-no-cover
-ut-no-cover: vendor/.up-to-date $(GO_FILES)
+ut-no-cover: $(GO_FILES)
 	@echo Running Go UTs without coverage.
 	$(DOCKER_GO_BUILD) ginkgo -r
 
@@ -270,6 +311,13 @@ cover-report: combined.coverprofile
 	                           column -t | \
 	                           grep -v '100\.0%'"
 
+.PHONY: upload-to-coveralls
+upload-to-coveralls: combined.coverprofile
+ifndef COVERALLS_REPO_TOKEN
+	$(error COVERALLS_REPO_TOKEN is undefined - run using make upload-to-coveralls COVERALLS_REPO_TOKEN=abcd)
+endif
+	$(DOCKER_GO_BUILD) goveralls -repotoken=$(COVERALLS_REPO_TOKEN) -coverprofile=combined.coverprofile
+
 bin/calico-felix.transfer-url: bin/calico-felix
 	$(DOCKER_GO_BUILD) sh -c 'curl --upload-file bin/calico-felix https://transfer.sh/calico-felix > $@'
 
@@ -292,6 +340,7 @@ clean:
 	       .glide \
 	       vendor \
 	       .go-pkg-cache \
+	       check-licenses/dependency-licenses.txt \
 	       release-notes-*
 	find . -name "*.coverprofile" -type f -delete
 	find . -name "coverage.xml" -type f -delete

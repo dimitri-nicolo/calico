@@ -15,53 +15,79 @@
 package rules
 
 import (
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/projectcalico/felix/hashutils"
 	. "github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
 )
 
-func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndpointID, endpoint *proto.WorkloadEndpoint) []*Chain {
+func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
+	ifaceName string,
+	adminUp bool,
+	tiers []*proto.TierInfo,
+	profileIDs []string,
+) []*Chain {
 	return r.endpointToIptablesChains(
-		endpoint.Tiers,
-		endpoint.ProfileIds,
-		endpoint.Name,
+		tiers,
+		profileIDs,
+		ifaceName,
 		PolicyInboundPfx,
 		PolicyOutboundPfx,
+		ProfileInboundPfx,
+		ProfileOutboundPfx,
 		WorkloadToEndpointPfx,
 		WorkloadFromEndpointPfx,
 		"", // No fail-safe chains for workloads.
 		"", // No fail-safe chains for workloads.
 		chainTypeTracked,
+		adminUp,
 	)
 }
 
-func (r *DefaultRuleRenderer) HostEndpointToFilterChains(ifaceName string, endpoint *proto.HostEndpoint) []*Chain {
+func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
+	ifaceName string,
+	tiers []*proto.TierInfo,
+	profileIDs []string,
+) []*Chain {
+	log.WithField("ifaceName", ifaceName).Debug("Rendering filter host endpoint chain.")
 	return r.endpointToIptablesChains(
-		endpoint.Tiers,
-		endpoint.ProfileIds,
+		tiers,
+		profileIDs,
 		ifaceName,
 		PolicyOutboundPfx,
 		PolicyInboundPfx,
+		ProfileOutboundPfx,
+		ProfileInboundPfx,
 		HostToEndpointPfx,
 		HostFromEndpointPfx,
 		ChainFailsafeOut,
 		ChainFailsafeIn,
 		chainTypeTracked,
+		true, // Host endpoints are always admin up.
 	)
 }
 
-func (r *DefaultRuleRenderer) HostEndpointToRawChains(ifaceName string, endpoint *proto.HostEndpoint) []*Chain {
+func (r *DefaultRuleRenderer) HostEndpointToRawChains(
+	ifaceName string,
+	untrackedTiers []*proto.TierInfo,
+) []*Chain {
+	log.WithField("ifaceName", ifaceName).Debug("Rendering raw (untracked) host endpoint chain.")
+	log.Debug("Rendering raw (untracked) host endpoint chain. - untrackedTiers %+v", untrackedTiers)
 	return r.endpointToIptablesChains(
-		endpoint.UntrackedTiers,
-		endpoint.ProfileIds,
+		untrackedTiers,
+		nil, // We don't render profiles into the raw chain.
 		ifaceName,
 		PolicyOutboundPfx,
 		PolicyInboundPfx,
+		ProfileOutboundPfx,
+		ProfileInboundPfx,
 		HostToEndpointPfx,
 		HostFromEndpointPfx,
 		ChainFailsafeOut,
 		ChainFailsafeIn,
 		chainTypeUntracked, // Render "untracked" version of chain for the raw table.
+		true,               // Host endpoints are always admin up.
 	)
 }
 
@@ -76,16 +102,36 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 	tiers []*proto.TierInfo,
 	profileIds []string,
 	name string,
-	toPolicyPrefix string,
-	fromPolicyPrefix string,
+	toPolicyPrefix PolicyChainNamePrefix,
+	fromPolicyPrefix PolicyChainNamePrefix,
+	toProfilePrefix ProfileChainNamePrefix,
+	fromProfilePrefix ProfileChainNamePrefix,
 	toEndpointPrefix string,
 	fromEndpointPrefix string,
 	toFailsafeChain string,
 	fromFailsafeChain string,
 	chainType endpointChainType,
+	adminUp bool,
 ) []*Chain {
 	toRules := []Rule{}
 	fromRules := []Rule{}
+	toChainName := EndpointChainName(toEndpointPrefix, name)
+	fromChainName := EndpointChainName(fromEndpointPrefix, name)
+
+	if !adminUp {
+		// Endpoint is admin-down, drop all traffic to/from it.
+		toRules = append(toRules, r.DropRules(Match(), "Endpoint admin disabled")...)
+		fromRules = append(fromRules, r.DropRules(Match(), "Endpoint admin disabled")...)
+		toEndpointChain := Chain{
+			Name:  toChainName,
+			Rules: toRules,
+		}
+		fromEndpointChain := Chain{
+			Name:  fromChainName,
+			Rules: fromRules,
+		}
+		return []*Chain{&toEndpointChain, &fromEndpointChain}
+	}
 
 	// First set up failsafes.
 	if toFailsafeChain != "" {
@@ -112,32 +158,31 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 		},
 	})
 
-	// TODO(smc) Police the MAC?
-	// TODO(neil) If so, add an arg to this function and only police in the workload case.
-
 	for _, tier := range tiers {
-		// For each tier,  clear the "accepted by tier" mark.
+		// Clear the "pass" mark.  If a policy sets that mark, we'll skip the rest of the policies
+		// continue processing the profiles, if there are any.
 		toRules = append(toRules, Rule{
 			Comment: "Start of tier " + tier.Name,
 			Action: ClearMarkAction{
-				Mark: r.IptablesMarkNextTier,
+				Mark: r.IptablesMarkPass,
 			},
 		})
 		fromRules = append(fromRules, Rule{
 			Comment: "Start of tier " + tier.Name,
 			Action: ClearMarkAction{
-				Mark: r.IptablesMarkNextTier,
+				Mark: r.IptablesMarkPass,
 			},
 		})
+
 		// Then, jump to each policy in turn.
 		for _, polID := range tier.Policies {
 			toPolChainName := PolicyChainName(
 				toPolicyPrefix,
 				&proto.PolicyID{Tier: tier.Name, Name: polID},
 			)
-			// If a previous policy didn't set the "next-tier" mark, jump to the policy.
+			// If a previous policy didn't set the "pass" mark, jump to the policy.
 			toRules = append(toRules, Rule{
-				Match:  Match().MarkClear(r.IptablesMarkNextTier),
+				Match:  Match().MarkClear(r.IptablesMarkPass),
 				Action: JumpAction{Target: toPolChainName},
 			})
 			// If policy marked packet as accepted, it returns, setting the accept
@@ -161,9 +206,9 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 				fromPolicyPrefix,
 				&proto.PolicyID{Tier: tier.Name, Name: polID},
 			)
-			// If a previous policy didn't set the "next-tier" mark, jump to the policy.
+			// If a previous policy didn't set the "pass" mark, jump to the policy.
 			fromRules = append(fromRules, Rule{
-				Match:  Match().MarkClear(r.IptablesMarkNextTier),
+				Match:  Match().MarkClear(r.IptablesMarkPass),
 				Action: JumpAction{Target: fromPolChainName},
 			})
 			// If policy marked packet as accepted, it returns, setting the accept
@@ -185,21 +230,21 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 		}
 
 		if chainType == chainTypeTracked {
-			// When rendering normal rules, if no policy in the tier marked the packet
-			// as next-tier, drop the packet.
+			// When rendering normal rules, if no policy marked the packet as "pass", drop the
+			// packet.
 			//
 			// For untracked rules, we don't do that because there may be tracked rules
 			// still to be applied to the packet in the filter table.
 
 			toRules = append(toRules, Rule{
-				Match: Match().MarkClear(r.IptablesMarkNextTier),
+				Match: Match().MarkClear(r.IptablesMarkPass),
 				Action: NflogAction{
 					Group:  1,
 					Prefix: "D/0/" + "no-policy-match-inbound/" + tier.Name,
 				},
 			})
 			fromRules = append(fromRules, Rule{
-				Match: Match().MarkClear(r.IptablesMarkNextTier),
+				Match: Match().MarkClear(r.IptablesMarkPass),
 				Action: NflogAction{
 					Group:  2,
 					Prefix: "D/0/" + "no-policy-match-outbound/" + tier.Name,
@@ -207,10 +252,10 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 			})
 
 			toRules = append(toRules, r.DropRules(
-				Match().MarkClear(r.IptablesMarkNextTier),
+				Match().MarkClear(r.IptablesMarkPass),
 				"Drop if no policies passed packet")...)
 			fromRules = append(fromRules, r.DropRules(
-				Match().MarkClear(r.IptablesMarkNextTier),
+				Match().MarkClear(r.IptablesMarkPass),
 				"Drop if no policies passed packet")...)
 		}
 	}
@@ -218,8 +263,8 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 	if chainType == chainTypeTracked {
 		// Then, jump to each profile in turn.
 		for _, profileID := range profileIds {
-			toProfChainName := ProfileChainName(toPolicyPrefix, &proto.ProfileID{Name: profileID})
-			fromProfChainName := ProfileChainName(fromPolicyPrefix, &proto.ProfileID{Name: profileID})
+			toProfChainName := ProfileChainName(toProfilePrefix, &proto.ProfileID{Name: profileID})
+			fromProfChainName := ProfileChainName(fromProfilePrefix, &proto.ProfileID{Name: profileID})
 			toRules = append(toRules,
 				Rule{Action: JumpAction{Target: toProfChainName}},
 				// If policy marked packet as accepted, it returns, setting the
@@ -267,11 +312,11 @@ func (r *DefaultRuleRenderer) endpointToIptablesChains(
 	}
 
 	toEndpointChain := Chain{
-		Name:  EndpointChainName(toEndpointPrefix, name),
+		Name:  toChainName,
 		Rules: toRules,
 	}
 	fromEndpointChain := Chain{
-		Name:  EndpointChainName(fromEndpointPrefix, name),
+		Name:  fromChainName,
 		Rules: fromRules,
 	}
 	return []*Chain{&toEndpointChain, &fromEndpointChain}

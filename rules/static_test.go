@@ -18,11 +18,13 @@ import (
 	. "github.com/projectcalico/felix/rules"
 
 	"fmt"
+	"net"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/ipsets"
 	. "github.com/projectcalico/felix/iptables"
-	"net"
 )
 
 var _ = Describe("Static", func() {
@@ -40,7 +42,7 @@ var _ = Describe("Static", func() {
 				FailsafeInboundHostPorts:  []uint16{22, 1022},
 				FailsafeOutboundHostPorts: []uint16{23, 1023},
 				IptablesMarkAccept:        0x10,
-				IptablesMarkNextTier:      0x20,
+				IptablesMarkPass:          0x20,
 				IptablesMarkFromWorkload:  0x40,
 			}
 		})
@@ -93,8 +95,14 @@ var _ = Describe("Static", func() {
 								Action: AcceptAction{}},
 
 							// Non-workload through-traffic, pass to host endpoint chains.
+							{Action: ClearMarkAction{Mark: 0x70}},
 							{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 							{Action: JumpAction{Target: ChainDispatchToHostEndpoint}},
+							{
+								Match:   Match().MarkSet(0x10),
+								Action:  AcceptAction{},
+								Comment: "Host endpoint policy accepted packet.",
+							},
 						},
 					}))
 				})
@@ -117,9 +125,14 @@ var _ = Describe("Static", func() {
 							{Match: Match().InInterface("cali+"),
 								Action: GotoAction{Target: "cali-wl-to-host"}},
 
-							// Non-workload traffic, pass to host endpoint chain. Note use of
-							// goto so that we don't return here.
-							{Action: GotoAction{Target: "cali-from-host-endpoint"}},
+							// Non-workload traffic, send to host chains.
+							{Action: ClearMarkAction{Mark: 0x70}},
+							{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
+							{
+								Match:   Match().MarkSet(0x10),
+								Action:  AcceptAction{},
+								Comment: "Host endpoint policy accepted packet.",
+							},
 						},
 					}))
 				})
@@ -140,9 +153,14 @@ var _ = Describe("Static", func() {
 							// Return if to workload.
 							{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 
-							// Non-workload traffic, pass to host endpoint chain. Note use of
-							// goto so that we don't return here.
-							{Action: GotoAction{Target: "cali-to-host-endpoint"}},
+							// Non-workload traffic, send to host chains.
+							{Action: ClearMarkAction{Mark: 0x70}},
+							{Action: JumpAction{Target: ChainDispatchToHostEndpoint}},
+							{
+								Match:   Match().MarkSet(0x10),
+								Action:  AcceptAction{},
+								Comment: "Host endpoint policy accepted packet.",
+							},
 						},
 					}))
 				})
@@ -282,6 +300,8 @@ var _ = Describe("Static", func() {
 				OpenStackMetadataIP:          net.ParseIP("10.0.0.1"),
 				OpenStackMetadataPort:        1234,
 				IptablesMarkAccept:           0x10,
+				IptablesMarkPass:             0x20,
+				IptablesMarkFromWorkload:     0x40,
 			}
 		})
 
@@ -373,11 +393,13 @@ var _ = Describe("Static", func() {
 	Describe("with IPIP enabled", func() {
 		BeforeEach(func() {
 			config = Config{
-				WorkloadIfacePrefixes: []string{"cali"},
-				IPIPEnabled:           true,
-				IPIPTunnelAddress:     net.ParseIP("10.0.0.1"),
-				IPSetConfigV4:         ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IptablesMarkAccept:    0x10,
+				WorkloadIfacePrefixes:    []string{"cali"},
+				IPIPEnabled:              true,
+				IPIPTunnelAddress:        net.ParseIP("10.0.0.1"),
+				IPSetConfigV4:            ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IptablesMarkAccept:       0x10,
+				IptablesMarkPass:         0x20,
+				IptablesMarkFromWorkload: 0x40,
 			}
 		})
 
@@ -404,9 +426,14 @@ var _ = Describe("Static", func() {
 				{Match: Match().InInterface("cali+"),
 					Action: GotoAction{Target: "cali-wl-to-host"}},
 
-				// Non-workload traffic, pass to host endpoint chain. Note use of
-				// goto so that we don't return here.
-				{Action: GotoAction{Target: "cali-from-host-endpoint"}},
+				// Not from a workload, apply host policy.
+				{Action: ClearMarkAction{Mark: 0x70}},
+				{Action: JumpAction{Target: "cali-from-host-endpoint"}},
+				{
+					Match:   Match().MarkSet(0x10),
+					Action:  AcceptAction{},
+					Comment: "Host endpoint policy accepted packet.",
+				},
 			},
 		}
 
@@ -429,9 +456,14 @@ var _ = Describe("Static", func() {
 				{Match: Match().InInterface("cali+"),
 					Action: GotoAction{Target: "cali-wl-to-host"}},
 
-				// Non-workload traffic, pass to host endpoint chain. Note use of
-				// goto so that we don't return here.
-				{Action: GotoAction{Target: "cali-from-host-endpoint"}},
+				// Not from a workload, apply host policy.
+				{Action: ClearMarkAction{Mark: 0x70}},
+				{Action: JumpAction{Target: "cali-from-host-endpoint"}},
+				{
+					Match:   Match().MarkSet(0x10),
+					Action:  AcceptAction{},
+					Comment: "Host endpoint policy accepted packet.",
+				},
 			},
 		}
 
@@ -475,9 +507,11 @@ var _ = Describe("Static", func() {
 	Describe("with drop override and multiple prefixes", func() {
 		BeforeEach(func() {
 			config = Config{
-				WorkloadIfacePrefixes: []string{"cali", "tap"},
-				ActionOnDrop:          "ACCEPT",
-				IptablesMarkAccept:    0x10,
+				WorkloadIfacePrefixes:    []string{"cali", "tap"},
+				ActionOnDrop:             "ACCEPT",
+				IptablesMarkAccept:       0x10,
+				IptablesMarkPass:         0x20,
+				IptablesMarkFromWorkload: 0x40,
 			}
 		})
 
@@ -515,8 +549,14 @@ var _ = Describe("Static", func() {
 					Action: AcceptAction{}},
 
 				// Non-workload through-traffic, pass to host endpoint chains.
+				{Action: ClearMarkAction{Mark: 0x70}},
 				{Action: JumpAction{Target: ChainDispatchFromHostEndpoint}},
 				{Action: JumpAction{Target: ChainDispatchToHostEndpoint}},
+				{
+					Match:   Match().MarkSet(0x10),
+					Action:  AcceptAction{},
+					Comment: "Host endpoint policy accepted packet.",
+				},
 			},
 		}
 
@@ -540,9 +580,14 @@ var _ = Describe("Static", func() {
 				{Match: Match().InInterface("tap+"),
 					Action: GotoAction{Target: "cali-wl-to-host"}},
 
-				// Non-workload traffic, pass to host endpoint chain. Note use of
-				// goto so that we don't return here.
-				{Action: GotoAction{Target: "cali-from-host-endpoint"}},
+				// Non-workload through-traffic, pass to host endpoint chains.
+				{Action: ClearMarkAction{Mark: 0x70}},
+				{Action: JumpAction{Target: "cali-from-host-endpoint"}},
+				{
+					Match:   Match().MarkSet(0x10),
+					Action:  AcceptAction{},
+					Comment: "Host endpoint policy accepted packet.",
+				},
 			},
 		}
 
@@ -563,9 +608,14 @@ var _ = Describe("Static", func() {
 				{Match: Match().OutInterface("cali+"), Action: ReturnAction{}},
 				{Match: Match().OutInterface("tap+"), Action: ReturnAction{}},
 
-				// Non-workload traffic, pass to host endpoint chain. Note use of
-				// goto so that we don't return here.
-				{Action: GotoAction{Target: "cali-to-host-endpoint"}},
+				// Non-workload traffic, pass to host endpoint chain.
+				{Action: ClearMarkAction{Mark: 0x70}},
+				{Action: JumpAction{Target: "cali-to-host-endpoint"}},
+				{
+					Match:   Match().MarkSet(0x10),
+					Action:  AcceptAction{},
+					Comment: "Host endpoint policy accepted packet.",
+				},
 			},
 		}
 
@@ -632,9 +682,11 @@ var _ = Describe("DropRules", func() {
 	Describe("with LOG-and-DROP override", func() {
 		BeforeEach(func() {
 			config = Config{
-				WorkloadIfacePrefixes: []string{"cali", "tap"},
-				ActionOnDrop:          "LOG-and-DROP",
-				IptablesMarkAccept:    0x10,
+				WorkloadIfacePrefixes:    []string{"cali", "tap"},
+				ActionOnDrop:             "LOG-and-DROP",
+				IptablesMarkAccept:       0x10,
+				IptablesMarkPass:         0x20,
+				IptablesMarkFromWorkload: 0x40,
 			}
 		})
 
@@ -647,7 +699,7 @@ var _ = Describe("DropRules", func() {
 
 		Describe("with a custom prefix", func() {
 			BeforeEach(func() {
-				config.DropLogPrefix = "my-prefix"
+				config.IptablesLogPrefix = "my-prefix"
 			})
 
 			It("should render a log and a drop", func() {

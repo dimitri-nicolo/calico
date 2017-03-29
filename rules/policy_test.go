@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
@@ -183,13 +184,14 @@ var ruleTestData = []TableEntry{
 
 var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	var rrConfigNormal = Config{
-		IPIPEnabled:          true,
-		IPIPTunnelAddress:    nil,
-		IPSetConfigV4:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		IptablesMarkAccept:   0x8,
-		IptablesMarkNextTier: 0x10,
-		IptablesMarkDrop:     0x0a,
+		IPIPEnabled:        true,
+		IPIPTunnelAddress:  nil,
+		IPSetConfigV4:      ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:      ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		IptablesMarkAccept: 0x8,
+		IptablesMarkPass:   0x10,
+		IptablesMarkDrop:   0x0a,
+		IptablesLogPrefix:  "calico-drop",
 	}
 
 	DescribeTable(
@@ -223,77 +225,43 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	)
 
 	DescribeTable(
-		"next-tier rules should be correctly rendered",
+		"pass rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
-			renderer := NewRenderer(rrConfigNormal)
-			in.Action = "next-tier"
-			rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
-			// For next-tier, should be one match rule that sets the mark, then one
-			// that reads the mark and returns.
-			Expect(len(rules)).To(Equal(3))
-			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x10}))
-			Expect(rules[1]).To(Equal(iptables.Rule{
-				Match: iptables.Match().MarkSet(0x10),
-				Action: iptables.NflogAction{
-					Group:  1,
-					Prefix: "N/foo",
-				},
-			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
-				Match:  iptables.Match().MarkSet(0x10),
-				Action: iptables.ReturnAction{},
-			}))
+			for _, action := range []string{"next-tier", "pass"} {
+				renderer := NewRenderer(rrConfigNormal)
+				in.Action = action
+				rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
+				// For next-tier, should be one match rule that sets the mark, then one
+				// that reads the mark and returns.
+				Expect(len(rules)).To(Equal(3))
+				Expect(rules[0].Match.Render()).To(Equal(expMatch))
+				Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x10}))
+				Expect(rules[1]).To(Equal(iptables.Rule{
+					Match: iptables.Match().MarkSet(0x10),
+					Action: iptables.NflogAction{
+						Group:  1,
+						Prefix: "N/foo",
+					},
+				}))
+				Expect(rules[2]).To(Equal(iptables.Rule{
+					Match:  iptables.Match().MarkSet(0x10),
+					Action: iptables.ReturnAction{},
+				}))
+			}
 		},
 		ruleTestData...,
 	)
 
 	DescribeTable(
-		"Allow rules with log prefix should be correctly rendered",
-		func(ipVer int, in proto.Rule, expMatch string) {
-			renderer := NewRenderer(rrConfigNormal)
-			in.LogPrefix = "logme"
-			rules := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
-			// For allow, should be one match rule that sets the mark, then one that reads the
-			// mark and returns.
-			Expect(len(rules)).To(Equal(4))
-			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.SetMarkAction{Mark: 0x8}))
-			Expect(rules[1]).To(Equal(iptables.Rule{
-				Match:  iptables.Match().MarkSet(0x8),
-				Action: iptables.LogAction{Prefix: "logme"},
-			}))
-			Expect(rules[2]).To(Equal(iptables.Rule{
-				Match: iptables.Match().MarkSet(0x8),
-				Action: iptables.NflogAction{
-					Group:  1,
-					Prefix: "A/foo",
-				},
-			}))
-			Expect(rules[3]).To(Equal(iptables.Rule{
-				Match:  iptables.Match().MarkSet(0x8),
-				Action: iptables.ReturnAction{},
-			}))
-
-			// Explicit allow should be treated the same as empty.
-			in.Action = "allow"
-			rules2 := renderer.ProtoRuleToIptablesRules(&in, uint8(ipVer), true, "foo")
-			Expect(rules2).To(Equal(rules))
-		},
-		ruleTestData...,
-	)
-
-	DescribeTable(
-		"Log rules should be correctly rendered in normal mode.",
+		"Log rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
 			logRule := in
 			logRule.Action = "log"
 			rules := renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer), true, "foo")
-			// For deny, should be one match rule that just does the DROP.
 			Expect(len(rules)).To(Equal(1))
 			Expect(rules[0].Match.Render()).To(Equal(expMatch))
-			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-packet"}))
+			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-drop"}))
 			By("Rendering an explicit log prefix")
 			logRule.LogPrefix = "foobar"
 			rules = renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer), true, "foo")
@@ -306,7 +274,31 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	)
 
 	DescribeTable(
-		"Deny rules should be correctly rendered in normal mode.",
+		"Log rules should be correctly rendered with non-default prefix",
+		func(ipVer int, in proto.Rule, expMatch string) {
+			rrConfigPrefix := rrConfigNormal
+			rrConfigPrefix.IptablesLogPrefix = "foobar"
+			renderer := NewRenderer(rrConfigPrefix)
+			logRule := in
+			logRule.Action = "log"
+			rules := renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer), true, "foo")
+			// For deny, should be one match rule that just does the DROP.
+			Expect(len(rules)).To(Equal(1))
+			Expect(rules[0].Match.Render()).To(Equal(expMatch))
+			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "calico-drop"}))
+			By("Rendering an explicit log prefix")
+			logRule.LogPrefix = "foobar"
+			rules = renderer.ProtoRuleToIptablesRules(&logRule, uint8(ipVer), true, "foo")
+			// For deny, should be one match rule that just does the DROP.
+			Expect(len(rules)).To(Equal(1))
+			Expect(rules[0].Match.Render()).To(Equal(expMatch))
+			Expect(rules[0].Action).To(Equal(iptables.LogAction{Prefix: "foobar"}))
+		},
+		ruleTestData...,
+	)
+
+	DescribeTable(
+		"Deny rules should be correctly rendered",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			renderer := NewRenderer(rrConfigNormal)
 			denyRule := in

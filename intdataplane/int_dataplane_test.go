@@ -15,13 +15,15 @@
 package intdataplane_test
 
 import (
+	"net"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/intdataplane"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/rules"
-	"net"
 )
 
 var _ = Describe("Constructor test", func() {
@@ -50,8 +52,8 @@ var _ = Describe("Constructor test", func() {
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				IptablesMarkAccept:   0x1000000,
-				IptablesMarkNextTier: 0x2000000,
+				IptablesMarkAccept: 0x1000000,
+				IptablesMarkPass:   0x2000000,
 
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,

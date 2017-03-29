@@ -13,6 +13,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/mipearson/rfw"
+
 	"github.com/projectcalico/felix/collector/stats"
 )
 
