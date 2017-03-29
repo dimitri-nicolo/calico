@@ -38,7 +38,6 @@ func init() {
 type MetricsReporter interface {
 	Update(data Data) error
 	Delete(data Data) error
-	Flush() error
 }
 
 // TODO(doublek): When we want different ways of aggregating, this will
@@ -49,11 +48,10 @@ type AggregateKey struct {
 }
 
 type AggregateValue struct {
-	Counter
-	labels             prometheus.Labels
-	gaugeDeniedPackets prometheus.Gauge
-	gaugeDeniedBytes   prometheus.Gauge
-	refs               set.Set
+	labels  prometheus.Labels
+	packets prometheus.Gauge
+	bytes   prometheus.Gauge
+	refs    set.Set
 }
 
 type PrometheusReporter struct {
@@ -81,9 +79,6 @@ func (pr *PrometheusReporter) Update(data Data) error {
 	}
 	value, ok := pr.aggStats[key]
 	if ok {
-		dp, db := ctr.DeltaValues()
-		value.packets += dp
-		value.bytes += db
 		value.refs.Add(data.Tuple)
 	} else {
 		l := prometheus.Labels{
@@ -91,13 +86,15 @@ func (pr *PrometheusReporter) Update(data Data) error {
 			"policy": key.policy,
 		}
 		value = AggregateValue{
-			Counter:            ctr,
-			labels:             l,
-			gaugeDeniedPackets: gaugeDeniedPackets.With(l),
-			gaugeDeniedBytes:   gaugeDeniedBytes.With(l),
-			refs:               set.FromArray([]Tuple{data.Tuple}),
+			labels:  l,
+			packets: gaugeDeniedPackets.With(l),
+			bytes:   gaugeDeniedBytes.With(l),
+			refs:    set.FromArray([]Tuple{data.Tuple}),
 		}
 	}
+	dp, db := ctr.DeltaValues()
+	value.packets.Add(float64(dp))
+	value.bytes.Add(float64(db))
 	pr.aggStats[key] = value
 	return nil
 }
@@ -115,6 +112,8 @@ func (pr *PrometheusReporter) Delete(data Data) error {
 	}
 	value.refs.Discard(data.Tuple)
 	pr.aggStats[key] = value
+	// TODO(doublek): We are deleting too early. We should probably hang on to
+	// counter value for a little bit before deleting the metric value labels.
 	if value.refs.Len() == 0 {
 		log.WithFields(log.Fields{
 			"labels": value.labels,
@@ -122,20 +121,6 @@ func (pr *PrometheusReporter) Delete(data Data) error {
 		gaugeDeniedPackets.Delete(value.labels)
 		gaugeDeniedBytes.Delete(value.labels)
 		delete(pr.aggStats, key)
-	}
-	return nil
-}
-
-func (pr *PrometheusReporter) Flush() error {
-	for key, value := range pr.aggStats {
-		log.WithFields(log.Fields{
-			"labels":  value.labels,
-			"bytes":   value.bytes,
-			"packets": value.packets,
-		}).Debug("Setting prometheus metrics.")
-		value.gaugeDeniedPackets.Set(float64(value.packets))
-		value.gaugeDeniedBytes.Set(float64(value.bytes))
-		pr.aggStats[key] = value
 	}
 	return nil
 }
@@ -163,11 +148,9 @@ func (sr *SyslogReporter) Update(data Data) error {
 	}
 	var bytes, packets int
 	if data.ctrIn.packets != 0 {
-		bytes = data.ctrIn.bytes
-		packets = data.ctrIn.packets
+		packets, bytes = data.ctrIn.Values()
 	} else {
-		bytes = data.ctrOut.bytes
-		packets = data.ctrOut.packets
+		packets, bytes = data.ctrOut.Values()
 	}
 	f := log.Fields{
 		"proto":   strconv.Itoa(data.Tuple.proto),
@@ -185,10 +168,6 @@ func (sr *SyslogReporter) Update(data Data) error {
 }
 
 func (sr *SyslogReporter) Delete(data Data) error {
-	return nil
-}
-
-func (sr *SyslogReporter) Flush() error {
 	return nil
 }
 

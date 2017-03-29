@@ -187,9 +187,6 @@ func (c *Collector) reportMetrics() {
 		}
 		data.clearDirtyFlag()
 	}
-	for _, r := range c.reporters {
-		r.Flush()
-	}
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.
