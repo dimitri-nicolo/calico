@@ -22,9 +22,11 @@ package ip
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	calinet "github.com/projectcalico/libcalico-go/lib/net"
 	"net"
+
+	log "github.com/Sirupsen/logrus"
+
+	calinet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
 // Addr represents either an IPv4 or IPv6 IP address.
@@ -49,7 +51,7 @@ func (a V4Addr) AsNetIP() net.IP {
 }
 
 func (a V4Addr) AsCalicoNetIP() calinet.IP {
-	return calinet.IP{a.AsNetIP()}
+	return calinet.IP{IP: a.AsNetIP()}
 }
 
 func (a V4Addr) String() string {
@@ -67,7 +69,7 @@ func (a V6Addr) AsNetIP() net.IP {
 }
 
 func (a V6Addr) AsCalicoNetIP() calinet.IP {
-	return calinet.IP{a.AsNetIP()}
+	return calinet.IP{IP: a.AsNetIP()}
 }
 
 func (a V6Addr) String() string {
@@ -138,23 +140,32 @@ func (c V6CIDR) String() string {
 	return fmt.Sprintf("%s/%v", c.addr.String(), c.prefix)
 }
 
-func FromNetIP(netIP net.IP) Addr {
-	if len(netIP) == 4 {
-		ip := V4Addr{}
-		for ii, b := range netIP {
-			ip[ii] = b
-		}
-		return ip
-	} else {
-		ip := V6Addr{}
-		for ii, b := range netIP {
-			ip[ii] = b
-		}
-		return ip
-	}
+func FromString(s string) Addr {
+	return FromNetIP(net.ParseIP(s))
 }
 
-func CIDRFromIPNet(ipNet calinet.IPNet) CIDR {
+func FromNetIP(netIP net.IP) Addr {
+	// Note: we have to use To4() here because the net package often represents an IPv4 address
+	// using 16 bytes.  The only way to distinguish an IPv4 address using that API is To4(),
+	// which returns nil if the IP is a v6 address or nil.
+	if v4NetIP := netIP.To4(); v4NetIP != nil {
+		ip := V4Addr{}
+		copy(ip[:], v4NetIP)
+		return ip
+	}
+	if v6NetIP := netIP.To16(); v6NetIP != nil {
+		ip := V6Addr{}
+		copy(ip[:], v6NetIP)
+		return ip
+	}
+	return nil
+}
+
+func CIDRFromCalicoNet(ipNet calinet.IPNet) CIDR {
+	return CIDRFromIPNet(&ipNet.IPNet)
+}
+
+func CIDRFromIPNet(ipNet *net.IPNet) CIDR {
 	ones, _ := ipNet.Mask.Size()
 	ip := FromNetIP(ipNet.IP)
 	if ip.Version() == 4 {
@@ -175,5 +186,5 @@ func MustParseCIDR(s string) CIDR {
 	if err != nil {
 		log.WithError(err).WithField("cidr", s).Panic("Failed to parse CIDR")
 	}
-	return CIDRFromIPNet(calinet.IPNet{*ipNet})
+	return CIDRFromIPNet(ipNet)
 }

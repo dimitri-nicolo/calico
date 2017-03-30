@@ -15,50 +15,59 @@
 package rules
 
 import (
+	"net"
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
+
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
-	"net"
-	"strings"
 )
 
 const (
-	ChainNamePrefix = "cali"
+	// ChainNamePrefix is a prefix used for all our iptables chain names.  We include a '-' at
+	// the end to reduce clashes with other apps.  Our OpenStack DHCP agent uses prefix
+	// 'calico-dhcp-', for example.
+	ChainNamePrefix = "cali-"
+	// IPSetNamePrefix: similarly for IP sets, we use the following prefix; the IP sets layer
+	// adds its own "-" so it isn't included here.
 	IPSetNamePrefix = "cali"
 
-	ChainFilterInput   = ChainNamePrefix + "-INPUT"
-	ChainFilterForward = ChainNamePrefix + "-FORWARD"
-	ChainFilterOutput  = ChainNamePrefix + "-OUTPUT"
+	ChainFilterInput   = ChainNamePrefix + "INPUT"
+	ChainFilterForward = ChainNamePrefix + "FORWARD"
+	ChainFilterOutput  = ChainNamePrefix + "OUTPUT"
 
-	ChainRawPrerouting = ChainNamePrefix + "-PREROUTING"
-	ChainRawOutput     = ChainNamePrefix + "-OUTPUT"
+	ChainRawPrerouting = ChainNamePrefix + "PREROUTING"
+	ChainRawOutput     = ChainNamePrefix + "OUTPUT"
 
-	ChainFailsafeIn  = ChainNamePrefix + "-failsafe-in"
-	ChainFailsafeOut = ChainNamePrefix + "-failsafe-out"
+	ChainFailsafeIn  = ChainNamePrefix + "failsafe-in"
+	ChainFailsafeOut = ChainNamePrefix + "failsafe-out"
 
-	ChainNATPrerouting  = ChainNamePrefix + "-PREROUTING"
-	ChainNATPostrouting = ChainNamePrefix + "-POSTROUTING"
-	ChainNATOutput      = ChainNamePrefix + "-OUTPUT"
-	ChainNATOutgoing    = ChainNamePrefix + "-nat-outgoing"
+	ChainNATPrerouting  = ChainNamePrefix + "PREROUTING"
+	ChainNATPostrouting = ChainNamePrefix + "POSTROUTING"
+	ChainNATOutput      = ChainNamePrefix + "OUTPUT"
+	ChainNATOutgoing    = ChainNamePrefix + "nat-outgoing"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
 
 	IPSetIDAllHostIPs = "all-hosts"
 
-	ChainFIPDnat = ChainNamePrefix + "-fip-dnat"
-	ChainFIPSnat = ChainNamePrefix + "-fip-snat"
+	ChainFIPDnat = ChainNamePrefix + "fip-dnat"
+	ChainFIPSnat = ChainNamePrefix + "fip-snat"
 
-	PolicyInboundPfx  = ChainNamePrefix + "pi-"
-	PolicyOutboundPfx = ChainNamePrefix + "po-"
+	PolicyInboundPfx   PolicyChainNamePrefix  = ChainNamePrefix + "pi-"
+	PolicyOutboundPfx  PolicyChainNamePrefix  = ChainNamePrefix + "po-"
+	ProfileInboundPfx  ProfileChainNamePrefix = ChainNamePrefix + "pri-"
+	ProfileOutboundPfx ProfileChainNamePrefix = ChainNamePrefix + "pro-"
 
-	ChainWorkloadToHost       = ChainNamePrefix + "-wl-to-host"
-	ChainFromWorkloadDispatch = ChainNamePrefix + "-from-wl-dispatch"
-	ChainToWorkloadDispatch   = ChainNamePrefix + "-to-wl-dispatch"
+	ChainWorkloadToHost       = ChainNamePrefix + "wl-to-host"
+	ChainFromWorkloadDispatch = ChainNamePrefix + "from-wl-dispatch"
+	ChainToWorkloadDispatch   = ChainNamePrefix + "to-wl-dispatch"
 
-	ChainDispatchToHostEndpoint   = ChainNamePrefix + "-to-host-endpoint"
-	ChainDispatchFromHostEndpoint = ChainNamePrefix + "-from-host-endpoint"
+	ChainDispatchToHostEndpoint   = ChainNamePrefix + "to-host-endpoint"
+	ChainDispatchFromHostEndpoint = ChainNamePrefix + "from-host-endpoint"
 
 	WorkloadToEndpointPfx   = ChainNamePrefix + "tw-"
 	WorkloadFromEndpointPfx = ChainNamePrefix + "fw-"
@@ -81,10 +90,30 @@ const (
 		`-A POSTROUTING -o tunl0 -m addrtype ! --src-type LOCAL --limit-iface-out -m addrtype --src-type LOCAL -j MASQUERADE`
 )
 
+// Typedefs to prevent accidentally passing the wrong prefix to the Policy/ProfileChainName()
+type PolicyChainNamePrefix string
+type ProfileChainNamePrefix string
+
 var (
 	// AllHistoricChainNamePrefixes lists all the prefixes that we've used for chains.  Keeping
 	// track of the old names lets us clean them up.
-	AllHistoricChainNamePrefixes = []string{"felix-", "cali"}
+	AllHistoricChainNamePrefixes = []string{
+		// Current.
+		"cali-",
+
+		// Early RCs of Felix 2.1 used "cali" as the prefix for some chains rather than
+		// "cali-".  This led to name clashes with the DHCP agent, which uses "calico-" as
+		// its prefix.  We need to explicitly list these exceptions.
+		"califw-",
+		"calitw-",
+		"califh-",
+		"calith-",
+		"calipi-",
+		"calipo-",
+
+		// Pre Felix v2.1.
+		"felix-",
+	}
 	// AllHistoricIPSetNamePrefixes, similarly contains all the prefixes we've ever used for IP
 	// sets.
 	AllHistoricIPSetNamePrefixes = []string{"felix-", "cali"}
@@ -99,11 +128,23 @@ type RuleRenderer interface {
 	StaticRawTableChains(ipVersion uint8) []*iptables.Chain
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
-	WorkloadEndpointToIptablesChains(epID *proto.WorkloadEndpointID, endpoint *proto.WorkloadEndpoint) []*iptables.Chain
+	WorkloadEndpointToIptablesChains(
+		ifaceName string,
+		adminUp bool,
+		tiers []*proto.TierInfo,
+		profileIDs []string,
+	) []*iptables.Chain
 
 	HostDispatchChains(map[string]proto.HostEndpointID) []*iptables.Chain
-	HostEndpointToFilterChains(ifaceName string, endpoint *proto.HostEndpoint) []*iptables.Chain
-	HostEndpointToRawChains(ifaceName string, endpoint *proto.HostEndpoint) []*iptables.Chain
+	HostEndpointToFilterChains(
+		ifaceName string,
+		tiers []*proto.TierInfo,
+		profileIDs []string,
+	) []*iptables.Chain
+	HostEndpointToRawChains(
+		ifaceName string,
+		untrackedTiers []*proto.TierInfo,
+	) []*iptables.Chain
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
@@ -140,7 +181,7 @@ type Config struct {
 	WorkloadIfacePrefixes []string
 
 	IptablesMarkAccept       uint32
-	IptablesMarkNextTier     uint32
+	IptablesMarkPass         uint32
 	IptablesMarkDrop         uint32
 	IptablesMarkFromWorkload uint32
 
@@ -151,7 +192,7 @@ type Config struct {
 	IPIPEnabled       bool
 	IPIPTunnelAddress net.IP
 
-	DropLogPrefix        string
+	IptablesLogPrefix    string
 	ActionOnDrop         string
 	EndpointToHostAction string
 
@@ -161,15 +202,15 @@ type Config struct {
 
 func NewRenderer(config Config) RuleRenderer {
 	log.WithField("config", config).Info("Creating rule renderer.")
-	// Convert configured actions to rule slices.  First, what should we actually do when we'd
+	// Convert configured actions to rule slices. First, what should we actually do when we'd
 	// normally drop a packet?  For sandbox mode, we support allowing the packet instead, or
 	// logging it.
 	var dropActions []iptables.Action
 	if strings.HasPrefix(config.ActionOnDrop, "LOG-") {
 		log.Warn("Action on drop includes LOG.  All dropped packets will be logged.")
 		logPrefix := "calico-drop"
-		if config.DropLogPrefix != "" {
-			logPrefix = config.DropLogPrefix
+		if config.IptablesLogPrefix != "" {
+			logPrefix = config.IptablesLogPrefix
 		}
 		dropActions = append(dropActions, iptables.LogAction{Prefix: logPrefix})
 	}

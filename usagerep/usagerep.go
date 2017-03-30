@@ -19,13 +19,15 @@ import (
 
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/felix/buildinfo"
-	"github.com/projectcalico/felix/calc"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
+
+	"github.com/projectcalico/felix/buildinfo"
+	"github.com/projectcalico/felix/calc"
 )
 
 const (
@@ -40,23 +42,7 @@ func PeriodicallyReportUsage(interval time.Duration, hostname, clusterGUID, clus
 	// To avoid thundering herd, inject some startup jitter.
 	initialDelay := calculateInitialDelay(stats.NumHosts)
 	log.WithField("delay", initialDelay).Info("Waiting before first check-in")
-
-	// Even while we're in the initial delay period, we need to keep draining the stats channel
-	// so we do the delay in a goroutine.
-	initialDelayC := make(chan bool)
-	go func() {
-		time.Sleep(initialDelay)
-		initialDelayC <- true
-		close(initialDelayC)
-	}()
-initialDelayLoop:
-	for {
-		select {
-		case stats = <-statsUpdateC:
-		case <-initialDelayC:
-			break initialDelayLoop
-		}
-	}
+	time.Sleep(initialDelay)
 
 	log.Info("Initial delay complete, making first check-in")
 	ReportUsage(hostname, clusterGUID, clusterType, stats)

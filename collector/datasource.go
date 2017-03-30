@@ -10,6 +10,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
@@ -79,20 +80,20 @@ func (ds *NflogDataSource) startProcessingPackets() {
 
 func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*StatUpdate, error) {
 	nflogTuple := nPkt.Tuple
-	var numPkts, numBytes, inPkts, inBytes, outPkts, outBytes int
+	var numPkts, numBytes int
 	var statUpdate *StatUpdate
-	var reverse bool
 	var wlEpKey *model.WorkloadEndpointKey
 	var prefixAction RuleAction
 	_, _, _, prefixAction = parsePrefix(nPkt.Prefix)
-	if prefixAction == DenyAction {
-		// NFLog based counters make sense only for denied packets.
+	if prefixAction == DenyAction || prefixAction == AllowAction {
+		// NFLog based counters make sense only for denied packets or allowed packets
+		// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
+		// counters will overwrite these values anyway.
 		numPkts = 1
 		numBytes = nPkt.Bytes
 	} else {
 		// Allowed packet counters are updated via conntrack datasource.
 		// Don't update packet counts for NextTierAction to avoid multiply counting.
-		// FIXME(doublek): This assumption is not true in the case of NOTRACK.
 		numPkts = 0
 		numBytes = 0
 	}
@@ -100,25 +101,15 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*S
 	// Determine the endpoint that this packet hit a rule for. This depends on the direction
 	// because local -> local packets will be NFLOGed twice.
 	if ds.direction == DirIn {
-		inPkts = numPkts
-		inBytes = numBytes
-		outPkts = 0
-		outBytes = 0
 		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Dst)
-		reverse = true
 	} else {
-		inPkts = 0
-		inBytes = 0
-		outPkts = numPkts
-		outBytes = numBytes
 		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Src)
-		reverse = false
 	}
 
 	if wlEpKey != nil {
 		tp := lookupRule(ds.lum, nPkt.Prefix, wlEpKey)
-		tuple := extractTupleFromNflogTuple(nPkt.Tuple, reverse)
-		statUpdate = NewStatUpdate(tuple, *wlEpKey, inPkts, inBytes, outPkts, outBytes, DeltaCounter, tp)
+		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
+		statUpdate = NewStatUpdate(tuple, numPkts, numBytes, 0, 0, DeltaCounter, ds.direction, tp)
 	} else {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
@@ -129,7 +120,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*S
 	return statUpdate, nil
 }
 
-func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse bool) Tuple {
+func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
 	var l4Src, l4Dst int
 	if nflogTuple.Proto == 1 {
 		l4Src = nflogTuple.L4Src.Id
@@ -138,11 +129,7 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple, reverse b
 		l4Src = nflogTuple.L4Src.Port
 		l4Dst = nflogTuple.L4Dst.Port
 	}
-	if !reverse {
-		return *NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
-	} else {
-		return *NewTuple(nflogTuple.Dst, nflogTuple.Src, nflogTuple.Proto, l4Dst, l4Src)
-	}
+	return *NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
 }
 
 type ConntrackDataSource struct {
@@ -222,24 +209,26 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	}
 	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
 	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
-
-	// Force conntrack to have empty tracepoint
-	if wlEpKeySrc != nil {
-		// Locally originating packet
-		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
-		su := NewStatUpdate(tuple, *wlEpKeySrc,
-			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
-			AbsoluteCounter, EmptyRuleTracePoint)
-		statUpdates = append(statUpdates, *su)
+	if wlEpKeySrc == nil && wlEpKeyDst == nil {
+		// We always expect unknown entries for conntrack for things such as
+		// management or local traffic. This log can get spammy if we log everything
+		// because of which we don't return an error and log at debug level.
+		log.Debugf("No known endpoints found for %v", ctEntry)
+		return nil, nil
 	}
-	if wlEpKeyDst != nil {
-		// Locally terminating packet
+	tuple := extractTupleFromCtEntryTuple(ctTuple, false)
+	su := NewStatUpdate(tuple,
+		ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
+		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
+		AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
+	statUpdates = append(statUpdates, *su)
+	if wlEpKeySrc != nil && wlEpKeyDst != nil {
+		// Locally to local packet will require a reversed tuple to collect reply stats.
 		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
-		su := NewStatUpdate(tuple, *wlEpKeyDst,
+		su := NewStatUpdate(tuple,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-			AbsoluteCounter, EmptyRuleTracePoint)
+			AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
 	}
 	for _, update := range statUpdates {
@@ -316,6 +305,7 @@ func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) R
 		Rule:     rule,
 		Action:   action,
 		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
+		WlEpKey:  *epKey,
 	}
 }
 

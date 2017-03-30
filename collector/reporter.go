@@ -135,9 +135,22 @@ func (pr *PrometheusReporter) startReporter() {
 				pr.deleteMetric(key)
 			}
 		case data := <-pr.reportChan:
-			pr.reportMetric(data)
+			if !data.IsDirty() {
+				continue
+			}
+			if data.IngressAction() == DenyAction {
+				pr.reportMetric(data.IngressRuleTrace, data)
+			}
+			if data.EgressAction() == DenyAction {
+				pr.reportMetric(data.EgressRuleTrace, data)
+			}
 		case data := <-pr.expireChan:
-			pr.expireMetric(data)
+			if data.IngressAction() == DenyAction {
+				pr.expireMetric(data.IngressRuleTrace, data)
+			}
+			if data.EgressAction() == DenyAction {
+				pr.expireMetric(data.EgressRuleTrace, data)
+			}
 		}
 	}
 }
@@ -147,19 +160,8 @@ func (pr *PrometheusReporter) Report(data Data) error {
 	return nil
 }
 
-func (pr *PrometheusReporter) reportMetric(data Data) {
-	if data.Action() != DenyAction || !data.IsDirty() {
-		return
-	}
-	key := AggregateKey{data.RuleTrace.ToString(), data.Tuple.src}
-	var ctr Counter
-	// TODO(doublek): This is a temporary workaround until direction awareness
-	// of tuples/data via NFLOG makes its way in.
-	if !data.ctrIn.IsZero() {
-		ctr = data.ctrIn
-	} else {
-		ctr = data.ctrOut
-	}
+func (pr *PrometheusReporter) reportMetric(ruleTrace *RuleTrace, data Data) {
+	key := AggregateKey{ruleTrace.ToString(), data.Tuple.src}
 	value, ok := pr.aggStats[key]
 	if ok {
 		if pr.deleteCandidates.Contains(key) {
@@ -179,7 +181,7 @@ func (pr *PrometheusReporter) reportMetric(data Data) {
 			refs:    set.FromArray([]Tuple{data.Tuple}),
 		}
 	}
-	dp, db := ctr.DeltaValues()
+	dp, db := data.ctr.DeltaValues()
 	value.packets.Add(float64(dp))
 	value.bytes.Add(float64(db))
 	pr.aggStats[key] = value
@@ -192,10 +194,8 @@ func (pr *PrometheusReporter) Expire(data Data) error {
 	return nil
 }
 
-func (pr *PrometheusReporter) expireMetric(data Data) {
-	ruleTrace := data.RuleTrace.ToString()
-	srcIP := data.Tuple.src
-	key := AggregateKey{ruleTrace, srcIP}
+func (pr *PrometheusReporter) expireMetric(ruleTrace *RuleTrace, data Data) {
+	key := AggregateKey{ruleTrace.ToString(), data.Tuple.src}
 	value, ok := pr.aggStats[key]
 	if !ok {
 		return
@@ -270,28 +270,32 @@ func (sr *SyslogReporter) Start() {
 }
 
 func (sr *SyslogReporter) Report(data Data) error {
-	if data.Action() != DenyAction || !data.IsDirty() {
+	if !data.IsDirty() {
 		return nil
 	}
-	var bytes, packets int
-	if data.ctrIn.packets != 0 {
-		packets, bytes = data.ctrIn.Values()
-	} else {
-		packets, bytes = data.ctrOut.Values()
+	if data.IngressAction() == DenyAction {
+		sr.log(data.IngressRuleTrace, data)
 	}
+	if data.EgressAction() == DenyAction {
+		sr.log(data.EgressRuleTrace, data)
+	}
+	return nil
+}
+
+func (sr *SyslogReporter) log(ruleTrace *RuleTrace, data Data) {
+	bytes, packets := data.ctr.Values()
 	f := log.Fields{
 		"proto":   strconv.Itoa(data.Tuple.proto),
 		"srcIP":   data.Tuple.src,
 		"srcPort": strconv.Itoa(data.Tuple.l4Src),
 		"dstIP":   data.Tuple.dst,
 		"dstPort": strconv.Itoa(data.Tuple.l4Dst),
-		"policy":  data.RuleTrace.ToString(),
+		"policy":  ruleTrace.ToString(),
 		"action":  DenyAction,
 		"packets": packets,
 		"bytes":   bytes,
 	}
 	sr.slog.WithFields(f).Info("")
-	return nil
 }
 
 func (sr *SyslogReporter) Expire(data Data) error {

@@ -16,17 +16,18 @@ package routetable
 
 import (
 	"errors"
-	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/felix/conntrack"
-	"github.com/projectcalico/felix/ifacemonitor"
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/felix/set"
-	calinet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/vishvananda/netlink"
 	"net"
 	"regexp"
 	"strings"
 	"syscall"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/felix/conntrack"
+	"github.com/projectcalico/felix/ifacemonitor"
+	"github.com/projectcalico/felix/ip"
+	"github.com/projectcalico/felix/set"
 )
 
 var (
@@ -120,6 +121,11 @@ func (r *RouteTable) SetRoutes(ifaceName string, targets []Target) {
 	r.dirtyIfaces.Add(ifaceName)
 }
 
+func (r *RouteTable) QueueResync() {
+	r.logCxt.Info("Queueing a resync of routing table.")
+	r.inSync = false
+}
+
 func (r *RouteTable) Apply() error {
 	if !r.inSync {
 		links, err := r.dataplane.LinkList()
@@ -161,7 +167,7 @@ func (r *RouteTable) Apply() error {
 				retries--
 				continue
 			}
-			logCxt.Info("Synchronised routes on interface")
+			logCxt.Debug("Synchronised routes on interface")
 			break
 		}
 		if retries == 0 {
@@ -261,7 +267,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string) error {
 	for _, route := range oldRoutes {
 		var dest ip.CIDR
 		if route.Dst != nil {
-			dest = ip.CIDRFromIPNet(calinet.IPNet{*route.Dst})
+			dest = ip.CIDRFromIPNet(route.Dst)
 		}
 		if !expectedCIDRs.Contains(dest) {
 			logCxt := logCxt.WithField("dest", dest)

@@ -23,6 +23,13 @@ var (
 	tuple4 = Tuple{localIp2.String(), remoteIp2.String(), proto_tcp, srcPort2, dstPort}
 )
 
+var dummyWlEpKey = model.WorkloadEndpointKey{
+	Hostname:       "localhost",
+	OrchestratorID: "orchestrator",
+	WorkloadID:     "workloadid",
+	EndpointID:     "epid",
+}
+
 var defTierAllowT1 = &RuleTrace{
 	path: []RuleTracePoint{
 		{
@@ -75,73 +82,66 @@ var defTierDenyT4 = &RuleTrace{
 	action: DenyAction,
 }
 
-var dummyWlEpKey = model.WorkloadEndpointKey{
-	Hostname:       "localhost",
-	OrchestratorID: "orchestrator",
-	WorkloadID:     "workloadid",
-	EndpointID:     "epid",
-}
-
 var (
 	allowConn1 = &Data{
-		Tuple:       tuple1,
-		WlEpKey:     dummyWlEpKey,
-		ctrIn:       *NewCounter(1,1),
-		ctrOut:      *NewCounter(1,1),
-		RuleTrace:   defTierAllowT1,
-		createdAt:   time.Now(),
-		updatedAt:   time.Now(),
-		ageTimeout:  time.Duration(10) * time.Second,
-		ageTimer:    time.NewTimer(time.Duration(10) * time.Second),
-		dirty:       true,
+		Tuple:            tuple1,
+		ctr:              *NewCounter(1, 1),
+		ctrReverse:       *NewCounter(1, 1),
+		IngressRuleTrace: defTierAllowT1,
+		EgressRuleTrace:  defTierAllowT1,
+		createdAt:        time.Now(),
+		updatedAt:        time.Now(),
+		ageTimeout:       time.Duration(10) * time.Second,
+		ageTimer:         time.NewTimer(time.Duration(10) * time.Second),
+		dirty:            true,
 	}
 	allowConn2 = &Data{
-		Tuple:       tuple2,
-		WlEpKey:     dummyWlEpKey,
-		ctrIn:       *NewCounter(1,1),
-		ctrOut:      *NewCounter(1,1),
-		RuleTrace:   defTierAllowT2,
-		createdAt:   time.Now(),
-		updatedAt:   time.Now(),
-		ageTimeout:  time.Duration(10) * time.Second,
-		ageTimer:    time.NewTimer(time.Duration(10) * time.Second),
-		dirty:       true,
+		Tuple:            tuple2,
+		ctr:              *NewCounter(1, 1),
+		ctrReverse:       *NewCounter(1, 1),
+		IngressRuleTrace: defTierAllowT2,
+		EgressRuleTrace:  defTierAllowT2,
+		createdAt:        time.Now(),
+		updatedAt:        time.Now(),
+		ageTimeout:       time.Duration(10) * time.Second,
+		ageTimer:         time.NewTimer(time.Duration(10) * time.Second),
+		dirty:            true,
 	}
 	denyPacketTuple1DenyT3 = &Data{
-		Tuple:       tuple1,
-		WlEpKey:     dummyWlEpKey,
-		ctrIn:       *NewCounter(0,0),
-		ctrOut:      *NewCounter(1,1),
-		RuleTrace:   defTierDenyT3,
-		createdAt:   time.Now(),
-		updatedAt:   time.Now(),
-		ageTimeout:  time.Duration(10) * time.Second,
-		ageTimer:    time.NewTimer(time.Duration(10) * time.Second),
-		dirty:       true,
+		Tuple:            tuple1,
+		ctr:              *NewCounter(0, 0),
+		ctrReverse:       *NewCounter(1, 1),
+		IngressRuleTrace: defTierDenyT3,
+		EgressRuleTrace:  defTierDenyT3,
+		createdAt:        time.Now(),
+		updatedAt:        time.Now(),
+		ageTimeout:       time.Duration(10) * time.Second,
+		ageTimer:         time.NewTimer(time.Duration(10) * time.Second),
+		dirty:            true,
 	}
 	denyPacketTuple2DenyT3 = &Data{
-		Tuple:       tuple2,
-		WlEpKey:     dummyWlEpKey,
-		ctrIn:       *NewCounter(0,0),
-		ctrOut:      *NewCounter(1,1),
-		RuleTrace:   defTierDenyT3,
-		createdAt:   time.Now(),
-		updatedAt:   time.Now(),
-		ageTimeout:  time.Duration(10) * time.Second,
-		ageTimer:    time.NewTimer(time.Duration(10) * time.Second),
-		dirty:       true,
+		Tuple:            tuple2,
+		ctr:              *NewCounter(0, 0),
+		ctrReverse:       *NewCounter(1, 1),
+		IngressRuleTrace: defTierDenyT3,
+		EgressRuleTrace:  defTierDenyT3,
+		createdAt:        time.Now(),
+		updatedAt:        time.Now(),
+		ageTimeout:       time.Duration(10) * time.Second,
+		ageTimer:         time.NewTimer(time.Duration(10) * time.Second),
+		dirty:            true,
 	}
 	denyPacketTuple3DenyT4 = &Data{
-		Tuple:       tuple3,
-		WlEpKey:     dummyWlEpKey,
-		ctrIn:       *NewCounter(0,0),
-		ctrOut:      *NewCounter(1,1),
-		RuleTrace:   defTierDenyT4,
-		createdAt:   time.Now(),
-		updatedAt:   time.Now(),
-		ageTimeout:  time.Duration(10) * time.Second,
-		ageTimer:    time.NewTimer(time.Duration(10) * time.Second),
-		dirty:       true,
+		Tuple:            tuple3,
+		ctr:              *NewCounter(0, 0),
+		ctrReverse:       *NewCounter(1, 1),
+		IngressRuleTrace: defTierDenyT4,
+		EgressRuleTrace:  defTierDenyT4,
+		createdAt:        time.Now(),
+		updatedAt:        time.Now(),
+		ageTimeout:       time.Duration(10) * time.Second,
+		ageTimer:         time.NewTimer(time.Duration(10) * time.Second),
+		dirty:            true,
 	}
 )
 
@@ -149,13 +149,14 @@ var _ = Describe("Prometheus Reporter", func() {
 	var pr *PrometheusReporter
 	BeforeEach(func() {
 		pr = NewPrometheusReporter()
+		pr.Start()
 	})
 	Describe("Test Update", func() {
 		Context("No existing aggregated stats", func() {
 			Describe("Should reject entries that are not deny-s", func() {
 				BeforeEach(func() {
-					pr.Update(*allowConn1)
-					pr.Update(*allowConn2)
+					pr.Report(*allowConn1)
+					pr.Report(*allowConn2)
 				})
 				It("should have no aggregated stats entries", func() {
 					Expect(pr.aggStats).Should(HaveLen(0))
@@ -165,8 +166,8 @@ var _ = Describe("Prometheus Reporter", func() {
 				BeforeEach(func() {
 					allowConn1.dirty = false
 					allowConn2.dirty = false
-					pr.Update(*allowConn1)
-					pr.Update(*allowConn2)
+					pr.Report(*allowConn1)
+					pr.Report(*allowConn2)
 				})
 				It("should have no aggregated stats entries", func() {
 					Expect(pr.aggStats).Should(HaveLen(0))
@@ -181,8 +182,8 @@ var _ = Describe("Prometheus Reporter", func() {
 				var value AggregateValue
 				var refs set.Set
 				BeforeEach(func() {
-					pr.Update(*denyPacketTuple1DenyT3)
-					pr.Update(*denyPacketTuple2DenyT3)
+					pr.Report(*denyPacketTuple1DenyT3)
+					pr.Report(*denyPacketTuple2DenyT3)
 					key = AggregateKey{
 						srcIP:  localIp1.String(),
 						policy: defTierDenyT3.ToString(),
@@ -207,9 +208,9 @@ var _ = Describe("Prometheus Reporter", func() {
 				var value1, value2 AggregateValue
 				var refs1, refs2 set.Set
 				BeforeEach(func() {
-					pr.Update(*denyPacketTuple1DenyT3)
-					pr.Update(*denyPacketTuple2DenyT3)
-					pr.Update(*denyPacketTuple3DenyT4)
+					pr.Report(*denyPacketTuple1DenyT3)
+					pr.Report(*denyPacketTuple2DenyT3)
+					pr.Report(*denyPacketTuple3DenyT4)
 					key1 = AggregateKey{
 						srcIP:  localIp1.String(),
 						policy: defTierDenyT3.ToString(),
@@ -254,11 +255,11 @@ var _ = Describe("Prometheus Reporter", func() {
 				policy: defTierDenyT4.ToString(),
 			}
 			value1 = AggregateValue{
-				Counter: *NewCounter(3, 3),
+				//Counter: *NewCounter(3, 3),
 				refs: set.FromArray([]Tuple{tuple1, tuple2}),
 			}
 			value2 = AggregateValue{
-				Counter: *NewCounter(2, 4),
+				//Counter: *NewCounter(2, 4),
 				refs: set.FromArray([]Tuple{tuple3}),
 			}
 			pr.aggStats[key1] = value1
@@ -268,7 +269,7 @@ var _ = Describe("Prometheus Reporter", func() {
 			var v1, v2 AggregateValue
 			var refs1, refs2 set.Set
 			BeforeEach(func() {
-				pr.Delete(*denyPacketTuple1DenyT3)
+				pr.Expire(*denyPacketTuple1DenyT3)
 				v1 = pr.aggStats[key1]
 				v2 = pr.aggStats[key2]
 				refs1 = set.New()
@@ -294,7 +295,7 @@ var _ = Describe("Prometheus Reporter", func() {
 			var v1 AggregateValue
 			var refs1 set.Set
 			BeforeEach(func() {
-				pr.Delete(*denyPacketTuple3DenyT4)
+				pr.Expire(*denyPacketTuple3DenyT4)
 				v1 = pr.aggStats[key1]
 				refs1 = set.FromArray([]Tuple{tuple1, tuple2})
 			})

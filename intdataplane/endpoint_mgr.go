@@ -16,7 +16,15 @@ package intdataplane
 
 import (
 	"fmt"
+	"io"
+	"net"
+	"os"
+	"reflect"
+	"regexp"
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
+
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/iptables"
@@ -24,12 +32,6 @@ import (
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/set"
-	"io"
-	"net"
-	"os"
-	"reflect"
-	"regexp"
-	"strings"
 )
 
 type routeTable interface {
@@ -373,7 +375,13 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 				m.wlIfaceNamesToReconfigure.Discard(oldWorkload.Name)
 				delete(m.activeWlIfaceNameToID, oldWorkload.Name)
 			}
-			chains := m.ruleRenderer.WorkloadEndpointToIptablesChains(&id, workload)
+			adminUp := workload.State == "active"
+			chains := m.ruleRenderer.WorkloadEndpointToIptablesChains(
+				workload.Name,
+				adminUp,
+				workload.Tiers,
+				workload.ProfileIds,
+			)
 			m.filterTable.UpdateChains(chains)
 			m.activeWlIDToChains[id] = chains
 
@@ -411,12 +419,17 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 						"Failed to parse endpoint's MAC address")
 				}
 			}
-			routeTargets := make([]routetable.Target, len(ipStrings))
-			for i, s := range ipStrings {
-				routeTargets[i] = routetable.Target{
-					CIDR:    ip.MustParseCIDR(s),
-					DestMAC: mac,
+			var routeTargets []routetable.Target
+			if adminUp {
+				logCxt.Debug("Endpoint up, adding routes")
+				for _, s := range ipStrings {
+					routeTargets = append(routeTargets, routetable.Target{
+						CIDR:    ip.MustParseCIDR(s),
+						DestMAC: mac,
+					})
 				}
+			} else {
+				logCxt.Debug("Endpoint down, removing routes")
 			}
 			m.routeTable.SetRoutes(workload.Name, routeTargets)
 			m.wlIfaceNamesToReconfigure.Add(workload.Name)
@@ -589,7 +602,11 @@ func (m *endpointManager) resolveHostEndpoints() {
 		hostEp := m.rawHostEndpoints[id]
 
 		// Update the filter chain, for normal traffic.
-		filtChains := m.ruleRenderer.HostEndpointToFilterChains(ifaceName, hostEp)
+		filtChains := m.ruleRenderer.HostEndpointToFilterChains(
+			ifaceName,
+			hostEp.Tiers,
+			hostEp.ProfileIds,
+		)
 		if !reflect.DeepEqual(filtChains, m.activeHostIfaceToFiltChains[ifaceName]) {
 			m.filterTable.UpdateChains(filtChains)
 		}
@@ -603,7 +620,10 @@ func (m *endpointManager) resolveHostEndpoints() {
 		hostEp := m.rawHostEndpoints[id]
 
 		// Update the raw chain, for untracked traffic.
-		rawChains := m.ruleRenderer.HostEndpointToRawChains(ifaceName, hostEp)
+		rawChains := m.ruleRenderer.HostEndpointToRawChains(
+			ifaceName,
+			hostEp.UntrackedTiers,
+		)
 		if !reflect.DeepEqual(rawChains, m.activeHostIfaceToRawChains[ifaceName]) {
 			m.rawTable.UpdateChains(rawChains)
 		}
