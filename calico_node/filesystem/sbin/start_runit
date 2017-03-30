@@ -12,6 +12,6 @@ then
 fi
 
 # Source any additional environment that was added by the startup script
-. /etc/startup.env
+. startup.env
 
 exec /sbin/runsvdir -P /etc/service/enabled

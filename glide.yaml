@@ -1,4 +1,4 @@
-package: github.com/projectcalico/calico-containers
+package: github.com/projectcalico/calicoctl
 homepage: https://projectcalico.org
 license: Apache-2.0
 owners:
@@ -22,7 +22,7 @@ import:
 - package: github.com/projectcalico/go-yaml-wrapper
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: master
+  version: 8cfc4a44c3e9197862d0ce2be8f16d79a0fe83a8
   subpackages:
   - lib/api
   - lib/api/unversioned
