@@ -119,14 +119,13 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 		// The entry does not exist. Go ahead and create one.
 		data = stats.NewData(
 			update.Tuple,
-			update.WlEpKey,
-			update.InPackets,
-			update.InBytes,
-			update.OutPackets,
-			update.OutBytes,
+			update.Packets,
+			update.Bytes,
+			update.ReversePackets,
+			update.ReverseBytes,
 			DefaultAgeTimeout)
 		if update.Tp != stats.EmptyRuleTracePoint {
-			data.AddRuleTracePoint(update.Tp)
+			data.AddRuleTracePoint(update.Tp, update.Dir)
 		}
 		c.registerAgeTimer(data)
 		c.epStats[update.Tuple] = data
@@ -134,17 +133,17 @@ func (c *Collector) applyStatUpdate(update stats.StatUpdate) {
 	}
 	// Entry does exists. Go agead and update it.
 	if update.CtrType == stats.AbsoluteCounter {
-		data.SetCountersIn(update.InPackets, update.InBytes)
-		data.SetCountersOut(update.OutPackets, update.OutBytes)
+		data.SetCounters(update.Packets, update.Bytes)
+		data.SetCountersReverse(update.ReversePackets, update.ReverseBytes)
 	} else {
-		data.IncreaseCountersIn(update.InPackets, update.InBytes)
-		data.IncreaseCountersOut(update.OutPackets, update.OutBytes)
+		data.IncreaseCounters(update.Packets, update.Bytes)
+		data.IncreaseCountersReverse(update.ReversePackets, update.ReverseBytes)
 	}
 	if update.Tp != stats.EmptyRuleTracePoint {
-		err := data.AddRuleTracePoint(update.Tp)
+		err := data.AddRuleTracePoint(update.Tp, update.Dir)
 		if err != nil {
 			data.ResetCounters()
-			data.ReplaceRuleTracePoint(update.Tp)
+			data.ReplaceRuleTracePoint(update.Tp, update.Dir)
 		}
 	}
 	c.epStats[update.Tuple] = data
