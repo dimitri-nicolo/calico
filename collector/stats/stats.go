@@ -46,7 +46,7 @@ var (
 	RuleTracePointExists   = errors.New("RuleTracePoint Exists")
 )
 
-// A RuleTracePoint represents a rule and the tier and a policy that contains
+// RuleTracePoint represents a rule and the tier and a policy that contains
 // it. The `Index` specifies the absolute position of a RuleTracePoint in the
 // RuleTrace list. The `WlEpKey` contains the corresponding workload endpoint
 // that the policy applied to.
@@ -65,10 +65,10 @@ func (rtp RuleTracePoint) String() string {
 
 var EmptyRuleTracePoint = RuleTracePoint{}
 
-// Represents the list of rules (i.e, a Trace) that a packet hits. The action
-// of a RuleTrace object is the final RuleTracePoint action that is not a
-// next-tier action. A RuleTrace also contains a workload endpoint, which
-// identifies the corresponding endpoint that the rule trace applied to.
+// RuleTrace represents the list of rules (i.e, a Trace) that a packet hits.
+// The action of a RuleTrace object is the final RuleTracePoint action that
+// is not a next-tier action. A RuleTrace also contains a workload endpoint,
+// which identifies the corresponding endpoint that the rule trace applied to.
 type RuleTrace struct {
 	path    []RuleTracePoint
 	action  RuleAction
@@ -154,8 +154,9 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	t.wlEpKey = tp.WlEpKey
 }
 
-// Tuple represents a 5-Tuple value that identifies a connection. This is
-// a hashable object and can be used as a map's key.
+// Tuple represents a 5-Tuple value that identifies a connection/flow of packets
+// with an implicit notion of direction that comes with the use of a source and
+// destination. This is a hashable object and can be used as a map's key.
 type Tuple struct {
 	src   string
 	dst   string
@@ -178,11 +179,15 @@ func (t *Tuple) String() string {
 	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", t.src, t.dst, t.proto, t.l4Src, t.l4Dst)
 }
 
-// A Data object contains metadata and statistics such as rule counters and
-// age of a connection represented as a Tuple. Each Data object also contains
-// 2 RuleTrace's - Ingress and Egress - each providing information on the where
-// the policy was applied, with additional information on corresponding workload
-// endpoint.
+// Data contains metadata and statistics such as rule counters and age of a
+// connection(Tuple). Each Data object contains:
+// - 2 RuleTrace's - Ingress and Egress - each providing information on the
+// where the policy was applied, with additional information on corresponding
+// workload endpoint. The EgressRuleTrace and the IngressRuleTrace record the
+// policies that this tuple can hit - egress from the workload that is the
+// source of this connection and ingress into a workload that terminated this.
+// - 2 counters - ctr for the direction of the connection and ctrReverse for
+// the reverse/reply of this connection.
 // Age Timer Implementation Note: Each Data entry's age is implemented using
 // time.Timer. Any actions that modifiy statistics or metadata of a Data entry
 // object will extend the life timer of the object. Each method of Data will
@@ -353,9 +358,11 @@ const (
 	DeltaCounter    CounterType = "delta"
 )
 
-// A StatUpdate represents an statistics update to be made on a `Tuple`.
+// StatUpdate represents an statistics update to be made on a `Tuple`.
 // All attributes are required. However, when a RuleTracePoint cannot be
 // specified, use the `EmptyRuleTracePoint` value to specify this.
+// Specify if the Packet and Byte counts included in the update are either
+// AbsoluteCounter or DeltaCounter using the CtrType field.
 // The current StatUpdate doesn't support deletes and all StatUpdate-s are
 // either "Add" or "Update" operations.
 type StatUpdate struct {
