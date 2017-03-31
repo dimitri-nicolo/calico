@@ -99,7 +99,6 @@ func (r *ReporterManager) startManaging() {
 	}
 }
 
-
 func filterAndHandleData(handler func(*RuleTrace, Data), data Data) {
 	if data.EgressAction() == DenyAction {
 		handler(data.EgressRuleTrace, data)
@@ -141,7 +140,8 @@ func (pr *PrometheusReporter) startReporter() {
 	for {
 		select {
 		case key := <-pr.deleteChan:
-			// Check if we were signalled because of a stopped timer.
+			// If a timer was stopped by us, then the key will not exist. Delete only
+			// when a timer was fired rather than stopped.
 			if _, exists := pr.retentionTimers[key]; exists {
 				pr.deleteMetric(key)
 			}
@@ -198,12 +198,7 @@ func (pr *PrometheusReporter) Expire(data Data) error {
 func (pr *PrometheusReporter) expireMetric(ruleTrace *RuleTrace, data Data) {
 	key := AggregateKey{ruleTrace.ToString(), data.Tuple.src}
 	value, ok := pr.aggStats[key]
-	if !ok {
-		return
-	}
-	// TODO(doublek): We need to do a add some counters here so that we don't
-	// lose the last counter update (if any).
-	if !value.refs.Contains(data.Tuple) {
+	if !ok || !value.refs.Contains(data.Tuple) {
 		return
 	}
 	// If the data had updated counters this is the time to update our counters.
