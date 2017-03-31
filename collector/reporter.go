@@ -99,8 +99,19 @@ func (r *ReporterManager) startManaging() {
 	}
 }
 
+
+func filterAndHandleData(handler func(*RuleTrace, Data), data Data) {
+	if data.EgressAction() == DenyAction {
+		handler(data.EgressRuleTrace, data)
+		// Packets denied at egress, will not have ingress rule trace.
+		return
+	}
+	if data.IngressAction() == DenyAction {
+		handler(data.IngressRuleTrace, data)
+	}
+}
+
 // PrometheusReporter records denied packets and bytes statistics in prometheus metrics.
-//
 type PrometheusReporter struct {
 	aggStats         map[AggregateKey]AggregateValue
 	deleteCandidates set.Set
@@ -138,19 +149,9 @@ func (pr *PrometheusReporter) startReporter() {
 			if !data.IsDirty() {
 				continue
 			}
-			if data.IngressAction() == DenyAction {
-				pr.reportMetric(data.IngressRuleTrace, data)
-			}
-			if data.EgressAction() == DenyAction {
-				pr.reportMetric(data.EgressRuleTrace, data)
-			}
+			filterAndHandleData(pr.reportMetric, data)
 		case data := <-pr.expireChan:
-			if data.IngressAction() == DenyAction {
-				pr.expireMetric(data.IngressRuleTrace, data)
-			}
-			if data.EgressAction() == DenyAction {
-				pr.expireMetric(data.EgressRuleTrace, data)
-			}
+			filterAndHandleData(pr.expireMetric, data)
 		}
 	}
 }
@@ -273,17 +274,12 @@ func (sr *SyslogReporter) Report(data Data) error {
 	if !data.IsDirty() {
 		return nil
 	}
-	if data.IngressAction() == DenyAction {
-		sr.log(data.IngressRuleTrace, data)
-	}
-	if data.EgressAction() == DenyAction {
-		sr.log(data.EgressRuleTrace, data)
-	}
+	filterAndHandleData(sr.log, data)
 	return nil
 }
 
 func (sr *SyslogReporter) log(ruleTrace *RuleTrace, data Data) {
-	bytes, packets := data.ctr.Values()
+	packets, bytes := data.ctr.Values()
 	f := log.Fields{
 		"proto":   strconv.Itoa(data.Tuple.proto),
 		"srcIP":   data.Tuple.src,
