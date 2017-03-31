@@ -206,10 +206,17 @@ func (pr *PrometheusReporter) expireMetric(ruleTrace *RuleTrace, data Data) {
 	if !value.refs.Contains(data.Tuple) {
 		return
 	}
+	// If the data had updated counters this is the time to update our counters.
+	// We retain deleted data for a little bit so that prometheus can get a chance
+	// to scrape the data.
+	if data.IsDirty() {
+		dp, db := data.ctr.DeltaValues()
+		value.packets.Add(float64(dp))
+		value.bytes.Add(float64(db))
+		pr.aggStats[key] = value
+	}
 	value.refs.Discard(data.Tuple)
 	pr.aggStats[key] = value
-	// TODO(doublek): We are deleting too early. We should probably hang on to
-	// counter value for a little bit before deleting the metric value labels.
 	if value.refs.Len() == 0 {
 		pr.markForDeletion(key)
 	}
