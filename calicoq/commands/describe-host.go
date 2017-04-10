@@ -5,8 +5,8 @@ package commands
 import (
 	"fmt"
 	"github.com/golang/glog"
-	"github.com/projectcalico/felix/go/felix/calc"
-	"github.com/projectcalico/felix/go/felix/dispatcher"
+	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
