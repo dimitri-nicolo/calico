@@ -279,7 +279,7 @@ static-checks:
 	$(MAKE) go-meta-linter check-licenses
 
 .PHONY: ut-no-cover
-ut-no-cover: $(GO_FILES)
+ut-no-cover: vendor/.up-to-date $(GO_FILES)
 	@echo Running Go UTs without coverage.
 	$(DOCKER_GO_BUILD) ginkgo -r
 
