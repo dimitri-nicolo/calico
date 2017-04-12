@@ -90,6 +90,8 @@ type Config struct {
 	NfNetlinkBufSize  int
 	StatsDumpFilePath string
 
+	DeletedMetricsRetentionSecs time.Duration
+
 	MaxIPSetSize int
 
 	IptablesRefreshInterval time.Duration
@@ -361,8 +363,11 @@ func (d *InternalDataplane) Start() {
 		StatsDumpFilePath: d.config.StatsDumpFilePath,
 	}
 	rm := collector.NewReporterManager()
-	rm.RegisterMetricsReporter(collector.NewPrometheusReporter())
-	rm.RegisterMetricsReporter(collector.NewSyslogReporter())
+	rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.DeletedMetricsRetentionSecs))
+	syslogReporter := collector.NewSyslogReporter()
+	if syslogReporter != nil {
+		rm.RegisterMetricsReporter(syslogReporter)
+	}
 	rm.Start()
 	datasources := []<-chan collector.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
 	statsCollector := collector.NewCollector(datasources, rm, collectorConfig)

@@ -226,6 +226,7 @@ configRetry:
 			},
 			NfNetlinkBufSize:        configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:       configParams.StatsDumpFilePath,
+			DeletedMetricsRetentionSecs: time.Duration(configParams.DeletedMetricsRetentionSecs) * time.Second,
 			IPIPMTU:                 configParams.IpInIpMtu,
 			IptablesRefreshInterval: time.Duration(configParams.IptablesRefreshInterval) * time.Second,
 			IptablesInsertMode:      configParams.ChainInsertMode,

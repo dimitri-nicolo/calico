@@ -16,8 +16,6 @@ import (
 	"github.com/projectcalico/felix/set"
 )
 
-const RetentionTime = time.Duration(10) * time.Second
-
 var (
 	gaugeDeniedPackets = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "felix_collector_denied_packets",
@@ -118,9 +116,10 @@ type PrometheusReporter struct {
 	reportChan       chan Data
 	expireChan       chan Data
 	retentionTimers  map[AggregateKey]*time.Timer
+	retentionTime    time.Duration
 }
 
-func NewPrometheusReporter() *PrometheusReporter {
+func NewPrometheusReporter(rTime time.Duration) *PrometheusReporter {
 	return &PrometheusReporter{
 		aggStats:         make(map[AggregateKey]AggregateValue),
 		deleteCandidates: set.New(),
@@ -128,6 +127,7 @@ func NewPrometheusReporter() *PrometheusReporter {
 		reportChan:       make(chan Data),
 		expireChan:       make(chan Data),
 		retentionTimers:  make(map[AggregateKey]*time.Timer),
+		retentionTime:    rTime,
 	}
 }
 
@@ -221,7 +221,7 @@ func (pr *PrometheusReporter) expireMetric(ruleTrace *RuleTrace, data Data) {
 func (pr *PrometheusReporter) markForDeletion(key AggregateKey) {
 	log.WithField("key", key).Debug("Marking metric for deletion.")
 	pr.deleteCandidates.Add(key)
-	timer := time.NewTimer(RetentionTime)
+	timer := time.NewTimer(pr.retentionTime)
 	pr.retentionTimers[key] = timer
 	go func() {
 		log.Debugf("Starting retention timer for key %+v", key)
@@ -259,7 +259,8 @@ func NewSyslogReporter() *SyslogReporter {
 	slog := log.New()
 	hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
 	if err != nil {
-		panic(fmt.Sprintf("Syslog Hook could not be configured %v", err))
+		log.Errorf("Syslog Reporting is disabled - Syslog Hook could not be configured %v", err)
+		return nil
 	}
 	slog.Hooks.Add(hook)
 	slog.Formatter = &DataOnlyJSONFormatter{}

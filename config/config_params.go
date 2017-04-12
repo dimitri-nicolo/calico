@@ -148,6 +148,8 @@ type Config struct {
 
 	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
+	DeletedMetricsRetentionSecs int `config:"int;30"`
+
 	UsageReportingEnabled bool   `config:"bool;true"`
 	ClusterGUID           string `config:"string;baddecaf"`
 	ClusterType           string `config:"string;"`
