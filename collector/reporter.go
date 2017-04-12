@@ -254,9 +254,14 @@ type SyslogReporter struct {
 	slog *log.Logger
 }
 
-func NewSyslogReporter() *SyslogReporter {
+// NewSyslogReporter configures and returns a SyslogReporter.
+// Network and Address can be used to configure remote syslogging. Leaving both
+// of these values empty implies using local syslog such as /dev/log.
+func NewSyslogReporter(network, address string) *SyslogReporter {
 	slog := log.New()
-	hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+	priority := syslog.LOG_USER | syslog.LOG_INFO
+	tag := "calico-felix"
+	hook, err := logrus_syslog.NewSyslogHook(network, address, priority, tag)
 	if err != nil {
 		log.Errorf("Syslog Reporting is disabled - Syslog Hook could not be configured %v", err)
 		return nil

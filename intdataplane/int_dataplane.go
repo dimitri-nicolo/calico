@@ -92,6 +92,9 @@ type Config struct {
 
 	DeletedMetricsRetentionSecs time.Duration
 
+	SyslogReporterNetwork string
+	SyslogReporterAddress string
+
 	MaxIPSetSize int
 
 	IptablesRefreshInterval time.Duration
@@ -364,7 +367,7 @@ func (d *InternalDataplane) Start() {
 	}
 	rm := collector.NewReporterManager()
 	rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.DeletedMetricsRetentionSecs))
-	syslogReporter := collector.NewSyslogReporter()
+	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
 	if syslogReporter != nil {
 		rm.RegisterMetricsReporter(syslogReporter)
 	}
