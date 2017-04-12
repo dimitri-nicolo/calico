@@ -16,6 +16,7 @@ import (
 	"github.com/projectcalico/felix/set"
 )
 
+// TODO(doublek): Finalize felix_ metric names.
 var (
 	gaugeDeniedPackets = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "felix_collector_denied_packets",
@@ -100,8 +101,6 @@ func (r *ReporterManager) startManaging() {
 func filterAndHandleData(handler func(*RuleTrace, Data), data Data) {
 	if data.EgressAction() == DenyAction {
 		handler(data.EgressRuleTrace, data)
-		// Packets denied at egress, will not have ingress rule trace.
-		return
 	}
 	if data.IngressAction() == DenyAction {
 		handler(data.IngressRuleTrace, data)
