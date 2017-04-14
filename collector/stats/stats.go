@@ -48,15 +48,15 @@ var (
 
 // RuleTracePoint represents a rule and the tier and a policy that contains
 // it. The `Index` specifies the absolute position of a RuleTracePoint in the
-// RuleTrace list. The `WlEpKey` contains the corresponding workload endpoint
-// that the policy applied to.
+// RuleTrace list. The `EpKey` contains the corresponding workload or host
+// endpoint that the policy applied to.
 type RuleTracePoint struct {
 	TierID   string
 	PolicyID string
 	Rule     string
 	Action   RuleAction
 	Index    int
-	WlEpKey  model.WorkloadEndpointKey
+	EpKey    interface{}
 }
 
 func (rtp RuleTracePoint) String() string {
@@ -70,9 +70,9 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 // is not a next-tier action. A RuleTrace also contains a workload endpoint,
 // which identifies the corresponding endpoint that the rule trace applied to.
 type RuleTrace struct {
-	path    []RuleTracePoint
-	action  RuleAction
-	wlEpKey model.WorkloadEndpointKey
+	path   []RuleTracePoint
+	action RuleAction
+	epKey  interface{}
 }
 
 func NewRuleTrace() *RuleTrace {
@@ -89,8 +89,16 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
 	}
-	return fmt.Sprintf("path=[%v], action=%v workloadEndpoint={workload=%v endpoint=%v}",
-		strings.Join(rtParts, ", "), t.action, t.wlEpKey.WorkloadID, t.wlEpKey.EndpointID)
+	var epStr string
+	switch t.epKey.(type) {
+	case *model.WorkloadEndpointKey:
+		epKey := t.epKey.(*model.WorkloadEndpointKey)
+		epStr = fmt.Sprintf("workloadEndpoint={workload=%v endpoint=%v}", epKey.WorkloadID, epKey.EndpointID)
+	case *model.HostEndpointKey:
+		epKey := t.epKey.(*model.HostEndpointKey)
+		epStr = fmt.Sprintf("hostEndpoint={endpoint=%v}", epKey.EndpointID)
+	}
+	return fmt.Sprintf("path=[%v], action=%v %s", strings.Join(rtParts, ", "), t.action, epStr)
 }
 
 func (t *RuleTrace) Len() int {
@@ -135,7 +143,7 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
 	}
-	t.wlEpKey = tp.WlEpKey
+	t.epKey = tp.EpKey
 	return nil
 }
 
@@ -151,7 +159,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
 	t.action = tp.Action
-	t.wlEpKey = tp.WlEpKey
+	t.epKey = tp.EpKey
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection/flow of packets

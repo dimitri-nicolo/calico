@@ -15,6 +15,7 @@
 package lookup
 
 import (
+	"errors"
 	"net"
 	"sync"
 
@@ -24,21 +25,33 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
+var UnknownEndpointError = errors.New("Unknown endpoint")
+
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
 type LookupManager struct {
 	// `string`s are IP.String().
 	endpoints        map[string]*model.WorkloadEndpointKey
 	endpointsReverse map[model.WorkloadEndpointKey]*string
 	endpointTiers    map[model.WorkloadEndpointKey][]*proto.TierInfo
-	mutex            sync.Mutex
+	epMutex          sync.Mutex
+
+	hostEndpoints              map[string]*model.HostEndpointKey
+	hostEndpointsReverse       map[model.HostEndpointKey]*string
+	hostEndpointTiers          map[model.HostEndpointKey][]*proto.TierInfo
+	hostEndpointUntrackedTiers map[model.HostEndpointKey][]*proto.TierInfo
+	hostEpMutex                sync.Mutex
 }
 
 func NewLookupManager() *LookupManager {
 	return &LookupManager{
-		endpoints:        map[string]*model.WorkloadEndpointKey{},
-		endpointsReverse: map[model.WorkloadEndpointKey]*string{},
-		endpointTiers:    map[model.WorkloadEndpointKey][]*proto.TierInfo{},
-		mutex:            sync.Mutex{},
+		endpoints:                  map[string]*model.WorkloadEndpointKey{},
+		endpointsReverse:           map[model.WorkloadEndpointKey]*string{},
+		endpointTiers:              map[model.WorkloadEndpointKey][]*proto.TierInfo{},
+		hostEndpoints:              map[string]*model.HostEndpointKey{},
+		hostEndpointsReverse:       map[model.HostEndpointKey]*string{},
+		hostEndpointTiers:          map[model.HostEndpointKey][]*proto.TierInfo{},
+		hostEndpointUntrackedTiers: map[model.HostEndpointKey][]*proto.TierInfo{},
+		epMutex:                    sync.Mutex{},
 	}
 }
 
@@ -52,7 +65,7 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			WorkloadID:     msg.Id.WorkloadId,
 			EndpointID:     msg.Id.EndpointId,
 		}
-		m.mutex.Lock()
+		m.epMutex.Lock()
 		// Store tiers and policies
 		m.endpointTiers[wlEpKey] = msg.Endpoint.Tiers
 		// Store IP addresses
@@ -79,7 +92,7 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			m.endpoints[addrStr] = &wlEpKey
 			m.endpointsReverse[wlEpKey] = &addrStr
 		}
-		m.mutex.Unlock()
+		m.epMutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
 		wlEpKey := model.WorkloadEndpointKey{
 			Hostname:       "matt-k8s",
@@ -87,20 +100,63 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			WorkloadID:     msg.Id.WorkloadId,
 			EndpointID:     msg.Id.EndpointId,
 		}
-		m.mutex.Lock()
+		m.epMutex.Lock()
 		epIp := m.endpointsReverse[wlEpKey]
 		if epIp != nil {
 			delete(m.endpoints, *epIp)
 			delete(m.endpointsReverse, wlEpKey)
 			delete(m.endpointTiers, wlEpKey)
 		}
-		m.mutex.Unlock()
+		m.epMutex.Unlock()
 	case *proto.HostEndpointUpdate:
-		// TODO(Matt) Host endpoint updates
-		log.WithField("msg", msg).Warn("Message not implemented")
+		// TODO (Matt): Need to lookup hostname.
+		hostEpKey := model.HostEndpointKey{
+			Hostname:   "matt-k8s",
+			EndpointID: msg.Id.EndpointId,
+		}
+		m.hostEpMutex.Lock()
+		// Store tiers and policies
+		m.hostEndpointTiers[hostEpKey] = msg.Endpoint.Tiers
+		m.hostEndpointUntrackedTiers[hostEpKey] = msg.Endpoint.UntrackedTiers
+		// Store IP addresses
+		for _, ipv4 := range msg.Endpoint.ExpectedIpv4Addrs {
+			addr := net.ParseIP(ipv4)
+			if addr == nil {
+				log.Warn("Error parsing IP ", ipv4)
+				continue
+			}
+			addrStr := addr.String()
+			log.Debug("Stored expected IPv4 host endpoint: ", hostEpKey, ": ", addrStr)
+			m.hostEndpoints[addrStr] = &hostEpKey
+			m.hostEndpointsReverse[hostEpKey] = &addrStr
+		}
+		for _, ipv6 := range msg.Endpoint.ExpectedIpv6Addrs {
+			addr := net.ParseIP(ipv6)
+			if addr == nil {
+				log.Warn("Error parsing IP ", ipv6)
+				continue
+			}
+			// TODO (Matt): IP.String() does funny things to IPv6 mapped IPv4 addresses.
+			addrStr := addr.String()
+			log.Debug("Stored expected IPv6 host endpoint: ", hostEpKey, ": ", addrStr)
+			m.hostEndpoints[addrStr] = &hostEpKey
+			m.hostEndpointsReverse[hostEpKey] = &addrStr
+		}
+		m.hostEpMutex.Unlock()
 	case *proto.HostEndpointRemove:
-		// TODO(Matt) Host endpoint updates
-		log.WithField("msg", msg).Warn("Message not implemented")
+		hostEpKey := model.HostEndpointKey{
+			Hostname:   "matt-k8s",
+			EndpointID: msg.Id.EndpointId,
+		}
+		m.epMutex.Lock()
+		epIp := m.hostEndpointsReverse[hostEpKey]
+		if epIp != nil {
+			delete(m.hostEndpoints, *epIp)
+			delete(m.hostEndpointsReverse, hostEpKey)
+			delete(m.hostEndpointTiers, hostEpKey)
+			delete(m.hostEndpointUntrackedTiers, hostEpKey)
+		}
+		m.epMutex.Unlock()
 	}
 }
 
@@ -108,31 +164,64 @@ func (m *LookupManager) CompleteDeferredWork() error {
 	return nil
 }
 
-func (m *LookupManager) GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey {
-	m.mutex.Lock()
+// GetEndpointKey returns either a *model.WorkloadEndpointKey or *model.HostEndpointKey
+// or nil if addr is a Workload Endpoint or a HostEndpoint or if we don't have any
+// idea about it.
+func (m *LookupManager) GetEndpointKey(addr net.IP) (interface{}, error) {
+	addrStr := addr.String()
+	m.epMutex.Lock()
 	// There's no need to copy the result because we never modify fields,
 	// only delete or replace.
-	epKey := m.endpoints[addr.String()]
-	m.mutex.Unlock()
-	return epKey
+	epKey := m.endpoints[addrStr]
+	m.epMutex.Unlock()
+	if epKey != nil {
+		return epKey, nil
+	}
+	m.hostEpMutex.Lock()
+	hostEpKey := m.hostEndpoints[addrStr]
+	m.hostEpMutex.Unlock()
+	if hostEpKey != nil {
+		return hostEpKey, nil
+	}
+	return nil, UnknownEndpointError
 }
 
-// Return the number of tiers that have been traversed before reaching a given Policy.
+// GetPolicyIndex returns the number of tiers that have been traversed before reaching a given Policy.
 // For a profile, this means it returns the total number of tiers that apply.
-func (m *LookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
-	m.mutex.Lock()
-	tiers := m.endpointTiers[*epKey]
-	tiersBefore := 0
-	log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
-	for _, tier := range tiers {
-		log.Debug("Checking endpoint tier ", tier)
-		if tier.Name == policyKey.Tier {
-			break
-		} else {
-			tiersBefore++
+// epKey is either a *model.WorkloadEndpointKey or *model.HostEndpointKey
+func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) (tiersBefore int) {
+	switch epKey.(type) {
+	case *model.WorkloadEndpointKey:
+		ek := epKey.(*model.WorkloadEndpointKey)
+		m.epMutex.Lock()
+		tiers := m.endpointTiers[*ek]
+		log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
+		for _, tier := range tiers {
+			log.Debug("Checking endpoint tier ", tier)
+			if tier.Name == policyKey.Tier {
+				break
+			} else {
+				tiersBefore++
+			}
 		}
+		log.Debug("TiersBefore: ", tiersBefore)
+		m.epMutex.Unlock()
+	case *model.HostEndpointKey:
+		ek := epKey.(*model.HostEndpointKey)
+		m.hostEpMutex.Lock()
+		// TODO(doublek): Not sure how to consider Untracked Tiers into this.
+		tiers := m.hostEndpointTiers[*ek]
+		log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
+		for _, tier := range tiers {
+			log.Debug("Checking endpoint tier ", tier)
+			if tier.Name == policyKey.Tier {
+				break
+			} else {
+				tiersBefore++
+			}
+		}
+		log.Debug("TiersBefore: ", tiersBefore)
+		m.hostEpMutex.Unlock()
 	}
-	log.Debug("TiersBefore: ", tiersBefore)
-	m.mutex.Unlock()
 	return tiersBefore
 }
