@@ -132,7 +132,7 @@ class TestCreateFromFile(TestBase):
         }),
         ("policy1", {'apiVersion': 'v1',
                      'kind': 'policy',
-                     'metadata': {'name': 'policy1'},
+                     'metadata': {'name': 'policy1', 'tier': 'admin'},
                      'spec': {'egress': [{'action': 'allow',
                                           'source': {
                                               'selector':
@@ -169,7 +169,7 @@ class TestCreateFromFile(TestBase):
                               'selector': "type=='database'"}}),
         ("policy2", {'apiVersion': 'v1',
                      'kind': 'policy',
-                     'metadata': {'name': 'policy2'},
+                     'metadata': {'name': 'policy2', 'tier': 'admin'},
                      'spec': {'egress': [{'action': 'deny',
                                           'destination': {},
                                           'protocol': 'tcp',
@@ -250,6 +250,9 @@ class TestCreateFromFile(TestBase):
         with DockerHost('host', dind=False, start_calico=False) as host:
             res_type = data['kind']
             logger.debug("Testing %s" % res_type)
+
+            self._create_admin_tier(host)
+
             # Write out the files to load later
             self.writeyaml('/tmp/%s-1.yaml' % res_type, data)
 
@@ -276,6 +279,9 @@ class TestCreateFromFile(TestBase):
         with DockerHost('host', dind=False, start_calico=False) as host:
             res_type = data['kind']
             logger.debug("Testing %s" % res_type)
+
+            self._create_admin_tier(host)
+
             # Write out the files to load later
             self.writejson('/tmp/%s-1.json' % res_type, data)
 
@@ -302,6 +308,9 @@ class TestCreateFromFile(TestBase):
         with DockerHost('host', dind=False, start_calico=False) as host:
             res_type = data['kind']
             logger.debug("Testing %s" % res_type)
+
+            self._create_admin_tier(host)
+
             # Write out the files to load later
             self.writejson('/tmp/%s-1.json' % res_type, data)
 
@@ -330,6 +339,9 @@ class TestCreateFromFile(TestBase):
         with DockerHost('host', dind=False, start_calico=False) as host:
             res_type = data['kind']
             logger.debug("Testing %s" % res_type)
+
+            self._create_admin_tier(host)
+
             # Write out the files to load later
             self.writeyaml('/tmp/%s-1.yaml' % res_type, data)
 
@@ -396,7 +408,7 @@ class TestCreateFromFile(TestBase):
         ("policy",
          {'apiVersion': 'v1',
           'kind': 'policy',
-          'metadata': {'name': 'policy1', },
+          'metadata': {'name': 'policy1', 'tier': 'admin'},
           'spec': {'egress': [{'action': 'allow',
                                'source': {
                                    'selector': "type=='application'"},
@@ -428,9 +440,7 @@ class TestCreateFromFile(TestBase):
                    'selector': "type=='database'"}},
          {'apiVersion': 'v1',
           'kind': 'policy',
-          'metadata': {'name': 'policy2',
-
-                       },
+          'metadata': {'name': 'policy2', 'tier': 'admin'},
           'spec': {'egress': [{'action': 'deny',
                                'destination': {},
                                'protocol': 'tcp',
@@ -512,6 +522,9 @@ class TestCreateFromFile(TestBase):
         self._check_data_save_load(data2)
         with DockerHost('host', dind=False, start_calico=False) as host:
             logger.debug("Testing %s" % res)
+
+            self._create_admin_tier(host)
+
             # Write out the files to load later
             self.writeyaml('/tmp/%s-1.yaml' % res, data1)
             self.writejson('/tmp/%s-2.json' % res, data2)
@@ -535,6 +548,20 @@ class TestCreateFromFile(TestBase):
 
             # Check it deleted
             self.check_data_in_datastore(host, [], res)
+
+    def _create_admin_tier(self, host):
+        tierdata = {
+            'apiVersion': 'v1',
+            'kind': 'tier',
+            'metadata': {
+                'name': 'admin'
+            },
+            'spec': {
+                'order': 1
+            }
+        }
+        host.writefile("tierfile.yaml", tierdata)
+        host.calicoctl("create -f tierfile.yaml")
 
     @parameterized.expand([
         ("bgpPeer",
@@ -580,7 +607,7 @@ class TestCreateFromFile(TestBase):
         ("policy",
          {'apiVersion': 'v1',
           'kind': 'policy',
-          'metadata': {'name': 'policy1', },
+          'metadata': {'name': 'policy1', 'tier': 'admin'},
           'spec': {'egress': [{'action': 'deny',
                                'protocol': 'tcp',
                                'destination': {},
@@ -603,7 +630,7 @@ class TestCreateFromFile(TestBase):
                    'selector': ''}},
          {'apiVersion': 'v1',
           'kind': 'policy',
-          'metadata': {'name': 'policy1'},
+          'metadata': {'name': 'policy1', 'tier': 'admin'},
           'spec': {'egress': [{'action': 'deny',
                                'protocol': 'tcp',
                                'destination': {},
@@ -629,7 +656,7 @@ class TestCreateFromFile(TestBase):
         ("policy",
           {'apiVersion': 'v1',
            'kind': 'policy',
-           'metadata': {'name': 'policy1', },
+           'metadata': {'name': 'policy1', 'tier': 'admin'},
            'spec': {'egress': [{'action': 'deny',
                                 'protocol': 'tcp',
                                 'destination': {},
@@ -652,7 +679,7 @@ class TestCreateFromFile(TestBase):
                     'selector': ''}},
           {'apiVersion': 'v1',
            'kind': 'policy',
-           'metadata': {'name': 'policy1'},
+           'metadata': {'name': 'policy1', 'tier': 'admin'},
            'spec': {'egress': [{'action': 'deny',
                                 'protocol': 'tcp',
                                 'destination': {},
@@ -734,6 +761,8 @@ class TestCreateFromFile(TestBase):
         self._check_data_save_load(data2)
         with DockerHost('host', dind=False, start_calico=False) as host:
             logger.debug("Testing %s" % res)
+
+            self._create_admin_tier(host)
 
             # Write test data files for loading later
             self.writeyaml('/tmp/data1.yaml', data1)
@@ -879,7 +908,7 @@ class InvalidData(TestBase):
                    ("policy-invalidHighPortinList", {
                        'apiVersion': 'v1',
                        'kind': 'policy',
-                       'metadata': {'name': 'policy2'},
+                       'metadata': {'name': 'policy2', 'tier': 'admin'},
                        'spec': {'egress': [{'action': 'deny',
                                             'destination': {},
                                             'source': {
@@ -897,7 +926,7 @@ class InvalidData(TestBase):
                    ("policy-invalidHighPortinRange", {
                        'apiVersion': 'v1',
                        'kind': 'policy',
-                       'metadata': {'name': 'policy2'},
+                       'metadata': {'name': 'policy2', 'tier': 'admin'},
                        'spec': {'egress': [{'action': 'deny',
                                             'destination': {},
                                             'source': {
@@ -914,7 +943,7 @@ class InvalidData(TestBase):
                    ("policy-invalidLowPortinRange", {
                        'apiVersion': 'v1',
                        'kind': 'policy',
-                       'metadata': {'name': 'policy2'},
+                       'metadata': {'name': 'policy2', 'tier': 'admin'},
                        'spec': {'egress': [{'action': 'deny',
                                             'destination': {},
                                             'source': {
@@ -931,7 +960,7 @@ class InvalidData(TestBase):
                    ("policy-invalidLowPortinList", {
                        'apiVersion': 'v1',
                        'kind': 'policy',
-                       'metadata': {'name': 'policy2'},
+                       'metadata': {'name': 'policy2', 'tier': 'admin'},
                        'spec': {'egress': [{'action': 'deny',
                                             'destination': {},
                                             'source': {
@@ -948,7 +977,7 @@ class InvalidData(TestBase):
                    ("policy-invalidReversedRange", {
                        'apiVersion': 'v1',
                        'kind': 'policy',
-                       'metadata': {'name': 'policy2'},
+                       'metadata': {'name': 'policy2', 'tier': 'admin'},
                        'spec': {'egress': [{'action': 'deny',
                                             'destination': {},
                                             'source': {
@@ -965,7 +994,7 @@ class InvalidData(TestBase):
                    ("policy-invalidAction", {
                        'apiVersion': 'v1',
                        'kind': 'policy',
-                       'metadata': {'name': 'policy2'},
+                       'metadata': {'name': 'policy2', 'tier': 'admin'},
                        'spec': {'egress': [{'action': 'jumpupanddown',  # invalid action
                                             'destination': {},
                                             'protocol': 'tcp',

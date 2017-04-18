@@ -66,7 +66,7 @@ Description:
   stdin format.
 
   Valid resource types are node, bgpPeer, hostEndpoint, workloadEndpoint,
-  ipPool, policy and profile.  The <TYPE> is case insensitive and may be
+  ipPool, tier, policy and profile.  The <TYPE> is case insensitive and may be
   pluralized.
 
   Attempting to get resources that do not exist will simply return no results.

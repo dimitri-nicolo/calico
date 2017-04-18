@@ -126,6 +126,10 @@ func getResourceFromArguments(args map[string]interface{}) (unversioned.Resource
 		p := api.NewPolicy()
 		p.Metadata.Name = name
 		return *p, nil
+	case "tier", "tiers":
+		p := api.NewTier()
+		p.Metadata.Name = name
+		return *p, nil
 	case "ippool", "ippools", "ipp", "ipps", "pool", "pools":
 		p := api.NewIPPool()
 		if name != "" {

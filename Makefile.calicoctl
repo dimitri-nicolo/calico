@@ -9,7 +9,7 @@ OS := $(shell uname -s | tr A-Z a-z)
 ARCH := amd64
 ###############################################################################
 # Subcomponent versions:
-GO_BUILD_VER:=latest
+GO_BUILD_VER:=v0.6
 # Set libcalico-go version in glide.yaml first then do a `glide up -v` to update glide.lock.
 # Setting LIBCALICOGO_VER in the Makefile won't update the glide dependencies.
 LIBCALICOGO_VER := v1.0.3
@@ -44,6 +44,12 @@ clean-calicoctl:
 
 #Use this to populate the vendor directory after checking out the repository.
 # To update upstream dependencies, delete the glide.lock file first.
+#
+# If your glide.lock has any repositories that need an SSH key, run
+# an SSH agent (if there isn't already one running - most Linux
+# desktops already do this) and use ssh-add to add the needed key(s)
+# into that agent.  Then the SSH agent forwarding - implemented below
+# by SSH_AGENT_FORWARD - will make the key(s) available when glide runs.
 vendor: glide.yaml
 	# Ensure that the glide cache directory exists.	
 	mkdir -p $(HOME)/.glide
@@ -55,6 +61,7 @@ vendor: glide.yaml
   docker run --rm \
     -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
     -v $(HOME)/.glide:/home/user/.glide:rw \
+    -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
     -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
     $(CALICO_BUILD) /bin/sh -c ' \
 		  cd /go/src/$(PACKAGE_NAME) && \

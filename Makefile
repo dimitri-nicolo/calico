@@ -132,7 +132,8 @@ clean: clean-calicoctl
 
 	# Retag and remove external images so that they will be pulled again
 	# We avoid just deleting the image. We didn't build them here so it would be impolite to delete it.
-	docker tag $(FELIX_CONTAINER_NAME) $(FELIX_CONTAINER_NAME)-backup && docker rmi $(FELIX_CONTAINER_NAME) || true
+	# Don't delete the Felix image, since we need to build it locally.
+	# docker tag $(FELIX_CONTAINER_NAME) $(FELIX_CONTAINER_NAME)-backup && docker rmi $(FELIX_CONTAINER_NAME) || true
 	docker tag $(SYSTEMTEST_CONTAINER) $(SYSTEMTEST_CONTAINER)-backup && docker rmi $(SYSTEMTEST_CONTAINER) || true
 
 .PHONY: help
