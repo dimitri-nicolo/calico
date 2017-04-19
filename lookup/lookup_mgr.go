@@ -209,8 +209,7 @@ func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.Polic
 	case *model.HostEndpointKey:
 		ek := epKey.(*model.HostEndpointKey)
 		m.hostEpMutex.Lock()
-		// TODO(doublek): Not sure how to consider Untracked Tiers into this.
-		tiers := m.hostEndpointTiers[*ek]
+		tiers := append(m.hostEndpointUntrackedTiers[*ek], m.hostEndpointTiers[*ek]...)
 		log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
 		for _, tier := range tiers {
 			log.Debug("Checking endpoint tier ", tier)

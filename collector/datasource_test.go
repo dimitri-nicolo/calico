@@ -297,7 +297,7 @@ var defTierAllowTp = stats.RuleTracePoint{
 	Rule:     "0",
 	Action:   stats.AllowAction,
 	Index:    0,
-	WlEpKey:  *localWlEPKey1,
+	EpKey:    localWlEPKey1,
 }
 var defTierDenyTp = stats.RuleTracePoint{
 	TierID:   "default",
@@ -305,7 +305,7 @@ var defTierDenyTp = stats.RuleTracePoint{
 	Rule:     "0",
 	Action:   stats.DenyAction,
 	Index:    0,
-	WlEpKey:  *localWlEPKey2,
+	EpKey:    localWlEPKey2,
 }
 var tier1AllowTp = stats.RuleTracePoint{
 	TierID:   "tier1",
@@ -398,12 +398,12 @@ func newMockLookupManager(em map[string]*model.WorkloadEndpointKey) *mockLookupM
 	}
 }
 
-func (lm *mockLookupManager) GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey {
+func (lm *mockLookupManager) GetEndpointKey(addr net.IP) (interface{}, error) {
 	data, _ := lm.epMap[string(addr)]
 	log.Infof("Looking up %v returned %v", addr, data)
-	return data
+	return data, nil
 }
 
-func (lm *mockLookupManager) GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int {
+func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) int {
 	return 0
 }
