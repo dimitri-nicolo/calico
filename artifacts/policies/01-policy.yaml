@@ -4,3 +4,30 @@ metadata:
   name: my-first-policy
   labels:
     sample-label: "true"
+spec:
+  order: 9999.9999
+  ingress:
+    - action: allow
+      protocol: udp
+      icmp:
+        type: 10
+        code: 100
+      source:
+        tag: web
+        net: 1.2.3.4/10
+        selector:
+        ports: [1,2,3,4]
+      destination:
+        tag: database
+        net: 10.20.30.40/32
+        selector:
+        ports:
+  egress:
+    - action: deny
+      protocol: tcp
+      source:
+        notTag: abcd
+        notNet: aa:bb:cc::ff/100
+        notSelector:
+        notPorts: [100]
+  selector:

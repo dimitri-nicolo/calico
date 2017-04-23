@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	// calico "github.com/projectcalico/libcalico-go/lib/api"
+	calico "github.com/projectcalico/libcalico-go/lib/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,9 +29,9 @@ type PolicyList struct {
 	Items []Policy `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
-type PolicySpec struct {
+/*type PolicySpec struct {
 	// calico.PolicySpec
-}
+}*/
 
 type PolicyStatus struct {
 }
@@ -42,6 +42,6 @@ type Policy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Spec   PolicySpec   `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	Status PolicyStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+	Spec   calico.PolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Status PolicyStatus      `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }

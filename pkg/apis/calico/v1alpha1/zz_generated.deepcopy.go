@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	api "github.com/projectcalico/libcalico-go/lib/api"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -37,7 +38,6 @@ func RegisterDeepCopies(scheme *runtime.Scheme) error {
 	return scheme.AddGeneratedDeepCopyFuncs(
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1alpha1_Policy, InType: reflect.TypeOf(&Policy{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1alpha1_PolicyList, InType: reflect.TypeOf(&PolicyList{})},
-		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1alpha1_PolicySpec, InType: reflect.TypeOf(&PolicySpec{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1alpha1_PolicyStatus, InType: reflect.TypeOf(&PolicyStatus{})},
 	)
 }
@@ -51,6 +51,11 @@ func DeepCopy_v1alpha1_Policy(in interface{}, out interface{}, c *conversion.Clo
 			return err
 		} else {
 			out.ObjectMeta = *newVal.(*v1.ObjectMeta)
+		}
+		if newVal, err := c.DeepCopy(&in.Spec); err != nil {
+			return err
+		} else {
+			out.Spec = *newVal.(*api.PolicySpec)
 		}
 		return nil
 	}
@@ -70,15 +75,6 @@ func DeepCopy_v1alpha1_PolicyList(in interface{}, out interface{}, c *conversion
 				}
 			}
 		}
-		return nil
-	}
-}
-
-func DeepCopy_v1alpha1_PolicySpec(in interface{}, out interface{}, c *conversion.Cloner) error {
-	{
-		in := in.(*PolicySpec)
-		out := out.(*PolicySpec)
-		*out = *in
 		return nil
 	}
 }

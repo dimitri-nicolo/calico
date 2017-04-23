@@ -21,6 +21,7 @@ limitations under the License.
 package calico
 
 import (
+	api "github.com/projectcalico/libcalico-go/lib/api"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -51,6 +52,11 @@ func DeepCopy_calico_Policy(in interface{}, out interface{}, c *conversion.Clone
 			return err
 		} else {
 			out.ObjectMeta = *newVal.(*v1.ObjectMeta)
+		}
+		if newVal, err := c.DeepCopy(&in.Spec); err != nil {
+			return err
+		} else {
+			out.Spec = *newVal.(*api.PolicySpec)
 		}
 		return nil
 	}
