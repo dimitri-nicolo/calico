@@ -24,6 +24,7 @@ all: build
 #######################
 ROOT           = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 BINDIR        ?= bin
+ARTIFACTS     ?= artifacts
 CAPI_PKG       = github.com/tigera/calico-k8sapiserver
 TOP_SRC_DIRS   = pkg
 SRC_DIRS       = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
@@ -66,6 +67,8 @@ build: .generate_files \
 # We'll rebuild apiserver if any go file has changed (ie. NEWEST_GO_FILE)
 $(BINDIR)/calico-k8sapiserver: .generate_files $(NEWEST_GO_FILE)
 	$(GO_BUILD) -o $@ $(CAPI_PKG)
+	cp $(BINDIR)/calico-k8sapiserver $(ARTIFACTS)/simple-image/calico-k8sapiserver
+	docker build -t calico-k8sapiserver:latest $(ARTIFACTS)/simple-image
 
 # This section contains the code generation stuff
 #################################################
@@ -127,10 +130,13 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 		--output-file-base zz_generated.conversion
 	touch $@
 
-clean: clean-bin clean-generated
+clean: clean-bin clean-build-image clean-generated
 clean-bin:
 	rm -rf $(BINDIR)
 	rm -f .generate_exes
+
+clean-build-image:
+	docker rmi -f calico-k8sapiserver > /dev/null 2>&1 || true
 
 clean-generated:
 	rm -f .generate_files
