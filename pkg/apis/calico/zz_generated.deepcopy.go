@@ -21,10 +21,11 @@ limitations under the License.
 package calico
 
 import (
-	api "github.com/projectcalico/libcalico-go/lib/api"
+	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	net "net"
 	reflect "reflect"
 )
 
@@ -36,11 +37,68 @@ func init() {
 // to allow building arbitrary schemes.
 func RegisterDeepCopies(scheme *runtime.Scheme) error {
 	return scheme.AddGeneratedDeepCopyFuncs(
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_EntityRule, InType: reflect.TypeOf(&EntityRule{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_ICMPFields, InType: reflect.TypeOf(&ICMPFields{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_Policy, InType: reflect.TypeOf(&Policy{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_PolicyList, InType: reflect.TypeOf(&PolicyList{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_PolicySpec, InType: reflect.TypeOf(&PolicySpec{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_PolicyStatus, InType: reflect.TypeOf(&PolicyStatus{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_Rule, InType: reflect.TypeOf(&Rule{})},
 	)
+}
+
+func DeepCopy_calico_EntityRule(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*EntityRule)
+		out := out.(*EntityRule)
+		*out = *in
+		if in.Net != nil {
+			in, out := &in.Net, &out.Net
+			if newVal, err := c.DeepCopy(*in); err != nil {
+				return err
+			} else {
+				*out = newVal.(*net.IPNet)
+			}
+		}
+		if in.Ports != nil {
+			in, out := &in.Ports, &out.Ports
+			*out = make([]numorstring.Port, len(*in))
+			copy(*out, *in)
+		}
+		if in.NotNet != nil {
+			in, out := &in.NotNet, &out.NotNet
+			if newVal, err := c.DeepCopy(*in); err != nil {
+				return err
+			} else {
+				*out = newVal.(*net.IPNet)
+			}
+		}
+		if in.NotPorts != nil {
+			in, out := &in.NotPorts, &out.NotPorts
+			*out = make([]numorstring.Port, len(*in))
+			copy(*out, *in)
+		}
+		return nil
+	}
+}
+
+func DeepCopy_calico_ICMPFields(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*ICMPFields)
+		out := out.(*ICMPFields)
+		*out = *in
+		if in.Type != nil {
+			in, out := &in.Type, &out.Type
+			*out = new(int)
+			**out = **in
+		}
+		if in.Code != nil {
+			in, out := &in.Code, &out.Code
+			*out = new(int)
+			**out = **in
+		}
+		return nil
+	}
 }
 
 func DeepCopy_calico_Policy(in interface{}, out interface{}, c *conversion.Cloner) error {
@@ -53,10 +111,8 @@ func DeepCopy_calico_Policy(in interface{}, out interface{}, c *conversion.Clone
 		} else {
 			out.ObjectMeta = *newVal.(*v1.ObjectMeta)
 		}
-		if newVal, err := c.DeepCopy(&in.Spec); err != nil {
+		if err := DeepCopy_calico_PolicySpec(&in.Spec, &out.Spec, c); err != nil {
 			return err
-		} else {
-			out.Spec = *newVal.(*api.PolicySpec)
 		}
 		return nil
 	}
@@ -85,6 +141,29 @@ func DeepCopy_calico_PolicySpec(in interface{}, out interface{}, c *conversion.C
 		in := in.(*PolicySpec)
 		out := out.(*PolicySpec)
 		*out = *in
+		if in.Order != nil {
+			in, out := &in.Order, &out.Order
+			*out = new(float64)
+			**out = **in
+		}
+		if in.IngressRules != nil {
+			in, out := &in.IngressRules, &out.IngressRules
+			*out = make([]Rule, len(*in))
+			for i := range *in {
+				if err := DeepCopy_calico_Rule(&(*in)[i], &(*out)[i], c); err != nil {
+					return err
+				}
+			}
+		}
+		if in.EgressRules != nil {
+			in, out := &in.EgressRules, &out.EgressRules
+			*out = make([]Rule, len(*in))
+			for i := range *in {
+				if err := DeepCopy_calico_Rule(&(*in)[i], &(*out)[i], c); err != nil {
+					return err
+				}
+			}
+		}
 		return nil
 	}
 }
@@ -94,6 +173,50 @@ func DeepCopy_calico_PolicyStatus(in interface{}, out interface{}, c *conversion
 		in := in.(*PolicyStatus)
 		out := out.(*PolicyStatus)
 		*out = *in
+		return nil
+	}
+}
+
+func DeepCopy_calico_Rule(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*Rule)
+		out := out.(*Rule)
+		*out = *in
+		if in.IPVersion != nil {
+			in, out := &in.IPVersion, &out.IPVersion
+			*out = new(int)
+			**out = **in
+		}
+		if in.Protocol != nil {
+			in, out := &in.Protocol, &out.Protocol
+			*out = new(numorstring.Protocol)
+			**out = **in
+		}
+		if in.ICMP != nil {
+			in, out := &in.ICMP, &out.ICMP
+			*out = new(ICMPFields)
+			if err := DeepCopy_calico_ICMPFields(*in, *out, c); err != nil {
+				return err
+			}
+		}
+		if in.NotProtocol != nil {
+			in, out := &in.NotProtocol, &out.NotProtocol
+			*out = new(numorstring.Protocol)
+			**out = **in
+		}
+		if in.NotICMP != nil {
+			in, out := &in.NotICMP, &out.NotICMP
+			*out = new(ICMPFields)
+			if err := DeepCopy_calico_ICMPFields(*in, *out, c); err != nil {
+				return err
+			}
+		}
+		if err := DeepCopy_calico_EntityRule(&in.Source, &out.Source, c); err != nil {
+			return err
+		}
+		if err := DeepCopy_calico_EntityRule(&in.Destination, &out.Destination, c); err != nil {
+			return err
+		}
 		return nil
 	}
 }
