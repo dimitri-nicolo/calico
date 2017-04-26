@@ -6,36 +6,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/syslog"
+	"net/http"
 	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/projectcalico/felix/set"
 )
 
-// TODO(doublek): Finalize felix_ metric names.
 var (
 	gaugeDeniedPackets = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "felix_collector_denied_packets",
-		Help: "Packets denied.",
+		Name: "calico_denied_packets",
+		Help: "Total number of packets denied by calico policies.",
 	},
 		[]string{"srcIP", "policy"},
 	)
 	gaugeDeniedBytes = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "felix_collector_denied_bytes",
-		Help: "Bytes denied.",
+		Name: "calico_denied_bytes",
+		Help: "Total number of bytes denied by calico policies.",
 	},
 		[]string{"srcIP", "policy"},
 	)
 )
-
-func init() {
-	prometheus.MustRegister(gaugeDeniedPackets)
-	prometheus.MustRegister(gaugeDeniedBytes)
-}
 
 type MetricsReporter interface {
 	Start()
@@ -109,6 +105,8 @@ func filterAndHandleData(handler func(*RuleTrace, Data), data Data) {
 
 // PrometheusReporter records denied packets and bytes statistics in prometheus metrics.
 type PrometheusReporter struct {
+	port             int
+	registry         *prometheus.Registry
 	aggStats         map[AggregateKey]AggregateValue
 	deleteCandidates set.Set
 	deleteChan       chan AggregateKey
@@ -118,8 +116,13 @@ type PrometheusReporter struct {
 	retentionTime    time.Duration
 }
 
-func NewPrometheusReporter(rTime time.Duration) *PrometheusReporter {
+func NewPrometheusReporter(port int, rTime time.Duration) *PrometheusReporter {
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(gaugeDeniedPackets)
+	registry.MustRegister(gaugeDeniedBytes)
 	return &PrometheusReporter{
+		port:             port,
+		registry:         registry,
 		aggStats:         make(map[AggregateKey]AggregateValue),
 		deleteCandidates: set.New(),
 		deleteChan:       make(chan AggregateKey),
@@ -131,11 +134,25 @@ func NewPrometheusReporter(rTime time.Duration) *PrometheusReporter {
 }
 
 func (pr *PrometheusReporter) Start() {
+	log.Info("Staring PrometheusReporter")
+	go pr.servePrometheusMetrics()
 	go pr.startReporter()
 }
 
+func (pr *PrometheusReporter) servePrometheusMetrics() {
+	for {
+		mux := http.NewServeMux()
+		handler := promhttp.HandlerFor(pr.registry, promhttp.HandlerOpts{})
+		mux.Handle("/metrics", handler)
+		err := http.ListenAndServe(fmt.Sprintf(":%v", pr.port), handler)
+		log.WithError(err).Error(
+			"Prometheus reporter metrics endpoint failed, trying to restart it...")
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func (pr *PrometheusReporter) startReporter() {
-	log.Info("Staring PrometheusReporter")
+
 	for {
 		select {
 		case key := <-pr.deleteChan:

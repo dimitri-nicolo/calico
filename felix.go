@@ -226,6 +226,7 @@ configRetry:
 			},
 			NfNetlinkBufSize:            configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:           configParams.StatsDumpFilePath,
+			PrometheusReporterPort:      configParams.PrometheusReporterPort,
 			SyslogReporterNetwork:       configParams.SyslogReporterNetwork,
 			SyslogReporterAddress:       configParams.SyslogReporterAddress,
 			DeletedMetricsRetentionSecs: time.Duration(configParams.DeletedMetricsRetentionSecs) * time.Second,
