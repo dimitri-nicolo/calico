@@ -13,13 +13,14 @@ import (
 
 	"github.com/projectcalico/felix/collector/stats"
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
 
 type epLookup interface {
-	GetEndpointKey(addr net.IP) *model.WorkloadEndpointKey
-	GetPolicyIndex(epKey *model.WorkloadEndpointKey, policyKey *model.PolicyKey) int
+	GetEndpointKey(addr net.IP) (interface{}, error)
+	GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) int
 }
 
 const PollingInterval = time.Duration(1) * time.Second
@@ -83,7 +84,8 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	nflogTuple := nPkt.Tuple
 	var numPkts, numBytes int
 	var statUpdate *stats.StatUpdate
-	var wlEpKey *model.WorkloadEndpointKey
+	var epKey interface{}
+	var err error
 	var prefixAction stats.RuleAction
 	_, _, _, prefixAction = parsePrefix(nPkt.Prefix)
 	if prefixAction == stats.DenyAction || prefixAction == stats.AllowAction {
@@ -102,13 +104,13 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*s
 	// Determine the endpoint that this packet hit a rule for. This depends on the direction
 	// because local -> local packets will be NFLOGed twice.
 	if ds.direction == stats.DirIn {
-		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Dst)
+		epKey, err = ds.lum.GetEndpointKey(nflogTuple.Dst)
 	} else {
-		wlEpKey = ds.lum.GetEndpointKey(nflogTuple.Src)
+		epKey, err = ds.lum.GetEndpointKey(nflogTuple.Src)
 	}
 
-	if wlEpKey != nil {
-		tp := lookupRule(ds.lum, nPkt.Prefix, wlEpKey)
+	if err != lookup.UnknownEndpointError {
+		tp := lookupRule(ds.lum, nPkt.Prefix, epKey)
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
 		statUpdate = stats.NewStatUpdate(tuple, numPkts, numBytes, 0, 0, stats.DeltaCounter, ds.direction, tp)
 	} else {
@@ -208,9 +210,9 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 			log.Error("Error when extracting tuple without DNAT:", err)
 		}
 	}
-	wlEpKeySrc := ds.lum.GetEndpointKey(ctTuple.Src)
-	wlEpKeyDst := ds.lum.GetEndpointKey(ctTuple.Dst)
-	if wlEpKeySrc == nil && wlEpKeyDst == nil {
+	_, errSrc := ds.lum.GetEndpointKey(ctTuple.Src)
+	_, errDst := ds.lum.GetEndpointKey(ctTuple.Dst)
+	if errSrc == lookup.UnknownEndpointError && errDst == lookup.UnknownEndpointError {
 		// We always expect unknown entries for conntrack for things such as
 		// management or local traffic. This log can get spammy if we log everything
 		// because of which we don't return an error and log at debug level.
@@ -223,7 +225,7 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 		stats.AbsoluteCounter, stats.DirUnknown, stats.EmptyRuleTracePoint)
 	statUpdates = append(statUpdates, *su)
-	if wlEpKeySrc != nil && wlEpKeyDst != nil {
+	if errSrc == nil && errDst == nil {
 		// Locally to local packet will require a reversed tuple to collect reply stats.
 		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
 		su := stats.NewStatUpdate(tuple,
@@ -297,7 +299,7 @@ func parsePrefix(prefix string) (tier, policy, rule string, action stats.RuleAct
 	return
 }
 
-func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) stats.RuleTracePoint {
+func lookupRule(lum epLookup, prefix string, epKey interface{}) stats.RuleTracePoint {
 	log.Infof("Looking up rule prefix %s", prefix)
 	tier, policy, rule, action := parsePrefix(prefix)
 	return stats.RuleTracePoint{
@@ -306,7 +308,7 @@ func lookupRule(lum epLookup, prefix string, epKey *model.WorkloadEndpointKey) s
 		Rule:     rule,
 		Action:   action,
 		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
-		WlEpKey:  *epKey,
+		EpKey:    epKey,
 	}
 }
 

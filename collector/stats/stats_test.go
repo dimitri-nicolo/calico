@@ -32,7 +32,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    0,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	denyTp0 = RuleTracePoint{
 		TierID:   "T1",
@@ -40,7 +40,7 @@ var (
 		Rule:     "R2",
 		Action:   DenyAction,
 		Index:    0,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	allowTp1 = RuleTracePoint{
 		TierID:   "T1",
@@ -48,7 +48,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    1,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	denyTp1 = RuleTracePoint{
 		TierID:   "T1",
@@ -56,7 +56,7 @@ var (
 		Rule:     "R2",
 		Action:   DenyAction,
 		Index:    1,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	allowTp2 = RuleTracePoint{
 		TierID:   "T2",
@@ -64,7 +64,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    2,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	denyTp2 = RuleTracePoint{
 		TierID:   "T2",
@@ -72,7 +72,7 @@ var (
 		Rule:     "R2",
 		Action:   DenyAction,
 		Index:    2,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	nextTierTp0 = RuleTracePoint{
 		TierID:   "T1",
@@ -80,7 +80,7 @@ var (
 		Rule:     "R3",
 		Action:   NextTierAction,
 		Index:    0,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	nextTierTp1 = RuleTracePoint{
 		TierID:   "T2",
@@ -88,7 +88,7 @@ var (
 		Rule:     "R4",
 		Action:   NextTierAction,
 		Index:    1,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	allowTp11 = RuleTracePoint{
 		TierID:   "T1",
@@ -96,7 +96,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    11,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	denyTp11 = RuleTracePoint{
 		TierID:   "T1",
@@ -104,7 +104,7 @@ var (
 		Rule:     "R1",
 		Action:   DenyAction,
 		Index:    11,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	allowTp21 = RuleTracePoint{
 		TierID:   "T1",
@@ -112,7 +112,7 @@ var (
 		Rule:     "R1",
 		Action:   AllowAction,
 		Index:    21,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 	denyTp21 = RuleTracePoint{
 		TierID:   "T1",
@@ -120,7 +120,7 @@ var (
 		Rule:     "R1",
 		Action:   DenyAction,
 		Index:    21,
-		WlEpKey:  wlEpKey1,
+		EpKey:    wlEpKey1,
 	}
 )
 
