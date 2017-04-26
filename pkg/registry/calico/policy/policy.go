@@ -1,13 +1,15 @@
 package policy
 
 import (
-	"context"
 	"os"
 
+	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/client"
 	"github.com/prometheus/common/log"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 )
 
@@ -37,16 +39,37 @@ func NewStorage(s rest.StandardStorage) *Storage {
 	return &Storage{s, c}
 }
 
-func (s *Storage) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
+// Create inserts a new item according to the unique key from the object.
+func (s *Storage) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
 
 	policy := obj.(*calico.Policy)
 	libcalicoPolicy := policy.Spec
 
 	pHandler := s.client.Policies()
-	_, err := pHandler.Create(&libcalicoPolicy)
+	p, err := pHandler.Create(&libcalicoPolicy)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	pOut := calico.Policy{Spec: *p}
+	return &pOut, nil
+}
+
+// Get retrieves the item from storage.
+func (s *Storage) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+
+	policyMetadata := api.PolicyMetadata{Name: name}
+	pHandler := s.client.Policies()
+	policyList, err := pHandler.List(policyMetadata)
+	if err != nil {
+		return nil, err
+	}
+
+	pListOut := calico.PolicyList{Items: []calico.Policy{}}
+	for _, item := range policyList.Items {
+		pOut := calico.Policy{Spec: item}
+		pListOut.Items = append(pListOut.Items, pOut)
+	}
+
+	return &pListOut, nil
 }
