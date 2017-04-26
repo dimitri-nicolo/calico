@@ -85,7 +85,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*S
 	var statUpdate *StatUpdate
 	var epKey interface{}
 	var err error
-	var prefixAction stats.RuleAction
+	var prefixAction RuleAction
 	_, _, _, prefixAction = parsePrefix(nPkt.Prefix)
 	if prefixAction == DenyAction || prefixAction == AllowAction {
 		// NFLog based counters make sense only for denied packets or allowed packets
