@@ -148,6 +148,7 @@ type Config struct {
 
 	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
+	PrometheusReporterEnabled   bool   `config:"bool;false"`
 	PrometheusReporterPort      int    `config:"int(0,65535);9092"`
 	SyslogReporterNetwork       string `config:"string;"`
 	SyslogReporterAddress       string `config:"string;"`

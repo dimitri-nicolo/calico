@@ -226,6 +226,7 @@ configRetry:
 			},
 			NfNetlinkBufSize:            configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:           configParams.StatsDumpFilePath,
+			PrometheusReporterEnabled:   configParams.PrometheusReporterEnabled,
 			PrometheusReporterPort:      configParams.PrometheusReporterPort,
 			SyslogReporterNetwork:       configParams.SyslogReporterNetwork,
 			SyslogReporterAddress:       configParams.SyslogReporterAddress,
