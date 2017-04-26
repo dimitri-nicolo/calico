@@ -17,6 +17,7 @@ limitations under the License.
 package apiserver
 
 import (
+	calicorest "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/rest"
 	"k8s.io/apimachinery/pkg/apimachinery/announced"
 	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,13 +25,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	serverstorage "k8s.io/apiserver/pkg/server/storage"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1alpha1"
-	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/registry/calico"
+	calicov1alpha1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1alpha1"
 )
 
 var (
@@ -88,6 +87,16 @@ func (c *Config) SkipComplete() completedConfig {
 	return completedConfig{c}
 }
 
+// DefaultAPIResourceConfigSource returns a default API Resource config source
+func DefaultAPIResourceConfigSource() *serverstorage.ResourceConfig {
+	ret := serverstorage.NewResourceConfig()
+	ret.EnableVersions(
+		calicov1alpha1.SchemeGroupVersion,
+	)
+
+	return ret
+}
+
 // New returns a new instance of CalicoServer from the given config.
 func (c completedConfig) New() (*CalicoServer, error) {
 	genericServer, err := c.Config.GenericConfig.SkipComplete().New() // completion is done in Complete, no need for a second time
@@ -99,13 +108,19 @@ func (c completedConfig) New() (*CalicoServer, error) {
 		GenericAPIServer: genericServer,
 	}
 
-	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(calico.GroupName, registry, Scheme, metav1.ParameterCodec, Codecs)
-	apiGroupInfo.GroupMeta.GroupVersion = v1alpha1.SchemeGroupVersion
-	v1alpha1storage := map[string]rest.Storage{}
-	v1alpha1storage["policies"] = calicostorage.NewREST(Scheme, c.GenericConfig.RESTOptionsGetter)
-	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = v1alpha1storage
-
-	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
+	calicostore := calicorest.RESTStorageProvider{}
+	apiGroupInfo, err := calicostore.NewRESTStorage(DefaultAPIResourceConfigSource(), c.Config.GenericConfig.RESTOptionsGetter)
+	if err != nil {
+		return nil, err
+	}
+	/*
+		apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(calico.GroupName, registry, Scheme, metav1.ParameterCodec, Codecs)
+		apiGroupInfo.GroupMeta.GroupVersion = v1alpha1.SchemeGroupVersion
+		v1alpha1storage := map[string]rest.Storage{}
+		v1alpha1storage["policies"] = calicostorage.NewREST(Scheme, c.GenericConfig.RESTOptionsGetter)
+		apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = v1alpha1storage
+	*/
+	if err := s.GenericAPIServer.InstallAPIGroup(apiGroupInfo); err != nil {
 		return nil, err
 	}
 
