@@ -40,7 +40,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 			return obj.(*calico.Policy).Name, nil
 		},
 		PredicateFunc:     policy.MatchPolicy,
-		QualifiedResource: calico.Resource("policies"),
+		QualifiedResource: api.Resource("policies"),
 
 		CreateStrategy: policy.Strategy,
 		UpdateStrategy: policy.Strategy,
