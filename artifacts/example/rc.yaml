@@ -21,4 +21,8 @@ spec:
         imagePullPolicy: Never
         env:
           - name: ETCD_AUTHORITY
-            value: "10.96.0.101:32379"
+            value: "10.96.232.136:6666"
+        args:
+        - "--etcd-servers=http://localhost:2379"
+      - name: etcd
+        image: quay.io/coreos/etcd:v3.0.17

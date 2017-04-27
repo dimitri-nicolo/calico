@@ -21,10 +21,9 @@ import (
 	"net"
 
 	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	"k8s.io/client-go/pkg/api"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
 )
@@ -55,7 +54,7 @@ func (o *CalicoServerOptions) Config() (apiserver.Config, error) {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
 	}
 
-	genericConfig := genericapiserver.NewConfig(serializer.NewCodecFactory(runtime.NewScheme()))
+	genericConfig := genericapiserver.NewConfig(api.Codecs)
 	if err := o.RecommendedOptions.ApplyTo(genericConfig); err != nil {
 		return nil, err
 	}

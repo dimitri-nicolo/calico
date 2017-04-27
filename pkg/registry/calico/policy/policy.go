@@ -3,9 +3,9 @@ package policy
 import (
 	"os"
 
+	"github.com/golang/glog"
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/client"
-	"github.com/prometheus/common/log"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,16 +25,16 @@ func NewStorage(s rest.StandardStorage) *Storage {
 
 	cfg, err := client.LoadClientConfig("")
 	if err != nil {
-		log.Errorf("Failed to load client config: %q", err)
+		glog.Errorf("Failed to load client config: %q", err)
 		os.Exit(1)
 	}
 
 	c, err := client.New(*cfg)
 	if err != nil {
-		log.Errorf("Failed creating client: %q", err)
+		glog.Errorf("Failed creating client: %q", err)
 		os.Exit(1)
 	}
-	log.Infof("Client: %v", c)
+	glog.Infof("Client: %v", c)
 
 	return &Storage{s, c}
 }

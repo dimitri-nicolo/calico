@@ -17,8 +17,6 @@ limitations under the License.
 package rest
 
 import (
-	"sync"
-
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1alpha1"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
@@ -28,6 +26,8 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	"k8s.io/client-go/pkg/api"
+
+	calicov1alpha1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1alpha1"
 )
 
 // RESTStorageProvider provides a factory method to create a new APIGroupInfo for
@@ -49,7 +49,7 @@ func (p RESTStorageProvider) NewRESTStorage(
 	apiGroupInfo.GroupMeta.GroupVersion = v1alpha1.SchemeGroupVersion
 
 	apiGroupInfo.VersionedResourcesStorageMap = map[string]map[string]rest.Storage{
-		"v1alpha1": storage,
+		calicov1alpha1.SchemeGroupVersion.Version: storage,
 	}
 
 	return &apiGroupInfo, nil
@@ -59,19 +59,9 @@ func (p RESTStorageProvider) v1alpha1Storage(
 	apiResourceConfigSource serverstorage.APIResourceConfigSource,
 	restOptionsGetter generic.RESTOptionsGetter,
 ) (map[string]rest.Storage, error) {
-	once := new(sync.Once)
-	var (
-		policyStorage rest.StandardStorage
-	)
-
-	initializeStorage := func() {
-		once.Do(func() {
-			policyStorage = policystore.NewREST(restOptionsGetter)
-		})
-	}
 
 	storage := map[string]rest.Storage{}
-	initializeStorage()
+	policyStorage := policystore.NewREST(restOptionsGetter)
 	storage["policies"] = calicopolicy.NewStorage(policyStorage)
 	return storage, nil
 }
