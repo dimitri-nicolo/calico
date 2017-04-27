@@ -66,7 +66,7 @@ build: .generate_files \
 
 # We'll rebuild apiserver if any go file has changed (ie. NEWEST_GO_FILE)
 $(BINDIR)/calico-k8sapiserver: .generate_files $(NEWEST_GO_FILE)
-	$(GO_BUILD) -o $@ $(CAPI_PKG)
+	$(GO_BUILD) -o $@ $(CAPI_PKG)/cmd/apiserver
 	cp $(BINDIR)/calico-k8sapiserver $(ARTIFACTS)/simple-image/calico-k8sapiserver
 	docker build -t calico-k8sapiserver:latest $(ARTIFACTS)/simple-image
 

@@ -23,21 +23,11 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1alpha1"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	policystore "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy/storage"
-	"k8s.io/apimachinery/pkg/apimachinery/registered"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-var (
-	registry = registered.NewOrDie("")
-	Scheme   = runtime.NewScheme()
-	Codecs   = serializer.NewCodecFactory(Scheme)
+	"k8s.io/client-go/pkg/api"
 )
 
 // RESTStorageProvider provides a factory method to create a new APIGroupInfo for
@@ -50,9 +40,12 @@ func (p RESTStorageProvider) NewRESTStorage(
 	apiResourceConfigSource serverstorage.APIResourceConfigSource,
 	restOptionsGetter generic.RESTOptionsGetter,
 ) (*genericapiserver.APIGroupInfo, error) {
+	storage, err := p.v1alpha1Storage(apiResourceConfigSource, restOptionsGetter)
+	if err != nil {
+		return nil, err
+	}
 
-	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(calico.GroupName, registry, Scheme, metav1.ParameterCodec, Codecs)
-	storage := p.v1alpha1Storage(apiResourceConfigSource, restOptionsGetter)
+	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(calico.GroupName, api.Registry, api.Scheme, api.ParameterCodec, api.Codecs)
 	apiGroupInfo.GroupMeta.GroupVersion = v1alpha1.SchemeGroupVersion
 
 	apiGroupInfo.VersionedResourcesStorageMap = map[string]map[string]rest.Storage{
@@ -65,7 +58,7 @@ func (p RESTStorageProvider) NewRESTStorage(
 func (p RESTStorageProvider) v1alpha1Storage(
 	apiResourceConfigSource serverstorage.APIResourceConfigSource,
 	restOptionsGetter generic.RESTOptionsGetter,
-) map[string]rest.Storage {
+) (map[string]rest.Storage, error) {
 	once := new(sync.Once)
 	var (
 		policyStorage rest.StandardStorage
@@ -80,5 +73,10 @@ func (p RESTStorageProvider) v1alpha1Storage(
 	storage := map[string]rest.Storage{}
 	initializeStorage()
 	storage["policies"] = calicopolicy.NewStorage(policyStorage)
-	return storage
+	return storage, nil
+}
+
+// GroupName returns the API group name.
+func (p RESTStorageProvider) GroupName() string {
+	return calico.GroupName
 }
