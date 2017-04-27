@@ -52,7 +52,7 @@ func (c *Counter) Set(packets int, bytes int) (changed bool) {
 	if packets != 0 && bytes != 0 && packets > c.packets && bytes > c.bytes {
 		changed = true
 		dp := packets - c.packets
-		db := packets - c.packets
+		db := bytes - c.bytes
 		c.packets = packets
 		c.bytes = bytes
 		c.deltaPackets += dp
@@ -110,10 +110,21 @@ type RuleTracePoint struct {
 	Action   RuleAction
 	Index    int
 	EpKey    interface{}
+	Ctr      Counter
 }
 
-func (rtp RuleTracePoint) String() string {
-	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index)
+// Equals compares all but the Ctr field of a RuleTracePoint
+func (rtp *RuleTracePoint) Equals(cmpRtp RuleTracePoint) bool {
+	return rtp.TierID == cmpRtp.TierID &&
+		rtp.PolicyID == cmpRtp.PolicyID &&
+		rtp.Rule == cmpRtp.Rule &&
+		rtp.Action == cmpRtp.Action &&
+		rtp.Index == cmpRtp.Index &&
+		rtp.EpKey == cmpRtp.EpKey
+}
+
+func (rtp *RuleTracePoint) String() string {
+	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v ctr={%v}", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index, rtp.Ctr.String())
 }
 
 var EmptyRuleTracePoint = RuleTracePoint{}
@@ -123,21 +134,23 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 // is not a next-tier action. A RuleTrace also contains a workload endpoint,
 // which identifies the corresponding endpoint that the rule trace applied to.
 type RuleTrace struct {
-	path   []RuleTracePoint
+	path   []*RuleTracePoint
 	action RuleAction
 	epKey  interface{}
+	ctr    Counter
+	dirty  bool
 }
 
 func NewRuleTrace() *RuleTrace {
 	return &RuleTrace{
-		path: make([]RuleTracePoint, RuleTraceInitLen),
+		path: make([]*RuleTracePoint, RuleTraceInitLen),
 	}
 }
 
 func (t *RuleTrace) String() string {
 	rtParts := make([]string, 0)
 	for _, tp := range t.path {
-		if tp == EmptyRuleTracePoint {
+		if tp == nil {
 			continue
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
@@ -151,17 +164,17 @@ func (t *RuleTrace) String() string {
 		epKey := t.epKey.(*model.HostEndpointKey)
 		epStr = fmt.Sprintf("hostEndpoint={endpoint=%v}", epKey.EndpointID)
 	}
-	return fmt.Sprintf("path=[%v], action=%v %s", strings.Join(rtParts, ", "), t.action, epStr)
+	return fmt.Sprintf("path=[%v], action=%v ctr={%v} %s", strings.Join(rtParts, ", "), t.action, t.ctr.String(), epStr)
 }
 
 func (t *RuleTrace) Len() int {
 	return len(t.path)
 }
 
-func (t *RuleTrace) Path() []RuleTracePoint {
-	path := []RuleTracePoint{}
+func (t *RuleTrace) Path() []*RuleTracePoint {
+	path := []*RuleTracePoint{}
 	for _, tp := range t.path {
-		if tp == EmptyRuleTracePoint {
+		if tp == nil {
 			continue
 		}
 		path = append(path, tp)
@@ -175,49 +188,79 @@ func (t *RuleTrace) ToString() string {
 	return fmt.Sprintf("%v/%v/%v/%v", p.TierID, p.PolicyID, p.Rule, p.Action)
 }
 
+func (t *RuleTrace) Action() RuleAction {
+	return t.action
+}
+
+func (t *RuleTrace) Counters() Counter {
+	return t.ctr
+}
+
+func (t *RuleTrace) IsDirty() bool {
+	return t.dirty
+}
+
+func (t *RuleTrace) ClearDirtyFlag() {
+	t.dirty = false
+	t.ctr.Reset()
+	path := t.Path()
+	l := len(path)
+	if l != 0 {
+		p := path[l-1]
+		p.Ctr.Reset()
+	}
+}
+
 func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
+	var ctr Counter
+	ctr = tp.Ctr
 	if tp.Index > t.Len() {
 		log.Debug("Got new rule trace: ", tp)
 		// Insertion index greater than current length. Grow the path slice as long
 		// as necessary.
-		newPath := make([]RuleTracePoint, tp.Index)
+		newPath := make([]*RuleTracePoint, tp.Index)
 		copy(newPath, t.path)
 		nextSize := (tp.Index / RuleTraceInitLen) * RuleTraceInitLen
-		t.path = append(t.path, make([]RuleTracePoint, nextSize)...)
-		t.path[tp.Index] = tp
+		t.path = append(t.path, make([]*RuleTracePoint, nextSize)...)
+		t.path[tp.Index] = &tp
 	} else {
 		existingTp := t.path[tp.Index]
 		switch {
-		case existingTp == (RuleTracePoint{}):
+		case existingTp == nil:
 			// Position is empty, insert and be done.
 			log.Debug("Got new rule trace: ", tp)
-			t.path[tp.Index] = tp
-		case existingTp == tp:
-			// Nothing to do here - maybe a duplicate notification or kernel conntrack
-			// expired. Just skip.
+			t.path[tp.Index] = &tp
+		case existingTp.Equals(tp):
+			p, b := tp.Ctr.Values()
+			existingTp.Ctr.Increase(p, b)
+			ctr = existingTp.Ctr
 		default:
 			return RuleTracePointConflict
 		}
 	}
 	if tp.Action != NextTierAction {
 		t.action = tp.Action
+		t.ctr = ctr
+		t.epKey = tp.EpKey
 	}
-	t.epKey = tp.EpKey
+	t.dirty = true
 	return nil
 }
 
 func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	log.Debug("Replacing rule trace: ", tp)
 	if tp.Action == NextTierAction {
-		t.path[tp.Index] = tp
+		t.path[tp.Index] = &tp
 		return
 	}
 	// New tracepoint is not a next-tier action truncate at this index.
-	t.path[tp.Index] = tp
-	newPath := make([]RuleTracePoint, t.Len())
+	t.path[tp.Index] = &tp
+	newPath := make([]*RuleTracePoint, t.Len())
 	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
 	t.action = tp.Action
+	t.ctr = tp.Ctr
+	t.dirty = true
 	t.epKey = tp.EpKey
 }
 
@@ -274,16 +317,11 @@ type Data struct {
 	dirty            bool
 }
 
-func NewData(tuple Tuple,
-	packets int,
-	bytes int,
-	reversePackets int,
-	reverseBytes int,
-	duration time.Duration) *Data {
+func NewData(tuple Tuple, duration time.Duration) *Data {
 	return &Data{
 		Tuple:            tuple,
-		ctr:              *NewCounter(packets, bytes),
-		ctrReverse:       *NewCounter(reversePackets, reverseBytes),
+		ctr:              *NewCounter(0, 0),
+		ctrReverse:       *NewCounter(0, 0),
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        time.Now(),
@@ -312,6 +350,8 @@ func (d *Data) clearDirtyFlag() {
 	d.dirty = false
 	d.ctr.Reset()
 	d.ctrReverse.Reset()
+	d.IngressRuleTrace.ClearDirtyFlag()
+	d.EgressRuleTrace.ClearDirtyFlag()
 }
 
 func (d *Data) IsDirty() bool {

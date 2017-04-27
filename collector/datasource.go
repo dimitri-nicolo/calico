@@ -110,8 +110,10 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*S
 
 	if err != lookup.UnknownEndpointError {
 		tp := lookupRule(ds.lum, nPkt.Prefix, epKey)
+		tp.Ctr = *NewCounter(numPkts, numBytes)
 		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
-		statUpdate = NewStatUpdate(tuple, numPkts, numBytes, 0, 0, DeltaCounter, ds.direction, tp)
+		// TODO(doublek): This DeltaCounter could be removed.
+		statUpdate = NewStatUpdate(tuple, 0, 0, 0, 0, DeltaCounter, ds.direction, tp)
 	} else {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
