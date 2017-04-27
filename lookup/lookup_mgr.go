@@ -58,9 +58,9 @@ func NewLookupManager() *LookupManager {
 func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
-		// TODO (Matt): Need to lookup hostname.
+		// We omit setting Hostname since at this point it is implied that the
+		// endpoint belongs to this host.
 		wlEpKey := model.WorkloadEndpointKey{
-			Hostname:       "matt-k8s",
 			OrchestratorID: msg.Id.OrchestratorId,
 			WorkloadID:     msg.Id.WorkloadId,
 			EndpointID:     msg.Id.EndpointId,
@@ -94,8 +94,9 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		}
 		m.epMutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
+		// We omit setting Hostname since at this point it is implied that the
+		// endpoint belongs to this host.
 		wlEpKey := model.WorkloadEndpointKey{
-			Hostname:       "matt-k8s",
 			OrchestratorID: msg.Id.OrchestratorId,
 			WorkloadID:     msg.Id.WorkloadId,
 			EndpointID:     msg.Id.EndpointId,
@@ -109,9 +110,9 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		}
 		m.epMutex.Unlock()
 	case *proto.HostEndpointUpdate:
-		// TODO (Matt): Need to lookup hostname.
+		// We omit setting Hostname since at this point it is implied that the
+		// endpoint belongs to this host.
 		hostEpKey := model.HostEndpointKey{
-			Hostname:   "matt-k8s",
 			EndpointID: msg.Id.EndpointId,
 		}
 		m.hostEpMutex.Lock()
@@ -144,8 +145,9 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		}
 		m.hostEpMutex.Unlock()
 	case *proto.HostEndpointRemove:
+		// We omit setting Hostname since at this point it is implied that the
+		// endpoint belongs to this host.
 		hostEpKey := model.HostEndpointKey{
-			Hostname:   "matt-k8s",
 			EndpointID: msg.Id.EndpointId,
 		}
 		m.epMutex.Lock()
