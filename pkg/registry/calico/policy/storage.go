@@ -14,11 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package storage
+package policy
 
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
-	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
@@ -39,14 +38,14 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
 			return obj.(*calico.Policy).Name, nil
 		},
-		PredicateFunc:     policy.MatchPolicy,
+		PredicateFunc:     MatchPolicy,
 		QualifiedResource: api.Resource("policies"),
 
-		CreateStrategy: policy.Strategy,
-		UpdateStrategy: policy.Strategy,
-		DeleteStrategy: policy.Strategy,
+		CreateStrategy: Strategy,
+		UpdateStrategy: Strategy,
+		DeleteStrategy: Strategy,
 	}
-	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: policy.GetAttrs}
+	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: GetAttrs}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err) // TODO: Propagate error up
 	}

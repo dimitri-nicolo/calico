@@ -20,7 +20,6 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1alpha1"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
-	policystore "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy/storage"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -61,7 +60,7 @@ func (p RESTStorageProvider) v1alpha1Storage(
 ) (map[string]rest.Storage, error) {
 
 	storage := map[string]rest.Storage{}
-	policyStorage := policystore.NewREST(restOptionsGetter)
+	policyStorage := calicopolicy.NewREST(restOptionsGetter)
 	storage["policies"] = calicopolicy.NewStorage(policyStorage)
 	return storage, nil
 }
