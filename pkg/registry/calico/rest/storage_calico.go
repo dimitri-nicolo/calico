@@ -60,8 +60,7 @@ func (p RESTStorageProvider) v1alpha1Storage(
 ) (map[string]rest.Storage, error) {
 
 	storage := map[string]rest.Storage{}
-	policyStorage := calicopolicy.NewREST(restOptionsGetter)
-	storage["policies"] = calicopolicy.NewStorage(policyStorage)
+	storage["policies"] = calicopolicy.NewREST(restOptionsGetter)
 	return storage, nil
 }
 

@@ -17,8 +17,12 @@ limitations under the License.
 package policy
 
 import (
+	"fmt"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/client-go/pkg/api"
@@ -27,6 +31,23 @@ import (
 // rest implements a RESTStorage for API services against etcd
 type REST struct {
 	*genericregistry.Store
+}
+
+// KeyRootFunc is ?
+func KeyRootFunc(ctx genericapirequest.Context, prefix string) string {
+	key := prefix
+
+	return key
+}
+
+// KeyFunc is the default function for constructing storage paths for Policy resource.
+func KeyFunc(ctx genericapirequest.Context, prefix string, name string) (string, error) {
+	if name == "" {
+		return "", kubeerr.NewBadRequest("Name parameter required.")
+	}
+	e := fmt.Sprintf("/calico/v1/policy/tier/default/policy/%s",
+		name)
+	return e, nil
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
@@ -44,6 +65,13 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
 		DeleteStrategy: Strategy,
+
+		KeyFunc: func(ctx genericapirequest.Context, name string) (string, error) {
+			return KeyFunc(ctx, "", name)
+		},
+		KeyRootFunc: func(ctx genericapirequest.Context) string {
+			return KeyRootFunc(ctx, "")
+		},
 	}
 	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: GetAttrs}
 	if err := store.CompleteWithOptions(options); err != nil {
