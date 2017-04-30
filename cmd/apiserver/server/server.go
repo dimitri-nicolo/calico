@@ -22,6 +22,7 @@ import (
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1alpha1"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	"k8s.io/apiserver/pkg/storage/storagebackend"
 	"k8s.io/client-go/pkg/api"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
@@ -46,8 +47,10 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 	flags.AddGoFlagSet(flag.CommandLine)
 
 	stopCh := make(chan struct{})
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, api.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion))
+	ro.Etcd.StorageConfig.Type = storagebackend.StorageTypeETCD2
 	opts := &CalicoServerOptions{
-		RecommendedOptions: genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, api.Codecs.LegacyCodec(v1alpha1.SchemeGroupVersion)),
+		RecommendedOptions: ro,
 		StopCh:             stopCh,
 	}
 	opts.addFlags(flags)
