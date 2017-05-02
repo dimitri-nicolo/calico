@@ -24,10 +24,11 @@ func init() {
 	registerResource(
 		api.NewPolicy(),
 		api.NewPolicyList(),
-		[]string{"NAME"},
-		[]string{"NAME", "ORDER", "SELECTOR"},
+		[]string{"NAME", "TIER"},
+		[]string{"NAME", "TIER", "ORDER", "SELECTOR"},
 		map[string]string{
 			"NAME":     "{{.Metadata.Name}}",
+			"TIER":     "{{.Metadata.Tier}}",
 			"ORDER":    "{{.Spec.Order}}",
 			"SELECTOR": "{{.Spec.Selector}}",
 		},

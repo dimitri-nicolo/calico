@@ -101,6 +101,7 @@ func getResourceFromArguments(args map[string]interface{}) (unversioned.Resource
 	workload := argutils.ArgStringOrBlank(args, "--workload")
 	orchestrator := argutils.ArgStringOrBlank(args, "--orchestrator")
 	resScope := argutils.ArgStringOrBlank(args, "--scope")
+	tier := argutils.ArgStringOrBlank(args, "--tier")
 	switch strings.ToLower(kind) {
 	case "node", "nodes", "no", "nos":
 		p := api.NewNode()
@@ -124,6 +125,7 @@ func getResourceFromArguments(args map[string]interface{}) (unversioned.Resource
 		return *p, nil
 	case "policy", "policies", "pol", "pols":
 		p := api.NewPolicy()
+		p.Metadata.Tier = tier
 		p.Metadata.Name = name
 		return *p, nil
 	case "tier", "tiers":
