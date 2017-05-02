@@ -54,7 +54,7 @@ type PolicyMetadata struct {
 	unversioned.ObjectMetadata
 
 	// The name of the selector-based security policy.
-	Name string `json:"name,omitempty" validate:"omitempty,name"`
+	Name string `json:"name,omitempty" validate:"omitempty,namespacedname"`
 
 	// The name of the tier that this policy belongs to.  If this is omitted, the default
 	// tier (name is "default") is assumed.  The specified tier must exist in order to create

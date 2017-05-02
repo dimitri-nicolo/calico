@@ -44,7 +44,7 @@ func (key PolicyKey) defaultPath() (string, error) {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "name"}
 	}
 	e := fmt.Sprintf("/calico/v1/policy/tier/%s/policy/%s",
-		key.Tier, key.Name)
+		key.Tier, escapeName(key.Name))
 	return e, nil
 }
 
@@ -78,7 +78,7 @@ func (options PolicyListOptions) defaultPathRoot() string {
 	if options.Name == "" {
 		return k
 	}
-	k = k + fmt.Sprintf("/%s", options.Name)
+	k = k + fmt.Sprintf("/%s", escapeName(options.Name))
 	return k
 }
 
@@ -90,7 +90,7 @@ func (options PolicyListOptions) KeyFromDefaultPath(path string) Key {
 		return nil
 	}
 	tier := r[0][1]
-	name := r[0][2]
+	name := unescapeName(r[0][2])
 	if options.Tier != "" && tier != options.Tier {
 		log.Infof("Didn't match tier %s != %s", options.Tier, tier)
 		return nil
