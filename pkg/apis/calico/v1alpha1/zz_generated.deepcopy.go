@@ -55,7 +55,7 @@ func DeepCopy_v1alpha1_Policy(in interface{}, out interface{}, c *conversion.Clo
 		if newVal, err := c.DeepCopy(&in.Spec); err != nil {
 			return err
 		} else {
-			out.Spec = *newVal.(*api.Policy)
+			out.Spec = *newVal.(*api.PolicySpec)
 		}
 		return nil
 	}

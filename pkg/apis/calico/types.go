@@ -38,6 +38,6 @@ type Policy struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec   calico.Policy
+	Spec   calico.PolicySpec
 	Status PolicyStatus
 }
