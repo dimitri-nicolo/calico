@@ -28,7 +28,7 @@ import (
 func Delete(args []string) {
 	doc := constants.DatastoreIntro + `Usage:
   calicoctl delete ([--scope=<SCOPE>] [--node=<NODE>] [--orchestrator=<ORCH>]
-                    [--workload=<WORKLOAD>] (<KIND> [<NAME>]) |
+                    [--workload=<WORKLOAD>] [--tier=<TIER>] (<KIND> [<NAME>]) |
                    --filename=<FILE>)
                    [--skip-not-exists] [--config=<CONFIG>]
 
@@ -57,6 +57,8 @@ Options:
                             node.  This is only valid for BGP peers and is used
                             to indicate whether the peer is a global peer or
                             node-specific.
+     --tier=<TIER>          The policy tier.  This is only valid for Policy
+                            resources.
   -c --config=<CONFIG>      Path to the file containing connection
                             configuration in YAML or JSON format.
                             [default: /etc/calico/calicoctl.cfg]
