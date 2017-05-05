@@ -24,7 +24,6 @@ import (
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	unsafe "unsafe"
 )
 
 func init() {
@@ -46,7 +45,10 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_Policy_To_calico_Policy(in *Policy, out *calico.Policy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	out.Spec = in.Spec
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
+		return err
+	}
 	if err := Convert_v1alpha1_PolicyStatus_To_calico_PolicyStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
@@ -60,7 +62,10 @@ func Convert_v1alpha1_Policy_To_calico_Policy(in *Policy, out *calico.Policy, s 
 
 func autoConvert_calico_Policy_To_v1alpha1_Policy(in *calico.Policy, out *Policy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	out.Spec = in.Spec
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
+		return err
+	}
 	if err := Convert_calico_PolicyStatus_To_v1alpha1_PolicyStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
@@ -74,7 +79,17 @@ func Convert_calico_Policy_To_v1alpha1_Policy(in *calico.Policy, out *Policy, s 
 
 func autoConvert_v1alpha1_PolicyList_To_calico_PolicyList(in *PolicyList, out *calico.PolicyList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]calico.Policy)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]calico.Policy, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_Policy_To_calico_Policy(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -85,10 +100,16 @@ func Convert_v1alpha1_PolicyList_To_calico_PolicyList(in *PolicyList, out *calic
 
 func autoConvert_calico_PolicyList_To_v1alpha1_PolicyList(in *calico.PolicyList, out *PolicyList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items == nil {
-		out.Items = make([]Policy, 0)
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]Policy, len(*in))
+		for i := range *in {
+			if err := Convert_calico_Policy_To_v1alpha1_Policy(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
 	} else {
-		out.Items = *(*[]Policy)(unsafe.Pointer(&in.Items))
+		out.Items = make([]Policy, 0)
 	}
 	return nil
 }
