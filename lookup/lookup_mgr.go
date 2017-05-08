@@ -33,13 +33,13 @@ type LookupManager struct {
 	endpoints        map[string]*model.WorkloadEndpointKey
 	endpointsReverse map[model.WorkloadEndpointKey]*string
 	endpointTiers    map[model.WorkloadEndpointKey][]*proto.TierInfo
-	epMutex          sync.Mutex
+	epMutex          sync.RWMutex
 
 	hostEndpoints              map[string]*model.HostEndpointKey
 	hostEndpointsReverse       map[model.HostEndpointKey]*string
 	hostEndpointTiers          map[model.HostEndpointKey][]*proto.TierInfo
 	hostEndpointUntrackedTiers map[model.HostEndpointKey][]*proto.TierInfo
-	hostEpMutex                sync.Mutex
+	hostEpMutex                sync.RWMutex
 }
 
 func NewLookupManager() *LookupManager {
@@ -51,7 +51,8 @@ func NewLookupManager() *LookupManager {
 		hostEndpointsReverse:       map[model.HostEndpointKey]*string{},
 		hostEndpointTiers:          map[model.HostEndpointKey][]*proto.TierInfo{},
 		hostEndpointUntrackedTiers: map[model.HostEndpointKey][]*proto.TierInfo{},
-		epMutex:                    sync.Mutex{},
+		epMutex:                    sync.RWMutex{},
+		hostEpMutex:                    sync.RWMutex{},
 	}
 }
 
@@ -171,17 +172,17 @@ func (m *LookupManager) CompleteDeferredWork() error {
 // idea about it.
 func (m *LookupManager) GetEndpointKey(addr net.IP) (interface{}, error) {
 	addrStr := addr.String()
-	m.epMutex.Lock()
+	m.epMutex.RLock()
 	// There's no need to copy the result because we never modify fields,
 	// only delete or replace.
 	epKey := m.endpoints[addrStr]
-	m.epMutex.Unlock()
+	m.epMutex.RUnlock()
 	if epKey != nil {
 		return epKey, nil
 	}
-	m.hostEpMutex.Lock()
+	m.hostEpMutex.RLock()
 	hostEpKey := m.hostEndpoints[addrStr]
-	m.hostEpMutex.Unlock()
+	m.hostEpMutex.RUnlock()
 	if hostEpKey != nil {
 		return hostEpKey, nil
 	}
@@ -195,7 +196,7 @@ func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.Polic
 	switch epKey.(type) {
 	case *model.WorkloadEndpointKey:
 		ek := epKey.(*model.WorkloadEndpointKey)
-		m.epMutex.Lock()
+		m.epMutex.RLock()
 		tiers := m.endpointTiers[*ek]
 		log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
 		for _, tier := range tiers {
@@ -207,10 +208,10 @@ func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.Polic
 			}
 		}
 		log.Debug("TiersBefore: ", tiersBefore)
-		m.epMutex.Unlock()
+		m.epMutex.RUnlock()
 	case *model.HostEndpointKey:
 		ek := epKey.(*model.HostEndpointKey)
-		m.hostEpMutex.Lock()
+		m.hostEpMutex.RLock()
 		tiers := append(m.hostEndpointUntrackedTiers[*ek], m.hostEndpointTiers[*ek]...)
 		log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
 		for _, tier := range tiers {
@@ -222,7 +223,7 @@ func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.Polic
 			}
 		}
 		log.Debug("TiersBefore: ", tiersBefore)
-		m.hostEpMutex.Unlock()
+		m.hostEpMutex.RUnlock()
 	}
 	return tiersBefore
 }
