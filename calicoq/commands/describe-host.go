@@ -97,42 +97,48 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 		cbs.evalCmd = NewEvalCmd()
 		polRules := func(update api.Update) (filterOut bool) {
 			// Go through the rules, and generate a selector for each.
-			polId := update.Key.(model.Key).String()
+			polId := update.Key.(model.PolicyKey).Name
 			policy := update.Value.(*model.Policy)
+			showSelector := func(selector string) (text string) {
+				if cbs.hideSelectors {
+					return ""
+				}
+				return fmt.Sprintf("; selector '%s'", selector)
+			}
 			for i, rule := range policy.InboundRules {
 				if rule.SrcSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v inbound source match", polId, i),
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v inbound source match%s)", polId, i, showSelector(rule.SrcSelector)),
 						rule.SrcSelector)
 				}
 				if rule.DstSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v inbound destination match", polId, i),
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v inbound destination match%s)", polId, i, showSelector(rule.DstSelector)),
 						rule.DstSelector)
 				}
 				if rule.NotSrcSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v inbound negative source match", polId, i),
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v inbound !source match%s)", polId, i, showSelector(rule.NotSrcSelector)),
 						rule.NotSrcSelector)
 				}
 				if rule.NotDstSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v inbound negative destination match", polId, i),
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v inbound !destination match%s)", polId, i, showSelector(rule.NotDstSelector)),
 						rule.NotDstSelector)
 				}
 			}
 			for i, rule := range policy.OutboundRules {
 				// TODO: Also refactor this because it's too copy-pasty.
 				if rule.SrcSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v outbound source match", polId, i),
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v outbound source match%s)", polId, i, showSelector(rule.SrcSelector)),
 						rule.SrcSelector)
 				}
 				if rule.DstSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v outbound destination match", polId, i),
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v outbound destination match%s)", polId, i, showSelector(rule.DstSelector)),
 						rule.DstSelector)
 				}
 				if rule.NotSrcSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v outbound negative source match", polId, i),
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v outbound negative source match%s)", polId, i, showSelector(rule.NotSrcSelector)),
 						rule.NotSrcSelector)
 				}
 				if rule.NotDstSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v outbound negative destination match", polId, i),
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v outbound negative destination match%s)", polId, i, showSelector(rule.NotDstSelector)),
 						rule.NotDstSelector)
 				}
 			}
@@ -281,32 +287,20 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			fmt.Println("  Policies:")
 			for _, tier := range tiers {
 				glog.V(2).Infof("Looking at tier %v", tier)
-				tierMatches := false
+				if tier.Name != "default" {
+					continue
+				}
 				for _, pol := range tier.OrderedPolicies { // pol is a PolKV
 					glog.V(2).Infof("Looking at policy %v", pol.Key)
 					if polIDs[pol.Key] {
-						if !tierMatches {
-							order := "default"
-							if !tier.Valid {
-								order = "missing"
-							}
-							tierMatches = true
-							if tier.Order != nil {
-								order = fmt.Sprint(*tier.Order)
-							}
-							fmt.Printf("    Tier %#v (order %v):\n", tier.Name, order)
-							if !tier.Valid {
-								fmt.Printf("    WARNING: tier metadata missing; packets will skip tier\n")
-							}
-						}
 						order := "default"
 						if pol.Value.Order != nil {
 							order = fmt.Sprint(*pol.Value.Order)
 						}
 						if cbs.hideSelectors {
-							fmt.Printf("      Policy %#v (order %v)\n", pol.Key.Name, order)
+							fmt.Printf("    Policy %#v (order %v)\n", pol.Key.Name, order)
 						} else {
-							fmt.Printf("      Policy %#v (order %v; selector '%v')\n", pol.Key.Name, order, pol.Value.Selector)
+							fmt.Printf("    Policy %#v (order %v; selector '%v')\n", pol.Key.Name, order, pol.Value.Selector)
 						}
 					}
 				}
@@ -321,7 +315,10 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 
 			if cbs.includeRules {
 				if policies, ok := matches[epID]; ok {
-					fmt.Printf("Some policy matches this EP: %v\n", policies)
+					fmt.Printf("  Matched by policies:\n")
+					for _, policy := range policies {
+						fmt.Printf("    %v\n", policy)
+					}
 				}
 			}
 		}

@@ -20,8 +20,9 @@ Usage:
   calicoq version
 
 Options:
-  -h --help            Show usage.
-  -s --hide-selectors  Hide selectors from output.
+  -h --help                  Show usage.
+  -s --hide-selectors        Hide selectors from output.
+  -r --include-rule-matches  Show policies whose rules match endpoints on the host.
 `
 
 func main() {

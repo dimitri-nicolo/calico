@@ -4,6 +4,8 @@ package commands
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/golang/glog"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
@@ -12,7 +14,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/client"
 	"github.com/projectcalico/libcalico-go/lib/selector"
-	"os"
 )
 
 func EvalSelector(sel string) (err error) {
@@ -24,8 +25,9 @@ func EvalSelector(sel string) (err error) {
 	cbs.Start(noopFilter)
 
 	matches := cbs.GetMatches()
+	fmt.Printf("Endpoints matching selector %v:\n", sel)
 	for endpoint := range matches {
-		fmt.Printf("Output stuff: %v\n", endpointName(endpoint))
+		fmt.Printf("  %v\n", endpointName(endpoint))
 	}
 	return
 }
@@ -106,9 +108,9 @@ func endpointName(key interface{}) string {
 	var epName string
 	switch epID := key.(type) {
 	case model.WorkloadEndpointKey:
-		epName = fmt.Sprintf("Workload endpoint %v/%v/%v", epID.OrchestratorID, epID.WorkloadID, epID.EndpointID)
+		epName = fmt.Sprintf("Workload endpoint %v/%v/%v/%v", epID.Hostname, epID.OrchestratorID, epID.WorkloadID, epID.EndpointID)
 	case model.HostEndpointKey:
-		epName = fmt.Sprintf("Host endpoint %v", epID.EndpointID)
+		epName = fmt.Sprintf("Host endpoint %v/%v", epID.Hostname, epID.EndpointID)
 	}
 	return epName
 }
@@ -171,7 +173,6 @@ func (cbs *EvalCmd) OnUpdates(updates []api.Update) {
 }
 
 func (cbs *EvalCmd) onMatchStarted(selId, epId interface{}) {
-	fmt.Printf("OLD %v\n", endpointName(epId))
 	if pols, ok := cbs.matches[epId]; ok {
 		cbs.matches[epId] = append(pols, selId.(string))
 	} else {
