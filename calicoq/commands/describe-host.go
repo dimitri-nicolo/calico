@@ -4,6 +4,9 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"sort"
+
 	"github.com/golang/glog"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dispatcher"
@@ -11,8 +14,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/client"
-	"os"
-	"sort"
 )
 
 // MATT: How to make includeRules actually work?
@@ -116,9 +117,25 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 						rule.NotDstSelector)
 				}
 			}
-			//for rule := range policy.OutboundRules {
-			// TODO: Also refactor this because it's too copy-pasty.
-			//}
+			for i, rule := range policy.OutboundRules {
+				// TODO: Also refactor this because it's too copy-pasty.
+				if rule.SrcSelector != "" {
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v outbound source match", polId, i),
+						rule.SrcSelector)
+				}
+				if rule.DstSelector != "" {
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v outbound destination match", polId, i),
+						rule.DstSelector)
+				}
+				if rule.NotSrcSelector != "" {
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v outbound negative source match", polId, i),
+						rule.NotSrcSelector)
+				}
+				if rule.NotDstSelector != "" {
+					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v Rule %v outbound negative destination match", polId, i),
+						rule.NotDstSelector)
+				}
+			}
 			return false
 		}
 		disp.Register(model.PolicyKey{}, polRules)
