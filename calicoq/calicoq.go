@@ -4,11 +4,12 @@ package main
 
 import (
 	"flag"
+	"os"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/docopt/docopt-go"
 	"github.com/golang/glog"
 	"github.com/tigera/calicoq/calicoq/commands"
-	"os"
 )
 
 const usage = `Calico query tool.
@@ -35,6 +36,8 @@ func main() {
 		flag.Lookup("logtostderr").Value.Set("true")
 		flag.Lookup("v").Value.Set(os.Getenv("GLOG"))
 		logrus.SetLevel(logrus.DebugLevel)
+	} else {
+		logrus.SetLevel(logrus.FatalLevel)
 	}
 
 	arguments, err := docopt.Parse(usage, nil, true, "calicoq", false, false)
