@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=k8s.io/kubernetes/vendor/github.com/tigera/calico-k8sapiserver/pkg/apis/calico
+// +k8s:conversion-gen=github.com/tigera/calico-k8sapiserver/pkg/apis/calico
 
 // Package v1alpha1 is the v1alpha1 version of the API.
 // +groupName=calico.k8s.io
