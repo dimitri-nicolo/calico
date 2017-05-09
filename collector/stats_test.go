@@ -1,6 +1,6 @@
 // Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
-package stats_test
+package collector_test
 
 import (
 	"net"
@@ -9,7 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/projectcalico/felix/collector/stats"
+	. "github.com/projectcalico/felix/collector"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 

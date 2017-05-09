@@ -1,6 +1,6 @@
 // Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
-package stats
+package collector
 
 import (
 	"errors"
@@ -22,12 +22,65 @@ const (
 	DirUnknown Direction = "unknown"
 )
 
+// Counter stores packet and byte statistics. It also maintains a delta of
+// changes made until a `Reset` is called. They can never be set to 0, except
+// when creating a new Counter.
 type Counter struct {
-	packets int
-	bytes   int
+	packets      int
+	bytes        int
+	deltaPackets int
+	deltaBytes   int
 }
 
-func (c Counter) String() string {
+func NewCounter(packets int, bytes int) *Counter {
+	return &Counter{packets, bytes, packets, bytes}
+}
+
+// Values returns packet and bytes stored in a Counter object.
+func (c *Counter) Values() (packets, bytes int) {
+	return c.packets, c.bytes
+}
+
+// DeltaValues returns the packet and byte deltas since the last `Reset()`.
+func (c *Counter) DeltaValues() (packets, bytes int) {
+	return c.deltaPackets, c.deltaBytes
+}
+
+// Set packet and byte values to `packets` and `bytes`. Returns true if value
+// was changed and false otherwise.
+func (c *Counter) Set(packets int, bytes int) (changed bool) {
+	if packets != 0 && bytes != 0 && packets > c.packets && bytes > c.bytes {
+		changed = true
+		dp := packets - c.packets
+		db := packets - c.packets
+		c.packets = packets
+		c.bytes = bytes
+		c.deltaPackets += dp
+		c.deltaBytes += db
+	}
+	return
+}
+
+// Increase packet and byte values by `packets` and `bytes`. Always returns
+// true.
+func (c *Counter) Increase(packets int, bytes int) (changed bool) {
+	c.Set(c.packets+packets, c.bytes+bytes)
+	changed = true
+	return
+}
+
+// Reset sets the delta packet and byte values to zero. Non-delta packet and
+// bytes cannot be reset or set to zero.
+func (c *Counter) Reset() {
+	c.deltaPackets = 0
+	c.deltaBytes = 0
+}
+
+func (c *Counter) IsZero() bool {
+	return (c.packets == 0 && c.bytes == 0)
+}
+
+func (c *Counter) String() string {
 	return fmt.Sprintf("packets=%v bytes=%v", c.packets, c.bytes)
 }
 
@@ -114,6 +167,12 @@ func (t *RuleTrace) Path() []RuleTracePoint {
 		path = append(path, tp)
 	}
 	return path
+}
+
+func (t *RuleTrace) ToString() string {
+	path := t.Path()
+	p := path[len(path)-1]
+	return fmt.Sprintf("%v/%v/%v/%v", p.TierID, p.PolicyID, p.Rule, p.Action)
 }
 
 func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
@@ -223,8 +282,8 @@ func NewData(tuple Tuple,
 	duration time.Duration) *Data {
 	return &Data{
 		Tuple:            tuple,
-		ctr:              Counter{packets: packets, bytes: bytes},
-		ctrReverse:       Counter{packets: reversePackets, bytes: reverseBytes},
+		ctr:              *NewCounter(packets, bytes),
+		ctrReverse:       *NewCounter(reversePackets, reverseBytes),
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        time.Now(),
@@ -237,7 +296,7 @@ func NewData(tuple Tuple,
 
 func (d *Data) String() string {
 	return fmt.Sprintf("tuple={%v}, counters={%v}, countersReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
-		&(d.Tuple), d.ctr, d.ctrReverse, d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
+		&(d.Tuple), d.ctr.String(), d.ctrReverse.String(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
 }
 
 func (d *Data) touch() {
@@ -251,6 +310,8 @@ func (d *Data) setDirtyFlag() {
 
 func (d *Data) clearDirtyFlag() {
 	d.dirty = false
+	d.ctr.Reset()
+	d.ctrReverse.Reset()
 }
 
 func (d *Data) IsDirty() bool {
@@ -288,51 +349,45 @@ func (d *Data) CountersReverse() Counter {
 	return d.ctrReverse
 }
 
-func (d *Data) setCounters(packets int, bytes int) {
-	if packets != d.ctr.packets && bytes != d.ctr.bytes {
-		d.setDirtyFlag()
-	}
-	d.ctr.packets = packets
-	d.ctr.bytes = bytes
-	d.touch()
-}
-
-func (d *Data) setCountersReverse(packets int, bytes int) {
-	if packets != d.ctrReverse.packets && bytes != d.ctrReverse.bytes {
-		d.setDirtyFlag()
-	}
-	d.ctrReverse.packets = packets
-	d.ctrReverse.bytes = bytes
-	d.touch()
-}
-
 // Add packets and bytes to the Counters' values. Use the IncreaseCounters*
 // methods when the source of packets/bytes are delta values.
 func (d *Data) IncreaseCounters(packets int, bytes int) {
-	d.setCounters(d.ctr.packets+packets, d.ctr.bytes+bytes)
+	d.ctr.Increase(packets, bytes)
+	d.setDirtyFlag()
+	d.touch()
 }
 
 // Add packets and bytes to the Reverse Counters' values. Use the IncreaseCounters*
 // methods when the source of packets/bytes are delta values.
 func (d *Data) IncreaseCountersReverse(packets int, bytes int) {
-	d.setCountersReverse(d.ctrReverse.packets+packets, d.ctrReverse.bytes+bytes)
+	d.ctrReverse.Increase(packets, bytes)
+	d.setDirtyFlag()
+	d.touch()
 }
 
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetCounters(packets int, bytes int) {
-	d.setCounters(packets, bytes)
+	changed := d.ctr.Set(packets, bytes)
+	if changed {
+		d.setDirtyFlag()
+	}
+	d.touch()
 }
 
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetCountersReverse(packets int, bytes int) {
-	d.setCountersReverse(packets, bytes)
+	changed := d.ctrReverse.Set(packets, bytes)
+	if changed {
+		d.setDirtyFlag()
+	}
+	d.touch()
 }
 
 func (d *Data) ResetCounters() {
-	d.setCounters(0, 0)
-	d.setCountersReverse(0, 0)
+	d.ctr = *NewCounter(0, 0)
+	d.ctrReverse = *NewCounter(0, 0)
 }
 
 func (d *Data) AddRuleTracePoint(tp RuleTracePoint, dir Direction) error {

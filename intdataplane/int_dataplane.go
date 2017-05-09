@@ -26,7 +26,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/projectcalico/felix/collector"
-	"github.com/projectcalico/felix/collector/stats"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
@@ -90,6 +89,14 @@ type Config struct {
 
 	NfNetlinkBufSize  int
 	StatsDumpFilePath string
+
+	DeletedMetricsRetentionSecs time.Duration
+
+	PrometheusReporterEnabled bool
+	PrometheusReporterPort    int
+
+	SyslogReporterNetwork string
+	SyslogReporterAddress string
 
 	MaxIPSetSize int
 
@@ -346,33 +353,33 @@ func (d *InternalDataplane) Start() {
 	go d.ifaceMonitor.MonitorInterfaces()
 
 	// TODO (Matt): This isn't really in keeping with the surrounding code.
-	ctSink := make(chan stats.StatUpdate)
+	ctSink := make(chan collector.StatUpdate)
 	conntrackDataSource := collector.NewConntrackDataSource(d.lookupManager, ctSink)
 	conntrackDataSource.Start()
 
-	nfIngressSink := make(chan stats.StatUpdate)
-	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, stats.DirIn, d.config.NfNetlinkBufSize)
+	nfIngressSink := make(chan collector.StatUpdate)
+	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, collector.DirIn, d.config.NfNetlinkBufSize)
 	nflogIngressDataSource.Start()
 
-	nfEgressSink := make(chan stats.StatUpdate)
-	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, stats.DirOut, d.config.NfNetlinkBufSize)
+	nfEgressSink := make(chan collector.StatUpdate)
+	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, collector.DirOut, d.config.NfNetlinkBufSize)
 	nflogEgressDataSource.Start()
 
 	collectorConfig := &collector.Config{
 		StatsDumpFilePath: d.config.StatsDumpFilePath,
 	}
-	printSink := make(chan *stats.Data)
-	datasources := []<-chan stats.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
-	datasinks := []chan<- *stats.Data{printSink}
-	statsCollector := collector.NewCollector(datasources, datasinks, collectorConfig)
+	rm := collector.NewReporterManager()
+	if d.config.PrometheusReporterEnabled {
+		rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.PrometheusReporterPort, d.config.DeletedMetricsRetentionSecs))
+	}
+	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
+	if syslogReporter != nil {
+		rm.RegisterMetricsReporter(syslogReporter)
+	}
+	rm.Start()
+	datasources := []<-chan collector.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
+	statsCollector := collector.NewCollector(datasources, rm, collectorConfig)
 	statsCollector.Start()
-
-	// TODO (doublek): The printSink is unused for now. It should be used to hook into dumping stats.
-	go func() {
-		for data := range printSink {
-			log.Info("MD4 test output data: ", data)
-		}
-	}()
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.
