@@ -4,22 +4,25 @@ package main
 
 import (
 	"flag"
+	"os"
+
+	"github.com/Sirupsen/logrus"
 	"github.com/docopt/docopt-go"
 	"github.com/golang/glog"
 	"github.com/tigera/calicoq/calicoq/commands"
-	"os"
 )
 
 const usage = `Calico query tool.
 
 Usage:
-  calicoq host [-s|--hide-selectors] <hostname>
+  calicoq host [-s|--hide-selectors] [-r|--include-rule-matches] <hostname>
   calicoq eval <selector>
   calicoq version
 
 Options:
-  -h --help            Show usage.
-  -s --hide-selectors  Hide selectors from output.
+  -h --help                  Show usage.
+  -s --hide-selectors        Hide selectors from output.
+  -r --include-rule-matches  Show policies whose rules match endpoints on the host.
 `
 
 func main() {
@@ -33,6 +36,9 @@ func main() {
 	if os.Getenv("GLOG") != "" {
 		flag.Lookup("logtostderr").Value.Set("true")
 		flag.Lookup("v").Value.Set(os.Getenv("GLOG"))
+		logrus.SetLevel(logrus.DebugLevel)
+	} else {
+		logrus.SetLevel(logrus.FatalLevel)
 	}
 
 	arguments, err := docopt.Parse(usage, nil, true, "calicoq", false, false)
@@ -48,7 +54,8 @@ func main() {
 		err = commands.EvalSelector(arguments["<selector>"].(string))
 	} else {
 		err = commands.DescribeHost(arguments["<hostname>"].(string),
-			arguments["--hide-selectors"].(bool))
+			arguments["--hide-selectors"].(bool),
+			arguments["--include-rule-matches"].(bool))
 	}
 
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const VERSION = "0.4.0"
+const VERSION = "1.0.0"
 
 func Version() error {
 	fmt.Println("Version:     ", VERSION)

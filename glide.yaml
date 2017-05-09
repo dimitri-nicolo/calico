@@ -2,7 +2,9 @@ package: github.com/tigera/calicoq
 version: ""
 import:
 - package: github.com/docopt/docopt-go
-- package: github.com/tigera/libcalico-go
+- package: github.com/projectcalico/felix
   vcs: git
-  version: etcd-driver
-  repo: git@github.com:fasaxc/libcalico-go.git
+  repo: git@github.com:tigera/felix-private.git
+- package: github.com/projectcalico/libcalico-go
+  vcs: git
+  repo: git@github.com:tigera/libcalico-go-private.git
