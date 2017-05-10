@@ -198,6 +198,8 @@ type Config struct {
 
 	FailsafeInboundHostPorts  []uint16
 	FailsafeOutboundHostPorts []uint16
+
+	DisableConntrackInvalid bool
 }
 
 func NewRenderer(config Config) RuleRenderer {

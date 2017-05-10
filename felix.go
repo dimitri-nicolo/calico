@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -83,6 +84,9 @@ Options:
 // main config parameters by exiting and allowing itself to be restarted by the init
 // daemon.
 func main() {
+	// Go's RNG is not seeded by default.  Do that now.
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	// Special-case handling for environment variable-configured logging:
 	// Initialise early so we can trace out config parsing.
 	logutils.ConfigureEarlyLogging()
@@ -223,6 +227,8 @@ configRetry:
 
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
+
+				DisableConntrackInvalid: configParams.DisableConntrackInvalidCheck,
 			},
 			NfNetlinkBufSize:            configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:           configParams.StatsDumpFilePath,
@@ -319,6 +325,13 @@ configRetry:
 			configParams.ClusterType,
 			statsChanOut,
 		)
+	} else {
+		// Usage reporting disabled, but we still want a stats collector for the
+		// felix_cluster_* metrics.  Register a no-op function as the callback.
+		statsCollector := calc.NewStatsCollector(func(stats calc.StatsUpdate) error {
+			return nil
+		})
+		statsCollector.RegisterWith(asyncCalcGraph.Dispatcher)
 	}
 
 	// Create the validator, which sits between the syncer and the
