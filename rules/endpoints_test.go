@@ -105,6 +105,10 @@ var _ = Describe("Endpoints", func() {
 							Action: AcceptAction{}},
 
 						{Action: ClearMarkAction{Mark: 0x8}},
+						{Action: NflogAction{
+							Group:  1,
+							Prefix: "D/0/no-profile-match-inbound",
+						}},
 						{Action: DropAction{},
 							Comment: "Drop if no profiles matched"},
 					},
@@ -117,6 +121,10 @@ var _ = Describe("Endpoints", func() {
 							Action: AcceptAction{}},
 
 						{Action: ClearMarkAction{Mark: 0x8}},
+						{Action: NflogAction{
+							Group:  2,
+							Prefix: "D/0/no-profile-match-outbound",
+						}},
 						{Action: DropAction{},
 							Comment: "Drop if no profiles matched"},
 					},
