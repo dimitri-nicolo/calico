@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1
 
 import (
 	"github.com/projectcalico/libcalico-go/lib/net"
@@ -29,8 +29,8 @@ import (
 func addConversionFuncs(scheme *runtime.Scheme) error {
 	// Add non-generated conversion functions
 	err := scheme.AddConversionFuncs(
-		Convert_v1alpha1_Policy_To_calico_Policy,
-		Convert_calico_Policy_To_v1alpha1_Policy,
+		Convert_v1_Policy_To_calico_Policy,
+		Convert_calico_Policy_To_v1_Policy,
 	)
 	if err != nil {
 		return err
@@ -183,7 +183,7 @@ func rulesBackendToAPI(brs []model.Rule) []api.Rule {
 	return ars
 }
 
-func Convert_v1alpha1_Policy_To_calico_Policy(in *Policy, out *calico.Policy, s conversion.Scope) error {
+func Convert_v1_Policy_To_calico_Policy(in *Policy, out *calico.Policy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec.DoNotTrack = in.Spec.DoNotTrack
 	out.Spec.Selector = in.Spec.Selector
@@ -191,13 +191,13 @@ func Convert_v1alpha1_Policy_To_calico_Policy(in *Policy, out *calico.Policy, s 
 	out.Spec.OutboundRules = rulesAPIToBackend(in.Spec.EgressRules)
 	out.Spec.InboundRules = rulesAPIToBackend(in.Spec.IngressRules)
 
-	if err := Convert_v1alpha1_PolicyStatus_To_calico_PolicyStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1_PolicyStatus_To_calico_PolicyStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func Convert_calico_Policy_To_v1alpha1_Policy(in *calico.Policy, out *Policy, s conversion.Scope) error {
+func Convert_calico_Policy_To_v1_Policy(in *calico.Policy, out *Policy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec.DoNotTrack = in.Spec.DoNotTrack
 	out.Spec.Selector = in.Spec.Selector
@@ -205,7 +205,7 @@ func Convert_calico_Policy_To_v1alpha1_Policy(in *calico.Policy, out *Policy, s 
 	out.Spec.EgressRules = rulesBackendToAPI(in.Spec.OutboundRules)
 	out.Spec.IngressRules = rulesBackendToAPI(in.Spec.InboundRules)
 
-	if err := Convert_calico_PolicyStatus_To_v1alpha1_PolicyStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_calico_PolicyStatus_To_v1_PolicyStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil

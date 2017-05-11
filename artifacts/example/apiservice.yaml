@@ -1,7 +1,7 @@
 apiVersion: apiregistration.k8s.io/v1alpha1
 kind: APIService
 metadata:
-  name: v1alpha1.calico.k8s.io
+  name: v1.calico.k8s.io
 spec:
   insecureSkipTLSVerify: true
   group: calico.k8s.io
@@ -9,4 +9,4 @@ spec:
   service:
     name: api
     namespace: calico
-  version: v1alpha1
+  version: v1

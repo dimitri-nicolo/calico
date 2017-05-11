@@ -18,7 +18,7 @@ package install
 
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1alpha1"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
 	"k8s.io/apimachinery/pkg/apimachinery/announced"
 	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,12 +53,12 @@ func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *r
 		&announced.GroupMetaFactoryArgs{
 			GroupName:                  calico.GroupName,
 			RootScopedKinds:            sets.NewString("APIService"),
-			VersionPreferenceOrder:     []string{v1alpha1.SchemeGroupVersion.Version},
+			VersionPreferenceOrder:     []string{v1.SchemeGroupVersion.Version},
 			ImportPrefix:               "github.com/tigera/calico-k8sapiserver/pkg/apis/calico",
 			AddInternalObjectsToScheme: calico.AddToScheme,
 		},
 		announced.VersionToSchemeFunc{
-			v1alpha1.SchemeGroupVersion.Version: v1alpha1.AddToScheme,
+			v1.SchemeGroupVersion.Version: v1.AddToScheme,
 		},
 	).Announce(groupFactoryRegistry).RegisterAndEnable(registry, scheme); err != nil {
 		panic(err)
