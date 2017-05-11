@@ -34,6 +34,15 @@ var _ = Describe("Endpoints", func() {
 		IptablesMarkAccept: 0x8,
 		IptablesMarkPass:   0x10,
 	}
+	var rrConfigConntrackDisabled = Config{
+		IPIPEnabled:             true,
+		IPIPTunnelAddress:       nil,
+		IPSetConfigV4:           ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:           ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		IptablesMarkAccept:      0x8,
+		IptablesMarkPass:        0x10,
+		DisableConntrackInvalid: true,
+	}
 
 	var renderer RuleRenderer
 	BeforeEach(func() {
@@ -45,6 +54,12 @@ var _ = Describe("Endpoints", func() {
 			{
 				Name: "cali-tw-cali1234",
 				Rules: []Rule{
+					// conntrack rules.
+					{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: AcceptAction{}},
+					{Match: Match().ConntrackState("INVALID"),
+						Action: DropAction{}},
+
 					{Action: ClearMarkAction{Mark: 0x8}},
 					{Action: NflogAction{
 						Group:  1,
@@ -57,6 +72,12 @@ var _ = Describe("Endpoints", func() {
 			{
 				Name: "cali-fw-cali1234",
 				Rules: []Rule{
+					// conntrack rules.
+					{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: AcceptAction{}},
+					{Match: Match().ConntrackState("INVALID"),
+						Action: DropAction{}},
+
 					{Action: ClearMarkAction{Mark: 0x8}},
 					{Action: NflogAction{
 						Group:  2,
@@ -67,6 +88,49 @@ var _ = Describe("Endpoints", func() {
 				},
 			},
 		}))
+	})
+
+	Describe("with ctstate=INVALID disabled", func() {
+		BeforeEach(func() {
+			renderer = NewRenderer(rrConfigConntrackDisabled)
+		})
+
+		It("should render a minimal workload endpoint", func() {
+			Expect(renderer.WorkloadEndpointToIptablesChains("cali1234", true, nil, nil)).To(Equal([]*Chain{
+				{
+					Name: "cali-tw-cali1234",
+					Rules: []Rule{
+						// conntrack rules.
+						{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+							Action: AcceptAction{}},
+
+						{Action: ClearMarkAction{Mark: 0x8}},
+						{Action: NflogAction{
+							Group:  1,
+							Prefix: "D/0/no-profile-match-inbound",
+						}},
+						{Action: DropAction{},
+							Comment: "Drop if no profiles matched"},
+					},
+				},
+				{
+					Name: "cali-fw-cali1234",
+					Rules: []Rule{
+						// conntrack rules.
+						{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+							Action: AcceptAction{}},
+
+						{Action: ClearMarkAction{Mark: 0x8}},
+						{Action: NflogAction{
+							Group:  2,
+							Prefix: "D/0/no-profile-match-outbound",
+						}},
+						{Action: DropAction{},
+							Comment: "Drop if no profiles matched"},
+					},
+				},
+			}))
+		})
 	})
 
 	It("should render a disabled workload endpoint", func() {
@@ -101,6 +165,12 @@ var _ = Describe("Endpoints", func() {
 			{
 				Name: "cali-tw-cali1234",
 				Rules: []Rule{
+					// conntrack rules.
+					{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: AcceptAction{}},
+					{Match: Match().ConntrackState("INVALID"),
+						Action: DropAction{}},
+
 					{Action: ClearMarkAction{Mark: 0x8}},
 
 					{Comment: "Start of tier tier1",
@@ -162,6 +232,12 @@ var _ = Describe("Endpoints", func() {
 			{
 				Name: "cali-fw-cali1234",
 				Rules: []Rule{
+					// conntrack rules.
+					{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: AcceptAction{}},
+					{Match: Match().ConntrackState("INVALID"),
+						Action: DropAction{}},
+
 					{Action: ClearMarkAction{Mark: 0x8}},
 
 					{Comment: "Start of tier tier1",
@@ -231,6 +307,12 @@ var _ = Describe("Endpoints", func() {
 			{
 				Name: "cali-th-eth0",
 				Rules: []Rule{
+					// conntrack rules.
+					{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: AcceptAction{}},
+					{Match: Match().ConntrackState("INVALID"),
+						Action: DropAction{}},
+
 					// Host endpoints get extra failsafe rules.
 					{Action: JumpAction{Target: "cali-failsafe-out"}},
 
@@ -275,6 +357,12 @@ var _ = Describe("Endpoints", func() {
 			{
 				Name: "cali-fh-eth0",
 				Rules: []Rule{
+					// conntrack rules.
+					{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: AcceptAction{}},
+					{Match: Match().ConntrackState("INVALID"),
+						Action: DropAction{}},
+
 					// Host endpoints get extra failsafe rules.
 					{Action: JumpAction{Target: "cali-failsafe-in"}},
 
