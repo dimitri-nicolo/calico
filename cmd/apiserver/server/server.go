@@ -22,6 +22,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/runtime/serializer/recognizer"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/storage/storagebackend"
 	"k8s.io/client-go/pkg/api"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"github.com/tigera/calico-k8sapiserver/legacy"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 )
 
@@ -40,7 +42,7 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 
 	// Create the command that runs the API server
 	cmd := &cobra.Command{
-		Short: "run a service-catalog server",
+		Short: "run a calico api server",
 	}
 	// We pass flags object to sub option structs to have them configure
 	// themselves. Each options adds its own command line flags
@@ -50,7 +52,7 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 
 	stopCh := make(chan struct{})
 	jsonSerializer := json.NewSerializer(json.DefaultMetaFactory, api.Scheme, api.Scheme, false)
-	codec := api.Codecs.CodecForVersions(jsonSerializer, api.Codecs.UniversalDeserializer(),
+	codec := api.Codecs.CodecForVersions(jsonSerializer, recognizer.NewDecoder(legacy.NewDecoder()),
 		schema.GroupVersions(schema.GroupVersions{calico.SchemeGroupVersion}), nil)
 	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, codec)
 	ro.Etcd.StorageConfig.Type = storagebackend.StorageTypeETCD2
