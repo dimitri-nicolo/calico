@@ -20,6 +20,8 @@ import (
 	"flag"
 	"io"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/apiserver/pkg/storage/storagebackend"
 	"k8s.io/client-go/pkg/api"
@@ -47,7 +49,10 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 	flags.AddGoFlagSet(flag.CommandLine)
 
 	stopCh := make(chan struct{})
-	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, api.Codecs.LegacyCodec(calico.SchemeGroupVersion))
+	jsonSerializer := json.NewSerializer(json.DefaultMetaFactory, api.Scheme, api.Scheme, false)
+	codec := api.Codecs.CodecForVersions(jsonSerializer, api.Codecs.UniversalDeserializer(),
+		schema.GroupVersions(schema.GroupVersions{calico.SchemeGroupVersion}), nil)
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, codec)
 	ro.Etcd.StorageConfig.Type = storagebackend.StorageTypeETCD2
 	opts := &CalicoServerOptions{
 		RecommendedOptions: ro,
