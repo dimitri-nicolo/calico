@@ -246,6 +246,7 @@ func (h *etcdHelper) Watch(ctx context.Context, key string, resourceVersion stri
 
 // Implements storage.Interface.
 func (h *etcdHelper) WatchList(ctx context.Context, key string, resourceVersion string, pred storage.SelectionPredicate) (watch.Interface, error) {
+	fmt.Printf("Inside etcdHelper (Etcd2) WatchList: %v, %v\n\n", key, resourceVersion)
 	if ctx == nil {
 		glog.Errorf("Context is nil")
 	}
@@ -254,6 +255,7 @@ func (h *etcdHelper) WatchList(ctx context.Context, key string, resourceVersion 
 		return nil, err
 	}
 	key = path.Join(h.pathPrefix, key)
+	fmt.Printf("In WatchList() key: %v , watchRV: %v\n\n", key, watchRV)
 	w := newEtcdWatcher(true, h.quorum, exceptKey(key), storage.SimpleFilter(pred), h.codec, h.versioner, nil, h.transformer, h)
 	go w.etcdWatch(ctx, h.etcdKeysAPI, key, watchRV)
 	return w, nil

@@ -99,6 +99,7 @@ type indexedWatchers struct {
 }
 
 func (i *indexedWatchers) addWatcher(w *cacheWatcher, number int, value string, supported bool) {
+	fmt.Printf("Adding to indexedWatchers number: %v, value %v, supported: %v\n\n", number, value, supported)
 	if supported {
 		if _, ok := i.valueWatchers[value]; !ok {
 			i.valueWatchers[value] = watchersMap{}
@@ -292,11 +293,12 @@ func (c *Cacher) Delete(ctx context.Context, key string, out runtime.Object, pre
 
 // Implements storage.Interface.
 func (c *Cacher) Watch(ctx context.Context, key string, resourceVersion string, pred SelectionPredicate) (watch.Interface, error) {
+	fmt.Printf("Cacher Watch() key: %v resourceVersion %v\n\n", key, resourceVersion)
 	watchRV, err := ParseWatchResourceVersion(resourceVersion)
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Printf("Cacher Watch() watchRV: %v\n\n", watchRV)
 	c.ready.wait()
 
 	// We explicitly use thread unsafe version and do locking ourself to ensure that
@@ -313,15 +315,16 @@ func (c *Cacher) Watch(ctx context.Context, key string, resourceVersion string, 
 		// rather than a directly returned error.
 		return newErrWatcher(err), nil
 	}
-
+	fmt.Printf("Cacher Watch() Done getting initial events for display\n\n")
 	triggerValue, triggerSupported := "", false
 	// TODO: Currently we assume that in a given Cacher object, any <predicate> that is
 	// passed here is aware of exactly the same trigger (at most one).
 	// Thus, either 0 or 1 values will be returned.
 	if matchValues := pred.MatcherIndex(); len(matchValues) > 0 {
 		triggerValue, triggerSupported = matchValues[0].Value, true
-	}
 
+		fmt.Printf("Match values: %v\n\n", matchValues)
+	}
 	// If there is triggerFunc defined, but triggerSupported is false,
 	// we can't narrow the amount of events significantly at this point.
 	//
@@ -349,6 +352,7 @@ func (c *Cacher) Watch(ctx context.Context, key string, resourceVersion string, 
 
 // Implements storage.Interface.
 func (c *Cacher) WatchList(ctx context.Context, key string, resourceVersion string, pred SelectionPredicate) (watch.Interface, error) {
+	fmt.Printf("Cacher WatchList() key: %v, resourceVersion: %v, pred: %v\n\n", key, resourceVersion, pred)
 	return c.Watch(ctx, key, resourceVersion, pred)
 }
 
@@ -455,6 +459,7 @@ func (c *Cacher) GetToList(ctx context.Context, key string, resourceVersion stri
 
 // Implements storage.Interface.
 func (c *Cacher) List(ctx context.Context, key string, resourceVersion string, pred SelectionPredicate, listObj runtime.Object) error {
+	fmt.Printf("Cacher List being invoked on key: %v, resourceVersion: %v, listObj: %v\n\n", key, resourceVersion, listObj)
 	if resourceVersion == "" {
 		// If resourceVersion is not specified, serve it from underlying
 		// storage (for backward compatibility).
@@ -561,6 +566,7 @@ func (c *Cacher) triggerValues(event *watchCacheEvent) ([]string, bool) {
 }
 
 func (c *Cacher) processEvent(event *watchCacheEvent) {
+	fmt.Printf("Cacher processEvent() event: %v\n\n", *event)
 	if curLen := int64(len(c.incoming)); c.incomingHWM.Update(curLen) {
 		// Monitor if this gets backed up, and how much.
 		glog.V(1).Infof("cacher (%v): %v objects queued in incoming channel.", c.objectType.String(), curLen)
@@ -583,6 +589,7 @@ func (c *Cacher) dispatchEvents() {
 }
 
 func (c *Cacher) dispatchEvent(event *watchCacheEvent) {
+	fmt.Printf("Cacher dispatchEvent() event: %v\n\n", *event)
 	triggerValues, supported := c.triggerValues(event)
 
 	c.Lock()
@@ -658,6 +665,7 @@ func filterFunction(key string, p SelectionPredicate) func(string, runtime.Objec
 }
 
 func watchFilterFunction(key string, p SelectionPredicate) watchFilterFunc {
+	fmt.Printf("watchFilterFunction key: %v, predicate: %v\n\n", key, p)
 	filterFunc := func(objKey string, label labels.Set, field fields.Set) bool {
 		if !hasPathPrefix(objKey, key) {
 			return false
@@ -705,6 +713,7 @@ func (lw *cacherListerWatcher) List(options metav1.ListOptions) (runtime.Object,
 
 // Implements cache.ListerWatcher interface.
 func (lw *cacherListerWatcher) Watch(options metav1.ListOptions) (watch.Interface, error) {
+	fmt.Printf("cacherListerWatcher Watch: %v\n\n", options)
 	return lw.storage.WatchList(context.TODO(), lw.resourcePrefix, options.ResourceVersion, Everything)
 }
 
@@ -761,6 +770,7 @@ type cacheWatcher struct {
 }
 
 func newCacheWatcher(copier runtime.ObjectCopier, resourceVersion uint64, chanSize int, initEvents []*watchCacheEvent, filter watchFilterFunc, forget func(bool)) *cacheWatcher {
+	fmt.Printf("Initializing newCacheWatcher resourceVersion: %v, chanSize %v, initEvent: %v filter: %v", resourceVersion, chanSize, initEvents, filter)
 	watcher := &cacheWatcher{
 		copier:  copier,
 		input:   make(chan *watchCacheEvent, chanSize),
@@ -840,6 +850,7 @@ func (c *cacheWatcher) add(event *watchCacheEvent, budget *timeBudget) {
 
 // NOTE: sendWatchCacheEvent is assumed to not modify <event> !!!
 func (c *cacheWatcher) sendWatchCacheEvent(event *watchCacheEvent) {
+	fmt.Printf("sendWatchCacheEvent: event: %v\n\n", *event)
 	curObjPasses := event.Type != watch.Deleted && c.filter(event.Key, event.ObjLabels, event.ObjFields)
 	oldObjPasses := false
 	if event.PrevObject != nil {
@@ -891,7 +902,7 @@ func (c *cacheWatcher) sendWatchCacheEvent(event *watchCacheEvent) {
 
 func (c *cacheWatcher) process(initEvents []*watchCacheEvent, resourceVersion uint64) {
 	defer utilruntime.HandleCrash()
-
+	fmt.Printf("Inside cacheWatcher process\n\n")
 	// Check how long we are processing initEvents.
 	// As long as these are not processed, we are not processing
 	// any incoming events, so if it takes long, we may actually
@@ -928,6 +939,7 @@ func (c *cacheWatcher) process(initEvents []*watchCacheEvent, resourceVersion ui
 		}
 		// only send events newer than resourceVersion
 		if event.ResourceVersion > resourceVersion {
+			fmt.Printf("cacheWatcher process. event Received: %v\n\n", event.ResourceVersion)
 			c.sendWatchCacheEvent(event)
 		}
 	}

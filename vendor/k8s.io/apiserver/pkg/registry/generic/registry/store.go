@@ -1035,6 +1035,7 @@ func (e *Store) WatchPredicate(ctx genericapirequest.Context, p storage.Selectio
 		// optimization is skipped
 	}
 
+	fmt.Printf("Calling Generic storage watchList with: %v,\n %v\n %v\n\n", e.KeyRootFunc(ctx), resourceVersion, p)
 	w, err := e.Storage.WatchList(ctx, e.KeyRootFunc(ctx), resourceVersion, p)
 	if err != nil {
 		return nil, err

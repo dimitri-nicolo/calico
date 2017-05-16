@@ -154,6 +154,7 @@ func newWatchCache(
 
 // Add takes runtime.Object as an argument.
 func (w *watchCache) Add(obj interface{}) error {
+	fmt.Printf("watchCache Add() object: %v\n\n", obj)
 	object, resourceVersion, err := objectToVersionedRuntimeObject(obj)
 	if err != nil {
 		return err
@@ -166,6 +167,7 @@ func (w *watchCache) Add(obj interface{}) error {
 
 // Update takes runtime.Object as an argument.
 func (w *watchCache) Update(obj interface{}) error {
+	fmt.Printf("watchCache Update() object: %v\n\n", obj)
 	object, resourceVersion, err := objectToVersionedRuntimeObject(obj)
 	if err != nil {
 		return err
@@ -213,12 +215,13 @@ func parseResourceVersion(resourceVersion string) (uint64, error) {
 }
 
 func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, updateFunc func(*storeElement) error) error {
+	fmt.Printf("watchCache processEvent(), event: %v, resourceVersion: %v\n\n", event, resourceVersion)
 	key, err := w.keyFunc(event.Object)
 	if err != nil {
 		return fmt.Errorf("couldn't compute key: %v", err)
 	}
 	elem := &storeElement{Key: key, Object: event.Object}
-
+	fmt.Printf("watchCache processEvent() key: %v, Object: %v\n\n", key, event.Object)
 	// TODO: We should consider moving this lock below after the watchCacheEvent
 	// is created. In such situation, the only problematic scenario is Replace(
 	// happening after getting object from store and before acquiring a lock.
@@ -254,6 +257,7 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 		Key:             key,
 		ResourceVersion: resourceVersion,
 	}
+	fmt.Printf("watchCache watchCacheEvent: %v\n\n", watchCacheEvent)
 	if w.onEvent != nil {
 		w.onEvent(watchCacheEvent)
 	}
@@ -443,7 +447,7 @@ func (w *watchCache) GetAllEventsSinceThreadUnsafe(resourceVersion uint64) ([]*w
 	if resourceVersion < oldest-1 {
 		return nil, errors.NewGone(fmt.Sprintf("too old resource version: %d (%d)", resourceVersion, oldest-1))
 	}
-
+	fmt.Printf("GetAllEventsSinceThreadUnsafe, no issues with Events so far.\n\n")
 	// Binary search the smallest index at which resourceVersion is greater than the given one.
 	f := func(i int) bool {
 		return w.cache[(w.startIndex+i)%w.capacity].resourceVersion > resourceVersion
@@ -453,6 +457,7 @@ func (w *watchCache) GetAllEventsSinceThreadUnsafe(resourceVersion uint64) ([]*w
 	for i := 0; i < size-first; i++ {
 		result[i] = w.cache[(w.startIndex+first+i)%w.capacity].watchCacheEvent
 	}
+	fmt.Printf("GetAllEventsSinceThreadUnsafe, result %v, w.cache: %v\n\n", result, w.cache)
 	return result, nil
 }
 

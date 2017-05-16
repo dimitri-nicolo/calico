@@ -233,7 +233,7 @@ func (r *Reflector) resyncChan() (<-chan time.Time, func() bool) {
 // and then use the resource version to watch.
 // It returns error if ListAndWatch didn't even try to initialize watch.
 func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
-	glog.V(3).Infof("Listing and watching %v from %s", r.expectedType, r.name)
+	fmt.Printf("Listing and watching %v from %s\n\n", r.expectedType, r.name)
 	var resourceVersion string
 	resyncCh, cleanup := r.resyncChan()
 	defer cleanup()
@@ -338,6 +338,7 @@ func (r *Reflector) syncWith(items []runtime.Object, resourceVersion string) err
 
 // watchHandler watches w and keeps *resourceVersion up to date.
 func (r *Reflector) watchHandler(w watch.Interface, resourceVersion *string, errc chan error, stopCh <-chan struct{}) error {
+	fmt.Println("Reflector watchHandler: %v\n\n", resourceVersion)
 	start := r.clock.Now()
 	eventCount := 0
 
@@ -353,6 +354,7 @@ loop:
 		case err := <-errc:
 			return err
 		case event, ok := <-w.ResultChan():
+			fmt.Printf("Reflector watchHandler event received %v %v\n\n", event, ok)
 			if !ok {
 				break loop
 			}

@@ -58,6 +58,6 @@ func (d *Decoder) Decode(originalData []byte, gvk *schema.GroupVersionKind, into
 				return nil, nil, err
 			}
 		}
-	}
+	}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
 	return d.Serializer.Decode(originalData, gvk, into)
 }
