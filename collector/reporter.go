@@ -33,10 +33,32 @@ var (
 	)
 )
 
+type MetricUpdate struct {
+	policy       string
+	tuple        Tuple
+	packets      int
+	bytes        int
+	deltaPackets int
+	deltaBytes   int
+}
+
+func NewMetricUpdateFromRuleTrace(t Tuple, rt *RuleTrace) *MetricUpdate {
+	p, b := rt.ctr.Values()
+	dp, db := rt.ctr.DeltaValues()
+	return &MetricUpdate{
+		policy:       rt.ToString(),
+		tuple:        t,
+		packets:      p,
+		bytes:        b,
+		deltaPackets: dp,
+		deltaBytes:   db,
+	}
+}
+
 type MetricsReporter interface {
 	Start()
-	Report(data Data) error
-	Expire(data Data) error
+	Report(mu *MetricUpdate) error
+	Expire(mu *MetricUpdate) error
 }
 
 // TODO(doublek): When we want different ways of aggregating, this will
@@ -54,15 +76,15 @@ type AggregateValue struct {
 }
 
 type ReporterManager struct {
-	ReportChan chan Data
-	ExpireChan chan Data
+	ReportChan chan *MetricUpdate
+	ExpireChan chan *MetricUpdate
 	reporters  []MetricsReporter
 }
 
 func NewReporterManager() *ReporterManager {
 	return &ReporterManager{
-		ReportChan: make(chan Data),
-		ExpireChan: make(chan Data),
+		ReportChan: make(chan *MetricUpdate),
+		ExpireChan: make(chan *MetricUpdate),
 	}
 }
 
@@ -82,24 +104,17 @@ func (r *ReporterManager) startManaging() {
 	for {
 		// TODO(doublek): Channel for stopping the reporter.
 		select {
-		case data := <-r.ReportChan:
+		case mu := <-r.ReportChan:
+			log.Debugf("Reporting metric update %+v", mu)
 			for _, reporter := range r.reporters {
-				reporter.Report(data)
+				reporter.Report(mu)
 			}
-		case data := <-r.ExpireChan:
+		case mu := <-r.ExpireChan:
+			log.Debugf("Expiring metric update %+v", mu)
 			for _, reporter := range r.reporters {
-				reporter.Expire(data)
+				reporter.Expire(mu)
 			}
 		}
-	}
-}
-
-func filterAndHandleData(handler func(*RuleTrace, Data), data Data) {
-	if data.EgressAction() == DenyAction {
-		handler(data.EgressRuleTrace, data)
-	}
-	if data.IngressAction() == DenyAction {
-		handler(data.IngressRuleTrace, data)
 	}
 }
 
@@ -110,8 +125,8 @@ type PrometheusReporter struct {
 	aggStats         map[AggregateKey]AggregateValue
 	deleteCandidates set.Set
 	deleteChan       chan AggregateKey
-	reportChan       chan Data
-	expireChan       chan Data
+	reportChan       chan *MetricUpdate
+	expireChan       chan *MetricUpdate
 	retentionTimers  map[AggregateKey]*time.Timer
 	retentionTime    time.Duration
 }
@@ -126,8 +141,8 @@ func NewPrometheusReporter(port int, rTime time.Duration) *PrometheusReporter {
 		aggStats:         make(map[AggregateKey]AggregateValue),
 		deleteCandidates: set.New(),
 		deleteChan:       make(chan AggregateKey),
-		reportChan:       make(chan Data),
-		expireChan:       make(chan Data),
+		reportChan:       make(chan *MetricUpdate),
+		expireChan:       make(chan *MetricUpdate),
 		retentionTimers:  make(map[AggregateKey]*time.Timer),
 		retentionTime:    rTime,
 	}
@@ -161,31 +176,28 @@ func (pr *PrometheusReporter) startReporter() {
 			if _, exists := pr.retentionTimers[key]; exists {
 				pr.deleteMetric(key)
 			}
-		case data := <-pr.reportChan:
-			if !data.IsDirty() {
-				continue
-			}
-			filterAndHandleData(pr.reportMetric, data)
-		case data := <-pr.expireChan:
-			filterAndHandleData(pr.expireMetric, data)
+		case mu := <-pr.reportChan:
+			pr.reportMetric(mu)
+		case mu := <-pr.expireChan:
+			pr.expireMetric(mu)
 		}
 	}
 }
 
-func (pr *PrometheusReporter) Report(data Data) error {
-	pr.reportChan <- data
+func (pr *PrometheusReporter) Report(mu *MetricUpdate) error {
+	pr.reportChan <- mu
 	return nil
 }
 
-func (pr *PrometheusReporter) reportMetric(ruleTrace *RuleTrace, data Data) {
-	key := AggregateKey{ruleTrace.ToString(), data.Tuple.src}
+func (pr *PrometheusReporter) reportMetric(mu *MetricUpdate) {
+	key := AggregateKey{mu.policy, mu.tuple.src}
 	value, ok := pr.aggStats[key]
 	if ok {
 		if pr.deleteCandidates.Contains(key) {
 			pr.deleteCandidates.Discard(key)
 			pr.cleanupRetentionTimer(key)
 		}
-		value.refs.Add(data.Tuple)
+		value.refs.Add(mu.tuple)
 	} else {
 		l := prometheus.Labels{
 			"srcIP":  key.srcIP,
@@ -195,38 +207,35 @@ func (pr *PrometheusReporter) reportMetric(ruleTrace *RuleTrace, data Data) {
 			labels:  l,
 			packets: gaugeDeniedPackets.With(l),
 			bytes:   gaugeDeniedBytes.With(l),
-			refs:    set.FromArray([]Tuple{data.Tuple}),
+			refs:    set.FromArray([]Tuple{mu.tuple}),
 		}
 	}
-	dp, db := data.ctr.DeltaValues()
-	value.packets.Add(float64(dp))
-	value.bytes.Add(float64(db))
+	value.packets.Add(float64(mu.deltaPackets))
+	value.bytes.Add(float64(mu.deltaBytes))
 	pr.aggStats[key] = value
-	log.Debugf("Metric is %+v", value.packets)
 	return
 }
 
-func (pr *PrometheusReporter) Expire(data Data) error {
-	pr.expireChan <- data
+func (pr *PrometheusReporter) Expire(mu *MetricUpdate) error {
+	pr.expireChan <- mu
 	return nil
 }
 
-func (pr *PrometheusReporter) expireMetric(ruleTrace *RuleTrace, data Data) {
-	key := AggregateKey{ruleTrace.ToString(), data.Tuple.src}
+func (pr *PrometheusReporter) expireMetric(mu *MetricUpdate) {
+	key := AggregateKey{mu.policy, mu.tuple.src}
 	value, ok := pr.aggStats[key]
-	if !ok || !value.refs.Contains(data.Tuple) {
+	if !ok || !value.refs.Contains(mu.tuple) {
 		return
 	}
-	// If the data had updated counters this is the time to update our counters.
-	// We retain deleted data for a little bit so that prometheus can get a chance
-	// to scrape the data.
-	if data.IsDirty() {
-		dp, db := data.ctr.DeltaValues()
-		value.packets.Add(float64(dp))
-		value.bytes.Add(float64(db))
+	// If the metric update has updated counters this is the time to update our counters.
+	// We retain deleted metric for a little bit so that prometheus can get a chance
+	// to scrape the metric.
+	if mu.deltaPackets != 0 && mu.deltaBytes != 0 {
+		value.packets.Add(float64(mu.deltaPackets))
+		value.bytes.Add(float64(mu.deltaBytes))
 		pr.aggStats[key] = value
 	}
-	value.refs.Discard(data.Tuple)
+	value.refs.Discard(mu.tuple)
 	pr.aggStats[key] = value
 	if value.refs.Len() == 0 {
 		pr.markForDeletion(key)
@@ -294,31 +303,23 @@ func (sr *SyslogReporter) Start() {
 	log.Info("Staring SyslogReporter")
 }
 
-func (sr *SyslogReporter) Report(data Data) error {
-	if !data.IsDirty() {
-		return nil
+func (sr *SyslogReporter) Report(mu *MetricUpdate) error {
+	f := log.Fields{
+		"proto":   strconv.Itoa(mu.tuple.proto),
+		"srcIP":   mu.tuple.src,
+		"srcPort": strconv.Itoa(mu.tuple.l4Src),
+		"dstIP":   mu.tuple.dst,
+		"dstPort": strconv.Itoa(mu.tuple.l4Dst),
+		"policy":  mu.policy,
+		"action":  DenyAction,
+		"packets": mu.packets,
+		"bytes":   mu.bytes,
 	}
-	filterAndHandleData(sr.log, data)
+	sr.slog.WithFields(f).Info("")
 	return nil
 }
 
-func (sr *SyslogReporter) log(ruleTrace *RuleTrace, data Data) {
-	packets, bytes := data.ctr.Values()
-	f := log.Fields{
-		"proto":   strconv.Itoa(data.Tuple.proto),
-		"srcIP":   data.Tuple.src,
-		"srcPort": strconv.Itoa(data.Tuple.l4Src),
-		"dstIP":   data.Tuple.dst,
-		"dstPort": strconv.Itoa(data.Tuple.l4Dst),
-		"policy":  ruleTrace.ToString(),
-		"action":  DenyAction,
-		"packets": packets,
-		"bytes":   bytes,
-	}
-	sr.slog.WithFields(f).Info("")
-}
-
-func (sr *SyslogReporter) Expire(data Data) error {
+func (sr *SyslogReporter) Expire(mu *MetricUpdate) error {
 	return nil
 }
 

@@ -298,6 +298,7 @@ var defTierAllowTp = RuleTracePoint{
 	Action:   AllowAction,
 	Index:    0,
 	EpKey:    localWlEPKey1,
+	Ctr:      *NewCounter(1, 100),
 }
 var defTierDenyTp = RuleTracePoint{
 	TierID:   "default",
@@ -306,6 +307,7 @@ var defTierDenyTp = RuleTracePoint{
 	Action:   DenyAction,
 	Index:    0,
 	EpKey:    localWlEPKey2,
+	Ctr:      *NewCounter(1, 100),
 }
 var tier1AllowTp = RuleTracePoint{
 	TierID:   "tier1",
@@ -370,7 +372,7 @@ var _ = Describe("NFLOG Datasource", func() {
 		Describe("Test local destination", func() {
 			It("should receive a single stat update with allow rule tracepoint", func() {
 				t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-				su := NewStatUpdate(*t, 1, 100, 0, 0,
+				su := NewStatUpdate(*t, 0, 0, 0, 0,
 					DeltaCounter, DirIn, defTierAllowTp)
 				dataFeeder <- inPkt
 				Eventually(sink).Should(Receive(Equal(*su)))
@@ -379,7 +381,7 @@ var _ = Describe("NFLOG Datasource", func() {
 		Describe("Test local to local", func() {
 			It("should receive a single stat update with deny rule tracepoint", func() {
 				t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-				su := NewStatUpdate(*t, 1, 100, 0, 0,
+				su := NewStatUpdate(*t, 0, 0, 0, 0,
 					DeltaCounter, DirIn, defTierDenyTp)
 				dataFeeder <- localPkt
 				Eventually(sink).Should(Receive(Equal(*su)))

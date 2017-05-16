@@ -125,13 +125,16 @@ func (c *Collector) applyStatUpdate(update StatUpdate) {
 		// The entry does not exist. Go ahead and create one.
 		data = NewData(
 			update.Tuple,
-			update.Packets,
-			update.Bytes,
-			update.ReversePackets,
-			update.ReverseBytes,
 			DefaultAgeTimeout)
 		if update.Tp != EmptyRuleTracePoint {
 			data.AddRuleTracePoint(update.Tp, update.Dir)
+		}
+		if update.CtrType == AbsoluteCounter {
+			data.SetCounters(update.Packets, update.Bytes)
+			data.SetCountersReverse(update.ReversePackets, update.ReverseBytes)
+		} else {
+			data.IncreaseCounters(update.Packets, update.Bytes)
+			data.IncreaseCountersReverse(update.ReversePackets, update.ReverseBytes)
 		}
 		c.registerAgeTimer(data)
 		c.epStats[update.Tuple] = data
@@ -148,7 +151,7 @@ func (c *Collector) applyStatUpdate(update StatUpdate) {
 	if update.Tp != EmptyRuleTracePoint {
 		err := data.AddRuleTracePoint(update.Tp, update.Dir)
 		if err != nil {
-			c.reporterMgr.ReportChan <- *data
+			c.reportData(data)
 			data.ResetCounters()
 			data.ReplaceRuleTracePoint(update.Tp, update.Dir)
 		}
@@ -159,7 +162,15 @@ func (c *Collector) applyStatUpdate(update StatUpdate) {
 func (c *Collector) expireEntry(data *Data) {
 	log.Infof("Timer expired for entry: %v", data)
 	tuple := data.Tuple
-	c.reporterMgr.ExpireChan <- *data
+	c.reportData(data)
+	if data.EgressRuleTrace.Action() == DenyAction {
+		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.EgressRuleTrace)
+		c.reporterMgr.ExpireChan <- mu
+	}
+	if data.IngressRuleTrace.Action() == DenyAction {
+		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.IngressRuleTrace)
+		c.reporterMgr.ExpireChan <- mu
+	}
 	delete(c.epStats, tuple)
 }
 
@@ -176,9 +187,23 @@ func (c *Collector) registerAgeTimer(data *Data) {
 func (c *Collector) reportMetrics() {
 	log.Debug("Aggregating and reporting metrics")
 	for _, data := range c.epStats {
-		c.reporterMgr.ReportChan <- *data
-		data.clearDirtyFlag()
+		c.reportData(data)
 	}
+}
+
+func (c *Collector) reportData(data *Data) {
+	if !data.IsDirty() {
+		return
+	}
+	if data.EgressRuleTrace.Action() == DenyAction && data.EgressRuleTrace.IsDirty() {
+		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.EgressRuleTrace)
+		c.reporterMgr.ReportChan <- mu
+	}
+	if data.IngressRuleTrace.Action() == DenyAction && data.IngressRuleTrace.IsDirty() {
+		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.IngressRuleTrace)
+		c.reporterMgr.ReportChan <- mu
+	}
+	data.clearDirtyFlag()
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.

@@ -131,7 +131,7 @@ var _ = Describe("Rule Trace", func() {
 
 	BeforeEach(func() {
 		tuple = NewTuple(net.IP("127.0.0,1"), net.IP("127.0.0.1"), 6, 12345, 80)
-		data = NewData(*tuple, 0, 0, 0, 0, time.Duration(10)*time.Second)
+		data = NewData(*tuple, time.Duration(10)*time.Second)
 	})
 
 	Describe("Data with no ingress or egress rule trace ", func() {
