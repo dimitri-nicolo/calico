@@ -16,11 +16,15 @@ import re
 import subprocess
 
 from netaddr import IPAddress, IPNetwork
+from nose_parameterized import parameterized
 from tests.st.test_base import TestBase
 from tests.st.utils.docker_host import DockerHost, CLUSTER_STORE_DOCKER_OPTIONS
 from tests.st.utils.constants import DEFAULT_IPV4_POOL_CIDR
-from tests.st.utils.utils import retry_until_success
+from tests.st.utils.route_reflector import RouteReflectorCluster
+from tests.st.utils.utils import check_bird_status, retry_until_success
 from time import sleep
+
+from .peer import create_bgp_peer
 
 """
 Test calico IPIP behaviour.
@@ -30,7 +34,11 @@ class TestIPIP(TestBase):
     def tearDown(self):
         self.remove_tunl_ip()
 
-    def test_ipip(self):
+    @parameterized.expand([
+        ('bird',),
+        ('gobgp',),
+    ])
+    def test_ipip(self, backend):
         """
         Test IPIP routing with the different IPIP modes.
 
@@ -54,8 +62,8 @@ class TestIPIP(TestBase):
 
             # Autodetect the IP addresses - this should ensure the subnet is
             # correctly configured.
-            host1.start_calico_node("--ip=autodetect")
-            host2.start_calico_node("--ip=autodetect")
+            host1.start_calico_node("--ip=autodetect --backend={0}".format(backend))
+            host2.start_calico_node("--ip=autodetect --backend={0}".format(backend))
 
             # Create a network and a workload on each host.
             network1 = host1.create_network("subnet1")
@@ -136,7 +144,7 @@ class TestIPIP(TestBase):
             host.start_calico_node()
             self.assert_tunl_ip(host, ipv4_pool, expect=True)
 
-            # Disable the IP Pool, and make sure the tunl IP is not from this IP pool anymore. 
+            # Disable the IP Pool, and make sure the tunl IP is not from this IP pool anymore.
             self.pool_action(host, "apply", ipv4_pool, True, disabled=True)
             self.assert_tunl_ip(host, ipv4_pool, expect=False)
 
@@ -287,3 +295,125 @@ class TestIPIP(TestBase):
         match = re.search(r'RX packets:(\d+) ',
                           output)
         return int(match.group(1))
+
+    @parameterized.expand([
+        (False,),
+        (True,),
+        (False,'gobgp',),
+        (True,'gobgp',),
+    ])
+    def test_gce(self, with_ipip, backend='bird'):
+        """Test with and without IP-in-IP routing on simulated GCE instances.
+
+        In this test we simulate GCE instance routing, where there is a router
+        between the instances, and each instance has a /32 address that appears
+        not to be directly connected to any subnet.  With that setup,
+        connectivity between workloads on different hosts _should_ require
+        IP-in-IP to be enabled.  We test that we do get connectivity _with_
+        IP-in-IP, that we don't get connectivity _without_ IP-in-IP, and that
+        the situation updates dynamically if we toggle IP-in-IP with workloads
+        already existing.
+
+        Note that this test targets the BGP implementation, to check that it
+        does IP-in-IP routing correctly, and handles the underlying GCE
+        routing, and switches dynamically between IP-in-IP and normal routing
+        as directed by calicoctl.  (In the BIRD case, these are all points for
+        which we've patched the upstream BIRD code.)  But naturally it also
+        involves calicoctl and confd, so it isn't _only_ about the BGP code.
+        """
+        with DockerHost('host1',
+                        additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS,
+                        simulate_gce_routing=True,
+                        start_calico=False) as host1, \
+             DockerHost('host2',
+                        additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS,
+                        simulate_gce_routing=True,
+                        start_calico=False) as host2:
+
+            self._test_gce_int(with_ipip, backend, host1, host2, False)
+
+    @parameterized.expand([
+        (False,),
+        (True,),
+    ])
+    def test_gce_rr(self, with_ipip):
+        """As test_gce except with a route reflector instead of mesh config."""
+        with DockerHost('host1',
+                        additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS,
+                        simulate_gce_routing=True,
+                        start_calico=False) as host1, \
+             DockerHost('host2',
+                        additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS,
+                        simulate_gce_routing=True,
+                        start_calico=False) as host2, \
+             RouteReflectorCluster(1, 1) as rrc:
+
+            self._test_gce_int(with_ipip, 'bird', host1, host2, rrc)
+
+    def _test_gce_int(self, with_ipip, backend, host1, host2, rrc):
+
+        host1.start_calico_node("--backend={0}".format(backend))
+        host2.start_calico_node("--backend={0}".format(backend))
+
+        # Before creating any workloads, set the initial IP-in-IP state.
+        host1.set_ipip_enabled(with_ipip)
+
+        if rrc:
+            # Set the default AS number - as this is used by the RR mesh,
+            # and turn off the node-to-node mesh (do this from any host).
+            host1.calicoctl("config set asNumber 64513")
+            host1.calicoctl("config set nodeToNodeMesh off")
+            # Peer from each host to the route reflector.
+            for host in [host1, host2]:
+                for rr in rrc.get_redundancy_group():
+                    create_bgp_peer(host, "node", rr.ip, 64513)
+
+        # Create a network and a workload on each host.
+        network1 = host1.create_network("subnet1")
+        workload_host1 = host1.create_workload("workload1",
+                                               network=network1)
+        workload_host2 = host2.create_workload("workload2",
+                                               network=network1)
+
+        for _ in [1, 2]:
+            # Check we do or don't have connectivity between the workloads,
+            # according to the IP-in-IP setting.
+            if with_ipip:
+                # Allow network to converge.
+                self.assert_true(
+                    workload_host1.check_can_ping(workload_host2.ip, retries=10))
+
+                # Check connectivity in both directions
+                self.assert_ip_connectivity(workload_list=[workload_host1,
+                                                           workload_host2],
+                                            ip_pass_list=[workload_host1.ip,
+                                                          workload_host2.ip])
+
+                # Check that we are using IP-in-IP for some routes.
+                assert "tunl0" in host1.execute("ip r")
+                assert "tunl0" in host2.execute("ip r")
+
+                # Check that routes are not flapping: the following shell
+                # script checks that there is no output for 10s from 'ip
+                # monitor', on either host.  The "-le 1" is to allow for
+                # something (either 'timeout' or 'ip monitor', not sure) saying
+                # 'Terminated' when the 10s are up.  (Note that all commands
+                # here are Busybox variants; I tried 'grep -v' to eliminate the
+                # Terminated line, but for some reason it didn't work.)
+                for host in [host1, host2]:
+                    host.execute("changes=`timeout -t 10 ip -t monitor 2>&1`; " +
+                                 "echo \"$changes\"; " +
+                                 "test `echo \"$changes\" | wc -l` -le 1")
+            else:
+                # Expect non-connectivity between workloads on different hosts.
+                self.assert_false(
+                    workload_host1.check_can_ping(workload_host2.ip, retries=10))
+
+            if not rrc:
+                # Check the BGP status on each host.
+                check_bird_status(host1, [("node-to-node mesh", host2.ip, "Established")])
+                check_bird_status(host2, [("node-to-node mesh", host1.ip, "Established")])
+
+            # Flip the IP-in-IP state for the next iteration.
+            with_ipip = not with_ipip
+            host1.set_ipip_enabled(with_ipip)

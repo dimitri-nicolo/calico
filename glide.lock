@@ -179,7 +179,7 @@ imports:
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: fec703b02e01245a2f3921be89486803c5efa319
+  version: 8015f7cc08d74b71e64f2878e438ce658bd6173f
   subpackages:
   - lib/api
   - lib/api/unversioned
@@ -261,7 +261,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 21f2569f6feb83b68a25c98c1b20eca5d4e1e6ae
+  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
   subpackages:
   - unix
 - name: golang.org/x/text

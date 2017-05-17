@@ -70,6 +70,7 @@ class DockerHost(object):
                  post_docker_commands=["docker load -i /code/calico-node.tar",
                                        "docker load -i /code/busybox.tar"],
                  calico_node_autodetect_ip=False,
+                 simulate_gce_routing=False,
                  override_hostname=False):
         self.name = name
         self.dind = dind
@@ -127,6 +128,33 @@ class DockerHost(object):
             docker_ps = partial(self.execute, "docker ps")
             retry_until_success(docker_ps, ex_class=CalledProcessError,
                                 retries=10)
+
+            if simulate_gce_routing:
+                # Simulate addressing and routing setup as on a GCE instance:
+                # the instance has a /32 address (which means that it appears
+                # not to be directly connected to anything) and a default route
+                # that does not have the 'onlink' flag to override that.
+                #
+                # First check that we can ping the Docker bridge, and trace out
+                # initial state.
+                self.execute("ping -c 1 -W 2 172.17.0.1")
+                self.execute("ip a")
+                self.execute("ip r")
+
+                # Change the normal /16 IP address to /32.
+                self.execute("ip a del %s/16 dev eth0" % self.ip)
+                self.execute("ip a add %s/32 dev eth0" % self.ip)
+
+                # Add a default route via the Docker bridge.
+                self.execute("ip r a 172.17.0.1 dev eth0")
+                self.execute("ip r a default via 172.17.0.1 dev eth0")
+
+                # Trace out final state, and check that we can still ping the
+                # Docker bridge.
+                self.execute("ip a")
+                self.execute("ip r")
+                self.execute("ping -c 1 -W 2 172.17.0.1")
+
             for command in post_docker_commands:
                 self.execute(command)
         elif not calico_node_autodetect_ip:
@@ -253,6 +281,16 @@ class DockerHost(object):
         self.calicoctl(cmd)
         self.attach_log_analyzer()
 
+    def set_ipip_enabled(self, enabled):
+        pools_output = self.calicoctl("get ippool -o yaml")
+        pools_dict = yaml.safe_load(pools_output)
+        for pool in pools_dict:
+            print "Pool is %s" % pool
+            if ':' not in pool['metadata']['cidr']:
+                pool['spec']['ipip'] = {'mode': 'always', 'enabled': enabled}
+            self.writefile("ippools.yaml", pools_dict)
+            self.calicoctl("apply -f ippools.yaml")
+
     def attach_log_analyzer(self):
         self.log_analyzer = LogAnalyzer(self,
                                         "/var/log/calico/felix/current",
@@ -345,18 +383,33 @@ class DockerHost(object):
         Exit the context of this host.
         :return: None
         """
-        self.cleanup()
+        self.cleanup(log_extra_diags=bool(exc_type))
 
-    def cleanup(self):
+    def cleanup(self, log_extra_diags=False):
         """
         Clean up this host, including removing any containers created.  This is
         necessary especially for Docker-in-Docker so we don't leave dangling
         volumes.
-        :return:
+
+        Also, perform log analysis to check for any errors, raising an exception
+        if any were found.
+
+        If log_extra_is set to True we will log some extra diagnostics (this is
+        set to True if the DockerHost context manager exits with an exception).
+        Extra logs will also be output if the log analyzer detects any errors.
         """
-        # Check for logs before tearing down
-        if self.log_analyzer is not None:
-            self.log_analyzer.check_logs_for_exceptions()
+        # Check for logs before tearing down, log extra diags if we spot an error.
+        log_exception = None
+        try:
+            if self.log_analyzer is not None:
+                self.log_analyzer.check_logs_for_exceptions()
+        except Exception, e:
+            log_exception = e
+            log_extra_diags = True
+
+        # Log extra diags if we need to.
+        if log_extra_diags:
+            self.log_extra_diags()
 
         logger.info("# Cleaning up host %s", self.name)
         if self.dind:
@@ -382,6 +435,10 @@ class DockerHost(object):
             log_and_run("docker rm -f calico-node || true")
 
         self._cleaned = True
+
+        # Now that tidy-up is complete, re-raise any exceptions found in the logs.
+        if log_exception:
+            raise log_exception
 
     def cleanup_networks(self):
         """
@@ -533,3 +590,10 @@ class DockerHost(object):
         # use calicoctl with data
         self.writejson("new_data", data)
         self.calicoctl("%s -f new_data" % action)
+
+    def log_extra_diags(self):
+        # Run a set of commands to trace ip routes, iptables and ipsets.
+        self.execute("ip route", raise_exception_on_failure=False)
+        self.execute("iptables-save", raise_exception_on_failure=False)
+        self.execute("ip6tables-save", raise_exception_on_failure=False)
+        self.execute("ipset save", raise_exception_on_failure=False)

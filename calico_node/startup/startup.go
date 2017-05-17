@@ -49,12 +49,8 @@ var exitFunction = os.Exit
 // -  Configuring the node resource with IP/AS information provided in the
 //    environment, or autodetected.
 // -  Creating default IP Pools for quick-start use
-// -  TODO:  Configuring IPIP tunnel with an IP address from an IP pool
-// TODO: Different auto-detection methods
 
 func main() {
-	var err error
-
 	// Determine the name for this node and ensure the environment is always
 	// available in the startup env file that is sourced in rc.local.
 	nodeName := determineNodeName()
@@ -65,32 +61,9 @@ func main() {
 	// An explicit value of true is required to wait for the datastore.
 	if os.Getenv("WAIT_FOR_DATASTORE") == "true" {
 		waitForConnection(client)
+		log.Info("Datastore is ready")
 	} else {
 		message("Skipping datastore connection test")
-	}
-
-	// If this is a Kubernetes backed datastore then just make sure the
-	// datastore is initialized and then exit.  We don't need to explicitly
-	// initialize the datastore for non-Kubernetes because the node resource
-	// management will do that for us.
-	if cfg.Spec.DatastoreType == api.Kubernetes {
-		message("Calico is using a Kubernetes datastore")
-		err = client.EnsureInitialized()
-		if err != nil {
-			fatal("Error initializing Kubernetes as the datastore: %s", err)
-			terminate()
-		}
-		log.Info("Kubernetes is initialized as a Calico datastore")
-
-		// We also need to configure IP Pools.  Do this explicitly here for now since the
-		// node configuration below is not yet supported, but once
-		// the full set of operations is supported in the kubernetes datastore driver
-		// we can remove this special case.
-		configureIPPools(client)
-
-		// Write out the startup environment file.
-		writeStartupEnv(nodeName, nil, nil)
-		return
 	}
 
 	// Query the current Node resources.  We update our node resource with
@@ -103,11 +76,11 @@ func main() {
 	// Configure the node AS number.
 	configureASNumber(node)
 
-	// Configure IP Pool configuration.
-	configureIPPools(client)
-
 	// Check for conflicting node configuration
 	checkConflictingNodes(client, node)
+
+	// Check expected filesystem
+	ensureFilesystemAsExpected()
 
 	// Apply the updated node resource.
 	if _, err := client.Nodes().Apply(node); err != nil {
@@ -115,10 +88,16 @@ func main() {
 		terminate()
 	}
 
-	// Set other Felix config that is not yet in the node resource.
-	if err := ensureDefaultConfig(client, node); err != nil {
-		fatal("Unable to set global default configuration: %s", err)
-		terminate()
+	// Configure IP Pool configuration.
+	configureIPPools(client)
+
+	// Set other Felix config that is not yet in the node resource.  Skip for Kubernetes as
+	// the keys do not yet exist
+	if cfg.Spec.DatastoreType != api.Kubernetes {
+		if err := ensureDefaultConfig(client, node); err != nil {
+			fatal("Unable to set global default configuration: %s", err)
+			terminate()
+		}
 	}
 
 	// Write the startup.env file now that we are ready to start other
@@ -166,9 +145,9 @@ func waitForConnection(c *client.Client) {
 	message("Checking datastore connection")
 	for {
 		// Query some arbitrary configuration to see if the connection
-		// is working.  Getting a specific config is a good option, even
-		// if the config does not exist.
-		_, _, err := c.Config().GetFelixConfig("foo", "")
+		// is working.  Getting a specific Node is a good option, even
+		// if the Node does not exist.
+		_, err := c.Nodes().Get(api.NodeMetadata{Name: "foo"})
 
 		// We only care about a couple of error cases, all others would
 		// suggest the datastore is accessible.
@@ -655,6 +634,32 @@ func checkConflictingNodes(client *client.Client, node *api.Node) {
 	if errored {
 		terminate()
 	}
+}
+
+// Checks that the filesystem is as expected and fix it if possible
+func ensureFilesystemAsExpected() {
+	runDir := "/var/run/calico"
+	// Check if directory already exists
+	if _, err := os.Stat(runDir); err != nil {
+		// Create the runDir
+		if err = os.MkdirAll(runDir, os.ModeDir); err != nil {
+			fatal("Unable to create '%s'", runDir)
+			terminate()
+		}
+		warning("%s was not mounted, 'calicoctl node status' may provide incomplete status information", runDir)
+	}
+
+	logDir := "/var/log/calico"
+	// Check if directory already exists
+	if _, err := os.Stat(logDir); err != nil {
+		// Create the logDir
+		if err = os.MkdirAll(logDir, os.ModeDir); err != nil {
+			fatal("Unable to create '%s'", logDir)
+			terminate()
+		}
+		warning("%s was not mounted, 'calicoctl node diags' will not be able to collect logs", logDir)
+	}
+
 }
 
 // ensureDefaultConfig ensures all of the required default settings are
