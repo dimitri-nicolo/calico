@@ -34,7 +34,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 )
 
-const defaultEtcdPathPrefix = ""
+const defaultEtcdPathPrefix = "/calico/v1"
 
 // NewCommandStartMaster provides a CLI handler for 'start master' command
 func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {

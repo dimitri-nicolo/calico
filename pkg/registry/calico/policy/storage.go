@@ -38,7 +38,12 @@ type REST struct {
 // KeyRootFunc returns the root etcd key for policy.
 // This is used for operations that work on the entire collection.
 func KeyRootFunc(ctx genericapirequest.Context, prefix string) string {
-	return "/calico/v1/policy/tier/default/policy"
+	key := prefix
+	ns, ok := genericapirequest.NamespaceFrom(ctx)
+	if ok && len(ns) > 0 {
+		key = key + "/tier/" + ns + "/policy"
+	}
+	return key
 }
 
 // KeyFunc is the default function for constructing storage paths for Policy resource.
@@ -56,6 +61,7 @@ func KeyFunc(ctx genericapirequest.Context, prefix string, name string) (string,
 
 // NewREST returns a RESTStorage object that will work against API services.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
+
 	store := &genericregistry.Store{
 		Copier:      api.Scheme,
 		NewFunc:     func() runtime.Object { return &calico.Policy{} },
@@ -69,15 +75,26 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
 		DeleteStrategy: Strategy,
-
-		KeyFunc: func(ctx genericapirequest.Context, name string) (string, error) {
-			return KeyFunc(ctx, "", name)
-		},
-		KeyRootFunc: func(ctx genericapirequest.Context) string {
-			return KeyRootFunc(ctx, "")
-		},
 	}
+
 	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: GetAttrs}
+
+	// Setup the key funcs
+	opts, err := options.RESTOptions.GetRESTOptions(store.QualifiedResource)
+	if err != nil {
+		panic(err)
+	}
+
+	opts.ResourcePrefix = "/calico/v1"
+	prefix := opts.ResourcePrefix + "/policy"
+
+	store.KeyFunc = func(ctx genericapirequest.Context, name string) (string, error) {
+		return KeyFunc(ctx, prefix, name)
+	}
+	store.KeyRootFunc = func(ctx genericapirequest.Context) string {
+		return KeyRootFunc(ctx, prefix)
+	}
+
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err) // TODO: Propagate error up
 	}
