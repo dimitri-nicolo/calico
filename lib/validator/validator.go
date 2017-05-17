@@ -444,32 +444,6 @@ func validateBackendRule(v *validator.Validate, structLevel *validator.StructLev
 	}
 }
 
-func validateBackendRule(v *validator.Validate, structLevel *validator.StructLevel) {
-	rule := structLevel.CurrentStruct.Interface().(model.Rule)
-
-	// If the protocol is neither tcp (6) nor udp (17) check that the port values have not
-	// been specified.
-	if rule.Protocol == nil || !rule.Protocol.SupportsPorts() {
-		if len(rule.SrcPorts) > 0 {
-			structLevel.ReportError(reflect.ValueOf(rule.SrcPorts),
-				"SrcPorts", "", reason("protocol does not support ports"))
-		}
-		if len(rule.NotSrcPorts) > 0 {
-			structLevel.ReportError(reflect.ValueOf(rule.NotSrcPorts),
-				"NotSrcPorts", "", reason("protocol does not support ports"))
-		}
-
-		if len(rule.DstPorts) > 0 {
-			structLevel.ReportError(reflect.ValueOf(rule.DstPorts),
-				"DstPorts", "", reason("protocol does not support ports"))
-		}
-		if len(rule.NotDstPorts) > 0 {
-			structLevel.ReportError(reflect.ValueOf(rule.NotDstPorts),
-				"NotDstPorts", "", reason("protocol does not support ports"))
-		}
-	}
-}
-
 func validateNodeSpec(v *validator.Validate, structLevel *validator.StructLevel) {
 	ns := structLevel.CurrentStruct.Interface().(api.NodeSpec)
 

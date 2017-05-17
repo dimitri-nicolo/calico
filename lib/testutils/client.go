@@ -26,9 +26,10 @@ import (
 
 	"errors"
 	"fmt"
-	"golang.org/x/net/context"
 	"os/exec"
 	"strings"
+
+	"golang.org/x/net/context"
 )
 
 // CreateNewIPPool takes a client.Client with a poolSubnet CIDR (in "192.168.1.0/24" format) with
@@ -148,17 +149,4 @@ func DumpDatastore(config api.CalicoAPIConfig) error {
 	}
 
 	return err
-}
-
-// CleanIPPools removes all IP pool configuration from the datastore.
-func CleanIPPools(c *client.Client) {
-	if pools, err := c.IPPools().List(api.IPPoolMetadata{}); err == nil {
-		for _, pool := range pools.Items {
-			if err := c.IPPools().Delete(pool.Metadata); err != nil {
-				panic(err)
-			}
-		}
-	} else {
-		panic(err)
-	}
 }

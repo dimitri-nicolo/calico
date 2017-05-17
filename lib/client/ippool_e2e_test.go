@@ -44,7 +44,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/libcalico-go/lib/api"
-	"github.com/projectcalico/libcalico-go/lib/client"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/ipip"
 	"github.com/projectcalico/libcalico-go/lib/testutils"

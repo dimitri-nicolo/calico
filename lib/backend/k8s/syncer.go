@@ -213,17 +213,9 @@ func (syn *kubeSyncer) updateTracker(updates []api.Update) {
 		if upd.UpdateType == api.UpdateTypeKVDeleted {
 			log.Debugf("Delete from tracker: %+v", upd.KVPair.Key)
 			delete(syn.tracker, upd.KVPair.Key.String())
-			switch key := upd.KVPair.Key.(type) {
-			case model.WorkloadEndpointKey:
-				delete(syn.labelCache, key.WorkloadID)
-			}
 		} else {
 			log.Debugf("Update tracker: %+v: %+v", upd.KVPair.Key, upd.KVPair.Revision)
 			syn.tracker[upd.KVPair.Key.String()] = upd.KVPair.Key
-			switch key := upd.KVPair.Key.(type) {
-			case model.WorkloadEndpointKey:
-				syn.labelCache[key.WorkloadID] = upd.KVPair.Value.(*model.WorkloadEndpoint).Labels
-			}
 		}
 	}
 }
