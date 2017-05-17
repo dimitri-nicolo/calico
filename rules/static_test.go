@@ -483,7 +483,7 @@ var _ = Describe("Static", func() {
 
 	Describe("with drop override and multiple prefixes", func() {
 		BeforeEach(func() {
-			config = Config{
+			conf = Config{
 				WorkloadIfacePrefixes:    []string{"cali", "tap"},
 				ActionOnDrop:             "ACCEPT",
 				IptablesMarkAccept:       0x10,
@@ -631,16 +631,16 @@ var _ = Describe("Static", func() {
 
 var _ = Describe("DropRules", func() {
 	var rr *DefaultRuleRenderer
-	var config Config
+	var conf Config
 
 	JustBeforeEach(func() {
 		// Cast back to the expected type so we can access a finer-grained API for testing.
-		rr = NewRenderer(config).(*DefaultRuleRenderer)
+		rr = NewRenderer(conf).(*DefaultRuleRenderer)
 	})
 
 	Describe("with LOG-and-DROP override", func() {
 		BeforeEach(func() {
-			config = Config{
+			conf = Config{
 				WorkloadIfacePrefixes:    []string{"cali", "tap"},
 				ActionOnDrop:             "LOG-and-DROP",
 				IptablesMarkAccept:       0x10,
@@ -658,7 +658,7 @@ var _ = Describe("DropRules", func() {
 
 		Describe("with a custom prefix", func() {
 			BeforeEach(func() {
-				config.IptablesLogPrefix = "my-prefix"
+				conf.IptablesLogPrefix = "my-prefix"
 			})
 
 			It("should render a log and a drop", func() {
