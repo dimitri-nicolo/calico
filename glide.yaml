@@ -22,7 +22,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: fec703b02e01245a2f3921be89486803c5efa319
+  version: 8015f7cc08d74b71e64f2878e438ce658bd6173f
   subpackages:
   - lib
 - package: github.com/tigera/nfnetlink
@@ -35,3 +35,9 @@ import:
 - package: github.com/gogo/protobuf
   version: ^0.3.0
 - package: github.com/vishvananda/netlink
+- package: github.com/gavv/monotime
+- package: github.com/onsi/ginkgo
+  version: f40a49d81e5c12e90400620b6242fb29a8e7c9
+testImport:
+- package: github.com/onsi/gomega
+  version: 9b8c753e8dfb382618ba8fa19b4197b5dcb0434c

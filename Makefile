@@ -95,8 +95,16 @@ DATE:=$(shell date -u +'%FT%T%z')
 # depend on these, clean removes them.
 GENERATED_GO_FILES:=proto/felixbackend.pb.go
 
-# All go files.
-GO_FILES:=$(shell find . -type f -name '*.go') $(GENERATED_GO_FILES)
+# Directories that aren't part of the main Felix program,
+# e.g. standalone test programs.
+K8SFV_DIR:=k8sfv
+NON_FELIX_DIRS:=$(K8SFV_DIR)
+
+# All Felix go files.
+FELIX_GO_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_GO_FILES)
+
+# Files for the Felix+k8s backend test program.
+K8SFV_GO_FILES:=$(shell find ./$(K8SFV_DIR) -name prometheus -prune -o -type f -name '*.go' -print)
 
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
@@ -140,7 +148,58 @@ calico/felix: bin/calico-felix
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-felix docker-image/bin/
-	docker build -t calico/felix docker-image
+	docker build --pull -t calico/felix docker-image
+
+# Targets for Felix testing with the k8s backend and a k8s API server,
+# with k8s model resources being injected by a separate test client.
+GET_CONTAINER_IP := docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+GRAFANA_VERSION=4.1.2
+.PHONY: k8sfv-test k8sfv-test-existing-felix
+# Run k8sfv test with Felix built from current code.
+k8sfv-test: calico/felix k8sfv-test-existing-felix
+# Run k8sfv test with whatever is the existing 'calico/felix:latest'
+# container image.  To use some existing Felix version other than
+# 'latest', do 'FELIX_VERSION=<...> make k8sfv-test-existing-felix'.
+k8sfv-test-existing-felix: bin/k8sfv.test
+	k8sfv/run-test
+
+PROMETHEUS_DATA_DIR := $$HOME/prometheus-data
+K8SFV_PROMETHEUS_DATA_DIR := $(PROMETHEUS_DATA_DIR)/k8sfv
+
+$(K8SFV_PROMETHEUS_DATA_DIR):
+	mkdir -p $@
+
+.PHONY: run-prometheus run-grafana stop-prometheus stop-grafana
+run-prometheus: stop-prometheus $(K8SFV_PROMETHEUS_DATA_DIR)
+	FELIX_IP=`$(GET_CONTAINER_IP) k8sfv-felix` && \
+	sed "s/__FELIX_IP__/$${FELIX_IP}/" < $(K8SFV_DIR)/prometheus/prometheus.yml.in > $(K8SFV_DIR)/prometheus/prometheus.yml
+	docker run --detach --name k8sfv-prometheus \
+	-v $${PWD}/$(K8SFV_DIR)/prometheus/prometheus.yml:/etc/prometheus.yml \
+	-v $(K8SFV_PROMETHEUS_DATA_DIR):/prometheus \
+	prom/prometheus \
+	-config.file=/etc/prometheus.yml \
+	-storage.local.path=/prometheus
+
+stop-prometheus:
+	@-docker rm -f k8sfv-prometheus
+	sleep 2
+
+run-grafana: stop-grafana run-prometheus
+	docker run --detach --name k8sfv-grafana -p 3000:3000 \
+	-v $${PWD}/$(K8SFV_DIR)/grafana:/etc/grafana \
+	-v $${PWD}/$(K8SFV_DIR)/grafana-dashboards:/etc/grafana-dashboards \
+	grafana/grafana:$(GRAFANA_VERSION) --config /etc/grafana/grafana.ini
+	# Wait for it to get going.
+	sleep 5
+	# Configure prometheus data source.
+	PROMETHEUS_IP=`$(GET_CONTAINER_IP) k8sfv-prometheus` && \
+	sed "s/__PROMETHEUS_IP__/$${PROMETHEUS_IP}/" < $(K8SFV_DIR)/grafana-datasources/my-prom.json.in | \
+	curl 'http://admin:admin@127.0.0.1:3000/api/datasources' -X POST \
+	    -H 'Content-Type: application/json;charset=UTF-8' --data-binary @-
+
+stop-grafana:
+	@-docker rm -f k8sfv-grafana
+	sleep 2
 
 # Pre-configured docker run command that runs as this user with the repo
 # checked out to /code, uses the --rm flag to avoid leaving the container
@@ -225,13 +284,20 @@ LDFLAGS:=-ldflags "\
         -X github.com/projectcalico/felix/buildinfo.GitRevision=$(GIT_COMMIT) \
         -B 0x$(BUILD_ID)"
 
-bin/calico-felix: $(GO_FILES) vendor/.up-to-date
+bin/calico-felix: $(FELIX_GO_FILES) vendor/.up-to-date
 	@echo Building felix...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "github.com/projectcalico/felix" && \
                ( ldd bin/calico-felix 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: bin/calico-felix was not statically linked"; false ) )'
+
+bin/k8sfv.test: $(K8SFV_GO_FILES) vendor/.up-to-date
+	@echo Building $@...
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go test -c -o $@ ./k8sfv && \
+               ( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $@ was not statically linked"; false ) )'
 
 dist/calico-felix/calico-felix: bin/calico-felix
 	mkdir -p dist/calico-felix/
@@ -254,11 +320,11 @@ check-licenses/dependency-licenses.txt: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) sh -c 'licenses . > check-licenses/dependency-licenses.txt'
 
 .PHONY: ut
-ut combined.coverprofile: vendor/.up-to-date $(GO_FILES)
+ut combined.coverprofile: vendor/.up-to-date $(FELIX_GO_FILES)
 	@echo Running Go UTs.
 	$(DOCKER_GO_BUILD) ./utils/run-coverage
 
-bin/check-licenses: $(GO_FILES)
+bin/check-licenses: $(FELIX_GO_FILES)
 	$(DOCKER_GO_BUILD) go build -v -i -o $@ "github.com/projectcalico/felix/check-licenses"
 
 .PHONY: check-licenses
@@ -267,11 +333,13 @@ check-licenses: check-licenses/dependency-licenses.txt bin/check-licenses
 	$(DOCKER_GO_BUILD) bin/check-licenses
 
 .PHONY: go-meta-linter
-go-meta-linter: vendor/.up-to-date
+go-meta-linter: vendor/.up-to-date $(GENERATED_GO_FILES)
+	# Run staticcheck stand-alone since gometalinter runs concurrent copies, which
+	# uses a lot of RAM.
+	$(DOCKER_GO_BUILD) sh -c 'glide nv | xargs -n 3 staticcheck'
 	$(DOCKER_GO_BUILD) gometalinter --deadline=300s \
 	                                --disable-all \
 	                                --enable=goimports \
-	                                --enable=staticcheck \
 	                                --vendor ./...
 
 .PHONY: static-checks
@@ -279,14 +347,14 @@ static-checks:
 	$(MAKE) go-meta-linter check-licenses
 
 .PHONY: ut-no-cover
-ut-no-cover: vendor/.up-to-date $(GO_FILES)
+ut-no-cover: vendor/.up-to-date $(FELIX_GO_FILES)
 	@echo Running Go UTs without coverage.
-	$(DOCKER_GO_BUILD) ginkgo -r
+	$(DOCKER_GO_BUILD) ginkgo -r -skipPackage k8sfv $(GINKGO_OPTIONS)
 
 .PHONY: ut-watch
-ut-watch: vendor/.up-to-date $(GO_FILES)
+ut-watch: vendor/.up-to-date $(FELIX_GO_FILES)
 	@echo Watching go UTs for changes...
-	$(DOCKER_GO_BUILD) ginkgo watch -r
+	$(DOCKER_GO_BUILD) ginkgo watch -r -skipPackage k8sfv $(GINKGO_OPTIONS)
 
 # Launch a browser with Go coverage stats for the whole project.
 .PHONY: cover-browser

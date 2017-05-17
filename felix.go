@@ -23,6 +23,10 @@ import (
 	"os/exec"
 	"os/signal"
 	"reflect"
+	"runtime"
+	"runtime/debug"
+	"runtime/pprof"
+	"strings"
 	"syscall"
 	"time"
 
@@ -50,12 +54,20 @@ import (
 const usage = `Felix, the Calico per-host daemon.
 
 Usage:
-  calico-felix [-c <config>]
+  calico-felix [options]
 
 Options:
-  -c --config-file=<config>  Config file to load [default: /etc/calico/felix.cfg].
-  --version                  Print the version and exit.
+  -c --config-file=<filename>  Config file to load [default: /etc/calico/felix.cfg].
+  --version                    Print the version and exit.
 `
+
+const (
+	// Our default value for GOGC if it is not set.  This is the percentage that heap usage must
+	// grow by to trigger a garbage collection.  Go's default is 100, meaning that 50% of the
+	// heap can be lost to garbage.  We reduce it to this value to trade increased CPU usage for
+	// lower occupancy.
+	defaultGCPercent = 20
+)
 
 // main is the entry point to the calico-felix binary.
 //
@@ -91,6 +103,14 @@ func main() {
 	// Initialise early so we can trace out config parsing.
 	logutils.ConfigureEarlyLogging()
 
+	if os.Getenv("GOGC") == "" {
+		// Tune the GC to trade off a little extra CPU usage for significantly lower
+		// occupancy at high scale.  This is worthwhile because Felix runs per-host so
+		// any occupancy improvement is multiplied by the number of hosts.
+		log.Debugf("No GOGC value set, defaulting to %d%%.", defaultGCPercent)
+		debug.SetGCPercent(defaultGCPercent)
+	}
+
 	// Parse command-line args.
 	version := ("Version:            " + buildinfo.GitVersion + "\n" +
 		"Full git commit ID: " + buildinfo.GitRevision + "\n" +
@@ -101,9 +121,10 @@ func main() {
 		log.Fatalf("Failed to parse usage, exiting: %v", err)
 	}
 	buildInfoLogCxt := log.WithFields(log.Fields{
-		"version":   buildinfo.GitVersion,
-		"buildDate": buildinfo.BuildDate,
-		"gitCommit": buildinfo.GitRevision,
+		"version":    buildinfo.GitVersion,
+		"buildDate":  buildinfo.BuildDate,
+		"gitCommit":  buildinfo.GitRevision,
+		"GOMAXPROCS": runtime.GOMAXPROCS(0),
 	})
 	buildInfoLogCxt.Info("Felix starting up")
 	log.Infof("Command line arguments: %v", arguments)
@@ -165,6 +186,19 @@ configRetry:
 			time.Sleep(1 * time.Second)
 			continue configRetry
 		}
+
+		// We now have some config flags that affect how we configure the syncer.
+		// After loading the config from the datastore, reconnect, possibly with new
+		// config.  We don't need to re-load the configuration _again_ because the
+		// calculation graph will spot if the config has changed since we were initialised.
+		datastoreConfig = configParams.DatastoreConfig()
+		datastore, err = backend.NewClient(datastoreConfig)
+		if err != nil {
+			log.WithError(err).Error("Failed to (re)connect to datastore")
+			time.Sleep(1 * time.Second)
+			continue configRetry
+		}
+
 		break configRetry
 	}
 
@@ -245,6 +279,8 @@ configRetry:
 			IPv6Enabled:                 configParams.Ipv6Support,
 			StatusReportingInterval: time.Duration(configParams.ReportingIntervalSecs) *
 				time.Second,
+
+			PostInSyncCallback: func() { dumpHeapMemoryProfile(configParams) },
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()
@@ -374,9 +410,55 @@ configRetry:
 		go servePrometheusMetrics(configParams.PrometheusMetricsPort)
 	}
 
+	// On receipt of SIGUSR1, write out heap profile.
+	usr1SignalChan := make(chan os.Signal, 1)
+	signal.Notify(usr1SignalChan, syscall.SIGUSR1)
+	go func() {
+		for {
+			<-usr1SignalChan
+			dumpHeapMemoryProfile(configParams)
+		}
+	}()
+
 	// Now monitor the worker process and our worker threads and shut
 	// down the process gracefully if they fail.
 	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
+}
+
+func dumpHeapMemoryProfile(configParams *config.Config) {
+	// If a memory profile file name is configured, dump a heap memory profile.  If the
+	// configured filename includes "<timestamp>", that will be replaced with a stamp indicating
+	// the current time.
+	memProfFileName := configParams.DebugMemoryProfilePath
+	if memProfFileName != "" {
+		logCxt := log.WithField("file", memProfFileName)
+		logCxt.Info("Asked to create a memory profile.")
+
+		// If the configured file name includes "<timestamp>", replace that with the current
+		// time.
+		if strings.Contains(memProfFileName, "<timestamp>") {
+			timestamp := time.Now().Format("2006-01-02-15:04:05")
+			memProfFileName = strings.Replace(memProfFileName, "<timestamp>", timestamp, 1)
+			logCxt = log.WithField("file", memProfFileName)
+		}
+
+		// Open a file with that name.
+		memProfFile, err := os.Create(memProfFileName)
+		if err != nil {
+			logCxt.WithError(err).Fatal("Could not create memory profile file")
+			memProfFile = nil
+		} else {
+			defer memProfFile.Close()
+			logCxt.Info("Writing memory profile...")
+			// The initial resync uses a lot of scratch space so now is
+			// a good time to force a GC and return any RAM that we can.
+			debug.FreeOSMemory()
+			if err := pprof.WriteHeapProfile(memProfFile); err != nil {
+				logCxt.WithError(err).Fatal("Could not write memory profile")
+			}
+			logCxt.Info("Finished writing memory profile")
+		}
+	}
 }
 
 func servePrometheusMetrics(port int) {
@@ -392,7 +474,7 @@ func servePrometheusMetrics(port int) {
 
 func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.Cmd, stopSignalChans []chan<- bool) {
 	// Ask the runtime to tell us if we get a term signal.
-	termSignalChan := make(chan os.Signal)
+	termSignalChan := make(chan os.Signal, 1)
 	signal.Notify(termSignalChan, syscall.SIGTERM)
 
 	// Start a background thread to tell us when the dataplane driver stops.
@@ -423,7 +505,8 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		receivedSignal = true
 	case reason = <-failureReportChan:
 	}
-	log.WithField("reason", reason).Warn("Felix is shutting down")
+	logCxt := log.WithField("reason", reason)
+	logCxt.Warn("Felix is shutting down")
 
 	// Notify other components to stop.
 	for _, c := range stopSignalChans {
@@ -437,7 +520,7 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		// Driver may still be running, just in case the driver is
 		// unresponsive, start a thread to kill this process if we
 		// don't manage to kill the driver.
-		log.Info("Driver still running, trying to shut it down...")
+		logCxt.Info("Driver still running, trying to shut it down...")
 		giveUpOnSigTerm := make(chan bool)
 		go func() {
 			time.Sleep(4 * time.Second)
@@ -449,12 +532,12 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		driverCmd.Process.Signal(syscall.SIGTERM)
 		select {
 		case <-driverStoppedC:
-			log.Info("Driver shut down after SIGTERM")
+			logCxt.Info("Driver shut down after SIGTERM")
 		case <-giveUpOnSigTerm:
-			log.Error("Driver did not respond to SIGTERM, sending SIGKILL")
+			logCxt.Error("Driver did not respond to SIGTERM, sending SIGKILL")
 			driverCmd.Process.Kill()
 			<-driverStoppedC
-			log.Info("Driver shut down after SIGKILL")
+			logCxt.Info("Driver shut down after SIGKILL")
 		}
 	}
 
@@ -463,19 +546,16 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		// a couple of seconds to ensure that we don't go into a tight
 		// restart loop (which would make the init daemon give up trying
 		// to restart us).
-		log.Info("Shutdown wasn't cause by signal, pausing to avoid tight restart loop")
+		logCxt.Info("Shutdown wasn't caused by signal, pausing to avoid tight restart loop")
 		go func() {
 			time.Sleep(2 * time.Second)
-			log.Info("Pause complete, exiting.")
-			syscall.Exit(1)
+			logCxt.Fatal("Exiting.")
 		}()
 		// But, if we get a signal while we're waiting quit immediately.
 		<-termSignalChan
 	}
 
-	// Then exit our process.
-	log.Info("Received signal, exiting immediately")
-	syscall.Exit(1)
+	logCxt.Fatal("Exiting immediately")
 }
 
 func loadConfigFromDatastore(datastore bapi.Client, hostname string) (globalConfig, hostConfig map[string]string) {

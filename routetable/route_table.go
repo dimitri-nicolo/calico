@@ -24,6 +24,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	"github.com/gavv/monotime"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/projectcalico/felix/conntrack"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ip"
@@ -38,7 +41,20 @@ var (
 	IfaceDown       = errors.New("interface down")
 
 	ipV6LinkLocalCIDR = ip.MustParseCIDR("fe80::/64")
+
+	listIfaceTime = prometheus.NewSummary(prometheus.SummaryOpts{
+		Name: "felix_route_table_list_seconds",
+		Help: "Time taken to list all the interfaces during a resync.",
+	})
+	perIfaceSyncTime = prometheus.NewSummary(prometheus.SummaryOpts{
+		Name: "felix_route_table_per_iface_sync_seconds",
+		Help: "Time taken to sync each interface",
+	})
 )
+
+func init() {
+	prometheus.MustRegister(listIfaceTime, perIfaceSyncTime)
+}
 
 type Target struct {
 	CIDR    ip.CIDR
@@ -128,6 +144,8 @@ func (r *RouteTable) QueueResync() {
 
 func (r *RouteTable) Apply() error {
 	if !r.inSync {
+		listStartTime := monotime.Now()
+
 		links, err := r.dataplane.LinkList()
 		if err != nil {
 			r.logCxt.WithError(err).Error("Failed to list interfaces, retrying...")
@@ -148,6 +166,8 @@ func (r *RouteTable) Apply() error {
 			}
 		}
 		r.inSync = true
+
+		listIfaceTime.Observe(monotime.Since(listStartTime).Seconds())
 	}
 
 	r.dirtyIfaces.Iter(func(item interface{}) error {
@@ -189,6 +209,10 @@ func (r *RouteTable) Apply() error {
 }
 
 func (r *RouteTable) syncRoutesForLink(ifaceName string) error {
+	startTime := monotime.Now()
+	defer func() {
+		perIfaceSyncTime.Observe(monotime.Since(startTime).Seconds())
+	}()
 	logCxt := r.logCxt.WithField("ifaceName", ifaceName)
 	logCxt.Debug("Syncing interface routes")
 
@@ -235,7 +259,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string) error {
 	if err != nil {
 		// Filter the error so that we don't spam errors if the interface is being torn
 		// down.
-		filteredErr := r.filterErrorByIfaceState(ifaceName, GetFailed)
+		filteredErr := r.filterErrorByIfaceState(ifaceName, err, GetFailed)
 		if filteredErr == GetFailed {
 			logCxt.WithError(err).Error("Failed to get interface.")
 		} else {
@@ -253,7 +277,7 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string) error {
 	if err != nil {
 		// Filter the error so that we don't spam errors if the interface is being torn
 		// down.
-		filteredErr := r.filterErrorByIfaceState(ifaceName, ListFailed)
+		filteredErr := r.filterErrorByIfaceState(ifaceName, err, ListFailed)
 		if filteredErr == ListFailed {
 			logCxt.WithError(err).Error("Error listing routes")
 		} else {
@@ -317,27 +341,41 @@ func (r *RouteTable) syncRoutesForLink(ifaceName string) error {
 	if updatesFailed {
 		// Recheck whether the interface exists so we don't produce spammy logs during
 		// interface removal.
-		return r.filterErrorByIfaceState(ifaceName, UpdateFailed)
+		return r.filterErrorByIfaceState(ifaceName, UpdateFailed, UpdateFailed)
 	}
 
 	return nil
 }
 
-// filterErrorByIfaceState checks the current state of the interface; it's down or gone, it returns
-// IfaceDown or IfaceError, otherwise, it returns the given defaultErr.
-func (r *RouteTable) filterErrorByIfaceState(ifaceName string, defaultErr error) error {
-	logCxt := r.logCxt.WithField("ifaceName", ifaceName)
+// filterErrorByIfaceState checks the current state of the interface; if it's down or gone, it
+// returns IfaceDown or IfaceNotPresent, otherwise, it returns the given defaultErr.
+func (r *RouteTable) filterErrorByIfaceState(ifaceName string, currentErr, defaultErr error) error {
+	logCxt := r.logCxt.WithFields(log.Fields{"ifaceName": ifaceName, "error": currentErr})
+	if strings.Contains(currentErr.Error(), "not found") {
+		// Current error already tells us that the link was not present.  If we re-check
+		// the status in this case, we open a race where the interface gets created and
+		// we log an error when we're about to re-trigger programming anyway.
+		logCxt.Info("Failed to access interface because it doesn't exist.")
+		return IfaceNotPresent
+	}
+	// If the current error wasn't clear, try to look up the interface to see if there's a
+	// well-understood reason for the failure.
 	if link, err := r.dataplane.LinkByName(ifaceName); err == nil {
 		// Link still exists.  Check if it's up.
+		logCxt.WithField("link", link).Debug("Interface still exists")
 		if link.Attrs().Flags&net.FlagUp != 0 {
 			// Link exists and it's up, no reason that we expect to fail.
+			logCxt.WithField("link", link).Warning(
+				"Failed to access interface but it now appears to be up")
 			return defaultErr
 		} else {
 			// Special case: Link exists and it's down.  Assume that's the problem.
+			logCxt.WithField("link", link).Debug("Interface is down")
 			return IfaceDown
 		}
 	} else if strings.Contains(err.Error(), "not found") {
 		// Special case: Link no longer exists.
+		logCxt.Info("Interface was deleted during operation, filtering error")
 		return IfaceNotPresent
 	} else {
 		// Failed to list routes, then failed to check if interface exists.

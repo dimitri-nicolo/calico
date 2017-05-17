@@ -20,6 +20,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
@@ -196,8 +197,8 @@ type Config struct {
 	ActionOnDrop         string
 	EndpointToHostAction string
 
-	FailsafeInboundHostPorts  []uint16
-	FailsafeOutboundHostPorts []uint16
+	FailsafeInboundHostPorts  []config.ProtoPort
+	FailsafeOutboundHostPorts []config.ProtoPort
 
 	DisableConntrackInvalid bool
 }

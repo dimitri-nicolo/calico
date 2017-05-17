@@ -143,8 +143,8 @@ type Config struct {
 	PrometheusMetricsEnabled bool `config:"bool;false"`
 	PrometheusMetricsPort    int  `config:"int(0,65535);9091"`
 
-	FailsafeInboundHostPorts  []uint16 `config:"port-list;22;die-on-fail"`
-	FailsafeOutboundHostPorts []uint16 `config:"port-list;2379,2380,4001,7001;die-on-fail"`
+	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68;die-on-fail"`
+	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;tcp:2379,tcp:2380,tcp:4001,tcp:7001,udp:53,udp:67;die-on-fail"`
 
 	NfNetlinkBufSize int `config:"int;65536"`
 
@@ -160,6 +160,9 @@ type Config struct {
 	ClusterGUID           string `config:"string;baddecaf"`
 	ClusterType           string `config:"string;"`
 
+	DebugMemoryProfilePath  string `config:"file;;"`
+	DebugDisableLogDropping bool   `config:"bool;false"`
+
 	// State tracking.
 
 	// nameToSource tracks where we loaded each config param from.
@@ -168,6 +171,11 @@ type Config struct {
 	Err               error
 
 	numIptablesBitsAllocated int
+}
+
+type ProtoPort struct {
+	Protocol string
+	Port     uint16
 }
 
 // Load parses and merges the rawData from one particular source into this config object.
@@ -218,7 +226,7 @@ func (config *Config) OpenstackActive() bool {
 			return true
 		}
 	}
-	log.Debug("No evidence this is an OpenStack deployment; diabling OpenStack special-cases")
+	log.Debug("No evidence this is an OpenStack deployment; disabling OpenStack special-cases")
 	return false
 }
 
@@ -334,15 +342,11 @@ func (config *Config) EndpointReportingDelay() time.Duration {
 }
 
 func (config *Config) DatastoreConfig() api.CalicoAPIConfig {
-	if config.DatastoreType == "kubernetes" {
-		// Create a new Client.  The client will be configured
-		// based on the provided environment.
-		cfg, err := client.LoadClientConfig("")
-		if err != nil {
-			log.WithError(err).Panic("Failed to create empty config")
-		}
-		return *cfg
-	} else {
+	// Special case for etcdv2 datastore, where we want to honour established Felix-specific
+	// config mechanisms.
+	if config.DatastoreType == "etcdv2" {
+		// Build a CalicoAPIConfig with the etcd fields filled in from Felix-specific
+		// config.
 		var etcdEndpoints string
 		if len(config.EtcdEndpoints) == 0 {
 			etcdEndpoints = config.EtcdScheme + "://" + config.EtcdAddr
@@ -362,6 +366,29 @@ func (config *Config) DatastoreConfig() api.CalicoAPIConfig {
 			},
 		}
 	}
+
+	// Build CalicoAPIConfig from the environment.  This means that any XxxYyy field in
+	// CalicoAPIConfigSpec can be set by a corresponding XXX_YYY or CALICO_XXX_YYY environment
+	// variable, and that the datastore type can be set by a DATASTORE_TYPE or
+	// CALICO_DATASTORE_TYPE variable.  (Except in the etcdv2 case which is handled specially
+	// above.)
+	cfg, err := client.LoadClientConfigFromEnvironment()
+	if err != nil {
+		log.WithError(err).Panic("Failed to create datastore config")
+	}
+	// If that didn't set the datastore type (in which case the field will have been set to its
+	// default 'etcdv2' value), copy it from the Felix config.
+	if cfg.Spec.DatastoreType == "etcdv2" {
+		cfg.Spec.DatastoreType = api.DatastoreType(config.DatastoreType)
+	}
+
+	if !config.IpInIpEnabled {
+		// Polling k8s for node updates is expensive (because we get many superfluous
+		// updates) so disable if we don't need it.
+		log.Info("IPIP disabled, disabling node poll (if KDD is in use).")
+		cfg.Spec.K8sDisableNodePoll = true
+	}
+	return *cfg
 }
 
 // Validate() performs cross-field validation.
