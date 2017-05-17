@@ -15,6 +15,7 @@
 package validator
 
 import (
+	"net"
 	"reflect"
 	"regexp"
 	"strings"
@@ -34,17 +35,30 @@ import (
 var validate *validator.Validate
 
 var (
-	labelRegex         = regexp.MustCompile(`^` + tokenizer.LabelKeyMatcher + `$`)
-	labelValueRegex    = regexp.MustCompile("^[a-zA-Z0-9]?([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$")
-	nameRegex          = regexp.MustCompile("^[a-zA-Z0-9_.-]{1,128}$")
-	interfaceRegex     = regexp.MustCompile("^[a-zA-Z0-9_-]{1,15}$")
-	actionRegex        = regexp.MustCompile("^(allow|deny|log|pass)$")
-	backendActionRegex = regexp.MustCompile("^(allow|deny|log|next-tier|)$")
-	protocolRegex      = regexp.MustCompile("^(tcp|udp|icmp|icmpv6|sctp|udplite)$")
-	ipipModeRegex      = regexp.MustCompile("^(always|cross-subnet|)$")
-	reasonString       = "Reason: "
-	poolSmallIPv4      = "IP pool size is too small (min /26) for use with Calico IPAM"
-	poolSmallIPv6      = "IP pool size is too small (min /122) for use with Calico IPAM"
+	labelRegex          = regexp.MustCompile(`^` + tokenizer.LabelKeyMatcher + `$`)
+	labelValueRegex     = regexp.MustCompile("^[a-zA-Z0-9]?([a-zA-Z0-9_.-]{0,61}[a-zA-Z0-9])?$")
+	nameRegex           = regexp.MustCompile("^[a-zA-Z0-9_.-]{1,128}$")
+	namespacedNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_./-]{1,128}$`)
+	interfaceRegex      = regexp.MustCompile("^[a-zA-Z0-9_-]{1,15}$")
+	actionRegex         = regexp.MustCompile("^(allow|deny|log|pass)$")
+	backendActionRegex  = regexp.MustCompile("^(allow|deny|log|next-tier|)$")
+	protocolRegex       = regexp.MustCompile("^(tcp|udp|icmp|icmpv6|sctp|udplite)$")
+	ipipModeRegex       = regexp.MustCompile("^(always|cross-subnet|)$")
+	reasonString        = "Reason: "
+	poolSmallIPv4       = "IP pool size is too small (min /26) for use with Calico IPAM"
+	poolSmallIPv6       = "IP pool size is too small (min /122) for use with Calico IPAM"
+	overlapsV4LinkLocal = "IP pool range overlaps with IPv4 Link Local range 169.254.0.0/16"
+	overlapsV6LinkLocal = "IP pool range overlaps with IPv6 Link Local range fe80::/10"
+
+	ipv4LinkLocalNet = net.IPNet{
+		IP:   net.ParseIP("169.254.0.0"),
+		Mask: net.CIDRMask(16, 32),
+	}
+
+	ipv6LinkLocalNet = net.IPNet{
+		IP:   net.ParseIP("fe80::"),
+		Mask: net.CIDRMask(10, 128),
+	}
 )
 
 // Validate is used to validate the supplied structure according to the
@@ -77,6 +91,7 @@ func init() {
 	registerFieldValidator("interface", validateInterface)
 	registerFieldValidator("backendaction", validateBackendAction)
 	registerFieldValidator("name", validateName)
+	registerFieldValidator("namespacedname", validateNamespacedName)
 	registerFieldValidator("selector", validateSelector)
 	registerFieldValidator("tag", validateTag)
 	registerFieldValidator("labels", validateLabels)
@@ -143,6 +158,12 @@ func validateName(v *validator.Validate, topStruct reflect.Value, currentStructO
 	s := field.String()
 	log.Debugf("Validate name: %s", s)
 	return nameRegex.MatchString(s)
+}
+
+func validateNamespacedName(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate namespacedname: %s", s)
+	return namespacedNameRegex.MatchString(s)
 }
 
 func validateIPVersion(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
@@ -326,6 +347,17 @@ func validateIPPool(v *validator.Validate, structLevel *validator.StructLevel) {
 				}
 			}
 		}
+
+		// IP Pool CIDR cannot overlap with IPv4 or IPv6 link local address range.
+		if pool.Metadata.CIDR.Version() == 4 && pool.Metadata.CIDR.IsNetOverlap(ipv4LinkLocalNet) {
+			structLevel.ReportError(reflect.ValueOf(pool.Metadata.CIDR),
+				"CIDR", "", reason(overlapsV4LinkLocal))
+		}
+
+		if pool.Metadata.CIDR.Version() == 6 && pool.Metadata.CIDR.IsNetOverlap(ipv6LinkLocalNet) {
+			structLevel.ReportError(reflect.ValueOf(pool.Metadata.CIDR),
+				"CIDR", "", reason(overlapsV6LinkLocal))
+		}
 	}
 
 }
@@ -362,6 +394,52 @@ func validateRule(v *validator.Validate, structLevel *validator.StructLevel) {
 		if len(rule.Destination.NotPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.NotPorts),
 				"Destination.NotPorts", "", reason("protocol does not support ports"))
+		}
+	}
+
+	// Check for mismatch in IP versions
+	if rule.Source.Net != nil && rule.IPVersion != nil {
+		if rule.Source.Net.Version() != *(rule.IPVersion) {
+			structLevel.ReportError(reflect.ValueOf(rule.Source.Net), "Source.Net",
+				"", reason("rule contains an IP version that does not match src CIDR version"))
+		}
+	}
+	if rule.Destination.Net != nil && rule.IPVersion != nil {
+		if rule.Destination.Net.Version() != *(rule.IPVersion) {
+			structLevel.ReportError(reflect.ValueOf(rule.Destination.Net), "Destination.Net",
+				"", reason("rule contains an IP version that does not match dst CIDR version"))
+		}
+	}
+	if rule.Source.Net != nil && rule.Destination.Net != nil {
+		if rule.Source.Net.Version() != rule.Destination.Net.Version() {
+			structLevel.ReportError(reflect.ValueOf(rule.Destination.Net), "Destination.Net",
+				"", reason("rule does not support mixing of IPv4/v6 CIDRs"))
+		}
+	}
+}
+
+func validateBackendRule(v *validator.Validate, structLevel *validator.StructLevel) {
+	rule := structLevel.CurrentStruct.Interface().(model.Rule)
+
+	// If the protocol is neither tcp (6) nor udp (17) check that the port values have not
+	// been specified.
+	if rule.Protocol == nil || !rule.Protocol.SupportsPorts() {
+		if len(rule.SrcPorts) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.SrcPorts),
+				"SrcPorts", "", reason("protocol does not support ports"))
+		}
+		if len(rule.NotSrcPorts) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.NotSrcPorts),
+				"NotSrcPorts", "", reason("protocol does not support ports"))
+		}
+
+		if len(rule.DstPorts) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.DstPorts),
+				"DstPorts", "", reason("protocol does not support ports"))
+		}
+		if len(rule.NotDstPorts) > 0 {
+			structLevel.ReportError(reflect.ValueOf(rule.NotDstPorts),
+				"NotDstPorts", "", reason("protocol does not support ports"))
 		}
 	}
 }

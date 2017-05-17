@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package selector
+package model
 
-import "github.com/projectcalico/libcalico-go/lib/selector/parser"
+import "strings"
 
-type Selector interface {
-	Evaluate(labels map[string]string) bool
-	EvaluateLabels(labels parser.Labels) bool
-	String() string
-	UniqueId() string
+// escapeName removes any "/" from the name and URL encodes it to %2f,
+// and necessarily removes % and encodes to %25.
+func escapeName(name string) string {
+	name = strings.Replace(name, "%", "%25", -1)
+	return strings.Replace(name, "/", "%2f", -1)
 }
 
-// Parse a string representation of a selector expression into a Selector.
-func Parse(selector string) (sel parser.Selector, err error) {
-	return parser.Parse(selector)
+// unescapeName replaces %2f and %25 in the name back to be a / and %.
+func unescapeName(name string) string {
+	name = strings.Replace(name, "%2f", "/", -1)
+	return strings.Replace(name, "%25", "%", -1)
 }

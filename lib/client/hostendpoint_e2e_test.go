@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,24 +48,17 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
-var _ = Describe("HostEndpoint tests", func() {
+var _ = testutils.E2eDatastoreDescribe("HostEndpoint tests", testutils.DatastoreEtcdV2, func(config api.CalicoAPIConfig) {
 
 	DescribeTable("HostEndpoint e2e tests",
 		func(meta1, meta2 api.HostEndpointMetadata, spec1, spec2 api.HostEndpointSpec) {
-
-			// Erase etcd clean.
-			testutils.CleanEtcd()
-
 			// Create a new client.
-			c, err := testutils.NewClient("")
-			if err != nil {
-				log.Println("Error creating client:", err)
-			}
+			c := testutils.CreateCleanClient(config)
 			By("Updating the HostEndpoint before it is created")
 			_, outError := c.HostEndpoints().Update(&api.HostEndpoint{Metadata: meta1, Spec: spec1})
 
 			// Should return an error.
-			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: HostEndpoint(node=node1, name=host1)").Error()))
+			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: HostEndpoint(node=node1, name=ep1)").Error()))
 
 			By("Create, Apply, Get and compare")
 
@@ -147,7 +140,7 @@ var _ = Describe("HostEndpoint tests", func() {
 			_, outError = c.HostEndpoints().Get(meta1)
 
 			// Expect an error since the HostEndpoint was deleted.
-			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: HostEndpoint(node=node1, name=host1)").Error()))
+			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: HostEndpoint(node=node1, name=ep1)").Error()))
 
 			// Delete the second HostEndpoint with meta2.
 			outError1 = c.HostEndpoints().Delete(meta2)
@@ -174,15 +167,15 @@ var _ = Describe("HostEndpoint tests", func() {
 		// Test 1: Pass two fully populated HostEndpointSpecs and expect the series of operations to succeed.
 		Entry("Two fully populated HostEndpointSpecs",
 			api.HostEndpointMetadata{
-				Name: "host1",
+				Name: "ep1",
 				Node: "node1",
 				Labels: map[string]string{
 					"app":  "app-abc",
 					"prod": "no",
 				}},
 			api.HostEndpointMetadata{
-				Name: "host2",
-				Node: "node2",
+				Name: "ep1/with_foo",
+				Node: "node1",
 				Labels: map[string]string{
 					"app":  "app-xyz",
 					"prod": "yes",
@@ -201,15 +194,15 @@ var _ = Describe("HostEndpoint tests", func() {
 		// Test 2: Pass one partially populated HostEndpointSpec and another fully populated HostEndpointSpec and expect the series of operations to succeed.
 		Entry("One partially populated HostEndpointSpec and another fully populated HostEndpointSpec",
 			api.HostEndpointMetadata{
-				Name: "host1",
+				Name: "ep1",
 				Node: "node1",
 				Labels: map[string]string{
 					"app":  "app-abc",
 					"prod": "no",
 				}},
 			api.HostEndpointMetadata{
-				Name: "host2",
-				Node: "node2",
+				Name: "ep1/with.foo",
+				Node: "node1",
 				Labels: map[string]string{
 					"app":  "app-xyz",
 					"prod": "yes",
@@ -226,15 +219,15 @@ var _ = Describe("HostEndpoint tests", func() {
 		// Test 3: Pass one fully populated HostEndpointSpec and another empty HostEndpointSpec and expect the series of operations to succeed.
 		Entry("One fully populated HostEndpointSpec and another (almost) empty HostEndpointSpec",
 			api.HostEndpointMetadata{
-				Name: "host1",
+				Name: "ep1",
 				Node: "node1",
 				Labels: map[string]string{
 					"app":  "app-abc",
 					"prod": "no",
 				}},
 			api.HostEndpointMetadata{
-				Name: "host2",
-				Node: "node2",
+				Name: "ep1/with.foo/and.bar",
+				Node: "node1",
 				Labels: map[string]string{
 					"app":  "app-xyz",
 					"prod": "yes",
@@ -251,14 +244,14 @@ var _ = Describe("HostEndpoint tests", func() {
 		// Test 4: Pass two fully populated HostEndpointSpecs with two HostEndpointMetadata (one IPv4 and another IPv6) and expect the series of operations to succeed.
 		Entry("Two fully populated HostEndpointSpecs with two HostEndpointMetadata (one IPv4 and another IPv6)",
 			api.HostEndpointMetadata{
-				Name: "host1",
+				Name: "ep1",
 				Node: "node1",
 				Labels: map[string]string{
 					"app":  "app-abc",
 					"prod": "no",
 				}},
 			api.HostEndpointMetadata{
-				Name: "host2",
+				Name: "ep2",
 				Node: "node2",
 				Labels: map[string]string{
 					"app":  "app-xyz",

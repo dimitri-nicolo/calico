@@ -28,6 +28,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
 	k8sapi "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
@@ -164,11 +165,8 @@ func (c cb) ExpectDeleted(kvps []model.KVPair) {
 	}
 }
 
-func CreateClientAndSyncer() (*KubeClient, *cb, api.Syncer) {
+func CreateClientAndSyncer(cfg KubeConfig) (*KubeClient, *cb, api.Syncer) {
 	// First create the client.
-	cfg := KubeConfig{
-		K8sAPIEndpoint: "http://localhost:8080",
-	}
 	c, err := NewKubeClient(&cfg)
 	if err != nil {
 		panic(err)
@@ -193,14 +191,23 @@ func CreateClientAndSyncer() (*KubeClient, *cb, api.Syncer) {
 }
 
 var _ = Describe("Test Syncer API for Kubernetes backend", func() {
-	log.SetLevel(log.DebugLevel)
+	var (
+		c      *KubeClient
+		cb     *cb
+		syncer api.Syncer
+	)
 
-	// Start the syncer.
-	c, cb, syncer := CreateClientAndSyncer()
-	syncer.Start()
+	BeforeEach(func() {
+		log.SetLevel(log.DebugLevel)
 
-	// Start processing updates.
-	go cb.ProcessUpdates()
+		// Start the syncer.
+		cfg := KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}
+		c, cb, syncer = CreateClientAndSyncer(cfg)
+		syncer.Start()
+
+		// Start processing updates.
+		go cb.ProcessUpdates()
+	})
 
 	It("should handle a Namespace with DefaultDeny", func() {
 		ns := k8sapi.Namespace{
@@ -465,7 +472,8 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 
 		By("Expecting a Syncer snapshot to include the update", func() {
 			// Create a new syncer / callback pair so that it performs a snapshot.
-			_, snapshotCallbacks, snapshotSyncer := CreateClientAndSyncer()
+			cfg := KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}
+			_, snapshotCallbacks, snapshotSyncer := CreateClientAndSyncer(cfg)
 			go snapshotCallbacks.ProcessUpdates()
 			snapshotSyncer.Start()
 
@@ -641,6 +649,136 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	It("Should support getting, deleting, and listing Nodes", func() {
+		nodeHostname := ""
+		var kvp model.KVPair
+		ip, cidr, _ := cnet.ParseCIDR("192.168.0.101/24")
+
+		By("Listing all Nodes", func() {
+			nodes, err := c.List(model.NodeListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			// Get the hostname so we can make a Get call
+			kvp = *nodes[0]
+			nodeHostname = kvp.Key.(model.NodeKey).Hostname
+		})
+
+		By("Getting a specific nodeHostname", func() {
+			n, err := c.Get(model.NodeKey{Hostname: nodeHostname})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Check to see we have the right Node
+			Expect(nodeHostname).To(Equal(n.Key.(model.NodeKey).Hostname))
+		})
+
+		By("Creating a new Node", func() {
+			_, err := c.Create(&kvp)
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Getting non-existent Node", func() {
+			_, err := c.Get(model.NodeKey{Hostname: "Fake"})
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Deleting a Node", func() {
+			err := c.Delete(&kvp)
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Applying changes to a node", func() {
+			newAsn := numorstring.ASNumber(23455)
+
+			testKvp := model.KVPair{
+				Key: model.NodeKey{
+					Hostname: kvp.Key.(model.NodeKey).Hostname,
+				},
+				Value: &model.Node{
+					BGPASNumber: &newAsn,
+					BGPIPv4Net:  cidr,
+					BGPIPv4Addr: ip,
+				},
+			}
+			node, err := c.Apply(&testKvp)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*node.Value.(*model.Node).BGPASNumber).To(Equal(newAsn))
+
+			// Also check that Get() returns the changes
+			getNode, err := c.Get(kvp.Key.(model.NodeKey))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*getNode.Value.(*model.Node).BGPASNumber).To(Equal(newAsn))
+
+			// We do not support creating Nodes, we should see an error
+			// if the Node does not exist.
+			missingKvp := model.KVPair{
+				Key: model.NodeKey{
+					Hostname: "IDontExist",
+				},
+			}
+			_, err = c.Apply(&missingKvp)
+
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Updating a Node", func() {
+			testKvp := model.KVPair{
+				Key: model.NodeKey{
+					Hostname: kvp.Key.(model.NodeKey).Hostname,
+				},
+				Value: &model.Node{
+					BGPIPv4Net:  cidr,
+					BGPIPv4Addr: ip,
+				},
+			}
+			node, err := c.Update(&testKvp)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(node.Value.(*model.Node).BGPASNumber).To(BeNil())
+
+			// Also check that Get() returns the changes
+			getNode, err := c.Get(kvp.Key.(model.NodeKey))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(getNode.Value.(*model.Node).BGPASNumber).To(BeNil())
+		})
+
+		By("Syncing HostIPs over the Syncer", func() {
+			expectExist := []model.KVPair{
+				{Key: model.HostIPKey{Hostname: nodeHostname}},
+			}
+
+			// Expect the snapshot to include the right keys.
+			cb.ExpectExists(expectExist)
+		})
+
+		By("Not syncing Nodes when K8sDisableNodePoll is enabled", func() {
+			cfg := KubeConfig{K8sAPIEndpoint: "http://localhost:8080", K8sDisableNodePoll: true}
+			_, snapshotCallbacks, snapshotSyncer := CreateClientAndSyncer(cfg)
+
+			go snapshotCallbacks.ProcessUpdates()
+			snapshotSyncer.Start()
+
+			expectNotExist := []model.KVPair{
+				{Key: model.HostIPKey{Hostname: nodeHostname}},
+			}
+
+			// Expect the snapshot to have not received the update.
+			snapshotCallbacks.ExpectDeleted(expectNotExist)
+		})
+	})
+
+	It("Should support Getting and Listing HostConfig", func() {
+		By("Listing all Nodes HostConfig", func() {
+			l, err := c.List(model.HostConfigListOptions{Hostname: ""})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(l[0].Value).NotTo(BeZero())
+		})
+
+		By("Getting a specific Nodes HostConfig", func() {
+			h, err := c.Get(model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(h.Value).NotTo(BeZero())
 		})
 	})
 })

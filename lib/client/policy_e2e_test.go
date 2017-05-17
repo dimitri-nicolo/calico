@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,19 +63,11 @@ var policySpec2 = api.PolicySpec{
 	DoNotTrack:   true,
 }
 
-var _ = Describe("Policy tests", func() {
+var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2, func(config api.CalicoAPIConfig) {
 
 	DescribeTable("Policy e2e tests",
 		func(meta1, meta2 api.PolicyMetadata, spec1, spec2 api.PolicySpec) {
-
-			// Erase etcd clean.
-			testutils.CleanEtcd()
-
-			// Create a new client.
-			c, err := testutils.NewClient("")
-			if err != nil {
-				log.Println("Error creating client:", err)
-			}
+			c := testutils.CreateCleanClient(config)
 			By("Updating the policy before it is created")
 			_, outError := c.Policies().Update(&api.Policy{Metadata: meta1, Spec: spec1})
 
@@ -187,26 +179,26 @@ var _ = Describe("Policy tests", func() {
 
 		// Test 1: Pass two fully populated PolicySpecs and expect the series of operations to succeed.
 		Entry("Two fully populated PolicySpecs",
-			api.PolicyMetadata{Name: "policy1"},
-			api.PolicyMetadata{Name: "policy2"},
+			api.PolicyMetadata{Name: "policy-1/with.foo"},
+			api.PolicyMetadata{Name: "policy.1"},
 			policySpec1,
 			policySpec2,
 		),
 
 		// Test 2: Pass one fully populated PolicySpec and another empty PolicySpec and expect the series of operations to succeed.
 		Entry("One fully populated PolicySpec and another empty PolicySpec",
-			api.PolicyMetadata{Name: "policy1"},
-			api.PolicyMetadata{Name: "policy2"},
+			api.PolicyMetadata{Name: "policy-1/with.foo"},
+			api.PolicyMetadata{Name: "policy.1"},
 			policySpec1,
 			api.PolicySpec{},
 		),
 
 		// Test 3: Pass one partially populated PolicySpec and another fully populated PolicySpec and expect the series of operations to succeed.
 		Entry("One partially populated PolicySpec and another fully populated PolicySpec",
-			api.PolicyMetadata{Name: "policy1"},
-			api.PolicyMetadata{Name: "policy2"},
+			api.PolicyMetadata{Name: "policy-1/with.foo"},
+			api.PolicyMetadata{Name: "policy_1/with.foo/with_bar"},
 			api.PolicySpec{
-				Selector: "has(myLabel888)",
+				Selector: "has(myLabel-8.9/88-._9)",
 			},
 			policySpec2,
 		),

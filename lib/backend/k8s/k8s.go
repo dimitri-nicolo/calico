@@ -28,9 +28,11 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
+	"github.com/projectcalico/libcalico-go/lib/net"
 	"k8s.io/client-go/kubernetes"
 	clientapi "k8s.io/client-go/pkg/api"
 	kerrors "k8s.io/client-go/pkg/api/errors"
+	"k8s.io/client-go/pkg/api/v1"
 	kapiv1 "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
@@ -49,21 +51,26 @@ type KubeClient struct {
 	// Client for interacting with ThirdPartyResources.
 	tprClient *rest.RESTClient
 
+	disableNodePoll bool
+
 	// Contains methods for converting Kubernetes resources to
 	// Calico resources.
 	converter converter
 
 	// Clients for interacting with Calico resources.
 	ipPoolClient api.Client
+	nodeClient   api.Client
 }
 
 type KubeConfig struct {
-	Kubeconfig     string `json:"kubeconfig" envconfig:"KUBECONFIG" default:""`
-	K8sAPIEndpoint string `json:"k8sAPIEndpoint" envconfig:"K8S_API_ENDPOINT" default:""`
-	K8sKeyFile     string `json:"k8sKeyFile" envconfig:"K8S_KEY_FILE" default:""`
-	K8sCertFile    string `json:"k8sCertFile" envconfig:"K8S_CERT_FILE" default:""`
-	K8sCAFile      string `json:"k8sCAFile" envconfig:"K8S_CA_FILE" default:""`
-	K8sAPIToken    string `json:"k8sAPIToken" envconfig:"K8S_API_TOKEN" default:""`
+	Kubeconfig               string `json:"kubeconfig" envconfig:"KUBECONFIG" default:""`
+	K8sAPIEndpoint           string `json:"k8sAPIEndpoint" envconfig:"K8S_API_ENDPOINT" default:""`
+	K8sKeyFile               string `json:"k8sKeyFile" envconfig:"K8S_KEY_FILE" default:""`
+	K8sCertFile              string `json:"k8sCertFile" envconfig:"K8S_CERT_FILE" default:""`
+	K8sCAFile                string `json:"k8sCAFile" envconfig:"K8S_CA_FILE" default:""`
+	K8sAPIToken              string `json:"k8sAPIToken" envconfig:"K8S_API_TOKEN" default:""`
+	K8sInsecureSkipTLSVerify bool   `json:"k8sInsecureSkipTLSVerify" envconfig:"K8S_INSECURE_SKIP_TLS_VERIFY" default:""`
+	K8sDisableNodePoll       bool   `json:"k8sDisableNodePoll" envconfig:"K8S_DISABLE_NODE_POLL" default""`
 }
 
 func NewKubeClient(kc *KubeConfig) (*KubeClient, error) {
@@ -94,6 +101,9 @@ func NewKubeClient(kc *KubeConfig) (*KubeClient, error) {
 			*override.variable = override.value
 		}
 	}
+	if kc.K8sInsecureSkipTLSVerify {
+		configOverrides.ClusterInfo.InsecureSkipTLSVerify = true
+	}
 	log.Debugf("Config overrides: %+v", configOverrides)
 
 	// A kubeconfig file was provided.  Use it to load a config, passing through
@@ -116,12 +126,14 @@ func NewKubeClient(kc *KubeConfig) (*KubeClient, error) {
 		return nil, fmt.Errorf("Failed to build TPR client: %s", err)
 	}
 	kubeClient := &KubeClient{
-		clientSet: cs,
-		tprClient: tprClient,
+		clientSet:       cs,
+		tprClient:       tprClient,
+		disableNodePoll: kc.K8sDisableNodePoll,
 	}
 
 	// Create the Calico sub-clients.
 	kubeClient.ipPoolClient = resources.NewIPPools(cs, tprClient)
+	kubeClient.nodeClient = resources.NewNodeClient(cs, tprClient)
 
 	return kubeClient, nil
 }
@@ -268,7 +280,7 @@ func buildTPRClient(baseConfig *rest.Config) (*rest.RESTClient, error) {
 }
 
 func (c *KubeClient) Syncer(callbacks api.SyncerCallbacks) api.Syncer {
-	return newSyncer(*c, callbacks)
+	return newSyncer(&realKubeAPI{c}, c.converter, callbacks, c.disableNodePoll)
 }
 
 // Create an entry in the datastore.  This errors if the entry already exists.
@@ -279,6 +291,8 @@ func (c *KubeClient) Create(d *model.KVPair) (*model.KVPair, error) {
 		return c.createGlobalConfig(d)
 	case model.IPPoolKey:
 		return c.ipPoolClient.Create(d)
+	case model.NodeKey:
+		return c.nodeClient.Create(d)
 	default:
 		log.Warn("Attempt to 'Create' using kubernetes backend is not supported.")
 		return nil, errors.ErrorOperationNotSupported{
@@ -297,10 +311,14 @@ func (c *KubeClient) Update(d *model.KVPair) (*model.KVPair, error) {
 		return c.updateGlobalConfig(d)
 	case model.IPPoolKey:
 		return c.ipPoolClient.Update(d)
+	case model.NodeKey:
+		return c.nodeClient.Update(d)
 	default:
-		// If the resource isn't supported, then this is a no-op.
-		log.Debugf("'Update' for %+v is no-op", d.Key)
-		return d, nil
+		log.Warn("Attempt to 'Update' using kubernetes backend is not supported.")
+		return nil, errors.ErrorOperationNotSupported{
+			Identifier: d.Key,
+			Operation:  "Update",
+		}
 	}
 }
 
@@ -315,9 +333,20 @@ func (c *KubeClient) Apply(d *model.KVPair) (*model.KVPair, error) {
 		return c.applyGlobalConfig(d)
 	case model.IPPoolKey:
 		return c.ipPoolClient.Apply(d)
-	default:
-		log.Debugf("'Apply' for %s is no-op", d.Key)
+	case model.NodeKey:
+		return c.nodeClient.Apply(d)
+	case model.ActiveStatusReportKey, model.LastStatusReportKey,
+		model.HostEndpointStatusKey, model.WorkloadEndpointStatusKey:
+		// Felix periodically reports status to the datastore.  This isn't supported
+		// right now, but we handle it anyway to avoid spamming warning logs.
+		log.WithField("key", d.Key).Debug("Dropping status report (not supported)")
 		return d, nil
+	default:
+		log.Warn("Attempt to 'Apply' using kubernetes backend is not supported.")
+		return nil, errors.ErrorOperationNotSupported{
+			Identifier: d.Key,
+			Operation:  "Apply",
+		}
 	}
 }
 
@@ -329,9 +358,14 @@ func (c *KubeClient) Delete(d *model.KVPair) error {
 		return c.deleteGlobalConfig(d)
 	case model.IPPoolKey:
 		return c.ipPoolClient.Delete(d)
+	case model.NodeKey:
+		return c.nodeClient.Delete(d)
 	default:
-		log.Warn("Attempt to 'Delete' using kubernetes datastore driver is not supported.")
-		return nil
+		log.Warn("Attempt to 'Delete' using kubernetes backend is not supported.")
+		return errors.ErrorOperationNotSupported{
+			Identifier: d.Key,
+			Operation:  "Delete",
+		}
 	}
 }
 
@@ -353,6 +387,8 @@ func (c *KubeClient) Get(k model.Key) (*model.KVPair, error) {
 		return c.getReadyStatus(k.(model.ReadyFlagKey))
 	case model.IPPoolKey:
 		return c.ipPoolClient.Get(k.(model.IPPoolKey))
+	case model.NodeKey:
+		return c.nodeClient.Get(k.(model.NodeKey))
 	default:
 		return nil, errors.ErrorOperationNotSupported{
 			Identifier: k,
@@ -361,7 +397,7 @@ func (c *KubeClient) Get(k model.Key) (*model.KVPair, error) {
 	}
 }
 
-// List entries in the datastore.  This may return an empty list of there are
+// List entries in the datastore.  This may return an empty list if there are
 // no entries matching the request in the ListInterface.
 func (c *KubeClient) List(l model.ListInterface) ([]*model.KVPair, error) {
 	log.Debugf("Performing 'List' for %+v", l)
@@ -378,6 +414,8 @@ func (c *KubeClient) List(l model.ListInterface) ([]*model.KVPair, error) {
 		return c.listHostConfig(l.(model.HostConfigListOptions))
 	case model.IPPoolListOptions:
 		return c.ipPoolClient.List(l.(model.IPPoolListOptions))
+	case model.NodeListOptions:
+		return c.nodeClient.List(l.(model.NodeListOptions))
 	default:
 		return []*model.KVPair{}, nil
 	}
@@ -462,13 +500,15 @@ func (c *KubeClient) listWorkloadEndpoints(l model.WorkloadEndpointListOptions) 
 			WorkloadID: l.WorkloadID,
 		})
 		if err != nil {
-			// Error getting the endpoint.
-			return nil, err
+			switch err.(type) {
+			// Return empty slice of KVPair if the object doesn't exist, return the error otherwise.
+			case errors.ErrorResourceDoesNotExist:
+				return []*model.KVPair{}, nil
+			default:
+				return nil, err
+			}
 		}
-		if kvp == nil {
-			// The workload endpoint doesn't exist.
-			return nil, nil
-		}
+
 		return []*model.KVPair{kvp}, nil
 	}
 
@@ -509,7 +549,7 @@ func (c *KubeClient) getWorkloadEndpoint(k model.WorkloadEndpointKey) (*model.KV
 
 	// Decide if this pod should be displayed.
 	if !c.converter.isReadyCalicoPod(pod) {
-		return nil, nil
+		return nil, errors.ErrorResourceDoesNotExist{Identifier: k}
 	}
 	return c.converter.podToWorkloadEndpoint(pod)
 }
@@ -520,8 +560,15 @@ func (c *KubeClient) listPolicies(l model.PolicyListOptions) ([]*model.KVPair, e
 		// Exact lookup on a NetworkPolicy.
 		kvp, err := c.getPolicy(model.PolicyKey{Name: l.Name})
 		if err != nil {
-			return []*model.KVPair{}, nil
+			switch err.(type) {
+			// Return empty slice of KVPair if the object doesn't exist, return the error otherwise.
+			case errors.ErrorResourceDoesNotExist:
+				return []*model.KVPair{}, nil
+			default:
+				return nil, err
+			}
 		}
+
 		return []*model.KVPair{kvp}, nil
 	}
 
@@ -721,9 +768,88 @@ func (c *KubeClient) deleteGlobalConfig(k *model.KVPair) error {
 }
 
 func (c *KubeClient) getHostConfig(k model.HostConfigKey) (*model.KVPair, error) {
+	if k.Name == "IpInIpTunnelAddr" {
+		n, err := c.clientSet.Nodes().Get(k.Hostname, metav1.GetOptions{})
+		if err != nil {
+			return nil, resources.K8sErrorToCalico(err, k)
+		}
+
+		kvp, err := getTunIp(n)
+		if err != nil {
+			return nil, err
+		} else if kvp == nil {
+			return nil, errors.ErrorResourceDoesNotExist{}
+		}
+
+		return kvp, nil
+	}
+
 	return nil, errors.ErrorResourceDoesNotExist{Identifier: k}
 }
 
 func (c *KubeClient) listHostConfig(l model.HostConfigListOptions) ([]*model.KVPair, error) {
-	return []*model.KVPair{}, nil
+	var kvps = []*model.KVPair{}
+
+	// Short circuit if they aren't asking for information we can provide.
+	if l.Name != "" && l.Name != "IpInIpTunnelAddr" {
+		return kvps, nil
+	}
+
+	// First see if we were handed a specific host, if not list all Nodes
+	if l.Hostname == "" {
+		nodes, err := c.clientSet.Nodes().List(v1.ListOptions{})
+		if err != nil {
+			return nil, resources.K8sErrorToCalico(err, l)
+		}
+
+		for _, node := range nodes.Items {
+			kvp, err := getTunIp(&node)
+			if err != nil || kvp == nil {
+				continue
+			}
+
+			kvps = append(kvps, kvp)
+		}
+	} else {
+		node, err := c.clientSet.Nodes().Get(l.Hostname, metav1.GetOptions{})
+		if err != nil {
+			return nil, resources.K8sErrorToCalico(err, l)
+		}
+
+		kvp, err := getTunIp(node)
+		if err != nil || kvp == nil {
+			return []*model.KVPair{}, nil
+		}
+
+		kvps = append(kvps, kvp)
+	}
+
+	return kvps, nil
+}
+
+func getTunIp(n *v1.Node) (*model.KVPair, error) {
+	if n.Spec.PodCIDR == "" {
+		log.Warnf("Node %s does not have podCIDR for HostConfig", n.Name)
+		return nil, nil
+	}
+
+	ip, _, err := net.ParseCIDR(n.Spec.PodCIDR)
+	if err != nil {
+		log.Warnf("Invalid podCIDR for HostConfig: %s, %s", n.Name, n.Spec.PodCIDR)
+		return nil, err
+	}
+	// We need to get the IP for the podCIDR and increment it to the
+	// first IP in the CIDR.
+	tunIp := ip.To4()
+	tunIp[3]++
+
+	kvp := &model.KVPair{
+		Key: model.HostConfigKey{
+			Hostname: n.Name,
+			Name:     "IpInIpTunnelAddr",
+		},
+		Value: tunIp.String(),
+	}
+
+	return kvp, nil
 }

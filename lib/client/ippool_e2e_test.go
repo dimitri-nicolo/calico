@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,16 +50,11 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 
-var _ = testutils.E2eDatastoreDescribe("IPPool e2e tests", testutils.DatastoreEtcdV2 |testutils.DatastoreK8s, func(apiConfig api.CalicoAPIConfig) {
+var _ = testutils.E2eDatastoreDescribe("IPPool e2e tests", testutils.DatastoreAll, func(apiConfig api.CalicoAPIConfig) {
 
 	DescribeTable("IPPool e2e tests",
 		func(meta1, meta2 api.IPPoolMetadata, spec1, spec2 api.IPPoolSpec) {
-
-			// Create a new client and clean the datastore
-			c, err := client.New(apiConfig)
-			if err != nil {
-				log.Println("Error creating client:", err)
-			}
+			c := testutils.CreateClient(apiConfig)
 			testutils.CleanIPPools(c)
 
 			By("Updating the pool before it is created")
@@ -221,7 +216,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool e2e tests", testutils.DatastoreEt
 		// Test 4: Pass two fully populated IPPoolSpecs with two IPPoolMetadata (one IPv4 and another IPv6) and expect the series of operations to succeed.
 		Entry("Two fully populated IPPoolSpecs with two IPPoolMetadata (one IPv4 and another IPv6)",
 			api.IPPoolMetadata{CIDR: testutils.MustParseNetwork("10.0.0.0/24")},
-			api.IPPoolMetadata{CIDR: testutils.MustParseNetwork("fe80::00/120")},
+			api.IPPoolMetadata{CIDR: testutils.MustParseNetwork("2001::2/120")},
 			api.IPPoolSpec{
 				NATOutgoing: true,
 				Disabled:    true,
@@ -235,7 +230,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool e2e tests", testutils.DatastoreEt
 		// Test 5: Test starting with IPIP (cross subnet mode) and moving to no IPIP
 		Entry("IPIP (cross subnet mode) and moving to no IPIP",
 			api.IPPoolMetadata{CIDR: testutils.MustParseNetwork("10.0.0.0/24")},
-			api.IPPoolMetadata{CIDR: testutils.MustParseNetwork("fe80::00/120")},
+			api.IPPoolMetadata{CIDR: testutils.MustParseNetwork("2001::2/120")},
 			api.IPPoolSpec{
 				IPIP: &api.IPIPConfiguration{
 					Enabled: true,
@@ -265,7 +260,7 @@ var _ = testutils.E2eDatastoreDescribe("IPPool e2e tests", testutils.DatastoreEt
 	)
 
 	Describe("Checking operations perform data validation", func() {
-		c, _ := client.New(apiConfig)
+		c := testutils.CreateClient(apiConfig)
 		testutils.CleanIPPools(c)
 
 		var err error
