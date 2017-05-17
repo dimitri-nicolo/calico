@@ -72,7 +72,7 @@ var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2
 			_, outError := c.Policies().Update(&api.Policy{Metadata: meta1, Spec: spec1})
 
 			// Should return an error.
-			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(tier=default, name=policy1)").Error()))
+			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(tier=default, name=policy-1/with.foo)").Error()))
 
 			By("Create, Apply, Get and compare")
 
@@ -153,7 +153,7 @@ var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2
 			_, outError = c.Policies().Get(meta1)
 
 			// Expect an error since the policy was deleted.
-			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(tier=default, name=policy1)").Error()))
+			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(tier=default, name=policy-1/with.foo)").Error()))
 
 			// Delete the second policy with meta2.
 			outError1 = c.Policies().Delete(meta2)
