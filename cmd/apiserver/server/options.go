@@ -21,6 +21,9 @@ import (
 	"net"
 
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/registry/generic"
+	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/client-go/pkg/api"
@@ -58,8 +61,27 @@ func (o *CalicoServerOptions) Config() (apiserver.Config, error) {
 	if err := o.RecommendedOptions.ApplyTo(genericConfig); err != nil {
 		return nil, err
 	}
-
+	// Overload RESTOptionsGetter to reflect ResourcePrefix
+	genericConfig.RESTOptionsGetter = CalicoRESTOptionHelper{o.RecommendedOptions.Etcd}
 	config := apiserver.NewCalicoConfig(genericConfig)
 
 	return config, nil
+}
+
+type CalicoRESTOptionHelper struct {
+	Options *genericoptions.EtcdOptions
+}
+
+func (f CalicoRESTOptionHelper) GetRESTOptions(resource schema.GroupResource) (generic.RESTOptions, error) {
+	ret := generic.RESTOptions{
+		StorageConfig:           &f.Options.StorageConfig,
+		Decorator:               generic.UndecoratedStorage,
+		EnableGarbageCollection: f.Options.EnableGarbageCollection,
+		DeleteCollectionWorkers: f.Options.DeleteCollectionWorkers,
+		ResourcePrefix:          f.Options.StorageConfig.Prefix + "/policy",
+	}
+	if f.Options.EnableWatchCache {
+		ret.Decorator = genericregistry.StorageWithCacher
+	}
+	return ret, nil
 }

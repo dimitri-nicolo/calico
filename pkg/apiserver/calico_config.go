@@ -23,6 +23,8 @@ import (
 	"k8s.io/apiserver/pkg/server/storage"
 )
 
+const defaultEtcdPathPrefix = "/calico/v1"
+
 // calicoConfig contains a generic API server Config along with config specific to
 // the calico API server.
 type calicoConfig struct {
@@ -72,6 +74,7 @@ func (c completedCalicoConfig) NewServer() (*CalicoAPIServer, error) {
 	glog.V(4).Infoln("Installing API group")
 	calicostore := calicorest.RESTStorageProvider{}
 	apiGroupInfo, err := calicostore.NewRESTStorage(c.apiResourceConfigSource, c.genericConfig.RESTOptionsGetter)
+
 	if err != nil {
 		return nil, err
 	}

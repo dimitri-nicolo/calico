@@ -61,7 +61,6 @@ func KeyFunc(ctx genericapirequest.Context, prefix string, name string) (string,
 
 // NewREST returns a RESTStorage object that will work against API services.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
-
 	store := &genericregistry.Store{
 		Copier:      api.Scheme,
 		NewFunc:     func() runtime.Object { return &calico.Policy{} },
@@ -72,29 +71,18 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		PredicateFunc:     MatchPolicy,
 		QualifiedResource: api.Resource("policies"),
 
+		KeyFunc: func(ctx genericapirequest.Context, name string) (string, error) {
+			return KeyFunc(ctx, "", name)
+		},
+		KeyRootFunc: func(ctx genericapirequest.Context) string {
+			return KeyRootFunc(ctx, "")
+		},
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
 		DeleteStrategy: Strategy,
 	}
 
 	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: GetAttrs}
-
-	// Setup the key funcs
-	opts, err := options.RESTOptions.GetRESTOptions(store.QualifiedResource)
-	if err != nil {
-		panic(err)
-	}
-
-	opts.ResourcePrefix = "/calico/v1"
-	prefix := opts.ResourcePrefix + "/policy"
-
-	store.KeyFunc = func(ctx genericapirequest.Context, name string) (string, error) {
-		return KeyFunc(ctx, prefix, name)
-	}
-	store.KeyRootFunc = func(ctx genericapirequest.Context) string {
-		return KeyRootFunc(ctx, prefix)
-	}
-
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err) // TODO: Propagate error up
 	}
