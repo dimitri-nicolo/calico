@@ -28,6 +28,8 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/client-go/pkg/api"
 
+	"strings"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
 )
 
@@ -78,10 +80,12 @@ func (f CalicoRESTOptionHelper) GetRESTOptions(resource schema.GroupResource) (g
 		Decorator:               generic.UndecoratedStorage,
 		EnableGarbageCollection: f.Options.EnableGarbageCollection,
 		DeleteCollectionWorkers: f.Options.DeleteCollectionWorkers,
-		ResourcePrefix:          f.Options.StorageConfig.Prefix + "/policy",
 	}
 	if f.Options.EnableWatchCache {
 		ret.Decorator = genericregistry.StorageWithCacher
+	}
+	if strings.Compare(resource.Resource, "policies") == 0 {
+		ret.ResourcePrefix = "/policy/tier"
 	}
 	return ret, nil
 }

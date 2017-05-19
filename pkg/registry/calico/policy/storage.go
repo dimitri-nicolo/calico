@@ -41,7 +41,7 @@ func KeyRootFunc(ctx genericapirequest.Context, prefix string) string {
 	key := prefix
 	ns, ok := genericapirequest.NamespaceFrom(ctx)
 	if ok && len(ns) > 0 {
-		key = key + "/tier/" + ns + "/policy"
+		key = key + "/" + ns + "/policy"
 	}
 	return key
 }
@@ -72,10 +72,10 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		QualifiedResource: api.Resource("policies"),
 
 		KeyFunc: func(ctx genericapirequest.Context, name string) (string, error) {
-			return KeyFunc(ctx, "", name)
+			return KeyFunc(ctx, "/policy/tier", name)
 		},
 		KeyRootFunc: func(ctx genericapirequest.Context) string {
-			return KeyRootFunc(ctx, "")
+			return KeyRootFunc(ctx, "/policy/tier")
 		},
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,

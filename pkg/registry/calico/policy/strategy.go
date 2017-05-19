@@ -42,7 +42,7 @@ type apiServerStrategy struct {
 var Strategy = apiServerStrategy{api.Scheme, names.SimpleNameGenerator}
 
 func (apiServerStrategy) NamespaceScoped() bool {
-	return false
+	return true
 }
 
 func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
