@@ -255,7 +255,7 @@ func (h *etcdHelper) WatchList(ctx context.Context, key string, resourceVersion 
 		return nil, err
 	}
 	key = path.Join(h.pathPrefix, key)
-	fmt.Printf("In WatchList() key: %v , watchRV: %v\n\n", key, watchRV)
+	fmt.Printf("In WatchList() prefix was: %v key: %v , watchRV: %v\n\n", h.pathPrefix, key, watchRV)
 	w := newEtcdWatcher(true, h.quorum, exceptKey(key), storage.SimpleFilter(pred), h.codec, h.versioner, nil, h.transformer, h)
 	go w.etcdWatch(ctx, h.etcdKeysAPI, key, watchRV)
 	return w, nil
@@ -432,6 +432,7 @@ func (h *etcdHelper) List(ctx context.Context, key string, resourceVersion strin
 		return err
 	}
 	key = path.Join(h.pathPrefix, key)
+	fmt.Printf("etcdHelper Eventual List Key: %v\n\n", key)
 	startTime := time.Now()
 	trace.Step("About to list etcd node")
 	nodes, index, err := h.listEtcdNode(ctx, key)
