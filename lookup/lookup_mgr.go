@@ -15,6 +15,7 @@
 package lookup
 
 import (
+	"bytes"
 	"errors"
 	"net"
 	"sync"
@@ -188,14 +189,14 @@ func (m *LookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) {
 // GetPolicyIndex returns the number of tiers that have been traversed before reaching a given Policy.
 // For a profile, this means it returns the total number of tiers that apply.
 // epKey is either a *model.WorkloadEndpointKey or *model.HostEndpointKey
-func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) (tiersBefore int) {
+func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyName, tierName []byte) (tiersBefore int) {
 	switch epKey.(type) {
 	case *model.WorkloadEndpointKey:
 		ek := epKey.(*model.WorkloadEndpointKey)
 		m.epMutex.Lock()
 		tiers := m.endpointTiers[*ek]
 		for _, tier := range tiers {
-			if tier.Name == policyKey.Tier {
+			if bytes.Equal([]byte(tier.Name), tierName) {
 				break
 			} else {
 				tiersBefore++
@@ -207,7 +208,7 @@ func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.Polic
 		m.hostEpMutex.Lock()
 		tiers := append(m.hostEndpointUntrackedTiers[*ek], m.hostEndpointTiers[*ek]...)
 		for _, tier := range tiers {
-			if tier.Name == policyKey.Tier {
+			if bytes.Equal([]byte(tier.Name), tierName) {
 				break
 			} else {
 				tiersBefore++

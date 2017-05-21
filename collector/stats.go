@@ -3,11 +3,14 @@
 package collector
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"strings"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -93,36 +96,110 @@ const (
 const RuleTraceInitLen = 10
 
 var (
-	RuleTracePointConflict = errors.New("Conflict in RuleTracePoint")
-	RuleTracePointExists   = errors.New("RuleTracePoint Exists")
+	RuleTracePointConflict   = errors.New("Conflict in RuleTracePoint")
+	RuleTracePointExists     = errors.New("RuleTracePoint Exists")
+	RuleTracePointParseError = errors.New("RuleTracePoint Parse Error")
 )
+
+var ruleSep = byte('/')
 
 // RuleTracePoint represents a rule and the tier and a policy that contains
 // it. The `Index` specifies the absolute position of a RuleTracePoint in the
 // RuleTrace list. The `EpKey` contains the corresponding workload or host
 // endpoint that the policy applied to.
+// Prefix formats are:
+// - A/rule index/profile name
+// - A/rule index/policy name/tier name
 type RuleTracePoint struct {
-	TierID   string
-	PolicyID string
-	Rule     string
-	Action   RuleAction
-	Index    int
-	EpKey    interface{}
-	Ctr      Counter
+	prefix    [64]byte
+	pfxlen    int
+	tierIdx   int
+	policyIdx int
+	ruleIdx   int
+	Action    RuleAction
+	Index     int
+	EpKey     interface{}
+	Ctr       Counter
+}
+
+func lookupAction(action byte) RuleAction {
+	switch action {
+	case 'A':
+		return AllowAction
+	case 'D':
+		return DenyAction
+	case 'N':
+		return NextTierAction
+	default:
+		log.Errorf("Unknown action %v", action)
+		return NextTierAction
+	}
+}
+
+func NewRuleTracePoint(prefix [64]byte, prefixLen int, epKey interface{}) (RuleTracePoint, error) {
+	pfxlen := prefixLen
+	// Should have at least 2 separators, a action character and a rule (assuming
+	// we allow empty policy names).
+	if pfxlen < 4 {
+		return EmptyRuleTracePoint, RuleTracePointParseError
+	}
+	action := lookupAction(prefix[0])
+	ruleIdx := 2
+	policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
+	if policySep == -1 {
+		return EmptyRuleTracePoint, RuleTracePointParseError
+	}
+	policyIdx := ruleIdx + policySep + 1
+	tierSep := bytes.IndexByte(prefix[policyIdx:], ruleSep)
+	var tierIdx int
+	if tierSep == -1 {
+		tierIdx = -1
+	} else {
+		tierIdx = policyIdx + tierSep + 1
+	}
+	rtp := RuleTracePoint{}
+	rtp.prefix = prefix
+	rtp.pfxlen = pfxlen
+	rtp.ruleIdx = ruleIdx
+	rtp.policyIdx = policyIdx
+	rtp.Action = action
+	rtp.tierIdx = tierIdx
+	rtp.EpKey = epKey
+	return rtp, nil
+}
+
+func (rtp *RuleTracePoint) TierID() []byte {
+	if rtp.tierIdx == -1 {
+		return []byte("profile")
+	} else {
+		return rtp.prefix[rtp.tierIdx:rtp.pfxlen]
+	}
+}
+
+func (rtp *RuleTracePoint) PolicyID() []byte {
+	var t int
+	if rtp.tierIdx == -1 {
+		t = rtp.pfxlen
+	} else {
+		t = rtp.tierIdx - 1
+	}
+	return rtp.prefix[rtp.policyIdx:t]
+}
+
+func (rtp *RuleTracePoint) Rule() []byte {
+	return rtp.prefix[rtp.ruleIdx : rtp.policyIdx-1]
 }
 
 // Equals compares all but the Ctr field of a RuleTracePoint
 func (rtp *RuleTracePoint) Equals(cmpRtp RuleTracePoint) bool {
-	return rtp.TierID == cmpRtp.TierID &&
-		rtp.PolicyID == cmpRtp.PolicyID &&
-		rtp.Rule == cmpRtp.Rule &&
+	return rtp.prefix == cmpRtp.prefix &&
 		rtp.Action == cmpRtp.Action &&
 		rtp.Index == cmpRtp.Index &&
 		rtp.EpKey == cmpRtp.EpKey
 }
 
 func (rtp *RuleTracePoint) String() string {
-	return fmt.Sprintf("tierId='%v' policyId='%v' rule='%s' action=%v index=%v ctr={%v}", rtp.TierID, rtp.PolicyID, rtp.Rule, rtp.Action, rtp.Index, rtp.Ctr.String())
+	return fmt.Sprintf("tierId='%s' policyId='%s' rule='%s' action=%v index=%v ctr={%v}", rtp.TierID(), rtp.PolicyID(), rtp.Rule(), rtp.Action, rtp.Index, rtp.Ctr.String())
 }
 
 var EmptyRuleTracePoint = RuleTracePoint{}
@@ -151,7 +228,7 @@ func (t *RuleTrace) String() string {
 		if tp == nil {
 			continue
 		}
-		rtParts = append(rtParts, fmt.Sprintf("(%v)", tp))
+		rtParts = append(rtParts, fmt.Sprintf("(%s)", tp))
 	}
 	var epStr string
 	switch t.epKey.(type) {
@@ -183,7 +260,7 @@ func (t *RuleTrace) Path() []*RuleTracePoint {
 func (t *RuleTrace) ToString() string {
 	path := t.Path()
 	p := path[len(path)-1]
-	return fmt.Sprintf("%v/%v/%v/%v", p.TierID, p.PolicyID, p.Rule, p.Action)
+	return fmt.Sprintf("%s/%s/%s/%v", p.TierID(), p.PolicyID(), p.Rule(), p.Action)
 }
 
 func (t *RuleTrace) Action() RuleAction {
