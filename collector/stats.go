@@ -268,25 +268,26 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 // with an implicit notion of direction that comes with the use of a source and
 // destination. This is a hashable object and can be used as a map's key.
 type Tuple struct {
-	src   string
-	dst   string
+	src   [16]byte
+	dst   [16]byte
 	proto int
 	l4Src int
 	l4Dst int
 }
 
-func NewTuple(src net.IP, dst net.IP, proto int, l4Src int, l4Dst int) *Tuple {
-	return &Tuple{
-		src:   src.String(),
-		dst:   dst.String(),
+func NewTuple(src [16]byte, dst [16]byte, proto int, l4Src int, l4Dst int) *Tuple {
+	t := &Tuple{
+		src:   src,
+		dst:   dst,
 		proto: proto,
 		l4Src: l4Src,
 		l4Dst: l4Dst,
 	}
+	return t
 }
 
 func (t *Tuple) String() string {
-	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", t.src, t.dst, t.proto, t.l4Src, t.l4Dst)
+	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", net.IP(t.src[:16]).String(), net.IP(t.dst[:16]).String(), t.proto, t.l4Src, t.l4Dst)
 }
 
 // Data contains metadata and statistics such as rule counters and age of a

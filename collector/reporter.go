@@ -190,7 +190,7 @@ func (pr *PrometheusReporter) Report(mu *MetricUpdate) error {
 }
 
 func (pr *PrometheusReporter) reportMetric(mu *MetricUpdate) {
-	key := AggregateKey{mu.policy, mu.tuple.src}
+	key := AggregateKey{mu.policy, string(mu.tuple.src[:16])}
 	value, ok := pr.aggStats[key]
 	if ok {
 		if pr.deleteCandidates.Contains(key) {
@@ -222,7 +222,7 @@ func (pr *PrometheusReporter) Expire(mu *MetricUpdate) error {
 }
 
 func (pr *PrometheusReporter) expireMetric(mu *MetricUpdate) {
-	key := AggregateKey{mu.policy, mu.tuple.src}
+	key := AggregateKey{mu.policy, string(mu.tuple.src[:16])}
 	value, ok := pr.aggStats[key]
 	if !ok || !value.refs.Contains(mu.tuple) {
 		return
@@ -306,9 +306,9 @@ func (sr *SyslogReporter) Start() {
 func (sr *SyslogReporter) Report(mu *MetricUpdate) error {
 	f := log.Fields{
 		"proto":   strconv.Itoa(mu.tuple.proto),
-		"srcIP":   mu.tuple.src,
+		"srcIP":   string(mu.tuple.src[:16]),
 		"srcPort": strconv.Itoa(mu.tuple.l4Src),
-		"dstIP":   mu.tuple.dst,
+		"dstIP":   string(mu.tuple.dst[:16]),
 		"dstPort": strconv.Itoa(mu.tuple.l4Dst),
 		"policy":  mu.policy,
 		"action":  DenyAction,

@@ -5,7 +5,6 @@ package collector
 import (
 	"bytes"
 	"errors"
-	"net"
 	"strings"
 	"time"
 
@@ -18,7 +17,7 @@ import (
 )
 
 type epLookup interface {
-	GetEndpointKey(addr net.IP) (interface{}, error)
+	GetEndpointKey([16]byte) (interface{}, error)
 	GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) int
 }
 
