@@ -10,6 +10,8 @@ using Calico.  In most cases we provide worked examples using manual setup on
 your own servers, a quick set-up in a virtualized environment using Vagrant and
 a number of cloud services.
 
+- [Setting up Tigera Networking Essentials](essentials)
+
 - [Calico with Kubernetes](kubernetes)
 - [Calico with Mesos](mesos)
   - [Calico with DC/OS](mesos/installation/dc-os)
