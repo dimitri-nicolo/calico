@@ -148,11 +148,15 @@ func parseNflog(m []byte) (NflogPacket, error) {
 			nflogPacket.Tuple, _ = parsePacketHeader(nflogPacket.Header.HwProtocol, attr.Value)
 			nflogPacket.Bytes = len(attr.Value)
 		case nfnl.NFULA_PREFIX:
-			nflogPacket.Prefix = string(attr.Value)
+			p := NflogPrefix{Len: len(attr.Value) - 1}
+			copy(p.Prefix[:], attr.Value[:len(attr.Value)-1])
+			nflogPacket.Prefix = p
 		case nfnl.NFULA_GID:
 			nflogPacket.Gid = int(native.Uint32(attr.Value[0:4]))
 		}
 	}
+	nflogPacket.Prefix.Packets = 1
+	nflogPacket.Prefix.Bytes = nflogPacket.Bytes
 	return nflogPacket, nil
 }
 

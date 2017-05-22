@@ -29,11 +29,22 @@ type NflogPacketTuple struct {
 	L4Dst NflogL4Info
 }
 
+type NflogPrefix struct {
+	Prefix  [64]byte
+	Len     int
+	Packets int
+	Bytes   int
+}
+
+func (np *NflogPrefix) Equals(cmp *NflogPrefix) bool {
+	return np.Prefix == cmp.Prefix
+}
+
 type NflogPacket struct {
 	Header    NflogPacketHeader
 	Mark      int
 	Timestamp NflogPacketTimestamp
-	Prefix    string
+	Prefix    NflogPrefix
 	Gid       int
 	Tuple     NflogPacketTuple
 	Bytes     int
