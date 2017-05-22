@@ -2,8 +2,6 @@
 title: Obtaining Tigera Networking Essentials
 ---
 
-## Obtaining Tigera Networking Essentials
-
 Tigera Networking Essentials consists of the open source Project Calico, with
 complementary monitoring and management tools.  Most of the software is open
 source, but 
