@@ -49,3 +49,8 @@ type NflogPacket struct {
 	Tuple     NflogPacketTuple
 	Bytes     int
 }
+
+type NflogPacketAggregate struct {
+	Tuple    *NflogPacketTuple
+	Prefixes []NflogPrefix
+}

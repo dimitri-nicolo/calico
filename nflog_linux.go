@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"syscall"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/tigera/nfnetlink/nfnl"
@@ -22,7 +23,7 @@ const (
 	ProtoUdp  = 17
 )
 
-func NflogSubscribe(groupNum int, bufSize int, ch chan<- NflogPacket, done <-chan struct{}) error {
+func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
 	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
 	if err != nil {
 		return err
@@ -85,8 +86,9 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- NflogPacket, done <-cha
 		<-done
 		sock.Close()
 	}()
+
+	resChan := make(chan [][]byte)
 	go func() {
-		defer close(ch)
 		logCtx := log.WithFields(log.Fields{
 			"groupNum": groupNum,
 		})
@@ -111,14 +113,57 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- NflogPacket, done <-cha
 				}
 				res = append(res, m.Data)
 			}
-			for _, m := range res {
-				msg := nfnl.DeserializeNfGenMsg(m)
-				nflogPacket, err := parseNflog(m[msg.Len():])
-				if err != nil {
-					logCtx.Warnf("Error parsing NFLOG %v", err)
-					continue
+			resChan <- res
+		}
+	}()
+	go func() {
+		defer close(ch)
+		logCtx := log.WithFields(log.Fields{
+			"groupNum": groupNum,
+		})
+		sendTicker := time.NewTicker(time.Duration(10) * time.Millisecond)
+		aggregate := make(map[NflogPacketTuple]*NflogPacketAggregate)
+		for {
+			select {
+			case res := <-resChan:
+				for _, m := range res {
+					msg := nfnl.DeserializeNfGenMsg(m)
+					nflogPacket, err := parseNflog(m[msg.Len():])
+					if err != nil {
+						logCtx.Warnf("Error parsing NFLOG %v", err)
+						continue
+					}
+					//
+					var pktAggr *NflogPacketAggregate
+					updatePrefix := true
+					pktAggr, ok := aggregate[*nflogPacket.Tuple]
+					if ok {
+						for i, prefix := range pktAggr.Prefixes {
+							if prefix.Equals(&nflogPacket.Prefix) {
+								prefix.Packets++
+								prefix.Bytes += nflogPacket.Bytes
+								pktAggr.Prefixes[i] = prefix
+								updatePrefix = false
+								break
+							}
+						}
+						// We reached here, so we didn't find a prefix. Appending this prefix
+						// is handled below.
+					} else {
+						pktAggr = &NflogPacketAggregate{
+							Tuple: nflogPacket.Tuple,
+						}
+					}
+					if updatePrefix {
+						pktAggr.Prefixes = append(pktAggr.Prefixes, nflogPacket.Prefix)
+						aggregate[*nflogPacket.Tuple] = pktAggr
+					}
 				}
-				ch <- nflogPacket
+			case <-sendTicker.C:
+				for t, pktAddr := range aggregate {
+					ch <- pktAddr
+					delete(aggregate, t)
+				}
 			}
 		}
 	}()
