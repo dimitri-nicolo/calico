@@ -26,11 +26,11 @@ type NflogPacketTuple struct {
 }
 
 type NflogPacket struct {
-	Header    NflogPacketHeader
+	Header    *NflogPacketHeader
 	Mark      int
-	Timestamp NflogPacketTimestamp
+	Timestamp *NflogPacketTimestamp
 	Prefix    string
 	Gid       int
-	Tuple     NflogPacketTuple
+	Tuple     *NflogPacketTuple
 	Bytes     int
 }
