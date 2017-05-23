@@ -364,10 +364,6 @@ func (d *InternalDataplane) Start() {
 	go d.ifaceMonitor.MonitorInterfaces()
 
 	// TODO (Matt): This isn't really in keeping with the surrounding code.
-	ctSink := make(chan collector.StatUpdate)
-	conntrackDataSource := collector.NewConntrackDataSource(d.lookupManager, ctSink)
-	conntrackDataSource.Start()
-
 	nfIngressSink := make(chan collector.StatUpdate)
 	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, collector.DirIn, d.config.NfNetlinkBufSize)
 	nflogIngressDataSource.Start()
@@ -388,7 +384,7 @@ func (d *InternalDataplane) Start() {
 		rm.RegisterMetricsReporter(syslogReporter)
 	}
 	rm.Start()
-	datasources := []<-chan collector.StatUpdate{ctSink, nfIngressSink, nfEgressSink}
+	datasources := []<-chan collector.StatUpdate{nfIngressSink, nfEgressSink}
 	statsCollector := collector.NewCollector(datasources, rm, collectorConfig)
 	statsCollector.Start()
 }
