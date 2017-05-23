@@ -2,7 +2,6 @@ package nfnetlink
 
 import (
 	"errors"
-	"net"
 
 	"github.com/tigera/nfnetlink/nfnl"
 )
@@ -34,8 +33,8 @@ type CtL4Dst struct {
 // TODO(doublek): Methods to increment and reset packet counters
 
 type CtTuple struct {
-	Src        net.IP
-	Dst        net.IP
+	Src        [16]byte
+	Dst        [16]byte
 	L3ProtoNum int
 	ProtoNum   int
 	Zone       int
@@ -46,8 +45,8 @@ type CtTuple struct {
 var EmptyCtTuple = CtTuple{}
 
 type CtNat struct {
-	MinIp net.IP
-	MaxIP net.IP
+	MinIp [16]byte
+	MaxIP [16]byte
 	L4Min CtL4Src
 	L4Max CtL4Src
 }
