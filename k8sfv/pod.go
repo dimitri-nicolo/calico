@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os/exec"
 	"strings"
 	"sync"
 
@@ -123,8 +124,21 @@ func createPod(clientset *kubernetes.Clientset, d deployment, nsName string, spe
 		panicIfError(err)
 		err = netlink.LinkSetNsFd(podIf, int(podNamespace.Fd()))
 		panicIfError(err)
-		err = podNamespace.Do(func(_ ns.NetNS) error {
-			return netlink.LinkSetUp(podIf)
+		err = podNamespace.Do(func(_ ns.NetNS) (err error) {
+			err = netlink.LinkSetUp(podIf)
+			if err != nil {
+				return
+			}
+			err = runCommand("ip", "addr", "add", ip+"/32", "dev", veth.PeerName)
+			if err != nil {
+				return
+			}
+			err = runCommand("ip", "route", "add", "169.254.169.254/32", "dev", veth.PeerName)
+			if err != nil {
+				return
+			}
+			err = runCommand("ip", "route", "add", "default", "via", "169.254.169.254", "dev", veth.PeerName)
+			return
 		})
 		panicIfError(err)
 
@@ -226,3 +240,26 @@ func cleanupAllPods(clientset *kubernetes.Clientset, nsPrefix string) {
 var zeroGracePeriod int64 = 0
 
 var deleteImmediately = &v1.DeleteOptions{GracePeriodSeconds: &zeroGracePeriod}
+
+func runCommand(command string, args ...string) error {
+	cmd := exec.Command(command, args...)
+	log.Infof("Running '%s %s'", cmd.Path, strings.Join(cmd.Args, " "))
+	output, err := cmd.CombinedOutput()
+	log.Infof("output: %v", string(output))
+	return err
+}
+
+func runNmap(pod1, pod2 *v1.Pod) {
+	log.WithField("from", pod1.Status.PodIP).WithField("to", pod2.Status.PodIP).Info("Run nmap")
+
+	// Lock mutex, as we do pod cleanup from multiple goroutines.
+	localNetworkingMutex.Lock()
+	defer localNetworkingMutex.Unlock()
+
+	err := localNetworkingMap[pod1.ObjectMeta.Namespace+"."+pod1.ObjectMeta.Name].namespace.Do(func(_ ns.NetNS) (err error) {
+		err = runCommand("ping", "-c", "1", "-W", "1", pod2.Status.PodIP)
+		err = runCommand("nmap", "-Pn", "-T5", pod2.Status.PodIP)
+		return
+	})
+	panicIfError(err)
+}
