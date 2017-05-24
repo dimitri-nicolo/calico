@@ -171,8 +171,8 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	return nil
 }
 
-func parseNflog(m []byte) (NflogPacket, error) {
-	nflogPacket := NflogPacket{}
+func parseNflog(m []byte) (*NflogPacket, error) {
+	nflogPacket := &NflogPacket{}
 	attrs, err := nfnl.ParseNetfilterAttr(m)
 	if err != nil {
 		return nflogPacket, err
@@ -183,7 +183,7 @@ func parseNflog(m []byte) (NflogPacket, error) {
 		native := binary.BigEndian
 		switch attr.Attr.Type {
 		case nfnl.NFULA_PACKET_HDR:
-			header := NflogPacketHeader{}
+			header := &NflogPacketHeader{}
 			header.HwProtocol = int(native.Uint16(attr.Value[0:2]))
 			header.Hook = int(attr.Value[2])
 			nflogPacket.Header = header
@@ -205,8 +205,8 @@ func parseNflog(m []byte) (NflogPacket, error) {
 	return nflogPacket, nil
 }
 
-func parsePacketHeader(hwProtocol int, nflogPayload []byte) (NflogPacketTuple, error) {
-	tuple := NflogPacketTuple{}
+func parsePacketHeader(hwProtocol int, nflogPayload []byte) (*NflogPacketTuple, error) {
+	tuple := &NflogPacketTuple{}
 	switch hwProtocol {
 	case IPv4Proto:
 		ipHeader := pkt.ParseIPv4Header(nflogPayload)
