@@ -42,5 +42,7 @@ Endpoints matching selector role=='endfront':
 
 ## See also
 
+-  [calicoq eval]({{site.baseurl}}/{{page.version}}/reference/calicoq/eval) for
+   more detail about the underlying `calico eval` command.
 -  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
    more information about the Calico selector-based policy model.

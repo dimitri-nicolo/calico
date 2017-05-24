@@ -29,12 +29,15 @@ commands to allow you to confirm that your security policies are configured
 as intended.
 
 - The [endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoq/endpoint)
-  command shows you the Calico profiles and policies that relate to a specified
+  command shows you the Calico profiles and policies that relate to a given
   endpoint.
 - The [eval]({{site.baseurl}}/{{page.version}}/reference/calicoq/eval) command
   displays the endpoints that a selector selects.
 - The [host]({{site.baseurl}}/{{page.version}}/reference/calicoq/host) command
-  displays the policies that apply to endpoints on a host.
+  displays the profiles and policies that are relevant to all endpoints on a
+  given host.
+- The [policy]({{site.baseurl}}/{{page.version}}/reference/calicoq/policy)
+  command shows the endpoints that are relevant to a given policy.
 - The [version]({{site.baseurl}}/{{page.version}}/reference/calicoq/version)
   command displays the version of the tool.
 

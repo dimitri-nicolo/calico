@@ -30,8 +30,8 @@ suppressed by giving the `-r` option.
 > ```
 >
 > The answer is that it depends on the cluster defaults.  Most commonly those
-> defaults are for all *egress* traffic from a workload to be *allowed*, and for
-> all *ingress* traffic to a workload to be *denied* - and in that case (A) will
+> defaults are for all *egress* traffic from an endpoint to be *allowed*, and for
+> all *ingress* traffic to an endpoint to be *denied* - and in that case (A) will
 > have the intended effect, because it opens a pinhole in the generally closed
 > ingress policy on the server pods; whereas (B) would have no effect and would
 > not allow the intended connectivity.
