@@ -4,6 +4,7 @@ package collector
 
 import (
 	"time"
+	"testing"
 
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/lookup"
@@ -409,4 +410,27 @@ func (lm *mockLookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) 
 
 func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) int {
 	return 0
+}
+
+
+func BenchmarkNflogPktToStat(b *testing.B) {
+       var nflogSource *NflogDataSource
+       var sink chan StatUpdate
+       var dataFeeder chan nfnetlink.NflogPacket
+       dir := DirIn
+       epMap := map[[16]byte]*model.WorkloadEndpointKey{
+               localIp1: localWlEPKey1,
+               localIp2: localWlEPKey2,
+       }
+       lm := newMockLookupManager(epMap)
+       sink = make(chan StatUpdate)
+       done := make(chan struct{})
+       dataFeeder = make(chan nfnetlink.NflogPacket)
+       gn := 1200
+       nflogSource = newNflogDataSource(lm, sink, gn, dir, 65535, dataFeeder, done)
+       b.ResetTimer()
+       b.ReportAllocs()
+       for n := 0; n < b.N; n++ {
+               nflogSource.convertNflogPktToStat(inPkt)
+       }
 }
