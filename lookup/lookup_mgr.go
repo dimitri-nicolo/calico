@@ -73,23 +73,23 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		for _, ipv4 := range msg.Endpoint.Ipv4Nets {
 			addr, _, err := net.ParseCIDR(ipv4)
 			if err != nil {
-				log.Warn("Error parsing CIDR ", ipv4)
+				log.Warnf("Error parsing CIDR %v", ipv4)
 				continue
 			}
 			addrStr := addr.String()
-			log.Debug("Stored IPv4 endpoint: ", wlEpKey, ": ", addrStr)
+			log.Debugf("Stored IPv4 endpoint: %v: %v", wlEpKey, addrStr)
 			m.endpoints[addrStr] = &wlEpKey
 			m.endpointsReverse[wlEpKey] = &addrStr
 		}
 		for _, ipv6 := range msg.Endpoint.Ipv6Nets {
 			addr, _, err := net.ParseCIDR(ipv6)
 			if err != nil {
-				log.Warn("Error parsing CIDR ", ipv6)
+				log.Warnf("Error parsing CIDR %v", ipv6)
 				continue
 			}
 			// TODO (Matt): IP.String() does funny things to IPv6 mapped IPv4 addresses.
 			addrStr := addr.String()
-			log.Debug("Stored IPv6 endpoint: ", wlEpKey, ": ", addrStr)
+			log.Debugf("Stored IPv6 endpoint: %v: %v", wlEpKey, addrStr)
 			m.endpoints[addrStr] = &wlEpKey
 			m.endpointsReverse[wlEpKey] = &addrStr
 		}
@@ -198,31 +198,25 @@ func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.Polic
 		ek := epKey.(*model.WorkloadEndpointKey)
 		m.epMutex.RLock()
 		tiers := m.endpointTiers[*ek]
-		log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
 		for _, tier := range tiers {
-			log.Debug("Checking endpoint tier ", tier)
 			if tier.Name == policyKey.Tier {
 				break
 			} else {
 				tiersBefore++
 			}
 		}
-		log.Debug("TiersBefore: ", tiersBefore)
 		m.epMutex.RUnlock()
 	case *model.HostEndpointKey:
 		ek := epKey.(*model.HostEndpointKey)
 		m.hostEpMutex.RLock()
 		tiers := append(m.hostEndpointUntrackedTiers[*ek], m.hostEndpointTiers[*ek]...)
-		log.Debug("Checking tiers ", tiers, " against policy ", policyKey)
 		for _, tier := range tiers {
-			log.Debug("Checking endpoint tier ", tier)
 			if tier.Name == policyKey.Tier {
 				break
 			} else {
 				tiersBefore++
 			}
 		}
-		log.Debug("TiersBefore: ", tiersBefore)
 		m.hostEpMutex.RUnlock()
 	}
 	return tiersBefore

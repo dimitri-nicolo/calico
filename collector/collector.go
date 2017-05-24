@@ -69,13 +69,13 @@ func (c *Collector) startStatsCollectionAndReporting() {
 	for {
 		select {
 		case update := <-c.mux:
-			log.Info("Stats collector received update: ", update)
+			log.Debugf("Stats collector received update: %v", update)
 			c.applyStatUpdate(update)
 		case data := <-c.statAgeTimeout:
-			log.Info("Stats entry timed out: ", data)
+			log.Debugf("Stats entry timed out: %v", data)
 			c.expireEntry(data)
 		case <-c.reporterTicker.C:
-			log.Info("Metrics reporter timer ticked")
+			log.Debug("Metrics reporter timer ticked")
 			c.reportMetrics()
 		case <-c.sigChan:
 			c.dumpStats()
@@ -120,7 +120,6 @@ func (c *Collector) mergeDataSources() {
 
 func (c *Collector) applyStatUpdate(update StatUpdate) {
 	data, ok := c.epStats[update.Tuple]
-	log.Debug("Stats update: ", update)
 	if !ok {
 		// The entry does not exist. Go ahead and create one.
 		data = NewData(
@@ -160,7 +159,6 @@ func (c *Collector) applyStatUpdate(update StatUpdate) {
 }
 
 func (c *Collector) expireEntry(data *Data) {
-	log.Infof("Timer expired for entry: %v", data)
 	tuple := data.Tuple
 	c.reportData(data)
 	if data.EgressRuleTrace.Action() == DenyAction {
@@ -185,7 +183,6 @@ func (c *Collector) registerAgeTimer(data *Data) {
 }
 
 func (c *Collector) reportMetrics() {
-	log.Debug("Aggregating and reporting metrics")
 	for _, data := range c.epStats {
 		c.reportData(data)
 	}
