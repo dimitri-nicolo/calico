@@ -119,7 +119,6 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*S
 		return nil, errors.New("Couldn't find endpoint info for NFLOG packet")
 	}
 
-	log.Debug("Built NFLOG stat update: ", statUpdate)
 	return statUpdate, nil
 }
 
@@ -198,13 +197,12 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 	// The last entry is the tuple entry for endpoints
 	ctTuple, err := ctEntry.OriginalTuple()
 	if err != nil {
-		log.Error("Error when extracting OriginalTuple:", err)
+		log.Errorf("Error when extracting OriginalTuple: '%v'", err)
 		return statUpdates, err
 	}
 
 	// We care about DNAT only which modifies the destination parts of the OriginalTuple.
 	if ctEntry.IsDNAT() {
-		log.Debugf("Entry is DNAT %+v", ctEntry)
 		ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
 		if err != nil {
 			log.Error("Error when extracting tuple without DNAT:", err)
@@ -233,9 +231,6 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
 		statUpdates = append(statUpdates, *su)
-	}
-	for _, update := range statUpdates {
-		log.Debug("Built conntrack stat update: ", update)
 	}
 	return statUpdates, nil
 }
@@ -290,7 +285,7 @@ func parsePrefix(prefix string) (tier, policy, rule string, action RuleAction) {
 		// which could be nfnetlink.
 		tier = string(bytes.Trim([]byte(prefixChunks[3]), "\x00"))
 	} else {
-		log.Error("Unable to parse NFLOG prefix ", prefix)
+		log.Errorf("Unable to parse NFLOG prefix %v", prefix)
 	}
 
 	action = lookupAction(prefixChunks[0])
@@ -300,7 +295,6 @@ func parsePrefix(prefix string) (tier, policy, rule string, action RuleAction) {
 }
 
 func lookupRule(lum epLookup, prefix string, epKey interface{}) RuleTracePoint {
-	log.Infof("Looking up rule prefix %s", prefix)
 	tier, policy, rule, action := parsePrefix(prefix)
 	return RuleTracePoint{
 		TierID:   tier,
