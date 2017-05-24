@@ -122,7 +122,6 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacket, done <-ch
 			}
 		}
 	}()
-
 	return nil
 }
 
@@ -130,6 +129,9 @@ func parseNflog(m []byte) (*NflogPacket, error) {
 	nflogPacket := &NflogPacket{}
 	attrs, err := nfnl.ParseNetfilterAttr(m)
 	if err != nil {
+		// TODO(doublek): Exported AttrPool is a bit ugly, need to keep this local to
+		// parseNflog.
+		nfnl.AttrPool.Put(attrs)
 		return nflogPacket, err
 	}
 
@@ -153,6 +155,7 @@ func parseNflog(m []byte) (*NflogPacket, error) {
 			nflogPacket.Gid = int(native.Uint32(attr.Value[0:4]))
 		}
 	}
+	nfnl.AttrPool.Put(attrs)
 	return nflogPacket, nil
 }
 

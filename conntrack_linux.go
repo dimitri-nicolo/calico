@@ -38,6 +38,7 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 	ctentry := CtEntry{}
 	attrs, err := nfnl.ParseNetfilterAttr(m)
 	if err != nil {
+		nfnl.AttrPool.Put(attrs)
 		return ctentry, err
 	}
 
@@ -51,12 +52,14 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 		switch attrType {
 		case nfnl.CTA_TUPLE_ORIG:
 			if !isNestedAttr {
+				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			tuple, _ := parseConntrackTuple(attr.Value, family)
 			ctentry.OriginalTuples = append(ctentry.OriginalTuples, tuple)
 		case nfnl.CTA_TUPLE_REPLY:
 			if !isNestedAttr {
+				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			tuple, _ := parseConntrackTuple(attr.Value, family)
@@ -69,11 +72,13 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 			ctentry.Mark = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_COUNTERS_ORIG:
 			if !isNestedAttr {
+				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			ctentry.OriginalCounters, _ = parseConntrackCounters(attr.Value)
 		case nfnl.CTA_COUNTERS_REPLY:
 			if !isNestedAttr {
+				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			ctentry.ReplyCounters, _ = parseConntrackCounters(attr.Value)
@@ -87,12 +92,14 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 			ctentry.Secmark = int(native.Uint32(attr.Value[0:4]))
 		}
 	}
+	nfnl.AttrPool.Put(attrs)
 	return ctentry, nil
 }
 
 func parseConntrackTuple(value []byte, family uint8) (CtTuple, error) {
 	attrs, err := nfnl.ParseNetfilterAttr(value)
 	if err != nil {
+		nfnl.AttrPool.Put(attrs)
 		return CtTuple{}, err
 	}
 	tuple := CtTuple{}
@@ -106,11 +113,13 @@ func parseConntrackTuple(value []byte, family uint8) (CtTuple, error) {
 		switch attrType {
 		case nfnl.CTA_TUPLE_IP:
 			if !isNestedAttr {
+				nfnl.AttrPool.Put(attrs)
 				return tuple, errors.New("Nested attribute value expected")
 			}
 			parseTupleIp(&tuple, attr.Value)
 		case nfnl.CTA_TUPLE_PROTO:
 			if !isNestedAttr {
+				nfnl.AttrPool.Put(attrs)
 				return tuple, errors.New("Nested attribute value expected")
 			}
 			parseTupleProto(&tuple, attr.Value)
@@ -119,14 +128,17 @@ func parseConntrackTuple(value []byte, family uint8) (CtTuple, error) {
 		}
 	}
 	if err != nil {
+		nfnl.AttrPool.Put(attrs)
 		return CtTuple{}, err
 	}
+	nfnl.AttrPool.Put(attrs)
 	return tuple, nil
 }
 
 func parseTupleIp(tuple *CtTuple, value []byte) error {
 	attrs, err := nfnl.ParseNetfilterAttr(value)
 	if err != nil {
+		nfnl.AttrPool.Put(attrs)
 		return err
 	}
 	for _, attr := range attrs {
@@ -137,12 +149,14 @@ func parseTupleIp(tuple *CtTuple, value []byte) error {
 			copy(tuple.Dst[:], net.IP(attr.Value).To16()[:16])
 		}
 	}
+	nfnl.AttrPool.Put(attrs)
 	return err
 }
 
 func parseTupleProto(tuple *CtTuple, value []byte) error {
 	attrs, err := nfnl.ParseNetfilterAttr(value)
 	if err != nil {
+		nfnl.AttrPool.Put(attrs)
 		return err
 	}
 	native := binary.BigEndian
@@ -162,6 +176,7 @@ func parseTupleProto(tuple *CtTuple, value []byte) error {
 			tuple.L4Dst.Code = int(attr.Value[0])
 		}
 	}
+	nfnl.AttrPool.Put(attrs)
 	return err
 }
 
@@ -169,6 +184,7 @@ func parseConntrackCounters(value []byte) (CtCounters, error) {
 	counters := CtCounters{}
 	attrs, err := nfnl.ParseNetfilterAttr(value)
 	if err != nil {
+		nfnl.AttrPool.Put(attrs)
 		return counters, err
 	}
 	native := binary.BigEndian
@@ -184,5 +200,6 @@ func parseConntrackCounters(value []byte) (CtCounters, error) {
 			counters.Bytes = int(native.Uint32(attr.Value[0:8]))
 		}
 	}
+	nfnl.AttrPool.Put(attrs)
 	return counters, err
 }
