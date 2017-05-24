@@ -29,9 +29,9 @@ type Config struct {
 // and stores them as a Data object in a map keyed by Tuple.
 // All data source channels must be specified when creating the collector.
 type Collector struct {
-	sources        []<-chan StatUpdate
+	sources        []<-chan *StatUpdate
 	epStats        map[Tuple]*Data
-	mux            chan StatUpdate
+	mux            chan *StatUpdate
 	statAgeTimeout chan *Data
 	reporterTicker *jitter.Ticker
 	sigChan        chan os.Signal
@@ -40,11 +40,11 @@ type Collector struct {
 	reporterMgr    *ReporterManager
 }
 
-func NewCollector(sources []<-chan StatUpdate, rm *ReporterManager, config *Config) *Collector {
+func NewCollector(sources []<-chan *StatUpdate, rm *ReporterManager, config *Config) *Collector {
 	return &Collector{
 		sources:        sources,
 		epStats:        make(map[Tuple]*Data),
-		mux:            make(chan StatUpdate),
+		mux:            make(chan *StatUpdate, 5000),
 		statAgeTimeout: make(chan *Data),
 		reporterTicker: jitter.NewTicker(ExportingInterval, ExportingInterval/10),
 		sigChan:        make(chan os.Signal, 1),
@@ -69,10 +69,8 @@ func (c *Collector) startStatsCollectionAndReporting() {
 	for {
 		select {
 		case update := <-c.mux:
-			log.Debugf("Stats collector received update: %v", update)
 			c.applyStatUpdate(update)
 		case data := <-c.statAgeTimeout:
-			log.Debugf("Stats entry timed out: %v", data)
 			c.expireEntry(data)
 		case <-c.reporterTicker.C:
 			log.Debug("Metrics reporter timer ticked")
@@ -110,7 +108,7 @@ func (c *Collector) mergeDataSources() {
 	// Can't use a select here as we don't really know the number of sources that
 	// we have.
 	for _, source := range c.sources {
-		go func(input <-chan StatUpdate) {
+		go func(input <-chan *StatUpdate) {
 			for {
 				c.mux <- <-input
 			}
@@ -118,7 +116,7 @@ func (c *Collector) mergeDataSources() {
 	}
 }
 
-func (c *Collector) applyStatUpdate(update StatUpdate) {
+func (c *Collector) applyStatUpdate(update *StatUpdate) {
 	data, ok := c.epStats[update.Tuple]
 	if !ok {
 		// The entry does not exist. Go ahead and create one.
