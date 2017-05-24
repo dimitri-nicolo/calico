@@ -4,6 +4,9 @@ default: all
 all: test
 test: ut
 
+vendor:
+	glide install --strip-vendor
+
 update-vendor:
 	glide up --strip-vendor
 
@@ -14,7 +17,7 @@ ut:
 force:
 	true
 
-bin/calicoq: force
+bin/calicoq: vendor protobuf force
 	mkdir -p bin
 	go build -o "$@" "./calicoq/calicoq.go"
 
@@ -39,4 +42,3 @@ clean:
 	-rm -rf build bin release
 	-docker rm -f calico-build
 	-docker rmi calico/build
-
