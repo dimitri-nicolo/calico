@@ -32,4 +32,13 @@ as intended.
   displays the policies that apply to endpoints on a host.
 - The [eval]({{site.baseurl}}/{{page.version}}/reference/calicoq/eval) command
   displays the workloads that a selector selects.
-- The `calicoq version` command displays the version of the tool.
+- The [version]({{site.baseurl}}/{{page.version}}/reference/calicoq/version)
+  command displays the version of the tool.
+
+## General options
+
+```
+-c --config=<CONFIG>      Path to the file containing connection
+                          configuration in YAML or JSON format.
+                          [default: /etc/calico/calicoctl.cfg]
+```

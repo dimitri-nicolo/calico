@@ -2,115 +2,57 @@
 title: calicoq eval
 ---
 
-`calicoq eval <selector>` is used to display the workloads that are matched by
+`calicoq eval <selector>` is used to display the endpoints that are matched by
 `<selector>`.
 
-> **Note:** Selectors can be used in three contexts in Calico security policy
-> definition.
+> **Recap:** Selectors can be used in three contexts in Calico security policy
+> definitions.
 >
-> - A selector is used in the definition of each Calico Policy (or Kubernetes
->   NetworkPolicy) object, to specify the endpoints (pods) that that Policy
->   applies to (`spec.selector`).
+> - A selector is used in the definition of each Calico Policy object, to
+>   specify the endpoints (pods) that that Policy applies to (`spec.selector`).
 >
-> - A selector can be used in each policy Rule, to specify that the Rule only
+> - A selector can be used in each ingress Rule, to specify that the Rule only
 >   applies to packets sent from a particular set of endpoints
->   (`source.selector`), or to packets from all endpoints except a particular set
->   (`source.notSelector`).
+>   (`source.selector`), or to packets from all endpoints except a particular
+>   set (`source.notSelector`).
 >
-> - A selector can be used in each policy Rule, to specify that the Rule only
+> - A selector can be used in each egress Rule, to specify that the Rule only
 >   applies to packets sent to a particular set of endpoints
->   (`destination.selector`), or to packets to all endpoints except a particular
->   set (`destination.notSelector`).
+>   (`destination.selector`), or to packets to all endpoints except a
+>   particular set (`destination.notSelector`).
+>
+> Kubernetes NetworkPolicy definitions are similar but less general: they do
+> not support egress rules or the `notSelector` options.
 
-
-Read the [calicoctl command line interface user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/)
-for a full list of calicoctl commands.
-
-## Displaying the help text for 'calicoq eval' command
-
-Run `calicoq eval --help` to display the following help menu for the
-command.
-
-```
-Usage:
-  calicoctl create --filename=<FILENAME> [--skip-exists] [--config=<CONFIG>]
-
-Examples:
-  # Create a policy using the data in policy.yaml.
-  calicoctl create -f ./policy.yaml
-
-  # Create a policy based on the JSON passed into stdin.
-  cat policy.json | calicoctl create -f -
-
-Options:
-  -h --help                 Show this screen.
-  -f --filename=<FILENAME>  Filename to use to create the resource.  If set to
-                            "-" loads from stdin.
-     --skip-exists          Skip over and treat as successful any attempts to
-                            create an entry that already exists.
-  -c --config=<CONFIG>      Path to the file containing connection
-                            configuration in YAML or JSON format.
-                            [default: /etc/calico/calicoctl.cfg]
-
-Description:
-  The create command is used to create a set of resources by filename or stdin.
-  JSON and YAML formats are accepted.
-
-  Valid resource types are:
-
-    * node
-    * bgpPeer
-    * hostEndpoint
-    * workloadEndpoint
-    * ipPool
-    * policy
-    * profile
-
-  Attempting to create a resource that already exists is treated as a
-  terminating error unless the --skip-exists flag is set.  If this flag is set,
-  resources that already exist are skipped.
-
-  The output of the command indicates how many resources were successfully
-  created, and the error reason if an error occurred.  If the --skip-exists
-  flag is set then skipped resources are included in the success count.
-
-  The resources are created in the order they are specified.  In the event of a
-  failure creating a specific resource it is possible to work out which
-  resource failed based on the number of resources successfully created.
-```
+Given a `<selector>` expression, therefore, it is useful to compute and display
+the endpoints that match that expression.
 
 ### Examples
 
+To find all endpoints that match the `role=='frontend'` selector, i.e. that
+have a `role` label with value `frontend`:
 ```
-# Evaluate a selector that matches some host endpoints.
-calicoq eval "role=='frontend'"
+$ calicoq eval "role=='frontend'"
 Endpoints matching selector role=='frontend':
   Host endpoint webserver1/eth0
   Host endpoint webserver2/eth0
+```
 
-# Evaluate a selector that matches a workload endpoint (in this case a
-# Kubernetes pod).
-calicoq eval "has(app)"
+To find all endpoints that have an `app` label (with any value):
+```
+$ calicoq eval "has(app)"
 Endpoints matching selector has(app):
   Workload endpoint rack1-host1/k8s/default.frontend-5gs43/eth0
+```
+(In this case the answer is a Kubernetes pod.)
 
-# Evaluate a selector that doesn't match any endpoints.
-calicoq eval "role=='endfront'"
+In case the specified selector did not match any endpoints, you would see:
+```
+$ calicoq eval "role=='endfront'"
 Endpoints matching selector role=='endfront':
-```
-
-### General options
-
-```
--c --config=<CONFIG>      Path to the file containing connection
-                          configuration in YAML or JSON format.
-                          [default: /etc/calico/calicoctl.cfg]
 ```
 
 ## See also
 
--  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
-   and schema
--  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for details on the Calico selector-based policy model
--  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup) for details on configuring `calicoctl` to access
-   the Calico datastore.
+-  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
+   more information about the Calico selector-based policy model.
