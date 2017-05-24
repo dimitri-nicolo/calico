@@ -21,7 +21,7 @@ type epLookup interface {
 const PollingInterval = time.Duration(1) * time.Second
 
 type NflogDataSource struct {
-	sink          chan<- StatUpdate
+	sink          chan<- *StatUpdate
 	groupNum      int
 	direction     Direction
 	nlBufSiz      int
@@ -30,14 +30,14 @@ type NflogDataSource struct {
 	nflogDoneChan chan struct{}
 }
 
-func NewNflogDataSource(lm epLookup, sink chan<- StatUpdate, groupNum int, dir Direction, nlBufSiz int) *NflogDataSource {
-	nflogChan := make(chan *nfnetlink.NflogPacketAggregate)
+func NewNflogDataSource(lm epLookup, sink chan<- *StatUpdate, groupNum int, dir Direction, nlBufSiz int) *NflogDataSource {
+	nflogChan := make(chan *nfnetlink.NflogPacketAggregate, 1000)
 	done := make(chan struct{})
 	return newNflogDataSource(lm, sink, groupNum, dir, nlBufSiz, nflogChan, done)
 }
 
 // Internal constructor to help mocking from UTs.
-func newNflogDataSource(lm epLookup, sink chan<- StatUpdate, gn int, dir Direction, nbs int, nc chan *nfnetlink.NflogPacketAggregate, done chan struct{}) *NflogDataSource {
+func newNflogDataSource(lm epLookup, sink chan<- *StatUpdate, gn int, dir Direction, nbs int, nc chan *nfnetlink.NflogPacketAggregate, done chan struct{}) *NflogDataSource {
 	return &NflogDataSource{
 		sink:          sink,
 		groupNum:      gn,
@@ -66,14 +66,16 @@ func (ds *NflogDataSource) subscribeToNflog() error {
 func (ds *NflogDataSource) startProcessingPackets() {
 	defer close(ds.nflogDoneChan)
 	for nflogPacketAggr := range ds.nflogChan {
-		statUpdates, err := ds.convertNflogPktToStat(nflogPacketAggr)
-		if err != nil {
-			log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacketAggr)
-			return
-		}
-		for _, statUpdate := range statUpdates {
-			ds.sink <- statUpdate
-		}
+		go func(nflogPacketAggr *nfnetlink.NflogPacketAggregate) {
+			statUpdates, err := ds.convertNflogPktToStat(nflogPacketAggr)
+			if err != nil {
+				log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacketAggr)
+				return
+			}
+			for _, statUpdate := range statUpdates {
+				ds.sink <- statUpdate
+			}
+		}(nflogPacketAggr)
 	}
 }
 
@@ -139,18 +141,18 @@ type ConntrackDataSource struct {
 	poller    *jitter.Ticker
 	pollerC   <-chan time.Time
 	converter chan []nfnetlink.CtEntry
-	sink      chan<- StatUpdate
+	sink      chan<- *StatUpdate
 	lum       epLookup
 }
 
-func NewConntrackDataSource(lm epLookup, sink chan<- StatUpdate) *ConntrackDataSource {
+func NewConntrackDataSource(lm epLookup, sink chan<- *StatUpdate) *ConntrackDataSource {
 	poller := jitter.NewTicker(PollingInterval, PollingInterval/10)
 	converter := make(chan []nfnetlink.CtEntry)
 	return newConntrackDataSource(lm, sink, poller, poller.C, converter)
 }
 
 // Internal constructor to help mocking from UTs.
-func newConntrackDataSource(lm epLookup, sink chan<- StatUpdate, poller *jitter.Ticker, pollerC <-chan time.Time, converter chan []nfnetlink.CtEntry) *ConntrackDataSource {
+func newConntrackDataSource(lm epLookup, sink chan<- *StatUpdate, poller *jitter.Ticker, pollerC <-chan time.Time, converter chan []nfnetlink.CtEntry) *ConntrackDataSource {
 	return &ConntrackDataSource{
 		poller:    poller,
 		pollerC:   pollerC,
@@ -179,22 +181,24 @@ func (ds *ConntrackDataSource) startPolling() {
 func (ds *ConntrackDataSource) startProcessor() {
 	for ctentries := range ds.converter {
 		for _, ctentry := range ctentries {
-			statUpdates, err := ds.convertCtEntryToStat(ctentry)
-			if err != nil {
-				log.Errorf("Couldn't convert ctentry %v to StatUpdate", ctentry)
-				continue
-			}
-			for _, su := range statUpdates {
-				ds.sink <- su
-			}
+			go func(ctentry nfnetlink.CtEntry) {
+				statUpdates, err := ds.convertCtEntryToStat(ctentry)
+				if err != nil {
+					log.Errorf("Couldn't convert ctentry %v to StatUpdate", ctentry)
+					return
+				}
+				for _, su := range statUpdates {
+					ds.sink <- su
+				}
+			}(ctentry)
 		}
 	}
 }
 
-func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]StatUpdate, error) {
+func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) ([]*StatUpdate, error) {
 	// There can be a maximum of 2 stat updates per ctentry, in the case of
 	// local-to-local traffic.
-	statUpdates := []StatUpdate{}
+	statUpdates := []*StatUpdate{}
 	// The last entry is the tuple entry for endpoints
 	ctTuple, err := ctEntry.OriginalTuple()
 	if err != nil {
@@ -223,7 +227,7 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 		ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 		AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
-	statUpdates = append(statUpdates, *su)
+	statUpdates = append(statUpdates, su)
 	if errSrc == nil && errDst == nil {
 		// Locally to local packet will require a reversed tuple to collect reply stats.
 		tuple := extractTupleFromCtEntryTuple(ctTuple, true)
@@ -231,7 +235,7 @@ func (ds *ConntrackDataSource) convertCtEntryToStat(ctEntry nfnetlink.CtEntry) (
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
-		statUpdates = append(statUpdates, *su)
+		statUpdates = append(statUpdates, su)
 	}
 	return statUpdates, nil
 }

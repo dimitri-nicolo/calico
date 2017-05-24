@@ -192,7 +192,7 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 
 var _ = Describe("Conntrack Datasource", func() {
 	var ctSource *ConntrackDataSource
-	var sink chan StatUpdate
+	var sink chan *StatUpdate
 	var dataFeeder chan []nfnetlink.CtEntry
 	BeforeEach(func() {
 		epMap := map[[16]byte]*model.WorkloadEndpointKey{
@@ -200,7 +200,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			localIp2: localWlEPKey2,
 		}
 		lm := newMockLookupManager(epMap)
-		sink = make(chan StatUpdate)
+		sink = make(chan *StatUpdate)
 		poller := jitter.NewTicker(time.Second, time.Second/10)
 		mockTickerChan := make(chan time.Time)
 		dataFeeder = make(chan []nfnetlink.CtEntry)
@@ -215,7 +215,7 @@ var _ = Describe("Conntrack Datasource", func() {
 				inCtEntry.ReplyCounters.Packets, inCtEntry.ReplyCounters.Bytes,
 				AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{inCtEntry}
-			Eventually(sink).Should(Receive(Equal(*su)))
+			Eventually(sink).Should(Receive(Equal(su)))
 		})
 	})
 	Describe("Test local source", func() {
@@ -226,7 +226,7 @@ var _ = Describe("Conntrack Datasource", func() {
 				outCtEntry.ReplyCounters.Packets, outCtEntry.ReplyCounters.Bytes,
 				AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{outCtEntry}
-			Eventually(sink).Should(Receive(Equal(*su)))
+			Eventually(sink).Should(Receive(Equal(su)))
 		})
 	})
 	Describe("Test local source to local destination", func() {
@@ -242,8 +242,8 @@ var _ = Describe("Conntrack Datasource", func() {
 				localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes,
 				AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{localCtEntry}
-			Eventually(sink).Should(Receive(Equal(*su1)))
-			Eventually(sink).Should(Receive(Equal(*su2)))
+			Eventually(sink).Should(Receive(Equal(su1)))
+			Eventually(sink).Should(Receive(Equal(su2)))
 		})
 	})
 	Describe("Test local destination with DNAT", func() {
@@ -254,7 +254,7 @@ var _ = Describe("Conntrack Datasource", func() {
 				inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes,
 				AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{inCtEntry}
-			Eventually(sink).Should(Receive(Equal(*su)))
+			Eventually(sink).Should(Receive(Equal(su)))
 		})
 	})
 	Describe("Test local source to local destination with DNAT", func() {
@@ -274,8 +274,8 @@ var _ = Describe("Conntrack Datasource", func() {
 				localCtEntryWithDNAT.OriginalCounters.Bytes,
 				AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
 			dataFeeder <- []nfnetlink.CtEntry{localCtEntryWithDNAT}
-			Eventually(sink).Should(Receive(Equal(*su1)))
-			Eventually(sink).Should(Receive(Equal(*su2)))
+			Eventually(sink).Should(Receive(Equal(su1)))
+			Eventually(sink).Should(Receive(Equal(su2)))
 		})
 	})
 
@@ -375,7 +375,7 @@ var _ = Describe("NFLOG Datasource", func() {
 		// Inject info nflogChan
 		// expect a single packet in sink
 		var nflogSource *NflogDataSource
-		var sink chan StatUpdate
+		var sink chan *StatUpdate
 		var dataFeeder chan *nfnetlink.NflogPacketAggregate
 		dir := DirIn
 		BeforeEach(func() {
@@ -384,7 +384,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				localIp2: localWlEPKey2,
 			}
 			lm := newMockLookupManager(epMap)
-			sink = make(chan StatUpdate)
+			sink = make(chan *StatUpdate)
 			done := make(chan struct{})
 			dataFeeder = make(chan *nfnetlink.NflogPacketAggregate)
 			gn := 1200
@@ -397,7 +397,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				su := NewStatUpdate(*t, 0, 0, 0, 0,
 					DeltaCounter, DirIn, defTierAllowTp)
 				dataFeeder <- inPkt
-				Eventually(sink).Should(Receive(Equal(*su)))
+				Eventually(sink).Should(Receive(Equal(su)))
 			})
 		})
 		Describe("Test local to local", func() {
@@ -406,7 +406,7 @@ var _ = Describe("NFLOG Datasource", func() {
 				su := NewStatUpdate(*t, 0, 0, 0, 0,
 					DeltaCounter, DirIn, defTierDenyTp)
 				dataFeeder <- localPkt
-				Eventually(sink).Should(Receive(Equal(*su)))
+				Eventually(sink).Should(Receive(Equal(su)))
 			})
 		})
 	})
@@ -456,7 +456,7 @@ func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyName, tierN
 
 func BenchmarkNflogPktToStat(b *testing.B) {
 	var nflogSource *NflogDataSource
-	var sink chan StatUpdate
+	var sink chan *StatUpdate
 	var dataFeeder chan *nfnetlink.NflogPacketAggregate
 	dir := DirIn
 	epMap := map[[16]byte]*model.WorkloadEndpointKey{
@@ -464,7 +464,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		localIp2: localWlEPKey2,
 	}
 	lm := newMockLookupManager(epMap)
-	sink = make(chan StatUpdate)
+	sink = make(chan *StatUpdate)
 	done := make(chan struct{})
 	dataFeeder = make(chan *nfnetlink.NflogPacketAggregate)
 	gn := 1200
