@@ -100,7 +100,7 @@ class TestDefaultPools(TestBase):
             return
 
         # Check we started OK
-        self.wait_for_node_log("Calico node started successfully")
+        self.wait_for_node_log("Calico node (enterprise) started successfully")
         # check the expected pool is present
         pools_output = self.host.calicoctl("get ippool -o yaml")
         pools_dict = yaml.safe_load(pools_output)
@@ -146,7 +146,7 @@ class TestDefaultPools(TestBase):
         """
         # Start calico-docker
         self.host.start_calico_node(options="--no-default-ippools")
-        self.wait_for_node_log("Calico node started successfully")
+        self.wait_for_node_log("Calico node (enterprise) started successfully")
         # check the expected pool is present
         pools_output = self.host.calicoctl("get ippool -o yaml")
         pools_dict = yaml.safe_load(pools_output)
