@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
@@ -215,7 +213,6 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	var ctr Counter
 	ctr = tp.Ctr
 	if tp.Index > t.Len() {
-		log.Debug("Got new rule trace: ", tp)
 		// Insertion index greater than current length. Grow the path slice as long
 		// as necessary.
 		newPath := make([]*RuleTracePoint, tp.Index)
@@ -228,7 +225,6 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 		switch {
 		case existingTp == nil:
 			// Position is empty, insert and be done.
-			log.Debug("Got new rule trace: ", tp)
 			t.path[tp.Index] = &tp
 		case existingTp.Equals(tp):
 			p, b := tp.Ctr.Values()
@@ -248,7 +244,6 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 }
 
 func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
-	log.Debug("Replacing rule trace: ", tp)
 	if tp.Action == NextTierAction {
 		t.path[tp.Index] = &tp
 		return
