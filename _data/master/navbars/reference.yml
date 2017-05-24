@@ -81,10 +81,14 @@ toc:
   section:
   - title: Overview
     path: /reference/calicoq/overview
-  - title: Host
-    path: /reference/calicoq/host
+  - title: Endpoint
+    path: /reference/calicoq/endpoint
   - title: Eval
     path: /reference/calicoq/eval
+  - title: Host
+    path: /reference/calicoq/host
+  - title: Policy
+    path: /reference/calicoq/policy
   - title: Version
     path: /reference/calicoq/version
 - title: calico/node

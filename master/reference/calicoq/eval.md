@@ -27,7 +27,7 @@ title: calicoq eval
 Given a `<selector>` expression, therefore, it is useful to compute and display
 the endpoints that match that expression.
 
-### Examples
+## Examples
 
 To find all endpoints that match the `role=='frontend'` selector, i.e. that
 have a `role` label with value `frontend`:

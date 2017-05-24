@@ -5,7 +5,7 @@ title: calicoq version
 `calicoq version` shows the version number of the calicoq tool, plus
 information about the source code it was built from, and when that was.
 
-### Example
+## Example
 
 ```
 $ calicoq version

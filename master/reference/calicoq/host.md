@@ -2,11 +2,24 @@
 title: calicoq host
 ---
 
-`calicoq host <hostname>` is used to list the endpoints that are hosted on
-`<hostname>`, and to show the Calico profiles and policies that apply to each
-of those endpoints.
+`calicoq host <hostname>` shows you the endpoints that are hosted on
+`<hostname>` and all the Calico profiles and policies that relate to those
+endpoints.  It is equivalent to running `calicoq endpoint <endpoint-id>` for
+each `<endpoint-id>` that is hosted on `<hostname>`.
 
-### Example
+## Options
+
+```
+-r --hide-rule-matches     Don't show the list of profiles and policies whose
+                           rule selectors match <endpoint-id> as an allowed or
+                           disallowed source/destination.
+
+-s --hide-selectors        Don't show the detailed selector expressions involved
+                           (that cause each displayed profile or policy to match
+                           <endpoint-id>).
+```
+
+## Example
 
 ```
 $ DATASTORE_TYPE=kubernetes KUBECONFIG=/home/user/.kube/config calicoq host tigera-kubetest-01
@@ -28,14 +41,10 @@ Workload endpoint k8s/policy-demo.nginx-2371676037-j2vmh/eth0
     Profile ns.projectcalico.org/policy-demo
 ```
 
-## Options
-
-```
-  -s --hide-selectors        Hide selectors from output.
-  -r --include-rule-matches  Show policies whose rules match endpoints on the host.
-```
-
 ## See also
 
+-  [calicoq endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoq/endpoint) for
+   more detail about the profiles and policies that are shown for each
+   endpoint.
 -  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
    more information about the Calico policy model.

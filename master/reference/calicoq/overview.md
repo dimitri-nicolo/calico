@@ -28,10 +28,13 @@ The calicoq command line interface provides a number of policy inspection
 commands to allow you to confirm that your security policies are configured
 as intended.
 
+- The [endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoq/endpoint)
+  command shows you the Calico profiles and policies that relate to a specified
+  endpoint.
+- The [eval]({{site.baseurl}}/{{page.version}}/reference/calicoq/eval) command
+  displays the endpoints that a selector selects.
 - The [host]({{site.baseurl}}/{{page.version}}/reference/calicoq/host) command
   displays the policies that apply to endpoints on a host.
-- The [eval]({{site.baseurl}}/{{page.version}}/reference/calicoq/eval) command
-  displays the workloads that a selector selects.
 - The [version]({{site.baseurl}}/{{page.version}}/reference/calicoq/version)
   command displays the version of the tool.
 
