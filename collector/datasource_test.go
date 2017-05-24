@@ -3,12 +3,11 @@
 package collector
 
 import (
-	"net"
 	"time"
-
-	log "github.com/Sirupsen/logrus"
+	"testing"
 
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 	"github.com/tigera/nfnetlink/nfnl"
@@ -25,12 +24,12 @@ const (
 )
 
 var (
-	localIp1     = net.ParseIP("10.0.0.1")
-	localIp2     = net.ParseIP("10.0.0.2")
-	remoteIp1    = net.ParseIP("20.0.0.1")
-	remoteIp2    = net.ParseIP("20.0.0.2")
-	localIp1DNAT = net.ParseIP("192.168.0.1")
-	localIp2DNAT = net.ParseIP("192.168.0.2")
+	localIp1     = [16]byte{10, 0, 0, 1}
+	localIp2     = [16]byte{10, 0, 0, 2}
+	remoteIp1    = [16]byte{20, 0, 0, 1}
+	remoteIp2    = [16]byte{20, 0, 0, 2}
+	localIp1DNAT = [16]byte{192, 168, 0, 1}
+	localIp2DNAT = [16]byte{192, 168, 0, 2}
 )
 
 var (
@@ -196,9 +195,9 @@ var _ = Describe("Conntrack Datasource", func() {
 	var sink chan StatUpdate
 	var dataFeeder chan []nfnetlink.CtEntry
 	BeforeEach(func() {
-		epMap := map[string]*model.WorkloadEndpointKey{
-			string(localIp1): localWlEPKey1,
-			string(localIp2): localWlEPKey2,
+		epMap := map[[16]byte]*model.WorkloadEndpointKey{
+			localIp1: localWlEPKey1,
+			localIp2: localWlEPKey2,
 		}
 		lm := newMockLookupManager(epMap)
 		sink = make(chan StatUpdate)
@@ -357,9 +356,9 @@ var _ = Describe("NFLOG Datasource", func() {
 		var dataFeeder chan nfnetlink.NflogPacket
 		dir := DirIn
 		BeforeEach(func() {
-			epMap := map[string]*model.WorkloadEndpointKey{
-				string(localIp1): localWlEPKey1,
-				string(localIp2): localWlEPKey2,
+			epMap := map[[16]byte]*model.WorkloadEndpointKey{
+				localIp1: localWlEPKey1,
+				localIp2: localWlEPKey2,
 			}
 			lm := newMockLookupManager(epMap)
 			sink = make(chan StatUpdate)
@@ -391,21 +390,47 @@ var _ = Describe("NFLOG Datasource", func() {
 })
 
 type mockLookupManager struct {
-	epMap map[string]*model.WorkloadEndpointKey
+	epMap map[[16]byte]*model.WorkloadEndpointKey
 }
 
-func newMockLookupManager(em map[string]*model.WorkloadEndpointKey) *mockLookupManager {
+func newMockLookupManager(em map[[16]byte]*model.WorkloadEndpointKey) *mockLookupManager {
 	return &mockLookupManager{
 		epMap: em,
 	}
 }
 
-func (lm *mockLookupManager) GetEndpointKey(addr net.IP) (interface{}, error) {
-	data, _ := lm.epMap[string(addr)]
-	log.Infof("Looking up %v returned %v", addr, data)
-	return data, nil
+func (lm *mockLookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) {
+	data, _ := lm.epMap[addr]
+	if data != nil {
+		return data, nil
+	} else {
+		return nil, lookup.UnknownEndpointError
+	}
 }
 
 func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) int {
 	return 0
+}
+
+
+func BenchmarkNflogPktToStat(b *testing.B) {
+       var nflogSource *NflogDataSource
+       var sink chan StatUpdate
+       var dataFeeder chan nfnetlink.NflogPacket
+       dir := DirIn
+       epMap := map[[16]byte]*model.WorkloadEndpointKey{
+               localIp1: localWlEPKey1,
+               localIp2: localWlEPKey2,
+       }
+       lm := newMockLookupManager(epMap)
+       sink = make(chan StatUpdate)
+       done := make(chan struct{})
+       dataFeeder = make(chan nfnetlink.NflogPacket)
+       gn := 1200
+       nflogSource = newNflogDataSource(lm, sink, gn, dir, 65535, dataFeeder, done)
+       b.ResetTimer()
+       b.ReportAllocs()
+       for n := 0; n < b.N; n++ {
+               nflogSource.convertNflogPktToStat(inPkt)
+       }
 }

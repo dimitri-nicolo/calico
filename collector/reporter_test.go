@@ -6,6 +6,7 @@ import (
 	"math"
 	"reflect"
 	"time"
+	"net"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,10 +22,10 @@ var (
 )
 
 var (
-	tuple1 = Tuple{localIp1.String(), remoteIp1.String(), proto_tcp, srcPort1, dstPort}
-	tuple2 = Tuple{localIp1.String(), remoteIp2.String(), proto_tcp, srcPort2, dstPort}
-	tuple3 = Tuple{localIp2.String(), remoteIp1.String(), proto_tcp, srcPort1, dstPort}
-	tuple4 = Tuple{localIp2.String(), remoteIp2.String(), proto_tcp, srcPort2, dstPort}
+	tuple1 = *NewTuple(localIp1, remoteIp1, proto_tcp, srcPort1, dstPort)
+	tuple2 = *NewTuple(localIp1, remoteIp2, proto_tcp, srcPort2, dstPort)
+	tuple3 = *NewTuple(localIp2, remoteIp1, proto_tcp, srcPort1, dstPort)
+	tuple4 = *NewTuple(localIp2, remoteIp2, proto_tcp, srcPort2, dstPort)
 )
 
 var dummyWlEpKey = model.WorkloadEndpointKey{
@@ -139,7 +140,7 @@ var _ = Describe("Prometheus Reporter", func() {
 				var refs set.Set
 				BeforeEach(func() {
 					key = AggregateKey{
-						srcIP:  localIp1.String(),
+						srcIP:  net.IP(localIp1[:16]).String(),
 						policy: defTierDenyT3.ToString(),
 					}
 					refs = set.New()
@@ -173,11 +174,11 @@ var _ = Describe("Prometheus Reporter", func() {
 				var refs1, refs2 set.Set
 				BeforeEach(func() {
 					key1 = AggregateKey{
-						srcIP:  localIp1.String(),
+						srcIP:  net.IP(localIp1[:16]).String(),
 						policy: defTierDenyT3.ToString(),
 					}
 					key2 = AggregateKey{
-						srcIP:  localIp2.String(),
+						srcIP:  net.IP(localIp2[:16]).String(),
 						policy: defTierDenyT4.ToString(),
 					}
 					refs1 = set.New()
@@ -227,19 +228,19 @@ var _ = Describe("Prometheus Reporter", func() {
 		var value1, value2 AggregateValue
 		BeforeEach(func() {
 			key1 = AggregateKey{
-				srcIP:  localIp1.String(),
+				srcIP:  net.IP(localIp1[:16]).String(),
 				policy: defTierDenyT3.ToString(),
 			}
 			key2 = AggregateKey{
-				srcIP:  localIp2.String(),
+				srcIP:  net.IP(localIp2[:16]).String(),
 				policy: defTierDenyT4.ToString(),
 			}
 			label1 := prometheus.Labels{
-				"srcIP":  localIp1.String(),
+				"srcIP":  net.IP(localIp1[:16]).String(),
 				"policy": defTierDenyT3.String(),
 			}
 			label2 := prometheus.Labels{
-				"srcIP":  localIp2.String(),
+				"srcIP":  net.IP(localIp2[:16]).String(),
 				"policy": defTierDenyT4.String(),
 			}
 			value1 = AggregateValue{
