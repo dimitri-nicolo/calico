@@ -153,7 +153,6 @@ func parseNflog(m []byte) (*NflogPacket, error) {
 			nflogPacket.Gid = int(native.Uint32(attr.Value[0:4]))
 		}
 	}
-	nfnl.AttrPool.Put(attrs)
 	return nflogPacket, nil
 }
 
