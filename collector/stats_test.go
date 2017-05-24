@@ -1,6 +1,6 @@
 // Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
-package collector_test
+package collector
 
 import (
 	"net"
@@ -8,8 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/projectcalico/felix/collector"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -125,12 +123,31 @@ var (
 	}
 )
 
+var _ = Describe("Tuple", func() {
+	var tuple *Tuple
+	Describe("Parse Ipv4 Tuple", func() {
+		BeforeEach(func() {
+			var src, dst [16]byte
+			copy(src[:], net.ParseIP("127.0.0.1").To16())
+			copy(dst[:], net.ParseIP("127.1.1.1").To16())
+			tuple = NewTuple(src, dst, 6, 12345, 80)
+		})
+		It("should parse correctly", func() {
+			Expect(net.IP(tuple.src[:16]).String()).To(Equal("127.0.0.1"))
+			Expect(net.IP(tuple.dst[:16]).String()).To(Equal("127.1.1.1"))
+		})
+	})
+})
+
 var _ = Describe("Rule Trace", func() {
 	var data *Data
 	var tuple *Tuple
 
 	BeforeEach(func() {
-		tuple = NewTuple(net.IP("127.0.0,1"), net.IP("127.0.0.1"), 6, 12345, 80)
+		var src, dst [16]byte
+		copy(src[:], net.ParseIP("127.0.0.1").To16())
+		copy(dst[:], net.ParseIP("127.1.1.1").To16())
+		tuple = NewTuple(src, dst, 6, 12345, 80)
 		data = NewData(*tuple, time.Duration(10)*time.Second)
 	})
 
