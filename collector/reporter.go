@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/syslog"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -190,7 +191,7 @@ func (pr *PrometheusReporter) Report(mu *MetricUpdate) error {
 }
 
 func (pr *PrometheusReporter) reportMetric(mu *MetricUpdate) {
-	key := AggregateKey{mu.policy, string(mu.tuple.src[:16])}
+	key := AggregateKey{mu.policy, net.IP(mu.tuple.src[:16]).String()}
 	value, ok := pr.aggStats[key]
 	if ok {
 		if pr.deleteCandidates.Contains(key) {
@@ -222,7 +223,7 @@ func (pr *PrometheusReporter) Expire(mu *MetricUpdate) error {
 }
 
 func (pr *PrometheusReporter) expireMetric(mu *MetricUpdate) {
-	key := AggregateKey{mu.policy, string(mu.tuple.src[:16])}
+	key := AggregateKey{mu.policy, net.IP(mu.tuple.src[:16]).String()}
 	value, ok := pr.aggStats[key]
 	if !ok || !value.refs.Contains(mu.tuple) {
 		return
@@ -306,9 +307,9 @@ func (sr *SyslogReporter) Start() {
 func (sr *SyslogReporter) Report(mu *MetricUpdate) error {
 	f := log.Fields{
 		"proto":   strconv.Itoa(mu.tuple.proto),
-		"srcIP":   string(mu.tuple.src[:16]),
+		"srcIP":   net.IP(mu.tuple.src[:16]).String(),
 		"srcPort": strconv.Itoa(mu.tuple.l4Src),
-		"dstIP":   string(mu.tuple.dst[:16]),
+		"dstIP":   net.IP(mu.tuple.dst[:16]).String(),
 		"dstPort": strconv.Itoa(mu.tuple.l4Dst),
 		"policy":  mu.policy,
 		"action":  DenyAction,
