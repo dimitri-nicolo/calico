@@ -2,7 +2,26 @@
 title: calicoq eval
 ---
 
-This section describes the `calicoq eval` command.
+`calicoq eval <selector>` is used to display the workloads that are matched by
+`<selector>`.
+
+> **Note:** Selectors can be used in three contexts in Calico security policy
+> definition.
+>
+> - A selector is used in the definition of each Calico Policy (or Kubernetes
+>   NetworkPolicy) object, to specify the endpoints (pods) that that Policy
+>   applies to (`spec.selector`).
+>
+> - A selector can be used in each policy Rule, to specify that the Rule only
+>   applies to packets sent from a particular set of endpoints
+>   (`source.selector`), or to packets from all endpoints except a particular set
+>   (`source.notSelector`).
+>
+> - A selector can be used in each policy Rule, to specify that the Rule only
+>   applies to packets sent to a particular set of endpoints
+>   (`destination.selector`), or to packets to all endpoints except a particular
+>   set (`destination.notSelector`).
+
 
 Read the [calicoctl command line interface user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/)
 for a full list of calicoctl commands.
