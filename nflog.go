@@ -1,9 +1,5 @@
 package nfnetlink
 
-import (
-	"net"
-)
-
 type NflogPacketHeader struct {
 	HwProtocol int
 	Hook       int
@@ -22,8 +18,8 @@ type NflogL4Info struct {
 }
 
 type NflogPacketTuple struct {
-	Src   net.IP
-	Dst   net.IP
+	Src   [16]byte
+	Dst   [16]byte
 	Proto int
 	L4Src NflogL4Info
 	L4Dst NflogL4Info

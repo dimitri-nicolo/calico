@@ -164,8 +164,8 @@ func parsePacketHeader(hwProtocol int, nflogPayload []byte) (*NflogPacketTuple, 
 	switch hwProtocol {
 	case IPv4Proto:
 		ipHeader := pkt.ParseIPv4Header(nflogPayload)
-		tuple.Src = ipHeader.Saddr
-		tuple.Dst = ipHeader.Daddr
+		copy(tuple.Src[:], ipHeader.Saddr.To16()[:16])
+		copy(tuple.Dst[:], ipHeader.Daddr.To16()[:16])
 		tuple.Proto = int(ipHeader.Protocol)
 		srcL4, dstL4, _ := parseLayer4Header(int(ipHeader.Protocol), nflogPayload[ipHeader.IHL:])
 		tuple.L4Src = srcL4
