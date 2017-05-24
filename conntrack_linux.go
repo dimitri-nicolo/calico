@@ -132,9 +132,9 @@ func parseTupleIp(tuple *CtTuple, value []byte) error {
 	for _, attr := range attrs {
 		switch attr.Attr.Type {
 		case nfnl.CTA_IP_V4_SRC, nfnl.CTA_IP_V6_SRC:
-			tuple.Src = net.IP(attr.Value)
+			copy(tuple.Src[:], net.IP(attr.Value).To16()[:16])
 		case nfnl.CTA_IP_V4_DST, nfnl.CTA_IP_V6_DST:
-			tuple.Dst = net.IP(attr.Value)
+			copy(tuple.Dst[:], net.IP(attr.Value).To16()[:16])
 		}
 	}
 	return err
