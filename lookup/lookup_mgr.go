@@ -30,13 +30,13 @@ var UnknownEndpointError = errors.New("Unknown endpoint")
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
 type LookupManager struct {
 	// `string`s are IP.String().
-	endpoints        map[string]*model.WorkloadEndpointKey
-	endpointsReverse map[model.WorkloadEndpointKey]*string
+	endpoints        map[[16]byte]*model.WorkloadEndpointKey
+	endpointsReverse map[model.WorkloadEndpointKey]*[16]byte
 	endpointTiers    map[model.WorkloadEndpointKey][]*proto.TierInfo
 	epMutex          sync.RWMutex
 
-	hostEndpoints              map[string]*model.HostEndpointKey
-	hostEndpointsReverse       map[model.HostEndpointKey]*string
+	hostEndpoints              map[[16]byte]*model.HostEndpointKey
+	hostEndpointsReverse       map[model.HostEndpointKey]*[16]byte
 	hostEndpointTiers          map[model.HostEndpointKey][]*proto.TierInfo
 	hostEndpointUntrackedTiers map[model.HostEndpointKey][]*proto.TierInfo
 	hostEpMutex                sync.RWMutex
@@ -44,11 +44,11 @@ type LookupManager struct {
 
 func NewLookupManager() *LookupManager {
 	return &LookupManager{
-		endpoints:                  map[string]*model.WorkloadEndpointKey{},
-		endpointsReverse:           map[model.WorkloadEndpointKey]*string{},
+		endpoints:                  map[[16]byte]*model.WorkloadEndpointKey{},
+		endpointsReverse:           map[model.WorkloadEndpointKey]*[16]byte{},
 		endpointTiers:              map[model.WorkloadEndpointKey][]*proto.TierInfo{},
-		hostEndpoints:              map[string]*model.HostEndpointKey{},
-		hostEndpointsReverse:       map[model.HostEndpointKey]*string{},
+		hostEndpoints:              map[[16]byte]*model.HostEndpointKey{},
+		hostEndpointsReverse:       map[model.HostEndpointKey]*[16]byte{},
 		hostEndpointTiers:          map[model.HostEndpointKey][]*proto.TierInfo{},
 		hostEndpointUntrackedTiers: map[model.HostEndpointKey][]*proto.TierInfo{},
 		epMutex:                    sync.RWMutex{},
@@ -76,10 +76,10 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 				log.Warnf("Error parsing CIDR %v", ipv4)
 				continue
 			}
-			addrStr := addr.String()
-			log.Debugf("Stored IPv4 endpoint: %v: %v", wlEpKey, addrStr)
-			m.endpoints[addrStr] = &wlEpKey
-			m.endpointsReverse[wlEpKey] = &addrStr
+			var addrB [16]byte
+			copy(addrB[:], addr.To16()[:16])
+			m.endpoints[addrB] = &wlEpKey
+			m.endpointsReverse[wlEpKey] = &addrB
 		}
 		for _, ipv6 := range msg.Endpoint.Ipv6Nets {
 			addr, _, err := net.ParseCIDR(ipv6)
@@ -87,11 +87,10 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 				log.Warnf("Error parsing CIDR %v", ipv6)
 				continue
 			}
-			// TODO (Matt): IP.String() does funny things to IPv6 mapped IPv4 addresses.
-			addrStr := addr.String()
-			log.Debugf("Stored IPv6 endpoint: %v: %v", wlEpKey, addrStr)
-			m.endpoints[addrStr] = &wlEpKey
-			m.endpointsReverse[wlEpKey] = &addrStr
+			var addrB [16]byte
+			copy(addrB[:], addr.To16()[:16])
+			m.endpoints[addrB] = &wlEpKey
+			m.endpointsReverse[wlEpKey] = &addrB
 		}
 		m.epMutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
@@ -127,10 +126,10 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 				log.Warn("Error parsing IP ", ipv4)
 				continue
 			}
-			addrStr := addr.String()
-			log.Debug("Stored expected IPv4 host endpoint: ", hostEpKey, ": ", addrStr)
-			m.hostEndpoints[addrStr] = &hostEpKey
-			m.hostEndpointsReverse[hostEpKey] = &addrStr
+			var addrB [16]byte
+			copy(addrB[:], addr.To16()[:16])
+			m.hostEndpoints[addrB] = &hostEpKey
+			m.hostEndpointsReverse[hostEpKey] = &addrB
 		}
 		for _, ipv6 := range msg.Endpoint.ExpectedIpv6Addrs {
 			addr := net.ParseIP(ipv6)
@@ -138,11 +137,10 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 				log.Warn("Error parsing IP ", ipv6)
 				continue
 			}
-			// TODO (Matt): IP.String() does funny things to IPv6 mapped IPv4 addresses.
-			addrStr := addr.String()
-			log.Debug("Stored expected IPv6 host endpoint: ", hostEpKey, ": ", addrStr)
-			m.hostEndpoints[addrStr] = &hostEpKey
-			m.hostEndpointsReverse[hostEpKey] = &addrStr
+			var addrB [16]byte
+			copy(addrB[:], addr.To16()[:16])
+			m.hostEndpoints[addrB] = &hostEpKey
+			m.hostEndpointsReverse[hostEpKey] = &addrB
 		}
 		m.hostEpMutex.Unlock()
 	case *proto.HostEndpointRemove:
@@ -170,18 +168,17 @@ func (m *LookupManager) CompleteDeferredWork() error {
 // GetEndpointKey returns either a *model.WorkloadEndpointKey or *model.HostEndpointKey
 // or nil if addr is a Workload Endpoint or a HostEndpoint or if we don't have any
 // idea about it.
-func (m *LookupManager) GetEndpointKey(addr net.IP) (interface{}, error) {
-	addrStr := addr.String()
+func (m *LookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) {
 	m.epMutex.RLock()
 	// There's no need to copy the result because we never modify fields,
 	// only delete or replace.
-	epKey := m.endpoints[addrStr]
+	epKey := m.endpoints[addr]
 	m.epMutex.RUnlock()
 	if epKey != nil {
 		return epKey, nil
 	}
 	m.hostEpMutex.RLock()
-	hostEpKey := m.hostEndpoints[addrStr]
+	hostEpKey := m.hostEndpoints[addr]
 	m.hostEpMutex.RUnlock()
 	if hostEpKey != nil {
 		return hostEpKey, nil
