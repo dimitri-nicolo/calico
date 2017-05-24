@@ -79,10 +79,10 @@ func (ds *NflogDataSource) startProcessingPackets() {
 	}
 }
 
-func (ds *NflogDataSource) convertNflogPktToStat(nPktAggr *nfnetlink.NflogPacketAggregate) ([]StatUpdate, error) {
+func (ds *NflogDataSource) convertNflogPktToStat(nPktAggr *nfnetlink.NflogPacketAggregate) ([]*StatUpdate, error) {
 	var (
 		numPkts, numBytes int
-		statUpdates       []StatUpdate
+		statUpdates       []*StatUpdate
 		epKey             interface{}
 		err               error
 	)
@@ -103,7 +103,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPktAggr *nfnetlink.NflogPacket
 	for _, prefix := range nPktAggr.Prefixes {
 		tp, err := lookupRule(ds.lum, prefix.Prefix, prefix.Len, epKey)
 		if err != nil {
-			return []StatUpdate{}, err
+			continue
 		}
 		if tp.Action == DenyAction || tp.Action == AllowAction {
 			// NFLog based counters make sense only for denied packets or allowed packets
@@ -120,7 +120,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPktAggr *nfnetlink.NflogPacket
 		tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
 		// TODO(doublek): This DeltaCounter could be removed.
 		statUpdate := NewStatUpdate(tuple, 0, 0, 0, 0, DeltaCounter, ds.direction, tp)
-		statUpdates = append(statUpdates, *statUpdate)
+		statUpdates = append(statUpdates, statUpdate)
 	}
 	return statUpdates, nil
 }
