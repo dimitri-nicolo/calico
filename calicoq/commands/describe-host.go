@@ -7,7 +7,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/golang/glog"
+	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -46,7 +46,7 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 	filterUpdate := func(update api.Update) (filterOut bool) {
 		if update.Value == nil {
 			// MATT: Why is this so much lower priority than checkValid?
-			glog.V(1).Infof("Skipping bad update: %v", update.Key)
+			log.Infof("Skipping bad update: %v", update.Key)
 			return true
 		}
 		switch key := update.Key.(type) {
@@ -65,7 +65,7 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 		}
 		// Insert an empty map so we'll list this endpoint even if
 		// no policies match it.
-		glog.V(2).Infof("Found active endpoint %#v", update.Key)
+		log.Infof("Found active endpoint %#v", update.Key)
 		cbs.epIDToPolIDs[update.Key] = make(map[model.PolicyKey]bool, 0)
 		arc.OnUpdate(update)
 		return false
@@ -158,12 +158,12 @@ func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) 
 
 	apiConfig, err := client.LoadClientConfig("")
 	if err != nil {
-		glog.Fatal("Failed loading client config")
+		log.Fatal("Failed loading client config")
 		os.Exit(1)
 	}
 	bclient, err := backend.NewClient(*apiConfig)
 	if err != nil {
-		glog.Fatal("Failed to create client")
+		log.Fatal("Failed to create client")
 		os.Exit(1)
 	}
 	syncer := bclient.Syncer(cbs)
@@ -251,7 +251,7 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			endpointMatch := func(update api.Update) (filterOut bool) {
 				if update.Value == nil {
 					// MATT: Why is this so much lower priority than checkValid?
-					glog.V(1).Infof("Skipping bad update: %v", update.Key)
+					log.Infof("Skipping bad update: %v", update.Key)
 					return true
 				}
 				switch key := update.Key.(type) {
@@ -282,16 +282,16 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			epName := epDatum.EndpointName()
 			epID := epDatum.epID
 			polIDs := epDatum.polIDs
-			glog.V(2).Infof("Looking at endpoint %v with policies %v", epID, polIDs)
+			log.Infof("Looking at endpoint %v with policies %v", epID, polIDs)
 			fmt.Printf("\n%v\n", epName)
 			fmt.Println("  Policies:")
 			for _, tier := range tiers {
-				glog.V(2).Infof("Looking at tier %v", tier)
+				log.Infof("Looking at tier %v", tier)
 				if tier.Name != "default" {
 					continue
 				}
 				for _, pol := range tier.OrderedPolicies { // pol is a PolKV
-					glog.V(2).Infof("Looking at policy %v", pol.Key)
+					log.Infof("Looking at policy %v", pol.Key)
 					if polIDs[pol.Key] {
 						order := "default"
 						if pol.Value.Order != nil {
@@ -328,7 +328,7 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 }
 
 func (cbs *describeCmd) OnUpdates(updates []api.Update) {
-	glog.V(3).Info("Update: ", updates)
+	log.Info("Update: ", updates)
 	for _, update := range updates {
 		// MATT: Removed some handling of empty key: don't understand how it can happen.
 		cbs.dispatcher.OnUpdate(update)
@@ -336,7 +336,7 @@ func (cbs *describeCmd) OnUpdates(updates []api.Update) {
 }
 
 func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey interface{}) {
-	glog.V(2).Infof("Policy %v/%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
+	log.Infof("Policy %v/%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
 	cbs.epIDToPolIDs[endpointKey][policyKey] = true
 }
 

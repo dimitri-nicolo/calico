@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/glog"
+	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -78,12 +78,12 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 
 	apiConfig, err := client.LoadClientConfig("")
 	if err != nil {
-		glog.Fatal("Failed loading client config")
+		log.Fatal("Failed loading client config")
 		os.Exit(1)
 	}
 	bclient, err := backend.NewClient(*apiConfig)
 	if err != nil {
-		glog.Fatal("Failed to create client")
+		log.Fatal("Failed to create client")
 		os.Exit(1)
 	}
 	syncer := bclient.Syncer(cbs)
@@ -130,13 +130,13 @@ func (cbs *EvalCmd) OnConfigLoaded(globalConfig map[string]string,
 
 func (cbs *EvalCmd) OnStatusUpdated(status api.SyncStatus) {
 	if status == api.InSync {
-		glog.V(0).Info("Datamodel in sync, we're done.")
+		log.Info("Datamodel in sync, we're done.")
 		cbs.done <- true
 	}
 }
 
 func (cbs *EvalCmd) OnKeysUpdated(updates []api.Update) {
-	glog.V(3).Info("Update: ", updates)
+	log.Info("Update: ", updates)
 	for _, update := range updates {
 		// Also removed empty key handling: don't understand it.
 		cbs.dispatcher.OnUpdate(update)
@@ -158,14 +158,14 @@ func (cbs *EvalCmd) OnUpdate(update api.Update) (filterOut bool) {
 		v := update.Value.(map[string]string)
 		cbs.index.UpdateParentLabels(k.Name, v)
 	default:
-		glog.Errorf("Unexpected update type: %#v", update)
+		log.Errorf("Unexpected update type: %#v", update)
 		return true
 	}
 	return false
 }
 
 func (cbs *EvalCmd) OnUpdates(updates []api.Update) {
-	glog.V(3).Info("Update: ", updates)
+	log.Info("Update: ", updates)
 	for _, update := range updates {
 		// MATT: Removed some handling of empty key: don't understand how it can happen.
 		cbs.dispatcher.OnUpdate(update)
@@ -181,5 +181,5 @@ func (cbs *EvalCmd) onMatchStarted(selId, epId interface{}) {
 }
 
 func (cbs *EvalCmd) onMatchStopped(selId, epId interface{}) {
-	glog.Errorf("Unexpected match stopped event: %v, %v", selId, epId)
+	log.Errorf("Unexpected match stopped event: %v, %v", selId, epId)
 }

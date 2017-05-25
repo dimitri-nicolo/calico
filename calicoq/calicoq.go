@@ -3,12 +3,10 @@
 package main
 
 import (
-	"flag"
 	"os"
 
-	"github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/docopt/docopt-go"
-	"github.com/golang/glog"
 	"github.com/tigera/calicoq/calicoq/commands"
 )
 
@@ -28,25 +26,14 @@ Options:
 func main() {
 	var err error
 
-	flag.CommandLine.Usage = func() {
-		println(usage)
-	}
-	flag.Parse()
-
-	if os.Getenv("GLOG") != "" {
-		flag.Lookup("logtostderr").Value.Set("true")
-		flag.Lookup("v").Value.Set(os.Getenv("GLOG"))
-		logrus.SetLevel(logrus.DebugLevel)
-	} else {
-		logrus.SetLevel(logrus.FatalLevel)
-	}
+	log.SetLevel(log.DebugLevel)
 
 	arguments, err := docopt.Parse(usage, nil, true, "calicoq", false, false)
 	if err != nil {
-		glog.V(0).Infof("Failed to parse command line arguments: %v", err)
+		log.Infof("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
 	}
-	glog.V(0).Info("Command line arguments: ", arguments)
+	log.Info("Command line arguments: ", arguments)
 
 	if arguments["version"].(bool) {
 		err = commands.Version()
