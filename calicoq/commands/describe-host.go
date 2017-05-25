@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/calc"
@@ -20,7 +21,7 @@ import (
 // Do that for each rule in each policy (globally, not just selected).
 // Actually I want to be able to do eval selector with many selectors and few EPs.
 // Basically I want to be able to control the EP filter used by eval selector.
-func DescribeHost(configFile, hostname string, hideSelectors bool, hideRuleMatches bool) (err error) {
+func DescribeEndpointOrHost(configFile, endpointID, hostname string, hideSelectors bool, hideRuleMatches bool) (err error) {
 	disp := dispatcher.NewDispatcher()
 	cbs := &describeCmd{
 		hideSelectors:    hideSelectors,
@@ -50,13 +51,19 @@ func DescribeHost(configFile, hostname string, hideSelectors bool, hideRuleMatch
 		}
 		switch key := update.Key.(type) {
 		case model.HostEndpointKey:
-			if key.Hostname != hostname {
+			if hostname != "" && key.Hostname != hostname {
+				return true
+			}
+			if !strings.Contains(endpointName(key), endpointID) {
 				return true
 			}
 			ep := update.Value.(*model.HostEndpoint)
 			cbs.epIDToProfileIDs[key] = ep.ProfileIDs
 		case model.WorkloadEndpointKey:
-			if key.Hostname != hostname {
+			if hostname != "" && key.Hostname != hostname {
+				return true
+			}
+			if !strings.Contains(endpointName(key), endpointID) {
 				return true
 			}
 			ep := update.Value.(*model.WorkloadEndpoint)

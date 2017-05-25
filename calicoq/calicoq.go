@@ -60,13 +60,20 @@ func main() {
 		},
 		"endpoint": func() error {
 			// Show the profiles and policies that relate to <endpoint-id>.
-			return errors.New("endpoint is not yet implemented")
+			return commands.DescribeEndpointOrHost(
+				arguments["--config"].(string),
+				arguments["<endpoint-id>"].(string),
+				"",
+				arguments["--hide-selectors"].(bool),
+				arguments["--hide-rule-matches"].(bool),
+			)
 		},
 		"host": func() error {
 			// Show the profiles and policies that relate to all endpoints on
 			// <hostname>.
-			return commands.DescribeHost(
+			return commands.DescribeEndpointOrHost(
 				arguments["--config"].(string),
+				"",
 				arguments["<hostname>"].(string),
 				arguments["--hide-selectors"].(bool),
 				arguments["--hide-rule-matches"].(bool),
