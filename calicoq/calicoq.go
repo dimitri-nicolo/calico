@@ -13,11 +13,11 @@ import (
 const usage = `Calico query tool.
 
 Usage:
-  calicoq [-c <config>] eval <selector>
-  calicoq [-c <config>] policy <policy-id>
-  calicoq [-c <config>] endpoint [-s|--hide-selectors] [-r|--hide-rule-matches] <endpoint-id>
-  calicoq [-c <config>] host [-s|--hide-selectors] [-r|--hide-rule-matches] <hostname>
-  calicoq version
+  calicoq [-d] [-c <config>] eval <selector>
+  calicoq [-d] [-c <config>] policy <policy-id>
+  calicoq [-d] [-c <config>] endpoint [-s|--hide-selectors] [-r|--hide-rule-matches] <endpoint-id>
+  calicoq [-d] [-c <config>] host [-s|--hide-selectors] [-r|--hide-rule-matches] <hostname>
+  calicoq [-d] version
 
 Options:
   -c <config> --config=<config>  Path to the file containing connection
@@ -32,15 +32,20 @@ Options:
   -s --hide-selectors        Don't show the detailed selector expressions involved
                              (that cause each displayed profile or policy to match
                              <endpoint-id> or <hostname>).
+
+  -d --debug                 Log debugging information to stderr.
 `
 
 func main() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.ErrorLevel)
 
 	arguments, err := docopt.Parse(usage, nil, true, commands.VERSION, false)
 	if err != nil {
-		log.Infof("Failed to parse command line arguments: %v", err)
+		log.Errorf("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
+	}
+	if arguments["-d"].(bool) {
+		log.SetLevel(log.DebugLevel)
 	}
 	log.Info("Command line arguments: ", arguments)
 
