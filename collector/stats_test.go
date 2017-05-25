@@ -25,101 +25,174 @@ var (
 		WorkloadID:     "workload2",
 		EndpointID:     "endpoint2",
 	}
+)
+
+var _ = Describe("RuleTracePoint", func() {
+	var rtp RuleTracePoint
+	Describe("Valid RuleTracePoint", func() {
+		Context("Policy", func() {
+			BeforeEach(func() {
+				var prefix [64]byte
+				pfxB := []byte("A/0/policy/tier")
+				copy(prefix[:], pfxB)
+				rtp, _ = NewRuleTracePoint(prefix, len(pfxB), wlEpKey1)
+			})
+			It("should have correct tier", func() {
+				Expect(rtp.TierID()).To(Equal([]byte("tier")))
+			})
+			It("should have correct policy", func() {
+				Expect(rtp.PolicyID()).To(Equal([]byte("policy")))
+			})
+			It("should have correct rule", func() {
+				Expect(rtp.Rule()).To(Equal([]byte("0")))
+			})
+			It("should have correct action", func() {
+				Expect(rtp.Action).To(Equal(AllowAction))
+			})
+		})
+		Context("Profile", func() {
+			BeforeEach(func() {
+				var prefix [64]byte
+				pfxB := []byte("A/0/policy")
+				copy(prefix[:], pfxB)
+				rtp, _ = NewRuleTracePoint(prefix, len(pfxB), wlEpKey1)
+			})
+			It("should have correct tier", func() {
+				Expect(rtp.TierID()).To(Equal([]byte("profile")))
+			})
+			It("should have correct policy", func() {
+				Expect(rtp.PolicyID()).To(Equal([]byte("policy")))
+			})
+			It("should have correct rule", func() {
+				Expect(rtp.Rule()).To(Equal([]byte("0")))
+			})
+			It("should have correct action", func() {
+				Expect(rtp.Action).To(Equal(AllowAction))
+			})
+		})
+	})
+})
+
+var (
 	allowTp0 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P1",
-		Rule:     "R1",
-		Action:   AllowAction,
-		Index:    0,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    AllowAction,
+		Index:     0,
+		EpKey:     wlEpKey1,
 	}
 	denyTp0 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P2",
-		Rule:     "R2",
-		Action:   DenyAction,
-		Index:    0,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'D', '/', 'R', '2', '/', 'P', '2', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    DenyAction,
+		Index:     0,
+		EpKey:     wlEpKey1,
 	}
 	allowTp1 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P1",
-		Rule:     "R1",
-		Action:   AllowAction,
-		Index:    1,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    AllowAction,
+		Index:     1,
+		EpKey:     wlEpKey1,
 	}
 	denyTp1 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P2",
-		Rule:     "R2",
-		Action:   DenyAction,
-		Index:    1,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'D', '/', 'R', '2', '/', 'P', '2', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    DenyAction,
+		Index:     1,
+		EpKey:     wlEpKey1,
 	}
 	allowTp2 = RuleTracePoint{
-		TierID:   "T2",
-		PolicyID: "P2",
-		Rule:     "R1",
-		Action:   AllowAction,
-		Index:    2,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '2', '/', 'T', '2'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    AllowAction,
+		Index:     2,
+		EpKey:     wlEpKey1,
 	}
 	denyTp2 = RuleTracePoint{
-		TierID:   "T2",
-		PolicyID: "P2",
-		Rule:     "R2",
-		Action:   DenyAction,
-		Index:    2,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'D', '/', 'R', '2', '/', 'P', '2', '/', 'T', '2'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    DenyAction,
+		Index:     2,
+		EpKey:     wlEpKey1,
 	}
 	nextTierTp0 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P1",
-		Rule:     "R3",
-		Action:   NextTierAction,
-		Index:    0,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'N', '/', 'R', '3', '/', 'P', '1', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    NextTierAction,
+		Index:     0,
+		EpKey:     wlEpKey1,
 	}
 	nextTierTp1 = RuleTracePoint{
-		TierID:   "T2",
-		PolicyID: "P2",
-		Rule:     "R4",
-		Action:   NextTierAction,
-		Index:    1,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'N', '/', 'R', '4', '/', 'P', '2', '/', 'T', '2'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    NextTierAction,
+		Index:     1,
+		EpKey:     wlEpKey1,
 	}
 	allowTp11 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P1",
-		Rule:     "R1",
-		Action:   AllowAction,
-		Index:    11,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    AllowAction,
+		Index:     11,
+		EpKey:     wlEpKey1,
 	}
 	denyTp11 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P1",
-		Rule:     "R1",
-		Action:   DenyAction,
-		Index:    11,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'D', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    DenyAction,
+		Index:     11,
+		EpKey:     wlEpKey1,
 	}
 	allowTp21 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P1",
-		Rule:     "R1",
-		Action:   AllowAction,
-		Index:    21,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    AllowAction,
+		Index:     21,
+		EpKey:     wlEpKey1,
 	}
 	denyTp21 = RuleTracePoint{
-		TierID:   "T1",
-		PolicyID: "P1",
-		Rule:     "R1",
-		Action:   DenyAction,
-		Index:    21,
-		EpKey:    wlEpKey1,
+		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		pfxlen:    10,
+		tierIdx:   8,
+		policyIdx: 5,
+		ruleIdx:   2,
+		Action:    DenyAction,
+		Index:     21,
+		EpKey:     wlEpKey1,
 	}
 )
 

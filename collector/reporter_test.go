@@ -38,11 +38,13 @@ var dummyWlEpKey = model.WorkloadEndpointKey{
 var defTierAllowT1 = &RuleTrace{
 	path: []*RuleTracePoint{
 		{
-			TierID:   "default",
-			PolicyID: "policy1",
-			Rule:     "0",
-			Action:   AllowAction,
-			Index:    0,
+			prefix:    [64]byte{'A','/','0','/','p','o','l','i','c','y','1','/','d','e','f','a','u','l','t'},
+			pfxlen:    19,
+			tierIdx:   12,
+			policyIdx: 4,
+			ruleIdx:   2,
+			Action:    AllowAction,
+			Index:     0,
 		},
 	},
 	action: AllowAction,
@@ -51,11 +53,13 @@ var defTierAllowT1 = &RuleTrace{
 var defTierAllowT2 = &RuleTrace{
 	path: []*RuleTracePoint{
 		{
-			TierID:   "default",
-			PolicyID: "policy2",
-			Rule:     "0",
-			Action:   AllowAction,
-			Index:    0,
+			prefix:    [64]byte{'A','/','0','/','p','o','l','i','c','y','2','/','d','e','f','a','u','l','t'},
+			pfxlen:    19,
+			tierIdx:   12,
+			policyIdx: 4,
+			ruleIdx:   2,
+			Action:    AllowAction,
+			Index:     0,
 		},
 	},
 	action: AllowAction,
@@ -64,11 +68,13 @@ var defTierAllowT2 = &RuleTrace{
 var defTierDenyT3 = &RuleTrace{
 	path: []*RuleTracePoint{
 		{
-			TierID:   "default",
-			PolicyID: "policy3",
-			Rule:     "0",
-			Action:   DenyAction,
-			Index:    0,
+			prefix:    [64]byte{'D','/','0','/','p','o','l','i','c','y','3','/','d','e','f','a','u','l','t'},
+			pfxlen:    19,
+			tierIdx:   12,
+			policyIdx: 4,
+			ruleIdx:   2,
+			Action:    DenyAction,
+			Index:     0,
 		},
 	},
 	action: DenyAction,
@@ -77,11 +83,13 @@ var defTierDenyT3 = &RuleTrace{
 var defTierDenyT4 = &RuleTrace{
 	path: []*RuleTracePoint{
 		{
-			TierID:   "default",
-			PolicyID: "policy4",
-			Rule:     "0",
-			Action:   DenyAction,
-			Index:    0,
+			prefix:    [64]byte{'D','/','0','/','p','o','l','i','c','y','4','/','d','e','f','a','u','l','t'},
+			pfxlen:    19,
+			tierIdx:   12,
+			policyIdx: 4,
+			ruleIdx:   2,
+			Action:    DenyAction,
+			Index:     0,
 		},
 	},
 	action: DenyAction,

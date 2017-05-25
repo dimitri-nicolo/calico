@@ -3,8 +3,8 @@
 package collector
 
 import (
-	"time"
 	"testing"
+	"time"
 
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/lookup"
@@ -284,67 +284,90 @@ var _ = Describe("Conntrack Datasource", func() {
 // NFLOG datasource test parameters
 
 var (
-	defTierAllow = "A/0/policy1/default"
-	defTierDeny  = "D/0/policy2/default"
-	tier1Allow   = "A/0/policy3/tier1"
-	tier1Deny    = "D/0/polic4/tier1"
+	defTierAllow = [64]byte{'A', '/', '0', '/', 'p', 'o', 'l', 'i', 'c', 'y', '1', '/', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
+	defTierDeny  = [64]byte{'D', '/', '0', '/', 'p', 'o', 'l', 'i', 'c', 'y', '2', '/', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
+	tier1Allow   = [64]byte{'A', '/', '0', '/', 'p', 'o', 'l', 'i', 'c', 'y', '3', '/', 't', 'i', 'e', 'r', '1'}
+	tier1Deny    = [64]byte{'D', '/', '0', '/', 'p', 'o', 'l', 'i', 'c', 'y', '4', '/', 't', 'i', 'e', 'r', '1'}
 )
 
 var defTierAllowTp = RuleTracePoint{
-	TierID:   "default",
-	PolicyID: "policy1",
-	Rule:     "0",
-	Action:   AllowAction,
-	Index:    0,
-	EpKey:    localWlEPKey1,
-	Ctr:      *NewCounter(1, 100),
-}
-var defTierDenyTp = RuleTracePoint{
-	TierID:   "default",
-	PolicyID: "policy2",
-	Rule:     "0",
-	Action:   DenyAction,
-	Index:    0,
-	EpKey:    localWlEPKey2,
-	Ctr:      *NewCounter(1, 100),
-}
-var tier1AllowTp = RuleTracePoint{
-	TierID:   "tier1",
-	PolicyID: "policy3",
-	Rule:     "0",
-	Action:   AllowAction,
-	Index:    1,
-}
-var tier1DenyTp = RuleTracePoint{
-	TierID:   "tier1",
-	PolicyID: "policy4",
-	Rule:     "0",
-	Action:   DenyAction,
-	Index:    1,
+	prefix:    defTierAllow,
+	pfxlen:    19,
+	tierIdx:   12,
+	policyIdx: 4,
+	ruleIdx:   2,
+	Action:    AllowAction,
+	Index:     0,
+	EpKey:     localWlEPKey1,
+	Ctr:       *NewCounter(1, 100),
 }
 
-var inPkt = nfnetlink.NflogPacket{
-	Prefix: defTierAllow,
-	Tuple: nfnetlink.NflogPacketTuple{
+var defTierDenyTp = RuleTracePoint{
+	prefix:    defTierDeny,
+	pfxlen:    19,
+	tierIdx:   12,
+	policyIdx: 4,
+	ruleIdx:   2,
+	Action:    DenyAction,
+	Index:     0,
+	EpKey:     localWlEPKey2,
+	Ctr:       *NewCounter(1, 100),
+}
+
+var tier1AllowTp = RuleTracePoint{
+	prefix:    tier1Allow,
+	pfxlen:    17,
+	tierIdx:   12,
+	policyIdx: 4,
+	ruleIdx:   2,
+	Action:    AllowAction,
+	Index:     1,
+}
+
+var tier1DenyTp = RuleTracePoint{
+	prefix:    tier1Deny,
+	pfxlen:    17,
+	tierIdx:   12,
+	policyIdx: 4,
+	ruleIdx:   2,
+	Action:    DenyAction,
+	Index:     1,
+}
+
+var inPkt = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierAllow,
+			Len:     19,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: &nfnetlink.NflogPacketTuple{
 		Src:   remoteIp1,
 		Dst:   localIp1,
 		Proto: proto_tcp,
 		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
 		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 	},
-	Bytes: 100,
 }
 
-var localPkt = nfnetlink.NflogPacket{
-	Prefix: defTierDeny,
-	Tuple: nfnetlink.NflogPacketTuple{
+var localPkt = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierDeny,
+			Len:     19,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: &nfnetlink.NflogPacketTuple{
 		Src:   localIp1,
 		Dst:   localIp2,
 		Proto: proto_tcp,
 		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
 		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 	},
-	Bytes: 100,
 }
 
 var _ = Describe("NFLOG Datasource", func() {
@@ -353,7 +376,7 @@ var _ = Describe("NFLOG Datasource", func() {
 		// expect a single packet in sink
 		var nflogSource *NflogDataSource
 		var sink chan *StatUpdate
-		var dataFeeder chan nfnetlink.NflogPacket
+		var dataFeeder chan *nfnetlink.NflogPacketAggregate
 		dir := DirIn
 		BeforeEach(func() {
 			epMap := map[[16]byte]*model.WorkloadEndpointKey{
@@ -363,7 +386,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			lm := newMockLookupManager(epMap)
 			sink = make(chan *StatUpdate)
 			done := make(chan struct{})
-			dataFeeder = make(chan nfnetlink.NflogPacket)
+			dataFeeder = make(chan *nfnetlink.NflogPacketAggregate)
 			gn := 1200
 			nflogSource = newNflogDataSource(lm, sink, gn, dir, 65535, dataFeeder, done)
 			nflogSource.Start()
@@ -389,6 +412,25 @@ var _ = Describe("NFLOG Datasource", func() {
 	})
 })
 
+var _ = Describe("Rtp", func() {
+	Describe("Rtp lookup", func() {
+		Describe("Test lookupRule", func() {
+			epMap := map[[16]byte]*model.WorkloadEndpointKey{
+				localIp1: localWlEPKey1,
+				localIp2: localWlEPKey2,
+			}
+			lm := newMockLookupManager(epMap)
+			It("should parse correctly", func() {
+				prefix := defTierAllow
+				prefixLen := 19
+				rtp, _ := lookupRule(lm, prefix, prefixLen, localWlEPKey1)
+				rtp.Ctr = *NewCounter(1, 100)
+				Expect(rtp).To(Equal(defTierAllowTp))
+			})
+		})
+	})
+})
+
 type mockLookupManager struct {
 	epMap map[[16]byte]*model.WorkloadEndpointKey
 }
@@ -408,29 +450,28 @@ func (lm *mockLookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) 
 	}
 }
 
-func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) int {
+func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyName, tierName []byte) int {
 	return 0
 }
 
-
 func BenchmarkNflogPktToStat(b *testing.B) {
-       var nflogSource *NflogDataSource
-       var sink chan *StatUpdate
-       var dataFeeder chan nfnetlink.NflogPacket
-       dir := DirIn
-       epMap := map[[16]byte]*model.WorkloadEndpointKey{
-               localIp1: localWlEPKey1,
-               localIp2: localWlEPKey2,
-       }
-       lm := newMockLookupManager(epMap)
-       sink = make(chan *StatUpdate)
-       done := make(chan struct{})
-       dataFeeder = make(chan nfnetlink.NflogPacket)
-       gn := 1200
-       nflogSource = newNflogDataSource(lm, sink, gn, dir, 65535, dataFeeder, done)
-       b.ResetTimer()
-       b.ReportAllocs()
-       for n := 0; n < b.N; n++ {
-               nflogSource.convertNflogPktToStat(inPkt)
-       }
+	var nflogSource *NflogDataSource
+	var sink chan *StatUpdate
+	var dataFeeder chan *nfnetlink.NflogPacketAggregate
+	dir := DirIn
+	epMap := map[[16]byte]*model.WorkloadEndpointKey{
+		localIp1: localWlEPKey1,
+		localIp2: localWlEPKey2,
+	}
+	lm := newMockLookupManager(epMap)
+	sink = make(chan *StatUpdate)
+	done := make(chan struct{})
+	dataFeeder = make(chan *nfnetlink.NflogPacketAggregate)
+	gn := 1200
+	nflogSource = newNflogDataSource(lm, sink, gn, dir, 65535, dataFeeder, done)
+	b.ResetTimer()
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		nflogSource.convertNflogPktToStat(inPkt)
+	}
 }

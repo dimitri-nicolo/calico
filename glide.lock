@@ -210,7 +210,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
 - name: github.com/tigera/nfnetlink
-  version: a317675b11b7b195956ba39b318c07e924cba085
+  version: 9204631173c1a6b50432517f7f46bb54335f2565
   repo: git@github.com:tigera/nfnetlink
   subpackages:
   - nfnl

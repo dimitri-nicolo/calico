@@ -3,22 +3,19 @@
 package collector
 
 import (
-	"bytes"
 	"errors"
-	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/lookup"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 )
 
 type epLookup interface {
-	GetEndpointKey([16]byte) (interface{}, error)
-	GetPolicyIndex(epKey interface{}, policyKey *model.PolicyKey) int
+	GetEndpointKey(addr [16]byte) (interface{}, error)
+	GetPolicyIndex(epKey interface{}, policyName, tierName []byte) int
 }
 
 const PollingInterval = time.Duration(1) * time.Second
@@ -29,18 +26,18 @@ type NflogDataSource struct {
 	direction     Direction
 	nlBufSiz      int
 	lum           epLookup
-	nflogChan     chan nfnetlink.NflogPacket
+	nflogChan     chan *nfnetlink.NflogPacketAggregate
 	nflogDoneChan chan struct{}
 }
 
 func NewNflogDataSource(lm epLookup, sink chan<- *StatUpdate, groupNum int, dir Direction, nlBufSiz int) *NflogDataSource {
-	nflogChan := make(chan nfnetlink.NflogPacket, 1000)
+	nflogChan := make(chan *nfnetlink.NflogPacketAggregate, 1000)
 	done := make(chan struct{})
 	return newNflogDataSource(lm, sink, groupNum, dir, nlBufSiz, nflogChan, done)
 }
 
 // Internal constructor to help mocking from UTs.
-func newNflogDataSource(lm epLookup, sink chan<- *StatUpdate, gn int, dir Direction, nbs int, nc chan nfnetlink.NflogPacket, done chan struct{}) *NflogDataSource {
+func newNflogDataSource(lm epLookup, sink chan<- *StatUpdate, gn int, dir Direction, nbs int, nc chan *nfnetlink.NflogPacketAggregate, done chan struct{}) *NflogDataSource {
 	return &NflogDataSource{
 		sink:          sink,
 		groupNum:      gn,
@@ -68,39 +65,28 @@ func (ds *NflogDataSource) subscribeToNflog() error {
 
 func (ds *NflogDataSource) startProcessingPackets() {
 	defer close(ds.nflogDoneChan)
-	for nflogPacket := range ds.nflogChan {
-		go func(nflogPacket nfnetlink.NflogPacket) {
-			statUpdate, err := ds.convertNflogPktToStat(nflogPacket)
+	for nflogPacketAggr := range ds.nflogChan {
+		go func(nflogPacketAggr *nfnetlink.NflogPacketAggregate) {
+			statUpdates, err := ds.convertNflogPktToStat(nflogPacketAggr)
 			if err != nil {
-				log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacket)
+				log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacketAggr)
 				return
 			}
-			ds.sink <- statUpdate
-		}(nflogPacket)
+			for _, statUpdate := range statUpdates {
+				ds.sink <- statUpdate
+			}
+		}(nflogPacketAggr)
 	}
 }
 
-func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*StatUpdate, error) {
-	nflogTuple := nPkt.Tuple
-	var numPkts, numBytes int
-	var statUpdate *StatUpdate
-	var epKey interface{}
-	var err error
-	var prefixAction RuleAction
-	_, _, _, prefixAction = parsePrefix(nPkt.Prefix)
-	if prefixAction == DenyAction || prefixAction == AllowAction {
-		// NFLog based counters make sense only for denied packets or allowed packets
-		// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
-		// counters will overwrite these values anyway.
-		numPkts = 1
-		numBytes = nPkt.Bytes
-	} else {
-		// Allowed packet counters are updated via conntrack datasource.
-		// Don't update packet counts for NextTierAction to avoid multiply counting.
-		numPkts = 0
-		numBytes = 0
-	}
-
+func (ds *NflogDataSource) convertNflogPktToStat(nPktAggr *nfnetlink.NflogPacketAggregate) ([]*StatUpdate, error) {
+	var (
+		numPkts, numBytes int
+		statUpdates       []*StatUpdate
+		epKey             interface{}
+		err               error
+	)
+	nflogTuple := nPktAggr.Tuple
 	// Determine the endpoint that this packet hit a rule for. This depends on the direction
 	// because local -> local packets will be NFLOGed twice.
 	if ds.direction == DirIn {
@@ -109,22 +95,37 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPkt nfnetlink.NflogPacket) (*S
 		epKey, err = ds.lum.GetEndpointKey(nflogTuple.Src)
 	}
 
-	if err != lookup.UnknownEndpointError {
-		tp := lookupRule(ds.lum, nPkt.Prefix, epKey)
-		tp.Ctr = *NewCounter(numPkts, numBytes)
-		tuple := extractTupleFromNflogTuple(nPkt.Tuple)
-		// TODO(doublek): This DeltaCounter could be removed.
-		statUpdate = NewStatUpdate(tuple, 0, 0, 0, 0, DeltaCounter, ds.direction, tp)
-	} else {
+	if err == lookup.UnknownEndpointError {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
-		log.Warn("Failed to find endpoint for NFLOG packet ", nflogTuple, "/", ds.direction)
-		return nil, errors.New("Couldn't find endpoint info for NFLOG packet")
+		log.Warnf("Failed to find endpoint for NFLOG packet %v/%v", nflogTuple, ds.direction)
+		return statUpdates, errors.New("Couldn't find endpoint info for NFLOG packet")
 	}
-
-	return statUpdate, nil
+	for _, prefix := range nPktAggr.Prefixes {
+		tp, err := lookupRule(ds.lum, prefix.Prefix, prefix.Len, epKey)
+		if err != nil {
+			continue
+		}
+		if tp.Action == DenyAction || tp.Action == AllowAction {
+			// NFLog based counters make sense only for denied packets or allowed packets
+			// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
+			// counters will overwrite these values anyway.
+			numPkts = prefix.Packets
+			numBytes = prefix.Bytes
+		} else {
+			// Don't update packet counts for NextTierAction to avoid multiply counting.
+			numPkts = 0
+			numBytes = 0
+		}
+		tp.Ctr = *NewCounter(numPkts, numBytes)
+		tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
+		// TODO(doublek): This DeltaCounter could be removed.
+		statUpdate := NewStatUpdate(tuple, 0, 0, 0, 0, DeltaCounter, ds.direction, tp)
+		statUpdates = append(statUpdates, statUpdate)
+	}
+	return statUpdates, nil
 }
 
-func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
+func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {
 	var l4Src, l4Dst int
 	if nflogTuple.Proto == 1 {
 		l4Src = nflogTuple.L4Src.Id
@@ -258,56 +259,14 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) Tuple
 // Stubs
 // TODO (Matt): Refactor these in better.
 
-func lookupAction(action string) RuleAction {
-	switch action {
-	case "A":
-		return AllowAction
-	case "D":
-		return DenyAction
-	case "N":
-		return NextTierAction
-	default:
-		log.Error("Unknown action ", action)
-		return NextTierAction
+func lookupRule(lum epLookup, prefix [64]byte, prefixLen int, epKey interface{}) (RuleTracePoint, error) {
+	rtp, err := NewRuleTracePoint(prefix, prefixLen, epKey)
+	if err != nil {
+		return rtp, err
 	}
-}
-
-func parsePrefix(prefix string) (tier, policy, rule string, action RuleAction) {
-	// Prefix formats are:
-	// - A/rule index/profile name
-	// - A/rule index/policy name/tier name
-	// TODO (Matt): Add sensible rule UUIDs
-	prefixChunks := strings.Split(prefix, "/")
-	if len(prefixChunks) == 3 {
-		// Profile
-		// TODO (Matt): Need something better than profile;
-		//              it won't work if that's the name of a tier.
-		tier = "profile"
-	} else if len(prefixChunks) == 4 {
-		// Tiered Policy
-		// TODO(doublek): Should fix where the null character was introduced,
-		// which could be nfnetlink.
-		tier = string(bytes.Trim([]byte(prefixChunks[3]), "\x00"))
-	} else {
-		log.Errorf("Unable to parse NFLOG prefix %v", prefix)
-	}
-
-	action = lookupAction(prefixChunks[0])
-	rule = prefixChunks[1]
-	policy = prefixChunks[2]
-	return
-}
-
-func lookupRule(lum epLookup, prefix string, epKey interface{}) RuleTracePoint {
-	tier, policy, rule, action := parsePrefix(prefix)
-	return RuleTracePoint{
-		TierID:   tier,
-		PolicyID: policy,
-		Rule:     rule,
-		Action:   action,
-		Index:    lum.GetPolicyIndex(epKey, &model.PolicyKey{Name: policy, Tier: tier}),
-		EpKey:    epKey,
-	}
+	index := lum.GetPolicyIndex(epKey, rtp.PolicyID(), rtp.TierID())
+	rtp.Index = index
+	return rtp, nil
 }
 
 // End Stubs
