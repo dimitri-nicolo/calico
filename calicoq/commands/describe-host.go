@@ -21,11 +21,11 @@ import (
 // Do that for each rule in each policy (globally, not just selected).
 // Actually I want to be able to do eval selector with many selectors and few EPs.
 // Basically I want to be able to control the EP filter used by eval selector.
-func DescribeHost(hostname string, hideSelectors bool, includeRuleMatches bool) (err error) {
+func DescribeHost(hostname string, hideSelectors bool, hideRuleMatches bool) (err error) {
 	disp := dispatcher.NewDispatcher()
 	cbs := &describeCmd{
 		hideSelectors:    hideSelectors,
-		includeRules:     includeRuleMatches,
+		includeRules:     !hideRuleMatches,
 		hostname:         hostname,
 		dispatcher:       disp,
 		done:             make(chan bool),

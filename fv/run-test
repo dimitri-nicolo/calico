@@ -10,13 +10,15 @@ passed=0
 failed=0
 
 function run_test {
+    expected_result=$1
+    shift
     echo ------------------------------------------------------
     echo TEST: "$@"
     echo
     eval "$@"
     result=$?
     echo
-    if test $result -eq 0; then
+    if test $result -eq $expected_result; then
 	echo TEST: PASSED
 	let 'passed++'
     else
@@ -34,22 +36,26 @@ function summarise_test {
     echo
 }
 
-run_test ${CALICOQ} -h
+run_test 0 ${CALICOQ} -h
 
-run_test ${CALICOQ} --help
+run_test 0 ${CALICOQ} --help
 
-run_test ${CALICOQ} --version
+run_test 0 ${CALICOQ} --version
 
-run_test ${CALICOQ} version
+run_test 0 ${CALICOQ} version
 
-run_test ${CALICOQ} endpoint -h
+run_test 0 ${CALICOQ} endpoint -h
 
-run_test ${CALICOQ} eval -h
+run_test 0 ${CALICOQ} eval -h
 
-run_test ${CALICOQ} host -h
+run_test 0 ${CALICOQ} host -h
 
-run_test ${CALICOQ} policy -h
+run_test 0 ${CALICOQ} policy -h
 
-run_test ${CALICOQ} version -h
+run_test 0 ${CALICOQ} version -h
+
+run_test 1 ${CALICOQ}
+
+run_test 1 ${CALICOQ} non-existent-command
 
 summarise_test

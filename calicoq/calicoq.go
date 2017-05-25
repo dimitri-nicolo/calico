@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 
 	log "github.com/Sirupsen/logrus"
@@ -13,13 +14,21 @@ import (
 const usage = `Calico query tool.
 
 Usage:
-  calicoq host [-s|--hide-selectors] [-r|--include-rule-matches] <hostname>
   calicoq eval <selector>
+  calicoq policy <policy-id>
+  calicoq endpoint [-s|--hide-selectors] [-r|--hide-rule-matches] <endpoint-id>
+  calicoq host [-s|--hide-selectors] [-r|--hide-rule-matches] <hostname>
   calicoq version
 
 Options:
-  -s --hide-selectors        Hide selectors from output.
-  -r --include-rule-matches  Show policies whose rules match endpoints on the host.
+  -r --hide-rule-matches     Don't show the list of profiles and policies whose
+                             rule selectors match the specified endpoint (or an
+                             endpoint on the specified host) as an allowed or
+                             disallowed source/destination.
+
+  -s --hide-selectors        Don't show the detailed selector expressions involved
+                             (that cause each displayed profile or policy to match
+                             <endpoint-id> or <hostname>).
 `
 
 func main() {
@@ -32,17 +41,38 @@ func main() {
 	}
 	log.Info("Command line arguments: ", arguments)
 
-	if arguments["version"].(bool) {
-		err = commands.Version()
-	} else if arguments["eval"].(bool) {
-		err = commands.EvalSelector(arguments["<selector>"].(string))
-	} else {
-		err = commands.DescribeHost(arguments["<hostname>"].(string),
-			arguments["--hide-selectors"].(bool),
-			arguments["--include-rule-matches"].(bool))
+	for cmd, thunk := range map[string]func() error{
+		"version": commands.Version,
+		"eval": func() error {
+			// Show all the endpoints that match <selector>.
+			return commands.EvalSelector(arguments["<selector>"].(string))
+		},
+		"policy": func() error {
+			// Show all the endpoints that are relevant to <policy-id>.
+			return errors.New("policy is not yet implemented")
+		},
+		"endpoint": func() error {
+			// Show the profiles and policies that relate to <endpoint-id>.
+			return errors.New("endpoint is not yet implemented")
+		},
+		"host": func() error {
+			// Show the profiles and policies that relate to all endpoints on
+			// <hostname>.
+			return commands.DescribeHost(
+				arguments["<hostname>"].(string),
+				arguments["--hide-selectors"].(bool),
+				arguments["--hide-rule-matches"].(bool),
+			)
+		},
+	} {
+		if arguments[cmd].(bool) {
+			err = thunk()
+			break
+		}
 	}
 
 	if err != nil {
+		log.WithError(err).Error("Command failed")
 		os.Exit(1)
 	}
 }
