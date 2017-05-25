@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"syscall"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/tigera/nfnetlink/nfnl"
@@ -22,7 +23,9 @@ const (
 	ProtoUdp  = 17
 )
 
-func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacket, done <-chan struct{}) error {
+const AggregationDuration = time.Duration(10) * time.Millisecond
+
+func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
 	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
 	if err != nil {
 		return err
@@ -85,8 +88,10 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacket, done <-ch
 		<-done
 		sock.Close()
 	}()
+
+	resChan := make(chan [][]byte)
+	// Start a goroutine for receiving netlink messages from the kernel.
 	go func() {
-		defer close(ch)
 		logCtx := log.WithFields(log.Fields{
 			"groupNum": groupNum,
 		})
@@ -111,14 +116,63 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacket, done <-ch
 				}
 				res = append(res, m.Data)
 			}
-			for _, m := range res {
-				msg := nfnl.DeserializeNfGenMsg(m)
-				nflogPacket, err := parseNflog(m[msg.Len():])
-				if err != nil {
-					logCtx.Warnf("Error parsing NFLOG %v", err)
-					continue
+			resChan <- res
+		}
+	}()
+	// Start another goroutine for parsing netlink messages into nflog objects
+	go func() {
+		defer close(ch)
+		logCtx := log.WithFields(log.Fields{
+			"groupNum": groupNum,
+		})
+		// We batch NFLOG objects and send them to the subscriber every
+		// "AggregationDuration" time interval.
+		sendTicker := time.NewTicker(AggregationDuration)
+		// Batching is done like so:
+		// For each NflogPacketTuple if it's a prefix we've already seen we update
+		// packet and byte counters on exising NflogPrefix and discard the parsed
+		// packet.
+		aggregate := make(map[NflogPacketTuple]*NflogPacketAggregate)
+		for {
+			select {
+			case res := <-resChan:
+				for _, m := range res {
+					msg := nfnl.DeserializeNfGenMsg(m)
+					nflogPacket, err := parseNflog(m[msg.Len():])
+					if err != nil {
+						logCtx.Warnf("Error parsing NFLOG %v", err)
+						continue
+					}
+					var pktAggr *NflogPacketAggregate
+					updatePrefix := true
+					pktAggr, seen := aggregate[*nflogPacket.Tuple]
+					if seen {
+						for i, prefix := range pktAggr.Prefixes {
+							if prefix.Equals(&nflogPacket.Prefix) {
+								prefix.Packets++
+								prefix.Bytes += nflogPacket.Bytes
+								pktAggr.Prefixes[i] = prefix
+								updatePrefix = false
+								break
+							}
+						}
+						// We reached here, so we didn't find a prefix. Appending this prefix
+						// is handled below.
+					} else {
+						pktAggr = &NflogPacketAggregate{
+							Tuple: nflogPacket.Tuple,
+						}
+					}
+					if updatePrefix {
+						pktAggr.Prefixes = append(pktAggr.Prefixes, nflogPacket.Prefix)
+						aggregate[*nflogPacket.Tuple] = pktAggr
+					}
 				}
-				ch <- nflogPacket
+			case <-sendTicker.C:
+				for t, pktAddr := range aggregate {
+					ch <- pktAddr
+					delete(aggregate, t)
+				}
 			}
 		}
 	}()
@@ -150,11 +204,15 @@ func parseNflog(m []byte) (*NflogPacket, error) {
 			nflogPacket.Tuple, _ = parsePacketHeader(nflogPacket.Header.HwProtocol, attr.Value)
 			nflogPacket.Bytes = len(attr.Value)
 		case nfnl.NFULA_PREFIX:
-			nflogPacket.Prefix = string(attr.Value)
+			p := NflogPrefix{Len: len(attr.Value) - 1}
+			copy(p.Prefix[:], attr.Value[:len(attr.Value)-1])
+			nflogPacket.Prefix = p
 		case nfnl.NFULA_GID:
 			nflogPacket.Gid = int(native.Uint32(attr.Value[0:4]))
 		}
 	}
+	nflogPacket.Prefix.Packets = 1
+	nflogPacket.Prefix.Bytes = nflogPacket.Bytes
 	nfnl.AttrPool.Put(attrs)
 	return nflogPacket, nil
 }
