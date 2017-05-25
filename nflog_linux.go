@@ -145,8 +145,8 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 					}
 					var pktAggr *NflogPacketAggregate
 					updatePrefix := true
-					pktAggr, ok := aggregate[*nflogPacket.Tuple]
-					if ok {
+					pktAggr, seen := aggregate[*nflogPacket.Tuple]
+					if seen {
 						for i, prefix := range pktAggr.Prefixes {
 							if prefix.Equals(&nflogPacket.Prefix) {
 								prefix.Packets++
