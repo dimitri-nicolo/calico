@@ -14,13 +14,17 @@ import (
 const usage = `Calico query tool.
 
 Usage:
-  calicoq eval <selector>
-  calicoq policy <policy-id>
-  calicoq endpoint [-s|--hide-selectors] [-r|--hide-rule-matches] <endpoint-id>
-  calicoq host [-s|--hide-selectors] [-r|--hide-rule-matches] <hostname>
+  calicoq [-c <config>] eval <selector>
+  calicoq [-c <config>] policy <policy-id>
+  calicoq [-c <config>] endpoint [-s|--hide-selectors] [-r|--hide-rule-matches] <endpoint-id>
+  calicoq [-c <config>] host [-s|--hide-selectors] [-r|--hide-rule-matches] <hostname>
   calicoq version
 
 Options:
+  -c <config> --config=<config>  Path to the file containing connection
+                                 configuration in YAML or JSON format.
+                                 [default: /etc/calico/calicoctl.cfg]
+
   -r --hide-rule-matches     Don't show the list of profiles and policies whose
                              rule selectors match the specified endpoint (or an
                              endpoint on the specified host) as an allowed or
@@ -45,7 +49,10 @@ func main() {
 		"version": commands.Version,
 		"eval": func() error {
 			// Show all the endpoints that match <selector>.
-			return commands.EvalSelector(arguments["<selector>"].(string))
+			return commands.EvalSelector(
+				arguments["--config"].(string),
+				arguments["<selector>"].(string),
+			)
 		},
 		"policy": func() error {
 			// Show all the endpoints that are relevant to <policy-id>.
@@ -59,6 +66,7 @@ func main() {
 			// Show the profiles and policies that relate to all endpoints on
 			// <hostname>.
 			return commands.DescribeHost(
+				arguments["--config"].(string),
 				arguments["<hostname>"].(string),
 				arguments["--hide-selectors"].(bool),
 				arguments["--hide-rule-matches"].(bool),

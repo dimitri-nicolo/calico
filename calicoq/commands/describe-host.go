@@ -13,7 +13,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/client"
 )
 
 // MATT: How to make includeRules actually work?
@@ -21,7 +20,7 @@ import (
 // Do that for each rule in each policy (globally, not just selected).
 // Actually I want to be able to do eval selector with many selectors and few EPs.
 // Basically I want to be able to control the EP filter used by eval selector.
-func DescribeHost(hostname string, hideSelectors bool, hideRuleMatches bool) (err error) {
+func DescribeHost(configFile, hostname string, hideSelectors bool, hideRuleMatches bool) (err error) {
 	disp := dispatcher.NewDispatcher()
 	cbs := &describeCmd{
 		hideSelectors:    hideSelectors,
@@ -94,7 +93,7 @@ func DescribeHost(hostname string, hideSelectors bool, hideRuleMatches bool) (er
 	if cbs.includeRules {
 		// MATT: Would be nice to have a single dispatcher: wouldn't need to worry about
 		// the two not working on the same data and giving weird results.
-		cbs.evalCmd = NewEvalCmd()
+		cbs.evalCmd = NewEvalCmd(configFile)
 		polRules := func(update api.Update) (filterOut bool) {
 			// Go through the rules, and generate a selector for each.
 			polId := update.Key.(model.PolicyKey).Name
@@ -156,7 +155,7 @@ func DescribeHost(hostname string, hideSelectors bool, hideRuleMatches bool) (er
 	disp.Register(model.ProfileLabelsKey{}, arc.OnUpdate)
 	disp.Register(model.ProfileRulesKey{}, arc.OnUpdate)
 
-	apiConfig, err := client.LoadClientConfig("")
+	apiConfig, err := LoadClientConfig(configFile)
 	if err != nil {
 		log.Fatal("Failed loading client config")
 		os.Exit(1)

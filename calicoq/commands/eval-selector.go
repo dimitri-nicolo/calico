@@ -12,12 +12,11 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/client"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 )
 
-func EvalSelector(sel string) (err error) {
-	cbs := NewEvalCmd()
+func EvalSelector(configFile, sel string) (err error) {
+	cbs := NewEvalCmd(configFile)
 	cbs.AddSelector("the selector", sel)
 	noopFilter := func(update api.Update) (filterOut bool) {
 		return false
@@ -33,9 +32,10 @@ func EvalSelector(sel string) (err error) {
 }
 
 // Restructuring like this should also be useful for a permanently running webserver variant too.
-func NewEvalCmd() (cbs *EvalCmd) {
+func NewEvalCmd(configFile string) (cbs *EvalCmd) {
 	disp := dispatcher.NewDispatcher()
 	cbs = &EvalCmd{
+		configFile: configFile,
 		dispatcher: disp,
 		done:       make(chan bool),
 		matches:    make(map[interface{}][]string),
@@ -76,7 +76,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 	cbs.dispatcher.Register(model.HostEndpointKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
 
-	apiConfig, err := client.LoadClientConfig("")
+	apiConfig, err := LoadClientConfig(cbs.configFile)
 	if err != nil {
 		log.Fatal("Failed loading client config")
 		os.Exit(1)
@@ -116,6 +116,7 @@ func endpointName(key interface{}) string {
 }
 
 type EvalCmd struct {
+	configFile string
 	dispatcher *dispatcher.Dispatcher
 	index      *labelindex.InheritIndex
 	matches    map[interface{}][]string
