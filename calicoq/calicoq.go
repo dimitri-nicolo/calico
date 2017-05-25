@@ -3,7 +3,6 @@
 package main
 
 import (
-	"errors"
 	"os"
 
 	log "github.com/Sirupsen/logrus"
@@ -56,7 +55,10 @@ func main() {
 		},
 		"policy": func() error {
 			// Show all the endpoints that are relevant to <policy-id>.
-			return errors.New("policy is not yet implemented")
+			return commands.EvalPolicySelectors(
+				arguments["--config"].(string),
+				arguments["<policy-id>"].(string),
+			)
 		},
 		"endpoint": func() error {
 			// Show the profiles and policies that relate to <endpoint-id>.
