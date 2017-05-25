@@ -1,0 +1,51 @@
+#!/bin/bash
+
+cat <<EOF
+
+Running calicoq FV tests with ${CALICOQ=calicoq}
+
+EOF
+
+passed=0
+failed=0
+
+function run_test {
+    echo ------------------------------------------------------
+    echo TEST: "$@"
+    echo
+    eval "$@"
+    result=$?
+    echo
+    if test $result -eq 0; then
+	echo TEST: PASSED
+	let 'passed++'
+    else
+	echo TEST: FAILED \($result\)
+	let 'failed++'
+    fi
+    echo ------------------------------------------------------
+    echo
+}
+
+function summarise_test {
+    echo ------------------------------------------------------
+    echo FV TEST SUMMARY: $passed PASSED, $failed FAILED
+    echo ------------------------------------------------------
+    echo
+}
+
+run_test ${CALICOQ} version
+
+run_test ${CALICOQ} -h
+
+run_test ${CALICOQ} endpoint -h
+
+run_test ${CALICOQ} eval -h
+
+run_test ${CALICOQ} host -h
+
+run_test ${CALICOQ} policy -h
+
+run_test ${CALICOQ} version -h
+
+summarise_test

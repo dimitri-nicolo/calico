@@ -13,6 +13,9 @@ update-vendor:
 ut:
 	./run-uts
 
+fv: release/calicoq
+	CALICOQ=`pwd`/$^ fv/run-test
+
 .PHONY: force
 force:
 	true
