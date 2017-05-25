@@ -25,6 +25,9 @@ type NflogPacketTuple struct {
 	L4Dst NflogL4Info
 }
 
+// NflogPrefix stores the "nflog-prefix" of a NFLOG packet.
+// NFLOG prefixes are 64 characters long. We keep them as a byte array to save
+// the allocation that comes with converting it to a string.
 type NflogPrefix struct {
 	Prefix  [64]byte
 	Len     int
