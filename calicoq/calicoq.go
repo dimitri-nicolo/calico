@@ -18,17 +18,14 @@ Usage:
   calicoq version
 
 Options:
-  -h --help                  Show usage.
   -s --hide-selectors        Hide selectors from output.
   -r --include-rule-matches  Show policies whose rules match endpoints on the host.
 `
 
 func main() {
-	var err error
-
 	log.SetLevel(log.DebugLevel)
 
-	arguments, err := docopt.Parse(usage, nil, true, "calicoq", false, false)
+	arguments, err := docopt.Parse(usage, nil, true, commands.VERSION, false)
 	if err != nil {
 		log.Infof("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
