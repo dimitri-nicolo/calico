@@ -16,6 +16,9 @@ ut:
 fv: release/calicoq
 	CALICOQ=`pwd`/$^ fv/run-test
 
+st: release/calicoq
+	CALICOQ=`pwd`/$^ st/run-test
+
 .PHONY: force
 force:
 	true
