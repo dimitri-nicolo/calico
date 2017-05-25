@@ -23,6 +23,8 @@ const (
 	ProtoUdp  = 17
 )
 
+const AggregationDuration = time.Duration(10) * time.Millisecond
+
 func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, done <-chan struct{}) error {
 	sock, err := nl.Subscribe(syscall.NETLINK_NETFILTER)
 	if err != nil {
@@ -88,6 +90,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	}()
 
 	resChan := make(chan [][]byte)
+	// Start a goroutine for receiving netlink messages from the kernel.
 	go func() {
 		logCtx := log.WithFields(log.Fields{
 			"groupNum": groupNum,
@@ -116,12 +119,19 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 			resChan <- res
 		}
 	}()
+	// Start another goroutine for parsing netlink messages into nflog objects
 	go func() {
 		defer close(ch)
 		logCtx := log.WithFields(log.Fields{
 			"groupNum": groupNum,
 		})
-		sendTicker := time.NewTicker(time.Duration(10) * time.Millisecond)
+		// We batch NFLOG objects and send them to the subscriber every
+		// "AggregationDuration" time interval.
+		sendTicker := time.NewTicker(AggregationDuration)
+		// Batching is done like so:
+		// For each NflogPacketTuple if it's a prefix we've already seen we update
+		// packet and byte counters on exising NflogPrefix and discard the parsed
+		// packet.
 		aggregate := make(map[NflogPacketTuple]*NflogPacketAggregate)
 		for {
 			select {
@@ -133,7 +143,6 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 						logCtx.Warnf("Error parsing NFLOG %v", err)
 						continue
 					}
-					//
 					var pktAggr *NflogPacketAggregate
 					updatePrefix := true
 					pktAggr, ok := aggregate[*nflogPacket.Tuple]
