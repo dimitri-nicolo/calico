@@ -27,6 +27,8 @@ toc:
         path: /getting-started/kubernetes/installation/hosted/kubeadm/
       - title: Kubernetes Datastore Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
+      - title: Essentials Kubernetes Hosted Install
+        path: /getting-started/kubernetes/installation/hosted/essentials/
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
     - title: AWS
