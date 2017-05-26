@@ -23,3 +23,11 @@ To deploy, bring up k8s >=1.6
 .
 .
 ```
+
+## Cluster Access
+```
+# APISERVER=$(kubectl config view | grep server | cut -f 2- -d ":" | tr -d " ")
+# TOKEN=$(kubectl describe secret $(kubectl get secrets | grep default | cut -f1 -d ' '
+# curl $APISERVER/api/ --header "Authorization: Bearer $TOKEN" --insecure
+```
+
