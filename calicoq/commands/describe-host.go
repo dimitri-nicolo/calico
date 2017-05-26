@@ -109,7 +109,7 @@ func DescribeEndpointOrHost(configFile, endpointID, hostname string, hideSelecto
 				if cbs.hideSelectors {
 					return ""
 				}
-				return fmt.Sprintf("; selector '%s'", selector)
+				return fmt.Sprintf("; selector \"%s\"", selector)
 			}
 			for i, rule := range policy.InboundRules {
 				if rule.SrcSelector != "" {
@@ -310,7 +310,7 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 							if cbs.hideSelectors {
 								fmt.Printf("    Policy %#v (order %v)%v\n", pol.Key.Name, order, suffix)
 							} else {
-								fmt.Printf("    Policy %#v (order %v; selector '%v')%v\n", pol.Key.Name, order, pol.Value.Selector, suffix)
+								fmt.Printf("    Policy %#v (order %v; selector \"%v\")%v\n", pol.Key.Name, order, pol.Value.Selector, suffix)
 							}
 						}
 					}
