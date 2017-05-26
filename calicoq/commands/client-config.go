@@ -9,6 +9,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/client"
 )
 
@@ -34,5 +35,13 @@ func GetClient(cf string) bapi.Client {
 		log.Fatal("Failed to create client")
 		os.Exit(1)
 	}
+	if kv, err := bclient.Get(model.ReadyFlagKey{}); err != nil {
+		log.WithError(err).Fatal("Failed to read datastore 'Ready' flag - is your datastore configuration correct?")
+		os.Exit(1)
+	} else if kv.Value != true {
+		log.Fatal("Datastore 'Ready' flag is false - can't run calicoq on a non-ready datastore")
+		os.Exit(1)
+	}
+
 	return bclient
 }
