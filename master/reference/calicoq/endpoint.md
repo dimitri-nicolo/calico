@@ -2,19 +2,16 @@
 title: calicoq endpoint
 ---
 
-`calicoq endpoint <endpoint-id>` shows you the Calico profiles and policies
-that relate to a particular endpoint `<endpoint-id>`.  It can display, in
-separate lists:
+`calicoq endpoint <substring>` shows you the Calico profiles and policies that
+relate to a endpoints whose full name includes `<substring>`.  It can display,
+in separate lists:
 
 - the profiles and policies that Calico uses to police traffic that is arriving
-  at or departing from `<endpoint-id>`
+  at or departing from those endpoints
 
 - the profiles and policies for other endpoints that allow (or disallow, using
-  selectors) `<endpoint-id>` as a source/destination for some traffic to/from
-  them.
-
-By default `calico endpoint` shows both of those lists; the second list can be
-suppressed by giving the `-r` option.
+  selectors) one of those endpoints as a source/destination for some traffic
+  to/from them.
 
 > **Note:** You may be wondering what the difference is between those.  For
 > example, what is the difference between (A):
@@ -40,6 +37,12 @@ suppressed by giving the `-r` option.
 > ingress and egress traffic.  In that case both (A) and (B) would be needed to
 > permit the intended connectivity between 'client' and 'server' pods.
 
+By default `calico endpoint` shows both of those lists; the second list can be
+suppressed by giving the `-r` option.
+
+`<substring>` can be any substring of an endpoint's full name, which is formed
+as `<host-name>/<orchestrator-id>/<workload-id>/<endpoint-id>`.
+
 ## Options
 
 ```
@@ -54,13 +57,47 @@ suppressed by giving the `-r` option.
 
 ## Example
 
+Here is an example with three workloads in a group, named with a prefix that
+specifies the group; so `calicoq endpoint` with that prefix returns information
+about all three endpoints.
 ```
-$ calicoq endpoint ...
+$ calicoq endpoint g1w
 
-Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
+Policies that match each endpoint:
+
+Workload endpoint k8s/g1w1/eth0
   Policies:
+    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
   Profiles:
-    Profile ns.projectcalico.org/calico-monitoring
+    Profile group1
+
+Workload endpoint k8s/g1w2/eth0
+  Policies:
+    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+  Profiles:
+    Profile group1
+
+Workload endpoint k8s/g1w3/eth0
+  Policies:
+    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+  Profiles:
+    Profile group1
+```
+
+Here is an example of a workload to which both normal and untracked policy
+applies.  The untracked policy is listed first because Calico enforces
+untracked policies before normal ones.
+```
+$ calicoq endpoint tigera-lwr-kubetest-02/
+
+Policies that match each endpoint:
+
+Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
+  Policies:
+    Policy "donottrack" (order 500; selector "calico/k8s_ns == 'advanced-policy-demo'") [untracked]
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "calico/k8s_ns == 'advanced-policy-demo'")
+  Profiles:
+    Profile k8s_ns.advanced-policy-demo
 ```
 
 ## See also

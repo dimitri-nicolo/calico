@@ -15,29 +15,79 @@ It shows output that is equivalent to running `calicoq eval <selector>` for the
 policy's `spec.selector` and for any `selector` or `notSelector` expressions in
 the `source` or `destination` of the policy's rules.
 
+## Options
+
+```
+-r --hide-rule-matches     Don't show the list of profiles and policies whose
+                           rule selectors match <endpoint-id> as an allowed or
+                           disallowed source/destination.
+
+-s --hide-selectors        Don't show the detailed selector expressions involved
+                           (that cause each displayed profile or policy to match
+                           <endpoint-id>).
+```
+
 ## Examples
 
-To find all endpoints that match the `role=='frontend'` selector, i.e. that
-have a `role` label with value `frontend`:
+In this example there are two groups of three endpoints each.  Policy "p1"
+applies to all of the endpoints in the first group, and its rules reference
+both groups as possible (allowed or denied) sources or destinations:
 ```
-$ calicoq eval "role=='frontend'"
-Endpoints matching selector role=='frontend':
-  Host endpoint webserver1/eth0
-  Host endpoint webserver2/eth0
+$ calicoq policy p1
+
+Endpoints matching policy p1:
+  Workload endpoint host1/k8s/g1w1/eth0
+    applicable endpoints; selector "calico/k8s_ns == 'group1'"
+    outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+  Workload endpoint host1/k8s/g1w2/eth0
+    applicable endpoints; selector "calico/k8s_ns == 'group1'"
+    outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+  Workload endpoint host1/k8s/g1w3/eth0
+    applicable endpoints; selector "calico/k8s_ns == 'group1'"
+    outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+  Workload endpoint host1/k8s/g2w1/eth0
+    inbound rule 1 source match; selector "calico/k8s_ns == 'group2'"
+  Workload endpoint host1/k8s/g2w2/eth0
+    inbound rule 1 source match; selector "calico/k8s_ns == 'group2'"
+  Workload endpoint host1/k8s/g2w3/eth0
+    inbound rule 1 source match; selector "calico/k8s_ns == 'group2'"
 ```
 
-To find all endpoints that have an `app` label (with any value):
+You can simplify that output by specifying `--hide-selectors`:
 ```
-$ calicoq eval "has(app)"
-Endpoints matching selector has(app):
-  Workload endpoint rack1-host1/k8s/default.frontend-5gs43/eth0
-```
-(In this case the answer is a Kubernetes pod.)
+$ calicoq policy p1 --hide-selectors
 
-In case the specified selector did not match any endpoints, you would see:
+Endpoints matching policy p1:
+  Workload endpoint host1/k8s/g1w1/eth0
+    applicable endpoints
+    outbound rule 1 destination match
+  Workload endpoint host1/k8s/g1w2/eth0
+    applicable endpoints
+    outbound rule 1 destination match
+  Workload endpoint host1/k8s/g1w3/eth0
+    applicable endpoints
+    outbound rule 1 destination match
+  Workload endpoint host1/k8s/g2w1/eth0
+    inbound rule 1 source match
+  Workload endpoint host1/k8s/g2w2/eth0
+    inbound rule 1 source match
+  Workload endpoint host1/k8s/g2w3/eth0
+    inbound rule 1 source match
 ```
-$ calicoq eval "role=='endfront'"
-Endpoints matching selector role=='endfront':
+
+If you only wanted to know the endpoints whose ingress or egress traffic is
+policed according to that policy, you could simplify the output further by
+adding `--hide-rule-matches`:
+```
+$ calicoq policy p1 --hide-rule-matches --hide-selectors
+
+Endpoints matching policy p1:
+  Workload endpoint host1/k8s/g1w1/eth0
+    applicable endpoints
+  Workload endpoint host1/k8s/g1w2/eth0
+    applicable endpoints
+  Workload endpoint host1/k8s/g1w3/eth0
+    applicable endpoints
 ```
 
 ## See also
