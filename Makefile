@@ -23,11 +23,14 @@ st: release/calicoq
 force:
 	true
 
-bin/calicoq: vendor protobuf force
+# All calicoq Go source files.
+CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)
+
+bin/calicoq: vendor protobuf $(CALICOQ_GO_FILES)
 	mkdir -p bin
 	go build -o "$@" "./calicoq/calicoq.go"
 
-release/calicoq: force
+release/calicoq: $(CALICOQ_GO_FILES)
 	mkdir -p release
 	cd build-container && docker build -t calicoq-build .
 	docker run --rm -v `pwd`:/calicoq calicoq-build /calicoq/build-container/build.sh
