@@ -44,13 +44,34 @@ func NewEvalCmd(configFile string) (cbs *EvalCmd) {
 }
 
 func (cbs *EvalCmd) AddSelector(selectorName string, selectorExpression string) {
+	if selectorExpression == "" {
+		return
+	}
 	parsedSel, err := selector.Parse(selectorExpression)
 	if err != nil {
 		fmt.Printf("Invalid selector: %#v. %v.\n", selectorExpression, err)
 		os.Exit(1)
 	}
 
+	if cbs.showSelectors {
+		selectorName = fmt.Sprintf("%v; selector \"%v\"", selectorName, selectorExpression)
+	}
+
 	cbs.index.UpdateSelector(selectorName, parsedSel)
+}
+
+func (cbs *EvalCmd) AddPolicyRuleSelectors(policy *model.Policy, prefix string) {
+	for direction, ruleSet := range map[string][]model.Rule{
+		"inbound":  policy.InboundRules,
+		"outbound": policy.OutboundRules,
+	} {
+		for i, rule := range ruleSet {
+			cbs.AddSelector(fmt.Sprintf("%v%v rule %v source match", prefix, direction, i+1), rule.SrcSelector)
+			cbs.AddSelector(fmt.Sprintf("%v%v rule %v destination match", prefix, direction, i+1), rule.DstSelector)
+			cbs.AddSelector(fmt.Sprintf("%v%v rule %v !source match", prefix, direction, i+1), rule.NotSrcSelector)
+			cbs.AddSelector(fmt.Sprintf("%v%v rule %v !destination match", prefix, direction, i+1), rule.NotDstSelector)
+		}
+	}
 }
 
 // Call this once you've AddSelector'ed the selectors you want to add.
@@ -106,10 +127,11 @@ func endpointName(key interface{}) string {
 }
 
 type EvalCmd struct {
-	configFile string
-	dispatcher *dispatcher.Dispatcher
-	index      *labelindex.InheritIndex
-	matches    map[interface{}][]string
+	showSelectors bool
+	configFile    string
+	dispatcher    *dispatcher.Dispatcher
+	index         *labelindex.InheritIndex
+	matches       map[interface{}][]string
 
 	done chan bool
 }

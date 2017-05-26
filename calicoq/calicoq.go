@@ -13,11 +13,11 @@ import (
 const usage = `Calico query tool.
 
 Usage:
-  calicoq [-d] [-c <config>] eval <selector>
-  calicoq [-d] [-c <config>] policy <policy-id>
-  calicoq [-d] [-c <config>] endpoint [-s|--hide-selectors] [-r|--hide-rule-matches] <endpoint-id>
-  calicoq [-d] [-c <config>] host [-s|--hide-selectors] [-r|--hide-rule-matches] <hostname>
-  calicoq [-d] version
+  calicoq [--debug] [--config=<config>] eval <selector>
+  calicoq [--debug] [--config=<config>] policy <policy-id> [--hide-selectors] [--hide-rule-matches]
+  calicoq [--debug] [--config=<config>] endpoint <endpoint-id> [--hide-selectors] [--hide-rule-matches]
+  calicoq [--debug] [--config=<config>] host <hostname> [--hide-selectors] [--hide-rule-matches]
+  calicoq [--debug] version
 
 Options:
   -c <config> --config=<config>  Path to the file containing connection
@@ -44,7 +44,7 @@ func main() {
 		log.Errorf("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
 	}
-	if arguments["-d"].(bool) {
+	if arguments["--debug"].(bool) {
 		log.SetLevel(log.DebugLevel)
 	}
 	log.Info("Command line arguments: ", arguments)
@@ -63,6 +63,8 @@ func main() {
 			return commands.EvalPolicySelectors(
 				arguments["--config"].(string),
 				arguments["<policy-id>"].(string),
+				arguments["--hide-selectors"].(bool),
+				arguments["--hide-rule-matches"].(bool),
 			)
 		},
 		"endpoint": func() error {

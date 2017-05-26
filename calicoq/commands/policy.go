@@ -5,13 +5,14 @@ package commands
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
-func EvalPolicySelectors(configFile, policyID string) (err error) {
+func EvalPolicySelectors(configFile, policyID string, hideSelectors, hideRuleMatches bool) (err error) {
 
 	bclient := GetClient(configFile)
 
@@ -25,25 +26,10 @@ func EvalPolicySelectors(configFile, policyID string) (err error) {
 	policy := kv.Value.(*model.Policy)
 
 	cbs := NewEvalCmd(configFile)
+	cbs.showSelectors = !hideSelectors
 	cbs.AddSelector("applicable endpoints", policy.Selector)
-	for name, ruleSet := range map[string][]model.Rule{
-		"inbound":  policy.InboundRules,
-		"outbound": policy.OutboundRules,
-	} {
-		for ii, rule := range ruleSet {
-			if rule.SrcSelector != "" {
-				cbs.AddSelector(fmt.Sprintf("%v %v SrcSelector", name, ii), rule.SrcSelector)
-			}
-			if rule.DstSelector != "" {
-				cbs.AddSelector(fmt.Sprintf("%v %v DstSelector", name, ii), rule.DstSelector)
-			}
-			if rule.NotSrcSelector != "" {
-				cbs.AddSelector(fmt.Sprintf("%v %v NotSrcSelector", name, ii), rule.NotSrcSelector)
-			}
-			if rule.NotDstSelector != "" {
-				cbs.AddSelector(fmt.Sprintf("%v %v NotDstSelector", name, ii), rule.NotDstSelector)
-			}
-		}
+	if !hideRuleMatches {
+		cbs.AddPolicyRuleSelectors(policy, "")
 	}
 
 	noopFilter := func(update api.Update) (filterOut bool) {
@@ -51,10 +37,23 @@ func EvalPolicySelectors(configFile, policyID string) (err error) {
 	}
 	cbs.Start(noopFilter)
 
-	matches := cbs.GetMatches()
+	matches := map[string][]string{}
+	for endpointID, selectors := range cbs.GetMatches() {
+		matches[endpointName(endpointID)] = selectors
+	}
+	names := []string{}
+	for name, _ := range matches {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	fmt.Printf("Endpoints matching policy %v:\n", policyID)
-	for endpoint := range matches {
-		fmt.Printf("  %v\n", endpointName(endpoint))
+	for _, name := range names {
+		fmt.Printf("  %v\n", name)
+		sort.Strings(matches[name])
+		for _, sel := range matches[name] {
+			fmt.Printf("    %v\n", sel)
+		}
 	}
 	return
 }

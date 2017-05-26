@@ -99,53 +99,13 @@ func DescribeEndpointOrHost(configFile, endpointID, hostname string, hideSelecto
 		// MATT: Would be nice to have a single dispatcher: wouldn't need to worry about
 		// the two not working on the same data and giving weird results.
 		cbs.evalCmd = NewEvalCmd(configFile)
+		cbs.evalCmd.showSelectors = !hideSelectors
 		polRules := func(update api.Update) (filterOut bool) {
 			// Go through the rules, and generate a selector for each.
-			polId := update.Key.(model.PolicyKey).Name
-			policy := update.Value.(*model.Policy)
-			showSelector := func(selector string) (text string) {
-				if cbs.hideSelectors {
-					return ""
-				}
-				return fmt.Sprintf("; selector \"%s\"", selector)
-			}
-			for i, rule := range policy.InboundRules {
-				if rule.SrcSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v inbound source match%s)", polId, i, showSelector(rule.SrcSelector)),
-						rule.SrcSelector)
-				}
-				if rule.DstSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v inbound destination match%s)", polId, i, showSelector(rule.DstSelector)),
-						rule.DstSelector)
-				}
-				if rule.NotSrcSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v inbound !source match%s)", polId, i, showSelector(rule.NotSrcSelector)),
-						rule.NotSrcSelector)
-				}
-				if rule.NotDstSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v inbound !destination match%s)", polId, i, showSelector(rule.NotDstSelector)),
-						rule.NotDstSelector)
-				}
-			}
-			for i, rule := range policy.OutboundRules {
-				// TODO: Also refactor this because it's too copy-pasty.
-				if rule.SrcSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v outbound source match%s)", polId, i, showSelector(rule.SrcSelector)),
-						rule.SrcSelector)
-				}
-				if rule.DstSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v outbound destination match%s)", polId, i, showSelector(rule.DstSelector)),
-						rule.DstSelector)
-				}
-				if rule.NotSrcSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v outbound negative source match%s)", polId, i, showSelector(rule.NotSrcSelector)),
-						rule.NotSrcSelector)
-				}
-				if rule.NotDstSelector != "" {
-					cbs.evalCmd.AddSelector(fmt.Sprintf("Policy %v (rule %v outbound negative destination match%s)", polId, i, showSelector(rule.NotDstSelector)),
-						rule.NotDstSelector)
-				}
-			}
+			cbs.evalCmd.AddPolicyRuleSelectors(
+				update.Value.(*model.Policy),
+				"Policy "+update.Key.(model.PolicyKey).Name+" ",
+			)
 			return false
 		}
 		disp.Register(model.PolicyKey{}, polRules)
