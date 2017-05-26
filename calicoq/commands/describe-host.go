@@ -280,7 +280,8 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			log.Infof("Looking at endpoint %v with policies %v", epID, polIDs)
 			fmt.Printf("\n%v\n", epName)
 			fmt.Println("  Policies:")
-			for untracked, suffix := range map[bool]string{true: " [untracked]", false: ""} {
+			for _, untracked := range []bool{true, false} {
+				suffix := map[bool]string{true: " [untracked]", false: ""}[untracked]
 				for _, tier := range tiers {
 					log.Infof("Looking at tier %v", tier)
 					if tier.Name != "default" {
