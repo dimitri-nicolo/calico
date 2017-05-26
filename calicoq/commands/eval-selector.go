@@ -9,7 +9,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
-	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/selector"
@@ -76,16 +75,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 	cbs.dispatcher.Register(model.HostEndpointKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
 
-	apiConfig, err := LoadClientConfig(cbs.configFile)
-	if err != nil {
-		log.Fatal("Failed loading client config")
-		os.Exit(1)
-	}
-	bclient, err := backend.NewClient(*apiConfig)
-	if err != nil {
-		log.Fatal("Failed to create client")
-		os.Exit(1)
-	}
+	bclient := GetClient(cbs.configFile)
 	syncer := bclient.Syncer(cbs)
 	syncer.Start()
 }

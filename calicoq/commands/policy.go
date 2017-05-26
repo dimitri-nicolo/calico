@@ -7,23 +7,13 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 func EvalPolicySelectors(configFile, policyID string) (err error) {
 
-	apiConfig, err := LoadClientConfig(configFile)
-	if err != nil {
-		log.Fatal("Failed loading client config")
-		os.Exit(1)
-	}
-	bclient, err := backend.NewClient(*apiConfig)
-	if err != nil {
-		log.Fatal("Failed to create client")
-		os.Exit(1)
-	}
+	bclient := GetClient(configFile)
 
 	kv, err := bclient.Get(model.PolicyKey{Name: policyID, Tier: "default"})
 	if err != nil {

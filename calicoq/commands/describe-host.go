@@ -4,14 +4,12 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dispatcher"
-	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -162,16 +160,7 @@ func DescribeEndpointOrHost(configFile, endpointID, hostname string, hideSelecto
 	disp.Register(model.ProfileLabelsKey{}, arc.OnUpdate)
 	disp.Register(model.ProfileRulesKey{}, arc.OnUpdate)
 
-	apiConfig, err := LoadClientConfig(configFile)
-	if err != nil {
-		log.Fatal("Failed loading client config")
-		os.Exit(1)
-	}
-	bclient, err := backend.NewClient(*apiConfig)
-	if err != nil {
-		log.Fatal("Failed to create client")
-		os.Exit(1)
-	}
+	bclient := GetClient(configFile)
 	syncer := bclient.Syncer(cbs)
 	syncer.Start()
 

@@ -7,6 +7,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/api"
+	"github.com/projectcalico/libcalico-go/lib/backend"
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/client"
 )
 
@@ -19,4 +21,18 @@ func LoadClientConfig(cf string) (*api.CalicoAPIConfig, error) {
 	}
 
 	return client.LoadClientConfig(cf)
+}
+
+func GetClient(cf string) bapi.Client {
+	apiConfig, err := LoadClientConfig(cf)
+	if err != nil {
+		log.Fatal("Failed loading client config")
+		os.Exit(1)
+	}
+	bclient, err := backend.NewClient(*apiConfig)
+	if err != nil {
+		log.Fatal("Failed to create client")
+		os.Exit(1)
+	}
+	return bclient
 }
