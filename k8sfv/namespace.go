@@ -89,7 +89,11 @@ func cleanupAllNamespaces(clientset *kubernetes.Clientset, nsPrefix string) {
 		if strings.HasPrefix(ns.ObjectMeta.Name, nsPrefix) {
 			err = clientset.Namespaces().Delete(ns.ObjectMeta.Name, deleteImmediately)
 			if err != nil {
-				panic(err)
+				if strings.HasSuffix(err.Error(), "The system is ensuring all content is removed from this namespace.  Upon completion, this namespace will automatically be purged by the system.") {
+					log.Info("Namespace already being deleted - carry on")
+				} else {
+					panic(err)
+				}
 			}
 		} else {
 			log.WithField("name", ns.ObjectMeta.Name).Debug("Namespace skipped")
