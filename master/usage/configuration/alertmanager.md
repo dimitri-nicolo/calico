@@ -4,6 +4,61 @@ title: Configuring Alertmanager
 
 Full information about Alertmanager is available with [upstream documentation](https://prometheus.io/docs/alerting/configuration).
 
+#### Updating the AlertManager config
+
+  - Save the current alertmanager secret, usually named `alertmanager-<your-alertmanager-name>`.
+    Our manifests will end up creating a secret called: `alertmanager-calico-node-alertmanager`.
+
+		$ kubectl -n calico-monitoring get secrets alertmanager-calico-node-alertmanager -o yaml > alertmanager-secret.yaml
+
+  - The current alertmanager.yaml file is encoded and stored inside the
+    `alertmanager.yaml` key under the `data` field. You can decode it by
+    copying the value of `alertmanager.yaml` and using the `base64` command.
+
+		$ echo "<whatever-you-copied>" | base64 --decode > alertmanager-config.yaml
+
+  - Make necessary changes to `alertmanager-config.yaml`. Once this is done,
+    you have to re-encode and save it to `alertmanager-secret.yaml`. You can do
+    this by (in Linux):
+
+		$ cat alertmanager-config.yaml | base64 -w 0
+
+  - Paste the output of the running the command above back in `alertmanager-secret.yaml`
+    replacing the value present in `alertmanager.yaml` field. The _apply_ this
+    updated manifest.
+
+		$ kubectl -n calico-monitoring apply -f alertmanager-config.yaml
+
+  Your changes should be applied in a few seconds by the config-reloader
+  container inside the alertmanager pod launched by the prometheus-operator
+  (usually named `alertmanager-<your-alertmanager-instance-name>`).
+
+You can also create your own alertmanager configuration file. Write your
+alertmanager configuration file based on [alerting configuration](https://prometheus.io/docs/alerting/configuration/)
+and save it to a file, say alertmanager.yaml and then run:
+
+		$ cat alertmanager.yaml | base64 -w 0
+
+Use the output from this command to create a manifest for the alertmanager
+secret and save it to a file called `alertmanager-config.yaml`:
+
+		apiVersion: v1
+		kind: Secret
+		metadata:
+		  name: alertmanager-calico-node-alertmanager
+		  namespace: calico-monitoring
+		data:
+		  alertmanager.yaml: <paste-output-from-command-above>
+
+Finally _apply_ the manifest:
+
+		$ kubectl apply -f alertmanager-config.yaml
+
+Your changes should be applied in a few seconds by the config-reloader
+container inside the alertmanager pod launched by the prometheus-operator
+(usually named `alertmanager-<your-alertmanager-instance-name>`).
+
+
 #### Inhibition
 
 Alertmanager has a feature to suppress certain notifications when according to
