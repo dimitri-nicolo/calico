@@ -291,22 +291,27 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			log.Infof("Looking at endpoint %v with policies %v", epID, polIDs)
 			fmt.Printf("\n%v\n", epName)
 			fmt.Println("  Policies:")
-			for _, tier := range tiers {
-				log.Infof("Looking at tier %v", tier)
-				if tier.Name != "default" {
-					continue
-				}
-				for _, pol := range tier.OrderedPolicies { // pol is a PolKV
-					log.Infof("Looking at policy %v", pol.Key)
-					if polIDs[pol.Key] {
-						order := "default"
-						if pol.Value.Order != nil {
-							order = fmt.Sprint(*pol.Value.Order)
+			for untracked, suffix := range map[bool]string{true: " [untracked]", false: ""} {
+				for _, tier := range tiers {
+					log.Infof("Looking at tier %v", tier)
+					if tier.Name != "default" {
+						continue
+					}
+					for _, pol := range tier.OrderedPolicies { // pol is a PolKV
+						log.Infof("Looking at policy %v", pol.Key)
+						if pol.Value.DoNotTrack != untracked {
+							continue
 						}
-						if cbs.hideSelectors {
-							fmt.Printf("    Policy %#v (order %v)\n", pol.Key.Name, order)
-						} else {
-							fmt.Printf("    Policy %#v (order %v; selector '%v')\n", pol.Key.Name, order, pol.Value.Selector)
+						if polIDs[pol.Key] {
+							order := "default"
+							if pol.Value.Order != nil {
+								order = fmt.Sprint(*pol.Value.Order)
+							}
+							if cbs.hideSelectors {
+								fmt.Printf("    Policy %#v (order %v)%v\n", pol.Key.Name, order, suffix)
+							} else {
+								fmt.Printf("    Policy %#v (order %v; selector '%v')%v\n", pol.Key.Name, order, pol.Value.Selector, suffix)
+							}
 						}
 					}
 				}

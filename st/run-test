@@ -47,7 +47,9 @@ for c in `ls`; do
     export DATASTORE_TYPE=etcdv2
 
     # Mark the DB as ready.
-    curl ${ETCD_ENDPOINTS}/v2/keys/calico/v1/Ready -XPUT -d value="true"
+    while ! curl ${ETCD_ENDPOINTS}/v2/keys/calico/v1/Ready -XPUT -d value="true"; do
+	sleep 2
+    done
 
     # Apply the resources for the test case.
     ${CALICOCTL} apply -f apply.yaml
@@ -57,7 +59,7 @@ for c in `ls`; do
 	actual=$(basename ${expected} .expected).actual
 	head -2 ${expected} > ${actual}
 	eval '${CALICOQ} `head -1 ${expected}`' >> ${actual}
-	if diff -u ${actual} ${expected}; then
+	if diff -u ${expected} ${actual}; then
 	    echo TEST: ${c}/${expected}: PASSED
 	    let 'passed++'
 	else
