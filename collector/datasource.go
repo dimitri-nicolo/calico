@@ -69,7 +69,7 @@ func (ds *NflogDataSource) startProcessingPackets() {
 		go func(nflogPacketAggr *nfnetlink.NflogPacketAggregate) {
 			statUpdates, err := ds.convertNflogPktToStat(nflogPacketAggr)
 			if err != nil {
-				log.Errorf("Cannot convert Nflog packet %v to StatUpdate", nflogPacketAggr)
+				log.Debugf("Cannot convert Nflog packet %v to StatUpdate", nflogPacketAggr)
 				return
 			}
 			for _, statUpdate := range statUpdates {
@@ -97,7 +97,7 @@ func (ds *NflogDataSource) convertNflogPktToStat(nPktAggr *nfnetlink.NflogPacket
 
 	if err == lookup.UnknownEndpointError {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
-		log.Warnf("Failed to find endpoint for NFLOG packet %v/%v", nflogTuple, ds.direction)
+		log.Debugf("Failed to find endpoint for NFLOG packet %v/%v", nflogTuple, ds.direction)
 		return statUpdates, errors.New("Couldn't find endpoint info for NFLOG packet")
 	}
 	for _, prefix := range nPktAggr.Prefixes {
