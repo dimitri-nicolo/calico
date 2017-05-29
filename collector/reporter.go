@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log/syslog"
@@ -39,7 +40,7 @@ var (
 )
 
 type MetricUpdate struct {
-	policy       string
+	policy       []byte
 	tuple        Tuple
 	packets      int
 	bytes        int
@@ -50,8 +51,10 @@ type MetricUpdate struct {
 func NewMetricUpdateFromRuleTrace(t Tuple, rt *RuleTrace) *MetricUpdate {
 	p, b := rt.ctr.Values()
 	dp, db := rt.ctr.DeltaValues()
+	buf := new(bytes.Buffer)
+	rt.ConcatBytes(buf)
 	return &MetricUpdate{
-		policy:       rt.ToString(),
+		policy:       buf.Bytes(),
 		tuple:        t,
 		packets:      p,
 		bytes:        b,
@@ -194,7 +197,7 @@ func (pr *PrometheusReporter) Report(mu *MetricUpdate) error {
 }
 
 func (pr *PrometheusReporter) reportMetric(mu *MetricUpdate) {
-	key := AggregateKey{mu.policy, net.IP(mu.tuple.src[:16]).String()}
+	key := AggregateKey{string(mu.policy), net.IP(mu.tuple.src[:16]).String()}
 	value, ok := pr.aggStats[key]
 	if ok {
 		_, exists := pr.retainedMetrics[key]
@@ -226,7 +229,7 @@ func (pr *PrometheusReporter) Expire(mu *MetricUpdate) error {
 }
 
 func (pr *PrometheusReporter) expireMetric(mu *MetricUpdate) {
-	key := AggregateKey{mu.policy, net.IP(mu.tuple.src[:16]).String()}
+	key := AggregateKey{string(mu.policy), net.IP(mu.tuple.src[:16]).String()}
 	value, ok := pr.aggStats[key]
 	if !ok || !value.refs.Contains(mu.tuple) {
 		return
@@ -308,7 +311,7 @@ func (sr *SyslogReporter) Report(mu *MetricUpdate) error {
 		"srcPort": strconv.Itoa(mu.tuple.l4Src),
 		"dstIP":   net.IP(mu.tuple.dst[:16]).String(),
 		"dstPort": strconv.Itoa(mu.tuple.l4Dst),
-		"policy":  mu.policy,
+		"policy":  string(mu.policy),
 		"action":  DenyAction,
 		"packets": mu.packets,
 		"bytes":   mu.bytes,
