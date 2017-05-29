@@ -12,12 +12,12 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/gavv/monotime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/set"
 )
 
@@ -262,6 +262,9 @@ func (pr *PrometheusReporter) deleteMetric(key AggregateKey) {
 	}
 }
 
+const logQueueSize = 100
+const DebugDisableLogDropping = false
+
 type SyslogReporter struct {
 	slog *log.Logger
 }
@@ -273,11 +276,20 @@ func NewSyslogReporter(network, address string) *SyslogReporter {
 	slog := log.New()
 	priority := syslog.LOG_USER | syslog.LOG_INFO
 	tag := "calico-felix"
-	hook, err := logrus_syslog.NewSyslogHook(network, address, priority, tag)
+	w, err := syslog.Dial(network, address, priority, tag)
 	if err != nil {
 		log.Errorf("Syslog Reporting is disabled - Syslog Hook could not be configured %v", err)
 		return nil
 	}
+	syslogDest := logutils.NewSyslogDestination(
+		log.InfoLevel,
+		w,
+		make(chan logutils.QueuedLog, logQueueSize),
+		DebugDisableLogDropping,
+	)
+
+	hook := logutils.NewBackgroundHook([]log.Level{log.InfoLevel}, log.InfoLevel, []*logutils.Destination{syslogDest})
+	hook.Start()
 	slog.Hooks.Add(hook)
 	slog.Formatter = &DataOnlyJSONFormatter{}
 	return &SyslogReporter{
