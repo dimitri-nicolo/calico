@@ -4,29 +4,35 @@ default: all
 all: test
 test: ut
 
+vendor:
+	glide install --strip-vendor
+
 update-vendor:
 	glide up --strip-vendor
 
 ut:
 	./run-uts
 
-.PHONY: force
-force:
-	true
+fv: bin/calicoq
+	CALICOQ=`pwd`/$^ fv/run-test
 
-bin/calicoq: force
+.PHONY: st
+st: bin/calicoq
+	CALICOQ=`pwd`/$^ st/run-test
+
+# All calicoq Go source files.
+CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)
+
+bin/calicoq: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(CALICOQ_GO_FILES)
 	mkdir -p bin
 	go build -o "$@" "./calicoq/calicoq.go"
 
-release/calicoq: force
+release/calicoq: $(CALICOQ_GO_FILES)
 	mkdir -p release
 	cd build-container && docker build -t calicoq-build .
 	docker run --rm -v `pwd`:/calicoq calicoq-build /calicoq/build-container/build.sh
 
 # Generate the protobuf bindings for Felix.
-.PHONY: protobuf
-protobuf: force vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
-	true
 vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go: vendor/github.com/projectcalico/felix/proto/felixbackend.proto
 	docker run --rm -v `pwd`/vendor/github.com/projectcalico/felix/proto:/src:rw \
 	              calico/protoc \
@@ -39,4 +45,3 @@ clean:
 	-rm -rf build bin release
 	-docker rm -f calico-build
 	-docker rmi calico/build
-

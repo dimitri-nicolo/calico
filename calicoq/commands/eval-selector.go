@@ -6,18 +6,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/golang/glog"
+	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
-	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/client"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 )
 
-func EvalSelector(sel string) (err error) {
-	cbs := NewEvalCmd()
+func EvalSelector(configFile, sel string) (err error) {
+	cbs := NewEvalCmd(configFile)
 	cbs.AddSelector("the selector", sel)
 	noopFilter := func(update api.Update) (filterOut bool) {
 		return false
@@ -33,9 +31,10 @@ func EvalSelector(sel string) (err error) {
 }
 
 // Restructuring like this should also be useful for a permanently running webserver variant too.
-func NewEvalCmd() (cbs *EvalCmd) {
+func NewEvalCmd(configFile string) (cbs *EvalCmd) {
 	disp := dispatcher.NewDispatcher()
 	cbs = &EvalCmd{
+		configFile: configFile,
 		dispatcher: disp,
 		done:       make(chan bool),
 		matches:    make(map[interface{}][]string),
@@ -45,13 +44,34 @@ func NewEvalCmd() (cbs *EvalCmd) {
 }
 
 func (cbs *EvalCmd) AddSelector(selectorName string, selectorExpression string) {
+	if selectorExpression == "" {
+		return
+	}
 	parsedSel, err := selector.Parse(selectorExpression)
 	if err != nil {
 		fmt.Printf("Invalid selector: %#v. %v.\n", selectorExpression, err)
 		os.Exit(1)
 	}
 
+	if cbs.showSelectors {
+		selectorName = fmt.Sprintf("%v; selector \"%v\"", selectorName, selectorExpression)
+	}
+
 	cbs.index.UpdateSelector(selectorName, parsedSel)
+}
+
+func (cbs *EvalCmd) AddPolicyRuleSelectors(policy *model.Policy, prefix string) {
+	for direction, ruleSet := range map[string][]model.Rule{
+		"inbound":  policy.InboundRules,
+		"outbound": policy.OutboundRules,
+	} {
+		for i, rule := range ruleSet {
+			cbs.AddSelector(fmt.Sprintf("%v%v rule %v source match", prefix, direction, i+1), rule.SrcSelector)
+			cbs.AddSelector(fmt.Sprintf("%v%v rule %v destination match", prefix, direction, i+1), rule.DstSelector)
+			cbs.AddSelector(fmt.Sprintf("%v%v rule %v !source match", prefix, direction, i+1), rule.NotSrcSelector)
+			cbs.AddSelector(fmt.Sprintf("%v%v rule %v !destination match", prefix, direction, i+1), rule.NotDstSelector)
+		}
+	}
 }
 
 // Call this once you've AddSelector'ed the selectors you want to add.
@@ -76,16 +96,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 	cbs.dispatcher.Register(model.HostEndpointKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
 
-	apiConfig, err := client.LoadClientConfig("")
-	if err != nil {
-		glog.Fatal("Failed loading client config")
-		os.Exit(1)
-	}
-	bclient, err := backend.NewClient(*apiConfig)
-	if err != nil {
-		glog.Fatal("Failed to create client")
-		os.Exit(1)
-	}
+	bclient := GetClient(cbs.configFile)
 	syncer := bclient.Syncer(cbs)
 	syncer.Start()
 }
@@ -116,9 +127,11 @@ func endpointName(key interface{}) string {
 }
 
 type EvalCmd struct {
-	dispatcher *dispatcher.Dispatcher
-	index      *labelindex.InheritIndex
-	matches    map[interface{}][]string
+	showSelectors bool
+	configFile    string
+	dispatcher    *dispatcher.Dispatcher
+	index         *labelindex.InheritIndex
+	matches       map[interface{}][]string
 
 	done chan bool
 }
@@ -130,13 +143,13 @@ func (cbs *EvalCmd) OnConfigLoaded(globalConfig map[string]string,
 
 func (cbs *EvalCmd) OnStatusUpdated(status api.SyncStatus) {
 	if status == api.InSync {
-		glog.V(0).Info("Datamodel in sync, we're done.")
+		log.Info("Datamodel in sync, we're done.")
 		cbs.done <- true
 	}
 }
 
 func (cbs *EvalCmd) OnKeysUpdated(updates []api.Update) {
-	glog.V(3).Info("Update: ", updates)
+	log.Info("Update: ", updates)
 	for _, update := range updates {
 		// Also removed empty key handling: don't understand it.
 		cbs.dispatcher.OnUpdate(update)
@@ -158,14 +171,14 @@ func (cbs *EvalCmd) OnUpdate(update api.Update) (filterOut bool) {
 		v := update.Value.(map[string]string)
 		cbs.index.UpdateParentLabels(k.Name, v)
 	default:
-		glog.Errorf("Unexpected update type: %#v", update)
+		log.Errorf("Unexpected update type: %#v", update)
 		return true
 	}
 	return false
 }
 
 func (cbs *EvalCmd) OnUpdates(updates []api.Update) {
-	glog.V(3).Info("Update: ", updates)
+	log.Info("Update: ", updates)
 	for _, update := range updates {
 		// MATT: Removed some handling of empty key: don't understand how it can happen.
 		cbs.dispatcher.OnUpdate(update)
@@ -181,5 +194,5 @@ func (cbs *EvalCmd) onMatchStarted(selId, epId interface{}) {
 }
 
 func (cbs *EvalCmd) onMatchStopped(selId, epId interface{}) {
-	glog.Errorf("Unexpected match stopped event: %v, %v", selId, epId)
+	log.Errorf("Unexpected match stopped event: %v, %v", selId, epId)
 }
