@@ -1,6 +1,11 @@
 policy abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ --hide-selectors
 
-Endpoints matching policy abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:
+Policy abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ applies to these endpoints:
+  Workload endpoint host1/k8s/g2w1/eth0
+  Workload endpoint host1/k8s/g2w2/eth0
+  Workload endpoint host1/k8s/g2w3/eth0
+
+Endpoints matching policy abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ rules:
   Workload endpoint host1/k8s/g1w1/eth0
     inbound rule 1 source match
     outbound rule 1 destination match
@@ -11,14 +16,11 @@ Endpoints matching policy abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:
     inbound rule 1 source match
     outbound rule 1 destination match
   Workload endpoint host1/k8s/g2w1/eth0
-    applicable endpoints
     inbound rule 1 source match
     outbound rule 1 destination match
   Workload endpoint host1/k8s/g2w2/eth0
-    applicable endpoints
     inbound rule 1 source match
     outbound rule 1 destination match
   Workload endpoint host1/k8s/g2w3/eth0
-    applicable endpoints
     inbound rule 1 source match
     outbound rule 1 destination match

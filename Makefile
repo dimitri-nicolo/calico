@@ -16,6 +16,7 @@ ut:
 fv: bin/calicoq
 	CALICOQ=`pwd`/$^ fv/run-test
 
+.PHONY: st
 st: bin/calicoq
 	CALICOQ=`pwd`/$^ st/run-test
 
