@@ -3,8 +3,8 @@ title: calicoq endpoint
 ---
 
 `calicoq endpoint <substring>` shows you the Calico profiles and policies that
-relate to a endpoints whose full name includes `<substring>`.  It can display,
-in separate lists:
+relate to endpoints whose full name includes `<substring>`.  It can display, in
+separate lists:
 
 - the profiles and policies that Calico uses to police traffic that is arriving
   at or departing from those endpoints
