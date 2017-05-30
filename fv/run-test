@@ -59,3 +59,5 @@ run_test 1 ${CALICOQ}
 run_test 1 ${CALICOQ} non-existent-command
 
 summarise_test
+
+exit $failed

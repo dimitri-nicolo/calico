@@ -1,6 +1,6 @@
-endpoint tigera-lwr-kubetest-02/
+host tigera-lwr-kubetest-02
 
-Policies and profiles for endpoints matching "tigera-lwr-kubetest-02/":
+Policies and profiles for each endpoint on host "tigera-lwr-kubetest-02":
 
 Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
   Policies:

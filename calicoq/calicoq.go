@@ -14,9 +14,9 @@ const usage = `Calico query tool.
 
 Usage:
   calicoq [--debug] [--config=<config>] eval <selector>
-  calicoq [--debug] [--config=<config>] policy <policy-id> [--hide-selectors] [--hide-rule-matches]
-  calicoq [--debug] [--config=<config>] endpoint <endpoint-id> [--hide-selectors] [--hide-rule-matches]
-  calicoq [--debug] [--config=<config>] host <hostname> [--hide-selectors] [--hide-rule-matches]
+  calicoq [--debug] [--config=<config>] policy <policy-name> [--hide-selectors|-s] [--hide-rule-matches|-r]
+  calicoq [--debug] [--config=<config>] endpoint <substring> [--hide-selectors|-s] [--hide-rule-matches|-r]
+  calicoq [--debug] [--config=<config>] host <hostname> [--hide-selectors|-s] [--hide-rule-matches|-r]
   calicoq [--debug] version
 
 Description:
@@ -24,32 +24,41 @@ Description:
 
   calicoq eval <selector> is used to display the endpoints that are matched by <selector>.
 
-  calicoq policy <policy-id> shows the endpoints that are relevant to policy <policy-id>,
+  calicoq policy <policy-name> shows the endpoints that are relevant to the named policy,
   comprising:
-  - the endpoints for which ingress or egress traffic is policed according to the rules in that
-    policy
-  - the endpoints that the policy's rule selectors allow or disallow as data sources or
-    destinations.
+  - the endpoints that the policy applies to (for which ingress or egress traffic is policed
+    according to the rules in that policy)
+  - the endpoints that match the policy's rule selectors (that are allowed or disallowed as data
+    sources or destinations).
 
-  calicoq endpoint <substring> shows you the Calico profiles and policies that relate to endpoints
-  whose full name includes <substring>.
+  calicoq endpoint <substring> shows you the Calico policies and profiles that relate to endpoints
+  whose full ID includes <substring>.
 
   calicoq host <hostname> shows you the endpoints that are hosted on <hostname> and all the Calico
-  profiles and policies that relate to those endpoints.
+  policies and profiles that relate to those endpoints.
+
+Notes:
+  When a Calico endpoint or policy is mapped from a Kubernetes resource, its name includes the
+  Kubernetes namespace and name as "<namespace>.<name>".  For a policy, this is the whole of the
+  Calico policy name.
+
+  For an endpoint, the full Calico ID is "<host>/<orchestrator>/<workload-name>/<endpoint-name>".
+  In the Kubernetes case "<orchestrator>" is always "k8s", "<workload-name>" is "<pod
+  namespace>.<pod name>", and "<endpoint-name>" is always "eth0".
 
 Options:
   -c <config> --config=<config>  Path to the file containing connection
                                  configuration in YAML or JSON format.
                                  [default: /etc/calico/calicoctl.cfg]
 
-  -r --hide-rule-matches     Don't show the list of profiles and policies whose
+  -r --hide-rule-matches     Don't show the list of policies and profiles whose
                              rule selectors match the specified endpoint (or an
                              endpoint on the specified host) as an allowed or
                              disallowed source/destination.
 
   -s --hide-selectors        Don't show the detailed selector expressions involved
-                             (that cause each displayed profile or policy to match
-                             <endpoint-id> or <hostname>).
+                             (that cause each displayed policy or profile to apply to or match
+                             various endpoints).
 
   -d --debug                 Log debugging information to stderr.
 `
@@ -77,33 +86,39 @@ func main() {
 			)
 		},
 		"policy": func() error {
-			// Show all the endpoints that are relevant to <policy-id>.
+			// Show all the endpoints that are relevant to <policy-name>.
 			return commands.EvalPolicySelectors(
 				arguments["--config"].(string),
-				arguments["<policy-id>"].(string),
-				arguments["--hide-selectors"].(bool),
-				arguments["--hide-rule-matches"].(bool),
+				arguments["<policy-name>"].(string),
+				arguments["-s"].(bool) ||
+					arguments["--hide-selectors"].(bool),
+				arguments["-r"].(bool) ||
+					arguments["--hide-rule-matches"].(bool),
 			)
 		},
 		"endpoint": func() error {
-			// Show the profiles and policies that relate to <endpoint-id>.
+			// Show the policies and profiles that relate to <substring>.
 			return commands.DescribeEndpointOrHost(
 				arguments["--config"].(string),
-				arguments["<endpoint-id>"].(string),
+				arguments["<substring>"].(string),
 				"",
-				arguments["--hide-selectors"].(bool),
-				arguments["--hide-rule-matches"].(bool),
+				arguments["-s"].(bool) ||
+					arguments["--hide-selectors"].(bool),
+				arguments["-r"].(bool) ||
+					arguments["--hide-rule-matches"].(bool),
 			)
 		},
 		"host": func() error {
-			// Show the profiles and policies that relate to all endpoints on
+			// Show the policies and profiles that relate to all endpoints on
 			// <hostname>.
 			return commands.DescribeEndpointOrHost(
 				arguments["--config"].(string),
 				"",
 				arguments["<hostname>"].(string),
-				arguments["--hide-selectors"].(bool),
-				arguments["--hide-rule-matches"].(bool),
+				arguments["-s"].(bool) ||
+					arguments["--hide-selectors"].(bool),
+				arguments["-r"].(bool) ||
+					arguments["--hide-rule-matches"].(bool),
 			)
 		},
 	} {

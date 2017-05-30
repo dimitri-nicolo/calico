@@ -1,4 +1,4 @@
-policy -s abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+policy abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ --hide-selectors
 
 Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" applies to these endpoints:
   Workload endpoint host1/k8s/g2w1/eth0
