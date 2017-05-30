@@ -55,11 +55,11 @@ Options:
 `
 
 func main() {
-	log.SetLevel(log.ErrorLevel)
+	log.SetLevel(log.FatalLevel)
 
 	arguments, err := docopt.Parse(usage, nil, true, commands.VERSION, false)
 	if err != nil {
-		log.Errorf("Failed to parse command line arguments: %v", err)
+		log.Fatalf("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
 	}
 	if arguments["--debug"].(bool) {
