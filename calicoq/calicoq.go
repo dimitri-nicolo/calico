@@ -19,6 +19,24 @@ Usage:
   calicoq [--debug] [--config=<config>] host <hostname> [--hide-selectors] [--hide-rule-matches]
   calicoq [--debug] version
 
+Description:
+  The calicoq command line tool is used to check Calico security policies.
+
+  calicoq eval <selector> is used to display the endpoints that are matched by <selector>.
+
+  calicoq policy <policy-id> shows the endpoints that are relevant to policy <policy-id>,
+  comprising:
+  - the endpoints for which ingress or egress traffic is policed according to the rules in that
+    policy
+  - the endpoints that the policy's rule selectors allow or disallow as data sources or
+    destinations.
+
+  calicoq endpoint <substring> shows you the Calico profiles and policies that relate to endpoints
+  whose full name includes <substring>.
+
+  calicoq host <hostname> shows you the endpoints that are hosted on <hostname> and all the Calico
+  profiles and policies that relate to those endpoints.
+
 Options:
   -c <config> --config=<config>  Path to the file containing connection
                                  configuration in YAML or JSON format.
