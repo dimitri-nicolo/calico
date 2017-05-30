@@ -19,18 +19,19 @@ import (
 // Do that for each rule in each policy (globally, not just selected).
 // Actually I want to be able to do eval selector with many selectors and few EPs.
 // Basically I want to be able to control the EP filter used by eval selector.
-func DescribeEndpointOrHost(configFile, endpointID, hostname string, hideSelectors bool, hideRuleMatches bool) (err error) {
+func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hideSelectors bool, hideRuleMatches bool) (err error) {
 	disp := dispatcher.NewDispatcher()
 	cbs := &describeCmd{
-		hideSelectors:    hideSelectors,
-		includeRules:     !hideRuleMatches,
-		hostname:         hostname,
-		dispatcher:       disp,
-		done:             make(chan bool),
-		epIDToPolIDs:     make(map[interface{}]map[model.PolicyKey]bool),
-		epIDToProfileIDs: make(map[interface{}][]string),
-		policySorter:     calc.NewPolicySorter(),
-		evalCmd:          nil,
+		hideSelectors:     hideSelectors,
+		includeRules:      !hideRuleMatches,
+		endpointSubstring: endpointSubstring,
+		hostname:          hostname,
+		dispatcher:        disp,
+		done:              make(chan bool),
+		epIDToPolIDs:      make(map[interface{}]map[model.PolicyKey]bool),
+		epIDToProfileIDs:  make(map[interface{}][]string),
+		policySorter:      calc.NewPolicySorter(),
+		evalCmd:           nil,
 	}
 	nrs := &noopRuleScanner{}
 	arc := calc.NewActiveRulesCalculator()
@@ -52,7 +53,7 @@ func DescribeEndpointOrHost(configFile, endpointID, hostname string, hideSelecto
 			if hostname != "" && key.Hostname != hostname {
 				return true
 			}
-			if !strings.Contains(endpointName(key), endpointID) {
+			if !strings.Contains(endpointName(key), endpointSubstring) {
 				return true
 			}
 			ep := update.Value.(*model.HostEndpoint)
@@ -61,7 +62,7 @@ func DescribeEndpointOrHost(configFile, endpointID, hostname string, hideSelecto
 			if hostname != "" && key.Hostname != hostname {
 				return true
 			}
-			if !strings.Contains(endpointName(key), endpointID) {
+			if !strings.Contains(endpointName(key), endpointSubstring) {
 				return true
 			}
 			ep := update.Value.(*model.WorkloadEndpoint)
@@ -104,7 +105,7 @@ func DescribeEndpointOrHost(configFile, endpointID, hostname string, hideSelecto
 			// Go through the rules, and generate a selector for each.
 			cbs.evalCmd.AddPolicyRuleSelectors(
 				update.Value.(*model.Policy),
-				"Policy "+update.Key.(model.PolicyKey).Name+" ",
+				"Policy \""+update.Key.(model.PolicyKey).Name+"\" ",
 			)
 			return false
 		}
@@ -152,9 +153,10 @@ func (rs *noopRuleScanner) OnProfileInactive(model.ProfileRulesKey) {
 
 type describeCmd struct {
 	// Config.
-	hideSelectors bool
-	includeRules  bool
-	hostname      string
+	hideSelectors     bool
+	includeRules      bool
+	endpointSubstring string
+	hostname          string
 
 	// ActiveRulesCalculator matches policies/profiles against local
 	// endpoints and notifies the ActiveSelectorCalculator when
@@ -211,11 +213,17 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 				}
 				switch key := update.Key.(type) {
 				case model.HostEndpointKey:
-					if key.Hostname != cbs.hostname {
+					if cbs.hostname != "" && key.Hostname != cbs.hostname {
+						return true
+					}
+					if !strings.Contains(endpointName(key), cbs.endpointSubstring) {
 						return true
 					}
 				case model.WorkloadEndpointKey:
-					if key.Hostname != cbs.hostname {
+					if cbs.hostname != "" && key.Hostname != cbs.hostname {
+						return true
+					}
+					if !strings.Contains(endpointName(key), cbs.endpointSubstring) {
 						return true
 					}
 				}
@@ -225,7 +233,11 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			matches = cbs.evalCmd.GetMatches()
 		}
 
-		fmt.Println("Policies that match each endpoint:")
+		if cbs.hostname != "" {
+			fmt.Printf("Policies and profiles for each endpoint on host \"%v\":\n", cbs.hostname)
+		} else {
+			fmt.Printf("Policies and profiles for endpoints matching \"%v\":\n", cbs.endpointSubstring)
+		}
 		tiers := cbs.policySorter.Sorted() // MATT: map[model.PolicyKey]*model.Policy
 		epData := make([]endpointDatum, 0)
 
@@ -270,13 +282,14 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			if len(profIDs) > 0 {
 				fmt.Printf("  Profiles:\n")
 				for _, profID := range cbs.epIDToProfileIDs[epID] {
-					fmt.Printf("    Profile %v\n", profID)
+					fmt.Printf("    Profile \"%v\"\n", profID)
 				}
 			}
 
 			if cbs.includeRules {
 				if policies, ok := matches[epID]; ok {
-					fmt.Printf("  Matched by policies:\n")
+					fmt.Printf("  Rule matches:\n")
+					sort.Strings(policies)
 					for _, policy := range policies {
 						fmt.Printf("    %v\n", policy)
 					}

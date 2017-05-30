@@ -13,6 +13,7 @@ update-vendor:
 ut:
 	./run-uts
 
+.PHONY: fv
 fv: bin/calicoq
 	CALICOQ=`pwd`/$^ fv/run-test
 

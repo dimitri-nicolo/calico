@@ -15,11 +15,11 @@ import (
 
 const APPLICABLE_ENDPOINTS = "applicable endpoints"
 
-func EvalPolicySelectors(configFile, policyID string, hideSelectors, hideRuleMatches bool) (err error) {
+func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleMatches bool) (err error) {
 
 	bclient := GetClient(configFile)
 
-	kv, err := bclient.Get(model.PolicyKey{Name: policyID, Tier: "default"})
+	kv, err := bclient.Get(model.PolicyKey{Name: policyName, Tier: "default"})
 	if err != nil {
 		log.Fatal("Failed to get policy")
 		os.Exit(1)
@@ -50,7 +50,7 @@ func EvalPolicySelectors(configFile, policyID string, hideSelectors, hideRuleMat
 	}
 	sort.Strings(names)
 
-	fmt.Printf("Policy %v applies to these endpoints:\n", policyID)
+	fmt.Printf("Policy \"%v\" applies to these endpoints:\n", policyName)
 	for _, name := range names {
 		for _, sel := range matches[name] {
 			if strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
@@ -61,7 +61,7 @@ func EvalPolicySelectors(configFile, policyID string, hideSelectors, hideRuleMat
 	}
 
 	if !hideRuleMatches {
-		fmt.Printf("\nEndpoints matching policy %v rules:\n", policyID)
+		fmt.Printf("\nEndpoints matching policy \"%v\" rules:\n", policyName)
 		for _, name := range names {
 			endpointPrefix := fmt.Sprintf("  %v\n", name)
 			sort.Strings(matches[name])

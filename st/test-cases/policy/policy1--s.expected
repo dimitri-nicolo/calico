@@ -1,4 +1,4 @@
-policy p1 -s
+policy p1 --hide-selectors
 
 Policy "p1" applies to these endpoints:
   Workload endpoint host1/k8s/g1w1/eth0
