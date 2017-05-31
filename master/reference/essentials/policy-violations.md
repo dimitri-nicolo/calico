@@ -2,10 +2,10 @@
 title: Policy Violation Monitoring & Reporting
 ---
 
-Tigera Networking Essentials includes the feature to monitor violations to
-policy configured in your cluster. By defining a set of simple query like
-rules and thresholds, one can monitor and receive alerts for their Kubernetes
-cluster for policy violations.
+Tigera Networking Essentials includes features to monitor violations of policy
+configured in your cluster. By defining a set of simple rules and thresholds,
+you can monitor and receive alerts for policy violations in your Kubernetes
+cluster.
 
 ### Architecture
 
@@ -36,7 +36,7 @@ Policy Violation & Reporting is accomplished using 3 key pieces:
    every configured `calico/node` target. Alerting rules querying denied packet
    metrics are configured in Prometheus and when triggered, fire alerts to
    the Prometheus Alertmanager.
-3. Prometheus Alertmanager (or simply Alertmanager) also deployed as part of
+3. Prometheus Alertmanager (or simply Alertmanager), also deployed as part of
    the _Essentials_ manifest, receives alerts from Prometheus and forwards
    alerts to various alerting mechanisms such as _Pager Duty_, or _OpsGenie_.
 
@@ -51,7 +51,7 @@ Using these metrics, one can identify the policy that denied packets as well as
 the source IP Address of the packets that were denied by this policy. Using
 Prometheus terminology, `calico_denied_packets` is the metric Name and `policy`
 and `srcIP` are labels. Each one of these metrics will be available as a
-combination of `{policy, srcIP}`. A HTTP GET request to retrieve metrics from a
+combination of `{policy, srcIP}`. An HTTP GET request to retrieve metrics from a
 `calico/node` container will provide output like this:
 
 ```
@@ -69,19 +69,27 @@ This means that the profile `k8s_ns.ns-0` denied 5 packets (totaling 300 bytes)
 originating from the IP Address "10.245.13.133" and the same profile denied 14
 packets originating from the IP Address "10.245.13.149".
 
+See
+the
+[Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#essentials-specific-configuration) for
+the settings that control the reporting of these metrics.  Essentials manifests
+normally set `PrometheusReporterEnabled=true` and
+`PrometheusReporterPort=9081`, so these metrics are available on each compute
+node at `http://<node-IP>:9081/metrics`.
+
 ### Lifetime of a Metric
 
 #### Node
 
 Metrics with a `{policy, srcIP}` label pair will only be generated at a node
-when there is packets directed at a _Endpoint_ are being actively denied by a
-policy. Once generated they stay alive upto 60 seconds after the last packet
-was dropped by a policy.
+when there are packets directed at an _Endpoint_ that are being actively denied
+by a policy. Once generated they stay alive for 60 seconds after the last
+packet was denied by a policy.
 
 #### Prometheus
 
 Once Prometheus scrapes a node and collects denied packet metrics, it will be
-available at Prometheus until the a metric is considered _stale_, i.e.,
+available at Prometheus until the metric is considered _stale_, i.e.,
 Prometheus has not seen any updates to this metric for some time. This time is
 configurable and details on how to do this are available in the
 [Prometheus Configuration]() document.
