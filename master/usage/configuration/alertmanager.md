@@ -2,7 +2,10 @@
 title: Configuring Alertmanager
 ---
 
-Full information about Alertmanager is available with [upstream documentation](https://prometheus.io/docs/alerting/configuration).
+Alertmanager is used by Networking Essentials to route alerts from Prometheus to the administrators.
+It handles routing, deduplicating, grouping, silencing and inhibition of alerts.
+
+More detailed information about Alertmanager is available in the [upstream documentation](https://prometheus.io/docs/alerting/configuration).
 
 #### Updating the AlertManager config
 
@@ -10,7 +13,7 @@ Full information about Alertmanager is available with [upstream documentation](h
     Our manifests will end up creating a secret called: `alertmanager-calico-node-alertmanager`.
 
     ```
-    $ kubectl -n calico-monitoring get secrets alertmanager-calico-node-alertmanager -o yaml > alertmanager-secret.yaml
+    kubectl -n calico-monitoring get secrets alertmanager-calico-node-alertmanager -o yaml > alertmanager-secret.yaml
     ```
 
   - The current alertmanager.yaml file is encoded and stored inside the
@@ -18,7 +21,7 @@ Full information about Alertmanager is available with [upstream documentation](h
     copying the value of `alertmanager.yaml` and using the `base64` command.
 
     ```
-    $ echo "<whatever-you-copied>" | base64 --decode > alertmanager-config.yaml
+    echo "<whatever-you-copied>" | base64 --decode > alertmanager-config.yaml
     ```
 
   - Make necessary changes to `alertmanager-config.yaml`. Once this is done,
@@ -26,7 +29,7 @@ Full information about Alertmanager is available with [upstream documentation](h
     this by (in Linux):
 
     ```
-    $ cat alertmanager-config.yaml | base64 -w 0
+    cat alertmanager-config.yaml | base64 -w 0
     ```
 
   - Paste the output of the running the command above back in `alertmanager-secret.yaml`
@@ -34,49 +37,20 @@ Full information about Alertmanager is available with [upstream documentation](h
     updated manifest.
 
     ```
-    $ kubectl -n calico-monitoring apply -f alertmanager-config.yaml
+    kubectl -n calico-monitoring apply -f alertmanager-config.yaml
     ```
 
   Your changes should be applied in a few seconds by the config-reloader
   container inside the alertmanager pod launched by the prometheus-operator
   (usually named `alertmanager-<your-alertmanager-instance-name>`).
 
-You can also create your own alertmanager configuration file. Write your
-alertmanager configuration file based on [alerting configuration](https://prometheus.io/docs/alerting/configuration/)
-and save it to a file, say alertmanager.yaml and then run:
-
-```
-$ cat alertmanager.yaml | base64 -w 0
-```
-
-Use the output from this command to create a manifest for the alertmanager
-secret and save it to a file called `alertmanager-config.yaml`:
-
-```
-apiVersion: v1
-kind: Secret
-metadata:
-  name: alertmanager-calico-node-alertmanager
-  namespace: calico-monitoring
-data:
-  alertmanager.yaml: <paste-output-from-command-above>
-```
-
-Finally _apply_ the manifest:
-
-```
-$ kubectl apply -f alertmanager-config.yaml
-```
-
-Your changes should be applied in a few seconds by the config-reloader
-container inside the alertmanager pod launched by the prometheus-operator
-(usually named `alertmanager-<your-alertmanager-instance-name>`).
-
+For more advice on writing alertmanager configuration files, see the
+[alertmanager configuration](https://prometheus.io/docs/alerting/configuration/) documentation.
 
 #### Configure Inhibition Rules
 
-Alertmanager has a feature to suppress certain notifications when according to
-defined rules. A typical use case of defining `inhibit` rules is to suppress
+Alertmanager has a feature to suppress certain notifications according to
+defined rules. A typical use case for defining `inhibit` rules is to suppress
 notifications from a lower priority alert when one with a higher priority is
 firing. These inhibition rules are defined in the alertmanager configuration
 file. You can define one by adding this configuration snippet to your
@@ -122,5 +96,6 @@ receivers:
   - url: 'http://calico-alertmanager-webhook:30501/'
 ```
 
-More information can be found under the [route section](https://prometheus.io/docs/alerting/configuration/#route)
+More information, including descriptiong of the various options can be found under the
+[route section](https://prometheus.io/docs/alerting/configuration/#route)
 of the Alertmanager Configuration guide.
