@@ -5,8 +5,9 @@ order: 1
 toc:
 - title: Getting Started with Calico
   path: /getting-started/
+
 - title: Tigera Networking Essentials
-  path: /essentials/
+  path: /getting-started/essentials/
 
 - title: Kubernetes
   section:

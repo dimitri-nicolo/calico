@@ -81,6 +81,8 @@ toc:
   section:
   - title: Overview
     path: /reference/calicoq/overview
+  - title: Selectors
+    path: /reference/calicoq/selectors
   - title: Endpoint
     path: /reference/calicoq/endpoint
   - title: Eval

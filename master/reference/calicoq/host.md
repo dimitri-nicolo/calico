@@ -3,48 +3,50 @@ title: calicoq host
 ---
 
 `calicoq host <hostname>` shows you the endpoints that are hosted on
-`<hostname>` and all the Calico profiles and policies that relate to those
+`<hostname>` and all the Calico policies and profiles that relate to those
 endpoints.  It is equivalent to running `calicoq endpoint <endpoint-id>` for
 each `<endpoint-id>` that is hosted on `<hostname>`.
 
 ## Options
 
 ```
--r --hide-rule-matches     Don't show the list of profiles and policies whose
-                           rule selectors match <endpoint-id> as an allowed or
+-r --hide-rule-matches     Don't show the list of policies and profiles whose
+                           rule selectors match each endpoint as an allowed or
                            disallowed source/destination.
 
 -s --hide-selectors        Don't show the detailed selector expressions involved
                            (that cause each displayed profile or policy to match
-                           <endpoint-id>).
+                           each endpoint).
 ```
 
 ## Example
 
 ```
 $ DATASTORE_TYPE=kubernetes KUBECONFIG=/home/user/.kube/config calicoq host tigera-kubetest-01
-Policies that match each endpoint:
+
+Policies and profiles for each endpoint on host "tigera-kubetest-01":
 
 Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
   Policies:
   Profiles:
-    Profile ns.projectcalico.org/calico-monitoring
+    Profile "ns.projectcalico.org/calico-monitoring"
 
 Workload endpoint k8s/kube-system.kube-dns-3913472980-fgf9m/eth0
   Policies:
   Profiles:
-    Profile ns.projectcalico.org/kube-system
+    Profile "ns.projectcalico.org/kube-system"
 
 Workload endpoint k8s/policy-demo.nginx-2371676037-j2vmh/eth0
   Policies:
   Profiles:
-    Profile ns.projectcalico.org/policy-demo
+    Profile "ns.projectcalico.org/policy-demo"
+  Rule matches:
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "calico/k8s_ns == 'policy-demo'"
 ```
 
 ## See also
 
 -  [calicoq endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoq/endpoint) for
-   more detail about the profiles and policies that are shown for each
-   endpoint.
+   the related `calicoq endpoint` command.
 -  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
    more information about the Calico policy model.

@@ -5,28 +5,6 @@ title: calicoq eval
 `calicoq eval <selector>` is used to display the endpoints that are matched by
 `<selector>`.
 
-> **Recap:** Selectors can be used in three contexts in Calico security policy
-> definitions.
->
-> - A selector is used in the definition of each Calico Policy object, to
->   specify the endpoints (pods) that that Policy applies to (`spec.selector`).
->
-> - A selector can be used in each ingress Rule, to specify that the Rule only
->   applies to packets sent from a particular set of endpoints
->   (`source.selector`), or to packets from all endpoints except a particular
->   set (`source.notSelector`).
->
-> - A selector can be used in each egress Rule, to specify that the Rule only
->   applies to packets sent to a particular set of endpoints
->   (`destination.selector`), or to packets to all endpoints except a
->   particular set (`destination.notSelector`).
->
-> Kubernetes NetworkPolicy definitions are similar but less general: they do
-> not support egress rules or the `notSelector` options.
-
-Given a `<selector>` expression, therefore, it is useful to compute and display
-the endpoints that match that expression.
-
 ## Examples
 
 To find all endpoints that match the `role=='frontend'` selector, i.e. that
@@ -56,3 +34,5 @@ Endpoints matching selector role=='endfront':
 
 -  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
    more information about the Calico selector-based policy model.
+-  [calicoq and selectors]({{site.baseurl}}/{{page.version}}/reference/calicoq/selectors) for
+   a recap on how selectors are used in Calico policy.
