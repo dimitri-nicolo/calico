@@ -4,41 +4,44 @@ title: Essentials Hosted Install
 
 The Calico install manifests are based on [Kubeadm hosted install](../kubeadm),
 however, you can adapt any hosted install manifest by making changes described
-in the [modifying your manifest to install essentials](adapt)
+below under "Modifying an existing manifest to install Essentials".
 
-The [calico-essentials.yaml](1.6/calico-essentials.yaml) manifest also:
+The [calico-essentials.yaml](1.6/calico-essentials.yaml) manifest is similar
+to [the Kubeadm hosted install's calico.yaml](../kubeadm/calico.yaml), but
+installs the Essentials-enhanced calico/node, and also:
   - Enables Prometheus reporting.  (This is different from Felix's Prometheus
     settings.)
   - Creates a new service, calico-node-metrics, to expose the Prometheus
     reporting port.
 
-The manifest [operator.yaml](1.6/operator.yaml) does the following:
-  - Create a namespace called calico-monitoring
-  - Create RBAC artifacts
-      - ServiceAccounts: prometheus-operator and prometheus
-      - Corresponding ClusterRole and ClusterRoleBindings.
-  - Deploys prometheus-operator (in namespace calico-monitoring)
-    - Creates a kubernetes deplyoment, which in turn creates 3 _Third Party
-      Resources_(TPR): `prometheus`, `alertmanager` and "servicemonitor".
+The [operator.yaml](1.6/operator.yaml) manifest does the following:
+  - Creates a namespace called calico-monitoring.
+  - Creates RBAC artifacts:
+      - ServiceAccounts for prometheus-operator and Prometheus
+      - corresponding ClusterRole and ClusterRoleBindings.
+  - Deploys prometheus-operator (in namespace calico-monitoring).  This results
+    in the creation of three _Third Party Resources_(TPR): `prometheus`,
+    `alertmanager` and "servicemonitor".
 
-The `monitor-calico.yaml` manifest does the following:
-  - A secret for storing alertmanager config - Should be customized for your
-    environment.
+The [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest does the following:
+  - Creates a secret for storing alertmanager config - which should be
+    customized for your environment.
     - Refer to [standard alerting configuration documentation](https://prometheus.io/docs/alerting/configuration/)
       and alertmanager.yaml in the current directory for what is included as a
       default.
-  - Create a alertmanager instance and corresponding dash service
-  - Create a ServiceMonitor that selects on the calico-node-metrics service's
+  - Creates an alertmanager instance and corresponding dash service
+  - Creates a ServiceMonitor that selects on the calico-node-metrics service's
     ports.
-  - ConfigMaps that define some [alerting rules](https://prometheus.io/docs/alerting/rules/)
-    for Prometheus.
+  - Creates ConfigMaps that define
+    some [alerting rules](https://prometheus.io/docs/alerting/rules/) for
+    Prometheus.
     - We predefine denied packet alerts and instance down alerts. This can be
       customized by modifying appropriate configmaps.
-  - Create a Prometheus instance and corresponding dash service. Prometheus
+  - Creates a Prometheus instance and corresponding dash service. Prometheus
     instance selects on:
     - Alertmanager dash (for configuring alertmanagers)
     - Servicemonitor selector (for populating calico-nodes to actually monitor).
-  - Create network policies as required for accessing all the services defined
+  - Creates network policies as required for accessing all the services defined
     above.
 
 The services (type _NodePort_) for Prometheus and alertmanager are created in
@@ -185,9 +188,9 @@ receivers:
   - url: 'http://calico-alertmanager-webhook:30501/'
 ```
 
-To view the any json output printed examine the logs of the webhook pod.
+To view the JSON output printed, examine the logs of the webhook pod.
 
-### Modifying existing manifest to install Essentials
+### Modifying an existing manifest to install Essentials
 
 Edit the manifest that deploys calico/node and update the following:
   - Update the _DaemonSet_ template `image` to point to the new Calico image.
