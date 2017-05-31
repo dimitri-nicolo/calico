@@ -66,16 +66,14 @@ func (ds *NflogDataSource) subscribeToNflog() error {
 func (ds *NflogDataSource) startProcessingPackets() {
 	defer close(ds.nflogDoneChan)
 	for nflogPacketAggr := range ds.nflogChan {
-		go func(nflogPacketAggr *nfnetlink.NflogPacketAggregate) {
-			statUpdates, err := ds.convertNflogPktToStat(nflogPacketAggr)
-			if err != nil {
-				log.Debugf("Cannot convert Nflog packet %v to StatUpdate", nflogPacketAggr)
-				return
-			}
-			for _, statUpdate := range statUpdates {
-				ds.sink <- statUpdate
-			}
-		}(nflogPacketAggr)
+		statUpdates, err := ds.convertNflogPktToStat(nflogPacketAggr)
+		if err != nil {
+			log.Debugf("Cannot convert Nflog packet %v to StatUpdate", nflogPacketAggr)
+			return
+		}
+		for _, statUpdate := range statUpdates {
+			ds.sink <- statUpdate
+		}
 	}
 }
 
