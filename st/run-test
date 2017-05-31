@@ -57,8 +57,14 @@ for c in `ls`; do
     # Check all the expected outputs.
     for expected in `ls *.expected`; do
 	actual=$(basename ${expected} .expected).actual
+	stderr=$(basename ${expected} .expected).stderr
 	head -2 ${expected} > ${actual}
-	eval '${CALICOQ} `head -1 ${expected}`' >> ${actual}
+	eval '${CALICOQ} `head -1 ${expected}`' >> ${actual} 2> ${stderr}
+	stderr_lines=`wc -l ${stderr} | awk '{print $1;}'`
+	if test "$stderr_lines" -ne 0; then
+	    echo >> ${actual}
+	    echo "Plus $stderr_lines lines on stderr" >> ${actual}
+	fi
 	if diff -u ${expected} ${actual}; then
 	    echo TEST: ${c}/${expected}: PASSED
 	    let 'passed++'
@@ -66,7 +72,7 @@ for c in `ls`; do
 	    echo TEST: ${c}/${expected}: FAILED
 	    let 'failed++'
 	fi
-	rm ${actual}
+	rm ${actual} ${stderr}
     done
 
     docker rm -f calicoq-etcd >/dev/null

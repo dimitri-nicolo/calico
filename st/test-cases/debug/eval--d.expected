@@ -1,0 +1,5 @@
+eval --debug app=="nonexistent"
+
+Endpoints matching selector app=="nonexistent":
+
+Plus 69 lines on stderr

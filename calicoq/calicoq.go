@@ -13,11 +13,11 @@ import (
 const usage = `Calico query tool.
 
 Usage:
-  calicoq [--debug] [--config=<config>] eval <selector>
-  calicoq [--debug] [--config=<config>] policy <policy-name> [--hide-selectors|-s] [--hide-rule-matches|-r]
-  calicoq [--debug] [--config=<config>] endpoint <substring> [--hide-selectors|-s] [--hide-rule-matches|-r]
-  calicoq [--debug] [--config=<config>] host <hostname> [--hide-selectors|-s] [--hide-rule-matches|-r]
-  calicoq [--debug] version
+  calicoq [--debug|-d] [--config=<config>] eval <selector>
+  calicoq [--debug|-d] [--config=<config>] policy <policy-name> [--hide-selectors|-s] [--hide-rule-matches|-r]
+  calicoq [--debug|-d] [--config=<config>] endpoint <substring> [--hide-selectors|-s] [--hide-rule-matches|-r]
+  calicoq [--debug|-d] [--config=<config>] host <hostname> [--hide-selectors|-s] [--hide-rule-matches|-r]
+  calicoq [--debug|-d] version
 
 Description:
   The calicoq command line tool is used to check Calico security policies.
@@ -71,7 +71,7 @@ func main() {
 		log.Fatalf("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
 	}
-	if arguments["--debug"].(bool) {
+	if arguments["--debug"].(bool) || arguments["-d"].(bool) {
 		log.SetLevel(log.DebugLevel)
 	}
 	log.Info("Command line arguments: ", arguments)

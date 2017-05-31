@@ -1,0 +1,5 @@
+eval -d app=="nonexistent"
+
+Endpoints matching selector app=="nonexistent":
+
+Plus 69 lines on stderr

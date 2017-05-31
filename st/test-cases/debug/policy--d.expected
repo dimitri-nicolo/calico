@@ -1,0 +1,4 @@
+policy --debug nonexistent
+
+
+Plus 8 lines on stderr

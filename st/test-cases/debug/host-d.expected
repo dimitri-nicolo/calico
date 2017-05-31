@@ -1,0 +1,5 @@
+host -d nonexistent
+
+Policies and profiles for each endpoint on host "nonexistent":
+
+Plus 121 lines on stderr
