@@ -26,6 +26,7 @@ container inside the prometheus pod launched by the prometheus-operator
 As an example, the range query in this _ConfigMap_ is 10 seconds.
 
 ```
+{% raw %}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -43,12 +44,14 @@ data:
          summary = "Instance {{$labels.instance}} - Large rate of packets denied",
          description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
       }
+{% endraw %}
 ```
 
 To update this alerting rule, to say, execute the query with a range of
 20 seconds modify the manifest to this:
 
 ```
+{% raw %}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -66,6 +69,7 @@ data:
          summary = "Instance {{$labels.instance}} - Large rate of packets denied",
          description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
       }
+{% endraw %}
 ```
 
 #### Creating a New Alerting Rule
@@ -85,6 +89,7 @@ As an example, to fire a alert when a calico/node instance has been down for
 more than 5 minutes, save the following to a file, say `calico-node-down-alert.yaml`
 
 ```
+{% raw %}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -103,6 +108,7 @@ data:
          summary = "Instance {{$labels.instance}} Pod: {{$labels.pod}} is down",
          description = "{{$labels.instance}} of job {{$labels.job}} has been down for more than 5 minutes"
       }
+{% endraw %}
 ```
 
 Then _create_/_apply_ this config map in kubernetes.
