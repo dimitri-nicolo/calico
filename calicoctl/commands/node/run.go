@@ -429,7 +429,7 @@ Description:
 	for outScanner.Scan() {
 		line := outScanner.Text()
 		fmt.Println(line)
-		if line == "Calico node (enterprise) started successfully" {
+		if line == "Calico node started successfully" {
 			started = true
 			break
 		}

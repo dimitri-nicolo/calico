@@ -104,4 +104,8 @@ case "$CALICO_DISABLE_FILE_LOGGING" in
     ;;
 esac
 
-echo "Calico node (enterprise) started successfully"
+echo "Calico node started successfully"
+
+# TODO(doublek): Find a way to plumb the version in here.
+CALICO_VERSION="Calico v2.2.1 with Tigera Networking Essentials v1.0.0"
+echo "Version: $CALICO_VERSION"
