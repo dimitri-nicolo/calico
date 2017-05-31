@@ -12,6 +12,14 @@ You can quickly and easily obtain such a cluster by setting up [Networking Essen
 
 The key steps in moving to essentials are to change to the essentials version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
+This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.6/)
+and that your cluster consists of the following nodes: 
+  * k8s-node1
+  * k8s-node2
+  * k8s-master
+
+Where you see references to these in the text below, substitute for your actual node names.
+
 ### Configure Namespaces
 
 This guide will deploy pods in a Kubernetes Namespaces.  Let's create the `Namespace` object for this guide.
@@ -119,6 +127,50 @@ wget: download timed out
 ```
 
 The request should time out after 5 seconds.  By enabling isolation on the Namespace, we've prevented access to the Service.
+
+### Denied packet metrics and Alerting
+Now would be a great time to take a look at the denied packet metrics.  Get the service listing from kubectl:
+```
+kubectl get svc -n calico-monitoring
+NAME                       CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+alertmanager-operated      None             <none>        9093/TCP,6783/TCP   6h
+calico-node-alertmanager   10.105.253.248   <nodes>       9093:30903/TCP      6h
+calico-node-prometheus     10.105.26.250    <nodes>       9090:30909/TCP      6h
+prometheus-operated        None             <none>        9090/TCP            6h
+
+```
+This tells us that the `calico-node-prometheus` service is running using a NodePort on port 30909. Point a web browser at [http://k8s-node1:30909/graph](http://k8s-node1:30909/graph).  
+
+If you click on the drop down box `- insert metric at cursor -`, you should see a list of metrics which are available:
+ - `calico_denied_packets`
+ - `calico_denied_bytes`
+ - `up`
+ - `scrape_duration_seconds`
+ - `scrape_samples_post_metric_relabelling`
+ - `scrape_samples_scraped`
+ 
+The first 3 in the list above are useful for monitoring your deployment, while the last 3 are useful for monitoring the health of your monitoring system.
+
+Note that if you have not sent any denied packets recently, `calico_denied_packets` and `calico_denied_bytes` may not appear in the drop down.
+
+Select `calico_denied_packets` and click the `Execute` button.  The `console` tab should now show a key like this:
+```calico_denied_packets{endpoint="calico-metrics-port",instance="10.240.0.16:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-zs6gt",policy="profile/k8s_ns.policy-demo/0/deny",service="calico-node-metrics",srcIP="192.168.213.12"}``` and a value.
+
+This indicates that the pod `calico-node-zs6gt` has reported 3 denied packets from `192.168.213.12` and that the packets were denied by the `profile/k8s_ns.policy-demo/0/deny` - which is the namespace default deny rule you enabled above using the namespace annotation.
+
+If you now click on the `graph` tab, you will see a graph of the denied packet count against time:
+![Graph Example]({{site.baseurl}}/images/Graph.png)
+
+Prometheus can also do some calculations based on metrics - for example to show the *rate* of denied packets.  Update the expression text box to contain the expression `rate(calico_denied_packets[10s])` and click execute again.  The graph and table will now show you the rate of denied packets averaged over the last 10s.
+
+Now let's try setting off an alert.  If you click on 'Alerts', you'll see that we have a `DeniedPacketsRate` alert configured. Notice that it is green to indicate that it is not currently firing. If you click on it, it will show you that it will fire if `rate(calico_denied_packets[10s]) > 50`.
+
+If you click on that expression, it will skip back to the graph screen and show you all the times that rate of packets was > 50.  So let's send some denied packets.  In the `access` pod you created above, run the following command:  
+```
+for i in `seq 1 10000`; do (wget -q --timeout=1 nginx -O - & sleep 0.01); done
+```
+Refresh the graph and you should see some data points appear.  Now switch back to the Alerts page and see that the Alert fires.  You may need to refresh the Alerts page a few times until the Alert goes red.  Now if you click on the Alert, it will show you the combination of labels that is firing the Alert:
+![Alert Example]({{site.baseurl}}/images/Alert.png)
 
 ### Allow Access using a NetworkPolicy
 
