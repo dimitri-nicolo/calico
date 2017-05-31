@@ -58,6 +58,10 @@ run_test 1 ${CALICOQ}
 
 run_test 1 ${CALICOQ} non-existent-command
 
+run_test 0 ${CALICOQ} -d version
+
+run_test 0 ${CALICOQ} --debug version
+
 summarise_test
 
 exit $failed
