@@ -6,7 +6,11 @@ This guide is a variation of the simple policy demo intended to introduce the ex
 
 It requires a Kubernetes cluster configured with Calico networking and Networking Essentials, and expects that you have `kubectl` configured to interact with the cluster.
 
-You can quickly and easily deploy such a cluster by setting up [Networking Essentials]({{site.baseurl}}/{page.version}}/getting-started/essentials), and then following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation)
+You can quickly and easily obtain such a cluster by setting up [Networking Essentials]({{site.baseurl}}/{page.version}}/getting-started/essentials), and then:
+- following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation), or
+- [upgrading an existing cluster]({{site.baseurl}}/{page.version}}/getting-started/kubernetes/upgrade).
+
+The key steps in moving to essentials are to change to the essentials version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
 ### Configure Namespaces
 
@@ -43,6 +47,54 @@ If you don't see a command prompt, try pressing enter.
 ```
 
 You should see a response from `nginx`.  Great! Our Service is accessible.  You can exit the Pod now.
+
+Now let's inspect the network policies using calicoq.  calicoq complements calicoctl by inspecting the
+dynamic aspects of Calico Policy: in particular displaying the endpoints actually affected by policies,
+and the policies that actually apply to endpoints.
+
+The full calicoq documentation is [here]({{site.baseurl}}/{{page.version}}/reference/calicoq).
+```
+# Point calicoq at etcd / the Kubernetes API Server in the same way as calicoctl.  You can also use a config file.
+# The host command displays information about the policies that select endpoints on a host.
+ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoq host k8s-node1
+Policies that match each endpoint:
+
+Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
+  # These are the policies that apply directly to the endpoint.  calicoq can display both
+  # Calico Policies and Kubernetes NetworkPolicies, although this example focuses on the latter.
+  # They're listed in the order they apply.
+  Policies:
+    # These first two policies are defined in the calico-monitoring.yaml manifest.
+    # The selectors here have been translated from the original NetworkPolicies to the Calico
+    # format (note the addition of the namespace test).
+    Policy "calico-monitoring.calico-node-alertmanager" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'")
+    Policy "calico-monitoring.calico-node-alertmanager-mesh" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'")
+    # This policy and the profile following it are created automatically by the policy controller.
+    Policy "k8s-policy-no-match" (order 2000; selector "has(calico/k8s_ns)")
+  Profiles:
+    Profile k8s_ns.calico-monitoring
+  # These are the policies that match the endpoint in their rules.
+  Matched by policies:
+    Policy calico-monitoring.calico-node-alertmanager-mesh (rule 0 inbound source match; selector "app in { "alertmanager" } && alertmanager in { "calico-node-alertmanager" } && calico/k8s_ns == 'calico-monitoring'")
+
+...
+
+Workload endpoint k8s/calico-monitoring.prometheus-calico-node-prometheus-0/eth0
+  Policies:
+    Policy "calico-monitoring.prometheus" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'prometheus' && prometheus == 'calico-node-prometheus'")
+    Policy "k8s-policy-no-match" (order 2000; selector "has(calico/k8s_ns)")
+  Profiles:
+    Profile k8s_ns.calico-monitoring
+
+# This endpoint has no NetworkPolicies configured - just the default Calico policy to allow traffic.
+Workload endpoint k8s/policy-demo.nginx-2371676037-7w78m/eth0
+  Policies:
+    Policy "k8s-policy-no-match" (order 2000; selector "has(calico/k8s_ns)")
+  Profiles:
+    Profile k8s_ns.policy-demo
+
+...
+```
 
 ### Enable isolation
 
