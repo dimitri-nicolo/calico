@@ -6,12 +6,11 @@ The Calico install manifests are based on [Kubeadm hosted install](../kubeadm),
 however, you can adapt any hosted install manifest by making changes described
 in the [modifying your manifest to install essentials](adapt)
 
-Additional things the [calico-essentials.yaml](1.6/calico-essentials.yaml) does
-is:
-  - Enables prometheus reporting (this is different from felix's prometheus
-    settings)
-  - Creates a new service: calico-node-metrics exposing prometheus reporting
-    port.
+The [calico-essentials.yaml](1.6/calico-essentials.yaml) manifest also:
+  - Enables Prometheus reporting.  (This is different from Felix's Prometheus
+    settings.)
+  - Creates a new service, calico-node-metrics, to expose the Prometheus
+    reporting port.
 
 The manifest [operator.yaml](1.6/operator.yaml) does the following:
   - Create a namespace called calico-monitoring
@@ -23,7 +22,6 @@ The manifest [operator.yaml](1.6/operator.yaml) does the following:
       Resources_(TPR): `prometheus`, `alertmanager` and "servicemonitor".
 
 The `monitor-calico.yaml` manifest does the following:
-the following:
   - A secret for storing alertmanager config - Should be customized for your
     environment.
     - Refer to [standard alerting configuration documentation](https://prometheus.io/docs/alerting/configuration/)
@@ -33,7 +31,7 @@ the following:
   - Create a ServiceMonitor that selects on the calico-node-metrics service's
     ports.
   - ConfigMaps that define some [alerting rules](https://prometheus.io/docs/alerting/rules/)
-    for prometheus.
+    for Prometheus.
     - We predefine denied packet alerts and instance down alerts. This can be
       customized by modifying appropriate configmaps.
   - Create a Prometheus instance and corresponding dash service. Prometheus
@@ -43,8 +41,8 @@ the following:
   - Create network policies as required for accessing all the services defined
     above.
 
-The services (type _NodePort_) for prometheus and alertmanager are created in
-the `calico-monitoring` namespaces and are named `calico-prometheus-dash`
+The services (type _NodePort_) for Prometheus and alertmanager are created in
+the `calico-monitoring` namespace and are named `calico-prometheus-dash`
 (port 30900) and `calico-alertmanager-dash` (port 30903).
 
 ## Setup & Installation
@@ -156,7 +154,7 @@ $ kubectl get thirdpartyresources
 ```
 
 - Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
-  install prometheus and alertmanager.
+  install Prometheus and alertmanager.
 
 ```
 $ kubectl apply -f monitor-calico.yaml
@@ -202,7 +200,7 @@ Create a new _Service_ to expose Calico Prometheus Denied Packet Metrics and
 apply this manifest using `kubectl apply`
 
 ```
-# This manfiest installs the Service which gets traffic to the calico-node
+# This manifest installs the Service which gets traffic to the calico-node
 # metrics reporting endpoint.
 apiVersion: v1
 kind: Service
@@ -237,7 +235,7 @@ $ kubectl get thirdpartyresources
 ```
 
 - Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
-  install prometheus and alertmanager.
+  install Prometheus and alertmanager.
 
 ```
 $ kubectl apply -f monitor-calico.yaml
