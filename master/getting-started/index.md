@@ -2,8 +2,8 @@
 title: Calico Integrations
 ---
 
-To get started using Calico, we recommend running through one or more of the
-available tutorials linked below.
+To get started using Calico and Tigera Networking Essentials, we recommend running
+through one or more of the available tutorials linked below.
 
 These tutorials will help you understand the different environment options when
 using Calico.  In most cases we provide worked examples using manual setup on
@@ -21,3 +21,15 @@ Then follow one of our getting started guides.
 - [Calico with OpenStack](openstack)
 - [Calico with rkt](rkt)
 - [Host protection](bare-metal/bare-metal)
+
+If you're already familiar with Calico, you may wish to consult the Networking
+Essentials for Kubernetes [demo](essentials/simple-policy-essentials), which
+demonstrates the main features.
+
+For more detailed documentation on Essentials features, see here:
+- [Setting up essentials binaries](essentials)
+- [calicoq documentation]({{site.baseurl}}/{{page.version}}/reference/calicoq/overview)
+- [Denied Packet Notifications]({{site.baseurl}}/{{page.version}}/reference/essentials/policy-violations)
+- [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)
+- [Configuring Prometheus]({{site.baseurl}}/{{page.version}}/usage/configuration/prometheus)
+- [Configuring Alertmanager]({{site.baseurl}}/{{page.version}}/usage/configuration/alertmanager)
