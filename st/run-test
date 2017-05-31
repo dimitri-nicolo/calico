@@ -36,23 +36,47 @@ for c in `ls`; do
     echo ------------------------------------------------------
     echo TEST: ${c}
 
+    # Establish settings for this test case directory.
+    ETCD_PORT=2379
+    USE_CFG_FILE=false
+    CFG_FILE_INSERT=
+    if [ -f config.sh ]; then
+	source config.sh
+	echo ETCD_PORT=${ETCD_PORT}
+	echo USE_CFG_FILE=${USE_CFG_FILE}
+	echo CFG_FILE_INSERT=${CFG_FILE_INSERT}
+    fi
+
     # Run etcd.
     docker run --detach --name calicoq-etcd \
        quay.io/coreos/etcd \
        etcd \
-       --advertise-client-urls "http://127.0.0.1:2379,http://127.0.0.1:4001" \
-       --listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
+       --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
+       --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
     etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
-    export ETCD_ENDPOINTS=http://${etcd_ip}:2379
+    export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
     export DATASTORE_TYPE=etcdv2
+
+    # Apply the resources for the test case.
+    ${CALICOCTL} apply -f apply.yaml
 
     # Mark the DB as ready.
     while ! curl ${ETCD_ENDPOINTS}/v2/keys/calico/v1/Ready -XPUT -d value="true"; do
 	sleep 2
     done
 
-    # Apply the resources for the test case.
-    ${CALICOCTL} apply -f apply.yaml
+    # Create config file, if wanted.
+    if ${USE_CFG_FILE}; then
+	tee calicoq.cfg <<EOF
+apiVersion: v1
+${CFG_FILE_INSERT}kind: calicoApiConfig
+metadata:
+spec:
+  datastoreType: "${DATASTORE_TYPE}"
+  etcdEndpoints: "${ETCD_ENDPOINTS}"
+EOF
+	unset ETCD_ENDPOINTS DATASTORE_TYPE
+    fi
 
     # Check all the expected outputs.
     for expected in `ls *.expected`; do
@@ -70,6 +94,7 @@ for c in `ls`; do
     done
 
     docker rm -f calicoq-etcd >/dev/null
+    rm -f calicoq.cfg
 
     echo ------------------------------------------------------
     echo
