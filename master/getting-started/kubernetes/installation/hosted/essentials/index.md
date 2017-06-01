@@ -133,36 +133,36 @@ spec:
 
 - Setup etcd:
 
-  ```
-  kubectl apply -f calico-etcd.yaml
-  ```
+```
+kubectl apply -f calico-etcd.yaml
+```
 
 - Make any changes to configurations to the calico-essentials.yaml file and then
   install/configure calico.
 
-  ```
-  kubectl apply -f calico-essentials.yaml
-  ```
+```
+kubectl apply -f calico-essentials.yaml
+```
 
 - Configure calico-monitoring namespace and deploy Prometheus Operator by
   applying the [operator.yaml](1.6/operator.yaml) manifest.
 
-  ```
-  kubectl apply -f operator.yaml
-  ```
+```
+kubectl apply -f operator.yaml
+```
 
 - Wait for third party resources to be created. Check by running:
 
-  ```
-  $ kubectl get thirdpartyresources
-  ```
+```
+$ kubectl get thirdpartyresources
+```
 
 - Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
-  install prometheus and alertmanager.
+  install Prometheus and alertmanager.
 
-  ```
-  $ kubectl apply -f monitor-calico.yaml
-  ```
+```
+$ kubectl apply -f monitor-calico.yaml
+```
 
 ### Sample Alertmanager Webhook
 
@@ -189,9 +189,9 @@ receivers:
   - url: 'http://calico-alertmanager-webhook:30501/'
 ```
 
-To view the any json output printed examine the logs of the webhook pod.
+To view the JSON output printed, examine the logs of the webhook pod.
 
-### Modifying existing manifest to install Essentials
+### Modifying an existing manifest to install Essentials
 
 Edit the manifest that deploys calico/node and update the following:
   - Update the _DaemonSet_ template `image` to point to the new Calico image.
@@ -204,7 +204,7 @@ Create a new _Service_ to expose Calico Prometheus Denied Packet Metrics and
 apply this manifest using `kubectl apply`
 
 ```
-# This manfiest installs the Service which gets traffic to the calico-node
+# This manifest installs the Service which gets traffic to the calico-node
 # metrics reporting endpoint.
 apiVersion: v1
 kind: Service
@@ -228,19 +228,19 @@ spec:
 - Configure calico-monitoring namespace and deploy Prometheus Operator by
   applying the [operator.yaml](1.6/operator.yaml) manifest.
 
-  ```
-  kubectl apply -f operator.yaml
-  ```
+```
+kubectl apply -f operator.yaml
+```
 
 - Wait for third party resources to be created. Check by running:
 
-  ```
-  $ kubectl get thirdpartyresources
-  ```
+```
+kubectl get thirdpartyresources
+```
 
 - Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
-  install prometheus and alertmanager.
+  install Prometheus and alertmanager.
 
-  ```
-  $ kubectl apply -f monitor-calico.yaml
-  ```
+```
+kubectl apply -f monitor-calico.yaml
+```

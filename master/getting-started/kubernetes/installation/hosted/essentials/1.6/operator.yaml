@@ -5,8 +5,8 @@ layout: null
 #   coreos/prometheus-operator:v0.9.1
 ---
 
-# This manifest creates a namespace for deploying prometheus operator,
-# prometheus and alertmanager.
+# This manifest creates a namespace for deploying prometheus-operator,
+# Prometheus and alertmanager.
 apiVersion: v1
 kind: Namespace
 metadata:
