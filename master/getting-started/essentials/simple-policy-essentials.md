@@ -8,11 +8,11 @@ It requires a Kubernetes cluster configured with Calico networking and Networkin
 
 You can quickly and easily obtain such a cluster by setting up [Networking Essentials]({{site.baseurl}}/{page.version}}/getting-started/essentials), and then:
 - following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation), or
-- [upgrading an existing cluster]({{site.baseurl}}/{page.version}}/getting-started/kubernetes/upgrade).
+- [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade).
 
 The key steps in moving to essentials are to change to the essentials version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
-This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.6/)
+This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.6/)
 and that your cluster consists of the following nodes: 
   * k8s-node1
   * k8s-node2

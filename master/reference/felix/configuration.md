@@ -109,34 +109,12 @@ syslog, with an entry like this:
 May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be879f658 MAC= SRC=192.168.128.30 DST=192.168.157.26 LEN=60 TOS=0x00 PREC=0x00 TTL=62 ID=56743 DF PROTO=TCP SPT=56248 DPT=80 WINDOW=29200 RES=0x00 SYN URGP=0 MARK=0xa000000
 ```
 
-When the reporting of denied packet metrics is enabled, Felix keeps a count of
-recently denied packets for each combination of
-
-- the Calico policy or profile that denied the packet, and
-
-- the IP address that sent the packet,
-
-and also of the amount of data in those denied packets.  Felix publishes these
-as Prometheus metrics on the port configured by the PrometheusReporterPort
-setting.  Then a REST call to `http://<felix-IP>:9092/metrics` will return
-output like this:
-
-```
-# HELP calico_denied_bytes Total number of bytes denied by calico policies.
-# TYPE calico_denied_bytes gauge
-calico_denied_bytes{policy="profile/policy-b8443/0/deny",srcIP="192.168.157.28"} 240
-# HELP calico_denied_packets Total number of packets denied by calico policies.
-# TYPE calico_denied_packets gauge
-calico_denied_packets{policy="profile/policy-b8443/0/deny",srcIP="192.168.157.28"} 4
-```
-
-These metrics are maintained for as long as the `{policy, srcIP}` combination
-continues to generate denied packets with an interval of less than one minute.
-If a minute passes with no further denied packets, Felix stops tracking any
-count for that combination.  (But note that typically a Prometheus server would
-be collecting all such metrics more frequently than once a minute, and that
-server will store and remember the metrics, for as long as the Prometheus
-server is configured to do so.)
+When the reporting of denied packet metrics is enabled, Felix keeps counts of
+recently denied packets and publishes these as Prometheus metrics on the port
+configured by the PrometheusReporterPort setting.  Please
+see
+[Policy Violation Monitoring & Reporting]({{site.baseurl}}/{{page.version}}/reference/essentials/policy-violations) for
+more details.
 
 Note that denied packet metrics are independent of the DropActionOverride
 setting.  Specifically, if packets that would normally be denied are being
