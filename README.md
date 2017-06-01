@@ -24,10 +24,44 @@ To deploy, bring up k8s >=1.6
 .
 ```
 
-## Cluster Access
-```
-# APISERVER=$(kubectl config view | grep server | cut -f 2- -d ":" | tr -d " ")
-# TOKEN=$(kubectl describe secret $(kubectl get secrets | grep default | cut -f1 -d ' '
-# curl $APISERVER/api/ --header "Authorization: Bearer $TOKEN" --insecure
-```
+## Cluster Access/Authentication
 
+Kubernetes natively supports various Authentication strategies like:
+Client Certificates
+Bearer Tokens
+Authenticating proxy
+HTTP Basic Auth
+
+An aggregated API Server will be able to delegate authentication, of any incoming request, to the master API Server/Aggregator.
+
+The Authentication strategy being setup as part of the above demo installation process (through kubeadm) is based on Client Certificates/PKI.
+
+In order to make curl requests against the Aggergated API, following steps can be followed:
+
+1. Open /etc/kubernetes/admin.conf
+The file contains the bits of information that kubectl uses in order to make authorized requests against the API Server.
+
+The file container client-certficate and client-key in base64 encoded format.
+
+Copy the value of client-certificate-data in a file , say client-crt.
+Run `base64 decode client-crt > client.crt`
+
+Copy the value of client-key-data in a file, say client-key
+Run `base64 decode client-key > client.key`
+
+The curl command expects the client certificate to be presented in PEM format.
+
+Generate the PEM file using the command:
+`cat client.crt client.key > client.includesprivatekey.pem`
+
+2. Find the API Server Certificate Authority info. This is used to verify the certificate response coming in from the Server.
+
+The CA can be found under /etc/kubernetes/pki/apiserver.crt
+
+3. Run the curl command against a K8s resource:
+
+`curl --cacert /etc/kubernetes/pki/apiserver.crt --cert-type pem --cert client.includesprivatekey.pem https://10.0.2.15:6443/api/v1/nodes`
+
+The API Server address can be found from the above admin.conf file as well.
+
+The API Server command/flags used for running can be found under /etc/kubernetes/manifest/
