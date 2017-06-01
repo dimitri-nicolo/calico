@@ -228,8 +228,8 @@ The Calico install manifests are based on [Kubeadm hosted install](../kubeadm),
 however, you can adapt any hosted install manifest by making changes described
 in the [modifying your manifest to install essentials](adapt)
 
-Additional things the [calico-essentials.yaml](1.6/calico-essentials.yaml) does
-is:
+The additional things the [calico-essentials.yaml](1.6/calico-essentials.yaml) does
+are:
   - Enables prometheus reporting (this is different from felix's prometheus
     settings)
   - Creates a new service: calico-node-metrics exposing prometheus reporting
