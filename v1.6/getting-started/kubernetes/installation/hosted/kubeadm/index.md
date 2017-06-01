@@ -2,11 +2,11 @@
 title: Install for Kubeadm
 ---
 
-This document describes a single manifest for installing Calico on kubeadm managed 
-Kubernetes clusters.  It is a specific case of the more general self-hosted 
+This document describes a single manifest for installing Calico on kubeadm managed
+Kubernetes clusters.  It is a specific case of the more general self-hosted
 install found [here]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted)
 
-This install is designed to work for kubeadm clusters, or any cluster which labels 
+This install is designed to work for kubeadm clusters, or any cluster which labels
 a single master node with `kubeadm.alpha.kubernetes.io/role: master`.  This label is used for deploying
 a single node etcd cluster.
 
@@ -19,13 +19,13 @@ Then use kubectl to create the manifest below using kubectl:
 kubectl create -f calico.yaml
 ```
 
-You can download the addon manfiest [here](calico.yaml)
+You can download the addon manifest [here](calico.yaml)
 
 ## About
 
-This manifest deploys the standard Calico components described 
-[here]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted) 
-as well as a dedicated Calico etcd node on the Kubernetes master.  Note that in a production cluster, it is 
+This manifest deploys the standard Calico components described
+[here]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted)
+as well as a dedicated Calico etcd node on the Kubernetes master.  Note that in a production cluster, it is
 recommended you use a secure, replicated etcd cluster.
 
 ### Requirements / Limitations
