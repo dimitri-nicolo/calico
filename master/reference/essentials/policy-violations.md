@@ -22,9 +22,11 @@ cluster for policy violations.
      |   +----------+  |              +------------+     +------------+
      +-----------------+                    ^                   ^
                                             |                   |
-                                web UI for accessing     web UI for accessing alert
-                             metrics and configuring     states and configuring
-                                 alert notifications     mechanisms to fan out to
+                             Collect and store metrics.     Web UI for accessing alert
+                             WebUI for accessing and        states.
+                             querying metrics.              Configure fan out
+                             Configure alerting rules.      notifications to different
+                                                            alert receivers.
 ```
 
 Policy Violation & Reporting is accomplished using 3 key pieces:
@@ -84,7 +86,7 @@ Once Prometheus scrapes a node and collects denied packet metrics, it will be
 available at Prometheus until the a metric is considered _stale_, i.e.,
 Prometheus has not seen any updates to this metric for some time. This time is
 configurable and details on how to do this are available in the
-[Prometheus Configuration]() document.
+[Prometheus Configuration]({{site.baseurl}}/{{page.version}}/usage/configuration/prometheus) document.
 
 #### Metric Resets and Empty Responses
 
