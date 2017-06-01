@@ -78,6 +78,71 @@ The full list of parameters which can be set is as follows.
 |-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
 | InterfacePrefix                         | FELIX_INTERFACEPREFIX                   | cali                                 | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces.  Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the 'cali' value, and our OpenStack integration sets the 'tap' value. |
 
+#### Essentials specific configuration
+
+| Setting                                 | Environment variable                    | Default                              | Meaning                                 |
+|-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
+| DropActionOverride                      | FELIX_DROPACTIONOVERRIDE                | DROP                                 | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
+| PrometheusReporterEnabled               | FELIX_PROMETHEUSREPORTERENABLED         | false                                | Set to "true" to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
+| PrometheusReporterPort                  | FELIX_PROMETHEUSREPORTERPORT            | 9092                                 | The TCP port on which to report denied packet metrics.  |
+
+DropActionOverride controls what happens to each packet that is denied by
+the current Calico policy - i.e. by the ordered combination of all the
+configured policies and profiles that apply to that packet.  It may be
+set to one of the following values:
+
+- DROP
+- ACCEPT
+- LOG-and-DROP
+- LOG-and-ACCEPT.
+
+Normally the "DROP" or "LOG-and-DROP" value should be used, as dropping a
+packet is the obvious implication of that packet being denied.  However when
+experimenting, or debugging a scenario that is not behaving as you expect, the
+"ACCEPT" and "LOG-and-ACCEPT" values can be useful: then the packet will be
+still be allowed through.
+
+When one of the "LOG-and-..." values is set, each denied packet is logged in
+syslog, with an entry like this:
+
+```
+May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be879f658 MAC= SRC=192.168.128.30 DST=192.168.157.26 LEN=60 TOS=0x00 PREC=0x00 TTL=62 ID=56743 DF PROTO=TCP SPT=56248 DPT=80 WINDOW=29200 RES=0x00 SYN URGP=0 MARK=0xa000000
+```
+
+When the reporting of denied packet metrics is enabled, Felix keeps a count of
+recently denied packets for each combination of
+
+- the Calico policy or profile that denied the packet, and
+
+- the IP address that sent the packet,
+
+and also of the amount of data in those denied packets.  Felix publishes these
+as Prometheus metrics on the port configured by the PrometheusReporterPort
+setting.  Then a REST call to `http://<felix-IP>:9092/metrics` will return
+output like this:
+
+```
+# HELP calico_denied_bytes Total number of bytes denied by calico policies.
+# TYPE calico_denied_bytes gauge
+calico_denied_bytes{policy="profile/policy-b8443/0/deny",srcIP="192.168.157.28"} 240
+# HELP calico_denied_packets Total number of packets denied by calico policies.
+# TYPE calico_denied_packets gauge
+calico_denied_packets{policy="profile/policy-b8443/0/deny",srcIP="192.168.157.28"} 4
+```
+
+These metrics are maintained for as long as the `{policy, srcIP}` combination
+continues to generate denied packets with an interval of less than one minute.
+If a minute passes with no further denied packets, Felix stops tracking any
+count for that combination.  (But note that typically a Prometheus server would
+be collecting all such metrics more frequently than once a minute, and that
+server will store and remember the metrics, for as long as the Prometheus
+server is configured to do so.)
+
+Note that denied packet metrics are independent of the DropActionOverride
+setting.  Specifically, if packets that would normally be denied are being
+allowed through by a setting of "ACCEPT" or "LOG-and-ACCEPT", those packets
+still contribute to the denied packet metrics as just described.
+
 Environment variables
 ---------------------
 
