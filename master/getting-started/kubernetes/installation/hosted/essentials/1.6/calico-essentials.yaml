@@ -175,27 +175,6 @@ spec:
 
 ---
 
-# This manifest installs the Service which gets traffic to the calico-node metrics
-# reporting endpoint.
-apiVersion: v1
-kind: Service
-metadata:
-  namespace: kube-system
-  name: calico-node-metrics
-  labels:
-    k8s-app: calico-node
-spec:
-  selector:
-    k8s-app: calico-node
-  type: ClusterIP
-  clusterIP: None
-  ports:
-  - name: calico-metrics-port
-    port: 9081
-    targetPort: 9081
-    protocol: TCP
----
-
 # This manifest deploys the Calico policy controller on Kubernetes.
 # See https://github.com/projectcalico/k8s-policy
 apiVersion: extensions/v1beta1

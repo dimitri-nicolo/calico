@@ -232,8 +232,6 @@ The additional things the [calico-essentials.yaml](1.6/calico-essentials.yaml) d
 are:
   - Enables prometheus reporting (this is different from felix's prometheus
     settings)
-  - Creates a new service: calico-node-metrics exposing prometheus reporting
-    port.
 
 The manifest [operator.yaml](1.6/operator.yaml) does the following:
   - Create a namespace called calico-monitoring
@@ -245,6 +243,8 @@ The manifest [operator.yaml](1.6/operator.yaml) does the following:
       Resources_(TPR): `prometheus`, `alertmanager` and "servicemonitor".
 
 The `monitor-calico.yaml` manifest does the following:
+  - Creates a new service: calico-node-metrics exposing prometheus reporting
+    port.
   - A secret for storing alertmanager config - Should be customized for your
     environment.
     - Refer to [standard alerting configuration documentation](https://prometheus.io/docs/alerting/configuration/)

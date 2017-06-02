@@ -1,6 +1,26 @@
-{% raw %}
 ---
 layout: null
+---
+
+# This manifest installs the Service which gets traffic to the calico-node metrics
+# reporting endpoint.
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: calico-node-metrics
+  labels:
+    k8s-app: calico-node
+spec:
+  selector:
+    k8s-app: calico-node
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: calico-metrics-port
+    port: 9081
+    targetPort: 9081
+    protocol: TCP
 ---
 
 # This manifest creates a network policy to allow traffic to Alertmanager
@@ -127,6 +147,7 @@ spec:
     interval: 5s
 ---
 
+{% raw %}
 # This ConfigMap is used to create the denied packets alerting rules in Prometheus.
 apiVersion: v1
 kind: ConfigMap
@@ -145,6 +166,7 @@ data:
          summary = "Instance {{$labels.instance}} - Large rate of packets denied",
          description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
       }
+{% endraw %}
 ---
 
 # This manifest creates a secret that will be mounted as the Alertmanager
@@ -265,4 +287,3 @@ spec:
     targetPort: web
   selector:
     prometheus: calico-node-prometheus
-{% endraw %}
