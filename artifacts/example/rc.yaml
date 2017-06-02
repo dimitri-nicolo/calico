@@ -21,3 +21,4 @@ spec:
         imagePullPolicy: Never
         args:
         - "--etcd-servers=http://10.96.232.136:6666"
+        - "--oidc-issuer-url=https://accounts.google.com"
