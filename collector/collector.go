@@ -29,28 +29,26 @@ type Config struct {
 // and stores them as a Data object in a map keyed by Tuple.
 // All data source channels must be specified when creating the collector.
 type Collector struct {
-	sources        []<-chan *StatUpdate
-	epStats        map[Tuple]*Data
-	mux            chan *StatUpdate
-	statAgeTimeout chan *Data
-	reporterTicker *jitter.Ticker
-	sigChan        chan os.Signal
-	config         *Config
-	dumpLog        *log.Logger
-	reporterMgr    *ReporterManager
+	sources     []<-chan *StatUpdate
+	epStats     map[Tuple]*Data
+	mux         chan *StatUpdate
+	ticker      *jitter.Ticker
+	sigChan     chan os.Signal
+	config      *Config
+	dumpLog     *log.Logger
+	reporterMgr *ReporterManager
 }
 
 func NewCollector(sources []<-chan *StatUpdate, rm *ReporterManager, config *Config) *Collector {
 	return &Collector{
-		sources:        sources,
-		epStats:        make(map[Tuple]*Data),
-		mux:            make(chan *StatUpdate, 5000),
-		statAgeTimeout: make(chan *Data),
-		reporterTicker: jitter.NewTicker(ExportingInterval, ExportingInterval/10),
-		sigChan:        make(chan os.Signal, 1),
-		config:         config,
-		dumpLog:        log.New(),
-		reporterMgr:    rm,
+		sources:     sources,
+		epStats:     make(map[Tuple]*Data),
+		mux:         make(chan *StatUpdate, 5000),
+		ticker:      jitter.NewTicker(ExportingInterval, ExportingInterval/10),
+		sigChan:     make(chan os.Signal, 1),
+		config:      config,
+		dumpLog:     log.New(),
+		reporterMgr: rm,
 	}
 }
 
@@ -63,18 +61,14 @@ func (c *Collector) Start() {
 func (c *Collector) startStatsCollectionAndReporting() {
 	// When a collector is started, we respond to the following events:
 	// 1. StatUpdates for incoming datasources (chan c.mux).
-	// 2. Data age timeouts via the c.statAgeTimeout channel.
-	// 3. A signal handler that will dump logs on receiving SIGUSR2.
-	// 4. A done channel for stopping and cleaning up collector (TODO).
+	// 2. A signal handler that will dump logs on receiving SIGUSR2.
+	// 3. A done channel for stopping and cleaning up collector (TODO).
 	for {
 		select {
 		case update := <-c.mux:
 			c.applyStatUpdate(update)
-		case data := <-c.statAgeTimeout:
-			c.expireEntry(data)
-		case <-c.reporterTicker.C:
-			log.Debug("Metrics reporter timer ticked")
-			c.reportMetrics()
+		case <-c.ticker.C:
+			c.checkEpStats()
 		case <-c.sigChan:
 			c.dumpStats()
 		}
@@ -133,7 +127,6 @@ func (c *Collector) applyStatUpdate(update *StatUpdate) {
 			data.IncreaseCounters(update.Packets, update.Bytes)
 			data.IncreaseCountersReverse(update.ReversePackets, update.ReverseBytes)
 		}
-		c.registerAgeTimer(data)
 		c.epStats[update.Tuple] = data
 		return
 	}
@@ -158,7 +151,6 @@ func (c *Collector) applyStatUpdate(update *StatUpdate) {
 
 func (c *Collector) expireEntry(data *Data) {
 	tuple := data.Tuple
-	c.reportData(data)
 	if data.EgressRuleTrace.Action() == DenyAction {
 		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.EgressRuleTrace)
 		c.reporterMgr.ExpireChan <- mu
@@ -170,19 +162,16 @@ func (c *Collector) expireEntry(data *Data) {
 	delete(c.epStats, tuple)
 }
 
-func (c *Collector) registerAgeTimer(data *Data) {
-	// Wait for timer to fire and send the corresponding expired data to be
-	// deleted.
-	timer := data.AgeTimer()
-	go func() {
-		<-timer.C
-		c.statAgeTimeout <- data
-	}()
-}
-
-func (c *Collector) reportMetrics() {
+func (c *Collector) checkEpStats() {
+	// For each entry
+	// - report metrics
+	// - check age and expire the entry if needed.
+	now := time.Now()
 	for _, data := range c.epStats {
 		c.reportData(data)
+		if now.Sub(data.UpdatedAt()) >= DefaultAgeTimeout {
+			c.expireEntry(data)
+		}
 	}
 }
 

@@ -371,12 +371,6 @@ func (t *Tuple) String() string {
 // source of this connection and ingress into a workload that terminated this.
 // - 2 counters - ctr for the direction of the connection and ctrReverse for
 // the reverse/reply of this connection.
-// Age Timer Implementation Note: Each Data entry's age is implemented using
-// time.Timer. Any actions that modifiy statistics or metadata of a Data entry
-// object will extend the life timer of the object. Each method of Data will
-// specify if it updates or doesn't update the age timer. When creating a new Data
-// object a timeout is specified and this fires when the there have been no updates
-// on the object for specified duration.
 type Data struct {
 	Tuple            Tuple
 	ctr              Counter
@@ -386,7 +380,6 @@ type Data struct {
 	createdAt        time.Time
 	updatedAt        time.Time
 	ageTimeout       time.Duration
-	ageTimer         *time.Timer
 	dirty            bool
 }
 
@@ -400,7 +393,6 @@ func NewData(tuple Tuple, duration time.Duration) *Data {
 		createdAt:        time.Now(),
 		updatedAt:        time.Now(),
 		ageTimeout:       duration,
-		ageTimer:         time.NewTimer(duration),
 		dirty:            true,
 	}
 }
@@ -412,7 +404,6 @@ func (d *Data) String() string {
 
 func (d *Data) touch() {
 	d.updatedAt = time.Now()
-	d.resetAgeTimeout()
 }
 
 func (d *Data) setDirtyFlag() {
@@ -431,17 +422,8 @@ func (d *Data) IsDirty() bool {
 	return d.dirty
 }
 
-func (d *Data) resetAgeTimeout() {
-	// FIXME(doublek): Resetting a timer is a more complex operation. The call to
-	// Reset() here will not work according to docs which define the correct way
-	// to do this.
-	d.ageTimer.Reset(d.ageTimeout)
-}
-
-// Return the internal Timer object. Use the Timers internal channel to detect
-// when the object's age expires.
-func (d *Data) AgeTimer() *time.Timer {
-	return d.ageTimer
+func (d *Data) UpdatedAt() time.Time {
+	return d.updatedAt
 }
 
 // Returns the final action of the RuleTrace
