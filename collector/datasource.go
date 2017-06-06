@@ -69,7 +69,7 @@ func (ds *NflogDataSource) startProcessingPackets() {
 		statUpdates, err := ds.convertNflogPktToStat(nflogPacketAggr)
 		if err != nil {
 			log.Debugf("Cannot convert Nflog packet %v to StatUpdate", nflogPacketAggr)
-			return
+			continue
 		}
 		for _, statUpdate := range statUpdates {
 			ds.sink <- statUpdate
