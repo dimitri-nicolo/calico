@@ -209,17 +209,19 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 // is not a next-tier action. A RuleTrace also contains a workload endpoint,
 // which identifies the corresponding endpoint that the rule trace applied to.
 type RuleTrace struct {
-	path   []*RuleTracePoint
-	action RuleAction
-	epKey  interface{}
-	ctr    Counter
-	dirty  bool
+	path      []*RuleTracePoint
+	action    RuleAction
+	epKey     interface{}
+	ctr       Counter
+	dirty     bool
+	pathArray [RuleTraceInitLen]*RuleTracePoint
+	lastIdx   int
 }
 
 func NewRuleTrace() *RuleTrace {
-	return &RuleTrace{
-		path: make([]*RuleTracePoint, RuleTraceInitLen),
-	}
+	rt := &RuleTrace{lastIdx: -1}
+	rt.path = rt.pathArray[:]
+	return rt
 }
 
 func (t *RuleTrace) String() string {
@@ -247,19 +249,21 @@ func (t *RuleTrace) Len() int {
 }
 
 func (t *RuleTrace) Path() []*RuleTracePoint {
-	path := []*RuleTracePoint{}
+	i := 0
 	for _, tp := range t.path {
 		if tp == nil {
 			continue
 		}
-		path = append(path, tp)
+		i++
 	}
-	return path
+	return t.path[:i]
 }
 
 func (t *RuleTrace) ToString() string {
-	path := t.Path()
-	p := path[len(path)-1]
+	p := t.LastRuleTracePoint()
+	if p == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s/%s/%s/%v", p.TierID(), p.PolicyID(), p.Rule(), p.Action)
 }
 
@@ -275,13 +279,19 @@ func (t *RuleTrace) IsDirty() bool {
 	return t.dirty
 }
 
+func (t *RuleTrace) LastRuleTracePoint() *RuleTracePoint {
+	if t.lastIdx >= 0 {
+		return t.path[t.lastIdx]
+	} else {
+		return nil
+	}
+}
+
 func (t *RuleTrace) ClearDirtyFlag() {
 	t.dirty = false
 	t.ctr.Reset()
-	path := t.Path()
-	l := len(path)
-	if l != 0 {
-		p := path[l-1]
+	p := t.LastRuleTracePoint()
+	if p != nil {
 		p.Ctr.Reset()
 	}
 }
@@ -315,6 +325,7 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 		t.action = tp.Action
 		t.ctr = ctr
 		t.epKey = tp.EpKey
+		t.lastIdx = tp.Index
 	}
 	t.dirty = true
 	return nil
@@ -334,6 +345,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
 	t.ctr = tp.Ctr
 	t.dirty = true
 	t.epKey = tp.EpKey
+	t.lastIdx = tp.Index
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection/flow of packets
