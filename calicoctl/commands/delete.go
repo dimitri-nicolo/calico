@@ -67,7 +67,7 @@ Description:
   The delete command is used to delete a set of resources by filename or stdin,
   or by type and identifiers.  JSON and YAML formats are accepted for file and
   stdin format.
-
+  
   Valid resource types are:
 
     * node
