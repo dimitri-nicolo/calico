@@ -217,36 +217,6 @@ func (c *Collector) reportData(data *Data) {
 	data.clearDirtyFlag()
 }
 
-// Write stats to file pointed by Config.StatsDumpFilePath.
-// When called, clear the contents of the file Config.StatsDumpFilePath before
-// writing the stats to it.
-func (c *Collector) dumpStats() {
-	log.Debugf("Dumping Stats to %v", c.config.StatsDumpFilePath)
-
-	os.Truncate(c.config.StatsDumpFilePath, 0)
-	c.dumpLog.Infof("Stats Dump Started: %v", time.Now().Format("2006-01-02 15:04:05.000"))
-	c.dumpLog.Infof("Number of Entries: %v", len(c.epStats))
-	for _, v := range c.epStats {
-		c.dumpLog.Info(fmtEntry(v))
-	}
-	c.dumpLog.Infof("Stats Dump Completed: %v", time.Now().Format("2006-01-02 15:04:05.000"))
-}
-
-func fmtEntry(data *Data) string {
-	return fmt.Sprintf("%v", data)
-}
-
-// Logrus Formatter that strips the log entry of formatting such as time, log
-// level and simply outputs *only* the message.
-type MessageOnlyFormatter struct{}
-
-func (f *MessageOnlyFormatter) Format(entry *log.Entry) ([]byte, error) {
-	b := &bytes.Buffer{}
-	b.WriteString(entry.Message)
-	b.WriteByte('\n')
-	return b.Bytes(), nil
-}
-
 func (c *Collector) convertNflogPktAndApplyUpdate(dir Direction, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
 		numPkts, numBytes int
@@ -316,3 +286,34 @@ func lookupRule(lum epLookup, prefix [64]byte, prefixLen int, epKey interface{})
 	rtp.Index = index
 	return rtp, nil
 }
+
+// Write stats to file pointed by Config.StatsDumpFilePath.
+// When called, clear the contents of the file Config.StatsDumpFilePath before
+// writing the stats to it.
+func (c *Collector) dumpStats() {
+	log.Debugf("Dumping Stats to %v", c.config.StatsDumpFilePath)
+
+	os.Truncate(c.config.StatsDumpFilePath, 0)
+	c.dumpLog.Infof("Stats Dump Started: %v", time.Now().Format("2006-01-02 15:04:05.000"))
+	c.dumpLog.Infof("Number of Entries: %v", len(c.epStats))
+	for _, v := range c.epStats {
+		c.dumpLog.Info(fmtEntry(v))
+	}
+	c.dumpLog.Infof("Stats Dump Completed: %v", time.Now().Format("2006-01-02 15:04:05.000"))
+}
+
+func fmtEntry(data *Data) string {
+	return fmt.Sprintf("%v", data)
+}
+
+// Logrus Formatter that strips the log entry of formatting such as time, log
+// level and simply outputs *only* the message.
+type MessageOnlyFormatter struct{}
+
+func (f *MessageOnlyFormatter) Format(entry *log.Entry) ([]byte, error) {
+	b := &bytes.Buffer{}
+	b.WriteString(entry.Message)
+	b.WriteByte('\n')
+	return b.Bytes(), nil
+}
+
