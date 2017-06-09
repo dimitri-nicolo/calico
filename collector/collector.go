@@ -132,14 +132,14 @@ func (c *Collector) setupStatsDumping() {
 	c.dumpLog.Out = rotAwareFile
 }
 
-func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int, ctrType CounterType, dir Direction, tp RuleTracePoint) {
+func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int, ctrType CounterType, dir Direction, tp *RuleTracePoint) {
 	data, ok := c.epStats[tuple]
 	if !ok {
 		// The entry does not exist. Go ahead and create one.
 		data = NewData(
 			tuple,
 			DefaultAgeTimeout)
-		if tp != EmptyRuleTracePoint {
+		if tp != nil {
 			data.AddRuleTracePoint(tp, dir)
 		}
 		if ctrType == AbsoluteCounter {
@@ -161,7 +161,7 @@ func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reverse
 		data.IncreaseCounters(packets, bytes)
 		data.IncreaseCountersReverse(reversePackets, reverseBytes)
 	}
-	if tp != EmptyRuleTracePoint {
+	if tp != nil {
 		err := data.AddRuleTracePoint(tp, dir)
 		if err != nil {
 			c.reportData(data)
@@ -277,7 +277,7 @@ func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {
 	return *NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
 }
 
-func lookupRule(lum epLookup, prefix [64]byte, prefixLen int, epKey interface{}) (RuleTracePoint, error) {
+func lookupRule(lum epLookup, prefix [64]byte, prefixLen int, epKey interface{}) (*RuleTracePoint, error) {
 	rtp, err := NewRuleTracePoint(prefix, prefixLen, epKey)
 	if err != nil {
 		return rtp, err
@@ -316,4 +316,3 @@ func (f *MessageOnlyFormatter) Format(entry *log.Entry) ([]byte, error) {
 	b.WriteByte('\n')
 	return b.Bytes(), nil
 }
-
