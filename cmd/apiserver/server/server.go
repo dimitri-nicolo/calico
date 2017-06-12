@@ -20,18 +20,14 @@ import (
 	"flag"
 	"io"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/apimachinery/pkg/runtime/serializer/recognizer"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
-	"k8s.io/apiserver/pkg/storage/storagebackend"
 	"k8s.io/client-go/pkg/api"
+
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
-	"github.com/tigera/calico-k8sapiserver/legacy"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 )
 
 const defaultEtcdPathPrefix = "/calico/v1"
@@ -51,11 +47,7 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 	flags.AddGoFlagSet(flag.CommandLine)
 
 	stopCh := make(chan struct{})
-	jsonSerializer := json.NewSerializer(json.DefaultMetaFactory, api.Scheme, api.Scheme, false)
-	codec := api.Codecs.CodecForVersions(jsonSerializer, recognizer.NewDecoder(legacy.NewDecoder()),
-		schema.GroupVersions(schema.GroupVersions{calico.SchemeGroupVersion}), nil)
-	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, codec)
-	ro.Etcd.StorageConfig.Type = storagebackend.StorageTypeETCD2
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, api.Codecs.LegacyCodec(v1.SchemeGroupVersion))
 	opts := &CalicoServerOptions{
 		RecommendedOptions: ro,
 		StopCh:             stopCh,
