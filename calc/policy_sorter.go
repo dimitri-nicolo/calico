@@ -40,9 +40,6 @@ func (poc *PolicySorter) OnUpdate(update api.Update) (dirty bool) {
 	case model.TierKey:
 		tierName := key.Name
 		logCxt := log.WithField("tierName", tierName)
-		if tierName != "default" {
-			logCxt.Panic("Tiers not supported")
-		}
 		tierInfo := poc.tiers[tierName]
 		if update.Value != nil {
 			newTier := update.Value.(*model.Tier)
