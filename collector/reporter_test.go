@@ -125,6 +125,9 @@ var (
 func getMetricNumber(m prometheus.Gauge) int {
 	// The actual number stored inside a prometheus metric is surprisingly hard to
 	// get to.
+	if m == nil {
+		return -1
+	}
 	v := reflect.ValueOf(m).Elem()
 	valBits := v.FieldByName("valBits")
 	return int(math.Float64frombits(valBits.Uint()))
