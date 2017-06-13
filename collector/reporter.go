@@ -13,6 +13,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
+	"github.com/gavv/monotime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -129,7 +130,7 @@ type PrometheusReporter struct {
 	aggStats        map[AggregateKey]AggregateValue
 	reportChan      chan *MetricUpdate
 	expireChan      chan *MetricUpdate
-	retainedMetrics map[AggregateKey]time.Time
+	retainedMetrics map[AggregateKey]time.Duration
 	retentionTime   time.Duration
 	retentionTicker *jitter.Ticker
 }
@@ -144,7 +145,7 @@ func NewPrometheusReporter(port int, rTime time.Duration) *PrometheusReporter {
 		aggStats:        make(map[AggregateKey]AggregateValue),
 		reportChan:      make(chan *MetricUpdate),
 		expireChan:      make(chan *MetricUpdate),
-		retainedMetrics: make(map[AggregateKey]time.Time),
+		retainedMetrics: make(map[AggregateKey]time.Duration),
 		retentionTime:   rTime,
 		retentionTicker: jitter.NewTicker(CheckInterval, CheckInterval/10),
 	}
@@ -177,9 +178,8 @@ func (pr *PrometheusReporter) startReporter() {
 		case mu := <-pr.expireChan:
 			pr.expireMetric(mu)
 		case <-pr.retentionTicker.C:
-			now := time.Now()
 			for key, expirationTime := range pr.retainedMetrics {
-				if now.Sub(expirationTime) >= DefaultAgeTimeout {
+				if monotime.Since(expirationTime) >= DefaultAgeTimeout {
 					pr.deleteMetric(key)
 					delete(pr.retainedMetrics, key)
 				}
@@ -249,7 +249,7 @@ func (pr *PrometheusReporter) expireMetric(mu *MetricUpdate) {
 
 func (pr *PrometheusReporter) markForDeletion(key AggregateKey) {
 	log.WithField("key", key).Debug("Marking metric for deletion.")
-	pr.retainedMetrics[key] = time.Now()
+	pr.retainedMetrics[key] = monotime.Now()
 }
 
 func (pr *PrometheusReporter) deleteMetric(key AggregateKey) {

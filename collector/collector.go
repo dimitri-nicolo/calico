@@ -12,6 +12,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/gavv/monotime"
 	"github.com/mipearson/rfw"
 
 	"github.com/projectcalico/felix/jitter"
@@ -166,10 +167,9 @@ func (c *Collector) checkEpStats() {
 	// For each entry
 	// - report metrics
 	// - check age and expire the entry if needed.
-	now := time.Now()
 	for _, data := range c.epStats {
 		c.reportData(data)
-		if now.Sub(data.UpdatedAt()) >= DefaultAgeTimeout {
+		if monotime.Since(data.UpdatedAt()) >= DefaultAgeTimeout {
 			c.expireEntry(data)
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/gavv/monotime"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -377,21 +378,22 @@ type Data struct {
 	ctrReverse       Counter
 	IngressRuleTrace *RuleTrace
 	EgressRuleTrace  *RuleTrace
-	createdAt        time.Time
-	updatedAt        time.Time
+	createdAt        time.Duration
+	updatedAt        time.Duration
 	ageTimeout       time.Duration
 	dirty            bool
 }
 
 func NewData(tuple Tuple, duration time.Duration) *Data {
+	now := monotime.Now()
 	return &Data{
 		Tuple:            tuple,
 		ctr:              *NewCounter(0, 0),
 		ctrReverse:       *NewCounter(0, 0),
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
-		createdAt:        time.Now(),
-		updatedAt:        time.Now(),
+		createdAt:        now,
+		updatedAt:        now,
 		ageTimeout:       duration,
 		dirty:            true,
 	}
@@ -403,7 +405,7 @@ func (d *Data) String() string {
 }
 
 func (d *Data) touch() {
-	d.updatedAt = time.Now()
+	d.updatedAt = monotime.Now()
 }
 
 func (d *Data) setDirtyFlag() {
@@ -422,7 +424,7 @@ func (d *Data) IsDirty() bool {
 	return d.dirty
 }
 
-func (d *Data) UpdatedAt() time.Time {
+func (d *Data) UpdatedAt() time.Duration {
 	return d.updatedAt
 }
 
