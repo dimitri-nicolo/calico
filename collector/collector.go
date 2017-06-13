@@ -96,8 +96,6 @@ func (c *Collector) startStatsCollectionAndReporting() {
 			c.convertNflogPktAndApplyUpdate(DirIn, nflogPacketAggr)
 		case nflogPacketAggr := <-c.nfEgressC:
 			c.convertNflogPktAndApplyUpdate(DirOut, nflogPacketAggr)
-		case data := <-c.statAgeTimeout:
-			c.expireEntry(data)
 		case <-c.ticker.C:
 			c.checkEpStats()
 		case <-c.sigChan:
