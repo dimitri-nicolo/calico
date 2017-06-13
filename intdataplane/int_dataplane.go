@@ -364,16 +364,11 @@ func (d *InternalDataplane) Start() {
 	go d.ifaceMonitor.MonitorInterfaces()
 
 	// TODO (Matt): This isn't really in keeping with the surrounding code.
-	nfIngressSink := make(chan *collector.StatUpdate, 1000)
-	nflogIngressDataSource := collector.NewNflogDataSource(d.lookupManager, nfIngressSink, 1, collector.DirIn, d.config.NfNetlinkBufSize)
-	nflogIngressDataSource.Start()
-
-	nfEgressSink := make(chan *collector.StatUpdate, 1000)
-	nflogEgressDataSource := collector.NewNflogDataSource(d.lookupManager, nfEgressSink, 2, collector.DirOut, d.config.NfNetlinkBufSize)
-	nflogEgressDataSource.Start()
-
 	collectorConfig := &collector.Config{
 		StatsDumpFilePath: d.config.StatsDumpFilePath,
+		NfNetlinkBufSize:  d.config.NfNetlinkBufSize,
+		IngressGroup:      1,
+		EgressGroup:       2,
 	}
 	rm := collector.NewReporterManager()
 	if d.config.PrometheusReporterEnabled {
@@ -384,8 +379,7 @@ func (d *InternalDataplane) Start() {
 		rm.RegisterMetricsReporter(syslogReporter)
 	}
 	rm.Start()
-	datasources := []<-chan *collector.StatUpdate{nfIngressSink, nfEgressSink}
-	statsCollector := collector.NewCollector(datasources, rm, collectorConfig)
+	statsCollector := collector.NewCollector(d.lookupManager, rm, collectorConfig)
 	statsCollector.Start()
 }
 

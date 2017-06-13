@@ -136,18 +136,18 @@ func lookupAction(action byte) RuleAction {
 	}
 }
 
-func NewRuleTracePoint(prefix [64]byte, prefixLen int, epKey interface{}) (RuleTracePoint, error) {
+func NewRuleTracePoint(prefix [64]byte, prefixLen int, epKey interface{}) (*RuleTracePoint, error) {
 	pfxlen := prefixLen
 	// Should have at least 2 separators, a action character and a rule (assuming
 	// we allow empty policy names).
 	if pfxlen < 4 {
-		return EmptyRuleTracePoint, RuleTracePointParseError
+		return nil, RuleTracePointParseError
 	}
 	action := lookupAction(prefix[0])
 	ruleIdx := 2
 	policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
 	if policySep == -1 {
-		return EmptyRuleTracePoint, RuleTracePointParseError
+		return nil, RuleTracePointParseError
 	}
 	policyIdx := ruleIdx + policySep + 1
 	tierSep := bytes.IndexByte(prefix[policyIdx:], ruleSep)
@@ -157,7 +157,7 @@ func NewRuleTracePoint(prefix [64]byte, prefixLen int, epKey interface{}) (RuleT
 	} else {
 		tierIdx = policyIdx + tierSep + 1
 	}
-	rtp := RuleTracePoint{}
+	rtp := &RuleTracePoint{}
 	rtp.prefix = prefix
 	rtp.pfxlen = pfxlen
 	rtp.ruleIdx = ruleIdx
@@ -191,7 +191,7 @@ func (rtp *RuleTracePoint) Rule() []byte {
 }
 
 // Equals compares all but the Ctr field of a RuleTracePoint
-func (rtp *RuleTracePoint) Equals(cmpRtp RuleTracePoint) bool {
+func (rtp *RuleTracePoint) Equals(cmpRtp *RuleTracePoint) bool {
 	return rtp.prefix == cmpRtp.prefix &&
 		rtp.Action == cmpRtp.Action &&
 		rtp.Index == cmpRtp.Index &&
@@ -286,7 +286,7 @@ func (t *RuleTrace) ClearDirtyFlag() {
 	}
 }
 
-func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
+func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 	var ctr Counter
 	ctr = tp.Ctr
 	if tp.Index > t.Len() {
@@ -296,13 +296,13 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 		copy(newPath, t.path)
 		nextSize := (tp.Index / RuleTraceInitLen) * RuleTraceInitLen
 		t.path = append(t.path, make([]*RuleTracePoint, nextSize)...)
-		t.path[tp.Index] = &tp
+		t.path[tp.Index] = tp
 	} else {
 		existingTp := t.path[tp.Index]
 		switch {
 		case existingTp == nil:
 			// Position is empty, insert and be done.
-			t.path[tp.Index] = &tp
+			t.path[tp.Index] = tp
 		case existingTp.Equals(tp):
 			p, b := tp.Ctr.Values()
 			existingTp.Ctr.Increase(p, b)
@@ -320,13 +320,13 @@ func (t *RuleTrace) addRuleTracePoint(tp RuleTracePoint) error {
 	return nil
 }
 
-func (t *RuleTrace) replaceRuleTracePoint(tp RuleTracePoint) {
+func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
 	if tp.Action == NextTierAction {
-		t.path[tp.Index] = &tp
+		t.path[tp.Index] = tp
 		return
 	}
 	// New tracepoint is not a next-tier action truncate at this index.
-	t.path[tp.Index] = &tp
+	t.path[tp.Index] = tp
 	newPath := make([]*RuleTracePoint, t.Len())
 	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
@@ -503,7 +503,7 @@ func (d *Data) ResetCounters() {
 	d.ctrReverse = *NewCounter(0, 0)
 }
 
-func (d *Data) AddRuleTracePoint(tp RuleTracePoint, dir Direction) error {
+func (d *Data) AddRuleTracePoint(tp *RuleTracePoint, dir Direction) error {
 	var err error
 	if dir == DirIn {
 		err = d.IngressRuleTrace.addRuleTracePoint(tp)
@@ -517,7 +517,7 @@ func (d *Data) AddRuleTracePoint(tp RuleTracePoint, dir Direction) error {
 	return err
 }
 
-func (d *Data) ReplaceRuleTracePoint(tp RuleTracePoint, dir Direction) {
+func (d *Data) ReplaceRuleTracePoint(tp *RuleTracePoint, dir Direction) {
 	if dir == DirIn {
 		d.IngressRuleTrace.replaceRuleTracePoint(tp)
 	} else {
@@ -533,41 +533,3 @@ const (
 	AbsoluteCounter CounterType = "absolute"
 	DeltaCounter    CounterType = "delta"
 )
-
-// StatUpdate represents an statistics update to be made on a `Tuple`.
-// All attributes are required. However, when a RuleTracePoint cannot be
-// specified, use the `EmptyRuleTracePoint` value to specify this.
-// Specify if the Packet and Byte counts included in the update are either
-// AbsoluteCounter or DeltaCounter using the CtrType field.
-// The current StatUpdate doesn't support deletes and all StatUpdate-s are
-// either "Add" or "Update" operations.
-type StatUpdate struct {
-	Tuple          Tuple
-	Packets        int
-	Bytes          int
-	ReversePackets int
-	ReverseBytes   int
-	CtrType        CounterType
-	Dir            Direction
-	Tp             RuleTracePoint
-}
-
-func NewStatUpdate(tuple Tuple,
-	packets int,
-	bytes int,
-	reversePackets int,
-	reverseBytes int,
-	ctrType CounterType,
-	dir Direction,
-	tp RuleTracePoint) *StatUpdate {
-	return &StatUpdate{
-		Tuple:          tuple,
-		Packets:        packets,
-		Bytes:          bytes,
-		ReversePackets: reversePackets,
-		ReverseBytes:   reverseBytes,
-		CtrType:        ctrType,
-		Dir:            dir,
-		Tp:             tp,
-	}
-}

@@ -4,6 +4,7 @@ package collector
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -15,6 +16,8 @@ import (
 	"github.com/mipearson/rfw"
 
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/lookup"
+	"github.com/tigera/nfnetlink"
 )
 
 // TODO(doublek): Need to hook these into configuration
@@ -23,15 +26,26 @@ const ExportingInterval = time.Duration(1) * time.Second
 
 type Config struct {
 	StatsDumpFilePath string
+	NfNetlinkBufSize  int
+	IngressGroup      int
+	EgressGroup       int
+}
+
+type epLookup interface {
+	GetEndpointKey(addr [16]byte) (interface{}, error)
+	GetPolicyIndex(epKey interface{}, policyName, tierName []byte) int
 }
 
 // A Collector (a StatsManager really) collects StatUpdates from data sources
 // and stores them as a Data object in a map keyed by Tuple.
 // All data source channels must be specified when creating the collector.
 type Collector struct {
-	sources        []<-chan *StatUpdate
+	lum            epLookup
+	nfIngressC     chan *nfnetlink.NflogPacketAggregate
+	nfEgressC      chan *nfnetlink.NflogPacketAggregate
+	nfIngressDoneC chan struct{}
+	nfEgressDoneC  chan struct{}
 	epStats        map[Tuple]*Data
-	mux            chan *StatUpdate
 	statAgeTimeout chan *Data
 	reporterTicker *jitter.Ticker
 	sigChan        chan os.Signal
@@ -40,11 +54,14 @@ type Collector struct {
 	reporterMgr    *ReporterManager
 }
 
-func NewCollector(sources []<-chan *StatUpdate, rm *ReporterManager, config *Config) *Collector {
+func NewCollector(lm epLookup, rm *ReporterManager, config *Config) *Collector {
 	return &Collector{
-		sources:        sources,
+		lum:            lm,
+		nfIngressC:     make(chan *nfnetlink.NflogPacketAggregate, 1000),
+		nfEgressC:      make(chan *nfnetlink.NflogPacketAggregate, 1000),
+		nfIngressDoneC: make(chan struct{}),
+		nfEgressDoneC:  make(chan struct{}),
 		epStats:        make(map[Tuple]*Data),
-		mux:            make(chan *StatUpdate, 5000),
 		statAgeTimeout: make(chan *Data),
 		reporterTicker: jitter.NewTicker(ExportingInterval, ExportingInterval/10),
 		sigChan:        make(chan os.Signal, 1),
@@ -55,9 +72,18 @@ func NewCollector(sources []<-chan *StatUpdate, rm *ReporterManager, config *Con
 }
 
 func (c *Collector) Start() {
-	c.mergeDataSources()
-	c.setupStatsDumping()
 	go c.startStatsCollectionAndReporting()
+	c.setupStatsDumping()
+	err := subscribeToNflog(c.config.IngressGroup, c.config.NfNetlinkBufSize, c.nfIngressC, c.nfIngressDoneC)
+	if err != nil {
+		log.Errorf("Error when subscribing to NFLOG: %v", err)
+		return
+	}
+	err = subscribeToNflog(c.config.EgressGroup, c.config.NfNetlinkBufSize, c.nfEgressC, c.nfEgressDoneC)
+	if err != nil {
+		log.Errorf("Error when subscribing to NFLOG: %v", err)
+		return
+	}
 }
 
 func (c *Collector) startStatsCollectionAndReporting() {
@@ -68,8 +94,10 @@ func (c *Collector) startStatsCollectionAndReporting() {
 	// 4. A done channel for stopping and cleaning up collector (TODO).
 	for {
 		select {
-		case update := <-c.mux:
-			c.applyStatUpdate(update)
+		case nflogPacketAggr := <-c.nfIngressC:
+			c.convertNflogPktAndApplyUpdate(DirIn, nflogPacketAggr)
+		case nflogPacketAggr := <-c.nfEgressC:
+			c.convertNflogPktAndApplyUpdate(DirOut, nflogPacketAggr)
 		case data := <-c.statAgeTimeout:
 			c.expireEntry(data)
 		case <-c.reporterTicker.C:
@@ -104,56 +132,44 @@ func (c *Collector) setupStatsDumping() {
 	c.dumpLog.Out = rotAwareFile
 }
 
-func (c *Collector) mergeDataSources() {
-	// Can't use a select here as we don't really know the number of sources that
-	// we have.
-	for _, source := range c.sources {
-		go func(input <-chan *StatUpdate) {
-			for {
-				c.mux <- <-input
-			}
-		}(source)
-	}
-}
-
-func (c *Collector) applyStatUpdate(update *StatUpdate) {
-	data, ok := c.epStats[update.Tuple]
+func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int, ctrType CounterType, dir Direction, tp *RuleTracePoint) {
+	data, ok := c.epStats[tuple]
 	if !ok {
 		// The entry does not exist. Go ahead and create one.
 		data = NewData(
-			update.Tuple,
+			tuple,
 			DefaultAgeTimeout)
-		if update.Tp != EmptyRuleTracePoint {
-			data.AddRuleTracePoint(update.Tp, update.Dir)
+		if tp != nil {
+			data.AddRuleTracePoint(tp, dir)
 		}
-		if update.CtrType == AbsoluteCounter {
-			data.SetCounters(update.Packets, update.Bytes)
-			data.SetCountersReverse(update.ReversePackets, update.ReverseBytes)
+		if ctrType == AbsoluteCounter {
+			data.SetCounters(packets, bytes)
+			data.SetCountersReverse(reversePackets, reverseBytes)
 		} else {
-			data.IncreaseCounters(update.Packets, update.Bytes)
-			data.IncreaseCountersReverse(update.ReversePackets, update.ReverseBytes)
+			data.IncreaseCounters(packets, bytes)
+			data.IncreaseCountersReverse(reversePackets, reverseBytes)
 		}
 		c.registerAgeTimer(data)
-		c.epStats[update.Tuple] = data
+		c.epStats[tuple] = data
 		return
 	}
 	// Entry does exists. Go ahead and update it.
-	if update.CtrType == AbsoluteCounter {
-		data.SetCounters(update.Packets, update.Bytes)
-		data.SetCountersReverse(update.ReversePackets, update.ReverseBytes)
+	if ctrType == AbsoluteCounter {
+		data.SetCounters(packets, bytes)
+		data.SetCountersReverse(reversePackets, reverseBytes)
 	} else {
-		data.IncreaseCounters(update.Packets, update.Bytes)
-		data.IncreaseCountersReverse(update.ReversePackets, update.ReverseBytes)
+		data.IncreaseCounters(packets, bytes)
+		data.IncreaseCountersReverse(reversePackets, reverseBytes)
 	}
-	if update.Tp != EmptyRuleTracePoint {
-		err := data.AddRuleTracePoint(update.Tp, update.Dir)
+	if tp != nil {
+		err := data.AddRuleTracePoint(tp, dir)
 		if err != nil {
 			c.reportData(data)
 			data.ResetCounters()
-			data.ReplaceRuleTracePoint(update.Tp, update.Dir)
+			data.ReplaceRuleTracePoint(tp, dir)
 		}
 	}
-	c.epStats[update.Tuple] = data
+	c.epStats[tuple] = data
 }
 
 func (c *Collector) expireEntry(data *Data) {
@@ -199,6 +215,76 @@ func (c *Collector) reportData(data *Data) {
 		c.reporterMgr.ReportChan <- mu
 	}
 	data.clearDirtyFlag()
+}
+
+func (c *Collector) convertNflogPktAndApplyUpdate(dir Direction, nPktAggr *nfnetlink.NflogPacketAggregate) error {
+	var (
+		numPkts, numBytes int
+		epKey             interface{}
+		err               error
+	)
+	nflogTuple := nPktAggr.Tuple
+	// Determine the endpoint that this packet hit a rule for. This depends on the direction
+	// because local -> local packets will be NFLOGed twice.
+	if dir == DirIn {
+		epKey, err = c.lum.GetEndpointKey(nflogTuple.Dst)
+	} else {
+		epKey, err = c.lum.GetEndpointKey(nflogTuple.Src)
+	}
+
+	if err == lookup.UnknownEndpointError {
+		// TODO (Matt): This branch becomes much more interesting with graceful restart.
+		log.Debugf("Failed to find endpoint for NFLOG packet %v/%v", nflogTuple, dir)
+		return errors.New("Couldn't find endpoint info for NFLOG packet")
+	}
+	for _, prefix := range nPktAggr.Prefixes {
+		tp, err := lookupRule(c.lum, prefix.Prefix, prefix.Len, epKey)
+		if err != nil {
+			continue
+		}
+		if tp.Action == DenyAction || tp.Action == AllowAction {
+			// NFLog based counters make sense only for denied packets or allowed packets
+			// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
+			// counters will overwrite these values anyway.
+			numPkts = prefix.Packets
+			numBytes = prefix.Bytes
+		} else {
+			// Don't update packet counts for NextTierAction to avoid multiply counting.
+			numPkts = 0
+			numBytes = 0
+		}
+		tp.Ctr = *NewCounter(numPkts, numBytes)
+		tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
+		// TODO(doublek): This DeltaCounter could be removed.
+		c.applyStatUpdate(tuple, 0, 0, 0, 0, DeltaCounter, dir, tp)
+	}
+	return nil
+}
+
+func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}) error {
+	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan)
+}
+
+func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {
+	var l4Src, l4Dst int
+	if nflogTuple.Proto == 1 {
+		l4Src = nflogTuple.L4Src.Id
+		l4Dst = int(uint16(nflogTuple.L4Dst.Type)<<8 | uint16(nflogTuple.L4Dst.Code))
+	} else {
+		l4Src = nflogTuple.L4Src.Port
+		l4Dst = nflogTuple.L4Dst.Port
+	}
+	return *NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
+}
+
+func lookupRule(lum epLookup, prefix [64]byte, prefixLen int, epKey interface{}) (*RuleTracePoint, error) {
+	rtp, err := NewRuleTracePoint(prefix, prefixLen, epKey)
+	if err != nil {
+		return rtp, err
+	}
+	index := lum.GetPolicyIndex(epKey, rtp.PolicyID(), rtp.TierID())
+	rtp.Index = index
+	return rtp, nil
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.
