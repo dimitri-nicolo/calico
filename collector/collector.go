@@ -13,6 +13,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/gavv/monotime"
 	"github.com/mipearson/rfw"
 
 	"github.com/projectcalico/felix/jitter"
@@ -46,8 +47,7 @@ type Collector struct {
 	nfIngressDoneC chan struct{}
 	nfEgressDoneC  chan struct{}
 	epStats        map[Tuple]*Data
-	statAgeTimeout chan *Data
-	reporterTicker *jitter.Ticker
+	ticker *jitter.Ticker
 	sigChan        chan os.Signal
 	config         *Config
 	dumpLog        *log.Logger
@@ -62,8 +62,7 @@ func NewCollector(lm epLookup, rm *ReporterManager, config *Config) *Collector {
 		nfIngressDoneC: make(chan struct{}),
 		nfEgressDoneC:  make(chan struct{}),
 		epStats:        make(map[Tuple]*Data),
-		statAgeTimeout: make(chan *Data),
-		reporterTicker: jitter.NewTicker(ExportingInterval, ExportingInterval/10),
+		ticker: jitter.NewTicker(ExportingInterval, ExportingInterval/10),
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
 		dumpLog:        log.New(),
@@ -89,20 +88,16 @@ func (c *Collector) Start() {
 func (c *Collector) startStatsCollectionAndReporting() {
 	// When a collector is started, we respond to the following events:
 	// 1. StatUpdates for incoming datasources (chan c.mux).
-	// 2. Data age timeouts via the c.statAgeTimeout channel.
-	// 3. A signal handler that will dump logs on receiving SIGUSR2.
-	// 4. A done channel for stopping and cleaning up collector (TODO).
+	// 2. A signal handler that will dump logs on receiving SIGUSR2.
+	// 3. A done channel for stopping and cleaning up collector (TODO).
 	for {
 		select {
 		case nflogPacketAggr := <-c.nfIngressC:
 			c.convertNflogPktAndApplyUpdate(DirIn, nflogPacketAggr)
 		case nflogPacketAggr := <-c.nfEgressC:
 			c.convertNflogPktAndApplyUpdate(DirOut, nflogPacketAggr)
-		case data := <-c.statAgeTimeout:
-			c.expireEntry(data)
-		case <-c.reporterTicker.C:
-			log.Debug("Metrics reporter timer ticked")
-			c.reportMetrics()
+		case <-c.ticker.C:
+			c.checkEpStats()
 		case <-c.sigChan:
 			c.dumpStats()
 		}
@@ -149,7 +144,6 @@ func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reverse
 			data.IncreaseCounters(packets, bytes)
 			data.IncreaseCountersReverse(reversePackets, reverseBytes)
 		}
-		c.registerAgeTimer(data)
 		c.epStats[tuple] = data
 		return
 	}
@@ -174,7 +168,6 @@ func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reverse
 
 func (c *Collector) expireEntry(data *Data) {
 	tuple := data.Tuple
-	c.reportData(data)
 	if data.EgressRuleTrace.Action() == DenyAction {
 		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.EgressRuleTrace)
 		c.reporterMgr.ExpireChan <- mu
@@ -186,19 +179,15 @@ func (c *Collector) expireEntry(data *Data) {
 	delete(c.epStats, tuple)
 }
 
-func (c *Collector) registerAgeTimer(data *Data) {
-	// Wait for timer to fire and send the corresponding expired data to be
-	// deleted.
-	timer := data.AgeTimer()
-	go func() {
-		<-timer.C
-		c.statAgeTimeout <- data
-	}()
-}
-
-func (c *Collector) reportMetrics() {
+func (c *Collector) checkEpStats() {
+	// For each entry
+	// - report metrics
+	// - check age and expire the entry if needed.
 	for _, data := range c.epStats {
 		c.reportData(data)
+		if monotime.Since(data.UpdatedAt()) >= DefaultAgeTimeout {
+			c.expireEntry(data)
+		}
 	}
 }
 

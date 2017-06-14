@@ -13,11 +13,15 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
+	"github.com/gavv/monotime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/set"
 )
+
+const CheckInterval = time.Duration(1) * time.Second
 
 var (
 	gaugeDeniedPackets = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -121,15 +125,14 @@ func (r *ReporterManager) startManaging() {
 
 // PrometheusReporter records denied packets and bytes statistics in prometheus metrics.
 type PrometheusReporter struct {
-	port             int
-	registry         *prometheus.Registry
-	aggStats         map[AggregateKey]AggregateValue
-	deleteCandidates set.Set
-	deleteChan       chan AggregateKey
-	reportChan       chan *MetricUpdate
-	expireChan       chan *MetricUpdate
-	retentionTimers  map[AggregateKey]*time.Timer
-	retentionTime    time.Duration
+	port            int
+	registry        *prometheus.Registry
+	aggStats        map[AggregateKey]AggregateValue
+	reportChan      chan *MetricUpdate
+	expireChan      chan *MetricUpdate
+	retainedMetrics map[AggregateKey]time.Duration
+	retentionTime   time.Duration
+	retentionTicker *jitter.Ticker
 }
 
 func NewPrometheusReporter(port int, rTime time.Duration) *PrometheusReporter {
@@ -137,15 +140,14 @@ func NewPrometheusReporter(port int, rTime time.Duration) *PrometheusReporter {
 	registry.MustRegister(gaugeDeniedPackets)
 	registry.MustRegister(gaugeDeniedBytes)
 	return &PrometheusReporter{
-		port:             port,
-		registry:         registry,
-		aggStats:         make(map[AggregateKey]AggregateValue),
-		deleteCandidates: set.New(),
-		deleteChan:       make(chan AggregateKey),
-		reportChan:       make(chan *MetricUpdate),
-		expireChan:       make(chan *MetricUpdate),
-		retentionTimers:  make(map[AggregateKey]*time.Timer),
-		retentionTime:    rTime,
+		port:            port,
+		registry:        registry,
+		aggStats:        make(map[AggregateKey]AggregateValue),
+		reportChan:      make(chan *MetricUpdate),
+		expireChan:      make(chan *MetricUpdate),
+		retainedMetrics: make(map[AggregateKey]time.Duration),
+		retentionTime:   rTime,
+		retentionTicker: jitter.NewTicker(CheckInterval, CheckInterval/10),
 	}
 }
 
@@ -171,16 +173,17 @@ func (pr *PrometheusReporter) startReporter() {
 
 	for {
 		select {
-		case key := <-pr.deleteChan:
-			// If a timer was stopped by us, then the key will not exist. Delete only
-			// when a timer was fired rather than stopped.
-			if _, exists := pr.retentionTimers[key]; exists {
-				pr.deleteMetric(key)
-			}
 		case mu := <-pr.reportChan:
 			pr.reportMetric(mu)
 		case mu := <-pr.expireChan:
 			pr.expireMetric(mu)
+		case <-pr.retentionTicker.C:
+			for key, expirationTime := range pr.retainedMetrics {
+				if monotime.Since(expirationTime) >= DefaultAgeTimeout {
+					pr.deleteMetric(key)
+					delete(pr.retainedMetrics, key)
+				}
+			}
 		}
 	}
 }
@@ -194,9 +197,9 @@ func (pr *PrometheusReporter) reportMetric(mu *MetricUpdate) {
 	key := AggregateKey{mu.policy, net.IP(mu.tuple.src[:16]).String()}
 	value, ok := pr.aggStats[key]
 	if ok {
-		if pr.deleteCandidates.Contains(key) {
-			pr.deleteCandidates.Discard(key)
-			pr.cleanupRetentionTimer(key)
+		_, exists := pr.retainedMetrics[key]
+		if exists {
+			delete(pr.retainedMetrics, key)
 		}
 		value.refs.Add(mu.tuple)
 	} else {
@@ -246,14 +249,7 @@ func (pr *PrometheusReporter) expireMetric(mu *MetricUpdate) {
 
 func (pr *PrometheusReporter) markForDeletion(key AggregateKey) {
 	log.WithField("key", key).Debug("Marking metric for deletion.")
-	pr.deleteCandidates.Add(key)
-	timer := time.NewTimer(pr.retentionTime)
-	pr.retentionTimers[key] = timer
-	go func() {
-		log.Debugf("Starting retention timer for key %+v", key)
-		<-timer.C
-		pr.deleteChan <- key
-	}()
+	pr.retainedMetrics[key] = monotime.Now()
 }
 
 func (pr *PrometheusReporter) deleteMetric(key AggregateKey) {
@@ -263,17 +259,6 @@ func (pr *PrometheusReporter) deleteMetric(key AggregateKey) {
 		gaugeDeniedPackets.Delete(value.labels)
 		gaugeDeniedBytes.Delete(value.labels)
 		delete(pr.aggStats, key)
-	}
-	pr.deleteCandidates.Discard(key)
-	pr.cleanupRetentionTimer(key)
-}
-
-func (pr *PrometheusReporter) cleanupRetentionTimer(key AggregateKey) {
-	log.Debugf("Cleaning up retention timer for key %+v", key)
-	timer, exists := pr.retentionTimers[key]
-	if exists {
-		delete(pr.retentionTimers, key)
-		timer.Stop()
 	}
 }
 

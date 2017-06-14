@@ -347,7 +347,7 @@ var _ = Describe("Prometheus Reporter", func() {
 				}).Should(BeTrue())
 			})
 			It("should have the deleted entry as candidate for deletion", func() {
-				Eventually(pr.deleteCandidates).Should(HaveKey(key2))
+				Eventually(pr.retainedMetrics).Should(HaveKey(key2))
 			})
 		})
 	})
