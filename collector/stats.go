@@ -216,17 +216,25 @@ var EmptyRuleTracePoint = RuleTracePoint{}
 // is not a next-tier action. A RuleTrace also contains a workload endpoint,
 // which identifies the corresponding endpoint that the rule trace applied to.
 type RuleTrace struct {
-	path      []*RuleTracePoint
-	action    RuleAction
-	epKey     interface{}
-	ctr       Counter
-	dirty     bool
+	path   []*RuleTracePoint
+	action RuleAction
+	epKey  interface{}
+	ctr    Counter
+	dirty  bool
+
+	// Stores the index of the RuleTracePoint that has a RuleAction Allow or Deny
+	verdictIdx int
+
+	// Optimization Note: When initializing a RuleTrace object, the pathArray
+	// array is used as the backing array that has been pre-allocated. This avoids
+	// one allocation when creating a RuleTrace object. More info on this here:
+	// https://github.com/golang/go/wiki/Performance#memory-profiler
+	// (Search for "slice array preallocation").
 	pathArray [RuleTraceInitLen]*RuleTracePoint
-	lastIdx   int
 }
 
 func NewRuleTrace() *RuleTrace {
-	rt := &RuleTrace{lastIdx: -1}
+	rt := &RuleTrace{verdictIdx: -1}
 	rt.path = rt.pathArray[:]
 	return rt
 }
@@ -267,7 +275,7 @@ func (t *RuleTrace) Path() []*RuleTracePoint {
 }
 
 func (t *RuleTrace) ToString() string {
-	p := t.LastRuleTracePoint()
+	p := t.VerdictRuleTracePoint()
 	if p == nil {
 		return ""
 	}
@@ -275,8 +283,7 @@ func (t *RuleTrace) ToString() string {
 }
 
 func (t *RuleTrace) ConcatBytes(buf *bytes.Buffer) {
-	path := t.Path()
-	p := path[len(path)-1]
+	p := t.VerdictRuleTracePoint()
 	buf.Write(p.TierID())
 	buf.Write([]byte("/"))
 	buf.Write(p.PolicyID())
@@ -299,9 +306,11 @@ func (t *RuleTrace) IsDirty() bool {
 	return t.dirty
 }
 
-func (t *RuleTrace) LastRuleTracePoint() *RuleTracePoint {
-	if t.lastIdx >= 0 {
-		return t.path[t.lastIdx]
+// VerdictRuleTracePoint returns the RuleTracePoint that contains either
+// AllowAction or DenyAction in a RuleTrace.
+func (t *RuleTrace) VerdictRuleTracePoint() *RuleTracePoint {
+	if t.verdictIdx >= 0 {
+		return t.path[t.verdictIdx]
 	} else {
 		return nil
 	}
@@ -310,7 +319,7 @@ func (t *RuleTrace) LastRuleTracePoint() *RuleTracePoint {
 func (t *RuleTrace) ClearDirtyFlag() {
 	t.dirty = false
 	t.ctr.Reset()
-	p := t.LastRuleTracePoint()
+	p := t.VerdictRuleTracePoint()
 	if p != nil {
 		p.Ctr.Reset()
 	}
@@ -345,7 +354,7 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 		t.action = tp.Action
 		t.ctr = ctr
 		t.epKey = tp.EpKey
-		t.lastIdx = tp.Index
+		t.verdictIdx = tp.Index
 	}
 	t.dirty = true
 	return nil
@@ -365,7 +374,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
 	t.ctr = tp.Ctr
 	t.dirty = true
 	t.epKey = tp.EpKey
-	t.lastIdx = tp.Index
+	t.verdictIdx = tp.Index
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection/flow of packets
