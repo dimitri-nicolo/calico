@@ -307,7 +307,8 @@ func (t *RuleTrace) IsDirty() bool {
 }
 
 // VerdictRuleTracePoint returns the RuleTracePoint that contains either
-// AllowAction or DenyAction in a RuleTrace.
+// AllowAction or DenyAction in a RuleTrace or nil if we haven't seen
+// either of these yet.
 func (t *RuleTrace) VerdictRuleTracePoint() *RuleTracePoint {
 	if t.verdictIdx >= 0 {
 		return t.path[t.verdictIdx]
