@@ -87,5 +87,8 @@ func (f CalicoRESTOptionHelper) GetRESTOptions(resource schema.GroupResource) (g
 	if strings.Compare(resource.Resource, "policies") == 0 {
 		ret.ResourcePrefix = "/policy/tier"
 	}
+	if strings.Compare(resource.Resource, "tiers") == 0 {
+		ret.ResourcePrefix = "/tier"
+	}
 	return ret, nil
 }
