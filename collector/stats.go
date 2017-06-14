@@ -264,14 +264,14 @@ func (t *RuleTrace) Len() int {
 }
 
 func (t *RuleTrace) Path() []*RuleTracePoint {
-	i := 0
+	path := make([]*RuleTracePoint, 0, RuleTraceInitLen)
 	for _, tp := range t.path {
 		if tp == nil {
 			continue
 		}
-		i++
+		path = append(path, tp)
 	}
-	return t.path[:i]
+	return path
 }
 
 func (t *RuleTrace) ToString() string {
