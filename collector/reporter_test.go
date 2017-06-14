@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"bytes"
 	"math"
 	"net"
 	"reflect"
@@ -96,8 +97,13 @@ var defTierDenyT4 = &RuleTrace{
 }
 
 var (
+	defTierDenyT3Buf = bytes.NewBufferString(defTierDenyT3.ToString())
+	defTierDenyT4Buf = bytes.NewBufferString(defTierDenyT4.ToString())
+)
+
+var (
 	denyPacketTuple1DenyT3 = &MetricUpdate{
-		policy:       defTierDenyT3.ToString(),
+		policy:       defTierDenyT3Buf.Bytes(),
 		tuple:        tuple1,
 		packets:      1,
 		bytes:        1,
@@ -105,7 +111,7 @@ var (
 		deltaBytes:   1,
 	}
 	denyPacketTuple2DenyT3 = &MetricUpdate{
-		policy:       defTierDenyT3.ToString(),
+		policy:       defTierDenyT3Buf.Bytes(),
 		tuple:        tuple2,
 		packets:      1,
 		bytes:        1,
@@ -113,7 +119,7 @@ var (
 		deltaBytes:   1,
 	}
 	denyPacketTuple3DenyT4 = &MetricUpdate{
-		policy:       defTierDenyT4.ToString(),
+		policy:       defTierDenyT4Buf.Bytes(),
 		tuple:        tuple3,
 		packets:      1,
 		bytes:        1,
@@ -347,7 +353,7 @@ var _ = Describe("Prometheus Reporter", func() {
 				}).Should(BeTrue())
 			})
 			It("should have the deleted entry as candidate for deletion", func() {
-				Eventually(pr.deleteCandidates).Should(HaveKey(key2))
+				Eventually(pr.retainedMetrics).Should(HaveKey(key2))
 			})
 		})
 	})

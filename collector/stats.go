@@ -11,6 +11,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/gavv/monotime"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -92,6 +93,12 @@ const (
 	DenyAction     RuleAction = "deny"
 	NextTierAction RuleAction = "pass"
 )
+
+var RuleActionToBytes = map[RuleAction][]byte{
+	AllowAction:    []byte("allow"),
+	DenyAction:     []byte("deny"),
+	NextTierAction: []byte("pass"),
+}
 
 const RuleTraceInitLen = 10
 
@@ -267,6 +274,19 @@ func (t *RuleTrace) ToString() string {
 	return fmt.Sprintf("%s/%s/%s/%v", p.TierID(), p.PolicyID(), p.Rule(), p.Action)
 }
 
+func (t *RuleTrace) ConcatBytes(buf *bytes.Buffer) {
+	path := t.Path()
+	p := path[len(path)-1]
+	buf.Write(p.TierID())
+	buf.Write([]byte("/"))
+	buf.Write(p.PolicyID())
+	buf.Write([]byte("/"))
+	buf.Write(p.Rule())
+	buf.Write([]byte("/"))
+	buf.Write(RuleActionToBytes[p.Action])
+	return
+}
+
 func (t *RuleTrace) Action() RuleAction {
 	return t.action
 }
@@ -383,36 +403,29 @@ func (t *Tuple) String() string {
 // source of this connection and ingress into a workload that terminated this.
 // - 2 counters - ctr for the direction of the connection and ctrReverse for
 // the reverse/reply of this connection.
-// Age Timer Implementation Note: Each Data entry's age is implemented using
-// time.Timer. Any actions that modifiy statistics or metadata of a Data entry
-// object will extend the life timer of the object. Each method of Data will
-// specify if it updates or doesn't update the age timer. When creating a new Data
-// object a timeout is specified and this fires when the there have been no updates
-// on the object for specified duration.
 type Data struct {
 	Tuple            Tuple
 	ctr              Counter
 	ctrReverse       Counter
 	IngressRuleTrace *RuleTrace
 	EgressRuleTrace  *RuleTrace
-	createdAt        time.Time
-	updatedAt        time.Time
+	createdAt        time.Duration
+	updatedAt        time.Duration
 	ageTimeout       time.Duration
-	ageTimer         *time.Timer
 	dirty            bool
 }
 
 func NewData(tuple Tuple, duration time.Duration) *Data {
+	now := monotime.Now()
 	return &Data{
 		Tuple:            tuple,
 		ctr:              *NewCounter(0, 0),
 		ctrReverse:       *NewCounter(0, 0),
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
-		createdAt:        time.Now(),
-		updatedAt:        time.Now(),
+		createdAt:        now,
+		updatedAt:        now,
 		ageTimeout:       duration,
-		ageTimer:         time.NewTimer(duration),
 		dirty:            true,
 	}
 }
@@ -423,8 +436,7 @@ func (d *Data) String() string {
 }
 
 func (d *Data) touch() {
-	d.updatedAt = time.Now()
-	d.resetAgeTimeout()
+	d.updatedAt = monotime.Now()
 }
 
 func (d *Data) setDirtyFlag() {
@@ -443,17 +455,8 @@ func (d *Data) IsDirty() bool {
 	return d.dirty
 }
 
-func (d *Data) resetAgeTimeout() {
-	// FIXME(doublek): Resetting a timer is a more complex operation. The call to
-	// Reset() here will not work according to docs which define the correct way
-	// to do this.
-	d.ageTimer.Reset(d.ageTimeout)
-}
-
-// Return the internal Timer object. Use the Timers internal channel to detect
-// when the object's age expires.
-func (d *Data) AgeTimer() *time.Timer {
-	return d.ageTimer
+func (d *Data) UpdatedAt() time.Duration {
+	return d.updatedAt
 }
 
 // Returns the final action of the RuleTrace
