@@ -15,7 +15,7 @@
 package embed
 
 import (
-	"path/filepath"
+	"path"
 
 	"github.com/coreos/etcd/wal"
 )
@@ -23,7 +23,7 @@ import (
 func isMemberInitialized(cfg *Config) bool {
 	waldir := cfg.WalDir
 	if waldir == "" {
-		waldir = filepath.Join(cfg.Dir, "member", "wal")
+		waldir = path.Join(cfg.Dir, "member", "wal")
 	}
 
 	return wal.Exist(waldir)

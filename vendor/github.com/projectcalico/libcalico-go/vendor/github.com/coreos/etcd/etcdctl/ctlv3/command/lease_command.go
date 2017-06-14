@@ -67,7 +67,7 @@ func leaseGrantCommandFunc(cmd *cobra.Command, args []string) {
 	if err != nil {
 		ExitWithError(ExitError, fmt.Errorf("failed to grant lease (%v)\n", err))
 	}
-	display.Grant(*resp)
+	fmt.Printf("lease %016x granted with TTL(%ds)\n", resp.ID, resp.TTL)
 }
 
 // NewLeaseRevokeCommand returns the cobra command for "lease revoke".
@@ -90,12 +90,12 @@ func leaseRevokeCommandFunc(cmd *cobra.Command, args []string) {
 
 	id := leaseFromArgs(args[0])
 	ctx, cancel := commandCtx(cmd)
-	resp, err := mustClientFromCmd(cmd).Revoke(ctx, id)
+	_, err := mustClientFromCmd(cmd).Revoke(ctx, id)
 	cancel()
 	if err != nil {
 		ExitWithError(ExitError, fmt.Errorf("failed to revoke lease (%v)\n", err))
 	}
-	display.Revoke(id, *resp)
+	fmt.Printf("lease %016x revoked\n", id)
 }
 
 var timeToLiveKeys bool
@@ -148,17 +148,15 @@ func leaseKeepAliveCommandFunc(cmd *cobra.Command, args []string) {
 	}
 
 	id := leaseFromArgs(args[0])
-	respc := mustClientFromCmd(cmd).KeepAlive(context.TODO(), id)
-	for resp := range respc {
-		if resp.Err != nil {
-			ExitWithError(ExitError, resp.Err)
-		}
-		display.KeepAlive(resp)
+	respc, kerr := mustClientFromCmd(cmd).KeepAlive(context.TODO(), id)
+	if kerr != nil {
+		ExitWithError(ExitBadConnection, kerr)
 	}
 
-	if _, ok := (display).(*simplePrinter); ok {
-		fmt.Printf("lease %016x expired or revoked.\n", id)
+	for resp := range respc {
+		fmt.Printf("lease %016x keepalived with TTL(%d)\n", resp.ID, resp.TTL)
 	}
+	fmt.Printf("lease %016x expired or revoked.\n", id)
 }
 
 func leaseFromArgs(arg string) v3.LeaseID {

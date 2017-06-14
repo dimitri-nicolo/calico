@@ -72,7 +72,7 @@ func TestStorePut(t *testing.T) {
 			indexGetResp{revision{}, revision{}, 0, ErrRevisionNotFound},
 			nil,
 
-			revision{2, 0},
+			revision{1, 1},
 			newTestKeyBytes(revision{2, 0}, false),
 			mvccpb.KeyValue{
 				Key:            []byte("foo"),
@@ -89,8 +89,8 @@ func TestStorePut(t *testing.T) {
 			indexGetResp{revision{2, 0}, revision{2, 0}, 1, nil},
 			&rangeResp{[][]byte{newTestKeyBytes(revision{2, 1}, false)}, [][]byte{kvb}},
 
-			revision{2, 0},
-			newTestKeyBytes(revision{2, 0}, false),
+			revision{1, 2},
+			newTestKeyBytes(revision{2, 1}, false),
 			mvccpb.KeyValue{
 				Key:            []byte("foo"),
 				Value:          []byte("bar"),
@@ -99,14 +99,14 @@ func TestStorePut(t *testing.T) {
 				Version:        2,
 				Lease:          2,
 			},
-			revision{2, 0},
+			revision{2, 1},
 		},
 		{
 			revision{2, 0},
 			indexGetResp{revision{2, 1}, revision{2, 0}, 2, nil},
 			&rangeResp{[][]byte{newTestKeyBytes(revision{2, 1}, false)}, [][]byte{kvb}},
 
-			revision{3, 0},
+			revision{2, 1},
 			newTestKeyBytes(revision{3, 0}, false),
 			mvccpb.KeyValue{
 				Key:            []byte("foo"),
@@ -124,13 +124,14 @@ func TestStorePut(t *testing.T) {
 		b := s.b.(*fakeBackend)
 		fi := s.kvindex.(*fakeIndex)
 
-		s.currentRev = tt.rev.main
+		s.currentRev = tt.rev
+		s.tx = b.BatchTx()
 		fi.indexGetRespc <- tt.r
 		if tt.rr != nil {
 			b.tx.rangeRespc <- *tt.rr
 		}
 
-		s.Put([]byte("foo"), []byte("bar"), lease.LeaseID(i+1))
+		s.put([]byte("foo"), []byte("bar"), lease.LeaseID(i+1))
 
 		data, err := tt.wkv.Marshal()
 		if err != nil {
@@ -157,7 +158,7 @@ func TestStorePut(t *testing.T) {
 		if g := fi.Action(); !reflect.DeepEqual(g, wact) {
 			t.Errorf("#%d: index action = %+v, want %+v", i, g, wact)
 		}
-		if s.currentRev != tt.wrev.main {
+		if s.currentRev != tt.wrev {
 			t.Errorf("#%d: rev = %+v, want %+v", i, s.currentRev, tt.wrev)
 		}
 
@@ -178,6 +179,7 @@ func TestStoreRange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	currev := revision{1, 1}
 	wrev := int64(2)
 
 	tests := []struct {
@@ -193,26 +195,25 @@ func TestStoreRange(t *testing.T) {
 			rangeResp{[][]byte{key}, [][]byte{kvb}},
 		},
 	}
-
-	ro := RangeOptions{Limit: 1, Rev: 0, Count: false}
 	for i, tt := range tests {
 		s := newFakeStore()
 		b := s.b.(*fakeBackend)
 		fi := s.kvindex.(*fakeIndex)
 
-		s.currentRev = 2
+		s.currentRev = currev
+		s.tx = b.BatchTx()
 		b.tx.rangeRespc <- tt.r
 		fi.indexRangeRespc <- tt.idxr
 
-		ret, err := s.Range([]byte("foo"), []byte("goo"), ro)
+		kvs, _, rev, err := s.rangeKeys([]byte("foo"), []byte("goo"), 1, 0, false)
 		if err != nil {
 			t.Errorf("#%d: err = %v, want nil", i, err)
 		}
-		if w := []mvccpb.KeyValue{kv}; !reflect.DeepEqual(ret.KVs, w) {
-			t.Errorf("#%d: kvs = %+v, want %+v", i, ret.KVs, w)
+		if w := []mvccpb.KeyValue{kv}; !reflect.DeepEqual(kvs, w) {
+			t.Errorf("#%d: kvs = %+v, want %+v", i, kvs, w)
 		}
-		if ret.Rev != wrev {
-			t.Errorf("#%d: rev = %d, want %d", i, ret.Rev, wrev)
+		if rev != wrev {
+			t.Errorf("#%d: rev = %d, want %d", i, rev, wrev)
 		}
 
 		wstart, wend := revBytesRange(tt.idxr.revs[0])
@@ -228,8 +229,8 @@ func TestStoreRange(t *testing.T) {
 		if g := fi.Action(); !reflect.DeepEqual(g, wact) {
 			t.Errorf("#%d: index action = %+v, want %+v", i, g, wact)
 		}
-		if s.currentRev != 2 {
-			t.Errorf("#%d: current rev = %+v, want %+v", i, s.currentRev, 2)
+		if s.currentRev != currev {
+			t.Errorf("#%d: current rev = %+v, want %+v", i, s.currentRev, currev)
 		}
 
 		s.Close()
@@ -266,9 +267,19 @@ func TestStoreDeleteRange(t *testing.T) {
 			rangeResp{[][]byte{key}, [][]byte{kvb}},
 
 			newTestKeyBytes(revision{3, 0}, true),
-			revision{3, 0},
+			revision{2, 1},
 			2,
 			revision{3, 0},
+		},
+		{
+			revision{2, 1},
+			indexRangeResp{[][]byte{[]byte("foo")}, []revision{{2, 0}}},
+			rangeResp{[][]byte{key}, [][]byte{kvb}},
+
+			newTestKeyBytes(revision{3, 1}, true),
+			revision{2, 2},
+			3,
+			revision{3, 1},
 		},
 	}
 	for i, tt := range tests {
@@ -276,11 +287,12 @@ func TestStoreDeleteRange(t *testing.T) {
 		b := s.b.(*fakeBackend)
 		fi := s.kvindex.(*fakeIndex)
 
-		s.currentRev = tt.rev.main
+		s.currentRev = tt.rev
+		s.tx = b.BatchTx()
 		fi.indexRangeRespc <- tt.r
 		b.tx.rangeRespc <- tt.rr
 
-		n, _ := s.DeleteRange([]byte("foo"), []byte("goo"))
+		n := s.deleteRange([]byte("foo"), []byte("goo"))
 		if n != 1 {
 			t.Errorf("#%d: n = %d, want 1", i, n)
 		}
@@ -304,7 +316,7 @@ func TestStoreDeleteRange(t *testing.T) {
 		if g := fi.Action(); !reflect.DeepEqual(g, wact) {
 			t.Errorf("#%d: index action = %+v, want %+v", i, g, wact)
 		}
-		if s.currentRev != tt.wrev.main {
+		if s.currentRev != tt.wrev {
 			t.Errorf("#%d: rev = %+v, want %+v", i, s.currentRev, tt.wrev)
 		}
 	}
@@ -316,7 +328,7 @@ func TestStoreCompact(t *testing.T) {
 	b := s.b.(*fakeBackend)
 	fi := s.kvindex.(*fakeIndex)
 
-	s.currentRev = 3
+	s.currentRev = revision{3, 0}
 	fi.indexCompactRespc <- map[revision]struct{}{{1, 0}: {}}
 	key1 := newTestKeyBytes(revision{1, 0}, false)
 	key2 := newTestKeyBytes(revision{2, 0}, false)
@@ -381,8 +393,9 @@ func TestStoreRestore(t *testing.T) {
 	if s.compactMainRev != 3 {
 		t.Errorf("compact rev = %d, want 5", s.compactMainRev)
 	}
-	if s.currentRev != 5 {
-		t.Errorf("current rev = %v, want 5", s.currentRev)
+	wrev := revision{5, 0}
+	if !reflect.DeepEqual(s.currentRev, wrev) {
+		t.Errorf("current rev = %v, want %v", s.currentRev, wrev)
 	}
 	wact := []testutil.Action{
 		{"range", []interface{}{metaBucketName, finishedCompactKeyName, []byte(nil), int64(0)}},
@@ -466,12 +479,18 @@ func TestTxnPut(t *testing.T) {
 	defer cleanup(s, b, tmpPath)
 
 	for i := 0; i < sliceN; i++ {
-		txn := s.Write()
+		id := s.TxnBegin()
 		base := int64(i + 2)
-		if rev := txn.Put(keys[i], vals[i], lease.NoLease); rev != base {
+
+		rev, err := s.TxnPut(id, keys[i], vals[i], lease.NoLease)
+		if err != nil {
+			t.Error("txn put error")
+		}
+		if rev != base {
 			t.Errorf("#%d: rev = %d, want %d", i, rev, base)
 		}
-		txn.End()
+
+		s.TxnEnd(id)
 	}
 }
 
@@ -480,7 +499,7 @@ func TestTxnBlockBackendForceCommit(t *testing.T) {
 	s := NewStore(b, &lease.FakeLessor{}, nil)
 	defer os.Remove(tmpPath)
 
-	txn := s.Read()
+	id := s.TxnBegin()
 
 	done := make(chan struct{})
 	go func() {
@@ -493,7 +512,7 @@ func TestTxnBlockBackendForceCommit(t *testing.T) {
 	case <-time.After(100 * time.Millisecond):
 	}
 
-	txn.End()
+	s.TxnEnd(id)
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second): // wait 5 seconds for CI with slow IO
@@ -518,6 +537,20 @@ func newTestKeyBytes(rev revision, tombstone bool) []byte {
 	return bytes
 }
 
+// TestStoreHashAfterForceCommit ensures that later Hash call to
+// closed backend with ForceCommit does not panic.
+func TestStoreHashAfterForceCommit(t *testing.T) {
+	be, tmpPath := backend.NewDefaultTmpBackend()
+	kv := NewStore(be, &lease.FakeLessor{}, nil)
+	defer os.Remove(tmpPath)
+
+	// as in EtcdServer.HardStop
+	kv.Close()
+	be.Close()
+
+	kv.Hash()
+}
+
 func newFakeStore() *store {
 	b := &fakeBackend{&fakeBatchTx{
 		Recorder:   &testutil.RecorderBuffered{},
@@ -529,17 +562,15 @@ func newFakeStore() *store {
 		indexRangeEventsRespc: make(chan indexRangeEventsResp, 1),
 		indexCompactRespc:     make(chan map[revision]struct{}, 1),
 	}
-	s := &store{
+	return &store{
 		b:              b,
 		le:             &lease.FakeLessor{},
 		kvindex:        fi,
-		currentRev:     0,
+		currentRev:     revision{},
 		compactMainRev: -1,
 		fifoSched:      schedule.NewFIFOScheduler(),
 		stopc:          make(chan struct{}),
 	}
-	s.ReadView, s.WriteView = &readView{s}, &writeView{s}
-	return s
 }
 
 type rangeResp struct {
@@ -580,7 +611,6 @@ type fakeBackend struct {
 }
 
 func (b *fakeBackend) BatchTx() backend.BatchTx                                    { return b.tx }
-func (b *fakeBackend) ReadTx() backend.ReadTx                                      { return b.tx }
 func (b *fakeBackend) Hash(ignores map[backend.IgnoreKey]struct{}) (uint32, error) { return 0, nil }
 func (b *fakeBackend) Size() int64                                                 { return 0 }
 func (b *fakeBackend) Snapshot() backend.Snapshot                                  { return nil }

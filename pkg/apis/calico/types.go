@@ -41,3 +41,18 @@ type Policy struct {
 	Spec   calico.Policy
 	Status PolicyStatus
 }
+
+// TierList is a list of Policy objects.
+type TierList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []Tier
+}
+
+type Tier struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.Tier
+}

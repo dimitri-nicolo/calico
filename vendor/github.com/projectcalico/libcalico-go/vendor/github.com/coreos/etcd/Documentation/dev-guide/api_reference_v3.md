@@ -427,8 +427,8 @@ Empty field.
 | Field | Description | Type |
 | ----- | ----------- | ---- |
 | key | key is the first key to delete in the range. | bytes |
-| range_end | range_end is the key following the last key to delete for the range [key, range_end). If range_end is not given, the range is defined to contain only the key argument. If range_end is one bit larger than the given key, then the range is all the keys with the prefix (the given key). If range_end is '\0', the range is all keys greater than or equal to the key argument. | bytes |
-| prev_kv | If prev_kv is set, etcd gets the previous key-value pairs before deleting it. The previous key-value pairs will be returned in the delete response. | bool |
+| range_end | range_end is the key following the last key to delete for the range [key, range_end). If range_end is not given, the range is defined to contain only the key argument. If range_end is one bit larger than the given key, then the range is all the all keys with the prefix (the given key). If range_end is '\0', the range is all keys greater than or equal to the key argument. | bytes |
+| prev_kv | If prev_kv is set, etcd gets the previous key-value pairs before deleting it. The previous key-value pairs will be returned in the delte response. | bool |
 
 
 
@@ -557,7 +557,6 @@ Empty field.
 | ----- | ----------- | ---- |
 | header |  | ResponseHeader |
 | member | member is the member information for the added member. | Member |
-| members | members is a list of all members after adding the new member. | (slice of) Member |
 
 
 
@@ -589,7 +588,6 @@ Empty field.
 | Field | Description | Type |
 | ----- | ----------- | ---- |
 | header |  | ResponseHeader |
-| members | members is a list of all members after removing the member. | (slice of) Member |
 
 
 
@@ -607,7 +605,6 @@ Empty field.
 | Field | Description | Type |
 | ----- | ----------- | ---- |
 | header |  | ResponseHeader |
-| members | members is a list of all members after updating the member. | (slice of) Member |
 
 
 
@@ -639,7 +636,7 @@ Empty field.
 | ----- | ----------- | ---- |
 | key | default, no sorting lowest target value first highest target value first key is the first key for the range. If range_end is not given, the request only looks up key. | bytes |
 | range_end | range_end is the upper bound on the requested range [key, range_end). If range_end is '\0', the range is all keys >= key. If range_end is key plus one (e.g., "aa"+1 == "ab", "a\xff"+1 == "b"), then the range request gets all keys prefixed with key. If both key and range_end are '\0', then the range request returns all keys. | bytes |
-| limit | limit is a limit on the number of keys returned for the request. When limit is set to 0, it is treated as no limit. | int64 |
+| limit | limit is a limit on the number of keys returned for the request. | int64 |
 | revision | revision is the point-in-time of the key-value store to use for the range. If revision is less or equal to zero, the range is over the newest key-value store. If the revision has been compacted, ErrCompacted is returned as a response. | int64 |
 | sort_order | sort_order is the order for returned sorted results. | SortOrder |
 | sort_target | sort_target is the key-value field to use for sorting. | SortTarget |

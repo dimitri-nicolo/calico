@@ -97,8 +97,6 @@ func togRPCError(err error) error {
 		return rpctypes.ErrGRPCAuthNotEnabled
 	case auth.ErrInvalidAuthToken:
 		return rpctypes.ErrGRPCInvalidAuthToken
-	case auth.ErrInvalidAuthMgmt:
-		return rpctypes.ErrGRPCInvalidAuthMgmt
 	default:
 		return grpc.Errorf(codes.Unknown, err.Error())
 	}

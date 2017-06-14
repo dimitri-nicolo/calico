@@ -26,15 +26,8 @@ ETCD_ROOT=$(dirname "${BASH_SOURCE}")/..
 pushd ${ETCD_ROOT} >/dev/null
 	echo Building etcd binary...
 	./scripts/build-binary ${VERSION}
-
-	# ppc64le not yet supported by acbuild.
-	for TARGET_ARCH in "amd64" "arm64"; do
-		echo Building ${TARGET_ARCH} aci image...
-		GOARCH=${TARGET_ARCH} BINARYDIR=release/etcd-${VERSION}-linux-${TARGET_ARCH} BUILDDIR=release ./scripts/build-aci ${VERSION}
-	done
-
-	for TARGET_ARCH in "amd64" "arm64" "ppc64le"; do
-		echo Building ${TARGET_ARCH} docker image...
-		GOARCH=${TARGET_ARCH} BINARYDIR=release/etcd-${VERSION}-linux-${TARGET_ARCH} BUILDDIR=release ./scripts/build-docker ${VERSION}
-	done
+	echo Building aci image...
+	BINARYDIR=release/etcd-${VERSION}-linux-amd64 BUILDDIR=release ./scripts/build-aci ${VERSION}
+	echo Building docker image...
+	BINARYDIR=release/etcd-${VERSION}-linux-amd64 BUILDDIR=release ./scripts/build-docker ${VERSION}
 popd >/dev/null

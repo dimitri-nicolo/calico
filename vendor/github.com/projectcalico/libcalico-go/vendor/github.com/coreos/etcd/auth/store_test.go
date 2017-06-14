@@ -15,12 +15,9 @@
 package auth
 
 import (
-	"fmt"
 	"os"
 	"reflect"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/coreos/etcd/auth/authpb"
 	pb "github.com/coreos/etcd/etcdserver/etcdserverpb"
@@ -41,46 +38,11 @@ func dummyIndexWaiter(index uint64) <-chan struct{} {
 	return ch
 }
 
-// TestNewAuthStoreRevision ensures newly auth store
-// keeps the old revision when there are no changes.
-func TestNewAuthStoreRevision(t *testing.T) {
-	b, tPath := backend.NewDefaultTmpBackend()
-	defer os.Remove(tPath)
-
-	tp, err := NewTokenProvider("simple", dummyIndexWaiter)
-	if err != nil {
-		t.Fatal(err)
-	}
-	as := NewAuthStore(b, tp)
-	err = enableAuthAndCreateRoot(as)
-	if err != nil {
-		t.Fatal(err)
-	}
-	old := as.Revision()
-	b.Close()
-	as.Close()
-
-	// no changes to commit
-	b2 := backend.NewDefaultBackend(tPath)
-	as = NewAuthStore(b2, tp)
-	new := as.Revision()
-	b2.Close()
-	as.Close()
-
-	if old != new {
-		t.Fatalf("expected revision %d, got %d", old, new)
-	}
-}
-
 func setupAuthStore(t *testing.T) (store *authStore, teardownfunc func(t *testing.T)) {
 	b, tPath := backend.NewDefaultTmpBackend()
 
-	tp, err := NewTokenProvider("simple", dummyIndexWaiter)
-	if err != nil {
-		t.Fatal(err)
-	}
-	as := NewAuthStore(b, tp)
-	err = enableAuthAndCreateRoot(as)
+	as := NewAuthStore(b, dummyIndexWaiter)
+	err := enableAuthAndCreateRoot(as)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,18 +161,18 @@ func TestUserChangePassword(t *testing.T) {
 	defer tearDown(t)
 
 	ctx1 := context.WithValue(context.WithValue(context.TODO(), "index", uint64(1)), "simpleToken", "dummy")
-	_, err := as.Authenticate(ctx1, "foo", "bar")
+	_, err := as.Authenticate(ctx1, "foo", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = as.UserChangePassword(&pb.AuthUserChangePasswordRequest{Name: "foo", Password: "baz"})
+	_, err = as.UserChangePassword(&pb.AuthUserChangePasswordRequest{Name: "foo", Password: "bar"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	ctx2 := context.WithValue(context.WithValue(context.TODO(), "index", uint64(2)), "simpleToken", "dummy")
-	_, err = as.Authenticate(ctx2, "foo", "baz")
+	_, err = as.Authenticate(ctx2, "foo", "bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -356,7 +318,7 @@ func TestRoleRevokePermission(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = as.RoleGet(&pb.AuthRoleGetRequest{Role: "role-test-1"})
+	r, err := as.RoleGet(&pb.AuthRoleGetRequest{Role: "role-test-1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +332,6 @@ func TestRoleRevokePermission(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var r *pb.AuthRoleGetResponse
 	r, err = as.RoleGet(&pb.AuthRoleGetRequest{Role: "role-test-1"})
 	if err != nil {
 		t.Fatal(err)
@@ -487,118 +448,6 @@ func TestAuthInfoFromCtx(t *testing.T) {
 	}
 }
 
-func TestAuthDisable(t *testing.T) {
-	as, tearDown := setupAuthStore(t)
-	defer tearDown(t)
-
-	as.AuthDisable()
-	ctx := context.WithValue(context.WithValue(context.TODO(), "index", uint64(2)), "simpleToken", "dummy")
-	_, err := as.Authenticate(ctx, "foo", "bar")
-	if err != ErrAuthNotEnabled {
-		t.Errorf("expected %v, got %v", ErrAuthNotEnabled, err)
-	}
-
-	// Disabling disabled auth to make sure it can return safely if store is already disabled.
-	as.AuthDisable()
-	_, err = as.Authenticate(ctx, "foo", "bar")
-	if err != ErrAuthNotEnabled {
-		t.Errorf("expected %v, got %v", ErrAuthNotEnabled, err)
-	}
-}
-
-// TestAuthRevisionRace ensures that access to authStore.revision is thread-safe.
-func TestAuthInfoFromCtxRace(t *testing.T) {
-	b, tPath := backend.NewDefaultTmpBackend()
-	defer os.Remove(tPath)
-
-	tp, err := NewTokenProvider("simple", dummyIndexWaiter)
-	if err != nil {
-		t.Fatal(err)
-	}
-	as := NewAuthStore(b, tp)
-	defer as.Close()
-
-	donec := make(chan struct{})
-	go func() {
-		defer close(donec)
-		ctx := metadata.NewContext(context.Background(), metadata.New(map[string]string{"token": "test"}))
-		as.AuthInfoFromCtx(ctx)
-	}()
-	as.UserAdd(&pb.AuthUserAddRequest{Name: "test"})
-	<-donec
-}
-
-func TestIsAdminPermitted(t *testing.T) {
-	as, tearDown := setupAuthStore(t)
-	defer tearDown(t)
-
-	err := as.IsAdminPermitted(&AuthInfo{Username: "root", Revision: 1})
-	if err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
-
-	// invalid user
-	err = as.IsAdminPermitted(&AuthInfo{Username: "rooti", Revision: 1})
-	if err != ErrUserNotFound {
-		t.Errorf("expected %v, got %v", ErrUserNotFound, err)
-	}
-
-	// non-admin user
-	err = as.IsAdminPermitted(&AuthInfo{Username: "foo", Revision: 1})
-	if err != ErrPermissionDenied {
-		t.Errorf("expected %v, got %v", ErrPermissionDenied, err)
-	}
-
-	// disabled auth should return nil
-	as.AuthDisable()
-	err = as.IsAdminPermitted(&AuthInfo{Username: "root", Revision: 1})
-	if err != nil {
-		t.Errorf("expected nil, got %v", err)
-	}
-}
-
-func TestRecoverFromSnapshot(t *testing.T) {
-	as, _ := setupAuthStore(t)
-
-	ua := &pb.AuthUserAddRequest{Name: "foo"}
-	_, err := as.UserAdd(ua) // add an existing user
-	if err == nil {
-		t.Fatalf("expected %v, got %v", ErrUserAlreadyExist, err)
-	}
-	if err != ErrUserAlreadyExist {
-		t.Fatalf("expected %v, got %v", ErrUserAlreadyExist, err)
-	}
-
-	ua = &pb.AuthUserAddRequest{Name: ""}
-	_, err = as.UserAdd(ua) // add a user with empty name
-	if err != ErrUserEmpty {
-		t.Fatal(err)
-	}
-
-	as.Close()
-
-	tp, err := NewTokenProvider("simple", dummyIndexWaiter)
-	if err != nil {
-		t.Fatal(err)
-	}
-	as2 := NewAuthStore(as.be, tp)
-	defer func(a *authStore) {
-		a.Close()
-	}(as2)
-
-	if !as2.isAuthEnabled() {
-		t.Fatal("recovering authStore from existing backend failed")
-	}
-
-	ul, err := as.UserList(&pb.AuthUserListRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !contains(ul.Users, "root") {
-		t.Errorf("expected %v in %v", "root", ul.Users)
-	}
-}
-
 func contains(array []string, str string) bool {
 	for _, s := range array {
 		if s == str {
@@ -606,50 +455,4 @@ func contains(array []string, str string) bool {
 		}
 	}
 	return false
-}
-
-func TestHammerSimpleAuthenticate(t *testing.T) {
-	// set TTL values low to try to trigger races
-	oldTTL, oldTTLRes := simpleTokenTTL, simpleTokenTTLResolution
-	defer func() {
-		simpleTokenTTL = oldTTL
-		simpleTokenTTLResolution = oldTTLRes
-	}()
-	simpleTokenTTL = 10 * time.Millisecond
-	simpleTokenTTLResolution = simpleTokenTTL
-	users := make(map[string]struct{})
-
-	as, tearDown := setupAuthStore(t)
-	defer tearDown(t)
-
-	// create lots of users
-	for i := 0; i < 50; i++ {
-		u := fmt.Sprintf("user-%d", i)
-		ua := &pb.AuthUserAddRequest{Name: u, Password: "123"}
-		if _, err := as.UserAdd(ua); err != nil {
-			t.Fatal(err)
-		}
-		users[u] = struct{}{}
-	}
-
-	// hammer on authenticate with lots of users
-	for i := 0; i < 10; i++ {
-		var wg sync.WaitGroup
-		wg.Add(len(users))
-		for u := range users {
-			go func(user string) {
-				defer wg.Done()
-				token := fmt.Sprintf("%s(%d)", user, i)
-				ctx := context.WithValue(context.WithValue(context.TODO(), "index", uint64(1)), "simpleToken", token)
-				if _, err := as.Authenticate(ctx, user, "123"); err != nil {
-					t.Fatal(err)
-				}
-				if _, err := as.AuthInfoFromCtx(ctx); err != nil {
-					t.Fatal(err)
-				}
-			}(u)
-		}
-		time.Sleep(time.Millisecond)
-		wg.Wait()
-	}
 }

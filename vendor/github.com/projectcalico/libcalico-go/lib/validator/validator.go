@@ -359,6 +359,7 @@ func validateIPPool(v *validator.Validate, structLevel *validator.StructLevel) {
 				"CIDR", "", reason(overlapsV6LinkLocal))
 		}
 	}
+
 }
 
 func validateICMPFields(v *validator.Validate, structLevel *validator.StructLevel) {

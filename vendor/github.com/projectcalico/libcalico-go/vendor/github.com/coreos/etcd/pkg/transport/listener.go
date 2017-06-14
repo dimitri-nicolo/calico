@@ -26,18 +26,19 @@ import (
 	"math/big"
 	"net"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"time"
 
+	"github.com/coreos/etcd/pkg/fileutil"
 	"github.com/coreos/etcd/pkg/tlsutil"
 )
 
-func NewListener(addr, scheme string, tlsinfo *TLSInfo) (l net.Listener, err error) {
+func NewListener(addr, scheme string, tlscfg *tls.Config) (l net.Listener, err error) {
 	if l, err = newListener(addr, scheme); err != nil {
 		return nil, err
 	}
-	return wrapTLS(addr, scheme, tlsinfo, l)
+	return wrapTLS(addr, scheme, tlscfg, l)
 }
 
 func newListener(addr string, scheme string) (net.Listener, error) {
@@ -48,11 +49,15 @@ func newListener(addr string, scheme string) (net.Listener, error) {
 	return net.Listen("tcp", addr)
 }
 
-func wrapTLS(addr, scheme string, tlsinfo *TLSInfo, l net.Listener) (net.Listener, error) {
+func wrapTLS(addr, scheme string, tlscfg *tls.Config, l net.Listener) (net.Listener, error) {
 	if scheme != "https" && scheme != "unixs" {
 		return l, nil
 	}
-	return newTLSListener(l, tlsinfo)
+	if tlscfg == nil {
+		l.Close()
+		return nil, fmt.Errorf("cannot listen on TLS for %s: KeyFile and CertFile are not presented", scheme+"://"+addr)
+	}
+	return tls.NewListener(l, tlscfg), nil
 }
 
 type TLSInfo struct {
@@ -64,10 +69,6 @@ type TLSInfo struct {
 
 	// ServerName ensures the cert matches the given host in case of discovery / virtual hosting
 	ServerName string
-
-	// HandshakeFailure is optinally called when a connection fails to handshake. The
-	// connection will be closed immediately afterwards.
-	HandshakeFailure func(*tls.Conn, error)
 
 	selfCert bool
 
@@ -85,12 +86,12 @@ func (info TLSInfo) Empty() bool {
 }
 
 func SelfCert(dirpath string, hosts []string) (info TLSInfo, err error) {
-	if err = os.MkdirAll(dirpath, 0700); err != nil {
+	if err = fileutil.TouchDirAll(dirpath); err != nil {
 		return
 	}
 
-	certPath := filepath.Join(dirpath, "cert.pem")
-	keyPath := filepath.Join(dirpath, "key.pem")
+	certPath := path.Join(dirpath, "cert.pem")
+	keyPath := path.Join(dirpath, "key.pem")
 	_, errcert := os.Stat(certPath)
 	_, errkey := os.Stat(keyPath)
 	if errcert == nil && errkey == nil {
@@ -118,11 +119,10 @@ func SelfCert(dirpath string, hosts []string) (info TLSInfo, err error) {
 	}
 
 	for _, host := range hosts {
-		h, _, _ := net.SplitHostPort(host)
-		if ip := net.ParseIP(h); ip != nil {
+		if ip := net.ParseIP(host); ip != nil {
 			tmpl.IPAddresses = append(tmpl.IPAddresses, ip)
 		} else {
-			tmpl.DNSNames = append(tmpl.DNSNames, h)
+			tmpl.DNSNames = append(tmpl.DNSNames, strings.Split(host, ":")[0])
 		}
 	}
 
@@ -242,11 +242,31 @@ func (info TLSInfo) ClientConfig() (*tls.Config, error) {
 	return cfg, nil
 }
 
-// IsClosedConnError returns true if the error is from closing listener, cmux.
-// copied from golang.org/x/net/http2/http2.go
-func IsClosedConnError(err error) bool {
-	// 'use of closed network connection' (Go <=1.8)
-	// 'use of closed file or network connection' (Go >1.8, internal/poll.ErrClosing)
-	// 'mux: listener closed' (cmux.ErrListenerClosed)
-	return err != nil && strings.Contains(err.Error(), "closed")
+// ShallowCopyTLSConfig copies *tls.Config. This is only
+// work-around for go-vet tests, which complains
+//
+//   assignment copies lock value to p: crypto/tls.Config contains sync.Once contains sync.Mutex
+//
+// Keep up-to-date with 'go/src/crypto/tls/common.go'
+func ShallowCopyTLSConfig(cfg *tls.Config) *tls.Config {
+	ncfg := tls.Config{
+		Time:                     cfg.Time,
+		Certificates:             cfg.Certificates,
+		NameToCertificate:        cfg.NameToCertificate,
+		GetCertificate:           cfg.GetCertificate,
+		RootCAs:                  cfg.RootCAs,
+		NextProtos:               cfg.NextProtos,
+		ServerName:               cfg.ServerName,
+		ClientAuth:               cfg.ClientAuth,
+		ClientCAs:                cfg.ClientCAs,
+		InsecureSkipVerify:       cfg.InsecureSkipVerify,
+		CipherSuites:             cfg.CipherSuites,
+		PreferServerCipherSuites: cfg.PreferServerCipherSuites,
+		SessionTicketKey:         cfg.SessionTicketKey,
+		ClientSessionCache:       cfg.ClientSessionCache,
+		MinVersion:               cfg.MinVersion,
+		MaxVersion:               cfg.MaxVersion,
+		CurvePreferences:         cfg.CurvePreferences,
+	}
+	return &ncfg
 }

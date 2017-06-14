@@ -123,24 +123,15 @@ func TestV3CompactCurrentRev(t *testing.T) {
 			t.Fatalf("couldn't put key (%v)", err)
 		}
 	}
-	// get key to add to proxy cache, if any
-	if _, err := kvc.Range(context.TODO(), &pb.RangeRequest{Key: []byte("foo")}); err != nil {
-		t.Fatal(err)
-	}
 	// compact on current revision
 	_, err := kvc.Compact(context.Background(), &pb.CompactionRequest{Revision: 4})
 	if err != nil {
 		t.Fatalf("couldn't compact kv space (%v)", err)
 	}
-	// key still exists when linearized?
+	// key still exists?
 	_, err = kvc.Range(context.Background(), &pb.RangeRequest{Key: []byte("foo")})
 	if err != nil {
 		t.Fatalf("couldn't get key after compaction (%v)", err)
-	}
-	// key still exists when serialized?
-	_, err = kvc.Range(context.Background(), &pb.RangeRequest{Key: []byte("foo"), Serializable: true})
-	if err != nil {
-		t.Fatalf("couldn't get serialized key after compaction (%v)", err)
 	}
 }
 
@@ -861,37 +852,6 @@ func TestV3Hash(t *testing.T) {
 	resp, err := m.Hash(context.Background(), &pb.HashRequest{})
 	if err != nil || resp.Hash == 0 {
 		t.Fatalf("couldn't hash (%v, hash %d)", err, resp.Hash)
-	}
-}
-
-// TestV3HashRestart ensures that hash stays the same after restart.
-func TestV3HashRestart(t *testing.T) {
-	defer testutil.AfterTest(t)
-	clus := NewClusterV3(t, &ClusterConfig{Size: 1})
-	defer clus.Terminate(t)
-
-	cli := clus.RandClient()
-	resp, err := toGRPC(cli).Maintenance.Hash(context.Background(), &pb.HashRequest{})
-	if err != nil || resp.Hash == 0 {
-		t.Fatalf("couldn't hash (%v, hash %d)", err, resp.Hash)
-	}
-	hash1 := resp.Hash
-
-	clus.Members[0].Stop(t)
-	clus.Members[0].Restart(t)
-	clus.waitLeader(t, clus.Members)
-	kvc := toGRPC(clus.Client(0)).KV
-	waitForRestart(t, kvc)
-
-	cli = clus.RandClient()
-	resp, err = toGRPC(cli).Maintenance.Hash(context.Background(), &pb.HashRequest{})
-	if err != nil || resp.Hash == 0 {
-		t.Fatalf("couldn't hash (%v, hash %d)", err, resp.Hash)
-	}
-	hash2 := resp.Hash
-
-	if hash1 != hash2 {
-		t.Fatalf("hash expected %d, got %d", hash1, hash2)
 	}
 }
 

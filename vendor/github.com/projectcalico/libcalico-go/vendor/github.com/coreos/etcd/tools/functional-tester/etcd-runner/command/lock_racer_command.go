@@ -20,29 +20,24 @@ import (
 	"fmt"
 
 	"github.com/coreos/etcd/clientv3/concurrency"
-
 	"github.com/spf13/cobra"
 )
 
 // NewLockRacerCommand returns the cobra command for "lock-racer runner".
 func NewLockRacerCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "lock-racer [name of lock (defaults to 'racers')]",
+		Use:   "lock-racer",
 		Short: "Performs lock race operation",
 		Run:   runRacerFunc,
 	}
+	cmd.Flags().IntVar(&rounds, "rounds", 100, "number of rounds to run")
 	cmd.Flags().IntVar(&totalClientConnections, "total-client-connections", 10, "total number of client connections")
 	return cmd
 }
 
 func runRacerFunc(cmd *cobra.Command, args []string) {
-	racers := "racers"
-	if len(args) == 1 {
-		racers = args[0]
-	}
-
-	if len(args) > 1 {
-		ExitWithError(ExitBadArgs, errors.New("lock-racer takes at most one argument"))
+	if len(args) > 0 {
+		ExitWithError(ExitBadArgs, errors.New("lock-racer does not take any argument"))
 	}
 
 	rcs := make([]roundClient, totalClientConnections)
@@ -66,7 +61,7 @@ func runRacerFunc(cmd *cobra.Command, args []string) {
 				break
 			}
 		}
-		m := concurrency.NewMutex(s, racers)
+		m := concurrency.NewMutex(s, "racers")
 		rcs[i].acquire = func() error { return m.Lock(ctx) }
 		rcs[i].validate = func() error {
 			if cnt++; cnt != 1 {
@@ -82,7 +77,5 @@ func runRacerFunc(cmd *cobra.Command, args []string) {
 			return nil
 		}
 	}
-	// each client creates 1 key from NewMutex() and delete it from Unlock()
-	// a round involves in 2*len(rcs) requests.
-	doRounds(rcs, rounds, 2*len(rcs))
+	doRounds(rcs, rounds)
 }

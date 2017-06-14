@@ -16,7 +16,7 @@ package etcdserver
 
 import (
 	"fmt"
-	"path/filepath"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -59,8 +59,6 @@ type ServerConfig struct {
 
 	// ClientCertAuthEnabled is true when cert has been signed by the client CA.
 	ClientCertAuthEnabled bool
-
-	AuthToken string
 }
 
 // VerifyBootstrap sanity-checks the initial config for bootstrap case
@@ -120,16 +118,16 @@ func (c *ServerConfig) advertiseMatchesCluster() error {
 	return nil
 }
 
-func (c *ServerConfig) MemberDir() string { return filepath.Join(c.DataDir, "member") }
+func (c *ServerConfig) MemberDir() string { return path.Join(c.DataDir, "member") }
 
 func (c *ServerConfig) WALDir() string {
 	if c.DedicatedWALDir != "" {
 		return c.DedicatedWALDir
 	}
-	return filepath.Join(c.MemberDir(), "wal")
+	return path.Join(c.MemberDir(), "wal")
 }
 
-func (c *ServerConfig) SnapDir() string { return filepath.Join(c.MemberDir(), "snap") }
+func (c *ServerConfig) SnapDir() string { return path.Join(c.MemberDir(), "snap") }
 
 func (c *ServerConfig) ShouldDiscover() bool { return c.DiscoveryURL != "" }
 

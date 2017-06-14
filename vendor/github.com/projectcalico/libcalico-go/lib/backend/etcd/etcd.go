@@ -346,8 +346,8 @@ func filterEtcdList(n *etcd.Node, l model.ListInterface) []*model.KVPair {
 		}
 	} else if k := l.KeyFromDefaultPath(n.Key); k != nil {
 		if v, err := model.ParseValue(k, []byte(n.Value)); err == nil {
-			kv := &model.KVPair{Key: k, Value: v, Revision: n.ModifiedIndex}
-			kvs = append(kvs, kv)
+			do := &model.KVPair{Key: k, Value: v, Revision: n.ModifiedIndex}
+			kvs = append(kvs, do)
 		}
 	}
 	log.Debugf("Returning: %#v", kvs)
