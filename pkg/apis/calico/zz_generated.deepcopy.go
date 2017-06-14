@@ -39,6 +39,8 @@ func RegisterDeepCopies(scheme *runtime.Scheme) error {
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_Policy, InType: reflect.TypeOf(&Policy{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_PolicyList, InType: reflect.TypeOf(&PolicyList{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_PolicyStatus, InType: reflect.TypeOf(&PolicyStatus{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_Tier, InType: reflect.TypeOf(&Tier{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_calico_TierList, InType: reflect.TypeOf(&TierList{})},
 	)
 }
 
@@ -84,6 +86,43 @@ func DeepCopy_calico_PolicyStatus(in interface{}, out interface{}, c *conversion
 		in := in.(*PolicyStatus)
 		out := out.(*PolicyStatus)
 		*out = *in
+		return nil
+	}
+}
+
+func DeepCopy_calico_Tier(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*Tier)
+		out := out.(*Tier)
+		*out = *in
+		if newVal, err := c.DeepCopy(&in.ObjectMeta); err != nil {
+			return err
+		} else {
+			out.ObjectMeta = *newVal.(*v1.ObjectMeta)
+		}
+		if newVal, err := c.DeepCopy(&in.Spec); err != nil {
+			return err
+		} else {
+			out.Spec = *newVal.(*model.Tier)
+		}
+		return nil
+	}
+}
+
+func DeepCopy_calico_TierList(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*TierList)
+		out := out.(*TierList)
+		*out = *in
+		if in.Items != nil {
+			in, out := &in.Items, &out.Items
+			*out = make([]Tier, len(*in))
+			for i := range *in {
+				if err := DeepCopy_calico_Tier(&(*in)[i], &(*out)[i], c); err != nil {
+					return err
+				}
+			}
+		}
 		return nil
 	}
 }

@@ -210,3 +210,15 @@ func Convert_calico_Policy_To_v1_Policy(in *calico.Policy, out *Policy, s conver
 	}
 	return nil
 }
+
+func Convert_v1_Tier_To_calico_Tier(in *Tier, out *calico.Tier, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	out.Spec.Order = in.Spec.Order
+	return nil
+}
+
+func Convert_calico_Tier_To_v1_Tier(in *calico.Tier, out *Tier, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	out.Spec.Order = in.Spec.Order
+	return nil
+}
