@@ -264,6 +264,8 @@ func (t *RuleTrace) Len() int {
 }
 
 func (t *RuleTrace) Path() []*RuleTracePoint {
+	// Minor optimiztion where we only do a rebuild when we don't have the full
+	// path.
 	rebuild := false
 	idx := 0
 	for i, tp := range t.path {
