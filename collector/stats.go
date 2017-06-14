@@ -94,6 +94,12 @@ const (
 	NextTierAction RuleAction = "pass"
 )
 
+var RuleActionToBytes = map[RuleAction][]byte{
+	AllowAction:    []byte("allow"),
+	DenyAction:     []byte("deny"),
+	NextTierAction: []byte("pass"),
+}
+
 const RuleTraceInitLen = 10
 
 var (
@@ -262,6 +268,19 @@ func (t *RuleTrace) ToString() string {
 	path := t.Path()
 	p := path[len(path)-1]
 	return fmt.Sprintf("%s/%s/%s/%v", p.TierID(), p.PolicyID(), p.Rule(), p.Action)
+}
+
+func (t *RuleTrace) ConcatBytes(buf *bytes.Buffer) {
+	path := t.Path()
+	p := path[len(path)-1]
+	buf.Write(p.TierID())
+	buf.Write([]byte("/"))
+	buf.Write(p.PolicyID())
+	buf.Write([]byte("/"))
+	buf.Write(p.Rule())
+	buf.Write([]byte("/"))
+	buf.Write(RuleActionToBytes[p.Action])
+	return
 }
 
 func (t *RuleTrace) Action() RuleAction {
