@@ -221,12 +221,22 @@ type RuleTrace struct {
 	epKey  interface{}
 	ctr    Counter
 	dirty  bool
+
+	// Stores the index of the RuleTracePoint that has a RuleAction Allow or Deny
+	verdictIdx int
+
+	// Optimization Note: When initializing a RuleTrace object, the pathArray
+	// array is used as the backing array that has been pre-allocated. This avoids
+	// one allocation when creating a RuleTrace object. More info on this here:
+	// https://github.com/golang/go/wiki/Performance#memory-profiler
+	// (Search for "slice array preallocation").
+	pathArray [RuleTraceInitLen]*RuleTracePoint
 }
 
 func NewRuleTrace() *RuleTrace {
-	return &RuleTrace{
-		path: make([]*RuleTracePoint, RuleTraceInitLen),
-	}
+	rt := &RuleTrace{verdictIdx: -1}
+	rt.path = rt.pathArray[:]
+	return rt
 }
 
 func (t *RuleTrace) String() string {
@@ -254,7 +264,24 @@ func (t *RuleTrace) Len() int {
 }
 
 func (t *RuleTrace) Path() []*RuleTracePoint {
-	path := []*RuleTracePoint{}
+	// Minor optimiztion where we only do a rebuild when we don't have the full
+	// path.
+	rebuild := false
+	idx := 0
+	for i, tp := range t.path {
+		if tp == nil {
+			rebuild = true
+			break
+		}
+		if tp.Action == AllowAction || tp.Action == DenyAction {
+			idx = i
+			break
+		}
+	}
+	if !rebuild {
+		return t.path[:idx+1]
+	}
+	path := make([]*RuleTracePoint, 0, RuleTraceInitLen)
 	for _, tp := range t.path {
 		if tp == nil {
 			continue
@@ -265,14 +292,15 @@ func (t *RuleTrace) Path() []*RuleTracePoint {
 }
 
 func (t *RuleTrace) ToString() string {
-	path := t.Path()
-	p := path[len(path)-1]
+	p := t.VerdictRuleTracePoint()
+	if p == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s/%s/%s/%v", p.TierID(), p.PolicyID(), p.Rule(), p.Action)
 }
 
 func (t *RuleTrace) ConcatBytes(buf *bytes.Buffer) {
-	path := t.Path()
-	p := path[len(path)-1]
+	p := t.VerdictRuleTracePoint()
 	buf.Write(p.TierID())
 	buf.Write([]byte("/"))
 	buf.Write(p.PolicyID())
@@ -295,13 +323,22 @@ func (t *RuleTrace) IsDirty() bool {
 	return t.dirty
 }
 
+// VerdictRuleTracePoint returns the RuleTracePoint that contains either
+// AllowAction or DenyAction in a RuleTrace or nil if we haven't seen
+// either of these yet.
+func (t *RuleTrace) VerdictRuleTracePoint() *RuleTracePoint {
+	if t.verdictIdx >= 0 {
+		return t.path[t.verdictIdx]
+	} else {
+		return nil
+	}
+}
+
 func (t *RuleTrace) ClearDirtyFlag() {
 	t.dirty = false
 	t.ctr.Reset()
-	path := t.Path()
-	l := len(path)
-	if l != 0 {
-		p := path[l-1]
+	p := t.VerdictRuleTracePoint()
+	if p != nil {
 		p.Ctr.Reset()
 	}
 }
@@ -335,6 +372,7 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 		t.action = tp.Action
 		t.ctr = ctr
 		t.epKey = tp.EpKey
+		t.verdictIdx = tp.Index
 	}
 	t.dirty = true
 	return nil
@@ -354,6 +392,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
 	t.ctr = tp.Ctr
 	t.dirty = true
 	t.epKey = tp.EpKey
+	t.verdictIdx = tp.Index
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection/flow of packets
