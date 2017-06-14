@@ -264,6 +264,21 @@ func (t *RuleTrace) Len() int {
 }
 
 func (t *RuleTrace) Path() []*RuleTracePoint {
+	rebuild := false
+	idx := 0
+	for i, tp := range t.path {
+		if tp == nil {
+			rebuild = true
+			break
+		}
+		if tp.Action == AllowAction || tp.Action == DenyAction {
+			idx = i
+			break
+		}
+	}
+	if !rebuild {
+		return t.path[:idx+1]
+	}
 	path := make([]*RuleTracePoint, 0, RuleTraceInitLen)
 	for _, tp := range t.path {
 		if tp == nil {
