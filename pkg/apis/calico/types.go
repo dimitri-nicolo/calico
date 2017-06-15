@@ -50,6 +50,9 @@ type TierList struct {
 	Items []Tier
 }
 
+// +genclient=true
+// +nonNamespaced=true
+
 type Tier struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta

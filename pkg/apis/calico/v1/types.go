@@ -50,6 +50,9 @@ type TierList struct {
 	Items []Tier `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+//  +genclient=true
+//  +nonNamespaced=true
+
 type Tier struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`

@@ -38,8 +38,7 @@ type REST struct {
 // KeyRootFunc returns the root etcd key for tier.
 // This is used for operations that work on the entire collection.
 func KeyRootFunc(ctx genericapirequest.Context, prefix string) string {
-	key := prefix + "/tier"
-	return key
+	return prefix
 }
 
 // KeyFunc is the default function for constructing storage paths for Tier resource.
