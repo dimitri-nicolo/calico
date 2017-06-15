@@ -106,8 +106,10 @@ func main() {
 	// Configure IP Pool configuration.
 	configureIPPools(client)
 
-	// Check for conflicting node configuration
-	checkConflictingNodes(client, node)
+	// Check for conflicting node configuration.
+	// TODO: Re-enable only on first invocation to avoid thundering
+	// herd during full system restart.
+	//checkConflictingNodes(client, node)
 
 	// Apply the updated node resource.
 	if _, err := client.Nodes().Apply(node); err != nil {
