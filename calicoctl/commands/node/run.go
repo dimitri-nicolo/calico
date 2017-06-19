@@ -295,6 +295,7 @@ Description:
 		{hostPath: logDir, containerPath: "/var/log/calico"},
 		{hostPath: "/var/run/calico", containerPath: "/var/run/calico"},
 		{hostPath: "/lib/modules", containerPath: "/lib/modules"},
+		{hostPath: "/dev/log", containerPath: "/dev/log"},
 	}
 
 	if !disableDockerNw {
