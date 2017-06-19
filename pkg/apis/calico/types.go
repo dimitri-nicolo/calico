@@ -17,7 +17,7 @@ limitations under the License.
 package calico
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/backend/model"
+	calico "github.com/projectcalico/libcalico-go/lib/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,7 +38,7 @@ type Policy struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec   calico.Policy
+	Spec   calico.PolicySpec
 	Status PolicyStatus
 }
 
@@ -57,5 +57,5 @@ type Tier struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.Tier
+	Spec calico.TierSpec
 }

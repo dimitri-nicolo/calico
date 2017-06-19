@@ -23,6 +23,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/validation/path"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
@@ -33,6 +34,7 @@ import (
 // rest implements a RESTStorage for API services against etcd
 type REST struct {
 	*genericregistry.Store
+	legacyStore *legacyREST
 }
 
 // KeyRootFunc returns the root etcd key for policy.
@@ -41,7 +43,7 @@ func KeyRootFunc(ctx genericapirequest.Context, prefix string) string {
 	key := prefix
 	ns, ok := genericapirequest.NamespaceFrom(ctx)
 	if ok && len(ns) > 0 {
-		key = key + "/" + ns + "/policy"
+		key = key + "/" + ns
 	}
 	return key
 }
@@ -72,10 +74,10 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		QualifiedResource: api.Resource("policies"),
 
 		KeyFunc: func(ctx genericapirequest.Context, name string) (string, error) {
-			return KeyFunc(ctx, "/policy/tier", name)
+			return KeyFunc(ctx, "/policy", name)
 		},
 		KeyRootFunc: func(ctx genericapirequest.Context) string {
-			return KeyRootFunc(ctx, "/policy/tier")
+			return KeyRootFunc(ctx, "/policy")
 		},
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
@@ -86,5 +88,38 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err) // TODO: Propagate error up
 	}
-	return &REST{store}
+
+	legacyStore := NewLegacyREST(store)
+	return &REST{store, legacyStore}
+}
+
+func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
+	err := r.legacyStore.create(obj)
+	if err != nil {
+		return nil, err
+	}
+	obj, err = r.Store.Create(ctx, obj)
+	if err != nil {
+		objectName, err := r.ObjectNameFunc(obj)
+		if err != nil {
+			panic("failed parsing object name of an already stored object")
+		}
+		r.legacyStore.delete(objectName)
+		return nil, err
+	}
+	return obj, nil
+}
+
+func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
+	_, err := r.legacyStore.delete(name)
+	if err != nil {
+		return nil, false, err
+	}
+	obj, ok, err := r.Store.Delete(ctx, name, options)
+	if err != nil || !ok {
+		// TODO
+		//r.legacyStore.create(policy)
+		return nil, false, err
+	}
+	return obj, ok, err
 }

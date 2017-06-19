@@ -46,8 +46,9 @@ func (apiServerStrategy) NamespaceScoped() bool {
 }
 
 func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
-	// Get Tier from object.
-	// Append it onto context.
+	apiserver := obj.(*calico.Policy)
+	tier, _, _ := getTierPolicy(apiserver.Name)
+	apiserver.SetLabels(map[string]string{"tier": tier})
 }
 
 func (apiServerStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
