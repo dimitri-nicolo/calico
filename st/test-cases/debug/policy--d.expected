@@ -1,4 +1,4 @@
 policy --debug nonexistent
 
 
-Plus 8 lines on stderr
+Plus 7 lines on stderr
