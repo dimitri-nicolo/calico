@@ -78,8 +78,8 @@ func (l *legacyREST) create(obj runtime.Object) error {
 	if err != nil {
 		return err
 	}
-	libcalicoPolicy.Metadata.Name = tierName
-	libcalicoPolicy.Metadata.Tier = policyName
+	libcalicoPolicy.Metadata.Name = policyName
+	libcalicoPolicy.Metadata.Tier = tierName
 
 	pHandler := l.client.Policies()
 	_, err = pHandler.Create(libcalicoPolicy)
