@@ -100,8 +100,15 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 			var res [][]byte
 			msgs, err := sock.Receive()
 			if err != nil {
-				logCtx.Warnf("NflogSubscribe Receive: %v", err)
-				continue
+				switch err := err.(type) {
+				case syscall.Errno:
+					if err.Temporary() || err == syscall.ENOBUFS {
+						logCtx.Warnf("NflogSubscribe Receive: %v", err)
+						continue
+					}
+				default:
+					logCtx.Fatalf("NflogSubscribe Receive: %v", err)
+				}
 			}
 			for _, m := range msgs {
 				mType := m.Header.Type
