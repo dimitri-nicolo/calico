@@ -61,8 +61,8 @@ func (p RESTStorageProvider) v1Storage(
 ) (map[string]rest.Storage, error) {
 
 	storage := map[string]rest.Storage{}
-	storage["tiers"] = calicotier.NewREST(restOptionsGetter)
 	storage["policies"] = calicopolicy.NewREST(restOptionsGetter)
+	storage["tiers"] = calicotier.NewREST(restOptionsGetter, storage["policies"])
 	return storage, nil
 }
 
