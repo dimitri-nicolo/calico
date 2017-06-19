@@ -17,12 +17,7 @@ limitations under the License.
 package policy
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/validation/path"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
@@ -37,30 +32,6 @@ type REST struct {
 	legacyStore *legacyREST
 }
 
-// KeyRootFunc returns the root etcd key for policy.
-// This is used for operations that work on the entire collection.
-func KeyRootFunc(ctx genericapirequest.Context, prefix string) string {
-	key := prefix
-	ns, ok := genericapirequest.NamespaceFrom(ctx)
-	if ok && len(ns) > 0 {
-		key = key + "/" + ns
-	}
-	return key
-}
-
-// KeyFunc is the default function for constructing storage paths for Policy resource.
-func KeyFunc(ctx genericapirequest.Context, prefix string, name string) (string, error) {
-	key := KeyRootFunc(ctx, prefix)
-	if len(name) == 0 {
-		return "", kubeerr.NewBadRequest("Name parameter required.")
-	}
-	if msgs := path.IsValidPathSegmentName(name); len(msgs) != 0 {
-		return "", kubeerr.NewBadRequest(fmt.Sprintf("Name parameter invalid: %q: %s", name, strings.Join(msgs, ";")))
-	}
-	key = key + "/" + name
-	return key, nil
-}
-
 // NewREST returns a RESTStorage object that will work against API services.
 func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
@@ -73,12 +44,6 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		PredicateFunc:     MatchPolicy,
 		QualifiedResource: api.Resource("policies"),
 
-		KeyFunc: func(ctx genericapirequest.Context, name string) (string, error) {
-			return KeyFunc(ctx, "/policy", name)
-		},
-		KeyRootFunc: func(ctx genericapirequest.Context) string {
-			return KeyRootFunc(ctx, "/policy")
-		},
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
 		DeleteStrategy: Strategy,
