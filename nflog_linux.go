@@ -89,7 +89,10 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 		sock.Close()
 	}()
 
-	resChan := make(chan [][]byte)
+	// Channel to pass raw Nflog packets for further processing. We keep it at
+	// twice the size of the processers outgoing channel so that reading NFLOG
+	// packets from the socket can be buffered until they can be consumed.
+	resChan := make(chan [][]byte, 2*cap(ch))
 	// Start a goroutine for receiving netlink messages from the kernel.
 	go func() {
 		logCtx := log.WithFields(log.Fields{
