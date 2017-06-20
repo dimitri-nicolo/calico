@@ -149,6 +149,8 @@ func (r *ReporterManager) startManaging() {
 // PrometheusReporter records denied packets and bytes statistics in prometheus metrics.
 type PrometheusReporter struct {
 	port            int
+	certFile        string
+	keyFile         string
 	registry        *prometheus.Registry
 	aggStats        map[AggregateKey]AggregateValue
 	reportChan      chan *MetricUpdate
@@ -158,12 +160,14 @@ type PrometheusReporter struct {
 	retentionTicker *jitter.Ticker
 }
 
-func NewPrometheusReporter(port int, rTime time.Duration) *PrometheusReporter {
+func NewPrometheusReporter(port int, rTime time.Duration, certFile, keyFile string) *PrometheusReporter {
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(gaugeDeniedPackets)
 	registry.MustRegister(gaugeDeniedBytes)
 	return &PrometheusReporter{
 		port:            port,
+		certFile:        certFile,
+		keyFile:         keyFile,
 		registry:        registry,
 		aggStats:        make(map[AggregateKey]AggregateValue),
 		reportChan:      make(chan *MetricUpdate),
@@ -185,7 +189,12 @@ func (pr *PrometheusReporter) servePrometheusMetrics() {
 		mux := http.NewServeMux()
 		handler := promhttp.HandlerFor(pr.registry, promhttp.HandlerOpts{})
 		mux.Handle("/metrics", handler)
-		err := http.ListenAndServe(fmt.Sprintf(":%v", pr.port), handler)
+		var err error
+		if pr.certFile != "" && pr.keyFile != "" {
+			err = http.ListenAndServeTLS(fmt.Sprintf(":%v", pr.port), pr.certFile, pr.keyFile, handler)
+		} else {
+			err = http.ListenAndServe(fmt.Sprintf(":%v", pr.port), handler)
+		}
 		log.WithError(err).Error(
 			"Prometheus reporter metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)

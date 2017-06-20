@@ -102,8 +102,10 @@ type Config struct {
 
 	DeletedMetricsRetentionSecs time.Duration
 
-	PrometheusReporterEnabled bool
-	PrometheusReporterPort    int
+	PrometheusReporterEnabled  bool
+	PrometheusReporterPort     int
+	PrometheusReporterCertFile string
+	PrometheusReporterKeyFile  string
 
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
@@ -442,7 +444,10 @@ func (d *InternalDataplane) Start() {
 	}
 	rm := collector.NewReporterManager()
 	if d.config.PrometheusReporterEnabled {
-		rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.PrometheusReporterPort, d.config.DeletedMetricsRetentionSecs))
+		rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.PrometheusReporterPort,
+			d.config.DeletedMetricsRetentionSecs,
+			d.config.PrometheusReporterCertFile,
+			d.config.PrometheusReporterKeyFile))
 	}
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
 	if syslogReporter != nil {
