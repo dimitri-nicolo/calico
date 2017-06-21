@@ -32,11 +32,11 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
 	inbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyInboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, true, policyID.Name+"/"+policyID.Tier),
+		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, true, policyID.Name+"/"+policyID.Tier, policy.Untracked),
 	}
 	outbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyOutboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, false, policyID.Name+"/"+policyID.Tier),
+		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, false, policyID.Name+"/"+policyID.Tier, policy.Untracked),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -44,25 +44,25 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
 	inbound := iptables.Chain{
 		Name:  ProfileChainName(ProfileInboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, true, profileID.Name),
+		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, true, profileID.Name, false),
 	}
 	outbound := iptables.Chain{
 		Name:  ProfileChainName(ProfileOutboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, false, profileID.Name),
+		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, false, profileID.Name, false),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
 
-func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, inbound bool, prefix string, untracked bool) []iptables.Rule {
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
-		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, fmt.Sprintf("%d", ii)+"/"+prefix)...)
+		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, fmt.Sprintf("%d", ii)+"/"+prefix, untracked)...)
 	}
 	return rules
 }
 
-func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string, untracked bool) []iptables.Rule {
 	rules := []iptables.Rule{}
 	ruleCopy := *pRule
 
@@ -87,7 +87,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 				return nil
 			}
 
-			markBit, actions := r.CalculateActions(match, &ruleCopy, ipVersion, inbound, prefix)
+			markBit, actions := r.CalculateActions(match, &ruleCopy, ipVersion, inbound, prefix, untracked)
 			if markBit != 0 {
 				// Any rule accept, next-tier or deny say, which needs to set a mark bit.  We
 				// render one with the full match criteria, which sets the mark.
@@ -140,7 +140,7 @@ func SplitPortList(ports []*proto.PortRange) (splits [][]*proto.PortRange) {
 	return
 }
 
-func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) (mark uint32, actions []iptables.Action) {
+func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string, untracked bool) (mark uint32, actions []iptables.Action) {
 	actions = []iptables.Action{}
 
 	nflogGroup := uint16(2)
@@ -164,27 +164,33 @@ func (r *DefaultRuleRenderer) CalculateActions(match iptables.MatchCriteria, pRu
 		// Allow needs to set the accept mark, and then return to the calling chain for
 		// further processing.
 		mark = r.IptablesMarkAccept
-		actions = append(actions, iptables.NflogAction{
-			Group:  nflogGroup,
-			Prefix: "A/" + prefix,
-		})
+		if !untracked {
+			actions = append(actions, iptables.NflogAction{
+				Group:  nflogGroup,
+				Prefix: "A/" + prefix,
+			})
+		}
 		actions = append(actions, iptables.ReturnAction{})
 	case "next-tier", "pass":
 		// pass (called next-tier in the API for historical reasons) needs to set the pass
 		// mark, and then return to the calling chain for further processing.
 		mark = r.IptablesMarkPass
-		actions = append(actions, iptables.NflogAction{
-			Group:  nflogGroup,
-			Prefix: "N/" + prefix,
-		})
+		if !untracked {
+			actions = append(actions, iptables.NflogAction{
+				Group:  nflogGroup,
+				Prefix: "N/" + prefix,
+			})
+		}
 		actions = append(actions, iptables.ReturnAction{})
 	case "deny":
 		// Deny maps to DROP.  We defer to DropActions() to allow for "sandbox" mode.
 		mark = r.IptablesMarkDrop
-		actions = append(actions, iptables.NflogAction{
-			Group:  nflogGroup,
-			Prefix: "D/" + prefix,
-		})
+		if !untracked {
+			actions = append(actions, iptables.NflogAction{
+				Group:  nflogGroup,
+				Prefix: "D/" + prefix,
+			})
+		}
 		actions = append(actions, r.DropActions()...)
 		//mark = r.IptablesMarkPass
 		//actions = append(actions, iptables.ReturnAction{})
