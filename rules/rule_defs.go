@@ -149,7 +149,7 @@ type RuleRenderer interface {
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
-	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string) []iptables.Rule
+	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string, untracked bool) []iptables.Rule
 
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
 
