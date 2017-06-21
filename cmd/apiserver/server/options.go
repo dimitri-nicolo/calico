@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/pkg/api"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
+	"github.com/tigera/calico-k8sapiserver/pkg/authorizer"
 )
 
 // CalicoServerOptions contains the aggregation of configuration structs for
@@ -58,6 +59,7 @@ func (o *CalicoServerOptions) Config() (apiserver.Config, error) {
 	if err := o.RecommendedOptions.ApplyTo(genericConfig); err != nil {
 		return nil, err
 	}
+	genericConfig.Authorizer = authorizer.NewCalicoAuthorizer(genericConfig.Authorizer)
 	config := apiserver.NewCalicoConfig(genericConfig)
 
 	return config, nil
