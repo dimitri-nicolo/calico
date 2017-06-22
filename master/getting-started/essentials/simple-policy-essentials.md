@@ -6,7 +6,7 @@ This guide is a variation of the simple policy demo intended to introduce the ex
 
 It requires a Kubernetes cluster configured with Calico networking and Networking Essentials, and expects that you have `kubectl` configured to interact with the cluster.
 
-You can quickly and easily obtain such a cluster by setting up [Networking Essentials]({{site.baseurl}}/{page.version}}/getting-started/essentials), and then:
+You can quickly and easily obtain such a cluster by setting up [Networking Essentials]({{site.baseurl}}/{{page.version}}/getting-started/essentials/), and then:
 - following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation), or
 - [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade).
 
@@ -236,4 +236,4 @@ kubectl delete ns policy-demo
 This was just a simple example of the Kubernetes NetworkPolicy API and how Calico can secure your Kubernetes cluster.  For more
 information on network policy in Kubernetes, see the [Kubernetes user-guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
 
-For a slightly more detailed demonstration of Policy, check out the [stars demo](stars-policy).
+For a slightly more detailed demonstration of Policy, check out the [stars demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/).
