@@ -10,8 +10,8 @@ To install Networking Essentials, run the following commands:
 kubectl apply -f calico-etcd.yaml
 ```
 
-- Make any changes to configurations to the calico-essentials.yaml file and then
-  install/configure calico.
+- Make any changes to configurations to the [calico-essentials.yaml](1.6/calico-essentials.yaml)
+  file and then install/configure calico.
 
 ```
 kubectl apply -f calico-essentials.yaml
