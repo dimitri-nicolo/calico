@@ -8,7 +8,7 @@ It can add logs for denied packets, or even allow the traffic through.
 
 See the
 [Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#essentials-specific-configuration) for
-information on how to cnofigure this option.
+information on how to configure this option.
 
 DropActionOverride controls what happens to each packet that is denied by
 the current Calico policy - i.e. by the ordered combination of all the
@@ -37,3 +37,12 @@ Note that [Denied Packet Metrics]({{site.baseurl}}/{{page.version}}/reference/es
 setting.  Specifically, if packets that would normally be denied are being
 allowed through by a setting of "ACCEPT" or "LOG-and-ACCEPT", those packets
 still contribute to the denied packet metrics as normal.
+
+One way to configure _DropActionOverride_ , would be to use
+[calicoctl config command](../calicoctl/commands/config). For example,
+to set a DropActionOverride for "myhost" to log then drop denied packets, use the
+following command:
+
+```
+    ./calicoctl config set --raw=felix --node=myhost DropActionOverride LOG-and-DROP
+```
