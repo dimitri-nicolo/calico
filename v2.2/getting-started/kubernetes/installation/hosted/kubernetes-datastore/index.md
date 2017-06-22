@@ -51,21 +51,13 @@ other routers - future releases of Calico are expected to bring feature parity w
 
 To install Calico with Calico networking, run one of the following commands based on your Kubernetes version:
 
-For Kubernetes 1.6 clusters:
-
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.6/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
->[Click here to view the above yaml directly.](calico-networking/1.6/calico.yaml)
+>[Click here to view the calico.yaml for Kubernetes 1.6 clusters.](calico-networking/1.6/calico.yaml)
 
-For Kubernetes 1.5 clusters:
-
-```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.5/calico.yaml
-```
-
->[Click here to view the above yaml directly.](calico-networking/1.5/calico.yaml)
+>[Click here to view the calico.yaml for Kubernetes 1.5 clusters.](calico-networking/1.5/calico.yaml)
 
 ### Calico policy-only with user-supplied networking
 
@@ -74,21 +66,13 @@ CIDR allocations, either through static routes, a Kubernetes cloud-provider inte
 
 To install Calico in policy-only mode, run one of the following commands based on your Kubernetes version:
 
-For Kubernetes 1.6 clusters:
-
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.6/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
->[Click here to view the above yaml directly.](policy-only/1.6/calico.yaml)
+>[Click here to view the calico.yaml for Kubernetes 1.6 clusters.](policy-only/1.6/calico.yaml)
 
-For Kubernetes 1.5 clusters:
-
-```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.5/calico.yaml
-```
-
->[Click here to view the above yaml directly.](policy-only/1.5/calico.yaml)
+>[Click here to view the calico.yaml for Kubernetes 1.5 clusters.](policy-only/1.5/calico.yaml)
 
 ### Calico policy-only with flannel networking
 
@@ -106,10 +90,10 @@ Apply the following manifest to create these RBAC roles.
 >Note: The following RBAC policy is compatible with the Kubernetes v1.6 manifest only.
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac.yaml
+kubectl apply -f rbac.yaml
 ```
 
->[Click here to view the above yaml directly.](../rbac.yaml)
+>[Click here to view the rbac.yaml.](../rbac.yaml)
 
 Once installed, you can try out NetworkPolicy by following the [simple policy guide](../../../tutorials/simple-policy).
 
@@ -131,8 +115,9 @@ kubeadm init --pod-network-cidr=192.168.0.0/16
 Then run the following command to install Calico.
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico.yaml
+kubectl apply -f calico.yaml
 ```
+>[Click here to view calico.yaml.](../calico.yaml)
 
 Then continue following the guide.
 
