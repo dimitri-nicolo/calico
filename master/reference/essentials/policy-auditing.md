@@ -46,3 +46,5 @@ following command:
 ```
     ./calicoctl config set --raw=felix --node=myhost DropActionOverride LOG-and-DROP
 ```
+
+For a global setting, omit the `--node=` option.
