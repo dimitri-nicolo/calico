@@ -98,8 +98,9 @@ ServiceAccounts with the neccessary permissions.
 If using Calico with RBAC, apply the `ClusterRole` and `ClusterRoleBinding` specs:
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/rbac.yaml
+kubectl apply -f rbac.yaml
 ```
+>[Click here to view the rbac.yaml manifest.](../rbac.yaml)
 
 ### Other Configuration Options
 
