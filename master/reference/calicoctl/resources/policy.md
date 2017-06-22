@@ -8,6 +8,10 @@ to a collection of endpoints which match a [label selector](#selector).
 Policy resources can be used to define network connectivity rules between groups of Calico endpoints and host endpoints, and
 take precedence over [Profile resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile) if any are defined.
 
+Policies are organised into [Tiers]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier), which provide an
+additional layer of ordering - in particular note that the `pass` `action` skips
+to the next tier, to enable hierarchical security policy.
+
 For `calicoctl` commands that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `policy`, `policies`, `pol`, `pols`.
 
@@ -20,6 +24,7 @@ This sample policy allows TCP traffic from `frontend` endpoints to port 6379 on
 apiVersion: v1
 kind: policy
 metadata:
+  tier: internal-access
   name: allow-tcp-6379
 spec:
   selector: role == 'database'
@@ -41,8 +46,10 @@ spec:
 
 | Field | Description  | Accepted Values   | Schema |
 |-------|--------------|-------------------|--------|
+| tier | The tier the policy belongs to. | | string |
 | name | The name of the policy. |         | string |
 
+If the `tier` is not specified, a Policy belongs to the default (last) Tier.
 
 #### Spec
 
@@ -74,9 +81,9 @@ connection tracking is always used for flows to and from those.
 | source      | Source match parameters. |  | [EntityRule](#entityrule) | |
 | destination | Destination match parameters. |  | [EntityRule](#entityrule) | |
 
-An `action` of `pass` will skip over the remaining Policies and jump to the
-first Profile assigned to the endpoint, applying the policy configured in the
-Profile; if there are no Profiles configured for the endpoint the default
+An `action` of `pass` will skip over the remaining Policies in the current Tier and jump to the
+next Tier containing policies that apply to the endpoint.  If there are no further
+Tiers, then the Profiles apply next.  If there are no Profiles configured for the endpoint the default
 applied action is deny.
 
 #### ICMP

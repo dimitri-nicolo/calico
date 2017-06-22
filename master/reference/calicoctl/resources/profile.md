@@ -9,6 +9,7 @@ Each Calico endpoint or host endpoint can be assigned to zero or more profiles.
 
 Also see the [Policy resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) 
 which provides an alternate way to select what policy is applied to an endpoint.
+Rules in Profiles are applied after any rules in Policies.
 
 For `calicoctl` commands that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `profile`, `profiles`, `pro`, `pros`.
