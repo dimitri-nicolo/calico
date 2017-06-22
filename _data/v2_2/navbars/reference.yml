@@ -80,7 +80,7 @@ toc:
 - title: calicoq
   section:
   - title: Overview
-    path: /reference/calicoq/overview
+    path: /reference/calicoq/
   - title: Selectors
     path: /reference/calicoq/selectors
   - title: Endpoint
