@@ -27,7 +27,7 @@ This section covers taking an existing Kubernetes system with Open Source Calico
 This procedure assumes the following:
 
 1. Your system is running the latest 2.2.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.2.x release
-2. You have obtained the Essentials Specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials/index.md) and uploaded the Essentials `calico/node` image to a private registry.
+2. You have obtained the Essentials Specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded the Essentials `calico/node` image to a private registry.
 3. You have the calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
 
 #### Prepare for the Upgrade
@@ -56,10 +56,10 @@ This procedure assumes the following:
         ```
         kubectl uncordon node-01
         ```
- 3. Install the Essentials tools.  For more information about the following instructions, see the instructions in [Essentials Hosted Install]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/index.md).
+ 3. Install the Essentials tools.  For more information about the following instructions, see the instructions in [Essentials Hosted Install](installation/hosted/essentials/).
 
     - Configure calico-monitoring namespace and deploy Prometheus Operator by
-      applying the [operator.yaml]({{site.baseurl}}{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.6/operator.yaml) manifest.
+      applying the [operator.yaml](installation/hosted/essentials/1.6/operator.yaml) manifest.
 
     ```
     kubectl apply -f operator.yaml
@@ -71,7 +71,7 @@ This procedure assumes the following:
     $ kubectl get thirdpartyresources --watch
     ```
 
-    - Apply the [monitor-calico.yaml]({{site.baseurl}}{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.6/monitor-calico.yaml) manifest which will
+    - Apply the [monitor-calico.yaml](installation/hosted/essentials/1.6/monitor-calico.yaml) manifest which will
       install prometheus and alertmanager.
 
     ```
