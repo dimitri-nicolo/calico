@@ -121,6 +121,87 @@ Your changes should be applied in a few seconds by the prometheus-config-reloade
 container inside the prometheus pod launched by the prometheus-operator
 (usually named `prometheus-<your-prometheus-instance-name>`).
 
+#### Additional Alerting Rules
+
+The Alerting Rules installed by the _Essentials_ install manifest is a simple
+one that fires an alert when the rate of denied packets denied by a policy on
+a node from a particular Source IP exceeds a certain packets per second
+threshold. The _Prometheus_ query used for this (ignoring the threshold value
+20) is:
+
+```
+rate(calico_denied_packets[10s])
+```
+
+and this query will return results something along the lines of:
+
+```
+{endpoint="calico-metrics-port",instance="10.240.0.81:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-hn0kl",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.167.129"}	0.6
+{endpoint="calico-metrics-port",instance="10.240.0.84:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-97m3g",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.167.175"}	0.2
+{endpoint="calico-metrics-port",instance="10.240.0.84:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-97m3g",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.252.157"}	0.4
+{endpoint="calico-metrics-port",instance="10.240.0.81:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-hn0kl",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.167.175"}	1
+{endpoint="calico-metrics-port",instance="10.240.0.84:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-97m3g",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.167.129"}	0.4
+{endpoint="calico-metrics-port",instance="10.240.0.81:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-hn0kl",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.167.159"}	0.4
+{endpoint="calico-metrics-port",instance="10.240.0.81:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-hn0kl",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.252.175"}	0.4
+{endpoint="calico-metrics-port",instance="10.240.0.84:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-97m3g",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.252.175"}	0.6
+{endpoint="calico-metrics-port",instance="10.240.0.81:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-hn0kl",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.252.157"}	0.6
+{endpoint="calico-metrics-port",instance="10.240.0.84:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-97m3g",policy="profile/k8s_ns.test/0/deny",service="calico-node-metrics",srcIP="192.168.167.159"}	0.6
+```
+
+We can modify this query to find out all packets dropped by different policies
+on every node.
+
+```
+(sum by (instance,policy) (rate(calico_denied_packets[10s])))
+```
+
+This query will aggregate the results from all different Source IPs, and
+preserve the `policy` and `instance` labels. Note that the `instance` label
+represents the calico node's IP Address and `PrometheusReporterPort`. This
+query will return results like so:
+
+```
+{instance="10.240.0.84:9081",policy="profile/k8s_ns.test/0/deny"}	2
+{instance="10.240.0.81:9081",policy="profile/k8s_ns.test/0/deny"}	2.8
+```
+
+To include the pod name in these results, add the label `pod` to the labels
+listed in the `by` expression like so:
+
+```
+(sum by (instance,pod,policy) (rate(calico_denied_packets[10s])))
+```
+
+which will the following results:
+
+```
+{instance="10.240.0.84:9081",pod="calico-node-97m3g",policy="profile/k8s_ns.test/0/deny"}	2
+{instance="10.240.0.81:9081",pod="calico-node-hn0kl",policy="profile/k8s_ns.test/0/deny"}	2.8
+```
+
+An interesting use case is when a rogue _Pod_ is using tools such as _nmap_ to
+scan a subnet for open ports. To do this, we have to execute a query that will
+aggregate across all policies on all instances while preserving the source IP
+address. This can be done using this query:
+
+```
+(sum by (srcIP) (rate(calico_denied_packets[10s])))
+```
+
+which will return results, different source IP address:
+
+```
+{srcIP="192.168.167.159"}	1.0000000000000002
+{srcIP="192.168.167.129"}	1.2000000000000002
+{srcIP="192.168.252.175"}	1.4000000000000001
+{srcIP="192.168.167.175"}	0.4
+{srcIP="192.168.252.157"}	1.0000000000000002
+```
+
+To use these queries as Alerting Rules, follow the instructions defined in the
+[Creating a new Alerting Rule](#creating-a-new-alerting-rule) section and create
+a _ConfigMap_ with the appropriate query.
+
 #### Storage
 
 Prometheus stores metrics at regular intervals. If Prometheus is restarted and
