@@ -117,6 +117,8 @@ toc:
   section:
     - title: Policy Violation Monitoring & Reporting
       path: /reference/essentials/policy-violations
+    - title: Policy Audit Mode
+      path: /reference/essentials/policy-auditing
 - title: Deploying on Private Cloud
   section:
     - title: Calico Over Ethernet Fabrics

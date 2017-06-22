@@ -2,10 +2,9 @@
 title: calicoq
 ---
 
-The command line tool, `calicoq`, makes it easy to check your Calico security
-policies.
-See
-[Essentials Getting Started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) for
+`calicoq` is the Tigera Policy Query Utility.  It is a command line tool that 
+makes it easy to check your Calico security policies.
+See [Essentials Getting Started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) for
 how to download and install `calicoq`.
 
 ## Datastore configuration
