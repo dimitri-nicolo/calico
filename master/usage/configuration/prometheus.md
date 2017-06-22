@@ -2,6 +2,10 @@
 title: Configuring Prometheus
 ---
 
+Note: This document assumes that Prometheus and Alertmanager have been setup
+using _Prometheus Operator_ as described
+[here](../../getting-started/kubernetes/installation/hosted/essentials/).
+
 #### Updating Denied Packets Rules
 
 This is an example of how to modify the sample rule created by the sample manifest.
