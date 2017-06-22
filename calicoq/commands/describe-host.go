@@ -256,23 +256,34 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 				suffix := map[bool]string{true: " [untracked]", false: ""}[untracked]
 				for _, tier := range tiers {
 					log.Infof("Looking at tier %v", tier)
-					if tier.Name != "default" {
-						continue
-					}
 					for _, pol := range tier.OrderedPolicies { // pol is a PolKV
 						log.Infof("Looking at policy %v", pol.Key)
 						if pol.Value.DoNotTrack != untracked {
 							continue
 						}
 						if polIDs[pol.Key] {
-							order := "default"
+							tierText := ""
+							tierOrder := "default"
+
+							if tier.Order != nil {
+								tierOrder = fmt.Sprint(*tier.Order)
+							}
+							if tier.Name != "default" {
+								if !tier.Valid {
+									fmt.Printf("    WARNING: tier %#v metadata missing; packets will skip tier\n", tier.Name)
+									tierOrder = "missing"
+								}
+								tierText = fmt.Sprintf("Tier %#v (order %v) ", tier.Name, tierOrder)
+							}
+
+							polOrder := "default"
 							if pol.Value.Order != nil {
-								order = fmt.Sprint(*pol.Value.Order)
+								polOrder = fmt.Sprint(*pol.Value.Order)
 							}
 							if cbs.hideSelectors {
-								fmt.Printf("    Policy %#v (order %v)%v\n", pol.Key.Name, order, suffix)
+								fmt.Printf("    %sPolicy %#v (order %v)%v\n", tierText, pol.Key.Name, polOrder, suffix)
 							} else {
-								fmt.Printf("    Policy %#v (order %v; selector \"%v\")%v\n", pol.Key.Name, order, pol.Value.Selector, suffix)
+								fmt.Printf("    %sPolicy %#v (order %v; selector \"%v\")%v\n", tierText, pol.Key.Name, polOrder, pol.Value.Selector, suffix)
 							}
 						}
 					}

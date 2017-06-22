@@ -11,7 +11,8 @@ update-vendor:
 	glide up --strip-vendor
 
 ut:
-	./run-uts
+	echo "No UTs"
+#	./run-uts
 
 .PHONY: fv
 fv: bin/calicoq
