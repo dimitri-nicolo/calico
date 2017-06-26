@@ -1,9 +1,7 @@
 apiVersion: calico.k8s.io/v1
 kind: Policy
 metadata:
-  name: my-first-policy
-  labels:
-    sample-label: "true"
+  name: Tier1.my-first-policy
 spec:
   selector: role == 'database'
   ingress:

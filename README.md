@@ -2,23 +2,27 @@
 
 k8s styled API server to interact with Calico resources.
 
-To deploy, bring up k8s >=1.6
+To deploy, bring up k8s >=1.6, preferably 1.7 (for now beta.1)
 
 ## Sample installation steps with kubeadm
 ```
-1. kubeadm reset; rm -rf /var/etc
-2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0-alpha.1 kubeadm init --config kubeadm.yaml
-   Make sure to setup proxy-client certs.
+1. kubeadm reset; rm -rf /var/etcd
+2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0-beta.1 kubeadm init --config kubeadm.yaml
+   Make sure to setup proxy-client certs. Refer artifacts/misc/kubeadm.yaml
    Example: proxy-client-cert-file: "/etc/kubernetes/pki/front-proxy-client.crt"
             proxy-client-key-file: "/etc/kubernetes/pki/front-proxy-client.key"
 3. sudo cp /etc/kubernetes/admin.conf $HOME/
    sudo chown $(id -u):$(id -g) $HOME/admin.conf
    export KUBECONFIG=$HOME/admin.conf
 4. kubectl apply -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
-5.  kubectl taint nodes --all node-role.kubernetes.io/master-
+5. kubectl taint nodes --all node-role.kubernetes.io/master-
 6. kubectl create namespace calico
-7. kubectl create -f artifacts/example/
-8. kubectl create -f artifacts/policies/01-policy.yaml
+7. kubectl create -f artifacts/example/ <-- The set of manifests necessary to install Aggregated API Server
+   Prior to this, make sure you have checked out calico-k8sapiserver and have run make clean;make
+   This will create the docker image needed by the example/rc.yaml
+   Currently tested to be stable at 4ba7b5c1d394b5f94cfd5f2ef4f6d467cff4051b
+8. kubectl create -f artifacts/policies/policy.yaml <-- Creating a Policy
+9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
 .
 .
 .

@@ -1,0 +1,6 @@
+apiVersion: calico.k8s.io/v1
+kind: Tier
+metadata:
+  name: "Tier1"
+spec:
+  order: 100
