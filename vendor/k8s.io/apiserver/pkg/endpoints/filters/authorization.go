@@ -45,6 +45,7 @@ func WithAuthorization(handler http.Handler, requestContextMapper request.Reques
 			responsewriters.InternalError(w, req, err)
 			return
 		}
+		attributes.SetRawQuery(req.URL.RawQuery)
 		authorized, reason, err := a.Authorize(attributes)
 		if authorized {
 			handler.ServeHTTP(w, req)

@@ -61,6 +61,12 @@ type Attributes interface {
 
 	// GetPath returns the path of the request
 	GetPath() string
+
+	// GetRawQuery returns the raw query associated with the request
+	GetRawQuery() string
+
+	// SetRawQuery sets the raw query associated with the request
+	SetRawQuery(string)
 }
 
 // Authorizer makes an authorization decision based on information gained by making
@@ -93,6 +99,7 @@ type AttributesRecord struct {
 	Name            string
 	ResourceRequest bool
 	Path            string
+	RawQuery        string
 }
 
 func (a AttributesRecord) GetUser() user.Info {
@@ -137,4 +144,12 @@ func (a AttributesRecord) IsResourceRequest() bool {
 
 func (a AttributesRecord) GetPath() string {
 	return a.Path
+}
+
+func (a AttributesRecord) GetRawQuery() string {
+	return a.RawQuery
+}
+
+func (a AttributesRecord) SetRawQuery(rawQuery string) {
+	a.RawQuery = rawQuery
 }
