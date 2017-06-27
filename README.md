@@ -20,7 +20,8 @@ To deploy, bring up k8s >=1.6, preferably 1.7 (for now beta.1)
 7. kubectl create -f artifacts/example/ <-- The set of manifests necessary to install Aggregated API Server
    Prior to this, make sure you have checked out calico-k8sapiserver and have run make clean;make
    This will create the docker image needed by the example/rc.yaml
-   Currently tested to be stable at 4ba7b5c1d394b5f94cfd5f2ef4f6d467cff4051b
+   OR docker tar can be found in: https://drive.google.com/open?id=0B1QYlddBYM-ZWkoxVWNfcFJtbUU
+   docker load -i calico-k8sapiserver-latest.tar.xz
 8. kubectl create -f artifacts/policies/policy.yaml <-- Creating a Policy
 9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
 .
@@ -58,6 +59,11 @@ The curl command expects the client certificate to be presented in PEM format.
 Generate the PEM file using the command:
 `cat client.crt client.key > client.includesprivatekey.pem`
 
+OR
+
+use the helper script artifacts/misc/admin_conf_parser.py to generate /var/tmp/client.includesprivatekey.pem and use it in the
+argument to the curl.
+
 2. Find the API Server Certificate Authority info. This is used to verify the certificate response coming in from the Server.
 
 The CA can be found under /etc/kubernetes/pki/apiserver.crt
@@ -69,3 +75,18 @@ The CA can be found under /etc/kubernetes/pki/apiserver.crt
 The API Server address can be found from the above admin.conf file as well.
 
 The API Server command/flags used for running can be found under /etc/kubernetes/manifest/
+
+## API Examples
+```
+Follows native Kubernetes REST semantics.
+
+1. Listing Tiers: https://10.0.2.15:6443/apis/calico.k8s.io/v1/tiers
+2. Getting a Tier: https://10.0.2.15:6443/apis/calico.k8s.io/v1/tiers/Tier1
+3. Posting a Tier: -XPOST -d @tier.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/calico.k8s.io/v1/tiers
+4. Listing policies across namespaces: https://10.0.2.15:6443/apis/calico.k8s.io/v1/policies
+5. Listing policy from a given namespace: https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies 
+6. Watching policies in the default namespace: https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies?watch
+7. Selecting policies in the default namespace belonging to Tier1: https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies?labelSelector=tier==Tier1
+8. Select based on Tier and watch at the same time: https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies?labelSelector=tier==Tier1
+9. Create policies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies
+``` 
