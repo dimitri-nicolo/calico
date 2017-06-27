@@ -33,16 +33,24 @@ func NewCalicoAuthorizer(a authorizer.Authorizer) *CalicoAuthorizer {
 }
 
 func (c *CalicoAuthorizer) Authorize(requestAttributes authorizer.Attributes) (authorized bool, reason string, err error) {
-	/*authorized, reason, err = c.Authorizer.Authorize(requestAttributes)
-	if !authorized {
+	authorized = true
+	resourceType := requestAttributes.GetResource()
+	if resourceType == "policies" {
+		tierName := requestAttributes.GetSelectorQuery()
+		attrs := authorizer.AttributesRecord{}
+		attrs.APIGroup = requestAttributes.GetAPIGroup()
+		attrs.APIVersion = requestAttributes.GetAPIVersion()
+		attrs.Name = tierName
+		attrs.Resource = "tiers"
+		attrs.User = requestAttributes.GetUser()
+		attrs.Verb = requestAttributes.GetVerb()
+		authorized, reason, err = c.Authorizer.Authorize(attrs)
+		glog.Infof("For policy %s tier %s is getting authorized first and its a %s", requestAttributes.GetName(), tierName, authorized)
+	}
+	if authorized == false {
 		return authorized, reason, err
-	}*/
-
-	// Check whether the User/Group has the Auhtority
-	// 1. To Write Policies in the given Tier
-	// 2. To Read Policies from the given Tier
-	reqPath := requestAttributes.GetPath()
-	glog.Infof("Authorizer reqPath: %s", reqPath)
+	}
+	glog.Infof("Authorizer SelectorQuery: %s", requestAttributes.GetSelectorQuery())
 	glog.Infof("Authorizer APIGroup: %s", requestAttributes.GetAPIGroup())
 	glog.Infof("Authorizer APIVersion: %s", requestAttributes.GetAPIVersion())
 	glog.Infof("Authorizer Name: %s", requestAttributes.GetName())
