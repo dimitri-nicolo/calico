@@ -19,6 +19,7 @@ package filters
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/golang/glog"
 
@@ -45,7 +46,17 @@ func WithAuthorization(handler http.Handler, requestContextMapper request.Reques
 			responsewriters.InternalError(w, req, err)
 			return
 		}
-		attributes.SetRawQuery(req.URL.RawQuery)
+		attributes = WithSelectorQuery(attributes, req)
+		glog.Infof("Authorizer Path: %s", attributes.GetPath())
+		glog.Infof("Authorizer APIGroup: %s", attributes.GetAPIGroup())
+		glog.Infof("Authorizer APIVersion: %s", attributes.GetAPIVersion())
+		glog.Infof("Authorizer Name: %s", attributes.GetName())
+		glog.Infof("Authorizer Namespace: %s", attributes.GetNamespace())
+		glog.Infof("Authorizer Resource: %s", attributes.GetResource())
+		glog.Infof("Authorizer Subresource: %s", attributes.GetSubresource())
+		glog.Infof("Authorizer User: %s", attributes.GetUser())
+		glog.Infof("Authorizer Verb: %s", attributes.GetVerb())
+		glog.Infof("Authotizer Selector Query: %s", attributes.GetSelectorQuery())
 		authorized, reason, err := a.Authorize(attributes)
 		if authorized {
 			handler.ServeHTTP(w, req)
@@ -87,4 +98,32 @@ func GetAuthorizerAttributes(ctx request.Context) (authorizer.Attributes, error)
 	attribs.Name = requestInfo.Name
 
 	return &attribs, nil
+}
+
+func WithSelectorQuery(a authorizer.Attributes, req *http.Request) authorizer.Attributes {
+	attribs := authorizer.AttributesRecord{}
+	attribs.User = a.GetUser()
+	attribs.ResourceRequest = a.IsResourceRequest()
+	attribs.Path = a.GetPath()
+	attribs.Verb = a.GetVerb()
+
+	attribs.APIGroup = a.GetAPIGroup()
+	attribs.APIVersion = a.GetAPIVersion()
+	attribs.Resource = a.GetResource()
+	attribs.Subresource = a.GetSubresource()
+	attribs.Namespace = a.GetNamespace()
+	attribs.Name = a.GetName()
+
+	tierName := "default"
+	labelSelector := req.URL.Query()["labelSelector"]
+	if len(labelSelector) > 0 {
+		// TODO: Check for if its a Tier selector
+		tierSelector := labelSelector[0]
+		tierSplice := strings.Split(tierSelector, "==")
+		if len(tierSplice) > 1 {
+			tierName = tierSplice[1]
+		}
+	}
+	attribs.SelectorQuery = tierName
+	return &attribs
 }
