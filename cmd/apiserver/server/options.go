@@ -25,6 +25,7 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/client-go/pkg/api"
 
+	"github.com/tigera/calico-k8sapiserver/pkg/admission"
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
 	"github.com/tigera/calico-k8sapiserver/pkg/authorizer"
 )
@@ -60,6 +61,7 @@ func (o *CalicoServerOptions) Config() (apiserver.Config, error) {
 		return nil, err
 	}
 	genericConfig.Authorizer = authorizer.NewCalicoAuthorizer(genericConfig.Authorizer)
+	genericConfig.AdmissionControl = admission.NewCalicoAdmission(genericConfig.AdmissionControl, genericConfig.Authorizer)
 	config := apiserver.NewCalicoConfig(genericConfig)
 
 	return config, nil
