@@ -21,6 +21,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -39,8 +40,9 @@ type RESTStorageProvider struct{}
 func (p RESTStorageProvider) NewRESTStorage(
 	apiResourceConfigSource serverstorage.APIResourceConfigSource,
 	restOptionsGetter generic.RESTOptionsGetter,
+	authorizer authorizer.Authorizer,
 ) (*genericapiserver.APIGroupInfo, error) {
-	storage, err := p.v1Storage(apiResourceConfigSource, restOptionsGetter)
+	storage, err := p.v1Storage(apiResourceConfigSource, restOptionsGetter, authorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -58,10 +60,11 @@ func (p RESTStorageProvider) NewRESTStorage(
 func (p RESTStorageProvider) v1Storage(
 	apiResourceConfigSource serverstorage.APIResourceConfigSource,
 	restOptionsGetter generic.RESTOptionsGetter,
+	authorizer authorizer.Authorizer,
 ) (map[string]rest.Storage, error) {
 
 	storage := map[string]rest.Storage{}
-	storage["policies"] = calicopolicy.NewREST(restOptionsGetter)
+	storage["policies"] = calicopolicy.NewREST(restOptionsGetter, authorizer)
 	storage["tiers"] = calicotier.NewREST(restOptionsGetter, storage["policies"])
 	return storage, nil
 }

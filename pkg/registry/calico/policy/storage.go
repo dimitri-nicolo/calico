@@ -17,9 +17,14 @@ limitations under the License.
 package policy
 
 import (
+	"fmt"
+
+	"github.com/golang/glog"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
+	"k8s.io/apiserver/pkg/endpoints/filters"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
@@ -30,10 +35,11 @@ import (
 type REST struct {
 	*genericregistry.Store
 	legacyStore *legacyREST
+	authorizer  authorizer.Authorizer
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
+func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authorizer) *REST {
 	store := &genericregistry.Store{
 		Copier:      api.Scheme,
 		NewFunc:     func() runtime.Object { return &calico.Policy{} },
@@ -55,11 +61,31 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	}
 
 	legacyStore := NewLegacyREST(store)
-	return &REST{store, legacyStore}
+	return &REST{store, legacyStore, authorizer}
 }
 
 func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
-	err := r.legacyStore.create(obj)
+	policy := obj.(*calico.Policy)
+	glog.Infof("Object: %q", policy)
+	requestAttributes, _ := filters.GetAuthorizerAttributes(ctx)
+	glog.Infof("Authorizer SelectorQuery: %s", requestAttributes.GetSelectorQuery())
+	glog.Infof("Authorizer APIGroup: %s", requestAttributes.GetAPIGroup())
+	glog.Infof("Authorizer APIVersion: %s", requestAttributes.GetAPIVersion())
+	glog.Infof("Authorizer Name: %s", requestAttributes.GetName())
+	glog.Infof("Authorizer Namespace: %s", requestAttributes.GetNamespace())
+	glog.Infof("Authorizer Resource: %s", requestAttributes.GetResource())
+	glog.Infof("Authorizer Subresource: %s", requestAttributes.GetSubresource())
+	glog.Infof("Authorizer User: %s", requestAttributes.GetUser())
+	glog.Infof("Authorizer Verb: %s", requestAttributes.GetVerb())
+	authorized, reason, err := r.authorizer.Authorize(requestAttributes)
+	if err != nil {
+		return nil, err
+	}
+	if !authorized {
+		return nil, fmt.Errorf(reason)
+	}
+
+	err = r.legacyStore.create(obj)
 	if err != nil {
 		return nil, err
 	}

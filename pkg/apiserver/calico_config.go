@@ -73,7 +73,7 @@ func (c completedCalicoConfig) NewServer() (*CalicoAPIServer, error) {
 
 	glog.V(4).Infoln("Installing API group")
 	calicostore := calicorest.RESTStorageProvider{}
-	apiGroupInfo, err := calicostore.NewRESTStorage(c.apiResourceConfigSource, c.genericConfig.RESTOptionsGetter)
+	apiGroupInfo, err := calicostore.NewRESTStorage(c.apiResourceConfigSource, c.genericConfig.RESTOptionsGetter, c.genericConfig.Authorizer)
 
 	if err != nil {
 		return nil, err
