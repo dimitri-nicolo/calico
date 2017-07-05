@@ -2,12 +2,13 @@
 
 k8s styled API server to interact with Calico resources.
 
-To deploy, bring up k8s >=1.6, preferably 1.7 (for now beta.1)
+To deploy, bring up k8s >=1.6, preferably 1.7 since it comes with built-in aggregator
+Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
 
 ## Sample installation steps with kubeadm
 ```
 1. kubeadm reset; rm -rf /var/etcd
-2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0-beta.1 kubeadm init --config kubeadm.yaml
+2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0 kubeadm init --config kubeadm.yaml
    Make sure to setup proxy-client certs. Refer artifacts/misc/kubeadm.yaml
    Example: proxy-client-cert-file: "/etc/kubernetes/pki/front-proxy-client.crt"
             proxy-client-key-file: "/etc/kubernetes/pki/front-proxy-client.key"

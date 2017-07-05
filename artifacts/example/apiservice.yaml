@@ -5,7 +5,8 @@ metadata:
 spec:
   insecureSkipTLSVerify: true
   group: calico.k8s.io
-  priority: 200
+  versionPriority: 200
+  groupPriorityMinimum: 200
   service:
     name: api
     namespace: calico
