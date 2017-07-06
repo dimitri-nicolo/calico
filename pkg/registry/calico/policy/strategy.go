@@ -47,7 +47,7 @@ func (apiServerStrategy) NamespaceScoped() bool {
 
 func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
 	apiserver := obj.(*calico.Policy)
-	tier, _, _ := getTierPolicy(apiserver.Name)
+	tier, _ := getTierPolicy(apiserver.Name)
 	apiserver.SetLabels(map[string]string{"tier": tier})
 }
 

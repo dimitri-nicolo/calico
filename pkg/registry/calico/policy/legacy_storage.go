@@ -58,12 +58,12 @@ func NewLegacyREST(s *genericregistry.Store) *legacyREST {
 	return &legacyREST{s, c}
 }
 
-func getTierPolicy(policyName string) (string, string, error) {
+func getTierPolicy(policyName string) (string, string) {
 	policySlice := strings.Split(policyName, policyDelim)
 	if len(policySlice) < 2 {
-		return "", "", fmt.Errorf("error parsing policy name %s. expecting <tier>.<policy>", policyName)
+		return policySlice[0], "default"
 	}
-	return policySlice[0], policySlice[1], nil
+	return policySlice[0], policySlice[1]
 }
 
 // Create creates a new version of a resource.
@@ -74,15 +74,12 @@ func (l *legacyREST) create(obj runtime.Object) error {
 	libcalicoPolicy.Spec = policy.Spec
 	libcalicoPolicy.APIVersion = "v1"
 	libcalicoPolicy.Kind = "policy"
-	tierName, policyName, err := getTierPolicy(policy.Name)
-	if err != nil {
-		return err
-	}
+	tierName, policyName := getTierPolicy(policy.Name)
 	libcalicoPolicy.Metadata.Name = policyName
 	libcalicoPolicy.Metadata.Tier = tierName
 
 	pHandler := l.client.Policies()
-	_, err = pHandler.Create(libcalicoPolicy)
+	_, err := pHandler.Create(libcalicoPolicy)
 	if err != nil {
 		return err
 	}
@@ -91,10 +88,7 @@ func (l *legacyREST) create(obj runtime.Object) error {
 }
 
 func (l *legacyREST) get(name string) (*api.Policy, error) {
-	tierName, policyName, err := getTierPolicy(name)
-	if err != nil {
-		return nil, err
-	}
+	tierName, policyName := getTierPolicy(name)
 	libcalicoPolicyMD := api.PolicyMetadata{}
 	libcalicoPolicyMD.Name = policyName
 	libcalicoPolicyMD.Tier = tierName
@@ -115,10 +109,7 @@ func (l *legacyREST) delete(name string) (*api.Policy, error) {
 	if err != nil {
 		return nil, err
 	}
-	tierName, policyName, err := getTierPolicy(name)
-	if err != nil {
-		return nil, err
-	}
+	tierName, policyName := getTierPolicy(name)
 	libcalicoPolicyMD := api.PolicyMetadata{}
 	libcalicoPolicyMD.Name = policyName
 	libcalicoPolicyMD.Tier = tierName

@@ -21,13 +21,17 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
+	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/client-go/pkg/api"
 )
 
@@ -64,10 +68,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authori
 	return &REST{store, legacyStore, authorizer}
 }
 
-func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
-	policy := obj.(*calico.Policy)
-	glog.Infof("Object: %q", policy)
-	requestAttributes, _ := filters.GetAuthorizerAttributes(ctx)
+// TODO: Remove this. Its purely for debugging purposes.
+func logAuthorizerAttributes(requestAttributes authorizer.Attributes) {
 	glog.Infof("Authorizer SelectorQuery: %s", requestAttributes.GetSelectorQuery())
 	glog.Infof("Authorizer APIGroup: %s", requestAttributes.GetAPIGroup())
 	glog.Infof("Authorizer APIVersion: %s", requestAttributes.GetAPIVersion())
@@ -77,12 +79,67 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtim
 	glog.Infof("Authorizer Subresource: %s", requestAttributes.GetSubresource())
 	glog.Infof("Authorizer User: %s", requestAttributes.GetUser())
 	glog.Infof("Authorizer Verb: %s", requestAttributes.GetVerb())
-	authorized, reason, err := r.authorizer.Authorize(requestAttributes)
+}
+
+func getTierNamesFromSelector(labelSelector labels.Selector) []string {
+	tierNames := []string{}
+	if labelSelector != nil {
+		requirements, _ := labelSelector.Requirements()
+		for _, requirement := range requirements {
+			if requirement.Key() == "tier" {
+				tierNames = append(tierNames, requirement.Values().UnsortedList()...)
+
+			}
+		}
+	}
+	if len(tierNames) == 0 {
+		tierNames = append(tierNames, "default")
+	}
+	return tierNames
+}
+
+func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName string) error {
+	attributes, err := filters.GetAuthorizerAttributes(ctx)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	attrs := authorizer.AttributesRecord{}
+	attrs.APIGroup = attributes.GetAPIGroup()
+	attrs.APIVersion = attributes.GetAPIVersion()
+	attrs.Name = tierName
+	attrs.Resource = "tiers"
+	attrs.User = attributes.GetUser()
+	attrs.Verb = attributes.GetVerb()
+	glog.Infof("Tier Auth Attributes for the given Policy")
+	logAuthorizerAttributes(attrs)
+	authorized, reason, err := r.authorizer.Authorize(attrs)
+	if err != nil {
+		return err
 	}
 	if !authorized {
-		return nil, fmt.Errorf(reason)
+		return fmt.Errorf(reason)
+	}
+	return nil
+}
+
+func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
+	tierNames := getTierNamesFromSelector(options.LabelSelector)
+	for _, tierName := range tierNames {
+		err := r.authorizeTierOperation(ctx, tierName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return r.Store.List(ctx, options)
+}
+
+func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
+	policy := obj.(*calico.Policy)
+	tierName, _ := getTierPolicy(policy.Name)
+	err := r.authorizeTierOperation(ctx, tierName)
+	if err != nil {
+		return nil, err
 	}
 
 	err = r.legacyStore.create(obj)
@@ -101,8 +158,35 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtim
 	return obj, nil
 }
 
+func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo) (runtime.Object, bool, error) {
+	tierName, _ := getTierPolicy(name)
+	err := r.authorizeTierOperation(ctx, tierName)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return r.Store.Update(ctx, name, objInfo)
+}
+
+// Get retrieves the item from storage.
+func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+	tierName, _ := getTierPolicy(name)
+	err := r.authorizeTierOperation(ctx, tierName)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.Store.Get(ctx, name, options)
+}
+
 func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
-	_, err := r.legacyStore.delete(name)
+	tierName, _ := getTierPolicy(name)
+	err := r.authorizeTierOperation(ctx, tierName)
+	if err != nil {
+		return nil, false, err
+	}
+
+	_, err = r.legacyStore.delete(name)
 	if err != nil {
 		return nil, false, err
 	}
@@ -113,4 +197,16 @@ func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav
 		return nil, false, err
 	}
 	return obj, ok, err
+}
+
+func (r *REST) Watch(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+	tierNames := getTierNamesFromSelector(options.LabelSelector)
+	for _, tierName := range tierNames {
+		err := r.authorizeTierOperation(ctx, tierName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return r.Store.Watch(ctx, options)
 }
