@@ -61,9 +61,6 @@ type Attributes interface {
 
 	// GetPath returns the path of the request
 	GetPath() string
-
-	// GetSelectorQuery returns the selector query associated with the request
-	GetSelectorQuery() string
 }
 
 // Authorizer makes an authorization decision based on information gained by making
@@ -96,7 +93,6 @@ type AttributesRecord struct {
 	Name            string
 	ResourceRequest bool
 	Path            string
-	SelectorQuery   string
 }
 
 func (a AttributesRecord) GetUser() user.Info {
@@ -141,8 +137,4 @@ func (a AttributesRecord) IsResourceRequest() bool {
 
 func (a AttributesRecord) GetPath() string {
 	return a.Path
-}
-
-func (a AttributesRecord) GetSelectorQuery() string {
-	return a.SelectorQuery
 }

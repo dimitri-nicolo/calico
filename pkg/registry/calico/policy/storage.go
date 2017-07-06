@@ -70,7 +70,6 @@ func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authori
 
 // TODO: Remove this. Its purely for debugging purposes.
 func logAuthorizerAttributes(requestAttributes authorizer.Attributes) {
-	glog.Infof("Authorizer SelectorQuery: %s", requestAttributes.GetSelectorQuery())
 	glog.Infof("Authorizer APIGroup: %s", requestAttributes.GetAPIGroup())
 	glog.Infof("Authorizer APIVersion: %s", requestAttributes.GetAPIVersion())
 	glog.Infof("Authorizer Name: %s", requestAttributes.GetName())
