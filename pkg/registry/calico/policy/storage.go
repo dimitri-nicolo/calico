@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
@@ -80,20 +81,20 @@ func logAuthorizerAttributes(requestAttributes authorizer.Attributes) {
 	glog.Infof("Authorizer Verb: %s", requestAttributes.GetVerb())
 }
 
-func getTierNamesFromSelector(labelSelector labels.Selector) []string {
+func getTierNamesFromSelector(options *metainternalversion.ListOptions) []string {
 	tierNames := []string{}
-	if labelSelector != nil {
-		requirements, _ := labelSelector.Requirements()
-		for _, requirement := range requirements {
-			if requirement.Key() == "tier" {
-				tierNames = append(tierNames, requirement.Values().UnsortedList()...)
-
-			}
+	if options.LabelSelector == nil {
+		options.LabelSelector = labels.NewSelector()
+		requirement, _ := labels.NewRequirement("tier", selection.DoubleEquals, []string{"default"})
+		options.LabelSelector = options.LabelSelector.Add(*requirement)
+	}
+	requirements, _ := options.LabelSelector.Requirements()
+	for _, requirement := range requirements {
+		if requirement.Key() == "tier" {
+			tierNames = append(tierNames, requirement.Values().UnsortedList()...)
 		}
 	}
-	if len(tierNames) == 0 {
-		tierNames = append(tierNames, "default")
-	}
+
 	return tierNames
 }
 
@@ -122,7 +123,7 @@ func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName st
 }
 
 func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	tierNames := getTierNamesFromSelector(options.LabelSelector)
+	tierNames := getTierNamesFromSelector(options)
 	for _, tierName := range tierNames {
 		err := r.authorizeTierOperation(ctx, tierName)
 		if err != nil {
@@ -199,7 +200,7 @@ func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav
 }
 
 func (r *REST) Watch(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
-	tierNames := getTierNamesFromSelector(options.LabelSelector)
+	tierNames := getTierNamesFromSelector(options)
 	for _, tierName := range tierNames {
 		err := r.authorizeTierOperation(ctx, tierName)
 		if err != nil {

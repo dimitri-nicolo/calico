@@ -61,7 +61,7 @@ func NewLegacyREST(s *genericregistry.Store) *legacyREST {
 func getTierPolicy(policyName string) (string, string) {
 	policySlice := strings.Split(policyName, policyDelim)
 	if len(policySlice) < 2 {
-		return policySlice[0], "default"
+		return "default", policySlice[0]
 	}
 	return policySlice[0], policySlice[1]
 }
