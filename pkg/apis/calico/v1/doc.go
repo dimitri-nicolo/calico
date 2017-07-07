@@ -18,5 +18,5 @@ limitations under the License.
 // +k8s:conversion-gen=github.com/tigera/calico-k8sapiserver/pkg/apis/calico
 
 // Package v1 is the v1 version of the API.
-// +groupName=calico.k8s.io
+// +groupName=calico.tigera.io
 package v1

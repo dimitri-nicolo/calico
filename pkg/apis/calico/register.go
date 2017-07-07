@@ -22,7 +22,7 @@ import (
 )
 
 // GroupName is the group name use in this package
-const GroupName = "calico.k8s.io"
+const GroupName = "calico.tigera.io"
 
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: runtime.APIVersionInternal}

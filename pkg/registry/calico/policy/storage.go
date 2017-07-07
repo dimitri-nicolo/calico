@@ -53,7 +53,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authori
 			return obj.(*calico.Policy).Name, nil
 		},
 		PredicateFunc:     MatchPolicy,
-		QualifiedResource: api.Resource("policies"),
+		QualifiedResource: calico.Resource("policies"),
 
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
@@ -136,6 +136,7 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 
 func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
 	policy := obj.(*calico.Policy)
+	// Is Tier prepended. If not prepend default?
 	tierName, _ := getTierPolicy(policy.Name)
 	err := r.authorizeTierOperation(ctx, tierName)
 	if err != nil {

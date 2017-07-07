@@ -17,5 +17,5 @@ limitations under the License.
 // +k8s:deepcopy-gen=package,register
 
 // Package api is the internal version of the API.
-// +groupName=calico.k8s.io
+// +groupName=calico.tigera.io
 package calico
