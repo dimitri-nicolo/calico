@@ -30,7 +30,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const defaultEtcdPathPrefix = "/calico/v1"
+const defaultEtcdPathPrefix = ""
 
 // NewCommandStartMaster provides a CLI handler for 'start master' command
 func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {

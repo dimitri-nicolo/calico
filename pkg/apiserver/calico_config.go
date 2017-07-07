@@ -23,8 +23,6 @@ import (
 	"k8s.io/apiserver/pkg/server/storage"
 )
 
-const defaultEtcdPathPrefix = "/calico/v1"
-
 // calicoConfig contains a generic API server Config along with config specific to
 // the calico API server.
 type calicoConfig struct {
