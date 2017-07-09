@@ -2,7 +2,8 @@
 
 k8s styled API server to interact with Calico resources.
 
-To deploy, bring up k8s >=1.6, preferably 1.7 since it comes with built-in aggregator
+To deploy, bring up k8s >=1.6, preferably 1.7 since it comes with built-in aggregator.
+
 Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
 
 ## Sample installation steps with kubeadm
@@ -81,13 +82,13 @@ The API Server command/flags used for running can be found under /etc/kubernetes
 ```
 Follows native Kubernetes REST semantics.
 
-1. Listing Tiers: https://10.0.2.15:6443/apis/calico.k8s.io/v1/tiers
-2. Getting a Tier: https://10.0.2.15:6443/apis/calico.k8s.io/v1/tiers/Tier1
-3. Posting a Tier: -XPOST -d @tier.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/calico.k8s.io/v1/tiers
-4. Listing policies across namespaces: https://10.0.2.15:6443/apis/calico.k8s.io/v1/policies
-5. Listing policy from a given namespace: https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies 
-6. Watching policies in the default namespace: https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies?watch
-7. Selecting policies in the default namespace belonging to Tier1: https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies?labelSelector=tier==Tier1
-8. Select based on Tier and watch at the same time: https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies?labelSelector=tier==Tier1
-9. Create policies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/calico.k8s.io/v1/namespaces/default/policies
+1. Listing Tiers: https://10.0.2.15:6443/apis/calico.tigera.io/v1/tiers
+2. Getting a Tier: https://10.0.2.15:6443/apis/calico.tigera.io/v1/tiers/Tier1
+3. Posting a Tier: -XPOST -d @tier.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/calico.tigera.io/v1/tiers
+4. Listing policies across namespaces: https://10.0.2.15:6443/apis/calico.tigera.io/v1/policies
+5. Listing policy from a given namespace: https://10.0.2.15:6443/apis/calico.tigera.io/v1/namespaces/default/policies 
+6. Watching policies in the default namespace: https://10.0.2.15:6443/apis/calico.tigera.io/v1/namespaces/default/policies?watch
+7. Selecting policies in the default namespace belonging to Tier1: https://10.0.2.15:6443/apis/calico.tigera.io/v1/namespaces/default/policies?labelSelector=tier==Tier1
+8. Select based on Tier and watch at the same time: https://10.0.2.15:6443/apis/calico.tigera.io/v1/namespaces/default/policies?labelSelector=tier==Tier1
+9. Create policies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/calico.tigera.io/v1/namespaces/default/policies
 ``` 

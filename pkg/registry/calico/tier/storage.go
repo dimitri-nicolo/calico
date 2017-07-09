@@ -46,7 +46,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter, policyStore rest.Storage) *RE
 			return obj.(*calico.Tier).Name, nil
 		},
 		PredicateFunc:     MatchTier,
-		QualifiedResource: api.Resource("tiers"),
+		QualifiedResource: calico.Resource("tiers"),
 
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
