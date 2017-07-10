@@ -31,6 +31,16 @@ Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
 .
 ```
 
+## Cleanup and Reset
+```
+1. kubectl delete -f ~/go/src/github.com/tigera/calico-k8sapiserver/artifacts/example/
+2. kubectl delete -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+3. rm -rf /var/etcd/
+4. Reload/Rebuild the new latest docker image for calico-k8sapiserver
+5. kubectl apply -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+6. kubectl create -f ~/go/src/github.com/tigera/calico-k8sapiserver/artifacts/example/
+```
+
 ## Cluster Access/Authentication
 
 Kubernetes natively supports various Authentication strategies like:
