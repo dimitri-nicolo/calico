@@ -13,7 +13,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/gavv/monotime"
 	"github.com/mipearson/rfw"
 
 	"github.com/projectcalico/felix/jitter"
@@ -22,8 +21,11 @@ import (
 )
 
 // TODO(doublek): Need to hook these into configuration
-const DefaultAgeTimeout = time.Duration(10) * time.Second
-const ExportingInterval = time.Duration(1) * time.Second
+const (
+	DefaultAgeTimeout            = time.Duration(10) * time.Second
+	DefaultInitialReportingDelay = time.Duration(5) * time.Second
+	DefaultExportingInterval     = time.Duration(1) * time.Second
+)
 
 type Config struct {
 	StatsDumpFilePath string
@@ -47,7 +49,7 @@ type Collector struct {
 	nfIngressDoneC chan struct{}
 	nfEgressDoneC  chan struct{}
 	epStats        map[Tuple]*Data
-	ticker *jitter.Ticker
+	ticker         *jitter.Ticker
 	sigChan        chan os.Signal
 	config         *Config
 	dumpLog        *log.Logger
@@ -62,7 +64,7 @@ func NewCollector(lm epLookup, rm *ReporterManager, config *Config) *Collector {
 		nfIngressDoneC: make(chan struct{}),
 		nfEgressDoneC:  make(chan struct{}),
 		epStats:        make(map[Tuple]*Data),
-		ticker: jitter.NewTicker(ExportingInterval, ExportingInterval/10),
+		ticker:         jitter.NewTicker(DefaultExportingInterval, DefaultExportingInterval/10),
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
 		dumpLog:        log.New(),
@@ -158,7 +160,15 @@ func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reverse
 	if tp != nil {
 		err := data.AddRuleTracePoint(tp, dir)
 		if err != nil {
-			c.reportData(data)
+			// When a RuleTracePoint is replaced, we have to do some housekeeping before
+			// we can replace the RuleTracePoint, the first of which is to remove
+			// references from the reporter, which is done by calling expireMetric,
+			// followed by resetting counters.
+			if data.DurationSinceCreate() > DefaultInitialReportingDelay {
+				// We only need to expire metric entries that've probably been reported
+				// in the first place.
+				c.expireMetric(data)
+			}
 			data.ResetCounters()
 			data.ReplaceRuleTracePoint(tp, dir)
 		}
@@ -166,8 +176,7 @@ func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reverse
 	c.epStats[tuple] = data
 }
 
-func (c *Collector) expireEntry(data *Data) {
-	tuple := data.Tuple
+func (c *Collector) expireMetric(data *Data) {
 	if data.EgressRuleTrace.Action() == DenyAction {
 		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.EgressRuleTrace)
 		c.reporterMgr.ExpireChan <- mu
@@ -176,7 +185,11 @@ func (c *Collector) expireEntry(data *Data) {
 		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.IngressRuleTrace)
 		c.reporterMgr.ExpireChan <- mu
 	}
-	delete(c.epStats, tuple)
+}
+
+func (c *Collector) expireData(data *Data) {
+	c.expireMetric(data)
+	delete(c.epStats, data.Tuple)
 }
 
 func (c *Collector) checkEpStats() {
@@ -184,17 +197,18 @@ func (c *Collector) checkEpStats() {
 	// - report metrics
 	// - check age and expire the entry if needed.
 	for _, data := range c.epStats {
-		c.reportData(data)
-		if monotime.Since(data.UpdatedAt()) >= DefaultAgeTimeout {
-			c.expireEntry(data)
+		if data.IsDirty() && data.DurationSinceCreate() >= DefaultInitialReportingDelay {
+			// We report Metrics only after an initial delay to allow any policy/rule
+			// changes to show up as part of data.
+			c.reportMetrics(data)
+		}
+		if data.DurationSinceLastUpdate() >= DefaultAgeTimeout {
+			c.expireData(data)
 		}
 	}
 }
 
-func (c *Collector) reportData(data *Data) {
-	if !data.IsDirty() {
-		return
-	}
+func (c *Collector) reportMetrics(data *Data) {
 	if data.EgressRuleTrace.Action() == DenyAction && data.EgressRuleTrace.IsDirty() {
 		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.EgressRuleTrace)
 		c.reporterMgr.ReportChan <- mu
