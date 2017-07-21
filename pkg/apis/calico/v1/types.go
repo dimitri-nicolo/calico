@@ -59,3 +59,39 @@ type Tier struct {
 
 	Spec calico.TierSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
+
+// EndpointList is a list of Policy objects.
+type EndpointList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []Endpoint `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient=true
+// +nonNamespaced=true
+
+type Endpoint struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.HostEndpointSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}
+
+// NodeList is a list of Policy objects.
+type NodeList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []Node `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient=true
+// +nonNamespaced=true
+
+type Node struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.NodeSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}

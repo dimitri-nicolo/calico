@@ -53,6 +53,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&PolicyList{},
 		&Tier{},
 		&TierList{},
+		&Endpoint{},
+		&EndpointList{},
+		&Node{},
+		&NodeList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	scheme.AddKnownTypes(schema.GroupVersion{Version: "v1"}, &metav1.Status{})
