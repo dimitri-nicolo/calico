@@ -82,3 +82,21 @@ type Endpoint struct {
 
 	Spec calico.WorkloadEndpointSpec
 }
+
+// NodeList is a list of Policy objects.
+type NodeList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []Node
+}
+
+// +genclient=true
+// +nonNamespaced=true
+
+type Node struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.NodeSpec
+}

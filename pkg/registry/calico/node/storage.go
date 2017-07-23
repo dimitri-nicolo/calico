@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package endpoint
+package node
 
 import (
 	"fmt"
@@ -45,13 +45,13 @@ type REST struct {
 func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authorizer) *REST {
 	store := &genericregistry.Store{
 		Copier:      api.Scheme,
-		NewFunc:     func() runtime.Object { return &calico.Endpoint{} },
-		NewListFunc: func() runtime.Object { return &calico.EndpointList{} },
+		NewFunc:     func() runtime.Object { return &calico.Node{} },
+		NewListFunc: func() runtime.Object { return &calico.NodeList{} },
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
-			return obj.(*calico.Endpoint).WorkloadEndpointMetadata.Name, nil
+			return obj.(*calico.Node).Name, nil
 		},
-		PredicateFunc:     MatchEndpoint,
-		QualifiedResource: calico.Resource("endpoints"),
+		PredicateFunc:     MatchNode,
+		QualifiedResource: calico.Resource("nodes"),
 
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
@@ -68,48 +68,33 @@ func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authori
 }
 
 func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	wpMD := libcalico.WorkloadEndpointMetadata{}
+	nMD := libcalico.NodeMetadata{}
 	if options != nil && options.LabelSelector != nil {
 		reqs, _ := options.LabelSelector.Requirements()
 		for _, req := range reqs {
-			if req.Key() == "node" {
-				wpMD.Node, _ = req.Values().PopAny()
-			}
-			if req.Key() == "orchestrator" {
-				wpMD.Orchestrator, _ = req.Values().PopAny()
-			}
-			if req.Key() == "workload" {
-				wpMD.Workload, _ = req.Values().PopAny()
-			}
-			if req.Key() == "iface" {
-				wpMD.Name, _ = req.Values().PopAny()
+			if req.Key() == "name" {
+				nMD.Name, _ = req.Values().PopAny()
 			}
 		}
 	}
-	endpoints, err := r.legacyStore.list(wpMD)
+	nodes, err := r.legacyStore.list(nMD)
 	if err != nil {
 		return nil, err
 	}
 
-	apiEndpoints := &calico.EndpointList{}
-	apiEndpoints.APIVersion = "calico.tigera.io/v1"
-	apiEndpoints.Kind = "List"
-	for _, endpoint := range endpoints.Items {
-		ae := calico.Endpoint{}
+	apiNodes := &calico.NodeList{}
+	apiNodes.APIVersion = "calico.tigera.io/v1"
+	apiNodes.Kind = "List"
+	for _, node := range nodes.Items {
+		ae := calico.Node{}
 		ae.APIVersion = "calico.tigera.io/v1"
-		ae.Kind = "Endpoint"
-		epMD := endpoint.Metadata
-		ae.WorkloadEndpointMetadata.Name = epMD.Name
-		ae.ObjectMeta.Name = epMD.Name
-		ae.Workload = epMD.Workload
-		ae.Orchestrator = epMD.Orchestrator
-		ae.Node = epMD.Node
-		ae.ActiveInstanceID = epMD.ActiveInstanceID
-		ae.WorkloadEndpointMetadata.Labels = epMD.Labels
-		ae.Spec = endpoint.Spec
-		apiEndpoints.Items = append(apiEndpoints.Items, ae)
+		ae.Kind = "Node"
+		nMD := node.Metadata
+		ae.Name = nMD.Name
+		ae.Spec = node.Spec
+		apiNodes.Items = append(apiNodes.Items, ae)
 	}
-	return apiEndpoints, nil
+	return apiNodes, nil
 }
 
 func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
@@ -122,7 +107,23 @@ func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.U
 
 // Get retrieves the item from storage.
 func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-	return nil, fmt.Errorf("Get not supported")
+	nMD := libcalico.NodeMetadata{}
+	nMD.Name = name
+
+	nodes, err := r.legacyStore.list(nMD)
+	if err != nil {
+		return nil, err
+	}
+	node := nodes.Items[0]
+
+	apiNode := &calico.Node{}
+	apiNode.APIVersion = "calico.tigera.io/v1"
+	apiNode.Kind = "Node"
+	apiNode.Kind = "Node"
+	apiNode.Name = name
+	apiNode.Spec = node.Spec
+
+	return apiNode, nil
 }
 
 func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav1.DeleteOptions) (runtime.Object, bool, error) {

@@ -52,7 +52,7 @@ func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *r
 	if err := announced.NewGroupMetaFactory(
 		&announced.GroupMetaFactoryArgs{
 			GroupName:                  calico.GroupName,
-			RootScopedKinds:            sets.NewString("Tier", "Endpoint"),
+			RootScopedKinds:            sets.NewString("Tier", "Endpoint", "Node"),
 			VersionPreferenceOrder:     []string{v1.SchemeGroupVersion.Version},
 			ImportPrefix:               "github.com/tigera/calico-k8sapiserver/pkg/apis/calico",
 			AddInternalObjectsToScheme: calico.AddToScheme,

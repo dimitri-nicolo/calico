@@ -20,6 +20,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
 	calicoendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/endpoint"
+	caliconode "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/node"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
 
@@ -69,6 +70,8 @@ func (p RESTStorageProvider) v1Storage(
 	storage["policies"] = calicopolicy.NewREST(restOptionsGetter, authorizer)
 	storage["tiers"] = calicotier.NewREST(restOptionsGetter, storage["policies"])
 	storage["endpoints"] = calicoendpoint.NewREST(restOptionsGetter, authorizer)
+	storage["nodes"] = caliconode.NewREST(restOptionsGetter, authorizer)
+
 	return storage, nil
 }
 

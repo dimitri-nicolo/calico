@@ -39,6 +39,8 @@ func RegisterDeepCopies(scheme *runtime.Scheme) error {
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_Endpoint, InType: reflect.TypeOf(&Endpoint{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_EndpointList, InType: reflect.TypeOf(&EndpointList{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_EndpointMeta, InType: reflect.TypeOf(&EndpointMeta{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_Node, InType: reflect.TypeOf(&Node{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_NodeList, InType: reflect.TypeOf(&NodeList{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_Policy, InType: reflect.TypeOf(&Policy{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_PolicyList, InType: reflect.TypeOf(&PolicyList{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_PolicyStatus, InType: reflect.TypeOf(&PolicyStatus{})},
@@ -96,6 +98,43 @@ func DeepCopy_v1_EndpointMeta(in interface{}, out interface{}, c *conversion.Clo
 			return err
 		} else {
 			out.WorkloadEndpointMetadata = *newVal.(*api.WorkloadEndpointMetadata)
+		}
+		return nil
+	}
+}
+
+func DeepCopy_v1_Node(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*Node)
+		out := out.(*Node)
+		*out = *in
+		if newVal, err := c.DeepCopy(&in.ObjectMeta); err != nil {
+			return err
+		} else {
+			out.ObjectMeta = *newVal.(*meta_v1.ObjectMeta)
+		}
+		if newVal, err := c.DeepCopy(&in.Spec); err != nil {
+			return err
+		} else {
+			out.Spec = *newVal.(*api.NodeSpec)
+		}
+		return nil
+	}
+}
+
+func DeepCopy_v1_NodeList(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*NodeList)
+		out := out.(*NodeList)
+		*out = *in
+		if in.Items != nil {
+			in, out := &in.Items, &out.Items
+			*out = make([]Node, len(*in))
+			for i := range *in {
+				if err := DeepCopy_v1_Node(&(*in)[i], &(*out)[i], c); err != nil {
+					return err
+				}
+			}
 		}
 		return nil
 	}
