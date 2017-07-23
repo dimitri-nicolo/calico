@@ -68,30 +68,17 @@ type EndpointList struct {
 	Items []Endpoint `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+type EndpointMeta struct {
+	metav1.ObjectMeta
+	calico.WorkloadEndpointMetadata
+}
+
 // +genclient=true
 // +nonNamespaced=true
 
 type Endpoint struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	Spec calico.HostEndpointSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-}
-
-// NodeList is a list of Policy objects.
-type NodeList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	EndpointMeta    `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Items []Node `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
-// +genclient=true
-// +nonNamespaced=true
-
-type Node struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	Spec calico.NodeSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec calico.WorkloadEndpointSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }

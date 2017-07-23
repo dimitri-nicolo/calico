@@ -54,8 +54,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&TierList{},
 		&Endpoint{},
 		&EndpointList{},
-		&Node{},
-		&NodeList{},
 	)
 	return nil
 }

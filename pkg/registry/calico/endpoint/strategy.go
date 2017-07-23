@@ -46,15 +46,7 @@ func (apiServerStrategy) NamespaceScoped() bool {
 }
 
 func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
-	apiserver := obj.(*calico.Endpoint)
-	epLabels, err := getEndpointLabels(apiserver.Name)
-	if err != nil {
-		panic(err)
-	}
-	apiserver.SetLabels(map[string]string{
-		"node":         epLabels.nodeName,
-		"orchestrator": epLabels.orchestrator,
-	})
+
 }
 
 func (apiServerStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {

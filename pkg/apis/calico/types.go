@@ -68,30 +68,17 @@ type EndpointList struct {
 	Items []Endpoint
 }
 
+type EndpointMeta struct {
+	metav1.ObjectMeta
+	calico.WorkloadEndpointMetadata
+}
+
 // +genclient=true
 // +nonNamespaced=true
 
 type Endpoint struct {
 	metav1.TypeMeta
-	metav1.ObjectMeta
+	EndpointMeta
 
-	Spec calico.HostEndpointSpec
-}
-
-// NodeList is a list of Policy objects.
-type NodeList struct {
-	metav1.TypeMeta
-	metav1.ListMeta
-
-	Items []Node
-}
-
-// +genclient=true
-// +nonNamespaced=true
-
-type Node struct {
-	metav1.TypeMeta
-	metav1.ObjectMeta
-
-	Spec calico.NodeSpec
+	Spec calico.WorkloadEndpointSpec
 }

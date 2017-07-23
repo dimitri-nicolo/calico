@@ -17,9 +17,7 @@ limitations under the License.
 package endpoint
 
 import (
-	"fmt"
 	"os"
-	"strings"
 
 	"github.com/golang/glog"
 	"github.com/projectcalico/libcalico-go/lib/api"
@@ -56,44 +54,11 @@ func NewLegacyREST(s *genericregistry.Store) *legacyREST {
 	return &legacyREST{s, c}
 }
 
-type endpointLabels struct {
-	nodeName     string
-	orchestrator string
-	namespace    string
-	name         string
-	iface        string
-}
-
-func getEndpointLabels(epName string) (*endpointLabels, error) {
-	epSlice := strings.Split(epName, endpointDelim)
-	if len(epSlice) < 5 {
-		return nil, fmt.Errorf("Endpoint name not formatted")
-	}
-	return &endpointLabels{
-		epSlice[0],
-		epSlice[1],
-		epSlice[2],
-		epSlice[3],
-		epSlice[4],
-	}, nil
-}
-
-func (l *legacyREST) get(name string) (*api.HostEndpointList, error) {
-	epLabels, err := getEndpointLabels(name)
+func (l *legacyREST) list(wpMD api.WorkloadEndpointMetadata) (*api.WorkloadEndpointList, error) {
+	eHandler := l.client.WorkloadEndpoints()
+	endpoints, err := eHandler.List(wpMD)
 	if err != nil {
 		return nil, err
-	}
-	endpointMD := api.HostEndpointMetadata{}
-	endpointMD.Name = epLabels.name
-	endpointMD.Node = epLabels.nodeName
-
-	eHandler := l.client.HostEndpoints()
-	endpoints, err := eHandler.List(endpointMD)
-	if err != nil {
-		return nil, err
-	}
-	if len(endpoints.Items) < 1 {
-		return nil, fmt.Errorf("endpoints %s not found", name)
 	}
 	return endpoints, nil
 }

@@ -19,8 +19,10 @@ package rest
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	calicoendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/endpoint"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
+
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -66,6 +68,7 @@ func (p RESTStorageProvider) v1Storage(
 	storage := map[string]rest.Storage{}
 	storage["policies"] = calicopolicy.NewREST(restOptionsGetter, authorizer)
 	storage["tiers"] = calicotier.NewREST(restOptionsGetter, storage["policies"])
+	storage["endpoints"] = calicoendpoint.NewREST(restOptionsGetter, authorizer)
 	return storage, nil
 }
 

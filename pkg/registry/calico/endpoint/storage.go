@@ -19,6 +19,8 @@ package endpoint
 import (
 	"fmt"
 
+	libcalico "github.com/projectcalico/libcalico-go/lib/api"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +48,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authori
 		NewFunc:     func() runtime.Object { return &calico.Endpoint{} },
 		NewListFunc: func() runtime.Object { return &calico.EndpointList{} },
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
-			return obj.(*calico.Endpoint).Name, nil
+			return obj.(*calico.Endpoint).WorkloadEndpointMetadata.Name, nil
 		},
 		PredicateFunc:     MatchEndpoint,
 		QualifiedResource: calico.Resource("endpoints"),
@@ -66,16 +68,45 @@ func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authori
 }
 
 func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
+	wpMD := libcalico.WorkloadEndpointMetadata{}
 	reqs, _ := options.LabelSelector.Requirements()
-	nodeName := ""
 	for _, req := range reqs {
 		if req.Key() == "node" {
-			nodeName, _ := req.Values().PopAny()
+			wpMD.Node, _ = req.Values().PopAny()
+		}
+		if req.Key() == "orchestrator" {
+			wpMD.Orchestrator, _ = req.Values().PopAny()
+		}
+		if req.Key() == "workload" {
+			wpMD.Workload, _ = req.Values().PopAny()
+		}
+		if req.Key() == "iface" {
+			wpMD.Name, _ = req.Values().PopAny()
 		}
 	}
-	endpoints := r.legacyStore.get(name)
+	endpoints, err := r.legacyStore.list(wpMD)
+	if err != nil {
+		return nil, err
+	}
 
-	return r.Store.List(ctx, options)
+	apiEndpoints := &calico.EndpointList{}
+	apiEndpoints.APIVersion = "calico.tigera.io/v1"
+	apiEndpoints.Kind = "List"
+	for _, endpoint := range endpoints.Items {
+		ae := calico.Endpoint{}
+		ae.APIVersion = "calico.tigera.io/v1"
+		ae.Kind = "Endpoint"
+		epMD := endpoint.Metadata
+		ae.WorkloadEndpointMetadata.Name = epMD.Name
+		ae.Workload = epMD.Workload
+		ae.Orchestrator = epMD.Orchestrator
+		ae.Node = epMD.Node
+		ae.ActiveInstanceID = epMD.ActiveInstanceID
+		ae.WorkloadEndpointMetadata.Labels = epMD.Labels
+		ae.Spec = endpoint.Spec
+		apiEndpoints.Items = append(apiEndpoints.Items, ae)
+	}
+	return apiEndpoints, nil
 }
 
 func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
@@ -88,9 +119,7 @@ func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.U
 
 // Get retrieves the item from storage.
 func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-	r.legacyStore.get(name, options)
-
-	return r.Store.Get(ctx, name, options)
+	return nil, fmt.Errorf("Get not supported")
 }
 
 func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav1.DeleteOptions) (runtime.Object, bool, error) {

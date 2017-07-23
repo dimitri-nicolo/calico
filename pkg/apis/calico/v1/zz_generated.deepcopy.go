@@ -36,12 +36,69 @@ func init() {
 // to allow building arbitrary schemes.
 func RegisterDeepCopies(scheme *runtime.Scheme) error {
 	return scheme.AddGeneratedDeepCopyFuncs(
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_Endpoint, InType: reflect.TypeOf(&Endpoint{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_EndpointList, InType: reflect.TypeOf(&EndpointList{})},
+		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_EndpointMeta, InType: reflect.TypeOf(&EndpointMeta{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_Policy, InType: reflect.TypeOf(&Policy{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_PolicyList, InType: reflect.TypeOf(&PolicyList{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_PolicyStatus, InType: reflect.TypeOf(&PolicyStatus{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_Tier, InType: reflect.TypeOf(&Tier{})},
 		conversion.GeneratedDeepCopyFunc{Fn: DeepCopy_v1_TierList, InType: reflect.TypeOf(&TierList{})},
 	)
+}
+
+func DeepCopy_v1_Endpoint(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*Endpoint)
+		out := out.(*Endpoint)
+		*out = *in
+		if err := DeepCopy_v1_EndpointMeta(&in.EndpointMeta, &out.EndpointMeta, c); err != nil {
+			return err
+		}
+		if newVal, err := c.DeepCopy(&in.Spec); err != nil {
+			return err
+		} else {
+			out.Spec = *newVal.(*api.WorkloadEndpointSpec)
+		}
+		return nil
+	}
+}
+
+func DeepCopy_v1_EndpointList(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*EndpointList)
+		out := out.(*EndpointList)
+		*out = *in
+		if in.Items != nil {
+			in, out := &in.Items, &out.Items
+			*out = make([]Endpoint, len(*in))
+			for i := range *in {
+				if err := DeepCopy_v1_Endpoint(&(*in)[i], &(*out)[i], c); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+}
+
+func DeepCopy_v1_EndpointMeta(in interface{}, out interface{}, c *conversion.Cloner) error {
+	{
+		in := in.(*EndpointMeta)
+		out := out.(*EndpointMeta)
+		*out = *in
+		if newVal, err := c.DeepCopy(&in.ObjectMeta); err != nil {
+			return err
+		} else {
+			out.ObjectMeta = *newVal.(*meta_v1.ObjectMeta)
+		}
+		if newVal, err := c.DeepCopy(&in.WorkloadEndpointMetadata); err != nil {
+			return err
+		} else {
+			out.WorkloadEndpointMetadata = *newVal.(*api.WorkloadEndpointMetadata)
+		}
+		return nil
+	}
 }
 
 func DeepCopy_v1_Policy(in interface{}, out interface{}, c *conversion.Cloner) error {
