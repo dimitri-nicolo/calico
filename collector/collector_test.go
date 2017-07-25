@@ -1,7 +1,9 @@
 package collector
 
 import (
+	"bytes"
 	"testing"
+	"time"
 
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -125,6 +127,24 @@ var inPkt = &nfnetlink.NflogPacketAggregate{
 	},
 }
 
+var inPktDeny = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierDeny,
+			Len:     19,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: &nfnetlink.NflogPacketTuple{
+		Src:   remoteIp1,
+		Dst:   localIp1,
+		Proto: proto_tcp,
+		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+	},
+}
+
 var localPkt = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
@@ -197,6 +217,92 @@ var _ = Describe("Rtp", func() {
 				rtp, _ := lookupRule(lm, prefix, prefixLen, localWlEPKey1)
 				rtp.Ctr = *NewCounter(1, 100)
 				Expect(rtp).To(Equal(defTierAllowTp))
+			})
+		})
+	})
+})
+
+var _ = Describe("Reporting Metrics", func() {
+	var c *Collector
+	const (
+		ageTimeout        = time.Duration(3) * time.Second
+		reportingDelay    = time.Duration(2) * time.Second
+		exportingInterval = time.Duration(1) * time.Second
+	)
+	conf := &Config{
+		StatsDumpFilePath:     "/tmp/qwerty",
+		NfNetlinkBufSize:      65535,
+		IngressGroup:          1200,
+		EgressGroup:           2200,
+		AgeTimeout:            ageTimeout,
+		InitialReportingDelay: reportingDelay,
+		ExportingInterval:     exportingInterval,
+	}
+	rm := NewReporterManager()
+	mockReporter := newMockReporter()
+	rm.RegisterMetricsReporter(mockReporter)
+	BeforeEach(func() {
+		epMap := map[[16]byte]*model.WorkloadEndpointKey{
+			localIp1: localWlEPKey1,
+			localIp2: localWlEPKey2,
+		}
+		lm := newMockLookupManager(epMap)
+		rm.Start()
+		c = NewCollector(lm, rm, conf)
+		c.Start()
+	})
+	Describe("Report Denied Packets", func() {
+		var t *Tuple
+		BeforeEach(func() {
+			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.nfIngressC <- inPktDeny
+		})
+		Context("reporting tick", func() {
+			It("should receive metric", func() {
+				tmu := &testMetricUpdate{*t, RtpToBytes(defTierDenyTp)}
+				Eventually(func() *testMetricUpdate {
+					return <-mockReporter.reportChan
+				}, reportingDelay, exportingInterval).Should(Equal(tmu))
+			})
+		})
+	})
+	Describe("Don't Report Allowed Packets", func() {
+		var t *Tuple
+		BeforeEach(func() {
+			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.nfIngressC <- inPkt
+		})
+		Context("reporting tick", func() {
+			It("should not receive metric", func() {
+				Consistently(func() *testMetricUpdate {
+					var a *testMetricUpdate
+					select {
+					case a = <-mockReporter.reportChan:
+					default:
+					}
+					return a
+				}, ageTimeout, exportingInterval).Should(BeNil())
+			})
+		})
+	})
+	Describe("Don't Report Packets that switch from deny to allow", func() {
+		var t *Tuple
+		BeforeEach(func() {
+			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.nfIngressC <- inPktDeny
+			time.Sleep(time.Duration(500) * time.Millisecond)
+			c.nfIngressC <- inPkt
+		})
+		Context("reporting tick", func() {
+			It("should not receive metric", func() {
+				Consistently(func() *testMetricUpdate {
+					var a *testMetricUpdate
+					select {
+					case a = <-mockReporter.reportChan:
+					default:
+					}
+					return a
+				}, ageTimeout, exportingInterval).Should(BeNil())
 			})
 		})
 	})
