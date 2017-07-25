@@ -148,10 +148,13 @@ var _ = Describe("NFLOG Datasource", func() {
 		// Inject info nflogChan
 		var c *Collector
 		conf := &Config{
-			StatsDumpFilePath: "/tmp/qwerty",
-			NfNetlinkBufSize:  65535,
-			IngressGroup:      1200,
-			EgressGroup:       2200,
+			StatsDumpFilePath:     "/tmp/qwerty",
+			NfNetlinkBufSize:      65535,
+			IngressGroup:          1200,
+			EgressGroup:           2200,
+			AgeTimeout:            time.Duration(10) * time.Second,
+			InitialReportingDelay: time.Duration(5) * time.Second,
+			ExportingInterval:     time.Duration(1) * time.Second,
 		}
 		rm := NewReporterManager()
 		BeforeEach(func() {
@@ -222,16 +225,62 @@ func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyName, tierN
 	return 0
 }
 
+func RtpToBytes(tp *RuleTracePoint) []byte {
+	buf := &bytes.Buffer{}
+	buf.Write(tp.TierID())
+	buf.Write([]byte("/"))
+	buf.Write(tp.PolicyID())
+	buf.Write([]byte("/"))
+	buf.Write(tp.Rule())
+	buf.Write([]byte("/"))
+	buf.Write(RuleActionToBytes[tp.Action])
+	return buf.Bytes()
+}
+
+type testMetricUpdate struct {
+	tuple  Tuple
+	policy []byte
+}
+
+type mockReporter struct {
+	reportChan chan *testMetricUpdate
+	expireChan chan *testMetricUpdate
+}
+
+func newMockReporter() *mockReporter {
+	return &mockReporter{
+		reportChan: make(chan *testMetricUpdate),
+		expireChan: make(chan *testMetricUpdate),
+	}
+}
+
+func (mr *mockReporter) Start() {
+	// Do nothing. We are a mock anyway.
+}
+
+func (mr *mockReporter) Report(mu *MetricUpdate) error {
+	mr.reportChan <- &testMetricUpdate{mu.tuple, mu.policy}
+	return nil
+}
+
+func (mr *mockReporter) Expire(mu *MetricUpdate) error {
+	mr.expireChan <- &testMetricUpdate{mu.tuple, mu.policy}
+	return nil
+}
+
 func BenchmarkNflogPktToStat(b *testing.B) {
 	epMap := map[[16]byte]*model.WorkloadEndpointKey{
 		localIp1: localWlEPKey1,
 		localIp2: localWlEPKey2,
 	}
 	conf := &Config{
-		StatsDumpFilePath: "/tmp/qwerty",
-		NfNetlinkBufSize:  65535,
-		IngressGroup:      1200,
-		EgressGroup:       2200,
+		StatsDumpFilePath:     "/tmp/qwerty",
+		NfNetlinkBufSize:      65535,
+		IngressGroup:          1200,
+		EgressGroup:           2200,
+		AgeTimeout:            time.Duration(10) * time.Second,
+		InitialReportingDelay: time.Duration(5) * time.Second,
+		ExportingInterval:     time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupManager(epMap)
@@ -249,10 +298,13 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		localIp2: localWlEPKey2,
 	}
 	conf := &Config{
-		StatsDumpFilePath: "/tmp/qwerty",
-		NfNetlinkBufSize:  65535,
-		IngressGroup:      1200,
-		EgressGroup:       2200,
+		StatsDumpFilePath:     "/tmp/qwerty",
+		NfNetlinkBufSize:      65535,
+		IngressGroup:          1200,
+		EgressGroup:           2200,
+		AgeTimeout:            time.Duration(10) * time.Second,
+		InitialReportingDelay: time.Duration(5) * time.Second,
+		ExportingInterval:     time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupManager(epMap)

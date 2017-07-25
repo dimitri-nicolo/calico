@@ -364,11 +364,19 @@ func (d *InternalDataplane) Start() {
 	go d.ifaceMonitor.MonitorInterfaces()
 
 	// TODO (Matt): This isn't really in keeping with the surrounding code.
+	const (
+		DefaultAgeTimeout            = time.Duration(10) * time.Second
+		DefaultInitialReportingDelay = time.Duration(5) * time.Second
+		DefaultExportingInterval     = time.Duration(1) * time.Second
+	)
 	collectorConfig := &collector.Config{
-		StatsDumpFilePath: d.config.StatsDumpFilePath,
-		NfNetlinkBufSize:  d.config.NfNetlinkBufSize,
-		IngressGroup:      1,
-		EgressGroup:       2,
+		StatsDumpFilePath:     d.config.StatsDumpFilePath,
+		NfNetlinkBufSize:      d.config.NfNetlinkBufSize,
+		IngressGroup:          1,
+		EgressGroup:           2,
+		AgeTimeout:            DefaultAgeTimeout,
+		InitialReportingDelay: DefaultInitialReportingDelay,
+		ExportingInterval:     DefaultExportingInterval,
 	}
 	rm := collector.NewReporterManager()
 	if d.config.PrometheusReporterEnabled {

@@ -20,18 +20,16 @@ import (
 	"github.com/tigera/nfnetlink"
 )
 
-// TODO(doublek): Need to hook these into configuration
-const (
-	DefaultAgeTimeout            = time.Duration(10) * time.Second
-	DefaultInitialReportingDelay = time.Duration(5) * time.Second
-	DefaultExportingInterval     = time.Duration(1) * time.Second
-)
-
 type Config struct {
 	StatsDumpFilePath string
-	NfNetlinkBufSize  int
-	IngressGroup      int
-	EgressGroup       int
+
+	NfNetlinkBufSize int
+	IngressGroup     int
+	EgressGroup      int
+
+	AgeTimeout            time.Duration
+	InitialReportingDelay time.Duration
+	ExportingInterval     time.Duration
 }
 
 type epLookup interface {
@@ -64,7 +62,7 @@ func NewCollector(lm epLookup, rm *ReporterManager, config *Config) *Collector {
 		nfIngressDoneC: make(chan struct{}),
 		nfEgressDoneC:  make(chan struct{}),
 		epStats:        make(map[Tuple]*Data),
-		ticker:         jitter.NewTicker(DefaultExportingInterval, DefaultExportingInterval/10),
+		ticker:         jitter.NewTicker(config.ExportingInterval, config.ExportingInterval/10),
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
 		dumpLog:        log.New(),
@@ -135,7 +133,7 @@ func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reverse
 		// The entry does not exist. Go ahead and create one.
 		data = NewData(
 			tuple,
-			DefaultAgeTimeout)
+			c.config.AgeTimeout)
 		if tp != nil {
 			data.AddRuleTracePoint(tp, dir)
 		}
@@ -164,7 +162,7 @@ func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reverse
 			// we can replace the RuleTracePoint, the first of which is to remove
 			// references from the reporter, which is done by calling expireMetric,
 			// followed by resetting counters.
-			if data.DurationSinceCreate() > DefaultInitialReportingDelay {
+			if data.DurationSinceCreate() > c.config.InitialReportingDelay {
 				// We only need to expire metric entries that've probably been reported
 				// in the first place.
 				c.expireMetric(data)
@@ -197,12 +195,12 @@ func (c *Collector) checkEpStats() {
 	// - report metrics
 	// - check age and expire the entry if needed.
 	for _, data := range c.epStats {
-		if data.IsDirty() && data.DurationSinceCreate() >= DefaultInitialReportingDelay {
+		if data.IsDirty() && data.DurationSinceCreate() >= c.config.InitialReportingDelay {
 			// We report Metrics only after an initial delay to allow any policy/rule
 			// changes to show up as part of data.
 			c.reportMetrics(data)
 		}
-		if data.DurationSinceLastUpdate() >= DefaultAgeTimeout {
+		if data.DurationSinceLastUpdate() >= c.config.AgeTimeout {
 			c.expireData(data)
 		}
 	}
