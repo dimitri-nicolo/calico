@@ -21,13 +21,13 @@ complete using [kubectl uncordon](http://kubernetes.io/docs/user-guide/kubectl/v
 server will continue to speak the v2 protocol so the upgrade should have no
 impact on Calico.
 
-## Adding Tigera Essentials to an Existing Open Source Cluster
-This section covers taking an existing Kubernetes system with Open Source Calico and adding Tigera Essentials.
+## Adding Tigera Essentials Toolkit to an Existing Open Source Cluster
+This section covers taking an existing Kubernetes system with Open Source Calico and adding Tigera Essentials Toolkit .
 #### Prerequisites
 This procedure assumes the following:
 
 1. Your system is running the latest 2.2.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.2.x release
-2. You have obtained the Essentials Specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded the Essentials `calico/node` image to a private registry.
+2. You have obtained the Tigera Essentials Toolkit specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded the Essentials `calico/node` image to a private registry.
 3. You have the calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
 
 #### Prepare for the Upgrade
@@ -56,7 +56,7 @@ This procedure assumes the following:
         ```
         kubectl uncordon node-01
         ```
- 3. Install the Essentials tools.  For more information about the following instructions, see the instructions in [Essentials Hosted Install](installation/hosted/essentials/).
+ 3. Install the Essentials tools.  For more information about the following instructions, see [Tigera Essentials Toolkit Hosted Install](installation/hosted/essentials/).
 
     - Configure calico-monitoring namespace and deploy Prometheus Operator by
       applying the [operator.yaml](installation/hosted/essentials/1.6/operator.yaml) manifest.

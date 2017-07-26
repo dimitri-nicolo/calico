@@ -1,8 +1,8 @@
 ---
-title: Tigera Essentials Hosted Install
+title: Tigera Essentials Toolkit Hosted Install
 ---
 
-To install Essentials, run the following commands:
+To install Tigera Essentials Toolkit, run the following commands:
 
 - Setup etcd:
 

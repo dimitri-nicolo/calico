@@ -2,7 +2,7 @@
 title: Policy Violation Monitoring & Reporting
 ---
 
-Tigera Essentials adds the ability to monitor violations of policy
+Tigera Essentials Toolkit adds the ability to monitor violations of policy
 configured in your cluster. By defining a set of simple rules and thresholds,
 you can monitor denied traffic and receive alerts when it exceeds configured
 thresholds.

@@ -2,7 +2,7 @@
 title: Policy Audit Mode
 ---
 
-Tigera Essentials adds a Felix option DropActionOverride that configures how the
+Tigera Essentials Toolkit adds a Felix option DropActionOverride that configures how the
 `deny` `action` in a [Rule]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy#Rule) is interpreted.
 It can add logs for denied packets, or even allow the traffic through.
 

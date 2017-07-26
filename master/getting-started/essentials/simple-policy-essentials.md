@@ -1,16 +1,16 @@
 ---
-title: Tigera Essentials for Kubernetes Demo
+title: Tigera Essentials Toolkit for Kubernetes Demo
 ---
 
-This guide is a variation of the simple policy demo intended to introduce the extra features of Tigera Essentials to people already familiar with Project Calico for Kubernetes.
+This guide is a variation of the simple policy demo intended to introduce the extra features of Essentials to people already familiar with Project Calico for Kubernetes.
 
-It requires a Kubernetes cluster configured with Calico networking and Tigera Essentials, and expects that you have `kubectl` configured to interact with the cluster.
+It requires a Kubernetes cluster configured with Calico networking and Tigera Essentials Toolkit, and expects that you have `kubectl` configured to interact with the cluster.
 
-You can quickly and easily obtain such a cluster by setting up [Tigera Essentials]({{site.baseurl}}/{{page.version}}/getting-started/essentials/), and then:
+You can quickly and easily obtain such a cluster by setting up [Tigera Essentials Toolkit]({{site.baseurl}}/{{page.version}}/getting-started/essentials/), and then:
 - following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation), or
 - [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade).
 
-The key steps in moving to essentials are to change to the essentials version of calico-node, update its configuration, download calicoq and deploy Prometheus.
+The key steps in moving to Essentials are to change to the Tigera Essentials Toolkit version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
 This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.6/)
 and that your cluster consists of the following nodes: 

@@ -6,7 +6,7 @@ toc:
 - title: Getting Started with Calico
   path: /getting-started/
 
-- title: Tigera Essentials
+- title: Tigera Essentials Toolkit
   path: /getting-started/essentials/
 
 - title: Kubernetes
@@ -27,7 +27,7 @@ toc:
         path: /getting-started/kubernetes/installation/hosted/kubeadm/
       - title: Kubernetes Datastore Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
-      - title: Tigera Essentials Hosted Install
+      - title: Tigera Essentials Toolkit Hosted Install
         path: /getting-started/kubernetes/installation/hosted/essentials/
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
