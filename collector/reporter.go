@@ -182,7 +182,7 @@ func (pr *PrometheusReporter) startReporter() {
 			pr.expireMetric(mu)
 		case <-pr.retentionTicker.C:
 			for key, expirationTime := range pr.retainedMetrics {
-				if monotime.Since(expirationTime) >= DefaultAgeTimeout {
+				if monotime.Since(expirationTime) >= pr.retentionTime {
 					pr.deleteMetric(key)
 					delete(pr.retainedMetrics, key)
 				}

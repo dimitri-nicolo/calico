@@ -482,8 +482,20 @@ func (d *Data) IsDirty() bool {
 	return d.dirty
 }
 
+func (d *Data) CreatedAt() time.Duration {
+	return d.createdAt
+}
+
 func (d *Data) UpdatedAt() time.Duration {
 	return d.updatedAt
+}
+
+func (d *Data) DurationSinceLastUpdate() time.Duration {
+	return monotime.Since(d.updatedAt)
+}
+
+func (d *Data) DurationSinceCreate() time.Duration {
+	return monotime.Since(d.createdAt)
 }
 
 // Returns the final action of the RuleTrace

@@ -1,7 +1,9 @@
 package collector
 
 import (
+	"bytes"
 	"testing"
+	"time"
 
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -125,6 +127,24 @@ var inPkt = &nfnetlink.NflogPacketAggregate{
 	},
 }
 
+var inPktDeny = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierDeny,
+			Len:     19,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: &nfnetlink.NflogPacketTuple{
+		Src:   remoteIp1,
+		Dst:   localIp1,
+		Proto: proto_tcp,
+		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+	},
+}
+
 var localPkt = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
@@ -148,10 +168,13 @@ var _ = Describe("NFLOG Datasource", func() {
 		// Inject info nflogChan
 		var c *Collector
 		conf := &Config{
-			StatsDumpFilePath: "/tmp/qwerty",
-			NfNetlinkBufSize:  65535,
-			IngressGroup:      1200,
-			EgressGroup:       2200,
+			StatsDumpFilePath:     "/tmp/qwerty",
+			NfNetlinkBufSize:      65535,
+			IngressGroup:          1200,
+			EgressGroup:           2200,
+			AgeTimeout:            time.Duration(10) * time.Second,
+			InitialReportingDelay: time.Duration(5) * time.Second,
+			ExportingInterval:     time.Duration(1) * time.Second,
 		}
 		rm := NewReporterManager()
 		BeforeEach(func() {
@@ -199,6 +222,92 @@ var _ = Describe("Rtp", func() {
 	})
 })
 
+var _ = Describe("Reporting Metrics", func() {
+	var c *Collector
+	const (
+		ageTimeout        = time.Duration(3) * time.Second
+		reportingDelay    = time.Duration(2) * time.Second
+		exportingInterval = time.Duration(1) * time.Second
+	)
+	conf := &Config{
+		StatsDumpFilePath:     "/tmp/qwerty",
+		NfNetlinkBufSize:      65535,
+		IngressGroup:          1200,
+		EgressGroup:           2200,
+		AgeTimeout:            ageTimeout,
+		InitialReportingDelay: reportingDelay,
+		ExportingInterval:     exportingInterval,
+	}
+	rm := NewReporterManager()
+	mockReporter := newMockReporter()
+	rm.RegisterMetricsReporter(mockReporter)
+	BeforeEach(func() {
+		epMap := map[[16]byte]*model.WorkloadEndpointKey{
+			localIp1: localWlEPKey1,
+			localIp2: localWlEPKey2,
+		}
+		lm := newMockLookupManager(epMap)
+		rm.Start()
+		c = NewCollector(lm, rm, conf)
+		c.Start()
+	})
+	Describe("Report Denied Packets", func() {
+		var t *Tuple
+		BeforeEach(func() {
+			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.nfIngressC <- inPktDeny
+		})
+		Context("reporting tick", func() {
+			It("should receive metric", func() {
+				tmu := &testMetricUpdate{*t, RtpToBytes(defTierDenyTp)}
+				Eventually(func() *testMetricUpdate {
+					return <-mockReporter.reportChan
+				}, reportingDelay, exportingInterval).Should(Equal(tmu))
+			})
+		})
+	})
+	Describe("Don't Report Allowed Packets", func() {
+		var t *Tuple
+		BeforeEach(func() {
+			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.nfIngressC <- inPkt
+		})
+		Context("reporting tick", func() {
+			It("should not receive metric", func() {
+				Consistently(func() *testMetricUpdate {
+					var a *testMetricUpdate
+					select {
+					case a = <-mockReporter.reportChan:
+					default:
+					}
+					return a
+				}, ageTimeout, exportingInterval).Should(BeNil())
+			})
+		})
+	})
+	Describe("Don't Report Packets that switch from deny to allow", func() {
+		var t *Tuple
+		BeforeEach(func() {
+			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.nfIngressC <- inPktDeny
+			time.Sleep(time.Duration(500) * time.Millisecond)
+			c.nfIngressC <- inPkt
+		})
+		Context("reporting tick", func() {
+			It("should not receive metric", func() {
+				Consistently(func() *testMetricUpdate {
+					var a *testMetricUpdate
+					select {
+					case a = <-mockReporter.reportChan:
+					default:
+					}
+					return a
+				}, ageTimeout, exportingInterval).Should(BeNil())
+			})
+		})
+	})
+})
+
 type mockLookupManager struct {
 	epMap map[[16]byte]*model.WorkloadEndpointKey
 }
@@ -222,16 +331,62 @@ func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyName, tierN
 	return 0
 }
 
+func RtpToBytes(tp *RuleTracePoint) []byte {
+	buf := &bytes.Buffer{}
+	buf.Write(tp.TierID())
+	buf.Write([]byte("/"))
+	buf.Write(tp.PolicyID())
+	buf.Write([]byte("/"))
+	buf.Write(tp.Rule())
+	buf.Write([]byte("/"))
+	buf.Write(RuleActionToBytes[tp.Action])
+	return buf.Bytes()
+}
+
+type testMetricUpdate struct {
+	tuple  Tuple
+	policy []byte
+}
+
+type mockReporter struct {
+	reportChan chan *testMetricUpdate
+	expireChan chan *testMetricUpdate
+}
+
+func newMockReporter() *mockReporter {
+	return &mockReporter{
+		reportChan: make(chan *testMetricUpdate),
+		expireChan: make(chan *testMetricUpdate),
+	}
+}
+
+func (mr *mockReporter) Start() {
+	// Do nothing. We are a mock anyway.
+}
+
+func (mr *mockReporter) Report(mu *MetricUpdate) error {
+	mr.reportChan <- &testMetricUpdate{mu.tuple, mu.policy}
+	return nil
+}
+
+func (mr *mockReporter) Expire(mu *MetricUpdate) error {
+	mr.expireChan <- &testMetricUpdate{mu.tuple, mu.policy}
+	return nil
+}
+
 func BenchmarkNflogPktToStat(b *testing.B) {
 	epMap := map[[16]byte]*model.WorkloadEndpointKey{
 		localIp1: localWlEPKey1,
 		localIp2: localWlEPKey2,
 	}
 	conf := &Config{
-		StatsDumpFilePath: "/tmp/qwerty",
-		NfNetlinkBufSize:  65535,
-		IngressGroup:      1200,
-		EgressGroup:       2200,
+		StatsDumpFilePath:     "/tmp/qwerty",
+		NfNetlinkBufSize:      65535,
+		IngressGroup:          1200,
+		EgressGroup:           2200,
+		AgeTimeout:            time.Duration(10) * time.Second,
+		InitialReportingDelay: time.Duration(5) * time.Second,
+		ExportingInterval:     time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupManager(epMap)
@@ -249,10 +404,13 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		localIp2: localWlEPKey2,
 	}
 	conf := &Config{
-		StatsDumpFilePath: "/tmp/qwerty",
-		NfNetlinkBufSize:  65535,
-		IngressGroup:      1200,
-		EgressGroup:       2200,
+		StatsDumpFilePath:     "/tmp/qwerty",
+		NfNetlinkBufSize:      65535,
+		IngressGroup:          1200,
+		EgressGroup:           2200,
+		AgeTimeout:            time.Duration(10) * time.Second,
+		InitialReportingDelay: time.Duration(5) * time.Second,
+		ExportingInterval:     time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
 	lm := newMockLookupManager(epMap)
