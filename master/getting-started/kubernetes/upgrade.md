@@ -21,8 +21,8 @@ complete using [kubectl uncordon](http://kubernetes.io/docs/user-guide/kubectl/v
 server will continue to speak the v2 protocol so the upgrade should have no
 impact on Calico.
 
-## Adding Tigera Networking Essentials to an Existing Open Source Cluster
-This section covers taking an existing Kubernetes system with Open Source Calico and adding Tigera Networking Essentials.
+## Adding Tigera Essentials to an Existing Open Source Cluster
+This section covers taking an existing Kubernetes system with Open Source Calico and adding Tigera Essentials.
 #### Prerequisites
 This procedure assumes the following:
 

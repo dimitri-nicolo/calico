@@ -113,7 +113,7 @@ toc:
       path: /reference/public-cloud/aws
     - title: GCE
       path: /reference/public-cloud/gce
-- title: Tigera Networking Essentials
+- title: Tigera Essentials
   section:
     - title: Policy Violation Monitoring & Reporting
       path: /reference/essentials/policy-violations

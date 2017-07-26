@@ -1,12 +1,12 @@
 ---
-title: Networking Essentials for Kubernetes Demo
+title: Tigera Essentials for Kubernetes Demo
 ---
 
-This guide is a variation of the simple policy demo intended to introduce the extra features of Tigera Networking Essentials to people already familiar with Project Calico for Kubernetes.
+This guide is a variation of the simple policy demo intended to introduce the extra features of Tigera Essentials to people already familiar with Project Calico for Kubernetes.
 
-It requires a Kubernetes cluster configured with Calico networking and Networking Essentials, and expects that you have `kubectl` configured to interact with the cluster.
+It requires a Kubernetes cluster configured with Calico networking and Tigera Essentials, and expects that you have `kubectl` configured to interact with the cluster.
 
-You can quickly and easily obtain such a cluster by setting up [Networking Essentials]({{site.baseurl}}/{{page.version}}/getting-started/essentials/), and then:
+You can quickly and easily obtain such a cluster by setting up [Tigera Essentials]({{site.baseurl}}/{{page.version}}/getting-started/essentials/), and then:
 - following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation), or
 - [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade).
 
