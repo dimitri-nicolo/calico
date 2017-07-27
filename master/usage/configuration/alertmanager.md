@@ -2,7 +2,7 @@
 title: Configuring Alertmanager
 ---
 
-Alertmanager is used by Networking Essentials to route alerts from Prometheus to the administrators.
+Alertmanager is used by Tigera Essentials Toolkit to route alerts from Prometheus to the administrators.
 It handles routing, deduplicating, grouping, silencing and inhibition of alerts.
 
 More detailed information about Alertmanager is available in the [upstream documentation](https://prometheus.io/docs/alerting/configuration).

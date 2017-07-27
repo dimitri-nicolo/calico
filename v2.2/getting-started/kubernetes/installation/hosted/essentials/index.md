@@ -1,8 +1,8 @@
 ---
-title: Networking Essentials Hosted Install
+title: Tigera Essentials Toolkit Hosted Install
 ---
 
-To install Networking Essentials, run the following commands:
+To install Tigera Essentials Toolkit, run the following commands:
 
 - Setup etcd:
 
