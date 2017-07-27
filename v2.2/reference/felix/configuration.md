@@ -78,7 +78,7 @@ The full list of parameters which can be set is as follows.
 |-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
 | InterfacePrefix                         | FELIX_INTERFACEPREFIX                   | cali                                 | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces.  Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the 'cali' value, and our OpenStack integration sets the 'tap' value. |
 
-#### Essentials specific configuration
+#### Tigera Essentials Toolkit specific configuration
 
 | Setting                                 | Environment variable                    | Default                              | Meaning                                 |
 |-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
