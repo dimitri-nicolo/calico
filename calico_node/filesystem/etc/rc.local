@@ -107,5 +107,5 @@ esac
 echo "Calico node started successfully"
 
 # TODO(doublek): Find a way to plumb the version in here.
-CALICO_VERSION="Calico v2.2.1 with Tigera Networking Essentials v1.0.1"
+CALICO_VERSION="Calico v2.2.1 with Tigera Networking Essentials v1.0.2"
 echo "Version: $CALICO_VERSION"
