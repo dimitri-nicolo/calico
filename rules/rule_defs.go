@@ -16,9 +16,11 @@ package rules
 
 import (
 	"net"
-	"strings"
 
 	log "github.com/Sirupsen/logrus"
+
+	"reflect"
+	"strings"
 
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/ipsets"
@@ -49,6 +51,8 @@ const (
 	ChainNATPostrouting = ChainNamePrefix + "POSTROUTING"
 	ChainNATOutput      = ChainNamePrefix + "OUTPUT"
 	ChainNATOutgoing    = ChainNamePrefix + "nat-outgoing"
+
+	ChainManglePrerouting = ChainNamePrefix + "PREROUTING"
 
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
@@ -127,6 +131,7 @@ type RuleRenderer interface {
 	StaticFilterTableChains(ipVersion uint8) []*iptables.Chain
 	StaticNATTableChains(ipVersion uint8) []*iptables.Chain
 	StaticRawTableChains(ipVersion uint8) []*iptables.Chain
+	StaticMangleTableChains(ipVersion uint8) []*iptables.Chain
 
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
 	WorkloadEndpointToIptablesChains(
@@ -137,6 +142,7 @@ type RuleRenderer interface {
 	) []*iptables.Chain
 
 	HostDispatchChains(map[string]proto.HostEndpointID) []*iptables.Chain
+	FromHostDispatchChains(map[string]proto.HostEndpointID) []*iptables.Chain
 	HostEndpointToFilterChains(
 		ifaceName string,
 		tiers []*proto.TierInfo,
@@ -145,6 +151,10 @@ type RuleRenderer interface {
 	HostEndpointToRawChains(
 		ifaceName string,
 		untrackedTiers []*proto.TierInfo,
+	) []*iptables.Chain
+	HostEndpointToMangleChains(
+		ifaceName string,
+		preDNATTiers []*proto.TierInfo,
 	) []*iptables.Chain
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
@@ -162,6 +172,8 @@ type DefaultRuleRenderer struct {
 
 	dropActions        []iptables.Action
 	inputAcceptActions []iptables.Action
+	filterAllowAction  iptables.Action
+	mangleAllowAction  iptables.Action
 }
 
 func (r *DefaultRuleRenderer) ipSetConfig(ipVersion uint8) *ipsets.IPVersionConfig {
@@ -181,10 +193,11 @@ type Config struct {
 
 	WorkloadIfacePrefixes []string
 
-	IptablesMarkAccept       uint32
-	IptablesMarkPass         uint32
-	IptablesMarkDrop         uint32
-	IptablesMarkFromWorkload uint32
+	IptablesMarkAccept   uint32
+	IptablesMarkPass     uint32
+	IptablesMarkDrop     uint32
+	IptablesMarkScratch0 uint32
+	IptablesMarkScratch1 uint32
 
 	OpenStackMetadataIP          net.IP
 	OpenStackMetadataPort        uint16
@@ -193,9 +206,11 @@ type Config struct {
 	IPIPEnabled       bool
 	IPIPTunnelAddress net.IP
 
-	IptablesLogPrefix    string
-	ActionOnDrop         string
-	EndpointToHostAction string
+	IptablesLogPrefix         string
+	EndpointToHostAction      string
+	ActionOnDrop              string
+	IptablesFilterAllowAction string
+	IptablesMangleAllowAction string
 
 	FailsafeInboundHostPorts  []config.ProtoPort
 	FailsafeOutboundHostPorts []config.ProtoPort
@@ -203,11 +218,41 @@ type Config struct {
 	DisableConntrackInvalid bool
 }
 
+func (c *Config) validate() {
+	// Scan for unset iptables mark bits.  We use reflection so that we have a hope of catching
+	// newly-added fields.
+	myValue := reflect.ValueOf(c).Elem()
+	myType := myValue.Type()
+	found := 0
+	usedBits := uint32(0)
+	for i := 0; i < myValue.NumField(); i++ {
+		fieldName := myType.Field(i).Name
+		if strings.HasPrefix(fieldName, "IptablesMark") {
+			bits := myValue.Field(i).Interface().(uint32)
+			if bits == 0 {
+				log.WithField("field", fieldName).Panic(
+					"IptablesMarkXXX field not set.")
+			}
+			if usedBits&bits > 0 {
+				log.WithField("field", fieldName).Panic(
+					"IptablesMarkXXX field overlapped with another's bits.")
+			}
+			usedBits |= bits
+			found++
+		}
+	}
+	if found == 0 {
+		// Check the reflection found something we were expecting.
+		log.Panic("Didn't find any IptablesMarkXXX fields.")
+	}
+}
+
 func NewRenderer(config Config) RuleRenderer {
 	log.WithField("config", config).Info("Creating rule renderer.")
-	// Convert configured actions to rule slices. First, what should we actually do when we'd
-	// normally drop a packet?  For sandbox mode, we support allowing the packet instead, or
-	// logging it.
+	config.validate()
+	// Convert configured actions to rule slices.
+	// First, what should we actually do when we'd normally drop a packet?  For
+	// sandbox mode, we support allowing the packet instead, or logging it.
 	var dropActions []iptables.Action
 	if strings.HasPrefix(config.ActionOnDrop, "LOG-") {
 		log.Warn("Action on drop includes LOG.  All dropped packets will be logged.")
@@ -238,9 +283,30 @@ func NewRenderer(config Config) RuleRenderer {
 		inputAcceptActions = []iptables.Action{iptables.ReturnAction{}}
 	}
 
+	//What should we do with packets that are accepted in the forwarding chain
+	var filterAllowAction, mangleAllowAction iptables.Action
+	switch config.IptablesFilterAllowAction {
+	case "RETURN":
+		log.Info("filter table allowed packets will be returned to FORWARD chain.")
+		filterAllowAction = iptables.ReturnAction{}
+	default:
+		log.Info("filter table allowed packets will be accepted immediately.")
+		filterAllowAction = iptables.AcceptAction{}
+	}
+	switch config.IptablesMangleAllowAction {
+	case "RETURN":
+		log.Info("mangle table allowed packets will be returned to PREROUTING chain.")
+		mangleAllowAction = iptables.ReturnAction{}
+	default:
+		log.Info("mangle table allowed packets will be accepted immediately.")
+		mangleAllowAction = iptables.AcceptAction{}
+	}
+
 	return &DefaultRuleRenderer{
 		Config:             config,
 		dropActions:        dropActions,
 		inputAcceptActions: inputAcceptActions,
+		filterAllowAction:  filterAllowAction,
+		mangleAllowAction:  mangleAllowAction,
 	}
 }

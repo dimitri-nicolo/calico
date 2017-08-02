@@ -18,12 +18,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/felix/logutils"
-	"github.com/projectcalico/felix/set"
+	"github.com/projectcalico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const CheckInterval = time.Duration(1) * time.Second
 
+// Calico Metrics
 var (
 	gaugeDeniedPackets = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "calico_denied_packets",
@@ -38,6 +39,25 @@ var (
 		[]string{"srcIP", "policy"},
 	)
 )
+
+// Felix Metrics
+var (
+	counterDroppedLogs = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_reporter_logs_dropped",
+		Help: "Number of logs dropped because the output stream was blocked in the Syslog reporter.",
+	})
+	counterLogErrors = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "felix_reporter_log_errors",
+		Help: "Number of errors encountered while logging in the Syslog reporter.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(
+		counterDroppedLogs,
+		counterLogErrors,
+	)
+}
 
 type MetricUpdate struct {
 	policy       []byte
@@ -289,9 +309,10 @@ func NewSyslogReporter(network, address string) *SyslogReporter {
 		w,
 		make(chan logutils.QueuedLog, logQueueSize),
 		DebugDisableLogDropping,
+		counterLogErrors,
 	)
 
-	hook := logutils.NewBackgroundHook([]log.Level{log.InfoLevel}, log.InfoLevel, []*logutils.Destination{syslogDest})
+	hook := logutils.NewBackgroundHook([]log.Level{log.InfoLevel}, log.InfoLevel, []*logutils.Destination{syslogDest}, counterDroppedLogs)
 	hook.Start()
 	slog.Hooks.Add(hook)
 	slog.Formatter = &DataOnlyJSONFormatter{}

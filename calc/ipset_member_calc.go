@@ -20,9 +20,9 @@ import (
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/multidict"
-	"github.com/projectcalico/felix/set"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 type IPAddRemoveCallbacks interface {
@@ -147,19 +147,6 @@ func (calc *MemberCalculator) updateEndpointIPs(endpointKey model.Key, ips []ip.
 		calc.addMatchToIndex(ipSetID, endpointKey, addedIPs)
 		calc.removeMatchFromIndex(ipSetID, endpointKey, removedIPs)
 	})
-}
-
-func (calc *MemberCalculator) Empty() bool {
-	if len(calc.keyToIPs) != 0 {
-		return false
-	}
-	if !calc.keyToMatchingIPSetIDs.Empty() {
-		return false
-	}
-	if len(calc.ipSetIDToIPToKey) != 0 {
-		return false
-	}
-	return true
 }
 
 func (calc *MemberCalculator) addMatchToIndex(ipSetID string, key model.Key, ips []ip.Addr) {

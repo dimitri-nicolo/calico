@@ -20,8 +20,9 @@ import (
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
+	v1 "k8s.io/client-go/pkg/api/v1"
 )
 
 type host struct {
@@ -63,6 +64,7 @@ func NewDeployment(
 	// Regardless of whether we're going to place _pods_ on the local host, we need to define a
 	// Node resource for the local host, so that Felix can get going.
 	d.ensureNodeDefined(clientset, felixHostname, felixIP+"/24")
+	localFelixConfigured = true
 	return d
 }
 
@@ -79,7 +81,7 @@ func (d *localPlusRemotes) ensureNodeDefined(
 			hostCIDR = GetNextRemoteHostCIDR()
 		}
 		node_in := &v1.Node{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: hostName,
 				Annotations: map[string]string{
 					"projectcalico.org/IPv4Address": hostCIDR,
@@ -111,7 +113,7 @@ func (d *localPlusRemotes) ChooseHost(clientset *kubernetes.Clientset) (h host) 
 
 func cleanupAllNodes(clientset *kubernetes.Clientset) {
 	log.Info("Cleaning up all nodes...")
-	nodeList, err := clientset.Nodes().List(v1.ListOptions{})
+	nodeList, err := clientset.Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		panic(err)
 	}
@@ -123,4 +125,5 @@ func cleanupAllNodes(clientset *kubernetes.Clientset) {
 		}
 	}
 	log.Info("Cleaned up all nodes")
+	localFelixConfigured = false
 }

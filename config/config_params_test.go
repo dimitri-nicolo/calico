@@ -19,6 +19,7 @@ import (
 
 	"net"
 	"reflect"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -30,7 +31,10 @@ var _ = DescribeTable("Config parsing",
 		config := New()
 		config.UpdateFrom(map[string]string{key: value},
 			EnvironmentVariable)
-		newVal := reflect.ValueOf(config).Elem().FieldByName(key).Interface()
+		configPtr := reflect.ValueOf(config)
+		configElem := configPtr.Elem()
+		fieldRef := configElem.FieldByName(key)
+		newVal := fieldRef.Interface()
 		Expect(newVal).To(Equal(expected))
 		if len(errorExpected) > 0 && errorExpected[0] {
 			Expect(config.Err).To(HaveOccurred())
@@ -57,10 +61,29 @@ var _ = DescribeTable("Config parsing",
 		"https://127.0.0.1:1234/, https://host:2345",
 		[]string{"https://127.0.0.1:1234/", "https://host:2345/"}),
 
+	Entry("TyphaAddr empty", "TyphaAddr", "", ""),
+	Entry("TyphaAddr set", "TyphaAddr", "foo:1234", "foo:1234"),
+	Entry("TyphaK8sServiceName empty", "TyphaK8sServiceName", "", ""),
+	Entry("TyphaK8sServiceName set", "TyphaK8sServiceName", "calico-typha", "calico-typha"),
+	Entry("TyphaK8sNamespace empty", "TyphaK8sNamespace", "", "kube-system"),
+	Entry("TyphaK8sNamespace set", "TyphaK8sNamespace", "default", "default"),
+	Entry("TyphaK8sNamespace none", "TyphaK8sNamespace", "none", "kube-system", true),
+
 	Entry("InterfacePrefix", "InterfacePrefix", "tap", "tap"),
 	Entry("InterfacePrefix list", "InterfacePrefix", "tap,cali", "tap,cali"),
 
 	Entry("ChainInsertMode append", "ChainInsertMode", "append", "append"),
+
+	Entry("IptablesPostWriteCheckIntervalSecs", "IptablesPostWriteCheckIntervalSecs",
+		"1.5", 1500*time.Millisecond),
+	Entry("IptablesLockFilePath", "IptablesLockFilePath",
+		"/host/run/xtables.lock", "/host/run/xtables.lock"),
+	Entry("IptablesLockTimeoutSecs", "IptablesLockTimeoutSecs",
+		"123", 123*time.Second),
+	Entry("IptablesLockProbeIntervalMillis", "IptablesLockProbeIntervalMillis",
+		"123", 123*time.Millisecond),
+	Entry("IptablesLockProbeIntervalMillis garbage", "IptablesLockProbeIntervalMillis",
+		"garbage", 50*time.Millisecond),
 
 	Entry("DefaultEndpointToHostAction", "DefaultEndpointToHostAction",
 		"RETURN", "RETURN"),
@@ -77,6 +100,11 @@ var _ = DescribeTable("Config parsing",
 		"log-and-accept", "LOG-and-ACCEPT"),
 	Entry("DropActionOverride log-and-drop", "DropActionOverride",
 		"log-and-drop", "LOG-and-DROP"),
+
+	Entry("IptablesFilterAllowAction", "IptablesFilterAllowAction",
+		"RETURN", "RETURN"),
+	Entry("IptablesMangleAllowAction", "IptablesMangleAllowAction",
+		"RETURN", "RETURN"),
 
 	Entry("LogFilePath", "LogFilePath", "/tmp/felix.log", "/tmp/felix.log"),
 
@@ -103,21 +131,23 @@ var _ = DescribeTable("Config parsing",
 	Entry("IpInIpTunnelAddr", "IpInIpTunnelAddr",
 		"10.0.0.1", net.ParseIP("10.0.0.1")),
 
-	Entry("ReportingIntervalSecs", "ReportingIntervalSecs", "31", int(31)),
-	Entry("ReportingTTLSecs", "ReportingTTLSecs", "91", int(91)),
+	Entry("ReportingIntervalSecs", "ReportingIntervalSecs", "31", 31*time.Second),
+	Entry("ReportingTTLSecs", "ReportingTTLSecs", "91", 91*time.Second),
 
 	Entry("EndpointReportingEnabled", "EndpointReportingEnabled",
 		"true", true),
 	Entry("EndpointReportingEnabled", "EndpointReportingEnabled",
 		"yes", true),
 	Entry("EndpointReportingDelaySecs", "EndpointReportingDelaySecs",
-		"10", float64(10)),
+		"10", 10*time.Second),
 
 	Entry("MaxIpsetSize", "MaxIpsetSize", "12345", int(12345)),
 	Entry("IptablesMarkMask", "IptablesMarkMask", "0xf0f0", uint32(0xf0f0)),
 
 	Entry("PrometheusMetricsEnabled", "PrometheusMetricsEnabled", "true", true),
 	Entry("PrometheusMetricsPort", "PrometheusMetricsPort", "1234", int(1234)),
+	Entry("PrometheusGoMetricsEnabled", "PrometheusGoMetricsEnabled", "false", false),
+	Entry("PrometheusProcessMetricsEnabled", "PrometheusProcessMetricsEnabled", "false", false),
 
 	Entry("FailsafeInboundHostPorts old syntax", "FailsafeInboundHostPorts", "1,2,3,4",
 		[]ProtoPort{
