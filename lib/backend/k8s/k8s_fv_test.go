@@ -24,16 +24,54 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	capi "github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	k8sapi "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
-	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
-	"k8s.io/client-go/pkg/util/wait"
+)
+
+var (
+	zeroOrder              = float64(0.0)
+	calicoAllowPolicyModel = model.Policy{
+		Order: &zeroOrder,
+		InboundRules: []model.Rule{
+			{
+				Action: "allow",
+			},
+		},
+		OutboundRules: []model.Rule{
+			{
+				Action: "allow",
+			},
+		},
+	}
+	calicoDisallowPolicyModel = model.Policy{
+		Order: &zeroOrder,
+		InboundRules: []model.Rule{
+			{
+				Action: "deny",
+			},
+		},
+		OutboundRules: []model.Rule{
+			{
+				Action: "deny",
+			},
+		},
+	}
+
+	// Use a back-off set of intervals for testing deletion of a namespace
+	// which can sometimes be slow.
+	slowCheck = []interface{}{
+		60 * time.Second,
+		1 * time.Second,
+	}
 )
 
 // cb implements the callback interface required for the
@@ -165,7 +203,43 @@ func (c cb) ExpectDeleted(kvps []model.KVPair) {
 	}
 }
 
-func CreateClientAndSyncer(cfg KubeConfig) (*KubeClient, *cb, api.Syncer) {
+// GetSyncerValueFunc returns a function that can be used to query the value of
+// an entry in our syncer state store.  It's useful for performing "Eventually" testing.
+//
+// The returned function returns the cached entry or nil if the entry does not
+// exist in the cache.
+func (c cb) GetSyncerValueFunc(key model.Key) func() interface{} {
+	return func() interface{} {
+		log.Infof("Checking entry in cache: %s", key)
+		c.Lock.Lock()
+		defer func() {
+			c.Lock.Unlock()
+		}()
+		if entry, ok := c.State[key.String()]; ok {
+			return entry.Value
+		}
+		return nil
+	}
+}
+
+// GetSyncerValuePresentFunc returns a function that can be used to query whether an entry
+// is in our syncer state store.  It's useful for performing "Eventually" testing.
+//
+// When checking for presence use this function rather than GetSyncerValueFunc() because
+// the Value may itself by nil.
+//
+// The returned function returns true if the entry is present.
+func (c cb) GetSyncerValuePresentFunc(key model.Key) func() interface{} {
+	return func() interface{} {
+		log.Infof("Checking entry in cache: %s", key)
+		c.Lock.Lock()
+		defer func() { c.Lock.Unlock() }()
+		_, ok := c.State[key.String()]
+		return ok
+	}
+}
+
+func CreateClientAndSyncer(cfg capi.KubeConfig) (*KubeClient, *cb, api.Syncer) {
 	// First create the client.
 	c, err := NewKubeClient(&cfg)
 	if err != nil {
@@ -201,7 +275,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		log.SetLevel(log.DebugLevel)
 
 		// Start the syncer.
-		cfg := KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}
+		cfg := capi.KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}
 		c, cb, syncer = CreateClientAndSyncer(cfg)
 		syncer.Start()
 
@@ -209,97 +283,123 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		go cb.ProcessUpdates()
 	})
 
-	It("should handle a Namespace with DefaultDeny", func() {
+	It("should handle a Namespace with DefaultDeny (v1beta annotation for namespace isolation)", func() {
 		ns := k8sapi.Namespace{
-			ObjectMeta: k8sapi.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-syncer-namespace-default-deny",
 				Annotations: map[string]string{
 					"net.beta.kubernetes.io/network-policy": "{\"ingress\": {\"isolation\": \"DefaultDeny\"}}",
 				},
 			},
 		}
-		_, err := c.clientSet.Namespaces().Create(&ns)
 
-		// Make sure we clean up.
+		// Make sure we clean up.  Don't check for errors since we attempt
+		// to delete as part of the test below.
 		defer func() {
-			err = c.clientSet.Namespaces().Delete(ns.ObjectMeta.Name, &k8sapi.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			c.clientSet.Namespaces().Delete(ns.ObjectMeta.Name, &metav1.DeleteOptions{})
 		}()
 
-		// Check to see if the create succeeded.
-		Expect(err).NotTo(HaveOccurred())
+		By("Creating a namespace", func() {
+			_, err := c.clientSet.Namespaces().Create(&ns)
+			Expect(err).NotTo(HaveOccurred())
+		})
 
-		// Perform a List and ensure it shows up in the Calico API.
-		_, err = c.List(model.ProfileListOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		By("Performing a List of Profiles", func() {
+			_, err := c.List(model.ProfileListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
 
-		_, err = c.List(model.PolicyListOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		By("Performing a List of Policies", func() {
+			_, err := c.List(model.PolicyListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
 
-		// Perform a Get and ensure no error in the Calico API.
-		_, err = c.Get(model.ProfileKey{Name: fmt.Sprintf("default.%s", ns.ObjectMeta.Name)})
-		Expect(err).NotTo(HaveOccurred())
+		By("Performing a Get on the Profile and ensure no error in the Calico API", func() {
+			_, err := c.Get(model.ProfileKey{Name: fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)})
+			Expect(err).NotTo(HaveOccurred())
+		})
 
-		_, err = c.Get(model.PolicyKey{Name: fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)})
-		Expect(err).NotTo(HaveOccurred())
+		By("Checking the correct entries are in our cache", func() {
+			expectedName := "ns.projectcalico.org/test-syncer-namespace-default-deny"
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileTagsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
+		})
 
-		// Expect corresponding Profile updates over the syncer for this Namespace.
-		expectedName := "ns.projectcalico.org/test-syncer-namespace-default-deny"
-		expectedKeys := []model.KVPair{
-			{Key: model.ProfileRulesKey{model.ProfileKey{Name: expectedName}}},
-			{Key: model.ProfileTagsKey{model.ProfileKey{Name: expectedName}}},
-			{Key: model.ProfileLabelsKey{model.ProfileKey{Name: expectedName}}},
-		}
-		time.Sleep(1 * time.Second)
-		cb.ExpectExists(expectedKeys)
+		By("Deleting the namespace", func() {
+			err := c.clientSet.Namespaces().Delete(ns.ObjectMeta.Name, &metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Checking the correct entries are no longer in our cache", func() {
+			expectedName := "ns.projectcalico.org/test-syncer-namespace-default-deny"
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}}), slowCheck...).Should(BeFalse())
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileTagsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
+		})
 	})
 
-	It("should handle a Namespace without DefaultDeny", func() {
+	It("should handle a Namespace without any annotations", func() {
 		ns := k8sapi.Namespace{
-			ObjectMeta: k8sapi.ObjectMeta{
-				Name: "test-syncer-namespace-no-default-deny",
-				Annotations: map[string]string{
-					"net.beta.kubernetes.io/network-policy": "{\"ingress\": {\"isolation\": \"\"}}",
-				},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "test-syncer-namespace-no-default-deny",
+				Annotations: map[string]string{},
 			},
 		}
-		_, err := c.clientSet.Namespaces().Create(&ns)
 
-		// Make sure we clean up after ourselves.
+		// Make sure we clean up after ourselves.  Don't check for errors since we attempt
+		// to delete as part of the test below.
 		defer func() {
-			err = c.clientSet.Namespaces().Delete(ns.ObjectMeta.Name, &k8sapi.DeleteOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			c.clientSet.Namespaces().Delete(ns.ObjectMeta.Name, &metav1.DeleteOptions{})
 		}()
 
 		// Check to see if the create succeeded.
-		Expect(err).NotTo(HaveOccurred())
+		By("Creating a namespace", func() {
+			_, err := c.clientSet.Namespaces().Create(&ns)
+			Expect(err).NotTo(HaveOccurred())
+		})
 
 		// Perform a List and ensure it shows up in the Calico API.
 		By("listing Profiles", func() {
-			_, err = c.List(model.ProfileListOptions{})
+			_, err := c.List(model.ProfileListOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		By("listing Policies", func() {
-			_, err = c.List(model.PolicyListOptions{})
+			_, err := c.List(model.PolicyListOptions{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		// Perform a Get and ensure no error in the Calico API.
 		By("getting a Profile", func() {
-			_, err = c.Get(model.ProfileKey{Name: fmt.Sprintf("default.%s", ns.ObjectMeta.Name)})
+			_, err := c.Get(model.ProfileKey{Name: fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		By("getting a Policy", func() {
-			_, err = c.Get(model.PolicyKey{Name: fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)})
+		// Expect corresponding Profile updates over the syncer for this Namespace.
+		By("Checking the correct entries are in our cache", func() {
+			expectedName := "ns.projectcalico.org/test-syncer-namespace-no-default-deny"
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileTagsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
+		})
+
+		By("deleting a namespace", func() {
+			err := c.clientSet.Namespaces().Delete(ns.ObjectMeta.Name, &metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Checking the correct entries are in no longer in our cache", func() {
+			expectedName := "ns.projectcalico.org/test-syncer-namespace-no-default-deny"
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}}), slowCheck...).Should(BeFalse())
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileTagsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
+			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
 		})
 	})
 
 	It("should handle a basic NetworkPolicy", func() {
 		np := extensions.NetworkPolicy{
-			ObjectMeta: k8sapi.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-syncer-basic-net-policy",
 			},
 			Spec: extensions.NetworkPolicySpec{
@@ -386,9 +486,427 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 	}()
 
+	It("should handle a CRUD of System Network Policy", func() {
+		// In the backend, the Policy name is prepended to indicate where
+		// the policy is derived from in KDD.  The System Network Policy
+		// is a TPR and in the backend the name is prepended with
+		// "snp.projectcalico.org/".  The SNP CRUD operations assume that
+		// the name is of the correct format (it's up to the calling code
+		// to fan-out Policy CRUD operations to the appropriate KDD client
+		// based on the prefix).
+		kvp1Name := "snp.projectcalico.org/my-test-snp"
+		kvp1a := &model.KVPair{
+			Key:   model.PolicyKey{Tier: "default", Name: kvp1Name},
+			Value: &calicoAllowPolicyModel,
+		}
+		kvp1b := &model.KVPair{
+			Key:   model.PolicyKey{Tier: "default", Name: kvp1Name},
+			Value: &calicoDisallowPolicyModel,
+		}
+		kvp2Name := "snp.projectcalico.org/my-test-snp2"
+		kvp2a := &model.KVPair{
+			Key:   model.PolicyKey{Tier: "default", Name: kvp2Name},
+			Value: &calicoAllowPolicyModel,
+		}
+		kvp2b := &model.KVPair{
+			Key:   model.PolicyKey{Tier: "default", Name: kvp2Name},
+			Value: &calicoDisallowPolicyModel,
+		}
+
+		// Make sure we clean up after ourselves.  We allow this to fail because
+		// part of our explicit testing below is to delete the resource.
+		defer func() {
+			c.snpClient.Delete(kvp1a)
+			c.snpClient.Delete(kvp2a)
+		}()
+
+		// Check our syncer has the correct SNP entries for the two
+		// System Network Protocols that this test manipulates.  Neither
+		// have been created yet.
+		By("Checking cache does not have System Network Policy entries", func() {
+			Eventually(cb.GetSyncerValuePresentFunc(kvp1a.Key)).Should(BeFalse())
+			Eventually(cb.GetSyncerValuePresentFunc(kvp2a.Key)).Should(BeFalse())
+		})
+
+		By("Creating a System Network Policy", func() {
+			_, err := c.snpClient.Create(kvp1a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Checking cache has correct System Network Policy entries", func() {
+			Eventually(cb.GetSyncerValueFunc(kvp1a.Key)).Should(Equal(kvp1a.Value))
+			Eventually(cb.GetSyncerValuePresentFunc(kvp2a.Key)).Should(BeFalse())
+		})
+
+		By("Attempting to recreate an existing System Network Policy", func() {
+			_, err := c.snpClient.Create(kvp1a)
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Updating an existing System Network Policy", func() {
+			_, err := c.snpClient.Update(kvp1b)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Checking cache has correct System Network Policy entries", func() {
+			Eventually(cb.GetSyncerValueFunc(kvp1a.Key)).Should(Equal(kvp1b.Value))
+			Eventually(cb.GetSyncerValuePresentFunc(kvp2a.Key)).Should(BeFalse())
+		})
+
+		By("Applying a non-existent System Network Policy", func() {
+			_, err := c.snpClient.Apply(kvp2a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Checking cache has correct System Network Policy entries", func() {
+			Eventually(cb.GetSyncerValueFunc(kvp1a.Key)).Should(Equal(kvp1b.Value))
+			Eventually(cb.GetSyncerValueFunc(kvp2a.Key)).Should(Equal(kvp2a.Value))
+		})
+
+		By("Updating the System Network Policy created by Apply", func() {
+			_, err := c.snpClient.Apply(kvp2b)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Checking cache has correct System Network Policy entries", func() {
+			Eventually(cb.GetSyncerValueFunc(kvp1a.Key)).Should(Equal(kvp1b.Value))
+			Eventually(cb.GetSyncerValueFunc(kvp2a.Key)).Should(Equal(kvp2b.Value))
+		})
+
+		By("Deleted the System Network Policy created by Apply", func() {
+			err := c.snpClient.Delete(kvp2a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Checking cache has correct System Network Policy entries", func() {
+			Eventually(cb.GetSyncerValueFunc(kvp1a.Key)).Should(Equal(kvp1b.Value))
+			Eventually(cb.GetSyncerValuePresentFunc(kvp2a.Key)).Should(BeFalse())
+		})
+
+		// Perform Get operations directly on the main client - this
+		// will fan out requests to the appropriate Policy client
+		// (including the System Network Policy client).
+		By("Getting a missing System Network Policy", func() {
+			_, err := c.Get(model.PolicyKey{Name: "my-test-snp"})
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Listing a missing System Network Policy", func() {
+			kvps, err := c.List(model.PolicyListOptions{Name: "my-test-snp"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(0))
+		})
+
+		By("Getting an existing System Network Policy", func() {
+			kvp, err := c.Get(model.PolicyKey{Name: "snp.projectcalico.org/my-test-snp"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvp.Key.(model.PolicyKey).Name).To(Equal("snp.projectcalico.org/my-test-snp"))
+			Expect(kvp.Value.(*model.Policy)).To(Equal(kvp1b.Value))
+		})
+
+		By("Listing all policies (including a System Network Policy)", func() {
+			// We expect namespace entries for kube-system, kube-public
+			// and default.
+			kvps, err := c.List(model.PolicyListOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(1))
+			Expect(kvps[len(kvps)-1].Key.(model.PolicyKey).Name).To(Equal("snp.projectcalico.org/my-test-snp"))
+			Expect(kvps[len(kvps)-1].Value.(*model.Policy)).To(Equal(kvp1b.Value))
+		})
+
+		By("Deleting an existing System Network Policy", func() {
+			err := c.snpClient.Delete(kvp1a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Checking cache has no System Network Policy entries", func() {
+			Eventually(cb.GetSyncerValuePresentFunc(kvp1a.Key)).Should(BeFalse())
+			Eventually(cb.GetSyncerValuePresentFunc(kvp2a.Key)).Should(BeFalse())
+		})
+	})
+
+	It("should handle a CRUD of Global BGP Peer", func() {
+		kvp1a := &model.KVPair{
+			Key: model.GlobalBGPPeerKey{
+				PeerIP: cnet.MustParseIP("10.0.0.1"),
+			},
+			Value: &model.BGPPeer{
+				PeerIP: cnet.MustParseIP("10.0.0.1"),
+				ASNum:  numorstring.ASNumber(6512),
+			},
+		}
+		kvp1b := &model.KVPair{
+			Key: model.GlobalBGPPeerKey{
+				PeerIP: cnet.MustParseIP("10.0.0.1"),
+			},
+			Value: &model.BGPPeer{
+				PeerIP: cnet.MustParseIP("10.0.0.1"),
+				ASNum:  numorstring.ASNumber(6513),
+			},
+		}
+		kvp2a := &model.KVPair{
+			Key: model.GlobalBGPPeerKey{
+				PeerIP: cnet.MustParseIP("aa:bb::cc"),
+			},
+			Value: &model.BGPPeer{
+				PeerIP: cnet.MustParseIP("aa:bb::cc"),
+				ASNum:  numorstring.ASNumber(6514),
+			},
+		}
+		kvp2b := &model.KVPair{
+			Key: model.GlobalBGPPeerKey{
+				PeerIP: cnet.MustParseIP("aa:bb::cc"),
+			},
+			Value: &model.BGPPeer{
+				PeerIP: cnet.MustParseIP("aa:bb::cc"),
+			},
+		}
+
+		// Make sure we clean up after ourselves.  We allow this to fail because
+		// part of our explicit testing below is to delete the resource.
+		defer func() {
+			c.Delete(kvp1a)
+			c.Delete(kvp2a)
+		}()
+
+		By("Creating a Global BGP Peer", func() {
+			_, err := c.Create(kvp1a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Attempting to recreate an existing Global BGP Peer", func() {
+			_, err := c.Create(kvp1a)
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Updating an existing Global BGP Peer", func() {
+			_, err := c.Update(kvp1b)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Applying a non-existent Global BGP Peer", func() {
+			_, err := c.Apply(kvp2a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Updating the Global BGP Peer created by Apply", func() {
+			_, err := c.Apply(kvp2b)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Getting a missing Global BGP Peer", func() {
+			_, err := c.Get(model.GlobalBGPPeerKey{PeerIP: cnet.MustParseIP("1.1.1.1")})
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Listing a missing Global BGP Peer", func() {
+			kvps, err := c.List(model.GlobalBGPPeerListOptions{PeerIP: cnet.MustParseIP("aa:bb:cc:dd::ee")})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(0))
+		})
+
+		By("Listing an explicit Global BGP Peer", func() {
+			kvps, err := c.List(model.GlobalBGPPeerListOptions{PeerIP: cnet.MustParseIP("10.0.0.1")})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(1))
+			Expect(kvps[0].Key).To(Equal(kvp1b.Key))
+			Expect(kvps[0].Value).To(Equal(kvp1b.Value))
+		})
+
+		By("Listing all Global BGP Peers (should be 2)", func() {
+			kvps, err := c.List(model.GlobalBGPPeerListOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(2))
+			Expect(kvps[0].Key).To(Equal(kvp1b.Key))
+			Expect(kvps[0].Value).To(Equal(kvp1b.Value))
+			Expect(kvps[1].Key).To(Equal(kvp2b.Key))
+			Expect(kvps[01].Value).To(Equal(kvp2b.Value))
+		})
+
+		By("Deleting the Global BGP Peer created by Apply", func() {
+			err := c.Delete(kvp2a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Listing all Global BGP Peers (should now be 1)", func() {
+			kvps, err := c.List(model.GlobalBGPPeerListOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(1))
+			Expect(kvps[0].Key).To(Equal(kvp1b.Key))
+			Expect(kvps[0].Value).To(Equal(kvp1b.Value))
+		})
+
+		By("Deleting an existing Global BGP Peer", func() {
+			err := c.Delete(kvp1a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	It("should handle a CRUD of Node BGP Peer", func() {
+		var kvp1a, kvp1b, kvp2a, kvp2b *model.KVPair
+		var nodename string
+
+		// Make sure we clean up after ourselves.  We allow this to fail because
+		// part of our explicit testing below is to delete the resource.
+		defer func() {
+			log.Debug("Deleting Node BGP Peers")
+			if peers, err := c.List(model.NodeBGPPeerListOptions{}); err == nil {
+				log.WithField("Peers", peers).Debug("Deleting resources")
+				for _, peer := range peers {
+					log.WithField("Key", peer.Key).Debug("Deleting resource")
+					peer.Revision = nil
+					_ = c.Delete(peer)
+				}
+			}
+		}()
+
+		By("Listing all Nodes to find a suitable Node name", func() {
+			nodes, err := c.List(model.NodeListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			// Get the hostname so we can make a Get call
+			kvp := *nodes[0]
+			nodename = kvp.Key.(model.NodeKey).Hostname
+			kvp1a = &model.KVPair{
+				Key: model.NodeBGPPeerKey{
+					PeerIP:   cnet.MustParseIP("10.0.0.1"),
+					Nodename: nodename,
+				},
+				Value: &model.BGPPeer{
+					PeerIP: cnet.MustParseIP("10.0.0.1"),
+					ASNum:  numorstring.ASNumber(6512),
+				},
+			}
+			kvp1b = &model.KVPair{
+				Key: model.NodeBGPPeerKey{
+					PeerIP:   cnet.MustParseIP("10.0.0.1"),
+					Nodename: nodename,
+				},
+				Value: &model.BGPPeer{
+					PeerIP: cnet.MustParseIP("10.0.0.1"),
+					ASNum:  numorstring.ASNumber(6513),
+				},
+			}
+			kvp2a = &model.KVPair{
+				Key: model.NodeBGPPeerKey{
+					PeerIP:   cnet.MustParseIP("aa:bb::cc"),
+					Nodename: nodename,
+				},
+				Value: &model.BGPPeer{
+					PeerIP: cnet.MustParseIP("aa:bb::cc"),
+					ASNum:  numorstring.ASNumber(6514),
+				},
+			}
+			kvp2b = &model.KVPair{
+				Key: model.NodeBGPPeerKey{
+					PeerIP:   cnet.MustParseIP("aa:bb::cc"),
+					Nodename: nodename,
+				},
+				Value: &model.BGPPeer{
+					PeerIP: cnet.MustParseIP("aa:bb::cc"),
+				},
+			}
+		})
+
+		By("Creating a Node BGP Peer", func() {
+			_, err := c.Create(kvp1a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Attempting to recreate an existing Node BGP Peer", func() {
+			_, err := c.Create(kvp1a)
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Updating an existing Node BGP Peer", func() {
+			_, err := c.Update(kvp1b)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Applying a non-existent Node BGP Peer", func() {
+			_, err := c.Apply(kvp2a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Updating the Node BGP Peer created by Apply", func() {
+			_, err := c.Apply(kvp2b)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Getting a missing Node BGP Peer (wrong IP)", func() {
+			_, err := c.Get(model.NodeBGPPeerKey{Nodename: nodename, PeerIP: cnet.MustParseIP("1.1.1.1")})
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Getting a missing Node BGP Peer (wrong nodename)", func() {
+			_, err := c.Get(model.NodeBGPPeerKey{Nodename: "foobarbaz", PeerIP: cnet.MustParseIP("10.0.0.1")})
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Listing a missing Node BGP Peer (wrong IP)", func() {
+			kvps, err := c.List(model.NodeBGPPeerListOptions{PeerIP: cnet.MustParseIP("aa:bb:cc:dd::ee")})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(0))
+		})
+
+		By("Listing a missing Node BGP Peer (wrong nodename)", func() {
+			kvps, err := c.List(model.NodeBGPPeerListOptions{Nodename: "foobarbaz"})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(0))
+		})
+
+		By("Listing an explicit Node BGP Peer (IP specific, Node is missing)", func() {
+			kvps, err := c.List(model.NodeBGPPeerListOptions{PeerIP: cnet.MustParseIP("10.0.0.1")})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(1))
+			Expect(kvps[0].Key).To(Equal(kvp1b.Key))
+			Expect(kvps[0].Value).To(Equal(kvp1b.Value))
+		})
+
+		By("Listing an explicit Node BGP Peer (IP and Node are specified)", func() {
+			kvps, err := c.List(model.NodeBGPPeerListOptions{Nodename: nodename, PeerIP: cnet.MustParseIP("10.0.0.1")})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(1))
+			Expect(kvps[0].Key).To(Equal(kvp1b.Key))
+			Expect(kvps[0].Value).To(Equal(kvp1b.Value))
+		})
+
+		By("Listing all Node BGP Peers (should be 2)", func() {
+			kvps, err := c.List(model.NodeBGPPeerListOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(2))
+			Expect(kvps[0].Key).To(Equal(kvp1b.Key))
+			Expect(kvps[0].Value).To(Equal(kvp1b.Value))
+			Expect(kvps[1].Key).To(Equal(kvp2b.Key))
+			Expect(kvps[1].Value).To(Equal(kvp2b.Value))
+		})
+
+		By("Deleting the Node BGP Peer created by Apply", func() {
+			err := c.Delete(kvp2a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Listing all Node BGP Peers (should now be 1)", func() {
+			kvps, err := c.List(model.NodeBGPPeerListOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps).To(HaveLen(1))
+			Expect(kvps[0].Key).To(Equal(kvp1b.Key))
+			Expect(kvps[0].Value).To(Equal(kvp1b.Value))
+		})
+
+		By("Deleting an existing Node BGP Peer", func() {
+			err := c.Delete(kvp1a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Deleting a non-existent Node BGP Peer", func() {
+			err := c.Delete(kvp1a)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	It("should handle a basic Pod", func() {
 		pod := k8sapi.Pod{
-			ObjectMeta: k8sapi.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-syncer-basic-pod",
 				Namespace: "default",
 			},
@@ -408,7 +926,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		// test below which deletes this pod, but that's OK.
 		defer func() {
 			log.Warnf("[TEST] Cleaning up test pod: %s", pod.ObjectMeta.Name)
-			_ = c.clientSet.Pods("default").Delete(pod.ObjectMeta.Name, &k8sapi.DeleteOptions{})
+			_ = c.clientSet.Pods("default").Delete(pod.ObjectMeta.Name, &metav1.DeleteOptions{})
 		}()
 		By("Creating a pod", func() {
 			Expect(err).NotTo(HaveOccurred())
@@ -466,13 +984,12 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		}
 
 		By("Expecting an update on the Syncer API", func() {
-			// Expect corresponding updates over the syncer for this Pod.
 			cb.ExpectExists(expectedKeys)
 		})
 
 		By("Expecting a Syncer snapshot to include the update", func() {
 			// Create a new syncer / callback pair so that it performs a snapshot.
-			cfg := KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}
+			cfg := capi.KubeConfig{K8sAPIEndpoint: "http://localhost:8080"}
 			_, snapshotCallbacks, snapshotSyncer := CreateClientAndSyncer(cfg)
 			go snapshotCallbacks.ProcessUpdates()
 			snapshotSyncer.Start()
@@ -482,7 +999,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 
 		By("Deleting the Pod and expecting the wep to be deleted", func() {
-			err = c.clientSet.Pods("default").Delete(pod.ObjectMeta.Name, &k8sapi.DeleteOptions{})
+			err = c.clientSet.Pods("default").Delete(pod.ObjectMeta.Name, &metav1.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			cb.ExpectDeleted(expectedKeys)
 		})
@@ -492,7 +1009,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 	defer func() {
 		It("should clean up all pods", func() {
 			log.Warnf("[TEST] Waiting for pods to tear down")
-			pods, err := c.clientSet.Pods("default").List(k8sapi.ListOptions{})
+			pods, err := c.clientSet.Pods("default").List(metav1.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			// Wait up to 60s for pod cleanup to occur.
@@ -500,7 +1017,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 				if len(pods.Items) == 0 {
 					return
 				}
-				pods, err = c.clientSet.Pods("default").List(k8sapi.ListOptions{})
+				pods, err = c.clientSet.Pods("default").List(metav1.ListOptions{})
 				Expect(err).NotTo(HaveOccurred())
 				time.Sleep(1 * time.Second)
 			}
@@ -509,7 +1026,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 	}()
 
 	It("should not error on unsupported List() calls", func() {
-		objs, err := c.List(model.BGPPeerListOptions{})
+		objs, err := c.List(model.BlockAffinityListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(objs)).To(Equal(0))
 	})
@@ -529,6 +1046,12 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		}
 		var updGC *model.KVPair
 		var err error
+
+		defer func() {
+			// Always make sure we tidy up after ourselves.  Ignore
+			// errors since the test itself should delete what it created.
+			_ = c.Delete(gc)
+		}()
 
 		By("creating a new object", func() {
 			updGC, err = c.Create(gc)
@@ -581,6 +1104,11 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		By("deleting a non-existing object", func() {
+			err = c.Delete(gc)
+			Expect(err).To(HaveOccurred())
+		})
+
 		By("getting a non-existing object", func() {
 			updGC, err = c.Get(gc.Key)
 			Expect(err).To(HaveOccurred())
@@ -588,6 +1116,8 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 
 		By("applying a new object", func() {
+			// Revision should not be specified when creating.
+			gc.Revision = nil
 			updGC, err = c.Apply(gc)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(updGC.Value.(string)).To(Equal(gc.Value.(string)))
@@ -599,6 +1129,11 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			Expect(updGC.Value.(string)).To(Equal(gc.Value.(string)))
 			Expect(updGC.Key.(model.GlobalConfigKey).Name).To(Equal("ClusterGUID"))
 			Expect(updGC.Revision).NotTo(BeNil())
+		})
+
+		By("deleting the existing object", func() {
+			err = c.Delete(updGC)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
@@ -663,6 +1198,20 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			// Get the hostname so we can make a Get call
 			kvp = *nodes[0]
 			nodeHostname = kvp.Key.(model.NodeKey).Hostname
+		})
+
+		By("Listing a specific Node", func() {
+			nodes, err := c.List(model.NodeListOptions{Hostname: nodeHostname})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(nodes).To(HaveLen(1))
+			Expect(nodes[0].Key).To(Equal(kvp.Key))
+			Expect(nodes[0].Value).To(Equal(kvp.Value))
+		})
+
+		By("Listing a specific invalid Node", func() {
+			nodes, err := c.List(model.NodeListOptions{Hostname: "foobarbaz-node"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(nodes).To(HaveLen(0))
 		})
 
 		By("Getting a specific nodeHostname", func() {
@@ -753,7 +1302,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 
 		By("Not syncing Nodes when K8sDisableNodePoll is enabled", func() {
-			cfg := KubeConfig{K8sAPIEndpoint: "http://localhost:8080", K8sDisableNodePoll: true}
+			cfg := capi.KubeConfig{K8sAPIEndpoint: "http://localhost:8080", K8sDisableNodePoll: true}
 			_, snapshotCallbacks, snapshotSyncer := CreateClientAndSyncer(cfg)
 
 			go snapshotCallbacks.ProcessUpdates()

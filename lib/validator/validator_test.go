@@ -24,7 +24,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/scope"
-	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 
 func init() {
@@ -38,19 +37,19 @@ func init() {
 	var V256 = 256
 
 	// Set up some values we use in various tests.
-	ipv4_1 := testutils.MustParseIP("1.2.3.4")
-	ipv4_2 := testutils.MustParseIP("100.200.0.0")
-	ipv6_1 := testutils.MustParseIP("aabb:aabb::ffff")
-	ipv6_2 := testutils.MustParseIP("aabb::abcd")
-	netv4_1 := testutils.MustParseNetwork("1.2.3.4/32")
-	netv4_2 := testutils.MustParseNetwork("1.2.0.0/32")
-	netv4_3 := testutils.MustParseNetwork("1.2.3.0/26")
-	netv4_4 := testutils.MustParseNetwork("1.2.3.4/10")
-	netv4_5 := testutils.MustParseNetwork("1.2.3.4/27")
-	netv6_1 := testutils.MustParseNetwork("aabb:aabb::ffff/128")
-	netv6_2 := testutils.MustParseNetwork("aabb:aabb::/128")
-	netv6_3 := testutils.MustParseNetwork("aabb:aabb::ffff/122")
-	netv6_4 := testutils.MustParseNetwork("aabb:aabb::ffff/10")
+	ipv4_1 := net.MustParseIP("1.2.3.4")
+	ipv4_2 := net.MustParseIP("100.200.0.0")
+	ipv6_1 := net.MustParseIP("aabb:aabb::ffff")
+	ipv6_2 := net.MustParseIP("aabb::abcd")
+	netv4_1 := net.MustParseNetwork("1.2.3.4/32")
+	netv4_2 := net.MustParseNetwork("1.2.0.0/32")
+	netv4_3 := net.MustParseNetwork("1.2.3.0/26")
+	netv4_4 := net.MustParseNetwork("1.2.3.4/10")
+	netv4_5 := net.MustParseNetwork("1.2.3.4/27")
+	netv6_1 := net.MustParseNetwork("aabb:aabb::ffff/128")
+	netv6_2 := net.MustParseNetwork("aabb:aabb::/128")
+	netv6_3 := net.MustParseNetwork("aabb:aabb::ffff/122")
+	netv6_4 := net.MustParseNetwork("aabb:aabb::ffff/10")
 
 	protoTCP := numorstring.ProtocolFromString("tcp")
 
@@ -60,10 +59,10 @@ func init() {
 	DescribeTable("Validator",
 		func(input interface{}, valid bool) {
 			if valid {
-				Expect(validator.Validate(input)).To(BeNil(),
+				Expect(validator.Validate(input)).NotTo(HaveOccurred(),
 					"expected value to be valid")
 			} else {
-				Expect(validator.Validate(input)).ToNot(BeNil(),
+				Expect(validator.Validate(input)).To(HaveOccurred(),
 					"expected value to be invalid")
 			}
 		},
@@ -308,9 +307,9 @@ func init() {
 				},
 			}, false),
 		Entry("should reject IPv4 pool with a CIDR range overlapping with Link Local range",
-			api.IPPool{Metadata: api.IPPoolMetadata{CIDR: testutils.MustParseCIDR("169.254.5.0/24")}}, false),
+			api.IPPool{Metadata: api.IPPoolMetadata{CIDR: net.MustParseCIDR("169.254.5.0/24")}}, false),
 		Entry("should reject IPv6 pool with a CIDR range overlapping with Link Local range",
-			api.IPPool{Metadata: api.IPPoolMetadata{CIDR: testutils.MustParseCIDR("fe80::/120")}}, false),
+			api.IPPool{Metadata: api.IPPoolMetadata{CIDR: net.MustParseCIDR("fe80::/120")}}, false),
 
 		// (API) IPIPConfiguration
 		Entry("should accept IPIP disabled", api.IPIPConfiguration{Enabled: false}, true),
@@ -530,6 +529,110 @@ func init() {
 				IPVersion: &V4,
 				Destination: api.EntityRule{
 					Net: &netv6_1,
+				},
+			}, false),
+		Entry("net list: should reject rule with net and nets",
+			api.Rule{
+				Action:    "allow",
+				Protocol:  protocolFromString("tcp"),
+				IPVersion: &V4,
+				Source: api.EntityRule{
+					Net:  &netv4_3,
+					Nets: []*net.IPNet{&netv4_3},
+				},
+			}, false),
+		Entry("net list: should reject rule with not net and not nets",
+			api.Rule{
+				Action:    "allow",
+				Protocol:  protocolFromString("tcp"),
+				IPVersion: &V4,
+				Source: api.EntityRule{
+					NotNet:  &netv4_3,
+					NotNets: []*net.IPNet{&netv4_3},
+				},
+			}, false),
+		Entry("net list: should reject rule with net and nets",
+			api.Rule{
+				Action:    "allow",
+				Protocol:  protocolFromString("tcp"),
+				IPVersion: &V4,
+				Destination: api.EntityRule{
+					Net:  &netv4_3,
+					Nets: []*net.IPNet{&netv4_3},
+				},
+			}, false),
+		Entry("net list: should reject rule with not net and not nets",
+			api.Rule{
+				Action:    "allow",
+				Protocol:  protocolFromString("tcp"),
+				IPVersion: &V4,
+				Destination: api.EntityRule{
+					NotNet:  &netv4_3,
+					NotNets: []*net.IPNet{&netv4_3},
+				},
+			}, false),
+		Entry("net list: should reject rule mixed IPv4 (src) and IPv6 (dest)",
+			api.Rule{
+				Action:   "allow",
+				Protocol: protocolFromString("tcp"),
+				Source: api.EntityRule{
+					Nets: []*net.IPNet{&netv4_3},
+				},
+				Destination: api.EntityRule{
+					Nets: []*net.IPNet{&netv6_3},
+				},
+			}, false),
+		Entry("net list: should reject rule mixed IPv6 (src) and IPv4 (dest)",
+			api.Rule{
+				Action:   "allow",
+				Protocol: protocolFromString("tcp"),
+				Source: api.EntityRule{
+					Nets: []*net.IPNet{&netv6_2},
+				},
+				Destination: api.EntityRule{
+					Nets: []*net.IPNet{&netv4_2},
+				},
+			}, false),
+		Entry("net list: should reject rule mixed IPv6 version and IPv4 Net",
+			api.Rule{
+				Action:    "allow",
+				Protocol:  protocolFromString("tcp"),
+				IPVersion: &V6,
+				Source: api.EntityRule{
+					Nets: []*net.IPNet{&netv4_4},
+				},
+				Destination: api.EntityRule{
+					Nets: []*net.IPNet{&netv4_2},
+				},
+			}, false),
+		Entry("net list: should reject rule mixed IPv6 version and IPv4 Net",
+			api.Rule{
+				Action:    "allow",
+				Protocol:  protocolFromString("tcp"),
+				IPVersion: &V6,
+				Source: api.EntityRule{
+					Net: &netv4_4,
+				},
+				Destination: api.EntityRule{
+					NotNets: []*net.IPNet{&netv4_2},
+				},
+			}, false),
+		Entry("net list: should reject rule mixed IPVersion and Source Net IP version",
+			api.Rule{
+				Action:    "allow",
+				Protocol:  protocolFromString("tcp"),
+				IPVersion: &V6,
+				Source: api.EntityRule{
+					Nets: []*net.IPNet{&netv4_1},
+				},
+			}, false),
+		Entry("net list: should reject rule mixed IPVersion and Dest Net IP version",
+			api.Rule{
+				Action:    "allow",
+				Protocol:  protocolFromString("tcp"),
+				IPVersion: &V4,
+				Destination: api.EntityRule{
+					Nets: []*net.IPNet{&netv6_1},
 				},
 			}, false),
 

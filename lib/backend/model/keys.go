@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -158,7 +158,7 @@ func KeyToDefaultDeletePath(key Key) (string, error) {
 //
 // For example,
 // 	KeyToDefaultDeletePaths(WorkloadEndpointKey{
-//		Hostname: "h",
+//		Nodename: "h",
 //		OrchestratorID: "o",
 //		WorkloadID: "w",
 //		EndpointID: "e",
@@ -202,25 +202,25 @@ func KeyFromDefaultPath(path string) Key {
 		log.Debugf("Path is a workload endpoint: %v", path)
 		return WorkloadEndpointKey{
 			Hostname:       m[1],
-			OrchestratorID: m[2],
-			WorkloadID:     m[3],
-			EndpointID:     m[4],
+			OrchestratorID: unescapeName(m[2]),
+			WorkloadID:     unescapeName(m[3]),
+			EndpointID:     unescapeName(m[4]),
 		}
 	} else if m := matchHostEndpoint.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a host endpoint: %v", path)
 		return HostEndpointKey{
 			Hostname:   m[1],
-			EndpointID: m[2],
+			EndpointID: unescapeName(m[2]),
 		}
 	} else if m := matchPolicy.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a policy: %v", path)
 		return PolicyKey{
-			Tier: m[1],
-			Name: m[2],
+			Tier: unescapeName(m[1]),
+			Name: unescapeName(m[2]),
 		}
 	} else if m := matchProfile.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a profile: %v (%v)", path, m[2])
-		pk := ProfileKey{m[1]}
+		pk := ProfileKey{unescapeName(m[1])}
 		switch m[2] {
 		case "tags":
 			log.Debugf("Profile tags")

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,33 +12,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package converter
 
 import (
+	"sync"
+
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/net"
 )
 
-// ruleActionAPIToBackend converts the rule action field value from the API
-// value to the equivalent backend value.
-func ruleActionAPIToBackend(action string) string {
-	if action == "pass" {
-		return "next-tier"
+// RulesAPIToBackend converts an API Rule structure slice to a Backend Rule structure slice.
+func RulesAPIToBackend(ars []api.Rule) []model.Rule {
+	if ars == nil {
+		return []model.Rule{}
 	}
-	return action
+
+	brs := make([]model.Rule, len(ars))
+	for idx, ar := range ars {
+		brs[idx] = ruleAPIToBackend(ar)
+	}
+	return brs
 }
 
-// ruleActionBackendToAPI converts the rule action field value from the backend
-// value to the equivalent API value.
-func ruleActionBackendToAPI(action string) string {
-	if action == "" {
-		return "allow"
-	} else if action == "next-tier" {
-		return "pass"
+// RulesBackendToAPI converts a Backend Rule structure slice to an API Rule structure slice.
+func RulesBackendToAPI(brs []model.Rule) []api.Rule {
+	if brs == nil {
+		return nil
 	}
-	return action
+
+	ars := make([]api.Rule, len(brs))
+	for idx, br := range brs {
+		ars[idx] = ruleBackendToAPI(br)
+	}
+	return ars
 }
+
+var logDeprecationOnce sync.Once
 
 // ruleAPIToBackend converts an API Rule structure to a Backend Rule structure.
 func ruleAPIToBackend(ar api.Rule) model.Rule {
@@ -53,6 +65,14 @@ func ruleAPIToBackend(ar api.Rule) model.Rule {
 		notICMPType = ar.NotICMP.Type
 	}
 
+	if ar.Source.Net != nil || ar.Source.NotNet != nil ||
+		ar.Destination.Net != nil || ar.Destination.NotNet != nil {
+		logDeprecationOnce.Do(func() {
+			log.Warning("The Net and NotNet fields in Source/Destination " +
+				"EntityRules are deprecated.  Please use Nets or NotNets.")
+		})
+	}
+
 	return model.Rule{
 		Action:      ruleActionAPIToBackend(ar.Action),
 		IPVersion:   ar.IPVersion,
@@ -65,31 +85,47 @@ func ruleAPIToBackend(ar api.Rule) model.Rule {
 
 		SrcTag:      ar.Source.Tag,
 		SrcNet:      ar.Source.Net,
+		SrcNets:     ar.Source.Nets,
 		SrcSelector: ar.Source.Selector,
 		SrcPorts:    ar.Source.Ports,
 		DstTag:      ar.Destination.Tag,
 		DstNet:      normalizeIPNet(ar.Destination.Net),
+		DstNets:     normalizeIPNets(ar.Destination.Nets),
 		DstSelector: ar.Destination.Selector,
 		DstPorts:    ar.Destination.Ports,
 
 		NotSrcTag:      ar.Source.NotTag,
 		NotSrcNet:      ar.Source.NotNet,
+		NotSrcNets:     ar.Source.NotNets,
 		NotSrcSelector: ar.Source.NotSelector,
 		NotSrcPorts:    ar.Source.NotPorts,
 		NotDstTag:      ar.Destination.NotTag,
 		NotDstNet:      normalizeIPNet(ar.Destination.NotNet),
+		NotDstNets:     normalizeIPNets(ar.Destination.NotNets),
 		NotDstSelector: ar.Destination.NotSelector,
 		NotDstPorts:    ar.Destination.NotPorts,
 	}
 }
 
-// normalizeIPNet converts an IPNet to a network by ensuring the IP address
-// is correctly masked.
+// normalizeIPNet converts an IPNet to a network by ensuring the IP address is correctly masked.
 func normalizeIPNet(n *net.IPNet) *net.IPNet {
 	if n == nil {
 		return nil
 	}
 	return n.Network()
+}
+
+// normalizeIPNets converts an []*IPNet to a slice of networks by ensuring the IP addresses
+// are correctly masked.
+func normalizeIPNets(nets []*net.IPNet) []*net.IPNet {
+	if nets == nil {
+		return nil
+	}
+	out := make([]*net.IPNet, len(nets))
+	for i, n := range nets {
+		out[i] = normalizeIPNet(n)
+	}
+	return out
 }
 
 // ruleBackendToAPI convert a Backend Rule structure to an API Rule structure.
@@ -116,50 +152,44 @@ func ruleBackendToAPI(br model.Rule) api.Rule {
 		NotICMP:     notICMP,
 		Source: api.EntityRule{
 			Tag:         br.SrcTag,
-			Net:         br.SrcNet,
+			Nets:        br.AllSrcNets(),
 			Selector:    br.SrcSelector,
 			Ports:       br.SrcPorts,
 			NotTag:      br.NotSrcTag,
-			NotNet:      br.NotSrcNet,
+			NotNets:     br.AllNotSrcNets(),
 			NotSelector: br.NotSrcSelector,
 			NotPorts:    br.NotSrcPorts,
 		},
 
 		Destination: api.EntityRule{
 			Tag:         br.DstTag,
-			Net:         br.DstNet,
+			Nets:        br.AllDstNets(),
 			Selector:    br.DstSelector,
 			Ports:       br.DstPorts,
 			NotTag:      br.NotDstTag,
-			NotNet:      br.NotDstNet,
+			NotNets:     br.AllNotDstNets(),
 			NotSelector: br.NotDstSelector,
 			NotPorts:    br.NotDstPorts,
 		},
 	}
 }
 
-// rulesAPIToBackend converts an API Rule structure slice to a Backend Rule structure slice.
-func rulesAPIToBackend(ars []api.Rule) []model.Rule {
-	if ars == nil {
-		return []model.Rule{}
+// ruleActionAPIToBackend converts the rule action field value from the API
+// value to the equivalent backend value.
+func ruleActionAPIToBackend(action string) string {
+	if action == "pass" {
+		return "next-tier"
 	}
-
-	brs := make([]model.Rule, len(ars))
-	for idx, ar := range ars {
-		brs[idx] = ruleAPIToBackend(ar)
-	}
-	return brs
+	return action
 }
 
-// rulesBackendToAPI converts a Backend Rule structure slice to an API Rule structure slice.
-func rulesBackendToAPI(brs []model.Rule) []api.Rule {
-	if brs == nil {
-		return nil
+// ruleActionBackendToAPI converts the rule action field value from the backend
+// value to the equivalent API value.
+func ruleActionBackendToAPI(action string) string {
+	if action == "" {
+		return "allow"
+	} else if action == "next-tier" {
+		return "pass"
 	}
-
-	ars := make([]api.Rule, len(brs))
-	for idx, br := range brs {
-		ars[idx] = ruleBackendToAPI(br)
-	}
-	return ars
+	return action
 }

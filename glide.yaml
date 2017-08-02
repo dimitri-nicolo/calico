@@ -22,8 +22,10 @@ import:
 - package: gopkg.in/tchap/go-patricia.v2
   subpackages:
   - patricia
+- package: golang.org/x/text
+  version: 19e51611da83d6be54ddafce4a4af510cb3e9ea4
 - package: k8s.io/client-go
-  version: 243d8a9cb66a51ad8676157f79e71033b4014a2a
+  version: 4a3ab2f5be5177366f8206fd79ce55ca80e417fa
   subpackages:
   - kubernetes
   - pkg/api
@@ -41,5 +43,7 @@ import:
   - rest
   - tools/cache
   - tools/clientcmd
+- package: github.com/prometheus/client_golang
+  version: ^0.8.0
 testImport:
 - package: github.com/onsi/gomega
