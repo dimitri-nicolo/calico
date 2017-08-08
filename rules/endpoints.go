@@ -17,7 +17,7 @@ package rules
 import (
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/hashutils"
 	. "github.com/projectcalico/felix/iptables"
