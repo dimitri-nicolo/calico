@@ -6,7 +6,7 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/nfnetlink/nfnl"
 	"github.com/tigera/nfnetlink/pkt"
 	"github.com/vishvananda/netlink/nl"
