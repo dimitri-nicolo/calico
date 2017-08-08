@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	kapiv1 "k8s.io/client-go/pkg/api/v1"
@@ -267,6 +267,11 @@ func (c converter) k8sSelectorToCalico(s *metav1.LabelSelector, ns *string) stri
 		case metav1.LabelSelectorOpDoesNotExist:
 			selectors = append(selectors, fmt.Sprintf("! has(%s%s)", prefix, e.Key))
 		}
+	}
+
+	// If namespace selector is empty then we select all namespaces.
+	if len(selectors) == 0 && ns == nil {
+		selectors = []string{"has(calico/k8s_ns)"}
 	}
 
 	return strings.Join(selectors, " && ")

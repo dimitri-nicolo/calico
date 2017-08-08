@@ -25,9 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	k8sapi "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
-
-	"github.com/projectcalico/libcalico-go/lib/backend/k8s/resources"
-	"github.com/projectcalico/libcalico-go/lib/net"
 )
 
 var _ = Describe("Test parsing strings", func() {
@@ -474,6 +471,48 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
 	})
 
+	It("should parse a NetworkPolicy with an empty namespaceSelector", func() {
+		np := extensions.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "testPolicy",
+				Namespace: "default",
+			},
+			Spec: extensions.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{"label": "value"},
+				},
+				Ingress: []extensions.NetworkPolicyIngressRule{
+					extensions.NetworkPolicyIngressRule{
+						From: []extensions.NetworkPolicyPeer{
+							extensions.NetworkPolicyPeer{
+								NamespaceSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		// Parse the policy.
+		pol, err := c.networkPolicyToPolicy(&np)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Assert key fields are correct.
+		Expect(pol.Key.(model.PolicyKey).Name).To(Equal("np.projectcalico.org/default.testPolicy"))
+
+		// Assert value fields are correct.
+		Expect(int(*pol.Value.(*model.Policy).Order)).To(Equal(1000))
+		Expect(pol.Value.(*model.Policy).Selector).To(Equal("calico/k8s_ns == 'default' && label == 'value'"))
+		Expect(len(pol.Value.(*model.Policy).InboundRules)).To(Equal(1))
+		Expect(pol.Value.(*model.Policy).InboundRules[0].SrcSelector).To(Equal("has(calico/k8s_ns)"))
+
+		// OutboundRules should only have one rule and it should be allow.
+		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
+		Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+	})
+
 	It("should parse a NetworkPolicy with podSelector.MatchExpressions", func() {
 		np := extensions.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
@@ -686,74 +725,5 @@ var _ = Describe("Test Namespace conversion", func() {
 			Expect(inboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
 			Expect(outboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
 		})
-	})
-})
-
-var _ = Describe("Test Node conversion", func() {
-
-	It("should parse a k8s Node to a Calico Node", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
-		node := k8sapi.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "TestNode",
-				Labels:          l,
-				ResourceVersion: "1234",
-				Annotations: map[string]string{
-					"projectcalico.org/IPv4Address": "172.17.17.10/24",
-					"projectcalico.org/ASNumber":    "2546",
-				},
-			},
-			Status: k8sapi.NodeStatus{
-				Addresses: []k8sapi.NodeAddress{
-					k8sapi.NodeAddress{
-						Type:    k8sapi.NodeInternalIP,
-						Address: "172.17.17.10",
-					},
-					k8sapi.NodeAddress{
-						Type:    k8sapi.NodeExternalIP,
-						Address: "192.168.1.100",
-					},
-					k8sapi.NodeAddress{
-						Type:    k8sapi.NodeHostName,
-						Address: "172-17-17-10",
-					},
-				},
-			},
-			Spec: k8sapi.NodeSpec{},
-		}
-
-		n, err := resources.K8sNodeToCalico(&node)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Ensure we got the correct values.
-		felixAddress := *n.Value.(*model.Node).FelixIPv4
-		bgpAddress := *n.Value.(*model.Node).BGPIPv4Addr
-		bgpNet := *n.Value.(*model.Node).BGPIPv4Net
-		labels := n.Value.(*model.Node).Labels
-		asn := n.Value.(*model.Node).BGPASNumber
-
-		ip, ipNet, _ := net.ParseCIDR("172.17.17.10/24")
-
-		Expect(felixAddress).To(Equal(*ip))
-		Expect(bgpAddress).To(Equal(*ip))
-		Expect(bgpNet).To(Equal(*ipNet))
-		Expect(labels).To(Equal(l))
-		Expect(asn.String()).To(Equal("2546"))
-	})
-
-	It("should error on an invalid IP", func() {
-		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
-		node := k8sapi.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            "TestNode",
-				Labels:          l,
-				ResourceVersion: "1234",
-				Annotations:     map[string]string{"projectcalico.org/IPv4Address": "172.984.12.5/24"},
-			},
-			Spec: k8sapi.NodeSpec{},
-		}
-
-		_, err := resources.K8sNodeToCalico(&node)
-		Expect(err).To(HaveOccurred())
 	})
 })

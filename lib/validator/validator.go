@@ -20,7 +20,6 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
@@ -28,6 +27,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/scope"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	"github.com/projectcalico/libcalico-go/lib/selector/tokenizer"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"gopkg.in/go-playground/validator.v8"
@@ -113,6 +113,7 @@ func init() {
 	registerStructValidator(validateBackendRule, model.Rule{})
 	registerStructValidator(validateNodeSpec, api.NodeSpec{})
 	registerStructValidator(validateBGPPeerMeta, api.BGPPeerMetadata{})
+	registerStructValidator(validatePolicySpec, api.PolicySpec{})
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -504,5 +505,19 @@ func validateBGPPeerMeta(v *validator.Validate, structLevel *validator.StructLev
 	if m.Scope == scope.Global && m.Node != "" {
 		structLevel.ReportError(reflect.ValueOf(m.Node),
 			"Metadata.Node", "", reason("no BGP Peer node name should be specified when scope is global"))
+	}
+}
+
+func validatePolicySpec(v *validator.Validate, structLevel *validator.StructLevel) {
+	m := structLevel.CurrentStruct.Interface().(api.PolicySpec)
+
+	if m.DoNotTrack && m.PreDNAT {
+		structLevel.ReportError(reflect.ValueOf(m.PreDNAT),
+			"PolicySpec.PreDNAT", "", reason("PreDNAT and DoNotTrack cannot both be true, for a given PolicySpec"))
+	}
+
+	if m.PreDNAT && len(m.EgressRules) > 0 {
+		structLevel.ReportError(reflect.ValueOf(m.EgressRules),
+			"PolicySpec.EgressRules", "", reason("PreDNAT PolicySpec cannot have any EgressRules"))
 	}
 }

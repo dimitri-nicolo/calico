@@ -15,6 +15,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/projectcalico/libcalico-go/lib/api/unversioned"
 )
 
@@ -47,6 +49,16 @@ type Policy struct {
 	unversioned.TypeMetadata
 	Metadata PolicyMetadata `json:"metadata,omitempty"`
 	Spec     PolicySpec     `json:"spec,omitempty"`
+}
+
+func (t Policy) GetResourceMetadata() unversioned.ResourceMetadata {
+	return t.Metadata
+}
+
+// String() returns the human-readable string representation of a Policy instance
+// which is defined by its Name.
+func (t Policy) String() string {
+	return fmt.Sprintf("Policy(Name=%s)", t.Metadata.Name)
 }
 
 // PolicyMetadata contains the metadata for a selector-based security Policy resource.
