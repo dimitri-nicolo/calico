@@ -55,6 +55,14 @@ var policySpec1 = api.PolicySpec{
 	Selector:     "thing == 'value'",
 }
 
+// When reading back, the rules should have been updated to the newer format.
+var policySpec1AfterRead = api.PolicySpec{
+	Order:        &order1,
+	IngressRules: []api.Rule{testutils.InRule1AfterRead, testutils.InRule2AfterRead},
+	EgressRules:  []api.Rule{testutils.EgressRule1AfterRead, testutils.EgressRule2AfterRead},
+	Selector:     "thing == 'value'",
+}
+
 var policySpec2 = api.PolicySpec{
 	Order:        &order2,
 	IngressRules: []api.Rule{testutils.InRule2, testutils.InRule1},
@@ -63,10 +71,34 @@ var policySpec2 = api.PolicySpec{
 	DoNotTrack:   true,
 }
 
+// When reading back, the rules should have been updated to the newer format.
+var policySpec2AfterRead = api.PolicySpec{
+	Order:        &order2,
+	IngressRules: []api.Rule{testutils.InRule2AfterRead, testutils.InRule1AfterRead},
+	EgressRules:  []api.Rule{testutils.EgressRule2AfterRead, testutils.EgressRule1AfterRead},
+	Selector:     "thing2 == 'value2'",
+	DoNotTrack:   true,
+}
+
+var policySpec3 = api.PolicySpec{
+	Order:        &order2,
+	IngressRules: []api.Rule{testutils.InRule2, testutils.InRule1},
+	Selector:     "thing2 == 'value2'",
+	PreDNAT:      true,
+}
+
+// When reading back, the rules should have been updated to the newer format.
+var policySpec3AfterRead = api.PolicySpec{
+	Order:        &order2,
+	IngressRules: []api.Rule{testutils.InRule2AfterRead, testutils.InRule1AfterRead},
+	Selector:     "thing2 == 'value2'",
+	PreDNAT:      true,
+}
+
 var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2, func(config api.CalicoAPIConfig) {
 
 	DescribeTable("Policy e2e tests",
-		func(meta1, meta2 api.PolicyMetadata, spec1, spec2 api.PolicySpec) {
+		func(tierMeta api.TierMetadata, meta1, meta2 api.PolicyMetadata, spec1, spec2, spec1AfterRead, spec2AfterRead api.PolicySpec) {
 			c := testutils.CreateCleanClient(config)
 			By("Updating the policy before it is created")
 			_, outError := c.Policies().Update(&api.Policy{Metadata: meta1, Spec: spec1})
@@ -75,6 +107,10 @@ var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2
 			Expect(outError.Error()).To(Equal(errors.New("resource does not exist: Policy(tier=default, name=policy-1/with.foo)").Error()))
 
 			By("Create, Apply, Get and compare")
+
+			// Create the policy tier
+			_, outError = c.Tiers().Create(&api.Tier{Metadata: tierMeta})
+			Expect(outError).NotTo(HaveOccurred())
 
 			// Create a policy with meta1 and spec1.
 			_, outError = c.Policies().Create(&api.Policy{Metadata: meta1, Spec: spec1})
@@ -95,8 +131,8 @@ var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2
 			// Should match spec1 & outPolicy1 and outPolicy2 & spec2 and errors to be nil.
 			Expect(outError1).NotTo(HaveOccurred())
 			Expect(outError2).NotTo(HaveOccurred())
-			Expect(outPolicy1.Spec).To(Equal(spec1))
-			Expect(outPolicy2.Spec).To(Equal(spec2))
+			Expect(outPolicy1.Spec).To(Equal(spec1AfterRead))
+			Expect(outPolicy2.Spec).To(Equal(spec2AfterRead))
 
 			By("Update, Get and compare")
 
@@ -109,7 +145,10 @@ var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2
 
 			// Assert the Spec for policy with meta1 matches spec2 and no error.
 			Expect(outError1).NotTo(HaveOccurred())
-			Expect(outPolicy1.Spec).To(Equal(spec2))
+			Expect(outPolicy1.Spec).To(Equal(spec2AfterRead))
+
+			// Assert the Metadata for policy with meta1 matches meta1.
+			Expect(outPolicy1.Metadata).To(Equal(meta1))
 
 			By("List all the policies and compare")
 
@@ -179,28 +218,50 @@ var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2
 
 		// Test 1: Pass two fully populated PolicySpecs and expect the series of operations to succeed.
 		Entry("Two fully populated PolicySpecs",
-			api.PolicyMetadata{Name: "policy-1/with.foo"},
-			api.PolicyMetadata{Name: "policy.1"},
+			api.TierMetadata{Name: "default"},
+			api.PolicyMetadata{Tier: "default", Name: "policy-1/with.foo", Annotations: map[string]string{"key": "value"}},
+			api.PolicyMetadata{Tier: "default", Name: "policy.1"},
 			policySpec1,
 			policySpec2,
+			policySpec1AfterRead,
+			policySpec2AfterRead,
 		),
 
 		// Test 2: Pass one fully populated PolicySpec and another empty PolicySpec and expect the series of operations to succeed.
 		Entry("One fully populated PolicySpec and another empty PolicySpec",
-			api.PolicyMetadata{Name: "policy-1/with.foo"},
-			api.PolicyMetadata{Name: "policy.1"},
+			api.TierMetadata{Name: "default"},
+			api.PolicyMetadata{Tier: "default", Name: "policy-1/with.foo"},
+			api.PolicyMetadata{Tier: "default", Name: "policy.1"},
 			policySpec1,
+			api.PolicySpec{},
+			policySpec1AfterRead,
 			api.PolicySpec{},
 		),
 
 		// Test 3: Pass one partially populated PolicySpec and another fully populated PolicySpec and expect the series of operations to succeed.
 		Entry("One partially populated PolicySpec and another fully populated PolicySpec",
-			api.PolicyMetadata{Name: "policy-1/with.foo"},
-			api.PolicyMetadata{Name: "policy_1/with.foo/with_bar"},
+			api.TierMetadata{Name: "default"},
+			api.PolicyMetadata{Tier: "default", Name: "policy-1/with.foo"},
+			api.PolicyMetadata{Tier: "default", Name: "policy_1/with.foo/with_bar"},
 			api.PolicySpec{
 				Selector: "has(myLabel-8.9/88-._9)",
 			},
 			policySpec2,
+			api.PolicySpec{
+				Selector: "has(myLabel-8.9/88-._9)",
+			},
+			policySpec2AfterRead,
+		),
+
+		// Test 4: Two fully populated PolicySpecs, one untracked and one pre-DNAT.
+		Entry("Two fully populated PolicySpecs, one untracked and one pre-DNAT",
+			api.TierMetadata{Name: "default"},
+			api.PolicyMetadata{Tier: "default", Name: "policy-1/with.foo", Annotations: map[string]string{"key": "value"}},
+			api.PolicyMetadata{Tier: "default", Name: "policy.1"},
+			policySpec3,
+			policySpec2,
+			policySpec3AfterRead,
+			policySpec2AfterRead,
 		),
 	)
 })

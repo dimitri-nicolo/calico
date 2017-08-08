@@ -17,7 +17,7 @@ package resources
 import (
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
-	kerrors "k8s.io/client-go/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // K8sErrorToCalico returns the equivalent libcalico error for the given
@@ -42,6 +42,12 @@ func K8sErrorToCalico(ke error, id interface{}) error {
 	if kerrors.IsForbidden(ke) || kerrors.IsUnauthorized(ke) {
 		return errors.ErrorConnectionUnauthorized{
 			Err: ke,
+		}
+	}
+	if kerrors.IsConflict(ke) {
+		return errors.ErrorResourceUpdateConflict{
+			Err:        ke,
+			Identifier: id,
 		}
 	}
 	return errors.ErrorDatastoreError{
