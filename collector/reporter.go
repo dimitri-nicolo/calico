@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gavv/monotime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/logutils"

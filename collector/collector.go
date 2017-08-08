@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/mipearson/rfw"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/lookup"
