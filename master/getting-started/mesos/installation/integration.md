@@ -3,7 +3,7 @@ title: Integration Guide
 ---
 
 This guide explains how to integrate Calico networking and policy on an existing
-Mesos cluster. These instruction should be followed on each **Agent**.
+Mesos cluster. These instructions should be followed on each **Agent**.
 
 Ensure you've met the [prerequisites](prerequisites) before continuing, namely that
 you have etcd running.
@@ -20,7 +20,7 @@ Calico runs as a Docker container on each host. The `calicoctl` command line too
 3. Launch `calico/node`:
 
    ```
-   sudo ETCD_ENDPOINTS=http://$ETCD_IP:$ETCD_PORT calicoctl node run
+   sudo ETCD_ENDPOINTS=http://$ETCD_IP:$ETCD_PORT calicoctl node run --node-image=quay.io/calico/node:{{site.data.versions[page.version].first.components["calico/node"].version}}
    ```
 
    >Note: Ensure you've set or replaced `$ETCD_IP` and `$ETCD_PORT` to point to

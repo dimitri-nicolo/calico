@@ -14,7 +14,10 @@ You can easily create a cluster compatible with this manifest by following [the 
 
 #### Installation
 
-To install this Calico and a single node etcd on a run the following command:
+To install this Calico and a single node etcd on a run the following command
+depending on your kubeadm / kubernetes version:
+
+For Kubeadm 1.6 with Kubernetes 1.6+:
 
 ```
 kubectl apply -f calico.yaml
@@ -23,6 +26,11 @@ kubectl apply -f calico.yaml
 >[Click here to view the calico.yaml for Kubeadm 1.6 with Kubernetes 1.6.x.](1.6/calico.yaml)
 
 >[Click here to view the calico.yaml for Kubeadm 1.5 with Kubernetes 1.5.x.](1.5/calico.yaml)
+
+## Using calicoctl in a Kubeadm Cluster
+
+The simplest way to use calicoctl in Kubeadm is by running it as a pod.
+See [using calicoctl with Kubernetes](../../../tutorials/using-calicoctl#b-running-calicoctl-as-a-kubernetes-pod) for more information.
 
 ## About
 

@@ -5,6 +5,12 @@ order: 2
 toc:
 - title: Using Calico
   path: /usage/
+- title: calicoctl
+  section:
+  - title: Installing and Configuring calicoctl
+    path: /usage/calicoctl/install-and-configuration
+  - title: calico/ctl container
+    path: /usage/calicoctl/container
 - title: Calico and Systemd
   path: /usage/configuration/as-service
 - title: Configuring BGP Peers
@@ -23,6 +29,10 @@ toc:
   path: /usage/configuration/ip-in-ip
 - title: Configuring a Node IP Address and Subnet
   path: /usage/configuration/node
+- title: Configuring MTU
+  path: /usage/configuration/mtu
+- title: Decommissioning a Node
+  path: /usage/decommissioning-a-node
 - title: Configuring Conntrack
   path: /usage/configuration/conntrack
 - title: Configuring Prometheus

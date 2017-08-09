@@ -1,6 +1,5 @@
 ---
 title: Configuring Felix
-redirect_from: latest/reference/felix/configuration
 ---
 
 Configuration for Felix is read from one of four possible locations, in
@@ -25,9 +24,9 @@ The full list of parameters which can be set is as follows.
 | DatastoreDriver                         | FELIX_DATASTOREDRIVER                   | etcdv2                               | One of "etcdv2" or "kubernetes".  The datastore that Felix should read endpoints and policy information from.  |
 | FelixHostname                           | FELIX_FELIXHOSTNAME                     | socket.gethostname()                 | The hostname Felix reports to the plugin. Should be used if the hostname Felix autodetects is incorrect or does not match what the plugin will expect.  |
 | LogFilePath                             | FELIX_LOGFILEPATH                       | /var/log/calico/felix.log            | The full path to the felix log. Set to "none" to disable file logging.  |
-| LogSeveritySys                          | FELIX_LOGSEVERITYSYS                    | ERROR                                | The log severity above which logs are sent to the syslog. Valid values are DEBUG, INFO, WARNING, ERROR and CRITICAL, or NONE for no logging to syslog (all values case insensitive).  |
+| LogSeveritySys                          | FELIX_LOGSEVERITYSYS                    | INFO                                 | The log severity above which logs are sent to the syslog. Valid values are DEBUG, INFO, WARNING, ERROR and CRITICAL, or NONE for no logging to syslog (all values case insensitive).  |
 | LogSeverityFile                         | FELIX_LOGSEVERITYFILE                   | INFO                                 | The log severity above which logs are sent to the log file. Valid values as for LogSeveritySys.  |
-| LogSeverityScreen                       | FELIX_LOGSEVERITYSCREEN                 | ERROR                                | The log severity above which logs are sent to the stdout. Valid values as for LogSeveritySys.  |
+| LogSeverityScreen                       | FELIX_LOGSEVERITYSCREEN                 | INFO                                 | The log severity above which logs are sent to the stdout. Valid values as for LogSeveritySys.  |
 | StartupCleanupDelay                     | FELIX_STARTUPCLEANUPDELAY               | 30                                   | Delay, in seconds, before felix does its start-of-day cleanup to remove orphaned iptables chains and ipsets.  Before the first cleanup, felix operates in "graceful restart" mode,  during which it preserves any pre-existing chains and ipsets. In a large deployment you may want to increase this value to give felix more time to load the initial snapshot from etcd before cleaning up.  |
 | PrometheusMetricsEnabled                | FELIX_PROMETHEUSMETRICSENABLED          | "false"                              | Set to "true" to enable the experimental Prometheus metrics server in Felix.  |
 | PrometheusMetricsPort                   | FELIX_PROMETHEUSMETRICSPORT             | 9091                                 | Experimental: TCP port that the Prometheus metrics server should bind to.  |
@@ -36,6 +35,7 @@ The full list of parameters which can be set is as follows.
 | FailsafeOutboundHostPorts               | FELIX_FAILSAFEOUTBOUNDHOSTPORTS         | 2379,2380,4001,7001                  | Comma-delimited list of TCP ports that Felix will allow outgoing from traffic from host endpoints to irrespective of the security policy. To disable all outbound host ports, use the value "none". This is useful to avoid accidently cutting off a host with incorrect configuration. The default value opens etcd's standard ports to ensure that Felix does not get cut off from etcd.  |
 | ReportingIntervalSecs                   | FELIX_REPORTINGINTERVALSECS             | 30                                   | Interval at which Felix reports its status into the datastore or 0 to disable.  Must be non-zero in OpenStack deployments.  |
 | ReportingTTLSecs                        | FELIX_REPORTINGTTLSECS                  | 90                                   | Time-to-live setting for process-wide status reports. |
+| IpInIpMtu                               | FELIX_IPINIPMTU                         | 1440                                 | The MTU to set on the tunnel device. See [Configuring MTU]({{site.baseurl}}/{{page.version}}/usage/configuration/mtu) |
 
 #### etcdv2 datastore configuration
 
@@ -105,22 +105,15 @@ OpenStack plugin in certain error cases). However, in a Docker
 environment the use of environment variables or etcd is often more
 convenient.
 
-### etcd configuration
+### Datastore
 
-> **NOTE**
->
-> etcd configuration cannot be used to set either EtcdAddr or
->
-> :   FelixHostname, both of which are required before the etcd
->     configuration can be read.
->
+Felix also reads configuration parameters from the datastore.  It supports
+a global setting and a per-host override.  Datastore-based configuration
+can be set using the `--raw=felix` option of the calicoctl tool.  For example,
+to set a per-host override for "myhost" to move the log file to /tmp/felix.log:
 
-when using the etcd datastore driver, etcd configuration is read from
-etcd from two places.
+    ./calicoctl config set --raw=felix --node=myhost LogFilePath /tmp/felix.log
 
-1.  For a host of FelixHostname value `HOSTNAME` and a parameter named
-    `NAME`, it is read from `/calico/v1/host/HOSTNAME/config/NAME`.
-2.  For a parameter named `NAME`, it is read from
-    `/calico/v1/config/NAME`.
+(For a global setting, omit the `--node=` option.)
 
-Note that the names are case sensitive.
+For more information, see the [calicoctl config documentation](../calicoctl/commands/config).

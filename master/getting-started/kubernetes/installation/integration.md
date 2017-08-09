@@ -21,8 +21,7 @@ for most users.
 
 > **NOTE:**
 >
-> Calico can also enforce network policy [without a dependency on etcd](hosted/kubernetes-datastore/). This feature is currently experimental
-and is currently only supported as via hosted install.
+> Calico can also enforce network policy [without a dependency on etcd](hosted/kubernetes-datastore/).
 
 ## About the Calico Components
 
@@ -59,7 +58,7 @@ wget {{site.data.versions[page.version].first.components.calicoctl.download_url}
 sudo chmod +x calicoctl
 
 # Run the calico/node container
-sudo ETCD_ENDPOINTS=http://<ETCD_IP>:<ETCD_PORT> ./calicoctl node run
+sudo ETCD_ENDPOINTS=http://<ETCD_IP>:<ETCD_PORT> ./calicoctl node run --node-image=quay.io/calico/node:{{site.data.versions[page.version].first.components["calico/node"].version}}
 ```
 
 See the [`calicoctl node run` documentation]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/node/)

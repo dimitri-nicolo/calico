@@ -1,6 +1,5 @@
 ---
 title: Overview of Calico for DC/OS
-redirect_from: latest/getting-started/mesos/installation/dc-os/index
 ---
 
 The following information details Calico's installation and runtime dependencies
@@ -93,7 +92,7 @@ can disable modification of the docker daemon altogether.
 
 To perform networking on Unified Containerizer tasks, Calico's CNI binaries and
 configuration file must be installed on every agent, and the slave process must
-be restarted to pick up the change. This step of the Framework performs the following steps:
+be restarted to pick up the change. The Framework then performs the following steps:
 
 1. Download [`calico`]({{site.data.versions[page.version].first.components["calico/cni"].download_calico_url}}) to `/opt/mesosphere/active/cni/`
 2. Download [`calico-ipam`]({{site.data.versions[page.version].first.components["calico/cni"].download_calico_ipam_url}}) to `/opt/mesosphere/active/cni/`
