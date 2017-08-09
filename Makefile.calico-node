@@ -12,13 +12,13 @@ BIRD_VER := v0.3.1
 GOBGPD_VER := v0.2.1
 FELIX_VER := latest
 LIBNETWORK_PLUGIN_VER := v1.1.0
-CONFD_VER := v0.11.2
+CONFD_VER := v0.12.1-calico0.1.0
 SYSTEMTEST_CONTAINER_VER := latest
 
-###############################################################################
+#######################################################w########################
 # URL for Calico binaries
 # confd binary
-CONFD_URL?=https://github.com/projectcalico/confd/releases/download/$(CONFD_VER)/confd.static
+CONFD_URL?=https://github.com/projectcalico/confd/releases/download/$(CONFD_VER)/confd
 # bird binaries
 BIRD_URL?=https://github.com/projectcalico/calico-bird/releases/download/$(BIRD_VER)/bird
 BIRD6_URL?=https://github.com/projectcalico/calico-bird/releases/download/$(BIRD_VER)/bird6
@@ -66,7 +66,7 @@ calico-node-latest.aci: calico-node.tar
 
 # Build calico/node docker image - explicitly depend on the container binaries.
 $(NODE_CONTAINER_CREATED): $(NODE_CONTAINER_DIR)/Dockerfile $(NODE_CONTAINER_FILES) $(addprefix $(NODE_CONTAINER_BIN_DIR)/,$(NODE_CONTAINER_BINARIES))
-	docker build -t $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_DIR)
+	docker build --pull -t $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_DIR)
 	touch $@
 
 # Get felix binaries
