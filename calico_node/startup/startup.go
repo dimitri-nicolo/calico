@@ -77,7 +77,9 @@ func main() {
 	configureASNumber(node)
 
 	// Check for conflicting node configuration
-	checkConflictingNodes(client, node)
+	// TODO: Re-enable only on first invocation to avoid thundering
+	// herd during full system restart.
+	//checkConflictingNodes(client, node)
 
 	// Check expected filesystem
 	ensureFilesystemAsExpected()

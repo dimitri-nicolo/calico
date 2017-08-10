@@ -31,7 +31,7 @@ RUN apk --no-cache add wget ca-certificates libgcc && \
 RUN apk add --no-cache --repository "http://alpine.gliderlabs.com/alpine/edge/community" runit
 
 # Install remaining runtime deps required for felix from the global repository
-RUN apk add --no-cache ip6tables ipset iputils iproute2 conntrack-tools
+RUN apk add --no-cache ip6tables ipset iputils iproute2 conntrack-tools net-tools
 
 # Copy in the filesystem - this contains felix, bird, gobgp etc...
 COPY filesystem /

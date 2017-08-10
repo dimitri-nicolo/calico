@@ -76,6 +76,7 @@ vendor: glide.yaml
   docker run --rm \
     -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
     -v $(HOME)/.glide:/home/user/.glide:rw \
+	-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
     -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
     $(CALICO_BUILD) /bin/sh -c ' \
 		  cd /go/src/$(PACKAGE_NAME) && \
@@ -481,7 +482,8 @@ clean:
 
 	# Retag and remove external images so that they will be pulled again
 	# We avoid just deleting the image. We didn't build them here so it would be impolite to delete it.
-	docker tag $(FELIX_CONTAINER_NAME) $(FELIX_CONTAINER_NAME)-backup && docker rmi $(FELIX_CONTAINER_NAME) || true
+	# Don't delete the Felix image, since we need to build it locally.
+	# docker tag $(FELIX_CONTAINER_NAME) $(FELIX_CONTAINER_NAME)-backup && docker rmi $(FELIX_CONTAINER_NAME) || true
 
 .PHONY: help
 ## Display this help text
