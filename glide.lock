@@ -1,6 +1,11 @@
-hash: 55b1bb6ca3ac60a923e1997963a2e8735895191745dcf8e55d3f2246c7d49a94
-updated: 2017-08-07T10:04:37.816424735-07:00
+hash: d8684b33118df33acfb2b7f6ed5f25004df3ce2f40efc23932a044e71dc4e381
+updated: 2017-08-10T18:34:18.164396018Z
 imports:
+- name: cloud.google.com/go
+  version: 3b1ae45394a234c385be014e9a488f2bb6eef821
+  subpackages:
+  - compute/metadata
+  - internal
 - name: github.com/beorn7/perks
   version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
@@ -19,6 +24,14 @@ imports:
   - pkg/tlsutil
   - pkg/transport
   - pkg/types
+- name: github.com/coreos/go-oidc
+  version: be73733bb8cc830d0205609b95d125215f8e9c70
+  subpackages:
+  - http
+  - jose
+  - key
+  - oauth2
+  - oidc
 - name: github.com/coreos/go-systemd
   version: 2688e91251d9d8e404e86dd8f096e23b2f086958
   subpackages:
@@ -69,7 +82,7 @@ imports:
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
-  version: 748d386b5c1ea99658fd69fe9f03991ce86a90c1
+  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
   subpackages:
   - proto
 - name: github.com/google/gofuzz
@@ -78,6 +91,8 @@ imports:
   version: 3ca23474a7c7203e0a0a070fd33508f6efdb9b3d
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
+- name: github.com/jonboulle/clockwork
+  version: 72f9bd7c4e0c2a40055ab3d0f09654f730cce982
 - name: github.com/juju/ratelimit
   version: 77ed1c8a01217656d2080ad51981f6e99adaa177
 - name: github.com/kardianos/osext
@@ -140,8 +155,8 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  repo:    git@github.com:tigera/libcalico-go-private
-  version: 7f93f7d05ab6cca1cb9923e138eb90e7882d09d6
+  version: 3b536b9bbf7f0bbf81e8a20334bcd506b1e14e07
+  repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
   - lib/api
@@ -204,8 +219,6 @@ imports:
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sirupsen/logrus
   version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
-  subpackages:
-  - hooks/syslog
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/nfnetlink
@@ -219,7 +232,7 @@ imports:
   subpackages:
   - codec
 - name: github.com/vishvananda/netlink
-  version: 70cf3c74a89e4ca3847f109e77490a40e5639965
+  version: f5a6f697a596c788d474984a38a0ac4ba0719e93
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -232,6 +245,7 @@ imports:
   version: 3da985ce5951d99de868be4385f21ea6c2b22f24
   subpackages:
   - context
+  - context/ctxhttp
   - html
   - html/atom
   - html/charset
@@ -239,8 +253,15 @@ imports:
   - http2/hpack
   - idna
   - lex/httplex
+- name: golang.org/x/oauth2
+  version: 3c3a985cb79f52a3190fbc056984415ca6763d01
+  subpackages:
+  - google
+  - internal
+  - jws
+  - jwt
 - name: golang.org/x/sys
-  version: d8f5ea21b9295e315e612b4bcf4bedea93454d4d
+  version: e42485b6e20ae7d2304ec72e535b103ed350cc02
   subpackages:
   - unix
 - name: golang.org/x/text
@@ -268,6 +289,18 @@ imports:
   - unicode/bidi
   - unicode/norm
   - width
+- name: google.golang.org/appengine
+  version: 4f7eeb5305a4ba1966344836ba4af9996b7b4e05
+  subpackages:
+  - internal
+  - internal/app_identity
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/modules
+  - internal/remote_api
+  - internal/urlfetch
+  - urlfetch
 - name: gopkg.in/go-playground/validator.v8
   version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/inf.v0
@@ -389,8 +422,12 @@ imports:
   - pkg/util
   - pkg/util/parsers
   - pkg/version
+  - plugin/pkg/client/auth
+  - plugin/pkg/client/auth/gcp
+  - plugin/pkg/client/auth/oidc
   - rest
   - rest/watch
+  - third_party/forked/golang/template
   - tools/auth
   - tools/cache
   - tools/clientcmd
@@ -404,4 +441,5 @@ imports:
   - util/flowcontrol
   - util/homedir
   - util/integer
+  - util/jsonpath
 testImports: []

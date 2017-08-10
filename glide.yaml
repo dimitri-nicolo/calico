@@ -27,7 +27,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: 7f93f7d05ab6cca1cb9923e138eb90e7882d09d6
+  version: 3b536b9bbf7f0bbf81e8a20334bcd506b1e14e07
   subpackages:
   - lib
 - package: github.com/tigera/nfnetlink
