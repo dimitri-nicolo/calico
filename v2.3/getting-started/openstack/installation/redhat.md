@@ -1,6 +1,5 @@
 ---
 title: Red Hat Enterprise Linux 7 Packaged Install Instructions
-redirect_from: latest/getting-started/openstack/installation/redhat
 ---
 
 For this version of Calico, with OpenStack on RHEL 7 or CentOS 7, we recommend
@@ -43,8 +42,7 @@ sections.
 
 Before starting this you will need the following:
 
--   One or more machines running RHEL 7, with OpenStack Liberty or Mitaka
-    installed.
+-   One or more machines running RHEL 7, with OpenStack installed.
 -   SSH access to these machines.
 -   Working DNS between these machines (use `/etc/hosts` if you don't
     have DNS on your network).
@@ -57,8 +55,7 @@ These steps are detailed in this section.
 ### Install OpenStack
 
 If you haven't already done so, install Openstack with Neutron and ML2
-networking. Instructions for installing OpenStack on RHEL can be found
-[here](http://docs.openstack.org/liberty/index.html).
+networking.
 
 ### Configure YUM repositories
 

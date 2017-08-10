@@ -1,6 +1,5 @@
 ---
 title: 'Ubuntu Packaged Install Instructions'
-redirect_from: latest/getting-started/openstack/installation/ubuntu
 ---
 
 For this version of Calico, with OpenStack on Ubuntu Trusty or Xenial, we
@@ -9,8 +8,7 @@ Ubuntu Trusty.
 
 These instructions will take you through a first-time install of Calico using
 the latest packages on a system running Ubuntu 14.04 (Trusty) or 16.04
-(Xenial), with OpenStack Kilo, Liberty or Mitaka. If you are upgrading an
-existing system, please see [this
+(Xenial). If you are upgrading an existing system, please see [this
 document]({{site.baseurl}}/{{page.version}}/getting-started/openstack/upgrade)
 instead for upgrade instructions.
 

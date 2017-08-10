@@ -17,6 +17,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -26,6 +27,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/client"
 	"github.com/projectcalico/libcalico-go/lib/ipip"
+	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 
@@ -33,6 +35,28 @@ var exitCode int
 
 func fakeExitFunction(ec int) {
 	exitCode = ec
+}
+
+// makeNode creates an api.Node with some BGPSpec info populated.
+func makeNode(ipv4 string, ipv6 string) *api.Node {
+	ip4, ip4net, _ := net.ParseCIDR(ipv4)
+	ip4net.IP = ip4.IP
+
+	ip6, ip6net, _ := net.ParseCIDR(ipv6)
+	// Guard against nil here in case we pass in an empty string for IPv6.
+	if ip6 != nil {
+		ip6net.IP = ip6.IP
+	}
+
+	n := &api.Node{
+		Spec: api.NodeSpec{
+			BGP: &api.NodeBGPSpec{
+				IPv4Address: ip4net,
+				IPv6Address: ip6net,
+			},
+		},
+	}
+	return n
 }
 
 var _ = Describe("Non-etcd related tests", func() {
@@ -69,7 +93,7 @@ type EnvItem struct {
 }
 
 var _ = Describe("FV tests against a real etcd", func() {
-	changedEnvVars := []string{"CALICO_IPV4POOL_CIDR", "CALICO_IPV6POOL_CIDR", "NO_DEFAULT_POOLS", "CALICO_IPV4POOL_IPIP"}
+	changedEnvVars := []string{"CALICO_IPV4POOL_CIDR", "CALICO_IPV6POOL_CIDR", "NO_DEFAULT_POOLS", "CALICO_IPV4POOL_IPIP", "CALICO_IPV6POOL_NAT_OUTGOING", "CALICO_IPV4POOL_NAT_OUTGOING", "IP", "CLUSTER_TYPE"}
 
 	BeforeEach(func() {
 		for _, envName := range changedEnvVars {
@@ -83,7 +107,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 	})
 
 	DescribeTable("Test IP pool env variables",
-		func(envList []EnvItem, expectedIPv4 string, expectedIPv6 string, expectIpv4IpipMode string) {
+		func(envList []EnvItem, expectedIPv4 string, expectedIPv6 string, expectIpv4IpipMode string, expectedIPV4NATOutgoing bool, expectedIPV6NATOutgoing bool) {
 			// Create a new client.
 			cfg, _ := client.LoadClientConfigFromEnvironment()
 			c := testutils.CreateCleanClient(*cfg)
@@ -106,6 +130,7 @@ var _ = Describe("FV tests against a real etcd", func() {
 			// Look through the pool for the expected data.
 			foundv4Expected := false
 			foundv6Expected := false
+
 			for _, pool := range poolList.Items {
 				if pool.Metadata.CIDR.String() == expectedIPv4 {
 					foundv4Expected = true
@@ -118,6 +143,9 @@ var _ = Describe("FV tests against a real etcd", func() {
 					if pool.Spec.IPIP != nil {
 						Expect(pool.Spec.IPIP.Enabled).To(BeFalse())
 					}
+
+					Expect(pool.Spec.NATOutgoing).To(Equal(expectedIPV6NATOutgoing), "Expected IPv6 to be %t but was %t", expectedIPV6NATOutgoing, pool.Spec.NATOutgoing)
+
 				} else {
 					// off is not a real mode value but use it instead of empty string
 					if expectIpv4IpipMode == "off" {
@@ -128,6 +156,9 @@ var _ = Describe("FV tests against a real etcd", func() {
 						Expect(pool.Spec.IPIP.Enabled).To(BeTrue())
 						Expect(pool.Spec.IPIP.Mode).To(Equal(ipip.Mode(expectIpv4IpipMode)))
 					}
+
+					Expect(pool.Spec.NATOutgoing).To(Equal(expectedIPV4NATOutgoing), "Expected IPv4 to be %t but was %t", expectedIPV4NATOutgoing, pool.Spec.NATOutgoing)
+
 				}
 			}
 			Expect(foundv4Expected).To(BeTrue(),
@@ -137,31 +168,49 @@ var _ = Describe("FV tests against a real etcd", func() {
 		},
 
 		Entry("No env variables set", []EnvItem{},
-			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "off"),
+			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "off", true, false),
 		Entry("IPv4 Pool env var set",
 			[]EnvItem{{"CALICO_IPV4POOL_CIDR", "172.16.0.0/24"}},
-			"172.16.0.0/24", "fd80:24e2:f998:72d6::/64", "off"),
+			"172.16.0.0/24", "fd80:24e2:f998:72d6::/64", "off", true, false),
 		Entry("IPv6 Pool env var set",
 			[]EnvItem{{"CALICO_IPV6POOL_CIDR", "fdff:ffff:ffff:ffff:ffff::/80"}},
-			"192.168.0.0/16", "fdff:ffff:ffff:ffff:ffff::/80", "off"),
+			"192.168.0.0/16", "fdff:ffff:ffff:ffff:ffff::/80", "off", true, false),
 		Entry("Both IPv4 and IPv6 Pool env var set",
 			[]EnvItem{
 				{"CALICO_IPV4POOL_CIDR", "172.16.0.0/24"},
 				{"CALICO_IPV6POOL_CIDR", "fdff:ffff:ffff:ffff:ffff::/80"},
 			},
-			"172.16.0.0/24", "fdff:ffff:ffff:ffff:ffff::/80", "off"),
+			"172.16.0.0/24", "fdff:ffff:ffff:ffff:ffff::/80", "off", true, false),
 		Entry("CALICO_IPV4POOL_IPIP set off", []EnvItem{{"CALICO_IPV4POOL_IPIP", "off"}},
-			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "off"),
+			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "off", true, false),
 		Entry("CALICO_IPV4POOL_IPIP set always", []EnvItem{{"CALICO_IPV4POOL_IPIP", "always"}},
-			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "always"),
+			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "always", true, false),
 		Entry("CALICO_IPV4POOL_IPIP set cross-subnet", []EnvItem{{"CALICO_IPV4POOL_IPIP", "cross-subnet"}},
-			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "cross-subnet"),
+			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "cross-subnet", true, false),
 		Entry("IPv6 Pool and IPIP set",
 			[]EnvItem{
 				{"CALICO_IPV6POOL_CIDR", "fdff:ffff:ffff:ffff:ffff::/80"},
 				{"CALICO_IPV4POOL_IPIP", "always"},
 			},
-			"192.168.0.0/16", "fdff:ffff:ffff:ffff:ffff::/80", "always"),
+			"192.168.0.0/16", "fdff:ffff:ffff:ffff:ffff::/80", "always", true, false),
+		Entry("IPv6 NATOutgoing Set Enabled",
+			[]EnvItem{
+				{"CALICO_IPV6POOL_NAT_OUTGOING", "true"}},
+			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "off", true, true),
+		Entry("IPv6 NATOutgoing Set Disabled",
+			[]EnvItem{
+				{"CALICO_IPV6POOL_NAT_OUTGOING", "false"}},
+			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "off", true, false),
+		Entry("IPv4 NATOutgoing Set Disabled",
+			[]EnvItem{
+				{"CALICO_IPV4POOL_NAT_OUTGOING", "false"}},
+			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "off", false, false),
+		Entry("IPv6 NAT OUTGOING and IPV4 NAT OUTGOING SET",
+			[]EnvItem{
+				{"CALICO_IPV4POOL_NAT_OUTGOING", "false"},
+				{"CALICO_IPV6POOL_NAT_OUTGOING", "true"},
+			},
+			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "off", false, true),
 	)
 
 	Describe("Test NO_DEFAULT_POOLS env variable", func() {
@@ -265,4 +314,143 @@ var _ = Describe("FV tests against a real etcd", func() {
 			}
 		}
 	})
+
+	Describe("Test CLUSTER_TYPE env variable", func() {
+		Context("With no env var, Cluster Type should be empty string", func() {
+			// Create a new client.
+			cfg, _ := client.LoadClientConfigFromEnvironment()
+			c := testutils.CreateCleanClient(*cfg)
+
+			nodeName := determineNodeName()
+			node := getNode(c, nodeName)
+
+			err := ensureDefaultConfig(cfg, c, node)
+			It("should be able to ensureDefaultConfig", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			val, assigned, err := c.Config().GetFelixConfig("ClusterType", "")
+			It("should be able to access the ClusterType", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			if assigned {
+				It("should be emtpy", func() {
+					Expect(val).To(Equal(""))
+				})
+			}
+		})
+		Context("With env var set, Cluster Type should have that value", func() {
+			// Create a new client.
+			cfg, _ := client.LoadClientConfigFromEnvironment()
+			c := testutils.CreateCleanClient(*cfg)
+
+			nodeName := determineNodeName()
+			node := getNode(c, nodeName)
+
+			os.Setenv("CLUSTER_TYPE", "theType")
+
+			err := ensureDefaultConfig(cfg, c, node)
+			It("should be able to ensureDefaultConfig", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			val, assigned, err := c.Config().GetFelixConfig("ClusterType", "")
+			It("should be able to access the ClusterType", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("should be assigned", func() {
+				Expect(assigned).To(BeTrue())
+			})
+			It("should have the set value", func() {
+				Expect(val).To(Equal("theType"))
+			})
+		})
+		Context("With env var and Cluster Type prepopulated, Cluster Type should have both", func() {
+			// Create a new client.
+			cfg, _ := client.LoadClientConfigFromEnvironment()
+			c := testutils.CreateCleanClient(*cfg)
+
+			nodeName := determineNodeName()
+			node := getNode(c, nodeName)
+
+			c.Config().SetFelixConfig("ClusterType", "", "prePopulated")
+			os.Setenv("CLUSTER_TYPE", "theType")
+
+			err := ensureDefaultConfig(cfg, c, node)
+			It("should be able to ensureDefaultConfig", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			val, assigned, err := c.Config().GetFelixConfig("ClusterType", "")
+			It("should be able to access the ClusterType", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("should be assigned", func() {
+				Expect(assigned).To(BeTrue())
+			})
+			It("should have the set value", func() {
+				Expect(val).To(ContainSubstring("theType"))
+			})
+			It("should have the prepopulated value", func() {
+				Expect(val).To(ContainSubstring("prePopulated"))
+			})
+		})
+
+		Context("With the same entries in both sources", func() {
+			// Create a new client.
+			cfg, _ := client.LoadClientConfigFromEnvironment()
+			c := testutils.CreateCleanClient(*cfg)
+
+			nodeName := determineNodeName()
+			node := getNode(c, nodeName)
+
+			c.Config().SetFelixConfig("ClusterType", "", "type1,type2")
+			os.Setenv("CLUSTER_TYPE", "type1,type1")
+
+			err := ensureDefaultConfig(cfg, c, node)
+			It("should be able to ensureDefaultConfig", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			val, assigned, err := c.Config().GetFelixConfig("ClusterType", "")
+			It("should be able to access the ClusterType", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("should be assigned", func() {
+				Expect(assigned).To(BeTrue())
+			})
+			It("should have only one instance of the expected value", func() {
+				Expect(strings.Count(val, "type1")).To(Equal(1), "Should only have one instance of type1, read '%s", val)
+			})
+			It("should have only one instance of the expected value", func() {
+				Expect(strings.Count(val, "type2")).To(Equal(1), "Should only have one instance of type1, read '%s", val)
+			})
+		})
+	})
+})
+
+var _ = Describe("UT for Node IP assignment and conflict checking.", func() {
+
+	DescribeTable("Test variations on how IPs are detected.",
+		func(node *api.Node, items []EnvItem, expected bool) {
+
+			for _, item := range items {
+				os.Setenv(item.key, item.value)
+			}
+
+			check := configureIPsAndSubnets(node)
+
+			Expect(check).To(Equal(expected))
+		},
+
+		Entry("Test with no \"IP\" env var set", &api.Node{}, []EnvItem{{"IP", ""}}, true),
+		Entry("Test with \"IP\" env var set to IP", &api.Node{}, []EnvItem{{"IP", "192.168.1.10/24"}}, true),
+		Entry("Test with \"IP\" env var set to IP and BGP spec populated with same IP", makeNode("192.168.1.10/24", ""), []EnvItem{{"IP", "192.168.1.10/24"}}, false),
+		Entry("Test with \"IP\" env var set to IP and BGP spec populated with different IP", makeNode("192.168.1.10/24", ""), []EnvItem{{"IP", "192.168.1.11/24"}}, true),
+		Entry("Test with no \"IP6\" env var set", &api.Node{}, []EnvItem{{"IP6", ""}}, true),
+		Entry("Test with \"IP6\" env var set to IP", &api.Node{}, []EnvItem{{"IP6", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"}}, true),
+		Entry("Test with \"IP6\" env var set to IP and BGP spec populated with same IP", makeNode("192.168.1.10/24", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"), []EnvItem{{"IP", "192.168.1.10/24"}, {"IP6", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"}}, false),
+		Entry("Test with \"IP6\" env var set to IP and BGP spec populated with different IP", makeNode("192.168.1.10/24", "2001:db8:85a3:8d3:1319:8a2e:370:7348/32"), []EnvItem{{"IP", "192.168.1.10/24"}, {"IP6", "2001:db8:85a3:8d3:1319:8a2e:370:7349/32"}}, true),
+	)
 })

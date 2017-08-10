@@ -281,7 +281,7 @@ class TestIPIP(TestBase):
                 assert self.get_tunl_tx(host1) == orig_tx + 2
             else:
                 assert self.get_tunl_tx(host1) == orig_tx
-        retry_until_success(check)
+        retry_until_success(check, retries=10)
 
     def get_tunl_tx(self, host):
         """
@@ -417,3 +417,5 @@ class TestIPIP(TestBase):
             # Flip the IP-in-IP state for the next iteration.
             with_ipip = not with_ipip
             host1.set_ipip_enabled(with_ipip)
+
+TestIPIP.batchnumber = 4  # Add batch label to these tests for parallel running

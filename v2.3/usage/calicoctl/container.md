@@ -1,6 +1,5 @@
 ---
 title: calico/ctl container
-redirect_from: latest/usage/calicoctl/container
 ---
 
 With each release of calicoctl the docker container `calico/ctl` is released to
@@ -11,7 +10,7 @@ for caveats when using a containerized version.
 
 #### Configuring the calico/ctl container
 
-See [Configuing calicoctl]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup).
+See [Configuring calicoctl]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup).
 for guidance on manually configuring a calico/ctl container.  Keep in mind
 when using a container that any environment variables and configuration files
 must be passed to the container so they are available to the process inside.

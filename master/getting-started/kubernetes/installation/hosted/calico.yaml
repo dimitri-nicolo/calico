@@ -32,6 +32,7 @@ data:
         "etcd_cert_file": "__ETCD_CERT_FILE__",
         "etcd_ca_cert_file": "__ETCD_CA_CERT_FILE__",
         "log_level": "info",
+        "mtu": 1500,
         "ipam": {
             "type": "calico-ipam"
         },
@@ -117,6 +118,9 @@ spec:
                 configMapKeyRef:
                   name: calico-config
                   key: calico_backend
+            # Cluster type to identify the deployment type
+            - name: CLUSTER_TYPE
+              value: "k8s,bgp"
             # Disable file logging so `kubectl logs` works.
             - name: CALICO_DISABLE_FILE_LOGGING
               value: "true"
@@ -134,6 +138,9 @@ spec:
             # Set Felix logging to "info"
             - name: FELIX_LOGSEVERITYSCREEN
               value: "info"
+            # Set MTU for tunnel device used if ipip is enabled
+            - name: FELIX_IPINIPMTU
+              value: "1440"
             # Location of the CA certificate for etcd.
             - name: ETCD_CA_CERT_FILE
               valueFrom:
@@ -155,11 +162,25 @@ spec:
             # Auto-detect the BGP IP address.
             - name: IP
               value: ""
+            - name: FELIX_HEALTHENABLED
+              value: "true"
           securityContext:
             privileged: true
           resources:
             requests:
               cpu: 250m
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 9099
+            periodSeconds: 10
+            initialDelaySeconds: 10
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 9099
+            periodSeconds: 10
           volumeMounts:
             - mountPath: /lib/modules
               name: lib-modules

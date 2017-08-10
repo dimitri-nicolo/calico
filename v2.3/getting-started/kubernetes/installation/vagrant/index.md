@@ -1,6 +1,5 @@
 ---
 title: Deploying Calico and Kubernetes on Container Linux by CoreOS using Vagrant and VirtualBox
-redirect_from: latest/getting-started/kubernetes/installation/vagrant/index
 ---
 
 These instructions allow you to set up a Kubernetes cluster with Calico networking using Vagrant and the [Calico CNI plugin][cni-plugin]. This guide does not setup TLS between Kubernetes components.
@@ -81,14 +80,14 @@ Let's configure `kubectl` so you can access the cluster from your local machine.
 For Mac:
 
 ```shell
-wget http://storage.googleapis.com/kubernetes-release/release/v1.7.0-beta.1/bin/darwin/amd64/kubectl
+wget http://storage.googleapis.com/kubernetes-release/release/v1.7.0/bin/darwin/amd64/kubectl
 chmod +x ./kubectl
 ```
 
 For Linux:
 
 ```shell
-wget http://storage.googleapis.com/kubernetes-release/release/v1.7.0-beta.1/bin/linux/amd64/kubectl
+wget http://storage.googleapis.com/kubernetes-release/release/v1.7.0/bin/linux/amd64/kubectl
 chmod +x ./kubectl
 ```
 

@@ -15,7 +15,9 @@ Calico can run on any Kubernetes cluster which meets the following criteria.
 - The kube-proxy must be started without the `--masquerade-all` flag, which conflicts with Calico policy.
 - The Kubernetes NetworkPolicy API requires at least Kubernetes version v1.3.0.
 - When RBAC is enabled, the proper accounts, roles, and bindings must be defined
-  and utilized by the Calico components.
+  and utilized by the Calico components.  Examples exist for both the [etcd](rbac.yaml) and
+  [kubernetes api](hosted/rbac-kdd.yaml) datastores.
+
 
 ## [Calico Hosted Install](hosted)
 
@@ -33,12 +35,9 @@ to integrate Calico into your own installation or deployment scripts.
 ## Third Party Integrations
 
 A number of popular Kubernetes installers use Calico to provide networking and/or network policy.
-Here are a few, listed alphabetically.
 
-- [Apprenda Kismatic Enterprise Toolkit](https://github.com/apprenda/kismatic)
-- [Container Linux by CoreOS](https://coreos.com/kubernetes/docs/latest/)
-- [GCE](http://kubernetes.io/docs/getting-started-guides/network-policy/calico/)
-- [Gravitational Telekube](http://gravitational.com/blog/gravitational-tigera-partnership/)
-- [Kargo](https://github.com/kubernetes-incubator/kargo)
-- [Kops](https://github.com/kubernetes/kops)
-- [StackPointCloud](https://stackpoint.io)
+You can find some of them here, organized by cloud provider.
+
+- [Amazon Web Services](aws)
+- [Google Compute Engine](gce)
+- [Microsoft Azure](azure)

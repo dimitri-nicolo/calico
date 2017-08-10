@@ -2,17 +2,17 @@
 title: Kubernetes Datastore
 ---
 
-This document describes how to install Calico on Kubernetes in a mode that does not require access to an etcd cluster.  
+This document describes how to install Calico on Kubernetes in a mode that does not require access to an etcd cluster.
 This mode uses the Kubernetes API as the datastore.
 
 Note that this feature currently comes with a number of limitations, namely:
 
 - It does not yet support Calico IPAM.  It is recommended to use `host-local` IPAM in conjunction with Kubernetes pod CIDR assignments.
-- It does not yet support the full set of `calicoctl` commands.
-- It does not yet support the full set of calico/node options (such as IP autodiscovery).
-- Calico networking support is in Beta and has limited configuration options:
-  -  it only supports a full BGP node-to-node mesh
-  -  it does not yet support BGP peer configuration.
+- It does not yet support per-node low-level Felix configuration - this must be handled using the Felix environment variables
+  passed into the `calico/node` container (see [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)).
+- Calico networking support is in Beta:
+  -  Control of the node-to-node mesh, default AS Number and all BGP peering configuration should
+     be configured using `calicoctl`.
 
 ## Requirements
 
@@ -42,13 +42,28 @@ Ensure you have a cluster which meets the above requirements.  There may be addi
 > if you are upgrading from Calico v2.1, use the [Calico policy-only with user-supplied networking](#2-calico-policy-only-with-user-supplied-networking) installation instructions
 > to upgrade Calico policy-only which leaves the networking solution unchanged.
 
+### RBAC
+
+Before you install Calico, if your Kubernetes cluster has RBAC enabled, you'll need to create the following
+RBAC roles to allow API access to Calico.
+
+Apply the following manifest to create these necessary RBAC roles and bindings.
+
+>Note: The following RBAC policy is compatible with the Kubernetes v1.6+ manifests only.
+
+```
+kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
+```
+
+>[Click here to view the above yaml directly.](../rbac-kdd.yaml)
+
 ### 1. Calico policy with Calico networking (Beta)
 
 With Kubernetes as the Calico datastore, Calico has Beta support for Calico networking.  This provides BGP-based
-networking with a full node-to-node mesh.  It is not currently possible to configure the Calico BGP network to peer with
-other routers - future releases of Calico are expected to bring feature parity with the etcd-backed Calico.
+networking with a full node-to-node mesh and/or explicit configuration of peers.
 
-To install Calico with Calico networking, run the following command based on your Kubernetes version:
+To install Calico with Calico networking, run the following command based on your Kubernetes version.
+This will install Calico and will initially create a full node-to-node mesh.
 
 ```
 kubectl apply -f calico.yaml
@@ -66,6 +81,14 @@ pod-network-cidr matching the default pool of `192.168.0.0/16`, as follows:
 ```
 kubeadm init --pod-network-cidr=192.168.0.0/16
 ```
+
+#### Configuring your BGP topology (optional)
+
+Some users running at high scale or on-premise may want to update Calico's BGP peering configuration using `calicoctl`.  For example,
+you may wish to turn off the full node-to-node mesh and configure a pair of redundant route reflectors.
+
+See the [Configuring BGP Peers guide]({{site.baseurl}}/{{page.version}}/usage/configuration/bgp) for details on using `calicoctl`
+to configure your topology.
 
 ### 2. Calico policy-only with user-supplied networking
 
@@ -102,6 +125,8 @@ kubectl apply -f rbac.yaml
 ```
 
 >[Click here to view the rbac.yaml.](../rbac.yaml)
+
+## Try it out
 
 Once installed, you can try out NetworkPolicy by following the [simple policy guide](../../../tutorials/simple-policy).
 

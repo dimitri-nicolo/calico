@@ -23,6 +23,7 @@ data:
         "log_level": "debug",
         "datastore_type": "kubernetes",
         "nodename": "__KUBERNETES_NODE_NAME__",
+        "mtu": 1500,
         "ipam": {
             "type": "host-local",
             "subnet": "usePodCidr"
@@ -77,6 +78,9 @@ spec:
             # Enable felix info logging.
             - name: FELIX_LOGSEVERITYSCREEN
               value: "info"
+            # Cluster type to identify the deployment type
+            - name: CLUSTER_TYPE
+              value: "k8s,bgp"
             # Disable file logging so `kubectl logs` works.
             - name: CALICO_DISABLE_FILE_LOGGING
               value: "true"
@@ -86,6 +90,9 @@ spec:
             # Disable IPV6 on Kubernetes.
             - name: FELIX_IPV6SUPPORT
               value: "false"
+            # Set MTU for tunnel device used if ipip is enabled
+            - name: FELIX_IPINIPMTU
+              value: "1440"
             # Wait for the datastore.
             - name: WAIT_FOR_DATASTORE
               value: "true"
@@ -106,11 +113,25 @@ spec:
             # No IP address needed.
             - name: IP
               value: ""
+            - name: FELIX_HEALTHENABLED
+              value: "true"
           securityContext:
             privileged: true
           resources:
             requests:
               cpu: 250m
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 9099
+            periodSeconds: 10
+            initialDelaySeconds: 10
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 9099
+            periodSeconds: 10
           volumeMounts:
             - mountPath: /lib/modules
               name: lib-modules

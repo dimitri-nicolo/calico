@@ -1,6 +1,5 @@
 ---
 title: Configuring calicoctl - etcdv2 datastore
-redirect_from: latest/reference/calicoctl/setup/etcdv2
 ---
 
 This document covers the configuration options for calicoctl when using an etcdv2 datastore.
@@ -62,7 +61,7 @@ See the table below for details on the etcdv2 specific environment variables.
 > 2. When specifying through environment variables, the DATASTORE_TYPE environment
 >    is not required for etcdv2.
 > 3. All environment variables may also be prefixed with "CALICO_", for example
->    "CALICO_DATASTORE_TYPE" and "CALICO_END_ENDPOINTS" etc. may also be used.
+>    "CALICO_DATASTORE_TYPE" and "CALICO_ETCD_ENDPOINTS" etc. may also be used.
 >    This is useful if the non-prefixed names clash with existing environment
 >    variables defined on your system
 > 4. Previous versions of calicoctl supported ETCD_SCHEME and ETC_AUTHORITY environment

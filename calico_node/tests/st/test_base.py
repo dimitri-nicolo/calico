@@ -43,14 +43,18 @@ class TestBase(TestCase):
     """
     Base class for test-wide methods.
     """
+    @classmethod
+    def setUpClass(cls):
+        wipe_etcd(HOST_IPV4)
 
-    def setUp(self):
+    def setUp(self, wipe_etcd=True):
         """
         Clean up before every test.
         """
         self.ip = HOST_IPV4
 
-        self.wipe_etcd()
+        if wipe_etcd:
+            self.wipe_etcd()
 
         # Log a newline to ensure that the first log appears on its own line.
         logger.info("")
@@ -124,7 +128,7 @@ class TestBase(TestCase):
         # Check that all tests passed
         if False in results:
             # We've failed, lets put together some diags.
-            header = ["source.ip", "dest.ip", "type", "exp_result", "pass/fail"]
+            header = ["source.ip", "dest.ip", "type", "expected", "actual"]
             diagstring = "{: >18} {: >18} {: >7} {: >6} {: >6}\r\n".format(*header)
             for i in range(len(conn_check_list)):
                 source, dest, test_type, exp_result, retries = conn_check_list[i]
@@ -303,3 +307,6 @@ class TestBase(TestCase):
                    banner + "\n"
                             "| " + msg + " |\n" +
                    banner)
+
+# Add a default batch number to all tests (used for running tests in parallel)
+TestBase.batchnumber = 0
