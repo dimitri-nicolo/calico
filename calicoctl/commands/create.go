@@ -19,8 +19,8 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docopt/docopt-go"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 )
@@ -44,7 +44,7 @@ Options:
                             create an entry that already exists.
   -c --config=<CONFIG>      Path to the file containing connection
                             configuration in YAML or JSON format.
-                            [default: /etc/calico/calicoctl.cfg]
+                            [default: ` + constants.DefaultConfigPath + `]
 
 Description:
   The create command is used to create a set of resources by filename or stdin.
