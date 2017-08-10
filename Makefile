@@ -57,6 +57,7 @@ vendor: glide.yaml
   docker run --rm \
     -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
     -v $(HOME)/.glide:/home/user/.glide:rw \
+    -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
     -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
     $(CALICO_BUILD) /bin/sh -c ' \
 		  cd /go/src/$(PACKAGE_NAME) && \
