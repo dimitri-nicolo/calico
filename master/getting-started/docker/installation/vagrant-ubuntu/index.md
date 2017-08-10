@@ -65,9 +65,12 @@ it is time to launch `calico/node`.
 
 The Vagrant machines already have `calicoctl` installed. Use it to launch `calico/node`:
 
-    sudo ETCD_ENDPOINTS=http://172.17.8.101:2379 calicoctl node run
+    sudo ETCD_ENDPOINTS=http://172.17.8.101:2379 calicoctl node run --node-image=quay.io/calico/node:{{site.data.versions[page.version].first.title}}
 
-This will start the `calico/node` container on this host. Check it is running:
+Append the `--use-docker-networking-container-labels` flag to the `calicoctl node run` command if you're combining
+[Docker Labels and Calico Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).
+
+Check that the `calico/node` container is running on this host:
 
     docker ps
 
@@ -75,7 +78,7 @@ You should see output like this on each node
 
     vagrant@calico-01:~$ docker ps
     CONTAINER ID        IMAGE                        COMMAND             CREATED             STATUS              PORTS               NAMES
-    408bd2b9ba53        quay.io/calico/node:{{site.data.versions[page.version].first.components["calico/node"].version}}   "start_runit"       About an hour ago   Up About an hour                        calico-node
+    408bd2b9ba53        quay.io/calico/node:{{site.data.versions[page.version].first.title}}   "start_runit"       About an hour ago   Up About an hour                        calico-node
 
 ## Next Steps
 

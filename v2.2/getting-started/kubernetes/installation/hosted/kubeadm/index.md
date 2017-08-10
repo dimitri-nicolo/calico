@@ -24,6 +24,11 @@ kubectl apply -f calico.yaml
 
 >[Click here to view the calico.yaml for Kubeadm 1.5 with Kubernetes 1.5.x.](1.5/calico.yaml)
 
+## Using calicoctl in a Kubeadm Cluster
+
+The simplest way to use calicoctl in Kubeadm is by running it as a pod.
+See [using calicoctl with Kubernetes](../../../tutorials/using-calicoctl#b-running-calicoctl-as-a-kubernetes-pod) for more information.
+
 ## About
 
 This manifest deploys the standard Calico components described

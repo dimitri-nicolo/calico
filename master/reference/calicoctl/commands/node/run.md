@@ -65,9 +65,17 @@ Options:
                              Use the interface determined by your host routing
                              tables that will be used to reach the supplied
                              destination IP or domain name.
-                           > interface=<IFACE NAME REGEX>
+			   > interface=<IFACE NAME REGEX LIST>
                              Use the first valid IP address found on interfaces
-                             named as per the supplied interface name regex.
+                             named as per the first matching supplied interface 
+			     name regex. Regexes are separated by commas
+			     (e.g. eth.*,enp0s.*).
+			   > skip-interface=<IFACE NAME REGEX LIST>
+			     Use the first valid IP address on the first
+			     enumerated interface (same logic as first-found
+			     above) that does NOT match with any of the
+			     specified interface name regexes. Regexes are
+			     separated by commas (e.g. eth.*,enp0s.*).
                            [default: first-found]
      --ip6-autodetection-method=<IP6_AUTODETECTION_METHOD>
                            Specify the autodetection method for detecting the
@@ -78,7 +86,7 @@ Options:
                            [default: /var/log/calico]
      --node-image=<DOCKER_IMAGE_NAME>
                            Docker image to use for Calico's per-node container.
-                           [default: quay.io/calico/node:%s]
+                           [default: quay.io/calico/node:latest]
      --backend=(bird|gobgp|none)
                            Specify which networking backend to use.  When set
                            to "none", Calico node runs in policy only mode.
@@ -135,7 +143,7 @@ Enabling IPv6 forwarding
 Increasing conntrack limit
 Running the following command:
 
-docker run --net=host --privileged --name=calico-node -d --restart=always -e ETCD_SCHEME=http -e HOSTNAME=calico -e CALICO_LIBNETWORK_ENABLED=true -e ETCD_AUTHORITY=127.0.0.1:2379 -e AS= -e NO_DEFAULT_POOLS= -e ETCD_ENDPOINTS= -e IP= -e IP6= -e CALICO_NETWORKING_BACKEND=bird -v /var/run/docker.sock:/var/run/docker.sock -v /var/run/calico:/var/run/calico -v /lib/modules:/lib/modules -v /var/log/calico:/var/log/calico -v /run/docker/plugins:/run/docker/plugins quay.io/calico/node:{{site.data.versions[page.version].first.components["calico/node"].version}}
+docker run --net=host --privileged --name=calico-node -d --restart=always -e ETCD_SCHEME=http -e HOSTNAME=calico -e CALICO_LIBNETWORK_ENABLED=true -e ETCD_AUTHORITY=127.0.0.1:2379 -e AS= -e NO_DEFAULT_POOLS= -e ETCD_ENDPOINTS= -e IP= -e IP6= -e CALICO_NETWORKING_BACKEND=bird -v /var/run/docker.sock:/var/run/docker.sock -v /var/run/calico:/var/run/calico -v /lib/modules:/lib/modules -v /var/log/calico:/var/log/calico -v /run/docker/plugins:/run/docker/plugins quay.io/calico/node:{{site.data.versions[page.version].first.title}}
 
 Waiting for etcd connection...
 Using configured IPv4 address: 192.0.2.0
@@ -211,12 +219,13 @@ sudo calicoctl node run --ip autodetect --ip-autodetection-method can-reach=8.8.
 sudo calicoctl node run --ip autodetect --ip-autodetection-method can-reach=www.google.com
 ```
 
-**interface=INTERFACE-REGEX**
+**interface=INTERFACE-REGEX,INTERFACE-REGEX,...**
 
-The `interface` method uses the supplied interface regular expression (golang
+The `interface` method uses the supplied interface regular expressions (golang
 syntax) to enumerate matching interfaces and to return the first IP address on
-the first matching interface.  The order that both the interfaces
-and the IP addresses are listed is system dependent.
+the first interface that matches any of the interface regexes provided.  The 
+order that both the interfaces and the IP addresses are listed is system 
+dependent.
 
 e.g.
 
@@ -226,7 +235,23 @@ sudo calicoctl node run --ip autodetect --ip-autodetection-method interface=eth0
 
 # IP detection on interfaces eth0, eth1, eth2 etc.
 sudo calicoctl node run --ip autodetect --ip-autodetection-method interface=eth.*
+
+# IP detection on interfaces eth0, eth1, eth2 etc. and wlp2s0
+sudo calicoctl node run --ip-autodetect --ip-autodetection-method interface=eth.*,wlp2s0
 ```
+
+**skip-interface=INTERFACE-REGEX,INTERFACE-REGEX,...**
+
+The `skip-interface` method uses the supplied interface regular expressions (golang
+syntax) to enumerate all interface IP addresses and returns the first valid IP address
+(based on IP version and type of address) that does not match the listed regular
+expressions.  Like the `first-found` option, it also skips by default certain known
+"local" interfaces such as the docker bridge.  The order that both the interfaces
+and the IP addresses are listed is system dependent.
+
+This method has the ability to take in multiple regular expressions separated by `,`.
+Specifying only one regular expression for interfaces to skip will also work and a
+terminating `,` character does not need to be specified for those cases.
 
 ### Options
 
@@ -265,9 +290,17 @@ sudo calicoctl node run --ip autodetect --ip-autodetection-method interface=eth.
                            Use the interface determined by your host routing
                            tables that will be used to reach the supplied
                            destination IP or domain name.
-                         > interface=<IFACE NAME REGEX>
+			 > interface=<IFACE NAME REGEX LIST>
                            Use the first valid IP address found on interfaces
-                           named as per the supplied interface name regex.
+                           named as per the first matching supplied interface 
+			   name regex. Regexes are separated by commas
+			   (e.g. eth.*,enp0s.*).
+			 > skip-interface=<IFACE NAME REGEX LIST>
+			   Use the first valid IP address on the first
+			   enumerated interface (same logic as first-found
+			   above) that does NOT match with any of the
+			   specified interface name regexes. Regexes are
+			   separated by commas (e.g. eth.*,enp0s.*).
                          [default: first-found]
    --ip6-autodetection-method=<IP6_AUTODETECTION_METHOD>
                          Specify the autodetection method for detecting the
@@ -278,7 +311,7 @@ sudo calicoctl node run --ip autodetect --ip-autodetection-method interface=eth.
                          [default: /var/log/calico]
    --node-image=<DOCKER_IMAGE_NAME>
                          Docker image to use for Calico's per-node container.
-                         [default: quay.io/calico/node:%s]
+                         [default: quay.io/calico/node:latest]
    --backend=(bird|gobgp|none)
                          Specify which networking backend to use.  When set
                          to "none", Calico node runs in policy only mode.

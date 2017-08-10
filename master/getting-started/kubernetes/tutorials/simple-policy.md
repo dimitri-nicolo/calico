@@ -46,9 +46,21 @@ You should see a response from `nginx`.  Great! Our Service is accessible.  You 
 
 Let's turn on isolation in our policy-demo Namespace.  Calico will then prevent connections to pods in this Namespace.
 
+Running the following command creates a NetworkPolicy which implements a default deny behavior for all pods in the `policy-demo` Namespace.
+
 ```
-kubectl annotate ns policy-demo "net.beta.kubernetes.io/network-policy={\"ingress\":{\"isolation\":\"DefaultDeny\"}}"
+kubectl create -f - <<EOF
+kind: NetworkPolicy
+apiVersion: extensions/v1beta1
+metadata:
+  name: default-deny
+  namespace: policy-demo
+spec:
+  podSelector:
+EOF
 ```
+
+#### Test Isolation
 
 This will prevent all access to the nginx Service.  We can see the effect by trying to access the Service again.
 

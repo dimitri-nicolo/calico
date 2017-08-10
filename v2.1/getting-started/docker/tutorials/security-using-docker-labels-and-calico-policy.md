@@ -1,6 +1,5 @@
 ---
 title: Security using Docker Labels and Calico Policy
-redirect_from: latest/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy
 ---
 
 ## Background
@@ -147,7 +146,7 @@ This works as follows:
    `role = database` (i.e. to database containers)
 
 For details on all of the possible match criteria, see the
-[policy resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile)
+[policy resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy)
 documentation.
 
 ## Multiple networks
