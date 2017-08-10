@@ -16,11 +16,9 @@ ARCH := amd64
 ###############################################################################
 # Subcomponent versions:
 GO_BUILD_VER:=latest
-# Set libcalico-go version in glide.yaml first then do a `glide up -v` to update glide.lock.
-# Setting LIBCALICOGO_VER in the Makefile won't update the glide dependencies.
-LIBCALICOGO_VER := v1.2.1
 ###############################################################################
 
+CALICOCTL_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOCTL_DIR=calicoctl
 CTL_CONTAINER_NAME?=calico/ctl
 CALICOCTL_FILES=$(shell find $(CALICOCTL_DIR) -name '*.go')
@@ -34,8 +32,8 @@ LOCAL_USER_ID?=$(shell id -u $$USER)
 
 PACKAGE_NAME?=github.com/projectcalico/calicoctl
 
-LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/calicoctl/commands.VERSION=$(CALICOCONTAINERS_VERSION) \
-	-X $(PACKAGE_NAME)/calicoctl/calicoctl/commands.BUILD_DATE=$(CALICOCTL_BUILD_DATE) \
+LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/calicoctl/commands.VERSION=$(CALICOCTL_VERSION) \
+	-X $(PACKAGE_NAME)/calicoctl/commands.BUILD_DATE=$(CALICOCTL_BUILD_DATE) \
 	-X $(PACKAGE_NAME)/calicoctl/commands.GIT_REVISION=$(CALICOCTL_GIT_REVISION) -s -w"
 
 LIBCALICOGO_PATH?=none
@@ -98,7 +96,7 @@ binary-containerized: $(CALICOCTL_FILES) vendor
 	-mkdir -p .go-pkg-cache
 	docker run --rm \
 	  -e OS=$(OS) -e ARCH=$(ARCH) \
-	  -e CALICOCONTAINERS_VERSION=$(CALICOCONTAINERS_VERSION) \
+	  -e CALICOCTL_VERSION=$(CALICOCTL_VERSION) \
 	  -e CALICOCTL_BUILD_DATE=$(CALICOCTL_BUILD_DATE) -e CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
 	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
 	  -v $(CURDIR)/dist:/go/src/$(PACKAGE_NAME)/dist \
@@ -107,7 +105,7 @@ binary-containerized: $(CALICOCTL_FILES) vendor
 	  $(CALICO_BUILD) sh -c '\
 	    cd /go/src/$(PACKAGE_NAME) && \
 	    make OS=$(OS) ARCH=$(ARCH) \
-	         CALICOCONTAINERS_VERSION=$(CALICOCONTAINERS_VERSION)  \
+	         CALICOCTL_VERSION=$(CALICOCTL_VERSION)  \
 	         CALICOCTL_BUILD_DATE=$(CALICOCTL_BUILD_DATE) CALICOCTL_GIT_REVISION=$(CALICOCTL_GIT_REVISION) \
 	         binary'
 
@@ -209,24 +207,6 @@ semaphore: clean
 
 	# Make sure that calicoctl builds cross-platform.
 	$(MAKE) dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64.exe
-
-	# Assumes that a few environment variables exist - BRANCH_NAME PULL_REQUEST_NUMBER
-	# If this isn't a PR, then push :BRANCHNAME tagged and :CALICOCONTAINERS_VERSION
-	# tagged images to Dockerhub and quay for both calico/ctl.
-	set -e; \
-	if [ -z $$PULL_REQUEST_NUMBER ]; then \
-		docker tag $(CTL_CONTAINER_NAME) quay.io/$(CTL_CONTAINER_NAME):$$BRANCH_NAME && \
-		docker push quay.io/$(CTL_CONTAINER_NAME):$$BRANCH_NAME; \
-		\
-		docker tag $(CTL_CONTAINER_NAME) $(CTL_CONTAINER_NAME):$$BRANCH_NAME && \
-		docker push $(CTL_CONTAINER_NAME):$$BRANCH_NAME; \
-		\
-		docker tag $(CTL_CONTAINER_NAME) quay.io/$(CTL_CONTAINER_NAME):$(CALICOCONTAINERS_VERSION) && \
-		docker push quay.io/$(CTL_CONTAINER_NAME):$(CALICOCONTAINERS_VERSION); \
-		\
-		docker tag $(CTL_CONTAINER_NAME) $(CTL_CONTAINER_NAME):$(CALICOCONTAINERS_VERSION) && \
-		docker push $(CTL_CONTAINER_NAME):$(CALICOCONTAINERS_VERSION); \
-	fi
 
 release: clean
 ifndef VERSION

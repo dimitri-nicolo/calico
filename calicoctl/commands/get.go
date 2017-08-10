@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
+	log "github.com/sirupsen/logrus"
 )
 
 func Get(args []string) {
@@ -60,7 +60,7 @@ Options:
                                resources.
   -c --config=<CONFIG>         Path to the file containing connection
                                configuration in YAML or JSON format.
-                               [default: /etc/calico/calicoctl.cfg]
+                               [default: ` + constants.DefaultConfigPath + `]
 
 Description:
   The get command is used to display a set of resources by filename or stdin,

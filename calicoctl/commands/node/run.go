@@ -25,21 +25,24 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docopt/docopt-go"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
+	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/net"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
-	ETCD_KEY_NODE_FILE             = "/etc/calico/certs/key.pem"
-	ETCD_CERT_NODE_FILE            = "/etc/calico/certs/cert.crt"
-	ETCD_CA_CERT_NODE_FILE         = "/etc/calico/certs/ca_cert.crt"
-	AUTODETECTION_METHOD_FIRST     = "first-found"
-	AUTODETECTION_METHOD_CAN_REACH = "can-reach="
-	AUTODETECTION_METHOD_INTERFACE = "interface="
+	ETCD_KEY_NODE_FILE                  = "/etc/calico/certs/key.pem"
+	ETCD_CERT_NODE_FILE                 = "/etc/calico/certs/cert.crt"
+	ETCD_CA_CERT_NODE_FILE              = "/etc/calico/certs/ca_cert.crt"
+	AUTODETECTION_METHOD_FIRST          = "first-found"
+	AUTODETECTION_METHOD_CAN_REACH      = "can-reach="
+	AUTODETECTION_METHOD_INTERFACE      = "interface="
+	AUTODETECTION_METHOD_SKIP_INTERFACE = "skip-interface="
+	DEFAULT_DOCKER_IFPREFIX             = "cali"
 )
 
 var (
@@ -103,9 +106,17 @@ Options:
                              Use the interface determined by your host routing
                              tables that will be used to reach the supplied
                              destination IP or domain name.
-                           > interface=<IFACE NAME REGEX>
+                           > interface=<IFACE NAME REGEX LIST>
                              Use the first valid IP address found on interfaces
-                             named as per the supplied interface name regex.
+                             named as per the first matching supplied interface 
+			     name regex. Regexes are separated by commas
+			     (e.g. eth.*,enp0s.*).
+			   > skip-interface=<IFACE NAME REGEX LIST>
+			     Use the first valid IP address on the first
+			     enumerated interface (same logic as first-found
+			     above) that does NOT match with any of the
+			     specified interface name regexes. Regexes are
+			     separated by commas (e.g. eth.*,enp0s.*).
                            [default: first-found]
      --ip6-autodetection-method=<IP6_AUTODETECTION_METHOD>
                            Specify the autodetection method for detecting the
@@ -136,7 +147,7 @@ Options:
                            Interface prefix to use for the network interface
                            within the Docker containers that have been networked
                            by the Calico driver.
-                           [default: cali]
+                           [default: ` + DEFAULT_DOCKER_IFPREFIX + `]
      --use-docker-networking-container-labels
                            Extract the Calico-namespaced Docker container labels
                            (org.projectcalico.label.*) and apply them to the
@@ -146,7 +157,7 @@ Options:
                            and Calico profiles are disabled.
   -c --config=<CONFIG>     Path to the file containing connection
                            configuration in YAML or JSON format.
-                           [default: /etc/calico/calicoctl.cfg]
+                           [default: ` + constants.DefaultConfigPath + `]
 
 Description:
   This command is used to start a calico/node container instance which provides
@@ -234,22 +245,11 @@ Description:
 	}
 	etcdcfg := cfg.Spec.EtcdConfig
 
-	// Convert the nopools boolean to either an empty string or "true".
-	noPoolsString := ""
-	if nopools {
-		noPoolsString = "true"
-	}
-
 	// Create a mapping of environment variables to values.
 	envs := map[string]string{
-		"NODENAME":                          name,
-		"CALICO_NETWORKING_BACKEND":         backend,
-		"NO_DEFAULT_POOLS":                  noPoolsString,
-		"CALICO_LIBNETWORK_ENABLED":         fmt.Sprint(!disableDockerNw),
-		"IP_AUTODETECTION_METHOD":           ipv4ADMethod,
-		"IP6_AUTODETECTION_METHOD":          ipv6ADMethod,
-		"CALICO_LIBNETWORK_CREATE_PROFILES": fmt.Sprint(!useDockerContainerLabels),
-		"CALICO_LIBNETWORK_LABEL_ENDPOINTS": fmt.Sprint(useDockerContainerLabels),
+		"NODENAME":                  name,
+		"CALICO_NETWORKING_BACKEND": backend,
+		"CALICO_LIBNETWORK_ENABLED": fmt.Sprint(!disableDockerNw),
 	}
 
 	// Validate the ifprefix to only allow alphanumeric characters
@@ -263,12 +263,25 @@ Description:
 		os.Exit(1)
 	}
 
-	// Set CALICO_LIBNETWORK_IFPREFIX env variable if Docker network is enabled.
-	if !disableDockerNw {
+	// Set CALICO_LIBNETWORK_IFPREFIX env variable if Docker network is enabled and set to non-default value.
+	if !disableDockerNw && ifprefix != DEFAULT_DOCKER_IFPREFIX {
 		envs["CALICO_LIBNETWORK_IFPREFIX"] = ifprefix
 	}
 
 	// Add in optional environments.
+	if useDockerContainerLabels {
+		envs["CALICO_LIBNETWORK_CREATE_PROFILES"] = "false"
+		envs["CALICO_LIBNETWORK_LABEL_ENDPOINTS"] = "true"
+	}
+	if nopools {
+		envs["NO_DEFAULT_POOLS"] = "true"
+	}
+	if ipv4ADMethod != AUTODETECTION_METHOD_FIRST {
+		envs["IP_AUTODETECTION_METHOD"] = ipv4ADMethod
+	}
+	if ipv6ADMethod != AUTODETECTION_METHOD_FIRST {
+		envs["IP6_AUTODETECTION_METHOD"] = ipv6ADMethod
+	}
 	if asNumber != "" {
 		envs["AS"] = asNumber
 	}
@@ -291,6 +304,7 @@ Description:
 		{hostPath: "/var/run/calico", containerPath: "/var/run/calico"},
 		{hostPath: "/lib/modules", containerPath: "/lib/modules"},
 		{hostPath: "/dev/log", containerPath: "/dev/log"},
+		{hostPath: "/run", containerPath: "/run"},
 	}
 
 	if !disableDockerNw {
@@ -527,9 +541,28 @@ func validateIpAutodetectionMethod(method string, version int) {
 		// Auto-detection method is "interface", validate that the interface
 		// regex is a valid golang regex.
 		ifStr := strings.TrimPrefix(method, AUTODETECTION_METHOD_INTERFACE)
-		if _, err := regexp.Compile(ifStr); err != nil {
-			fmt.Printf("Error executing command: invalid interface regex specified for IP autodetection: %s\n", ifStr)
-			os.Exit(1)
+
+		// Regexes are provided in a string separated by ","
+		ifRegexes := strings.Split(ifStr, ",")
+		for _, ifRegex := range ifRegexes {
+			if _, err := regexp.Compile(ifStr); err != nil {
+				fmt.Printf("Error executing command: invalid interface regex specified for IP autodetection: %s\n", ifRegex)
+				os.Exit(1)
+			}
+		}
+		return
+	} else if strings.HasPrefix(method, AUTODETECTION_METHOD_SKIP_INTERFACE) {
+		// Auto-detection method is "skip-interface", validate that the
+		// interface regexes used are valid golang regexes.
+		ifStr := strings.TrimPrefix(method, AUTODETECTION_METHOD_SKIP_INTERFACE)
+
+		// Regexes are provided in a string separated by ","
+		ifRegexes := strings.Split(ifStr, ",")
+		for _, ifRegex := range ifRegexes {
+			if _, err := regexp.Compile(ifRegex); err != nil {
+				fmt.Printf("Error executing command: invalid interface regex specified for IP autodetection: %s\n", ifRegex)
+				os.Exit(1)
+			}
 		}
 		return
 	}

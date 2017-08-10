@@ -5,14 +5,14 @@ owners:
 - name: Rob Brockbank
   email: rob@tigera.io
 import:
-- package: github.com/Sirupsen/logrus
+- package: github.com/sirupsen/logrus
   version: ^0.10.0
 - package: github.com/docopt/docopt-go
 - package: github.com/mcuadros/go-version
 - package: github.com/mitchellh/go-ps
 - package: github.com/olekukonko/tablewriter
 - package: github.com/osrg/gobgp
-  version: 38c47609a2eeae67c2c9cc042adea60484c2f481
+  version: v1.22
   subpackages:
   - client
   - packet/bgp

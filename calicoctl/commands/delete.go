@@ -19,8 +19,8 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docopt/docopt-go"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 )
@@ -61,7 +61,7 @@ Options:
                             resources.
   -c --config=<CONFIG>      Path to the file containing connection
                             configuration in YAML or JSON format.
-                            [default: /etc/calico/calicoctl.cfg]
+                            [default: ` + constants.DefaultConfigPath + `]
 
 Description:
   The delete command is used to delete a set of resources by filename or stdin,
