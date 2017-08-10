@@ -20,7 +20,7 @@ import (
 	"net"
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -53,7 +53,7 @@ func NewLookupManager() *LookupManager {
 		hostEndpointTiers:          map[model.HostEndpointKey][]*proto.TierInfo{},
 		hostEndpointUntrackedTiers: map[model.HostEndpointKey][]*proto.TierInfo{},
 		epMutex:                    sync.RWMutex{},
-		hostEpMutex:                    sync.RWMutex{},
+		hostEpMutex:                sync.RWMutex{},
 	}
 }
 

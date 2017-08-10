@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package set_test
-
-import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"testing"
-
-	"github.com/onsi/ginkgo/reporters"
-
-	"github.com/projectcalico/libcalico-go/lib/testutils"
-)
-
-func init() {
-	testutils.HookLogrusForGinkgo()
-}
-
-func TestSet(t *testing.T) {
-	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("junit.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "Set Suite", []Reporter{junitReporter})
-}
+// The fv packge contains FV tests that execute Felix for-real.
+package fv

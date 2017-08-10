@@ -24,7 +24,7 @@ import (
 	"net/url"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
@@ -34,7 +34,7 @@ const (
 	baseURL = "https://usage.projectcalico.org/UsageCheck/calicoVersionCheck?"
 )
 
-func PeriodicallyReportUsage(interval time.Duration, hostname, clusterGUID, clusterType string, statsUpdateC <-chan calc.StatsUpdate) {
+func PeriodicallyReportUsage(interval time.Duration, clusterGUID, clusterType, calicoVersion string, statsUpdateC <-chan calc.StatsUpdate) {
 	log.Info("Usage reporting thread started, waiting for size estimate")
 	stats := <-statsUpdateC
 	log.WithField("stats", stats).Info("Initial stats read")
@@ -45,7 +45,7 @@ func PeriodicallyReportUsage(interval time.Duration, hostname, clusterGUID, clus
 	time.Sleep(initialDelay)
 
 	log.Info("Initial delay complete, making first check-in")
-	ReportUsage(hostname, clusterGUID, clusterType, stats)
+	ReportUsage(clusterGUID, clusterType, calicoVersion, stats)
 
 	log.WithField("interval", interval).Info("Initial check-in done, switching to timer.")
 	baseInterval := interval * 9 / 10
@@ -55,7 +55,7 @@ func PeriodicallyReportUsage(interval time.Duration, hostname, clusterGUID, clus
 		select {
 		case stats = <-statsUpdateC:
 		case <-ticker.C:
-			ReportUsage(hostname, clusterGUID, clusterType, stats)
+			ReportUsage(clusterGUID, clusterType, calicoVersion, stats)
 		}
 	}
 }
@@ -75,8 +75,8 @@ func calculateInitialDelay(numHosts int) time.Duration {
 	return initialDelay
 }
 
-func ReportUsage(hostname, clusterGUID, clusterType string, stats calc.StatsUpdate) {
-	fullURL := calculateURL(hostname, clusterGUID, clusterType, stats)
+func ReportUsage(clusterGUID, clusterType, calicoVersion string, stats calc.StatsUpdate) {
+	fullURL := calculateURL(clusterGUID, clusterType, calicoVersion, stats)
 	resp, err := http.Get(fullURL)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -98,30 +98,33 @@ func ReportUsage(hostname, clusterGUID, clusterType string, stats calc.StatsUpda
 	}
 }
 
-func calculateURL(hostname, clusterGUID, clusterType string, stats calc.StatsUpdate) string {
+func calculateURL(clusterGUID, clusterType, calicoVersion string, stats calc.StatsUpdate) string {
 	if clusterType == "" {
 		clusterType = "unknown"
+	}
+	if calicoVersion == "" {
+		calicoVersion = "unknown"
 	}
 	if clusterGUID == "" {
 		clusterGUID = "baddecaf"
 	}
 	log.WithFields(log.Fields{
-		"hostname":    hostname,
-		"clusterGUID": clusterGUID,
-		"clusterType": clusterType,
-		"stats":       stats,
-		"version":     buildinfo.GitVersion,
-		"gitRevision": buildinfo.GitRevision,
+		"clusterGUID":   clusterGUID,
+		"clusterType":   clusterType,
+		"calicoVersion": calicoVersion,
+		"stats":         stats,
+		"version":       buildinfo.GitVersion,
+		"gitRevision":   buildinfo.GitRevision,
 	}).Info("Reporting cluster usage/checking for deprecation warnings.")
 	queryParams := url.Values{
-		"hostname": {hostname},
-		"guid":     {clusterGUID},
-		"type":     {clusterType},
-		"size":     {fmt.Sprintf("%v", stats.NumHosts)},
-		"weps":     {fmt.Sprintf("%v", stats.NumWorkloadEndpoints)},
-		"heps":     {fmt.Sprintf("%v", stats.NumHostEndpoints)},
-		"version":  {buildinfo.GitVersion},
-		"rev":      {buildinfo.GitRevision},
+		"guid":    {clusterGUID},
+		"type":    {clusterType},
+		"cal_ver": {calicoVersion},
+		"size":    {fmt.Sprintf("%v", stats.NumHosts)},
+		"weps":    {fmt.Sprintf("%v", stats.NumWorkloadEndpoints)},
+		"heps":    {fmt.Sprintf("%v", stats.NumHostEndpoints)},
+		"version": {buildinfo.GitVersion},
+		"rev":     {buildinfo.GitRevision},
 	}
 	fullURL := baseURL + queryParams.Encode()
 	log.WithField("url", fullURL).Debug("Calculated URL.")

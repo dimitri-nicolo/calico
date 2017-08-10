@@ -50,14 +50,14 @@ package labelindex
 import (
 	"reflect"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dispatcher"
-	"github.com/projectcalico/felix/set"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	"github.com/projectcalico/libcalico-go/lib/selector/parser"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 // itemData holds the data that we know about a particular item (i.e. a workload or host endpoint).
@@ -190,10 +190,17 @@ func (l *InheritIndex) OnUpdate(update api.Update) (_ bool) {
 }
 
 func (idx *InheritIndex) UpdateSelector(id interface{}, sel selector.Selector) {
-	log.Infof("Updating selector %v", id)
 	if sel == nil {
 		log.WithField("id", id).Panic("Selector should not be nil")
 	}
+	oldSel := idx.selectorsById[id]
+	// Since the selectorRoot struct has cache fields, the easiest way to compare two
+	// selectors is to compare their IDs.
+	if oldSel != nil && oldSel.UniqueID() == sel.UniqueID() {
+		log.WithField("selID", id).Info("Skipping unchanged selector")
+		return
+	}
+	log.WithField("selID", id).Info("Updating selector")
 	idx.scanAllLabels(id, sel)
 	idx.selectorsById[id] = sel
 }

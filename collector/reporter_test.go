@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/felix/set"
+	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 

@@ -20,10 +20,10 @@ import (
 
 	"testing"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/onsi/ginkgo/reporters"
+	"github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/logutils"
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 

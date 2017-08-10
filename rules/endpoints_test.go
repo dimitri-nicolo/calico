@@ -27,12 +27,15 @@ import (
 
 var _ = Describe("Endpoints", func() {
 	var rrConfigNormal = Config{
-		IPIPEnabled:        true,
-		IPIPTunnelAddress:  nil,
-		IPSetConfigV4:      ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-		IPSetConfigV6:      ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-		IptablesMarkAccept: 0x8,
-		IptablesMarkPass:   0x10,
+		IPIPEnabled:          true,
+		IPIPTunnelAddress:    nil,
+		IPSetConfigV4:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+		IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+		IptablesMarkAccept:   0x8,
+		IptablesMarkPass:     0x10,
+		IptablesMarkScratch0: 0x20,
+		IptablesMarkScratch1: 0x40,
+		IptablesMarkDrop:     0x80,
 	}
 	var rrConfigConntrackDisabled = Config{
 		IPIPEnabled:             true,
@@ -41,6 +44,9 @@ var _ = Describe("Endpoints", func() {
 		IPSetConfigV6:           ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
 		IptablesMarkAccept:      0x8,
 		IptablesMarkPass:        0x10,
+		IptablesMarkScratch0:    0x20,
+		IptablesMarkScratch1:    0x40,
+		IptablesMarkDrop:        0x80,
 		DisableConntrackInvalid: true,
 	}
 
@@ -60,7 +66,7 @@ var _ = Describe("Endpoints", func() {
 					{Match: Match().ConntrackState("INVALID"),
 						Action: DropAction{}},
 
-					{Action: ClearMarkAction{Mark: 0x8}},
+					{Action: ClearMarkAction{Mark: 0x88}},
 					{Action: NflogAction{
 						Group:  1,
 						Prefix: "D/0/no-profile-match-inbound",
@@ -78,7 +84,7 @@ var _ = Describe("Endpoints", func() {
 					{Match: Match().ConntrackState("INVALID"),
 						Action: DropAction{}},
 
-					{Action: ClearMarkAction{Mark: 0x8}},
+					{Action: ClearMarkAction{Mark: 0x88}},
 					{Action: NflogAction{
 						Group:  2,
 						Prefix: "D/0/no-profile-match-outbound",
@@ -104,7 +110,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 							Action: AcceptAction{}},
 
-						{Action: ClearMarkAction{Mark: 0x8}},
+						{Action: ClearMarkAction{Mark: 0x88}},
 						{Action: NflogAction{
 							Group:  1,
 							Prefix: "D/0/no-profile-match-inbound",
@@ -120,7 +126,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
 							Action: AcceptAction{}},
 
-						{Action: ClearMarkAction{Mark: 0x8}},
+						{Action: ClearMarkAction{Mark: 0x88}},
 						{Action: NflogAction{
 							Group:  2,
 							Prefix: "D/0/no-profile-match-outbound",
@@ -171,7 +177,7 @@ var _ = Describe("Endpoints", func() {
 					{Match: Match().ConntrackState("INVALID"),
 						Action: DropAction{}},
 
-					{Action: ClearMarkAction{Mark: 0x8}},
+					{Action: ClearMarkAction{Mark: 0x88}},
 
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
@@ -238,7 +244,7 @@ var _ = Describe("Endpoints", func() {
 					{Match: Match().ConntrackState("INVALID"),
 						Action: DropAction{}},
 
-					{Action: ClearMarkAction{Mark: 0x8}},
+					{Action: ClearMarkAction{Mark: 0x88}},
 
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
@@ -316,7 +322,7 @@ var _ = Describe("Endpoints", func() {
 					// Host endpoints get extra failsafe rules.
 					{Action: JumpAction{Target: "cali-failsafe-out"}},
 
-					{Action: ClearMarkAction{Mark: 0x8}},
+					{Action: ClearMarkAction{Mark: 0x88}},
 
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
@@ -366,7 +372,7 @@ var _ = Describe("Endpoints", func() {
 					// Host endpoints get extra failsafe rules.
 					{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-					{Action: ClearMarkAction{Mark: 0x8}},
+					{Action: ClearMarkAction{Mark: 0x88}},
 
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
@@ -418,7 +424,7 @@ var _ = Describe("Endpoints", func() {
 					// Host endpoints get extra failsafe rules.
 					{Action: JumpAction{Target: "cali-failsafe-out"}},
 
-					{Action: ClearMarkAction{Mark: 0x8}},
+					{Action: ClearMarkAction{Mark: 0x88}},
 
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
@@ -440,7 +446,7 @@ var _ = Describe("Endpoints", func() {
 					// Host endpoints get extra failsafe rules.
 					{Action: JumpAction{Target: "cali-failsafe-in"}},
 
-					{Action: ClearMarkAction{Mark: 0x8}},
+					{Action: ClearMarkAction{Mark: 0x88}},
 
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},

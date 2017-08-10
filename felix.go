@@ -15,6 +15,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -30,9 +32,13 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/docopt/docopt-go"
+	docopt "github.com/docopt/docopt-go"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
@@ -49,6 +55,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/typha/pkg/syncclient"
 )
 
 const usage = `Felix, the Calico per-host daemon.
@@ -112,9 +120,9 @@ func main() {
 	}
 
 	// Parse command-line args.
-	version := ("Version:            " + buildinfo.GitVersion + "\n" +
+	version := "Version:            " + buildinfo.GitVersion + "\n" +
 		"Full git commit ID: " + buildinfo.GitRevision + "\n" +
-		"Build date:         " + buildinfo.BuildDate + "\n")
+		"Build date:         " + buildinfo.BuildDate + "\n"
 	arguments, err := docopt.Parse(usage, nil, true, version, false)
 	if err != nil {
 		println(usage)
@@ -135,6 +143,7 @@ func main() {
 	log.Infof("Loading configuration...")
 	var datastore bapi.Client
 	var configParams *config.Config
+	var typhaAddr string
 configRetry:
 	for {
 		// Load locally-defined config, including the datastore connection
@@ -199,6 +208,14 @@ configRetry:
 			continue configRetry
 		}
 
+		// If we're configured to discover Typha, do that now so we can retry if we fail.
+		typhaAddr, err = discoverTyphaAddr(configParams)
+		if err != nil {
+			log.WithError(err).Error("Typha discovery enabled but discovery failed.")
+			time.Sleep(1 * time.Second)
+			continue configRetry
+		}
+
 		break configRetry
 	}
 
@@ -210,21 +227,29 @@ configRetry:
 	buildInfoLogCxt.WithField("config", configParams).Info(
 		"Successfully loaded configuration.")
 
+	// Health monitoring, for liveness and readiness endpoints.
+	healthAggregator := health.NewHealthAggregator()
+
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
 	// one.
 	var dpDriver dataplaneDriver
 	var dpDriverCmd *exec.Cmd
 	if configParams.UseInternalDataplaneDriver {
 		log.Info("Using internal dataplane driver.")
+		// Dedicated mark bits for accept and pass actions.  These are long lived bits
+		// that we use for communicating between chains.
 		markAccept := configParams.NextIptablesMark()
 		markPass := configParams.NextIptablesMark()
-		markWorkload := configParams.NextIptablesMark()
 		markDrop := configParams.NextIptablesMark()
+		// Short-lived mark bits for local calculations within a chain.
+		markScratch0 := configParams.NextIptablesMark()
+		markScratch1 := configParams.NextIptablesMark()
 		log.WithFields(log.Fields{
 			"acceptMark":   markAccept,
 			"passMark":     markPass,
-			"workloadMark": markWorkload,
 			"dropMark":     markDrop,
+			"scratch0Mark": markScratch0,
+			"scratch1Mark": markScratch1,
 		}).Info("Calculated iptables mark bits")
 		dpConfig := intdataplane.Config{
 			RulesConfig: rules.Config{
@@ -247,40 +272,50 @@ configRetry:
 				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
 				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
 
-				IptablesMarkAccept:       markAccept,
-				IptablesMarkPass:         markPass,
-				IptablesMarkFromWorkload: markWorkload,
-				IptablesMarkDrop:         markDrop,
+				IptablesMarkAccept:   markAccept,
+				IptablesMarkPass:     markPass,
+				IptablesMarkDrop:     markDrop,
+				IptablesMarkScratch0: markScratch0,
+				IptablesMarkScratch1: markScratch1,
 
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
 
-				IptablesLogPrefix:    configParams.LogPrefix,
-				ActionOnDrop:         configParams.DropActionOverride,
-				EndpointToHostAction: configParams.DefaultEndpointToHostAction,
+				IptablesLogPrefix:         configParams.LogPrefix,
+				ActionOnDrop:              configParams.DropActionOverride,
+				EndpointToHostAction:      configParams.DefaultEndpointToHostAction,
+				IptablesFilterAllowAction: configParams.IptablesFilterAllowAction,
+				IptablesMangleAllowAction: configParams.IptablesMangleAllowAction,
 
 				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
 
 				DisableConntrackInvalid: configParams.DisableConntrackInvalidCheck,
 			},
-			NfNetlinkBufSize:            configParams.NfNetlinkBufSize,
-			StatsDumpFilePath:           configParams.StatsDumpFilePath,
-			PrometheusReporterEnabled:   configParams.PrometheusReporterEnabled,
-			PrometheusReporterPort:      configParams.PrometheusReporterPort,
-			SyslogReporterNetwork:       configParams.SyslogReporterNetwork,
-			SyslogReporterAddress:       configParams.SyslogReporterAddress,
-			DeletedMetricsRetentionSecs: time.Duration(configParams.DeletedMetricsRetentionSecs) * time.Second,
-			IPIPMTU:                     configParams.IpInIpMtu,
-			IptablesRefreshInterval:     time.Duration(configParams.IptablesRefreshInterval) * time.Second,
-			IptablesInsertMode:          configParams.ChainInsertMode,
-			MaxIPSetSize:                configParams.MaxIpsetSize,
-			IgnoreLooseRPF:              configParams.IgnoreLooseRPF,
-			IPv6Enabled:                 configParams.Ipv6Support,
-			StatusReportingInterval: time.Duration(configParams.ReportingIntervalSecs) *
-				time.Second,
+
+			NfNetlinkBufSize:               configParams.NfNetlinkBufSize,
+			StatsDumpFilePath:              configParams.StatsDumpFilePath,
+			PrometheusReporterEnabled:      configParams.PrometheusReporterEnabled,
+			PrometheusReporterPort:         configParams.PrometheusReporterPort,
+			SyslogReporterNetwork:          configParams.SyslogReporterNetwork,
+			SyslogReporterAddress:          configParams.SyslogReporterAddress,
+			DeletedMetricsRetentionSecs:    configParams.DeletedMetricsRetentionSecs,
+			IPIPMTU:                        configParams.IpInIpMtu,
+			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
+			RouteRefreshInterval:           configParams.RouteRefreshInterval,
+			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
+			IptablesPostWriteCheckInterval: configParams.IptablesPostWriteCheckIntervalSecs,
+			IptablesInsertMode:             configParams.ChainInsertMode,
+			IptablesLockFilePath:           configParams.IptablesLockFilePath,
+			IptablesLockTimeout:            configParams.IptablesLockTimeoutSecs,
+			IptablesLockProbeInterval:      configParams.IptablesLockProbeIntervalMillis,
+			MaxIPSetSize:                   configParams.MaxIpsetSize,
+			IgnoreLooseRPF:                 configParams.IgnoreLooseRPF,
+			IPv6Enabled:                    configParams.Ipv6Support,
+			StatusReportingInterval:        configParams.ReportingIntervalSecs,
 
 			PostInSyncCallback: func() { dumpHeapMemoryProfile(configParams) },
+			HealthAggregator:   healthAggregator,
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()
@@ -308,16 +343,32 @@ configRetry:
 	// Syncer -chan-> Validator -chan-> Calc graph -chan->   dataplane
 	//        KVPair            KVPair             protobufs
 
-	// Get a Syncer from the datastore, which will feed the calculation
-	// graph with updates, bringing Felix into sync..
+	// Get a Syncer from the datastore, or a connection to our remote sync daemon, Typha,
+	// which will feed the calculation graph with updates, bringing Felix into sync.
+	var syncer Startable
+	var typhaConnection *syncclient.SyncerClient
 	syncerToValidator := calc.NewSyncerCallbacksDecoupler()
-	syncer := datastore.Syncer(syncerToValidator)
-	log.Debugf("Created Syncer: %#v", syncer)
+	if typhaAddr != "" {
+		// Use a remote Syncer, via the Typha server.
+		log.WithField("addr", typhaAddr).Info("Connecting to Typha.")
+		typhaConnection = syncclient.New(
+			typhaAddr,
+			buildinfo.GitVersion,
+			configParams.FelixHostname,
+			fmt.Sprintf("Revision: %s; Build date: %s",
+				buildinfo.GitRevision, buildinfo.BuildDate),
+			syncerToValidator,
+		)
+	} else {
+		// Use the syncer locally.
+		syncer = datastore.Syncer(syncerToValidator)
+	}
+	log.WithField("syncer", syncer).Info("Created Syncer")
 
 	// Create the ipsets/active policy calculation graph, which will
 	// do the dynamic calculation of ipset memberships and active policies
 	// etc.
-	asyncCalcGraph := calc.NewAsyncCalcGraph(configParams, dpConnector.ToDataplane)
+	asyncCalcGraph := calc.NewAsyncCalcGraph(configParams, dpConnector.ToDataplane, healthAggregator)
 
 	if configParams.UsageReportingEnabled {
 		// Usage reporting enabled, add stats collector to graph.  When it detects an update
@@ -356,9 +407,9 @@ configRetry:
 
 		go usagerep.PeriodicallyReportUsage(
 			24*time.Hour,
-			configParams.FelixHostname,
 			configParams.ClusterGUID,
 			configParams.ClusterType,
+			configParams.CalicoVersion,
 			statsChanOut,
 		)
 	} else {
@@ -375,14 +426,26 @@ configRetry:
 	validator := calc.NewValidationFilter(asyncCalcGraph)
 
 	// Start the background processing threads.
-	log.Infof("Starting the datastore Syncer/processing graph")
-	syncer.Start()
+	if syncer != nil {
+		log.Infof("Starting the datastore Syncer")
+		syncer.Start()
+	} else {
+		log.Infof("Starting the Typha connection")
+		err := typhaConnection.Start(context.Background())
+		if err != nil {
+			log.WithError(err).Fatal("Failed to connect to Typha")
+		}
+		go func() {
+			typhaConnection.Finished.Wait()
+			failureReportChan <- "Connection to Typha failed"
+		}()
+	}
 	go syncerToValidator.SendTo(validator)
 	asyncCalcGraph.Start()
-	log.Infof("Started the datastore Syncer/processing graph")
+	log.Infof("Started the processing graph")
 	var stopSignalChans []chan<- bool
 	if configParams.EndpointReportingEnabled {
-		delay := configParams.EndpointReportingDelay()
+		delay := configParams.EndpointReportingDelaySecs
 		log.WithField("delay", delay).Info(
 			"Endpoint status reporting enabled, starting status reporter")
 		dpConnector.statusReporter = statusrep.NewEndpointStatusReporter(
@@ -407,7 +470,19 @@ configRetry:
 
 	if configParams.PrometheusMetricsEnabled {
 		log.Info("Prometheus metrics enabled.  Starting server.")
-		go servePrometheusMetrics(configParams.PrometheusMetricsPort)
+		gaugeHost := prometheus.NewGauge(prometheus.GaugeOpts{
+			Name:        "felix_host",
+			Help:        "Configured Felix hostname (as a label), typically used in grouping/aggregating stats; the label defaults to the hostname of the host but can be overridden by configuration. The value of the gauge is always set to 1.",
+			ConstLabels: prometheus.Labels{"host": configParams.FelixHostname},
+		})
+		gaugeHost.Set(1)
+		prometheus.MustRegister(gaugeHost)
+		go servePrometheusMetrics(configParams)
+	}
+
+	if configParams.HealthEnabled {
+		log.WithField("port", configParams.HealthPort).Info("Health enabled.  Starting server.")
+		go healthAggregator.ServeHTTP(configParams.HealthPort)
 	}
 
 	// On receipt of SIGUSR1, write out heap profile.
@@ -461,11 +536,23 @@ func dumpHeapMemoryProfile(configParams *config.Config) {
 	}
 }
 
-func servePrometheusMetrics(port int) {
+func servePrometheusMetrics(configParams *config.Config) {
 	for {
-		log.WithField("port", port).Info("Starting prometheus metrics endpoint")
+		log.WithField("port", configParams.PrometheusMetricsPort).Info("Starting prometheus metrics endpoint")
+		if configParams.PrometheusGoMetricsEnabled && configParams.PrometheusProcessMetricsEnabled {
+			log.Info("Including Golang & Process metrics")
+		} else {
+			if !configParams.PrometheusGoMetricsEnabled {
+				log.Info("Discarding Golang metrics")
+				prometheus.Unregister(prometheus.NewGoCollector())
+			}
+			if !configParams.PrometheusProcessMetricsEnabled {
+				log.Info("Discarding process metrics")
+				prometheus.Unregister(prometheus.NewProcessCollector(os.Getpid(), ""))
+			}
+		}
 		http.Handle("/metrics", promhttp.Handler())
-		err := http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
+		err := http.ListenAndServe(fmt.Sprintf(":%v", configParams.PrometheusMetricsPort), nil)
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)
@@ -693,7 +780,7 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(msg *proto.ProcessStatus
 	kv := model.KVPair{
 		Key:   model.ActiveStatusReportKey{Hostname: fc.config.FelixHostname},
 		Value: &statusReport,
-		TTL:   time.Duration(fc.config.ReportingTTLSecs) * time.Second,
+		TTL:   fc.config.ReportingTTLSecs,
 	}
 	_, err := fc.datastore.Apply(&kv)
 	if err != nil {
@@ -768,4 +855,52 @@ func (fc *DataplaneConnector) Start() {
 
 	// Start background thread to read messages from dataplane driver.
 	go fc.readMessagesFromDataplane()
+}
+
+var ErrServiceNotReady = errors.New("Kubernetes service missing IP or port.")
+
+func discoverTyphaAddr(configParams *config.Config) (string, error) {
+	if configParams.TyphaAddr != "" {
+		// Explicit address; trumps other sources of config.
+		return configParams.TyphaAddr, nil
+	}
+
+	if configParams.TyphaK8sServiceName == "" {
+		// No explicit address, and no service name, not using Typha.
+		return "", nil
+	}
+
+	// If we get here, we need to look up the Typha service using the k8s API.
+	// TODO Typha: support Typha lookup without using rest.InClusterConfig().
+	k8sconf, err := rest.InClusterConfig()
+	if err != nil {
+		log.WithError(err).Error("Unable to create Kubernetes config.")
+		return "", err
+	}
+	clientset, err := kubernetes.NewForConfig(k8sconf)
+	if err != nil {
+		log.WithError(err).Error("Unable to create Kubernetes client set.")
+		return "", err
+	}
+	svcClient := clientset.CoreV1().Services(configParams.TyphaK8sNamespace)
+	svc, err := svcClient.Get(configParams.TyphaK8sServiceName, v1.GetOptions{})
+	if err != nil {
+		log.WithError(err).Error("Unable to get Typha service from Kubernetes.")
+		return "", err
+	}
+	host := svc.Spec.ClusterIP
+	log.WithField("clusterIP", host).Info("Found Typha ClusterIP.")
+	if host == "" {
+		log.WithError(err).Error("Typha service had no ClusterIP.")
+		return "", ErrServiceNotReady
+	}
+	for _, p := range svc.Spec.Ports {
+		if p.Name == "calico-typha" {
+			log.WithField("port", p).Info("Found Typha service port.")
+			typhaAddr := fmt.Sprintf("%s:%v", host, p.Port)
+			return typhaAddr, nil
+		}
+	}
+	log.Error("Didn't find Typha service port.")
+	return "", ErrServiceNotReady
 }

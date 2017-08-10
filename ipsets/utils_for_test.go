@@ -22,9 +22,9 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 
 	"bufio"
 
@@ -34,7 +34,7 @@ import (
 	"regexp"
 
 	. "github.com/projectcalico/felix/ipsets"
-	"github.com/projectcalico/felix/set"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 // This file contains shared test infrastructure for testing the ipsets package.
@@ -176,6 +176,12 @@ func (c *restoreCmd) StdinPipe() (WriteCloserFlusher, error) {
 		log.Warn("Returning a bad pipe that will fail when writing an IP")
 		return &badPipe{
 			FirstWriteFailRegexp: regexp.MustCompile(`\s*\d+\.\d+\.\d+\.\d+\s*`),
+		}, nil
+	}
+	if c.Dataplane.popRestoreFailure("close") {
+		log.Warn("Returning a bad pipe that will fail when closedP")
+		return &badPipe{
+			CloseFail: true,
 		}, nil
 	}
 	pipeR, pipeW := io.Pipe()

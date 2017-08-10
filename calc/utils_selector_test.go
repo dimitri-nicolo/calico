@@ -15,7 +15,7 @@
 package calc_test
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/selector"
 )
@@ -25,5 +25,5 @@ func selectorId(selStr string) string {
 	if err != nil {
 		log.Fatalf("Failed to parse %v: %v", selStr, err)
 	}
-	return sel.UniqueId()
+	return sel.UniqueID()
 }

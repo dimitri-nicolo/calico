@@ -25,10 +25,9 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/api"
-	"github.com/projectcalico/libcalico-go/lib/backend/etcd"
 	"github.com/projectcalico/libcalico-go/lib/client"
 )
 
@@ -103,10 +102,21 @@ type Config struct {
 	EtcdCaFile    string   `config:"file(must-exist);;local"`
 	EtcdEndpoints []string `config:"endpoint-list;;local"`
 
+	TyphaAddr           string `config:"authority;;"`
+	TyphaK8sServiceName string `config:"string;"`
+	TyphaK8sNamespace   string `config:"string;kube-system;non-zero"`
+
 	Ipv6Support    bool `config:"bool;true"`
 	IgnoreLooseRPF bool `config:"bool;false"`
 
-	IptablesRefreshInterval int `config:"int;10"`
+	RouteRefreshInterval               time.Duration `config:"seconds;90"`
+	IptablesRefreshInterval            time.Duration `config:"seconds;90"`
+	IptablesPostWriteCheckIntervalSecs time.Duration `config:"seconds;1"`
+	IptablesLockFilePath               string        `config:"file;/run/xtables.lock"`
+	IptablesLockTimeoutSecs            time.Duration `config:"seconds;0"`
+	IptablesLockProbeIntervalMillis    time.Duration `config:"millis;50"`
+	IpsetsRefreshInterval              time.Duration `config:"seconds;10"`
+	MaxIpsetSize                       int           `config:"int;1048576;non-zero"`
 
 	MetadataAddr string `config:"hostname;127.0.0.1;die-on-fail"`
 	MetadataPort int    `config:"int(0,65535);8775;die-on-fail"`
@@ -116,6 +126,8 @@ type Config struct {
 	ChainInsertMode             string `config:"oneof(insert,append);insert;non-zero,die-on-fail"`
 	DefaultEndpointToHostAction string `config:"oneof(DROP,RETURN,ACCEPT);DROP;non-zero,die-on-fail"`
 	DropActionOverride          string `config:"oneof(DROP,ACCEPT,LOG-and-DROP,LOG-and-ACCEPT);DROP;non-zero,die-on-fail"`
+	IptablesFilterAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
+	IptablesMangleAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
 	LogPrefix                   string `config:"string;calico-drop"`
 
 	LogFilePath string `config:"file;/var/log/calico/felix.log;die-on-fail"`
@@ -128,20 +140,22 @@ type Config struct {
 	IpInIpMtu        int    `config:"int;1440;non-zero"`
 	IpInIpTunnelAddr net.IP `config:"ipv4;"`
 
-	ReportingIntervalSecs int `config:"int;30"`
-	ReportingTTLSecs      int `config:"int;90"`
+	ReportingIntervalSecs time.Duration `config:"seconds;30"`
+	ReportingTTLSecs      time.Duration `config:"seconds;90"`
 
-	EndpointReportingEnabled   bool    `config:"bool;false"`
-	EndpointReportingDelaySecs float64 `config:"float;1.0"`
-
-	MaxIpsetSize int `config:"int;1048576;non-zero"`
+	EndpointReportingEnabled   bool          `config:"bool;false"`
+	EndpointReportingDelaySecs time.Duration `config:"seconds;1"`
 
 	IptablesMarkMask uint32 `config:"mark-bitmask;0xff000000;non-zero,die-on-fail"`
 
 	DisableConntrackInvalidCheck bool `config:"bool;false"`
 
-	PrometheusMetricsEnabled bool `config:"bool;false"`
-	PrometheusMetricsPort    int  `config:"int(0,65535);9091"`
+	HealthEnabled                   bool `config:"bool;false"`
+	HealthPort                      int  `config:"int(0,65535);9099"`
+	PrometheusMetricsEnabled        bool `config:"bool;false"`
+	PrometheusMetricsPort           int  `config:"int(0,65535);9091"`
+	PrometheusGoMetricsEnabled      bool `config:"bool;true"`
+	PrometheusProcessMetricsEnabled bool `config:"bool;true"`
 
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;tcp:2379,tcp:2380,tcp:4001,tcp:7001,udp:53,udp:67;die-on-fail"`
@@ -150,15 +164,16 @@ type Config struct {
 
 	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
-	PrometheusReporterEnabled   bool   `config:"bool;false"`
-	PrometheusReporterPort      int    `config:"int(0,65535);9092"`
-	SyslogReporterNetwork       string `config:"string;"`
-	SyslogReporterAddress       string `config:"string;"`
-	DeletedMetricsRetentionSecs int    `config:"int;30"`
+	PrometheusReporterEnabled   bool          `config:"bool;false"`
+	PrometheusReporterPort      int           `config:"int(0,65535);9092"`
+	SyslogReporterNetwork       string        `config:"string;"`
+	SyslogReporterAddress       string        `config:"string;"`
+	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
 	UsageReportingEnabled bool   `config:"bool;true"`
 	ClusterGUID           string `config:"string;baddecaf"`
 	ClusterType           string `config:"string;"`
+	CalicoVersion         string `config:"string;"`
 
 	DebugMemoryProfilePath  string `config:"file;;"`
 	DebugDisableLogDropping bool   `config:"bool;false"`
@@ -337,10 +352,6 @@ func (config *Config) resolve() (changed bool, err error) {
 	return
 }
 
-func (config *Config) EndpointReportingDelay() time.Duration {
-	return time.Duration(config.EndpointReportingDelaySecs*1000000) * time.Microsecond
-}
-
 func (config *Config) DatastoreConfig() api.CalicoAPIConfig {
 	// Special case for etcdv2 datastore, where we want to honour established Felix-specific
 	// config mechanisms.
@@ -353,7 +364,7 @@ func (config *Config) DatastoreConfig() api.CalicoAPIConfig {
 		} else {
 			etcdEndpoints = strings.Join(config.EtcdEndpoints, ",")
 		}
-		etcdCfg := etcd.EtcdConfig{
+		etcdCfg := api.EtcdConfig{
 			EtcdEndpoints:  etcdEndpoints,
 			EtcdKeyFile:    config.EtcdKeyFile,
 			EtcdCertFile:   config.EtcdCertFile,
@@ -462,6 +473,10 @@ func loadParams() {
 			param = &MarkBitmaskParam{}
 		case "float":
 			param = &FloatParam{}
+		case "seconds":
+			param = &SecondsParam{}
+		case "millis":
+			param = &MillisParam{}
 		case "iface-list":
 			param = &RegexpParam{Regexp: IfaceListRegexp,
 				Msg: "invalid Linux interface name"}
