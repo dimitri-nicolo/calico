@@ -103,6 +103,7 @@ class DockerHost(object):
 
         docker_args = "--privileged -tid " \
                       "-v /lib/modules:/lib/modules " \
+                      "-v /dev/log:/dev/log " \
                       "-v %s/certs:%s/certs -v %s:/code --name %s" % \
                       (CHECKOUT_DIR, CHECKOUT_DIR, CHECKOUT_DIR,
                        self.name)
