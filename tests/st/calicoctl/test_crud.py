@@ -247,7 +247,7 @@ class TestCreateFromFile(TestBase):
         res_type = data['kind']
         logger.debug("Testing %s" % res_type)
 
-        self._create_admin_tier(host)
+        self._create_admin_tier()
 
         # Write out the files to load later
         self.writeyaml('/tmp/%s-1.yaml' % res_type, data)
@@ -273,7 +273,7 @@ class TestCreateFromFile(TestBase):
         res_type = data['kind']
         logger.debug("Testing %s" % res_type)
 
-        self._create_admin_tier(host)
+        self._create_admin_tier()
 
         # Write out the files to load later
         self.writejson('/tmp/%s-1.json' % res_type, data)
@@ -299,7 +299,7 @@ class TestCreateFromFile(TestBase):
         res_type = data['kind']
         logger.debug("Testing %s" % res_type)
 
-        self._create_admin_tier(host)
+        self._create_admin_tier()
 
         # Write out the files to load later
         self.writejson('/tmp/%s-1.json' % res_type, data)
@@ -325,7 +325,7 @@ class TestCreateFromFile(TestBase):
         res_type = data['kind']
         logger.debug("Testing %s" % res_type)
 
-        self._create_admin_tier(host)
+        self._create_admin_tier()
 
         # Write out the files to load later
         self.writeyaml('/tmp/%s-1.yaml' % res_type, data)
@@ -503,7 +503,7 @@ class TestCreateFromFile(TestBase):
         self._check_data_save_load(data2)
         logger.debug("Testing %s" % res)
 
-        self._create_admin_tier(host)
+        self._create_admin_tier()
 
         # Write out the files to load later
         self.writeyaml('/tmp/%s-1.yaml' % res, data1)
@@ -527,7 +527,7 @@ class TestCreateFromFile(TestBase):
         # Check it deleted
         self.check_data_in_datastore([], res)
 
-    def _create_admin_tier(self, host):
+    def _create_admin_tier(self):
         tierdata = {
             'apiVersion': 'v1',
             'kind': 'tier',
@@ -538,8 +538,8 @@ class TestCreateFromFile(TestBase):
                 'order': 1
             }
         }
-        host.writefile("tierfile.yaml", tierdata)
-        host.calicoctl("create -f tierfile.yaml")
+        self.writeyaml("/tmp/tierfile.yaml", tierdata)
+        calicoctl("create -f /tmp/tierfile.yaml")
 
     @parameterized.expand([
         ("bgpPeer",
@@ -739,7 +739,7 @@ class TestCreateFromFile(TestBase):
         self._check_data_save_load(data2)
         logger.debug("Testing %s" % res)
 
-        self._create_admin_tier(host)
+        self._create_admin_tier()
 
         # Write test data files for loading later
         self.writeyaml('/tmp/data1.yaml', data1)
