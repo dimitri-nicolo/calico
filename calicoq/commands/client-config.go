@@ -5,12 +5,12 @@ package commands
 import (
 	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/client"
+	log "github.com/sirupsen/logrus"
 )
 
 // LoadClientConfig loads the client config from file if the file exists,

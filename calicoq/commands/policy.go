@@ -8,9 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	log "github.com/sirupsen/logrus"
 )
 
 const APPLICABLE_ENDPOINTS = "applicable endpoints"

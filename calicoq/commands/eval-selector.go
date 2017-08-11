@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/selector"
+	log "github.com/sirupsen/logrus"
 )
 
 func EvalSelector(configFile, sel string) (err error) {

@@ -5,8 +5,8 @@ package main
 import (
 	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docopt/docopt-go"
+	log "github.com/sirupsen/logrus"
 	"github.com/tigera/calicoq/calicoq/commands"
 )
 
