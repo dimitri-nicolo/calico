@@ -1,7 +1,6 @@
 ---
 layout: null
 ---
-
 # This manifest creates a deployment for a json-echo server
 # listening on port 5001
 apiVersion: extensions/v1beta1
@@ -18,7 +17,7 @@ spec:
 
       containers:
         - name: json-echo
-          image: calico/am-json-echo:latest
+          image: doublek/json-echo:latest
           ports:
           - containerPort: 5001
 ---
