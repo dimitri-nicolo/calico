@@ -24,7 +24,7 @@ impact on Calico.
 ## Upgrading an Existing Cluster with Tigera Essentials Toolkit
 
 Follow the steps for [upgrading a hosted installation of Calico](#upgrading-a-hosted-installation-of-calico),
-but also upgrade the additional toolkit manifests.
+but also upgrade the additional toolkit manifests after upgrading the core Calico manifests.
 
 > **NOTE**
 >
@@ -38,7 +38,7 @@ This section covers taking an existing Kubernetes system with Open Source Calico
 #### Prerequisites
 This procedure assumes the following:
 
-1. Your system is running the latest 2.2.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.2.x release
+1. Your system is running the latest 2.4.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.4.x release
 2. You have obtained the Tigera Essentials Toolkit specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded the Essentials `calico/node` image to a private registry.
 3. You have the calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
 
