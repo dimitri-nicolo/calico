@@ -12,39 +12,22 @@ pipeline{
             }
         }
 
-        stage('Run Unit Tests') {
+        stage('Build calico/node') {
             steps {
-                ansiColor('xterm') {
-                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make test-containerized'
-                    sh "make node-test-containerized"
+                dir('calico_node'){
+                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make calico/node && docker run --rm calico/node:latest versions && make st'
                 }
             }
         }
 
-        stage('Build calico/node') {
-            steps {
-                sh "make calico/node"
-            }
-        }
-
-        stage('Build calico/ctl') {
-            steps {
-                sh "make calico/ctl"
-            }
-        }
-
-        stage('Build cross platform calicoctl') {
-            steps {
-                sh "make dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64.exe"
-            }
-        }
-
-        stage('Run calicoctl FVs') {
+        stage('Run calico/node FVs') {
             steps {
                 ansiColor('xterm') {
-                    // The following bit of nastiness works round a docker issue with ttys.
-                    // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
-                    sh 'ssh localhost -t -t "cd $WORKSPACE && make st"'
+                    dir('calico_node'){
+                        // The following bit of nastiness works round a docker issue with ttys.
+                        // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
+                        sh 'ssh localhost -t -t "cd $WORKSPACE/calico_node && make st"'
+                    }
                 }
             }
         }
