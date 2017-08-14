@@ -44,7 +44,7 @@ pipeline{
     }
   post {
     always {
-      junit("nosetests.xml")
+      junit("./calico_node/nosetests.xml")
       deleteDir()
     }
     success {
