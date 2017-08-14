@@ -2,11 +2,29 @@ v2.4:
 
 - title: v2.4.1
   note: |
-    07 August 2017
+    14 August 2017
 
-    Detailed release notes can be found on [GitHub](https://github.com/projectcalico/calico/releases).
+    Calico v2.4.1 with Tigera Essentials Toolkit v1.0.3.
+
+    ### Changes / New Features from Essentials Toolkit v1.0.2.
+    - Move to Calico v2.4.1.
+    - Various improvements to Felix CPU usage and general performance at high scale, particularly when nodes are experiencing high connection rates.
+    - Calico now implements the `networking.k8s.io/NetworkPolicy` API semantics as [defined by Kubernetes](https://github.com/kubernetes/kubernetes/pull/39164#issue-197243974).
+    - Add Felix liveness and readiness probes.
+    - Add support for Pre-DNAT policy, which applies before traffic is DNATed (e.g. before Kubernetes services).
+    - Add support for matching multiple CIDRs in a single rule.
+    - Numerous other enhancements and fixes from open source, detailed release notes for which can be found on [GitHub](https://github.com/projectcalico/calico/releases).
+
+    ### Upgrade Notes and Known Issues
+    - The move to GA NetworkPolicy API semantics changes behavior.  To maintain existing behavior when upgrading, follow these steps.
+      - In Namespaces that previously did not have the "DefaultDeny" annotation, you should delete any existing NetworkPolicy objects.
+      - In Namespaces that previously did have the "DefaultDeny" annotation, you can create the equivalent semantics by creating a NetworkPolicy that selects all pods but does not allow any traffic.
+    - Policy Violation Alerting doesn't record dropped packet counts for policy that applies to host endpoints that are not configured with expectedIPs.  (Note that rules can't match against such endpoints with selectors either.)
 
   components:
+    tigera-essentials-toolkit:
+      version: v1.0.3
+      url: ""
     felix:
       version: 2.4.1
       url: https://github.com/projectcalico/felix/releases/tag/2.4.1
