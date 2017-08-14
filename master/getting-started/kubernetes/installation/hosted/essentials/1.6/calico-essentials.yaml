@@ -26,10 +26,10 @@ data:
   cni_network_config: |-
     {
         "name": "k8s-pod-network",
-        "cniVersion": "0.1.0",
         "type": "calico",
         "etcd_endpoints": "__ETCD_ENDPOINTS__",
         "log_level": "info",
+        "mtu": 1500,
         "ipam": {
             "type": "calico-ipam"
         },
@@ -83,7 +83,8 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: essentials-docker-registry:5000/calico/node:essentials-v1.0.2
+          image: essentials-docker-registry:5000/calico/node:v2.4.1-e1.0.3
+          imagePullPolicy: IfNotPresent
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -105,13 +106,18 @@ spec:
               value: "ACCEPT"
             # Configure the IP Pool from which Pod IPs will be chosen.
             - name: CALICO_IPV4POOL_CIDR
-              value: "192.168.0.0/16"
+              value: "10.244.0.0/14"
             - name: CALICO_IPV4POOL_IPIP
               value: "always"
             # Disable IPv6 on Kubernetes.
             - name: FELIX_IPV6SUPPORT
               value: "false"
-            # Set Felix logging to "info"
+            # Set MTU for tunnel device used if ipip is enabled
+            - name: FELIX_IPINIPMTU
+              value: "1440"
+            - name: FELIX_HEALTHENABLED
+              value: "true"
+            # Set Felix logging to "info" - switched to error
             - name: FELIX_LOGSEVERITYSCREEN
               value: "info"
             # Auto-detect the BGP IP address.
@@ -127,6 +133,18 @@ spec:
           resources:
             requests:
               cpu: 250m
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 9099
+            periodSeconds: 10
+            initialDelaySeconds: 10
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 9099
+            periodSeconds: 10
           volumeMounts:
             - mountPath: /lib/modules
               name: lib-modules
