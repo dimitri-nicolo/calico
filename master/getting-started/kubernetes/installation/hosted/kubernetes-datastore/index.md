@@ -42,21 +42,6 @@ Ensure you have a cluster which meets the above requirements.  There may be addi
 > if you are upgrading from Calico v2.1, use the [Calico policy-only with user-supplied networking](#2-calico-policy-only-with-user-supplied-networking) installation instructions
 > to upgrade Calico policy-only which leaves the networking solution unchanged.
 
-### RBAC
-
-Before you install Calico, if your Kubernetes cluster has RBAC enabled, you'll need to create the following
-RBAC roles to allow API access to Calico.
-
-Apply the following manifest to create these necessary RBAC roles and bindings.
-
->Note: The following RBAC policy is compatible with the Kubernetes v1.6+ manifests only.
-
-```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-```
-
->[Click here to view the above yaml directly.](../rbac-kdd.yaml)
-
 ### 1. Calico policy with Calico networking (Beta)
 
 With Kubernetes as the Calico datastore, Calico has Beta support for Calico networking.  This provides BGP-based
