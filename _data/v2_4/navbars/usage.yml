@@ -35,6 +35,10 @@ toc:
   path: /usage/decommissioning-a-node
 - title: Configuring Conntrack
   path: /usage/configuration/conntrack
+- title: Configuring Prometheus
+  path: /usage/configuration/prometheus
+- title: Configuring Alertmanager
+  path: /usage/configuration/alertmanager
 - title: Calico for OpenStack
   section:
   - title: Configuration 
