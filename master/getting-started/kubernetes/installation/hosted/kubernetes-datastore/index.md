@@ -54,7 +54,7 @@ This will install Calico and will initially create a full node-to-node mesh.
 kubectl apply -f calico.yaml
 ```
 
->[Click here to view the calico.yaml for Kubernetes 1.6 clusters.](calico-networking/1.6/calico.yaml)
+>[Click here to view the calico.yaml for Kubernetes 1.6+ clusters.](calico-networking/1.6/calico.yaml)
 
 >[Click here to view the calico.yaml for Kubernetes 1.5 clusters.](calico-networking/1.5/calico.yaml)
 
@@ -86,7 +86,7 @@ To install Calico in policy-only mode, run following command based on your Kuber
 kubectl apply -f calico.yaml
 ```
 
->[Click here to view the calico.yaml for Kubernetes 1.6 clusters.](policy-only/1.6/calico.yaml)
+>[Click here to view the calico.yaml for Kubernetes 1.6+ clusters.](policy-only/1.6/calico.yaml)
 
 >[Click here to view the calico.yaml for Kubernetes 1.5 clusters.](policy-only/1.5/calico.yaml)
 

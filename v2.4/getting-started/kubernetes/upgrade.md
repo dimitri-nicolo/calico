@@ -22,11 +22,74 @@ complete using [kubectl uncordon](http://kubernetes.io/docs/user-guide/kubectl/v
 server will continue to speak the v2 protocol so the upgrade should have no
 impact on Calico.
 
+## Upgrading an Existing Cluster with Tigera Essentials Toolkit
+
+Follow the steps for [upgrading a hosted installation of Calico](#upgrading-a-hosted-installation-of-calico),
+but also upgrade the additional toolkit manifests after upgrading the core Calico manifests.
+
 > **NOTE**
 >
 > When upgrading Calico using the Kubernetes datastore driver from a version < v2.3.0
 > to a version >= v2.3.0, or when upgrading Calico using the etcd datastore from a version < v2.4.0
 > to a version >= v2.4.0, you should follow the steps for [upgrading to v1 NetworkPolicy semantics](#upgrading-to-v1-networkpolicy-semantics)
+
+## Adding Tigera Essentials Toolkit to an Existing Open Source Cluster
+This section covers taking an existing Kubernetes system with Open Source Calico and adding the Tigera Essentials Toolkit.
+
+#### Prerequisites
+This procedure assumes the following:
+
+1. Your system is running the latest 2.4.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.4.x release
+2. You have obtained the Tigera Essentials Toolkit specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded the Essentials `calico/node` image to a private registry.
+3. You have the calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
+
+#### Prepare for the Upgrade
+ Edit your calico manifest:
+   - change the calico/node `image:` key to point at the Essentials `calico/node` image in your private registry.
+   - add the following to the `env:` section of the `calico/node` Daemonset:
+     ```
+     - name: FELIX_PROMETHEUSREPORTERENABLED
+       value: "true"
+     - name: FELIX_PROMETHEUSREPORTERPORT
+       value: "9081"
+     ```
+
+#### Perform the upgrade
+ 1. Apply the calico manifest you prepared above with a command like: `kubectl apply -f calico.yaml`
+ 2. Upgrade each node. Perform the following steps on each node one at a time:
+    - First make the node unschedulable:
+        ```
+        kubectl cordon node-01
+        ```
+    - Delete the calico-node pod running on the cordoned node and wait for the DaemonSet controller to deploy a replacement using the Essentials image.
+        ```
+        kubectl delete pod -n kube-system calico-node-ajzy6e3t
+        ```
+    - Once the new calico-node Pod has started, make the node schedulable again.
+        ```
+        kubectl uncordon node-01
+        ```
+ 3. Install the Essentials tools.  For more information about the following instructions, see [Tigera Essentials Toolkit Hosted Install](installation/hosted/essentials/).
+
+    - Configure calico-monitoring namespace and deploy Prometheus Operator by
+      applying the [operator.yaml](installation/hosted/essentials/1.6/operator.yaml) manifest.
+
+    ```
+    kubectl apply -f operator.yaml
+    ```
+
+    - Wait for third party resources to be created. Check by running:
+
+    ```
+    $ kubectl get thirdpartyresources --watch
+    ```
+
+    - Apply the [monitor-calico.yaml](installation/hosted/essentials/1.6/monitor-calico.yaml) manifest which will
+      install prometheus and alertmanager.
+
+    ```
+    $ kubectl apply -f monitor-calico.yaml
+    ```
 
 ## Upgrading a Hosted Installation of Calico
 

@@ -1,0 +1,96 @@
+---
+title: calicoq endpoint
+redirect_from: latest/reference/calicoq/endpoint
+---
+
+`calicoq endpoint <substring>` shows you the Calico policies and profiles that
+relate to endpoints whose full ID includes `<substring>`.  It displays, for
+each endpoint:
+
+- the policies and profiles that apply to that endpoint (that Calico uses to
+  police traffic that is arriving at or departing from that endpoint), in the
+  order that they apply
+
+- the policies and profiles whose rule selectors match that endpoint (that
+  allow or disallow that endpoint as a traffic source or destination).
+
+The rule matches can be suppressed by giving the `-r` option.
+
+`<substring>` can be any substring of an endpoint's full ID, which is formed
+as `<host-name>/<orchestrator>/<workload-name>/<endpoint-name>`.
+
+## Options
+
+```
+-r --hide-rule-matches     Don't show the list of policies and profiles whose
+                           rule selectors match each endpoint as an allowed or
+                           disallowed source/destination.
+
+-s --hide-selectors        Don't show the detailed selector expressions involved
+                           (that cause each displayed profile or policy to match
+                           each endpoint).
+```
+
+## Examples
+
+Here is an example with three workloads in a group, named with a prefix that
+specifies the group; so `calicoq endpoint` with that prefix returns information
+about all three endpoints.
+```
+$ calicoq endpoint g1w
+
+Policies and profiles for endpoints matching "g1w":
+
+Workload endpoint k8s/g1w1/eth0
+  Policies:
+    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+  Profiles:
+    Profile "group1"
+  Rule matches:
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match; selector "calico/k8s_ns in {'group1','group2'}"
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "calico/k8s_ns in {'group1','group2'}"
+    Policy "p1" outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+
+Workload endpoint k8s/g1w2/eth0
+  Policies:
+    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+  Profiles:
+    Profile "group1"
+  Rule matches:
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match; selector "calico/k8s_ns in {'group1','group2'}"
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "calico/k8s_ns in {'group1','group2'}"
+    Policy "p1" outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+
+Workload endpoint k8s/g1w3/eth0
+  Policies:
+    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+  Profiles:
+    Profile "group1"
+  Rule matches:
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match; selector "calico/k8s_ns in {'group1','group2'}"
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "calico/k8s_ns in {'group1','group2'}"
+    Policy "p1" outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+```
+
+Here is an example of a workload to which both normal and untracked policy
+applies.  The untracked policy is listed first because Calico enforces
+untracked policies before normal ones.
+```
+$ calicoq endpoint tigera-lwr-kubetest-02 --hide-rule-matches
+
+Policies and profiles for endpoints matching "tigera-lwr-kubetest-02":
+
+Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
+  Policies:
+    Policy "donottrack" (order 500; selector "calico/k8s_ns == 'advanced-policy-demo'") [untracked]
+    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "calico/k8s_ns == 'advanced-policy-demo'")
+  Profiles:
+    Profile "k8s_ns.advanced-policy-demo"
+```
+
+## See also
+
+-  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
+   more information about the Calico policy model.
+-  [Untracked policy]({{site.baseurl}}/{{page.version}}/getting-started/bare-metal/bare-metal) for
+   more information about untracked policy.
