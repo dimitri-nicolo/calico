@@ -10,9 +10,15 @@ layout: null
 apiVersion: v1
 kind: Namespace
 metadata:
-  annotations:
-    net.beta.kubernetes.io/network-policy: '{"ingress":{"isolation":"DefaultDeny"}}'
   name: calico-monitoring
+---
+kind: NetworkPolicy
+apiVersion: extensions/v1beta1
+metadata:
+  name: default-deny
+  namespace: calico-monitoring
+spec:
+  podSelector:
 ---
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
