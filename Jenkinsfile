@@ -20,6 +20,16 @@ pipeline{
             }
         }
 
+        stage('Get enterprise calicoctl') {
+            steps {
+                dir('calico_node'){
+                    // Get calicoctl
+                    sh "gsutil cp gs://tigera-essentials/calicoctl-v1.0.3-rc1 ./dist/calicoctl"
+                    sh "chmod +x ./dist/calicoctl"
+                }
+            }
+        }
+
         stage('Run calico/node FVs') {
             steps {
                 ansiColor('xterm') {
