@@ -15,7 +15,7 @@ pipeline{
         stage('Build calico/node') {
             steps {
                 dir('calico_node'){
-                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make calico/node && docker run --rm calico/node:latest versions && make st'
+                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make calico/node && docker run --rm calico/node:latest versions'
                 }
             }
         }
