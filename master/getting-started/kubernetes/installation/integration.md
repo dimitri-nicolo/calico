@@ -6,8 +6,9 @@ title: Integration Guide
 This document explains the components necessary to install Calico on Kubernetes for integrating
 with custom configuration management.
 
-The [hosted installation method](hosted/) will perform these steps automatically for you and is recommended
-for most users.
+The [self-hosted installation method](hosted/) will perform these steps automatically for you and is *strongly* recommended
+for most users.  These instructions should only be followed by users who have a specific need that cannot be met by the self-hosted
+installation method.
 
 * TOC
 {:toc}
@@ -21,8 +22,7 @@ for most users.
 
 > **NOTE:**
 >
-> Calico can also enforce network policy [without a dependency on etcd](hosted/kubernetes-datastore/). This feature is currently experimental
-and is currently only supported as via hosted install.
+> Calico can also be installed [without a dependency on etcd](hosted/kubernetes-datastore/), but that is not covered in this document.
 
 ## About the Calico Components
 
@@ -59,7 +59,7 @@ wget {{site.data.versions[page.version].first.components.calicoctl.download_url}
 sudo chmod +x calicoctl
 
 # Run the calico/node container
-sudo ETCD_ENDPOINTS=http://<ETCD_IP>:<ETCD_PORT> ./calicoctl node run
+sudo ETCD_ENDPOINTS=http://<ETCD_IP>:<ETCD_PORT> ./calicoctl node run --node-image=quay.io/calico/node:{{site.data.versions[page.version].first.title}}
 ```
 
 See the [`calicoctl node run` documentation]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/node/)
@@ -94,7 +94,7 @@ ExecStart=/usr/bin/docker run --net=host --privileged --name=calico-node \
   -v /run/docker/plugins:/run/docker/plugins \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /var/log/calico:/var/log/calico \
-  quay.io/calico/node:{{site.data.versions[page.version].first.components["calico/node"].version}}
+  calico/node:{{site.data.versions[page.version].first.title}}
 ExecStop=/usr/bin/docker rm -f calico-node
 Restart=always
 RestartSec=10
@@ -192,6 +192,24 @@ calico-policy-controller                 1/1       Running   0          1m
 
 For more information on how to configure the policy controller,
 see the [configuration guide]({{site.baseur}}/{{page.version}}/reference/policy-controller/configuration).
+
+## Role-based access control (RBAC)
+
+When installing Calico on Kubernetes clusters with RBAC enabled, it is necessary to provide Calico access to some Kubernetes
+APIs.  To do this, subjects and roles must be configured in the Kubernetes API and Calico components must be provided with the appropriate
+tokens or certificates to presnt which identify it as the configured API user.
+
+Detailed instructions for configuring Kubernetes RBAC are outside the scope of this document.  For more information,
+please see the [upstream Kubernetes documentation](https://kubernetes.io/docs/admin/authorization/rbac/) on the topic.
+
+The following yaml file defines the necessary API permissions required by Calico
+when using the etcd datastore.
+
+```
+kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/rbac.yaml
+```
+
+>[Click here to view the above yaml directly.](rbac.yaml)
 
 ## Configuring Kubernetes
 

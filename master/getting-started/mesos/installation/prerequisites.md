@@ -7,7 +7,7 @@ title: Requirements for Calico with Mesos
 Calico uses etcd as its datastore. Ensure you have an instance of etcd running,
 and that it is accessible from all Agents in your cluster.
 
-For maximize availability, use [etcd's clustering guide](https://coreos.com/os/docs/latest/cluster-architectures.html)
+In order to maximize availability, use [etcd's clustering guide](https://coreos.com/os/docs/latest/cluster-architectures.html)
 and run etcd across the masters or other dedicated hosts.
 
 For simplicity, you can quickly get started by running a single instance of etcd
@@ -17,7 +17,7 @@ or replaced `$ETCD_IP` and `$ETCD_PORT`:
 ```shell
 docker run --detach \
 	--net=host \
-	--name etcd quay.io/coreos/etcd:v2.0.11 \
+	--name etcd quay.io/coreos/etcd:v3.1.10 \
 	--advertise-client-urls "http://$ETCD_IP:$ETCD_PORT" \
 	--listen-client-urls "http://$ETCD_IP:$ETCD_PORT,http://127.0.0.1:$ETCD_PORT"
 ```
@@ -49,7 +49,7 @@ etcd cluster.
 Restart docker, then ensure it has picked up the changes:
 
 ```
-docker info | grep -i "cluster store"
+$ docker info | grep -i "cluster store"
 Cluster Store: etcd://10.0.0.1:2379
 ```
 

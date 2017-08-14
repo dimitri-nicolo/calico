@@ -21,12 +21,24 @@ complete using [kubectl uncordon](http://kubernetes.io/docs/user-guide/kubectl/v
 server will continue to speak the v2 protocol so the upgrade should have no
 impact on Calico.
 
+## Upgrading an Existing Cluster with Tigera Essentials Toolkit
+
+Follow the steps for [upgrading a hosted installation of Calico](#upgrading-a-hosted-installation-of-calico),
+but also upgrade the additional toolkit manifests after upgrading the core Calico manifests.
+
+> **NOTE**
+>
+> When upgrading Calico using the Kubernetes datastore driver from a version < v2.3.0
+> to a version >= v2.3.0, or when upgrading Calico using the etcd datastore from a version < v2.4.0
+> to a version >= v2.4.0, you should follow the steps for [upgrading to v1 NetworkPolicy semantics](#upgrading-to-v1-networkpolicy-semantics)
+
 ## Adding Tigera Essentials Toolkit to an Existing Open Source Cluster
-This section covers taking an existing Kubernetes system with Open Source Calico and adding Tigera Essentials Toolkit .
+This section covers taking an existing Kubernetes system with Open Source Calico and adding the Tigera Essentials Toolkit.
+
 #### Prerequisites
 This procedure assumes the following:
 
-1. Your system is running the latest 2.2.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.2.x release
+1. Your system is running the latest 2.4.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.4.x release
 2. You have obtained the Tigera Essentials Toolkit specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded the Essentials `calico/node` image to a private registry.
 3. You have the calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
 
@@ -224,3 +236,34 @@ To upgrade the policy controller:
 We recommend running the policy controller as a Kubernetes Deployment with type "recreate", in which
 case upgrade can be handled entirely through the
 standard [Deployment mechanism](http://kubernetes.io/docs/user-guide/deployments/#updating-a-deployment)
+
+## Upgrading to v1 NetworkPolicy semantics
+
+Calico v2.3.0 (when using the Kubernetes datastore driver) and Calico v2.4.0 (when using the etcd datastore driver)
+interpret the Kubernetes `NetworkPolicy` differently than previous releases, as specified
+in [upstream Kubernetes](https://github.com/kubernetes/kubernetes/pull/39164#issue-197243974).
+
+To maintain behavior when upgrading, you should follow these steps prior to upgrading Calico to ensure your configured policy is
+enforced consistently throughout the upgrade process.
+
+- In any Namespace that previously did _not_ have a "DefaultDeny" annotation:
+  - Delete any NetworkPolicy objects in that Namespace.  After upgrade, these policies will become active and may block traffic that was previously allowed.
+- In any Namespace that previously had a "DefaultDeny" annotation:
+  - Create a NetworkPolicy which matches all pods but does not allow any traffic.  After upgrade, the Namespace annotation will have no effect, but this empty NetworkPolicy will provide the same behavior.
+
+Here is an example of a NetworkPolicy which selects all pods in the Namespace, but does not allow any traffic:
+
+```yaml
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: default-deny
+spec:
+  podSelector:
+```
+
+> **Note**:
+>
+> The above steps should be followed when upgrading to Calico v2.3.0+ using the Kubernetes
+> datastore driver, and Calico v2.4.0+ using the etcd datastore,
+> independent of the Kubernetes version being used.

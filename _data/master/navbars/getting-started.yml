@@ -35,10 +35,14 @@ toc:
       path: /getting-started/kubernetes/installation/aws
     - title: GCE
       path: /getting-started/kubernetes/installation/gce
+    - title: Azure 
+      path: /getting-started/kubernetes/installation/azure
     - title: 'Vagrant/VirtualBox: CoreOS'
       path: /getting-started/kubernetes/installation/vagrant/
   - title: Tutorials
     section:
+    - title: Using calicoctl
+      path: /getting-started/kubernetes/tutorials/using-calicoctl
     - title: Simple Policy Demo
       path: /getting-started/kubernetes/tutorials/simple-policy
     - title: Stars Policy Demo
@@ -49,6 +53,11 @@ toc:
     path: /getting-started/kubernetes/troubleshooting
   - title: Upgrade
     path: /getting-started/kubernetes/upgrade
+
+- title: OpenShift
+  section:
+    - title: Installation
+      path: /getting-started/openshift/installation
 
 - title: Mesos
   section:
@@ -68,6 +77,8 @@ toc:
         path: /getting-started/mesos/installation/dc-os/framework
       - title: Customize Universe Package Install
         path: /getting-started/mesos/installation/dc-os/custom
+    - title: 'Vagrant/VirtualBox: CentOS'
+      path: /getting-started/mesos/installation/vagrant-centos/
   - title: Tutorials
     section:
     - title: Launching Tasks
@@ -80,10 +91,6 @@ toc:
         path: /getting-started/mesos/tutorials/policy/universal-containerizer
       - title: Docker Containerizer
         path: /getting-started/mesos/tutorials/policy/docker-containerizer
-  - title: Demos
-    section:
-    - title: Vagrant Quickstart - Docker Containerizer
-      path: /getting-started/mesos/vagrant/
 
 - title: Docker
   section:
