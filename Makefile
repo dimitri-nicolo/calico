@@ -173,7 +173,7 @@ st: dist/calicoctl run-etcd-host
 	#   - This also provides access to calicoctl and the docker client
 	docker run --net=host --privileged \
 	           -e MY_IP=$(LOCAL_IP_ENV) \
-	           --rm -ti \
+	           --rm -t \
 	           -v $(SOURCE_DIR):/code \
 	           calico/test \
 	           sh -c 'nosetests $(ST_TO_RUN) -sv --nologcapture  --with-xunit --xunit-file="/code/nosetests.xml" --with-timer $(ST_OPTIONS)'
