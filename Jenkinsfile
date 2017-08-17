@@ -12,13 +12,26 @@ pipeline{
             }
         }
 
+        stage('Wipe out all docker state') {
+            steps {
+                // Kill running containers:
+                sh "sudo docker kill `docker ps -qa` || true"
+                // Delete all containers (and their associated volumes):
+                sh "sudo docker rm -v `docker ps -qa` || true"
+                // Remove all images:
+                sh "sudo docker rmi `docker images -q` || true"
+            }
+        }
+
         stage('Build calico/node') {
             steps {
-                dir('calico_node'){
-                    // clear glide cache
-                    sh 'sudo rm -rf ~/.glide/*'
-                    sh 'make clean'
-                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make calico/node && docker run --rm calico/node:latest versions'
+                ansiColor('xterm') {
+                    dir('calico_node'){
+                        // clear glide cache
+                        sh 'sudo rm -rf ~/.glide/*'
+                        sh 'make clean'
+                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make calico/node && docker run --rm calico/node:latest versions'
+                    }
                 }
             }
         }
