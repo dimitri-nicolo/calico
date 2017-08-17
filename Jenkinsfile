@@ -1,6 +1,9 @@
 #!groovy
 pipeline{
     agent { label 'containers' }
+    parameters {
+        string(name: 'calicoctl_url', defaultValue: 'gs://tigera-essentials/calicoctl-v1.0.3-rc1', description: 'URL of calicoctl to use in tests')
+    }
     triggers{
         pollSCM('H/5 * * * *')
         cron('H H(0-7) * * *')
@@ -40,7 +43,7 @@ pipeline{
             steps {
                 dir('calico_node'){
                     // Get calicoctl
-                    sh "gsutil cp gs://tigera-essentials/calicoctl-v1.0.3-rc1 ./dist/calicoctl"
+                    sh "gsutil cp ${params.calicoctl_url} ./dist/calicoctl"
                     sh "chmod +x ./dist/calicoctl"
                 }
             }
