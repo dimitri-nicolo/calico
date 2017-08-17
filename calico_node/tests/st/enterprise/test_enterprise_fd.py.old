@@ -1,4 +1,4 @@
-# Copyright 2016 Tigera, Inc
+# Copyright 2016-2017 Tigera, Inc
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -136,6 +136,9 @@ test_ipip_nat_out = {
 }
 
 
+# TODO(doublek): Looks like this test file has the the beginnings of a Ipfix
+# test case, that should be merged manually with the test_ipfix.py[.disabled]
+# file when ready.
 class MultiHostIpfixAsymTCP(TestBase):
     @classmethod
     def setUpClass(cls):
