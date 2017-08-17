@@ -15,6 +15,9 @@ pipeline{
         stage('Build calico/node') {
             steps {
                 dir('calico_node'){
+                    // clear glide cache
+                    sh 'sudo rm -rf ~/.glide/*'
+                    sh 'make clean'
                     sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make calico/node && docker run --rm calico/node:latest versions'
                 }
             }
