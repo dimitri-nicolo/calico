@@ -14,6 +14,8 @@ pipeline{
 
         stage('Build calicoctl') {
             steps {
+                // Make sure no one's left root owned files in glide cache
+                sh 'sudo chown -R ${USER}:${USER} ~/.glide'
                 // SSH_AUTH_SOCK stuff needed to allow jenkins to download from private repo
                 sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make dist/calicoctl'
             }
