@@ -1,6 +1,9 @@
 #!groovy
 pipeline{
     agent { label 'containers' }
+    parameters {
+        string(name: 'calicoctl_url', defaultValue: 'gs://tigera-essentials/calicoctl-v1.0.3-rc1', description: 'URL of calicoctl to use in tests')
+    }
     triggers{
         pollSCM('H/5 * * * *')
         cron('H H(0-7) * * *')
@@ -12,46 +15,55 @@ pipeline{
             }
         }
 
-        stage('Run Unit Tests') {
+        stage('Wipe out all docker state') {
             steps {
-                ansiColor('xterm') {
-                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make test-containerized'
-                    sh "make node-test-containerized"
-                }
+                // Kill running containers:
+                sh "sudo docker kill `docker ps -qa` || true"
+                // Delete all containers (and their associated volumes):
+                sh "sudo docker rm -v `docker ps -qa` || true"
+                // Remove all images:
+                sh "sudo docker rmi `docker images -q` || true"
             }
         }
 
         stage('Build calico/node') {
             steps {
-                sh "make calico/node"
+                ansiColor('xterm') {
+                    dir('calico_node'){
+                        // clear glide cache
+                        sh 'sudo rm -rf ~/.glide/*'
+                        sh 'make clean'
+                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make calico/node && docker run --rm calico/node:latest versions'
+                    }
+                }
             }
         }
 
-        stage('Build calico/ctl') {
+        stage('Get enterprise calicoctl') {
             steps {
-                sh "make calico/ctl"
+                dir('calico_node'){
+                    // Get calicoctl
+                    sh "gsutil cp ${params.calicoctl_url} ./dist/calicoctl"
+                    sh "chmod +x ./dist/calicoctl"
+                }
             }
         }
 
-        stage('Build cross platform calicoctl') {
-            steps {
-                sh "make dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64.exe"
-            }
-        }
-
-        stage('Run calicoctl FVs') {
+        stage('Run calico/node FVs') {
             steps {
                 ansiColor('xterm') {
-                    // The following bit of nastiness works round a docker issue with ttys.
-                    // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
-                    sh 'ssh localhost -t -t "cd $WORKSPACE && make st"'
+                    dir('calico_node'){
+                        // The following bit of nastiness works round a docker issue with ttys.
+                        // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
+                        sh 'ssh localhost -t -t "cd $WORKSPACE/calico_node && make st"'
+                    }
                 }
             }
         }
     }
   post {
     always {
-      junit("nosetests.xml")
+      junit("**/calico_node/nosetests.xml")
       deleteDir()
     }
     success {
