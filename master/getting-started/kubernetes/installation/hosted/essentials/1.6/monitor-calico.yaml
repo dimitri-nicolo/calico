@@ -211,6 +211,7 @@ metadata:
   name: calico-node-alertmanager
   namespace: calico-monitoring
 spec:
+  version: v0.7.1
   # If necessary, uncomment the 2 lines below and edit the nodeSelector
   # key:value pair with appropriate values for your environment.
   #nodeSelector:
@@ -253,7 +254,7 @@ spec:
   serviceMonitorSelector:
     matchLabels:
       team: network-operators
-  version: v1.6.3
+  version: v1.7.1
   retention: 1h
   resources:
     requests:
