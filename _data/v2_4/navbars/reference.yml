@@ -67,6 +67,8 @@ toc:
         path: /reference/calicoctl/resources/policy
       - title: Profile
         path: /reference/calicoctl/resources/profile
+      - title: Tier
+        path: /reference/calicoctl/resources/tier   
       - title: Workload Endpoint
         path: /reference/calicoctl/resources/workloadendpoint
   - title: Setup

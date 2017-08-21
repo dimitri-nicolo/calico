@@ -47,6 +47,7 @@ Description:
     * hostEndpoint
     * workloadEndpoint
     * ipPool
+    * tier
     * policy
     * profile
 
