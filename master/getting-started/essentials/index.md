@@ -13,8 +13,9 @@ Your support representative will provide you with a link to a Google Drive folde
 containing the binaries that are modified from or supplementary to open source
 Project Calico.  These are:
 
-1. the `calicoq` policy query tool, and
-2. `calico-node.tar.xz` - a `calico/node` image with additional monitoring capabilities.
+1. the `calicoq` policy query tool,
+2. the `calicoctl` configuration tool, and
+3. `calico-node.tar.xz` - a `calico/node` image with additional monitoring capabilities.
 
 If you are unable to use Google Drive, please contact your support representative
 for an alternative distribution mechanism.
