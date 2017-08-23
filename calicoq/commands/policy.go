@@ -52,7 +52,7 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 			EvalPolicySelectorsPrintYAML(policyName, hideRuleMatches, kv, matches)
 		case "json":
 			EvalPolicySelectorsPrintJSON(policyName, hideRuleMatches, kv, matches)
-		default:
+		case "ps":
 			EvalPolicySelectorsPrint(policyName, hideRuleMatches, kv, matches)
 		}
 	}
@@ -96,9 +96,13 @@ func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv
 	}
 
 	for _, name := range names {
+		wepp := NewWorkloadEndpointPrintFromNameString(name)
+		if wepp == nil {
+			continue
+		}
+
 		for _, sel := range matches[name] {
 			if strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
-				wepp := NewWorkloadEndpointPrintFromNameString(name)
 				// sel is of the form "applicable endpoints; selector <selector>
 				selector := strings.SplitN(sel, " ", 4)[3]
 				wepp.Selector = selector[1 : len(selector)-1]
@@ -111,6 +115,10 @@ func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv
 	if !hideRuleMatches {
 		for _, name := range names {
 			wepp := NewWorkloadEndpointPrintFromNameString(name)
+			if wepp == nil {
+				continue
+			}
+
 			sort.Strings(matches[name])
 			for _, sel := range matches[name] {
 				if !strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {

@@ -29,7 +29,7 @@ func EvalSelector(configFile, sel string, outputFormat string) (err error) {
 		EvalSelectorPrintYAML(sel, matches)
 	case "json":
 		EvalSelectorPrintJSON(sel, matches)
-	default:
+	case "ps":
 		EvalSelectorPrint(sel, matches)
 	}
 	return

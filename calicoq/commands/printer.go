@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	// TODO: Check glide for these and if they need to be private
+	// TODO (mattl): Check glide for these and if they need to be private
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -18,7 +18,7 @@ func printYAML(outputs []OutputList) error {
 	if output, err := yaml.Marshal(outputs); err != nil {
 		return err
 	} else {
-		fmt.Printf("%s", string(output))
+		fmt.Println(string(output))
 	}
 	return nil
 }
@@ -27,7 +27,7 @@ func printJSON(outputs []OutputList) error {
 	if output, err := json.MarshalIndent(outputs, "", "  "); err != nil {
 		return err
 	} else {
-		fmt.Printf("%s\n", string(output))
+		fmt.Println(string(output))
 	}
 	return nil
 }
@@ -40,24 +40,14 @@ type OutputList struct {
 }
 
 type WorkloadEndpointPrint struct {
-	// Identifiers    EndpointIdentifiers `json:"identifiers"`
-	Node           string         `json:"node,omitempty"`
-	Orchestrator   string         `json:"orchestrator,omitempty"`
-	Workload       string         `json:"workload,omitempty"`
-	Name           string         `json:"name,omitempty"`
-	UntrackedTiers []TierPrint    `json:"untracked_tiers,omitempty"`
-	Tiers          []TierPrint    `json:"policy_tiers,omitempty"`
-	Policies       []PolicyPrint  `json:"policies,omitempty"`
-	Profiles       []ProfilePrint `json:"profiles,omitempty"`
-	Rules          []RulePrint    `json:"rule-matches,omitempty"`
-	Selector       string         `json:"selector,omitempty"`
-}
-
-type EndpointIdentifiers struct {
-	Node         string `json:"node,omitempty"`
-	Orchestrator string `json:"orchestrator,omitempty"`
-	Workload     string `json:"workload,omitempty"`
-	Name         string `json:"name,omitempty"`
+	Node         string         `json:"node,omitempty"`
+	Orchestrator string         `json:"orchestrator,omitempty"`
+	Workload     string         `json:"workload,omitempty"`
+	Name         string         `json:"name,omitempty"`
+	Policies     []PolicyPrint  `json:"policies,omitempty"`
+	Profiles     []ProfilePrint `json:"profiles,omitempty"`
+	Rules        []RulePrint    `json:"rule_matches,omitempty"`
+	Selector     string         `json:"selector,omitempty"`
 }
 
 func NewWorkloadEndpointPrintFromEndpointDatum(epd endpointDatum) *WorkloadEndpointPrint {
@@ -65,21 +55,6 @@ func NewWorkloadEndpointPrintFromEndpointDatum(epd endpointDatum) *WorkloadEndpo
 }
 
 func NewWorkloadEndpointPrintFromKey(key interface{}) *WorkloadEndpointPrint {
-	/*
-		idents := EndpointIdentifiers{}
-		switch epID := key.(type) {
-		case model.WorkloadEndpointKey:
-			idents.Node = epID.Hostname
-			idents.Orchestrator = epID.OrchestratorID
-			idents.Workload = epID.WorkloadID
-			idents.Name = epID.EndpointID
-		case model.HostEndpointKey:
-			idents.Name = epID.EndpointID
-		}
-		return &WorkloadEndpointPrint{
-			Identifiers: idents,
-		}
-	*/
 	wepp := &WorkloadEndpointPrint{}
 	switch epID := key.(type) {
 	case model.WorkloadEndpointKey:
@@ -96,35 +71,17 @@ func NewWorkloadEndpointPrintFromKey(key interface{}) *WorkloadEndpointPrint {
 func NewWorkloadEndpointPrintFromNameString(name string) *WorkloadEndpointPrint {
 	// name is of the form "Workload endpoint <node>/<orchestrator>/<workload>/<name>
 	// sel is of the form "applicable endpoints; selector <selector>
-	/*
-		idents := EndpointIdentifiers{}
-		endpointStrings := strings.Split(name, " ")
-		if len(endpointStrings) != 3 {
-			log.Errorf("Workload name is not in the \"Workload endpoint <node>/<orchestrator>/<workload>/<name>\" format: %s", name)
-			return &WorkloadEndpointPrint{}
-		}
-
-		endpointIdents := strings.Split(endpointStrings[2], "/")
-		idents.Node = endpointIdents[0]
-		idents.Orchestrator = endpointIdents[1]
-		idents.Workload = endpointIdents[2]
-		idents.Name = endpointIdents[3]
-
-		return &WorkloadEndpointPrint{
-			Identifiers: idents,
-		}
-	*/
 	wepp := &WorkloadEndpointPrint{}
 	endpointStrings := strings.Split(name, " ")
 	if len(endpointStrings) != 3 || endpointStrings[0] != "Workload" || endpointStrings[1] != "endpoint" {
 		log.Errorf("Workload endpoint name is not in the \"Workload endpoint <node>/<orchestrator>/<workload>/<name>\" format: %s", name)
-		return wepp
+		return nil
 	}
 
 	endpointIdents := strings.Split(endpointStrings[2], "/")
 	if len(endpointIdents) != 4 {
 		log.Errorf("Workload endpoint name does not have its identifiers <node>/<orchestrator>/<workload>/<name> separated by \"/\": %s", name)
-		return wepp
+		return nil
 	}
 	wepp.Node = endpointIdents[0]
 	wepp.Orchestrator = endpointIdents[1]
@@ -140,12 +97,6 @@ type PolicyPrint struct {
 	Selector  string `json:"selector,omitempty"`
 	TierName  string `json:"tier_name,omitempty"`
 	TierOrder string `json:"tier_order,omitempty"`
-}
-
-type TierPrint struct {
-	Name     string        `json:"name"`
-	Order    string        `json:"order"`
-	Policies []PolicyPrint `json:"policies"`
 }
 
 type ProfilePrint struct {
@@ -169,10 +120,10 @@ func NewRulePrintFromMatchString(match string) RulePrint {
 	// Split by spaces to extract the information
 	info := strings.SplitN(match, " ", 9)
 
-	// TODO: Figure out what the right error handling would be here
-	// TODO: Refactor this and its callers eventually to use the PolicyKey objects to get Tier names
+	// TODO (mattl): Figure out what the right error handling would be here
+	// TODO (mattl): Refactor this and its callers eventually to use the PolicyKey objects to get Tier names
 	if info[0] != "Policy" || info[3] != "rule" || info[6] != "match;" || info[7] != "selector" {
-		log.Errorf("Match string is not in the format: Policy \"policy name>\" <inbound/outbound> rule <rule number> <source/destination> match; selector \"<selector>\": %s", match)
+		log.Errorf("Internal error - please report to support: Match string is not in the format: Policy \"policy name>\" <inbound/outbound> rule <rule number> <source/destination> match; selector \"<selector>\": %s", match)
 		return rp
 	}
 
@@ -197,9 +148,9 @@ func NewRulePrintFromSelectorString(selector string) RulePrint {
 	// Split by spaces to extract the information
 	info := strings.SplitN(selector, " ", 7)
 
-	// TODO: Figure out what the right error handling would be here
+	// TODO (mattl): Figure out what the right error handling would be here
 	if strings.HasPrefix(selector, APPLICABLE_ENDPOINTS) || len(info) != 7 || info[1] != "rule" || info[4] != "match;" || info[5] != "selector" {
-		log.Errorf("Selector string not in the format <direction> rule <rule number> <selector type> match; selector \"<selector>\": %s", selector)
+		log.Errorf("Internal error - please report to support: Selector string not in the format <direction> rule <rule number> <selector type> match; selector \"<selector>\": %s", selector)
 		return rp
 	}
 

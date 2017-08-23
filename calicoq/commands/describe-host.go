@@ -21,9 +21,6 @@ import (
 // Basically I want to be able to control the EP filter used by eval selector.
 func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hideSelectors bool, hideRuleMatches bool, outputFormat string) (err error) {
 	disp := dispatcher.NewDispatcher()
-	if outputFormat != "json" && outputFormat != "yaml" {
-		outputFormat = "ps"
-	}
 	cbs := &describeCmd{
 		hideSelectors:     hideSelectors,
 		includeRules:      !hideRuleMatches,
@@ -243,7 +240,7 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			cbs.printJSON(matches)
 		case "yaml":
 			cbs.printYAML(matches)
-		default:
+		case "ps":
 			cbs.print(matches)
 		}
 
@@ -357,26 +354,6 @@ func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputLis
 			for _, tier := range tiers {
 				log.Infof("Looking at tier %v", tier)
 
-				/*
-					tierOrder := "default"
-					if tier.Order != nil {
-						tierOrder = fmt.Sprint(*tier.Order)
-					}
-
-					if tier.Name != "default" {
-						if !tier.Valid {
-							fmt.Printf("    WARNING: tier %#v metadata missing; packets will skip tier\n", tier.Name)
-							tierOrder = "missing"
-						}
-					}
-
-					tierPrint := TierPrint{
-						Name:     tier.Name,
-						Order:    tierOrder,
-						Policies: make([]PolicyPrint, 0, 1),
-					}
-				*/
-
 				for _, pol := range tier.OrderedPolicies { // pol is a PolKV
 					log.Infof("Looking at policy %v", pol.Key)
 					if pol.Value.DoNotTrack != untracked {
@@ -415,16 +392,6 @@ func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputLis
 						ep.Policies = append(ep.Policies, policyPrint)
 					}
 				}
-
-				/*
-					if len(tierPrint.Policies) > 0 {
-						if untracked {
-							ep.UntrackedTiers = append(ep.UntrackedTiers, tierPrint)
-						} else {
-							ep.Tiers = append(ep.Tiers, tierPrint)
-						}
-					}
-				*/
 			}
 		}
 

@@ -57,27 +57,18 @@ var _ = Describe("Test NewWorkloadEndpointPrintFromNameString", func() {
 		Expect(wepp.Name).To(Equal("testName"))
 	})
 
-	It("Creates an empty WorkloadEndpointPrint Object for invalid name strings", func() {
+	It("Returns nil for invalid name strings", func() {
 		tooManyWords := "Workload endpoint stuff testNode/testOrchestrator/testWorkload/testName"
 		wepp := NewWorkloadEndpointPrintFromNameString(tooManyWords)
-		Expect(wepp.Node).To(Equal(""))
-		Expect(wepp.Orchestrator).To(Equal(""))
-		Expect(wepp.Workload).To(Equal(""))
-		Expect(wepp.Name).To(Equal(""))
+		Expect(wepp == nil).To(Equal(true))
 
 		wrongType := "Policy endpoint testNode/testOrchestrator/testWorkload/testName"
 		wepp = NewWorkloadEndpointPrintFromNameString(wrongType)
-		Expect(wepp.Node).To(Equal(""))
-		Expect(wepp.Orchestrator).To(Equal(""))
-		Expect(wepp.Workload).To(Equal(""))
-		Expect(wepp.Name).To(Equal(""))
+		Expect(wepp == nil).To(Equal(true))
 
 		notEnoughIdents := "Workload endpoint testNode/testOrchestrator/testWorkload"
 		wepp = NewWorkloadEndpointPrintFromNameString(notEnoughIdents)
-		Expect(wepp.Node).To(Equal(""))
-		Expect(wepp.Orchestrator).To(Equal(""))
-		Expect(wepp.Workload).To(Equal(""))
-		Expect(wepp.Name).To(Equal(""))
+		Expect(wepp == nil).To(Equal(true))
 	})
 })
 

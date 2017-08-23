@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/docopt/docopt-go"
@@ -58,7 +59,7 @@ Options:
                                  (that cause each displayed policy or profile to apply to or match
                                  various endpoints).
   -d --debug                     Log debugging information to stderr.
-  -o --output=<output>           Output format. Either yaml, json, or ps.
+  -o <output> --output=<output>  Output format. Either yaml, json, or ps.
                                  [default: ps]
 `
 
@@ -74,6 +75,12 @@ func main() {
 		log.SetLevel(log.DebugLevel)
 	}
 	log.Info("Command line arguments: ", arguments)
+
+	outputFormat := arguments["--output"].(string)
+	if outputFormat != "json" && outputFormat != "yaml" && outputFormat != "ps" && outputFormat != "" {
+		fmt.Printf("Output Format: \"%s\" is not valid. Output Format must be one of json, yaml, or ps\n", outputFormat)
+		os.Exit(1)
+	}
 
 	for cmd, thunk := range map[string]func() error{
 		"version": commands.Version,
