@@ -89,14 +89,17 @@ Options:
                                  configuration in YAML or JSON format.
                                  [default: /etc/calico/calicoctl.cfg]
 
-  -r --hide-rule-matches     Don't show the list of policies and profiles whose
-                             rule selectors match the specified endpoint (or an
-                             endpoint on the specified host) as an allowed or
-                             disallowed source/destination.
+  -r --hide-rule-matches         Don't show the list of policies and profiles whose
+                                 rule selectors match the specified endpoint (or an
+                                 endpoint on the specified host) as an allowed or
+                                 disallowed source/destination.
 
-  -s --hide-selectors        Don't show the detailed selector expressions involved
-                             (that cause each displayed policy or profile to apply to or match
-                             various endpoints).
+  -s --hide-selectors            Don't show the detailed selector expressions involved
+                                 (that cause each displayed policy or profile to apply to or match
+                                 various endpoints).
 
-  -d --debug                 Log debugging information to stderr.
+  -d --debug                     Log debugging information to stderr.
+
+  -o <output> --output=<output>  Output format. Either yaml, json, or ps.
+                                 [default: ps]
 ```

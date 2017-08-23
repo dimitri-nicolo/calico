@@ -10,13 +10,16 @@ each `<endpoint-id>` that is hosted on `<hostname>`.
 ## Options
 
 ```
--r --hide-rule-matches     Don't show the list of policies and profiles whose
-                           rule selectors match each endpoint as an allowed or
-                           disallowed source/destination.
+-r --hide-rule-matches         Don't show the list of policies and profiles whose
+                               rule selectors match each endpoint as an allowed or
+                               disallowed source/destination.
 
--s --hide-selectors        Don't show the detailed selector expressions involved
-                           (that cause each displayed profile or policy to match
-                           each endpoint).
+-s --hide-selectors            Don't show the detailed selector expressions involved
+                               (that cause each displayed profile or policy to match
+                               each endpoint).
+
+-o <OUTPUT> --output=<OUTPUT>  Set the output format. Should be one of yaml, json, or
+                               ps. If nothing is set, defaults to ps.
 ```
 
 ## Example

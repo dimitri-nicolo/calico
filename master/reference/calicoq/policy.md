@@ -18,13 +18,16 @@ the `source` or `destination` of the policy's rules.
 ## Options
 
 ```
--r --hide-rule-matches     Don't show the list of endpoints that match the
-                           policy's rules as allowed or disallowed sources or
-                           destinations.
+-r --hide-rule-matches         Don't show the list of endpoints that match the
+                               policy's rules as allowed or disallowed sources or
+                               destinations.
 
--s --hide-selectors        Don't show the detailed selector expressions involved
-                           (that cause the policy to apply to or match various
-                           endpoints).
+-s --hide-selectors            Don't show the detailed selector expressions involved
+                               (that cause the policy to apply to or match various
+                               endpoints).
+
+-o <OUTPUT> --output=<OUTPUT>  Set the output format. Should be one of yaml, json, or
+                               ps. If nothing is set, defaults to ps.
 ```
 
 ## Examples
