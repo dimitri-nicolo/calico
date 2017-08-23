@@ -2,7 +2,7 @@
 layout: null
 ---
 # This manifest includes the following component versions:
-#   coreos/prometheus-operator:v0.9.1
+#   coreos/prometheus-operator:v0.10.2
 ---
 
 # This manifest creates a namespace for deploying prometheus-operator,
@@ -106,7 +106,7 @@ spec:
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator
-        image: quay.io/coreos/prometheus-operator:v0.9.1
+        image: quay.io/coreos/prometheus-operator:v0.10.2
         resources:
           requests:
             cpu: 100m
