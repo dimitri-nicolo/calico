@@ -1,6 +1,5 @@
 ---
 title: Juju Install
-redirect_from: latest/getting-started/openstack/installation/juju
 ---
 
 You can use Ubuntu's [Juju Charms](https://jujucharms.com/) to quickly deploy a
@@ -25,4 +24,4 @@ The default admin password for these deployments is "openstack" - you may wish
 to update this in the bundle (search for the keystone "admin-password" option).
 
 For more detailed information, please see [this blog
-post](http://www.projectcalico.org/exploring-juju/) on the Calico blog.
+post](https://www.projectcalico.org/exploring-juju/) on the Calico blog.
