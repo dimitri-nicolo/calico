@@ -2,7 +2,7 @@
 
 Name:           felix
 Summary:        Project Calico virtual networking for cloud data centers
-Version:        2.4.0
+Version:        2.4.1
 Release:        1%{?dist}
 License:        Apache-2
 URL:            http://projectcalico.org
@@ -152,6 +152,13 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Aug 10 2017 Neil Jerram <neil@tigera.io> 2.4.1-1
+  - Felix 2.4.1 (from Git commit 0ee59e4).
+    [Changes recorded in 2.4.1 tag]
+    - Update the import for logrus to use lowercasing
+    - Switched log.Printf to log.Infof.
+    - Update libcalico to v1.5.2
+
 * Fri Aug 04 2017 Neil Jerram <neil@tigera.io> 2.4.0-1
   - Felix 2.4.0 (from Git commit b891ac5).
 
@@ -227,6 +234,11 @@ rm -rf $RPM_BUILD_ROOT
     [Changes recorded in 2.3.0-rc2 tag]
     - Update libcalico to v1.4.0
     [Changes recorded in 2.3.0-rc1 tag]
+    [Changes recorded in 2.2.2 tag]
+    - Pin libcalico-go to v1.2.2 to pick up memory leak fix (#1457).
+
+* Tue May 16 2017 Neil Jerram <neil@tigera.io> 2.2.2-1
+  - Felix 2.2.2 (from Git commit 9c92a96).
     [Changes recorded in 2.2.2 tag]
     - Pin libcalico-go to v1.2.2 to pick up memory leak fix (#1457).
 
