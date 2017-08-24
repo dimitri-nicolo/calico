@@ -12,16 +12,6 @@ pipeline{
             }
         }
 
-	/* Comment this out until the unit tests are merged
-        stage('Run Unit Tests') {
-            steps {
-                ansiColor('xterm') {
-                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make ut-containerized'
-                }
-            }
-        }
-	*/
-
 	stage('Clean artifacts') {
             steps {
                 sh 'if [ -d vendor ] ; then sudo chown -R $USER:$USER vendor; fi && make clean'
@@ -31,6 +21,14 @@ pipeline{
         stage('Build calicoq') {
             steps {
                 sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make bin/calicoq'
+            }
+        }
+
+	stage('Run Unit Tests') {
+            steps {
+                ansiColor('xterm') {
+                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make ut-containerized'
+                }
             }
         }
 

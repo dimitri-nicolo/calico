@@ -43,8 +43,10 @@ ut: bin/calicoq
 ut-containerized: bin/calicoq
 	docker run --rm -t \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
+		-w /go/src/$(PACKAGE_NAME) \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		calico/go-build \
-		sh -c 'cd /code/$(PACKAGE_NAME) && make ut'
+		sh -c 'make ut'
 
 .PHONY: fv
 fv: bin/calicoq
@@ -56,8 +58,9 @@ fv-containerized: bin/calicoq build-image
 		--rm -t \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-w /code/$(PACKAGE_NAME) \
 		$(BUILD_IMAGE) \
-		sh -c 'cd /code/$(PACKAGE_NAME) && CALICOQ=`pwd`/$(BINARY) fv/run-test'
+		sh -c 'CALICOQ=`pwd`/$(BINARY) fv/run-test'
 	$(MAKE) clean-image
 
 .PHONY: st
@@ -70,8 +73,9 @@ st-containerized: bin/calicoq build-image
 		--rm -t \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-w /code/$(PACKAGE_NAME) \
 		$(BUILD_IMAGE) \
-		sh -c 'cd /code/$(PACKAGE_NAME) && CALICOQ=`pwd`/$(BINARY) st/run-test'
+		sh -c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
 	$(MAKE) clean-image
 
 # Build image for containerized testing
