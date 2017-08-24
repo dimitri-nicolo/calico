@@ -62,7 +62,9 @@ for c in `ls`; do
 
     # Mark the DB as ready.
     while ! curl ${ETCD_ENDPOINTS}/v2/keys/calico/v1/Ready -XPUT -d value="true"; do
-	sleep 2
+	# TODO (mattl): Need to fix this so that adjusting this time does not affect tests
+	# Currently containerized tests will not pass in Jenkins most of the time with 2 set
+	sleep 4
     done
 
     # Create config file, if wanted.
