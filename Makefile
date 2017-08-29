@@ -24,6 +24,7 @@ all: build
 #######################
 ROOT           = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 BINDIR        ?= bin
+BUILD_DIR     ?= build
 ARTIFACTS     ?= artifacts
 CAPI_PKG       = github.com/tigera/calico-k8sapiserver
 TOP_SRC_DIRS   = pkg
@@ -128,6 +129,8 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v1" \
 		--output-file-base zz_generated.conversion
+	# generate all pkg/client contents
+	$(DOCKER_CMD) $(BUILD_DIR)/update-client-gen.sh
 	touch $@
 
 clean: clean-bin clean-build-image clean-generated
