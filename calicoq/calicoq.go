@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/docopt/docopt-go"
@@ -13,10 +14,10 @@ import (
 const usage = `Calico query tool.
 
 Usage:
-  calicoq [--debug|-d] [--config=<config>] eval <selector>
-  calicoq [--debug|-d] [--config=<config>] policy <policy-name> [--hide-selectors|-s] [--hide-rule-matches|-r]
-  calicoq [--debug|-d] [--config=<config>] endpoint <substring> [--hide-selectors|-s] [--hide-rule-matches|-r]
-  calicoq [--debug|-d] [--config=<config>] host <hostname> [--hide-selectors|-s] [--hide-rule-matches|-r]
+  calicoq [--debug|-d] [--config=<config>] eval <selector> [--output=<output>]
+  calicoq [--debug|-d] [--config=<config>] policy <policy-name> [--hide-selectors|-s] [--hide-rule-matches|-r] [--output=<output>]
+  calicoq [--debug|-d] [--config=<config>] endpoint <substring> [--hide-selectors|-s] [--hide-rule-matches|-r] [--output=<output>]
+  calicoq [--debug|-d] [--config=<config>] host <hostname> [--hide-selectors|-s] [--hide-rule-matches|-r] [--output=<output>]
   calicoq [--debug|-d] version
 
 Description:
@@ -50,17 +51,16 @@ Options:
   -c <config> --config=<config>  Path to the file containing connection
                                  configuration in YAML or JSON format.
                                  [default: /etc/calico/calicoctl.cfg]
-
-  -r --hide-rule-matches     Don't show the list of policies and profiles whose
-                             rule selectors match the specified endpoint (or an
-                             endpoint on the specified host) as an allowed or
-                             disallowed source/destination.
-
-  -s --hide-selectors        Don't show the detailed selector expressions involved
-                             (that cause each displayed policy or profile to apply to or match
-                             various endpoints).
-
-  -d --debug                 Log debugging information to stderr.
+  -r --hide-rule-matches         Don't show the list of policies and profiles whose
+                                 rule selectors match the specified endpoint (or an
+                                 endpoint on the specified host) as an allowed or
+                                 disallowed source/destination.
+  -s --hide-selectors            Don't show the detailed selector expressions involved
+                                 (that cause each displayed policy or profile to apply to or match
+                                 various endpoints).
+  -d --debug                     Log debugging information to stderr.
+  -o <output> --output=<output>  Output format. Either yaml, json, or ps.
+                                 [default: ps]
 `
 
 func main() {
@@ -71,10 +71,16 @@ func main() {
 		log.Fatalf("Failed to parse command line arguments: %v", err)
 		os.Exit(1)
 	}
-	if arguments["--debug"].(bool) || arguments["-d"].(bool) {
+	if arguments["--debug"].(bool) {
 		log.SetLevel(log.DebugLevel)
 	}
 	log.Info("Command line arguments: ", arguments)
+
+	outputFormat := arguments["--output"].(string)
+	if outputFormat != "json" && outputFormat != "yaml" && outputFormat != "ps" && outputFormat != "" {
+		fmt.Printf("Output Format: \"%s\" is not valid. Output Format must be one of json, yaml, or ps\n", outputFormat)
+		os.Exit(1)
+	}
 
 	for cmd, thunk := range map[string]func() error{
 		"version": commands.Version,
@@ -83,6 +89,7 @@ func main() {
 			return commands.EvalSelector(
 				arguments["--config"].(string),
 				arguments["<selector>"].(string),
+				arguments["--output"].(string),
 			)
 		},
 		"policy": func() error {
@@ -90,10 +97,9 @@ func main() {
 			return commands.EvalPolicySelectors(
 				arguments["--config"].(string),
 				arguments["<policy-name>"].(string),
-				arguments["-s"].(bool) ||
-					arguments["--hide-selectors"].(bool),
-				arguments["-r"].(bool) ||
-					arguments["--hide-rule-matches"].(bool),
+				arguments["--hide-selectors"].(bool),
+				arguments["--hide-rule-matches"].(bool),
+				arguments["--output"].(string),
 			)
 		},
 		"endpoint": func() error {
@@ -102,10 +108,9 @@ func main() {
 				arguments["--config"].(string),
 				arguments["<substring>"].(string),
 				"",
-				arguments["-s"].(bool) ||
-					arguments["--hide-selectors"].(bool),
-				arguments["-r"].(bool) ||
-					arguments["--hide-rule-matches"].(bool),
+				arguments["--hide-selectors"].(bool),
+				arguments["--hide-rule-matches"].(bool),
+				arguments["--output"].(string),
 			)
 		},
 		"host": func() error {
@@ -115,10 +120,9 @@ func main() {
 				arguments["--config"].(string),
 				"",
 				arguments["<hostname>"].(string),
-				arguments["-s"].(bool) ||
-					arguments["--hide-selectors"].(bool),
-				arguments["-r"].(bool) ||
-					arguments["--hide-rule-matches"].(bool),
+				arguments["--hide-selectors"].(bool),
+				arguments["--hide-rule-matches"].(bool),
+				arguments["--output"].(string),
 			)
 		},
 	} {

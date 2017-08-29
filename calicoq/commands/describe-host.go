@@ -19,13 +19,14 @@ import (
 // Do that for each rule in each policy (globally, not just selected).
 // Actually I want to be able to do eval selector with many selectors and few EPs.
 // Basically I want to be able to control the EP filter used by eval selector.
-func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hideSelectors bool, hideRuleMatches bool) (err error) {
+func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hideSelectors bool, hideRuleMatches bool, outputFormat string) (err error) {
 	disp := dispatcher.NewDispatcher()
 	cbs := &describeCmd{
 		hideSelectors:     hideSelectors,
 		includeRules:      !hideRuleMatches,
 		endpointSubstring: endpointSubstring,
 		hostname:          hostname,
+		outputFormat:      outputFormat,
 		dispatcher:        disp,
 		done:              make(chan bool),
 		epIDToPolIDs:      make(map[interface{}]map[model.PolicyKey]bool),
@@ -157,6 +158,7 @@ type describeCmd struct {
 	includeRules      bool
 	endpointSubstring string
 	hostname          string
+	outputFormat      string
 
 	// ActiveRulesCalculator matches policies/profiles against local
 	// endpoints and notifies the ActiveSelectorCalculator when
@@ -233,82 +235,204 @@ func (cbs *describeCmd) OnStatusUpdated(status api.SyncStatus) {
 			matches = cbs.evalCmd.GetMatches()
 		}
 
-		if cbs.hostname != "" {
-			fmt.Printf("Policies and profiles for each endpoint on host \"%v\":\n", cbs.hostname)
-		} else {
-			fmt.Printf("Policies and profiles for endpoints matching \"%v\":\n", cbs.endpointSubstring)
-		}
-		tiers := cbs.policySorter.Sorted() // MATT: map[model.PolicyKey]*model.Policy
-		epData := make([]endpointDatum, 0)
-
-		for epID, polIDs := range cbs.epIDToPolIDs {
-			epData = append(epData, endpointDatum{epID, polIDs})
-		}
-		sort.Sort(ByName(epData))
-		for _, epDatum := range epData {
-			epName := epDatum.EndpointName()
-			epID := epDatum.epID
-			polIDs := epDatum.polIDs
-			log.Infof("Looking at endpoint %v with policies %v", epID, polIDs)
-			fmt.Printf("\n%v\n", epName)
-			fmt.Println("  Policies:")
-			for _, untracked := range []bool{true, false} {
-				suffix := map[bool]string{true: " [untracked]", false: ""}[untracked]
-				for _, tier := range tiers {
-					log.Infof("Looking at tier %v", tier)
-					for _, pol := range tier.OrderedPolicies { // pol is a PolKV
-						log.Infof("Looking at policy %v", pol.Key)
-						if pol.Value.DoNotTrack != untracked {
-							continue
-						}
-						if polIDs[pol.Key] {
-							tierText := ""
-							tierOrder := "default"
-
-							if tier.Order != nil {
-								tierOrder = fmt.Sprint(*tier.Order)
-							}
-							if tier.Name != "default" {
-								if !tier.Valid {
-									fmt.Printf("    WARNING: tier %#v metadata missing; packets will skip tier\n", tier.Name)
-									tierOrder = "missing"
-								}
-								tierText = fmt.Sprintf("Tier %#v (order %v) ", tier.Name, tierOrder)
-							}
-
-							polOrder := "default"
-							if pol.Value.Order != nil {
-								polOrder = fmt.Sprint(*pol.Value.Order)
-							}
-							if cbs.hideSelectors {
-								fmt.Printf("    %sPolicy %#v (order %v)%v\n", tierText, pol.Key.Name, polOrder, suffix)
-							} else {
-								fmt.Printf("    %sPolicy %#v (order %v; selector \"%v\")%v\n", tierText, pol.Key.Name, polOrder, pol.Value.Selector, suffix)
-							}
-						}
-					}
-				}
-			}
-			profIDs := cbs.epIDToProfileIDs[epID]
-			if len(profIDs) > 0 {
-				fmt.Printf("  Profiles:\n")
-				for _, profID := range cbs.epIDToProfileIDs[epID] {
-					fmt.Printf("    Profile \"%v\"\n", profID)
-				}
-			}
-
-			if cbs.includeRules {
-				if policies, ok := matches[epID]; ok {
-					fmt.Printf("  Rule matches:\n")
-					sort.Strings(policies)
-					for _, policy := range policies {
-						fmt.Printf("    %v\n", policy)
-					}
-				}
-			}
+		switch cbs.outputFormat {
+		case "json":
+			cbs.printJSON(matches)
+		case "yaml":
+			cbs.printYAML(matches)
+		case "ps":
+			cbs.print(matches)
 		}
 
 		cbs.done <- true
+	}
+}
+
+func (cbs *describeCmd) print(matches map[interface{}][]string) {
+	if cbs.hostname != "" {
+		fmt.Printf("Policies and profiles for each endpoint on host \"%v\":\n", cbs.hostname)
+	} else {
+		fmt.Printf("Policies and profiles for endpoints matching \"%v\":\n", cbs.endpointSubstring)
+	}
+	tiers := cbs.policySorter.Sorted() // MATT: map[model.PolicyKey]*model.Policy
+	epData := make([]endpointDatum, 0)
+
+	for epID, polIDs := range cbs.epIDToPolIDs {
+		epData = append(epData, endpointDatum{epID, polIDs})
+	}
+
+	sort.Sort(ByName(epData))
+
+	for _, epDatum := range epData {
+		epName := epDatum.EndpointName()
+		epID := epDatum.epID
+		polIDs := epDatum.polIDs
+		log.Infof("Looking at endpoint %v with policies %v", epID, polIDs)
+		fmt.Printf("\n%v\n", epName)
+		fmt.Println("  Policies:")
+		for _, untracked := range []bool{true, false} {
+			suffix := map[bool]string{true: " [untracked]", false: ""}[untracked]
+			for _, tier := range tiers {
+				log.Infof("Looking at tier %v", tier)
+				for _, pol := range tier.OrderedPolicies { // pol is a PolKV
+					log.Infof("Looking at policy %v", pol.Key)
+					if pol.Value.DoNotTrack != untracked {
+						continue
+					}
+					if polIDs[pol.Key] {
+						tierText := ""
+						tierOrder := "default"
+
+						if tier.Order != nil {
+							tierOrder = fmt.Sprint(*tier.Order)
+						}
+						if tier.Name != "default" {
+							if !tier.Valid {
+								fmt.Printf("    WARNING: tier %#v metadata missing; packets will skip tier\n", tier.Name)
+								tierOrder = "missing"
+							}
+							tierText = fmt.Sprintf("Tier %#v (order %v) ", tier.Name, tierOrder)
+						}
+
+						polOrder := "default"
+						if pol.Value.Order != nil {
+							polOrder = fmt.Sprint(*pol.Value.Order)
+						}
+						if cbs.hideSelectors {
+							fmt.Printf("    %sPolicy %#v (order %v)%v\n", tierText, pol.Key.Name, polOrder, suffix)
+						} else {
+							fmt.Printf("    %sPolicy %#v (order %v; selector \"%v\")%v\n", tierText, pol.Key.Name, polOrder, pol.Value.Selector, suffix)
+						}
+					}
+				}
+			}
+		}
+		profIDs := cbs.epIDToProfileIDs[epID]
+		if len(profIDs) > 0 {
+			fmt.Printf("  Profiles:\n")
+			for _, profID := range cbs.epIDToProfileIDs[epID] {
+				fmt.Printf("    Profile \"%v\"\n", profID)
+			}
+		}
+
+		if cbs.includeRules {
+			if policies, ok := matches[epID]; ok {
+				fmt.Printf("  Rule matches:\n")
+				sort.Strings(policies)
+				for _, policy := range policies {
+					fmt.Printf("    %v\n", policy)
+				}
+			}
+		}
+	}
+}
+
+func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputList {
+	output := OutputList{}
+
+	if cbs.hostname != "" {
+		output.Description = fmt.Sprintf("Policies and profiles for each endpoint on host \"%v\"", cbs.hostname)
+	} else {
+		output.Description = fmt.Sprintf("Policies and profiles for endpoints matching \"%v\"", cbs.endpointSubstring)
+	}
+
+	tiers := cbs.policySorter.Sorted() // MATT: map[model.PolicyKey]*model.Policy
+	epData := make([]endpointDatum, 0)
+
+	for epID, polIDs := range cbs.epIDToPolIDs {
+		epData = append(epData, endpointDatum{epID, polIDs})
+	}
+
+	sort.Sort(ByName(epData))
+
+	for _, epDatum := range epData {
+		ep := NewWorkloadEndpointPrintFromEndpointDatum(epDatum)
+		epID := epDatum.epID
+		polIDs := epDatum.polIDs
+		log.Infof("Looking at endpoint %v with policies %v", epID, polIDs)
+		for _, untracked := range []bool{true, false} {
+			for _, tier := range tiers {
+				log.Infof("Looking at tier %v", tier)
+
+				for _, pol := range tier.OrderedPolicies { // pol is a PolKV
+					log.Infof("Looking at policy %v", pol.Key)
+					if pol.Value.DoNotTrack != untracked {
+						continue
+					}
+					if polIDs[pol.Key] {
+						tierOrder := "default"
+						if tier.Order != nil {
+							tierOrder = fmt.Sprint(*tier.Order)
+						}
+
+						if tier.Name != "default" {
+							if !tier.Valid {
+								fmt.Printf("    WARNING: tier %#v metadata missing; packets will skip tier\n", tier.Name)
+								tierOrder = "missing"
+							}
+						}
+
+						polOrder := "default"
+						if pol.Value.Order != nil {
+							polOrder = fmt.Sprint(*pol.Value.Order)
+						}
+
+						policyPrint := PolicyPrint{
+							Name:      pol.Key.Name,
+							Order:     polOrder,
+							TierName:  tier.Name,
+							TierOrder: tierOrder,
+						}
+
+						if !cbs.hideSelectors {
+							policyPrint.Selector = pol.Value.Selector
+						}
+
+						// tierPrint.Policies = append(tierPrint.Policies, policyPrint)
+						ep.Policies = append(ep.Policies, policyPrint)
+					}
+				}
+			}
+		}
+
+		profIDs := cbs.epIDToProfileIDs[epID]
+		if len(profIDs) > 0 {
+			for _, profID := range cbs.epIDToProfileIDs[epID] {
+				ep.Profiles = append(ep.Profiles, ProfilePrint{profID})
+			}
+		}
+
+		if cbs.includeRules {
+			if policies, ok := matches[epID]; ok {
+				sort.Strings(policies)
+				for _, policy := range policies {
+					ep.Rules = append(ep.Rules, NewRulePrintFromMatchString(policy))
+				}
+			}
+		}
+
+		// Add the filled out endpoint to the output list
+		output.Endpoints = append(output.Endpoints, ep)
+	}
+
+	return output
+}
+
+func (cbs *describeCmd) printYAML(matches map[interface{}][]string) {
+	output := cbs.printObjects(matches)
+	err := printYAML([]OutputList{output})
+	if err != nil {
+		log.Errorf("Unexpected error printing to YAML: %s", err)
+		fmt.Println("Unexpected error printing to YAML")
+	}
+}
+
+func (cbs *describeCmd) printJSON(matches map[interface{}][]string) {
+	output := cbs.printObjects(matches)
+	err := printJSON([]OutputList{output})
+	if err != nil {
+		log.Errorf("Unexpected error printing to JSON: %s", err)
+		fmt.Println("Unexpected error printing to JSON")
 	}
 }
 
