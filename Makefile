@@ -13,6 +13,18 @@ BINARY:=bin/calicoq
 GO_BUILD_VER?=latest
 GO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 
+CALICOQ_VERSION?=$(shell git describe --tags --dirty --always)
+CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+CALICOQ_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+CALICOQ_GIT_DESCRIPTION?=$(shell git describe --tags)
+
+VERSION_FLAGS:=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(CALICOQ_VERSION) \
+	-X $(PACKAGE_NAME)/calicoq/commands.BUILD_DATE=$(CALICOQ_BUILD_DATE) \
+	-X $(PACKAGE_NAME)/calicoq/commands.GIT_DESCRIPTION=$(CALICOQ_GIT_DESCRIPTION) \
+	-X $(PACKAGE_NAME)/calicoq/commands.GIT_REVISION=$(CALICOQ_GIT_REVISION)
+BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
+RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
+
 .PHONY: vendor
 vendor:
 	glide install --strip-vendor
@@ -92,7 +104,7 @@ clean-image:
 CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)
 
 bin/calicoq:
-	$(MAKE) binary-containerized
+	$(MAKE) binary-containerized LDFLAGS='$(BUILD_LDFLAGS)'
 
 .PHONY: binary-containerized
 binary-containerized: $(CALICOQ_GO_FILES)
@@ -118,7 +130,7 @@ binary-containerized: $(CALICOQ_GO_FILES)
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
 		calico/go-build \
-		sh -c 'go build -o "$(BINARY)" "./calicoq/calicoq.go"'
+		sh -c 'go build $(LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"'
 
 .PHONY: binary
 binary: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(CALICOQ_GO_FILES)
@@ -126,9 +138,18 @@ binary: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(
 	go build -o "$(BINARY)" "./calicoq/calicoq.go"
 
 release/calicoq: $(CALICOQ_GO_FILES)
+	$(MAKE) binary-containerized LDFLAGS='$(RELEASE_LDFLAGS)'
 	mkdir -p release
-	cd build-container && docker build -t calicoq-build .
-	docker run --rm -v `pwd`:/calicoq calicoq-build /calicoq/build-container/build.sh
+	mv $(BINARY) release/calicoq-$(CALICOQ_GIT_DESCRIPTION)
+	ln -f release/calicoq-$(CALICOQ_GIT_DESCRIPTION) release/calicoq
+
+.PHONY: compress-release
+compressed-release: release/calicoq
+	# Requires "upx" to be in your PATH.
+	# Compress the executable with upx.  We get 4:1 compression with '-8'; the
+	# more agressive --best gives a 0.5% improvement but takes several minutes.
+	upx -8 release/calicoq-$(CALICOQ_GIT_DESCRIPTION)
+	ln -f release/calicoq-$(CALICOQ_GIT_DESCRIPTION) release/calicoq
 
 # Generate the protobuf bindings for Felix.
 vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go: vendor/github.com/projectcalico/felix/proto/felixbackend.proto
@@ -136,6 +157,10 @@ vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go: vendor/github.co
 	              calico/protoc \
 	              --gogofaster_out=. \
 	              felixbackend.proto
+
+.PHONY: clean-release
+clean-release:
+	-rm -rf release
 
 .PHONY: clean
 clean:
