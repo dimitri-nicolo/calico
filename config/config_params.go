@@ -166,6 +166,9 @@ type Config struct {
 
 	PrometheusReporterEnabled   bool          `config:"bool;false"`
 	PrometheusReporterPort      int           `config:"int(0,65535);9092"`
+	PrometheusReporterCertFile  string        `config:"string;"`
+	PrometheusReporterKeyFile   string        `config:"string;"`
+	PrometheusReporterCAFile    string        `config:"string;"`
 	SyslogReporterNetwork       string        `config:"string;"`
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
