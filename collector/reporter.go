@@ -4,8 +4,11 @@ package collector
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log/syslog"
 	"net"
 	"net/http"
@@ -151,6 +154,7 @@ type PrometheusReporter struct {
 	port            int
 	certFile        string
 	keyFile         string
+	caFile          string
 	registry        *prometheus.Registry
 	aggStats        map[AggregateKey]AggregateValue
 	reportChan      chan *MetricUpdate
@@ -160,7 +164,7 @@ type PrometheusReporter struct {
 	retentionTicker *jitter.Ticker
 }
 
-func NewPrometheusReporter(port int, rTime time.Duration, certFile, keyFile string) *PrometheusReporter {
+func NewPrometheusReporter(port int, rTime time.Duration, certFile, keyFile, caFile string) *PrometheusReporter {
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(gaugeDeniedPackets)
 	registry.MustRegister(gaugeDeniedBytes)
@@ -168,6 +172,7 @@ func NewPrometheusReporter(port int, rTime time.Duration, certFile, keyFile stri
 		port:            port,
 		certFile:        certFile,
 		keyFile:         keyFile,
+		caFile:          caFile,
 		registry:        registry,
 		aggStats:        make(map[AggregateKey]AggregateValue),
 		reportChan:      make(chan *MetricUpdate),
@@ -190,8 +195,22 @@ func (pr *PrometheusReporter) servePrometheusMetrics() {
 		handler := promhttp.HandlerFor(pr.registry, promhttp.HandlerOpts{})
 		mux.Handle("/metrics", handler)
 		var err error
-		if pr.certFile != "" && pr.keyFile != "" {
-			err = http.ListenAndServeTLS(fmt.Sprintf(":%v", pr.port), pr.certFile, pr.keyFile, handler)
+		if pr.certFile != "" && pr.keyFile != "" && pr.caFile != "" {
+			caCert, err := ioutil.ReadFile(pr.caFile)
+			if err == nil {
+				caCertPool := x509.NewCertPool()
+				caCertPool.AppendCertsFromPEM(caCert)
+				cfg := &tls.Config{
+					ClientAuth: tls.RequireAndVerifyClientCert,
+					ClientCAs:  caCertPool,
+				}
+				srv := &http.Server{
+					Addr:      fmt.Sprintf(":%v", pr.port),
+					Handler:   handler,
+					TLSConfig: cfg,
+				}
+				err = srv.ListenAndServeTLS(pr.certFile, pr.keyFile)
+			}
 		} else {
 			err = http.ListenAndServe(fmt.Sprintf(":%v", pr.port), handler)
 		}

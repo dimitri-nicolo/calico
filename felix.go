@@ -299,6 +299,7 @@ configRetry:
 			PrometheusReporterPort:         configParams.PrometheusReporterPort,
 			PrometheusReporterCertFile:     configParams.PrometheusReporterCertFile,
 			PrometheusReporterKeyFile:      configParams.PrometheusReporterKeyFile,
+			PrometheusReporterCAFile:       configParams.PrometheusReporterCAFile,
 			SyslogReporterNetwork:          configParams.SyslogReporterNetwork,
 			SyslogReporterAddress:          configParams.SyslogReporterAddress,
 			DeletedMetricsRetentionSecs:    configParams.DeletedMetricsRetentionSecs,

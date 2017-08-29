@@ -106,6 +106,7 @@ type Config struct {
 	PrometheusReporterPort     int
 	PrometheusReporterCertFile string
 	PrometheusReporterKeyFile  string
+	PrometheusReporterCAFile   string
 
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
@@ -447,7 +448,8 @@ func (d *InternalDataplane) Start() {
 		rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.PrometheusReporterPort,
 			d.config.DeletedMetricsRetentionSecs,
 			d.config.PrometheusReporterCertFile,
-			d.config.PrometheusReporterKeyFile))
+			d.config.PrometheusReporterKeyFile,
+			d.config.PrometheusReporterCAFile))
 	}
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
 	if syslogReporter != nil {

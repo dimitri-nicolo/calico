@@ -142,7 +142,7 @@ func getMetricNumber(m prometheus.Gauge) int {
 var _ = Describe("Prometheus Reporter", func() {
 	var pr *PrometheusReporter
 	BeforeEach(func() {
-		pr = NewPrometheusReporter(8089, time.Second*time.Duration(30), "", "")
+		pr = NewPrometheusReporter(8089, time.Second*time.Duration(30), "", "", "")
 		pr.Start()
 	})
 	AfterEach(func() {
