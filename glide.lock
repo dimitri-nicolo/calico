@@ -1,5 +1,5 @@
-hash: d8684b33118df33acfb2b7f6ed5f25004df3ce2f40efc23932a044e71dc4e381
-updated: 2017-08-10T18:34:18.164396018Z
+hash: cda9ee354f4b966f567242f008b3d8180247442d3319beaad35d233a6bc02e28
+updated: 2017-08-23T19:04:58.942606073Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -65,7 +65,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: d3de07a94d22b4a0972deb4b96d790c2c0ce8333
+  version: 20b96f641a5ea98f2f8619ff4f3e061cff4833bd
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -82,7 +82,7 @@ imports:
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
-  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
+  version: 4bd1920723d7b7c925de087aa32e2187708897f7
   subpackages:
   - proto
 - name: github.com/google/gofuzz
@@ -155,7 +155,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 3b536b9bbf7f0bbf81e8a20334bcd506b1e14e07
+  version: af4e564302e48940c4778ad48b2e9f557687806e
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -166,8 +166,8 @@ imports:
   - lib/backend/compat
   - lib/backend/etcd
   - lib/backend/k8s
+  - lib/backend/k8s/custom
   - lib/backend/k8s/resources
-  - lib/backend/k8s/thirdparty
   - lib/backend/model
   - lib/client
   - lib/converter
@@ -187,7 +187,7 @@ imports:
   - lib/testutils
   - lib/validator
 - name: github.com/projectcalico/typha
-  version: 5e3fcf3a305f8e24a27aa663323eddf54b0a515a
+  version: da7479a93f30a6dd3fcfd683e409af4dbf381ea0
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
@@ -236,7 +236,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 86bef332bfc3b59b7624a600bd53009ce91a9829
+  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: golang.org/x/crypto
   version: d172538b2cfce0c13cee31e647d0367aa8cd2486
   subpackages:
@@ -261,7 +261,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: e42485b6e20ae7d2304ec72e535b103ed350cc02
+  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
   subpackages:
   - unix
 - name: golang.org/x/text
