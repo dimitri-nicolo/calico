@@ -349,31 +349,51 @@ spec:
 
 #### Enabling Secure Connections for Prometheus metrics
 
-You may want to secure your denied packet/bytes metrics. To allow for this, you can
-secure Prometheus's connection to Calico using TLS.
+Because denied packet/bytes metrics may contain sensitive information, you may wish
+to encrypt the communications between Prometheus and Calico with TLS. To accomplish
+this, complete the following steps.
 
-First you need to properly format your certificates. You should have a certificate
-and key for both Prometheus and Calico. For just the Calico certificate, you will
-need to concatenate your certificate to the certificate authority certificate.
+###### Format your certificates
+
+In order to secure connections between Prometheus and Calico, you will need to first
+have the following:
+
+1. A Certificate Authority (CA) certificate (Used to sign the Calico/Prometheus certificate and key)
+(`ca.pem` in this example)
+2. A certificate for Calico (`calico.pem` in this example)
+3. A private key for Calico (`calico-key.pem` in this example)
+4. A certificate for Prometheus (`prom.pem` in this example)
+5. A private key for Prometheus (`prom-key.pem` in this example)
+
+For just the Calico certificate, you will need to concatenate your certificate
+to the CA certificate.
 
 ```
 cat calico.pem ca.pem >> concat-cert.pem
 ```
 
-Once your certificates are formatted correctly, you should then mount the Calico
-certificate (the concatenated certificate) and key into the `calico-node` daemonset.
+###### Mount your certificates into Calico
 
-Note: the `calico-node` daemonset is found in the `calico-essentials.yaml` file
-provided as an example.
+You now need to mount the Calico certificate (the concatenated certificate) and key
+into the `calico-node` daemonset.
 
-Create a secret for your `concat-cert.pem` file and the corresponding key for the
-original certificate (`calico-key.pem` in this example) by base64 encoding the files.
+<div class="alert alert-info" role="alert">
+<b>Note</b>: The <samp>calico-node</samp> daemonset is found in the <samp>calico-essentials.yaml</samp> file provided as an example.
+</div>
+
+Encode the concatenated certificate, the corresponding private key, and the CA 
+certificate used to sign the Prometheus certificate and key in base64 format. In the
+following commands, we call these files `concat-cert.pem`, `calico-key.pem`, and 
+`ca.pem`, respectively.
 
 ```
 cat concat-cert.pem | base64 -w 0
+cat calico-key.pem | base64 -w 0
+cat ca.pem | base64 -w 0
 ```
 
-Create a secret for the files and place this in the `calico-essentials.yaml` file
+Create a secret for the files and place this in the `calico-essentials.yaml` file.
+
 ```
 apiVersion: v1
 kind: Secret
@@ -381,8 +401,9 @@ metadata:
   name: certs
   namespace: kube-system
 data:
-  concat-cert.pem: <your base64 encoding of concat-cert.pem goes here>
-  calico-key.pem: <your base64 encoding of your calico-key.pem goes here>
+  concat-cert.pem: <Your base64 encoding of concat-cert.pem goes here>
+  calico-key.pem: <Your base64 encoding of your calico-key.pem goes here>
+  ca.pem: <Your base64 encoding of your ca.pem goes here>
 ```
 
 Add the appropriate `volumeMounts` and `volumes` to their corresponding sections in
@@ -448,11 +469,13 @@ into the container instead of using secrets.
       ...
 ```
 
-Once the certificates are accessible by the `calico-node` daemonset. You need to
-make sure that Calico knows where to read them from. This is specified by the
-environment variables `FELIX_PROMETHEUSREPORTERCERTFILE` and `FELIX_PROMETHEUSREPORTERKEYFILE`.
-You should set these environment variables in the `calico-node` daemonset
-`spec.template.spec.containers.env` section.
+Make sure that Calico knows where to read the certificates from by setting the
+`FELIX_PROMETHEUSREPORTERCERTFILE` and `FELIX_PROMETHEUSREPORTERKEYFILE` environment
+variables. You must also specify where to find the CA certificate used
+to sign the client certificate in `FELIX_PROMETHEUSREPORTERCAFILE` (either the CA
+certificate from above or the optional CA certificate). You can set
+these in the `spec.template.spec.containers.env` section of the `calico-node`
+daemonset as shown below.
 
 ```
             ...
@@ -463,45 +486,25 @@ You should set these environment variables in the `calico-node` daemonset
               value: "/etc/certs/concat-cert.pem"
             - name: FELIX_PROMETHEUSREPORTERKEYFILE
               value: "/etc/certs/calico-key.pem"
+            - name: FELIX_PROMETHEUSREPORTERCAFILE
+              value: "/etc/certs/ca.pem"
             ...
 ```
 
-Also make sure DNS is working properly by making sure that the `calico-node`
-daemonset `spec.template.spec` has `dnsPolicy: ClusterFirstWithHostNet` set.
+###### Mount your certificates into Prometheus
 
-```
-...
-spec:
-  selector:
-    matchLabels:
-      k8s-app: calico-node
-  template:
-    metadata:
-      labels:
-        k8s-app: calico-node
-      annotations:
-        # Mark this pod as a critical add-on; when enabled, the critical add-on scheduler
-        # reserves resources for critical add-on pods so that they can be rescheduled after
-        # a failure.  This annotation works in tandem with the toleration below.
-        scheduler.alpha.kubernetes.io/critical-pod: ''
-    spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
-      tolerations:
-...
-```
+<div class="alert alert-info" role="alert">
+<b>Note</b>: The following changes need to be made to the <samp>monitor-calico.yaml</samp> file provided as an example or your equivalent manifest.
+</div>
 
-Now that Calico has access to the correct certificates, you need to make sure
-that Prometheus can also access the certificates and keys it needs. First
-you need create secrets for all of the certificates Prometheus needs:
-your certificate authority certificate (`ca.pem`), your Prometheus certificate
-(`prom.pem`), and your Prometheus certificate key (`prom-key.pem`).
-
-For each of these files, you need to create a secret. Create a base64 encoding
-of your files:
+Encode your Prometheus certificate, your Prometheus private key, and your
+CA certificate in base64 format. In the following commands, we refer to these
+files as `prom.pem`, `prom-key.pem`, and `ca.pem` respectively.
 
 ```
 cat ca.pem | base64 -w 0
+cat prom.pem | base64 -w 0
+cat prom-key.pem | base64 -w 0
 ```
 
 Take the base64 output and add it to a secret in the same manifest file as
@@ -513,16 +516,17 @@ namespace as your `calico-node-monitor` (`calico-monitoring` in the example).
 apiVersion: v1
 kind: Secret
 metadata:
-  name: rootca
+  name: certs
   namespace: calico-monitoring
 data:
   ca.pem: <Your base64 certificate output goes here>
+  prom.pem: <Your base64 certificate output goes here>
+  prom-key.pem: <Your base64 private key output goes here>
 ```
 
-Once a secret has been created for all your files, you need to add your secrets
-so that they can be mounted in the service monitor. In the manifest for your
-Prometheus instance (`calico-node-prometheus` in the example), add a `secrets`
-section to the `spec` listing the secrets you defined.
+Add your secrets so that they can be mounted in the service monitor. In the
+manifest for your Prometheus instance (`calico-node-prometheus` in the example),
+add a `secrets` section to the `spec` listing the secrets you defined.
 
 ```
 ...
@@ -533,22 +537,14 @@ alerting:
         port: web
         scheme: http
   secrets:
-    - rootca
-    - prometheus
-    - prometheus-key
+    - certs
 ...
 ```
 
-Now that Prometheus has access to your secrets, it will mount them in
-`/etc/prometheus/secrets/` in the container. You need to let the service
-monitor know where to access your configuration by specifying the files
-from the secrets in the service monitor (`calico-node-monitor` in the example)
-under `spec.endpoints.tlsConfig`. Also make sure to change the endpoint
-scheme to reflect that we are using TLS by using `scheme: https`.  Make
-sure that the `serverName` field is populated with the common name from
-your Calico certificate if `insecureSkipVerify` is set to `false`. 
-If you do not want to verify your certificate's common name for any
-traffic, then change `insecureSkipVerify` to `true`.
+Prometheus will mount your secrets at `/etc/prometheus/secrets/` in the container.
+Specify the location of your secrets in the `spec.endpoints.tlsConfig` section of your
+service monitor (`calico-node-monitor` in the example).  Also make sure to change the
+endpoint scheme to use TLS by specifying `scheme: https`.
 
 ```
 ...
@@ -557,24 +553,36 @@ endpoints:
     interval: 5s
     scheme: https
     tlsConfig:
-      caFile: /etc/prometheus/secrets/rootca/ca.pem
-      certFile: /etc/prometheus/secrets/client/prom.pem
-      keyFile: /etc/prometheus/secrets/client-key/prom-key.pem
-      serverName: <the common name from the certificate goes here>
+      caFile: /etc/prometheus/secrets/certs/ca.pem
+      certFile: /etc/prometheus/secrets/certs/prom.pem
+      keyFile: /etc/prometheus/secrets/certs/prom-key.pem
+      serverName: <the common name used in the calico certificate goes here>
       insecureSkipVerify: false
 ...
 ```
 
-Apply your changes and now metrics on the port should be inaccessible
-without the proper certificates.
+<div class="alert alert-info" role="alert">
+<b>Note</b>: Make sure that <samp>serverName</samp> is set to the common name field
+of your calico certificate. If this is misconfigured, then connections will fail verification.
+If you wish to skip certificate verification, then you can ignore the <samp>serverName</samp>
+field and instead set <samp>insecureskipVerify</samp> to <samp>true</samp>.
+</div>
+
+###### Reapply your changes
+
+Apply your changes.
 
 ```
 kubectl apply -f calico-essentials.yaml
 kubectl apply -f monitor-calico.yaml
 ```
 
-Note: daemonset changes may require you to delete the existing
-pods in order to schedule new pods with your changes.
+Congratulations! Your metrics are now secured with TLS.
+
+<div class="alert alert-info" role="alert">
+<b>Note</b>: Changes to the daemonset may require you to delete the existing pods
+in order to schedule new pods with your changes.
+</div>
 
 ### Troubeshooting Config Updates
 
