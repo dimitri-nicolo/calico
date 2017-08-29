@@ -1,11 +1,11 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 package commands
 
 import (
 	"fmt"
 )
 
-const VERSION = "1.0.3"
+var VERSION, BUILD_DATE, GIT_DESCRIPTION, GIT_REVISION string
 
 func Version() error {
 	fmt.Println("Version:     ", VERSION)
