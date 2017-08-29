@@ -29,6 +29,13 @@ The default MTU for workload interfaces is 1500, this is to match the most
 common network MTU size.  The default MTU for the IP-in-IP tunnel device
 is 1440 to match the value needed in GCE.
 
+#### Using Flannel for Networking
+
+When using Flannel for networking, the MTU for the network interfaces
+should match the MTU of the flannel interface.  In the above table the 4th
+column "Calico MTU with VXLAN" is the expected MTU when using Flannel
+configured with VXLAN.
+
 ### Setting MTU for workload network interfaces
 
 It is the job of the network plugin to create new interfaces, the current
@@ -56,8 +63,10 @@ Example CNI configuration
 }
 ```
 
-> **Note:** The MTU on existing workloads will not be updated with this
-change.  To have all workloads use the new MTU then they must be restarted.
+> **NOTE**
+>
+> The MTU on existing workloads will not be updated with this
+change.  To have all workloads use the new MTU, they must be restarted.
 
 ### Setting MTU for tunnel network interfaces
 
@@ -80,7 +89,9 @@ following command to set the global config value.
 calicoctl config set --raw=felix IpInIpMtu 1480
 ```
 
-> **Note:** Setting the `IpInIpMtu` config option will result in an immediate
+> **NOTE**
+>
+> Setting the `IpInIpMtu` config option will result in an immediate
 update the tunnel interface MTU on all of the active nodes in your cluster.
 
 ## Configuring MTU in Kubernetes self-hosted manifests

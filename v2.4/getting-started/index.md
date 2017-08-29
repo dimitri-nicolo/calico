@@ -1,6 +1,5 @@
 ---
 title: Calico Integrations
-redirect_from: latest/getting-started/index
 ---
 
 To get started using Calico and Tigera Essentials Toolkit, we recommend running
