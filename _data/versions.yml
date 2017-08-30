@@ -1,9 +1,12 @@
 v2.5:
-- title: v2.5.0
+- title: v2.5.0-e1.1.0-rc1
   note: |
-    22 August 2017
+    29 August 2017
 
-    Detailed release notes can be found on [GitHub](https://github.com/projectcalico/calico/releases).
+    Calico v2.5.0 with Tigera Essentials Toolkit v1.1.0-rc1
+
+    ### Changes / New Features from Essentials Toolkit v1.0.3.
+    - Move to Calico v2.5.0.
 
     ### Attention Kubernetes datastore backend users
     If you're upgrading from Calico v2.4.x or older to v2.5.x or higher with Kubernetes datastore backend,
@@ -11,18 +14,24 @@ v2.5:
 
 
   components:
+   tigera-essentials-toolkit:
+      version: v1.1.0-rc1
+      url: ""
+    calicoq:
+      version: v1.1.0-rc1
+      url: ""
     felix:
-      version: 2.5.0
+      version: v2.5.0-e1.1.0-rc1
       url: https://github.com/projectcalico/felix/releases/tag/2.5.0
     typha:
       version: v0.4.0
       url: https://github.com/projectcalico/typha/releases/tag/v0.4.0
     calicoctl:
-      version: v1.5.0
+      version: v1.5.0-e1.1.0-rc1
       url: https://github.com/projectcalico/calicoctl/releases/tag/v1.5.0
       download_url: https://github.com/projectcalico/calicoctl/releases/download/v1.5.0/calicoctl
     calico/node:
-      version: v2.5.0
+      version: v2.5.0-e1.1.0-rc1
       url: https://github.com/projectcalico/calico/releases/tag/v2.5.0
     calico/cni:
       version: v1.10.0
