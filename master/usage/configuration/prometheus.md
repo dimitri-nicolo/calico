@@ -358,12 +358,12 @@ this, complete the following steps.
 In order to secure connections between Prometheus and Calico, you will need to first
 have the following:
 
-1. A Certificate Authority (CA) certificate (Used to sign the Calico/Prometheus certificate and key)
+- A Certificate Authority (CA) certificate (Used to sign the Calico/Prometheus certificate and key)
 (`ca.pem` in this example)
-2. A certificate for Calico (`calico.pem` in this example)
-3. A private key for Calico (`calico-key.pem` in this example)
-4. A certificate for Prometheus (`prom.pem` in this example)
-5. A private key for Prometheus (`prom-key.pem` in this example)
+- A certificate for Calico (`calico.pem` in this example)
+- A private key for Calico (`calico-key.pem` in this example)
+- A certificate for Prometheus (`prom.pem` in this example)
+- A private key for Prometheus (`prom-key.pem` in this example)
 
 For just the Calico certificate, you will need to concatenate your certificate
 to the CA certificate.
@@ -443,7 +443,7 @@ the `calico-node` daemonset.
       ...
 ```
 <div class="alert alert-info" role="alert">
-<b>Note</b>: Alternatively, you can directly mount the location of your certificates directly
+<b>Note</b>: Alternatively, you can mount the location of your certificates directly
 into the container instead of using secrets.
 </div>
 ```
