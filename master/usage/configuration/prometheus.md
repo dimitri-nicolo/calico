@@ -353,7 +353,7 @@ Because denied packet/bytes metrics may contain sensitive information, you may w
 to encrypt the communications between Prometheus and Calico with TLS. To accomplish
 this, complete the following steps.
 
-###### Format your certificates
+##### Format your certificates
 
 In order to secure connections between Prometheus and Calico, you will need to first
 have the following:
@@ -372,7 +372,7 @@ to the CA certificate.
 cat calico.pem ca.pem >> concat-cert.pem
 ```
 
-###### Mount your certificates into Calico
+##### Mount your certificates into Calico
 
 You now need to mount the Calico certificate (the concatenated certificate) and key
 into the `calico-node` daemonset.
@@ -442,10 +442,10 @@ the `calico-node` daemonset.
             secretName: certs
       ...
 ```
-
-Alternatively, you can directly mount the location of your certificates directly
+<div class="alert alert-info" role="alert">
+<b>Note</b>: Alternatively, you can directly mount the location of your certificates directly
 into the container instead of using secrets.
-
+</div>
 ```
       ...
       volumes:
@@ -491,10 +491,10 @@ daemonset as shown below.
             ...
 ```
 
-###### Mount your certificates into Prometheus
+##### Mount your certificates into Prometheus
 
 <div class="alert alert-info" role="alert">
-<b>Note</b>: The following changes need to be made to the <samp>monitor-calico.yaml</samp> file provided as an example or your equivalent manifest.
+<b>Note</b>: The following changes need to be made to the <samp>monitor-calico.yaml</samp> file or your equivalent manifest.
 </div>
 
 Encode your Prometheus certificate, your Prometheus private key, and your
@@ -568,7 +568,7 @@ If you wish to skip certificate verification, then you can ignore the <samp>serv
 field and instead set <samp>insecureskipVerify</samp> to <samp>true</samp>.
 </div>
 
-###### Reapply your changes
+##### Reapply your changes
 
 Apply your changes.
 
