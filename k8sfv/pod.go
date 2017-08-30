@@ -250,7 +250,7 @@ func runCommand(command string, args ...string) error {
 	return err
 }
 
-func runNmap(pod1, pod2 *metav1.Pod) {
+func runNmap(pod1, pod2 *v1.Pod) {
 	log.WithField("from", pod1.Status.PodIP).WithField("to", pod2.Status.PodIP).Info("Run nmap")
 
 	// Lock mutex, as we do pod cleanup from multiple goroutines.
