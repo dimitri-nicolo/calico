@@ -58,6 +58,12 @@ toc:
   section:
     - title: Installation
       path: /getting-started/openshift/installation
+    - title: Essentials
+      section:
+      - title: Installing Essentials for OpenShift
+        path: /getting-started/openshift/essentials/installation
+      - title: Using Essentials for OpenShift
+        path: /getting-started/openshift/essentials/usage
 
 - title: Mesos
   section:
