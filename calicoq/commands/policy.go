@@ -104,10 +104,13 @@ func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv
 		for _, sel := range matches[name] {
 			if strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
 				// sel is of the form "applicable endpoints; selector <selector>
-				selector := strings.SplitN(sel, " ", 4)[3]
-				wepp.Selector = selector[1 : len(selector)-1]
-				output.ApplyToEndpoints = append(output.ApplyToEndpoints, wepp)
-				break
+				// if the selector is hidden, it will be of the form "applicable endpoints"
+				if len(sel) == 4 {
+					selector := strings.SplitN(sel, " ", 4)[3]
+					wepp.Selector = selector[1 : len(selector)-1]
+					output.ApplyToEndpoints = append(output.ApplyToEndpoints, wepp)
+					break
+				}
 			}
 		}
 	}
