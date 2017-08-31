@@ -111,25 +111,12 @@ func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv
 					output.ApplyToEndpoints = append(output.ApplyToEndpoints, wepp)
 					break
 				}
+			} else if !hideRuleMatches {
+				wepp.Rules = append(wepp.Rules, NewRulePrintFromSelectorString(sel))
 			}
 		}
-	}
 
-	if !hideRuleMatches {
-		for _, name := range names {
-			wepp := NewWorkloadEndpointPrintFromNameString(name)
-			if wepp == nil {
-				continue
-			}
-
-			sort.Strings(matches[name])
-			for _, sel := range matches[name] {
-				if !strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
-					wepp.Rules = append(wepp.Rules, NewRulePrintFromSelectorString(sel))
-				}
-			}
-			output.MatchingEndpoints = append(output.MatchingEndpoints, wepp)
-		}
+		output.MatchingEndpoints = append(output.MatchingEndpoints, wepp)
 	}
 
 	return output
