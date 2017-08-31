@@ -109,7 +109,7 @@ type RulePrint struct {
 	Direction    string `json:"direction"`
 	SelectorType string `json:"selector_type"`
 	Order        int    `json:"order"`
-	Selector     string `json:"selector"`
+	Selector     string `json:"selector,omitempty"`
 }
 
 func NewRulePrintFromMatchString(match string) RulePrint {
@@ -122,7 +122,12 @@ func NewRulePrintFromMatchString(match string) RulePrint {
 
 	// TODO (mattl): Figure out what the right error handling would be here
 	// TODO (mattl): Refactor this and its callers eventually to use the PolicyKey objects to get Tier names
-	if info[0] != "Policy" || info[3] != "rule" || info[6] != "match;" || info[7] != "selector" {
+	if len(info) == 7 {
+		if info[0] != "Policy" || info[3] != "rule" || info[6] != "match" {
+			log.Errorf("Internal error - please report to support: Match string is not in the format: Policy \"policy name>\" <inbound/outbound> rule <rule number> <source/destination> match: %s", match)
+			return rp
+		}
+	} else if len(info) != 9 || info[0] != "Policy" || info[3] != "rule" || info[6] != "match;" || info[7] != "selector" {
 		log.Errorf("Internal error - please report to support: Match string is not in the format: Policy \"policy name>\" <inbound/outbound> rule <rule number> <source/destination> match; selector \"<selector>\": %s", match)
 		return rp
 	}
@@ -131,7 +136,9 @@ func NewRulePrintFromMatchString(match string) RulePrint {
 	rp.PolicyName = info[1][1 : len(info[1])-1]
 	rp.Direction = info[2]
 	rp.SelectorType = info[5]
-	rp.Selector = info[8][1 : len(info[8])-1]
+	if len(info) == 9 {
+		rp.Selector = info[8][1 : len(info[8])-1]
+	}
 	rp.Order, err = strconv.Atoi(info[4])
 	if err != nil {
 		log.Errorf("Unable to create Policy Rule from match string: %s", err)
@@ -149,7 +156,12 @@ func NewRulePrintFromSelectorString(selector string) RulePrint {
 	info := strings.SplitN(selector, " ", 7)
 
 	// TODO (mattl): Figure out what the right error handling would be here
-	if strings.HasPrefix(selector, APPLICABLE_ENDPOINTS) || len(info) != 7 || info[1] != "rule" || info[4] != "match;" || info[5] != "selector" {
+	if len(info) == 5 {
+		if strings.HasPrefix(selector, APPLICABLE_ENDPOINTS) || info[1] != "rule" || info[4] != "match" {
+			log.Errorf("Internal error - please report to support: Selector string not in the format <direction> rule <rule number> <selector type> match: %s", selector)
+			return rp
+		}
+	} else if strings.HasPrefix(selector, APPLICABLE_ENDPOINTS) || len(info) != 7 || info[1] != "rule" || info[4] != "match;" || info[5] != "selector" {
 		log.Errorf("Internal error - please report to support: Selector string not in the format <direction> rule <rule number> <selector type> match; selector \"<selector>\": %s", selector)
 		return rp
 	}
@@ -157,7 +169,9 @@ func NewRulePrintFromSelectorString(selector string) RulePrint {
 	var err error
 	rp.Direction = info[0]
 	rp.SelectorType = info[3]
-	rp.Selector = info[6][1 : len(info[6])-1]
+	if len(info) == 7 {
+		rp.Selector = info[6][1 : len(info[6])-1]
+	}
 	rp.Order, err = strconv.Atoi(info[2])
 	if err != nil {
 		log.Errorf("Unable to create Policy Rule from match string: %s", err)
