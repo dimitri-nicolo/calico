@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
@@ -33,7 +34,9 @@ import (
 // It is public so that integration tests can access it.
 type CalicoServerOptions struct {
 	RecommendedOptions *genericoptions.RecommendedOptions
-	StopCh             <-chan struct{}
+	// DisableAuth disables delegating authentication and authorization for testing scenarios
+	DisableAuth bool
+	StopCh      <-chan struct{}
 }
 
 func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
@@ -55,7 +58,27 @@ func (o *CalicoServerOptions) Config() (apiserver.Config, error) {
 	}
 
 	genericConfig := genericapiserver.NewConfig(api.Codecs)
-	if err := o.RecommendedOptions.ApplyTo(genericConfig); err != nil {
+	if err := o.RecommendedOptions.Etcd.ApplyTo(genericConfig); err != nil {
+		return nil, err
+	}
+	if err := o.RecommendedOptions.SecureServing.ApplyTo(genericConfig); err != nil {
+		return nil, err
+	}
+	if !o.DisableAuth {
+		if err := o.RecommendedOptions.Authentication.ApplyTo(genericConfig); err != nil {
+			return nil, err
+		}
+		if err := o.RecommendedOptions.Authorization.ApplyTo(genericConfig); err != nil {
+			return nil, err
+		}
+	} else {
+		// always warn when auth is disabled, since this should only be used for testing
+		glog.Infof("Authentication and authorization disabled for testing purposes")
+	}
+	if err := o.RecommendedOptions.Audit.ApplyTo(genericConfig); err != nil {
+		return nil, err
+	}
+	if err := o.RecommendedOptions.Features.ApplyTo(genericConfig); err != nil {
 		return nil, err
 	}
 	config := apiserver.NewCalicoConfig(genericConfig)

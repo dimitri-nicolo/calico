@@ -56,6 +56,16 @@ ifdef UNIT_TESTS
 	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
+ifdef NO_DOCKER
+	DOCKER_CMD =
+	cBuildImageTarget =
+else
+	# Mount .pkg as pkg so that we save our cached "go build" output files
+	DOCKER_CMD = docker run --rm -v $(PWD):/go/src/$(CAPI_PKG) \
+	  cbuildimage
+	cBuildImageTarget = .cBuildImage
+endif
+
 NON_VENDOR_DIRS = $(shell $(DOCKER_CMD) glide nv)
 
 # This section builds the output binaries.
@@ -133,6 +143,22 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 	$(DOCKER_CMD) $(BUILD_DIR)/update-client-gen.sh
 	touch $@
 
+# Some prereq stuff
+###################
+
+.init: $(cBuildImageTarget)
+	touch $@
+
+.cBuildImage: artifacts/simple-image/Dockerfile
+	sed "s/GO_VERSION/$(GO_VERSION)/g" < artifacts/simple-image/Dockerfile | \
+	  docker build -t cbuildimage -
+	touch $@
+
+# this target uses the host-local go installation to test 
+test-integration: .init $(cBuildImageTarget) build
+	# golang integration tests
+	test/integration.sh
+
 clean: clean-bin clean-build-image clean-generated
 clean-bin:
 	rm -rf $(BINDIR)
@@ -144,3 +170,5 @@ clean-build-image:
 clean-generated:
 	rm -f .generate_files
 	find $(TOP_SRC_DIRS) -name zz_generated* -exec rm {} \;
+	# rollback changes to the generated clientset directories
+	find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
