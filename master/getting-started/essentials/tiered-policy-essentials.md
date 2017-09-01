@@ -10,7 +10,7 @@ Some use cases for using tiers and tiered policies are:
   - Allow privileged users to define security Policy that takes precedence over
     other users.
   - Translating hierarchies of physical firewalls directly into Calico Policy.
-  - Group policies together under a Tier.
+  - Group policies together under a tier.
 
 Specifically, the example presented here will discuss some aspects of the
 first use case.
@@ -87,7 +87,7 @@ wget: download timed out
 ### Examine the Policy Resource
 
 Let's first look at existing policies and tiers that are created when Calico
-is deployed. All policies that are created so far will end up in a `default` Tier
+is deployed. All policies that are created so far will end up in a `default` tier
 called `default`. You can view existing policies by running:
 
 ```
@@ -97,7 +97,7 @@ policy-demo.default-deny                          default
 ```
 
 Notice that there is a new `TIER` column. This means that the
-`policy-demo.default-deny` policy exists under the `default` Tier. We can get
+`policy-demo.default-deny` policy exists under the `default` tier. We can get
 the same information in YAML format as well by running:
 
 ```
@@ -116,7 +116,7 @@ $ calicoctl get policy -o yaml
     selector: calico/k8s_ns == 'policy-demo'
 ```
 
-Notice the Policy resource includes the information about the Tier in the
+Notice the Policy resource includes the information about the tier in the
 `metadata` field. Also, note the use of special label `calico/k8s_ns` in the
 Policy selector. This label is automatically added to endpoints and the value
 populated with the pod's Kubernetes namespace. For more information about this
@@ -132,9 +132,9 @@ default   1000
 
 ### Working with Tiers and Tiered Policies
 
-Let's create a `netops` Tier. We'd like policies in this Tier to apply
-before the policies in `default` Tier. Let's create a new `netops` Tier
-and give it a higher order of precedence than the `default` Tier.
+Let's create a `netops` tier. We'd like policies in this tier to apply
+before the policies in `default` tier. Let's create a new `netops` tier
+and give it a higher order of precedence than the `default` tier.
 
 ```
 $ calicoctl create -f - <<EOF
@@ -148,7 +148,7 @@ EOF
 ```
 
 You should see the message `Successfully created 1 'tier' resource(s)` to
-indicate that the Tier was created successfully. You can view your current
+indicate that the tier was created successfully. You can view your current
 tiers as follows.
 
 ```
@@ -159,7 +159,7 @@ netops    100
 ```
 
 Notice that the order value of the netops tier is lower than the value of the
-`default` Tier. Lower order values have a higher precedence.
+`default` tier. Lower order values have a higher precedence.
 
 <div class="alert alert-info" role="alert"><b>Note</b>:
 Read more about order values in the <a href="../reference/calicoq/">calicoctl reference section.</a>
@@ -181,16 +181,16 @@ Address 2: 2620:12a:8001::2
 Address 3: 23.185.0.2
 ```
 
-To add a Policy to a Tier, specify the name of the Tier you want to add it to,
+To add a Policy to a tier, specify the name of the tier you want to add it to,
 under `metadata`. The YAML sample below adds the `no-public-dns-for-policy-demo`
-policy to the `netops` Tier.
+policy to the `netops` tier.
 
 ```
-# Policy in the netops Tier that will prevent DNS requests to Google DNS
+# Policy in the netops tier that will prevent DNS requests to Google DNS
 # servers from pods in the policy-demo Namespace.
 # We use the "pass" action to give other lower ordered tiers a chance to define
-# policies. If a policy in a Tier is applied to an endpoint but no policy in
-# the Tier acts on the traffic, it will be dropped at the end of Tier.
+# policies. If a policy in a tier is applied to an endpoint but no policy in
+# the tier acts on the traffic, it will be dropped at the end of tier.
 $ calicoctl create -f - <<EOF
 - apiVersion: v1
   kind: policy
@@ -237,7 +237,7 @@ nslookup: can't resolve 'tigera.io'
 We can create additional tiered policies to police `pass`-ed traffic from the
 `no-public-dns-for-policy-demo` Policy.
 
-Create a `devops` Tier
+Create a `devops` tier.
 
 ```
 $ calicoctl create -f - <<EOF
@@ -250,7 +250,7 @@ spec:
 EOF
 ```
 
-Then create a Policy in the `devops` Tier that will prevent traffic from/to the
+Then create a Policy in the `devops` tier that will prevent traffic from/to the.
 `policy-demo` Namespace from entering or leaving this Namespace.
 
 ```
@@ -281,7 +281,7 @@ EOF
 ### Allow Access using a NetworkPolicy and the default Tier
 
 You can still use NetworkPolicy to define policies. These policies will always
-be created under the `default` Tier. Let's enable access to the nginx Service
+be created under the `default` tier. Let's enable access to the nginx Service
 using a NetworkPolicy.
 
 Create a network policy `access-nginx` with the following contents:
@@ -305,10 +305,10 @@ spec:
 EOF
 ```
 
-The `access-nginx` policy is created under the `default` Tier.
+The `access-nginx` policy is created under the `default` tier.
 
 ```
-# Get all policies that belong in the default Tier.
+# Get all policies that belong in the default tier.
 # Note the usage of the "--tier" option.
 $ calicoctl get policies --tier default
 NAME                                              TIER
@@ -335,7 +335,7 @@ kubectl delete ns policy-demo
 kubectl delete ns external-demo
 ```
 
-Delete policies that are not part of the `default` Tier.
+Delete policies that are not part of the `default` tier.
 
 ```
 # Delete a single policy in a tier.
