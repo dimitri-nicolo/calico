@@ -89,6 +89,49 @@ The full list of parameters which can be set is as follows.
 | --------------------------------------- | ---------------------------------------- | --------------------------------------- |
 | InterfacePrefix (FELIX_INTERFACEPREFIX) | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces.  Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the 'cali' value, and our OpenStack integration sets the 'tap' value. [Default: `cali`] | string |
 
+#### Tigera Essentials Toolkit specific configuration
+
+| Setting                                 | Environment variable                    | Default                              | Meaning                                 |
+|-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
+| DropActionOverride                      | FELIX_DROPACTIONOVERRIDE                | DROP                                 | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
+| PrometheusReporterEnabled               | FELIX_PROMETHEUSREPORTERENABLED         | false                                | Set to "true" to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
+| PrometheusReporterPort                  | FELIX_PROMETHEUSREPORTERPORT            | 9092                                 | The TCP port on which to report denied packet metrics.  |
+
+DropActionOverride controls what happens to each packet that is denied by
+the current Calico policy - i.e. by the ordered combination of all the
+configured policies and profiles that apply to that packet.  It may be
+set to one of the following values:
+
+- DROP
+- ACCEPT
+- LOG-and-DROP
+- LOG-and-ACCEPT.
+
+Normally the "DROP" or "LOG-and-DROP" value should be used, as dropping a
+packet is the obvious implication of that packet being denied.  However when
+experimenting, or debugging a scenario that is not behaving as you expect, the
+"ACCEPT" and "LOG-and-ACCEPT" values can be useful: then the packet will be
+still be allowed through.
+
+When one of the "LOG-and-..." values is set, each denied packet is logged in
+syslog, with an entry like this:
+
+```
+May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be879f658 MAC= SRC=192.168.128.30 DST=192.168.157.26 LEN=60 TOS=0x00 PREC=0x00 TTL=62 ID=56743 DF PROTO=TCP SPT=56248 DPT=80 WINDOW=29200 RES=0x00 SYN URGP=0 MARK=0xa000000
+```
+
+When the reporting of denied packet metrics is enabled, Felix keeps counts of
+recently denied packets and publishes these as Prometheus metrics on the port
+configured by the PrometheusReporterPort setting.  Please
+see
+[Policy Violation Monitoring & Reporting]({{site.baseurl}}/{{page.version}}/reference/essentials/policy-violations) for
+more details.
+
+Note that denied packet metrics are independent of the DropActionOverride
+setting.  Specifically, if packets that would normally be denied are being
+allowed through by a setting of "ACCEPT" or "LOG-and-ACCEPT", those packets
+still contribute to the denied packet metrics as just described.
+
 Environment variables
 ---------------------
 

@@ -67,6 +67,8 @@ toc:
         path: /reference/calicoctl/resources/policy
       - title: Profile
         path: /reference/calicoctl/resources/profile
+      - title: Tier
+        path: /reference/calicoctl/resources/tier
       - title: Workload Endpoint
         path: /reference/calicoctl/resources/workloadendpoint
   - title: Setup
@@ -77,6 +79,22 @@ toc:
         path: /reference/calicoctl/setup/etcdv2
       - title: kubernetes api datastore
         path: /reference/calicoctl/setup/kubernetes
+- title: calicoq
+  section:
+  - title: Overview
+    path: /reference/calicoq/
+  - title: Selectors
+    path: /reference/calicoq/selectors
+  - title: Endpoint
+    path: /reference/calicoq/endpoint
+  - title: Eval
+    path: /reference/calicoq/eval
+  - title: Host
+    path: /reference/calicoq/host
+  - title: Policy
+    path: /reference/calicoq/policy
+  - title: Version
+    path: /reference/calicoq/version
 - title: calico/node
   section:
   - title: Configuration
@@ -97,6 +115,12 @@ toc:
       path: /reference/public-cloud/aws
     - title: GCE
       path: /reference/public-cloud/gce
+- title: Tigera Essentials Toolkit
+  section:
+    - title: Policy Violation Monitoring & Reporting
+      path: /reference/essentials/policy-violations
+    - title: Policy Audit Mode
+      path: /reference/essentials/policy-auditing
 - title: Deploying on Private Cloud
   section:
     - title: Calico Over Ethernet Fabrics

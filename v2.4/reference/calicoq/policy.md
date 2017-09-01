@@ -1,6 +1,5 @@
 ---
 title: calicoq policy
-redirect_from: latest/reference/calicoq/policy
 ---
 
 `calicoq policy <policy-name>` shows the endpoints that are relevant to the
