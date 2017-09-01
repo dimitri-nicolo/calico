@@ -51,21 +51,6 @@ GO_BUILD       = env GOOS=$(PLATFORM) GOARCH=$(ARCH) go build -i $(GOFLAGS) \
 BASE_PATH      = $(ROOT:/src/github.com/tigera/calico-k8sapiserver/=)
 export GOPATH  = $(BASE_PATH):$(ROOT)/vendor
 
-
-ifdef UNIT_TESTS
-	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
-endif
-
-ifdef NO_DOCKER
-	DOCKER_CMD =
-	cBuildImageTarget =
-else
-	# Mount .pkg as pkg so that we save our cached "go build" output files
-	DOCKER_CMD = docker run --rm -v $(PWD):/go/src/$(CAPI_PKG) \
-	  cbuildimage
-	cBuildImageTarget = .cBuildImage
-endif
-
 NON_VENDOR_DIRS = $(shell $(DOCKER_CMD) glide nv)
 
 # This section builds the output binaries.
@@ -171,4 +156,4 @@ clean-generated:
 	rm -f .generate_files
 	find $(TOP_SRC_DIRS) -name zz_generated* -exec rm {} \;
 	# rollback changes to the generated clientset directories
-	find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
+	# find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;

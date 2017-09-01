@@ -99,6 +99,10 @@ func getTierNamesFromSelector(options *metainternalversion.ListOptions) []string
 }
 
 func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName string) error {
+	if r.authorizer == nil {
+		glog.Infof("Authorization disabled for testing purposes")
+		return nil
+	}
 	attributes, err := filters.GetAuthorizerAttributes(ctx)
 	if err != nil {
 		return err

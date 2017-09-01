@@ -102,3 +102,15 @@ Follows native Kubernetes REST semantics.
 8. Select based on Tier and watch at the same time: https://10.0.2.15:6443/apis/calico.tigera.io/v1/namespaces/default/policies?labelSelector=tier==Tier1
 9. Create policies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/calico.tigera.io/v1/namespaces/default/policies
 ``` 
+
+## Testing
+The integration tests can be run via the `test-integration` Makefile target,
+e.g.:
+
+    $ make test-integration
+
+The integration tests require the Kubernetes client (`kubectl`) so there is a
+script called `contrib/hack/kubectl` that will run it from within a
+Docker container. This avoids the need for you to download, or install it,
+youself. You may find it useful to add `contrib/hack` to your `PATH`.
+

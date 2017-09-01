@@ -28,21 +28,6 @@ import (
 
 func init() {
 	Install(api.GroupFactoryRegistry, api.Registry, api.Scheme)
-
-	// we need to add the options to empty v1
-	// TODO fix the server code to avoid this
-	/*metav1.AddToGroupVersion(api.Scheme, schema.GroupVersion{Version: "v1"})
-
-	// TODO: keep the generic API server from wanting this
-	unversioned := schema.GroupVersion{Group: "", Version: "v1"}
-	api.Scheme.AddUnversionedTypes(unversioned,
-		&metav1.Status{},
-		&metav1.APIVersions{},
-		&metav1.APIGroupList{},
-		&metav1.APIGroup{},
-		&metav1.APIResourceList{},
-	)
-	*/
 }
 
 // Install registers the API group and adds types to a scheme
