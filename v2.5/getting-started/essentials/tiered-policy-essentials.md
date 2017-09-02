@@ -4,7 +4,7 @@ redirect_from: latest/getting-started/essentials/tiered-policy-essentials
 ---
 
 This guide will introduce tiered policies and walk through a simple example
-for working with the [Tiers](../../reference/calicoctl/resources/tiers) resource.
+for working with the [Tiers](../../reference/calicoctl/resources/tier) resource.
 
 Some use cases for using tiers and tiered policies are:
 
@@ -163,7 +163,7 @@ Notice that the order value of the netops tier is lower than the value of the
 `default` tier. Lower order values have a higher precedence.
 
 <div class="alert alert-info" role="alert"><b>Note</b>:
-Read more about order values in the <a href="../reference/calicoq/">calicoctl reference section.</a>
+Read more about order values in the <a href="../../reference/calicoctl/">calicoctl reference section.</a>
 </div>
 
 Launch a pod in the `policy-demo` Namespace and test DNS connectivity to 8.8.8.8
