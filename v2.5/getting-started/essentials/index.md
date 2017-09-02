@@ -47,13 +47,13 @@ to create your registry.
 Once you have a suitable registry, load the `calico/node` image into it (substituting
 the domain and port appropriately).
 ```
-unxz calico-node-v2.4.1-e1.0.3.tar.xz
-docker load -i calico-node-v2.4.1-e1.0.3.tar
-docker tag calico/node:v2.4.1-e1.0.3 myregistrydomain.com:5000/calico-node:v2.4.1-e1.0.3
-docker push myregistrydomain.com:5000/calico-node:v2.4.1-e1.0.3
+unxz calico-node-v2.5.0-e1.1.0.tar.xz
+docker load -i calico-node-v2.5.0-e1.1.0.tar
+docker tag calico/node:v2.5.0-e1.1.0 myregistrydomain.com:5000/calico-node:v2.5.0-e1.1.0
+docker push myregistrydomain.com:5000/calico-node:v2.5.0-e1.1.0
 ```
 
 Then, the images can be pulled easily from other hosts.
 ```
-docker pull myregistrydomain.com:5000/calico-node:v2.4.1-e1.0.3
+docker pull myregistrydomain.com:5000/calico-node:v2.5.0-e1.1.0
 ```
