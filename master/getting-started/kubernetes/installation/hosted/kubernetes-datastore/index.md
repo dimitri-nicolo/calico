@@ -47,8 +47,6 @@ Ensure you have a cluster which meets the above requirements.  There may be addi
 > if you are upgrading from Calico v2.1, use the [Calico policy-only with user-supplied networking](#2-calico-policy-only-with-user-supplied-networking) installation instructions
 > to upgrade Calico policy-only which leaves the networking solution unchanged.
 
-<<<<<<< HEAD
-=======
 ### RBAC
 
 Before you install Calico, if your Kubernetes cluster has RBAC enabled, you'll need to create the following
@@ -61,12 +59,11 @@ Apply the following manifest to create these necessary RBAC roles and bindings.
 > The following RBAC policy is compatible with the Kubernetes v1.7+ manifests only.
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
+kubectl apply rbac-kdd.yaml
 ```
 
->[Click here to view the above yaml directly.](../rbac-kdd.yaml)
+>[Click here to view the above rbac-kdd.yaml for Kubernetes 1.7 clusters.](../rbac-kdd.yaml)
 
->>>>>>> v2.5.0
 ### 1. Calico policy with Calico networking (Beta)
 
 With Kubernetes as the Calico datastore, Calico has Beta support for Calico networking.  This provides BGP-based
@@ -75,26 +72,15 @@ networking with a full node-to-node mesh and/or explicit configuration of peers.
 To install Calico with Calico networking, run the following command based on your Kubernetes version.
 This will install Calico and will initially create a full node-to-node mesh.
 
-<<<<<<< HEAD
-```
-kubectl apply -f calico.yaml
-```
-
->[Click here to view the calico.yaml for Kubernetes 1.6+ clusters.](calico-networking/1.6/calico.yaml)
-
->[Click here to view the calico.yaml for Kubernetes 1.5 clusters.](calico-networking/1.5/calico.yaml)
-=======
 > **NOTE**
 >
 > Calico `v2.5.0` or higher with Kubernetes backend requires Kubernetes `v1.7.0` or higher.
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
->[Click here to view the above yaml directly.](calico-networking/1.7/calico.yaml)
-
->>>>>>> v2.5.0
+>[Click here to view the calico.yaml for Kubernetes 1.7 clusters.](calico-networking/1.7/calico.yaml)
 
 #### Calico policy with Calico networking on kubeadm
 
@@ -118,17 +104,6 @@ to configure your topology.
 If you run Calico in policy-only mode it is necessary to configure your network to route pod traffic based on pod
 CIDR allocations, either through static routes, a Kubernetes cloud-provider integration, or flannel (self-installed).
 
-<<<<<<< HEAD
-To install Calico in policy-only mode, run following command based on your Kubernetes version:
-
-```
-kubectl apply -f calico.yaml
-```
-
->[Click here to view the calico.yaml for Kubernetes 1.6+ clusters.](policy-only/1.6/calico.yaml)
-
->[Click here to view the calico.yaml for Kubernetes 1.5 clusters.](policy-only/1.5/calico.yaml)
-=======
 To install Calico in policy-only mode, run one of the following commands based on your Kubernetes version:
 
 > **NOTE**
@@ -136,12 +111,10 @@ To install Calico in policy-only mode, run one of the following commands based o
 > Calico `v2.5.0` or higher with Kubernetes backend requires Kubernetes `v1.7.0` or higher.
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
->[Click here to view the above yaml directly.](policy-only/1.7/calico.yaml)
-
->>>>>>> v2.5.0
+>[Click here to view the policy.yaml for Kubernetes 1.7 clusters.](policy-only/1.7/calico.yaml)
 
 ### 3. Calico policy-only with flannel networking
 
@@ -167,6 +140,8 @@ kubectl apply -f rbac.yaml
 ## Try it out
 
 Once installed, you can try out NetworkPolicy by following the [simple policy guide](../../../tutorials/simple-policy).
+
+Below are a few examples for how to get started.
 
 ## Configuration details
 
@@ -204,3 +179,4 @@ The above manifest deploys Calico such that Felix uses the Kubernetes API direct
 removing Calico's dependency on etcd and the need for the Calico kubernetes policy controller.
 
 The Calico CNI plugin is still required to configure each pod's virtual ethernet device and network namespace.
+

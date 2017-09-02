@@ -25,7 +25,7 @@ To install `calicoq` in OpenShift:
 1. Download it to any node.
 1. Run it as root user.
 
-See the [calicoq reference](http://localhost:4000/v2.4/reference/calicoq/) for more information on using `calicoq`.
+See the [calicoq reference](../../../reference/calicoq/) for more information on using `calicoq`.
 
 ### Policy Violation Alerting
 
@@ -74,7 +74,7 @@ instance for you.
    ```
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
-See [Policy Violation Alerting]({{site.baseurl}}/{{page.version}}/reference/essentials/policy-violations) for more information.
+See [Policy Violation Alerting](../../../reference/essentials/policy-violations) for more information.
 
 ##### Updating Rules
 
@@ -83,4 +83,4 @@ will not get picked up by Prometheus until a SIGHUP signal is explicitly issued.
 
 ### Policy Audit Mode
 
-See [Policy Auditing](http://{{site.baseurl}}/{{page.version}}/reference/essentials/policy-auditing) for more information.
+See [Policy Auditing](../../../reference/essentials/policy-auditing) for more information.
