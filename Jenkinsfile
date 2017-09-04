@@ -12,6 +12,19 @@ pipeline{
             }
         }
 
+        stage('Wipe out all docker state') {
+            steps {
+                // Kill running containers:
+                sh "sudo docker kill `docker ps -qa` || true"
+                // Delete all containers (and their associated volumes):
+                sh "sudo docker rm -v `docker ps -qa` || true"
+                // Remove all images:
+                sh "sudo docker rmi `docker images -q` || true"
+                // clear glide cache
+                sh 'sudo rm -rf ~/.glide/*'
+                }
+        }
+
         stage('Build calicoctl') {
             steps {
                 // Make sure no one's left root owned files in glide cache
