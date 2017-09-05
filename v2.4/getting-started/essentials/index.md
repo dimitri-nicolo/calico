@@ -1,6 +1,5 @@
 ---
 title: Obtaining Tigera Essentials Toolkit
-redirect_from: latest/getting-started/essentials/index
 ---
 
 Tigera Essentials Toolkit consists of the open source Project Calico, with

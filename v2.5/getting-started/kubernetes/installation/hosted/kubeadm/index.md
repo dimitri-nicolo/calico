@@ -25,18 +25,12 @@ depending on your kubeadm / kubernetes version:
 For Kubeadm stable with Kubernetes version >= v1.6.0:
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
->[Click here to view the above yaml directly.](1.6/calico.yaml)
+>[Click here to view the calico.yaml for Kubeadm 1.6 with Kubernetes 1.6.x.](1.6/calico.yaml)
 
-For Kubeadm 1.5 with Kubernetes version v1.5.x:
-
-```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.5/calico.yaml
-```
-
->[Click here to view the above yaml directly.](1.5/calico.yaml)
+>[Click here to view the calico.yaml for Kubeadm 1.5 with Kubernetes 1.5.x.](1.5/calico.yaml)
 
 ## Using calicoctl in a Kubeadm Cluster
 

@@ -1,6 +1,5 @@
 ---
 title: Tigera Essentials Toolkit Hosted Install
-redirect_from: latest/getting-started/kubernetes/installation/hosted/essentials/index
 ---
 
 To install Tigera Essentials Toolkit, run the following commands:

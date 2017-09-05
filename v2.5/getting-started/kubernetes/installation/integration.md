@@ -21,7 +21,7 @@ installation method.
   - Calico can share the etcd cluster used by Kubernetes, but in some cases it's recommended that a separate cluster is set up.
     A number of production users do share the etcd cluster between the two, but separating them gives better performance at high scale.
 
-> **NOTE:**
+> **NOTE**
 >
 > Calico can also be installed [without a dependency on etcd](hosted/kubernetes-datastore/), but that is not covered in this document.
 
@@ -95,7 +95,7 @@ ExecStart=/usr/bin/docker run --net=host --privileged --name=calico-node \
   -v /run/docker/plugins:/run/docker/plugins \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /var/log/calico:/var/log/calico \
-  quay.io/calico/node:{{site.data.versions[page.version].first.title}}
+  calico/node:{{site.data.versions[page.version].first.title}}
 ExecStop=/usr/bin/docker rm -f calico-node
 Restart=always
 RestartSec=10
@@ -105,7 +105,7 @@ WantedBy=multi-user.target
 ```
 > Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 
-> **NOTE:**
+> **NOTE**
 >
 > To ensure reasonable dataplane programming latency on a system under load,
 `calico/node` requires a CPU reservation of at least 0.25 cores with additional

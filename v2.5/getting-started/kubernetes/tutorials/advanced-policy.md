@@ -56,7 +56,7 @@ kubectl expose --namespace=advanced-policy-demo deployment nginx --port=80
 
 #### Check using calicoctl
 
-  > **Note:**
+  > **NOTE**
   >
   > This requires the [calicoctl tool to be configured]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup/etcdv2).
   > For example: `export ETCD_ENDPOINTS=http://10.96.232.136:6666`
@@ -71,7 +71,7 @@ $ calicoctl get profile -o wide
 NAME                          TAGS
 k8s_ns.advanced-policy-demo   k8s_ns.advanced-policy-demo
 k8s_ns.default                k8s_ns.default
-k8s_ns.kube-public            k8s_ns.kube-public 
+k8s_ns.kube-public            k8s_ns.kube-public
 k8s_ns.kube-system            k8s_ns.kube-system
 ```
 
@@ -156,9 +156,9 @@ It now shows up as a [Policy]({{site.baseurl}}/{{page.version}}/reference/calico
 
 ```shell
 $ calicoctl get policy -o wide
-NAME                                ORDER   SELECTOR
-advanced-policy-demo.access-nginx   1000    calico/k8s_ns == 'advanced-policy-demo' && run == 'nginx'
-advanced-policy-demo.default-deny   1000    calico/k8s_ns == 'advanced-policy-demo' 
+NAME                                TIER       ORDER   SELECTOR
+advanced-policy-demo.access-nginx   default    1000    calico/k8s_ns == 'advanced-policy-demo' && run == 'nginx'
+advanced-policy-demo.default-deny   default    1000    calico/k8s_ns == 'advanced-policy-demo'
 ```
 
 After creating the policy, we can now access the nginx Service.  We also see that the pod can

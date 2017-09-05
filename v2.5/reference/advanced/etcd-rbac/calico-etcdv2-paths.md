@@ -6,9 +6,10 @@ redirect_from: latest/reference/advanced/etcd-rbac/calico-etcdv2-paths
 The Paths listed here are the key or path prefixes that a particular calico
 component needs access to in etcd to function successfully.
 
-> **Note:** The paths listed here may change in the future and at that point
-anything referencing them (like etcd roles) would need to be updated
-appropriately.
+> **NOTE**
+>
+> The paths listed here may change in the future and at that point anything
+> referencing them (like etcd roles) would need to be updated appropriately.
 
 ## calico/node
 
@@ -91,4 +92,3 @@ appropriately.
 | /calico/v1/ipam\*          |   RW   |
 | /calico/ipam/v2\*          |   RW   |
 | /calico/bgp/v1\*           |   RW   |
-

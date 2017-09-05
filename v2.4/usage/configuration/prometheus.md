@@ -1,6 +1,5 @@
 ---
 title: Configuring Prometheus
-redirect_from: latest/usage/configuration/prometheus
 ---
 
 Note: This document assumes that Prometheus and Alertmanager have been setup

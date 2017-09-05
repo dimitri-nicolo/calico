@@ -91,7 +91,7 @@ spec:
 
 ---
 
-# This manfiest installs the Service which gets traffic to the Calico
+# This manifest installs the Service which gets traffic to the Calico
 # etcd.
 apiVersion: v1
 kind: Service
