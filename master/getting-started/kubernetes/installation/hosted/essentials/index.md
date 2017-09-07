@@ -51,7 +51,7 @@ repository.
 
 For example if you set up the docker registry to be accessible at
 `myregistrydomain.com:5000` then make sure that the `image:` field points
-to `myregistrydomain.com:5000/calico-node:{{site.data.versions[page.version].first.title}}`
+to `myregistrydomain.com:5000/calico/node:{{site.data.versions[page.version].first.title}}`
 
 #### Configure calico/node settings
 
