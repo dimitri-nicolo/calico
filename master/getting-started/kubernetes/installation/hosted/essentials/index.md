@@ -8,7 +8,7 @@ To install Tigera Essentials Toolkit, run the following commands.
   <b>Note</b>: These instructions do not apply to OpenShift users. Instead, see <a href="{{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation">Installing Essentials for OpenShift</a>.
 </div>
 
-- Setup etcd:
+- Setup etcd: [calico-etcd.yaml](1.6/calico-etcd.yaml)
 
 ```
 kubectl apply -f calico-etcd.yaml
@@ -42,6 +42,16 @@ $ kubectl apply -f monitor-calico.yaml
 ```
 
 ### Customizing the manifests
+
+#### Configure calico/node image repository
+
+In the [calico-essentials.yaml](1.6/calico-essentials.yaml) file, make sure
+that the `image` field of the `calico-node` container contains the correct
+repository.
+
+For example if you set up the docker registry to be accessible at
+`myregistrydomain.com:5000` then make sure that the `image:` field points
+to `myregistrydomain.com:5000/calico-node:{{site.data.versions[page.version].first.title}}`
 
 #### Configure calico/node settings
 

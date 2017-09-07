@@ -9,6 +9,8 @@ toc:
 - title: Tigera Essentials Toolkit
   path: /getting-started/essentials/
   section:
+  - title: Obtaining Tigera Essentials Toolkit
+    path: /getting-started/essentials/
   - title: Tigera Essentials Toolkit for Kubernetes Demo
     path: /getting-started/essentials/simple-policy-essentials
   - title: Tiered Policy Demo

@@ -70,8 +70,10 @@ instance for you.
 1. Apply Prometheus:
 
    ```
-   oc apply -f http://{{site.baseurl}}/{{page.version}}/getting-started/openshift/calico-monitoring.yml
+   oc apply -f calico-monitoring.yml
    ```
+
+>[Click here to view calico-monitoring.yml](../calico-monitoring.yml)
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
 See [Policy Violation Alerting](../../../reference/essentials/policy-violations) for more information.
