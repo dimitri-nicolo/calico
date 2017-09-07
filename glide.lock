@@ -1,5 +1,5 @@
-hash: cda9ee354f4b966f567242f008b3d8180247442d3319beaad35d233a6bc02e28
-updated: 2017-08-23T19:04:58.942606073Z
+hash: 24009873f64f16cea9114bf21159475d6aef004a40aa0d7da0ae8a42d796cc29
+updated: 2017-08-30T10:19:36.907767338Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -82,7 +82,7 @@ imports:
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
-  version: 4bd1920723d7b7c925de087aa32e2187708897f7
+  version: ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
   subpackages:
   - proto
 - name: github.com/google/gofuzz
@@ -187,7 +187,7 @@ imports:
   - lib/testutils
   - lib/validator
 - name: github.com/projectcalico/typha
-  version: da7479a93f30a6dd3fcfd683e409af4dbf381ea0
+  version: 71413e6c4e8f903f899429329cf3e38e17633ba5
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
@@ -236,7 +236,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: 86bef332bfc3b59b7624a600bd53009ce91a9829
 - name: golang.org/x/crypto
   version: d172538b2cfce0c13cee31e647d0367aa8cd2486
   subpackages:
@@ -261,7 +261,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
+  version: ab9e364efd8b52800ff7ee48a9ffba4e0ed78dfb
   subpackages:
   - unix
 - name: golang.org/x/text
