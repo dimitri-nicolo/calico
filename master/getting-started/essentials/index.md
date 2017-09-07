@@ -48,11 +48,11 @@ the domain and port appropriately).
 ```
 unxz calico-node-{{site.data.versions[page.version].first.title}}.tar.xz
 docker load -i calico-node-{{site.data.versions[page.version].first.title}}.tar
-docker tag calico/node:v2.5.0-e1.1.0 myregistrydomain.com:5000/calico-node:{{site.data.versions[page.version].first.title}}
-docker push myregistrydomain.com:5000/calico-node:{{site.data.versions[page.version].first.title}}
+docker tag calico/node:v2.5.0-e1.1.0 myregistrydomain.com:5000/calico/node:{{site.data.versions[page.version].first.title}}
+docker push myregistrydomain.com:5000/calico/node:{{site.data.versions[page.version].first.title}}
 ```
 
 Then, the images can be pulled easily from other hosts.
 ```
-docker pull myregistrydomain.com:5000/calico-node:{{site.data.versions[page.version].first.title}}
+docker pull myregistrydomain.com:5000/calico/node:{{site.data.versions[page.version].first.title}}
 ```
