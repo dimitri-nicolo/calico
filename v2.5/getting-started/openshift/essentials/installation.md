@@ -32,7 +32,7 @@ etcd
 os_sdn_network_plugin_name=cni
 openshift_use_calico=true
 openshift_use_openshift_sdn=false
-calico_node_image=calico/node:v2.4.1-e1.0.3
+calico_node_image=calico/node:{{site.data.versions[page.version].first.title}}
 calico_ipv4pool_cidr=10.128.0.0/14
 calico_etcd_endpoints=http://calico-etcd:2379
 calico_etcd_ca_cert_file=/etc/calico/etcd-ca.crt

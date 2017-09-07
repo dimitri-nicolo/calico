@@ -44,6 +44,16 @@ $ kubectl apply -f monitor-calico.yaml
 
 ### Customizing the manifests
 
+#### Configure calico/node image repository
+
+In the [calico-essentials.yaml](1.6/calico-essentials.yaml) file, make sure
+that the `image` field of the `calico-node` container contains the correct
+repository.
+
+For example if you set up the docker registry to be accessible at
+`myregistrydomain.com:5000` then make sure that the `image:` field points
+to `myregistrydomain.com:5000/calico-node:{{site.data.versions[page.version].first.title}}`
+
 #### Configure calico/node settings
 
 In the [calico-essentials.yaml](1.6/calico-essentials.yaml) file, make sure
