@@ -14,8 +14,9 @@ To install Tigera Essentials Toolkit, run the following commands.
 kubectl apply -f calico-etcd.yaml
 ```
 
-- Make any changes to configurations to the [calico-essentials.yaml](1.6/calico-essentials.yaml)
-  file and then install/configure calico.
+- Edit [calico-essentials.yaml](1.6/calico-essentials.yaml) file by following
+  [these instructions](#customizing-the-manifests) and then run the command below
+  to install/configure calico.
 
 ```
 kubectl apply -f calico-essentials.yaml
@@ -240,7 +241,7 @@ kubectl apply -f monitor-calico.yaml
 
 The Calico install manifests are based on [Kubeadm hosted install](../kubeadm),
 however, you can adapt any hosted install manifest by making changes described
-in the [modifying your manifest to install essentials](adapt)
+in the [modifying your manifest to install essentials](#modifying-an-existing-manifest-to-install-essentials)
 
 The additional things the [calico-essentials.yaml](1.6/calico-essentials.yaml) does
 are:
