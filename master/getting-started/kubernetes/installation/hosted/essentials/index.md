@@ -4,9 +4,9 @@ title: Tigera Essentials Toolkit Hosted Install
 
 To install Tigera Essentials Toolkit, run the following commands.
 
-<div class="alert alert-info" role="alert">
-  <b>Note</b>: These instructions do not apply to OpenShift users. Instead, see <a href="{{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation">Installing Essentials for OpenShift</a>.
-</div>
+> **Note**: These instructions do not apply to OpenShift users. Instead, see 
+> [Installing Essentials for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
+{: .alert .alert-info}
 
 - Setup etcd: [calico-etcd.yaml](1.6/calico-etcd.yaml)
 
