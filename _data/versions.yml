@@ -1,4 +1,60 @@
 v2.5:
+- title: v2.5.1-e1.1.1-rc1
+  note: |
+    6 September 2017
+
+    Calico v2.5.1 with Tigera Essentials Toolkit v1.1.1
+
+    ### Changes / New Features from Essentials Toolkit v1.1.0.
+    - Move to Calico v2.5.1.
+
+    <div class="alert alert-danger" role="alert"><b>Important</b>: If you are using the Kubernetes datastore and upgrading from Calico v2.4.x or earlier to Calico v2.5.x or later, you must <a href="https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md">migrate your Calico configuration data</a> before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.</div>
+
+
+  components:
+    tigera-essentials-toolkit:
+      version: v1.1.1-rc1
+      url: ""
+    calicoq:
+      version: v1.1.0
+      url: ""
+    felix:
+      version: 2.5.1-e1.1.1-rc1
+      url: https://github.com/projectcalico/felix/releases/tag/2.5.1
+    typha:
+      version: v0.4.1
+      url: https://github.com/projectcalico/typha/releases/tag/v0.4.1
+    calicoctl:
+      version: v1.5.0-e1.1.0
+      url: https://github.com/projectcalico/calicoctl/releases/tag/v1.5.0
+      download_url: https://github.com/projectcalico/calicoctl/releases/download/v1.5.0/calicoctl
+    calico/node:
+      version: v2.5.1-e1.1.1-rc1
+      url: https://github.com/projectcalico/calico/releases/tag/v2.5.1
+    calico/cni:
+      version: v1.10.0
+      url: https://github.com/projectcalico/cni-plugin/releases/tag/v1.10.0
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v1.10.0/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v1.10.0/calico-ipam
+    calico-bird:
+      version: v0.3.1
+      url: https://github.com/projectcalico/calico-bird/releases/tag/v0.3.1
+    calico-bgp-daemon:
+      version: v0.2.1
+      url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
+    libnetwork-plugin:
+      version: v1.1.0
+      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
+    calico/kube-policy-controller:
+      version: v0.7.0
+      url: https://github.com/projectcalico/k8s-policy/releases/tag/v0.7.0
+    networking-calico:
+      version: 1.4.2
+      url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.2
+    calico/routereflector:
+      version: v0.4.0
+      url: ""
+
 - title: v2.5.0-e1.1.0
   note: |
     2 September 2017
@@ -16,10 +72,8 @@ v2.5:
        - Prometheus - v1.7.1
        - Alertmanager - v0.7.1
 
-    ### Attention Kubernetes datastore backend users
-    If you're upgrading from Calico v2.4.x or older to v2.5.x or higher with Kubernetes datastore backend,
-    please perform the following one-time configuration migration task to upgrade the cluster: [https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md](https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md)
-
+    <div class="alert alert-danger" role="alert"><b>Important</b>: If you are using the Kubernetes datastore and upgrading from Calico v2.4.x or earlier to Calico v2.5.x or later, you must <a href="https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md">migrate your Calico configuration data</a> before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.</div>
+    
 
   components:
     tigera-essentials-toolkit:
@@ -74,9 +128,7 @@ v2.5:
     ### Changes / New Features from Essentials Toolkit v1.0.3.
     - Move to Calico v2.5.0.
 
-    ### Attention Kubernetes datastore backend users
-    If you're upgrading from Calico v2.4.x or older to v2.5.x or higher with Kubernetes datastore backend,
-    please perform the following one-time configuration migration task to upgrade the cluster: [https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md](https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md)
+    <div class="alert alert-danger" role="alert"><b>Important</b>: If you are using the Kubernetes datastore and upgrading from Calico v2.4.x or earlier to Calico v2.5.x or later, you must <a href="https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md">migrate your Calico configuration data</a> before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.</div>
 
 
   components:
@@ -132,9 +184,7 @@ v2.5:
     ### Changes / New Features from Essentials Toolkit v1.0.3.
     - Move to Calico v2.5.0.
 
-    ### Attention Kubernetes datastore backend users
-    If you're upgrading from Calico v2.4.x or older to v2.5.x or higher with Kubernetes datastore backend,
-    please perform the following one-time configuration migration task to upgrade the cluster: [https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md](https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md) 
+    <div class="alert alert-danger" role="alert"><b>Important</b>: If you are using the Kubernetes datastore and upgrading from Calico v2.4.x or earlier to Calico v2.5.x or later, you must <a href="https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md">migrate your Calico configuration data</a> before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.</div>
 
 
   components:
@@ -190,9 +240,7 @@ v2.5:
     ### Changes / New Features from Essentials Toolkit v1.0.3.
     - Move to Calico v2.5.0.
 
-    ### Attention Kubernetes datastore backend users
-    If you're upgrading from Calico v2.4.x or older to v2.5.x or higher with Kubernetes datastore backend,
-    please perform the following one-time configuration migration task to upgrade the cluster: [https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md](https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md) 
+    <div class="alert alert-danger" role="alert"><b>Important</b>: If you are using the Kubernetes datastore and upgrading from Calico v2.4.x or earlier to Calico v2.5.x or later, you must <a href="https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md">migrate your Calico configuration data</a> before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.</div>
 
 
   components:
