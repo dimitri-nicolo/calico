@@ -143,7 +143,7 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 	return r.Store.List(ctx, options)
 }
 
-func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
+func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, includeUninitialized bool) (runtime.Object, error) {
 	policy := obj.(*calico.Policy)
 	// Is Tier prepended. If not prepend default?
 	tierName, _ := getTierPolicy(policy.Name)

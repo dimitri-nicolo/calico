@@ -62,7 +62,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter, policyStore rest.Storage) *RE
 	return &REST{store, legacyStore, policyStore}
 }
 
-func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
+func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, includeUninitialized bool) (runtime.Object, error) {
 	err := r.legacyStore.create(obj)
 	if err != nil {
 		return nil, err
