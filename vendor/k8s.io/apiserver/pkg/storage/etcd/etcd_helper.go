@@ -30,12 +30,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilcache "k8s.io/apimachinery/pkg/util/cache"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/etcd/metrics"
 	etcdutil "k8s.io/apiserver/pkg/storage/etcd/util"
-	utilcache "k8s.io/apiserver/pkg/util/cache"
 	utiltrace "k8s.io/apiserver/pkg/util/trace"
 )
 
@@ -246,7 +246,6 @@ func (h *etcdHelper) Watch(ctx context.Context, key string, resourceVersion stri
 
 // Implements storage.Interface.
 func (h *etcdHelper) WatchList(ctx context.Context, key string, resourceVersion string, pred storage.SelectionPredicate) (watch.Interface, error) {
-	fmt.Printf("Inside etcdHelper (Etcd2) WatchList: %v, %v\n\n", key, resourceVersion)
 	if ctx == nil {
 		glog.Errorf("Context is nil")
 	}
@@ -255,7 +254,6 @@ func (h *etcdHelper) WatchList(ctx context.Context, key string, resourceVersion 
 		return nil, err
 	}
 	key = path.Join(h.pathPrefix, key)
-	fmt.Printf("In WatchList() prefix was: %v key: %v , watchRV: %v\n\n", h.pathPrefix, key, watchRV)
 	w := newEtcdWatcher(true, h.quorum, exceptKey(key), storage.SimpleFilter(pred), h.codec, h.versioner, nil, h.transformer, h)
 	go w.etcdWatch(ctx, h.etcdKeysAPI, key, watchRV)
 	return w, nil
@@ -432,7 +430,6 @@ func (h *etcdHelper) List(ctx context.Context, key string, resourceVersion strin
 		return err
 	}
 	key = path.Join(h.pathPrefix, key)
-	fmt.Printf("etcdHelper Eventual List Key: %v\n\n", key)
 	startTime := time.Now()
 	trace.Step("About to list etcd node")
 	nodes, index, err := h.listEtcdNode(ctx, key)

@@ -19,7 +19,6 @@ limitations under the License.
 package v1
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	v1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +61,7 @@ func (s *nodeLister) Get(name string) (*v1.Node, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(calico.Resource("node"), name)
+		return nil, errors.NewNotFound(v1.Resource("node"), name)
 	}
 	return obj.(*v1.Node), nil
 }

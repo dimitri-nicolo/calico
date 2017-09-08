@@ -33,6 +33,8 @@ type FakeNodes struct {
 
 var nodesResource = schema.GroupVersionResource{Group: "calico.tigera.io", Version: "", Resource: "nodes"}
 
+var nodesKind = schema.GroupVersionKind{Group: "calico.tigera.io", Version: "", Kind: "Node"}
+
 func (c *FakeNodes) Create(node *calico.Node) (result *calico.Node, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(nodesResource, node), &calico.Node{})
@@ -75,7 +77,7 @@ func (c *FakeNodes) Get(name string, options v1.GetOptions) (result *calico.Node
 
 func (c *FakeNodes) List(opts v1.ListOptions) (result *calico.NodeList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(nodesResource, opts), &calico.NodeList{})
+		Invokes(testing.NewRootListAction(nodesResource, nodesKind, opts), &calico.NodeList{})
 	if obj == nil {
 		return nil, err
 	}

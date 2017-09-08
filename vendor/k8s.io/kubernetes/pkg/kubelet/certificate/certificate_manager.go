@@ -46,17 +46,23 @@ const (
 // manager. In the background it communicates with the API server to get new
 // certificates for certificates about to expire.
 type Manager interface {
+	// CertificateSigningRequestClient sets the client interface that is used for
+	// signing new certificates generated as part of rotation.
+	SetCertificateSigningRequestClient(certificatesclient.CertificateSigningRequestInterface) error
 	// Start the API server status sync loop.
 	Start()
 	// Current returns the currently selected certificate from the
-	// certificate manager.
+	// certificate manager, as well as the associated certificate and key data
+	// in PEM format.
 	Current() *tls.Certificate
 }
 
 // Config is the set of configuration parameters available for a new Manager.
 type Config struct {
 	// CertificateSigningRequestClient will be used for signing new certificate
-	// requests generated when a key rotation occurs.
+	// requests generated when a key rotation occurs. It must be set either at
+	// initialization or by using CertificateSigningRequestClient before
+	// Manager.Start() is called.
 	CertificateSigningRequestClient certificatesclient.CertificateSigningRequestInterface
 	// Template is the CertificateRequest that will be used as a template for
 	// generating certificate signing requests for all new keys generated as
@@ -72,12 +78,14 @@ type Config struct {
 	CertificateStore Store
 	// BootstrapCertificatePEM is the certificate data that will be returned
 	// from the Manager if the CertificateStore doesn't have any cert/key pairs
-	// currently available. If the CertificateStore does have a cert/key pair,
-	// this will be ignored. If the bootstrap cert/key pair are used, they will
-	// be rotated at the first opportunity, possibly well in advance of
-	// expiring. This is intended to allow the first boot of a component to be
-	// initialized using a generic, multi-use cert/key pair which will be
-	// quickly replaced with a unique cert/key pair.
+	// currently available and has not yet had a chance to get a new cert/key
+	// pair from the API. If the CertificateStore does have a cert/key pair,
+	// this will be ignored. If there is no cert/key pair available in the
+	// CertificateStore, as soon as Start is called, it will request a new
+	// cert/key pair from the CertificateSigningRequestClient. This is intended
+	// to allow the first boot of a component to be initialized using a
+	// generic, multi-use cert/key pair which will be quickly replaced with a
+	// unique cert/key pair.
 	BootstrapCertificatePEM []byte
 	// BootstrapKeyPEM is the key data that will be returned from the Manager
 	// if the CertificateStore doesn't have any cert/key pairs currently
@@ -94,7 +102,8 @@ type Config struct {
 // Depending on the concrete implementation, the backing store for this
 // behavior may vary.
 type Store interface {
-	// Current returns the currently selected certificate. If the Store doesn't
+	// Current returns the currently selected certificate, as well as the
+	// associated certificate and key data in PEM format. If the Store doesn't
 	// have a cert/key pair currently, it should return a NoCertKeyError so
 	// that the Manager can recover by using bootstrap certificates to request
 	// a new cert/key pair.
@@ -117,6 +126,7 @@ type manager struct {
 	certStore                Store
 	certAccessLock           sync.RWMutex
 	cert                     *tls.Certificate
+	rotationDeadline         time.Time
 	forceRotation            bool
 }
 
@@ -144,12 +154,28 @@ func NewManager(config *Config) (Manager, error) {
 	return &m, nil
 }
 
-// Current returns the currently selected certificate from the
-// certificate manager.
+// Current returns the currently selected certificate from the certificate
+// manager. This can be nil if the manager was initialized without a
+// certificate and has not yet received one from the
+// CertificateSigningRequestClient.
 func (m *manager) Current() *tls.Certificate {
 	m.certAccessLock.RLock()
 	defer m.certAccessLock.RUnlock()
 	return m.cert
+}
+
+// SetCertificateSigningRequestClient sets the client interface that is used
+// for signing new certificates generated as part of rotation. It must be
+// called before Start() and can not be used to change the
+// CertificateSigningRequestClient that has already been set. This method is to
+// support the one specific scenario where the CertificateSigningRequestClient
+// uses the CertificateManager.
+func (m *manager) SetCertificateSigningRequestClient(certSigningRequestClient certificatesclient.CertificateSigningRequestInterface) error {
+	if m.certSigningRequestClient == nil {
+		m.certSigningRequestClient = certSigningRequestClient
+		return nil
+	}
+	return fmt.Errorf("CertificateSigningRequestClient is already set.")
 }
 
 // Start will start the background work of rotating the certificates.
@@ -164,12 +190,29 @@ func (m *manager) Start() {
 	}
 
 	glog.V(2).Infof("Certificate rotation is enabled.")
+
+	m.setRotationDeadline()
+
+	// Synchronously request a certificate before entering the background
+	// loop to allow bootstrap scenarios, where the certificate manager
+	// doesn't have a certificate at all yet.
+	if m.shouldRotate() {
+		_, err := m.rotateCerts()
+		if err != nil {
+			glog.Errorf("Could not rotate certificates: %v", err)
+		}
+	}
+	backoff := wait.Backoff{
+		Duration: 2 * time.Second,
+		Factor:   2,
+		Jitter:   0.1,
+		Steps:    7,
+	}
 	go wait.Forever(func() {
-		for range time.Tick(syncPeriod) {
-			err := m.rotateCerts()
-			if err != nil {
-				glog.Errorf("Could not rotate certificates: %v", err)
-			}
+		time.Sleep(m.rotationDeadline.Sub(time.Now()))
+		if err := wait.ExponentialBackoff(backoff, m.rotateCerts); err != nil {
+			glog.Errorf("Reached backoff limit, still unable to rotate certs: %v", err)
+			wait.PollInfinite(128*time.Second, m.rotateCerts)
 		}
 	}, 0)
 }
@@ -189,7 +232,7 @@ func getCurrentCertificateOrBootstrap(
 	}
 
 	if bootstrapCertificatePEM == nil || bootstrapKeyPEM == nil {
-		return nil, false, fmt.Errorf("no cert/key available and no bootstrap cert/key to fall back to")
+		return nil, true, nil
 	}
 
 	bootstrapCert, err := tls.X509KeyPair(bootstrapCertificatePEM, bootstrapKeyPEM)
@@ -213,6 +256,53 @@ func getCurrentCertificateOrBootstrap(
 func (m *manager) shouldRotate() bool {
 	m.certAccessLock.RLock()
 	defer m.certAccessLock.RUnlock()
+	if m.cert == nil {
+		return true
+	}
+	if m.forceRotation {
+		return true
+	}
+	return time.Now().After(m.rotationDeadline)
+}
+
+func (m *manager) rotateCerts() (bool, error) {
+	csrPEM, keyPEM, err := m.generateCSR()
+	if err != nil {
+		glog.Errorf("Unable to generate a certificate signing request: %v", err)
+		return false, nil
+	}
+
+	// Call the Certificate Signing Request API to get a certificate for the
+	// new private key.
+	crtPEM, err := requestCertificate(m.certSigningRequestClient, csrPEM, m.usages)
+	if err != nil {
+		glog.Errorf("Failed while requesting a signed certificate from the master: %v", err)
+		return false, nil
+	}
+
+	cert, err := m.certStore.Update(crtPEM, keyPEM)
+	if err != nil {
+		glog.Errorf("Unable to store the new cert/key pair: %v", err)
+		return false, nil
+	}
+
+	m.updateCached(cert)
+	m.setRotationDeadline()
+	m.forceRotation = false
+	return true, nil
+}
+
+// setRotationDeadline sets a cached value for the threshold at which the
+// current certificate should be rotated, 80%+/-10% of the expiration of the
+// certificate.
+func (m *manager) setRotationDeadline() {
+	m.certAccessLock.RLock()
+	defer m.certAccessLock.RUnlock()
+	if m.cert == nil {
+		m.rotationDeadline = time.Now()
+		return
+	}
+
 	notAfter := m.cert.Leaf.NotAfter
 	totalDuration := float64(notAfter.Sub(m.cert.Leaf.NotBefore))
 
@@ -223,36 +313,7 @@ func (m *manager) shouldRotate() bool {
 	// certificates at the same time for the rest of the life of the cluster.
 	jitteryDuration := wait.Jitter(time.Duration(totalDuration), 0.2) - time.Duration(totalDuration*0.3)
 
-	rotationThreshold := m.cert.Leaf.NotBefore.Add(jitteryDuration)
-	passedThreshold := time.Now().After(rotationThreshold)
-	return m.forceRotation || passedThreshold
-}
-
-func (m *manager) rotateCerts() error {
-	if !m.shouldRotate() {
-		return nil
-	}
-
-	csrPEM, keyPEM, err := m.generateCSR()
-	if err != nil {
-		return err
-	}
-
-	// Call the Certificate Signing Request API to get a certificate for the
-	// new private key.
-	crtPEM, err := requestCertificate(m.certSigningRequestClient, csrPEM, m.usages)
-	if err != nil {
-		return fmt.Errorf("unable to get a new key signed: %v", err)
-	}
-
-	cert, err := m.certStore.Update(crtPEM, keyPEM)
-	if err != nil {
-		return fmt.Errorf("unable to store the new cert/key pair: %v", err)
-	}
-
-	m.updateCached(cert)
-	m.forceRotation = false
-	return nil
+	m.rotationDeadline = m.cert.Leaf.NotBefore.Add(jitteryDuration)
 }
 
 func (m *manager) updateCached(cert *tls.Certificate) {
@@ -291,6 +352,7 @@ func (m *manager) generateCSR() (csrPEM []byte, keyPEM []byte, err error) {
 // k8s.io/kubernetes/pkg/kubelet/util/csr/csr.go, changing only the package that
 // CertificateSigningRequestInterface and KeyUsage are imported from.
 func requestCertificate(client certificatesclient.CertificateSigningRequestInterface, csrData []byte, usages []certificates.KeyUsage) (certData []byte, err error) {
+	glog.Infof("Requesting new certificate.")
 	req, err := client.Create(&certificates.CertificateSigningRequest{
 		// Username, UID, Groups will be injected by API server.
 		TypeMeta:   metav1.TypeMeta{Kind: "CertificateSigningRequest"},

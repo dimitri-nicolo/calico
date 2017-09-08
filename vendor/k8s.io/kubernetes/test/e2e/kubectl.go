@@ -51,7 +51,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
-	"k8s.io/kubernetes/pkg/api/annotations"
 	"k8s.io/kubernetes/pkg/api/v1"
 	rbacv1beta1 "k8s.io/kubernetes/pkg/apis/rbac/v1beta1"
 	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
@@ -191,43 +190,6 @@ var _ = framework.KubeDescribe("Kubectl alpha client", func() {
 	})
 
 	// Customized Wait  / ForEach wrapper for this test.  These demonstrate the
-
-	framework.KubeDescribe("Kubectl run ScheduledJob", func() {
-		var nsFlag string
-		var sjName string
-
-		BeforeEach(func() {
-			nsFlag = fmt.Sprintf("--namespace=%v", ns)
-			sjName = "e2e-test-echo-scheduledjob"
-		})
-
-		AfterEach(func() {
-			framework.RunKubectlOrDie("delete", "cronjobs", sjName, nsFlag)
-		})
-
-		It("should create a ScheduledJob", func() {
-			framework.SkipIfMissingResource(f.ClientPool, ScheduledJobGroupVersionResource, f.Namespace.Name)
-
-			schedule := "*/5 * * * ?"
-			framework.RunKubectlOrDie("run", sjName, "--restart=OnFailure", "--generator=scheduledjob/v2alpha1",
-				"--schedule="+schedule, "--image="+busyboxImage, nsFlag)
-			By("verifying the ScheduledJob " + sjName + " was created")
-			sj, err := c.BatchV2alpha1().CronJobs(ns).Get(sjName, metav1.GetOptions{})
-			if err != nil {
-				framework.Failf("Failed getting ScheduledJob %s: %v", sjName, err)
-			}
-			if sj.Spec.Schedule != schedule {
-				framework.Failf("Failed creating a ScheduledJob with correct schedule %s", schedule)
-			}
-			containers := sj.Spec.JobTemplate.Spec.Template.Spec.Containers
-			if containers == nil || len(containers) != 1 || containers[0].Image != busyboxImage {
-				framework.Failf("Failed creating ScheduledJob %s for 1 pod with expected image %s: %#v", sjName, busyboxImage, containers)
-			}
-			if sj.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy != v1.RestartPolicyOnFailure {
-				framework.Failf("Failed creating a ScheduledJob with correct restart policy for --restart=OnFailure")
-			}
-		})
-	})
 
 	framework.KubeDescribe("Kubectl run CronJob", func() {
 		var nsFlag string
@@ -636,13 +598,42 @@ users:
     tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
 `), os.FileMode(0755)))
 			framework.Logf("copying override kubeconfig to the %s pod", simplePodName)
-			framework.RunKubectlOrDie("cp", filepath.Join(tmpDir, overrideKubeconfigName), ns+"/"+simplePodName+":/tmp/"+overrideKubeconfigName)
+			framework.RunKubectlOrDie("cp", filepath.Join(tmpDir, overrideKubeconfigName), ns+"/"+simplePodName+":/tmp/")
+
+			framework.ExpectNoError(ioutil.WriteFile(filepath.Join(tmpDir, "invalid-configmap-with-namespace.yaml"), []byte(`
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: "configmap with namespace and invalid name"
+  namespace: configmap-namespace
+`), os.FileMode(0755)))
+			framework.ExpectNoError(ioutil.WriteFile(filepath.Join(tmpDir, "invalid-configmap-without-namespace.yaml"), []byte(`
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: "configmap without namespace and invalid name"
+`), os.FileMode(0755)))
+			framework.Logf("copying configmap manifests to the %s pod", simplePodName)
+			framework.RunKubectlOrDie("cp", filepath.Join(tmpDir, "invalid-configmap-with-namespace.yaml"), ns+"/"+simplePodName+":/tmp/")
+			framework.RunKubectlOrDie("cp", filepath.Join(tmpDir, "invalid-configmap-without-namespace.yaml"), ns+"/"+simplePodName+":/tmp/")
 
 			By("getting pods with in-cluster configs")
 			execOutput := framework.RunHostCmdOrDie(ns, simplePodName, "/tmp/kubectl get pods --v=7 2>&1")
 			Expect(execOutput).To(MatchRegexp("nginx +1/1 +Running"))
 			Expect(execOutput).To(ContainSubstring("Using in-cluster namespace"))
 			Expect(execOutput).To(ContainSubstring("Using in-cluster configuration"))
+
+			By("creating an object containing a namespace with in-cluster config")
+			_, err = framework.RunHostCmd(ns, simplePodName, "/tmp/kubectl create -f /tmp/invalid-configmap-with-namespace.yaml --v=7 2>&1")
+			Expect(err).To(ContainSubstring("Using in-cluster namespace"))
+			Expect(err).To(ContainSubstring("Using in-cluster configuration"))
+			Expect(err).To(ContainSubstring(fmt.Sprintf("POST https://%s:%s/api/v1/namespaces/configmap-namespace/configmaps", inClusterHost, inClusterPort)))
+
+			By("creating an object not containing a namespace with in-cluster config")
+			_, err = framework.RunHostCmd(ns, simplePodName, "/tmp/kubectl create -f /tmp/invalid-configmap-without-namespace.yaml --v=7 2>&1")
+			Expect(err).To(ContainSubstring("Using in-cluster namespace"))
+			Expect(err).To(ContainSubstring("Using in-cluster configuration"))
+			Expect(err).To(ContainSubstring(fmt.Sprintf("POST https://%s:%s/api/v1/namespaces/%s/configmaps", inClusterHost, inClusterPort, f.Namespace.Name)))
 
 			By("trying to use kubectl with invalid token")
 			_, err = framework.RunHostCmd(ns, simplePodName, "/tmp/kubectl get pods --token=invalid --v=7 2>&1")
@@ -929,7 +920,7 @@ users:
 						return false, nil
 					}
 					if len(uidToPort) > 1 {
-						Fail("Too many endpoints found")
+						framework.Failf("Too many endpoints found")
 					}
 					for _, port := range uidToPort {
 						if port[0] != redisPort {
@@ -1892,7 +1883,7 @@ func forEachReplicationController(c clientset.Interface, ns, selectorKey, select
 
 func validateReplicationControllerConfiguration(rc v1.ReplicationController) {
 	if rc.Name == "redis-master" {
-		if _, ok := rc.Annotations[annotations.LastAppliedConfigAnnotation]; !ok {
+		if _, ok := rc.Annotations[v1.LastAppliedConfigAnnotation]; !ok {
 			framework.Failf("Annotation not found in modified configuration:\n%v\n", rc)
 		}
 
@@ -1984,6 +1975,7 @@ func newStreamingUpload(filePath string) (*io.PipeReader, *multipart.Writer, err
 	if err != nil {
 		return nil, nil, err
 	}
+	defer file.Close()
 
 	r, w := io.Pipe()
 

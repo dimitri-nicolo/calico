@@ -22,6 +22,10 @@ import (
 	"k8s.io/client-go/pkg/version"
 )
 
+const (
+	apiServerName = "calico-apiserver"
+)
+
 func completeGenericConfig(cfg *genericapiserver.Config) {
 	cfg.Serializer = api.Codecs
 	cfg.Complete()
@@ -39,7 +43,7 @@ func createSkeletonServer(genericCfg *genericapiserver.Config) (*CalicoAPIServer
 	// only way to get here from there is by Complete()'ing. Thus
 	// we skip the complete on the underlying config and go
 	// straight to running it's New() method.
-	genericServer, err := genericCfg.SkipComplete().New()
+	genericServer, err := genericCfg.SkipComplete().New(apiServerName, genericapiserver.EmptyDelegate)
 	if err != nil {
 		return nil, err
 	}

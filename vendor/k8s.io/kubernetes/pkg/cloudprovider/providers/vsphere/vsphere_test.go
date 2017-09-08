@@ -33,6 +33,7 @@ func configFromEnv() (cfg VSphereConfig, ok bool) {
 	var InsecureFlag bool
 	var err error
 	cfg.Global.VCenterIP = os.Getenv("VSPHERE_VCENTER")
+	cfg.Global.VCenterPort = os.Getenv("VSPHERE_VCENTER_PORT")
 	cfg.Global.User = os.Getenv("VSPHERE_USER")
 	cfg.Global.Password = os.Getenv("VSPHERE_PASSWORD")
 	cfg.Global.Datacenter = os.Getenv("VSPHERE_DATACENTER")
@@ -232,7 +233,7 @@ func TestVolumes(t *testing.T) {
 		t.Fatalf("Cannot create a new VMDK volume: %v", err)
 	}
 
-	_, _, err = vs.AttachDisk(volPath, "")
+	_, _, err = vs.AttachDisk(volPath, "", "")
 	if err != nil {
 		t.Fatalf("Cannot attach volume(%s) to VM(%s): %v", volPath, nodeName, err)
 	}

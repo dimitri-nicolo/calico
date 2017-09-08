@@ -31,7 +31,7 @@ type NodeListerExpansion interface{}
 type PolicyListerExpansion interface{}
 
 // PolicyNamespaceListerExpansion allows custom methods to be added to
-// PolicyNamespaeLister.
+// PolicyNamespaceLister.
 type PolicyNamespaceListerExpansion interface{}
 
 // TierListerExpansion allows custom methods to be added to

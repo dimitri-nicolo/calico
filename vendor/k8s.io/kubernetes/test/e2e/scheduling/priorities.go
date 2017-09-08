@@ -84,63 +84,6 @@ var _ = framework.KubeDescribe("SchedulerPriorities [Serial]", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("Pods should be scheduled to low resource use rate node", func() {
-		//Make sure all the schedulable nodes are balanced (have the same cpu/mem usage ratio)
-		By("Create pods on each node except the last one to raise cpu and memory usage to the same high level")
-		var expectedNodeName string
-		expectedNodeName = nodeList.Items[len(nodeList.Items)-1].Name
-		nodes := nodeList.Items[:len(nodeList.Items)-1]
-		// make the nodes except last have cpu,mem usage to 90%
-		createBalancedPodForNodes(f, cs, ns, nodes, podRequestedResource, 0.9)
-		By("Create a pod,pod should schedule to the least requested nodes")
-		createPausePod(f, pausePodConfig{
-			Name:      "priority-least-requested",
-			Labels:    map[string]string{"name": "priority-least-requested"},
-			Resources: podRequestedResource,
-		})
-		By("Wait for all the pods are running")
-		err := f.WaitForPodRunning("priority-least-requested")
-		framework.ExpectNoError(err)
-		By("Verify the pod is scheduled to the expected node")
-		testPod, err := cs.CoreV1().Pods(ns).Get("priority-least-requested", metav1.GetOptions{})
-		framework.ExpectNoError(err)
-		Expect(testPod.Spec.NodeName).Should(Equal(expectedNodeName))
-	})
-
-	It("Pods created by ReplicationController should spread to different node", func() {
-		By("Create a pod for each node to make the nodes have almost same cpu/mem usage ratio")
-
-		createBalancedPodForNodes(f, cs, ns, nodeList.Items, podRequestedResource, 0.6)
-
-		By("Create an RC with the same number of replicas as the schedualble nodes. One pod should be scheduled on each node.")
-		rc := createRC(ns, "scheduler-priority-selector-spreading", int32(len(nodeList.Items)), map[string]string{"name": "scheduler-priority-selector-spreading"}, f, podRequestedResource)
-		// Cleanup the replication controller when we are done.
-		defer func() {
-			// Resize the replication controller to zero to get rid of pods.
-			if err := framework.DeleteRCAndPods(f.ClientSet, f.InternalClientset, f.Namespace.Name, rc.Name); err != nil {
-				framework.Logf("Failed to cleanup replication controller %v: %v.", rc.Name, err)
-			}
-		}()
-		pods, err := framework.PodsCreated(f.ClientSet, f.Namespace.Name, "scheduler-priority-selector-spreading", int32(len(nodeList.Items)))
-		Expect(err).NotTo(HaveOccurred())
-		By("Ensuring each pod is running")
-
-		result := map[string]bool{}
-		for _, pod := range pods.Items {
-			if pod.DeletionTimestamp != nil {
-				continue
-			}
-			err = f.WaitForPodRunning(pod.Name)
-			Expect(err).NotTo(HaveOccurred())
-			result[pod.Spec.NodeName] = true
-			framework.PrintAllKubeletPods(cs, pod.Spec.NodeName)
-		}
-		By("Verify the pods were scheduled to each node")
-		if len(nodeList.Items) != len(result) {
-			framework.Failf("Pods are not spread to each node")
-		}
-	})
-
 	It("Pod should be prefer scheduled to node that satisify the NodeAffinity", func() {
 		nodeName := GetNodeThatCanRunPod(f)
 		By("Trying to apply a label on the found node.")
@@ -276,7 +219,7 @@ var _ = framework.KubeDescribe("SchedulerPriorities [Serial]", func() {
 								LabelSelector: &metav1.LabelSelector{
 									MatchExpressions: []metav1.LabelSelectorRequirement{
 										{
-											Key:      "service",
+											Key:      "security",
 											Operator: metav1.LabelSelectorOpIn,
 											Values:   []string{"S1", "value2"},
 										},
@@ -465,6 +408,11 @@ func createBalancedPodForNodes(f *framework.Framework, cs clientset.Interface, n
 				NodeName: node.Name,
 			}), true, framework.Logf)
 	}
+	for _, node := range nodes {
+		By("Compute Cpu, Mem Fraction after create balanced pods.")
+		computeCpuMemFraction(cs, node, requestedResource)
+
+	}
 }
 
 func computeCpuMemFraction(cs clientset.Interface, node v1.Node, resource *v1.ResourceRequirements) (float64, float64) {
@@ -493,7 +441,7 @@ func computeCpuMemFraction(cs clientset.Interface, node v1.Node, resource *v1.Re
 	memFraction := float64(totalRequestedMemResource) / float64(memAllocatableVal)
 
 	framework.Logf("Node: %v, totalRequestedCpuResource: %v, cpuAllocatableMil: %v, cpuFraction: %v", node.Name, totalRequestedCpuResource, cpuAllocatableMil, cpuFraction)
-	framework.Logf("Node: %v, totalRequestedMemResource: %v, memAllocatableVal: %v, memFraction: %v", node.Name, memAllocatableVal, cpuAllocatableMil, memFraction)
+	framework.Logf("Node: %v, totalRequestedMemResource: %v, memAllocatableVal: %v, memFraction: %v", node.Name, totalRequestedMemResource, memAllocatableVal, memFraction)
 
 	return cpuFraction, memFraction
 }

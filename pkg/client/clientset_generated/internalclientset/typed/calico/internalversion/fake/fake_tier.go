@@ -33,6 +33,8 @@ type FakeTiers struct {
 
 var tiersResource = schema.GroupVersionResource{Group: "calico.tigera.io", Version: "", Resource: "tiers"}
 
+var tiersKind = schema.GroupVersionKind{Group: "calico.tigera.io", Version: "", Kind: "Tier"}
+
 func (c *FakeTiers) Create(tier *calico.Tier) (result *calico.Tier, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(tiersResource, tier), &calico.Tier{})
@@ -75,7 +77,7 @@ func (c *FakeTiers) Get(name string, options v1.GetOptions) (result *calico.Tier
 
 func (c *FakeTiers) List(opts v1.ListOptions) (result *calico.TierList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(tiersResource, opts), &calico.TierList{})
+		Invokes(testing.NewRootListAction(tiersResource, tiersKind, opts), &calico.TierList{})
 	if obj == nil {
 		return nil, err
 	}

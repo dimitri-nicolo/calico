@@ -75,12 +75,12 @@ func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old 
 	// return validation.ValidatePolicyUpdate(obj.(*calico.Policy), old.(*calico.Policy))
 }
 
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 	apiserver, ok := obj.(*calico.Policy)
 	if !ok {
-		return nil, nil, fmt.Errorf("given object is not a Policy.")
+		return nil, nil, false, fmt.Errorf("given object is not a Policy.")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), PolicyToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.ObjectMeta.Labels), PolicyToSelectableFields(apiserver), apiserver.Initializers != nil, nil
 }
 
 // MatchPolicy is the filter used by the generic etcd backend to watch events

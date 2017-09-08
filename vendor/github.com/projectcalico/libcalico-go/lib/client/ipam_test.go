@@ -115,7 +115,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV2, 
 		ic := setupIPAMClient(c, true)
 
 		host := "host-A"
-		pool1 := testutils.MustParseNetwork("10.0.0.0/24")
+		pool1 := cnet.MustParseNetwork("10.0.0.0/24")
 		var block cnet.IPNet
 
 		testutils.CreateNewIPPool(*c, "10.0.0.0/24", false, false, true)
@@ -173,7 +173,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV2, 
 		})
 
 		// Step-4: Create a new IP Pool.
-		pool2 := testutils.MustParseNetwork("20.0.0.0/24")
+		pool2 := cnet.MustParseNetwork("20.0.0.0/24")
 		testutils.CreateNewIPPool(*c, "20.0.0.0/24", false, false, true)
 
 		// Step-5: AutoAssign 1 IP without specifying a pool - expect the assigned IP is from pool2.
@@ -229,8 +229,8 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV2, 
 		ic := setupIPAMClient(c, true)
 
 		host := "host-A"
-		pool1 := testutils.MustParseNetwork("10.0.0.0/24")
-		pool2 := testutils.MustParseNetwork("20.0.0.0/24")
+		pool1 := cnet.MustParseNetwork("10.0.0.0/24")
+		pool2 := cnet.MustParseNetwork("20.0.0.0/24")
 		var block1, block2 cnet.IPNet
 
 		testutils.CreateNewIPPool(*c, "10.0.0.0/24", false, false, true)
@@ -328,13 +328,74 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV2, 
 		ic := setupIPAMClient(c, true)
 
 		host := "host-A"
-		pool1 := testutils.MustParseNetwork("10.0.0.0/24")
-		pool2 := testutils.MustParseNetwork("20.0.0.0/24")
+		pool1 := cnet.MustParseNetwork("10.0.0.0/24")
+		pool2 := cnet.MustParseNetwork("20.0.0.0/24")
+		pool3 := cnet.MustParseNetwork("30.0.0.0/24")
+		pool4_v6 := cnet.MustParseNetwork("fe80::11/120")
+		pool5_doesnot_exist := cnet.MustParseNetwork("40.0.0.0/24")
 
 		testutils.CreateNewIPPool(*c, "10.0.0.0/24", false, false, true)
 		testutils.CreateNewIPPool(*c, "20.0.0.0/24", false, false, true)
+		testutils.CreateNewIPPool(*c, "30.0.0.0/24", false, false, false)
+		testutils.CreateNewIPPool(*c, "fe80::11/120", false, false, true)
 
-		// Step-1: AutoAssign 300 IPs from 2 pools
+		// Step-1: Try to AutoAssign an IP from 2 pools  passed in IPv4Pools field with
+		// the second IP Pool in the list being an IPv6 IP Pool.
+		// Expect a non-nil error returned.
+		Context("AutoAssign 1 IP from 2 pools with the first IPPool disabled", func() {
+			args := client.AutoAssignArgs{
+				Num4:      1,
+				Num6:      0,
+				Hostname:  host,
+				IPv4Pools: []cnet.IPNet{pool1, pool4_v6},
+			}
+
+			_, _, outErr := ic.AutoAssign(args)
+
+			It("should have failed with a non-nil error", func() {
+				Expect(outErr).To(HaveOccurred())
+			})
+		})
+
+		// Step-2: Try to AutoAssign an IP from 2 pools  passed in IPv6Pools field with
+		// the second IP Pool in the list being an IPv4 IP Pool.
+		// Expect a non-nil error returned.
+		Context("AutoAssign 1 IP from 2 pools with the first IPPool disabled", func() {
+			args := client.AutoAssignArgs{
+				Num4:      0,
+				Num6:      1,
+				Hostname:  host,
+				IPv6Pools: []cnet.IPNet{pool4_v6, pool1},
+			}
+
+			_, _, outErr := ic.AutoAssign(args)
+
+			It("should have failed with a non-nil error", func() {
+				Expect(outErr).To(HaveOccurred())
+			})
+		})
+
+		// Step-3: AutoAssign an IP from 2 pools with the first IP Pool in the list disabled.
+		// Expect the returned IP is from the second IP Pool in the list.
+		Context("AutoAssign 1 IP from 2 pools with the first IPPool disabled", func() {
+			args := client.AutoAssignArgs{
+				Num4:      1,
+				Num6:      0,
+				Hostname:  host,
+				IPv4Pools: []cnet.IPNet{pool3, pool2},
+			}
+
+			v4, _, outErr := ic.AutoAssign(args)
+			log.Println("IPAM returned: %v", v4)
+
+			It("should not have failed, and the returned IP is from the second IPPool in the list", func() {
+				Expect(outErr).NotTo(HaveOccurred())
+				Expect(len(v4)).To(Equal(1))
+				Expect(pool2.Contains(v4[0].IP)).To(BeTrue())
+			})
+		})
+
+		// Step-4: AutoAssign 300 IPs from 2 pools
 		// Expect that the IPs are from both pools
 		Context("AutoAssign 300 IPs from 2 pools", func() {
 			args := client.AutoAssignArgs{
@@ -353,9 +414,9 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV2, 
 			})
 		})
 
-		// Step-2: AutoAssign 300 IPs from both pools again.
-		// This time we should run out of IPS
-		Context("AutoAssign 300 IPs from both pools - none left tho", func() {
+		// Step-5: AutoAssign 300 IPs from both pools again.
+		// This time we should run out of IPs, so we should only get the remaining 209 IPs
+		Context("AutoAssign 300 IPs from both pools - none left this time", func() {
 			args := client.AutoAssignArgs{
 				Num4:      300,
 				Num6:      0,
@@ -366,9 +427,28 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV2, 
 			v4, _, outErr := ic.AutoAssign(args)
 			log.Println("v4: %d IPs", len(v4))
 
-			It("should have failed with less than 300", func() {
-				Expect(len(v4)).NotTo(Equal(300))
+			It("should have returned the remaining 209 IPs", func() {
 				Expect(outErr).NotTo(HaveOccurred())
+				Expect(len(v4)).NotTo(Equal(209))
+			})
+		})
+
+		// Step-6: AutoAssign an IPv4 address. Request the IP from 2 IP Pools one of which doesn't exist.
+		// This should return an error.
+		Context("AutoAssign an IP from two pools - one valid one doesn't exist", func() {
+			args := client.AutoAssignArgs{
+				Num4:      1,
+				Num6:      0,
+				Hostname:  host,
+				IPv4Pools: []cnet.IPNet{pool1, pool5_doesnot_exist},
+			}
+
+			v4, _, err := ic.AutoAssign(args)
+			log.Println("v4: %d IPs", len(v4))
+
+			It("should return an error and no IPs", func() {
+				Expect(err.Error()).Should(Equal("The given pool (40.0.0.0/24) does not exist"))
+				Expect(len(v4)).To(Equal(0))
 			})
 		})
 	})
@@ -472,7 +552,7 @@ var _ = testutils.E2eDatastoreDescribe("IPAM tests", testutils.DatastoreEtcdV2, 
 
 	DescribeTable("ClaimAffinity: claim IPNet vs actual number of blocks claimed",
 		func(args testArgsClaimAff) {
-			inIPNet := testutils.MustParseNetwork(args.inNet)
+			inIPNet := cnet.MustParseNetwork(args.inNet)
 			c := testutils.CreateClient(config)
 
 			// Wipe clean etcd, create a new client, and pools when cleanEnv flag is true.
@@ -594,7 +674,7 @@ func testIPAMAssignIP(inIP net.IP, host string, poolSubnet []string, cleanEnv bo
 // testIPAMAutoAssign takes number of requested IPv4 and IPv6, and hostname, and setus up/cleans up client and etcd,
 // then it calls AutoAssign (function under test) and returns the number of returned IPv4 and IPv6 addresses and returned error.
 func testIPAMAutoAssign(inv4, inv6 int, host string, cleanEnv bool, poolSubnet []string, usePool string, config api.CalicoAPIConfig) (int, int, error) {
-	fromPool := testutils.MustParseNetwork(usePool)
+	fromPool := cnet.MustParseNetwork(usePool)
 	args := client.AutoAssignArgs{
 		Num4:      inv4,
 		Num6:      inv6,

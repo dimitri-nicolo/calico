@@ -213,7 +213,6 @@ func (w *etcdWatcher) etcdWatch(ctx context.Context, client etcd.KeysAPI, key st
 
 	for {
 		resp, err := watcher.Next(w.ctx)
-		fmt.Printf("Response received: %v\n\n", resp)
 		if err != nil {
 			w.etcdError <- err
 			return

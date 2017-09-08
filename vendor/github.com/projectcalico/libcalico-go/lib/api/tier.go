@@ -15,6 +15,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/projectcalico/libcalico-go/lib/api/unversioned"
 )
 
@@ -27,6 +29,16 @@ type Tier struct {
 	unversioned.TypeMetadata
 	Metadata TierMetadata `json:"metadata,omitempty"`
 	Spec     TierSpec     `json:"spec,omitempty"`
+}
+
+func (t Tier) GetResourceMetadata() unversioned.ResourceMetadata {
+	return t.Metadata
+}
+
+// String() returns the human-readable string representation of a Tier instance
+// which is defined by its Name.
+func (t Tier) String() string {
+	return fmt.Sprintf("Tier(Name=%s)", t.Metadata.Name)
 }
 
 // TierMetadata contains the metadata for a security policy Tier.

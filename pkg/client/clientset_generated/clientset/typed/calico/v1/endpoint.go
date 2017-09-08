@@ -72,7 +72,7 @@ func (c *endpoints) Update(endpoint *v1.Endpoint) (result *v1.Endpoint, err erro
 	result = &v1.Endpoint{}
 	err = c.client.Put().
 		Resource("endpoints").
-		Name(endpoint.ObjectMeta.Name).
+		Name(endpoint.Name).
 		Body(endpoint).
 		Do().
 		Into(result)

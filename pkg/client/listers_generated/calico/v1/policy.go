@@ -19,7 +19,6 @@ limitations under the License.
 package v1
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	v1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -89,7 +88,7 @@ func (s policyNamespaceLister) Get(name string) (*v1.Policy, error) {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(calico.Resource("policy"), name)
+		return nil, errors.NewNotFound(v1.Resource("policy"), name)
 	}
 	return obj.(*v1.Policy), nil
 }

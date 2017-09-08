@@ -23,10 +23,14 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/pkg/api/v1"
+	"k8s.io/kubernetes/pkg/controller"
 )
 
 // Interface is an abstract, pluggable interface for cloud providers.
 type Interface interface {
+	// Initialize provides the cloud with a kubernetes client builder and may spawn goroutines
+	// to perform housekeeping activities within the cloud provider.
+	Initialize(clientBuilder controller.ControllerClientBuilder)
 	// LoadBalancer returns a balancer interface. Also returns true if the interface is supported, false otherwise.
 	LoadBalancer() (LoadBalancer, bool)
 	// Instances returns an instances interface. Also returns true if the interface is supported, false otherwise.
@@ -64,6 +68,7 @@ func GetLoadBalancerName(service *v1.Service) string {
 	return ret
 }
 
+// GetInstanceProviderID builds a ProviderID for a node in a cloud.
 func GetInstanceProviderID(cloud Interface, nodeName types.NodeName) (string, error) {
 	instances, ok := cloud.Instances()
 	if !ok {
@@ -145,6 +150,9 @@ type Route struct {
 	// DestinationCIDR is the CIDR format IP range that this routing rule
 	// applies to.
 	DestinationCIDR string
+	// Blackhole is set to true if this is a blackhole route
+	// The node controller will delete the route if it is in the managed range.
+	Blackhole bool
 }
 
 // Routes is an abstract, pluggable interface for advanced routing rules.

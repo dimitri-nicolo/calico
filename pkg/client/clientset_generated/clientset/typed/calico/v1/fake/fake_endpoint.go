@@ -32,6 +32,8 @@ type FakeEndpoints struct {
 
 var endpointsResource = schema.GroupVersionResource{Group: "calico.tigera.io", Version: "v1", Resource: "endpoints"}
 
+var endpointsKind = schema.GroupVersionKind{Group: "calico.tigera.io", Version: "v1", Kind: "Endpoint"}
+
 func (c *FakeEndpoints) Create(endpoint *v1.Endpoint) (result *v1.Endpoint, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(endpointsResource, endpoint), &v1.Endpoint{})
@@ -74,7 +76,7 @@ func (c *FakeEndpoints) Get(name string, options meta_v1.GetOptions) (result *v1
 
 func (c *FakeEndpoints) List(opts meta_v1.ListOptions) (result *v1.EndpointList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(endpointsResource, opts), &v1.EndpointList{})
+		Invokes(testing.NewRootListAction(endpointsResource, endpointsKind, opts), &v1.EndpointList{})
 	if obj == nil {
 		return nil, err
 	}

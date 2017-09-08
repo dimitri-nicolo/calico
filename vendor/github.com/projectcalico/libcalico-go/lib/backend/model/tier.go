@@ -20,8 +20,8 @@ import (
 
 	"reflect"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/projectcalico/libcalico-go/lib/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 var (

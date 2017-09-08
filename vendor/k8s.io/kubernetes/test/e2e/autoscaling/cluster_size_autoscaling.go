@@ -52,7 +52,7 @@ const (
 	resizeTimeout         = 5 * time.Minute
 	scaleUpTimeout        = 5 * time.Minute
 	scaleUpTriggerTimeout = 2 * time.Minute
-	scaleDownTimeout      = 15 * time.Minute
+	scaleDownTimeout      = 20 * time.Minute
 	podTimeout            = 2 * time.Minute
 	nodesRecoverTimeout   = 5 * time.Minute
 
@@ -79,14 +79,6 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 		c = f.ClientSet
 		framework.SkipUnlessProviderIs("gce", "gke")
 
-		nodes := framework.GetReadySchedulableNodesOrDie(f.ClientSet)
-		nodeCount = len(nodes.Items)
-		Expect(nodeCount).NotTo(BeZero())
-		cpu := nodes.Items[0].Status.Capacity[v1.ResourceCPU]
-		mem := nodes.Items[0].Status.Capacity[v1.ResourceMemory]
-		coresPerNode = int((&cpu).MilliValue() / 1000)
-		memCapacityMb = int((&mem).Value() / 1024 / 1024)
-
 		originalSizes = make(map[string]int)
 		sum := 0
 		for _, mig := range strings.Split(framework.TestContext.CloudConfig.NodeInstanceGroup, ",") {
@@ -96,6 +88,17 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 			originalSizes[mig] = size
 			sum += size
 		}
+		// Give instances time to spin up
+		framework.ExpectNoError(framework.WaitForClusterSize(c, sum, scaleUpTimeout))
+
+		nodes := framework.GetReadySchedulableNodesOrDie(f.ClientSet)
+		nodeCount = len(nodes.Items)
+		Expect(nodeCount).NotTo(BeZero())
+		cpu := nodes.Items[0].Status.Capacity[v1.ResourceCPU]
+		mem := nodes.Items[0].Status.Capacity[v1.ResourceMemory]
+		coresPerNode = int((&cpu).MilliValue() / 1000)
+		memCapacityMb = int((&mem).Value() / 1024 / 1024)
+
 		Expect(nodeCount).Should(Equal(sum))
 
 		if framework.ProviderIs("gke") {
@@ -142,7 +145,7 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 			}
 		}
 		Expect(eventFound).Should(Equal(true))
-		// Verify, that cluster size is not changed.
+		// Verify that cluster size is not changed
 		framework.ExpectNoError(WaitForClusterSizeFunc(f.ClientSet,
 			func(size int) bool { return size <= nodeCount }, time.Second))
 	})
@@ -151,7 +154,7 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 		ReserveMemory(f, "memory-reservation", 100, nodeCount*memCapacityMb, false, 1*time.Second)
 		defer framework.DeleteRCAndPods(f.ClientSet, f.InternalClientset, f.Namespace.Name, "memory-reservation")
 
-		// Verify, that cluster size is increased
+		// Verify that cluster size is increased
 		framework.ExpectNoError(WaitForClusterSizeFuncWithUnready(f.ClientSet,
 			func(size int) bool { return size >= nodeCount+1 }, scaleUpTimeout, unready))
 		framework.ExpectNoError(waitForAllCaPodsReadyInNamespace(f, c))
@@ -230,6 +233,25 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 		framework.ExpectNoError(waitForAllCaPodsReadyInNamespace(f, c))
 	})
 
+	It("should increase cluster size if pods are pending due to pod anti-affinity [Feature:ClusterSizeAutoscalingAntiAffinityScaleUp]", func() {
+		pods := nodeCount
+		newPods := 2
+		labels := map[string]string{
+			"anti-affinity": "yes",
+		}
+		By("starting a pod with anti-affinity on each node")
+		framework.ExpectNoError(runAntiAffinityPods(f, f.Namespace.Name, pods, "some-pod", labels, labels))
+		defer framework.DeleteRCAndPods(f.ClientSet, f.InternalClientset, f.Namespace.Name, "some-pod")
+		framework.ExpectNoError(waitForAllCaPodsReadyInNamespace(f, c))
+
+		By("scheduling extra pods with anti-affinity to existing ones")
+		framework.ExpectNoError(runAntiAffinityPods(f, f.Namespace.Name, newPods, "extra-pod", labels, labels))
+		defer framework.DeleteRCAndPods(f.ClientSet, f.InternalClientset, f.Namespace.Name, "extra-pod")
+
+		framework.ExpectNoError(waitForAllCaPodsReadyInNamespace(f, c))
+		framework.ExpectNoError(framework.WaitForClusterSize(c, nodeCount+newPods, scaleUpTimeout))
+	})
+
 	It("should add node to the particular mig [Feature:ClusterSizeAutoscalingScaleUp]", func() {
 		labelKey := "cluster-autoscaling-test.special-node"
 		labelValue := "true"
@@ -286,7 +308,7 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 			}
 
 			for newNode := range newNodesSet {
-				if output, err := exec.Command("gcloud", "compute", "instances", "describe",
+				if output, err := execCmd("gcloud", "compute", "instances", "describe",
 					newNode,
 					"--project="+framework.TestContext.CloudConfig.ProjectID,
 					"--zone="+framework.TestContext.CloudConfig.Zone).Output(); err == nil {
@@ -343,12 +365,16 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 	})
 
 	simpleScaleDownTest := func(unready int) {
+		cleanup, err := addKubeSystemPdbs(f)
+		defer cleanup()
+		framework.ExpectNoError(err)
+
 		By("Manually increase cluster size")
 		increasedSize := 0
 		newSizes := make(map[string]int)
 		for key, val := range originalSizes {
-			newSizes[key] = val + 2
-			increasedSize += val + 2
+			newSizes[key] = val + 2 + unready
+			increasedSize += val + 2 + unready
 		}
 		setMigSizes(newSizes)
 		framework.ExpectNoError(WaitForClusterSizeFuncWithUnready(f.ClientSet,
@@ -389,7 +415,7 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 	})
 
 	It("should be able to scale down when rescheduling a pod is required and pdb allows for it[Feature:ClusterSizeAutoscalingScaleDown]", func() {
-		runDrainTest(f, originalSizes, 1, 1, func(increasedSize int) {
+		runDrainTest(f, originalSizes, f.Namespace.Name, 1, 1, func(increasedSize int) {
 			By("Some node should be removed")
 			framework.ExpectNoError(WaitForClusterSizeFunc(f.ClientSet,
 				func(size int) bool { return size < increasedSize }, scaleDownTimeout))
@@ -397,7 +423,7 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 	})
 
 	It("shouldn't be able to scale down when rescheduling a pod is required, but pdb doesn't allow drain[Feature:ClusterSizeAutoscalingScaleDown]", func() {
-		runDrainTest(f, originalSizes, 1, 0, func(increasedSize int) {
+		runDrainTest(f, originalSizes, f.Namespace.Name, 1, 0, func(increasedSize int) {
 			By("No nodes should be removed")
 			time.Sleep(scaleDownTimeout)
 			nodes := framework.GetReadySchedulableNodesOrDie(f.ClientSet)
@@ -406,7 +432,15 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 	})
 
 	It("should be able to scale down by draining multiple pods one by one as dictated by pdb[Feature:ClusterSizeAutoscalingScaleDown]", func() {
-		runDrainTest(f, originalSizes, 2, 1, func(increasedSize int) {
+		runDrainTest(f, originalSizes, f.Namespace.Name, 2, 1, func(increasedSize int) {
+			By("Some node should be removed")
+			framework.ExpectNoError(WaitForClusterSizeFunc(f.ClientSet,
+				func(size int) bool { return size < increasedSize }, scaleDownTimeout))
+		})
+	})
+
+	It("should be able to scale down by draining system pods with pdb[Feature:ClusterSizeAutoscalingScaleDown]", func() {
+		runDrainTest(f, originalSizes, "kube-system", 2, 1, func(increasedSize int) {
 			By("Some node should be removed")
 			framework.ExpectNoError(WaitForClusterSizeFunc(f.ClientSet,
 				func(size int) bool { return size < increasedSize }, scaleDownTimeout))
@@ -457,22 +491,27 @@ var _ = framework.KubeDescribe("Cluster size autoscaling [Slow]", func() {
 
 })
 
-func runDrainTest(f *framework.Framework, migSizes map[string]int, podsPerNode, pdbSize int, verifyFunction func(int)) {
+func execCmd(args ...string) *exec.Cmd {
+	glog.Infof("Executing: %s", strings.Join(args, " "))
+	return exec.Command(args[0], args[1:]...)
+}
+
+func runDrainTest(f *framework.Framework, migSizes map[string]int, namespace string, podsPerNode, pdbSize int, verifyFunction func(int)) {
 	increasedSize := manuallyIncreaseClusterSize(f, migSizes)
 
 	nodes, err := f.ClientSet.Core().Nodes().List(metav1.ListOptions{FieldSelector: fields.Set{
 		"spec.unschedulable": "false",
 	}.AsSelector().String()})
 	framework.ExpectNoError(err)
-	namespace := f.Namespace.Name
 	numPods := len(nodes.Items) * podsPerNode
 	testId := string(uuid.NewUUID()) // So that we can label and find pods
 	labelMap := map[string]string{"test_id": testId}
-	framework.ExpectNoError(runReplicatedPodOnEachNode(f, nodes.Items, podsPerNode, "reschedulable-pods", labelMap))
+	framework.ExpectNoError(runReplicatedPodOnEachNode(f, nodes.Items, namespace, podsPerNode, "reschedulable-pods", labelMap))
 
-	defer framework.DeleteRCAndPods(f.ClientSet, f.InternalClientset, f.Namespace.Name, "reschedulable-pods")
+	defer framework.DeleteRCAndPods(f.ClientSet, f.InternalClientset, namespace, "reschedulable-pods")
 
 	By("Create a PodDisruptionBudget")
+	minAvailable := intstr.FromInt(numPods - pdbSize)
 	pdb := &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test_pdb",
@@ -480,7 +519,7 @@ func runDrainTest(f *framework.Framework, migSizes map[string]int, podsPerNode, 
 		},
 		Spec: policy.PodDisruptionBudgetSpec{
 			Selector:     &metav1.LabelSelector{MatchLabels: labelMap},
-			MinAvailable: intstr.FromInt(numPods - pdbSize),
+			MinAvailable: &minAvailable,
 		},
 	}
 	_, err = f.StagingClient.Policy().PodDisruptionBudgets(namespace).Create(pdb)
@@ -494,7 +533,7 @@ func runDrainTest(f *framework.Framework, migSizes map[string]int, podsPerNode, 
 }
 
 func getGKEClusterUrl() string {
-	out, err := exec.Command("gcloud", "auth", "print-access-token").Output()
+	out, err := execCmd("gcloud", "auth", "print-access-token").Output()
 	framework.ExpectNoError(err)
 	token := strings.Replace(string(out), "\n", "", -1)
 
@@ -517,8 +556,6 @@ func isAutoscalerEnabled(expectedMinNodeCountInTargetPool int) (bool, error) {
 		return false, err
 	}
 	strBody := string(body)
-	glog.Infof("Cluster config %s", strBody)
-
 	if strings.Contains(strBody, "\"minNodeCount\": "+strconv.Itoa(expectedMinNodeCountInTargetPool)) {
 		return true, nil
 	}
@@ -530,7 +567,7 @@ func enableAutoscaler(nodePool string, minCount, maxCount int) error {
 	if nodePool == "default-pool" {
 		glog.Infof("Using gcloud to enable autoscaling for pool %s", nodePool)
 
-		output, err := exec.Command("gcloud", "alpha", "container", "clusters", "update", framework.TestContext.CloudConfig.Cluster,
+		output, err := execCmd("gcloud", "alpha", "container", "clusters", "update", framework.TestContext.CloudConfig.Cluster,
 			"--enable-autoscaling",
 			"--min-nodes="+strconv.Itoa(minCount),
 			"--max-nodes="+strconv.Itoa(maxCount),
@@ -578,7 +615,7 @@ func disableAutoscaler(nodePool string, minCount, maxCount int) error {
 	if nodePool == "default-pool" {
 		glog.Infof("Using gcloud to disable autoscaling for pool %s", nodePool)
 
-		output, err := exec.Command("gcloud", "alpha", "container", "clusters", "update", framework.TestContext.CloudConfig.Cluster,
+		output, err := execCmd("gcloud", "alpha", "container", "clusters", "update", framework.TestContext.CloudConfig.Cluster,
 			"--no-enable-autoscaling",
 			"--node-pool="+nodePool,
 			"--project="+framework.TestContext.CloudConfig.ProjectID,
@@ -618,19 +655,19 @@ func disableAutoscaler(nodePool string, minCount, maxCount int) error {
 }
 
 func addNodePool(name string, machineType string, numNodes int) {
-	output, err := exec.Command("gcloud", "alpha", "container", "node-pools", "create", name, "--quiet",
+	output, err := execCmd("gcloud", "alpha", "container", "node-pools", "create", name, "--quiet",
 		"--machine-type="+machineType,
 		"--num-nodes="+strconv.Itoa(numNodes),
 		"--project="+framework.TestContext.CloudConfig.ProjectID,
 		"--zone="+framework.TestContext.CloudConfig.Zone,
 		"--cluster="+framework.TestContext.CloudConfig.Cluster).CombinedOutput()
-	framework.ExpectNoError(err)
 	glog.Infof("Creating node-pool %s: %s", name, output)
+	framework.ExpectNoError(err)
 }
 
 func deleteNodePool(name string) {
 	glog.Infof("Deleting node pool %s", name)
-	output, err := exec.Command("gcloud", "alpha", "container", "node-pools", "delete", name, "--quiet",
+	output, err := execCmd("gcloud", "alpha", "container", "node-pools", "delete", name, "--quiet",
 		"--project="+framework.TestContext.CloudConfig.ProjectID,
 		"--zone="+framework.TestContext.CloudConfig.Zone,
 		"--cluster="+framework.TestContext.CloudConfig.Cluster).CombinedOutput()
@@ -855,7 +892,46 @@ func makeNodeSchedulable(c clientset.Interface, node *v1.Node) error {
 	return fmt.Errorf("Failed to remove taint from node in allowed number of retries")
 }
 
-// Creat an RC running a given number of pods on each node without adding any constraint forcing
+// Create an RC running a given number of pods with anti-affinity
+func runAntiAffinityPods(f *framework.Framework, namespace string, pods int, id string, podLabels, antiAffinityLabels map[string]string) error {
+	config := &testutils.RCConfig{
+		Affinity:       buildAntiAffinity(antiAffinityLabels),
+		Client:         f.ClientSet,
+		InternalClient: f.InternalClientset,
+		Name:           id,
+		Namespace:      namespace,
+		Timeout:        scaleUpTimeout,
+		Image:          framework.GetPauseImageName(f.ClientSet),
+		Replicas:       pods,
+		Labels:         podLabels,
+	}
+	err := framework.RunRC(*config)
+	if err != nil {
+		return err
+	}
+	_, err = f.ClientSet.Core().ReplicationControllers(namespace).Get(id, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func buildAntiAffinity(labels map[string]string) *v1.Affinity {
+	return &v1.Affinity{
+		PodAntiAffinity: &v1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: []v1.PodAffinityTerm{
+				{
+					LabelSelector: &metav1.LabelSelector{
+						MatchLabels: labels,
+					},
+					TopologyKey: "kubernetes.io/hostname",
+				},
+			},
+		},
+	}
+}
+
+// Create an RC running a given number of pods on each node without adding any constraint forcing
 // such pod distribution. This is meant to create a bunch of underutilized (but not unused) nodes
 // with pods that can be rescheduled on different nodes.
 // This is achieved using the following method:
@@ -864,7 +940,7 @@ func makeNodeSchedulable(c clientset.Interface, node *v1.Node) error {
 // 3. for each node:
 // 3a. enable scheduling on that node
 // 3b. increase number of replicas in RC by podsPerNode
-func runReplicatedPodOnEachNode(f *framework.Framework, nodes []v1.Node, podsPerNode int, id string, labels map[string]string) error {
+func runReplicatedPodOnEachNode(f *framework.Framework, nodes []v1.Node, namespace string, podsPerNode int, id string, labels map[string]string) error {
 	By("Run a pod on each node")
 	for _, node := range nodes {
 		err := makeNodeUnschedulable(f.ClientSet, &node)
@@ -881,7 +957,7 @@ func runReplicatedPodOnEachNode(f *framework.Framework, nodes []v1.Node, podsPer
 		Client:         f.ClientSet,
 		InternalClient: f.InternalClientset,
 		Name:           id,
-		Namespace:      f.Namespace.Name,
+		Namespace:      namespace,
 		Timeout:        defaultTimeout,
 		Image:          framework.GetPauseImageName(f.ClientSet),
 		Replicas:       0,
@@ -891,7 +967,7 @@ func runReplicatedPodOnEachNode(f *framework.Framework, nodes []v1.Node, podsPer
 	if err != nil {
 		return err
 	}
-	rc, err := f.ClientSet.Core().ReplicationControllers(f.Namespace.Name).Get(id, metav1.GetOptions{})
+	rc, err := f.ClientSet.Core().ReplicationControllers(namespace).Get(id, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -905,7 +981,7 @@ func runReplicatedPodOnEachNode(f *framework.Framework, nodes []v1.Node, podsPer
 		// (we retry 409 errors in case rc reference got out of sync)
 		for j := 0; j < 3; j++ {
 			*rc.Spec.Replicas = int32((i + 1) * podsPerNode)
-			rc, err = f.ClientSet.Core().ReplicationControllers(f.Namespace.Name).Update(rc)
+			rc, err = f.ClientSet.Core().ReplicationControllers(namespace).Update(rc)
 			if err == nil {
 				break
 			}
@@ -913,14 +989,14 @@ func runReplicatedPodOnEachNode(f *framework.Framework, nodes []v1.Node, podsPer
 				return err
 			}
 			glog.Warningf("Got 409 conflict when trying to scale RC, retries left: %v", 3-j)
-			rc, err = f.ClientSet.Core().ReplicationControllers(f.Namespace.Name).Get(id, metav1.GetOptions{})
+			rc, err = f.ClientSet.Core().ReplicationControllers(namespace).Get(id, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
 		}
 
 		err = wait.PollImmediate(5*time.Second, podTimeout, func() (bool, error) {
-			rc, err = f.ClientSet.Core().ReplicationControllers(f.Namespace.Name).Get(id, metav1.GetOptions{})
+			rc, err = f.ClientSet.Core().ReplicationControllers(namespace).Get(id, metav1.GetOptions{})
 			if err != nil || rc.Status.ReadyReplicas < int32((i+1)*podsPerNode) {
 				return false, nil
 			}
@@ -1046,4 +1122,50 @@ func waitForScaleUpStatus(c clientset.Interface, expected string, timeout time.D
 		}
 	}
 	return nil, fmt.Errorf("ScaleUp status did not reach expected value: %v", expected)
+}
+
+// This is a temporary fix to allow CA to migrate some kube-system pods
+// TODO: Remove this when the PDB is added for those components
+func addKubeSystemPdbs(f *framework.Framework) (func(), error) {
+	By("Create PodDisruptionBudgets for kube-system components, so they can be migrated if required")
+
+	newPdbs := make([]string, 0)
+	cleanup := func() {
+		for _, newPdbName := range newPdbs {
+			f.StagingClient.Policy().PodDisruptionBudgets("kube-system").Delete(newPdbName, &metav1.DeleteOptions{})
+		}
+	}
+
+	type pdbInfo struct {
+		label         string
+		min_available int
+	}
+	pdbsToAdd := []pdbInfo{
+		{label: "kube-dns-autoscaler", min_available: 1},
+		{label: "kube-dns", min_available: 1},
+		{label: "event-exporter", min_available: 0},
+	}
+	for _, pdbData := range pdbsToAdd {
+		By(fmt.Sprintf("Create PodDisruptionBudget for %v", pdbData.label))
+		labelMap := map[string]string{"k8s-app": pdbData.label}
+		pdbName := fmt.Sprintf("test-pdb-for-%v", pdbData.label)
+		minAvailable := intstr.FromInt(pdbData.min_available)
+		pdb := &policy.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      pdbName,
+				Namespace: "kube-system",
+			},
+			Spec: policy.PodDisruptionBudgetSpec{
+				Selector:     &metav1.LabelSelector{MatchLabels: labelMap},
+				MinAvailable: &minAvailable,
+			},
+		}
+		_, err := f.StagingClient.Policy().PodDisruptionBudgets("kube-system").Create(pdb)
+		newPdbs = append(newPdbs, pdbName)
+
+		if err != nil {
+			return cleanup, err
+		}
+	}
+	return cleanup, nil
 }

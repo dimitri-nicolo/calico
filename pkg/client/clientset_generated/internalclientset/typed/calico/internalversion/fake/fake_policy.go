@@ -34,6 +34,8 @@ type FakePolicies struct {
 
 var policiesResource = schema.GroupVersionResource{Group: "calico.tigera.io", Version: "", Resource: "policies"}
 
+var policiesKind = schema.GroupVersionKind{Group: "calico.tigera.io", Version: "", Kind: "Policy"}
+
 func (c *FakePolicies) Create(policy *calico.Policy) (result *calico.Policy, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(policiesResource, c.ns, policy), &calico.Policy{})
@@ -90,7 +92,7 @@ func (c *FakePolicies) Get(name string, options v1.GetOptions) (result *calico.P
 
 func (c *FakePolicies) List(opts v1.ListOptions) (result *calico.PolicyList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(policiesResource, c.ns, opts), &calico.PolicyList{})
+		Invokes(testing.NewListAction(policiesResource, policiesKind, c.ns, opts), &calico.PolicyList{})
 
 	if obj == nil {
 		return nil, err
