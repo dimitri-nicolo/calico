@@ -54,6 +54,8 @@ pipeline{
 		    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
                     // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
                     if (env.BRANCH_NAME == 'master') {
+			sh 'make build-image'
+			sh 'docker tag calico/calicoq:latest gcr.io/tigera-dev/calico/calicoq:latest'
                         sh 'gcloud docker -- push gcr.io/tigera-dev/calico/calicoq'
                     }
                 }
