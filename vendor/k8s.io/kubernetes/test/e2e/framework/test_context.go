@@ -73,6 +73,7 @@ type TestContextType struct {
 	GatherKubeSystemResourceUsageData string
 	GatherLogsSizes                   bool
 	GatherMetricsAfterTest            bool
+	GatherSuiteMetricsAfterTest       bool
 	// Currently supported values are 'hr' for human-readable and 'json'. It's a comma separated list.
 	OutputPrintType string
 	// NodeSchedulableTimeout is the timeout for waiting for all nodes to be schedulable.
@@ -129,6 +130,10 @@ type NodeTestContextType struct {
 	PrepullImages bool
 	// KubeletConfig is the kubelet configuration the test is running against.
 	KubeletConfig componentconfig.KubeletConfiguration
+	// SystemSpecName is the name of the system spec (e.g., gke) that's used in
+	// the node e2e test. If empty, the default one (system.DefaultSpec) is
+	// used. The system specs are in test/e2e_node/system/specs/.
+	SystemSpecName string
 }
 
 type CloudConfig struct {
@@ -137,10 +142,11 @@ type CloudConfig struct {
 	MultiZone         bool
 	Cluster           string
 	MasterName        string
-	NodeInstanceGroup string
+	NodeInstanceGroup string // comma-delimited list of groups' names
 	NumNodes          int
 	ClusterTag        string
 	Network           string
+	ConfigFile        string // for azure and openstack
 
 	Provider cloudprovider.Interface
 }
@@ -161,7 +167,8 @@ func RegisterCommonFlags() {
 	flag.StringVar(&TestContext.GatherKubeSystemResourceUsageData, "gather-resource-usage", "false", "If set to 'true' or 'all' framework will be monitoring resource usage of system all add-ons in (some) e2e tests, if set to 'master' framework will be monitoring master node only, if set to 'none' of 'false' monitoring will be turned off.")
 	flag.BoolVar(&TestContext.GatherLogsSizes, "gather-logs-sizes", false, "If set to true framework will be monitoring logs sizes on all machines running e2e tests.")
 	flag.BoolVar(&TestContext.GatherMetricsAfterTest, "gather-metrics-at-teardown", false, "If set to true framwork will gather metrics from all components after each test.")
-	flag.StringVar(&TestContext.OutputPrintType, "output-print-type", "hr", "Comma separated list: 'hr' for human readable summaries 'json' for JSON ones.")
+	flag.BoolVar(&TestContext.GatherSuiteMetricsAfterTest, "gather-suite-metrics-at-teardown", false, "If set to true framwork will gather metrics from all components after the whole test suite completes.")
+	flag.StringVar(&TestContext.OutputPrintType, "output-print-type", "json", "Format in which summaries should be printed: 'hr' for human readable, 'json' for JSON ones.")
 	flag.BoolVar(&TestContext.DumpLogsOnFailure, "dump-logs-on-failure", true, "If set to true test will dump data about the namespace in which test was running.")
 	flag.BoolVar(&TestContext.DisableLogDump, "disable-log-dump", false, "If set to true, logs from master and nodes won't be gathered after test run.")
 	flag.BoolVar(&TestContext.DeleteNamespace, "delete-namespace", true, "If true tests will delete namespace after completion. It is only designed to make debugging easier, DO NOT turn it off by default.")
@@ -209,6 +216,7 @@ func RegisterClusterFlags() {
 	flag.IntVar(&cloudConfig.NumNodes, "num-nodes", -1, "Number of nodes in the cluster")
 
 	flag.StringVar(&cloudConfig.ClusterTag, "cluster-tag", "", "Tag used to identify resources.  Only required if provider is aws.")
+	flag.StringVar(&cloudConfig.ConfigFile, "cloud-config-file", "", "Cloud config file.  Only required if provider is azure.")
 	flag.IntVar(&TestContext.MinStartupPods, "minStartupPods", 0, "The number of pods which we need to see in 'Running' state with a 'Ready' condition of true, before we try running tests. This is useful in any cluster which needs some base pod-based services running before it can be used.")
 	flag.DurationVar(&TestContext.SystemPodsStartupTimeout, "system-pods-startup-timeout", 10*time.Minute, "Timeout for waiting for all system pods to be running before starting tests.")
 	flag.DurationVar(&TestContext.NodeSchedulableTimeout, "node-schedulable-timeout", 4*time.Hour, "Timeout for waiting for all nodes to be schedulable.")
@@ -236,16 +244,7 @@ func RegisterNodeFlags() {
 	// It is hard and unnecessary to deal with the complexity inside the test suite.
 	flag.BoolVar(&TestContext.NodeConformance, "conformance", false, "If true, the test suite will not start kubelet, and fetch system log (kernel, docker, kubelet log etc.) to the report directory.")
 	flag.BoolVar(&TestContext.PrepullImages, "prepull-images", true, "If true, prepull images so image pull failures do not cause test failures.")
-}
-
-// overwriteFlagsWithViperConfig finds and writes values to flags using viper as input.
-func overwriteFlagsWithViperConfig() {
-	viperFlagSetter := func(f *flag.Flag) {
-		if viper.IsSet(f.Name) {
-			f.Value.Set(viper.GetString(f.Name))
-		}
-	}
-	flag.VisitAll(viperFlagSetter)
+	flag.StringVar(&TestContext.SystemSpecName, "system-spec-name", "", "The name of the system spec (e.g., gke) that's used in the node e2e test. The system specs are in test/e2e_node/system/specs/. This is used by the test framework to determine which tests to run for validating the system requirements.")
 }
 
 // ViperizeFlags sets up all flag and config processing. Future configuration info should be added to viper, not to flags.

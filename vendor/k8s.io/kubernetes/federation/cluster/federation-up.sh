@@ -81,6 +81,18 @@ function init() {
   kube::log::status "DNS_ZONE_NAME: \"${DNS_ZONE_NAME}\", DNS_PROVIDER: \"${DNS_PROVIDER}\""
   kube::log::status "Image: \"${kube_registry}/hyperkube-amd64:${kube_version}\""
 
+  # The very first thing that kubefed does when it comes up is run RBAC API
+  # discovery. If it doesn't appear to be available, issue 'get role' to ensure
+  # that kubectl updates its cache.
+  ${KUBE_ROOT}/cluster/kubectl.sh get role
+  timeout 1m bash <<EOF
+    while [[ ! "$(${KUBE_ROOT}/cluster/kubectl.sh api-versions)" =~ "rbac.authorization.k8s.io/" ]]; do
+      ${KUBE_ROOT}/cluster/kubectl.sh get role
+      echo "Waiting for rbac.authorization.k8s.io API group to appear"
+      sleep 2
+    done
+EOF
+
   # Send INT after 20m and KILL 1m after that if process is still alive.
   timeout --signal=INT --kill-after=1m 20m \
       "${KUBE_ROOT}/federation/develop/kubefed.sh" init \
@@ -94,7 +106,8 @@ function init() {
       --apiserver-enable-basic-auth=true \
       --apiserver-enable-token-auth=true \
       --apiserver-arg-overrides="--v=4" \
-      --controllermanager-arg-overrides="--v=4"
+      --controllermanager-arg-overrides="--v=4" \
+      --v=4
 }
 
 # join_clusters joins the clusters in the local kubeconfig to federation. The clusters
@@ -108,7 +121,7 @@ function join_clusters() {
         --federation-system-namespace=${FEDERATION_NAMESPACE} \
         --host-cluster-context="${HOST_CLUSTER_CONTEXT}" \
         --context="${FEDERATION_KUBE_CONTEXT}" \
-        --secret-name="${context//_/-}"    # Replace "_" by "-"
+        --v=4
   done
 }
 

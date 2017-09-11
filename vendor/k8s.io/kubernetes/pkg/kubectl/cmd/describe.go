@@ -47,7 +47,7 @@ var (
 		will first check for an exact match on TYPE and NAME_PREFIX. If no such resource
 		exists, it will output details for every resource that has a name prefixed with NAME_PREFIX.
 
-		` + valid_resources)
+		` + validResources)
 
 	describe_example = templates.Examples(i18n.T(`
 		# Describe a node
@@ -111,15 +111,16 @@ func RunDescribe(f cmdutil.Factory, out, cmdErr io.Writer, cmd *cobra.Command, a
 		enforceNamespace = false
 	}
 	if len(args) == 0 && cmdutil.IsFilenameEmpty(options.Filenames) {
-		fmt.Fprint(cmdErr, "You must specify the type of resource to describe. ", valid_resources)
+		fmt.Fprint(cmdErr, "You must specify the type of resource to describe. ", validResources)
 		return cmdutil.UsageError(cmd, "Required resource not specified.")
 	}
 
-	mapper, typer, err := f.UnstructuredObject()
+	builder, err := f.NewUnstructuredBuilder(true)
 	if err != nil {
 		return err
 	}
-	r := resource.NewBuilder(mapper, f.CategoryExpander(), typer, resource.ClientMapperFunc(f.UnstructuredClientForMapping), unstructured.UnstructuredJSONScheme).
+
+	r := builder.
 		ContinueOnError().
 		NamespaceParam(cmdNamespace).DefaultNamespace().AllNamespaces(allNamespaces).
 		FilenameParam(enforceNamespace, options).

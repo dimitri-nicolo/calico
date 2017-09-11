@@ -28,7 +28,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -67,14 +66,14 @@ type LabelOptions struct {
 }
 
 var (
-	label_long = templates.LongDesc(i18n.T(`
+	labelLong = templates.LongDesc(i18n.T(`
 		Update the labels on a resource.
 
 		* A label must begin with a letter or number, and may contain letters, numbers, hyphens, dots, and underscores, up to %[1]d characters.
 		* If --overwrite is true, then existing labels can be overwritten, otherwise attempting to overwrite a label will result in an error.
 		* If --resource-version is specified, then updates will use this resource version, otherwise the existing resource-version will be used.`))
 
-	label_example = templates.Examples(i18n.T(`
+	labelExample = templates.Examples(i18n.T(`
 		# Update pod 'foo' with the label 'unhealthy' and the value 'true'.
 		kubectl label pods foo unhealthy=true
 
@@ -112,8 +111,8 @@ func NewCmdLabel(f cmdutil.Factory, out io.Writer) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "label [--overwrite] (-f FILENAME | TYPE NAME) KEY_1=VAL_1 ... KEY_N=VAL_N [--resource-version=version]",
 		Short:   i18n.T("Update the labels on a resource"),
-		Long:    fmt.Sprintf(label_long, validation.LabelValueMaxLength),
-		Example: label_example,
+		Long:    fmt.Sprintf(labelLong, validation.LabelValueMaxLength),
+		Example: labelExample,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := options.Complete(out, cmd, args); err != nil {
 				cmdutil.CheckErr(cmdutil.UsageError(cmd, err.Error()))
@@ -181,11 +180,12 @@ func (o *LabelOptions) RunLabel(f cmdutil.Factory, cmd *cobra.Command) error {
 
 	changeCause := f.Command(cmd, false)
 
-	mapper, typer, err := f.UnstructuredObject()
+	builder, err := f.NewUnstructuredBuilder(!o.local)
 	if err != nil {
 		return err
 	}
-	b := resource.NewBuilder(mapper, f.CategoryExpander(), typer, resource.ClientMapperFunc(f.UnstructuredClientForMapping), unstructured.UnstructuredJSONScheme).
+
+	b := builder.
 		ContinueOnError().
 		NamespaceParam(cmdNamespace).DefaultNamespace().
 		FilenameParam(enforceNamespace, &o.FilenameOptions).
@@ -220,6 +220,7 @@ func (o *LabelOptions) RunLabel(f cmdutil.Factory, cmd *cobra.Command) error {
 			if err != nil {
 				return err
 			}
+			dataChangeMsg = "labeled"
 			outputObj = info.Object
 		} else {
 			obj := info.Object
@@ -275,8 +276,18 @@ func (o *LabelOptions) RunLabel(f cmdutil.Factory, cmd *cobra.Command) error {
 				return err
 			}
 		}
+
+		var mapper meta.RESTMapper
+		if o.local {
+			mapper, _ = f.Object()
+		} else {
+			mapper, _, err = f.UnstructuredObject()
+			if err != nil {
+				return err
+			}
+		}
 		if o.outputFormat != "" {
-			return f.PrintObject(cmd, mapper, outputObj, o.out)
+			return f.PrintObject(cmd, o.local, mapper, outputObj, o.out)
 		}
 		cmdutil.PrintSuccess(mapper, false, o.out, info.Mapping.Resource, info.Name, o.dryrun, dataChangeMsg)
 		return nil

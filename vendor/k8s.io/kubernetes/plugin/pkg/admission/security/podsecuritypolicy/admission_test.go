@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package admission
+package podsecuritypolicy
 
 import (
 	"fmt"
@@ -834,7 +834,8 @@ func TestAdmitRunAsUser(t *testing.T) {
 		// doesn't matter if we set it here or on the container, the
 		// admission controller uses DetermineEffectiveSC to get the defaulting
 		// behavior so it can validate what will be applied at runtime
-		pod.Spec.SecurityContext.RunAsUser = &user
+		userID := int64(user)
+		pod.Spec.SecurityContext.RunAsUser = &userID
 		return pod
 	}
 
@@ -853,7 +854,7 @@ func TestAdmitRunAsUser(t *testing.T) {
 		pod               *kapi.Pod
 		psps              []*extensions.PodSecurityPolicy
 		shouldPass        bool
-		expectedRunAsUser *int
+		expectedRunAsUser *int64
 		expectedPSP       string
 	}{
 		"runAsAny no pod request": {
@@ -867,7 +868,7 @@ func TestAdmitRunAsUser(t *testing.T) {
 			pod:               createPodWithRunAsUser(1),
 			psps:              []*extensions.PodSecurityPolicy{runAsAny},
 			shouldPass:        true,
-			expectedRunAsUser: intPtr(1),
+			expectedRunAsUser: userIDPtr(1),
 			expectedPSP:       runAsAny.Name,
 		},
 		"mustRunAs pod request out of range": {
@@ -879,14 +880,14 @@ func TestAdmitRunAsUser(t *testing.T) {
 			pod:               createPodWithRunAsUser(999),
 			psps:              []*extensions.PodSecurityPolicy{mustRunAs},
 			shouldPass:        true,
-			expectedRunAsUser: intPtr(int(mustRunAs.Spec.RunAsUser.Ranges[0].Min)),
+			expectedRunAsUser: &mustRunAs.Spec.RunAsUser.Ranges[0].Min,
 			expectedPSP:       mustRunAs.Name,
 		},
 		"mustRunAs no pod request": {
 			pod:               goodPod(),
 			psps:              []*extensions.PodSecurityPolicy{mustRunAs},
 			shouldPass:        true,
-			expectedRunAsUser: intPtr(int(mustRunAs.Spec.RunAsUser.Ranges[0].Min)),
+			expectedRunAsUser: &mustRunAs.Spec.RunAsUser.Ranges[0].Min,
 			expectedPSP:       mustRunAs.Name,
 		},
 		"runAsNonRoot no pod request": {
@@ -905,7 +906,7 @@ func TestAdmitRunAsUser(t *testing.T) {
 			pod:               createPodWithRunAsUser(1),
 			psps:              []*extensions.PodSecurityPolicy{runAsNonRoot},
 			shouldPass:        true,
-			expectedRunAsUser: intPtr(1),
+			expectedRunAsUser: userIDPtr(1),
 			expectedPSP:       runAsNonRoot.Name,
 		},
 	}
@@ -926,7 +927,7 @@ func TestAdmitRunAsUser(t *testing.T) {
 				t.Errorf("%s expected RunAsUser to be nil but found: %v", k, *v.pod.Spec.Containers[0].SecurityContext.RunAsUser)
 				continue
 			}
-			if int64(*v.expectedRunAsUser) != *v.pod.Spec.Containers[0].SecurityContext.RunAsUser {
+			if *v.expectedRunAsUser != *v.pod.Spec.Containers[0].SecurityContext.RunAsUser {
 				t.Errorf("%s expected RunAsUser to be: %v but found %v", k, *v.expectedRunAsUser, *v.pod.Spec.Containers[0].SecurityContext.RunAsUser)
 			}
 		}
@@ -939,7 +940,8 @@ func TestAdmitSupplementalGroups(t *testing.T) {
 		// doesn't matter if we set it here or on the container, the
 		// admission controller uses DetermineEffectiveSC to get the defaulting
 		// behavior so it can validate what will be applied at runtime
-		pod.Spec.SecurityContext.SupplementalGroups = []int64{group}
+		groupID := int64(group)
+		pod.Spec.SecurityContext.SupplementalGroups = []int64{groupID}
 		return pod
 	}
 
@@ -1012,12 +1014,12 @@ func TestAdmitSupplementalGroups(t *testing.T) {
 }
 
 func TestAdmitFSGroup(t *testing.T) {
-	createPodWithFSGroup := func(group int64) *kapi.Pod {
+	createPodWithFSGroup := func(group int) *kapi.Pod {
 		pod := goodPod()
 		// doesn't matter if we set it here or on the container, the
 		// admission controller uses DetermineEffectiveSC to get the defaulting
 		// behavior so it can validate what will be applied at runtime
-		pod.Spec.SecurityContext.FSGroup = &group
+		pod.Spec.SecurityContext.FSGroup = groupIDPtr(group)
 		return pod
 	}
 
@@ -1046,7 +1048,7 @@ func TestAdmitFSGroup(t *testing.T) {
 			pod:             createPodWithFSGroup(1),
 			psps:            []*extensions.PodSecurityPolicy{runAsAny},
 			shouldPass:      true,
-			expectedFSGroup: int64Ptr(1),
+			expectedFSGroup: groupIDPtr(1),
 			expectedPSP:     runAsAny.Name,
 		},
 		"mustRunAs no pod request": {
@@ -1065,7 +1067,7 @@ func TestAdmitFSGroup(t *testing.T) {
 			pod:             createPodWithFSGroup(999),
 			psps:            []*extensions.PodSecurityPolicy{mustRunAs},
 			shouldPass:      true,
-			expectedFSGroup: int64Ptr(999),
+			expectedFSGroup: groupIDPtr(999),
 			expectedPSP:     mustRunAs.Name,
 		},
 	}
@@ -1707,8 +1709,8 @@ func restrictivePSP() *extensions.PodSecurityPolicy {
 		Spec: extensions.PodSecurityPolicySpec{
 			RunAsUser: extensions.RunAsUserStrategyOptions{
 				Rule: extensions.RunAsUserStrategyMustRunAs,
-				Ranges: []extensions.IDRange{
-					{Min: 999, Max: 999},
+				Ranges: []extensions.UserIDRange{
+					{Min: int64(999), Max: int64(999)},
 				},
 			},
 			SELinux: extensions.SELinuxStrategyOptions{
@@ -1719,14 +1721,14 @@ func restrictivePSP() *extensions.PodSecurityPolicy {
 			},
 			FSGroup: extensions.FSGroupStrategyOptions{
 				Rule: extensions.FSGroupStrategyMustRunAs,
-				Ranges: []extensions.IDRange{
-					{Min: 999, Max: 999},
+				Ranges: []extensions.GroupIDRange{
+					{Min: int64(999), Max: int64(999)},
 				},
 			},
 			SupplementalGroups: extensions.SupplementalGroupsStrategyOptions{
 				Rule: extensions.SupplementalGroupsStrategyMustRunAs,
-				Ranges: []extensions.IDRange{
-					{Min: 999, Max: 999},
+				Ranges: []extensions.GroupIDRange{
+					{Min: int64(999), Max: int64(999)},
 				},
 			},
 		},
@@ -1771,11 +1773,12 @@ func goodPod() *kapi.Pod {
 	}
 }
 
-func intPtr(i int) *int {
-	return &i
+func userIDPtr(i int) *int64 {
+	userID := int64(i)
+	return &userID
 }
 
-func int64Ptr(i int) *int64 {
-	i64 := int64(i)
-	return &i64
+func groupIDPtr(i int) *int64 {
+	groupID := int64(i)
+	return &groupID
 }

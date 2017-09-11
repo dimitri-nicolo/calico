@@ -74,12 +74,12 @@ func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old 
 	// return validation.ValidateTierUpdate(obj.(*calico.Tier), old.(*calico.Tier))
 }
 
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 	apiserver, ok := obj.(*calico.Tier)
 	if !ok {
-		return nil, nil, fmt.Errorf("given object is not a Tier.")
+		return nil, nil, false, fmt.Errorf("given object is not a Tier.")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), TierToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.ObjectMeta.Labels), TierToSelectableFields(apiserver), apiserver.Initializers != nil, nil
 }
 
 // MatchTier is the filter used by the generic etcd backend to watch events

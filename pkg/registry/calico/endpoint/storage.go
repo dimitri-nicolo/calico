@@ -112,7 +112,7 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 	return apiEndpoints, nil
 }
 
-func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object) (runtime.Object, error) {
+func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, includeUninitialized bool) (runtime.Object, error) {
 	return nil, fmt.Errorf("Create not supported.")
 }
 

@@ -24,7 +24,6 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/kubernetes/pkg/kubectl"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/templates"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
@@ -37,6 +36,7 @@ type ViewLastAppliedOptions struct {
 	Selector                     string
 	LastAppliedConfigurationList []string
 	OutputFormat                 string
+	All                          bool
 	Factory                      cmdutil.Factory
 	Out                          io.Writer
 	ErrOut                       io.Writer
@@ -74,6 +74,7 @@ func NewCmdApplyViewLastApplied(f cmdutil.Factory, out, err io.Writer) *cobra.Co
 
 	cmd.Flags().StringP("output", "o", "", "Output format. Must be one of yaml|json")
 	cmd.Flags().StringVarP(&options.Selector, "selector", "l", "", "Selector (label query) to filter on, supports '=', '==', and '!='.")
+	cmd.Flags().BoolVar(&options.All, "all", false, "select all resources in the namespace of the specified resource types")
 	usage := "that contains the last-applied-configuration annotations"
 	cmdutil.AddFilenameOptionFlags(cmd, &options.FilenameOptions, usage)
 
@@ -81,20 +82,21 @@ func NewCmdApplyViewLastApplied(f cmdutil.Factory, out, err io.Writer) *cobra.Co
 }
 
 func (o *ViewLastAppliedOptions) Complete(f cmdutil.Factory, args []string) error {
-	mapper, typer, err := f.UnstructuredObject()
-	if err != nil {
-		return err
-	}
-
 	cmdNamespace, enforceNamespace, err := f.DefaultNamespace()
 	if err != nil {
 		return err
 	}
 
-	r := resource.NewBuilder(mapper, f.CategoryExpander(), typer, resource.ClientMapperFunc(f.UnstructuredClientForMapping), unstructured.UnstructuredJSONScheme).
+	builder, err := f.NewUnstructuredBuilder(true)
+	if err != nil {
+		return err
+	}
+
+	r := builder.
 		NamespaceParam(cmdNamespace).DefaultNamespace().
 		FilenameParam(enforceNamespace, &o.FilenameOptions).
 		ResourceTypeOrNameArgs(enforceNamespace, args...).
+		SelectAllParam(o.All).
 		SelectorParam(o.Selector).
 		Latest().
 		Flatten().

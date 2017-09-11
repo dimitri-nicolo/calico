@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,21 +15,26 @@
 package resources
 
 import (
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	kapiv1 "k8s.io/client-go/pkg/api/v1"
-	metav1 "k8s.io/client-go/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
 
-func NewNodeClient(c *kubernetes.Clientset, r *rest.RESTClient) api.Client {
-	return &nodeClient{
-		clientSet: c,
+const (
+	nodeBgpIpv4CidrAnnotation = "projectcalico.org/IPv4Address"
+	nodeBgpAsnAnnotation      = "projectcalico.org/ASNumber"
+)
+
+func NewNodeClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
+	return &retryWrapper{
+		client: &nodeClient{
+			clientSet: c,
+		},
 	}
 }
 
@@ -60,7 +65,15 @@ func (c *nodeClient) Update(kvp *model.KVPair) (*model.KVPair, error) {
 
 	newNode, err := c.clientSet.Nodes().Update(node)
 	if err != nil {
-		return nil, K8sErrorToCalico(err, kvp.Key)
+		log.WithError(err).Info("Error updating Node resource")
+		err = K8sErrorToCalico(err, kvp.Key)
+
+		// If this is an update conflict and we didn't specify a revision in the
+		// request, indicate to the nodeRetryWrapper that we can retry the action.
+		if _, ok := err.(errors.ErrorResourceUpdateConflict); ok && kvp.Revision == nil {
+			err = retryError{err: err}
+		}
+		return nil, err
 	}
 
 	newCalicoNode, err := K8sNodeToCalico(newNode)
@@ -110,14 +123,31 @@ func (c *nodeClient) Get(key model.Key) (*model.KVPair, error) {
 	return kvp, nil
 }
 
-func (c *nodeClient) List(list model.ListInterface) ([]*model.KVPair, error) {
+//func (c *nodeClient) List(list model.ListInterface) ([]*model.KVPair, string, error) {f
+func (c *nodeClient) List(list model.ListInterface) ([]*model.KVPair, string, error) {
 	log.Debug("Received List request on Node type")
-	nodes, err := c.clientSet.Nodes().List(kapiv1.ListOptions{})
+	nl := list.(model.NodeListOptions)
+	kvps := []*model.KVPair{}
+
+	if nl.Hostname != "" {
+		// The node is already fully qualified, so perform a Get instead.
+		// If the entry does not exist then we just return an empty list.
+		kvp, err := c.Get(model.NodeKey{Hostname: nl.Hostname})
+		if err != nil {
+			if _, ok := err.(errors.ErrorResourceDoesNotExist); !ok {
+				return nil, "", err
+			}
+			return kvps, "", nil
+		}
+		kvps = append(kvps, kvp)
+		return kvps, kvp.Revision.(string), nil
+	}
+
+	// Listing all nodes.
+	nodes, err := c.clientSet.Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		K8sErrorToCalico(err, list)
 	}
-
-	kvps := []*model.KVPair{}
 
 	for _, node := range nodes.Items {
 		n, err := K8sNodeToCalico(&node)
@@ -127,21 +157,9 @@ func (c *nodeClient) List(list model.ListInterface) ([]*model.KVPair, error) {
 		kvps = append(kvps, n)
 	}
 
-	return kvps, nil
+	return kvps, nodes.GetListMeta().GetResourceVersion(), nil
 }
 
 func (c *nodeClient) EnsureInitialized() error {
 	return nil
 }
-
-func (c *nodeClient) EnsureCalicoNodeInitialized(node string) error {
-	return nil
-}
-
-func (c *nodeClient) Syncer(callbacks api.SyncerCallbacks) api.Syncer {
-	return nodeFakeSyncer{}
-}
-
-type nodeFakeSyncer struct{}
-
-func (f nodeFakeSyncer) Start() {}

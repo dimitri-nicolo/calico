@@ -29,25 +29,25 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	kubeadmconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
-	"k8s.io/kubernetes/pkg/util/node"
+	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
 )
 
 const apiCallRetryInterval = 500 * time.Millisecond
 
 // TODO: Can we think of any unit tests here? Or should this code just be covered through integration/e2e tests?
 
-func attemptToUpdateMasterRoleLabelsAndTaints(client *clientset.Clientset) error {
+func attemptToUpdateMasterRoleLabelsAndTaints(client *clientset.Clientset, nodeName string) error {
 	var n *v1.Node
 
 	// Wait for current node registration
 	wait.PollInfinite(kubeadmconstants.APICallRetryInterval, func() (bool, error) {
 		var err error
-		if n, err = client.Nodes().Get(node.GetHostname(""), metav1.GetOptions{}); err != nil {
+		if n, err = client.Nodes().Get(nodeName, metav1.GetOptions{}); err != nil {
 			return false, nil
 		}
 		// The node may appear to have no labels at first,
 		// so we wait for it to get hostname label.
-		_, found := n.ObjectMeta.Labels[metav1.LabelHostname]
+		_, found := n.ObjectMeta.Labels[kubeletapis.LabelHostname]
 		return found, nil
 	})
 
@@ -58,7 +58,7 @@ func attemptToUpdateMasterRoleLabelsAndTaints(client *clientset.Clientset) error
 
 	// The master node is tainted and labelled accordingly
 	n.ObjectMeta.Labels[kubeadmconstants.LabelNodeRoleMaster] = ""
-	n.Spec.Taints = []v1.Taint{{Key: kubeadmconstants.LabelNodeRoleMaster, Value: "", Effect: "NoSchedule"}}
+	addTaintIfNotExists(n, v1.Taint{Key: kubeadmconstants.LabelNodeRoleMaster, Value: "", Effect: "NoSchedule"})
 
 	newData, err := json.Marshal(n)
 	if err != nil {
@@ -74,7 +74,7 @@ func attemptToUpdateMasterRoleLabelsAndTaints(client *clientset.Clientset) error
 		if apierrs.IsConflict(err) {
 			fmt.Println("[apiclient] Temporarily unable to update master node metadata due to conflict (will retry)")
 			time.Sleep(apiCallRetryInterval)
-			attemptToUpdateMasterRoleLabelsAndTaints(client)
+			attemptToUpdateMasterRoleLabelsAndTaints(client, nodeName)
 		} else {
 			return err
 		}
@@ -83,10 +83,20 @@ func attemptToUpdateMasterRoleLabelsAndTaints(client *clientset.Clientset) error
 	return nil
 }
 
+func addTaintIfNotExists(n *v1.Node, t v1.Taint) {
+	for _, taint := range n.Spec.Taints {
+		if taint == t {
+			return
+		}
+	}
+
+	n.Spec.Taints = append(n.Spec.Taints, t)
+}
+
 // UpdateMasterRoleLabelsAndTaints taints the master and sets the master label
-func UpdateMasterRoleLabelsAndTaints(client *clientset.Clientset) error {
+func UpdateMasterRoleLabelsAndTaints(client *clientset.Clientset, nodeName string) error {
 	// TODO: Use iterate instead of recursion
-	err := attemptToUpdateMasterRoleLabelsAndTaints(client)
+	err := attemptToUpdateMasterRoleLabelsAndTaints(client, nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to update master node - [%v]", err)
 	}

@@ -215,7 +215,7 @@ func (o *DrainOptions) SetupDrain(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	r := o.Factory.NewBuilder().
+	r := o.Factory.NewBuilder(true).
 		NamespaceParam(cmdNamespace).DefaultNamespace().
 		ResourceNames("node", args[0]).
 		Do()
@@ -494,6 +494,9 @@ func (o *DrainOptions) evictPods(pods []api.Pod, policyGroupVersion string, getP
 				err = o.evictPod(pod, policyGroupVersion)
 				if err == nil {
 					break
+				} else if apierrors.IsNotFound(err) {
+					doneCh <- true
+					return
 				} else if apierrors.IsTooManyRequests(err) {
 					time.Sleep(5 * time.Second)
 				} else {
@@ -544,7 +547,7 @@ func (o *DrainOptions) deletePods(pods []api.Pod, getPodFn func(namespace, name 
 	}
 	for _, pod := range pods {
 		err := o.deletePod(pod)
-		if err != nil {
+		if err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}

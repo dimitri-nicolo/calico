@@ -29,16 +29,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/helper"
 	"k8s.io/kubernetes/pkg/api/validation"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/templates"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
-	"k8s.io/kubernetes/pkg/kubectl/resource"
+	"k8s.io/kubernetes/pkg/kubectl/util"
 	"k8s.io/kubernetes/pkg/util/i18n"
 )
 
 var (
-	logs_example = templates.Examples(i18n.T(`
+	logsExample = templates.Examples(i18n.T(`
 		# Return snapshot logs from pod nginx with only one container
 		kubectl logs nginx
 
@@ -75,10 +74,9 @@ type LogsOptions struct {
 	ResourceArg string
 	Options     runtime.Object
 
-	Mapper       meta.RESTMapper
-	Typer        runtime.ObjectTyper
-	ClientMapper resource.ClientMapper
-	Decoder      runtime.Decoder
+	Mapper  meta.RESTMapper
+	Typer   runtime.ObjectTyper
+	Decoder runtime.Decoder
 
 	Object        runtime.Object
 	GetPodTimeout time.Duration
@@ -94,7 +92,7 @@ func NewCmdLogs(f cmdutil.Factory, out io.Writer) *cobra.Command {
 		Use:     "logs [-f] [-p] (POD | TYPE/NAME) [-c CONTAINER]",
 		Short:   i18n.T("Print the logs for a container in a pod"),
 		Long:    "Print the logs for a container in a pod or specified resource. If the pod has only one container, the container name is optional.",
-		Example: logs_example,
+		Example: logsExample,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			if len(os.Args) > 1 && os.Args[1] == "log" {
 				printDeprecationWarning("logs", "log")
@@ -158,7 +156,7 @@ func (o *LogsOptions) Complete(f cmdutil.Factory, out io.Writer, cmd *cobra.Comm
 		Timestamps: cmdutil.GetFlagBool(cmd, "timestamps"),
 	}
 	if sinceTime := cmdutil.GetFlagString(cmd, "since-time"); len(sinceTime) > 0 {
-		t, err := helper.ParseRFC3339(sinceTime, metav1.Now)
+		t, err := util.ParseRFC3339(sinceTime, metav1.Now)
 		if err != nil {
 			return err
 		}
@@ -181,25 +179,19 @@ func (o *LogsOptions) Complete(f cmdutil.Factory, out io.Writer, cmd *cobra.Comm
 	}
 	o.Options = logOptions
 	o.LogsForObject = f.LogsForObject
-	o.ClientMapper = resource.ClientMapperFunc(f.ClientForMapping)
 	o.Out = out
 
 	if len(selector) != 0 {
 		if logOptions.Follow {
 			return cmdutil.UsageError(cmd, "only one of follow (-f) or selector (-l) is allowed")
 		}
-		if len(logOptions.Container) != 0 {
-			return cmdutil.UsageError(cmd, "a container cannot be specified when using a selector (-l)")
-		}
 		if logOptions.TailLines == nil {
 			logOptions.TailLines = &selectorTail
 		}
 	}
 
-	mapper, typer := f.Object()
-	decoder := f.Decoder(true)
 	if o.Object == nil {
-		builder := resource.NewBuilder(mapper, f.CategoryExpander(), typer, o.ClientMapper, decoder).
+		builder := f.NewBuilder(true).
 			NamespaceParam(o.Namespace).DefaultNamespace().
 			SingleResourceType()
 		if o.ResourceArg != "" {

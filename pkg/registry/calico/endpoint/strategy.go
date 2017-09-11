@@ -73,12 +73,12 @@ func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old 
 	// return validation.ValidateEndpointUpdate(obj.(*calico.Endpoint), old.(*calico.Endpoint))
 }
 
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 	apiserver, ok := obj.(*calico.Endpoint)
 	if !ok {
-		return nil, nil, fmt.Errorf("given object is not a Endpoint.")
+		return nil, nil, false, fmt.Errorf("given object is not a Endpoint.")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), EndpointToSelectableFields(apiserver), nil
+	return labels.Set(apiserver.ObjectMeta.Labels), EndpointToSelectableFields(apiserver), apiserver.Initializers != nil, nil
 }
 
 // MatchEndpoint is the filter used by the generic etcd backend to watch events

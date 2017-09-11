@@ -24,6 +24,7 @@ all: build
 #######################
 ROOT           = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 BINDIR        ?= bin
+BUILD_DIR     ?= build
 ARTIFACTS     ?= artifacts
 CAPI_PKG       = github.com/tigera/calico-k8sapiserver
 TOP_SRC_DIRS   = pkg
@@ -49,11 +50,6 @@ GO_BUILD       = env GOOS=$(PLATFORM) GOARCH=$(ARCH) go build -i $(GOFLAGS) \
                    -ldflags "-X $(CAPI_PKG)/pkg.VERSION=$(VERSION)"
 BASE_PATH      = $(ROOT:/src/github.com/tigera/calico-k8sapiserver/=)
 export GOPATH  = $(BASE_PATH):$(ROOT)/vendor
-
-
-ifdef UNIT_TESTS
-	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
-endif
 
 NON_VENDOR_DIRS = $(shell $(DOCKER_CMD) glide nv)
 
@@ -128,7 +124,25 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v1" \
 		--output-file-base zz_generated.conversion
+	# generate all pkg/client contents
+	$(DOCKER_CMD) $(BUILD_DIR)/update-client-gen.sh
 	touch $@
+
+# Some prereq stuff
+###################
+
+.init: $(cBuildImageTarget)
+	touch $@
+
+.cBuildImage: artifacts/simple-image/Dockerfile
+	sed "s/GO_VERSION/$(GO_VERSION)/g" < artifacts/simple-image/Dockerfile | \
+	  docker build -t cbuildimage -
+	touch $@
+
+# this target uses the host-local go installation to test 
+test-integration: .init $(cBuildImageTarget) build
+	# golang integration tests
+	test/integration.sh
 
 clean: clean-bin clean-build-image clean-generated
 clean-bin:
@@ -141,3 +155,5 @@ clean-build-image:
 clean-generated:
 	rm -f .generate_files
 	find $(TOP_SRC_DIRS) -name zz_generated* -exec rm {} \;
+	# rollback changes to the generated clientset directories
+	# find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;

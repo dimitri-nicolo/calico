@@ -180,7 +180,7 @@ func (cm *containerManagerImpl) getNodeAllocatableAbsolute() v1.ResourceList {
 
 }
 
-// GetNodeAllocatable returns amount of compute resource that have to be reserved on this node from scheduling.
+// GetNodeAllocatable returns amount of compute or storage resource that have to be reserved on this node from scheduling.
 func (cm *containerManagerImpl) GetNodeAllocatableReservation() v1.ResourceList {
 	evictionReservation := hardEvictionReservation(cm.HardEvictionThresholds, cm.capacity)
 	result := make(v1.ResourceList)
@@ -217,6 +217,10 @@ func hardEvictionReservation(thresholds []evictionapi.Threshold, capacity v1.Res
 			memoryCapacity := capacity[v1.ResourceMemory]
 			value := evictionapi.GetThresholdQuantity(threshold.Value, &memoryCapacity)
 			ret[v1.ResourceMemory] = *value
+		case evictionapi.SignalNodeFsAvailable:
+			storageCapacity := capacity[v1.ResourceStorageScratch]
+			value := evictionapi.GetThresholdQuantity(threshold.Value, &storageCapacity)
+			ret[v1.ResourceStorageScratch] = *value
 		}
 	}
 	return ret

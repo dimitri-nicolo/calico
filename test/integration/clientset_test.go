@@ -1,0 +1,345 @@
+/*
+Copyright 2017 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package integration
+
+import (
+	"crypto/tls"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"reflect"
+	"strings"
+	"testing"
+
+	// TODO: fix this upstream
+	// we shouldn't have to install things to use our own generated client.
+
+	// avoid error `servicecatalog/v1alpha1 is not enabled`
+
+	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	// avoid error `no kind is registered for the type metav1.ListOptions`
+	_ "k8s.io/client-go/pkg/api/install"
+	// our versioned types
+	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+
+	// our versioned client
+	calicoapi "github.com/projectcalico/libcalico-go/lib/api"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/diff"
+)
+
+const (
+	instanceParameter = `{
+    "bar": "barvalue",
+    "values": {
+      "first" : "firstvalue",
+      "second" : "secondvalue"
+    }
+  }
+`
+	bindingParameter = `{
+    "foo": "bar",
+    "baz": [
+      "first",
+      "second"
+    ]
+  }
+`
+)
+
+// TestGroupVersion is trivial.
+func TestGroupVersion(t *testing.T) {
+	fmt.Println("GropVersion being tested.")
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &calico.Policy{}
+			})
+			defer shutdownServer()
+			if err := testGroupVersion(client); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run("group version", rootTestFunc()) {
+		t.Error("test failed")
+	}
+
+}
+
+func testGroupVersion(client calicoclient.Interface) error {
+	gv := client.Calico().RESTClient().APIVersion()
+	if gv.Group != calico.GroupName {
+		return fmt.Errorf("we should be testing the servicecatalog group, not %s", gv.Group)
+	}
+	return nil
+}
+
+func TestEtcdHealthCheckerSuccess(t *testing.T) {
+	serverConfig := NewTestServerConfig()
+	_, clientconfig, shutdownServer := withConfigGetFreshApiserverAndClient(t, serverConfig)
+	t.Log(clientconfig.Host)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	c := &http.Client{Transport: tr}
+	resp, err := c.Get(clientconfig.Host + "/healthz")
+	if nil != err || http.StatusOK != resp.StatusCode {
+		t.Fatal("health check endpoint should not have failed")
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal("couldn't read response body", err)
+	}
+	if strings.Contains(string(body), "healthz check failed") {
+		t.Fatal("health check endpoint should not have failed")
+	}
+
+	defer shutdownServer()
+}
+
+/*
+func TestEtcdHealthCheckerFail(t *testing.T) {
+	serverConfig := NewTestServerConfig()
+	// this server won't exist
+	serverConfig.etcdServerList = []string{""}
+	_, clientconfig, shutdownServer := withConfigGetFreshApiserverAndClient(t, serverConfig)
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	c := &http.Client{Transport: tr}
+	resp, err := c.Get(clientconfig.Host + "/healthz")
+	if nil != err || http.StatusInternalServerError != resp.StatusCode {
+		t.Fatal("health check endpoint should have failed and did not")
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal("couldn't read response body", err)
+	}
+	if !strings.Contains(string(body), "healthz check failed") {
+		t.Fatal("health check endpoint should contain a failure message")
+	}
+
+	defer shutdownServer()
+}*/
+
+// TestNoName checks that all creates fail for objects that have no
+// name given.
+func TestNoName(t *testing.T) {
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &calico.Policy{}
+			})
+			defer shutdownServer()
+			if err := testNoName(client); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run("no-name", rootTestFunc()) {
+		t.Errorf("NoName test failed")
+	}
+
+}
+
+func testNoName(client calicoclient.Interface) error {
+	cClient := client.Calico()
+
+	ns := "namespace"
+
+	if p, e := cClient.Policies(ns).Create(&v1.Policy{}); nil == e {
+		return fmt.Errorf("needs a name (%s)", p.Name)
+	}
+	if t, e := cClient.Tiers().Create(&v1.Tier{}); nil == e {
+		return fmt.Errorf("needs a name (%s)", t.Name)
+	}
+	return nil
+}
+
+// TestPolicyClient exercises the Policy client.
+func TestPolicyClient(t *testing.T) {
+	const name = "test-policy"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &calico.Policy{}
+			})
+			defer shutdownServer()
+			if err := testPolicyClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-policy test failed")
+	}
+
+}
+
+func testPolicyClient(client calicoclient.Interface, name string) error {
+	ns := "namespace"
+	policyClient := client.Calico().Policies(ns)
+	policy := &v1.Policy{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       calicoapi.PolicySpec{},
+	}
+
+	tierClient := client.Calico().Tiers()
+	tier := &v1.Tier{
+		ObjectMeta: metav1.ObjectMeta{Name: "default"},
+		Spec:       calicoapi.TierSpec{},
+	}
+
+	tierServer, err := tierClient.Create(tier)
+	if nil != err {
+		return fmt.Errorf("error creating default tier")
+	}
+	if "default" != tierServer.Name {
+		return fmt.Errorf("error creating default tier")
+	}
+
+	// start from scratch
+	policies, err := policyClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing policies (%s)", err)
+	}
+	if policies.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+	if len(policies.Items) > 0 {
+		return fmt.Errorf("policies should not exist on start, had %v policies", len(policies.Items))
+	}
+
+	policyServer, err := policyClient.Create(policy)
+	if nil != err {
+		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
+	}
+	if name != policyServer.Name {
+		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
+	}
+
+	policies, err = policyClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing policies (%s)", err)
+	}
+	if 1 != len(policies.Items) {
+		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
+	}
+
+	policyServer, err = policyClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting policy %s (%s)", name, err)
+	}
+	if name != policyServer.Name &&
+		policy.ResourceVersion == policyServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
+	}
+
+	// check that the policy is the same from get and list
+	policyListed := &policies.Items[0]
+	if !reflect.DeepEqual(policyServer, policyListed) {
+		return fmt.Errorf(
+			"Didn't get the same instance from list and get: diff: %v",
+			diff.ObjectReflectDiff(policyServer, policyListed),
+		)
+	}
+
+	err = policyClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("policy should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
+// TestTierClient exercises the Tier client.
+func TestTierClient(t *testing.T) {
+	const name = "test-tier"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &calico.Policy{}
+			})
+			defer shutdownServer()
+			if err := testTierClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-tier test failed")
+	}
+
+}
+
+func testTierClient(client calicoclient.Interface, name string) error {
+	tierClient := client.Calico().Tiers()
+	tier := &v1.Tier{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       calicoapi.TierSpec{},
+	}
+
+	// start from scratch
+	tiers, err := tierClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing tiers (%s)", err)
+	}
+	if tiers.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	tierServer, err := tierClient.Create(tier)
+	if nil != err {
+		return fmt.Errorf("error creating the tier '%v' (%v)", tier, err)
+	}
+	if name != tierServer.Name {
+		return fmt.Errorf("didn't get the same tier back from the server \n%+v\n%+v", tier, tierServer)
+	}
+
+	tiers, err = tierClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing tiers (%s)", err)
+	}
+
+	tierServer, err = tierClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting tier %s (%s)", name, err)
+	}
+	if name != tierServer.Name &&
+		tier.ResourceVersion == tierServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same tier back from the server \n%+v\n%+v", tier, tierServer)
+	}
+
+	err = tierClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("tier should be deleted (%s)", err)
+	}
+
+	return nil
+}
