@@ -161,9 +161,9 @@ netops    100
 Notice that the order value of the netops tier is lower than the value of the
 `default` tier. Lower order values have a higher precedence.
 
-<div class="alert alert-info" role="alert"><b>Note</b>:
-Read more about order values in the <a href="../../reference/calicoctl/">calicoctl reference section.</a>
-</div>
+> **Note**: Read more about order values in the 
+> [calicoctl reference section](../../reference/calicoctl/).
+{: .alert .alert-info}
 
 Launch a pod in the `policy-demo` Namespace and test DNS connectivity to 8.8.8.8
 
