@@ -14,8 +14,9 @@ CALICO_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STRE
 CALICO_GIT_VER ?= $(shell git describe --tags --dirty --always)
 BIRD_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico-bird.version')
 GOBGPD_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico-bgp-daemon.version')
-FELIX_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.felix.version')
-CALICOCTL_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoctl.version')
+FELIX_VER ?= latest
+CALICOCTL_VER ?= latest
+CALICOQ_VER ?= latest
 LIBNETWORK_PLUGIN_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.libnetwork-plugin.version')
 TYPHA_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.typha.version')
 K8S_POLICY_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/kube-policy-controller.version')
@@ -52,10 +53,14 @@ NODE_CONTAINER_CREATED=$(NODE_CONTAINER_DIR)/.calico_node.created
 NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
 NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
 FELIX_REPO?=calico/felix
-FELIX_CONTAINER_NAME?=calico/felix:latest
+FELIX_CONTAINER_NAME?=calico/felix:$(FELIX_VER)
+FELIX_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/felix-essentials
 LIBNETWORK_PLUGIN_REPO?=calico/libnetwork-plugin
 LIBNETWORK_PLUGIN_CONTAINER_NAME?=$(LIBNETWORK_PLUGIN_REPO):$(LIBNETWORK_PLUGIN_VER)
 CTL_CONTAINER_NAME?=calico/ctl:$(CALICOCTL_VER)
+CTL_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/ctl-essentials
+CALICOQ_CONTAINER_NAME?=calico/calicoq:$(CALICOQ_VER)
+CALICOQ_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/calicoq
 
 STARTUP_DIR=$(NODE_CONTAINER_DIR)/startup
 STARTUP_FILES=$(shell find $(STARTUP_DIR) -name '*.go')
@@ -101,10 +106,40 @@ dist/calicoctl-v1.0.2:
 # Pull the latest calicoctl binary.  Used for STs
 dist/calicoctl:
 	-docker rm -f calicoctl
+	if [ "$(docker images -q $$(CTL_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
+	  docker tag $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER) $(CTL_CONTAINER_NAME); \
+	fi;
 	docker create --name calicoctl $(CTL_CONTAINER_NAME)
 	docker cp calicoctl:calicoctl dist/calicoctl && \
 	  test -e dist/calicoctl && \
 	  touch dist/calicoctl
+	-docker rm -f calicoctl
+
+# Pull the latest calicoctl darwin binary. Used for releases
+dist/calicoctl-darwin-amd64:
+	-docker rm -f calicoctl
+	if [ "$(docker images -q $$(CTL_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
+	  docker tag $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER) $(CTL_CONTAINER_NAME); \
+	fi;
+	docker create --name calicoctl $(CTL_CONTAINER_NAME)
+	docker cp calicoctl:calicoctl-darwin-amd64 dist/calicoctl-darwin-amd64 && \
+	  test -e dist/calicoctl-darwin-amd64 && \
+	  touch dist/calicoctl-darwin-amd64
+	-docker rm -f calicoctl
+
+# Pull the latest calicoctl windows binary. Used for releases
+dist/calicoctl-windows-amd64.exe:
+	-docker rm -f calicoctl
+	if [ "$(docker images -q $$(CTL_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
+	  docker tag $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER) $(CTL_CONTAINER_NAME); \
+	fi;
+	docker create --name calicoctl $(CTL_CONTAINER_NAME)
+	docker cp calicoctl:calicoctl-windows-amd64.exe dist/calicoctl-windows-amd64.exe && \
+	  test -e dist/calicoctl-windows-amd64.exe && \
+	  touch dist/calicoctl-windows-amd64.exe
 	-docker rm -f calicoctl
 
 test_image: calico_test.created ## Create the calico/test image
@@ -134,6 +169,11 @@ $(NODE_CONTAINER_BIN_DIR)/calico-felix update-felix:
 	-docker rm -f calico-felix
 	# Latest felix binaries are stored in automated builds of calico/felix.
 	# To get them, we create (but don't start) a container from that image.
+	# Check if need to pull calico/felix from private repo or if it was built locally
+	if [ "$(docker images -q $$(FELIX_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(FELIX_PRIVATE_IMAGE):$(FELIX_VER); \
+	  docker tag $(FELIX_PRIVATE_IMAGE):$(FELIX_VER) $(FELIX_CONTAINER_NAME); \
+	fi;
 	docker create --name calico-felix $(FELIX_CONTAINER_NAME)
 	# Then we copy the files out of the container.  Since docker preserves
 	# mtimes on its copy, check the file really did appear, then touch it
@@ -216,6 +256,19 @@ dist/allocate-ipip-addr: $(ALLOCATE_IPIP_FILES) vendor
 	  $(CALICO_BUILD) sh -c '\
 		cd /go/src/$(PACKAGE_NAME) && \
 		make CALICO_GIT_VER=$(CALICO_GIT_VER) allocate-ipip-addr'
+
+# Pull the latest calicoq binary. Not used for STs yet.
+dist/calicoq:
+	-docker rm -f calicoq
+	if [ "$(docker images -q $$(CALICOQ_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(CALICOQ_PRIVATE_IMAGE):$(CALICOQ_VER); \
+	  docker tag $(CALICOQ_PRIVATE_IMAGE):$(CALICOQ_VER) $(CALICOQ_CONTAINER_NAME); \
+	fi;
+	docker create --name calicoq $(CALICOQ_CONTAINER_NAME)
+	docker cp calicoq:calicoq dist/calicoq && \
+	  test -e dist/calicoq && \
+	  touch dist/calicoq
+	-docker rm -f calicoq
 
 ###############################################################################
 # Tests
@@ -452,21 +505,22 @@ semaphore:
 	$(MAKE) RELEASE_STREAM=master $(NODE_CONTAINER_NAME) st
 	ST_TO_RUN=tests/st/policy $(MAKE) RELEASE_STREAM=master st-ssl
 
+release: FELIX_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.felix.version')
+release: CALICOCTL_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoctl.version')
+release: CALICOQ_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
 release: clean
 	@if [[ `git rev-parse --abbrev-ref HEAD` == "master" ]]; then echo 'Release process should not be run from master'; exit 1; fi
 
 	git tag $(CALICO_VER)
 
 	# Build the calico/node images.
-	$(MAKE) $(NODE_CONTAINER_NAME)
+	FELIX_VER=$(FELIX_VER) $(MAKE) $(NODE_CONTAINER_NAME)
 
 	# Create the release archive
-	$(MAKE) release-archive
+	CALICOCTL_VER=$(CALICOCTL_VER) CALICOQ_VER=$(CALICOQ_VER) $(MAKE) release-archive
 
-	# Retag images with corect version and quay
-	docker tag $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_NAME):$(CALICO_VER)
-	docker tag $(NODE_CONTAINER_NAME) quay.io/$(NODE_CONTAINER_NAME):$(CALICO_VER)
-	docker tag $(NODE_CONTAINER_NAME) quay.io/$(NODE_CONTAINER_NAME):latest
+	# Retag images with corect version and GCR private registry
+	docker tag $(NODE_CONTAINER_NAME) gcr.io/tigera-dev/$(NODE_CONTAINER_NAME)-essentials:$(CALICO_VER)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME)
@@ -478,10 +532,7 @@ release: clean
 	
 	@echo "See RELEASING.md for detailed instructions."
 	@echo "Now push images."
-	@echo "docker push $(NODE_CONTAINER_NAME):$(CALICO_VER)"
-	@echo "docker push quay.io/$(NODE_CONTAINER_NAME):$(CALICO_VER)"
-	@echo "docker push $(NODE_CONTAINER_NAME):latest"
-	@echo "docker push quay.io/$(NODE_CONTAINER_NAME):latest"
+	@echo "gcloud docker -- push gcr.io/tigera-dev/$(NODE_CONTAINER_NAME)-essentials:$(CALICO_VER)"
 	
 	@echo "Only push the tag AFTER this branch is merged to origin/master"
 	@echo "git push origin $(CALICO_VER)"
@@ -500,7 +551,7 @@ $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR_IM
 	tar -czvf $(RELEASE_DIR).tgz $(RELEASE_DIR)/*
 
 $(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/calico-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-policy-controller.tar
-$(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64
+$(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64 $(RELEASE_DIR_BIN)/calicoq
 
 $(RELEASE_DIR)/README:
 	@echo "This directory contains a complete release of Calico $(CALICO_VER)" >> $@
@@ -558,7 +609,13 @@ $(RELEASE_DIR_IMAGES)/calico-kube-policy-controller.tar:
 
 $(RELEASE_DIR_BIN)/%:
 	mkdir -p $(RELEASE_DIR_BIN)
-	wget https://github.com/projectcalico/calicoctl/releases/download/$(CALICOCTL_VER)/$(@F) -O $@
+	if [ "$(@F)" = "calicoq" ]; then \
+	    $(MAKE) dist/$(@F); \
+	    cp dist/$(@F) $@; \
+	else \
+	    # wget https://github.com/tigera/calico-containers-private/releases/download/$(CALICOCTL_VER)/$(@F) -O $@; \
+	    gsutil cp gs://tigera-essentials-release-binaries/calicoctl-$(CALICOCTL_VER)/$(@F) $@; \
+	fi
 	chmod +x $@
 
 ## Clean enough that a new release build will be clean
@@ -575,6 +632,8 @@ clean:
 	# We avoid just deleting the image. We didn't build them here so it would be impolite to delete it.
 	# Don't delete the Felix image, since we need to build it locally.
 	# docker tag $(FELIX_CONTAINER_NAME) $(FELIX_CONTAINER_NAME)-backup && docker rmi $(FELIX_CONTAINER_NAME) || true
+	docker tag $(CTL_CONTAINER_NAME) $(CTL_CONTAINER_NAME)-backup && docker rmi $(CTL_CONTAINER_NAME) || true
+	docker tag $(CALICOQ_CONTAINER_NAME) $(CALICOQ_CONTAINER_NAME)-backup && docker rmi $(CALICOQ_CONTAINER_NAME) || true
 
 	rm -rf $(RELEASE_DIR)
 

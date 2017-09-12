@@ -43,8 +43,10 @@ pipeline{
             steps {
                 dir('calico_node'){
                     // Get calicoctl
-                    sh "gsutil cp ${params.calicoctl_url} ./dist/calicoctl"
-                    sh "chmod +x ./dist/calicoctl"
+		     // TODO: Matt L: remove the url and pulling release versions when it is verified that pulling from images works correctly
+                    // sh "gsutil cp ${params.calicoctl_url} ./dist/calicoctl"
+                    // sh "chmod +x ./dist/calicoctl"
+		     sh 'make dist/calicoctl'
                 }
             }
         }
@@ -56,6 +58,20 @@ pipeline{
                         // The following bit of nastiness works round a docker issue with ttys.
                         // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
                         sh 'ssh localhost -t -t "cd $WORKSPACE/calico_node && make st"'
+                    }
+                }
+            }
+        }
+
+	stage('Push image to GCR') {
+            steps {
+                script{
+		    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
+                    // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
+                    if (env.BRANCH_NAME == 'master') {
+			 sh 'make calico/node'
+                        sh 'docker tag calico/node:latest gcr.io/tigera-dev/calico/node-essentials:latest'
+                        sh 'gcloud docker -- push gcr.io/tigera-dev/calico/node-essentials:latest'
                     }
                 }
             }
