@@ -4,7 +4,7 @@ default: all
 all: test
 test: ut
 
-BUILD_VER:=latest
+BUILD_VER?=latest
 BUILD_IMAGE:=calico/calicoq
 PACKAGE_NAME?=github.com/tigera/calicoq
 LOCAL_USER_ID?=$(shell id -u $$USER)
@@ -18,14 +18,13 @@ CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 CALICOQ_GIT_REVISION?=$(shell git rev-parse --short HEAD)
 CALICOQ_GIT_DESCRIPTION?=$(shell git describe --tags)
 
-VERSION_FLAGS:=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(CALICOQ_VERSION) \
+VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoq/commands.VERSION=$(CALICOQ_VERSION) \
 	-X $(PACKAGE_NAME)/calicoq/commands.BUILD_DATE=$(CALICOQ_BUILD_DATE) \
 	-X $(PACKAGE_NAME)/calicoq/commands.GIT_DESCRIPTION=$(CALICOQ_GIT_DESCRIPTION) \
 	-X $(PACKAGE_NAME)/calicoq/commands.GIT_REVISION=$(CALICOQ_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
-.PHONY: vendor
 vendor:
 	glide install --strip-vendor
 
@@ -104,10 +103,15 @@ clean-image:
 CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)
 
 bin/calicoq:
-	$(MAKE) binary-containerized LDFLAGS='$(BUILD_LDFLAGS)'
+	$(MAKE) binary-containerized
 
 .PHONY: binary-containerized
 binary-containerized: $(CALICOQ_GO_FILES)
+ifndef RELEASE_BUILD
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
+endif
 	mkdir -p bin
 	mkdir -p $(HOME)/.glide
 	# vendor in a container first
@@ -135,7 +139,7 @@ binary-containerized: $(CALICOQ_GO_FILES)
 .PHONY: binary
 binary: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(CALICOQ_GO_FILES)
 	mkdir -p bin
-	go build -o "$(BINARY)" "./calicoq/calicoq.go"
+	go build $(BUILD_LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"
 
 release/calicoq: $(CALICOQ_GO_FILES) clean
 ifndef VERSION
@@ -148,7 +152,7 @@ endif
 	then echo current git working tree is "dirty". Make sure you do not have any uncommitted changes ;false; fi
 
 	# Build the calicoq binaries and image
-	$(MAKE) binary-containerized LDFLAGS='$(RELEASE_LDFLAGS)'
+	$(MAKE) binary-containerized RELEASE_BUILD=1
 	$(MAKE) build-image
 
 	# Make the release directory and move over the relevant files
@@ -206,5 +210,5 @@ clean:
 	-rm -rf build bin release vendor
 	-docker rm -f calico-build
 	-docker rmi calico/build
-	-docker rmi $(BUILD_IMAGE)
-	-docker rmi calico/go-build
+	-docker rmi $(BUILD_IMAGE) -f
+	-docker rmi calico/go-build -f
