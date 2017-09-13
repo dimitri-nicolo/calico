@@ -55,7 +55,7 @@ function validate_version {
     version=$1
 
     # We allow.
-    REGEX="^[0-9]+\.[0-9]+\.[0-9]+(-?(a|b|rc|pre).*)?$"
+    REGEX="^[0-9]+\.[0-9]+\.[0-9]+(-?e[0-9]+\.[0-9]+\.[0-9]+)?(-?(a|b|rc|pre).*)?$"
 
     if [[ $version =~ $REGEX ]]; then
 	return 0
