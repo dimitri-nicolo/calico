@@ -19,9 +19,11 @@ package rest
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
-	calicoendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/endpoint"
-	caliconode "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/node"
+	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
+	// calicoendpoint "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/endpoint"
+	// caliconode "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/node"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
+	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
 
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -29,6 +31,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/client-go/pkg/api"
 
 	calicov1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
@@ -36,7 +39,9 @@ import (
 
 // RESTStorageProvider provides a factory method to create a new APIGroupInfo for
 // the calico API group. It implements (./pkg/apiserver).RESTStorageProvider
-type RESTStorageProvider struct{}
+type RESTStorageProvider struct {
+	StorageType server.StorageType
+}
 
 // NewRESTStorage is a factory method to make a new APIGroupInfo for the
 // calico API group.
@@ -65,12 +70,30 @@ func (p RESTStorageProvider) v1Storage(
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,
 ) (map[string]rest.Storage, error) {
+	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("policies"))
+	if err != nil {
+		return nil, err
+	}
+	policyOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   policyRESTOptions,
+			Capacity:      1000,
+			ObjectType:    policy.EmptyObject(),
+			ScopeStrategy: policy.NewScopeStrategy(),
+			NewListFunc:   policy.NewList,
+			GetAttrsFunc:  policy.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calico.Options{},
+		p.StorageType,
+		authorizer,
+	)
 
 	storage := map[string]rest.Storage{}
-	storage["policies"] = calicopolicy.NewREST(restOptionsGetter, authorizer)
+	storage["policies"] = calicopolicy.NewREST(*policyOpts)
 	storage["tiers"] = calicotier.NewREST(restOptionsGetter, storage["policies"])
-	storage["endpoints"] = calicoendpoint.NewREST(restOptionsGetter, authorizer)
-	storage["nodes"] = caliconode.NewREST(restOptionsGetter, authorizer)
+	// storage["endpoints"] = calicoendpoint.NewREST(restOptionsGetter, authorizer)
+	// storage["nodes"] = caliconode.NewREST(restOptionsGetter, authorizer)
 
 	return storage, nil
 }

@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,9 +31,9 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/client-go/pkg/api"
 )
 
@@ -44,7 +45,18 @@ type REST struct {
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authorizer) *REST {
+func NewREST(opts server.Options) *REST {
+	prefix := "/" + opts.ResourcePrefix()
+
+	storageInterface, dFunc := opts.GetStorage(
+		1000,
+		&calico.Policy{},
+		prefix,
+		apiServerStrategy,
+		NewList,
+		nil,
+		storage.NoTriggerPublisher,
+	)
 	store := &genericregistry.Store{
 		Copier:      api.Scheme,
 		NewFunc:     func() runtime.Object { return &calico.Policy{} },
@@ -58,15 +70,10 @@ func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authori
 		CreateStrategy: Strategy,
 		UpdateStrategy: Strategy,
 		DeleteStrategy: Strategy,
+		DestroyFunc:    dFunc,
 	}
 
-	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: GetAttrs}
-	if err := store.CompleteWithOptions(options); err != nil {
-		panic(err) // TODO: Propagate error up
-	}
-
-	legacyStore := NewLegacyREST(store)
-	return &REST{store, legacyStore, authorizer}
+	return &REST{store, opts.authorizer}
 }
 
 // TODO: Remove this. Its purely for debugging purposes.
@@ -152,20 +159,7 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, include
 		return nil, err
 	}
 
-	err = r.legacyStore.create(obj)
-	if err != nil {
-		return nil, err
-	}
-	obj, err = r.Store.Create(ctx, obj, false)
-	if err != nil {
-		objectName, err := r.ObjectNameFunc(obj)
-		if err != nil {
-			panic("failed parsing object name of an already stored object")
-		}
-		r.legacyStore.delete(objectName)
-		return nil, err
-	}
-	return obj, nil
+	return r.Store.Create(ctx, obj, false)
 }
 
 func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo) (runtime.Object, bool, error) {
@@ -196,17 +190,7 @@ func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav
 		return nil, false, err
 	}
 
-	_, err = r.legacyStore.delete(name)
-	if err != nil {
-		return nil, false, err
-	}
-	obj, ok, err := r.Store.Delete(ctx, name, options)
-	if err != nil || !ok {
-		// TODO
-		//r.legacyStore.create(policy)
-		return nil, false, err
-	}
-	return obj, ok, err
+	return r.Store.Delete(ctx, name, options)
 }
 
 func (r *REST) Watch(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
