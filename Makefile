@@ -465,11 +465,10 @@ release-once-tagged:
 	@echo "Will now build release artifacts..."
 	@echo
 	$(MAKE) bin/calico-felix calico/felix
-	docker tag calico/felix calico/felix:$(VERSION)
-	docker tag calico/felix:$(VERSION) quay.io/calico/felix:$(VERSION)
+	docker tag calico/felix gcr.io/tigera-essentials/calico/felix-essentials:$(VERSION)
 	@echo
 	@echo "Checking built felix has correct version..."
-	@if docker run quay.io/calico/felix:$(VERSION) calico-felix --version | grep -q '$(VERSION)$$'; \
+	@if docker run gcr.io/tigera-dev/calico/felix-essentials:$(VERSION) calico-felix --version | grep -q '$(VERSION)$$'; \
 	then \
 	  echo "Check successful."; \
 	else \
@@ -481,14 +480,14 @@ release-once-tagged:
 	@echo
 	@echo "- Binary:                 bin/calico-felix"
 	@echo "- Docker container image: calico/felix:$(VERSION)"
-	@echo "- Same, tagged for Quay:  quay.io/calico/felix:$(VERSION)"
+	@echo "- Same, tagged for GCR private registry:  gcr.io/tigera-dev/calico/felix-essentials:$(VERSION)"
 	@echo
 	@echo "Now to publish this release to Github:"
 	@echo
-	@echo "- Push the new tag ($(VERSION)) to https://github.com/projectcalico/felix"
-	@echo "- Go to https://github.com/projectcalico/felix/releases/tag/$(VERSION)"
+	@echo "- Push the new tag ($(VERSION)) to https://github.com/tigera/felix-private"
+	@echo "- Go to https://github.com/tigera/felix-private/releases/tag/$(VERSION)"
 	@echo "- Copy the tag content (release notes) shown on that page"
-	@echo "- Go to https://github.com/projectcalico/felix/releases/new?tag=$(VERSION)"
+	@echo "- Go to https://github.com/tigera/felix-private/releases/new?tag=$(VERSION)"
 	@echo "- Name the GitHub release:"
 	@echo "  - For a stable release: 'Felix $(VERSION)'"
 	@echo "  - For a test release:   'Felix $(VERSION) pre-release for testing'"
@@ -500,16 +499,9 @@ release-once-tagged:
 	@echo "- Click the 'This is a pre-release' checkbox, if appropriate"
 	@echo "- Click 'Publish release'"
 	@echo
-	@echo "Then, push the versioned docker images to Dockerhub and Quay:"
+	@echo "Then, push the versioned docker images to GCR ONLY:"
 	@echo
-	@echo "- docker push calico/felix:$(VERSION)"
-	@echo "- docker push quay.io/calico/felix:$(VERSION)"
-	@echo
-	@echo "If this is the latest release from the most recent stable"
-	@echo "release series, also push the 'latest' tag:"
-	@echo
-	@echo "- docker push calico/felix:latest"
-	@echo "- docker push quay.io/calico/felix:latest"
+	@echo "- gcloud docker -- push gcr.io/tigera-dev/calico/felix-essentials:$(VERSION)"
 	@echo
 	@echo "If you also want to build Debian/Ubuntu and RPM packages for"
 	@echo "the new release, use 'make deb' and 'make rpm'."
