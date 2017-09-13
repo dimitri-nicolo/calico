@@ -233,24 +233,19 @@ endif
 	  echo "Version check passed\n"; \
 	fi
 
-	# Retag images with corect version and quay
-	docker tag $(CTL_CONTAINER_NAME) $(CTL_CONTAINER_NAME):$(VERSION)
-	docker tag $(CTL_CONTAINER_NAME) quay.io/$(CTL_CONTAINER_NAME):$(VERSION)
-	docker tag $(CTL_CONTAINER_NAME) quay.io/$(CTL_CONTAINER_NAME):latest
+	# Retag images with correct version and GCR private registry
+	docker tag $(CTL_CONTAINER_NAME) gcr.io/tigera-dev/$(CTL_CONTAINER_NAME)-essentials:$(VERSION)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(CTL_CONTAINER_NAME)
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(CTL_CONTAINER_NAME):$(VERSION)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/$(CTL_CONTAINER_NAME)-essentials:$(VERSION)
 
 	@echo "\nNow push the tag and images. Then create a release on Github and"
 	@echo "attach dist/calicoctl, dist/calicoctl-darwin-amd64, and dist/calicoctl-windows-amd64.exe binaries"
 	@echo "\nAdd release notes for calicoctl. Use this command"
 	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
 	@echo "git push origin $(VERSION)"
-	@echo "docker push calico/ctl:$(VERSION)"
-	@echo "docker push quay.io/calico/ctl:$(VERSION)"
-	@echo "docker push calico/ctl:latest"
-	@echo "docker push quay.io/calico/ctl:latest"
+	@echo "gcloud docker -- push gcr.io/tigera-dev/calico/ctl-essentials:$(VERSION)"
 	@echo "See RELEASING.md for detailed instructions."
 
 ## Clean enough that a new release build will be clean
