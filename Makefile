@@ -465,7 +465,7 @@ release-once-tagged:
 	@echo "Will now build release artifacts..."
 	@echo
 	$(MAKE) bin/calico-felix calico/felix
-	docker tag calico/felix gcr.io/tigera-essentials/calico/felix-essentials:$(VERSION)
+	docker tag calico/felix gcr.io/tigera-dev/calico/felix-essentials:$(VERSION)
 	@echo
 	@echo "Checking built felix has correct version..."
 	@if docker run gcr.io/tigera-dev/calico/felix-essentials:$(VERSION) calico-felix --version | grep -q '$(VERSION)$$'; \
