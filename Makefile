@@ -92,7 +92,7 @@ st-containerized: bin/calicoq build-image
 
 # Build image for containerized testing
 .PHONY: build-image
-build-image:
+build-image: bin/calicoq
 	docker build -t $(BUILD_IMAGE):$(BUILD_VER) `pwd`
 
 # Clean up image from containerized testing
@@ -137,11 +137,48 @@ binary: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(
 	mkdir -p bin
 	go build -o "$(BINARY)" "./calicoq/calicoq.go"
 
-release/calicoq: $(CALICOQ_GO_FILES)
+release/calicoq: $(CALICOQ_GO_FILES) clean
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
+endif
+	git tag $(VERSION)
+
+	# Check to make sure the tag isn't "dirty"
+	if git describe --tags --dirty | grep dirty; \
+	then echo current git working tree is "dirty". Make sure you do not have any uncommitted changes ;false; fi
+
+	# Build the calicoq binaries and image
 	$(MAKE) binary-containerized LDFLAGS='$(RELEASE_LDFLAGS)'
+	$(MAKE) build-image
+
+	# Make the release directory and move over the relevant files
 	mkdir -p release
 	mv $(BINARY) release/calicoq-$(CALICOQ_GIT_DESCRIPTION)
 	ln -f release/calicoq-$(CALICOQ_GIT_DESCRIPTION) release/calicoq
+
+	# Check that the version output includes the version specified.
+	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
+	# Release is currently supported on darwin / linux only.
+	if ! docker run $(BUILD_IMAGE) version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(BUILD_IMAGE) version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+	# Retag images with correct version and GCR private registry
+	docker tag $(BUILD_IMAGE) gcr.io/tigera-dev/$(BUILD_IMAGE):$(VERSION)
+
+	# Check that images were created recently and that the IDs of the versioned and latest images match
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(BUILD_IMAGE)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/$(BUILD_IMAGE):$(VERSION)
+
+	@echo "\nNow push the tag and images. Then create a release on Github and"
+	@echo "attach bin/calicoq binary"
+	@echo "\nAdd release notes for calicoq. Use this command"
+	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
+	@echo "git push origin $(VERSION)"
+	@echo "gcloud docker -- push gcr.io/tigera-dev/$(BUILD_IMAGE):$(VERSION)"
 
 .PHONY: compress-release
 compressed-release: release/calicoq
