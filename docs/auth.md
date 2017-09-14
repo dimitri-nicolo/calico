@@ -55,6 +55,10 @@ users:
 
 ### For UI access through OIDC
 1. Configure the 'client_iD' and 'authority' in the startup/config yaml with the exact values as ones being used by the Core API Server. Ideally they can be configured through the UI application's Pod manifest using environment variables.
+2. Once the id_token is fetched from the OAuth2 browser workflow, it can be used to set the Authorization request header. For ex: 
+```
+Authorization: Bearer 31ada4fd-adec-460c-809a-9e56ceb75269
+```
 
 ### Setting up RBAC for the new user.
 1. Since the new user comes with no permission any access would be by default forbidden
