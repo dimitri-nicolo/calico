@@ -67,11 +67,12 @@ fv: bin/calicoq
 fv-containerized: bin/calicoq build-image
 	docker run --net=host --privileged \
 		--rm -t \
+		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
 		$(BUILD_IMAGE) \
-		sh -c 'CALICOQ=`pwd`/$(BINARY) fv/run-test'
+		-c 'CALICOQ=`pwd`/$(BINARY) fv/run-test'
 	$(MAKE) clean-image
 
 .PHONY: st
@@ -82,11 +83,12 @@ st: bin/calicoq
 st-containerized: bin/calicoq build-image
 	docker run --net=host --privileged \
 		--rm -t \
+		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
 		$(BUILD_IMAGE) \
-		sh -c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
+		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
 	$(MAKE) clean-image
 
 # Build image for containerized testing
