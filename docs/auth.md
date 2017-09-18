@@ -14,14 +14,19 @@ Assuming you have a running Kubernetes cluster (based on instructions as laid ou
 3. In the sidebar under APIs & Services, select Credentials, then select the OAuth consent screen tab.
 4. Choose an Email Address, specify a Product Name, and submit Save.
 5. In the Credentials tab, click on Create Credentials, and choose OAuth client ID from the drop-down.
-6. Under Application type, select Other.
+6. Under Application type, select Web Application. Set the desired "Authorized JavaScript origins" and "Authorized redirect URIs". The authorized URI will be appended with "id_token"/"access_toke" based on the "response_type". 
+
+For detailed workflow please refer: https://www.ibm.com/support/knowledgecenter/en/SSEQTP_8.5.5/com.ibm.websphere.wlp.doc/ae/twlp_oidc_auth_endpoint.html
+
 7. From the resulting OAuth client dialog box, copy the Client ID. The Client ID lets your app access enabled Google APIs.
 8. Download the client secret JSON file of the credentials.
 
 ### Setting up a Kubernetes cluster
-1. After initializing the master instance, you need to update the kube api server arguments in the manifest /etc/kubernetes/manifests/kube-apiserver.yaml.
+1. Update the kube api server arguments in the manifest /etc/kubernetes/manifests/kube-apiserver.yaml to set 'oidc-issuer-url', 'oidc-username-claim', 'oidc-client-id'. Following command can be used to perform the action: 
+
+Set the Client ID based on the credential created above.
 ```
-sed -i "/- apiserver/a\    - --oidc-issuer-url=https://accounts.google.com\n    - --oidc-username-claim=email\n    - --oidc-client-id=<FILL_IN_THE_CLIENT_ID_FROM_CONSOLE_PROJECT" /etc/kubernetes/manifests/kube-apiserver.yaml
+sed -i "/- apiserver/a\    - --oidc-issuer-url=https://accounts.google.com\n    - --oidc-username-claim=email\n    - --oidc-client-id=<FILL_IN_THE_CLIENT_ID_FROM_CONSOLE_PROJECT>" /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
 ### For Kubectl access through OIDC
@@ -54,10 +59,22 @@ users:
 3. Copy everything after users: and append it to your existing user list in the $HOME/admin.conf. Now you have 2 users: one from the new cluster configuration and one that you added.
 
 ### For UI access through OIDC
-1. Configure the 'client_iD' and 'authority' in the startup/config yaml with the exact values as ones being used by the Core API Server. Ideally they can be configured through the UI application's Pod manifest using environment variables.
-2. Once the id_token is fetched from the OAuth2 browser workflow, it can be used to set the Authorization request header. For ex: 
+1. Configure the 'client_iD' and/or 'client_secret' and 'endpoint/authority' in the startup/config yaml with the same values as ones being used to configure the Core API Server. In the workflow so far those values would be the ones that were created as part of the console project/credentials workflow. 
+
+These values should ideally be configured through the UI application's Pod manifest using environment variables.
+2. Once the id_token is fetched from the OAuth2 browser workflow, i.e. from the redirect uri query parameters, it can be used to set the Authorization request header. For ex, id_token being embedded into the Authorization header: 
 ```
-Authorization: Bearer 31ada4fd-adec-460c-809a-9e56ceb75269
+curl -L H "Authorization: Bearer eyJhbGREDACTEDlOTE0ZGRkOWY4MGYyOGY2YWU0ZDBhNGMzZTAxOTE1NzFkNTIifQ.eyJhenREDACTEDlobnJudGZsZm5sNW80bGliYm9ibHFmbGkwODQ3NXIuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI1OREDACTED0bGliYm9ibHFmbGkwODQ3NXIuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDkwNDY2NDM4MDYzNDk5MTM2NzEiLCJlbWFpbCI6InNREDACTEDUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiYXRfaGFREDACTED3czM2Uk8zSUg5RmpTeHciLCJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJpYXQiOjE1MDU3MTIwOTUsImV4cCI6MTUwNTREDACTEDRydSBTYWRodSIsInBpY3R1cmUiOiJodHRwczovL2xoNS5nb29nbGV1c2VyY29udGVudC5jb20vLXpMcUxYT19rU3JNL0FBQUFBQUFBQUFJL0FBQUFBQUFBQUFBL0FQSnlwQTNFeDVQbUoyZnpVSGptMVpaYTUteFlRTFdzakEvczk2LWMvcGhvdG8uanBnIiwiZ2l2ZW5fbmFtZSI6IlNoYXRydSIsImZhbWlseV9uYW1lIjoiU2FkaHUiLCJsb2NhbGUiOiJlbiJ9.gAFVQc-6R29VtcrNXA3UTO0U2svu4qwY-LZEMIMPcp7tHg4LnmaXAdab5FTuWKgkG4AXeuXtkNYKJNiYf7yCt_TX90QDV6kUDGPKOWQueX1Gst2jgnCyATHy5hkEvun1XoVC2eFndlsAonIhicAlkO7z86E6bjog5gGfy2M36QgABBOmHyTsO9ueLP1_0yCCgjoQPcK5o4u-VZpIE9G-0I03SaZ664dppHIH1j1GYEaeW1n4xzNVX_Yw6x8qCMbH6QsNkVDTEPh0-y7hGsfzfbk8T-vDVSFriGA3_LiABUADy5WJduwVM5PYWqDtnxCwfYxVo43vWA6O-FRcRf2M3w" --cacert /etc/kubernetes/pki/apiserver.crt https://10.0.2.15:6443/apis/calico.tigera.io/v1/policies
+
+{
+  "kind": "PolicyList",
+  "apiVersion": "calico.tigera.io/v1",
+  "metadata": {
+    "selfLink": "/apis/calico.tigera.io/v1/policies",
+    "resourceVersion": "60"
+  },
+  "items": []
+}
 ```
 
 ### Setting up RBAC for the new user.
