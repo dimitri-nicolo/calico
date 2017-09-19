@@ -35,6 +35,7 @@ import (
 	"k8s.io/client-go/pkg/api"
 
 	calicov1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
 )
 
 // RESTStorageProvider provides a factory method to create a new APIGroupInfo for
@@ -78,15 +79,15 @@ func (p RESTStorageProvider) v1Storage(
 		etcd.Options{
 			RESTOptions:   policyRESTOptions,
 			Capacity:      1000,
-			ObjectType:    policy.EmptyObject(),
-			ScopeStrategy: policy.NewScopeStrategy(),
-			NewListFunc:   policy.NewList,
-			GetAttrsFunc:  policy.GetAttrs,
+			ObjectType:    calicopolicy.EmptyObject(),
+			ScopeStrategy: calicopolicy.NewScopeStrategy(),
+			NewListFunc:   calicopolicy.NewList,
+			GetAttrsFunc:  calicopolicy.GetAttrs,
 			Trigger:       storage.NoTriggerPublisher,
 		},
-		calico.Options{},
+		calicostorage.Options{},
 		p.StorageType,
-		authorizer,
+		//authorizer,
 	)
 
 	storage := map[string]rest.Storage{}

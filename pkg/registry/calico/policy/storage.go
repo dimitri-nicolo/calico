@@ -40,8 +40,20 @@ import (
 // rest implements a RESTStorage for API services against etcd
 type REST struct {
 	*genericregistry.Store
-	legacyStore *legacyREST
-	authorizer  authorizer.Authorizer
+	authorizer authorizer.Authorizer
+}
+
+// EmptyObject returns an empty instance
+func EmptyObject() runtime.Object {
+	return &calico.Policy{}
+}
+
+// NewList returns a new shell of a binding list
+func NewList() runtime.Object {
+	return &calico.PolicyList{
+		TypeMeta: metav1.TypeMeta{},
+		Items:    []calico.Policy{},
+	}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
@@ -52,8 +64,8 @@ func NewREST(opts server.Options) *REST {
 		1000,
 		&calico.Policy{},
 		prefix,
-		apiServerStrategy,
-		NewList,
+		Strategy,
+		func() runtime.Object { return &calico.PolicyList{} },
 		nil,
 		storage.NoTriggerPublisher,
 	)
@@ -61,19 +73,24 @@ func NewREST(opts server.Options) *REST {
 		Copier:      api.Scheme,
 		NewFunc:     func() runtime.Object { return &calico.Policy{} },
 		NewListFunc: func() runtime.Object { return &calico.PolicyList{} },
+		KeyRootFunc: opts.KeyRootFunc(),
+		KeyFunc:     opts.KeyFunc(false),
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
 			return obj.(*calico.Policy).Name, nil
 		},
 		PredicateFunc:     MatchPolicy,
 		QualifiedResource: calico.Resource("policies"),
 
-		CreateStrategy: Strategy,
-		UpdateStrategy: Strategy,
-		DeleteStrategy: Strategy,
-		DestroyFunc:    dFunc,
+		CreateStrategy:          Strategy,
+		UpdateStrategy:          Strategy,
+		DeleteStrategy:          Strategy,
+		EnableGarbageCollection: true,
+
+		Storage:     storageInterface,
+		DestroyFunc: dFunc,
 	}
 
-	return &REST{store, opts.authorizer}
+	return &REST{store, opts.Authorizer}
 }
 
 // TODO: Remove this. Its purely for debugging purposes.

@@ -19,8 +19,11 @@ package server
 import (
 	"fmt"
 
-	"github.com/kubernetes-incubator/service-catalog/pkg/storage/etcd"
+	"github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
+	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
+
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -70,6 +73,7 @@ type Options struct {
 	EtcdOptions   etcd.Options
 	CalicoOptions calico.Options
 	storageType   StorageType
+	Authorizer    authorizer.Authorizer
 }
 
 // NewOptions returns a new Options with the given parameters

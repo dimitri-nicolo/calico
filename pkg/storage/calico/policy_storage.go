@@ -12,5 +12,5 @@ type policyStore struct {
 
 // NewPolicyStorage creates a new libcalico-based storage.Interface implementation for Policy
 func NewPolicyStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
-
+	return nil, nil
 }

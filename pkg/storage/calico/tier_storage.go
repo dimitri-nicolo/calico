@@ -12,5 +12,5 @@ type tierStore struct {
 
 // NewTierStorage creates a new libcalico-based storage.Interface implementation for Tier
 func NewTierStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
-
+	return nil, nil
 }
