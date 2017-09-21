@@ -44,6 +44,14 @@ pipeline {
 			 sh 'make calico/felix'
 			 sh 'docker tag calico/felix:latest gcr.io/tigera-dev/calico/felix-essentials:latest'
                         sh 'gcloud docker -- push gcr.io/tigera-dev/calico/felix-essentials:latest'
+
+			// Clean up images.
+			// Hackey since empty displayed tags are not empty according to gcloud filter criteria
+			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/calico/felix-essentials --format='get(digest)'); do 
+				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/calico/felix-essentials --filter=digest~${digest}) | awk '{print $6}'); then
+					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/calico/felix-essentials@${digest}" 
+				fi 
+			done'''
                     }
                 }
             }
