@@ -19,10 +19,8 @@ package rest
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
-	caliconode "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/node"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
-	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
 	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
 
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -70,7 +68,7 @@ func (p RESTStorageProvider) v1Storage(
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,
 ) (map[string]rest.Storage, error) {
-	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("policies"))
+	policyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("networkpolicies"))
 	if err != nil {
 		return nil, err
 	}
@@ -89,29 +87,8 @@ func (p RESTStorageProvider) v1Storage(
 		authorizer,
 	)
 
-	tierRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("tiers"))
-	if err != nil {
-		return nil, err
-	}
-	tierOpts := server.NewOptions(
-		etcd.Options{
-			RESTOptions:   tierRESTOptions,
-			Capacity:      1000,
-			ObjectType:    calicotier.EmptyObject(),
-			ScopeStrategy: calicotier.NewScopeStrategy(),
-			NewListFunc:   calicotier.NewList,
-			GetAttrsFunc:  calicotier.GetAttrs,
-			Trigger:       storage.NoTriggerPublisher,
-		},
-		calicostorage.Options{},
-		p.StorageType,
-		authorizer,
-	)
-
 	storage := map[string]rest.Storage{}
-	storage["policies"] = calicopolicy.NewREST(*policyOpts)
-	storage["tiers"] = calicotier.NewREST(*tierOpts, storage["policies"])
-	storage["nodes"] = caliconode.NewREST(restOptionsGetter, authorizer)
+	storage["networkpolicies"] = calicopolicy.NewREST(*policyOpts)
 
 	return storage, nil
 }

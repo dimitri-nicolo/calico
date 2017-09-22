@@ -1,6 +1,7 @@
 // Copyright (c) 2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
+
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
@@ -55,7 +56,7 @@ type GlobalNetworkPolicyConverter struct {
 func (_ GlobalNetworkPolicyConverter) ListInterfaceToKey(l model.ListInterface) model.Key {
 	pl := l.(model.PolicyListOptions)
 	if pl.Name != "" {
-		return model.PolicyKey{Tier: "default", Name: pl.Name}
+		return model.PolicyKey{Name: pl.Name}
 	}
 	return nil
 }
@@ -66,7 +67,6 @@ func (_ GlobalNetworkPolicyConverter) KeyToName(k model.Key) (string, error) {
 
 func (_ GlobalNetworkPolicyConverter) NameToKey(name string) (model.Key, error) {
 	return model.PolicyKey{
-		Tier: "default",
 		Name: name,
 	}, nil
 }
@@ -100,12 +100,10 @@ func (c GlobalNetworkPolicyConverter) FromKVPair(kvp *model.KVPair) (CustomK8sRe
 
 	crd := custom.GlobalNetworkPolicy{
 		Metadata: metav1.ObjectMeta{
-			Name: crdName,
+			Name:            crdName,
+			ResourceVersion: kvp.Revision,
 		},
 		Spec: r.(*api.Policy).Spec,
-	}
-	if kvp.Revision != nil {
-		crd.Metadata.ResourceVersion = kvp.Revision.(string)
 	}
 	return &crd, nil
 }

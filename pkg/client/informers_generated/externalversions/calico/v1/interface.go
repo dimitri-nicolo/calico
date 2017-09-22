@@ -24,12 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// Nodes returns a NodeInformer.
-	Nodes() NodeInformer
-	// Policies returns a PolicyInformer.
-	Policies() PolicyInformer
-	// Tiers returns a TierInformer.
-	Tiers() TierInformer
+	// NetworkPolicies returns a NetworkPolicyInformer.
+	NetworkPolicies() NetworkPolicyInformer
 }
 
 type version struct {
@@ -41,17 +37,7 @@ func New(f internalinterfaces.SharedInformerFactory) Interface {
 	return &version{f}
 }
 
-// Nodes returns a NodeInformer.
-func (v *version) Nodes() NodeInformer {
-	return &nodeInformer{factory: v.SharedInformerFactory}
-}
-
-// Policies returns a PolicyInformer.
-func (v *version) Policies() PolicyInformer {
-	return &policyInformer{factory: v.SharedInformerFactory}
-}
-
-// Tiers returns a TierInformer.
-func (v *version) Tiers() TierInformer {
-	return &tierInformer{factory: v.SharedInformerFactory}
+// NetworkPolicies returns a NetworkPolicyInformer.
+func (v *version) NetworkPolicies() NetworkPolicyInformer {
+	return &networkPolicyInformer{factory: v.SharedInformerFactory}
 }

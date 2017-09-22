@@ -36,7 +36,8 @@ var (
 	protoTCP = kapiv1.ProtocolTCP
 )
 
-type converter struct {
+//TODO: make this private and expose a public conversion interface instead
+type Converter struct {
 }
 
 // VethNameForWorkload returns a deterministic veth name
@@ -50,24 +51,13 @@ func VethNameForWorkload(workload string) string {
 }
 
 // parseWorkloadID extracts the Namespace and Pod name from the given workload ID.
-func (c converter) parseWorkloadID(workloadID string) (string, string) {
+func (c Converter) parseWorkloadID(workloadID string) (string, string) {
 	splits := strings.SplitN(workloadID, ".", 2)
 	return splits[0], splits[1]
 }
 
-// parsePolicyNameNamespace extracts the Kubernetes Namespace that backs the given Policy.
-func (c converter) parsePolicyNameNamespace(name string) (string, error) {
-	// Policy objects backed by Namespaces have form "ns.projectcalico.org/<ns_name>"
-	if !strings.HasPrefix(name, "ns.projectcalico.org/") {
-		// This is not backed by a Kubernetes Namespace.
-		return "", fmt.Errorf("Policy %s not backed by a Namespace", name)
-	}
-
-	return strings.TrimPrefix(name, "ns.projectcalico.org/"), nil
-}
-
 // parsePolicyNameNetworkPolicy extracts the Kubernetes Namespace and NetworkPolicy that backs the given Policy.
-func (c converter) parsePolicyNameNetworkPolicy(name string) (string, string, error) {
+func (c Converter) parsePolicyNameNetworkPolicy(name string) (string, string, error) {
 	// Policies backed by NetworkPolicies have form "knp.default.<ns_name>.<np_name>"
 	if !strings.HasPrefix(name, "knp.default.") {
 		// This is not backed by a Kubernetes NetworkPolicy.
@@ -83,28 +73,28 @@ func (c converter) parsePolicyNameNetworkPolicy(name string) (string, string, er
 }
 
 // parseProfileName extracts the Namespace name from the given Profile name.
-func (c converter) parseProfileName(profileName string) (string, error) {
-	// Profile objects backed by Namespaces have form "ns.projectcalico.org/<ns_name>"
-	if !strings.HasPrefix(profileName, "ns.projectcalico.org/") {
+func (c Converter) parseProfileName(profileName string) (string, error) {
+	// Profile objects backed by Namespaces have form "k8s_ns.<ns_name>"
+	if !strings.HasPrefix(profileName, "k8s_ns.") {
 		// This is not backed by a Kubernetes Namespace.
 		return "", fmt.Errorf("Profile %s not backed by a Namespace", profileName)
 	}
 
-	return strings.TrimPrefix(profileName, "ns.projectcalico.org/"), nil
+	return strings.TrimPrefix(profileName, "k8s_ns."), nil
 }
 
-// namespaceToProfile converts a Namespace to a Calico Profile.  The Profile stores
+// NamespaceToProfile converts a Namespace to a Calico Profile.  The Profile stores
 // labels from the Namespace which are inherited by the WorkloadEndpoints within
 // the Profile. This Profile also has the default ingress and egress rules, which are both 'allow'.
-func (c converter) namespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, error) {
+func (c Converter) NamespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, error) {
 	// Generate the labels to apply to the profile, using a special prefix
 	// to indicate that these are the labels from the parent Kubernetes Namespace.
 	labels := map[string]string{}
 	for k, v := range ns.ObjectMeta.Labels {
-		labels[fmt.Sprintf("k8s_ns/label/%s", k)] = v
+		labels[fmt.Sprintf("pcns.%s", k)] = v
 	}
 
-	name := fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)
+	name := fmt.Sprintf("k8s_ns.%s", ns.ObjectMeta.Name)
 	kvp := model.KVPair{
 		Key: model.ProfileKey{Name: name},
 		Value: &model.Profile{
@@ -121,7 +111,7 @@ func (c converter) namespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, erro
 
 // isReadyCalicoPod returns true if the pod should be shown as a workloadEndpoint
 // in the Calico API and false otherwise.
-func (c converter) isReadyCalicoPod(pod *kapiv1.Pod) bool {
+func (c Converter) isReadyCalicoPod(pod *kapiv1.Pod) bool {
 	if c.isHostNetworked(pod) {
 		log.WithField("pod", pod.Name).Debug("Pod is host networked.")
 		return false
@@ -135,23 +125,23 @@ func (c converter) isReadyCalicoPod(pod *kapiv1.Pod) bool {
 	return true
 }
 
-func (c converter) isScheduled(pod *kapiv1.Pod) bool {
+func (c Converter) isScheduled(pod *kapiv1.Pod) bool {
 	return pod.Spec.NodeName != ""
 }
 
-func (c converter) isHostNetworked(pod *kapiv1.Pod) bool {
+func (c Converter) isHostNetworked(pod *kapiv1.Pod) bool {
 	return pod.Spec.HostNetwork
 }
 
-func (c converter) hasIPAddress(pod *kapiv1.Pod) bool {
+func (c Converter) hasIPAddress(pod *kapiv1.Pod) bool {
 	return pod.Status.PodIP != ""
 }
 
-// podToWorkloadEndpoint converts a Pod to a WorkloadEndpoint.  It assumes the calling code
+// PodToWorkloadEndpoint converts a Pod to a WorkloadEndpoint.  It assumes the calling code
 // has verified that the provided Pod is valid to convert to a WorkloadEndpoint.
-func (c converter) podToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error) {
+func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error) {
 	// Pull out the profile and workload ID based on pod name and Namespace.
-	profile := fmt.Sprintf("ns.projectcalico.org/%s", pod.ObjectMeta.Namespace)
+	profile := fmt.Sprintf("k8s_ns.%s", pod.ObjectMeta.Namespace)
 	workload := fmt.Sprintf("%s.%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 
 	// We do, in some circumstances, want to parse Pods without an IP address.  For example,
@@ -177,6 +167,35 @@ func (c converter) podToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 	}
 	labels["calico/k8s_ns"] = pod.ObjectMeta.Namespace
 
+	// Map any named ports through.
+	var endpointPorts []model.EndpointPort
+	for _, container := range pod.Spec.Containers {
+		for _, containerPort := range container.Ports {
+			if containerPort.Name != "" && containerPort.ContainerPort != 0 {
+				var modelProto numorstring.Protocol
+				switch containerPort.Protocol {
+				case kapiv1.ProtocolUDP:
+					modelProto = numorstring.ProtocolFromString("udp")
+				case kapiv1.ProtocolTCP, kapiv1.Protocol("") /* K8s default is TCP. */ :
+					modelProto = numorstring.ProtocolFromString("tcp")
+				default:
+					log.WithFields(log.Fields{
+						"protocol": containerPort.Protocol,
+						"pod":      pod,
+						"port":     containerPort,
+					}).Debug("Ignoring named port with unknown protocol")
+					continue
+				}
+
+				endpointPorts = append(endpointPorts, model.EndpointPort{
+					Name:     containerPort.Name,
+					Protocol: modelProto,
+					Port:     uint16(containerPort.ContainerPort),
+				})
+			}
+		}
+	}
+
 	// Create the key / value pair to return.
 	kvp := model.KVPair{
 		Key: model.WorkloadEndpointKey{
@@ -192,14 +211,15 @@ func (c converter) podToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 			IPv4Nets:   ipNets,
 			IPv6Nets:   []cnet.IPNet{},
 			Labels:     labels,
+			Ports:      endpointPorts,
 		},
 		Revision: pod.ObjectMeta.ResourceVersion,
 	}
 	return &kvp, nil
 }
 
-// networkPolicyToPolicy converts a k8s NetworkPolicy to a model.KVPair.
-func (c converter) networkPolicyToPolicy(np *extensions.NetworkPolicy) (*model.KVPair, error) {
+// NetworkPolicyToPolicy converts a k8s NetworkPolicy to a model.KVPair.
+func (c Converter) NetworkPolicyToPolicy(np *extensions.NetworkPolicy) (*model.KVPair, error) {
 	// Pull out important fields.
 	policyName := fmt.Sprintf("knp.default.%s.%s", np.ObjectMeta.Namespace, np.ObjectMeta.Name)
 
@@ -208,7 +228,7 @@ func (c converter) networkPolicyToPolicy(np *extensions.NetworkPolicy) (*model.K
 	order := float64(1000.0)
 
 	// Generate the inbound rules list.
-	inboundRules := []model.Rule{}
+	var inboundRules []model.Rule
 	for _, r := range np.Spec.Ingress {
 		inboundRules = append(inboundRules, c.k8sIngressRuleToCalico(r, np.ObjectMeta.Namespace)...)
 	}
@@ -219,10 +239,10 @@ func (c converter) networkPolicyToPolicy(np *extensions.NetworkPolicy) (*model.K
 			Name: policyName,
 		},
 		Value: &model.Policy{
-			Order:         &order,
-			Selector:      c.k8sSelectorToCalico(&np.Spec.PodSelector, &np.ObjectMeta.Namespace),
-			InboundRules:  inboundRules,
-			OutboundRules: []model.Rule{model.Rule{Action: "allow"}},
+			Order:        &order,
+			Selector:     c.k8sSelectorToCalico(&np.Spec.PodSelector, &np.ObjectMeta.Namespace),
+			InboundRules: inboundRules,
+			Types:        []string{"ingress"},
 		},
 		Revision: np.ObjectMeta.ResourceVersion,
 	}, nil
@@ -230,11 +250,11 @@ func (c converter) networkPolicyToPolicy(np *extensions.NetworkPolicy) (*model.K
 
 // k8sSelectorToCalico takes a namespaced k8s label selector and returns the Calico
 // equivalent.
-func (c converter) k8sSelectorToCalico(s *metav1.LabelSelector, ns *string) string {
+func (c Converter) k8sSelectorToCalico(s *metav1.LabelSelector, ns *string) string {
 	// If this is a podSelector, it needs to be namespaced, and it
 	// uses a different prefix.  Otherwise, treat this as a NamespaceSelector.
 	selectors := []string{}
-	prefix := "k8s_ns/label/"
+	prefix := "pcns."
 	if ns != nil {
 		prefix = ""
 		selectors = append(selectors, fmt.Sprintf("calico/k8s_ns == '%s'", *ns))
@@ -277,7 +297,7 @@ func (c converter) k8sSelectorToCalico(s *metav1.LabelSelector, ns *string) stri
 	return strings.Join(selectors, " && ")
 }
 
-func (c converter) k8sIngressRuleToCalico(r extensions.NetworkPolicyIngressRule, ns string) []model.Rule {
+func (c Converter) k8sIngressRuleToCalico(r extensions.NetworkPolicyIngressRule, ns string) []model.Rule {
 	rules := []model.Rule{}
 	peers := []*extensions.NetworkPolicyPeer{}
 	ports := []*extensions.NetworkPolicyPort{}
@@ -319,7 +339,7 @@ func (c converter) k8sIngressRuleToCalico(r extensions.NetworkPolicyIngressRule,
 		ports = []*extensions.NetworkPolicyPort{nil}
 	}
 
-	// Combine desintations with sources to generate rules.
+	// Combine destinations with sources to generate rules.
 	// TODO: This currently creates a lot of rules by making every combination of from / ports
 	// into a rule.  We can combine these so that we don't need as many rules!
 	for _, port := range ports {
@@ -331,9 +351,9 @@ func (c converter) k8sIngressRuleToCalico(r extensions.NetworkPolicyIngressRule,
 	return rules
 }
 
-func (c converter) buildRule(port *extensions.NetworkPolicyPort, peer *extensions.NetworkPolicyPeer, ns string) model.Rule {
+func (c Converter) buildRule(port *extensions.NetworkPolicyPort, peer *extensions.NetworkPolicyPeer, ns string) model.Rule {
 	var protocol *numorstring.Protocol
-	dstPorts := []numorstring.Port{}
+	var dstPorts []numorstring.Port
 	srcSelector := ""
 	if port != nil {
 		// Port information available.
@@ -354,7 +374,7 @@ func (c converter) buildRule(port *extensions.NetworkPolicyPort, peer *extension
 	}
 }
 
-func (c converter) k8sProtocolToCalico(protocol *kapiv1.Protocol) *numorstring.Protocol {
+func (c Converter) k8sProtocolToCalico(protocol *kapiv1.Protocol) *numorstring.Protocol {
 	if protocol != nil {
 		p := numorstring.ProtocolFromString(strings.ToLower(string(*protocol)))
 		return &p
@@ -362,7 +382,7 @@ func (c converter) k8sProtocolToCalico(protocol *kapiv1.Protocol) *numorstring.P
 	return nil
 }
 
-func (c converter) k8sPeerToCalicoSelector(peer extensions.NetworkPolicyPeer, ns string) string {
+func (c Converter) k8sPeerToCalicoSelector(peer extensions.NetworkPolicyPeer, ns string) string {
 	// Determine the source selector for the rule.
 	// Only one of PodSelector / NamespaceSelector can be defined.
 	if peer.PodSelector != nil {
@@ -376,15 +396,16 @@ func (c converter) k8sPeerToCalicoSelector(peer extensions.NetworkPolicyPeer, ns
 	return ""
 }
 
-func (c converter) k8sPortToCalico(port extensions.NetworkPolicyPort) []numorstring.Port {
+func (c Converter) k8sPortToCalico(port extensions.NetworkPolicyPort) []numorstring.Port {
+	var portList []numorstring.Port
 	if port.Port != nil {
 		p, err := numorstring.PortFromString(port.Port.String())
 		if err != nil {
 			log.Panic("Invalid port %+v: %s", port.Port, err)
 		}
-		return []numorstring.Port{p}
+		return append(portList, p)
 	}
 
 	// No ports - return empty list.
-	return []numorstring.Port{}
+	return portList
 }

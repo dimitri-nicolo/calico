@@ -52,14 +52,14 @@ type REST struct {
 
 // EmptyObject returns an empty instance
 func EmptyObject() runtime.Object {
-	return &calico.Policy{}
+	return &calico.NetworkPolicy{}
 }
 
 // NewList returns a new shell of a binding list
 func NewList() runtime.Object {
-	return &calico.PolicyList{
-		TypeMeta: metav1.TypeMeta{},
-		Items:    []calico.Policy{},
+	return &calico.NetworkPolicyList{
+	//TypeMeta: metav1.TypeMeta{},
+	//Items:    []calico.NetworkPolicy{},
 	}
 }
 
@@ -77,25 +77,25 @@ func NewREST(opts server.Options) *REST {
 	}
 	storageInterface, dFunc := opts.GetStorage(
 		1000,
-		&calico.Policy{},
+		&calico.NetworkPolicy{},
 		prefix,
 		keyFunc,
 		Strategy,
-		func() runtime.Object { return &calico.PolicyList{} },
+		func() runtime.Object { return &calico.NetworkPolicyList{} },
 		GetAttrs,
 		storage.NoTriggerPublisher,
 	)
 	store := &genericregistry.Store{
 		Copier:      api.Scheme,
-		NewFunc:     func() runtime.Object { return &calico.Policy{} },
-		NewListFunc: func() runtime.Object { return &calico.PolicyList{} },
+		NewFunc:     func() runtime.Object { return &calico.NetworkPolicy{} },
+		NewListFunc: func() runtime.Object { return &calico.NetworkPolicyList{} },
 		KeyRootFunc: opts.KeyRootFunc(true),
 		KeyFunc:     opts.KeyFunc(true),
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
-			return obj.(*calico.Policy).Name, nil
+			return obj.(*calico.NetworkPolicy).Name, nil
 		},
 		PredicateFunc:     MatchPolicy,
-		QualifiedResource: calico.Resource("policies"),
+		QualifiedResource: calico.Resource("networkpolicies"),
 
 		CreateStrategy:          Strategy,
 		UpdateStrategy:          Strategy,
@@ -192,7 +192,7 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 }
 
 func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, includeUninitialized bool) (runtime.Object, error) {
-	policy := obj.(*calico.Policy)
+	policy := obj.(*calico.NetworkPolicy)
 	// Is Tier prepended. If not prepend default?
 	tierName, _ := getTierPolicy(policy.Name)
 	err := r.authorizeTierOperation(ctx, tierName)

@@ -52,12 +52,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=Calico, Version=InternalVersion
-	case calico.SchemeGroupVersion.WithResource("nodes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Calico().InternalVersion().Nodes().Informer()}, nil
-	case calico.SchemeGroupVersion.WithResource("policies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Calico().InternalVersion().Policies().Informer()}, nil
-	case calico.SchemeGroupVersion.WithResource("tiers"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Calico().InternalVersion().Tiers().Informer()}, nil
+	case calico.SchemeGroupVersion.WithResource("networkpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Calico().InternalVersion().NetworkPolicies().Informer()}, nil
 
 	}
 

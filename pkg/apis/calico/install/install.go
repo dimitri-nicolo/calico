@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/apimachinery/announced"
 	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/pkg/api"
 )
 
@@ -34,8 +33,8 @@ func init() {
 func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *registered.APIRegistrationManager, scheme *runtime.Scheme) {
 	if err := announced.NewGroupMetaFactory(
 		&announced.GroupMetaFactoryArgs{
-			GroupName:                  calico.GroupName,
-			RootScopedKinds:            sets.NewString("Tier", "Node"),
+			GroupName: calico.GroupName,
+			//RootScopedKinds:            sets.NewString("Tier", "Node"),
 			VersionPreferenceOrder:     []string{v1.SchemeGroupVersion.Version},
 			ImportPrefix:               "github.com/tigera/calico-k8sapiserver/pkg/apis/calico",
 			AddInternalObjectsToScheme: calico.AddToScheme,

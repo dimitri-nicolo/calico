@@ -48,12 +48,8 @@ var (
 // Adds the list of known types to api.Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&Policy{},
-		&PolicyList{},
-		&Tier{},
-		&TierList{},
-		&Node{},
-		&NodeList{},
+		&NetworkPolicy{},
+		&NetworkPolicyList{},
 	)
 	return nil
 }

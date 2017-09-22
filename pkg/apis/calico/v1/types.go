@@ -17,63 +17,23 @@ limitations under the License.
 package v1
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/api"
+	calico "github.com/projectcalico/libcalico-go/lib/apiv2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PolicyList is a list of Policy objects.
-type PolicyList struct {
+// NetworkPolicyList is a list of Policy objects.
+type NetworkPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Items []Policy `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
-type PolicyStatus struct {
+	Items []NetworkPolicy `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // +genclient=true
 
-type Policy struct {
+type NetworkPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Spec   calico.PolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	Status PolicyStatus      `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
-}
-
-// TierList is a list of Policy objects.
-type TierList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	Items []Tier `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
-//  +genclient=true
-//  +nonNamespaced=true
-
-type Tier struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	Spec calico.TierSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-}
-
-// NodeList is a list of Policy objects.
-type NodeList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	Items []Node `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
-// +genclient=true
-// +nonNamespaced=true
-
-type Node struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-
-	Spec calico.NodeSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec calico.PolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }

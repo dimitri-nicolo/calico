@@ -16,8 +16,4 @@ limitations under the License.
 
 package v1
 
-type NodeExpansion interface{}
-
-type PolicyExpansion interface{}
-
-type TierExpansion interface{}
+type NetworkPolicyExpansion interface{}

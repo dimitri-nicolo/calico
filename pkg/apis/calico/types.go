@@ -17,63 +17,23 @@ limitations under the License.
 package calico
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/api"
+	calico "github.com/projectcalico/libcalico-go/lib/apiv2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PolicyList is a list of Policy objects.
-type PolicyList struct {
+// NetworkPolicyList is a list of Policy objects.
+type NetworkPolicyList struct {
 	metav1.TypeMeta
 	metav1.ListMeta
 
-	Items []Policy
-}
-
-type PolicyStatus struct {
+	Items []NetworkPolicy
 }
 
 // +genclient=true
 
-type Policy struct {
+type NetworkPolicy struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec   calico.PolicySpec
-	Status PolicyStatus
-}
-
-// TierList is a list of Policy objects.
-type TierList struct {
-	metav1.TypeMeta
-	metav1.ListMeta
-
-	Items []Tier
-}
-
-// +genclient=true
-// +nonNamespaced=true
-
-type Tier struct {
-	metav1.TypeMeta
-	metav1.ObjectMeta
-
-	Spec calico.TierSpec
-}
-
-// NodeList is a list of Policy objects.
-type NodeList struct {
-	metav1.TypeMeta
-	metav1.ListMeta
-
-	Items []Node
-}
-
-// +genclient=true
-// +nonNamespaced=true
-
-type Node struct {
-	metav1.TypeMeta
-	metav1.ObjectMeta
-
-	Spec calico.NodeSpec
+	Spec calico.PolicySpec
 }

@@ -25,9 +25,7 @@ import (
 
 type CalicoV1Interface interface {
 	RESTClient() rest.Interface
-	NodesGetter
-	PoliciesGetter
-	TiersGetter
+	NetworkPoliciesGetter
 }
 
 // CalicoV1Client is used to interact with features provided by the calico.tigera.io group.
@@ -35,16 +33,8 @@ type CalicoV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *CalicoV1Client) Nodes() NodeInterface {
-	return newNodes(c)
-}
-
-func (c *CalicoV1Client) Policies(namespace string) PolicyInterface {
-	return newPolicies(c, namespace)
-}
-
-func (c *CalicoV1Client) Tiers() TierInterface {
-	return newTiers(c)
+func (c *CalicoV1Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
+	return newNetworkPolicies(c, namespace)
 }
 
 // NewForConfig creates a new CalicoV1Client for the given config.

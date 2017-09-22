@@ -38,7 +38,7 @@ import (
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 
 	// our versioned client
-	calicoapi "github.com/projectcalico/libcalico-go/lib/api"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,7 +70,7 @@ func TestGroupVersion(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Policy{}
+				return &calico.NetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testGroupVersion(client); err != nil {
@@ -151,7 +151,7 @@ func TestNoName(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Policy{}
+				return &calico.NetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testNoName(client); err != nil {
@@ -171,43 +171,40 @@ func testNoName(client calicoclient.Interface) error {
 
 	ns := "namespace"
 
-	if p, e := cClient.Policies(ns).Create(&v1.Policy{}); nil == e {
+	if p, e := cClient.NetworkPolicies(ns).Create(&v1.NetworkPolicy{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", p.Name)
 	}
-	if t, e := cClient.Tiers().Create(&v1.Tier{}); nil == e {
+	/*	if t, e := cClient.Tiers().Create(&v1.Tier{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", t.Name)
-	}
+	}*/
 	return nil
 }
 
-// TestPolicyClient exercises the Policy client.
-func TestPolicyClient(t *testing.T) {
-	const name = "test-policy"
+// TestNetworkPolicyClient exercises the NetworkPolicy client.
+func TestNetworkPolicyClient(t *testing.T) {
+	const name = "test-networkpolicy"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Policy{}
+				return &calico.NetworkPolicy{}
 			})
 			defer shutdownServer()
-			if err := testPolicyClient(client, name); err != nil {
+			if err := testNetworkPolicyClient(client, name); err != nil {
 				t.Fatal(err)
 			}
 		}
 	}
 
 	if !t.Run(name, rootTestFunc()) {
-		t.Errorf("test-policy test failed")
+		t.Errorf("test-networkpolicy test failed")
 	}
 
 }
 
-func testPolicyClient(client calicoclient.Interface, name string) error {
+func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "namespace"
-	policyClient := client.Calico().Policies(ns)
-	policy := &v1.Policy{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       calicoapi.PolicySpec{},
-	}
+	policyClient := client.Calico().NetworkPolicies(ns)
+	policy := &v1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
 	/*
 		tierClient := client.Calico().Tiers()
 		tier := &v1.Tier{

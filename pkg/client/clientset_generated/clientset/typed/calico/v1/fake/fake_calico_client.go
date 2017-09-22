@@ -26,16 +26,8 @@ type FakeCalicoV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeCalicoV1) Nodes() v1.NodeInterface {
-	return &FakeNodes{c}
-}
-
-func (c *FakeCalicoV1) Policies(namespace string) v1.PolicyInterface {
-	return &FakePolicies{c, namespace}
-}
-
-func (c *FakeCalicoV1) Tiers() v1.TierInterface {
-	return &FakeTiers{c}
+func (c *FakeCalicoV1) NetworkPolicies(namespace string) v1.NetworkPolicyInterface {
+	return &FakeNetworkPolicies{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

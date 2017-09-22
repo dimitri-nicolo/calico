@@ -52,7 +52,7 @@ func (apiServerStrategy) NamespaceScoped() bool {
 }
 
 func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
-	apiserver := obj.(*calico.Policy)
+	apiserver := obj.(*calico.NetworkPolicy)
 	tier, _ := getTierPolicy(apiserver.Name)
 	apiserver.SetLabels(map[string]string{"tier": tier})
 }
@@ -82,7 +82,7 @@ func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old 
 }
 
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
-	apiserver, ok := obj.(*calico.Policy)
+	apiserver, ok := obj.(*calico.NetworkPolicy)
 	if !ok {
 		return nil, nil, false, fmt.Errorf("given object is not a Policy.")
 	}
@@ -100,6 +100,6 @@ func MatchPolicy(label labels.Selector, field fields.Selector) storage.Selection
 }
 
 // PolicyToSelectableFields returns a field set that represents the object.
-func PolicyToSelectableFields(obj *calico.Policy) fields.Set {
+func PolicyToSelectableFields(obj *calico.NetworkPolicy) fields.Set {
 	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
 }

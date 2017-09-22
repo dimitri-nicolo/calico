@@ -18,18 +18,10 @@ limitations under the License.
 
 package internalversion
 
-// NodeListerExpansion allows custom methods to be added to
-// NodeLister.
-type NodeListerExpansion interface{}
+// NetworkPolicyListerExpansion allows custom methods to be added to
+// NetworkPolicyLister.
+type NetworkPolicyListerExpansion interface{}
 
-// PolicyListerExpansion allows custom methods to be added to
-// PolicyLister.
-type PolicyListerExpansion interface{}
-
-// PolicyNamespaceListerExpansion allows custom methods to be added to
-// PolicyNamespaceLister.
-type PolicyNamespaceListerExpansion interface{}
-
-// TierListerExpansion allows custom methods to be added to
-// TierLister.
-type TierListerExpansion interface{}
+// NetworkPolicyNamespaceListerExpansion allows custom methods to be added to
+// NetworkPolicyNamespaceLister.
+type NetworkPolicyNamespaceListerExpansion interface{}

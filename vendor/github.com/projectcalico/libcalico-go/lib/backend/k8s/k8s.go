@@ -56,7 +56,7 @@ type KubeClient struct {
 
 	// Contains methods for converting Kubernetes resources to
 	// Calico resources.
-	converter converter
+	converter Converter
 
 	// Clients for interacting with Calico resources.
 	globalBgpPeerClient     resources.K8sResourceClient
@@ -159,8 +159,23 @@ func (c *KubeClient) EnsureInitialized() error {
 	return nil
 }
 
-func (c *KubeClient) EnsureCalicoNodeInitialized(node string) error {
-	log.WithField("Node", node).Info("Ensuring node is initialized")
+func (c *KubeClient) Clean() error {
+	/*types := []model.ListInterface{
+		model.GlobalBGPConfigListOptions{},
+		model.NodeBGPConfigListOptions{},
+		model.GlobalBGPPeerListOptions{},
+		model.NodeBGPPeerListOptions{},
+		model.GlobalConfigListOptions{},
+		model.IPPoolListOptions{},
+	}
+	for _, t := range types {
+		rs, _ := c.List(t, "")
+		for _, r := range rs.KVPairs {
+			log.WithField("Key", r.Key).Info("Deleting from KDD")
+			backend.Delete(r.Key, r.Revision)
+		}
+	}
+	*/
 	return nil
 }
 
@@ -195,7 +210,7 @@ func (c *KubeClient) ensureClusterType() (bool, error) {
 			existingValue = fmt.Sprintf("%s,KDD", existingValue)
 		}
 		value = existingValue
-		rv = ct.Revision.(string)
+		rv = ct.Revision
 	}
 	log.WithField("value", value).Debug("Setting ClusterType")
 	_, err = c.Apply(&model.KVPair{
@@ -467,7 +482,7 @@ func (c *KubeClient) listProfiles(l model.ProfileListOptions) ([]*model.KVPair, 
 	// For each Namespace, return a profile.
 	ret := []*model.KVPair{}
 	for _, ns := range namespaces.Items {
-		kvp, err := c.converter.namespaceToProfile(&ns)
+		kvp, err := c.converter.NamespaceToProfile(&ns)
 		if err != nil {
 			return nil, err
 		}
@@ -490,7 +505,7 @@ func (c *KubeClient) getProfile(k model.ProfileKey) (*model.KVPair, error) {
 		return nil, resources.K8sErrorToCalico(err, k)
 	}
 
-	return c.converter.namespaceToProfile(namespace)
+	return c.converter.NamespaceToProfile(namespace)
 }
 
 // applyWorkloadEndpoint patches the existing Pod to include an IP address, if
@@ -512,7 +527,7 @@ func (c *KubeClient) applyWorkloadEndpoint(k *model.KVPair) (*model.KVPair, erro
 			return nil, resources.K8sErrorToCalico(err, k.Key)
 		}
 		log.Debugf("Successfully applied pod: %+v", pod)
-		return c.converter.podToWorkloadEndpoint(pod)
+		return c.converter.PodToWorkloadEndpoint(pod)
 	}
 	return k, nil
 }
@@ -553,7 +568,7 @@ func (c *KubeClient) listWorkloadEndpoints(l model.WorkloadEndpointListOptions) 
 			continue
 		}
 
-		kvp, err := c.converter.podToWorkloadEndpoint(&pod)
+		kvp, err := c.converter.PodToWorkloadEndpoint(&pod)
 		if err != nil {
 			return nil, err
 		}
@@ -577,7 +592,7 @@ func (c *KubeClient) getWorkloadEndpoint(k model.WorkloadEndpointKey) (*model.KV
 	if !c.converter.isReadyCalicoPod(pod) {
 		return nil, errors.ErrorResourceDoesNotExist{Identifier: k}
 	}
-	return c.converter.podToWorkloadEndpoint(pod)
+	return c.converter.PodToWorkloadEndpoint(pod)
 }
 
 // listPolicies lists the Policies from the k8s API based on NetworkPolicy objects.
@@ -612,7 +627,7 @@ func (c *KubeClient) listPolicies(l model.PolicyListOptions) ([]*model.KVPair, e
 	// For each policy, turn it into a Policy and generate the list.
 	ret := []*model.KVPair{}
 	for _, p := range networkPolicies.Items {
-		kvp, err := c.converter.networkPolicyToPolicy(&p)
+		kvp, err := c.converter.NetworkPolicyToPolicy(&p)
 		if err != nil {
 			return nil, err
 		}
@@ -655,7 +670,7 @@ func (c *KubeClient) getPolicy(k model.PolicyKey) (*model.KVPair, error) {
 		if err != nil {
 			return nil, resources.K8sErrorToCalico(err, k)
 		}
-		return c.converter.networkPolicyToPolicy(&networkPolicy)
+		return c.converter.NetworkPolicyToPolicy(&networkPolicy)
 	} else {
 		// This is backed by a Global Network Policy CRD.
 		return c.gnpClient.Get(k)
