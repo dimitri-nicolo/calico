@@ -71,6 +71,14 @@ pipeline{
                     if (env.BRANCH_NAME == 'master') {
                         sh 'docker tag calico/node:latest gcr.io/tigera-dev/calico/node-essentials:latest'
                         sh 'gcloud docker -- push gcr.io/tigera-dev/calico/node-essentials:latest'
+
+			// Clean up images.
+			// Hackey since empty displayed tags are not empty according to gcloud filter criteria
+			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/calico/node-essentials --format='get(digest)'); do 
+				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/calico/node-essentials --filter=digest~${digest}) | awk '{print $6}'); then
+					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/calico/node-essentials@${digest}" 
+				fi 
+			done'''
                     }
                 }
             }
