@@ -208,21 +208,21 @@ func testPolicyClient(client calicoclient.Interface, name string) error {
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec:       calicoapi.PolicySpec{},
 	}
+	/*
+		tierClient := client.Calico().Tiers()
+		tier := &v1.Tier{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			Spec:       calicoapi.TierSpec{},
+		}
 
-	tierClient := client.Calico().Tiers()
-	tier := &v1.Tier{
-		ObjectMeta: metav1.ObjectMeta{Name: "default"},
-		Spec:       calicoapi.TierSpec{},
-	}
-
-	tierServer, err := tierClient.Create(tier)
-	if nil != err {
-		return fmt.Errorf("error creating default tier")
-	}
-	if "default" != tierServer.Name {
-		return fmt.Errorf("error creating default tier")
-	}
-
+		tierServer, err := tierClient.Create(tier)
+		if nil != err {
+			return fmt.Errorf("error creating default tier")
+		}
+		if "default" != tierServer.Name {
+			return fmt.Errorf("error creating default tier")
+		}
+	*/
 	// start from scratch
 	policies, err := policyClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -277,6 +277,7 @@ func testPolicyClient(client calicoclient.Interface, name string) error {
 	return nil
 }
 
+/*
 // TestTierClient exercises the Tier client.
 func TestTierClient(t *testing.T) {
 	const name = "test-tier"
@@ -343,3 +344,4 @@ func testTierClient(client calicoclient.Interface, name string) error {
 
 	return nil
 }
+*/
