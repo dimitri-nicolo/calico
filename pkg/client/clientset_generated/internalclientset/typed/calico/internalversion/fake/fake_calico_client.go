@@ -26,10 +26,6 @@ type FakeCalico struct {
 	*testing.Fake
 }
 
-func (c *FakeCalico) Endpoints() internalversion.EndpointInterface {
-	return &FakeEndpoints{c}
-}
-
 func (c *FakeCalico) Nodes() internalversion.NodeInterface {
 	return &FakeNodes{c}
 }

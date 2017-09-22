@@ -7,12 +7,13 @@ import (
 
 // NewStorage creates a new libcalico-based storage.Interface implementation
 func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
-	switch opts.resorceType {
+	/*switch opts.resourceType {
 	case "policy":
 		return NewPolicyStorage(opts)
 	case "tier":
 		return NewTierStorage(opts)
 	default:
 		return nil, nil
-	}
+	}*/
+	return nil, nil
 }

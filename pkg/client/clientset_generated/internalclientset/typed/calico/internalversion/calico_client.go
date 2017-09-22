@@ -23,7 +23,6 @@ import (
 
 type CalicoInterface interface {
 	RESTClient() rest.Interface
-	EndpointsGetter
 	NodesGetter
 	PoliciesGetter
 	TiersGetter
@@ -32,10 +31,6 @@ type CalicoInterface interface {
 // CalicoClient is used to interact with features provided by the calico.tigera.io group.
 type CalicoClient struct {
 	restClient rest.Interface
-}
-
-func (c *CalicoClient) Endpoints() EndpointInterface {
-	return newEndpoints(c)
 }
 
 func (c *CalicoClient) Nodes() NodeInterface {

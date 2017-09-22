@@ -52,8 +52,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&PolicyList{},
 		&Tier{},
 		&TierList{},
-		&Endpoint{},
-		&EndpointList{},
 		&Node{},
 		&NodeList{},
 	)

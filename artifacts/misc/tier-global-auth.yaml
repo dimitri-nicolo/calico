@@ -1,0 +1,24 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  # "namespace" omitted since ClusterRoles are not namespaced
+  name: tier-default-reader
+rules:
+- apiGroups: ["calico.tigera.io"]
+  resources: ["tiers"]
+  resourceNames: ["default"]
+  verbs: ["get", "watch", "list"]
+---
+# This cluster role binding allows anyone in the "manager" group to read secrets in any namespace.
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: read-tier-default-global
+subjects:
+- kind: User
+  name: jane
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tier-default-reader
+  apiGroup: rbac.authorization.k8s.io

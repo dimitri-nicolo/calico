@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/client-go/pkg/api"
@@ -35,6 +36,11 @@ import (
 type apiServerStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
+}
+
+// NewScopeStrategy returns a new NamespaceScopedStrategy for instances
+func NewScopeStrategy() rest.NamespaceScopedStrategy {
+	return Strategy
 }
 
 // strategy is the default logic that applies when creating and updating

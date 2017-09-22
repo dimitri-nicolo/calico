@@ -1,0 +1,13 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+   name: read-write-policies
+subjects:
+ - kind: User
+   name: jane
+   apiGroup: rbac.authorization.k8s.io
+roleRef:
+   kind: Role
+   name: policy-reader-writer
+   apiGroup: rbac.authorization.k8s.io
+

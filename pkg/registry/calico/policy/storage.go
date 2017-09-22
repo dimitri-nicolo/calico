@@ -18,10 +18,12 @@ package policy
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -31,10 +33,15 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/client-go/pkg/api"
+)
+
+const (
+	policyDelim = "."
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -59,22 +66,31 @@ func NewList() runtime.Object {
 // NewREST returns a RESTStorage object that will work against API services.
 func NewREST(opts server.Options) *REST {
 	prefix := "/" + opts.ResourcePrefix()
-
+	// We adapt the store's keyFunc so that we can use it with the StorageDecorator
+	// without making any assumptions about where objects are stored in etcd
+	keyFunc := func(obj runtime.Object) (string, error) {
+		accessor, err := meta.Accessor(obj)
+		if err != nil {
+			return "", err
+		}
+		return registry.NamespaceKeyFunc(genericapirequest.WithNamespace(genericapirequest.NewContext(), accessor.GetNamespace()), prefix, accessor.GetName())
+	}
 	storageInterface, dFunc := opts.GetStorage(
 		1000,
 		&calico.Policy{},
 		prefix,
+		keyFunc,
 		Strategy,
 		func() runtime.Object { return &calico.PolicyList{} },
-		nil,
+		GetAttrs,
 		storage.NoTriggerPublisher,
 	)
 	store := &genericregistry.Store{
 		Copier:      api.Scheme,
 		NewFunc:     func() runtime.Object { return &calico.Policy{} },
 		NewListFunc: func() runtime.Object { return &calico.PolicyList{} },
-		KeyRootFunc: opts.KeyRootFunc(),
-		KeyFunc:     opts.KeyFunc(false),
+		KeyRootFunc: opts.KeyRootFunc(true),
+		KeyFunc:     opts.KeyFunc(true),
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
 			return obj.(*calico.Policy).Name, nil
 		},
@@ -153,6 +169,14 @@ func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName st
 		return fmt.Errorf(reason)
 	}
 	return nil
+}
+
+func getTierPolicy(policyName string) (string, string) {
+	policySlice := strings.Split(policyName, policyDelim)
+	if len(policySlice) < 2 {
+		return "default", policySlice[0]
+	}
+	return policySlice[0], policySlice[1]
 }
 
 func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {

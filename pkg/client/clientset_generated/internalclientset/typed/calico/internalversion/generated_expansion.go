@@ -16,8 +16,6 @@ limitations under the License.
 
 package internalversion
 
-type EndpointExpansion interface{}
-
 type NodeExpansion interface{}
 
 type PolicyExpansion interface{}

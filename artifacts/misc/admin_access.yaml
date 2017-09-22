@@ -1,0 +1,21 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: default
+  name: policy-rw-role
+rules:
+  - apiGroups: ["calico.tigera.io"]
+    resources: ["policies"]
+    verbs: [“create”, “update”, “patch”, delete”, “get”, “watch”, “list”]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: policy-rw-binding
+subjects:
+  - kind: User
+    name: jane
+roleRef:
+  kind: Role
+  name: policy-rw-role
+  apiGroup: rbac.authorization.k8s.io

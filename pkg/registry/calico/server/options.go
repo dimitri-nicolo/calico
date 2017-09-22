@@ -81,11 +81,13 @@ func NewOptions(
 	etcdOpts etcd.Options,
 	calicoOpts calico.Options,
 	sType StorageType,
+	authorizer authorizer.Authorizer,
 ) *Options {
 	return &Options{
 		EtcdOptions:   etcdOpts,
 		CalicoOptions: calicoOpts,
 		storageType:   sType,
+		Authorizer:    authorizer,
 	}
 }
 
@@ -108,18 +110,15 @@ func (o Options) ResourcePrefix() string {
 // KeyRootFunc returns the appropriate key root function for the storage type in o.
 // This function produces a path that etcd or Calico storage understands, to the root of the resource
 // by combining the namespace in the context with the given prefix
-func (o Options) KeyRootFunc() func(genericapirequest.Context) string {
+func (o Options) KeyRootFunc(namespaced bool) func(genericapirequest.Context) string {
 	prefix := o.ResourcePrefix()
-	sType, err := o.StorageType()
-	if err != nil {
-		return nil
-	}
-	if sType == StorageTypeEtcd {
-		return func(ctx genericapirequest.Context) string {
+
+	return func(ctx genericapirequest.Context) string {
+		if namespaced {
 			return registry.NamespaceKeyRootFunc(ctx, prefix)
 		}
+		return prefix
 	}
-	return o.CalicoOptions.Keyer.KeyRoot
 }
 
 // KeyFunc returns the appropriate key function for the storage type in o.
@@ -127,19 +126,13 @@ func (o Options) KeyRootFunc() func(genericapirequest.Context) string {
 // by combining the namespace in the context with the given prefix
 func (o Options) KeyFunc(namespaced bool) func(genericapirequest.Context, string) (string, error) {
 	prefix := o.ResourcePrefix()
-	sType, err := o.StorageType()
-	if err != nil {
-		return nil
-	}
-	if sType == StorageTypeEtcd {
-		return func(ctx genericapirequest.Context, name string) (string, error) {
-			if namespaced {
-				return registry.NamespaceKeyFunc(ctx, prefix, name)
-			}
-			return registry.NoNamespaceKeyFunc(ctx, prefix, name)
+
+	return func(ctx genericapirequest.Context, name string) (string, error) {
+		if namespaced {
+			return registry.NamespaceKeyFunc(ctx, prefix, name)
 		}
+		return registry.NoNamespaceKeyFunc(ctx, prefix, name)
 	}
-	return o.CalicoOptions.Keyer.Key
 }
 
 // GetStorage returns the storage from the given parameters
@@ -147,6 +140,7 @@ func (o Options) GetStorage(
 	capacity int,
 	objectType runtime.Object,
 	resourcePrefix string,
+	keyFunc func(obj runtime.Object) (string, error),
 	scopeStrategy rest.NamespaceScopedStrategy,
 	newListFunc func() runtime.Object,
 	getAttrsFunc storage.AttrFunc,
@@ -160,7 +154,7 @@ func (o Options) GetStorage(
 			&capacity,
 			objectType,
 			resourcePrefix,
-			nil, /* keyFunc for decorator -- looks to be unused everywhere */
+			keyFunc, /* keyFunc for decorator -- looks to be unused everywhere */
 			newListFunc,
 			getAttrsFunc,
 			trigger,

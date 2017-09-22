@@ -1,0 +1,10 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+   namespace: default
+   name: policy-reader
+rules:
+- apiGroups: [“calico.tigera.io”]
+  resources: [“policies”]
+  verbs: [“get”, “watch”, “list”]
+

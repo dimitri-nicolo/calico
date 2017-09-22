@@ -1,0 +1,9 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+   name: tier-reader
+rules:
+- apiGroups: [“calico.tigera.io”]
+  resources: [“tiers”]
+  verbs: [“get”, “watch”, “list”]
+

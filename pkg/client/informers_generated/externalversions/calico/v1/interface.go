@@ -24,8 +24,6 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// Endpoints returns a EndpointInformer.
-	Endpoints() EndpointInformer
 	// Nodes returns a NodeInformer.
 	Nodes() NodeInformer
 	// Policies returns a PolicyInformer.
@@ -41,11 +39,6 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory) Interface {
 	return &version{f}
-}
-
-// Endpoints returns a EndpointInformer.
-func (v *version) Endpoints() EndpointInformer {
-	return &endpointInformer{factory: v.SharedInformerFactory}
 }
 
 // Nodes returns a NodeInformer.

@@ -18,10 +18,6 @@ limitations under the License.
 
 package v1
 
-// EndpointListerExpansion allows custom methods to be added to
-// EndpointLister.
-type EndpointListerExpansion interface{}
-
 // NodeListerExpansion allows custom methods to be added to
 // NodeLister.
 type NodeListerExpansion interface{}

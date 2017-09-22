@@ -16,8 +16,6 @@ limitations under the License.
 
 package v1
 
-type EndpointExpansion interface{}
-
 type NodeExpansion interface{}
 
 type PolicyExpansion interface{}

@@ -60,29 +60,6 @@ type Tier struct {
 	Spec calico.TierSpec
 }
 
-// EndpointList is a list of Policy objects.
-type EndpointList struct {
-	metav1.TypeMeta
-	metav1.ListMeta
-
-	Items []Endpoint
-}
-
-type EndpointMeta struct {
-	metav1.ObjectMeta
-	calico.WorkloadEndpointMetadata
-}
-
-// +genclient=true
-// +nonNamespaced=true
-
-type Endpoint struct {
-	metav1.TypeMeta
-	EndpointMeta
-
-	Spec calico.WorkloadEndpointSpec
-}
-
 // NodeList is a list of Policy objects.
 type NodeList struct {
 	metav1.TypeMeta

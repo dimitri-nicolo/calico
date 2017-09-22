@@ -1,6 +1,6 @@
 apiVersion: calico.tigera.io/v1
 kind: Tier
 metadata:
-  name: "Tier1"
+  name: "net-sec"
 spec:
   order: 100
