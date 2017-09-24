@@ -4,7 +4,7 @@ metadata:
   namespace: default
   name: policy-rw-role
 rules:
-  - apiGroups: ["calico.tigera.io"]
+  - apiGroups: ["projectcalico.org"]
     resources: ["policies"]
     verbs: [“create”, “update”, “patch”, delete”, “get”, “watch”, “list”]
 ---

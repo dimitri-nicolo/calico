@@ -4,7 +4,7 @@ metadata:
   # "namespace" omitted since ClusterRoles are not namespaced
   name: tier-default-reader
 rules:
-- apiGroups: ["calico.tigera.io"]
+- apiGroups: ["projectcalico.org"]
   resources: ["tiers"]
   resourceNames: ["default"]
   verbs: ["get", "watch", "list"]

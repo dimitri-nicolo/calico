@@ -21,22 +21,22 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type CalicoInterface interface {
+type ProjectcalicoInterface interface {
 	RESTClient() rest.Interface
 	NetworkPoliciesGetter
 }
 
-// CalicoClient is used to interact with features provided by the calico.tigera.io group.
-type CalicoClient struct {
+// ProjectcalicoClient is used to interact with features provided by the projectcalico.org group.
+type ProjectcalicoClient struct {
 	restClient rest.Interface
 }
 
-func (c *CalicoClient) NetworkPolicies(namespace string) NetworkPolicyInterface {
+func (c *ProjectcalicoClient) NetworkPolicies(namespace string) NetworkPolicyInterface {
 	return newNetworkPolicies(c, namespace)
 }
 
-// NewForConfig creates a new CalicoClient for the given config.
-func NewForConfig(c *rest.Config) (*CalicoClient, error) {
+// NewForConfig creates a new ProjectcalicoClient for the given config.
+func NewForConfig(c *rest.Config) (*ProjectcalicoClient, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -45,12 +45,12 @@ func NewForConfig(c *rest.Config) (*CalicoClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CalicoClient{client}, nil
+	return &ProjectcalicoClient{client}, nil
 }
 
-// NewForConfigOrDie creates a new CalicoClient for the given config and
+// NewForConfigOrDie creates a new ProjectcalicoClient for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *CalicoClient {
+func NewForConfigOrDie(c *rest.Config) *ProjectcalicoClient {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -58,13 +58,13 @@ func NewForConfigOrDie(c *rest.Config) *CalicoClient {
 	return client
 }
 
-// New creates a new CalicoClient for the given RESTClient.
-func New(c rest.Interface) *CalicoClient {
-	return &CalicoClient{c}
+// New creates a new ProjectcalicoClient for the given RESTClient.
+func New(c rest.Interface) *ProjectcalicoClient {
+	return &ProjectcalicoClient{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	g, err := scheme.Registry.Group("calico.tigera.io")
+	g, err := scheme.Registry.Group("projectcalico.org")
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *CalicoClient) RESTClient() rest.Interface {
+func (c *ProjectcalicoClient) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

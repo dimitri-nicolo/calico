@@ -23,22 +23,22 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type CalicoV1Interface interface {
+type ProjectcalicoV1Interface interface {
 	RESTClient() rest.Interface
 	NetworkPoliciesGetter
 }
 
-// CalicoV1Client is used to interact with features provided by the calico.tigera.io group.
-type CalicoV1Client struct {
+// ProjectcalicoV1Client is used to interact with features provided by the projectcalico.org group.
+type ProjectcalicoV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *CalicoV1Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
+func (c *ProjectcalicoV1Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
 	return newNetworkPolicies(c, namespace)
 }
 
-// NewForConfig creates a new CalicoV1Client for the given config.
-func NewForConfig(c *rest.Config) (*CalicoV1Client, error) {
+// NewForConfig creates a new ProjectcalicoV1Client for the given config.
+func NewForConfig(c *rest.Config) (*ProjectcalicoV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -47,12 +47,12 @@ func NewForConfig(c *rest.Config) (*CalicoV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &CalicoV1Client{client}, nil
+	return &ProjectcalicoV1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new CalicoV1Client for the given config and
+// NewForConfigOrDie creates a new ProjectcalicoV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *CalicoV1Client {
+func NewForConfigOrDie(c *rest.Config) *ProjectcalicoV1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -60,9 +60,9 @@ func NewForConfigOrDie(c *rest.Config) *CalicoV1Client {
 	return client
 }
 
-// New creates a new CalicoV1Client for the given RESTClient.
-func New(c rest.Interface) *CalicoV1Client {
-	return &CalicoV1Client{c}
+// New creates a new ProjectcalicoV1Client for the given RESTClient.
+func New(c rest.Interface) *ProjectcalicoV1Client {
+	return &ProjectcalicoV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -80,7 +80,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *CalicoV1Client) RESTClient() rest.Interface {
+func (c *ProjectcalicoV1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

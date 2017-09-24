@@ -155,7 +155,7 @@ func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName st
 	attrs.User = attributes.GetUser()
 	attrs.Verb = attributes.GetVerb()
 	attrs.ResourceRequest = attributes.IsResourceRequest()
-	attrs.Path = "/apis/calico.tigera.io/v1/tiers/" + tierName
+	attrs.Path = "/apis/projectcalico.org/v1/tiers/" + tierName
 	glog.Infof("Tier Auth Attributes for the given Policy")
 	logAuthorizerAttributes(attrs)
 	authorized, reason, err := r.authorizer.Authorize(attrs)
@@ -164,7 +164,7 @@ func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName st
 	}
 	if !authorized {
 		if reason == "" {
-			reason = fmt.Sprintf("(Forbidden) Policy operation is assocaited with tier %s. User \"%s\" cannot %s tiers.calico.tigera.io at the cluster scope. (get tiers.calico.tigera.io)", tierName, attrs.User.GetName(), attrs.Verb)
+			reason = fmt.Sprintf("(Forbidden) Policy operation is assocaited with tier %s. User \"%s\" cannot %s tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)", tierName, attrs.User.GetName(), attrs.Verb)
 		}
 		return fmt.Errorf(reason)
 	}

@@ -22,7 +22,7 @@ import (
 	calico_v1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
 	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/internalinterfaces"
-	v1 "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated/calico/v1"
+	v1 "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated/projectcalico/v1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -45,10 +45,10 @@ func newNetworkPolicyInformer(client clientset.Interface, resyncPeriod time.Dura
 	sharedIndexInformer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
-				return client.CalicoV1().NetworkPolicies(meta_v1.NamespaceAll).List(options)
+				return client.ProjectcalicoV1().NetworkPolicies(meta_v1.NamespaceAll).List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
-				return client.CalicoV1().NetworkPolicies(meta_v1.NamespaceAll).Watch(options)
+				return client.ProjectcalicoV1().NetworkPolicies(meta_v1.NamespaceAll).Watch(options)
 			},
 		},
 		&calico_v1.NetworkPolicy{},

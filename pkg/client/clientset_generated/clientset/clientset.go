@@ -18,7 +18,7 @@ package clientset
 
 import (
 	glog "github.com/golang/glog"
-	calicov1 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/calico/v1"
+	projectcalicov1 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -26,33 +26,33 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	CalicoV1() calicov1.CalicoV1Interface
+	ProjectcalicoV1() projectcalicov1.ProjectcalicoV1Interface
 	// Deprecated: please explicitly pick a version if possible.
-	Calico() calicov1.CalicoV1Interface
+	Projectcalico() projectcalicov1.ProjectcalicoV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	*calicov1.CalicoV1Client
+	*projectcalicov1.ProjectcalicoV1Client
 }
 
-// CalicoV1 retrieves the CalicoV1Client
-func (c *Clientset) CalicoV1() calicov1.CalicoV1Interface {
+// ProjectcalicoV1 retrieves the ProjectcalicoV1Client
+func (c *Clientset) ProjectcalicoV1() projectcalicov1.ProjectcalicoV1Interface {
 	if c == nil {
 		return nil
 	}
-	return c.CalicoV1Client
+	return c.ProjectcalicoV1Client
 }
 
-// Deprecated: Calico retrieves the default version of CalicoClient.
+// Deprecated: Projectcalico retrieves the default version of ProjectcalicoClient.
 // Please explicitly pick a version.
-func (c *Clientset) Calico() calicov1.CalicoV1Interface {
+func (c *Clientset) Projectcalico() projectcalicov1.ProjectcalicoV1Interface {
 	if c == nil {
 		return nil
 	}
-	return c.CalicoV1Client
+	return c.ProjectcalicoV1Client
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -71,7 +71,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.CalicoV1Client, err = calicov1.NewForConfig(&configShallowCopy)
+	cs.ProjectcalicoV1Client, err = projectcalicov1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.CalicoV1Client = calicov1.NewForConfigOrDie(c)
+	cs.ProjectcalicoV1Client = projectcalicov1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -97,7 +97,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.CalicoV1Client = calicov1.New(c)
+	cs.ProjectcalicoV1Client = projectcalicov1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

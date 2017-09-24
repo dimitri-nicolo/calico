@@ -86,7 +86,7 @@ func TestGroupVersion(t *testing.T) {
 }
 
 func testGroupVersion(client calicoclient.Interface) error {
-	gv := client.Calico().RESTClient().APIVersion()
+	gv := client.Projectcalico().RESTClient().APIVersion()
 	if gv.Group != calico.GroupName {
 		return fmt.Errorf("we should be testing the servicecatalog group, not %s", gv.Group)
 	}
@@ -167,7 +167,7 @@ func TestNoName(t *testing.T) {
 }
 
 func testNoName(client calicoclient.Interface) error {
-	cClient := client.Calico()
+	cClient := client.Projectcalico()
 
 	ns := "namespace"
 
@@ -203,7 +203,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 
 func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "namespace"
-	policyClient := client.Calico().NetworkPolicies(ns)
+	policyClient := client.Projectcalico().NetworkPolicies(ns)
 	policy := &v1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	/*
 		tierClient := client.Calico().Tiers()

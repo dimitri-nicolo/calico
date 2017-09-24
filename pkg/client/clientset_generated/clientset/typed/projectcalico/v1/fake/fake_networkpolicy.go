@@ -28,13 +28,13 @@ import (
 
 // FakeNetworkPolicies implements NetworkPolicyInterface
 type FakeNetworkPolicies struct {
-	Fake *FakeCalicoV1
+	Fake *FakeProjectcalicoV1
 	ns   string
 }
 
-var networkpoliciesResource = schema.GroupVersionResource{Group: "calico.tigera.io", Version: "v1", Resource: "networkpolicies"}
+var networkpoliciesResource = schema.GroupVersionResource{Group: "projectcalico.org", Version: "v1", Resource: "networkpolicies"}
 
-var networkpoliciesKind = schema.GroupVersionKind{Group: "calico.tigera.io", Version: "v1", Kind: "NetworkPolicy"}
+var networkpoliciesKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "v1", Kind: "NetworkPolicy"}
 
 func (c *FakeNetworkPolicies) Create(networkPolicy *v1.NetworkPolicy) (result *v1.NetworkPolicy, err error) {
 	obj, err := c.Fake.

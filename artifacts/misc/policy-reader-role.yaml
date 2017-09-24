@@ -4,7 +4,7 @@ metadata:
    namespace: default
    name: policy-reader
 rules:
-- apiGroups: [“calico.tigera.io”]
+- apiGroups: [“projectcalico.org”]
   resources: [“policies”]
   verbs: [“get”, “watch”, “list”]
 
