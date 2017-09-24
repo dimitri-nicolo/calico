@@ -14,31 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v2
 
 import (
-	v1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
-type ProjectcalicoV1Interface interface {
+type ProjectcalicoV2Interface interface {
 	RESTClient() rest.Interface
 	NetworkPoliciesGetter
 }
 
-// ProjectcalicoV1Client is used to interact with features provided by the projectcalico.org group.
-type ProjectcalicoV1Client struct {
+// ProjectcalicoV2Client is used to interact with features provided by the projectcalico.org group.
+type ProjectcalicoV2Client struct {
 	restClient rest.Interface
 }
 
-func (c *ProjectcalicoV1Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
+func (c *ProjectcalicoV2Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
 	return newNetworkPolicies(c, namespace)
 }
 
-// NewForConfig creates a new ProjectcalicoV1Client for the given config.
-func NewForConfig(c *rest.Config) (*ProjectcalicoV1Client, error) {
+// NewForConfig creates a new ProjectcalicoV2Client for the given config.
+func NewForConfig(c *rest.Config) (*ProjectcalicoV2Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -47,12 +47,12 @@ func NewForConfig(c *rest.Config) (*ProjectcalicoV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ProjectcalicoV1Client{client}, nil
+	return &ProjectcalicoV2Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new ProjectcalicoV1Client for the given config and
+// NewForConfigOrDie creates a new ProjectcalicoV2Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *ProjectcalicoV1Client {
+func NewForConfigOrDie(c *rest.Config) *ProjectcalicoV2Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -60,13 +60,13 @@ func NewForConfigOrDie(c *rest.Config) *ProjectcalicoV1Client {
 	return client
 }
 
-// New creates a new ProjectcalicoV1Client for the given RESTClient.
-func New(c rest.Interface) *ProjectcalicoV1Client {
-	return &ProjectcalicoV1Client{c}
+// New creates a new ProjectcalicoV2Client for the given RESTClient.
+func New(c rest.Interface) *ProjectcalicoV2Client {
+	return &ProjectcalicoV2Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1.SchemeGroupVersion
+	gv := v2.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
@@ -80,7 +80,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *ProjectcalicoV1Client) RESTClient() rest.Interface {
+func (c *ProjectcalicoV2Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

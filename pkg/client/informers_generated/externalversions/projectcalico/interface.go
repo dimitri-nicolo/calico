@@ -20,13 +20,13 @@ package projectcalico
 
 import (
 	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/internalinterfaces"
-	v1 "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/projectcalico/v1"
+	v2 "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/projectcalico/v2"
 )
 
 // Interface provides access to each of this group's versions.
 type Interface interface {
-	// V1 provides access to shared informers for resources in V1.
-	V1() v1.Interface
+	// V2 provides access to shared informers for resources in V2.
+	V2() v2.Interface
 }
 
 type group struct {
@@ -38,7 +38,7 @@ func New(f internalinterfaces.SharedInformerFactory) Interface {
 	return &group{f}
 }
 
-// V1 returns a new v1.Interface.
-func (g *group) V1() v1.Interface {
-	return v1.New(g.SharedInformerFactory)
+// V2 returns a new v2.Interface.
+func (g *group) V2() v2.Interface {
+	return v2.New(g.SharedInformerFactory)
 }

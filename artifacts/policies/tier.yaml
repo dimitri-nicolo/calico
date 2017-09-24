@@ -1,4 +1,4 @@
-apiVersion: projectcalico.org/v1
+apiVersion: projectcalico.org/v2
 kind: Tier
 metadata:
   name: "net-sec"

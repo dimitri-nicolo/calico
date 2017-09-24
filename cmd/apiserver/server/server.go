@@ -23,7 +23,7 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"k8s.io/client-go/pkg/api"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
 	"github.com/golang/glog"
@@ -47,7 +47,7 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 	flags.AddGoFlagSet(flag.CommandLine)
 
 	stopCh := make(chan struct{})
-	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, api.Codecs.LegacyCodec(v1.SchemeGroupVersion))
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, api.Scheme, api.Codecs.LegacyCodec(v2.SchemeGroupVersion))
 	opts := &CalicoServerOptions{
 		RecommendedOptions: ro,
 		StopCh:             stopCh,

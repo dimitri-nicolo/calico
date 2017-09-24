@@ -20,7 +20,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 
-	calicov1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	calicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 )
 
 // CalicoAPIServer contains state for a Kubernetes cluster master/api server.
@@ -32,7 +32,7 @@ type CalicoAPIServer struct {
 func DefaultAPIResourceConfigSource() *serverstorage.ResourceConfig {
 	ret := serverstorage.NewResourceConfig()
 	ret.EnableVersions(
-		calicov1.SchemeGroupVersion,
+		calicov2.SchemeGroupVersion,
 	)
 
 	return ret

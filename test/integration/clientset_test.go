@@ -31,7 +31,7 @@ import (
 	// avoid error `servicecatalog/v1alpha1 is not enabled`
 
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	// avoid error `no kind is registered for the type metav1.ListOptions`
 	_ "k8s.io/client-go/pkg/api/install"
 	// our versioned types
@@ -171,7 +171,7 @@ func testNoName(client calicoclient.Interface) error {
 
 	ns := "namespace"
 
-	if p, e := cClient.NetworkPolicies(ns).Create(&v1.NetworkPolicy{}); nil == e {
+	if p, e := cClient.NetworkPolicies(ns).Create(&v2.NetworkPolicy{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", p.Name)
 	}
 	/*	if t, e := cClient.Tiers().Create(&v1.Tier{}); nil == e {
@@ -204,7 +204,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "namespace"
 	policyClient := client.Projectcalico().NetworkPolicies(ns)
-	policy := &v1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	policy := &v2.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	/*
 		tierClient := client.Calico().Tiers()
 		tier := &v1.Tier{

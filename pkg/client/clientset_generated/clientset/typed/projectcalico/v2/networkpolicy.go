@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v2
 
 import (
-	v1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
@@ -33,14 +33,14 @@ type NetworkPoliciesGetter interface {
 
 // NetworkPolicyInterface has methods to work with NetworkPolicy resources.
 type NetworkPolicyInterface interface {
-	Create(*v1.NetworkPolicy) (*v1.NetworkPolicy, error)
-	Update(*v1.NetworkPolicy) (*v1.NetworkPolicy, error)
-	Delete(name string, options *meta_v1.DeleteOptions) error
-	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.NetworkPolicy, error)
-	List(opts meta_v1.ListOptions) (*v1.NetworkPolicyList, error)
-	Watch(opts meta_v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.NetworkPolicy, err error)
+	Create(*v2.NetworkPolicy) (*v2.NetworkPolicy, error)
+	Update(*v2.NetworkPolicy) (*v2.NetworkPolicy, error)
+	Delete(name string, options *v1.DeleteOptions) error
+	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
+	Get(name string, options v1.GetOptions) (*v2.NetworkPolicy, error)
+	List(opts v1.ListOptions) (*v2.NetworkPolicyList, error)
+	Watch(opts v1.ListOptions) (watch.Interface, error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.NetworkPolicy, err error)
 	NetworkPolicyExpansion
 }
 
@@ -51,7 +51,7 @@ type networkPolicies struct {
 }
 
 // newNetworkPolicies returns a NetworkPolicies
-func newNetworkPolicies(c *ProjectcalicoV1Client, namespace string) *networkPolicies {
+func newNetworkPolicies(c *ProjectcalicoV2Client, namespace string) *networkPolicies {
 	return &networkPolicies{
 		client: c.RESTClient(),
 		ns:     namespace,
@@ -59,8 +59,8 @@ func newNetworkPolicies(c *ProjectcalicoV1Client, namespace string) *networkPoli
 }
 
 // Create takes the representation of a networkPolicy and creates it.  Returns the server's representation of the networkPolicy, and an error, if there is any.
-func (c *networkPolicies) Create(networkPolicy *v1.NetworkPolicy) (result *v1.NetworkPolicy, err error) {
-	result = &v1.NetworkPolicy{}
+func (c *networkPolicies) Create(networkPolicy *v2.NetworkPolicy) (result *v2.NetworkPolicy, err error) {
+	result = &v2.NetworkPolicy{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -71,8 +71,8 @@ func (c *networkPolicies) Create(networkPolicy *v1.NetworkPolicy) (result *v1.Ne
 }
 
 // Update takes the representation of a networkPolicy and updates it. Returns the server's representation of the networkPolicy, and an error, if there is any.
-func (c *networkPolicies) Update(networkPolicy *v1.NetworkPolicy) (result *v1.NetworkPolicy, err error) {
-	result = &v1.NetworkPolicy{}
+func (c *networkPolicies) Update(networkPolicy *v2.NetworkPolicy) (result *v2.NetworkPolicy, err error) {
+	result = &v2.NetworkPolicy{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -84,7 +84,7 @@ func (c *networkPolicies) Update(networkPolicy *v1.NetworkPolicy) (result *v1.Ne
 }
 
 // Delete takes name of the networkPolicy and deletes it. Returns an error if one occurs.
-func (c *networkPolicies) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (c *networkPolicies) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -95,7 +95,7 @@ func (c *networkPolicies) Delete(name string, options *meta_v1.DeleteOptions) er
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *networkPolicies) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (c *networkPolicies) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -106,8 +106,8 @@ func (c *networkPolicies) DeleteCollection(options *meta_v1.DeleteOptions, listO
 }
 
 // Get takes name of the networkPolicy, and returns the corresponding networkPolicy object, and an error if there is any.
-func (c *networkPolicies) Get(name string, options meta_v1.GetOptions) (result *v1.NetworkPolicy, err error) {
-	result = &v1.NetworkPolicy{}
+func (c *networkPolicies) Get(name string, options v1.GetOptions) (result *v2.NetworkPolicy, err error) {
+	result = &v2.NetworkPolicy{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -119,8 +119,8 @@ func (c *networkPolicies) Get(name string, options meta_v1.GetOptions) (result *
 }
 
 // List takes label and field selectors, and returns the list of NetworkPolicies that match those selectors.
-func (c *networkPolicies) List(opts meta_v1.ListOptions) (result *v1.NetworkPolicyList, err error) {
-	result = &v1.NetworkPolicyList{}
+func (c *networkPolicies) List(opts v1.ListOptions) (result *v2.NetworkPolicyList, err error) {
+	result = &v2.NetworkPolicyList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -131,7 +131,7 @@ func (c *networkPolicies) List(opts meta_v1.ListOptions) (result *v1.NetworkPoli
 }
 
 // Watch returns a watch.Interface that watches the requested networkPolicies.
-func (c *networkPolicies) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (c *networkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
@@ -141,8 +141,8 @@ func (c *networkPolicies) Watch(opts meta_v1.ListOptions) (watch.Interface, erro
 }
 
 // Patch applies the patch and returns the patched networkPolicy.
-func (c *networkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.NetworkPolicy, err error) {
-	result = &v1.NetworkPolicy{}
+func (c *networkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.NetworkPolicy, err error) {
+	result = &v2.NetworkPolicy{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("networkpolicies").

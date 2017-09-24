@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1
+package v2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +26,7 @@ import (
 const GroupName = "projectcalico.org"
 
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v2"}
 
 // Kind takes an unqualified kind and returns a Group qualified GroupKind
 func Kind(kind string) schema.GroupKind {
@@ -53,7 +53,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&NetworkPolicyList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
-	scheme.AddKnownTypes(schema.GroupVersion{Version: "v1"}, &metav1.Status{})
+	scheme.AddKnownTypes(schema.GroupVersion{Version: "v2"}, &metav1.Status{})
 
 	return nil
 }

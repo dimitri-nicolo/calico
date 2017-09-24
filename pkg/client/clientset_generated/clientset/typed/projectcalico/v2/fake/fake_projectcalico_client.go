@@ -17,22 +17,22 @@ limitations under the License.
 package fake
 
 import (
-	v1 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v1"
+	v2 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v2"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeProjectcalicoV1 struct {
+type FakeProjectcalicoV2 struct {
 	*testing.Fake
 }
 
-func (c *FakeProjectcalicoV1) NetworkPolicies(namespace string) v1.NetworkPolicyInterface {
+func (c *FakeProjectcalicoV2) NetworkPolicies(namespace string) v2.NetworkPolicyInterface {
 	return &FakeNetworkPolicies{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeProjectcalicoV1) RESTClient() rest.Interface {
+func (c *FakeProjectcalicoV2) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

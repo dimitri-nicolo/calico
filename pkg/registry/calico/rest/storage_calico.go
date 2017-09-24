@@ -18,7 +18,7 @@ package rest
 
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
 	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
@@ -31,7 +31,7 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/client-go/pkg/api"
 
-	calicov1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	calicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
 )
 
@@ -48,22 +48,22 @@ func (p RESTStorageProvider) NewRESTStorage(
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,
 ) (*genericapiserver.APIGroupInfo, error) {
-	storage, err := p.v1Storage(apiResourceConfigSource, restOptionsGetter, authorizer)
+	storage, err := p.v2Storage(apiResourceConfigSource, restOptionsGetter, authorizer)
 	if err != nil {
 		return nil, err
 	}
 
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(calico.GroupName, api.Registry, api.Scheme, api.ParameterCodec, api.Codecs)
-	apiGroupInfo.GroupMeta.GroupVersion = v1.SchemeGroupVersion
+	apiGroupInfo.GroupMeta.GroupVersion = v2.SchemeGroupVersion
 
 	apiGroupInfo.VersionedResourcesStorageMap = map[string]map[string]rest.Storage{
-		calicov1.SchemeGroupVersion.Version: storage,
+		calicov2.SchemeGroupVersion.Version: storage,
 	}
 
 	return &apiGroupInfo, nil
 }
 
-func (p RESTStorageProvider) v1Storage(
+func (p RESTStorageProvider) v2Storage(
 	apiResourceConfigSource serverstorage.APIResourceConfigSource,
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,
