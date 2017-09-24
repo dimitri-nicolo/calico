@@ -204,7 +204,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "namespace"
 	policyClient := client.Calico().NetworkPolicies(ns)
-	policy := &v1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
+	policy := &v1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	/*
 		tierClient := client.Calico().Tiers()
 		tier := &v1.Tier{
