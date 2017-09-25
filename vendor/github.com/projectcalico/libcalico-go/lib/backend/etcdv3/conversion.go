@@ -25,15 +25,15 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
-// convertListResponse filters an etcdv3 Kv and converts to the model.KVPair types
-// with parsed values.  If the etcdv3 key or value does not represent the appropriate
-// resource, or cannot be parsed, this method returns nil.
+// convertListResponse converts etcdv3 Kv to a model.KVPair with parsed values.
+// If the etcdv3 key or value does not represent the resource specified by the ListInterface,
+// or if value cannot be parsed, this method returns nil.
 func convertListResponse(ekv *mvccpb.KeyValue, l model.ListInterface) *model.KVPair {
 	log.WithField("etcdv3-etcdKey", ekv.Key).Debug("Processing etcdv3 entry")
 	if k := l.KeyFromDefaultPath(string(ekv.Key)); k != nil {
 		log.WithField("model-etcdKey", k).Debug("Key is valid and converted to model-etcdKey")
 		if v, err := model.ParseValue(k, ekv.Value); err == nil {
-			log.Debug("Value is valid - filter value in")
+			log.Debug("Value is valid - return KVPair with parsed value")
 			return &model.KVPair{Key: k, Value: v, Revision: strconv.FormatInt(ekv.ModRevision, 10)}
 		}
 	}
@@ -46,11 +46,12 @@ func convertWatchEvent(e *clientv3.Event, l model.ListInterface) (*api.WatchEven
 	log.WithField("etcdv3-etcdKey", e.Kv.Key).Debug("Processing etcdv3 event")
 
 	var eventType api.WatchEventType
-	if e.Type == clientv3.EventTypeDelete {
+	switch {
+	case e.Type == clientv3.EventTypeDelete:
 		eventType = api.WatchDeleted
-	} else if e.IsCreate() {
+	case e.IsCreate():
 		eventType = api.WatchAdded
-	} else {
+	default:
 		eventType = api.WatchModified
 	}
 
@@ -60,7 +61,7 @@ func convertWatchEvent(e *clientv3.Event, l model.ListInterface) (*api.WatchEven
 
 		if eventType != api.WatchDeleted {
 			if v, err := model.ParseValue(k, e.Kv.Value); err == nil {
-				log.Debug("Value is valid - filter value in")
+				log.Debug("Value is valid - return KVPair with parsed value")
 				new = &model.KVPair{Key: k, Value: v, Revision: strconv.FormatInt(e.Kv.ModRevision, 10)}
 			} else {
 				return nil, err
@@ -68,7 +69,7 @@ func convertWatchEvent(e *clientv3.Event, l model.ListInterface) (*api.WatchEven
 		}
 		if eventType != api.WatchAdded && e.PrevKv != nil && len(e.PrevKv.Value) != 0 {
 			if v, err := model.ParseValue(k, e.PrevKv.Value); err == nil {
-				log.Debug("Value is valid - filter value in")
+				log.Debug("Previous value is valid - return KVPair with parsed value")
 				old = &model.KVPair{Key: k, Value: v, Revision: strconv.FormatInt(e.PrevKv.ModRevision, 10)}
 			} else {
 				return nil, err

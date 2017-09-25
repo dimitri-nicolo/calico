@@ -15,6 +15,8 @@
 package clientv2
 
 import (
+	"context"
+
 	"github.com/projectcalico/libcalico-go/lib/apiv2"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
@@ -22,12 +24,12 @@ import (
 
 // NodeInterface has methods to work with Node resources.
 type NodeInterface interface {
-	Create(peer *apiv2.Node, opts options.SetOptions) (*apiv2.Node, error)
-	Update(peer *apiv2.Node, opts options.SetOptions) (*apiv2.Node, error)
-	Delete(name string, opts options.DeleteOptions) error
-	Get(name string, opts options.GetOptions) (*apiv2.Node, error)
-	List(opts options.ListOptions) (*apiv2.NodeList, error)
-	Watch(opts options.ListOptions) (watch.Interface, error)
+	Create(ctx context.Context, res *apiv2.Node, opts options.SetOptions) (*apiv2.Node, error)
+	Update(ctx context.Context, res *apiv2.Node, opts options.SetOptions) (*apiv2.Node, error)
+	Delete(ctx context.Context, name string, opts options.DeleteOptions) error
+	Get(ctx context.Context, name string, opts options.GetOptions) (*apiv2.Node, error)
+	List(ctx context.Context, opts options.ListOptions) (*apiv2.NodeList, error)
+	Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error)
 }
 
 // nodes implements NodeInterface
@@ -37,40 +39,51 @@ type nodes struct {
 
 // Create takes the representation of a Node and creates it.  Returns the stored
 // representation of the Node, and an error, if there is any.
-func (r nodes) Create(peer *apiv2.Node, opts options.SetOptions) (*apiv2.Node, error) {
-	panic("Create not implemented for NodeInterface")
-	return nil, nil
+func (r nodes) Create(ctx context.Context, res *apiv2.Node, opts options.SetOptions) (*apiv2.Node, error) {
+	out, err := r.client.resources.Create(ctx, opts, apiv2.KindNode, NoNamespace, res)
+	if out != nil {
+		return out.(*apiv2.Node), err
+	}
+	return nil, err
 }
 
 // Update takes the representation of a Node and updates it. Returns the stored
 // representation of the Node, and an error, if there is any.
-func (r nodes) Update(peer *apiv2.Node, opts options.SetOptions) (*apiv2.Node, error) {
-	panic("Update not implemented for NodeInterface")
-	return nil, nil
+func (r nodes) Update(ctx context.Context, res *apiv2.Node, opts options.SetOptions) (*apiv2.Node, error) {
+	out, err := r.client.resources.Update(ctx, opts, apiv2.KindNode, NoNamespace, res)
+	if out != nil {
+		return out.(*apiv2.Node), err
+	}
+	return nil, err
 }
 
 // Delete takes name of the Node and deletes it. Returns an error if one occurs.
-func (r nodes) Delete(name string, opts options.DeleteOptions) error {
-	panic("Delete not implemented for NodeInterface")
-	return nil
+func (r nodes) Delete(ctx context.Context, name string, opts options.DeleteOptions) error {
+	err := r.client.resources.Delete(ctx, opts, apiv2.KindNode, NoNamespace, name)
+	return err
 }
 
 // Get takes name of the Node, and returns the corresponding Node object,
 // and an error if there is any.
-func (r nodes) Get(name string, opts options.GetOptions) (*apiv2.Node, error) {
-	panic("Get not implemented for NodeInterface")
-	return nil, nil
+func (r nodes) Get(ctx context.Context, name string, opts options.GetOptions) (*apiv2.Node, error) {
+	out, err := r.client.resources.Get(ctx, opts, apiv2.KindNode, NoNamespace, name)
+	if out != nil {
+		return out.(*apiv2.Node), err
+	}
+	return nil, err
 }
 
 // List returns the list of Node objects that match the supplied options.
-func (r nodes) List(opts options.ListOptions) (*apiv2.NodeList, error) {
-	panic("List not implemented for NodeInterface")
-	return nil, nil
+func (r nodes) List(ctx context.Context, opts options.ListOptions) (*apiv2.NodeList, error) {
+	res := &apiv2.NodeList{}
+	if err := r.client.resources.List(ctx, opts, apiv2.KindNode, apiv2.KindNodeList, NoNamespace, AllNames, res); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 // Watch returns a watch.Interface that watches the Nodes that match the
 // supplied options.
-func (r nodes) Watch(opts options.ListOptions) (watch.Interface, error) {
-	panic("Watch not implemented for NodeInterface")
-	return nil, nil
+func (r nodes) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
+	return r.client.resources.Watch(ctx, opts, apiv2.KindNode, NoNamespace, AllNames)
 }

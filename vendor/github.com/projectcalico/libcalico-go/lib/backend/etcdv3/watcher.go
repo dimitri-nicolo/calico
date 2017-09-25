@@ -30,7 +30,7 @@ const (
 )
 
 // Watch entries in the datastore matching the resources specified by the ListInterface.
-func (c *etcdV3Client) Watch(l model.ListInterface, revision string) (api.WatchInterface, error) {
+func (c *etcdV3Client) Watch(cxt context.Context, l model.ListInterface, revision string) (api.WatchInterface, error) {
 	var rev int64
 	if len(revision) != 0 {
 		var err error
@@ -47,7 +47,7 @@ func (c *etcdV3Client) Watch(l model.ListInterface, revision string) (api.WatchI
 		resultChan: make(chan api.WatchEvent, outgoingBufSize),
 		errChan:    make(chan error, 1),
 	}
-	wc.ctx, wc.cancel = context.WithCancel(context.Background())
+	wc.ctx, wc.cancel = context.WithCancel(cxt)
 	go wc.run()
 	return wc, nil
 }
@@ -86,11 +86,11 @@ func (wc *watcher) run() {
 		case <-wc.ctx.Done():
 		}
 	case <-watchClosedCh:
-		log.Debug("watcher.run() loop received watch closed event")
+		log.Debug("watcher.run loop received watch closed event")
 	case <-wc.ctx.Done(): // user cancel
-		log.Debug("watcher.run() loop received done event")
+		log.Debug("watcher.run loop received done event")
 	}
-	log.Info("watcher.run() loop exiting")
+	log.Info("watcher.run loop exiting")
 
 	// We use wc.ctx to reap all goroutines. Under whatever condition, we should stop them all.
 	// It's fine to double cancel.
@@ -98,13 +98,13 @@ func (wc *watcher) run() {
 	close(wc.resultChan)
 }
 
-// Stop() implements the api.WatchInterface.
+// Stop implements the api.WatchInterface.
 // This calls through to the context cancel function.
 func (wc *watcher) Stop() {
 	wc.cancel()
 }
 
-// ResultChan() implements the api.WatchInterface.
+// ResultChan implements the api.WatchInterface.
 func (wc *watcher) ResultChan() <-chan api.WatchEvent {
 	return wc.resultChan
 }
@@ -112,7 +112,7 @@ func (wc *watcher) ResultChan() <-chan api.WatchEvent {
 // listCurrent retrieves the existing entries and sends an event for each listed
 func (wc *watcher) listCurrent() error {
 	log.Info("Performing initial list with no revision")
-	list, err := wc.client.List(wc.list, "")
+	list, err := wc.client.List(wc.ctx, wc.list, "")
 	if err != nil {
 		return err
 	}
@@ -123,9 +123,12 @@ func (wc *watcher) listCurrent() error {
 		return err
 	}
 
+	// We are sending an initial sync of entries to the watcher to provide current
+	// state.  To the perspective of the watcher, these are added entries, so set the
+	// event type to WatchAdded.
 	for _, kv := range list.KVPairs {
 		log.Info("Sending create events for each existing entry")
-		wc.queueEvent(&api.WatchEvent{
+		wc.sendEvent(&api.WatchEvent{
 			Type: api.WatchAdded,
 			New:  kv,
 		})
@@ -170,7 +173,7 @@ func (wc *watcher) watchLoop(watchClosedCh chan struct{}) {
 		}
 		for _, e := range wres.Events {
 			if ae, err := convertWatchEvent(e, wc.list); ae != nil {
-				wc.queueEvent(ae)
+				wc.sendEvent(ae)
 			} else if err != nil {
 				wc.sendError(err)
 			}
@@ -192,7 +195,7 @@ func (wc *watcher) sendError(err error) {
 	}
 }
 
-func (wc *watcher) queueEvent(e *api.WatchEvent) {
+func (wc *watcher) sendEvent(e *api.WatchEvent) {
 	if len(wc.resultChan) == outgoingBufSize {
 		log.Warningf("Watch events backing up: %d events", outgoingBufSize)
 	}

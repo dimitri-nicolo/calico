@@ -15,6 +15,7 @@
 package clientv2_test
 
 import (
+	"context"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -34,6 +35,7 @@ import (
 // Perform CRUD operations on Global and Node-specific BGP Peer Resources.
 var _ = testutils.E2eDatastoreDescribe("Prefix deletion watch test", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
 
+	ctx := context.Background()
 	numEvents := 10000
 
 	Describe("Test prefix deletion of the datastore", func() {
@@ -56,7 +58,7 @@ var _ = testutils.E2eDatastoreDescribe("Prefix deletion watch test", testutils.D
 						ASNumber: numorstring.ASNumber(ii),
 					},
 				}
-				_, outError := c.BGPPeers().Create(peer, options.SetOptions{})
+				_, outError := c.BGPPeers().Create(ctx, peer, options.SetOptions{})
 				Expect(outError).NotTo(HaveOccurred())
 				deleteEvents = append(deleteEvents, watch.Event{
 					Type:     watch.Deleted,
@@ -65,12 +67,12 @@ var _ = testutils.E2eDatastoreDescribe("Prefix deletion watch test", testutils.D
 			}
 
 			By("Listing all the resources")
-			outList, outError := c.BGPPeers().List(options.ListOptions{})
+			outList, outError := c.BGPPeers().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 			Expect(outList.Items).To(HaveLen(numEvents))
 
 			By("Creating a watcher, watching the current resource version")
-			w, _ := c.BGPPeers().Watch(options.ListOptions{ResourceVersion: outList.ResourceVersion})
+			w, _ := c.BGPPeers().Watch(ctx, options.ListOptions{ResourceVersion: outList.ResourceVersion})
 			testWatcher := testutils.TestResourceWatch(w)
 			defer testWatcher.Stop()
 
