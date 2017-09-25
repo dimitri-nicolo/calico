@@ -1,9 +1,16 @@
 package calico
 
 import (
+	"os"
+
 	"golang.org/x/net/context"
 
-	"github.com/projectcalico/libcalico-go/lib/client"
+	"github.com/golang/glog"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	"github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
@@ -12,13 +19,29 @@ import (
 )
 
 type policyStore struct {
-	client    *client.Client
+	client    clientv2.Interface
 	versioner storage.Versioner
 }
 
 // NewPolicyStorage creates a new libcalico-based storage.Interface implementation for Policy
 func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
+	var err error
+
+	cfg, err := apiconfig.LoadClientConfig("")
+	if err != nil {
+		glog.Errorf("Failed to load client config: %q", err)
+		os.Exit(1)
+	}
+
+	c, err := clientv2.New(*cfg)
+	if err != nil {
+		glog.Errorf("Failed creating client: %q", err)
+		os.Exit(1)
+	}
+	glog.Infof("Client: %v", c)
+
 	return &policyStore{
+		client:    c,
 		versioner: etcd.APIObjectVersioner{},
 	}, func() {}
 }
@@ -32,6 +55,20 @@ func (ps *policyStore) Versioner() storage.Versioner {
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
 func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
+	policy := obj.(*calico.NetworkPolicy)
+	libcalicoPolicy := &apiv2.NetworkPolicy{}
+	libcalicoPolicy.TypeMeta = policy.TypeMeta
+	libcalicoPolicy.ObjectMeta = policy.ObjectMeta
+	libcalicoPolicy.Spec = policy.Spec
+
+	// TODO: Get namespace from key string, for now "default"
+	pHandler := ps.client.NetworkPolicies("default")
+	// TODO: Set TTL
+	opts := options.SetOptions{}
+	_, err := pHandler.Create(ctx, libcalicoPolicy, opts)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -39,6 +76,14 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 // If key didn't exist, it will return NotFound storage error.
 func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Object,
 	preconditions *storage.Preconditions) error {
+	// TODO: Get namespace from key string, for now "default"
+	pHandler := ps.client.NetworkPolicies("default")
+	// TODO: Fill in the resource version if present
+	opts := options.DeleteOptions{}
+	err := pHandler.Delete(ctx, key, opts)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -51,6 +96,14 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 // and send it in an "ADDED" event, before watch starts.
 func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
+	// TODO: Get namespace from key string, for now "default"
+	pHandler := ps.client.NetworkPolicies("default")
+	// TODO: Fill in the resource version if present
+	opts := options.ListOptions{}
+	_, err := pHandler.Watch(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 
