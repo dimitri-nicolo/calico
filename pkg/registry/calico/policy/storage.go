@@ -200,7 +200,7 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, include
 		return nil, err
 	}
 
-	return r.Store.Create(ctx, obj, false)
+	return r.Store.Create(ctx, obj, includeUninitialized)
 }
 
 func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo) (runtime.Object, bool, error) {
@@ -221,7 +221,12 @@ func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.G
 		return nil, err
 	}
 
-	return r.Store.Get(ctx, name, options)
+	obj, err := r.Store.Get(ctx, name, options)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf(" SHATRU DEBUG Object Get: %v", obj)
+	return obj, err
 }
 
 func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav1.DeleteOptions) (runtime.Object, bool, error) {

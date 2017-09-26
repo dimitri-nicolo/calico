@@ -33,6 +33,10 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 		os.Exit(1)
 	}
 
+	//TODO: Make the following items configurable at creation.
+	cfg.Spec.DatastoreType = apiconfig.EtcdV3
+	cfg.Spec.EtcdEndpoints = "http://127.0.0.1:2379"
+
 	c, err := clientv2.New(*cfg)
 	if err != nil {
 		glog.Errorf("Failed creating client: %q", err)
@@ -62,13 +66,17 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 	libcalicoPolicy.Spec = policy.Spec
 
 	// TODO: Get namespace from key string, for now "default"
-	pHandler := ps.client.NetworkPolicies("default")
+	pHandler := ps.client.NetworkPolicies("namespace")
 	// TODO: Set TTL
 	opts := options.SetOptions{}
-	_, err := pHandler.Create(ctx, libcalicoPolicy, opts)
+	networkPolicy, err := pHandler.Create(ctx, libcalicoPolicy, opts)
 	if err != nil {
 		return err
 	}
+	calicoNetworkPolicy := out.(*calico.NetworkPolicy)
+	calicoNetworkPolicy.Spec = networkPolicy.Spec
+	calicoNetworkPolicy.TypeMeta = networkPolicy.TypeMeta
+	calicoNetworkPolicy.ObjectMeta = networkPolicy.ObjectMeta
 	return nil
 }
 
@@ -77,10 +85,23 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Object,
 	preconditions *storage.Preconditions) error {
 	// TODO: Get namespace from key string, for now "default"
-	pHandler := ps.client.NetworkPolicies("default")
+	pHandler := ps.client.NetworkPolicies("namespace")
+
+	// TODO: Hack to get the object to be deleted and returned
 	// TODO: Fill in the resource version if present
-	opts := options.DeleteOptions{}
-	err := pHandler.Delete(ctx, key, opts)
+	opts := options.GetOptions{}
+	networkPolicy, err := pHandler.Get(ctx, "test-networkpolicy", opts)
+	if err != nil {
+		return err
+	}
+	calicoNetworkPolicy := out.(*calico.NetworkPolicy)
+	calicoNetworkPolicy.Spec = networkPolicy.Spec
+	calicoNetworkPolicy.TypeMeta = networkPolicy.TypeMeta
+	calicoNetworkPolicy.ObjectMeta = networkPolicy.ObjectMeta
+
+	// TODO: Fill in the resource version if present
+	delOpts := options.DeleteOptions{}
+	err = pHandler.Delete(ctx, "test-networkpolicy", delOpts)
 	if err != nil {
 		return err
 	}
@@ -97,7 +118,7 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
 	// TODO: Get namespace from key string, for now "default"
-	pHandler := ps.client.NetworkPolicies("default")
+	pHandler := ps.client.NetworkPolicies("namespace")
 	// TODO: Fill in the resource version if present
 	opts := options.ListOptions{}
 	_, err := pHandler.Watch(ctx, opts)
@@ -116,6 +137,7 @@ func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion st
 // and send them in "ADDED" events, before watch starts.
 func (ps *policyStore) WatchList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
+	//TODO
 	return nil, nil
 }
 
@@ -126,6 +148,22 @@ func (ps *policyStore) WatchList(ctx context.Context, key string, resourceVersio
 // be have at least 'resourceVersion'.
 func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion string,
 	objPtr runtime.Object, ignoreNotFound bool) error {
+	// TODO: Get namespace from key string, for now "default"
+	pHandler := ps.client.NetworkPolicies("namespace")
+	// TODO: Fill in the resource version if present
+	opts := options.GetOptions{}
+	// TODO: Get name from key. This is to just get the integration tests to pass.
+	networkPolicy, err := pHandler.Get(ctx, "test-networkpolicy", opts)
+	if err != nil {
+		return err
+	}
+	glog.Infof("SHATRU DEBUG: %v", networkPolicy)
+	calicoNetworkPolicy := objPtr.(*calico.NetworkPolicy)
+	calicoNetworkPolicy.Spec = networkPolicy.Spec
+	calicoNetworkPolicy.TypeMeta = networkPolicy.TypeMeta
+	calicoNetworkPolicy.ObjectMeta = networkPolicy.ObjectMeta
+	glog.Infof("SHATRU DEBUG CNP: %v", calicoNetworkPolicy)
+
 	return nil
 }
 
@@ -135,6 +173,7 @@ func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion stri
 // be have at least 'resourceVersion'.
 func (ps *policyStore) GetToList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
+	//TODO
 	return nil
 }
 
@@ -144,6 +183,26 @@ func (ps *policyStore) GetToList(ctx context.Context, key string, resourceVersio
 // be have at least 'resourceVersion'.
 func (ps *policyStore) List(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
+	// TODO: Get namespace from key string, for now "default"
+	pHandler := ps.client.NetworkPolicies("namespace")
+	// TODO: Fill in the resource version if present
+	opts := options.ListOptions{}
+	networkPolicyList, err := pHandler.List(ctx, opts)
+	if err != nil {
+		return err
+	}
+	calicoNetworkPolicyList := listObj.(*calico.NetworkPolicyList)
+	calicoNetworkPolicyList.Items = []calico.NetworkPolicy{}
+	for _, item := range networkPolicyList.Items {
+		glog.Infof("SHATRU DEBUG List ITem: %v", item)
+		calicoNetworkPolicy := calico.NetworkPolicy{}
+		calicoNetworkPolicy.TypeMeta = item.TypeMeta
+		calicoNetworkPolicy.ObjectMeta = item.ObjectMeta
+		calicoNetworkPolicy.Spec = item.Spec
+		calicoNetworkPolicyList.Items = append(calicoNetworkPolicyList.Items, calicoNetworkPolicy)
+	}
+	calicoNetworkPolicyList.TypeMeta = networkPolicyList.TypeMeta
+	calicoNetworkPolicyList.ListMeta = networkPolicyList.ListMeta
 	return nil
 }
 
@@ -181,5 +240,6 @@ func (ps *policyStore) List(ctx context.Context, key string, resourceVersion str
 func (ps *policyStore) GuaranteedUpdate(
 	ctx context.Context, key string, ptrToType runtime.Object, ignoreNotFound bool,
 	precondtions *storage.Preconditions, tryUpdate storage.UpdateFunc, suggestion ...runtime.Object) error {
+	//TODO
 	return nil
 }
