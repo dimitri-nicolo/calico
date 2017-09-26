@@ -10,6 +10,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/apiv2"
 	"github.com/projectcalico/libcalico-go/lib/clientv2"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
@@ -32,10 +33,6 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 		glog.Errorf("Failed to load client config: %q", err)
 		os.Exit(1)
 	}
-
-	//TODO: Make the following items configurable at creation.
-	cfg.Spec.DatastoreType = apiconfig.EtcdV3
-	cfg.Spec.EtcdEndpoints = "http://127.0.0.1:2379"
 
 	c, err := clientv2.New(*cfg)
 	if err != nil {
@@ -121,11 +118,30 @@ func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion st
 	pHandler := ps.client.NetworkPolicies("namespace")
 	// TODO: Fill in the resource version if present
 	opts := options.ListOptions{}
-	_, err := pHandler.Watch(ctx, opts)
+	lWatch, err := pHandler.Watch(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	returnChan := make(chan watch.Event)
+	go func() {
+		for e := range lWatch.ResultChan() {
+			sendEvent := watch.Event{}
+			sendEvent.Object = e.Object
+			switch e.Type {
+			case cwatch.Added:
+				sendEvent.Type = watch.Added
+			case cwatch.Deleted:
+				sendEvent.Type = watch.Deleted
+			case cwatch.Modified:
+				sendEvent.Type = watch.Modified
+			case cwatch.Error:
+				sendEvent.Type = watch.Error
+			}
+			returnChan <- sendEvent
+		}
+	}()
+	wc := createWatchChan(ctx, lWatch, returnChan)
+	return wc, nil
 }
 
 // WatchList begins watching the specified key's items. Items are decoded into API

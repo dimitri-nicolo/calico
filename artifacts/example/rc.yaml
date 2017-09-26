@@ -19,5 +19,8 @@ spec:
       - name: calico-server
         image: calico-k8sapiserver:latest
         imagePullPolicy: Never
-      - name: etcd
-        image: quay.io/coreos/etcd:v3.0.17
+        env:
+          - name: ETCD_ENDPOINTS
+            value: "http://10.96.232.136:6666"
+          - name: DATASTORE_TYPE
+            value: "etcdv3"
