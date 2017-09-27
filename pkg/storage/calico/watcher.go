@@ -31,7 +31,8 @@ type watchChan struct {
 
 func createWatchChan(ctx context.Context, w cwatch.Interface, rc chan watch.Event) *watchChan {
 	wc := &watchChan{
-		watcher: w,
+		resultChan: rc,
+		watcher:    w,
 	}
 	return wc
 }

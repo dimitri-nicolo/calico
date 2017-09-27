@@ -25,7 +25,7 @@ source "${KUBE_ROOT}/hack/lib/init.sh"
 runTests() {
   kube::etcd::start
 
-  go test -race -v github.com/tigera/calico-k8sapiserver/test/integration/... --args -v 10 -logtostderr
+  ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test -race -v github.com/tigera/calico-k8sapiserver/test/integration/... --args -v 10 -logtostderr
 }
 
 # Run cleanup to stop etcd on interrupt or other kill signal.

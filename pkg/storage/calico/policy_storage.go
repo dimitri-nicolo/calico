@@ -62,8 +62,11 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 	libcalicoPolicy.ObjectMeta = policy.ObjectMeta
 	libcalicoPolicy.Spec = policy.Spec
 
-	// TODO: Get namespace from key string, for now "default"
-	pHandler := ps.client.NetworkPolicies("namespace")
+	ns, _, err := NamespaceAndNameFromKey(key)
+	if err != nil {
+		return err
+	}
+	pHandler := ps.client.NetworkPolicies(ns)
 	// TODO: Set TTL
 	opts := options.SetOptions{}
 	networkPolicy, err := pHandler.Create(ctx, libcalicoPolicy, opts)
@@ -81,13 +84,15 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 // If key didn't exist, it will return NotFound storage error.
 func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Object,
 	preconditions *storage.Preconditions) error {
-	// TODO: Get namespace from key string, for now "default"
-	pHandler := ps.client.NetworkPolicies("namespace")
-
+	ns, name, err := NamespaceAndNameFromKey(key)
+	if err != nil {
+		return err
+	}
+	pHandler := ps.client.NetworkPolicies(ns)
 	// TODO: Hack to get the object to be deleted and returned
 	// TODO: Fill in the resource version if present
 	opts := options.GetOptions{}
-	networkPolicy, err := pHandler.Get(ctx, "test-networkpolicy", opts)
+	networkPolicy, err := pHandler.Get(ctx, name, opts)
 	if err != nil {
 		return err
 	}
@@ -98,7 +103,7 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 
 	// TODO: Fill in the resource version if present
 	delOpts := options.DeleteOptions{}
-	err = pHandler.Delete(ctx, "test-networkpolicy", delOpts)
+	err = pHandler.Delete(ctx, name, delOpts)
 	if err != nil {
 		return err
 	}
@@ -114,8 +119,11 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 // and send it in an "ADDED" event, before watch starts.
 func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
-	// TODO: Get namespace from key string, for now "default"
-	pHandler := ps.client.NetworkPolicies("namespace")
+	ns, _, err := NamespaceAndNameFromKey(key)
+	if err != nil {
+		return nil, err
+	}
+	pHandler := ps.client.NetworkPolicies(ns)
 	// TODO: Fill in the resource version if present
 	opts := options.ListOptions{}
 	lWatch, err := pHandler.Watch(ctx, opts)
@@ -126,9 +134,14 @@ func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion st
 	go func() {
 		for e := range lWatch.ResultChan() {
 			sendEvent := watch.Event{}
-			sendEvent.Object = e.Object
 			switch e.Type {
 			case cwatch.Added:
+				apiv2NetworkPolicy := e.Object.(*apiv2.NetworkPolicy)
+				calicoNetworkPolicy := &calico.NetworkPolicy{}
+				calicoNetworkPolicy.TypeMeta = apiv2NetworkPolicy.TypeMeta
+				calicoNetworkPolicy.ObjectMeta = apiv2NetworkPolicy.ObjectMeta
+				calicoNetworkPolicy.Spec = apiv2NetworkPolicy.Spec
+				sendEvent.Object = calicoNetworkPolicy
 				sendEvent.Type = watch.Added
 			case cwatch.Deleted:
 				sendEvent.Type = watch.Deleted
@@ -154,7 +167,7 @@ func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion st
 func (ps *policyStore) WatchList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
 	//TODO
-	return nil, nil
+	return ps.Watch(ctx, key, resourceVersion, p)
 }
 
 // Get unmarshals json found at key into objPtr. On a not found error, will either
@@ -164,12 +177,14 @@ func (ps *policyStore) WatchList(ctx context.Context, key string, resourceVersio
 // be have at least 'resourceVersion'.
 func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion string,
 	objPtr runtime.Object, ignoreNotFound bool) error {
-	// TODO: Get namespace from key string, for now "default"
-	pHandler := ps.client.NetworkPolicies("namespace")
+	ns, name, err := NamespaceAndNameFromKey(key)
+	if err != nil {
+		return err
+	}
+	pHandler := ps.client.NetworkPolicies(ns)
 	// TODO: Fill in the resource version if present
 	opts := options.GetOptions{}
-	// TODO: Get name from key. This is to just get the integration tests to pass.
-	networkPolicy, err := pHandler.Get(ctx, "test-networkpolicy", opts)
+	networkPolicy, err := pHandler.Get(ctx, name, opts)
 	if err != nil {
 		return err
 	}
@@ -199,8 +214,11 @@ func (ps *policyStore) GetToList(ctx context.Context, key string, resourceVersio
 // be have at least 'resourceVersion'.
 func (ps *policyStore) List(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
-	// TODO: Get namespace from key string, for now "default"
-	pHandler := ps.client.NetworkPolicies("namespace")
+	ns, _, err := NamespaceAndNameFromKey(key)
+	if err != nil {
+		return err
+	}
+	pHandler := ps.client.NetworkPolicies(ns)
 	// TODO: Fill in the resource version if present
 	opts := options.ListOptions{}
 	networkPolicyList, err := pHandler.List(ctx, opts)

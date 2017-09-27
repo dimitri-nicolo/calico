@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 
 	// TODO: fix this upstream
@@ -32,6 +33,7 @@ import (
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	// avoid error `no kind is registered for the type metav1.ListOptions`
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/pkg/api/install"
 	// our versioned types
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
@@ -265,12 +267,43 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 			diff.ObjectReflectDiff(policyServer, policyListed),
 		)
 	}*/
+	// Watch Test:
+	opts := v1.ListOptions{}
+	wIface, err := policyClient.Watch(opts)
+	if nil != err {
+		return fmt.Errorf("Error on watch")
+	}
+	e := <-wIface.ResultChan()
+	fmt.Println("Watch object: ", e)
 
 	err = policyClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		opts := v1.ListOptions{}
+		wIface, err := policyClient.Watch(opts)
+		if nil != err {
+			fmt.Errorf("Error on watch")
+		}
+		for e := range wIface.ResultChan() {
+			fmt.Println("Watch object: ", e)
+			break
+		}
+	}()
+
+	policyServer, err = policyClient.Create(policy)
+	if nil != err {
+		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
+	}
+	if name != policyServer.Name {
+		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
+	}
+	wg.Wait()
 	return nil
 }
 
