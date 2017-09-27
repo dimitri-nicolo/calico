@@ -15,6 +15,7 @@
 package client
 
 import (
+	"context"
 	"encoding/hex"
 	goerrors "errors"
 	"fmt"
@@ -35,7 +36,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/validator"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	"context"
 )
 
 // Client contains
@@ -323,7 +323,7 @@ func (c *Client) delete(metadata unversioned.ResourceMetadata, helper conversion
 	// operations fills in the revision information.
 	if k, err := helper.convertMetadataToKey(metadata); err != nil {
 		return err
-	} else if err := c.Backend.Delete(context.Background(), k, metadata.GetObjectMetadata().Revision); err != nil {
+	} else if _, err := c.Backend.Delete(context.Background(), k, metadata.GetObjectMetadata().Revision); err != nil {
 		return err
 	} else {
 		return nil

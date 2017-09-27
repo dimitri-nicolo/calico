@@ -85,7 +85,7 @@ type Client interface {
 	// also be removed when deleting the objects that implicitly created it.
 	// For example, deleting the last WorkloadEndpoint in a Workload will
 	// also remove the Workload.
-	Delete(ctx context.Context, key model.Key, revision string) error
+	Delete(ctx context.Context, key model.Key, revision string) (*model.KVPair, error)
 
 	// Get returns the object identified by the given key as a KVPair with
 	// revision information.
@@ -170,6 +170,10 @@ type WatchInterface interface {
 	// or Stop() is called, this channel will be closed, in which case the
 	// watch should be completely cleaned up.
 	ResultChan() <-chan WatchEvent
+
+	// HasTerminated returns true if the watcher has terminated and released all
+	// resources.  This is used for test purposes.
+	HasTerminated() bool
 }
 
 // WatchEventType defines the possible types of events.

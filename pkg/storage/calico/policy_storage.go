@@ -1,17 +1,19 @@
 package calico
 
 import (
+	"fmt"
 	"os"
 
 	"golang.org/x/net/context"
 
 	"github.com/golang/glog"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apiv2"
 	"github.com/projectcalico/libcalico-go/lib/clientv2"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
@@ -56,27 +58,23 @@ func (ps *policyStore) Versioner() storage.Versioner {
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
 func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
-	policy := obj.(*calico.NetworkPolicy)
-	libcalicoPolicy := &apiv2.NetworkPolicy{}
-	libcalicoPolicy.TypeMeta = policy.TypeMeta
-	libcalicoPolicy.ObjectMeta = policy.ObjectMeta
-	libcalicoPolicy.Spec = policy.Spec
+	networkPolicy := obj.(*aapi.NetworkPolicy)
+	libcalicoPolicy := &libcalicoapi.NetworkPolicy{}
+	libcalicoPolicy.TypeMeta = networkPolicy.TypeMeta
+	libcalicoPolicy.ObjectMeta = networkPolicy.ObjectMeta
+	libcalicoPolicy.Spec = networkPolicy.Spec
 
-	ns, _, err := NamespaceAndNameFromKey(key)
-	if err != nil {
-		return err
-	}
-	pHandler := ps.client.NetworkPolicies(ns)
+	pHandler := ps.client.NetworkPolicies()
 	// TODO: Set TTL
 	opts := options.SetOptions{}
-	networkPolicy, err := pHandler.Create(ctx, libcalicoPolicy, opts)
+	createdLibcalicoPolicy, err := pHandler.Create(ctx, libcalicoPolicy, opts)
 	if err != nil {
 		return err
 	}
-	calicoNetworkPolicy := out.(*calico.NetworkPolicy)
-	calicoNetworkPolicy.Spec = networkPolicy.Spec
-	calicoNetworkPolicy.TypeMeta = networkPolicy.TypeMeta
-	calicoNetworkPolicy.ObjectMeta = networkPolicy.ObjectMeta
+	networkPolicy = out.(*aapi.NetworkPolicy)
+	networkPolicy.Spec = createdLibcalicoPolicy.Spec
+	networkPolicy.TypeMeta = createdLibcalicoPolicy.TypeMeta
+	networkPolicy.ObjectMeta = createdLibcalicoPolicy.ObjectMeta
 	return nil
 }
 
@@ -84,28 +82,53 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 // If key didn't exist, it will return NotFound storage error.
 func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Object,
 	preconditions *storage.Preconditions) error {
+	pHandler := ps.client.NetworkPolicies()
 	ns, name, err := NamespaceAndNameFromKey(key)
 	if err != nil {
 		return err
 	}
-	pHandler := ps.client.NetworkPolicies(ns)
-	// TODO: Hack to get the object to be deleted and returned
-	// TODO: Fill in the resource version if present
-	opts := options.GetOptions{}
-	networkPolicy, err := pHandler.Get(ctx, name, opts)
+
+	delOpts := options.DeleteOptions{}
+	if preconditions != nil {
+		// Get the object to check for validity of UID
+		opts := options.GetOptions{}
+		libcalicoPolicy, err := pHandler.Get(ctx, ns, name, opts)
+		if err != nil {
+			return err
+		}
+		networkPolicy := &aapi.NetworkPolicy{}
+		networkPolicy.Spec = libcalicoPolicy.Spec
+		networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
+		networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+		if err := checkPreconditions(key, preconditions, networkPolicy); err != nil {
+			return err
+		}
+		// Set the Resource Version for Deletion
+		delOpts.ResourceVersion = networkPolicy.ResourceVersion
+	}
+
+	libcalicoPolicy, err := pHandler.Delete(ctx, ns, name, delOpts)
 	if err != nil {
 		return err
 	}
-	calicoNetworkPolicy := out.(*calico.NetworkPolicy)
-	calicoNetworkPolicy.Spec = networkPolicy.Spec
-	calicoNetworkPolicy.TypeMeta = networkPolicy.TypeMeta
-	calicoNetworkPolicy.ObjectMeta = networkPolicy.ObjectMeta
+	networkPolicy := out.(*aapi.NetworkPolicy)
+	networkPolicy.Spec = libcalicoPolicy.Spec
+	networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
+	networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+	return nil
+}
 
-	// TODO: Fill in the resource version if present
-	delOpts := options.DeleteOptions{}
-	err = pHandler.Delete(ctx, name, delOpts)
+func checkPreconditions(key string, preconditions *storage.Preconditions, out runtime.Object) error {
+	if preconditions == nil {
+		return nil
+	}
+	objMeta, err := meta.Accessor(out)
 	if err != nil {
-		return err
+		return storage.NewInternalErrorf("can't enforce preconditions %v on un-introspectable object %v, got error: %v", *preconditions, out, err)
+	}
+	if preconditions.UID != nil && *preconditions.UID != objMeta.GetUID() {
+		errMsg := fmt.Sprintf("Precondition failed: UID in precondition: %v, UID in object meta: %v", *preconditions.UID, objMeta.GetUID())
+		return storage.NewInvalidObjError(key, errMsg)
 	}
 	return nil
 }
@@ -119,42 +142,11 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 // and send it in an "ADDED" event, before watch starts.
 func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
-	ns, _, err := NamespaceAndNameFromKey(key)
+	ns, name, err := NamespaceAndNameFromKey(key)
 	if err != nil {
 		return nil, err
 	}
-	pHandler := ps.client.NetworkPolicies(ns)
-	// TODO: Fill in the resource version if present
-	opts := options.ListOptions{}
-	lWatch, err := pHandler.Watch(ctx, opts)
-	if err != nil {
-		return nil, err
-	}
-	returnChan := make(chan watch.Event)
-	go func() {
-		for e := range lWatch.ResultChan() {
-			sendEvent := watch.Event{}
-			switch e.Type {
-			case cwatch.Added:
-				apiv2NetworkPolicy := e.Object.(*apiv2.NetworkPolicy)
-				calicoNetworkPolicy := &calico.NetworkPolicy{}
-				calicoNetworkPolicy.TypeMeta = apiv2NetworkPolicy.TypeMeta
-				calicoNetworkPolicy.ObjectMeta = apiv2NetworkPolicy.ObjectMeta
-				calicoNetworkPolicy.Spec = apiv2NetworkPolicy.Spec
-				sendEvent.Object = calicoNetworkPolicy
-				sendEvent.Type = watch.Added
-			case cwatch.Deleted:
-				sendEvent.Type = watch.Deleted
-			case cwatch.Modified:
-				sendEvent.Type = watch.Modified
-			case cwatch.Error:
-				sendEvent.Type = watch.Error
-			}
-			returnChan <- sendEvent
-		}
-	}()
-	wc := createWatchChan(ctx, lWatch, returnChan)
-	return wc, nil
+	return ps.watch(ctx, resourceVersion, p, name, ns)
 }
 
 // WatchList begins watching the specified key's items. Items are decoded into API
@@ -166,8 +158,59 @@ func (ps *policyStore) Watch(ctx context.Context, key string, resourceVersion st
 // and send them in "ADDED" events, before watch starts.
 func (ps *policyStore) WatchList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
-	//TODO
-	return ps.Watch(ctx, key, resourceVersion, p)
+	ns, name, err := NamespaceAndNameFromKey(key)
+	if err != nil {
+		return nil, err
+	}
+	return ps.watch(ctx, resourceVersion, p, name, ns)
+}
+
+func (ps *policyStore) watch(ctx context.Context, resourceVersion string,
+	p storage.SelectionPredicate, name, namespace string) (watch.Interface, error) {
+	pHandler := ps.client.NetworkPolicies()
+	// TODO: Fill in the resource version if present
+	opts := options.ListOptions{Name: name, Namespace: namespace, ResourceVersion: resourceVersion}
+	lWatch, err := pHandler.Watch(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	returnChan := make(chan watch.Event)
+	go func() {
+		for e := range lWatch.ResultChan() {
+			sendEvent := watch.Event{}
+			switch e.Type {
+			case cwatch.Added:
+				libcalicoPolicy := e.Object.(*libcalicoapi.NetworkPolicy)
+				networkPolicy := &aapi.NetworkPolicy{}
+				networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
+				networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+				networkPolicy.Spec = libcalicoPolicy.Spec
+				sendEvent.Object = libcalicoPolicy
+				sendEvent.Type = watch.Added
+			case cwatch.Deleted:
+				libcalicoPolicy := e.Previous.(*libcalicoapi.NetworkPolicy)
+				networkPolicy := &aapi.NetworkPolicy{}
+				networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
+				networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+				networkPolicy.Spec = libcalicoPolicy.Spec
+				sendEvent.Object = libcalicoPolicy
+				sendEvent.Type = watch.Deleted
+			case cwatch.Modified:
+				libcalicoPolicy := e.Object.(*libcalicoapi.NetworkPolicy)
+				networkPolicy := &aapi.NetworkPolicy{}
+				networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
+				networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+				networkPolicy.Spec = libcalicoPolicy.Spec
+				sendEvent.Object = libcalicoPolicy
+				sendEvent.Type = watch.Modified
+			case cwatch.Error:
+				sendEvent.Type = watch.Error
+			}
+			returnChan <- sendEvent
+		}
+	}()
+	wc := createWatchChan(ctx, lWatch, returnChan)
+	return wc, nil
 }
 
 // Get unmarshals json found at key into objPtr. On a not found error, will either
@@ -176,24 +219,27 @@ func (ps *policyStore) WatchList(ctx context.Context, key string, resourceVersio
 // The returned contents may be delayed, but it is guaranteed that they will
 // be have at least 'resourceVersion'.
 func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion string,
-	objPtr runtime.Object, ignoreNotFound bool) error {
+	out runtime.Object, ignoreNotFound bool) error {
 	ns, name, err := NamespaceAndNameFromKey(key)
 	if err != nil {
 		return err
 	}
-	pHandler := ps.client.NetworkPolicies(ns)
-	// TODO: Fill in the resource version if present
-	opts := options.GetOptions{}
-	networkPolicy, err := pHandler.Get(ctx, name, opts)
+	pHandler := ps.client.NetworkPolicies()
+	opts := options.GetOptions{ResourceVersion: resourceVersion}
+	libcalicoPolicy, err := pHandler.Get(ctx, ns, name, opts)
 	if err != nil {
 		return err
 	}
-	glog.Infof("SHATRU DEBUG: %v", networkPolicy)
-	calicoNetworkPolicy := objPtr.(*calico.NetworkPolicy)
-	calicoNetworkPolicy.Spec = networkPolicy.Spec
-	calicoNetworkPolicy.TypeMeta = networkPolicy.TypeMeta
-	calicoNetworkPolicy.ObjectMeta = networkPolicy.ObjectMeta
-	glog.Infof("SHATRU DEBUG CNP: %v", calicoNetworkPolicy)
+	if libcalicoPolicy == nil {
+		if ignoreNotFound {
+			return runtime.SetZeroValue(out)
+		}
+		return storage.NewKeyNotFoundError(key, 0)
+	}
+	networkPolicy := out.(*aapi.NetworkPolicy)
+	networkPolicy.Spec = libcalicoPolicy.Spec
+	networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
+	networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
 
 	return nil
 }
@@ -214,29 +260,27 @@ func (ps *policyStore) GetToList(ctx context.Context, key string, resourceVersio
 // be have at least 'resourceVersion'.
 func (ps *policyStore) List(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
-	ns, _, err := NamespaceAndNameFromKey(key)
+	ns, name, err := NamespaceAndNameFromKey(key)
 	if err != nil {
 		return err
 	}
-	pHandler := ps.client.NetworkPolicies(ns)
-	// TODO: Fill in the resource version if present
-	opts := options.ListOptions{}
-	networkPolicyList, err := pHandler.List(ctx, opts)
+	pHandler := ps.client.NetworkPolicies()
+	opts := options.ListOptions{Namespace: ns, Name: name, ResourceVersion: resourceVersion}
+	libcalicoPolicyList, err := pHandler.List(ctx, opts)
 	if err != nil {
 		return err
 	}
-	calicoNetworkPolicyList := listObj.(*calico.NetworkPolicyList)
-	calicoNetworkPolicyList.Items = []calico.NetworkPolicy{}
-	for _, item := range networkPolicyList.Items {
-		glog.Infof("SHATRU DEBUG List ITem: %v", item)
-		calicoNetworkPolicy := calico.NetworkPolicy{}
-		calicoNetworkPolicy.TypeMeta = item.TypeMeta
-		calicoNetworkPolicy.ObjectMeta = item.ObjectMeta
-		calicoNetworkPolicy.Spec = item.Spec
-		calicoNetworkPolicyList.Items = append(calicoNetworkPolicyList.Items, calicoNetworkPolicy)
+	networkPolicyList := listObj.(*aapi.NetworkPolicyList)
+	networkPolicyList.Items = []aapi.NetworkPolicy{}
+	for _, item := range libcalicoPolicyList.Items {
+		networkPolicy := aapi.NetworkPolicy{}
+		networkPolicy.TypeMeta = item.TypeMeta
+		networkPolicy.ObjectMeta = item.ObjectMeta
+		networkPolicy.Spec = item.Spec
+		networkPolicyList.Items = append(networkPolicyList.Items, networkPolicy)
 	}
-	calicoNetworkPolicyList.TypeMeta = networkPolicyList.TypeMeta
-	calicoNetworkPolicyList.ListMeta = networkPolicyList.ListMeta
+	networkPolicyList.TypeMeta = libcalicoPolicyList.TypeMeta
+	networkPolicyList.ListMeta = libcalicoPolicyList.ListMeta
 	return nil
 }
 

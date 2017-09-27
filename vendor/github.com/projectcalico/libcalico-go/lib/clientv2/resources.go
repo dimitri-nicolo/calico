@@ -16,6 +16,7 @@ package clientv2
 
 import (
 	"context"
+	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -33,9 +34,8 @@ import (
 )
 
 const (
-	AllNames      = ""
-	AllNamespaces = ""
-	NoNamespace   = ""
+	noNamespace      = ""
+	defaultNamespace = "default"
 )
 
 // All Calico resources implement the resource interface.
@@ -52,12 +52,12 @@ type resourceList interface {
 
 // resourceInterface has methods to work with generic resource types.
 type resourceInterface interface {
-	Create(ctx context.Context, opts options.SetOptions, kind, ns string, in resource) (resource, error)
-	Update(ctx context.Context, opts options.SetOptions, kind, ns string, in resource) (resource, error)
-	Delete(ctx context.Context, opts options.DeleteOptions, kind, ns, name string) error
+	Create(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error)
+	Update(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error)
+	Delete(ctx context.Context, opts options.DeleteOptions, kind, ns, name string) (resource, error)
 	Get(ctx context.Context, opts options.GetOptions, kind, ns, name string) (resource, error)
-	List(ctx context.Context, opts options.ListOptions, kind, listkind, ns, name string, inout resourceList) error
-	Watch(ctx context.Context, opts options.ListOptions, kind, ns, name string) (watch.Interface, error)
+	List(ctx context.Context, opts options.ListOptions, kind, listkind string, inout resourceList) error
+	Watch(ctx context.Context, opts options.ListOptions, kind string) (watch.Interface, error)
 }
 
 // resources implements resourceInterface.
@@ -66,7 +66,7 @@ type resources struct {
 }
 
 // Create creates a resource in the backend datastore.
-func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind, ns string, in resource) (resource, error) {
+func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
 	// A ResourceVersion should never be specified on a Create.
 	if len(in.GetObjectMeta().GetResourceVersion()) != 0 {
 		logWithResource(in).Info("Rejecting Create request with non-empty resource version")
@@ -78,9 +78,7 @@ func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind, n
 			}},
 		}
 	}
-
-	// Handle namespace field processing common to Create and Update.
-	if err := c.handleNamespace(ns, kind, in); err != nil {
+	if err := c.checkNamespace(in.GetObjectMeta().GetNamespace(), kind); err != nil {
 		return nil, err
 	}
 
@@ -94,7 +92,7 @@ func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind, n
 }
 
 // Update updates a resource in the backend datastore.
-func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind, ns string, in resource) (resource, error) {
+func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind string, in resource) (resource, error) {
 	// A ResourceVersion should always be specified on an Update.
 	if len(in.GetObjectMeta().GetResourceVersion()) == 0 {
 		logWithResource(in).Info("Rejecting Update request with empty resource version")
@@ -106,9 +104,7 @@ func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind, n
 			}},
 		}
 	}
-
-	// Handle namespace field processing common to Create and Update.
-	if err := c.handleNamespace(ns, kind, in); err != nil {
+	if err := c.checkNamespace(in.GetObjectMeta().GetNamespace(), kind); err != nil {
 		return nil, err
 	}
 
@@ -122,18 +118,28 @@ func (c *resources) Update(ctx context.Context, opts options.SetOptions, kind, n
 }
 
 // Delete deletes a resource from the backend datastore.
-func (c *resources) Delete(ctx context.Context, opts options.DeleteOptions, kind, ns, name string) error {
+func (c *resources) Delete(ctx context.Context, opts options.DeleteOptions, kind, ns, name string) (resource, error) {
+	if err := c.checkNamespace(ns, kind); err != nil {
+		return nil, err
+	}
 	// Create a ResourceKey and pass that to the backend datastore.
 	key := model.ResourceKey{
 		Kind:      kind,
 		Name:      name,
 		Namespace: ns,
 	}
-	return c.backend.Delete(ctx, key, opts.ResourceVersion)
+	kvp, err := c.backend.Delete(ctx, key, opts.ResourceVersion)
+	if kvp != nil {
+		return c.kvPairToResource(kvp), err
+	}
+	return nil, err
 }
 
 // Get gets a resource from the backend datastore.
 func (c *resources) Get(ctx context.Context, opts options.GetOptions, kind, ns, name string) (resource, error) {
+	if err := c.checkNamespace(ns, kind); err != nil {
+		return nil, err
+	}
 	key := model.ResourceKey{
 		Kind:      kind,
 		Name:      name,
@@ -148,11 +154,11 @@ func (c *resources) Get(ctx context.Context, opts options.GetOptions, kind, ns, 
 }
 
 // List lists a resource from the backend datastore.
-func (c *resources) List(ctx context.Context, opts options.ListOptions, kind, listKind, ns, name string, listObj resourceList) error {
+func (c *resources) List(ctx context.Context, opts options.ListOptions, kind, listKind string, listObj resourceList) error {
 	list := model.ResourceListOptions{
 		Kind:      kind,
-		Name:      name,
-		Namespace: ns,
+		Name:      opts.Name,
+		Namespace: opts.Namespace,
 	}
 
 	// Query the backend.
@@ -183,24 +189,26 @@ func (c *resources) List(ctx context.Context, opts options.ListOptions, kind, li
 }
 
 // Watch watches a specific resource or resource type.
-func (c *resources) Watch(ctx context.Context, opts options.ListOptions, kind, ns, name string) (watch.Interface, error) {
+func (c *resources) Watch(ctx context.Context, opts options.ListOptions, kind string) (watch.Interface, error) {
 	list := model.ResourceListOptions{
 		Kind:      kind,
-		Name:      name,
-		Namespace: ns,
+		Name:      opts.Name,
+		Namespace: opts.Namespace,
 	}
 
 	// Create the backend watcher.  We need to process the results to add revision data etc.
-	bw, err := c.backend.Watch(ctx, list, opts.ResourceVersion)
+	ctx, cancel := context.WithCancel(ctx)
+	backend, err := c.backend.Watch(ctx, list, opts.ResourceVersion)
 	if err != nil {
 		return nil, err
 	}
 	w := &watcher{
-		backend: bw,
 		results: make(chan watch.Event, 100),
 		client:  c,
+		cancel:  cancel,
+		context: ctx,
+		backend: backend,
 	}
-	w.context, w.cancel = context.WithCancel(ctx)
 	go w.run()
 	return w, nil
 }
@@ -249,53 +257,28 @@ func (c *resources) kvPairToResource(kvp *model.KVPair) resource {
 	return out
 }
 
-// handleNamespace fills in the namespace information in the resource (if required),
-// and validates the namespace depending on whether or not a namespace should be
-// provided based on the resource kind.
-func (c *resources) handleNamespace(ns, kind string, in resource) error {
-	// If the namespace is not specified in the resource, assign it using the namespace supplied,
-	// otherwise validate that they match.
-	if in.GetObjectMeta().GetNamespace() == "" {
-		in.GetObjectMeta().SetNamespace(ns)
-	} else if in.GetObjectMeta().GetNamespace() != ns {
-		return cerrors.ErrorValidation{
-			ErroredFields: []cerrors.ErroredField{{
-				Name:   "Metadata.Namespace",
-				Reason: "Namespace does not match client namespace",
-				Value:  in.GetObjectMeta().GetNamespace(),
-			}},
-		}
-	}
+// checkNamespace checks that the namespace is supplied on a namespaced resource type.
+func (c *resources) checkNamespace(ns, kind string) error {
 
-	// Validate that a namespace is supplied if one is required for the resource kind.
-	if namespace.IsNamespaced(kind) {
-		if in.GetObjectMeta().GetNamespace() == "" {
-			return cerrors.ErrorValidation{
-				ErroredFields: []cerrors.ErroredField{{
-					Name:   "Metadata.Namespace",
-					Reason: "Namespace should be specified",
-					Value:  in.GetObjectMeta().GetNamespace(),
-				}},
-			}
-		}
-	} else if in.GetObjectMeta().GetNamespace() != "" {
+	if namespace.IsNamespaced(kind) && len(ns) == 0 {
 		return cerrors.ErrorValidation{
 			ErroredFields: []cerrors.ErroredField{{
 				Name:   "Metadata.Namespace",
-				Reason: "Namespace should not be specified",
-				Value:  in.GetObjectMeta().GetNamespace(),
+				Reason: "namespace is not specified on namespaced resource",
 			}},
 		}
 	}
 	return nil
 }
 
+// watcher implements the watch.Interface.
 type watcher struct {
-	backend bapi.WatchInterface
-	context context.Context
-	cancel  context.CancelFunc
-	results chan watch.Event
-	client  *resources
+	backend    bapi.WatchInterface
+	context    context.Context
+	cancel     context.CancelFunc
+	results    chan watch.Event
+	client     *resources
+	terminated uint32
 }
 
 func (w *watcher) Stop() {
@@ -306,32 +289,41 @@ func (w *watcher) ResultChan() <-chan watch.Event {
 	return w.results
 }
 
+// run is the main watch loop, pulling events from the backend watcher and sending
+// down the results channel.
 func (w *watcher) run() {
 	log.Info("Main client watcher loop")
-mainloop:
+
+	// Make sure we terminate resources if we exit.
+	defer w.terminate()
+
 	for {
 		select {
 		case event := <-w.backend.ResultChan():
-			e := w.processEvent(event)
+			e := w.convertEvent(event)
 			select {
 			case w.results <- e:
 			case <-w.context.Done():
 				log.Info("Process backend watcher done event during watch event in main client")
-				break mainloop
+				return
 			}
 		case <-w.context.Done(): // user cancel
 			log.Info("Process backend watcher done event in main client")
-			break mainloop
+			return
 		}
 	}
-
-	log.Info("Exiting main client watcher loop")
-	w.cancel()
-	w.backend.Stop()
-	close(w.results)
 }
 
-func (w *watcher) processEvent(backendEvent bapi.WatchEvent) watch.Event {
+// terminate all resources associated with this watcher.
+func (w *watcher) terminate() {
+	log.Info("Terminating main client watcher loop")
+	w.cancel()
+	close(w.results)
+	atomic.AddUint32(&w.terminated, 1)
+}
+
+// convertEvent converts a backend watch event into a client watch event.
+func (w *watcher) convertEvent(backendEvent bapi.WatchEvent) watch.Event {
 	apiEvent := watch.Event{
 		Error: backendEvent.Error,
 	}
@@ -356,6 +348,16 @@ func (w *watcher) processEvent(backendEvent bapi.WatchEvent) watch.Event {
 	return apiEvent
 }
 
+// hasTerminated returns true if the watcher has terminated, release all resources.
+// Used for test purposes.
+func (w *watcher) hasTerminated() bool {
+	t := atomic.LoadUint32(&w.terminated) != 0
+	bt := w.backend.HasTerminated()
+	log.Infof("hasTerminated() terminated=%v; backend-terminated=%v", t, bt)
+	return t && bt
+}
+
+// logWithResource returns a logrus entry with key resource attributes included.
 func logWithResource(res resource) *log.Entry {
 	return log.WithFields(log.Fields{
 		"Kind":            res.GetObjectKind().GroupVersionKind(),

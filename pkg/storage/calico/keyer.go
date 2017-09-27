@@ -29,26 +29,41 @@ func (e errInvalidKey) Error() string {
 	return fmt.Sprintf("invalid key '%s'", e.k)
 }
 
-// NamespaceAndNameFromKey returns the namespace (or an empty string if there wasn't one) and
-// name for a given k8s etcd-style key. This function is intended to be used in a Calico based
-// storage.Interface.
+// NamespaceAndNameFromKey returns the namespace and name for a given k8s etcd-style key.
+// This function is intended to be used in a Calico based storage.Interface.
 //
-// The first return value is the namespace, and may be empty if the key represents a
-// namespace-less resource. The second return value is the name and will not be empty if the
-// error is nil. The error will be non-nil if the key was malformed, in which case all other
-// return values will be empty strings.
+// The first return value is the namespace. The second return value is the name and will
+// not be empty if the error is nil. The error will be non-nil if the key was malformed,
+// in which case all other return values will be empty strings.
 //
-// Example Namespaced resource key: /projectcalico.org/networkpolicies/default/my-first-policy
+// Example Namespaced resource key: projectcalico.org/networkpolicies/default/my-first-policy
+// OR projectcalico.org/globapolicies/my-first-policy
 func NamespaceAndNameFromKey(key string) (string, string, error) {
 	spl := strings.Split(key, "/")
 	splLen := len(spl)
+
 	if splLen == 3 {
-		// slice has no namespace
-		return "", spl[2], nil
+		// slice has namespace and no name
+		return spl[2], "", nil
 	} else if splLen == 4 {
-		// two slice entries has a namespace
+		// slice has namespace and name
 		return spl[2], spl[3], nil
 	}
 
 	return "", "", errInvalidKey{k: key}
+}
+
+func NameFromKey(key string, hasNamespace bool) (string, error) {
+	spl := strings.Split(key, "/")
+	splLen := len(spl)
+
+	if splLen == 2 {
+		// slice has no name
+		return "", nil
+	} else if splLen == 3 {
+		// slice has name
+		return spl[2], nil
+	}
+
+	return "", errInvalidKey{k: key}
 }

@@ -15,13 +15,12 @@
 package clientv2
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-
-	"context"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/backend"
@@ -74,8 +73,8 @@ func (c client) Nodes() NodeInterface {
 }
 
 // Policies returns an interface for managing policy resources.
-func (c client) NetworkPolicies(namespace string) NetworkPolicyInterface {
-	return networkPolicies{client: c, namespace: namespace}
+func (c client) NetworkPolicies() NetworkPolicyInterface {
+	return networkPolicies{client: c}
 }
 
 // Policies returns an interface for managing policy resources.
@@ -99,8 +98,8 @@ func (c client) HostEndpoints() HostEndpointInterface {
 }
 
 // WorkloadEndpoints returns an interface for managing workload endpoint resources.
-func (c client) WorkloadEndpoints(namespace string) WorkloadEndpointInterface {
-	return workloadEndpoints{client: c, namespace: namespace}
+func (c client) WorkloadEndpoints() WorkloadEndpointInterface {
+	return workloadEndpoints{client: c}
 }
 
 // BGPPeers returns an interface for managing BGP peer resources.
