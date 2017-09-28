@@ -422,6 +422,7 @@ func newLocalListener(t *testing.T) net.Listener {
 	c := atomic.AddInt64(&localListenCount, 1)
 	// Go 1.8+ allows only numbers in port
 	addr := fmt.Sprintf("127.0.0.1:%05d%05d", c+basePort, os.Getpid())
+	//addr := "localhost:2379"
 	return NewListenerWithAddr(t, addr)
 }
 
