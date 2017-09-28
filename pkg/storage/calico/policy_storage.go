@@ -1,8 +1,11 @@
 package calico
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"golang.org/x/net/context"
 
@@ -13,6 +16,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
@@ -22,10 +27,11 @@ import (
 
 type policyStore struct {
 	client    clientv2.Interface
+	codec     runtime.Codec
 	versioner storage.Versioner
 }
 
-// NewPolicyStorage creates a new libcalico-based storage.Interface implementation for Policy
+// NewNetworkPolicyStorage creates a new libcalico-based storage.Interface implementation for Policy
 func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	var err error
 
@@ -44,6 +50,7 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 
 	return &policyStore{
 		client:    c,
+		codec:     opts.RESTOptions.StorageConfig.Codec,
 		versioner: etcd.APIObjectVersioner{},
 	}, func() {}
 }
@@ -64,8 +71,7 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 	libcalicoPolicy.Spec = networkPolicy.Spec
 
 	pHandler := ps.client.NetworkPolicies()
-	// TODO: Set TTL
-	opts := options.SetOptions{}
+	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}
 	createdLibcalicoPolicy, err := pHandler.Create(ctx, libcalicoPolicy, opts)
 	if err != nil {
 		return err
@@ -167,7 +173,6 @@ func (ps *policyStore) WatchList(ctx context.Context, key string, resourceVersio
 func (ps *policyStore) watch(ctx context.Context, resourceVersion string,
 	p storage.SelectionPredicate, name, namespace string) (watch.Interface, error) {
 	pHandler := ps.client.NetworkPolicies()
-	// TODO: Fill in the resource version if present
 	opts := options.ListOptions{Name: name, Namespace: namespace, ResourceVersion: resourceVersion}
 	lWatch, err := pHandler.Watch(ctx, opts)
 	if err != nil {
@@ -214,8 +219,7 @@ func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion stri
 // be have at least 'resourceVersion'.
 func (ps *policyStore) GetToList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
-	fmt.Println("HITTING GETTOLIST")
-	return nil
+	return ps.List(ctx, key, resourceVersion, p, listObj)
 }
 
 // List unmarshalls jsons found at directory defined by key and opaque them
@@ -234,6 +238,7 @@ func (ps *policyStore) List(ctx context.Context, key string, resourceVersion str
 	if err != nil {
 		return err
 	}
+	filterFunc := storage.SimpleFilter(p)
 	networkPolicyList := listObj.(*aapi.NetworkPolicyList)
 	networkPolicyList.Items = []aapi.NetworkPolicy{}
 	for _, item := range libcalicoPolicyList.Items {
@@ -241,10 +246,60 @@ func (ps *policyStore) List(ctx context.Context, key string, resourceVersion str
 		networkPolicy.TypeMeta = item.TypeMeta
 		networkPolicy.ObjectMeta = item.ObjectMeta
 		networkPolicy.Spec = item.Spec
-		networkPolicyList.Items = append(networkPolicyList.Items, networkPolicy)
+		if filterFunc(&networkPolicy) {
+			networkPolicyList.Items = append(networkPolicyList.Items, networkPolicy)
+		}
 	}
 	networkPolicyList.TypeMeta = libcalicoPolicyList.TypeMeta
 	networkPolicyList.ListMeta = libcalicoPolicyList.ListMeta
+	return nil
+}
+
+type objState struct {
+	obj  runtime.Object
+	meta *storage.ResponseMeta
+	rev  int64
+	data []byte
+}
+
+func (ps *policyStore) getStateFromObject(obj runtime.Object) (*objState, error) {
+	state := &objState{
+		obj:  obj,
+		meta: &storage.ResponseMeta{},
+	}
+
+	rv, err := ps.versioner.ObjectResourceVersion(obj)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't get resource version: %v", err)
+	}
+	state.rev = int64(rv)
+	state.meta.ResourceVersion = uint64(state.rev)
+
+	// Compute the serialized form - for that we need to temporarily clean
+	// its resource version field (those are not stored in etcd).
+	if err := ps.versioner.UpdateObject(obj, 0); err != nil {
+		return nil, errors.New("resourceVersion cannot be set on objects store in etcd")
+	}
+	state.data, err = runtime.Encode(ps.codec, obj)
+	if err != nil {
+		return nil, err
+	}
+	ps.versioner.UpdateObject(state.obj, uint64(rv))
+	return state, nil
+}
+
+func decode(
+	codec runtime.Codec,
+	value []byte,
+	objPtr runtime.Object,
+) error {
+	if _, err := conversion.EnforcePtr(objPtr); err != nil {
+		panic("unable to convert output object to pointer")
+	}
+	_, _, err := codec.Decode(value, nil, objPtr)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -280,8 +335,111 @@ func (ps *policyStore) List(ctx context.Context, key string, resourceVersion str
 //    }
 // })
 func (ps *policyStore) GuaranteedUpdate(
-	ctx context.Context, key string, ptrToType runtime.Object, ignoreNotFound bool,
-	precondtions *storage.Preconditions, tryUpdate storage.UpdateFunc, suggestion ...runtime.Object) error {
-	//TODO
-	return nil
+	ctx context.Context, key string, out runtime.Object, ignoreNotFound bool,
+	precondtions *storage.Preconditions, userUpdate storage.UpdateFunc, suggestion ...runtime.Object) error {
+	// If a suggestion was passed, use that as the initial object, otherwise
+	// use Get() to retrieve it
+	var initObj runtime.Object
+	if len(suggestion) == 1 && suggestion[0] != nil {
+		initObj = suggestion[0]
+	} else {
+		initObj = &aapi.NetworkPolicy{
+			TypeMeta: metav1.TypeMeta{
+				Kind: "NetworkPolicy",
+			},
+			ObjectMeta: metav1.ObjectMeta{},
+		}
+		if err := ps.Get(ctx, key, "", initObj, ignoreNotFound); err != nil {
+			glog.Errorf("getting initial object (%s)", err)
+			return err
+		}
+	}
+	// In either case, extract current state from the initial object
+	curState, err := ps.getStateFromObject(initObj)
+	if err != nil {
+		glog.Errorf("getting state from initial object (%s)", err)
+		return err
+	}
+	// Loop until update succeeds or we get an error
+	for {
+		if err := checkPreconditions(key, precondtions, curState.obj); err != nil {
+			glog.Errorf("checking preconditions (%s)", err)
+			return err
+		}
+		// update the object by applying the userUpdate func & encode it
+		updated, _, err := userUpdate(curState.obj, *curState.meta)
+		if err != nil {
+			glog.Errorf("applying user update: (%s)", err)
+			return err
+		}
+		updatedData, err := runtime.Encode(ps.codec, updated)
+		if err != nil {
+			glog.Errorf("encoding candidate obj (%s)", err)
+			return err
+		}
+
+		// figure out what the new "current state" of the object is for this loop iteration
+		var newCurState *objState
+		if bytes.Equal(updatedData, curState.data) {
+			// If the candidate matches what we already have, then all we need to do is
+			// decode into the out object
+			err := decode(ps.codec, updatedData, out)
+			if err != nil {
+				glog.Errorf("decoding to output object (%s)", err)
+			}
+			newCurState = curState
+		} else {
+			// If the candidate doesn't match what we already have, then get an up-to-date copy
+			// of the resource we're trying to update
+			// (because it may have changed if we're looping and in a race)
+			newCurObj := &aapi.NetworkPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "NetworkPolicy",
+				},
+				ObjectMeta: metav1.ObjectMeta{},
+			}
+			if err := ps.Get(ctx, key, "", newCurObj, ignoreNotFound); err != nil {
+				glog.Errorf("getting new current object (%s)", err)
+				return err
+			}
+			updatedObj, _, err := userUpdate(newCurObj, *curState.meta)
+			ncs, err := ps.getStateFromObject(updatedObj)
+			if err != nil {
+				glog.Errorf("getting state from new current object (%s)", err)
+				return err
+			}
+			newCurState = ncs
+		}
+		// If the new current revision of the object is the same as the last loop iteration,
+		// proceed with trying to update the object
+		if newCurState.rev == curState.rev {
+			// TODO: Considering the deletion timestamp and deletion grace period are not set in the initObj,
+			// so just do the actual update. Loop back into this use-case later.
+			networkPolicy := initObj.(*aapi.NetworkPolicy)
+			libcalicoPolicy := &libcalicoapi.NetworkPolicy{}
+			libcalicoPolicy.TypeMeta = networkPolicy.TypeMeta
+			libcalicoPolicy.ObjectMeta = networkPolicy.ObjectMeta
+			libcalicoPolicy.Spec = networkPolicy.Spec
+
+			pHandler := ps.client.NetworkPolicies()
+			// TODO: Whats the TTL?
+			opts := options.SetOptions{}
+			createdLibcalicoPolicy, err := pHandler.Update(ctx, libcalicoPolicy, opts)
+			if err != nil {
+				return err
+			}
+			networkPolicy = out.(*aapi.NetworkPolicy)
+			networkPolicy.Spec = createdLibcalicoPolicy.Spec
+			networkPolicy.TypeMeta = createdLibcalicoPolicy.TypeMeta
+			networkPolicy.ObjectMeta = createdLibcalicoPolicy.ObjectMeta
+		} else {
+			glog.V(4).Infof(
+				"GuaranteedUpdate of %s failed because of a conflict, going to retry",
+				key,
+			)
+			curState = newCurState
+			continue
+		}
+		return nil
+	}
 }

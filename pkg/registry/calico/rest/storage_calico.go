@@ -82,7 +82,9 @@ func (p RESTStorageProvider) v2Storage(
 			GetAttrsFunc:  calicopolicy.GetAttrs,
 			Trigger:       storage.NoTriggerPublisher,
 		},
-		calicostorage.Options{},
+		calicostorage.Options{
+			RESTOptions: policyRESTOptions,
+		},
 		p.StorageType,
 		authorizer,
 	)
