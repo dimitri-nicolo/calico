@@ -11,7 +11,6 @@ import (
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apiv2"
 	"github.com/projectcalico/libcalico-go/lib/clientv2"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
 	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -174,42 +173,8 @@ func (ps *policyStore) watch(ctx context.Context, resourceVersion string,
 	if err != nil {
 		return nil, err
 	}
-	returnChan := make(chan watch.Event)
-	go func() {
-		for e := range lWatch.ResultChan() {
-			sendEvent := watch.Event{}
-			switch e.Type {
-			case cwatch.Added:
-				libcalicoPolicy := e.Object.(*libcalicoapi.NetworkPolicy)
-				networkPolicy := &aapi.NetworkPolicy{}
-				networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-				networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
-				networkPolicy.Spec = libcalicoPolicy.Spec
-				sendEvent.Object = libcalicoPolicy
-				sendEvent.Type = watch.Added
-			case cwatch.Deleted:
-				libcalicoPolicy := e.Previous.(*libcalicoapi.NetworkPolicy)
-				networkPolicy := &aapi.NetworkPolicy{}
-				networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-				networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
-				networkPolicy.Spec = libcalicoPolicy.Spec
-				sendEvent.Object = libcalicoPolicy
-				sendEvent.Type = watch.Deleted
-			case cwatch.Modified:
-				libcalicoPolicy := e.Object.(*libcalicoapi.NetworkPolicy)
-				networkPolicy := &aapi.NetworkPolicy{}
-				networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-				networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
-				networkPolicy.Spec = libcalicoPolicy.Spec
-				sendEvent.Object = libcalicoPolicy
-				sendEvent.Type = watch.Modified
-			case cwatch.Error:
-				sendEvent.Type = watch.Error
-			}
-			returnChan <- sendEvent
-		}
-	}()
-	wc := createWatchChan(ctx, lWatch, returnChan)
+	wc := createWatchChan(ctx, lWatch, p)
+	go wc.run()
 	return wc, nil
 }
 
@@ -240,7 +205,6 @@ func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion stri
 	networkPolicy.Spec = libcalicoPolicy.Spec
 	networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
 	networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
-
 	return nil
 }
 
@@ -250,7 +214,7 @@ func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion stri
 // be have at least 'resourceVersion'.
 func (ps *policyStore) GetToList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
-	//TODO
+	fmt.Println("HITTING GETTOLIST")
 	return nil
 }
 
