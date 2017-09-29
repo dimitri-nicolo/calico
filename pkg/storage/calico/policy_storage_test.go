@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/golang/glog"
@@ -30,11 +31,15 @@ import (
 	calicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	apitesting "k8s.io/apimachinery/pkg/api/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/watch"
 
 	"k8s.io/apiserver/pkg/apis/example"
 	examplev1 "k8s.io/apiserver/pkg/apis/example/v1"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/etcd"
 	"k8s.io/apiserver/pkg/storage/value"
 
@@ -78,13 +83,14 @@ func (p prefixTransformer) TransformToStorage(b []byte, ctx value.Context) ([]by
 
 func TestCreate(t *testing.T) {
 	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
 
-	key := "/testkey"
+	key := "projectcalico.org/networkpolicies/default/foo"
 	out := &calico.NetworkPolicy{}
-	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "namespace", Name: "foo"}}
+	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
 
 	// verify that kv pair is empty before set
-	libcPolicy, err := store.client.NetworkPolicies().Get(ctx, "namespace", "foo", options.GetOptions{})
+	libcPolicy, err := store.client.NetworkPolicies().Get(ctx, "default", "foo", options.GetOptions{})
 	if libcPolicy != nil {
 		t.Fatalf("expecting empty result on key: %s", key)
 	}
@@ -102,7 +108,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	// verify that kv pair is not empty after set
-	libcPolicy, err = store.client.NetworkPolicies().Get(ctx, "namespace", "foo", options.GetOptions{})
+	libcPolicy, err = store.client.NetworkPolicies().Get(ctx, "default", "foo", options.GetOptions{})
 	if err != nil {
 		t.Fatalf("libcalico networkpolicy client get failed: %v", err)
 	}
@@ -111,15 +117,14 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-/*
 func TestCreateWithTTL(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
 
-	input := &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
-	key := "/somekey"
+	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
+	key := "projectcalico.org/networkpolicies/default/foo"
 
-	out := &example.Pod{}
+	out := &calico.NetworkPolicy{}
 	if err := store.Create(ctx, key, input, out, 1); err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
@@ -130,14 +135,14 @@ func TestCreateWithTTL(t *testing.T) {
 	}
 	testCheckEventType(t, watch.Deleted, w)
 }
-*/
-/*
+
 func TestCreateWithKeyExist(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
-	obj := &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
+
+	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
 	key, _ := testPropogateStore(ctx, t, store, obj)
-	out := &example.Pod{}
+	out := &calico.NetworkPolicy{}
 	err := store.Create(ctx, key, obj, out, 0)
 	if err == nil || !storage.IsNodeExist(err) {
 		t.Errorf("expecting key exists error, but get: %s", err)
@@ -145,33 +150,34 @@ func TestCreateWithKeyExist(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
-	key, storedObj := testPropogateStore(ctx, t, store, &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}})
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
+
+	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
 	tests := []struct {
 		key               string
 		ignoreNotFound    bool
 		expectNotFoundErr bool
-		expectedOut       *example.Pod
+		expectedOut       *calico.NetworkPolicy
 	}{{ // test get on existing item
 		key:               key,
 		ignoreNotFound:    false,
 		expectNotFoundErr: false,
 		expectedOut:       storedObj,
 	}, { // test get on non-existing item with ignoreNotFound=false
-		key:               "/non-existing",
+		key:               "projectcalico.org/networkpolicies/default/non-existing",
 		ignoreNotFound:    false,
 		expectNotFoundErr: true,
 	}, { // test get on non-existing item with ignoreNotFound=true
-		key:               "/non-existing",
+		key:               "projectcalico.org/networkpolicies/default/non-existing",
 		ignoreNotFound:    true,
 		expectNotFoundErr: false,
-		expectedOut:       &example.Pod{},
+		expectedOut:       &calico.NetworkPolicy{},
 	}}
 
 	for i, tt := range tests {
-		out := &example.Pod{}
+		out := &calico.NetworkPolicy{}
 		err := store.Get(ctx, tt.key, "", out, tt.ignoreNotFound)
 		if tt.expectNotFoundErr {
 			if err == nil || !storage.IsNotFound(err) {
@@ -189,26 +195,27 @@ func TestGet(t *testing.T) {
 }
 
 func TestUnconditionalDelete(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
-	key, storedObj := testPropogateStore(ctx, t, store, &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}})
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
+
+	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
 	tests := []struct {
 		key               string
-		expectedObj       *example.Pod
+		expectedObj       *calico.NetworkPolicy
 		expectNotFoundErr bool
 	}{{ // test unconditional delete on existing key
 		key:               key,
 		expectedObj:       storedObj,
 		expectNotFoundErr: false,
 	}, { // test unconditional delete on non-existing key
-		key:               "/non-existing",
+		key:               "projectcalico.org/networkpolicies/default/non-existing",
 		expectedObj:       nil,
 		expectNotFoundErr: true,
 	}}
 
 	for i, tt := range tests {
-		out := &example.Pod{} // reset
+		out := &calico.NetworkPolicy{} // reset
 		err := store.Delete(ctx, tt.key, out, nil)
 		if tt.expectNotFoundErr {
 			if err == nil || !storage.IsNotFound(err) {
@@ -226,9 +233,10 @@ func TestUnconditionalDelete(t *testing.T) {
 }
 
 func TestConditionalDelete(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
-	key, storedObj := testPropogateStore(ctx, t, store, &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo", UID: "A"}})
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
+
+	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 
 	tests := []struct {
 		precondition        *storage.Preconditions
@@ -242,7 +250,7 @@ func TestConditionalDelete(t *testing.T) {
 	}}
 
 	for i, tt := range tests {
-		out := &example.Pod{}
+		out := &calico.NetworkPolicy{}
 		err := store.Delete(ctx, key, out, tt.precondition)
 		if tt.expectInvalidObjErr {
 			if err == nil || !storage.IsInvalidObj(err) {
@@ -256,42 +264,43 @@ func TestConditionalDelete(t *testing.T) {
 		if !reflect.DeepEqual(storedObj, out) {
 			t.Errorf("#%d: pod want=%#v, get=%#v", i, storedObj, out)
 		}
-		key, storedObj = testPropogateStore(ctx, t, store, &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo", UID: "A"}})
+		key, storedObj = testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 	}
 }
 
 func TestGetToList(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
-	key, storedObj := testPropogateStore(ctx, t, store, &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}})
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
+
+	key, storedObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
 	tests := []struct {
 		key         string
 		pred        storage.SelectionPredicate
-		expectedOut []*example.Pod
+		expectedOut []*calico.NetworkPolicy
 	}{{ // test GetToList on existing key
 		key:         key,
 		pred:        storage.Everything,
-		expectedOut: []*example.Pod{storedObj},
+		expectedOut: []*calico.NetworkPolicy{storedObj},
 	}, { // test GetToList on non-existing key
-		key:         "/non-existing",
+		key:         "projectcalico.org/networkpolicies/default/non-existing",
 		pred:        storage.Everything,
 		expectedOut: nil,
-	}, { // test GetToList with matching pod name
-		key: "/non-existing",
+	}, { // test GetToList with matching policy name
+		key: "projectcalico.org/networkpolicies/default/non-existing",
 		pred: storage.SelectionPredicate{
 			Label: labels.Everything(),
 			Field: fields.ParseSelectorOrDie("metadata.name!=" + storedObj.Name),
 			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
-				pod := obj.(*example.Pod)
-				return nil, fields.Set{"metadata.name": pod.Name}, pod.Initializers != nil, nil
+				policy := obj.(*calico.NetworkPolicy)
+				return nil, fields.Set{"metadata.name": policy.Name}, policy.Initializers != nil, nil
 			},
 		},
 		expectedOut: nil,
 	}}
 
 	for i, tt := range tests {
-		out := &example.PodList{}
+		out := &calico.NetworkPolicyList{}
 		err := store.GetToList(ctx, tt.key, "", tt.pred, out)
 		if err != nil {
 			t.Fatalf("GetToList failed: %v", err)
@@ -300,20 +309,20 @@ func TestGetToList(t *testing.T) {
 			t.Errorf("#%d: length of list want=%d, get=%d", i, len(tt.expectedOut), len(out.Items))
 			continue
 		}
-		for j, wantPod := range tt.expectedOut {
-			getPod := &out.Items[j]
-			if !reflect.DeepEqual(wantPod, getPod) {
-				t.Errorf("#%d: pod want=%#v, get=%#v", i, wantPod, getPod)
+		for j, wantPolicy := range tt.expectedOut {
+			getPolicy := &out.Items[j]
+			if !reflect.DeepEqual(wantPolicy, getPolicy) {
+				t.Errorf("#%d: pod want=%#v, get=%#v", i, wantPolicy, getPolicy)
 			}
 		}
 	}
 }
-*/
+
 /*
 func TestGuaranteedUpdate(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
-	key, storeObj := testPropogateStore(ctx, t, store, &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo", UID: "A"}})
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
+	key, storeObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 
 	tests := []struct {
 		key                 string
@@ -324,14 +333,14 @@ func TestGuaranteedUpdate(t *testing.T) {
 		expectNoUpdate      bool
 		transformStale      bool
 	}{{ // GuaranteedUpdate on non-existing key with ignoreNotFound=false
-		key:                 "/non-existing",
+		key:                 "projectcalico.org/networkpolicies/default/non-existing",
 		ignoreNotFound:      false,
 		precondition:        nil,
 		expectNotFoundErr:   true,
 		expectInvalidObjErr: false,
 		expectNoUpdate:      false,
 	}, { // GuaranteedUpdate on non-existing key with ignoreNotFound=true
-		key:                 "/non-existing",
+		key:                 "projectcalico.org/networkpolicies/default/non-existing",
 		ignoreNotFound:      true,
 		precondition:        nil,
 		expectNotFoundErr:   false,
@@ -376,7 +385,7 @@ func TestGuaranteedUpdate(t *testing.T) {
 	}}
 
 	for i, tt := range tests {
-		out := &example.Pod{}
+		out := &calico.NetworkPolicy{}
 		name := fmt.Sprintf("foo-%d", i)
 		if tt.expectNoUpdate {
 			name = storeObj.Name
@@ -432,7 +441,8 @@ func TestGuaranteedUpdate(t *testing.T) {
 		storeObj = out
 	}
 }
-
+*/
+/*
 func TestGuaranteedUpdateWithTTL(t *testing.T) {
 	ctx, store, cluster := testSetup(t)
 	defer cluster.Terminate(t)
@@ -584,42 +594,33 @@ func TestTransformationFailure(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
+*/
 
 func TestList(t *testing.T) {
-	codec := apitesting.TestCodec(codecs, examplev1.SchemeGroupVersion)
-	cluster := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1})
-	defer cluster.Terminate(t)
-	store := newStore(cluster.RandClient(), false, codec, "", prefixTransformer{prefix: []byte("test!")})
-	ctx := context.Background()
+	ctx, store := testSetup(t)
+	defer func() {
+		store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
+		store.client.NetworkPolicies().Delete(ctx, "default1", "foo", options.DeleteOptions{})
+		store.client.NetworkPolicies().Delete(ctx, "default1", "bar", options.DeleteOptions{})
+	}()
 
-	// Setup storage with the following structure:
-	//  /
-	//   - one-level/
-	//  |            - test
-	//  |
-	//   - two-level/
-	//               - 1/
-	//              |   - test
-	//              |
-	//               - 2/
-	//                  - test
 	preset := []struct {
 		key       string
-		obj       *example.Pod
-		storedObj *example.Pod
+		obj       *calico.NetworkPolicy
+		storedObj *calico.NetworkPolicy
 	}{{
-		key: "/one-level/test",
-		obj: &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
+		key: "projectcalico.org/networkpolicies/default/foo",
+		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}},
 	}, {
-		key: "/two-level/1/test",
-		obj: &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
+		key: "projectcalico.org/networkpolicies/default1/foo",
+		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default1", Name: "foo"}},
 	}, {
-		key: "/two-level/2/test",
-		obj: &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "bar"}},
+		key: "projectcalico.org/networkpolicies/default1/bar",
+		obj: &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default1", Name: "bar"}},
 	}}
 
 	for i, ps := range preset {
-		preset[i].storedObj = &example.Pod{}
+		preset[i].storedObj = &calico.NetworkPolicy{}
 		err := store.Create(ctx, ps.key, ps.obj, preset[i].storedObj, 0)
 		if err != nil {
 			t.Fatalf("Set failed: %v", err)
@@ -629,34 +630,34 @@ func TestList(t *testing.T) {
 	tests := []struct {
 		prefix      string
 		pred        storage.SelectionPredicate
-		expectedOut []*example.Pod
+		expectedOut []*calico.NetworkPolicy
 	}{{ // test List on existing key
-		prefix:      "/one-level/",
+		prefix:      "projectcalico.org/networkpolicies/default/",
 		pred:        storage.Everything,
-		expectedOut: []*example.Pod{preset[0].storedObj},
+		expectedOut: []*calico.NetworkPolicy{preset[0].storedObj},
 	}, { // test List on non-existing key
-		prefix:      "/non-existing/",
+		prefix:      "projectcalico.org/networkpolicies/non-existing/",
 		pred:        storage.Everything,
 		expectedOut: nil,
-	}, { // test List with pod name matching
-		prefix: "/one-level/",
+	}, { // test List with policy name matching
+		prefix: "projectcalico.org/networkpolicies/default/",
 		pred: storage.SelectionPredicate{
 			Label: labels.Everything(),
 			Field: fields.ParseSelectorOrDie("metadata.name!=" + preset[0].storedObj.Name),
 			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
-				pod := obj.(*example.Pod)
-				return nil, fields.Set{"metadata.name": pod.Name}, pod.Initializers != nil, nil
+				policy := obj.(*calico.NetworkPolicy)
+				return nil, fields.Set{"metadata.name": policy.Name}, policy.Initializers != nil, nil
 			},
 		},
 		expectedOut: nil,
 	}, { // test List with multiple levels of directories and expect flattened result
-		prefix:      "/two-level/",
+		prefix:      "projectcalico.org/networkpolicies/",
 		pred:        storage.Everything,
-		expectedOut: []*example.Pod{preset[1].storedObj, preset[2].storedObj},
+		expectedOut: []*calico.NetworkPolicy{preset[0].storedObj, preset[2].storedObj, preset[1].storedObj},
 	}}
 
 	for i, tt := range tests {
-		out := &example.PodList{}
+		out := &calico.NetworkPolicyList{}
 		err := store.List(ctx, tt.prefix, "0", tt.pred, out)
 		if err != nil {
 			t.Fatalf("List failed: %v", err)
@@ -665,15 +666,15 @@ func TestList(t *testing.T) {
 			t.Errorf("#%d: length of list want=%d, get=%d", i, len(tt.expectedOut), len(out.Items))
 			continue
 		}
-		for j, wantPod := range tt.expectedOut {
-			getPod := &out.Items[j]
-			if !reflect.DeepEqual(wantPod, getPod) {
-				t.Errorf("#%d: pod want=%#v, get=%#v", i, wantPod, getPod)
+		for j, wantPolicy := range tt.expectedOut {
+			getPolicy := &out.Items[j]
+			if !reflect.DeepEqual(wantPolicy, getPolicy) {
+				t.Errorf("#%d: pod want=%#v, get=%#v", i, wantPolicy, getPolicy)
 			}
 		}
 	}
 }
-*/
+
 func testSetup(t *testing.T) (context.Context, *policyStore) {
 	codec := apitesting.TestCodec(codecs, calicov2.SchemeGroupVersion)
 	cfg, err := apiconfig.LoadClientConfig("")
@@ -698,13 +699,16 @@ func testSetup(t *testing.T) (context.Context, *policyStore) {
 	return ctx, store
 }
 
+func testCleanup(t *testing.T, ctx context.Context, store *policyStore) {
+	store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
+}
+
 // testPropogateStore helps propogates store with objects, automates key generation, and returns
 // keys and stored objects.
-/*
-func testPropogateStore(ctx context.Context, t *testing.T, store *store, obj *example.Pod) (string, *example.Pod) {
+func testPropogateStore(ctx context.Context, t *testing.T, store *policyStore, obj *calico.NetworkPolicy) (string, *calico.NetworkPolicy) {
 	// Setup store with a key and grab the output for returning.
-	key := "/testkey"
-	setOutput := &example.Pod{}
+	key := "projectcalico.org/networkpolicies/default/foo"
+	setOutput := &calico.NetworkPolicy{}
 	err := store.Create(ctx, key, obj, setOutput, 0)
 	if err != nil {
 		t.Fatalf("Set failed: %v", err)
@@ -712,6 +716,7 @@ func testPropogateStore(ctx context.Context, t *testing.T, store *store, obj *ex
 	return key, setOutput
 }
 
+/*
 func TestPrefix(t *testing.T) {
 	codec := apitesting.TestCodec(codecs, examplev1.SchemeGroupVersion)
 	cluster := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1})

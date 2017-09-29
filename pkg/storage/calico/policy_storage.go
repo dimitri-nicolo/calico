@@ -74,7 +74,7 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}
 	createdLibcalicoPolicy, err := pHandler.Create(ctx, libcalicoPolicy, opts)
 	if err != nil {
-		return err
+		return aapiError(err, key)
 	}
 	networkPolicy = out.(*aapi.NetworkPolicy)
 	networkPolicy.Spec = createdLibcalicoPolicy.Spec
@@ -99,7 +99,7 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 		opts := options.GetOptions{}
 		libcalicoPolicy, err := pHandler.Get(ctx, ns, name, opts)
 		if err != nil {
-			return err
+			return aapiError(err, key)
 		}
 		networkPolicy := &aapi.NetworkPolicy{}
 		networkPolicy.Spec = libcalicoPolicy.Spec
@@ -114,7 +114,7 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 
 	libcalicoPolicy, err := pHandler.Delete(ctx, ns, name, delOpts)
 	if err != nil {
-		return err
+		return aapiError(err, key)
 	}
 	networkPolicy := out.(*aapi.NetworkPolicy)
 	networkPolicy.Spec = libcalicoPolicy.Spec
@@ -198,13 +198,11 @@ func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion stri
 	opts := options.GetOptions{ResourceVersion: resourceVersion}
 	libcalicoPolicy, err := pHandler.Get(ctx, ns, name, opts)
 	if err != nil {
-		return err
-	}
-	if libcalicoPolicy == nil {
-		if ignoreNotFound {
+		e := aapiError(err, key)
+		if storage.IsNotFound(e) && ignoreNotFound {
 			return runtime.SetZeroValue(out)
 		}
-		return storage.NewKeyNotFoundError(key, 0)
+		return e
 	}
 	networkPolicy := out.(*aapi.NetworkPolicy)
 	networkPolicy.Spec = libcalicoPolicy.Spec
@@ -236,7 +234,13 @@ func (ps *policyStore) List(ctx context.Context, key string, resourceVersion str
 	opts := options.ListOptions{Namespace: ns, Name: name, ResourceVersion: resourceVersion}
 	libcalicoPolicyList, err := pHandler.List(ctx, opts)
 	if err != nil {
-		return err
+		e := aapiError(err, key)
+		if storage.IsNotFound(e) {
+			networkPolicyList := listObj.(*aapi.NetworkPolicyList)
+			networkPolicyList.Items = []aapi.NetworkPolicy{}
+			return nil
+		}
+		return e
 	}
 	filterFunc := storage.SimpleFilter(p)
 	networkPolicyList := listObj.(*aapi.NetworkPolicyList)
