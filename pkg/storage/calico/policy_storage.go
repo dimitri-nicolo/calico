@@ -360,7 +360,7 @@ func (ps *policyStore) GuaranteedUpdate(
 		}
 
 		// update the object by applying the userUpdate func & encode it
-		updated, _, err := userUpdate(curState.obj, *curState.meta)
+		updated, ttl, err := userUpdate(curState.obj, *curState.meta)
 		if err != nil {
 			glog.Errorf("applying user update: (%s)", err)
 			return err
@@ -385,10 +385,16 @@ func (ps *policyStore) GuaranteedUpdate(
 		libcalicoPolicy.TypeMeta = networkPolicy.TypeMeta
 		libcalicoPolicy.ObjectMeta = networkPolicy.ObjectMeta
 		libcalicoPolicy.Spec = networkPolicy.Spec
+		if libcalicoPolicy.ResourceVersion == "" {
+			// Resource Version needs to be set for libcaclio clientv2 Update call.
+			libcalicoPolicy.ResourceVersion = "0"
+		}
 
 		pHandler := ps.client.NetworkPolicies()
-		// TODO: Whats the TTL?
-		opts := options.SetOptions{}
+		var opts options.SetOptions
+		if ttl != nil {
+			opts = options.SetOptions{TTL: time.Duration(*ttl) * time.Second}
+		}
 		createdLibcalicoPolicy, err := pHandler.Update(ctx, libcalicoPolicy, opts)
 		if err != nil {
 			e := aapiError(err, key)

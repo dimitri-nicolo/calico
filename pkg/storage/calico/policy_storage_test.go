@@ -17,10 +17,10 @@ limitations under the License.
 package calico
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/golang/glog"
@@ -39,7 +39,6 @@ import (
 
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/etcd"
-	"k8s.io/apiserver/pkg/storage/value"
 
 	"golang.org/x/net/context"
 )
@@ -51,32 +50,6 @@ func init() {
 	metav1.AddToGroupVersion(scheme, metav1.SchemeGroupVersion)
 	calico.AddToScheme(scheme)
 	calicov2.AddToScheme(scheme)
-}
-
-// prefixTransformer adds and verifies that all data has the correct prefix on its way in and out.
-type prefixTransformer struct {
-	prefix []byte
-	stale  bool
-	err    error
-}
-
-func (p prefixTransformer) TransformFromStorage(b []byte, ctx value.Context) ([]byte, bool, error) {
-	if ctx == nil {
-		panic("no context provided")
-	}
-	if !bytes.HasPrefix(b, p.prefix) {
-		return nil, false, fmt.Errorf("value does not have expected prefix: %s", string(b))
-	}
-	return bytes.TrimPrefix(b, p.prefix), p.stale, p.err
-}
-func (p prefixTransformer) TransformToStorage(b []byte, ctx value.Context) ([]byte, error) {
-	if ctx == nil {
-		panic("no context provided")
-	}
-	if len(b) > 0 {
-		return append(append([]byte{}, p.prefix...), b...), p.err
-	}
-	return b, p.err
 }
 
 func TestCreate(t *testing.T) {
@@ -439,15 +412,14 @@ func TestGuaranteedUpdate(t *testing.T) {
 	}
 }
 
-/*
 func TestGuaranteedUpdateWithTTL(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
 
-	input := &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
-	key := "/somekey"
+	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
+	key := "projectcalico.org/networkpolicies/default/foo"
 
-	out := &example.Pod{}
+	out := &calico.NetworkPolicy{}
 	err := store.GuaranteedUpdate(ctx, key, out, true, nil,
 		func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
 			ttl := uint64(1)
@@ -465,9 +437,9 @@ func TestGuaranteedUpdateWithTTL(t *testing.T) {
 }
 
 func TestGuaranteedUpdateWithConflict(t *testing.T) {
-	ctx, store, cluster := testSetup(t)
-	defer cluster.Terminate(t)
-	key, _ := testPropogateStore(ctx, t, store, &example.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}})
+	ctx, store := testSetup(t)
+	defer testCleanup(t, ctx, store)
+	key, _ := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
 
 	errChan := make(chan error, 1)
 	var firstToFinish sync.WaitGroup
@@ -476,28 +448,28 @@ func TestGuaranteedUpdateWithConflict(t *testing.T) {
 	secondToEnter.Add(1)
 
 	go func() {
-		err := store.GuaranteedUpdate(ctx, key, &example.Pod{}, false, nil,
+		err := store.GuaranteedUpdate(ctx, key, &calico.NetworkPolicy{}, false, nil,
 			storage.SimpleUpdate(func(obj runtime.Object) (runtime.Object, error) {
-				pod := obj.(*example.Pod)
-				pod.Name = "foo-1"
+				policy := obj.(*calico.NetworkPolicy)
+				policy.Spec.Selector = "foo-1"
 				secondToEnter.Wait()
-				return pod, nil
+				return policy, nil
 			}))
 		firstToFinish.Done()
 		errChan <- err
 	}()
 
 	updateCount := 0
-	err := store.GuaranteedUpdate(ctx, key, &example.Pod{}, false, nil,
+	err := store.GuaranteedUpdate(ctx, key, &calico.NetworkPolicy{}, false, nil,
 		storage.SimpleUpdate(func(obj runtime.Object) (runtime.Object, error) {
 			if updateCount == 0 {
 				secondToEnter.Done()
 				firstToFinish.Wait()
 			}
 			updateCount++
-			pod := obj.(*example.Pod)
-			pod.Name = "foo-2"
-			return pod, nil
+			policy := obj.(*calico.NetworkPolicy)
+			policy.Spec.Selector = "foo-2"
+			return policy, nil
 		}))
 	if err != nil {
 		t.Fatalf("Second GuaranteedUpdate error %#v", err)
@@ -510,88 +482,6 @@ func TestGuaranteedUpdateWithConflict(t *testing.T) {
 		t.Errorf("Should have conflict and called update func twice")
 	}
 }
-*/
-/*
-func TestTransformationFailure(t *testing.T) {
-	codec := apitesting.TestCodec(codecs, examplev1.SchemeGroupVersion)
-	cluster := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1})
-	defer cluster.Terminate(t)
-	store := newStore(cluster.RandClient(), false, codec, "", prefixTransformer{prefix: []byte("test!")})
-	ctx := context.Background()
-
-	preset := []struct {
-		key       string
-		obj       *example.Pod
-		storedObj *example.Pod
-	}{{
-		key: "/one-level/test",
-		obj: &example.Pod{
-			ObjectMeta: metav1.ObjectMeta{Name: "bar"},
-			Spec:       storagetests.DeepEqualSafePodSpec(),
-		},
-	}, {
-		key: "/two-level/1/test",
-		obj: &example.Pod{
-			ObjectMeta: metav1.ObjectMeta{Name: "baz"},
-			Spec:       storagetests.DeepEqualSafePodSpec(),
-		},
-	}}
-	for i, ps := range preset[:1] {
-		preset[i].storedObj = &example.Pod{}
-		err := store.Create(ctx, ps.key, ps.obj, preset[:1][i].storedObj, 0)
-		if err != nil {
-			t.Fatalf("Set failed: %v", err)
-		}
-	}
-
-	// create a second resource with an invalid prefix
-	oldTransformer := store.transformer
-	store.transformer = prefixTransformer{prefix: []byte("otherprefix!")}
-	for i, ps := range preset[1:] {
-		preset[1:][i].storedObj = &example.Pod{}
-		err := store.Create(ctx, ps.key, ps.obj, preset[1:][i].storedObj, 0)
-		if err != nil {
-			t.Fatalf("Set failed: %v", err)
-		}
-	}
-	store.transformer = oldTransformer
-
-	// only the first item is returned, and no error
-	var got example.PodList
-	if err := store.List(ctx, "/", "", storage.Everything, &got); err != nil {
-		t.Errorf("Unexpected error %v", err)
-	}
-	if e, a := []example.Pod{*preset[0].storedObj}, got.Items; !reflect.DeepEqual(e, a) {
-		t.Errorf("Unexpected: %s", diff.ObjectReflectDiff(e, a))
-	}
-
-	// Get should fail
-	if err := store.Get(ctx, preset[1].key, "", &example.Pod{}, false); !storage.IsInternalError(err) {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	// GuaranteedUpdate without suggestion should return an error
-	if err := store.GuaranteedUpdate(ctx, preset[1].key, &example.Pod{}, false, nil, func(input runtime.Object, res storage.ResponseMeta) (output runtime.Object, ttl *uint64, err error) {
-		return input, nil, nil
-	}); !storage.IsInternalError(err) {
-		t.Errorf("Unexpected error: %v", err)
-	}
-	// GuaranteedUpdate with suggestion should not return an error if we don't change the object
-	if err := store.GuaranteedUpdate(ctx, preset[1].key, &example.Pod{}, false, nil, func(input runtime.Object, res storage.ResponseMeta) (output runtime.Object, ttl *uint64, err error) {
-		return input, nil, nil
-	}, preset[1].obj); err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	// Delete succeeds but reports an error because we cannot access the body
-	if err := store.Delete(ctx, preset[1].key, &example.Pod{}, nil); !storage.IsInternalError(err) {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	if err := store.Get(ctx, preset[1].key, "", &example.Pod{}, false); !storage.IsNotFound(err) {
-		t.Errorf("Unexpected error: %v", err)
-	}
-}
-*/
 
 func TestList(t *testing.T) {
 	ctx, store := testSetup(t)
@@ -712,23 +602,3 @@ func testPropogateStore(ctx context.Context, t *testing.T, store *policyStore, o
 	}
 	return key, setOutput
 }
-
-/*
-func TestPrefix(t *testing.T) {
-	codec := apitesting.TestCodec(codecs, examplev1.SchemeGroupVersion)
-	cluster := integration.NewClusterV3(t, &integration.ClusterConfig{Size: 1})
-	defer cluster.Terminate(t)
-	transformer := prefixTransformer{prefix: []byte("test!")}
-	testcases := map[string]string{
-		"custom/prefix":     "/custom/prefix",
-		"/custom//prefix//": "/custom/prefix",
-		"/registry":         "/registry",
-	}
-	for configuredPrefix, effectivePrefix := range testcases {
-		store := newStore(cluster.RandClient(), false, codec, configuredPrefix, transformer)
-		if store.pathPrefix != effectivePrefix {
-			t.Errorf("configured prefix of %s, expected effective prefix of %s, got %s", configuredPrefix, effectivePrefix, store.pathPrefix)
-		}
-	}
-}
-*/
