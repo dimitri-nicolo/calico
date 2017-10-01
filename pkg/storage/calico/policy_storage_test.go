@@ -37,8 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"k8s.io/apiserver/pkg/apis/example"
-	examplev1 "k8s.io/apiserver/pkg/apis/example/v1"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/etcd"
 	"k8s.io/apiserver/pkg/storage/value"
@@ -51,8 +49,8 @@ var codecs = serializer.NewCodecFactory(scheme)
 
 func init() {
 	metav1.AddToGroupVersion(scheme, metav1.SchemeGroupVersion)
-	example.AddToScheme(scheme)
-	examplev1.AddToScheme(scheme)
+	calico.AddToScheme(scheme)
+	calicov2.AddToScheme(scheme)
 }
 
 // prefixTransformer adds and verifies that all data has the correct prefix on its way in and out.
@@ -318,10 +316,12 @@ func TestGetToList(t *testing.T) {
 	}
 }
 
-/*
 func TestGuaranteedUpdate(t *testing.T) {
 	ctx, store := testSetup(t)
-	defer testCleanup(t, ctx, store)
+	defer func() {
+		testCleanup(t, ctx, store)
+		store.client.NetworkPolicies().Delete(ctx, "default", "non-existing", options.DeleteOptions{})
+	}()
 	key, storeObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 
 	tests := []struct {
@@ -386,29 +386,24 @@ func TestGuaranteedUpdate(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.NetworkPolicy{}
-		name := fmt.Sprintf("foo-%d", i)
+		selector := fmt.Sprintf("foo-%d", i)
 		if tt.expectNoUpdate {
-			name = storeObj.Name
-		}
-		originalTransformer := store.transformer.(prefixTransformer)
-		if tt.transformStale {
-			transformer := originalTransformer
-			transformer.stale = true
-			store.transformer = transformer
+			selector = ""
 		}
 		version := storeObj.ResourceVersion
 		err := store.GuaranteedUpdate(ctx, tt.key, out, tt.ignoreNotFound, tt.precondition,
 			storage.SimpleUpdate(func(obj runtime.Object) (runtime.Object, error) {
 				if tt.expectNotFoundErr && tt.ignoreNotFound {
-					if pod := obj.(*example.Pod); pod.Name != "" {
-						t.Errorf("#%d: expecting zero value, but get=%#v", i, pod)
+					if policy := obj.(*calico.NetworkPolicy); policy.Spec.Selector != "" {
+						t.Errorf("#%d: expecting zero value, but get=%#v", i, policy)
 					}
 				}
-				pod := *storeObj
-				pod.Name = name
-				return &pod, nil
+				policy := *storeObj
+				if !tt.expectNoUpdate {
+					policy.Spec.Selector = selector
+				}
+				return &policy, nil
 			}))
-		store.transformer = originalTransformer
 
 		if tt.expectNotFoundErr {
 			if err == nil || !storage.IsNotFound(err) {
@@ -425,8 +420,10 @@ func TestGuaranteedUpdate(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GuaranteedUpdate failed: %v", err)
 		}
-		if out.ObjectMeta.Name != name {
-			t.Errorf("#%d: pod name want=%s, get=%s", i, name, out.ObjectMeta.Name)
+		if !tt.expectNoUpdate {
+			if out.Spec.Selector != selector {
+				t.Errorf("#%d: policy selector want=%s, get=%s", i, selector, out.Spec.Selector)
+			}
 		}
 		switch tt.expectNoUpdate {
 		case true:
@@ -441,7 +438,7 @@ func TestGuaranteedUpdate(t *testing.T) {
 		storeObj = out
 	}
 }
-*/
+
 /*
 func TestGuaranteedUpdateWithTTL(t *testing.T) {
 	ctx, store, cluster := testSetup(t)
