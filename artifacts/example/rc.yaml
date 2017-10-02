@@ -23,5 +23,6 @@ spec:
           - name: ETCD_AUTHORITY
             value: "10.96.232.136:6666"
         args:
+        - "--audit-log-path=/var/tmp/calico_audit.log"
         - "--storage-backend=etcd2"
         - "--etcd-servers=http://10.96.232.136:6666"
