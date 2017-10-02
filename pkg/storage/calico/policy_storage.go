@@ -352,8 +352,10 @@ func (ps *policyStore) GuaranteedUpdate(
 		glog.Errorf("getting state from initial object (%s)", err)
 		return err
 	}
+
 	// Loop until update succeeds or we get an error
 	for {
+	start:
 		if err := checkPreconditions(key, precondtions, curState.obj); err != nil {
 			glog.Errorf("checking preconditions (%s)", err)
 			return err
@@ -414,16 +416,16 @@ func (ps *policyStore) GuaranteedUpdate(
 					glog.Errorf("getting new current object (%s)", err)
 					return aapiError(err, key)
 				}
-				updatedObj, _, err := userUpdate(newCurObj, *curState.meta)
-				ncs, err := ps.getStateFromObject(updatedObj)
+				ncs, err := ps.getStateFromObject(newCurObj)
 				if err != nil {
 					glog.Errorf("getting state from new current object (%s)", err)
 					return err
 				}
 				curState = ncs
-				continue
+				goto start
+			default:
+				return e
 			}
-			return e
 		}
 		networkPolicy = out.(*aapi.NetworkPolicy)
 		networkPolicy.Spec = createdLibcalicoPolicy.Spec
