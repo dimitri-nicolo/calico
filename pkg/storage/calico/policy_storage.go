@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"golang.org/x/net/context"
@@ -354,13 +355,15 @@ func (ps *policyStore) GuaranteedUpdate(
 	}
 
 	// Loop until update succeeds or we get an error
-	for {
-	start:
+	// Check count to avoid an infinite loop in case of any issues
+	totalLoopCount := 0
+	for totalLoopCount < 3 {
+		totalLoopCount++
+
 		if err := checkPreconditions(key, precondtions, curState.obj); err != nil {
 			glog.Errorf("checking preconditions (%s)", err)
 			return err
 		}
-
 		// update the object by applying the userUpdate func & encode it
 		updated, ttl, err := userUpdate(curState.obj, *curState.meta)
 		if err != nil {
@@ -383,30 +386,31 @@ func (ps *policyStore) GuaranteedUpdate(
 
 		// Apply Update
 		networkPolicy := updated.(*aapi.NetworkPolicy)
+		// Check for Revision no. If not set or less than the current version then set it
+		// to latest
+		accessor, err := meta.Accessor(networkPolicy)
+		if err != nil {
+			return err
+		}
+		revInt, _ := strconv.Atoi(accessor.GetResourceVersion())
+		if networkPolicy.ResourceVersion == "" || revInt < int(curState.rev) {
+			networkPolicy.ResourceVersion = strconv.FormatInt(curState.rev, 10)
+		}
 		libcalicoPolicy := &libcalicoapi.NetworkPolicy{}
 		libcalicoPolicy.TypeMeta = networkPolicy.TypeMeta
 		libcalicoPolicy.ObjectMeta = networkPolicy.ObjectMeta
 		libcalicoPolicy.Spec = networkPolicy.Spec
-		if libcalicoPolicy.ResourceVersion == "" {
-			// Resource Version needs to be set for libcaclio clientv2 Update call.
-			libcalicoPolicy.ResourceVersion = "0"
-		}
 
 		pHandler := ps.client.NetworkPolicies()
 		var opts options.SetOptions
 		if ttl != nil {
 			opts = options.SetOptions{TTL: time.Duration(*ttl) * time.Second}
 		}
-		createdLibcalicoPolicy, err := pHandler.Update(ctx, libcalicoPolicy, opts)
+		var createdLibcalicoPolicy *libcalicoapi.NetworkPolicy
+		createdLibcalicoPolicy, err = pHandler.Update(ctx, libcalicoPolicy, opts)
 		if err != nil {
 			e := aapiError(err, key)
-			switch {
-			case storage.IsNotFound(e):
-				createdLibcalicoPolicy, err = pHandler.Create(ctx, libcalicoPolicy, opts)
-				if err != nil {
-					return aapiError(err, key)
-				}
-			case storage.IsConflict(e):
+			if storage.IsConflict(e) {
 				glog.V(4).Infof(
 					"GuaranteedUpdate of %s failed because of a conflict, going to retry",
 					key,
@@ -422,10 +426,9 @@ func (ps *policyStore) GuaranteedUpdate(
 					return err
 				}
 				curState = ncs
-				goto start
-			default:
-				return e
+				continue
 			}
+			return e
 		}
 		networkPolicy = out.(*aapi.NetworkPolicy)
 		networkPolicy.Spec = createdLibcalicoPolicy.Spec
@@ -433,4 +436,6 @@ func (ps *policyStore) GuaranteedUpdate(
 		networkPolicy.ObjectMeta = createdLibcalicoPolicy.ObjectMeta
 		return nil
 	}
+	glog.Errorf("GuaranteedUpdate failed.")
+	return nil
 }

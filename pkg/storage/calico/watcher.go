@@ -18,6 +18,7 @@ package calico
 
 import (
 	"context"
+	"fmt"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apiv2"
 	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
@@ -36,7 +37,7 @@ type watchChan struct {
 
 func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.SelectionPredicate) *watchChan {
 	wc := &watchChan{
-		resultChan:     make(chan watch.Event),
+		resultChan:     make(chan watch.Event, 1),
 		internalFilter: storage.SimpleFilter(pred),
 		watcher:        w,
 	}
@@ -49,6 +50,7 @@ func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.Selec
 }
 
 func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
+	fmt.Printf("Whats the event we got? : %v\n", ce)
 	switch ce.Type {
 	case cwatch.Added:
 		libcalicoPolicy := ce.Object.(*libcalicoapi.NetworkPolicy)
@@ -94,8 +96,12 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 		oldNetworkPolicy.TypeMeta = oldLibcalicoPolicy.TypeMeta
 		oldNetworkPolicy.ObjectMeta = oldLibcalicoPolicy.ObjectMeta
 		oldNetworkPolicy.Spec = oldLibcalicoPolicy.Spec
+		fmt.Printf("Cur Network Policy: %v\n", networkPolicy)
+		fmt.Printf("Old Network Policy: %v\n", oldNetworkPolicy)
 		curObjPasses := wc.filter(networkPolicy)
 		oldObjPasses := wc.filter(oldNetworkPolicy)
+		fmt.Printf("Passed Cur Network Policy: %v\n", curObjPasses)
+		fmt.Printf("Passed Old Network Policy: %v\n", oldObjPasses)
 		switch {
 		case curObjPasses && oldObjPasses:
 			res = &watch.Event{
@@ -112,6 +118,8 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 				Type:   watch.Deleted,
 				Object: oldNetworkPolicy,
 			}
+		default:
+			fmt.Println("????Hitting this case??????")
 		}
 	}
 	return res
@@ -119,9 +127,12 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 
 func (wc *watchChan) run() {
 	for e := range wc.watcher.ResultChan() {
+		fmt.Println("Receiving events from calico??")
 		we := wc.convertEvent(e)
 		if we != nil {
+			fmt.Printf("Pushing in a new event: %v\n", *we)
 			wc.resultChan <- *we
+			fmt.Printf("Done pushing a new event: %v\n", *we)
 		}
 	}
 }
@@ -139,6 +150,7 @@ func (wc *watchChan) acceptAll() bool {
 
 func (wc *watchChan) Stop() {
 	wc.watcher.Stop()
+	close(wc.resultChan)
 }
 
 func (wc *watchChan) ResultChan() <-chan watch.Event {
