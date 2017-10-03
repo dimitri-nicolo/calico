@@ -18,7 +18,6 @@ package calico
 
 import (
 	"context"
-	"fmt"
 
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apiv2"
 	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
@@ -50,14 +49,11 @@ func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.Selec
 }
 
 func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
-	fmt.Printf("Whats the event we got? : %v\n", ce)
 	switch ce.Type {
 	case cwatch.Added:
 		libcalicoPolicy := ce.Object.(*libcalicoapi.NetworkPolicy)
 		networkPolicy := &aapi.NetworkPolicy{}
-		networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-		networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
-		networkPolicy.Spec = libcalicoPolicy.Spec
+		convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
 		if !wc.filter(networkPolicy) {
 			return nil
 		}
@@ -68,9 +64,7 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 	case cwatch.Deleted:
 		libcalicoPolicy := ce.Previous.(*libcalicoapi.NetworkPolicy)
 		networkPolicy := &aapi.NetworkPolicy{}
-		networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-		networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
-		networkPolicy.Spec = libcalicoPolicy.Spec
+		convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
 		if !wc.filter(networkPolicy) {
 			return nil
 		}
@@ -81,9 +75,7 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 	case cwatch.Modified:
 		libcalicoPolicy := ce.Object.(*libcalicoapi.NetworkPolicy)
 		networkPolicy := &aapi.NetworkPolicy{}
-		networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-		networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
-		networkPolicy.Spec = libcalicoPolicy.Spec
+		convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
 		if wc.acceptAll() {
 			res = &watch.Event{
 				Type:   watch.Modified,
@@ -93,15 +85,9 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 		}
 		oldLibcalicoPolicy := ce.Previous.(*libcalicoapi.NetworkPolicy)
 		oldNetworkPolicy := &aapi.NetworkPolicy{}
-		oldNetworkPolicy.TypeMeta = oldLibcalicoPolicy.TypeMeta
-		oldNetworkPolicy.ObjectMeta = oldLibcalicoPolicy.ObjectMeta
-		oldNetworkPolicy.Spec = oldLibcalicoPolicy.Spec
-		fmt.Printf("Cur Network Policy: %v\n", networkPolicy)
-		fmt.Printf("Old Network Policy: %v\n", oldNetworkPolicy)
+		convertToAAPINetworkPolicy(oldNetworkPolicy, oldLibcalicoPolicy)
 		curObjPasses := wc.filter(networkPolicy)
 		oldObjPasses := wc.filter(oldNetworkPolicy)
-		fmt.Printf("Passed Cur Network Policy: %v\n", curObjPasses)
-		fmt.Printf("Passed Old Network Policy: %v\n", oldObjPasses)
 		switch {
 		case curObjPasses && oldObjPasses:
 			res = &watch.Event{
@@ -118,8 +104,6 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 				Type:   watch.Deleted,
 				Object: oldNetworkPolicy,
 			}
-		default:
-			fmt.Println("????Hitting this case??????")
 		}
 	}
 	return res
@@ -127,12 +111,9 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 
 func (wc *watchChan) run() {
 	for e := range wc.watcher.ResultChan() {
-		fmt.Println("Receiving events from calico??")
 		we := wc.convertEvent(e)
 		if we != nil {
-			fmt.Printf("Pushing in a new event: %v\n", *we)
 			wc.resultChan <- *we
-			fmt.Printf("Done pushing a new event: %v\n", *we)
 		}
 	}
 }

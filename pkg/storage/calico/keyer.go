@@ -37,12 +37,15 @@ func (e errInvalidKey) Error() string {
 // in which case all other return values will be empty strings.
 //
 // Example Namespaced resource key: projectcalico.org/networkpolicies/default/my-first-policy
-// OR projectcalico.org/globapolicies/my-first-policy
+// OR projectcalico.org/globalpolicies/my-first-policy
 func NamespaceAndNameFromKey(key string) (string, string, error) {
 	spl := strings.Split(key, "/")
 	splLen := len(spl)
 
-	if splLen == 3 {
+	if splLen == 2 {
+		// slice has neither name nor namespace
+		return "", "", nil
+	} else if splLen == 3 {
 		// slice has namespace and no name
 		return spl[2], "", nil
 	} else if splLen == 4 {

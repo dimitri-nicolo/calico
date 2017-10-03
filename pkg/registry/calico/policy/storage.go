@@ -221,12 +221,7 @@ func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.G
 		return nil, err
 	}
 
-	obj, err := r.Store.Get(ctx, name, options)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Printf(" SHATRU DEBUG Object Get: %v", obj)
-	return obj, err
+	return r.Store.Get(ctx, name, options)
 }
 
 func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav1.DeleteOptions) (runtime.Object, bool, error) {

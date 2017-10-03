@@ -65,9 +65,7 @@ func (ps *policyStore) Versioner() storage.Versioner {
 func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
 	networkPolicy := obj.(*aapi.NetworkPolicy)
 	libcalicoPolicy := &libcalicoapi.NetworkPolicy{}
-	libcalicoPolicy.TypeMeta = networkPolicy.TypeMeta
-	libcalicoPolicy.ObjectMeta = networkPolicy.ObjectMeta
-	libcalicoPolicy.Spec = networkPolicy.Spec
+	convertToLibcalicoNetworkPolicy(networkPolicy, libcalicoPolicy)
 
 	pHandler := ps.client.NetworkPolicies()
 	opts := options.SetOptions{TTL: time.Duration(ttl) * time.Second}
@@ -76,9 +74,7 @@ func (ps *policyStore) Create(ctx context.Context, key string, obj, out runtime.
 		return aapiError(err, key)
 	}
 	networkPolicy = out.(*aapi.NetworkPolicy)
-	networkPolicy.Spec = createdLibcalicoPolicy.Spec
-	networkPolicy.TypeMeta = createdLibcalicoPolicy.TypeMeta
-	networkPolicy.ObjectMeta = createdLibcalicoPolicy.ObjectMeta
+	convertToAAPINetworkPolicy(networkPolicy, createdLibcalicoPolicy)
 	return nil
 }
 
@@ -101,9 +97,7 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 			return aapiError(err, key)
 		}
 		networkPolicy := &aapi.NetworkPolicy{}
-		networkPolicy.Spec = libcalicoPolicy.Spec
-		networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-		networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+		convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
 		if err := checkPreconditions(key, preconditions, networkPolicy); err != nil {
 			return err
 		}
@@ -116,9 +110,7 @@ func (ps *policyStore) Delete(ctx context.Context, key string, out runtime.Objec
 		return aapiError(err, key)
 	}
 	networkPolicy := out.(*aapi.NetworkPolicy)
-	networkPolicy.Spec = libcalicoPolicy.Spec
-	networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-	networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+	convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
 	return nil
 }
 
@@ -204,9 +196,7 @@ func (ps *policyStore) Get(ctx context.Context, key string, resourceVersion stri
 		return e
 	}
 	networkPolicy := out.(*aapi.NetworkPolicy)
-	networkPolicy.Spec = libcalicoPolicy.Spec
-	networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
-	networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+	convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
 	return nil
 }
 
@@ -246,9 +236,7 @@ func (ps *policyStore) List(ctx context.Context, key string, resourceVersion str
 	networkPolicyList.Items = []aapi.NetworkPolicy{}
 	for _, item := range libcalicoPolicyList.Items {
 		networkPolicy := aapi.NetworkPolicy{}
-		networkPolicy.TypeMeta = item.TypeMeta
-		networkPolicy.ObjectMeta = item.ObjectMeta
-		networkPolicy.Spec = item.Spec
+		convertToAAPINetworkPolicy(&networkPolicy, &item)
 		if filterFunc(&networkPolicy) {
 			networkPolicyList.Items = append(networkPolicyList.Items, networkPolicy)
 		}
@@ -397,9 +385,7 @@ func (ps *policyStore) GuaranteedUpdate(
 			networkPolicy.ResourceVersion = strconv.FormatInt(curState.rev, 10)
 		}
 		libcalicoPolicy := &libcalicoapi.NetworkPolicy{}
-		libcalicoPolicy.TypeMeta = networkPolicy.TypeMeta
-		libcalicoPolicy.ObjectMeta = networkPolicy.ObjectMeta
-		libcalicoPolicy.Spec = networkPolicy.Spec
+		convertToLibcalicoNetworkPolicy(networkPolicy, libcalicoPolicy)
 
 		pHandler := ps.client.NetworkPolicies()
 		var opts options.SetOptions
@@ -431,9 +417,7 @@ func (ps *policyStore) GuaranteedUpdate(
 			return e
 		}
 		networkPolicy = out.(*aapi.NetworkPolicy)
-		networkPolicy.Spec = createdLibcalicoPolicy.Spec
-		networkPolicy.TypeMeta = createdLibcalicoPolicy.TypeMeta
-		networkPolicy.ObjectMeta = createdLibcalicoPolicy.ObjectMeta
+		convertToAAPINetworkPolicy(networkPolicy, createdLibcalicoPolicy)
 		return nil
 	}
 	glog.Errorf("GuaranteedUpdate failed.")
