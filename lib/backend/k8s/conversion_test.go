@@ -29,8 +29,8 @@ import (
 
 var _ = Describe("Test parsing strings", func() {
 
-	// Use a single instance of the converter for these tests.
-	c := converter{}
+	// Use a single instance of the Converter for these tests.
+	c := Converter{}
 
 	It("should parse workloadIDs", func() {
 		workloadName := "Namespace.podName"
@@ -46,13 +46,6 @@ var _ = Describe("Test parsing strings", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ns).To(Equal("Namespace"))
 		Expect(polName).To(Equal("policyName"))
-
-		// Parse a Namespace backed Policy.
-		name = "ns.projectcalico.org/Namespace"
-		ns, err = c.parsePolicyNameNamespace(name)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ns).To(Equal("Namespace"))
-
 	})
 
 	It("should not parse invalid policy names", func() {
@@ -63,22 +56,17 @@ var _ = Describe("Test parsing strings", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(ns).To(Equal(""))
 		Expect(polName).To(Equal(""))
-
-		// As a Namespace.
-		ns, err = c.parsePolicyNameNamespace(name)
-		Expect(err).To(HaveOccurred())
-		Expect(ns).To(Equal(""))
 	})
 
 	It("should parse valid profile names", func() {
-		name := "ns.projectcalico.org/default"
+		name := "k8s_ns.default"
 		ns, err := c.parseProfileName(name)
 		Expect(ns).To(Equal("default"))
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should not parse invalid profile names", func() {
-		name := "k8s_ns.default"
+		name := "ns.projectcalico.org/default"
 		ns, err := c.parseProfileName(name)
 		Expect(err).To(HaveOccurred())
 		Expect(ns).To(Equal(""))
@@ -87,8 +75,8 @@ var _ = Describe("Test parsing strings", func() {
 
 var _ = Describe("Test Pod conversion", func() {
 
-	// Use a single instance of the converter for these tests.
-	c := converter{}
+	// Use a single instance of the Converter for these tests.
+	c := Converter{}
 
 	It("should parse a Pod with an IP to a WorkloadEndpoint", func() {
 		pod := k8sapi.Pod{
@@ -106,13 +94,51 @@ var _ = Describe("Test Pod conversion", func() {
 			},
 			Spec: k8sapi.PodSpec{
 				NodeName: "nodeA",
+				Containers: []k8sapi.Container{
+					{
+						Ports: []k8sapi.ContainerPort{
+							{
+								ContainerPort: 5678,
+							},
+							{
+								Name:          "no-proto",
+								ContainerPort: 1234,
+							},
+						},
+					},
+					{
+						Ports: []k8sapi.ContainerPort{
+							{
+								Name:          "tcp-proto",
+								Protocol:      k8sapi.ProtocolTCP,
+								ContainerPort: 1024,
+							},
+							{
+								Name:          "tcp-proto-with-host-port",
+								Protocol:      k8sapi.ProtocolTCP,
+								ContainerPort: 8080,
+								HostPort:      5678,
+							},
+							{
+								Name:          "udp-proto",
+								Protocol:      k8sapi.ProtocolUDP,
+								ContainerPort: 432,
+							},
+							{
+								Name:          "unkn-proto",
+								Protocol:      k8sapi.Protocol("unknown"),
+								ContainerPort: 567,
+							},
+						},
+					},
+				},
 			},
 			Status: k8sapi.PodStatus{
 				PodIP: "192.168.0.1",
 			},
 		}
 
-		wep, err := c.podToWorkloadEndpoint(&pod)
+		wep, err := c.PodToWorkloadEndpoint(&pod)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields.
@@ -129,8 +155,22 @@ var _ = Describe("Test Pod conversion", func() {
 		expectedLabels := map[string]string{"labelA": "valueA", "labelB": "valueB", "calico/k8s_ns": "default"}
 		Expect(wep.Value.(*model.WorkloadEndpoint).Labels).To(Equal(expectedLabels))
 
+		nsProtoTCP := numorstring.ProtocolFromString("tcp")
+		nsProtoUDP := numorstring.ProtocolFromString("udp")
+		Expect(wep.Value.(*model.WorkloadEndpoint).Ports).To(ConsistOf(
+			// No proto defaults to TCP (as defined in k8s API spec)
+			model.EndpointPort{Name: "no-proto", Port: 1234, Protocol: nsProtoTCP},
+			// Explicit TCP proto is OK too.
+			model.EndpointPort{Name: "tcp-proto", Port: 1024, Protocol: nsProtoTCP},
+			// Host port should be ignored.
+			model.EndpointPort{Name: "tcp-proto-with-host-port", Port: 8080, Protocol: nsProtoTCP},
+			// UDP is also an option.
+			model.EndpointPort{Name: "udp-proto", Port: 432, Protocol: nsProtoUDP},
+			// Unknown protocol port is ignored.
+		))
+
 		// Assert ResourceVersion is present.
-		Expect(wep.Revision.(string)).To(Equal("1234"))
+		Expect(wep.Revision).To(Equal("1234"))
 	})
 
 	It("should not parse a Pod without an IP to a WorkloadEndpoint", func() {
@@ -152,7 +192,7 @@ var _ = Describe("Test Pod conversion", func() {
 			Status: k8sapi.PodStatus{},
 		}
 
-		_, err := c.podToWorkloadEndpoint(&pod)
+		_, err := c.PodToWorkloadEndpoint(&pod)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -170,7 +210,7 @@ var _ = Describe("Test Pod conversion", func() {
 			},
 		}
 
-		wep, err := c.podToWorkloadEndpoint(&pod)
+		wep, err := c.PodToWorkloadEndpoint(&pod)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields.
@@ -198,7 +238,7 @@ var _ = Describe("Test Pod conversion", func() {
 			},
 		}
 
-		_, err := c.podToWorkloadEndpoint(&pod)
+		_, err := c.PodToWorkloadEndpoint(&pod)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -206,11 +246,12 @@ var _ = Describe("Test Pod conversion", func() {
 
 var _ = Describe("Test NetworkPolicy conversion", func() {
 
-	// Use a single instance of the converter for these tests.
-	c := converter{}
+	// Use a single instance of the Converter for these tests.
+	c := Converter{}
 
 	It("should parse a basic NetworkPolicy to a Policy", func() {
 		port80 := intstr.FromInt(80)
+		portFoo := intstr.FromString("foo")
 		np := extensions.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testPolicy",
@@ -227,6 +268,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 					{
 						Ports: []extensions.NetworkPolicyPort{
 							{Port: &port80},
+							{Port: &portFoo},
 						},
 						From: []extensions.NetworkPolicyPeer{
 							{
@@ -244,7 +286,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		}
 
 		// Parse the policy.
-		pol, err := c.networkPolicyToPolicy(&np)
+		pol, err := c.NetworkPolicyToPolicy(&np)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
@@ -256,16 +298,27 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*model.Policy).Selector).To(Equal(
 			"calico/k8s_ns == 'default' && label == 'value' && label2 == 'value2'"))
 		protoTCP := numorstring.ProtocolFromString("tcp")
-		Expect(pol.Value.(*model.Policy).InboundRules).To(ConsistOf(model.Rule{
-			Action:      "allow",
-			Protocol:    &protoTCP, // Defaulted to TCP.
-			SrcSelector: "calico/k8s_ns == 'default' && k == 'v' && k2 == 'v2'",
-			DstPorts:    []numorstring.Port{numorstring.SinglePort(80)},
-		}))
+		Expect(pol.Value.(*model.Policy).InboundRules).To(ConsistOf(
+			model.Rule{
+				Action:      "allow",
+				Protocol:    &protoTCP, // Defaulted to TCP.
+				SrcSelector: "calico/k8s_ns == 'default' && k == 'v' && k2 == 'v2'",
+				DstPorts:    []numorstring.Port{numorstring.SinglePort(80)},
+			},
+			model.Rule{
+				Action:      "allow",
+				Protocol:    &protoTCP, // Defaulted to TCP.
+				SrcSelector: "calico/k8s_ns == 'default' && k == 'v' && k2 == 'v2'",
+				DstPorts:    []numorstring.Port{numorstring.NamedPort("foo")},
+			},
+		))
 
-		// OutboundRules should only have one rule and it should be allow.
-		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
-		Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+		// There should be no OutboundRules
+		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(0))
+
+		// Check that Types field exists and has only 'ingress'
+		Expect(len(pol.Value.(*model.Policy).Types)).To(Equal(1))
+		Expect(pol.Value.(*model.Policy).Types[0]).To(Equal("ingress"))
 	})
 
 	It("should parse a NetworkPolicy with no rules", func() {
@@ -282,7 +335,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		}
 
 		// Parse the policy.
-		pol, err := c.networkPolicyToPolicy(&np)
+		pol, err := c.NetworkPolicyToPolicy(&np)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
@@ -293,9 +346,12 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*model.Policy).Selector).To(Equal("calico/k8s_ns == 'default' && label == 'value'"))
 		Expect(len(pol.Value.(*model.Policy).InboundRules)).To(Equal(0))
 
-		// OutboundRules should only have one rule and it should be allow.
-		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
-		Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+		// There should be no OutboundRules
+		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(0))
+
+		// Check that Types field exists and has only 'ingress'
+		Expect(len(pol.Value.(*model.Policy).Types)).To(Equal(1))
+		Expect(pol.Value.(*model.Policy).Types[0]).To(Equal("ingress"))
 	})
 
 	It("should parse a NetworkPolicy with multiple peers", func() {
@@ -337,7 +393,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		var pol *model.KVPair
 		var err error
 		By("parsing the policy", func() {
-			pol, err = c.networkPolicyToPolicy(&np)
+			pol, err = c.NetworkPolicyToPolicy(&np)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pol.Key.(model.PolicyKey).Name).To(Equal("knp.default.default.testPolicy"))
 			Expect(int(*pol.Value.(*model.Policy).Order)).To(Equal(1000))
@@ -350,9 +406,12 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		By("having the correct peer selectors", func() {
 			Expect(len(pol.Value.(*model.Policy).InboundRules)).To(Equal(2))
 
-			// OutboundRules should only have one rule and it should be allow.
-			Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
-			Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+			// There should be no OutboundRules
+			Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(0))
+
+			// Check that Types field exists and has only 'ingress'
+			Expect(len(pol.Value.(*model.Policy).Types)).To(Equal(1))
+			Expect(pol.Value.(*model.Policy).Types[0]).To(Equal("ingress"))
 
 			Expect(pol.Value.(*model.Policy).InboundRules[0].SrcSelector).To(Equal("calico/k8s_ns == 'default' && k == 'v'"))
 			Expect(pol.Value.(*model.Policy).InboundRules[1].SrcSelector).To(Equal("calico/k8s_ns == 'default' && k2 == 'v2'"))
@@ -410,7 +469,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		var pol *model.KVPair
 		var err error
 		By("parsing the policy", func() {
-			pol, err = c.networkPolicyToPolicy(&np)
+			pol, err = c.NetworkPolicyToPolicy(&np)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pol.Key.(model.PolicyKey).Name).To(Equal("knp.default.default.testPolicy"))
 			Expect(int(*pol.Value.(*model.Policy).Order)).To(Equal(1000))
@@ -425,9 +484,12 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			ninety, _ := numorstring.PortFromString("90")
 			Expect(len(pol.Value.(*model.Policy).InboundRules)).To(Equal(4))
 
-			// OutboundRules should only have one rule and it should be allow.
-			Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
-			Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+			// There should be no OutboundRules
+			Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(0))
+
+			// Check that Types field exists and has only 'ingress'
+			Expect(len(pol.Value.(*model.Policy).Types)).To(Equal(1))
+			Expect(pol.Value.(*model.Policy).Types[0]).To(Equal("ingress"))
 
 			Expect(pol.Value.(*model.Policy).InboundRules[0].SrcSelector).To(Equal("calico/k8s_ns == 'default' && k == 'v'"))
 			Expect(pol.Value.(*model.Policy).InboundRules[0].DstPorts).To(Equal([]numorstring.Port{ninety}))
@@ -455,7 +517,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		}
 
 		// Parse the policy.
-		pol, err := c.networkPolicyToPolicy(&np)
+		pol, err := c.NetworkPolicyToPolicy(&np)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
@@ -466,9 +528,12 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*model.Policy).Selector).To(Equal("calico/k8s_ns == 'default'"))
 		Expect(len(pol.Value.(*model.Policy).InboundRules)).To(Equal(0))
 
-		// OutboundRules should only have one rule and it should be allow.
-		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
-		Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+		// There should be no OutboundRules
+		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(0))
+
+		// Check that Types field exists and has only 'ingress'
+		Expect(len(pol.Value.(*model.Policy).Types)).To(Equal(1))
+		Expect(pol.Value.(*model.Policy).Types[0]).To(Equal("ingress"))
 	})
 
 	It("should parse a NetworkPolicy with an empty namespaceSelector", func() {
@@ -496,7 +561,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		}
 
 		// Parse the policy.
-		pol, err := c.networkPolicyToPolicy(&np)
+		pol, err := c.NetworkPolicyToPolicy(&np)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
@@ -508,9 +573,12 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(len(pol.Value.(*model.Policy).InboundRules)).To(Equal(1))
 		Expect(pol.Value.(*model.Policy).InboundRules[0].SrcSelector).To(Equal("has(calico/k8s_ns)"))
 
-		// OutboundRules should only have one rule and it should be allow.
-		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
-		Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+		// There should be no OutboundRules
+		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(0))
+
+		// Check that Types field exists and has only 'ingress'
+		Expect(len(pol.Value.(*model.Policy).Types)).To(Equal(1))
+		Expect(pol.Value.(*model.Policy).Types[0]).To(Equal("ingress"))
 	})
 
 	It("should parse a NetworkPolicy with podSelector.MatchExpressions", func() {
@@ -533,7 +601,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		}
 
 		// Parse the policy.
-		pol, err := c.networkPolicyToPolicy(&np)
+		pol, err := c.NetworkPolicyToPolicy(&np)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
@@ -544,9 +612,12 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(pol.Value.(*model.Policy).Selector).To(Equal("calico/k8s_ns == 'default' && k in { 'v1', 'v2' }"))
 		Expect(len(pol.Value.(*model.Policy).InboundRules)).To(Equal(0))
 
-		// OutboundRules should only have one rule and it should be allow.
-		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
-		Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+		// There should be no OutboundRules
+		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(0))
+
+		// Check that Types field exists and has only 'ingress'
+		Expect(len(pol.Value.(*model.Policy).Types)).To(Equal(1))
+		Expect(pol.Value.(*model.Policy).Types[0]).To(Equal("ingress"))
 	})
 
 	It("should parse a NetworkPolicy with Ports only", func() {
@@ -573,7 +644,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		}
 
 		// Parse the policy.
-		pol, err := c.networkPolicyToPolicy(&np)
+		pol, err := c.NetworkPolicyToPolicy(&np)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields are correct.
@@ -587,16 +658,19 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(len(pol.Value.(*model.Policy).InboundRules[0].DstPorts)).To(Equal(1))
 		Expect(pol.Value.(*model.Policy).InboundRules[0].DstPorts[0].String()).To(Equal("80"))
 
-		// OutboundRules should only have one rule and it should be allow.
-		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(1))
-		Expect(pol.Value.(*model.Policy).OutboundRules[0]).To(Equal(model.Rule{Action: "allow"}))
+		// There should be no OutboundRules
+		Expect(len(pol.Value.(*model.Policy).OutboundRules)).To(Equal(0))
+
+		// Check that Types field exists and has only 'ingress'
+		Expect(len(pol.Value.(*model.Policy).Types)).To(Equal(1))
+		Expect(pol.Value.(*model.Policy).Types[0]).To(Equal("ingress"))
 	})
 })
 
 var _ = Describe("Test Namespace conversion", func() {
 
-	// Use a single instance of the converter for these tests.
-	c := converter{}
+	// Use a single instance of the Converter for these tests.
+	c := Converter{}
 
 	It("should parse a Namespace to a Profile", func() {
 		ns := k8sapi.Namespace{
@@ -611,7 +685,7 @@ var _ = Describe("Test Namespace conversion", func() {
 			Spec: k8sapi.NamespaceSpec{},
 		}
 
-		p, err := c.namespaceToProfile(&ns)
+		p, err := c.NamespaceToProfile(&ns)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Ensure rules are correct for profile.
@@ -626,8 +700,8 @@ var _ = Describe("Test Namespace conversion", func() {
 
 		// Check labels.
 		labels := p.Value.(*model.Profile).Labels
-		Expect(labels["k8s_ns/label/foo"]).To(Equal("bar"))
-		Expect(labels["k8s_ns/label/roger"]).To(Equal("rabbit"))
+		Expect(labels["pcns.foo"]).To(Equal("bar"))
+		Expect(labels["pcns.roger"]).To(Equal("rabbit"))
 	})
 
 	It("should parse a Namespace to a Profile with no labels", func() {
@@ -639,7 +713,7 @@ var _ = Describe("Test Namespace conversion", func() {
 			Spec: k8sapi.NamespaceSpec{},
 		}
 
-		p, err := c.namespaceToProfile(&ns)
+		p, err := c.NamespaceToProfile(&ns)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Ensure rules are correct.
@@ -669,7 +743,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		}
 
 		// Ensure it generates the correct Profile.
-		p, err := c.namespaceToProfile(&ns)
+		p, err := c.NamespaceToProfile(&ns)
 		Expect(err).NotTo(HaveOccurred())
 		// Ensure rules are correct for profile.
 		inboundRules := p.Value.(*model.Profile).Rules.InboundRules
@@ -695,7 +769,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		}
 
 		By("converting to a Profile", func() {
-			_, err := c.namespaceToProfile(&ns)
+			_, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -712,7 +786,7 @@ var _ = Describe("Test Namespace conversion", func() {
 		}
 
 		By("converting to a Profile", func() {
-			p, err := c.namespaceToProfile(&ns)
+			p, err := c.NamespaceToProfile(&ns)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Ensure rules are correct.
