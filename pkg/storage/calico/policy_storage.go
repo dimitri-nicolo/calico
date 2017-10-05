@@ -345,7 +345,7 @@ func (ps *policyStore) GuaranteedUpdate(
 	// Loop until update succeeds or we get an error
 	// Check count to avoid an infinite loop in case of any issues
 	totalLoopCount := 0
-	for totalLoopCount < 3 {
+	for totalLoopCount < 5 {
 		totalLoopCount++
 
 		if err := checkPreconditions(key, precondtions, curState.obj); err != nil {

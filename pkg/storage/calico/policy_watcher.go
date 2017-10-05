@@ -36,7 +36,7 @@ type watchChan struct {
 
 func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.SelectionPredicate) *watchChan {
 	wc := &watchChan{
-		resultChan:     make(chan watch.Event, 1),
+		resultChan:     make(chan watch.Event),
 		internalFilter: storage.SimpleFilter(pred),
 		watcher:        w,
 	}
@@ -116,6 +116,7 @@ func (wc *watchChan) run() {
 			wc.resultChan <- *we
 		}
 	}
+	close(wc.resultChan)
 }
 
 func (wc *watchChan) filter(obj runtime.Object) bool {
@@ -131,7 +132,6 @@ func (wc *watchChan) acceptAll() bool {
 
 func (wc *watchChan) Stop() {
 	wc.watcher.Stop()
-	close(wc.resultChan)
 }
 
 func (wc *watchChan) ResultChan() <-chan watch.Event {
