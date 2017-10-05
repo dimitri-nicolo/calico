@@ -200,7 +200,7 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, include
 		return nil, err
 	}
 
-	return r.Store.Create(ctx, obj, false)
+	return r.Store.Create(ctx, obj, includeUninitialized)
 }
 
 func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo) (runtime.Object, bool, error) {

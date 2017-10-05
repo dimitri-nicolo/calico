@@ -15,6 +15,8 @@
 package clientv2
 
 import (
+	"context"
+
 	"github.com/projectcalico/libcalico-go/lib/apiv2"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
@@ -22,12 +24,12 @@ import (
 
 // ProfileInterface has methods to work with Profile resources.
 type ProfileInterface interface {
-	Create(peer *apiv2.Profile, opts options.SetOptions) (*apiv2.Profile, error)
-	Update(peer *apiv2.Profile, opts options.SetOptions) (*apiv2.Profile, error)
-	Delete(name string, opts options.DeleteOptions) error
-	Get(name string, opts options.GetOptions) (*apiv2.Profile, error)
-	List(opts options.ListOptions) (*apiv2.ProfileList, error)
-	Watch(opts options.ListOptions) (watch.Interface, error)
+	Create(ctx context.Context, res *apiv2.Profile, opts options.SetOptions) (*apiv2.Profile, error)
+	Update(ctx context.Context, res *apiv2.Profile, opts options.SetOptions) (*apiv2.Profile, error)
+	Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv2.Profile, error)
+	Get(ctx context.Context, name string, opts options.GetOptions) (*apiv2.Profile, error)
+	List(ctx context.Context, opts options.ListOptions) (*apiv2.ProfileList, error)
+	Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error)
 }
 
 // profiles implements ProfileInterface
@@ -37,40 +39,54 @@ type profiles struct {
 
 // Create takes the representation of a Profile and creates it.  Returns the stored
 // representation of the Profile, and an error, if there is any.
-func (r profiles) Create(peer *apiv2.Profile, opts options.SetOptions) (*apiv2.Profile, error) {
-	panic("Create not implemented for ProfileInterface")
-	return nil, nil
+func (r profiles) Create(ctx context.Context, res *apiv2.Profile, opts options.SetOptions) (*apiv2.Profile, error) {
+	out, err := r.client.resources.Create(ctx, opts, apiv2.KindProfile, res)
+	if out != nil {
+		return out.(*apiv2.Profile), err
+	}
+	return nil, err
 }
 
 // Update takes the representation of a Profile and updates it. Returns the stored
 // representation of the Profile, and an error, if there is any.
-func (r profiles) Update(peer *apiv2.Profile, opts options.SetOptions) (*apiv2.Profile, error) {
-	panic("Update not implemented for ProfileInterface")
-	return nil, nil
+func (r profiles) Update(ctx context.Context, res *apiv2.Profile, opts options.SetOptions) (*apiv2.Profile, error) {
+	out, err := r.client.resources.Update(ctx, opts, apiv2.KindProfile, res)
+	if out != nil {
+		return out.(*apiv2.Profile), err
+	}
+	return nil, err
 }
 
 // Delete takes name of the Profile and deletes it. Returns an error if one occurs.
-func (r profiles) Delete(name string, opts options.DeleteOptions) error {
-	panic("Delete not implemented for ProfileInterface")
-	return nil
+func (r profiles) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv2.Profile, error) {
+	out, err := r.client.resources.Delete(ctx, opts, apiv2.KindProfile, noNamespace, name)
+	if out != nil {
+		return out.(*apiv2.Profile), err
+	}
+	return nil, err
 }
 
 // Get takes name of the Profile, and returns the corresponding Profile object,
 // and an error if there is any.
-func (r profiles) Get(name string, opts options.GetOptions) (*apiv2.Profile, error) {
-	panic("Get not implemented for ProfileInterface")
-	return nil, nil
+func (r profiles) Get(ctx context.Context, name string, opts options.GetOptions) (*apiv2.Profile, error) {
+	out, err := r.client.resources.Get(ctx, opts, apiv2.KindProfile, noNamespace, name)
+	if out != nil {
+		return out.(*apiv2.Profile), err
+	}
+	return nil, err
 }
 
 // List returns the list of Profile objects that match the supplied options.
-func (r profiles) List(opts options.ListOptions) (*apiv2.ProfileList, error) {
-	panic("List not implemented for ProfileInterface")
-	return nil, nil
+func (r profiles) List(ctx context.Context, opts options.ListOptions) (*apiv2.ProfileList, error) {
+	res := &apiv2.ProfileList{}
+	if err := r.client.resources.List(ctx, opts, apiv2.KindProfile, apiv2.KindProfileList, res); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 // Watch returns a watch.Interface that watches the Profiles that match the
 // supplied options.
-func (r profiles) Watch(opts options.ListOptions) (watch.Interface, error) {
-	panic("Watch not implemented for ProfileInterface")
-	return nil, nil
+func (r profiles) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
+	return r.client.resources.Watch(ctx, opts, apiv2.KindProfile)
 }

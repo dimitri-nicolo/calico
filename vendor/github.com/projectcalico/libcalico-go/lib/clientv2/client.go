@@ -15,6 +15,7 @@
 package clientv2
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
 
@@ -72,8 +73,8 @@ func (c client) Nodes() NodeInterface {
 }
 
 // Policies returns an interface for managing policy resources.
-func (c client) NetworkPolicies(namespace string) NetworkPolicyInterface {
-	return networkPolicies{client: c, namespace: namespace}
+func (c client) NetworkPolicies() NetworkPolicyInterface {
+	return networkPolicies{client: c}
 }
 
 // Policies returns an interface for managing policy resources.
@@ -97,8 +98,8 @@ func (c client) HostEndpoints() HostEndpointInterface {
 }
 
 // WorkloadEndpoints returns an interface for managing workload endpoint resources.
-func (c client) WorkloadEndpoints(namespace string) WorkloadEndpointInterface {
-	return workloadEndpoints{client: c, namespace: namespace}
+func (c client) WorkloadEndpoints() WorkloadEndpointInterface {
+	return workloadEndpoints{client: c}
 }
 
 // BGPPeers returns an interface for managing BGP peer resources.
@@ -116,7 +117,7 @@ type poolAccessor struct {
 }
 
 func (p poolAccessor) GetEnabledPools(ipVersion int) ([]net.IPNet, error) {
-	pools, err := p.client.IPPools().List(options.ListOptions{})
+	pools, err := p.client.IPPools().List(context.Background(), options.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ func (c client) EnsureInitialized() error {
 		Key:   model.GlobalConfigKey{Name: "ClusterGUID"},
 		Value: fmt.Sprintf("%v", hex.EncodeToString(uuid.NewV4().Bytes())),
 	}
-	if _, err := c.Backend.Create(kv); err == nil {
+	if _, err := c.Backend.Create(context.Background(), kv); err == nil {
 		log.WithField("ClusterGUID", kv.Value).Info("Assigned cluster GUID")
 	} else {
 		if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
