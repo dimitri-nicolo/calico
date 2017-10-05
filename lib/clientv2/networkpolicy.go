@@ -21,6 +21,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // NetworkPolicyInterface has methods to work with NetworkPolicy resources.
@@ -43,13 +45,17 @@ type networkPolicies struct {
 func (r networkPolicies) Create(ctx context.Context, res *apiv2.NetworkPolicy, opts options.SetOptions) (*apiv2.NetworkPolicy, error) {
 	// Before creating the policy, check that the tier exists, and if this is the
 	// default tier, create it if it doesn't.
-	if res.Tier == "" {
-		if _, err := r.client.resources.Create(ctx, opts, apiv2.KindTier, &defaultTier); err != nil {
+	if res.Spec.Tier == "" {
+		defaultTier := &apiv2.Tier{
+			ObjectMeta: metav1.ObjectMeta{Name: defaultTierName},
+			Spec:       apiv2.TierSpec{},
+		}
+		if _, err := r.client.resources.Create(ctx, opts, apiv2.KindTier, defaultTier); err != nil {
 			if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
 				return nil, err
 			}
 		}
-	} else if _, err := r.client.resources.Get(ctx, opts, apiv2.KindTier, noNamespace, defaultTierName); err != nil {
+	} else if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv2.KindTier, noNamespace, defaultTierName); err != nil {
 		return nil, err
 	}
 
