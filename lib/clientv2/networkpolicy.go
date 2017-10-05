@@ -23,11 +23,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
 
-var (
-	defaultTierName = "default"
-	defaultTier     = apiv2.Tier{Name: defaultTierName}
-)
-
 // NetworkPolicyInterface has methods to work with NetworkPolicy resources.
 type NetworkPolicyInterface interface {
 	Create(ctx context.Context, res *apiv2.NetworkPolicy, opts options.SetOptions) (*apiv2.NetworkPolicy, error)
