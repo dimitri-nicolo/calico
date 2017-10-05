@@ -70,7 +70,8 @@ func (c completedCalicoConfig) NewServer() (*CalicoAPIServer, error) {
 	glog.V(4).Infoln("Created skeleton API server")
 
 	glog.V(4).Infoln("Installing API group")
-	calicostore := calicorest.RESTStorageProvider{}
+	// TODO: Make the storage type configurable
+	calicostore := calicorest.RESTStorageProvider{StorageType: "calico"}
 	apiGroupInfo, err := calicostore.NewRESTStorage(c.apiResourceConfigSource, c.genericConfig.RESTOptionsGetter, c.genericConfig.Authorizer)
 
 	if err != nil {

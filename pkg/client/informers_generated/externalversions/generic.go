@@ -20,7 +20,7 @@ package externalversions
 
 import (
 	"fmt"
-	v1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -51,15 +51,9 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=Calico, Version=V1
-	case v1.SchemeGroupVersion.WithResource("endpoints"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Calico().V1().Endpoints().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("nodes"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Calico().V1().Nodes().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("policies"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Calico().V1().Policies().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("tiers"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Calico().V1().Tiers().Informer()}, nil
+	// Group=Projectcalico, Version=V2
+	case v2.SchemeGroupVersion.WithResource("networkpolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Projectcalico().V2().NetworkPolicies().Informer()}, nil
 
 	}
 

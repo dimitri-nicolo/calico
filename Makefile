@@ -105,16 +105,16 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v1" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
 	  	--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico/v1" \
+		--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
 		--output-file-base "zz_generated.defaults"
 	# Generate deep copies
 	$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v1" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
 		--bounding-dirs "github.com/tigera/calico-k8sapiserver" \
 		--output-file-base zz_generated.deepcopy
 	# Generate conversions
@@ -122,7 +122,7 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v1" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
 		--output-file-base zz_generated.conversion
 	# generate all pkg/client contents
 	$(DOCKER_CMD) $(BUILD_DIR)/update-client-gen.sh

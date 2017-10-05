@@ -33,18 +33,14 @@ var (
 
 type PolicyKey struct {
 	Name string `json:"-" validate:"required,name"`
-	Tier string `json:"-" validate:"required,name"`
 }
 
 func (key PolicyKey) defaultPath() (string, error) {
-	if key.Tier == "" {
-		return "", errors.ErrorInsufficientIdentifiers{Name: "tier"}
-	}
 	if key.Name == "" {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "name"}
 	}
-	e := fmt.Sprintf("/calico/v1/policy/tier/%s/policy/%s",
-		key.Tier, escapeName(key.Name))
+	e := fmt.Sprintf("/calico/v1/policy/tier/default/policy/%s",
+		escapeName(key.Name))
 	return e, nil
 }
 
@@ -61,20 +57,15 @@ func (key PolicyKey) valueType() reflect.Type {
 }
 
 func (key PolicyKey) String() string {
-	return fmt.Sprintf("Policy(tier=%s, name=%s)", key.Tier, key.Name)
+	return fmt.Sprintf("Policy(name=%s)", key.Name)
 }
 
 type PolicyListOptions struct {
 	Name string
-	Tier string
 }
 
 func (options PolicyListOptions) defaultPathRoot() string {
-	k := "/calico/v1/policy/tier"
-	if options.Tier == "" {
-		return k
-	}
-	k = k + fmt.Sprintf("/%s/policy", options.Tier)
+	k := "/calico/v1/policy/tier/default/policy"
 	if options.Name == "" {
 		return k
 	}
@@ -89,17 +80,12 @@ func (options PolicyListOptions) KeyFromDefaultPath(path string) Key {
 		log.Debugf("Didn't match regex")
 		return nil
 	}
-	tier := r[0][1]
 	name := unescapeName(r[0][2])
-	if options.Tier != "" && tier != options.Tier {
-		log.Infof("Didn't match tier %s != %s", options.Tier, tier)
-		return nil
-	}
 	if options.Name != "" && name != options.Name {
 		log.Debugf("Didn't match name %s != %s", options.Name, name)
 		return nil
 	}
-	return PolicyKey{Tier: tier, Name: name}
+	return PolicyKey{Name: name}
 }
 
 type Policy struct {
@@ -110,6 +96,7 @@ type Policy struct {
 	DoNotTrack    bool              `json:"untracked,omitempty"`
 	Annotations   map[string]string `json:"annotations,omitempty"`
 	PreDNAT       bool              `json:"pre_dnat,omitempty"`
+	Types         []string          `json:"types,omitempty"`
 }
 
 func (p Policy) String() string {
@@ -130,5 +117,6 @@ func (p Policy) String() string {
 	parts = append(parts, fmt.Sprintf("outbound:%v", strings.Join(outRules, ";")))
 	parts = append(parts, fmt.Sprintf("untracked:%v", p.DoNotTrack))
 	parts = append(parts, fmt.Sprintf("pre_dnat:%v", p.PreDNAT))
+	parts = append(parts, fmt.Sprintf("types:%v", strings.Join(p.Types, ";")))
 	return strings.Join(parts, ",")
 }

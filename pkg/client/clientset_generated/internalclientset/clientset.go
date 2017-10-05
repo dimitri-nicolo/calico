@@ -18,7 +18,7 @@ package internalclientset
 
 import (
 	glog "github.com/golang/glog"
-	calicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/typed/calico/internalversion"
+	projectcalicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/typed/projectcalico/internalversion"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -26,22 +26,22 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	Calico() calicointernalversion.CalicoInterface
+	Projectcalico() projectcalicointernalversion.ProjectcalicoInterface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	*calicointernalversion.CalicoClient
+	*projectcalicointernalversion.ProjectcalicoClient
 }
 
-// Calico retrieves the CalicoClient
-func (c *Clientset) Calico() calicointernalversion.CalicoInterface {
+// Projectcalico retrieves the ProjectcalicoClient
+func (c *Clientset) Projectcalico() projectcalicointernalversion.ProjectcalicoInterface {
 	if c == nil {
 		return nil
 	}
-	return c.CalicoClient
+	return c.ProjectcalicoClient
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -60,7 +60,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.CalicoClient, err = calicointernalversion.NewForConfig(&configShallowCopy)
+	cs.ProjectcalicoClient, err = projectcalicointernalversion.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.CalicoClient = calicointernalversion.NewForConfigOrDie(c)
+	cs.ProjectcalicoClient = projectcalicointernalversion.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -86,7 +86,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.CalicoClient = calicointernalversion.New(c)
+	cs.ProjectcalicoClient = projectcalicointernalversion.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

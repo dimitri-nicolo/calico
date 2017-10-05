@@ -17,7 +17,7 @@ limitations under the License.
 package scheme
 
 import (
-	calicov1 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	projectcalicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -48,6 +48,6 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	calicov1.AddToScheme(scheme)
+	projectcalicov2.AddToScheme(scheme)
 
 }

@@ -17,7 +17,7 @@ limitations under the License.
 package scheme
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
+	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
 	announced "k8s.io/apimachinery/pkg/apimachinery/announced"
 	registered "k8s.io/apimachinery/pkg/apimachinery/registered"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,6 +41,6 @@ func init() {
 
 // Install registers the API group and adds types to a scheme
 func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *registered.APIRegistrationManager, scheme *runtime.Scheme) {
-	calico.Install(groupFactoryRegistry, registry, scheme)
+	projectcalico.Install(groupFactoryRegistry, registry, scheme)
 
 }

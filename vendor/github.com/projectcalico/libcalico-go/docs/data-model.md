@@ -571,7 +571,7 @@ uses iptables LOG action, which results in a log to syslog.
 
 For iptables compatibility, Calico will truncate the prefix to 27 
 characters and limit the character set.
-
+  
 `action`: what action to take when traffic matches this rule. One of `deny`,
 which drops the packet immediately, `allow`, which accepts the
 packet unconditionally and `log`, which logs the packet (to syslog

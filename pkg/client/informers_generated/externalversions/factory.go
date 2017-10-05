@@ -20,8 +20,8 @@ package externalversions
 
 import (
 	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
-	calico "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/calico"
 	internalinterfaces "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/internalinterfaces"
+	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/client/informers_generated/externalversions/projectcalico"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
@@ -110,9 +110,9 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Calico() calico.Interface
+	Projectcalico() projectcalico.Interface
 }
 
-func (f *sharedInformerFactory) Calico() calico.Interface {
-	return calico.New(f)
+func (f *sharedInformerFactory) Projectcalico() projectcalico.Interface {
+	return projectcalico.New(f)
 }

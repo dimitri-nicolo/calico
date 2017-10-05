@@ -33,21 +33,21 @@ ${BINDIR}/client-gen "$@" \
 # Generate the versioned clientset (pkg/client/clientset_generated/clientset)
 ${BINDIR}/client-gen "$@" \
               --input-base "github.com/tigera/calico-k8sapiserver/pkg/apis/" \
-	      --input "calico/v1" \
+	      --input "calico/v2" \
 	      --clientset-path "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/" \
 	      --clientset-name "clientset" \
 	      --go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt"
 # generate lister
 ${BINDIR}/lister-gen "$@" \
 	      --input-dirs="github.com/tigera/calico-k8sapiserver/pkg/apis/calico" \
-	      --input-dirs="github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1" \
+	      --input-dirs="github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2" \
 	      --output-package "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated" \
 	      --go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt"
 # generate informer
 ${BINDIR}/informer-gen "$@" \
 	      --go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
 	      --input-dirs "github.com/tigera/calico-k8sapiserver/pkg/apis/calico" \
-	      --input-dirs "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1" \
+	      --input-dirs "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2" \
 	      --internal-clientset-package "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset" \
 	      --versioned-clientset-package "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset" \
 	      --listers-package "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated" \

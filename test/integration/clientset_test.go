@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	// TODO: fix this upstream
@@ -31,18 +31,18 @@ import (
 	// avoid error `servicecatalog/v1alpha1 is not enabled`
 
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v1"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	// avoid error `no kind is registered for the type metav1.ListOptions`
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/pkg/api/install"
 	// our versioned types
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 
 	// our versioned client
-	calicoapi "github.com/projectcalico/libcalico-go/lib/api"
+
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/diff"
 )
 
 const (
@@ -70,7 +70,7 @@ func TestGroupVersion(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Policy{}
+				return &calico.NetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testGroupVersion(client); err != nil {
@@ -86,7 +86,7 @@ func TestGroupVersion(t *testing.T) {
 }
 
 func testGroupVersion(client calicoclient.Interface) error {
-	gv := client.Calico().RESTClient().APIVersion()
+	gv := client.Projectcalico().RESTClient().APIVersion()
 	if gv.Group != calico.GroupName {
 		return fmt.Errorf("we should be testing the servicecatalog group, not %s", gv.Group)
 	}
@@ -151,7 +151,7 @@ func TestNoName(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Policy{}
+				return &calico.NetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testNoName(client); err != nil {
@@ -167,62 +167,59 @@ func TestNoName(t *testing.T) {
 }
 
 func testNoName(client calicoclient.Interface) error {
-	cClient := client.Calico()
+	cClient := client.Projectcalico()
 
 	ns := "namespace"
 
-	if p, e := cClient.Policies(ns).Create(&v1.Policy{}); nil == e {
+	if p, e := cClient.NetworkPolicies(ns).Create(&v2.NetworkPolicy{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", p.Name)
 	}
-	if t, e := cClient.Tiers().Create(&v1.Tier{}); nil == e {
+	/*	if t, e := cClient.Tiers().Create(&v1.Tier{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", t.Name)
-	}
+	}*/
 	return nil
 }
 
-// TestPolicyClient exercises the Policy client.
-func TestPolicyClient(t *testing.T) {
-	const name = "test-policy"
+// TestNetworkPolicyClient exercises the NetworkPolicy client.
+func TestNetworkPolicyClient(t *testing.T) {
+	const name = "test-networkpolicy"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Policy{}
+				return &calico.NetworkPolicy{}
 			})
 			defer shutdownServer()
-			if err := testPolicyClient(client, name); err != nil {
+			if err := testNetworkPolicyClient(client, name); err != nil {
 				t.Fatal(err)
 			}
 		}
 	}
 
 	if !t.Run(name, rootTestFunc()) {
-		t.Errorf("test-policy test failed")
+		t.Errorf("test-networkpolicy test failed")
 	}
 
 }
 
-func testPolicyClient(client calicoclient.Interface, name string) error {
+func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "namespace"
-	policyClient := client.Calico().Policies(ns)
-	policy := &v1.Policy{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       calicoapi.PolicySpec{},
-	}
+	policyClient := client.Projectcalico().NetworkPolicies(ns)
+	policy := &v2.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	/*
+		tierClient := client.Calico().Tiers()
+		tier := &v1.Tier{
+			ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			Spec:       calicoapi.TierSpec{},
+		}
 
-	tierClient := client.Calico().Tiers()
-	tier := &v1.Tier{
-		ObjectMeta: metav1.ObjectMeta{Name: "default"},
-		Spec:       calicoapi.TierSpec{},
-	}
-
-	tierServer, err := tierClient.Create(tier)
-	if nil != err {
-		return fmt.Errorf("error creating default tier")
-	}
-	if "default" != tierServer.Name {
-		return fmt.Errorf("error creating default tier")
-	}
-
+		tierServer, err := tierClient.Create(tier)
+		if nil != err {
+			return fmt.Errorf("error creating default tier")
+		}
+		if "default" != tierServer.Name {
+			return fmt.Errorf("error creating default tier")
+		}
+	*/
 	// start from scratch
 	policies, err := policyClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -261,22 +258,56 @@ func testPolicyClient(client calicoclient.Interface, name string) error {
 	}
 
 	// check that the policy is the same from get and list
-	policyListed := &policies.Items[0]
+	/*policyListed := &policies.Items[0]
 	if !reflect.DeepEqual(policyServer, policyListed) {
+		fmt.Printf("Policy through Get: %v\n", policyServer)
+		fmt.Printf("Policy through list: %v\n", policyListed)
 		return fmt.Errorf(
 			"Didn't get the same instance from list and get: diff: %v",
 			diff.ObjectReflectDiff(policyServer, policyListed),
 		)
+	}*/
+	// Watch Test:
+	opts := v1.ListOptions{}
+	wIface, err := policyClient.Watch(opts)
+	if nil != err {
+		return fmt.Errorf("Error on watch")
 	}
+	e := <-wIface.ResultChan()
+	fmt.Println("Watch object: ", e)
 
 	err = policyClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		opts := v1.ListOptions{}
+		wIface, err := policyClient.Watch(opts)
+		if nil != err {
+			fmt.Errorf("Error on watch")
+		}
+		for e := range wIface.ResultChan() {
+			fmt.Println("Watch object: ", e)
+			break
+		}
+	}()
+
+	policyServer, err = policyClient.Create(policy)
+	if nil != err {
+		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
+	}
+	if name != policyServer.Name {
+		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
+	}
+	wg.Wait()
 	return nil
 }
 
+/*
 // TestTierClient exercises the Tier client.
 func TestTierClient(t *testing.T) {
 	const name = "test-tier"
@@ -343,3 +374,4 @@ func testTierClient(client calicoclient.Interface, name string) error {
 
 	return nil
 }
+*/

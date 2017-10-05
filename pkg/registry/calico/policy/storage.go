@@ -18,9 +18,12 @@ package policy
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,43 +33,80 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/client-go/pkg/api"
+)
+
+const (
+	policyDelim = "."
 )
 
 // rest implements a RESTStorage for API services against etcd
 type REST struct {
 	*genericregistry.Store
-	legacyStore *legacyREST
-	authorizer  authorizer.Authorizer
+	authorizer authorizer.Authorizer
+}
+
+// EmptyObject returns an empty instance
+func EmptyObject() runtime.Object {
+	return &calico.NetworkPolicy{}
+}
+
+// NewList returns a new shell of a binding list
+func NewList() runtime.Object {
+	return &calico.NetworkPolicyList{
+	//TypeMeta: metav1.TypeMeta{},
+	//Items:    []calico.NetworkPolicy{},
+	}
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(optsGetter generic.RESTOptionsGetter, authorizer authorizer.Authorizer) *REST {
+func NewREST(opts server.Options) *REST {
+	prefix := "/" + opts.ResourcePrefix()
+	// We adapt the store's keyFunc so that we can use it with the StorageDecorator
+	// without making any assumptions about where objects are stored in etcd
+	keyFunc := func(obj runtime.Object) (string, error) {
+		accessor, err := meta.Accessor(obj)
+		if err != nil {
+			return "", err
+		}
+		return registry.NamespaceKeyFunc(genericapirequest.WithNamespace(genericapirequest.NewContext(), accessor.GetNamespace()), prefix, accessor.GetName())
+	}
+	storageInterface, dFunc := opts.GetStorage(
+		1000,
+		&calico.NetworkPolicy{},
+		prefix,
+		keyFunc,
+		Strategy,
+		func() runtime.Object { return &calico.NetworkPolicyList{} },
+		GetAttrs,
+		storage.NoTriggerPublisher,
+	)
 	store := &genericregistry.Store{
 		Copier:      api.Scheme,
-		NewFunc:     func() runtime.Object { return &calico.Policy{} },
-		NewListFunc: func() runtime.Object { return &calico.PolicyList{} },
+		NewFunc:     func() runtime.Object { return &calico.NetworkPolicy{} },
+		NewListFunc: func() runtime.Object { return &calico.NetworkPolicyList{} },
+		KeyRootFunc: opts.KeyRootFunc(true),
+		KeyFunc:     opts.KeyFunc(true),
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
-			return obj.(*calico.Policy).Name, nil
+			return obj.(*calico.NetworkPolicy).Name, nil
 		},
 		PredicateFunc:     MatchPolicy,
-		QualifiedResource: calico.Resource("policies"),
+		QualifiedResource: calico.Resource("networkpolicies"),
 
-		CreateStrategy: Strategy,
-		UpdateStrategy: Strategy,
-		DeleteStrategy: Strategy,
+		CreateStrategy:          Strategy,
+		UpdateStrategy:          Strategy,
+		DeleteStrategy:          Strategy,
+		EnableGarbageCollection: true,
+
+		Storage:     storageInterface,
+		DestroyFunc: dFunc,
 	}
 
-	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: GetAttrs}
-	if err := store.CompleteWithOptions(options); err != nil {
-		panic(err) // TODO: Propagate error up
-	}
-
-	legacyStore := NewLegacyREST(store)
-	return &REST{store, legacyStore, authorizer}
+	return &REST{store, opts.Authorizer}
 }
 
 // TODO: Remove this. Its purely for debugging purposes.
@@ -115,7 +155,7 @@ func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName st
 	attrs.User = attributes.GetUser()
 	attrs.Verb = attributes.GetVerb()
 	attrs.ResourceRequest = attributes.IsResourceRequest()
-	attrs.Path = "/apis/calico.tigera.io/v1/tiers/" + tierName
+	attrs.Path = "/apis/projectcalico.org/v2/tiers/" + tierName
 	glog.Infof("Tier Auth Attributes for the given Policy")
 	logAuthorizerAttributes(attrs)
 	authorized, reason, err := r.authorizer.Authorize(attrs)
@@ -124,11 +164,19 @@ func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName st
 	}
 	if !authorized {
 		if reason == "" {
-			reason = fmt.Sprintf("(Forbidden) Policy operation is assocaited with tier %s. User \"%s\" cannot %s tiers.calico.tigera.io at the cluster scope. (get tiers.calico.tigera.io)", tierName, attrs.User.GetName(), attrs.Verb)
+			reason = fmt.Sprintf("(Forbidden) Policy operation is assocaited with tier %s. User \"%s\" cannot %s tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)", tierName, attrs.User.GetName(), attrs.Verb)
 		}
 		return fmt.Errorf(reason)
 	}
 	return nil
+}
+
+func getTierPolicy(policyName string) (string, string) {
+	policySlice := strings.Split(policyName, policyDelim)
+	if len(policySlice) < 2 {
+		return "default", policySlice[0]
+	}
+	return policySlice[0], policySlice[1]
 }
 
 func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
@@ -144,7 +192,7 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 }
 
 func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, includeUninitialized bool) (runtime.Object, error) {
-	policy := obj.(*calico.Policy)
+	policy := obj.(*calico.NetworkPolicy)
 	// Is Tier prepended. If not prepend default?
 	tierName, _ := getTierPolicy(policy.Name)
 	err := r.authorizeTierOperation(ctx, tierName)
@@ -152,20 +200,7 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, include
 		return nil, err
 	}
 
-	err = r.legacyStore.create(obj)
-	if err != nil {
-		return nil, err
-	}
-	obj, err = r.Store.Create(ctx, obj, false)
-	if err != nil {
-		objectName, err := r.ObjectNameFunc(obj)
-		if err != nil {
-			panic("failed parsing object name of an already stored object")
-		}
-		r.legacyStore.delete(objectName)
-		return nil, err
-	}
-	return obj, nil
+	return r.Store.Create(ctx, obj, includeUninitialized)
 }
 
 func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo) (runtime.Object, bool, error) {
@@ -196,17 +231,7 @@ func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav
 		return nil, false, err
 	}
 
-	_, err = r.legacyStore.delete(name)
-	if err != nil {
-		return nil, false, err
-	}
-	obj, ok, err := r.Store.Delete(ctx, name, options)
-	if err != nil || !ok {
-		// TODO
-		//r.legacyStore.create(policy)
-		return nil, false, err
-	}
-	return obj, ok, err
+	return r.Store.Delete(ctx, name, options)
 }
 
 func (r *REST) Watch(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {

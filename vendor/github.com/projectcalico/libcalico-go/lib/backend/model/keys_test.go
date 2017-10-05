@@ -49,7 +49,7 @@ var _ = DescribeTable(
 	Entry(
 		"policy with a /",
 		"/calico/v1/policy/tier/default/policy/biff%2fbop",
-		PolicyKey{Tier: "default", Name: "biff/bop"},
+		PolicyKey{Name: "biff/bop"},
 	),
 	Entry(
 		"workload with a /",

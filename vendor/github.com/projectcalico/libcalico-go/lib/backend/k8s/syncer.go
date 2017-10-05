@@ -153,7 +153,7 @@ func (k *realKubeAPI) getReadyStatus(key model.ReadyFlagKey) (*model.KVPair, err
 	return k.kc.getReadyStatus(key)
 }
 
-func newSyncer(kubeAPI kubeAPI, converter converter, callbacks api.SyncerCallbacks, disableNodePoll bool) *kubeSyncer {
+func newSyncer(kubeAPI kubeAPI, converter Converter, callbacks api.SyncerCallbacks, disableNodePoll bool) *kubeSyncer {
 	syn := &kubeSyncer{
 		kubeAPI:   kubeAPI,
 		converter: converter,
@@ -189,7 +189,7 @@ func newSyncer(kubeAPI kubeAPI, converter converter, callbacks api.SyncerCallbac
 
 type kubeSyncer struct {
 	kubeAPI         kubeAPI
-	converter       converter
+	converter       Converter
 	callbacks       api.SyncerCallbacks
 	OneShot         bool
 	disableNodePoll bool
@@ -459,7 +459,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			}
 			// Event is OK - parse it.
 			kvps := syn.parseNamespaceEvent(event)
-			latestVersions.namespaceVersion = kvps[0].Revision.(string)
+			latestVersions.namespaceVersion = kvps[0].Revision
 			syn.sendUpdates(kvps, KEY_NS)
 			continue
 		case event = <-poChan:
@@ -475,7 +475,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			if kvp := syn.parsePodEvent(event); kvp != nil {
 				// Only send the update if we care about it.  We filter
 				// out a number of events that aren't useful for us.
-				latestVersions.podVersion = kvp.Revision.(string)
+				latestVersions.podVersion = kvp.Revision
 				syn.sendUpdates([]model.KVPair{*kvp}, KEY_PO)
 			}
 		case event = <-npChan:
@@ -489,7 +489,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			}
 			// Event is OK - parse it and send it over the channel.
 			kvp := syn.parseNetworkPolicyEvent(event)
-			latestVersions.networkPolicyVersion = kvp.Revision.(string)
+			latestVersions.networkPolicyVersion = kvp.Revision
 			syn.sendUpdates([]model.KVPair{*kvp}, KEY_NP)
 		case event = <-gnpChan:
 			log.Debugf("Incoming GlobalNetworkPolicy watch event. Type=%s", event.Type)
@@ -504,7 +504,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			}
 			// Event is OK - parse it and send it over the channel.
 			if kvp := syn.parseGlobalNetworkPolicyEvent(event); kvp != nil {
-				latestVersions.globalNetworkPolicyVersion = kvp.Revision.(string)
+				latestVersions.globalNetworkPolicyVersion = kvp.Revision
 				syn.sendUpdates([]model.KVPair{*kvp}, KEY_GNP)
 			}
 		case event = <-gcChan:
@@ -520,7 +520,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			}
 			// Event is OK - parse it and send it over the channel.
 			kvp := syn.parseGlobalFelixConfigEvent(event)
-			latestVersions.globalFelixConfigVersion = kvp.Revision.(string)
+			latestVersions.globalFelixConfigVersion = kvp.Revision
 			syn.sendUpdates([]model.KVPair{*kvp}, KEY_GC)
 		case event = <-poolChan:
 			log.Debugf("Incoming IPPool watch event. Type=%s", event.Type)
@@ -535,7 +535,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 			}
 			// Event is OK - parse it and send it over the channel.
 			if kvp := syn.parseIPPoolEvent(event); kvp != nil {
-				latestVersions.poolVersion = kvp.Revision.(string)
+				latestVersions.poolVersion = kvp.Revision
 				syn.sendUpdates([]model.KVPair{*kvp}, KEY_IP)
 			}
 		case event = <-noChan:
@@ -556,7 +556,7 @@ func (syn *kubeSyncer) readFromKubernetesAPI() {
 				"kvpHostIP":   kvpHostIP,
 				"kvpIPIPAddr": kvpIPIPAddr,
 			}).Debug("Got node KVs.")
-			latestVersions.nodeVersion = kvpHostIP.Revision.(string)
+			latestVersions.nodeVersion = kvpHostIP.Revision
 			syn.sendUpdates([]model.KVPair{*kvpHostIP}, KEY_NO)
 			syn.sendUpdates([]model.KVPair{*kvpIPIPAddr}, KEY_HC)
 		}
@@ -617,7 +617,7 @@ func (syn *kubeSyncer) performSnapshot(versions *resourceVersions) (map[string][
 			for _, ns := range nsList.Items {
 				// The Syncer API expects a profile to be broken into its underlying
 				// components - rules, tags, labels.
-				profile, err := syn.converter.namespaceToProfile(&ns)
+				profile, err := syn.converter.NamespaceToProfile(&ns)
 				if err != nil {
 					log.Panicf("%s", err)
 				}
@@ -650,7 +650,7 @@ func (syn *kubeSyncer) performSnapshot(versions *resourceVersions) (map[string][
 
 			versions.networkPolicyVersion = npList.ListMeta.ResourceVersion
 			for _, np := range npList.Items {
-				pol, _ := syn.converter.networkPolicyToPolicy(&np)
+				pol, _ := syn.converter.NetworkPolicyToPolicy(&np)
 				snap[KEY_NP] = append(snap[KEY_NP], *pol)
 				keys[KEY_NP][pol.Key.String()] = true
 			}
@@ -702,7 +702,7 @@ func (syn *kubeSyncer) performSnapshot(versions *resourceVersions) (map[string][
 				}
 
 				// Convert to a workload endpoint.
-				wep, err := syn.converter.podToWorkloadEndpoint(&po)
+				wep, err := syn.converter.PodToWorkloadEndpoint(&po)
 				if err != nil {
 					log.WithError(err).Error("Failed to convert pod to workload endpoint")
 					continue
@@ -865,7 +865,7 @@ func (syn *kubeSyncer) parseNamespaceEvent(e watch.Event) []model.KVPair {
 	}
 
 	// Convert the received Namespace into a profile KVPair.
-	profile, err := syn.converter.namespaceToProfile(ns)
+	profile, err := syn.converter.NamespaceToProfile(ns)
 	if err != nil {
 		log.Panicf("%s", err)
 	}
@@ -964,7 +964,7 @@ func (syn *kubeSyncer) parsePodEvent(e watch.Event) *model.KVPair {
 	}
 
 	// Convert the received Pod into a KVPair.
-	kvp, err := syn.converter.podToWorkloadEndpoint(pod)
+	kvp, err := syn.converter.PodToWorkloadEndpoint(pod)
 	if err != nil {
 		// If we fail to parse, then ignore this update and emit a log.
 		log.WithField("error", err).Error("Failed to parse Pod event")
@@ -991,7 +991,7 @@ func (syn *kubeSyncer) parseNetworkPolicyEvent(e watch.Event) *model.KVPair {
 	}
 
 	// Convert the received NetworkPolicy into a profile KVPair.
-	kvp, err := syn.converter.networkPolicyToPolicy(np)
+	kvp, err := syn.converter.NetworkPolicyToPolicy(np)
 	if err != nil {
 		log.Panicf("%s", err)
 	}

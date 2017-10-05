@@ -1,20 +1,21 @@
-kind: ClusterRole
+kind: Role
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: admin-role
+  namespace: default
+  name: policy-rw-role
 rules:
-  - apiGroups: ["*"]
-    resources: ["*"]
-    verbs: ["*"]
+  - apiGroups: ["projectcalico.org"]
+    resources: ["policies"]
+    verbs: [“create”, “update”, “patch”, delete”, “get”, “watch”, “list”]
 ---
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: admin-binding
+  name: policy-rw-binding
 subjects:
   - kind: User
-    name: satrughna@gmail.com
+    name: jane
 roleRef:
-  kind: ClusterRole
-  name: admin-role
+  kind: Role
+  name: policy-rw-role
   apiGroup: rbac.authorization.k8s.io

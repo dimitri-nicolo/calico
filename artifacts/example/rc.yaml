@@ -20,9 +20,7 @@ spec:
         image: calico-k8sapiserver:latest
         imagePullPolicy: Never
         env:
-          - name: ETCD_AUTHORITY
-            value: "10.96.232.136:6666"
-        args:
-        - "--audit-log-path=/var/tmp/calico_audit.log"
-        - "--storage-backend=etcd2"
-        - "--etcd-servers=http://10.96.232.136:6666"
+          - name: ETCD_ENDPOINTS
+            value: "http://10.96.232.136:6666"
+          - name: DATASTORE_TYPE
+            value: "etcdv3"

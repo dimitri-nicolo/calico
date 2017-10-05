@@ -1,13 +1,13 @@
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
-  name: v1.calico.tigera.io
+  name: v2.projectcalico.org
 spec:
   insecureSkipTLSVerify: true
-  group: calico.tigera.io
+  group: projectcalico.org
   versionPriority: 200
   groupPriorityMinimum: 200
   service:
     name: api
     namespace: calico
-  version: v1
+  version: v2

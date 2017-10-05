@@ -18,8 +18,8 @@ package fake
 
 import (
 	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset"
-	calicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/typed/calico/internalversion"
-	fakecalicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/typed/calico/internalversion/fake"
+	projectcalicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/typed/projectcalico/internalversion"
+	fakeprojectcalicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/typed/projectcalico/internalversion/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -60,7 +60,7 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// Calico retrieves the CalicoClient
-func (c *Clientset) Calico() calicointernalversion.CalicoInterface {
-	return &fakecalicointernalversion.FakeCalico{Fake: &c.Fake}
+// Projectcalico retrieves the ProjectcalicoClient
+func (c *Clientset) Projectcalico() projectcalicointernalversion.ProjectcalicoInterface {
+	return &fakeprojectcalicointernalversion.FakeProjectcalico{Fake: &c.Fake}
 }
