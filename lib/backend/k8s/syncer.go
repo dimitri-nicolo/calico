@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"
 	k8sapi "k8s.io/client-go/pkg/api/v1"
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	extensions "github.com/projectcalico/libcalico-go/lib/backend/extensions"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -66,7 +66,7 @@ func (k *realKubeAPI) PodWatch(namespace string, opts metav1.ListOptions) (watch
 
 func (k *realKubeAPI) NetworkPolicyWatch(opts metav1.ListOptions) (watch watch.Interface, err error) {
 	netpolListWatcher := cache.NewListWatchFromClient(
-		k.kc.clientSet.Extensions().RESTClient(),
+		k.kc.extensionsClientV1Beta1,
 		"networkpolicies",
 		"",
 		fields.Everything())
@@ -106,7 +106,7 @@ func (k *realKubeAPI) NamespaceList(opts metav1.ListOptions) (list *k8sapi.Names
 
 func (k *realKubeAPI) NetworkPolicyList() (list extensions.NetworkPolicyList, err error) {
 	list = extensions.NetworkPolicyList{}
-	err = k.kc.clientSet.Extensions().RESTClient().
+	err = k.kc.extensionsClientV1Beta1.
 		Get().
 		Resource("networkpolicies").
 		Timeout(10 * time.Second).
@@ -153,7 +153,7 @@ func (k *realKubeAPI) getReadyStatus(key model.ReadyFlagKey) (*model.KVPair, err
 	return k.kc.getReadyStatus(key)
 }
 
-func newSyncer(kubeAPI kubeAPI, converter converter, callbacks api.SyncerCallbacks, disableNodePoll bool) *kubeSyncer {
+func newSyncer(kubeAPI kubeAPI, converter Converter, callbacks api.SyncerCallbacks, disableNodePoll bool) *kubeSyncer {
 	syn := &kubeSyncer{
 		kubeAPI:   kubeAPI,
 		converter: converter,
@@ -189,7 +189,7 @@ func newSyncer(kubeAPI kubeAPI, converter converter, callbacks api.SyncerCallbac
 
 type kubeSyncer struct {
 	kubeAPI         kubeAPI
-	converter       converter
+	converter       Converter
 	callbacks       api.SyncerCallbacks
 	OneShot         bool
 	disableNodePoll bool
@@ -617,7 +617,7 @@ func (syn *kubeSyncer) performSnapshot(versions *resourceVersions) (map[string][
 			for _, ns := range nsList.Items {
 				// The Syncer API expects a profile to be broken into its underlying
 				// components - rules, tags, labels.
-				profile, err := syn.converter.namespaceToProfile(&ns)
+				profile, err := syn.converter.NamespaceToProfile(&ns)
 				if err != nil {
 					log.Panicf("%s", err)
 				}
@@ -650,7 +650,7 @@ func (syn *kubeSyncer) performSnapshot(versions *resourceVersions) (map[string][
 
 			versions.networkPolicyVersion = npList.ListMeta.ResourceVersion
 			for _, np := range npList.Items {
-				pol, _ := syn.converter.networkPolicyToPolicy(&np)
+				pol, _ := syn.converter.NetworkPolicyToPolicy(&np)
 				snap[KEY_NP] = append(snap[KEY_NP], *pol)
 				keys[KEY_NP][pol.Key.String()] = true
 			}
@@ -702,7 +702,7 @@ func (syn *kubeSyncer) performSnapshot(versions *resourceVersions) (map[string][
 				}
 
 				// Convert to a workload endpoint.
-				wep, err := syn.converter.podToWorkloadEndpoint(&po)
+				wep, err := syn.converter.PodToWorkloadEndpoint(&po)
 				if err != nil {
 					log.WithError(err).Error("Failed to convert pod to workload endpoint")
 					continue
@@ -865,7 +865,7 @@ func (syn *kubeSyncer) parseNamespaceEvent(e watch.Event) []model.KVPair {
 	}
 
 	// Convert the received Namespace into a profile KVPair.
-	profile, err := syn.converter.namespaceToProfile(ns)
+	profile, err := syn.converter.NamespaceToProfile(ns)
 	if err != nil {
 		log.Panicf("%s", err)
 	}
@@ -964,7 +964,7 @@ func (syn *kubeSyncer) parsePodEvent(e watch.Event) *model.KVPair {
 	}
 
 	// Convert the received Pod into a KVPair.
-	kvp, err := syn.converter.podToWorkloadEndpoint(pod)
+	kvp, err := syn.converter.PodToWorkloadEndpoint(pod)
 	if err != nil {
 		// If we fail to parse, then ignore this update and emit a log.
 		log.WithField("error", err).Error("Failed to parse Pod event")
@@ -991,7 +991,7 @@ func (syn *kubeSyncer) parseNetworkPolicyEvent(e watch.Event) *model.KVPair {
 	}
 
 	// Convert the received NetworkPolicy into a profile KVPair.
-	kvp, err := syn.converter.networkPolicyToPolicy(np)
+	kvp, err := syn.converter.NetworkPolicyToPolicy(np)
 	if err != nil {
 		log.Panicf("%s", err)
 	}

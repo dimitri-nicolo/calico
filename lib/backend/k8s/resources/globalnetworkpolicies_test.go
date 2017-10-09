@@ -70,6 +70,7 @@ var _ = Describe("Global Network Policies conversion methods", func() {
 			}},
 			Selector:   "has(foobar)",
 			DoNotTrack: true,
+			Types:      []string{"ingress", "egress"},
 		},
 		Revision: "rv",
 	}
@@ -96,6 +97,7 @@ var _ = Describe("Global Network Policies conversion methods", func() {
 			}},
 			Selector:   "has(foobar)",
 			DoNotTrack: true,
+			Types:      []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 		},
 	}
 

@@ -31,10 +31,10 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
+	extensions "github.com/projectcalico/libcalico-go/lib/backend/extensions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	k8sapi "k8s.io/client-go/pkg/api/v1"
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
 var (
@@ -146,10 +146,17 @@ func (c cb) ProcessUpdates() {
 	}
 }
 
+var updateTypeStr = map[api.UpdateType]string{
+	api.UpdateTypeKVDeleted: "Deleted",
+	api.UpdateTypeKVNew:     "New",
+	api.UpdateTypeKVUnknown: "Unknown",
+	api.UpdateTypeKVUpdated: "Updated",
+}
+
 func (c cb) ExpectExists(updates []api.Update) {
 	// For each Key, wait for it to exist.
 	for _, update := range updates {
-		log.Infof("[TEST] Expecting key: %s", update.Key)
+		log.Infof("[TEST] Expecting key: %s, %s", update.Key, updateTypeStr[update.UpdateType])
 		matches := false
 
 		wait.PollImmediate(1*time.Second, 60*time.Second, func() (bool, error) {
@@ -162,7 +169,7 @@ func (c cb) ExpectExists(updates []api.Update) {
 			// that the key exists and that it's the correct type.
 			matches = ok && update.UpdateType == u.UpdateType
 
-			log.Infof("[TEST] Key exists? %t matches? %t: %+v", ok, matches, u)
+			log.Infof("[TEST] Key exists? %t matches? %t: %+v %s", ok, matches, u, updateTypeStr[u.UpdateType])
 			if matches {
 				// Expected the update to be present, and it is.
 				return true, nil
@@ -320,12 +327,12 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 
 		By("Performing a Get on the Profile and ensure no error in the Calico API", func() {
-			_, err := c.Get(model.ProfileKey{Name: fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)})
+			_, err := c.Get(model.ProfileKey{Name: fmt.Sprintf("k8s_ns.%s", ns.ObjectMeta.Name)})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		By("Checking the correct entries are in our cache", func() {
-			expectedName := "ns.projectcalico.org/test-syncer-namespace-default-deny"
+			expectedName := "k8s_ns.test-syncer-namespace-default-deny"
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileTagsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
@@ -337,7 +344,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 
 		By("Checking the correct entries are no longer in our cache", func() {
-			expectedName := "ns.projectcalico.org/test-syncer-namespace-default-deny"
+			expectedName := "k8s_ns.test-syncer-namespace-default-deny"
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}}), slowCheck...).Should(BeFalse())
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileTagsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
@@ -377,13 +384,13 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 
 		// Perform a Get and ensure no error in the Calico API.
 		By("getting a Profile", func() {
-			_, err := c.Get(model.ProfileKey{Name: fmt.Sprintf("ns.projectcalico.org/%s", ns.ObjectMeta.Name)})
+			_, err := c.Get(model.ProfileKey{Name: fmt.Sprintf("k8s_ns.%s", ns.ObjectMeta.Name)})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		// Expect corresponding Profile updates over the syncer for this Namespace.
 		By("Checking the correct entries are in our cache", func() {
-			expectedName := "ns.projectcalico.org/test-syncer-namespace-no-default-deny"
+			expectedName := "k8s_ns.test-syncer-namespace-no-default-deny"
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileTagsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeTrue())
@@ -395,7 +402,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 
 		By("Checking the correct entries are in no longer in our cache", func() {
-			expectedName := "ns.projectcalico.org/test-syncer-namespace-no-default-deny"
+			expectedName := "k8s_ns.test-syncer-namespace-no-default-deny"
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileRulesKey{ProfileKey: model.ProfileKey{expectedName}}), slowCheck...).Should(BeFalse())
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileTagsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
 			Eventually(cb.GetSyncerValuePresentFunc(model.ProfileLabelsKey{ProfileKey: model.ProfileKey{expectedName}})).Should(BeFalse())
@@ -429,7 +436,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 				},
 			},
 		}
-		res := c.clientSet.Extensions().RESTClient().
+		res := c.extensionsClientV1Beta1.
 			Post().
 			Resource("networkpolicies").
 			Namespace("default").
@@ -438,7 +445,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 
 		// Make sure we clean up after ourselves.
 		defer func() {
-			res := c.clientSet.Extensions().RESTClient().
+			res := c.extensionsClientV1Beta1.
 				Delete().
 				Resource("networkpolicies").
 				Namespace("default").
@@ -459,12 +466,81 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("should handle a basic NetworkPolicy with egress rules", func() {
+		np := extensions.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-syncer-basic-net-with-egress-policy",
+			},
+			Spec: extensions.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{"label": "value"},
+				},
+				Egress: []extensions.NetworkPolicyEgressRule{
+					{
+						To: []extensions.NetworkPolicyPeer{
+							{
+								IPBlock: &extensions.IPBlock{
+									CIDR:   "192.168.0.0/16",
+									Except: []string{"192.168.3.0/24", "192.168.4.0/24"},
+								},
+							},
+						},
+					},
+				},
+				PolicyTypes: []extensions.PolicyType{extensions.PolicyTypeIngress, extensions.PolicyTypeEgress},
+			},
+		}
+		res := c.extensionsClientV1Beta1.
+			Post().
+			Resource("networkpolicies").
+			Namespace("default").
+			Body(&np).
+			Do()
+
+		// Make sure we clean up after ourselves.
+		defer func() {
+			res := c.extensionsClientV1Beta1.
+				Delete().
+				Resource("networkpolicies").
+				Namespace("default").
+				Name(np.ObjectMeta.Name).
+				Do()
+			Expect(res.Error()).NotTo(HaveOccurred())
+		}()
+
+		// Check to see if the create succeeded.
+		Expect(res.Error()).NotTo(HaveOccurred())
+
+		By("Getting the NetworkPolicy", func() {
+			newNP := extensions.NetworkPolicy{}
+			c.extensionsClientV1Beta1.Get().
+				Resource("networkpolicies").
+				Namespace("default").
+				Name(np.ObjectMeta.Name).Do().
+				Into(&newNP)
+			Expect(len(newNP.Spec.Egress)).To(Equal(1))
+		})
+
+		By("Listing the Calico API policy", func() {
+			// Perform a List and ensure it shows up in the Calico API.
+			_, err := c.List(model.PolicyListOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Perform a Get and ensure no error in the Calico API.
+			p, err := c.Get(model.PolicyKey{Name: fmt.Sprintf("knp.default.default.%s", np.ObjectMeta.Name)})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p).NotTo(BeNil())
+			policy := p.Value.(*model.Policy)
+			Expect(len(policy.OutboundRules)).To(Equal(1))
+		})
+	})
+
 	// Add a defer to wait for policies to clean up.
 	defer func() {
 		log.Warnf("[TEST] Waiting for policies to tear down")
 		It("should clean up all policies", func() {
 			nps := extensions.NetworkPolicyList{}
-			err := c.clientSet.Extensions().RESTClient().
+			err := c.extensionsClientV1Beta1.
 				Get().
 				Resource("networkpolicies").
 				Namespace("default").
@@ -478,7 +554,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 					return
 				}
 				nps := extensions.NetworkPolicyList{}
-				err := c.clientSet.Extensions().RESTClient().
+				err := c.extensionsClientV1Beta1.
 					Get().
 					Resource("networkpolicies").
 					Namespace("default").
@@ -536,6 +612,12 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 
 		By("Checking cache has correct Global Network Policy entries", func() {
+			// The GNP has been roundtripped through conversion to and from an API
+			// Policy object, and in that process the Types field has been defaulted.
+			kvp1a.Value.(*model.Policy).Types = []string{
+				string(capi.PolicyTypeIngress),
+				string(capi.PolicyTypeEgress),
+			}
 			Eventually(cb.GetSyncerValueFunc(kvp1a.Key)).Should(Equal(kvp1a.Value))
 			Eventually(cb.GetSyncerValuePresentFunc(kvp2a.Key)).Should(BeFalse())
 		})
@@ -551,6 +633,12 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		})
 
 		By("Checking cache has correct Global Network Policy entries", func() {
+			// The GNP has been roundtripped through conversion to and from an API
+			// Policy object, and in that process the Types field has been defaulted.
+			kvp1b.Value.(*model.Policy).Types = []string{
+				string(capi.PolicyTypeIngress),
+				string(capi.PolicyTypeEgress),
+			}
 			Eventually(cb.GetSyncerValueFunc(kvp1a.Key)).Should(Equal(kvp1b.Value))
 			Eventually(cb.GetSyncerValuePresentFunc(kvp2a.Key)).Should(BeFalse())
 		})
@@ -1009,9 +1097,9 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			},
 		}
 
-		By("Expecting an update with type 'KVUpdated' on the Syncer API", func() {
+		By("Expecting an update with type 'KVNew' on the Syncer API", func() {
 			cb.ExpectExists([]api.Update{
-				{KVPair: expectedKVP, UpdateType: api.UpdateTypeKVUpdated},
+				{KVPair: expectedKVP, UpdateType: api.UpdateTypeKVNew},
 			})
 		})
 
