@@ -289,8 +289,9 @@ var _ = testutils.E2eDatastoreDescribe("Policy tests", testutils.DatastoreEtcdV2
 
 		// An egress Policy and an ingress Policy.
 		Entry("An egress Policy and an ingress Policy",
-			api.PolicyMetadata{Name: "policy-1/with.foo", Annotations: map[string]string{"key": "value"}},
-			api.PolicyMetadata{Name: "policy.1"},
+			api.TierMetadata{Name: "default"},
+			api.PolicyMetadata{Tier: "default", Name: "policy-1/with.foo", Annotations: map[string]string{"key": "value"}},
+			api.PolicyMetadata{Tier: "default", Name: "policy.1"},
 			egressPolicy,
 			policySpec2,
 			egressPolicyAfterRead,
