@@ -1,70 +1,94 @@
-# Copyright 2016 The Kubernetes Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# The build architecture is select by setting the ARCH variable.
+# For example: When building on ppc64le you could use ARCH=ppc64le make <....>.
+# When ARCH is undefined it defaults to amd64.
+ifdef ARCH
+	ARCHTAG:=-$(ARCH)
+endif
+ARCH?=amd64
+ARCHTAG?=
 
-all: build
+ifeq ($(ARCH),amd64)
+GO_BUILD_VER:=v0.6
+endif
 
-# Some env vars that devs might find useful:
-#  GOFLAGS      : extra "go build" flags to use - e.g. -v   (for verbose)
-#  NO_DOCKER=1  : execute each step natively, not in a Docker container
-#  TEST_DIRS=   : only run the unit tests from the specified dirs
-#  UNIT_TESTS=  : only run the unit tests matching the specified regexp
+ifeq ($(ARCH),ppc64le)
+GO_BUILD_VER:=latest
+endif
+
+GO_BUILD_CONTAINER?=calico/go-build$(ARCHTAG):$(GO_BUILD_VER)
+
+help:
+	@echo "Calico K8sapiserver Makefile"
+	@echo "Builds:"
+	@echo
+	@echo "  make all                  Build all the binary packages."
+	@echo "  make calico/k8sapiserver  Build calico/k8sapiserver docker image."
+	@echo "Maintenance:"
+	@echo
+	@echo "  make clean         Remove binary files."
+# Disable make's implicit rules, which are not useful for golang, and slow down the build
+# considerably.
+.SUFFIXES:
+
+all: calico/k8sapiserver
+
+# Figure out version information.  To support builds from release tarballs, we default to
+# <unknown> if this isn't a git checkout.
+GIT_COMMIT:=$(shell git rev-parse HEAD || echo '<unknown>')
+BUILD_ID:=$(shell git rev-parse HEAD || uuidgen | sed 's/-//g')
+GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
 
 # Define some constants
 #######################
-ROOT           = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 BINDIR        ?= bin
 BUILD_DIR     ?= build
-ARTIFACTS     ?= artifacts
 CAPI_PKG       = github.com/tigera/calico-k8sapiserver
 TOP_SRC_DIRS   = pkg
 SRC_DIRS       = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
                    -exec dirname {} \\; | sort | uniq")
-TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
-                   -exec dirname {} \\; | sort | uniq")
-VERSION       ?= $(shell git describe --always --abbrev=7 --dirty)
 ifeq ($(shell uname -s),Darwin)
 STAT           = stat -f '%c %N'
 else
 STAT           = stat -c '%Y %n'
 endif
-NEWEST_GO_FILE = $(shell find $(SRC_DIRS) -name \*.go -exec $(STAT) {} \; \
+K8SAPISERVER_GO_FILE = $(shell find $(SRC_DIRS) -name \*.go -exec $(STAT) {} \; \
                    | sort -r | head -n 1 | sed "s/.* //")
-TYPES_FILES    = $(shell find pkg/apis -name types.go)
-GO_VERSION     = 1.7.3
+# Figure out the users UID/GID.  These are needed to run docker containers
+# as the current user and ensure that files built inside containers are
+# owned by the current user.
+MY_UID:=$(shell id -u)
+MY_GID:=$(shell id -g)
 
-PLATFORM?=linux
-ARCH?=amd64
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+endif
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
 
-GO_BUILD       = env GOOS=$(PLATFORM) GOARCH=$(ARCH) go build -i $(GOFLAGS) \
-                   -ldflags "-X $(CAPI_PKG)/pkg.VERSION=$(VERSION)"
-BASE_PATH      = $(ROOT:/src/github.com/tigera/calico-k8sapiserver/=)
-export GOPATH  = $(BASE_PATH):$(ROOT)/vendor
+DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
+                   docker run --rm \
+                              --net=host \
+                              $(EXTRA_DOCKER_ARGS) \
+                              -e LOCAL_USER_ID=$(MY_UID) \
+                              -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
+                              -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                              -w /go/src/github.com/tigera/calico-k8sapiserver \
+                              $(GO_BUILD_CONTAINER)
 
-NON_VENDOR_DIRS = $(shell $(DOCKER_CMD) glide nv)
-
-# This section builds the output binaries.
-# Some will have dedicated targets to make it easier to type, for example
-# "apiserver" instead of "bin/apiserver".
-#########################################################################
-build: .generate_files \
-       $(BINDIR)/calico-k8sapiserver
-
-# We'll rebuild apiserver if any go file has changed (ie. NEWEST_GO_FILE)
-$(BINDIR)/calico-k8sapiserver: .generate_files $(NEWEST_GO_FILE)
-	$(GO_BUILD) -o $@ $(CAPI_PKG)/cmd/apiserver
-	cp $(BINDIR)/calico-k8sapiserver $(ARTIFACTS)/simple-image/calico-k8sapiserver
-	docker build -t calico-k8sapiserver:latest $(ARTIFACTS)/simple-image
+# Linker flags for building Felix.
+#
+# We use -X to insert the version information into the placeholder variables
+# in the buildinfo package.
+#
+# We use -B to insert a build ID note into the executable, without which, the
+# RPM build tools complain.
+LDFLAGS:=-ldflags "\
+        -X github.com/tigera/calico-k8sapiserver/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
+        -X github.com/tigera/calico-k8sapiserver/buildinfo.BuildDate=$(DATE) \
+        -X github.com/tigera/calico-k8sapiserver/buildinfo.GitRevision=$(GIT_COMMIT) \
+        -B 0x$(BUILD_ID)"
 
 # This section contains the code generation stuff
 #################################################
@@ -78,25 +102,32 @@ $(BINDIR)/calico-k8sapiserver: .generate_files $(NEWEST_GO_FILE)
 	touch $@
 
 $(BINDIR)/defaulter-gen: 
-	go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/defaulter-gen
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/defaulter-gen'
 
-$(BINDIR)/deepcopy-gen: 
-	go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/deepcopy-gen
+$(BINDIR)/deepcopy-gen:
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/deepcopy-gen'
 
 $(BINDIR)/conversion-gen: 
-	go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/conversion-gen
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/conversion-gen'
 
-$(BINDIR)/client-gen: 
-	go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/client-gen
+$(BINDIR)/client-gen:
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/client-gen'
 
 $(BINDIR)/lister-gen:
-	go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/lister-gen
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/lister-gen'
 
-$(BINDIR)/informer-gen: 
-	go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/informer-gen
+$(BINDIR)/informer-gen:
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/informer-gen'
 
 $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
-	go build -o $@ $(CAPI_PKG)/$^
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -o $@ $(CAPI_PKG)/$^'
 
 # Regenerate all files if the gen exes changed or any "types.go" files changed
 .generate_files: .generate_exes $(TYPES_FILES)
@@ -128,27 +159,29 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 	$(DOCKER_CMD) $(BUILD_DIR)/update-client-gen.sh
 	touch $@
 
-# Some prereq stuff
-###################
+# This section builds the output binaries.
+# Some will have dedicated targets to make it easier to type, for example
+# "apiserver" instead of "$(BINDIR)/apiserver".
+#########################################################################
+$(BINDIR)/calico-k8sapiserver: .generate_files $(K8SAPISERVER_GO_FILES)
+	@echo Building k8sapiserver...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) \
+	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(CAPI_PKG)/cmd/apiserver" && \
+               ( ldd $(BINDIR)/calico-k8sapiserver 2>&1 | grep -q "Not a valid dynamic program" || \
+	             ( echo "Error: $(BINDIR)/calico-k8sapiserver was not statically linked"; false ) )'
 
-.init: $(cBuildImageTarget)
-	touch $@
+# Build the calico/k8sapiserver docker image.
+.PHONY: calico/k8sapiserver
+calico/k8sapiserver: .generate_files \
+    $(BINDIR)/calico-k8sapiserver
+	rm -rf docker-image/bin
+	mkdir -p docker-image/bin
+	cp $(BINDIR)/calico-k8sapiserver docker-image/bin/
+	docker build --pull -t calico/k8sapiserver docker-image
 
-.cBuildImage: artifacts/simple-image/Dockerfile
-	sed "s/GO_VERSION/$(GO_VERSION)/g" < artifacts/simple-image/Dockerfile | \
-	  docker build -t cbuildimage -
-	touch $@
-
-# this target uses the host-local go installation to test 
-test-integration: .init $(cBuildImageTarget) build
-	# golang integration tests
-	test/integration.sh
-
+.PHONY: clean
 clean: clean-bin clean-build-image clean-generated
-clean-bin:
-	rm -rf $(BINDIR)
-	rm -f .generate_exes
-
 clean-build-image:
 	docker rmi -f calico-k8sapiserver > /dev/null 2>&1 || true
 
@@ -157,3 +190,8 @@ clean-generated:
 	find $(TOP_SRC_DIRS) -name zz_generated* -exec rm {} \;
 	# rollback changes to the generated clientset directories
 	# find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
+
+clean-bin:
+	rm -rf $(BINDIR) \
+		   .generate_exes \
+	       docker-image/bin
