@@ -214,6 +214,11 @@ run-etcd: stop-etcd
 stop-etcd:
 	-docker rm -f calico-etcd
 
+.PHONY: fv
+fv: run-etcd
+	$(DOCKER_GO_BUILD) \
+		sh -c 'test/integration.sh'
+
 .PHONY: clean
 clean: clean-bin clean-build-image clean-generated
 clean-build-image:
