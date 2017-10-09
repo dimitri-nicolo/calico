@@ -82,7 +82,6 @@ func TestGroupVersion(t *testing.T) {
 	if !t.Run("group version", rootTestFunc()) {
 		t.Error("test failed")
 	}
-
 }
 
 func testGroupVersion(client calicoclient.Interface) error {
@@ -304,6 +303,11 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
 	}
 	wg.Wait()
+
+	err = policyClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("policy should be deleted (%s)", err)
+	}
 	return nil
 }
 

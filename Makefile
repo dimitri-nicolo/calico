@@ -217,7 +217,7 @@ stop-etcd:
 .PHONY: fv
 fv: run-etcd
 	$(DOCKER_GO_BUILD) \
-		sh -c 'test/integration.sh'
+		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
 
 .PHONY: clean
 clean: clean-bin clean-build-image clean-generated
