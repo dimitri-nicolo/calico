@@ -196,10 +196,23 @@ calico/k8sapiserver: .generate_files \
 	docker build --pull -t calico/k8sapiserver docker-image
 
 .PHONY: ut
-ut:
+ut: run-etcd
 	$(DOCKER_GO_BUILD) \
 		sh -c 'go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(CAPI_PKG)/,$(TEST_DIRS))'
+
+## Run etcd as a container (calico-etcd)
+run-etcd: stop-etcd
+	docker run --detach \
+	--net=host \
+	--entrypoint=/usr/local/bin/etcd \
+	--name calico-etcd quay.io/coreos/etcd:v3.1.7 \
+	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
+	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
+
+## Stop the etcd container (calico-etcd)
+stop-etcd:
+	-docker rm -f calico-etcd
 
 .PHONY: clean
 clean: clean-bin clean-build-image clean-generated
