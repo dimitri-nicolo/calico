@@ -17,8 +17,10 @@ spec:
       serviceAccountName: apiserver
       containers:
       - name: calico-server
-        image: calico-k8sapiserver:latest
+        image: calico/k8sapiserver:latest
         imagePullPolicy: Never
+        args:
+        - "--etcd-servers=http://10.96.232.136:6666"
         env:
           - name: ETCD_ENDPOINTS
             value: "http://10.96.232.136:6666"

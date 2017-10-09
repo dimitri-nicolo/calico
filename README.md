@@ -16,7 +16,7 @@ Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
 3. sudo cp /etc/kubernetes/admin.conf $HOME/
    sudo chown $(id -u):$(id -g) $HOME/admin.conf
    export KUBECONFIG=$HOME/admin.conf
-4. kubectl apply -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+4. kubectl apply -f artifacts/misc/calico.yaml (this one has calico bringing up etcd 3.x backend)
 5. kubectl taint nodes --all node-role.kubernetes.io/master-
 6. kubectl create namespace calico
 7. kubectl create -f artifacts/example/ <-- The set of manifests necessary to install Aggregated API Server
@@ -90,7 +90,7 @@ The API Server command/flags used for running can be found under /etc/kubernetes
 
 ## API Examples
 ```
-Follows native Kubernetes REST semantics.
+Follows native Kubernetes REST semantics. (NOTE: Transformation WIP from v1->v2)
 
 1. Listing Tiers: https://10.0.2.15:6443/apis/projectcalico.org/v1/tiers
 2. Getting a Tier: https://10.0.2.15:6443/apis/projectcalico.org/v1/tiers/Tier1
