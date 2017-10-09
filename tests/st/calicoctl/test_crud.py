@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Tigera, Inc. All rights reserved.
+# Copyright (c) 2015-2017 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -163,7 +163,9 @@ class TestCreateFromFile(TestBase):
                                                    "type=='application'",
                                                'tag': 'footag'}}],
                               'order': 100,
-                              'selector': "type=='database'"}}),
+                              'selector': "type=='database'",
+                              'types': ['ingress', 'egress']}
+        }),
         ("policy2", {'apiVersion': 'v1',
                      'kind': 'policy',
                      'metadata': {'name': 'policy2', 'tier': 'admin'},
@@ -177,7 +179,9 @@ class TestCreateFromFile(TestBase):
                                            'source': {}}],
                               'order': 100000,
                               'selector': "",
-                              'doNotTrack': True}}),
+                              'doNotTrack': True,
+                              'types': ['ingress', 'egress']}
+        }),
         ("pool1", {'apiVersion': 'v1',
                    'kind': 'ipPool',
                    'metadata': {'cidr': "10.0.1.0/24"},
@@ -418,7 +422,8 @@ class TestCreateFromFile(TestBase):
                                            'selector': "type=='application'",
                                            'tag': 'footag'}}],
                    'order': 100,
-                   'selector': "type=='database'"}},
+                   'selector': "type=='database'",
+                   'types': ['ingress', 'egress']}},
          {'apiVersion': 'v1',
           'kind': 'policy',
           'metadata': {'name': 'policy2', 'tier': 'admin'},
@@ -431,7 +436,8 @@ class TestCreateFromFile(TestBase):
                                 'protocol': 'udp',
                                 'source': {}}],
                    'order': 100000,
-                   'selector': ""}},
+                   'selector': "",
+                   'types': ['ingress', 'egress']}},
          ),
         ("ipPool",
          {'apiVersion': 'v1',
@@ -605,7 +611,8 @@ class TestCreateFromFile(TestBase):
                                     'ports': [1, 2, 3, 4],
                                     'tag': 'web'}}],
                    'order': 6543215.5,
-                   'selector': ''}},
+                   'selector': '',
+                   'types': ['ingress', 'egress']}},
          {'apiVersion': 'v1',
           'kind': 'policy',
           'metadata': {'name': 'policy1', 'tier': 'admin'},
@@ -628,7 +635,8 @@ class TestCreateFromFile(TestBase):
                                     'ports': [1, 2, 3, 4],
                                     'tag': 'web'}}],
                    'order': 100000,
-                   'selector': ""}},
+                   'selector': "",
+                   'types': ['ingress', 'egress']}},
          ),
         #  https://github.com/projectcalico/libcalico-go/issues/230
         ("policy",
@@ -654,7 +662,8 @@ class TestCreateFromFile(TestBase):
                                      'ports': [1, 2, 3, 4],
                                      'tag': 'web'}}],
                     'order': 6543215.321,
-                    'selector': ''}},
+                    'selector': '',
+                    'types': ['ingress', 'egress']}},
           {'apiVersion': 'v1',
            'kind': 'policy',
            'metadata': {'name': 'policy1', 'tier': 'admin'},
@@ -677,7 +686,8 @@ class TestCreateFromFile(TestBase):
                                      'ports': [1, 2, 3, 4],
                                      'tag': 'web'}}],
                     'order': 100000,
-                    'selector': ""}},
+                    'selector': "",
+                    'types': ['ingress', 'egress']}},
         ),
         ("ipPool",
          {'apiVersion': 'v1',
@@ -983,6 +993,21 @@ class InvalidData(TestBase):
                                              'source': {}}],
                                 'order': 100000,
                                 'selector': ""}}),
+                   ("policy-NetworkPolicyNameRejected", {
+                       'apiVersion': 'v1',
+                       'kind': 'policy',
+                       'metadata': {'name': 'knp.default.rejectmeplease'},
+                       'spec': {'egress': [{'action': 'allow',
+                                            'destination': {},
+                                            'protocol': 'tcp',
+                                            'source': {},
+                                            }],
+                                'ingress': [{'action': 'allow',
+                                             'destination': {},
+                                             'protocol': 'udp',
+                                             'source': {}}],
+                                'order': 100000,
+                                'selector': ""}}),
                    ("pool-invalidNet1", {'apiVersion': 'v1',
                                          'kind': 'ipPool',
                                          'metadata': {'cidr': "10.0.1.0/33"},  # impossible mask
@@ -1127,3 +1152,149 @@ class InvalidData(TestBase):
 
         # Cover the case where no data got stored, but calicoctl didn't fail:
         assert commanderror is True, "Failed - calicoctl did not fail to add invalid config"
+
+class TestTypes(TestBase):
+    """
+    Test calicoctl types field. Confirm that for a policy with:
+    1) both ingress and egress rules, the types:ingress,egress
+       field is appended.
+    2) neither an ingress rule nor an egress rule, the
+       types:ingress field is appended.
+    3) only an ingress rule, the types:ingress field is appended.
+    4) only an egress rule, the types:egress field is appended.
+    """
+    def test_types_both_egress_and_ingress(self):
+        """
+        Test that a simple policy with both ingress and egress
+        rules will have the types:ingress,egress field appended.
+        """
+        # Set up simple ingress/egress policy
+        policy1_dict = {'apiVersion': 'v1',
+                        'kind': 'policy',
+                        'metadata': {'name': 'policy1'},
+                        'spec': {
+                            'egress': [{
+                                'action': 'deny',
+                                'destination': {},
+                                'source': {},
+                            }],
+                            'ingress': [{
+                                'action': 'allow',
+                                'destination': {},
+                                'source': {},
+                            }],
+                            'selector': "type=='application'"
+                        }
+        }
+        self.writeyaml('/tmp/policy1.yaml', policy1_dict)
+
+        # append types: 'ingress', 'egress'
+        policy1_types_dict = policy1_dict
+        policy1_types_dict['spec'].update({'types': ['ingress', 'egress']})
+
+        # Create the policy using calicoctl
+        calicoctl("create -f /tmp/policy1.yaml")
+
+        # Now read it out (yaml format) with calicoctl and verify it matches:
+        self.check_data_in_datastore([policy1_types_dict], "policy")
+
+        # Remove policy1
+        calicoctl("delete -f /tmp/policy1.yaml")
+
+    def test_types_no_ingress_or_egress(self):
+        """
+        Test that a simple policy with neither an ingress nor an
+        egress rule will have the types:ingress field appended.
+        """
+        # Set up simple policy without ingress or egress rules
+        policy2_dict = {'apiVersion': 'v1',
+                        'kind': 'policy',
+                        'metadata': {'name': 'policy2'},
+                        'spec': {
+                            'selector': "type=='application'"
+                        }
+        }
+
+        self.writeyaml('/tmp/policy2.yaml', policy2_dict)
+
+        # Create the policy using calicoctl
+        calicoctl("create -f /tmp/policy2.yaml")
+
+        # append types: 'ingress'
+        policy2_types_dict = policy2_dict
+        policy2_types_dict['spec'].update({'types': ['ingress']})
+
+        # Now read it out (yaml format) with calicoctl and verify it matches:
+        self.check_data_in_datastore([policy2_types_dict], "policy")
+
+        # Remove policy2
+        calicoctl("delete -f /tmp/policy2.yaml")
+
+    def test_types_ingress_only(self):
+        """
+        Test that a simple policy with only an ingress
+        rule will have the types:ingress field appended.
+        """
+        # Set up simple ingress-only policy
+        policy2_dict = {'apiVersion': 'v1',
+                        'kind': 'policy',
+                        'metadata': {'name': 'policy2'},
+                        'spec': {
+                            'ingress': [{
+                                'action': 'allow',
+                                'destination': {},
+                                'source': {},
+                            }],
+                            'selector': "type=='application'"
+                        }
+        }
+
+        self.writeyaml('/tmp/policy2.yaml', policy2_dict)
+
+        # Create the policy using calicoctl
+        calicoctl("create -f /tmp/policy2.yaml")
+
+        # append types: 'ingress'
+        policy2_types_dict = policy2_dict
+        policy2_types_dict['spec'].update({'types': ['ingress']})
+
+        # Now read it out (yaml format) with calicoctl and verify it matches:
+        self.check_data_in_datastore([policy2_types_dict], "policy")
+
+        # Remove policy2
+        calicoctl("delete -f /tmp/policy2.yaml")
+
+    def test_types_egress_only(self):
+        """
+        Test that a simple policy with only an egress
+        rule will have the types:egress field appended.
+        """
+        # Set up simple egress-only policy
+        policy2_dict = {'apiVersion': 'v1',
+                        'kind': 'policy',
+                        'metadata': {'name': 'policy2'},
+                        'spec': {
+                            'egress': [{
+                                'action': 'allow',
+                                'destination': {},
+                                'source': {},
+                            }],
+                            'selector': "type=='application'"
+                        }
+        }
+
+        self.writeyaml('/tmp/policy2.yaml', policy2_dict)
+
+        # Create the policy using calicoctl
+        calicoctl("create -f /tmp/policy2.yaml")
+
+        # append types: 'egress'
+        policy2_types_dict = policy2_dict
+        policy2_types_dict['spec'].update({'types': ['egress']})
+
+        # Now read it out (yaml format) with calicoctl and verify it matches:
+        self.check_data_in_datastore([policy2_types_dict], "policy")
+
+        # Remove policy2
+        calicoctl("delete -f /tmp/policy2.yaml")
+
