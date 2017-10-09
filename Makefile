@@ -23,6 +23,10 @@ help:
 	@echo
 	@echo "  make all                  Build all the binary packages."
 	@echo "  make calico/k8sapiserver  Build calico/k8sapiserver docker image."
+	@echo
+	@echo "Tests:"
+	@echo
+	@echo "  make test                Run Tests."
 	@echo "Maintenance:"
 	@echo
 	@echo "  make clean         Remove binary files."
@@ -31,6 +35,11 @@ help:
 .SUFFIXES:
 
 all: calico/k8sapiserver
+test: ut fv
+
+# Some env vars that devs might find useful:
+#  TEST_DIRS=   : only run the unit tests from the specified dirs
+#  UNIT_TESTS=  : only run the unit tests matching the specified regexp
 
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
@@ -46,6 +55,8 @@ CAPI_PKG       = github.com/tigera/calico-k8sapiserver
 TOP_SRC_DIRS   = pkg
 SRC_DIRS       = $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*.go \
                    -exec dirname {} \\; | sort | uniq")
+TEST_DIRS     ?= $(shell sh -c "find $(TOP_SRC_DIRS) -name \\*_test.go \
+                   -exec dirname {} \\; | sort | uniq")
 ifeq ($(shell uname -s),Darwin)
 STAT           = stat -f '%c %N'
 else
@@ -53,6 +64,10 @@ STAT           = stat -c '%Y %n'
 endif
 K8SAPISERVER_GO_FILE = $(shell find $(SRC_DIRS) -name \*.go -exec $(STAT) {} \; \
                    | sort -r | head -n 1 | sed "s/.* //")
+ifdef UNIT_TESTS
+	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
+endif
+
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
 # owned by the current user.
@@ -179,6 +194,12 @@ calico/k8sapiserver: .generate_files \
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-k8sapiserver docker-image/bin/
 	docker build --pull -t calico/k8sapiserver docker-image
+
+.PHONY: ut
+ut:
+	$(DOCKER_GO_BUILD) \
+		sh -c 'go test $(UNIT_TEST_FLAGS) \
+			$(addprefix $(CAPI_PKG)/,$(TEST_DIRS))'
 
 .PHONY: clean
 clean: clean-bin clean-build-image clean-generated
