@@ -1,6 +1,5 @@
 ---
 title: 'Calico BIRD Route Reflector container'
-redirect_from: latest/usage/routereflector/calico-routereflector
 ---
 
 For many Calico deployments, the use of a Route Reflector is not required.
@@ -324,5 +323,5 @@ Rack model:
 -  Each node (server in the rack) peers with a redundant set of route
    reflectors specific to that rack.
 -  All of the ToR route reflectors form a full mesh with each other.
-
+   
 ![Example scale topology](mesh-topology.png)
