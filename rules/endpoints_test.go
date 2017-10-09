@@ -162,8 +162,8 @@ var _ = Describe("Endpoints", func() {
 		var endpoint = proto.WorkloadEndpoint{
 			Name: "cali1234",
 			Tiers: []*proto.TierInfo{
-				{Name: "tier1", Policies: []string{"a", "b"}},
-				{Name: "tier2", Policies: []string{"c", "d"}},
+				{Name: "tier1", IngressPolicies: []string{"ai", "bi"}, EgressPolicies: []string{"ae", "be"}},
+				{Name: "tier2", IngressPolicies: []string{"ci", "di"}, EgressPolicies: []string{"ce", "de"}},
 			},
 			ProfileIds: []string{"prof1", "prof2"},
 		}
@@ -182,12 +182,12 @@ var _ = Describe("Endpoints", func() {
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-pi-tier1/a"}},
+						Action: JumpAction{Target: "cali-pi-tier1/ai"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-pi-tier1/b"}},
+						Action: JumpAction{Target: "cali-pi-tier1/bi"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
@@ -202,12 +202,12 @@ var _ = Describe("Endpoints", func() {
 					{Comment: "Start of tier tier2",
 						Action: ClearMarkAction{Mark: 0x10}},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-pi-tier2/c"}},
+						Action: JumpAction{Target: "cali-pi-tier2/ci"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-pi-tier2/d"}},
+						Action: JumpAction{Target: "cali-pi-tier2/di"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
@@ -249,12 +249,12 @@ var _ = Describe("Endpoints", func() {
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-po-tier1/a"}},
+						Action: JumpAction{Target: "cali-po-tier1/ae"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-po-tier1/b"}},
+						Action: JumpAction{Target: "cali-po-tier1/be"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
@@ -269,12 +269,12 @@ var _ = Describe("Endpoints", func() {
 					{Comment: "Start of tier tier2",
 						Action: ClearMarkAction{Mark: 0x10}},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-po-tier2/c"}},
+						Action: JumpAction{Target: "cali-po-tier2/ce"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-po-tier2/d"}},
+						Action: JumpAction{Target: "cali-po-tier2/de"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
@@ -307,7 +307,7 @@ var _ = Describe("Endpoints", func() {
 
 	It("should render a host endpoint", func() {
 		var tiers = []*proto.TierInfo{
-			{Name: "tier1", Policies: []string{"a", "b"}},
+			{Name: "tier1", IngressPolicies: []string{"ai", "bi"}, EgressPolicies: []string{"ae", "be"}},
 		}
 		Expect(renderer.HostEndpointToFilterChains("eth0", tiers, []string{"prof1", "prof2"})).To(Equal([]*Chain{
 			{
@@ -327,12 +327,12 @@ var _ = Describe("Endpoints", func() {
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-po-tier1/a"}},
+						Action: JumpAction{Target: "cali-po-tier1/ae"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-po-tier1/b"}},
+						Action: JumpAction{Target: "cali-po-tier1/be"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
@@ -377,12 +377,12 @@ var _ = Describe("Endpoints", func() {
 					{Comment: "Start of tier tier1",
 						Action: ClearMarkAction{Mark: 0x10}},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-pi-tier1/a"}},
+						Action: JumpAction{Target: "cali-pi-tier1/ai"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
 					{Match: Match().MarkClear(0x10),
-						Action: JumpAction{Target: "cali-pi-tier1/b"}},
+						Action: JumpAction{Target: "cali-pi-tier1/bi"}},
 					{Match: Match().MarkSet(0x8),
 						Action:  ReturnAction{},
 						Comment: "Return if policy accepted"},
@@ -415,7 +415,7 @@ var _ = Describe("Endpoints", func() {
 
 	It("should render host endpoint raw chains with untracked policies", func() {
 		var untrackedTiers = []*proto.TierInfo{
-			{Name: "tier1", Policies: []string{"c"}},
+			{Name: "tier1", IngressPolicies: []string{"c"}, EgressPolicies: []string{"c"}},
 		}
 		Expect(renderer.HostEndpointToRawChains("eth0", untrackedTiers)).To(Equal([]*Chain{
 			{

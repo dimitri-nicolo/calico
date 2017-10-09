@@ -65,7 +65,7 @@ var localEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 ).withEndpoint(
 	localWlEp1Id,
 	[]tierInfo{
-		{"tier-1", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("ep1 local, policy")
 
@@ -90,7 +90,7 @@ var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 ).withEndpoint(
 	hostEpWithNameId,
 	[]tierInfo{
-		{"tier-1", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("host ep1, policy")
 
@@ -109,7 +109,7 @@ var hostEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 ).withEndpoint(
 	hostEpNoNameId,
 	[]tierInfo{
-		{"tier-1", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("host ep2, policy")
 
@@ -165,7 +165,7 @@ func commercialPolicyOrderState(policyOrders [3]float64, expectedOrder [3]string
 	).withEndpoint(
 		localWlEp1Id,
 		[]tierInfo{
-			{"tier-1", expectedOrder[:]},
+			{"tier-1", expectedOrder[:], expectedOrder[:]},
 		},
 	).withName(fmt.Sprintf("ep1 local, 1 tier, policies %v", expectedOrder[:]))
 	return state
@@ -227,9 +227,9 @@ func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
 	).withEndpoint(
 		localWlEp1Id,
 		[]tierInfo{
-			{expectedOrder[0], []string{expectedOrder[0] + "-pol"}},
-			{expectedOrder[1], []string{expectedOrder[1] + "-pol"}},
-			{expectedOrder[2], []string{expectedOrder[2] + "-pol"}},
+			{expectedOrder[0], []string{expectedOrder[0] + "-pol"}, []string{expectedOrder[0] + "-pol"}},
+			{expectedOrder[1], []string{expectedOrder[1] + "-pol"}, []string{expectedOrder[1] + "-pol"}},
+			{expectedOrder[2], []string{expectedOrder[2] + "-pol"}, []string{expectedOrder[2] + "-pol"}},
 		},
 	).withName(fmt.Sprintf("tier-order-state%v", expectedOrder[:]))
 	return state
@@ -254,7 +254,7 @@ var localEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 ).withEndpoint(
 	localWlEp2Id,
 	[]tierInfo{
-		{"tier-1", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("ep2 local, policy")
 
@@ -287,12 +287,12 @@ var localEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 ).withEndpoint(
 	localWlEp1Id,
 	[]tierInfo{
-		{"tier-1", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withEndpoint(
 	localWlEp2Id,
 	[]tierInfo{
-		{"tier-1", []string{"pol-1"}},
+		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("2 local, overlapping IPs & a policy")
 

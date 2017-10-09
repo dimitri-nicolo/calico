@@ -122,12 +122,16 @@ type Config struct {
 	IptablesLockTimeout            time.Duration
 	IptablesLockProbeInterval      time.Duration
 
+	NetlinkTimeout time.Duration
+
 	RulesConfig rules.Config
 
 	StatusReportingInterval time.Duration
 
 	PostInSyncCallback func()
 	HealthAggregator   *health.HealthAggregator
+
+	DebugSimulateDataplaneHangAfter time.Duration
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -206,6 +210,8 @@ type InternalDataplane struct {
 	applyThrottle *throttle.Throttle
 
 	config Config
+
+	debugHangC <-chan time.Time
 }
 
 const (
@@ -297,7 +303,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV4)
 	dp.ipSets = append(dp.ipSets, ipSetsV4)
 
-	routeTableV4 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 4)
+	routeTableV4 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 4, config.NetlinkTimeout)
 	dp.routeTables = append(dp.routeTables, routeTableV4)
 
 	dp.endpointStatusCombiner = newEndpointStatusCombiner(dp.fromDataplane, config.IPv6Enabled)
@@ -360,7 +366,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		dp.iptablesMangleTables = append(dp.iptablesMangleTables, mangleTableV6)
 		dp.iptablesFilterTables = append(dp.iptablesFilterTables, filterTableV6)
 
-		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6)
+		routeTableV6 := routetable.New(config.RulesConfig.WorkloadIfacePrefixes, 6, config.NetlinkTimeout)
 		dp.routeTables = append(dp.routeTables, routeTableV6)
 
 		dp.RegisterManager(newIPSetsManager(ipSetsV6, config.MaxIPSetSize))
@@ -391,7 +397,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		dp.allIptablesTables = append(dp.allIptablesTables, t)
 	}
 
-	// Register that we will report a liveness indicator.
+	// Register that we will report liveness and readiness.
 	if config.HealthAggregator != nil {
 		log.Info("Registering to report health.")
 		config.HealthAggregator.RegisterReporter(
@@ -399,6 +405,12 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 			&health.HealthReport{Live: true, Ready: true},
 			healthInterval*2,
 		)
+	}
+
+	if config.DebugSimulateDataplaneHangAfter != 0 {
+		log.WithField("delay", config.DebugSimulateDataplaneHangAfter).Warn(
+			"Simulating a dataplane hang.")
+		dp.debugHangC = time.After(config.DebugSimulateDataplaneHangAfter)
 	}
 
 	return dp
@@ -716,6 +728,10 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		case <-healthTicks:
 			d.reportHealth()
 		case <-retryTicker.C:
+		case <-d.debugHangC:
+			log.Warning("Debug hang simulation timer popped, hanging the dataplane!!")
+			time.Sleep(1 * time.Hour)
+			log.Panic("Woke up after 1 hour, something's probably wrong with the test.")
 		}
 
 		if datastoreInSync && d.dataplaneNeedsSync {
@@ -751,6 +767,7 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 						d.config.PostInSyncCallback()
 					}
 				}
+				d.reportHealth()
 			} else {
 				if !beingThrottled {
 					log.Info("Dataplane updates throttled")

@@ -24,6 +24,11 @@ import (
 	"github.com/projectcalico/felix/proto"
 )
 
+const (
+	ingressPolicy = "ingress"
+	egressPolicy  = "egress"
+)
+
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 	ifaceName string,
 	adminUp bool,
@@ -44,6 +49,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			adminUp,
 			uint16(1),
 			"inbound",
+			ingressPolicy,
 		),
 		// Chain for traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -58,6 +64,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			adminUp,
 			uint16(2),
 			"outbound",
+			egressPolicy,
 		),
 	}
 }
@@ -82,6 +89,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			true, // Host endpoints are always admin up.
 			uint16(1),
 			"inbound",
+			egressPolicy,
 		),
 		// Chain for traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -96,6 +104,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			true, // Host endpoints are always admin up.
 			uint16(2),
 			"outbound",
+			ingressPolicy,
 		),
 	}
 }
@@ -119,6 +128,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			true, // Host endpoints are always admin up.
 			uint16(1),
 			"inbound",
+			egressPolicy,
 		),
 		// Chain for traffic _from_ the endpoint.
 		r.endpointIptablesChain(
@@ -133,6 +143,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			true, // Host endpoints are always admin up.
 			uint16(2),
 			"outbound",
+			ingressPolicy,
 		),
 	}
 }
@@ -157,6 +168,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleChains(
 			true, // Host endpoints are always admin up.
 			uint16(1),
 			"inbound",
+			ingressPolicy,
 		),
 	}
 }
@@ -181,6 +193,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	adminUp bool,
 	nflogGroup uint16,
 	directionSuffix string,
+	policyType string,
 ) *Chain {
 	rules := []Rule{}
 	chainName := EndpointChainName(endpointPrefix, name)
@@ -216,60 +229,68 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	})
 
 	for _, tier := range tiers {
-		// Clear the "pass" mark.  If a policy sets that mark, we'll skip the rest of the policies and
-		// continue processing the profiles, if there are any.
-		rules = append(rules, Rule{
-			Comment: "Start of tier " + tier.Name,
-			Action: ClearMarkAction{
-				Mark: r.IptablesMarkPass,
-			},
-		})
-
-		// Then, jump to each policy in turn.
-		for _, polID := range tier.Policies {
-			polChainName := PolicyChainName(
-				policyPrefix,
-				&proto.PolicyID{Tier: tier.Name, Name: polID},
-			)
-			// If a previous policy didn't set the "pass" mark, jump to the policy.
-			rules = append(rules, Rule{
-				Match:  Match().MarkClear(r.IptablesMarkPass),
-				Action: JumpAction{Target: polChainName},
-			})
-			// If policy marked packet as accepted, it returns, setting the accept
-			// mark bit.
-			if chainType == chainTypeUntracked {
-				// For an untracked policy, map allow to "NOTRACK and ALLOW".
-				rules = append(rules, Rule{
-					Match:  Match().MarkSet(r.IptablesMarkAccept),
-					Action: NoTrackAction{},
-				})
-			}
-			// If accept bit is set, return from this chain.  We don't immediately
-			// accept because there may be other policy still to apply.
-			rules = append(rules, Rule{
-				Match:   Match().MarkSet(r.IptablesMarkAccept),
-				Action:  ReturnAction{},
-				Comment: "Return if policy accepted",
-			})
+		var policies []string
+		if policyType == ingressPolicy {
+			policies = tier.IngressPolicies
+		} else {
+			policies = tier.EgressPolicies
 		}
-
-		if chainType == chainTypeNormal {
-			// When rendering normal rules, if no policy marked the packet as "pass", drop the
-			// packet.
-			//
-			// For untracked and pre-DNAT rules, we don't do that because there may be
-			// normal rules still to be applied to the packet in the filter table.
+		if len(policies) > 0 {
+			// Clear the "pass" mark.  If a policy sets that mark, we'll skip the rest of the policies and
+			// continue processing the profiles, if there are any.
 			rules = append(rules, Rule{
-				Match: Match().MarkClear(r.IptablesMarkPass),
-				Action: NflogAction{
-					Group:  nflogGroup,
-					Prefix: fmt.Sprintf("D/0/no-policy-match-%s/%s", directionSuffix, tier.Name),
+				Comment: "Start of tier " + tier.Name,
+				Action: ClearMarkAction{
+					Mark: r.IptablesMarkPass,
 				},
 			})
-			rules = append(rules, r.DropRules(
-				Match().MarkClear(r.IptablesMarkPass),
-				"Drop if no policies passed packet")...)
+
+			// Then, jump to each policy in turn.
+			for _, polID := range policies {
+				polChainName := PolicyChainName(
+					policyPrefix,
+					&proto.PolicyID{Tier: tier.Name, Name: polID},
+				)
+				// If a previous policy didn't set the "pass" mark, jump to the policy.
+				rules = append(rules, Rule{
+					Match:  Match().MarkClear(r.IptablesMarkPass),
+					Action: JumpAction{Target: polChainName},
+				})
+				// If policy marked packet as accepted, it returns, setting the accept
+				// mark bit.
+				if chainType == chainTypeUntracked {
+					// For an untracked policy, map allow to "NOTRACK and ALLOW".
+					rules = append(rules, Rule{
+						Match:  Match().MarkSet(r.IptablesMarkAccept),
+						Action: NoTrackAction{},
+					})
+				}
+				// If accept bit is set, return from this chain.  We don't immediately
+				// accept because there may be other policy still to apply.
+				rules = append(rules, Rule{
+					Match:   Match().MarkSet(r.IptablesMarkAccept),
+					Action:  ReturnAction{},
+					Comment: "Return if policy accepted",
+				})
+			}
+
+			if chainType == chainTypeNormal {
+				// When rendering normal rules, if no policy marked the packet as "pass", drop the
+				// packet.
+				//
+				// For untracked and pre-DNAT rules, we don't do that because there may be
+				// normal rules still to be applied to the packet in the filter table.
+				rules = append(rules, Rule{
+					Match: Match().MarkClear(r.IptablesMarkPass),
+					Action: NflogAction{
+						Group:  nflogGroup,
+						Prefix: fmt.Sprintf("D/0/no-policy-match-%s/%s", directionSuffix, tier.Name),
+					},
+				})
+				rules = append(rules, r.DropRules(
+					Match().MarkClear(r.IptablesMarkPass),
+					"Drop if no policies passed packet")...)
+			}
 		}
 	}
 
