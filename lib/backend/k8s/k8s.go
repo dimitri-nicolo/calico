@@ -40,7 +40,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientapi "k8s.io/client-go/pkg/api"
 	"k8s.io/client-go/pkg/api/v1"
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	extensions "github.com/projectcalico/libcalico-go/lib/backend/extensions"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -52,11 +52,14 @@ type KubeClient struct {
 	// Client for interacting with CustomResourceDefinition.
 	crdClientV1 *rest.RESTClient
 
+	// Client for interacting with NetworkingPolicy
+	extensionsClientV1Beta1 *rest.RESTClient
+
 	disableNodePoll bool
 
 	// Contains methods for converting Kubernetes resources to
 	// Calico resources.
-	converter converter
+	converter Converter
 
 	// Clients for interacting with Calico resources.
 	globalBgpPeerClient     resources.K8sResourceClient
@@ -123,10 +126,16 @@ func NewKubeClient(kc *capi.KubeConfig) (*KubeClient, error) {
 		return nil, fmt.Errorf("Failed to build V1 CRD client: %s", err)
 	}
 
+	extensionsClientV1, err := BuildExtensionsClientV1(*config)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to build V1 Extensions client: %s", err)
+	}
+
 	kubeClient := &KubeClient{
-		clientSet:       cs,
-		crdClientV1:     crdClientV1,
-		disableNodePoll: kc.K8sDisableNodePoll,
+		clientSet:               cs,
+		crdClientV1:             crdClientV1,
+		extensionsClientV1Beta1: extensionsClientV1,
+		disableNodePoll:         kc.K8sDisableNodePoll,
 	}
 
 	// Create the Calico sub-clients.
@@ -249,6 +258,47 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 	return cli, nil
 }
 
+// BuildExtensionsClientV1 builds a RESTClient configured to interact with
+// K8s.io extensions/NetworkPolicy
+func BuildExtensionsClientV1(cfg rest.Config) (*rest.RESTClient, error) {
+	// Generate config using the base config.
+	cfg.GroupVersion = &schema.GroupVersion{
+		Group:   "extensions",
+		Version: "v1beta1",
+	}
+	cfg.APIPath = "/apis"
+	cfg.ContentType = runtime.ContentTypeJSON
+	cfg.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: clientapi.Codecs}
+
+	cli, err := rest.RESTClientFor(&cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove the client-go type for NetworkPolicy since we want to
+	// register our own to get new API features.
+	akt := clientapi.Scheme.AllKnownTypes()
+	gvk := schema.GroupVersionKind{
+		Group:   "extensions",
+		Version: "v1beta1",
+		Kind:    "NetworkPolicy",
+	}
+	delete(akt, gvk)
+
+	// Register our resource.
+	schemeBuilder := runtime.NewSchemeBuilder(
+		func(scheme *runtime.Scheme) error {
+			scheme.AddKnownTypes(
+				*cfg.GroupVersion,
+				&extensions.NetworkPolicy{},
+			)
+			return nil
+		})
+	schemeBuilder.AddToScheme(clientapi.Scheme)
+
+	return cli, nil
+}
+
 func (c *KubeClient) Syncer(callbacks api.SyncerCallbacks) api.Syncer {
 	return newSyncer(&realKubeAPI{c}, c.converter, callbacks, c.disableNodePoll)
 }
@@ -257,6 +307,8 @@ func (c *KubeClient) Syncer(callbacks api.SyncerCallbacks) api.Syncer {
 func (c *KubeClient) Create(d *model.KVPair) (*model.KVPair, error) {
 	log.Debugf("Performing 'Create' for %+v", d)
 	switch d.Key.(type) {
+	case model.PolicyKey:
+		return c.gnpClient.Create(d)
 	case model.GlobalConfigKey:
 		return c.globalFelixConfigClient.Create(d)
 	case model.IPPoolKey:
@@ -285,6 +337,8 @@ func (c *KubeClient) Create(d *model.KVPair) (*model.KVPair, error) {
 func (c *KubeClient) Update(d *model.KVPair) (*model.KVPair, error) {
 	log.Debugf("Performing 'Update' for %+v", d)
 	switch d.Key.(type) {
+	case model.PolicyKey:
+		return c.gnpClient.Update(d)
 	case model.GlobalConfigKey:
 		return c.globalFelixConfigClient.Update(d)
 	case model.IPPoolKey:
@@ -315,6 +369,8 @@ func (c *KubeClient) Apply(d *model.KVPair) (*model.KVPair, error) {
 	switch d.Key.(type) {
 	case model.WorkloadEndpointKey:
 		return c.applyWorkloadEndpoint(d)
+	case model.PolicyKey:
+		return c.gnpClient.Apply(d)
 	case model.GlobalConfigKey:
 		return c.globalFelixConfigClient.Apply(d)
 	case model.IPPoolKey:
@@ -344,10 +400,12 @@ func (c *KubeClient) Apply(d *model.KVPair) (*model.KVPair, error) {
 	}
 }
 
-// Delete an entry in the datastore. This is a no-op when using the k8s backend.
+// Delete an entry in the datastore. Returns an error if the entry does not exist.
 func (c *KubeClient) Delete(d *model.KVPair) error {
 	log.Debugf("Performing 'Delete' for %+v", d)
 	switch d.Key.(type) {
+	case model.PolicyKey:
+		return c.gnpClient.Delete(d)
 	case model.GlobalConfigKey:
 		return c.globalFelixConfigClient.Delete(d)
 	case model.IPPoolKey:
@@ -467,7 +525,7 @@ func (c *KubeClient) listProfiles(l model.ProfileListOptions) ([]*model.KVPair, 
 	// For each Namespace, return a profile.
 	ret := []*model.KVPair{}
 	for _, ns := range namespaces.Items {
-		kvp, err := c.converter.namespaceToProfile(&ns)
+		kvp, err := c.converter.NamespaceToProfile(&ns)
 		if err != nil {
 			return nil, err
 		}
@@ -490,7 +548,7 @@ func (c *KubeClient) getProfile(k model.ProfileKey) (*model.KVPair, error) {
 		return nil, resources.K8sErrorToCalico(err, k)
 	}
 
-	return c.converter.namespaceToProfile(namespace)
+	return c.converter.NamespaceToProfile(namespace)
 }
 
 // applyWorkloadEndpoint patches the existing Pod to include an IP address, if
@@ -512,7 +570,7 @@ func (c *KubeClient) applyWorkloadEndpoint(k *model.KVPair) (*model.KVPair, erro
 			return nil, resources.K8sErrorToCalico(err, k.Key)
 		}
 		log.Debugf("Successfully applied pod: %+v", pod)
-		return c.converter.podToWorkloadEndpoint(pod)
+		return c.converter.PodToWorkloadEndpoint(pod)
 	}
 	return k, nil
 }
@@ -553,7 +611,7 @@ func (c *KubeClient) listWorkloadEndpoints(l model.WorkloadEndpointListOptions) 
 			continue
 		}
 
-		kvp, err := c.converter.podToWorkloadEndpoint(&pod)
+		kvp, err := c.converter.PodToWorkloadEndpoint(&pod)
 		if err != nil {
 			return nil, err
 		}
@@ -577,7 +635,7 @@ func (c *KubeClient) getWorkloadEndpoint(k model.WorkloadEndpointKey) (*model.KV
 	if !c.converter.isReadyCalicoPod(pod) {
 		return nil, errors.ErrorResourceDoesNotExist{Identifier: k}
 	}
-	return c.converter.podToWorkloadEndpoint(pod)
+	return c.converter.PodToWorkloadEndpoint(pod)
 }
 
 // listPolicies lists the Policies from the k8s API based on NetworkPolicy objects.
@@ -600,7 +658,7 @@ func (c *KubeClient) listPolicies(l model.PolicyListOptions) ([]*model.KVPair, e
 
 	// Otherwise, list all NetworkPolicy objects in all Namespaces.
 	networkPolicies := extensions.NetworkPolicyList{}
-	err := c.clientSet.Extensions().RESTClient().
+	err := c.extensionsClientV1Beta1.
 		Get().
 		Resource("networkpolicies").
 		Timeout(10 * time.Second).
@@ -612,7 +670,7 @@ func (c *KubeClient) listPolicies(l model.PolicyListOptions) ([]*model.KVPair, e
 	// For each policy, turn it into a Policy and generate the list.
 	ret := []*model.KVPair{}
 	for _, p := range networkPolicies.Items {
-		kvp, err := c.converter.networkPolicyToPolicy(&p)
+		kvp, err := c.converter.NetworkPolicyToPolicy(&p)
 		if err != nil {
 			return nil, err
 		}
@@ -645,7 +703,7 @@ func (c *KubeClient) getPolicy(k model.PolicyKey) (*model.KVPair, error) {
 
 		// Get the NetworkPolicy from the API and convert it.
 		networkPolicy := extensions.NetworkPolicy{}
-		err = c.clientSet.Extensions().RESTClient().
+		err = c.extensionsClientV1Beta1.
 			Get().
 			Resource("networkpolicies").
 			Namespace(namespace).
@@ -655,7 +713,7 @@ func (c *KubeClient) getPolicy(k model.PolicyKey) (*model.KVPair, error) {
 		if err != nil {
 			return nil, resources.K8sErrorToCalico(err, k)
 		}
-		return c.converter.networkPolicyToPolicy(&networkPolicy)
+		return c.converter.NetworkPolicyToPolicy(&networkPolicy)
 	} else {
 		// This is backed by a Global Network Policy CRD.
 		return c.gnpClient.Get(k)

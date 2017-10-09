@@ -667,6 +667,66 @@ func init() {
 				PreDNAT:      true,
 				IngressRules: []api.Rule{{Action: "allow"}},
 			}, true),
+
+		// PolicySpec Types field checks.
+		Entry("allow missing Types", api.PolicySpec{}, true),
+		Entry("allow empty Types", api.PolicySpec{Types: []api.PolicyType{}}, true),
+		Entry("allow ingress Types", api.PolicySpec{Types: []api.PolicyType{api.PolicyTypeIngress}}, true),
+		Entry("allow egress Types", api.PolicySpec{Types: []api.PolicyType{api.PolicyTypeEgress}}, true),
+		Entry("allow ingress+egress Types", api.PolicySpec{Types: []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress}}, true),
+		Entry("disallow repeated egress Types", api.PolicySpec{Types: []api.PolicyType{api.PolicyTypeEgress, api.PolicyTypeEgress}}, false),
+		Entry("disallow unexpected value", api.PolicySpec{Types: []api.PolicyType{"unexpected"}}, false),
+
+		// In the initial implementation, we validated against the following two cases but we found
+		// that prevented us from doing a smooth upgrade from type-less to typed policy since we
+		// couldn't write a policy that would work for back-level Felix instances while also
+		// specifying the type for up-level Felix instances.
+		Entry("allow Types without ingress when IngressRules present",
+			api.PolicySpec{
+				IngressRules: []api.Rule{{Action: "allow"}},
+				Types:        []api.PolicyType{api.PolicyTypeEgress},
+			}, true),
+		Entry("allow Types without egress when EgressRules present",
+			api.PolicySpec{
+				EgressRules: []api.Rule{{Action: "allow"}},
+				Types:       []api.PolicyType{api.PolicyTypeIngress},
+			}, true),
+
+		Entry("allow Types with ingress when IngressRules present",
+			api.PolicySpec{
+				IngressRules: []api.Rule{{Action: "allow"}},
+				Types:        []api.PolicyType{api.PolicyTypeIngress},
+			}, true),
+		Entry("allow Types with ingress+egress when IngressRules present",
+			api.PolicySpec{
+				IngressRules: []api.Rule{{Action: "allow"}},
+				Types:        []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
+			}, true),
+		Entry("allow Types with egress when EgressRules present",
+			api.PolicySpec{
+				EgressRules: []api.Rule{{Action: "allow"}},
+				Types:       []api.PolicyType{api.PolicyTypeEgress},
+			}, true),
+		Entry("allow Types with ingress+egress when EgressRules present",
+			api.PolicySpec{
+				EgressRules: []api.Rule{{Action: "allow"}},
+				Types:       []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
+			}, true),
+		Entry("allow ingress Types with pre-DNAT",
+			api.PolicySpec{
+				PreDNAT: true,
+				Types:   []api.PolicyType{api.PolicyTypeIngress},
+			}, true),
+		Entry("disallow egress Types with pre-DNAT",
+			api.PolicySpec{
+				PreDNAT: true,
+				Types:   []api.PolicyType{api.PolicyTypeEgress},
+			}, false),
+		Entry("disallow ingress+egress Types with pre-DNAT",
+			api.PolicySpec{
+				PreDNAT: true,
+				Types:   []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
+			}, false),
 	)
 }
 

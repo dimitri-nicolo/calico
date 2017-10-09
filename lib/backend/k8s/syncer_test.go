@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	k8sapi "k8s.io/client-go/pkg/api/v1"
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	extensions "github.com/projectcalico/libcalico-go/lib/backend/extensions"
 )
 
 type testWatch struct {
@@ -218,7 +218,7 @@ var _ = Describe("Test Syncer", func() {
 			poolC: make(chan watch.Event),
 			state: map[model.Key]interface{}{},
 		}
-		syn = newSyncer(tc, converter{}, tc, false)
+		syn = newSyncer(tc, Converter{}, tc, false)
 	})
 
 	It("should create a syncer", func() {
