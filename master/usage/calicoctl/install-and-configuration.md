@@ -26,10 +26,10 @@ curl -O -L {{site.data.versions[page.version].first.components.calicoctl.downloa
 chmod +x calicoctl
 ```
 
-> **NOTE**
->
-> Move calicoctl to a directory in your PATH or add the directory it is in to
-> your PATH to avoid prepending the path to invocations of calicoctl.
+> **Note**: Move `calicoctl` to a directory in your `PATH` or add the directory it is in to
+> your `PATH` to avoid prepending the path to invocations of calicoctl.
+{: .alert .alert-info}
+
 
 ### Datastore configuration
 
@@ -43,7 +43,7 @@ Here is a simple etcdv2 example.
 ETCD_ENDPOINTS=http://etcd:2379 calicoctl get nodes
 ```
 
-Here is a simple kubernetes datastore example.
+Here is a simple Kubernetes datastore example.
 
 ```
 DATASTORE_TYPE=kubernetes KUBECONFIG=~/.kube/config calicoctl get nodes

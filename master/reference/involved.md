@@ -24,8 +24,7 @@ Repository                                                              | Descri
 [calicoctl](https://github.com/projectcalico/calicoctl)                 | calico/node and calicoctl components
 [cni-plugin](https://github.com/projectcalico/cni-plugin)               | Calico CNI plugin
 [felix](https://github.com/projectcalico/felix)                         | felix policy enforcement agent
-[k8s-policy](https://github.com/projectcalico/k8s-policy)               | Kubernetes policy controller
-[libcalico](https://github.com/projectcalico/libcalico)                 | Python Calico library
+[kube-controllers](https://github.com/projectcalico/kube-controllers)   | Kubernetes controllers
 [libcalico-go](https://github.com/projectcalico/libcalico-go)           | Golang Calico library
 [libnetwork-plugin](https://github.com/projectcalico/libnetwork-plugin) | Calico libnetwork plugin for Docker
 

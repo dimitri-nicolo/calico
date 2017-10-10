@@ -1,6 +1,4 @@
 ###############################################################################
-# Versions:
-RELEASE_STREAM?=v2.5
 
 GO_BUILD_VER?=v0.7
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
@@ -8,8 +6,14 @@ CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 CALICO_NODE_DIR=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 VERSIONS_FILE?=$(CALICO_NODE_DIR)/../_data/versions.yml
 
-# For local builds this can be made faster by running "go get github.com/mikefarah/yaml" and changing YAML_CMD to "yaml"
-YAML_CMD?=$(shell which yaml || echo docker run --rm -i $(CALICO_BUILD) yaml)
+# Read current stream version from _data/versions.yml
+RELEASE_STREAM?=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - "currentReleaseStream")
+
+###############################################################################
+# Determine whether there's a local yaml installed or use dockerized version.
+# Note in order to install local (faster) yaml: "go get github.com/mikefarah/yaml"
+YAML_CMD:=$(shell which yaml || echo docker run --rm -i $(CALICO_BUILD) yaml)
+
 CALICO_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
 CALICO_GIT_VER ?= $(shell git describe --tags --dirty --always)
 BIRD_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico-bird.version')
@@ -19,10 +23,10 @@ CALICOCTL_VER ?= latest
 CALICOQ_VER ?= latest
 LIBNETWORK_PLUGIN_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.libnetwork-plugin.version')
 TYPHA_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.typha.version')
-K8S_POLICY_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/kube-policy-controller.version')
+KUBE_CONTROLLERS_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/kube-controllers.version')
 CNI_VER ?= $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/cni.version')
 # TODO - Why isn't confd in versions.yaml
-CONFD_VER ?= v0.12.1-calico-0.3.0
+CONFD_VER ?= v0.12.1-calico-0.4.0
 
 SYSTEMTEST_CONTAINER_VER ?= latest
 # we can use "custom" build image and test image name
@@ -30,6 +34,17 @@ SYSTEMTEST_CONTAINER?=calico/test:$(SYSTEMTEST_CONTAINER_VER)
 
 # Ensure that the dist directory is always created
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p dist)
+
+.PHONY: print-version
+print-version:
+	$(info $$RELEASE_STREAM is ${RELEASE_STREAM})
+    $(info $$BIRD_VER is ${BIRD_VER})
+    $(info $$CALICOCTL_VER is ${CALICOCTL_VER})
+    $(info $$CALICO_VER is ${CALICO_VER})
+    $(info $$CONFD_VER is ${CONFD_VER})
+    $(info $$FELIX_VER is ${FELIX_VER})
+    $(info $$KUBE_CONTROLLERS_VER is ${KUBE_CONTROLLERS_VER})
+    $(info $$TYPHA_VER is ${TYPHA_VER})
 
 ###############################################################################
 # URL for Calico binaries
@@ -282,7 +297,9 @@ dist/calicoq:
 # Default value: directory with Makefile
 SOURCE_DIR?=$(dir $(lastword $(MAKEFILE_LIST)))
 SOURCE_DIR:=$(abspath $(SOURCE_DIR))
+CRD_PATH=$(CURDIR)/vendor/github.com/projectcalico/libcalico-go/test/
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
+K8S_VERSION=v1.7.4
 ST_TO_RUN?=tests/st/
 
 # Can exclude the slower tests with "-a '!slow'"
@@ -442,6 +459,39 @@ run-etcd-host:
 	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379" \
 	--listen-client-urls "http://0.0.0.0:2379"
 
+## Kubernetes apiserver used for tests
+run-k8s-apiserver: stop-k8s-apiserver run-etcd vendor
+	docker run \
+		--net=host --name st-apiserver \
+		--detach \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube apiserver \
+			--bind-address=0.0.0.0 \
+			--insecure-bind-address=0.0.0.0 \
+				--etcd-servers=http://127.0.0.1:2379 \
+			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
+			--authorization-mode=RBAC \
+			--service-cluster-ip-range=10.101.0.0/16 \
+			--v=10 \
+			--logtostderr=true
+
+	# Wait until we can configure a cluster role binding which allows anonymous auth.
+	while ! docker exec st-apiserver kubectl create clusterrolebinding anonymous-admin --clusterrole=cluster-admin --user=system:anonymous; do echo "Trying to create ClusterRoleBinding"; sleep 2; done
+
+	# Create CustomResourceDefinition (CRD) for Calico resources
+	# from the manifest crds.yaml
+	docker run \
+		--net=host \
+		--rm \
+		-v  $(CRD_PATH):/manifests \
+		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		--server=http://localhost:8080 \
+		apply -f /manifests/crds.yaml
+
+## Stop Kubernetes apiserver
+stop-k8s-apiserver:
+	@-docker rm -f st-apiserver
+
 ###############################################################################
 # calico_node FVs
 ###############################################################################
@@ -467,7 +517,7 @@ node-fv:
 
 PHONY: node-test-containerized
 ## Run the tests in a container. Useful for CI, Mac dev.
-node-test-containerized: vendor run-etcd-host
+node-test-containerized: vendor run-etcd-host run-k8s-apiserver
 	docker run --rm \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 	-v $(VERSIONS_FILE):/versions.yaml:ro \
@@ -509,7 +559,12 @@ release: FELIX_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEAS
 release: CALICOCTL_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoctl.version')
 release: CALICOQ_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
 release: clean
-	@if [[ `git rev-parse --abbrev-ref HEAD` == "master" ]]; then echo 'Release process should not be run from master'; exit 1; fi
+	@echo Using the following versions:
+	@echo "	felix:             ${FELIX_VER}"
+	@echo "	calico:            ${CALICO_VER}"
+	@echo "	bird:              ${BIRD_VER}"
+	@echo "	confd:             ${CONFD_VER}"
+	@echo "	libnetwork_plugin: ${LIBNETWORK_PLUGIN_VER}"
 
 	git tag $(CALICO_VER)
 
@@ -534,8 +589,8 @@ release: clean
 	@echo "Now push images."
 	@echo "gcloud docker -- push gcr.io/tigera-dev/$(NODE_CONTAINER_NAME)-essentials:$(CALICO_VER)"
 	
-	@echo "Only push the tag AFTER this branch is merged to origin/master"
-	@echo "git push origin $(CALICO_VER)"
+	@echo "# Only push the git tag AFTER this branch is merged to origin/master"
+	@echo "  git push origin $(CALICO_VER)"
 
 
 RELEASE_DIR?=release-$(CALICO_VER)
@@ -550,7 +605,7 @@ release-archive: $(RELEASE_DIR).tgz
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR_IMAGES) $(RELEASE_DIR_BIN) $(RELEASE_DIR)/README
 	tar -czvf $(RELEASE_DIR).tgz $(RELEASE_DIR)/*
 
-$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/calico-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-policy-controller.tar
+$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/calico-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar
 $(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64 $(RELEASE_DIR_BIN)/calicoq
 
 $(RELEASE_DIR)/README:
@@ -561,7 +616,7 @@ $(RELEASE_DIR)/README:
 	@echo "* The calico/node docker image  (version $(CALICO_VER))" >> $@
 	@echo "* The calico/typha docker image  (version $(TYPHA_VER))" >> $@
 	@echo "* The calico/cni docker image  (version $(CNI_VER))" >> $@
-	@echo "* The calico/kube-policy-controller docker image (version $(K8S_POLICY_VER))" >> $@
+	@echo "* The calico/kube-controllers docker image (version $(KUBE_CONTROLLERS_VER))" >> $@
 	@echo "" >> $@
 	@echo "Binaries (for amd64) (under 'bin')" >> $@
 	@echo "* The calicoctl binary (for Linux) (version $(CALICOCTL_VER))" >> $@
@@ -602,10 +657,10 @@ $(RELEASE_DIR_IMAGES)/calico-cni.tar:
 	docker pull calico/cni:$(CNI_VER)
 	docker save --output $@ calico/cni:$(CNI_VER)
 
-$(RELEASE_DIR_IMAGES)/calico-kube-policy-controller.tar:
+$(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/kube-policy-controller:$(K8S_POLICY_VER)
-	docker save --output $@ calico/kube-policy-controller:$(K8S_POLICY_VER)
+	docker pull calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
+	docker save --output $@ calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
 
 $(RELEASE_DIR_BIN)/%:
 	mkdir -p $(RELEASE_DIR_BIN)

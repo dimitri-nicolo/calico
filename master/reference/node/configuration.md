@@ -36,7 +36,7 @@ The `calico/node` container is primarily configured through environment variable
 | ETCD_KEY_FILE     | Path to the etcd key file, e.g. `/etc/calico/key.pem` (optional)        | string |
 | ETCD_CERT_FILE    | Path to the etcd client cert, e.g. `/etc/calico/cert.pem` (optional)    | string |
 | ETCD_CA_CERT_FILE | Path to the etcd CA file, e.g. `/etc/calico/ca.pem` (optional)          | string |
-| KUBECONFIG | When using the kubernetes datastore, the location of a kubeconfig file to use. | string |
+| KUBECONFIG | When using the Kubernetes datastore, the location of a kubeconfig file to use. | string |
 | K8S_API_ENDPOINT | Location of the Kubernetes API.  Not required if using kubeconfig.       | string |
 | K8S_CERT_FILE | Location of a client certificate for accessing the Kubernetes API.          | string |
 | K8S_KEY_FILE | Location of a client key for accessing the Kubernetes API.                   | string |
@@ -45,11 +45,11 @@ The `calico/node` container is primarily configured through environment variable
 
 In addition to the above, `calico/node` also supports [the standard Felix configuration environment variables](../felix/configuration).
 
-> **NOTE**
->
-> When Calico is configured to use the Kubernetes API as the datastore, the environments
-> used for BGP configuration are ignored - this includes selection of the node AS number (AS)
+> **Note**: When Calico is configured to use the Kubernetes API as the datastore, the environments
+> used for BGP configuration are ignored—this includes selection of the node AS number (AS)
 > and all of the IP selection options (IP, IP6, IP_AUTODETECTION_METHOD, IP6_AUTODETECTION_METHOD).
+>
+{: .alert .alert-info}
 
 ### IP Autodetection methods
 

@@ -1,6 +1,5 @@
 ---
 title: Upgrading Calico for Kubernetes
-redirect_from: latest/getting-started/kubernetes/upgrade
 ---
 
 This document covers upgrading the Calico components in a Kubernetes deployment.  This
@@ -32,6 +31,13 @@ but also upgrade the additional toolkit manifests after upgrading the core Calic
 > When upgrading Calico using the Kubernetes datastore driver from a version < v2.3.0
 > to a version >= v2.3.0, or when upgrading Calico using the etcd datastore from a version < v2.4.0
 > to a version >= v2.4.0, you should follow the steps for [upgrading to v1 NetworkPolicy semantics](#upgrading-to-v1-networkpolicy-semantics)
+
+> **Important**: If you are using the Kubernetes datastore and upgrading from 
+> Calico v2.4.x or earlier to Calico v2.5.x or later, you must 
+> [migrate your Calico configuration data](https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md) 
+> before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.
+{: .alert .alert-danger}
+
 
 ## Adding Tigera Essentials Toolkit to an Existing Open Source Cluster
 This section covers taking an existing Kubernetes system with Open Source Calico and adding the Tigera Essentials Toolkit.
@@ -90,7 +96,6 @@ This procedure assumes the following:
     ```
     $ kubectl apply -f monitor-calico.yaml
     ```
-
 ## Upgrading a Hosted Installation of Calico
 
 This section covers upgrading a [self-hosted]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted) Calico installation.
