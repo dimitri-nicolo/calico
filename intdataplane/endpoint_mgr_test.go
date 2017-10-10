@@ -94,26 +94,39 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 		"ifaces":    ifaceTierNames,
 		"host":      host,
 		"tableKind": tableKind,
-	}).Debug("Calculating chains for interface")
+	}).Info("Calculating chains for interface")
 	chains := []*iptables.Chain{}
 	dispatchOut := []iptables.Rule{}
 	dispatchIn := []iptables.Rule{}
 	hostOrWlLetter := "w"
 	hostOrWlDispatch := "wl-dispatch"
+	outPrefix := "cali-from-"
+	inPrefix := "cali-to-"
+	inboundSuffix := "inbound"
+	inboundGroup := uint16(1)
+	outboundSuffix := "outbound"
+	outboundGroup := uint16(2)
 	if host {
 		hostOrWlLetter = "h"
 		hostOrWlDispatch = "host-endpoint"
+		outPrefix = "cali-to-"
+		inPrefix = "cali-from-"
+		inboundSuffix = "outbound"
+		inboundGroup = uint16(2)
+		outboundSuffix = "inbound"
+		outboundGroup = uint16(1)
 	}
 	for _, ifaceTierName := range ifaceTierNames {
-		var ifaceName, tierName string
+		var ifaceName, tierName, polName string
 		nameParts := strings.Split(ifaceTierName, "_")
-		var ifaceKind string
-		var polName string
+		ifaceKind := "normal"
+		ingress := true
+		egress := true
 		if len(nameParts) == 1 {
 			// Just an interface name "eth0", apply no tweaks.
 			ifaceName = nameParts[0]
 			tierName = ""
-			ifaceKind = "normal"
+			polName = ""
 		} else if len(nameParts) == 2 {
 			// Interface name and a policy name  "eth0_tierA".
 			ifaceName = nameParts[0]
@@ -127,6 +140,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			ifaceKind = "normal"
 		} else {
 			// Interface name, policy name and untracked "eth0_tierA_untracked".
+			log.Debug("Interface name policy name and untracked/ingress/egress")
 			ifaceName = nameParts[0]
 			if strings.HasPrefix(nameParts[1], "pol") {
 				tierName = "default"
@@ -135,7 +149,14 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 				tierName = nameParts[1]
 				polName = "/a"
 			}
-			ifaceKind = nameParts[2]
+			switch nameParts[2] {
+			case "ingress":
+				egress = false
+			case "egress":
+				ingress = false
+			default:
+				ifaceKind = nameParts[2]
+			}
 		}
 
 		if tableKind != ifaceKind && tableKind != "normal" {
@@ -167,7 +188,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			Match:  iptables.Match(),
 			Action: iptables.ClearMarkAction{Mark: 136}, // 0x8 + 0x80 (IptablesMarkAccept + IptablesMarkDrop)
 		})
-		if tierName != "" && tableKind == ifaceKind {
+		if egress && tierName != "" && tableKind == ifaceKind {
 			outRules = append(outRules, iptables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.ClearMarkAction{Mark: 16},
@@ -195,8 +216,8 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 				outRules = append(outRules, iptables.Rule{
 					Match: iptables.Match().MarkClear(16),
 					Action: iptables.NflogAction{
-						Group:  1,
-						Prefix: "D/0/no-policy-match-inbound/" + tierName,
+						Group:  outboundGroup,
+						Prefix: "D/0/no-policy-match-" + outboundSuffix + "/" + tierName,
 					},
 				})
 				outRules = append(outRules, iptables.Rule{
@@ -211,8 +232,8 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			outRules = append(outRules, iptables.Rule{
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
-					Group:  1,
-					Prefix: "D/0/no-profile-match-inbound",
+					Group:  outboundGroup,
+					Prefix: "D/0/no-profile-match-" + outboundSuffix,
 				},
 			})
 			outRules = append(outRules, iptables.Rule{
@@ -247,7 +268,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			Match:  iptables.Match(),
 			Action: iptables.ClearMarkAction{Mark: 136}, // 0x8 + 0x80 (IptablesMarkAccept + IptablesMarkDrop)
 		})
-		if tierName != "" && tableKind == ifaceKind {
+		if ingress && tierName != "" && tableKind == ifaceKind {
 			inRules = append(inRules, iptables.Rule{
 				Match:   iptables.Match(),
 				Action:  iptables.ClearMarkAction{Mark: 16},
@@ -276,8 +297,8 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 				inRules = append(inRules, iptables.Rule{
 					Match: iptables.Match().MarkClear(16),
 					Action: iptables.NflogAction{
-						Group:  2,
-						Prefix: "D/0/no-policy-match-outbound/" + tierName,
+						Group:  inboundGroup,
+						Prefix: "D/0/no-policy-match-" + inboundSuffix + "/" + tierName,
 					},
 				})
 				inRules = append(inRules, iptables.Rule{
@@ -291,8 +312,8 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			inRules = append(inRules, iptables.Rule{
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
-					Group:  2,
-					Prefix: "D/0/no-profile-match-outbound",
+					Group:  inboundGroup,
+					Prefix: "D/0/no-profile-match-" + inboundSuffix,
 				},
 			})
 			inRules = append(inRules, iptables.Rule{
@@ -304,34 +325,49 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 		if tableKind == "preDNAT" {
 			chains = append(chains,
 				&iptables.Chain{
-					Name:  "cali-f" + hostOrWlLetter + "-" + ifaceName,
+					Name:  inPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
 					Rules: inRules,
 				},
 			)
 		} else {
 			chains = append(chains,
 				&iptables.Chain{
-					Name:  "cali-t" + hostOrWlLetter + "-" + ifaceName,
+					Name:  outPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
 					Rules: outRules,
 				},
 				&iptables.Chain{
-					Name:  "cali-f" + hostOrWlLetter + "-" + ifaceName,
+					Name:  inPrefix[:6] + hostOrWlLetter + "-" + ifaceName,
 					Rules: inRules,
 				},
 			)
 		}
-		dispatchOut = append(dispatchOut,
-			iptables.Rule{
-				Match:  iptables.Match().OutInterface(ifaceName),
-				Action: iptables.GotoAction{Target: "cali-t" + hostOrWlLetter + "-" + ifaceName},
-			},
-		)
-		dispatchIn = append(dispatchIn,
-			iptables.Rule{
-				Match:  iptables.Match().InInterface(ifaceName),
-				Action: iptables.GotoAction{Target: "cali-f" + hostOrWlLetter + "-" + ifaceName},
-			},
-		)
+		if host {
+			dispatchOut = append(dispatchOut,
+				iptables.Rule{
+					Match:  iptables.Match().OutInterface(ifaceName),
+					Action: iptables.GotoAction{Target: outPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
+				},
+			)
+			dispatchIn = append(dispatchIn,
+				iptables.Rule{
+					Match:  iptables.Match().InInterface(ifaceName),
+					Action: iptables.GotoAction{Target: inPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
+				},
+			)
+		} else {
+			dispatchOut = append(dispatchOut,
+				iptables.Rule{
+					Match:  iptables.Match().InInterface(ifaceName),
+					Action: iptables.GotoAction{Target: outPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
+				},
+			)
+			dispatchIn = append(dispatchIn,
+				iptables.Rule{
+					Match:  iptables.Match().OutInterface(ifaceName),
+					Action: iptables.GotoAction{Target: inPrefix[:6] + hostOrWlLetter + "-" + ifaceName},
+				},
+			)
+		}
 	}
 	if !host {
 		dispatchOut = append(dispatchOut,
@@ -352,18 +388,18 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 	if tableKind == "preDNAT" {
 		chains = append(chains,
 			&iptables.Chain{
-				Name:  "cali-from-" + hostOrWlDispatch,
+				Name:  inPrefix + hostOrWlDispatch,
 				Rules: dispatchIn,
 			},
 		)
 	} else {
 		chains = append(chains,
 			&iptables.Chain{
-				Name:  "cali-to-" + hostOrWlDispatch,
+				Name:  outPrefix + hostOrWlDispatch,
 				Rules: dispatchOut,
 			},
 			&iptables.Chain{
-				Name:  "cali-from-" + hostOrWlDispatch,
+				Name:  inPrefix + hostOrWlDispatch,
 				Rules: dispatchIn,
 			},
 		)
@@ -499,8 +535,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 						policies = []string{"a"}
 					}
 					tiers = append(tiers, &proto.TierInfo{
-						Name:     tierName,
-						Policies: policies,
+						Name:            tierName,
+						IngressPolicies: policies,
+						EgressPolicies:  policies,
 					})
 				} else if len(parts) == 2 && parts[1] == "untracked" {
 					if strings.HasPrefix(parts[0], "pol") {
@@ -511,8 +548,9 @@ func endpointManagerTests(ipVersion uint8) func() {
 						policies = []string{"a"}
 					}
 					untrackedTiers = append(untrackedTiers, &proto.TierInfo{
-						Name:     tierName,
-						Policies: policies,
+						Name:            tierName,
+						IngressPolicies: policies,
+						EgressPolicies:  policies,
 					})
 				} else if len(parts) == 2 && parts[1] == "preDNAT" {
 					if strings.HasPrefix(parts[0], "pol") {
@@ -523,8 +561,32 @@ func endpointManagerTests(ipVersion uint8) func() {
 						policies = []string{"a"}
 					}
 					preDNATTiers = append(preDNATTiers, &proto.TierInfo{
-						Name:     tierName,
-						Policies: policies,
+						Name:            tierName,
+						IngressPolicies: policies,
+					})
+				} else if len(parts) == 2 && parts[1] == "ingress" {
+					if strings.HasPrefix(parts[0], "pol") {
+						tierName = "default"
+						policies = []string{parts[0]}
+					} else {
+						tierName = parts[0]
+						policies = []string{"a"}
+					}
+					tiers = append(tiers, &proto.TierInfo{
+						Name:            tierName,
+						IngressPolicies: policies,
+					})
+				} else if len(parts) == 2 && parts[1] == "egress" {
+					if strings.HasPrefix(parts[0], "pol") {
+						tierName = "default"
+						policies = []string{parts[0]}
+					} else {
+						tierName = parts[0]
+						policies = []string{"a"}
+					}
+					tiers = append(tiers, &proto.TierInfo{
+						Name:           tierName,
+						EgressPolicies: policies,
 					})
 				} else {
 					panic("Failed to parse policy name " + spec.tierName)
@@ -712,6 +774,24 @@ func endpointManagerTests(ipVersion uint8) func() {
 						tierName: "polA_preDNAT",
 					}))
 					It("should have expected chains", expectChainsFor("eth0_polA_preDNAT"))
+				})
+
+				Describe("replaced with ingress-only version", func() {
+					JustBeforeEach(configureHostEp(&hostEpSpec{
+						id:       "id1",
+						name:     "eth0",
+						tierName: "polA_ingress",
+					}))
+					It("should have expected chains", expectChainsFor("eth0_polA_ingress"))
+				})
+
+				Describe("replaced with egress-only version", func() {
+					JustBeforeEach(configureHostEp(&hostEpSpec{
+						id:       "id1",
+						name:     "eth0",
+						tierName: "polA_egress",
+					}))
+					It("should have expected chains", expectChainsFor("eth0_polA_egress"))
 				})
 			})
 
@@ -1049,6 +1129,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 					WorkloadId:     "pod-11",
 					EndpointId:     "endpoint-id-11",
 				}
+				var tiers []*proto.TierInfo
+
+				BeforeEach(func() {
+					tiers = []*proto.TierInfo{}
+				})
+
 				JustBeforeEach(func() {
 					epMgr.OnUpdate(&proto.WorkloadEndpointUpdate{
 						Id: &wlEPID1,
@@ -1057,12 +1143,46 @@ func endpointManagerTests(ipVersion uint8) func() {
 							Mac:        "01:02:03:04:05:06",
 							Name:       "cali12345-ab",
 							ProfileIds: []string{},
-							Tiers:      []*proto.TierInfo{},
+							Tiers:      tiers,
 							Ipv4Nets:   []string{"10.0.240.2/24"},
 							Ipv6Nets:   []string{"2001:db8:2::2/128"},
 						},
 					})
 					epMgr.CompleteDeferredWork()
+				})
+
+				Context("with policy", func() {
+					BeforeEach(func() {
+						tiers = []*proto.TierInfo{&proto.TierInfo{
+							Name:            "default",
+							IngressPolicies: []string{"policy1"},
+							EgressPolicies:  []string{"policy1"},
+						}}
+					})
+
+					It("should have expected chains", expectWlChainsFor("cali12345-ab_policy1"))
+				})
+
+				Context("with ingress-only policy", func() {
+					BeforeEach(func() {
+						tiers = []*proto.TierInfo{&proto.TierInfo{
+							Name:            "default",
+							IngressPolicies: []string{"policy1"},
+						}}
+					})
+
+					It("should have expected chains", expectWlChainsFor("cali12345-ab_policy1_ingress"))
+				})
+
+				Context("with egress-only policy", func() {
+					BeforeEach(func() {
+						tiers = []*proto.TierInfo{&proto.TierInfo{
+							Name:           "default",
+							EgressPolicies: []string{"policy1"},
+						}}
+					})
+
+					It("should have expected chains", expectWlChainsFor("cali12345-ab_policy1_egress"))
 				})
 
 				It("should have expected chains", expectWlChainsFor("cali12345-ab"))
