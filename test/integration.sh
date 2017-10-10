@@ -23,13 +23,17 @@ KUBE_ROOT=$(realpath $(dirname "${BASH_SOURCE}")/../vendor/k8s.io/kubernetes)
 source "${KUBE_ROOT}/hack/lib/init.sh"
 
 runTests() {
-  kube::etcd::start
-
-  ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test -race -v github.com/tigera/calico-k8sapiserver/test/integration/... --args -v 10 -logtostderr
+  if [ -z "$DATASTORE_TYPE" ]; then
+    # Run etcd only if the storage type is default for the apiserver.
+    kube::etcd::start
+  fi
+  go test -v github.com/tigera/calico-k8sapiserver/test/integration/... --args -v 10 -logtostderr
 }
 
 # Run cleanup to stop etcd on interrupt or other kill signal.
-trap kube::etcd::cleanup EXIT
+if [ -z "$DATASTORE_TYPE" ]; then
+  trap kube::etcd::cleanup EXIT
+fi
 
 runTests
 
