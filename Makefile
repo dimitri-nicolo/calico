@@ -167,31 +167,35 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 # Regenerate all files if the gen exes changed or any "types.go" files changed
 .generate_files: .generate_exes $(TYPES_FILES)
 	# Generate defaults
-	$(BINDIR)/defaulter-gen \
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BINDIR)/defaulter-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
 	  	--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico" \
 		--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
-		--output-file-base "zz_generated.defaults"
+		--output-file-base "zz_generated.defaults"'
 	# Generate deep copies
-	$(BINDIR)/deepcopy-gen \
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
 		--bounding-dirs "github.com/tigera/calico-k8sapiserver" \
-		--output-file-base zz_generated.deepcopy
+		--output-file-base zz_generated.deepcopy'
 	# Generate conversions
-	$(BINDIR)/conversion-gen \
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BINDIR)/conversion-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
 		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
-		--output-file-base zz_generated.conversion
+		--output-file-base zz_generated.conversion'
 	# generate all pkg/client contents
-	$(DOCKER_CMD) $(BUILD_DIR)/update-client-gen.sh
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BUILD_DIR)/update-client-gen.sh'
 	touch $@
 
 # This section builds the output binaries.
