@@ -2,5 +2,3 @@ calico-k8sapiserver
 artifacts/simple-image/calico-k8sapiserver
 bin/calico-k8sapiserver
 /bin
-.generate_exes
-.generate_files
