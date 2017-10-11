@@ -213,7 +213,7 @@ calico/k8sapiserver: vendor/.up-to-date .generate_files \
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-k8sapiserver docker-image/bin/
-	docker build --pull -t calico/k8sapiserver docker-image
+	docker build --pull -t calico/k8sapiserver$(ARCHTAG) --file ./docker-image/Dockerfile$(ARCHTAG) docker-image
 
 .PHONY: ut
 ut: run-etcd
