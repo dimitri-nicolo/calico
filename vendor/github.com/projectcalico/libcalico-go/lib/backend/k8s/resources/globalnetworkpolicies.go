@@ -56,7 +56,7 @@ type GlobalNetworkPolicyConverter struct {
 func (_ GlobalNetworkPolicyConverter) ListInterfaceToKey(l model.ListInterface) model.Key {
 	pl := l.(model.PolicyListOptions)
 	if pl.Name != "" {
-		return model.PolicyKey{Name: pl.Name}
+		return model.PolicyKey{Tier: "default", Name: pl.Name}
 	}
 	return nil
 }
@@ -67,6 +67,7 @@ func (_ GlobalNetworkPolicyConverter) KeyToName(k model.Key) (string, error) {
 
 func (_ GlobalNetworkPolicyConverter) NameToKey(name string) (model.Key, error) {
 	return model.PolicyKey{
+		Tier: "default",
 		Name: name,
 	}, nil
 }

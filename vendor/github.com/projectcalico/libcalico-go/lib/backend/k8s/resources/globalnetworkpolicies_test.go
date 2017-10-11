@@ -40,12 +40,14 @@ var _ = Describe("Global Network Policies conversion methods", func() {
 	}
 	key1 := model.PolicyKey{
 		Name: "abcd",
+		Tier: "default",
 	}
 	name1 := "abcd"
 
 	// Compatible set of key and name
 	key2 := model.PolicyKey{
 		Name: "foo.bar",
+		Tier: "default",
 	}
 	name2 := "foo.bar"
 

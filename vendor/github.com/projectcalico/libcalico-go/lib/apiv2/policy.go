@@ -18,13 +18,19 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
-// PolicySpec contains the specification for a selector-based security Policy resource.
+// PolicySpec contains the specification for a selector-based tiered security Policy resource.
 type PolicySpec struct {
-	// Order is an optional field that specifies the order in which the policy is applied.
+	// The name of the tier that this policy belongs to.  If this is omitted, the default
+	// tier (name is "default") is assumed.  The specified tier must exist in order to create
+	// security policies within the tier, the "default" tier is created automatically if it
+	// does not exist, this means for deployments requiring only a single Tier, the tier name
+	// may be omitted on all policy management requests.
+	Tier string `json:"tier,omitempty" validate:"omitempty,name"`
+	// Order is an optional field that specifies the order in which the policy is applied within the tier.
 	// Policies with higher "order" are applied after those with lower
 	// order.  If the order is omitted, it may be considered to be "infinite" - i.e. the
-	// policy will be applied last.  Policies with identical order will be applied in
-	// alphanumerical order based on the Policy "Name".
+	// policy will be applied last within the tier.  Policies with identical order will be applied in
+	// alphanumerical order based on the Policy "Name" within the same tier.
 	Order *float64 `json:"order,omitempty"`
 	// The ordered set of ingress rules.  Each rule contains a set of packet match criteria and
 	// a corresponding action to apply.

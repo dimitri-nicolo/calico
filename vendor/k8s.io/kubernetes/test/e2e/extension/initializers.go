@@ -49,6 +49,7 @@ var _ = framework.KubeDescribe("Initializers", func() {
 
 		ch := make(chan struct{})
 		go func() {
+			defer GinkgoRecover()
 			_, err := c.Core().Pods(ns).Create(newUninitializedPod(podName))
 			Expect(err).NotTo(HaveOccurred())
 			close(ch)
@@ -149,6 +150,7 @@ var _ = framework.KubeDescribe("Initializers", func() {
 		// run create that blocks
 		ch := make(chan struct{})
 		go func() {
+			defer GinkgoRecover()
 			defer close(ch)
 			_, err := c.Core().Pods(ns).Create(newPod(podName))
 			Expect(err).NotTo(HaveOccurred())
@@ -212,7 +214,7 @@ var _ = framework.KubeDescribe("Initializers", func() {
 func newUninitializedPod(podName string) *v1.Pod {
 	pod := newPod(podName)
 	pod.Initializers = &metav1.Initializers{
-		Pending: []metav1.Initializer{{Name: "Test"}},
+		Pending: []metav1.Initializer{{Name: "test.k8s.io"}},
 	}
 	return pod
 }

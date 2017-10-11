@@ -495,23 +495,23 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 
 		kvp1Name := "my-test-gnp"
 		kvp1a := &model.KVPair{
-			Key:   model.PolicyKey{Name: kvp1Name},
+			Key:   model.PolicyKey{Tier: "default", Name: kvp1Name},
 			Value: &calicoAllowPolicyModel,
 		}
 
 		kvp1b := &model.KVPair{
-			Key:   model.PolicyKey{Name: kvp1Name},
+			Key:   model.PolicyKey{Tier: "default", Name: kvp1Name},
 			Value: &calicoDisallowPolicyModel,
 		}
 
 		kvp2Name := "my-test-gnp2"
 		kvp2a := &model.KVPair{
-			Key:   model.PolicyKey{Name: kvp2Name},
+			Key:   model.PolicyKey{Tier: "default", Name: kvp2Name},
 			Value: &calicoAllowPolicyModel,
 		}
 
 		kvp2b := &model.KVPair{
-			Key:   model.PolicyKey{Name: kvp2Name},
+			Key:   model.PolicyKey{Tier: "default", Name: kvp2Name},
 			Value: &calicoDisallowPolicyModel,
 		}
 

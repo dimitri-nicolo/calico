@@ -18,7 +18,15 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/api"
 	"github.com/projectcalico/libcalico-go/lib/api/unversioned"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/converter"
+)
+
+var (
+	defaultTierName = "default"
+	defaultTier     = api.Tier{
+		Metadata: api.TierMetadata{Name: defaultTierName},
+	}
 )
 
 // PolicyInterface has methods to work with Policy resources.
@@ -44,6 +52,18 @@ func newPolicies(c *Client) *policies {
 
 // Create creates a new policy.
 func (h *policies) Create(a *api.Policy) (*api.Policy, error) {
+	// Before creating the policy, check that the tier exists, and if this is the
+	// default tier, create it if it doesn't.
+	if a.Metadata.Tier == "" {
+		if _, err := h.c.Tiers().Create(&defaultTier); err != nil {
+			if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
+				return nil, err
+			}
+		}
+	} else if _, err := h.c.Tiers().Get(api.TierMetadata{Name: a.Metadata.Tier}); err != nil {
+		return nil, err
+	}
+
 	return a, h.c.create(*a, h)
 }
 
@@ -54,6 +74,18 @@ func (h *policies) Update(a *api.Policy) (*api.Policy, error) {
 
 // Apply updates a policy if it exists, or creates a new policy if it does not exist.
 func (h *policies) Apply(a *api.Policy) (*api.Policy, error) {
+	// Before creating the policy, check that the tier exists, and if this is the
+	// default tier, create it if it doesn't.
+	if a.Metadata.Tier == "" {
+		if _, err := h.c.Tiers().Create(&defaultTier); err != nil {
+			if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
+				return nil, err
+			}
+		}
+	} else if _, err := h.c.Tiers().Get(api.TierMetadata{Name: a.Metadata.Tier}); err != nil {
+		return nil, err
+	}
+
 	return a, h.c.apply(*a, h)
 }
 
@@ -85,6 +117,7 @@ func (h *policies) convertMetadataToListInterface(m unversioned.ResourceMetadata
 	pm := m.(api.PolicyMetadata)
 	l := model.PolicyListOptions{
 		Name: pm.Name,
+		Tier: pm.Tier,
 	}
 	return l, nil
 }
@@ -110,4 +143,13 @@ func (h *policies) convertAPIToKVPair(a unversioned.Resource) (*model.KVPair, er
 // converter (embedded in the policies struct).
 func (h *policies) convertKVPairToAPI(d *model.KVPair) (unversioned.Resource, error) {
 	return h.ConvertKVPairToAPI(d)
+}
+
+// TierOrDefault returns the tier name, or the default if blank.
+func TierOrDefault(tier string) string {
+	if len(tier) == 0 {
+		return DefaultTierName
+	} else {
+		return tier
+	}
 }

@@ -29,6 +29,9 @@ help:
 	@echo "  make test                Run Tests."
 	@echo "Maintenance:"
 	@echo
+	@echo "  make update-vendor  Update the vendor directory with new "
+	@echo "                      versions of upstream packages.  Record results"
+	@echo "                      in glide.lock."
 	@echo "  make clean         Remove binary files."
 # Disable make's implicit rules, which are not useful for golang, and slow down the build
 # considerably.
@@ -91,6 +94,23 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
                               -w /go/src/github.com/tigera/calico-k8sapiserver \
                               $(GO_BUILD_CONTAINER)
+
+# Update the vendored dependencies with the latest upstream versions matching
+# our glide.yaml.  If there area any changes, this updates glide.lock
+# as a side effect.  Unless you're adding/updating a dependency, you probably
+# want to use the vendor target to install the versions from glide.lock.
+.PHONY: update-vendor
+update-vendor:
+	mkdir -p $$HOME/.glide
+	$(DOCKER_GO_BUILD) glide up
+	touch vendor/.up-to-date
+
+# vendor is a shortcut for force rebuilding the go vendor directory.
+.PHONY: vendor
+vendor vendor/.up-to-date: glide.lock
+	mkdir -p $$HOME/.glide
+	$(DOCKER_GO_BUILD) glide install
+	touch vendor/.up-to-date
 
 # Linker flags for building Felix.
 #
@@ -178,7 +198,7 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
 #########################################################################
-$(BINDIR)/calico-k8sapiserver: .generate_files $(K8SAPISERVER_GO_FILES)
+$(BINDIR)/calico-k8sapiserver: .generate_files $(K8SAPISERVER_GO_FILES) vendor/.up-to-date
 	@echo Building k8sapiserver...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
@@ -188,7 +208,7 @@ $(BINDIR)/calico-k8sapiserver: .generate_files $(K8SAPISERVER_GO_FILES)
 
 # Build the calico/k8sapiserver docker image.
 .PHONY: calico/k8sapiserver
-calico/k8sapiserver: .generate_files \
+calico/k8sapiserver: vendor/.up-to-date .generate_files \
     $(BINDIR)/calico-k8sapiserver
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
@@ -232,5 +252,5 @@ clean-generated:
 
 clean-bin:
 	rm -rf $(BINDIR) \
-		   .generate_exes \
-	       docker-image/bin
+			.generate_exes \
+			docker-image/bin

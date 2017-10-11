@@ -35,6 +35,7 @@ var (
 		strings.ToLower(apiv2.KindHostEndpoint):        reflect.TypeOf(apiv2.HostEndpoint{}),
 		strings.ToLower(apiv2.KindIPPool):              reflect.TypeOf(apiv2.IPPool{}),
 		strings.ToLower(apiv2.KindNetworkPolicy):       reflect.TypeOf(apiv2.NetworkPolicy{}),
+		strings.ToLower(apiv2.KindTier):                reflect.TypeOf(apiv2.Tier{}),
 		strings.ToLower(apiv2.KindNode):                reflect.TypeOf(apiv2.Node{}),
 		strings.ToLower(apiv2.KindProfile):             reflect.TypeOf(apiv2.Profile{}),
 		strings.ToLower(apiv2.KindWorkloadEndpoint):    reflect.TypeOf(apiv2.WorkloadEndpoint{}),

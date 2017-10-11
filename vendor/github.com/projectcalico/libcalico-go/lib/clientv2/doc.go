@@ -29,6 +29,7 @@ The client has a number of methods that return interfaces for managing:
 	-  Host endpoint resources
 	-  Workload endpoint resources
 	-  Profile resources
+	-  Tier resources
 	-  IP Address Management (IPAM)
 
 See [resource definitions](http://docs.projectcalico.org/latest/reference/calicoctl/resources/) for details about the set of management commands for each

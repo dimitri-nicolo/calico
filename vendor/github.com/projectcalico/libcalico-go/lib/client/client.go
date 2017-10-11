@@ -69,6 +69,11 @@ func NewFromEnv() (*Client, error) {
 	return New(*config)
 }
 
+// Tiers returns an interface for managing tier resources.
+func (c *Client) Tiers() TierInterface {
+	return newTiers(c)
+}
+
 // Nodes returns an interface for managing node resources.
 func (c *Client) Nodes() NodeInterface {
 	return newNodes(c)
@@ -106,7 +111,7 @@ func (c *Client) BGPPeers() BGPPeerInterface {
 
 // IPAM returns an interface for managing IP address assignment and releasing.
 func (c *Client) IPAM() ipam.Interface {
-	return ipam.NewIPAM(c.Backend, poolAccessor{})
+	return ipam.NewIPAMClient(c.Backend, poolAccessor{})
 }
 
 type poolAccessor struct {
@@ -319,8 +324,7 @@ func (c *Client) delete(metadata unversioned.ResourceMetadata, helper conversion
 	}
 
 	// Convert the Metadata to a Key and combine with the Metadata revision to create
-	// a KVPair for the delete operation.  At the moment only the WorkloadEndpoint Get
-	// operations fills in the revision information.
+	// a KVPair for the delete operation.
 	if k, err := helper.convertMetadataToKey(metadata); err != nil {
 		return err
 	} else if _, err := c.Backend.Delete(context.Background(), k, metadata.GetObjectMetadata().Revision); err != nil {

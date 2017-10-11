@@ -18,8 +18,15 @@ import (
 	"context"
 
 	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var (
+	defaultTierName = "default"
 )
 
 // GlobalNetworkPolicyInterface has methods to work with GlobalNetworkPolicy resources.
@@ -40,6 +47,22 @@ type globalnetworkpolicies struct {
 // Create takes the representation of a GlobalNetworkPolicy and creates it.  Returns the stored
 // representation of the GlobalNetworkPolicy, and an error, if there is any.
 func (r globalnetworkpolicies) Create(ctx context.Context, res *apiv2.GlobalNetworkPolicy, opts options.SetOptions) (*apiv2.GlobalNetworkPolicy, error) {
+	// Before creating the policy, check that the tier exists, and if this is the
+	// default tier, create it if it doesn't.
+	if res.Spec.Tier == "" {
+		defaultTier := &apiv2.Tier{
+			ObjectMeta: metav1.ObjectMeta{Name: defaultTierName},
+			Spec:       apiv2.TierSpec{},
+		}
+		if _, err := r.client.resources.Create(ctx, opts, apiv2.KindTier, defaultTier); err != nil {
+			if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
+				return nil, err
+			}
+		}
+	} else if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv2.KindTier, noNamespace, defaultTierName); err != nil {
+		return nil, err
+	}
+
 	out, err := r.client.resources.Create(ctx, opts, apiv2.KindGlobalNetworkPolicy, res)
 	if out != nil {
 		return out.(*apiv2.GlobalNetworkPolicy), err

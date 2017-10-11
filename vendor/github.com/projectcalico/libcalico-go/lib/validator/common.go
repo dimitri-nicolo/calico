@@ -57,6 +57,10 @@ func ValidateMetadataIDsAssigned(rm unversioned.ResourceMetadata) error {
 		if metadata.Name == "" {
 			return errors.ErrorInsufficientIdentifiers{Name: "name"}
 		}
+	case api.TierMetadata:
+		if metadata.Name == "" {
+			return errors.ErrorInsufficientIdentifiers{Name: "name"}
+		}
 	case api.ProfileMetadata:
 		if metadata.Name == "" {
 			return errors.ErrorInsufficientIdentifiers{Name: "name"}
