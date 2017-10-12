@@ -28,6 +28,11 @@ func convertToLibcalicoNetworkPolicy(networkPolicy *aapi.NetworkPolicy, libcalic
 
 func convertToAAPINetworkPolicy(networkPolicy *aapi.NetworkPolicy, libcalicoPolicy *libcalicoapi.NetworkPolicy) {
 	networkPolicy.Spec = libcalicoPolicy.Spec
+	// Tier field maybe left blank when policy created vi OS libcalico.
+	// Initialize it to defalt in that case to make work with field selector.
+	if networkPolicy.Spec.Tier == "" {
+		networkPolicy.Spec.Tier = "default"
+	}
 	networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
 	networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
 }
