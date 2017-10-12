@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
@@ -101,5 +100,9 @@ func MatchPolicy(label labels.Selector, field fields.Selector) storage.Selection
 
 // PolicyToSelectableFields returns a field set that represents the object.
 func PolicyToSelectableFields(obj *calico.NetworkPolicy) fields.Set {
-	return generic.ObjectMetaFieldsSet(&obj.ObjectMeta, true)
+	return fields.Set{
+		"metadata.name":      obj.Name,
+		"metadata.namespace": obj.Namespace,
+		"spec.tier":          obj.Spec.Tier,
+	}
 }
