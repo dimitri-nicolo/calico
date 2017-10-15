@@ -156,9 +156,9 @@ It now shows up as a [policy]({{site.baseurl}}/{{page.version}}/reference/calico
 
 ```shell
 $ calicoctl get policy -o wide
-NAME                                ORDER   SELECTOR
-advanced-policy-demo.access-nginx   1000    calico/k8s_ns == 'advanced-policy-demo' && run == 'nginx'
-advanced-policy-demo.default-deny   1000    calico/k8s_ns == 'advanced-policy-demo'
+NAME                                TIER       ORDER   SELECTOR
+advanced-policy-demo.access-nginx   default    1000    calico/k8s_ns == 'advanced-policy-demo' && run == 'nginx'
+advanced-policy-demo.default-deny   default    1000    calico/k8s_ns == 'advanced-policy-demo'
 ```
 
 After creating the policy, we can now access the nginx Service.  We also see that the pod can

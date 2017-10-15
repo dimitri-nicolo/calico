@@ -1,6 +1,5 @@
 ---
 title: Tigera Essentials Toolkit for Kubernetes Demo
-redirect_from: latest/getting-started/essentials/simple-policy-essentials
 ---
 
 This guide is a variation of the simple policy demo intended to introduce the extra features of Essentials to people already familiar with Project Calico for Kubernetes.
