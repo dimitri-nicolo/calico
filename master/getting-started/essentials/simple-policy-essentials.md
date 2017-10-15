@@ -119,6 +119,7 @@ metadata:
   namespace: policy-demo
 spec:
   podSelector:
+    matchLabels: {}
 EOF
 ```
 
