@@ -1,6 +1,5 @@
 ---
 title: Tier Resource (tier)
-redirect_from: latest/reference/calicoctl/resources/tier
 ---
 
 A Tier resource (tier) represents an ordered collection of [Policies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy).

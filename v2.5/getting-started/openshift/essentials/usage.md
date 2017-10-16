@@ -1,6 +1,5 @@
 ---
 title: Using Essentials for OpenShift
-redirect_from: latest/getting-started/openshift/essentials/usage
 ---
 
 Tigera Essentials for OpenShift is mostly similar to Tigera Essentials for Kubernetes, with a few exceptions:

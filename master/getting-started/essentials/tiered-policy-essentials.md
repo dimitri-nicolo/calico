@@ -69,6 +69,7 @@ metadata:
   namespace: policy-demo
 spec:
   podSelector:
+    matchLabels: {}
 EOF
 ```
 
@@ -214,6 +215,11 @@ $ calicoctl create -f - <<EOF
     - action: deny
       destination:
         net: 8.8.4.4/32
+    # Explicitly allow other outgoing DNS traffic
+    - action: allow
+      protocol: udp
+      destination:
+        ports: [53]
     # Pass other traffic to next tier
     - action: pass
     selector: calico/k8s_ns == 'policy-demo'

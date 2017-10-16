@@ -1,6 +1,5 @@
 ---
 title: calicoq endpoint
-redirect_from: latest/reference/calicoq/endpoint
 ---
 
 `calicoq endpoint <substring>` shows you the Calico policies and profiles that

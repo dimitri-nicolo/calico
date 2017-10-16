@@ -5,6 +5,17 @@ order: 1
 toc:
 - title: Getting Started with Calico
   path: /getting-started/
+
+- title: Tigera Essentials Toolkit
+  path: /getting-started/essentials/
+  section:
+  - title: Obtaining Tigera Essentials Toolkit
+    path: /getting-started/essentials/
+  - title: Tigera Essentials Toolkit for Kubernetes Demo
+    path: /getting-started/essentials/simple-policy-essentials
+  - title: Tiered Policy Demo
+    path: /getting-started/essentials/tiered-policy-essentials
+
 - title: Kubernetes
   section:
   - title: Overview
@@ -23,6 +34,8 @@ toc:
         path: /getting-started/kubernetes/installation/hosted/kubeadm/
       - title: Kubernetes Datastore Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
+      - title: Tigera Essentials Toolkit Hosted Install
+        path: /getting-started/kubernetes/installation/hosted/essentials/
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
     - title: AWS
@@ -52,6 +65,12 @@ toc:
   section:
     - title: Installation
       path: /getting-started/openshift/installation
+    - title: Essentials
+      section:
+      - title: Installing Essentials for OpenShift
+        path: /getting-started/openshift/essentials/installation
+      - title: Using Essentials for OpenShift
+        path: /getting-started/openshift/essentials/usage
 
 - title: Mesos
   section:

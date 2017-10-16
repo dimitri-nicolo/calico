@@ -101,7 +101,7 @@ if [ "$CALICO_DISABLE_FILE_LOGGING" == "true" ]; then
 fi
 
 # TODO: Find a way to plumb the version in here.
-CALICO_VERSION="Calico v2.5.1 with Tigera Essentials Toolkit v1.1.1"
+CALICO_VERSION="Calico v2.6.1 with Tigera Essentials Toolkit v1.2.0"
 echo "Version: $CALICO_VERSION"
 
 echo "Calico node started successfully"
