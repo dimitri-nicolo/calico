@@ -258,3 +258,40 @@ clean-bin:
 	rm -rf $(BINDIR) \
 			.generate_exes \
 			docker-image/bin
+
+.PHONY: release
+release:
+ifndef VERSION
+	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
+endif
+	git tag $(VERSION)
+
+	# Check to make sure the tag isn't "dirty"
+	if git describe --tags --dirty | grep dirty; \
+	then echo current git working tree is "dirty". Make sure you do not have any uncommitted changes ;false; fi
+
+	# Build the apiserver binaries and image
+	$(MAKE) calico/k8sapiserver
+
+	# Check that the version output includes the version specified.
+	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
+	# Release is currently supported on darwin / linux only.
+	if ! docker run calico/k8sapiserver version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run calico/k8sapiserver version` "\nExpected version: $(VERSION)"; \
+	  false; \
+	else \
+	  echo "Version check passed\n"; \
+	fi
+
+	# Retag images with correct version and GCR private registry
+	docker tag calico/k8sapiserver gcr.io/tigera-dev/calico/k8sapiserver:$(VERSION)
+
+	# Check that images were created recently and that the IDs of the versioned and latest images match
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" calico/k8sapiserver
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/calico/k8sapiserver:$(VERSION)
+
+	@echo "\nNow push the tag and images. Then create a release on Github and"
+	@echo "\nAdd release notes for calico-k8sapiserver. Use this command"
+	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
+	@echo "git push origin $(VERSION)"
+	@echo "gcloud docker -- push gcr.io/tigera-dev/calico/k8sapiserver:$(VERSION)"
