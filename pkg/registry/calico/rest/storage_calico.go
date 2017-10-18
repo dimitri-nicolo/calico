@@ -19,6 +19,7 @@ package rest
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
+	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/globalpolicy"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
@@ -111,9 +112,31 @@ func (p RESTStorageProvider) v2Storage(
 		authorizer,
 	)
 
+	gpolicyRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("globalnetworkpolicies"))
+	if err != nil {
+		return nil, err
+	}
+	gpolicyOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   gpolicyRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicogpolicy.EmptyObject(),
+			ScopeStrategy: calicogpolicy.NewScopeStrategy(),
+			NewListFunc:   calicogpolicy.NewList,
+			GetAttrsFunc:  calicogpolicy.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: gpolicyRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(*policyOpts)
 	storage["tiers"] = calicotier.NewREST(*tierOpts)
+	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(*gpolicyOpts)
 
 	return storage, nil
 }

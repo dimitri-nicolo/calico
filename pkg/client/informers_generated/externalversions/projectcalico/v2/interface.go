@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// GlobalNetworkPolicies returns a GlobalNetworkPolicyInformer.
+	GlobalNetworkPolicies() GlobalNetworkPolicyInformer
 	// NetworkPolicies returns a NetworkPolicyInformer.
 	NetworkPolicies() NetworkPolicyInformer
 	// Tiers returns a TierInformer.
@@ -37,6 +39,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory) Interface {
 	return &version{f}
+}
+
+// GlobalNetworkPolicies returns a GlobalNetworkPolicyInformer.
+func (v *version) GlobalNetworkPolicies() GlobalNetworkPolicyInformer {
+	return &globalNetworkPolicyInformer{factory: v.SharedInformerFactory}
 }
 
 // NetworkPolicies returns a NetworkPolicyInformer.

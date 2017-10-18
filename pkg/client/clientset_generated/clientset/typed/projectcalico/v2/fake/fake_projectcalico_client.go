@@ -26,6 +26,10 @@ type FakeProjectcalicoV2 struct {
 	*testing.Fake
 }
 
+func (c *FakeProjectcalicoV2) GlobalNetworkPolicies() v2.GlobalNetworkPolicyInterface {
+	return &FakeGlobalNetworkPolicies{c}
+}
+
 func (c *FakeProjectcalicoV2) NetworkPolicies(namespace string) v2.NetworkPolicyInterface {
 	return &FakeNetworkPolicies{c, namespace}
 }

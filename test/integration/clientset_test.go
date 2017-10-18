@@ -317,7 +317,7 @@ func TestTierClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.NetworkPolicy{}
+				return &calico.Tier{}
 			})
 			defer shutdownServer()
 			if err := testTierClient(client, name); err != nil {
@@ -329,7 +329,6 @@ func TestTierClient(t *testing.T) {
 	if !t.Run(name, rootTestFunc()) {
 		t.Errorf("test-tier test failed")
 	}
-
 }
 
 func testTierClient(client calicoclient.Interface, name string) error {
@@ -372,6 +371,70 @@ func testTierClient(client calicoclient.Interface, name string) error {
 	err = tierClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("tier should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
+// TestGlobalNetworkPolicyClient exercises the GlobalNetworkPolicy client.
+func TestGlobalNetworkPolicyClient(t *testing.T) {
+	const name = "test-globalnetworkpolicy"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &calico.GlobalNetworkPolicy{}
+			})
+			defer shutdownServer()
+			if err := testGlobalNetworkPolicyClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-globalnetworkpolicy test failed")
+	}
+
+}
+
+func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) error {
+	globalNetworkPolicyClient := client.Projectcalico().GlobalNetworkPolicies()
+	globalNetworkPolicy := &v2.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	// start from scratch
+	globalNetworkPolicies, err := globalNetworkPolicyClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
+	}
+	if globalNetworkPolicies.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	globalNetworkPolicyServer, err := globalNetworkPolicyClient.Create(globalNetworkPolicy)
+	if nil != err {
+		return fmt.Errorf("error creating the globalNetworkPolicy '%v' (%v)", globalNetworkPolicy, err)
+	}
+	if name != globalNetworkPolicyServer.Name {
+		return fmt.Errorf("didn't get the same globalNetworkPolicy back from the server \n%+v\n%+v", globalNetworkPolicy, globalNetworkPolicyServer)
+	}
+
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
+	}
+
+	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting globalNetworkPolicy %s (%s)", name, err)
+	}
+	if name != globalNetworkPolicyServer.Name &&
+		globalNetworkPolicy.ResourceVersion == globalNetworkPolicyServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same globalNetworkPolicy back from the server \n%+v\n%+v", globalNetworkPolicy, globalNetworkPolicyServer)
+	}
+
+	err = globalNetworkPolicyClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("globalNetworkPolicy should be deleted (%s)", err)
 	}
 
 	return nil
