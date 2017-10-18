@@ -32,7 +32,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 )
 
-type apiServerStrategy struct {
+type policyStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
 }
@@ -42,50 +42,50 @@ func NewScopeStrategy() rest.NamespaceScopedStrategy {
 	return Strategy
 }
 
-// strategy is the default logic that applies when creating and updating
+// Strategy is the default logic that applies when creating and updating
 // Role objects.
-var Strategy = apiServerStrategy{api.Scheme, names.SimpleNameGenerator}
+var Strategy = policyStrategy{api.Scheme, names.SimpleNameGenerator}
 
-func (apiServerStrategy) NamespaceScoped() bool {
+func (policyStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
-	apiserver := obj.(*calico.NetworkPolicy)
-	tier, _ := getTierPolicy(apiserver.Name)
-	apiserver.SetLabels(map[string]string{"tier": tier})
+func (policyStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+	policy := obj.(*calico.NetworkPolicy)
+	tier, _ := getTierPolicy(policy.Name)
+	policy.SetLabels(map[string]string{"projectcalico.org/tier": tier})
 }
 
-func (apiServerStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (policyStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
 }
 
-func (apiServerStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (policyStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
 	return field.ErrorList{}
-	// return validation.ValidatePolicy(obj.(*calico.Policy))
+	//return validation.ValidatePolicy(obj.(*calico.Policy))
 }
 
-func (apiServerStrategy) AllowCreateOnUpdate() bool {
+func (policyStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (apiServerStrategy) AllowUnconditionalUpdate() bool {
+func (policyStrategy) AllowUnconditionalUpdate() bool {
 	return false
 }
 
-func (apiServerStrategy) Canonicalize(obj runtime.Object) {
+func (policyStrategy) Canonicalize(obj runtime.Object) {
 }
 
-func (apiServerStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (policyStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
 	return field.ErrorList{}
 	// return validation.ValidatePolicyUpdate(obj.(*calico.Policy), old.(*calico.Policy))
 }
 
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
-	apiserver, ok := obj.(*calico.NetworkPolicy)
+	policy, ok := obj.(*calico.NetworkPolicy)
 	if !ok {
 		return nil, nil, false, fmt.Errorf("given object is not a Policy.")
 	}
-	return labels.Set(apiserver.ObjectMeta.Labels), PolicyToSelectableFields(apiserver), apiserver.Initializers != nil, nil
+	return labels.Set(policy.ObjectMeta.Labels), PolicyToSelectableFields(policy), policy.Initializers != nil, nil
 }
 
 // MatchPolicy is the filter used by the generic etcd backend to watch events

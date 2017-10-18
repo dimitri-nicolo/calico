@@ -26,9 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
@@ -42,6 +40,7 @@ import (
 
 const (
 	policyDelim = "."
+	defaultTier = "default"
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -121,21 +120,32 @@ func logAuthorizerAttributes(requestAttributes authorizer.Attributes) {
 	glog.Infof("Authorizer Verb: %s", requestAttributes.GetVerb())
 }
 
-func getTierNamesFromSelector(options *metainternalversion.ListOptions) []string {
-	tierNames := []string{}
-	if options.LabelSelector == nil {
-		options.LabelSelector = labels.NewSelector()
-		requirement, _ := labels.NewRequirement("tier", selection.DoubleEquals, []string{"default"})
-		options.LabelSelector = options.LabelSelector.Add(*requirement)
-	}
-	requirements, _ := options.LabelSelector.Requirements()
-	for _, requirement := range requirements {
-		if requirement.Key() == "tier" {
-			tierNames = append(tierNames, requirement.Values().UnsortedList()...)
+func getTierNameFromSelector(options *metainternalversion.ListOptions) (string, error) {
+	if options.FieldSelector != nil {
+		requirements := options.FieldSelector.Requirements()
+		for _, requirement := range requirements {
+			if requirement.Field == "spec.tier" {
+				return requirement.Value, nil
+			}
 		}
 	}
 
-	return tierNames
+	if options.LabelSelector != nil {
+		requirements, _ := options.LabelSelector.Requirements()
+		for _, requirement := range requirements {
+			if requirement.Key() == "projectcalico.org/tier" {
+				if len(requirement.Values()) > 1 {
+					return "", fmt.Errorf("multi-valued selector not supported")
+				}
+				tierName, ok := requirement.Values().PopAny()
+				if ok {
+					return tierName, nil
+				}
+			}
+		}
+	}
+
+	return defaultTier, nil
 }
 
 func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName string) error {
@@ -180,12 +190,13 @@ func getTierPolicy(policyName string) (string, string) {
 }
 
 func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	tierNames := getTierNamesFromSelector(options)
-	for _, tierName := range tierNames {
-		err := r.authorizeTierOperation(ctx, tierName)
-		if err != nil {
-			return nil, err
-		}
+	tierName, err := getTierNameFromSelector(options)
+	if err != nil {
+		return nil, err
+	}
+	err = r.authorizeTierOperation(ctx, tierName)
+	if err != nil {
+		return nil, err
 	}
 
 	return r.Store.List(ctx, options)
@@ -235,12 +246,13 @@ func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav
 }
 
 func (r *REST) Watch(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
-	tierNames := getTierNamesFromSelector(options)
-	for _, tierName := range tierNames {
-		err := r.authorizeTierOperation(ctx, tierName)
-		if err != nil {
-			return nil, err
-		}
+	tierName, err := getTierNameFromSelector(options)
+	if err != nil {
+		return nil, err
+	}
+	err = r.authorizeTierOperation(ctx, tierName)
+	if err != nil {
+		return nil, err
 	}
 
 	return r.Store.Watch(ctx, options)
