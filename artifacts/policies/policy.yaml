@@ -1,7 +1,7 @@
 apiVersion: projectcalico.org/v2
 kind: NetworkPolicy
 metadata:
-  name: my-first-policy
+  name: tier1.my-first-policy
 spec:
   selector: role == 'database'
   ingress:
@@ -14,3 +14,4 @@ spec:
       - 6379
   egress:
   - action: allow
+  tier: "tier1"
