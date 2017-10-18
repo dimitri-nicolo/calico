@@ -25,3 +25,11 @@ type NetworkPolicyListerExpansion interface{}
 // NetworkPolicyNamespaceListerExpansion allows custom methods to be added to
 // NetworkPolicyNamespaceLister.
 type NetworkPolicyNamespaceListerExpansion interface{}
+
+// TierListerExpansion allows custom methods to be added to
+// TierLister.
+type TierListerExpansion interface{}
+
+// TierNamespaceListerExpansion allows custom methods to be added to
+// TierNamespaceLister.
+type TierNamespaceListerExpansion interface{}

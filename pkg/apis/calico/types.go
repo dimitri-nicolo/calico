@@ -37,3 +37,20 @@ type NetworkPolicy struct {
 
 	Spec calico.PolicySpec
 }
+
+// TierList is a list of Tier objects.
+type TierList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []Tier
+}
+
+// +genclient=true
+
+type Tier struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.TierSpec
+}

@@ -10,5 +10,13 @@ import (
 func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	glog.V(4).Infoln("Constructing Calico Storage")
 
-	return NewNetworkPolicyStorage(opts)
+	switch opts.RESTOptions.ResourcePrefix {
+	case "policy":
+		return NewNetworkPolicyStorage(opts)
+	case "tier":
+		return NewTierStorage(opts)
+	default:
+		return nil, nil
+
+	}
 }
