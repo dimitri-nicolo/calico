@@ -82,7 +82,7 @@ func (ts *tierStore) Create(ctx context.Context, key string, obj, out runtime.Ob
 func (ts *tierStore) Delete(ctx context.Context, key string, out runtime.Object,
 	preconditions *storage.Preconditions) error {
 	tHandler := ts.client.Tiers()
-	_, name, err := NamespaceAndNameFromKey(key)
+	name, err := NameFromKey(key, false)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (ts *tierStore) Delete(ctx context.Context, key string, out runtime.Object,
 // and send it in an "ADDED" event, before watch starts.
 func (ts *tierStore) Watch(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
-	_, name, err := NamespaceAndNameFromKey(key)
+	name, err := NameFromKey(key, false)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (ts *tierStore) Watch(ctx context.Context, key string, resourceVersion stri
 // and send them in "ADDED" events, before watch starts.
 func (ts *tierStore) WatchList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (watch.Interface, error) {
-	_, name, err := NamespaceAndNameFromKey(key)
+	name, err := NameFromKey(key, false)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (ts *tierStore) watch(ctx context.Context, resourceVersion string,
 // be have at least 'resourceVersion'.
 func (ts *tierStore) Get(ctx context.Context, key string, resourceVersion string,
 	out runtime.Object, ignoreNotFound bool) error {
-	_, name, err := NamespaceAndNameFromKey(key)
+	name, err := NameFromKey(key, false)
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func (ts *tierStore) GetToList(ctx context.Context, key string, resourceVersion 
 // be have at least 'resourceVersion'.
 func (ts *tierStore) List(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
-	_, name, err := NamespaceAndNameFromKey(key)
+	name, err := NameFromKey(key, false)
 	if err != nil {
 		return err
 	}

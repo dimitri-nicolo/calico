@@ -43,12 +43,12 @@ func NewScopeStrategy() rest.NamespaceScopedStrategy {
 	return Strategy
 }
 
-// strategy is the default logic that applies when creating and updating
+// Strategy is the default logic that applies when creating and updating
 // Role objects.
 var Strategy = apiServerStrategy{api.Scheme, names.SimpleNameGenerator}
 
 func (apiServerStrategy) NamespaceScoped() bool {
-	return true
+	return false
 }
 
 func (apiServerStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {

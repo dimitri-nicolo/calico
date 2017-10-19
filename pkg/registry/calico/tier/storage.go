@@ -56,7 +56,11 @@ func NewREST(opts server.Options) *REST {
 		if err != nil {
 			return "", err
 		}
-		return registry.NamespaceKeyFunc(genericapirequest.WithNamespace(genericapirequest.NewContext(), accessor.GetNamespace()), prefix, accessor.GetName())
+		return registry.NoNamespaceKeyFunc(
+			genericapirequest.NewContext(),
+			prefix,
+			accessor.GetName(),
+		)
 	}
 	storageInterface, dFunc := opts.GetStorage(
 		1000,
@@ -72,8 +76,8 @@ func NewREST(opts server.Options) *REST {
 		Copier:      api.Scheme,
 		NewFunc:     func() runtime.Object { return &calico.Tier{} },
 		NewListFunc: func() runtime.Object { return &calico.TierList{} },
-		KeyRootFunc: opts.KeyRootFunc(true),
-		KeyFunc:     opts.KeyFunc(true),
+		KeyRootFunc: opts.KeyRootFunc(false),
+		KeyFunc:     opts.KeyFunc(false),
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
 			return obj.(*calico.Tier).Name, nil
 		},
