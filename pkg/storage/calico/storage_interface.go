@@ -11,12 +11,12 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	glog.V(4).Infoln("Constructing Calico Storage")
 
 	switch opts.RESTOptions.ResourcePrefix {
-	case "policy":
+	case "projectcalico.org/networkpolicies":
 		return NewNetworkPolicyStorage(opts)
-	case "tier":
+	case "projectcalico.org/tiers":
 		return NewTierStorage(opts)
 	default:
+		glog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return nil, nil
-
 	}
 }
