@@ -28,7 +28,7 @@ import (
 // TiersGetter has a method to return a TierInterface.
 // A group's client should implement this interface.
 type TiersGetter interface {
-	Tiers(namespace string) TierInterface
+	Tiers() TierInterface
 }
 
 // TierInterface has methods to work with Tier resources.
@@ -47,14 +47,12 @@ type TierInterface interface {
 // tiers implements TierInterface
 type tiers struct {
 	client rest.Interface
-	ns     string
 }
 
 // newTiers returns a Tiers
-func newTiers(c *ProjectcalicoV2Client, namespace string) *tiers {
+func newTiers(c *ProjectcalicoV2Client) *tiers {
 	return &tiers{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -62,7 +60,6 @@ func newTiers(c *ProjectcalicoV2Client, namespace string) *tiers {
 func (c *tiers) Create(tier *v2.Tier) (result *v2.Tier, err error) {
 	result = &v2.Tier{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("tiers").
 		Body(tier).
 		Do().
@@ -74,7 +71,6 @@ func (c *tiers) Create(tier *v2.Tier) (result *v2.Tier, err error) {
 func (c *tiers) Update(tier *v2.Tier) (result *v2.Tier, err error) {
 	result = &v2.Tier{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("tiers").
 		Name(tier.Name).
 		Body(tier).
@@ -86,7 +82,6 @@ func (c *tiers) Update(tier *v2.Tier) (result *v2.Tier, err error) {
 // Delete takes name of the tier and deletes it. Returns an error if one occurs.
 func (c *tiers) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("tiers").
 		Name(name).
 		Body(options).
@@ -97,7 +92,6 @@ func (c *tiers) Delete(name string, options *v1.DeleteOptions) error {
 // DeleteCollection deletes a collection of objects.
 func (c *tiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("tiers").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Body(options).
@@ -109,7 +103,6 @@ func (c *tiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListO
 func (c *tiers) Get(name string, options v1.GetOptions) (result *v2.Tier, err error) {
 	result = &v2.Tier{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("tiers").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -122,7 +115,6 @@ func (c *tiers) Get(name string, options v1.GetOptions) (result *v2.Tier, err er
 func (c *tiers) List(opts v1.ListOptions) (result *v2.TierList, err error) {
 	result = &v2.TierList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("tiers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
@@ -134,7 +126,6 @@ func (c *tiers) List(opts v1.ListOptions) (result *v2.TierList, err error) {
 func (c *tiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("tiers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Watch()
@@ -144,7 +135,6 @@ func (c *tiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
 func (c *tiers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.Tier, err error) {
 	result = &v2.Tier{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("tiers").
 		SubResource(subresources...).
 		Name(name).

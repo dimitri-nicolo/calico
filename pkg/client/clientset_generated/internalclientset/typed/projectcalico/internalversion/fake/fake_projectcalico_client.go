@@ -30,8 +30,8 @@ func (c *FakeProjectcalico) NetworkPolicies(namespace string) internalversion.Ne
 	return &FakeNetworkPolicies{c, namespace}
 }
 
-func (c *FakeProjectcalico) Tiers(namespace string) internalversion.TierInterface {
-	return &FakeTiers{c, namespace}
+func (c *FakeProjectcalico) Tiers() internalversion.TierInterface {
+	return &FakeTiers{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

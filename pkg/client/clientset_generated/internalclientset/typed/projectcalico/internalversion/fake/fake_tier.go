@@ -29,7 +29,6 @@ import (
 // FakeTiers implements TierInterface
 type FakeTiers struct {
 	Fake *FakeProjectcalico
-	ns   string
 }
 
 var tiersResource = schema.GroupVersionResource{Group: "projectcalico.org", Version: "", Resource: "tiers"}
@@ -38,8 +37,7 @@ var tiersKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "",
 
 func (c *FakeTiers) Create(tier *calico.Tier) (result *calico.Tier, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(tiersResource, c.ns, tier), &calico.Tier{})
-
+		Invokes(testing.NewRootCreateAction(tiersResource, tier), &calico.Tier{})
 	if obj == nil {
 		return nil, err
 	}
@@ -48,8 +46,7 @@ func (c *FakeTiers) Create(tier *calico.Tier) (result *calico.Tier, err error) {
 
 func (c *FakeTiers) Update(tier *calico.Tier) (result *calico.Tier, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(tiersResource, c.ns, tier), &calico.Tier{})
-
+		Invokes(testing.NewRootUpdateAction(tiersResource, tier), &calico.Tier{})
 	if obj == nil {
 		return nil, err
 	}
@@ -58,13 +55,12 @@ func (c *FakeTiers) Update(tier *calico.Tier) (result *calico.Tier, err error) {
 
 func (c *FakeTiers) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(tiersResource, c.ns, name), &calico.Tier{})
-
+		Invokes(testing.NewRootDeleteAction(tiersResource, name), &calico.Tier{})
 	return err
 }
 
 func (c *FakeTiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(tiersResource, c.ns, listOptions)
+	action := testing.NewRootDeleteCollectionAction(tiersResource, listOptions)
 
 	_, err := c.Fake.Invokes(action, &calico.TierList{})
 	return err
@@ -72,8 +68,7 @@ func (c *FakeTiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.L
 
 func (c *FakeTiers) Get(name string, options v1.GetOptions) (result *calico.Tier, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(tiersResource, c.ns, name), &calico.Tier{})
-
+		Invokes(testing.NewRootGetAction(tiersResource, name), &calico.Tier{})
 	if obj == nil {
 		return nil, err
 	}
@@ -82,8 +77,7 @@ func (c *FakeTiers) Get(name string, options v1.GetOptions) (result *calico.Tier
 
 func (c *FakeTiers) List(opts v1.ListOptions) (result *calico.TierList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(tiersResource, tiersKind, c.ns, opts), &calico.TierList{})
-
+		Invokes(testing.NewRootListAction(tiersResource, tiersKind, opts), &calico.TierList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -104,15 +98,13 @@ func (c *FakeTiers) List(opts v1.ListOptions) (result *calico.TierList, err erro
 // Watch returns a watch.Interface that watches the requested tiers.
 func (c *FakeTiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(tiersResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(tiersResource, opts))
 }
 
 // Patch applies the patch and returns the patched tier.
 func (c *FakeTiers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *calico.Tier, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(tiersResource, c.ns, name, data, subresources...), &calico.Tier{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(tiersResource, name, data, subresources...), &calico.Tier{})
 	if obj == nil {
 		return nil, err
 	}

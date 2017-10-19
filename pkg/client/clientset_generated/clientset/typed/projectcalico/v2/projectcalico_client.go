@@ -38,8 +38,8 @@ func (c *ProjectcalicoV2Client) NetworkPolicies(namespace string) NetworkPolicyI
 	return newNetworkPolicies(c, namespace)
 }
 
-func (c *ProjectcalicoV2Client) Tiers(namespace string) TierInterface {
-	return newTiers(c, namespace)
+func (c *ProjectcalicoV2Client) Tiers() TierInterface {
+	return newTiers(c)
 }
 
 // NewForConfig creates a new ProjectcalicoV2Client for the given config.

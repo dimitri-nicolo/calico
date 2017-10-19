@@ -47,6 +47,7 @@ type TierList struct {
 }
 
 // +genclient=true
+// +nonNamespaced=true
 
 type Tier struct {
 	metav1.TypeMeta   `json:",inline"`

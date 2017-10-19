@@ -45,10 +45,10 @@ func newTierInformer(client internalclientset.Interface, resyncPeriod time.Durat
 	sharedIndexInformer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
-				return client.Projectcalico().Tiers(v1.NamespaceAll).List(options)
+				return client.Projectcalico().Tiers().List(options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
-				return client.Projectcalico().Tiers(v1.NamespaceAll).Watch(options)
+				return client.Projectcalico().Tiers().Watch(options)
 			},
 		},
 		&calico.Tier{},

@@ -21,6 +21,7 @@ package v2
 import (
 	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 )
@@ -29,8 +30,8 @@ import (
 type TierLister interface {
 	// List lists all Tiers in the indexer.
 	List(selector labels.Selector) (ret []*v2.Tier, err error)
-	// Tiers returns an object that can list and get Tiers.
-	Tiers(namespace string) TierNamespaceLister
+	// Get retrieves the Tier from the index for a given name.
+	Get(name string) (*v2.Tier, error)
 	TierListerExpansion
 }
 
@@ -52,38 +53,10 @@ func (s *tierLister) List(selector labels.Selector) (ret []*v2.Tier, err error) 
 	return ret, err
 }
 
-// Tiers returns an object that can list and get Tiers.
-func (s *tierLister) Tiers(namespace string) TierNamespaceLister {
-	return tierNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// TierNamespaceLister helps list and get Tiers.
-type TierNamespaceLister interface {
-	// List lists all Tiers in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v2.Tier, err error)
-	// Get retrieves the Tier from the indexer for a given namespace and name.
-	Get(name string) (*v2.Tier, error)
-	TierNamespaceListerExpansion
-}
-
-// tierNamespaceLister implements the TierNamespaceLister
-// interface.
-type tierNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all Tiers in the indexer for a given namespace.
-func (s tierNamespaceLister) List(selector labels.Selector) (ret []*v2.Tier, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v2.Tier))
-	})
-	return ret, err
-}
-
-// Get retrieves the Tier from the indexer for a given namespace and name.
-func (s tierNamespaceLister) Get(name string) (*v2.Tier, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the Tier from the index for a given name.
+func (s *tierLister) Get(name string) (*v2.Tier, error) {
+	key := &v2.Tier{ObjectMeta: v1.ObjectMeta{Name: name}}
+	obj, exists, err := s.indexer.Get(key)
 	if err != nil {
 		return nil, err
 	}
