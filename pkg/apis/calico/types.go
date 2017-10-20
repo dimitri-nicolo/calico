@@ -21,6 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // NetworkPolicyList is a list of Policy objects.
 type NetworkPolicyList struct {
 	metav1.TypeMeta
@@ -29,7 +31,8 @@ type NetworkPolicyList struct {
 	Items []NetworkPolicy
 }
 
-// +genclient=true
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type NetworkPolicy struct {
 	metav1.TypeMeta

@@ -1,20 +1,6 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package internalversion
+Copyright 2017 Tigera.
+*/package internalversion
 
 import (
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
@@ -56,6 +42,41 @@ func newNetworkPolicies(c *ProjectcalicoClient, namespace string) *networkPolici
 		client: c.RESTClient(),
 		ns:     namespace,
 	}
+}
+
+// Get takes name of the networkPolicy, and returns the corresponding networkPolicy object, and an error if there is any.
+func (c *networkPolicies) Get(name string, options v1.GetOptions) (result *calico.NetworkPolicy, err error) {
+	result = &calico.NetworkPolicy{}
+	err = c.client.Get().
+		Namespace(c.ns).
+		Resource("networkpolicies").
+		Name(name).
+		VersionedParams(&options, scheme.ParameterCodec).
+		Do().
+		Into(result)
+	return
+}
+
+// List takes label and field selectors, and returns the list of NetworkPolicies that match those selectors.
+func (c *networkPolicies) List(opts v1.ListOptions) (result *calico.NetworkPolicyList, err error) {
+	result = &calico.NetworkPolicyList{}
+	err = c.client.Get().
+		Namespace(c.ns).
+		Resource("networkpolicies").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Do().
+		Into(result)
+	return
+}
+
+// Watch returns a watch.Interface that watches the requested networkPolicies.
+func (c *networkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error) {
+	opts.Watch = true
+	return c.client.Get().
+		Namespace(c.ns).
+		Resource("networkpolicies").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Watch()
 }
 
 // Create takes the representation of a networkPolicy and creates it.  Returns the server's representation of the networkPolicy, and an error, if there is any.
@@ -103,41 +124,6 @@ func (c *networkPolicies) DeleteCollection(options *v1.DeleteOptions, listOption
 		Body(options).
 		Do().
 		Error()
-}
-
-// Get takes name of the networkPolicy, and returns the corresponding networkPolicy object, and an error if there is any.
-func (c *networkPolicies) Get(name string, options v1.GetOptions) (result *calico.NetworkPolicy, err error) {
-	result = &calico.NetworkPolicy{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("networkpolicies").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of NetworkPolicies that match those selectors.
-func (c *networkPolicies) List(opts v1.ListOptions) (result *calico.NetworkPolicyList, err error) {
-	result = &calico.NetworkPolicyList{}
-	err = c.client.Get().
-		Namespace(c.ns).
-		Resource("networkpolicies").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested networkPolicies.
-func (c *networkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error) {
-	opts.Watch = true
-	return c.client.Get().
-		Namespace(c.ns).
-		Resource("networkpolicies").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Watch()
 }
 
 // Patch applies the patch and returns the patched networkPolicy.

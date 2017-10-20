@@ -92,6 +92,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -e LOCAL_USER_ID=$(MY_UID) \
                               -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                              -v $${PWD}/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
                               -w /go/src/github.com/tigera/calico-k8sapiserver \
                               $(GO_BUILD_CONTAINER)
 

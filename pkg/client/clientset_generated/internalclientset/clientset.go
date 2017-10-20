@@ -1,20 +1,6 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package internalclientset
+Copyright 2017 Tigera.
+*/package internalclientset
 
 import (
 	glog "github.com/golang/glog"
@@ -33,15 +19,12 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	*projectcalicointernalversion.ProjectcalicoClient
+	projectcalico *projectcalicointernalversion.ProjectcalicoClient
 }
 
 // Projectcalico retrieves the ProjectcalicoClient
 func (c *Clientset) Projectcalico() projectcalicointernalversion.ProjectcalicoInterface {
-	if c == nil {
-		return nil
-	}
-	return c.ProjectcalicoClient
+	return c.projectcalico
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -60,7 +43,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.ProjectcalicoClient, err = projectcalicointernalversion.NewForConfig(&configShallowCopy)
+	cs.projectcalico, err = projectcalicointernalversion.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +60,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.ProjectcalicoClient = projectcalicointernalversion.NewForConfigOrDie(c)
+	cs.projectcalico = projectcalicointernalversion.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -86,7 +69,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.ProjectcalicoClient = projectcalicointernalversion.New(c)
+	cs.projectcalico = projectcalicointernalversion.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

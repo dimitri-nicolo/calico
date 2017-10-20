@@ -1,20 +1,6 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package clientset
+Copyright 2017 Tigera.
+*/package clientset
 
 import (
 	glog "github.com/golang/glog"
@@ -35,24 +21,18 @@ type Interface interface {
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	*projectcalicov2.ProjectcalicoV2Client
+	projectcalicoV2 *projectcalicov2.ProjectcalicoV2Client
 }
 
 // ProjectcalicoV2 retrieves the ProjectcalicoV2Client
 func (c *Clientset) ProjectcalicoV2() projectcalicov2.ProjectcalicoV2Interface {
-	if c == nil {
-		return nil
-	}
-	return c.ProjectcalicoV2Client
+	return c.projectcalicoV2
 }
 
 // Deprecated: Projectcalico retrieves the default version of ProjectcalicoClient.
 // Please explicitly pick a version.
 func (c *Clientset) Projectcalico() projectcalicov2.ProjectcalicoV2Interface {
-	if c == nil {
-		return nil
-	}
-	return c.ProjectcalicoV2Client
+	return c.projectcalicoV2
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -71,7 +51,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.ProjectcalicoV2Client, err = projectcalicov2.NewForConfig(&configShallowCopy)
+	cs.projectcalicoV2, err = projectcalicov2.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +68,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.ProjectcalicoV2Client = projectcalicov2.NewForConfigOrDie(c)
+	cs.projectcalicoV2 = projectcalicov2.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -97,7 +77,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.ProjectcalicoV2Client = projectcalicov2.New(c)
+	cs.projectcalicoV2 = projectcalicov2.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
