@@ -1,5 +1,5 @@
-hash: d38d5304f51fd5c59b1e3db5f9b9182313b95ea8886f35acdc0635a7135a76e6
-updated: 2017-10-19T22:52:38.850905678-07:00
+hash: fa8fa6b6a5323934482a63862ddd2d2fb3a73bbddb5697ac5f0755174b7ffeca
+updated: 2017-10-19T23:00:09.613863969-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -533,6 +533,8 @@ imports:
   - util/integer
 - name: k8s.io/code-generator
   version: 0c5165a97e055df28cca8bbcb8b7c8ae1019b3f1
+- name: k8s.io/gengo
+  version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
 - name: k8s.io/kube-openapi
   version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
