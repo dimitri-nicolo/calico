@@ -138,29 +138,29 @@ LDFLAGS:=-ldflags "\
 
 $(BINDIR)/defaulter-gen: 
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/defaulter-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/defaulter-gen'
 
 $(BINDIR)/deepcopy-gen:
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/deepcopy-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
 $(BINDIR)/conversion-gen: 
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/conversion-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/conversion-gen'
 
 $(BINDIR)/client-gen:
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/client-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/client-gen'
 
 $(BINDIR)/lister-gen:
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/lister-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/lister-gen'
 
 $(BINDIR)/informer-gen:
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/informer-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/informer-gen'
 
-$(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
+$(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -o $@ $(CAPI_PKG)/$^'
 

@@ -197,4 +197,6 @@ import:
   - lib/client
 - package: k8s.io/kubernetes
   version: release-1.8
+- package: k8s.io/code-generator
+  version: release-1.8
 - package: github.com/kubernetes/repo-infra
