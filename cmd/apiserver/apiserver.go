@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/util/logs"
-	"k8s.io/client-go/pkg/api"
+	"k8s.io/kubernetes/pkg/api"
 	// The API groups for our API must be installed before we can use the
 	// client to work with them.  This needs to be done once per process; this
 	// is the point at which we handle this for the API server process.
@@ -40,7 +40,7 @@ func init() {
 
 	// TODO: keep the generic API server from wanting this
 	unversioned := schema.GroupVersion{Group: "", Version: "v1"}
-	api.Scheme.AddUnversionedTypes(unversioned,
+	kapiv1.Scheme.AddUnversionedTypes(unversioned,
 		&metav1.Status{},
 		&metav1.APIVersions{},
 		&metav1.APIGroupList{},

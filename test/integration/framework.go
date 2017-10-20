@@ -35,9 +35,9 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/pkg/api"
-	_ "k8s.io/client-go/pkg/api/install"
-	_ "k8s.io/client-go/pkg/apis/extensions/install"
+	_ "k8s.io/kubernetes/pkg/api/install"
+	//_ "k8s.io/kubernetes/pkg/apis/extensions/install"
+	"k8s.io/kubernetes/pkg/api"
 )
 
 const defaultEtcdPathPrefix = ""

@@ -27,7 +27,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
-	"k8s.io/client-go/pkg/api"
+	"k8s.io/kubernetes/pkg/api"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 )

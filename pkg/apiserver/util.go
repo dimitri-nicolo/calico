@@ -18,8 +18,8 @@ package apiserver
 
 import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/client-go/pkg/api"
 	"k8s.io/client-go/pkg/version"
+	"k8s.io/kubernetes/pkg/api"
 )
 
 const (

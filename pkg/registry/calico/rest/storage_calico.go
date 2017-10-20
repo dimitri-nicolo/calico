@@ -31,7 +31,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/client-go/pkg/api"
+	"k8s.io/kubernetes/pkg/api"
 
 	calicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/storage/calico"

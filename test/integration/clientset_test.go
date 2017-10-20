@@ -34,7 +34,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	// avoid error `no kind is registered for the type metav1.ListOptions`
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	_ "k8s.io/client-go/pkg/api/install"
+	_ "k8s.io/kubernetes/pkg/api/install"
 	// our versioned types
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 

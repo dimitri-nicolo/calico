@@ -21,7 +21,7 @@ import (
 	"io"
 
 	genericoptions "k8s.io/apiserver/pkg/server/options"
-	"k8s.io/client-go/pkg/api"
+	"k8s.io/kubernetes/pkg/api"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	"k8s.io/kubernetes/pkg/util/interrupt"

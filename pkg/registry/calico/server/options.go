@@ -29,7 +29,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
-	"k8s.io/client-go/pkg/api"
+	"k8s.io/kubernetes/pkg/api"
 )
 
 type errUnsupportedStorageType struct {
