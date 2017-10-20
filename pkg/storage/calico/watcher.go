@@ -19,6 +19,10 @@ package calico
 import (
 	"context"
 
+<<<<<<< HEAD:pkg/storage/calico/watcher.go
+=======
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v2"
+>>>>>>> aa67996e... Moving to libcalico-go based off k8s 1.8:pkg/storage/calico/policy_watcher.go
 	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"

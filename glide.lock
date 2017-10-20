@@ -1,8 +1,20 @@
-hash: fa8fa6b6a5323934482a63862ddd2d2fb3a73bbddb5697ac5f0755174b7ffeca
-updated: 2017-10-19T23:00:09.613863969-07:00
+hash: 61173e4cd8e5dc21d4b541aa26d8198293e09910de5816edc438cc49c19d75e5
+updated: 2017-10-20T15:33:34.954291102-07:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
+- name: cloud.google.com/go
+  version: 3b1ae45394a234c385be014e9a488f2bb6eef821
+  subpackages:
+  - compute/metadata
+  - internal
+- name: github.com/Azure/go-autorest
+  version: 58f6f26e200fa5dfb40c9cd1c83f3e2c860d779d
+  subpackages:
+  - autorest
+  - autorest/adal
+  - autorest/azure
+  - autorest/date
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
@@ -34,6 +46,8 @@ imports:
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
   subpackages:
   - spew
+- name: github.com/dgrijalva/jwt-go
+  version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/docker/distribution
   version: cd27f179f2c10c5d300e6d09025b538c475b0d51
   subpackages:
@@ -89,6 +103,15 @@ imports:
   - OpenAPIv2
   - compiler
   - extensions
+- name: github.com/gophercloud/gophercloud
+  version: 2bf16b94fdd9b01557c4d076e567fe5cbbe5a961
+  subpackages:
+  - openstack
+  - openstack/identity/v2/tenants
+  - openstack/identity/v2/tokens
+  - openstack/identity/v3/tokens
+  - openstack/utils
+  - pagination
 - name: github.com/gregjones/httpcache
   version: 787624de3eb7bd915c329cba748687a3b22666a6
   subpackages:
@@ -118,7 +141,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/kubernetes/repo-infra
-  version: 0aafaab9e158d3628804242c6a9c4dd3eb8bce1f
+  version: e26fc85d14a1d3dc25569831acc06919673c545a
 - name: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -150,25 +173,30 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 67bd4b4e8a7466592dc6c3917f052c9a4a075cd9
-  repo: git@github.com:tigera/libcalico-go-private.git
+  version: 8953ccf223be94fd0ea931a66df15b3f1ba3f054
   subpackages:
-  - lib/api
-  - lib/api/unversioned
   - lib/apiconfig
-  - lib/apiv2
+  - lib/apis/v1
+  - lib/apis/v1/unversioned
+  - lib/apis/v2
   - lib/backend
   - lib/backend/api
   - lib/backend/etcdv3
+  - lib/backend/k8s
+  - lib/backend/k8s/conversion
+  - lib/backend/k8s/resources
   - lib/backend/model
+  - lib/backend/syncersv1/felixsyncer
+  - lib/backend/syncersv1/updateprocessors
+  - lib/backend/watchersyncer
   - lib/client
   - lib/clientv2
   - lib/converter
   - lib/errors
   - lib/hash
-  - lib/hwm
   - lib/ipam
   - lib/ipip
+  - lib/names
   - lib/namespace
   - lib/net
   - lib/numorstring
@@ -218,6 +246,7 @@ imports:
   version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
   subpackages:
   - context
+  - context/ctxhttp
   - html
   - html/atom
   - http2
@@ -227,6 +256,13 @@ imports:
   - lex/httplex
   - trace
   - websocket
+- name: golang.org/x/oauth2
+  version: a6bd8cefa1811bd24b86f8902872e4e8225f74c4
+  subpackages:
+  - google
+  - internal
+  - jws
+  - jwt
 - name: golang.org/x/sys
   version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
   subpackages:
@@ -244,6 +280,18 @@ imports:
   - unicode/bidi
   - unicode/norm
   - width
+- name: google.golang.org/appengine
+  version: 12d5545dc1cfa6047a286d5e853841b6471f4c19
+  subpackages:
+  - internal
+  - internal/app_identity
+  - internal/base
+  - internal/datastore
+  - internal/log
+  - internal/modules
+  - internal/remote_api
+  - internal/urlfetch
+  - urlfetch
 - name: google.golang.org/grpc
   version: 777daa17ff9b5daef1cfdf915088a2ada3332bf0
   subpackages:
@@ -261,10 +309,6 @@ imports:
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
   version: 20b71e5b60d756d3d2f80def009790325acc2b23
-- name: gopkg.in/tchap/go-patricia.v2
-  version: 666120de432aea38ab06bd5c818f04f4129882c9
-  subpackages:
-  - patricia
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
@@ -514,9 +558,15 @@ imports:
   - listers/storage/v1
   - listers/storage/v1beta1
   - pkg/version
+  - plugin/pkg/client/auth
+  - plugin/pkg/client/auth/azure
+  - plugin/pkg/client/auth/gcp
+  - plugin/pkg/client/auth/oidc
+  - plugin/pkg/client/auth/openstack
   - rest
   - rest/watch
   - testing
+  - third_party/forked/golang/template
   - tools/auth
   - tools/cache
   - tools/clientcmd
@@ -531,6 +581,7 @@ imports:
   - util/flowcontrol
   - util/homedir
   - util/integer
+  - util/jsonpath
 - name: k8s.io/code-generator
   version: 0c5165a97e055df28cca8bbcb8b7c8ae1019b3f1
 - name: k8s.io/gengo
@@ -543,7 +594,7 @@ imports:
   - pkg/handler
   - pkg/util
 - name: k8s.io/kubernetes
-  version: aa1dc9db3532dfbf09e45c8e3786a648cd217417
+  version: 95233f5ffe731e4b5d29bdee12955e20dcc07410
   subpackages:
   - pkg/api
   - pkg/api/install

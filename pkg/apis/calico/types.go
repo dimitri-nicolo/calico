@@ -17,7 +17,7 @@ limitations under the License.
 package calico
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/apiv2"
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

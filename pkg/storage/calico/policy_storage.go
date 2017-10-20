@@ -7,7 +7,13 @@ import (
 
 	"golang.org/x/net/context"
 
+<<<<<<< HEAD
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apiv2"
+=======
+	"github.com/golang/glog"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v2"
+>>>>>>> aa67996e... Moving to libcalico-go based off k8s 1.8
 	"github.com/projectcalico/libcalico-go/lib/clientv2"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
