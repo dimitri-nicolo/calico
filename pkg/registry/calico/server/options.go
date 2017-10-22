@@ -29,7 +29,6 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend/factory"
-	"k8s.io/kubernetes/pkg/api"
 )
 
 type errUnsupportedStorageType struct {
@@ -137,7 +136,6 @@ func (o Options) KeyFunc(namespaced bool) func(genericapirequest.Context, string
 
 // GetStorage returns the storage from the given parameters
 func (o Options) GetStorage(
-	capacity int,
 	objectType runtime.Object,
 	resourcePrefix string,
 	keyFunc func(obj runtime.Object) (string, error),
@@ -149,9 +147,8 @@ func (o Options) GetStorage(
 	if o.storageType == StorageTypeEtcd {
 		etcdRESTOpts := o.EtcdOptions.RESTOptions
 		return etcdRESTOpts.Decorator(
-			api.Scheme,
+			nil,
 			etcdRESTOpts.StorageConfig,
-			&capacity,
 			objectType,
 			resourcePrefix,
 			keyFunc, /* keyFunc for decorator -- looks to be unused everywhere */

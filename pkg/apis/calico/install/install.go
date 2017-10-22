@@ -23,12 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/kubernetes/pkg/api"
 )
-
-func init() {
-	Install(api.GroupFactoryRegistry, api.Registry, api.Scheme)
-}
 
 // Install registers the API group and adds types to a scheme
 func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *registered.APIRegistrationManager, scheme *runtime.Scheme) {
@@ -37,7 +32,6 @@ func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *r
 			GroupName:                  calico.GroupName,
 			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy"),
 			VersionPreferenceOrder:     []string{v2.SchemeGroupVersion.Version},
-			ImportPrefix:               "github.com/tigera/calico-k8sapiserver/pkg/apis/calico",
 			AddInternalObjectsToScheme: calico.AddToScheme,
 		},
 		announced.VersionToSchemeFunc{

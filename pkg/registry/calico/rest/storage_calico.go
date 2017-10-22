@@ -18,7 +18,6 @@ package rest
 
 import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/globalpolicy"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
@@ -28,12 +27,9 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
-	genericapiserver "k8s.io/apiserver/pkg/server"
 	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/kubernetes/pkg/api"
 
-	calicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
 )
 
@@ -43,29 +39,8 @@ type RESTStorageProvider struct {
 	StorageType server.StorageType
 }
 
-// NewRESTStorage is a factory method to make a new APIGroupInfo for the
-// calico API group.
-func (p RESTStorageProvider) NewRESTStorage(
-	apiResourceConfigSource serverstorage.APIResourceConfigSource,
-	restOptionsGetter generic.RESTOptionsGetter,
-	authorizer authorizer.Authorizer,
-) (*genericapiserver.APIGroupInfo, error) {
-	storage, err := p.v2Storage(apiResourceConfigSource, restOptionsGetter, authorizer)
-	if err != nil {
-		return nil, err
-	}
-
-	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(calico.GroupName, api.Registry, api.Scheme, api.ParameterCodec, api.Codecs)
-	apiGroupInfo.GroupMeta.GroupVersion = v2.SchemeGroupVersion
-
-	apiGroupInfo.VersionedResourcesStorageMap = map[string]map[string]rest.Storage{
-		calicov2.SchemeGroupVersion.Version: storage,
-	}
-
-	return &apiGroupInfo, nil
-}
-
-func (p RESTStorageProvider) v2Storage(
+// NewV2Storage constructs v2 api storage.
+func (p RESTStorageProvider) NewV2Storage(
 	apiResourceConfigSource serverstorage.APIResourceConfigSource,
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,

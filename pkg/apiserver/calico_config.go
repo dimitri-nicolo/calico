@@ -18,7 +18,12 @@ package apiserver
 
 import (
 	"github.com/golang/glog"
+	"github.com/projectcalico/libcalico-go/lib/apis/v2"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	calicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	calicorest "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/rest"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/server/storage"
 )
@@ -70,15 +75,19 @@ func (c completedCalicoConfig) NewServer() (*CalicoAPIServer, error) {
 	glog.V(4).Infoln("Created skeleton API server")
 
 	glog.V(4).Infoln("Installing API group")
+	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(calico.GroupName, registry, Scheme, metav1.ParameterCodec, Codecs)
+	apiGroupInfo.GroupMeta.GroupVersion = v2.SchemeGroupVersion
 	// TODO: Make the storage type configurable
 	calicostore := calicorest.RESTStorageProvider{StorageType: "calico"}
-	apiGroupInfo, err := calicostore.NewRESTStorage(c.apiResourceConfigSource, c.genericConfig.RESTOptionsGetter, c.genericConfig.Authorizer)
-
+	storage, err := calicostore.NewV2Storage(c.apiResourceConfigSource, c.genericConfig.RESTOptionsGetter, c.genericConfig.Authorizer)
 	if err != nil {
 		return nil, err
 	}
+	apiGroupInfo.VersionedResourcesStorageMap = map[string]map[string]rest.Storage{
+		calicov2.SchemeGroupVersion.Version: storage,
+	}
 
-	if err := s.GenericAPIServer.InstallAPIGroup(apiGroupInfo); err != nil {
+	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
 		glog.Fatalf("Error installing API group %v: %v", calicostore.GroupName(), err)
 	}
 

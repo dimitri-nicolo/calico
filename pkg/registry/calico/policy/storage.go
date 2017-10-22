@@ -35,7 +35,6 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/kubernetes/pkg/api"
 )
 
 const (
@@ -75,7 +74,6 @@ func NewREST(opts server.Options) *REST {
 		return registry.NamespaceKeyFunc(genericapirequest.WithNamespace(genericapirequest.NewContext(), accessor.GetNamespace()), prefix, accessor.GetName())
 	}
 	storageInterface, dFunc := opts.GetStorage(
-		1000,
 		&calico.NetworkPolicy{},
 		prefix,
 		keyFunc,
@@ -85,7 +83,6 @@ func NewREST(opts server.Options) *REST {
 		storage.NoTriggerPublisher,
 	)
 	store := &genericregistry.Store{
-		Copier:      api.Scheme,
 		NewFunc:     func() runtime.Object { return &calico.NetworkPolicy{} },
 		NewListFunc: func() runtime.Object { return &calico.NetworkPolicyList{} },
 		KeyRootFunc: opts.KeyRootFunc(true),
@@ -93,8 +90,8 @@ func NewREST(opts server.Options) *REST {
 		ObjectNameFunc: func(obj runtime.Object) (string, error) {
 			return obj.(*calico.NetworkPolicy).Name, nil
 		},
-		PredicateFunc:     MatchPolicy,
-		QualifiedResource: calico.Resource("networkpolicies"),
+		PredicateFunc:            MatchPolicy,
+		DefaultQualifiedResource: calico.Resource("networkpolicies"),
 
 		CreateStrategy:          Strategy,
 		UpdateStrategy:          Strategy,

@@ -19,7 +19,6 @@ package apiserver
 import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/client-go/pkg/version"
-	"k8s.io/kubernetes/pkg/api"
 )
 
 const (
@@ -27,8 +26,8 @@ const (
 )
 
 func completeGenericConfig(cfg *genericapiserver.Config) {
-	cfg.Serializer = api.Codecs
-	cfg.Complete()
+	cfg.Serializer = Codecs
+	cfg.Complete(nil)
 
 	version := version.Get()
 	// Setting this var enables the version resource. We should populate the
@@ -43,7 +42,7 @@ func createSkeletonServer(genericCfg *genericapiserver.Config) (*CalicoAPIServer
 	// only way to get here from there is by Complete()'ing. Thus
 	// we skip the complete on the underlying config and go
 	// straight to running it's New() method.
-	genericServer, err := genericCfg.SkipComplete().New(apiServerName, genericapiserver.EmptyDelegate)
+	genericServer, err := genericCfg.Complete(nil).New(apiServerName, genericapiserver.EmptyDelegate)
 	if err != nil {
 		return nil, err
 	}

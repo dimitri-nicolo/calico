@@ -29,10 +29,14 @@ import (
 
 func init() {
 <<<<<<< HEAD
+<<<<<<< HEAD
 	SchemeBuilder.Register(RegisterConversions)
 =======
 	localSchemeBuilder.Register(RegisterConversions)
 >>>>>>> c1ca39f0... 1.8 related updates
+=======
+	localSchemeBuilder.Register(RegisterConversions)
+>>>>>>> 0142c282... Compiles with the dependencies
 }
 
 // RegisterConversions adds conversion functions to the given scheme.
@@ -40,16 +44,20 @@ func init() {
 func RegisterConversions(scheme *runtime.Scheme) error {
 	return scheme.AddGeneratedConversionFuncs(
 <<<<<<< HEAD
+<<<<<<< HEAD
 		Convert_v2_GlobalNetworkPolicy_To_calico_GlobalNetworkPolicy,
 		Convert_calico_GlobalNetworkPolicy_To_v2_GlobalNetworkPolicy,
 		Convert_v2_GlobalNetworkPolicyList_To_calico_GlobalNetworkPolicyList,
 		Convert_calico_GlobalNetworkPolicyList_To_v2_GlobalNetworkPolicyList,
 =======
 >>>>>>> c1ca39f0... 1.8 related updates
+=======
+>>>>>>> 0142c282... Compiles with the dependencies
 		Convert_v2_NetworkPolicy_To_calico_NetworkPolicy,
 		Convert_calico_NetworkPolicy_To_v2_NetworkPolicy,
 		Convert_v2_NetworkPolicyList_To_calico_NetworkPolicyList,
 		Convert_calico_NetworkPolicyList_To_v2_NetworkPolicyList,
+<<<<<<< HEAD
 <<<<<<< HEAD
 		Convert_v2_Tier_To_calico_Tier,
 		Convert_calico_Tier_To_v2_Tier,
@@ -111,6 +119,11 @@ func Convert_calico_GlobalNetworkPolicyList_To_v2_GlobalNetworkPolicyList(in *ca
 }
 
 >>>>>>> c1ca39f0... 1.8 related updates
+=======
+	)
+}
+
+>>>>>>> 0142c282... Compiles with the dependencies
 func autoConvert_v2_NetworkPolicy_To_calico_NetworkPolicy(in *NetworkPolicy, out *calico.NetworkPolicy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = in.Spec
@@ -147,6 +160,7 @@ func Convert_v2_NetworkPolicyList_To_calico_NetworkPolicyList(in *NetworkPolicyL
 func autoConvert_calico_NetworkPolicyList_To_v2_NetworkPolicyList(in *calico.NetworkPolicyList, out *NetworkPolicyList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 <<<<<<< HEAD
+<<<<<<< HEAD
 	if in.Items == nil {
 		out.Items = make([]NetworkPolicy, 0)
 	} else {
@@ -155,6 +169,9 @@ func autoConvert_calico_NetworkPolicyList_To_v2_NetworkPolicyList(in *calico.Net
 =======
 	out.Items = *(*[]NetworkPolicy)(unsafe.Pointer(&in.Items))
 >>>>>>> c1ca39f0... 1.8 related updates
+=======
+	out.Items = *(*[]NetworkPolicy)(unsafe.Pointer(&in.Items))
+>>>>>>> 0142c282... Compiles with the dependencies
 	return nil
 }
 
@@ -162,6 +179,7 @@ func autoConvert_calico_NetworkPolicyList_To_v2_NetworkPolicyList(in *calico.Net
 func Convert_calico_NetworkPolicyList_To_v2_NetworkPolicyList(in *calico.NetworkPolicyList, out *NetworkPolicyList, s conversion.Scope) error {
 	return autoConvert_calico_NetworkPolicyList_To_v2_NetworkPolicyList(in, out, s)
 }
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 func autoConvert_v2_Tier_To_calico_Tier(in *Tier, out *calico.Tier, s conversion.Scope) error {
@@ -213,3 +231,5 @@ func Convert_calico_TierList_To_v2_TierList(in *calico.TierList, out *TierList, 
 }
 =======
 >>>>>>> c1ca39f0... 1.8 related updates
+=======
+>>>>>>> 0142c282... Compiles with the dependencies

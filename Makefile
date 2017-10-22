@@ -199,6 +199,10 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 	   sh -c '$(BUILD_DIR)/update-client-gen.sh'
 	touch $@
 
+.no_generate_files:
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BUILD_DIR)/update-codegen.sh'
+	touch $@
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
@@ -253,7 +257,7 @@ clean-generated:
 	rm -f .generate_files
 	find $(TOP_SRC_DIRS) -name zz_generated* -exec rm {} \;
 	# rollback changes to the generated clientset directories
-	# find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
+	find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
 
 clean-bin:
 	rm -rf $(BINDIR) \

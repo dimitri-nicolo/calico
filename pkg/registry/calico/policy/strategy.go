@@ -27,7 +27,6 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
-	"k8s.io/kubernetes/pkg/api"
 
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 )
@@ -44,16 +43,16 @@ func NewScopeStrategy() rest.NamespaceScopedStrategy {
 
 // Strategy is the default logic that applies when creating and updating
 // Role objects.
-var Strategy = policyStrategy{api.Scheme, names.SimpleNameGenerator}
+var Strategy = policyStrategy{runtime.NewScheme(), names.SimpleNameGenerator}
 
 func (policyStrategy) NamespaceScoped() bool {
 	return true
 }
 
 func (policyStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
-	policy := obj.(*calico.NetworkPolicy)
-	tier, _ := getTierPolicy(policy.Name)
-	policy.SetLabels(map[string]string{"projectcalico.org/tier": tier})
+	//policy := obj.(*calico.NetworkPolicy)
+	//tier, _ := getTierPolicy(policy.Name)
+	//policy.SetLabels(map[string]string{"projectcalico.org/tier": tier})
 }
 
 func (policyStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
@@ -103,6 +102,6 @@ func PolicyToSelectableFields(obj *calico.NetworkPolicy) fields.Set {
 	return fields.Set{
 		"metadata.name":      obj.Name,
 		"metadata.namespace": obj.Namespace,
-		"spec.tier":          obj.Spec.Tier,
+		//		"spec.tier":          obj.Spec.Tier,
 	}
 }
