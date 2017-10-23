@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package policy
+package networkpolicy
 
 import (
 	"fmt"
@@ -24,11 +24,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 )
 
 type policyStrategy struct {
@@ -36,14 +35,10 @@ type policyStrategy struct {
 	names.NameGenerator
 }
 
-// NewScopeStrategy returns a new NamespaceScopedStrategy for instances
-func NewScopeStrategy() rest.NamespaceScopedStrategy {
-	return Strategy
+// NewStrategy returns a new NamespaceScopedStrategy for instances
+func NewStrategy(typer runtime.ObjectTyper) policyStrategy {
+	return policyStrategy{typer, names.SimpleNameGenerator}
 }
-
-// Strategy is the default logic that applies when creating and updating
-// Role objects.
-var Strategy = policyStrategy{runtime.NewScheme(), names.SimpleNameGenerator}
 
 func (policyStrategy) NamespaceScoped() bool {
 	return true

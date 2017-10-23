@@ -23,7 +23,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
 	"k8s.io/kubernetes/pkg/util/interrupt"
 
 	"github.com/golang/glog"

@@ -14,15 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package policy
+package networkpolicy
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
-	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
+	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +62,9 @@ func NewList() runtime.Object {
 }
 
 // NewREST returns a RESTStorage object that will work against API services.
-func NewREST(opts server.Options) *REST {
+func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
+	strategy := NewStrategy(scheme)
+
 	prefix := "/" + opts.ResourcePrefix()
 	// We adapt the store's keyFunc so that we can use it with the StorageDecorator
 	// without making any assumptions about where objects are stored in etcd
@@ -77,7 +79,7 @@ func NewREST(opts server.Options) *REST {
 		&calico.NetworkPolicy{},
 		prefix,
 		keyFunc,
-		Strategy,
+		strategy,
 		func() runtime.Object { return &calico.NetworkPolicyList{} },
 		GetAttrs,
 		storage.NoTriggerPublisher,
@@ -93,9 +95,9 @@ func NewREST(opts server.Options) *REST {
 		PredicateFunc:            MatchPolicy,
 		DefaultQualifiedResource: calico.Resource("networkpolicies"),
 
-		CreateStrategy:          Strategy,
-		UpdateStrategy:          Strategy,
-		DeleteStrategy:          Strategy,
+		CreateStrategy:          strategy,
+		UpdateStrategy:          strategy,
+		DeleteStrategy:          strategy,
 		EnableGarbageCollection: true,
 
 		Storage:     storageInterface,

@@ -17,8 +17,6 @@ limitations under the License.
 package server
 
 import (
-	"fmt"
-
 	"github.com/golang/glog"
 )
 
@@ -34,12 +32,10 @@ func RunServer(opts *CalicoServerOptions) error {
 		return err
 	}
 
-	completed := config.Complete()
-
 	glog.V(4).Infoln("Completing API server configuration")
-	server, err := completed.NewServer()
+	server, err := config.Complete().New()
 	if err != nil {
-		return fmt.Errorf("error completing API server configuration: %v", err)
+		return err
 	}
 
 	// do we need to do any post api installation setup? We should have set up the api already?

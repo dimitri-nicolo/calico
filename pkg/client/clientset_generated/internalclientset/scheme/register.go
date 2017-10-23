@@ -3,7 +3,7 @@ Copyright 2017 Tigera.
 */package scheme
 
 import (
-	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
+	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 	announced "k8s.io/apimachinery/pkg/apimachinery/announced"
 	registered "k8s.io/apimachinery/pkg/apimachinery/registered"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

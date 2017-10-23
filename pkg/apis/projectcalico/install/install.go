@@ -17,8 +17,8 @@ limitations under the License.
 package install
 
 import (
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
 	"k8s.io/apimachinery/pkg/apimachinery/announced"
 	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,10 +29,10 @@ import (
 func Install(groupFactoryRegistry announced.APIGroupFactoryRegistry, registry *registered.APIRegistrationManager, scheme *runtime.Scheme) {
 	if err := announced.NewGroupMetaFactory(
 		&announced.GroupMetaFactoryArgs{
-			GroupName:                  calico.GroupName,
+			GroupName:                  projectcalico.GroupName,
 			RootScopedKinds:            sets.NewString("Tier", "GlobalNetworkPolicy"),
 			VersionPreferenceOrder:     []string{v2.SchemeGroupVersion.Version},
-			AddInternalObjectsToScheme: calico.AddToScheme,
+			AddInternalObjectsToScheme: projectcalico.AddToScheme,
 		},
 		announced.VersionToSchemeFunc{
 			v2.SchemeGroupVersion.Version: v2.AddToScheme,

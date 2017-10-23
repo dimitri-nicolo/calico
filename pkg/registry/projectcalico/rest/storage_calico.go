@@ -17,17 +17,17 @@ limitations under the License.
 package rest
 
 import (
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
-	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/globalpolicy"
-	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
-	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
+	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
+	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
+	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/policy"
+	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
 	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
 	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
-	serverstorage "k8s.io/apiserver/pkg/server/storage"
 	"k8s.io/apiserver/pkg/storage"
 
 	calicostorage "github.com/tigera/calico-k8sapiserver/pkg/storage/calico"
@@ -41,7 +41,7 @@ type RESTStorageProvider struct {
 
 // NewV2Storage constructs v2 api storage.
 func (p RESTStorageProvider) NewV2Storage(
-	apiResourceConfigSource serverstorage.APIResourceConfigSource,
+	scheme *runtime.Scheme,
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,
 ) (map[string]rest.Storage, error) {
@@ -54,7 +54,7 @@ func (p RESTStorageProvider) NewV2Storage(
 			RESTOptions:   policyRESTOptions,
 			Capacity:      1000,
 			ObjectType:    calicopolicy.EmptyObject(),
-			ScopeStrategy: calicopolicy.NewScopeStrategy(),
+			ScopeStrategy: calicopolicy.NewStrategy(scheme),
 			NewListFunc:   calicopolicy.NewList,
 			GetAttrsFunc:  calicopolicy.GetAttrs,
 			Trigger:       storage.NoTriggerPublisher,
@@ -109,9 +109,13 @@ func (p RESTStorageProvider) NewV2Storage(
 	)
 
 	storage := map[string]rest.Storage{}
+<<<<<<< HEAD:pkg/registry/calico/rest/storage_calico.go
 	storage["networkpolicies"] = calicopolicy.NewREST(*policyOpts)
 	storage["tiers"] = calicotier.NewREST(*tierOpts)
 	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(*gpolicyOpts)
+=======
+	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
+>>>>>>> 466f79f6... Functional with k8s 1.8 related dependencies:pkg/registry/projectcalico/rest/storage_calico.go
 
 	return storage, nil
 }

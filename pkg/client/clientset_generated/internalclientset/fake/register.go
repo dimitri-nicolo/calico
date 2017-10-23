@@ -3,7 +3,7 @@ Copyright 2017 Tigera.
 */package fake
 
 import (
-	projectcalicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	projectcalicointernalversion "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

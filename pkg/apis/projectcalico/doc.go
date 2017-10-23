@@ -18,4 +18,4 @@ limitations under the License.
 
 // Package api is the internal version of the API.
 // +groupName=projectcalico.org
-package calico
+package projectcalico

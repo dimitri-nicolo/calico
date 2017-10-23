@@ -3,7 +3,7 @@ Copyright 2017 Tigera.
 */package v2
 
 import (
-	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
+	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
 	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"

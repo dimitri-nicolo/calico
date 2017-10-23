@@ -172,18 +172,18 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 	   sh -c '$(BINDIR)/defaulter-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
-	  	--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v2" \
+	  	--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/projectcalico" \
+		--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v2" \
 		--output-file-base "zz_generated.defaults"'
 	# Generate deep copies
 	$(DOCKER_GO_BUILD) \
 	   sh -c '$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v2" \
 		--bounding-dirs "github.com/tigera/calico-k8sapiserver" \
 		--output-file-base zz_generated.deepcopy'
 	# Generate conversions
@@ -191,18 +191,14 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 	   sh -c '$(BINDIR)/conversion-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v2" \
 		--output-file-base zz_generated.conversion'
 	# generate all pkg/client contents
 	$(DOCKER_GO_BUILD) \
 	   sh -c '$(BUILD_DIR)/update-client-gen.sh'
 	touch $@
 
-.no_generate_files:
-	$(DOCKER_GO_BUILD) \
-	   sh -c '$(BUILD_DIR)/update-codegen.sh'
-	touch $@
 # This section builds the output binaries.
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
