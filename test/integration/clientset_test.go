@@ -311,14 +311,13 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	return nil
 }
 
-/*
 // TestTierClient exercises the Tier client.
 func TestTierClient(t *testing.T) {
 	const name = "test-tier"
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Policy{}
+				return &calico.NetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testTierClient(client, name); err != nil {
@@ -334,10 +333,9 @@ func TestTierClient(t *testing.T) {
 }
 
 func testTierClient(client calicoclient.Interface, name string) error {
-	tierClient := client.Calico().Tiers()
-	tier := &v1.Tier{
+	tierClient := client.Projectcalico().Tiers()
+	tier := &v2.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       calicoapi.TierSpec{},
 	}
 
 	// start from scratch
@@ -378,4 +376,3 @@ func testTierClient(client calicoclient.Interface, name string) error {
 
 	return nil
 }
-*/
