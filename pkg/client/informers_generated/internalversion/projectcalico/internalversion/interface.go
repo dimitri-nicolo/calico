@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// NetworkPolicies returns a NetworkPolicyInformer.
 	NetworkPolicies() NetworkPolicyInformer
+	// Tiers returns a TierInformer.
+	Tiers() TierInformer
 }
 
 type version struct {
@@ -40,4 +42,9 @@ func New(f internalinterfaces.SharedInformerFactory) Interface {
 // NetworkPolicies returns a NetworkPolicyInformer.
 func (v *version) NetworkPolicies() NetworkPolicyInformer {
 	return &networkPolicyInformer{factory: v.SharedInformerFactory}
+}
+
+// Tiers returns a TierInformer.
+func (v *version) Tiers() TierInformer {
+	return &tierInformer{factory: v.SharedInformerFactory}
 }

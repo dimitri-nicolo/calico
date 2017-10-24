@@ -4,6 +4,7 @@ import (
 	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apiv2"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage"
 )
 
@@ -17,6 +18,23 @@ func aapiError(err error, key string) error {
 		return storage.NewResourceVersionConflictsError(key, 0)
 	default:
 		return err
+	}
+}
+
+func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
+	switch libcalicoObject.(type) {
+	case *libcalicoapi.Tier:
+		lcgTier := libcalicoObject.(*libcalicoapi.Tier)
+		aapiTier := &aapi.Tier{}
+		convertToAAPITier(aapiTier, lcgTier)
+		return aapiTier
+	case *libcalicoapi.NetworkPolicy:
+		lcgPolicy := libcalicoObject.(*libcalicoapi.NetworkPolicy)
+		aapiPolicy := &aapi.NetworkPolicy{}
+		convertToAAPINetworkPolicy(aapiPolicy, lcgPolicy)
+		return aapiPolicy
+	default:
+		return nil
 	}
 }
 
@@ -35,4 +53,16 @@ func convertToAAPINetworkPolicy(networkPolicy *aapi.NetworkPolicy, libcalicoPoli
 	}
 	networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
 	networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+}
+
+func convertToLibcalicoTier(tier *aapi.Tier, libcalicoTier *libcalicoapi.Tier) {
+	libcalicoTier.TypeMeta = tier.TypeMeta
+	libcalicoTier.ObjectMeta = tier.ObjectMeta
+	libcalicoTier.Spec = tier.Spec
+}
+
+func convertToAAPITier(tier *aapi.Tier, libcalicoTier *libcalicoapi.Tier) {
+	tier.Spec = libcalicoTier.Spec
+	tier.TypeMeta = libcalicoTier.TypeMeta
+	tier.ObjectMeta = libcalicoTier.ObjectMeta
 }

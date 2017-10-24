@@ -93,7 +93,7 @@ The API Server command/flags used for running can be found under /etc/kubernetes
 Follows native Kubernetes REST semantics. (NOTE: Transformation WIP from v1->v2)
 Tiers - APIVersion: projectcalico.org/v2 Kind: Tier
 1. Listing Tiers: https://10.0.2.15:6443/apis/projectcalico.org/v2/tiers
-2. Getting a Tier: https://10.0.2.15:6443/apis/projectcalico.org/v2/tiers/Tier1
+2. Getting a Tier: https://10.0.2.15:6443/apis/projectcalico.org/v2/tiers/net-sec
 3. Posting a Tier: -XPOST -d @tier.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/projectcalico.org/v2/tiers
 
 NetworkPolicies - APIVersion: projectcalico.org/v2 Kind: NetworkPolicy
@@ -102,7 +102,7 @@ NetworkPolicies - APIVersion: projectcalico.org/v2 Kind: NetworkPolicy
 ^ NOTE: NetworkPolicy list will also include Core NetworkPolicies. Core NetworkPolicy names will be prepended with "knp."
 6. Watching networkpolicies in the default namespace: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch
 7. Selecting networkpolicies in the default namespace belonging to Tier1: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?fieldSelector=spec.tier==Tier1
-8. Select networkpolicies based on Tier and watch at the same time: https://10.0.2.15:6443/apis/projectcalico.org/v1/namespaces/default/networkpolicies?watch&fieldSelector=tier==Tier1
+8. Select networkpolicies based on Tier and watch at the same time: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch&fieldSelector=tier==Tier1
 9. Create networkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies
 
 GlobalNetworkPolicies - APIVersion: projectcalico.org/v2 Kind: GlobalNetworkPolicy

@@ -37,3 +37,21 @@ type NetworkPolicy struct {
 
 	Spec calico.PolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
+
+// TierList is a list of Tier objects.
+type TierList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Items []Tier `json:"items" protobuf:"bytes,2,rep,name=items"`
+}
+
+// +genclient=true
+// +nonNamespaced=true
+
+type Tier struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	Spec calico.TierSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}

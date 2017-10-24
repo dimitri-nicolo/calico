@@ -30,6 +30,10 @@ func (c *FakeProjectcalico) NetworkPolicies(namespace string) internalversion.Ne
 	return &FakeNetworkPolicies{c, namespace}
 }
 
+func (c *FakeProjectcalico) Tiers() internalversion.TierInterface {
+	return &FakeTiers{c}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeProjectcalico) RESTClient() rest.Interface {

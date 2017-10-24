@@ -21,6 +21,7 @@ import (
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
 	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/policy"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/calico/server"
+	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
 	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
 
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -89,8 +90,30 @@ func (p RESTStorageProvider) v2Storage(
 		authorizer,
 	)
 
+	tierRESTOptions, err := restOptionsGetter.GetRESTOptions(calico.Resource("tiers"))
+	if err != nil {
+		return nil, err
+	}
+	tierOpts := server.NewOptions(
+		etcd.Options{
+			RESTOptions:   policyRESTOptions,
+			Capacity:      1000,
+			ObjectType:    calicotier.EmptyObject(),
+			ScopeStrategy: calicotier.NewScopeStrategy(),
+			NewListFunc:   calicotier.NewList,
+			GetAttrsFunc:  calicotier.GetAttrs,
+			Trigger:       storage.NoTriggerPublisher,
+		},
+		calicostorage.Options{
+			RESTOptions: tierRESTOptions,
+		},
+		p.StorageType,
+		authorizer,
+	)
+
 	storage := map[string]rest.Storage{}
 	storage["networkpolicies"] = calicopolicy.NewREST(*policyOpts)
+	storage["tiers"] = calicotier.NewREST(*tierOpts)
 
 	return storage, nil
 }

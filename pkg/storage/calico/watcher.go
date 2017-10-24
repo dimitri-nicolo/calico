@@ -19,9 +19,7 @@ package calico
 import (
 	"context"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apiv2"
 	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
-	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
@@ -51,58 +49,50 @@ func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.Selec
 func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 	switch ce.Type {
 	case cwatch.Added:
-		libcalicoPolicy := ce.Object.(*libcalicoapi.NetworkPolicy)
-		networkPolicy := &aapi.NetworkPolicy{}
-		convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
-		if !wc.filter(networkPolicy) {
+		aapiObject := convertToAAPI(ce.Object)
+		if !wc.filter(aapiObject) {
 			return nil
 		}
 		res = &watch.Event{
 			Type:   watch.Added,
-			Object: networkPolicy,
+			Object: aapiObject,
 		}
 	case cwatch.Deleted:
-		libcalicoPolicy := ce.Previous.(*libcalicoapi.NetworkPolicy)
-		networkPolicy := &aapi.NetworkPolicy{}
-		convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
-		if !wc.filter(networkPolicy) {
+		aapiObject := convertToAAPI(ce.Previous)
+		if !wc.filter(aapiObject) {
 			return nil
 		}
 		res = &watch.Event{
 			Type:   watch.Deleted,
-			Object: networkPolicy,
+			Object: aapiObject,
 		}
 	case cwatch.Modified:
-		libcalicoPolicy := ce.Object.(*libcalicoapi.NetworkPolicy)
-		networkPolicy := &aapi.NetworkPolicy{}
-		convertToAAPINetworkPolicy(networkPolicy, libcalicoPolicy)
+		aapiObject := convertToAAPI(ce.Object)
 		if wc.acceptAll() {
 			res = &watch.Event{
 				Type:   watch.Modified,
-				Object: networkPolicy,
+				Object: aapiObject,
 			}
 			return res
 		}
-		oldLibcalicoPolicy := ce.Previous.(*libcalicoapi.NetworkPolicy)
-		oldNetworkPolicy := &aapi.NetworkPolicy{}
-		convertToAAPINetworkPolicy(oldNetworkPolicy, oldLibcalicoPolicy)
-		curObjPasses := wc.filter(networkPolicy)
-		oldObjPasses := wc.filter(oldNetworkPolicy)
+		oldAapiObject := convertToAAPI(ce.Previous)
+		curObjPasses := wc.filter(aapiObject)
+		oldObjPasses := wc.filter(oldAapiObject)
 		switch {
 		case curObjPasses && oldObjPasses:
 			res = &watch.Event{
 				Type:   watch.Modified,
-				Object: networkPolicy,
+				Object: aapiObject,
 			}
 		case curObjPasses && !oldObjPasses:
 			res = &watch.Event{
 				Type:   watch.Added,
-				Object: networkPolicy,
+				Object: aapiObject,
 			}
 		case !curObjPasses && oldObjPasses:
 			res = &watch.Event{
 				Type:   watch.Deleted,
-				Object: oldNetworkPolicy,
+				Object: oldAapiObject,
 			}
 		}
 	}

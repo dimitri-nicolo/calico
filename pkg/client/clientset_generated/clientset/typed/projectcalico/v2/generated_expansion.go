@@ -17,3 +17,5 @@ limitations under the License.
 package v2
 
 type NetworkPolicyExpansion interface{}
+
+type TierExpansion interface{}
