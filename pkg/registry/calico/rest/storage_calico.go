@@ -97,7 +97,7 @@ func (p RESTStorageProvider) v2Storage(
 	}
 	tierOpts := server.NewOptions(
 		etcd.Options{
-			RESTOptions:   policyRESTOptions,
+			RESTOptions:   tierRESTOptions,
 			Capacity:      1000,
 			ObjectType:    calicotier.EmptyObject(),
 			ScopeStrategy: calicotier.NewScopeStrategy(),
