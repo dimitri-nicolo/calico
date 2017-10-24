@@ -222,7 +222,7 @@ calico/k8sapiserver: vendor/.up-to-date .generate_files \
 .PHONY: ut
 ut: run-etcd
 	$(DOCKER_GO_BUILD) \
-		sh -c 'go test $(UNIT_TEST_FLAGS) \
+		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(CAPI_PKG)/,$(TEST_DIRS))'
 
 ## Run etcd as a container (calico-etcd)
