@@ -131,7 +131,7 @@ func testWatch(t *testing.T, list bool) {
 		var w watch.Interface
 		var err error
 		if list {
-			w, err = store.watchRes(ctx, "0", tt.pred, "", "default")
+			w, err = store.watchResource(ctx, "0", tt.pred, "", "default")
 			if err != nil {
 				t.Fatalf("Watch failed: %v", err)
 			}
@@ -139,14 +139,14 @@ func testWatch(t *testing.T, list bool) {
 		var prevObj *calico.NetworkPolicy
 		for _, watchTest := range tt.watchTests {
 			if !list {
-				ns, name, err := NamespaceAndNameFromKey(watchTest.key)
+				ns, name, err := NamespaceAndNameFromKey(watchTest.key, true)
 				if err != nil {
 					t.Fatalf("Test failed")
 				}
 				if list {
 					name = ""
 				}
-				w, err = store.watchRes(ctx, "0", tt.pred, name, ns)
+				w, err = store.watchResource(ctx, "0", tt.pred, name, ns)
 				if err != nil {
 					t.Fatalf("Watch failed: %v", err)
 				}

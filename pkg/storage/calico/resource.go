@@ -43,8 +43,8 @@ type resourceConverter interface {
 
 type clientOpts interface{}
 
-type clientObjShim func(context.Context, clientv2.Interface, resourceObject, clientOpts) (resourceObject, error)
-type clientStrShim func(context.Context, clientv2.Interface, string, string, clientOpts) (resourceObject, error)
+type clientObjectOperator func(context.Context, clientv2.Interface, resourceObject, clientOpts) (resourceObject, error)
+type clientNameOperator func(context.Context, clientv2.Interface, string, string, clientOpts) (resourceObject, error)
 type clientLister func(context.Context, clientv2.Interface, clientOpts) (resourceListObject, error)
 type clientWatcher func(context.Context, clientv2.Interface, clientOpts) (calicowatch.Interface, error)
 
@@ -57,10 +57,10 @@ type resourceStore struct {
 	libCalicoType     reflect.Type
 	libCalicoListType reflect.Type
 	isNamespaced      bool
-	create            clientObjShim
-	update            clientObjShim
-	get               clientStrShim
-	delete            clientStrShim
+	create            clientObjectOperator
+	update            clientObjectOperator
+	get               clientNameOperator
+	delete            clientNameOperator
 	list              clientLister
 	watch             clientWatcher
 	resourceName      string
@@ -89,6 +89,9 @@ func (rs *resourceStore) Versioner() storage.Versioner {
 	return rs.versioner
 }
 
+// Create adds a new object at a key unless it already exists. 'ttl' is time-to-live
+// in seconds (0 means forever). If no error is returned and out is not nil, out will be
+// set to the read value from database.
 func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtime.Object, ttl uint64) error {
 	glog.Infof("Create called with key: %v for resource %v\n", key, rs.resourceName)
 	lcObj := rs.converter.convertToLibcalico(obj)
@@ -108,25 +111,11 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Object,
 	preconditions *storage.Preconditions) error {
 	glog.Infof("Delete called with key: %v for resource %v\n", key, rs.resourceName)
-	var (
-		name, ns string
-		err      error
-	)
 
-	if rs.isNamespaced {
-		ns, name, err = NamespaceAndNameFromKey(key)
-		if err != nil {
-			glog.Errorf("Error deleting resource %v when extracting namespace and name from key %v error %v\n", rs.resourceName, key, err)
-			return err
-		}
-	} else {
-		name, err = NameFromKey(key, false)
-		if err != nil {
-			glog.Errorf("Error deleting resource %v when extracting name from key %v error %v\n", rs.resourceName, key, err)
-			return err
-		}
+	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
+	if err != nil {
+		return err
 	}
-
 	delOpts := options.DeleteOptions{}
 	if preconditions != nil {
 		// Get the object to check for validity of UID
@@ -146,7 +135,7 @@ func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Obj
 
 	libcalicoObj, err := rs.delete(ctx, rs.client, ns, name, delOpts)
 	if err != nil {
-			glog.Errorf("Clientv2 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
+		glog.Errorf("Clientv2 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
 		return aapiError(err, key)
 	}
 	rs.converter.convertToAAPI(libcalicoObj, out)
@@ -178,23 +167,11 @@ func checkPreconditions(key string, preconditions *storage.Preconditions, out ru
 func (rs *resourceStore) Watch(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (k8swatch.Interface, error) {
 	glog.Infof("Watch called with key: %v on resource %v\n", key, rs.resourceName)
-	var (
-		name, ns string
-		err      error
-	)
-
-	if rs.isNamespaced {
-		ns, name, err = NamespaceAndNameFromKey(key)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		name, err = NameFromKey(key, false)
-		if err != nil {
-			return nil, err
-		}
+	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
+	if err != nil {
+		return nil, err
 	}
-	return rs.watchRes(ctx, resourceVersion, p, name, ns)
+	return rs.watchResource(ctx, resourceVersion, p, name, ns)
 }
 
 // WatchList begins watching the specified key's items. Items are decoded into API
@@ -207,25 +184,14 @@ func (rs *resourceStore) Watch(ctx context.Context, key string, resourceVersion 
 func (rs *resourceStore) WatchList(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate) (k8swatch.Interface, error) {
 	glog.Infof("WatchList called with key: %v on resource %v\n", key, rs.resourceName)
-	var (
-		name, ns string
-		err      error
-	)
-	if rs.isNamespaced {
-		ns, name, err = NamespaceAndNameFromKey(key)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		name, err = NameFromKey(key, false)
-		if err != nil {
-			return nil, err
-		}
+	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
+	if err != nil {
+		return nil, err
 	}
-	return rs.watchRes(ctx, resourceVersion, p, name, ns)
+	return rs.watchResource(ctx, resourceVersion, p, name, ns)
 }
 
-func (rs *resourceStore) watchRes(ctx context.Context, resourceVersion string,
+func (rs *resourceStore) watchResource(ctx context.Context, resourceVersion string,
 	p storage.SelectionPredicate, name, namespace string) (k8swatch.Interface, error) {
 	opts := options.ListOptions{Name: name, Namespace: namespace, ResourceVersion: resourceVersion}
 	lWatch, err := rs.watch(ctx, rs.client, opts)
@@ -245,35 +211,20 @@ func (rs *resourceStore) watchRes(ctx context.Context, resourceVersion string,
 func (rs *resourceStore) Get(ctx context.Context, key string, resourceVersion string,
 	out runtime.Object, ignoreNotFound bool) error {
 	glog.Infof("Get called with key: %v on resource %v\n", key, rs.resourceName)
-	var (
-		name, ns string
-		err      error
-	)
-	if rs.isNamespaced {
-		ns, name, err = NamespaceAndNameFromKey(key)
-		if err != nil {
-			return err
-		}
-	} else {
-		name, err = NameFromKey(key, false)
-		if err != nil {
-			return err
-		}
+	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
+	if err != nil {
+		return err
 	}
 	opts := options.GetOptions{ResourceVersion: resourceVersion}
 	libcalicoObj, err := rs.get(ctx, rs.client, ns, name, opts)
 	if err != nil {
-		fmt.Printf("Err Getting for key %v error %v\n", key, err)
 		e := aapiError(err, key)
 		if storage.IsNotFound(e) && ignoreNotFound {
-			fmt.Printf("Set zero value %v error %v\n", key, e)
 			return runtime.SetZeroValue(out)
 		}
 		return e
 	}
-	fmt.Printf("Get converting for key %v\n", key)
 	rs.converter.convertToAAPI(libcalicoObj, out)
-	fmt.Printf("Get converted for key %v\n", key)
 	return nil
 }
 
@@ -294,20 +245,9 @@ func (rs *resourceStore) GetToList(ctx context.Context, key string, resourceVers
 func (rs *resourceStore) List(ctx context.Context, key string, resourceVersion string,
 	p storage.SelectionPredicate, listObj runtime.Object) error {
 	glog.Infof("List called with key: %v on resource %v\n", key, rs.resourceName)
-	var (
-		name, ns string
-		err      error
-	)
-	if rs.isNamespaced {
-		ns, name, err = NamespaceAndNameFromKey(key)
-		if err != nil {
-			return err
-		}
-	} else {
-		name, err = NameFromKey(key, false)
-		if err != nil {
-			return err
-		}
+	ns, name, err := NamespaceAndNameFromKey(key, rs.isNamespaced)
+	if err != nil {
+		return err
 	}
 	opts := options.ListOptions{Namespace: ns, Name: name, ResourceVersion: resourceVersion}
 	libcalicoObjList, err := rs.list(ctx, rs.client, opts)

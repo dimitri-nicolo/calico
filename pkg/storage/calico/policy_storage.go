@@ -85,7 +85,7 @@ func (rc NetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObject, a
 	aapiPolicy := aapiObj.(*aapi.NetworkPolicy)
 	aapiPolicy.Spec = lcgPolicy.Spec
 	// Tier field maybe left blank when policy created vi OS libcalico.
-	// Initialize it to defalt in that case to make work with field selector.
+	// Initialize it to default in that case to make work with field selector.
 	if aapiPolicy.Spec.Tier == "" {
 		aapiPolicy.Spec.Tier = "default"
 	}

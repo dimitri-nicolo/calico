@@ -49,8 +49,8 @@ func NewTierStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	}
 	// TODO(doublek): Inject codec, client for nicer testing.
 	return &resourceStore{
-		client: c,
-		codec:  opts.RESTOptions.StorageConfig.Codec,
+		client:            c,
+		codec:             opts.RESTOptions.StorageConfig.Codec,
 		versioner:         etcd.APIObjectVersioner{},
 		aapiType:          reflect.TypeOf(aapi.Tier{}),
 		aapiListType:      reflect.TypeOf(aapi.TierList{}),
