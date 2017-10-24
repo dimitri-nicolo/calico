@@ -36,8 +36,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 
+	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/apiserver/pkg/storage/etcd"
+	"k8s.io/apiserver/pkg/storage/storagebackend"
 
 	"golang.org/x/net/context"
 )
@@ -553,7 +554,7 @@ func TestTierList(t *testing.T) {
 	}
 }
 
-func testTierSetup(t *testing.T) (context.Context, *tierStore) {
+func testTierSetup(t *testing.T) (context.Context, *resourceStore) {
 	codec := apitesting.TestCodec(codecs, calicov2.SchemeGroupVersion)
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
@@ -568,22 +569,25 @@ func testTierSetup(t *testing.T) (context.Context, *tierStore) {
 		os.Exit(1)
 	}
 	glog.Infof("Client: %v", c)
-	store := &tierStore{
-		client:    c,
-		codec:     codec,
-		versioner: etcd.APIObjectVersioner{},
+	opts := Options{
+		RESTOptions: generic.RESTOptions{
+			StorageConfig: &storagebackend.Config{
+				Codec: codec,
+			},
+		},
 	}
+	store, _ := NewTierStorage(opts)
 	ctx := context.Background()
-	return ctx, store
+	return ctx, store.(*resourceStore)
 }
 
-func testTierCleanup(t *testing.T, ctx context.Context, store *tierStore) {
+func testTierCleanup(t *testing.T, ctx context.Context, store *resourceStore) {
 	store.client.Tiers().Delete(ctx, "foo", options.DeleteOptions{})
 }
 
 // testTierPropogateStore helps propogates store with objects, automates key generation, and returns
 // keys and stored objects.
-func testTierPropogateStore(ctx context.Context, t *testing.T, store *tierStore, obj *calico.Tier) (string, *calico.Tier) {
+func testTierPropogateStore(ctx context.Context, t *testing.T, store *resourceStore, obj *calico.Tier) (string, *calico.Tier) {
 	// Setup store with a key and grab the output for returning.
 	key := "projectcalico.org/tiers/foo"
 	setOutput := &calico.Tier{}

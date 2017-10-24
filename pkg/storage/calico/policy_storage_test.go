@@ -37,8 +37,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
 
+	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/storage"
-	"k8s.io/apiserver/pkg/storage/etcd"
+	"k8s.io/apiserver/pkg/storage/storagebackend"
 
 	"golang.org/x/net/context"
 )
@@ -52,7 +53,7 @@ func init() {
 	calicov2.AddToScheme(scheme)
 }
 
-func TestCreate(t *testing.T) {
+func TestNetworkPolicyCreate(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
@@ -88,7 +89,7 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func TestCreateWithTTL(t *testing.T) {
+func TestNetworkPolicyCreateWithTTL(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
@@ -107,7 +108,7 @@ func TestCreateWithTTL(t *testing.T) {
 	testCheckEventType(t, watch.Deleted, w)
 }
 
-func TestCreateWithKeyExist(t *testing.T) {
+func TestNetworkPolicyCreateWithKeyExist(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
@@ -120,7 +121,7 @@ func TestCreateWithKeyExist(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestNetworkPolicyGet(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
@@ -165,7 +166,7 @@ func TestGet(t *testing.T) {
 	}
 }
 
-func TestUnconditionalDelete(t *testing.T) {
+func TestNetworkPolicyUnconditionalDelete(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
@@ -203,7 +204,7 @@ func TestUnconditionalDelete(t *testing.T) {
 	}
 }
 
-func TestConditionalDelete(t *testing.T) {
+func TestNetworkPolicyConditionalDelete(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
@@ -239,7 +240,7 @@ func TestConditionalDelete(t *testing.T) {
 	}
 }
 
-func TestGetToList(t *testing.T) {
+func TestNetworkPolicyGetToList(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
@@ -289,7 +290,7 @@ func TestGetToList(t *testing.T) {
 	}
 }
 
-func TestGuaranteedUpdate(t *testing.T) {
+func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer func() {
 		testCleanup(t, ctx, store)
@@ -412,7 +413,7 @@ func TestGuaranteedUpdate(t *testing.T) {
 	}
 }
 
-func TestGuaranteedUpdateWithTTL(t *testing.T) {
+func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
@@ -436,7 +437,7 @@ func TestGuaranteedUpdateWithTTL(t *testing.T) {
 	testCheckEventType(t, watch.Deleted, w)
 }
 
-func TestGuaranteedUpdateWithConflict(t *testing.T) {
+func TestNetworkPolicyGuaranteedUpdateWithConflict(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 	key, _ := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
@@ -483,7 +484,7 @@ func TestGuaranteedUpdateWithConflict(t *testing.T) {
 	}
 }
 
-func TestList(t *testing.T) {
+func TestNetworkPolicyList(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer func() {
 		store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
@@ -562,7 +563,7 @@ func TestList(t *testing.T) {
 	}
 }
 
-func testSetup(t *testing.T) (context.Context, *policyStore) {
+func testSetup(t *testing.T) (context.Context, *resourceStore) {
 	codec := apitesting.TestCodec(codecs, calicov2.SchemeGroupVersion)
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
@@ -577,22 +578,25 @@ func testSetup(t *testing.T) (context.Context, *policyStore) {
 		os.Exit(1)
 	}
 	glog.Infof("Client: %v", c)
-	store := &policyStore{
-		client:    c,
-		codec:     codec,
-		versioner: etcd.APIObjectVersioner{},
+	opts := Options{
+		RESTOptions: generic.RESTOptions{
+			StorageConfig: &storagebackend.Config{
+				Codec: codec,
+			},
+		},
 	}
+	store, _ := NewNetworkPolicyStorage(opts)
 	ctx := context.Background()
-	return ctx, store
+	return ctx, store.(*resourceStore)
 }
 
-func testCleanup(t *testing.T, ctx context.Context, store *policyStore) {
+func testCleanup(t *testing.T, ctx context.Context, store *resourceStore) {
 	store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
 }
 
 // testPropogateStore helps propogates store with objects, automates key generation, and returns
 // keys and stored objects.
-func testPropogateStore(ctx context.Context, t *testing.T, store *policyStore, obj *calico.NetworkPolicy) (string, *calico.NetworkPolicy) {
+func testPropogateStore(ctx context.Context, t *testing.T, store *resourceStore, obj *calico.NetworkPolicy) (string, *calico.NetworkPolicy) {
 	// Setup store with a key and grab the output for returning.
 	key := "projectcalico.org/networkpolicies/default/foo"
 	setOutput := &calico.NetworkPolicy{}
