@@ -131,7 +131,7 @@ func testWatch(t *testing.T, list bool) {
 		var w watch.Interface
 		var err error
 		if list {
-			w, err = store.watch(ctx, "0", tt.pred, "", "default")
+			w, err = store.watchRes(ctx, "0", tt.pred, "", "default")
 			if err != nil {
 				t.Fatalf("Watch failed: %v", err)
 			}
@@ -146,7 +146,7 @@ func testWatch(t *testing.T, list bool) {
 				if list {
 					name = ""
 				}
-				w, err = store.watch(ctx, "0", tt.pred, name, ns)
+				w, err = store.watchRes(ctx, "0", tt.pred, name, ns)
 				if err != nil {
 					t.Fatalf("Watch failed: %v", err)
 				}
