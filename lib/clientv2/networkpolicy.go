@@ -55,7 +55,7 @@ func (r networkPolicies) Create(ctx context.Context, res *apiv2.NetworkPolicy, o
 				return nil, err
 			}
 		}
-	} else if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv2.KindTier, noNamespace, defaultTierName); err != nil {
+	} else if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv2.KindTier, noNamespace, res.Spec.Tier); err != nil {
 		return nil, err
 	}
 
