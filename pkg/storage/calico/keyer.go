@@ -33,12 +33,15 @@ func (e errInvalidKey) Error() string {
 // This function is intended to be used in a Calico based storage.Interface.
 //
 // The first return value is the namespace. The namespace will be empty if
-// hasNamespace is set to false.The second return value is the name and will
+// hasNamespace is set to false or when the key is root scoped like for
+// list/watch calls.
+// The second return value is the name and will
 // not be empty if the error is nil. The error will be non-nil if the key was
 // malformed, in which case all other return values will be empty strings.
 //
 // Example Namespaced resource key: projectcalico.org/networkpolicies/default/my-first-policy
 // OR projectcalico.org/globalpolicies/my-first-policy
+// OR projectcalico.org/networkpolicies (root scope for list/watch operations)
 func NamespaceAndNameFromKey(key string, hasNamespace bool) (ns string, name string, err error) {
 	spl := strings.Split(key, "/")
 	splLen := len(spl)
