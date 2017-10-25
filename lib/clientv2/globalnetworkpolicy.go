@@ -50,10 +50,9 @@ func (r globalnetworkpolicies) Create(ctx context.Context, res *apiv2.GlobalNetw
 	// Before creating the policy, check that the tier exists, and if this is the
 	// default tier, create it if it doesn't.
 	if res.Spec.Tier == "" {
-		defaultTier := &apiv2.Tier{
-			ObjectMeta: metav1.ObjectMeta{Name: defaultTierName},
-			Spec:       apiv2.TierSpec{},
-		}
+		defaultTier := apiv2.NewTier()
+		defaultTier.ObjectMeta = metav1.ObjectMeta{Name: defaultTierName}
+		defaultTier.Spec = apiv2.TierSpec{}
 		if _, err := r.client.resources.Create(ctx, opts, apiv2.KindTier, defaultTier); err != nil {
 			if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
 				return nil, err

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package apiv2
+package v2
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -20,6 +20,9 @@ const (
 	KindTier     = "Tier"
 	KindTierList = "TierList"
 )
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Tier contains a set of policies that are applied to packets.  Multiple tiers may
 // be created and each tier is applied in the order specified in the tier specification.
@@ -41,6 +44,8 @@ type TierSpec struct {
 	// on the Tier "Name".
 	Order *float64 `json:"order,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // TierList contains a list of Tier resources.
 type TierList struct {

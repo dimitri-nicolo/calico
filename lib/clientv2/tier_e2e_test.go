@@ -25,7 +25,7 @@ import (
 	"context"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/clientv2"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -33,7 +33,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
 
-var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
+var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
 
 	ctx := context.Background()
 	order1 := 99.999
@@ -278,7 +278,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Starting a watcher from revision rev1 - this should skip the first creation")
 			w, err := c.Tiers().Watch(ctx, options.ListOptions{ResourceVersion: rev1})
 			Expect(err).NotTo(HaveOccurred())
-			testWatcher1 := testutils.TestResourceWatch(w)
+			testWatcher1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher1.Stop()
 
 			By("Deleting res1")
@@ -301,7 +301,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Starting a watcher from rev0 - this should get all events")
 			w, err = c.Tiers().Watch(ctx, options.ListOptions{ResourceVersion: rev0})
 			Expect(err).NotTo(HaveOccurred())
-			testWatcher2 := testutils.TestResourceWatch(w)
+			testWatcher2 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher2.Stop()
 
 			By("Modifying res2")
@@ -338,7 +338,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
 			w, err = c.Tiers().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
 			Expect(err).NotTo(HaveOccurred())
-			testWatcher2_1 := testutils.TestResourceWatch(w)
+			testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher2_1.Stop()
 			testWatcher2_1.ExpectEvents(apiv2.KindTier, []watch.Event{
 				{
@@ -355,7 +355,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
 			w, err = c.Tiers().Watch(ctx, options.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			testWatcher3 := testutils.TestResourceWatch(w)
+			testWatcher3 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher3.Stop()
 			testWatcher3.ExpectEvents(apiv2.KindTier, []watch.Event{
 				{
@@ -378,7 +378,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
 			w, err = c.Tiers().Watch(ctx, options.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			testWatcher4 := testutils.TestResourceWatch(w)
+			testWatcher4 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher4.Stop()
 			testWatcher4.ExpectEvents(apiv2.KindTier, []watch.Event{
 				{

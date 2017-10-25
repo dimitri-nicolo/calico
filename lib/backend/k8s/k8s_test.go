@@ -40,7 +40,6 @@ import (
 var (
 	zeroOrder                  = float64(0.0)
 	calicoAllowPolicyModelSpec = capiv2.PolicySpec{
-		Tier:  "default",
 		Order: &zeroOrder,
 		IngressRules: []capiv2.Rule{
 			{
@@ -54,7 +53,6 @@ var (
 		},
 	}
 	calicoDisallowPolicyModelSpec = capiv2.PolicySpec{
-		Tier:  "default",
 		Order: &zeroOrder,
 		IngressRules: []capiv2.Rule{
 			{
@@ -529,8 +527,8 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		var kvpRes *model.KVPair
 
 		gnpClient := c.getResourceClientFromResourceKind(capiv2.KindGlobalNetworkPolicy)
-		kvp1Name := "default.my-test-gnp"
-		kvp1KeyV1 := model.PolicyKey{Tier: "default", Name: kvp1Name}
+		kvp1Name := "my-test-gnp"
+		kvp1KeyV1 := model.PolicyKey{Name: kvp1Name}
 		kvp1a := &model.KVPair{
 			Key: model.ResourceKey{Name: kvp1Name, Kind: capiv2.KindGlobalNetworkPolicy},
 			Value: &capiv2.GlobalNetworkPolicy{
@@ -559,7 +557,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 			},
 		}
 
-		kvp2Name := "default.my-test-gnp2"
+		kvp2Name := "my-test-gnp2"
 		kvp2KeyV1 := model.PolicyKey{Name: kvp2Name}
 		kvp2a := &model.KVPair{
 			Key: model.ResourceKey{Name: kvp2Name, Kind: capiv2.KindGlobalNetworkPolicy},

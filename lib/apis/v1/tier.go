@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package api
+package v1
 
 import (
 	"fmt"
 
-	"github.com/projectcalico/libcalico-go/lib/api/unversioned"
+	"github.com/projectcalico/libcalico-go/lib/apis/v1/unversioned"
 )
 
 // Tier contains the details of a security policy tier resource.  A tier contains a set of
