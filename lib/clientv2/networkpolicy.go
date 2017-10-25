@@ -17,7 +17,7 @@ package clientv2
 import (
 	"context"
 
-	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
@@ -59,6 +59,7 @@ func (r networkPolicies) Create(ctx context.Context, res *apiv2.NetworkPolicy, o
 		return nil, err
 	}
 
+	defaultPolicyTypesField(&res.Spec)
 	out, err := r.client.resources.Create(ctx, opts, apiv2.KindNetworkPolicy, res)
 	if out != nil {
 		return out.(*apiv2.NetworkPolicy), err
@@ -69,6 +70,7 @@ func (r networkPolicies) Create(ctx context.Context, res *apiv2.NetworkPolicy, o
 // Update takes the representation of a NetworkPolicy and updates it. Returns the stored
 // representation of the NetworkPolicy, and an error, if there is any.
 func (r networkPolicies) Update(ctx context.Context, res *apiv2.NetworkPolicy, opts options.SetOptions) (*apiv2.NetworkPolicy, error) {
+	defaultPolicyTypesField(&res.Spec)
 	out, err := r.client.resources.Update(ctx, opts, apiv2.KindNetworkPolicy, res)
 	if out != nil {
 		return out.(*apiv2.NetworkPolicy), err

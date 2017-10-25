@@ -14,31 +14,33 @@
 
 package apiconfig
 
-import "github.com/projectcalico/libcalico-go/lib/api/unversioned"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+)
 
 type DatastoreType string
 
 const (
-	EtcdV2     DatastoreType = "etcdv2"
-	EtcdV3     DatastoreType = "etcdv3"
-	Kubernetes DatastoreType = "kubernetes"
+	EtcdV2              DatastoreType = "etcdv2"
+	EtcdV3              DatastoreType = "etcdv3"
+	Kubernetes          DatastoreType = "kubernetes"
+	KindCalicoAPIConfig               = "CalicoAPIConfig"
 )
 
 // CalicoAPIConfig contains the connection information for a Calico CalicoAPIConfig resource
 type CalicoAPIConfig struct {
-	unversioned.TypeMetadata
-	Metadata CalicoAPIConfigMetadata `json:"metadata,omitempty"`
-	Spec     CalicoAPIConfigSpec     `json:"spec,omitempty"`
-}
-
-// CalicoAPIConfigMetadata contains the metadata for a Calico CalicoAPIConfig resource.
-type CalicoAPIConfigMetadata struct {
-	unversioned.ObjectMetadata
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// Specification of the BGPConfiguration.
+	Spec CalicoAPIConfigSpec `json:"spec,omitempty"`
 }
 
 // CalicoAPIConfigSpec contains the specification for a Calico CalicoAPIConfig resource.
 type CalicoAPIConfigSpec struct {
-	DatastoreType DatastoreType `json:"datastoreType" envconfig:"DATASTORE_TYPE" default:"etcdv2"`
+	DatastoreType DatastoreType `json:"datastoreType" envconfig:"DATASTORE_TYPE" default:"etcdv3"`
 	// Inline the ectd config fields
 	EtcdConfig
 	// Inline the k8s config fields.
@@ -71,9 +73,9 @@ type KubeConfig struct {
 // TypeMetadata initialised to the current version.
 func NewCalicoAPIConfig() *CalicoAPIConfig {
 	return &CalicoAPIConfig{
-		TypeMetadata: unversioned.TypeMetadata{
-			Kind:       "calicoApiConfig",
-			APIVersion: unversioned.VersionCurrent,
+		TypeMeta: metav1.TypeMeta{
+			Kind:       KindCalicoAPIConfig,
+			APIVersion: apiv2.GroupVersionCurrent,
 		},
 	}
 }
