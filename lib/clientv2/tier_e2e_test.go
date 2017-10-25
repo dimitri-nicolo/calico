@@ -33,7 +33,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
 
-var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
+var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 
 	ctx := context.Background()
 	order1 := 99.999
@@ -86,15 +86,12 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreEtcdV3, 
 			rv1_1 := res1.ResourceVersion
 
 			By("Attempting to create the same Tier with name1 but with spec2")
-			res1, outError = c.Tiers().Create(ctx, &apiv2.Tier{
+			_, outError = c.Tiers().Create(ctx, &apiv2.Tier{
 				ObjectMeta: metav1.ObjectMeta{Name: name1},
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("resource already exists: Tier(" + name1 + ")"))
-			// Check return value is actually the previously stored value.
-			testutils.ExpectResource(res1, apiv2.KindTier, testutils.ExpectNoNamespace, name1, spec1)
-			Expect(res1.ResourceVersion).To(Equal(rv1_1))
 
 			By("Getting Tier (name1) and comparing the output against spec1")
 			res, outError = c.Tiers().Get(ctx, name1, options.GetOptions{})
@@ -103,7 +100,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreEtcdV3, 
 			Expect(res.ResourceVersion).To(Equal(res1.ResourceVersion))
 
 			By("Getting Tier (name2) before it is created")
-			res, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
+			_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
 
@@ -146,24 +143,24 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreEtcdV3, 
 			By("Updating Tier name1 without specifying a resource version")
 			res1.Spec = spec1
 			res1.ObjectMeta.ResourceVersion = ""
-			res, outError = c.Tiers().Update(ctx, res1, options.SetOptions{})
+			_, outError = c.Tiers().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("error with field Metadata.ResourceVersion = '' (field must be set for an Update request)"))
-			Expect(res).To(BeNil())
 
 			By("Updating Tier name1 using the previous resource version")
 			res1.Spec = spec1
 			res1.ResourceVersion = rv1_1
-			res1, outError = c.Tiers().Update(ctx, res1, options.SetOptions{})
+			_, outError = c.Tiers().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("update conflict: Tier(" + name1 + ")"))
-			Expect(res1.ResourceVersion).To(Equal(rv1_2))
 
-			By("Getting Tier (name1) with the original resource version and comparing the output against spec1")
-			res, outError = c.Tiers().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_1})
-			Expect(outError).NotTo(HaveOccurred())
-			testutils.ExpectResource(res, apiv2.KindTier, testutils.ExpectNoNamespace, name1, spec1)
-			Expect(res.ResourceVersion).To(Equal(rv1_1))
+			if config.Spec.DatastoreType != apiconfig.Kubernetes {
+				By("Getting Tier (name1) with the original resource version and comparing the output against spec1")
+				res, outError = c.Tiers().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_1})
+				Expect(outError).NotTo(HaveOccurred())
+				testutils.ExpectResource(res, apiv2.KindTier, testutils.ExpectNoNamespace, name1, spec1)
+				Expect(res.ResourceVersion).To(Equal(rv1_1))
+			}
 
 			By("Getting Tier (name1) with the updated resource version and comparing the output against spec2")
 			res, outError = c.Tiers().Get(ctx, name1, options.GetOptions{ResourceVersion: rv1_2})
@@ -171,11 +168,13 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreEtcdV3, 
 			testutils.ExpectResource(res, apiv2.KindTier, testutils.ExpectNoNamespace, name1, spec2)
 			Expect(res.ResourceVersion).To(Equal(rv1_2))
 
-			By("Listing Tiers with the original resource version and checking for a single result with name1/spec1")
-			outList, outError = c.Tiers().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
-			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(1))
-			testutils.ExpectResource(&outList.Items[0], apiv2.KindTier, testutils.ExpectNoNamespace, name1, spec1)
+			if config.Spec.DatastoreType != apiconfig.Kubernetes {
+				By("Listing Tiers with the original resource version and checking for a single result with name1/spec1")
+				outList, outError = c.Tiers().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
+				Expect(outError).NotTo(HaveOccurred())
+				Expect(outList.Items).To(HaveLen(1))
+				testutils.ExpectResource(&outList.Items[0], apiv2.KindTier, testutils.ExpectNoNamespace, name1, spec1)
+			}
 
 			By("Listing Tiers with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
 			outList, outError = c.Tiers().List(ctx, options.ListOptions{})
@@ -184,40 +183,51 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreEtcdV3, 
 			testutils.ExpectResource(&outList.Items[0], apiv2.KindTier, testutils.ExpectNoNamespace, name1, spec2)
 			testutils.ExpectResource(&outList.Items[1], apiv2.KindTier, testutils.ExpectNoNamespace, name2, spec2)
 
-			By("Deleting Tier (name1) with the old resource version")
-			_, outError = c.Tiers().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_1})
-			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("update conflict: Tier(" + name1 + ")"))
+			if config.Spec.DatastoreType != apiconfig.Kubernetes {
+				By("Deleting Tier (name1) with the old resource version")
+				_, outError = c.Tiers().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_1})
+				Expect(outError).To(HaveOccurred())
+				Expect(outError.Error()).To(Equal("update conflict: Tier(" + name1 + ")"))
+			}
 
 			By("Deleting Tier (name1) with the new resource version")
 			dres, outError := c.Tiers().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
 			testutils.ExpectResource(dres, apiv2.KindTier, testutils.ExpectNoNamespace, name1, spec2)
 
-			By("Updating Tier name2 with a 2s TTL and waiting for the entry to be deleted")
-			_, outError = c.Tiers().Update(ctx, res2, options.SetOptions{TTL: 2 * time.Second})
-			Expect(outError).NotTo(HaveOccurred())
-			time.Sleep(1 * time.Second)
-			_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
-			Expect(outError).NotTo(HaveOccurred())
-			time.Sleep(2 * time.Second)
-			_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
-			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
+			if config.Spec.DatastoreType != apiconfig.Kubernetes {
+				By("Updating Tier name2 with a 2s TTL and waiting for the entry to be deleted")
+				_, outError = c.Tiers().Update(ctx, res2, options.SetOptions{TTL: 2 * time.Second})
+				Expect(outError).NotTo(HaveOccurred())
+				time.Sleep(1 * time.Second)
+				_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
+				Expect(outError).NotTo(HaveOccurred())
+				time.Sleep(2 * time.Second)
+				_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
+				Expect(outError).To(HaveOccurred())
+				Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
 
-			By("Creating Tier name2 with a 2s TTL and waiting for the entry to be deleted")
-			_, outError = c.Tiers().Create(ctx, &apiv2.Tier{
-				ObjectMeta: metav1.ObjectMeta{Name: name2},
-				Spec:       spec2,
-			}, options.SetOptions{TTL: 2 * time.Second})
-			Expect(outError).NotTo(HaveOccurred())
-			time.Sleep(1 * time.Second)
-			_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
-			Expect(outError).NotTo(HaveOccurred())
-			time.Sleep(2 * time.Second)
-			_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
-			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
+				By("Creating Tier name2 with a 2s TTL and waiting for the entry to be deleted")
+				_, outError = c.Tiers().Create(ctx, &apiv2.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: name2},
+					Spec:       spec2,
+				}, options.SetOptions{TTL: 2 * time.Second})
+				Expect(outError).NotTo(HaveOccurred())
+				time.Sleep(1 * time.Second)
+				_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
+				Expect(outError).NotTo(HaveOccurred())
+				time.Sleep(2 * time.Second)
+				_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
+				Expect(outError).To(HaveOccurred())
+				Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
+			}
+
+			if config.Spec.DatastoreType == apiconfig.Kubernetes {
+				By("Deleting Tier (name2)")
+				dres, outError = c.Tiers().Delete(ctx, name2, options.DeleteOptions{})
+				Expect(outError).NotTo(HaveOccurred())
+				testutils.ExpectResource(dres, apiv2.KindTier, testutils.ExpectNoNamespace, name2, spec2)
+			}
 
 			By("Attempting to deleting Tier (name2) again")
 			_, outError = c.Tiers().Delete(ctx, name2, options.DeleteOptions{})
@@ -335,22 +345,25 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreEtcdV3, 
 			})
 			testWatcher2.Stop()
 
-			By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
-			w, err = c.Tiers().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
-			Expect(err).NotTo(HaveOccurred())
-			testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
-			defer testWatcher2_1.Stop()
-			testWatcher2_1.ExpectEvents(apiv2.KindTier, []watch.Event{
-				{
-					Type:   watch.Added,
-					Object: outRes1,
-				},
-				{
-					Type:     watch.Deleted,
-					Previous: outRes1,
-				},
-			})
-			testWatcher2_1.Stop()
+			// Only etcdv3 supports watching a specific instance of a resource.
+			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
+				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
+				w, err = c.Tiers().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
+				Expect(err).NotTo(HaveOccurred())
+				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
+				defer testWatcher2_1.Stop()
+				testWatcher2_1.ExpectEvents(apiv2.KindTier, []watch.Event{
+					{
+						Type:   watch.Added,
+						Object: outRes1,
+					},
+					{
+						Type:     watch.Deleted,
+						Previous: outRes1,
+					},
+				})
+				testWatcher2_1.Stop()
+			}
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
 			w, err = c.Tiers().Watch(ctx, options.ListOptions{})
