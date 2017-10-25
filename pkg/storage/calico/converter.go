@@ -33,6 +33,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapiPolicy := &aapi.NetworkPolicy{}
 		convertToAAPINetworkPolicy(aapiPolicy, lcgPolicy)
 		return aapiPolicy
+	case *libcalicoapi.GlobalNetworkPolicy:
+		lcgPolicy := libcalicoObject.(*libcalicoapi.GlobalNetworkPolicy)
+		aapiPolicy := &aapi.GlobalNetworkPolicy{}
+		convertToAAPIGlobalNetworkPolicy(aapiPolicy, lcgPolicy)
+		return aapiPolicy
 	default:
 		return nil
 	}
@@ -65,4 +70,21 @@ func convertToAAPITier(tier *aapi.Tier, libcalicoTier *libcalicoapi.Tier) {
 	tier.Spec = libcalicoTier.Spec
 	tier.TypeMeta = libcalicoTier.TypeMeta
 	tier.ObjectMeta = libcalicoTier.ObjectMeta
+}
+
+func convertToLibcalicoGlobalNetworkPolicy(globalNetworkPolicy *aapi.GlobalNetworkPolicy, libcalicoPolicy *libcalicoapi.GlobalNetworkPolicy) {
+	libcalicoPolicy.TypeMeta = globalNetworkPolicy.TypeMeta
+	libcalicoPolicy.ObjectMeta = globalNetworkPolicy.ObjectMeta
+	libcalicoPolicy.Spec = globalNetworkPolicy.Spec
+}
+
+func convertToAAPIGlobalNetworkPolicy(globalNetworkPolicy *aapi.GlobalNetworkPolicy, libcalicoPolicy *libcalicoapi.GlobalNetworkPolicy) {
+	globalNetworkPolicy.Spec = libcalicoPolicy.Spec
+	// Tier field maybe left blank when policy created vi OS libcalico.
+	// Initialize it to defalt in that case to make work with field selector.
+	if globalNetworkPolicy.Spec.Tier == "" {
+		globalNetworkPolicy.Spec.Tier = "default"
+	}
+	globalNetworkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
+	globalNetworkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
 }

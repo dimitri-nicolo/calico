@@ -45,25 +45,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-const (
-	instanceParameter = `{
-    "bar": "barvalue",
-    "values": {
-      "first" : "firstvalue",
-      "second" : "secondvalue"
-    }
-  }
-`
-	bindingParameter = `{
-    "foo": "bar",
-    "baz": [
-      "first",
-      "second"
-    ]
-  }
-`
-)
-
 // TestGroupVersion is trivial.
 func TestGroupVersion(t *testing.T) {
 	fmt.Println("GropVersion being tested.")
@@ -116,33 +97,6 @@ func TestEtcdHealthCheckerSuccess(t *testing.T) {
 
 	defer shutdownServer()
 }
-
-/*
-func TestEtcdHealthCheckerFail(t *testing.T) {
-	serverConfig := NewTestServerConfig()
-	// this server won't exist
-	serverConfig.etcdServerList = []string{""}
-	_, clientconfig, shutdownServer := withConfigGetFreshApiserverAndClient(t, serverConfig)
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	c := &http.Client{Transport: tr}
-	resp, err := c.Get(clientconfig.Host + "/healthz")
-	if nil != err || http.StatusInternalServerError != resp.StatusCode {
-		t.Fatal("health check endpoint should have failed and did not")
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal("couldn't read response body", err)
-	}
-	if !strings.Contains(string(body), "healthz check failed") {
-		t.Fatal("health check endpoint should contain a failure message")
-	}
-
-	defer shutdownServer()
-}*/
 
 // TestNoName checks that all creates fail for objects that have no
 // name given.
@@ -204,21 +158,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "namespace"
 	policyClient := client.Projectcalico().NetworkPolicies(ns)
 	policy := &v2.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	/*
-		tierClient := client.Calico().Tiers()
-		tier := &v1.Tier{
-			ObjectMeta: metav1.ObjectMeta{Name: "default"},
-			Spec:       calicoapi.TierSpec{},
-		}
 
-		tierServer, err := tierClient.Create(tier)
-		if nil != err {
-			return fmt.Errorf("error creating default tier")
-		}
-		if "default" != tierServer.Name {
-			return fmt.Errorf("error creating default tier")
-		}
-	*/
 	// start from scratch
 	policies, err := policyClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -267,19 +207,6 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		)
 	}*/
 	// Watch Test:
-	opts := v1.ListOptions{}
-	wIface, err := policyClient.Watch(opts)
-	if nil != err {
-		return fmt.Errorf("Error on watch")
-	}
-	e := <-wIface.ResultChan()
-	fmt.Println("Watch object: ", e)
-
-	err = policyClient.Delete(name, &metav1.DeleteOptions{})
-	if nil != err {
-		return fmt.Errorf("policy should be deleted (%s)", err)
-	}
-
 	var wg sync.WaitGroup
 	go func() {
 		wg.Add(1)
@@ -295,19 +222,11 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		}
 	}()
 
-	policyServer, err = policyClient.Create(policy)
-	if nil != err {
-		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
-	}
-	if name != policyServer.Name {
-		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
-	}
-	wg.Wait()
-
 	err = policyClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
+	wg.Wait()
 	return nil
 }
 
@@ -317,7 +236,7 @@ func TestTierClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.NetworkPolicy{}
+				return &calico.Tier{}
 			})
 			defer shutdownServer()
 			if err := testTierClient(client, name); err != nil {
@@ -329,7 +248,6 @@ func TestTierClient(t *testing.T) {
 	if !t.Run(name, rootTestFunc()) {
 		t.Errorf("test-tier test failed")
 	}
-
 }
 
 func testTierClient(client calicoclient.Interface, name string) error {
@@ -372,6 +290,70 @@ func testTierClient(client calicoclient.Interface, name string) error {
 	err = tierClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("tier should be deleted (%s)", err)
+	}
+
+	return nil
+}
+
+// TestGlobalNetworkPolicyClient exercises the GlobalNetworkPolicy client.
+func TestGlobalNetworkPolicyClient(t *testing.T) {
+	const name = "test-globalnetworkpolicy"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &calico.GlobalNetworkPolicy{}
+			})
+			defer shutdownServer()
+			if err := testGlobalNetworkPolicyClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-globalnetworkpolicy test failed")
+	}
+
+}
+
+func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) error {
+	globalNetworkPolicyClient := client.Projectcalico().GlobalNetworkPolicies()
+	globalNetworkPolicy := &v2.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	// start from scratch
+	globalNetworkPolicies, err := globalNetworkPolicyClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
+	}
+	if globalNetworkPolicies.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	globalNetworkPolicyServer, err := globalNetworkPolicyClient.Create(globalNetworkPolicy)
+	if nil != err {
+		return fmt.Errorf("error creating the globalNetworkPolicy '%v' (%v)", globalNetworkPolicy, err)
+	}
+	if name != globalNetworkPolicyServer.Name {
+		return fmt.Errorf("didn't get the same globalNetworkPolicy back from the server \n%+v\n%+v", globalNetworkPolicy, globalNetworkPolicyServer)
+	}
+
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
+	}
+
+	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting globalNetworkPolicy %s (%s)", name, err)
+	}
+	if name != globalNetworkPolicyServer.Name &&
+		globalNetworkPolicy.ResourceVersion == globalNetworkPolicyServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same globalNetworkPolicy back from the server \n%+v\n%+v", globalNetworkPolicy, globalNetworkPolicyServer)
+	}
+
+	err = globalNetworkPolicyClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("globalNetworkPolicy should be deleted (%s)", err)
 	}
 
 	return nil

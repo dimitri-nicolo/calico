@@ -25,6 +25,7 @@ import (
 
 type ProjectcalicoV2Interface interface {
 	RESTClient() rest.Interface
+	GlobalNetworkPoliciesGetter
 	NetworkPoliciesGetter
 	TiersGetter
 }
@@ -32,6 +33,10 @@ type ProjectcalicoV2Interface interface {
 // ProjectcalicoV2Client is used to interact with features provided by the projectcalico.org group.
 type ProjectcalicoV2Client struct {
 	restClient rest.Interface
+}
+
+func (c *ProjectcalicoV2Client) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {
+	return newGlobalNetworkPolicies(c)
 }
 
 func (c *ProjectcalicoV2Client) NetworkPolicies(namespace string) NetworkPolicyInterface {

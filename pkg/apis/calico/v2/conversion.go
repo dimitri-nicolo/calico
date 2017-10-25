@@ -39,5 +39,20 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
+	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v2", "GlobalNetworkPolicy",
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "spec.tier":
+				return "spec.tier", value, nil
+			case "metadata.name":
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	)
+	if err != nil {
+		return err
+	}
 	return nil
 }

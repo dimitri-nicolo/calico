@@ -55,3 +55,21 @@ type Tier struct {
 
 	Spec calico.TierSpec
 }
+
+// GlobalNetworkPolicyList is a list of Policy objects.
+type GlobalNetworkPolicyList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []GlobalNetworkPolicy
+}
+
+// +genclient=true
+// +nonNamespaced=true
+
+type GlobalNetworkPolicy struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.PolicySpec
+}

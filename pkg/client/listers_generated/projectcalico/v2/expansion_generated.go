@@ -18,6 +18,10 @@ limitations under the License.
 
 package v2
 
+// GlobalNetworkPolicyListerExpansion allows custom methods to be added to
+// GlobalNetworkPolicyLister.
+type GlobalNetworkPolicyListerExpansion interface{}
+
 // NetworkPolicyListerExpansion allows custom methods to be added to
 // NetworkPolicyLister.
 type NetworkPolicyListerExpansion interface{}

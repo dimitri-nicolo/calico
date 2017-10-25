@@ -64,7 +64,7 @@ func NewREST(opts server.Options) *REST {
 	}
 	storageInterface, dFunc := opts.GetStorage(
 		1000,
-		&calico.NetworkPolicy{},
+		&calico.Tier{},
 		prefix,
 		keyFunc,
 		Strategy,
