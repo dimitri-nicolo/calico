@@ -25,10 +25,10 @@ import (
 	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/coreos/etcd/mvcc/mvccpb"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 )
 
@@ -48,7 +48,7 @@ func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
 	}
 
 	if len(etcdLocation) == 0 {
-		log.Info("No etcd endpoints specified in etcdv3 API config")
+		log.Warning("No etcd endpoints specified in etcdv3 API config")
 		return nil, errors.New("no etcd endpoints specified")
 	}
 
@@ -302,7 +302,7 @@ func (c *etcdV3Client) Get(ctx context.Context, k model.Key, revision string) (*
 		return nil, cerrors.ErrorDatastoreError{Err: err}
 	}
 	if len(resp.Kvs) == 0 {
-		logCxt.Info("No results returned from etcdv3 client")
+		logCxt.Debug("No results returned from etcdv3 client")
 		return nil, cerrors.ErrorResourceDoesNotExist{Identifier: k}
 	}
 
@@ -319,14 +319,23 @@ func (c *etcdV3Client) List(ctx context.Context, l model.ListInterface, revision
 	// IDs, and then filter the results.
 	key := model.ListOptionsToDefaultPathRoot(l)
 
-	// If the etcdKey is actually fully qualified, then do not perform a prefix Get.
-	// If the etcdKey is just a prefix, then append a terminating "/" and perform a prefix Get.
-	// The terminating / for a prefix Get ensures for a prefix of "/a" we only return "child entries"
-	// of "/a" such as "/a/x" and not siblings such as "/ab".
+	// -  If the final name segment of the name is itself a prefix, then just perform a prefix Get
+	//    using the constructed key.
+	// -  If the etcdKey is actually fully qualified, then perform an exact Get using the constructed
+	//    key.
+	// -  If the etcdKey is not fully qualified then it is a path prefix but the last segment is complete.
+	//    Append a terminating "/" and perform a prefix Get.  The terminating / for a prefix Get ensures
+	//    for a prefix of "/a" we only return "child entries" of "/a" such as "/a/x" and not siblings
+	//    such as "/ab".
 	ops := []clientv3.OpOption{}
-	if l.KeyFromDefaultPath(key) == nil {
+	if model.IsListOptionsLastSegmentPrefix(l) {
+		// The last segment is a prefix, perform a prefix Get without adding a segment
+		// delimiter.
+		logCxt.Debug("Performing a name-prefix query")
+		ops = append(ops, clientv3.WithPrefix())
+	} else if l.KeyFromDefaultPath(key) == nil {
 		// The etcdKey not a fully qualified etcdKey - it must be a prefix.
-		logCxt.Info("Performing a prefix query")
+		logCxt.Debug("Performing a parent-prefix query")
 		if !strings.HasSuffix(key, "/") {
 			key += "/"
 		}
@@ -368,21 +377,7 @@ func (c *etcdV3Client) List(ctx context.Context, l model.ListInterface, revision
 // EnsureInitialized makes sure that the etcd data is initialized for use by
 // Calico.
 func (c *etcdV3Client) EnsureInitialized() error {
-	// Make sure the Ready flag is initialized in the datastore
-	kv := &model.KVPair{
-		Key:   model.ReadyFlagKey{},
-		Value: true,
-	}
-
 	//TODO - still need to worry about ready flag.
-	if _, err := c.Create(context.Background(), kv); err != nil {
-		if _, ok := err.(cerrors.ErrorResourceAlreadyExists); !ok {
-			log.WithError(err).Warn("Failed to set ready flag")
-			return err
-		}
-	}
-
-	log.Info("Ready flag is already set")
 	return nil
 }
 
@@ -401,7 +396,7 @@ func (c *etcdV3Client) Clean() error {
 
 // Syncer returns a v1 Syncer used to stream resource updates.
 func (c *etcdV3Client) Syncer(callbacks api.SyncerCallbacks) api.Syncer {
-	return newSyncerV3(c.etcdClient, callbacks)
+	return felixsyncer.New(c, callbacks, apiconfig.EtcdV3)
 }
 
 // getTTLOption returns a OpOption slice containing a Lease granted for the TTL.
@@ -443,23 +438,6 @@ func getKeyValueStrings(d *model.KVPair) (string, string, error) {
 	}
 
 	return key, string(bytes), nil
-}
-
-// etcdToKVPair converts an etcd KeyValue in to model.KVPair.
-func etcdToKVPair(key model.Key, ekv *mvccpb.KeyValue) (*model.KVPair, error) {
-	v, err := model.ParseValue(key, ekv.Value)
-	if err != nil {
-		return nil, cerrors.ErrorDatastoreError{
-			Identifier: key,
-			Err:        err,
-		}
-	}
-
-	return &model.KVPair{
-		Key:      key,
-		Value:    v,
-		Revision: strconv.FormatInt(ekv.ModRevision, 10),
-	}, nil
 }
 
 // parseRevision parses the model.KVPair revision string and converts to the

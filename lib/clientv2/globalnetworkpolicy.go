@@ -17,7 +17,7 @@ package clientv2
 import (
 	"context"
 
-	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
@@ -50,10 +50,9 @@ func (r globalnetworkpolicies) Create(ctx context.Context, res *apiv2.GlobalNetw
 	// Before creating the policy, check that the tier exists, and if this is the
 	// default tier, create it if it doesn't.
 	if res.Spec.Tier == "" {
-		defaultTier := &apiv2.Tier{
-			ObjectMeta: metav1.ObjectMeta{Name: defaultTierName},
-			Spec:       apiv2.TierSpec{},
-		}
+		defaultTier := apiv2.NewTier()
+		defaultTier.ObjectMeta = metav1.ObjectMeta{Name: defaultTierName}
+		defaultTier.Spec = apiv2.TierSpec{}
 		if _, err := r.client.resources.Create(ctx, opts, apiv2.KindTier, defaultTier); err != nil {
 			if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
 				return nil, err
@@ -63,6 +62,7 @@ func (r globalnetworkpolicies) Create(ctx context.Context, res *apiv2.GlobalNetw
 		return nil, err
 	}
 
+	defaultPolicyTypesField(&res.Spec)
 	out, err := r.client.resources.Create(ctx, opts, apiv2.KindGlobalNetworkPolicy, res)
 	if out != nil {
 		return out.(*apiv2.GlobalNetworkPolicy), err
@@ -73,6 +73,7 @@ func (r globalnetworkpolicies) Create(ctx context.Context, res *apiv2.GlobalNetw
 // Update takes the representation of a GlobalNetworkPolicy and updates it. Returns the stored
 // representation of the GlobalNetworkPolicy, and an error, if there is any.
 func (r globalnetworkpolicies) Update(ctx context.Context, res *apiv2.GlobalNetworkPolicy, opts options.SetOptions) (*apiv2.GlobalNetworkPolicy, error) {
+	defaultPolicyTypesField(&res.Spec)
 	out, err := r.client.resources.Update(ctx, opts, apiv2.KindGlobalNetworkPolicy, res)
 	if out != nil {
 		return out.(*apiv2.GlobalNetworkPolicy), err
@@ -112,4 +113,25 @@ func (r globalnetworkpolicies) List(ctx context.Context, opts options.ListOption
 // supplied options.
 func (r globalnetworkpolicies) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	return r.client.resources.Watch(ctx, opts, apiv2.KindGlobalNetworkPolicy)
+}
+
+func defaultPolicyTypesField(spec *apiv2.PolicySpec) {
+	if len(spec.Types) == 0 {
+		// Default the Types field according to what inbound and outbound rules are present
+		// in the policy.
+		if len(spec.EgressRules) == 0 {
+			// Policy has no egress rules, so apply this policy to ingress only.  (Note:
+			// intentionally including the case where the policy also has no ingress
+			// rules.)
+			spec.Types = []apiv2.PolicyType{apiv2.PolicyTypeIngress}
+		} else if len(spec.IngressRules) == 0 {
+			// Policy has egress rules but no ingress rules, so apply this policy to
+			// egress only.
+			spec.Types = []apiv2.PolicyType{apiv2.PolicyTypeEgress}
+		} else {
+			// Policy has both ingress and egress rules, so apply this policy to both
+			// ingress and egress.
+			spec.Types = []apiv2.PolicyType{apiv2.PolicyTypeIngress, apiv2.PolicyTypeEgress}
+		}
+	}
 }

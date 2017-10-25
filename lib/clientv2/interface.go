@@ -37,6 +37,12 @@ type Interface interface {
 	Tiers() TierInterface
 	// IPAM returns an interface for managing IP address assignment and releasing.
 	IPAM() ipam.Interface
+	// BGPConfigurations returns an interface for managing the BGP configuration resources.
+	BGPConfigurations() BGPConfigurationInterface
+	// FelixConfigurations returns an interface for managing the Felix configuration resources.
+	FelixConfigurations() FelixConfigurationInterface
+	// ClusterInformation returns an interface for managing the cluster information resource.
+	ClusterInformation() ClusterInformationInterface
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and
 	// will have no effect if the datastore is already correctly initialized.
