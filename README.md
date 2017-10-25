@@ -24,8 +24,9 @@ Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
    This will create the docker image needed by the example/rc.yaml
    OR docker tar can be found in: https://drive.google.com/open?id=0B1QYlddBYM-ZWkoxVWNfcFJtbUU
    docker load -i calico-k8sapiserver-latest.tar.xz
-8. kubectl create -f artifacts/policies/policy.yaml <-- Creating a Policy
+8. kubectl create -f artifacts/policies/policy.yaml <-- Creating a NetworkPolicy
 9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
+10. kubectl create -f artifacts/policies/globalpolicy.yaml <-- Creating a GlobalNetworkPolicy
 .
 .
 .
@@ -100,14 +101,14 @@ NetworkPolicies - APIVersion: projectcalico.org/v2 Kind: NetworkPolicy
 4. Listing networkpolicies across namespaces: https://10.0.2.15:6443/apis/projectcalico.org/v2/networkpolicies
 5. Listing networkpolicy from a given namespace: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies 
 ^ NOTE: NetworkPolicy list will also include Core NetworkPolicies. Core NetworkPolicy names will be prepended with "knp."
-6. Watching networkpolicies in the default namespace: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch
+6. Watching networkpolicies in the default namespace: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch=true
 7. Selecting networkpolicies in the default namespace belonging to Tier1: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?fieldSelector=spec.tier==Tier1
 8. Select networkpolicies based on Tier and watch at the same time: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch&fieldSelector=tier==Tier1
 9. Create networkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies
 
 GlobalNetworkPolicies - APIVersion: projectcalico.org/v2 Kind: GlobalNetworkPolicy
 10. Listing globalnetworkpolicies: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies
-11. Watching globalnetworkpolicies: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?watch
+11. Watching globalnetworkpolicies: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?watch=true
 12. Selecting globalnetworkpolicies belonging to Tier1: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?fieldSelector=spec.tier==Tier1
 13. Create globalnetworkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies
 
@@ -115,6 +116,8 @@ Core/K8s NetworkPolicies - APIVersion: networking.k8s.io/v1 Kind: NetworkPolicy
 14. Create core networkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/networking.k8s.io/v1/networkpolicies
 NOTE: Use above endpoint for CREATE, UPDATE and DELETE on core networkpolicies.
 
+Listing Namespaces - APIVersion: v1 Kind: Namespace
+15. List K8s Namespaces:https://10.0.2.15:6443/api/v1/namespaces
 ``` 
 
 ## Testing

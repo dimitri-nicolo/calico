@@ -83,7 +83,7 @@ func (policyStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old run
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 	policy, ok := obj.(*calico.GlobalNetworkPolicy)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("given object is not a Policy.")
+		return nil, nil, false, fmt.Errorf("given object is not a Global Policy.")
 	}
 	return labels.Set(policy.ObjectMeta.Labels), PolicyToSelectableFields(policy), policy.Initializers != nil, nil
 }
