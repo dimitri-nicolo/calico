@@ -528,7 +528,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 
 		gnpClient := c.getResourceClientFromResourceKind(capiv2.KindGlobalNetworkPolicy)
 		kvp1Name := "my-test-gnp"
-		kvp1KeyV1 := model.PolicyKey{Name: kvp1Name}
+		kvp1KeyV1 := model.PolicyKey{Name: kvp1Name, Tier: "default"}
 		kvp1a := &model.KVPair{
 			Key: model.ResourceKey{Name: kvp1Name, Kind: capiv2.KindGlobalNetworkPolicy},
 			Value: &capiv2.GlobalNetworkPolicy{
@@ -558,7 +558,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		}
 
 		kvp2Name := "my-test-gnp2"
-		kvp2KeyV1 := model.PolicyKey{Name: kvp2Name}
+		kvp2KeyV1 := model.PolicyKey{Name: kvp2Name, Tier: "default"}
 		kvp2a := &model.KVPair{
 			Key: model.ResourceKey{Name: kvp2Name, Kind: capiv2.KindGlobalNetworkPolicy},
 			Value: &capiv2.GlobalNetworkPolicy{

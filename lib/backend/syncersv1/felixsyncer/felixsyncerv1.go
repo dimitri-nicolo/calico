@@ -62,6 +62,10 @@ func New(client api.Client, callbacks api.SyncerCallbacks, datastoreType apiconf
 			ListInterface:   model.ResourceListOptions{Kind: apiv2.KindNetworkPolicy},
 			UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
 		},
+		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv2.KindTier},
+			UpdateProcessor: updateprocessors.NewTierUpdateProcessor(),
+		},
 	}
 
 	if datastoreType != apiconfig.Kubernetes {
