@@ -1604,6 +1604,9 @@ master:
      calico/routereflector:
       version: v0.4.0
       url: ""
+     calico/k8sapiserver:
+      version: master
+      url: ""
 # vX.Y format: update during major release process
 currentReleaseStream: v2.6
 

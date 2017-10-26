@@ -2,11 +2,24 @@
 title: Tigera Essentials Toolkit Hosted Install
 ---
 
-To install Tigera Essentials Toolkit, run the following commands.
-
 > **Note**: These instructions do not apply to OpenShift users. Instead, see 
 > [Installing Essentials for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
 {: .alert .alert-info}
+
+## Requirements
+
+Ensure that the kube-apiserver has been started with the appropriate flags.
+Refer to the Kubernetes documentation to
+[Configure the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
+with the proper flags.
+
+> **Note**: If the Kubernetes cluster was installed with kubeadm the necessary
+> flags are configured by default.
+{: .alert .alert-info}
+
+## Installation
+
+To install Tigera Essentials Toolkit, run the following commands.
 
 - Setup etcd: [calico-etcd.yaml](1.6/calico-etcd.yaml)
 
@@ -40,6 +53,14 @@ $ kubectl get thirdpartyresources
 
 ```
 $ kubectl apply -f monitor-calico.yaml
+```
+
+- Edit [calico-k8sapiserver.yaml](1.6/calico-k8sapiserver.yaml) by following
+  [these instructions](#enabling-tls-verification-for-a-kubernetes-extension-api-server)
+  and then run the command below to install a Kubernetes extension API server.
+
+```
+$ kubectl apply -f calico-k8sapiserver.yaml
 ```
 
 ### Customizing the manifests
@@ -84,7 +105,7 @@ places:
 - In [calico-etcd.yaml](1.6/calico-etcd.yaml) update the `ClusterIP` and `port`
   fields of the _Service_ manifest.
 - In [calico-essentials.yaml](1.6/calico-essentials.yaml) update the
-  `etcd_endpoints` key in the `calico-config` _ConfigMap_
+  `etcd_endpoints` key in the `calico-config` _ConfigMap_.
 
 #### Node Selectors
 
@@ -128,6 +149,73 @@ spec:
 	    cpu: 200m
 	    memory: 100Mi
 ```
+
+#### Enabling TLS Verification for a Kubernetes extension API Server
+
+The Kubernetes extension API Server deployed by the provided
+[manifest](1.6/calico-k8sapiserver.yaml) will communicate with the Kubernetes
+API Server.  The manifest, by default, requires no updates to work but does not
+enable TLS verification on the connection between the two API servers. We
+recommend that this is enabled and you can follow the directions below to
+enable TLS.
+
+To enable TLS verification you will need to obtain or generate the following
+in PEM format:
+- Certificate Authority (CA) certificate
+- certificate signed by the CA
+- private key for the generated certificate
+
+##### Generating certificate files
+
+1. Create a root key (This is only needed if you are generating your CA)
+   ```
+   openssl genrsa -out rootCA.key 2048
+   ```
+
+1. Create a Certificate Authority (CA) certificate (This is only needed if you are generating your CA)
+   ```
+   openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 1024 -out rootCA.pem
+   ```
+   At each of the prompts press enter.
+
+1. Generate a private key
+   ```
+   openssl genrsa -out calico.key 2048
+   ```
+
+1. Generate a signing request
+   ```
+   openssl req -new -key calico.key -out calico.csr
+   ```
+   At each of the prompts press enter except at the Common Name prompt enter
+   `calico-k8sapiserver.kube-system.svc`
+
+
+1. Generate the signed certificate
+   ```
+   openssl x509 -req -in calico.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out calico.crt -days 500 -sha256
+   ```
+
+When including the contents of the CA certificate, generated signed
+certificate, and generated private key files the contents must be base64
+encoded before being added to the manifest file.
+Here is an example command to do the base64 encoding:
+`cat rootCA.pem | base64 -w 0`.
+
+##### Add Certificate Files to the Manifest
+
+The [calico-k8sapiserver.yaml](1.6/calico-k8sapiserver.yaml) must be updated
+with the following changes:
+
+1. The line `insecureSkipTLSVerify: true` must be removed from the
+   `APIService` section.
+1. Uncomment the line `caBundle:` in the `APIService` and append the base64
+   encoded CA file contents.
+1. Uncomment the line `apiserver.key:` in the `Secret` and append the base64
+   encoded key file contents.
+1. Uncomment the line `apiserver.crt:` in the `Secret` and append the base64
+   encoded certificate file contents.
+
 
 ### Configure Alertmanager Notifications
 
