@@ -1,23 +1,9 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package internalversion
+Copyright 2017 Tigera.
+*/package internalversion
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -33,14 +19,14 @@ type TiersGetter interface {
 
 // TierInterface has methods to work with Tier resources.
 type TierInterface interface {
-	Create(*calico.Tier) (*calico.Tier, error)
-	Update(*calico.Tier) (*calico.Tier, error)
+	Create(*projectcalico.Tier) (*projectcalico.Tier, error)
+	Update(*projectcalico.Tier) (*projectcalico.Tier, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*calico.Tier, error)
-	List(opts v1.ListOptions) (*calico.TierList, error)
+	Get(name string, options v1.GetOptions) (*projectcalico.Tier, error)
+	List(opts v1.ListOptions) (*projectcalico.TierList, error)
 	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *calico.Tier, err error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.Tier, err error)
 	TierExpansion
 }
 
@@ -56,9 +42,41 @@ func newTiers(c *ProjectcalicoClient) *tiers {
 	}
 }
 
+// Get takes name of the tier, and returns the corresponding tier object, and an error if there is any.
+func (c *tiers) Get(name string, options v1.GetOptions) (result *projectcalico.Tier, err error) {
+	result = &projectcalico.Tier{}
+	err = c.client.Get().
+		Resource("tiers").
+		Name(name).
+		VersionedParams(&options, scheme.ParameterCodec).
+		Do().
+		Into(result)
+	return
+}
+
+// List takes label and field selectors, and returns the list of Tiers that match those selectors.
+func (c *tiers) List(opts v1.ListOptions) (result *projectcalico.TierList, err error) {
+	result = &projectcalico.TierList{}
+	err = c.client.Get().
+		Resource("tiers").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Do().
+		Into(result)
+	return
+}
+
+// Watch returns a watch.Interface that watches the requested tiers.
+func (c *tiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
+	opts.Watch = true
+	return c.client.Get().
+		Resource("tiers").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Watch()
+}
+
 // Create takes the representation of a tier and creates it.  Returns the server's representation of the tier, and an error, if there is any.
-func (c *tiers) Create(tier *calico.Tier) (result *calico.Tier, err error) {
-	result = &calico.Tier{}
+func (c *tiers) Create(tier *projectcalico.Tier) (result *projectcalico.Tier, err error) {
+	result = &projectcalico.Tier{}
 	err = c.client.Post().
 		Resource("tiers").
 		Body(tier).
@@ -68,8 +86,8 @@ func (c *tiers) Create(tier *calico.Tier) (result *calico.Tier, err error) {
 }
 
 // Update takes the representation of a tier and updates it. Returns the server's representation of the tier, and an error, if there is any.
-func (c *tiers) Update(tier *calico.Tier) (result *calico.Tier, err error) {
-	result = &calico.Tier{}
+func (c *tiers) Update(tier *projectcalico.Tier) (result *projectcalico.Tier, err error) {
+	result = &projectcalico.Tier{}
 	err = c.client.Put().
 		Resource("tiers").
 		Name(tier.Name).
@@ -99,41 +117,9 @@ func (c *tiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListO
 		Error()
 }
 
-// Get takes name of the tier, and returns the corresponding tier object, and an error if there is any.
-func (c *tiers) Get(name string, options v1.GetOptions) (result *calico.Tier, err error) {
-	result = &calico.Tier{}
-	err = c.client.Get().
-		Resource("tiers").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of Tiers that match those selectors.
-func (c *tiers) List(opts v1.ListOptions) (result *calico.TierList, err error) {
-	result = &calico.TierList{}
-	err = c.client.Get().
-		Resource("tiers").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested tiers.
-func (c *tiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
-	opts.Watch = true
-	return c.client.Get().
-		Resource("tiers").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Watch()
-}
-
 // Patch applies the patch and returns the patched tier.
-func (c *tiers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *calico.Tier, err error) {
-	result = &calico.Tier{}
+func (c *tiers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.Tier, err error) {
+	result = &projectcalico.Tier{}
 	err = c.client.Patch(pt).
 		Resource("tiers").
 		SubResource(subresources...).

@@ -45,9 +45,9 @@ func (policyStrategy) NamespaceScoped() bool {
 }
 
 func (policyStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
-	//policy := obj.(*calico.NetworkPolicy)
-	//tier, _ := getTierPolicy(policy.Name)
-	//policy.SetLabels(map[string]string{"projectcalico.org/tier": tier})
+	policy := obj.(*calico.NetworkPolicy)
+	tier, _ := getTierPolicy(policy.Name)
+	policy.SetLabels(map[string]string{"projectcalico.org/tier": tier})
 }
 
 func (policyStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
@@ -97,6 +97,6 @@ func PolicyToSelectableFields(obj *calico.NetworkPolicy) fields.Set {
 	return fields.Set{
 		"metadata.name":      obj.Name,
 		"metadata.namespace": obj.Namespace,
-		//		"spec.tier":          obj.Spec.Tier,
+		"spec.tier":          obj.Spec.Tier,
 	}
 }

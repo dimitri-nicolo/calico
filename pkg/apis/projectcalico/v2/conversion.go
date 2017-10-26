@@ -40,8 +40,6 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 			switch label {
 			case "spec.tier":
 				return "spec.tier", value, nil
-			case "metadata.name":
-				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)
 			}

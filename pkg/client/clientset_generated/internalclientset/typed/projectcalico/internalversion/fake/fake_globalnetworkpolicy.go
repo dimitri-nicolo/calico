@@ -1,23 +1,9 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package fake
+Copyright 2017 Tigera.
+*/package fake
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,49 +21,20 @@ var globalnetworkpoliciesResource = schema.GroupVersionResource{Group: "projectc
 
 var globalnetworkpoliciesKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "", Kind: "GlobalNetworkPolicy"}
 
-func (c *FakeGlobalNetworkPolicies) Create(globalNetworkPolicy *calico.GlobalNetworkPolicy) (result *calico.GlobalNetworkPolicy, err error) {
+// Get takes name of the globalNetworkPolicy, and returns the corresponding globalNetworkPolicy object, and an error if there is any.
+func (c *FakeGlobalNetworkPolicies) Get(name string, options v1.GetOptions) (result *projectcalico.GlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(globalnetworkpoliciesResource, globalNetworkPolicy), &calico.GlobalNetworkPolicy{})
+		Invokes(testing.NewRootGetAction(globalnetworkpoliciesResource, name), &projectcalico.GlobalNetworkPolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*calico.GlobalNetworkPolicy), err
+	return obj.(*projectcalico.GlobalNetworkPolicy), err
 }
 
-func (c *FakeGlobalNetworkPolicies) Update(globalNetworkPolicy *calico.GlobalNetworkPolicy) (result *calico.GlobalNetworkPolicy, err error) {
+// List takes label and field selectors, and returns the list of GlobalNetworkPolicies that match those selectors.
+func (c *FakeGlobalNetworkPolicies) List(opts v1.ListOptions) (result *projectcalico.GlobalNetworkPolicyList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(globalnetworkpoliciesResource, globalNetworkPolicy), &calico.GlobalNetworkPolicy{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*calico.GlobalNetworkPolicy), err
-}
-
-func (c *FakeGlobalNetworkPolicies) Delete(name string, options *v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(globalnetworkpoliciesResource, name), &calico.GlobalNetworkPolicy{})
-	return err
-}
-
-func (c *FakeGlobalNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(globalnetworkpoliciesResource, listOptions)
-
-	_, err := c.Fake.Invokes(action, &calico.GlobalNetworkPolicyList{})
-	return err
-}
-
-func (c *FakeGlobalNetworkPolicies) Get(name string, options v1.GetOptions) (result *calico.GlobalNetworkPolicy, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(globalnetworkpoliciesResource, name), &calico.GlobalNetworkPolicy{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*calico.GlobalNetworkPolicy), err
-}
-
-func (c *FakeGlobalNetworkPolicies) List(opts v1.ListOptions) (result *calico.GlobalNetworkPolicyList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(globalnetworkpoliciesResource, globalnetworkpoliciesKind, opts), &calico.GlobalNetworkPolicyList{})
+		Invokes(testing.NewRootListAction(globalnetworkpoliciesResource, globalnetworkpoliciesKind, opts), &projectcalico.GlobalNetworkPolicyList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -86,8 +43,8 @@ func (c *FakeGlobalNetworkPolicies) List(opts v1.ListOptions) (result *calico.Gl
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &calico.GlobalNetworkPolicyList{}
-	for _, item := range obj.(*calico.GlobalNetworkPolicyList).Items {
+	list := &projectcalico.GlobalNetworkPolicyList{}
+	for _, item := range obj.(*projectcalico.GlobalNetworkPolicyList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -101,12 +58,47 @@ func (c *FakeGlobalNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface,
 		InvokesWatch(testing.NewRootWatchAction(globalnetworkpoliciesResource, opts))
 }
 
-// Patch applies the patch and returns the patched globalNetworkPolicy.
-func (c *FakeGlobalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *calico.GlobalNetworkPolicy, err error) {
+// Create takes the representation of a globalNetworkPolicy and creates it.  Returns the server's representation of the globalNetworkPolicy, and an error, if there is any.
+func (c *FakeGlobalNetworkPolicies) Create(globalNetworkPolicy *projectcalico.GlobalNetworkPolicy) (result *projectcalico.GlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(globalnetworkpoliciesResource, name, data, subresources...), &calico.GlobalNetworkPolicy{})
+		Invokes(testing.NewRootCreateAction(globalnetworkpoliciesResource, globalNetworkPolicy), &projectcalico.GlobalNetworkPolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*calico.GlobalNetworkPolicy), err
+	return obj.(*projectcalico.GlobalNetworkPolicy), err
+}
+
+// Update takes the representation of a globalNetworkPolicy and updates it. Returns the server's representation of the globalNetworkPolicy, and an error, if there is any.
+func (c *FakeGlobalNetworkPolicies) Update(globalNetworkPolicy *projectcalico.GlobalNetworkPolicy) (result *projectcalico.GlobalNetworkPolicy, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateAction(globalnetworkpoliciesResource, globalNetworkPolicy), &projectcalico.GlobalNetworkPolicy{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*projectcalico.GlobalNetworkPolicy), err
+}
+
+// Delete takes name of the globalNetworkPolicy and deletes it. Returns an error if one occurs.
+func (c *FakeGlobalNetworkPolicies) Delete(name string, options *v1.DeleteOptions) error {
+	_, err := c.Fake.
+		Invokes(testing.NewRootDeleteAction(globalnetworkpoliciesResource, name), &projectcalico.GlobalNetworkPolicy{})
+	return err
+}
+
+// DeleteCollection deletes a collection of objects.
+func (c *FakeGlobalNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(globalnetworkpoliciesResource, listOptions)
+
+	_, err := c.Fake.Invokes(action, &projectcalico.GlobalNetworkPolicyList{})
+	return err
+}
+
+// Patch applies the patch and returns the patched globalNetworkPolicy.
+func (c *FakeGlobalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.GlobalNetworkPolicy, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(globalnetworkpoliciesResource, name, data, subresources...), &projectcalico.GlobalNetworkPolicy{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*projectcalico.GlobalNetworkPolicy), err
 }

@@ -19,9 +19,9 @@ package rest
 import (
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	calicogpolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/globalpolicy"
-	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/policy"
+	calicopolicy "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/networkpolicy"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
-	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/calico/tier"
+	calicotier "github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/tier"
 	"github.com/tigera/calico-k8sapiserver/pkg/storage/etcd"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -75,7 +75,7 @@ func (p RESTStorageProvider) NewV2Storage(
 			RESTOptions:   tierRESTOptions,
 			Capacity:      1000,
 			ObjectType:    calicotier.EmptyObject(),
-			ScopeStrategy: calicotier.NewScopeStrategy(),
+			ScopeStrategy: calicotier.NewStrategy(scheme),
 			NewListFunc:   calicotier.NewList,
 			GetAttrsFunc:  calicotier.GetAttrs,
 			Trigger:       storage.NoTriggerPublisher,
@@ -96,7 +96,7 @@ func (p RESTStorageProvider) NewV2Storage(
 			RESTOptions:   gpolicyRESTOptions,
 			Capacity:      1000,
 			ObjectType:    calicogpolicy.EmptyObject(),
-			ScopeStrategy: calicogpolicy.NewScopeStrategy(),
+			ScopeStrategy: calicogpolicy.NewStrategy(scheme),
 			NewListFunc:   calicogpolicy.NewList,
 			GetAttrsFunc:  calicogpolicy.GetAttrs,
 			Trigger:       storage.NoTriggerPublisher,
@@ -109,13 +109,9 @@ func (p RESTStorageProvider) NewV2Storage(
 	)
 
 	storage := map[string]rest.Storage{}
-<<<<<<< HEAD:pkg/registry/calico/rest/storage_calico.go
-	storage["networkpolicies"] = calicopolicy.NewREST(*policyOpts)
-	storage["tiers"] = calicotier.NewREST(*tierOpts)
-	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(*gpolicyOpts)
-=======
 	storage["networkpolicies"] = calicopolicy.NewREST(scheme, *policyOpts)
->>>>>>> 466f79f6... Functional with k8s 1.8 related dependencies:pkg/registry/projectcalico/rest/storage_calico.go
+	storage["tiers"] = calicotier.NewREST(scheme, *tierOpts)
+	storage["globalnetworkpolicies"] = calicogpolicy.NewREST(scheme, *gpolicyOpts)
 
 	return storage, nil
 }

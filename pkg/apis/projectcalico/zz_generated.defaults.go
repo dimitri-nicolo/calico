@@ -20,23 +20,6 @@ limitations under the License.
 
 package projectcalico
 
-<<<<<<< HEAD:pkg/client/listers_generated/projectcalico/internalversion/expansion_generated.go
-// GlobalNetworkPolicyListerExpansion allows custom methods to be added to
-// GlobalNetworkPolicyLister.
-type GlobalNetworkPolicyListerExpansion interface{}
-
-// NetworkPolicyListerExpansion allows custom methods to be added to
-// NetworkPolicyLister.
-type NetworkPolicyListerExpansion interface{}
-
-// NetworkPolicyNamespaceListerExpansion allows custom methods to be added to
-// NetworkPolicyNamespaceLister.
-type NetworkPolicyNamespaceListerExpansion interface{}
-
-// TierListerExpansion allows custom methods to be added to
-// TierLister.
-type TierListerExpansion interface{}
-=======
 import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -47,4 +30,3 @@ import (
 func RegisterDefaults(scheme *runtime.Scheme) error {
 	return nil
 }
->>>>>>> 0142c282... Compiles with the dependencies:pkg/apis/calico/zz_generated.defaults.go

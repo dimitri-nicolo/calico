@@ -236,7 +236,7 @@ func TestTierClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Tier{}
+				return &projectcalico.Tier{}
 			})
 			defer shutdownServer()
 			if err := testTierClient(client, name); err != nil {
@@ -301,7 +301,7 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.GlobalNetworkPolicy{}
+				return &projectcalico.GlobalNetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testGlobalNetworkPolicyClient(client, name); err != nil {

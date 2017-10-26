@@ -41,6 +41,9 @@ type NetworkPolicy struct {
 	Spec calico.PolicySpec
 }
 
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // TierList is a list of Tier objects.
 type TierList struct {
 	metav1.TypeMeta
@@ -49,8 +52,9 @@ type TierList struct {
 	Items []Tier
 }
 
-// +genclient=true
-// +nonNamespaced=true
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type Tier struct {
 	metav1.TypeMeta
@@ -58,6 +62,9 @@ type Tier struct {
 
 	Spec calico.TierSpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // GlobalNetworkPolicyList is a list of Policy objects.
 type GlobalNetworkPolicyList struct {
@@ -67,8 +74,9 @@ type GlobalNetworkPolicyList struct {
 	Items []GlobalNetworkPolicy
 }
 
-// +genclient=true
-// +nonNamespaced=true
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type GlobalNetworkPolicy struct {
 	metav1.TypeMeta

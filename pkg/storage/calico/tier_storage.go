@@ -7,11 +7,11 @@ import (
 
 	"golang.org/x/net/context"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apiv2"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/clientv2"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
-	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/etcd"

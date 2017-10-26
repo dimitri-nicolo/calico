@@ -1,23 +1,9 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package fake
+Copyright 2017 Tigera.
+*/package fake
 
 import (
-	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
+	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,37 +21,7 @@ var tiersResource = schema.GroupVersionResource{Group: "projectcalico.org", Vers
 
 var tiersKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "v2", Kind: "Tier"}
 
-func (c *FakeTiers) Create(tier *v2.Tier) (result *v2.Tier, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(tiersResource, tier), &v2.Tier{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v2.Tier), err
-}
-
-func (c *FakeTiers) Update(tier *v2.Tier) (result *v2.Tier, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(tiersResource, tier), &v2.Tier{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v2.Tier), err
-}
-
-func (c *FakeTiers) Delete(name string, options *v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(tiersResource, name), &v2.Tier{})
-	return err
-}
-
-func (c *FakeTiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(tiersResource, listOptions)
-
-	_, err := c.Fake.Invokes(action, &v2.TierList{})
-	return err
-}
-
+// Get takes name of the tier, and returns the corresponding tier object, and an error if there is any.
 func (c *FakeTiers) Get(name string, options v1.GetOptions) (result *v2.Tier, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(tiersResource, name), &v2.Tier{})
@@ -75,6 +31,7 @@ func (c *FakeTiers) Get(name string, options v1.GetOptions) (result *v2.Tier, er
 	return obj.(*v2.Tier), err
 }
 
+// List takes label and field selectors, and returns the list of Tiers that match those selectors.
 func (c *FakeTiers) List(opts v1.ListOptions) (result *v2.TierList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(tiersResource, tiersKind, opts), &v2.TierList{})
@@ -99,6 +56,41 @@ func (c *FakeTiers) List(opts v1.ListOptions) (result *v2.TierList, err error) {
 func (c *FakeTiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(tiersResource, opts))
+}
+
+// Create takes the representation of a tier and creates it.  Returns the server's representation of the tier, and an error, if there is any.
+func (c *FakeTiers) Create(tier *v2.Tier) (result *v2.Tier, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootCreateAction(tiersResource, tier), &v2.Tier{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v2.Tier), err
+}
+
+// Update takes the representation of a tier and updates it. Returns the server's representation of the tier, and an error, if there is any.
+func (c *FakeTiers) Update(tier *v2.Tier) (result *v2.Tier, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateAction(tiersResource, tier), &v2.Tier{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v2.Tier), err
+}
+
+// Delete takes name of the tier and deletes it. Returns an error if one occurs.
+func (c *FakeTiers) Delete(name string, options *v1.DeleteOptions) error {
+	_, err := c.Fake.
+		Invokes(testing.NewRootDeleteAction(tiersResource, name), &v2.Tier{})
+	return err
+}
+
+// DeleteCollection deletes a collection of objects.
+func (c *FakeTiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(tiersResource, listOptions)
+
+	_, err := c.Fake.Invokes(action, &v2.TierList{})
+	return err
 }
 
 // Patch applies the patch and returns the patched tier.
