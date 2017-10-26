@@ -23,6 +23,7 @@ The valid resource types are:
 	-  NetworkPolicy
 	-  Profile
 	-  WorkloadEndpoint
+	-  Tier
 
 The resource structures include the JSON tags for each exposed field.  These are standard
 golang tags that define the JSON format of the structures as used by calicoctl.  The YAML

@@ -18,13 +18,19 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
-// PolicySpec contains the specification for a selector-based security Policy resource.
+// PolicySpec contains the specification for a selector-based tiered security Policy resource.
 type PolicySpec struct {
-	// Order is an optional field that specifies the order in which the policy is applied.
+	// The name of the tier that this policy belongs to.  If this is omitted, the default
+	// tier (name is "default") is assumed.  The specified tier must exist in order to create
+	// security policies within the tier, the "default" tier is created automatically if it
+	// does not exist, this means for deployments requiring only a single Tier, the tier name
+	// may be omitted on all policy management requests.
+	Tier string `json:"tier,omitempty" validate:"omitempty,name"`
+	// Order is an optional field that specifies the order in which the policy is applied within the tier.
 	// Policies with higher "order" are applied after those with lower
 	// order.  If the order is omitted, it may be considered to be "infinite" - i.e. the
-	// policy will be applied last.  Policies with identical order will be applied in
-	// alphanumerical order based on the Policy "Name".
+	// policy will be applied last within the tier.  Policies with identical order will be applied in
+	// alphanumerical order based on the Policy "Name" within the same tier.
 	Order *float64 `json:"order,omitempty"`
 	// The ordered set of ingress rules.  Each rule contains a set of packet match criteria and
 	// a corresponding action to apply.
@@ -142,10 +148,6 @@ type ICMPFields struct {
 // A source EntityRule matches the source endpoint and originating traffic.
 // A destination EntityRule matches the destination endpoint and terminating traffic.
 type EntityRule struct {
-	// Tag is an optional field that restricts the rule to only apply to traffic that
-	// originates from (or terminates at) endpoints that have profiles with the given tag
-	// in them.
-	Tag string `json:"tag,omitempty" validate:"omitempty,tag"`
 	// Nets is an optional field that restricts the rule to only apply to traffic that
 	// originates from (or terminates at) IP addresses in any of the given subnets.
 	Nets []string `json:"nets,omitempty" validate:"omitempty,dive,cidr"`
@@ -174,9 +176,6 @@ type EntityRule struct {
 	// Protocol match in the Rule to be set to "tcp" or "udp".
 	Ports []numorstring.Port `json:"ports,omitempty" validate:"omitempty,dive"`
 	// NotTag is the negated version of the Tag field.
-	NotTag string `json:"notTag,omitempty" validate:"omitempty,tag"`
-	// NotNets is an optional field that restricts the rule to only apply to traffic that
-	// does not originate from (or terminate at) an IP address in any of the given subnets.
 	NotNets []string `json:"notNets,omitempty" validate:"omitempty,dive,cidr"`
 	// NotSelector is the negated version of the Selector field.  See Selector field for
 	// subtleties with negated selectors.

@@ -38,7 +38,7 @@ import:
   subpackages:
   - spew
 - package: github.com/docker/distribution
-  version: cd27f179f2c10c5d300e6d09025b538c475b0d51
+  version: 63cb8cf23b53424ac4fe483a2e58de8358c70e82
   subpackages:
   - digest
   - reference
@@ -91,7 +91,7 @@ import:
 - package: github.com/inconshreveable/mousetrap
   version: v1.0
 - package: github.com/juju/ratelimit
-  version: 77ed1c8a01217656d2080ad51981f6e99adaa177
+  version: a4f3c04b4245e91ee302f52cc5d175cb8b3278ee
 - package: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -189,6 +189,8 @@ import:
 - package: k8s.io/client-go
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/libcalico-go
+  repo: git@github.com:tigera/libcalico-go-private.git
+  version: v3.0-integration
 - package: k8s.io/kubernetes
   version: release-1.8
 - package: k8s.io/code-generator

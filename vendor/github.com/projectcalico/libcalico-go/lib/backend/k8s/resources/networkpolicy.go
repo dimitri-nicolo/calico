@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
+	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
 
@@ -34,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
@@ -62,15 +63,16 @@ func NewNetworkPolicyClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sReso
 
 // Implements the api.Client interface for NetworkPolicys.
 type networkPolicyClient struct {
-	clientSet *kubernetes.Clientset
-	crdClient *customK8sResourceClient
-	converter conversion.Converter
+	resourceName string
+	clientSet    *kubernetes.Clientset
+	crdClient    *customK8sResourceClient
+	converter    conversion.Converter
 }
 
 func (c *networkPolicyClient) Create(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
 	log.Debug("Received Create request on NetworkPolicy type")
 	key := kvp.Key.(model.ResourceKey)
-	if strings.HasPrefix(key.Name, "knp.default.") {
+	if strings.HasPrefix(key.Name, conversion.K8sNetworkPolicyNamePrefix) {
 		// We don't support Create of a Kubernetes NetworkPolicy.
 		return nil, cerrors.ErrorOperationNotSupported{
 			Identifier: kvp.Key,
@@ -83,7 +85,7 @@ func (c *networkPolicyClient) Create(ctx context.Context, kvp *model.KVPair) (*m
 func (c *networkPolicyClient) Update(ctx context.Context, kvp *model.KVPair) (*model.KVPair, error) {
 	log.Debug("Received Update request on NetworkPolicy type")
 	key := kvp.Key.(model.ResourceKey)
-	if strings.HasPrefix(key.Name, "knp.default.") {
+	if strings.HasPrefix(key.Name, conversion.K8sNetworkPolicyNamePrefix) {
 		// We don't support Update of a Kubernetes NetworkPolicy.
 		return nil, cerrors.ErrorOperationNotSupported{
 			Identifier: kvp.Key,
@@ -103,7 +105,7 @@ func (c *networkPolicyClient) Apply(kvp *model.KVPair) (*model.KVPair, error) {
 func (c *networkPolicyClient) Delete(ctx context.Context, key model.Key, revision string) (*model.KVPair, error) {
 	log.Debug("Received Delete request on NetworkPolicy type")
 	k := key.(model.ResourceKey)
-	if strings.HasPrefix(k.Name, "knp.default.") {
+	if strings.HasPrefix(k.Name, conversion.K8sNetworkPolicyNamePrefix) {
 		// We don't support Delete of a Kubernetes NetworkPolicy.
 		return nil, cerrors.ErrorOperationNotSupported{
 			Identifier: key,
@@ -119,23 +121,23 @@ func (c *networkPolicyClient) Get(ctx context.Context, key model.Key, revision s
 	if k.Name == "" {
 		return nil, errors.New("Missing policy name")
 	}
+	if k.Namespace == "" {
+		return nil, errors.New("Missing policy namespace")
+	}
 
 	// Check to see if this is backed by a NetworkPolicy.
-	if strings.HasPrefix(k.Name, "knp.default.") {
-		// Backed by a NetworkPolicy. Parse out the namespace / name.
-		namespace, policyName, err := c.converter.ParsePolicyNameNetworkPolicy(k.Name)
-		if err != nil {
-			return nil, cerrors.ErrorResourceDoesNotExist{Err: err, Identifier: k}
-		}
+	if strings.HasPrefix(k.Name, conversion.K8sNetworkPolicyNamePrefix) {
+		// Backed by a NetworkPolicy - extract the name.
+		policyName := strings.TrimPrefix(k.Name, conversion.K8sNetworkPolicyNamePrefix)
 
 		// Get the NetworkPolicy from the API and convert it.
 		networkPolicy := extensions.NetworkPolicy{}
-		err = c.clientSet.Extensions().RESTClient().
+		err := c.clientSet.Extensions().RESTClient().
 			Get().
 			Resource("networkpolicies").
-			Namespace(namespace).
+			Namespace(k.Namespace).
 			Name(policyName).
-			Timeout(10 * time.Second).
+			VersionedParams(&metav1.GetOptions{ResourceVersion: revision}, scheme.ParameterCodec).
 			Do().Into(&networkPolicy)
 		if err != nil {
 			return nil, K8sErrorToCalico(err, k)
@@ -170,38 +172,45 @@ func (c *networkPolicyClient) List(ctx context.Context, list model.ListInterface
 		}, nil
 	}
 
-	// Otherwise, list all NetworkPolicy objects in all Namespaces.
-	networkPolicies := extensions.NetworkPolicyList{}
-	err := c.clientSet.Extensions().RESTClient().
-		Get().
-		Resource("networkpolicies").
-		Timeout(10 * time.Second).
-		Do().Into(&networkPolicies)
+	// List all Namespaced Calico Network Policies.
+	npKvps, err := c.crdClient.List(ctx, l, revision)
 	if err != nil {
+		log.WithError(err).Info("Unable to list Calico CRD-backed Network Policy resources")
+		return nil, err
+	}
+
+	// List all of the k8s NetworkPolicy objects in all Namespaces.
+	networkPolicies := extensions.NetworkPolicyList{}
+	req := c.clientSet.Extensions().RESTClient().
+		Get().
+		Resource("networkpolicies")
+	if l.Namespace != "" {
+		// Add the namespace if requested.
+		req = req.Namespace(l.Namespace)
+	}
+	err = req.Do().Into(&networkPolicies)
+	if err != nil {
+		log.WithError(err).Info("Unable to list K8s Network Policy resources")
 		return nil, K8sErrorToCalico(err, l)
 	}
 
+	// Combine the two resource versions to a single resource version that can be decoded by the Watch.
+	// Ideally we would just use the revision from the CRD query as input into the List for the K8s
+	// Network Policies.  However, this causes the client request to hang - so it is not a viable option.
+	npKvps.Revision = npKvps.Revision + "/" + networkPolicies.ResourceVersion
+
 	// For each policy, turn it into a Policy and generate the list.
-	ret := []*model.KVPair{}
 	for _, p := range networkPolicies.Items {
 		kvp, err := c.converter.K8sNetworkPolicyToCalico(&p)
 		if err != nil {
+			log.WithError(err).Info("Failed to convert K8s Network Policy")
 			return nil, err
 		}
-		ret = append(ret, kvp)
+		npKvps.KVPairs = append(npKvps.KVPairs, kvp)
 	}
 
-	// List all Namespaced Calico Network Policies.
-	nps, err := c.crdClient.List(ctx, l, revision)
-	if err != nil {
-		return nil, err
-	}
-	ret = append(ret, nps.KVPairs...)
-
-	return &model.KVPairList{
-		KVPairs:  ret,
-		Revision: revision,
-	}, nil
+	log.WithField("KVPs", npKvps).Info("Returning NP KVPs")
+	return npKvps, nil
 }
 
 func (c *networkPolicyClient) EnsureInitialized() error {
@@ -209,19 +218,35 @@ func (c *networkPolicyClient) EnsureInitialized() error {
 }
 
 func (c *networkPolicyClient) Watch(ctx context.Context, list model.ListInterface, revision string) (api.WatchInterface, error) {
-	// TODO(doublek): We are only watching k8s backed NetworkPolicy. Will need to add
-	// the ability to watch both CRD and k8s NetworkPolicy.
 	resl := list.(model.ResourceListOptions)
 	if len(resl.Name) != 0 {
 		return nil, fmt.Errorf("cannot watch specific resource instance: %s", list.(model.ResourceListOptions).Name)
 	}
+
+	// If a revision is specified, see if it contains a "/" and if so split into separate
+	// revisions for the CRD and for the K8s resource.
+	k8sRev := revision
+	crdRev := revision
+	if strings.Contains(revision, "/") {
+		revs := strings.Split(revision, "/")
+		if len(revs) != 2 {
+			return nil, fmt.Errorf("badly formatted ResourceVersion: %s", revision)
+		}
+		crdRev = revs[0]
+		k8sRev = revs[1]
+	}
+
+	log.WithFields(log.Fields{
+		"CRDNPRev": crdRev,
+		"K8sNPRev": k8sRev,
+	}).Info("Watching two resources at individual revisions")
 
 	k8sWatchClient := cache.NewListWatchFromClient(
 		c.clientSet.ExtensionsV1beta1().RESTClient(),
 		"networkpolicies",
 		resl.Namespace,
 		fields.Everything())
-	k8sWatch, err := k8sWatchClient.WatchFunc(metav1.ListOptions{ResourceVersion: revision})
+	k8sRawWatch, err := k8sWatchClient.WatchFunc(metav1.ListOptions{ResourceVersion: k8sRev})
 	if err != nil {
 		return nil, K8sErrorToCalico(err, list)
 	}
@@ -232,6 +257,109 @@ func (c *networkPolicyClient) Watch(ctx context.Context, list model.ListInterfac
 		}
 		return c.converter.K8sNetworkPolicyToCalico(np)
 	}
-	return newK8sWatcherConverter(ctx, converter, k8sWatch), nil
-	// return c.crdClient.Watch(ctx, list, revision)
+	k8sWatch := newK8sWatcherConverter(ctx, "NetworkPolicy (namespaced)", converter, k8sRawWatch)
+
+	calicoWatch, err := c.crdClient.Watch(ctx, list, crdRev)
+	if err != nil {
+		k8sWatch.Stop()
+		return nil, err
+	}
+
+	return newNetworkPolicyWatcher(ctx, k8sWatch, calicoWatch), nil
+
+}
+
+func newNetworkPolicyWatcher(ctx context.Context, k8sWatch, calicoWatch api.WatchInterface) api.WatchInterface {
+	ctx, cancel := context.WithCancel(ctx)
+	wc := &networkPolicyWatcher{
+		k8sNPWatch:    k8sWatch,
+		calicoNPWatch: calicoWatch,
+		context:       ctx,
+		cancel:        cancel,
+		resultChan:    make(chan api.WatchEvent, resultsBufSize),
+	}
+	go wc.processNPEvents()
+	return wc
+}
+
+type networkPolicyWatcher struct {
+	converter     ConvertK8sResourceToKVPair
+	k8sNPWatch    api.WatchInterface
+	calicoNPWatch api.WatchInterface
+	context       context.Context
+	cancel        context.CancelFunc
+	resultChan    chan api.WatchEvent
+	terminated    uint32
+}
+
+// Stop stops the watcher and releases associated resources.
+// This calls through to the context cancel function.
+func (npw *networkPolicyWatcher) Stop() {
+	npw.cancel()
+	npw.k8sNPWatch.Stop()
+	npw.calicoNPWatch.Stop()
+}
+
+// ResultChan returns a channel used to receive WatchEvents.
+func (npw *networkPolicyWatcher) ResultChan() <-chan api.WatchEvent {
+	return npw.resultChan
+}
+
+// HasTerminated returns true when the watcher has completed termination processing.
+func (npw *networkPolicyWatcher) HasTerminated() bool {
+	terminated := atomic.LoadUint32(&npw.terminated) != 0
+
+	if npw.k8sNPWatch != nil {
+		terminated = terminated && npw.k8sNPWatch.HasTerminated()
+	}
+	if npw.calicoNPWatch != nil {
+		terminated = terminated && npw.calicoNPWatch.HasTerminated()
+	}
+
+	return terminated
+}
+
+// Loop to process the events stream from the underlying k8s Watcher and convert them to
+// backend KVPs.
+func (npw *networkPolicyWatcher) processNPEvents() {
+	log.Info("Watcher process started")
+	defer func() {
+		log.Info("Watcher process terminated")
+		npw.Stop()
+		close(npw.resultChan)
+		atomic.AddUint32(&npw.terminated, 1)
+	}()
+
+	for {
+		var e api.WatchEvent
+		select {
+		case e = <-npw.calicoNPWatch.ResultChan():
+			log.Debug("Processing Calico NP event")
+
+		case e = <-npw.k8sNPWatch.ResultChan():
+			log.Debug("Processing Kubernetes NP event")
+
+		case <-npw.context.Done(): // user cancel
+			log.Info("Process watcher done event in kdd client")
+			return
+		}
+
+		// Send the processed event.
+		select {
+		case npw.resultChan <- e:
+			// If this is an error event, check to see if it's a terminating one.
+			// If so, terminate this watcher.
+			if e.Type == api.WatchError {
+				log.WithError(e.Error).Debug("Kubernetes event converted to backend watcher error event")
+				if _, ok := e.Error.(cerrors.ErrorWatchTerminated); ok {
+					log.Info("Watch terminated event")
+					return
+				}
+			}
+
+		case <-npw.context.Done():
+			log.Info("Process watcher done event during watch event in kdd client")
+			return
+		}
+	}
 }

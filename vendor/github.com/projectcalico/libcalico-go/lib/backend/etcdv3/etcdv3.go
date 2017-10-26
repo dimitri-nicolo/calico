@@ -48,7 +48,7 @@ func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
 	}
 
 	if len(etcdLocation) == 0 {
-		log.Info("No etcd endpoints specified in etcdv3 API config")
+		log.Warning("No etcd endpoints specified in etcdv3 API config")
 		return nil, errors.New("no etcd endpoints specified")
 	}
 
@@ -302,7 +302,7 @@ func (c *etcdV3Client) Get(ctx context.Context, k model.Key, revision string) (*
 		return nil, cerrors.ErrorDatastoreError{Err: err}
 	}
 	if len(resp.Kvs) == 0 {
-		logCxt.Info("No results returned from etcdv3 client")
+		logCxt.Debug("No results returned from etcdv3 client")
 		return nil, cerrors.ErrorResourceDoesNotExist{Identifier: k}
 	}
 
@@ -331,11 +331,11 @@ func (c *etcdV3Client) List(ctx context.Context, l model.ListInterface, revision
 	if model.IsListOptionsLastSegmentPrefix(l) {
 		// The last segment is a prefix, perform a prefix Get without adding a segment
 		// delimiter.
-		logCxt.Info("Performing a name-prefix query")
+		logCxt.Debug("Performing a name-prefix query")
 		ops = append(ops, clientv3.WithPrefix())
 	} else if l.KeyFromDefaultPath(key) == nil {
 		// The etcdKey not a fully qualified etcdKey - it must be a prefix.
-		logCxt.Info("Performing a parent-prefix query")
+		logCxt.Debug("Performing a parent-prefix query")
 		if !strings.HasSuffix(key, "/") {
 			key += "/"
 		}
@@ -377,21 +377,7 @@ func (c *etcdV3Client) List(ctx context.Context, l model.ListInterface, revision
 // EnsureInitialized makes sure that the etcd data is initialized for use by
 // Calico.
 func (c *etcdV3Client) EnsureInitialized() error {
-	// Make sure the Ready flag is initialized in the datastore
-	kv := &model.KVPair{
-		Key:   model.ReadyFlagKey{},
-		Value: true,
-	}
-
 	//TODO - still need to worry about ready flag.
-	if _, err := c.Create(context.Background(), kv); err != nil {
-		if _, ok := err.(cerrors.ErrorResourceAlreadyExists); !ok {
-			log.WithError(err).Warn("Failed to set ready flag")
-			return err
-		}
-	}
-
-	log.Info("Ready flag is already set")
 	return nil
 }
 
@@ -410,7 +396,7 @@ func (c *etcdV3Client) Clean() error {
 
 // Syncer returns a v1 Syncer used to stream resource updates.
 func (c *etcdV3Client) Syncer(callbacks api.SyncerCallbacks) api.Syncer {
-	return felixsyncer.New(c, callbacks)
+	return felixsyncer.New(c, callbacks, apiconfig.EtcdV3)
 }
 
 // getTTLOption returns a OpOption slice containing a Lease granted for the TTL.

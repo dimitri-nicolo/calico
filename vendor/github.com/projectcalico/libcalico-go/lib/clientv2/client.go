@@ -100,6 +100,11 @@ func (c client) BGPPeers() BGPPeerInterface {
 	return bgpPeers{client: c}
 }
 
+// BGPPeers returns an interface for managing tier resources.
+func (c client) Tiers() TierInterface {
+	return tiers{client: c}
+}
+
 // IPAM returns an interface for managing IP address assignment and releasing.
 func (c client) IPAM() ipam.Interface {
 	return ipam.NewIPAMClient(c.backend, poolAccessor{client: &c})

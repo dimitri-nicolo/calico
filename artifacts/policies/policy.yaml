@@ -1,7 +1,11 @@
 apiVersion: projectcalico.org/v2
 kind: NetworkPolicy
 metadata:
+<<<<<<< HEAD
   name: net-sec.my-first-policy
+=======
+  name: my-first-policy
+>>>>>>> ffab4532... Fixing vendor folder updating to latest...
 spec:
   selector: role == 'database'
   ingress:
@@ -14,4 +18,7 @@ spec:
       - 6379
   egress:
   - action: allow
+<<<<<<< HEAD
   tier: "net-sec"
+=======
+>>>>>>> ffab4532... Fixing vendor folder updating to latest...

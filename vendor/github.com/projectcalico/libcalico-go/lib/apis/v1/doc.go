@@ -23,6 +23,7 @@ In particular this includes:
 		-  Policy
 		-  Pool
 		-  Profile
+		-  Tier
 	-  The client configuration
 
 The resource structures include the JSON tags for each exposed field.  These are standard

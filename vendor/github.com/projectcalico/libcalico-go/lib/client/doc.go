@@ -23,7 +23,8 @@ definitions for each resource type are defined in the following package:
 	github.com/projectcalico/libcalico-go/lib/api
 
 The client has a number of methods that return interfaces for managing:
-    -  BGP Peer resources
+	-  BGP Peer resources
+	-  Tier resources
 	-  Policy resources
 	-  IP Pool resources
 	-  Host endpoint resources
@@ -36,77 +37,70 @@ resource type.
 
 The resource management interfaces have a common set of commands to create, delete,
 update and retrieve resource instances.  For example, an application using this
-client to manage host endpoint resources would create an instance of this client, create a
-new HostEndpoints interface and call the appropriate methods on that interface.  For example:
+client to manage tier resources would create an instance of this client, create a
+new Tiers interface and call the appropriate methods on that interface.  For example:
 
 	// NewFromEnv() creates a new client and defaults to access an etcd backend datastore at
 	// http://127.0.0.1:2379.  For alternative backend access details, set the appropriate
 	// ENV variables specified in the CalicoAPIConfigSpec structure.
 	client, err := client.NewFromEnv()
 
-	// Obtain the interface for managing host endpoint resources.
-	hostendpoints := client.HostEndpoints()
+	// Obtain the interface for managing tier resources.
+	tiers := client.Tiers()
 
-	// Create a new host endpoint.  All Create() methods return an error of type
+	// Create a new tier.  All Create() methods return an error of type
 	// common.ErrorResourceAlreadyExists if the resource specified by its
 	// unique identifiers already exists.
-	hostEndpoint, err := hostEndpoints.Create(&api.HostEndpoint{
-		Metadata: api.HostEndpointMetadata{
-			Name: "endpoint1",
-			Nodename: "hostname1",
+	tier, err := tiers.Create(&api.Tier{
+		Metadata: api.TierMetadata{
+			Name: "tier-1",
 		},
-		Spec: api.HostEndpointSpec{
-			InterfaceName: "eth0"
+		Spec: api.TierSpec{
+			Order: 100
 		},
 	}
 
-	// Update an existing host endpoint.  All Update() methods return an error of type
+	// Update am existing tier.  All Update() methods return an error of type
 	// common.ErrorResourceDoesNotExist if the resource specified by its
 	// unique identifiers does not exist.
-	hostEndpoint, err = hostEndpoints.Update(&api.HostEndpoint{
-		Metadata: api.HostEndpointMetadata{
-			Name: "endpoint1",
-			Nodename: "hostname1",
+	tier, err = tiers.Update(&api.Tier{
+		Metadata: api.TierMetadata{
+			Name: "tier-1",
 		},
-		Spec: api.HostEndpointSpec{
-			InterfaceName: "eth0",
-			Profiles: []string{"profile1"},
+		Spec: api.TierSpec{
+			Order: 200
 		},
 	}
 
-	// Apply (update or create) a hostEndpoint.  All Apply() methods will update a resource
+	// Apply (update or create) a tier.  All Apply() methods will update a resource
 	// if it already exists, and will create a new resource if it does not.
-	hostEndpoint, err = hostEndpoints.Apply(&api.HostEndpoint{
-		Metadata: api.HostEndpointMetadata{
-			Name: "endpoint1",
-			Nodename: "hostname1",
+	tier, err = tiers.Apply(&api.Tier{
+		Metadata: api.TierMetadata{
+			Name: "tier-2",
 		},
-		Spec: api.HostEndpointSpec{
-			InterfaceName: "eth1",
-			Profiles: []string{"profile1"},
+		Spec: api.TierSpec{
+			Order: 150
 		},
 	}
 
-	// Delete a hostEndpoint.  All Delete() methods return an error of type
+	// Delete a tier.  All Delete() methods return an error of type
 	// common.ErrorResourceDoesNotExist if the resource specified by its
 	// unique identifiers does not exist.
-	hostEndpoint, err = hostEndpoints.Delete(api.HostEndpointMetadata{
-		Name: "endpoint1",
-		Nodename: "hostname1",
+	tier, err = tiers.Delete(api.TierMetadata{
+		Name: "tier-2",
 	})
 
-	// Get a hostEndpoint.  All Get() methods return an error of type
+	// Get a tier.  All Get() methods return an error of type
 	// common.ErrorResourceDoesNotExist if the resource specified by its
 	// unique identifiers does not exist.
-	hostEndpoint, err = hostEndpoints.Get(api.HostEndpointMetadata{
-		Name: "endpoint1",
-		Nodename: "hostname1",
+	tier, err = tiers.Get(api.TierMetadata{
+		Name: "tier-2",
 	})
 
-	// List all hostEndpoints.  All List() methods take a (sub-)set of the resource
+	// List all tiers.  All List() methods take a (sub-)set of the resource
 	// identifiers and return the corresponding list resource type that has an
 	// Items field containing a list of resources that match the supplied
 	// identifiers.
-	hostEndpointList, err := hostEndpoints.List(api.HostEndpointMetadata{})
+	tierList, err := tiers.List(api.TierMetadata{})
 */
 package client

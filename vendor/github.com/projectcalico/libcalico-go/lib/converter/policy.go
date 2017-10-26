@@ -29,6 +29,7 @@ func (p PolicyConverter) ConvertMetadataToKey(m unversioned.ResourceMetadata) (m
 	pm := m.(api.PolicyMetadata)
 	k := model.PolicyKey{
 		Name: pm.Name,
+		Tier: TierOrDefault(pm.Tier),
 	}
 	return k, nil
 }
@@ -93,6 +94,7 @@ func (p PolicyConverter) ConvertKVPairToAPI(d *model.KVPair) (unversioned.Resour
 
 	ap := api.NewPolicy()
 	ap.Metadata.Name = bk.Name
+	ap.Metadata.Tier = bk.Tier
 	ap.Metadata.Annotations = bp.Annotations
 	ap.Spec.Order = bp.Order
 	ap.Spec.IngressRules = RulesBackendToAPI(bp.InboundRules)

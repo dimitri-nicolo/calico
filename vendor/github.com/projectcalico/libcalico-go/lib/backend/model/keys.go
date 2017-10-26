@@ -107,10 +107,21 @@ type KVPairList struct {
 //
 // Each unique key returns a unique path.
 //
-// Keys with a hierarchical relationship share a common prefix.  However, in
-// order to support datastores that do not support storing data at non-leaf
-// nodes in the hierarchy (such as etcd v2), the path returned for a "parent"
-// key, is not a direct ancestor of its children.
+// Keys with a hierarchical relationship, such as tiers and policies, share
+// a common prefix.  However, in order to support datastores that do not
+// support storing data at non-leaf nodes in the hierarchy (such as etcd v2),
+// the path returned for a "parent" key, such as a TierKey, is not a direct
+// ancestor of its children.
+//
+// For example, KeyToDefaultPath(TierKey{Tier: "a"}) returns
+//
+//     "/calico/v1/policy/tier/a/metadata"
+//
+// and KeyToDefaultPath(PolicyKey{Tier: "a", Name: "b"}) returns
+//
+//     "/calico/v1/policy/tier/a/policy/b"
+//
+// In this case, the common tier prefix is "/calico/v1/policy/tier/a".
 func KeyToDefaultPath(key Key) (string, error) {
 	return key.defaultPath()
 }
@@ -121,12 +132,24 @@ func KeyToDefaultPath(key Key) (string, error) {
 // directories and leaves) key/value datastore such as etcd v2.
 //
 // KeyToDefaultDeletePath returns a different path to KeyToDefaultPath when
-// it is a passed a Key that represents a non-leaf which, for example, has its
-// own metadata but also contains other resource types as children.
+// it is a passed a Key that represents a non-leaf, such as a TierKey.  (A
+// tier has its own metadata but it also contains policies as children.)
 //
 // KeyToDefaultDeletePath returns the common prefix of the non-leaf key and
 // its children so that a recursive delete of that key would delete the
 // object itself and any children it has.
+//
+// For example, KeyToDefaultDeletePath(TierKey{Tier: "a"}) returns
+//
+//     "/calico/v1/policy/tier/a"
+//
+// which is a prefix of both KeyToDefaultPath(TierKey{Tier: "a"}):
+//
+//     "/calico/v1/policy/tier/a/metadata"
+//
+// and KeyToDefaultPath(PolicyKey{Tier: "a", Name: "b"}):
+//
+//     "/calico/v1/policy/tier/a/policy/b"
 func KeyToDefaultDeletePath(key Key) (string, error) {
 	return key.defaultDeletePath()
 }
@@ -160,7 +183,19 @@ func KeyToDefaultDeleteParentPaths(key Key) ([]string, error) {
 
 // ListOptionsToDefaultPathRoot converts list options struct into a
 // common-prefix path suitable for querying a datastore that uses the paths
-// returned by KeyToDefaultPath.
+// returned by KeyToDefaultPath.  For example,
+//
+//     ListOptionsToDefaultPathRoot(TierListOptions{})
+//
+// doesn't specify any particular tier so it returns
+// "/calico/v1/policy/tier" which is a prefix for all tiers.  The datastore
+// must then do a recursive query to find all children of that path.
+// However,
+//
+//    ListOptionsToDefaultPathRoot(TierListOptions{Tier:"a"})
+//
+// returns a more-specific path, which filters down to the specific tier of
+// interest: "/calico/v1/policy/tier/a"
 func ListOptionsToDefaultPathRoot(listOptions ListInterface) string {
 	return listOptions.defaultPathRoot()
 }
@@ -202,6 +237,7 @@ func KeyFromDefaultPath(path string) Key {
 	} else if m := matchPolicy.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a policy: %v", path)
 		return PolicyKey{
+			Tier: unescapeName(m[1]),
 			Name: unescapeName(m[2]),
 		}
 	} else if m := matchProfile.FindStringSubmatch(path); m != nil {
@@ -219,6 +255,9 @@ func KeyFromDefaultPath(path string) Key {
 			return ProfileLabelsKey{ProfileKey: pk}
 		}
 		return nil
+	} else if m := matchTier.FindStringSubmatch(path); m != nil {
+		log.Debugf("Path is a policy tier: %v", path)
+		return TierKey{Name: m[1]}
 	} else if m := matchHostIp.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a host ID: %v", path)
 		return HostIPKey{Hostname: m[1]}

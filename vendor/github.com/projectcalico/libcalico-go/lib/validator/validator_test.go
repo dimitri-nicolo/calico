@@ -82,6 +82,7 @@ func init() {
 		// (Backend model) Actions.
 		Entry("should accept allow action (m)", model.Rule{Action: "allow"}, true),
 		Entry("should accept deny action (m)", model.Rule{Action: "deny"}, true),
+		Entry("should accept next-tier action (m)", model.Rule{Action: "next-tier"}, true),
 		Entry("should accept log action (m)", model.Rule{Action: "log"}, true),
 		Entry("should reject unknown action (m)", model.Rule{Action: "unknown"}, false),
 		Entry("should reject unknown action (m)", model.Rule{Action: "allowfoo"}, false),
@@ -89,6 +90,7 @@ func init() {
 		// (API) Actions.
 		Entry("should accept allow action", api.Rule{Action: "allow"}, true),
 		Entry("should accept deny action", api.Rule{Action: "deny"}, true),
+		Entry("should accept pass action", api.Rule{Action: "pass"}, true),
 		Entry("should accept log action", api.Rule{Action: "log"}, true),
 		Entry("should reject unknown action", api.Rule{Action: "unknown"}, false),
 		Entry("should reject unknown action", api.Rule{Action: "allowfoo"}, false),
@@ -402,9 +404,9 @@ func init() {
 		Entry("should reject IP version 0", api.Rule{Action: "allow", IPVersion: &V0}, false),
 
 		// (API) Names.
-		Entry("should accept a valid name", api.ProfileMetadata{Name: ".My-valid-Profile_190"}, true),
-		Entry("should reject ! in a name", api.ProfileMetadata{Name: "my!nvalid-Profile"}, false),
-		Entry("should reject $ in a name", api.ProfileMetadata{Name: "my-invalid-profile$"}, false),
+		Entry("should accept a valid name", api.TierMetadata{Name: ".My-valid-Tier_190"}, true),
+		Entry("should reject ! in a name", api.TierMetadata{Name: "my!nvalid-Tier"}, false),
+		Entry("should reject $ in a name", api.TierMetadata{Name: "my-invalid-tier$"}, false),
 
 		// (API) Selectors.  Selectors themselves are thorougly UT'd so only need to test simple
 		// accept and reject cases here.

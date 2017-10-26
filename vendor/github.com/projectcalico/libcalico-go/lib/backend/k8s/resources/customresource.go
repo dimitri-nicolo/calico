@@ -159,7 +159,8 @@ func (c *customK8sResourceClient) Delete(ctx context.Context, k model.Key, revis
 		NamespaceIfScoped(namespace, c.namespaced).
 		Resource(c.resource).
 		Name(name).
-		Do().Error()
+		Do().
+		Error()
 	if err != nil {
 		logContext.WithError(err).Info("Error deleting resource")
 		return nil, K8sErrorToCalico(err, k)
@@ -211,6 +212,10 @@ func (c *customK8sResourceClient) List(ctx context.Context, list model.ListInter
 	})
 	logContext.Debug("List Custom K8s Resource")
 	kvps := []*model.KVPair{}
+
+	if revision != "" {
+		return nil, errors.New("Cannot List this resource type specifying a ResourceVersion")
+	}
 
 	// Attempt to convert the ListInterface to a Key.  If possible, the parameters
 	// indicate a fully qualified resource, and we'll need to use Get instead of
@@ -307,7 +312,7 @@ func (c *customK8sResourceClient) Watch(ctx context.Context, list model.ListInte
 		r.GetObjectKind().SetGroupVersionKind(c.k8sResourceTypeMeta.GetObjectKind().GroupVersionKind())
 		return c.convertResourceToKVPair(r)
 	}
-	return newK8sWatcherConverter(ctx, toKVPair, k8sWatch), nil
+	return newK8sWatcherConverter(ctx, resl.Kind+" (custom)", toKVPair, k8sWatch), nil
 }
 
 // EnsureInitialized is a no-op since the CRD should be

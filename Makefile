@@ -103,14 +103,14 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 .PHONY: update-vendor
 update-vendor:
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide up
+	$(DOCKER_GO_BUILD) glide up --strip-vendor
 	touch vendor/.up-to-date
 
 # vendor is a shortcut for force rebuilding the go vendor directory.
 .PHONY: vendor
 vendor vendor/.up-to-date: glide.lock
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide install
+	$(DOCKER_GO_BUILD) glide install --strip-vendor
 	touch vendor/.up-to-date
 
 # Linker flags for building Felix.
