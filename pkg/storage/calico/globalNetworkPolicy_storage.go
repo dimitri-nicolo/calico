@@ -89,7 +89,6 @@ func (gc GlobalNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObj
 	if aapiGlobalNetworkPolicy.Spec.Tier == "" {
 		aapiGlobalNetworkPolicy.Spec.Tier = "default"
 	}
-	aapiGlobalNetworkPolicy.Spec = lcgGlobalNetworkPolicy.Spec
 	aapiGlobalNetworkPolicy.TypeMeta = lcgGlobalNetworkPolicy.TypeMeta
 	aapiGlobalNetworkPolicy.ObjectMeta = lcgGlobalNetworkPolicy.ObjectMeta
 }
