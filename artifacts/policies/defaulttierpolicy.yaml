@@ -1,7 +1,7 @@
 apiVersion: projectcalico.org/v2
-kind: GlobalNetworkPolicy
+kind: NetworkPolicy
 metadata:
-  name: net-sec.my-first-global-policy
+  name: my-first-policy
 spec:
   selector: role == 'database'
   ingress:
@@ -14,4 +14,3 @@ spec:
       - 6379
   egress:
   - action: allow
-  tier: "net-sec"
