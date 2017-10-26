@@ -247,13 +247,13 @@ fv: run-etcd
 .PHONY: clean
 clean: clean-bin clean-build-image clean-generated
 clean-build-image:
-	docker rmi -f calico-k8sapiserver > /dev/null 2>&1 || true
+	docker rmi -f calico/k8sapiserver > /dev/null 2>&1 || true
 
 clean-generated:
 	rm -f .generate_files
 	find $(TOP_SRC_DIRS) -name zz_generated* -exec rm {} \;
 	# rollback changes to the generated clientset directories
-	find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
+	# find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
 
 clean-bin:
 	rm -rf $(BINDIR) \
