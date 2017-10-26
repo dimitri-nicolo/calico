@@ -92,6 +92,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -e LOCAL_USER_ID=$(MY_UID) \
                               -v $${PWD}:/go/src/github.com/tigera/calico-k8sapiserver:rw \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+                              -v $${PWD}/hack/boilerplate:/go/src/k8s.io/kubernetes/hack/boilerplate:rw \
                               -w /go/src/github.com/tigera/calico-k8sapiserver \
                               $(GO_BUILD_CONTAINER)
 
@@ -102,14 +103,14 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 .PHONY: update-vendor
 update-vendor:
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide up
+	$(DOCKER_GO_BUILD) glide up --strip-vendor
 	touch vendor/.up-to-date
 
 # vendor is a shortcut for force rebuilding the go vendor directory.
 .PHONY: vendor
 vendor vendor/.up-to-date: glide.lock
 	mkdir -p $$HOME/.glide
-	$(DOCKER_GO_BUILD) glide install
+	$(DOCKER_GO_BUILD) glide install --strip-vendor
 	touch vendor/.up-to-date
 
 # Linker flags for building Felix.
@@ -138,29 +139,29 @@ LDFLAGS:=-ldflags "\
 
 $(BINDIR)/defaulter-gen: 
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/defaulter-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/defaulter-gen'
 
 $(BINDIR)/deepcopy-gen:
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/deepcopy-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
 $(BINDIR)/conversion-gen: 
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/conversion-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/conversion-gen'
 
 $(BINDIR)/client-gen:
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/client-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/client-gen'
 
 $(BINDIR)/lister-gen:
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/lister-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/lister-gen'
 
 $(BINDIR)/informer-gen:
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/kubernetes/cmd/libs/go2idl/informer-gen'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/informer-gen'
 
-$(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
+$(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -o $@ $(CAPI_PKG)/$^'
 
@@ -171,18 +172,18 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 	   sh -c '$(BINDIR)/defaulter-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
-	  	--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v2" \
+	  	--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/projectcalico" \
+		--extra-peer-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v2" \
 		--output-file-base "zz_generated.defaults"'
 	# Generate deep copies
 	$(DOCKER_GO_BUILD) \
 	   sh -c '$(BINDIR)/deepcopy-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v2" \
 		--bounding-dirs "github.com/tigera/calico-k8sapiserver" \
 		--output-file-base zz_generated.deepcopy'
 	# Generate conversions
@@ -190,8 +191,8 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/kubernetes/cmd/libs/go2idl/openapi-gen
 	   sh -c '$(BINDIR)/conversion-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/calico/v2" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v2" \
 		--output-file-base zz_generated.conversion'
 	# generate all pkg/client contents
 	$(DOCKER_GO_BUILD) \
@@ -252,7 +253,7 @@ clean-generated:
 	rm -f .generate_files
 	find $(TOP_SRC_DIRS) -name zz_generated* -exec rm {} \;
 	# rollback changes to the generated clientset directories
-	# find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
+	find $(TOP_SRC_DIRS) -type d -name *_generated -exec rm -rf {} \;
 
 clean-bin:
 	rm -rf $(BINDIR) \

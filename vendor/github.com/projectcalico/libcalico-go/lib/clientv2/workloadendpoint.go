@@ -16,8 +16,11 @@ package clientv2
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	"github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
@@ -40,6 +43,10 @@ type workloadEndpoints struct {
 // Create takes the representation of a WorkloadEndpoint and creates it.  Returns the stored
 // representation of the WorkloadEndpoint, and an error, if there is any.
 func (r workloadEndpoints) Create(ctx context.Context, res *apiv2.WorkloadEndpoint, opts options.SetOptions) (*apiv2.WorkloadEndpoint, error) {
+	if err := r.validate(res); err != nil {
+		return nil, err
+	}
+	r.updateLabelsForStorage(res)
 	out, err := r.client.resources.Create(ctx, opts, apiv2.KindWorkloadEndpoint, res)
 	if out != nil {
 		return out.(*apiv2.WorkloadEndpoint), err
@@ -50,6 +57,10 @@ func (r workloadEndpoints) Create(ctx context.Context, res *apiv2.WorkloadEndpoi
 // Update takes the representation of a WorkloadEndpoint and updates it. Returns the stored
 // representation of the WorkloadEndpoint, and an error, if there is any.
 func (r workloadEndpoints) Update(ctx context.Context, res *apiv2.WorkloadEndpoint, opts options.SetOptions) (*apiv2.WorkloadEndpoint, error) {
+	if err := r.validate(res); err != nil {
+		return nil, err
+	}
+	r.updateLabelsForStorage(res)
 	out, err := r.client.resources.Update(ctx, opts, apiv2.KindWorkloadEndpoint, res)
 	if out != nil {
 		return out.(*apiv2.WorkloadEndpoint), err
@@ -89,4 +100,46 @@ func (r workloadEndpoints) List(ctx context.Context, opts options.ListOptions) (
 // supplied options.
 func (r workloadEndpoints) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	return r.client.resources.Watch(ctx, opts, apiv2.KindWorkloadEndpoint)
+}
+
+func (r workloadEndpoints) validate(res *apiv2.WorkloadEndpoint) error {
+	// Validate the workload endpoint indices and the name match.
+	wepids := names.WorkloadEndpointIdentifiers{
+		Node:         res.Spec.Node,
+		Orchestrator: res.Spec.Orchestrator,
+		Endpoint:     res.Spec.Endpoint,
+		Workload:     res.Spec.Workload,
+		Pod:          res.Spec.Pod,
+		ContainerID:  res.Spec.ContainerID,
+	}
+	expectedName, err := wepids.CalculateWorkloadEndpointName(false)
+	if err != nil {
+		return err
+	}
+	if len(res.Name) == 0 {
+		// If a name was not specified then we will calculate it on behalf of the caller.
+		res.Name = expectedName
+		return nil
+	}
+	if res.Name != expectedName {
+		return errors.ErrorValidation{
+			ErroredFields: []errors.ErroredField{{
+				Name:   "Name",
+				Value:  res.Name,
+				Reason: fmt.Sprintf("the WorkloadEndpoint name does not match the primary identifiers assigned in the Spec: expected name %s", expectedName),
+			}},
+		}
+	}
+	return nil
+}
+
+// updateLabelsForStorage updates the set of labels that we persist.  It adds/overrides
+// the Namespace and Orchestrator labels which must be set to the correct values and are
+// not user configurable.
+func (r workloadEndpoints) updateLabelsForStorage(res *apiv2.WorkloadEndpoint) {
+	if res.Labels == nil {
+		res.Labels = make(map[string]string, 2)
+	}
+	res.Labels[apiv2.LabelNamespace] = res.Namespace
+	res.Labels[apiv2.LabelOrchestrator] = res.Spec.Orchestrator
 }

@@ -22,11 +22,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
+	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
-	"k8s.io/client-go/pkg/api"
-
-	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
 )
 
 // CalicoServerOptions contains the aggregation of configuration structs for
@@ -44,44 +43,50 @@ func (s *CalicoServerOptions) addFlags(flags *pflag.FlagSet) {
 }
 
 func (o CalicoServerOptions) Validate(args []string) error {
-	return nil
+	errors := []error{}
+	errors = append(errors, o.RecommendedOptions.Validate()...)
+	return utilerrors.NewAggregate(errors)
 }
 
 func (o *CalicoServerOptions) Complete() error {
 	return nil
 }
 
-func (o *CalicoServerOptions) Config() (apiserver.Config, error) {
+func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 	// TODO have a "real" external address
 	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
 	}
 
-	genericConfig := genericapiserver.NewConfig(api.Codecs)
-	if err := o.RecommendedOptions.Etcd.ApplyTo(genericConfig); err != nil {
+	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
+	if err := o.RecommendedOptions.Etcd.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
-	if err := o.RecommendedOptions.SecureServing.ApplyTo(genericConfig); err != nil {
+	if err := o.RecommendedOptions.SecureServing.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
 	if !o.DisableAuth {
-		if err := o.RecommendedOptions.Authentication.ApplyTo(genericConfig); err != nil {
+		if err := o.RecommendedOptions.Authentication.ApplyTo(&serverConfig.Config); err != nil {
 			return nil, err
 		}
-		if err := o.RecommendedOptions.Authorization.ApplyTo(genericConfig); err != nil {
+		if err := o.RecommendedOptions.Authorization.ApplyTo(&serverConfig.Config); err != nil {
 			return nil, err
 		}
 	} else {
 		// always warn when auth is disabled, since this should only be used for testing
 		glog.Infof("Authentication and authorization disabled for testing purposes")
 	}
-	if err := o.RecommendedOptions.Audit.ApplyTo(genericConfig); err != nil {
+	if err := o.RecommendedOptions.Audit.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
-	if err := o.RecommendedOptions.Features.ApplyTo(genericConfig); err != nil {
+	if err := o.RecommendedOptions.Features.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
-	config := apiserver.NewCalicoConfig(genericConfig)
+
+	config := &apiserver.Config{
+		GenericConfig: serverConfig,
+		ExtraConfig:   apiserver.ExtraConfig{},
+	}
 
 	return config, nil
 }

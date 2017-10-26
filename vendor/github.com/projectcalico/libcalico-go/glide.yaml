@@ -30,28 +30,14 @@ import:
   subpackages:
   - patricia
 - package: k8s.io/apimachinery
-  subpackages:
-  - pkg/api/errors
-  - pkg/api/meta
-  - pkg/apis/meta/v1
-  - pkg/fields
-  - pkg/runtime
-  - pkg/runtime/schema
-  - pkg/runtime/serializer
-  - pkg/util/intstr
-  - pkg/util/wait
-  - pkg/watch
+  version: release-1.8 
+- package: k8s.io/api
+  version: release-1.8 
 - package: k8s.io/client-go
-  version: ^4.0.0
-  subpackages:
-  - kubernetes
-  - pkg/api
-  - pkg/api/v1
-  - pkg/apis/extensions/v1beta1
-  - plugin/pkg/client/auth
-  - rest
-  - tools/cache
-  - tools/clientcmd
+  version: 82aa063804cf055e16e8911250f888bc216e8b61
+- package: k8s.io/code-generator
+  version: release-1.8
+- package: k8s.io/gengo
+  version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
 testImport:
 - package: github.com/onsi/gomega
-  version: ^1.2.0

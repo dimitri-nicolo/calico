@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/projectcalico/libcalico-go/lib/options"
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"

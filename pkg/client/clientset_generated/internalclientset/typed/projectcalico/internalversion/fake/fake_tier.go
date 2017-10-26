@@ -1,23 +1,9 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package fake
+Copyright 2017 Tigera.
+*/package fake
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,49 +21,20 @@ var tiersResource = schema.GroupVersionResource{Group: "projectcalico.org", Vers
 
 var tiersKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "", Kind: "Tier"}
 
-func (c *FakeTiers) Create(tier *calico.Tier) (result *calico.Tier, err error) {
+// Get takes name of the tier, and returns the corresponding tier object, and an error if there is any.
+func (c *FakeTiers) Get(name string, options v1.GetOptions) (result *projectcalico.Tier, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(tiersResource, tier), &calico.Tier{})
+		Invokes(testing.NewRootGetAction(tiersResource, name), &projectcalico.Tier{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*calico.Tier), err
+	return obj.(*projectcalico.Tier), err
 }
 
-func (c *FakeTiers) Update(tier *calico.Tier) (result *calico.Tier, err error) {
+// List takes label and field selectors, and returns the list of Tiers that match those selectors.
+func (c *FakeTiers) List(opts v1.ListOptions) (result *projectcalico.TierList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(tiersResource, tier), &calico.Tier{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*calico.Tier), err
-}
-
-func (c *FakeTiers) Delete(name string, options *v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(tiersResource, name), &calico.Tier{})
-	return err
-}
-
-func (c *FakeTiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(tiersResource, listOptions)
-
-	_, err := c.Fake.Invokes(action, &calico.TierList{})
-	return err
-}
-
-func (c *FakeTiers) Get(name string, options v1.GetOptions) (result *calico.Tier, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(tiersResource, name), &calico.Tier{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*calico.Tier), err
-}
-
-func (c *FakeTiers) List(opts v1.ListOptions) (result *calico.TierList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(tiersResource, tiersKind, opts), &calico.TierList{})
+		Invokes(testing.NewRootListAction(tiersResource, tiersKind, opts), &projectcalico.TierList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -86,8 +43,8 @@ func (c *FakeTiers) List(opts v1.ListOptions) (result *calico.TierList, err erro
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &calico.TierList{}
-	for _, item := range obj.(*calico.TierList).Items {
+	list := &projectcalico.TierList{}
+	for _, item := range obj.(*projectcalico.TierList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -101,12 +58,47 @@ func (c *FakeTiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		InvokesWatch(testing.NewRootWatchAction(tiersResource, opts))
 }
 
-// Patch applies the patch and returns the patched tier.
-func (c *FakeTiers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *calico.Tier, err error) {
+// Create takes the representation of a tier and creates it.  Returns the server's representation of the tier, and an error, if there is any.
+func (c *FakeTiers) Create(tier *projectcalico.Tier) (result *projectcalico.Tier, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(tiersResource, name, data, subresources...), &calico.Tier{})
+		Invokes(testing.NewRootCreateAction(tiersResource, tier), &projectcalico.Tier{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*calico.Tier), err
+	return obj.(*projectcalico.Tier), err
+}
+
+// Update takes the representation of a tier and updates it. Returns the server's representation of the tier, and an error, if there is any.
+func (c *FakeTiers) Update(tier *projectcalico.Tier) (result *projectcalico.Tier, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootUpdateAction(tiersResource, tier), &projectcalico.Tier{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*projectcalico.Tier), err
+}
+
+// Delete takes name of the tier and deletes it. Returns an error if one occurs.
+func (c *FakeTiers) Delete(name string, options *v1.DeleteOptions) error {
+	_, err := c.Fake.
+		Invokes(testing.NewRootDeleteAction(tiersResource, name), &projectcalico.Tier{})
+	return err
+}
+
+// DeleteCollection deletes a collection of objects.
+func (c *FakeTiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(tiersResource, listOptions)
+
+	_, err := c.Fake.Invokes(action, &projectcalico.TierList{})
+	return err
+}
+
+// Patch applies the patch and returns the patched tier.
+func (c *FakeTiers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.Tier, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewRootPatchSubresourceAction(tiersResource, name, data, subresources...), &projectcalico.Tier{})
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*projectcalico.Tier), err
 }

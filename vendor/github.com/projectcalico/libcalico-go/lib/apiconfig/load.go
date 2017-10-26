@@ -7,7 +7,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
-	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -53,8 +53,8 @@ func LoadClientConfigFromBytes(b []byte) (*CalicoAPIConfig, error) {
 	if c.APIVersion != apiv2.GroupVersionCurrent {
 		return nil, errors.New("invalid config file: unknown APIVersion '" + c.APIVersion + "'")
 	}
-	if c.Kind != "calicoApiConfig" {
-		return nil, errors.New("invalid config file: expected kind 'calicoApiConfig', got '" + c.Kind + "'")
+	if c.Kind != KindCalicoAPIConfig {
+		return nil, errors.New("invalid config file: expected kind '" + KindCalicoAPIConfig + "', got '" + c.Kind + "'")
 	}
 
 	log.Info("Datastore type: ", c.Spec.DatastoreType)

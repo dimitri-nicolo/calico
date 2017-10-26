@@ -30,17 +30,17 @@ import (
 
 	// avoid error `servicecatalog/v1alpha1 is not enabled`
 
-	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
+	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
 	// avoid error `no kind is registered for the type metav1.ListOptions`
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	_ "k8s.io/client-go/pkg/api/install"
+	_ "k8s.io/kubernetes/pkg/api/install"
 	// our versioned types
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 
 	// our versioned client
 
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -51,7 +51,7 @@ func TestGroupVersion(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.NetworkPolicy{}
+				return &projectcalico.NetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testGroupVersion(client); err != nil {
@@ -67,7 +67,7 @@ func TestGroupVersion(t *testing.T) {
 
 func testGroupVersion(client calicoclient.Interface) error {
 	gv := client.Projectcalico().RESTClient().APIVersion()
-	if gv.Group != calico.GroupName {
+	if gv.Group != projectcalico.GroupName {
 		return fmt.Errorf("we should be testing the servicecatalog group, not %s", gv.Group)
 	}
 	return nil
@@ -104,7 +104,7 @@ func TestNoName(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.NetworkPolicy{}
+				return &projectcalico.NetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testNoName(client); err != nil {
@@ -139,7 +139,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.NetworkPolicy{}
+				return &projectcalico.NetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testNetworkPolicyClient(client, name); err != nil {
@@ -236,7 +236,7 @@ func TestTierClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.Tier{}
+				return &projectcalico.Tier{}
 			})
 			defer shutdownServer()
 			if err := testTierClient(client, name); err != nil {
@@ -301,7 +301,7 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &calico.GlobalNetworkPolicy{}
+				return &projectcalico.GlobalNetworkPolicy{}
 			})
 			defer shutdownServer()
 			if err := testGlobalNetworkPolicyClient(client, name); err != nil {

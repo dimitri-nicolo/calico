@@ -15,8 +15,9 @@
 package testutils
 
 import (
-	"github.com/projectcalico/libcalico-go/lib/apiv2"
+	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
+	"github.com/sirupsen/logrus"
 )
 
 var ipv4 = 4
@@ -24,6 +25,18 @@ var ipv6 = 6
 var strProtocol1 = numorstring.ProtocolFromString("icmp")
 var strProtocol2 = numorstring.ProtocolFromString("udp")
 var numProtocol1 = numorstring.ProtocolFromInt(240)
+
+var portRange, singlePort, namedPort numorstring.Port
+
+func init() {
+	var err error
+	portRange, err = numorstring.PortFromRange(10, 20)
+	if err != nil {
+		logrus.WithError(err).Panic("Failed to create port range")
+	}
+	singlePort = numorstring.SinglePort(1024)
+	namedPort = numorstring.NamedPort("named-port")
+}
 
 var icmpType1 = 100
 var icmpCode1 = 200
@@ -44,9 +57,13 @@ var InRule1 = apiv2.Rule{
 	Protocol:  &strProtocol1,
 	ICMP:      &icmp1,
 	Source: apiv2.EntityRule{
-		Tag:      "tag1",
 		Nets:     []string{cidr1},
 		Selector: "label1 == 'value1'",
+		Ports: []numorstring.Port{
+			portRange,
+			singlePort,
+			namedPort,
+		},
 	},
 }
 
@@ -56,7 +73,6 @@ var InRule2 = apiv2.Rule{
 	Protocol:  &numProtocol1,
 	ICMP:      &icmp1,
 	Source: apiv2.EntityRule{
-		Tag:      "tag2",
 		Nets:     []string{cidrv61},
 		Selector: "has(label2)",
 	},
@@ -68,7 +84,6 @@ var EgressRule1 = apiv2.Rule{
 	Protocol:  &numProtocol1,
 	ICMP:      &icmp1,
 	Source: apiv2.EntityRule{
-		Tag:      "tag3",
 		Nets:     []string{cidr2},
 		Selector: "all()",
 	},
@@ -80,7 +95,6 @@ var EgressRule2 = apiv2.Rule{
 	Protocol:  &strProtocol2,
 	ICMP:      &icmp1,
 	Source: apiv2.EntityRule{
-		Tag:      "tag4",
 		Nets:     []string{cidrv62},
 		Selector: "label2 == '1234'",
 	},

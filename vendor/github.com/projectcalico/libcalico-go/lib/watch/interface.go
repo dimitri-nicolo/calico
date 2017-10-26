@@ -34,6 +34,18 @@ type Interface interface {
 type EventType string
 
 const (
+	// Event type:
+	// Added
+	// * a new Object has been added.  If the Watcher does not have a specific
+	//   ResourceVersion to watch from, existing entries will first be listed
+	//   and propagated as "Added" events.
+	// Modified
+	// * an Object has been modified.
+	// Deleted
+	// * an Object has been deleted
+	// Error
+	// * an error has occurred.  If the error is terminating, the results channel
+	//   will be closed.
 	Added    EventType = "ADDED"
 	Modified EventType = "MODIFIED"
 	Deleted  EventType = "DELETED"
@@ -47,11 +59,11 @@ type Event struct {
 	Type EventType
 
 	// Previous is:
-	// * If Type is Added or Error: nil
+	// * If Type is Added, Error or Synced: nil
 	// * If Type is Modified or Deleted: the previous state of the object
 	// Object is:
 	//  * If Type is Added or Modified: the new state of the object.
-	//  * If Type is Deleted or Error: nil
+	//  * If Type is Deleted, Error or Synced: nil
 	Previous runtime.Object
 	Object   runtime.Object
 

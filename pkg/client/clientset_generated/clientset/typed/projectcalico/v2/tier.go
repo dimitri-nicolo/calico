@@ -1,23 +1,9 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package v2
+Copyright 2017 Tigera.
+*/package v2
 
 import (
-	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/calico/v2"
+	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
 	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -54,6 +40,38 @@ func newTiers(c *ProjectcalicoV2Client) *tiers {
 	return &tiers{
 		client: c.RESTClient(),
 	}
+}
+
+// Get takes name of the tier, and returns the corresponding tier object, and an error if there is any.
+func (c *tiers) Get(name string, options v1.GetOptions) (result *v2.Tier, err error) {
+	result = &v2.Tier{}
+	err = c.client.Get().
+		Resource("tiers").
+		Name(name).
+		VersionedParams(&options, scheme.ParameterCodec).
+		Do().
+		Into(result)
+	return
+}
+
+// List takes label and field selectors, and returns the list of Tiers that match those selectors.
+func (c *tiers) List(opts v1.ListOptions) (result *v2.TierList, err error) {
+	result = &v2.TierList{}
+	err = c.client.Get().
+		Resource("tiers").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Do().
+		Into(result)
+	return
+}
+
+// Watch returns a watch.Interface that watches the requested tiers.
+func (c *tiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
+	opts.Watch = true
+	return c.client.Get().
+		Resource("tiers").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Watch()
 }
 
 // Create takes the representation of a tier and creates it.  Returns the server's representation of the tier, and an error, if there is any.
@@ -97,38 +115,6 @@ func (c *tiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListO
 		Body(options).
 		Do().
 		Error()
-}
-
-// Get takes name of the tier, and returns the corresponding tier object, and an error if there is any.
-func (c *tiers) Get(name string, options v1.GetOptions) (result *v2.Tier, err error) {
-	result = &v2.Tier{}
-	err = c.client.Get().
-		Resource("tiers").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of Tiers that match those selectors.
-func (c *tiers) List(opts v1.ListOptions) (result *v2.TierList, err error) {
-	result = &v2.TierList{}
-	err = c.client.Get().
-		Resource("tiers").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested tiers.
-func (c *tiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
-	opts.Watch = true
-	return c.client.Get().
-		Resource("tiers").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Watch()
 }
 
 // Patch applies the patch and returns the patched tier.

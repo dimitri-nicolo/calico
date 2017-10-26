@@ -1,23 +1,9 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package internalversion
+Copyright 2017 Tigera.
+*/package internalversion
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -33,14 +19,14 @@ type GlobalNetworkPoliciesGetter interface {
 
 // GlobalNetworkPolicyInterface has methods to work with GlobalNetworkPolicy resources.
 type GlobalNetworkPolicyInterface interface {
-	Create(*calico.GlobalNetworkPolicy) (*calico.GlobalNetworkPolicy, error)
-	Update(*calico.GlobalNetworkPolicy) (*calico.GlobalNetworkPolicy, error)
+	Create(*projectcalico.GlobalNetworkPolicy) (*projectcalico.GlobalNetworkPolicy, error)
+	Update(*projectcalico.GlobalNetworkPolicy) (*projectcalico.GlobalNetworkPolicy, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*calico.GlobalNetworkPolicy, error)
-	List(opts v1.ListOptions) (*calico.GlobalNetworkPolicyList, error)
+	Get(name string, options v1.GetOptions) (*projectcalico.GlobalNetworkPolicy, error)
+	List(opts v1.ListOptions) (*projectcalico.GlobalNetworkPolicyList, error)
 	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *calico.GlobalNetworkPolicy, err error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.GlobalNetworkPolicy, err error)
 	GlobalNetworkPolicyExpansion
 }
 
@@ -56,9 +42,41 @@ func newGlobalNetworkPolicies(c *ProjectcalicoClient) *globalNetworkPolicies {
 	}
 }
 
+// Get takes name of the globalNetworkPolicy, and returns the corresponding globalNetworkPolicy object, and an error if there is any.
+func (c *globalNetworkPolicies) Get(name string, options v1.GetOptions) (result *projectcalico.GlobalNetworkPolicy, err error) {
+	result = &projectcalico.GlobalNetworkPolicy{}
+	err = c.client.Get().
+		Resource("globalnetworkpolicies").
+		Name(name).
+		VersionedParams(&options, scheme.ParameterCodec).
+		Do().
+		Into(result)
+	return
+}
+
+// List takes label and field selectors, and returns the list of GlobalNetworkPolicies that match those selectors.
+func (c *globalNetworkPolicies) List(opts v1.ListOptions) (result *projectcalico.GlobalNetworkPolicyList, err error) {
+	result = &projectcalico.GlobalNetworkPolicyList{}
+	err = c.client.Get().
+		Resource("globalnetworkpolicies").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Do().
+		Into(result)
+	return
+}
+
+// Watch returns a watch.Interface that watches the requested globalNetworkPolicies.
+func (c *globalNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error) {
+	opts.Watch = true
+	return c.client.Get().
+		Resource("globalnetworkpolicies").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Watch()
+}
+
 // Create takes the representation of a globalNetworkPolicy and creates it.  Returns the server's representation of the globalNetworkPolicy, and an error, if there is any.
-func (c *globalNetworkPolicies) Create(globalNetworkPolicy *calico.GlobalNetworkPolicy) (result *calico.GlobalNetworkPolicy, err error) {
-	result = &calico.GlobalNetworkPolicy{}
+func (c *globalNetworkPolicies) Create(globalNetworkPolicy *projectcalico.GlobalNetworkPolicy) (result *projectcalico.GlobalNetworkPolicy, err error) {
+	result = &projectcalico.GlobalNetworkPolicy{}
 	err = c.client.Post().
 		Resource("globalnetworkpolicies").
 		Body(globalNetworkPolicy).
@@ -68,8 +86,8 @@ func (c *globalNetworkPolicies) Create(globalNetworkPolicy *calico.GlobalNetwork
 }
 
 // Update takes the representation of a globalNetworkPolicy and updates it. Returns the server's representation of the globalNetworkPolicy, and an error, if there is any.
-func (c *globalNetworkPolicies) Update(globalNetworkPolicy *calico.GlobalNetworkPolicy) (result *calico.GlobalNetworkPolicy, err error) {
-	result = &calico.GlobalNetworkPolicy{}
+func (c *globalNetworkPolicies) Update(globalNetworkPolicy *projectcalico.GlobalNetworkPolicy) (result *projectcalico.GlobalNetworkPolicy, err error) {
+	result = &projectcalico.GlobalNetworkPolicy{}
 	err = c.client.Put().
 		Resource("globalnetworkpolicies").
 		Name(globalNetworkPolicy.Name).
@@ -99,41 +117,9 @@ func (c *globalNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, list
 		Error()
 }
 
-// Get takes name of the globalNetworkPolicy, and returns the corresponding globalNetworkPolicy object, and an error if there is any.
-func (c *globalNetworkPolicies) Get(name string, options v1.GetOptions) (result *calico.GlobalNetworkPolicy, err error) {
-	result = &calico.GlobalNetworkPolicy{}
-	err = c.client.Get().
-		Resource("globalnetworkpolicies").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of GlobalNetworkPolicies that match those selectors.
-func (c *globalNetworkPolicies) List(opts v1.ListOptions) (result *calico.GlobalNetworkPolicyList, err error) {
-	result = &calico.GlobalNetworkPolicyList{}
-	err = c.client.Get().
-		Resource("globalnetworkpolicies").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested globalNetworkPolicies.
-func (c *globalNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error) {
-	opts.Watch = true
-	return c.client.Get().
-		Resource("globalnetworkpolicies").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Watch()
-}
-
 // Patch applies the patch and returns the patched globalNetworkPolicy.
-func (c *globalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *calico.GlobalNetworkPolicy, err error) {
-	result = &calico.GlobalNetworkPolicy{}
+func (c *globalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.GlobalNetworkPolicy, err error) {
+	result = &projectcalico.GlobalNetworkPolicy{}
 	err = c.client.Patch(pt).
 		Resource("globalnetworkpolicies").
 		SubResource(subresources...).

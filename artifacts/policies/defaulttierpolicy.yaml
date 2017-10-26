@@ -1,0 +1,16 @@
+apiVersion: projectcalico.org/v2
+kind: NetworkPolicy
+metadata:
+  name: my-first-policy
+spec:
+  selector: role == 'database'
+  ingress:
+  - action: allow
+    protocol: tcp
+    source:
+      selector: role == 'frontend'
+    destination:
+      ports:
+      - 6379
+  egress:
+  - action: allow

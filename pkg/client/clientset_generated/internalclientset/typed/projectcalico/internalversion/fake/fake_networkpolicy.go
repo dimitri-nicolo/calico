@@ -1,23 +1,9 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package fake
+Copyright 2017 Tigera.
+*/package fake
 
 import (
-	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/calico"
+	projectcalico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,53 +22,21 @@ var networkpoliciesResource = schema.GroupVersionResource{Group: "projectcalico.
 
 var networkpoliciesKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "", Kind: "NetworkPolicy"}
 
-func (c *FakeNetworkPolicies) Create(networkPolicy *calico.NetworkPolicy) (result *calico.NetworkPolicy, err error) {
+// Get takes name of the networkPolicy, and returns the corresponding networkPolicy object, and an error if there is any.
+func (c *FakeNetworkPolicies) Get(name string, options v1.GetOptions) (result *projectcalico.NetworkPolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(networkpoliciesResource, c.ns, networkPolicy), &calico.NetworkPolicy{})
+		Invokes(testing.NewGetAction(networkpoliciesResource, c.ns, name), &projectcalico.NetworkPolicy{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*calico.NetworkPolicy), err
+	return obj.(*projectcalico.NetworkPolicy), err
 }
 
-func (c *FakeNetworkPolicies) Update(networkPolicy *calico.NetworkPolicy) (result *calico.NetworkPolicy, err error) {
+// List takes label and field selectors, and returns the list of NetworkPolicies that match those selectors.
+func (c *FakeNetworkPolicies) List(opts v1.ListOptions) (result *projectcalico.NetworkPolicyList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(networkpoliciesResource, c.ns, networkPolicy), &calico.NetworkPolicy{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*calico.NetworkPolicy), err
-}
-
-func (c *FakeNetworkPolicies) Delete(name string, options *v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(networkpoliciesResource, c.ns, name), &calico.NetworkPolicy{})
-
-	return err
-}
-
-func (c *FakeNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(networkpoliciesResource, c.ns, listOptions)
-
-	_, err := c.Fake.Invokes(action, &calico.NetworkPolicyList{})
-	return err
-}
-
-func (c *FakeNetworkPolicies) Get(name string, options v1.GetOptions) (result *calico.NetworkPolicy, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(networkpoliciesResource, c.ns, name), &calico.NetworkPolicy{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*calico.NetworkPolicy), err
-}
-
-func (c *FakeNetworkPolicies) List(opts v1.ListOptions) (result *calico.NetworkPolicyList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewListAction(networkpoliciesResource, networkpoliciesKind, c.ns, opts), &calico.NetworkPolicyList{})
+		Invokes(testing.NewListAction(networkpoliciesResource, networkpoliciesKind, c.ns, opts), &projectcalico.NetworkPolicyList{})
 
 	if obj == nil {
 		return nil, err
@@ -92,8 +46,8 @@ func (c *FakeNetworkPolicies) List(opts v1.ListOptions) (result *calico.NetworkP
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &calico.NetworkPolicyList{}
-	for _, item := range obj.(*calico.NetworkPolicyList).Items {
+	list := &projectcalico.NetworkPolicyList{}
+	for _, item := range obj.(*projectcalico.NetworkPolicyList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -108,13 +62,51 @@ func (c *FakeNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error
 
 }
 
-// Patch applies the patch and returns the patched networkPolicy.
-func (c *FakeNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *calico.NetworkPolicy, err error) {
+// Create takes the representation of a networkPolicy and creates it.  Returns the server's representation of the networkPolicy, and an error, if there is any.
+func (c *FakeNetworkPolicies) Create(networkPolicy *projectcalico.NetworkPolicy) (result *projectcalico.NetworkPolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(networkpoliciesResource, c.ns, name, data, subresources...), &calico.NetworkPolicy{})
+		Invokes(testing.NewCreateAction(networkpoliciesResource, c.ns, networkPolicy), &projectcalico.NetworkPolicy{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*calico.NetworkPolicy), err
+	return obj.(*projectcalico.NetworkPolicy), err
+}
+
+// Update takes the representation of a networkPolicy and updates it. Returns the server's representation of the networkPolicy, and an error, if there is any.
+func (c *FakeNetworkPolicies) Update(networkPolicy *projectcalico.NetworkPolicy) (result *projectcalico.NetworkPolicy, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateAction(networkpoliciesResource, c.ns, networkPolicy), &projectcalico.NetworkPolicy{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*projectcalico.NetworkPolicy), err
+}
+
+// Delete takes name of the networkPolicy and deletes it. Returns an error if one occurs.
+func (c *FakeNetworkPolicies) Delete(name string, options *v1.DeleteOptions) error {
+	_, err := c.Fake.
+		Invokes(testing.NewDeleteAction(networkpoliciesResource, c.ns, name), &projectcalico.NetworkPolicy{})
+
+	return err
+}
+
+// DeleteCollection deletes a collection of objects.
+func (c *FakeNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(networkpoliciesResource, c.ns, listOptions)
+
+	_, err := c.Fake.Invokes(action, &projectcalico.NetworkPolicyList{})
+	return err
+}
+
+// Patch applies the patch and returns the patched networkPolicy.
+func (c *FakeNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *projectcalico.NetworkPolicy, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewPatchSubresourceAction(networkpoliciesResource, c.ns, name, data, subresources...), &projectcalico.NetworkPolicy{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*projectcalico.NetworkPolicy), err
 }

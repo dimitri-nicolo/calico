@@ -20,7 +20,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/projectcalico/libcalico-go/lib/api"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
@@ -51,6 +51,7 @@ var (
 	poolUnstictCIDR     = "IP pool CIDR is not strictly masked"
 	overlapsV4LinkLocal = "IP pool range overlaps with IPv4 Link Local range 169.254.0.0/16"
 	overlapsV6LinkLocal = "IP pool range overlaps with IPv6 Link Local range fe80::/10"
+	protocolPortsMsg    = "rules that specify ports must set protocol to TCP or UDP"
 
 	ipv4LinkLocalNet = net.IPNet{
 		IP:   net.ParseIP("169.254.0.0"),
@@ -122,8 +123,6 @@ func init() {
 	// Backend model types.
 	registerStructValidator(validateBackendRule, model.Rule{})
 	registerStructValidator(validateBackendEndpointPort, model.EndpointPort{})
-	registerStructValidator(validateBackendWorkloadEndpoint, model.WorkloadEndpoint{})
-	registerStructValidator(validateBackendHostEndpoint, model.HostEndpoint{})
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -262,7 +261,7 @@ func validatePort(v *validator.Validate, structLevel *validator.StructLevel) {
 
 	// Check that the port range is in the correct order.  The YAML parsing also checks this,
 	// but this protects against misuse of the programmatic API.
-	log.Debugf("Validate port: %s")
+	log.Debugf("Validate port: %v", p)
 	if p.MinPort > p.MaxPort {
 		structLevel.ReportError(reflect.ValueOf(p.MaxPort),
 			"Port", "", reason("port range invalid"))
@@ -336,20 +335,6 @@ func validateWorkloadEndpointSpec(v *validator.Validate, structLevel *validator.
 				"IPNATs", "", reason("NAT is not in the endpoint networks"))
 		}
 	}
-
-	// Check for duplicate named ports.
-	seenPortNames := map[string]bool{}
-	for _, port := range w.Ports {
-		if seenPortNames[port.Name] {
-			structLevel.ReportError(
-				reflect.ValueOf(port.Name),
-				"Ports",
-				"",
-				reason("Ports list contains duplicate named port."),
-			)
-		}
-		seenPortNames[port.Name] = true
-	}
 }
 
 func validateHostEndpointSpec(v *validator.Validate, structLevel *validator.StructLevel) {
@@ -359,20 +344,6 @@ func validateHostEndpointSpec(v *validator.Validate, structLevel *validator.Stru
 	if h.InterfaceName == "" && len(h.ExpectedIPs) == 0 {
 		structLevel.ReportError(reflect.ValueOf(h.InterfaceName),
 			"InterfaceName", "", reason("no interface or expected IPs have been specified"))
-	}
-
-	// Check for duplicate named ports.
-	seenPortNames := map[string]bool{}
-	for _, port := range h.Ports {
-		if seenPortNames[port.Name] {
-			structLevel.ReportError(
-				reflect.ValueOf(port.Name),
-				"Ports",
-				"",
-				reason("Ports list contains duplicate named port."),
-			)
-		}
-		seenPortNames[port.Name] = true
 	}
 }
 
@@ -446,20 +417,20 @@ func validateRule(v *validator.Validate, structLevel *validator.StructLevel) {
 	if rule.Protocol == nil || !rule.Protocol.SupportsPorts() {
 		if len(rule.Source.Ports) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.Source.Ports),
-				"Source.Ports", "", reason("protocol does not support ports"))
+				"Source.Ports", "", reason(protocolPortsMsg))
 		}
 		if len(rule.Source.NotPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.Source.NotPorts),
-				"Source.NotPorts", "", reason("protocol does not support ports"))
+				"Source.NotPorts", "", reason(protocolPortsMsg))
 		}
 
 		if len(rule.Destination.Ports) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.Ports),
-				"Destination.Ports", "", reason("protocol does not support ports"))
+				"Destination.Ports", "", reason(protocolPortsMsg))
 		}
 		if len(rule.Destination.NotPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.Destination.NotPorts),
-				"Destination.NotPorts", "", reason("protocol does not support ports"))
+				"Destination.NotPorts", "", reason(protocolPortsMsg))
 		}
 	}
 
@@ -514,20 +485,20 @@ func validateBackendRule(v *validator.Validate, structLevel *validator.StructLev
 	if rule.Protocol == nil || !rule.Protocol.SupportsPorts() {
 		if len(rule.SrcPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.SrcPorts),
-				"SrcPorts", "", reason("protocol does not support ports"))
+				"SrcPorts", "", reason(protocolPortsMsg))
 		}
 		if len(rule.NotSrcPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.NotSrcPorts),
-				"NotSrcPorts", "", reason("protocol does not support ports"))
+				"NotSrcPorts", "", reason(protocolPortsMsg))
 		}
 
 		if len(rule.DstPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.DstPorts),
-				"DstPorts", "", reason("protocol does not support ports"))
+				"DstPorts", "", reason(protocolPortsMsg))
 		}
 		if len(rule.NotDstPorts) > 0 {
 			structLevel.ReportError(reflect.ValueOf(rule.NotDstPorts),
-				"NotDstPorts", "", reason("protocol does not support ports"))
+				"NotDstPorts", "", reason(protocolPortsMsg))
 		}
 	}
 }
@@ -588,40 +559,6 @@ func validateEndpointPort(v *validator.Validate, structLevel *validator.StructLe
 	}
 }
 
-func validateBackendWorkloadEndpoint(v *validator.Validate, structLevel *validator.StructLevel) {
-	ep := structLevel.CurrentStruct.Interface().(model.WorkloadEndpoint)
-
-	seenPortNames := map[string]bool{}
-	for _, port := range ep.Ports {
-		if seenPortNames[port.Name] {
-			structLevel.ReportError(
-				reflect.ValueOf(port.Name),
-				"WorkloadEndpoint.Ports",
-				"",
-				reason("Ports list contains duplicate named port."),
-			)
-		}
-		seenPortNames[port.Name] = true
-	}
-}
-
-func validateBackendHostEndpoint(v *validator.Validate, structLevel *validator.StructLevel) {
-	ep := structLevel.CurrentStruct.Interface().(model.HostEndpoint)
-
-	seenPortNames := map[string]bool{}
-	for _, port := range ep.Ports {
-		if seenPortNames[port.Name] {
-			structLevel.ReportError(
-				reflect.ValueOf(port.Name),
-				"HostEndpoint.Ports",
-				"",
-				reason("Ports list contains duplicate named port."),
-			)
-		}
-		seenPortNames[port.Name] = true
-	}
-}
-
 func validatePolicySpec(v *validator.Validate, structLevel *validator.StructLevel) {
 	m := structLevel.CurrentStruct.Interface().(api.PolicySpec)
 
@@ -644,6 +581,11 @@ func validatePolicySpec(v *validator.Validate, structLevel *validator.StructLeve
 		}
 	}
 
+	if !m.ApplyOnForward && (m.DoNotTrack || m.PreDNAT) {
+		structLevel.ReportError(reflect.ValueOf(m.ApplyOnForward),
+			"PolicySpec.ApplyOnForward", "", reason("ApplyOnForward must be true if either PreDNAT or DoNotTrack is true, for a given PolicySpec"))
+	}
+
 	// Check (and disallow) any repeats in Types field.
 	mp := map[api.PolicyType]bool{}
 	for _, t := range m.Types {
@@ -652,23 +594,6 @@ func validatePolicySpec(v *validator.Validate, structLevel *validator.StructLeve
 				"PolicySpec.Types", "", reason("'"+string(t)+"' type specified more than once"))
 		} else {
 			mp[t] = true
-		}
-	}
-
-	// When Types is explicitly specified:
-	if len(m.Types) > 0 {
-		var exists bool
-		// 'ingress' type must be there if Policy has any ingress rules.
-		_, exists = mp[api.PolicyTypeIngress]
-		if len(m.IngressRules) > 0 && !exists {
-			structLevel.ReportError(reflect.ValueOf(m.Types),
-				"PolicySpec.Types", "", reason("'ingress' must be specified when policy has ingress rules"))
-		}
-		// 'egress' type must be there if Policy has any egress rules.
-		_, exists = mp[api.PolicyTypeEgress]
-		if len(m.EgressRules) > 0 && !exists {
-			structLevel.ReportError(reflect.ValueOf(m.Types),
-				"PolicySpec.Types", "", reason("'egress' must be specified when policy has egress rules"))
 		}
 	}
 }
