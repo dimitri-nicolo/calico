@@ -6,7 +6,7 @@ To deploy, bring up k8s >=1.6, preferably 1.7 since it comes with built-in aggre
 
 Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
 
-## Sample installation steps with kubeadm
+## Sample installation steps with kubeadm with Calico in ETCD mode
 ```
 1. kubeadm reset; rm -rf /var/etcd
 2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0 kubeadm init --config kubeadm.yaml
@@ -24,6 +24,30 @@ Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
    This will create the docker image needed by the example/rc.yaml
    OR docker tar can be found in: https://drive.google.com/open?id=0B1QYlddBYM-ZWkoxVWNfcFJtbUU
    docker load -i calico-k8sapiserver-latest.tar.xz
+8. kubectl create -f artifacts/policies/policy.yaml <-- Creating a NetworkPolicy
+9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
+10. kubectl create -f artifacts/policies/globalpolicy.yaml <-- Creating a GlobalNetworkPolicy
+.
+.
+.
+```
+
+## Sample installation steps with kubeadm with Calico in KDD mode
+```
+1. kubeadm reset; rm -rf /var/etcd
+2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0 kubeadm init --config kubeadm.yaml
+   Make sure to setup proxy-client certs. Refer artifacts/misc/kubeadm.yaml
+   Example: proxy-client-cert-file: "/etc/kubernetes/pki/front-proxy-client.crt"
+            proxy-client-key-file: "/etc/kubernetes/pki/front-proxy-client.key"
+3. sudo cp /etc/kubernetes/admin.conf $HOME/
+   sudo chown $(id -u):$(id -g) $HOME/admin.conf
+   export KUBECONFIG=$HOME/admin.conf
+4a. kubectl apply -f artifacts/misc/rbac-kdd.yaml
+4b. kubectl apply -f artifacts/misc/kdd_calico.yaml
+5. kubectl taint nodes --all node-role.kubernetes.io/master-
+6. kubectl create namespace calico
+7a. kubectl create -f artifacts/example/
+7b. kubectl create -f artifacts/example_kdd
 8. kubectl create -f artifacts/policies/policy.yaml <-- Creating a NetworkPolicy
 9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
 10. kubectl create -f artifacts/policies/globalpolicy.yaml <-- Creating a GlobalNetworkPolicy
