@@ -156,6 +156,12 @@ func NewKubeClient(kc *apiconfig.KubeConfig) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv2.KindTier,
+		resources.NewTierClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv2.KindBGPPeer,
 		resources.NewBGPPeerClient(cs, crdClientV1),
 	)
@@ -264,6 +270,7 @@ func (c *KubeClient) Clean() error {
 		apiv2.KindClusterInformation,
 		apiv2.KindFelixConfiguration,
 		apiv2.KindGlobalNetworkPolicy,
+		apiv2.KindTier,
 		apiv2.KindIPPool,
 	}
 	ctx := context.Background()
@@ -330,6 +337,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 				&apiv2.GlobalNetworkPolicyList{},
 				&apiv2.NetworkPolicy{},
 				&apiv2.NetworkPolicyList{},
+				&apiv2.Tier{},
+				&apiv2.TierList{},
 			)
 			return nil
 		})
