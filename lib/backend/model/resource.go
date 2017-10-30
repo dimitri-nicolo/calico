@@ -259,3 +259,7 @@ func (options ResourceListOptions) defaultPathRoot() string {
 	}
 	return k + "/" + options.Name
 }
+
+func (options ResourceListOptions) String() string {
+	return options.Kind
+}
