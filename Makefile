@@ -3,12 +3,18 @@
 default: all
 all: test
 test: ut
+deepcopy-gen: .deepcopy_gen
 
-K8S_VERSION=v1.8.0-beta.1
-KUBECTL_VERSION=v1.7.3
-CALICO_BUILD?=calico/go-build
-PACKAGE_NAME?=projectcalico/libcalico-go
-LOCAL_USER_ID?=$(shell id -u $$USER)
+# Define some constants
+#######################
+K8S_VERSION       = v1.8.1
+CALICO_BUILD     ?= calico/go-build
+PACKAGE_NAME     ?= projectcalico/libcalico-go
+LOCAL_USER_ID    ?= $(shell id -u $$USER)
+BINDIR           ?= bin
+LIBCALICO-GO_PKG  = github.com/projectcalico/libcalico-go
+TOP_SRC_DIR       = lib
+MY_UID           := $(shell id -u)
 
 ## Use this to populate the vendor directory after checking out the repository.
 vendor: glide.yaml
@@ -84,7 +90,7 @@ run-kubernetes-master: stop-kubernetes-master
 	    --net=host \
 	    --rm \
 		-v  $(CURDIR):/manifests \
-		lachlanevenson/k8s-kubectl:${KUBECTL_VERSION} \
+		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
 		apply -f manifests/test/crds.yaml
 
@@ -93,9 +99,19 @@ run-kubernetes-master: stop-kubernetes-master
 	    --net=host \
 	    --rm \
 		-v  $(CURDIR):/manifests \
-		lachlanevenson/k8s-kubectl:${KUBECTL_VERSION} \
+		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
 		--server=http://127.0.0.1:8080 \
 		apply -f manifests/test/mock-node.yaml
+
+	# Create Namespaces required by namespaced Calico `NetworkPolicy`
+	# tests from the manifests namespaces.yaml.
+	docker run \
+	    --net=host \
+	    --rm \
+		-v  $(CURDIR):/manifests \
+		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		--server=http://localhost:8080 \
+		apply -f manifests/test/namespaces.yaml
 
 ## Stop the local kubernetes master
 stop-kubernetes-master:
@@ -111,9 +127,16 @@ stop-etcd:
 
 .PHONY: clean
 ## Removes all .coverprofile files, the vendor dir, and .go-pkg-cache
-clean:
+clean: clean-deepcopy-gen clean-bin
 	find . -name '*.coverprofile' -type f -delete
 	rm -rf vendor .go-pkg-cache
+
+clean-deepcopy-gen:
+	rm -f .deepcopy_gen
+	find $(TOP_SRC_DIR) -name zz_generated* -exec rm {} \;
+
+clean-bin:
+	rm -rf $(BINDIR) .deepcopy_gen_exes
 
 .PHONY: help
 ## Display this help text
@@ -131,3 +154,32 @@ help: # Some kind of magic from https://gist.github.com/rcmachado/af3db315e31383
 	{ helpMsg = $$0 }'                                                  \
 	width=23                                                            \
 	$(MAKEFILE_LIST)
+
+DOCKER_GO_BUILD := \
+	mkdir -p .go-pkg-cache && \
+	docker run --rm \
+		--net=host \
+		$(EXTRA_DOCKER_ARGS) \
+		-e LOCAL_USER_ID=$(MY_UID) \
+		-v $${PWD}:/go/src/github.com/projectcalico/libcalico-go \
+		-v $${PWD}/.go-pkg-cache:/go/pkg:rw \
+		-w /go/src/github.com/projectcalico/libcalico-go \
+		$(CALICO_BUILD)
+
+.deepcopy_gen_exes: $(BINDIR)/deepcopy-gen
+	touch $@
+
+$(BINDIR)/deepcopy-gen:
+	$(DOCKER_GO_BUILD) \
+		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
+
+# Regenerate all files if the gen exe(s) changed
+.deepcopy_gen: .deepcopy_gen_exes
+	# Generate deep copies
+	$(DOCKER_GO_BUILD) \
+		sh -c '$(BINDIR)/deepcopy-gen \
+			--v 1 --logtostderr \
+			--go-header-file "./docs/boilerplate.go.txt" \
+			--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v2" \
+			--bounding-dirs "github.com/projectcalico/libcalico-go" \
+			--output-file-base zz_generated.deepcopy'

@@ -15,9 +15,12 @@
 package resources
 
 import (
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"context"
 
-	apiv1 "k8s.io/client-go/pkg/api/v1"
+	apiv1 "k8s.io/api/core/v1"
+
+	"github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 // K8sResourceClient is the interface to the k8s datastore for CRUD operations
@@ -25,41 +28,37 @@ import (
 // the K8s backend).
 //
 // Defining a separate client interface from api.Client allows the k8s-specific
-// client to diverge - for example, the List operation also returns additional
-// revision information.
+// client to diverge.
 type K8sResourceClient interface {
 	// Create creates the object specified in the KVPair, which must not
 	// already exist. On success, returns a KVPair for the object with
 	// revision  information filled-in.
-	Create(object *model.KVPair) (*model.KVPair, error)
+	Create(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
 
 	// Update modifies the existing object specified in the KVPair.
 	// On success, returns a KVPair for the object with revision
 	// information filled-in.  If the input KVPair has revision
 	// information then the update only succeeds if the revision is still
 	// current.
-	Update(object *model.KVPair) (*model.KVPair, error)
-
-	// Apply updates or creates the object specified in the KVPair.
-	// On success, returns a KVPair for the object with revision
-	// information filled-in.  If the input KVPair has revision
-	// information then the update only succeeds if the revision is still
-	// current.
-	Apply(object *model.KVPair) (*model.KVPair, error)
+	Update(ctx context.Context, object *model.KVPair) (*model.KVPair, error)
 
 	// Delete removes the object specified by the KVPair.  If the KVPair
 	// contains revision information, the delete only succeeds if the
 	// revision is still current.
-	Delete(object *model.KVPair) error
+	Delete(ctx context.Context, key model.Key, revision string) (*model.KVPair, error)
 
 	// Get returns the object identified by the given key as a KVPair with
 	// revision information.
-	Get(key model.Key) (*model.KVPair, error)
+	Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error)
 
 	// List returns a slice of KVPairs matching the input list options.
 	// list should be passed one of the model.<Type>ListOptions structs.
 	// Non-zero fields in the struct are used as filters.
-	List(list model.ListInterface) ([]*model.KVPair, string, error)
+	List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error)
+
+	// Watch returns a WatchInterface used for watching a resources matching the
+	// input list options.
+	Watch(ctx context.Context, list model.ListInterface, revision string) (api.WatchInterface, error)
 
 	// EnsureInitialized ensures that the backend is initialized
 	// any ready to be used.
