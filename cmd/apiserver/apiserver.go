@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"os"
 	"runtime"
 
@@ -31,6 +32,18 @@ func main() {
 
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
+	}
+
+	versionPtr := flag.Bool("version", false, "print version")
+	flag.Parse()
+
+	if *versionPtr {
+		err := server.Version()
+		if err != nil {
+			glog.Errorf("Error printing version info.")
+			logs.FlushLogs()
+		}
+		os.Exit(1)
 	}
 
 	cmd, err := server.NewCommandStartCalicoServer(os.Stdout)

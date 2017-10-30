@@ -72,6 +72,19 @@ ifdef UNIT_TESTS
 	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
+
+CALICOAPISERVER_VERSION?=$(shell git describe --tags --dirty --always)
+CALICOAPISERVER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+CALICOAPISERVER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+CALICOAPISERVER_GIT_DESCRIPTION?=$(shell git describe --tags)
+
+VERSION_FLAGS=-X $(CAPI_PKG)/cmd/apiserver/server.VERSION=$(CALICOAPISERVER_VERSION) \
+	-X $(CAPI_PKG)/cmd/apiserver/server.BUILD_DATE=$(CALICOAPISERVER_BUILD_DATE) \
+	-X $(CAPI_PKG)/cmd/apiserver/server.GIT_DESCRIPTION=$(CALICOAPISERVER_GIT_DESCRIPTION) \
+	-X $(CAPI_PKG)/cmd/apiserver/server.GIT_REVISION=$(CALICOAPISERVER_GIT_REVISION)
+BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
+RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
+
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
 # owned by the current user.
@@ -113,19 +126,6 @@ vendor vendor/.up-to-date: glide.lock
 	mkdir -p $$HOME/.glide
 	$(DOCKER_GO_BUILD) glide install --strip-vendor
 	touch vendor/.up-to-date
-
-# Linker flags for building Felix.
-#
-# We use -X to insert the version information into the placeholder variables
-# in the buildinfo package.
-#
-# We use -B to insert a build ID note into the executable, without which, the
-# RPM build tools complain.
-LDFLAGS:=-ldflags "\
-        -X github.com/tigera/calico-k8sapiserver/buildinfo.GitVersion=$(GIT_DESCRIPTION) \
-        -X github.com/tigera/calico-k8sapiserver/buildinfo.BuildDate=$(DATE) \
-        -X github.com/tigera/calico-k8sapiserver/buildinfo.GitRevision=$(GIT_COMMIT) \
-        -B 0x$(BUILD_ID)"
 
 # This section contains the code generation stuff
 #################################################
@@ -205,6 +205,11 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 # "apiserver" instead of "$(BINDIR)/apiserver".
 #########################################################################
 $(BINDIR)/calico-k8sapiserver: .generate_files $(K8SAPISERVER_GO_FILES) vendor/.up-to-date
+ifndef RELEASE_BUILD
+	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
+else
+	$(eval LDFLAGS:=$(BUILD_LDFLAGS))
+endif
 	@echo Building k8sapiserver...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
@@ -352,8 +357,8 @@ endif
 	# Check that the version output includes the version specified.
 	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
 	# Release is currently supported on darwin / linux only.
-	if ! docker run calico/k8sapiserver version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run calico/k8sapiserver version` "\nExpected version: $(VERSION)"; \
+	if ! docker run calico/k8sapiserver -version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run calico/k8sapiserver -version` "\nExpected version: $(VERSION)"; \
 	  false; \
 	else \
 	  echo "Version check passed\n"; \
