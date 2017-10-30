@@ -27,6 +27,8 @@ help:
 	@echo "Tests:"
 	@echo
 	@echo "  make test                Run Tests."
+	@echo "  sudo make kubeadm        Run a kubeadm master with the apiserver."
+	@echo
 	@echo "Maintenance:"
 	@echo
 	@echo "  make update-vendor  Update the vendor directory with new "
@@ -72,7 +74,6 @@ ifdef UNIT_TESTS
 	UNIT_TEST_FLAGS=-run $(UNIT_TESTS) -v
 endif
 
-
 CALICOAPISERVER_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOAPISERVER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
 CALICOAPISERVER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
@@ -84,6 +85,7 @@ VERSION_FLAGS=-X $(CAPI_PKG)/cmd/apiserver/server.VERSION=$(CALICOAPISERVER_VERS
 	-X $(CAPI_PKG)/cmd/apiserver/server.GIT_REVISION=$(CALICOAPISERVER_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
+KUBECONFIG_DIR?=/etc/kubernetes/admin.conf
 
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
@@ -376,3 +378,24 @@ endif
 	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
 	@echo "git push origin $(VERSION)"
 	@echo "gcloud docker -- push gcr.io/tigera-dev/calico/k8sapiserver:$(VERSION)"
+
+.PHONY: kubeadm
+kubeadm:
+	kubeadm reset
+	rm -rf /var/etcd
+	kubeadm init --config artifacts/misc/kubeadm.yaml
+
+	# Wait for it to be ready
+	while ! KUBECONFIG=$(KUBECONFIG_DIR) kubectl get pods; do sleep 15; done
+
+	# Install Calico and the AAPI server
+	KUBECONFIG=$(KUBECONFIG_DIR) kubectl apply -f artifacts/misc/calico.yaml
+	KUBECONFIG=$(KUBECONFIG_DIR) kubectl taint nodes --all node-role.kubernetes.io/master-
+	KUBECONFIG=$(KUBECONFIG_DIR) kubectl create namespace calico
+	KUBECONFIG=$(KUBECONFIG_DIR) kubectl create -f artifacts/example/
+	@echo "Kubeadm master created."
+	@echo "To use, run the following commands:"
+	@echo "sudo cp $(KUBECONFIG_DIR) \$$HOME"
+	@echo "sudo chown \$$(id -u):\$$(id -g) \$$HOME/admin.conf"
+	@echo "export KUBECONFIG=\$$HOME/admin.conf"
+	@echo "kubectl get tiers"
