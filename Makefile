@@ -38,7 +38,7 @@ help:
 .SUFFIXES:
 
 all: calico/k8sapiserver
-test: ut fv
+test: ut fv fv-kdd
 
 # Some env vars that devs might find useful:
 #  TEST_DIRS=   : only run the unit tests from the specified dirs
@@ -52,6 +52,7 @@ GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
 
 # Define some constants
 #######################
+K8S_VERSION    = v1.8.1
 BINDIR        ?= bin
 BUILD_DIR     ?= build
 CAPI_PKG       = github.com/tigera/calico-k8sapiserver
@@ -243,6 +244,80 @@ stop-etcd:
 fv: run-etcd
 	$(DOCKER_GO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
+
+## Run a local kubernetes master with API via hyperkube
+run-kubernetes-master: run-etcd stop-kubernetes-master
+	# Run a Kubernetes apiserver using Docker.
+	docker run \
+		--net=host --name st-apiserver \
+		--detach \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube apiserver \
+			--bind-address=0.0.0.0 \
+			--insecure-bind-address=0.0.0.0 \
+	        	--etcd-servers=http://127.0.0.1:2379 \
+			--admission-control=NamespaceLifecycle,LimitRanger,DefaultStorageClass,ResourceQuota \
+			--authorization-mode=RBAC \
+			--service-cluster-ip-range=10.101.0.0/16 \
+			--v=10 \
+			--logtostderr=true
+
+	# Wait until we can configure a cluster role binding which allows anonymous auth.
+	while ! docker exec st-apiserver kubectl create clusterrolebinding anonymous-admin --clusterrole=cluster-admin --user=system:anonymous; do echo "Trying to create ClusterRoleBinding"; sleep 2; done
+
+	# And run the controller manager.
+	docker run \
+		--net=host --name st-controller-manager \
+		--detach \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube controller-manager \
+                        --master=127.0.0.1:8080 \
+                        --min-resync-period=3m \
+                        --allocate-node-cidrs=true \
+                        --cluster-cidr=10.10.0.0/16 \
+                        --v=5
+
+	# Create CustomResourceDefinition (CRD) for Calico resources
+	# from the manifest crds.yaml
+	docker run \
+	    --net=host \
+	    --rm \
+		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
+		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		--server=http://127.0.0.1:8080 \
+		apply -f manifests/test/crds.yaml
+
+	# Create a Node in the API for the tests to use.
+	docker run \
+	    --net=host \
+	    --rm \
+		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
+		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		--server=http://127.0.0.1:8080 \
+		apply -f manifests/test/mock-node.yaml
+
+	# Create Namespaces required by namespaced Calico `NetworkPolicy`
+	# tests from the manifests namespaces.yaml.
+	docker run \
+	    --net=host \
+	    --rm \
+		-v  $(CURDIR)/vendor/github.com/projectcalico/libcalico-go:/manifests \
+		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		--server=http://localhost:8080 \
+		apply -f manifests/test/namespaces.yaml
+
+## Stop the local kubernetes master
+stop-kubernetes-master:
+	# Delete the cluster role binding.
+	-docker exec st-apiserver kubectl delete clusterrolebinding anonymous-admin
+
+	# Stop master components.
+	-docker rm -f st-apiserver st-controller-manager
+
+.PHONY: fv-kdd
+fv-kdd: run-kubernetes-master
+	$(DOCKER_GO_BUILD) \
+		sh -c 'K8S_API_ENDPOINT="http://localhost:8080" DATASTORE_TYPE="kubernetes" test/integration.sh'
 
 .PHONY: clean
 clean: clean-bin clean-build-image clean-generated

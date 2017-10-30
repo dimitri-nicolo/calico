@@ -122,7 +122,7 @@ func TestNoName(t *testing.T) {
 func testNoName(client calicoclient.Interface) error {
 	cClient := client.Projectcalico()
 
-	ns := "namespace"
+	ns := "default"
 
 	if p, e := cClient.NetworkPolicies(ns).Create(&v2.NetworkPolicy{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", p.Name)
@@ -155,7 +155,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 }
 
 func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
-	ns := "namespace"
+	ns := "default"
 	policyClient := client.Projectcalico().NetworkPolicies(ns)
 	policy := &v2.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
