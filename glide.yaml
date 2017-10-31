@@ -6,7 +6,7 @@ owners:
   email: rob@tigera.io
 import:
 - package: github.com/coreos/etcd
-  version: v3.1.8
+  version: ^3.2.7
   subpackages:
   - client
   - pkg/transport
@@ -27,17 +27,17 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: 0870564da45cd4e9f25a499cc90eedaf0266cbba
+  version: df60adf40f7cd24a065390f2e5867f9d11e081b1
   subpackages:
   - lib
 - package: github.com/tigera/nfnetlink
   repo:    git@github.com:tigera/nfnetlink
 - package: github.com/sirupsen/logrus
-  version: ^0.11.5
+  version: ^1.0.3
 - package: github.com/kardianos/osext
 - package: github.com/mipearson/rfw
 - package: github.com/prometheus/client_golang
-  version: ^0.8.0
+  version: ^0.9.0-pre1
 - package: github.com/gogo/protobuf
   version: ^0.3.0
 - package: github.com/vishvananda/netlink
@@ -45,9 +45,9 @@ import:
 - package: github.com/onsi/ginkgo
   version: f40a49d81e5c12e90400620b6242fb29a8e7c9
 - package: k8s.io/client-go
-  version: 4a3ab2f5be5177366f8206fd79ce55ca80e417fa
+  version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
-  version: 049f0ad98022129ccb29f7fb3d9859c8dd967728
+  version: 07780931f7de3af4f94666965871e8b001df6a45
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
@@ -56,3 +56,6 @@ import:
   version: v0.5.2
 - package: github.com/onsi/gomega
   version: ^1.1.0
+- package: github.com/jbenet/go-reuseport
+  repo: https://github.com/fasaxc/go-reuseport.git
+  version: disable-dial-check

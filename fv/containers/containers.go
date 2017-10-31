@@ -29,6 +29,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/utils"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	client "github.com/projectcalico/libcalico-go/lib/clientv2"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -151,7 +153,7 @@ func (c *Container) WaitUntilRunning() {
 		if strings.Contains(string(out), c.Name) {
 			break
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 	}
 }
 
@@ -174,6 +176,7 @@ func (c *Container) WaitNotRunning(timeout time.Duration) {
 		if time.Since(start) > timeout {
 			log.Panic("Timed out waiting for container not to be listed.")
 		}
+		time.Sleep(1000 * time.Millisecond)
 	}
 }
 
@@ -208,14 +211,14 @@ func (c *Container) SourceName() string {
 	return c.Name
 }
 
-func (c *Container) CanConnectTo(ip, port string) bool {
+func (c *Container) CanConnectTo(ip, port, protocol string) bool {
 
 	// Ensure that the container has the 'test-connection' binary.
 	c.EnsureBinary("test-connection")
 
 	// Run 'test-connection' to the target.
 	connectionCmd := utils.Command("docker", "exec", c.Name,
-		"/test-connection", "-", ip, port)
+		"/test-connection", "--protocol="+protocol, "-", ip, port)
 	outPipe, err := connectionCmd.StdoutPipe()
 	Expect(err).NotTo(HaveOccurred())
 	errPipe, err := connectionCmd.StderrPipe()
@@ -250,12 +253,44 @@ func RunEtcd() *Container {
 func RunFelix(etcdIP string) *Container {
 	return Run("felix",
 		"--privileged",
-		"-e", "CALICO_DATASTORE_TYPE=etcdv2",
+		"-e", "CALICO_DATASTORE_TYPE=etcdv3",
+		"-e", "CALICO_ETCD_ENDPOINTS=http://"+etcdIP+":2379",
 		"-e", "FELIX_LOGSEVERITYSCREEN=debug",
-		"-e", "FELIX_DATASTORETYPE=etcdv2",
-		"-e", "FELIX_ETCDENDPOINTS=http://"+etcdIP+":2379",
+		"-e", "FELIX_DATASTORETYPE=etcdv3",
 		"-e", "FELIX_PROMETHEUSMETRICSENABLED=true",
 		"-e", "FELIX_USAGEREPORTINGENABLED=false",
 		"-e", "FELIX_IPV6SUPPORT=false",
 		"calico/felix:latest")
+}
+
+// StartSingleNodeEtcdTopology starts an etcd container and a single Felix container; it initialises
+// the datastore and installs a Node resource for the Felix node.
+func StartSingleNodeEtcdTopology() (felix, etcd *Container, client client.Interface) {
+	success := false
+	defer func() {
+		if !success {
+			log.Error("Failed to start topology, tearing down containers")
+			felix.Stop()
+			etcd.Stop()
+		}
+	}()
+
+	// First start etcd.
+	etcd = RunEtcd()
+
+	// Connect to etcd.
+	client = utils.GetEtcdClient(etcd.IP)
+
+	// Then start Felix and create a node for it.
+	felix = RunFelix(etcd.IP)
+
+	felixNode := api.NewNode()
+	felixNode.Name = felix.Hostname
+	Eventually(func() error {
+		_, err := client.Nodes().Create(utils.Ctx, felixNode, utils.NoOptions)
+		return err
+	}, "10s", "500ms").ShouldNot(HaveOccurred())
+
+	success = true
+	return
 }

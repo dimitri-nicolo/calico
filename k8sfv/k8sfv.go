@@ -27,9 +27,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-
-	capi "github.com/projectcalico/libcalico-go/lib/api"
-	"github.com/projectcalico/libcalico-go/lib/client"
 )
 
 // Global config - these are set by arguments on the ginkgo command line.
@@ -131,8 +128,6 @@ var _ = AfterSuite(func() {
 
 func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
 
-	initializeCalicoDeployment(k8sServerEndpoint)
-
 	config, err := clientcmd.NewNonInteractiveClientConfig(*api.NewConfig(),
 		"",
 		&clientcmd.ConfigOverrides{
@@ -156,28 +151,6 @@ func initialize(k8sServerEndpoint string) (clientset *kubernetes.Clientset) {
 	return
 }
 
-func initializeCalicoDeployment(k8sServerEndpoint string) {
-	// Create client into the Kubernetes datastore.
-	c, err := client.New(capi.CalicoAPIConfig{
-		Spec: capi.CalicoAPIConfigSpec{
-			DatastoreType: capi.Kubernetes,
-			KubeConfig: capi.KubeConfig{
-				K8sAPIEndpoint:           k8sServerEndpoint,
-				K8sInsecureSkipTLSVerify: true,
-			},
-		},
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// Establish the other global config that Calico requires.
-	err = c.EnsureInitialized()
-	if err != nil {
-		panic(err)
-	}
-}
-
 func create1000Pods(clientset *kubernetes.Clientset, nsPrefix string) error {
 
 	d = NewDeployment(clientset, 49, true)
@@ -190,6 +163,11 @@ func create1000Pods(clientset *kubernetes.Clientset, nsPrefix string) error {
 		createPod(clientset, d, nsName, podSpec{})
 	}
 	log.Info("Done")
+
+	Eventually(getNumEndpointsDefault(-1), "30s", "1s").Should(
+		BeNumerically("==", 1000),
+		"Addition of pods wasn't reflected in Felix metrics",
+	)
 
 	return nil
 }

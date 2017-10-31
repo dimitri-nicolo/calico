@@ -309,7 +309,10 @@ var _ = Describe("Endpoints", func() {
 		var tiers = []*proto.TierInfo{
 			{Name: "tier1", IngressPolicies: []string{"ai", "bi"}, EgressPolicies: []string{"ae", "be"}},
 		}
-		Expect(renderer.HostEndpointToFilterChains("eth0", tiers, []string{"prof1", "prof2"})).To(Equal([]*Chain{
+		var forwardTiers = []*proto.TierInfo{
+			{Name: "fwdTier1", IngressPolicies: []string{"afi", "bfi"}, EgressPolicies: []string{"afe", "bfe"}},
+		}
+		Expect(renderer.HostEndpointToFilterChains("eth0", tiers, forwardTiers, []string{"prof1", "prof2"})).To(Equal([]*Chain{
 			{
 				Name: "cali-th-eth0",
 				Rules: []Rule{
@@ -408,6 +411,70 @@ var _ = Describe("Endpoints", func() {
 
 					{Action: DropAction{},
 						Comment: "Drop if no profiles matched"},
+				},
+			},
+			{
+				Name: "cali-thfw-eth0",
+				Rules: []Rule{
+					// conntrack rules.
+					{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: AcceptAction{}},
+					{Match: Match().ConntrackState("INVALID"),
+						Action: DropAction{}},
+
+					{Action: ClearMarkAction{Mark: 0x88}},
+
+					{Comment: "Start of tier fwdTier1",
+						Action: ClearMarkAction{Mark: 0x10}},
+					{Match: Match().MarkClear(0x10),
+						Action: JumpAction{Target: "cali-po-fwdTier1/afe"}},
+					{Match: Match().MarkSet(0x8),
+						Action:  ReturnAction{},
+						Comment: "Return if policy accepted"},
+					{Match: Match().MarkClear(0x10),
+						Action: JumpAction{Target: "cali-po-fwdTier1/bfe"}},
+					{Match: Match().MarkSet(0x8),
+						Action:  ReturnAction{},
+						Comment: "Return if policy accepted"},
+					{Match: Match().MarkClear(0x10),
+						Action: NflogAction{
+							Group:  1,
+							Prefix: "D/0/no-policy-match-inbound/fwdTier1"}},
+					{Match: Match().MarkClear(0x10),
+						Action:  DropAction{},
+						Comment: "Drop if no policies passed packet"},
+				},
+			},
+			{
+				Name: "cali-fhfw-eth0",
+				Rules: []Rule{
+					// conntrack rules.
+					{Match: Match().ConntrackState("RELATED,ESTABLISHED"),
+						Action: AcceptAction{}},
+					{Match: Match().ConntrackState("INVALID"),
+						Action: DropAction{}},
+
+					{Action: ClearMarkAction{Mark: 0x88}},
+
+					{Comment: "Start of tier fwdTier1",
+						Action: ClearMarkAction{Mark: 0x10}},
+					{Match: Match().MarkClear(0x10),
+						Action: JumpAction{Target: "cali-pi-fwdTier1/afi"}},
+					{Match: Match().MarkSet(0x8),
+						Action:  ReturnAction{},
+						Comment: "Return if policy accepted"},
+					{Match: Match().MarkClear(0x10),
+						Action: JumpAction{Target: "cali-pi-fwdTier1/bfi"}},
+					{Match: Match().MarkSet(0x8),
+						Action:  ReturnAction{},
+						Comment: "Return if policy accepted"},
+					{Match: Match().MarkClear(0x10),
+						Action: NflogAction{
+							Group:  2,
+							Prefix: "D/0/no-policy-match-outbound/fwdTier1"}},
+					{Match: Match().MarkClear(0x10),
+						Action:  DropAction{},
+						Comment: "Drop if no policies passed packet"},
 				},
 			},
 		}))
