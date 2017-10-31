@@ -7,6 +7,9 @@ To deploy, bring up k8s >=1.6, preferably 1.7 since it comes with built-in aggre
 Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
 
 ## Sample installation steps with kubeadm with Calico in ETCD mode
+
+`sudo make kubeadm` automates steps 1-7 of this, if kubeadm is installed and the
+docker image (`make calico/k8sapiserver`) has been built.
 ```
 1. kubeadm reset; rm -rf /var/etcd
 2. KUBE_HYPERKUBE_IMAGE=gcr.io/google_containers/hyperkube-amd64:v1.7.0 kubeadm init --config kubeadm.yaml

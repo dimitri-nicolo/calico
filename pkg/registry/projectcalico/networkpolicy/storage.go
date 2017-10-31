@@ -23,6 +23,7 @@ import (
 	"github.com/golang/glog"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -147,6 +148,8 @@ func getTierNameFromSelector(options *metainternalversion.ListOptions) (string, 
 	return defaultTier, nil
 }
 
+// Check the user is allowed to "get" the tier.
+// This is required to be allowed to perform actions on policies.
 func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName string) error {
 	if r.authorizer == nil {
 		glog.Infof("Authorization disabled for testing purposes")
@@ -162,7 +165,7 @@ func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName st
 	attrs.Name = tierName
 	attrs.Resource = "tiers"
 	attrs.User = attributes.GetUser()
-	attrs.Verb = attributes.GetVerb()
+	attrs.Verb = "get"
 	attrs.ResourceRequest = attributes.IsResourceRequest()
 	attrs.Path = "/apis/projectcalico.org/v2/tiers/" + tierName
 	glog.Infof("Tier Auth Attributes for the given Policy")
@@ -173,9 +176,11 @@ func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName st
 	}
 	if !authorized {
 		if reason == "" {
-			reason = fmt.Sprintf("(Forbidden) Policy operation is assocaited with tier %s. User \"%s\" cannot %s tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)", tierName, attrs.User.GetName(), attrs.Verb)
+			reason = fmt.Sprintf("(Forbidden) Policy operation is associated with tier %s. "+
+				"User \"%s\" cannot get tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)",
+				tierName, attrs.User.GetName())
 		}
-		return fmt.Errorf(reason)
+		return errors.NewForbidden(calico.Resource("tiers"), tierName, fmt.Errorf(reason))
 	}
 	return nil
 }
