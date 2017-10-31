@@ -28,6 +28,8 @@ import (
 var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 	name1 := "name1"
 	name2 := "name2"
+	name3 := "mytier.name3"
+	mytier := "mytier"
 
 	v2GlobalNetworkPolicyKey1 := model.ResourceKey{
 		Kind: apiv2.KindGlobalNetworkPolicy,
@@ -37,11 +39,21 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 		Kind: apiv2.KindGlobalNetworkPolicy,
 		Name: name2,
 	}
+	v2GlobalNetworkPolicyKey3 := model.ResourceKey{
+		Kind: apiv2.KindGlobalNetworkPolicy,
+		Name: name3,
+	}
 	v1GlobalNetworkPolicyKey1 := model.PolicyKey{
 		Name: name1,
+		Tier: "default",
 	}
 	v1GlobalNetworkPolicyKey2 := model.PolicyKey{
 		Name: name2,
+		Tier: "default",
+	}
+	v1GlobalNetworkPolicyKey3 := model.PolicyKey{
+		Name: name3,
+		Tier: mytier,
 	}
 
 	It("should handle conversion of valid GlobalNetworkPolicys", func() {
@@ -184,6 +196,28 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 			},
 		}))
 
+		By("converting a tiered GlobalNetworkPolicy with minimum policy configuration")
+		res = apiv2.NewGlobalNetworkPolicy()
+		res.Spec.Tier = mytier
+		res.Spec.PreDNAT = true
+		res.Spec.ApplyOnForward = true
+
+		kvps, err = up.Process(&model.KVPair{
+			Key:      v2GlobalNetworkPolicyKey3,
+			Value:    res,
+			Revision: "xyz",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kvps).To(HaveLen(1))
+		Expect(kvps[0]).To(Equal(&model.KVPair{
+			Key: v1GlobalNetworkPolicyKey3,
+			Value: &model.Policy{
+				PreDNAT:        true,
+				ApplyOnForward: true,
+			},
+			Revision: "xyz",
+		}))
+
 		By("deleting the first network policy")
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v2GlobalNetworkPolicyKey1,
@@ -193,6 +227,19 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 		Expect(kvps).To(Equal([]*model.KVPair{
 			{
 				Key:   v1GlobalNetworkPolicyKey1,
+				Value: nil,
+			},
+		}))
+
+		By("deleting the tiered GlobalNetworkPolicy")
+		kvps, err = up.Process(&model.KVPair{
+			Key:   v2GlobalNetworkPolicyKey3,
+			Value: nil,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kvps).To(Equal([]*model.KVPair{
+			{
+				Key:   v1GlobalNetworkPolicyKey3,
 				Value: nil,
 			},
 		}))

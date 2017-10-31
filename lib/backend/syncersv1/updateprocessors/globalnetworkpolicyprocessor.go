@@ -20,6 +20,7 @@ import (
 	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
+	"github.com/projectcalico/libcalico-go/lib/names"
 )
 
 // Create a new SyncerUpdateProcessor to sync GlobalNetworkPolicy data in v1 format for
@@ -32,8 +33,13 @@ func convertGlobalNetworkPolicyV2ToV1Key(v2key model.ResourceKey) (model.Key, er
 	if v2key.Name == "" {
 		return model.PolicyKey{}, errors.New("Missing Name field to create a v1 NetworkPolicy Key")
 	}
+	tier, err := names.TierFromPolicyName(v2key.Name)
+	if err != nil {
+		return model.PolicyKey{}, err
+	}
 	return model.PolicyKey{
 		Name: v2key.Name,
+		Tier: tier,
 	}, nil
 
 }

@@ -250,6 +250,30 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				})
 			}
 
+			By("Creating a Tier")
+			tierName := "mytier"
+			order := float64(100.00)
+			tier, err := c.Tiers().Create(
+				ctx,
+				&apiv2.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: tierName},
+					Spec: apiv2.TierSpec{
+						Order: &order,
+					},
+				},
+				options.SetOptions{},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			expectedCacheSize += 1
+			syncTester.ExpectCacheSize(expectedCacheSize)
+			syncTester.ExpectData(model.KVPair{
+				Key: model.TierKey{Name: tierName},
+				Value: &model.Tier{
+					Order: &order,
+				},
+				Revision: tier.ResourceVersion,
+			})
+
 			By("Starting a new syncer and verifying that all current entries are returned before sync status")
 			// We need to create a new syncTester and syncer.
 			current := syncTester.GetCacheEntries()
