@@ -91,6 +91,13 @@ func (gc GlobalNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObj
 	}
 	aapiGlobalNetworkPolicy.TypeMeta = lcgGlobalNetworkPolicy.TypeMeta
 	aapiGlobalNetworkPolicy.ObjectMeta = lcgGlobalNetworkPolicy.ObjectMeta
+	// Labeling Purely for kubectl purposes. ex: kubectl get globalnetworkpolicies -l projectcalico.org/tier=net-sec
+	// kubectl 1.9 should come out with support for field selector.
+	// Workflows associated with label "projectcalico.org/tier" should be deprecated thereafter.
+	if aapiGlobalNetworkPolicy.Labels == nil {
+		aapiGlobalNetworkPolicy.Labels = make(map[string]string)
+	}
+	aapiGlobalNetworkPolicy.Labels["projectcalico.org/tier"] = aapiGlobalNetworkPolicy.Spec.Tier
 }
 
 func (gc GlobalNetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, filterFunc storage.FilterFunc) {
