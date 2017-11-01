@@ -200,9 +200,9 @@ var _ = Context("with a k8s clientset", func() {
 						heapAlloc,
 					)
 				}
-				panicIfError(clientset.Pods(nsName).Delete(pod1.ObjectMeta.Name, deleteImmediately))
-				panicIfError(clientset.Pods(nsName).Delete(pod2.ObjectMeta.Name, deleteImmediately))
-				panicIfError(clientset.Namespaces().Delete(nsName, deleteImmediately))
+				panicIfError(clientset.CoreV1().Pods(nsName).Delete(pod1.ObjectMeta.Name, deleteImmediately))
+				panicIfError(clientset.CoreV1().Pods(nsName).Delete(pod2.ObjectMeta.Name, deleteImmediately))
+				panicIfError(clientset.CoreV1().Namespaces().Delete(nsName, deleteImmediately))
 			}
 		})
 
