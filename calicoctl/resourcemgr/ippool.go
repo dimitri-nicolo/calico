@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,41 +15,47 @@
 package resourcemgr
 
 import (
-	"github.com/projectcalico/libcalico-go/lib/api"
-	"github.com/projectcalico/libcalico-go/lib/api/unversioned"
-	"github.com/projectcalico/libcalico-go/lib/client"
+	"context"
+
+	api "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	client "github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
 func init() {
 	registerResource(
 		api.NewIPPool(),
 		api.NewIPPoolList(),
-		[]string{"CIDR"},
-		[]string{"CIDR", "NAT", "IPIP"},
+		false,
+		[]string{"ippool", "ippools", "ipp", "ipps", "pool", "pools"},
+		[]string{"NAME", "CIDR"},
+		[]string{"NAME", "CIDR", "NAT", "IPIPMODE", "DISABLED"},
 		map[string]string{
-			"CIDR": "{{.Metadata.CIDR}}",
-			"NAT":  "{{.Spec.NATOutgoing}}",
-			"IPIP": "{{if .Spec.IPIP}}{{.Spec.IPIP.Enabled}}{{else}}false{{end}}",
+			"NAME":     "{{.ObjectMeta.Name}}",
+			"CIDR":     "{{.Spec.CIDR}}",
+			"NAT":      "{{.Spec.NATOutgoing}}",
+			"IPIPMODE": "{{if .Spec.IPIPMode}}{{.Spec.IPIPMode}}{{else}}Never{{end}}",
+			"DISABLED": "{{.Spec.Disabled}}",
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.IPPool)
-			return client.IPPools().Apply(&r)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
+			r := resource.(*api.IPPool)
+			return client.IPPools().Create(ctx, r, options.SetOptions{})
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.IPPool)
-			return client.IPPools().Create(&r)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
+			r := resource.(*api.IPPool)
+			return client.IPPools().Update(ctx, r, options.SetOptions{})
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.IPPool)
-			return client.IPPools().Update(&r)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
+			r := resource.(*api.IPPool)
+			return client.IPPools().Delete(ctx, r.Name, options.DeleteOptions{ResourceVersion: r.ResourceVersion})
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.IPPool)
-			return nil, client.IPPools().Delete(r.Metadata)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
+			r := resource.(*api.IPPool)
+			return client.IPPools().Get(ctx, r.Name, options.GetOptions{ResourceVersion: r.ResourceVersion})
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.IPPool)
-			return client.IPPools().List(r.Metadata)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceListObject, error) {
+			r := resource.(*api.IPPool)
+			return client.IPPools().List(ctx, options.ListOptions{ResourceVersion: r.ResourceVersion, Name: r.Name})
 		},
 	)
 }

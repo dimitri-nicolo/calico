@@ -1,54 +1,46 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 package resourcemgr
 
 import (
-	"github.com/projectcalico/libcalico-go/lib/api"
-	"github.com/projectcalico/libcalico-go/lib/api/unversioned"
-	"github.com/projectcalico/libcalico-go/lib/client"
+	"context"
+
+	api "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	client "github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
 func init() {
 	registerResource(
 		api.NewTier(),
 		api.NewTierList(),
+		false,
+		[]string{"tier", "tiers"},
 		[]string{"NAME", "ORDER"},
 		[]string{"NAME", "ORDER"},
 		map[string]string{
-			"NAME":  "{{.Metadata.Name}}",
+			"NAME":  "{{.ObjectMeta.Name}}",
 			"ORDER": "{{.Spec.Order}}",
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Tier)
-			return client.Tiers().Apply(&r)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
+			r := resource.(*api.Tier)
+			return client.Tiers().Create(ctx, r, options.SetOptions{})
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Tier)
-			return client.Tiers().Create(&r)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
+			r := resource.(*api.Tier)
+			return client.Tiers().Update(ctx, r, options.SetOptions{})
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Tier)
-			return client.Tiers().Update(&r)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
+			r := resource.(*api.Tier)
+			return client.Tiers().Delete(ctx, r.Name, options.DeleteOptions{ResourceVersion: r.ResourceVersion})
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Tier)
-			return nil, client.Tiers().Delete(r.Metadata)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
+			r := resource.(*api.Tier)
+			return client.Tiers().Get(ctx, r.Name, options.GetOptions{ResourceVersion: r.ResourceVersion})
 		},
-		func(client *client.Client, resource unversioned.Resource) (unversioned.Resource, error) {
-			r := resource.(api.Tier)
-			return client.Tiers().List(r.Metadata)
+		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceListObject, error) {
+			r := resource.(*api.Tier)
+			return client.Tiers().List(ctx, options.ListOptions{ResourceVersion: r.ResourceVersion, Name: r.Name})
 		},
 	)
 }
