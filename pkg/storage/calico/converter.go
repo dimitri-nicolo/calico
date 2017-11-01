@@ -22,6 +22,8 @@ func aapiError(err error, key string) error {
 	}
 }
 
+// TODO: convertToAAPI should be same as the ones specific to resources.
+// This is common code. Refactor this workflow.
 func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 	switch libcalicoObject.(type) {
 	case *libcalicoapi.Tier:
@@ -59,6 +61,11 @@ func convertToAAPINetworkPolicy(networkPolicy *aapi.NetworkPolicy, libcalicoPoli
 	}
 	networkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
 	networkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+	if networkPolicy.Labels == nil {
+		networkPolicy.Labels = make(map[string]string)
+	}
+	networkPolicy.Labels["projectcalico.org/tier"] = networkPolicy.Spec.Tier
+
 }
 
 func convertToLibcalicoTier(tier *aapi.Tier, libcalicoTier *libcalicoapi.Tier) {
@@ -88,4 +95,8 @@ func convertToAAPIGlobalNetworkPolicy(globalNetworkPolicy *aapi.GlobalNetworkPol
 	}
 	globalNetworkPolicy.TypeMeta = libcalicoPolicy.TypeMeta
 	globalNetworkPolicy.ObjectMeta = libcalicoPolicy.ObjectMeta
+	if globalNetworkPolicy.Labels == nil {
+		globalNetworkPolicy.Labels = make(map[string]string)
+	}
+	globalNetworkPolicy.Labels["projectcalico.org/tier"] = globalNetworkPolicy.Spec.Tier
 }

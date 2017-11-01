@@ -46,12 +46,6 @@ test: ut fv fv-kdd
 #  TEST_DIRS=   : only run the unit tests from the specified dirs
 #  UNIT_TESTS=  : only run the unit tests matching the specified regexp
 
-# Figure out version information.  To support builds from release tarballs, we default to
-# <unknown> if this isn't a git checkout.
-GIT_COMMIT:=$(shell git rev-parse HEAD || echo '<unknown>')
-BUILD_ID:=$(shell git rev-parse HEAD || uuidgen | sed 's/-//g')
-GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
-
 # Define some constants
 #######################
 K8S_VERSION    = v1.8.1
@@ -359,8 +353,8 @@ endif
 	# Check that the version output includes the version specified.
 	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
 	# Release is currently supported on darwin / linux only.
-	if ! docker run calico/k8sapiserver -version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run calico/k8sapiserver -version` "\nExpected version: $(VERSION)"; \
+	if ! docker run calico/k8sapiserver | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run calico/k8sapiserver` "\nExpected version: $(VERSION)"; \
 	  false; \
 	else \
 	  echo "Version check passed\n"; \
