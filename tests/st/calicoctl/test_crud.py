@@ -321,11 +321,35 @@ class TestCalicoctlCommands(TestBase):
         (hostendpoint_name1_rev1,),
         (bgppeer_name1_rev1_v4,),
         (node_name1_rev1,),
+        (tier_name1_rev1,),
     ])
     def test_non_namespaced(self, data):
         """
         Test namespace is handled as expected for each non-namespaced resource type.
         """
+        return self._test_non_namespaced(data)
+
+    @parameterized.expand([
+        (globalnetworkpolicy_tiered_name2_rev1,),
+    ])
+    def test_non_namespaced_tiered(self, data):
+        """
+        Test namespace is handled as expected for each non-namespaced resource type.
+        """
+        self._create_admin_tier()
+        self._test_non_namespaced(data)
+        self._delete_admin_tier()
+
+    def _create_admin_tier(self):
+        rc = calicoctl("create", data=tier_name1_rev1)
+        rc.assert_no_error()
+
+    def _delete_admin_tier(self):
+        # Delete the resource
+        rc = calicoctl("delete", data=tier_name1_rev1)
+        rc.assert_no_error()
+
+    def _test_non_namespaced(self, data):
         # Clone the data so that we can modify the metadata parms.
         data1 = copy.deepcopy(data)
         kind = data['kind']
@@ -347,21 +371,6 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("delete", data=data1)
         rc.assert_no_error()
 
-
-    def _create_admin_tier(self):
-        tierdata = {
-            'apiVersion': 'v1',
-            'kind': 'tier',
-            'metadata': {
-                'name': 'admin'
-            },
-            'spec': {
-                'order': 1
-            }
-        }
-        self.writeyaml("/tmp/tierfile.yaml", tierdata)
-        calicoctl("create -f /tmp/tierfile.yaml")
-
     @parameterized.expand([
         (networkpolicy_name1_rev1,),
         (workloadendpoint_name1_rev1,),
@@ -370,6 +379,20 @@ class TestCalicoctlCommands(TestBase):
         """
         Tests namespace is handled as expected for each namespaced resource type.
         """
+        self._test_namespaced(data)
+
+    @parameterized.expand([
+        (networkpolicy_tiered_name2_rev1,),
+    ])
+    def test_namespaced_tiered(self, data):
+        """
+        Tests namespace is handled as expected for each namespaced resource type.
+        """
+        self._create_admin_tier()
+        self._test_namespaced(data)
+        self._delete_admin_tier()
+
+    def _test_namespaced(self, data):
         # Clone the data so that we can modify the metadata parms.
         data1 = copy.deepcopy(data)
         data2 = copy.deepcopy(data)

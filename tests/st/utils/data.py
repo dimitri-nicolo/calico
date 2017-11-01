@@ -109,6 +109,21 @@ bgppeer_name2_rev1_v6 = {
 }
 
 #
+# Tier1
+#
+
+tier_name1_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'Tier',
+    'metadata': {
+        'name': 'admin',
+    },
+    'spec': {
+        'Order': 1000,
+    },
+}
+
+#
 # Network Policy
 #
 networkpolicy_name1_rev1 = {
@@ -184,6 +199,35 @@ networkpolicy_name1_rev2 = {
     }
 }
 
+networkpolicy_tiered_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'NetworkPolicy',
+    'metadata': {
+        'name': 'admin.mypolicy2',
+        'namespace': 'default'
+    },
+    'spec': {
+        'tier': 'admin',
+        'order': 100000,
+        'selector': "type=='sql'",
+        'doNotTrack': True,
+        'types': ['ingress', 'egress'],
+        'egress': [
+            {
+                'action': 'deny',
+                'protocol': 'tcp',
+            },
+        ],
+        'ingress': [
+            {
+                'action': 'allow',
+                'protocol': 'udp',
+            },
+        ],
+    }
+}
+
+
 #
 # Global Network Policy
 #
@@ -239,6 +283,33 @@ globalnetworkpolicy_name1_rev2 = {
         'name': 'policy-mypolicy1',
     },
     'spec': {
+        'order': 100000,
+        'selector': "type=='sql'",
+        'doNotTrack': True,
+        'types': ['ingress', 'egress'],
+        'egress': [
+            {
+                'action': 'deny',
+                'protocol': 'tcp',
+            },
+        ],
+        'ingress': [
+            {
+                'action': 'allow',
+                'protocol': 'udp',
+            },
+        ],
+    }
+}
+
+globalnetworkpolicy_tiered_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'GlobalNetworkPolicy',
+    'metadata': {
+        'name': 'admin.mypolicy2',
+    },
+    'spec': {
+        'tier': 'admin',
         'order': 100000,
         'selector': "type=='sql'",
         'doNotTrack': True,
