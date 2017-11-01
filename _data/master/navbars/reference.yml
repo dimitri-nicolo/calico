@@ -26,8 +26,6 @@ toc:
       path: /reference/calicoctl/commands/delete
     - title: get
       path: /reference/calicoctl/commands/get
-    - title: config
-      path: /reference/calicoctl/commands/config
     - title: ipam
       section:
       - title: Overview
@@ -57,14 +55,20 @@ toc:
         path: /reference/calicoctl/resources/
       - title: BGP Peer
         path: /reference/calicoctl/resources/bgppeer
+      - title: BGP Configuration
+        path: /reference/calicoctl/resources/bgpconfig
+      - title: Felix Configuration
+        path: /reference/calicoctl/resources/felixconfig
       - title: Host Endpoint
         path: /reference/calicoctl/resources/hostendpoint
       - title: IP Pool
         path: /reference/calicoctl/resources/ippool
       - title: Node
-        path: /reference/calicoctl/resources/node    
-      - title: Policy
-        path: /reference/calicoctl/resources/policy
+        path: /reference/calicoctl/resources/node
+      - title: Network Policy
+        path: /reference/calicoctl/resources/networkpolicy
+      - title: Global Network Policy
+        path: /reference/calicoctl/resources/globalnetworkpolicy
       - title: Profile
         path: /reference/calicoctl/resources/profile
       - title: Tier
@@ -75,8 +79,8 @@ toc:
     section:
       - title: Overview
         path: /reference/calicoctl/setup/
-      - title: etcdv2 datastore
-        path: /reference/calicoctl/setup/etcdv2
+      - title: etcdv3 datastore
+        path: /reference/calicoctl/setup/etcdv3
       - title: kubernetes api datastore
         path: /reference/calicoctl/setup/kubernetes
 - title: calicoq

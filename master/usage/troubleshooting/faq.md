@@ -51,12 +51,11 @@ to the interface.
 
 ## Can I prevent my Kubernetes pods from initiating outgoing connections?
 
-The Kubernetes [NetworkPolicy](http://kubernetes.io/docs/api-reference/extensions/v1beta1/definitions/#_v1beta1_networkpolicy)
-API doesn't currently support this.  However,
-Calico does!  You can use `calicoctl` to configure egress policy to prevent
-Kubernetes pods from initiating outgoing connections based on the full set of
-supported Calico policy primitives including labels, Kubernetes namespaces,
-CIDRs, and ports.
+Yes! The Kubernetes [`NetworkPolicy`](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+API added support for egress policies in v1.8. You can also use `calicoctl` 
+to configure egress policy to prevent Kubernetes pods from initiating outgoing 
+connections based on the full set of supported Calico policy primitives 
+including labels, Kubernetes namespaces, CIDRs, and ports.
 
 ## I've heard Calico uses proxy ARP, doesn't proxy ARP cause a lot of problems?
 
@@ -90,13 +89,13 @@ documents *mandates* the use of VLANs.
    for other settings that can be edited.)
    
    ```shell
-   - apiVersion: v1
-     kind: ipPool
+   - apiVersion: projectcalico.org/v2
+     kind: IPPool
      metadata:
-       cidr: 192.168.0.0/16
+      name: ippool-1
      spec:
-       ipip:
-   	  enabled: true
+       cidr: 192.168.0.0/16
+       ipipMode: Always
        nat-outgoing: true
    ```
 
@@ -270,11 +269,12 @@ node on which each container is hosted.
 
 ```
 cat << EOF | calicoctl apply -f -
-apiVersion: v1
-kind: ipPool
+apiVersion: projectcalico.org/v2
+kind: IPPool
 metadata:
-  cidr: <CIDR>
+  name: ippool-1
 spec:
+  cidr: <CIDR>
   nat-outgoing: true
 EOF
 ```
@@ -335,13 +335,13 @@ Yes.  If you are running in a public cloud that doesn't allow either L3 peering 
 
 ```shell
 cat << EOF | calicoctl apply -f -
-apiVersion: v1
-kind: ipPool
+apiVersion: projectcalico.org/v2
+kind: IPPool
 metadata:
-  cidr: <CIDR>
+  name: ippool-1
 spec:
-  ipip:
-    enabled: true
+  cidr: <CIDR>
+  ipipMode: Always
   nat-outgoing: true
 EOF
 ```
@@ -354,11 +354,12 @@ In AWS, you disable `Source/Dest. Check` instead of using IP in IP as long as al
 aws ec2 modify-instance-attribute --instance-id <INSTANCE_ID> --source-dest-check "{\"Value\": false}"
 
 cat << EOF | calicoctl apply -f -
-apiVersion: v1
-kind: ipPool
+apiVersion: projectcalico.org/v2
+kind: IPPool
 metadata:
-  cidr: <CIDR>
+  name: ippool-2
 spec:
+  cidr: <CIDR>
   nat-outgoing: true
 EOF
 ```

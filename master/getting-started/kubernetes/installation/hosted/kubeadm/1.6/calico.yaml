@@ -184,7 +184,7 @@ spec:
             - name: CALICO_IPV4POOL_CIDR
               value: "192.168.0.0/16"
             - name: CALICO_IPV4POOL_IPIP
-              value: "always"
+              value: "Always"
             # Disable IPv6 on Kubernetes.
             - name: FELIX_IPV6SUPPORT
               value: "false"
@@ -377,7 +377,6 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: calico-cni-plugin
-  namespace: kube-system
 rules:
   - apiGroups: [""]
     resources:
@@ -415,7 +414,6 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: calico-kube-controllers
-  namespace: kube-system
 rules:
   - apiGroups:
     - ""

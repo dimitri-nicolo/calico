@@ -18,7 +18,7 @@ toc:
 
 - title: Kubernetes
   section:
-  - title: Overview
+  - title: Quickstart
     path: /getting-started/kubernetes/
   - title: Installation
     section:
