@@ -240,12 +240,23 @@ endif
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(CTL_CONTAINER_NAME)
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/$(CTL_CONTAINER_NAME)-essentials:$(VERSION)
 
-	@echo "\nNow push the tag and images. Then create a release on Github and"
-	@echo "attach dist/calicoctl, dist/calicoctl-darwin-amd64, and dist/calicoctl-windows-amd64.exe binaries"
-	@echo "\nAdd release notes for calicoctl. Use this command"
-	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
-	@echo "git push origin $(VERSION)"
-	@echo "gcloud docker -- push gcr.io/tigera-dev/calico/ctl-essentials:$(VERSION)"
+	@echo ""
+	@echo "# Push the created tag to GitHub"
+	@echo "  git push origin $(VERSION)"
+	@echo ""
+	@echo "# Now, create a GitHub release from the tag, add release notes, and attach the following binaries:"
+	@echo "- dist/calicoctl"
+	@echo "- dist/calicoctl-darwin-amd64"
+	@echo "- dist/calicoctl-windows-amd64.exe"
+	@echo "# To find commit messages for the release notes:  git log --oneline <old_release_version>...$(VERSION)"
+	@echo ""
+	@echo "# Now push the newly created release images."
+	@echo "  gcloud docker -- push gcr.io/tigera-dev/calico/ctl-essentials:$(VERSION)"
+	@echo ""
+	@echo "# For the final release only, push the latest tag"
+	@echo "# DO NOT PUSH THESE IMAGES FOR RELEASE CANDIDATES OR ALPHA RELEASES" 
+	@echo "  gcloud docker -- push gcr.io/tigera-dev/calico/ctl-essentials:latest"
+	@echo ""
 	@echo "See RELEASING.md for detailed instructions."
 
 ## Clean enough that a new release build will be clean

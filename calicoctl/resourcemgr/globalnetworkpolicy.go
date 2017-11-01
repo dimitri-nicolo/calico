@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,38 +24,36 @@ import (
 
 func init() {
 	registerResource(
-		api.NewHostEndpoint(),
-		api.NewHostEndpointList(),
+		api.NewGlobalNetworkPolicy(),
+		api.NewGlobalNetworkPolicyList(),
 		false,
-		[]string{"hostendpoint", "hostendpoints", "hep", "heps"},
-		[]string{"NAME", "NODE"},
-		[]string{"NAME", "NODE", "INTERFACE", "IPS", "PROFILES"},
+		[]string{"globalnetworkpolicy", "globalnetworkpolicies", "gnp", "gnps"},
+		[]string{"NAME"},
+		[]string{"NAME", "ORDER", "SELECTOR"},
 		map[string]string{
-			"NAME":      "{{.ObjectMeta.Name}}",
-			"NODE":      "{{.Spec.Node}}",
-			"INTERFACE": "{{.Spec.InterfaceName}}",
-			"IPS":       "{{join .Spec.ExpectedIPs \",\"}}",
-			"PROFILES":  "{{join .Spec.Profiles \",\"}}",
+			"NAME":     "{{.ObjectMeta.Name}}",
+			"ORDER":    "{{.Spec.Order}}",
+			"SELECTOR": "{{.Spec.Selector}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.HostEndpoint)
-			return client.HostEndpoints().Create(ctx, r, options.SetOptions{})
+			r := resource.(*api.GlobalNetworkPolicy)
+			return client.GlobalNetworkPolicies().Create(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.HostEndpoint)
-			return client.HostEndpoints().Update(ctx, r, options.SetOptions{})
+			r := resource.(*api.GlobalNetworkPolicy)
+			return client.GlobalNetworkPolicies().Update(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.HostEndpoint)
-			return client.HostEndpoints().Delete(ctx, r.Name, options.DeleteOptions{ResourceVersion: r.ResourceVersion})
+			r := resource.(*api.GlobalNetworkPolicy)
+			return client.GlobalNetworkPolicies().Delete(ctx, r.Name, options.DeleteOptions{ResourceVersion: r.ResourceVersion})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			r := resource.(*api.HostEndpoint)
-			return client.HostEndpoints().Get(ctx, r.Name, options.GetOptions{ResourceVersion: r.ResourceVersion})
+			r := resource.(*api.GlobalNetworkPolicy)
+			return client.GlobalNetworkPolicies().Get(ctx, r.Name, options.GetOptions{ResourceVersion: r.ResourceVersion})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceListObject, error) {
-			r := resource.(*api.HostEndpoint)
-			return client.HostEndpoints().List(ctx, options.ListOptions{ResourceVersion: r.ResourceVersion, Name: r.Name})
+			r := resource.(*api.GlobalNetworkPolicy)
+			return client.GlobalNetworkPolicies().List(ctx, options.ListOptions{ResourceVersion: r.ResourceVersion, Name: r.Name})
 		},
 	)
 }
