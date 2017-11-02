@@ -3,7 +3,7 @@ title: Network Policy (Universal Containerizer)
 ---
 
 This document will demonstrate how to manipulate policy for Calico using
-[Policies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy). Specifically, we will:
+[Policies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy). Specifically, we will:
 
 - Set labels on our workload at launch
 - Configure policy based off these labels
@@ -81,8 +81,8 @@ Run the following command to block incoming requests in the default Profile:
 
 ```yaml
 calicoctl apply -f - <<EOF
-- apiVersion: v1
-  kind: profile
+- apiVersion: projectcalico.org/v2
+  kind: Profile
   metadata:
     name: calico
     tags:
@@ -96,7 +96,7 @@ EOF
 ```
 
 > **Note**: You'll need `calicoctl` configured to access your central etcd datastore. 
-> See [help]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup/etcdv2).
+> See [help](/{{page.version}}/reference/calicoctl/setup/etcdv3).
 {: .alert .alert-info}
 
 Checking the task's log should show that these connections are no longer successful.
@@ -118,8 +118,8 @@ We can use `calicoctl create` to create two new policies for this:
 
 ```yaml
 calicoctl create -f -<<EOF
-- apiVersion: v1
-  kind: policy
+- apiVersion: projectcalico.org/v2
+  kind: GlobalNetworkPolicy
   metadata:
     name: webserver
   spec:
@@ -140,8 +140,8 @@ calicoctl create -f -<<EOF
     - action: allow
       destination:
         selector: role == 'webserver'
-- apiVersion: v1
-  kind: policy
+- apiVersion: projectcalico.org/v2
+  kind: GlobalNetworkPolicy
   metadata:
     name: client
   spec:

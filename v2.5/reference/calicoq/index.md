@@ -1,6 +1,5 @@
 ---
 title: calicoq
-redirect_from: latest/reference/calicoq/index
 ---
 
 `calicoq` is the Tigera Policy Query Utility.  It is a command line tool that 

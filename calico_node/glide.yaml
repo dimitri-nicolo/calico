@@ -1,19 +1,16 @@
 package: github.com/projectcalico/calico/calico_node
 import:
 - package: github.com/sirupsen/logrus
-  version: ^0.10.0
+  version: ^1.0.3
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 0870564da45cd4e9f25a499cc90eedaf0266cbba
+  version: df60adf40f7cd24a065390f2e5867f9d11e081b1
   subpackages:
   - lib/api
   - lib/client
+  - lib/apiv2
+  - lib/clientv2
   - lib/errors
   - lib/ipip
   - lib/net
   - lib/numorstring
-testImport:
-- package: github.com/onsi/ginkgo
-  subpackages:
-  - extensions/table
-- package: github.com/onsi/gomega

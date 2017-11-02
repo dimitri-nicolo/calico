@@ -1,6 +1,5 @@
 ---
 title: Installing Essentials for OpenShift
-redirect_from: latest/getting-started/openshift/essentials/installation
 ---
 
 The installation process for Tigera Essentials for OpenShift is identical to the
