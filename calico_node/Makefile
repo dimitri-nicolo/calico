@@ -56,7 +56,7 @@ $(info GOBGPD_VER=$(GOBGPD_VER))
 $(info KUBE_CONTROLLERS_VER=$(KUBE_CONTROLLERS_VER))
 $(info LIBNETWORK_PLUGIN_VER=$(LIBNETWORK_PLUGIN_VER))
 $(info TYPHA_VER=$(TYPHA_VER))
->>>>>>> v3.0.0-alpha1
+$(info CALICOQ_VER=$(CALICOQ_VER))
 
 SYSTEMTEST_CONTAINER_VER ?= latest
 # we can use "custom" build image and test image name
