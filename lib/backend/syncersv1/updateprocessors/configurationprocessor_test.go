@@ -68,7 +68,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Kind: apiv2.KindBGPConfiguration,
 		Name: "node.bgpnode1",
 	}
-	numFelixConfigs := 46
+	numFelixConfigs := 52
 	numClusterConfigs := 3
 	numBgpConfigs := 3
 	felixMappedNames := map[string]interface{}{
