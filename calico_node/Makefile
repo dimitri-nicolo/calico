@@ -28,6 +28,7 @@ V_KUBE_CONTROLLERS := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELE
 V_LIBNETWORK_PLUGIN := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.libnetwork-plugin.version')
 V_TYPHA := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.typha.version')
 V_CALICOQ := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
+V_APISERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/apiserver.version')
 
 # Now use ?= to allow the versions derived from versions.yml to be
 # overriden (by the environment).
@@ -43,6 +44,7 @@ KUBE_CONTROLLERS_VER ?= $(V_KUBE_CONTROLLERS)
 LIBNETWORK_PLUGIN_VER ?= $(V_LIBNETWORK_PLUGIN)
 TYPHA_VER ?= $(V_TYPHA)
 CALICOQ_VER ?= $(V_CALICOQ)
+APISERVER_VER ?= $(V_APISERVER)
 
 $(info RELEASE_STREAM=$(RELEASE_STREAM))
 $(info CALICO_VER=$(CALICO_VER))
@@ -57,6 +59,7 @@ $(info KUBE_CONTROLLERS_VER=$(KUBE_CONTROLLERS_VER))
 $(info LIBNETWORK_PLUGIN_VER=$(LIBNETWORK_PLUGIN_VER))
 $(info TYPHA_VER=$(TYPHA_VER))
 $(info CALICOQ_VER=$(CALICOQ_VER))
+$(info APISERVER_VER=$(APISERVER_VER))
 
 SYSTEMTEST_CONTAINER_VER ?= latest
 # we can use "custom" build image and test image name
@@ -95,6 +98,8 @@ CTL_CONTAINER_NAME?=calico/ctl:$(CALICOCTL_VER)
 CTL_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/ctl-essentials
 CALICOQ_CONTAINER_NAME?=calico/calicoq:$(CALICOQ_VER)
 CALICOQ_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/calicoq
+APISERVER_CONTAINER_NAME?=calico/k8sapiserver:$(APISERVER_VER)
+APISERVER_IMAGE?=gcr.io/tigera-dev/calico/k8sapiserver
 
 STARTUP_DIR=$(NODE_CONTAINER_DIR)/startup
 STARTUP_FILES=$(shell find $(STARTUP_DIR) -name '*.go')
@@ -639,7 +644,7 @@ release-archive: $(RELEASE_DIR).tgz
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR_IMAGES) $(RELEASE_DIR_BIN) $(RELEASE_DIR)/README
 	tar -czvf $(RELEASE_DIR).tgz $(RELEASE_DIR)/*
 
-$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/calico-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar
+$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/calico-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar $(RELEASE_DIR_IMAGES)/calico-k8sapiserver.tar
 $(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64 $(RELEASE_DIR_BIN)/calicoq
 
 $(RELEASE_DIR)/README:
@@ -651,6 +656,7 @@ $(RELEASE_DIR)/README:
 	@echo "* The calico/typha docker image  (version $(TYPHA_VER))" >> $@
 	@echo "* The calico/cni docker image  (version $(CNI_VER))" >> $@
 	@echo "* The calico/kube-controllers docker image (version $(KUBE_CONTROLLERS_VER))" >> $@
+	@echo "* The calico/k8sapiserver docker image (version $(APISERVER_VER))" >> $@
 	@echo "" >> $@
 	@echo "Binaries (for amd64) (under 'bin')" >> $@
 	@echo "* The calicoctl binary (for Linux) (version $(CALICOCTL_VER))" >> $@
@@ -695,6 +701,14 @@ $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
 	docker pull calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
 	docker save --output $@ calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
+
+$(RELEASE_DIR_IMAGES)/calico-k8sapiserver.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	if [ "$(docker images -q $$(APISERVER_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(APISERVER_IMAGE):$(APISERVER_VER); \
+	  docker tag $(APISERVER_IMAGE):$(APISERVER_VER) $(APISERVER_CONTAINER_NAME); \
+	fi;
+	docker save --output $@ calico/k8sapiserver:$(APISERVER_VER)
 
 $(RELEASE_DIR_BIN)/%:
 	mkdir -p $(RELEASE_DIR_BIN)
