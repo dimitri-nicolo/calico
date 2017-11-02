@@ -2,7 +2,7 @@
 title: Tigera Essentials Toolkit Hosted Install
 ---
 
-> **Note**: These instructions do not apply to OpenShift users. Instead, see 
+> **Note**: These instructions do not apply to OpenShift users. Instead, see
 > [Installing Essentials for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
 {: .alert .alert-info}
 
@@ -19,9 +19,11 @@ with the proper flags.
 
 ## Installation
 
-To install Tigera Essentials Toolkit, run the following commands.
+To install Tigera Essentials Toolkit that is configured to use a etcd cluster,
+run the following commands.
 
-- Setup etcd: [calico-etcd.yaml](1.6/calico-etcd.yaml)
+- Setup etcd: [calico-etcd.yaml](1.6/calico-etcd.yaml). Users who have deployed
+  their own etcd cluster can skip this step.
 
 ```
 kubectl apply -f calico-etcd.yaml
@@ -31,8 +33,20 @@ kubectl apply -f calico-etcd.yaml
   [these instructions](#customizing-the-manifests) and then run the command below
   to install/configure calico.
 
+> **Note**: If you are using your own etcd cluster, make sure you configure the
+> provided ConfigMap with the location of your etcd cluster before proceeding.
+{: .alert .alert-info}
+
 ```
 kubectl apply -f calico-essentials.yaml
+```
+
+- Edit [calico-k8sapiserver.yaml](1.6/calico-k8sapiserver.yaml) by following
+  [these instructions](#enabling-tls-verification-for-a-kubernetes-extension-api-server)
+  and then run the command below to install a Kubernetes extension API server.
+
+```
+$ kubectl apply -f calico-k8sapiserver.yaml
 ```
 
 - Configure calico-monitoring namespace and deploy Prometheus Operator by
@@ -53,14 +67,6 @@ $ kubectl get thirdpartyresources
 
 ```
 $ kubectl apply -f monitor-calico.yaml
-```
-
-- Edit [calico-k8sapiserver.yaml](1.6/calico-k8sapiserver.yaml) by following
-  [these instructions](#enabling-tls-verification-for-a-kubernetes-extension-api-server)
-  and then run the command below to install a Kubernetes extension API server.
-
-```
-$ kubectl apply -f calico-k8sapiserver.yaml
 ```
 
 ### Customizing the manifests
@@ -133,21 +139,21 @@ spec:
   template:
     metadata:
       labels:
-	operator: prometheus
+        operator: prometheus
     spec:
       nodeSelector:
-	cloud.google.com/gke-nodepool: infrastructure
+        cloud.google.com/gke-nodepool: infrastructure
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator
-	image: quay.io/coreos/prometheus-operator:v0.8.1
-	resources:
-	  requests:
-	    cpu: 100m
-	    memory: 50Mi
-	  limits:
-	    cpu: 200m
-	    memory: 100Mi
+        image: quay.io/coreos/prometheus-operator:v0.8.1
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 100Mi
 ```
 
 #### Enabling TLS Verification for a Kubernetes extension API Server
