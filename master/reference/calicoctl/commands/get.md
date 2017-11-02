@@ -8,7 +8,7 @@ Read the [calicoctl command line interface user reference]({{site.baseurl}}/{{pa
 for a full list of calicoctl commands.
 
 > **Note**: The available actions for a specific resource type may be 
-> limited based on the datastore used for Calico (etcdv2 / Kubernetes API). 
+> limited based on the datastore used for Calico (etcdv3 / Kubernetes API). 
 > Please refer to the 
 > [Resources section]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/)
 > for details about each resource type.
@@ -22,10 +22,9 @@ command.
 
 ```
 Usage:
-  calicoctl get ([--scope=<SCOPE>] [--node=<NODE>] [--orchestrator=<ORCH>]
-                 [--workload=<WORKLOAD>] [--tier=<TIER>] (<KIND> [<NAME>]) |
+  calicoctl get ( (<KIND> [<NAME>]) |
                 --filename=<FILENAME>)
-                [--output=<OUTPUT>] [--config=<CONFIG>]
+                [--output=<OUTPUT>] [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces]
 
 Examples:
   # List all policy in default output format.
@@ -41,20 +40,14 @@ Options:
   -o --output=<OUTPUT FORMAT>  Output format.  One of: yaml, json, ps, wide,
                                custom-columns=..., go-template=...,
                                go-template-file=...   [Default: ps]
-  -n --node=<NODE>             The node (this may be the hostname of the
-                               compute server if your installation does not
-                               explicitly set the names of each Calico node).
-     --orchestrator=<ORCH>     The orchestrator (valid for workload endpoints).
-     --workload=<WORKLOAD>     The workload (valid for workload endpoints).
-     --scope=<SCOPE>           The scope of the resource type.  One of global,
-                               node.  This is only valid for BGP peers and is
-                               used to indicate whether the peer is a global
-                               peer or node-specific.
-     --tier=<TIER>             The policy tier.  This is only valid for Policy
-                               resources.
   -c --config=<CONFIG>         Path to the file containing connection
                                configuration in YAML or JSON format.
                                [default: /etc/calico/calicoctl.cfg]
+  -n --namespace=<NS>          Namespace of the resource.
+                               Only applicable to NetworkPolicy and WorkloadEndpoint.
+                               Uses the default namespace if not specified.
+  -a --all-namespaces          If present, list the requested object(s) across 
+                               all namespaces.
 
 Description:
   The get command is used to display a set of resources by filename or stdin,
@@ -63,14 +56,18 @@ Description:
 
   Valid resource types are:
 
-    * node
+
+    * bgpConfiguration
     * bgpPeer
+    * felixConfiguration
+    * globalNetworkPolicy
     * hostEndpoint
-    * workloadEndpoint
     * ipPool
     * tier
-    * policy
+    * networkPolicy
+    * node
     * profile
+    * workloadEndpoint
 
   The resource type is case insensitive and may be pluralized.
 
@@ -115,15 +112,11 @@ Description:
 -o --output=<OUTPUT FORMAT>  Output format.  One of: yaml, json, ps, wide,
                              custom-columns=..., go-template=...,
                              go-template-file=...   [Default: ps]
--n --node=<NODE>             The node (this may be the hostname of the
-                             compute server if your installation does not
-                             explicitly set the names of each Calico node).
-   --orchestrator=<ORCH>     The orchestrator (valid for workload endpoints).
-   --workload=<WORKLOAD>     The workload (valid for workload endpoints).
-   --scope=<SCOPE>           The scope of the resource type.  One of global,
-                             node.  This is only valid for BGP peers and is
-                             used to indicate whether the peer is a global
-                             peer or node-specific.
+-n --namespace=<NS>          Namespace of the resource.
+                             Only applicable to NetworkPolicy and WorkloadEndpoint.
+                             Uses the default namespace if not specified.
+-a --all-namespaces          If present, list the requested object(s) across 
+                             all namespaces.
 ```
 
 ### General options
@@ -147,9 +140,9 @@ columns, and `custom-columns` for selecting which columns to display.
 Example
 ```
 $ calicoctl get hostEndpoint
-HOSTNAME   NAME        
-host1      endpoint1   
-myhost     eth0        
+NAME          NODE       
+endpoint1     host1
+myhost-eth0   myhost
 ```
 
 #### `wide`
@@ -161,9 +154,9 @@ The headings displayed for each resource type is fixed.  See `custom-columns` fo
 Example
 ```
 $ calicoctl get hostEndpoint --output=wide
-HOSTNAME   NAME        INTERFACE   IPS                PROFILES      
-host1      endpoint1               1.2.3.4,0:bb::aa   prof1,prof2   
-myhost     eth0                                       profile1      
+NAME           NODE     INTERFACE   IPS                PROFILES
+endpoint1      host1                1.2.3.4,0:bb::aa   prof1,prof2
+myhost-eth0    myhost                                  profile1
 ```
 
 #### `custom-columns`
@@ -175,42 +168,41 @@ resource type is documented in the [Resources]({{site.baseurl}}/{{page.version}}
 Example
 ```
 $ calicoctl get hostEndpoint --output=custom-columns=NAME,IPS
-NAME        IPS                
-endpoint1   1.2.3.4,0:bb::aa   
-eth0                           
+NAME        IPS
+endpoint1   1.2.3.4,0:bb::aa
+myhost-eth0                           
 ```
 
 #### `yaml / json`
 
 The `yaml` and `json` options display the output as a list of YAML documents or JSON dictionaries.  The fields for
-resource type are documented in the [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) guide, or alternatively view the structure
-definitions (implemented in golang) in the [libcalic API](https://github.com/projectcalico/libcalico-go/tree/master/lib/api).
+resource type are documented in the [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) guide.
 
 The output from either of these formats may be used as input for all of the resource management commands.
 
 Example
 ```
 $ calicoctl get hostEndpoint --output=yaml
-- apiVersion: v1
-  kind: hostEndpoint
+- apiVersion: projectcalico.org/v2
+  kind: HostEndpoint
   metadata:
-    hostname: host1
     labels:
       type: database
     name: endpoint1
   spec:
+    node: host1
     expectedIPs:
     - 1.2.3.4
     - 0:bb::aa
     profiles:
     - prof1
     - prof2
-- apiVersion: v1
-  kind: hostEndpoint
+- apiVersion: projectcalico.org/v2
+  kind: HostEndpoint
   metadata:
-    hostname: myhost
-    name: eth0
+    name: myhost-eth0
   spec:
+    node: myhost
     profiles:
     - profile1
 ```
@@ -237,6 +229,6 @@ endpoint1,eth0,
 
 -  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
--  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for details on the Calico selector-based policy model
+-  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the Calico selector-based policy model
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup) for details on configuring `calicoctl` to access
    the Calico datastore.
