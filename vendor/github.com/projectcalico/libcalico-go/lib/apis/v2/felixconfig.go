@@ -180,6 +180,14 @@ type FelixConfigurationSpec struct {
 	// server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]
 	UsageReportingEnabled *bool `json:"usageReportingEnabled,omitempty"`
 
+	// Felix Denied Packet Metrics configuration parameters.
+	PrometheusReporterEnabled   *bool  `json:"prometheusReporterEnabled,omitempty"`
+	PrometheusReporterPort      *int   `json:"prometheusReporterPort,omitempty"`
+	PrometheusReporterCertFile  string `json:"prometheusReporterCertFile,omitempty"`
+	PrometheusReporterKeyFile   string `json:"prometheusReporterKeyFile,omitempty"`
+	PrometheusReporterCAFile    string `json:"prometheusReporterCAFile,omitempty"`
+	DeletedMetricsRetentionSecs *int   `json:"deletedMetricsRetentionSecs,omitempty"`
+
 	DebugMemoryProfilePath              string `json:"debugMemoryProfilePath,omitempty"`
 	DebugDisableLogDropping             *bool  `json:"debugDisableLogDropping,omitempty"`
 	DebugSimulateCalcGraphHangAfterSecs *int   `json:"debugSimulateCalcGraphHangAfterSecs,omitempty" confignamev1:"DebugSimulateCalcGraphHangAfter"`
