@@ -2,38 +2,38 @@ endpoint host1 -r
 
 Policies and profiles for endpoints matching "host1":
 
-Workload endpoint k8s/g1w1/eth0
+Workload endpoint k8s/group1.g1w1/eth0
   Policies:
-    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+    Policy "group1/p1" (order 500; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'")
   Profiles:
     Profile "group1"
 
-Workload endpoint k8s/g1w2/eth0
+Workload endpoint k8s/group1.g1w2/eth0
   Policies:
-    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+    Policy "group1/p1" (order 500; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'")
   Profiles:
     Profile "group1"
 
-Workload endpoint k8s/g1w3/eth0
+Workload endpoint k8s/group1.g1w3/eth0
   Policies:
-    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+    Policy "group1/p1" (order 500; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'")
   Profiles:
     Profile "group1"
 
-Workload endpoint k8s/g2w1/eth0
+Workload endpoint k8s/group2.g2w1/eth0
   Policies:
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "calico/k8s_ns == 'group2'")
+    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
   Profiles:
     Profile "group2"
 
-Workload endpoint k8s/g2w2/eth0
+Workload endpoint k8s/group2.g2w2/eth0
   Policies:
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "calico/k8s_ns == 'group2'")
+    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
   Profiles:
     Profile "group2"
 
-Workload endpoint k8s/g2w3/eth0
+Workload endpoint k8s/group2.g2w3/eth0
   Policies:
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "calico/k8s_ns == 'group2'")
+    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
   Profiles:
     Profile "group2"

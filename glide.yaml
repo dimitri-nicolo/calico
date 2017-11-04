@@ -8,6 +8,7 @@ import:
 - package: github.com/projectcalico/libcalico-go
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
+  version: df60adf40f7cd24a065390f2e5867f9d11e081b1
 - package: github.com/projectcalico/go-yaml-wrapper
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
