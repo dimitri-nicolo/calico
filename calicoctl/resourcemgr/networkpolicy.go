@@ -28,13 +28,14 @@ func init() {
 		api.NewNetworkPolicyList(),
 		true,
 		[]string{"networkpolicy", "networkpolicies", "policy", "np", "policies", "pol", "pols"},
-		[]string{"NAME"},
-		[]string{"NAME", "ORDER", "SELECTOR", "NAMESPACE"},
+		[]string{"NAME", "TIER"},
+		[]string{"NAME", "TIER", "ORDER", "SELECTOR", "NAMESPACE"},
 		map[string]string{
 			"NAME":      "{{.ObjectMeta.Name}}",
 			"NAMESPACE": "{{.ObjectMeta.Namespace}}",
 			"ORDER":     "{{.Spec.Order}}",
 			"SELECTOR":  "{{.Spec.Selector}}",
+			"TIER":      "{{.Spec.Tier}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.NetworkPolicy)

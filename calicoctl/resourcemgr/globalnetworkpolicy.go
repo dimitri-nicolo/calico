@@ -28,12 +28,13 @@ func init() {
 		api.NewGlobalNetworkPolicyList(),
 		false,
 		[]string{"globalnetworkpolicy", "globalnetworkpolicies", "gnp", "gnps"},
-		[]string{"NAME"},
-		[]string{"NAME", "ORDER", "SELECTOR"},
+		[]string{"NAME", "TIER"},
+		[]string{"NAME", "TIER", "ORDER", "SELECTOR"},
 		map[string]string{
 			"NAME":     "{{.ObjectMeta.Name}}",
 			"ORDER":    "{{.Spec.Order}}",
 			"SELECTOR": "{{.Spec.Selector}}",
+			"TIER":     "{{.Spec.Tier}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.GlobalNetworkPolicy)
