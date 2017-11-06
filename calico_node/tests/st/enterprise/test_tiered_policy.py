@@ -92,41 +92,41 @@ def curl_etcd(ip, path, options=None, recursive=True):
     return json.loads(rc.strip())
 
 
-policy_next_all = {
-    "apiVersion": "v1",
-    "kind": "policy",
-    "metadata": {"name": "policy_next_all"},
+gnp_next_all = {
+    "apiVersion": "projectcalico.org/v2",
+    "kind": "GlobalNetworkPolicy",
+    "metadata": {"name": "gnp_next_all"},
     "spec": {
         "order": 10,
-        "ingress": [{"action": "pass"}],
-        "egress": [{"action": "pass"}]
+        "ingress": [{"action": "Pass"}],
+        "egress": [{"action": "Pass"}]
     }
 }
 
-policy_allow_all = {
-    "apiVersion": "v1",
-    "kind": "policy",
-    "metadata": {"name": "policy_allow_all"},
+gnp_allow_all = {
+    "apiVersion": "projectcalico.org/v2",
+    "kind": "GlobalNetworkPolicy",
+    "metadata": {"name": "gnp_allow_all"},
     "spec": {
         "order": 10,
-        "ingress": [{"action": "allow"}],
-        "egress": [{"action": "allow"}]
+        "ingress": [{"action": "Allow"}],
+        "egress": [{"action": "Allow"}]
     }
 }
 
-policy_deny_all = {
-    "apiVersion": "v1",
-    "kind": "policy",
-    "metadata": {"name": "policy_deny_all"},
+gnp_deny_all = {
+    "apiVersion": "projectcalico.org/v2",
+    "kind": "GlobalNetworkPolicy",
+    "metadata": {"name": "gnp_deny_all"},
     "spec": {
         "order": 10,
-        "ingress": [{"action": "deny"}],
-        "egress": [{"action": "deny"}]}
+        "ingress": [{"action": "Deny"}],
+        "egress": [{"action": "Deny"}]}
 }
-policy_none_all = {
-    "apiVersion": "v1",
-    "kind": "policy",
-    "metadata": {"name": "policy_none_all"},
+gnp_none_all = {
+    "apiVersion": "projectcalico.org/v2",
+    "kind": "GlobalNetworkPolicy",
+    "metadata": {"name": "gnp_none_all"},
     "spec": {
         "selector": "all()",
         "order": 10,
@@ -139,7 +139,7 @@ class TieredPolicyWorkloads(TestBase):
     def setUp(self):
         _log.debug("Override the TestBase setUp() method which wipes etcd. Do nothing.")
         # Wipe policies and tiers before each test
-        self.delete_all("pol")
+        self.delete_all("gnp")
         self.delete_all("tier")
 
     def delete_all(self, resource):
@@ -147,7 +147,11 @@ class TieredPolicyWorkloads(TestBase):
         objects = yaml.load(self.hosts[0].calicoctl("get %s -o yaml" % resource))
         # and delete them (if there are any)
         if len(objects) > 0:
-            self._delete_data(objects, self.hosts[0])
+            _log.info("objects: %s", objects)
+            if 'items' in objects and len(objects['items']) == 0:
+                pass
+            else:
+                self._delete_data(objects, self.hosts[0])
 
     @staticmethod
     def sleep(length):
@@ -223,8 +227,8 @@ class TieredPolicyWorkloads(TestBase):
                    name, order)
         if name is None:
             name = self.policy_tier_name
-        tier = {"apiVersion": "v1",
-                "kind": "tier",
+        tier = {"apiVersion": "projectcalico.org/v2",
+                "kind": "Tier",
                 "metadata": {"name": name},
                 "spec": {"order": order}
                 }
@@ -249,45 +253,45 @@ class TieredPolicyWorkloads(TestBase):
         self.set_tier(name=third_tier, order=third_tier_order)
 
         # Slip a deny into the third tier, just to alternate DENY/ALLOW.
-        self.set_policy(third_tier, "pol-1", policy_deny_all)
+        self.set_policy(third_tier, "pol-1", gnp_deny_all)
         # Check that access is blocked.
         self.assert_no_connectivity(self.n1_workloads)
 
         # Allow in first tier only, should allow.
         _log.info("Allow in first tier only, should allow.")
-        self.set_policy(first_tier, "pol-1", policy_allow_all)
-        self.set_policy(second_tier, "pol-1", policy_deny_all)
-        self.set_policy(third_tier, "pol-1", policy_deny_all)
+        self.set_policy(first_tier, "pol-1", gnp_allow_all)
+        self.set_policy(second_tier, "pol-1", gnp_deny_all)
+        self.set_policy(third_tier, "pol-1", gnp_deny_all)
         self.assert_connectivity(self.n1_workloads)
 
         # Deny in all tiers, should drop.
         _log.info("Deny in all tiers, should drop.")
         # Fix up second tier
-        self.set_policy(second_tier, "pol-1", policy_deny_all)
-        self.set_policy(first_tier, "pol-1", policy_deny_all)
+        self.set_policy(second_tier, "pol-1", gnp_deny_all)
+        self.set_policy(first_tier, "pol-1", gnp_deny_all)
         self.assert_no_connectivity(self.n1_workloads)
 
         # Allow in first tier, should allow.
-        self.set_policy(first_tier, "pol-1", policy_allow_all)
+        self.set_policy(first_tier, "pol-1", gnp_allow_all)
         self.assert_connectivity(self.n1_workloads)
 
         # Switch, now the first tier drops but the later ones allow.
         _log.info("Switch, now the first tier drops but the later ones "
                   "allow.")
-        self.set_policy(first_tier, "pol-1", policy_deny_all)
-        self.set_policy(second_tier, "pol-1", policy_allow_all)
-        self.set_policy(third_tier, "pol-1", policy_allow_all)
+        self.set_policy(first_tier, "pol-1", gnp_deny_all)
+        self.set_policy(second_tier, "pol-1", gnp_allow_all)
+        self.set_policy(third_tier, "pol-1", gnp_allow_all)
         self.assert_no_connectivity(self.n1_workloads)
 
         # Fall through via a next-tier policy in the first tier.
         _log.info("Fall through via a next-tier policy in the first "
                   "tier.")
-        self.set_policy(first_tier, "pol-1", policy_next_all)
+        self.set_policy(first_tier, "pol-1", gnp_next_all)
         self.assert_connectivity(self.n1_workloads)
 
         # Swap the second tier for a drop.
         _log.info("Swap the second tier for a drop.")
-        self.set_policy(second_tier, "pol-1", policy_deny_all)
+        self.set_policy(second_tier, "pol-1", gnp_deny_all)
         self.assert_no_connectivity(self.n1_workloads)
 
     def _apply_data(self, data, host):
@@ -301,9 +305,9 @@ class TieredPolicyWorkloads(TestBase):
     @staticmethod
     def _use_calicoctl(action, data, host):
         # use calicoctl with data
-        host.writefile("new_profile",
+        host.writefile("new_data",
                        yaml.dump(data, default_flow_style=False))
-        host.calicoctl("%s -f new_profile" % action)
+        host.calicoctl("%s -f new_data" % action)
 
     def set_policy(self, tier, policy_name, data, order=None):
         data = copy.deepcopy(data)
@@ -314,12 +318,19 @@ class TieredPolicyWorkloads(TestBase):
             for dirn in ["ingress", "egress"]:
                 if dirn in data:
                     def f(rule):
-                        return rule != {"action": "pass"}
+                        return rule != {"action": "Pass"}
                     data[dirn] = filter(f, data[dirn])
 
         data["metadata"]["name"] = policy_name
         if tier != "default":
-            data["metadata"]["tier"] = tier
+            data["spec"]["tier"] = tier
+            data["metadata"]["name"] = "{tier}.{policy}".format(tier=tier,
+                                                                policy=data["metadata"]["name"])
+        elif tier == "default":
+            # TODO(doublek): This elif can be removed when proper tier
+            # validation has been added.
+            data["spec"]["tier"] = "default"
+            data["metadata"]["name"] = "default.{policy}".format(policy=data["metadata"]["name"])
 
         self._apply_data(data, self.hosts[0])
 
@@ -336,11 +347,23 @@ class TieredPolicyWorkloads(TestBase):
             self.assert_connectivity([workload], fail_list=the_rest,
                                      retries=retries, type_list=type_list)
 
+    def add_default_tier(self):
+        # TODO(doublek): This can be removed when proper tier validation
+        # and conversion is added.
+        tier = {
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'Tier',
+            'metadata': {'name': 'default'},
+            'spec': {},
+        }
+        self._apply_data(tier, self.hosts[0])
+
     def test_policy_ordering_explicit(self):
         """Check correct ordering of policies by their explicit order
         field."""
         self.policy_tier_name = "default"
         self.next_tier_allowed = False
+        self.add_default_tier()
         self._do_policy_order_test("pol-c", 1,
                                    "pol-b", 2,
                                    "pol-a", 3)
@@ -349,6 +372,7 @@ class TieredPolicyWorkloads(TestBase):
         """Check correct ordering of policies by name as tie-breaker."""
         self.policy_tier_name = "default"
         self.next_tier_allowed = False
+        self.add_default_tier()
         self._do_policy_order_test("pol-1", 1,
                                    "pol-2", 1,
                                    "pol-3", 1)
@@ -365,223 +389,232 @@ class TieredPolicyWorkloads(TestBase):
         _log.info("Check we start with connectivity.")
         self.assert_connectivity(self.n1_workloads)
         _log.info("Apply a single deny policy")
-        self.set_policy(self.policy_tier_name, first_pol, policy_deny_all,
+        self.set_policy(self.policy_tier_name, first_pol, gnp_deny_all,
                         order=first_pol_order)
         _log.info("Check we now cannot access tcp service")
         self.assert_no_connectivity(self.n1_workloads)
         _log.info("Allow in first tier only, should allow.")
-        self.set_policy(self.policy_tier_name, first_pol, policy_allow_all,
+        self.set_policy(self.policy_tier_name, first_pol, gnp_allow_all,
                         order=first_pol_order)
-        self.set_policy(self.policy_tier_name, second_pol, policy_deny_all,
+        self.set_policy(self.policy_tier_name, second_pol, gnp_deny_all,
                         order=second_pol_order)
-        self.set_policy(self.policy_tier_name, third_pol, policy_deny_all,
+        self.set_policy(self.policy_tier_name, third_pol, gnp_deny_all,
                         order=third_pol_order)
         self.assert_connectivity(self.n1_workloads)
 
         # Fix up second tier
-        self.set_policy(self.policy_tier_name, second_pol, policy_deny_all,
+        self.set_policy(self.policy_tier_name, second_pol, gnp_deny_all,
                         order=second_pol_order)
 
         # Deny in all tiers, should drop.
         _log.info("Deny in all tiers, should drop.")
-        self.set_policy(self.policy_tier_name, first_pol, policy_deny_all,
+        self.set_policy(self.policy_tier_name, first_pol, gnp_deny_all,
                         order=first_pol_order)
         self.assert_no_connectivity(self.n1_workloads)
 
         # Allow in first tier, should allow.
         _log.info("Allow in first tier, should allow.")
-        self.set_policy(self.policy_tier_name, first_pol, policy_allow_all,
+        self.set_policy(self.policy_tier_name, first_pol, gnp_allow_all,
                         order=first_pol_order)
         self.assert_connectivity(self.n1_workloads)
 
         # Switch, now the first policy drops but the later ones allow.
         _log.info("Switch, now the first tier drops but the later ones "
                   "allow.")
-        self.set_policy(self.policy_tier_name, first_pol, policy_deny_all,
+        self.set_policy(self.policy_tier_name, first_pol, gnp_deny_all,
                         order=first_pol_order)
-        self.set_policy(self.policy_tier_name, second_pol, policy_allow_all,
+        self.set_policy(self.policy_tier_name, second_pol, gnp_allow_all,
                         order=second_pol_order)
-        self.set_policy(self.policy_tier_name, third_pol, policy_allow_all,
+        self.set_policy(self.policy_tier_name, third_pol, gnp_allow_all,
                         order=third_pol_order)
         self.assert_no_connectivity(self.n1_workloads)
 
         # Fall through to second policy.
         _log.info("Fall through to second policy.")
-        self.set_policy(self.policy_tier_name, first_pol, policy_none_all,
+        self.set_policy(self.policy_tier_name, first_pol, gnp_none_all,
                         order=first_pol_order)
         self.assert_connectivity(self.n1_workloads)
 
         # Swap the second tier for a drop.
         _log.info("Swap the second tier for a drop.")
-        self.set_policy(self.policy_tier_name, second_pol,  policy_deny_all,
+        self.set_policy(self.policy_tier_name, second_pol,  gnp_deny_all,
                         order=second_pol_order)
         self.assert_no_connectivity(self.n1_workloads)
 
     @parameterized.expand([
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true1"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true1"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source": {"selector": "test == 'True'"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination": {"selector": "test == 'True'"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "True"},
          True
          ),
 
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true2"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true2"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source": {"selector": "test != 'True'"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination": {"selector": "test != 'True'"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "False"},
          False
          ),
 
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true3"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true3"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source": {"selector": "has(test)"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination": {"selector": "has(test)"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "any_old_value"},
          True
          ),
 
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true4"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true4"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source": {"selector": "!has(test)"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination": {"selector": "!has(test)"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "no_one_cares"},
          False
          ),
 
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true5"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true5"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source": {"selector": "test in {'true', 'false'}"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination": {"selector": "test in {'true', 'false'}"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "true"},
          True
          ),
 
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true6"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true6"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source": {"selector": "test in {'true', 'false'}"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination": {"selector": "test in {'true', 'false'}"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "false"},
          True
          ),
 
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true7"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true7"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source": {"selector": "test not in {'true', 'false'}"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination": {"selector": "test not in {'true', 'false'}"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "neither"},
          False
          ),
 
-        ([{"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true8a"},
+        ([{"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true8a"},
            "spec":
                {
+                   "tier": "default",
                    "selector": "test == 'true'",
                    "ingress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ],
                    "egress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ]
                }
            },
-          {"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true8b"},
+          {"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true8b"},
            "spec":
                {
+                   "tier": "default",
                    "ingress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ],
                    "egress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ]
                }
            }
@@ -590,30 +623,32 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ([{"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true9a"},
+        ([{"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true9a"},
            "spec":
                {
+                   "tier": "default",
                    "selector": "test != 'true'",
                    "ingress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ],
                    "egress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ]
                }
            },
-          {"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true9b"},
+          {"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true9b"},
            "spec":
                {
+                   "tier": "default",
                    "ingress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ],
                    "egress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ]
                }
            }
@@ -622,30 +657,32 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ([{"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true10a"},
+        ([{"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true10a"},
            "spec":
                {
+                   "tier": "default",
                    "selector": "has(test)",
                    "ingress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ],
                    "egress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ]
                }
            },
-          {"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true10b"},
+          {"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true10b"},
            "spec":
                {
+                   "tier": "default",
                    "ingress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ],
                    "egress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ]
                }
            }
@@ -654,30 +691,32 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ([{"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true11a"},
+        ([{"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true11a"},
            "spec":
                {
+                   "tier": "default",
                    "selector": "!has(test)",
                    "ingress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ],
                    "egress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ]
                }
            },
-          {"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true11b"},
+          {"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true11b"},
            "spec":
                {
+                   "tier": "default",
                    "ingress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ],
                    "egress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ]
                }
            }
@@ -686,30 +725,32 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ([{"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true12a"},
+        ([{"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true12a"},
            "spec":
                {
+                   "tier": "default",
                    "selector": "test in {'true', 'false'}",
                    "ingress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ],
                    "egress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ]
                }
            },
-          {"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true12b"},
+          {"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true12b"},
            "spec":
                {
+                   "tier": "default",
                    "ingress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ],
                    "egress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ]
                }
            }
@@ -718,30 +759,32 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ([{"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true13a"},
+        ([{"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true13a"},
            "spec":
                {
+                   "tier": "default",
                    "selector": "test in {'true', 'false'}",
                    "ingress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ],
                    "egress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ]
                }
            },
-          {"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true13b"},
+          {"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true13b"},
            "spec":
                {
+                   "tier": "default",
                    "ingress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ],
                    "egress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ]
                }
            }
@@ -750,30 +793,32 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ([{"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true14a"},
+        ([{"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true14a"},
            "spec":
                {
+                   "tier": "default",
                    "selector": "test not in {'true', 'false'}",
                    "ingress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ],
                    "egress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ]
                }
            },
-          {"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true14b"},
+          {"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true14b"},
            "spec":
                {
+                   "tier": "default",
                    "ingress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ],
                    "egress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ]
                }
            }
@@ -782,30 +827,32 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ([{"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true15a"},
+        ([{"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true15a"},
            "spec":
                {
+                   "tier": "default",
                    "selector": "has(test) && test in {'true', 'false'} && test == 'true'",
                    "ingress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ],
                    "egress": [
-                       {"action": "deny"},
+                       {"action": "Deny"},
                    ]
                }
            },
-          {"apiVersion": "v1",
-           "kind": "policy",
-           "metadata": {"name": "deny-test-true15b"},
+          {"apiVersion": "projectcalico.org/v2",
+           "kind": "GlobalNetworkPolicy",
+           "metadata": {"name": "default.deny-test-true15b"},
            "spec":
                {
+                   "tier": "default",
                    "ingress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ],
                    "egress": [
-                       {"action": "allow"},
+                       {"action": "Allow"},
                    ]
                }
            }
@@ -814,46 +861,48 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true16"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true16"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source":
                       {"selector": "has(test) && test in {'True', 'False'} && test == 'True'"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination":
                        {"selector": "has(test) && test in {'True', 'False'} && test == 'True'"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "True"},
          True
          ),
 
-        ({"apiVersion": "v1",
-          "kind": "policy",
-          "metadata": {"name": "deny-test-true17"},
+        ({"apiVersion": "projectcalico.org/v2",
+          "kind": "GlobalNetworkPolicy",
+          "metadata": {"name": "default.deny-test-true17"},
           "spec": {
+              "tier": "default",
               "ingress": [{
-                  "action": "deny",
+                  "action": "Deny",
                   "source":
                       {"selector":
                            "has(test) && test not in {'True', 'False'} && test == 'Sausage'"},
               },
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ],
               "egress": [
-                  {"action": "deny",
+                  {"action": "Deny",
                    "destination":
                        {"selector":
                             "has(test) && test not in {'True', 'False'} && test == 'Sausage'"}},
-                  {"action": "allow"}
+                  {"action": "Allow"}
               ]},
           },
          {"test": "Sausage"},
@@ -869,21 +918,34 @@ class TieredPolicyWorkloads(TestBase):
         the workloads do not have the label.
         :return:
         """
+        self.add_default_tier()
         # set workload config
         host = self.hosts[0]
-        weps = yaml.load(host.calicoctl("get wep -o yaml"))
-        wep_old = weps[0]
+        weps = yaml.safe_load(host.calicoctl("get wep -o yaml"))
+        _log.info("n1_workloads 0 %s", self.n1_workloads[0].__dict__)
+        _log.info("n1_workloads 1 %s", self.n1_workloads[1].__dict__)
+        wep_old = weps['items'][0]
+        #for w in weps['items']:
+        #    if w['spec']['ipNetworks'][0] == self.n1_workloads[1].ip + '/32':
+        #        _log.info("Set wep_old to %s", w)
+        #        wep_old = w
         wep = copy.deepcopy(wep_old)
+        _log.info("Set new label %s", workload_label)
         wep['metadata']['labels'] = workload_label
         self._apply_data(wep, host)
+        updated_weps = yaml.safe_load(host.calicoctl("get workloadEndpoint -o yaml"))
         # check connectivity OK
         self.assert_connectivity(self.n1_workloads)
         # set up policy
+        _log.info("Set up policy %s", policy)
         self._apply_data(policy, host)
         # check connectivity not OK
         self.assert_no_connectivity(self.n1_workloads)
         # Restore workload config (i.e. remove the label)
+        wep_old['metadata']['resourceVersion'] = updated_weps['items'][0]['metadata']['resourceVersion']
+        _log.info("Restore workload config %s", wep_old)
         self._apply_data(wep_old, host)
+        updated_weps = yaml.safe_load(host.calicoctl("get workloadEndpoint -o yaml"))
         if no_label_expected_result:
             # check connectivity OK again
             self.assert_connectivity(self.n1_workloads)

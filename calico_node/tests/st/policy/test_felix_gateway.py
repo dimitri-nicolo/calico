@@ -217,7 +217,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'host-out',
+                'name': 'default.host-out',
             },
             'spec': {
                 'order': 100,
@@ -260,7 +260,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'empty-forward',
+                'name': 'default.empty-forward',
             },
             'spec': {
                 'order': 500,
@@ -521,7 +521,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'workload-ingress',
+                'name': 'default.workload-ingress',
             },
             'spec': {
                 'order': order,
@@ -544,7 +544,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'workload-egress',
+                'name': 'default.workload-egress',
             },
             'spec': {
                 'order': order,
@@ -568,7 +568,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'prednat',
+                'name': 'default.prednat',
             },
             'spec': {
                 'order': order,
@@ -589,14 +589,14 @@ class TestFelixOnGateway(TestBase):
         })
 
     def del_prednat_ingress(self):
-        self.delete_all("globalnetworkpolicy prednat")
+        self.delete_all("globalnetworkpolicy default.prednat")
 
     def add_untrack_gw_int(self, order, action):
         self.add_policy({
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'untrack-ingress',
+                'name': 'default.untrack-ingress',
             },
             'spec': {
                 'order': order,
@@ -625,14 +625,14 @@ class TestFelixOnGateway(TestBase):
         })
 
     def del_untrack_gw_int(self):
-        self.delete_all("globalnetworkpolicy untrack-ingress")
+        self.delete_all("globalnetworkpolicy default.untrack-ingress")
 
     def add_untrack_gw_ext(self, order, action):
         self.add_policy({
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'untrack-egress',
+                'name': 'default.untrack-egress',
             },
             'spec': {
                 'order': order,
@@ -663,14 +663,14 @@ class TestFelixOnGateway(TestBase):
         })
 
     def del_untrack_gw_ext(self):
-        self.delete_all("globalnetworkpolicy untrack-egress")
+        self.delete_all("globalnetworkpolicy default.untrack-egress")
 
     def add_ingress_policy(self, order, action, forward):
         self.add_policy({
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'port80-int-%s' % str(forward).lower(),
+                'name': 'default.port80-int-%s' % str(forward).lower(),
             },
             'spec': {
                 'order': order,
@@ -694,7 +694,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'GlobalNetworkPolicy',
             'metadata': {
-                'name': 'port80-ext-%s' % str(forward).lower(),
+                'name': 'default.port80-ext-%s' % str(forward).lower(),
              },
             'spec': {
                 'order': order,
@@ -722,7 +722,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'HostEndpoint',
             'metadata': {
-                'name': 'gw-int',
+                'name': 'default.gw-int',
                 'labels': {'nodeEth': 'gateway-int'}
             },
             'spec': {
@@ -737,7 +737,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'HostEndpoint',
             'metadata': {
-                'name': 'gw-ext',
+                'name': 'default.gw-ext',
                 'labels': {'nodeEth': 'gateway-ext'}
             },
             'spec': {
@@ -752,7 +752,7 @@ class TestFelixOnGateway(TestBase):
             'apiVersion': 'projectcalico.org/v3',
             'kind': 'HostEndpoint',
             'metadata': {
-                'name': 'host-int',
+                'name': 'default.host-int',
                 'labels': {'nodeEth': 'host'}
             },
             'spec': {

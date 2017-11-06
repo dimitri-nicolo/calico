@@ -1,4 +1,4 @@
-# Copyright 2016 Tigera, Inc
+# Copyright 2016-2017 Tigera, Inc
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ class TestFelixOnGateway(TestBase):
     def setUp(self):
         _log.debug("Override the TestBase setUp() method which wipes etcd. Do nothing.")
         # Wipe policies and tiers before each test
-        self.delete_all("pol")
+        self.delete_all("globalnetworkpolicy")
         self.delete_all("tier")
         self.delete_all("hostEndpoint")
 
@@ -62,7 +62,7 @@ class TestFelixOnGateway(TestBase):
 
     def tearDown(self):
         # Wipe policies and tiers after each test
-        self.delete_all("pol")
+        self.delete_all("globalnetworkpolicy")
         self.delete_all("tier")
         self.delete_all("hostEndpoint")
         super(TestFelixOnGateway, self).tearDown()
@@ -72,7 +72,11 @@ class TestFelixOnGateway(TestBase):
         objects = yaml.load(self.hosts[0].calicoctl("get %s -o yaml" % resource))
         # and delete them (if there are any)
         if len(objects) > 0:
-            self._delete_data(objects, self.hosts[0])
+            _log.info("objects: %s", objects)
+            if 'items' in objects and len(objects['items']) == 0:
+                pass
+            else:
+                self._delete_data(objects, self.hosts[0])
 
     def _delete_data(self, data, host):
         _log.debug("Deleting data with calicoctl: %s", data)
@@ -81,9 +85,9 @@ class TestFelixOnGateway(TestBase):
     @staticmethod
     def _use_calicoctl(action, data, host):
         # use calicoctl with data
-        host.writefile("new_profile",
+        host.writefile("new_data",
                        yaml.dump(data, default_flow_style=False))
-        host.calicoctl("%s -f new_profile" % action)
+        host.calicoctl("%s -f new_data" % action)
 
     @staticmethod
     def sleep(length):
@@ -210,21 +214,23 @@ class TestFelixOnGateway(TestBase):
     def test_ingress_policy_can_block_through_traffic(self):
         self.add_admin_tier()
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'port80-int', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.port80-int'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'ingress': [
                     {
                         'protocol': 'tcp',
                         'destination': {'ports': [80]},
-                        'action': 'deny'
+                        'action': 'Deny'
                     },
                 ],
                 'egress': [
-                    {'action': 'deny'},
+                    {'action': 'Deny'},
                 ],
+                'applyOnForward': True,
                 'selector': 'role == "gateway-int"'
             }
         })
@@ -234,10 +240,11 @@ class TestFelixOnGateway(TestBase):
     def test_ingress_policy_can_allow_through_traffic(self):
         self.add_admin_tier()
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'port80-int', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.port80-int'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'ingress': [
                     {
@@ -258,10 +265,11 @@ class TestFelixOnGateway(TestBase):
     def test_egress_policy_can_block_through_traffic(self):
         self.add_admin_tier()
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'port80-ext', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.port80-ext'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'ingress': [
                     {
@@ -275,6 +283,7 @@ class TestFelixOnGateway(TestBase):
                         'action': 'deny'
                     },
                 ],
+                'applyOnForward': True,
                 'selector': 'role == "gateway-ext"'
             }
         })
@@ -284,10 +293,11 @@ class TestFelixOnGateway(TestBase):
     def test_egress_policy_can_allow_through_traffic(self):
         self.add_admin_tier()
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'port80-ext', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.port80-ext'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'ingress': [
                     {
@@ -318,10 +328,11 @@ class TestFelixOnGateway(TestBase):
 
         # Add in the policy...
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'host-out', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.host-out'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'selector': 'role == "host"',
                 'egress': [{'action': 'allow'}],
@@ -329,17 +340,18 @@ class TestFelixOnGateway(TestBase):
             }
         })
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'port80-int', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.port80-int'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'ingress': [
                     {
                         'protocol': 'tcp',
                         'destination': {
                             'ports': [80],
-                            'net': self.ext_server_ip + "/32",
+                            'nets': [self.ext_server_ip + "/32"],
                         },
                         'source': {
                             'selector': 'role == "host"',
@@ -352,10 +364,11 @@ class TestFelixOnGateway(TestBase):
             }
         })
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'port80-ext', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.port80-ext'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'ingress': [],
                 'egress': [
@@ -363,7 +376,7 @@ class TestFelixOnGateway(TestBase):
                         'protocol': 'tcp',
                         'destination': {
                             'ports': [80],
-                            'net': self.ext_server_ip + "/32",
+                            'nets': [self.ext_server_ip + "/32"],
                         },
                         'source': {
                             'selector': 'role == "host"',
@@ -389,10 +402,11 @@ class TestFelixOnGateway(TestBase):
         self.add_gateway_internal_iface()
 
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'port80-int', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.port80-int'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'ingress': [
                     {
@@ -404,10 +418,11 @@ class TestFelixOnGateway(TestBase):
             }
         })
         self.add_policy({
-            'apiVersion': 'v1',
-            'kind': 'policy',
-            'metadata': {'name': 'port80-ext', 'tier': 'admin'},
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'GlobalNetworkPolicy',
+            'metadata': {'name': 'admin.port80-ext'},
             'spec': {
+                'tier': 'admin',
                 'order': 10,
                 'ingress': [],
                 'egress': [
@@ -425,8 +440,8 @@ class TestFelixOnGateway(TestBase):
 
     def add_admin_tier(self):
         tier_data = {
-            'apiVersion': 'v1',
-            'kind': 'tier',
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'Tier',
             'metadata': {'name': 'admin'},
             'spec': {'order': 1}
         }
@@ -434,14 +449,14 @@ class TestFelixOnGateway(TestBase):
 
     def add_gateway_internal_iface(self):
         host_endpoint_data = {
-            'apiVersion': 'v1',
-            'kind': 'hostEndpoint',
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'HostEndpoint',
             'metadata': {
                 'name': 'gw-int',
-                'node': self.gateway_hostname,
                 'labels': {'role': 'gateway-int'}
             },
             'spec': {
+                'node': self.gateway_hostname,
                 'interfaceName': 'eth0'
             }
         }
@@ -449,14 +464,14 @@ class TestFelixOnGateway(TestBase):
 
     def add_gateway_external_iface(self):
         host_endpoint_data = {
-            'apiVersion': 'v1',
-            'kind': 'hostEndpoint',
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'HostEndpoint',
             'metadata': {
                 'name': 'gw-ext',
-                'node': self.gateway_hostname,
                 'labels': {'role': 'gateway-ext'}
             },
             'spec': {
+                'node': self.gateway_hostname,
                 'interfaceName': 'eth1'
             }
         }
@@ -464,14 +479,14 @@ class TestFelixOnGateway(TestBase):
 
     def add_host_iface(self):
         host_endpoint_data = {
-            'apiVersion': 'v1',
-            'kind': 'hostEndpoint',
+            'apiVersion': 'projectcalico.org/v2',
+            'kind': 'HostEndpoint',
             'metadata': {
                 'name': 'host-int',
-                'node': self.host_hostname,
                 'labels': {'role': 'host'}
             },
             'spec': {
+                'node': self.host_hostname,
                 'interfaceName': 'eth0',
                 'expectedIPs': [self.get_container_ip('cali-st-host')],
             }
