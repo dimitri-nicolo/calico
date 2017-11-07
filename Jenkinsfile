@@ -20,6 +20,12 @@ pipeline {
                 }
             }
         }
+        stage('Check Typha pin') {
+            steps {
+                sh "echo 'Check Type pin'"
+                sh "make check-typha-pins"
+            }
+        }
         stage('Build felix') {
             steps {
                 sh "echo 'Build Felix'"
