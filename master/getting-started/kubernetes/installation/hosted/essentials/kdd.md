@@ -1,8 +1,8 @@
 ---
-title: CNX Hosted Install
+title: Tigera CNX Hosted Install
 ---
 
-> **Note**: These instructions do not apply to OpenShift users. Instead, see 
+> **Note**: These instructions do not apply to OpenShift users. Instead, see
 > [Installing {{site.prodname}} for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
 {: .alert .alert-info}
 
@@ -38,32 +38,32 @@ To install {{site.prodname}}, run the following commands.
    kubectl apply -f calico-essentials-kdd.yaml
    ```
 
-1. Configure calico-monitoring namespace and deploy Prometheus Operator by
-  applying the [operator.yaml](1.6/operator.yaml) manifest.
-
-   ```
-   kubectl apply -f operator.yaml
-   ```
-
-1. Wait for third party resources to be created. Check by running:
-
-   ```
-   kubectl get thirdpartyresources
-   ```
-
-1. Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
-  install Prometheus and alertmanager.
-
-   ```
-   kubectl apply -f monitor-calico.yaml
-   ```
-
 1. Edit [calico-k8sapiserver-kdd.yaml](1.6/calico-k8sapiserver-kdd.yaml) by following
   [these instructions](#enabling-tls-verification-for-a-kubernetes-extension-api-server)
   and then run the command below to install a Kubernetes extension API server.
 
    ```
    kubectl apply -f calico-k8sapiserver-kdd.yaml
+   ```
+
+1. Configure calico-monitoring namespace and deploy Prometheus Operator by
+  applying the [operator.yaml](1.7/operator.yaml) manifest.
+
+   ```
+   kubectl apply -f operator.yaml
+   ```
+
+1. Wait for custom resource definitions to be created. Check by running:
+
+   ```
+   kubectl get customresourcedefinitions
+   ```
+
+1. Apply the [monitor-calico.yaml](1.7/monitor-calico.yaml) manifest which will
+  install Prometheus and alertmanager.
+
+   ```
+   kubectl apply -f monitor-calico.yaml
    ```
 
 ### Customizing the manifests
@@ -102,9 +102,9 @@ have the same ports.
 There are 3 places where `nodeSelectors` can be customized. Ensure to update
 these.
 
-- [operator.yaml](1.6/operator.yaml) - The _Deployment_
+- [operator.yaml](1.7/operator.yaml) - The _Deployment_
   manifest for the `calico-prometheus-operator`
-- [monitor-calico.yaml](1.6/monitor-calico.yaml) - The _Prometheus_ and
+- [monitor-calico.yaml](1.7/monitor-calico.yaml) - The _Prometheus_ and
   _AlertManager_ manifests.
 
 For example, to deploy Prometheus Operator in GKE infrastructure nodes,
@@ -123,21 +123,21 @@ spec:
   template:
     metadata:
       labels:
-	operator: prometheus
+        operator: prometheus
     spec:
       nodeSelector:
-	cloud.google.com/gke-nodepool: infrastructure
+        cloud.google.com/gke-nodepool: infrastructure
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator
-	image: quay.io/coreos/prometheus-operator:v0.8.1
-	resources:
-	  requests:
-	    cpu: 100m
-	    memory: 50Mi
-	  limits:
-	    cpu: 200m
-	    memory: 100Mi
+        image: quay.io/coreos/prometheus-operator:v0.12.0
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 100Mi
 ```
 
 #### Enabling TLS Verification for a Kubernetes extension API Server
@@ -236,7 +236,7 @@ Information on how to create a _Integration Key_ is available
 
 ### Advanced Alertmanager Notifications
 
-Included in the manifests is a sample alertmanager webhook. _apply_ this t
+Included in the manifests is a sample alertmanager webhook. _Apply_ this to
 deploy webserver that will pretty print to its stdout a JSON message (if it
 received a valid message).
 
@@ -295,20 +295,20 @@ spec:
     protocol: TCP
 ```
 
-- Configure calico-monitoring namespace and deploy Prometheus Operator by
-  applying the [operator.yaml](1.6/operator.yaml) manifest.
+1. Configure calico-monitoring namespace and deploy Prometheus Operator by
+  applying the [operator.yaml](1.7/operator.yaml) manifest.
 
    ```
    kubectl apply -f operator.yaml
    ```
 
-- Wait for third party resources to be created. Check by running:
+1. Wait for custom resource definitions to be created. Check by running:
 
    ```
-   kubectl get thirdpartyresources
+   kubectl get customresourcedefinitions
    ```
 
-- Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
+1. Apply the [monitor-calico.yaml](1.7/monitor-calico.yaml) manifest which will
   install Prometheus and alertmanager.
 
    ```
@@ -323,17 +323,17 @@ in the [modifying your manifest to install essentials](#modifying-an-existing-ma
 
 The additional things the [calico-essentials-kdd.yaml](1.6/calico-essentials-kdd.yaml) does
 are:
-  - Enables prometheus reporting (this is different from felix's prometheus
+  - Enables Prometheus reporting (this is different from Felix's prometheus
     settings)
 
-The manifest [operator.yaml](1.6/operator.yaml) does the following:
+The manifest [operator.yaml](1.7/operator.yaml) does the following:
   - Create a namespace called calico-monitoring
   - Create RBAC artifacts
       - ServiceAccounts: prometheus-operator and prometheus
       - Corresponding ClusterRole and ClusterRoleBindings.
   - Deploys prometheus-operator (in namespace calico-monitoring)
-    - Creates a kubernetes deployment, which in turn creates 3 _Third Party
-      Resources_(TPR): `prometheus`, `alertmanager` and "servicemonitor".
+    - Creates a kubernetes deployment, which in turn creates 3 _Custom Resource
+      Definitions_(CRD): `prometheus`, `alertmanager` and "servicemonitor".
 
 The `monitor-calico.yaml` manifest does the following:
   - Creates a new service: calico-node-metrics exposing prometheus reporting
