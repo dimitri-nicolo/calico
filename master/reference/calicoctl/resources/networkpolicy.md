@@ -15,6 +15,9 @@ See [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/
 NetworkPolicy resources can be used to define network connectivity rules between groups of Calico endpoints and host endpoints, and
 take precedence over [Profile resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile) if any are defined.
 
+NetworkPolicies are organised into tiers, which provide an additional layer of ordering—in particular, note that the `pass` action skips to the
+next tier, to enable hierarchical security policy.
+
 For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `networkpolicy`, `networkpolicies`, `policy`, `np`, `policies`, `pol`, `pols`.
 
@@ -27,9 +30,10 @@ This sample policy allows TCP traffic from `frontend` endpoints to port 6379 on
 apiVersion: projectcalico.org/v2
 kind: NetworkPolicy
 metadata:
-  name: allow-tcp-6379
+  name: internal-access.allow-tcp-6379
   namespace: production
 spec:
+  tier: internal-access
   selector: role == 'database'
   types:
   - ingress

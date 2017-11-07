@@ -30,7 +30,7 @@ $ kubectl create ns external-demo
 ```
 
 Create some nginx pods in the `policy-demo` and `external-demo` Namespaces,
-and expose them through a Service.
+and expose them through a service.
 
 ```
 # Run the Pods.
@@ -92,23 +92,25 @@ is deployed. All policies that are created so far will end up in a `default` tie
 called `default`. You can view existing policies by running:
 
 ```
-$ calicoctl get policy
+$ calicoctl get networkpolicy --namespace policy-demo
 NAME                                              TIER
-policy-demo.default-deny                          default
+knp.default.default-deny                          default
 ```
 
 Notice that there is a new `TIER` column. This means that the
-`policy-demo.default-deny` policy exists under the `default` tier. We can get
-the same information in YAML format as well by running:
+`default-deny` policy in the `policy-demo` namespace exists under the
+`default` tier. We can get the same information in YAML format as well
+by running:
 
 ```
-$ calicoctl get policy -o yaml
-- apiVersion: v1
-  kind: policy
+$ calicoctl get networkpolicy -o yaml --namespace policy-demo
+- apiVersion: projectcalico.org/v2
+  kind: NetworkPolicy
   metadata:
-    name: policy-demo.default-deny
-    tier: default
+    name: knp.default.default-deny
+    namespace: policy-demo
   spec:
+    tier: default
     egress:
     - action: allow
       destination: {}
@@ -139,8 +141,8 @@ and give it a higher order of precedence than the `default` tier.
 
 ```
 $ calicoctl create -f - <<EOF
-apiVersion: v1
-kind: tier
+apiVersion: projectcalico.org/v2
+kind: Tier
 metadata:
   name: netops
 spec:
@@ -182,23 +184,26 @@ Address 2: 2620:12a:8001::2
 Address 3: 23.185.0.2
 ```
 
-To add a Policy to a tier, specify the name of the tier you want to add it to,
-under `metadata`. The YAML sample below adds the `no-public-dns-for-policy-demo`
-policy to the `netops` tier.
+To add a GlobalNetworkPolicy to a tier, specify the name of the tier you want to add
+it to, under `metadata`. The YAML sample below adds the
+`netops.no-public-dns-for-policy-demo` policy to the `netops` tier. Note how we prefix
+`netops.`, which is the name of the tier, followed by a `.`. This is a requirement for
+tiered policy names and calicoctl will exit with an error message if this requirement
+isn't met.
 
 ```
-# Policy in the netops tier that will prevent DNS requests to Google DNS
-# servers from pods in the policy-demo Namespace.
+# GlobalNetworkPolicyPolicy in the netops tier that will prevent DNS requests to
+# Google DNS servers from pods in the policy-demo namespace.
 # We use the "pass" action to give other lower ordered tiers a chance to define
 # policies. If a policy in a tier is applied to an endpoint but no policy in
 # the tier acts on the traffic, it will be dropped at the end of tier.
 $ calicoctl create -f - <<EOF
-- apiVersion: v1
-  kind: policy
+- apiVersion: projectcalico.org/v2
+  kind: GlobalNetworkPolicy
   metadata:
-    name: no-public-dns-for-policy-demo
-    tier: netops
+    name: netops.no-public-dns-for-policy-demo
   spec:
+    tier: netops
     order: 100
     ingress:
     # Let lower order tiers define traffic for ingress
@@ -241,14 +246,14 @@ nslookup: can't resolve 'tigera.io'
 ```
 
 We can create additional tiered policies to police `pass`-ed traffic from the
-`no-public-dns-for-policy-demo` Policy.
+`netops.no-public-dns-for-policy-demo` GlobalNetworkPolicy.
 
 Create a `devops` tier.
 
 ```
 $ calicoctl create -f - <<EOF
-apiVersion: v1
-kind: tier
+apiVersion: projectcalico.org/v2
+kind: Tier
 metadata:
   name: devops
 spec:
@@ -256,17 +261,17 @@ spec:
 EOF
 ```
 
-Then create a Policy in the `devops` tier that will prevent traffic from/to the.
+Then create a GlobalNetworkPolicy in the `devops` tier that will prevent traffic from/to the.
 `policy-demo` Namespace from entering or leaving this Namespace.
 
 ```
 $ calicoctl create -f - <<EOF
-- apiVersion: v1
-  kind: policy
+- apiVersion: projectcalico.org/v2
+  kind: GlobalNetworkPolicy
   metadata:
-    name: policy-demo-isolation
-    tier: devops
+    name: devops.policy-demo-isolation
   spec:
+    tier: devops
     order: 200
     egress:
     # Deny traffic from leaving the namespace
@@ -286,9 +291,9 @@ EOF
 
 ### Allow Access using a NetworkPolicy and the default Tier
 
-You can still use NetworkPolicy to define policies. These policies will always
-be created under the `default` tier. Let's enable access to the nginx Service
-using a NetworkPolicy.
+You can still use Kubernetes NetworkPolicy to define policies. These policies
+will always be created under the `default` tier. Let's enable access to the
+nginx service using a Kubernetes NetworkPolicy.
 
 Create a network policy `access-nginx` with the following contents:
 
@@ -314,12 +319,11 @@ EOF
 The `access-nginx` policy is created under the `default` tier.
 
 ```
-# Get all policies that belong in the default tier.
-# Note the usage of the "--tier" option.
-$ calicoctl get policies --tier default
+# Get all NetworkPolicies
+$ calicoctl get networkpolicy --namespace policy-demo
 NAME                                              TIER
-policy-demo.access-nginx                          default
-policy-demo.default-deny                          default
+knp.default.access-nginx                          default
+knp.default.default-deny                          default
 ```
 
 We should now be able to access the Service from the access Pod.
@@ -345,7 +349,7 @@ Delete policies that are not part of the `default` tier.
 
 ```
 # Delete a single policy in a tier.
-$ calicoctl delete policy policy-demo-isolation --tier devops
+$ calicoctl delete policy devops.policy-demo-isolation
 # Or delete the entier tier
 $ calicoctl delete tier devops
 $ calicoctl delete tier netops
