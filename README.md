@@ -126,17 +126,18 @@ Tiers - APIVersion: projectcalico.org/v2 Kind: Tier
 
 NetworkPolicies - APIVersion: projectcalico.org/v2 Kind: NetworkPolicy
 4. Listing networkpolicies across namespaces: https://10.0.2.15:6443/apis/projectcalico.org/v2/networkpolicies
-5. Listing networkpolicy from a given namespace: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies 
+5. Listing networkpolicy from a given namespace (belonging to default tier): https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies 
 ^ NOTE: NetworkPolicy list will also include Core NetworkPolicies. Core NetworkPolicy names will be prepended with "knp."
+^ NOTE: When fieldSelector not specified it defaults to "default" on the server side.
 6. Watching networkpolicies in the default namespace: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch=true
-7. Selecting networkpolicies in the default namespace belonging to Tier1: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?fieldSelector=spec.tier==Tier1
-8. Select networkpolicies based on Tier and watch at the same time: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch&fieldSelector=tier==Tier1
+7. Selecting networkpolicies in the default namespace belonging to "net-sec": https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?fieldSelector=spec.tier=net-sec
+8. Select networkpolicies based on Tier and watch at the same time: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch=true&fieldSelector=spec.tier=net-sec
 9. Create networkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies
 
 GlobalNetworkPolicies - APIVersion: projectcalico.org/v2 Kind: GlobalNetworkPolicy
 10. Listing globalnetworkpolicies: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies
-11. Watching globalnetworkpolicies: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?watch=true
-12. Selecting globalnetworkpolicies belonging to Tier1: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?fieldSelector=spec.tier==Tier1
+11. Watching globalnetworkpolicies belonging to default tier: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?watch=true
+12. Selecting globalnetworkpolicies belonging to Tier1: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?fieldSelector=spec.tier=Tier1
 13. Create globalnetworkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies
 
 Core/K8s NetworkPolicies - APIVersion: networking.k8s.io/v1 Kind: NetworkPolicy
@@ -148,13 +149,18 @@ Listing Namespaces - APIVersion: v1 Kind: Namespace
 ``` 
 
 ## Testing
-The integration tests can be run via the `test-integration` Makefile target,
+The integration tests/functional verification tests can be run via the `fv`/`fv-kdd` Makefile target,
 e.g.:
 
-    $ make test-integration
+    $ make fv
 
-The integration tests require the Kubernetes client (`kubectl`) so there is a
-script called `contrib/hack/kubectl` that will run it from within a
-Docker container. This avoids the need for you to download, or install it,
-youself. You may find it useful to add `contrib/hack` to your `PATH`.
+The unit tests can be run via `ut` Makefile target,
+e.g.:
+
+    $ make ut
+
+All of the tests can be run via `test` Makefile target,
+e.g.:
+
+    $ make test
 

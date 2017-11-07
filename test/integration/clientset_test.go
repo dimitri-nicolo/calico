@@ -40,6 +40,7 @@ import (
 
 	// our versioned client
 
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,7 +48,6 @@ import (
 
 // TestGroupVersion is trivial.
 func TestGroupVersion(t *testing.T) {
-	fmt.Println("GropVersion being tested.")
 	rootTestFunc := func() func(t *testing.T) {
 		return func(t *testing.T) {
 			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
@@ -127,9 +127,7 @@ func testNoName(client calicoclient.Interface) error {
 	if p, e := cClient.NetworkPolicies(ns).Create(&v2.NetworkPolicy{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", p.Name)
 	}
-	/*	if t, e := cClient.Tiers().Create(&v1.Tier{}); nil == e {
-		return fmt.Errorf("needs a name (%s)", t.Name)
-	}*/
+
 	return nil
 }
 
@@ -179,7 +177,38 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
 	}
 
+	// For testing out Tiered Policy
+	tierClient := client.Projectcalico().Tiers()
+	tier := &v2.Tier{
+		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
+	}
+
+	tierClient.Create(tier)
+	defer func() {
+		tierClient.Delete("net-sec", &metav1.DeleteOptions{})
+	}()
+
+	netSecPolicyName := "net-sec" + "." + name
+	netSecPolicy := &v2.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.PolicySpec{Tier: "net-sec"}}
+	policyServer, err = policyClient.Create(netSecPolicy)
+	if nil != err {
+		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
+	}
+	if netSecPolicyName != policyServer.Name {
+		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
+	}
+
+	// Should be listing the policy under default tier.
 	policies, err = policyClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing policies (%s)", err)
+	}
+	if 1 != len(policies.Items) {
+		return fmt.Errorf("should have exactly one policies, had %v policies", len(policies.Items))
+	}
+
+	// Should be listing the policy under "net-sec" tier
+	policies, err = policyClient.List(metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
 	if err != nil {
 		return fmt.Errorf("error listing policies (%s)", err)
 	}
@@ -207,15 +236,15 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		)
 	}*/
 	// Watch Test:
+	opts := v1.ListOptions{Watch: true}
+	wIface, err := policyClient.Watch(opts)
+	if nil != err {
+		return fmt.Errorf("Error on watch")
+	}
 	var wg sync.WaitGroup
 	go func() {
 		wg.Add(1)
 		defer wg.Done()
-		opts := v1.ListOptions{}
-		wIface, err := policyClient.Watch(opts)
-		if nil != err {
-			fmt.Errorf("Error on watch")
-		}
 		for e := range wIface.ResultChan() {
 			fmt.Println("Watch object: ", e)
 			break
@@ -226,6 +255,12 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	if nil != err {
 		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
+
+	err = policyClient.Delete(netSecPolicyName, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("policy should be deleted (%s)", err)
+	}
+
 	wg.Wait()
 	return nil
 }
@@ -337,9 +372,43 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 		return fmt.Errorf("didn't get the same globalNetworkPolicy back from the server \n%+v\n%+v", globalNetworkPolicy, globalNetworkPolicyServer)
 	}
 
+	// For testing out Tiered Policy
+	tierClient := client.Projectcalico().Tiers()
+	tier := &v2.Tier{
+		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
+	}
+
+	tierClient.Create(tier)
+	defer func() {
+		tierClient.Delete("net-sec", &metav1.DeleteOptions{})
+	}()
+
+	netSecPolicyName := "net-sec" + "." + name
+	netSecPolicy := &v2.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.PolicySpec{Tier: "net-sec"}}
+	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Create(netSecPolicy)
+	if nil != err {
+		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
+	}
+	if netSecPolicyName != globalNetworkPolicyServer.Name {
+		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", netSecPolicy, globalNetworkPolicyServer)
+	}
+
+	// Should be listing the policy under "default" tier
 	globalNetworkPolicies, err = globalNetworkPolicyClient.List(metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
+	}
+	if 1 != len(globalNetworkPolicies.Items) {
+		return fmt.Errorf("should have exactly one policies, had %v policies", len(globalNetworkPolicies.Items))
+	}
+
+	// Should be listing the policy under "net-sec" tier
+	globalNetworkPolicies, err = globalNetworkPolicyClient.List(metav1.ListOptions{FieldSelector: "spec.tier=net-sec"})
+	if err != nil {
+		return fmt.Errorf("error listing globalNetworkPolicies (%s)", err)
+	}
+	if 1 != len(globalNetworkPolicies.Items) {
+		return fmt.Errorf("should have exactly one policies, had %v policies", len(globalNetworkPolicies.Items))
 	}
 
 	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Get(name, metav1.GetOptions{})
@@ -354,6 +423,11 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	err = globalNetworkPolicyClient.Delete(name, &metav1.DeleteOptions{})
 	if nil != err {
 		return fmt.Errorf("globalNetworkPolicy should be deleted (%s)", err)
+	}
+
+	err = globalNetworkPolicyClient.Delete(netSecPolicyName, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("policy should be deleted (%s)", err)
 	}
 
 	return nil

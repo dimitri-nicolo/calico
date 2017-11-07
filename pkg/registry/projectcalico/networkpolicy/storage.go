@@ -17,30 +17,20 @@ limitations under the License.
 package networkpolicy
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/golang/glog"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/server"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/tigera/calico-k8sapiserver/pkg/registry/projectcalico/util"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	"k8s.io/apiserver/pkg/endpoints/filters"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic/registry"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
-)
-
-const (
-	policyDelim = "."
-	defaultTier = "default"
 )
 
 // rest implements a RESTStorage for API services against etcd
@@ -108,97 +98,12 @@ func NewREST(scheme *runtime.Scheme, opts server.Options) *REST {
 	return &REST{store, opts.Authorizer}
 }
 
-// TODO: Remove this. Its purely for debugging purposes.
-func logAuthorizerAttributes(requestAttributes authorizer.Attributes) {
-	glog.Infof("Authorizer APIGroup: %s", requestAttributes.GetAPIGroup())
-	glog.Infof("Authorizer APIVersion: %s", requestAttributes.GetAPIVersion())
-	glog.Infof("Authorizer Name: %s", requestAttributes.GetName())
-	glog.Infof("Authorizer Namespace: %s", requestAttributes.GetNamespace())
-	glog.Infof("Authorizer Resource: %s", requestAttributes.GetResource())
-	glog.Infof("Authorizer Subresource: %s", requestAttributes.GetSubresource())
-	glog.Infof("Authorizer User: %s", requestAttributes.GetUser())
-	glog.Infof("Authorizer Verb: %s", requestAttributes.GetVerb())
-}
-
-func getTierNameFromSelector(options *metainternalversion.ListOptions) (string, error) {
-	if options.FieldSelector != nil {
-		requirements := options.FieldSelector.Requirements()
-		for _, requirement := range requirements {
-			if requirement.Field == "spec.tier" {
-				return requirement.Value, nil
-			}
-		}
-	}
-
-	if options.LabelSelector != nil {
-		requirements, _ := options.LabelSelector.Requirements()
-		for _, requirement := range requirements {
-			if requirement.Key() == "projectcalico.org/tier" {
-				if len(requirement.Values()) > 1 {
-					return "", fmt.Errorf("multi-valued selector not supported")
-				}
-				tierName, ok := requirement.Values().PopAny()
-				if ok {
-					return tierName, nil
-				}
-			}
-		}
-	}
-
-	return defaultTier, nil
-}
-
-// Check the user is allowed to "get" the tier.
-// This is required to be allowed to perform actions on policies.
-func (r *REST) authorizeTierOperation(ctx genericapirequest.Context, tierName string) error {
-	if r.authorizer == nil {
-		glog.Infof("Authorization disabled for testing purposes")
-		return nil
-	}
-	attributes, err := filters.GetAuthorizerAttributes(ctx)
-	if err != nil {
-		return err
-	}
-	attrs := authorizer.AttributesRecord{}
-	attrs.APIGroup = attributes.GetAPIGroup()
-	attrs.APIVersion = attributes.GetAPIVersion()
-	attrs.Name = tierName
-	attrs.Resource = "tiers"
-	attrs.User = attributes.GetUser()
-	attrs.Verb = "get"
-	attrs.ResourceRequest = attributes.IsResourceRequest()
-	attrs.Path = "/apis/projectcalico.org/v2/tiers/" + tierName
-	glog.Infof("Tier Auth Attributes for the given Policy")
-	logAuthorizerAttributes(attrs)
-	authorized, reason, err := r.authorizer.Authorize(attrs)
-	if err != nil {
-		return err
-	}
-	if !authorized {
-		if reason == "" {
-			reason = fmt.Sprintf("(Forbidden) Policy operation is associated with tier %s. "+
-				"User \"%s\" cannot get tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)",
-				tierName, attrs.User.GetName())
-		}
-		return errors.NewForbidden(calico.Resource("tiers"), tierName, fmt.Errorf(reason))
-	}
-	return nil
-}
-
-func getTierPolicy(policyName string) (string, string) {
-	policySlice := strings.Split(policyName, policyDelim)
-	if len(policySlice) < 2 {
-		return "default", policySlice[0]
-	}
-	return policySlice[0], policySlice[1]
-}
-
 func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	tierName, err := getTierNameFromSelector(options)
+	tierName, err := util.GetTierNameFromSelector(options)
 	if err != nil {
 		return nil, err
 	}
-	err = r.authorizeTierOperation(ctx, tierName)
+	err = util.AuthorizeTierOperation(ctx, r.authorizer, tierName)
 	if err != nil {
 		return nil, err
 	}
@@ -209,8 +114,8 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, includeUninitialized bool) (runtime.Object, error) {
 	policy := obj.(*calico.NetworkPolicy)
 	// Is Tier prepended. If not prepend default?
-	tierName, _ := getTierPolicy(policy.Name)
-	err := r.authorizeTierOperation(ctx, tierName)
+	tierName, _ := util.GetTierPolicy(policy.Name)
+	err := util.AuthorizeTierOperation(ctx, r.authorizer, tierName)
 	if err != nil {
 		return nil, err
 	}
@@ -219,8 +124,8 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, include
 }
 
 func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo) (runtime.Object, bool, error) {
-	tierName, _ := getTierPolicy(name)
-	err := r.authorizeTierOperation(ctx, tierName)
+	tierName, _ := util.GetTierPolicy(name)
+	err := util.AuthorizeTierOperation(ctx, r.authorizer, tierName)
 	if err != nil {
 		return nil, false, err
 	}
@@ -230,8 +135,8 @@ func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.U
 
 // Get retrieves the item from storage.
 func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-	tierName, _ := getTierPolicy(name)
-	err := r.authorizeTierOperation(ctx, tierName)
+	tierName, _ := util.GetTierPolicy(name)
+	err := util.AuthorizeTierOperation(ctx, r.authorizer, tierName)
 	if err != nil {
 		return nil, err
 	}
@@ -240,8 +145,8 @@ func (r *REST) Get(ctx genericapirequest.Context, name string, options *metav1.G
 }
 
 func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav1.DeleteOptions) (runtime.Object, bool, error) {
-	tierName, _ := getTierPolicy(name)
-	err := r.authorizeTierOperation(ctx, tierName)
+	tierName, _ := util.GetTierPolicy(name)
+	err := util.AuthorizeTierOperation(ctx, r.authorizer, tierName)
 	if err != nil {
 		return nil, false, err
 	}
@@ -250,11 +155,11 @@ func (r *REST) Delete(ctx genericapirequest.Context, name string, options *metav
 }
 
 func (r *REST) Watch(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
-	tierName, err := getTierNameFromSelector(options)
+	tierName, err := util.GetTierNameFromSelector(options)
 	if err != nil {
 		return nil, err
 	}
-	err = r.authorizeTierOperation(ctx, tierName)
+	err = util.AuthorizeTierOperation(ctx, r.authorizer, tierName)
 	if err != nil {
 		return nil, err
 	}
