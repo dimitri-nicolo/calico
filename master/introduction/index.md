@@ -1,12 +1,12 @@
 ---
-title: Tigera Essentials Toolkit
+title: Tigera CNX
 description: Home
 layout: docwithnav
 ---
 
-Tigera Essentials Toolkit adds complementary monitoring and policy management
+{{site.prodname}} adds complementary monitoring and policy management
 tools on top of [Project Calico](about-calico). Features included as part of
-the Tigera Essentials Toolkit release are:
+the {{site.prodname}} release are:
 
 
 * Policy Query Utility
@@ -17,14 +17,15 @@ the Tigera Essentials Toolkit release are:
 * Policy Violation Alerting
   * Setup proactive alerting based on connection attempts that violate a policy
 
-For guides on how to set up Tigera Essentials Toolkit and a demo of some its basic function, see the following links:
+For guides on how to set up {{site.prodname}} and a demo of some its basic function, see the following links:
 
-* [Obtaining Tigera Essentials Toolkit](../getting-started/essentials/)
-* [Installing Tigera Essentials Toolkit for Kubernetes (etcd)](../getting-started/kubernetes/installation/hosted/essentials/etcd)
-* [Installing Tigera Essentials Toolkit for Kubernetes (kdd)](../getting-started/kubernetes/installation/hosted/essentials/kdd)
-* [Installing Tigera Essentials Toolkit for OpenShift](../getting-started/openshift/essentials/installation)
-* [Demo of Tigera Essentials Toolkit](../getting-started/essentials/simple-policy-essentials)
-* [Demo of Tiered Policy using Tigera Essentials Toolkit](../getting-started/essentials/tiered-policy-essentials)
+
+* [Obtaining {{site.prodname}}](../getting-started/essentials/)
+* [Installing {{site.prodname}} for Kubernetes (etcd)](../getting-started/kubernetes/installation/hosted/essentials/etcd)
+* [Installing {{site.prodname}} for Kubernetes (kdd)](../getting-started/kubernetes/installation/hosted/essentials/kdd)
+* [Installing {{site.prodname}} for OpenShift](../getting-started/openshift/essentials/installation)
+* [Demo of {{site.prodname}}](../getting-started/essentials/simple-policy-essentials)
+* [Demo of Tiered Policy using {{site.prodname}}](../getting-started/essentials/tiered-policy-essentials)
 * [Policy Query Utility (calicoq))](../reference/calicoq/)
 * [Policy Audit Mode](../reference/essentials/policy-auditing)
 * [Policy Violation Alerting](../reference/essentials/policy-violations)

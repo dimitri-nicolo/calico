@@ -1,16 +1,16 @@
 ---
-title: Tigera Essentials Toolkit for Kubernetes Demo
+title: CNX for Kubernetes Demo
 ---
 
-This guide is a variation of the simple policy demo intended to introduce the extra features of Essentials to people already familiar with Project Calico for Kubernetes.
+This guide is a variation of the simple policy demo intended to introduce the extra features of {{site.prodname}} to people already familiar with Project Calico for Kubernetes.
 
-It requires a Kubernetes cluster configured with Calico networking and Tigera Essentials Toolkit, and expects that you have `kubectl` configured to interact with the cluster.
+It requires a Kubernetes cluster configured with Calico networking and {{site.prodname}}, and expects that you have `kubectl` configured to interact with the cluster.
 
-You can quickly and easily obtain such a cluster by setting up [Tigera Essentials Toolkit]({{site.baseurl}}/{{page.version}}/getting-started/essentials/), and then:
+You can quickly and easily obtain such a cluster by setting up [{{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started/essentials/), and then:
 - following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation), or
 - [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade).
 
-The key steps in moving to Essentials are to change to the Tigera Essentials Toolkit version of calico-node, update its configuration, download calicoq and deploy Prometheus.
+The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
 This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.6/)
 and that your cluster consists of the following nodes: 
@@ -57,7 +57,7 @@ If you don't see a command prompt, try pressing enter.
 You should see a response from `nginx`.  Great! Our Service is accessible.  You can exit the Pod now.
 
 Now let's inspect the network policies using calicoq.  calicoq complements calicoctl by inspecting the
-dynamic aspects of Calico Policy: in particular displaying the endpoints actually affected by policies,
+dynamic aspects of {{site.prodname}} Policy: in particular displaying the endpoints actually affected by policies,
 and the policies that actually apply to endpoints.
 
 The full calicoq documentation is [here]({{site.baseurl}}/{{page.version}}/reference/calicoq).
@@ -69,11 +69,11 @@ Policies that match each endpoint:
 
 Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
   # These are the policies that apply directly to the endpoint.  calicoq can display both
-  # Calico Policies and Kubernetes NetworkPolicies, although this example focuses on the latter.
+  # {{site.prodname}} Policies and Kubernetes NetworkPolicies, although this example focuses on the latter.
   # They're listed in the order they apply.
   Policies:
     # These first two policies are defined in the calico-monitoring.yaml manifest.
-    # The selectors here have been translated from the original NetworkPolicies to the Calico
+    # The selectors here have been translated from the original NetworkPolicies to the {{site.prodname}}
     # format (note the addition of the namespace test).
     Policy "calico-monitoring.calico-node-alertmanager" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'")
     Policy "calico-monitoring.calico-node-alertmanager-mesh" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'")
@@ -106,7 +106,7 @@ Workload endpoint k8s/policy-demo.nginx-2371676037-7w78m/eth0
 
 ### Enable isolation
 
-Let's turn on isolation in our policy-demo Namespace.  Calico will then prevent connections to pods in this Namespace.
+Let's turn on isolation in our policy-demo Namespace. {{site.prodname}} will then prevent connections to pods in this Namespace.
 
 Running the following command creates a NetworkPolicy which implements a default deny behavior for all pods in the `policy-demo` Namespace.
 
@@ -249,7 +249,7 @@ You can clean up the demo by deleting the demo Namespace:
 kubectl delete ns policy-demo
 ```
 
-This was just a simple example of the Kubernetes NetworkPolicy API and how Calico can secure your Kubernetes cluster.  For more
+This was just a simple example of the Kubernetes NetworkPolicy API and how {{site.prodname}} can secure your Kubernetes cluster.  For more
 information on network policy in Kubernetes, see the [Kubernetes user-guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
 
 For a slightly more detailed demonstration of Policy, check out the [stars demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/).

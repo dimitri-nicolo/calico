@@ -3,15 +3,15 @@ abstract: "All you need to know to get started with Calico"
 path: /getting-started
 order: 1
 toc:
-- title: Getting Started with Calico
+- title: Getting Started with CNX
   path: /getting-started/
 
-- title: Tigera Essentials Toolkit
+- title: Tigera CNX
   path: /getting-started/essentials/
   section:
-  - title: Obtaining Tigera Essentials Toolkit
+  - title: Obtaining CNX
     path: /getting-started/essentials/
-  - title: Tigera Essentials Toolkit for Kubernetes Demo
+  - title: CNX for Kubernetes Demo
     path: /getting-started/essentials/simple-policy-essentials
   - title: Tiered Policy Demo
     path: /getting-started/essentials/tiered-policy-essentials
@@ -30,13 +30,13 @@ toc:
         path: /getting-started/kubernetes/installation/hosted/
       - title: Standard Hosted Install
         path: /getting-started/kubernetes/installation/hosted/hosted
-      - title: Kubeadm Hosted Install
+      - title: kubeadm Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubeadm/
       - title: Kubernetes Datastore Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
-      - title: Tigera Essentials Toolkit Hosted Install (etcd)
+      - title: CNX Hosted Install (etcd)
         path: /getting-started/kubernetes/installation/hosted/essentials/etcd
-      - title: Tigera Essentials Toolkit Hosted Install (kdd)
+      - title: CNX Hosted Install (kdd)
         path: /getting-started/kubernetes/installation/hosted/essentials/kdd      
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
@@ -67,11 +67,11 @@ toc:
   section:
     - title: Installation
       path: /getting-started/openshift/installation
-    - title: Essentials
+    - title: CNX
       section:
-      - title: Installing Essentials for OpenShift
+      - title: Installing CNX for OpenShift
         path: /getting-started/openshift/essentials/installation
-      - title: Using Essentials for OpenShift
+      - title: Using CNX for OpenShift
         path: /getting-started/openshift/essentials/usage
 
 - title: Mesos
@@ -123,11 +123,11 @@ toc:
       path: /getting-started/docker/installation/vagrant-ubuntu/
   - title: Tutorials
     section:
-    - title: Security using Calico Profiles
+    - title: Security using CNX Profiles
       path: /getting-started/docker/tutorials/security-using-calico-profiles
-    - title: Security using Calico Profiles and Policy
+    - title: Security using CNX Profiles and Policy
       path: /getting-started/docker/tutorials/security-using-calico-profiles-and-policy
-    - title: Security using Docker Labels and Calico Policy
+    - title: Security using Docker Labels and CNX Policy
       path: /getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy
     - title: IPAM
       path: /getting-started/docker/tutorials/ipam

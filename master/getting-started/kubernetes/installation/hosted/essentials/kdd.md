@@ -1,9 +1,9 @@
 ---
-title: Tigera Essentials Toolkit Hosted Install
+title: CNX Hosted Install
 ---
 
 > **Note**: These instructions do not apply to OpenShift users. Instead, see 
-> [Installing Essentials for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
+> [Installing {{site.prodname}} for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
 {: .alert .alert-info}
 
 ## Requirements
@@ -19,52 +19,52 @@ with the proper flags.
 
 ## Installation
 
-To install Tigera Essentials Toolkit, run the following commands.
+To install {{site.prodname}}, run the following commands.
 
 > **Note**: The following manifests require Kubernetes 1.7.0 or later.
 {: .alert .alert-info}
 
-- Before you install Calico, if your Kubernetes cluster has RBAC enabled, you’ll need to create the following RBAC roles to allow API access to Calico: [rbac-kdd.yaml](1.6/rbac-kdd.yaml)
+1. Before you install {{site.prodname}}, if your Kubernetes cluster has RBAC enabled, you’ll need to create the following RBAC roles to allow API access to {{site.prodname}}: [rbac-kdd.yaml](1.6/rbac-kdd.yaml)
 
-```
-kubectl apply -f rbac-kdd.yaml
-```
+   ```
+   kubectl apply -f rbac-kdd.yaml
+   ```
 
-- Edit [calico-essentials-kdd.yaml](1.6/calico-essentials-kdd.yaml) file by following
+1. Edit [calico-essentials-kdd.yaml](1.6/calico-essentials-kdd.yaml) file by following
   [these instructions](#customizing-the-manifests) and then run the command below
-  to install/configure calico.
+  to install/configure {{site.prodname}}.
 
-```
-kubectl apply -f calico-essentials-kdd.yaml
-```
+   ```
+   kubectl apply -f calico-essentials-kdd.yaml
+   ```
 
-- Configure calico-monitoring namespace and deploy Prometheus Operator by
+1. Configure calico-monitoring namespace and deploy Prometheus Operator by
   applying the [operator.yaml](1.6/operator.yaml) manifest.
 
-```
-kubectl apply -f operator.yaml
-```
+   ```
+   kubectl apply -f operator.yaml
+   ```
 
-- Wait for third party resources to be created. Check by running:
+1. Wait for third party resources to be created. Check by running:
 
-```
-$ kubectl get thirdpartyresources
-```
+   ```
+   kubectl get thirdpartyresources
+   ```
 
-- Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
+1. Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
   install Prometheus and alertmanager.
 
-```
-$ kubectl apply -f monitor-calico.yaml
-```
+   ```
+   kubectl apply -f monitor-calico.yaml
+   ```
 
-- Edit [calico-k8sapiserver-kdd.yaml](1.6/calico-k8sapiserver-kdd.yaml) by following
+1. Edit [calico-k8sapiserver-kdd.yaml](1.6/calico-k8sapiserver-kdd.yaml) by following
   [these instructions](#enabling-tls-verification-for-a-kubernetes-extension-api-server)
   and then run the command below to install a Kubernetes extension API server.
 
-```
-$ kubectl apply -f calico-k8sapiserver-kdd.yaml
-```
+   ```
+   kubectl apply -f calico-k8sapiserver-kdd.yaml
+   ```
 
 ### Customizing the manifests
 
@@ -88,7 +88,7 @@ that:
 
 Note that the environment variables stated above are different from
 `FELIX_PROMETHEUSMETRICSENABLED` and `FELIX_PROMETHEUSMETRICSPORT`. The former
-set toggles and configures Calico Denied Packet reporting, while the latter set
+set toggles and configures {{site.prodname}} Denied Packet reporting, while the latter set
 toggles and configures Felix white box metrics reporting.
 
 #### Ports of Services and NetworkPolicy
@@ -261,20 +261,20 @@ receivers:
 
 To view the JSON output printed, examine the logs of the webhook pod.
 
-### Modifying an existing manifest to install Essentials
+### Modifying an existing manifest to install {{site.prodname}}
 
 Edit the manifest that deploys calico/node and update the following:
-  - Update the _DaemonSet_ template `image` to point to the new Calico image.
+  - Update the _DaemonSet_ template `image` to point to the new {{site.prodname}} image.
   - Add the environment variable `FELIX_PROMETHEUSREPORTERENABLED` and make
     sure it is set to `true` and
   - Add the environment variable `FELIX_PROMETHEUSREPORTERPORT` and set it to
     desired port.
 
-Create a new _Service_ to expose Calico Prometheus Denied Packet Metrics and
+Create a new _Service_ to expose {{site.prodname}} Prometheus Denied Packet Metrics and
 apply this manifest using `kubectl apply`
 
 ```
-# This manifest installs the Service which gets traffic to the calico-node
+# This manifest installs the service which gets traffic to the calico-node
 # metrics reporting endpoint.
 apiVersion: v1
 kind: Service
@@ -298,26 +298,26 @@ spec:
 - Configure calico-monitoring namespace and deploy Prometheus Operator by
   applying the [operator.yaml](1.6/operator.yaml) manifest.
 
-```
-kubectl apply -f operator.yaml
-```
+   ```
+   kubectl apply -f operator.yaml
+   ```
 
 - Wait for third party resources to be created. Check by running:
 
-```
-kubectl get thirdpartyresources
-```
+   ```
+   kubectl get thirdpartyresources
+   ```
 
 - Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
   install Prometheus and alertmanager.
 
-```
-kubectl apply -f monitor-calico.yaml
-```
+   ```
+   kubectl apply -f monitor-calico.yaml
+   ```
 
 ### Manifest Details
 
-The Calico install manifests are based on [Kubeadm hosted install](../kubeadm),
+The {{site.prodname}} install manifests are based on [kubeadm hosted install](../kubeadm),
 however, you can adapt any hosted install manifest by making changes described
 in the [modifying your manifest to install essentials](#modifying-an-existing-manifest-to-install-essentials)
 
@@ -332,7 +332,7 @@ The manifest [operator.yaml](1.6/operator.yaml) does the following:
       - ServiceAccounts: prometheus-operator and prometheus
       - Corresponding ClusterRole and ClusterRoleBindings.
   - Deploys prometheus-operator (in namespace calico-monitoring)
-    - Creates a kubernetes deplyoment, which in turn creates 3 _Third Party
+    - Creates a kubernetes deployment, which in turn creates 3 _Third Party
       Resources_(TPR): `prometheus`, `alertmanager` and "servicemonitor".
 
 The `monitor-calico.yaml` manifest does the following:

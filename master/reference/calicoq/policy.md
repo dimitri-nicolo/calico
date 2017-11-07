@@ -99,4 +99,4 @@ Policy "p1" applies to these endpoints:
 -  [calicoq eval]({{site.baseurl}}/{{page.version}}/reference/calicoq/eval) for
    more detail about the related `calico eval` command.
 -  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
-   more information about the Calico selector-based policy model.
+   more information about the {{site.prodname}} selector-based policy model.
