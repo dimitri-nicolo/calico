@@ -34,8 +34,10 @@ toc:
         path: /getting-started/kubernetes/installation/hosted/kubeadm/
       - title: Kubernetes Datastore Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
-      - title: Tigera Essentials Toolkit Hosted Install
-        path: /getting-started/kubernetes/installation/hosted/essentials/
+      - title: Tigera Essentials Toolkit Hosted Install (etcd)
+        path: /getting-started/kubernetes/installation/hosted/essentials/etcd
+      - title: Tigera Essentials Toolkit Hosted Install (kdd)
+        path: /getting-started/kubernetes/installation/hosted/essentials/kdd      
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
     - title: AWS

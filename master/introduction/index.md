@@ -20,7 +20,8 @@ the Tigera Essentials Toolkit release are:
 For guides on how to set up Tigera Essentials Toolkit and a demo of some its basic function, see the following links:
 
 * [Obtaining Tigera Essentials Toolkit](../getting-started/essentials/)
-* [Installing Tigera Essentials Toolkit for Kubernetes](../getting-started/kubernetes/installation/hosted/essentials)
+* [Installing Tigera Essentials Toolkit for Kubernetes (etcd)](../getting-started/kubernetes/installation/hosted/essentials/etcd)
+* [Installing Tigera Essentials Toolkit for Kubernetes (kdd)](../getting-started/kubernetes/installation/hosted/essentials/kdd)
 * [Installing Tigera Essentials Toolkit for OpenShift](../getting-started/openshift/essentials/installation)
 * [Demo of Tigera Essentials Toolkit](../getting-started/essentials/simple-policy-essentials)
 * [Demo of Tiered Policy using Tigera Essentials Toolkit](../getting-started/essentials/tiered-policy-essentials)
