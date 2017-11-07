@@ -271,11 +271,11 @@ release-once-tagged:
 	@echo
 	$(MAKE) bin/calico-typha calico/typha
 	docker tag calico/typha calico/typha:$(VERSION)
-	docker tag calico/typha quay.io/calico/typha:latest
-	docker tag calico/typha:$(VERSION) quay.io/calico/typha:$(VERSION)
+	docker tag calico/typha gcr.io/tigera-dev/calico/typha-essentials:latest
+	docker tag calico/typha:$(VERSION) gcr.io/tigera-dev/calico/typha-essentials:$(VERSION)
 	@echo
 	@echo "Checking built typha has correct version..."
-	@if docker run quay.io/calico/typha:$(VERSION) calico-typha --version | grep -q '$(VERSION)$$'; \
+	@if docker run gcr.io/tigera-dev/calico/typha-essentials:$(VERSION) calico-typha --version | grep -q '$(VERSION)$$'; \
 	then \
 	  echo "Check successful."; \
 	else \
@@ -287,14 +287,14 @@ release-once-tagged:
 	@echo
 	@echo "- Binary:                 bin/calico-typha"
 	@echo "- Docker container image: calico/typha:$(VERSION)"
-	@echo "- Same, tagged for Quay:  quay.io/calico/typha:$(VERSION)"
+	@echo "- Same, tagged for GCR private registry:  gcr.io/tigera-dev/calico/typha-essentials:$(VERSION)"
 	@echo
 	@echo "Now to publish this release to Github:"
 	@echo
-	@echo "- Push the new tag ($(VERSION)) to https://github.com/projectcalico/typha"
-	@echo "- Go to https://github.com/projectcalico/typha/releases/tag/$(VERSION)"
+	@echo "- Push the new tag ($(VERSION)) to https://github.com/tigera/typha-private"
+	@echo "- Go to https://github.com/tigera/typha-private/releases/tag/$(VERSION)"
 	@echo "- Copy the tag content (release notes) shown on that page"
-	@echo "- Go to https://github.com/projectcalico/typha/releases/new?tag=$(VERSION)"
+	@echo "- Go to https://github.com/tigera/typha-private/releases/new?tag=$(VERSION)"
 	@echo "- Name the GitHub release:"
 	@echo "  - For a stable release: 'Typha $(VERSION)'"
 	@echo "  - For a test release:   'Typha $(VERSION) pre-release for testing'"
@@ -306,13 +306,11 @@ release-once-tagged:
 	@echo "- Click the 'This is a pre-release' checkbox, if appropriate"
 	@echo "- Click 'Publish release'"
 	@echo
-	@echo "Then, push the versioned docker images to Dockerhub and Quay:"
+	@echo "Then, push the versioned docker images to GCR only:"
 	@echo
-	@echo "- docker push calico/typha:$(VERSION)"
-	@echo "- docker push quay.io/calico/typha:$(VERSION)"
+	@echo "- gcloud docker -- docker push gcr.io/tigera-dev/calico/typha-essentials:$(VERSION)"
 	@echo
 	@echo "If this is the latest release from the most recent stable"
 	@echo "release series, also push the 'latest' tag:"
 	@echo
-	@echo "- docker push calico/typha:latest"
-	@echo "- docker push quay.io/calico/typha:latest"
+	@echo "- gcloud docker -- docker push gcr.io/tigera-dev/calico/typha-essentials:latest"
