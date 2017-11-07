@@ -28,3 +28,4 @@ For guides on how to set up Tigera Essentials Toolkit and a demo of some its bas
 * [Policy Query Utility (calicoq))](../reference/calicoq/)
 * [Policy Audit Mode](../reference/essentials/policy-auditing)
 * [Policy Violation Alerting](../reference/essentials/policy-violations)
+* [RBAC on Tiered Policies](../reference/essentials/rbac-tiered-policies)
