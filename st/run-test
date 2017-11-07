@@ -19,7 +19,7 @@ function summarise_test {
 # Get a calicoctl.
 cd st
 if ! test -x calicoctl; then
-    wget https://github.com/projectcalico/calicoctl/releases/download/v1.2.1/calicoctl
+    wget https://github.com/projectcalico/calicoctl/releases/download/v2.0.0-alpha1/calicoctl
     chmod a+x calicoctl
 fi
 CALICOCTL=`pwd`/calicoctl
@@ -55,7 +55,7 @@ for c in `ls`; do
        --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
     etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
     export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
-    export DATASTORE_TYPE=etcdv2
+    export DATASTORE_TYPE=etcdv3
 
     # Apply the resources for the test case.
     ${CALICOCTL} apply -f apply.yaml
@@ -70,8 +70,8 @@ for c in `ls`; do
     # Create config file, if wanted.
     if ${USE_CFG_FILE}; then
 	tee calicoq.cfg <<EOF
-apiVersion: v1
-${CFG_FILE_INSERT}kind: calicoApiConfig
+apiVersion: projectcalico.org/v2
+${CFG_FILE_INSERT}kind: CalicoAPIConfig
 metadata:
 spec:
   datastoreType: "${DATASTORE_TYPE}"

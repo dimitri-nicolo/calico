@@ -106,7 +106,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 			// Go through the rules, and generate a selector for each.
 			cbs.evalCmd.AddPolicyRuleSelectors(
 				update.Value.(*model.Policy),
-				"Policy \""+update.Key.(model.PolicyKey).Name+"\" ",
+				"Policy \""+removeTierFromPolicyName(update.Key.(model.PolicyKey).Name)+"\" ",
 			)
 			return false
 		}
@@ -188,7 +188,7 @@ func (epd endpointDatum) EndpointName() string {
 	var epName string
 	switch epID := epd.epID.(type) {
 	case model.WorkloadEndpointKey:
-		epName = fmt.Sprintf("Workload endpoint %v/%v/%v", epID.OrchestratorID, epID.WorkloadID, epID.EndpointID)
+		epName = fmt.Sprintf("Workload endpoint %v/%v/%v", epID.OrchestratorID, convertWorkloadID(epID.WorkloadID), epID.EndpointID)
 	case model.HostEndpointKey:
 		epName = fmt.Sprintf("Host endpoint %v", epID.EndpointID)
 	}
@@ -299,9 +299,9 @@ func (cbs *describeCmd) print(matches map[interface{}][]string) {
 							polOrder = fmt.Sprint(*pol.Value.Order)
 						}
 						if cbs.hideSelectors {
-							fmt.Printf("    %sPolicy %#v (order %v)%v\n", tierText, pol.Key.Name, polOrder, suffix)
+							fmt.Printf("    %sPolicy %#v (order %v)%v\n", tierText, removeTierFromPolicyName(pol.Key.Name), polOrder, suffix)
 						} else {
-							fmt.Printf("    %sPolicy %#v (order %v; selector \"%v\")%v\n", tierText, pol.Key.Name, polOrder, pol.Value.Selector, suffix)
+							fmt.Printf("    %sPolicy %#v (order %v; selector \"%v\")%v\n", tierText, removeTierFromPolicyName(pol.Key.Name), polOrder, pol.Value.Selector, suffix)
 						}
 					}
 				}
@@ -378,7 +378,7 @@ func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputLis
 						}
 
 						policyPrint := PolicyPrint{
-							Name:      pol.Key.Name,
+							Name:      removeTierFromPolicyName(pol.Key.Name),
 							Order:     polOrder,
 							TierName:  tier.Name,
 							TierOrder: tierOrder,
@@ -445,7 +445,7 @@ func (cbs *describeCmd) OnUpdates(updates []api.Update) {
 }
 
 func (cbs *describeCmd) OnPolicyMatch(policyKey model.PolicyKey, endpointKey interface{}) {
-	log.Infof("Policy %v/%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
+	log.Infof("Policy %v.%v now matches %v", policyKey.Tier, policyKey.Name, endpointKey)
 	cbs.epIDToPolIDs[endpointKey][policyKey] = true
 }
 

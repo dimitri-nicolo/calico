@@ -99,7 +99,7 @@ build-image: bin/calicoq
 # Clean up image from containerized testing
 .PHONY: clean-image
 clean-image:
-	docker rmi $(shell docker images -a | grep $(BUILD_IMAGE) | awk '{print $$3}')
+	docker rmi -f $(shell docker images -a | grep $(BUILD_IMAGE) | awk '{print $$3}' | awk '!a[$$0]++')
 
 # All calicoq Go source files.
 CALICOQ_GO_FILES:=$(shell find calicoq -type f -name '*.go' -print)

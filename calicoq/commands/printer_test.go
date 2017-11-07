@@ -74,6 +74,16 @@ var _ = Describe("Test NewWorkloadEndpointPrintFromNameString", func() {
 
 var _ = Describe("Test NewRulePrintFromMatchString", func() {
 	It("Creates a RulePrint Object with a valid match string", func() {
+		matchString := "Policy \"test-namespace/default.testPolicy\" testDirection rule 1 testSelectorType match; selector \"testSelector\""
+		rp := NewRulePrintFromMatchString(matchString)
+		Expect(rp.PolicyName).To(Equal("test-namespace/testPolicy"))
+		Expect(rp.Direction).To(Equal("testDirection"))
+		Expect(rp.SelectorType).To(Equal("testSelectorType"))
+		Expect(rp.Selector).To(Equal("testSelector"))
+		Expect(rp.Order).To(Equal(1))
+	})
+
+	It("Creates a RulePrint Object with a valid match string and a V1 formatted policy name", func() {
 		matchString := "Policy \"testPolicy\" testDirection rule 1 testSelectorType match; selector \"testSelector\""
 		rp := NewRulePrintFromMatchString(matchString)
 		Expect(rp.PolicyName).To(Equal("testPolicy"))
@@ -84,7 +94,7 @@ var _ = Describe("Test NewRulePrintFromMatchString", func() {
 	})
 
 	It("Creates an empty RulePrint Object for invalid match strings", func() {
-		formatWrong := "Policy \"testPolicy\" testDirection rule 1 testSelectorType match something; selector \"testSelector\""
+		formatWrong := "Policy \"test-namespace/default.testPolicy\" testDirection rule 1 testSelectorType match something; selector \"testSelector\""
 		rp := NewRulePrintFromMatchString(formatWrong)
 		Expect(rp.PolicyName).To(Equal(""))
 		Expect(rp.Direction).To(Equal(""))
