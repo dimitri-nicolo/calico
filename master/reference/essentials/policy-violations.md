@@ -2,7 +2,7 @@
 title: Policy Violation Monitoring & Reporting
 ---
 
-Tigera Essentials Toolkit adds the ability to monitor violations of policy
+{{site.prodname}} adds the ability to monitor violations of policy
 configured in your cluster. By defining a set of simple rules and thresholds,
 you can monitor denied traffic and receive alerts when it exceeds configured
 thresholds.
@@ -31,10 +31,10 @@ thresholds.
 
 Policy Violation & Reporting is accomplished using 3 key pieces:
 
-1. Essentials specific `calico/node` image: An _Essentials_ specific Felix
+1. {{site.prodname}} specific `calico/node` image: A _{{site.prodname}}_ specific Felix
    binary running inside `calico/node` monitors the host for Denied packets and
    collects metrics.
-2. Prometheus Server(s) deployed as part of the _Essentials_ manifest scrapes
+2. Prometheus Server(s) deployed as part of the _{{site.prodname}}_ manifest scrapes
    every configured `calico/node` target. Alerting rules querying denied packet
    metrics are configured in Prometheus and when triggered, fire alerts to
    the Prometheus Alertmanager.
@@ -46,8 +46,8 @@ Policy Violation & Reporting is accomplished using 3 key pieces:
 
 The metrics generated are:
 
-- `calico_denied_packets` - Total number of packets denied by Calico policies.
-- `calico_denied_bytes` - Total number of bytes denied by Calico policies.
+- `calico_denied_packets` - Total number of packets denied by {{site.prodname}} policies.
+- `calico_denied_bytes` - Total number of bytes denied by {{site.prodname}} policies.
 
 Using these metrics, one can identify the policy that denied packets as well as
 the source IP Address of the packets that were denied by this policy. Using

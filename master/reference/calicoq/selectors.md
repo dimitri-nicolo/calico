@@ -4,15 +4,15 @@ title: calicoq and selectors
 
 The queries that you can make with `calicoq` all involve computing the matches
 between endpoints and policies or profiles, via selectors.  The use of
-selectors in Calico policy is described in detail
+selectors in {{site.prodname}} policy is described in detail
 by
 [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy),
 but to recap:
 
-- Selectors can be used in three contexts in Calico security policy
+- Selectors can be used in three contexts in {{site.prodname}} security policy
   definitions.
 
-- A selector is used in the definition of each Calico Policy object, to specify
+- A selector is used in the definition of each {{site.prodname}} Policy object, to specify
   the endpoints (pods) that that Policy applies to (`spec.selector`).
 
 - A selector can be used in each ingress Rule, to specify that the Rule only

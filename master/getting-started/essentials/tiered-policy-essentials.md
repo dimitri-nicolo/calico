@@ -9,7 +9,7 @@ Some use cases for using tiers and tiered policies are:
 
   - Allow privileged users to define security Policy that takes precedence over
     other users.
-  - Translating hierarchies of physical firewalls directly into Calico Policy.
+  - Translating hierarchies of physical firewalls directly into {{site.prodname}} Policy.
   - Group policies together under a tier.
 
 Specifically, the example presented here will discuss some aspects of the
@@ -17,7 +17,7 @@ first use case.
 
 ### Prerequisites
 
-- A Kubernetes cluster configured with [Calico Networking and Tigera Essentials Toolkit](../kubernetes/installation/hosted/essentials/index)
+- A Kubernetes cluster configured with [{{site.prodname}}](../kubernetes/installation/hosted/essentials/index)
 - [calicoctl installed and set up](../../reference/calicoctl/setup) to work properly with your cluster
 
 ### Create Namespace and Enable Isolation
@@ -87,7 +87,7 @@ wget: download timed out
 
 ### Examine the Policy Resource
 
-Let's first look at existing policies and tiers that are created when Calico
+Let's first look at existing policies and tiers that are created when {{site.prodname}}
 is deployed. All policies that are created so far will end up in a `default` tier
 called `default`. You can view existing policies by running:
 
@@ -121,7 +121,7 @@ Notice the Policy resource includes the information about the tier in the
 `metadata` field. Also, note the use of special label `calico/k8s_ns` in the
 Policy selector. This label is automatically added to endpoints and the value
 populated with the pod's Kubernetes namespace. For more information about this
-checkout [Advanced Policy with Calico](../kubernetes/tutorials/advanced-policy).
+checkout [Advanced Policy with {{site.prodname}}](../kubernetes/tutorials/advanced-policy).
 
 You can also get a list of all current tiers that exist by running:
 

@@ -1,8 +1,8 @@
 ---
-title: Obtaining Tigera Essentials Toolkit
+title: Obtaining Tigera CNX
 ---
 
-Tigera Essentials Toolkit consists of the open source Project Calico, with
+{{site.prodname}} consists of the open source Project Calico, with
 complementary monitoring and management tools.  Most of the software is open
 source, but the additions are not.  This guide details how to obtain copies of
 the relevant binaries.
@@ -22,7 +22,7 @@ for an alternative distribution mechanism.
 
 ### Open Source Binaries
 
-Essentials uses standard open source Kubernetes and `calicoctl` binaries.  These
+{{site.prodname}} uses standard open source Kubernetes and `calicoctl` binaries.  These
 can be obtained via the usual channels, although the appropriate version of
 `calicoctl ` is included in the Google Drive folder for convenience.
 

@@ -3,7 +3,7 @@ title: calicoq host
 ---
 
 `calicoq host <hostname>` shows you the endpoints that are hosted on
-`<hostname>` and all the Calico policies and profiles that relate to those
+`<hostname>` and all the {{site.prodname}} policies and profiles that relate to those
 endpoints.  It is equivalent to running `calicoq endpoint <endpoint-id>` for
 each `<endpoint-id>` that is hosted on `<hostname>`.
 
@@ -52,4 +52,4 @@ Workload endpoint k8s/policy-demo.nginx-2371676037-j2vmh/eth0
 -  [calicoq endpoint]({{site.baseurl}}/{{page.version}}/reference/calicoq/endpoint) for
    the related `calicoq endpoint` command.
 -  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
-   more information about the Calico policy model.
+   more information about the {{site.prodname}} policy model.

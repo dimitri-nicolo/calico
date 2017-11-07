@@ -1,9 +1,9 @@
 ---
-title: Tigera Essentials Toolkit Hosted Install
+title: Tigera CNX Hosted Install
 ---
 
 > **Note**: These instructions do not apply to OpenShift users. Instead, see
-> [Installing Essentials for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
+> [Installing {{site.prodname}} for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
 {: .alert .alert-info}
 
 ## Requirements
@@ -19,55 +19,55 @@ with the proper flags.
 
 ## Installation
 
-To install Tigera Essentials Toolkit that is configured to use a etcd cluster,
+To install {{site.prodname}} configured to use a etcd cluster,
 run the following commands.
 
-- Setup etcd: [calico-etcd.yaml](1.6/calico-etcd.yaml). Users who have deployed
+1. Setup etcd: [calico-etcd.yaml](1.6/calico-etcd.yaml). Users who have deployed
   their own etcd cluster can skip this step.
 
-```
-kubectl apply -f calico-etcd.yaml
-```
+   ```
+   kubectl apply -f calico-etcd.yaml
+   ```
 
-- Edit [calico-essentials.yaml](1.6/calico-essentials.yaml) file by following
+1. Edit [calico-essentials.yaml](1.6/calico-essentials.yaml) file by following
   [these instructions](#customizing-the-manifests) and then run the command below
   to install/configure calico.
 
-> **Note**: If you are using your own etcd cluster, make sure you configure the
-> provided ConfigMap with the location of your etcd cluster before proceeding.
-{: .alert .alert-info}
+   > **Note**: If you are using your own etcd cluster, make sure you configure the
+   > provided ConfigMap with the location of your etcd cluster before proceeding.
+   {: .alert .alert-info}
 
-```
-kubectl apply -f calico-essentials.yaml
-```
+   ```
+   kubectl apply -f calico-essentials.yaml
+   ```
 
-- Edit [calico-k8sapiserver.yaml](1.6/calico-k8sapiserver.yaml) by following
+1. Edit [calico-k8sapiserver.yaml](1.6/calico-k8sapiserver.yaml) by following
   [these instructions](#enabling-tls-verification-for-a-kubernetes-extension-api-server)
   and then run the command below to install a Kubernetes extension API server.
 
-```
-$ kubectl apply -f calico-k8sapiserver.yaml
-```
+   ```
+   kubectl apply -f calico-k8sapiserver.yaml
+   ```
 
-- Configure calico-monitoring namespace and deploy Prometheus Operator by
+1. Configure calico-monitoring namespace and deploy Prometheus Operator by
   applying the [operator.yaml](1.6/operator.yaml) manifest.
 
-```
-kubectl apply -f operator.yaml
-```
+   ```
+   kubectl apply -f operator.yaml
+   ```
 
-- Wait for third party resources to be created. Check by running:
+1. Wait for third party resources to be created. Check by running:
 
-```
-$ kubectl get thirdpartyresources
-```
+   ```
+   kubectl get thirdpartyresources
+   ```
 
-- Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
+1. Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
   install Prometheus and alertmanager.
 
-```
-$ kubectl apply -f monitor-calico.yaml
-```
+   ```
+   kubectl apply -f monitor-calico.yaml
+   ```
 
 ### Customizing the manifests
 
@@ -91,7 +91,7 @@ that:
 
 Note that the environment variables stated above are different from
 `FELIX_PROMETHEUSMETRICSENABLED` and `FELIX_PROMETHEUSMETRICSPORT`. The former
-set toggles and configures Calico Denied Packet reporting, while the latter set
+set toggles and configures {{site.prodname}} Denied Packet reporting, while the latter set
 toggles and configures Felix white box metrics reporting.
 
 #### Ports of Services and NetworkPolicy
@@ -252,8 +252,8 @@ Information on how to create a _Integration Key_ is available
 
 ### Advanced Alertmanager Notifications
 
-Included in the manifests is a sample alertmanager webhook. _apply_ this t
-deploy webserver that will pretty print to its stdout a JSON message (if it
+Included in the manifests is a sample alertmanager webhook. _Apply_ this to
+deploy a webserver that will pretty print to its stdout a JSON message (if it
 received a valid message).
 
 Ensure that your alertmanager configuration is as follows (this is similar to
@@ -277,16 +277,16 @@ receivers:
 
 To view the JSON output printed, examine the logs of the webhook pod.
 
-### Modifying an existing manifest to install Essentials
+### Modifying an existing manifest to install {{site.prodname}}
 
 Edit the manifest that deploys calico/node and update the following:
-  - Update the _DaemonSet_ template `image` to point to the new Calico image.
+  - Update the _DaemonSet_ template `image` to point to the new {{site.prodname}} image.
   - Add the environment variable `FELIX_PROMETHEUSREPORTERENABLED` and make
     sure it is set to `true` and
   - Add the environment variable `FELIX_PROMETHEUSREPORTERPORT` and set it to
     desired port.
 
-Create a new _Service_ to expose Calico Prometheus Denied Packet Metrics and
+Create a new _Service_ to expose {{site.prodname}} Prometheus Denied Packet Metrics and
 apply this manifest using `kubectl apply`
 
 ```
@@ -311,35 +311,35 @@ spec:
     protocol: TCP
 ```
 
-- Configure calico-monitoring namespace and deploy Prometheus Operator by
+1. Configure calico-monitoring namespace and deploy Prometheus Operator by
   applying the [operator.yaml](1.6/operator.yaml) manifest.
 
-```
-kubectl apply -f operator.yaml
-```
+   ```
+   kubectl apply -f operator.yaml
+   ```
 
-- Wait for third party resources to be created. Check by running:
+1. Wait for third party resources to be created. Check by running:
 
-```
-kubectl get thirdpartyresources
-```
+   ```
+   kubectl get thirdpartyresources
+   ```
 
-- Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
+1. Apply the [monitor-calico.yaml](1.6/monitor-calico.yaml) manifest which will
   install Prometheus and alertmanager.
 
-```
-kubectl apply -f monitor-calico.yaml
-```
+   ```
+   kubectl apply -f monitor-calico.yaml
+   ```
 
 ### Manifest Details
 
-The Calico install manifests are based on [Kubeadm hosted install](../kubeadm),
+The {{site.prodname}} install manifests are based on [Kubeadm hosted install](../kubeadm),
 however, you can adapt any hosted install manifest by making changes described
 in the [modifying your manifest to install essentials](#modifying-an-existing-manifest-to-install-essentials)
 
 The additional things the [calico-essentials.yaml](1.6/calico-essentials.yaml) does
 are:
-  - Enables prometheus reporting (this is different from felix's prometheus
+  - Enables Prometheus reporting (this is different from Felix's prometheus
     settings)
 
 The manifest [operator.yaml](1.6/operator.yaml) does the following:

@@ -9,6 +9,8 @@ gems:
 
 url: https://docs.projectcalico.org
 
+prodname: CNX
+
 exclude:
   - release-scripts
   - LICENSE
