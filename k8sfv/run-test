@@ -183,7 +183,7 @@ fi
 
 # Run Felix.
 #
-# If the image is a GCR image, pull it with gcloud it.
+# If the image is a GCR image, pull it with gcloud.
 #
 if [[ "${FELIX_IMAGE}" == *"gcr.io"* ]]; then
     gcloud docker -- pull ${FELIX_IMAGE}:${FELIX_VERSION}
