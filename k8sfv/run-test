@@ -6,6 +6,9 @@
 
 # Config.
 #
+# What Felix (container image) to use.
+: ${FELIX_IMAGE:=calico/felix}
+#
 # What version of Felix (container image) to use.
 : ${FELIX_VERSION:=latest}
 #
@@ -52,6 +55,9 @@
 #
 # Whether to tell Felix to go via Typha.
 : ${USE_TYPHA:=true}
+#
+# What Typha (container image) to use.
+: ${TYPHA_IMAGE:=calico/typha}
 #
 # What version of Typha (container image) to use.
 : ${TYPHA_VERSION:=latest}
@@ -154,6 +160,9 @@ while ! docker cp ${prefix}-apiserver:/var/run/kubernetes/apiserver.crt k8sfv/ou
 done
 
 if ${USE_TYPHA}; then
+    if [[ "${TYPHA_IMAGE}" == *"gcr.io"* ]]; then
+        gcloud docker -- pull ${TYPHA_IMAGE}:${TYPHA_VERSION}
+    fi
     # Run Typha.
     docker run --detach --privileged --name ${prefix}-typha \
 	   -e CALICO_DATASTORE_TYPE=kubernetes \
@@ -163,7 +172,7 @@ if ${USE_TYPHA}; then
 	   -e K8S_CA_FILE=/testcode/k8sfv/output/apiserver.crt \
 	   -v ${PWD}:/testcode \
 	   -w /testcode/k8sfv/output \
-	   calico/typha:${TYPHA_VERSION} \
+	   ${TYPHA_IMAGE}:${TYPHA_VERSION} \
 	   /bin/sh -c "for n in 1 2; do calico-typha; done"
     typha_ip=$(get_container_ip ${prefix}-typha)
     typha_hostname=$(get_container_hostname ${prefix}-typha)
@@ -173,6 +182,13 @@ else
 fi
 
 # Run Felix.
+#
+# If the image is a GCR image, pull it with gcloud.
+#
+if [[ "${FELIX_IMAGE}" == *"gcr.io"* ]]; then
+    gcloud docker -- pull ${FELIX_IMAGE}:${FELIX_VERSION}
+fi
+
 #
 # Specifying CALICO_DATASTORE_TYPE as well as FELIX_DATASTORETYPE is
 # only needed for Felix 2.1 and earlier.  For 2.2, FELIX_DATASTORETYPE
@@ -192,7 +208,7 @@ docker run --detach --privileged --name ${prefix}-felix \
        -e K8SFV_LOG_LEVEL=${K8SFV_LOG_LEVEL} \
        -v ${PWD}:/testcode \
        -w /testcode/k8sfv/output \
-       calico/felix:${FELIX_VERSION} \
+       ${FELIX_IMAGE}:${FELIX_VERSION} \
        /bin/sh -c "apk --no-cache add nmap; while true; do calico-felix; done"
 felix_ip=$(get_container_ip ${prefix}-felix)
 felix_hostname=$(get_container_hostname ${prefix}-felix)
