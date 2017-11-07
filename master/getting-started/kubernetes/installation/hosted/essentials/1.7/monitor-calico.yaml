@@ -128,7 +128,7 @@ metadata:
 ---
 
 # This manifest creates a ServiceMonitor to select calico-node metrics endpoints.
-apiVersion: monitoring.coreos.com/v1alpha1
+apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: calico-node-monitor
@@ -205,13 +205,13 @@ data:
 ---
 
 # This manifest creates the Calico AlertManager.
-apiVersion: monitoring.coreos.com/v1alpha1
+apiVersion: monitoring.coreos.com/v1
 kind: Alertmanager
 metadata:
   name: calico-node-alertmanager
   namespace: calico-monitoring
 spec:
-  version: v0.7.1
+  version: v0.8.0
   # If necessary, uncomment the 2 lines below and edit the nodeSelector
   # key:value pair with appropriate values for your environment.
   #nodeSelector:
@@ -240,7 +240,7 @@ spec:
 
 # This manifest runs a Prometheus instance that will monitor calico-node
 # denied packet metrics.
-apiVersion: monitoring.coreos.com/v1alpha1
+apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
   name: calico-node-prometheus
