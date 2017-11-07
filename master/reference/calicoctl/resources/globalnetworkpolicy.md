@@ -15,6 +15,9 @@ See [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resour
 GlobalNetworkPolicy resources can be used to define network connectivity rules between groups of Calico endpoints and host endpoints, and
 take precedence over [Profile resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile) if any are defined.
 
+GlobalNetworkPolicies are organised into tiers, which provide an additional layer of ordering—in particular, note that the `pass` action skips to the
+next tier, to enable hierarchical security policy.
+
 For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `globalnetworkpolicy`, `globalnetworkpolicies`, `gnp`, `gnps`.
 
@@ -27,8 +30,9 @@ This sample policy allows TCP traffic from `frontend` endpoints to port 6379 on
 apiVersion: projectcalico.org/v2
 kind: GlobalNetworkPolicy
 metadata:
-  name: allow-tcp-6379
+  name: internal-access.allow-tcp-6379
 spec:
+  tier: internal-access
   selector: role == 'database'
   types:
   - ingress

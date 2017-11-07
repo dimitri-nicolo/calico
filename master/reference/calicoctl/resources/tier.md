@@ -1,12 +1,14 @@
 ---
 title: Tier Resource (tier)
+no_canonical: true
 ---
 
-A Tier resource (tier) represents an ordered collection of [Policies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy).
-Tiers are used to divide Policies into groups of different priorities.  Policies
+A tier resource (`Tier`) represents an ordered collection of [NetworkPolicies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy)
+and/or [GlobalNetworkPolicies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy).
+Tiers are used to divide these policies into groups of different priorities.  These policies
 are ordered within a Tier: the additional hierarchy of Tiers provides more flexibility
 because the `pass` `action` in a Rule jumps to the next Tier.  Some example use cases for this are.
-- Allowing privileged users to define security Policy that takes precedence over other users.
+- Allowing privileged users to define security policy that takes precedence over other users.
 - Translating hierarchies of physical firewalls directly into Calico Policy.
 
 For `calicoctl` commands that specify a resource type on the CLI, the following
@@ -28,8 +30,8 @@ If the last Tier applying to the endpoint `pass`es the packet, that endpoint's [
 ### Sample YAML
 
 ```yaml
-apiVersion: v1
-kind: tier
+apiVersion: projectcalico.org/v2
+kind: Tier
 metadata:
   name: internal-access
 spec:
