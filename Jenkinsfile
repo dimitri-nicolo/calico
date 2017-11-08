@@ -55,7 +55,7 @@ pipeline{
                     // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
                     if (env.BRANCH_NAME == 'master') {
 			sh 'make build-image'
-			sh 'docker tag calico/calicoq:latest gcr.io/tigera-dev/calico/calicoq:latest'
+			sh 'docker tag calico/calicoq:latest gcr.io/tigera-dev/calico/calicoq:master'
                         sh 'gcloud docker -- push gcr.io/tigera-dev/calico/calicoq'
 
 			// Clean up images.
