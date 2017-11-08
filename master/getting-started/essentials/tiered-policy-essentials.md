@@ -112,15 +112,15 @@ $ calicoctl get networkpolicy -o yaml --namespace policy-demo
   spec:
     tier: default
     egress:
-    - action: allow
+    - action: Allow
       destination: {}
       source: {}
     order: 1000
-    selector: calico/k8s_ns == 'policy-demo'
+    selector: projectcalico.org/namespace == 'policy-demo'
 ```
 
 Notice the Policy resource includes the information about the tier in the
-`metadata` field. Also, note the use of special label `calico/k8s_ns` in the
+`metadata` field. Also, note the use of special label `projectcalico.org/namespace` in the
 Policy selector. This label is automatically added to endpoints and the value
 populated with the pod's Kubernetes namespace. For more information about this
 checkout [Advanced Policy with {{site.prodname}}](../kubernetes/tutorials/advanced-policy).
@@ -194,7 +194,7 @@ isn't met.
 ```
 # GlobalNetworkPolicyPolicy in the netops tier that will prevent DNS requests to
 # Google DNS servers from pods in the policy-demo namespace.
-# We use the "pass" action to give other lower ordered tiers a chance to define
+# We use the "Pass" action to give other lower ordered tiers a chance to define
 # policies. If a policy in a tier is applied to an endpoint but no policy in
 # the tier acts on the traffic, it will be dropped at the end of tier.
 $ calicoctl create -f - <<EOF
@@ -208,26 +208,26 @@ $ calicoctl create -f - <<EOF
     ingress:
     # Let lower order tiers define traffic for ingress
     # traffic
-    - action: pass
+    - action: Pass
       destination: {}
       source: {}
     egress:
     # Drop traffic to google-public-dns-a.google.com
-    - action: deny
+    - action: Deny
       destination:
-        net: 8.8.8.8/32
+        nets: ["8.8.8.8/32"]
     # Drop traffic to google-public-dns-b.google.com
-    - action: deny
+    - action: Deny
       destination:
-        net: 8.8.4.4/32
+        nets: ["8.8.4.4/32"]
     # Explicitly allow other outgoing DNS traffic
-    - action: allow
+    - action: Allow
       protocol: udp
       destination:
         ports: [53]
     # Pass other traffic to next tier
-    - action: pass
-    selector: calico/k8s_ns == 'policy-demo'
+    - action: Pass
+    selector: projectcalico.org/namespace == 'policy-demo'
 EOF
 ```
 
@@ -245,7 +245,7 @@ nslookup: can't resolve 'tigera.io'
 # No results returned and query should eventually timeout.
 ```
 
-We can create additional tiered policies to police `pass`-ed traffic from the
+We can create additional tiered policies to police `Pass`-ed traffic from the
 `netops.no-public-dns-for-policy-demo` GlobalNetworkPolicy.
 
 Create a `devops` tier.
@@ -275,17 +275,17 @@ $ calicoctl create -f - <<EOF
     order: 200
     egress:
     # Deny traffic from leaving the namespace
-    - action: deny
+    - action: Deny
       destination:
-        selector: calico/k8s_ns != 'policy-demo'
-    - action: pass
+        selector: projectcalico.org/namespace != 'policy-demo'
+    - action: Pass
     ingress:
     # Deny traffic from entering the namespace
-    - action: deny
+    - action: Deny
       source:
-        selector: calico/k8s_ns != 'policy-demo'
-    - action: pass
-    selector: calico/k8s_ns == 'policy-demo'
+        selector: projectcalico.org/namespace != 'policy-demo'
+    - action: Pass
+    selector: projectcalico.org/namespace == 'policy-demo'
 EOF
 ```
 
