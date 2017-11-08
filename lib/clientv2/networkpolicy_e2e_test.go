@@ -28,10 +28,16 @@ import (
 	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
+
+func tieredNetworkPolicyName(ns, p, t string) string {
+	name, _ := names.BackendTieredPolicyName(p, t)
+	return ns + "/" + name
+}
 
 var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 
@@ -42,6 +48,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 	namespace2 := "namespace-2"
 	name1 := "networkp-1"
 	name2 := "networkp-2"
+	tier := "tier-a"
 	spec1 := apiv2.PolicySpec{
 		Order:        &order1,
 		IngressRules: []apiv2.Rule{testutils.InRule1, testutils.InRule2},
@@ -66,9 +73,10 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 	ingressTypesSpec1.Types = ingress
 	egressTypesSpec2 := spec2
 	egressTypesSpec2.Types = egress
-
 	DescribeTable("NetworkPolicy e2e CRUD tests",
-		func(namespace1, namespace2, name1, name2 string, spec1, spec2 apiv2.PolicySpec, types1, types2 []apiv2.PolicyType) {
+		func(tier, namespace1, namespace2, name1, name2 string, spec1, spec2 apiv2.PolicySpec, types1, types2 []apiv2.PolicyType) {
+			spec1.Tier = tier
+			spec2.Tier = tier
 			c, err := clientv2.New(config)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -76,13 +84,26 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
 
+			if tier != "" && tier != "default" {
+				// Create the tier if required before running other tiered policy tests.
+				order := float64(10)
+				tierSpec := apiv2.TierSpec{Order: &order}
+				By("Creating the tier")
+				tierRes, resErr := c.Tiers().Create(ctx, &apiv2.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: tier},
+					Spec:       tierSpec,
+				}, options.SetOptions{})
+				Expect(resErr).NotTo(HaveOccurred())
+				testutils.ExpectResource(tierRes, apiv2.KindTier, testutils.ExpectNoNamespace, tier, tierSpec)
+			}
+
 			By("Updating the NetworkPolicy before it is created")
 			_, outError := c.NetworkPolicies().Update(ctx, &apiv2.NetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespace1, Name: name1, ResourceVersion: "1234"},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + namespace1 + "/" + name1 + ")"))
+			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace1, name1, tier) + ")"))
 
 			By("Attempting to creating a new NetworkPolicy with name1/spec1 and a non-empty ResourceVersion")
 			_, outError = c.NetworkPolicies().Create(ctx, &apiv2.NetworkPolicy{
@@ -110,7 +131,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource already exists: NetworkPolicy(" + namespace1 + "/" + name1 + ")"))
+			Expect(outError.Error()).To(Equal("resource already exists: NetworkPolicy(" + tieredNetworkPolicyName(namespace1, name1, tier) + ")"))
 
 			By("Getting NetworkPolicy (name1) and comparing the output against spec1")
 			res, outError := c.NetworkPolicies().Get(ctx, namespace1, name1, options.GetOptions{})
@@ -121,7 +142,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			By("Getting NetworkPolicy (name2) before it is created")
 			_, outError = c.NetworkPolicies().Get(ctx, namespace2, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + namespace2 + "/" + name2 + ")"))
+			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
 
 			By("Listing all the NetworkPolicies in namespace1, expecting a single result with name1/spec1")
 			outList, outError := c.NetworkPolicies().List(ctx, options.ListOptions{Namespace: namespace1})
@@ -178,7 +199,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			res1.ResourceVersion = rv1_1
 			_, outError = c.NetworkPolicies().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("update conflict: NetworkPolicy(" + namespace1 + "/" + name1 + ")"))
+			Expect(outError.Error()).To(Equal("update conflict: NetworkPolicy(" + tieredNetworkPolicyName(namespace1, name1, tier) + ")"))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Getting NetworkPolicy (name1) with the original resource version and comparing the output against spec1")
@@ -213,7 +234,8 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				By("Deleting NetworkPolicy (name1) with the old resource version")
 				_, outError = c.NetworkPolicies().Delete(ctx, namespace1, name1, options.DeleteOptions{ResourceVersion: rv1_1})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("update conflict: NetworkPolicy(" + namespace1 + "/" + name1 + ")"))
+				//Expect(outError.Error()).To(Equal("update conflict: NetworkPolicy(" + namespace1 + "/" + name1 + ")"))
+				Expect(outError.Error()).To(Equal("update conflict: NetworkPolicy(" + tieredNetworkPolicyName(namespace1, name1, tier) + ")"))
 			}
 
 			By("Deleting NetworkPolicy (name1) with the new resource version")
@@ -231,7 +253,8 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				time.Sleep(2 * time.Second)
 				_, outError = c.NetworkPolicies().Get(ctx, namespace2, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + namespace2 + "/" + name2 + ")"))
+				//Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + namespace2 + "/" + name2 + ")"))
+				Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
 
 				By("Creating NetworkPolicy name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.NetworkPolicies().Create(ctx, &apiv2.NetworkPolicy{
@@ -245,7 +268,8 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				time.Sleep(2 * time.Second)
 				_, outError = c.NetworkPolicies().Get(ctx, namespace2, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + namespace2 + "/" + name2 + ")"))
+				//Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + namespace2 + "/" + name2 + ")"))
+				Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
@@ -258,7 +282,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			By("Attempting to deleting NetworkPolicy (name2) again")
 			_, outError = c.NetworkPolicies().Delete(ctx, namespace2, name2, options.DeleteOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + namespace2 + "/" + name2 + ")"))
+			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
 
 			By("Listing all NetworkPolicies and expecting no items")
 			outList, outError = c.NetworkPolicies().List(ctx, options.ListOptions{})
@@ -268,11 +292,12 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			By("Getting NetworkPolicy (name2) and expecting an error")
 			_, outError = c.NetworkPolicies().Get(ctx, namespace2, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + namespace2 + "/" + name2 + ")"))
+			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
 		},
 
 		// Pass two fully populated PolicySpecs and expect the series of operations to succeed.
-		Entry("Two fully populated PolicySpecs",
+		Entry("Two fully populated PolicySpecs in the default tier",
+			"",
 			namespace1, namespace2,
 			name1, name2,
 			spec1, spec2,
@@ -280,6 +305,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 		),
 		// Check defaulting for policies with ingress rules and egress rules only.
 		Entry("Ingress-only and egress-only policies",
+			"",
 			namespace1, namespace2,
 			name1, name2,
 			ingressSpec1, egressSpec2,
@@ -287,10 +313,18 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 		),
 		// Check non-defaulting for policies with explicit Types value.
 		Entry("Policies with explicit ingress and egress Types",
+			"",
 			namespace1, namespace2,
 			name1, name2,
 			ingressTypesSpec1, egressTypesSpec2,
 			ingress, egress,
+		),
+		Entry("Two fully populated PolicySpecs in tier",
+			tier,
+			namespace1, namespace2,
+			tier+"."+name1, tier+"."+name2,
+			spec1, spec2,
+			ingressEgress, ingressEgress,
 		),
 	)
 
@@ -319,6 +353,8 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				options.SetOptions{},
 			)
 			rev1 := outRes1.ResourceVersion
+			// Update to match backend storage
+			outRes1.GetObjectMeta().SetName("default." + name1)
 
 			By("Configuring a NetworkPolicy namespace2/name2/spec2 and storing the response")
 			outRes2, err := c.NetworkPolicies().Create(
@@ -329,6 +365,8 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				},
 				options.SetOptions{},
 			)
+			// Update to match backend storage
+			outRes2.GetObjectMeta().SetName("default." + name2)
 
 			By("Starting a watcher from revision rev1 - this should skip the first creation")
 			w, err := c.NetworkPolicies().Watch(ctx, options.ListOptions{ResourceVersion: rev1})
@@ -359,7 +397,9 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			testWatcher2 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher2.Stop()
 
+			// Revert back to client input
 			By("Modifying res2")
+			outRes2.GetObjectMeta().SetName(name2)
 			outRes3, err := c.NetworkPolicies().Update(
 				ctx,
 				&apiv2.NetworkPolicy{
@@ -369,6 +409,9 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			// And switch name back to backend storage.
+			outRes2.GetObjectMeta().SetName("default." + name2)
+			outRes3.GetObjectMeta().SetName("default." + name2)
 			testWatcher2.ExpectEvents(apiv2.KindNetworkPolicy, []watch.Event{
 				{
 					Type:   watch.Added,
@@ -393,7 +436,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			// Only etcdv3 supports watching a specific instance of a resource.
 			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
 				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
-				w, err = c.NetworkPolicies().Watch(ctx, options.ListOptions{Namespace: namespace1, Name: name1, ResourceVersion: rev0})
+				w, err = c.NetworkPolicies().Watch(ctx, options.ListOptions{Namespace: namespace1, Name: "default." + name1, ResourceVersion: rev0})
 				Expect(err).NotTo(HaveOccurred())
 				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 				defer testWatcher2_1.Stop()

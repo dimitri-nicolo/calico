@@ -28,10 +28,16 @@ import (
 	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
+
+func tieredGNPName(p, t string) string {
+	name, _ := names.BackendTieredPolicyName(p, t)
+	return name
+}
 
 var (
 	ingressEgress = []apiv2.PolicyType{apiv2.PolicyTypeIngress, apiv2.PolicyTypeEgress}
@@ -44,6 +50,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 	ctx := context.Background()
 	order1 := 99.999
 	order2 := 22.222
+	tier := "tier-a"
 	name1 := "globalnetworkp-1"
 	name2 := "globalnetworkp-2"
 	spec1 := apiv2.PolicySpec{
@@ -72,7 +79,9 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 	egressTypesSpec2.Types = egress
 
 	DescribeTable("GlobalNetworkPolicy e2e CRUD tests",
-		func(name1, name2 string, spec1, spec2 apiv2.PolicySpec, types1, types2 []apiv2.PolicyType) {
+		func(tier, name1, name2 string, spec1, spec2 apiv2.PolicySpec, types1, types2 []apiv2.PolicyType) {
+			spec1.Tier = tier
+			spec2.Tier = tier
 			c, err := clientv2.New(config)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -80,13 +89,26 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
 
+			if tier != "" && tier != "default" {
+				// Create the tier if required before running other tiered policy tests.
+				order := float64(10)
+				tierSpec := apiv2.TierSpec{Order: &order}
+				By("Creating the tier")
+				tierRes, resErr := c.Tiers().Create(ctx, &apiv2.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: tier},
+					Spec:       tierSpec,
+				}, options.SetOptions{})
+				Expect(resErr).NotTo(HaveOccurred())
+				testutils.ExpectResource(tierRes, apiv2.KindTier, testutils.ExpectNoNamespace, tier, tierSpec)
+			}
+
 			By("Updating the GlobalNetworkPolicy before it is created")
 			_, outError := c.GlobalNetworkPolicies().Update(ctx, &apiv2.GlobalNetworkPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234"},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + name1 + ")"))
+			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name1, tier) + ")"))
 
 			By("Attempting to creating a new GlobalNetworkPolicy with name1/spec1 and a non-empty ResourceVersion")
 			_, outError = c.GlobalNetworkPolicies().Create(ctx, &apiv2.GlobalNetworkPolicy{
@@ -114,7 +136,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				Spec:       spec2,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource already exists: GlobalNetworkPolicy(" + name1 + ")"))
+			Expect(outError.Error()).To(Equal("resource already exists: GlobalNetworkPolicy(" + tieredGNPName(name1, tier) + ")"))
 
 			By("Getting GlobalNetworkPolicy (name1) and comparing the output against spec1")
 			res, outError := c.GlobalNetworkPolicies().Get(ctx, name1, options.GetOptions{})
@@ -125,7 +147,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			By("Getting GlobalNetworkPolicy (name2) before it is created")
 			_, outError = c.GlobalNetworkPolicies().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + name2 + ")"))
+			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
 
 			By("Listing all the GlobalNetworkPolicies, expecting a single result with name1/spec1")
 			outList, outError := c.GlobalNetworkPolicies().List(ctx, options.ListOptions{})
@@ -176,7 +198,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			res1.ResourceVersion = rv1_1
 			_, outError = c.GlobalNetworkPolicies().Update(ctx, res1, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("update conflict: GlobalNetworkPolicy(" + name1 + ")"))
+			Expect(outError.Error()).To(Equal("update conflict: GlobalNetworkPolicy(" + tieredGNPName(name1, tier) + ")"))
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Getting GlobalNetworkPolicy (name1) with the original resource version and comparing the output against spec1")
@@ -211,7 +233,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				By("Deleting GlobalNetworkPolicy (name1) with the old resource version")
 				_, outError = c.GlobalNetworkPolicies().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_1})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("update conflict: GlobalNetworkPolicy(" + name1 + ")"))
+				Expect(outError.Error()).To(Equal("update conflict: GlobalNetworkPolicy(" + tieredGNPName(name1, tier) + ")"))
 			}
 
 			By("Deleting GlobalNetworkPolicy (name1) with the new resource version")
@@ -229,7 +251,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				time.Sleep(2 * time.Second)
 				_, outError = c.GlobalNetworkPolicies().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + name2 + ")"))
+				Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
 
 				By("Creating GlobalNetworkPolicy name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.GlobalNetworkPolicies().Create(ctx, &apiv2.GlobalNetworkPolicy{
@@ -243,7 +265,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				time.Sleep(2 * time.Second)
 				_, outError = c.GlobalNetworkPolicies().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + name2 + ")"))
+				Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
@@ -256,7 +278,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			By("Attempting to deleting GlobalNetworkPolicy (name2) again")
 			_, outError = c.GlobalNetworkPolicies().Delete(ctx, name2, options.DeleteOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + name2 + ")"))
+			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
 
 			By("Listing all GlobalNetworkPolicies and expecting no items")
 			outList, outError = c.GlobalNetworkPolicies().List(ctx, options.ListOptions{})
@@ -266,15 +288,17 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			By("Getting GlobalNetworkPolicy (name2) and expecting an error")
 			_, outError = c.GlobalNetworkPolicies().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + name2 + ")"))
+			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
 		},
 
-		// Pass two fully populated GlobalNetworkPolicySpecs and expect the series of operations to succeed.
-		Entry("Two fully populated GlobalNetworkPolicySpecs", name1, name2, spec1, spec2, ingressEgress, ingressEgress),
+		// Pass two fully populated GlobalNetworkPolicySpecs in default tier and expect the series of operations to succeed.
+		Entry("Two fully populated GlobalNetworkPolicySpecs", "", name1, name2, spec1, spec2, ingressEgress, ingressEgress),
 		// Check defaulting for policies with ingress rules and egress rules only.
-		Entry("Ingress-only and egress-only policies", name1, name2, ingressSpec1, egressSpec2, ingress, egress),
+		Entry("Ingress-only and egress-only policies", "", name1, name2, ingressSpec1, egressSpec2, ingress, egress),
 		// Check non-defaulting for policies with explicit Types value.
-		Entry("Policies with explicit ingress and egress Types", name1, name2, ingressTypesSpec1, egressTypesSpec2, ingress, egress),
+		Entry("Policies with explicit ingress and egress Types", "", name1, name2, ingressTypesSpec1, egressTypesSpec2, ingress, egress),
+		// Pass two fully populated GlobalNetworkPolicySpecs in a tier, and expect the series of operations to succeed.
+		Entry("Two fully populated GlobalNetworkPolicySpecs", tier, tier+"."+name1, tier+"."+name2, spec1, spec2, ingressEgress, ingressEgress),
 	)
 
 	Describe("GlobalNetworkPolicy watch functionality", func() {
@@ -302,6 +326,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				options.SetOptions{},
 			)
 			rev1 := outRes1.ResourceVersion
+			outRes1.GetObjectMeta().SetName("default." + name1)
 
 			By("Configuring a GlobalNetworkPolicy name2/spec2 and storing the response")
 			outRes2, err := c.GlobalNetworkPolicies().Create(
@@ -312,6 +337,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				},
 				options.SetOptions{},
 			)
+			outRes2.GetObjectMeta().SetName("default." + name2)
 
 			By("Starting a watcher from revision rev1 - this should skip the first creation")
 			w, err := c.GlobalNetworkPolicies().Watch(ctx, options.ListOptions{ResourceVersion: rev1})
@@ -343,6 +369,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			defer testWatcher2.Stop()
 
 			By("Modifying res2")
+			outRes2.GetObjectMeta().SetName(name2)
 			outRes3, err := c.GlobalNetworkPolicies().Update(
 				ctx,
 				&apiv2.GlobalNetworkPolicy{
@@ -352,6 +379,8 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
+			outRes2.GetObjectMeta().SetName("default." + name2)
+			outRes3.GetObjectMeta().SetName("default." + name2)
 			testWatcher2.ExpectEvents(apiv2.KindGlobalNetworkPolicy, []watch.Event{
 				{
 					Type:   watch.Added,
@@ -376,7 +405,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			// Only etcdv3 supports watching a specific instance of a resource.
 			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
 				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
-				w, err = c.GlobalNetworkPolicies().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
+				w, err = c.GlobalNetworkPolicies().Watch(ctx, options.ListOptions{Name: "default." + name1, ResourceVersion: rev0})
 				Expect(err).NotTo(HaveOccurred())
 				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 				defer testWatcher2_1.Stop()

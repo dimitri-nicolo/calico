@@ -19,6 +19,7 @@ import (
 
 	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
 	"github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 
@@ -47,6 +48,11 @@ type globalnetworkpolicies struct {
 // Create takes the representation of a GlobalNetworkPolicy and creates it.  Returns the stored
 // representation of the GlobalNetworkPolicy, and an error, if there is any.
 func (r globalnetworkpolicies) Create(ctx context.Context, res *apiv2.GlobalNetworkPolicy, opts options.SetOptions) (*apiv2.GlobalNetworkPolicy, error) {
+	// Validate the policy name and append the `default.` prefix if necessary.
+	backendPolicyName, err := names.BackendTieredPolicyName(res.GetObjectMeta().GetName(), res.Spec.Tier)
+	if err != nil {
+		return nil, err
+	}
 	// Before creating the policy, check that the tier exists, and if this is the
 	// default tier, create it if it doesn't.
 	if res.Spec.Tier == "" {
@@ -62,20 +68,45 @@ func (r globalnetworkpolicies) Create(ctx context.Context, res *apiv2.GlobalNetw
 		return nil, err
 	}
 
+	res.GetObjectMeta().SetName(backendPolicyName)
 	defaultPolicyTypesField(&res.Spec)
 	out, err := r.client.resources.Create(ctx, opts, apiv2.KindGlobalNetworkPolicy, res)
 	if out != nil {
+		retName, retErr := names.ClientTieredPolicyName(backendPolicyName)
+		if retErr != nil {
+			return nil, retErr
+		}
+		// Remove any changes made to the policy name.
+		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv2.GlobalNetworkPolicy), err
 	}
+	retName, retErr := names.ClientTieredPolicyName(backendPolicyName)
+	if retErr != nil {
+		return nil, retErr
+	}
+	// Remove any changes made to the policy name.
+	res.GetObjectMeta().SetName(retName)
 	return nil, err
 }
 
 // Update takes the representation of a GlobalNetworkPolicy and updates it. Returns the stored
 // representation of the GlobalNetworkPolicy, and an error, if there is any.
 func (r globalnetworkpolicies) Update(ctx context.Context, res *apiv2.GlobalNetworkPolicy, opts options.SetOptions) (*apiv2.GlobalNetworkPolicy, error) {
+	// Validate the policy name and append the `default.` prefix if necessary.
+	backendPolicyName, err := names.BackendTieredPolicyName(res.GetObjectMeta().GetName(), res.Spec.Tier)
+	if err != nil {
+		return nil, err
+	}
+	res.GetObjectMeta().SetName(backendPolicyName)
 	defaultPolicyTypesField(&res.Spec)
 	out, err := r.client.resources.Update(ctx, opts, apiv2.KindGlobalNetworkPolicy, res)
 	if out != nil {
+		retName, retErr := names.ClientTieredPolicyName(backendPolicyName)
+		if retErr != nil {
+			return nil, retErr
+		}
+		// Remove any changes made to the policy name.
+		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv2.GlobalNetworkPolicy), err
 	}
 	return nil, err
@@ -83,8 +114,15 @@ func (r globalnetworkpolicies) Update(ctx context.Context, res *apiv2.GlobalNetw
 
 // Delete takes name of the GlobalNetworkPolicy and deletes it. Returns an error if one occurs.
 func (r globalnetworkpolicies) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv2.GlobalNetworkPolicy, error) {
-	out, err := r.client.resources.Delete(ctx, opts, apiv2.KindGlobalNetworkPolicy, noNamespace, name)
+	backendPolicyName := names.TieredPolicyName(name)
+	out, err := r.client.resources.Delete(ctx, opts, apiv2.KindGlobalNetworkPolicy, noNamespace, backendPolicyName)
 	if out != nil {
+		retName, retErr := names.ClientTieredPolicyName(backendPolicyName)
+		if retErr != nil {
+			return nil, retErr
+		}
+		// Remove any changes made to the policy name.
+		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv2.GlobalNetworkPolicy), err
 	}
 	return nil, err
@@ -93,8 +131,15 @@ func (r globalnetworkpolicies) Delete(ctx context.Context, name string, opts opt
 // Get takes name of the GlobalNetworkPolicy, and returns the corresponding GlobalNetworkPolicy object,
 // and an error if there is any.
 func (r globalnetworkpolicies) Get(ctx context.Context, name string, opts options.GetOptions) (*apiv2.GlobalNetworkPolicy, error) {
-	out, err := r.client.resources.Get(ctx, opts, apiv2.KindGlobalNetworkPolicy, noNamespace, name)
+	backendPolicyName := names.TieredPolicyName(name)
+	out, err := r.client.resources.Get(ctx, opts, apiv2.KindGlobalNetworkPolicy, noNamespace, backendPolicyName)
 	if out != nil {
+		retName, retErr := names.ClientTieredPolicyName(backendPolicyName)
+		if retErr != nil {
+			return nil, retErr
+		}
+		// Remove any changes made to the policy name.
+		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv2.GlobalNetworkPolicy), err
 	}
 	return nil, err
@@ -105,6 +150,15 @@ func (r globalnetworkpolicies) List(ctx context.Context, opts options.ListOption
 	res := &apiv2.GlobalNetworkPolicyList{}
 	if err := r.client.resources.List(ctx, opts, apiv2.KindGlobalNetworkPolicy, apiv2.KindGlobalNetworkPolicyList, res); err != nil {
 		return nil, err
+	}
+	// Format policy names to be returned.
+	for i, _ := range res.Items {
+		name := res.Items[i].GetObjectMeta().GetName()
+		retName, err := names.ClientTieredPolicyName(name)
+		if err != nil {
+			continue
+		}
+		res.Items[i].GetObjectMeta().SetName(retName)
 	}
 	return res, nil
 }
