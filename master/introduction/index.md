@@ -29,3 +29,4 @@ For guides on how to set up {{site.prodname}} and a demo of some its basic funct
 * [Policy Query Utility (calicoq))](../reference/calicoq/)
 * [Policy Audit Mode](../reference/essentials/policy-auditing)
 * [Policy Violation Alerting](../reference/essentials/policy-violations)
+* [RBAC on Tiered Policies](../reference/essentials/rbac-tiered-policies)
