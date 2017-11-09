@@ -2,8 +2,10 @@
 title: Upgrading Calico for Kubernetes
 ---
 
-This document covers upgrading the Calico components in a Kubernetes deployment.  This
-upgrade procedure is supported for Calico v1.6+.
+This document covers upgrading the Calico components in a Kubernetes deployment.
+It also covers upgrading to Tigera CNX from [open source Calico](#upgrading-an-open-source-cluster-with-tigera-cnx),
+or from [Tigera Essentials Toolkit](#upgrading-a-cluster-with-tigera-essentials-toolkit-to-cnx).
+The upgrade procedure is supported for Calico v1.6+.
 
 It is possible to upgrade the Calico components on a single node without affecting connectivity or
 network policy for any existing pods.  However, it is recommended that you do not deploy
@@ -32,20 +34,25 @@ impact on Calico.
 > before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.
 {: .alert .alert-danger}
 
-## Upgrading an Existing Cluster with Tigera Essentials Toolkit
+## Upgrading an Open Source Cluster with Tigera CNX
 
 Follow the steps for [upgrading a hosted installation of Calico](#upgrading-a-hosted-installation-of-calico),
-but also upgrade the additional toolkit manifests after upgrading the core Calico manifests.
+but also [upgrade the additional CNX manifests](#adding-tigera-cnx) after upgrading the core Calico manifests.
 
-## Adding Tigera Essentials Toolkit to an Existing Open Source Cluster
-This section covers taking an existing Kubernetes system with Open Source Calico and adding the Tigera Essentials Toolkit.
+## Upgrading a Cluster with Tigera Essentials Toolkit to CNX
+
+Follow the steps for [upgrading a hosted installation of Calico](#upgrading-a-hosted-installation-of-calico),
+but also [upgrade the additional CNX manifests](#adding-tigera-cnx) after upgrading the core Calico manifests.  Steps 1 to 3 are not required.
+
+## Adding Tigera CNX
+This section covers taking an existing Kubernetes system with Calico and maybe Tigera Essentials Toolkit, and adding Tigera CNX.
 
 #### Prerequisites
 This procedure assumes the following:
 
-1. Your system is running the latest 2.4.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.4.x release
-2. You have obtained the Tigera Essentials Toolkit specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded the Essentials `calico/node` image to a private registry.
-3. You have the calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
+1. Your system is running the latest 3.0.x release of Calico.  If not, follow the instructions below to upgrade it to the latest 3.0.x release
+2. You have obtained the Tigera CNX specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded them to a private registry.
+3. You have the Calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
 
 #### Prepare for the Upgrade
  Edit your calico manifest:
@@ -65,7 +72,7 @@ This procedure assumes the following:
         ```
         kubectl cordon node-01
         ```
-    - Delete the calico-node pod running on the cordoned node and wait for the DaemonSet controller to deploy a replacement using the Essentials image.
+    - Delete the calico-node pod running on the cordoned node and wait for the DaemonSet controller to deploy a replacement using the CNX image.
         ```
         kubectl delete pod -n kube-system calico-node-ajzy6e3t
         ```
@@ -73,7 +80,7 @@ This procedure assumes the following:
         ```
         kubectl uncordon node-01
         ```
- 3. Install the Essentials tools.  For more information about the following instructions, see [Tigera Essentials Toolkit Hosted Install](installation/hosted/essentials/).
+ 3. Install the policy query and violation alerting tools.  For more information about the following instructions, see [Tigera CNX Hosted Install](installation/hosted/essentials/).
 
     - Configure calico-monitoring namespace and deploy Prometheus Operator by
       applying the [operator.yaml](installation/hosted/essentials/1.6/operator.yaml) manifest.
@@ -94,6 +101,26 @@ This procedure assumes the following:
     ```
     $ kubectl apply -f monitor-calico.yaml
     ```
+
+4. Add Tigera CNX Manager.  Note that this step may require API downtime, 
+   because the API server's command line flags will probably need changing.
+   For more information about the following instructions, see [Tigera CNX Hosted Install](installation/hosted/essentials/).
+
+   - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication).
+
+   - Edit and apply [the manifest](installagion/hosted/essentials/1.6/cnx-manager.yaml) defining the CNX Manager resources.
+     The `tigera-cnx-manager-web-config` ConfigMap at the start of the file
+     defines two parameters that may need changing: the OIDC client id
+     (only if using Google login), and the Kubernetes API location (must
+     be reachable from any system running the web application).
+
+     ```
+     # Edit the ConfigMap first
+     kubectl apply -f cnx-manager.yaml
+     ```
+
+   - Define RBAC permissions for users to access CNX Manager.
+     [This document]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies) describes how to do that.
 
 ## Upgrading a Hosted Installation of Calico
 
