@@ -845,6 +845,33 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
+	if in.PrometheusReporterEnabled != nil {
+		in, out := &in.PrometheusReporterEnabled, &out.PrometheusReporterEnabled
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
+	if in.PrometheusReporterPort != nil {
+		in, out := &in.PrometheusReporterPort, &out.PrometheusReporterPort
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int)
+			**out = **in
+		}
+	}
+	if in.DeletedMetricsRetentionSecs != nil {
+		in, out := &in.DeletedMetricsRetentionSecs, &out.DeletedMetricsRetentionSecs
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int)
+			**out = **in
+		}
+	}
 	if in.DebugDisableLogDropping != nil {
 		in, out := &in.DebugDisableLogDropping, &out.DebugDisableLogDropping
 		if *in == nil {
