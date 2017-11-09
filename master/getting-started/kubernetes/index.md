@@ -53,7 +53,7 @@ the host. Instead, continue directly to the
    and the domain name of your system (also port 30003), and note the client ID.
 
 1. Configure kubeadm to allow aggregated API servers and login using your Google project
-   by downloading [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/kubeadm.yaml),
+   by downloading [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/kubeadm.yaml),
    and filling in the client id.
 
 1. Initialize the master using the following command.
@@ -71,7 +71,7 @@ the host. Instead, continue directly to the
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
    
-1. Install Calico and Tigera CNX.  First download the [file defining the resources]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/calico-cnx.yaml), update the client id
+1. Install Calico and Tigera CNX.  First download the [file defining the resources]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml), update the client id
    in the ConfigMap and then create them.
 
    ```
@@ -172,7 +172,7 @@ with access to the Kubernetes API, and navigate to the domain name of
 the system instead (still on port 30003).
 
 You should be able to log in , but won't yet be able to see or edit resources.
-To create some RBAC roles that allow full access to everyone, apply [this manifest].
+To create some RBAC roles that allow full access to everyone, apply [this manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/rbac-all.yaml).
 
 
 ### Next steps
