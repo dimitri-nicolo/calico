@@ -108,7 +108,13 @@ This procedure assumes the following:
 
    - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication).
 
-   - Edit and apply [the manifest](installagion/hosted/essentials/1.6/cnx-manager.yaml) defining the CNX Manager resources.
+   - Edit and apply the manifest ([etcd](installation/hosted/essentials/1.6/calico-k8sapiserver.yaml)
+     or [KDD](installation/hosted/essentials/1.6/calico-k8sapiserver-kdd.yaml))
+     defining the CNX Manager API server resources.
+
+     See the main installation documentation for details on how to set the flags.
+
+   - Edit and apply [the manifest](installation/hosted/essentials/1.6/cnx-manager.yaml) defining the CNX Manager web application resources.
      The `tigera-cnx-manager-web-config` ConfigMap at the start of the file
      defines two parameters that may need changing: the OIDC client id
      (only if using Google login), and the Kubernetes API location (must
