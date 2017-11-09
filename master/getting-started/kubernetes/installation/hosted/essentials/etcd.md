@@ -9,13 +9,11 @@ title: Tigera CNX Hosted Install
 ## Requirements
 
 Ensure that the kube-apiserver has been started with the appropriate flags.
-Refer to the Kubernetes documentation to
-[Configure the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
-with the proper flags.
-
-> **Note**: If the Kubernetes cluster was installed with kubeadm the necessary
-> flags are configured by default.
-{: .alert .alert-info}
+- Refer to the Kubernetes documentation to
+  [Configure the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
+  with the proper flags.
+- Refer to the [authentication guide]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication) to choose a supported authentication
+  mechanism and configure the Kubernetes API server accordingly.
 
 ## Installation
 
@@ -47,6 +45,13 @@ run the following commands.
 
    ```
    kubectl apply -f calico-k8sapiserver.yaml
+   ```
+
+1. Edit [cnx-manager.yaml](1.6/cnx-manager.yaml) by following
+   [these instructions](#configure-the-cnx-manager-web-application)
+   and then run the command below to install the CNX Manager web application.
+   ```
+   kubectl apply -f cnx-manager.yaml
    ```
 
 1. Configure calico-monitoring namespace and deploy Prometheus Operator by
@@ -222,6 +227,25 @@ with the following changes:
 1. Uncomment the line `apiserver.crt:` in the `Secret` and append the base64
    encoded certificate file contents.
 
+### Configure the CNX Manager Web Application
+
+The [cnx-manager.yaml](1.6/cnx-manager.yaml) manifest must be updated with
+the following changes.  Some of the parameters depend on the chosen
+authentication method.  Authentication methods, and the relevant parameters
+are described [here]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication).
+
+1. If using Google login, update the `tigera.cnx-web.oidc-client-id` field 
+   in the `tigera-cnx-web-manager-config` ConfigMap.
+
+1. Update the `tigera.cnx-web.kubernetes-api` field 
+   in the `tigera-cnx-web-manager-config` ConfigMap.  It must be a URL which
+   the web client can use to reach the Kubernetes API server.  Note that it
+   must be reachable from any system which is going to access the CNX
+   Manager web application (not just inside the cluster).
+
+1. Consider updating the NodePort that exposes the web application.  Note
+   that for Google login, the URL of the application must be well known,
+   and configured in the Google console (with /login/oidc/callback appended).
 
 ### Configure Alertmanager Notifications
 
