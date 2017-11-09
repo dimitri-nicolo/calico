@@ -1,13 +1,12 @@
 ---
-title: Quickstart for Calico and Tigera CNX on Kubernetes
+title: Quickstart for Tigera CNX on Kubernetes
 ---
 
 
 ### Overview
 
-This quickstart gets you a single-host Kubernetes cluster with Calico
-and Tigera CNX in approximately 30 minutes. You can use this cluster for
-testing and development.
+This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}} 
+in approximately 30 minutes. You can use this cluster for testing and development.
 
 To deploy a cluster suitable for production, refer to [Installation](https://docs.projectcalico.org/master/getting-started/kubernetes/installation/).
 
@@ -37,7 +36,7 @@ the host. Instead, continue directly to the
 1. As a regular user with sudo privileges, open a terminal on the host that 
    you installed kubeadm on. 
 
-1. Download the Tigera CNX docker images onto that system.  Follow the instructions
+1. Download the {{site.prodname}} docker images onto that system.  Follow the instructions
    [here]({{site.baseurl}}/{{page.version}}/getting-started/essentials), but you can
    skip the steps related to uploading to a registry, since the images will only be
    needed locally.
@@ -48,13 +47,13 @@ the host. Instead, continue directly to the
    sudo apt-get update && sudo apt-get upgrade
    ```
    
-1. [Create a Google project to use to login to CNX Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
+1. [Create a Google project to use to login to {{site.prodname}} Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
    Set the redirect URIs to `http://127.0.0.1:30003`, `https://127.0.0.1:30003`,
    and the domain name of your system (also port 30003), and note the client ID.
 
 1. Configure kubeadm to allow aggregated API servers and login using your Google project
    by downloading [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/kubeadm.yaml),
-   and filling in the client id.
+   and filling in your OAuth client ID.
 
 1. Initialize the master using the following command.
 
@@ -71,11 +70,14 @@ the host. Instead, continue directly to the
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
    
-1. Install Calico and Tigera CNX.  First download the [file defining the resources]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml), update the client id
-   in the ConfigMap and then create them.
+1. [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/calico-cnx.yaml).
+
+1. Open the file in your favorite editor, update the client id
+   in the ConfigMap, and save the file.
+   
+1. Issue the following command to install {{site.prodname}} and a single-node etcd.
 
    ```
-   # First update the client id
    kubectl apply -f calico-cnx.yaml
    ```
 
@@ -163,9 +165,9 @@ the host. Instead, continue directly to the
    ```
    
 Congratulations! You now have a single-host Kubernetes cluster
-equipped with Calico and Tigera CNX.
+equipped with {{site.prodname}}.
 
-To access the CNX Manager web UI, navigate to `https://127.0.0.1:30003`.
+To access the {{site.prodname}} Manager web UI, navigate to `https://127.0.0.1:30003`.
 If you're not running this demo on the same system you'll log in from,
 instead run `kubectl proxy --port=8080` to provide the web application
 with access to the Kubernetes API, and navigate to the domain name of
@@ -181,6 +183,6 @@ To create some RBAC roles that allow full access to everyone, apply [this manife
 
 **[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
-**[Create a policy using more advanced Calico policy features](tutorials/advanced-policy)**
+**[Create a policy using more advanced {{site.prodname}} policy features](tutorials/advanced-policy)**
 
 **[Using the calicoctl CLI tool](https://docs.projectcalico.org/master/getting-started/kubernetes/tutorials/using-calicoctl)**
