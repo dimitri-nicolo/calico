@@ -72,8 +72,8 @@ the host. Instead, continue directly to the
    
 1. [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/calico-cnx.yaml).
 
-1. Open the file in your favorite editor, update the client id
-   in the ConfigMap, and save the file.
+1. Open the file in your favorite editor, replace `<fill in client id here>` with
+   your OAuth client ID, and save the file.
    
 1. Issue the following command to install {{site.prodname}} and a single-node etcd.
 
@@ -167,7 +167,7 @@ the host. Instead, continue directly to the
 Congratulations! You now have a single-host Kubernetes cluster
 equipped with {{site.prodname}}.
 
-To access the {{site.prodname}} Manager web UI, navigate to `https://127.0.0.1:30003`.
+To access the {{site.prodname}} Manager web interface, navigate to `https://127.0.0.1:30003`.
 If you're not running this demo on the same system you'll log in from,
 instead run `kubectl proxy --port=8080` to provide the web application
 with access to the Kubernetes API, and navigate to the domain name of
@@ -179,7 +179,7 @@ To create some RBAC roles that allow full access to everyone, apply [this manife
 
 ### Next steps
 
-**[Experiment with RBAC and the CNX Manager web application]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
+**[Experiment with RBAC and the {{site.prodname}} Manager web interface]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
 
 **[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
