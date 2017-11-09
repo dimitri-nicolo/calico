@@ -9,6 +9,7 @@ title: RBAC on tiered Policies
 - You can create a tier using the [Tier]({{site.baseurl}}/{{page.version}}/reference/essentials/tiered-policy-essentials) resource and add policies to the tier using the tier field in the spec section of a global/networkpolicy resource. For a tutorial on tiers, refer to [Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier).
 - A user’s CRUD-ability (also watch, list etc, throughout) on a global/networkpolicy resource will be subject to the RBAC rules as set by the administrator on the global/networkpolicy resource for the user, as well as on the RBAC rules as set by the administrator on the tier resource associated with that given global/networkpolicy resource for the same user.
 - The associated RBAC role on tier for the user will only be evaluated for Read/"get" permission. I.e. as long as a user can "get" the tier, the user is free to perform any operations on policies in that tier subject to their roles for those policies.
+- See the [authentication guide](authentication) for how usernames and groups will be presented.
 
 ### Operational considerations
 - Tier permissions beyond read, like create, update and delete, are tantamount to admin - even if only granted for a single tier (e.g. change its order so it applies first).
