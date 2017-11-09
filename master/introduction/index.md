@@ -9,6 +9,8 @@ tools on top of [Project Calico](about-calico). Features included as part of
 the {{site.prodname}} release are:
 
 
+* CNX Manager
+  * Web interface for managing tiered security policy
 * Policy Query Utility
   * Query policies that are currently being enforced for a given pod
   * Query pods that are affected by a given policy
