@@ -48,13 +48,25 @@ to create your registry.
 Once you have a suitable registry, load the images into it (substituting
 the domain and port appropriately).
 ```
-unxz <image>-{{site.data.versions[page.version].first.title}}.tar.xz
-docker load -i <image>-{{site.data.versions[page.version].first.title}}.tar
-docker tag calico/node:v2.5.0-e1.1.0 myregistrydomain.com:5000/<image>:{{site.data.versions[page.version].first.title}}
-docker push myregistrydomain.com:5000/calico/node:{{site.data.versions[page.version].first.title}}
+REGISTRY_DOMAIN=<URL for your Docker registry>
+REGISTRY_PORT=<port for your Docker registry>
+
+load_image()
+{
+    IMAGE_FILE=$1
+    IMAGE_NAME=$2
+    unxz $IMAGE_FILE-{{site.data.versions[page.version].first.title}}.tar.xz
+    docker load -i $IMAGE_FILE-{{site.data.versions[page.version].first.title}}.tar
+    docker tag $IMAGE_NAME:{{site.data.versions[page.version].first.title}} $REGISTRY_DOMAIN:$REGISTRY_PORT/$IMAGE_NAME:{{site.data.versions[page.version].first.title}}
+    docker push $REGISTRY_DOMAIN:$REGISTRY_PORT/$IMAGE_NAME:{{site.data.versions[page.version].first.title}}
+}
+
+load_image calico-node calico/node
+load_image calico-k8sapiserver calico/k8sapiserver
+load_image tigera-cnx-manager-web tigera/cnx-manager-web
 ```
 
 Then, the images can be pulled easily from other hosts.
 ```
-docker pull myregistrydomain.com:5000/calico/node:{{site.data.versions[page.version].first.title}}
+docker pull $REGISTRY_DOMAIN:$REGISTRY_PORT/$IMAGE_NAME:{{site.data.versions[page.version].first.title}}
 ```
