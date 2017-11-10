@@ -1,5 +1,5 @@
-hash: 38d109d677773ec8075751a302de0933fd6ac882943383fd9f21dc42ea29d2d4
-updated: 2017-10-28T12:48:21.359520943Z
+hash: c0338f8baac76ea063116cc051289b790e8ad7b30ee4185fc3f70ed4639d59c7
+updated: 2017-11-09T16:46:52.696695072-08:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -144,7 +144,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 283ed655c6b8238afecd5bea6434bc9b03129f2f
+  version: 1eecca0ba8e6f5ea5a431ce21d3aee2af0b4c90b
   subpackages:
   - format
   - internal/assertion
@@ -168,8 +168,8 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
+  version: e2cd859246511b4b97271eeab86d25307c5c5376
   repo: git@github.com:tigera/libcalico-go-private
-  version: df60adf40f7cd24a065390f2e5867f9d11e081b1
   subpackages:
   - lib
   - lib/apiconfig
@@ -212,7 +212,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 1bab55dd05dbff384524a6a1c99006d9eb5f139b
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -232,12 +232,12 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/Workiva/go-datastructures
-  version: e47d01bc9eaf75e75e0f250e221dcb7533c7a1b8
+  version: af7475fb23e7561c87e7c1d17c12f46d732379bb
   subpackages:
   - list
   - trie/ctrie
 - name: golang.org/x/crypto
-  version: 81e90905daefcd6fd217b62423c0908922eadb30
+  version: 6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -293,7 +293,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: a2e0dc829727a4f957a7428b1f322805cfc1f362
+  version: 9d8544a6b2c7df9cff240fcf92d7b2f59bc13416
   subpackages:
   - internal
   - internal/app_identity
