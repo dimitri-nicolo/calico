@@ -1,23 +1,19 @@
 ---
-title: Policy Editor
+title: Tigera CNX Manager Policy Editor
 ---
 
-
-<!--## Detailed description of function and usage-->
+Tigera CNX Manager includes a web client for viewing and editing
+[tiered security policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier.md)
 
 ## Policy Authentication
 
 The Policy Editor uses standard Kubernetes-based authentication.
 
-<!--
-This needs to have all the documentation for how to set up login.
-Particularly on the web UI side - how do you actually figure out the
-name / group for an OIDC user etc.
--->
-
 The Web UI uses the underlying Kubernetes permissions for the logged in user
 to access all resources; permissions for Web UI users are configured as standard
 Kubernetes RBAC roles and role bindings.
+
+The options for authentication are described in detail [here](authentication).
 
 ## Access model
 
@@ -25,7 +21,8 @@ The authorization model for policies uses the [tier]({{site.baseurl}}/{{page.ver
 additional layer of authorization.  To perform any operation on a policy,
 the user must be allowed to `GET` the tier that policy is in (or will be
 created in).  The operation must still be authorized on the policy in the normal
-way in addition to this check.
+way in addition to this check.  A detailed description of configuring these
+permissions is [here](rbac-tiered-policies).
 
 ### UI minimum requirements
 
