@@ -183,6 +183,6 @@ To create some RBAC roles that allow full access to everyone, apply [this manife
 
 **[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
-**[Create a policy using more advanced {{site.prodname}} policy features](tutorials/advanced-policy)**
+**[Create a policy using more advanced policy features](tutorials/advanced-policy)**
 
 **[Using the calicoctl CLI tool](https://docs.projectcalico.org/master/getting-started/kubernetes/tutorials/using-calicoctl)**

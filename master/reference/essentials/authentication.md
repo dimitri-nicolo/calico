@@ -40,17 +40,17 @@ serving on port 30003, but you may wish to set up connectivity differently.
 
 Configure Kubernetes RBAC bindings depending on the settings used for
 `--oidc-username/groups-claim` and `--oidc-username/groups-prefix` on the API server.  When using this login method, be aware that most people have Google
-accounts, so the system:authenticated group will include anybody who can
+accounts, so the `system:authenticated` group will include anybody who can
 reach the cluster.
 
-### Basic auth (username / password)
+### Basic authentication (username / password)
 
-Basic auth allows users to configure Kubernetes with a list of username/passwords.
-It is intended for testing purposes, and has significant limitations - notably
+Basic authentication allows users to configure Kubernetes with a list of username/passwords.
+It is intended for testing purposes, and has significant limitations—notably
 the Kubernetes API server must be restarted after making any changes.
 
 Consult the [Kubernetes docs](https://kubernetes.io/docs/admin/authentication/#static-password-file)
-to configure this login mode, and select the "Login via username and password"
+to configure this login mode, and select the **Login via username and password**
 option in the {{site.prodname}} Manager web interface.
 
 Configure Kubernetes RBAC bindings using the username and groups defined in the

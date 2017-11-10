@@ -29,7 +29,7 @@ For guides on how to set up {{site.prodname}} and a demo of some its basic funct
 * [Installing {{site.prodname}} for OpenShift](../getting-started/openshift/essentials/installation)
 * [Demo of {{site.prodname}}](../getting-started/essentials/simple-policy-essentials)
 * [Demo of Tiered Policy using {{site.prodname}}](../getting-started/essentials/tiered-policy-essentials)
-* [Policy Query Utility (calicoq))](../reference/calicoq/)
+* [Policy Query Utility (calicoq)](../reference/calicoq/)
 * [Policy Audit Mode](../reference/essentials/policy-auditing)
 * [Policy Violation Alerting](../reference/essentials/policy-violations)
 * [RBAC on Tiered Policies](../reference/essentials/rbac-tiered-policies)
