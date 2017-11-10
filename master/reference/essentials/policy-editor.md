@@ -2,19 +2,18 @@
 title: Policy Editor
 ---
 
-Tigera CNX Enterprise includes a web-based Policy Editor, as well as a
-REST Policy API.
 
-## Detailed description of function and usage
+<!--## Detailed description of function and usage-->
 
 ## Policy Authentication
 
 The Policy Editor uses standard Kubernetes-based authentication.
-<aside class="warning">
+
+<!--
 This needs to have all the documentation for how to set up login.
 Particularly on the web UI side - how do you actually figure out the
 name / group for an OIDC user etc.
-</aside>
+-->
 
 The Web UI uses the underlying Kubernetes permissions for the logged in user
 to access all resources; permissions for Web UI users are configured as standard
@@ -24,7 +23,7 @@ Kubernetes RBAC roles and role bindings.
 
 The authorization model for policies uses the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier.md) each policy belongs to as an
 additional layer of authorization.  To perform any operation on a policy,
-the user must be allowed to "get" the tier that policy is in (or will be
+the user must be allowed to `GET` the tier that policy is in (or will be
 created in).  The operation must still be authorized on the policy in the normal
 way in addition to this check.
 
@@ -95,17 +94,17 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ```
 
-Note that the NetworkPolicies and GlobalNetworkPolicies in each tier have RBAC
-applied in the usual Kubernetes way in addition to the "get" tier requirement.
+Note that the `NetworkPolicy` and `GlobalNetworkPolicy` resources in each tier have RBAC
+applied in the usual Kubernetes way in addition to the `GET` tier requirement.
 That is, to edit a policy, the user needs to be able to edit that policy, _and_
-get the tier that it belongs to.
+`GET` the tier that it belongs to.
 
 ### The Default Tier
 
-Typically, all users should be able to "get" the default (last) tier, and therefore
+Typically, all users should be able to `GET` the default (last) tier, and therefore
 manage policies in it.  Policies created by the orchestrator integration are
-created in this tier, such as [Kubernetes NetworkPolicies](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
+created in this tier, such as [Kubernetes network policy resources](https://kubernetes.io/docs/concepts/services-networking/network-policies/).
 
 Note that policies in the default tier are generally created by the
 orchestrator integration, and it is best to edit the original Kubernetes
-NetworkPolicies instead.
+`NetworkPolicy` resources instead.

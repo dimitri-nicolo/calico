@@ -119,6 +119,12 @@ toc:
       path: /reference/essentials/policy-violations
     - title: Policy Audit Mode
       path: /reference/essentials/policy-auditing
+- title: CNX Manager 
+  section:
+    - title: Configuring user authentication
+      path: /reference/essentials/authentication
+    - title: Editing policies
+      path: /reference/essentials/policy-editor
 - title: Deploying on Public Cloud
   section:
     - title: AWS

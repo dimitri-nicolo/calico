@@ -49,7 +49,7 @@ run the following commands.
 
 1. Edit [cnx-manager.yaml](1.6/cnx-manager.yaml) by following
    [these instructions](#configure-the-cnx-manager-web-application)
-   and then run the command below to install the CNX Manager web application.
+   and then run the command below to install the {{site.prodname}} Manager web application.
    ```
    kubectl apply -f cnx-manager.yaml
    ```
@@ -110,7 +110,7 @@ have the same ports.
 The [calico-essentials.yaml](1.6/calico-essentials.yaml) file contains a manifest
 for a _ConfigMap_ which specifies etcd endpoints. The current default is set to
 `http://10.96.232.136:6666`. Ensure that this value is updated to not clash
-with any service running in your environment. This needs to be changed in 2
+with any service running in your environment. This needs to be changed in two
 places:
 
 - In [calico-etcd.yaml](1.6/calico-etcd.yaml) update the `ClusterIP` and `port`
@@ -227,7 +227,7 @@ with the following changes:
 1. Uncomment the line `apiserver.crt:` in the `Secret` and append the base64
    encoded certificate file contents.
 
-### Configure the CNX Manager Web Application
+### Configure the {{site.prodname}} Manager Web Application
 
 The [cnx-manager.yaml](1.6/cnx-manager.yaml) manifest must be updated with
 the following changes.  Some of the parameters depend on the chosen
@@ -240,7 +240,7 @@ are described [here]({{site.baseurl}}/{{page.version}}/reference/essentials/auth
 1. Update the `tigera.cnx-web.kubernetes-api` field 
    in the `tigera-cnx-web-manager-config` ConfigMap.  It must be a URL which
    the web client can use to reach the Kubernetes API server.  Note that it
-   must be reachable from any system which is going to access the CNX
+   must be reachable from any system which is going to access the {{site.prodname}}
    Manager web application (not just inside the cluster).
 
 1. Consider updating the NodePort that exposes the web application.  Note

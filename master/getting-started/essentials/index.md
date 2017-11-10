@@ -30,7 +30,7 @@ documentation.
 
 ## Setting up a Docker Registry
 
-Rather than directly loading the docker images onto every host directly,
+Rather than directly loading the Docker images onto every host directly,
 we recommend you host the images in a Docker registry which hosts can then pull
 from.  The instructions and manifests provided elsewhere in the documentation 
 assume that the images will be pulled from a private Docker registry.
