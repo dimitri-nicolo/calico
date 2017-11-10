@@ -1,23 +1,27 @@
 ---
-title: Upgrading Calico for Kubernetes
+title: Upgrading CNX in Kubernetes
 ---
 
-This document covers upgrading the Calico components in a Kubernetes deployment.  This
-upgrade procedure is supported for Calico v1.6+.
+This document covers:
 
-It is possible to upgrade the Calico components on a single node without affecting connectivity or
-network policy for any existing pods.  However, it is recommended that you do not deploy
+- [Upgrading an open source Calico cluster to {{site.prodname}}](#upgrading-an-open-source-calico-cluster-to-cnx)
+- [Upgrading a cluster with Tigera Essentials Toolkit to {{site.prodname}}](#upgrading-a-cluster-with-tigera-essentials-toolkit-to-cnx)
+
+The upgrade procedure is supported for Calico v1.6+.
+
+It is possible to upgrade the Calico and {{site.prodname}} components on a single node without affecting connectivity or
+network policy for any existing pods.  However, we do not recommend deploying
 new pods to a node that is being upgraded.
 
-It is recommended to upgrade one node at a time, rendering each node as
-unscheduleable using [kubectl cordon](http://kubernetes.io/docs/user-guide/kubectl/v1.6/#cordon)
-before upgrading the node, and then make the node scheduleable after the upgrade is
+We recommend upgrading one node at a time, rendering each node as
+unschedulable using [kubectl cordon](http://kubernetes.io/docs/user-guide/kubectl/v1.6/#cordon)
+before upgrading the node, and then make the node schedulable after the upgrade is
 complete using [kubectl uncordon](http://kubernetes.io/docs/user-guide/kubectl/v1.6/#uncordon).
 
 > **Note**: When upgrading to etcd v3, as long as the cluster is migrated with the
 `etcdctl migrate` command, the v2 data will remain untouched and the etcd v3
 server will continue to speak the v2 protocol so the upgrade should have no
-impact on Calico.
+impact on {{site.prodname}}.
 {: .alert .alert-info}
 
 > **Note**: When upgrading Calico using the Kubernetes datastore driver from a version < v2.3.0
@@ -32,24 +36,29 @@ impact on Calico.
 > before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.
 {: .alert .alert-danger}
 
-## Upgrading an Existing Cluster with Tigera Essentials Toolkit
+## Upgrading an open source Calico cluster to {{site.prodname}}
 
-Follow the steps for [upgrading a hosted installation of Calico](#upgrading-a-hosted-installation-of-calico),
-but also upgrade the additional toolkit manifests after upgrading the core Calico manifests.
+1. [Upgrade the open source Calico cluster](#upgrading-a-hosted-installation-of-calico).
+1. [Add {{site.prodname}}](#adding-cnx).
 
-## Adding Tigera Essentials Toolkit to an Existing Open Source Cluster
-This section covers taking an existing Kubernetes system with Open Source Calico and adding the Tigera Essentials Toolkit.
+## Upgrading a cluster with Tigera Essentials Toolkit to {{site.prodname}}
+
+1. [Upgrade the open source Calico cluster](#upgrading-a-hosted-installation-of-calico).
+1. [Add {{site.prodname}}](#adding-cnx). Steps 1 to 3 are not required.
+
+## Adding {{site.prodname}}
+This section covers taking an existing Kubernetes system with Calico and maybe Tigera Essentials Toolkit, and adding {{site.prodname}}.
 
 #### Prerequisites
 This procedure assumes the following:
 
-1. Your system is running the latest 2.4.x release of calico.  If not, follow the instructions below to upgrade it to the latest 2.4.x release
-2. You have obtained the Tigera Essentials Toolkit specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded the Essentials `calico/node` image to a private registry.
-3. You have the calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
+- Your system is running the latest 3.0.x release of Calico.  If not, follow the instructions below to upgrade it to the latest 3.0.x release
+- You have obtained the {{site.prodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded them to a private registry.
+- You have the Calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
 
 #### Prepare for the Upgrade
- Edit your calico manifest:
-   - change the calico/node `image:` key to point at the Essentials `calico/node` image in your private registry.
+ Edit your Calico manifest:
+   - change the calico/node `image:` key to point at the {{site.prodname}} `calico/node` image in your private registry.
    - add the following to the `env:` section of the `calico/node` Daemonset:
      ```
      - name: FELIX_PROMETHEUSREPORTERENABLED
@@ -59,43 +68,69 @@ This procedure assumes the following:
      ```
 
 #### Perform the upgrade
- 1. Apply the calico manifest you prepared above with a command like: `kubectl apply -f calico.yaml`
+ 1. Apply the Calico manifest you prepared above with a command like: `kubectl apply -f calico.yaml`
  2. Upgrade each node. Perform the following steps on each node one at a time:
     - First make the node unschedulable:
         ```
         kubectl cordon node-01
         ```
-    - Delete the calico-node pod running on the cordoned node and wait for the DaemonSet controller to deploy a replacement using the Essentials image.
+    - Delete the calico-node pod running on the cordoned node and wait for the DaemonSet controller to deploy a replacement using the {{site.prodname}} image.
         ```
         kubectl delete pod -n kube-system calico-node-ajzy6e3t
         ```
-    - Once the new calico-node Pod has started, make the node schedulable again.
+    - Once the new calico-node pod has started, make the node schedulable again.
         ```
         kubectl uncordon node-01
         ```
- 3. Install the Essentials tools.  For more information about the following instructions, see [Tigera Essentials Toolkit Hosted Install](installation/hosted/essentials/).
+ 3. Install the policy query and violation alerting tools.  For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/essentials/).
 
     - Configure calico-monitoring namespace and deploy Prometheus Operator by
       applying the [operator.yaml](installation/hosted/essentials/1.6/operator.yaml) manifest.
 
-    ```
-    kubectl apply -f operator.yaml
-    ```
+      ```
+      kubectl apply -f operator.yaml
+      ```
 
     - Wait for third party resources to be created. Check by running:
 
-    ```
-    $ kubectl get thirdpartyresources --watch
-    ```
+      ```
+      kubectl get thirdpartyresources --watch
+      ```
 
     - Apply the [monitor-calico.yaml](installation/hosted/essentials/1.6/monitor-calico.yaml) manifest which will
       install prometheus and alertmanager.
 
-    ```
-    $ kubectl apply -f monitor-calico.yaml
-    ```
+      ```
+      kubectl apply -f monitor-calico.yaml
+      ```
 
-## Upgrading a Hosted Installation of Calico
+4. Add the {{site.prodname}} Manager.  Note that this step may require API downtime, 
+   because the API server's command line flags will probably need changing.
+   For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/essentials/).
+
+   - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication).
+
+   - Edit and apply the manifest ([etcd](installation/hosted/essentials/1.6/calico-k8sapiserver.yaml)
+     or [KDD](installation/hosted/essentials/1.6/calico-k8sapiserver-kdd.yaml))
+     defining the {{site.prodname}} Manager API server resources.
+
+     See the main installation documentation for details on how to set the flags.
+
+   - Edit and apply [the manifest](installation/hosted/essentials/1.6/cnx-manager.yaml) defining the {{site.prodname}} Manager web application resources.
+     The `tigera-cnx-manager-web-config` ConfigMap at the start of the file
+     defines two parameters that may need changing: the OIDC client ID
+     (only if using Google login), and the Kubernetes API location (must
+     be reachable from any system running the web application).
+
+     ```
+     # Edit the ConfigMap first
+     kubectl apply -f cnx-manager.yaml
+     ```
+
+   - Define RBAC permissions for users to access the {{site.prodname}} Manager.
+     [This document]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies) describes how to do that.
+
+## Upgrading a hosted installation of Calico
 
 This section covers upgrading a [self-hosted]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted) Calico installation.
 
@@ -155,7 +190,7 @@ DaemonSet controller to deploy a replacement.
 kubectl delete pod -n kube-system calico-node-ajzy6e3t
 ```
 
-Once the new calico-node Pod has started, make the node schedulable again.
+Once the new calico-node pod has started, make the node schedulable again.
 
 ```
 kubectl uncordon node-01
@@ -176,7 +211,7 @@ To update the ConfigMap, make any desired changes and apply the new ConfigMap us
 kubectl.  You will need to restart the Calico Kubernetes controllers and each calico/node instance
 as described above before new config is reflected.
 
-## Upgrading Components Individually
+## Upgrading components individually
 
 This section covers upgrading each component individually for use with custom configuration
 management tools.
@@ -206,12 +241,12 @@ of Kubernetes you must restart the kubelet for changes to be applied.
 #### Upgrading the Calico Kubernetes controllers
 
 The calico/kube-controllers pod can be stopped and restarted without affecting connectivity or
-policy on existing pods.  New pods in existing Namespaces will correctly have
+policy on existing pods.  New pods in existing namespaces will correctly have
 existing policy applied even when the controller is not running.  However, when the
 controllers are not running:
 
-- New NetworkPolicies will not be applied.
-- New Pods in new Namespaces will not get network connectivity.
+- New `NetworkPolicy` resources will not be applied.
+- New pods in new namespaces will not get network connectivity.
 - Label changes to existing pods will not be reflected in the applied policy.
 
 
@@ -237,12 +272,12 @@ in [upstream Kubernetes](https://github.com/kubernetes/kubernetes/pull/39164#iss
 To maintain behavior when upgrading, you should follow these steps prior to upgrading Calico to ensure your configured policy is
 enforced consistently throughout the upgrade process.
 
-- In any Namespace that previously did _not_ have a "DefaultDeny" annotation:
-  - Delete any NetworkPolicy objects in that Namespace.  After upgrade, these policies will become active and may block traffic that was previously allowed.
-- In any Namespace that previously had a "DefaultDeny" annotation:
-  - Create a NetworkPolicy which matches all pods but does not allow any traffic.  After upgrade, the Namespace annotation will have no effect, but this empty NetworkPolicy will provide the same behavior.
+- In any namespace that previously did _not_ have a `DefaultDeny` annotation:
+  - Delete any `NetworkPolicy` objects in that namespace.  After upgrade, these policies will become active and may block traffic that was previously allowed.
+- In any namespace that previously had a `DefaultDeny` annotation:
+  - Create a `NetworkPolicy` which matches all pods but does not allow any traffic.  After upgrade, the namespace annotation will have no effect, but this empty `NetworkPolicy` will provide the same behavior.
 
-Here is an example of a NetworkPolicy which selects all pods in the Namespace, but does not allow any traffic:
+Here is an example of a `NetworkPolicy` which selects all pods in the namespace, but does not allow any traffic:
 
 ```yaml
 kind: NetworkPolicy

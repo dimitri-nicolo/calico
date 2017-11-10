@@ -6,15 +6,8 @@ toc:
 - title: Getting Started with CNX
   path: /getting-started/
 
-- title: Tigera CNX
+- title: Obtaining the CNX binaries
   path: /getting-started/essentials/
-  section:
-  - title: Obtaining CNX
-    path: /getting-started/essentials/
-  - title: CNX for Kubernetes Demo
-    path: /getting-started/essentials/simple-policy-essentials
-  - title: Tiered Policy Demo
-    path: /getting-started/essentials/tiered-policy-essentials
 
 - title: Kubernetes
   section:
@@ -58,6 +51,10 @@ toc:
       path: /getting-started/kubernetes/tutorials/stars-policy/
     - title: Advanced network policy
       path: /getting-started/kubernetes/tutorials/advanced-policy
+    - title: CNX for Kubernetes Demo
+      path: /getting-started/essentials/simple-policy-essentials
+    - title: Tiered Policy Demo
+      path: /getting-started/essentials/tiered-policy-essentials
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
   - title: Upgrade
@@ -162,7 +159,6 @@ toc:
     path: /getting-started/openstack/connectivity
   - title: Use of the Neutron API
     path: /getting-started/openstack/neutron-api
-
 
 - title: Host Protection
   section:
