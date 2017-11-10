@@ -120,7 +120,7 @@ imports:
   - poll
   - singlepoll
 - name: github.com/jbenet/go-sockaddr
-  version: 9ad2a49ab6a4f3e1ac08dffb3aa1f110dc062807
+  version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
   subpackages:
   - net
 - name: github.com/json-iterator/go
