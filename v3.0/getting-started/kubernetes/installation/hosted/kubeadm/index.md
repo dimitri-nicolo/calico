@@ -40,10 +40,10 @@ To install this Calico and a single node etcd on a run the following command:
 {: .alert .alert-info}
 
 ```shell
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
->[Click here to view the above yaml directly.](1.6/calico.yaml)
+>[Click here to view the calico.yaml for Kubeadm with Kubernetes 1.6.x or later.](1.6/calico.yaml)
 
 ### Kubernetes datastore
 

@@ -71,17 +71,17 @@ Apply the following manifest to create these necessary RBAC roles and bindings.
 {: .alert .alert-info}
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
+kubectl apply rbac-kdd.yaml
 ```
 
->[Click here to view the above yaml directly.](../rbac-kdd.yaml)
+>[Click here to view the above rbac-kdd.yaml for Kubernetes 1.7 clusters.](../rbac-kdd.yaml)
 
 ### 1. Calico policy with Calico networking (Beta)
 
 With Kubernetes as the Calico datastore, Calico has Beta support for Calico networking.  This provides BGP-based
 networking with a full node-to-node mesh and/or explicit configuration of peers.
 
-To install Calico with Calico networking, run one of the commands below based on your Kubernetes version.
+To install Calico with Calico networking, run the following command based on your Kubernetes version.
 This will install Calico and will initially create a full node-to-node mesh.
 
 > **Note**: Calico v2.5.0 or later with Kubernetes backend requires Kubernetes
@@ -89,11 +89,10 @@ This will install Calico and will initially create a full node-to-node mesh.
 {: .alert .alert-info}
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
->[Click here to view the above yaml directly.](calico-networking/1.7/calico.yaml)
-
+>[Click here to view the calico.yaml for Kubernetes 1.7 clusters.](calico-networking/1.7/calico.yaml)
 
 #### Calico policy with Calico networking on kubeadm
 
@@ -124,11 +123,10 @@ To install Calico in policy-only mode, run one of the following commands based o
 {: .alert .alert-info}
 
 ```
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
->[Click here to view the above yaml directly.](policy-only/1.7/calico.yaml)
-
+>[Click here to view the policy.yaml for Kubernetes 1.7 clusters.](policy-only/1.7/calico.yaml)
 
 ### 3. Calico policy-only with flannel networking
 
@@ -137,6 +135,19 @@ Calico with flannel networking.
 
 Refer to the following [Kubernetes self-hosted install guide](https://github.com/projectcalico/canal/blob/master/k8s-install/README.md)
 in the Canal project for details on installing Calico with flannel.
+
+### RBAC
+
+If your Kubernetes cluster has RBAC enabled, you'll need to create RBAC roles for Calico.
+Apply the following manifest to create these RBAC roles.
+
+>Note: The following RBAC policy is compatible with the Kubernetes v1.6+ manifest only.
+
+```
+kubectl apply -f rbac.yaml
+```
+
+>[Click here to view the rbac.yaml.](../rbac.yaml)
 
 ## Try it out
 
@@ -180,3 +191,4 @@ The above manifest deploys Calico such that Felix uses the Kubernetes API direct
 removing Calico's dependency on etcd and the need for the Calico Kubernetes controllers.
 
 The Calico CNI plugin is still required to configure each pod's virtual ethernet device and network namespace.
+

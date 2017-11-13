@@ -1,13 +1,12 @@
 ---
-title: Quickstart for Calico on Kubernetes
+title: Quickstart for Tigera CNX on Kubernetes
 ---
 
 
 ### Overview
 
-This quickstart gets you a single-host Kubernetes cluster with Calico
-in approximately 15 minutes. You can use this cluster for testing and
-development.
+This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}} 
+in approximately 30 minutes. You can use this cluster for testing and development.
 
 To deploy a cluster suitable for production, refer to [Installation](https://docs.projectcalico.org/master/getting-started/kubernetes/installation/).
 
@@ -16,9 +15,10 @@ To deploy a cluster suitable for production, refer to [Installation](https://doc
 
 - AMD64 processor
 - 2CPU
-- 2GB RAM
+- 4GB RAM
 - 10GB free disk space
 - RedHat Enterprise Linux 7.x+, CentOS 7.x+, Ubuntu 16.04+, or Debian 8.x+
+- A Google account for login
 
 
 ### Before you begin
@@ -36,16 +36,29 @@ the host. Instead, continue directly to the
 1. As a regular user with sudo privileges, open a terminal on the host that 
    you installed kubeadm on. 
 
+1. Download the {{site.prodname}} docker images onto that system.  Follow the instructions
+   [here]({{site.baseurl}}/{{page.version}}/getting-started/essentials), but you can
+   skip the steps related to uploading to a registry, since the images will only be
+   needed locally.
+
 1. Update your package definitions and upgrade your existing packages.
 
    ```
    sudo apt-get update && sudo apt-get upgrade
    ```
    
+1. [Create a Google project to use to login to {{site.prodname}} Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
+   Set the redirect URIs to `http://127.0.0.1:30003`, `https://127.0.0.1:30003`,
+   and the domain name of your system (also port 30003), and note the client ID.
+
+1. Configure kubeadm to allow aggregated API servers and login using your Google project
+   by downloading [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/kubeadm.yaml),
+   and filling in your OAuth client ID.
+
 1. Initialize the master using the following command.
 
    ```
-   sudo kubeadm init --pod-network-cidr=192.168.0.0/16
+   sudo kubeadm init --config kubeadm.yaml
    ```
    
 1. Execute the following commands to configure kubectl (also returned by
@@ -57,16 +70,16 @@ the host. Instead, continue directly to the
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
    
-1. Install Calico and a single node etcd with the following command.
+1. [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/calico-cnx.yaml).
+
+1. Open the file in your favorite editor, replace `<fill in client id here>` with
+   your OAuth client ID, and save the file.
+   
+1. Issue the following command to install {{site.prodname}} and a single-node etcd.
 
    ```
-   kubectl apply -f \
-   https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+   kubectl apply -f calico-cnx.yaml
    ```
-   
-   > **Note**: You can also 
-   > [view the YAML in your browser](https://docs.projectcalico.org/v2.6/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml){:target="_blank"}.
-   {: .alert .alert-info}
 
    You should see the following output.
 
@@ -74,42 +87,10 @@ the host. Instead, continue directly to the
    configmap "calico-config" created
    daemonset "calico-etcd" created
    service "calico-etcd" created
-   daemonset "calico-node" created
-   deployment "calico-kube-controllers" created
-   deployment "calico-policy-controller" created
-   clusterrolebinding "calico-cni-plugin" created
-   clusterrole "calico-cni-plugin" created
-   serviceaccount "calico-cni-plugin" created
-   clusterrolebinding "calico-kube-controllers" created
-   clusterrole "calico-kube-controllers" created
-   serviceaccount "calico-kube-controllers" created
+   ...
    ```
    
-1. Confirm that all of the pods are running with the following command.
-
-   ```
-   watch kubectl get pods --all-namespaces
-   ```
-   
-   Wait until each pod has the `STATUS` of `Running`.
-
-   ```
-   NAMESPACE    NAME                                       READY  STATUS   RESTARTS  AGE
-   kube-system  calico-etcd-x2482                          1/1    Running  0         2m
-   kube-system  calico-kube-controllers-6ff88bf6d4-tgtzb   1/1    Running  0         2m
-   kube-system  calico-node-24h85                          2/2    Running  0         2m
-   kube-system  etcd-jbaker-virtualbox                     1/1    Running  0         6m
-   kube-system  kube-apiserver-jbaker-virtualbox           1/1    Running  0         6m
-   kube-system  kube-controller-manager-jbaker-virtualbox  1/1    Running  0         6m
-   kube-system  kube-dns-545bc4bfd4-67qqp                  3/3    Running  0         5m
-   kube-system  kube-proxy-8fzp2                           1/1    Running  0         5m
-   kube-system  kube-scheduler-jbaker-virtualbox           1/1    Running  0         5m
-   ```
-
-1. Press CTRL+C to exit `watch`.
-
-1. Remove the taints on the master so that you can schedule pods
-   on it.
+1. Remove the taints on the master so that pods can be scheduled on it.
    
    ```
    kubectl taint nodes --all node-role.kubernetes.io/master-
@@ -121,6 +102,24 @@ the host. Instead, continue directly to the
    node "<your-hostname>" untainted
    ```
    
+1. Confirm that all of the pods are running with the following command.
+   Some can only start after others, so it's OK to see a few restarts.
+
+   ```
+   watch kubectl get pods --all-namespaces
+   ```
+   
+   Wait until each pod has the `STATUS` of `Running`.
+
+   ```
+   NAMESPACE    NAME                                       READY  STATUS   RESTARTS  AGE
+   kube-system  calico-etcd-x2482                          1/1    Running  0         2m
+   kube-system  calico-kube-controllers-6ff88bf6d4-tgtzb   1/1    Running  0         2m
+   ...
+   ```
+
+1. Press CTRL+C to exit `watch`.
+
 1. Switch to a root shell.
 
    ```
@@ -166,17 +165,24 @@ the host. Instead, continue directly to the
    ```
    
 Congratulations! You now have a single-host Kubernetes cluster
-equipped with Calico.
+equipped with {{site.prodname}}.
+
+To access the {{site.prodname}} Manager web interface, navigate to `https://127.0.0.1:30003`.
+If you're not running this demo on the same system you'll log in from,
+instead run `kubectl proxy --port=8080` to provide the web application
+with access to the Kubernetes API, and navigate to the domain name of
+the system instead (still on port 30003).
+
+You should be able to log in , but won't yet be able to see or edit resources.
+To create some RBAC roles that allow full access to everyone, apply [this manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/rbac-all.yaml).
 
 
 ### Next steps
 
+**[Experiment with RBAC and the {{site.prodname}} Manager web interface]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
+
 **[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
-**[Create a policy using more advanced Calico policy features](tutorials/advanced-policy)**
-
-**[Create a user interface that shows blocked and allowed connections in real time](tutorials/stars-policy/)**
+**[Create a policy using more advanced policy features](tutorials/advanced-policy)**
 
 **[Using the calicoctl CLI tool](https://docs.projectcalico.org/master/getting-started/kubernetes/tutorials/using-calicoctl)**
-
-**[Configure BGP to peer with your underlying infrastructure (private cloud only)](https://docs.projectcalico.org/master/usage/configuration/bgp)**

@@ -34,7 +34,7 @@ The full list of parameters which can be set is as follows.
 | UsageReportingEnabled (FELIX_USAGEREPORTINGENABLED)                      | Reports anonymous Calico version number and cluster size to projectcalico.org.  Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: `true`] | boolean |
 | FailsafeInboundHostPorts (FELIX_FAILSAFEINBOUNDHOSTPORTS)                | Comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints on irrespective of the security policy.  This is useful to avoid accidently cutting off a host with incorrect configuration.  Each port should be specified as `tcp:<port-number>` or `udp:<port-number>`.  For back-compatibility, if the protocol is not specified, it defaults to "tcp".  To disable all inbound host ports, use the value `none`.  The default value allows ssh access, DHCP, BGP and etcd. [Default: `tcp:22, udp:68, tcp:179, tcp:2379, tcp:2380, tcp:6666, tcp:6667`] | string                               |
 | FailsafeOutboundHostPorts (FELIX_FAILSAFEOUTBOUNDHOSTPORTS)              | Comma-delimited list of UDP/TCP ports that Felix will allow outgoing traffic from host endpoints to irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration.  Each port should be specified as `tcp:<port-number>` or `udp:<port-number>`.  For back-compatibility, if the protocol is not specified, it defaults to "tcp".  To disable all outbound host ports, use the value `none`.  The default value opens etcd's standard ports to ensure that Felix does not get cut off from etcd as well as allowing DHCP, DNS, BGP. [Default: `udp:53, udp:67, tcp:179, tcp:2379, tcp:2380, tcp:6666, tcp:6667`]  | string |
-| ReportingIntervalSecs (FELIX_REPORTINGINTERVALSECS)                      | Interval at which Felix reports its status into the datastore or 0 to disable.   [Default: `30`]                                                       | int                                     |
+| ReportingIntervalSecs (FELIX_REPORTINGINTERVALSECS)                      | Interval at which Felix reports its status into the datastore or 0 to disable.  Must be non-zero in OpenStack deployments. [Default: `30`]                                                       | int                                     |
 | ReportingTTLSecs (FELIX_REPORTINGTTLSECS)                                | Time-to-live setting for process-wide status reports. [Default: `90`]                                                                                                                            | int                                     |
 | IpInIpMtu (FELIX_IPINIPMTU)                                              | The MTU to set on the tunnel device. See [Configuring MTU]({{site.baseurl}}/{{page.version}}/usage/configuration/mtu) [Default: `1440`]                                                          | int                                     |
 
@@ -75,12 +75,61 @@ The full list of parameters which can be set is as follows.
 | IptablesLockProbeIntervalMillis (FELIX_IPTABLESLOCKPROBEINTERVALMILLIS)       | Time, in milliseconds, that Felix will wait between attempts to acquire the iptables lock if it is not available.  Lower values make Felix more responsive when the lock is contended, but use more CPU. [Default: `50`]  | int |
 | NetlinkTimeoutSecs (FELIX_NETLINKTIMEOUTSECS)                                 | Time, in seconds, that Felix will wait for netlink (i.e. routing table list/update) operations to complete before giving up and retrying. [Default: `10`] | float |
 
+#### OpenStack specific configuration
+
+| Setting (Environment variable)      | Description                              | Schema                                  |
+| ------------------------------------|----------------------------------------- | --------------------------------------- |
+| MetadataAddr (FELIX_METADATAADDR)   | The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of `none`  (case insensitive) means that Felix should not set up any NAT rule for the metadata path. [Default: `127.0.0.1`]  | IPv4, hostname, none |
+| MetadataPort (FELIX_METADATAPORT)   | The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed [Default: `8775`].  | int |
 
 #### Bare metal specific configuration
 
 | Setting (Environment variable)          | Description                              | Schema                                  |
 | --------------------------------------- | ---------------------------------------- | --------------------------------------- |
-| InterfacePrefix (FELIX_INTERFACEPREFIX) | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces.  Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the 'cali' value. [Default: `cali`] | string |
+| InterfacePrefix (FELIX_INTERFACEPREFIX) | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces.  Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the 'cali' value, and our OpenStack integration sets the 'tap' value. [Default: `cali`] | string |
+
+#### Tigera Essentials Toolkit specific configuration
+
+| Setting                                 | Environment variable                    | Default                              | Meaning                                 |
+|-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
+| DropActionOverride                      | FELIX_DROPACTIONOVERRIDE                | DROP                                 | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
+| PrometheusReporterEnabled               | FELIX_PROMETHEUSREPORTERENABLED         | false                                | Set to "true" to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
+| PrometheusReporterPort                  | FELIX_PROMETHEUSREPORTERPORT            | 9092                                 | The TCP port on which to report denied packet metrics.  |
+
+DropActionOverride controls what happens to each packet that is denied by
+the current Calico policy - i.e. by the ordered combination of all the
+configured policies and profiles that apply to that packet.  It may be
+set to one of the following values:
+
+- DROP
+- ACCEPT
+- LOG-and-DROP
+- LOG-and-ACCEPT.
+
+Normally the "DROP" or "LOG-and-DROP" value should be used, as dropping a
+packet is the obvious implication of that packet being denied.  However when
+experimenting, or debugging a scenario that is not behaving as you expect, the
+"ACCEPT" and "LOG-and-ACCEPT" values can be useful: then the packet will be
+still be allowed through.
+
+When one of the "LOG-and-..." values is set, each denied packet is logged in
+syslog, with an entry like this:
+
+```
+May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be879f658 MAC= SRC=192.168.128.30 DST=192.168.157.26 LEN=60 TOS=0x00 PREC=0x00 TTL=62 ID=56743 DF PROTO=TCP SPT=56248 DPT=80 WINDOW=29200 RES=0x00 SYN URGP=0 MARK=0xa000000
+```
+
+When the reporting of denied packet metrics is enabled, Felix keeps counts of
+recently denied packets and publishes these as Prometheus metrics on the port
+configured by the PrometheusReporterPort setting.  Please
+see
+[Policy Violation Monitoring & Reporting]({{site.baseurl}}/{{page.version}}/reference/essentials/policy-violations) for
+more details.
+
+Note that denied packet metrics are independent of the DropActionOverride
+setting.  Specifically, if packets that would normally be denied are being
+allowed through by a setting of "ACCEPT" or "LOG-and-ACCEPT", those packets
+still contribute to the denied packet metrics as just described.
 
 Environment variables
 ---------------------
@@ -102,7 +151,9 @@ using the `-c` or `--config-file` options on the command line. If the
 file exists, then it is read (ignoring section names) and all parameters
 are set from it.
 
-In a Docker
+In OpenStack, we recommend putting all configuration into configuration
+files, since the etcd database is transient (and may be recreated by the
+OpenStack plugin in certain error cases). However, in a Docker
 environment the use of environment variables or etcd is often more
 convenient.
 

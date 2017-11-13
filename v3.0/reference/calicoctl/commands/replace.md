@@ -54,6 +54,7 @@ Description:
     * globalNetworkPolicy
     * hostEndpoint
     * ipPool
+    * tier
     * networkPolicy
     * node
     * profile
