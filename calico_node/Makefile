@@ -29,6 +29,7 @@ V_LIBNETWORK_PLUGIN := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(REL
 V_TYPHA := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.typha.version')
 V_CALICOQ := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
 V_APISERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/k8sapiserver.version')
+V_CNX_WEB_MANAGER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-web-manager.version')
 
 # Now use ?= to allow the versions derived from versions.yml to be
 # overriden (by the environment).
@@ -45,6 +46,7 @@ LIBNETWORK_PLUGIN_VER ?= $(V_LIBNETWORK_PLUGIN)
 TYPHA_VER ?= $(V_TYPHA)
 CALICOQ_VER ?= $(V_CALICOQ)
 APISERVER_VER ?= $(V_APISERVER)
+CNX_WEB_MANAGER_VER ?= $(V_CNX_WEB_MANAGER)
 
 $(info RELEASE_STREAM=$(RELEASE_STREAM))
 $(info CALICO_VER=$(CALICO_VER))
@@ -60,6 +62,7 @@ $(info LIBNETWORK_PLUGIN_VER=$(LIBNETWORK_PLUGIN_VER))
 $(info TYPHA_VER=$(TYPHA_VER))
 $(info CALICOQ_VER=$(CALICOQ_VER))
 $(info APISERVER_VER=$(APISERVER_VER))
+$(info CNX_WEB_MANAGER_VER=$(CNX_WEB_MANAGER_VER))
 
 SYSTEMTEST_CONTAINER_VER ?= latest
 # we can use "custom" build image and test image name
