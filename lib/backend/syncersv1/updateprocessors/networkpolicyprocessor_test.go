@@ -56,8 +56,8 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		Name:      name2,
 		Namespace: ns2,
 	}
-	v2NetworkPolicyKey3 := model.ResourceKey{
-		Kind:      apiv2.KindNetworkPolicy,
+	v3NetworkPolicyKey3 := model.ResourceKey{
+		Kind:      apiv3.KindNetworkPolicy,
 		Name:      name3,
 		Namespace: ns3,
 	}
@@ -213,7 +213,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		}))
 
 		By("converting a tiered NetworkPolicy with minimum policy configuration")
-		res = apiv2.NewNetworkPolicy()
+		res = apiv3.NewNetworkPolicy()
 		res.Name = name3
 		res.Namespace = ns3
 		res.Spec.Tier = mytier
@@ -221,7 +221,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		res.Spec.ApplyOnForward = true
 
 		kvps, err = up.Process(&model.KVPair{
-			Key:      v2NetworkPolicyKey3,
+			Key:      v3NetworkPolicyKey3,
 			Value:    res,
 			Revision: "xyz",
 		})
@@ -254,7 +254,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		By("deleting the network policy belonging to a tier other than default tier")
 
 		kvps, err = up.Process(&model.KVPair{
-			Key:   v2NetworkPolicyKey3,
+			Key:   v3NetworkPolicyKey3,
 			Value: nil,
 		})
 		Expect(err).NotTo(HaveOccurred())

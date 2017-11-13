@@ -35,7 +35,7 @@ func convertNetworkPolicyV2ToV1Key(v3key model.ResourceKey) (model.Key, error) {
 	if v3key.Name == "" || v3key.Namespace == "" {
 		return model.PolicyKey{}, errors.New("Missing Name or Namespace field to create a v1 NetworkPolicy Key")
 	}
-	tier, err := names.TierFromPolicyName(v2key.Name)
+	tier, err := names.TierFromPolicyName(v3key.Name)
 	if err != nil {
 		return model.PolicyKey{}, err
 	}

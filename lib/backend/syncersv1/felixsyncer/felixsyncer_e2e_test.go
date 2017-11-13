@@ -267,9 +267,9 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			order := float64(100.00)
 			tier, err := c.Tiers().Create(
 				ctx,
-				&apiv2.Tier{
+				&apiv3.Tier{
 					ObjectMeta: metav1.ObjectMeta{Name: tierName},
-					Spec: apiv2.TierSpec{
+					Spec: apiv3.TierSpec{
 						Order: &order,
 					},
 				},

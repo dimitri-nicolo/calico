@@ -33,7 +33,7 @@ func convertGlobalNetworkPolicyV2ToV1Key(v3key model.ResourceKey) (model.Key, er
 	if v3key.Name == "" {
 		return model.PolicyKey{}, errors.New("Missing Name field to create a v1 NetworkPolicy Key")
 	}
-	tier, err := names.TierFromPolicyName(v2key.Name)
+	tier, err := names.TierFromPolicyName(v3key.Name)
 	if err != nil {
 		return model.PolicyKey{}, err
 	}

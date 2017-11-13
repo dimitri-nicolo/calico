@@ -39,8 +39,8 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 		Kind: apiv3.KindGlobalNetworkPolicy,
 		Name: name2,
 	}
-	v2GlobalNetworkPolicyKey3 := model.ResourceKey{
-		Kind: apiv2.KindGlobalNetworkPolicy,
+	v3GlobalNetworkPolicyKey3 := model.ResourceKey{
+		Kind: apiv3.KindGlobalNetworkPolicy,
 		Name: name3,
 	}
 	v1GlobalNetworkPolicyKey1 := model.PolicyKey{
@@ -197,13 +197,13 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 		}))
 
 		By("converting a tiered GlobalNetworkPolicy with minimum policy configuration")
-		res = apiv2.NewGlobalNetworkPolicy()
+		res = apiv3.NewGlobalNetworkPolicy()
 		res.Spec.Tier = mytier
 		res.Spec.PreDNAT = true
 		res.Spec.ApplyOnForward = true
 
 		kvps, err = up.Process(&model.KVPair{
-			Key:      v2GlobalNetworkPolicyKey3,
+			Key:      v3GlobalNetworkPolicyKey3,
 			Value:    res,
 			Revision: "xyz",
 		})
@@ -233,7 +233,7 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 
 		By("deleting the tiered GlobalNetworkPolicy")
 		kvps, err = up.Process(&model.KVPair{
-			Key:   v2GlobalNetworkPolicyKey3,
+			Key:   v23lobalNetworkPolicyKey3,
 			Value: nil,
 		})
 		Expect(err).NotTo(HaveOccurred())

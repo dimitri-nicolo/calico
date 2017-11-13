@@ -63,7 +63,7 @@ func New(client api.Client, callbacks api.SyncerCallbacks, datastoreType apiconf
 			UpdateProcessor: updateprocessors.NewNetworkPolicyUpdateProcessor(),
 		},
 		{
-			ListInterface:   model.ResourceListOptions{Kind: apiv2.KindTier},
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindTier},
 			UpdateProcessor: updateprocessors.NewTierUpdateProcessor(),
 		},
 	}
