@@ -111,7 +111,7 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	apiGroupInfo.GroupMeta.GroupVersion = v3.SchemeGroupVersion
 	// TODO: Make the storage type configurable
 	calicostore := calicorest.RESTStorageProvider{StorageType: "calico"}
-	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV2Storage(Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorizer)
+	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorizer)
 	if err != nil {
 		return nil, err
 	}

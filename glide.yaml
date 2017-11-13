@@ -176,9 +176,9 @@ import:
   - transport
 - package: gopkg.in/inf.v0
   version: v0.9.0
-- package: gopkg.in/natefinch/lumberjack.v3
+- package: gopkg.in/natefinch/lumberjack.v2
   version: 20b71e5b60d756d3d2f80def009790325acc2b23
-- package: gopkg.in/yaml.v3
+- package: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - package: k8s.io/apimachinery
   version: release-1.8
@@ -190,7 +190,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: v3.0.0-cnx-alpha1
+  version: v2.0.0-cnx-alpha1
 - package: k8s.io/kubernetes
   version: release-1.8
 - package: k8s.io/code-generator

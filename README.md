@@ -62,10 +62,10 @@ docker image (`make calico/k8sapiserver`) has been built.
 ## Cleanup and Reset
 ```
 1. kubectl delete -f ~/go/src/github.com/tigera/calico-k8sapiserver/artifacts/example/
-2. kubectl delete -f http://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+2. kubectl delete -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
 3. rm -rf /var/etcd/
 4. Reload/Rebuild the new latest docker image for calico-k8sapiserver
-5. kubectl apply -f http://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+5. kubectl apply -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
 6. kubectl create -f ~/go/src/github.com/tigera/calico-k8sapiserver/artifacts/example/
 ```
 
@@ -118,7 +118,7 @@ The API Server command/flags used for running can be found under /etc/kubernetes
 
 ## API Examples
 ```
-Follows native Kubernetes REST semantics. (NOTE: Transformation WIP from v1->v3)
+Follows native Kubernetes REST semantics.
 Tiers - APIVersion: projectcalico.org/v3 Kind: Tier
 1. Listing Tiers: https://10.0.2.15:6443/apis/projectcalico.org/v3/tiers
 2. Getting a Tier: https://10.0.2.15:6443/apis/projectcalico.org/v3/tiers/net-sec

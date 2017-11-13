@@ -101,15 +101,15 @@ imports:
 - name: github.com/googleapis/gnostic
   version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
-  - OpenAPIv3
+  - OpenAPIv2
   - compiler
   - extensions
 - name: github.com/gophercloud/gophercloud
   version: 2bf16b94fdd9b01557c4d076e567fe5cbbe5a961
   subpackages:
   - openstack
-  - openstack/identity/v3/tenants
-  - openstack/identity/v3/tokens
+  - openstack/identity/v2/tenants
+  - openstack/identity/v2/tokens
   - openstack/identity/v3/tokens
   - openstack/utils
   - pagination
@@ -176,11 +176,11 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: v3.0.0-cnx-alpha1
+  version: v2.0.0-cnx-alpha1
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
-  - lib/apis/v3
+  - lib/apis/v2
   - lib/backend
   - lib/backend/api
   - lib/backend/etcdv3
@@ -191,7 +191,7 @@ imports:
   - lib/backend/syncersv1/felixsyncer
   - lib/backend/syncersv1/updateprocessors
   - lib/backend/watchersyncer
-  - lib/clientv3
+  - lib/clientv2
   - lib/errors
   - lib/ipam
   - lib/ipip
@@ -297,9 +297,9 @@ imports:
   - transport
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
-- name: gopkg.in/natefinch/lumberjack.v3
+- name: gopkg.in/natefinch/lumberjack.v2
   version: 20b71e5b60d756d3d2f80def009790325acc2b23
-- name: gopkg.in/yaml.v3
+- name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
   version: 6c6dac0277229b9e9578c5ca3f74a4345d35cdc2
@@ -312,10 +312,10 @@ imports:
   - authorization/v1
   - authorization/v1beta1
   - autoscaling/v1
-  - autoscaling/v3beta1
+  - autoscaling/v2beta1
   - batch/v1
   - batch/v1beta1
-  - batch/v3alpha1
+  - batch/v2alpha1
   - certificates/v1beta1
   - core/v1
   - extensions/v1beta1
@@ -474,11 +474,11 @@ imports:
   - informers/apps/v1beta2
   - informers/autoscaling
   - informers/autoscaling/v1
-  - informers/autoscaling/v3beta1
+  - informers/autoscaling/v2beta1
   - informers/batch
   - informers/batch/v1
   - informers/batch/v1beta1
-  - informers/batch/v3alpha1
+  - informers/batch/v2alpha1
   - informers/certificates
   - informers/certificates/v1beta1
   - informers/core
@@ -511,10 +511,10 @@ imports:
   - kubernetes/typed/authorization/v1
   - kubernetes/typed/authorization/v1beta1
   - kubernetes/typed/autoscaling/v1
-  - kubernetes/typed/autoscaling/v3beta1
+  - kubernetes/typed/autoscaling/v2beta1
   - kubernetes/typed/batch/v1
   - kubernetes/typed/batch/v1beta1
-  - kubernetes/typed/batch/v3alpha1
+  - kubernetes/typed/batch/v2alpha1
   - kubernetes/typed/certificates/v1beta1
   - kubernetes/typed/core/v1
   - kubernetes/typed/extensions/v1beta1
@@ -531,10 +531,10 @@ imports:
   - listers/apps/v1beta1
   - listers/apps/v1beta2
   - listers/autoscaling/v1
-  - listers/autoscaling/v3beta1
+  - listers/autoscaling/v2beta1
   - listers/batch/v1
   - listers/batch/v1beta1
-  - listers/batch/v3alpha1
+  - listers/batch/v2alpha1
   - listers/certificates/v1beta1
   - listers/core/v1
   - listers/extensions/v1beta1
