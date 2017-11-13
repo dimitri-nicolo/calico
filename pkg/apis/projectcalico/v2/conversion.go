@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2
+package v3
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ import (
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
 	// Add non-generated conversion functions
-	err := scheme.AddFieldLabelConversionFunc("projectcalico.org/v2", "NetworkPolicy",
+	err := scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "NetworkPolicy",
 		func(label, value string) (string, string, error) {
 			switch label {
 			case "spec.tier":
@@ -35,7 +35,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
-	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v2", "GlobalNetworkPolicy",
+	err = scheme.AddFieldLabelConversionFunc("projectcalico.org/v3", "GlobalNetworkPolicy",
 		func(label, value string) (string, string, error) {
 			switch label {
 			case "spec.tier":

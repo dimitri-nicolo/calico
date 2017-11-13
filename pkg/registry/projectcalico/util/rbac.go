@@ -89,7 +89,7 @@ func AuthorizeTierOperation(ctx genericapirequest.Context, authz authorizer.Auth
 	attrs.User = attributes.GetUser()
 	attrs.Verb = "get"
 	attrs.ResourceRequest = attributes.IsResourceRequest()
-	attrs.Path = "/apis/projectcalico.org/v2/tiers/" + tierName
+	attrs.Path = "/apis/projectcalico.org/v3/tiers/" + tierName
 	glog.Infof("Tier Auth Attributes for the given Policy")
 	logAuthorizerAttributes(attrs)
 	authorized, reason, err := authz.Authorize(attrs)

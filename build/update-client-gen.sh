@@ -32,18 +32,18 @@ ${BINDIR}/client-gen "$@" \
 # Generate the versioned clientset (pkg/client/clientset_generated/clientset)
 ${BINDIR}/client-gen "$@" \
           --input-base "github.com/tigera/calico-k8sapiserver/pkg/apis/" \
-	      --input "projectcalico/v2" \
+	      --input "projectcalico/v3" \
 	      --clientset-path "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/" \
 	      --clientset-name "clientset"
 # generate lister
 ${BINDIR}/lister-gen "$@" \
 	      --input-dirs="github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico" \
-	      --input-dirs="github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2" \
+	      --input-dirs="github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3" \
 	      --output-package "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated"
 # generate informer
 ${BINDIR}/informer-gen "$@" \
 	      --input-dirs "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico" \
-	      --input-dirs "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2" \
+	      --input-dirs "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3" \
 	      --internal-clientset-package "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/internalclientset" \
 	      --versioned-clientset-package "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset" \
 	      --listers-package "github.com/tigera/calico-k8sapiserver/pkg/client/listers_generated" \

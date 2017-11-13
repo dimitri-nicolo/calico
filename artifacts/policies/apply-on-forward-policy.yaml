@@ -1,4 +1,4 @@
-apiVersion: projectcalico.org/v2
+apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
 metadata:
   name: my-apply-on-forward-policy

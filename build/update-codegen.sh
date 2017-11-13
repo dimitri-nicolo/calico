@@ -27,5 +27,5 @@ CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -1 ./vendor/k8s.io/code-ge
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 ${CODEGEN_PKG}/generate-internal-groups.sh all \
   github.com/tigera/calico-k8sapiserver/pkg/client github.com/tigera/calico-k8sapiserver/pkg/apis github.com/tigera/calico-k8sapiserver/pkg/apis \
-  "calico:v2" ...
+  "calico:v3" ...
 #  --output-base "$(dirname ${BASH_SOURCE})/../../.."

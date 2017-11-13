@@ -4,8 +4,8 @@ Copyright 2017 Tigera.
 
 import (
 	clientset "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
-	projectcalicov2 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v2"
-	fakeprojectcalicov2 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v2/fake"
+	projectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
+	fakeprojectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -47,11 +47,11 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 var _ clientset.Interface = &Clientset{}
 
 // ProjectcalicoV2 retrieves the ProjectcalicoV2Client
-func (c *Clientset) ProjectcalicoV2() projectcalicov2.ProjectcalicoV2Interface {
-	return &fakeprojectcalicov2.FakeProjectcalicoV2{Fake: &c.Fake}
+func (c *Clientset) ProjectcalicoV2() projectcalicov3.ProjectcalicoV2Interface {
+	return &fakeprojectcalicov3.FakeProjectcalicoV2{Fake: &c.Fake}
 }
 
 // Projectcalico retrieves the ProjectcalicoV2Client
-func (c *Clientset) Projectcalico() projectcalicov2.ProjectcalicoV2Interface {
-	return &fakeprojectcalicov2.FakeProjectcalicoV2{Fake: &c.Fake}
+func (c *Clientset) Projectcalico() projectcalicov3.ProjectcalicoV2Interface {
+	return &fakeprojectcalicov3.FakeProjectcalicoV2{Fake: &c.Fake}
 }

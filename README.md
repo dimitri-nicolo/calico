@@ -62,10 +62,10 @@ docker image (`make calico/k8sapiserver`) has been built.
 ## Cleanup and Reset
 ```
 1. kubectl delete -f ~/go/src/github.com/tigera/calico-k8sapiserver/artifacts/example/
-2. kubectl delete -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+2. kubectl delete -f http://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
 3. rm -rf /var/etcd/
 4. Reload/Rebuild the new latest docker image for calico-k8sapiserver
-5. kubectl apply -f http://docs.projectcalico.org/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
+5. kubectl apply -f http://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.6/calico.yaml
 6. kubectl create -f ~/go/src/github.com/tigera/calico-k8sapiserver/artifacts/example/
 ```
 
@@ -118,27 +118,27 @@ The API Server command/flags used for running can be found under /etc/kubernetes
 
 ## API Examples
 ```
-Follows native Kubernetes REST semantics. (NOTE: Transformation WIP from v1->v2)
-Tiers - APIVersion: projectcalico.org/v2 Kind: Tier
-1. Listing Tiers: https://10.0.2.15:6443/apis/projectcalico.org/v2/tiers
-2. Getting a Tier: https://10.0.2.15:6443/apis/projectcalico.org/v2/tiers/net-sec
-3. Posting a Tier: -XPOST -d @tier.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/projectcalico.org/v2/tiers
+Follows native Kubernetes REST semantics. (NOTE: Transformation WIP from v1->v3)
+Tiers - APIVersion: projectcalico.org/v3 Kind: Tier
+1. Listing Tiers: https://10.0.2.15:6443/apis/projectcalico.org/v3/tiers
+2. Getting a Tier: https://10.0.2.15:6443/apis/projectcalico.org/v3/tiers/net-sec
+3. Posting a Tier: -XPOST -d @tier.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/projectcalico.org/v3/tiers
 
-NetworkPolicies - APIVersion: projectcalico.org/v2 Kind: NetworkPolicy
-4. Listing networkpolicies across namespaces: https://10.0.2.15:6443/apis/projectcalico.org/v2/networkpolicies
-5. Listing networkpolicy from a given namespace (belonging to default tier): https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies 
+NetworkPolicies - APIVersion: projectcalico.org/v3 Kind: NetworkPolicy
+4. Listing networkpolicies across namespaces: https://10.0.2.15:6443/apis/projectcalico.org/v3/networkpolicies
+5. Listing networkpolicy from a given namespace (belonging to default tier): https://10.0.2.15:6443/apis/projectcalico.org/v3/namespaces/default/networkpolicies 
 ^ NOTE: NetworkPolicy list will also include Core NetworkPolicies. Core NetworkPolicy names will be prepended with "knp."
 ^ NOTE: When fieldSelector not specified it defaults to "default" on the server side.
-6. Watching networkpolicies in the default namespace: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch=true
-7. Selecting networkpolicies in the default namespace belonging to "net-sec": https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?fieldSelector=spec.tier=net-sec
-8. Select networkpolicies based on Tier and watch at the same time: https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies?watch=true&fieldSelector=spec.tier=net-sec
-9. Create networkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v2/namespaces/default/networkpolicies
+6. Watching networkpolicies in the default namespace: https://10.0.2.15:6443/apis/projectcalico.org/v3/namespaces/default/networkpolicies?watch=true
+7. Selecting networkpolicies in the default namespace belonging to "net-sec": https://10.0.2.15:6443/apis/projectcalico.org/v3/namespaces/default/networkpolicies?fieldSelector=spec.tier=net-sec
+8. Select networkpolicies based on Tier and watch at the same time: https://10.0.2.15:6443/apis/projectcalico.org/v3/namespaces/default/networkpolicies?watch=true&fieldSelector=spec.tier=net-sec
+9. Create networkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v3/namespaces/default/networkpolicies
 
-GlobalNetworkPolicies - APIVersion: projectcalico.org/v2 Kind: GlobalNetworkPolicy
-10. Listing globalnetworkpolicies: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies
-11. Watching globalnetworkpolicies belonging to default tier: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?watch=true
-12. Selecting globalnetworkpolicies belonging to Tier1: https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies?fieldSelector=spec.tier=Tier1
-13. Create globalnetworkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v2/globalnetworkpolicies
+GlobalNetworkPolicies - APIVersion: projectcalico.org/v3 Kind: GlobalNetworkPolicy
+10. Listing globalnetworkpolicies: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworkpolicies
+11. Watching globalnetworkpolicies belonging to default tier: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworkpolicies?watch=true
+12. Selecting globalnetworkpolicies belonging to Tier1: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworkpolicies?fieldSelector=spec.tier=Tier1
+13. Create globalnetworkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworkpolicies
 
 Core/K8s NetworkPolicies - APIVersion: networking.k8s.io/v1 Kind: NetworkPolicy
 14. Create core networkpolicies: -XPOST -d @policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/networking.k8s.io/v1/networkpolicies

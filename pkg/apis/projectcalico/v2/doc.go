@@ -17,6 +17,6 @@ limitations under the License.
 // +k8s:deepcopy-gen=package,register
 // +k8s:conversion-gen=github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico
 
-// Package v2 is the v2 version of the API.
+// Package v3 is the v3 version of the API.
 // +groupName=projectcalico.org
-package v2
+package v3

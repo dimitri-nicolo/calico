@@ -1,9 +1,9 @@
 /*
 Copyright 2017 Tigera.
-*/package v2
+*/package v3
 
 import (
-	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -19,14 +19,14 @@ type GlobalNetworkPoliciesGetter interface {
 
 // GlobalNetworkPolicyInterface has methods to work with GlobalNetworkPolicy resources.
 type GlobalNetworkPolicyInterface interface {
-	Create(*v2.GlobalNetworkPolicy) (*v2.GlobalNetworkPolicy, error)
-	Update(*v2.GlobalNetworkPolicy) (*v2.GlobalNetworkPolicy, error)
+	Create(*v3.GlobalNetworkPolicy) (*v3.GlobalNetworkPolicy, error)
+	Update(*v3.GlobalNetworkPolicy) (*v3.GlobalNetworkPolicy, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v2.GlobalNetworkPolicy, error)
-	List(opts v1.ListOptions) (*v2.GlobalNetworkPolicyList, error)
+	Get(name string, options v1.GetOptions) (*v3.GlobalNetworkPolicy, error)
+	List(opts v1.ListOptions) (*v3.GlobalNetworkPolicyList, error)
 	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.GlobalNetworkPolicy, err error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkPolicy, err error)
 	GlobalNetworkPolicyExpansion
 }
 
@@ -43,8 +43,8 @@ func newGlobalNetworkPolicies(c *ProjectcalicoV2Client) *globalNetworkPolicies {
 }
 
 // Get takes name of the globalNetworkPolicy, and returns the corresponding globalNetworkPolicy object, and an error if there is any.
-func (c *globalNetworkPolicies) Get(name string, options v1.GetOptions) (result *v2.GlobalNetworkPolicy, err error) {
-	result = &v2.GlobalNetworkPolicy{}
+func (c *globalNetworkPolicies) Get(name string, options v1.GetOptions) (result *v3.GlobalNetworkPolicy, err error) {
+	result = &v3.GlobalNetworkPolicy{}
 	err = c.client.Get().
 		Resource("globalnetworkpolicies").
 		Name(name).
@@ -55,8 +55,8 @@ func (c *globalNetworkPolicies) Get(name string, options v1.GetOptions) (result 
 }
 
 // List takes label and field selectors, and returns the list of GlobalNetworkPolicies that match those selectors.
-func (c *globalNetworkPolicies) List(opts v1.ListOptions) (result *v2.GlobalNetworkPolicyList, err error) {
-	result = &v2.GlobalNetworkPolicyList{}
+func (c *globalNetworkPolicies) List(opts v1.ListOptions) (result *v3.GlobalNetworkPolicyList, err error) {
+	result = &v3.GlobalNetworkPolicyList{}
 	err = c.client.Get().
 		Resource("globalnetworkpolicies").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -75,8 +75,8 @@ func (c *globalNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface, err
 }
 
 // Create takes the representation of a globalNetworkPolicy and creates it.  Returns the server's representation of the globalNetworkPolicy, and an error, if there is any.
-func (c *globalNetworkPolicies) Create(globalNetworkPolicy *v2.GlobalNetworkPolicy) (result *v2.GlobalNetworkPolicy, err error) {
-	result = &v2.GlobalNetworkPolicy{}
+func (c *globalNetworkPolicies) Create(globalNetworkPolicy *v3.GlobalNetworkPolicy) (result *v3.GlobalNetworkPolicy, err error) {
+	result = &v3.GlobalNetworkPolicy{}
 	err = c.client.Post().
 		Resource("globalnetworkpolicies").
 		Body(globalNetworkPolicy).
@@ -86,8 +86,8 @@ func (c *globalNetworkPolicies) Create(globalNetworkPolicy *v2.GlobalNetworkPoli
 }
 
 // Update takes the representation of a globalNetworkPolicy and updates it. Returns the server's representation of the globalNetworkPolicy, and an error, if there is any.
-func (c *globalNetworkPolicies) Update(globalNetworkPolicy *v2.GlobalNetworkPolicy) (result *v2.GlobalNetworkPolicy, err error) {
-	result = &v2.GlobalNetworkPolicy{}
+func (c *globalNetworkPolicies) Update(globalNetworkPolicy *v3.GlobalNetworkPolicy) (result *v3.GlobalNetworkPolicy, err error) {
+	result = &v3.GlobalNetworkPolicy{}
 	err = c.client.Put().
 		Resource("globalnetworkpolicies").
 		Name(globalNetworkPolicy.Name).
@@ -118,8 +118,8 @@ func (c *globalNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, list
 }
 
 // Patch applies the patch and returns the patched globalNetworkPolicy.
-func (c *globalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.GlobalNetworkPolicy, err error) {
-	result = &v2.GlobalNetworkPolicy{}
+func (c *globalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkPolicy, err error) {
+	result = &v3.GlobalNetworkPolicy{}
 	err = c.client.Patch(pt).
 		Resource("globalnetworkpolicies").
 		SubResource(subresources...).

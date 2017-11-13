@@ -1,6 +1,6 @@
 /*
 Copyright 2017 Tigera.
-*/package v2
+*/package v3
 
 type GlobalNetworkPolicyExpansion interface{}
 

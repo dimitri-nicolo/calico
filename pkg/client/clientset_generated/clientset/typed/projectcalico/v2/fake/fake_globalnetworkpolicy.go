@@ -3,7 +3,7 @@ Copyright 2017 Tigera.
 */package fake
 
 import (
-	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -17,24 +17,24 @@ type FakeGlobalNetworkPolicies struct {
 	Fake *FakeProjectcalicoV2
 }
 
-var globalnetworkpoliciesResource = schema.GroupVersionResource{Group: "projectcalico.org", Version: "v2", Resource: "globalnetworkpolicies"}
+var globalnetworkpoliciesResource = schema.GroupVersionResource{Group: "projectcalico.org", Version: "v3", Resource: "globalnetworkpolicies"}
 
-var globalnetworkpoliciesKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "v2", Kind: "GlobalNetworkPolicy"}
+var globalnetworkpoliciesKind = schema.GroupVersionKind{Group: "projectcalico.org", Version: "v3", Kind: "GlobalNetworkPolicy"}
 
 // Get takes name of the globalNetworkPolicy, and returns the corresponding globalNetworkPolicy object, and an error if there is any.
-func (c *FakeGlobalNetworkPolicies) Get(name string, options v1.GetOptions) (result *v2.GlobalNetworkPolicy, err error) {
+func (c *FakeGlobalNetworkPolicies) Get(name string, options v1.GetOptions) (result *v3.GlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(globalnetworkpoliciesResource, name), &v2.GlobalNetworkPolicy{})
+		Invokes(testing.NewRootGetAction(globalnetworkpoliciesResource, name), &v3.GlobalNetworkPolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2.GlobalNetworkPolicy), err
+	return obj.(*v3.GlobalNetworkPolicy), err
 }
 
 // List takes label and field selectors, and returns the list of GlobalNetworkPolicies that match those selectors.
-func (c *FakeGlobalNetworkPolicies) List(opts v1.ListOptions) (result *v2.GlobalNetworkPolicyList, err error) {
+func (c *FakeGlobalNetworkPolicies) List(opts v1.ListOptions) (result *v3.GlobalNetworkPolicyList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(globalnetworkpoliciesResource, globalnetworkpoliciesKind, opts), &v2.GlobalNetworkPolicyList{})
+		Invokes(testing.NewRootListAction(globalnetworkpoliciesResource, globalnetworkpoliciesKind, opts), &v3.GlobalNetworkPolicyList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -43,8 +43,8 @@ func (c *FakeGlobalNetworkPolicies) List(opts v1.ListOptions) (result *v2.Global
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v2.GlobalNetworkPolicyList{}
-	for _, item := range obj.(*v2.GlobalNetworkPolicyList).Items {
+	list := &v3.GlobalNetworkPolicyList{}
+	for _, item := range obj.(*v3.GlobalNetworkPolicyList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -59,29 +59,29 @@ func (c *FakeGlobalNetworkPolicies) Watch(opts v1.ListOptions) (watch.Interface,
 }
 
 // Create takes the representation of a globalNetworkPolicy and creates it.  Returns the server's representation of the globalNetworkPolicy, and an error, if there is any.
-func (c *FakeGlobalNetworkPolicies) Create(globalNetworkPolicy *v2.GlobalNetworkPolicy) (result *v2.GlobalNetworkPolicy, err error) {
+func (c *FakeGlobalNetworkPolicies) Create(globalNetworkPolicy *v3.GlobalNetworkPolicy) (result *v3.GlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(globalnetworkpoliciesResource, globalNetworkPolicy), &v2.GlobalNetworkPolicy{})
+		Invokes(testing.NewRootCreateAction(globalnetworkpoliciesResource, globalNetworkPolicy), &v3.GlobalNetworkPolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2.GlobalNetworkPolicy), err
+	return obj.(*v3.GlobalNetworkPolicy), err
 }
 
 // Update takes the representation of a globalNetworkPolicy and updates it. Returns the server's representation of the globalNetworkPolicy, and an error, if there is any.
-func (c *FakeGlobalNetworkPolicies) Update(globalNetworkPolicy *v2.GlobalNetworkPolicy) (result *v2.GlobalNetworkPolicy, err error) {
+func (c *FakeGlobalNetworkPolicies) Update(globalNetworkPolicy *v3.GlobalNetworkPolicy) (result *v3.GlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(globalnetworkpoliciesResource, globalNetworkPolicy), &v2.GlobalNetworkPolicy{})
+		Invokes(testing.NewRootUpdateAction(globalnetworkpoliciesResource, globalNetworkPolicy), &v3.GlobalNetworkPolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2.GlobalNetworkPolicy), err
+	return obj.(*v3.GlobalNetworkPolicy), err
 }
 
 // Delete takes name of the globalNetworkPolicy and deletes it. Returns an error if one occurs.
 func (c *FakeGlobalNetworkPolicies) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(globalnetworkpoliciesResource, name), &v2.GlobalNetworkPolicy{})
+		Invokes(testing.NewRootDeleteAction(globalnetworkpoliciesResource, name), &v3.GlobalNetworkPolicy{})
 	return err
 }
 
@@ -89,16 +89,16 @@ func (c *FakeGlobalNetworkPolicies) Delete(name string, options *v1.DeleteOption
 func (c *FakeGlobalNetworkPolicies) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(globalnetworkpoliciesResource, listOptions)
 
-	_, err := c.Fake.Invokes(action, &v2.GlobalNetworkPolicyList{})
+	_, err := c.Fake.Invokes(action, &v3.GlobalNetworkPolicyList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched globalNetworkPolicy.
-func (c *FakeGlobalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.GlobalNetworkPolicy, err error) {
+func (c *FakeGlobalNetworkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.GlobalNetworkPolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(globalnetworkpoliciesResource, name, data, subresources...), &v2.GlobalNetworkPolicy{})
+		Invokes(testing.NewRootPatchSubresourceAction(globalnetworkpoliciesResource, name, data, subresources...), &v3.GlobalNetworkPolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v2.GlobalNetworkPolicy), err
+	return obj.(*v3.GlobalNetworkPolicy), err
 }

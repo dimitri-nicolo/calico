@@ -14,7 +14,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	calicowatch "github.com/projectcalico/libcalico-go/lib/watch"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -43,13 +43,13 @@ type resourceConverter interface {
 
 type clientOpts interface{}
 
-type clientObjectOperator func(context.Context, clientv2.Interface, resourceObject, clientOpts) (resourceObject, error)
-type clientNameOperator func(context.Context, clientv2.Interface, string, string, clientOpts) (resourceObject, error)
-type clientLister func(context.Context, clientv2.Interface, clientOpts) (resourceListObject, error)
-type clientWatcher func(context.Context, clientv2.Interface, clientOpts) (calicowatch.Interface, error)
+type clientObjectOperator func(context.Context, clientv3.Interface, resourceObject, clientOpts) (resourceObject, error)
+type clientNameOperator func(context.Context, clientv3.Interface, string, string, clientOpts) (resourceObject, error)
+type clientLister func(context.Context, clientv3.Interface, clientOpts) (resourceListObject, error)
+type clientWatcher func(context.Context, clientv3.Interface, clientOpts) (calicowatch.Interface, error)
 
 type resourceStore struct {
-	client            clientv2.Interface
+	client            clientv3.Interface
 	codec             runtime.Codec
 	versioner         storage.Versioner
 	aapiType          reflect.Type
@@ -67,7 +67,7 @@ type resourceStore struct {
 	converter         resourceConverter
 }
 
-func createClientFromConfig() clientv2.Interface {
+func createClientFromConfig() clientv3.Interface {
 	// TODO(doublek): nicer errors returned
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
@@ -75,7 +75,7 @@ func createClientFromConfig() clientv2.Interface {
 		os.Exit(1)
 	}
 
-	c, err := clientv2.New(*cfg)
+	c, err := clientv3.New(*cfg)
 	if err != nil {
 		glog.Errorf("Failed creating client: %q", err)
 		os.Exit(1)
@@ -135,7 +135,7 @@ func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Obj
 
 	libcalicoObj, err := rs.delete(ctx, rs.client, ns, name, delOpts)
 	if err != nil {
-		glog.Errorf("Clientv2 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
+		glog.Errorf("Clientv3 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
 		return aapiError(err, key)
 	}
 	rs.converter.convertToAAPI(libcalicoObj, out)

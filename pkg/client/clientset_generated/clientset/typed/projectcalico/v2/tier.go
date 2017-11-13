@@ -1,9 +1,9 @@
 /*
 Copyright 2017 Tigera.
-*/package v2
+*/package v3
 
 import (
-	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -19,14 +19,14 @@ type TiersGetter interface {
 
 // TierInterface has methods to work with Tier resources.
 type TierInterface interface {
-	Create(*v2.Tier) (*v2.Tier, error)
-	Update(*v2.Tier) (*v2.Tier, error)
+	Create(*v3.Tier) (*v3.Tier, error)
+	Update(*v3.Tier) (*v3.Tier, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v2.Tier, error)
-	List(opts v1.ListOptions) (*v2.TierList, error)
+	Get(name string, options v1.GetOptions) (*v3.Tier, error)
+	List(opts v1.ListOptions) (*v3.TierList, error)
 	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.Tier, err error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.Tier, err error)
 	TierExpansion
 }
 
@@ -43,8 +43,8 @@ func newTiers(c *ProjectcalicoV2Client) *tiers {
 }
 
 // Get takes name of the tier, and returns the corresponding tier object, and an error if there is any.
-func (c *tiers) Get(name string, options v1.GetOptions) (result *v2.Tier, err error) {
-	result = &v2.Tier{}
+func (c *tiers) Get(name string, options v1.GetOptions) (result *v3.Tier, err error) {
+	result = &v3.Tier{}
 	err = c.client.Get().
 		Resource("tiers").
 		Name(name).
@@ -55,8 +55,8 @@ func (c *tiers) Get(name string, options v1.GetOptions) (result *v2.Tier, err er
 }
 
 // List takes label and field selectors, and returns the list of Tiers that match those selectors.
-func (c *tiers) List(opts v1.ListOptions) (result *v2.TierList, err error) {
-	result = &v2.TierList{}
+func (c *tiers) List(opts v1.ListOptions) (result *v3.TierList, err error) {
+	result = &v3.TierList{}
 	err = c.client.Get().
 		Resource("tiers").
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -75,8 +75,8 @@ func (c *tiers) Watch(opts v1.ListOptions) (watch.Interface, error) {
 }
 
 // Create takes the representation of a tier and creates it.  Returns the server's representation of the tier, and an error, if there is any.
-func (c *tiers) Create(tier *v2.Tier) (result *v2.Tier, err error) {
-	result = &v2.Tier{}
+func (c *tiers) Create(tier *v3.Tier) (result *v3.Tier, err error) {
+	result = &v3.Tier{}
 	err = c.client.Post().
 		Resource("tiers").
 		Body(tier).
@@ -86,8 +86,8 @@ func (c *tiers) Create(tier *v2.Tier) (result *v2.Tier, err error) {
 }
 
 // Update takes the representation of a tier and updates it. Returns the server's representation of the tier, and an error, if there is any.
-func (c *tiers) Update(tier *v2.Tier) (result *v2.Tier, err error) {
-	result = &v2.Tier{}
+func (c *tiers) Update(tier *v3.Tier) (result *v3.Tier, err error) {
+	result = &v3.Tier{}
 	err = c.client.Put().
 		Resource("tiers").
 		Name(tier.Name).
@@ -118,8 +118,8 @@ func (c *tiers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListO
 }
 
 // Patch applies the patch and returns the patched tier.
-func (c *tiers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.Tier, err error) {
-	result = &v2.Tier{}
+func (c *tiers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.Tier, err error) {
+	result = &v3.Tier{}
 	err = c.client.Patch(pt).
 		Resource("tiers").
 		SubResource(subresources...).

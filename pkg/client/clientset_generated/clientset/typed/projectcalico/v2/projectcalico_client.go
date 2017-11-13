@@ -1,9 +1,9 @@
 /*
 Copyright 2017 Tigera.
-*/package v2
+*/package v3
 
 import (
-	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
@@ -62,7 +62,7 @@ func New(c rest.Interface) *ProjectcalicoV2Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v2.SchemeGroupVersion
+	gv := v3.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}

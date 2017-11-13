@@ -1,7 +1,7 @@
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
-  name: v2.projectcalico.org
+  name: v3.projectcalico.org
 spec:
   insecureSkipTLSVerify: true
   group: projectcalico.org
@@ -10,4 +10,4 @@ spec:
   service:
     name: api
     namespace: calico
-  version: v2
+  version: v3

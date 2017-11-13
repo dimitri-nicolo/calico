@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v2
+package v3
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

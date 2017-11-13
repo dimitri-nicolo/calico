@@ -1,9 +1,9 @@
 /*
 Copyright 2017 Tigera.
-*/package v2
+*/package v3
 
 import (
-	v2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	v3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	scheme "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -19,14 +19,14 @@ type NetworkPoliciesGetter interface {
 
 // NetworkPolicyInterface has methods to work with NetworkPolicy resources.
 type NetworkPolicyInterface interface {
-	Create(*v2.NetworkPolicy) (*v2.NetworkPolicy, error)
-	Update(*v2.NetworkPolicy) (*v2.NetworkPolicy, error)
+	Create(*v3.NetworkPolicy) (*v3.NetworkPolicy, error)
+	Update(*v3.NetworkPolicy) (*v3.NetworkPolicy, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v2.NetworkPolicy, error)
-	List(opts v1.ListOptions) (*v2.NetworkPolicyList, error)
+	Get(name string, options v1.GetOptions) (*v3.NetworkPolicy, error)
+	List(opts v1.ListOptions) (*v3.NetworkPolicyList, error)
 	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.NetworkPolicy, err error)
+	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.NetworkPolicy, err error)
 	NetworkPolicyExpansion
 }
 
@@ -45,8 +45,8 @@ func newNetworkPolicies(c *ProjectcalicoV2Client, namespace string) *networkPoli
 }
 
 // Get takes name of the networkPolicy, and returns the corresponding networkPolicy object, and an error if there is any.
-func (c *networkPolicies) Get(name string, options v1.GetOptions) (result *v2.NetworkPolicy, err error) {
-	result = &v2.NetworkPolicy{}
+func (c *networkPolicies) Get(name string, options v1.GetOptions) (result *v3.NetworkPolicy, err error) {
+	result = &v3.NetworkPolicy{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -58,8 +58,8 @@ func (c *networkPolicies) Get(name string, options v1.GetOptions) (result *v2.Ne
 }
 
 // List takes label and field selectors, and returns the list of NetworkPolicies that match those selectors.
-func (c *networkPolicies) List(opts v1.ListOptions) (result *v2.NetworkPolicyList, err error) {
-	result = &v2.NetworkPolicyList{}
+func (c *networkPolicies) List(opts v1.ListOptions) (result *v3.NetworkPolicyList, err error) {
+	result = &v3.NetworkPolicyList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -80,8 +80,8 @@ func (c *networkPolicies) Watch(opts v1.ListOptions) (watch.Interface, error) {
 }
 
 // Create takes the representation of a networkPolicy and creates it.  Returns the server's representation of the networkPolicy, and an error, if there is any.
-func (c *networkPolicies) Create(networkPolicy *v2.NetworkPolicy) (result *v2.NetworkPolicy, err error) {
-	result = &v2.NetworkPolicy{}
+func (c *networkPolicies) Create(networkPolicy *v3.NetworkPolicy) (result *v3.NetworkPolicy, err error) {
+	result = &v3.NetworkPolicy{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -92,8 +92,8 @@ func (c *networkPolicies) Create(networkPolicy *v2.NetworkPolicy) (result *v2.Ne
 }
 
 // Update takes the representation of a networkPolicy and updates it. Returns the server's representation of the networkPolicy, and an error, if there is any.
-func (c *networkPolicies) Update(networkPolicy *v2.NetworkPolicy) (result *v2.NetworkPolicy, err error) {
-	result = &v2.NetworkPolicy{}
+func (c *networkPolicies) Update(networkPolicy *v3.NetworkPolicy) (result *v3.NetworkPolicy, err error) {
+	result = &v3.NetworkPolicy{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("networkpolicies").
@@ -127,8 +127,8 @@ func (c *networkPolicies) DeleteCollection(options *v1.DeleteOptions, listOption
 }
 
 // Patch applies the patch and returns the patched networkPolicy.
-func (c *networkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v2.NetworkPolicy, err error) {
-	result = &v2.NetworkPolicy{}
+func (c *networkPolicies) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v3.NetworkPolicy, err error) {
+	result = &v3.NetworkPolicy{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("networkpolicies").
