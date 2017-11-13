@@ -8,7 +8,7 @@ deepcopy-gen: .deepcopy_gen
 # Define some constants
 #######################
 K8S_VERSION       = v1.8.1
-CALICO_BUILD     ?= calico/go-build
+CALICO_BUILD     ?= calico/go-build:v0.9
 PACKAGE_NAME     ?= projectcalico/libcalico-go
 LOCAL_USER_ID    ?= $(shell id -u $$USER)
 BINDIR           ?= bin
@@ -180,6 +180,6 @@ $(BINDIR)/deepcopy-gen:
 		sh -c '$(BINDIR)/deepcopy-gen \
 			--v 1 --logtostderr \
 			--go-header-file "./docs/boilerplate.go.txt" \
-			--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v2" \
+			--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v3" \
 			--bounding-dirs "github.com/projectcalico/libcalico-go" \
 			--output-file-base zz_generated.deepcopy'
