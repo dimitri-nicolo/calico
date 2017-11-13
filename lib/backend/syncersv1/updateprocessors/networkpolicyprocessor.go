@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/libcalico-go/lib/names"
@@ -28,11 +28,11 @@ import (
 // Create a new SyncerUpdateProcessor to sync NetworkPolicy data in v1 format for
 // consumption by Felix.
 func NewNetworkPolicyUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
-	return NewSimpleUpdateProcessor(apiv2.KindNetworkPolicy, convertNetworkPolicyV2ToV1Key, convertNetworkPolicyV2ToV1Value)
+	return NewSimpleUpdateProcessor(apiv3.KindNetworkPolicy, convertNetworkPolicyV2ToV1Key, convertNetworkPolicyV2ToV1Value)
 }
 
-func convertNetworkPolicyV2ToV1Key(v2key model.ResourceKey) (model.Key, error) {
-	if v2key.Name == "" || v2key.Namespace == "" {
+func convertNetworkPolicyV2ToV1Key(v3key model.ResourceKey) (model.Key, error) {
+	if v3key.Name == "" || v3key.Namespace == "" {
 		return model.PolicyKey{}, errors.New("Missing Name or Namespace field to create a v1 NetworkPolicy Key")
 	}
 	tier, err := names.TierFromPolicyName(v2key.Name)
@@ -40,35 +40,23 @@ func convertNetworkPolicyV2ToV1Key(v2key model.ResourceKey) (model.Key, error) {
 		return model.PolicyKey{}, err
 	}
 	return model.PolicyKey{
-		Name: v2key.Namespace + "/" + v2key.Name,
+		Name: v3key.Namespace + "/" + v3key.Name,
 		Tier: tier,
 	}, nil
 
 }
 
 func convertNetworkPolicyV2ToV1Value(val interface{}) (interface{}, error) {
-	v2res, ok := val.(*apiv2.NetworkPolicy)
+	v3res, ok := val.(*apiv3.NetworkPolicy)
 	if !ok {
 		return nil, errors.New("Value is not a valid NetworkPolicy resource value")
 	}
-	return convertPolicyV2ToV1Spec(v2res.Spec, v2res.Namespace)
-}
-
-func convertPolicyV2ToV1Spec(spec apiv2.PolicySpec, ns string) (interface{}, error) {
-	var irules []model.Rule
-	for _, irule := range spec.IngressRules {
-		irules = append(irules, RuleAPIV2ToBackend(irule, ns))
-	}
-
-	var erules []model.Rule
-	for _, erule := range spec.EgressRules {
-		erules = append(erules, RuleAPIV2ToBackend(erule, ns))
-	}
 
 	// If this policy is namespaced, then add a namespace selector.
+	spec := v3res.Spec
 	selector := spec.Selector
-	if ns != "" {
-		nsSelector := fmt.Sprintf("%s == '%s'", apiv2.LabelNamespace, ns)
+	if v3res.Namespace != "" {
+		nsSelector := fmt.Sprintf("%s == '%s'", apiv3.LabelNamespace, v3res.Namespace)
 		if selector == "" {
 			selector = nsSelector
 		} else {
@@ -78,13 +66,11 @@ func convertPolicyV2ToV1Spec(spec apiv2.PolicySpec, ns string) (interface{}, err
 
 	v1value := &model.Policy{
 		Order:          spec.Order,
-		InboundRules:   irules,
-		OutboundRules:  erules,
+		InboundRules:   RulesAPIV2ToBackend(spec.Ingress, v3res.Namespace),
+		OutboundRules:  RulesAPIV2ToBackend(spec.Egress, v3res.Namespace),
 		Selector:       selector,
-		DoNotTrack:     spec.DoNotTrack,
-		PreDNAT:        spec.PreDNAT,
-		ApplyOnForward: spec.ApplyOnForward,
 		Types:          policyTypesAPIV2ToBackend(spec.Types),
+		ApplyOnForward: true,
 	}
 
 	return v1value, nil
@@ -92,7 +78,7 @@ func convertPolicyV2ToV1Spec(spec apiv2.PolicySpec, ns string) (interface{}, err
 
 // policyTypesAPIV2ToBackend converts the policy type field value from the API
 // value to the equivalent backend value.
-func policyTypesAPIV2ToBackend(ptypes []apiv2.PolicyType) []string {
+func policyTypesAPIV2ToBackend(ptypes []apiv3.PolicyType) []string {
 	var v1ptypes []string
 	for _, ptype := range ptypes {
 		v1ptypes = append(v1ptypes, policyTypeAPIV2ToBackend(ptype))
@@ -100,6 +86,6 @@ func policyTypesAPIV2ToBackend(ptypes []apiv2.PolicyType) []string {
 	return v1ptypes
 }
 
-func policyTypeAPIV2ToBackend(ptype apiv2.PolicyType) string {
+func policyTypeAPIV2ToBackend(ptype apiv3.PolicyType) string {
 	return strings.ToLower(string(ptype))
 }

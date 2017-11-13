@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	kwatch "k8s.io/apimachinery/pkg/watch"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -39,7 +39,7 @@ func newK8sWatcherConverter(
 ) api.WatchInterface {
 	ctx, cancel := context.WithCancel(ctx)
 	wc := &k8sWatcherConverter{
-		logCxt:     log.WithField("resource", name),
+		logCxt:     logrus.WithField("resource", name),
 		converter:  converter,
 		k8sWatch:   k8sWatch,
 		context:    ctx,
@@ -51,7 +51,7 @@ func newK8sWatcherConverter(
 }
 
 type k8sWatcherConverter struct {
-	logCxt     *log.Entry
+	logCxt     *logrus.Entry
 	converter  ConvertK8sResourceToKVPair
 	k8sWatch   kwatch.Interface
 	context    context.Context
@@ -80,9 +80,9 @@ func (crw *k8sWatcherConverter) HasTerminated() bool {
 // Loop to process the events stream from the underlying k8s Watcher and convert them to
 // backend KVPs.
 func (crw *k8sWatcherConverter) processK8sEvents() {
-	crw.logCxt.Info("Watcher process started")
+	crw.logCxt.Info("Kubernetes watcher/converter started")
 	defer func() {
-		crw.logCxt.Info("Watcher process terminated")
+		crw.logCxt.Info("Kubernetes watcher/converter stopped, closing result channel")
 		crw.Stop()
 		close(crw.resultChan)
 		atomic.AddUint32(&crw.terminated, 1)
@@ -90,18 +90,38 @@ func (crw *k8sWatcherConverter) processK8sEvents() {
 
 	for {
 		select {
-		case event := <-crw.k8sWatch.ResultChan():
-			e := crw.convertEvent(event)
+		case event, ok := <-crw.k8sWatch.ResultChan():
+			var e *api.WatchEvent
+			if !ok {
+				// The channel is closed so send a terminating watcher event indicating the watch was
+				// closed by the remote.
+				crw.logCxt.Debug("Watcher terminated by remote")
+				e = &api.WatchEvent{
+					Type: api.WatchError,
+					Error: cerrors.ErrorWatchTerminated{
+						Err:            fmt.Errorf("terminating error event from Kubernetes watcher: closed by remote"),
+						ClosedByRemote: true,
+					},
+				}
+			} else {
+				// We have a valid event, so convert it.
+				e = crw.convertEvent(event)
+				if e == nil {
+					crw.logCxt.Debug("Event converted to a no-op")
+					continue
+				}
+			}
+
 			select {
-			case crw.resultChan <- e:
+			case crw.resultChan <- *e:
 				crw.logCxt.Debug("Kubernetes event converted and sent to backend watcher")
 
 				// If this is an error event, check to see if it's a terminating one (the
 				// convertEvent method will decide that).  If so, terminate this watcher.
 				if e.Type == api.WatchError {
-					crw.logCxt.WithError(e.Error).Debug("Kubernetes event converted to backend watcher error event")
+					crw.logCxt.WithError(e.Error).Debug("Watch event was an error event type")
 					if _, ok := e.Error.(cerrors.ErrorWatchTerminated); ok {
-						crw.logCxt.Info("Watch terminated event")
+						crw.logCxt.Info("Watch event indicates a terminated watcher")
 						return
 					}
 				}
@@ -118,48 +138,51 @@ func (crw *k8sWatcherConverter) processK8sEvents() {
 
 // convertEvent converts a Kubernetes Watch event into the equivalent Calico backend
 // client watch event.
-func (crw *k8sWatcherConverter) convertEvent(kevent kwatch.Event) api.WatchEvent {
+func (crw *k8sWatcherConverter) convertEvent(kevent kwatch.Event) *api.WatchEvent {
 	var kvp *model.KVPair
 	var err error
-	if kevent.Type != kwatch.Error && kevent.Type != "" {
+	if kevent.Type != kwatch.Error {
 		k8sRes := kevent.Object.(Resource)
 		kvp, err = crw.converter(k8sRes)
 		if err != nil {
 			crw.logCxt.WithError(err).Warning("Error converting Kubernetes resource to Calico resource")
-			return api.WatchEvent{
+			return &api.WatchEvent{
 				Type:  api.WatchError,
 				Error: err,
 			}
 		}
+		if kvp == nil {
+			return nil
+		}
 	}
 
 	switch kevent.Type {
-	case kwatch.Error, "":
+	case kwatch.Error:
 		// An error directly from the k8s watcher is a terminating event.
-		return api.WatchEvent{
+		return &api.WatchEvent{
 			Type: api.WatchError,
 			Error: cerrors.ErrorWatchTerminated{
 				Err: fmt.Errorf("terminating error event from Kubernetes watcher: %v", kevent.Object),
 			},
 		}
 	case kwatch.Deleted:
-		return api.WatchEvent{
+		return &api.WatchEvent{
 			Type: api.WatchDeleted,
 			Old:  kvp,
 		}
 	case kwatch.Added:
-		return api.WatchEvent{
+		return &api.WatchEvent{
 			Type: api.WatchAdded,
 			New:  kvp,
 		}
 	case kwatch.Modified:
 		// In KDD we don't have access to the previous settings, so just set the current settings.
-		return api.WatchEvent{
+		return &api.WatchEvent{
 			Type: api.WatchModified,
 			New:  kvp,
 		}
 	default:
-		return api.WatchEvent{
+		return &api.WatchEvent{
 			Type:  api.WatchError,
 			Error: fmt.Errorf("unhandled Kubernetes watcher event type: %v", kevent.Type),
 		}
