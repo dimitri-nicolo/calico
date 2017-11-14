@@ -1,5 +1,5 @@
-hash: f3c0d07a7e13b46f759a2170c6155b92603d532356eb16700d29e3524d6ec108
-updated: 2017-11-10T18:26:16.033231-08:00
+hash: 1948e2b25e53f81ab3d518c215292c955cef1a4ac32c52385f22f2e687d1a57e
+updated: 2017-11-14T17:13:46.351564649Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -201,6 +201,8 @@ imports:
   - zebra
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
+- name: github.com/pelletier/go-buffruneio
+  version: c37440a7cf42ac63b919c752ca73a85067e05992
 - name: github.com/pelletier/go-toml
   version: 361678322880708ac144df8575e6f01144ba1404
 - name: github.com/peterbourgon/diskv
