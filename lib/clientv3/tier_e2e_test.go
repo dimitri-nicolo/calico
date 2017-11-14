@@ -58,7 +58,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 
 			By("Updating the Tier before it is created")
 			res, outError := c.Tiers().Update(ctx, &apiv3.Tier{
-				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234"},
+				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-tier"},
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())

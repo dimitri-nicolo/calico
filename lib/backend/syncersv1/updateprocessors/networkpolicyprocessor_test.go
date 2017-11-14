@@ -342,7 +342,7 @@ var port80 = numorstring.SinglePort(uint16(80))
 var order float64 = 1000.0
 var expected1 = []*model.KVPair{
 	&model.KVPair{
-		Key: model.PolicyKey{Name: "default/knp.default.test.policy"},
+		Key: model.PolicyKey{Name: "default/knp.default.test.policy", Tier: "default"},
 		Value: &model.Policy{
 			Order:          &order,
 			Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",
