@@ -1,5 +1,5 @@
-hash: c0338f8baac76ea063116cc051289b790e8ad7b30ee4185fc3f70ed4639d59c7
-updated: 2017-11-09T16:46:52.696695072-08:00
+hash: 5081f8e84b832dc0890253593e84e6bc307a75f9b01a400343a066a47e396f68
+updated: 2017-11-14T17:55:52.250539457Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -42,12 +42,10 @@ imports:
   - log
 - name: github.com/emicklei/go-restful-swagger12
   version: dcef7f55730566d41eae5db10e7d6981829720f6
-- name: github.com/gavv/monotime
-  version: 6f8212e8d10df7383609d3c377ca08884d8f3ec0
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: f280b3ba517bf5fc98922624f21fb0e7a92adaec
+  version: 7e7da451323b6766da368f8a1e8ec9a88a16b4a0
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -157,6 +155,8 @@ imports:
   - matchers/support/goraph/node
   - matchers/support/goraph/util
   - types
+- name: github.com/pborman/uuid
+  version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/go-json
@@ -168,14 +168,14 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e2cd859246511b4b97271eeab86d25307c5c5376
+  version: 39f8320c51962f2e3f3f5fecffd6b55636d520b2
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
   - lib/apiconfig
   - lib/apis/v1
   - lib/apis/v1/unversioned
-  - lib/apis/v2
+  - lib/apis/v3
   - lib/backend
   - lib/backend/api
   - lib/backend/etcdv3
@@ -186,14 +186,18 @@ imports:
   - lib/backend/syncersv1/felixsyncer
   - lib/backend/syncersv1/updateprocessors
   - lib/backend/watchersyncer
+  - lib/clientv3
   - lib/errors
   - lib/hash
   - lib/health
+  - lib/ipam
   - lib/ipip
+  - lib/logutils
   - lib/names
   - lib/namespace
   - lib/net
   - lib/numorstring
+  - lib/options
   - lib/scope
   - lib/selector
   - lib/selector/parser
@@ -237,7 +241,7 @@ imports:
   - list
   - trie/ctrie
 - name: golang.org/x/crypto
-  version: 6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd
+  version: 81e90905daefcd6fd217b62423c0908922eadb30
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -387,6 +391,7 @@ imports:
   - pkg/util/net
   - pkg/util/runtime
   - pkg/util/sets
+  - pkg/util/uuid
   - pkg/util/validation
   - pkg/util/validation/field
   - pkg/util/wait

@@ -28,7 +28,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private
-  version: v2.0.0-cnx-alpha1
+  version: 39f8320c51962f2e3f3f5fecffd6b55636d520b2
   subpackages:
   - lib
 - package: github.com/sirupsen/logrus
@@ -37,11 +37,10 @@ import:
 - package: github.com/mipearson/rfw
 - package: github.com/prometheus/client_golang
   version: ^0.9.0-pre1
-- package: github.com/gavv/monotime
 - package: github.com/onsi/ginkgo
   version: f40a49d81e5c12e90400620b6242fb29a8e7c9
 - package: github.com/Workiva/go-datastructures
-  version: ^1.0.39
+  version: v1.0.42
   subpackages:
   - trie/ctrie
 - package: golang.org/x/text
