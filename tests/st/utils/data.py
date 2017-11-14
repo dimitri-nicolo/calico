@@ -263,7 +263,6 @@ networkpolicy_tiered_name2_rev1 = {
         'tier': 'admin',
         'order': 100000,
         'selector': "type=='sql'",
-        'doNotTrack': True,
         'types': ['ingress', 'egress'],
         'egress': [
             {
