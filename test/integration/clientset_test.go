@@ -36,7 +36,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/kubernetes/pkg/api/install"
 	// our versioned types
-	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+	// calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 
 	// our versioned client
 

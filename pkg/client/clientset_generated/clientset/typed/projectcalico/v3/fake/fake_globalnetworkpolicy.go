@@ -14,7 +14,7 @@ import (
 
 // FakeGlobalNetworkPolicies implements GlobalNetworkPolicyInterface
 type FakeGlobalNetworkPolicies struct {
-	Fake *FakeProjectcalicoV2
+	Fake *FakeProjectcalicoV3
 }
 
 var globalnetworkpoliciesResource = schema.GroupVersionResource{Group: "projectcalico.org", Version: "v3", Resource: "globalnetworkpolicies"}

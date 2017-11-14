@@ -37,7 +37,7 @@ type networkPolicies struct {
 }
 
 // newNetworkPolicies returns a NetworkPolicies
-func newNetworkPolicies(c *ProjectcalicoV2Client, namespace string) *networkPolicies {
+func newNetworkPolicies(c *ProjectcalicoV3Client, namespace string) *networkPolicies {
 	return &networkPolicies{
 		client: c.RESTClient(),
 		ns:     namespace,

@@ -270,8 +270,8 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindClusterInformation,
 		apiv3.KindFelixConfiguration,
 		apiv3.KindGlobalNetworkPolicy,
-		apiv3.KindIPPool,
 		apiv3.KindTier,
+		apiv3.KindIPPool,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {

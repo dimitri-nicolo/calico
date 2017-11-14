@@ -78,19 +78,14 @@ func (c client) Nodes() NodeInterface {
 	return nodes{client: c}
 }
 
-// NetworkPolicies returns an interface for managing policy resources.
+// Policies returns an interface for managing policy resources.
 func (c client) NetworkPolicies() NetworkPolicyInterface {
 	return networkPolicies{client: c}
 }
 
-// GlobalNetworkPolicies returns an interface for managing global policy resources.
+// Policies returns an interface for managing policy resources.
 func (c client) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {
 	return globalnetworkpolicies{client: c}
-}
-
-// Tiers returns an interface for managing tier resources.
-func (c client) Tiers() TierInterface {
-	return tiers{client: c}
 }
 
 // IPPools returns an interface for managing IP pool resources.
@@ -116,6 +111,11 @@ func (c client) WorkloadEndpoints() WorkloadEndpointInterface {
 // BGPPeers returns an interface for managing BGP peer resources.
 func (c client) BGPPeers() BGPPeerInterface {
 	return bgpPeers{client: c}
+}
+
+// BGPPeers returns an interface for managing tier resources.
+func (c client) Tiers() TierInterface {
+	return tiers{client: c}
 }
 
 // IPAM returns an interface for managing IP address assignment and releasing.

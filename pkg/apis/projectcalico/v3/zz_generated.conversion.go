@@ -52,7 +52,10 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 
 func autoConvert_v3_GlobalNetworkPolicy_To_projectcalico_GlobalNetworkPolicy(in *GlobalNetworkPolicy, out *projectcalico.GlobalNetworkPolicy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	out.Spec = in.Spec
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -63,7 +66,10 @@ func Convert_v3_GlobalNetworkPolicy_To_projectcalico_GlobalNetworkPolicy(in *Glo
 
 func autoConvert_projectcalico_GlobalNetworkPolicy_To_v3_GlobalNetworkPolicy(in *projectcalico.GlobalNetworkPolicy, out *GlobalNetworkPolicy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	out.Spec = in.Spec
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -96,7 +102,10 @@ func Convert_projectcalico_GlobalNetworkPolicyList_To_v3_GlobalNetworkPolicyList
 
 func autoConvert_v3_NetworkPolicy_To_projectcalico_NetworkPolicy(in *NetworkPolicy, out *projectcalico.NetworkPolicy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	out.Spec = in.Spec
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -107,7 +116,10 @@ func Convert_v3_NetworkPolicy_To_projectcalico_NetworkPolicy(in *NetworkPolicy, 
 
 func autoConvert_projectcalico_NetworkPolicy_To_v3_NetworkPolicy(in *projectcalico.NetworkPolicy, out *NetworkPolicy, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	out.Spec = in.Spec
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.Spec, &out.Spec, 0); err != nil {
+		return err
+	}
 	return nil
 }
 

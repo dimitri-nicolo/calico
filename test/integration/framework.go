@@ -34,7 +34,7 @@ import (
 
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+	// calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/kubernetes/pkg/api/install"
 	//_ "k8s.io/kubernetes/pkg/apis/extensions/install"

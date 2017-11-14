@@ -120,7 +120,7 @@ var _ = Describe("Test the Tier update processor", func() {
 
 		By("trying to convert without enough information to create a v1 key")
 		eres := apiv3.NewTier()
-		v2TierKeyEmpty := model.ResourceKey{
+		v3TierKeyEmpty := model.ResourceKey{
 			Kind: apiv3.KindTier,
 		}
 

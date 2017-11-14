@@ -9,32 +9,32 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type ProjectcalicoV2Interface interface {
+type ProjectcalicoV3Interface interface {
 	RESTClient() rest.Interface
 	GlobalNetworkPoliciesGetter
 	NetworkPoliciesGetter
 	TiersGetter
 }
 
-// ProjectcalicoV2Client is used to interact with features provided by the projectcalico.org group.
-type ProjectcalicoV2Client struct {
+// ProjectcalicoV3Client is used to interact with features provided by the projectcalico.org group.
+type ProjectcalicoV3Client struct {
 	restClient rest.Interface
 }
 
-func (c *ProjectcalicoV2Client) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {
+func (c *ProjectcalicoV3Client) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {
 	return newGlobalNetworkPolicies(c)
 }
 
-func (c *ProjectcalicoV2Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
+func (c *ProjectcalicoV3Client) NetworkPolicies(namespace string) NetworkPolicyInterface {
 	return newNetworkPolicies(c, namespace)
 }
 
-func (c *ProjectcalicoV2Client) Tiers() TierInterface {
+func (c *ProjectcalicoV3Client) Tiers() TierInterface {
 	return newTiers(c)
 }
 
-// NewForConfig creates a new ProjectcalicoV2Client for the given config.
-func NewForConfig(c *rest.Config) (*ProjectcalicoV2Client, error) {
+// NewForConfig creates a new ProjectcalicoV3Client for the given config.
+func NewForConfig(c *rest.Config) (*ProjectcalicoV3Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -43,12 +43,12 @@ func NewForConfig(c *rest.Config) (*ProjectcalicoV2Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ProjectcalicoV2Client{client}, nil
+	return &ProjectcalicoV3Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new ProjectcalicoV2Client for the given config and
+// NewForConfigOrDie creates a new ProjectcalicoV3Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *ProjectcalicoV2Client {
+func NewForConfigOrDie(c *rest.Config) *ProjectcalicoV3Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -56,9 +56,9 @@ func NewForConfigOrDie(c *rest.Config) *ProjectcalicoV2Client {
 	return client
 }
 
-// New creates a new ProjectcalicoV2Client for the given RESTClient.
-func New(c rest.Interface) *ProjectcalicoV2Client {
-	return &ProjectcalicoV2Client{c}
+// New creates a new ProjectcalicoV3Client for the given RESTClient.
+func New(c rest.Interface) *ProjectcalicoV3Client {
+	return &ProjectcalicoV3Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -76,7 +76,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *ProjectcalicoV2Client) RESTClient() rest.Interface {
+func (c *ProjectcalicoV3Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

@@ -36,7 +36,7 @@ type tiers struct {
 }
 
 // newTiers returns a Tiers
-func newTiers(c *ProjectcalicoV2Client) *tiers {
+func newTiers(c *ProjectcalicoV3Client) *tiers {
 	return &tiers{
 		client: c.RESTClient(),
 	}

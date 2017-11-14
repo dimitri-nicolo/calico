@@ -14,7 +14,7 @@ import (
 
 // FakeNetworkPolicies implements NetworkPolicyInterface
 type FakeNetworkPolicies struct {
-	Fake *FakeProjectcalicoV2
+	Fake *FakeProjectcalicoV3
 	ns   string
 }
 

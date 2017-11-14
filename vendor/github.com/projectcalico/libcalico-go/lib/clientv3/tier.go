@@ -22,10 +22,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
 
-var (
-	defaultTierName = "default"
-)
-
 // TierInterface has methods to work with Tier resources.
 type TierInterface interface {
 	Create(ctx context.Context, res *apiv3.Tier, opts options.SetOptions) (*apiv3.Tier, error)

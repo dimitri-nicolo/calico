@@ -46,12 +46,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// ProjectcalicoV2 retrieves the ProjectcalicoV2Client
-func (c *Clientset) ProjectcalicoV2() projectcalicov3.ProjectcalicoV2Interface {
-	return &fakeprojectcalicov3.FakeProjectcalicoV2{Fake: &c.Fake}
+// ProjectcalicoV3 retrieves the ProjectcalicoV3Client
+func (c *Clientset) ProjectcalicoV3() projectcalicov3.ProjectcalicoV3Interface {
+	return &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &c.Fake}
 }
 
-// Projectcalico retrieves the ProjectcalicoV2Client
-func (c *Clientset) Projectcalico() projectcalicov3.ProjectcalicoV2Interface {
-	return &fakeprojectcalicov3.FakeProjectcalicoV2{Fake: &c.Fake}
+// Projectcalico retrieves the ProjectcalicoV3Client
+func (c *Clientset) Projectcalico() projectcalicov3.ProjectcalicoV3Interface {
+	return &fakeprojectcalicov3.FakeProjectcalicoV3{Fake: &c.Fake}
 }

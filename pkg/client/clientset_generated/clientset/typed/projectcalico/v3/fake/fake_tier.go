@@ -14,7 +14,7 @@ import (
 
 // FakeTiers implements TierInterface
 type FakeTiers struct {
-	Fake *FakeProjectcalicoV2
+	Fake *FakeProjectcalicoV3
 }
 
 var tiersResource = schema.GroupVersionResource{Group: "projectcalico.org", Version: "v3", Resource: "tiers"}

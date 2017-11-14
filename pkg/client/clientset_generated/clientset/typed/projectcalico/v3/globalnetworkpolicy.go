@@ -36,7 +36,7 @@ type globalNetworkPolicies struct {
 }
 
 // newGlobalNetworkPolicies returns a GlobalNetworkPolicies
-func newGlobalNetworkPolicies(c *ProjectcalicoV2Client) *globalNetworkPolicies {
+func newGlobalNetworkPolicies(c *ProjectcalicoV3Client) *globalNetworkPolicies {
 	return &globalNetworkPolicies{
 		client: c.RESTClient(),
 	}

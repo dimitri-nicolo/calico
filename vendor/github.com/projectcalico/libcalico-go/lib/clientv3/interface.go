@@ -37,7 +37,7 @@ type Interface interface {
 	WorkloadEndpoints() WorkloadEndpointInterface
 	// BGPPeers returns an interface for managing BGP peer resources.
 	BGPPeers() BGPPeerInterface
-	// Tiers returns an interface for managing tier resources.
+	// Tiers returns an interface for managint tier resources.
 	Tiers() TierInterface
 	// IPAM returns an interface for managing IP address assignment and releasing.
 	IPAM() ipam.Interface

@@ -1,5 +1,5 @@
-hash: 3d6f897c64fe69dcdd92a59dfdc878a072646345b51fecee4effc1b953407626
-updated: 2017-10-25T19:45:34.46727459-07:00
+hash: 899ffd0c4898722a12cbef611288ce5233a54a516dbdb0396f76974da93d3772
+updated: 2017-11-14T00:03:55.067727188Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -142,7 +142,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/kubernetes/repo-infra
-  version: ae4e9a3906ace4ba657b7a09242610c6266e832c
+  version: 0e2dd0ad88f05bc3dd71c7834c330d39b013c13c
 - name: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -176,11 +176,11 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 020da42dee6f3ec9819bd6fcf22857bb4f958940
+  version: 1f6eaf8cd3060ad97a299a910a5426cd7a58ed4f
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
-  - lib/apis/v2
+  - lib/apis/v3
   - lib/backend
   - lib/backend/api
   - lib/backend/etcdv3
@@ -191,8 +191,9 @@ imports:
   - lib/backend/syncersv1/felixsyncer
   - lib/backend/syncersv1/updateprocessors
   - lib/backend/watchersyncer
-  - lib/clientv2
+  - lib/clientv3
   - lib/errors
+  - lib/hash
   - lib/ipam
   - lib/ipip
   - lib/names
@@ -200,6 +201,9 @@ imports:
   - lib/net
   - lib/numorstring
   - lib/options
+  - lib/selector/parser
+  - lib/selector/tokenizer
+  - lib/set
   - lib/watch
 - name: github.com/prometheus/client_golang
   version: e51041b3fa41cece0dca035740ba6411905be473
@@ -220,6 +224,8 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/satori/go.uuid
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sirupsen/logrus
   version: 89742aefa4b206dcf400792f3bd35b542998eb3b
 - name: github.com/spf13/cobra
@@ -273,7 +279,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 12d5545dc1cfa6047a286d5e853841b6471f4c19
+  version: 9d8544a6b2c7df9cff240fcf92d7b2f59bc13416
   subpackages:
   - internal
   - internal/app_identity
@@ -302,7 +308,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 6c6dac0277229b9e9578c5ca3f74a4345d35cdc2
+  version: 4df58c811fe2e65feb879227b2b245e4dc26e7ad
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -387,7 +393,7 @@ imports:
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: a35277792fddcf69f8cbbb8a9cb7727b23077409
+  version: 9707c008294d447053c0e2737c256ee23f99e5b4
   subpackages:
   - pkg/admission
   - pkg/admission/initializer
@@ -465,7 +471,6 @@ imports:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
   subpackages:
   - discovery
-  - discovery/fake
   - informers
   - informers/admissionregistration
   - informers/admissionregistration/v1alpha1
@@ -555,7 +560,6 @@ imports:
   - plugin/pkg/client/auth/openstack
   - rest
   - rest/watch
-  - testing
   - third_party/forked/golang/template
   - tools/auth
   - tools/cache
@@ -573,7 +577,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/code-generator
-  version: 0c5165a97e055df28cca8bbcb8b7c8ae1019b3f1
+  version: 6db2ee6aa9ab51230d6e0d970b398274a88e81b0
 - name: k8s.io/gengo
   version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
 - name: k8s.io/kube-openapi
@@ -584,7 +588,7 @@ imports:
   - pkg/handler
   - pkg/util
 - name: k8s.io/kubernetes
-  version: 473949524af05266632bf5b07af235471437e4bf
+  version: c1d1b92688176f37893d81cf6d7a3abc5663a795
   subpackages:
   - pkg/api
   - pkg/api/install

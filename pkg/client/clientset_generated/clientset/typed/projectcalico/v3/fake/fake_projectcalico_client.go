@@ -8,25 +8,25 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeProjectcalicoV2 struct {
+type FakeProjectcalicoV3 struct {
 	*testing.Fake
 }
 
-func (c *FakeProjectcalicoV2) GlobalNetworkPolicies() v3.GlobalNetworkPolicyInterface {
+func (c *FakeProjectcalicoV3) GlobalNetworkPolicies() v3.GlobalNetworkPolicyInterface {
 	return &FakeGlobalNetworkPolicies{c}
 }
 
-func (c *FakeProjectcalicoV2) NetworkPolicies(namespace string) v3.NetworkPolicyInterface {
+func (c *FakeProjectcalicoV3) NetworkPolicies(namespace string) v3.NetworkPolicyInterface {
 	return &FakeNetworkPolicies{c, namespace}
 }
 
-func (c *FakeProjectcalicoV2) Tiers() v3.TierInterface {
+func (c *FakeProjectcalicoV3) Tiers() v3.TierInterface {
 	return &FakeTiers{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeProjectcalicoV2) RESTClient() rest.Interface {
+func (c *FakeProjectcalicoV3) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }
