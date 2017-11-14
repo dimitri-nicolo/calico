@@ -36,7 +36,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/kubernetes/pkg/api/install"
 	// our versioned types
-	// calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
+	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 
 	// our versioned client
 
@@ -189,7 +189,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.PolicySpec{Tier: "net-sec"}}
+	netSecPolicy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.NetworkPolicySpec{Tier: "net-sec"}}
 	policyServer, err = policyClient.Create(netSecPolicy)
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
@@ -384,7 +384,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.PolicySpec{Tier: "net-sec"}}
+	netSecPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.GlobalNetworkPolicySpec{Tier: "net-sec"}}
 	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Create(netSecPolicy)
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)

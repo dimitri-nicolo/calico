@@ -68,7 +68,7 @@ func (in *GlobalNetworkPolicy) DeepCopyInto(out *GlobalNetworkPolicy) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	out.Spec = in.Spec.DeepCopy()
+	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 
@@ -130,7 +130,7 @@ func (in *NetworkPolicy) DeepCopyInto(out *NetworkPolicy) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	out.Spec = in.Spec.DeepCopy()
+	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 

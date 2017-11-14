@@ -38,7 +38,7 @@ type NetworkPolicy struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.PolicySpec
+	Spec calico.NetworkPolicySpec
 }
 
 // +genclient:nonNamespaced
@@ -82,5 +82,5 @@ type GlobalNetworkPolicy struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.PolicySpec
+	Spec calico.GlobalNetworkPolicySpec
 }

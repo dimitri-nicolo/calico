@@ -38,7 +38,7 @@ type NetworkPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Spec calico.PolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec calico.NetworkPolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // +genclient:nonNamespaced
@@ -82,5 +82,5 @@ type GlobalNetworkPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Spec calico.PolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Spec calico.GlobalNetworkPolicySpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
