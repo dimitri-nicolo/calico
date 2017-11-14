@@ -16,9 +16,16 @@ package updateprocessors_test
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	kapiv1 "k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
@@ -39,18 +46,18 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 	ns3 := "namespace3"
 	mytier := "mytier"
 
-	v2NetworkPolicyKey1 := model.ResourceKey{
-		Kind:      apiv2.KindNetworkPolicy,
+	v3NetworkPolicyKey1 := model.ResourceKey{
+		Kind:      apiv3.KindNetworkPolicy,
 		Name:      name1,
 		Namespace: ns1,
 	}
-	v2NetworkPolicyKey2 := model.ResourceKey{
-		Kind:      apiv2.KindNetworkPolicy,
+	v3NetworkPolicyKey2 := model.ResourceKey{
+		Kind:      apiv3.KindNetworkPolicy,
 		Name:      name2,
 		Namespace: ns2,
 	}
-	v2NetworkPolicyKey3 := model.ResourceKey{
-		Kind:      apiv2.KindNetworkPolicy,
+	v3NetworkPolicyKey3 := model.ResourceKey{
+		Kind:      apiv3.KindNetworkPolicy,
 		Name:      name3,
 		Namespace: ns3,
 	}
@@ -71,14 +78,12 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		up := updateprocessors.NewNetworkPolicyUpdateProcessor()
 
 		By("converting a NetworkPolicy with minimum configuration")
-		res := apiv2.NewNetworkPolicy()
+		res := apiv3.NewNetworkPolicy()
 		res.Name = name1
 		res.Namespace = ns1
-		res.Spec.PreDNAT = true
-		res.Spec.ApplyOnForward = true
 
 		kvps, err := up.Process(&model.KVPair{
-			Key:      v2NetworkPolicyKey1,
+			Key:      v3NetworkPolicyKey1,
 			Value:    res,
 			Revision: "abcde",
 		})
@@ -88,14 +93,13 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 			Key: v1NetworkPolicyKey1,
 			Value: &model.Policy{
 				Selector:       "projectcalico.org/namespace == 'namespace1'",
-				PreDNAT:        true,
 				ApplyOnForward: true,
 			},
 			Revision: "abcde",
 		}))
 
 		By("adding another NetworkPolicy with a full configuration")
-		res = apiv2.NewNetworkPolicy()
+		res = apiv3.NewNetworkPolicy()
 
 		v4 := 4
 		itype := 1
@@ -106,20 +110,20 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		inproto := numorstring.ProtocolFromString("udp")
 		port80 := numorstring.SinglePort(uint16(80))
 		port443 := numorstring.SinglePort(uint16(443))
-		irule := apiv2.Rule{
-			Action:    apiv2.Allow,
+		irule := apiv3.Rule{
+			Action:    apiv3.Allow,
 			IPVersion: &v4,
 			Protocol:  &iproto,
-			ICMP: &apiv2.ICMPFields{
+			ICMP: &apiv3.ICMPFields{
 				Type: &itype,
 				Code: &icode,
 			},
 			NotProtocol: &inproto,
-			NotICMP: &apiv2.ICMPFields{
+			NotICMP: &apiv3.ICMPFields{
 				Type: &intype,
 				Code: &incode,
 			},
-			Source: apiv2.EntityRule{
+			Source: apiv3.EntityRule{
 				Nets:        []string{"10.100.10.1"},
 				Selector:    "mylabel = value1",
 				Ports:       []numorstring.Port{port80},
@@ -127,7 +131,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 				NotSelector: "has(label1)",
 				NotPorts:    []numorstring.Port{port443},
 			},
-			Destination: apiv2.EntityRule{
+			Destination: apiv3.EntityRule{
 				Nets:        []string{"10.100.1.1"},
 				Selector:    "",
 				Ports:       []numorstring.Port{port443},
@@ -143,20 +147,20 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		encode := 8
 		eproto := numorstring.ProtocolFromInt(uint8(30))
 		enproto := numorstring.ProtocolFromInt(uint8(62))
-		erule := apiv2.Rule{
-			Action:    apiv2.Allow,
+		erule := apiv3.Rule{
+			Action:    apiv3.Allow,
 			IPVersion: &v4,
 			Protocol:  &eproto,
-			ICMP: &apiv2.ICMPFields{
+			ICMP: &apiv3.ICMPFields{
 				Type: &etype,
 				Code: &ecode,
 			},
 			NotProtocol: &enproto,
-			NotICMP: &apiv2.ICMPFields{
+			NotICMP: &apiv3.ICMPFields{
 				Type: &entype,
 				Code: &encode,
 			},
-			Source: apiv2.EntityRule{
+			Source: apiv3.EntityRule{
 				Nets:        []string{"10.100.1.1"},
 				Selector:    "pcns.namespacelabel1 == 'value1'",
 				Ports:       []numorstring.Port{port443},
@@ -164,7 +168,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 				NotSelector: "has(label2)",
 				NotPorts:    []numorstring.Port{port80},
 			},
-			Destination: apiv2.EntityRule{
+			Destination: apiv3.EntityRule{
 				Nets:        []string{"10.100.10.1"},
 				Selector:    "pcns.namespacelabel2 == 'value2'",
 				Ports:       []numorstring.Port{port80},
@@ -179,15 +183,12 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		res.Name = name2
 		res.Namespace = ns2
 		res.Spec.Order = &order
-		res.Spec.IngressRules = []apiv2.Rule{irule}
-		res.Spec.EgressRules = []apiv2.Rule{erule}
+		res.Spec.Ingress = []apiv3.Rule{irule}
+		res.Spec.Egress = []apiv3.Rule{erule}
 		res.Spec.Selector = selector
-		res.Spec.DoNotTrack = true
-		res.Spec.PreDNAT = false
-		res.Spec.ApplyOnForward = true
-		res.Spec.Types = []apiv2.PolicyType{apiv2.PolicyTypeIngress}
+		res.Spec.Types = []apiv3.PolicyType{apiv3.PolicyTypeIngress}
 		kvps, err = up.Process(&model.KVPair{
-			Key:      v2NetworkPolicyKey2,
+			Key:      v3NetworkPolicyKey2,
 			Value:    res,
 			Revision: "1234",
 		})
@@ -204,25 +205,21 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 					InboundRules:   []model.Rule{v1irule},
 					OutboundRules:  []model.Rule{v1erule},
 					Selector:       namespacedSelector,
-					DoNotTrack:     true,
-					PreDNAT:        false,
-					ApplyOnForward: true,
 					Types:          []string{"ingress"},
+					ApplyOnForward: true,
 				},
 				Revision: "1234",
 			},
 		}))
 
 		By("converting a tiered NetworkPolicy with minimum policy configuration")
-		res = apiv2.NewNetworkPolicy()
+		res = apiv3.NewNetworkPolicy()
 		res.Name = name3
 		res.Namespace = ns3
 		res.Spec.Tier = mytier
-		res.Spec.PreDNAT = true
-		res.Spec.ApplyOnForward = true
 
 		kvps, err = up.Process(&model.KVPair{
-			Key:      v2NetworkPolicyKey3,
+			Key:      v3NetworkPolicyKey3,
 			Value:    res,
 			Revision: "xyz",
 		})
@@ -232,7 +229,6 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 			Key: v1NetworkPolicyKey3,
 			Value: &model.Policy{
 				Selector:       "projectcalico.org/namespace == 'namespace3'",
-				PreDNAT:        true,
 				ApplyOnForward: true,
 			},
 			Revision: "xyz",
@@ -241,7 +237,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		By("deleting the first network policy")
 
 		kvps, err = up.Process(&model.KVPair{
-			Key:   v2NetworkPolicyKey1,
+			Key:   v3NetworkPolicyKey1,
 			Value: nil,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -255,7 +251,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		By("deleting the network policy belonging to a tier other than default tier")
 
 		kvps, err = up.Process(&model.KVPair{
-			Key:   v2NetworkPolicyKey3,
+			Key:   v3NetworkPolicyKey3,
 			Value: nil,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -271,7 +267,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		up := updateprocessors.NewNetworkPolicyUpdateProcessor()
 
 		By("trying to convert with the wrong key type")
-		res := apiv2.NewNetworkPolicy()
+		res := apiv3.NewNetworkPolicy()
 
 		_, err := up.Process(&model.KVPair{
 			Key: model.GlobalBGPPeerKey{
@@ -283,10 +279,10 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		Expect(err).To(HaveOccurred())
 
 		By("trying to convert with the wrong value type")
-		wres := apiv2.NewHostEndpoint()
+		wres := apiv3.NewHostEndpoint()
 
 		kvps, err := up.Process(&model.KVPair{
-			Key:      v2NetworkPolicyKey1,
+			Key:      v3NetworkPolicyKey1,
 			Value:    wres,
 			Revision: "abcde",
 		})
@@ -299,16 +295,91 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		}))
 
 		By("trying to convert without enough information to create a v1 key")
-		eres := apiv2.NewNetworkPolicy()
-		v2NetworkPolicyKeyEmpty := model.ResourceKey{
-			Kind: apiv2.KindNetworkPolicy,
+		eres := apiv3.NewNetworkPolicy()
+		v3NetworkPolicyKeyEmpty := model.ResourceKey{
+			Kind: apiv3.KindNetworkPolicy,
 		}
 
 		_, err = up.Process(&model.KVPair{
-			Key:      v2NetworkPolicyKeyEmpty,
+			Key:      v3NetworkPolicyKeyEmpty,
 			Value:    eres,
 			Revision: "abcde",
 		})
 		Expect(err).To(HaveOccurred())
 	})
+})
+
+// Define network policies and the corresponding expected v1 KVPairs.
+//
+// np1 is a NetworkPolicy with a single Egress rule, which contains ports only,
+// and no selectors.
+var protocol = kapiv1.ProtocolTCP
+var port = intstr.FromInt(80)
+var np1 = v1beta1.NetworkPolicy{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "test.policy",
+		Namespace: "default",
+	},
+	Spec: v1beta1.NetworkPolicySpec{
+		PodSelector: metav1.LabelSelector{},
+		Egress: []v1beta1.NetworkPolicyEgressRule{
+			v1beta1.NetworkPolicyEgressRule{
+				Ports: []v1beta1.NetworkPolicyPort{
+					v1beta1.NetworkPolicyPort{
+						Protocol: &protocol,
+						Port:     &port,
+					},
+				},
+			},
+		},
+		PolicyTypes: []v1beta1.PolicyType{v1beta1.PolicyTypeEgress},
+	},
+}
+
+// expected1 is the expected v1 KVPair representation of np1 from above.
+var tcp = numorstring.ProtocolFromString("tcp")
+var port80 = numorstring.SinglePort(uint16(80))
+var order float64 = 1000.0
+var expected1 = []*model.KVPair{
+	&model.KVPair{
+		Key: model.PolicyKey{Name: "default/knp.default.test.policy", Tier: "default"},
+		Value: &model.Policy{
+			Order:          &order,
+			Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",
+			Types:          []string{"egress"},
+			ApplyOnForward: true,
+			OutboundRules: []model.Rule{
+				{
+					Action:      "allow",
+					Protocol:    &tcp,
+					SrcSelector: "",
+					DstSelector: "",
+					DstPorts:    []numorstring.Port{port80},
+				},
+			},
+		},
+	},
+}
+
+var _ = Describe("Test the NetworkPolicy update processor + conversion", func() {
+	up := updateprocessors.NewNetworkPolicyUpdateProcessor()
+
+	DescribeTable("NetworkPolicy update processor + conversion tests",
+		func(np v1beta1.NetworkPolicy, expected []*model.KVPair) {
+			// First, convert the NetworkPolicy using the k8s conversion logic.
+			c := conversion.Converter{}
+			kvp, err := c.K8sNetworkPolicyToCalico(&np)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Next, run the policy through the update processor.
+			out, err := up.Process(kvp)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Finally, assert the expected result.
+			Expect(out).To(Equal(expected))
+		},
+
+		Entry("should handle a NetworkPolicy with no rule selectors", np1, expected1),
+	)
+
 })
