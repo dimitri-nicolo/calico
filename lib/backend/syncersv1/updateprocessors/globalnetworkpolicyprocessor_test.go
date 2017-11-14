@@ -233,7 +233,7 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 
 		By("deleting the tiered GlobalNetworkPolicy")
 		kvps, err = up.Process(&model.KVPair{
-			Key:   v23lobalNetworkPolicyKey3,
+			Key:   v3GlobalNetworkPolicyKey3,
 			Value: nil,
 		})
 		Expect(err).NotTo(HaveOccurred())
