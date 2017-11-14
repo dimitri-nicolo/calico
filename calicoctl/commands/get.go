@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	"github.com/projectcalico/calicoctl/calicoctl/commands/constants"
 
 	log "github.com/sirupsen/logrus"
@@ -31,7 +32,7 @@ func Get(args []string) {
 	doc := constants.DatastoreIntro + `Usage:
   calicoctl get ( (<KIND> [<NAME>]) |
                 --filename=<FILENAME>)
-                [--output=<OUTPUT>] [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces]
+                [--output=<OUTPUT>] [--config=<CONFIG>] [--namespace=<NS>] [--all-namespaces] [--export]
 
 Examples:
   # List all policy in default output format.
@@ -54,6 +55,9 @@ Options:
                                Only applicable to NetworkPolicy and WorkloadEndpoint.
                                Uses the default namespace if not specified.
   -a --all-namespaces          If present, list the requested object(s) across all namespaces.
+  --export                     If present, returns the requested object(s) stripped of
+                               cluster-specific information. This flag will be ignored
+			       if <NAME> is not specified.
 
 Description:
   The get command is used to display a set of resources by filename or stdin,
@@ -64,7 +68,6 @@ Description:
 
     * bgpConfiguration
     * bgpPeer
-    * clusterInformation
     * felixConfiguration
     * globalNetworkPolicy
     * hostEndpoint
@@ -118,6 +121,11 @@ Description:
 		return
 	}
 
+	printNamespace := false
+	if argutils.ArgBoolOrFalse(parsedArgs, "--all-namespaces") || argutils.ArgStringOrBlank(parsedArgs, "--namespace") != "" {
+		printNamespace = true
+	}
+
 	var rp resourcePrinter
 	output := parsedArgs["--output"].(string)
 	switch output {
@@ -126,9 +134,9 @@ Description:
 	case "json":
 		rp = resourcePrinterJSON{}
 	case "ps":
-		rp = resourcePrinterTable{wide: false}
+		rp = resourcePrinterTable{wide: false, printNamespace: printNamespace}
 	case "wide":
-		rp = resourcePrinterTable{wide: true}
+		rp = resourcePrinterTable{wide: true, printNamespace: printNamespace}
 	default:
 		// Output format may be a key=value pair, so split on "=" to find out.  Pull
 		// out the key and value, and split the value by "," as some options allow

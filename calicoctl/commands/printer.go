@@ -19,18 +19,20 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strings"
-
 	"bytes"
 	"os"
 	"text/tabwriter"
 	"text/template"
+	"context"
+
+	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
-	client "github.com/projectcalico/libcalico-go/lib/clientv2"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
 type resourcePrinter interface {
@@ -88,6 +90,10 @@ type resourcePrinterTable struct {
 	// Wide format.  When headings have not been explicitly specified, this is used to
 	// determine whether to the resource-specific default wide or narrow headings.
 	wide bool
+
+	// Namespace included. When a resource being printed is namespaced, this is used
+	// to determine if the namespace column should be printed or not.
+	printNamespace bool
 }
 
 func (r resourcePrinterTable) print(client client.Interface, resources []runtime.Object) error {
@@ -104,7 +110,7 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 		}
 
 		// Look up the template string for the specific resource type.
-		tpls, err := rm.GetTableTemplate(headings)
+		tpls, err := rm.GetTableTemplate(headings, r.printNamespace)
 		if err != nil {
 			return err
 		}
@@ -214,13 +220,11 @@ func config(client client.Interface) func(string) string {
 		switch strings.ToLower(name) {
 		case "asnumber":
 			if asValue == "" {
-				// TODO: fix this once config stuff is available in libcalico-g0
-				//if asn, err := client.Config().GetGlobalASNumber(); err != nil {
-				//	asValue = "unknown"
-				//} else {
-				//	asValue = asn.String()
-				//}
-				asValue = "1234"
+				if bgpConfig, err := client.BGPConfigurations().Get(context.Background(), "default", options.GetOptions{}); err != nil {
+					asValue = "unknown"
+				} else {
+					asValue = bgpConfig.Spec.ASNumber.String()
+				}
 			}
 			return asValue
 		}

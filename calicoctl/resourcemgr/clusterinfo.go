@@ -17,8 +17,8 @@ package resourcemgr
 import (
 	"context"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v2"
-	client "github.com/projectcalico/libcalico-go/lib/clientv2"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
@@ -29,13 +29,14 @@ func init() {
 		api.NewClusterInformationList(),
 		false,
 		[]string{"clusterinformation", "clusterinformations", "clusterinfo", "clusterinfos"},
-		[]string{"NAME", "CLUSTERGUID", "CLUSTERTYPE", "CALICOVERSION"},
-		[]string{"NAME", "CLUSTERGUID", "CLUSTERTYPE", "CALICOVERSION"},
+		[]string{"NAME", "CLUSTERGUID", "CLUSTERTYPE", "CALICOVERSION", "DATASTOREREADY"},
+		[]string{"NAME", "CLUSTERGUID", "CLUSTERTYPE", "CALICOVERSION", "DATASTOREREADY"},
 		map[string]string{
-			"NAME":          "{{.ObjectMeta.Name}}",
-			"CLUSTERGUID":   "{{.Spec.ClusterGUID}}",
-			"CLUSTERTYPE":   "{{.Spec.ClusterType}}",
-			"CALICOVERSION": "{{.Spec.CalicoVersion}}",
+			"NAME":           "{{.ObjectMeta.Name}}",
+			"CLUSTERGUID":    "{{.Spec.ClusterGUID}}",
+			"CLUSTERTYPE":    "{{.Spec.ClusterType}}",
+			"CALICOVERSION":  "{{.Spec.CalicoVersion}}",
+			"DATASTOREREADY": "{{.Spec.DatastoreReady}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			return nil, cerrors.ErrorOperationNotSupported{

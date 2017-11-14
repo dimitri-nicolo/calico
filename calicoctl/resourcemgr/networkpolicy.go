@@ -17,8 +17,8 @@ package resourcemgr
 import (
 	"context"
 
-	api "github.com/projectcalico/libcalico-go/lib/apis/v2"
-	client "github.com/projectcalico/libcalico-go/lib/clientv2"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
@@ -29,7 +29,8 @@ func init() {
 		true,
 		[]string{"networkpolicy", "networkpolicies", "policy", "np", "policies", "pol", "pols"},
 		[]string{"NAME", "TIER"},
-		[]string{"NAME", "TIER", "ORDER", "SELECTOR", "NAMESPACE"},
+		[]string{"NAME", "TIER", "ORDER", "SELECTOR"},
+		// NAMESPACE may be prepended in GrabTableTemplate so needs to remain in the map below
 		map[string]string{
 			"NAME":      "{{.ObjectMeta.Name}}",
 			"NAMESPACE": "{{.ObjectMeta.Namespace}}",

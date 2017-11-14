@@ -22,21 +22,20 @@ import (
 	"os"
 	"reflect"
 	"strings"
-
 	"time"
-
 	"context"
 
-	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
-	yamlsep "github.com/projectcalico/calicoctl/calicoctl/util/yaml"
-	"github.com/projectcalico/go-yaml-wrapper"
-	client "github.com/projectcalico/libcalico-go/lib/clientv2"
-	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
+	yamlsep "github.com/projectcalico/calicoctl/calicoctl/util/yaml"
+	"github.com/projectcalico/go-yaml-wrapper"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 )
 
 // The ResourceManager interface provides useful function for each resource type.  This includes:
@@ -44,7 +43,7 @@ import (
 //	-  Commands to manage resource instances through an un-typed interface.
 type ResourceManager interface {
 	GetTableDefaultHeadings(wide bool) []string
-	GetTableTemplate(columns []string) (string, error)
+	GetTableTemplate(columns []string, printNamespace bool) (string, error)
 	GetObjectType() reflect.Type
 	IsNamespaced() bool
 	Apply(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error)
@@ -188,7 +187,8 @@ func (rh resourceHelper) Apply(ctx context.Context, client client.Interface, res
 // through to the resource helper specific Create method which will map the untyped call to
 // the typed interface on the client.
 func (rh resourceHelper) Create(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-	return rh.create(ctx, client, resource)
+	resourceCopy := prepareMetadataForCreate(resource)
+	return rh.create(ctx, client, resourceCopy)
 }
 
 // Update is an un-typed method to update an existing resource. This calls the resource
@@ -201,8 +201,18 @@ func (rh resourceHelper) Update(ctx context.Context, client client.Interface, re
 	// Check to see if the resourceVersion is specified in the resource object.
 	rv := resource.(ResourceObject).GetObjectMeta().GetResourceVersion()
 
-	// If the resourceVersion is specified then we don't try to Get it or retry.
+	// If the resourceVersion is specified then we use it to try and update the resource.
+	// Do not attempt to retry if the resource version is specified.
 	if rv != "" {
+		// Validate the metadata is not changed for the the resource.
+		ro, err := rh.get(ctx, client, resource)
+		if err != nil {
+			return ro, err
+		}
+		// Set the specific resource version we are attempting to update.
+		ro.GetObjectMeta().SetResourceVersion(rv)
+		resource = mergeMetadataForUpdate(ro, resource)
+
 		return rh.update(ctx, client, resource)
 	}
 
@@ -216,8 +226,7 @@ func (rh resourceHelper) Update(ctx context.Context, client client.Interface, re
 			return ro, err
 		}
 
-		// Set the resource-to-be-updated's resourceVersion to the one we got from the Get call.
-		resource.(ResourceObject).GetObjectMeta().SetResourceVersion(ro.GetObjectMeta().GetResourceVersion())
+		resource = mergeMetadataForUpdate(ro, resource)
 
 		// Try to update with the resource with the updated resourceVersion.
 		ru, err := rh.update(ctx, client, resource)
@@ -467,7 +476,10 @@ func (rh resourceHelper) GetTableDefaultHeadings(wide bool) []string {
 // GetTableTemplate constructs the go-lang template string from the supplied set of headings.
 // The template separates columns using tabs so that a tabwriter can be used to pretty-print
 // the table.
-func (rh resourceHelper) GetTableTemplate(headings []string) (string, error) {
+func (rh resourceHelper) GetTableTemplate(headings []string, printNamespace bool) (string, error) {
+	if _, ok := rh.headingsMap["NAMESPACE"]; printNamespace && ok {
+		headings = append([]string{"NAMESPACE"}, headings...)
+	}
 	// Write the headings line.
 	buf := new(bytes.Buffer)
 	for _, heading := range headings {
@@ -504,4 +516,44 @@ func (rh resourceHelper) GetTableTemplate(headings []string) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// mergeMetadataForUpdate merges the Metadata for a stored ResourceObject and a potentail
+// update. All metadata in the potential update will be overwritten by the stored object
+// except for Labels and Annotations. This prevents accidental modifications to the metadata
+// fields by forcing updates to those fields to be handled by internal or more involved
+// processes.
+func mergeMetadataForUpdate(old, new ResourceObject) ResourceObject {
+	sm := old.GetObjectMeta()
+	cm := new.GetObjectMeta()
+
+	// Set the fields that are allowed to be overwritten (Labels and Annotations)
+	// so that they will not be overwritten.
+	sm.SetAnnotations(cm.GetAnnotations())
+	sm.SetLabels(cm.GetLabels())
+
+	sm.(*v1.ObjectMeta).DeepCopyInto(cm.(*v1.ObjectMeta))
+	return new
+}
+
+// prepareMetadataForCreate removes the metadata fields that should not be set from
+// calicoctl. Only the metadata fields Name, Namespace, ResourceVersion, Labels,
+// and Annotations will be kept. All other fields will be set elsewhere if required.
+// This prevents accidental modifications to the metadata fields by forcing updates
+// to those fields to be handled by internal or more involved processes.
+func prepareMetadataForCreate(r ResourceObject) ResourceObject {
+	rom := r.GetObjectMeta()
+	meta := &v1.ObjectMeta{}
+
+	// Save the important fields in the meta before everything gets wiped out.
+	meta.Name = rom.GetName()
+	meta.Namespace = rom.GetNamespace()
+	meta.ResourceVersion = rom.GetResourceVersion()
+	meta.Labels = rom.GetLabels()
+	meta.Annotations = rom.GetAnnotations()
+
+	// Make a copy of the resource so the input does not get modified
+	resOut := r.DeepCopyObject().(ResourceObject)
+	meta.DeepCopyInto(resOut.GetObjectMeta().(*v1.ObjectMeta))
+	return resOut
 }

@@ -166,6 +166,7 @@ networkpolicy_name1_rev1 = {
                     'nets': ['10.0.0.0/16'],
                     'ports': [1234, '10:1024'],
                     'selector': "type=='application'",
+                    'namespaceSelector': 'has(role)',
                 }
             }
         ],
@@ -182,7 +183,59 @@ networkpolicy_name1_rev2 = {
     'spec': {
         'order': 100000,
         'selector': "type=='sql'",
-        'doNotTrack': True,
+        'types': ['ingress', 'egress'],
+        'egress': [
+            {
+                'action': 'deny',
+                'protocol': 'tcp',
+            },
+        ],
+        'ingress': [
+            {
+                'action': 'allow',
+                'protocol': 'udp',
+            },
+        ],
+    }
+}
+
+networkpolicy_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'NetworkPolicy',
+    'metadata': {
+        'name': 'policy-mypolicy2',
+        'namespace': 'default',
+        'generateName': 'test-policy-',
+        'deletionTimestamp': '2006-01-02T15:04:07Z',
+        'deletionGracePeriodSeconds': 30,
+        'ownerReferences': [{
+            'apiVersion': 'extensions/v1beta1',
+            'blockOwnerDeletion': True,
+            'controller': True,
+            'kind': 'DaemonSet',
+            'name': 'endpoint1',
+            'uid': 'test-uid-change',
+        }],
+        'initializers': {
+            'pending': [{
+                'name': 'initializer1',
+            }],
+            'result': {
+                'status': 'test-status',
+            },
+        },
+        'clusterName': 'cluster1',
+        'labels': {'label1': 'l1', 'label2': 'l2'},
+        'annotations': {'key': 'value'},
+        'selfLink': 'test-self-link',
+        'uid': 'test-uid-change',
+        'generation': 3,
+        'finalizers': ['finalizer1', 'finalizer2'],
+        'creationTimestamp': '2006-01-02T15:04:05Z',
+    },
+    'spec': {
+        'order': 100000,
+        'selector': "type=='sql'",
         'types': ['ingress', 'egress'],
         'egress': [
             {
@@ -270,6 +323,7 @@ globalnetworkpolicy_name1_rev1 = {
                     'nets': ['10.0.0.0/16'],
                     'ports': [1234, '10:1024'],
                     'selector': "type=='application'",
+                    'namespaceSelector': 'has(role)',
                 }
             }
         ],
@@ -352,6 +406,26 @@ hostendpoint_name1_rev2 = {
     'metadata': {
         'name': 'endpoint1',
         'labels': {'type': 'frontend'}
+    },
+    'spec': {
+        'interfaceName': 'cali7',
+        'profiles': ['prof1', 'prof2'],
+        'node': 'host2'
+    }
+}
+
+hostendpoint_name1_rev3 = {
+    'apiVersion': API_VERSION,
+    'kind': 'HostEndpoint',
+    'metadata': {
+        'name': 'endpoint1',
+        'labels': {'type': 'frontend', 'misc': 'version1'},
+        'annotations': {'key': 'value'},
+        'selfLink': 'test-self-link',
+        'uid': 'test-uid-change',
+        'generation': 3,
+        'finalizers': ['finalizer1', 'finalizer2'],
+        'creationTimestamp': '2006-01-02T15:04:05Z',
     },
     'spec': {
         'interfaceName': 'cali7',
@@ -494,6 +568,34 @@ node_name1_rev1 = {
     }
 }
 
+node_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'Node',
+    'metadata': {
+        'name': 'node2',
+    },
+    'spec': {
+        'bgp': {
+            'ipv4Address': '1.2.3.5/24',
+            'ipv6Address': 'aa:bb:cc::ee/120',
+        }
+    }
+}
+
+node_name3_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'Node',
+    'metadata': {
+        'name': 'node3',
+    },
+    'spec': {
+        'bgp': {
+            'ipv4Address': '1.2.3.6/24',
+            'ipv6Address': 'aa:bb:cc::dd/120',
+        }
+    }
+}
+
 #
 # BGPConfigs
 #
@@ -567,9 +669,43 @@ felixconfig_name1_rev1 = {
         'name': 'felixconfiguration1',
     },
     'spec': {
+        'chainInsertMode': 'append',
+        'defaultEndpointToHostAction': 'ACCEPT',
+        'failsafeInboundHostPorts': [
+            {'protocol': 'tcp', 'port': 666},
+            {'protocol': 'udp', 'port': 333}, ],
+        'failsafeOutboundHostPorts': [
+            {'protocol': 'tcp', 'port': 999},
+            {'protocol': 'udp', 'port': 222},
+            {'protocol': 'udp', 'port': 422}, ],
+        'interfacePrefix': 'humperdink',
+        'ipipMTU': 1521,
+        'ipsetsRefreshIntervalSecs': 44,
+        'iptablesFilterAllowAction': 'rEtUrN',
+        'iptablesLockFilePath': '/run/fun',
+        'iptablesLockProbeIntervalMillis': 500,
+        'iptablesLockTimeoutSecs': 22,
+        'iptablesMangleAllowAction': 'accept',
+        'iptablesMarkMask': 0xff0000,
+        'iptablesPostWriteCheckIntervalSecs': 12,
+        'iptablesRefreshIntervalSecs': 22,
         'ipv6Support': True,
+        'logFilePath': '/var/log/fun.log',
+        'logPrefix': 'say-hello-friend',
         'logSeverityScreen': 'Info',
+        'maxIpsetSize': 8192,
+        'metadataAddr': '127.1.1.1',
+        'metadataPort': 8999,
         'netlinkTimeoutSecs': 10,
+        'netlinkTimeoutSecs': 10,
+        'prometheusGoMetricsEnabled': True,
+        'prometheusMetricsEnabled': True,
+        'prometheusMetricsPort': 11,
+        'prometheusProcessMetricsEnabled': True,
+        'reportingIntervalSecs': 10,
+        'reportingTTLSecs': 99,
+        'routeRefreshIntervalSecs': 33,
+        'usageReportingEnabled': False,
     }
 }
 
@@ -597,8 +733,7 @@ clusterinfo_name1_rev1 = {
     },
     'spec': {
         'clusterGUID': 'cluster-guid1',
-        'clusterType': 'cluster-type1',
-        'calicoVersion': 'calico-version1',
+        'datastoreReady': True,
     }
 }
 

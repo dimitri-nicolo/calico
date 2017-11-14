@@ -20,7 +20,7 @@ from nose_parameterized import parameterized
 from tests.st.test_base import TestBase
 from tests.st.utils.utils import log_and_run, calicoctl, \
     API_VERSION, name, ERROR_CONFLICT, NOT_FOUND, NOT_NAMESPACED, \
-    SET_DEFAULT, NOT_SUPPORTED
+    SET_DEFAULT, NOT_SUPPORTED, writeyaml
 from tests.st.utils.data import *
 
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
@@ -415,6 +415,10 @@ class TestCalicoctlCommands(TestBase):
             data2['metadata']['name'] = data1['metadata']['name'][:len(data1['metadata']['name'])-1] + "1"
             # Change endpoint to eth1 so the validation works on the WEP
             data2['spec']['endpoint'] = "eth1"
+        elif kind == "IPPool":
+            data1['metadata']['name'] = "name1"
+            data2['metadata']['name'] = "name2"
+            data2['spec']['cidr'] = "10.10.1.0/24"
         else:
             data1['metadata']['name'] = "name1"
             data2['metadata']['name'] = "name2"
@@ -514,8 +518,8 @@ class TestCalicoctlCommands(TestBase):
         self.assertNotEqual(rev0['metadata']['resourceVersion'], rev1['metadata']['resourceVersion'])
 
         # Attempt to delete the default resource by name (i.e. without using a resource version).
-        rc = calicoctl("delete bgpconfig %s" % name(rev0))
-        rc.assert_no_error()
+        # rc = calicoctl("delete bgpconfig %s" % name(rev0))
+        # rc.assert_error(DELETE_DEFAULT)
 
         rc = calicoctl("create", data=bgpconfig_name2_rev1)
         rc.assert_no_error()
@@ -581,12 +585,10 @@ class TestCalicoctlCommands(TestBase):
         """
         Test CRUD commands behave as expected on the cluster information resource:
         """
-        # Create a new default BGPConfiguration and get it to determine the current
-        # resource version.
+        # Try to create a cluster info, should be rejected.
         rc = calicoctl("create", data=clusterinfo_name1_rev1)
         rc.assert_error(NOT_SUPPORTED)
-        rc = calicoctl(
-            "get clusterinfo %s -o yaml" % name(clusterinfo_name1_rev1))
+        rc = calicoctl("get clusterinfo %s -o yaml" % name(clusterinfo_name1_rev1))
         rc.assert_error(NOT_FOUND)
 
         # Replace the cluster information (with no resource version) - assert not supported.
@@ -598,10 +600,148 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("apply", data=clusterinfo_name1_rev2)
         rc.assert_error(NOT_FOUND)
 
-        # Delete the resource by name (i.e. without using a resource version) - assert not supported.
+        # Delete the resource by name (i.e. without using a resource version) - assert not
+        # supported.
         rc = calicoctl("delete clusterinfo %s" % name(clusterinfo_name1_rev1))
         rc.assert_error(NOT_SUPPORTED)
 
+        # Create a node, this should trigger auto-creation of a cluster info.
+        rc = calicoctl("create", data=node_name2_rev1)
+        rc.assert_no_error()
+
+        rc = calicoctl("get clusterinfo %s -o yaml" % name(clusterinfo_name1_rev1))
+        rc.assert_no_error()
+        # Check the GUID is populated.
+        self.assertRegexpMatches(rc.decoded["spec"]["clusterGUID"], "^[a-f0-9]{32}$")
+        # The GUID is unpredictable so tweak our test data to match it.
+        ci = copy.deepcopy(clusterinfo_name1_rev1)
+        ci["spec"]["clusterGUID"] = rc.decoded["spec"]["clusterGUID"]
+        rc.assert_data(ci)
+
+        # Create a second node, this should keep the existing cluster info.
+        rc = calicoctl("create", data=node_name3_rev1)
+        rc.assert_no_error()
+        rc = calicoctl("get clusterinfo %s -o yaml" % name(clusterinfo_name1_rev1))
+        rc.assert_no_error()
+        rc.assert_data(ci)  # Implicitly checks the GUID is still the same.
+
+    @parameterized.expand([
+        ('create', 'replace'),
+        ('apply', 'apply'),
+    ])
+    def test_metadata_unchanged(self, create_cmd, update_cmd):
+        """
+        Test that the metadata fields other than labels and annotations cannot be changed
+        in create and update operations by applying a resource twice.
+        """
+        # Create a new Host Endpoint and get it to determine the
+        # current resource version (first checking that it doesn't exist).
+        rc = calicoctl(
+            "get hostendpoint %s -o yaml" % name(hostendpoint_name1_rev2))
+        rc.assert_error(text=NOT_FOUND)
+
+        rc = calicoctl(create_cmd, data=hostendpoint_name1_rev2)
+        rc.assert_no_error()
+        rc = calicoctl(
+            "get hostendpoint %s -o yaml" % name(hostendpoint_name1_rev2))
+        rc.assert_no_error()
+        rev0 = rc.decoded
+        self.assertIn('uid', rev0['metadata'])
+        self.assertIn('creationTimestamp', rev0['metadata'])
+
+        # Update the Host Endpoint (with no resource version) and get it to
+        # assert the resource version is not the same.
+        rc = calicoctl(update_cmd, data=hostendpoint_name1_rev3)
+        rc.assert_no_error()
+        rc = calicoctl(
+            "get hostendpoint %s -o yaml" % name(hostendpoint_name1_rev3))
+        rc.assert_no_error()
+        rev1 = rc.decoded
+        self.assertNotEqual(rev0['metadata']['resourceVersion'], rev1['metadata']['resourceVersion'])
+
+        # Validate that only annotations and labels were changed in the metadata
+        self.assertNotIn('selfLink', rev1['metadata'])
+        self.assertNotIn('generation', rev1['metadata'])
+        self.assertNotIn('finalizers', rev1['metadata'])
+        self.assertIn('uid', rev1['metadata'])
+        self.assertIn('creationTimestamp', rev1['metadata'])
+        self.assertNotEqual(rev1['metadata']['uid'], hostendpoint_name1_rev3['metadata']['uid'])
+        self.assertNotEqual(rev1['metadata']['creationTimestamp'], hostendpoint_name1_rev3['metadata']['creationTimestamp'])
+        self.assertEqual(rev1['metadata'].get('name', ''), hostendpoint_name1_rev2['metadata'].get('name', ''))
+        self.assertEqual(rev1['metadata']['labels'], hostendpoint_name1_rev3['metadata']['labels'])
+        self.assertNotEqual(rev1['metadata']['labels'], rev0['metadata']['labels'])
+        self.assertEqual(rev1['metadata']['annotations'], hostendpoint_name1_rev3['metadata']['annotations'])
+        self.assertNotEqual(rev1['metadata']['annotations'], rev0['metadata']['labels'])
+
+        # Validate that creationTimestamp and UID are unchanged from when they were created
+        self.assertEqual(rev1['metadata']['creationTimestamp'], rev0['metadata']['creationTimestamp'])
+        self.assertEqual(rev1['metadata']['uid'], rev0['metadata']['uid'])
+
+        # Delete the resource without using a resource version.
+        rc = calicoctl("delete hostendpoint %s" % name(rev1))
+        rc.assert_no_error()
+
+    def test_export_flag(self):
+        """
+        Test that the cluster-specific information gets stripped
+        out of a "get" request.
+        """
+        # Create a new Network Policy with all metadata specified
+        rc = calicoctl('create', data=networkpolicy_name2_rev1)
+        rc.assert_no_error()
+        rc = calicoctl(
+            "get networkpolicy %s -o yaml" % name(networkpolicy_name2_rev1))
+        rc.assert_no_error()
+        rev0 = rc.decoded
+        self.assertIn('uid', rev0['metadata'])
+        self.assertIn('creationTimestamp', rev0['metadata'])
+        self.assertEqual(rev0['metadata']['name'], networkpolicy_name2_rev1['metadata']['name'])
+        self.assertEqual(rev0['metadata']['namespace'], networkpolicy_name2_rev1['metadata']['namespace'])
+        self.assertIn('resourceVersion', rev0['metadata'])
+
+        # Retrieve the Network Policy with the export flag and
+        # Verify that cluster-specific information is not present
+        rc = calicoctl(
+            "get networkpolicy %s -o yaml --export" % name(networkpolicy_name2_rev1))
+        rc.assert_no_error()
+        rev1 = rc.decoded
+        self.assertNotIn('uid', rev1['metadata'])
+        self.assertIsNone(rev1['metadata']['creationTimestamp'])
+        self.assertNotIn('namespace', rev1['metadata'])
+        self.assertNotIn('resourceVersion', rev1['metadata'])
+        self.assertEqual(rev1['metadata']['name'], rev0['metadata']['name'])
+
+        # Write the output to yaml so that it can be applied later
+        rev1['spec']['order'] = 100
+        writeyaml('/tmp/export_data.yaml', rev1)
+
+        # Verify that the cluster-specific information IS present if
+        # the export flag is used without specifying a specific resource.
+        rc = calicoctl(
+            "get networkpolicy -o yaml --export")
+        rc.assert_no_error()
+        rev2 = rc.decoded
+        self.assertEqual(len(rev2['items']), 1)
+        self.assertIn('uid', rev2['items'][0]['metadata'])
+        self.assertIsNotNone(rev2['items'][0]['metadata']['creationTimestamp'])
+        self.assertIn('namespace', rev2['items'][0]['metadata'])
+        self.assertIn('resourceVersion', rev2['items'][0]['metadata'])
+        self.assertEqual(rev2['items'][0]['metadata']['name'], rev0['metadata']['name'])
+
+        # Apply the output and verify that it did not error out
+        rc = calicoctl(
+            "apply -f %s" % '/tmp/export_data.yaml')
+        rc.assert_no_error()
+        rc = calicoctl(
+            "get networkpolicy %s -o yaml" % name(networkpolicy_name2_rev1))
+        rc.assert_no_error()
+        rev3 = rc.decoded
+        self.assertEqual(rev3['metadata']['name'], rev1['metadata']['name'])
+        self.assertEqual(rev3['spec']['order'], 100)
+
+        # Delete the resource without using a resource version.
+        rc = calicoctl("delete networkpolicy %s" % name(rev3))
+        rc.assert_no_error()
 #
 #
 # class TestCreateFromFile(TestBase):
