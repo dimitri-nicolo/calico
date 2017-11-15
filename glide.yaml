@@ -27,7 +27,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: v2.0.0-cnx-alpha1
+  version: 39f8320c51962f2e3f3f5fecffd6b55636d520b2
   subpackages:
   - lib
 - package: github.com/tigera/nfnetlink
@@ -41,14 +41,13 @@ import:
 - package: github.com/gogo/protobuf
   version: ^0.3.0
 - package: github.com/vishvananda/netlink
-- package: github.com/gavv/monotime
 - package: github.com/onsi/ginkgo
   version: f40a49d81e5c12e90400620b6242fb29a8e7c9
 - package: k8s.io/client-go
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: v2.0.0-cnx-alpha1
+  version: 4a0487b216a20634a68545c4659090769e43319d
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
@@ -60,3 +59,7 @@ import:
 - package: github.com/jbenet/go-reuseport
   repo: https://github.com/fasaxc/go-reuseport.git
   version: disable-dial-check
+- package: github.com/jbenet/go-sockaddr
+  version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
+  subpackages:
+  - net

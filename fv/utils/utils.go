@@ -21,14 +21,31 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/kelseyhightower/envconfig"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	client "github.com/projectcalico/libcalico-go/lib/clientv2"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
+
+type EnvConfig struct {
+	EtcdImage  string `default:"quay.io/coreos/etcd"`
+	K8sImage   string `default:"gcr.io/google_containers/hyperkube-amd64:v1.7.5"`
+	TyphaImage string `default:"calico/typha:latest"` // Note: this is overridden in the Makefile!
+}
+
+var Config EnvConfig
+
+func init() {
+	err := envconfig.Process("fv", &Config)
+	if err != nil {
+		panic(err)
+	}
+	log.WithField("config", Config).Info("Loaded config")
+}
 
 var Ctx = context.Background()
 
