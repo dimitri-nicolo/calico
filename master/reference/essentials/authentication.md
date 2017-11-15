@@ -38,6 +38,13 @@ serving on port 30003, but you may wish to set up connectivity differently.
    - Set the client ID in the `tigera-cnx-manager-web-config` ConfigMap (referenced
      in the installation instructions).
 
+4. If CNX Manager has already been deployed, restart the web server.
+
+   ```
+   kubectl autoscale deployment tigera-cnx-manager-web -n kube-system --replicas=0
+   kubectl autoscale deployment tigera-cnx-manager-web -n kube-system --replicas=1
+   ```
+
 Configure Kubernetes RBAC bindings depending on the settings used for
 `--oidc-username/groups-claim` and `--oidc-username/groups-prefix` on the API server.  When using this login method, be aware that most people have Google
 accounts, so the `system:authenticated` group will include anybody who can
