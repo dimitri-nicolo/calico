@@ -100,7 +100,6 @@ func TestNetworkPolicyCreateWithTTL(t *testing.T) {
 	if err := store.Create(ctx, key, input, out, 1); err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-
 	w, err := store.Watch(ctx, key, out.ResourceVersion, storage.Everything)
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
@@ -418,13 +417,13 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 	defer testCleanup(t, ctx, store)
 
 	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
-	key := "projectcalico.org/networkpolicies/default/foo"
+	key, storeObj := testPropogateStore(ctx, t, store, input)
 
 	out := &calico.NetworkPolicy{}
 	err := store.GuaranteedUpdate(ctx, key, out, true, nil,
 		func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
 			ttl := uint64(1)
-			return input, &ttl, nil
+			return storeObj, &ttl, nil
 		})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)

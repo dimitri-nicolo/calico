@@ -414,13 +414,13 @@ func TestTierGuaranteedUpdateWithTTL(t *testing.T) {
 	defer testTierCleanup(t, ctx, store)
 
 	input := &calico.Tier{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
-	key := "projectcalico.org/tiers/foo"
+	key, storeObj := testTierPropogateStore(ctx, t, store, input)
 
 	out := &calico.Tier{}
 	err := store.GuaranteedUpdate(ctx, key, out, true, nil,
 		func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
 			ttl := uint64(1)
-			return input, &ttl, nil
+			return storeObj, &ttl, nil
 		})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
