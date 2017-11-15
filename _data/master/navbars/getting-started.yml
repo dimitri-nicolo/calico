@@ -6,9 +6,6 @@ toc:
 - title: Getting Started with CNX
   path: /getting-started/
 
-- title: Obtaining the CNX binaries
-  path: /getting-started/essentials/
-
 - title: Kubernetes
   section:
   - title: Quickstart

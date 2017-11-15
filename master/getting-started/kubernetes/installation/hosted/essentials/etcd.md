@@ -6,6 +6,8 @@ title: Tigera CNX Hosted Install
 > [Installing {{site.prodname}} for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
 {: .alert .alert-info}
 
+{% include {{page.version}}/load-docker.md %}
+
 ## Requirements
 
 Ensure that the kube-apiserver has been started with the appropriate flags.
@@ -400,3 +402,5 @@ The `monitor-calico.yaml` manifest does the following:
 The services (type _NodePort_) for prometheus and alertmanager are created in
 the `calico-monitoring` namespace and are named `calico-prometheus-dash`
 (port 30900) and `calico-alertmanager-dash` (port 30903).
+
+{% include {{page.version}}/gs-next-steps.md %}
