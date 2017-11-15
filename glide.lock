@@ -1,5 +1,5 @@
-hash: 4ad149902316ab15d33ec41f5ec086668918887c292b22a0243f4a375fa8c4ba
-updated: 2017-11-10T20:20:28.690356-08:00
+hash: bd565f1860ed3f377cab252370499aaa4574c44314468b7230b4383dffa4784f
+updated: 2017-11-15T14:50:35.230487681Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -47,10 +47,12 @@ imports:
   - log
 - name: github.com/emicklei/go-restful-swagger12
   version: dcef7f55730566d41eae5db10e7d6981829720f6
+- name: github.com/gavv/monotime
+  version: 6f8212e8d10df7383609d3c377ca08884d8f3ec0
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: f280b3ba517bf5fc98922624f21fb0e7a92adaec
+  version: 7e7da451323b6766da368f8a1e8ec9a88a16b4a0
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -228,7 +230,7 @@ imports:
   - lib/validator
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: f8ca228ebaa6926e5b7dcd5816074fcbfe798a08
+  version: 4a0487b216a20634a68545c4659090769e43319d
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -244,13 +246,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a1dba9ce8baed984a2495b658c82687f8157b98f
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
@@ -270,7 +272,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: 63ca7e48f59f463578ae6b6e839bef6906f048e2
+  version: c2a3de3b38bd00f07290c3c5e12b4dbc04ec8666
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -278,7 +280,7 @@ imports:
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
-  version: 81e90905daefcd6fd217b62423c0908922eadb30
+  version: 9f005a07e0d31d45e6656d241bb5c0f2efd4bc94
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
