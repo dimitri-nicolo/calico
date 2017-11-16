@@ -3,8 +3,12 @@ abstract: "All you need to know to get started with Calico"
 path: /getting-started
 order: 1
 toc:
-- title: Getting Started with Calico
+- title: Getting Started with CNX
   path: /getting-started/
+  
+- title: Obtaining the CNX binaries
+  path: /getting-started/essentials/
+  
 - title: Kubernetes
   section:
   - title: Quickstart
@@ -19,10 +23,14 @@ toc:
         path: /getting-started/kubernetes/installation/hosted/
       - title: Standard Hosted Install
         path: /getting-started/kubernetes/installation/hosted/hosted
-      - title: Kubeadm Hosted Install
+      - title: kubeadm Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubeadm/
       - title: Kubernetes Datastore Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
+      - title: CNX Hosted Install (etcd)
+        path: /getting-started/kubernetes/installation/hosted/essentials/etcd
+      - title: CNX Hosted Install (kdd)
+        path: /getting-started/kubernetes/installation/hosted/essentials/kdd 
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
     - title: AWS
@@ -43,6 +51,10 @@ toc:
       path: /getting-started/kubernetes/tutorials/stars-policy/
     - title: Advanced network policy
       path: /getting-started/kubernetes/tutorials/advanced-policy
+    - title: CNX for Kubernetes Demo
+      path: /getting-started/essentials/simple-policy-essentials
+    - title: Tiered Policy Demo
+      path: /getting-started/essentials/tiered-policy-essentials
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
   - title: Upgrade
