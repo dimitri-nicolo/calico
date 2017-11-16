@@ -3,7 +3,7 @@ abstract: "How to configure and troubleshoot Calico systems"
 path: /usage
 order: 2
 toc:
-- title: Using Calico
+- title: Using CNX
   path: /usage/
 - title: calicoctl
   section:
@@ -11,7 +11,7 @@ toc:
     path: /usage/calicoctl/install-and-configuration
   - title: calico/ctl container
     path: /usage/calicoctl/container
-- title: Running Calico with an init system
+- title: Running calico/node with an init system
   path: /usage/configuration/as-service
 - title: Configuring BGP Peers
   path: /usage/configuration/bgp
@@ -35,6 +35,10 @@ toc:
   path: /usage/decommissioning-a-node
 - title: Configuring Conntrack
   path: /usage/configuration/conntrack
+- title: Configuring Prometheus
+  path: /usage/configuration/prometheus
+- title: Configuring Alertmanager
+  path: /usage/configuration/alertmanager
 - title: Troubleshooting
   path: /usage/troubleshooting/
 - title: Logging

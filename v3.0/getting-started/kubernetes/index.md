@@ -70,7 +70,7 @@ the host. Instead, continue directly to the
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
    
-1. [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/calico-cnx.yaml).
+1. [Downloading the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml).
 
 1. Open the file in your favorite editor, replace `<fill in client id here>` with
    your OAuth client ID, and save the file.
