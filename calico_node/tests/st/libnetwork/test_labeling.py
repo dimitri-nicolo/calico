@@ -41,7 +41,8 @@ else:
     ADDITIONAL_DOCKER_OPTIONS = "--cluster-store=etcd://%s:2379 " % \
                                 get_ip()
 
-@skip("Disabled until libnetwork is updated for libcalico-go v2")
+# TODO: Re-enable
+@skip("Disabled until libnetwork is updated for libcalico-go v3")
 class TestLibnetworkLabeling(TestBase):
     """
     Tests that labeling is correctly implemented in libnetwork.  Setup

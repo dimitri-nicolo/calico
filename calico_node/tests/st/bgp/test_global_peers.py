@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from nose.plugins.attrib import attr
+from unittest import skip
 
 from tests.st.test_base import TestBase
 from tests.st.utils.constants import (DEFAULT_IPV4_ADDR_1, DEFAULT_IPV4_ADDR_2,
@@ -82,9 +83,10 @@ class TestGlobalPeers(TestBase):
     def test_bird_node_peers(self):
         self._test_global_peers(backend='bird')
 
-    # TODO: Add back when gobgp is updated to work with libcalico-go v2 api
+    # TODO: Add back when gobgp is updated to work with libcalico-go v3 api
     @attr('slow')
-    def _test_gobgp_node_peers(self):
+    @skip("Disabled until gobgp is updated with libcalico-go v3")
+    def test_gobgp_node_peers(self):
         self._test_global_peers(backend='gobgp')
 
 TestGlobalPeers.batchnumber = 1  # Adds a batch number for parallel testing
