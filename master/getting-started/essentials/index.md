@@ -48,17 +48,18 @@ to create your registry.
 Once you have a suitable registry, load the images into it (substituting
 the domain and port appropriately).
 ```
+#!/bin/bash
+
 REGISTRY_DOMAIN=<URL for your Docker registry>
 REGISTRY_PORT=<port for your Docker registry>
 
-load_image()
-{
-    IMAGE_FILE=$1
-    IMAGE_NAME=$2
-    unxz $IMAGE_FILE-{{site.data.versions[page.version].first.title}}.tar.xz
-    docker load -i $IMAGE_FILE-{{site.data.versions[page.version].first.title}}.tar
-    docker tag $IMAGE_NAME:{{site.data.versions[page.version].first.title}} $REGISTRY_DOMAIN:$REGISTRY_PORT/$IMAGE_NAME:{{site.data.versions[page.version].first.title}}
-    docker push $REGISTRY_DOMAIN:$REGISTRY_PORT/$IMAGE_NAME:{{site.data.versions[page.version].first.title}}
+load_image() {
+    IMAGE_FILE="$1"
+    IMAGE_NAME="$2"
+    unxz "${IMAGE_FILE}_{{site.data.versions[page.version].first.title}}.tar.xz"
+    docker load -i "${IMAGE_FILE}_{{site.data.versions[page.version].first.title}}.tar"
+    docker tag "${IMAGE_NAME}:{{site.data.versions[page.version].first.title}}" "${REGISTRY_DOMAIN}:${REGISTRY_PORT}/${IMAGE_NAME}:{{site.data.versions[page.version].first.title}}"
+    docker push "${REGISTRY_DOMAIN}:${REGISTRY_PORT}/${IMAGE_NAME}:{{site.data.versions[page.version].first.title}}"
 }
 
 load_image calico-node calico/node
