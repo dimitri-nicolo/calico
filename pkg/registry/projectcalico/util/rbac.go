@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/filters"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
@@ -40,7 +41,11 @@ func GetTierNameFromSelector(options *metainternalversion.ListOptions) (string, 
 		requirements := options.FieldSelector.Requirements()
 		for _, requirement := range requirements {
 			if requirement.Field == "spec.tier" {
-				return requirement.Value, nil
+				if requirement.Operator == selection.Equals ||
+					requirement.Operator == selection.DoubleEquals {
+					return requirement.Value, nil
+				}
+				return "", fmt.Errorf("Non equal selector operator not supported for field spec.tier")
 			}
 		}
 	}
