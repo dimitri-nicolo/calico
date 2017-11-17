@@ -29,10 +29,10 @@ import:
 - package: github.com/projectcalico/go-yaml-wrapper
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 39f8320c51962f2e3f3f5fecffd6b55636d520b2
+  version: v2.0.0-cnx-beta1-rc1
   subpackages:
-  - lib/apis/v2
-  - lib/clientv2
+  - lib/apis/v3
+  - lib/clientv3
   - lib/backend
   - lib/backend/api
   - lib/backend/model
@@ -45,3 +45,5 @@ import:
 - package: github.com/termie/go-shutil
 - package: google.golang.org/grpc
   version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d
+- package: github.com/coreos/etcd
+  version: v3.2.7

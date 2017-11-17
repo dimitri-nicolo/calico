@@ -1,5 +1,5 @@
-hash: 1948e2b25e53f81ab3d518c215292c955cef1a4ac32c52385f22f2e687d1a57e
-updated: 2017-11-14T17:13:46.351564649Z
+hash: b2fd75c4f24f54d6daf9fd2badadff9c628312cb4771826f6999abb851e4ddee
+updated: 2017-11-16T16:46:02.151043708-08:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -20,10 +20,9 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
-  version: f1d7dd87da3e8feab4aaf675b8e29c6a5ed5f58b
+  version: bb66589f8cf18960c7f3d56b1b83753caeed9c7a
   subpackages:
   - auth/authpb
-  - client
   - clientv3
   - etcdserver/api/v3rpc/rpctypes
   - etcdserver/etcdserverpb
@@ -118,7 +117,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/influxdata/influxdb
-  version: ef42c367f0b79794b266fb60e49f32e422deb4a7
+  version: aa99a56bf122efc5a5d74dd22c10651ebfab4031
   subpackages:
   - client/v2
   - models
@@ -173,7 +172,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 1eecca0ba8e6f5ea5a431ce21d3aee2af0b4c90b
+  version: c893efa28eb45626cdaa76c9f653b62488858837
   subpackages:
   - format
   - internal/assertion
@@ -216,13 +215,12 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 39f8320c51962f2e3f3f5fecffd6b55636d520b2
+  version: 7f8596bb424bd06bf7bda435a049976469ad005a
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
   - lib/apis/v1/unversioned
-  - lib/apis/v2
   - lib/apis/v3
   - lib/backend
   - lib/backend/api
@@ -235,7 +233,6 @@ imports:
   - lib/backend/syncersv1/updateprocessors
   - lib/backend/watchersyncer
   - lib/client
-  - lib/clientv2
   - lib/clientv3
   - lib/errors
   - lib/hash
@@ -248,11 +245,13 @@ imports:
   - lib/numorstring
   - lib/options
   - lib/scope
+  - lib/selector
   - lib/selector/parser
   - lib/selector/tokenizer
   - lib/set
   - lib/testutils
   - lib/validator
+  - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
   version: 967789050ba94deca04a5e84cce8ad472ce313c1
@@ -281,7 +280,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 - name: github.com/spf13/afero
-  version: 9be650865eab0c12963d8753212f4f9c66cdcf12
+  version: 8d919cbe7e2627e417f3e45c3c0e489a5b7e2536
   subpackages:
   - mem
 - name: github.com/spf13/cast
@@ -295,11 +294,11 @@ imports:
 - name: github.com/termie/go-shutil
   version: bcacb06fecaeec8dc42af03c87c6949f4a05c74c
 - name: github.com/vishvananda/netlink
-  version: 63ca7e48f59f463578ae6b6e839bef6906f048e2
+  version: fe3b5664d23a11b52ba59bece4ff29c52772a56b
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
+  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: golang.org/x/crypto
   version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
@@ -382,6 +381,8 @@ imports:
   - stats
   - tap
   - transport
+- name: gopkg.in/go-playground/validator.v8
+  version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/tomb.v2
