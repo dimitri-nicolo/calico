@@ -263,17 +263,17 @@ networkpolicy_tiered_name2_rev1 = {
         'tier': 'admin',
         'order': 100000,
         'selector': "type=='sql'",
-        'types': ['ingress', 'egress'],
+        'types': ['Ingress', 'Egress'],
         'egress': [
             {
-                'action': 'deny',
-                'protocol': 'tcp',
+                'action': 'Deny',
+                'protocol': 'TCP',
             },
         ],
         'ingress': [
             {
-                'action': 'allow',
-                'protocol': 'udp',
+                'action': 'Allow',
+                'protocol': 'UDP',
             },
         ],
     }
@@ -367,17 +367,18 @@ globalnetworkpolicy_tiered_name2_rev1 = {
         'order': 100000,
         'selector': "type=='sql'",
         'doNotTrack': True,
-        'types': ['ingress', 'egress'],
+        'applyOnForward': True,
+        'types': ['Ingress', 'Egress'],
         'egress': [
             {
-                'action': 'deny',
-                'protocol': 'tcp',
+                'action': 'Deny',
+                'protocol': 'TCP',
             },
         ],
         'ingress': [
             {
-                'action': 'allow',
-                'protocol': 'udp',
+                'action': 'Allow',
+                'protocol': 'UDP',
             },
         ],
     }
