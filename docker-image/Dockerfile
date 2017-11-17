@@ -1,4 +1,4 @@
-FROM fedora
+FROM alpine:3.4
 
 # Put out binary in /code rather than directly in /usr/bin.  This allows the downstream builds
 # to more easily extract the apiserver build artefacts from the container.
