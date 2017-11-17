@@ -131,7 +131,7 @@ func (key ResourceKey) defaultPath() (string, error) {
 func (key ResourceKey) defaultDeletePath() (string, error) {
 	ri, ok := resourceInfoByKind[strings.ToLower(key.Kind)]
 	if !ok {
-		log.Fatal("Unexpected resource kind: " + key.Kind)
+		log.Panic("Unexpected resource kind: " + key.Kind)
 	}
 	if namespace.IsNamespaced(key.Kind) {
 		return fmt.Sprintf("/calico/resources/v3/projectcalico.org/%s/%s/%s", ri.plural, key.Namespace, key.Name), nil
@@ -146,7 +146,7 @@ func (key ResourceKey) defaultDeleteParentPaths() ([]string, error) {
 func (key ResourceKey) valueType() reflect.Type {
 	ri, ok := resourceInfoByKind[strings.ToLower(key.Kind)]
 	if !ok {
-		log.Fatal("Unexpected resource kind: " + key.Kind)
+		log.Panic("Unexpected resource kind: " + key.Kind)
 	}
 	return ri.typeOf
 }
@@ -181,7 +181,7 @@ func (options ResourceListOptions) IsLastSegmentIsPrefix() bool {
 func (options ResourceListOptions) KeyFromDefaultPath(path string) Key {
 	ri, ok := resourceInfoByKind[strings.ToLower(options.Kind)]
 	if !ok {
-		log.Fatal("Unexpected resource kind: " + options.Kind)
+		log.Panic("Unexpected resource kind: " + options.Kind)
 	}
 
 	if namespace.IsNamespaced(options.Kind) {
@@ -244,7 +244,7 @@ func (options ResourceListOptions) KeyFromDefaultPath(path string) Key {
 func (options ResourceListOptions) defaultPathRoot() string {
 	ri, ok := resourceInfoByKind[strings.ToLower(options.Kind)]
 	if !ok {
-		log.Fatal("Unexpected resource kind: " + options.Kind)
+		log.Panic("Unexpected resource kind: " + options.Kind)
 	}
 
 	k := "/calico/resources/v3/projectcalico.org/" + ri.plural

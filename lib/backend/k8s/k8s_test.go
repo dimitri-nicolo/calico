@@ -43,12 +43,12 @@ var (
 		Order: &zeroOrder,
 		Ingress: []apiv3.Rule{
 			{
-				Action: "allow",
+				Action: "Allow",
 			},
 		},
 		Egress: []apiv3.Rule{
 			{
-				Action: "allow",
+				Action: "Allow",
 			},
 		},
 	}
@@ -56,12 +56,12 @@ var (
 		Order: &zeroOrder,
 		Ingress: []apiv3.Rule{
 			{
-				Action: "deny",
+				Action: "Deny",
 			},
 		},
 		Egress: []apiv3.Rule{
 			{
-				Action: "deny",
+				Action: "Deny",
 			},
 		},
 	}
