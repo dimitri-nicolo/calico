@@ -15,12 +15,16 @@ import (
 	"github.com/golang/glog"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	calicowatch "github.com/projectcalico/libcalico-go/lib/watch"
+	aapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	k8swatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
 )
@@ -89,6 +93,21 @@ func (rs *resourceStore) Versioner() storage.Versioner {
 	return rs.versioner
 }
 
+func validationError(err error, qualifiedKind schema.GroupKind, name string) *aapierrors.StatusError {
+	errs := field.ErrorList{}
+	calErrors := err.(errors.ErrorValidation)
+	for _, calErr := range calErrors.ErroredFields {
+		fmt.Printf("Heres the validation error: %v && %v\n", calErr.Name, calErr.Reason)
+		err := &field.Error{
+			Type:   field.ErrorTypeInternal,
+			Field:  calErr.Name,
+			Detail: calErr.Reason,
+		}
+		errs = append(errs, err)
+	}
+	return aapierrors.NewInvalid(qualifiedKind, name, errs)
+}
+
 // Create adds a new object at a key unless it already exists. 'ttl' is time-to-live
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
@@ -100,7 +119,13 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	createdObj, err := rs.create(ctx, rs.client, lcObj, opts)
 	if err != nil {
 		glog.Errorf("Error creating resource %v key %v error %v\n", rs.resourceName, key, err)
-		return aapiError(err, key)
+		switch err.(type) {
+		case errors.ErrorValidation:
+			rObj := obj.(resourceObject)
+			return validationError(err, rObj.GetObjectKind().GroupVersionKind().GroupKind(), rObj.GetObjectMeta().GetName())
+		default:
+			return aapiError(err, key)
+		}
 	}
 	rs.converter.convertToAAPI(createdObj, out)
 	return nil
@@ -409,26 +434,31 @@ func (rs *resourceStore) GuaranteedUpdate(
 		}
 		createdLibcalicoObj, err := rs.update(ctx, rs.client, libcalicoObj, opts)
 		if err != nil {
-			e := aapiError(err, key)
-			if storage.IsConflict(e) {
-				glog.V(4).Infof(
-					"GuaranteedUpdate of %s failed because of a conflict, going to retry",
-					key,
-				)
-				newCurObj := reflect.New(rs.aapiType).Interface().(runtime.Object)
-				if err := rs.Get(ctx, key, "", newCurObj, ignoreNotFound); err != nil {
-					glog.Errorf("getting new current object (%s)", err)
-					return aapiError(err, key)
+			switch err.(type) {
+			case errors.ErrorValidation:
+				return validationError(err, updatedRes.GetObjectKind().GroupVersionKind().GroupKind(), updatedRes.GetObjectMeta().GetName())
+			default:
+				e := aapiError(err, key)
+				if storage.IsConflict(e) {
+					glog.V(4).Infof(
+						"GuaranteedUpdate of %s failed because of a conflict, going to retry",
+						key,
+					)
+					newCurObj := reflect.New(rs.aapiType).Interface().(runtime.Object)
+					if err := rs.Get(ctx, key, "", newCurObj, ignoreNotFound); err != nil {
+						glog.Errorf("getting new current object (%s)", err)
+						return aapiError(err, key)
+					}
+					ncs, err := rs.getStateFromObject(newCurObj)
+					if err != nil {
+						glog.Errorf("getting state from new current object (%s)", err)
+						return err
+					}
+					curState = ncs
+					continue
 				}
-				ncs, err := rs.getStateFromObject(newCurObj)
-				if err != nil {
-					glog.Errorf("getting state from new current object (%s)", err)
-					return err
-				}
-				curState = ncs
-				continue
+				return e
 			}
-			return e
 		}
 		rs.converter.convertToAAPI(createdLibcalicoObj, out)
 		return nil
