@@ -55,6 +55,20 @@ function config-ip-firewall {
   if [[ -n "${KUBE_FIREWALL_METADATA_SERVER:-}" ]]; then
     iptables -A KUBE-METADATA-SERVER -j DROP
   fi
+
+  # Flush iptables nat table
+  iptables -t nat -F || true
+
+  echo "Add rules for ip masquerade"
+  if [[ "${NON_MASQUERADE_CIDR:-}" == "0.0.0.0/0" ]]; then
+    iptables -t nat -N IP-MASQ
+    iptables -t nat -A POSTROUTING -m comment --comment "ip-masq: ensure nat POSTROUTING directs all non-LOCAL destination traffic to our custom IP-MASQ chain" -m addrtype ! --dst-type LOCAL -j IP-MASQ
+    iptables -t nat -A IP-MASQ -d 169.254.0.0/16 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -t nat -A IP-MASQ -d 10.0.0.0/8 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -t nat -A IP-MASQ -d 172.16.0.0/12 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -t nat -A IP-MASQ -d 192.168.0.0/16 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -t nat -A IP-MASQ -m comment --comment "ip-masq: outbound traffic is subject to MASQUERADE (must be last in chain)" -j MASQUERADE
+  fi
 }
 
 function create-dirs {
@@ -834,6 +848,12 @@ function assemble-docker-flags {
   docker_opts+=" --log-driver=${DOCKER_LOG_DRIVER:-json-file}"
   docker_opts+=" --log-opt=max-size=${DOCKER_LOG_MAX_SIZE:-10m}"
   docker_opts+=" --log-opt=max-file=${DOCKER_LOG_MAX_FILE:-5}"
+
+  # Disable live-restore if the environment variable is set.
+
+  if [[ "${DISABLE_DOCKER_LIVE_RESTORE:-false}" == "true" ]]; then
+    docker_opts+=" --live-restore=false"
+  fi
 
   echo "DOCKER_OPTS=\"${docker_opts} ${EXTRA_DOCKER_OPTS:-}\"" > /etc/default/docker
 
@@ -1726,6 +1746,10 @@ function start-kube-addons {
 
   # prep addition kube-up specific rbac objects
   setup-addon-manifests "addons" "rbac"
+
+  if [[ "${ENABLE_POD_SECURITY_POLICY:-}" == "true" ]]; then
+      setup-addon-manifests "addons" "podsecuritypolicies"
+  fi
 
   # Set up manifests of other addons.
   if [[ "${KUBE_PROXY_DAEMONSET:-}" == "true" ]]; then

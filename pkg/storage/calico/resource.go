@@ -14,13 +14,17 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	calicowatch "github.com/projectcalico/libcalico-go/lib/watch"
+	aapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	k8swatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
 )
@@ -43,13 +47,13 @@ type resourceConverter interface {
 
 type clientOpts interface{}
 
-type clientObjectOperator func(context.Context, clientv2.Interface, resourceObject, clientOpts) (resourceObject, error)
-type clientNameOperator func(context.Context, clientv2.Interface, string, string, clientOpts) (resourceObject, error)
-type clientLister func(context.Context, clientv2.Interface, clientOpts) (resourceListObject, error)
-type clientWatcher func(context.Context, clientv2.Interface, clientOpts) (calicowatch.Interface, error)
+type clientObjectOperator func(context.Context, clientv3.Interface, resourceObject, clientOpts) (resourceObject, error)
+type clientNameOperator func(context.Context, clientv3.Interface, string, string, clientOpts) (resourceObject, error)
+type clientLister func(context.Context, clientv3.Interface, clientOpts) (resourceListObject, error)
+type clientWatcher func(context.Context, clientv3.Interface, clientOpts) (calicowatch.Interface, error)
 
 type resourceStore struct {
-	client            clientv2.Interface
+	client            clientv3.Interface
 	codec             runtime.Codec
 	versioner         storage.Versioner
 	aapiType          reflect.Type
@@ -67,7 +71,7 @@ type resourceStore struct {
 	converter         resourceConverter
 }
 
-func createClientFromConfig() clientv2.Interface {
+func createClientFromConfig() clientv3.Interface {
 	// TODO(doublek): nicer errors returned
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
@@ -75,7 +79,7 @@ func createClientFromConfig() clientv2.Interface {
 		os.Exit(1)
 	}
 
-	c, err := clientv2.New(*cfg)
+	c, err := clientv3.New(*cfg)
 	if err != nil {
 		glog.Errorf("Failed creating client: %q", err)
 		os.Exit(1)
@@ -89,6 +93,20 @@ func (rs *resourceStore) Versioner() storage.Versioner {
 	return rs.versioner
 }
 
+func validationError(err error, qualifiedKind schema.GroupKind, name string) *aapierrors.StatusError {
+	errs := field.ErrorList{}
+	calErrors := err.(errors.ErrorValidation)
+	for _, calErr := range calErrors.ErroredFields {
+		err := &field.Error{
+			Type:   field.ErrorTypeInternal,
+			Field:  calErr.Name,
+			Detail: calErr.Reason,
+		}
+		errs = append(errs, err)
+	}
+	return aapierrors.NewInvalid(qualifiedKind, name, errs)
+}
+
 // Create adds a new object at a key unless it already exists. 'ttl' is time-to-live
 // in seconds (0 means forever). If no error is returned and out is not nil, out will be
 // set to the read value from database.
@@ -100,7 +118,13 @@ func (rs *resourceStore) Create(ctx context.Context, key string, obj, out runtim
 	createdObj, err := rs.create(ctx, rs.client, lcObj, opts)
 	if err != nil {
 		glog.Errorf("Error creating resource %v key %v error %v\n", rs.resourceName, key, err)
-		return aapiError(err, key)
+		switch err.(type) {
+		case errors.ErrorValidation:
+			rObj := obj.(resourceObject)
+			return validationError(err, rObj.GetObjectKind().GroupVersionKind().GroupKind(), rObj.GetObjectMeta().GetName())
+		default:
+			return aapiError(err, key)
+		}
 	}
 	rs.converter.convertToAAPI(createdObj, out)
 	return nil
@@ -135,7 +159,7 @@ func (rs *resourceStore) Delete(ctx context.Context, key string, out runtime.Obj
 
 	libcalicoObj, err := rs.delete(ctx, rs.client, ns, name, delOpts)
 	if err != nil {
-		glog.Errorf("Clientv2 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
+		glog.Errorf("Clientv3 error deleting resource %v with key %v error %v\n", rs.resourceName, key, err)
 		return aapiError(err, key)
 	}
 	rs.converter.convertToAAPI(libcalicoObj, out)
@@ -409,26 +433,31 @@ func (rs *resourceStore) GuaranteedUpdate(
 		}
 		createdLibcalicoObj, err := rs.update(ctx, rs.client, libcalicoObj, opts)
 		if err != nil {
-			e := aapiError(err, key)
-			if storage.IsConflict(e) {
-				glog.V(4).Infof(
-					"GuaranteedUpdate of %s failed because of a conflict, going to retry",
-					key,
-				)
-				newCurObj := reflect.New(rs.aapiType).Interface().(runtime.Object)
-				if err := rs.Get(ctx, key, "", newCurObj, ignoreNotFound); err != nil {
-					glog.Errorf("getting new current object (%s)", err)
-					return aapiError(err, key)
+			switch err.(type) {
+			case errors.ErrorValidation:
+				return validationError(err, updatedRes.GetObjectKind().GroupVersionKind().GroupKind(), updatedRes.GetObjectMeta().GetName())
+			default:
+				e := aapiError(err, key)
+				if storage.IsConflict(e) {
+					glog.V(4).Infof(
+						"GuaranteedUpdate of %s failed because of a conflict, going to retry",
+						key,
+					)
+					newCurObj := reflect.New(rs.aapiType).Interface().(runtime.Object)
+					if err := rs.Get(ctx, key, "", newCurObj, ignoreNotFound); err != nil {
+						glog.Errorf("getting new current object (%s)", err)
+						return aapiError(err, key)
+					}
+					ncs, err := rs.getStateFromObject(newCurObj)
+					if err != nil {
+						glog.Errorf("getting state from new current object (%s)", err)
+						return err
+					}
+					curState = ncs
+					continue
 				}
-				ncs, err := rs.getStateFromObject(newCurObj)
-				if err != nil {
-					glog.Errorf("getting state from new current object (%s)", err)
-					return err
-				}
-				curState = ncs
-				continue
+				return e
 			}
-			return e
 		}
 		rs.converter.convertToAAPI(createdLibcalicoObj, out)
 		return nil

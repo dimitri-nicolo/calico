@@ -39,8 +39,8 @@ type RESTStorageProvider struct {
 	StorageType server.StorageType
 }
 
-// NewV2Storage constructs v2 api storage.
-func (p RESTStorageProvider) NewV2Storage(
+// NewV3Storage constructs v3 api storage.
+func (p RESTStorageProvider) NewV3Storage(
 	scheme *runtime.Scheme,
 	restOptionsGetter generic.RESTOptionsGetter,
 	authorizer authorizer.Authorizer,

@@ -17,7 +17,7 @@ package updateprocessors
 import (
 	"reflect"
 
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 )
@@ -25,10 +25,26 @@ import (
 // Create a new NewClusterInfoUpdateProcessor.
 func NewClusterInfoUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
 	return NewConfigUpdateProcessor(
-		reflect.TypeOf(apiv2.ClusterInformationSpec{}),
+		reflect.TypeOf(apiv3.ClusterInformationSpec{}),
 		DisallowAnnotations,
-		func(node, name string) model.Key { return model.HostConfigKey{Hostname: node, Name: name} },
-		func(name string) model.Key { return model.GlobalConfigKey{Name: name} },
-		nil,
+		func(node, name string) model.Key {
+			if name == "DatastoreReady" {
+				return nil
+			}
+			return model.HostConfigKey{Hostname: node, Name: name}
+		},
+		func(name string) model.Key {
+			if name == "DatastoreReady" {
+				return model.ReadyFlagKey{}
+			}
+			return model.GlobalConfigKey{Name: name}
+		},
+		map[string]ConfigFieldValueToV1ModelValue{
+			"DatastoreReady": datastoreReadyToBool,
+		},
 	)
+}
+
+func datastoreReadyToBool(value interface{}) interface{} {
+	return value.(bool)
 }

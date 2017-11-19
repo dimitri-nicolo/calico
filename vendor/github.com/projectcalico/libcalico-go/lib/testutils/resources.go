@@ -28,7 +28,7 @@ import (
 
 	"github.com/projectcalico/go-yaml-wrapper"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 	"k8s.io/apimachinery/pkg/conversion"
 )
@@ -44,8 +44,8 @@ func ExpectResource(res runtime.Object, kind, namespace, name string, spec inter
 	Expect(ma.GetObjectMeta().GetName()).To(Equal(name), optionalDescription...)
 	Expect(ma.GetObjectMeta().GetResourceVersion()).ToNot(BeEmpty(), optionalDescription...)
 	Expect(res.GetObjectKind().GroupVersionKind().Kind).To(Equal(kind), optionalDescription...)
-	Expect(res.GetObjectKind().GroupVersionKind().Group).To(Equal(apiv2.Group), optionalDescription...)
-	Expect(res.GetObjectKind().GroupVersionKind().Version).To(Equal(apiv2.VersionCurrent), optionalDescription...)
+	Expect(res.GetObjectKind().GroupVersionKind().Group).To(Equal(apiv3.Group), optionalDescription...)
+	Expect(res.GetObjectKind().GroupVersionKind().Version).To(Equal(apiv3.VersionCurrent), optionalDescription...)
 	Expect(getSpec(res)).To(Equal(spec), optionalDescription...)
 }
 
@@ -164,36 +164,31 @@ func (t *testResourceWatcher) expectEvents(kind string, anyOrder bool, expectedE
 	defer t.lock.Unlock()
 
 	// If the events may be expected in any order, then sort the events so that we
-	// can compare like with like.
-	actualEvents := t.events[:len(expectedEvents)]
+	// can compare like with like.  We may not actually have the correct number of
+	// events, so protect against that scenario - we'll check later once we've
+	// constructed useful diagnostics.
+	var actualEvents []watch.Event
+	if len(t.events) >= len(expectedEvents) {
+		actualEvents = t.events[:len(expectedEvents)]
+	} else {
+		actualEvents = t.events
+	}
 	if anyOrder {
 		log.Info("Ordering events")
 		expectedEvents = t.sortEvents(expectedEvents)
 		actualEvents = t.sortEvents(actualEvents)
 	}
 
+	// Trace out logs summarizing the set of events.
 	log.Info("Comparing actual events against expected events.  Summary:")
+	var expectedObject runtime.Object
+	var actualObject runtime.Object
 	for i, expectedEvent := range expectedEvents {
-		actualEvent := actualEvents[i]
-		var expectedObject runtime.Object
-		var actualObject runtime.Object
 		if expectedEvent.Type == watch.Deleted {
 			expectedObject = expectedEvent.Previous
 		} else {
 			expectedObject = expectedEvent.Object
 		}
-		if actualEvent.Type == watch.Deleted {
-			actualObject = actualEvent.Previous
-		} else {
-			actualObject = actualEvent.Object
-		}
-		log.Infof(
-			"Actual:   EventType:%s; Kind:%s; Name:%s; Namespace:%s",
-			actualEvent.Type,
-			actualObject.GetObjectKind().GroupVersionKind(),
-			actualObject.(v1.ObjectMetaAccessor).GetObjectMeta().GetName(),
-			actualObject.(v1.ObjectMetaAccessor).GetObjectMeta().GetNamespace(),
-		)
 		log.Infof(
 			"Expected: EventType:%s; Kind:%s; Name:%s; Namespace:%s",
 			expectedEvent.Type,
@@ -201,8 +196,27 @@ func (t *testResourceWatcher) expectEvents(kind string, anyOrder bool, expectedE
 			expectedObject.(v1.ObjectMetaAccessor).GetObjectMeta().GetName(),
 			expectedObject.(v1.ObjectMetaAccessor).GetObjectMeta().GetNamespace(),
 		)
+
+		if i < len(actualEvents) {
+			actualEvent := actualEvents[i]
+			if actualEvent.Type == watch.Deleted {
+				actualObject = actualEvent.Previous
+			} else {
+				actualObject = actualEvent.Object
+			}
+			log.Infof(
+				"Actual:   EventType:%s; Kind:%s; Name:%s; Namespace:%s",
+				actualEvent.Type,
+				actualObject.GetObjectKind().GroupVersionKind(),
+				actualObject.(v1.ObjectMetaAccessor).GetObjectMeta().GetName(),
+				actualObject.(v1.ObjectMetaAccessor).GetObjectMeta().GetNamespace(),
+			)
+		} else {
+			log.Error("Actual:   Event missing")
+		}
 	}
 
+	// And verify we got the correct number of events.
 	Expect(actualEvents).To(HaveLen(len(expectedEvents)))
 
 	for i, expectedEvent := range expectedEvents {

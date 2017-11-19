@@ -22,13 +22,14 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	"github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	calico "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	calicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	calicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	apitesting "k8s.io/apimachinery/pkg/api/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -46,7 +47,7 @@ import (
 func init() {
 	metav1.AddToGroupVersion(scheme, metav1.SchemeGroupVersion)
 	calico.AddToScheme(scheme)
-	calicov2.AddToScheme(scheme)
+	calicov3.AddToScheme(scheme)
 }
 
 func TestTierCreate(t *testing.T) {
@@ -414,6 +415,8 @@ func TestTierGuaranteedUpdateWithTTL(t *testing.T) {
 	defer testTierCleanup(t, ctx, store)
 
 	input := &calico.Tier{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+	input.SetCreationTimestamp(metav1.Time{time.Now()})
+	input.SetUID("test_uid")
 	key := "projectcalico.org/tiers/foo"
 
 	out := &calico.Tier{}
@@ -555,7 +558,7 @@ func TestTierList(t *testing.T) {
 }
 
 func testTierSetup(t *testing.T) (context.Context, *resourceStore) {
-	codec := apitesting.TestCodec(codecs, calicov2.SchemeGroupVersion)
+	codec := apitesting.TestCodec(codecs, calicov3.SchemeGroupVersion)
 	cfg, err := apiconfig.LoadClientConfig("")
 	if err != nil {
 		glog.Errorf("Failed to load client config: %q", err)
@@ -563,7 +566,7 @@ func testTierSetup(t *testing.T) (context.Context, *resourceStore) {
 	}
 	cfg.Spec.DatastoreType = "etcdv3"
 	cfg.Spec.EtcdEndpoints = "http://localhost:2379"
-	c, err := clientv2.New(*cfg)
+	c, err := clientv3.New(*cfg)
 	if err != nil {
 		glog.Errorf("Failed creating client: %q", err)
 		os.Exit(1)

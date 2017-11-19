@@ -7,8 +7,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v2"
-	"github.com/projectcalico/libcalico-go/lib/clientv2"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
@@ -21,29 +21,29 @@ import (
 // NewTierStorage creates a new libcalico-based storage.Interface implementation for Tiers
 func NewTierStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	c := createClientFromConfig()
-	create := func(ctx context.Context, c clientv2.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	create := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.Tier)
 		return c.Tiers().Create(ctx, res, oso)
 	}
-	update := func(ctx context.Context, c clientv2.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	update := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.Tier)
 		return c.Tiers().Update(ctx, res, oso)
 	}
-	get := func(ctx context.Context, c clientv2.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	get := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		ogo := opts.(options.GetOptions)
 		return c.Tiers().Get(ctx, name, ogo)
 	}
-	delete := func(ctx context.Context, c clientv2.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	delete := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		odo := opts.(options.DeleteOptions)
 		return c.Tiers().Delete(ctx, name, odo)
 	}
-	list := func(ctx context.Context, c clientv2.Interface, opts clientOpts) (resourceListObject, error) {
+	list := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
 		olo := opts.(options.ListOptions)
 		return c.Tiers().List(ctx, olo)
 	}
-	watch := func(ctx context.Context, c clientv2.Interface, opts clientOpts) (watch.Interface, error) {
+	watch := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
 		olo := opts.(options.ListOptions)
 		return c.Tiers().Watch(ctx, olo)
 	}

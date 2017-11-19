@@ -17,7 +17,7 @@ limitations under the License.
 package projectcalico
 
 import (
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,7 +38,7 @@ type NetworkPolicy struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.PolicySpec
+	Spec calico.NetworkPolicySpec
 }
 
 // +genclient:nonNamespaced
@@ -82,5 +82,5 @@ type GlobalNetworkPolicy struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
-	Spec calico.PolicySpec
+	Spec calico.GlobalNetworkPolicySpec
 }

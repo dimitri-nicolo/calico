@@ -31,7 +31,7 @@ import (
 	// avoid error `servicecatalog/v1alpha1 is not enabled`
 
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	// avoid error `no kind is registered for the type metav1.ListOptions`
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/kubernetes/pkg/api/install"
@@ -40,7 +40,7 @@ import (
 
 	// our versioned client
 
-	calico "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -124,7 +124,7 @@ func testNoName(client calicoclient.Interface) error {
 
 	ns := "default"
 
-	if p, e := cClient.NetworkPolicies(ns).Create(&v2.NetworkPolicy{}); nil == e {
+	if p, e := cClient.NetworkPolicies(ns).Create(&v3.NetworkPolicy{}); nil == e {
 		return fmt.Errorf("needs a name (%s)", p.Name)
 	}
 
@@ -155,7 +155,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "default"
 	policyClient := client.Projectcalico().NetworkPolicies(ns)
-	policy := &v2.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	policy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
 	// start from scratch
 	policies, err := policyClient.List(metav1.ListOptions{})
@@ -179,7 +179,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 
 	// For testing out Tiered Policy
 	tierClient := client.Projectcalico().Tiers()
-	tier := &v2.Tier{
+	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
@@ -189,7 +189,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v2.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.PolicySpec{Tier: "net-sec"}}
+	netSecPolicy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.NetworkPolicySpec{Tier: "net-sec"}}
 	policyServer, err = policyClient.Create(netSecPolicy)
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)
@@ -287,7 +287,7 @@ func TestTierClient(t *testing.T) {
 
 func testTierClient(client calicoclient.Interface, name string) error {
 	tierClient := client.Projectcalico().Tiers()
-	tier := &v2.Tier{
+	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
 
@@ -353,7 +353,7 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 
 func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	globalNetworkPolicyClient := client.Projectcalico().GlobalNetworkPolicies()
-	globalNetworkPolicy := &v2.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	globalNetworkPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
 
 	// start from scratch
 	globalNetworkPolicies, err := globalNetworkPolicyClient.List(metav1.ListOptions{})
@@ -374,7 +374,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 
 	// For testing out Tiered Policy
 	tierClient := client.Projectcalico().Tiers()
-	tier := &v2.Tier{
+	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
 
@@ -384,7 +384,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}()
 
 	netSecPolicyName := "net-sec" + "." + name
-	netSecPolicy := &v2.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.PolicySpec{Tier: "net-sec"}}
+	netSecPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: netSecPolicyName}, Spec: calico.GlobalNetworkPolicySpec{Tier: "net-sec"}}
 	globalNetworkPolicyServer, err = globalNetworkPolicyClient.Create(netSecPolicy)
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", netSecPolicy, err)

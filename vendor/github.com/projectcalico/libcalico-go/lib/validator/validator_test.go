@@ -79,6 +79,20 @@ func init() {
 		// Empty rule is valid, it means "allow all".
 		Entry("empty rule (m)", model.Rule{}, true),
 
+		// (Backend model) ICMP.
+		Entry("should accept ICMP 0/any (m)", model.Rule{ICMPType: &V0}, true),
+		Entry("should accept ICMP 0/0 (m)", model.Rule{ICMPType: &V0, ICMPCode: &V0}, true),
+		Entry("should accept ICMP 128/0 (m)", model.Rule{ICMPType: &V128, ICMPCode: &V0}, true),
+		Entry("should accept ICMP 254/255 (m)", model.Rule{ICMPType: &V254, ICMPCode: &V255}, true),
+		Entry("should reject ICMP 255/255 (m)", model.Rule{ICMPType: &V255, ICMPCode: &V255}, false),
+		Entry("should reject ICMP 128/256 (m)", model.Rule{ICMPType: &V128, ICMPCode: &V256}, false),
+		Entry("should accept not ICMP 0/any (m)", model.Rule{NotICMPType: &V0}, true),
+		Entry("should accept not ICMP 0/0 (m)", model.Rule{NotICMPType: &V0, NotICMPCode: &V0}, true),
+		Entry("should accept not ICMP 128/0 (m)", model.Rule{NotICMPType: &V128, NotICMPCode: &V0}, true),
+		Entry("should accept not ICMP 254/255 (m)", model.Rule{NotICMPType: &V254, NotICMPCode: &V255}, true),
+		Entry("should reject not ICMP 255/255 (m)", model.Rule{NotICMPType: &V255, NotICMPCode: &V255}, false),
+		Entry("should reject not ICMP 128/256 (m)", model.Rule{NotICMPType: &V128, NotICMPCode: &V256}, false),
+
 		// (Backend model) Actions.
 		Entry("should accept allow action (m)", model.Rule{Action: "allow"}, true),
 		Entry("should accept deny action (m)", model.Rule{Action: "deny"}, true),
@@ -1057,33 +1071,33 @@ func init() {
 		// that prevented us from doing a smooth upgrade from type-less to typed policy since we
 		// couldn't write a policy that would work for back-level Felix instances while also
 		// specifying the type for up-level Felix instances.
-		Entry("allow Types without ingress when IngressRules present",
+		Entry("allow Types without ingress when Ingress present",
 			api.PolicySpec{
 				IngressRules: []api.Rule{{Action: "allow"}},
 				Types:        []api.PolicyType{api.PolicyTypeEgress},
 			}, true),
-		Entry("allow Types without egress when EgressRules present",
+		Entry("allow Types without egress when Egress present",
 			api.PolicySpec{
 				EgressRules: []api.Rule{{Action: "allow"}},
 				Types:       []api.PolicyType{api.PolicyTypeIngress},
 			}, true),
 
-		Entry("allow Types with ingress when IngressRules present",
+		Entry("allow Types with ingress when Ingress present",
 			api.PolicySpec{
 				IngressRules: []api.Rule{{Action: "allow"}},
 				Types:        []api.PolicyType{api.PolicyTypeIngress},
 			}, true),
-		Entry("allow Types with ingress+egress when IngressRules present",
+		Entry("allow Types with ingress+egress when Ingress present",
 			api.PolicySpec{
 				IngressRules: []api.Rule{{Action: "allow"}},
 				Types:        []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},
 			}, true),
-		Entry("allow Types with egress when EgressRules present",
+		Entry("allow Types with egress when Egress present",
 			api.PolicySpec{
 				EgressRules: []api.Rule{{Action: "allow"}},
 				Types:       []api.PolicyType{api.PolicyTypeEgress},
 			}, true),
-		Entry("allow Types with ingress+egress when EgressRules present",
+		Entry("allow Types with ingress+egress when Egress present",
 			api.PolicySpec{
 				EgressRules: []api.Rule{{Action: "allow"}},
 				Types:       []api.PolicyType{api.PolicyTypeIngress, api.PolicyTypeEgress},

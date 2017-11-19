@@ -3,7 +3,7 @@ Copyright 2017 Tigera.
 */package scheme
 
 import (
-	projectcalicov2 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	projectcalicov3 "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,6 +34,6 @@ func init() {
 // After this, RawExtensions in Kubernetes types will serialize kube-aggregator types
 // correctly.
 func AddToScheme(scheme *runtime.Scheme) {
-	projectcalicov2.AddToScheme(scheme)
+	projectcalicov3.AddToScheme(scheme)
 
 }

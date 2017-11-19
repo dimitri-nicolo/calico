@@ -33,7 +33,7 @@ import (
 	restclient "k8s.io/client-go/rest"
 
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v2"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/kubernetes/pkg/api/install"
@@ -77,7 +77,7 @@ func withConfigGetFreshApiserverAndClient(
 	t.Logf("Starting server on port: %d", securePort)
 	// start the server in the background
 	go func() {
-		ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Scheme, apiserver.Codecs.LegacyCodec(v2.SchemeGroupVersion))
+		ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Scheme, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
 		ro.Etcd.StorageConfig.ServerList = serverConfig.etcdServerList
 		options := &server.CalicoServerOptions{
 			RecommendedOptions: ro,

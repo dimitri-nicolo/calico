@@ -1,7 +1,7 @@
 package calico
 
 import (
-	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	libcalicoapi "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 
 	aapi "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"

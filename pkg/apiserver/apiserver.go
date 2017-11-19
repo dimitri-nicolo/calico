@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
-	"github.com/projectcalico/libcalico-go/lib/apis/v2"
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 )
@@ -108,10 +108,10 @@ func (c completedConfig) New() (*ProjectCalicoServer, error) {
 	}
 
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(projectcalico.GroupName, registry, Scheme, metav1.ParameterCodec, Codecs)
-	apiGroupInfo.GroupMeta.GroupVersion = v2.SchemeGroupVersion
+	apiGroupInfo.GroupMeta.GroupVersion = v3.SchemeGroupVersion
 	// TODO: Make the storage type configurable
 	calicostore := calicorest.RESTStorageProvider{StorageType: "calico"}
-	apiGroupInfo.VersionedResourcesStorageMap["v2"], err = calicostore.NewV2Storage(Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorizer)
+	apiGroupInfo.VersionedResourcesStorageMap["v3"], err = calicostore.NewV3Storage(Scheme, c.GenericConfig.RESTOptionsGetter, c.GenericConfig.Authorizer)
 	if err != nil {
 		return nil, err
 	}
