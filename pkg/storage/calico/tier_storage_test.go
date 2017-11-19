@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -414,13 +415,15 @@ func TestTierGuaranteedUpdateWithTTL(t *testing.T) {
 	defer testTierCleanup(t, ctx, store)
 
 	input := &calico.Tier{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
-	key, storeObj := testTierPropogateStore(ctx, t, store, input)
+	input.SetCreationTimestamp(metav1.Time{time.Now()})
+	input.SetUID("test_uid")
+	key := "projectcalico.org/tiers/foo"
 
 	out := &calico.Tier{}
 	err := store.GuaranteedUpdate(ctx, key, out, true, nil,
 		func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
 			ttl := uint64(1)
-			return storeObj, &ttl, nil
+			return input, &ttl, nil
 		})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)

@@ -101,7 +101,7 @@ func (c *resources) Create(ctx context.Context, opts options.SetOptions, kind st
 	// Add in the UID and creation timestamp for the resource if needed.
 	creationTimestamp := in.GetObjectMeta().GetCreationTimestamp()
 	if creationTimestamp.IsZero() {
-		//in.GetObjectMeta().SetCreationTimestamp(v1.Now())
+		in.GetObjectMeta().SetCreationTimestamp(v1.Now())
 	}
 	if in.GetObjectMeta().GetUID() == "" {
 		in.GetObjectMeta().SetUID(uuid.NewUUID())
@@ -201,7 +201,7 @@ func (c *resources) Get(ctx context.Context, opts options.GetOptions, kind, ns, 
 func (c *resources) List(ctx context.Context, opts options.ListOptions, kind, listKind string, listObj resourceList) error {
 	list := model.ResourceListOptions{
 		Kind:      kind,
-		Name:      convertPolicyNameForStorage(opts.Name),
+		Name:      opts.Name,
 		Namespace: opts.Namespace,
 		Prefix:    opts.Prefix,
 	}
@@ -237,7 +237,7 @@ func (c *resources) List(ctx context.Context, opts options.ListOptions, kind, li
 func (c *resources) Watch(ctx context.Context, opts options.ListOptions, kind string) (watch.Interface, error) {
 	list := model.ResourceListOptions{
 		Kind:      kind,
-		Name:      convertPolicyNameForStorage(opts.Name),
+		Name:      opts.Name,
 		Namespace: opts.Namespace,
 	}
 

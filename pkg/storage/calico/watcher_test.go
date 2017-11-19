@@ -39,12 +39,15 @@ func testWatch(t *testing.T, list bool) {
 		testCleanup(t, ctx, store)
 		store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
 		store.client.NetworkPolicies().Delete(ctx, "default", "bar", options.DeleteOptions{})
-		store.client.NetworkPolicies().Delete(ctx, "default", "foo1", options.DeleteOptions{})
-		store.client.NetworkPolicies().Delete(ctx, "default", "foo2", options.DeleteOptions{})
 	}()
 
 	policyFoo := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
+	policyFoo.SetCreationTimestamp(metav1.Time{time.Now()})
+	policyFoo.SetUID("test_uid_foo")
 	policyBar := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "bar"}}
+	policyBar.SetCreationTimestamp(metav1.Time{time.Now()})
+	policyBar.SetUID("test_uid_bar")
+
 	policyBar.Spec.Selector = "set"
 	//policyFoo1 := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo1"}}
 	//policyFoo2 := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo2"}}

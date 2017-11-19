@@ -97,7 +97,6 @@ func validationError(err error, qualifiedKind schema.GroupKind, name string) *aa
 	errs := field.ErrorList{}
 	calErrors := err.(errors.ErrorValidation)
 	for _, calErr := range calErrors.ErroredFields {
-		fmt.Printf("Heres the validation error: %v && %v\n", calErr.Name, calErr.Reason)
 		err := &field.Error{
 			Type:   field.ErrorTypeInternal,
 			Field:  calErr.Name,

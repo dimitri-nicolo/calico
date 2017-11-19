@@ -41,6 +41,8 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/storagebackend"
 
+	"time"
+
 	"golang.org/x/net/context"
 )
 
@@ -417,16 +419,18 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 	defer testCleanup(t, ctx, store)
 
 	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
-	key, storeObj := testPropogateStore(ctx, t, store, input)
+	input.SetCreationTimestamp(metav1.Time{time.Now()})
+	input.SetUID("test_uid")
+	key := "projectcalico.org/networkpolicies/default/foo"
 
 	out := &calico.NetworkPolicy{}
 	err := store.GuaranteedUpdate(ctx, key, out, true, nil,
 		func(_ runtime.Object, _ storage.ResponseMeta) (runtime.Object, *uint64, error) {
 			ttl := uint64(1)
-			return storeObj, &ttl, nil
+			return input, &ttl, nil
 		})
 	if err != nil {
-		t.Fatalf("Create failed: %v", err)
+		t.Fatalf("Guranteed Update failed: %v", err)
 	}
 
 	w, err := store.Watch(ctx, key, out.ResourceVersion, storage.Everything)

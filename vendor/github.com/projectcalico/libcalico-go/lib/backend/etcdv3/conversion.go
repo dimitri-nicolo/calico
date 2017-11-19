@@ -16,14 +16,17 @@ package etcdv3
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/mvcc/mvccpb"
 	log "github.com/sirupsen/logrus"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // convertListResponse converts etcdv3 Kv to a model.KVPair with parsed values.
@@ -91,9 +94,26 @@ func etcdToKVPair(key model.Key, ekv *mvccpb.KeyValue) (*model.KVPair, error) {
 		}
 	}
 
+	if _, ok := v.(*apiv3.GlobalNetworkPolicy); ok {
+		v.(metav1.ObjectMetaAccessor).GetObjectMeta().SetName(convertPolicyNameFromStorage(v.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
+	}
+
+	if _, ok := v.(*apiv3.NetworkPolicy); ok {
+		v.(metav1.ObjectMetaAccessor).GetObjectMeta().SetName(convertPolicyNameFromStorage(v.(metav1.ObjectMetaAccessor).GetObjectMeta().GetName()))
+	}
+
 	return &model.KVPair{
 		Key:      key,
 		Value:    v,
 		Revision: strconv.FormatInt(ekv.ModRevision, 10),
 	}, nil
+}
+
+func convertPolicyNameFromStorage(name string) string {
+	// Do nothing on names prefixed with "knp."
+	if strings.HasPrefix(name, "knp.") {
+		return name
+	}
+	parts := strings.SplitN(name, ".", 2)
+	return parts[len(parts)-1]
 }
