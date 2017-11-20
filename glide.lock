@@ -1,5 +1,5 @@
-hash: 442b968d727b877caa6341dc02bb14263872c8f82584ebeed4842e4d140e6494
-updated: 2017-11-18T18:29:50.779496196-08:00
+hash: 8960afa69ef4e03d8e37c1fc14c0ad11f7d9dff4ccdbb1b637e3be4831360ebe
+updated: 2017-11-20T16:03:33.791573453Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -52,7 +52,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: 7e7da451323b6766da368f8a1e8ec9a88a16b4a0
+  version: 32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -281,7 +281,7 @@ imports:
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
-  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
+  version: 9f005a07e0d31d45e6656d241bb5c0f2efd4bc94
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
