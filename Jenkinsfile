@@ -55,14 +55,14 @@ pipeline{
                     // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
                     if (env.BRANCH_NAME == 'master') {
 			sh 'make build-image'
-			sh 'docker tag tigera/calicoq:latest gcr.io/tigera-dev/tigera/calicoq:latest'
-                        sh 'gcloud docker -- push gcr.io/tigera-dev/tigera/calicoq'
+			sh 'docker tag tigera/calicoq:latest gcr.io/tigera-dev/cnx/tigera/calicoq:master'
+                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/calicoq:master'
 
 			// Clean up images.
 			// Hackey since empty displayed tags are not empty according to gcloud filter criteria
-			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/tigera/calicoq --format='get(digest)'); do
-				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/tigera/calicoq --filter=digest~${digest}) | awk '{print $6}'); then
-					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/tigera/calicoq@${digest}"
+			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/calicoq --format='get(digest)'); do
+				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/calicoq --filter=digest~${digest}) | awk '{print $6}'); then
+					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/calicoq@${digest}"
 				fi 
 			done'''
                     }
