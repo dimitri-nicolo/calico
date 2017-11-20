@@ -19,7 +19,7 @@ GO_BUILD_VER:=v0.9
 
 CALICOCTL_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOCTL_DIR=calicoctl
-CTL_CONTAINER_NAME?=calico/ctl
+CTL_CONTAINER_NAME?=tigera/calicoctl
 CALICOCTL_FILES=$(shell find $(CALICOCTL_DIR) -name '*.go')
 CTL_CONTAINER_CREATED=$(CALICOCTL_DIR)/.calico_ctl.created
 
