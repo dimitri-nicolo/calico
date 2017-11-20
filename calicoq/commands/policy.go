@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
@@ -34,13 +34,13 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 		name = parts[1]
 	}
 
-	npkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Namespace: ns, Kind: apiv2.KindNetworkPolicy}, "")
+	npkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Namespace: ns, Kind: apiv3.KindNetworkPolicy}, "")
 	if err != nil {
 		log.Fatal("Failed to get network policy")
 		os.Exit(1)
 	}
 
-	gnpkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Namespace: ns, Kind: apiv2.KindGlobalNetworkPolicy}, "")
+	gnpkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Namespace: ns, Kind: apiv3.KindGlobalNetworkPolicy}, "")
 	if err != nil {
 		log.Fatal("Failed to get global network policy")
 		os.Exit(1)
@@ -54,10 +54,10 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 		// TODO: Get rid of the conversion method when felix is updated to use the v2 data model
 		var policy *model.Policy
 		switch kv.Value.(type) {
-		case *apiv2.NetworkPolicy:
-			policy = convertPolicyV2ToV1Spec(kv.Value.(*apiv2.NetworkPolicy).Spec, ns)
-		case *apiv2.GlobalNetworkPolicy:
-			policy = convertPolicyV2ToV1Spec(kv.Value.(*apiv2.GlobalNetworkPolicy).Spec, ns)
+		case *apiv3.NetworkPolicy:
+			policy = convertNetworkPolicyV2ToV1Value(kv.Value.(*apiv3.NetworkPolicy).Spec, ns)
+		case *apiv3.GlobalNetworkPolicy:
+			policy = convertGlobalPolicyV2ToV1Spec(kv.Value.(*apiv3.GlobalNetworkPolicy).Spec)
 		}
 
 		cbs := NewEvalCmd(configFile)
@@ -116,16 +116,16 @@ func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv
 	sort.Strings(names)
 
 	// Display tier when non-default.
-	var spec apiv2.PolicySpec
+	var tier string
 	switch kv.Value.(type) {
-	case *apiv2.NetworkPolicy:
-		spec = kv.Value.(*apiv2.NetworkPolicy).Spec
-	case *apiv2.GlobalNetworkPolicy:
-		spec = kv.Value.(*apiv2.GlobalNetworkPolicy).Spec
+	case *apiv3.NetworkPolicy:
+		tier = kv.Value.(*apiv3.NetworkPolicy).Spec.Tier
+	case *apiv3.GlobalNetworkPolicy:
+		tier = kv.Value.(*apiv3.GlobalNetworkPolicy).Spec.Tier
 	}
 	tierPrefix := ""
-	if spec.Tier != "default" && spec.Tier != "" {
-		tierPrefix = "Tier \"" + spec.Tier + "\" "
+	if tier != "default" && tier != "" {
+		tierPrefix = "Tier \"" + tier + "\" "
 	}
 
 	output := OutputList{
@@ -167,16 +167,16 @@ func EvalPolicySelectorsPrint(policyName string, hideRuleMatches bool, kv *model
 	sort.Strings(names)
 
 	// Display tier when non-default.
-	var spec apiv2.PolicySpec
+	var tier string
 	switch kv.Value.(type) {
-	case *apiv2.NetworkPolicy:
-		spec = kv.Value.(*apiv2.NetworkPolicy).Spec
-	case *apiv2.GlobalNetworkPolicy:
-		spec = kv.Value.(*apiv2.GlobalNetworkPolicy).Spec
+	case *apiv3.NetworkPolicy:
+		tier = kv.Value.(*apiv3.NetworkPolicy).Spec.Tier
+	case *apiv3.GlobalNetworkPolicy:
+		tier = kv.Value.(*apiv3.GlobalNetworkPolicy).Spec.Tier
 	}
 	tierPrefix := ""
-	if spec.Tier != "default" && spec.Tier != "" {
-		tierPrefix = "Tier \"" + spec.Tier + "\" "
+	if tier != "default" && tier != "" {
+		tierPrefix = "Tier \"" + tier + "\" "
 	}
 
 	fmt.Printf("%vPolicy \"%v\" applies to these endpoints:\n", tierPrefix, policyName)
@@ -204,27 +204,32 @@ func EvalPolicySelectorsPrint(policyName string, hideRuleMatches bool, kv *model
 	}
 }
 
-// This is a slightly modified copy (it does not return an error) of
-// the conversion method in libcalico-go. Copying it here so that we
+// These are slightly modified copies (they do not return an error) of
+// the conversion methods in libcalico-go. Copying it here so that we
 // do not have more work later to keep libcalico-go-private in sync
 // with libcalico-go.
 // TODO: Delete this when the Felix syncer uses the v2 model and the
 // referencing logic is changed.
-func convertPolicyV2ToV1Spec(spec apiv2.PolicySpec, ns string) *model.Policy {
-	var irules []model.Rule
-	for _, irule := range spec.IngressRules {
-		irules = append(irules, updateprocessors.RuleAPIV2ToBackend(irule, ns))
+func convertGlobalPolicyV2ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) *model.Policy {
+	v1value := &model.Policy{
+		Order:          spec.Order,
+		InboundRules:   updateprocessors.RulesAPIV2ToBackend(spec.Ingress, ""),
+		OutboundRules:  updateprocessors.RulesAPIV2ToBackend(spec.Egress, ""),
+		Selector:       spec.Selector,
+		Types:          policyTypesAPIV2ToBackend(spec.Types),
+		DoNotTrack:     spec.DoNotTrack,
+		PreDNAT:        spec.PreDNAT,
+		ApplyOnForward: spec.ApplyOnForward,
 	}
 
-	var erules []model.Rule
-	for _, erule := range spec.EgressRules {
-		erules = append(erules, updateprocessors.RuleAPIV2ToBackend(erule, ns))
-	}
+	return v1value
+}
 
+func convertNetworkPolicyV2ToV1Value(spec apiv3.NetworkPolicySpec, ns string) *model.Policy {
 	// If this policy is namespaced, then add a namespace selector.
 	selector := spec.Selector
 	if ns != "" {
-		nsSelector := fmt.Sprintf("%s == '%s'", apiv2.LabelNamespace, ns)
+		nsSelector := fmt.Sprintf("%s == '%s'", apiv3.LabelNamespace, ns)
 		if selector == "" {
 			selector = nsSelector
 		} else {
@@ -234,13 +239,11 @@ func convertPolicyV2ToV1Spec(spec apiv2.PolicySpec, ns string) *model.Policy {
 
 	v1value := &model.Policy{
 		Order:          spec.Order,
-		InboundRules:   irules,
-		OutboundRules:  erules,
+		InboundRules:   updateprocessors.RulesAPIV2ToBackend(spec.Ingress, ns),
+		OutboundRules:  updateprocessors.RulesAPIV2ToBackend(spec.Egress, ns),
 		Selector:       selector,
-		DoNotTrack:     spec.DoNotTrack,
-		PreDNAT:        spec.PreDNAT,
-		ApplyOnForward: spec.ApplyOnForward,
 		Types:          policyTypesAPIV2ToBackend(spec.Types),
+		ApplyOnForward: true,
 	}
 
 	return v1value
@@ -249,7 +252,7 @@ func convertPolicyV2ToV1Spec(spec apiv2.PolicySpec, ns string) *model.Policy {
 // Copy of the function in libcalico-go.
 // TODO: Remove this when the Felix syncer uses the v2 model and the
 // referencing logic is changed
-func policyTypesAPIV2ToBackend(ptypes []apiv2.PolicyType) []string {
+func policyTypesAPIV2ToBackend(ptypes []apiv3.PolicyType) []string {
 	var v1ptypes []string
 	for _, ptype := range ptypes {
 		v1ptypes = append(v1ptypes, strings.ToLower(string(ptype)))

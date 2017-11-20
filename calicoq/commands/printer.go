@@ -202,9 +202,10 @@ func removeTierFromPolicyName(prefixed string) string {
 		return prefixed
 	}
 	// TODO: remove the if else statements once libcalico-go is updated to prevent knp.<tier>.<name> from happening
+	// TODO: Should we show "knp." in the policy name?
 	var nParts []string
 	if strings.HasPrefix(nsParts[1], "knp.") {
-		nParts = strings.SplitN(nsParts[1], ".", 3)
+		nParts = []string{nsParts[1]}
 	} else {
 		nParts = strings.SplitN(nsParts[1], ".", 2)
 	}

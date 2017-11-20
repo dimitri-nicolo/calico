@@ -5,10 +5,11 @@ import:
 - package: github.com/projectcalico/felix
   vcs: git
   repo: git@github.com:tigera/felix-private.git
+  version: mattl-versioning
 - package: github.com/projectcalico/libcalico-go
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: v2.0.0-cnx-alpha1
+  version: v2.0.0-cnx-beta1-rc1
 - package: github.com/projectcalico/go-yaml-wrapper
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
