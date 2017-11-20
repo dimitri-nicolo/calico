@@ -5,7 +5,7 @@ all: test
 test: ut
 
 BUILD_VER?=latest
-BUILD_IMAGE:=calico/calicoq
+BUILD_IMAGE:=tigera/calicoq
 PACKAGE_NAME?=github.com/tigera/calicoq
 LOCAL_USER_ID?=$(shell id -u $$USER)
 BINARY:=bin/calicoq
