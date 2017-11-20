@@ -1,5 +1,5 @@
-hash: 0360f5f599336510accc9e3f8ea1c49ddc4bdc29f05058b24365eba0981575ab
-updated: 2017-11-09T15:24:59.106073736-08:00
+hash: 4f50cb9fffbcc43bba86a18fe0f2d7068030681eb1800df757f0c98dd5a790a7
+updated: 2017-11-20T16:26:10.26744376Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -18,7 +18,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
-  version: f1d7dd87da3e8feab4aaf675b8e29c6a5ed5f58b
+  version: bb66589f8cf18960c7f3d56b1b83753caeed9c7a
   subpackages:
   - auth/authpb
   - client
@@ -42,12 +42,10 @@ imports:
   - log
 - name: github.com/emicklei/go-restful-swagger12
   version: dcef7f55730566d41eae5db10e7d6981829720f6
-- name: github.com/gavv/monotime
-  version: 6f8212e8d10df7383609d3c377ca08884d8f3ec0
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: f280b3ba517bf5fc98922624f21fb0e7a92adaec
+  version: 32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -157,7 +155,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: b278e2c8d30805c582275529ad13d54e8a65c71d
+  version: eb99bf7ad85e204702efd24d6c0e248c2409d11e
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -177,14 +175,14 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e2cd859246511b4b97271eeab86d25307c5c5376
+  version: 4df325251b9db55c9f6380f27d0c1d350f525440
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
   - lib/apis/v1/unversioned
-  - lib/apis/v2
+  - lib/apis/v3
   - lib/backend
   - lib/backend/api
   - lib/backend/etcdv3
@@ -208,7 +206,7 @@ imports:
   - lib/selector/parser
   - lib/selector/tokenizer
   - lib/set
-  - lib/validator
+  - lib/validator/v1
 - name: github.com/prometheus/client_golang
   version: 967789050ba94deca04a5e84cce8ad472ce313c1
   subpackages:
@@ -232,7 +230,7 @@ imports:
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
 - name: github.com/sirupsen/logrus
-  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: golang.org/x/crypto
