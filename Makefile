@@ -184,10 +184,10 @@ endif
 	@echo "\nAdd release notes for calicoq. Use this command"
 	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
 	@echo "git push origin $(VERSION)"
-	@echo "gcloud docker -- push gcr.io/tigera-dev/$(BUILD_IMAGE):$(VERSION)"
+	@echo "gcloud docker -- push gcr.io/tigera-dev/cnx/$(BUILD_IMAGE):$(VERSION)"
 	@echo "\nIf this release version is the newest stable release, also push the"
 	@echo "image with the 'latest' tag"
-	@echo "gcloud docker -- push gcr.io/tigera-dev/$(BUILD_IMAGE):latest"
+	@echo "gcloud docker -- push gcr.io/tigera-dev/cnx/$(BUILD_IMAGE):latest"
 
 .PHONY: compress-release
 compressed-release: release/calicoq
