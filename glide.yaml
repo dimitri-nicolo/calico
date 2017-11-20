@@ -6,7 +6,7 @@ owners:
   email: rob@tigera.io
 import:
 - package: github.com/coreos/etcd
-  version: 3.2.7
+  version: v3.2.7
   subpackages:
   - client
   - pkg/transport
@@ -27,7 +27,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: v2.0.0-cnx-beta1-rc1
+  version: v2.0.0-cnx-beta1-rc2
   subpackages:
   - lib
 - package: github.com/tigera/nfnetlink
@@ -47,7 +47,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 4a0487b216a20634a68545c4659090769e43319d
+  version: v2.0.0-cnx-beta1-rc2
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
