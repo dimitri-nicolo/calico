@@ -22,7 +22,7 @@ the {{site.prodname}} release are:
 For guides on how to set up {{site.prodname}} and a demo of some its basic function, see the following links:
 
 
-* [Obtaining {{site.prodname}}](../getting-started/essentials/)
+* [Obtaining {{site.prodname}}](../getting-started/)
 * [Quickstart for {{site.prodname}} on Kubernetes](../getting-started/kubernetes/)
 * [Installing {{site.prodname}} for Kubernetes (etcd)](../getting-started/kubernetes/installation/hosted/essentials/etcd)
 * [Installing {{site.prodname}} for Kubernetes (kdd)](../getting-started/kubernetes/installation/hosted/essentials/kdd)
