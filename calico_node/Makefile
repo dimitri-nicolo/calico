@@ -92,13 +92,13 @@ NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
 NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
 FELIX_REPO?=calico/felix
 FELIX_CONTAINER_NAME?=$(FELIX_REPO):$(FELIX_VER)
-FELIX_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/felix-essentials
+FELIX_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/felix
 CONFD_REPO?=calico/confd
 CONFD_CONTAINER_NAME?=$(CONFD_REPO):$(CONFD_VER)
 LIBNETWORK_PLUGIN_REPO?=calico/libnetwork-plugin
 LIBNETWORK_PLUGIN_CONTAINER_NAME?=$(LIBNETWORK_PLUGIN_REPO):$(LIBNETWORK_PLUGIN_VER)
 CTL_CONTAINER_NAME?=calico/ctl:$(CALICOCTL_VER)
-CTL_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/ctl-essentials
+CTL_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/calicoctl
 CALICOQ_CONTAINER_NAME?=calico/calicoq:$(CALICOQ_VER)
 CALICOQ_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/calicoq
 APISERVER_CONTAINER_NAME?=calico/k8sapiserver:$(APISERVER_VER)
@@ -230,7 +230,7 @@ $(NODE_CONTAINER_CREATED): $(NODE_CONTAINER_DIR)/Dockerfile $(NODE_CONTAINER_FIL
 	$(NODE_CONTAINER_BIN_DIR)/calico-bgp-daemon -v
 	$(NODE_CONTAINER_BIN_DIR)/confd --version
 	$(NODE_CONTAINER_BIN_DIR)/libnetwork-plugin -v
-	docker build --pull -t $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_DIR)
+	docker build -t $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_DIR)
 	touch $@
 
 # Get felix binaries
