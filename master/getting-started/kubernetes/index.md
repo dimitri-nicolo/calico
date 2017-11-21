@@ -36,10 +36,18 @@ the host. Instead, continue directly to the
 1. As a regular user with sudo privileges, open a terminal on the host that 
    you installed kubeadm on. 
 
-1. Download the {{site.prodname}} docker images onto that system.  Follow the instructions
-   [here]({{site.baseurl}}/{{page.version}}/getting-started/essentials), but you can
-   skip the steps related to uploading to a registry, since the images will only be
-   needed locally.
+1. Download the {{site.prodname}} images and add them to Docker.  Obtain the
+   archives containing the images from your support representative, and then
+   run the following commands to load them.
+
+   ```
+   docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"]}}.tar.xz
+   docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"]}}.tar.xz
+   docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"]}}.xz
+   docker load -i tigera_calicoctl_{{site.data.versions[page.version].first.components["calicoctl"]}}.xz
+   docker load -i tigera_calicoq_{{site.data.versions[page.version].first.components["calicoq"]}}.xz
+   
+   ```
 
 1. Update your package definitions and upgrade your existing packages.
 
@@ -47,14 +55,14 @@ the host. Instead, continue directly to the
    sudo apt-get update && sudo apt-get upgrade
    ```
    
-1. [Create a Google project to use to login to {{site.prodname}} Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
+1. [Create a Google project to use to login to CNX Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
    Set the redirect URIs to `http://127.0.0.1:30003` and `https://127.0.0.1:30003`.
    
 1. Copy the OAuth client ID value.
 
 1. Download the [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/kubeadm.yaml) file.
 
-1. Open the kubeadm.yaml file in your favorite editor, replace `<fill in client id here>` 
+1. Open the kubeadm.yaml file in your favorite editor, replace `<fill-in-your-oauth-client-id-here>` 
    with the OAuth client ID value, then save and close the file.
 
 1. Initialize the master using the following command.
@@ -71,31 +79,20 @@ the host. Instead, continue directly to the
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
-   
-1. [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/calico-cnx.yaml).
 
-1. Open calico-cnx.yaml file in your favorite editor.
-
-1. Replace `<your-oauth-client-id>` with your OAuth client ID.
-
-1. Replace `<your-cnx-mgr-image-name>` with the name of the CNX Manager image.
-
-1. Replace `<your-calico-node-image-name>` with the name of the calico/node image.
-
-1. Replace `<your-k8sapiserver-image-name>` with the name of the Kubernetes extension API server image.
-
-1. Save and close the file.
-   
-1. Issue the following command to install {{site.prodname}} and a single-node etcd.
+1. Install Calico with CNX enhancements for tiered policy and denied packet reporting,
+   and a single node etcd by downloading [the manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml), editing and
+   applying it.  Since you've already added the Docker images locally, you need to remove
+   the registry prefix.
 
    ```
-   kubectl apply -f calico-cnx.yaml
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico.yaml
+   kubectl apply -f calico.yaml
    ```
-
+   
    You should see the following output.
 
    ```
-   configmap "tigera-cnx-manager-web-config" created
    configmap "calico-config" created
    daemonset "calico-etcd" created
    service "calico-etcd" created
@@ -108,15 +105,30 @@ the host. Instead, continue directly to the
    clusterrolebinding "calico-kube-controllers" created
    clusterrole "calico-kube-controllers" created
    serviceaccount "calico-kube-controllers" created
-   namespace "calico" created
-   apiservice "v2.projectcalico.org" created
+   ```
+
+1. Install CNX Manager and the CNX API server.
+   [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml).
+   Update the image paths using the `sed` command below and fill in the OAuth client ID by hand.
+
+   ```
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico-cnx.yaml
+   # Replace <fill-in-your-oauth-client-id-here> with your OAuth client ID.
+   kubectl apply -f calico-cnx.yaml
+   ```
+ 
+   You should see the following output.
+
+   ```
+   configmap "tigera-cnx-manager-config" created
+   apiservice "v3.projectcalico.org" created
    clusterrolebinding "calico:system:auth-delegator" created
    rolebinding "calico-auth-reader" created
-   replicationcontroller "calico-server" created
-   serviceaccount "apiserver" created
+   replicationcontroller "cnx-apiserver" created
+   serviceaccount "cnx-apiserver" created
    service "api" created
-   deployment "tigera-cnx-manager-web" created
-   service "tigera-cnx-manager-web" created
+   deployment "tigera-cnx-manager" created
+   service "tigera-cnx-manager" created
    ```
    
 1. Remove the taints on the master so that pods can be scheduled on it.
