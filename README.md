@@ -81,7 +81,7 @@ proportionately.
             operator: Exists
           hostNetwork: true
           containers:
-          - image: calico/typha:v0.2.2
+          - image: tigera/typha:v0.2.2
             name: calico-typha
             ports:
             - containerPort: 5473
@@ -177,9 +177,9 @@ Then, to build the calico-typha binary:
 ```
 make bin/calico-typha
 ```
-or, the `calico/typha` docker image:
+or, the `tigera/typha` docker image:
 ```
-make calico/typha
+make tigera/typha
 ```
 
 ## How can I run Typha's unit tests?
@@ -229,5 +229,5 @@ Ginkgo will re-run tests as files are modified and saved.
 
 After building the docker image (see above), you can run Typha and log to screen 
 with, for example:
-`docker run --privileged --net=host -e TYPHA_LOGSEVERITYSCREEN=INFO calico/typha`
+`docker run --privileged --net=host -e TYPHA_LOGSEVERITYSCREEN=INFO tigera/typha`
 

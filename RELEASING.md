@@ -7,9 +7,9 @@ through creating and distributing the following artifacts:
   push to Github.
 - File `bin/calico-typha`; the static binary relase, which we attach to 
   the GitHub release.
-- Docker container images: `calico/typha:$VERSION` and
-  `quay.io/calico/typha:$VERSION` containing the Typha binaries.  These
-  are ready to push to Dockerhub and Quay.
+- Docker container images: `tigera/typha:$VERSION` and
+  `gcr.io/cnx/tigera/typha:$VERSION` containing the Typha binaries.  These
+  are ready to push to GCR.
 
 # Typha release process
 
