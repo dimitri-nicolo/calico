@@ -7,7 +7,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,9 +36,9 @@ func LoadClientConfig(filename string) (*CalicoAPIConfig, error) {
 func LoadClientConfigFromBytes(b []byte) (*CalicoAPIConfig, error) {
 	var c CalicoAPIConfig
 
-	// Default the backend type to be etcd v2.  This will be overridden if
+	// Default the backend type to be etcd v3.  This will be overridden if
 	// explicitly specified in the file.
-	log.Info("Loading config from JSON or YAML data")
+	log.Debug("Loading config from JSON or YAML data")
 	c = CalicoAPIConfig{
 		Spec: CalicoAPIConfigSpec{
 			DatastoreType: EtcdV3,
@@ -50,14 +50,14 @@ func LoadClientConfigFromBytes(b []byte) (*CalicoAPIConfig, error) {
 	}
 
 	// Validate the version and kind.
-	if c.APIVersion != apiv2.GroupVersionCurrent {
+	if c.APIVersion != apiv3.GroupVersionCurrent {
 		return nil, errors.New("invalid config file: unknown APIVersion '" + c.APIVersion + "'")
 	}
 	if c.Kind != KindCalicoAPIConfig {
 		return nil, errors.New("invalid config file: expected kind '" + KindCalicoAPIConfig + "', got '" + c.Kind + "'")
 	}
 
-	log.Info("Datastore type: ", c.Spec.DatastoreType)
+	log.Debug("Datastore type: ", c.Spec.DatastoreType)
 	return &c, nil
 }
 
@@ -67,7 +67,7 @@ func LoadClientConfigFromEnvironment() (*CalicoAPIConfig, error) {
 	c := NewCalicoAPIConfig()
 
 	// Load client config from environment variables.
-	log.Info("Loading config from environment")
+	log.Debug("Loading config from environment")
 	if err := envconfig.Process("calico", &c.Spec); err != nil {
 		return nil, err
 	}

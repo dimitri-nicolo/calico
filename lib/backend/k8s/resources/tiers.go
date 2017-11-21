@@ -17,7 +17,7 @@ package resources
 import (
 	"reflect"
 
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -36,12 +36,12 @@ func NewTierClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClien
 		name:            TierCRDName,
 		resource:        TierResourceName,
 		description:     "Calico Tiers",
-		k8sResourceType: reflect.TypeOf(apiv2.Tier{}),
+		k8sResourceType: reflect.TypeOf(apiv3.Tier{}),
 		k8sResourceTypeMeta: metav1.TypeMeta{
-			Kind:       apiv2.KindTier,
-			APIVersion: apiv2.GroupVersionCurrent,
+			Kind:       apiv3.KindTier,
+			APIVersion: apiv3.GroupVersionCurrent,
 		},
-		k8sListType:  reflect.TypeOf(apiv2.TierList{}),
-		resourceKind: apiv2.KindTier,
+		k8sListType:  reflect.TypeOf(apiv3.TierList{}),
+		resourceKind: apiv3.KindTier,
 	}
 }

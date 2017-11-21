@@ -22,11 +22,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/projectcalico/libcalico-go/lib/clientv2"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/ipip"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
@@ -40,9 +40,9 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 
 	Describe("Felix syncer functionality", func() {
 		It("should receive the synced after return all current data", func() {
-			// Create a v2 client to drive data changes (luckily because this is the _test module,
+			// Create a v3 client to drive data changes (luckily because this is the _test module,
 			// we don't get circular imports.
-			c, err := clientv2.New(config)
+			c, err := clientv3.New(config)
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create the backend client to obtain a syncer interface.
@@ -105,26 +105,27 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			}
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
-			var node *apiv2.Node
+			var node *apiv3.Node
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// For Kubernetes, update the existing node config to have some BGP configuration.
 				By("Configuring a node with an IP address")
 				node, err = c.Nodes().Get(ctx, "127.0.0.1", options.GetOptions{})
 				Expect(err).NotTo(HaveOccurred())
-				node.Spec.BGP = &apiv2.NodeBGPSpec{
+				node.Spec.BGP = &apiv3.NodeBGPSpec{
 					IPv4Address: "1.2.3.4/24",
 					IPv6Address: "aa:bb::cc/120",
 				}
 				node, err = c.Nodes().Update(ctx, node, options.SetOptions{})
+				Expect(err).NotTo(HaveOccurred())
 			} else {
 				// For non-Kubernetes, add a new node with valid BGP configuration.
 				By("Creating a node with an IP address")
 				node, err = c.Nodes().Create(
 					ctx,
-					&apiv2.Node{
+					&apiv3.Node{
 						ObjectMeta: metav1.ObjectMeta{Name: "127.0.0.1"},
-						Spec: apiv2.NodeSpec{
-							BGP: &apiv2.NodeBGPSpec{
+						Spec: apiv3.NodeSpec{
+							BGP: &apiv3.NodeBGPSpec{
 								IPv4Address:        "1.2.3.4/24",
 								IPv6Address:        "aa:bb::cc/120",
 								IPv4IPIPTunnelAddr: "10.10.10.1",
@@ -134,12 +135,22 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					options.SetOptions{},
 				)
 				Expect(err).NotTo(HaveOccurred())
+
+				// Creating the node initialises the ClusterInformation as a side effect.
+				syncTester.ExpectData(model.KVPair{
+					Key:   model.ReadyFlagKey{},
+					Value: true,
+				})
+				syncTester.ExpectValueMatches(
+					model.GlobalConfigKey{Name: "ClusterGUID"},
+					MatchRegexp("[a-f0-9]{32}"),
+				)
+				expectedCacheSize += 2
 			}
 
 			// The HostIP will be added for the IPv4 address
 			expectedCacheSize += 2
 			ip := net.MustParseIP("1.2.3.4")
-			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectData(model.KVPair{
 				Key:   model.HostIPKey{Hostname: "127.0.0.1"},
 				Value: &ip,
@@ -148,17 +159,18 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
 				Value: "10.10.10.1",
 			})
+			syncTester.ExpectCacheSize(expectedCacheSize)
 
 			By("Creating an IPPool")
 			poolCIDR := "192.124.0.0/21"
 			poolCIDRNet := net.MustParseCIDR(poolCIDR)
 			pool, err := c.IPPools().Create(
 				ctx,
-				&apiv2.IPPool{
+				&apiv3.IPPool{
 					ObjectMeta: metav1.ObjectMeta{Name: "mypool"},
-					Spec: apiv2.IPPoolSpec{
+					Spec: apiv3.IPPoolSpec{
 						CIDR:        poolCIDR,
-						IPIPMode:    apiv2.IPIPModeCrossSubnet,
+						IPIPMode:    apiv3.IPIPModeCrossSubnet,
 						NATOutgoing: true,
 					},
 				},
@@ -190,27 +202,27 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				By("Creating a HostEndpoint")
 				hep, err := c.HostEndpoints().Create(
 					ctx,
-					&apiv2.HostEndpoint{
+					&apiv3.HostEndpoint{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "hosta.eth0-a",
 							Labels: map[string]string{
 								"label1": "value1",
 							},
 						},
-						Spec: apiv2.HostEndpointSpec{
+						Spec: apiv3.HostEndpointSpec{
 							Node:          "127.0.0.1",
 							InterfaceName: "eth0",
 							ExpectedIPs:   []string{"1.2.3.4", "aa:bb::cc:dd"},
 							Profiles:      []string{"profile1", "profile2"},
-							Ports: []apiv2.EndpointPort{
+							Ports: []apiv3.EndpointPort{
 								{
 									Name:     "port1",
-									Protocol: numorstring.ProtocolFromString("tcp"),
+									Protocol: numorstring.ProtocolFromString("TCP"),
 									Port:     1234,
 								},
 								{
 									Name:     "port2",
-									Protocol: numorstring.ProtocolFromString("udp"),
+									Protocol: numorstring.ProtocolFromString("UDP"),
 									Port:     1010,
 								},
 							},
@@ -236,12 +248,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						Ports: []model.EndpointPort{
 							{
 								Name:     "port1",
-								Protocol: numorstring.ProtocolFromString("tcp"),
+								Protocol: numorstring.ProtocolFromStringV1("TCP"),
 								Port:     1234,
 							},
 							{
 								Name:     "port2",
-								Protocol: numorstring.ProtocolFromString("udp"),
+								Protocol: numorstring.ProtocolFromStringV1("UDP"),
 								Port:     1010,
 							},
 						},
@@ -255,9 +267,9 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			order := float64(100.00)
 			tier, err := c.Tiers().Create(
 				ctx,
-				&apiv2.Tier{
+				&apiv3.Tier{
 					ObjectMeta: metav1.ObjectMeta{Name: tierName},
-					Spec: apiv2.TierSpec{
+					Spec: apiv3.TierSpec{
 						Order: &order,
 					},
 				},

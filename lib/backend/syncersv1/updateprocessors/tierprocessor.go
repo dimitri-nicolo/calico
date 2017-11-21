@@ -5,7 +5,7 @@ package updateprocessors
 import (
 	"errors"
 
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 )
@@ -13,7 +13,7 @@ import (
 // Create a new SyncerUpdateProcessor to sync Tiers data in v1 format for
 // consumption by Felix.
 func NewTierUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
-	return NewSimpleUpdateProcessor(apiv2.KindTier, convertTierV2ToV1Key, convertTierV2ToV1Value)
+	return NewSimpleUpdateProcessor(apiv3.KindTier, convertTierV2ToV1Key, convertTierV2ToV1Value)
 }
 
 func convertTierV2ToV1Key(v2key model.ResourceKey) (model.Key, error) {
@@ -27,7 +27,7 @@ func convertTierV2ToV1Key(v2key model.ResourceKey) (model.Key, error) {
 }
 
 func convertTierV2ToV1Value(val interface{}) (interface{}, error) {
-	v2res, ok := val.(*apiv2.Tier)
+	v2res, ok := val.(*apiv3.Tier)
 	if !ok {
 		return nil, errors.New("Value is not a valid Tier resource value")
 	}

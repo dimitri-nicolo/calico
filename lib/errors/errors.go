@@ -43,10 +43,15 @@ func (e ErrorResourceDoesNotExist) Error() string {
 type ErrorOperationNotSupported struct {
 	Operation  string
 	Identifier interface{}
+	Reason     string
 }
 
 func (e ErrorOperationNotSupported) Error() string {
-	return fmt.Sprintf("operation %s is not supported on %s", e.Operation, e.Identifier)
+	if e.Reason == "" {
+		return fmt.Sprintf("operation %s is not supported on %s", e.Operation, e.Identifier)
+	} else {
+		return fmt.Sprintf("operation %s is not supported on %s: %s", e.Operation, e.Identifier, e.Reason)
+	}
 }
 
 // Error indicating a resource already exists.  Used when attempting to create a
@@ -157,11 +162,12 @@ func UpdateErrorIdentifier(err error, id interface{}) error {
 
 // Error indicating the watcher has been terminated.
 type ErrorWatchTerminated struct {
-	Err error
+	Err            error
+	ClosedByRemote bool
 }
 
 func (e ErrorWatchTerminated) Error() string {
-	return fmt.Sprintf("watch terminated: %s", e.Err)
+	return fmt.Sprintf("watch terminated (closedByRemote:%v): %s", e.ClosedByRemote, e.Err)
 }
 
 // Error indicating the datastore has failed to parse an entry.

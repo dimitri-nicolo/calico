@@ -17,13 +17,12 @@ package apiconfig
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 )
 
 type DatastoreType string
 
 const (
-	EtcdV2              DatastoreType = "etcdv2"
 	EtcdV3              DatastoreType = "etcdv3"
 	Kubernetes          DatastoreType = "kubernetes"
 	KindCalicoAPIConfig               = "CalicoAPIConfig"
@@ -48,8 +47,6 @@ type CalicoAPIConfigSpec struct {
 }
 
 type EtcdConfig struct {
-	EtcdScheme     string `json:"etcdScheme" envconfig:"ETCD_SCHEME" default:"http"`
-	EtcdAuthority  string `json:"etcdAuthority" envconfig:"ETCD_AUTHORITY" default:"127.0.0.1:2379"`
 	EtcdEndpoints  string `json:"etcdEndpoints" envconfig:"ETCD_ENDPOINTS"`
 	EtcdUsername   string `json:"etcdUsername" envconfig:"ETCD_USERNAME"`
 	EtcdPassword   string `json:"etcdPassword" envconfig:"ETCD_PASSWORD"`
@@ -75,7 +72,7 @@ func NewCalicoAPIConfig() *CalicoAPIConfig {
 	return &CalicoAPIConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       KindCalicoAPIConfig,
-			APIVersion: apiv2.GroupVersionCurrent,
+			APIVersion: apiv3.GroupVersionCurrent,
 		},
 	}
 }

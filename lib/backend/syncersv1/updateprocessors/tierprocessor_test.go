@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	apiv2 "github.com/projectcalico/libcalico-go/lib/apis/v2"
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
@@ -16,12 +16,12 @@ var _ = Describe("Test the Tier update processor", func() {
 	name1 := "tier1"
 	name2 := "tier2"
 
-	v2TierKey1 := model.ResourceKey{
-		Kind: apiv2.KindTier,
+	v3TierKey1 := model.ResourceKey{
+		Kind: apiv3.KindTier,
 		Name: name1,
 	}
-	v2TierKey2 := model.ResourceKey{
-		Kind: apiv2.KindTier,
+	v3TierKey2 := model.ResourceKey{
+		Kind: apiv3.KindTier,
 		Name: name2,
 	}
 	v1TierKey1 := model.TierKey{
@@ -35,10 +35,10 @@ var _ = Describe("Test the Tier update processor", func() {
 		up := updateprocessors.NewTierUpdateProcessor()
 
 		By("converting a Tier with minimum configuration")
-		res := apiv2.NewTier()
+		res := apiv3.NewTier()
 
 		kvps, err := up.Process(&model.KVPair{
-			Key:      v2TierKey1,
+			Key:      v3TierKey1,
 			Value:    res,
 			Revision: "abcde",
 		})
@@ -51,13 +51,13 @@ var _ = Describe("Test the Tier update processor", func() {
 		}))
 
 		By("adding another Tier with a full configuration")
-		res = apiv2.NewTier()
+		res = apiv3.NewTier()
 
 		order := float64(101)
 
 		res.Spec.Order = &order
 		kvps, err = up.Process(&model.KVPair{
-			Key:      v2TierKey2,
+			Key:      v3TierKey2,
 			Value:    res,
 			Revision: "1234",
 		})
@@ -75,7 +75,7 @@ var _ = Describe("Test the Tier update processor", func() {
 
 		By("deleting the first tier")
 		kvps, err = up.Process(&model.KVPair{
-			Key:   v2TierKey1,
+			Key:   v3TierKey1,
 			Value: nil,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -91,7 +91,7 @@ var _ = Describe("Test the Tier update processor", func() {
 		up := updateprocessors.NewTierUpdateProcessor()
 
 		By("trying to convert with the wrong key type")
-		res := apiv2.NewTier()
+		res := apiv3.NewTier()
 
 		_, err := up.Process(&model.KVPair{
 			Key: model.GlobalBGPPeerKey{
@@ -103,10 +103,10 @@ var _ = Describe("Test the Tier update processor", func() {
 		Expect(err).To(HaveOccurred())
 
 		By("trying to convert with the wrong value type")
-		wres := apiv2.NewHostEndpoint()
+		wres := apiv3.NewHostEndpoint()
 
 		kvps, err := up.Process(&model.KVPair{
-			Key:      v2TierKey1,
+			Key:      v3TierKey1,
 			Value:    wres,
 			Revision: "abcde",
 		})
@@ -119,13 +119,13 @@ var _ = Describe("Test the Tier update processor", func() {
 		}))
 
 		By("trying to convert without enough information to create a v1 key")
-		eres := apiv2.NewTier()
-		v2TierKeyEmpty := model.ResourceKey{
-			Kind: apiv2.KindTier,
+		eres := apiv3.NewTier()
+		v3TierKeyEmpty := model.ResourceKey{
+			Kind: apiv3.KindTier,
 		}
 
 		_, err = up.Process(&model.KVPair{
-			Key:      v2TierKeyEmpty,
+			Key:      v3TierKeyEmpty,
 			Value:    eres,
 			Revision: "abcde",
 		})
