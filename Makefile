@@ -21,8 +21,8 @@ help:
 	@echo "Calico K8sapiserver Makefile"
 	@echo "Builds:"
 	@echo
-	@echo "  make all                  Build all the binary packages."
-	@echo "  make calico/k8sapiserver  Build calico/k8sapiserver docker image."
+	@echo "  make all                   Build all the binary packages."
+	@echo "  make tigera/cnx-apiserver  Build tigera/cnx-apiserver docker image."
 	@echo
 	@echo "Tests:"
 	@echo
@@ -39,7 +39,7 @@ help:
 # considerably.
 .SUFFIXES:
 
-all: calico/k8sapiserver
+all: tigera/cnx-apiserver
 test: ut fv fv-kdd
 
 # Some env vars that devs might find useful:
@@ -213,14 +213,14 @@ endif
                ( ldd $(BINDIR)/calico-k8sapiserver 2>&1 | grep -q "Not a valid dynamic program" || \
 	             ( echo "Error: $(BINDIR)/calico-k8sapiserver was not statically linked"; false ) )'
 
-# Build the calico/k8sapiserver docker image.
-.PHONY: calico/k8sapiserver
-calico/k8sapiserver: vendor/.up-to-date .generate_files \
+# Build the tigera/cnx-apiserver docker image.
+.PHONY: tigera/cnx-apiserver
+tigera/cnx-apiserver: vendor/.up-to-date .generate_files \
     $(BINDIR)/calico-k8sapiserver
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-k8sapiserver docker-image/bin/
-	docker build --pull -t calico/k8sapiserver$(ARCHTAG) --file ./docker-image/Dockerfile$(ARCHTAG) docker-image
+	docker build --pull -t tigera/cnx-apiserver$(ARCHTAG) --file ./docker-image/Dockerfile$(ARCHTAG) docker-image
 
 .PHONY: ut
 ut: run-etcd
@@ -323,7 +323,7 @@ fv-kdd: run-kubernetes-master
 .PHONY: clean
 clean: clean-bin clean-build-image clean-generated
 clean-build-image:
-	docker rmi -f calico/k8sapiserver > /dev/null 2>&1 || true
+	docker rmi -f tigera/cnx-apiserver > /dev/null 2>&1 || true
 
 clean-generated:
 	rm -f .generate_files
@@ -348,30 +348,30 @@ endif
 	then echo current git working tree is "dirty". Make sure you do not have any uncommitted changes ;false; fi
 
 	# Build the apiserver binaries and image
-	$(MAKE) calico/k8sapiserver
+	$(MAKE) tigera/cnx-apiserver
 
 	# Check that the version output includes the version specified.
 	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
 	# Release is currently supported on darwin / linux only.
-	if ! docker run calico/k8sapiserver | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run calico/k8sapiserver` "\nExpected version: $(VERSION)"; \
+	if ! docker run tigera/cnx-apiserver | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run tigera/cnx-apiserver` "\nExpected version: $(VERSION)"; \
 	  false; \
 	else \
 	  echo "Version check passed\n"; \
 	fi
 
 	# Retag images with correct version and GCR private registry
-	docker tag calico/k8sapiserver gcr.io/tigera-dev/calico/k8sapiserver:$(VERSION)
+	docker tag tigera/cnx-apiserver gcr.io/tigera-dev/cnx/tigera/cnx-apiserver:$(VERSION)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" calico/k8sapiserver
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/calico/k8sapiserver:$(VERSION)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" tigera/cnx-apiserver
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/cnx/tigera/cnx-apiserver:$(VERSION)
 
 	@echo "\nNow push the tag and images. Then create a release on Github and"
 	@echo "\nAdd release notes for calico-k8sapiserver. Use this command"
 	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
 	@echo "git push origin $(VERSION)"
-	@echo "gcloud docker -- push gcr.io/tigera-dev/calico/k8sapiserver:$(VERSION)"
+	@echo "gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/cnx-apiserver:$(VERSION)"
 
 .PHONY: kubeadm
 kubeadm:

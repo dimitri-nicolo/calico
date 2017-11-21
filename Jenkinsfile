@@ -34,6 +34,26 @@ pipeline {
                 sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make test'
             }
         }
+        stage('Push image to GCR') {
+            steps {
+                script{
+                    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
+                    // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
+                    if (env.BRANCH_NAME == 'master') {
+                        sh 'docker tag tigera/cnx-apiserver:latest gcr.io/tigera-dev/cnx/tigera/cnx-apiserver:master'
+                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/cnx-apiserver:master'
+
+                        // Clean up images.
+                        // Hackey since empty displayed tags are not empty according to gcloud filter criteria
+                        sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-apiserver --format='get(digest)'); do
+                                if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-apiserver --filter=digest~${digest}) | awk '{print $6}'); then
+                                    gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/cnx-apiserver@${digest}"
+                                fi
+                        done'''
+                    }
+                }
+            }
+        }
     }
     post {
         success {
