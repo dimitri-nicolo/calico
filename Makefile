@@ -36,7 +36,7 @@
 #            |  RPM packages for Centos7  |           |
 #            |  RPM packages for Centos6  |           v
 #            | Debian packages for Xenial |    +--------------+
-#            | Debian packages for Trusty |    | calico/felix |
+#            | Debian packages for Trusty |    | tigera/felix |
 #            +----------------------------+    +--------------+
 #
 #
@@ -81,7 +81,7 @@ help:
 	@echo "  make all           Build all the binary packages."
 	@echo "  make deb           Build debs in ./dist."
 	@echo "  make rpm           Build rpms in ./dist."
-	@echo "  make calico/felix  Build calico/felix docker image."
+	@echo "  make tigera/felix  Build tigera/felix docker image."
 	@echo
 	@echo "Tests:"
 	@echo
@@ -102,7 +102,7 @@ TOPDIR:=$(shell pwd)
 # considerably.
 .SUFFIXES:
 
-all: deb rpm calico/felix
+all: deb rpm tigera/felix
 test: ut fv
 
 # Figure out version information.  To support builds from release tarballs, we default to
@@ -173,13 +173,13 @@ calico-build/centos6:
 	  -f centos6-build.Dockerfile$(ARCHTAG) \
 	  -t calico-build/centos6 .
 
-# Build the calico/felix docker image, which contains only Felix.
-.PHONY: calico/felix
-calico/felix: bin/calico-felix
+# Build the tigera/felix docker image, which contains only Felix.
+.PHONY: tigera/felix
+tigera/felix: bin/calico-felix
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-felix docker-image/bin/
-	docker build --pull -t calico/felix$(ARCHTAG) --file ./docker-image/Dockerfile$(ARCHTAG) docker-image
+	docker build --pull -t tigera/felix$(ARCHTAG) --file ./docker-image/Dockerfile$(ARCHTAG) docker-image
 
 # Targets for Felix testing with the k8s backend and a k8s API server,
 # with k8s model resources being injected by a separate test client.
@@ -187,8 +187,8 @@ GET_CONTAINER_IP := docker inspect --format='{{range .NetworkSettings.Networks}}
 GRAFANA_VERSION=4.1.2
 .PHONY: k8sfv-test k8sfv-test-existing-felix
 # Run k8sfv test with Felix built from current code.
-k8sfv-test: calico/felix k8sfv-test-existing-felix
-# Run k8sfv test with whatever is the existing 'calico/felix:latest'
+k8sfv-test: tigera/felix k8sfv-test-existing-felix
+# Run k8sfv test with whatever is the existing 'tigera/felix:latest'
 # container image.  To use some existing Felix version other than
 # 'latest', do 'FELIX_VERSION=<...> make k8sfv-test-existing-felix'.
 k8sfv-test-existing-felix: bin/k8sfv.test
@@ -391,7 +391,7 @@ $(FV_TESTS): vendor/.up-to-date $(FELIX_GO_FILES)
 	$(DOCKER_GO_BUILD) go test ./$(shell dirname $@) -c --tags fvtests -o $@
 
 .PHONY: fv
-fv: calico/felix bin/iptables-locker bin/test-workload bin/test-connection $(FV_TESTS)
+fv: tigera/felix bin/iptables-locker bin/test-workload bin/test-connection $(FV_TESTS)
 	# Copy the ginkgo binary out of the container since we need to run the fv tests directly
 	# on the host (because they need to be able to manipulate docker).  It'd be even nicer
 	# if we could give the build container access to the docker API but we've so-far struggled
@@ -399,7 +399,7 @@ fv: calico/felix bin/iptables-locker bin/test-workload bin/test-connection $(FV_
 	@echo Running Go FVs.
 	$(DOCKER_GO_BUILD) cp /go/bin/ginkgo bin/ginkgo
 	# fv.test is not expecting a container name with an ARCHTAG.
-	-docker tag calico/felix$(ARCHTAG) calico/felix
+	-docker tag tigera/felix$(ARCHTAG) tigera/felix
 	for t in $(FV_TESTS); do \
 	    cd $(TOPDIR)/`dirname $$t` && \
 	    FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
@@ -547,11 +547,11 @@ release-once-tagged:
 	@echo
 	@echo "Will now build release artifacts..."
 	@echo
-	$(MAKE) bin/calico-felix calico/felix
-	docker tag calico/felix gcr.io/tigera-dev/calico/felix-essentials:$(VERSION)
+	$(MAKE) bin/calico-felix tigera/felix
+	docker tag tigera/felix gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)
 	@echo
 	@echo "Checking built felix has correct version..."
-	@if docker run gcr.io/tigera-dev/calico/felix-essentials:$(VERSION) calico-felix --version | grep -q '$(VERSION)$$'; \
+	@if docker run gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION) calico-felix --version | grep -q '$(VERSION)$$'; \
 	then \
 	  echo "Check successful."; \
 	else \
@@ -562,8 +562,8 @@ release-once-tagged:
 	@echo "Felix release artifacts have been built:"
 	@echo
 	@echo "- Binary:                 bin/calico-felix"
-	@echo "- Docker container image: calico/felix:$(VERSION)"
-	@echo "- Same, tagged for GCR private registry:  gcr.io/tigera-dev/calico/felix-essentials:$(VERSION)"
+	@echo "- Docker container image: tigera/felix:$(VERSION)"
+	@echo "- Same, tagged for GCR private registry:  gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)"
 	@echo
 	@echo "Now to publish this release to Github:"
 	@echo
@@ -584,7 +584,7 @@ release-once-tagged:
 	@echo
 	@echo "Then, push the versioned docker images to GCR ONLY:"
 	@echo
-	@echo "- gcloud docker -- push gcr.io/tigera-dev/calico/felix-essentials:$(VERSION)"
+	@echo "- gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)"
 	@echo
 	@echo "If you also want to build Debian/Ubuntu and RPM packages for"
 	@echo "the new release, use 'make deb' and 'make rpm'."
