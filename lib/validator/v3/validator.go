@@ -53,7 +53,7 @@ var (
 
 	// NetworkPolicy names must either be a simple DNS1123 label format (nameLabelFmt), or
 	// must be the standard name format (nameRegex) prefixed with "knp.default".
-	networkPolicyNameRegex = regexp.MustCompile("^((" + nameLabelFmt + ")|(knp\\.default\\.(" + nameSubdomainFmt + ")))$")
+	networkPolicyNameRegex = regexp.MustCompile("^((" + nameSubdomainFmt + ")|(knp\\.default\\.(" + nameSubdomainFmt + ")))$")
 
 	interfaceRegex        = regexp.MustCompile("^[a-zA-Z0-9_-]{1,15}$")
 	actionRegex           = regexp.MustCompile("^(Allow|Deny|Log|Pass)$")
