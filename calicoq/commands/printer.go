@@ -197,19 +197,20 @@ func removeTierFromPolicyName(prefixed string) string {
 	// Name is in the form <namespace>/<tier>.<name> or <namespace>/knp.<tier>.<name>.
 	// This method returns <namespace>/<name>.
 	nsParts := strings.SplitN(prefixed, "/", 2)
-	// Handle the edge cases that some data is migrated in v1 format mistakenly
+	// Handle Global Network Policies that are not namespaced
+	prefix := nsParts[0] + "/"
 	if len(nsParts) != 2 {
-		return prefixed
+		prefix = ""
+		nsParts = append(nsParts, nsParts[0])
 	}
 	// TODO: remove the if else statements once libcalico-go is updated to prevent knp.<tier>.<name> from happening
-	// TODO: Should we show "knp." in the policy name?
 	var nParts []string
 	if strings.HasPrefix(nsParts[1], "knp.") {
 		nParts = []string{nsParts[1]}
 	} else {
 		nParts = strings.SplitN(nsParts[1], ".", 2)
 	}
-	return nsParts[0] + "/" + nParts[len(nParts)-1]
+	return prefix + nParts[len(nParts)-1]
 }
 
 // TODO: Figure out if we need to change how WorkloadEndpoints are displayed and remove this if

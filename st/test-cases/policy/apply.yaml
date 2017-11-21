@@ -1,22 +1,22 @@
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: Profile
   metadata:
     name: group1
   spec:
     ingress:
-    - action: allow
+    - action: Allow
       source:
         selector: projectcalico.org/namespace == 'group1'
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: Profile
   metadata:
     name: group2
   spec:
     ingress:
-    - action: allow
+    - action: Allow
       source:
         selector: projectcalico.org/namespace == 'group2'
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: WorkloadEndpoint
   metadata:
     name: host1-k8s-g1w1-eth0
@@ -36,7 +36,7 @@
     node: host1
     pod: g1w1
     endpoint: eth0
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: WorkloadEndpoint
   metadata:
     name: host1-k8s-g1w2-eth0
@@ -56,7 +56,7 @@
     node: host1
     pod: g1w2
     endpoint: eth0
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: WorkloadEndpoint
   metadata:
     name: host1-k8s-g1w3-eth0
@@ -76,7 +76,7 @@
     node: host1
     pod: g1w3
     endpoint: eth0
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: WorkloadEndpoint
   metadata:
     name: host1-k8s-g2w1-eth0
@@ -96,7 +96,7 @@
     node: host1
     pod: g2w1
     endpoint: eth0
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: WorkloadEndpoint
   metadata:
     name: host1-k8s-g2w2-eth0
@@ -116,7 +116,7 @@
     node: host1
     pod: g2w2
     endpoint: eth0
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: WorkloadEndpoint
   metadata:
     name: host1-k8s-g2w3-eth0
@@ -136,7 +136,7 @@
     node: host1
     pod: g2w3
     endpoint: eth0
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: NetworkPolicy
   metadata:
     name: p1
@@ -145,26 +145,26 @@
     selector: projectcalico.org/namespace == 'group1'
     order: 500
     egress:
-    - action: deny
+    - action: Deny
       destination:
         selector: projectcalico.org/namespace == 'group1'
     ingress:
-    - action: allow
+    - action: Allow
       source:
         selector: projectcalico.org/namespace == 'group2'
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: NetworkPolicy
   metadata:
-    name: abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+    name: abcdefghijklmnopqrstuvwxyz
     namespace: group2
   spec:
     selector: projectcalico.org/namespace == 'group2'
     order: 400
     egress:
-    - action: allow
+    - action: Allow
       destination:
         selector: projectcalico.org/namespace in {'group1','group2'}
     ingress:
-    - action: deny
+    - action: Deny
       source:
         selector: projectcalico.org/namespace in {'group1','group2'}

@@ -1,6 +1,6 @@
-policy -rs abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -c calicoq.cfg
+policy -rs abcdefghijklmnopqrstuvwxyz -c calicoq.cfg
 
-Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" applies to these endpoints:
+Policy "abcdefghijklmnopqrstuvwxyz" applies to these endpoints:
   Workload endpoint host1/k8s/group2.g2w1/eth0
   Workload endpoint host1/k8s/group2.g2w2/eth0
   Workload endpoint host1/k8s/group2.g2w3/eth0
