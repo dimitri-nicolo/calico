@@ -137,6 +137,7 @@ spec:
               value: ""
             - name: FELIX_HEALTHENABLED
               value: "true"
+{% include {{page.version}}/extra-felix-config-12sp.yaml %}
           securityContext:
             privileged: true
           resources:
