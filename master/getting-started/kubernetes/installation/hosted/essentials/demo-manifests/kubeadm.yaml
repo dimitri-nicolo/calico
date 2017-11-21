@@ -23,4 +23,4 @@ apiServerExtraArgs:
   oidc-username-claim: "email"
   # Fill in the Google OIDC client ID here.
   oidc-client-id: "<fill-in-your-oauth-client-id-here>"
-selfHosted: false%                    
+selfHosted: false

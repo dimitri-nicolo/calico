@@ -173,12 +173,12 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    k8s-app: tigera-cnx-manager
-  name: tigera-cnx-manager
+    k8s-app: cnx-manager
+  name: cnx-manager
   namespace: kube-system
 spec:
   selector:
-    k8s-app: tigera-cnx-manager
+    k8s-app: cnx-manager
   ports:
     - port: 8080
       targetPort: 80

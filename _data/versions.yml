@@ -145,6 +145,61 @@ v2.0:
       version: v2.0.0-cnx-alpha1
       url: ""
 
+# The master release stream is used to generate the master version of the docs,
+# as well as for builds of `calico/node:master` via CI.  Submit PRs to update the
+# versions when a component changes.
+master:
+- title: master
+  note: ""
+  components:
+    cnx-manager:
+      version: master
+      url: ""
+    cnx-apiserver:
+      version: master
+      url: ""
+    calicoq:
+      version: master
+      url: ""
+    felix:
+      version: master
+      url: ""
+    typha:
+      version: master
+      url: ""
+    calicoctl:
+      version: master
+      url: ""
+      download_url: ""
+    cnx-node:
+      version: master
+      url: ""
+    calico/cni:
+      version: master
+      url: ""
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v1.11.0/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v1.11.0/calico-ipam
+    calico-bird:
+      version: v0.3.1
+      url: https://github.com/projectcalico/calico-bird/releases/tag/v0.3.1
+    confd:
+      version: master 
+    calico-bgp-daemon:
+      version: v0.2.2
+      url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.2
+    libnetwork-plugin:
+      version: master
+      url: ""
+    calico/kube-controllers:
+      version: master
+      url: ""
+    networking-calico:
+      version: master
+      url: ""
+    calico/routereflector:
+      version: v0.4.0
+      url: ""
+
 # vX.Y format: update during major release process
 currentReleaseStream: v2.0
 
