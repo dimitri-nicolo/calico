@@ -65,7 +65,7 @@ Description:
 		fmt.Println(err)
 	}
 	if !psContains("calico-felix", processes) {
-		// Return and print message if calico-node is not running
+		// Return and print message if cnx-node is not running
 		fmt.Printf("Calico process is not running.\n")
 		os.Exit(1)
 	}

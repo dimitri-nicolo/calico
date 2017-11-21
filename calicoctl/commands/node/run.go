@@ -127,7 +127,7 @@ Options:
                            [default: /var/log/calico]
      --node-image=<DOCKER_IMAGE_NAME>
                            Docker image to use for Calico's per-node container.
-                           [default: calico/node:latest]
+                           [default: tigera/cnx-node:latest]
      --backend=(bird|gobgp|none)
                            Specify which networking backend to use.  When set
                            to "none", Calico node runs in policy only mode.
@@ -160,7 +160,7 @@ Options:
                            [default: ` + constants.DefaultConfigPath + `]
 
 Description:
-  This command is used to start a calico/node container instance which provides
+  This command is used to start a tigera/cnx-node container instance which provides
   Calico networking and network policy on your compute host.
 `
 	arguments, err := docopt.Parse(doc, args, true, "", false, false)
@@ -207,7 +207,7 @@ Description:
 		}
 	}
 	if asNumber != "" {
-		// The calico/node image does not accept dotted notation for
+		// The tigera/cnx-node image does not accept dotted notation for
 		// the AS number, so convert.
 		asNumber = argutils.ValidateASNumber(asNumber).String()
 	}
@@ -223,7 +223,7 @@ Description:
 
 	// Use the hostname if a name is not specified.  We should always
 	// pass in a fixed value to the node container so that if the user
-	// changes the hostname, the calico/node won't start using a different
+	// changes the hostname, the tigera/cnx-node won't start using a different
 	// name.
 	if name == "" {
 		name, err = os.Hostname()
@@ -333,7 +333,7 @@ Description:
 	// command to remain attached and for Docker to remove the dead
 	// container so that it can be restarted by the init system.
 	cmd := []string{"docker", "run", "--net=host", "--privileged",
-		"--name=calico-node"}
+		"--name=cnx-node"}
 	if initSystem {
 		cmd = append(cmd, "--rm")
 	} else {
@@ -354,15 +354,15 @@ Description:
 	cmd = append(cmd, img)
 
 	if dryrun {
-		fmt.Println("Use the following command to start the calico/node container:")
+		fmt.Println("Use the following command to start the tigera/cnx-node container:")
 		fmt.Printf("\n%s\n\n", strings.Join(cmd, " "))
 
 		if !initSystem {
-			fmt.Println("If you are running calico/node in an init system, use the --init-system flag")
+			fmt.Println("If you are running tigera/cnx-node in an init system, use the --init-system flag")
 			fmt.Println("to display the appropriate start and stop commands.")
 		} else {
-			fmt.Println("Use the following command to stop the calico/node container:")
-			fmt.Printf("\ndocker stop calico-node\n\n")
+			fmt.Println("Use the following command to stop the tigera/cnx-node container:")
+			fmt.Printf("\ndocker stop cnx-node\n\n")
 		}
 		return
 	}
@@ -382,16 +382,16 @@ Description:
 		setNFConntrackMax()
 	}
 
-	// Make sure the calico-node is not already running before we attempt
+	// Make sure the cnx-node is not already running before we attempt
 	// to start the node.
-	fmt.Println("Removing old calico-node container (if running).")
-	err = exec.Command("docker", "rm", "-f", "calico-node").Run()
+	fmt.Println("Removing old cnx-node container (if running).")
+	err = exec.Command("docker", "rm", "-f", "cnx-node").Run()
 	if err != nil {
-		log.WithError(err).Debug("Unable to remove calico-node container (ok if container was not running)")
+		log.WithError(err).Debug("Unable to remove cnx-node container (ok if container was not running)")
 	}
 
 	// Run the docker command.
-	fmt.Println("Running the following command to start calico-node:")
+	fmt.Println("Running the following command to start cnx-node:")
 	fmt.Printf("\n%s\n\n", strings.Join(cmd, " "))
 	fmt.Println("Image may take a short time to download if it is not available locally.")
 
@@ -406,14 +406,14 @@ Description:
 		os.Exit(1)
 	}
 
-	// Create the command to follow the docker logs for the calico/node
+	// Create the command to follow the docker logs for the tigera/cnx-node
 	fmt.Print("Container started, checking progress logs.\n\n")
-	logCmd := exec.Command("docker", "logs", "--follow", "calico-node")
+	logCmd := exec.Command("docker", "logs", "--follow", "cnx-node")
 
 	// Get the stdout pipe
 	outPipe, err := logCmd.StdoutPipe()
 	if err != nil {
-		fmt.Printf("Error executing command:  unable to check calico/node logs: %v\n", err)
+		fmt.Printf("Error executing command:  unable to check tigera/cnx-node logs: %v\n", err)
 		os.Exit(1)
 	}
 	outScanner := bufio.NewScanner(outPipe)
@@ -421,7 +421,7 @@ Description:
 	// Start following the logs.
 	err = logCmd.Start()
 	if err != nil {
-		fmt.Printf("Error executing command:  unable to check calico/node logs: %v\n", err)
+		fmt.Printf("Error executing command:  unable to check tigera/cnx-node logs: %v\n", err)
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -450,10 +450,10 @@ Description:
 
 	// If we didn't successfully start then notify the user.
 	if outScanner.Err() != nil {
-		fmt.Println("Error executing command: error reading calico/node logs, check logs for details")
+		fmt.Println("Error executing command: error reading tigera/cnx-node logs, check logs for details")
 		os.Exit(1)
 	} else if !started {
-		fmt.Println("Error executing command: calico/node has terminated, check logs for details")
+		fmt.Println("Error executing command: tigera/cnx-node has terminated, check logs for details")
 		os.Exit(1)
 	}
 }

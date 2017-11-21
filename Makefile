@@ -7,7 +7,7 @@ test: test-containerized st                             ## Run all the tests
 # calicoctl build
 # - Building the calicoctl binary in a container
 # - Building the calicoctl binary outside a container ("simple-binary")
-# - Building the calico/ctl image
+# - Building the tigera/calicoctl image
 ###############################################################################
 # Determine which OS / ARCH.
 OS := $(shell uname -s | tr A-Z a-z)
@@ -37,7 +37,7 @@ LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/calicoctl/commands.VERSION=$(CALICOCTL_VERS
 
 LIBCALICOGO_PATH?=none
 
-calico/ctl: $(CTL_CONTAINER_CREATED)      ## Create the calico/ctl image
+tigera/calicoctl: $(CTL_CONTAINER_CREATED)      ## Create the tigera/calicoctl image
 
 .PHONY: clean-calicoctl
 clean-calicoctl:
@@ -203,7 +203,7 @@ semaphore: clean
 	# Run the containerized tests first.
 	$(MAKE) test-containerized st
 
-	$(MAKE) calico/ctl
+	$(MAKE) tigera/calicoctl
 
 	# Make sure that calicoctl builds cross-platform.
 	$(MAKE) dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64.exe
@@ -218,9 +218,9 @@ endif
 	if git describe --tags --dirty | grep dirty; \
 	then echo current git working tree is "dirty". Make sure you do not have any uncommitted changes ;false; fi
 
-	# Build the calicoctl binaries, as well as the calico/ctl and calico/node images.
+	# Build the calicoctl binaries, as well as the tigera/calicoctl and tigera/cnx-node images.
 	$(MAKE) dist/calicoctl dist/calicoctl-darwin-amd64 dist/calicoctl-windows-amd64.exe
-	$(MAKE) calico/ctl
+	$(MAKE) tigera/calicoctl
 
 	# Check that the version output includes the version specified.
 	# Tests that the "git tag" makes it into the binaries. Main point is to catch "-dirty" builds
@@ -250,11 +250,11 @@ endif
 	@echo "# To find commit messages for the release notes:  git log --oneline <old_release_version>...$(VERSION)"
 	@echo ""
 	@echo "# Now push the newly created release images."
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/calico/ctl-essentials:$(VERSION)"
+	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/calicoctl:$(VERSION)"
 	@echo ""
 	@echo "# For the final release only, push the latest tag"
 	@echo "# DO NOT PUSH THESE IMAGES FOR RELEASE CANDIDATES OR ALPHA RELEASES" 
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/calico/ctl-essentials:latest"
+	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/calicoctl:latest"
 	@echo ""
 	@echo "See RELEASING.md for detailed instructions."
 
