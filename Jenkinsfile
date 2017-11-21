@@ -23,7 +23,7 @@ pipeline {
         stage('Build typha') {
             steps {
                 sh "echo 'Build Typha'"
-                sh "make calico/typha"
+                sh "make tigera/typha"
             }
         }
 
@@ -41,15 +41,15 @@ pipeline {
 		    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
                     // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
                     if (env.BRANCH_NAME == 'master') {
-			 sh 'make calico/typha'
-			 sh 'docker tag calico/typha:latest gcr.io/tigera-dev/calico/typha-essentials:latest'
-                        sh 'gcloud docker -- push gcr.io/tigera-dev/calico/typha-essentials:latest'
+                        sh 'make tigera/typha'
+                        sh 'docker tag tigera/typha:latest gcr.io/tigera-dev/cnx/tigera/typha:master'
+                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/typha:master'
 
 			// Clean up images.
 			// Hackey since empty displayed tags are not empty according to gcloud filter criteria
-			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/calico/typha-essentials --format='get(digest)'); do 
-				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/calico/typha-essentials --filter=digest~${digest}) | awk '{print $6}'); then
-					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/calico/typha-essentials@${digest}" 
+			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/typha --format='get(digest)'); do
+				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/typha --filter=digest~${digest}) | awk '{print $6}'); then
+					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/typha@${digest}"
 				fi 
 			done'''
                     }

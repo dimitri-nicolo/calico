@@ -10,7 +10,7 @@ help:
 	@echo "Builds:"
 	@echo
 	@echo "  make all           Build all the binary packages."
-	@echo "  make calico/typha  Build calico/typha docker image."
+	@echo "  make tigera/typha  Build tigera/typha docker image."
 	@echo
 	@echo "Tests:"
 	@echo
@@ -29,7 +29,7 @@ help:
 # considerably.
 .SUFFIXES:
 
-all: bin/calico-typha calico/typha bin/typha-client
+all: bin/calico-typha tigera/typha bin/typha-client
 test: ut
 
 GO_BUILD_CONTAINER?=calico/go-build:v0.9
@@ -56,13 +56,13 @@ TYPHA_GO_FILES:=$(shell find . $(foreach dir,$(NON_TYPHA_DIRS),-path ./$(dir) -p
 MY_UID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
-# Build the calico/typha docker image, which contains only Typha.
-.PHONY: calico/typha
-calico/typha: bin/calico-typha
+# Build the tigera/typha docker image, which contains only Typha.
+.PHONY: tigera/typha
+tigera/typha: bin/calico-typha
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-typha docker-image/bin/
-	docker build --pull -t calico/typha docker-image
+	docker build --pull -t tigera/typha docker-image
 
 # Pre-configured docker run command that runs as this user with the repo
 # checked out to /code, uses the --rm flag to avoid leaving the container
@@ -269,13 +269,13 @@ release-once-tagged:
 	@echo
 	@echo "Will now build release artifacts..."
 	@echo
-	$(MAKE) bin/calico-typha calico/typha
-	docker tag calico/typha calico/typha:$(VERSION)
-	docker tag calico/typha gcr.io/tigera-dev/calico/typha-essentials:latest
-	docker tag calico/typha:$(VERSION) gcr.io/tigera-dev/calico/typha-essentials:$(VERSION)
+	$(MAKE) bin/calico-typha tigera/typha
+	docker tag tigera/typha tigera/typha:$(VERSION)
+	docker tag tigera/typha gcr.io/tigera-dev/cnx/tigera/typha:latest
+	docker tag tigera/typha:$(VERSION) gcr.io/tigera-dev/cnx/tigera/typha:$(VERSION)
 	@echo
 	@echo "Checking built typha has correct version..."
-	@if docker run gcr.io/tigera-dev/calico/typha-essentials:$(VERSION) calico-typha --version | grep -q '$(VERSION)$$'; \
+	@if docker run gcr.io/tigera-dev/cnx/tigera/typha:$(VERSION) calico-typha --version | grep -q '$(VERSION)$$'; \
 	then \
 	  echo "Check successful."; \
 	else \
@@ -286,8 +286,8 @@ release-once-tagged:
 	@echo "Typha release artifacts have been built:"
 	@echo
 	@echo "- Binary:                 bin/calico-typha"
-	@echo "- Docker container image: calico/typha:$(VERSION)"
-	@echo "- Same, tagged for GCR private registry:  gcr.io/tigera-dev/calico/typha-essentials:$(VERSION)"
+	@echo "- Docker container image: tigera/typha:$(VERSION)"
+	@echo "- Same, tagged for GCR private registry:  gcr.io/tigera-dev/cnx/tigera/typha:$(VERSION)"
 	@echo
 	@echo "Now to publish this release to Github:"
 	@echo
@@ -308,9 +308,9 @@ release-once-tagged:
 	@echo
 	@echo "Then, push the versioned docker images to GCR only:"
 	@echo
-	@echo "- gcloud docker -- docker push gcr.io/tigera-dev/calico/typha-essentials:$(VERSION)"
+	@echo "- gcloud docker -- docker push gcr.io/tigera-dev/cnx/tigera/typha:$(VERSION)"
 	@echo
 	@echo "If this is the latest release from the most recent stable"
 	@echo "release series, also push the 'latest' tag:"
 	@echo
-	@echo "- gcloud docker -- docker push gcr.io/tigera-dev/calico/typha-essentials:latest"
+	@echo "- gcloud docker -- docker push gcr.io/tigera-dev/cnx/tigera/typha:latest"
