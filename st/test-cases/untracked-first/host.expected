@@ -4,9 +4,9 @@ Policies and profiles for each endpoint on host "tigera-lwr-kubetest-02":
 
 Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
   Policies:
-    Policy "advanced-policy-demo/donottrack" (order 500; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && projectcalico.org/namespace == 'advanced-policy-demo'") [untracked]
-    Policy "advanced-policy-demo/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && projectcalico.org/namespace == 'advanced-policy-demo'")
+    Policy "donottrack" (order 500; selector "projectcalico.org/namespace == 'advanced-policy-demo'") [untracked]
+    Policy "advanced-policy-demo/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && projectcalico.org/namespace == 'advanced-policy-demo'")
   Profiles:
-    Profile "k8s_ns.advanced-policy-demo"
+    Profile "k8s-ns.advanced-policy-demo"
   Rule matches:
-    Policy "advanced-policy-demo/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && projectcalico.org/namespace == 'advanced-policy-demo'"
+    Policy "advanced-policy-demo/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && (projectcalico.org/namespace == 'advanced-policy-demo')"

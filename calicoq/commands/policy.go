@@ -34,13 +34,19 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 		name = parts[1]
 	}
 
+	// Handle tier prefix
+	nParts := strings.SplitN(name, ".", 2)
+	if len(nParts) != 2 {
+		name = "default." + name
+	}
+
 	npkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Namespace: ns, Kind: apiv3.KindNetworkPolicy}, "")
 	if err != nil {
 		log.Fatal("Failed to get network policy")
 		os.Exit(1)
 	}
 
-	gnpkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Namespace: ns, Kind: apiv3.KindGlobalNetworkPolicy}, "")
+	gnpkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Kind: apiv3.KindGlobalNetworkPolicy}, "")
 	if err != nil {
 		log.Fatal("Failed to get global network policy")
 		os.Exit(1)

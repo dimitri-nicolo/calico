@@ -19,7 +19,7 @@ function summarise_test {
 # Get a calicoctl.
 cd st
 if ! test -x calicoctl; then
-    wget https://github.com/projectcalico/calicoctl/releases/download/v2.0.0-alpha1/calicoctl
+    wget https://github.com/projectcalico/calicoctl/releases/download/v2.0.0-beta1/calicoctl
     chmod a+x calicoctl
 fi
 CALICOCTL=`pwd`/calicoctl
@@ -70,7 +70,7 @@ for c in `ls`; do
     # Create config file, if wanted.
     if ${USE_CFG_FILE}; then
 	tee calicoq.cfg <<EOF
-apiVersion: projectcalico.org/v2
+apiVersion: projectcalico.org/v3
 ${CFG_FILE_INSERT}kind: CalicoAPIConfig
 metadata:
 spec:

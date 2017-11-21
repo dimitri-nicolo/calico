@@ -22,18 +22,18 @@ Workload endpoint k8s/group1.g1w3/eth0
 
 Workload endpoint k8s/group2.g2w1/eth0
   Policies:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
   Profiles:
     Profile "group2"
 
 Workload endpoint k8s/group2.g2w2/eth0
   Policies:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
   Profiles:
     Profile "group2"
 
 Workload endpoint k8s/group2.g2w3/eth0
   Policies:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'")
   Profiles:
     Profile "group2"

@@ -388,7 +388,6 @@ func (cbs *describeCmd) printObjects(matches map[interface{}][]string) OutputLis
 							policyPrint.Selector = pol.Value.Selector
 						}
 
-						// tierPrint.Policies = append(tierPrint.Policies, policyPrint)
 						ep.Policies = append(ep.Policies, policyPrint)
 					}
 				}

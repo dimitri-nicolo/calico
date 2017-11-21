@@ -28,27 +28,27 @@ Workload endpoint k8s/group1.g1w3/eth0
 
 Workload endpoint k8s/group2.g2w1/eth0
   Policies:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400)
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400)
   Profiles:
     Profile "group2"
   Rule matches:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" inbound rule 1 source match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match
 
 Workload endpoint k8s/group2.g2w2/eth0
   Policies:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400)
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400)
   Profiles:
     Profile "group2"
   Rule matches:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" inbound rule 1 source match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match
 
 Workload endpoint k8s/group2.g2w3/eth0
   Policies:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400)
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400)
   Profiles:
     Profile "group2"
   Rule matches:
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match
-    Policy "group2/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" inbound rule 1 source match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match
