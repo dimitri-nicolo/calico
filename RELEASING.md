@@ -8,8 +8,8 @@ through creating and distributing the following artifacts:
 - File `dist/calico-felix-$VERSION.tgz`; the "PyInstaller bundle"
   containing the Felix binaries.  We attach that file to the
   Github release.
-- Docker container images: `calico/felix:$VERSION` and
-  `quay.io/calico/felix:$VERSION` containing the Felix binaries.  These
+- Docker container images: `tigera/felix:$VERSION` and
+  `gcr.io/tigera-dev/cnx/tigera/felix:$VERSION` containing the Felix binaries.  These
   are ready to push to Dockerhub and Quay.  They primarily form the input
   to the downstream `calico/node` build process but they could also
   be used to run Felix as a stand-alone container.

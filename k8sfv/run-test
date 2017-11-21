@@ -7,7 +7,7 @@
 # Config.
 #
 # What Felix (container image) to use.
-: ${FELIX_IMAGE:=calico/felix}
+: ${FELIX_IMAGE:=tigera/felix}
 #
 # What version of Felix (container image) to use.
 : ${FELIX_VERSION:=latest}
@@ -57,7 +57,7 @@
 : ${USE_TYPHA:=true}
 #
 # What Typha (container image) to use.
-: ${TYPHA_IMAGE:=calico/typha}
+: ${TYPHA_IMAGE:=tigera/typha}
 #
 # What version of Typha (container image) to use.
 : ${TYPHA_VERSION:=latest}

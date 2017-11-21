@@ -309,7 +309,7 @@ func RunFelix(etcdIP string) *Container {
 		"-e", "FELIX_PROMETHEUSMETRICSENABLED=true",
 		"-e", "FELIX_USAGEREPORTINGENABLED=false",
 		"-e", "FELIX_IPV6SUPPORT=false",
-		"calico/felix:latest")
+		"tigera/felix:latest")
 }
 
 // StartSingleNodeEtcdTopology starts an etcd container and a single Felix container; it initialises

@@ -29,7 +29,7 @@ pipeline {
         stage('Build felix') {
             steps {
                 sh "echo 'Build Felix'"
-                sh "make calico/felix"
+                sh "make tigera/felix"
             }
         }
 
@@ -47,15 +47,15 @@ pipeline {
 		    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
                     // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
                     if (env.BRANCH_NAME == 'master') {
-			 sh 'make calico/felix'
-			 sh 'docker tag calico/felix:latest gcr.io/tigera-dev/calico/felix-essentials:latest'
-                        sh 'gcloud docker -- push gcr.io/tigera-dev/calico/felix-essentials:latest'
+			 sh 'make tigera/felix'
+			 sh 'docker tag tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:master'
+                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/felix:master'
 
 			// Clean up images.
 			// Hackey since empty displayed tags are not empty according to gcloud filter criteria
-			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/calico/felix-essentials --format='get(digest)'); do 
-				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/calico/felix-essentials --filter=digest~${digest}) | awk '{print $6}'); then
-					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/calico/felix-essentials@${digest}" 
+			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/felix --format='get(digest)'); do 
+				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/felix --filter=digest~${digest}) | awk '{print $6}'); then
+					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/felix@${digest}" 
 				fi 
 			done'''
                     }

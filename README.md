@@ -58,9 +58,9 @@ Then, to build the calico-felix binary:
 ```
 make bin/calico-felix
 ```
-or, the `calico/felix` docker image:
+or, the `tigera/felix` docker image:
 ```
-make calico/felix
+make tigera/felix
 ```
 
 ## How can I run Felix's unit tests?
@@ -116,7 +116,7 @@ docker run --privileged \
            --net=host \
            -v /run:/run \
            -e FELIX_LOGSEVERITYSCREEN=INFO \
-           calico/felix
+           tigera/felix
 ```
 
 Notes:
