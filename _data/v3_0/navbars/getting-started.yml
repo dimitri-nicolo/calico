@@ -57,8 +57,11 @@ toc:
       path: /getting-started/essentials/tiered-policy-essentials
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
-  - title: Upgrade
-    path: /getting-started/kubernetes/upgrade
+    
+- title: OpenShift
+  section:
+    - title: Installation
+      path: /getting-started/openshift/installation
 
 - title: Host Protection
   section:

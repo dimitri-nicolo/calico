@@ -69,6 +69,11 @@ spec:
     spec:
       # Only run this pod on the master.
       tolerations:
+      # this taint is set by all kubelets running `--cloud-provider=external`
+      # so we should tolerate it to schedule the calico pods
+      - key: node.cloudprovider.kubernetes.io/uninitialized
+        value: "true"
+        effect: NoSchedule
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
       # Allow this pod to be rescheduled while the node is in "critical add-ons only" mode.
@@ -145,6 +150,11 @@ spec:
     spec:
       hostNetwork: true
       tolerations:
+      # this taint is set by all kubelets running `--cloud-provider=external`
+      # so we should tolerate it to schedule the calico pods
+      - key: node.cloudprovider.kubernetes.io/uninitialized
+        value: "true"
+        effect: NoSchedule
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
       # Allow this pod to be rescheduled while the node is in "critical add-ons only" mode.
@@ -152,6 +162,9 @@ spec:
       - key: CriticalAddonsOnly
         operator: Exists
       serviceAccountName: calico-cni-plugin
+      # Minimize downtime during a rolling upgrade or deletion; tell Kubernetes to do a "force
+      # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
+      terminationGracePeriodSeconds: 0
       containers:
         # Runs calico/node container on each Kubernetes node.  This
         # container programs network policy and routes on each
@@ -294,6 +307,11 @@ spec:
       # it isn't governed by policy that would prevent it from working.
       hostNetwork: true
       tolerations:
+      # this taint is set by all kubelets running `--cloud-provider=external`
+      # so we should tolerate it to schedule the calico pods
+      - key: node.cloudprovider.kubernetes.io/uninitialized
+        value: "true"
+        effect: NoSchedule
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
       # Allow this pod to be rescheduled while the node is in "critical add-ons only" mode.
@@ -377,7 +395,6 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: calico-cni-plugin
-  namespace: kube-system
 rules:
   - apiGroups: [""]
     resources:
@@ -415,7 +432,6 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: calico-kube-controllers
-  namespace: kube-system
 rules:
   - apiGroups:
     - ""

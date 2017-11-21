@@ -11,12 +11,12 @@ aliases are supported (all case insensitive): `bgpconfiguration`, `bgpconfig`, `
 ### Sample YAML
 
 ```yaml
-apiVersion: projectcalico.org/v2
+apiVersion: projectcalico.org/v3
 kind: BGPConfiguration
 metadata:
   name: default
 spec:
-  logSeverityScreen: info
+  logSeverityScreen: Info
   nodeToNodeMeshEnabled: true
   asNumber: 63400
 ```
@@ -27,7 +27,7 @@ spec:
 
 | Field       | Description                 | Accepted Values   | Schema |
 |-------------|-----------------------------|-------------------|--------|
-| name     | Unique name to describe this resource instance. Required. | Alphanumeric string with optional `.`, `_`, `-`, or `/` | string |
+| name     | Unique name to describe this resource instance. Required. | Alphanumeric string with optional `.`, `_`, or `-`. | string |
 
 - The resource with the name `default` has a specific meaning - this contains the BGP global default configuration.
 - The resources with the name `node.<nodename>` contain the node-specific overrides, and will be applied to the node `<nodename>`. When deleting a node the FelixConfiguration resource associated with the node will also be deleted.
@@ -36,7 +36,7 @@ spec:
 
 | Field       | Description                 | Accepted Values   | Schema | Default    |
 |-------------|-----------------------------|-------------------|--------|------------|
-| logSeverityScreen | Global log level | none, debug, info, warning, error, critical | string | info |
+| logSeverityScreen | Global log level | Debug, Info, Warning, Error, Fatal | string | `Info` |
 | nodeToNodeMeshEnabled | Full BGP node-to-node mesh | true, false  | string | true |
 | asNumber | The AS Number of this peer. | A valid AS Number, may be specified in dotted notation. | integer/string | 64512 |
 

@@ -41,7 +41,8 @@ else:
     ADDITIONAL_DOCKER_OPTIONS = "--cluster-store=etcd://%s:2379 " % \
                                 get_ip()
 
-@skip("Disabled until libnetwork is updated for libcalico-go v2")
+# TODO: Re-enable
+@skip("Disabled until libnetwork is updated for libcalico-go v3")
 class TestLibnetworkLabeling(TestBase):
     """
     Tests that labeling is correctly implemented in libnetwork.  Setup
@@ -123,26 +124,26 @@ class TestLibnetworkLabeling(TestBase):
     def test_policy_only_selectors_allow_traffic(self):
         self.host1.add_resource([
             {
-                'apiVersion': 'v1',
-                'kind': 'policy',
+                'apiVersion': 'projectcalico.org/v3',
+                'kind': 'NetworkPolicy',
                 'metadata': {'name': 'allowFooBarToBazBop'},
                 'spec': {
                     'ingress': [
                         {
                             'source': {'selector': 'foo == "bar"'},
-                            'action': 'allow',
+                            'action': 'Allow',
                         },
                     ],
-                    'egress': [{'action': 'deny'}],
+                    'egress': [{'action': 'Deny'}],
                     'selector': 'baz == "bop"'
                 }
             }, {
-                'apiVersion': 'v1',
-                'kind': 'policy',
+                'apiVersion': 'projectcalico.org/v3',
+                'kind': 'NetworkPolicy',
                 'metadata': {'name': 'allowFooBarEgress'},
                 'spec': {
                     'selector': 'foo == "bar"',
-                    'egress': [{'action': 'allow'}]
+                    'egress': [{'action': 'Allow'}]
                 }
             }
         ])

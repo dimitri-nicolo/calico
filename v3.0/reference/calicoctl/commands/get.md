@@ -48,6 +48,9 @@ Options:
                                Uses the default namespace if not specified.
   -a --all-namespaces          If present, list the requested object(s) across 
                                all namespaces.
+  --export                     If present, returns the requested object(s) stripped of
+                               cluster-specific information. This flag will be ignored
+                               if <NAME> is not specified.
 
 Description:
   The get command is used to display a set of resources by filename or stdin,
@@ -117,6 +120,9 @@ Description:
                              Uses the default namespace if not specified.
 -a --all-namespaces          If present, list the requested object(s) across 
                              all namespaces.
+--export                     If present, returns the requested object(s) stripped of
+                             cluster-specific information. This flag will be ignored
+                             if the resource name is not specified.
 ```
 
 ### General options
@@ -183,7 +189,7 @@ The output from either of these formats may be used as input for all of the reso
 Example
 ```
 $ calicoctl get hostEndpoint --output=yaml
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: HostEndpoint
   metadata:
     labels:
@@ -197,7 +203,7 @@ $ calicoctl get hostEndpoint --output=yaml
     profiles:
     - prof1
     - prof2
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: HostEndpoint
   metadata:
     name: myhost-eth0
@@ -220,7 +226,7 @@ within that list.
 Example
 {% raw %}
 ```
-$ bin/calicoctl get hostEndpoint --output=go-template="{{range .}}{{range .Items}}{{.Metadata.Name}},{{end}}{{end}}"
+$ bin/calicoctl get hostEndpoint --output=go-template="{{range .}}{{range .Items}}{{.ObjectMeta.Name}},{{end}}{{end}}"
 endpoint1,eth0,
 ```
 {% endraw %}

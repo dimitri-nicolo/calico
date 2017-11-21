@@ -159,7 +159,7 @@ toc:
       - title: Advanced Kubernetes
         path: /reference/advanced/etcd-rbac/kubernetes-advanced
       - title: etcd paths for CNX components
-        path: /reference/advanced/etcd-rbac/calico-etcdv2-paths
+        path: /reference/advanced/etcd-rbac/calico-etcdv3-paths
   - title: Configuring CNX RBAC
     path: /reference/essentials/rbac-tiered-policies
 - title: System Requirements

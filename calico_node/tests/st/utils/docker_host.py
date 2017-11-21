@@ -22,7 +22,8 @@ from functools import partial
 from subprocess import CalledProcessError, Popen, PIPE
 
 from log_analyzer import LogAnalyzer, FELIX_LOG_FORMAT, TIMESTAMP_FORMAT
-from network import DockerNetwork, global_setting, NETWORKING_CNI, NETWORKING_LIBNETWORK
+from network import DockerNetwork, DummyNetwork, global_setting, \
+        NETWORKING_CNI, NETWORKING_LIBNETWORK
 from tests.st.utils.constants import DEFAULT_IPV4_POOL_CIDR
 from tests.st.utils.exceptions import CommandExecError
 from utils import get_ip, log_and_run, retry_until_success, ETCD_SCHEME, \
@@ -37,6 +38,8 @@ if CHECKOUT_DIR == "":
     CHECKOUT_DIR = os.getcwd()
 
 NODE_CONTAINER_NAME = os.getenv("NODE_CONTAINER_NAME", "calico/node:latest")
+
+FELIX_LOGLEVEL = os.getenv("ST_FELIX_LOGLEVEL", "")
 
 if ETCD_SCHEME == "https":
     CLUSTER_STORE_DOCKER_OPTIONS = "--cluster-store=etcd://%s:2379 " \
@@ -319,11 +322,16 @@ class DockerHost(object):
             # Break the line at the first occurrence of " -e ".
             prefix, _, suffix = line.rstrip().partition(" -e ")
 
+            felix_logsetting = ""
+            if FELIX_LOGLEVEL != "":
+                felix_logsetting = " -e FELIX_LOGSEVERITYSCREEN=" + FELIX_LOGLEVEL
+
             # Construct the calicoctl command that we want, including the
             # CALICO_IPV4POOL_CIDR setting.
             modified_cmd = (
                 prefix +
                 (" -e CALICO_IPV4POOL_CIDR=%s " % DEFAULT_IPV4_POOL_CIDR) +
+                felix_logsetting +
                 " -e DISABLE_NODE_IP_CHECK=true -e FELIX_IPINIPENABLED=true " +
                 " -e " + suffix
             )
@@ -557,8 +565,13 @@ class DockerHost(object):
         :param subnet: The subnet IP pool to assign IPs from.
         :return: A DockerNetwork object.
         """
-        nw = DockerNetwork(self, name, driver=driver, ipam_driver=ipam_driver,
-                           subnet=subnet)
+
+        nw = DummyNetwork(name)
+
+        if self.networking == NETWORKING_LIBNETWORK:
+            nw = DockerNetwork(self, name, driver=driver,
+                               ipam_driver=ipam_driver,
+                               subnet=subnet)
 
         # Store the network so that we can attempt to remove it when this host
         # or another host exits.
@@ -665,8 +678,10 @@ class DockerHost(object):
     def log_extra_diags(self):
         # Run a set of commands to trace ip routes, iptables and ipsets.
         self.execute("ip route", raise_exception_on_failure=False)
-        self.execute("iptables-save", raise_exception_on_failure=False)
-        self.execute("ip6tables-save", raise_exception_on_failure=False)
+        self.execute("iptables-save -c", raise_exception_on_failure=False)
+        self.execute("ip6tables-save -c", raise_exception_on_failure=False)
         self.execute("ipset save", raise_exception_on_failure=False)
         self.execute("ps", raise_exception_on_failure=False)
-        self.execute("cat /etc/bird/bird.conf", raise_exception_on_failure=False)
+        self.execute("docker logs calico-node", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node ls -l /var/log/calico/felix", raise_exception_on_failure=False)
+        self.execute("docker exec calico-node cat /var/log/calico/felix/*", raise_exception_on_failure=False)

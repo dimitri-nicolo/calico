@@ -2,9 +2,11 @@
 title: Configuring the Calico CNI plugins
 ---
 
-The Calico CNI plugin is configured through the standard CNI [configuration mechanism](https://github.com/containernetworking/cni/blob/master/SPEC.md#network-configuration)
+The Calico CNI plugin is configured through the standard CNI 
+[configuration mechanism](https://github.com/containernetworking/cni/blob/master/SPEC.md#network-configuration)
 
-A minimal configuration file that uses Calico for networking and IPAM looks like this
+A minimal configuration file that uses {{site.prodname}} for networking 
+and IPAM looks like this
 
 ```json
 {
@@ -36,7 +38,7 @@ Additional configuration can be added as detailed below.
 
 ### Datastore type
 
-The following option allows configuration of the Calico datastore type.
+The following option allows configuration of the {{site.prodname}} datastore type.
 
 * `datastore_type` (default: etcdv3)
 
@@ -84,14 +86,14 @@ The following deprecated options are also supported
 
 ### IPAM
 
-When using Calico IPAM, the following flags determine what IP addresses should be assigned. NOTE: These flags are strings and not boolean values.
+When using {{site.prodname}} IPAM, the following flags determine what IP addresses should be assigned. NOTE: These flags are strings and not boolean values.
 
 * `assign_ipv4` (default: `"true"`)
 * `assign_ipv6` (default: `"false"`)
 
 A specific IP address can be chosen by using [`CNI_ARGS`](https://github.com/appc/cni/blob/master/SPEC.md#parameters) and setting `IP` to the desired value.
 
-By default, Calico IPAM will assign IP addresses from all the available IP pools.
+By default, {{site.prodname}} IPAM will assign IP addresses from all the available IP pools.
 
 Optionally, the list of possible IPv4 and IPv6 pools can also be specified via the following properties:
 
@@ -217,13 +219,13 @@ When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is all
 }
 ```
 
-When making use of the `usePodCidr` option, the Calico CNI plugin requires read-only Kubernetes API access to the `Nodes` resource.
+When making use of the `usePodCidr` option, the {{site.prodname}} CNI plugin requires read-only Kubernetes API access to the `Nodes` resource.
 
 ### IPAM Manipulation with Kubernetes Annotations
 
 #### Specifying IP pools on a per-Pod basis
 
-In addition to specifying IP pools in the CNI config as discussed above, Calico IPAM supports specifying IP pools per-Pod using the following [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/).
+In addition to specifying IP pools in the CNI config as discussed above, {{site.prodname}} IPAM supports specifying IP pools per-Pod using the following [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/).
 
 - `cni.projectcalico.org/ipv4pools`: A list of configured IPv4 Pools from which to choose an address for the Pod.
 
@@ -255,10 +257,10 @@ If provided, these IP pools will override any IP pools specified in the CNI conf
 
 #### Requesting a Specific IP address
 
-You can also request a specific IP address through [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/) with Calico IPAM.
+You can also request a specific IP address through [Kubernetes annotations](https://kubernetes.io/docs/user-guide/annotations/) with {{site.prodname}} IPAM.
 There are two annotations to request a specific IP address:
 
-- `cni.projectcalico.org/ipAddrs`: A list of IPv4 and/or IPv6 addresses to assign to the Pod. The requested IP addresses will be assigned from Calico IPAM and must exist within a configured IP pool.
+- `cni.projectcalico.org/ipAddrs`: A list of IPv4 and/or IPv6 addresses to assign to the Pod. The requested IP addresses will be assigned from {{site.prodname}} IPAM and must exist within a configured IP pool.
 
   Example:
 
@@ -268,7 +270,7 @@ There are two annotations to request a specific IP address:
    ```
 
 - `cni.projectcalico.org/ipAddrsNoIpam`: A list of IPv4 and/or IPv6 addresses to assign to the Pod, bypassing IPAM. Any IP conflicts and routing have to be taken care of manually or by some other system.
-Calico will only distribute routes to a Pod if its IP address falls within a Calico IP pool. If you assign an IP address that is not in a Calico IP pool, you must ensure that routing to that IP address is taken care of through another mechanism.
+{{site.prodname}} will only distribute routes to a Pod if its IP address falls within a {{site.prodname}} IP pool. If you assign an IP address that is not in a {{site.prodname}} IP pool, you must ensure that routing to that IP address is taken care of through another mechanism.
 
   Example:
 
