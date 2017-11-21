@@ -10,11 +10,11 @@ metadata:
   namespace: kube-system
 data:
   # The OIDC client id to use for Google login.  Kubelet must be configured accordingly.
-  tigera.cnx-web.oidc-client-id: "<fill in client id here>"
+  tigera.cnx-web.oidc-client-id: "<your-oauth-client-id>"
   # The location of the Kubernetes API.  This must be reachable from where the web interface
   # will be accessed from.  `kubectl proxy --port=8080` can be used; in this case set the
   # value of this field to "localhost:8080".
-  tigera.cnx-web.kubernetes-api: "localhost:8080"
+  tigera.cnx-web.kubernetes-api: "127.0.0.1:6443"
 
 ---
 
@@ -167,8 +167,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          imagePullPolicy: Never
-          image: calico/node:{{site.data.versions[page.version].first.title}}
+          image: {{site.cnx-node-image-name}}:{{site.cnx-image-tag}}
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
@@ -531,10 +530,12 @@ spec:
         apiserver: "true"
     spec:
       serviceAccountName: apiserver
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
       containers:
       - name: calico-server
-        image: calico/k8sapiserver:{{site.data.versions[page.version].first.title}}
-        imagePullPolicy: Never
+        image: {{site.cnx-api-image-name}}:{{site.cnx-image-tag}}
         args:
         - "--etcd-servers=http://10.96.232.136:6666"
         env:
@@ -600,8 +601,7 @@ spec:
         operator: Exists
       containers:
       - name: cnx-manager-web
-        image: tigera/cnx-manager-web:{{site.data.versions[page.version].first.title}}
-        imagePullPolicy: Never
+        image: {{site.cnx-mgr-image-name}}:{{site.cnx-image-tag}}
         env:
           - name: CNX_WEB_OIDC_CLIENT_ID
             valueFrom:

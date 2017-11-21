@@ -1,6 +1,20 @@
 ---
-title: CNX Integrations
+title: Getting started with CNX
 ---
+
+## Obtain the private binaries
+
+Contact your support representative to gain access to the following files. 
+
+   | TAR file                                       | Description                                |
+   | ---------------------------------------------- | ------------------------------------------ |
+   | `tigera-calicoctl_v2.0.0-cnx-beta1.tar.xz`     | {{site.prodname}}-enhanced `calicoctl`     |
+   | `tigera-cnx-apiserver_v2.0.0-cnx-beta1.tar.xz` | Kubernetes extension API server component  |
+   | `tigera-cnx-node_v2.0.0-cnx-beta1.tar.xz`      | {{site.prodname}}-enhanced `calico/node`   |
+   | `tigera-calicoq_v2.0.0-cnx-beta1.tar.xz`       | Policy query command-line tool             |
+   | `tigera-cnx-manager_v2.0.0-cnx-beta1.xz`       | {{site.prodname}} Manager component        | 
+   
+## Choose your orchestrator
 
 To get started using {{site.prodname}}, we recommend running
 through one or more of the available tutorials linked below.
@@ -10,9 +24,6 @@ using {{site.prodname}}.  In most cases we provide worked examples using manual 
 your own servers, a quick set-up in a virtualized environment using Vagrant and
 a number of cloud services.
 
-First download and set up the {{site.prodname}} binaries.
-- [Obtaining {{site.prodname}}](essentials)
-
 Then follow one of our getting started guides.
 - [{{site.prodname}} with Kubernetes](kubernetes)
 - [{{site.prodname}} with Mesos](mesos)
@@ -20,15 +31,3 @@ Then follow one of our getting started guides.
 - [{{site.prodname}} with Docker](docker)
 - [{{site.prodname}} with OpenStack](openstack)
 - [Host protection](bare-metal/bare-metal)
-
-If you're already familiar with {{site.prodname}}, you may wish to consult the
-{{site.prodname}} for Kubernetes [demo](essentials/simple-policy-essentials), which
-demonstrates the main features.
-
-For more detailed documentation on {{site.prodname}} features, see here:
-- [Setting up {{site.prodname}} binaries](essentials)
-- [calicoq documentation]({{site.baseurl}}/{{page.version}}/reference/calicoq)
-- [Denied Packet Notifications]({{site.baseurl}}/{{page.version}}/reference/essentials/policy-violations)
-- [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)
-- [Configuring Prometheus]({{site.baseurl}}/{{page.version}}/usage/configuration/prometheus)
-- [Configuring Alertmanager]({{site.baseurl}}/{{page.version}}/usage/configuration/alertmanager)
