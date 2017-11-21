@@ -22,7 +22,7 @@ from nose_parameterized import parameterized
 from tests.st.test_base import TestBase
 from tests.st.utils.docker_host import DockerHost, CLUSTER_STORE_DOCKER_OPTIONS
 
-POST_DOCKER_COMMANDS = ["docker load -i /code/calico-node.tar",
+POST_DOCKER_COMMANDS = ["docker load -i /code/cnx-node.tar",
                         "docker load -i /code/busybox.tar",
                         "docker load -i /code/workload.tar"]
 

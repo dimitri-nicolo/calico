@@ -13,11 +13,14 @@ from tests.st.test_base import TestBase
 from tests.st.utils.docker_host import DockerHost
 from tests.st.utils.utils import assert_number_endpoints, get_ip, \
     ETCD_CA, ETCD_CERT, ETCD_KEY, ETCD_HOSTNAME_SSL, ETCD_SCHEME
+from tests.st.utils.utils import wipe_etcd as WIPE_ETCD
+
+_log = logging.getLogger(__name__)
 
 _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
 
-POST_DOCKER_COMMANDS = ["docker load -i /code/calico-node.tar",
+POST_DOCKER_COMMANDS = ["docker load -i /code/cnx-node.tar",
                         "docker load -i /code/busybox.tar",
                         "docker load -i /code/workload.tar"]
 
@@ -167,7 +170,7 @@ class TieredPolicyWorkloads(TestBase):
                                     start_calico=False))
         for host in cls.hosts:
             host.start_calico_node()
-        # Allow time for calico-node to load
+        # Allow time for cnx-node to load
         time.sleep(10)
 
         cls.networks = []
