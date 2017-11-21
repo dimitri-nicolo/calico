@@ -17,7 +17,7 @@ spec:
       serviceAccountName: apiserver
       containers:
       - name: calico-server
-        image: calico/k8sapiserver:latest
+        image: tigera/cnx-apiserver:latest
         imagePullPolicy: Never
         env:
           - name: DATASTORE_TYPE

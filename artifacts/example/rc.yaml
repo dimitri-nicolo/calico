@@ -17,7 +17,7 @@ spec:
       serviceAccountName: apiserver
       containers:
       - name: calico-server
-        image: calico/k8sapiserver:latest
+        image: tigera/cnx-apiserver:latest
         imagePullPolicy: Never
         args:
         - "--etcd-servers=http://10.96.232.136:6666"
