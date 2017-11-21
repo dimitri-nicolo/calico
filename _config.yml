@@ -19,6 +19,14 @@ cnx-api-image-name: <your-k8sapiserver-image-name>
 
 prodname: CNX
 
+# Image names in case the host changes
+imageNames:
+  node: quay.io/calico/node
+  calicoctl: quay.io/calico/ctl
+  typha: quay.io/calico/typha
+  cni: quay.io/calico/cni
+  kubeControllers: quay.io/calico/kube-controllers
+
 exclude:
   - release-scripts
   - LICENSE
