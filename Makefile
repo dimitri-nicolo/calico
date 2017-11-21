@@ -179,7 +179,7 @@ tigera/felix: bin/calico-felix
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-felix docker-image/bin/
-	docker build --pull -t tigera/felix$(ARCHTAG) --file ./docker-image/Dockerfile$(ARCHTAG) docker-image
+	docker build -t tigera/felix$(ARCHTAG) --file ./docker-image/Dockerfile$(ARCHTAG) docker-image
 
 # Targets for Felix testing with the k8s backend and a k8s API server,
 # with k8s model resources being injected by a separate test client.
