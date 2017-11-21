@@ -9,7 +9,7 @@ gems:
 
 url: https://docs.projectcalico.org
 
-cnx-image-tag: v2.0.0-cnx-beta1
+cnx-image-tag: v2.0.0-cnx-beta1-rc2
 
 cnx-mgr-image-name: <your-cnx-mgr-image-name>
 
@@ -52,51 +52,6 @@ defaults:
       version: master
   -
     scope:
-      path: v1.5
-    values:
-      version: v1.5
-  -
-    scope:
-      path: v1.6
-    values:
-      version: v1.6
-  -
-    scope:
       path: v2.0
     values:
       version: v2.0
-  -
-    scope:
-      path: v2.1
-    values:
-      version: v2.1
-  -
-    scope:
-      path: v2.2
-    values:
-      version: v2.2
-  -
-    scope:
-      path: v2.3
-    values:
-      version: v2.3
-  -
-    scope:
-      path: v2.4
-    values:
-      version: v2.4
-  -
-    scope:
-      path: v2.5
-    values:
-      version: v2.5
-  -
-    scope:
-      path: v2.6
-    values:
-      version: v2.6
-  -
-    scope:
-      path: v3.0
-    values:
-      version: v3.0

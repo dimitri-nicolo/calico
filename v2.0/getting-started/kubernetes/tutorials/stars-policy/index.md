@@ -7,22 +7,18 @@ running on Kubernetes.  It then configures network policy on each service.
 ## Pre-requisites
 
 To create a Kubernetes cluster which supports the Kubernetes network policy API, follow
-one of our [getting started guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes).  
-
-Before following this guide, you will need to download the required manifests.
-
-    git clone https://github.com/projectcalico/calico.git
-
-Then, change into the directory for this guide:
-
-    cd calico/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy
+one of our [getting started guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes).
 
 ## Running the stars example
 
 ### 1) Create the frontend, backend, client, and management-ui apps.
 
 ```shell
-kubectl create -f manifests/
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/manifests/00-namespace.yaml
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/manifests/01-management-ui.yaml
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/manifests/02-backend.yaml
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/manifests/03-frontend.yaml
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/manifests/04-client.yaml
 ```
 
 Wait for all the pods to enter `Running` state.
@@ -35,8 +31,7 @@ kubectl get pods --all-namespaces --watch
 The management UI runs as a `NodePort` Service on Kubernetes, and shows the connectivity
 of the Services in this example.
 
-If you're running the vagrant cluster, you can view the UI by visiting `http://172.18.18.102:30002` in a browser.  For other clusters, accessing
-the web UI may vary.
+You can view the UI by visiting `http://<k8s-node-ip>:30002` in a browser.
 
 Once all the pods are started, they should have full connectivity. You can see this by visiting the UI.  Each service is
 represented by a single node in the graph.
@@ -47,12 +42,14 @@ represented by a single node in the graph.
 
 ### 2) Enable isolation
 
+Running following commands will prevent all access to the frontend, backend, and client Services.
+
 ```shell
-kubectl annotate ns stars "net.beta.kubernetes.io/network-policy={\"ingress\":{\"isolation\":\"DefaultDeny\"}}"
-kubectl annotate ns client "net.beta.kubernetes.io/network-policy={\"ingress\":{\"isolation\":\"DefaultDeny\"}}"
+kubectl create -n stars -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/policies/default-deny.yaml
+kubectl create -n client -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/policies/default-deny.yaml
 ```
 
-This will prevent all access to the frontend, backend, and client Services.
+#### Confirm isolation
 
 Refresh the management UI (it may take up to 10 seconds for changes to be reflected in the UI).
 Now that we've enabled isolation, the UI can no longer access the pods, and so they will no longer show up in the UI.
@@ -61,8 +58,8 @@ Now that we've enabled isolation, the UI can no longer access the pods, and so t
 
 ```shell
 # Allow access from the management UI.
-kubectl create -f policies/allow-ui.yaml
-kubectl create -f policies/allow-ui-client.yaml
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/policies/allow-ui.yaml
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/policies/allow-ui-client.yaml
 ```
 
 After a few seconds, refresh the UI - it should now show the Services, but they should not be able to access each other any more.
@@ -70,7 +67,7 @@ After a few seconds, refresh the UI - it should now show the Services, but they 
 ### 4) Create the "backend-policy.yaml" file to allow traffic from the frontend to the backend.
 
 ```shell
-kubectl create -f policies/backend-policy.yaml
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/policies/backend-policy.yaml
 ```
 
 Refresh the UI.  You should see the following:
@@ -82,10 +79,18 @@ Refresh the UI.  You should see the following:
 ### 5) Expose the frontend service to the `client` namespace.
 
 ```shell
-kubectl create -f policies/frontend-policy.yaml
+kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/policies/frontend-policy.yaml
 ```
 
 The client can now access the frontend, but not the backend.  Neither the frontend nor the backend
 can initiate connections to the client.  The frontend can still access the backend.
 
 To use Calico to enforce egress policy on Kubernetes pods, see [the advanced policy demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/advanced-policy).
+
+### 6) (Optional) Clean up the demo environment.
+
+You can clean up the demo by deleting the demo Namespaces:
+
+```shell
+kubectl delete ns client stars management-ui
+```

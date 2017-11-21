@@ -1,16 +1,15 @@
 ---
-title: Profile Resource (profile)
+title: Profile Resource (Profile)
 ---
 
-A Profile resource (profile) represents a set of rules which are applied 
+A profile resource (`Profile`) represents a set of rules which are applied 
 to the individual endpoints to which this profile has been assigned.
 
-Each Calico endpoint or host endpoint can be assigned to zero or more profiles.
+Each {{site.prodname}} endpoint or host endpoint can be assigned to zero or more profiles.
 
-Also see the [Policy resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) 
-which provides an alternate way to select what policy is applied to an endpoint.
+Also see the [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) which provide an alternate way to select what policy is applied to an endpoint.
 
-For `calicoctl` commands that specify a resource type on the CLI, the following
+For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `profile`, `profiles`, `pro`, `pros`.
 
 ### Sample YAML
@@ -20,22 +19,23 @@ have the profile label set to `profile1` (i.e. endpoints that reference this pro
 except that *all* traffic from 10.0.20.0/24 is denied.
 
 ```yaml
-apiVersion: v1
-kind: profile
+apiVersion: projectcalico.org/v3
+kind: Profile
 metadata:
   name: profile1
   labels:
     profile: profile1 
 spec:
   ingress:
-  - action: deny
+  - action: Deny
     source:
-      net: 10.0.20.0/24
-  - action: allow
+      nets:
+      - 10.0.20.0/24
+  - action: Allow
     source:
       selector: profile == 'profile1'
   egress:
-  - action: allow 
+  - action: Allow 
 ```
 
 ### Definition 
@@ -44,7 +44,7 @@ spec:
 
 | Field       | Description                 | Accepted Values   | Schema | Default    |
 |-------------|-----------------------------|-------------------|--------|------------|
-| name   | The name of the profile. | | string |
+| name   | The name of the profile. Required. | Alphanumeric string with optional `.`, `_`, or `-`. | string |
 | labels | A set of labels to apply to endpoints using this profile. |  | map of string key to string values |
 | tags (deprecated) | A list of tag names to apply to endpoints using this profile.        | | list of strings |
 
@@ -52,40 +52,21 @@ spec:
 
 | Field       | Description                 | Accepted Values   | Schema | Default    |
 |-------------|-----------------------------|-------------------|--------|------------|
-| ingress  | The ingress rules belonging to this profile.                          | | List of [Rule](#rule) |
-| egress   | The egress rules belonging to this profile.                           | | List of [Rule](#rule)  |
+| ingress  | The ingress rules belonging to this profile. | | List of [Rule](#rule) |
+| egress   | The egress rules belonging to this profile. | | List of [Rule](#rule)  |
+| labels   | An option set of labels to apply to each endpoint (in addition to their own labels) |  | map | 
 
 #### Rule
 
-| Field       | Description                 | Accepted Values   | Schema | Default    |
-|-------------|-----------------------------|-------------------|--------|------------|
-| action      | Action to perform when matching this rule. | allow, deny, log | string | |
-| protocol    | Positive protocol match.  | tcp, udp, icmp, icmpv6, sctp, udplite, integer 1-255. | string | |
-| notProtocol | Negative protocol match. | tcp, udp, icmp, icmpv6, sctp, udplite, integer 1-255. | string | |
-| icmp        | ICMP match criteria.     | | [ICMP](#icmp) | |
-| notICMP     | Negative match on ICMP. | | [ICMP](#icmp) | |
-| source      | Source match parameters. |  | [EntityRule](#entityrule) | |
-| destination | Destination match parameters. |  | [EntityRule](#entityrule) | |
+{% include {{page.version}}/rule.md %}
 
 #### ICMP
 
-| Field       | Description                 | Accepted Values   | Schema | Default    |
-|-------------|-----------------------------|-------------------|--------|------------|
-| type | Match on ICMP type. | Can be integer 1-255 | integer |
-| code | Match on ICMP code. | Can be integer 1-255 | integer |
+{% include {{page.version}}/icmp.md %}
 
 #### EntityRule
 
-| Field       | Description                 | Accepted Values   | Schema | Default    |
-|-------------|-----------------------------|-------------------|--------|------------|
-| tag (deprecated)      | Positive match on tag. |  | string | |
-| notTag (deprecated)   | Negative match on tag. |  | string | |
-| net    | Match on CIDR. | Valid IPv4 or IPv6 CIDR  | cidr | |
-| notNet | Negative match on CIDR. | Valid IPv4 or IPv6 CIDR | cidr | |
-| selector    | Positive match on selected endpoints. | | [selector](#selector) | |
-| notSelector | Negative match on selected endpoints. | | [selector](#selector) | |
-| ports | Positive match on the specified ports | | list of [ports](#ports) | |
-| notPorts | Negative match on the specified ports |  | list of [ports](#ports) | |
+{% include {{page.version}}/entityrule.md %}
 
 #### Selector
 
@@ -94,3 +75,11 @@ spec:
 #### Ports
 
 {% include {{page.version}}/ports.md %}
+
+
+### Supported operations
+
+| Datastore type        | Create/Delete | Update | Get/List | Notes
+|-----------------------|---------------|--------|----------|------
+| etcdv3                | Yes           | Yes    | Yes      |
+| Kubernetes API server | No            | No     | Yes      | Calico profiles are pre-assigned for each Namespace.

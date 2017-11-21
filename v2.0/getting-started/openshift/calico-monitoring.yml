@@ -1,0 +1,458 @@
+# This manifest creates a namespace for deploying prometheus-operator,
+# Prometheus and alertmanager.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: calico-monitoring
+---
+# This manifest creates a secret that will be mounted as the Alertmanager
+# configuration file.
+# Write your alertmanager configuration file based on
+# https://prometheus.io/docs/alerting/configuration/
+# and save it to a file, say alertmanager.yaml and then run:
+#
+#       $ cat alertmanager.yml | base64 -w 0
+#
+# and paste the output below.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-calico-node-alertmanager
+  namespace: calico-monitoring
+data:
+  alertmanager.yaml: Z2xvYmFsOgogIHJlc29sdmVfdGltZW91dDogNW0Kcm91dGU6CiAgZ3JvdXBfYnk6IFsnam9iJ10KICBncm91cF93YWl0OiAzMHMKICBncm91cF9pbnRlcnZhbDogMW0KICByZXBlYXRfaW50ZXJ2YWw6IDVtCiAgcmVjZWl2ZXI6ICd3ZWJob29rJwpyZWNlaXZlcnM6Ci0gbmFtZTogJ3dlYmhvb2snCiAgd2ViaG9va19jb25maWdzOgogIC0gdXJsOiAnaHR0cDovL2NhbGljby1hbGVydG1hbmFnZXItd2ViaG9vazozMDUwMS8n
+---
+# This manifest installs the Service which gets traffic to the Calico
+# AlertManager.
+apiVersion: v1
+kind: Service
+metadata:
+  name: calico-node-alertmanager
+  namespace: calico-monitoring
+spec:
+  type: NodePort
+  ports:
+  - name: web
+    nodePort: 30903
+    port: 9093
+    protocol: TCP
+    targetPort: web
+  selector:
+    alertmanager: calico-node-alertmanager
+---
+# This manifest creates a network policy to allow traffic to Alertmanager
+# (TCP port 9093).
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+  name: calico-node-alertmanager
+  namespace: calico-monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 9093
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      alertmanager: calico-node-alertmanager
+      app: alertmanager
+---
+# This manifest creates a network policy to allow traffic between
+# Alertmanagers for HA configuration (TCP port 6783).
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+  name: calico-node-alertmanager-mesh
+  namespace: calico-monitoring
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - alertmanager
+        - key: alertmanager
+          operator: In
+          values:
+          - calico-node-alertmanager
+    ports:
+    - port: 6783
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      alertmanager: calico-node-alertmanager
+      app: alertmanager
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  labels:
+    alertmanager: calico-node-alertmanager
+    app: alertmanager
+  name: alertmanager-calico-node-alertmanager
+  namespace: calico-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      alertmanager: calico-node-alertmanager
+      app: alertmanager
+  serviceName: alertmanager-operated
+  template:
+    metadata:
+      labels:
+        alertmanager: calico-node-alertmanager
+        app: alertmanager
+    spec:
+      containers:
+      - command:
+        - /bin/alertmanager
+        - -config.file=/etc/alertmanager/config/alertmanager.yaml
+        - -web.listen-address=:9093
+        - -mesh.listen-address=:6783
+        - -storage.path=/etc/alertmanager/data
+        - -mesh.peer=alertmanager-calico-node-alertmanager-0.alertmanager-operated.calico-monitoring.svc
+        image: quay.io/prometheus/alertmanager:v0.6.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /api/v1/status
+            port: web
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: alertmanager
+        ports:
+        - containerPort: 9093
+          name: web
+          protocol: TCP
+        - containerPort: 6783
+          name: mesh
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /api/v1/status
+            port: web
+            scheme: HTTP
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: 200Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/alertmanager/config
+          name: config-volume
+        - mountPath: /var/alertmanager/data
+          name: alertmanager-calico-node-alertmanager-db
+      - args:
+        - -webhook-url=http://localhost:9093/-/reload
+        - -volume-dir=/etc/alertmanager/config
+        image: quay.io/coreos/configmap-reload:v0.0.1
+        imagePullPolicy: IfNotPresent
+        name: config-reloader
+        resources:
+          limits:
+            cpu: 5m
+            memory: 10Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/alertmanager/config
+          name: config-volume
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - name: config-volume
+        secret:
+          defaultMode: 420
+          secretName: alertmanager-calico-node-alertmanager
+      - emptyDir: {}
+        name: alertmanager-calico-node-alertmanager-db
+---
+kind: NetworkPolicy
+apiVersion: extensions/v1beta1
+metadata:
+  name: default-deny
+  namespace: calico-monitoring
+spec:
+  podSelector:
+---
+# This manifest installs the Service which gets traffic to the calico-node metrics
+# reporting endpoint.
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: calico-node-metrics
+  labels:
+    k8s-app: calico-node
+spec:
+  selector:
+    k8s-app: calico-node
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: calico-metrics-port
+    port: 9081
+    targetPort: 9081
+    protocol: TCP
+---
+# This manifest installs the Service which gets traffic to the calico-node metrics
+# reporting endpoint.
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: calico-node-metrics
+  labels:
+    k8s-app: calico-node
+spec:
+  selector:
+    k8s-app: calico-node
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: calico-metrics-port
+    port: 9081
+    targetPort: 9081
+    protocol: TCP
+---
+
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: kube-system
+  labels:
+    k8s-app: calico-node
+spec:
+  template:
+    metadata:
+      name: node-exporter
+      labels:
+        k8s-app: calico-node
+    spec:
+      serviceAccountName: calico
+      containers:
+      - image: busybox
+        command: ["sleep", "10000000"]
+        name: node-exporter
+        ports:
+        - containerPort: 9081
+          hostPort: 9081
+          name: scrape
+      hostNetwork: true
+      hostPID: true
+---
+# This manifest creates a secret that will be mounted as the Alertmanager
+# configuration file.
+# Write your alertmanager configuration file based on
+# https://prometheus.io/docs/alerting/configuration/
+# and save it to a file, say alertmanager.yaml and then run:
+#
+#       $ cat alertmanager.yml | base64 -w 0
+#
+# and paste the output below.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-calico-node-prometheus
+  namespace: calico-monitoring
+data:
+  prometheus.yaml: Z2xvYmFsOgogIGV2YWx1YXRpb25faW50ZXJ2YWw6IDMwcwogIHNjcmFwZV9pbnRlcnZhbDogMzBzCiAgZXh0ZXJuYWxfbGFiZWxzOiB7fQpydWxlX2ZpbGVzOgotIC9ldGMvcHJvbWV0aGV1cy9ydWxlcy9ydWxlcy0wLyoucnVsZXMKc2NyYXBlX2NvbmZpZ3M6Ci0gam9iX25hbWU6IGNhbGljby1tb25pdG9yaW5nL2NhbGljby1ub2RlLW1vbml0b3IvMAogIGhvbm9yX2xhYmVsczogZmFsc2UKICBrdWJlcm5ldGVzX3NkX2NvbmZpZ3M6CiAgLSByb2xlOiBlbmRwb2ludHMKICBzY3JhcGVfaW50ZXJ2YWw6IDVzCiAgcmVsYWJlbF9jb25maWdzOgogIC0gYWN0aW9uOiBrZWVwCiAgICBzb3VyY2VfbGFiZWxzOgogICAgLSBfX21ldGFfa3ViZXJuZXRlc19zZXJ2aWNlX2xhYmVsX2s4c19hcHAKICAgIHJlZ2V4OiBjYWxpY28tbm9kZQogIC0gYWN0aW9uOiBrZWVwCiAgICBzb3VyY2VfbGFiZWxzOgogICAgLSBfX21ldGFfa3ViZXJuZXRlc19uYW1lc3BhY2UKICAgIHJlZ2V4OiBrdWJlLXN5c3RlbQogIC0gYWN0aW9uOiBrZWVwCiAgICBzb3VyY2VfbGFiZWxzOgogICAgLSBfX21ldGFfa3ViZXJuZXRlc19lbmRwb2ludF9wb3J0X25hbWUKICAgIHJlZ2V4OiBjYWxpY28tbWV0cmljcy1wb3J0CiAgLSBzb3VyY2VfbGFiZWxzOgogICAgLSBfX21ldGFfa3ViZXJuZXRlc19uYW1lc3BhY2UKICAgIHRhcmdldF9sYWJlbDogbmFtZXNwYWNlCiAgLSBzb3VyY2VfbGFiZWxzOgogICAgLSBfX21ldGFfa3ViZXJuZXRlc19wb2RfbmFtZQogICAgdGFyZ2V0X2xhYmVsOiBwb2QKICAtIHNvdXJjZV9sYWJlbHM6CiAgICAtIF9fbWV0YV9rdWJlcm5ldGVzX3NlcnZpY2VfbmFtZQogICAgdGFyZ2V0X2xhYmVsOiBzZXJ2aWNlCiAgLSBzb3VyY2VfbGFiZWxzOgogICAgLSBfX21ldGFfa3ViZXJuZXRlc19zZXJ2aWNlX25hbWUKICAgIHRhcmdldF9sYWJlbDogam9iCiAgICByZXBsYWNlbWVudDogJHsxfQogIC0gdGFyZ2V0X2xhYmVsOiBlbmRwb2ludAogICAgcmVwbGFjZW1lbnQ6IGNhbGljby1tZXRyaWNzLXBvcnQKYWxlcnRpbmc6CiAgYWxlcnRtYW5hZ2VyczoKICAtIGt1YmVybmV0ZXNfc2RfY29uZmlnczoKICAgIC0gcm9sZTogZW5kcG9pbnRzCiAgICBzY2hlbWU6IGh0dHAKICAgIHJlbGFiZWxfY29uZmlnczoKICAgIC0gYWN0aW9uOiBrZWVwCiAgICAgIHNvdXJjZV9sYWJlbHM6CiAgICAgIC0gX19tZXRhX2t1YmVybmV0ZXNfc2VydmljZV9uYW1lCiAgICAgIHJlZ2V4OiBjYWxpY28tbm9kZS1hbGVydG1hbmFnZXIKICAgIC0gYWN0aW9uOiBrZWVwCiAgICAgIHNvdXJjZV9sYWJlbHM6CiAgICAgIC0gX19tZXRhX2t1YmVybmV0ZXNfbmFtZXNwYWNlCiAgICAgIHJlZ2V4OiBjYWxpY28tbW9uaXRvcmluZwogICAgLSBhY3Rpb246IGtlZXAKICAgICAgc291cmNlX2xhYmVsczoKICAgICAgLSBfX21ldGFfa3ViZXJuZXRlc19lbmRwb2ludF9wb3J0X25hbWUKICAgICAgcmVnZXg6IHdlYgo=
+---
+# This ConfigMap is used to create the denied packets alerting rules in Prometheus.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calico-prometheus-dp-rate
+  namespace: calico-monitoring
+  labels:
+    role: calico-prometheus-rules
+    prometheus: calico-node-prometheus
+data:
+  calico.rules: |
+    ALERT DeniedPacketsRate
+      IF rate(calico_denied_packets[10s]) > 10
+      LABELS { severity = "critical" }
+      ANNOTATIONS {
+         summary = "Instance {{$labels.instance}} - Large rate of packets denied",
+         description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
+      }
+---
+
+# This manifest installs the Service which gets traffic to the Calico
+# Prometheus.
+apiVersion: v1
+kind: Service
+metadata:
+  name: calico-node-prometheus
+  namespace: calico-monitoring
+spec:
+  type: NodePort
+  ports:
+  - name: web
+    nodePort: 30909
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    prometheus: calico-node-prometheus
+---
+
+# This manifest creates a network policy to allow traffic to access the
+# Prometheus (TCP port 9090).
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+  name: prometheus
+  namespace: calico-monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 9090
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: prometheus
+      prometheus: calico-node-prometheus
+---
+
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  labels:
+    app: prometheus
+    prometheus: calico-node-prometheus
+  name: prometheus-calico-node-prometheus
+  namespace: calico-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+      prometheus: calico-node-prometheus
+  serviceName: prometheus-operated
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        prometheus: calico-node-prometheus
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: prometheus
+      serviceAccountName: prometheus
+      terminationGracePeriodSeconds: 600
+      volumes:
+      - name: config
+        secret:
+          defaultMode: 420
+          secretName: prometheus-calico-node-prometheus
+      - name: rules
+        configMap:
+          name: calico-prometheus-dp-rate
+      - name: prometheus-calico-node-prometheus-db
+        emptyDir: {}
+      containers:
+      - args:
+        - -storage.local.retention=1h
+        - -storage.local.num-fingerprint-mutexes=4096
+        - -storage.local.path=/var/prometheus/data
+        - -storage.local.chunk-encoding-version=2
+        - -config.file=/etc/prometheus/config/prometheus.yaml
+        - -storage.local.target-heap-size=279620266
+        image: quay.io/prometheus/prometheus:v1.6.3
+
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /status
+            port: web
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        name: prometheus
+        ports:
+        - containerPort: 9090
+          name: web
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /status
+            port: web
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: 400Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules/rules-0/
+          name: rules
+          readOnly: true
+        - mountPath: /var/prometheus/data
+          name: prometheus-calico-node-prometheus-db
+---
+apiVersion: v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["get"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+---
+apiVersion: v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: calico-monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: calico-monitoring

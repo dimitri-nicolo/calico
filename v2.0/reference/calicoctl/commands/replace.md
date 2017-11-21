@@ -7,6 +7,14 @@ This sections describes the `calicoctl replace` command.
 Read the [calicoctl command line interface user reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/) 
 for a full list of calicoctl commands.
 
+> **Note**: The available actions for a specific resource type may be 
+> limited based on the datastore used for {{site.prodname}} (etcdv3 / Kubernetes API). 
+> Please refer to the 
+> [Resources section]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/)
+> for details about each resource type.
+{: .alert .alert-info}
+
+
 ## Displaying the help text for 'calicoctl replace' command
 
 Run `calicoctl replace --help` to display the following help menu for the 
@@ -14,7 +22,7 @@ command.
 
 ```
 Usage:
-  calicoctl replace --filename=<FILENAME> [--config=<CONFIG>]
+  calicoctl replace --filename=<FILENAME> [--config=<CONFIG>] [--namespace=<NS>]
 
 Examples:
   # Replace a policy using the data in policy.yaml.
@@ -30,19 +38,33 @@ Options:
   -c --config=<CONFIG>       Path to the file containing connection
                              configuration in YAML or JSON format.
                              [default: /etc/calico/calicoctl.cfg]
+  -n --namespace=<NS>       Namespace of the resource.
+                            Only applicable to NetworkPolicy and WorkloadEndpoint.
+                            Uses the default namespace if not specified.
 
 Description:
   The replace command is used to replace a set of resources by filename or
   stdin.  JSON and YAML formats are accepted.
 
-  Valid resource types are node, bgpPeer, hostEndpoint, workloadEndpoint,
-  ipPool, policy, and profile.
+  Valid resource types are:
+
+    * bgpConfiguration
+    * bgpPeer
+    * felixConfiguration
+    * globalNetworkPolicy
+    * hostEndpoint
+    * ipPool
+    * tier
+    * networkPolicy
+    * node
+    * profile
+    * workloadEndpoint
 
   Attempting to replace a resource that does not exist is treated as a
   terminating error.
 
   The output of the command indicates how many resources were successfully
-  eplaced, and the error reason if an error occurred.
+  replaced, and the error reason if an error occurred.
 
   The resources are replaced in the order they are specified.  In the event of
   a failure replacing a specific resource it is possible to work out which
@@ -85,6 +107,6 @@ Failed to replace any 'policy' resources: resource does not exist: Policy(name=d
 
 -  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
--  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for details on the Calico selector-based policy model
+-  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup) for details on configuring `calicoctl` to access
-   the Calico datastore.
+   the {{site.prodname}} datastore.

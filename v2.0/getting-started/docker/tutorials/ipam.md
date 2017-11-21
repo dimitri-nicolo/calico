@@ -7,18 +7,20 @@ select a specific IP address when creating a container.  In order to use
 this feature, Docker requires that you specify the `--subnet` parameter when running
 `docker network create`.
 
-Calico requires that the passed `--subnet` value be the same CIDR as an existing
-Calico IP pool.  
+{{site.prodname}} requires that the passed `--subnet` value be the same CIDR as an existing
+{{site.prodname}} IP pool.  
 
 ## Example
 
-#### 1. Create a Calico IP pool
+#### 1. Create a {{site.prodname}} IP pool
 
 ```
 cat << EOF | calicoctl create -f -
-- apiVersion: v1
-  kind: ipPool
+- apiVersion: projectcalico.org/v3
+  kind: IPPool
   metadata:
+    name: ippool-1
+  spec:
     cidr: 192.0.2.0/24
 EOF
 ```

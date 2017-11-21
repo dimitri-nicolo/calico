@@ -2,7 +2,7 @@
 title: Command Reference
 ---
 
-The command line tool, `calicoctl`, makes it easy to manage Calico network
+The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}} network
 and security policy.
 
 This section is a command line reference for calicoctl, organised based on 
@@ -25,7 +25,6 @@ Usage:
               name.
     get       Get a resource identified by file, stdin or resource type and 
               name.
-    config    Manage system-wide and low-level node configuration options.
     ipam      IP address management.
     node      Calico node management.
     version   Display the version of calicoctl.
@@ -53,7 +52,15 @@ organized by top level command.
 -  [calicoctl apply]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/apply)
 -  [calicoctl delete]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/delete)
 -  [calicoctl get]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/get)
--  [calicoctl config]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/config)
 -  [calicoctl ipam]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/ipam)
 -  [calicoctl node]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/node)
 -  [calicoctl version]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/version)
+
+## Modifying low-level component configurations
+
+In order to update low-level Felix or BGP settings:
+1. optionally `get` the appropriate resource and store the yaml output in a file
+1. optionally modify the resource using your favorite editor
+1. `replace` the resource
+
+See [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration) for more details.
