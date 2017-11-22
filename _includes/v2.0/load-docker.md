@@ -59,16 +59,46 @@ If you do not already have a private registry, consider one of the following opt
    private repository.
 
    ```
-   docker push cnx-manager:v2.0.0-cnx-beta1
-   docker push cnx-node:v2.0.0-cnx-beta1
-   docker push cnx-apiserver:v2.0.0-cnx-beta1
+   docker push {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker push {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker push {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    ```
+
+1. Optionally repeat this process for the `tigera_calicoctl` and `tigera_calicoq` command line tools.
+   You don't need them to deploy CNX, and can distribute and use them as binaries instead of Docker
+   images if you prefer.
    
-### Creating a secret containing the credentials
+### Configure Kubernetes to pull from your private registry
 
-1. Create a secret containing your private registry credentials.
+You can do this in several different ways, depending mostly on what the registry is.  Pick one.
+
+1. Use an unsecured private registry that is not accessible from the internet.
+
+1. Use a private Docker registry and configure `.docker/config.json` on each node.
+
+1. Instances running on GCE can pull from the project's Google Container Registry using the
+   automatically configured instance service account.
+
+1. Create a secret containing your private registry credentials and add it to the default
+   service account.
 
    ```
-   kubectl create secret docker-registry regsecret --docker-server=<your-registry-server> /
+   kubectl create secret docker-registry regsecret -n kube-system --docker-server=<your-registry-server> /
    --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
    ```
+
+   Then 
+
+   ```
+   kubectl patch serviceaccount default -n kube-system -p '{"imagePullSecrets": [{"name": "regsecret"}]}'
+   ```
+
+1. Create a secret and specify it as an imagePullSecret.
+
+   ```
+   kubectl create secret docker-registry regsecret -n kube-system --docker-server=<your-registry-server> /
+   --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
+   ```
+   
+   You will then need to edit every manifest and insert the line `imagePullSecret: regsecret` alongside
+   every image hosted in the private registry.

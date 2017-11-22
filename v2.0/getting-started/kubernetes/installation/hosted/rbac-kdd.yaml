@@ -50,6 +50,7 @@ rules:
       - ippools
       - globalnetworkpolicies
       - networkpolicies
+      - tiers
       - clusterinformations
     verbs:
       - create
