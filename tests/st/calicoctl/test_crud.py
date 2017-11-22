@@ -419,6 +419,15 @@ class TestCalicoctlCommands(TestBase):
             data1['metadata']['name'] = "name1"
             data2['metadata']['name'] = "name2"
             data2['spec']['cidr'] = "10.10.1.0/24"
+        elif kind == "NetworkPolicy":
+            tier = "default"
+            if 'tier' in data1['spec']:
+                tier = data1['spec']['tier']
+            data1['metadata']['name'] = tier + "." + 'name1'
+            tier = "default"
+            if 'tier' in data2['spec']:
+                tier = data2['spec']['tier']
+            data2['metadata']['name'] = tier + "." + 'name2'
         else:
             data1['metadata']['name'] = "name1"
             data2['metadata']['name'] = "name2"
@@ -588,17 +597,6 @@ class TestCalicoctlCommands(TestBase):
         # Try to create a cluster info, should be rejected.
         rc = calicoctl("create", data=clusterinfo_name1_rev1)
         rc.assert_error(NOT_SUPPORTED)
-        rc = calicoctl("get clusterinfo %s -o yaml" % name(clusterinfo_name1_rev1))
-        rc.assert_error(NOT_FOUND)
-
-        # Replace the cluster information (with no resource version) - assert not supported.
-        rc = calicoctl("replace", data=clusterinfo_name1_rev2)
-        rc.assert_error(NOT_FOUND)
-
-        # Apply an update to the cluster information and assert not found (we need the node to
-        # create it).
-        rc = calicoctl("apply", data=clusterinfo_name1_rev2)
-        rc.assert_error(NOT_FOUND)
 
         # Delete the resource by name (i.e. without using a resource version) - assert not
         # supported.

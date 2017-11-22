@@ -130,10 +130,11 @@ networkpolicy_name1_rev1 = {
     'apiVersion': API_VERSION,
     'kind': 'NetworkPolicy',
     'metadata': {
-        'name': 'policy-mypolicy1',
+        'name': 'default.policy-mypolicy1',
         'namespace': 'default'
     },
     'spec': {
+        'tier': 'default',
         'order': 100,
         'selector': "type=='database'",
         'types': ['Ingress', 'Egress'],
@@ -203,7 +204,7 @@ networkpolicy_name2_rev1 = {
     'apiVersion': API_VERSION,
     'kind': 'NetworkPolicy',
     'metadata': {
-        'name': 'policy-mypolicy2',
+        'name': 'default.policy-mypolicy2',
         'namespace': 'default',
         'generateName': 'test-policy-',
         'deletionTimestamp': '2006-01-02T15:04:07Z',
@@ -287,7 +288,7 @@ globalnetworkpolicy_name1_rev1 = {
     'apiVersion': API_VERSION,
     'kind': 'GlobalNetworkPolicy',
     'metadata': {
-        'name': 'policy-mypolicy1',
+        'name': 'default.policy-mypolicy1',
     },
     'spec': {
         'order': 100,
@@ -333,7 +334,7 @@ globalnetworkpolicy_name1_rev2 = {
     'apiVersion': API_VERSION,
     'kind': 'GlobalNetworkPolicy',
     'metadata': {
-        'name': 'policy-mypolicy1',
+        'name': 'default.policy-mypolicy1',
     },
     'spec': {
         'order': 100000,
