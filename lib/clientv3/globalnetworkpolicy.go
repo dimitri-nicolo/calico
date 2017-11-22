@@ -153,6 +153,11 @@ func (r globalNetworkPolicies) Get(ctx context.Context, name string, opts option
 // List returns the list of GlobalNetworkPolicy objects that match the supplied options.
 func (r globalNetworkPolicies) List(ctx context.Context, opts options.ListOptions) (*apiv3.GlobalNetworkPolicyList, error) {
 	res := &apiv3.GlobalNetworkPolicyList{}
+	// Add the name prefix if name is provided
+	if opts.Name != "" {
+		opts.Name = names.TieredPolicyName(opts.Name)
+	}
+
 	if err := r.client.resources.List(ctx, opts, apiv3.KindGlobalNetworkPolicy, apiv3.KindGlobalNetworkPolicyList, res); err != nil {
 		return nil, err
 	}
@@ -174,7 +179,12 @@ func (r globalNetworkPolicies) List(ctx context.Context, opts options.ListOption
 // Watch returns a watch.Interface that watches the globalNetworkPolicies that match the
 // supplied options.
 func (r globalNetworkPolicies) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
-	return r.client.resources.Watch(ctx, opts, apiv3.KindGlobalNetworkPolicy)
+	// Add the name prefix if name is provided
+	if opts.Name != "" {
+		opts.Name = names.TieredPolicyName(opts.Name)
+	}
+
+	return r.client.resources.Watch(ctx, opts, apiv3.KindGlobalNetworkPolicy, &policyConverter{})
 }
 
 func defaultPolicyTypesField(ingressRules, egressRules []apiv3.Rule, types *[]apiv3.PolicyType) {
@@ -213,4 +223,16 @@ func convertPolicyNameFromStorage(name string) string {
 	}
 	parts := strings.SplitN(name, ".", 2)
 	return parts[len(parts)-1]
+}
+
+type policyConverter struct{}
+
+func (pc *policyConverter) Convert(r resource) resource {
+	retName, err := names.ClientTieredPolicyName(r.GetObjectMeta().GetName())
+	if err != nil {
+		log.WithError(err).Infof("Stored policy name is invalid: %s", r.GetObjectMeta().GetName())
+		return r
+	}
+	r.GetObjectMeta().SetName(retName)
+	return r
 }
