@@ -40,12 +40,14 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 	order2 := 22.222
 	name1 := "t-1"
 	name2 := "t-2"
+	defaultName := "default"
 	spec1 := apiv3.TierSpec{
 		Order: &order1,
 	}
 	spec2 := apiv3.TierSpec{
 		Order: &order2,
 	}
+	defaultSpec := apiv3.TierSpec{}
 
 	DescribeTable("Tier e2e CRUD tests",
 		func(name1, name2 string, spec1, spec2 apiv3.TierSpec) {
@@ -56,8 +58,36 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
 
+			err = c.EnsureInitialized(ctx, "", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Cannot create the default tier")
+			res, outError := c.Tiers().Create(ctx, &apiv3.Tier{
+				ObjectMeta: metav1.ObjectMeta{Name: defaultName},
+				Spec:       defaultSpec,
+			}, options.SetOptions{})
+			Expect(res).To(BeNil())
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(Equal("operation Create is not supported on default: Cannot create default tier"))
+
+			By("Cannot delete the default Tier")
+			_, outError = c.Tiers().Delete(ctx, defaultName, options.DeleteOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(Equal("operation Delete is not supported on default: Cannot delete default tier"))
+
+			By("Getting default Tier")
+			defRes, outError := c.Tiers().Get(ctx, defaultName, options.GetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+			testutils.ExpectResource(defRes, apiv3.KindTier, testutils.ExpectNoNamespace, defaultName, defaultSpec)
+
+			By("Cannot update the default Tier")
+			defRes.Spec = spec2
+			_, outError = c.Tiers().Update(ctx, defRes, options.SetOptions{})
+			Expect(outError).To(HaveOccurred())
+			Expect(outError.Error()).To(Equal("operation Update is not supported on default: Cannot update the order of the default tier"))
+
 			By("Updating the Tier before it is created")
-			res, outError := c.Tiers().Update(ctx, &apiv3.Tier{
+			res, outError = c.Tiers().Update(ctx, &apiv3.Tier{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-tier"},
 				Spec:       spec1,
 			}, options.SetOptions{})
@@ -107,8 +137,9 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Listing all the Tiers, expecting a single result with name1/spec1")
 			outList, outError := c.Tiers().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(1))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec1)
+			Expect(outList.Items).To(HaveLen(2))
+			testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, defaultName, defaultSpec)
+			testutils.ExpectResource(&outList.Items[1], apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec1)
 
 			By("Creating a new Tier with name2/spec2")
 			res2, outError := c.Tiers().Create(ctx, &apiv3.Tier{
@@ -127,9 +158,10 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Listing all the Tiers, expecting a two results with name1/spec1 and name2/spec2")
 			outList, outError = c.Tiers().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(2))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec1)
-			testutils.ExpectResource(&outList.Items[1], apiv3.KindTier, testutils.ExpectNoNamespace, name2, spec2)
+			Expect(outList.Items).To(HaveLen(3))
+			testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, defaultName, defaultSpec)
+			testutils.ExpectResource(&outList.Items[1], apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec1)
+			testutils.ExpectResource(&outList.Items[2], apiv3.KindTier, testutils.ExpectNoNamespace, name2, spec2)
 
 			By("Updating Tier name1 with spec2")
 			res1.Spec = spec2
@@ -172,16 +204,18 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 				By("Listing Tiers with the original resource version and checking for a single result with name1/spec1")
 				outList, outError = c.Tiers().List(ctx, options.ListOptions{ResourceVersion: rv1_1})
 				Expect(outError).NotTo(HaveOccurred())
-				Expect(outList.Items).To(HaveLen(1))
-				testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec1)
+				Expect(outList.Items).To(HaveLen(2))
+				testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, defaultName, defaultSpec)
+				testutils.ExpectResource(&outList.Items[1], apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec1)
 			}
 
 			By("Listing Tiers with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
 			outList, outError = c.Tiers().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(2))
-			testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec2)
-			testutils.ExpectResource(&outList.Items[1], apiv3.KindTier, testutils.ExpectNoNamespace, name2, spec2)
+			Expect(outList.Items).To(HaveLen(3))
+			testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, defaultName, defaultSpec)
+			testutils.ExpectResource(&outList.Items[1], apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec2)
+			testutils.ExpectResource(&outList.Items[2], apiv3.KindTier, testutils.ExpectNoNamespace, name2, spec2)
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Deleting Tier (name1) with the old resource version")
@@ -234,10 +268,11 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			Expect(outError).To(HaveOccurred())
 			Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
 
-			By("Listing all Tiers and expecting no items")
+			By("Listing all Tiers and expecting only the default tier")
 			outList, outError = c.Tiers().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
-			Expect(outList.Items).To(HaveLen(0))
+			Expect(outList.Items).To(HaveLen(1))
+			testutils.ExpectResource(&outList.Items[0], apiv3.KindTier, testutils.ExpectNoNamespace, defaultName, defaultSpec)
 
 			By("Getting Tier (name2) and expecting an error")
 			res, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
