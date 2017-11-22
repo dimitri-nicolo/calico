@@ -50,7 +50,7 @@ def parallel_host_setup(num_hosts):
 
 
 gnp_next_all = {
-    "apiVersion": "projectcalico.org/v2",
+    "apiVersion": "projectcalico.org/v3",
     "kind": "GlobalNetworkPolicy",
     "metadata": {"name": "gnp_next_all"},
     "spec": {
@@ -61,7 +61,7 @@ gnp_next_all = {
 }
 
 gnp_allow_all = {
-    "apiVersion": "projectcalico.org/v2",
+    "apiVersion": "projectcalico.org/v3",
     "kind": "GlobalNetworkPolicy",
     "metadata": {"name": "gnp_allow_all"},
     "spec": {
@@ -72,7 +72,7 @@ gnp_allow_all = {
 }
 
 gnp_deny_all = {
-    "apiVersion": "projectcalico.org/v2",
+    "apiVersion": "projectcalico.org/v3",
     "kind": "GlobalNetworkPolicy",
     "metadata": {"name": "gnp_deny_all"},
     "spec": {
@@ -81,7 +81,7 @@ gnp_deny_all = {
         "egress": [{"action": "Deny"}]}
 }
 gnp_none_all = {
-    "apiVersion": "projectcalico.org/v2",
+    "apiVersion": "projectcalico.org/v3",
     "kind": "GlobalNetworkPolicy",
     "metadata": {"name": "gnp_none_all"},
     "spec": {
@@ -185,7 +185,7 @@ class TieredPolicyWorkloads(TestBase):
                    name, order)
         if name is None:
             name = self.policy_tier_name
-        tier = {"apiVersion": "projectcalico.org/v2",
+        tier = {"apiVersion": "projectcalico.org/v3",
                 "kind": "Tier",
                 "metadata": {"name": name},
                 "spec": {"order": order}
@@ -326,7 +326,7 @@ class TieredPolicyWorkloads(TestBase):
         # TODO(doublek): This can be removed when proper tier validation
         # and conversion is added.
         tier = {
-            'apiVersion': 'projectcalico.org/v2',
+            'apiVersion': 'projectcalico.org/v3',
             'kind': 'Tier',
             'metadata': {'name': 'default'},
             'spec': {},
@@ -417,7 +417,7 @@ class TieredPolicyWorkloads(TestBase):
         self.assert_no_connectivity(self.n1_workloads)
 
     @parameterized.expand([
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true1"},
           "spec": {
@@ -438,7 +438,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true2"},
           "spec": {
@@ -459,7 +459,7 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true3"},
           "spec": {
@@ -480,7 +480,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true4"},
           "spec": {
@@ -501,7 +501,7 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true5"},
           "spec": {
@@ -522,7 +522,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true6"},
           "spec": {
@@ -543,7 +543,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true7"},
           "spec": {
@@ -564,7 +564,7 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ([{"apiVersion": "projectcalico.org/v2",
+        ([{"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true8a"},
            "spec":
@@ -579,7 +579,7 @@ class TieredPolicyWorkloads(TestBase):
                    ]
                }
            },
-          {"apiVersion": "projectcalico.org/v2",
+          {"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true8b"},
            "spec":
@@ -598,7 +598,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ([{"apiVersion": "projectcalico.org/v2",
+        ([{"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true9a"},
            "spec":
@@ -613,7 +613,7 @@ class TieredPolicyWorkloads(TestBase):
                    ]
                }
            },
-          {"apiVersion": "projectcalico.org/v2",
+          {"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true9b"},
            "spec":
@@ -632,7 +632,7 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ([{"apiVersion": "projectcalico.org/v2",
+        ([{"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true10a"},
            "spec":
@@ -647,7 +647,7 @@ class TieredPolicyWorkloads(TestBase):
                    ]
                }
            },
-          {"apiVersion": "projectcalico.org/v2",
+          {"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true10b"},
            "spec":
@@ -666,7 +666,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ([{"apiVersion": "projectcalico.org/v2",
+        ([{"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true11a"},
            "spec":
@@ -681,7 +681,7 @@ class TieredPolicyWorkloads(TestBase):
                    ]
                }
            },
-          {"apiVersion": "projectcalico.org/v2",
+          {"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true11b"},
            "spec":
@@ -700,7 +700,7 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ([{"apiVersion": "projectcalico.org/v2",
+        ([{"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true12a"},
            "spec":
@@ -715,7 +715,7 @@ class TieredPolicyWorkloads(TestBase):
                    ]
                }
            },
-          {"apiVersion": "projectcalico.org/v2",
+          {"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true12b"},
            "spec":
@@ -734,7 +734,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ([{"apiVersion": "projectcalico.org/v2",
+        ([{"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true13a"},
            "spec":
@@ -749,7 +749,7 @@ class TieredPolicyWorkloads(TestBase):
                    ]
                }
            },
-          {"apiVersion": "projectcalico.org/v2",
+          {"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true13b"},
            "spec":
@@ -768,7 +768,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ([{"apiVersion": "projectcalico.org/v2",
+        ([{"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true14a"},
            "spec":
@@ -783,7 +783,7 @@ class TieredPolicyWorkloads(TestBase):
                    ]
                }
            },
-          {"apiVersion": "projectcalico.org/v2",
+          {"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true14b"},
            "spec":
@@ -802,7 +802,7 @@ class TieredPolicyWorkloads(TestBase):
          False
          ),
 
-        ([{"apiVersion": "projectcalico.org/v2",
+        ([{"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true15a"},
            "spec":
@@ -817,7 +817,7 @@ class TieredPolicyWorkloads(TestBase):
                    ]
                }
            },
-          {"apiVersion": "projectcalico.org/v2",
+          {"apiVersion": "projectcalico.org/v3",
            "kind": "GlobalNetworkPolicy",
            "metadata": {"name": "default.deny-test-true15b"},
            "spec":
@@ -836,7 +836,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true16"},
           "spec": {
@@ -859,7 +859,7 @@ class TieredPolicyWorkloads(TestBase):
          True
          ),
 
-        ({"apiVersion": "projectcalico.org/v2",
+        ({"apiVersion": "projectcalico.org/v3",
           "kind": "GlobalNetworkPolicy",
           "metadata": {"name": "default.deny-test-true17"},
           "spec": {
