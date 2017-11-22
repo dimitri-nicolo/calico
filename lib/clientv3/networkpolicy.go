@@ -22,6 +22,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // NetworkPolicyInterface has methods to work with NetworkPolicy resources.
@@ -45,6 +47,7 @@ func (r networkPolicies) Create(ctx context.Context, res *apiv3.NetworkPolicy, o
 	// Before creating the policy, check that the tier exists.
 	tier := names.TierOrDefault(res.Spec.Tier)
 	if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv3.KindTier, noNamespace, tier); err != nil {
+		log.WithError(err).Infof("Tier %v does not exist", tier)
 		return nil, err
 	}
 	defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
@@ -159,6 +162,7 @@ func (r networkPolicies) List(ctx context.Context, opts options.ListOptions) (*a
 		name := res.Items[i].GetObjectMeta().GetName()
 		retName, err := names.ClientTieredPolicyName(name)
 		if err != nil {
+			log.WithError(err).Infof("Skipping incorrectly formatted policy name %v", name)
 			continue
 		}
 		res.Items[i].GetObjectMeta().SetName(retName)

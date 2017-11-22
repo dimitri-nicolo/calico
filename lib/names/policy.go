@@ -50,6 +50,7 @@ func validateBackendTieredPolicyName(policy, tier string) error {
 		return errors.New("Policy name is empty")
 	}
 	// If it is a K8s network policy, then simply return the policy name as is.
+	// We expect K8s network policies to be formatted properly in the first place.
 	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) {
 		return nil
 	}

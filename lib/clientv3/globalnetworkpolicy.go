@@ -162,6 +162,7 @@ func (r globalNetworkPolicies) List(ctx context.Context, opts options.ListOption
 		name := res.Items[i].GetObjectMeta().GetName()
 		retName, err := names.ClientTieredPolicyName(name)
 		if err != nil {
+			log.WithError(err).Infof("Skipping incorrectly formatted policy name %v", name)
 			continue
 		}
 		res.Items[i].GetObjectMeta().SetName(retName)
