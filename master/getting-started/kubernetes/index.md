@@ -41,12 +41,9 @@ the host. Instead, continue directly to the
    run the following commands to load them.
 
    ```
-   docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"]}}.tar.xz
-   docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"]}}.tar.xz
-   docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"]}}.xz
-   docker load -i tigera_calicoctl_{{site.data.versions[page.version].first.components["calicoctl"]}}.xz
-   docker load -i tigera_calicoq_{{site.data.versions[page.version].first.components["calicoq"]}}.xz
-   
+   docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}.tar.xz
+   docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"].version}}.tar.xz
+   docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"].version}}.tar.xz
    ```
 
 1. Update your package definitions and upgrade your existing packages.
@@ -80,13 +77,17 @@ the host. Instead, continue directly to the
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
 
-1. Install Calico with CNX enhancements for tiered policy and denied packet reporting,
-   and a single node etcd by downloading [the manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml), editing and
-   applying it.  Since you've already added the Docker images locally, you need to remove
-   the registry prefix.
+1. Download the [`calico.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml).
+
+1. Since you have loaded the private {{site.prodname}} images locally, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
 
    ```
    sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico.yaml
+   ```
+
+1. Use the following command to apply the manifest.
+
+   ```
    kubectl apply -f calico.yaml
    ```
    
@@ -107,13 +108,20 @@ the host. Instead, continue directly to the
    serviceaccount "calico-kube-controllers" created
    ```
 
-1. Install CNX Manager and the CNX API server.
-   [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml).
-   Update the image paths using the `sed` command below and fill in the OAuth client ID by hand.
+1. [Download the `calico-cnx.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml).
+
+
+1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
 
    ```
    sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico-cnx.yaml
-   # Replace <fill-in-your-oauth-client-id-here> with your OAuth client ID.
+   ```
+   
+1. Open `calico-cnx.yaml` in your favorite editor, replace `<fill-in-your-oauth-client-id-here>` with your OAuth client ID, save the file, and exit the editor. 
+
+1. Use the following command to install the additional {{site.prodname}} components.
+
+   ```
    kubectl apply -f calico-cnx.yaml
    ```
  
