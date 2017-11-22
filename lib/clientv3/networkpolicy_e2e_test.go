@@ -50,6 +50,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 	name1 := "networkp-1"
 	name2 := "networkp-2"
 	tier := "tier-a"
+	tierOrder := float64(10)
 	spec1 := apiv3.NetworkPolicySpec{
 
 		Order:    &order1,
@@ -87,8 +88,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 
 			t := names.TierOrDefault(tier)
 			// Create the tier if required before running other tiered policy tests.
-			order := float64(10)
-			tierSpec := apiv3.TierSpec{Order: &order}
+			tierSpec := apiv3.TierSpec{Order: &tierOrder}
 			By("Creating the tier")
 			tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
 				ObjectMeta: metav1.ObjectMeta{Name: t},
@@ -369,8 +369,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 
 			// Create the tier if required before running other tiered policy tests.
 			t := "default"
-			order := float64(10)
-			tierSpec := apiv3.TierSpec{Order: &order}
+			tierSpec := apiv3.TierSpec{Order: &tierOrder}
 			By("Creating the tier")
 			tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
 				ObjectMeta: metav1.ObjectMeta{Name: t},
