@@ -269,6 +269,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			dres, outError := c.GlobalNetworkPolicies().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
 			testutils.ExpectResource(dres, apiv3.KindGlobalNetworkPolicy, testutils.ExpectNoNamespace, tieredGNPName(name1, tier), spec2)
+			time.Sleep(1 * time.Second)
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Updating GlobalNetworkPolicy name2 with a 2s TTL and waiting for the entry to be deleted")
@@ -302,6 +303,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				dres, outError = c.GlobalNetworkPolicies().Delete(ctx, name2, options.DeleteOptions{})
 				Expect(outError).NotTo(HaveOccurred())
 				testutils.ExpectResource(dres, apiv3.KindGlobalNetworkPolicy, testutils.ExpectNoNamespace, tieredGNPName(name2, tier), spec2)
+				time.Sleep(1 * time.Second)
 			}
 
 			By("Attempting to delete GlobalNetworkPolicy (name2) again")

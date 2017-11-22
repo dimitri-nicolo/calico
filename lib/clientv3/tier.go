@@ -81,6 +81,32 @@ func (r tiers) Delete(ctx context.Context, name string, opts options.DeleteOptio
 			Reason:     "Cannot delete default tier",
 		}
 	}
+
+	// Check if there are any policies associated with the tier first.
+	npList, err := r.client.NetworkPolicies().List(ctx, options.ListOptions{
+		Prefix: true,
+		Name:   name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	gnpList, err := r.client.GlobalNetworkPolicies().List(ctx, options.ListOptions{
+		Prefix: true,
+		Name:   name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(npList.Items) > 0 || len(gnpList.Items) > 0 {
+		return nil, cerrors.ErrorOperationNotSupported{
+			Operation:  "delete",
+			Identifier: name,
+			Reason:     "Cannot delete a non-empty tier",
+		}
+	}
+
 	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindTier, noNamespace, name)
 	if out != nil {
 		return out.(*apiv3.Tier), err

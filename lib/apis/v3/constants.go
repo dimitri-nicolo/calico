@@ -40,4 +40,8 @@ const (
 	OrchestratorKubernetes = "k8s"
 	OrchestratorCNI        = "cni"
 	OrchestratorDocker     = "libnetwork"
+
+	// Label used to denote the Tier. This is added to policies by Calico so that label matches
+	// can be made for tiers.
+	LabelTier = "projectcalico.org/tier"
 )

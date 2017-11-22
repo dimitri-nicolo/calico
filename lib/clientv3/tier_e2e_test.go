@@ -41,6 +41,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 	name1 := "t-1"
 	name2 := "t-2"
 	defaultName := "default"
+	namespace1 := "namespace-1"
 	spec1 := apiv3.TierSpec{
 		Order: &order1,
 	}
@@ -49,8 +50,28 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 	}
 	defaultSpec := apiv3.TierSpec{}
 
+	npName1 := name1 + ".networkp-1"
+	npSpec1 := apiv3.NetworkPolicySpec{
+		Tier:     name1,
+		Order:    &order1,
+		Ingress:  []apiv3.Rule{testutils.InRule1, testutils.InRule2},
+		Egress:   []apiv3.Rule{testutils.EgressRule1, testutils.EgressRule2},
+		Selector: "thing == 'value'",
+	}
+
+	gnpName1 := name1 + ".globalnetworkp-1"
+	gnpSpec1 := apiv3.GlobalNetworkPolicySpec{
+		Tier:           name1,
+		Order:          &order2,
+		Ingress:        []apiv3.Rule{testutils.InRule2, testutils.InRule1},
+		Egress:         []apiv3.Rule{testutils.EgressRule2, testutils.EgressRule1},
+		Selector:       "thing2 == 'value2'",
+		DoNotTrack:     true,
+		ApplyOnForward: true,
+	}
+
 	DescribeTable("Tier e2e CRUD tests",
-		func(name1, name2 string, spec1, spec2 apiv3.TierSpec) {
+		func(name1, name2, npName1, gnpName1, namespace1 string, spec1, spec2 apiv3.TierSpec, npSpec1 apiv3.NetworkPolicySpec, gnpSpec1 apiv3.GlobalNetworkPolicySpec) {
 			c, err := clientv3.New(config)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -224,8 +245,43 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 				Expect(outError.Error()).To(Equal("update conflict: Tier(" + name1 + ")"))
 			}
 
-			By("Deleting Tier (name1) with the new resource version")
+			By("Attempting to delete Tier (name1) when there is a NetworkPolicy in it")
+			np1, outError := c.NetworkPolicies().Create(ctx, &apiv3.NetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: npName1, Namespace: namespace1},
+				Spec:       npSpec1,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+			npSpec1.Types = []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress}
+			testutils.ExpectResource(np1, apiv3.KindNetworkPolicy, namespace1, npName1, npSpec1)
+			rv_np := np1.ResourceVersion
+
 			dres, outError := c.Tiers().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
+			Expect(outError).To(HaveOccurred())
+
+			dnp, outError := c.NetworkPolicies().Delete(ctx, namespace1, npName1, options.DeleteOptions{ResourceVersion: rv_np})
+			Expect(outError).NotTo(HaveOccurred())
+			testutils.ExpectResource(dnp, apiv3.KindNetworkPolicy, namespace1, npName1, npSpec1)
+
+			By("Attempting to delete Tier (name1) when there is a GlobalNetworkPolicy in it")
+			gnp1, outError := c.GlobalNetworkPolicies().Create(ctx, &apiv3.GlobalNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: gnpName1},
+				Spec:       gnpSpec1,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+			gnpSpec1.Types = []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress}
+			testutils.ExpectResource(gnp1, apiv3.KindGlobalNetworkPolicy, testutils.ExpectNoNamespace, gnpName1, gnpSpec1)
+			rv_gnp := gnp1.ResourceVersion
+
+			dres, outError = c.Tiers().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
+			Expect(outError).To(HaveOccurred())
+
+			dgnp, outError := c.GlobalNetworkPolicies().Delete(ctx, gnpName1, options.DeleteOptions{ResourceVersion: rv_gnp})
+			Expect(outError).NotTo(HaveOccurred())
+			testutils.ExpectResource(dgnp, apiv3.KindGlobalNetworkPolicy, testutils.ExpectNoNamespace, gnpName1, gnpSpec1)
+			time.Sleep(1 * time.Second)
+
+			By("Deleting Tier (name1) with the new resource version")
+			dres, outError = c.Tiers().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
 			testutils.ExpectResource(dres, apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec2)
 
@@ -281,7 +337,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 		},
 
 		// Test 1: Pass two fully populated TierSpecs and expect the series of operations to succeed.
-		Entry("Two fully populated TierSpecs", name1, name2, spec1, spec2),
+		Entry("Two fully populated TierSpecs", name1, name2, npName1, gnpName1, namespace1, spec1, spec2, npSpec1, gnpSpec1),
 	)
 
 	Describe("Tier watch functionality", func() {

@@ -61,10 +61,22 @@ func (r globalNetworkPolicies) Create(ctx context.Context, res *apiv3.GlobalNetw
 		return nil, err
 	}
 	res.GetObjectMeta().SetName(backendPolicyName)
+
+	// Add tier labels to policy for lookup.
+	if tier != "default" {
+		res.GetObjectMeta().SetLabels(addTierLabel(res.GetObjectMeta().GetLabels(), tier))
+	}
+
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindGlobalNetworkPolicy, res)
 	if out != nil {
+		// Add the tier labels if necessary
+		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.GlobalNetworkPolicy), err
 	}
+
+	// Add the tier labels if necessary
+	res.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.GetObjectMeta().GetLabels()))
+
 	return nil, err
 }
 
@@ -83,10 +95,23 @@ func (r globalNetworkPolicies) Update(ctx context.Context, res *apiv3.GlobalNetw
 		return nil, err
 	}
 	res.GetObjectMeta().SetName(backendPolicyName)
+
+	// Add tier labels to policy for lookup.
+	tier := names.TierOrDefault(res.Spec.Tier)
+	if tier != "default" {
+		res.GetObjectMeta().SetLabels(addTierLabel(res.GetObjectMeta().GetLabels(), tier))
+	}
+
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindGlobalNetworkPolicy, res)
 	if out != nil {
+		// Add the tier labels if necessary
+		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.GlobalNetworkPolicy), err
 	}
+
+	// Add the tier labels if necessary
+	res.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.GetObjectMeta().GetLabels()))
+
 	return nil, err
 }
 
@@ -95,6 +120,8 @@ func (r globalNetworkPolicies) Delete(ctx context.Context, name string, opts opt
 	backendPolicyName := names.TieredPolicyName(name)
 	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindGlobalNetworkPolicy, noNamespace, backendPolicyName)
 	if out != nil {
+		// Add the tier labels if necessary
+		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.GlobalNetworkPolicy), err
 	}
 	return nil, err
@@ -106,6 +133,8 @@ func (r globalNetworkPolicies) Get(ctx context.Context, name string, opts option
 	backendPolicyName := names.TieredPolicyName(name)
 	out, err := r.client.resources.Get(ctx, opts, apiv3.KindGlobalNetworkPolicy, noNamespace, backendPolicyName)
 	if out != nil {
+		// Add the tier labels if necessary
+		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.GlobalNetworkPolicy), err
 	}
 	return nil, err
@@ -115,12 +144,17 @@ func (r globalNetworkPolicies) Get(ctx context.Context, name string, opts option
 func (r globalNetworkPolicies) List(ctx context.Context, opts options.ListOptions) (*apiv3.GlobalNetworkPolicyList, error) {
 	res := &apiv3.GlobalNetworkPolicyList{}
 	// Add the name prefix if name is provided
-	if opts.Name != "" {
+	if opts.Name != "" && !opts.Prefix {
 		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
 	if err := r.client.resources.List(ctx, opts, apiv3.KindGlobalNetworkPolicy, apiv3.KindGlobalNetworkPolicyList, res); err != nil {
 		return nil, err
+	}
+
+	// Make sure the tier labels are added
+	for i, _ := range res.Items {
+		res.Items[i].GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.Items[i].GetObjectMeta().GetLabels()))
 	}
 
 	return res, nil
@@ -134,7 +168,7 @@ func (r globalNetworkPolicies) Watch(ctx context.Context, opts options.ListOptio
 		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
-	return r.client.resources.Watch(ctx, opts, apiv3.KindGlobalNetworkPolicy, nil)
+	return r.client.resources.Watch(ctx, opts, apiv3.KindGlobalNetworkPolicy, &policyConverter{})
 }
 
 func defaultPolicyTypesField(ingressRules, egressRules []apiv3.Rule, types *[]apiv3.PolicyType) {
@@ -156,4 +190,35 @@ func defaultPolicyTypesField(ingressRules, egressRules []apiv3.Rule, types *[]ap
 			*types = []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress}
 		}
 	}
+}
+
+func addTierLabel(labels map[string]string, prefix string) map[string]string {
+	// Create the map if it is nil
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[apiv3.LabelTier] = prefix
+	return labels
+}
+
+func defaultTierLabelIfMissing(labels map[string]string) map[string]string {
+	// Create the map if it is nil
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	// Add the default labels if one is not set
+	if _, ok := labels[apiv3.LabelTier]; !ok {
+		labels[apiv3.LabelTier] = "default"
+	}
+
+	return labels
+}
+
+type policyConverter struct{}
+
+func (pc *policyConverter) Convert(r resource) resource {
+	r.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(r.GetObjectMeta().GetLabels()))
+	return r
 }

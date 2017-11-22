@@ -24,9 +24,11 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
@@ -260,12 +262,29 @@ func (c *customK8sResourceClient) List(ctx context.Context, list model.ListInter
 	// If it is a namespaced resource, then we'll need the namespace.
 	namespace := list.(model.ResourceListOptions).Namespace
 
-	// Perform the request.
-	err := c.restClient.Get().
+	// Build the request.
+	req := c.restClient.Get().
 		Context(ctx).
 		NamespaceIfScoped(namespace, c.namespaced).
-		Resource(c.resource).
-		Do().Into(reslOut)
+		Resource(c.resource)
+
+	// If the prefix is specified, look for the resources with the label
+	// of prefix.
+	if list.(model.ResourceListOptions).Prefix {
+		name := list.(model.ResourceListOptions).Name
+		if name == "default" {
+			req = req.VersionedParams(&metav1.ListOptions{
+				LabelSelector: "!" + apiv3.LabelTier,
+			}, scheme.ParameterCodec)
+		} else {
+			req = req.VersionedParams(&metav1.ListOptions{
+				LabelSelector: apiv3.LabelTier + "=" + name,
+			}, scheme.ParameterCodec)
+		}
+	}
+
+	// Perform the request.
+	err := req.Do().Into(reslOut)
 	if err != nil {
 		// Don't return errors for "not found".  This just
 		// means there are no matching Custom K8s Resources, and we should return
@@ -330,7 +349,7 @@ func (c *customK8sResourceClient) EnsureInitialized() error {
 
 func (c *customK8sResourceClient) listInterfaceToKey(l model.ListInterface) model.Key {
 	pl := l.(model.ResourceListOptions)
-	if pl.Name != "" {
+	if pl.Name != "" && !pl.Prefix {
 		return model.ResourceKey{Name: pl.Name, Kind: pl.Kind}
 	}
 	return nil
