@@ -19,16 +19,11 @@ import (
 	"strings"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-var (
-	defaultTierName = "default"
+	log "github.com/sirupsen/logrus"
 )
 
 // GlobalNetworkPolicyInterface has methods to work with GlobalNetworkPolicy resources.
@@ -49,18 +44,10 @@ type globalNetworkPolicies struct {
 // Create takes the representation of a GlobalNetworkPolicy and creates it.  Returns the stored
 // representation of the GlobalNetworkPolicy, and an error, if there is any.
 func (r globalNetworkPolicies) Create(ctx context.Context, res *apiv3.GlobalNetworkPolicy, opts options.SetOptions) (*apiv3.GlobalNetworkPolicy, error) {
-	// Before creating the policy, check that the tier exists, and if this is the
-	// default tier, create it if it doesn't.
-	if res.Spec.Tier == "" {
-		defaultTier := apiv3.NewTier()
-		defaultTier.ObjectMeta = metav1.ObjectMeta{Name: defaultTierName}
-		defaultTier.Spec = apiv3.TierSpec{}
-		if _, err := r.client.resources.Create(ctx, opts, apiv3.KindTier, defaultTier); err != nil {
-			if _, ok := err.(errors.ErrorResourceAlreadyExists); !ok {
-				return nil, err
-			}
-		}
-	} else if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv3.KindTier, noNamespace, res.Spec.Tier); err != nil {
+	// Before creating the policy, check that the tier exists.
+	tier := names.TierOrDefault(res.Spec.Tier)
+	if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv3.KindTier, noNamespace, tier); err != nil {
+		log.WithError(err).Infof("Tier %v does not exist", tier)
 		return nil, err
 	}
 	defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)

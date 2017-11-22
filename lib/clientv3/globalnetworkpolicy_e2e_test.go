@@ -89,18 +89,24 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
 
-			if tier != "" && tier != "default" {
-				// Create the tier if required before running other tiered policy tests.
-				order := float64(10)
-				tierSpec := apiv3.TierSpec{Order: &order}
-				By("Creating the tier")
-				tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
-					ObjectMeta: metav1.ObjectMeta{Name: tier},
-					Spec:       tierSpec,
-				}, options.SetOptions{})
-				Expect(resErr).NotTo(HaveOccurred())
-				testutils.ExpectResource(tierRes, apiv3.KindTier, testutils.ExpectNoNamespace, tier, tierSpec)
-			}
+			t := names.TierOrDefault(tier)
+			// Create the tier if required before running other tiered policy tests.
+			order := float64(10)
+			tierSpec := apiv3.TierSpec{Order: &order}
+			By("Creating the tier")
+			tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
+				ObjectMeta: metav1.ObjectMeta{Name: t},
+				Spec:       tierSpec,
+			}, options.SetOptions{})
+			Expect(resErr).NotTo(HaveOccurred())
+			testutils.ExpectResource(tierRes, apiv3.KindTier, testutils.ExpectNoNamespace, t, tierSpec)
+			rvTier := tierRes.ResourceVersion
+			defer func() {
+				By("Cleaning up the tier")
+				dres, outError := c.Tiers().Delete(ctx, t, options.DeleteOptions{ResourceVersion: rvTier})
+				Expect(outError).NotTo(HaveOccurred())
+				testutils.ExpectResource(dres, apiv3.KindTier, testutils.ExpectNoNamespace, t, tierSpec)
+			}()
 
 			By("Updating the GlobalNetworkPolicy before it is created")
 			_, outError := c.GlobalNetworkPolicies().Update(ctx, &apiv3.GlobalNetworkPolicy{
@@ -327,6 +333,18 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			be, err := backend.NewClient(config)
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
+
+			// Create the tier if required before running other tiered policy tests.
+			t := "default"
+			order := float64(10)
+			tierSpec := apiv3.TierSpec{Order: &order}
+			By("Creating the tier")
+			tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
+				ObjectMeta: metav1.ObjectMeta{Name: t},
+				Spec:       tierSpec,
+			}, options.SetOptions{})
+			Expect(resErr).NotTo(HaveOccurred())
+			testutils.ExpectResource(tierRes, apiv3.KindTier, testutils.ExpectNoNamespace, t, tierSpec)
 
 			By("Listing GlobalNetworkPolicies with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
 			outList, outError := c.GlobalNetworkPolicies().List(ctx, options.ListOptions{})
