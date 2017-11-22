@@ -145,7 +145,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					model.GlobalConfigKey{Name: "ClusterGUID"},
 					MatchRegexp("[a-f0-9]{32}"),
 				)
-				expectedCacheSize += 2
+				// Creating the node also creates default tier.
+				syncTester.ExpectData(model.KVPair{
+					Key:   model.TierKey{Name: "default"},
+					Value: &model.Tier{},
+				})
+				expectedCacheSize += 3
 			}
 
 			// The HostIP will be added for the IPv4 address
