@@ -18,9 +18,12 @@ import (
 	"context"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // NetworkPolicyInterface has methods to work with NetworkPolicy resources.
@@ -41,6 +44,12 @@ type networkPolicies struct {
 // Create takes the representation of a NetworkPolicy and creates it.  Returns the stored
 // representation of the NetworkPolicy, and an error, if there is any.
 func (r networkPolicies) Create(ctx context.Context, res *apiv3.NetworkPolicy, opts options.SetOptions) (*apiv3.NetworkPolicy, error) {
+	// Before creating the policy, check that the tier exists.
+	tier := names.TierOrDefault(res.Spec.Tier)
+	if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv3.KindTier, noNamespace, tier); err != nil {
+		log.WithError(err).Infof("Tier %v does not exist", tier)
+		return nil, err
+	}
 	defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
 
 	if err := validator.Validate(res); err != nil {
@@ -48,16 +57,28 @@ func (r networkPolicies) Create(ctx context.Context, res *apiv3.NetworkPolicy, o
 	}
 
 	// Properly prefix the name
-	res.GetObjectMeta().SetName(convertPolicyNameForStorage(res.GetObjectMeta().GetName()))
+	backendPolicyName, err := names.BackendTieredPolicyName(res.GetObjectMeta().GetName(), res.Spec.Tier)
+	if err != nil {
+		return nil, err
+	}
+	res.GetObjectMeta().SetName(backendPolicyName)
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindNetworkPolicy, res)
 	if out != nil {
 		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(convertPolicyNameFromStorage(out.GetObjectMeta().GetName()))
+		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
+		if retErr != nil {
+			return nil, retErr
+		}
+		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.NetworkPolicy), err
 	}
 
+	retName, retErr := names.ClientTieredPolicyName(res.GetObjectMeta().GetName())
+	if retErr != nil {
+		return nil, retErr
+	}
 	// Remove the prefix out of the returned policy name.
-	res.GetObjectMeta().SetName(convertPolicyNameFromStorage(res.GetObjectMeta().GetName()))
+	res.GetObjectMeta().SetName(retName)
 	return nil, err
 }
 
@@ -71,25 +92,42 @@ func (r networkPolicies) Update(ctx context.Context, res *apiv3.NetworkPolicy, o
 	}
 
 	// Properly prefix the name
-	res.GetObjectMeta().SetName(convertPolicyNameForStorage(res.GetObjectMeta().GetName()))
+	backendPolicyName, err := names.BackendTieredPolicyName(res.GetObjectMeta().GetName(), res.Spec.Tier)
+	if err != nil {
+		return nil, err
+	}
+	res.GetObjectMeta().SetName(backendPolicyName)
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindNetworkPolicy, res)
 	if out != nil {
 		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(convertPolicyNameFromStorage(out.GetObjectMeta().GetName()))
+		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
+		if retErr != nil {
+			return nil, retErr
+		}
+		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.NetworkPolicy), err
 	}
 
 	// Remove the prefix out of the returned policy name.
-	res.GetObjectMeta().SetName(convertPolicyNameFromStorage(res.GetObjectMeta().GetName()))
+	retName, retErr := names.ClientTieredPolicyName(res.GetObjectMeta().GetName())
+	if retErr != nil {
+		return nil, retErr
+	}
+	res.GetObjectMeta().SetName(retName)
 	return nil, err
 }
 
 // Delete takes name of the NetworkPolicy and deletes it. Returns an error if one occurs.
 func (r networkPolicies) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.NetworkPolicy, error) {
-	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindNetworkPolicy, namespace, convertPolicyNameForStorage(name))
+	backendPolicyName := names.TieredPolicyName(name)
+	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindNetworkPolicy, namespace, backendPolicyName)
 	if out != nil {
 		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(convertPolicyNameFromStorage(out.GetObjectMeta().GetName()))
+		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
+		if retErr != nil {
+			return nil, retErr
+		}
+		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.NetworkPolicy), err
 	}
 	return nil, err
@@ -98,10 +136,15 @@ func (r networkPolicies) Delete(ctx context.Context, namespace, name string, opt
 // Get takes name of the NetworkPolicy, and returns the corresponding NetworkPolicy object,
 // and an error if there is any.
 func (r networkPolicies) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*apiv3.NetworkPolicy, error) {
-	out, err := r.client.resources.Get(ctx, opts, apiv3.KindNetworkPolicy, namespace, convertPolicyNameForStorage(name))
+	backendPolicyName := names.TieredPolicyName(name)
+	out, err := r.client.resources.Get(ctx, opts, apiv3.KindNetworkPolicy, namespace, backendPolicyName)
 	if out != nil {
 		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(convertPolicyNameFromStorage(out.GetObjectMeta().GetName()))
+		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
+		if retErr != nil {
+			return nil, retErr
+		}
+		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.NetworkPolicy), err
 	}
 	return nil, err
@@ -117,7 +160,12 @@ func (r networkPolicies) List(ctx context.Context, opts options.ListOptions) (*a
 	// Remove the prefix off of each policy name
 	for i, _ := range res.Items {
 		name := res.Items[i].GetObjectMeta().GetName()
-		res.Items[i].GetObjectMeta().SetName(convertPolicyNameFromStorage(name))
+		retName, err := names.ClientTieredPolicyName(name)
+		if err != nil {
+			log.WithError(err).Infof("Skipping incorrectly formatted policy name %v", name)
+			continue
+		}
+		res.Items[i].GetObjectMeta().SetName(retName)
 	}
 
 	return res, nil

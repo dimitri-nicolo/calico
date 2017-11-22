@@ -106,6 +106,7 @@ func init() {
 		Entry("should accept allow action", api.Rule{Action: "Allow"}, true),
 		Entry("should accept deny action", api.Rule{Action: "Deny"}, true),
 		Entry("should accept log action", api.Rule{Action: "Log"}, true),
+		Entry("should accept pass action", api.Rule{Action: "Pass"}, true),
 		Entry("should reject unknown action", api.Rule{Action: "unknown"}, false),
 		Entry("should reject unknown action", api.Rule{Action: "allowfoo"}, false),
 		Entry("should reject rule with no action", api.Rule{}, false),
@@ -1064,7 +1065,8 @@ func init() {
 
 		// NetworkPolicy Object MetaData checks.
 		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"}}, true),
-		Entry("disallow name with dot", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"}}, false),
+		Entry("allow name with single dot - tier", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "th.ing"}}, true),
+		Entry("disallow name with multiple dot", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "t.h.i.ng"}}, false),
 		Entry("allow valid name of 253 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])}}, true),
 		Entry("disallow a name of 254 chars", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])}}, false),
 
