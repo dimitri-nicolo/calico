@@ -363,8 +363,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			Expect(err).NotTo(HaveOccurred())
 
 			rev1 := outRes1.ResourceVersion
-			// Update the name to reflect the underlying data returned from the watcher
-			outRes1.GetObjectMeta().SetName("default." + name1)
 
 			By("Configuring a GlobalNetworkPolicy name2/spec2 and storing the response")
 			outRes2, err := c.GlobalNetworkPolicies().Create(
@@ -375,8 +373,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				},
 				options.SetOptions{},
 			)
-			// Update the name to reflect the underlying data returned from the watcher
-			outRes2.GetObjectMeta().SetName("default." + name2)
 
 			By("Starting a watcher from revision rev1 - this should skip the first creation")
 			w, err := c.GlobalNetworkPolicies().Watch(ctx, options.ListOptions{ResourceVersion: rev1})
@@ -408,8 +404,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			defer testWatcher2.Stop()
 
 			By("Modifying res2")
-			// Update the name to reflect the name that would be passed in from calicoctl
-			outRes2.GetObjectMeta().SetName(name2)
 			outRes3, err := c.GlobalNetworkPolicies().Update(
 				ctx,
 				&apiv3.GlobalNetworkPolicy{
@@ -419,9 +413,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			// Update the name to reflect the underlying data returned from the watcher
-			outRes2.GetObjectMeta().SetName("default." + name2)
-			outRes3.GetObjectMeta().SetName("default." + name2)
 			testWatcher2.ExpectEvents(apiv3.KindGlobalNetworkPolicy, []watch.Event{
 				{
 					Type:   watch.Added,
@@ -446,7 +437,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			// Only etcdv3 supports watching a specific instance of a resource.
 			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
 				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
-				w, err = c.GlobalNetworkPolicies().Watch(ctx, options.ListOptions{Name: "default." + name1, ResourceVersion: rev0})
+				w, err = c.GlobalNetworkPolicies().Watch(ctx, options.ListOptions{Name: name1, ResourceVersion: rev0})
 				Expect(err).NotTo(HaveOccurred())
 				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 				defer testWatcher2_1.Stop()
@@ -485,8 +476,6 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				},
 				options.SetOptions{},
 			)
-			// Update the name to reflect the underlying data returned from the watcher
-			outRes1.GetObjectMeta().SetName("default." + name1)
 
 			By("Starting a watcher not specifying a rev - expect the current snapshot")
 			w, err = c.GlobalNetworkPolicies().Watch(ctx, options.ListOptions{})
