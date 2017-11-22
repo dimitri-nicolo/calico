@@ -16,6 +16,7 @@ from nose.plugins.attrib import attr
 from unittest import skip
 
 from tests.st.test_base import TestBase
+from tests.st.utils.docker_host import DockerHost, CLUSTER_STORE_DOCKER_OPTIONS
 from tests.st.utils.constants import (DEFAULT_IPV4_ADDR_1, DEFAULT_IPV4_ADDR_2,
                                       DEFAULT_IPV4_POOL_CIDR, LARGE_AS_NUM)
 from tests.st.utils.utils import check_bird_status, update_bgp_config

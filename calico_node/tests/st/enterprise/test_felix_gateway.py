@@ -19,11 +19,11 @@ import time
 import yaml
 from nose_parameterized import parameterized
 
-from tests.st.test_base import TestBase
+from tests.st.test_base import TestBase, HOST_IPV4
 from tests.st.utils.docker_host import DockerHost
 from tests.st.utils.utils import assert_number_endpoints, ETCD_CA, ETCD_CERT, \
-    ETCD_KEY, ETCD_HOSTNAME_SSL, ETCD_SCHEME, get_ip, log_and_run, retry_until_success
-from tests.st.utils.utils import wipe_etcd as WIPE_ETCD
+    ETCD_KEY, ETCD_HOSTNAME_SSL, ETCD_SCHEME, get_ip, log_and_run, retry_until_success, \
+    wipe_etcd
 
 _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
@@ -96,7 +96,8 @@ class TestFelixOnGateway(TestBase):
 
     @classmethod
     def setUpClass(cls):
-        wipe_etcd()
+        _log.debug("Wiping etcd")
+        wipe_etcd(HOST_IPV4)
         cls.policy_tier_name = "default"
         cls.next_tier_allowed = False
 
@@ -209,7 +210,8 @@ class TestFelixOnGateway(TestBase):
             host.cleanup()
             del host
         log_and_run("docker rm -f cali-st-ext-nginx || true")
-        wipe_etcd()
+        _log.debug("Wiping etcd")
+        wipe_etcd(HOST_IPV4)
 
     def test_ingress_policy_can_block_through_traffic(self):
         self.add_admin_tier()
@@ -520,44 +522,3 @@ class TestFelixOnGateway(TestBase):
 
 class IpNotFound(Exception):
     pass
-
-
-def wipe_etcd():
-    _log.debug("Wiping etcd")
-    # Delete /calico if it exists. This ensures each test has an empty data
-    # store at start of day.
-    curl_etcd(get_ip(), "calico", options=["-XDELETE"])
-
-    # Disable Usage Reporting to usage.projectcalico.org
-    # We want to avoid polluting analytics data with unit test noise
-    curl_etcd(get_ip(),
-              "calico/v1/config/UsageReportingEnabled",
-              options=["-XPUT -d value=False"])
-    curl_etcd(get_ip(),
-              "calico/v1/config/LogSeverityScreen",
-              options=["-XPUT -d value=debug"])
-
-
-def curl_etcd(ip, path, options=None, recursive=True):
-    """
-    Perform a curl to etcd, returning JSON decoded response.
-    :param ip: IP address of etcd server
-    :param path:  The key path to query
-    :param options:  Additional options to include in the curl
-    :param recursive:  Whether we want recursive query or not
-    :return:  The JSON decoded response.
-    """
-    if options is None:
-        options = []
-    if ETCD_SCHEME == "https":
-        # Etcd is running with SSL/TLS, require key/certificates
-        command = "curl --cacert %s --cert %s --key %s " \
-                  "-sL https://%s:2379/v2/keys/%s?recursive=%s %s" % \
-                  (ETCD_CA, ETCD_CERT, ETCD_KEY, ETCD_HOSTNAME_SSL, path,
-                   str(recursive).lower(), " ".join(options))
-    else:
-        command = "curl -sL http://%s:2379/v2/keys/%s?recursive=%s %s" % \
-                  (ip, path, str(recursive).lower(), " ".join(options))
-    _log.debug("Running: %s", command)
-    rc = subprocess.check_output(command, shell=True)
-    return json.loads(rc.strip())
