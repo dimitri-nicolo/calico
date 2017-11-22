@@ -17,7 +17,9 @@ information.
 - When RBAC is enabled, the proper accounts, roles, and bindings must be defined
   and utilized by the {{site.prodname}} components.  Examples exist for both the [etcd](rbac.yaml) and
   [kubernetes api](hosted/rbac-kdd.yaml) datastores.
+- The cluster must be able to load the Tigera CNX docker images - see following section.
 
+{% include {{page.version}}/load-docker.md %}
 
 ## [{{site.prodname}} Hosted Install](hosted)
 

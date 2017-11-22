@@ -14,6 +14,8 @@ Note that this feature currently comes with a number of limitations, namely:
   -  Control of the node-to-node mesh, default AS Number and all BGP peering configuration should
      be configured using `calicoctl`.
 
+{% include {{page.version}}/load-docker.md %}
+
 ## Requirements
 
 The provided manifest configures Calico to use host-local IPAM in conjunction with the Kubernetes assigned
@@ -25,7 +27,15 @@ You must have a cluster which meets the following requirements:
 - You have a Kubernetes cluster configured to use CNI network plugins (i.e. by passing `--network-plugin=cni` to the kubelet)
 - Your Kubernetes controller manager is configured to allocate pod CIDRs (i.e. by passing `--allocate-node-cidrs=true` to the controller manager)
 - Your Kubernetes controller manager has been provided a cluster-cidr (i.e. by passing `--cluster-cidr=192.168.0.0/16`, which the manifest expects by default).
+- Your Kubernetes API server is configured to [support the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/).
+- Your Kubernetes API server is configured to use a supported authentication method
 
+Ensure that the kube-apiserver has been started with the appropriate flags.
+- Refer to the Kubernetes documentation to
+  [Configure the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
+  with the proper flags.
+- Refer to the [authentication guide]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication) to choose a supported authentication
+  mechanism and configure the Kubernetes API server accordingly.
 
 > **Note**: If you are upgrading from Calico v2.1, the cluster-cidr
 > selected for your controller manager should remain
@@ -88,6 +98,15 @@ This will install Calico and will initially create a full node-to-node mesh.
 > v1.7.0 or higher.
 {: .alert .alert-info}
 
+Update the manifest with the path to your private docker registry.  Substitute
+`mydockerregistry:5000` with the location of your docker registry.
+
+```
+sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
+```
+
+Then apply the manifest.
+
 ```
 kubectl apply -f calico.yaml
 ```
@@ -122,6 +141,14 @@ To install Calico in policy-only mode, run one of the following commands based o
 > Kubernetes `v1.7.0` or higher.
 {: .alert .alert-info}
 
+Update the manifest with the path to your private docker registry.  Substitute
+`mydockerregistry:5000` with the location of your docker registry.
+
+```
+sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
+```
+
+Then apply the manifest.
 ```
 kubectl apply -f calico.yaml
 ```
@@ -148,6 +175,11 @@ kubectl apply -f rbac.yaml
 ```
 
 >[Click here to view the rbac.yaml.](../rbac.yaml)
+
+## Adding Tigera CNX
+
+Now you've installed Calico with the enhanced CNX node agent, you're ready to
+[add CNX Manager](../essentials/cnx).
 
 ## Try it out
 

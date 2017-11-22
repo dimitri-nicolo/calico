@@ -53,7 +53,7 @@ the host. Instead, continue directly to the
    ```
    
 1. [Create a Google project to use to login to CNX Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
-   Set the redirect URIs to `http://127.0.0.1:30003` and `https://127.0.0.1:30003`.
+   Set the redirect URIs to `http://127.0.0.1:30003/login/oidc/callback` and `https://127.0.0.1:30003/login/oidc/callback`.
    
 1. Copy the OAuth client ID value.
 
@@ -97,7 +97,7 @@ the host. Instead, continue directly to the
    configmap "calico-config" created
    daemonset "calico-etcd" created
    service "calico-etcd" created
-   daemonset "calico-node" created
+   daemonset "cnx-node" created
    deployment "calico-kube-controllers" created
    deployment "calico-policy-controller" created
    clusterrolebinding "calico-cni-plugin" created
@@ -164,15 +164,15 @@ the host. Instead, continue directly to the
    NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
    kube-system   calico-etcd-q4fcf                          1/1     Running   0          1h
    kube-system   calico-kube-controllers-797946f9d9-jrwx9   1/1     Running   0          1h
-   kube-system   calico-node-mxzhw                          2/2     Running   0          1h
-   kube-system   calico-server-8kmm8                        1/1     Running   0          1h
-   kube-system   etcd-karen-virtualbox                      1/1     Running   0          1h
-   kube-system   kube-apiserver-karen-virtualbox            1/1     Running   0          1h
-   kube-system   kube-controller-manager-karen-virtualbox   1/1     Running   0          1h
+   kube-system   cnx-node-mxzhw                             2/2     Running   0          1h
+   kube-system   cnx-apiserver-8kmm8                        1/1     Running   0          1h
+   kube-system   etcd-<hostname>                            1/1     Running   0          1h
+   kube-system   kube-apiserver-<hostname>                  1/1     Running   0          1h
+   kube-system   kube-controller-manager-<hostname>         1/1     Running   0          1h
    kube-system   kube-dns-545bc4bfd4-gxhpv                  3/3     Running   0          1h
    kube-system   kube-proxy-z5vq9                           1/1     Running   0          1h
-   kube-system   kube-scheduler-karen-virtualbox            1/1     Running   0          1h
-   kube-system   tigera-cnx-manager-web-558d896894-zvpmc    1/1     Running   0          1h
+   kube-system   kube-scheduler-<hostname>                  1/1     Running   0          1h
+   kube-system   cnx-manager-558d896894-zvpmc               1/1     Running   0          1h
    ```
 
 1. Press CTRL+C to exit `watch`.
