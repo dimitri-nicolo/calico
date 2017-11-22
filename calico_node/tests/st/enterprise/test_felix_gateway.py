@@ -23,12 +23,13 @@ from tests.st.test_base import TestBase
 from tests.st.utils.docker_host import DockerHost
 from tests.st.utils.utils import assert_number_endpoints, ETCD_CA, ETCD_CERT, \
     ETCD_KEY, ETCD_HOSTNAME_SSL, ETCD_SCHEME, get_ip, log_and_run, retry_until_success
+from tests.st.utils.utils import wipe_etcd as WIPE_ETCD
 
 _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
 
 POST_DOCKER_COMMANDS = [
-    "docker load -i /code/calico-node.tar",
+    "docker load -i /code/cnx-node.tar",
     "docker load -i /code/busybox.tar",
     "docker load -i /code/workload.tar",
 ]

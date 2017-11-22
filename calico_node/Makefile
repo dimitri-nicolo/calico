@@ -80,12 +80,12 @@ BIRDCL_URL?=https://github.com/projectcalico/calico-bird/releases/download/$(BIR
 CALICO_BGP_DAEMON_URL?=https://github.com/projectcalico/calico-bgp-daemon/releases/download/$(GOBGPD_VER)/calico-bgp-daemon
 
 ###############################################################################
-# calico/node build. Contains the following areas
+# tigera/cnx-node build. Contains the following areas
 # - Populate the calico_node/filesystem
 # - Build the container itself
 ###############################################################################
 NODE_CONTAINER_DIR=.
-NODE_CONTAINER_NAME?=calico/node
+NODE_CONTAINER_NAME?=tigera/cnx-node
 NODE_CONTAINER_FILES=$(shell find $(NODE_CONTAINER_DIR)/filesystem -type f)
 NODE_CONTAINER_CREATED=$(NODE_CONTAINER_DIR)/.calico_node.created
 NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
@@ -100,9 +100,9 @@ LIBNETWORK_PLUGIN_CONTAINER_NAME?=$(LIBNETWORK_PLUGIN_REPO):$(LIBNETWORK_PLUGIN_
 CTL_CONTAINER_NAME?=calico/ctl:$(CALICOCTL_VER)
 CTL_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/calicoctl
 CALICOQ_CONTAINER_NAME?=calico/calicoq:$(CALICOQ_VER)
-CALICOQ_PRIVATE_IMAGE?=gcr.io/tigera-dev/calico/calicoq
-APISERVER_CONTAINER_NAME?=calico/k8sapiserver:$(APISERVER_VER)
-APISERVER_IMAGE?=gcr.io/tigera-dev/calico/k8sapiserver
+CALICOQ_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/calicoq
+APISERVER_CONTAINER_NAME?=tigera/cnx-apiserver:$(APISERVER_VER)
+APISERVER_IMAGE?=gcr.io/tigera-dev/cnx/tigera/k8sapiserver
 
 STARTUP_DIR=$(NODE_CONTAINER_DIR)/startup
 STARTUP_FILES=$(shell find $(STARTUP_DIR) -name '*.go')
@@ -202,10 +202,10 @@ calico_test.created: $(TEST_CONTAINER_FILES)
 	cd calico_test && docker build -f Dockerfile.calico_test -t $(TEST_CONTAINER_NAME) .
 	touch calico_test.created
 
-$(NODE_CONTAINER_NAME): $(NODE_CONTAINER_CREATED)    ## Create the calico/node image
+$(NODE_CONTAINER_NAME): $(NODE_CONTAINER_CREATED)    ## Create the tigera/cnx-node image
 
-calico-node.tar: $(NODE_CONTAINER_CREATED)
-	# Check versions of the Calico binaries that will be in calico-node.tar.
+cnx-node.tar: $(NODE_CONTAINER_CREATED)
+	# Check versions of the Calico binaries that will be in cnx-node.tar.
 	docker run --rm $(NODE_CONTAINER_NAME) /bin/sh -c "\
 	  echo calico-felix --version; /bin/calico-felix --version; \
 	  echo bird --version;         /bin/bird --version; \
@@ -215,14 +215,14 @@ calico-node.tar: $(NODE_CONTAINER_CREATED)
 	"
 	docker save --output $@ $(NODE_CONTAINER_NAME)
 
-# Build ACI (the APPC image file format) of calico/node.
+# Build ACI (the APPC image file format) of tigera/cnx-node.
 # Requires docker2aci installed on host: https://github.com/appc/docker2aci
-calico-node-latest.aci: calico-node.tar
+cnx-node-latest.aci: cnx-node.tar
 	docker2aci $<
 
-# Build calico/node docker image - explicitly depend on the container binaries.
+# Build tigera/cnx-node docker image - explicitly depend on the container binaries.
 $(NODE_CONTAINER_CREATED): $(NODE_CONTAINER_DIR)/Dockerfile $(NODE_CONTAINER_FILES) $(addprefix $(NODE_CONTAINER_BIN_DIR)/,$(NODE_CONTAINER_BINARIES))
-	# Check versions of the binaries that we're going to use to build calico/node.
+	# Check versions of the binaries that we're going to use to build tigera/cnx-node.
 	# startup: doesn't support --version or -v
 	# allocate-ipip-addr: doesn't support --version or -v
 	$(NODE_CONTAINER_BIN_DIR)/calico-felix --version
@@ -441,7 +441,7 @@ st-checks:
 
 ## Run the STs in a container
 .PHONY: st
-st: dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector.tar calico-node.tar workload.tar run-etcd-host calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
+st: dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector.tar cnx-node.tar workload.tar run-etcd-host calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
 	# Check versions of Calico binaries that ST execution will use.
 	dist/calicoctl --version
 	dist/calicoctl-v1.0.2 --version
@@ -471,7 +471,7 @@ st: dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector.tar calico-n
 
 ## Run the STs in a container using etcd with SSL certificate/key/CA verification.
 .PHONY: st-ssl
-st-ssl: run-etcd-ssl dist/calicoctl busybox.tar calico-node.tar routereflector.tar workload.tar calico_test.created
+st-ssl: run-etcd-ssl dist/calicoctl busybox.tar cnx-node.tar routereflector.tar workload.tar calico_test.created
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
@@ -600,13 +600,13 @@ node-test-containerized: vendor run-etcd-host run-k8s-apiserver
 	$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && make node-fv'
 
 .PHONY: node-test-at
-## Run calico/node docker-image acceptance tests
+## Run tigera/cnx-node docker-image acceptance tests
 node-test-at:
 	docker run -v $(CALICO_NODE_DIR)tests/at/calico_node_goss.yaml:/tmp/goss.yaml \
         -e CALICO_BGP_DAEMON_VER=$(GOBGPD_VER) \
         -e CALICO_FELIX_VER=$(FELIX_VER) \
         -e CONFD_VER=$(CONFD_VER) \
-	calico/node:$(CALICO_VER) /bin/sh -c 'apk --no-cache add wget ca-certificates && \
+	tigera/cnx-node:$(CALICO_VER) /bin/sh -c 'apk --no-cache add wget ca-certificates && \
 	wget -q -O /tmp/goss \
 	https://github.com/aelsabbahy/goss/releases/download/v0.3.4/goss-linux-amd64 && \
 	chmod +rx /tmp/goss && \
@@ -641,14 +641,14 @@ release: clean
 
 	git tag $(CALICO_VER)
 
-	# Build the calico/node images.
+	# Build the tigera/cnx-node images.
 	FELIX_VER=$(FELIX_VER) $(MAKE) $(NODE_CONTAINER_NAME)
 
 	# Create the release archive
 	CALICOCTL_VER=$(CALICOCTL_VER) CALICOQ_VER=$(CALICOQ_VER) $(MAKE) release-archive
 
 	# Retag images with corect version and GCR private registry
-	docker tag $(NODE_CONTAINER_NAME) gcr.io/tigera-dev/$(NODE_CONTAINER_NAME)-essentials:$(CALICO_VER)
+	docker tag $(NODE_CONTAINER_NAME) gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CALICO_VER)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME)
@@ -660,10 +660,10 @@ release: clean
 
 	@echo "# See RELEASING.md for detailed instructions."
 	@echo "# Now push release images."
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/$(NODE_CONTAINER_NAME)-essentials:$(CALICO_VER)"
+	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CALICO_VER)"
 
 	@echo "# For the final release only, push the latest tag (not for RCs)"
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/$(NODE_CONTAINER_NAME)-essentials:latest"
+	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):latest"
 
 	@echo "# Only push the git tag AFTER this branch is merged to origin/master"
 	@echo "  git push origin $(CALICO_VER)"
@@ -681,7 +681,7 @@ release-archive: $(RELEASE_DIR).tgz
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR_IMAGES) $(RELEASE_DIR_BIN) $(RELEASE_DIR)/README
 	tar -czvf $(RELEASE_DIR).tgz $(RELEASE_DIR)/*
 
-$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/calico-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar $(RELEASE_DIR_IMAGES)/calico-k8sapiserver.tar
+$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/cnx-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar $(RELEASE_DIR_IMAGES)/cnx-apiserver.tar
 $(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64 $(RELEASE_DIR_BIN)/calicoq
 
 $(RELEASE_DIR)/README:
@@ -689,11 +689,11 @@ $(RELEASE_DIR)/README:
 	@echo "Documentation for this release can be found at http://docs.projectcalico.org/$(RELEASE_STREAM)" >> $@
 	@echo "" >> $@
 	@echo "Docker images (under 'images'). Load them with 'docker load'" >> $@
-	@echo "* The calico/node docker image  (version $(CALICO_VER))" >> $@
-	@echo "* The calico/typha docker image  (version $(TYPHA_VER))" >> $@
+	@echo "* The tigera/cnx-node docker image  (version $(CALICO_VER))" >> $@
+	@echo "* The tigera/typha docker image  (version $(TYPHA_VER))" >> $@
 	@echo "* The calico/cni docker image  (version $(CNI_VER))" >> $@
 	@echo "* The calico/kube-controllers docker image (version $(KUBE_CONTROLLERS_VER))" >> $@
-	@echo "* The calico/k8sapiserver docker image (version $(APISERVER_VER))" >> $@
+	@echo "* The tigera/cnx-apiserver docker image (version $(APISERVER_VER))" >> $@
 	@echo "" >> $@
 	@echo "Binaries (for amd64) (under 'bin')" >> $@
 	@echo "* The calicoctl binary (for Linux) (version $(CALICOCTL_VER))" >> $@
@@ -720,7 +720,7 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 	# Copy the non-hosted manifets too
 	cp $(MANIFEST_SRC)/*.yaml $(RELEASE_DIR_K8S_MANIFESTS)
 
-$(RELEASE_DIR_IMAGES)/calico-node.tar:
+$(RELEASE_DIR_IMAGES)/cnx-node.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
 	docker save --output $@ $(NODE_CONTAINER_NAME)
 
@@ -739,13 +739,13 @@ $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar:
 	docker pull calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
 	docker save --output $@ calico/kube-controllers:$(KUBE_CONTROLLERS_VER)
 
-$(RELEASE_DIR_IMAGES)/calico-k8sapiserver.tar:
+$(RELEASE_DIR_IMAGES)/cnx-apiserver.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
 	if [ "$(docker images -q $$(APISERVER_CONTAINER_NAME))" = "" ]; then \
 	  gcloud docker -- pull $(APISERVER_IMAGE):$(APISERVER_VER); \
 	  docker tag $(APISERVER_IMAGE):$(APISERVER_VER) $(APISERVER_CONTAINER_NAME); \
 	fi;
-	docker save --output $@ calico/k8sapiserver:$(APISERVER_VER)
+	docker save --output $@ tigera/cnx-apiserver:$(APISERVER_VER)
 
 $(RELEASE_DIR_BIN)/%:
 	mkdir -p $(RELEASE_DIR_BIN)

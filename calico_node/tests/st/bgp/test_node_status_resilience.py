@@ -83,8 +83,8 @@ class TestNodeStatusResilience(TestBase):
             hosts = [host1, host2, host3]
             workloads = [workload_host1, workload_host2, workload_host3]
 
-            _log.debug("==== docker exec -it calico-node ps -a  ====")
-            _log.debug(hosts[test_host].execute("docker exec -it calico-node ps -a"))
+            _log.debug("==== docker exec -it cnx-node ps -a  ====")
+            _log.debug(hosts[test_host].execute("docker exec -it cnx-node ps -a"))
 
             # Check the BGP status on the BIRD/GoBGP host.
             def check_connected():
@@ -111,16 +111,16 @@ class TestNodeStatusResilience(TestBase):
                 _log.debug("Host under test: %s", hosts[test_host].name)
                 _log.debug("Identify and pkill process: %s", pid_name)
 
-                pre_pkill = hosts[test_host].execute("docker exec -it calico-node pgrep %s" % pid_name)
+                pre_pkill = hosts[test_host].execute("docker exec -it cnx-node pgrep %s" % pid_name)
                 pre_pkill_list = pid_parse(pre_pkill)
                 _log.debug("Pre pkill list: %s", pre_pkill_list)
 
-                hosts[test_host].execute("docker exec -it calico-node pkill %s" % pid_name)
+                hosts[test_host].execute("docker exec -it cnx-node pkill %s" % pid_name)
 
                 _log.debug('check connected and retry until "Established"')
                 retry_until_success(check_connected, retries=20, ex_class=Exception)
 
-                post_pkill = hosts[test_host].execute("docker exec -it calico-node pgrep %s" % pid_name)
+                post_pkill = hosts[test_host].execute("docker exec -it cnx-node pgrep %s" % pid_name)
                 post_pkill_list = pid_parse(post_pkill)
                 _log.debug("Post pkill list: %s", post_pkill_list)
 
