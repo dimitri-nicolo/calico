@@ -394,8 +394,6 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				options.SetOptions{},
 			)
 			rev1 := outRes1.ResourceVersion
-			// Update the name to reflect the underlying data returned from the watcher
-			outRes1.GetObjectMeta().SetName("default." + name1)
 
 			By("Configuring a NetworkPolicy namespace2/name2/spec2 and storing the response")
 			outRes2, err := c.NetworkPolicies().Create(
@@ -406,8 +404,6 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				},
 				options.SetOptions{},
 			)
-			// Update the name to reflect the underlying data returned from the watcher
-			outRes2.GetObjectMeta().SetName("default." + name2)
 
 			By("Starting a watcher from revision rev1 - this should skip the first creation")
 			w, err := c.NetworkPolicies().Watch(ctx, options.ListOptions{ResourceVersion: rev1})
@@ -440,8 +436,6 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 
 			// Revert back to client input
 			By("Modifying res2")
-			// Update the name to reflect the name that would be passed in from calicoctl
-			outRes2.GetObjectMeta().SetName(name2)
 			outRes3, err := c.NetworkPolicies().Update(
 				ctx,
 				&apiv3.NetworkPolicy{
@@ -451,9 +445,6 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			// Update the name to reflect the underlying data returned from the watcher
-			outRes2.GetObjectMeta().SetName("default." + name2)
-			outRes3.GetObjectMeta().SetName("default." + name2)
 			testWatcher2.ExpectEvents(apiv3.KindNetworkPolicy, []watch.Event{
 				{
 					Type:   watch.Added,
@@ -478,7 +469,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			// Only etcdv3 supports watching a specific instance of a resource.
 			if config.Spec.DatastoreType == apiconfig.EtcdV3 {
 				By("Starting a watcher from rev0 watching name1 - this should get all events for name1")
-				w, err = c.NetworkPolicies().Watch(ctx, options.ListOptions{Namespace: namespace1, Name: "default." + name1, ResourceVersion: rev0})
+				w, err = c.NetworkPolicies().Watch(ctx, options.ListOptions{Namespace: namespace1, Name: name1, ResourceVersion: rev0})
 				Expect(err).NotTo(HaveOccurred())
 				testWatcher2_1 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 				defer testWatcher2_1.Stop()

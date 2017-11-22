@@ -88,5 +88,5 @@ func (r tiers) List(ctx context.Context, opts options.ListOptions) (*apiv3.TierL
 // Watch returns a watch.Interface that watches the tiers that match the
 // supplied options.
 func (r tiers) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
-	return r.client.resources.Watch(ctx, opts, apiv3.KindTier)
+	return r.client.resources.Watch(ctx, opts, apiv3.KindTier, nil)
 }
