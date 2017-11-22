@@ -155,7 +155,7 @@ func (r globalNetworkPolicies) List(ctx context.Context, opts options.ListOption
 	res := &apiv3.GlobalNetworkPolicyList{}
 	// Add the name prefix if name is provided
 	if opts.Name != "" {
-		opts.Name = convertPolicyNameForStorage(opts.Name)
+		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
 	if err := r.client.resources.List(ctx, opts, apiv3.KindGlobalNetworkPolicy, apiv3.KindGlobalNetworkPolicyList, res); err != nil {
@@ -181,7 +181,7 @@ func (r globalNetworkPolicies) List(ctx context.Context, opts options.ListOption
 func (r globalNetworkPolicies) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	// Add the name prefix if name is provided
 	if opts.Name != "" {
-		opts.Name = convertPolicyNameForStorage(opts.Name)
+		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
 	return r.client.resources.Watch(ctx, opts, apiv3.KindGlobalNetworkPolicy, &policyConverter{})
@@ -228,6 +228,11 @@ func convertPolicyNameFromStorage(name string) string {
 type policyConverter struct{}
 
 func (pc *policyConverter) Convert(r resource) resource {
-	r.GetObjectMeta().SetName(convertPolicyNameFromStorage(r.GetObjectMeta().GetName()))
+	retName, err := names.ClientTieredPolicyName(r.GetObjectMeta().GetName())
+	if err != nil {
+		log.WithError(err).Infof("Stored policy name is invalid: %s", r.GetObjectMeta().GetName())
+		return r
+	}
+	r.GetObjectMeta().SetName(retName)
 	return r
 }

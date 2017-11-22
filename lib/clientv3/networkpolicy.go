@@ -155,7 +155,7 @@ func (r networkPolicies) List(ctx context.Context, opts options.ListOptions) (*a
 	res := &apiv3.NetworkPolicyList{}
 	// Add the name prefix if name is provided
 	if opts.Name != "" {
-		opts.Name = convertPolicyNameForStorage(opts.Name)
+		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
 	if err := r.client.resources.List(ctx, opts, apiv3.KindNetworkPolicy, apiv3.KindNetworkPolicyList, res); err != nil {
@@ -181,7 +181,7 @@ func (r networkPolicies) List(ctx context.Context, opts options.ListOptions) (*a
 func (r networkPolicies) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	// Add the name prefix if name is provided
 	if opts.Name != "" {
-		opts.Name = convertPolicyNameForStorage(opts.Name)
+		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
 	return r.client.resources.Watch(ctx, opts, apiv3.KindNetworkPolicy, &policyConverter{})
