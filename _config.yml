@@ -9,15 +9,25 @@ gems:
 
 url: https://docs.projectcalico.org
 
-cnx-image-tag: v2.0.0-cnx-beta1
-
+# <deprecated>
+# Remove once all references cleaned up
+cnx-image-tag: v2.0.0-cnx-beta1-rc2
 cnx-mgr-image-name: <your-cnx-mgr-image-name>
-
 cnx-node-image-name: <your-calico-node-image-name>
-
 cnx-api-image-name: <your-k8sapiserver-image-name>
+# </deprecated>
 
 prodname: CNX
+
+# Image names in case the host changes
+imageNames:
+  node: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-node
+  calicoctl: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/calicoctl
+  typha: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/typha
+  cnxManager: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-manager
+  cnxApiserver: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-apiserver
+  cni: quay.io/calico/cni
+  kubeControllers: quay.io/calico/kube-controllers
 
 exclude:
   - release-scripts
@@ -52,51 +62,6 @@ defaults:
       version: master
   -
     scope:
-      path: v1.5
-    values:
-      version: v1.5
-  -
-    scope:
-      path: v1.6
-    values:
-      version: v1.6
-  -
-    scope:
       path: v2.0
     values:
       version: v2.0
-  -
-    scope:
-      path: v2.1
-    values:
-      version: v2.1
-  -
-    scope:
-      path: v2.2
-    values:
-      version: v2.2
-  -
-    scope:
-      path: v2.3
-    values:
-      version: v2.3
-  -
-    scope:
-      path: v2.4
-    values:
-      version: v2.4
-  -
-    scope:
-      path: v2.5
-    values:
-      version: v2.5
-  -
-    scope:
-      path: v2.6
-    values:
-      version: v2.6
-  -
-    scope:
-      path: v3.0
-    values:
-      version: v3.0

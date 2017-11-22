@@ -1,41 +1,225 @@
 ---
-title: Calico for Kubernetes
+title: Quickstart for Tigera CNX on Kubernetes
 ---
 
-Calico enables networking and network policy in Kubernetes clusters across the cloud.  Calico works
-everywhere - on all major public cloud providers and private cloud as well.
 
-Calico uses a pure IP networking fabric to provide high performance networking, and its battle-tested policy engine
-enforces high-level, intent-focused network policy.  Together, Calico and Kubernetes provide a secure,
-cloud-native platform that can scale your infrastructure to hundreds of thousands of workloads.
+### Overview
 
-## Installing Calico for Kubernetes
+This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}} 
+in approximately 30 minutes. You can use this cluster for testing and development.
 
-There are a number of ways to install Calico and Kubernetes.  The [installation documentation](installation)
-includes links to a number of popular guides and installers which use Calico. It also
-includes information on installing Calico on a from-scratch Kubernetes cluster using either a self-hosted Kubernetes manifest,
-or by integrating Calico into your own configuration management scripts.
+To deploy a cluster suitable for production, refer to [Installation](https://docs.projectcalico.org/master/getting-started/kubernetes/installation/).
 
-## Using Calico with Kubernetes
 
-Once you have a Kubernetes cluster with Calico installed, the following articles will help you
-get familiar with Calico and make the most of the features that Calico provides.
+### Requirements
 
-##### Tutorials
+- AMD64 processor
+- 2CPU
+- 4GB RAM
+- 10GB free disk space
+- RedHat Enterprise Linux 7.x+, CentOS 7.x+, Ubuntu 16.04+, or Debian 8.x+
+- A Google account for login
 
-**[Using the NetworkPolicy API](tutorials/simple-policy)**: this guide explains how to use Calico to secure a simple two-tier application
-using the Kubernetes NetworkPolicy API.
 
-**[Advanced Calico Policy](tutorials/advanced-policy)**: this guide explains how to use Calico to provide policy features beyond
-what can be done with the Kubernetes NetworkPolicy API like egress and CIDR based policy.
+### Before you begin
 
-**[Stars Demo](tutorials/stars-policy/)**: this demo features a UI which actively shows blocked and allowed connections as policy is implemented.
+[Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
 
-##### Usage Reference
+> **Note**: After installing kubeadm, do not power down or restart
+the host. Instead, continue directly to the 
+[next section to create your cluster](#create-a-single-host-kubernetes-cluster).
+{: .alert .alert-info}
 
-**[Using the calicoctl CLI tool][calicoctl]**: reference documentation for the Calico CLI tool, calicoctl.
 
-**[Configuring BGP Peering][bgp-peering]**: this guide is for users on private cloud who want to configure Calico to peer with their underlying infrastructure.
+### Create a single-host Kubernetes cluster
 
-[calicoctl]: {{site.baseurl}}/{{page.version}}/reference/calicoctl/
-[bgp-peering]: {{site.baseurl}}/{{page.version}}/usage/configuration/bgp
+1. As a regular user with sudo privileges, open a terminal on the host that 
+   you installed kubeadm on. 
+
+1. Download the {{site.prodname}} docker images onto that system.  Follow the instructions
+   [here]({{site.baseurl}}/{{page.version}}/getting-started/essentials), but you can
+   skip the steps related to uploading to a registry, since the images will only be
+   needed locally.
+
+1. Update your package definitions and upgrade your existing packages.
+
+   ```
+   sudo apt-get update && sudo apt-get upgrade
+   ```
+   
+1. [Create a Google project to use to login to {{site.prodname}} Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
+   Set the redirect URIs to `http://127.0.0.1:30003` and `https://127.0.0.1:30003`.
+   
+1. Copy the OAuth client ID value.
+
+1. Download the [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/kubeadm.yaml) file.
+
+1. Open the kubeadm.yaml file in your favorite editor, replace `<fill in client id here>` 
+   with the OAuth client ID value, then save and close the file.
+
+1. Initialize the master using the following command.
+
+   ```
+   sudo kubeadm init --config kubeadm.yaml
+   ```
+   
+1. Execute the following commands to configure kubectl (also returned by
+   `kubeadm init`).
+
+   ```
+   mkdir -p $HOME/.kube
+   sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+   sudo chown $(id -u):$(id -g) $HOME/.kube/config
+   ```
+   
+1. [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/calico-cnx.yaml).
+
+1. Open calico-cnx.yaml file in your favorite editor.
+
+1. Replace `<your-oauth-client-id>` with your OAuth client ID.
+
+1. Replace `<your-cnx-mgr-image-name>` with the name of the CNX Manager image.
+
+1. Replace `<your-calico-node-image-name>` with the name of the calico/node image.
+
+1. Replace `<your-k8sapiserver-image-name>` with the name of the Kubernetes extension API server image.
+
+1. Save and close the file.
+   
+1. Issue the following command to install {{site.prodname}} and a single-node etcd.
+
+   ```
+   kubectl apply -f calico-cnx.yaml
+   ```
+
+   You should see the following output.
+
+   ```
+   configmap "tigera-cnx-manager-web-config" created
+   configmap "calico-config" created
+   daemonset "calico-etcd" created
+   service "calico-etcd" created
+   daemonset "calico-node" created
+   deployment "calico-kube-controllers" created
+   deployment "calico-policy-controller" created
+   clusterrolebinding "calico-cni-plugin" created
+   clusterrole "calico-cni-plugin" created
+   serviceaccount "calico-cni-plugin" created
+   clusterrolebinding "calico-kube-controllers" created
+   clusterrole "calico-kube-controllers" created
+   serviceaccount "calico-kube-controllers" created
+   namespace "calico" created
+   apiservice "v2.projectcalico.org" created
+   clusterrolebinding "calico:system:auth-delegator" created
+   rolebinding "calico-auth-reader" created
+   replicationcontroller "calico-server" created
+   serviceaccount "apiserver" created
+   service "api" created
+   deployment "tigera-cnx-manager-web" created
+   service "tigera-cnx-manager-web" created
+   ```
+   
+1. Remove the taints on the master so that pods can be scheduled on it.
+   
+   ```
+   kubectl taint nodes --all node-role.kubernetes.io/master-
+   ```
+
+   It should return the following.
+
+   ```
+   node "<your-hostname>" untainted
+   ```
+   
+1. Confirm that all of the pods are running with the following command.
+   Some can only start after others, so it's OK to see a few restarts.
+
+   ```
+   watch kubectl get pods --all-namespaces
+   ```
+   
+   Wait until each pod has the `STATUS` of `Running`.
+
+   ```
+   NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
+   kube-system   calico-etcd-q4fcf                          1/1     Running   0          1h
+   kube-system   calico-kube-controllers-797946f9d9-jrwx9   1/1     Running   0          1h
+   kube-system   calico-node-mxzhw                          2/2     Running   0          1h
+   kube-system   calico-server-8kmm8                        1/1     Running   0          1h
+   kube-system   etcd-karen-virtualbox                      1/1     Running   0          1h
+   kube-system   kube-apiserver-karen-virtualbox            1/1     Running   0          1h
+   kube-system   kube-controller-manager-karen-virtualbox   1/1     Running   0          1h
+   kube-system   kube-dns-545bc4bfd4-gxhpv                  3/3     Running   0          1h
+   kube-system   kube-proxy-z5vq9                           1/1     Running   0          1h
+   kube-system   kube-scheduler-karen-virtualbox            1/1     Running   0          1h
+   kube-system   tigera-cnx-manager-web-558d896894-zvpmc    1/1     Running   0          1h
+   ```
+
+1. Press CTRL+C to exit `watch`.
+
+1. Switch to a root shell.
+
+   ```
+   sudo -i
+   ```
+
+1. Scroll upward in your terminal to locate the `join` command
+   returned by `kubeadm init`. Copy the `join` command, paste it
+   in your shell prompt, and add `--skip-preflight-checks` to the end.
+   
+   **Syntax**:
+   ```
+   kubeadm join --token <token> <master-ip>:<master-port> \
+   --discovery-token-ca-cert-hash sha256:<hash> \
+   --skip-preflight-checks
+   ```
+   
+   **Example**:
+   ```
+   kubeadm join --token eea8bd.4d282767b6b962ca 10.0.2.15:6443 \
+   --discovery-token-ca-cert-hash sha256:0e6e73d52066326023432f417a566afad72667e6111d2236b69956b658773255
+   --skip-preflight-checks
+   ```
+   
+1. Exit the root shell.
+
+   ```
+   exit
+   ```
+
+1. Confirm that you now have a node in your cluster with the 
+   following command.
+   
+   ```
+   kubectl get nodes -o wide
+   ```
+   
+   It should return something like the following.
+   
+   ```
+   NAME             STATUS  ROLES   AGE  VERSION  EXTERNAL-IP  OS-IMAGE            KERNEL-VERSION     CONTAINER-RUNTIME
+   <your-hostname>  Ready   master  1h   v1.8.x   <none>       Ubuntu 16.04.3 LTS  4.10.0-28-generic  docker://1.12.6
+   ```
+   
+Congratulations! You now have a single-host Kubernetes cluster
+equipped with {{site.prodname}}.
+
+To access the {{site.prodname}} Manager web interface, navigate to `https://127.0.0.1:30003`.
+If you're not running this demo on the same system you'll log in from,
+instead run `kubectl proxy --port=8080` to provide the web application
+with access to the Kubernetes API, and navigate to the domain name of
+the system instead (still on port 30003).
+
+You should be able to log in , but won't yet be able to see or edit resources.
+To create some RBAC roles that allow full access to everyone, apply [this manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/rbac-all.yaml).
+
+
+### Next steps
+
+**[Experiment with RBAC and the {{site.prodname}} Manager web interface]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
+
+**[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
+
+**[Create a policy using more advanced policy features](tutorials/advanced-policy)**
+
+**[Using the calicoctl CLI tool](https://docs.projectcalico.org/master/getting-started/kubernetes/tutorials/using-calicoctl)**

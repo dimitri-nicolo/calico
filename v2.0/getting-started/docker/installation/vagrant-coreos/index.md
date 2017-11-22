@@ -3,7 +3,7 @@ title: Running the Calico tutorials on CoreOS Container Linux using Vagrant and 
 ---
 
 These instructions allow you to set up a CoreOS Container Linux cluster ready to network Docker containers with
-Calico networking using Vagrant.
+{{site.prodname}} networking using Vagrant.
 
 ## 1. Streamlined setup of the VMs
 
@@ -11,17 +11,19 @@ Calico networking using Vagrant.
 
 * [VirtualBox][virtualbox] 5.1.8 or greater.
 * [Vagrant][vagrant] 1.8.5 or greater.
-* [Git][git]
+* [Curl][curl]
 
-### 1.2 Clone this project
+### 1.2 Download the source files
 
-    git clone https://github.com/projectcalico/calico.git
+    mkdir demo; cd demo
+    curl -O {{site.url}}{{page.dir}}Vagrantfile
+    curl -O {{site.url}}{{page.dir }}user-data-first
+    curl -O {{site.url}}{{page.dir }}user-data-others
 
 ### 1.4 Startup and SSH
 
 Run the following:
 
-    cd calico/{{page.version}}/getting-started/docker/installation/vagrant-coreos
     vagrant up
 
 To connect to your servers
@@ -66,23 +68,28 @@ it is time to launch `calico/node`.
 
 The Vagrant machines already have `calicoctl` installed. Use it to launch `calico/node`:
 
-    sudo ETCD_ENDPOINTS=http://172.17.8.101:2379 calicoctl node run
+    sudo ETCD_ENDPOINTS=http://172.17.8.101:2379 calicoctl node run --node-image=quay.io/calico/node:{{site.data.versions[page.version].first.title}}
 
-This will start the `calico/node` container on this host. Check it is running:
+Append the `--use-docker-networking-container-labels` flag to the `calicoctl node run` command if you're combining
+[Docker Labels and {{site.prodname}} Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).
+
+Check that the `calico/node` container is running on this host:
 
     docker ps
 
 You should see output like this on each node
 
     vagrant@calico-01:~$ docker ps
-    CONTAINER ID        IMAGE                COMMAND             CREATED             STATUS              PORTS               NAMES
-    408bd2b9ba53        calico/node:v1.0.2   "start_runit"       About an hour ago   Up About an hour                        calico-node
+    CONTAINER ID        IMAGE                        COMMAND             CREATED             STATUS              PORTS               NAMES
+    408bd2b9ba53        quay.io/calico/node:{{site.data.versions[page.version].first.title}}   "start_runit"       About an hour ago   Up About an hour                        calico-node
 
 ## Next Steps
 
-Now that you have a basic two node CoreOS Container Linux cluster setup, see the [simple policy walkthrough]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/simple-policy)
+Now that you have a basic two node CoreOS Container Linux cluster setup, see
+[Security using {{site.prodname}} Profiles]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles)
+for a simple security walkthrough.
 
 [virtualbox]: https://www.virtualbox.org/
 [vagrant]: https://www.vagrantup.com/downloads.html
 [using-coreos]: http://coreos.com/using-coreos/
-[git]: http://git-scm.com/
+[curl]: https://curl.haxx.se/

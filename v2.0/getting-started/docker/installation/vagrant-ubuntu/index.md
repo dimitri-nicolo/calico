@@ -3,7 +3,7 @@ title: Running the Calico tutorials on Ubuntu using Vagrant and VirtualBox
 ---
 
 These instructions allow you to set up an Ubuntu cluster ready to network Docker containers with
-Calico using Vagrant.
+{{site.prodname}} using Vagrant.
 
 ## 1. Streamlined setup of the VMs
 
@@ -11,17 +11,17 @@ Calico using Vagrant.
 
 * [VirtualBox][virtualbox] 5.1.8 or greater.
 * [Vagrant][vagrant] 1.8.5 or greater.
-* [Git][git]
+* [Curl][curl]
 
-### 1.2 Clone this project
+### 1.2 Download the source files
 
-    git clone https://github.com/projectcalico/calico.git
+    mkdir demo; cd demo
+    curl -O {{site.url}}{{page.dir}}Vagrantfile
 
 ### 1.3 Startup and SSH
 
-For Calico as a Docker network plugin
+For {{site.prodname}} as a Docker network plugin
 
-    cd calico/{{page.version}}/getting-started/docker/installation/vagrant-ubuntu
     vagrant up
 
 To connect to your servers
@@ -34,15 +34,15 @@ To connect to your servers
 
 ### 1.4 Verify environment
 
-You should now have two Ubuntu servers, with Etcd running on the first server.
+You should now have two Ubuntu servers, with etcd running on the first server.
 
 At this point, it's worth checking that your servers can ping each other.
 
-From calico-1
+From calico-01
 
     ping 172.17.8.102
 
-From calico-2
+From calico-02
 
     ping 172.17.8.101
 
@@ -58,31 +58,35 @@ And finally check that Docker is running on both hosts by running
 
     docker ps
 
-## 2. Install Calico
+## 2. Install {{site.prodname}}
 
 With your VMs running, and connectivity between them established,
 it is time to launch `calico/node`.
 
 The Vagrant machines already have `calicoctl` installed. Use it to launch `calico/node`:
 
-    sudo ETCD_ENDPOINTS=http://172.17.8.101:2379 calicoctl node run
+    sudo ETCD_ENDPOINTS=http://172.17.8.101:2379 calicoctl node run --node-image=quay.io/calico/node:{{site.data.versions[page.version].first.title}}
 
-This will start the `calico/node` container on this host. Check it is running:
+Append the `--use-docker-networking-container-labels` flag to the `calicoctl node run` command if you're combining
+[Docker Labels and {{site.prodname}} Policy]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-docker-labels-and-calico-policy).
+
+Check that the `calico/node` container is running on this host:
 
     docker ps
 
 You should see output like this on each node
 
     vagrant@calico-01:~$ docker ps
-    CONTAINER ID        IMAGE                COMMAND             CREATED             STATUS              PORTS               NAMES
-    408bd2b9ba53        calico/node:v1.0.2   "start_runit"       About an hour ago   Up About an hour                        calico-node
+    CONTAINER ID        IMAGE                        COMMAND             CREATED             STATUS              PORTS               NAMES
+    408bd2b9ba53        quay.io/calico/node:{{site.data.versions[page.version].first.title}}   "start_runit"       About an hour ago   Up About an hour                        calico-node
 
 ## Next Steps
 
-Now that you have a basic two node Ubuntu cluster setup, see the [simple policy walkthrough]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/simple-policy)
+Now that you have a basic two node Ubuntu cluster setup, see
+[Security using {{site.prodname}} Profiles]({{site.baseurl}}/{{page.version}}/getting-started/docker/tutorials/security-using-calico-profiles)
 
 [libnetwork]: https://github.com/docker/libnetwork
 [experimental-channel]: https://github.com/docker/docker/tree/master/experimental
 [virtualbox]: https://www.virtualbox.org/
 [vagrant]: https://www.vagrantup.com/downloads.html
-[git]: http://git-scm.com/
+[curl]: https://curl.haxx.se/

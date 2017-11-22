@@ -26,8 +26,6 @@ toc:
       path: /reference/calicoctl/commands/delete
     - title: get
       path: /reference/calicoctl/commands/get
-    - title: config
-      path: /reference/calicoctl/commands/config
     - title: ipam
       section:
       - title: Overview
@@ -57,43 +55,87 @@ toc:
         path: /reference/calicoctl/resources/
       - title: BGP Peer
         path: /reference/calicoctl/resources/bgppeer
+      - title: BGP Configuration
+        path: /reference/calicoctl/resources/bgpconfig
+      - title: Felix Configuration
+        path: /reference/calicoctl/resources/felixconfig
       - title: Host Endpoint
         path: /reference/calicoctl/resources/hostendpoint
       - title: IP Pool
         path: /reference/calicoctl/resources/ippool
       - title: Node
         path: /reference/calicoctl/resources/node
-      - title: Policy
-        path: /reference/calicoctl/resources/policy
+      - title: Network Policy
+        path: /reference/calicoctl/resources/networkpolicy
+      - title: Global Network Policy
+        path: /reference/calicoctl/resources/globalnetworkpolicy
       - title: Profile
         path: /reference/calicoctl/resources/profile
+      - title: Tier
+        path: /reference/calicoctl/resources/tier   
       - title: Workload Endpoint
         path: /reference/calicoctl/resources/workloadendpoint
   - title: Setup
     section:
       - title: Overview
         path: /reference/calicoctl/setup/
-      - title: etcdv2 datastore
-        path: /reference/calicoctl/setup/etcdv2
+      - title: etcdv3 datastore
+        path: /reference/calicoctl/setup/etcdv3
       - title: kubernetes api datastore
         path: /reference/calicoctl/setup/kubernetes
+- title: calicoq
+  section:
+  - title: Overview
+    path: /reference/calicoq/
+  - title: Selectors
+    path: /reference/calicoq/selectors
+  - title: Endpoint
+    path: /reference/calicoq/endpoint
+  - title: Eval
+    path: /reference/calicoq/eval
+  - title: Host
+    path: /reference/calicoq/host
+  - title: Policy
+    path: /reference/calicoq/policy
+  - title: Version
+    path: /reference/calicoq/version
 - title: calico/node
   section:
   - title: Configuration
     path: /reference/node/configuration
+- title: felix
+  section:
+  - title: Configuration
+    path: /reference/felix/configuration
+  - title: Prometheus Statistics
+    path: /reference/felix/prometheus
 - title: Calico CNI Plugins
   path: /reference/cni-plugin/configuration
-- title: Calico Policy Controller
-  path: /reference/policy-controller/configuration
+- title: Calico Kubernetes Controllers
+  path: /reference/kube-controllers/configuration
+- title: Policy Auditing and Reporting
+  section:
+    - title: Policy Violation Monitoring & Reporting
+      path: /reference/essentials/policy-violations
+    - title: Policy Audit Mode
+      path: /reference/essentials/policy-auditing
+- title: CNX Manager 
+  section:
+    - title: Configuring user authentication
+      path: /reference/essentials/authentication
+    - title: Editing policies
+      path: /reference/essentials/policy-editor
 - title: Deploying on Public Cloud
   section:
     - title: AWS
       path: /reference/public-cloud/aws
+    - title: GCE
+      path: /reference/public-cloud/gce
 - title: Deploying on Private Cloud
   section:
-    - title: Calico Over Ethernet Fabrics
+    - title: CNX Over Ethernet Fabrics
       path: /reference/private-cloud/l2-interconnect-fabric
-    - title: Calico Over IP Fabrics 
+    - title: CNX Over IP Fabrics
       path: /reference/private-cloud/l3-interconnect-fabric
 - title: Architecture
   section:
@@ -105,13 +147,28 @@ toc:
     path: /reference/architecture/data-path
 - title: Advanced
   section:
-  - title: RBAC for etcdv2
-    path: /reference/advanced/etcd-rbac
+  - title: Configuring etcd RBAC
+    path: /reference/advanced/etcd-rbac/overview
+    section:
+      - title: Overview
+        path: /reference/advanced/etcd-rbac/
+      - title: Certificate Generation
+        path: /reference/advanced/etcd-rbac/certificate-generation
+      - title: User and Role Creations
+        path: /reference/advanced/etcd-rbac/users-and-roles
+      - title: Kubernetes
+        path: /reference/advanced/etcd-rbac/kubernetes
+      - title: Advanced Kubernetes
+        path: /reference/advanced/etcd-rbac/kubernetes-advanced
+      - title: etcd paths for CNX components
+        path: /reference/advanced/etcd-rbac/calico-etcdv3-paths
+  - title: Configuring CNX RBAC
+    path: /reference/essentials/rbac-tiered-policies
+- title: System Requirements
+  path: /reference/requirements
 - title: Repo Structure
   path: /reference/repo-structure
-- title: Contribute
-  path: /reference/contribute
-- title: Involved
+- title: Get Involved
   path: /reference/involved
 - title: License
   path: /reference/license

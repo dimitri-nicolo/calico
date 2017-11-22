@@ -14,10 +14,13 @@ commands.
 
 ```
 Usage:
-  calicoctl version
+  calicoctl version [--config=<CONFIG>]
 
 Options:
-  -h --help   Show this screen.
+  -h --help             Show this screen.
+  -c --config=<CONFIG>  Path to the file containing connection configuration in
+                        YAML or JSON format.
+                        [default: /etc/calico/calicoctl.cfg]
 
 Description:
   Display the version of calicoctl.
@@ -27,10 +30,14 @@ Description:
 
 ```
 $ calicoctl version
-0.8.0
+Client Version:    v1.4.0
+Build date:        2017-07-21T19:33:04+0000
+Git commit:        d2babb6
+Cluster Version:   v2.4.0
+Cluster Type:      KDD,hosted
 ```
 
 ## See also
 
 -  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup) for details on configuring `calicoctl` to access
-   the Calico datastore.
+   the {{site.prodname}} datastore.
