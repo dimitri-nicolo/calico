@@ -64,21 +64,9 @@ func (r networkPolicies) Create(ctx context.Context, res *apiv3.NetworkPolicy, o
 	res.GetObjectMeta().SetName(backendPolicyName)
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindNetworkPolicy, res)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
-		if retErr != nil {
-			return nil, retErr
-		}
-		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.NetworkPolicy), err
 	}
 
-	retName, retErr := names.ClientTieredPolicyName(res.GetObjectMeta().GetName())
-	if retErr != nil {
-		return nil, retErr
-	}
-	// Remove the prefix out of the returned policy name.
-	res.GetObjectMeta().SetName(retName)
 	return nil, err
 }
 
@@ -99,21 +87,9 @@ func (r networkPolicies) Update(ctx context.Context, res *apiv3.NetworkPolicy, o
 	res.GetObjectMeta().SetName(backendPolicyName)
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindNetworkPolicy, res)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
-		if retErr != nil {
-			return nil, retErr
-		}
-		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.NetworkPolicy), err
 	}
 
-	// Remove the prefix out of the returned policy name.
-	retName, retErr := names.ClientTieredPolicyName(res.GetObjectMeta().GetName())
-	if retErr != nil {
-		return nil, retErr
-	}
-	res.GetObjectMeta().SetName(retName)
 	return nil, err
 }
 
@@ -122,12 +98,6 @@ func (r networkPolicies) Delete(ctx context.Context, namespace, name string, opt
 	backendPolicyName := names.TieredPolicyName(name)
 	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindNetworkPolicy, namespace, backendPolicyName)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
-		if retErr != nil {
-			return nil, retErr
-		}
-		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.NetworkPolicy), err
 	}
 	return nil, err
@@ -139,12 +109,6 @@ func (r networkPolicies) Get(ctx context.Context, namespace, name string, opts o
 	backendPolicyName := names.TieredPolicyName(name)
 	out, err := r.client.resources.Get(ctx, opts, apiv3.KindNetworkPolicy, namespace, backendPolicyName)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
-		if retErr != nil {
-			return nil, retErr
-		}
-		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.NetworkPolicy), err
 	}
 	return nil, err
@@ -162,17 +126,6 @@ func (r networkPolicies) List(ctx context.Context, opts options.ListOptions) (*a
 		return nil, err
 	}
 
-	// Remove the prefix off of each policy name
-	for i, _ := range res.Items {
-		name := res.Items[i].GetObjectMeta().GetName()
-		retName, err := names.ClientTieredPolicyName(name)
-		if err != nil {
-			log.WithError(err).Infof("Skipping incorrectly formatted policy name %v", name)
-			continue
-		}
-		res.Items[i].GetObjectMeta().SetName(retName)
-	}
-
 	return res, nil
 }
 
@@ -184,5 +137,5 @@ func (r networkPolicies) Watch(ctx context.Context, opts options.ListOptions) (w
 		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
-	return r.client.resources.Watch(ctx, opts, apiv3.KindNetworkPolicy, &policyConverter{})
+	return r.client.resources.Watch(ctx, opts, apiv3.KindNetworkPolicy, nil)
 }
