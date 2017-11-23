@@ -17,9 +17,9 @@ aliases are supported (all case insensitive): `tier`, `tiers`.
 ### How Policy Is Evaluated
 
 When a new connection is processed by Calico, each Tier that contains a Policy that applies to the endpoint processes the packet.
-Tiers are sorted first by their `order` (smallest number first), and as a tie-breaker by `name` (alphabetically).
+Tiers are sorted by their `order` - smallest number first.
 
-Policies in each Tier are then processed in order (again, by `order` then by `name`).
+Policies in each Tier are then processed in order.
 - If a Policy in the Tier `allow`s or `deny`s the packet, then evaluation is done: the packet is handled accordingly.
 - If a Policy in the Tier `pass`es the packet, the next Tier containing a Policy that applies to the endpoint processes the packet.
 
