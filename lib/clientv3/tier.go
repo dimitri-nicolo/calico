@@ -18,6 +18,7 @@ import (
 	"context"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
@@ -40,6 +41,13 @@ type tiers struct {
 // Create takes the representation of a Tier and creates it.  Returns the stored
 // representation of the Tier, and an error, if there is any.
 func (r tiers) Create(ctx context.Context, res *apiv3.Tier, opts options.SetOptions) (*apiv3.Tier, error) {
+	if res.Name == defaultTierName && res.Spec.Order != nil {
+		return nil, cerrors.ErrorOperationNotSupported{
+			Identifier: defaultTierName,
+			Operation:  "Create",
+			Reason:     "Default tier should have nil Order",
+		}
+	}
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindTier, res)
 	if out != nil {
 		return out.(*apiv3.Tier), err
@@ -50,6 +58,13 @@ func (r tiers) Create(ctx context.Context, res *apiv3.Tier, opts options.SetOpti
 // Update takes the representation of a Tier and updates it. Returns the stored
 // representation of the Tier, and an error, if there is any.
 func (r tiers) Update(ctx context.Context, res *apiv3.Tier, opts options.SetOptions) (*apiv3.Tier, error) {
+	if res.GetObjectMeta().GetName() == defaultTierName && res.Spec.Order != nil {
+		return nil, cerrors.ErrorOperationNotSupported{
+			Identifier: defaultTierName,
+			Operation:  "Update",
+			Reason:     "Cannot update the order of the default tier",
+		}
+	}
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindTier, res)
 	if out != nil {
 		return out.(*apiv3.Tier), err
@@ -59,6 +74,13 @@ func (r tiers) Update(ctx context.Context, res *apiv3.Tier, opts options.SetOpti
 
 // Delete takes name of the Tier and deletes it. Returns an error if one occurs.
 func (r tiers) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.Tier, error) {
+	if name == defaultTierName {
+		return nil, cerrors.ErrorOperationNotSupported{
+			Identifier: defaultTierName,
+			Operation:  "Delete",
+			Reason:     "Cannot delete default tier",
+		}
+	}
 	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindTier, noNamespace, name)
 	if out != nil {
 		return out.(*apiv3.Tier), err

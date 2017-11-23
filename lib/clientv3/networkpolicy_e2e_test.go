@@ -27,6 +27,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/names"
@@ -79,34 +80,39 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 	ingressTypesSpec1.Types = ingress
 	egressTypesSpec2 := spec2
 	egressTypesSpec2.Types = egress
+
+	var c clientv3.Interface
+	var be bapi.Client
+
+	BeforeEach(func() {
+		var err error
+		c, err = clientv3.New(config)
+		Expect(err).NotTo(HaveOccurred())
+
+		be, err = backend.NewClient(config)
+		Expect(err).NotTo(HaveOccurred())
+		be.Clean()
+
+		err = c.EnsureInitialized(ctx, "", "")
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	DescribeTable("NetworkPolicy e2e CRUD tests",
 		func(tier, namespace1, namespace2, name1, name2 string, spec1, spec2 apiv3.NetworkPolicySpec, types1, types2 []apiv3.PolicyType) {
 			spec1.Tier = tier
 			spec2.Tier = tier
-			c, err := clientv3.New(config)
-			Expect(err).NotTo(HaveOccurred())
 
-			be, err := backend.NewClient(config)
-			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
-
-			t := names.TierOrDefault(tier)
-			// Create the tier if required before running other tiered policy tests.
-			tierSpec := apiv3.TierSpec{Order: &tierOrder}
-			By("Creating the tier")
-			tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
-				ObjectMeta: metav1.ObjectMeta{Name: t},
-				Spec:       tierSpec,
-			}, options.SetOptions{})
-			Expect(resErr).NotTo(HaveOccurred())
-			testutils.ExpectResource(tierRes, apiv3.KindTier, testutils.ExpectNoNamespace, t, tierSpec)
-			rvTier := tierRes.ResourceVersion
-			defer func() {
-				By("Cleaning up the tier")
-				dres, outError := c.Tiers().Delete(ctx, t, options.DeleteOptions{ResourceVersion: rvTier})
-				Expect(outError).NotTo(HaveOccurred())
-				testutils.ExpectResource(dres, apiv3.KindTier, testutils.ExpectNoNamespace, t, tierSpec)
-			}()
+			if tier != "" && tier != "default" {
+				// Create the tier if required before running other tiered policy tests.
+				tierSpec := apiv3.TierSpec{Order: &tierOrder}
+				By("Creating the tier")
+				tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: tier},
+					Spec:       tierSpec,
+				}, options.SetOptions{})
+				Expect(resErr).NotTo(HaveOccurred())
+				testutils.ExpectResource(tierRes, apiv3.KindTier, testutils.ExpectNoNamespace, tier, tierSpec)
+			}
 
 			By("Updating the NetworkPolicy before it is created")
 			var rv string
@@ -364,24 +370,6 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 
 	Describe("NetworkPolicy watch functionality", func() {
 		It("should handle watch events for different resource versions and event types", func() {
-			c, err := clientv3.New(config)
-			Expect(err).NotTo(HaveOccurred())
-
-			be, err := backend.NewClient(config)
-			Expect(err).NotTo(HaveOccurred())
-			be.Clean()
-
-			// Create the tier if required before running other tiered policy tests.
-			t := "default"
-			tierSpec := apiv3.TierSpec{Order: &tierOrder}
-			By("Creating the tier")
-			tierRes, resErr := c.Tiers().Create(ctx, &apiv3.Tier{
-				ObjectMeta: metav1.ObjectMeta{Name: t},
-				Spec:       tierSpec,
-			}, options.SetOptions{})
-			Expect(resErr).NotTo(HaveOccurred())
-			testutils.ExpectResource(tierRes, apiv3.KindTier, testutils.ExpectNoNamespace, t, tierSpec)
-
 			By("Listing NetworkPolicies with the latest resource version and checking for two results with name1/spec2 and name2/spec2")
 			outList, outError := c.NetworkPolicies().List(ctx, options.ListOptions{})
 			Expect(outError).NotTo(HaveOccurred())
