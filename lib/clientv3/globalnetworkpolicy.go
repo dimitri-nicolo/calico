@@ -16,7 +16,6 @@ package clientv3
 
 import (
 	"context"
-	"strings"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/names"
@@ -64,21 +63,8 @@ func (r globalNetworkPolicies) Create(ctx context.Context, res *apiv3.GlobalNetw
 	res.GetObjectMeta().SetName(backendPolicyName)
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindGlobalNetworkPolicy, res)
 	if out != nil {
-		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
-		if retErr != nil {
-			return nil, retErr
-		}
-		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.GlobalNetworkPolicy), err
 	}
-
-	// Remove the prefix out of the returned policy name.
-	retName, retErr := names.ClientTieredPolicyName(res.GetObjectMeta().GetName())
-	if retErr != nil {
-		return nil, retErr
-	}
-	res.GetObjectMeta().SetName(retName)
 	return nil, err
 }
 
@@ -99,21 +85,8 @@ func (r globalNetworkPolicies) Update(ctx context.Context, res *apiv3.GlobalNetw
 	res.GetObjectMeta().SetName(backendPolicyName)
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindGlobalNetworkPolicy, res)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
-		if retErr != nil {
-			return nil, retErr
-		}
-		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.GlobalNetworkPolicy), err
 	}
-
-	// Remove the prefix out of the returned policy name.
-	retName, retErr := names.ClientTieredPolicyName(res.GetObjectMeta().GetName())
-	if retErr != nil {
-		return nil, retErr
-	}
-	res.GetObjectMeta().SetName(retName)
 	return nil, err
 }
 
@@ -122,12 +95,6 @@ func (r globalNetworkPolicies) Delete(ctx context.Context, name string, opts opt
 	backendPolicyName := names.TieredPolicyName(name)
 	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindGlobalNetworkPolicy, noNamespace, backendPolicyName)
 	if out != nil {
-		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
-		if retErr != nil {
-			return nil, retErr
-		}
-		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.GlobalNetworkPolicy), err
 	}
 	return nil, err
@@ -139,12 +106,6 @@ func (r globalNetworkPolicies) Get(ctx context.Context, name string, opts option
 	backendPolicyName := names.TieredPolicyName(name)
 	out, err := r.client.resources.Get(ctx, opts, apiv3.KindGlobalNetworkPolicy, noNamespace, backendPolicyName)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		retName, retErr := names.ClientTieredPolicyName(out.GetObjectMeta().GetName())
-		if retErr != nil {
-			return nil, retErr
-		}
-		out.GetObjectMeta().SetName(retName)
 		return out.(*apiv3.GlobalNetworkPolicy), err
 	}
 	return nil, err
@@ -162,17 +123,6 @@ func (r globalNetworkPolicies) List(ctx context.Context, opts options.ListOption
 		return nil, err
 	}
 
-	// Remove the prefix off of each policy name
-	for i, _ := range res.Items {
-		name := res.Items[i].GetObjectMeta().GetName()
-		retName, err := names.ClientTieredPolicyName(name)
-		if err != nil {
-			log.WithError(err).Infof("Skipping incorrectly formatted policy name %v", name)
-			continue
-		}
-		res.Items[i].GetObjectMeta().SetName(retName)
-	}
-
 	return res, nil
 }
 
@@ -184,7 +134,7 @@ func (r globalNetworkPolicies) Watch(ctx context.Context, opts options.ListOptio
 		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
-	return r.client.resources.Watch(ctx, opts, apiv3.KindGlobalNetworkPolicy, &policyConverter{})
+	return r.client.resources.Watch(ctx, opts, apiv3.KindGlobalNetworkPolicy, nil)
 }
 
 func defaultPolicyTypesField(ingressRules, egressRules []apiv3.Rule, types *[]apiv3.PolicyType) {
@@ -206,33 +156,4 @@ func defaultPolicyTypesField(ingressRules, egressRules []apiv3.Rule, types *[]ap
 			*types = []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress}
 		}
 	}
-}
-
-func convertPolicyNameForStorage(name string) string {
-	// Do nothing on names prefixed with "knp."
-	if strings.HasPrefix(name, "knp.") {
-		return name
-	}
-	return "default." + name
-}
-
-func convertPolicyNameFromStorage(name string) string {
-	// Do nothing on names prefixed with "knp."
-	if strings.HasPrefix(name, "knp.") {
-		return name
-	}
-	parts := strings.SplitN(name, ".", 2)
-	return parts[len(parts)-1]
-}
-
-type policyConverter struct{}
-
-func (pc *policyConverter) Convert(r resource) resource {
-	retName, err := names.ClientTieredPolicyName(r.GetObjectMeta().GetName())
-	if err != nil {
-		log.WithError(err).Infof("Stored policy name is invalid: %s", r.GetObjectMeta().GetName())
-		return r
-	}
-	r.GetObjectMeta().SetName(retName)
-	return r
 }
