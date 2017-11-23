@@ -4,6 +4,8 @@ title: Standard Hosted Install
 
 The following steps install Calico as a Kubernetes add-on using your own etcd cluster.
 
+{% include {{page.version}}/load-docker.md %}
+
 ## RBAC
 
 If deploying Calico on an RBAC enabled cluster, you should first apply the `ClusterRole` and `ClusterRoleBinding` specs:
@@ -33,3 +35,8 @@ kubectl apply -f calico.yaml
 ## Configuration Options
 
 The above manifest supports a number of configuration options documented [here](index#configuration-options)
+
+## Adding Tigera CNX
+
+Now you've installed Calico with the enhanced CNX node agent, you're ready to
+[add CNX Manager](essentials/cnx).

@@ -2,7 +2,20 @@
 title: Calico Kubernetes Hosted Install
 ---
 
-Calico can be installed on a Kubernetes cluster with a single command.
+{% include {{page.version}}/load-docker.md %}
+
+## Installing
+
+Calico can be installed on a Kubernetes cluster with a single application.
+
+Update the manifest with the path to your private docker registry.  Substitute
+`mydockerregistry:5000` with the location of your docker registry.
+
+```
+sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
+```
+
+Apply the manifest.
 
 ```
 kubectl apply -f calico.yaml
@@ -24,6 +37,11 @@ for getting started quickly with Calico in conjunction with tools like kubeadm.
 #### [Kubernetes Datastore](kubernetes-datastore/)
 
 This manifest installs Calico in a mode where it does not require its own etcd cluster.
+
+## Adding Tigera CNX
+
+Now you've installed Calico with the enhanced CNX node agent, you're ready to
+[add CNX Manager](essentials/cnx).
 
 ## How it works
 

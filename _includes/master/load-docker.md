@@ -16,16 +16,6 @@ If you do not already have a private registry, consider one of the following opt
 - [Quay](https://quay.io/repository/)
 
 
-> **Note**: Due to the variations between private repositories, the commands in this 
-> procedure may require some tweaks according to the specifics of your circumstance. 
-> If you are unfamiliar with how to work with a private registry in Kubernetes, 
-> refer to:
-> - The documentation of your private repository vendor
-> - Kubernetes [Using a private repository](https://kubernetes.io/docs/concepts/containers/images/#using-a-private-registry)
-> - Heptio [How to: Pull from private registries with Kubernetes](http://docs.heptio.com/content/private-registries.html)
-{: .alert .alert-info}
-
-
 ### Loading and pushing the private images
 
 
@@ -59,16 +49,12 @@ If you do not already have a private registry, consider one of the following opt
    private repository.
 
    ```
-   docker push cnx-manager:v2.0.0-cnx-beta1
-   docker push cnx-node:v2.0.0-cnx-beta1
-   docker push cnx-apiserver:v2.0.0-cnx-beta1
+   docker push {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker push {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker push {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    ```
-   
-### Creating a secret containing the credentials
 
-1. Create a secret containing your private registry credentials.
-
-   ```
-   kubectl create secret docker-registry regsecret --docker-server=<your-registry-server> /
-   --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
-   ```
+1. Next, you must determine how to configure Kubernetes to pull from your private repository. The method varies according to your private repository vendor and Kubernetes hosting. For specific instructions, refer to:
+   - The documentation of your private repository vendor
+   - Kubernetes [Using a private repository](https://kubernetes.io/docs/concepts/containers/images/#using-a-private-registry)
+   - Heptio [How to: Pull from private registries with Kubernetes](http://docs.heptio.com/content/private-registries.html)

@@ -4,7 +4,7 @@ layout: null
 # Calico Version {{site.data.versions[page.version].first.title}}
 # https://docs.projectcalico.org/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
 # This manifest includes the following component versions:
-#   calico/node:{{site.data.versions[page.version].first.title}}
+#   tigera/cnx-node:{{site.data.versions[page.version].first.title}}
 #   calico/cni:{{site.data.versions[page.version].first.components["calico/cni"].version}}
 #   calico/kube-controllers:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
 
@@ -187,7 +187,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
+          image: {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
           env:
             # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS

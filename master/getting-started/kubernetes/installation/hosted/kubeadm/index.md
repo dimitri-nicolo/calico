@@ -8,25 +8,43 @@ If you have already built your cluster with kubeadm, please review the
 this page. It is likely you will need to recreate your cluster with the
 `--pod-network-cidr` and `--service-cidr` arguments to kubeadm.
 
+{% include {{page.version}}/load-docker.md %}
+
 ## Installation
 
 You can easily create a cluster compatible with these manifests by following [the official kubeadm guide](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-Calico installations require kubeadm initialized clusters to have set a `--pod-network-cidr`
-which should match the value set by `CALICO_IPV4POOL_CIDR` in the manifest:
+1. Calico installations require kubeadm initialized clusters to have set a `--pod-network-cidr`
+   which should match the value set by `CALICO_IPV4POOL_CIDR` in the manifest:
 
-```yaml
-- name: CALICO_IPV4POOL_CIDR
-  value: "192.168.0.0/16"
-```
+   ```yaml
+   - name: CALICO_IPV4POOL_CIDR
+     value: "192.168.0.0/16"
+   ```
 
-This value can be changed to any CIDR that does not overlap the cluster's service CIDR.
-The manifests are currently setup to use the CIDR `192.168.0.0/16` so you would initialize
-the cluster with the following command:
+   This value can be changed to any CIDR that does not overlap the cluster's service CIDR.
+   The manifests are currently setup to use the CIDR `192.168.0.0/16` so you would include
+   `--pod-network-cidr=192.168.0.0/16` in the `kubeadm init` call (either as a parameter
+   or in a config file).
 
-```shell
-kubeadm init --pod-network-cidr=192.168.0.0/16
-```
+1. To use CNX Manager, authentication needs to be set up on the cluster in a supported way.
+   The [authentication documentation](../../../../reference/essentials/authentication) lists
+   the supported methods and references the Kubernetes documentation for how to configure
+   them.
+
+   This [kubeadm config file](../essentials/demo-manifests/kubeadm.yaml) is an example that
+   configures Google OIDC login using the email address as the username.
+
+   Run kubeadm using the config file as follows.
+   ```
+   kubeadm init --config=kubeadm.yaml
+   ```
+
+1. Ensure kubeadm sets the Kubernetes API server up to support aggregation.  Recent
+   versions of kubeadm should do this by default.  Please refer to the kubeadm
+   documentation for full details on how to do this.
+
+   The example kubeadm config file linked above does this explicitly.
 
 ### etcd datastore
 
@@ -43,8 +61,6 @@ To install this Calico and a single node etcd on a run the following command:
 kubectl apply -f calico.yaml
 ```
 
->[Click here to view the calico.yaml for Kubeadm with Kubernetes 1.6.x or later.](1.6/calico.yaml)
-
 ### Kubernetes datastore
 
 To install Calico configured to use the Kubernetes API as its sole data source, run the following commands:
@@ -52,14 +68,28 @@ To install Calico configured to use the Kubernetes API as its sole data source, 
 > **Note**: The following manifests require Kubernetes 1.7.0 or later.
 {: .alert .alert-info}
 
+Download the calico manifest and update it with the path to your private docker registry.  Substitute
+`mydockerregistry:5000` with the location of your docker registry.
+
+```
+sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
+```
+
+Then apply the manifests.
+
 ```shell
 kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml
+kubectl apply -f calico.yaml
 ```
 
 >[Click here to view the above RBAC yaml directly.](../rbac-kdd.yaml)
 >
->[Click here to view the above Calico yaml directly.](../kubernetes-datastore/calico-networking/1.7/calico.yaml)
+>[Click here to view the Calico yaml.](../kubernetes-datastore/calico-networking/1.7/calico.yaml)
+
+## Adding Tigera CNX
+
+Now you've installed Calico with the enhanced CNX node agent, you're ready to
+[add CNX Manager](../essentials/cnx).
 
 ## Using calicoctl in a kubeadm cluster
 

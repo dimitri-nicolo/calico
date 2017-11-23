@@ -1,6 +1,15 @@
 ---
 layout: null
 ---
+# This manifest adds the additional CNX Manager components to a cluster
+# that has already had the Calico part of CNX deployed.
+# - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
+#   from that file, so if you are not using the provided hosted Calico
+#   manifest you must update references to those resources in this file.
+# - Update the tigera-cnx-manager-config ConfigMap below before use.
+# - This manifest makes the CNX Manager web server available via a NodePort
+#   serving on port 30003.  You may wish to update how this is exposed; do
+#   so by editing the tigera-cnx-manager-access Service below.
 
 # Update this ConfigMap with the Google login client id.
 kind: ConfigMap
@@ -9,12 +18,36 @@ metadata:
   name: tigera-cnx-manager-config
   namespace: kube-system
 data:
-  # The OIDC client id to use for Google login.  Kubelet must be configured accordingly.
+  # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
+  # Value is ignored if not using OIDC login.
   tigera.cnx-manager.oidc-client-id: "<fill-in-your-oauth-client-id-here>"
   # The location of the Kubernetes API.  This must be reachable from where the web interface
   # will be accessed from.  `kubectl proxy --port=8080` can be used; in this case set the
   # value of this field to "localhost:8080".
   tigera.cnx-manager.kubernetes-api: "127.0.0.1:6443"
+
+---
+
+# Optionally update this Service to change how CNX Manager is accessed.
+# If using Google login, the URL for the web server must be configured
+# as a redirect URI in the Google project.  If the web server will be
+# accessed at https://<host>:<port>, add https://<host>:<port>/login/oidc/callback
+# to the redirect URI list for the project.
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: cnx-manager
+  name: cnx-manager
+  namespace: kube-system
+spec:
+  selector:
+    k8s-app: cnx-manager
+  ports:
+    - port: 8080
+      targetPort: 80
+      nodePort: 30003
+  type: NodePort
 
 ---
 
@@ -65,6 +98,29 @@ subjects:
 
 ---
 
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: cnx-apiserver
+  namespace: kube-system
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: kube-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    apiserver: "true"
+
+---
+
 apiVersion: v1
 kind: ReplicationController
 metadata:
@@ -88,36 +144,39 @@ spec:
       containers:
       - name: cnx-apiserver
         image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
-        args:
-        - "--etcd-servers=http://10.96.232.136:6666"
         env:
           - name: ETCD_ENDPOINTS
-            value: "http://10.96.232.136:6666"
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_endpoints
           - name: DATASTORE_TYPE
             value: "etcdv3"
-
----
-
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: cnx-apiserver
-  namespace: kube-system
-
----
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: api
-  namespace: kube-system
-spec:
-  ports:
-  - port: 443
-    protocol: TCP
-    targetPort: 443
-  selector:
-    apiserver: "true"
+          # Location of the CA certificate for etcd.
+          - name: ETCD_CA_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_ca
+          # Location of the client key for etcd.
+          - name: ETCD_KEY_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_key
+          # Location of the client certificate for etcd.
+          - name: ETCD_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_cert
+        volumeMounts:
+          - mountPath: /calico-secrets
+            name: etcd-certs
+      volumes:
+        - name: etcd-certs
+          secret:
+            secretName: calico-etcd-secrets
 
 ---
 
@@ -165,22 +224,3 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.kubernetes-api
-
----
-
-# Create a NodePort to expose the web application
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    k8s-app: cnx-manager
-  name: cnx-manager
-  namespace: kube-system
-spec:
-  selector:
-    k8s-app: cnx-manager
-  ports:
-    - port: 8080
-      targetPort: 80
-      nodePort: 30003
-  type: NodePort

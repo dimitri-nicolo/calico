@@ -36,10 +36,15 @@ the host. Instead, continue directly to the
 1. As a regular user with sudo privileges, open a terminal on the host that 
    you installed kubeadm on. 
 
-1. Download the {{site.prodname}} docker images onto that system.  Follow the instructions
-   [here]({{site.baseurl}}/{{page.version}}/getting-started/essentials), but you can
-   skip the steps related to uploading to a registry, since the images will only be
-   needed locally.
+1. Download the {{site.prodname}} images and add them to Docker.  Obtain the
+   archives containing the images from your support representative, and then
+   run the following commands to load them.
+
+   ```
+   docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}.tar.xz
+   docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"].version}}.tar.xz
+   docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"].version}}.tar.xz
+   ```
 
 1. Update your package definitions and upgrade your existing packages.
 
@@ -47,14 +52,14 @@ the host. Instead, continue directly to the
    sudo apt-get update && sudo apt-get upgrade
    ```
    
-1. [Create a Google project to use to login to {{site.prodname}} Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
-   Set the redirect URIs to `http://127.0.0.1:30003` and `https://127.0.0.1:30003`.
+1. [Create a Google project to use to login to CNX Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
+   Set the redirect URIs to `http://127.0.0.1:30003/login/oidc/callback` and `https://127.0.0.1:30003/login/oidc/callback`.
    
 1. Copy the OAuth client ID value.
 
 1. Download the [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/kubeadm.yaml) file.
 
-1. Open the kubeadm.yaml file in your favorite editor, replace `<fill in client id here>` 
+1. Open the kubeadm.yaml file in your favorite editor, replace `<fill-in-your-oauth-client-id-here>` 
    with the OAuth client ID value, then save and close the file.
 
 1. Initialize the master using the following command.
@@ -71,35 +76,28 @@ the host. Instead, continue directly to the
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
-   
-1. [Download the file defining the {{site.prodname}} resources]({{site.baseurl}}/{{page.version}}/getting-started/essentials/demo-manifests/calico-cnx.yaml).
 
-1. Open calico-cnx.yaml file in your favorite editor.
+1. Download the [`calico.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml).
 
-1. Replace `<your-oauth-client-id>` with your OAuth client ID.
-
-1. Replace `<your-cnx-mgr-image-name>` with the name of the CNX Manager image.
-
-1. Replace `<your-calico-node-image-name>` with the name of the calico/node image.
-
-1. Replace `<your-k8sapiserver-image-name>` with the name of the Kubernetes extension API server image.
-
-1. Save and close the file.
-   
-1. Issue the following command to install {{site.prodname}} and a single-node etcd.
+1. Since you have loaded the private {{site.prodname}} images locally, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
 
    ```
-   kubectl apply -f calico-cnx.yaml
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico.yaml
    ```
 
+1. Use the following command to apply the manifest.
+
+   ```
+   kubectl apply -f calico.yaml
+   ```
+   
    You should see the following output.
 
    ```
-   configmap "tigera-cnx-manager-web-config" created
    configmap "calico-config" created
    daemonset "calico-etcd" created
    service "calico-etcd" created
-   daemonset "calico-node" created
+   daemonset "cnx-node" created
    deployment "calico-kube-controllers" created
    deployment "calico-policy-controller" created
    clusterrolebinding "calico-cni-plugin" created
@@ -108,15 +106,37 @@ the host. Instead, continue directly to the
    clusterrolebinding "calico-kube-controllers" created
    clusterrole "calico-kube-controllers" created
    serviceaccount "calico-kube-controllers" created
-   namespace "calico" created
-   apiservice "v2.projectcalico.org" created
+   ```
+
+1. [Download the `calico-cnx.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml).
+
+
+1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
+
+   ```
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico-cnx.yaml
+   ```
+   
+1. Open `calico-cnx.yaml` in your favorite editor, replace `<fill-in-your-oauth-client-id-here>` with your OAuth client ID, save the file, and exit the editor. 
+
+1. Use the following command to install the additional {{site.prodname}} components.
+
+   ```
+   kubectl apply -f calico-cnx.yaml
+   ```
+ 
+   You should see the following output.
+
+   ```
+   configmap "tigera-cnx-manager-config" created
+   apiservice "v3.projectcalico.org" created
    clusterrolebinding "calico:system:auth-delegator" created
    rolebinding "calico-auth-reader" created
-   replicationcontroller "calico-server" created
-   serviceaccount "apiserver" created
+   replicationcontroller "cnx-apiserver" created
+   serviceaccount "cnx-apiserver" created
    service "api" created
-   deployment "tigera-cnx-manager-web" created
-   service "tigera-cnx-manager-web" created
+   deployment "tigera-cnx-manager" created
+   service "tigera-cnx-manager" created
    ```
    
 1. Remove the taints on the master so that pods can be scheduled on it.
@@ -144,15 +164,15 @@ the host. Instead, continue directly to the
    NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
    kube-system   calico-etcd-q4fcf                          1/1     Running   0          1h
    kube-system   calico-kube-controllers-797946f9d9-jrwx9   1/1     Running   0          1h
-   kube-system   calico-node-mxzhw                          2/2     Running   0          1h
-   kube-system   calico-server-8kmm8                        1/1     Running   0          1h
-   kube-system   etcd-karen-virtualbox                      1/1     Running   0          1h
-   kube-system   kube-apiserver-karen-virtualbox            1/1     Running   0          1h
-   kube-system   kube-controller-manager-karen-virtualbox   1/1     Running   0          1h
+   kube-system   cnx-node-mxzhw                             2/2     Running   0          1h
+   kube-system   cnx-apiserver-8kmm8                        1/1     Running   0          1h
+   kube-system   etcd-<hostname>                            1/1     Running   0          1h
+   kube-system   kube-apiserver-<hostname>                  1/1     Running   0          1h
+   kube-system   kube-controller-manager-<hostname>         1/1     Running   0          1h
    kube-system   kube-dns-545bc4bfd4-gxhpv                  3/3     Running   0          1h
    kube-system   kube-proxy-z5vq9                           1/1     Running   0          1h
-   kube-system   kube-scheduler-karen-virtualbox            1/1     Running   0          1h
-   kube-system   tigera-cnx-manager-web-558d896894-zvpmc    1/1     Running   0          1h
+   kube-system   kube-scheduler-<hostname>                  1/1     Running   0          1h
+   kube-system   cnx-manager-558d896894-zvpmc               1/1     Running   0          1h
    ```
 
 1. Press CTRL+C to exit `watch`.
