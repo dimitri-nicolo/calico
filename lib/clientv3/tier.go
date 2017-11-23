@@ -41,11 +41,11 @@ type tiers struct {
 // Create takes the representation of a Tier and creates it.  Returns the stored
 // representation of the Tier, and an error, if there is any.
 func (r tiers) Create(ctx context.Context, res *apiv3.Tier, opts options.SetOptions) (*apiv3.Tier, error) {
-	if res.GetObjectMeta().GetName() == defaultTierName {
+	if res.Name == defaultTierName && res.Spec.Order != nil {
 		return nil, cerrors.ErrorOperationNotSupported{
 			Identifier: defaultTierName,
 			Operation:  "Create",
-			Reason:     "Cannot create default tier",
+			Reason:     "Default tier should have nil Order",
 		}
 	}
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindTier, res)

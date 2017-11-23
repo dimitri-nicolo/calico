@@ -61,14 +61,14 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			err = c.EnsureInitialized(ctx, "", "")
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cannot create the default tier")
+			By("Creating the default tier with not nil order")
 			res, outError := c.Tiers().Create(ctx, &apiv3.Tier{
 				ObjectMeta: metav1.ObjectMeta{Name: defaultName},
-				Spec:       defaultSpec,
+				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(res).To(BeNil())
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("operation Create is not supported on default: Cannot create default tier"))
+			Expect(outError.Error()).To(Equal("operation Create is not supported on default: Default tier should have nil Order"))
 
 			By("Cannot delete the default Tier")
 			_, outError = c.Tiers().Delete(ctx, defaultName, options.DeleteOptions{})

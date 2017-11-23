@@ -323,7 +323,7 @@ func (c client) ensureDefaultTierExists(ctx context.Context) error {
 	defaultTier := v3.NewTier()
 	defaultTier.ObjectMeta = metav1.ObjectMeta{Name: defaultTierName}
 	defaultTier.Spec = v3.TierSpec{}
-	if _, err := c.resources.Create(ctx, options.SetOptions{}, v3.KindTier, defaultTier); err != nil {
+	if _, err := c.Tiers().Create(ctx, defaultTier, options.SetOptions{}); err != nil {
 		if _, ok := err.(cerrors.ErrorResourceAlreadyExists); !ok {
 			return err
 		}
