@@ -1,5 +1,5 @@
-hash: 4c62885f20354b6bdcaa075612a2b14e1c5258da0e756a74f153e84da8551531
-updated: 2017-11-22T17:03:01.408877091-08:00
+hash: 075f02b23d587c56a5e22bedd47f03484c6a274ecb1659a8933efa03d1e3e2ee
+updated: 2017-11-23T12:03:19.147180619Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -172,7 +172,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 1eecca0ba8e6f5ea5a431ce21d3aee2af0b4c90b
+  version: c893efa28eb45626cdaa76c9f653b62488858837
   subpackages:
   - format
   - internal/assertion
@@ -215,7 +215,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: a22f24dbb3da480c533f27eed52188da805dc2e9
+  version: 06a1d46d8f5af1246f59883181b20580acf005fa
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
