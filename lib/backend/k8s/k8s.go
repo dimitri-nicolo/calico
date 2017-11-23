@@ -340,6 +340,7 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 				&apiv3.Tier{},
 				&apiv3.TierList{},
 			)
+			metav1.AddToGroupVersion(scheme, *cfg.GroupVersion)
 			return nil
 		})
 
