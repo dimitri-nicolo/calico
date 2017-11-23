@@ -131,7 +131,7 @@ spec:
 #### Enabling TLS Verification for a Kubernetes extension API Server
 
 The Kubernetes extension API Server deployed by the provided
-[manifest](1.6/calico-k8sapiserver.yaml) will communicate with the Kubernetes
+[manifest](1.7/cnx.yaml) will communicate with the Kubernetes
 API Server.  The manifest, by default, requires no updates to work but does not
 enable TLS verification on the connection between the two API servers. We
 recommend that this is enabled and you can follow the directions below to
@@ -166,7 +166,7 @@ in PEM format:
    openssl req -new -key calico.key -out calico.csr
    ```
    At each of the prompts press enter except at the Common Name prompt enter
-   `calico-k8sapiserver.kube-system.svc`
+   `cnx-apiserver.kube-system.svc`
 
 
 1. Generate the signed certificate
@@ -182,30 +182,29 @@ Here is an example command to do the base64 encoding:
  
 ##### Add Certificate Files to the Manifest
 
-The [calico-k8sapiserver.yaml](1.6/calico-k8sapiserver.yaml) must be updated
-with the following changes:
+The [cnx.yaml](1.7/cnx.yaml) manifest must be updated
+with the following changes
 
-1. The line `insecureSkipTLSVerify: true` must be removed from the
-   `APIService` section.
+1. Remove the line `insecureSkipTLSVerify: true` from the `APIService` section.
 1. Uncomment the line `caBundle:` in the `APIService` and append the base64
    encoded CA file contents.
-1. Uncomment the line `apiserver.key:` in the `Secret` and append the base64
-   encoded key file contents.
-1. Uncomment the line `apiserver.crt:` in the `Secret` and append the base64
-   encoded certificate file contents.
+1. Uncomment the line `apiserver.key:` in the `cnx-apiserver-certs` `Secret`
+   and append the base64 encoded key file contents.
+1. Uncomment the line `apiserver.crt:` in the `cnx-apiserver-certs` `Secret`
+   and append the base64 encoded certificate file contents.
 
 ### Configure the {{site.prodname}} Manager Web Application
 
-The [cnx-manager.yaml](1.6/cnx-manager.yaml) manifest must be updated with
+The [cnx.yaml](1.7/cnx.yaml) manifest must be updated with
 the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
 are described [here]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication).
 
-1. If using Google login, update the `tigera.cnx-web.oidc-client-id` field 
-   in the `tigera-cnx-web-manager-config` ConfigMap.
+1. If using Google login, update the `tigera.cnx-manager.oidc-client-id` field 
+   in the `tigera-cnx-manager-config` ConfigMap.
 
-1. Update the `tigera.cnx-web.kubernetes-api` field 
-   in the `tigera-cnx-web-manager-config` ConfigMap.  It must be a URL which
+1. Update the `tigera.cnx-manager.kubernetes-api` field 
+   in the `tigera-cnx-manager-config` ConfigMap.  It must be a URL which
    the web client can use to reach the Kubernetes API server.  Note that it
    must be reachable from any system which is going to access the {{site.prodname}}
    Manager web application (not just inside the cluster).
@@ -324,14 +323,13 @@ spec:
 
 ### Manifest Details
 
-The {{site.prodname}} install manifests are based on [kubeadm hosted install](../kubeadm),
-however, you can adapt any hosted install manifest by making changes described
-in the [modifying your manifest to install essentials](#modifying-an-existing-manifest-to-install-essentials)
+The {{site.prodname}} install manifests are based on [kubeadm hosted install](../kubeadm).
 
-The additional things the [calico-essentials.yaml](1.6/calico-essentials.yaml) does
-are:
-  - Enables Prometheus reporting (this is different from Felix's prometheus
-    settings)
+The [cnx.yaml](1.7/calico-essentials.yaml) manifest does the following:
+  - Installs the CNX API server, and configures the APIService to tell
+    the Kubernetes API server to delegate to it.
+  - Installs the CNX Manager web server, and configures it with the location
+    of the Kubernetes API, login methods and SSL certificates.
 
 The manifest [operator.yaml](1.7/operator.yaml) does the following:
   - Create a namespace called calico-monitoring
