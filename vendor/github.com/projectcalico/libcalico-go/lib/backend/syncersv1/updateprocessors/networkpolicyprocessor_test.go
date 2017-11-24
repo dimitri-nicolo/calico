@@ -106,8 +106,8 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		intype := 3
 		icode := 4
 		incode := 6
-		iproto := numorstring.ProtocolFromString("tcp")
-		inproto := numorstring.ProtocolFromString("udp")
+		iproto := numorstring.ProtocolFromString("TCP")
+		inproto := numorstring.ProtocolFromString("UDP")
 		port80 := numorstring.SinglePort(uint16(80))
 		port443 := numorstring.SinglePort(uint16(443))
 		irule := apiv3.Rule{
@@ -205,8 +205,8 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 					InboundRules:   []model.Rule{v1irule},
 					OutboundRules:  []model.Rule{v1erule},
 					Selector:       namespacedSelector,
-					ApplyOnForward: true,
 					Types:          []string{"ingress"},
+					ApplyOnForward: true,
 				},
 				Revision: "1234",
 			},
@@ -217,8 +217,6 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		res.Name = name3
 		res.Namespace = ns3
 		res.Spec.Tier = mytier
-		res.Spec.PreDNAT = true
-		res.Spec.ApplyOnForward = true
 
 		kvps, err = up.Process(&model.KVPair{
 			Key:      v3NetworkPolicyKey3,
@@ -231,7 +229,6 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 			Key: v1NetworkPolicyKey3,
 			Value: &model.Policy{
 				Selector:       "projectcalico.org/namespace == 'namespace3'",
-				PreDNAT:        true,
 				ApplyOnForward: true,
 			},
 			Revision: "xyz",
@@ -340,12 +337,12 @@ var np1 = v1beta1.NetworkPolicy{
 }
 
 // expected1 is the expected v1 KVPair representation of np1 from above.
-var tcp = numorstring.ProtocolFromString("tcp")
+var tcp = numorstring.ProtocolFromStringV1("tcp")
 var port80 = numorstring.SinglePort(uint16(80))
 var order float64 = 1000.0
 var expected1 = []*model.KVPair{
 	&model.KVPair{
-		Key: model.PolicyKey{Name: "default/knp.default.test.policy"},
+		Key: model.PolicyKey{Name: "default/knp.default.test.policy", Tier: "default"},
 		Value: &model.Policy{
 			Order:          &order,
 			Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",

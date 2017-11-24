@@ -66,7 +66,7 @@ type PolicyMetadata struct {
 	unversioned.ObjectMetadata
 
 	// The name of the selector-based security policy.
-	Name string `json:"name,omitempty" validate:"omitempty,namespacedname"`
+	Name string `json:"name,omitempty" validate:"omitempty,namespacedName"`
 
 	// The name of the tier that this policy belongs to.  If this is omitted, the default
 	// tier (name is "default") is assumed.  The specified tier must exist in order to create
@@ -149,7 +149,7 @@ type PolicySpec struct {
 	//
 	// When the policy is read back again, Types will always be one of these values, never empty
 	// or nil.
-	Types []PolicyType `json:"types,omitempty" validate:"omitempty,dive,policytype"`
+	Types []PolicyType `json:"types,omitempty" validate:"omitempty,dive,policyType"`
 }
 
 // PolicyType enumerates the possible values of the PolicySpec Types field.

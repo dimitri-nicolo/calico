@@ -1,5 +1,5 @@
-hash: 899ffd0c4898722a12cbef611288ce5233a54a516dbdb0396f76974da93d3772
-updated: 2017-11-14T00:03:55.067727188Z
+hash: bcb8d56c4f76a3a10e5f1a361b1cad2e37865a72c5502bc926da49ce3967a6f1
+updated: 2017-11-24T19:11:15.560490325Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -142,7 +142,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/kubernetes/repo-infra
-  version: 0e2dd0ad88f05bc3dd71c7834c330d39b013c13c
+  version: 2d2eb5e12b4663fc4d764b5db9daab39334d3f37
 - name: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -176,10 +176,12 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 39f8320c51962f2e3f3f5fecffd6b55636d520b2
+  version: 06a1d46d8f5af1246f59883181b20580acf005fa
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
+  - lib/apis/v1
+  - lib/apis/v1/unversioned
   - lib/apis/v3
   - lib/backend
   - lib/backend/api
@@ -201,9 +203,12 @@ imports:
   - lib/net
   - lib/numorstring
   - lib/options
+  - lib/scope
+  - lib/selector
   - lib/selector/parser
   - lib/selector/tokenizer
   - lib/set
+  - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
   version: e51041b3fa41cece0dca035740ba6411905be473
@@ -301,6 +306,8 @@ imports:
   - naming
   - peer
   - transport
+- name: gopkg.in/go-playground/validator.v8
+  version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/natefinch/lumberjack.v2
@@ -471,6 +478,7 @@ imports:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
   subpackages:
   - discovery
+  - discovery/fake
   - informers
   - informers/admissionregistration
   - informers/admissionregistration/v1alpha1
@@ -560,6 +568,7 @@ imports:
   - plugin/pkg/client/auth/openstack
   - rest
   - rest/watch
+  - testing
   - third_party/forked/golang/template
   - tools/auth
   - tools/cache
@@ -588,7 +597,7 @@ imports:
   - pkg/handler
   - pkg/util
 - name: k8s.io/kubernetes
-  version: c1d1b92688176f37893d81cf6d7a3abc5663a795
+  version: b3eda6e781eca0f61919f8eb655b47e7632b554a
   subpackages:
   - pkg/api
   - pkg/api/install

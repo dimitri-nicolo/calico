@@ -34,6 +34,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/satori/go.uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // client implements the client.Interface.
@@ -85,7 +86,7 @@ func (c client) NetworkPolicies() NetworkPolicyInterface {
 
 // Policies returns an interface for managing policy resources.
 func (c client) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {
-	return globalnetworkpolicies{client: c}
+	return globalNetworkPolicies{client: c}
 }
 
 // IPPools returns an interface for managing IP pool resources.
@@ -178,6 +179,10 @@ func (c client) EnsureInitialized(ctx context.Context, calicoVersion, clusterTyp
 	}
 
 	if err := c.ensureClusterInformation(ctx, calicoVersion, clusterType); err != nil {
+		return err
+	}
+
+	if err := c.ensureDefaultTierExists(ctx); err != nil {
 		return err
 	}
 
@@ -305,6 +310,24 @@ func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, clu
 		break
 	}
 
+	return nil
+}
+
+const defaultTierName = "default"
+
+// ensureDefaultTierExists ensures that the "default" Tier exits in the datastore.
+// This is done by trying to create the default tier. If it doesn't exists, it
+// is created.  A error is returned if there is any error other than when the
+// default tier resource already exists.
+func (c client) ensureDefaultTierExists(ctx context.Context) error {
+	defaultTier := v3.NewTier()
+	defaultTier.ObjectMeta = metav1.ObjectMeta{Name: defaultTierName}
+	defaultTier.Spec = v3.TierSpec{}
+	if _, err := c.Tiers().Create(ctx, defaultTier, options.SetOptions{}); err != nil {
+		if _, ok := err.(cerrors.ErrorResourceAlreadyExists); !ok {
+			return err
+		}
+	}
 	return nil
 }
 

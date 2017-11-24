@@ -18,8 +18,12 @@ import (
 	"context"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // NetworkPolicyInterface has methods to work with NetworkPolicy resources.
@@ -40,19 +44,40 @@ type networkPolicies struct {
 // Create takes the representation of a NetworkPolicy and creates it.  Returns the stored
 // representation of the NetworkPolicy, and an error, if there is any.
 func (r networkPolicies) Create(ctx context.Context, res *apiv3.NetworkPolicy, opts options.SetOptions) (*apiv3.NetworkPolicy, error) {
+	// Before creating the policy, check that the tier exists.
+	tier := names.TierOrDefault(res.Spec.Tier)
+	if _, err := r.client.resources.Get(ctx, options.GetOptions{}, apiv3.KindTier, noNamespace, tier); err != nil {
+		log.WithError(err).Infof("Tier %v does not exist", tier)
+		return nil, err
+	}
 	defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
 
+	if err := validator.Validate(res); err != nil {
+		return nil, err
+	}
+
 	// Properly prefix the name
-	res.GetObjectMeta().SetName(convertPolicyNameForStorage(res.GetObjectMeta().GetName()))
+	backendPolicyName, err := names.BackendTieredPolicyName(res.GetObjectMeta().GetName(), res.Spec.Tier)
+	if err != nil {
+		return nil, err
+	}
+	res.GetObjectMeta().SetName(backendPolicyName)
+
+	// Add tier labels to policy for lookup.
+	if tier != "default" {
+		res.GetObjectMeta().SetLabels(addTierLabel(res.GetObjectMeta().GetLabels(), tier))
+	}
+
 	out, err := r.client.resources.Create(ctx, opts, apiv3.KindNetworkPolicy, res)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(convertPolicyNameFromStorage(out.GetObjectMeta().GetName()))
+		// Add the tier labels if necessary
+		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.NetworkPolicy), err
 	}
 
-	// Remove the prefix out of the returned policy name.
-	res.GetObjectMeta().SetName(convertPolicyNameFromStorage(res.GetObjectMeta().GetName()))
+	// Add the tier labels if necessary
+	res.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.GetObjectMeta().GetLabels()))
+
 	return nil, err
 }
 
@@ -61,26 +86,43 @@ func (r networkPolicies) Create(ctx context.Context, res *apiv3.NetworkPolicy, o
 func (r networkPolicies) Update(ctx context.Context, res *apiv3.NetworkPolicy, opts options.SetOptions) (*apiv3.NetworkPolicy, error) {
 	defaultPolicyTypesField(res.Spec.Ingress, res.Spec.Egress, &res.Spec.Types)
 
+	if err := validator.Validate(res); err != nil {
+		return nil, err
+	}
+
 	// Properly prefix the name
-	res.GetObjectMeta().SetName(convertPolicyNameForStorage(res.GetObjectMeta().GetName()))
+	backendPolicyName, err := names.BackendTieredPolicyName(res.GetObjectMeta().GetName(), res.Spec.Tier)
+	if err != nil {
+		return nil, err
+	}
+	res.GetObjectMeta().SetName(backendPolicyName)
+
+	// Add tier labels to policy for lookup.
+	tier := names.TierOrDefault(res.Spec.Tier)
+	if tier != "default" {
+		res.GetObjectMeta().SetLabels(addTierLabel(res.GetObjectMeta().GetLabels(), tier))
+	}
+
 	out, err := r.client.resources.Update(ctx, opts, apiv3.KindNetworkPolicy, res)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(convertPolicyNameFromStorage(out.GetObjectMeta().GetName()))
+		// Add the tier labels if necessary
+		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.NetworkPolicy), err
 	}
 
-	// Remove the prefix out of the returned policy name.
-	res.GetObjectMeta().SetName(convertPolicyNameFromStorage(res.GetObjectMeta().GetName()))
+	// Add the tier labels if necessary
+	res.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.GetObjectMeta().GetLabels()))
+
 	return nil, err
 }
 
 // Delete takes name of the NetworkPolicy and deletes it. Returns an error if one occurs.
 func (r networkPolicies) Delete(ctx context.Context, namespace, name string, opts options.DeleteOptions) (*apiv3.NetworkPolicy, error) {
-	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindNetworkPolicy, namespace, convertPolicyNameForStorage(name))
+	backendPolicyName := names.TieredPolicyName(name)
+	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindNetworkPolicy, namespace, backendPolicyName)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(convertPolicyNameFromStorage(out.GetObjectMeta().GetName()))
+		// Add the tier labels if necessary
+		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.NetworkPolicy), err
 	}
 	return nil, err
@@ -89,10 +131,11 @@ func (r networkPolicies) Delete(ctx context.Context, namespace, name string, opt
 // Get takes name of the NetworkPolicy, and returns the corresponding NetworkPolicy object,
 // and an error if there is any.
 func (r networkPolicies) Get(ctx context.Context, namespace, name string, opts options.GetOptions) (*apiv3.NetworkPolicy, error) {
-	out, err := r.client.resources.Get(ctx, opts, apiv3.KindNetworkPolicy, namespace, convertPolicyNameForStorage(name))
+	backendPolicyName := names.TieredPolicyName(name)
+	out, err := r.client.resources.Get(ctx, opts, apiv3.KindNetworkPolicy, namespace, backendPolicyName)
 	if out != nil {
-		// Remove the prefix out of the returned policy name.
-		out.GetObjectMeta().SetName(convertPolicyNameFromStorage(out.GetObjectMeta().GetName()))
+		// Add the tier labels if necessary
+		out.GetObjectMeta().SetLabels(defaultTierLabelIfMissing(out.GetObjectMeta().GetLabels()))
 		return out.(*apiv3.NetworkPolicy), err
 	}
 	return nil, err
@@ -102,18 +145,17 @@ func (r networkPolicies) Get(ctx context.Context, namespace, name string, opts o
 func (r networkPolicies) List(ctx context.Context, opts options.ListOptions) (*apiv3.NetworkPolicyList, error) {
 	res := &apiv3.NetworkPolicyList{}
 	// Add the name prefix if name is provided
-	if opts.Name != "" {
-		opts.Name = convertPolicyNameForStorage(opts.Name)
+	if opts.Name != "" && !opts.Prefix {
+		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
 	if err := r.client.resources.List(ctx, opts, apiv3.KindNetworkPolicy, apiv3.KindNetworkPolicyList, res); err != nil {
 		return nil, err
 	}
 
-	// Remove the prefix off of each policy name
+	// Make sure the tier labels are added
 	for i, _ := range res.Items {
-		name := res.Items[i].GetObjectMeta().GetName()
-		res.Items[i].GetObjectMeta().SetName(convertPolicyNameFromStorage(name))
+		res.Items[i].GetObjectMeta().SetLabels(defaultTierLabelIfMissing(res.Items[i].GetObjectMeta().GetLabels()))
 	}
 
 	return res, nil
@@ -124,8 +166,8 @@ func (r networkPolicies) List(ctx context.Context, opts options.ListOptions) (*a
 func (r networkPolicies) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	// Add the name prefix if name is provided
 	if opts.Name != "" {
-		opts.Name = convertPolicyNameForStorage(opts.Name)
+		opts.Name = names.TieredPolicyName(opts.Name)
 	}
 
-	return r.client.resources.Watch(ctx, opts, apiv3.KindNetworkPolicy)
+	return r.client.resources.Watch(ctx, opts, apiv3.KindNetworkPolicy, &policyConverter{})
 }

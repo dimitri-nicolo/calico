@@ -145,7 +145,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					model.GlobalConfigKey{Name: "ClusterGUID"},
 					MatchRegexp("[a-f0-9]{32}"),
 				)
-				expectedCacheSize += 2
+				// Creating the node also creates default tier.
+				syncTester.ExpectData(model.KVPair{
+					Key:   model.TierKey{Name: "default"},
+					Value: &model.Tier{},
+				})
+				expectedCacheSize += 3
 			}
 
 			// The HostIP will be added for the IPv4 address
@@ -217,12 +222,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 							Ports: []apiv3.EndpointPort{
 								{
 									Name:     "port1",
-									Protocol: numorstring.ProtocolFromString("tcp"),
+									Protocol: numorstring.ProtocolFromString("TCP"),
 									Port:     1234,
 								},
 								{
 									Name:     "port2",
-									Protocol: numorstring.ProtocolFromString("udp"),
+									Protocol: numorstring.ProtocolFromString("UDP"),
 									Port:     1010,
 								},
 							},
@@ -248,12 +253,12 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 						Ports: []model.EndpointPort{
 							{
 								Name:     "port1",
-								Protocol: numorstring.ProtocolFromString("tcp"),
+								Protocol: numorstring.ProtocolFromStringV1("TCP"),
 								Port:     1234,
 							},
 							{
 								Name:     "port2",
-								Protocol: numorstring.ProtocolFromString("udp"),
+								Protocol: numorstring.ProtocolFromStringV1("UDP"),
 								Port:     1010,
 							},
 						},

@@ -16,6 +16,7 @@ package conversion
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -56,6 +57,68 @@ var _ = Describe("Test parsing strings", func() {
 		Expect(err).To(HaveOccurred())
 		Expect(ns).To(Equal(""))
 	})
+})
+
+var _ = Describe("Test selector conversion", func() {
+	DescribeTable("selector conversion table",
+		func(inSelector metav1.LabelSelector, selectorType selectorType, expected string) {
+			// First, convert the NetworkPolicy using the k8s conversion logic.
+			c := Converter{}
+
+			converted := c.k8sSelectorToCalico(&inSelector, selectorType)
+
+			// Finally, assert the expected result.
+			Expect(converted).To(Equal(expected))
+		},
+
+		Entry("should handle an empty pod selector", metav1.LabelSelector{}, SelectorPod, "projectcalico.org/orchestrator == 'k8s'"),
+		Entry("should handle an empty namespace selector", metav1.LabelSelector{}, SelectorNamespace, ""),
+		Entry("should handle an OpDoesNotExist namespace selector",
+			metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "toast", Operator: metav1.LabelSelectorOpDoesNotExist},
+				},
+			},
+			SelectorNamespace,
+			"! has(toast)",
+		),
+		Entry("should handle an OpExists namespace selector",
+			metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "toast", Operator: metav1.LabelSelectorOpExists},
+				},
+			},
+			SelectorNamespace,
+			"has(toast)",
+		),
+		Entry("should handle an OpIn namespace selector",
+			metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "toast", Operator: metav1.LabelSelectorOpIn, Values: []string{"butter", "jam"}},
+				},
+			},
+			SelectorNamespace,
+			"toast in { 'butter', 'jam' }",
+		),
+		Entry("should handle an OpNotIn namespace selector",
+			metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "toast", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"marmite", "milk"}},
+				},
+			},
+			SelectorNamespace,
+			"toast not in { 'marmite', 'milk' }",
+		),
+		Entry("should handle an OpDoesNotExist pod selector",
+			metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "toast", Operator: metav1.LabelSelectorOpDoesNotExist},
+				},
+			},
+			SelectorPod,
+			"projectcalico.org/orchestrator == 'k8s' && ! has(toast)",
+		),
+	)
 })
 
 var _ = Describe("Test Pod conversion", func() {
@@ -163,6 +226,11 @@ var _ = Describe("Test Pod conversion", func() {
 			// Unknown protocol port is ignored.
 		))
 
+		// Assert the interface name is fixed.  The calculation of this name should be consistent
+		// between releases otherwise there will be issues upgrading a node with networked Pods.
+		// If this fails, fix the code not this expect!
+		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.InterfaceName).To(Equal("cali7f94ce7c295"))
+
 		// Assert ResourceVersion is present.
 		Expect(wep.Revision).To(Equal("1234"))
 	})
@@ -170,7 +238,7 @@ var _ = Describe("Test Pod conversion", func() {
 	It("should not parse a Pod without an IP to a WorkloadEndpoint", func() {
 		pod := kapiv1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "podA",
+				Name:      "podB",
 				Namespace: "default",
 				Annotations: map[string]string{
 					"arbitrary": "annotation",
@@ -193,7 +261,7 @@ var _ = Describe("Test Pod conversion", func() {
 	It("should parse a Pod with no labels", func() {
 		pod := kapiv1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "podA",
+				Name:      "podB",
 				Namespace: "default",
 			},
 			Spec: kapiv1.PodSpec{
@@ -208,11 +276,11 @@ var _ = Describe("Test Pod conversion", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// Assert key fields.
-		Expect(wep.Key.(model.ResourceKey).Name).To(Equal("nodeA-k8s-podA-eth0"))
+		Expect(wep.Key.(model.ResourceKey).Name).To(Equal("nodeA-k8s-podB-eth0"))
 		Expect(wep.Key.(model.ResourceKey).Namespace).To(Equal("default"))
 		Expect(wep.Key.(model.ResourceKey).Kind).To(Equal(apiv3.KindWorkloadEndpoint))
 		// Assert value fields.
-		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Pod).To(Equal("podA"))
+		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Pod).To(Equal("podB"))
 		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Node).To(Equal("nodeA"))
 		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Endpoint).To(Equal("eth0"))
 		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.Orchestrator).To(Equal("k8s"))
@@ -221,6 +289,11 @@ var _ = Describe("Test Pod conversion", func() {
 			"projectcalico.org/namespace":    "default",
 			"projectcalico.org/orchestrator": "k8s",
 		}))
+
+		// Assert the interface name is fixed.  The calculation of this name should be consistent
+		// between releases otherwise there will be issues upgrading a node with networked Pods.
+		// If this fails, fix the code not this expect!
+		Expect(wep.Value.(*apiv3.WorkloadEndpoint).Spec.InterfaceName).To(Equal("cali92cf1f5e9f6"))
 	})
 
 	It("should not parse a Pod with no NodeName", func() {
@@ -299,10 +372,10 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		// Check the selector is correct, and that the matches are sorted.
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal(
 			"projectcalico.org/orchestrator == 'k8s' && label == 'value' && label2 == 'value2'"))
-		protoTCP := numorstring.ProtocolFromString("tcp")
+		protoTCP := numorstring.ProtocolFromString("TCP")
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(ConsistOf(
 			apiv3.Rule{
-				Action:   "allow",
+				Action:   "Allow",
 				Protocol: &protoTCP, // Defaulted to TCP.
 				Source: apiv3.EntityRule{
 					Selector: "projectcalico.org/orchestrator == 'k8s' && k == 'v' && k2 == 'v2'",
@@ -312,7 +385,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 				},
 			},
 			apiv3.Rule{
-				Action:   "allow",
+				Action:   "Allow",
 				Protocol: &protoTCP, // Defaulted to TCP.
 				Source: apiv3.EntityRule{
 					Selector: "projectcalico.org/orchestrator == 'k8s' && k == 'v' && k2 == 'v2'",
@@ -475,6 +548,90 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 			Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Source.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s' && k == 'v'"))
 			Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[1].Source.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s' && k2 == 'v2'"))
 		})
+	})
+
+	It("should parse a k8s NetworkPolicy with a DoesNotExist expression ", func() {
+		port80 := intstr.FromInt(80)
+		portFoo := intstr.FromString("foo")
+		np := extensions.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test.policy",
+				Namespace: "default",
+			},
+			Spec: extensions.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"label":  "value",
+						"label2": "value2",
+					},
+				},
+				Ingress: []extensions.NetworkPolicyIngressRule{
+					{
+						Ports: []extensions.NetworkPolicyPort{
+							{Port: &port80},
+							{Port: &portFoo},
+						},
+						From: []extensions.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{Key: "toast", Operator: metav1.LabelSelectorOpDoesNotExist},
+									},
+								},
+							},
+						},
+					},
+				},
+				PolicyTypes: []extensions.PolicyType{extensions.PolicyTypeIngress},
+			},
+		}
+
+		// Parse the policy.
+		pol, err := c.K8sNetworkPolicyToCalico(&np)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Make sure the type information is correct.
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Kind).To(Equal(apiv3.KindNetworkPolicy))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).APIVersion).To(Equal(apiv3.GroupVersionCurrent))
+
+		// Assert key fields are correct.
+		Expect(pol.Key.(model.ResourceKey).Name).To(Equal("knp.default.test.policy"))
+
+		// Assert value fields are correct.
+		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
+		// Check the selector is correct, and that the matches are sorted.
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal(
+			"projectcalico.org/orchestrator == 'k8s' && label == 'value' && label2 == 'value2'"))
+		protoTCP := numorstring.ProtocolFromString("TCP")
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(ConsistOf(
+			apiv3.Rule{
+				Action:   "Allow",
+				Protocol: &protoTCP, // Defaulted to TCP.
+				Source: apiv3.EntityRule{
+					Selector: "projectcalico.org/orchestrator == 'k8s' && ! has(toast)",
+				},
+				Destination: apiv3.EntityRule{
+					Ports: []numorstring.Port{numorstring.SinglePort(80)},
+				},
+			},
+			apiv3.Rule{
+				Action:   "Allow",
+				Protocol: &protoTCP, // Defaulted to TCP.
+				Source: apiv3.EntityRule{
+					Selector: "projectcalico.org/orchestrator == 'k8s' && ! has(toast)",
+				},
+				Destination: apiv3.EntityRule{
+					Ports: []numorstring.Port{numorstring.NamedPort("foo")},
+				},
+			},
+		))
+
+		// There should be no Egress rules
+		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(0))
+
+		// Check that Types field exists and has only 'ingress'
+		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Types)).To(Equal(1))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Types[0]).To(Equal(apiv3.PolicyTypeIngress))
 	})
 
 	It("should parse a NetworkPolicy with multiple peers and ports", func() {
@@ -771,7 +928,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s'"))
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(1))
-		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Protocol.String()).To(Equal("tcp"))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Protocol.String()).To(Equal("TCP"))
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Destination.Ports)).To(Equal(1))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Destination.Ports[0].String()).To(Equal("80"))
 
@@ -818,7 +975,7 @@ var _ = Describe("Test NetworkPolicy conversion", func() {
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s'"))
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress)).To(Equal(1))
-		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress[0].Protocol.String()).To(Equal("tcp"))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress[0].Protocol.String()).To(Equal("TCP"))
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress[0].Destination.Ports)).To(Equal(1))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Egress[0].Destination.Ports[0].String()).To(Equal("80"))
 
@@ -1117,9 +1274,9 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		// Check the selector is correct, and that the matches are sorted.
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal(
 			"projectcalico.org/orchestrator == 'k8s' && label == 'value' && label2 == 'value2'"))
-		protoTCP := numorstring.ProtocolFromString("tcp")
+		protoTCP := numorstring.ProtocolFromString("TCP")
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress).To(ConsistOf(apiv3.Rule{
-			Action:   "allow",
+			Action:   "Allow",
 			Protocol: &protoTCP, // Defaulted to TCP.
 			Source: apiv3.EntityRule{
 				Selector: "projectcalico.org/orchestrator == 'k8s' && k == 'v' && k2 == 'v2'",
@@ -1476,7 +1633,7 @@ var _ = Describe("Test NetworkPolicy conversion (k8s <= 1.7, no policyTypes)", f
 		Expect(int(*pol.Value.(*apiv3.NetworkPolicy).Spec.Order)).To(Equal(1000))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Selector).To(Equal("projectcalico.org/orchestrator == 'k8s'"))
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress)).To(Equal(1))
-		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Protocol.String()).To(Equal("tcp"))
+		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Protocol.String()).To(Equal("TCP"))
 		Expect(len(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Destination.Ports)).To(Equal(1))
 		Expect(pol.Value.(*apiv3.NetworkPolicy).Spec.Ingress[0].Destination.Ports[0].String()).To(Equal("80"))
 

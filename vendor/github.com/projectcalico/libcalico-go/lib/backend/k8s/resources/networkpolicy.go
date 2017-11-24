@@ -211,7 +211,7 @@ func (c *networkPolicyClient) Get(ctx context.Context, key model.Key, revision s
 func (c *networkPolicyClient) List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error) {
 	log.Debug("Received List request on NetworkPolicy type")
 	l := list.(model.ResourceListOptions)
-	if l.Name != "" {
+	if l.Name != "" && !l.Prefix {
 		// Exact lookup on a NetworkPolicy.
 		kvp, err := c.Get(ctx, model.ResourceKey{Name: l.Name, Namespace: l.Namespace, Kind: l.Kind}, revision)
 		if err != nil {
@@ -252,6 +252,20 @@ func (c *networkPolicyClient) List(ctx context.Context, list model.ListInterface
 	if l.Namespace != "" {
 		// Add the namespace if requested.
 		req = req.Namespace(l.Namespace)
+	}
+	// If the prefix is specified, look for the resources with the label
+	// of the prefix.
+	if l.Prefix {
+		name := list.(model.ResourceListOptions).Name
+		if name == "default" {
+			req = req.VersionedParams(&metav1.ListOptions{
+				LabelSelector: "!" + apiv3.LabelTier,
+			}, scheme.ParameterCodec)
+		} else {
+			req = req.VersionedParams(&metav1.ListOptions{
+				LabelSelector: apiv3.LabelTier + "=" + name,
+			}, scheme.ParameterCodec)
+		}
 	}
 	err = req.Do().Into(&networkPolicies)
 	if err != nil {

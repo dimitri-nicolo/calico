@@ -4,6 +4,7 @@ package names
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -33,4 +34,80 @@ func TierFromPolicyName(name string) (string, error) {
 	}
 	// Return the first word before the first dot.
 	return parts[0], nil
+}
+
+// BackendTieredPolicyName returns a policy name suitable for use by any
+// backend. It will always return a policy name prefixed with the appropriate
+// tier or error. The tier name is passed in as-is from the Policy Spec of a
+// NetworkPolicy or a GlobalNetworkPolicy resource.
+func BackendTieredPolicyName(policy, tier string) (string, error) {
+	tieredPolicy := TieredPolicyName(policy)
+	return tieredPolicy, validateBackendTieredPolicyName(tieredPolicy, tier)
+}
+
+func validateBackendTieredPolicyName(policy, tier string) error {
+	if policy == "" {
+		return errors.New("Policy name is empty")
+	}
+	// If it is a K8s network policy, then simply return the policy name as is.
+	// We expect K8s network policies to be formatted properly in the first place.
+	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) {
+		return nil
+	}
+
+	t := TierOrDefault(tier)
+	parts := strings.SplitN(policy, ".", 2)
+	if len(parts) != 2 || !strings.HasPrefix(policy, t+".") {
+		return fmt.Errorf("Incorrectly formatted policy name %s", policy)
+	}
+	return nil
+}
+
+func TieredPolicyName(policy string) string {
+	if policy == "" {
+		return ""
+	}
+	// If it is a K8s network policy, then simply return the policy name as is.
+	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) {
+		return policy
+	}
+
+	parts := strings.SplitN(policy, ".", 2)
+	if len(parts) == 1 {
+		// Default tier name.
+		return fmt.Sprintf("default.%v", policy)
+	} else if len(parts) == 2 {
+		// The policy name is already prefixed appropriately.
+		return policy
+	}
+	return ""
+}
+
+// ClientTieredPolicyName returns a policy name suitable for returning to
+// the user of the client. The tier name is passed in as-is from the Policy
+// spec for NetworkPolicy or a GlobalNetworkPolicy.
+func ClientTieredPolicyName(policy string) (string, error) {
+	if policy == "" {
+		return "", errors.New("Policy name is empty")
+	}
+	// If it is a K8s network policy, then simply return the policy name as is.
+	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) {
+		return policy, nil
+	}
+	parts := strings.SplitN(policy, ".", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("Invalid policy name %s", policy)
+	} else if parts[0] == DefaultTierName {
+		return parts[1], nil
+	}
+	return policy, nil
+}
+
+// TierOrDefault returns the tier name, or the default if blank.
+func TierOrDefault(tier string) string {
+	if len(tier) == 0 {
+		return DefaultTierName
+	} else {
+		return tier
+	}
 }

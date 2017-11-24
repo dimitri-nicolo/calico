@@ -125,13 +125,7 @@ func (c *etcdV3Client) Create(ctx context.Context, d *model.KVPair) (*model.KVPa
 	}
 
 	v, err := model.ParseValue(d.Key, []byte(value))
-	if err != nil {
-		return nil, cerrors.ErrorParsingDatastoreEntry{
-			RawKey:   key,
-			RawValue: value,
-			Err:      err,
-		}
-	}
+	cerrors.PanicIfErrored(err, "Unexpected error parsing stored datastore entry: %v", value)
 	d.Value = v
 	d.Revision = strconv.FormatInt(txnResp.Header.Revision, 10)
 
@@ -192,13 +186,7 @@ func (c *etcdV3Client) Update(ctx context.Context, d *model.KVPair) (*model.KVPa
 	}
 
 	v, err := model.ParseValue(d.Key, []byte(value))
-	if err != nil {
-		return nil, cerrors.ErrorParsingDatastoreEntry{
-			RawKey:   key,
-			RawValue: value,
-			Err:      err,
-		}
-	}
+	cerrors.PanicIfErrored(err, "Unexpected error parsing stored datastore entry: %v", value)
 	d.Value = v
 	d.Revision = strconv.FormatInt(txnResp.Header.Revision, 10)
 
@@ -226,13 +214,7 @@ func (c *etcdV3Client) Apply(d *model.KVPair) (*model.KVPair, error) {
 	}
 
 	v, err := model.ParseValue(d.Key, []byte(value))
-	if err != nil {
-		return nil, cerrors.ErrorParsingDatastoreEntry{
-			RawKey:   key,
-			RawValue: value,
-			Err:      err,
-		}
-	}
+	cerrors.PanicIfErrored(err, "Unexpected error parsing stored datastore entry: %v", value)
 	d.Value = v
 	d.Revision = strconv.FormatInt(resp.Header.Revision, 10)
 
