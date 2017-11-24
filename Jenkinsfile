@@ -58,7 +58,7 @@ pipeline{
                         // The following bit of nastiness works round a docker issue with ttys.
                         // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
 			sh 'ssh-keygen -f "/home/jenkins/.ssh/known_hosts" -R localhost'
-                        sh 'ssh -o StrictHostKeyChecking=no localhost -t -t "cd $WORKSPACE/calico_node && make st"'
+                        sh 'ssh -o StrictHostKeyChecking=no localhost -t -t "cd $WORKSPACE/calico_node && RELEASE_STREAM=master make st"'
                     }
                 }
             }
