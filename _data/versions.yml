@@ -1,5 +1,5 @@
 v2.0:
-- title: v2.0.0-cnx-beta1-rc2
+- title: v2.0.0-cnx-beta1-rc3
   note: |
     17 November 2017
     
@@ -41,10 +41,10 @@ v2.0:
       version: v2.0.0-cnx-beta1-rc2
       url: ""
     typha:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta1-rc3
       url: ""
     calicoctl:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta1-rc3
       url: ""
       download_url: ""
     cnx-node:

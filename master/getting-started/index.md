@@ -26,8 +26,4 @@ a number of cloud services.
 
 Then follow one of our getting started guides.
 - [{{site.prodname}} with Kubernetes](kubernetes)
-- [{{site.prodname}} with Mesos](mesos)
-  - [{{site.prodname}} with DC/OS](mesos/installation/dc-os)
-- [{{site.prodname}} with Docker](docker)
-- [{{site.prodname}} with OpenStack](openstack)
 - [Host protection](bare-metal/bare-metal)

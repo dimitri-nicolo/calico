@@ -7,6 +7,9 @@ layout: null
 #   not using the provided hosted Calico manifest you must update
 #   references to that resource in this file.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
+# - Optionally update the cnx-apiserver-certs ConfigMap below before use to
+#   enable TLS on the connection between the CNX API server and the
+#   Kubernetes API server.
 # - This manifest makes the CNX Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
@@ -25,6 +28,24 @@ data:
   # will be accessed from.  `kubectl proxy --port=8080` can be used; in this case set the
   # value of this field to "localhost:8080".
   tigera.cnx-manager.kubernetes-api: "127.0.0.1:6443"
+
+---
+
+# Optionally update this ConfigMap to enable TLS between the CNX API
+# server and Kubernetes API server.
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: cnx-apiserver-certs
+  namespace: kube-system
+data:
+  # Populate the following files with etcd TLS configuration if desired,
+  # but leave blank if not using TLS for Kubernetes etcd.
+  # This self-hosted install expects three files with the following names.  The values
+  # should be base64 encoded strings of the entire contents of each file.
+  #apiserver.key:
+  #apiserver.crt:
 
 ---
 
@@ -147,6 +168,13 @@ spec:
         env:
           - name: DATASTORE_TYPE
             value: "kubernetes"
+        volumeMounts:
+          - mountPath: /code/apiserver.local.config/certificates
+            name: apiserver-certs
+      volumes:
+        - name: apiserver-certs
+          secret:
+            secretName: cnx-apiserver-certs
 
 ---
 
