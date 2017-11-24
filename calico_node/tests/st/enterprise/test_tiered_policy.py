@@ -105,6 +105,12 @@ class TieredPolicyWorkloads(TestBase):
         # and delete them (if there are any)
         if len(objects) > 0:
             _log.info("objects: %s", objects)
+            if 'items' in objects:
+                # Filter out object(s) representing the default tier.
+                objects['items'] = [x for x in objects['items']
+                                    if (x.get('kind', '') != 'Tier' or
+                                        'metadata' not in x or
+                                        x['metadata'].get('name', '') != 'default')]
             if 'items' in objects and len(objects['items']) == 0:
                 pass
             else:
