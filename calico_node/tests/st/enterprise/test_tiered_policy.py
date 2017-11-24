@@ -920,16 +920,16 @@ class TieredPolicyWorkloads(TestBase):
         # set up policy
         _log.info("Set up policy %s", policy)
         self._apply_data(policy, host)
-        # check connectivity not OK
-        self.assert_no_connectivity(self.n1_workloads)
+        # check connectivity not OK - use retries to allow time to apply new policy
+        self.assert_no_connectivity(self.n1_workloads, retries=3)
         # Restore workload config (i.e. remove the label)
         wep_old['metadata']['resourceVersion'] = updated_weps['items'][0]['metadata']['resourceVersion']
         _log.info("Restore workload config %s", wep_old)
         self._apply_data(wep_old, host)
         updated_weps = yaml.safe_load(host.calicoctl("get workloadEndpoint -o yaml"))
         if no_label_expected_result:
-            # check connectivity OK again
-            self.assert_connectivity(self.n1_workloads)
+            # check connectivity OK again - use retries to allow time to apply new policy
+            self.assert_connectivity(self.n1_workloads, retries=3)
         else:
             self.assert_no_connectivity(self.n1_workloads)
 
