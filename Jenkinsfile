@@ -57,7 +57,8 @@ pipeline{
                     dir('calico_node'){
                         // The following bit of nastiness works round a docker issue with ttys.
                         // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
-                        sh 'ssh localhost -t -t "cd $WORKSPACE/calico_node && make st"'
+			sh 'ssh-keygen -f "/home/jenkins/.ssh/known_hosts" -R localhost'
+                        sh 'ssh -o StrictHostKeyChecking=no localhost -t -t "cd $WORKSPACE/calico_node && RELEASE_STREAM=master make st"'
                     }
                 }
             }
@@ -74,10 +75,10 @@ pipeline{
 
 			// Clean up images.
 			// Hackey since empty displayed tags are not empty according to gcloud filter criteria
-			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --format='get(digest)'); do 
+			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --format='get(digest)'); do
 				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --filter=digest~${digest}) | awk '{print $6}'); then
-					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/cnx-node@${digest}" 
-				fi 
+					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/cnx-node@${digest}"
+				fi
 			done'''
                     }
                 }

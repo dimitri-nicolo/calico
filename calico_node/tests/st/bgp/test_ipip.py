@@ -437,6 +437,11 @@ class TestIPIP(TestBase):
                             # Local routing table entry associated with tunl0
                             # device IP address.
                             pass
+                        elif line.startswith("broadcast") and "dev tunl0" in line:
+                            # e.g. "broadcast 192.168.154.129 dev tunl0 table local proto kernel scope link src 192.168.154.129"
+                            # Broadcast routing table entry associated with
+                            # tunl0 device.
+                            pass
                         elif "172.17.0.1 dev eth0 lladdr" in line:
                             # Ex: "172.17.0.1 dev eth0 lladdr 02:03:04:05:06:07 REACHABLE"
                             # Indicates that the host just learned the MAC
