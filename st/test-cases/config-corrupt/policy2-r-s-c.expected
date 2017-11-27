@@ -1,5 +1,4 @@
 policy -rs abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ -c calicoq.cfg
 
-syntax error in calicoq.cfg: error parsing document: field in document is not recognized or is in the wrong location: sskind
 
 Plus 1 lines on stderr
