@@ -181,21 +181,11 @@ spec:
                 key: tigera.cnx-manager.kubernetes-api
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
-          name: cnx-manager-web-tls
+          name: cnx-manager-tls
       volumes:
-      - name: cnx-manager-web-tls
-        # To configure the CNX manager to serve over HTTPS, create a
-        # directory with the following path on the host, with files
-        # "cert" and "key" containing the TLS certificate and key that
-        # the CNX manager web server should use.  Alternatively you
-        # can use any other Kubernetes volume type to provide the
-        # certificate and key; in that case, modify the following
-        # definition accordingly.
-        hostPath:
-          # directory location on host
-          path: /etc/cnx-manager-web-tls
-          # this field is optional
-          type: Directory
+      - name: cnx-manager-tls
+        secret:
+          secretName: cnx-manager-tls
 
 ---
 
