@@ -1,5 +1,6 @@
 ---
 title: Tier Resource (tier)
+redirect_from: latest/reference/calicoctl/resources/tier
 no_canonical: true
 ---
 

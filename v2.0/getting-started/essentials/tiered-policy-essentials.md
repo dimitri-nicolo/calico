@@ -1,5 +1,6 @@
 ---
 title: Tiered Policy Demo
+redirect_from: latest/getting-started/essentials/tiered-policy-essentials
 ---
 
 This guide will introduce tiered policies and walk through a simple example

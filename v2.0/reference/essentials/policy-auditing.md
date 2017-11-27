@@ -1,5 +1,6 @@
 ---
 title: Policy Audit Mode
+redirect_from: latest/reference/essentials/policy-auditing
 ---
 
 {{site.prodname}} adds a Felix option DropActionOverride that configures how the

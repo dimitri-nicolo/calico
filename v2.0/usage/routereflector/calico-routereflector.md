@@ -1,5 +1,6 @@
 ---
 title: Calico BIRD Route Reflector container
+redirect_from: latest/usage/routereflector/calico-routereflector
 ---
 
 For many {{site.prodname}} deployments, the use of a Route Reflector is not required.

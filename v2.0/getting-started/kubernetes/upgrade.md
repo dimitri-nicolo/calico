@@ -1,5 +1,6 @@
 ---
 title: Upgrading CNX in Kubernetes
+redirect_from: latest/getting-started/kubernetes/upgrade
 ---
 
 This document covers:

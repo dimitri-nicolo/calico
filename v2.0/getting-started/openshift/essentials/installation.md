@@ -1,5 +1,6 @@
 ---
 title: Installing CNX for OpenShift
+redirect_from: latest/getting-started/openshift/essentials/installation
 ---
 
 The installation process for {{site.prodname}} for OpenShift is identical to the

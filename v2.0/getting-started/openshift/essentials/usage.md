@@ -1,5 +1,6 @@
 ---
 title: Using CNX for OpenShift
+redirect_from: latest/getting-started/openshift/essentials/usage
 ---
 
 {{site.prodname}} for OpenShift is mostly similar to {{site.prodname}} for Kubernetes, with a few exceptions:

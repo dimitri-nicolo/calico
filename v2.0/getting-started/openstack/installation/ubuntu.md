@@ -1,5 +1,6 @@
 ---
 title: Ubuntu Packaged Install Instructions
+redirect_from: latest/getting-started/openstack/installation/ubuntu
 ---
 
 For this version of {{site.prodname}}, with OpenStack on Ubuntu Trusty or Xenial, we

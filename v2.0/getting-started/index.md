@@ -1,5 +1,6 @@
 ---
 title: Getting started with CNX
+redirect_from: latest/getting-started/index
 ---
 
 ## Obtain the private binaries

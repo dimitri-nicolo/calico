@@ -1,5 +1,6 @@
 ---
 title: Adding Tigera CNX to a Calico install
+redirect_from: latest/getting-started/kubernetes/installation/hosted/essentials/cnx
 ---
 
 > **Note**: These instructions do not apply to OpenShift users. Instead, see

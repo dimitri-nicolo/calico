@@ -1,5 +1,6 @@
 ---
 title: calicoq version
+redirect_from: latest/reference/calicoq/version
 ---
 
 `calicoq version` shows the version number of the calicoq tool, plus
