@@ -20,7 +20,7 @@ from nose_parameterized import parameterized
 from tests.st.test_base import TestBase
 from tests.st.utils.utils import log_and_run, calicoctl, \
     API_VERSION, name, ERROR_CONFLICT, NOT_FOUND, NOT_NAMESPACED, \
-    SET_DEFAULT, NOT_SUPPORTED, KUBERNETES_NP, writeyaml
+    SET_DEFAULT, NOT_SUPPORTED, KUBERNETES_NP, writeyaml, add_tier_label
 from tests.st.utils.data import *
 
 logging.basicConfig(level=logging.DEBUG, format="%(message)s")
@@ -226,21 +226,24 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("create", data=globalnetworkpolicy_name1_rev1, format="json", load_as_stdin=True)
         rc.assert_no_error()
         rc = calicoctl("get globalnetworkpolicy %s -o json" % name(globalnetworkpolicy_name1_rev1))
-        rc.assert_data(globalnetworkpolicy_name1_rev1, format="json")
+        res = add_tier_label(globalnetworkpolicy_name1_rev1)
+        rc.assert_data(res, format="json")
 
         # Use apply to update the GlobalNetworkPolicy and get the resource to check the
         # data was stored (using YAML input/output).
         rc = calicoctl("apply", data=globalnetworkpolicy_name1_rev2, format="yaml", load_as_stdin=True)
         rc.assert_no_error()
         rc = calicoctl("get globalnetworkpolicy %s -o yaml" % name(globalnetworkpolicy_name1_rev1))
-        rc.assert_data(globalnetworkpolicy_name1_rev2, format="yaml")
+        res = add_tier_label(globalnetworkpolicy_name1_rev2)
+        rc.assert_data(res, format="yaml")
 
         # Use replace to update the GlobalNetworkPolicy and get the resource to check the
         # data was stored (using JSON input/output).
         rc = calicoctl("replace", data=globalnetworkpolicy_name1_rev1, format="json", load_as_stdin=True)
         rc.assert_no_error()
         rc = calicoctl("get globalnetworkpolicy %s -o json" % name(globalnetworkpolicy_name1_rev1))
-        rc.assert_data(globalnetworkpolicy_name1_rev1, format="json")
+        res = add_tier_label(globalnetworkpolicy_name1_rev1)
+        rc.assert_data(res, format="json")
 
         # Use delete to delete the GlobalNetworkPolicy (using YAML input).
         rc = calicoctl("delete", data=globalnetworkpolicy_name1_rev1, format="yaml", load_as_stdin=True)
@@ -263,7 +266,8 @@ class TestCalicoctlCommands(TestBase):
         # Get the resources using file based input.  It should return the
         # same results.
         rc = calicoctl("get -o yaml", data=resources)
-        rc.assert_data(resources)
+        res = add_tier_label(resources)
+        rc.assert_data(res)
 
         # Use a get/list to get one of the resource types and an exact get to
         # get the other.  Join them together and use it to delete the resource.
@@ -271,7 +275,8 @@ class TestCalicoctlCommands(TestBase):
         # We use the data returned from the get since this should be able to
         # be used directly as input into the next command.
         rc = calicoctl("get globalnetworkpolicy %s -o yaml" % name(globalnetworkpolicy_name1_rev1))
-        rc.assert_data(globalnetworkpolicy_name1_rev1)
+        res = add_tier_label(globalnetworkpolicy_name1_rev1)
+        rc.assert_data(res)
         gnp = rc.decoded
 
         rc = calicoctl("get workloadendpoints -o yaml --all-namespaces")
@@ -424,10 +429,12 @@ class TestCalicoctlCommands(TestBase):
             if 'tier' in data1['spec']:
                 tier = data1['spec']['tier']
             data1['metadata']['name'] = tier + "." + 'name1'
+            data1 = add_tier_label(data1)
             tier = "default"
             if 'tier' in data2['spec']:
                 tier = data2['spec']['tier']
             data2['metadata']['name'] = tier + "." + 'name2'
+            data2 = add_tier_label(data2)
         else:
             data1['metadata']['name'] = "name1"
             data2['metadata']['name'] = "name2"
