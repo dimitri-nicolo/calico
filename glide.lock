@@ -1,5 +1,5 @@
-hash: 66b49747c17b36ee0f5fe3f41c169828847ad631b46a5badb872fc72da4d477d
-updated: 2017-11-23T08:32:51.797673412Z
+hash: a4968ac6ea05e130892b0185c62d2629e46c8566bb3d15ad4d32337f245bc6ba
+updated: 2017-11-27T23:36:00.397283428Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -191,7 +191,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: a22f24dbb3da480c533f27eed52188da805dc2e9
+  version: 06a1d46d8f5af1246f59883181b20580acf005fa
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -231,7 +231,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 235a9318e64633983dbc64e565eaa05894c0dd5d
+  version: 0ae46af432cd8542b61218e672eea0a422b433f9
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -243,17 +243,17 @@ imports:
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
+  version: 2e54d0b93cba2fd133edc32211dcc32c06ef72ca
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a1dba9ce8baed984a2495b658c82687f8157b98f
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
@@ -273,7 +273,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: c2a3de3b38bd00f07290c3c5e12b4dbc04ec8666
+  version: fe3b5664d23a11b52ba59bece4ff29c52772a56b
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -309,7 +309,6 @@ imports:
   version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
   subpackages:
   - unix
-  - windows
 - name: golang.org/x/text
   version: 4ee4af566555f5fbe026368b75596286a312663a
   subpackages:
