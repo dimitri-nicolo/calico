@@ -237,7 +237,7 @@ spec:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.kubernetes-api
         volumeMounts:
-        - mountPath: /etc/cnx-manager-tls
+        - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
       volumes:
       - name: cnx-manager-tls
