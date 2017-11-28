@@ -103,6 +103,8 @@ CALICOQ_CONTAINER_NAME?=calico/calicoq:$(CALICOQ_VER)
 CALICOQ_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/calicoq
 APISERVER_CONTAINER_NAME?=tigera/cnx-apiserver:$(APISERVER_VER)
 APISERVER_IMAGE?=gcr.io/tigera-dev/cnx/tigera/k8sapiserver
+TYPHA_CONTAINER_NAME?=tigera/typha:$(TYPHA_VER)
+TYPHA_IMAGE?=gcr.io/tigera-dev/cnx/tigera/typha
 
 STARTUP_DIR=$(NODE_CONTAINER_DIR)/startup
 STARTUP_FILES=$(shell find $(STARTUP_DIR) -name '*.go')
@@ -726,8 +728,11 @@ $(RELEASE_DIR_IMAGES)/cnx-node.tar:
 
 $(RELEASE_DIR_IMAGES)/calico-typha.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/typha:$(TYPHA_VER)
-	docker save --output $@ calico/typha:$(TYPHA_VER)
+	if [ "$(docker images -q $$(TYPHA_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(TYPHA_IMAGE):$(TYPHA_VER); \
+	  docker tag $(TYPHA_IMAGE):$(TYPHA_VER) $(TYPHA_CONTAINER_NAME); \
+	fi;
+	docker save --output $@ tigera/typha:$(TYPHA_VER)
 
 $(RELEASE_DIR_IMAGES)/calico-cni.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
