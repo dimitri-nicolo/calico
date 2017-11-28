@@ -21,6 +21,10 @@ metadata:
   name: tigera-cnx-manager-config
   namespace: kube-system
 data:
+  # Authentication type.  Must be set to "OIDC", "Basic" or "StaticToken".
+  tigera.cnx-manager.authentication-type: "OIDC"
+  # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
+  tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
   tigera.cnx-manager.oidc-client-id: "<fill-in-your-oauth-client-id-here>"
@@ -66,7 +70,7 @@ spec:
     k8s-app: cnx-manager
   ports:
     - port: 8080
-      targetPort: 80
+      targetPort: 443
       nodePort: 30003
   type: NodePort
 
@@ -240,6 +244,16 @@ spec:
       - name: cnx-manager
         image: {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
         env:
+          - name: CNX_WEB_AUTHENTICATION_TYPE
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.authentication-type
+          - name: CNX_WEB_OIDC_AUTHORITY
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.oidc-authority
           - name: CNX_WEB_OIDC_CLIENT_ID
             valueFrom:
               configMapKeyRef:
@@ -250,3 +264,10 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.kubernetes-api
+        volumeMounts:
+        - mountPath: /etc/cnx-manager-web-tls
+          name: cnx-manager-tls
+      volumes:
+      - name: cnx-manager-tls
+        secret:
+          secretName: cnx-manager-tls
