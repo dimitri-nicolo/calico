@@ -1,5 +1,6 @@
 ---
 title: Installing calicoq
+redirect_from: latest/usage/calicoq/index
 ---
 
 This document outlines how to install `calicoq`.

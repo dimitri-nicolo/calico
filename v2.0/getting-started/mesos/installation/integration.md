@@ -1,5 +1,6 @@
 ---
 title: Integration Guide
+redirect_from: latest/getting-started/mesos/installation/integration
 ---
 
 This guide explains how to integrate {{site.prodname}} networking and policy on an existing

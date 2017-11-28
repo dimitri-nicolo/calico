@@ -1,5 +1,6 @@
 ---
 title: Tigera CNX
+redirect_from: latest/introduction/index
 description: Home
 layout: docwithnav
 ---

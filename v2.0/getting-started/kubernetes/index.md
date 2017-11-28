@@ -1,5 +1,6 @@
 ---
 title: Quickstart for Tigera CNX on Kubernetes
+redirect_from: latest/getting-started/kubernetes/index
 ---
 
 

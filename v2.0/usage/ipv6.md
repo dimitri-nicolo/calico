@@ -1,5 +1,6 @@
 ---
 title: IPv6 Support
+redirect_from: latest/usage/ipv6
 ---
 
 {{site.prodname}} supports connectivity over IPv6, between compute hosts, and

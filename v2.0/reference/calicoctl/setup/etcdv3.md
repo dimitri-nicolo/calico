@@ -1,5 +1,6 @@
 ---
 title: Configuring calicoctl - etcdv3 datastore
+redirect_from: latest/reference/calicoctl/setup/etcdv3
 no_canonical: true
 ---
 

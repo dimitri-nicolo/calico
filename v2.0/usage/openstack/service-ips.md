@@ -1,5 +1,6 @@
 ---
 title: Service IPs
+redirect_from: latest/usage/openstack/service-ips
 ---
 
 {{site.prodname}} supports two approaches for assigning a service IP to a 

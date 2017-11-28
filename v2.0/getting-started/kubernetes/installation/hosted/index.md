@@ -1,5 +1,6 @@
 ---
 title: Calico Kubernetes Hosted Install
+redirect_from: latest/getting-started/kubernetes/installation/hosted/index
 ---
 
 {% include {{page.version}}/load-docker.md %}

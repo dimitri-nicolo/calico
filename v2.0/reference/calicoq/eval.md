@@ -1,5 +1,6 @@
 ---
 title: calicoq eval
+redirect_from: latest/reference/calicoq/eval
 ---
 
 `calicoq eval <selector>` is used to display the endpoints that are matched by

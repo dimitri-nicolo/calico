@@ -1,5 +1,6 @@
 ---
 title: Detailed Semantics
+redirect_from: latest/usage/openstack/semantics
 ---
 
 A {{site.prodname}} network is a Neutron network (either provider or tenant) whose
