@@ -1,10 +1,6 @@
 ---
-title: Adding Tigera CNX to a Calico install
+title: Installing CNX manager and denied packet monitoring
 ---
-
-> **Note**: These instructions do not apply to OpenShift users. Instead, see
-> [Installing {{site.prodname}} for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
-{: .alert .alert-info}
 
 ## Requirements
 

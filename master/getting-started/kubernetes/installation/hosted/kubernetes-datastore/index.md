@@ -163,19 +163,6 @@ Calico with flannel networking.
 Refer to the following [Kubernetes self-hosted install guide](https://github.com/projectcalico/canal/blob/master/k8s-install/README.md)
 in the Canal project for details on installing Calico with flannel.
 
-### RBAC
-
-If your Kubernetes cluster has RBAC enabled, you'll need to create RBAC roles for Calico.
-Apply the following manifest to create these RBAC roles.
-
->Note: The following RBAC policy is compatible with the Kubernetes v1.6+ manifest only.
-
-```
-kubectl apply -f rbac.yaml
-```
-
->[Click here to view the rbac.yaml.](../rbac.yaml)
-
 ## Adding Tigera CNX
 
 Now you've installed Calico with the enhanced CNX node agent, you're ready to

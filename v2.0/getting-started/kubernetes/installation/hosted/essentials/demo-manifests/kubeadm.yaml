@@ -23,4 +23,8 @@ apiServerExtraArgs:
   oidc-username-claim: "email"
   # Fill in the Google OIDC client ID here.
   oidc-client-id: "<fill-in-your-oauth-client-id-here>"
+apiServerCertSANs:
+- "127.0.0.1"
+- "localhost"
+- "kube-apiserver"
 selfHosted: false
