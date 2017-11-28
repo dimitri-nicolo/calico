@@ -6,7 +6,8 @@ title: Quickstart for Tigera CNX on Kubernetes
 ### Overview
 
 This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
-in approximately 30 minutes. You can use this cluster for testing and development.
+in approximately 30 minutes.  You must run the cluster on a linux system with a
+web browser (possibly a VM).  You can use this cluster for testing and development.
 
 To deploy a cluster suitable for production, refer to [Installation](https://docs.projectcalico.org/master/getting-started/kubernetes/installation/).
 
@@ -249,10 +250,6 @@ Congratulations! You now have a single-host Kubernetes cluster
 equipped with {{site.prodname}}.
 
 To access the {{site.prodname}} Manager web interface, navigate to `https://127.0.0.1:30003`.
-If you're not running this demo on the same system you'll log in from,
-instead run `kubectl proxy --port=8080` to provide the web application
-with access to the Kubernetes API, and navigate to the domain name of
-the system instead (still on port 30003).
 
 You should be able to log in , but won't yet be able to see or edit resources.
 To create some RBAC roles that allow full access to everyone, apply [this manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/rbac-all.yaml).
