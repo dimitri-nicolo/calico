@@ -1,5 +1,5 @@
 ---
-title: Adding Tigera CNX to a Calico install
+title: Installing CNX manager and denied packet monitoring
 ---
 
 ## Requirements
