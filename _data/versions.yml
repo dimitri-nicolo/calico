@@ -29,16 +29,16 @@ v2.0:
 
   components:
     cnx-manager:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta1-rc3
       url: ""
     cnx-apiserver:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta1-rc3
       url: ""
     calicoq:
       version: v2.0.0-cnx-beta1-rc2
       url: ""
     felix:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta1-rc3
       url: ""
     typha:
       version: v2.0.0-cnx-beta1-rc3
@@ -48,7 +48,7 @@ v2.0:
       url: ""
       download_url: ""
     cnx-node:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta1-rc3
       url: ""
     calico/cni:
       version: v2.0.0-beta1
