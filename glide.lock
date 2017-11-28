@@ -1,5 +1,5 @@
-hash: a4968ac6ea05e130892b0185c62d2629e46c8566bb3d15ad4d32337f245bc6ba
-updated: 2017-11-27T23:36:00.397283428Z
+hash: b39fcf013f128cbde763a542bc08aa35b3e0e7134ffe3a4c58a692b468a250cc
+updated: 2017-11-28T15:59:17.904095499Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -231,7 +231,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 0ae46af432cd8542b61218e672eea0a422b433f9
+  version: 7bc8e165d1f4acfd88fc7600520effac41320fa3
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -273,7 +273,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: fe3b5664d23a11b52ba59bece4ff29c52772a56b
+  version: 016ba6f67a12c03708643150afcfb1509be7747a
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -281,7 +281,7 @@ imports:
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
-  version: 81e90905daefcd6fd217b62423c0908922eadb30
+  version: 48a5a650cfc529a2517eb6a4d6d6749872520525
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -309,6 +309,7 @@ imports:
   version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
   subpackages:
   - unix
+  - windows
 - name: golang.org/x/text
   version: 4ee4af566555f5fbe026368b75596286a312663a
   subpackages:
