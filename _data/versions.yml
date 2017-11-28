@@ -19,9 +19,9 @@ v2.0:
 
     #### Limitations
 
-    - **No upgrades**: this version of {{site.prodname}} ends support for etcd version 2. Existing customers must migrate their data to etcd version 3. The alpha and beta releases do not provide migration capabilities, nor do they support upgrades. We plan to add migration and upgrade support in the GA release.
+    - **No upgrades**: this version of CNX ends support for etcd version 2. Existing customers must migrate their data to etcd version 3. Neither the alpha or beta release provides migration capabilities, nor do they support upgrades. We plan to add migration and upgrade support in the GA release.
 
-    - **Integrates only with Kubernetes, OpenShift, and host endpoints**: the OpenStack, Mesos, DC/OS, rkt, and Docker orchestrators have not been tested and are not supported. ({{site.prodname}} still supports Docker and rkt containers.) We plan to resume support for the OpenStack, Mesos, DC/OS, and Docker orchestrators in a future release.
+    - **Integrates only with Kubernetes and host endpoints**: the OpenShift, OpenStack, Mesos, DC/OS, rkt, and Docker orchestrators have not been tested and are not supported. (CNX still supports Docker and rkt containers.) We plan to resume support for the OpenShift, OpenStack, Mesos, DC/OS, and Docker orchestrators in a future release.
 
     - **BGP route reflector not supported**: large deployments that require the [BGP route reflector](https://docs.projectcalico.org/v3.0/usage/routereflector/bird-rr-config) are not supported. We plan to resume support for the BGP route reflector in a future release.
     
