@@ -84,11 +84,13 @@ func createClientFromConfig() clientv3.Interface {
 		glog.Errorf("Failed creating client: %q", err)
 		os.Exit(1)
 	}
+
 	err = c.EnsureInitialized(context.Background(), "", "")
 	if err != nil {
 		glog.Errorf("Failed initializing client: %q", err)
 		os.Exit(1)
 	}
+
 	glog.Infof("Client: %v", c)
 	return c
 }
@@ -103,7 +105,7 @@ func validationError(err error, qualifiedKind schema.GroupKind, name string) *aa
 	calErrors := err.(errors.ErrorValidation)
 	for _, calErr := range calErrors.ErroredFields {
 		err := &field.Error{
-			Type:   field.ErrorTypeInternal,
+			Type:   field.ErrorTypeInvalid,
 			Field:  calErr.Name,
 			Detail: calErr.Reason,
 		}

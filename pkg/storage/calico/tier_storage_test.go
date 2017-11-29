@@ -485,8 +485,6 @@ func TestTierGuaranteedUpdateWithConflict(t *testing.T) {
 
 func TestTierList(t *testing.T) {
 	ctx, store := testTierSetup(t)
-	// Delete default
-	store.client.Tiers().Delete(ctx, "default", options.DeleteOptions{})
 	defer func() {
 		store.client.Tiers().Delete(ctx, "foo", options.DeleteOptions{})
 		store.client.Tiers().Delete(ctx, "bar", options.DeleteOptions{})
@@ -512,6 +510,9 @@ func TestTierList(t *testing.T) {
 		}
 	}
 
+	defaultTier := &calico.Tier{}
+	store.Get(ctx, "projectcalico.org/tiers/default", "", defaultTier, false)
+
 	tests := []struct {
 		prefix      string
 		pred        storage.SelectionPredicate
@@ -530,11 +531,7 @@ func TestTierList(t *testing.T) {
 				return nil, fields.Set{"metadata.name": tier.Name}, tier.Initializers != nil, nil
 			},
 		},
-		expectedOut: []*calico.Tier{preset[1].storedObj},
-	}, { // test List with multiple levels of directories and expect flattened result
-		prefix:      "projectcalico.org/",
-		pred:        storage.Everything,
-		expectedOut: []*calico.Tier{preset[1].storedObj, preset[0].storedObj},
+		expectedOut: []*calico.Tier{preset[1].storedObj, defaultTier},
 	}}
 
 	for i, tt := range tests {
@@ -543,7 +540,6 @@ func TestTierList(t *testing.T) {
 		if err != nil {
 			t.Fatalf("List failed: %v", err)
 		}
-		// Consider default tier, hence +1
 		if len(tt.expectedOut) != len(out.Items) {
 			t.Errorf("#%d: length of list want=%d, get=%d", i, len(tt.expectedOut), len(out.Items))
 			continue
@@ -551,7 +547,7 @@ func TestTierList(t *testing.T) {
 		for j, wantTier := range tt.expectedOut {
 			getTier := &out.Items[j]
 			if !reflect.DeepEqual(wantTier, getTier) {
-				t.Errorf("#%d: pod want=%#v, get=%#v", i, wantTier, getTier)
+				t.Errorf("#%d: tier want=%#v, get=%#v", i, wantTier, getTier)
 			}
 		}
 	}
@@ -581,11 +577,15 @@ func testTierSetup(t *testing.T) (context.Context, *resourceStore) {
 	}
 	store, _ := NewTierStorage(opts)
 	ctx := context.Background()
+
 	return ctx, store.(*resourceStore)
 }
 
 func testTierCleanup(t *testing.T, ctx context.Context, store *resourceStore) {
-	store.client.Tiers().Delete(ctx, "foo", options.DeleteOptions{})
+	tr, _ := store.client.Tiers().Get(ctx, "default", options.GetOptions{})
+	if tr != nil {
+		store.client.Tiers().Delete(ctx, "foo", options.DeleteOptions{})
+	}
 }
 
 // testTierPropogateStore helps propogates store with objects, automates key generation, and returns
