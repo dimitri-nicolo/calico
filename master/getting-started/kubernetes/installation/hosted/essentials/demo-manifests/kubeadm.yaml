@@ -19,6 +19,7 @@ apiServerExtraArgs:
   feature-gates: "TaintBasedEvictions=true"
   proxy-client-cert-file: "/etc/kubernetes/pki/front-proxy-client.crt"
   proxy-client-key-file: "/etc/kubernetes/pki/front-proxy-client.key"
+  cors-allowed-origins: "https://*"
   oidc-issuer-url: "https://accounts.google.com"
   oidc-username-claim: "email"
   # Fill in the Google OIDC client ID here.

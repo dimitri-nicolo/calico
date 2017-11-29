@@ -95,6 +95,7 @@ spec:
         image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
         args:
         - "--etcd-servers=http://10.96.232.136:6666"
+        - "--secure-port=5443"
         env:
           - name: ETCD_ENDPOINTS
             value: "http://10.96.232.136:6666"
@@ -120,7 +121,7 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 443
+    targetPort: 5443
   selector:
     apiserver: "true"
 
