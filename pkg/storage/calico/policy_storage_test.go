@@ -59,12 +59,12 @@ func TestNetworkPolicyCreate(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
-	key := "projectcalico.org/networkpolicies/default/foo"
+	key := "projectcalico.org/networkpolicies/default/default.foo"
 	out := &calico.NetworkPolicy{}
-	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
+	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 
 	// verify that kv pair is empty before set
-	libcPolicy, err := store.client.NetworkPolicies().Get(ctx, "default", "foo", options.GetOptions{})
+	libcPolicy, err := store.client.NetworkPolicies().Get(ctx, "default", "default.foo", options.GetOptions{})
 	if libcPolicy != nil {
 		t.Fatalf("expecting empty result on key: %s", key)
 	}
@@ -82,7 +82,7 @@ func TestNetworkPolicyCreate(t *testing.T) {
 	}
 
 	// verify that kv pair is not empty after set
-	libcPolicy, err = store.client.NetworkPolicies().Get(ctx, "default", "foo", options.GetOptions{})
+	libcPolicy, err = store.client.NetworkPolicies().Get(ctx, "default", "default.foo", options.GetOptions{})
 	if err != nil {
 		t.Fatalf("libcalico networkpolicy client get failed: %v", err)
 	}
@@ -95,8 +95,8 @@ func TestNetworkPolicyCreateWithTTL(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
-	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
-	key := "projectcalico.org/networkpolicies/default/foo"
+	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
+	key := "projectcalico.org/networkpolicies/default/default.foo"
 
 	out := &calico.NetworkPolicy{}
 	if err := store.Create(ctx, key, input, out, 1); err != nil {
@@ -113,7 +113,7 @@ func TestNetworkPolicyCreateWithKeyExist(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
-	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
+	obj := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	key, _ := testPropogateStore(ctx, t, store, obj)
 	out := &calico.NetworkPolicy{}
 	err := store.Create(ctx, key, obj, out, 0)
@@ -295,7 +295,7 @@ func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer func() {
 		testCleanup(t, ctx, store)
-		store.client.NetworkPolicies().Delete(ctx, "default", "non-existing", options.DeleteOptions{})
+		store.client.NetworkPolicies().Delete(ctx, "default", "default.non-existing", options.DeleteOptions{})
 	}()
 	key, storeObj := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo", UID: "A"}})
 
@@ -308,14 +308,14 @@ func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
 		expectNoUpdate      bool
 		transformStale      bool
 	}{{ // GuaranteedUpdate on non-existing key with ignoreNotFound=false
-		key:                 "projectcalico.org/networkpolicies/default/non-existing",
+		key:                 "projectcalico.org/networkpolicies/default/default.non-existing",
 		ignoreNotFound:      false,
 		precondition:        nil,
 		expectNotFoundErr:   true,
 		expectInvalidObjErr: false,
 		expectNoUpdate:      false,
 	}, { // GuaranteedUpdate on non-existing key with ignoreNotFound=true
-		key:                 "projectcalico.org/networkpolicies/default/non-existing",
+		key:                 "projectcalico.org/networkpolicies/default/default.non-existing",
 		ignoreNotFound:      true,
 		precondition:        nil,
 		expectNotFoundErr:   false,
@@ -361,7 +361,7 @@ func TestNetworkPolicyGuaranteedUpdate(t *testing.T) {
 
 	for i, tt := range tests {
 		out := &calico.NetworkPolicy{}
-		selector := fmt.Sprintf("foo-%d", i)
+		selector := fmt.Sprintf("my_label == \"foo-%d\"", i)
 		if tt.expectNoUpdate {
 			selector = ""
 		}
@@ -418,10 +418,10 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
 
-	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
+	input := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	input.SetCreationTimestamp(metav1.Time{time.Now()})
 	input.SetUID("test_uid")
-	key := "projectcalico.org/networkpolicies/default/foo"
+	key := "projectcalico.org/networkpolicies/default/default.foo"
 
 	out := &calico.NetworkPolicy{}
 	err := store.GuaranteedUpdate(ctx, key, out, true, nil,
@@ -443,7 +443,7 @@ func TestNetworkPolicyGuaranteedUpdateWithTTL(t *testing.T) {
 func TestNetworkPolicyGuaranteedUpdateWithConflict(t *testing.T) {
 	ctx, store := testSetup(t)
 	defer testCleanup(t, ctx, store)
-	key, _ := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}})
+	key, _ := testPropogateStore(ctx, t, store, &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}})
 
 	errChan := make(chan error, 1)
 	var firstToFinish sync.WaitGroup
@@ -455,7 +455,7 @@ func TestNetworkPolicyGuaranteedUpdateWithConflict(t *testing.T) {
 		err := store.GuaranteedUpdate(ctx, key, &calico.NetworkPolicy{}, false, nil,
 			storage.SimpleUpdate(func(obj runtime.Object) (runtime.Object, error) {
 				policy := obj.(*calico.NetworkPolicy)
-				policy.Spec.Selector = "foo-1"
+				policy.Spec.Selector = "my_label == \"foo-1\""
 				secondToEnter.Wait()
 				return policy, nil
 			}))
@@ -472,7 +472,7 @@ func TestNetworkPolicyGuaranteedUpdateWithConflict(t *testing.T) {
 			}
 			updateCount++
 			policy := obj.(*calico.NetworkPolicy)
-			policy.Spec.Selector = "foo-2"
+			policy.Spec.Selector = "my_label == \"foo-2\""
 			return policy, nil
 		}))
 	if err != nil {
@@ -580,6 +580,7 @@ func testSetup(t *testing.T) (context.Context, *resourceStore) {
 		glog.Errorf("Failed creating client: %q", err)
 		os.Exit(1)
 	}
+
 	glog.Infof("Client: %v", c)
 	opts := Options{
 		RESTOptions: generic.RESTOptions{
@@ -590,18 +591,22 @@ func testSetup(t *testing.T) (context.Context, *resourceStore) {
 	}
 	store, _ := NewNetworkPolicyStorage(opts)
 	ctx := context.Background()
+
 	return ctx, store.(*resourceStore)
 }
 
 func testCleanup(t *testing.T, ctx context.Context, store *resourceStore) {
-	store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
+	np, _ := store.client.NetworkPolicies().Get(ctx, "default", "default.foo", options.GetOptions{})
+	if np != nil {
+		store.client.NetworkPolicies().Delete(ctx, "default", "default.foo", options.DeleteOptions{})
+	}
 }
 
 // testPropogateStore helps propogates store with objects, automates key generation, and returns
 // keys and stored objects.
 func testPropogateStore(ctx context.Context, t *testing.T, store *resourceStore, obj *calico.NetworkPolicy) (string, *calico.NetworkPolicy) {
 	// Setup store with a key and grab the output for returning.
-	key := "projectcalico.org/networkpolicies/default/foo"
+	key := "projectcalico.org/networkpolicies/default/default.foo"
 	setOutput := &calico.NetworkPolicy{}
 	err := store.Create(ctx, key, obj, setOutput, 0)
 	if err != nil {

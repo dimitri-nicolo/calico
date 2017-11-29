@@ -37,18 +37,18 @@ func testWatch(t *testing.T, list bool) {
 	ctx, store := testSetup(t)
 	defer func() {
 		testCleanup(t, ctx, store)
-		store.client.NetworkPolicies().Delete(ctx, "default", "foo", options.DeleteOptions{})
-		store.client.NetworkPolicies().Delete(ctx, "default", "bar", options.DeleteOptions{})
+		store.client.NetworkPolicies().Delete(ctx, "default", "default.foo", options.DeleteOptions{})
+		store.client.NetworkPolicies().Delete(ctx, "default", "default.bar", options.DeleteOptions{})
 	}()
 
-	policyFoo := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo"}}
+	policyFoo := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.foo"}}
 	policyFoo.SetCreationTimestamp(metav1.Time{time.Now()})
 	policyFoo.SetUID("test_uid_foo")
-	policyBar := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "bar"}}
+	policyBar := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "default.bar"}}
 	policyBar.SetCreationTimestamp(metav1.Time{time.Now()})
 	policyBar.SetUID("test_uid_bar")
 
-	policyBar.Spec.Selector = "set"
+	policyBar.Spec.Selector = "my_label == \"set\""
 	//policyFoo1 := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo1"}}
 	//policyFoo2 := &calico.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "foo2"}}
 
@@ -58,7 +58,7 @@ func testWatch(t *testing.T, list bool) {
 	}{{ // create a key
 		watchTests: []*testWatchStruct{
 			{
-				key:         "projectcalico.org/networkpolicies/default/foo",
+				key:         "projectcalico.org/networkpolicies/default/default.foo",
 				obj:         policyFoo,
 				expectEvent: true,
 				watchType:   watch.Added,
@@ -68,13 +68,13 @@ func testWatch(t *testing.T, list bool) {
 	}, { // create a key but obj gets filtered. Then update it with unfiltered obj
 		watchTests: []*testWatchStruct{
 			{
-				key:         "projectcalico.org/networkpolicies/default/foo",
+				key:         "projectcalico.org/networkpolicies/default/default.foo",
 				obj:         policyFoo,
 				expectEvent: false,
 				watchType:   "",
 			},
 			{
-				key:         "projectcalico.org/networkpolicies/default/bar",
+				key:         "projectcalico.org/networkpolicies/default/default.bar",
 				obj:         policyBar,
 				expectEvent: true,
 				watchType:   watch.Added,
@@ -82,7 +82,7 @@ func testWatch(t *testing.T, list bool) {
 		},
 		pred: storage.SelectionPredicate{
 			Label: labels.Everything(),
-			Field: fields.ParseSelectorOrDie("metadata.name=bar"),
+			Field: fields.ParseSelectorOrDie("metadata.name=default.bar"),
 			GetAttrs: func(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 				policy := obj.(*calico.NetworkPolicy)
 				return nil, fields.Set{"metadata.name": policy.Name}, policy.Initializers != nil, nil
