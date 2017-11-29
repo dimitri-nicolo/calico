@@ -14,11 +14,8 @@ controllerManagerExtraArgs:
   horizontal-pod-autoscaler-sync-period: "10s"
   node-monitor-grace-period: "10s"
 apiServerExtraArgs:
-  storage-backend: "etcd2"
   runtime-config: "api/all=true"
   feature-gates: "TaintBasedEvictions=true"
-  proxy-client-cert-file: "/etc/kubernetes/pki/front-proxy-client.crt"
-  proxy-client-key-file: "/etc/kubernetes/pki/front-proxy-client.key"
   cors-allowed-origins: "https://*"
   oidc-issuer-url: "https://accounts.google.com"
   oidc-username-claim: "email"

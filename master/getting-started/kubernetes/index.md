@@ -57,7 +57,7 @@ the host. Instead, continue directly to the
    Set the redirect URIs to `http://127.0.0.1:30003/login/oidc/callback` and `https://127.0.0.1:30003/login/oidc/callback`.
 
 1. Copy the OAuth client ID value.
-
+[NOTE: We might not need our own guided kubeadm setup]
 1. Download the [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/kubeadm.yaml) file.
 
 1. Open the kubeadm.yaml file in your favorite editor, replace `<fill-in-your-oauth-client-id-here>`
