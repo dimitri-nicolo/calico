@@ -154,8 +154,9 @@ func TestNetworkPolicyClient(t *testing.T) {
 
 func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "default"
+	defaultTierPolicyName := "default" + "." + name
 	policyClient := client.Projectcalico().NetworkPolicies(ns)
-	policy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	policy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName}}
 
 	// start from scratch
 	policies, err := policyClient.List(metav1.ListOptions{})
@@ -173,7 +174,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	if nil != err {
 		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
 	}
-	if name != policyServer.Name {
+	if defaultTierPolicyName != policyServer.Name {
 		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
 	}
 
@@ -353,7 +354,8 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 
 func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	globalNetworkPolicyClient := client.Projectcalico().GlobalNetworkPolicies()
-	globalNetworkPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	defaultTierPolicyName := "default" + "." + name
+	globalNetworkPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName}}
 
 	// start from scratch
 	globalNetworkPolicies, err := globalNetworkPolicyClient.List(metav1.ListOptions{})
@@ -368,7 +370,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	if nil != err {
 		return fmt.Errorf("error creating the globalNetworkPolicy '%v' (%v)", globalNetworkPolicy, err)
 	}
-	if name != globalNetworkPolicyServer.Name {
+	if defaultTierPolicyName != globalNetworkPolicyServer.Name {
 		return fmt.Errorf("didn't get the same globalNetworkPolicy back from the server \n%+v\n%+v", globalNetworkPolicy, globalNetworkPolicyServer)
 	}
 
