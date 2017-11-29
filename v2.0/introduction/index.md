@@ -26,7 +26,6 @@ For guides on how to set up {{site.prodname}} and a demo of some its basic funct
 * [Obtaining {{site.prodname}}](../getting-started/)
 * [Quickstart for {{site.prodname}} on Kubernetes](../getting-started/kubernetes/)
 * [Installing {{site.prodname}} for Kubernetes](../getting-started/kubernetes/installation/hosted/)
-* [Installing {{site.prodname}} for OpenShift](../getting-started/openshift/essentials/installation)
 * [Demo of {{site.prodname}}](../getting-started/essentials/simple-policy-essentials)
 * [Demo of Tiered Policy using {{site.prodname}}](../getting-started/essentials/tiered-policy-essentials)
 * [Policy Query Utility (calicoq)](../reference/calicoq/)
