@@ -1,5 +1,5 @@
 hash: bcb8d56c4f76a3a10e5f1a361b1cad2e37865a72c5502bc926da49ce3967a6f1
-updated: 2017-11-24T19:11:15.560490325Z
+updated: 2017-11-28T22:41:03.826167079Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -597,7 +597,7 @@ imports:
   - pkg/handler
   - pkg/util
 - name: k8s.io/kubernetes
-  version: b3eda6e781eca0f61919f8eb655b47e7632b554a
+  version: c1d1b92688176f37893d81cf6d7a3abc5663a795
   subpackages:
   - pkg/api
   - pkg/api/install
