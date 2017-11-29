@@ -53,10 +53,18 @@ Users who have deployed their own etcd cluster outside of kubeadm should
 use the [Calico only manifest](../hosted) instead, as it does not deploy its
 own etcd.
 
-To install this Calico and a single node etcd on a run the following command:
+Download the [calico with single node etcd manifest](1.7/calico.yaml) and
+update it with the path to your private docker registry.
+Substitute`mydockerregistry:5000` with the location of your docker registry.
 
 > **Note**: The following manifest requires Kubernetes 1.7.0 or later.
 {: .alert .alert-info}
+
+```
+sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
+```
+
+Then apply the manifest.
 
 ```shell
 kubectl apply -f calico.yaml
