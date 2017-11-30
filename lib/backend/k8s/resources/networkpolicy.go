@@ -256,7 +256,11 @@ func (c *networkPolicyClient) List(ctx context.Context, list model.ListInterface
 	// If the prefix is specified, look for the resources with the label
 	// of the prefix.
 	if l.Prefix {
-		name := list.(model.ResourceListOptions).Name
+		// The prefix has a trailing "." character, remove it, since it is not valid for k8s labels
+		if !strings.HasSuffix(l.Name, ".") {
+			return nil, errors.New("internal error: custom resource list invoked for a prefix not in the form '<tier>.'")
+		}
+		name := l.Name[:len(l.Name)-1]
 		if name == "default" {
 			req = req.VersionedParams(&metav1.ListOptions{
 				LabelSelector: "!" + apiv3.LabelTier,
