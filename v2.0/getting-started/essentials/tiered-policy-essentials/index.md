@@ -105,7 +105,7 @@ by running:
 
 ```
 $ calicoctl get networkpolicy -o yaml --namespace policy-demo
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: NetworkPolicy
   metadata:
     name: knp.default.default-deny
@@ -142,7 +142,7 @@ and give it a higher order of precedence than the `default` tier.
 
 ```
 $ calicoctl create -f - <<EOF
-apiVersion: projectcalico.org/v2
+apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
   name: netops
@@ -165,7 +165,7 @@ netops    100
 Notice that the order value of the netops tier is lower than the value of the
 `default` tier. Lower order values have a higher precedence.
 
-> **Note**: Read more about order values in the 
+> **Note**: Read more about order values in the
 > [calicoctl reference section](../../reference/calicoctl/).
 {: .alert .alert-info}
 
@@ -199,7 +199,7 @@ isn't met.
 # policies. If a policy in a tier is applied to an endpoint but no policy in
 # the tier acts on the traffic, it will be dropped at the end of tier.
 $ calicoctl create -f - <<EOF
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: GlobalNetworkPolicy
   metadata:
     name: netops.no-public-dns-for-policy-demo
@@ -253,7 +253,7 @@ Create a `devops` tier.
 
 ```
 $ calicoctl create -f - <<EOF
-apiVersion: projectcalico.org/v2
+apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
   name: devops
@@ -267,7 +267,7 @@ Then create a GlobalNetworkPolicy in the `devops` tier that will prevent traffic
 
 ```
 $ calicoctl create -f - <<EOF
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: GlobalNetworkPolicy
   metadata:
     name: devops.policy-demo-isolation
