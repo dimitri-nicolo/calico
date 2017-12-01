@@ -72,6 +72,8 @@ var (
 	overlapsV6LinkLocal   = "IP pool range overlaps with IPv6 Link Local range fe80::/10"
 	protocolPortsMsg      = "rules that specify ports must set protocol to TCP or UDP"
 
+	dropActionOverrideRegex = regexp.MustCompile("^(Drop|Accept|LogAndDrop|LogAndAccept)$")
+
 	ipv4LinkLocalNet = net.IPNet{
 		IP:   net.ParseIP("169.254.0.0"),
 		Mask: net.CIDRMask(16, 32),
@@ -138,6 +140,7 @@ func init() {
 	registerFieldValidator("dropAcceptReturn", validateFelixEtoHAction)
 	registerFieldValidator("acceptReturn", validateAcceptReturn)
 	registerFieldValidator("portName", validatePortName)
+	registerFieldValidator("dropActionOverride", validateDropActionOverride)
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -259,6 +262,12 @@ func validateAcceptReturn(v *validator.Validate, topStruct reflect.Value, curren
 	s := field.String()
 	log.Debugf("Validate Accept Return Action: %s", s)
 	return acceptReturnRegex.MatchString(s)
+}
+
+func validateDropActionOverride(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate DropActionOverride: %s", s)
+	return dropActionOverrideRegex.MatchString(s)
 }
 
 func validateSelector(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {

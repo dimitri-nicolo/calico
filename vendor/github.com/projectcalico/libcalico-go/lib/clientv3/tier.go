@@ -85,7 +85,7 @@ func (r tiers) Delete(ctx context.Context, name string, opts options.DeleteOptio
 	// Check if there are any policies associated with the tier first.
 	npList, err := r.client.NetworkPolicies().List(ctx, options.ListOptions{
 		Prefix: true,
-		Name:   name,
+		Name:   name + ".",
 	})
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (r tiers) Delete(ctx context.Context, name string, opts options.DeleteOptio
 
 	gnpList, err := r.client.GlobalNetworkPolicies().List(ctx, options.ListOptions{
 		Prefix: true,
-		Name:   name,
+		Name:   name + ".",
 	})
 	if err != nil {
 		return nil, err
