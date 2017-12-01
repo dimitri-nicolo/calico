@@ -15,18 +15,18 @@ the current {{site.prodname}} policy - i.e. by the ordered combination of all th
 configured policies and profiles that apply to that packet.  It may be
 set to one of the following values:
 
-- DROP
-- ACCEPT
-- LOG-and-DROP
-- LOG-and-ACCEPT.
+- Drop
+- Accept
+- LogAndDrop
+- LogAndAccept.
 
-Normally the "DROP" or "LOG-and-DROP" value should be used, as dropping a
+Normally the "Drop" or "LogAndDrop" value should be used, as dropping a
 packet is the obvious implication of that packet being denied.  However when
 experimenting, or debugging a scenario that is not behaving as you expect, the
-"ACCEPT" and "LOG-and-ACCEPT" values can be useful: then the packet will be
+"Accept" and "LogAndAccept" values can be useful: then the packet will be
 still be allowed through.
 
-When one of the "LOG-and-..." values is set, each denied packet is logged in
+When one of the "LogAnd..." values is set, each denied packet is logged in
 syslog, with an entry like this:
 
 ```
@@ -35,16 +35,5 @@ May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be
 
 Note that [Denied Packet Metrics]({{site.baseurl}}/{{page.version}}/reference/essentials/policy-violations) are independent of the DropActionOverride
 setting.  Specifically, if packets that would normally be denied are being
-allowed through by a setting of "ACCEPT" or "LOG-and-ACCEPT", those packets
+allowed through by a setting of "Accept" or "LogAndAccept", those packets
 still contribute to the denied packet metrics as normal.
-
-One way to configure _DropActionOverride_ , would be to use
-[calicoctl config command](../calicoctl/commands/config). For example,
-to set a DropActionOverride for "myhost" to log then drop denied packets, use the
-following command:
-
-```
-    ./calicoctl config set --raw=felix --node=myhost DropActionOverride LOG-and-DROP
-```
-
-For a global setting, omit the `--node=` option.
