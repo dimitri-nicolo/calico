@@ -39,7 +39,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 	order1 := 99.999
 	order2 := 22.222
 	name1 := "t-1"
-	name2 := "t-2"
+	name2 := "t-12"
 	defaultName := "default"
 	namespace1 := "namespace-1"
 	spec1 := apiv3.TierSpec{
@@ -70,8 +70,19 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 		ApplyOnForward: true,
 	}
 
+	gnpName2 := name2 + ".globalnetworkp-1"
+	gnpSpec2 := apiv3.GlobalNetworkPolicySpec{
+		Tier:           name2,
+		Order:          &order2,
+		Ingress:        []apiv3.Rule{testutils.InRule2, testutils.InRule1},
+		Egress:         []apiv3.Rule{testutils.EgressRule2, testutils.EgressRule1},
+		Selector:       "thing2 == 'value2'",
+		DoNotTrack:     true,
+		ApplyOnForward: true,
+	}
+
 	DescribeTable("Tier e2e CRUD tests",
-		func(name1, name2, npName1, gnpName1, namespace1 string, spec1, spec2 apiv3.TierSpec, npSpec1 apiv3.NetworkPolicySpec, gnpSpec1 apiv3.GlobalNetworkPolicySpec) {
+		func(name1, name2, npName1, gnpName1, gnpName2, namespace1 string, spec1, spec2 apiv3.TierSpec, npSpec1 apiv3.NetworkPolicySpec, gnpSpec1, gnpSpec2 apiv3.GlobalNetworkPolicySpec) {
 			c, err := clientv3.New(config)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -281,9 +292,25 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			time.Sleep(1 * time.Second)
 
 			By("Deleting Tier (name1) with the new resource version")
+			// Make sure that policies on other tiers are not associated with other tiers
+			gnp2, outError := c.GlobalNetworkPolicies().Create(ctx, &apiv3.GlobalNetworkPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: gnpName2},
+				Spec:       gnpSpec2,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+			gnpSpec2.Types = []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress}
+			testutils.ExpectResource(gnp2, apiv3.KindGlobalNetworkPolicy, testutils.ExpectNoNamespace, gnpName2, gnpSpec2)
+			rv_gnp2 := gnp2.ResourceVersion
+
 			dres, outError = c.Tiers().Delete(ctx, name1, options.DeleteOptions{ResourceVersion: rv1_2})
 			Expect(outError).NotTo(HaveOccurred())
 			testutils.ExpectResource(dres, apiv3.KindTier, testutils.ExpectNoNamespace, name1, spec2)
+
+			// Delete policy on the other tier
+			dgnp, outError = c.GlobalNetworkPolicies().Delete(ctx, gnpName2, options.DeleteOptions{ResourceVersion: rv_gnp2})
+			Expect(outError).NotTo(HaveOccurred())
+			testutils.ExpectResource(dgnp, apiv3.KindGlobalNetworkPolicy, testutils.ExpectNoNamespace, gnpName2, gnpSpec2)
+			time.Sleep(1 * time.Second)
 
 			if config.Spec.DatastoreType != apiconfig.Kubernetes {
 				By("Updating Tier name2 with a 2s TTL and waiting for the entry to be deleted")
@@ -337,7 +364,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 		},
 
 		// Test 1: Pass two fully populated TierSpecs and expect the series of operations to succeed.
-		Entry("Two fully populated TierSpecs", name1, name2, npName1, gnpName1, namespace1, spec1, spec2, npSpec1, gnpSpec1),
+		Entry("Two fully populated TierSpecs", name1, name2, npName1, gnpName1, gnpName2, namespace1, spec1, spec2, npSpec1, gnpSpec1, gnpSpec2),
 	)
 
 	Describe("Tier watch functionality", func() {
@@ -385,6 +412,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Deleting res1")
 			_, err = c.Tiers().Delete(ctx, name1, options.DeleteOptions{})
 			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(1 * time.Second)
 
 			By("Checking for two events, create res2 and delete re1")
 			testWatcher1.ExpectEvents(apiv3.KindTier, []watch.Event{

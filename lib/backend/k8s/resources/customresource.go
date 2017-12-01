@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -271,7 +272,11 @@ func (c *customK8sResourceClient) List(ctx context.Context, list model.ListInter
 	// If the prefix is specified, look for the resources with the label
 	// of prefix.
 	if list.(model.ResourceListOptions).Prefix {
-		name := list.(model.ResourceListOptions).Name
+		// The prefix has a trailing "." character, remove it, since it is not valid for k8s labels
+		if !strings.HasSuffix(list.(model.ResourceListOptions).Name, ".") {
+			return nil, errors.New("internal error: custom resource list invoked for a prefix not in the form '<tier>.'")
+		}
+		name := list.(model.ResourceListOptions).Name[:len(list.(model.ResourceListOptions).Name)-1]
 		if name == "default" {
 			req = req.VersionedParams(&metav1.ListOptions{
 				LabelSelector: "!" + apiv3.LabelTier,
