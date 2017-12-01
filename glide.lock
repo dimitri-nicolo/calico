@@ -1,5 +1,5 @@
-hash: 3a3af87c14948a9f82dd3fdb7c6a610975fe2c8e94f048599983941b9a0455d6
-updated: 2017-11-28T17:03:43.551736259Z
+hash: 87d7832af138530d7b1e1a9d78721cdfd13cc2c951227e1688085d923477a9f1
+updated: 2017-12-01T12:48:27.66516187-08:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -215,7 +215,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 06a1d46d8f5af1246f59883181b20580acf005fa
+  version: f05a77c0a691871a35235e01fa339a4dbe7bb7b4
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
