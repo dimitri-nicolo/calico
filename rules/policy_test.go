@@ -325,10 +325,10 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	)
 
 	DescribeTable(
-		"Deny rules should be correctly rendered in LOG-and-DROP mode",
+		"Deny rules should be correctly rendered in LOGandDROP mode",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			rrConfigLogAndDrop := rrConfigNormal
-			rrConfigLogAndDrop.ActionOnDrop = "LOG-and-DROP"
+			rrConfigLogAndDrop.ActionOnDrop = "LOGandDROP"
 			renderer := NewRenderer(rrConfigLogAndDrop)
 			denyRule := in
 			denyRule.Action = "deny"
@@ -360,10 +360,10 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 	)
 
 	DescribeTable(
-		"Deny rules should be correctly rendered in LOG-and-ACCEPT mode",
+		"Deny rules should be correctly rendered in LOGandACCEPT mode",
 		func(ipVer int, in proto.Rule, expMatch string) {
 			rrConfigLogAndAccept := rrConfigNormal
-			rrConfigLogAndAccept.ActionOnDrop = "LOG-and-ACCEPT"
+			rrConfigLogAndAccept.ActionOnDrop = "LOGandACCEPT"
 			renderer := NewRenderer(rrConfigLogAndAccept)
 			denyRule := in
 			denyRule.Action = "deny"
@@ -426,7 +426,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		clearBothMarksRule       = "-A test --jump MARK --set-mark 0x0/0x600"
 		preSetAllBlocksMarkRule  = "-A test --jump MARK --set-mark 0x200/0x600"
 		allowIfAllMarkRule       = "-A test -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
-		nflogAllowRule          = "-A test -m mark --mark 0x80/0x80 --jump NFLOG --nflog-group 1 --nflog-prefix A/foo --nflog-range 80"
+		nflogAllowRule           = "-A test -m mark --mark 0x80/0x80 --jump NFLOG --nflog-group 1 --nflog-prefix A/foo --nflog-range 80"
 		allowIfAllMarkAndTCPRule = "-A test -p tcp -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
 		allowIfAllMarkAndUDPRule = "-A test -p udp -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
 		returnRule               = "-A test -m mark --mark 0x80/0x80 --jump RETURN"

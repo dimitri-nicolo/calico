@@ -715,11 +715,11 @@ var _ = Describe("DropRules", func() {
 		rr = NewRenderer(conf).(*DefaultRuleRenderer)
 	})
 
-	Describe("with LOG-and-DROP override", func() {
+	Describe("with LOGandDROP override", func() {
 		BeforeEach(func() {
 			conf = Config{
 				WorkloadIfacePrefixes: []string{"cali", "tap"},
-				ActionOnDrop:          "LOG-and-DROP",
+				ActionOnDrop:          "LOGandDROP",
 				IptablesMarkAccept:    0x10,
 				IptablesMarkPass:      0x20,
 				IptablesMarkScratch0:  0x40,
