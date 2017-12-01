@@ -77,7 +77,7 @@ for the list of supported environment variables.
 
 ```yaml
 apiVersion: projectcalico.org/v3
-kind: CalicoApiConfig
+kind: CalicoAPIConfig
 metadata:
 spec:
   etcdEndpoints: http://etcd1:2379,http://etcd2:2379,http://etcd3:2379
