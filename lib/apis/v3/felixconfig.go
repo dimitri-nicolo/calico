@@ -185,6 +185,10 @@ type FelixConfigurationSpec struct {
 	PrometheusReporterCAFile    string `json:"prometheusReporterCAFile,omitempty"`
 	DeletedMetricsRetentionSecs *int   `json:"deletedMetricsRetentionSecs,omitempty"`
 
+	// DropActionOverride overrides the Drop action in Felix, optionally changing the behavior to Accept, and optionally adding Log.
+	// Possible values are Drop, LogAndDrop, Accept, LogAndAccept. [Default: Drop]
+	DropActionOverride string `json:"dropActionOverride,omitempty" validate:"omitempty,dropActionOverride"`
+
 	DebugMemoryProfilePath              string `json:"debugMemoryProfilePath,omitempty"`
 	DebugDisableLogDropping             *bool  `json:"debugDisableLogDropping,omitempty"`
 	DebugSimulateCalcGraphHangAfterSecs *int   `json:"debugSimulateCalcGraphHangAfterSecs,omitempty" confignamev1:"DebugSimulateCalcGraphHangAfter"`

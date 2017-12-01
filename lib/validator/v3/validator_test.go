@@ -401,6 +401,13 @@ func init() {
 		Entry("should accept a valid LogSeverityFile value 'Debug'", api.FelixConfigurationSpec{LogSeverityFile: "Debug"}, true),
 		Entry("should accept a valid LogSeveritySys value 'Info'", api.FelixConfigurationSpec{LogSeveritySys: "Info"}, true),
 
+		Entry("should accept a valid DropActionOverride value 'Accept'", api.FelixConfigurationSpec{DropActionOverride: "Accept"}, true),
+		Entry("should accept a valid DropActionOverride value 'Drop'", api.FelixConfigurationSpec{DropActionOverride: "Drop"}, true),
+		Entry("should accept a valid DropActionOverride value 'LogAndAccept'", api.FelixConfigurationSpec{DropActionOverride: "LogAndAccept"}, true),
+		Entry("should accept a valid DropActionOverride value 'LogAndDrop'", api.FelixConfigurationSpec{DropActionOverride: "LogAndDrop"}, true),
+		Entry("should reject an invalid (removed) DropActionOverride value 'LOG-and-DROP'", api.FelixConfigurationSpec{DropActionOverride: "LOG-and-DROP"}, false),
+		Entry("should reject an invalid DropActionOverride value 'badval'", api.FelixConfigurationSpec{DropActionOverride: "badval"}, false),
+
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),
 		Entry("should accept protocol UDP", protocolFromString("UDP"), true),
