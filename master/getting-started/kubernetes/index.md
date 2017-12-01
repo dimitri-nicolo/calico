@@ -58,18 +58,13 @@ the host. Instead, continue directly to the
    ```
    sudo kubeadm init --pod-network-cidr 192.168.0.0/16
    ```
-
    Execute the commands to configure kubectl as returned by
    `kubeadm init`. Most likely they will be as follows:
-
    ```
    mkdir -p $HOME/.kube
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
-
-   > **Note**: If you are on a multi-node cluster, you will need to join all of the non-master nodes to the cluster using the `kubeadm join` command. Scroll upward in your terminal to locate the `join` command as returned by `kubeadm init`. Copy and paste it in each of the node's shell prompt.
-   {: .alert .alert-info}
 
 1. Download the [`calico.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml).
 
@@ -102,12 +97,11 @@ the host. Instead, continue directly to the
    serviceaccount "calico-kube-controllers" created
    ```
 
-   > **Note**: At this point, you should have a fully functional kubernetes cluster with calico. Confirm that you now have the node(s) `STATUS` as `Ready` using the
-   following command: `kubectl get nodes`
+   > **Note**: At this point, you should have a fully functional kubernetes cluster with calico. Confirm that you now have the node(s) `STATUS` as `Ready` using the command: `kubectl get nodes`
    {: .alert .alert-info}
 
    Now, continuing onto setting up the CNX manager(ui) and the CNX apiserver.
-  
+
 1. Considering its a single node cluster, remove the taints on the master so that pods can be scheduled on it.
 
    ```
@@ -120,28 +114,11 @@ the host. Instead, continue directly to the
    node "<your-hostname>" untainted
    ```
 
-1. Generate TLS credentials - i.e. a web server certificate and key - for the
-   CNX Manager.
-
-   See
-   [Certificates](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
-   for various ways of generating TLS credentials.  As both its Common Name and
-   a Subject Alternative Name, the certificate must have the host name (or IP
-   address) that browsers will use to access the CNX Manager.  In a single-node
-   test deployment this can be just `127.0.0.1`, but in a real deployment it
-   should be a planned host name that maps to the `cnx-manager` Service.
-
-   For the sake of this quick start, i.e. just to see CNX working, you can use
-   [this test
-   certificate]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/cert)
-   and
-   [key]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/key).
-
-1. Store those credentials as `cert` and `key` in a Secret named
-   `cnx-manager-tls`.  For example:
-
+1. Set TLS for CNX manager. For simplicity, we will use kubeadm generated kube-apiserver cert and key for cnx-manager as well. 
+   Create the tls Secret named `cnx-manager-tls`.
    ```
-   kubectl create secret generic cnx-manager-tls --from-file=cert=/path/to/certificate --from-file=key=/path/to/key -n kube-system
+   kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
+   --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
    ```
 
 1. [Download the `calico-cnx.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml).
@@ -171,54 +148,31 @@ the host. Instead, continue directly to the
    deployment "tigera-cnx-manager" created
    service "tigera-cnx-manager" created
    ```
+   > **Note**: At this point, you should have the CNX services up and running. Confirm that pods have their `STATUS` as `Running` using the command: `watch kubectl get pods --all-namespaces`. Some can only start after others, so it's OK to see a few restarts. Press CTRL+C to exit `watch`.
+   {: .alert .alert-info}
 
-1. Confirm that all of the pods are running with the following command.
-   Some can only start after others, so it's OK to see a few restarts.
-
-   ```
-   watch kubectl get pods --all-namespaces
-   ```
-
-   Wait until each pod has the `STATUS` of `Running`.
-
-   ```
-   NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
-   kube-system   calico-etcd-q4fcf                          1/1     Running   0          1h
-   kube-system   calico-kube-controllers-797946f9d9-jrwx9   1/1     Running   0          1h
-   kube-system   cnx-node-mxzhw                             2/2     Running   0          1h
-   kube-system   cnx-apiserver-8kmm8                        1/1     Running   0          1h
-   kube-system   etcd-<hostname>                            1/1     Running   0          1h
-   kube-system   kube-apiserver-<hostname>                  1/1     Running   0          1h
-   kube-system   kube-controller-manager-<hostname>         1/1     Running   0          1h
-   kube-system   kube-dns-545bc4bfd4-gxhpv                  3/3     Running   0          1h
-   kube-system   kube-proxy-z5vq9                           1/1     Running   0          1h
-   kube-system   kube-scheduler-<hostname>                  1/1     Running   0          1h
-   kube-system   cnx-manager-558d896894-zvpmc               1/1     Running   0          1h
-   ```
-   Press CTRL+C to exit `watch`.
-
-1. Setup a basic-auth user for the purposes of logging in and then navigating the UI.
+1. Setup a basic-auth user to login through the UI.
    
-   Create the csv file and register `jane` as the user with the Kubernetes cluster. Each line is 'password,user-name,user-id'
+   Create the basic auth csv file to be used by the kube apiserver and lets register `jane` as our user. Each line in the file is of the form 'password,user-name,user-id'
    ```
    echo 'welc0me,jane,1' > /etc/kubernetes/pki/basic_auth.csv
    ```
-   Now, lets set the path in kube-apiserver.yaml
+   Then, lets set the path in kube-apiserver.yaml
    ```
    sed -i "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
-   >**Note: We created the basic_auth.csv under /etc/kubernetes/pki since that volume is mounted by default on the kube-apiserver pod with a kubeadm installation.
+   > **Note**: We created the basic_auth.csv under /etc/kubernetes/pki because that volume is mounted by default on the kube-apiserver pod with a kubeadm installation.
    {: .alert .alert-info}
 
-1. Set up CORS on the API Server to allow API access from the UI
+1. Set up CORS on the kube apiserver to allow API accesses from the UI
    ```
    sed -i "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://*\"" \
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
-1. You should now be able to log in as Jane, but won't yet be able to see or edit resources. Bind `jane` with the `cluster-admin` role to give full access.
+1. You should now be able to log in as `jane`, but won't yet be able to see or edit resources. Bind `jane` with the `cluster-admin` role to give full access.
    ```
    kubectl create clusterrolebinding permissive-binding \
    --clusterrole=cluster-admin \
@@ -229,8 +183,7 @@ Congratulations! You now have a single-host Kubernetes cluster
 equipped with {{site.prodname}}.
 
 To access the {{site.prodname}} Manager web interface, navigate to `https://127.0.0.1:30003`.
->**Note: As part of these instruction we are dealing with self-signed certificates for both the cnx-manager and the cnx-apiserver. So, you will need to proceed explicitly from the browser. If on Chrome and things dont go as planned, take a look at the Inspect logs to get tip-offs.
-Example: The case of `Failed to fetch namespaces` while navigating through Chrome. If you open up the `Console` tab under Chrome Inspect (right-click Inspect) window, you may see `net::ERR_INSECURE_RESPONSE`. Click on the api link associated to the message and explicitly proceed ahead.
+> **Note**: As part of these instruction we are dealing with self-signed certificates for CNX/K8s services. So, you might need to proceed explicitly from the browser. For example, if on Chrome and things do not go as planned, take a look at the Inspect (right-click Inspect) Console logs to get tip-offs.
 {: .alert .alert-info}
 
 ### Next steps
