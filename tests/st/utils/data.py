@@ -182,6 +182,7 @@ networkpolicy_name1_rev2 = {
         'namespace': 'default'
     },
     'spec': {
+        'tier': "default",
         'order': 100000,
         'selector': "type=='sql'",
         'types': ['Ingress', 'Egress'],
@@ -235,6 +236,7 @@ networkpolicy_name2_rev1 = {
         'creationTimestamp': '2006-01-02T15:04:05Z',
     },
     'spec': {
+        'tier': "default",
         'order': 100000,
         'selector': "type=='sql'",
         'types': ['Ingress', 'Egress'],
@@ -291,6 +293,7 @@ globalnetworkpolicy_name1_rev1 = {
         'name': 'default.policy-mypolicy1',
     },
     'spec': {
+        'tier': "default",
         'order': 100,
         'selector': "type=='database'",
         'types': ['Ingress', 'Egress'],
@@ -337,6 +340,7 @@ globalnetworkpolicy_name1_rev2 = {
         'name': 'default.policy-mypolicy1',
     },
     'spec': {
+        'tier': "default",
         'order': 100000,
         'selector': "type=='sql'",
         'doNotTrack': True,
