@@ -337,7 +337,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 
 		// Pass two fully populated PolicySpecs and expect the series of operations to succeed.
 		Entry("Two fully populated PolicySpecs in the default tier",
-			"",
+			"default",
 			namespace1, namespace2,
 			name1, name2,
 			spec1, spec2,
@@ -345,7 +345,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 		),
 		// Check defaulting for policies with ingress rules and egress rules only.
 		Entry("Ingress-only and egress-only policies",
-			"",
+			"default",
 			namespace1, namespace2,
 			name1, name2,
 			ingressSpec1, egressSpec2,
@@ -353,7 +353,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 		),
 		// Check non-defaulting for policies with explicit Types value.
 		Entry("Policies with explicit ingress and egress Types",
-			"",
+			"default",
 			namespace1, namespace2,
 			name1, name2,
 			ingressTypesSpec1, egressTypesSpec2,
