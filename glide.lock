@@ -1,5 +1,5 @@
-hash: 6515585c479438d10d356c2ed066420cc6e1df856bec3fcf4d1ccd90ebdefccf
-updated: 2017-11-28T17:29:11.563600753Z
+hash: fb651792f10d9b43549a3a8035ec9006bad71739464215d8e65e8f90991239fc
+updated: 2017-12-02T14:17:27.385832314-08:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -155,7 +155,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: d2fe2d009e9e6a3aca10d7c6fbda184185ab9657
+  version: f9a2a8db8e39076d383d7d8f57ececcbfd022aea
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -175,7 +175,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 06a1d46d8f5af1246f59883181b20580acf005fa
+  version: 542c7908f045010ce8e2780af470ac709ee17cc9
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
