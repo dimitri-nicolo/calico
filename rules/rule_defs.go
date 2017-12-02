@@ -259,7 +259,7 @@ func NewRenderer(config Config) RuleRenderer {
 	// First, what should we actually do when we'd normally drop a packet?  For
 	// sandbox mode, we support allowing the packet instead, or logging it.
 	var dropActions []iptables.Action
-	if strings.HasPrefix(config.ActionOnDrop, "LOG-") {
+	if strings.HasPrefix(config.ActionOnDrop, "LOG") {
 		log.Warn("Action on drop includes LOG.  All dropped packets will be logged.")
 		logPrefix := "calico-drop"
 		if config.IptablesLogPrefix != "" {
