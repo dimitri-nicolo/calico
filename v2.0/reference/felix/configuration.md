@@ -94,7 +94,7 @@ The full list of parameters which can be set is as follows.
 
 | Setting                                 | Environment variable                    | Default                              | Meaning                                 |
 |-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
-| DropActionOverride                      | FELIX_DROPACTIONOVERRIDE                | DROP                                 | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
+| DropActionOverride                      | FELIX_DROPACTIONOVERRIDE                | Drop                                 | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
 | PrometheusReporterEnabled               | FELIX_PROMETHEUSREPORTERENABLED         | false                                | Set to "true" to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
 | PrometheusReporterPort                  | FELIX_PROMETHEUSREPORTERPORT            | 9092                                 | The TCP port on which to report denied packet metrics.  |
 
@@ -103,18 +103,18 @@ the current Calico policy - i.e. by the ordered combination of all the
 configured policies and profiles that apply to that packet.  It may be
 set to one of the following values:
 
-- DROP
-- ACCEPT
-- LOG-and-DROP
-- LOG-and-ACCEPT.
+- Drop
+- Accept
+- LogAndDrop
+- LogAndAccept.
 
-Normally the "DROP" or "LOG-and-DROP" value should be used, as dropping a
+Normally the "Drop" or "LogAndDrop" value should be used, as dropping a
 packet is the obvious implication of that packet being denied.  However when
 experimenting, or debugging a scenario that is not behaving as you expect, the
-"ACCEPT" and "LOG-and-ACCEPT" values can be useful: then the packet will be
+"Accept" and "LogAndAccept" values can be useful: then the packet will be
 still be allowed through.
 
-When one of the "LOG-and-..." values is set, each denied packet is logged in
+When one of the "LogAnd..." values is set, each denied packet is logged in
 syslog, with an entry like this:
 
 ```
@@ -130,7 +130,7 @@ more details.
 
 Note that denied packet metrics are independent of the DropActionOverride
 setting.  Specifically, if packets that would normally be denied are being
-allowed through by a setting of "ACCEPT" or "LOG-and-ACCEPT", those packets
+allowed through by a setting of "Accept" or "LogAndAccept", those packets
 still contribute to the denied packet metrics as just described.
 
 Environment variables
