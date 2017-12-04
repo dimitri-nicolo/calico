@@ -18,6 +18,8 @@ cnx-api-image-name: <your-k8sapiserver-image-name>
 # </deprecated>
 
 prodname: CNX
+nodecontainer: cnx-node
+noderunning: cnx-node
 
 # Image names in case the host changes
 imageNames:
