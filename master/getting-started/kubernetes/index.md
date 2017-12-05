@@ -172,7 +172,7 @@ the host. Instead, continue directly to the
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
-1. You should now be able to log in as `jane`, but won't yet be able to see or edit resources. Bind `jane` with the `cluster-admin` role to give full access.
+1. You should now be able to log in as `jane`, but won't yet be able to see or edit resources. Bind `jane` with the `cluster-admin` role to give full access to all resources.
    ```
    kubectl create clusterrolebinding permissive-binding \
    --clusterrole=cluster-admin \
@@ -189,7 +189,7 @@ To access the {{site.prodname}} Manager web interface, navigate to `https://127.
 ### Next steps
 **[Experiment with OIDC authentication strategy]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication)**
 
-**[Experiment with RBAC and the {{site.prodname}} Manager web interface]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
+**[Experiment with non-admin users and the web manager]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
 
 **[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
