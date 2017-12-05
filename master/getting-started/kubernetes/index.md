@@ -189,7 +189,7 @@ To access the {{site.prodname}} Manager web interface, navigate to `https://127.
 ### Next steps
 **[Experiment with OIDC authentication strategy]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication)**
 
-**[Experiment with non-admin users and the web manager]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
+**[Experiment with non-admin users and the web manager]({{site.baseurl}}/{{page.version}}/reference/essentials/non-admin-workflows)**
 
 **[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 

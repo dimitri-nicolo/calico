@@ -1,0 +1,67 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: ui-needed-listers
+rules:
+- apiGroups: ["projectcalico.org","networking.k8s.io",""]
+  resources: ["tiers","networkpolicies","globalnetworkpolicies","namespaces"]
+  verbs: ["watch","list"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: default-tier-reader
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  resourceNames: ["default"]
+  verbs: ["get"]
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: default
+  name: default-namespace-policy-cruder
+rules:
+- apiGroups: ["projectcalico.org","networking.k8s.io"]
+  resources: ["networkpolicies","globalnetworkpolicies"]
+  verbs: ["create","update","delete","patch","get","watch","list"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: <USER>-ui-needed-lister
+subjects:
+- kind: User
+  name: <USER>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: ui-needed-listers
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: <USER>-default-tier-reader
+subjects:
+- kind: User
+  name: <USER>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: default-tier-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: <USER>-default-namespace-policy-cruder
+subjects:
+- kind: User
+  name: <USER>
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: default-namespace-policy-cruder
+  apiGroup: rbac.authorization.k8s.io
