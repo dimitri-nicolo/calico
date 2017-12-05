@@ -187,7 +187,7 @@ To access the {{site.prodname}} Manager web interface, navigate to `https://127.
 {: .alert .alert-info}
 
 ### Next steps
-**[Experiment with OIDC authentication strategy] (WIP add the link with detailed instructions)**
+**[Experiment with OIDC authentication strategy]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication)**
 
 **[Experiment with RBAC and the {{site.prodname}} Manager web interface]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
 
