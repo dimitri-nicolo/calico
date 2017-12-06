@@ -24,7 +24,7 @@ metadata:
   name: default-namespace-policy-cruder
 rules:
 - apiGroups: ["projectcalico.org","networking.k8s.io"]
-  resources: ["networkpolicies","globalnetworkpolicies"]
+  resources: ["networkpolicies"]
   verbs: ["create","update","delete","patch","get","watch","list"]
 ---
 kind: ClusterRoleBinding

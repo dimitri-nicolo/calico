@@ -117,13 +117,13 @@ the host. Instead, continue directly to the
 1. Set TLS for CNX manager. For simplicity, we will use kubeadm generated kube-apiserver cert and key for cnx-manager as well. 
    Create the tls Secret named `cnx-manager-tls`.
    ```
-   kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
+   sudo kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
    --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
    ```
 
 1. [Download the `cnx-etcd.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.7/cnx-etcd.yaml).
 
-1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
+1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-apiserver` and `cnx-manager` images.
 
    ```
    sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' cnx-etcd.yaml
@@ -155,11 +155,11 @@ the host. Instead, continue directly to the
    
    Create the basic auth csv file to be used by the kube apiserver and lets register `jane` as our user. Each line in the file is of the form 'password,user-name,user-id'
    ```
-   echo 'welc0me,jane,1' > /etc/kubernetes/pki/basic_auth.csv
+   sudo echo 'welc0me,jane,1' > /etc/kubernetes/pki/basic_auth.csv
    ```
    Then, lets set the path in kube-apiserver.yaml
    ```
-   sed -i "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
+   sudo sed -i "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
@@ -168,7 +168,7 @@ the host. Instead, continue directly to the
 
 1. Set up CORS on the kube apiserver to allow API accesses from the UI
    ```
-   sed -i "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://*\"" \
+   sudo sed -i "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://*\"" \
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
@@ -183,7 +183,7 @@ Congratulations! You now have a single-host Kubernetes cluster
 equipped with {{site.prodname}}.
 
 To access the {{site.prodname}} Manager web interface, navigate to `https://127.0.0.1:30003`.
-> **Note**: As part of these instruction we are dealing with self-signed certificates for CNX/K8s services. So, you might need to proceed explicitly from the browser. For example, if on Chrome and things do not go as planned, take a look at the Inspect (right-click Inspect) Console logs to get tip-offs.
+> **Note**: As part of these instruction we are dealing with self-signed certificates for CNX/K8s services. So, you might need to proceed explicitly from the browser.
 {: .alert .alert-info}
 
 ### Next steps

@@ -140,7 +140,7 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 443
+    targetPort: 5443
   selector:
     apiserver: "true"
 
@@ -170,6 +170,8 @@ spec:
       containers:
       - name: cnx-apiserver
         image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+        args:
+        - "--secure-port=5443"
         env:
           - name: DATASTORE_TYPE
             value: "kubernetes"
