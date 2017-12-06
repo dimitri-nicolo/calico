@@ -245,3 +245,21 @@ spec:
       - name: cnx-manager-tls
         secret:
           secretName: cnx-manager-tls
+---
+
+# Create a NodePort to expose the web application
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: cnx-manager
+  name: cnx-manager
+  namespace: kube-system
+spec:
+  selector:
+    k8s-app: cnx-manager
+  ports:
+    - port: 8080
+      targetPort: 443
+      nodePort: 30003
+  type: NodePort

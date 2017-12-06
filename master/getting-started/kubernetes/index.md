@@ -5,7 +5,7 @@ title: Quickstart for Tigera CNX on Kubernetes
 
 ### Overview
 
-This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
+This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}} (with Calico in etcd mode)
 in approximately 30 minutes.  You must run the cluster on a linux system with a
 web browser (possibly a VM).  You can use this cluster for testing and development.
 
@@ -97,11 +97,6 @@ the host. Instead, continue directly to the
    serviceaccount "calico-kube-controllers" created
    ```
 
-   > **Note**: At this point, you should have a fully functional kubernetes cluster with calico. Confirm that you now have the node(s) `STATUS` as `Ready` using the command: `kubectl get nodes`
-   {: .alert .alert-info}
-
-   Now, continuing onto setting up the CNX manager(ui) and the CNX apiserver.
-
 1. Considering its a single node cluster, remove the taints on the master so that pods can be scheduled on it.
 
    ```
@@ -114,6 +109,11 @@ the host. Instead, continue directly to the
    node "<your-hostname>" untainted
    ```
 
+   > **Note**: At this point, you should have a fully functional kubernetes cluster with calico. Confirm that you now have the node(s) `STATUS` as `Ready` using the command: `kubectl get nodes`
+   {: .alert .alert-info}
+
+   Now, continuing onto setting up the CNX manager(ui) and the CNX apiserver.
+
 1. Set TLS for CNX manager. For simplicity, we will use kubeadm generated kube-apiserver cert and key for cnx-manager as well. 
    Create the tls Secret named `cnx-manager-tls`.
    ```
@@ -121,18 +121,18 @@ the host. Instead, continue directly to the
    --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
    ```
 
-1. [Download the `calico-cnx.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml).
+1. [Download the `cnx-etcd.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.7/cnx-etcd.yaml).
 
 1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
 
    ```
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico-cnx.yaml
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' cnx-etcd.yaml
    ```
 
 1. Use the following command to install the additional {{site.prodname}} components.
 
    ```
-   kubectl apply -f calico-cnx.yaml
+   kubectl apply -f cnx-etcd.yaml
    ```
 
    You should see the following output.
