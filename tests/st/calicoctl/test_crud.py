@@ -510,6 +510,54 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("delete", data2)
         rc.assert_no_error()
 
+    @parameterized.expand([
+        (globalnetworkpolicy_os_name1_rev1, False),
+        (networkpolicy_os_name1_rev1, True),
+    ])
+    def test_os_compat(self, data, is_namespaced):
+        """
+        Test policy CRUD commands with calico (open source) style manifests.
+        """
+        # Clone the data so that we can modify the metadata parms.
+        data1 = copy.deepcopy(data)
+
+        # Create the policy without a tier present in the name or spec.
+        rc = calicoctl("create", data=data1)
+        rc.assert_no_error()
+
+        # On get, we expect name to be prefixed with the "default" tier name as
+        # well as have the tier field and value present in the spec.
+        # First we check with the name without tier in the name.
+        if is_namespaced:
+            rc = calicoctl("get %s %s --namespace default -o yaml" % (data['kind'], data['metadata']['name']))
+        else:
+            rc = calicoctl("get %s %s -o yaml" % (data['kind'], data['metadata']['name']))
+        data1['metadata']['name'] = 'default.' + data1['metadata']['name']
+        data1['spec']['tier'] = 'default'
+        data1 = add_tier_label(data1)
+        rc.assert_data(data1)
+
+        # Then we check with the tiered policy name.
+        if is_namespaced:
+            rc = calicoctl("get %s %s --namespace default -o yaml" % (data['kind'], data1['metadata']['name']))
+        else:
+            rc = calicoctl("get %s %s -o yaml" % (data['kind'], data1['metadata']['name']))
+        rc.assert_data(data1)
+
+        # Deleting without a tiered policy name will delete the correct policy
+        if is_namespaced:
+            rc = calicoctl("delete %s %s --namespace default" % (data['kind'], data['metadata']['name']))
+        else:
+            rc = calicoctl("delete %s %s" % (data['kind'], data['metadata']['name']))
+        rc.assert_no_error()
+
+        # And we re-check to make sure the deleted policy is not present.
+        if is_namespaced:
+            rc = calicoctl("get %s %s --namespace default -o yaml" % (data['kind'], data['metadata']['name']))
+        else:
+            rc = calicoctl("get %s %s -o yaml" % (data['kind'], data['metadata']['name']))
+        rc.assert_error(NOT_FOUND)
+
     def test_bgpconfig(self):
         """
         Test CRUD commands behave as expected on the BGP configuration resource:

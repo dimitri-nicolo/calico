@@ -282,6 +282,52 @@ networkpolicy_tiered_name2_rev1 = {
     }
 }
 
+networkpolicy_os_name1_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'NetworkPolicy',
+    'metadata': {
+        'name': 'os-policy-mypolicy1',
+        'namespace': 'default'
+    },
+    'spec': {
+        'order': 100,
+        'selector': "type=='database'",
+        'types': ['Ingress', 'Egress'],
+        'egress': [
+            {
+                'action': 'Allow',
+                'source': {
+                    'selector': "type=='application'"},
+            },
+        ],
+        'ingress': [
+            {
+                'notICMP': {'type': 19, 'code': 255},
+                'ipVersion': 4,
+                'action': 'Deny',
+                'destination': {
+                    'notNets': ['10.3.0.0/16'],
+                    'notPorts': ['110:1050'],
+                    'notSelector': "type=='apples'",
+                    'nets': ['10.2.0.0/16'],
+                    'ports': ['100:200'],
+                    'selector': "type=='application'",
+                },
+                'icmp': {'type': 10, 'code': 6},
+                'protocol': 'TCP',
+                'source': {
+                    'notNets': ['10.1.0.0/16'],
+                    'notPorts': [1050],
+                    'notSelector': "type=='database'",
+                    'nets': ['10.0.0.0/16'],
+                    'ports': [1234, '10:1024'],
+                    'selector': "type=='application'",
+                    'namespaceSelector': 'has(role)',
+                }
+            }
+        ],
+    }
+}
 
 #
 # Global Network Policy
@@ -385,6 +431,52 @@ globalnetworkpolicy_tiered_name2_rev1 = {
                 'action': 'Allow',
                 'protocol': 'UDP',
             },
+        ],
+    }
+}
+
+globalnetworkpolicy_os_name1_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'GlobalNetworkPolicy',
+    'metadata': {
+        'name': 'os-policy-mypolicy1',
+    },
+    'spec': {
+        'order': 100,
+        'selector': "type=='database'",
+        'types': ['Ingress', 'Egress'],
+        'egress': [
+            {
+                'action': 'Allow',
+                'source': {
+                    'selector': "type=='application'"},
+            },
+        ],
+        'ingress': [
+            {
+                'notICMP': {'type': 19, 'code': 255},
+                'ipVersion': 4,
+                'action': 'Deny',
+                'destination': {
+                    'notNets': ['10.3.0.0/16'],
+                    'notPorts': ['110:1050'],
+                    'notSelector': "type=='apples'",
+                    'nets': ['10.2.0.0/16'],
+                    'ports': ['100:200'],
+                    'selector': "type=='application'",
+                },
+                'icmp': {'type': 10, 'code': 6},
+                'protocol': 'TCP',
+                'source': {
+                    'notNets': ['10.1.0.0/16'],
+                    'notPorts': [1050],
+                    'notSelector': "type=='database'",
+                    'nets': ['10.0.0.0/16'],
+                    'ports': [1234, '10:1024'],
+                    'selector': "type=='application'",
+                    'namespaceSelector': 'has(role)',
+                }
+            }
         ],
     }
 }
