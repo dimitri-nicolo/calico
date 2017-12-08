@@ -5,7 +5,7 @@ title: Quickstart for Tigera CNX on Kubernetes
 
 ### Overview
 
-This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
+This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}} (with Calico in etcd mode)
 in approximately 30 minutes.  You must run the cluster on a linux system with a
 web browser (possibly a VM).  You can use this cluster for testing and development.
 
@@ -53,53 +53,17 @@ the host. Instead, continue directly to the
    sudo apt-get update && sudo apt-get upgrade
    ```
 
-1. [Create a Google project to use to login to CNX Manager](https://developers.google.com/identity/protocols/OpenIDConnect){:target="_blank"}.
-   Set the redirect URIs to `http://127.0.0.1:30003/login/oidc/callback` and `https://127.0.0.1:30003/login/oidc/callback`.
-
-1. Copy the OAuth client ID value.
-
-1. Download the [kubeadm.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/kubeadm.yaml) file.
-
-1. Open the kubeadm.yaml file in your favorite editor, replace `<fill-in-your-oauth-client-id-here>`
-   with the OAuth client ID value, then save and close the file.
-
-1. Initialize the master using the following command.
+1. Initialize the master using the following command and configure kubectl.
 
    ```
-   sudo kubeadm init --config kubeadm.yaml
+   sudo kubeadm init --pod-network-cidr 192.168.0.0/16
    ```
-
-1. Execute the following commands to configure kubectl (also returned by
-   `kubeadm init`).
-
+   Execute the commands to configure kubectl as returned by
+   `kubeadm init`. Most likely they will be as follows:
    ```
    mkdir -p $HOME/.kube
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
-   ```
-
-1. Generate TLS credentials - i.e. a web server certificate and key - for the
-   CNX Manager.
-
-   See
-   [Certificates](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
-   for various ways of generating TLS credentials.  As both its Common Name and
-   a Subject Alternative Name, the certificate must have the host name (or IP
-   address) that browsers will use to access the CNX Manager.  In a single-node
-   test deployment this can be just `127.0.0.1`, but in a real deployment it
-   should be a planned host name that maps to the `cnx-manager` Service.
-
-   For the sake of this quick start, i.e. just to see CNX working, you can use
-   [this test
-   certificate]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/cert)
-   and
-   [key]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/key).
-
-1. Store those credentials as `cert` and `key` in a Secret named
-   `cnx-manager-tls`.  For example:
-
-   ```
-   kubectl create secret generic cnx-manager-tls --from-file=cert=/path/to/certificate --from-file=key=/path/to/key -n kube-system
    ```
 
 1. Download the [`calico.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml).
@@ -133,21 +97,42 @@ the host. Instead, continue directly to the
    serviceaccount "calico-kube-controllers" created
    ```
 
-1. [Download the `calico-cnx.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/calico-cnx.yaml).
-
-
-1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
+1. Considering its a single node cluster, remove the taints on the master so that pods can be scheduled on it.
 
    ```
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico-cnx.yaml
+   kubectl taint nodes --all node-role.kubernetes.io/master-
    ```
 
-1. Open `calico-cnx.yaml` in your favorite editor, replace `<fill-in-your-oauth-client-id-here>` with your OAuth client ID, save the file, and exit the editor.
+   It should return the following.
+
+   ```
+   node "<your-hostname>" untainted
+   ```
+
+   > **Note**: At this point, you should have a fully functional kubernetes cluster with calico. Confirm that you now have the node(s) `STATUS` as `Ready` using the command: `kubectl get nodes`
+   {: .alert .alert-info}
+
+   Now, continuing onto setting up the CNX manager(ui) and the CNX apiserver.
+
+1. Set TLS for CNX manager. For simplicity, we will use kubeadm generated kube-apiserver cert and key for cnx-manager as well. 
+   Create the tls Secret named `cnx-manager-tls`.
+   ```
+   sudo kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
+   --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
+   ```
+
+1. [Download the `cnx-etcd.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.7/cnx-etcd.yaml).
+
+1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-apiserver` and `cnx-manager` images.
+
+   ```
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' cnx-etcd.yaml
+   ```
 
 1. Use the following command to install the additional {{site.prodname}} components.
 
    ```
-   kubectl apply -f calico-cnx.yaml
+   kubectl apply -f cnx-etcd.yaml
    ```
 
    You should see the following output.
@@ -163,101 +148,48 @@ the host. Instead, continue directly to the
    deployment "tigera-cnx-manager" created
    service "tigera-cnx-manager" created
    ```
+   > **Note**: At this point, you should have the CNX services up and running. Confirm that pods have their `STATUS` as `Running` using the command: `watch kubectl get pods --all-namespaces`. Some can only start after others, so it's OK to see a few restarts. Press CTRL+C to exit `watch`.
+   {: .alert .alert-info}
 
-1. Remove the taints on the master so that pods can be scheduled on it.
-
+1. Setup a basic-auth user to login through the UI.
+   
+   Create the basic auth csv file to be used by the kube apiserver and lets register `jane` as our user. Each line in the file is of the form 'password,user-name,user-id'
    ```
-   kubectl taint nodes --all node-role.kubernetes.io/master-
+   sudo echo 'welc0me,jane,1' > /etc/kubernetes/pki/basic_auth.csv
    ```
-
-   It should return the following.
-
+   Then, lets set the path in kube-apiserver.yaml
    ```
-   node "<your-hostname>" untainted
-   ```
-
-1. Confirm that all of the pods are running with the following command.
-   Some can only start after others, so it's OK to see a few restarts.
-
-   ```
-   watch kubectl get pods --all-namespaces
+   sudo sed -i "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
+   /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
-   Wait until each pod has the `STATUS` of `Running`.
+   > **Note**: We created the basic_auth.csv under /etc/kubernetes/pki because that volume is mounted by default on the kube-apiserver pod with a kubeadm installation.
+   {: .alert .alert-info}
 
+1. Set up CORS on the kube apiserver to allow API accesses from the UI
    ```
-   NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
-   kube-system   calico-etcd-q4fcf                          1/1     Running   0          1h
-   kube-system   calico-kube-controllers-797946f9d9-jrwx9   1/1     Running   0          1h
-   kube-system   cnx-node-mxzhw                             2/2     Running   0          1h
-   kube-system   cnx-apiserver-8kmm8                        1/1     Running   0          1h
-   kube-system   etcd-<hostname>                            1/1     Running   0          1h
-   kube-system   kube-apiserver-<hostname>                  1/1     Running   0          1h
-   kube-system   kube-controller-manager-<hostname>         1/1     Running   0          1h
-   kube-system   kube-dns-545bc4bfd4-gxhpv                  3/3     Running   0          1h
-   kube-system   kube-proxy-z5vq9                           1/1     Running   0          1h
-   kube-system   kube-scheduler-<hostname>                  1/1     Running   0          1h
-   kube-system   cnx-manager-558d896894-zvpmc               1/1     Running   0          1h
+   sudo sed -i "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://*\"" \
+   /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
-1. Press CTRL+C to exit `watch`.
-
-1. Switch to a root shell.
-
+1. You should now be able to log in as `jane`, but won't yet be able to see or edit resources. Bind `jane` with the `cluster-admin` role to give full access to all resources.
    ```
-   sudo -i
-   ```
-
-1. Scroll upward in your terminal to locate the `join` command
-   returned by `kubeadm init`. Copy the `join` command, paste it
-   in your shell prompt, and add `--skip-preflight-checks` to the end.
-
-   **Syntax**:
-   ```
-   kubeadm join --token <token> <master-ip>:<master-port> \
-   --discovery-token-ca-cert-hash sha256:<hash> \
-   --skip-preflight-checks
-   ```
-
-   **Example**:
-   ```
-   kubeadm join --token eea8bd.4d282767b6b962ca 10.0.2.15:6443 \
-   --discovery-token-ca-cert-hash sha256:0e6e73d52066326023432f417a566afad72667e6111d2236b69956b658773255
-   --skip-preflight-checks
-   ```
-
-1. Exit the root shell.
-
-   ```
-   exit
-   ```
-
-1. Confirm that you now have a node in your cluster with the
-   following command.
-
-   ```
-   kubectl get nodes -o wide
-   ```
-
-   It should return something like the following.
-
-   ```
-   NAME             STATUS  ROLES   AGE  VERSION  EXTERNAL-IP  OS-IMAGE            KERNEL-VERSION     CONTAINER-RUNTIME
-   <your-hostname>  Ready   master  1h   v1.8.x   <none>       Ubuntu 16.04.3 LTS  4.10.0-28-generic  docker://1.12.6
+   kubectl create clusterrolebinding permissive-binding \
+   --clusterrole=cluster-admin \
+   --user=jane
    ```
 
 Congratulations! You now have a single-host Kubernetes cluster
 equipped with {{site.prodname}}.
 
 To access the {{site.prodname}} Manager web interface, navigate to `https://127.0.0.1:30003`.
-
-You should be able to log in , but won't yet be able to see or edit resources.
-To create some RBAC roles that allow full access to everyone, apply [this manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/demo-manifests/rbac-all.yaml).
-
+> **Note**: As part of these instruction we are dealing with self-signed certificates for CNX/K8s services. So, you might need to proceed explicitly from the browser.
+{: .alert .alert-info}
 
 ### Next steps
+**[Experiment with OIDC authentication strategy]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication)**
 
-**[Experiment with RBAC and the {{site.prodname}} Manager web interface]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies)**
+**[Experiment with non-admin users and the web manager]({{site.baseurl}}/{{page.version}}/reference/essentials/non-admin-workflows)**
 
 **[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
