@@ -1,10 +1,6 @@
 ---
-title: Adding Tigera CNX to a Calico install
+title: Installing CNX manager and denied packet monitoring
 ---
-
-> **Note**: These instructions do not apply to OpenShift users. Instead, see
-> [Installing {{site.prodname}} for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/essentials/installation).
-{: .alert .alert-info}
 
 ## Requirements
 
@@ -43,6 +39,24 @@ kubectl get pods -n kube-system | grep cnx-node
 
    You might want to reconfigure the Service that gets traffic to the CNX Manager
    web server as well.
+
+1. Generate TLS credentials - i.e. a web server certificate and key - for the
+   CNX Manager.
+
+   See
+   [Certificates](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
+   for various ways of generating TLS credentials.  As both its Common Name and
+   a Subject Alternative Name, the certificate must have the host name (or IP
+   address) that browsers will use to access the CNX Manager.  In a single-node
+   test deployment this can be just `127.0.0.1`, but in a real deployment it
+   should be a planned host name that maps to the `cnx-manager` Service.
+
+1. Store those credentials as `cert` and `key` in a Secret named
+   `cnx-manager-tls`.  For example:
+
+   ```
+   kubectl create secret generic cnx-manager-tls --from-file=cert=/path/to/certificate --from-file=key=/path/to/key -n kube-system
+   ```
 
 1. Apply the manifest to install CNX Manager and the CNX API server.
 
@@ -179,7 +193,7 @@ certificate, and generated private key files the contents must be base64
 encoded before being added to the manifest file.
 Here is an example command to do the base64 encoding:
 `cat rootCA.pem | base64 -w 0`.
- 
+
 ##### Add Certificate Files to the Manifest
 
 The [cnx.yaml](1.7/cnx.yaml) manifest must be updated
@@ -200,10 +214,10 @@ the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
 are described [here]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication).
 
-1. If using Google login, update the `tigera.cnx-manager.oidc-client-id` field 
+1. If using Google login, update the `tigera.cnx-manager.oidc-client-id` field
    in the `tigera-cnx-manager-config` ConfigMap.
 
-1. Update the `tigera.cnx-manager.kubernetes-api` field 
+1. Update the `tigera.cnx-manager.kubernetes-api` field
    in the `tigera-cnx-manager-config` ConfigMap.  It must be a URL which
    the web client can use to reach the Kubernetes API server.  Note that it
    must be reachable from any system which is going to access the {{site.prodname}}

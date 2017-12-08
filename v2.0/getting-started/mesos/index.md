@@ -1,5 +1,6 @@
 ---
 title: Integration Guide
+redirect_from: latest/getting-started/mesos/index
 ---
 
 {{site.prodname}} introduces IP-per-container & fine-grained security policies to Mesos, while

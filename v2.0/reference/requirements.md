@@ -1,5 +1,6 @@
 ---
 title: Calico System Requirements
+redirect_from: latest/reference/requirements
 ---
 
 Depending on the {{site.prodname}} functionality you are using, there are some requirements your system needs to meet in order for {{site.prodname}} to work properly.

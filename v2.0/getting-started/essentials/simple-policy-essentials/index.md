@@ -1,5 +1,6 @@
 ---
 title: CNX for Kubernetes Demo
+redirect_from: latest/getting-started/essentials/simple-policy-essentials
 ---
 
 This guide is a variation of the simple policy demo intended to introduce the extra features of {{site.prodname}} to people already familiar with Project Calico for Kubernetes.

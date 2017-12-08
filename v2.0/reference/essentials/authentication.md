@@ -1,5 +1,6 @@
 ---
 title: Configuring user authentication to CNX Manager
+redirect_from: latest/reference/essentials/authentication
 ---
 
 This document describes the authentication methods supported by {{site.prodname}}

@@ -93,8 +93,8 @@ called `default`. You can view existing policies by running:
 
 ```
 $ calicoctl get networkpolicy --namespace policy-demo
-NAME                                              TIER
-knp.default.default-deny                          default
+NAMESPACE	NAME                                              TIER
+policy-demo	knp.default.default-deny                          default
 ```
 
 Notice that there is a new `TIER` column. This means that the
@@ -104,7 +104,7 @@ by running:
 
 ```
 $ calicoctl get networkpolicy -o yaml --namespace policy-demo
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: NetworkPolicy
   metadata:
     name: knp.default.default-deny
@@ -130,7 +130,7 @@ You can also get a list of all current tiers that exist by running:
 ```
 $ calicoctl get tiers
 NAME      ORDER
-default   1000
+default   <nil>
 ```
 
 ### Working with Tiers and Tiered Policies
@@ -141,7 +141,7 @@ and give it a higher order of precedence than the `default` tier.
 
 ```
 $ calicoctl create -f - <<EOF
-apiVersion: projectcalico.org/v2
+apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
   name: netops
@@ -164,7 +164,7 @@ netops    100
 Notice that the order value of the netops tier is lower than the value of the
 `default` tier. Lower order values have a higher precedence.
 
-> **Note**: Read more about order values in the 
+> **Note**: Read more about order values in the
 > [calicoctl reference section](../../reference/calicoctl/).
 {: .alert .alert-info}
 
@@ -198,7 +198,7 @@ isn't met.
 # policies. If a policy in a tier is applied to an endpoint but no policy in
 # the tier acts on the traffic, it will be dropped at the end of tier.
 $ calicoctl create -f - <<EOF
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: GlobalNetworkPolicy
   metadata:
     name: netops.no-public-dns-for-policy-demo
@@ -222,7 +222,7 @@ $ calicoctl create -f - <<EOF
         nets: ["8.8.4.4/32"]
     # Explicitly allow other outgoing DNS traffic
     - action: Allow
-      protocol: udp
+      protocol: UDP
       destination:
         ports: [53]
     # Pass other traffic to next tier
@@ -252,7 +252,7 @@ Create a `devops` tier.
 
 ```
 $ calicoctl create -f - <<EOF
-apiVersion: projectcalico.org/v2
+apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
   name: devops
@@ -266,7 +266,7 @@ Then create a GlobalNetworkPolicy in the `devops` tier that will prevent traffic
 
 ```
 $ calicoctl create -f - <<EOF
-- apiVersion: projectcalico.org/v2
+- apiVersion: projectcalico.org/v3
   kind: GlobalNetworkPolicy
   metadata:
     name: devops.policy-demo-isolation
@@ -321,9 +321,9 @@ The `access-nginx` policy is created under the `default` tier.
 ```
 # Get all NetworkPolicies
 $ calicoctl get networkpolicy --namespace policy-demo
-NAME                                              TIER
-knp.default.access-nginx                          default
-knp.default.default-deny                          default
+NAMESPACE	NAME                                              TIER
+policy-demo	knp.default.access-nginx                          default
+policy-demo	knp.default.default-deny                          default
 ```
 
 We should now be able to access the Service from the access Pod.

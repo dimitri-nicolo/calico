@@ -1,5 +1,6 @@
 ---
 title: calicoq and selectors
+redirect_from: latest/reference/calicoq/selectors
 ---
 
 The queries that you can make with `calicoq` all involve computing the matches

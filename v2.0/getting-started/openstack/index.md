@@ -1,5 +1,6 @@
 ---
 title: Calico for OpenStack
+redirect_from: latest/getting-started/openstack/index
 ---
 
 {{site.prodname}}'s integration with OpenStack consists of the following pieces.

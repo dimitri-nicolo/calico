@@ -1,5 +1,6 @@
 ---
 title: Policy Violation Monitoring & Reporting
+redirect_from: latest/reference/essentials/policy-violations
 ---
 
 {{site.prodname}} adds the ability to monitor violations of policy

@@ -1,5 +1,6 @@
 ---
 title: External Connectivity
+redirect_from: latest/usage/external-connectivity
 ---
 
 {{site.prodname}} creates a routed network on which your containers look like normal IP

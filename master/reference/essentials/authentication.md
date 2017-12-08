@@ -32,24 +32,26 @@ serving on port 30003, but you may wish to set up connectivity differently.
    - Note down the client ID.
 
 2. [Configure the Kubernetes API server to use it](https://kubernetes.io/docs/admin/authentication/#configuring-the-api-server).
-   - Use the client ID from above.
+   - Example command: `sed -i "/- kube-apiserver/a\    - --oidc-issuer-url=https://accounts.google.com\n    - --oidc-username-claim=email\n    - --oidc-client-id==<client_ID_from_above>" /etc/kubernetes/manifests/kube-apiserver.yaml`
 
 3. Configure {{site.prodname}} Manager to use it
-   - Set the client ID in the `cnx-manager-config` ConfigMap (referenced
+   - Set the client ID in the `tigera-cnx-manager-config` ConfigMap (referenced
      in the installation instructions).
 
-4. If CNX Manager has already been deployed, restart the web server.
+4. If CNX Manager has already been deployed, restart the web server (achieved by deleting the pod).
 
    ```
-   kubectl autoscale deployment cnx-manager -n kube-system --replicas=0
-   kubectl autoscale deployment cnx-manager -n kube-system --replicas=1
+   kubectl delete pod cnx-manager-<hash> -n kube-system
    ```
 
-Configure Kubernetes RBAC bindings depending on the settings used for
-`--oidc-username/groups-claim` and `--oidc-username/groups-prefix` on the API server.
-When using this login method, be aware that most people have Google
-accounts, so the `system:authenticated` group will include anybody who can
-reach the cluster.
+Configure Kubernetes RBAC bindings depending on the settings used for `--oidc-username/groups-claim` and `--oidc-username/groups-prefix` on the API server.
+
+Or, as for a quickstart step for the email address you want to login with, bind the email address with the `cluster-admin` role to give full access.
+   ```
+   kubectl create clusterrolebinding oidc-user-permissive-binding \
+   --clusterrole=cluster-admin \
+   --user=<email_address>
+   ```
 
 ### Basic authentication (username / password)
 

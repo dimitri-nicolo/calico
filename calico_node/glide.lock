@@ -1,5 +1,5 @@
-hash: 62fad0964a7a9a637807861609626f5f1f80df85248ddad5dfc0ebcdd27d27f7
-updated: 2017-11-23T11:42:03.777121098Z
+hash: 2ef46a01e8f9529364dc74bd7e2fd6c6c505099df938afba1f9e0e5bb002d82b
+updated: 2017-12-04T15:06:02.788807775Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -133,7 +133,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: c893efa28eb45626cdaa76c9f653b62488858837
+  version: 9aef6c6952f2e285f6fef1caaf7638ef51c81e6e
   subpackages:
   - format
   - internal/assertion
@@ -159,7 +159,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 06a1d46d8f5af1246f59883181b20580acf005fa
+  version: 542c7908f045010ce8e2780af470ac709ee17cc9
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/api
@@ -202,17 +202,17 @@ imports:
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
+  version: 2e54d0b93cba2fd133edc32211dcc32c06ef72ca
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a1dba9ce8baed984a2495b658c82687f8157b98f
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
@@ -226,7 +226,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: golang.org/x/crypto
-  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
+  version: 1351f936d976c60a0a48d728281922cf63eafb8d
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net

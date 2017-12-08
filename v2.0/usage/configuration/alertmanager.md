@@ -1,5 +1,6 @@
 ---
 title: Configuring Alertmanager
+redirect_from: latest/usage/configuration/alertmanager
 ---
 
 Alertmanager is used by Tigera Essentials Toolkit to route alerts from Prometheus to the administrators.

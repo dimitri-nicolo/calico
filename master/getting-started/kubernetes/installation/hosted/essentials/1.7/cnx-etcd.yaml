@@ -21,6 +21,10 @@ metadata:
   name: tigera-cnx-manager-config
   namespace: kube-system
 data:
+  # Authentication type.  Must be set to "OIDC", "Basic" or "StaticToken".
+  tigera.cnx-manager.authentication-type: "OIDC"
+  # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
+  tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
   tigera.cnx-manager.oidc-client-id: "<fill-in-your-oauth-client-id-here>"
@@ -66,7 +70,7 @@ spec:
     k8s-app: cnx-manager
   ports:
     - port: 8080
-      targetPort: 80
+      targetPort: 443
       nodePort: 30003
   type: NodePort
 
@@ -136,7 +140,7 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 443
+    targetPort: 5443
   selector:
     apiserver: "true"
 
@@ -162,9 +166,12 @@ spec:
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
+      hostNetwork: true
       containers:
       - name: cnx-apiserver
         image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+        args:
+        - "--secure-port=5443"
         env:
           - name: ETCD_ENDPOINTS
             valueFrom:
@@ -173,33 +180,35 @@ spec:
                 key: etcd_endpoints
           - name: DATASTORE_TYPE
             value: "etcdv3"
+          # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
-          - name: ETCD_CA_CERT_FILE
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: etcd_ca
+          # - name: ETCD_CA_CERT_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_ca
           # Location of the client key for etcd.
-          - name: ETCD_KEY_FILE
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: etcd_key
+          # - name: ETCD_KEY_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_key
           # Location of the client certificate for etcd.
-          - name: ETCD_CERT_FILE
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: etcd_cert
+          # - name: ETCD_CERT_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_cert
         volumeMounts:
-          - mountPath: /calico-secrets
-            name: etcd-certs
+          # - mountPath: /calico-secrets
+          #   name: etcd-certs
           - mountPath: /code/apiserver.local.config/certificates
             name: apiserver-certs
       volumes:
-        - name: etcd-certs
-          secret:
-            secretName: calico-etcd-secrets
+        # If you're using TLS enabled etcd uncomment the following.
+        # - name: etcd-certs
+        #   secret:
+        #     secretName: calico-etcd-secrets
         - name: apiserver-certs
           secret:
             secretName: cnx-apiserver-certs
@@ -236,10 +245,21 @@ spec:
       # This, along with the annotation above marks this pod as a critical add-on.
       - key: CriticalAddonsOnly
         operator: Exists
+      hostNetwork: true
       containers:
       - name: cnx-manager
         image: {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
         env:
+          - name: CNX_WEB_AUTHENTICATION_TYPE
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.authentication-type
+          - name: CNX_WEB_OIDC_AUTHORITY
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.oidc-authority
           - name: CNX_WEB_OIDC_CLIENT_ID
             valueFrom:
               configMapKeyRef:
@@ -250,3 +270,29 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.kubernetes-api
+        volumeMounts:
+        - mountPath: /etc/cnx-manager-web-tls
+          name: cnx-manager-tls
+      volumes:
+      - name: cnx-manager-tls
+        secret:
+          secretName: cnx-manager-tls
+
+---
+
+# Create a NodePort to expose the web application
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: cnx-manager
+  name: cnx-manager
+  namespace: kube-system
+spec:
+  selector:
+    k8s-app: cnx-manager
+  ports:
+    - port: 8080
+      targetPort: 443
+      nodePort: 30003
+  type: NodePort

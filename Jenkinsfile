@@ -2,7 +2,7 @@
 pipeline{
     agent { label 'containers' }
     parameters {
-        string(name: 'calicoctl_url', defaultValue: 'gs://tigera-essentials/calicoctl-v1.0.3-rc1', description: 'URL of calicoctl to use in tests')
+        string(name: 'calicoctl_url', defaultValue: 'gs://tigera-essentials/calicoctl-v2.0.0-cnx-beta1', description: 'URL of calicoctl to use in tests')
     }
     triggers{
         pollSCM('H/5 * * * *')

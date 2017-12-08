@@ -1,5 +1,6 @@
 ---
 title: Tier Resource (tier)
+redirect_from: latest/reference/calicoctl/resources/tier
 no_canonical: true
 ---
 
@@ -30,7 +31,7 @@ If the last Tier applying to the endpoint `pass`es the packet, that endpoint's [
 ### Sample YAML
 
 ```yaml
-apiVersion: projectcalico.org/v2
+apiVersion: projectcalico.org/v3
 kind: Tier
 metadata:
   name: internal-access

@@ -1,5 +1,6 @@
 ---
 title: Tigera CNX Manager Policy Editor
+redirect_from: latest/reference/essentials/policy-editor
 ---
 
 Tigera CNX Manager includes a web client for viewing and editing
@@ -105,3 +106,32 @@ created in this tier, such as [Kubernetes network policy resources](https://kube
 Note that policies in the default tier are generally created by the
 orchestrator integration, and it is best to edit the original Kubernetes
 `NetworkPolicy` resources instead.
+
+## Secure HTTPS
+
+The CNX Manager Web UI uses HTTPS to securely access the CNX Manager and
+Kubernetes and CNX API servers over TLS - where 'securely' means that these
+communications are encrypted and that the browser can be sure that it is
+speaking to those servers.  The web browser should display `Secure` in the
+address bar, to indicate this.
+
+If the web browser does not display `Secure`, the likely reasons - and how to
+fix them - are as follows.
+
+- Your browser does not know about (and trust) the certificate authorities that
+  issued the certificates that the Kubernetes API server and CNX Manager are
+  using - typically because your installation process has generated and used
+  its own certificate authority (CA) instead of using one of the recognized
+  ones.  If so, you can fix that, on a per-browser basis, by importing the CA
+  certificates into that browser.  In Google Chrome this can be done under
+  Settings, Advanced, Privacy and security, Manage certificates, Authorities,
+  Import.
+
+- The certificates have a Common Name or Subject Alternative Name that is
+  different from the host name or IP address - i.e. what it says in the browser
+  address bar - that you are using to access the CNX Manager server.  In Google
+  Chrome you can check the CNX Manager certificate with Developer Tools
+  (Ctrl+Shift+I), Security.  In this case the fix is to reissue the certificate
+  with correct Common Name and Subject Alternative Name, update the
+  `cnx-manager-tls` secret to include the new certificate, and kill the CNX
+  Manager pod so that it is restarted.

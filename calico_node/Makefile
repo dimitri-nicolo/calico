@@ -28,8 +28,8 @@ V_KUBE_CONTROLLERS := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELE
 V_LIBNETWORK_PLUGIN := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.libnetwork-plugin.version')
 V_TYPHA := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.typha.version')
 V_CALICOQ := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
-V_APISERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/k8sapiserver.version')
-V_CNX_WEB_MANAGER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-web-manager.version')
+V_APISERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-apiserver.version')
+V_CNX_WEB_MANAGER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-manager.version')
 
 # Now use ?= to allow the versions derived from versions.yml to be
 # overriden (by the environment).
@@ -90,19 +90,21 @@ NODE_CONTAINER_FILES=$(shell find $(NODE_CONTAINER_DIR)/filesystem -type f)
 NODE_CONTAINER_CREATED=$(NODE_CONTAINER_DIR)/.calico_node.created
 NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
 NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
-FELIX_REPO?=calico/felix
+FELIX_REPO?=tigera/felix
 FELIX_CONTAINER_NAME?=$(FELIX_REPO):$(FELIX_VER)
 FELIX_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/felix
 CONFD_REPO?=calico/confd
 CONFD_CONTAINER_NAME?=$(CONFD_REPO):$(CONFD_VER)
 LIBNETWORK_PLUGIN_REPO?=calico/libnetwork-plugin
 LIBNETWORK_PLUGIN_CONTAINER_NAME?=$(LIBNETWORK_PLUGIN_REPO):$(LIBNETWORK_PLUGIN_VER)
-CTL_CONTAINER_NAME?=calico/ctl:$(CALICOCTL_VER)
+CTL_CONTAINER_NAME?=tigera/calicoctl:$(CALICOCTL_VER)
 CTL_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/calicoctl
-CALICOQ_CONTAINER_NAME?=calico/calicoq:$(CALICOQ_VER)
+CALICOQ_CONTAINER_NAME?=tigera/calicoq:$(CALICOQ_VER)
 CALICOQ_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/calicoq
 APISERVER_CONTAINER_NAME?=tigera/cnx-apiserver:$(APISERVER_VER)
-APISERVER_IMAGE?=gcr.io/tigera-dev/cnx/tigera/k8sapiserver
+APISERVER_IMAGE?=gcr.io/tigera-dev/cnx/tigera/cnx-apiserver
+TYPHA_CONTAINER_NAME?=tigera/typha:$(TYPHA_VER)
+TYPHA_IMAGE?=gcr.io/tigera-dev/cnx/tigera/typha
 
 STARTUP_DIR=$(NODE_CONTAINER_DIR)/startup
 STARTUP_FILES=$(shell find $(STARTUP_DIR) -name '*.go')
@@ -726,8 +728,11 @@ $(RELEASE_DIR_IMAGES)/cnx-node.tar:
 
 $(RELEASE_DIR_IMAGES)/calico-typha.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker pull calico/typha:$(TYPHA_VER)
-	docker save --output $@ calico/typha:$(TYPHA_VER)
+	if [ "$(docker images -q $$(TYPHA_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(TYPHA_IMAGE):$(TYPHA_VER); \
+	  docker tag $(TYPHA_IMAGE):$(TYPHA_VER) $(TYPHA_CONTAINER_NAME); \
+	fi;
+	docker save --output $@ tigera/typha:$(TYPHA_VER)
 
 $(RELEASE_DIR_IMAGES)/calico-cni.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)

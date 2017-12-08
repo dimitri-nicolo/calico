@@ -103,7 +103,7 @@ The code is a little roundabout for a few reasons:
                     <li><a href="https://www.projectcalico.org/mvp"><i class="fa fa-star" aria-hidden="true"></i> &nbsp; MVP Program</a></li>
                     <li><a href="https://www.projectcalico.org/community#events"><i class="fa fa-calendar" aria-hidden="true"></i> &nbsp; Upcoming Events</a></li>
                     <li><a href="https://www.projectcalico.org/newsletters"><i class="fa fa-envelope-o" aria-hidden="true"></i> &nbsp; Newsletter</a></li>
-                    <li><a href="https://github.com/projectcalico" target="_blank"><i class="fa fa-github" aria-hidden="true"></i> &nbsp; GitHub</a></li> 
+                    <li><a href="https://github.com/projectcalico" target="_blank"><i class="fa fa-github" aria-hidden="true"></i> &nbsp; GitHub</a></li>
                     <li><a href="https://www.projectcalico.org/jobs"><i class="fa fa-briefcase" aria-hidden="true"></i> &nbsp; Jobs</a></li>
                     <li><a href="https://www.projectcalico.org/blog"><i class="fa fa-bookmark" aria-hidden="true"></i> &nbsp; Blog</a></li>
                 </ul>
@@ -127,16 +127,7 @@ The code is a little roundabout for a few reasons:
              <li class="dropdown">
                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Version ({% if page.version == 'master' %}nightly{% else %}{{page.version}}{% endif %})<span class="caret"></span></a>
                <ul class="dropdown-menu">
-                 <li><a href="{{site.baseurl}}/v2.6/introduction">v2.6 (latest)</a></li>
-                 <li><a href="{{site.baseurl}}/v2.5/introduction">v2.5</a></li>
-                 <li><a href="{{site.baseurl}}/v2.4/introduction">v2.4</a></li>
-                 <li><a href="{{site.baseurl}}/v2.3/introduction">v2.3</a></li>
-                 <li><a href="{{site.baseurl}}/v2.2/introduction">v2.2</a></li>
-                 <li><a href="{{site.baseurl}}/v2.1/introduction">v2.1</a></li>
-                 <li><a href="{{site.baseurl}}/v2.0/introduction">v2.0</a></li>
-                 <li><a href="{{site.baseurl}}/v1.6/introduction">v1.6</a></li>
-                 <li><a href="{{site.baseurl}}/v1.5/introduction">v1.5</a></li>
-                 <li><a href="{{site.baseurl}}/v3.0/introduction">v3.0 (beta)</a></li>
+                 <li><a href="{{site.baseurl}}/v2.0/introduction">v2.0 (beta)</a></li>
                  <li><a href="{{site.baseurl}}/master/introduction">nightly</a></li>
                  <li role="separator" class="divider"></li>
                </ul>
@@ -192,13 +183,13 @@ The code is a little roundabout for a few reasons:
             <div id="content-main">
               <!-- TOP DOCUMENTATION PAGE NAVBAR -->
               <div style="text-align: left; padding: 18px 0 9px 0; min-width: 500px; overflow-x: hidden;">
-              
+
               <a data-proofer-ignore href="https://github.com/projectcalico/calico/tree/master/{{page.path}}" style="color: #999; text-decoration: none; float: right;" target="_blank"><i class="fa fa-github" aria-hidden="true"></i> Edit this page</a></div>
               <!-- END TOP DOCUMENTATION PAGE NAVBAR -->
               {% include version_warning.html %}
               <h1>{{ page.title }}</h1>
               {{ content }}
-              
+
               <!-- BOTTOM DOCUMENTATION PAGE NAVBAR -->
               <!-- END BOTTOM DOCUMENTATION PAGE NAVBAR -->
             </div>
@@ -250,17 +241,17 @@ The code is a little roundabout for a few reasons:
 				"showLoader": false,
                 "style": "oxygen",
                 "isDummy": false
-            } 
+            }
         });
         RW.render();
     };
         // Append Rating-Widget JavaScript library.
     var rw, s = d.getElementsByTagName(e)[0], id = "rw-js",
-        l = d.location, ck = "Y" + t.getFullYear() + 
+        l = d.location, ck = "Y" + t.getFullYear() +
         "M" + t.getMonth() + "D" + t.getDate(), p = l.protocol,
         f = ((l.search.indexOf("DBG=") > -1) ? "" : ".min"),
         a = ("https:" == p ? "secure." + m + "js/" : "js." + m);
-    if (d.getElementById(id)) return;              
+    if (d.getElementById(id)) return;
     rw = d.createElement(e);
     rw.id = id; rw.async = true; rw.type = "text/javascript";
     rw.src = p + "//" + a + "external" + f + ".js?ck=" + ck;

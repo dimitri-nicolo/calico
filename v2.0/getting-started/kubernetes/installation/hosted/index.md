@@ -1,47 +1,30 @@
 ---
 title: Calico Kubernetes Hosted Install
+redirect_from: latest/getting-started/kubernetes/installation/hosted/index
 ---
 
 {% include {{page.version}}/load-docker.md %}
 
 ## Installing
 
-Calico can be installed on a Kubernetes cluster with a single application.
+CNX is installed on a cluster by configuring and applying Kubernetes manifests.
 
-Update the manifest with the path to your private docker registry.  Substitute
-`mydockerregistry:5000` with the location of your docker registry.
-
-```
-sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
-```
-
-Apply the manifest.
-
-```
-kubectl apply -f calico.yaml
-```
-
-We maintain several manifests.  Which one you use depends on the specific
-requirements of your Calico installation:
+We maintain several manifests.  Which ones you use depends on the specific
+requirements of your CNX installation:
 
 #### [Standard Hosted Install](hosted)
 
-This manifest installs Calico for use with an existing etcd cluster.  This is
-the recommended hosted approach for deploying Calico in production.
+Install CNX for use with an existing etcd cluster.  This is
+the recommended hosted approach for deploying CNX in production.
 
 #### [Kubeadm Hosted Install](kubeadm/)
 
-This manifest installs Calico as well as a single node etcd cluster.  This is the recommended hosted approach
-for getting started quickly with Calico in conjunction with tools like kubeadm.
+Install CNX as well as a single node etcd cluster.  This is the recommended hosted approach
+for getting started quickly with CNX in conjunction with tools like kubeadm.
 
 #### [Kubernetes Datastore](kubernetes-datastore/)
 
-This manifest installs Calico in a mode where it does not require its own etcd cluster.
-
-## Adding Tigera CNX
-
-Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](essentials/cnx).
+Install CNX in a mode where it does not require its own etcd cluster.
 
 ## How it works
 

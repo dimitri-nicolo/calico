@@ -1,5 +1,6 @@
 ---
 title: Configuring MTU
+redirect_from: latest/usage/configuration/mtu
 ---
 
 Depending on the environment {{site.prodname}} is being deployed into it may be

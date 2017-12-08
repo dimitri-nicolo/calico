@@ -1,54 +1,136 @@
 v2.0:
-- title: v2.0.0-cnx-beta1-rc3
+- title: v2.0.0-cnx-beta2
   note: |
-    17 November 2017
-    
+    03 December 2017
+
     This is a pre-release of v2.0.0. This release is intended for testing purposes only and is NOT to be used on production systems.
+
     #### What's new
-    - Move to Calico v3.0.0-beta1
+
+    - **Tiered policy**: policies can be grouped into tiers to allow structured security policy.
 
     - **CNX Manager**: a new web interface allows you to edit and manage tiers and policies.
-    
-    - **CNX API server**: you can now use a RESTful API to edit and manage tiers and policies. 
-    
-    - **Tiered policy**: policies can now be grouped into tiers when using the Kubernetes API datastore.
-    
-    - **Role-based access control (RBAC) with tiers**: you can use RBAC with tiers to achieve fine-grained control over which users can access which policies and what operations they can perform.
-    
+
+    - **CNX API server**: a RESTful API to edit and manage tiers and policies that can impose fine-grained control over what tiers users can manipulate policies in.
+
     - **Prometheus operator update**: this release includes a newer Prometheus operator.
+
+    - **Built on Calico v3.0.0-beta1**: including features and limitations of that release other than as specified here.
 
     #### Limitations
 
-    - **No upgrades**: this version of {{site.prodname}} ends support for etcd version 2. Existing customers must migrate their data to etcd version 3. The alpha and beta releases do not provide migration capabilities, nor do they support upgrades. We plan to add migration and upgrade support in the GA release.
+    - **No upgrades**: existing customers should start a fresh cluster for testing this release.  There is no migration support, and it is not possible to upgrade to or from this release.  We plan to add migration and upgrade support in the GA release from and to other GA releases, but never this beta.
 
-    - **Integrates only with Kubernetes, OpenShift, and host endpoints**: the OpenStack, Mesos, DC/OS, rkt, and Docker orchestrators have not been tested and are not supported. ({{site.prodname}} still supports Docker and rkt containers.) We plan to resume support for the OpenStack, Mesos, DC/OS, and Docker orchestrators in a future release.
+    - **Integrates only with Kubernetes and host endpoints**: the OpenShift, OpenStack, Mesos, DC/OS, rkt, and Docker orchestrators have not been tested and are not supported. (CNX still supports Docker and rkt containers.) We plan to resume support for the OpenShift, OpenStack, Mesos, DC/OS, and Docker orchestrators in a future release.
 
     - **BGP route reflector not supported**: large deployments that require the [BGP route reflector](https://docs.projectcalico.org/v3.0/usage/routereflector/bird-rr-config) are not supported. We plan to resume support for the BGP route reflector in a future release.
-    
-    - **GoBGP not supported**: Setting the `CALICO_NETWORKING_BACKEND` environment variable to `gobgp` is not supported. See [Configuring calico/node](https://docs.projectcalico.org/v3.0/reference/node/configuration) for more information. We plan to resume support for GoBPG in a future release.
+
+    - **GoBGP not supported**: setting the `CALICO_NETWORKING_BACKEND` environment variable to `gobgp` is not supported. See [Configuring calico/node](https://docs.projectcalico.org/v3.0/reference/node/configuration) for more information. We plan to resume support for GoBPG in a future release.
+
+    - **Typha not supported**: the Typha datastore proxy is not supported in this release.
 
   components:
     cnx-manager:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta2
       url: ""
     cnx-apiserver:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta2
       url: ""
     calicoq:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta2
       url: ""
     felix:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta2
       url: ""
     typha:
-      version: v2.0.0-cnx-beta1-rc3
+      version: v2.0.0-cnx-beta2
       url: ""
     calicoctl:
-      version: v2.0.0-cnx-beta1-rc3
+      version: v2.0.0-cnx-beta2
       url: ""
       download_url: ""
     cnx-node:
-      version: v2.0.0-cnx-beta1-rc2
+      version: v2.0.0-cnx-beta2
+      url: ""
+    calico/cni:
+      version: v2.0.0-beta1
+      url: https://github.com/projectcalico/cni-plugin/releases/tag/v2.0.0-beta1
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.0-beta1/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.0-beta1/calico-ipam
+    calico/kube-controllers:
+      version: v2.0.0-beta1
+      url: https://github.com/projectcalico/k8s-policy/releases/tag/v2.0.0-beta1
+    confd:
+      version: v1.0.0-beta1
+      url: https://github.com/projectcalico/confd/releases/tag/v1.0.0-beta1
+    calico-bird:
+      version: v0.3.1
+      url: https://github.com/projectcalico/calico-bird/releases/tag/v0.3.1
+    calico-bgp-daemon:
+      version: v0.2.1
+      url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
+    libnetwork-plugin:
+      version: v1.1.0
+      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
+    networking-calico:
+      version: 1.4.3
+      url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
+    calico/routereflector:
+      version: v0.4.0
+      url: ""
+
+- title: v2.0.0-cnx-beta1
+  note: |
+    28 November 2017
+
+    This is a pre-release of v2.0.0. This release is intended for testing purposes only and is NOT to be used on production systems.
+
+    #### What's new
+
+    - **Tiered policy**: policies can be grouped into tiers to allow structured security policy.
+
+    - **CNX Manager**: a new web interface allows you to edit and manage tiers and policies.
+
+    - **CNX API server**: a RESTful API to edit and manage tiers and policies that can impose fine-grained control over what tiers users can manipulate policies in.
+
+    - **Prometheus operator update**: this release includes a newer Prometheus operator.
+
+    - **Built on Calico v3.0.0-beta1**: including features and limitations of that release other than as specified here.
+
+    #### Limitations
+
+    - **No upgrades**: existing customers should start a fresh cluster for testing this release.  There is no migration support, and it is not possible to upgrade to or from this release.  We plan to add migration and upgrade support in the GA release from and to other GA releases, but never this beta.
+
+    - **Integrates only with Kubernetes and host endpoints**: the OpenShift, OpenStack, Mesos, DC/OS, rkt, and Docker orchestrators have not been tested and are not supported. (CNX still supports Docker and rkt containers.) We plan to resume support for the OpenShift, OpenStack, Mesos, DC/OS, and Docker orchestrators in a future release.
+
+    - **BGP route reflector not supported**: large deployments that require the [BGP route reflector](https://docs.projectcalico.org/v3.0/usage/routereflector/bird-rr-config) are not supported. We plan to resume support for the BGP route reflector in a future release.
+
+    - **GoBGP not supported**: setting the `CALICO_NETWORKING_BACKEND` environment variable to `gobgp` is not supported. See [Configuring calico/node](https://docs.projectcalico.org/v3.0/reference/node/configuration) for more information. We plan to resume support for GoBPG in a future release.
+
+    - **Typha not supported**: the Typha datastore proxy is not supported in this release.
+
+  components:
+    cnx-manager:
+      version: v2.0.0-cnx-beta1
+      url: ""
+    cnx-apiserver:
+      version: v2.0.0-cnx-beta1
+      url: ""
+    calicoq:
+      version: v2.0.0-cnx-beta1
+      url: ""
+    felix:
+      version: v2.0.0-cnx-beta1
+      url: ""
+    typha:
+      version: v2.0.0-cnx-beta1
+      url: ""
+    calicoctl:
+      version: v2.0.0-cnx-beta1
+      url: ""
+      download_url: ""
+    cnx-node:
+      version: v2.0.0-cnx-beta1
       url: ""
     calico/cni:
       version: v2.0.0-beta1
@@ -80,19 +162,19 @@ v2.0:
 - title: v2.0.0-cnx-alpha1
   note: |
     12 November 2017
-    
+
     This is a pre-release of v2.0.0. This release is intended for testing purposes only and is NOT to be used on production systems.
     #### What's new
     - Move to Calico v3.0.0-alpha1
 
     - **CNX Manager**: a new web interface allows you to edit and manage tiers and policies.
-    
-    - **Tigera CNX API**: you can now use a RESTful API to edit and manage tiers and policies. 
-    
+
+    - **Tigera CNX API**: you can now use a RESTful API to edit and manage tiers and policies.
+
     - **Tiered policy**: policies can now be grouped into tiers when using the Kubernetes API datastore.
-    
+
     - **Role-based access control (RBAC) with tiers**: you can use RBAC with tiers to achieve fine-grained control over which users can access which policies and what operations they can perform.
-    
+
     - **Prometheus operator update**: this release includes a newer Prometheus operator.
 
   components:
@@ -183,7 +265,7 @@ master:
       version: v0.3.1
       url: https://github.com/projectcalico/calico-bird/releases/tag/v0.3.1
     confd:
-      version: master 
+      version: master
     calico-bgp-daemon:
       version: v0.2.2
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.2
@@ -204,4 +286,4 @@ master:
 currentReleaseStream: v2.0
 
 # Local directories to ignore when checking external links
-htmlProoferLocalDirIgnore: 
+htmlProoferLocalDirIgnore:
