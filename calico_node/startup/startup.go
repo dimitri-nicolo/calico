@@ -14,6 +14,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -135,7 +136,11 @@ func main() {
 
 	// Write the startup.env file now that we are ready to start other
 	// components.
-	writeStartupEnv(nodeName)
+	sEnv := map[string]string{
+		"NODENAME": nodeName,
+		"NODEVERSION": VERSION,
+	}
+	writeStartupEnv(sEnv)
 
 	// Tell the user what the name of the node is.
 	log.Infof("Using node name: %s", nodeName)
@@ -233,12 +238,15 @@ func waitForConnection(ctx context.Context, c client.Interface) {
 // writeStartupEnv writes out the startup.env file to set environment variables
 // that are required by confd/bird etc. but may not have been passed into the
 // container.
-func writeStartupEnv(nodeName string) {
-	text := "export NODENAME=" + nodeName + "\n"
+func writeStartupEnv(envVars map[string]string) {
+	var textBuf bytes.Buffer
+	for k, v := range envVars {
+		textBuf.WriteString(fmt.Sprintf("export %s=%s\n", strings.ToUpper(k), v))
+	}
 
 	// Write out the startup.env file to ensure required environments are
 	// set (which they might not otherwise be).
-	if err := ioutil.WriteFile("startup.env", []byte(text), 0666); err != nil {
+	if err := ioutil.WriteFile("startup.env", textBuf.Bytes(), 0666); err != nil {
 		log.WithError(err).Info("Unable to write to startup.env")
 		log.Warn("Unable to write to local filesystem")
 		terminate()

@@ -84,8 +84,6 @@ if [ "$CALICO_DISABLE_FILE_LOGGING" == "true" ]; then
 	rm -rf /etc/service/enabled/calico-bgp-daemon/log
 fi
 
-# TODO: Find a way to plumb the version in here.
-CALICO_VERSION="v2.0.0-cnx-beta2"
-echo "Version: $CALICO_VERSION"
+echo "CNX Version: $NODEVERSION"
 
 echo "Calico node started successfully"
