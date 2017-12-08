@@ -15,7 +15,15 @@
 package conversion
 
 const (
-	NamespaceLabelPrefix       = "pcns."
-	NamespaceProfileNamePrefix = "kns."
-	K8sNetworkPolicyNamePrefix = "knp.default."
+	NamespaceLabelPrefix            = "pcns."
+	NamespaceProfileNamePrefix      = "kns."
+	K8sNetworkPolicyNamePrefix      = "knp.default."
+	ServiceAccountLabelPrefix       = "pcsa."
+	ServiceAccountProfileNamePrefix = "ksa."
+
+	// AnnotationPodIP is an annotation we apply to pods when assigning them an IP.  It
+	// duplicates the value of the Pod.Status.PodIP field, which is set by kubelet but,
+	// since we write it ourselves, we can make sure that it is written synchronously
+	// and quickly.
+	AnnotationPodIP = "cni.projectcalico.org/podIP"
 )
