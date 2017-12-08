@@ -204,7 +204,8 @@ the host. Instead, continue directly to the
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
-   > **Note**: We created the basic_auth.csv under /etc/kubernetes/pki because that volume is mounted by default on the kube-apiserver pod with a kubeadm installation.
+   > **Note**: We created the basic_auth.csv under /etc/kubernetes/pki because that volume is 
+   mounted by default on the kube-apiserver pod with a kubeadm installation.
    {: .alert .alert-info}
 
 1. Configure the {{site.prodname}} API server to allow
@@ -239,7 +240,7 @@ the host. Instead, continue directly to the
    
    > **Note**: On Firefox, you must also type a {{site.prodname}} API server endpoint 
    into the address bar and accept this additional certificate. For example:
-   `https://127.0.0.1:6443/apis/projectcalico.org/v3/namespaces`.
+   `https://127.0.0.1:6443/apis/projectcalico.org/v3/namespaces/default/networkpolicies`.
    {: .alert .alert-info}
    
 1. Type **jane** in the **Login** box and **welc0me** in the **Password** box. 
