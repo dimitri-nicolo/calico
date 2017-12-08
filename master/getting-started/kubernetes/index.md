@@ -5,11 +5,10 @@ title: Quickstart for Tigera CNX on Kubernetes
 
 ### Overview
 
-This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}} (with Calico in etcd mode)
-in approximately 30 minutes.  You must run the cluster on a linux system with a
-web browser (possibly a VM).  You can use this cluster for testing and development.
+This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}
+in approximately 30 minutes. You can use this cluster for testing and development.
 
-To deploy a cluster suitable for production, refer to [Installation](https://docs.projectcalico.org/master/getting-started/kubernetes/installation/).
+To deploy a cluster suitable for production, refer to [Installation](/{{page.version}}/getting-started/kubernetes/installation/).
 
 
 ### Requirements
@@ -19,7 +18,6 @@ To deploy a cluster suitable for production, refer to [Installation](https://doc
 - 4GB RAM
 - 10GB free disk space
 - RedHat Enterprise Linux 7.x+, CentOS 7.x+, Ubuntu 16.04+, or Debian 8.x+
-- A Google account for login
 
 
 ### Before you begin
@@ -37,9 +35,10 @@ the host. Instead, continue directly to the
 1. As a regular user with sudo privileges, open a terminal on the host that
    you installed kubeadm on.
 
-1. Download the {{site.prodname}} images and add them to Docker.  Obtain the
-   archives containing the images from your support representative, and then
-   run the following commands to load them.
+1. [Download the `cnx-apiserver`, `cnx-node`, and `cnx-manager` private binaries](/{{page.version}}/getting-started/).
+
+1. Load the `cnx-apiserver`, `cnx-node`, and `cnx-manager` binaries into your
+   local Docker engine.
 
    ```
    docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}.tar.xz
@@ -47,26 +46,22 @@ the host. Instead, continue directly to the
    docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"].version}}.tar.xz
    ```
 
-1. Update your package definitions and upgrade your existing packages.
+1. Initialize the master using the following command.
 
    ```
-   sudo apt-get update && sudo apt-get upgrade
+   sudo kubeadm init --pod-network-cidr=192.168.0.0/16
    ```
 
-1. Initialize the master using the following command and configure kubectl.
-
-   ```
-   sudo kubeadm init --pod-network-cidr 192.168.0.0/16
-   ```
-   Execute the commands to configure kubectl as returned by
+1. Execute the commands to configure kubectl as returned by
    `kubeadm init`. Most likely they will be as follows:
+   
    ```
    mkdir -p $HOME/.kube
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
 
-1. Download the [`calico.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml).
+1. Download the [`calico.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml){:target="_blank"}.
 
 1. Since you have loaded the private {{site.prodname}} images locally, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
 
@@ -86,9 +81,8 @@ the host. Instead, continue directly to the
    configmap "calico-config" created
    daemonset "calico-etcd" created
    service "calico-etcd" created
-   daemonset "cnx-node" created
+   daemonset "{{site.noderunning}}" created
    deployment "calico-kube-controllers" created
-   deployment "calico-policy-controller" created
    clusterrolebinding "calico-cni-plugin" created
    clusterrole "calico-cni-plugin" created
    serviceaccount "calico-cni-plugin" created
@@ -97,7 +91,8 @@ the host. Instead, continue directly to the
    serviceaccount "calico-kube-controllers" created
    ```
 
-1. Considering its a single node cluster, remove the taints on the master so that pods can be scheduled on it.
+1. Remove the taints on the master so that you can schedule pods
+   on it.
 
    ```
    kubectl taint nodes --all node-role.kubernetes.io/master-
@@ -109,19 +104,37 @@ the host. Instead, continue directly to the
    node "<your-hostname>" untainted
    ```
 
-   > **Note**: At this point, you should have a fully functional kubernetes cluster with calico. Confirm that you now have the node(s) `STATUS` as `Ready` using the command: `kubectl get nodes`
-   {: .alert .alert-info}
+1. Confirm that you now have a node in your cluster with the 
+   following command.
+   
+   ```
+   kubectl get nodes -o wide
+   ```
+   
+   It should return something like the following.
+   
+   ```
+   NAME             STATUS  ROLES   AGE  VERSION  EXTERNAL-IP  OS-IMAGE            KERNEL-VERSION     CONTAINER-RUNTIME
+   <your-hostname>  Ready   master  1h   v1.8.x   <none>       Ubuntu 16.04.3 LTS  4.10.0-28-generic  docker://1.12.6
+   ```
+   
+1. Use the following command to create a secret called `cnx-manager-tls` 
+   containing the self-signed Kubernetes API server certificate and key 
+   generated by kubeadm. We can use these to achieve TLS-encrypted 
+   communications with the {{site.prodname}} Manager.
 
-   Now, continuing onto setting up the CNX manager(ui) and the CNX apiserver.
-
-1. Set TLS for CNX manager. For simplicity, we will use kubeadm generated kube-apiserver cert and key for cnx-manager as well. 
-   Create the tls Secret named `cnx-manager-tls`.
    ```
    sudo kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
    --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
    ```
+   
+   `kubectl` should return the following.
+   
+   ```
+   secret "cnx-manager-tls" created
+   ```
 
-1. [Download the `cnx-etcd.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.7/cnx-etcd.yaml).
+1. [Download the `cnx-etcd.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.7/cnx-etcd.yaml).
 
 1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-apiserver` and `cnx-manager` images.
 
@@ -139,60 +152,111 @@ the host. Instead, continue directly to the
 
    ```
    configmap "tigera-cnx-manager-config" created
+   secret "cnx-apiserver-certs" created
+   service "cnx-manager" created
    apiservice "v3.projectcalico.org" created
    clusterrolebinding "calico:system:auth-delegator" created
    rolebinding "calico-auth-reader" created
-   replicationcontroller "cnx-apiserver" created
    serviceaccount "cnx-apiserver" created
-   service "api" created
-   deployment "tigera-cnx-manager" created
-   service "tigera-cnx-manager" created
+   service "api" created   
+   replicationcontroller "cnx-apiserver" created
+   deployment "cnx-manager" created
+   service "cnx-manager" created
    ```
-   > **Note**: At this point, you should have the CNX services up and running. Confirm that pods have their `STATUS` as `Running` using the command: `watch kubectl get pods --all-namespaces`. Some can only start after others, so it's OK to see a few restarts. Press CTRL+C to exit `watch`.
-   {: .alert .alert-info}
 
-1. Setup a basic-auth user to login through the UI.
+1. Confirm that all of the pods are running with the following command.
+
+   ```
+   watch kubectl get pods --all-namespaces
+   ```
    
-   Create the basic auth csv file to be used by the kube apiserver and lets register `jane` as our user. Each line in the file is of the form 'password,user-name,user-id'
+   Wait until each pod has the `STATUS` of `Running`.
+
    ```
-   sudo echo 'welc0me,jane,1' > /etc/kubernetes/pki/basic_auth.csv
+   NAMESPACE    NAME                                       READY  STATUS   RESTARTS  AGE
+   kube-system  calico-etcd-x2482                          1/1    Running  0         12m
+   kube-system  calico-kube-controllers-6ff88bf6d4-tgtzb   1/1    Running  0         12m
+   kube-system  {{site.noderunning}}-24h85                             2/2    Running  0         12m
+   kube-system  cnx-apiserver-m5bt9                        1/1    Running  0         4m
+   kube-system  cnx-manager-68cf9fd767-szzl2               1/1    Running  0         2m
+   kube-system  etcd-jbaker-virtualbox                     1/1    Running  0         16m
+   kube-system  kube-apiserver-jbaker-virtualbox           1/1    Running  0         16m
+   kube-system  kube-controller-manager-jbaker-virtualbox  1/1    Running  0         16m
+   kube-system  kube-dns-545bc4bfd4-67qqp                  3/3    Running  0         15m
+   kube-system  kube-proxy-8fzp2                           1/1    Running  0         15m
+   kube-system  kube-scheduler-jbaker-virtualbox           1/1    Running  0         15m
    ```
-   Then, lets set the path in kube-apiserver.yaml
+
+1. Press CTRL+C to exit `watch`.
+
+1. Use the following command to create a file `basic_auth.csv` containing
+   a set of credentials.
+
    ```
-   sudo sed -i "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
+   sudo sh -c "echo 'welc0me,jane,1' > /etc/kubernetes/pki/basic_auth.csv"
+   ```
+   
+1. Add a reference to the `basic_auth.csv` file in `kube-apiserver.yaml`.
+   
+   ```
+   sudo sed -i \
+   "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
    > **Note**: We created the basic_auth.csv under /etc/kubernetes/pki because that volume is mounted by default on the kube-apiserver pod with a kubeadm installation.
    {: .alert .alert-info}
 
-1. Set up CORS on the kube apiserver to allow API accesses from the UI
+1. Configure the {{site.prodname}} API server to allow
+   cross-origin resource sharing (CORS). This will allow the {{site.prodname}} API 
+   server to communicate with the {{site.prodname}} Manager.
+
    ```
-   sudo sed -i "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://*\"" \
+   sudo sed -i \
+   "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://*\"" \
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
-1. You should now be able to log in as `jane`, but won't yet be able to see or edit resources. Bind `jane` with the `cluster-admin` role to give full access to all resources.
+1. Bind `jane` with the `cluster-admin` role so that she can access any 
+   resources after logging in.
+
    ```
    kubectl create clusterrolebinding permissive-binding \
    --clusterrole=cluster-admin \
    --user=jane
    ```
+   
+   `kubectl` should return the following.
+   
+   ```
+   clusterrolebinding "permissive-binding" created
+   ```
+
+1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
+
+1. Because we're using a self-signed certificate for a quick start, the
+   browser will warn you of an insecure connection. Click past the warning.
+   
+   > **Note**: On Firefox, you must also type a {{site.prodname}} API server endpoint 
+   into the address bar and accept this additional certificate. For example:
+   `https://127.0.0.1:6443/apis/projectcalico.org/v3/namespaces`.
+   {: .alert .alert-info}
+   
+1. Type **jane** in the **Login** box and **welc0me** in the **Password** box. 
+   Then click **Sign In**.
 
 Congratulations! You now have a single-host Kubernetes cluster
 equipped with {{site.prodname}}.
 
-To access the {{site.prodname}} Manager web interface, navigate to `https://127.0.0.1:30003`.
-> **Note**: As part of these instruction we are dealing with self-signed certificates for CNX/K8s services. So, you might need to proceed explicitly from the browser.
-{: .alert .alert-info}
-
 ### Next steps
-**[Experiment with OIDC authentication strategy]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication)**
+**[Experiment with OIDC authentication strategy](/{{page.version}}/reference/essentials/authentication)**
 
-**[Experiment with non-admin users and the web manager]({{site.baseurl}}/{{page.version}}/reference/essentials/non-admin-workflows)**
+**[Experiment with non-admin users and the web manager](/{{page.version}}/reference/essentials/non-admin-workflows)**
 
-**[Secure a simple two-tier application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
+**[Secure a simple application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
-**[Create a policy using more advanced policy features](tutorials/advanced-policy)**
+**[Control ingress and egress traffic using the Kubernetes `NetworkPolicy` API](tutorials/advanced-policy)**
 
-**[Using the calicoctl CLI tool](https://docs.projectcalico.org/master/getting-started/kubernetes/tutorials/using-calicoctl)**
+**[Create a user interface that shows blocked and allowed connections in real time](tutorials/stars-policy/)**
+
+**[Install and configure calicoctl](/{{page.version}}/usage/calicoctl/install)**
