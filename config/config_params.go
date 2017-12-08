@@ -28,6 +28,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/libcalico-go/lib/names"
 )
 
 var (
@@ -90,7 +91,7 @@ type Config struct {
 	UseInternalDataplaneDriver bool   `config:"bool;true"`
 	DataplaneDriver            string `config:"file(must-exist,executable);calico-iptables-plugin;non-zero,die-on-fail,skip-default-validation"`
 
-	DatastoreType string `config:"oneof(kubernetes,etcdv3);etcdv3;non-zero,die-on-fail"`
+	DatastoreType string `config:"oneof(kubernetes,etcdv3);etcdv3;non-zero,die-on-fail,local"`
 
 	FelixHostname string `config:"hostname;;local,non-zero"`
 
@@ -101,11 +102,11 @@ type Config struct {
 	EtcdCaFile    string   `config:"file(must-exist);;local"`
 	EtcdEndpoints []string `config:"endpoint-list;;local"`
 
-	TyphaAddr           string        `config:"authority;;"`
-	TyphaK8sServiceName string        `config:"string;"`
-	TyphaK8sNamespace   string        `config:"string;kube-system;non-zero"`
-	TyphaReadTimeout    time.Duration `config:"seconds;30"`
-	TyphaWriteTimeout   time.Duration `config:"seconds;10"`
+	TyphaAddr           string        `config:"authority;;local"`
+	TyphaK8sServiceName string        `config:"string;;local"`
+	TyphaK8sNamespace   string        `config:"string;kube-system;non-zero,local"`
+	TyphaReadTimeout    time.Duration `config:"seconds;30;local"`
+	TyphaWriteTimeout   time.Duration `config:"seconds;10;local"`
 
 	Ipv6Support    bool `config:"bool;true"`
 	IgnoreLooseRPF bool `config:"bool;false"`
@@ -177,10 +178,12 @@ type Config struct {
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
-	UsageReportingEnabled bool   `config:"bool;true"`
-	ClusterGUID           string `config:"string;baddecaf"`
-	ClusterType           string `config:"string;"`
-	CalicoVersion         string `config:"string;"`
+	UsageReportingEnabled          bool          `config:"bool;true"`
+	UsageReportingInitialDelaySecs time.Duration `config:"seconds;300"`
+	UsageReportingIntervalSecs     time.Duration `config:"seconds;86400"`
+	ClusterGUID                    string        `config:"string;baddecaf"`
+	ClusterType                    string        `config:"string;"`
+	CalicoVersion                  string        `config:"string;"`
 
 	DebugMemoryProfilePath          string        `config:"file;;"`
 	DebugDisableLogDropping         bool          `config:"bool;false"`
@@ -582,11 +585,11 @@ func New() *Config {
 	for _, param := range knownParams {
 		param.setDefault(p)
 	}
-	hostname, err := os.Hostname()
+	hostname, err := names.Hostname()
 	if err != nil {
 		log.Warningf("Failed to get hostname from kernel, "+
 			"trying HOSTNAME variable: %v", err)
-		hostname = os.Getenv("HOSTNAME")
+		hostname = strings.ToLower(os.Getenv("HOSTNAME"))
 	}
 	p.FelixHostname = hostname
 	return p

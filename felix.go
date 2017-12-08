@@ -19,16 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
-	"reflect"
 	"runtime"
 	"runtime/debug"
-	"runtime/pprof"
-	"strings"
 	"syscall"
 	"time"
 
@@ -44,13 +40,9 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	_ "github.com/projectcalico/felix/config"
-	"github.com/projectcalico/felix/extdataplane"
-	"github.com/projectcalico/felix/ifacemonitor"
-	"github.com/projectcalico/felix/intdataplane"
-	"github.com/projectcalico/felix/ipsets"
+	dp "github.com/projectcalico/felix/dataplane"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/felix/statusrep"
 	"github.com/projectcalico/felix/usagerep"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -61,6 +53,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	errors2 "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/typha/pkg/syncclient"
 )
 
@@ -80,6 +73,13 @@ const (
 	// heap can be lost to garbage.  We reduce it to this value to trade increased CPU usage for
 	// lower occupancy.
 	defaultGCPercent = 20
+
+	// String sent on the failure report channel to indicate we're shutting down for config
+	// change.
+	reasonConfigChanged = "config changed"
+	// Process return code used to report a config change.  This is the same as the code used
+	// by SIGHUP, which means that the wrapper script also restarts Felix on a SIGHUP.
+	configChangedRC = 129
 )
 
 // main is the entry point to the calico-felix binary.
@@ -244,114 +244,21 @@ configRetry:
 
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
 	// one.
-	var dpDriver dataplaneDriver
+	var dpDriver dp.DataplaneDriver
 	var dpDriverCmd *exec.Cmd
-	if configParams.UseInternalDataplaneDriver {
-		log.Info("Using internal dataplane driver.")
-		// Dedicated mark bits for accept and pass actions.  These are long lived bits
-		// that we use for communicating between chains.
-		markAccept := configParams.NextIptablesMark()
-		markPass := configParams.NextIptablesMark()
-		markDrop := configParams.NextIptablesMark()
-		// Short-lived mark bits for local calculations within a chain.
-		markScratch0 := configParams.NextIptablesMark()
-		markScratch1 := configParams.NextIptablesMark()
-		log.WithFields(log.Fields{
-			"acceptMark":   markAccept,
-			"passMark":     markPass,
-			"dropMark":     markDrop,
-			"scratch0Mark": markScratch0,
-			"scratch1Mark": markScratch1,
-		}).Info("Calculated iptables mark bits")
-		dpConfig := intdataplane.Config{
-			IfaceMonitorConfig: ifacemonitor.Config{
-				InterfaceExcludes: configParams.InterfaceExcludes(),
-			},
-			RulesConfig: rules.Config{
-				WorkloadIfacePrefixes: configParams.InterfacePrefixes(),
 
-				IPSetConfigV4: ipsets.NewIPVersionConfig(
-					ipsets.IPFamilyV4,
-					rules.IPSetNamePrefix,
-					rules.AllHistoricIPSetNamePrefixes,
-					rules.LegacyV4IPSetNames,
-				),
-				IPSetConfigV6: ipsets.NewIPVersionConfig(
-					ipsets.IPFamilyV6,
-					rules.IPSetNamePrefix,
-					rules.AllHistoricIPSetNamePrefixes,
-					nil,
-				),
-
-				OpenStackSpecialCasesEnabled: configParams.OpenstackActive(),
-				OpenStackMetadataIP:          net.ParseIP(configParams.MetadataAddr),
-				OpenStackMetadataPort:        uint16(configParams.MetadataPort),
-
-				IptablesMarkAccept:   markAccept,
-				IptablesMarkPass:     markPass,
-				IptablesMarkDrop:     markDrop,
-				IptablesMarkScratch0: markScratch0,
-				IptablesMarkScratch1: markScratch1,
-
-				IPIPEnabled:       configParams.IpInIpEnabled,
-				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
-
-				IptablesLogPrefix:         configParams.LogPrefix,
-				ActionOnDrop:              configParams.DropActionOverride,
-				EndpointToHostAction:      configParams.DefaultEndpointToHostAction,
-				IptablesFilterAllowAction: configParams.IptablesFilterAllowAction,
-				IptablesMangleAllowAction: configParams.IptablesMangleAllowAction,
-
-				FailsafeInboundHostPorts:  configParams.FailsafeInboundHostPorts,
-				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
-
-				DisableConntrackInvalid: configParams.DisableConntrackInvalidCheck,
-			},
-
-			NfNetlinkBufSize:               configParams.NfNetlinkBufSize,
-			StatsDumpFilePath:              configParams.StatsDumpFilePath,
-			PrometheusReporterEnabled:      configParams.PrometheusReporterEnabled,
-			PrometheusReporterPort:         configParams.PrometheusReporterPort,
-			PrometheusReporterCertFile:     configParams.PrometheusReporterCertFile,
-			PrometheusReporterKeyFile:      configParams.PrometheusReporterKeyFile,
-			PrometheusReporterCAFile:       configParams.PrometheusReporterCAFile,
-			SyslogReporterNetwork:          configParams.SyslogReporterNetwork,
-			SyslogReporterAddress:          configParams.SyslogReporterAddress,
-			DeletedMetricsRetentionSecs:    configParams.DeletedMetricsRetentionSecs,
-			IPIPMTU:                        configParams.IpInIpMtu,
-			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
-			RouteRefreshInterval:           configParams.RouteRefreshInterval,
-			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
-			IptablesPostWriteCheckInterval: configParams.IptablesPostWriteCheckIntervalSecs,
-			IptablesInsertMode:             configParams.ChainInsertMode,
-			IptablesLockFilePath:           configParams.IptablesLockFilePath,
-			IptablesLockTimeout:            configParams.IptablesLockTimeoutSecs,
-			IptablesLockProbeInterval:      configParams.IptablesLockProbeIntervalMillis,
-			MaxIPSetSize:                   configParams.MaxIpsetSize,
-			IgnoreLooseRPF:                 configParams.IgnoreLooseRPF,
-			IPv6Enabled:                    configParams.Ipv6Support,
-			StatusReportingInterval:        configParams.ReportingIntervalSecs,
-
-			NetlinkTimeout: configParams.NetlinkTimeoutSecs,
-
-			PostInSyncCallback: func() { dumpHeapMemoryProfile(configParams) },
-			HealthAggregator:   healthAggregator,
-
-			DebugSimulateDataplaneHangAfter: configParams.DebugSimulateDataplaneHangAfter,
-		}
-		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
-		intDP.Start()
-		dpDriver = intDP
-	} else {
-		log.WithField("driver", configParams.DataplaneDriver).Info(
-			"Using external dataplane driver.")
-		dpDriver, dpDriverCmd = extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
-	}
+	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(configParams, healthAggregator)
 
 	// Initialise the glue logic that connects the calculation graph to/from the dataplane driver.
 	log.Info("Connect to the dataplane driver.")
 	failureReportChan := make(chan string)
-	dpConnector := newConnector(configParams, backendClient, dpDriver, failureReportChan)
+	var connToUsageRepUpdChan chan map[string]string
+	if configParams.UsageReportingEnabled {
+		// Make a channel for the connector to use to send updates to the usage reporter.
+		// (Otherwise, we pass in a nil channel, which disables such updates.)
+		connToUsageRepUpdChan = make(chan map[string]string, 1)
+	}
+	dpConnector := newConnector(configParams, connToUsageRepUpdChan, backendClient, dpDriver, failureReportChan)
 
 	// Now create the calculation graph, which receives updates from the
 	// datastore and outputs dataplane updates for the dataplane driver.
@@ -431,13 +338,13 @@ configRetry:
 			}
 		}()
 
-		go usagerep.PeriodicallyReportUsage(
-			24*time.Hour,
-			configParams.ClusterGUID,
-			configParams.ClusterType,
-			configParams.CalicoVersion,
+		usageRep := usagerep.New(
+			configParams.UsageReportingInitialDelaySecs,
+			configParams.UsageReportingIntervalSecs,
 			statsChanOut,
+			connToUsageRepUpdChan,
 		)
+		go usageRep.PeriodicallyReportUsage(context.Background())
 	} else {
 		// Usage reporting disabled, but we still want a stats collector for the
 		// felix_cluster_* metrics.  Register a no-op function as the callback.
@@ -512,54 +419,11 @@ configRetry:
 	}
 
 	// On receipt of SIGUSR1, write out heap profile.
-	usr1SignalChan := make(chan os.Signal, 1)
-	signal.Notify(usr1SignalChan, syscall.SIGUSR1)
-	go func() {
-		for {
-			<-usr1SignalChan
-			dumpHeapMemoryProfile(configParams)
-		}
-	}()
+	logutils.DumpHeapMemoryOnSignal(configParams)
 
 	// Now monitor the worker process and our worker threads and shut
 	// down the process gracefully if they fail.
 	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
-}
-
-func dumpHeapMemoryProfile(configParams *config.Config) {
-	// If a memory profile file name is configured, dump a heap memory profile.  If the
-	// configured filename includes "<timestamp>", that will be replaced with a stamp indicating
-	// the current time.
-	memProfFileName := configParams.DebugMemoryProfilePath
-	if memProfFileName != "" {
-		logCxt := log.WithField("file", memProfFileName)
-		logCxt.Info("Asked to create a memory profile.")
-
-		// If the configured file name includes "<timestamp>", replace that with the current
-		// time.
-		if strings.Contains(memProfFileName, "<timestamp>") {
-			timestamp := time.Now().Format("2006-01-02-15:04:05")
-			memProfFileName = strings.Replace(memProfFileName, "<timestamp>", timestamp, 1)
-			logCxt = log.WithField("file", memProfFileName)
-		}
-
-		// Open a file with that name.
-		memProfFile, err := os.Create(memProfFileName)
-		if err != nil {
-			logCxt.WithError(err).Fatal("Could not create memory profile file")
-			memProfFile = nil
-		} else {
-			defer memProfFile.Close()
-			logCxt.Info("Writing memory profile...")
-			// The initial resync uses a lot of scratch space so now is
-			// a good time to force a GC and return any RAM that we can.
-			debug.FreeOSMemory()
-			if err := pprof.WriteHeapProfile(memProfFile); err != nil {
-				logCxt.WithError(err).Fatal("Could not write memory profile")
-			}
-			logCxt.Info("Finished writing memory profile")
-		}
-	}
 }
 
 func servePrometheusMetrics(configParams *config.Config) {
@@ -586,9 +450,11 @@ func servePrometheusMetrics(configParams *config.Config) {
 }
 
 func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.Cmd, stopSignalChans []chan<- bool) {
-	// Ask the runtime to tell us if we get a term signal.
-	termSignalChan := make(chan os.Signal, 1)
-	signal.Notify(termSignalChan, syscall.SIGTERM)
+	// Ask the runtime to tell us if we get a term/int signal.
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGTERM)
+	signal.Notify(signalChan, syscall.SIGINT)
+	signal.Notify(signalChan, syscall.SIGHUP)
 
 	// Start a background thread to tell us when the dataplane driver stops.
 	// If the driver stops unexpectedly, we'll terminate this process.
@@ -607,15 +473,20 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 
 	// Wait for one of the channels to give us a reason to shut down.
 	driverAlreadyStopped := driverCmd == nil
-	receivedSignal := false
+	receivedFatalSignal := false
 	var reason string
 	select {
 	case <-driverStoppedC:
 		reason = "Driver stopped"
 		driverAlreadyStopped = true
-	case sig := <-termSignalChan:
-		reason = fmt.Sprintf("Received OS signal %v", sig)
-		receivedSignal = true
+	case sig := <-signalChan:
+		if sig == syscall.SIGHUP {
+			log.Warning("Received a SIGHUP, treating as a request to reload config")
+			reason = reasonConfigChanged
+		} else {
+			reason = fmt.Sprintf("Received OS signal %v", sig)
+			receivedFatalSignal = true
+		}
 	case reason = <-failureReportChan:
 	}
 	logCxt := log.WithField("reason", reason)
@@ -654,18 +525,36 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		}
 	}
 
-	if !receivedSignal {
+	if !receivedFatalSignal {
 		// We're exiting due to a failure or a config change, wait
 		// a couple of seconds to ensure that we don't go into a tight
-		// restart loop (which would make the init daemon give up trying
-		// to restart us).
-		logCxt.Info("Shutdown wasn't caused by signal, pausing to avoid tight restart loop")
+		// restart loop (which would make the init daemon in calico/node give
+		// up trying to restart us).
+		logCxt.Info("Sleeping to avoid tight restart loop.")
 		go func() {
 			time.Sleep(2 * time.Second)
+
+			if reason == reasonConfigChanged {
+				// We want to exit with a specific RC, but if we call Fatal() it will exit for us
+				// with the wrong RC. We need to call Fatal or Panic to force the log to be flushed
+				// so call Panic() but use defer to force an exit before the stack trace is printed.
+				defer os.Exit(configChangedRC)
+				logCxt.Panic("Exiting for config change")
+				return
+			}
+
 			logCxt.Fatal("Exiting.")
 		}()
-		// But, if we get a signal while we're waiting quit immediately.
-		<-termSignalChan
+
+		for {
+			sig := <-signalChan
+			if sig == syscall.SIGHUP {
+				logCxt.Warning("Ignoring SIGHUP because we're already shutting down")
+				continue
+			}
+			logCxt.WithField("signal", sig).Fatal(
+				"Signal received while shutting down, exiting immediately")
+		}
 	}
 
 	logCxt.Fatal("Exiting immediately")
@@ -788,18 +677,14 @@ func getAndMergeConfig(
 	return nil
 }
 
-type dataplaneDriver interface {
-	SendMessage(msg interface{}) error
-	RecvMessage() (msg interface{}, err error)
-}
-
 type DataplaneConnector struct {
 	config                     *config.Config
+	configUpdChan              chan<- map[string]string
 	ToDataplane                chan interface{}
 	StatusUpdatesFromDataplane chan interface{}
 	InSync                     chan bool
 	failureReportChan          chan<- string
-	dataplane                  dataplaneDriver
+	dataplane                  dp.DataplaneDriver
 	datastore                  bapi.Client
 	statusReporter             *statusrep.EndpointStatusReporter
 
@@ -813,11 +698,14 @@ type Startable interface {
 }
 
 func newConnector(configParams *config.Config,
+	configUpdChan chan<- map[string]string,
 	datastore bapi.Client,
-	dataplane dataplaneDriver,
-	failureReportChan chan<- string) *DataplaneConnector {
+	dataplane dp.DataplaneDriver,
+	failureReportChan chan<- string,
+) *DataplaneConnector {
 	felixConn := &DataplaneConnector{
 		config:                     configParams,
+		configUpdChan:              configUpdChan,
 		datastore:                  datastore,
 		ToDataplane:                make(chan interface{}),
 		StatusUpdatesFromDataplane: make(chan interface{}),
@@ -894,6 +782,8 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(msg *proto.ProcessStatus
 	}
 }
 
+var handledConfigChanges = set.From("CalicoVersion", "ClusterGUID", "ClusterType")
+
 func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 	defer func() {
 		fc.shutDownProcess("Failed to send messages to dataplane")
@@ -911,31 +801,56 @@ func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 				fc.InSync <- true
 			}
 		case *proto.ConfigUpdate:
-			log.WithFields(log.Fields{
-				"old": config,
-				"new": msg.Config,
-			}).Info("Possible config update")
-			if config != nil && !reflect.DeepEqual(msg.Config, config) {
-				log.Warn("Felix configuration changed. Need to restart.")
+			if config != nil {
+				log.WithFields(log.Fields{
+					"old": config,
+					"new": msg.Config,
+				}).Info("Config updated, checking whether we need to restart")
+				restartNeeded := false
 				for kNew, vNew := range msg.Config {
+					logCxt := log.WithFields(log.Fields{"key": kNew, "new": vNew})
 					if vOld, prs := config[kNew]; !prs {
-						log.WithFields(log.Fields{"key": kNew, "value": vNew}).Warn("Felix configuration changed: Key added")
+						logCxt = logCxt.WithField("updateType", "add")
 					} else if vNew != vOld {
-						log.WithFields(log.Fields{"key": kNew, "old": vOld, "new": vNew}).Warn("Felix configuration changed: Key changed")
+						logCxt = logCxt.WithFields(log.Fields{"old": vOld, "updateType": "update"})
+					} else {
+						continue
 					}
+					if handledConfigChanges.Contains(kNew) {
+						logCxt.Info("Config change can be handled without restart")
+						continue
+					}
+					logCxt.Warning("Config change requires restart")
+					restartNeeded = true
 				}
 				for kOld, vOld := range config {
-					if _, prs := config[kOld]; !prs {
-						log.WithFields(log.Fields{"key": kOld, "value": vOld}).Warn("Felix configuration changed: Key deleted")
+					logCxt := log.WithFields(log.Fields{"key": kOld, "old": vOld, "updateType": "delete"})
+					if _, prs := msg.Config[kOld]; prs {
+						// Key was present in the message so we've handled above.
+						continue
 					}
+					if handledConfigChanges.Contains(kOld) {
+						logCxt.Info("Config change can be handled without restart")
+						continue
+					}
+					logCxt.Warning("Config change requires restart")
+					restartNeeded = true
 				}
-				fc.shutDownProcess("config changed")
-			} else if config == nil {
-				log.Info("Config resolved.")
-				config = make(map[string]string)
-				for k, v := range msg.Config {
-					config[k] = v
+
+				if restartNeeded {
+					fc.shutDownProcess("config changed")
 				}
+			}
+
+			// Take a copy of the config to compare against next time.
+			config = make(map[string]string)
+			for k, v := range msg.Config {
+				config[k] = v
+			}
+
+			if fc.configUpdChan != nil {
+				// Send the config over to the usage reporter.
+				fc.configUpdChan <- config
 			}
 		case *calc.DatastoreNotReady:
 			log.Warn("Datastore became unready, need to restart.")

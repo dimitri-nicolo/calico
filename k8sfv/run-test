@@ -209,8 +209,7 @@ docker run --detach --privileged --name ${prefix}-felix \
        -e K8SFV_LOG_LEVEL=${K8SFV_LOG_LEVEL} \
        -v ${PWD}:/testcode \
        -w /testcode/k8sfv/output \
-       ${FELIX_IMAGE}:${FELIX_VERSION} \
-       /bin/sh -c "apk --no-cache add nmap; while true; do calico-felix; done"
+       ${FELIX_IMAGE}:${FELIX_VERSION}
 felix_ip=$(get_container_ip ${prefix}-felix)
 felix_hostname=$(get_container_hostname ${prefix}-felix)
 
