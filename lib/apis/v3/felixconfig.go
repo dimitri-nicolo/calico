@@ -185,6 +185,9 @@ type FelixConfigurationSpec struct {
 	// UsageReportingIntervalSecs controls the interval (in seconds) at which Felix makes reports. [Default: 86400]
 	UsageReportingIntervalSecs *int `json:"usageReportingIntervalSecs,omitempty"`
 
+	NfNetlinkBufSize  string `json:"nfNetlinkBufSize,omitempty"`
+	StatsDumpFilePath string `json:"statsDumpFilePath,omitempty"`
+
 	// Felix Denied Packet Metrics configuration parameters.
 	PrometheusReporterEnabled   *bool  `json:"prometheusReporterEnabled,omitempty"`
 	PrometheusReporterPort      *int   `json:"prometheusReporterPort,omitempty"`
@@ -201,6 +204,9 @@ type FelixConfigurationSpec struct {
 	DebugDisableLogDropping             *bool  `json:"debugDisableLogDropping,omitempty"`
 	DebugSimulateCalcGraphHangAfterSecs *int   `json:"debugSimulateCalcGraphHangAfterSecs,omitempty" confignamev1:"DebugSimulateCalcGraphHangAfter"`
 	DebugSimulateDataplaneHangAfterSecs *int   `json:"debugSimulateDataplaneHangAfterSecs,omitempty" confignamev1:"DebugSimualteDataplaneHangAfter"`
+
+	SyslogReporterNetwork string `json:"syslogReporterNetwork,omitempty"`
+	SyslogReporterAddress string `json:"syslogReporterAddress,omitempty"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.
