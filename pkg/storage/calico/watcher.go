@@ -20,6 +20,7 @@ import (
 	"context"
 
 	cwatch "github.com/projectcalico/libcalico-go/lib/watch"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/storage"
@@ -30,6 +31,8 @@ type watchChan struct {
 	resultChan     chan watch.Event
 	internalFilter storage.FilterFunc
 	watcher        cwatch.Interface
+	ctx            context.Context
+	cancel         context.CancelFunc
 }
 
 func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.SelectionPredicate) *watchChan {
@@ -42,7 +45,7 @@ func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.Selec
 		// The filter doesn't filter out any object.
 		wc.internalFilter = nil
 	}
-
+	wc.ctx, wc.cancel = context.WithCancel(ctx)
 	return wc
 }
 
@@ -95,6 +98,11 @@ func (wc *watchChan) convertEvent(ce cwatch.Event) (res *watch.Event) {
 				Object: oldAapiObject,
 			}
 		}
+	case cwatch.Error:
+		res = &watch.Event{
+			Type:   watch.Error,
+			Object: &metav1.Status{Reason: metav1.StatusReasonInternalError},
+		}
 	}
 	return res
 }
@@ -104,6 +112,11 @@ func (wc *watchChan) run() {
 		we := wc.convertEvent(e)
 		if we != nil {
 			wc.resultChan <- *we
+			if we.Type == watch.Error {
+				// We use wc.ctx to reap all goroutines. Under whatever condition, we should stop them all.
+				// It's fine to double cancel.
+				wc.cancel()
+			}
 		}
 	}
 	close(wc.resultChan)
