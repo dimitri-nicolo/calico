@@ -526,7 +526,7 @@ var _ = Describe("Endpoints", func() {
 
 						{Action: ClearMarkAction{Mark: 0x88}},
 
-						{Comment: "Start of policies",
+						{Comment: "Start of tier tier1",
 							Action: ClearMarkAction{Mark: 0x10}},
 						{Match: Match().MarkClear(0x10),
 							Action: JumpAction{Target: "cali-pi-tier1/c"}},
@@ -558,10 +558,9 @@ var _ = Describe("Endpoints", func() {
 							Action: ReturnAction{}},
 
 						{Action: ClearMarkAction{Mark: 0x88}},
-						{Match: Match().MarkClear(0x10),
-							Action: NflogAction{
-								Group:  1,
-								Prefix: "D/0/no-profile-match-inbound"}},
+						{Action: NflogAction{
+							Group:  1,
+							Prefix: "D/0/no-profile-match-inbound"}},
 						{Action: DropAction{},
 							Comment: "Drop if no profiles matched"},
 					},
@@ -576,10 +575,9 @@ var _ = Describe("Endpoints", func() {
 							Action: ReturnAction{}},
 
 						{Action: ClearMarkAction{Mark: 0x88}},
-						{Match: Match().MarkClear(0x10),
-							Action: NflogAction{
-								Group:  2,
-								Prefix: "D/0/no-profile-match-outbound"}},
+						{Action: NflogAction{
+							Group:  2,
+							Prefix: "D/0/no-profile-match-outbound"}},
 						{Action: DropAction{},
 							Comment: "Drop if no profiles matched"},
 					},
