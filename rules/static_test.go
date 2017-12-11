@@ -386,6 +386,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkPass:             0x20,
 				IptablesMarkScratch0:         0x40,
 				IptablesMarkScratch1:         0x80,
+				IptablesMarkDrop:             0x100,
 				IptablesFilterAllowAction:    "RETURN",
 			}
 		})
