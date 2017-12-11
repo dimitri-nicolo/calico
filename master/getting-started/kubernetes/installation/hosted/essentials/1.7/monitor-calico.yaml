@@ -145,6 +145,7 @@ spec:
   endpoints:
   - port: calico-metrics-port
     interval: 5s
+    scrapeTimeout: 5s
 ---
 
 {% raw %}
@@ -158,14 +159,17 @@ metadata:
     role: calico-prometheus-rules
     prometheus: calico-node-prometheus
 data:
-  calico.rules: |
-    ALERT DeniedPacketsRate
-      IF rate(calico_denied_packets[10s]) > 50
-      LABELS { severity = "critical" }
-      ANNOTATIONS {
-         summary = "Instance {{$labels.instance}} - Large rate of packets denied",
-         description = "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
-      }
+  calico.rules.yaml: |+
+    groups:
+    - name: ./calico.rules
+      rules:
+      - alert: DeniedPacketsRate
+        expr: rate(calico_denied_packets[10s]) > 50
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{$labels.instance}} - Large rate of packets denied"
+          description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
 {% endraw %}
 ---
 
@@ -211,7 +215,7 @@ metadata:
   name: calico-node-alertmanager
   namespace: calico-monitoring
 spec:
-  version: v0.8.0
+  version: v0.11.0
   # If necessary, uncomment the 2 lines below and edit the nodeSelector
   # key:value pair with appropriate values for your environment.
   #nodeSelector:
@@ -254,7 +258,7 @@ spec:
   serviceMonitorSelector:
     matchLabels:
       team: network-operators
-  version: v1.7.1
+  version: v2.0.0
   retention: 1h
   resources:
     requests:
