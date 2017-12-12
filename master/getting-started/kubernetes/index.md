@@ -218,6 +218,11 @@ the host. Instead, continue directly to the
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
+1. Restart kube-apiserver to pick up new settings:
+    ```
+    sudo pkill kube-apiserver
+    ```
+
 1. Bind `jane` with the `cluster-admin` role so that she can access any 
    resources after logging in.
 
