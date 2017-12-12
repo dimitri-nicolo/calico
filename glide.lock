@@ -1,5 +1,5 @@
-hash: 5c2fceba81bde0e9100c29c85d4117c1ccce3f3cb29616030ca39fb9bb41e4e9
-updated: 2017-12-01T21:20:08.016983589-08:00
+hash: e742ba5f95c38fb648926cf43aa5f9823ea4c9cc4f4155770b30760990f87459
+updated: 2017-12-11T16:13:38.694191315Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -176,7 +176,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 542c7908f045010ce8e2780af470ac709ee17cc9
+  version: ccf961448630f93c6650761dcd3be768699fe31d
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -315,7 +315,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 4df58c811fe2e65feb879227b2b245e4dc26e7ad
+  version: 9b9dca205a15b6ce9ef10091f05d60a13fdcf418
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -342,7 +342,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 019ae5ada31de202164b118aee88ee2d14075c31
+  version: 5134afd2c0c91158afac0d8a28bd2177185a3bcc
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
@@ -400,7 +400,7 @@ imports:
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: 9707c008294d447053c0e2737c256ee23f99e5b4
+  version: f5fd0005b06697e897cbeb10c97b7cb5f5b85232
   subpackages:
   - pkg/admission
   - pkg/admission/initializer
@@ -586,7 +586,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/code-generator
-  version: 6db2ee6aa9ab51230d6e0d970b398274a88e81b0
+  version: 25fd8c8ddbf75b223882df4479f8b8e615da05ae
 - name: k8s.io/gengo
   version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
 - name: k8s.io/kube-openapi
@@ -597,7 +597,7 @@ imports:
   - pkg/handler
   - pkg/util
 - name: k8s.io/kubernetes
-  version: c1d1b92688176f37893d81cf6d7a3abc5663a795
+  version: bbeba5ff9b79ea157100bcff72e263c8086f6952
   subpackages:
   - pkg/api
   - pkg/api/install
