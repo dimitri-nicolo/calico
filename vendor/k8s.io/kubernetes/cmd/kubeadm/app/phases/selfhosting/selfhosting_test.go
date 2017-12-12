@@ -109,9 +109,6 @@ status: {}
   name: self-hosted-kube-apiserver
   namespace: kube-system
 spec:
-  selector:
-    matchLabels:
-      k8s-app: self-hosted-kube-apiserver
   template:
     metadata:
       creationTimestamp: null
@@ -268,9 +265,6 @@ status: {}
   name: self-hosted-kube-controller-manager
   namespace: kube-system
 spec:
-  selector:
-    matchLabels:
-      k8s-app: self-hosted-kube-controller-manager
   template:
     metadata:
       creationTimestamp: null
@@ -396,9 +390,6 @@ status: {}
   name: self-hosted-kube-scheduler
   namespace: kube-system
 spec:
-  selector:
-    matchLabels:
-      k8s-app: self-hosted-kube-scheduler
   template:
     metadata:
       creationTimestamp: null

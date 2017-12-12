@@ -105,8 +105,7 @@ func TestVerifyRunAsNonRoot(t *testing.T) {
 		},
 	} {
 		pod.Spec.Containers[0].SecurityContext = test.sc
-		uid := int64(0)
-		err := verifyRunAsNonRoot(pod, &pod.Spec.Containers[0], &uid, "")
+		err := verifyRunAsNonRoot(pod, &pod.Spec.Containers[0], int64(0))
 		if test.fail {
 			assert.Error(t, err, test.desc)
 		} else {

@@ -344,10 +344,7 @@ func (gce *GCECloud) ensureExternalLoadBalancerDeleted(clusterName, clusterID st
 			glog.Infof("Failed to retrieve health check %v:%v", loadBalancerName, err)
 			return err
 		}
-		// If we got 'StatusNotFound' LB was already deleted and it's safe to ignore.
-		if err == nil {
-			hcNames = append(hcNames, hcToDelete.Name)
-		}
+		hcNames = append(hcNames, hcToDelete.Name)
 	} else {
 		// EnsureLoadBalancerDeleted() could be triggered by changing service from
 		// LoadBalancer type to others. In this case we have no idea whether it was

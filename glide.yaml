@@ -181,20 +181,20 @@ import:
 - package: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - package: k8s.io/apimachinery
-  version: release-1.8
+  version: kubernetes-1.8.2
 - package: k8s.io/api
-  version: release-1.8
+  version: kubernetes-1.8.2
 - package: k8s.io/apiserver
-  version: release-1.8
+  version: kubernetes-1.8.2 
 - package: k8s.io/client-go
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
   version: v2.0.0-cnx-beta3
 - package: k8s.io/kubernetes
-  version: release-1.8
+  version: c1d1b92688176f37893d81cf6d7a3abc5663a795
 - package: k8s.io/code-generator
-  version: release-1.8
+  version: kubernetes-1.8.3
 - package: k8s.io/gengo
   version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
 - package: github.com/kubernetes/repo-infra

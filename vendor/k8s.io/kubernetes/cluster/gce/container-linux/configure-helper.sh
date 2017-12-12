@@ -215,19 +215,14 @@ EOF
   if [[ -n "${NODE_INSTANCE_PREFIX:-}" ]]; then
     use_cloud_config="true"
     if [[ -n "${NODE_TAGS:-}" ]]; then
-      # split NODE_TAGS into an array by comma.
-      IFS=',' read -r -a node_tags <<< ${NODE_TAGS}
+      local -r node_tags="${NODE_TAGS}"
     else
       local -r node_tags="${NODE_INSTANCE_PREFIX}"
     fi
     cat <<EOF >>/etc/gce.conf
+node-tags = ${node_tags}
 node-instance-prefix = ${NODE_INSTANCE_PREFIX}
 EOF
-    for tag in ${node_tags[@]}; do
-      cat <<EOF >>/etc/gce.conf
-node-tags = ${tag}
-EOF
-    done
   fi
   if [[ -n "${MULTIZONE:-}" ]]; then
     use_cloud_config="true"
@@ -237,13 +232,9 @@ EOF
   fi
   if [[ -n "${GCE_ALPHA_FEATURES:-}" ]]; then
     use_cloud_config="true"
-    # split GCE_ALPHA_FEATURES into an array by comma.
-    IFS=',' read -r -a alpha_features <<< ${GCE_ALPHA_FEATURES}
-    for feature in ${alpha_features[@]}; do
-      cat <<EOF >>/etc/gce.conf
-alpha-features = ${feature}
+    cat <<EOF >>/etc/gce.conf
+alpha-features = ${GCE_ALPHA_FEATURES}
 EOF
-    done
   fi
   if [[ -n "${SECONDARY_RANGE_NAME:-}" ]]; then
     use_cloud_config="true"
@@ -991,13 +982,9 @@ function start-kube-apiserver {
   fi
   if [[ -n "${PROJECT_ID:-}" && -n "${TOKEN_URL:-}" && -n "${TOKEN_BODY:-}" && -n "${NODE_NETWORK:-}" ]]; then
     local -r vm_external_ip=$(curl --retry 5 --retry-delay 3 --fail --silent -H 'Metadata-Flavor: Google' "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip")
-    if [[ -n "${PROXY_SSH_USER:-}" ]]; then
-      params+=" --advertise-address=${vm_external_ip}"      
-      params+=" --ssh-user=${PROXY_SSH_USER}"
-      params+=" --ssh-keyfile=/etc/srv/sshproxy/.sshkeyfile"
-    else
-      params+=" --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
-    fi    
+    params+=" --advertise-address=${vm_external_ip}"
+    params+=" --ssh-user=${PROXY_SSH_USER}"
+    params+=" --ssh-keyfile=/etc/srv/sshproxy/.sshkeyfile"
   elif [ -n "${MASTER_ADVERTISE_ADDRESS:-}" ]; then
     params="${params} --advertise-address=${MASTER_ADVERTISE_ADDRESS}"
   fi

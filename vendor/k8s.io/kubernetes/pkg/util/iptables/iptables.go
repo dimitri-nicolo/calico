@@ -91,7 +91,6 @@ const (
 	ChainPrerouting  Chain = "PREROUTING"
 	ChainOutput      Chain = "OUTPUT"
 	ChainInput       Chain = "INPUT"
-	ChainForward     Chain = "FORWARD"
 )
 
 const (

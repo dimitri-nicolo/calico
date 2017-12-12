@@ -33,10 +33,6 @@ import (
 	proberesults "k8s.io/kubernetes/pkg/kubelet/prober/results"
 )
 
-const (
-	fakeSeccompProfileRoot = "/fakeSeccompProfileRoot"
-)
-
 type fakeHTTP struct {
 	url string
 	err error
@@ -82,7 +78,6 @@ func NewFakeKubeRuntimeManager(runtimeService internalapi.RuntimeService, imageS
 		runtimeService:      runtimeService,
 		imageService:        imageService,
 		keyring:             keyring,
-		seccompProfileRoot:  fakeSeccompProfileRoot,
 		internalLifecycle:   cm.NewFakeInternalContainerLifecycle(),
 	}
 

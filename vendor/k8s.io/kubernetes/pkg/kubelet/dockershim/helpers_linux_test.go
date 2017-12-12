@@ -20,13 +20,9 @@ package dockershim
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGetSeccompSecurityOpts(t *testing.T) {
@@ -59,31 +55,26 @@ func TestGetSeccompSecurityOpts(t *testing.T) {
 }
 
 func TestLoadSeccompLocalhostProfiles(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "seccomp-local-profile-test")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
-	testProfile := `{"foo": "bar"}`
-	err = ioutil.WriteFile(filepath.Join(tmpdir, "test"), []byte(testProfile), 0644)
-	require.NoError(t, err)
-
 	tests := []struct {
 		msg            string
 		seccompProfile string
 		expectedOpts   []string
 		expectErr      bool
 	}{{
-		msg:            "Seccomp localhost/test profile should return correct seccomp profiles",
-		seccompProfile: "localhost/" + filepath.Join(tmpdir, "test"),
+		msg: "Seccomp localhost/test profile",
+		// We are abusing localhost for loading test seccomp profiles.
+		// The profile should be an absolute path while we are using a relative one.
+		seccompProfile: "localhost/fixtures/seccomp/test",
 		expectedOpts:   []string{`seccomp={"foo":"bar"}`},
 		expectErr:      false,
 	}, {
-		msg:            "Non-existent profile should return error",
-		seccompProfile: "localhost/" + filepath.Join(tmpdir, "fixtures/non-existent"),
-		expectedOpts:   nil,
-		expectErr:      true,
+		msg:            "Seccomp localhost/sub/subtest profile",
+		seccompProfile: "localhost/fixtures/seccomp/sub/subtest",
+		expectedOpts:   []string{`seccomp={"abc":"def"}`},
+		expectErr:      false,
 	}, {
-		msg:            "Relative profile path should return error",
-		seccompProfile: "localhost/fixtures/test",
+		msg:            "Seccomp non-existent",
+		seccompProfile: "localhost/fixtures/seccomp/non-existent",
 		expectedOpts:   nil,
 		expectErr:      true,
 	}}

@@ -34,45 +34,40 @@ function setup-os-params {
 
 function config-ip-firewall {
   echo "Configuring IP firewall rules"
-
-  # Do not consider loopback addresses as martian source or destination while
-  # routing. This enables the use of 127/8 for local routing purposes.
-  sysctl -w net.ipv4.conf.all.route_localnet=1
-
   # The GCI image has host firewall which drop most inbound/forwarded packets.
   # We need to add rules to accept all TCP/UDP/ICMP packets.
-  if iptables -w -L INPUT | grep "Chain INPUT (policy DROP)" > /dev/null; then
+  if iptables -L INPUT | grep "Chain INPUT (policy DROP)" > /dev/null; then
     echo "Add rules to accept all inbound TCP/UDP/ICMP packets"
     iptables -A INPUT -w -p TCP -j ACCEPT
     iptables -A INPUT -w -p UDP -j ACCEPT
     iptables -A INPUT -w -p ICMP -j ACCEPT
   fi
-  if iptables -w -L FORWARD | grep "Chain FORWARD (policy DROP)" > /dev/null; then
+  if iptables -L FORWARD | grep "Chain FORWARD (policy DROP)" > /dev/null; then
     echo "Add rules to accept all forwarded TCP/UDP/ICMP packets"
     iptables -A FORWARD -w -p TCP -j ACCEPT
     iptables -A FORWARD -w -p UDP -j ACCEPT
     iptables -A FORWARD -w -p ICMP -j ACCEPT
   fi
 
-  iptables -w -N KUBE-METADATA-SERVER
-  iptables -w -I FORWARD -p tcp -d 169.254.169.254 --dport 80 -j KUBE-METADATA-SERVER
+  iptables -N KUBE-METADATA-SERVER
+  iptables -I FORWARD -p tcp -d 169.254.169.254 --dport 80 -j KUBE-METADATA-SERVER
 
   if [[ -n "${KUBE_FIREWALL_METADATA_SERVER:-}" ]]; then
-    iptables -w -A KUBE-METADATA-SERVER -j DROP
+    iptables -A KUBE-METADATA-SERVER -j DROP
   fi
 
   # Flush iptables nat table
-  iptables -w -t nat -F || true
+  iptables -t nat -F || true
 
   echo "Add rules for ip masquerade"
   if [[ "${NON_MASQUERADE_CIDR:-}" == "0.0.0.0/0" ]]; then
-    iptables -w -t nat -N IP-MASQ
-    iptables -w -t nat -A POSTROUTING -m comment --comment "ip-masq: ensure nat POSTROUTING directs all non-LOCAL destination traffic to our custom IP-MASQ chain" -m addrtype ! --dst-type LOCAL -j IP-MASQ
-    iptables -w -t nat -A IP-MASQ -d 169.254.0.0/16 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
-    iptables -w -t nat -A IP-MASQ -d 10.0.0.0/8 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
-    iptables -w -t nat -A IP-MASQ -d 172.16.0.0/12 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
-    iptables -w -t nat -A IP-MASQ -d 192.168.0.0/16 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
-    iptables -w -t nat -A IP-MASQ -m comment --comment "ip-masq: outbound traffic is subject to MASQUERADE (must be last in chain)" -j MASQUERADE
+    iptables -t nat -N IP-MASQ
+    iptables -t nat -A POSTROUTING -m comment --comment "ip-masq: ensure nat POSTROUTING directs all non-LOCAL destination traffic to our custom IP-MASQ chain" -m addrtype ! --dst-type LOCAL -j IP-MASQ
+    iptables -t nat -A IP-MASQ -d 169.254.0.0/16 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -t nat -A IP-MASQ -d 10.0.0.0/8 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -t nat -A IP-MASQ -d 172.16.0.0/12 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -t nat -A IP-MASQ -d 192.168.0.0/16 -m comment --comment "ip-masq: local traffic is not subject to MASQUERADE" -j RETURN
+    iptables -t nat -A IP-MASQ -m comment --comment "ip-masq: outbound traffic is subject to MASQUERADE (must be last in chain)" -j MASQUERADE
   fi
 }
 
@@ -400,19 +395,14 @@ EOF
   if [[ -n "${NODE_INSTANCE_PREFIX:-}" ]]; then
     use_cloud_config="true"
     if [[ -n "${NODE_TAGS:-}" ]]; then
-      # split NODE_TAGS into an array by comma.
-      IFS=',' read -r -a node_tags <<< ${NODE_TAGS}
+      local -r node_tags="${NODE_TAGS}"
     else
       local -r node_tags="${NODE_INSTANCE_PREFIX}"
     fi
     cat <<EOF >>/etc/gce.conf
+node-tags = ${node_tags}
 node-instance-prefix = ${NODE_INSTANCE_PREFIX}
 EOF
-    for tag in ${node_tags[@]}; do
-      cat <<EOF >>/etc/gce.conf
-node-tags = ${tag}
-EOF
-    done
   fi
   if [[ -n "${MULTIZONE:-}" ]]; then
     use_cloud_config="true"
@@ -422,13 +412,9 @@ EOF
   fi
   if [[ -n "${GCE_ALPHA_FEATURES:-}" ]]; then
     use_cloud_config="true"
-    # split GCE_ALPHA_FEATURES into an array by comma.
-    IFS=',' read -r -a alpha_features <<< ${GCE_ALPHA_FEATURES}
-    for feature in ${alpha_features[@]}; do
-      cat <<EOF >>/etc/gce.conf
-alpha-features = ${feature}
+    cat <<EOF >>/etc/gce.conf
+alpha-features = ${GCE_ALPHA_FEATURES}
 EOF
-    done
   fi
   if [[ -n "${SECONDARY_RANGE_NAME:-}" ]]; then
     use_cloud_config="true"
@@ -1035,6 +1021,9 @@ ExecStart=${kubelet_bin} \$KUBELET_OPTS
 WantedBy=multi-user.target
 EOF
 
+  # Flush iptables nat table
+  iptables -t nat -F || true
+
   systemctl start kubelet.service
 }
 
@@ -1447,13 +1436,9 @@ function start-kube-apiserver {
   fi
   if [[ -n "${PROJECT_ID:-}" && -n "${TOKEN_URL:-}" && -n "${TOKEN_BODY:-}" && -n "${NODE_NETWORK:-}" ]]; then
     local -r vm_external_ip=$(curl --retry 5 --retry-delay 3 --fail --silent -H 'Metadata-Flavor: Google' "http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip")
-    if [[ -n "${PROXY_SSH_USER:-}" ]]; then
-      params+=" --advertise-address=${vm_external_ip}"      
-      params+=" --ssh-user=${PROXY_SSH_USER}"
-      params+=" --ssh-keyfile=/etc/srv/sshproxy/.sshkeyfile"
-    else
-      params+=" --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
-    fi
+    params+=" --advertise-address=${vm_external_ip}"
+    params+=" --ssh-user=${PROXY_SSH_USER}"
+    params+=" --ssh-keyfile=/etc/srv/sshproxy/.sshkeyfile"
   elif [ -n "${MASTER_ADVERTISE_ADDRESS:-}" ]; then
     params="${params} --advertise-address=${MASTER_ADVERTISE_ADDRESS}"
   fi
@@ -1691,35 +1676,14 @@ function start-cluster-autoscaler {
   fi
 }
 
-# A helper function for setting up addon manifests.
+# A helper function for copying addon manifests and set dir/files
+# permissions.
 #
 # $1: addon category under /etc/kubernetes
 # $2: manifest source dir
-# $3: (optional) auxilary manifest source dir
 function setup-addon-manifests {
-  local -r src_dir="${KUBE_HOME}/kube-manifests/kubernetes/gci-trusty"
+  local -r src_dir="${KUBE_HOME}/kube-manifests/kubernetes/gci-trusty/$2"
   local -r dst_dir="/etc/kubernetes/$1/$2"
-
-  copy-manifests "${src_dir}/$2" "${dst_dir}"
-
-  # If the PodSecurityPolicy admission controller is enabled,
-  # set up the corresponding addon policies.
-  if [[ "${ENABLE_POD_SECURITY_POLICY:-}" == "true" ]]; then
-    local -r psp_dir="${src_dir}/${3:-$2}/podsecuritypolicies"
-    if [[ -d "${psp_dir}" ]]; then
-      copy-manifests "${psp_dir}" "${dst_dir}"
-    fi
-  fi
-}
-
-# A helper function for copying manifests and setting dir/files
-# permissions.
-#
-# $1: absolute source dir
-# $2: absolute destination dir
-function copy-manifests {
-  local -r src_dir="$1"
-  local -r dst_dir="$2"
   if [[ ! -d "${dst_dir}" ]]; then
     mkdir -p "${dst_dir}"
   fi
@@ -1743,47 +1707,21 @@ function copy-manifests {
 # Fluentd manifest is modified using kubectl, which may not be available at
 # this point. Run this as a background process.
 function wait-for-apiserver-and-update-fluentd {
-  local -r fluentd_gcp_yaml="${1}"
-
-  local modifying_flags=""
-  if [[ -n "${FLUENTD_GCP_MEMORY_LIMIT:-}" ]]; then
-    modifying_flags="${modifying_flags} --limits=memory=${FLUENTD_GCP_MEMORY_LIMIT}"
-  fi
-  local request_resources=""
-  if [[ -n "${FLUENTD_GCP_CPU_REQUEST:-}" ]]; then
-    request_resources="cpu=${FLUENTD_GCP_CPU_REQUEST}"
-  fi
-  if [[ -n "${FLUENTD_GCP_MEMORY_REQUEST:-}" ]]; then
-    if [[ -n "${request_resources}" ]]; then
-      request_resources="${request_resources},"
-    fi
-    request_resources="memory=${FLUENTD_GCP_MEMORY_REQUEST}"
-  fi
-  if [[ -n "${request_resources}" ]]; then
-    modifying_flags="${modifying_flags} --requests=${request_resources}"
-  fi
-
   until kubectl get nodes
   do
     sleep 10
   done
-
-  local -r temp_fluentd_gcp_yaml="${fluentd_gcp_yaml}.tmp"
-  if kubectl set resources --dry-run --local -f ${fluentd_gcp_yaml} ${modifying_flags} \
-      --containers=fluentd-gcp -o yaml > ${temp_fluentd_gcp_yaml}; then
-    mv ${temp_fluentd_gcp_yaml} ${fluentd_gcp_yaml}
-  else
-    (echo "Failed to update fluentd resources. Used manifest:" && cat ${temp_fluentd_gcp_yaml}) >&2
-    rm ${temp_fluentd_gcp_yaml}
-  fi
+  kubectl set resources --dry-run --local -f ${fluentd_gcp_yaml} \
+    --limits=memory=${FLUENTD_GCP_MEMORY_LIMIT} \
+    --requests=cpu=${FLUENTD_GCP_CPU_REQUEST},memory=${FLUENTD_GCP_MEMORY_REQUEST} \
+    --containers=fluentd-gcp -o yaml > ${fluentd_gcp_yaml}.tmp
+  mv ${fluentd_gcp_yaml}.tmp ${fluentd_gcp_yaml}
 }
 
 # Trigger background process that will ultimately update fluentd resource
 # requirements.
 function start-fluentd-resource-update {
-  local -r fluentd_gcp_yaml="${1}"
-
-  wait-for-apiserver-and-update-fluentd ${fluentd_gcp_yaml} &
+  wait-for-apiserver-and-update-fluentd &
 }
 
 # Updates parameters in yaml file for prometheus-to-sd configuration, or
@@ -1810,7 +1748,7 @@ function start-kube-addons {
   setup-addon-manifests "addons" "rbac"
 
   if [[ "${ENABLE_POD_SECURITY_POLICY:-}" == "true" ]]; then
-    setup-addon-manifests "addons" "podsecuritypolicies"
+      setup-addon-manifests "addons" "podsecuritypolicies"
   fi
 
   # Set up manifests of other addons.
@@ -1897,7 +1835,7 @@ function start-kube-addons {
     local -r fluentd_gcp_yaml="${dst_dir}/fluentd-gcp/fluentd-gcp-ds.yaml"
     update-prometheus-to-sd-parameters ${event_exporter_yaml}
     update-prometheus-to-sd-parameters ${fluentd_gcp_yaml}
-    start-fluentd-resource-update ${fluentd_gcp_yaml}
+    start-fluentd-resource-update
   fi
   if [[ "${ENABLE_CLUSTER_UI:-}" == "true" ]]; then
     setup-addon-manifests "addons" "dashboard"
@@ -1907,7 +1845,7 @@ function start-kube-addons {
   fi
   if [[ "${ENABLE_NODE_PROBLEM_DETECTOR:-}" == "standalone" ]]; then
     # Setup role binding for standalone node problem detector.
-    setup-addon-manifests "addons" "node-problem-detector/standalone" "node-problem-detector"
+    setup-addon-manifests "addons" "node-problem-detector/standalone"
   fi
   if echo "${ADMISSION_CONTROL:-}" | grep -q "LimitRanger"; then
     setup-addon-manifests "admission-controls" "limit-range"

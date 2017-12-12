@@ -1,5 +1,5 @@
-hash: e742ba5f95c38fb648926cf43aa5f9823ea4c9cc4f4155770b30760990f87459
-updated: 2017-12-11T16:13:38.694191315Z
+hash: d5ce09f7e93f7f940521ca20de5dcc1fa334346c85ccf20fe0063089a9797789
+updated: 2017-12-12T14:58:38.191754217-08:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -315,7 +315,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 9b9dca205a15b6ce9ef10091f05d60a13fdcf418
+  version: 4df58c811fe2e65feb879227b2b245e4dc26e7ad
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -342,7 +342,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 5134afd2c0c91158afac0d8a28bd2177185a3bcc
+  version: 019ae5ada31de202164b118aee88ee2d14075c31
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
@@ -400,7 +400,7 @@ imports:
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/apiserver
-  version: f5fd0005b06697e897cbeb10c97b7cb5f5b85232
+  version: 9707c008294d447053c0e2737c256ee23f99e5b4
   subpackages:
   - pkg/admission
   - pkg/admission/initializer
@@ -586,7 +586,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/code-generator
-  version: 25fd8c8ddbf75b223882df4479f8b8e615da05ae
+  version: 6db2ee6aa9ab51230d6e0d970b398274a88e81b0
 - name: k8s.io/gengo
   version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
 - name: k8s.io/kube-openapi
@@ -597,7 +597,7 @@ imports:
   - pkg/handler
   - pkg/util
 - name: k8s.io/kubernetes
-  version: bbeba5ff9b79ea157100bcff72e263c8086f6952
+  version: c1d1b92688176f37893d81cf6d7a3abc5663a795
   subpackages:
   - pkg/api
   - pkg/api/install

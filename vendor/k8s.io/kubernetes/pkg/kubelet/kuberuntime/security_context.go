@@ -75,7 +75,7 @@ func (m *kubeGenericRuntimeManager) determineEffectiveSecurityContext(pod *v1.Po
 }
 
 // verifyRunAsNonRoot verifies RunAsNonRoot.
-func verifyRunAsNonRoot(pod *v1.Pod, container *v1.Container, uid *int64, username string) error {
+func verifyRunAsNonRoot(pod *v1.Pod, container *v1.Container, uid int64) error {
 	effectiveSc := securitycontext.DetermineEffectiveSecurityContext(pod, container)
 	// If the option is not set, or if running as root is allowed, return nil.
 	if effectiveSc == nil || effectiveSc.RunAsNonRoot == nil || !*effectiveSc.RunAsNonRoot {
@@ -89,14 +89,11 @@ func verifyRunAsNonRoot(pod *v1.Pod, container *v1.Container, uid *int64, userna
 		return nil
 	}
 
-	switch {
-	case uid != nil && *uid == 0:
+	if uid == 0 {
 		return fmt.Errorf("container has runAsNonRoot and image will run as root")
-	case uid == nil && len(username) > 0:
-		return fmt.Errorf("container has runAsNonRoot and image has non-numeric user (%s), cannot verify user is non-root", username)
-	default:
-		return nil
 	}
+
+	return nil
 }
 
 // convertToRuntimeSecurityContext converts v1.SecurityContext to runtimeapi.SecurityContext.
