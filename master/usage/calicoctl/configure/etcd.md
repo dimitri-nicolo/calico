@@ -1,49 +1,7 @@
 ---
-redirect_to: /master/usage/calicoctl/configure/etcd
+title: Configuring calicoctl to connect to an etcd datastore
 no_canonical: true
 ---
-
-This document covers the configuration options for calicoctl when using an etcdv3 datastore.
-
-There are two ways to configure calicoctl with your etcdv3 cluster details:
-- [Configuration file](#configuration-file)
-- [Environment variables](#environment-variables)
-
-
-## Configuration file
-
-By default `calicoctl` looks for a configuration file at `/etc/calico/calicoctl.cfg`.
-
-The file location may be overridden using the `--config` option on commands that required
-datastore access.
-
-You can use either YAML or JSON for the configuration file. A YAML example follows.
-
-```
-apiVersion: projectcalico.org/v3
-kind: CalicoAPIConfig
-metadata:
-spec:
-  datastoreType: "etcdv3"
-  etcdEndpoints: "http://etcd1:2379,http://etcd2:2379"
-  ...
-```
-
-See [Complete list of etcdv3 configuration options](#complete-list-of-etcdv3-configuration-options)
-for details on the etcdv3 configuration options that may be included in
-the `spec` section of the configuration file.
-
-If the file exists, then it must be valid and readable by calicoctl.  If the file
-does not exist, calicoctl will read etcdv3 configuration options from the environment variables.
-
-## Environment variables
-
-If you are not using a configuration file to specify your etcdv3 access information, calicoctl
-will check a particular set of environment variables.
-
-See [Complete list of etcdv3 configuration options](#complete-list-of-etcdv3-configuration-options)
-for the list of supported environment variables.
-
 
 ## Complete list of etcdv3 configuration options
 
@@ -68,7 +26,12 @@ for the list of supported environment variables.
 > - Previous versions of `calicoctl` supported `ETCD_SCHEME` and `ETC_AUTHORITY` environment
 >   variables as a mechanism for specifying the etcd endpoints. These variables are
 >   no longer supported. Use `ETCD_ENDPOINTS` instead.
+> - In kubeadm deployments, Calico is not configured to use the etcd run by kubeadm 
+>   on the Kubernetes master. Instead, it launches its own instance of etcd as a pod, 
+>   available at `http://10.96.232.136:6666`. Ensure you are connecting to the correct etcd 
+>   or you will not see any of the expected data.
 {: .alert .alert-info}
+
 
 
 ## Examples
@@ -80,7 +43,7 @@ apiVersion: projectcalico.org/v3
 kind: CalicoAPIConfig
 metadata:
 spec:
-  etcdEndpoints: http://etcd1:2379,http://etcd2:2379,http://etcd3:2379
+  etcdEndpoints: https://etcd1:2379,https://etcd2:2379,https://etcd3:2379
   etcdKeyFile: /etc/calico/key.pem
   etcdCertFile: /etc/calico/cert.pem
   etcdCACertFile: /etc/calico/ca.pem
@@ -126,11 +89,36 @@ Use the IPv4 endpoint:
 ETCD_ENDPOINTS=http://127.0.0.1:2379 calicoctl get bgppeers
 ```
 
-## calico/node
+## {{site.nodecontainer}}
 
 It is important to note that not only will calicoctl will use the specified keys directly
 on the host to access etcd, **it will also pass on these environment variables
-and volume mount the keys into the started calico-node container.**
+and volume mount the keys into the started `{{site.noderunning}}` container.**
 
-Therefore, configuring calico-node for etcd is easily accomplished by running
+Therefore, configuring `{{site.nodecontainer}}` for etcd is easily accomplished by running
 `calicoctl node run` with the parameters set correctly.
+
+
+### Checking the configuration
+
+Here is a simple command to check that the installation and configuration is
+correct.
+
+```
+calicoctl get nodes
+```
+
+A correct setup will yield a list of the nodes that have registered.  If an
+empty list is returned you are either pointed at the wrong datastore or no
+nodes have registered.  If an error is returned then attempt to correct the
+issue then try again.
+
+### Next steps
+
+Now you are ready to read and configure most aspects of {{site.prodname}}.  You can
+find the full list of commands in the
+[Command Reference]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/).
+
+The full list of resources that can be managed, including a description of each,
+can be found in the
+[Resource Definitions]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/).

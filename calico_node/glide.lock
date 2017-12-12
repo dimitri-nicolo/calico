@@ -255,7 +255,6 @@ imports:
   version: e48874b42435b4347fc52bdee0424a52abc974d7
   subpackages:
   - unix
-  - windows
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
