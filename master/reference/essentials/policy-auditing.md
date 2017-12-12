@@ -37,3 +37,37 @@ Note that [Denied Packet Metrics]({{site.baseurl}}/{{page.version}}/reference/es
 setting.  Specifically, if packets that would normally be denied are being
 allowed through by a setting of "Accept" or "LogAndAccept", those packets
 still contribute to the denied packet metrics as normal.
+
+One way to configure DropActionOverride, would be to use the [calicoctl replace]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/replace)
+command. For example, to set a DropActionOverride for "myhost" to log then drop denied packets:
+
+```
+# Get current felix configuration for the node and save it to a file.
+$ calicoctl get felixconfig node.myhost -o yaml | tee node-myhost-felixconfig.yaml
+apiVersion: projectcalico.org/v3
+kind: FelixConfiguration
+metadata:
+  creationTimestamp: 2017-12-11T22:31:57Z
+  name: node.myhost
+  resourceVersion: "624"
+  uid: 191ead36-dec3-11e7-911b-08002767d9b9
+spec:
+  defaultEndpointToHostAction: Return
+
+# Edit the node-myhost-felixconfig file and add the "dropActionOverride" key.
+# Note that we are adding the new parameter keeping all the other existing fields as-is.
+$ cat node-myhost-felixconfig.yaml
+apiVersion: projectcalico.org/v3
+kind: FelixConfiguration
+metadata:
+  name: node.myhost
+spec:
+  defaultEndpointToHostAction: Return
+  dropActionOverride: LogAndDrop
+EOF
+
+# Replace the FelixConfiguration of the "myhost" node.
+$ cat node-myhost-felixconfig.yaml | calicoctl replace -f -
+```
+
+For a global setting, modify the `default` FelixConfiguration resource.
