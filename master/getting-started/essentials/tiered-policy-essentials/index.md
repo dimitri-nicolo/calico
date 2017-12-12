@@ -3,7 +3,7 @@ title: Tiered Policy Demo
 ---
 
 This guide will introduce tiered policies and walk through a simple example
-for working with the [Tiers](../../reference/calicoctl/resources/tier) resource.
+for working with the [Tiers]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) resource.
 
 Some use cases for using tiers and tiered policies are:
 
@@ -18,7 +18,7 @@ first use case.
 ### Prerequisites
 
 - A Kubernetes cluster configured with [{{site.prodname}}](../kubernetes/installation/hosted/essentials/index)
-- [calicoctl installed and set up](../../reference/calicoctl/setup) to work properly with your cluster
+- [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup/) to work properly with your cluster
 
 ### Create Namespace and Enable Isolation
 
@@ -122,8 +122,7 @@ $ calicoctl get networkpolicy -o yaml --namespace policy-demo
 Notice the Policy resource includes the information about the tier in the
 `metadata` field. Also, note the use of special label `projectcalico.org/namespace` in the
 Policy selector. This label is automatically added to endpoints and the value
-populated with the pod's Kubernetes namespace. For more information about this
-checkout [Advanced Policy with {{site.prodname}}](../kubernetes/tutorials/advanced-policy).
+populated with the pod's Kubernetes namespace.
 
 You can also get a list of all current tiers that exist by running:
 
@@ -165,7 +164,7 @@ Notice that the order value of the netops tier is lower than the value of the
 `default` tier. Lower order values have a higher precedence.
 
 > **Note**: Read more about order values in the
-> [calicoctl reference section](../../reference/calicoctl/).
+> [calicoctl reference section]({{site.baseurl}}/{{page.version}}/reference/calicoctl/).
 {: .alert .alert-info}
 
 Launch a pod in the `policy-demo` Namespace and test DNS connectivity to 8.8.8.8
