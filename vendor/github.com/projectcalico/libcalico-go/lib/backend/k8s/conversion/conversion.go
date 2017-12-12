@@ -47,6 +47,8 @@ const (
 
 //TODO: make this private and expose a public conversion interface instead
 type Converter struct {
+	// AlphaSA set to true if the alpha feature for serviceaccounts is enabled.
+	AlphaSA bool
 }
 
 // VethNameForWorkload returns a deterministic veth name
@@ -98,7 +100,7 @@ func (c Converter) NamespaceToProfile(ns *kapiv1.Namespace) (*model.KVPair, erro
 			Kind: apiv3.KindProfile,
 		},
 		Value:    profile,
-		Revision: ns.ResourceVersion,
+		Revision: c.JoinProfileRevisions(ns.ResourceVersion, ""),
 	}
 	return &kvp, nil
 }
@@ -138,7 +140,28 @@ func (c Converter) IsHostNetworked(pod *kapiv1.Pod) bool {
 }
 
 func (c Converter) HasIPAddress(pod *kapiv1.Pod) bool {
-	return pod.Status.PodIP != ""
+	return pod.Status.PodIP != "" || pod.Annotations[AnnotationPodIP] != ""
+}
+
+// GetPodIPs extracts the IP addresses from a Kubernetes Pod.  At present, only a single IP
+// is expected/supported.  GetPodIPs loads the IP either from the PodIP field, if present, or
+// the calico podIP annotation.
+func (c Converter) GetPodIPs(pod *kapiv1.Pod) ([]string, error) {
+	var podIP string
+	if podIP = pod.Status.PodIP; podIP != "" {
+		log.WithField("ip", podIP).Debug("PodIP field filled in.")
+	} else if podIP = pod.Annotations[AnnotationPodIP]; podIP != "" {
+		log.WithField("ip", podIP).Debug("PodIP missing, falling back on Calico annotation.")
+	} else {
+		log.WithField("ip", podIP).Debug("Pod has no IP.")
+		return nil, nil
+	}
+	_, ipNet, err := cnet.ParseCIDROrIP(podIP)
+	if err != nil {
+		log.WithFields(log.Fields{"ip": podIP, "pod": pod.Name}).WithError(err).Error("Failed to parse pod IP")
+		return nil, err
+	}
+	return []string{ipNet.String()}, nil
 }
 
 // PodToWorkloadEndpoint converts a Pod to a WorkloadEndpoint.  It assumes the calling code
@@ -146,8 +169,18 @@ func (c Converter) HasIPAddress(pod *kapiv1.Pod) bool {
 // PodToWorkloadEndpoint requires a Pods Name and Node Name to be populated. It will
 // fail to convert from a Pod to WorkloadEndpoint otherwise.
 func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error) {
-	// Pull out the profile and workload ID based on pod name and Namespace.
-	profile := NamespaceProfileNamePrefix + pod.Namespace
+	log.WithField("pod", pod).Debug("Converting pod to WorkloadEndpoint")
+	// Get all the profiles that apply
+	var profiles []string
+
+	// Pull out the Namespace based profile off the pod name and Namespace.
+	profiles = append(profiles, NamespaceProfileNamePrefix+pod.Namespace)
+
+	// Pull out the Serviceaccount based profile off the pod SA and namespace
+	if c.AlphaSA && pod.Spec.ServiceAccountName != "" {
+		profiles = append(profiles, serviceAccountNameToProfileName(pod.Spec.ServiceAccountName, pod.Namespace))
+	}
+
 	wepids := names.WorkloadEndpointIdentifiers{
 		Node:         pod.Spec.NodeName,
 		Orchestrator: apiv3.OrchestratorKubernetes,
@@ -161,14 +194,9 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 
 	// An IP address may not yet be assigned (or may have been removed for a Pod deletion), so
 	// handle a missing IP gracefully.
-	ipNets := []string{}
-	if c.HasIPAddress(pod) {
-		_, ipNet, err := cnet.ParseCIDROrIP(pod.Status.PodIP)
-		if err != nil {
-			log.WithFields(log.Fields{"ip": pod.Status.PodIP, "pod": pod.Name}).WithError(err).Error("Failed to parse pod IP")
-			return nil, err
-		}
-		ipNets = append(ipNets, ipNet.String())
+	ipNets, err := c.GetPodIPs(pod)
+	if err != nil {
+		return nil, err
 	}
 
 	// Generate the interface name based on workload.  This must match
@@ -183,6 +211,10 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 	}
 	labels[apiv3.LabelNamespace] = pod.Namespace
 	labels[apiv3.LabelOrchestrator] = apiv3.OrchestratorKubernetes
+
+	if c.AlphaSA && pod.Spec.ServiceAccountName != "" {
+		labels[apiv3.LabelServiceAccount] = pod.Spec.ServiceAccountName
+	}
 
 	// Map any named ports through.
 	var endpointPorts []apiv3.EndpointPort
@@ -228,7 +260,7 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 		Pod:           pod.Name,
 		Endpoint:      "eth0",
 		InterfaceName: interfaceName,
-		Profiles:      []string{profile},
+		Profiles:      profiles,
 		IPNetworks:    ipNets,
 		Ports:         endpointPorts,
 	}
@@ -557,5 +589,106 @@ func (c Converter) SplitNetworkPolicyRevision(rev string) (crdNPRev string, k8sN
 
 	crdNPRev = revs[0]
 	k8sNPRev = revs[1]
+	return
+}
+
+// serviceAccountNameToProfileName creates a profile name that is a join
+// of 'ksa.' + namespace + "." + serviceaccount name.
+func serviceAccountNameToProfileName(sa, namespace string) string {
+	// Need to incorporate the namespace into the name of the sa based profile
+	// to make them globally unique
+	if namespace == "" {
+		namespace = "default"
+	}
+	return ServiceAccountProfileNamePrefix + namespace + "." + sa
+}
+
+// ServiceAccountToProfile converts a ServiceAccount to a Calico Profile.  The Profile stores
+// labels from the ServiceAccount which are inherited by the WorkloadEndpoints within
+// the Profile.
+func (c Converter) ServiceAccountToProfile(sa *kapiv1.ServiceAccount) (*model.KVPair, error) {
+	// Generate the labels to apply to the profile, using a special prefix
+	// to indicate that these are the labels from the parent Kubernetes ServiceAccount.
+	labels := map[string]string{}
+	for k, v := range sa.ObjectMeta.Labels {
+		labels[ServiceAccountLabelPrefix+k] = v
+	}
+
+	name := serviceAccountNameToProfileName(sa.Name, sa.Namespace)
+	profile := apiv3.NewProfile()
+	profile.ObjectMeta = metav1.ObjectMeta{
+		Name:              name,
+		CreationTimestamp: sa.CreationTimestamp,
+		UID:               sa.UID,
+	}
+	profile.Spec = apiv3.ProfileSpec{
+		LabelsToApply: labels,
+	}
+
+	// Embed the profile in a KVPair.
+	kvp := model.KVPair{
+		Key: model.ResourceKey{
+			Name: name,
+			Kind: apiv3.KindProfile,
+		},
+		Value:    profile,
+		Revision: c.JoinProfileRevisions("", sa.ResourceVersion),
+	}
+	return &kvp, nil
+}
+
+// ProfileNameToServiceAccount extracts the ServiceAccount name from the given Profile name.
+func (c Converter) ProfileNameToServiceAccount(profileName string) (ns, sa string, err error) {
+
+	// Profile objects backed by ServiceAccounts have form "ksa.<namespace>.<sa_name>"
+	if !strings.HasPrefix(profileName, ServiceAccountProfileNamePrefix) {
+		// This is not backed by a Kubernetes ServiceAccount.
+		err = fmt.Errorf("Profile %s not backed by a ServiceAccount", profileName)
+		return
+	}
+
+	names := strings.SplitN(profileName, ".", 3)
+	if len(names) != 3 {
+		err = fmt.Errorf("Profile %s is not formatted correctly", profileName)
+		return
+	}
+
+	ns = names[1]
+	sa = names[2]
+	return
+}
+
+// JoinProfileRevisions constructs the revision from the individual namespace and serviceaccount
+// revisions.
+// This is conditional on the feature flag for serviceaccount set or not.
+func (c Converter) JoinProfileRevisions(nsRev, saRev string) string {
+	if c.AlphaSA == false {
+		return nsRev
+	}
+
+	return nsRev + "/" + saRev
+}
+
+// SplitProfileRevision extracts the namespace and serviceaccount revisions from the combined
+// revision returned on the KDD service account based profile.
+// This is conditional on the feature flag for serviceaccount set or not.
+func (c Converter) SplitProfileRevision(rev string) (nsRev string, saRev string, err error) {
+	if rev == "" {
+		return
+	}
+
+	if c.AlphaSA == false {
+		nsRev = rev
+		return
+	}
+
+	revs := strings.Split(rev, "/")
+	if len(revs) != 2 {
+		err = fmt.Errorf("ResourceVersion is not valid: %s", rev)
+		return
+	}
+
+	nsRev = revs[0]
+	saRev = revs[1]
 	return
 }
