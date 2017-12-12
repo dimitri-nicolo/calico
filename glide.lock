@@ -1,5 +1,5 @@
-hash: 15d28fd34d413aedb888b3b324230e1c66993cb11892a04061ee7ce2fcba0966
-updated: 2017-12-01T18:28:32.982301912-08:00
+hash: d6c85cbd31fb20e83ddbb59311fae7c8b8ba64a5aeab707ce1ca55c442e39097
+updated: 2017-12-11T16:08:51.602907413Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -141,6 +141,10 @@ imports:
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
+- name: github.com/Microsoft/go-winio
+  version: 78439966b38d69bf38227fbf57ac8a6fee70f69a
+- name: github.com/Microsoft/hcsshim
+  version: 34a629f78a5d50f7de07727e41a948685c45e026
 - name: github.com/mipearson/rfw
   version: 6f0a6f3266ba1058df9ef0c94cda1cecd2e62852
 - name: github.com/onsi/ginkgo
@@ -191,7 +195,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 542c7908f045010ce8e2780af470ac709ee17cc9
+  version: ccf961448630f93c6650761dcd3be768699fe31d
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -231,7 +235,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 007bf897c0d0e2303c309d59b1e59317c0f713d5
+  version: dc35e05d7cd9f2a9ae10bd991a122a4a7f7da93f
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -263,7 +267,7 @@ imports:
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sirupsen/logrus
-  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/nfnetlink
@@ -273,15 +277,15 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: 016ba6f67a12c03708643150afcfb1509be7747a
+  version: f67b75edbf5e3bb7dfe70bb788610693a71be3d1
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
-  version: 48a5a650cfc529a2517eb6a4d6d6749872520525
+  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -368,7 +372,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 4df58c811fe2e65feb879227b2b245e4dc26e7ad
+  version: 9b9dca205a15b6ce9ef10091f05d60a13fdcf418
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -395,7 +399,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 019ae5ada31de202164b118aee88ee2d14075c31
+  version: 5134afd2c0c91158afac0d8a28bd2177185a3bcc
   subpackages:
   - pkg/api/equality
   - pkg/api/errors

@@ -25,7 +25,7 @@ import (
 func (r *DefaultRuleRenderer) StaticFilterTableChains(ipVersion uint8) (chains []*Chain) {
 	chains = append(chains, r.StaticFilterForwardChains()...)
 	chains = append(chains, r.StaticFilterInputChains(ipVersion)...)
-	chains = append(chains, r.StaticFilterOutputChains()...)
+	chains = append(chains, r.StaticFilterOutputChains(ipVersion)...)
 	return
 }
 
@@ -46,7 +46,7 @@ func (r *DefaultRuleRenderer) acceptAlreadyAccepted() []Rule {
 	return []Rule{
 		{
 			Match:  Match().MarkSet(r.IptablesMarkAccept),
-			Action: AcceptAction{},
+			Action: r.filterAllowAction,
 		},
 	}
 }
@@ -59,12 +59,20 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 
 	if ipVersion == 4 && r.IPIPEnabled {
 		// IPIP is enabled, filter incoming IPIP packets to ensure they come from a
-		// recognised host.  We use the protocol number rather than its name because the
-		// name is not guaranteed to be known by the kernel.
-		match := Match().ProtocolNum(ProtoIPIP).
-			NotSourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs))
+		// recognised host and are going to a local address on the host.  We use the protocol
+		// number rather than its name because the name is not guaranteed to be known by the kernel.
 		inputRules = append(inputRules,
-			r.DropRules(match, "Drop IPIP packets from non-Calico hosts")...)
+			Rule{
+				Match: Match().ProtocolNum(ProtoIPIP).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPIP packets from Calico hosts",
+			},
+		)
+		inputRules = append(inputRules,
+			r.DropRules(Match().ProtocolNum(ProtoIPIP), "Drop IPIP packets from non-Calico hosts")...,
+		)
 	}
 
 	// Apply our policy to packets coming from workload endpoints.
@@ -121,7 +129,7 @@ func (r *DefaultRuleRenderer) filterWorkloadToHostChain(ipVersion uint8) *Chain 
 				Match: Match().
 					ProtocolNum(ProtoICMPv6).
 					ICMPV6Type(icmpType),
-				Action: AcceptAction{},
+				Action: r.filterAllowAction,
 			})
 		}
 	}
@@ -140,7 +148,7 @@ func (r *DefaultRuleRenderer) filterWorkloadToHostChain(ipVersion uint8) *Chain 
 					Protocol("tcp").
 					DestNet(r.OpenStackMetadataIP.String()).
 					DestPorts(r.OpenStackMetadataPort),
-				Action: AcceptAction{},
+				Action: r.filterAllowAction,
 			})
 		}
 
@@ -160,13 +168,13 @@ func (r *DefaultRuleRenderer) filterWorkloadToHostChain(ipVersion uint8) *Chain 
 					Protocol("udp").
 					SourcePorts(dhcpSrcPort).
 					DestPorts(dhcpDestPort),
-				Action: AcceptAction{},
+				Action: r.filterAllowAction,
 			},
 			Rule{
 				Match: Match().
 					Protocol("udp").
 					DestPorts(dnsDestPort),
-				Action: AcceptAction{},
+				Action: r.filterAllowAction,
 			},
 		)
 	}
@@ -295,14 +303,14 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 	}}
 }
 
-func (r *DefaultRuleRenderer) StaticFilterOutputChains() []*Chain {
+func (r *DefaultRuleRenderer) StaticFilterOutputChains(ipVersion uint8) []*Chain {
 	return []*Chain{
-		r.filterOutputChain(),
+		r.filterOutputChain(ipVersion),
 		r.failsafeOutChain(),
 	}
 }
 
-func (r *DefaultRuleRenderer) filterOutputChain() *Chain {
+func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 	rules := []Rule{}
 
 	// Accept immediately if we've already accepted this packet in the raw or mangle table.
@@ -332,6 +340,21 @@ func (r *DefaultRuleRenderer) filterOutputChain() *Chain {
 
 	// If we reach here, the packet is not going to a workload so it must be going to a
 	// host endpoint.
+
+	if ipVersion == 4 && r.IPIPEnabled {
+		// When IPIP is enabled, auto-allow IPIP traffic to other Calico nodes.  Without this,
+		// it's too easy to make a host policy that blocks IPIP traffic, resulting in very confusing
+		// connectivity problems.
+		rules = append(rules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoIPIP).
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					SrcAddrType(AddrTypeLocal, false),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPIP packets to other Calico hosts",
+			},
+		)
+	}
 
 	// Apply host endpoint policy.
 	rules = append(rules,

@@ -35,6 +35,7 @@ package fv_test
 // says that it is ready.)
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -51,8 +52,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	"context"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/utils"
@@ -363,8 +362,8 @@ var _ = Describe("health tests", func() {
 			"-e", "K8S_INSECURE_SKIP_TLS_VERIFY=true",
 			"-e", "FELIX_TYPHAADDR="+typhaAddr,
 			"-v", k8sCertFilename+":/tmp/apiserver.crt",
-			"tigera/felix", // TODO Felix version
-			"calico-felix")
+			"tigera/felix:latest",
+		)
 		Expect(felixContainer).NotTo(BeNil())
 
 		felixReady = getHealthStatus(felixContainer.IP, "9099", "readiness")
