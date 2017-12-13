@@ -29,7 +29,7 @@ import:
 - package: github.com/projectcalico/go-yaml-wrapper
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: v2.0.0-cnx-beta2
+  version: v2.0.0-cnx-beta3
   subpackages:
   - lib/apis/v3
   - lib/clientv3
