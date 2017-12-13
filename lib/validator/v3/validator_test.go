@@ -1261,6 +1261,14 @@ func init() {
 			}, false,
 		),
 
+		// Tiers.
+		Entry("Tier: valid name", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "foo"}}, true),
+		Entry("Tier: valid name with dash", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "fo-o"}}, true),
+		Entry("Tier: disallow dot in name", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "fo.o"}}, false),
+		Entry("Tier: allow valid name of 253 chars", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])}}, true),
+		Entry("Tier: disallow a name of 254 chars", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])}}, false),
+		Entry("Tier: disallow other chars", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"}}, false),
+
 		// NetworkPolicy Object MetaData checks.
 		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"}}, true),
 		Entry("allow name with single dot - tier", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "th.ing"}}, true),

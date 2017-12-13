@@ -51,6 +51,10 @@ var (
 	// more restrictive naming requirements.
 	nameRegex = regexp.MustCompile("^" + nameSubdomainFmt + "$")
 
+	// Tiers must have simple names with no dots, since they appear as sub-components of other
+	// names.
+	tierNameRegex = regexp.MustCompile("^" + nameLabelFmt + "$")
+
 	// NetworkPolicy names must either be a simple DNS1123 label format (nameLabelFmt), or
 	// nameLabelFmt.nameLabelFmt (with a single dot), or
 	// must be the standard name format (nameRegex) prefixed with "knp.default".
@@ -168,6 +172,7 @@ func init() {
 	registerStructValidator(validatorPrimary, validateIPPoolSpec, api.IPPoolSpec{})
 	registerStructValidator(validatorPrimary, validateNodeSpec, api.NodeSpec{})
 	registerStructValidator(validatorPrimary, validateObjectMeta, metav1.ObjectMeta{})
+	registerStructValidator(validatorPrimary, validateTier, api.Tier{})
 
 	// Register structs that have one level of additional structs to validate.
 	registerStructValidator(validatorSecondary, validateWorkloadEndpointSpec, api.WorkloadEndpointSpec{})
@@ -749,6 +754,34 @@ func validateObjectMeta(v *validator.Validate, structLevel *validator.StructLeve
 
 	validateObjectMetaAnnotations(v, structLevel, om.Annotations)
 	validateObjectMetaLabels(v, structLevel, om.Labels)
+}
+
+func validateTier(v *validator.Validate, structLevel *validator.StructLevel) {
+	tier := structLevel.CurrentStruct.Interface().(api.Tier)
+
+	// Check the name is within the max length.
+	if len(tier.Name) > k8svalidation.DNS1123SubdomainMaxLength {
+		structLevel.ReportError(
+			reflect.ValueOf(tier.Name),
+			"Metadata.Name",
+			"",
+			reason(fmt.Sprintf("name is too long by %d bytes", len(tier.Name)-k8svalidation.DNS1123SubdomainMaxLength)),
+		)
+	}
+
+	// Tiers must have simple (no dot) names, since they appear as sub-components of other names.
+	matched := tierNameRegex.MatchString(tier.Name)
+	if !matched {
+		structLevel.ReportError(
+			reflect.ValueOf(tier.Name),
+			"Metadata.Name",
+			"",
+			reason("name must consist of lower case alphanumeric characters or '-' (regex: "+nameLabelFmt+")"),
+		)
+	}
+
+	validateObjectMetaAnnotations(v, structLevel, tier.Annotations)
+	validateObjectMetaLabels(v, structLevel, tier.Labels)
 }
 
 func validateNetworkPolicy(v *validator.Validate, structLevel *validator.StructLevel) {
