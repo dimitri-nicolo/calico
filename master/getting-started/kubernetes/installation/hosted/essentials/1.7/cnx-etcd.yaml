@@ -131,6 +131,14 @@ metadata:
 
 ---
 
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: cnx-manager
+  namespace: kube-system
+
+---
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -238,6 +246,7 @@ spec:
         # a failure.  This annotation works in tandem with the toleration below.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      serviceAccountName: cnx-manager
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
