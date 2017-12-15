@@ -1,6 +1,5 @@
 ---
 title: Vagrant Deployed Mesos Cluster with Calico
-redirect_from: latest/getting-started/mesos/installation/vagrant-centos/index
 ---
 This guide will show you how to use Vagrant to launch a Mesos Cluster
 with {{site.prodname}} installed and ready to network Docker Containerizer tasks.
@@ -45,11 +44,11 @@ Access the Mesos and Marathon services at the following URLs:
 |              |        |           |                | zookeeper              |
 |              |        |           |                | marathon               |
 |              |        |           |                | marathon load-balancer |
-|              |        |           |                | calico-node            |
+|              |        |           |                | {{site.noderunning}}   |
 |--------------|--------|-----------|----------------|------------------------|
 | Agents       | Centos | calico-01 | 172.24.197.102 | mesos-agent            |
 |              |        | calico-02 | 172.24.197.103 | docker                 |
-|              |        |           |                | calico-node            |
+|              |        |           |                | {{site.noderunning}}   |
 
 ## 4. SSH
 

@@ -1,6 +1,5 @@
 ---
 title: RBAC on tiered Policies
-redirect_from: latest/reference/essentials/rbac-tiered-policies
 ---
 
 {{site.prodname}} with the CNX Kubernetes extension API Server adds the ability to manage tiered policies as Kubernetes resources. And with that comes the ability to use Kubernetes RBAC Authorization APIs, under apiGroup rbac.authorization.k8s.io, with CNX resources.

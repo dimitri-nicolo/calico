@@ -1,6 +1,5 @@
 ---
 title: Deploying Calico on GCE
-redirect_from: latest/reference/public-cloud/gce
 ---
 
 To deploy {{site.prodname}} in [Google Compute Engine][GCE], you must ensure that the
@@ -12,10 +11,10 @@ options for doing this depending on your deployment.
 
 {{site.prodname}} requires the following firewall rules to function in GCE.
 
-| Description       | Protocol | Port Range |
-|:------------------|:---------|:-----------|
-| BGP               | TCP      | 179        |
-| IPIP*             | 4        | all        |
+| Description  | Protocol | Port Range |
+|:-------------|:---------|:-----------|
+| BGP          | TCP      | 179        |
+| IPIP*        | 4        | all        |
 
 
 \* The IPIP rule is required only when using {{site.prodname}} with IPIP encapsulation. Keep reading 

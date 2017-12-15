@@ -1,5 +1,8 @@
 ###############################################################################
+# vX.Y format: update during major release process
+RELEASE_STREAM ?= v2.0
 
+###############################################################################
 GO_BUILD_VER?=v0.7
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 
@@ -10,10 +13,6 @@ VERSIONS_FILE?=$(CALICO_NODE_DIR)/../_data/versions.yml
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yaml"
 YAML_CMD:=$(shell which yaml || echo docker run --rm -i $(CALICO_BUILD) yaml)
-
-# Read current stream version from _data/versions.yml
-V_RELEASE_STREAM := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - "currentReleaseStream")
-RELEASE_STREAM ?= $(V_RELEASE_STREAM)
 
 # Use := so that these V_ variables are computed only once per make run.
 V_CALICO := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
@@ -30,6 +29,7 @@ V_TYPHA := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)
 V_CALICOQ := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
 V_APISERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-apiserver.version')
 V_CNX_WEB_MANAGER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-manager.version')
+V_RR := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/routereflector.version')
 
 # Now use ?= to allow the versions derived from versions.yml to be
 # overriden (by the environment).
@@ -47,22 +47,23 @@ TYPHA_VER ?= $(V_TYPHA)
 CALICOQ_VER ?= $(V_CALICOQ)
 APISERVER_VER ?= $(V_APISERVER)
 CNX_WEB_MANAGER_VER ?= $(V_CNX_WEB_MANAGER)
+RR_VER ?= $(V_RR)
 
-$(info RELEASE_STREAM=$(RELEASE_STREAM))
-$(info CALICO_VER=$(CALICO_VER))
-$(info CALICO_GIT_VER=$(CALICO_GIT_VER))
-$(info BIRD_VER=$(BIRD_VER))
-$(info CALICOCTL_VER=$(CALICOCTL_VER))
-$(info CONFD_VER=$(CONFD_VER))
-$(info CNI_VER=$(CNI_VER))
-$(info FELIX_VER=$(FELIX_VER))
-$(info GOBGPD_VER=$(GOBGPD_VER))
-$(info KUBE_CONTROLLERS_VER=$(KUBE_CONTROLLERS_VER))
-$(info LIBNETWORK_PLUGIN_VER=$(LIBNETWORK_PLUGIN_VER))
-$(info TYPHA_VER=$(TYPHA_VER))
-$(info CALICOQ_VER=$(CALICOQ_VER))
-$(info APISERVER_VER=$(APISERVER_VER))
-$(info CNX_WEB_MANAGER_VER=$(CNX_WEB_MANAGER_VER))
+$(info $(shell printf "%-21s = %-10s\n" "CALICO_VER" $(CALICO_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "CALICO_GIT_VER" $(CALICO_GIT_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "BIRD_VER" $(BIRD_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "CONFD_VER" $(CONFD_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "CALICOCTL_VER" $(CALICOCTL_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "CNI_VER" $(CNI_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "FELIX_VER" $(FELIX_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "GOBGPD_VER" $(GOBGPD_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "KUBE_CONTROLLERS_VER" $(KUBE_CONTROLLERS_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "LIBNETWORK_PLUGIN_VER" $(LIBNETWORK_PLUGIN_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "TYPHA_VER" $(TYPHA_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "CALICOQ_VER" $(CALICOQ_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "CNX_WEB_MANAGER_VER" $(CNX_WEB_MANAGER_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "APISERVER_VER" $(APISERVER_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "RR_VER" $(RR_VER)))
 
 SYSTEMTEST_CONTAINER_VER ?= latest
 # we can use "custom" build image and test image name
@@ -121,6 +122,9 @@ LDFLAGS=-ldflags "-X main.VERSION=$(CALICO_GIT_VER)"
 PACKAGE_NAME?=github.com/projectcalico/calico/calico_node
 
 LIBCALICOGO_PATH?=none
+
+# Whether the update-felix target should pull the felix image.
+PULL_FELIX?=true
 
 # Use this to populate the vendor directory after checking out the repository.
 # To update upstream dependencies, delete the glide.lock file first.
@@ -405,8 +409,8 @@ busybox.tar:
 	docker save --output busybox.tar busybox:latest
 
 routereflector.tar:
-	docker pull calico/routereflector:latest
-	docker save --output routereflector.tar calico/routereflector:latest
+	docker pull calico/routereflector:$(RR_VER)
+	docker save --output routereflector.tar calico/routereflector:$(RR_VER)
 
 workload.tar:
 	cd workload && docker build -t workload .
@@ -464,6 +468,7 @@ st: dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector.tar cnx-node
 	           -e DEBUG_FAILURES=$(DEBUG_FAILURES) \
 	           -e MY_IP=$(LOCAL_IP_ENV) \
 	           -e NODE_CONTAINER_NAME=$(NODE_CONTAINER_NAME) \
+	           -e RR_VER=$(RR_VER) \
 	           --rm -t \
 	           -v /var/run/docker.sock:/var/run/docker.sock \
 	           -v $(SOURCE_DIR):/code \
@@ -634,12 +639,9 @@ release: FELIX_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEAS
 release: CALICOCTL_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoctl.version')
 release: CALICOQ_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
 release: clean
-	@echo Using the following versions:
-	@echo "	felix:             ${FELIX_VER}"
-	@echo "	calico:            ${CALICO_VER}"
-	@echo "	bird:              ${BIRD_VER}"
-	@echo "	confd:             ${CONFD_VER}"
-	@echo "	libnetwork_plugin: ${LIBNETWORK_PLUGIN_VER}"
+	@echo ""
+	@echo "Hit Return to go ahead and create the tag, or Ctrl-C to cancel."
+	@bash -c read
 
 	git tag $(CALICO_VER)
 

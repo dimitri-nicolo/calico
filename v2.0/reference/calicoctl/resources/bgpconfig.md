@@ -1,6 +1,5 @@
 ---
 title: BGP Configuration Resource (BGPConfiguration)
-redirect_from: latest/reference/calicoctl/resources/bgpconfig
 no_canonical: true
 ---
 

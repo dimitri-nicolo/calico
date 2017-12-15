@@ -1,5 +1,5 @@
-hash: 2ef46a01e8f9529364dc74bd7e2fd6c6c505099df938afba1f9e0e5bb002d82b
-updated: 2017-12-04T15:06:02.788807775Z
+hash: cdc8f2175382d5deadb6329c9d27aca5ff62004b5e1e793fd07cabaf80c76564
+updated: 2017-12-12T18:35:53.216284368Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -133,7 +133,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 9aef6c6952f2e285f6fef1caaf7638ef51c81e6e
+  version: c1fb6682134d162f37c13f42e7157653a7de7d2b
   subpackages:
   - format
   - internal/assertion
@@ -159,7 +159,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 542c7908f045010ce8e2780af470ac709ee17cc9
+  version: ccf961448630f93c6650761dcd3be768699fe31d
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/api
@@ -222,11 +222,11 @@ imports:
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/sirupsen/logrus
-  version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: golang.org/x/crypto
-  version: 1351f936d976c60a0a48d728281922cf63eafb8d
+  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -252,7 +252,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: e48874b42435b4347fc52bdee0424a52abc974d7
+  version: 53aa286056ef226755cd898109dbcdaba8ac0b81
   subpackages:
   - unix
   - windows
@@ -314,7 +314,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 4df58c811fe2e65feb879227b2b245e4dc26e7ad
+  version: 9b9dca205a15b6ce9ef10091f05d60a13fdcf418
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -341,7 +341,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 019ae5ada31de202164b118aee88ee2d14075c31
+  version: 5134afd2c0c91158afac0d8a28bd2177185a3bcc
   subpackages:
   - pkg/api/equality
   - pkg/api/errors

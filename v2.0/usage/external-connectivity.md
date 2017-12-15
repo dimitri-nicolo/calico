@@ -1,6 +1,5 @@
 ---
 title: External Connectivity
-redirect_from: latest/usage/external-connectivity
 ---
 
 {{site.prodname}} creates a routed network on which your containers look like normal IP
@@ -67,7 +66,7 @@ container hosts.
 ![hosts-on-layer-2-network]({{site.baseurl}}/images/hosts-on-layer-2-network.png)
 
 See the [BGP peering document]({{site.baseurl}}/{{page.version}}/usage/configuration/bgp)
-for information on how to set up the {{site.prodname}} node sides of the sessions.
+for information on how to set up the `{{site.nodecontainer}}` sides of the sessions.
 Consult the documentation for your BGP capable switch/router to set up the
 switch sides of the sessions.
 

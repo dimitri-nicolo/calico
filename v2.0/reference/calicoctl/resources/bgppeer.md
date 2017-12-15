@@ -1,6 +1,5 @@
 ---
 title: BGP Peer Resource (BGPPeer)
-redirect_from: latest/reference/calicoctl/resources/bgppeer
 ---
 
 A BGP peer resource (`BGPPeer`) represents a remote BGP peer with 
@@ -45,7 +44,7 @@ spec:
 ### Peer Scopes
 
 BGP Peers can exist at either a global scope or a node scope. A peer's scope 
-determines which {{site.prodname}} nodes will attempt to establish a BGP session with that peer.
+determines which `{{site.nodecontainer}}` will attempt to establish a BGP session with that peer.
 
 #### Global Peer
 

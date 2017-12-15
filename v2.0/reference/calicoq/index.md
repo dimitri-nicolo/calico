@@ -1,6 +1,5 @@
 ---
 title: calicoq
-redirect_from: latest/reference/calicoq/index
 ---
 
 `calicoq` is the {{site.prodname}} Policy Query Utility.  It is a command line tool that 
