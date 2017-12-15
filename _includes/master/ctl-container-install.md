@@ -3,15 +3,18 @@ as a pod.
 
 - **etcd datastore**:
 
-   ```
-   kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calicoctl.yaml
-   ```
-   
+   [calicoctl.yaml]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calicoctl.yaml){:target="_blank"}
+
 - **Kubernetes API datastore**:
 
+   [calicoctl.yaml]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml){:target="_blank"}
+
+- **Start the pod**:
+
    ```
-   kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml
+   kubectl apply -f calicoctl.yaml
    ```
+
 
 In other environments, use the following command.
 
