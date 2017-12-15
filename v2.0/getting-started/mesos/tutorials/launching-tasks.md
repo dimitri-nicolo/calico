@@ -1,6 +1,5 @@
 ---
 title: Launching Tasks
-redirect_from: latest/getting-started/mesos/tutorials/launching-tasks
 ---
 
 The following information describes how to launch {{site.prodname}} networked tasks in Mesos

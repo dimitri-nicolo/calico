@@ -1,6 +1,5 @@
 ---
 title: calicoq host
-redirect_from: latest/reference/calicoq/host
 ---
 
 `calicoq host <hostname>` shows you the endpoints that are hosted on

@@ -1,6 +1,5 @@
 ---
 title: IP Pool Resource (IPPool)
-redirect_from: latest/reference/calicoctl/resources/ippool
 ---
 
 An IP pool resource (`IPPool`) represents a collection of IP addresses from which {{site.prodname}} expects
@@ -44,7 +43,7 @@ Routing of packets using IP-in-IP will be used when the destination IP address
 is in an IP Pool that has IPIP enabled.  In addition, if the `ipipMode` is set to `CrossSubnet`,
 {{site.prodname}} will only route using IP-in-IP if the IP address of the destination node is in a different
 subnet. The subnet of each node is configured on the node resource (which may be automatically 
-determined when running the calico/node service).
+determined when running the `{{site.nodecontainer}}` service).
 
 For details on configuring IP-in-IP on your deployment, please read the
 [Configuring IP-in-IP guide]({{site.baseurl}}/{{page.version}}/usage/configuration/ip-in-ip).

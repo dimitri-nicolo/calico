@@ -1,6 +1,5 @@
 ---
 title: Configuring the Calico CNI plugins
-redirect_from: latest/reference/cni-plugin/configuration
 ---
 
 The Calico CNI plugin is configured through the standard CNI 
@@ -20,7 +19,7 @@ and IPAM looks like this
 }
 ```
 
-If the `calico-node` container on a node registered with a `NODENAME` other than the node hostname, the CNI plugin on this node must be configured with the same `nodename`:
+If the `{{site.nodecontainer}}` container on a node registered with a `NODENAME` other than the node hostname, the CNI plugin on this node must be configured with the same `nodename`:
 
 ```json
 {

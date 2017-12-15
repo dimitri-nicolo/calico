@@ -1,6 +1,5 @@
 ---
 title: Calico key and path prefixes in etcd v3
-redirect_from: latest/reference/advanced/etcd-rbac/calico-etcdv3-paths
 no_canonical: true
 ---
 
@@ -12,7 +11,7 @@ component needs access to in etcd to function successfully.
 {: .alert .alert-info}
 
 
-## calico/node
+## {{site.nodecontainer}}
 
 | Path                                      | Access |
 |-------------------------------------------|--------|
