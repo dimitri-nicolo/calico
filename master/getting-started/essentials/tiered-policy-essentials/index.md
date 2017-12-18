@@ -3,7 +3,7 @@ title: Tiered Policy Demo
 ---
 
 This guide will introduce tiered policies and walk through a simple example
-for working with the [Tiers](../../reference/calicoctl/resources/tier) resource.
+for working with the [Tiers]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) resource.
 
 Some use cases for using tiers and tiered policies are:
 
@@ -18,7 +18,8 @@ first use case.
 ### Prerequisites
 
 - A Kubernetes cluster configured with [{{site.prodname}}](../kubernetes/installation/hosted/essentials/index)
-- [calicoctl installed and set up](../../reference/calicoctl/setup) to work properly with your cluster
+- [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup/) to work properly with your cluster
+- [calicoq installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoq/) to work with your cluster
 
 ### Create Namespace and Enable Isolation
 
@@ -122,8 +123,20 @@ $ calicoctl get networkpolicy -o yaml --namespace policy-demo
 Notice the Policy resource includes the information about the tier in the
 `metadata` field. Also, note the use of special label `projectcalico.org/namespace` in the
 Policy selector. This label is automatically added to endpoints and the value
-populated with the pod's Kubernetes namespace. For more information about this
-checkout [Advanced Policy with {{site.prodname}}](../kubernetes/tutorials/advanced-policy).
+populated with the pod's Kubernetes namespace.
+
+You can use `calicoq` command to query the workload endpoints that the
+`default-deny` Kubernetes NetworkPolicy the `policy-demo` namespace applies to.
+
+```
+$ calicoq policy policy-demo/knp.default.default-deny
+Policy "policy-demo/knp.default.default-deny" applies to these endpoints:
+  Workload endpoint host1/k8s/policy-demo.access-79f4758b79-6q8qs/eth0; selector "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'policy-demo'"
+  Workload endpoint host1/k8s/policy-demo.nginx-7c87f569d-vvjtb/eth0; selector "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'policy-demo'"
+  Workload endpoint host1/k8s/policy-demo.nginx-7c87f569d-zcgrh/eth0; selector "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'policy-demo'"
+
+Endpoints matching Policy "policy-demo/knp.default.default-deny" rules:
+```
 
 You can also get a list of all current tiers that exist by running:
 
@@ -165,7 +178,7 @@ Notice that the order value of the netops tier is lower than the value of the
 `default` tier. Lower order values have a higher precedence.
 
 > **Note**: Read more about order values in the
-> [calicoctl reference section](../../reference/calicoctl/).
+> [calicoctl reference section]({{site.baseurl}}/{{page.version}}/reference/calicoctl/).
 {: .alert .alert-info}
 
 Launch a pod in the `policy-demo` Namespace and test DNS connectivity to 8.8.8.8
@@ -231,6 +244,18 @@ $ calicoctl create -f - <<EOF
 EOF
 ```
 
+Let's find out all endpoints that this GlobalNetworkPolicy applies to.
+
+```
+$ calicoq policy netops.no-public-dns-for-policy-demo
+Tier "netops" Policy "netops.no-public-dns-for-policy-demo" applies to these endpoints:
+  Workload endpoint host1/k8s/policy-demo.access-79f4758b79-6q8qs/eth0; selector "projectcalico.org/namespace == "policy-demo""
+  Workload endpoint host1/k8s/policy-demo.nginx-7c87f569d-vvjtb/eth0; selector "projectcalico.org/namespace == "policy-demo""
+  Workload endpoint host1/k8s/policy-demo.nginx-7c87f569d-zcgrh/eth0; selector "projectcalico.org/namespace == "policy-demo""
+
+Endpoints matching Tier "netops" Policy "netops.no-public-dns-for-policy-demo" rules:
+```
+
 Launch a pod in the `policy-demo` Namespace and test DNS connectivity to 8.8.8.8
 
 ```
@@ -289,6 +314,29 @@ $ calicoctl create -f - <<EOF
 EOF
 ```
 
+The GlobalNetworkPolicy created above used a selector in the ingress and egress
+rules to match only selected endpoints. We can use the `calicoq` command to query
+the set of endpoints that the the rule selector applies to.
+
+```
+$ calicoq policy devops.policy-demo-isolation
+Tier "devops" Policy "devops.policy-demo-isolation" applies to these endpoints:
+  Workload endpoint host1/k8s/policy-demo.access-79f4758b79-6q8qs/eth0; selector "projectcalico.org/namespace == 'policy-demo'"
+  Workload endpoint host1/k8s/policy-demo.nginx-7c87f569d-vvjtb/eth0; selector "projectcalico.org/namespace == 'policy-demo'"
+  Workload endpoint host1/k8s/policy-demo.nginx-7c87f569d-zcgrh/eth0; selector "projectcalico.org/namespace == 'policy-demo'"
+
+Endpoints matching Tier "devops" Policy "devops.policy-demo-isolation" rules:
+  ...
+  Workload endpoint host1/k8s/external-demo.nginx-7c87f569d-d9ktq/eth0
+    inbound rule 1 source match; selector "projectcalico.org/namespace != 'policy-demo'"
+    outbound rule 1 destination match; selector "projectcalico.org/namespace != 'policy-demo'"
+  Workload endpoint host1/k8s/external-demo.nginx-7c87f569d-nt5gp/eth0
+    inbound rule 1 source match; selector "projectcalico.org/namespace != 'policy-demo'"
+    outbound rule 1 destination match; selector "projectcalico.org/namespace != 'policy-demo'"
+  ...
+
+```
+
 ### Allow Access using a NetworkPolicy and the default Tier
 
 You can still use Kubernetes NetworkPolicy to define policies. These policies
@@ -324,6 +372,16 @@ $ calicoctl get networkpolicy --namespace policy-demo
 NAMESPACE	NAME                                              TIER
 policy-demo	knp.default.access-nginx                          default
 policy-demo	knp.default.default-deny                          default
+
+# Get all endpoints this policy applies to
+$ calicoq policy policy-demo/knp.default.access-nginx
+Policy "policy-demo/knp.default.access-nginx" applies to these endpoints:
+  Workload endpoint host1/k8s/policy-demo.nginx-7c87f569d-vvjtb/eth0; selector "(projectcalico.org/orchestrator == 'k8s' && run == 'nginx') && projectcalico.org/namespace == 'policy-demo'"
+  Workload endpoint host1/k8s/policy-demo.nginx-7c87f569d-zcgrh/eth0; selector "(projectcalico.org/orchestrator == 'k8s' && run == 'nginx') && projectcalico.org/namespace == 'policy-demo'"
+
+Endpoints matching Policy "policy-demo/knp.default.access-nginx" rules:
+  Workload endpoint host1/k8s/policy-demo.access-79f4758b79-6q8qs/eth0
+    inbound rule 1 source match; selector "(projectcalico.org/namespace == 'policy-demo') && (projectcalico.org/orchestrator == 'k8s' && run == 'access')"
 ```
 
 We should now be able to access the Service from the access Pod.
