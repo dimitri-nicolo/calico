@@ -30,6 +30,12 @@ impact on {{site.prodname}}.
 > [upgrading to v1 NetworkPolicy semantics](#upgrading-to-v1-networkpolicy-semantics)
 {: .alert .alert-info}
 
+> **Note**: The version of Prometheus used for the Policy Violation Monitoring & Reporting
+feature has been updated to 2.0. To retain historic data, please refer to the
+[Prometheus 2.0 Migration Guide](https://prometheus.io/docs/prometheus/2.0/migration/)
+documentation for guidance on migrating to 2.0.
+{: .alert .alert-warning}
+
 > **Important**: If you are using the Kubernetes datastore and upgrading from
 > Calico v2.4.x or earlier to Calico v2.5.x or later, you must
 > [migrate your {{site.prodname}} configuration data](https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md)

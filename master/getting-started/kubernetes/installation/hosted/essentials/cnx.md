@@ -132,7 +132,7 @@ spec:
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator
-        image: quay.io/coreos/prometheus-operator:v0.12.0
+        image: quay.io/coreos/prometheus-operator:v0.15.0
         resources:
           requests:
             cpu: 100m
