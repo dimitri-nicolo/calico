@@ -34,35 +34,35 @@ logging.basicConfig(level=logging.DEBUG, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 tests = [
-    ("bgppeer_long_node_name", False),
-    ("bgppeer_dotted_asn", False),
-    ("hep_bad_label", True, "a qualified name must consist of alphanumeric characters"),
-    ("hep_tame", False),
-    ("hep_mixed_ip", False),
-    ("hep_label_too_long", True, "name part must be no more than 63 characters"),
-    ("hep_long_fields", False),
-    ("hep_name_too_long", True, "name is too long by 11 bytes"),
-    ("ippool_mixed", False),
-    ("ippool_v4_small", False),
-    ("ippool_v4_large", False),
-    ("node_long_name", False),
-    ("node_tame", False),
-    ("policy_long_name", False),
-    ("policy_big", False),
+ #   ("bgppeer_long_node_name", False),
+ #   ("bgppeer_dotted_asn", False),
+ #   ("hep_bad_label", True, "a qualified name must consist of alphanumeric characters"),
+ #   ("hep_tame", False),
+ #   ("hep_mixed_ip", False),
+ #   ("hep_label_too_long", True, "name part must be no more than 63 characters"),
+ #   ("hep_long_fields", False),
+ #   ("hep_name_too_long", True, "name is too long by 11 bytes"),
+ #   ("ippool_mixed", False),
+ #   ("ippool_v4_small", False),
+ #   ("ippool_v4_large", False),
+ #   ("node_long_name", False),
+ #   ("node_tame", False),
+ #   ("policy_long_name", False),
+ #   ("policy_big", False),
     ("policy_tame", False),
-    ("profile_big", False),
-    ("profile_tame", False),
-    ("wep_bad_workload_id", True, "field must not begin with a '-'"),
-    ("wep_lots_ips", False),
-    ("wep_similar_name", True,
-     "workload was not added through the Calico CNI plugin and cannot be converted"),
-    ("wep_similar_name_2", False),
-    ("do_not_track", False),
-    ("prednat_policy", False),
+ #   ("profile_big", False),
+ #   ("profile_tame", False),
+ #   ("wep_bad_workload_id", True, "field must not begin with a '-'"),
+ #   ("wep_lots_ips", False),
+ #   ("wep_similar_name", True,
+ #    "workload was not added through the Calico CNI plugin and cannot be converted"),
+ #   ("wep_similar_name_2", False),
+ #   ("do_not_track", False),
+ #   ("prednat_policy", False),
 
     # profile_long_labels Fails validation after conversion, but error is not clear.
     # TODO: Add some error text once new validator lands and gives this test a sane error message
-    ("profile_long_labels", True),
+#    ("profile_long_labels", True),
 ]
 random.shuffle(tests)
 
@@ -83,6 +83,7 @@ def _test_converter(testname, fail_expected, error_text=None, format="yaml"):
             parsed_output = yaml.safe_load(rc.output)
         else:
             parsed_output = json.loads(rc.output)
+        logger.critical("MATT1: parsed output " + str(parsed_output))
         # Get the converted data and clean it up (remove fields we don't care about)
         converted_data = clean_calico_data(parsed_output)
         original_resource = rc
@@ -101,6 +102,8 @@ def _test_converter(testname, fail_expected, error_text=None, format="yaml"):
                 extra_keys_to_remove=['projectcalico.org/orchestrator', 'namespace']
             )
         )
+        logger.critical("MATT2: " + str(cleaned_output))
+        logger.critical("MATT3: " + str(original_resource))
         original_resource.assert_data(cleaned_output, format=format)
     else:
         rc.assert_error(error_text)
