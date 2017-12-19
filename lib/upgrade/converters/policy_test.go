@@ -69,7 +69,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "tierymctierface-df3092e8.nameymcpolicyname-32df456f",
+				Name:   "tierymctierface-df3092e8.nameymcpolicyname-32df456f",
+				Labels: map[string]string{apiv3.LabelTier: "tierymctierface-df3092e8"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -119,7 +120,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "tier-tier-dcb6465f.make-make-1b6971c8",
+				Name:   "tier-tier-dcb6465f.make-make-1b6971c8",
+				Labels: map[string]string{apiv3.LabelTier: "tier-tier-dcb6465f"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -166,7 +168,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "default.rawr-03d81e1d",
+				Name:   "default.rawr-03d81e1d",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -210,7 +213,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "default.rawr-03d81e1d",
+				Name:   "default.rawr-03d81e1d",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -255,7 +259,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "default.meow",
+				Name:   "default.meow",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -304,7 +309,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "default.make-make-1b6971c8",
+				Name:   "default.make-make-1b6971c8",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order: &order1,
@@ -358,7 +364,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "default.policy1",
+				Name:   "default.policy1",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order: &order1,

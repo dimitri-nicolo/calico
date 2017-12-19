@@ -108,6 +108,7 @@ func (_ Policy) BackendV1ToAPIV3(kvp *model.KVPair) (Resource, error) {
 	}
 	ap.Name = tier + "." + convertNameNoDots(bk.Name)
 	ap.Annotations = bp.Annotations
+	ap.Labels = map[string]string{apiv3.LabelTier: tier}
 	ap.Spec.Order = bp.Order
 	ap.Spec.Ingress = rulesV1BackendToV3API(bp.InboundRules)
 	ap.Spec.Egress = rulesV1BackendToV3API(bp.OutboundRules)
@@ -117,7 +118,6 @@ func (_ Policy) BackendV1ToAPIV3(kvp *model.KVPair) (Resource, error) {
 	ap.Spec.ApplyOnForward = bp.ApplyOnForward
 	ap.Spec.Types = nil // Set later.
 	ap.Spec.Tier = tier
-	// TODO: Maybe need to add the tier label for KDD?
 
 	if !bp.ApplyOnForward && (bp.DoNotTrack || bp.PreDNAT) {
 		// This case happens when there is a pre-existing policy in the datastore, from before
