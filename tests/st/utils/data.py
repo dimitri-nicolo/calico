@@ -778,15 +778,15 @@ felixconfig_name1_rev1 = {
             {'protocol': 'UDP', 'port': 422}, ],
         'interfacePrefix': 'humperdink',
         'ipipMTU': 1521,
-        'ipsetsRefreshIntervalSecs': 44,
+        'ipsetsRefreshInterval': '44s',
         'iptablesFilterAllowAction': 'Return',
         'iptablesLockFilePath': '/run/fun',
-        'iptablesLockProbeIntervalMillis': 500,
-        'iptablesLockTimeoutSecs': 22,
+        'iptablesLockProbeInterval': '500ms',
+        'iptablesLockTimeout': '22s',
         'iptablesMangleAllowAction': 'Accept',
         'iptablesMarkMask': 0xff0000,
-        'iptablesPostWriteCheckIntervalSecs': 12,
-        'iptablesRefreshIntervalSecs': 22,
+        'iptablesPostWriteCheckInterval': '12s',
+        'iptablesRefreshInterval': '22s',
         'ipv6Support': True,
         'logFilePath': '/var/log/fun.log',
         'logPrefix': 'say-hello-friend',
@@ -794,15 +794,14 @@ felixconfig_name1_rev1 = {
         'maxIpsetSize': 8192,
         'metadataAddr': '127.1.1.1',
         'metadataPort': 8999,
-        'netlinkTimeoutSecs': 10,
-        'netlinkTimeoutSecs': 10,
+        'netlinkTimeout': '10s',
         'prometheusGoMetricsEnabled': True,
         'prometheusMetricsEnabled': True,
         'prometheusMetricsPort': 11,
         'prometheusProcessMetricsEnabled': True,
-        'reportingIntervalSecs': 10,
-        'reportingTTLSecs': 99,
-        'routeRefreshIntervalSecs': 33,
+        'reportingInterval': '10s',
+        'reportingTTL': '99s',
+        'routeRefreshInterval': '33s',
         'usageReportingEnabled': False,
     }
 }
@@ -816,7 +815,23 @@ felixconfig_name1_rev2 = {
     'spec': {
         'ipv6Support': False,
         'logSeverityScreen': 'Debug',
-        'netlinkTimeoutSecs': 11,
+        'netlinkTimeout': '11s',
+    }
+}
+
+# The large values for `netlinkTimeout` and `reportingTTL` will be transformed
+# into a different unit type in the format `XhXmXs`.
+felixconfig_name1_rev3 = {
+    'apiVersion': API_VERSION,
+    'kind': 'FelixConfiguration',
+    'metadata': {
+        'name': 'felixconfiguration1',
+    },
+    'spec': {
+        'ipv6Support': False,
+        'logSeverityScreen': 'Debug',
+        'netlinkTimeout': '125s',
+        'reportingTTL': '9910s',
     }
 }
 
