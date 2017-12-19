@@ -36,6 +36,7 @@ func (_ Policy) APIV1ToBackendV1(a unversioned.Resource) (*model.KVPair, error) 
 	d := model.KVPair{
 		Key: model.PolicyKey{
 			Name: ap.Metadata.Name,
+			Tier: ap.Metadata.Tier,
 		},
 		Value: &model.Policy{
 			Order:         ap.Spec.Order,
@@ -101,7 +102,11 @@ func (_ Policy) BackendV1ToAPIV3(kvp *model.KVPair) (Resource, error) {
 	}
 
 	ap := apiv3.NewGlobalNetworkPolicy()
-	ap.Name = convertNameNoDots(bk.Name)
+	tier := convertNameNoDots(bk.Tier)
+	if tier == "" {
+		tier = "default"
+	}
+	ap.Name = tier + "." + convertNameNoDots(bk.Name)
 	ap.Annotations = bp.Annotations
 	ap.Spec.Order = bp.Order
 	ap.Spec.Ingress = rulesV1BackendToV3API(bp.InboundRules)
@@ -111,6 +116,8 @@ func (_ Policy) BackendV1ToAPIV3(kvp *model.KVPair) (Resource, error) {
 	ap.Spec.PreDNAT = bp.PreDNAT
 	ap.Spec.ApplyOnForward = bp.ApplyOnForward
 	ap.Spec.Types = nil // Set later.
+	ap.Spec.Tier = tier
+	// TODO: Maybe need to add the tier label for KDD?
 
 	if !bp.ApplyOnForward && (bp.DoNotTrack || bp.PreDNAT) {
 		// This case happens when there is a pre-existing policy in the datastore, from before
