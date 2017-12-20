@@ -253,6 +253,11 @@ func (b *mockDatastore) EnsureInitialized(ctx context.Context, version, clusterT
 	return nil
 }
 
+// Tiers returns an interface for managing tier resources.
+func (b *mockDatastore) Tiers() clientv3.TierInterface {
+	panic("not implemented")
+}
+
 // Nodes returns an interface for managing node resources.
 func (b *mockDatastore) Nodes() clientv3.NodeInterface {
 	panic("not implemented")
