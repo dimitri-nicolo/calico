@@ -14,7 +14,7 @@ This guide describes how to modify the base install to launch the `calico/node` 
 3. Set `calico_node_image` to the {{site.prodname}} `calico/node` image.
 
 See [Obtaining {{site.prodname}}][obtaining-essentials] for more information
-on how to equire the `calico/node` {{site.prodname}} image.
+on how to acquire the `calico/node` {{site.prodname}} image.
 
 See the [OCP Advanced Installation Instructions][ocp-advanced-install] for more 
 information on setting up custom Docker registries using the OpenShift installer.
