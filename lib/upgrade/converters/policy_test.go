@@ -39,6 +39,7 @@ var policyTable = []struct {
 		v1API: &apiv1.Policy{
 			Metadata: apiv1.PolicyMetadata{
 				Name: "nameyMcPolicyName",
+				Tier: "tieryMcTierFace",
 			},
 			Spec: apiv1.PolicySpec{
 				Order:        &order1,
@@ -53,6 +54,7 @@ var policyTable = []struct {
 		v1KVP: &model.KVPair{
 			Key: model.PolicyKey{
 				Name: "nameyMcPolicyName",
+				Tier: "tieryMcTierFace",
 			},
 			Value: &model.Policy{
 				Order:          &order1,
@@ -67,7 +69,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "nameymcpolicyname-32df456f",
+				Name:   "tierymctierface-df3092e8.nameymcpolicyname-32df456f",
+				Labels: map[string]string{apiv3.LabelTier: "tierymctierface-df3092e8"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -78,6 +81,7 @@ var policyTable = []struct {
 				PreDNAT:        true,
 				ApplyOnForward: true,
 				Types:          []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Tier:           "tierymctierface-df3092e8",
 			},
 		},
 	},
@@ -86,6 +90,7 @@ var policyTable = []struct {
 		v1API: &apiv1.Policy{
 			Metadata: apiv1.PolicyMetadata{
 				Name: "MaKe.-.MaKe",
+				Tier: "TiEr.-.TiEr",
 			},
 			Spec: apiv1.PolicySpec{
 				Order:        &order1,
@@ -100,6 +105,7 @@ var policyTable = []struct {
 		v1KVP: &model.KVPair{
 			Key: model.PolicyKey{
 				Name: "MaKe.-.MaKe",
+				Tier: "TiEr.-.TiEr",
 			},
 			Value: &model.Policy{
 				Order:          &order1,
@@ -114,7 +120,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "make-make-1b6971c8",
+				Name:   "tier-tier-dcb6465f.make-make-1b6971c8",
+				Labels: map[string]string{apiv3.LabelTier: "tier-tier-dcb6465f"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -125,15 +132,17 @@ var policyTable = []struct {
 				PreDNAT:        false,
 				ApplyOnForward: true,
 				Types:          []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Tier:           "tier-tier-dcb6465f",
 			},
 		},
 	},
 	{
-		description: "policy with PreDNAT set to true " +
+		description: "explicit default tier policy with PreDNAT set to true " +
 			"should convert ApplyOnForward to true in v3 API",
 		v1API: &apiv1.Policy{
 			Metadata: apiv1.PolicyMetadata{
 				Name: "RAWR",
+				Tier: "default",
 			},
 			Spec: apiv1.PolicySpec{
 				Order:        &order1,
@@ -145,6 +154,7 @@ var policyTable = []struct {
 		v1KVP: &model.KVPair{
 			Key: model.PolicyKey{
 				Name: "RAWR",
+				Tier: "default",
 			},
 			Value: &model.Policy{
 				Order:          &order1,
@@ -158,7 +168,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "rawr-03d81e1d",
+				Name:   "default.rawr-03d81e1d",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -168,6 +179,7 @@ var policyTable = []struct {
 				PreDNAT:        true,
 				ApplyOnForward: true, // notice this gets converted to true, because PreDNAT are true.
 				Types:          []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Tier:           "default",
 			},
 		},
 	},
@@ -201,7 +213,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "rawr-03d81e1d",
+				Name:   "default.rawr-03d81e1d",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -211,6 +224,7 @@ var policyTable = []struct {
 				PreDNAT:        false,
 				ApplyOnForward: true, // notice this gets converted to true, because DoNotTrack are true.
 				Types:          []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Tier:           "default",
 			},
 		},
 	},
@@ -245,7 +259,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "meow",
+				Name:   "default.meow",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order:          &order1,
@@ -255,6 +270,7 @@ var policyTable = []struct {
 				PreDNAT:        false,
 				ApplyOnForward: false,
 				Types:          []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Tier:           "default",
 			},
 		},
 	},
@@ -293,7 +309,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "make-make-1b6971c8",
+				Name:   "default.make-make-1b6971c8",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order: &order1,
@@ -305,6 +322,7 @@ var policyTable = []struct {
 				PreDNAT:        true,
 				ApplyOnForward: true,
 				Types:          []apiv3.PolicyType{apiv3.PolicyTypeIngress, apiv3.PolicyTypeEgress},
+				Tier:           "default",
 			},
 		},
 	},
@@ -346,7 +364,8 @@ var policyTable = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "policy1",
+				Name:   "default.policy1",
+				Labels: map[string]string{apiv3.LabelTier: "default"},
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order: &order1,
@@ -360,6 +379,7 @@ var policyTable = []struct {
 				Egress:   []apiv3.Rule{},
 				Selector: "type=='database'",
 				Types:    []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Tier:     "default",
 			},
 		},
 	},
