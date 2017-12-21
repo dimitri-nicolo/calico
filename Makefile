@@ -49,7 +49,7 @@ ARCH?=amd64
 ifeq ($(ARCH),amd64)
 	ARCHTAG?=
 	GO_BUILD_VER?=v0.9
-	FV_TYPHAIMAGE?=gcr.io/tigera-dev/cnx/tigera/typha:v2.0.0-cnx-beta1-rc2
+	FV_TYPHAIMAGE?=gcr.io/tigera-dev/cnx/tigera/typha:master
 endif
 
 ifeq ($(ARCH),ppc64le)

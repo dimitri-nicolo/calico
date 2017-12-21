@@ -30,6 +30,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"golang.org/x/sys/unix"
 )
 
 type linkModel struct {
