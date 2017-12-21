@@ -1,5 +1,5 @@
-hash: 50c9f1dbbc6b021a5756b672b478d49c8286a21dc5edfcccacbff566a24a2d0f
-updated: 2017-12-20T14:11:31.587260086Z
+hash: 3c3f74ad7ae0ae7bffdcb5e8c0180e9a2b9315f6da69b6d0ad9a6cb8c040e06b
+updated: 2017-12-21T16:10:27.79541472Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -33,7 +33,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
+  version: 1817cd4bea52af76542157eeabd74b057d1a199e
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
@@ -176,7 +176,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: bdb49238fd51f50983aa49dd6cb597897657f7f6
+  version: 1e6e79a6953e4afb49a13171d9c8a0b83b67fb9d
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -239,7 +239,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: f98634e408857669d61064b283c4cde240622865
+  version: 8f918ac9ab4be3a790338bda8624fec5d71260b3
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
