@@ -14,6 +14,7 @@ If you do not already have a private registry, consider one of the following opt
 - [Amazon Web Services (AWS) Elastic Compute Cloud (EC2) Container Registry](https://aws.amazon.com/ecr/pricing/)
 - [Azure Container Registry](https://azure.microsoft.com/en-us/services/container-registry/)
 - [Quay](https://quay.io/repository/)
+- [OpenShift Container Platform](https://access.redhat.com/documentation/en-us/openshift_container_platform/3.6/html-single/installation_and_configuration/#system-requirements)
 
 
 ### Loading and pushing the private images

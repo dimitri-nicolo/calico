@@ -19,7 +19,7 @@ kubectl get pods -n kube-system | grep cnx-node
 
 ## Installation
 
-1. Download and modify the Tigera CNX resources.
+1. Download the {{site.prodname}} manifest:
 
    - [Kubernetes datastore](1.7/cnx-kdd.yaml)
 
@@ -27,8 +27,8 @@ kubectl get pods -n kube-system | grep cnx-node
 
    Rename the file `cnx.yaml` - this is what subsequent instructions will refer to.
 
-1. Update the manifest with the path to your private docker registry.  Substitute
-   `mydockerregistry:5000` with the location of your docker registry.
+1. Update the manifest with the path to your private Docker registry.  Substitute
+   `mydockerregistry:5000` with the location of your Docker registry.
 
    ```
    sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' cnx.yaml
@@ -37,35 +37,35 @@ kubectl get pods -n kube-system | grep cnx-node
 1. Open the file in a text editor, and update the ConfigMap `tigera-cnx-manager-config`
    according to the instructions in the file and your chosen authentication method.
 
-   You might want to reconfigure the Service that gets traffic to the CNX Manager
+   You might want to reconfigure the service that gets traffic to the {{site.prodname}} Manager
    web server as well.
 
 1. Generate TLS credentials - i.e. a web server certificate and key - for the
-   CNX Manager.
+   {{site.prodname}} Manager.
 
    See
    [Certificates](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
    for various ways of generating TLS credentials.  As both its Common Name and
    a Subject Alternative Name, the certificate must have the host name (or IP
-   address) that browsers will use to access the CNX Manager.  In a single-node
+   address) that browsers will use to access the {{site.prodname}} Manager.  In a single-node
    test deployment this can be just `127.0.0.1`, but in a real deployment it
-   should be a planned host name that maps to the `cnx-manager` Service.
+   should be a planned host name that maps to the `cnx-manager` service.
 
-1. Store those credentials as `cert` and `key` in a Secret named
+1. Store those credentials as `cert` and `key` in a secret named
    `cnx-manager-tls`.  For example:
 
    ```
    kubectl create secret generic cnx-manager-tls --from-file=cert=/path/to/certificate --from-file=key=/path/to/key -n kube-system
    ```
 
-1. Apply the manifest to install CNX Manager and the CNX API server.
+1. Apply the manifest to install {{site.prodname}} Manager and the {{site.prodname}} API server.
 
    ```
    kubectl apply -f cnx.yaml
    ```
 
-1. Configure authentication to allow CNX Manager users to edit policies.  Consult the
-   [CNX Manager](../../../../../reference/essentials/policy-editor) and
+1. Configure authentication to allow {{site.prodname}} Manager users to edit policies.  Consult the
+   [{{site.prodname}} Manager](../../../../../reference/essentials/policy-editor) and
    [Tiered policy RBAC](../../../../../reference/essentials/rbac-tiered-policy)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
