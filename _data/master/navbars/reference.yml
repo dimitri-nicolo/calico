@@ -166,6 +166,8 @@ toc:
     path: /reference/essentials/rbac-tiered-policies
 - title: System Requirements
   path: /reference/requirements
+- title: Deployment recommendations and limits
+  path: /reference/recommendations
 - title: Repo Structure
   path: /reference/repo-structure
 - title: Get Involved
