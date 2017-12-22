@@ -20,6 +20,7 @@ import (
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
 	"github.com/projectcalico/libcalico-go/lib/watch"
 )
 
@@ -41,6 +42,9 @@ type tiers struct {
 // Create takes the representation of a Tier and creates it.  Returns the stored
 // representation of the Tier, and an error, if there is any.
 func (r tiers) Create(ctx context.Context, res *apiv3.Tier, opts options.SetOptions) (*apiv3.Tier, error) {
+	if err := validator.Validate(res); err != nil {
+		return nil, err
+	}
 	if res.Name == defaultTierName && res.Spec.Order != nil {
 		return nil, cerrors.ErrorOperationNotSupported{
 			Identifier: defaultTierName,
@@ -58,6 +62,9 @@ func (r tiers) Create(ctx context.Context, res *apiv3.Tier, opts options.SetOpti
 // Update takes the representation of a Tier and updates it. Returns the stored
 // representation of the Tier, and an error, if there is any.
 func (r tiers) Update(ctx context.Context, res *apiv3.Tier, opts options.SetOptions) (*apiv3.Tier, error) {
+	if err := validator.Validate(res); err != nil {
+		return nil, err
+	}
 	if res.GetObjectMeta().GetName() == defaultTierName && res.Spec.Order != nil {
 		return nil, cerrors.ErrorOperationNotSupported{
 			Identifier: defaultTierName,
