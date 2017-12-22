@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
+var order17 = 17.0
 var tierTable = []struct {
 	description string
 	v1API       unversioned.Resource
@@ -39,7 +40,7 @@ var tierTable = []struct {
 				Name: "nameyMcTierName",
 			},
 			Spec: apiv1.TierSpec{
-				Order: 17.0,
+				Order: &order17,
 			},
 		},
 		v1KVP: &model.KVPair{
@@ -47,14 +48,16 @@ var tierTable = []struct {
 				Name: "nameyMcTierName",
 			},
 			Value: &model.Tier{
-				Order: 17.0,
+				Order: &order17,
 			},
 		},
 		v3API: apiv3.Tier{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "nameymcTiername-9740ed19",
+				Name: "nameymctiername-b645ff6a",
 			},
-			Order: 17.0,
+			Spec: apiv3.TierSpec{
+				Order: &order17,
+			},
 		},
 	},
 }
