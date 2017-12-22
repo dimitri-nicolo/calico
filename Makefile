@@ -169,11 +169,11 @@ stop-etcd:
 
 .PHONY: clean
 ## Removes all .coverprofile files, the vendor dir, and .go-pkg-cache
-clean: clean-deepcopy-gen clean-bin
+clean:
 	find . -name '*.coverprofile' -type f -delete
 	rm -rf vendor .go-pkg-cache
 
-clean-deepcopy-gen:
+clean-deepcopy-gen: clean-bin
 	rm -f .deepcopy_gen
 	find $(TOP_SRC_DIR) -name zz_generated* -exec rm {} \;
 

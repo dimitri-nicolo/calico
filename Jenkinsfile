@@ -25,7 +25,7 @@ pipeline {
                 ansiColor('xterm') {
                     // Needed to allow checkout of private repos
                     echo 'make test-containerized..'
-                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make vendor deepcopy-gen test-containerized'
+                    sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make vendor test-containerized'
                 }
             }
         }
