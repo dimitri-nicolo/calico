@@ -62,6 +62,11 @@ var _ = testutils.E2eDatastoreDescribe("FelixConfiguration tests", testutils.Dat
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
 
+			By("Listing all FelixConfigurations and expecting no items")
+			outListEarly, outErrorEarly := c.FelixConfigurations().List(ctx, options.ListOptions{})
+			Expect(outErrorEarly).NotTo(HaveOccurred())
+			Expect(outListEarly.Items).To(HaveLen(0))
+
 			By("Updating the FelixConfiguration before it is created")
 			_, outError := c.FelixConfigurations().Update(ctx, &apiv3.FelixConfiguration{
 				ObjectMeta: metav1.ObjectMeta{Name: name1, ResourceVersion: "1234", CreationTimestamp: metav1.Now(), UID: "test-fail-felixconfig"},
