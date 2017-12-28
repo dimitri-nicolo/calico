@@ -558,6 +558,7 @@ continue-release:
 	@echo
 	$(MAKE) bin/calico-felix tigera/felix
 	docker tag tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:latest
+	docker tag tigera/felix:latest tigera/felix:$(VERSION)
 	docker tag tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)
 	@echo
 	@echo "Checking built felix has correct version..."
