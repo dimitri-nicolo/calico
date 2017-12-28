@@ -59,7 +59,6 @@ pipeline {
     }
     post {
         always {
-          junit("*/junit.xml")
           deleteDir()
         }
         success {
