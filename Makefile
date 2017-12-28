@@ -553,21 +553,25 @@ continue-release:
 	# new tag.
 	$(MAKE) release-once-tagged
 
-release-once-tagged:
 	@echo
 	@echo "Will now build release artifacts..."
 	@echo
 	$(MAKE) bin/calico-felix tigera/felix
-	docker tag tigera/felix gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)
+	docker tag tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:latest
+	docker tag tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)
 	@echo
 	@echo "Checking built felix has correct version..."
-	@if docker run gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION) calico-felix --version | grep -q '$(VERSION)$$'; \
-	then \
-	  echo "Check successful."; \
-	else \
-	  echo "Incorrect version in docker image!"; \
-	  false; \
-	fi
+	@result=true; \
+	for img in tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:latest tigera/felix:$(VERSION) gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION); do \
+	  if docker run $$img calico-felix --version | grep -q '$(VERSION)$$'; \
+	  then \
+	    echo "Check successful. ($$img)"; \
+	  else \
+	    echo "Incorrect version in docker image $$img!"; \
+	    result=false; \
+	  fi \
+	done; \
+	$$result
 	@echo
 	@echo "Felix release artifacts have been built:"
 	@echo
