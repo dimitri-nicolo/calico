@@ -512,7 +512,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			Expect(err).NotTo(HaveOccurred())
 			testWatcher4 := testutils.NewTestResourceWatch(config.Spec.DatastoreType, w)
 			defer testWatcher4.Stop()
-			testWatcher4.ExpectEvents(apiv3.KindTier, []watch.Event{
+			testWatcher4.ExpectEventsAnyOrder(apiv3.KindTier, []watch.Event{
 				{
 					Type:   watch.Added,
 					Object: outRes1,

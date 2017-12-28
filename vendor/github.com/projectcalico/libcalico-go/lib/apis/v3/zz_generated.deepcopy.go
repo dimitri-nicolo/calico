@@ -19,7 +19,9 @@
 package v3
 
 import (
+	apis_v1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	reflect "reflect"
@@ -637,57 +639,57 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
-	if in.RouteRefreshIntervalSecs != nil {
-		in, out := &in.RouteRefreshIntervalSecs, &out.RouteRefreshIntervalSecs
+	if in.RouteRefreshInterval != nil {
+		in, out := &in.RouteRefreshInterval, &out.RouteRefreshInterval
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
-	if in.IptablesRefreshIntervalSecs != nil {
-		in, out := &in.IptablesRefreshIntervalSecs, &out.IptablesRefreshIntervalSecs
+	if in.IptablesRefreshInterval != nil {
+		in, out := &in.IptablesRefreshInterval, &out.IptablesRefreshInterval
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
-	if in.IptablesPostWriteCheckIntervalSecs != nil {
-		in, out := &in.IptablesPostWriteCheckIntervalSecs, &out.IptablesPostWriteCheckIntervalSecs
+	if in.IptablesPostWriteCheckInterval != nil {
+		in, out := &in.IptablesPostWriteCheckInterval, &out.IptablesPostWriteCheckInterval
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
-	if in.IptablesLockTimeoutSecs != nil {
-		in, out := &in.IptablesLockTimeoutSecs, &out.IptablesLockTimeoutSecs
+	if in.IptablesLockTimeout != nil {
+		in, out := &in.IptablesLockTimeout, &out.IptablesLockTimeout
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
-	if in.IptablesLockProbeIntervalMillis != nil {
-		in, out := &in.IptablesLockProbeIntervalMillis, &out.IptablesLockProbeIntervalMillis
+	if in.IptablesLockProbeInterval != nil {
+		in, out := &in.IptablesLockProbeInterval, &out.IptablesLockProbeInterval
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
-	if in.IpsetsRefreshIntervalSecs != nil {
-		in, out := &in.IpsetsRefreshIntervalSecs, &out.IpsetsRefreshIntervalSecs
+	if in.IpsetsRefreshInterval != nil {
+		in, out := &in.IpsetsRefreshInterval, &out.IpsetsRefreshInterval
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
@@ -700,12 +702,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
-	if in.NetlinkTimeoutSecs != nil {
-		in, out := &in.NetlinkTimeoutSecs, &out.NetlinkTimeoutSecs
+	if in.NetlinkTimeout != nil {
+		in, out := &in.NetlinkTimeout, &out.NetlinkTimeout
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
@@ -736,21 +738,21 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
-	if in.ReportingIntervalSecs != nil {
-		in, out := &in.ReportingIntervalSecs, &out.ReportingIntervalSecs
+	if in.ReportingInterval != nil {
+		in, out := &in.ReportingInterval, &out.ReportingInterval
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
-	if in.ReportingTTLSecs != nil {
-		in, out := &in.ReportingTTLSecs, &out.ReportingTTLSecs
+	if in.ReportingTTL != nil {
+		in, out := &in.ReportingTTL, &out.ReportingTTL
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
@@ -763,12 +765,12 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
-	if in.EndpointReportingDelaySecs != nil {
-		in, out := &in.EndpointReportingDelaySecs, &out.EndpointReportingDelaySecs
+	if in.EndpointReportingDelay != nil {
+		in, out := &in.EndpointReportingDelay, &out.EndpointReportingDelay
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
@@ -879,21 +881,21 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
-	if in.UsageReportingInitialDelaySecs != nil {
-		in, out := &in.UsageReportingInitialDelaySecs, &out.UsageReportingInitialDelaySecs
+	if in.UsageReportingInitialDelay != nil {
+		in, out := &in.UsageReportingInitialDelay, &out.UsageReportingInitialDelay
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
-	if in.UsageReportingIntervalSecs != nil {
-		in, out := &in.UsageReportingIntervalSecs, &out.UsageReportingIntervalSecs
+	if in.UsageReportingInterval != nil {
+		in, out := &in.UsageReportingInterval, &out.UsageReportingInterval
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
@@ -933,21 +935,21 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
-	if in.DebugSimulateCalcGraphHangAfterSecs != nil {
-		in, out := &in.DebugSimulateCalcGraphHangAfterSecs, &out.DebugSimulateCalcGraphHangAfterSecs
+	if in.DebugSimulateCalcGraphHangAfter != nil {
+		in, out := &in.DebugSimulateCalcGraphHangAfter, &out.DebugSimulateCalcGraphHangAfter
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
-	if in.DebugSimulateDataplaneHangAfterSecs != nil {
-		in, out := &in.DebugSimulateDataplaneHangAfterSecs, &out.DebugSimulateDataplaneHangAfterSecs
+	if in.DebugSimulateDataplaneHangAfter != nil {
+		in, out := &in.DebugSimulateDataplaneHangAfter, &out.DebugSimulateDataplaneHangAfter
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(int)
+			*out = new(v1.Duration)
 			**out = **in
 		}
 	}
@@ -1239,7 +1241,7 @@ func (in *IPPool) DeepCopyInto(out *IPPool) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	out.Spec = in.Spec
+	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 
@@ -1299,6 +1301,15 @@ func (in *IPPoolList) DeepCopyObject() runtime.Object {
 // DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
 func (in *IPPoolSpec) DeepCopyInto(out *IPPoolSpec) {
 	*out = *in
+	if in.IPIP != nil {
+		in, out := &in.IPIP, &out.IPIP
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(apis_v1.IPIPConfiguration)
+			**out = **in
+		}
+	}
 	return
 }
 
