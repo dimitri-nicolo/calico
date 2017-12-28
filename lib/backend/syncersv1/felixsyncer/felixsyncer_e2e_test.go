@@ -154,7 +154,6 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 					Key:   model.TierKey{Name: "default"},
 					Value: &model.Tier{},
 				})
-				// TODO: Need to figure out how to integrate this block with everything else
 				syncTester.ExpectData(model.KVPair{
 					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
 					Value: "10.10.10.1",
