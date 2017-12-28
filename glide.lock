@@ -1,5 +1,5 @@
-hash: b1b8956144d7623e698089df5c68d1a27dac3da76157b3956579a6ae12a4b12a
-updated: 2017-12-13T00:43:42.200495064Z
+hash: 5221d9630a5f3c546ef6bfa747bf6cf56836945cbc67948268662f2296b2c7ed
+updated: 2017-12-28T13:07:15.470207533-08:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -155,7 +155,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 1aa8d5e8301f1910729a3f3ede8110d6ecfb9587
+  version: acc95d1d63a9c4927259b90c7071609d021be773
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -175,7 +175,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: ccf961448630f93c6650761dcd3be768699fe31d
+  version: c11898e64634830f4fcad678336de3ffc1f352a7
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -222,7 +222,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
+  version: 8f918ac9ab4be3a790338bda8624fec5d71260b3
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
@@ -234,7 +234,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: golang.org/x/crypto
-  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
+  version: d585fd2cc9195196078f516b69daff6744ef5e84
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -260,7 +260,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 53aa286056ef226755cd898109dbcdaba8ac0b81
+  version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
   subpackages:
   - unix
   - windows
