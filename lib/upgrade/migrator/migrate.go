@@ -509,6 +509,7 @@ func (m *migrationHelper) queryAndConvertV1ToV3Resources(
 		if filterOut(kvp.Key) {
 			log.Infof("Filter out Policy Controller created resource: %s", kvp.Key)
 			data.HandledByPolicyCtrl = append(data.HandledByPolicyCtrl, kvp.Key)
+			continue
 		}
 
 		r, err := converter.BackendV1ToAPIV3(kvp)
@@ -890,8 +891,7 @@ func (m *migrationHelper) storeV3Resources(data *MigrationData) error {
 		// This is slightly more efficient, and cuts out some of the unneccessary additional
 		// processing. Since we applying directly to the backend we need to set the UUID
 		// and creation timestamp which is normally handled by clientv3.
-		r.GetObjectMeta().SetCreationTimestamp(metav1.Now())
-		r.GetObjectMeta().SetUID(uuid.NewUUID())
+		r = toStorage(r)
 		if err := m.applyToBackend(&model.KVPair{
 			Key:   resourceToKey(r),
 			Value: r,
@@ -905,6 +905,29 @@ func (m *migrationHelper) storeV3Resources(data *MigrationData) error {
 	}
 	m.statusBullet("success: resources stored in v3 datastore")
 	return nil
+}
+
+func toStorage(r converters.Resource) converters.Resource {
+	// Set timestamp and UID.
+	r.GetObjectMeta().SetCreationTimestamp(metav1.Now())
+	r.GetObjectMeta().SetUID(uuid.NewUUID())
+
+	// Some types require additional processing when converting to storage.
+	switch r.(type) {
+	case *apiv3.GlobalNetworkPolicy, *apiv3.NetworkPolicy:
+		// For GNP and NP, we need to adjust the name before storage.
+		r.GetObjectMeta().SetName(convertPolicyNameForStorage(r.GetObjectMeta().GetName()))
+	}
+
+	return r
+}
+
+func convertPolicyNameForStorage(name string) string {
+	// Do nothing on names prefixed with "knp."
+	if strings.HasPrefix(name, "knp.") {
+		return name
+	}
+	return "default." + name
 }
 
 // migrateIPAMData queries, converts and migrates all of the IPAM data from v1
