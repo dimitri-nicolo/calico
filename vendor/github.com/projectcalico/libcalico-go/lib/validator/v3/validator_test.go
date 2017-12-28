@@ -19,7 +19,9 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	apiv1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/ipip"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
@@ -197,6 +199,7 @@ func init() {
 						Port:     1234,
 					},
 				},
+				Node: "node01",
 			},
 			true,
 		),
@@ -205,6 +208,20 @@ func init() {
 				InterfaceName: "eth0",
 				Ports: []api.EndpointPort{
 					{
+						Protocol: protoTCP,
+						Port:     1234,
+					},
+				},
+				Node: "node01",
+			},
+			false,
+		),
+		Entry("should reject HostEndpointSpec with a missing node",
+			api.HostEndpointSpec{
+				InterfaceName: "eth0",
+				Ports: []api.EndpointPort{
+					{
+						Name:     "a-valid-port",
 						Protocol: protoTCP,
 						Port:     1234,
 					},
@@ -227,6 +244,7 @@ func init() {
 						Port:     5456,
 					},
 				},
+				Node: "node01",
 			},
 			true,
 		),
@@ -479,6 +497,11 @@ func init() {
 					{InternalIP: ipv6_1, ExternalIP: ipv6_2},
 				},
 			}, true),
+		Entry("should accept workload endpoint with mixed-case ContainerID",
+			api.WorkloadEndpointSpec{
+				InterfaceName: "cali012371237",
+				ContainerID:   "Cath01234-G",
+			}, true),
 		Entry("should reject workload endpoint with no config", api.WorkloadEndpointSpec{}, false),
 		Entry("should reject workload endpoint with IPv4 networks that contain >1 address",
 			api.WorkloadEndpointSpec{
@@ -507,41 +530,63 @@ func init() {
 				IPNetworks:    []string{netv6_1},
 				IPNATs:        []api.IPNAT{{InternalIP: ipv6_2, ExternalIP: ipv6_1}},
 			}, false),
+		Entry("should reject workload endpoint containerID that starts with a dash",
+			api.WorkloadEndpointSpec{
+				InterfaceName: "cali0134",
+				ContainerID:   "-abcdefg",
+			}, false),
+		Entry("should reject workload endpoint containerID that ends with a dash",
+			api.WorkloadEndpointSpec{
+				InterfaceName: "cali0134",
+				ContainerID:   "abcdeSg-",
+			}, false),
+		Entry("should reject workload endpoint containerID that contains a period",
+			api.WorkloadEndpointSpec{
+				InterfaceName: "cali0134",
+				ContainerID:   "abcde-j.g",
+			}, false),
 
 		// (API) HostEndpointSpec
-		Entry("should accept host endpoint with interface",
+		Entry("should accept host endpoint with interface and node",
 			api.HostEndpointSpec{
 				InterfaceName: "eth0",
+				Node:          "node01",
 			}, true),
 		Entry("should accept host endpoint with expected IPs",
 			api.HostEndpointSpec{
 				ExpectedIPs: []string{ipv4_1, ipv6_1},
+				Node:        "node01",
 			}, true),
 		Entry("should accept host endpoint with interface and expected IPs",
 			api.HostEndpointSpec{
 				InterfaceName: "eth0",
 				ExpectedIPs:   []string{ipv4_1, ipv6_1},
+				Node:          "node01",
 			}, true),
 		Entry("should reject host endpoint with no config", api.HostEndpointSpec{}, false),
 		Entry("should reject host endpoint with blank interface an no IPs",
 			api.HostEndpointSpec{
 				InterfaceName: "",
 				ExpectedIPs:   []string{},
+				Node:          "node01",
 			}, false),
 		Entry("should accept host endpoint with prefixed profile name",
 			api.HostEndpointSpec{
 				InterfaceName: "eth0",
 				Profiles:      []string{"knp.default.fun", "knp.default.funner.11234-a"},
+				Node:          "node01",
 			}, true),
 		Entry("should accept host endpoint without prefixed profile name",
 			api.HostEndpointSpec{
 				InterfaceName: "eth0",
 				Profiles:      []string{"fun-funner1234"},
+				Node:          "node01",
 			}, true),
 		Entry("should reject host endpoint with no prefix and dots at the start of the name",
 			api.HostEndpointSpec{
 				InterfaceName: "eth0",
 				Profiles:      []string{".fun"},
+				Node:          "node01",
 			}, false),
 
 		// (API) IPPool
@@ -596,7 +641,7 @@ func init() {
 		Entry("should reject IPv6 pool with a CIDR range overlapping with Link Local range",
 			api.IPPool{ObjectMeta: v1.ObjectMeta{Name: "pool.name"}, Spec: api.IPPoolSpec{CIDR: "fe80::/120"}}, false),
 
-		// (API) IPIPConfiguration
+		// (API) IPIPMode
 		Entry("should accept IPPool with no IPIP mode specified", api.IPPoolSpec{CIDR: "1.2.3.0/24"}, true),
 		Entry("should accept IPIP mode Never (api)", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: api.IPIPModeNever}, true),
 		Entry("should accept IPIP mode Never", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never"}, true),
@@ -604,6 +649,16 @@ func init() {
 		Entry("should accept IPIP mode CrossSubnet", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "CrossSubnet"}, true),
 		Entry("should reject IPIP mode badVal", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "badVal"}, false),
 		Entry("should reject IPIP mode never (lower case)", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "never"}, false),
+
+		// (API) IPIP APIv1 backwards compatibility. Read-only field IPIP
+		Entry("should accept a nil IPIP field", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never", IPIP: nil}, true),
+		Entry("should accept it when the IPIP field is not specified", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never"}, true),
+		Entry("should reject a non-nil IPIP field", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never", IPIP: &apiv1.IPIPConfiguration{Enabled: true, Mode: ipip.Always}}, false),
+
+		// (API) NatOutgoing APIv1 backwards compatibility. Read-only field NatOutgoingV1
+		Entry("should accept NATOutgoingV1 field set to true", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never", NATOutgoingV1: false}, true),
+		Entry("should accept it when the NATOutgoingV1 field is not specified", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never"}, true),
+		Entry("should reject NATOutgoingV1 field set to true", api.IPPoolSpec{CIDR: "1.2.3.0/24", IPIPMode: "Never", NATOutgoingV1: true}, false),
 
 		// (API) ICMPFields
 		Entry("should accept ICMP with no config", api.ICMPFields{}, true),
@@ -933,6 +988,7 @@ func init() {
 		// (API) NodeSpec
 		Entry("should accept node with IPv4 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4Address: netv4_1}}, true),
 		Entry("should accept node with IPv6 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv6Address: netv6_1}}, true),
+		Entry("should accept node with tunnel IP in BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4IPIPTunnelAddr: "10.0.0.1"}}, true),
 		Entry("should accept node with no BGP", api.NodeSpec{}, true),
 		Entry("should reject node with BGP but no IPs", api.NodeSpec{BGP: &api.NodeBGPSpec{}}, false),
 		Entry("should reject node with IPv6 address in IPv4 field", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4Address: netv6_1}}, false),
@@ -1260,6 +1316,14 @@ func init() {
 				},
 			}, false,
 		),
+
+		// Tiers.
+		Entry("Tier: valid name", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "foo"}}, true),
+		Entry("Tier: valid name with dash", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "fo-o"}}, true),
+		Entry("Tier: disallow dot in name", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "fo.o"}}, false),
+		Entry("Tier: allow valid name of 253 chars", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength])}}, true),
+		Entry("Tier: disallow a name of 254 chars", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: string(longValue[:maxNameLength+1])}}, false),
+		Entry("Tier: disallow other chars", &api.Tier{ObjectMeta: v1.ObjectMeta{Name: "t~!s.h.i.ng"}}, false),
 
 		// NetworkPolicy Object MetaData checks.
 		Entry("allow valid name", &api.NetworkPolicy{ObjectMeta: v1.ObjectMeta{Name: "thing"}}, true),

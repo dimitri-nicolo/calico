@@ -21,8 +21,9 @@ import (
 	"regexp"
 	"strings"
 
+	validator "gopkg.in/go-playground/validator.v8"
+
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/go-playground/validator.v8"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
@@ -41,7 +42,7 @@ var validatorSecondary *validator.Validate
 var validatorTertiary *validator.Validate
 
 // Maximum size of annotations.
-const totalAnnotationSizeLimitB int64 = 256 * (1 << 10) // 256 kB`
+const totalAnnotationSizeLimitB int64 = 256 * (1 << 10) // 256 kB
 
 var (
 	nameLabelFmt     = "[a-z0-9]([-a-z0-9]*[a-z0-9])?"
@@ -50,6 +51,13 @@ var (
 	// All resource names must follow the subdomain name format.  Some resources we impose
 	// more restrictive naming requirements.
 	nameRegex = regexp.MustCompile("^" + nameSubdomainFmt + "$")
+
+	// Tiers must have simple names with no dots, since they appear as sub-components of other
+	// names.
+	tierNameRegex = regexp.MustCompile("^" + nameLabelFmt + "$")
+
+	containerIDFmt   = "[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?"
+	containerIDRegex = regexp.MustCompile("^" + containerIDFmt + "$")
 
 	// NetworkPolicy names must either be a simple DNS1123 label format (nameLabelFmt), or
 	// nameLabelFmt.nameLabelFmt (with a single dot), or
@@ -135,6 +143,7 @@ func init() {
 	registerFieldValidator("interface", validateInterface)
 	registerFieldValidator("datastoreType", validateDatastoreType)
 	registerFieldValidator("name", validateName)
+	registerFieldValidator("containerID", validateContainerID)
 	registerFieldValidator("selector", validateSelector)
 	registerFieldValidator("labels", validateLabels)
 	registerFieldValidator("ipVersion", validateIPVersion)
@@ -145,6 +154,8 @@ func init() {
 	registerFieldValidator("acceptReturn", validateAcceptReturn)
 	registerFieldValidator("portName", validatePortName)
 	registerFieldValidator("dropActionOverride", validateDropActionOverride)
+	registerFieldValidator("mustBeNil", validateMustBeNil)
+	registerFieldValidator("mustBeFalse", validateMustBeFalse)
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -168,6 +179,7 @@ func init() {
 	registerStructValidator(validatorPrimary, validateIPPoolSpec, api.IPPoolSpec{})
 	registerStructValidator(validatorPrimary, validateNodeSpec, api.NodeSpec{})
 	registerStructValidator(validatorPrimary, validateObjectMeta, metav1.ObjectMeta{})
+	registerStructValidator(validatorPrimary, validateTier, api.Tier{})
 
 	// Register structs that have one level of additional structs to validate.
 	registerStructValidator(validatorSecondary, validateWorkloadEndpointSpec, api.WorkloadEndpointSpec{})
@@ -232,10 +244,26 @@ func validateName(v *validator.Validate, topStruct reflect.Value, currentStructO
 	return nameRegex.MatchString(s)
 }
 
+func validateContainerID(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate containerID: %s", s)
+	return containerIDRegex.MatchString(s)
+}
+
 func validatePortName(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
 	s := field.String()
 	log.Debugf("Validate port name: %s", s)
 	return len(s) != 0 && len(k8svalidation.IsValidPortName(s)) == 0
+}
+
+func validateMustBeNil(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	log.WithField("field", field.String()).Debugf("Validate field must be nil")
+	return field.IsNil()
+}
+
+func validateMustBeFalse(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	log.WithField("field", field.String()).Debugf("Validate field must be false")
+	return !field.Bool()
 }
 
 func validateIPVersion(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
@@ -545,6 +573,11 @@ func validateHostEndpointSpec(v *validator.Validate, structLevel *validator.Stru
 		structLevel.ReportError(reflect.ValueOf(h.InterfaceName),
 			"InterfaceName", "", reason("no interface or expected IPs have been specified"))
 	}
+	// A host endpoint must have a nodename specified.
+	if h.Node == "" {
+		structLevel.ReportError(reflect.ValueOf(h.Node),
+			"InterfaceName", "", reason("no node has been specified"))
+	}
 }
 
 func validateIPPoolSpec(v *validator.Validate, structLevel *validator.StructLevel) {
@@ -690,9 +723,9 @@ func validateNodeSpec(v *validator.Validate, structLevel *validator.StructLevel)
 	ns := structLevel.CurrentStruct.Interface().(api.NodeSpec)
 
 	if ns.BGP != nil {
-		if ns.BGP.IPv4Address == "" && ns.BGP.IPv6Address == "" {
+		if ns.BGP.IPv4Address == "" && ns.BGP.IPv6Address == "" && ns.BGP.IPv4IPIPTunnelAddr == "" {
 			structLevel.ReportError(reflect.ValueOf(ns.BGP.IPv4Address),
-				"BGP.IPv4Address", "", reason("no BGP IP address and subnet specified"))
+				"BGP", "", reason("BGP IP or IPv4IPIPTunnelAddr should be set"))
 		}
 	}
 }
@@ -749,6 +782,34 @@ func validateObjectMeta(v *validator.Validate, structLevel *validator.StructLeve
 
 	validateObjectMetaAnnotations(v, structLevel, om.Annotations)
 	validateObjectMetaLabels(v, structLevel, om.Labels)
+}
+
+func validateTier(v *validator.Validate, structLevel *validator.StructLevel) {
+	tier := structLevel.CurrentStruct.Interface().(api.Tier)
+
+	// Check the name is within the max length.
+	if len(tier.Name) > k8svalidation.DNS1123SubdomainMaxLength {
+		structLevel.ReportError(
+			reflect.ValueOf(tier.Name),
+			"Metadata.Name",
+			"",
+			reason(fmt.Sprintf("name is too long by %d bytes", len(tier.Name)-k8svalidation.DNS1123SubdomainMaxLength)),
+		)
+	}
+
+	// Tiers must have simple (no dot) names, since they appear as sub-components of other names.
+	matched := tierNameRegex.MatchString(tier.Name)
+	if !matched {
+		structLevel.ReportError(
+			reflect.ValueOf(tier.Name),
+			"Metadata.Name",
+			"",
+			reason("name must consist of lower case alphanumeric characters or '-' (regex: "+nameLabelFmt+")"),
+		)
+	}
+
+	validateObjectMetaAnnotations(v, structLevel, tier.Annotations)
+	validateObjectMetaLabels(v, structLevel, tier.Labels)
 }
 
 func validateNetworkPolicy(v *validator.Validate, structLevel *validator.StructLevel) {

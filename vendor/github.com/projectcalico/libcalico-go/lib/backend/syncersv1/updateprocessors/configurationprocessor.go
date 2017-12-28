@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -230,6 +231,15 @@ func (c *configUpdateProcessor) processAddOrModified(kvp *model.KVPair) ([]*mode
 				switch vt := value.(type) {
 				case string:
 					value = vt
+				case v1.Duration:
+					switch fieldInfo.Tag.Get("configv1timescale") {
+					case "milliseconds":
+						ms := vt.Duration / time.Millisecond
+						nMs := vt.Duration % time.Millisecond
+						value = fmt.Sprintf("%v", float64(ms)+float64(nMs)/1e6)
+					default:
+						value = fmt.Sprintf("%v", vt.Seconds())
+					}
 				default:
 					value = fmt.Sprintf("%v", vt)
 				}

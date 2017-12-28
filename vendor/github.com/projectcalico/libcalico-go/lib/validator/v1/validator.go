@@ -20,6 +20,8 @@ import (
 	"regexp"
 	"strings"
 
+	validator "gopkg.in/go-playground/validator.v8"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	"github.com/projectcalico/libcalico-go/lib/errors"
 	calinet "github.com/projectcalico/libcalico-go/lib/net"
@@ -31,7 +33,6 @@ import (
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"gopkg.in/go-playground/validator.v8"
 )
 
 var validate *validator.Validate
@@ -587,11 +588,6 @@ func validatePolicySpec(v *validator.Validate, structLevel *validator.StructLeve
 					"PolicySpec.Types", "", reason("PreDNAT PolicySpec cannot have 'egress' Type"))
 			}
 		}
-	}
-
-	if !m.ApplyOnForward && (m.DoNotTrack || m.PreDNAT) {
-		structLevel.ReportError(reflect.ValueOf(m.ApplyOnForward),
-			"PolicySpec.ApplyOnForward", "", reason("ApplyOnForward must be true if either PreDNAT or DoNotTrack is true, for a given PolicySpec"))
 	}
 
 	// Check (and disallow) any repeats in Types field.

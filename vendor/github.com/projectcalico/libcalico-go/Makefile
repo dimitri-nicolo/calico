@@ -29,6 +29,25 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 
 VENDOR_REMADE := false
 
+.PHONY: static-checks
+static-checks: check-format
+
+.PHONY: check-format
+# Depends on the vendor directory because goimports needs to be able to resolve the imports.
+check-format: vendor/.up-to-date
+	@if $(DOCKER_GO_BUILD) goimports -l lib | grep .; then \
+	  echo "Some files in ./lib are not goimported"; \
+	  false; \
+	else \
+	  echo "All files in ./lib are goimported"; \
+	fi
+
+.PHONY: goimports go-fmt format-code
+# Format the code using goimports.  Depends on the vendor directory because goimports needs
+# to be able to resolve the imports.
+goimports go-fmt format-code: vendor/.up-to-date
+	$(DOCKER_GO_BUILD) goimports -w lib
+
 .PHONY: update-vendor
 # Update the pins in glide.lock to reflect the updated glide.yaml.
 # Note: no dependency on glide.yaml so we don't automatically update glide.lock without
@@ -150,11 +169,11 @@ stop-etcd:
 
 .PHONY: clean
 ## Removes all .coverprofile files, the vendor dir, and .go-pkg-cache
-clean: clean-deepcopy-gen clean-bin
+clean:
 	find . -name '*.coverprofile' -type f -delete
 	rm -rf vendor .go-pkg-cache
 
-clean-deepcopy-gen:
+clean-deepcopy-gen: clean-bin
 	rm -f .deepcopy_gen
 	find $(TOP_SRC_DIR) -name zz_generated* -exec rm {} \;
 
