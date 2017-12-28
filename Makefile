@@ -252,11 +252,11 @@ endif
 	fi
 
 	# Retag images with correct version and GCR private registry
-	docker tag $(CTL_CONTAINER_NAME) gcr.io/tigera-dev/$(CTL_CONTAINER_NAME)-essentials:$(VERSION)
+	docker tag $(CTL_CONTAINER_NAME) gcr.io/tigera-dev/cnx/$(CTL_CONTAINER_NAME):$(VERSION)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(CTL_CONTAINER_NAME)
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/$(CTL_CONTAINER_NAME)-essentials:$(VERSION)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/cnx/$(CTL_CONTAINER_NAME):$(VERSION)
 
 	@echo ""
 	@echo "# Push the created tag to GitHub"
