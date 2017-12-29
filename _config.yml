@@ -30,6 +30,7 @@ imageNames:
   cnxApiserver: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-apiserver
   cni: quay.io/calico/cni
   kubeControllers: quay.io/calico/kube-controllers
+  calico-upgrade: quay.io/calico/upgrade
 
 exclude:
   - release-scripts
