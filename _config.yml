@@ -11,7 +11,7 @@ url: https://docs.projectcalico.org
 
 # <deprecated>
 # Remove once all references cleaned up
-cnx-image-tag: v2.0.0-cnx-beta3
+cnx-image-tag: v2.0.0-cnx-rc1
 cnx-mgr-image-name: <your-cnx-mgr-image-name>
 cnx-node-image-name: <your-calico-node-image-name>
 cnx-api-image-name: <your-k8sapiserver-image-name>
@@ -30,6 +30,7 @@ imageNames:
   cnxApiserver: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-apiserver
   cni: quay.io/calico/cni
   kubeControllers: quay.io/calico/kube-controllers
+  calico-upgrade: quay.io/calico/upgrade
 
 exclude:
   - release-scripts

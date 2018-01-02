@@ -1,6 +1,6 @@
 ---
 title: BGP Configuration Resource (BGPConfiguration)
-no_canonical: true
+redirect_from: latest/reference/calicoctl/resources/bgpconfig
 ---
 
 A BGP configuration resource (`BGPConfiguration`) represents BGP specific configuration options for the cluster.
@@ -21,7 +21,7 @@ spec:
   asNumber: 63400
 ```
 
-### BGP Peer Definition
+### BGP Configuration Definition
 
 #### Metadata
 

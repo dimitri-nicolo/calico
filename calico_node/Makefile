@@ -654,6 +654,9 @@ release: clean
 	# Retag images with corect version and GCR private registry
 	docker tag $(NODE_CONTAINER_NAME) gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CALICO_VER)
 
+	# Create the release archive
+	$(MAKE) release-archive
+
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME)
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME):$(CALICO_VER)
@@ -726,7 +729,7 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 
 $(RELEASE_DIR_IMAGES)/cnx-node.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker save --output $@ $(NODE_CONTAINER_NAME)
+	docker save --output $@ $(NODE_CONTAINER_NAME):$(CALICO_VER)
 
 $(RELEASE_DIR_IMAGES)/calico-typha.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)

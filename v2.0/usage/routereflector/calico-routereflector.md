@@ -1,5 +1,6 @@
 ---
-title: Calico BIRD Route Reflector container
+title: 'Calico BIRD Route Reflector container'
+redirect_from: latest/usage/routereflector/calico-routereflector
 ---
 
 For many {{site.prodname}} deployments, the use of a Route Reflector is not required.
@@ -75,8 +76,8 @@ Where:
 -  `<ETCD_IP:PORT>` is the colon separated IPv4 address and port of an etcd
    node in the etcd cluster.  A comma-separated list of endpoints may be
    specified.
-   
-> **Note**: If you require TLS/SSL-enabled etcd, see the 
+
+> **Note**: If you require TLS/SSL-enabled etcd, see the
 > [section below](#route-reflector-with-tlsssl-etcd)
 > for details on how to start the route reflector.
 {: .alert .alert-info}
@@ -172,7 +173,7 @@ curl --cacert <path_to_ca_cert> --cert <path_to_cert> --key <path_to_key> -L htt
 curl --cacert <path_to_ca_cert> --cert <path_to_cert> --key <path_to_key> -L https://<ETCD_IP:PORT>:2379/v2/keys/calico/bgp/v1/rr_v6/<IPv6_RR> -XPUT -d value="{\"ip\":\"<IPv6_RR>\",\"cluster_id\":\"<CLUSTER_ID>\"}"
 ```
 
-### Using the Kubernetes API as the {{site.prodname}} datastore
+### Using the Kubernetes API as the Calico datastore
 
 If you are using Kubernetes as the datastore for {{site.prodname}}, the {{site.prodname}} Route
 Reflector container only supports running as a single route reflector.  It is not
@@ -312,24 +313,3 @@ Where:
 
 Run this separately for each Route Reflector that you want to peer with the
 node.
-
-## Additional information
-
-### Example topology / multiple cluster IDs
-
-When the topology includes a cluster of Route Reflectors, BGP uses the concept
-of a cluster ID to ensure there are no routing loops when distributing routes.
-
-The Route Reflector image provided assumes that it has a fixed cluster ID for
-each Route Reflector rather than being configurable on a per peer basis.
-
-For example, the topology outlined in the diagram below is based on the Top of
-Rack model:
-
--  Each rack is assigned its own cluster ID (a unique number in IPv4 address
-   format).
--  Each node (server in the rack) peers with a redundant set of route
-   reflectors specific to that rack.
--  All of the ToR route reflectors form a full mesh with each other.
-
-![Example scale topology](mesh-topology.png)

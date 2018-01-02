@@ -1,6 +1,6 @@
 ---
 title: Network Policy Resource (NetworkPolicy)
-no_canonical: true
+redirect_from: latest/reference/calicoctl/resources/networkpolicy
 ---
 
 A network policy resource (`NetworkPolicy`) represents an ordered set of rules which are applied

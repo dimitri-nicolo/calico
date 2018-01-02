@@ -1,5 +1,5 @@
-hash: cdc8f2175382d5deadb6329c9d27aca5ff62004b5e1e793fd07cabaf80c76564
-updated: 2017-12-12T18:35:53.216284368Z
+hash: 5a687c48a9104ea43a845dd33d1afc77fe2a4577b6061bbf5d1d7c422439abfe
+updated: 2017-12-28T17:44:28.354624715-08:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -21,12 +21,21 @@ imports:
   version: bb66589f8cf18960c7f3d56b1b83753caeed9c7a
   subpackages:
   - auth/authpb
+  - client
   - clientv3
   - etcdserver/api/v3rpc/rpctypes
   - etcdserver/etcdserverpb
   - mvcc/mvccpb
+  - pkg/pathutil
+  - pkg/srv
   - pkg/tlsutil
   - pkg/transport
+  - pkg/types
+  - version
+- name: github.com/coreos/go-semver
+  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
+  subpackages:
+  - semver
 - name: github.com/davecgh/go-spew
   version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
@@ -133,7 +142,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: c1fb6682134d162f37c13f42e7157653a7de7d2b
+  version: ba3724c94e4dd5d5690d37c190f1c54b2c1b4e64
   subpackages:
   - format
   - internal/assertion
@@ -150,6 +159,11 @@ imports:
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/projectcalico/calico
+  version: 395bb54921b836f1e1c6e50ce3bac6e1c06c0b64
+  subpackages:
+  - calico_node/calicoclient
+  - calico_node/startup/autodetection
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -159,7 +173,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: ccf961448630f93c6650761dcd3be768699fe31d
+  version: c11898e64634830f4fcad678336de3ffc1f352a7
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/api
@@ -195,6 +209,14 @@ imports:
   - lib/selector/tokenizer
   - lib/set
   - lib/testutils
+  - lib/upgrade/converters
+  - lib/upgrade/migrator
+  - lib/upgrade/migrator/clients
+  - lib/upgrade/migrator/clients/v1/compat
+  - lib/upgrade/migrator/clients/v1/etcdv2
+  - lib/upgrade/migrator/clients/v1/k8s
+  - lib/upgrade/migrator/clients/v1/k8s/custom
+  - lib/upgrade/migrator/clients/v1/k8s/resources
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
@@ -206,13 +228,13 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 2e54d0b93cba2fd133edc32211dcc32c06ef72ca
+  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
+  version: a1dba9ce8baed984a2495b658c82687f8157b98f
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
@@ -225,8 +247,12 @@ imports:
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
+- name: github.com/ugorji/go
+  version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
+  subpackages:
+  - codec
 - name: golang.org/x/crypto
-  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
+  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -252,7 +278,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 53aa286056ef226755cd898109dbcdaba8ac0b81
+  version: 314a259e304ff91bd6985da2a7149bbf91237993
   subpackages:
   - unix
   - windows
@@ -282,7 +308,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 9d8544a6b2c7df9cff240fcf92d7b2f59bc13416
+  version: 5bee14b453b4c71be47ec1781b0fa61c2ea182db
   subpackages:
   - internal
   - internal/app_identity

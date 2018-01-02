@@ -1,5 +1,5 @@
 ---
-title: Configuring BIRD as a BGP Route Reflector
+title: 'Configuring BIRD as a BGP Route Reflector'
 ---
 
 For many {{site.prodname}} deployments, the use of a Route Reflector is not required. 
