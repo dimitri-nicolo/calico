@@ -64,10 +64,11 @@ Error from server: (Forbidden) Policy operation is associated with tier default.
 Error from server: (Forbidden) Policy operation is associated with tier net-sec. User "jane" cannot list tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)
 ```
 
-> **Note**: The appended '.p' with the networkpolicies resource in the kubectl command. That is short for "networkpolicies.projectcalico.org" and is needed to differentiate from the Kubernetes namesake NetworkPolicy resource. It won't be necessary when dealing with GlobalNetworkPolicy resource.
+> **Note**: The appended '.p' with the networkpolicies resource in the kubectl command. That is short for "networkpolicies.projectcalico.org" and is needed to differentiate from the Kubernetes namesake NetworkPolicy resource.
 {: .alert .alert-info}
 
-> **Note**: Currently, the tier collection on a Policy resource through the kubectl client of the APIs is being done using labels, since kubectl lacks field selector support (at least pre 1.9 release). The label being used for tier collection is "projectcalico.org/tier". Label selector support for policies can be deprecated at will without requiring a store update. Field Selection based Policy collection is enabled at API level. spec.tier is the field to select on for the purpose.
+> **Note**: Currently, the tier collection on a Policy resource through the kubectl client (pre 1.9) of the APIs is being done using labels, i.e. since kubectl lacks field selector support. The label being used for tier collection is "projectcalico.org/tier". When a label selection is not specified, the server defaults the collection to the `default` tier.
+Field Selection based Policy collection is enabled at API level. spec.tier is the field to select on for the purpose.
 {: .alert .alert-info}
 
 kubernetes-admin gives User jane the permission to read tier ‘default’:
@@ -81,7 +82,7 @@ rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["tiers"]
   resourceNames: ["default"]
-  verbs: ["get", "watch", "list"]
+  verbs: ["get"]
 ---
 
 kind: ClusterRoleBinding
@@ -107,4 +108,34 @@ But still not net-sec
 ```
 # kubectl get networkpolicies.p -l projectcalico.org/tier==net-sec
 Error from server: (Forbidden) Policy operation is associated with tier net-sec. User "jane" cannot list tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)
+```
+
+To further provide permission to user jane to read policies under 'net-sec' tier, the following clusterrole and clusterrolebindings can be used.
+
+kubernetes-admin gives User jane the permission to read tier ‘net-sec’:
+```
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  # "namespace" omitted since ClusterRoles are not namespaced
+  name: tier-net-sec-reader
+rules:
+- apiGroups: ["projectcalico.org"]
+  resources: ["tiers"]
+  resourceNames: ["net-sec"]
+  verbs: ["get"]
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: read-tier-net-sec-global
+subjects:
+- kind: User
+  name: jane
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: tier-net-sec-reader
+  apiGroup: rbac.authorization.k8s.io
 ```
