@@ -140,7 +140,7 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 443
+    targetPort: 5443
   selector:
     apiserver: "true"
 
@@ -170,6 +170,8 @@ spec:
       containers:
       - name: cnx-apiserver
         image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+        args:
+        - "--secure-port=5443"
         env:
           - name: ETCD_ENDPOINTS
             valueFrom:
@@ -178,33 +180,35 @@ spec:
                 key: etcd_endpoints
           - name: DATASTORE_TYPE
             value: "etcdv3"
+          # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
-          - name: ETCD_CA_CERT_FILE
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: etcd_ca
+          # - name: ETCD_CA_CERT_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_ca
           # Location of the client key for etcd.
-          - name: ETCD_KEY_FILE
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: etcd_key
+          # - name: ETCD_KEY_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_key
           # Location of the client certificate for etcd.
-          - name: ETCD_CERT_FILE
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: etcd_cert
+          # - name: ETCD_CERT_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_cert
         volumeMounts:
-          - mountPath: /calico-secrets
-            name: etcd-certs
+          # - mountPath: /calico-secrets
+          #   name: etcd-certs
           - mountPath: /code/apiserver.local.config/certificates
             name: apiserver-certs
       volumes:
-        - name: etcd-certs
-          secret:
-            secretName: calico-etcd-secrets
+        # If you're using TLS enabled etcd uncomment the following.
+        # - name: etcd-certs
+        #   secret:
+        #     secretName: calico-etcd-secrets
         - name: apiserver-certs
           secret:
             secretName: cnx-apiserver-certs
@@ -273,3 +277,22 @@ spec:
       - name: cnx-manager-tls
         secret:
           secretName: cnx-manager-tls
+
+---
+
+# Create a NodePort to expose the web application
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: cnx-manager
+  name: cnx-manager
+  namespace: kube-system
+spec:
+  selector:
+    k8s-app: cnx-manager
+  ports:
+    - port: 8080
+      targetPort: 443
+      nodePort: 30003
+  type: NodePort

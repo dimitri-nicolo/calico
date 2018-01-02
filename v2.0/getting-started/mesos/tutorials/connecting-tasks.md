@@ -1,6 +1,6 @@
 ---
 title: Connecting to Tasks
-redirect_from: latest/getting-started/mesos/tutorials/connecting-tasks
+no_canonical: true
 ---
 
 When {{site.prodname}} is used to network Mesos tasks,

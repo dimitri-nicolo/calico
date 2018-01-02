@@ -131,6 +131,14 @@ metadata:
 
 ---
 
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: cnx-manager
+  namespace: kube-system
+
+---
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -166,7 +174,6 @@ spec:
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
-      hostNetwork: true
       containers:
       - name: cnx-apiserver
         image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -238,6 +245,7 @@ spec:
         # a failure.  This annotation works in tandem with the toleration below.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      serviceAccountName: cnx-manager
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
@@ -245,7 +253,6 @@ spec:
       # This, along with the annotation above marks this pod as a critical add-on.
       - key: CriticalAddonsOnly
         operator: Exists
-      hostNetwork: true
       containers:
       - name: cnx-manager
         image: {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}

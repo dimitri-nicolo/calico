@@ -15,19 +15,19 @@ deployments.
 The image is currently experimental and has some key limitations discussed below.
 However, it may provide a useful framework for future development.
 
-These instructions are focused around container-based deployments that use the
-calico/node container image.
+These instructions are focused on container-based deployments that use the
+`{{site.nodecontainer}}` container image.
 
 For an OpenStack deployment, read [Configuring BIRD as a BGP Route Reflector](bird-rr-config).
 
-> **Note**: The API and behavior of the calico/routereflector is likely to change in
+> **Note**: The API and behavior of `calico/routereflector` is likely to change in
 > future releases.
 {: .alert .alert-info}
 
 
 #### Known limitations
 
--  The calico/routereflector instance will automatically peer with the {{site.prodname}}
+-  The `calico/routereflector` instance will automatically peer with the {{site.prodname}}
    nodes, but it currently has no mechanism to configure peerings with non-{{site.prodname}}
    BGP speakers (e.g. edge routers)
 -  There is no `calicoctl` integration or similar.
@@ -75,66 +75,11 @@ Where:
 -  `<ETCD_IP:PORT>` is the colon separated IPv4 address and port of an etcd
    node in the etcd cluster.  A comma-separated list of endpoints may be
    specified.
-   
-> **Note**: If you require TLS/SSL-enabled etcd, see the 
+
+> **Note**: If you require TLS/SSL-enabled etcd, see the
 > [section below](#route-reflector-with-tlsssl-etcd)
 > for details on how to start the route reflector.
 {: .alert .alert-info}
-
-
-#### Configuring a cluster of Route Reflectors
-
-If you want to use more than one route reflector, the Route Reflector container supports
-running as a single cluster of route reflectors.  The {{site.prodname}} BIRD Route Reflector
-takes care of creating a full mesh between all of the route reflectors in the
-cluster.
-
-To operate a cluster of these route reflectors it is necessary to explicitly
-add an entry into etcd for each route reflector.  The following steps indicate how
-to add an entry into etcd.
-
-The configuration for the Route Reflector is stored for IPv4 at:
-
-	/calico/bgp/v1/rr_v4/<RR IPv4 address>
-
-and IPv6 at:
-
-	/calico/bgp/v1/rr_v6/<RR IPv6 address>
-
-In all cases, the data is a JSON blob in the form:
-
-        {
-          "ip": "<IP address of Route Reflector>",
-          "cluster_id": "<Cluster ID for this RR (see notes)>"
-        }
-
-To add this entry into etcd, you could use the following commands:
-
-```
-# IPv4 entries
-curl -L http://<ETCD_IP:PORT>/v2/keys/calico/bgp/v1/rr_v4/<IPv4_RR> -XPUT -d value="{\"ip\":\"<IPv4_RR>\",\"cluster_id\":\"<CLUSTER_ID>\"}"
-
-# IPv6 entries
-curl -L http://<ETCD_IP:PORT>/v2/keys/calico/bgp/v1/rr_v6/<IPv6_RR> -XPUT -d value="{\"ip\":\"<IPv6_RR>\",\"cluster_id\":\"<CLUSTER_ID>\"}"
-```
-
-Replacing <ETCD_IP:PORT>, <IPv4_RR>, <IPv6_RR> and <CLUSTER_ID> as required.  For
-example, for a Route Reflector with the values:
-
--  etcd running at http://192.0.2.10:2379
--  The Route Reflector IP address of 192.0.2.50
--  A Cluster ID of 1.0.0.1
-
-the following command would be used to configure the Route Reflector.
-
-```
-curl -L http://192.0.2.10:2379/v2/keys/calico/bgp/v1/rr_v4/192.0.2.50 -XPUT -d value="{\"ip\":\"192.0.2.50\",\"cluster_id\":\"1.0.0.1\"}"
-```
-
-See [below](#example-topology--multiple-cluster-ids) for details
-about large networks and the use and format of the cluster ID.
-
-Repeat the above instructions for every Route Reflector in the cluster.
 
 #### Route Reflector with TLS/SSL Etcd
 
@@ -162,16 +107,6 @@ the certificate files (you can mount multiple directories with additional
 `-v <DIR>` parameters if they are in separate directories, but be sure
 to choose different `<MOUNT_DIR>` locations if this is the case).
 
-You will also need to pass the certificate and key files as parameters
-in the curl statement when adding entries:
-
-```
-# IPv4 entries
-curl --cacert <path_to_ca_cert> --cert <path_to_cert> --key <path_to_key> -L https://<ETCD_IP:PORT>:2379/v2/keys/calico/bgp/v1/rr_v4/<IPv4_RR> -XPUT -d value="{\"ip\":\"<IPv4_RR>\",\"cluster_id\":\"<CLUSTER_ID>\"}"
-# IPv6 entries
-curl --cacert <path_to_ca_cert> --cert <path_to_cert> --key <path_to_key> -L https://<ETCD_IP:PORT>:2379/v2/keys/calico/bgp/v1/rr_v6/<IPv6_RR> -XPUT -d value="{\"ip\":\"<IPv6_RR>\",\"cluster_id\":\"<CLUSTER_ID>\"}"
-```
-
 ### Using the Kubernetes API as the {{site.prodname}} datastore
 
 If you are using Kubernetes as the datastore for {{site.prodname}}, the {{site.prodname}} Route
@@ -180,7 +115,7 @@ possible with this image to set up a cluster of route reflectors.
 
 #### Starting up the Route Reflector
 
-On your Route Reflector host, ensure you have [Docker v1.6][docker] or greater
+On your Route Reflector host, ensure you have [Docker v1.6](https://docs.docker.com/engine/installation/) or greater
 installed.
 
 You will need a kubeconfig file that you need to mount into the route reflector
@@ -312,24 +247,3 @@ Where:
 
 Run this separately for each Route Reflector that you want to peer with the
 node.
-
-## Additional information
-
-### Example topology / multiple cluster IDs
-
-When the topology includes a cluster of Route Reflectors, BGP uses the concept
-of a cluster ID to ensure there are no routing loops when distributing routes.
-
-The Route Reflector image provided assumes that it has a fixed cluster ID for
-each Route Reflector rather than being configurable on a per peer basis.
-
-For example, the topology outlined in the diagram below is based on the Top of
-Rack model:
-
--  Each rack is assigned its own cluster ID (a unique number in IPv4 address
-   format).
--  Each node (server in the rack) peers with a redundant set of route
-   reflectors specific to that rack.
--  All of the ToR route reflectors form a full mesh with each other.
-
-![Example scale topology](mesh-topology.png)

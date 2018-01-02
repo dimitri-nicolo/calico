@@ -27,6 +27,12 @@ rules:
       - get
       - list
       - watch
+      - patch
+  - apiGroups: [""]
+    resources:
+      - services
+    verbs:
+      - get
   - apiGroups: [""]
     resources:
       - nodes
@@ -44,8 +50,10 @@ rules:
       - watch
   - apiGroups: ["crd.projectcalico.org"]
     resources:
+      - globalfelixconfigs
       - felixconfigurations
       - bgppeers
+      - globalbgpconfigs
       - bgpconfigurations
       - ippools
       - globalnetworkpolicies

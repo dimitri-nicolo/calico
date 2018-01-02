@@ -140,7 +140,7 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 443
+    targetPort: 5443
   selector:
     apiserver: "true"
 
@@ -170,6 +170,8 @@ spec:
       containers:
       - name: cnx-apiserver
         image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+        args:
+        - "--secure-port=5443"
         env:
           - name: DATASTORE_TYPE
             value: "kubernetes"
@@ -245,3 +247,21 @@ spec:
       - name: cnx-manager-tls
         secret:
           secretName: cnx-manager-tls
+---
+
+# Create a NodePort to expose the web application
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: cnx-manager
+  name: cnx-manager
+  namespace: kube-system
+spec:
+  selector:
+    k8s-app: cnx-manager
+  ports:
+    - port: 8080
+      targetPort: 443
+      nodePort: 30003
+  type: NodePort

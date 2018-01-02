@@ -1,20 +1,19 @@
 ---
 title: Getting started with CNX
-redirect_from: latest/getting-started/index
 ---
 
 ## Obtain the private binaries
 
-Contact your support representative to gain access to the following files. 
+Contact your support representative to gain access to the following files.
 
-   | TAR file                                       | Description                                |
-   | ---------------------------------------------- | ------------------------------------------ |
-   | `tigera-calicoctl_v2.0.0-cnx-beta1.tar.xz`     | {{site.prodname}}-enhanced `calicoctl`     |
-   | `tigera-cnx-apiserver_v2.0.0-cnx-beta1.tar.xz` | Kubernetes extension API server component  |
-   | `tigera-cnx-node_v2.0.0-cnx-beta1.tar.xz`      | {{site.prodname}}-enhanced `calico/node`   |
-   | `tigera-calicoq_v2.0.0-cnx-beta1.tar.xz`       | Policy query command-line tool             |
-   | `tigera-cnx-manager_v2.0.0-cnx-beta1.xz`       | {{site.prodname}} Manager component        | 
-   
+   | TAR file                                                                       | Description                                |
+   | ------------------------------------------------------------------------------ | ------------------------------------------ |
+   | `tigera-calicoctl_{{site.data.versions[page.version].first.title}}.tar.xz`     | {{site.prodname}}-enhanced `calicoctl`     |
+   | `tigera-cnx-apiserver_{{site.data.versions[page.version].first.title}}.tar.xz` | Kubernetes extension API server component  |
+   | `tigera-cnx-node_{{site.data.versions[page.version].first.title}}.tar.xz`      | {{site.prodname}}-enhanced `calico/node`   |
+   | `tigera-calicoq_{{site.data.versions[page.version].first.title}}.tar.xz`       | Policy query command-line tool             |
+   | `tigera-cnx-manager_{{site.data.versions[page.version].first.title}}.xz`       | {{site.prodname}} Manager component        |
+
 ## Choose your orchestrator
 
 To get started using {{site.prodname}}, we recommend running

@@ -1,6 +1,6 @@
 ---
 title: Configuring Systems for use with Calico
-redirect_from: latest/usage/openstack/configuration
+no_canonical: true
 ---
 
 When running {{site.prodname}} with OpenStack, you also need to configure various

@@ -1,6 +1,5 @@
 ---
 title: Tigera CNX Manager Policy Editor
-redirect_from: latest/reference/essentials/policy-editor
 ---
 
 Tigera CNX Manager includes a web client for viewing and editing

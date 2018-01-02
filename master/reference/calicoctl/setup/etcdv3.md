@@ -1,5 +1,5 @@
 ---
-title: Configuring calicoctl - etcdv3 datastore
+redirect_to: /master/usage/calicoctl/configure/etcd
 no_canonical: true
 ---
 
@@ -29,7 +29,7 @@ spec:
   ...
 ```
 
-See [Complete list of etcdv3 configuration options](#complete-list-of-etcdv3-configuration-options) 
+See [Complete list of etcdv3 configuration options](#complete-list-of-etcdv3-configuration-options)
 for details on the etcdv3 configuration options that may be included in
 the `spec` section of the configuration file.
 
@@ -41,7 +41,7 @@ does not exist, calicoctl will read etcdv3 configuration options from the enviro
 If you are not using a configuration file to specify your etcdv3 access information, calicoctl
 will check a particular set of environment variables.
 
-See [Complete list of etcdv3 configuration options](#complete-list-of-etcdv3-configuration-options) 
+See [Complete list of etcdv3 configuration options](#complete-list-of-etcdv3-configuration-options)
 for the list of supported environment variables.
 
 

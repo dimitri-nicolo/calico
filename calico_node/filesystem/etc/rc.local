@@ -15,7 +15,7 @@ startup || exit 1
 # Source any additional environment that was added by the startup script.  This
 # is done immediately after the startup script because the environments are
 # required by the remaining processing.
-. startup.env
+. ./startup.env
 
 # If possible pre-allocate the IP address on the IPIP tunnel.
 allocate-ipip-addr || exit 1
@@ -84,8 +84,6 @@ if [ "$CALICO_DISABLE_FILE_LOGGING" == "true" ]; then
 	rm -rf /etc/service/enabled/calico-bgp-daemon/log
 fi
 
-# TODO: Find a way to plumb the version in here.
-CALICO_VERSION="v2.0.0-cnx-beta2"
-echo "Version: $CALICO_VERSION"
+echo "CNX Version: $NODEVERSION"
 
 echo "Calico node started successfully"

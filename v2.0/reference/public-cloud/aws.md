@@ -1,6 +1,5 @@
 ---
 title: AWS
-redirect_from: latest/reference/public-cloud/aws
 ---
 
 {{site.prodname}} provides the following advantages when running in AWS:

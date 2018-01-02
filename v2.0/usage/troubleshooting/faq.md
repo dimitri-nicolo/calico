@@ -1,6 +1,5 @@
 ---
 title: Frequently Asked Questions
-redirect_from: latest/usage/troubleshooting/faq
 layout: docwithnav
 ---
 
@@ -49,6 +48,14 @@ of each workload interface, {{site.prodname}} sets the `proxy_arp` flag on the
 interface.  This makes the host behave like a gateway, responding to
 ARPs for 169.254.1.1 without having to actually allocate the IP address
 to the interface.
+
+## Why do all cali\* interfaces have the MAC address ee:ee:ee:ee:ee:ee?
+
+In some setups the kernel is unable to generate a persistent MAC address and so
+{{site.prodname}} assigns a MAC address itself. Since {{site.prodname}} uses
+point-to-point routed interfaces, traffic does not reach the data link layer
+so the MAC Address is never used and can therefore be the same for all the
+cali\* interfaces.
 
 ## Can I prevent my Kubernetes pods from initiating outgoing connections?
 

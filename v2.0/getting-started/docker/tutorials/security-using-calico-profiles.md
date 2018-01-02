@@ -1,6 +1,6 @@
 ---
 title: Security using Calico Profiles
-redirect_from: latest/getting-started/docker/tutorials/security-using-calico-profiles
+no_canonical: true
 ---
 
 ## Background

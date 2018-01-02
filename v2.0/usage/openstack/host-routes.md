@@ -1,6 +1,6 @@
 ---
 title: Host routes
-redirect_from: latest/usage/openstack/host-routes
+no_canonical: true
 ---
 
 Neutron allows "host routes" to be configured on a subnet, with each host route

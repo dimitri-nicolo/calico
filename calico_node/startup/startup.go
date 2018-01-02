@@ -14,13 +14,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/projectcalico/calico/calico_node/calicoclient"
 	"github.com/projectcalico/calico/calico_node/startup/autodetection"
@@ -29,11 +34,12 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
+	"github.com/projectcalico/libcalico-go/lib/names"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator"
+	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator/clients"
 )
 
 const (
@@ -95,6 +101,13 @@ func main() {
 		log.Info("Skipping datastore connection test")
 	}
 
+	if cfg.Spec.DatastoreType == apiconfig.Kubernetes {
+		if err := ensureKDDMigrated(cfg, cli); err != nil {
+			log.WithError(err).Errorf("Unable to ensure datastore is migrated.")
+			terminate()
+		}
+	}
+
 	// Query the current Node resources.  We update our node resource with
 	// updated IP data and use the full list of nodes for validation.
 	node := getNode(ctx, cli, nodeName)
@@ -135,7 +148,11 @@ func main() {
 
 	// Write the startup.env file now that we are ready to start other
 	// components.
-	writeStartupEnv(nodeName)
+	sEnv := map[string]string{
+		"NODENAME": nodeName,
+		"NODEVERSION": VERSION,
+	}
+	writeStartupEnv(sEnv)
 
 	// Tell the user what the name of the node is.
 	log.Infof("Using node name: %s", nodeName)
@@ -191,11 +208,10 @@ func determineNodeName() string {
 		// hostname - but should warn the user that this is not a
 		// recommended way to start the node container.
 		var err error
-		if nodeName, err = os.Hostname(); err != nil {
+		if nodeName, err = names.Hostname(); err != nil {
 			log.WithError(err).Error("Unable to determine hostname")
 			terminate()
 		}
-
 		log.Warn("Auto-detecting node name. It is recommended that an explicit value is supplied using the NODENAME environment variable.")
 	}
 	return nodeName
@@ -233,12 +249,15 @@ func waitForConnection(ctx context.Context, c client.Interface) {
 // writeStartupEnv writes out the startup.env file to set environment variables
 // that are required by confd/bird etc. but may not have been passed into the
 // container.
-func writeStartupEnv(nodeName string) {
-	text := "export NODENAME=" + nodeName + "\n"
+func writeStartupEnv(envVars map[string]string) {
+	var textBuf bytes.Buffer
+	for k, v := range envVars {
+		textBuf.WriteString(fmt.Sprintf("export %s=%s\n", strings.ToUpper(k), v))
+	}
 
 	// Write out the startup.env file to ensure required environments are
 	// set (which they might not otherwise be).
-	if err := ioutil.WriteFile("startup.env", []byte(text), 0666); err != nil {
+	if err := ioutil.WriteFile("startup.env", textBuf.Bytes(), 0666); err != nil {
 		log.WithError(err).Info("Unable to write to startup.env")
 		log.Warn("Unable to write to local filesystem")
 		terminate()
@@ -812,8 +831,7 @@ func ensureDefaultConfig(ctx context.Context, cfg *apiconfig.CalicoAPIConfig, c 
 		if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok {
 			newFelixConf := api.NewFelixConfiguration()
 			newFelixConf.Name = globalFelixConfigName
-			interval := 0
-			newFelixConf.Spec.ReportingIntervalSecs = &interval
+			newFelixConf.Spec.ReportingInterval = &metav1.Duration{Duration: 0}
 			newFelixConf.Spec.LogSeverityScreen = defaultLogSeverity
 			_, err = c.FelixConfigurations().Create(ctx, newFelixConf, options.SetOptions{})
 			if err != nil {
@@ -830,12 +848,11 @@ func ensureDefaultConfig(ctx context.Context, cfg *apiconfig.CalicoAPIConfig, c 
 		}
 	} else {
 		updateNeeded := false
-		if felixConf.Spec.ReportingIntervalSecs == nil {
-			interval := 0
-			felixConf.Spec.ReportingIntervalSecs = &interval
+		if felixConf.Spec.ReportingInterval == nil {
+			felixConf.Spec.ReportingInterval = &metav1.Duration{Duration: 0}
 			updateNeeded = true
 		} else {
-			log.WithField("ReportingIntervalSecs", felixConf.Spec.ReportingIntervalSecs).Debug("Global Felix value already assigned")
+			log.WithField("ReportingInterval", felixConf.Spec.ReportingInterval).Debug("Global Felix value already assigned")
 		}
 
 		if felixConf.Spec.LogSeverityScreen == "" {
@@ -901,6 +918,29 @@ func ensureDefaultConfig(ctx context.Context, cfg *apiconfig.CalicoAPIConfig, c 
 				log.WithField("DefaultEndpointToHostAction", felixNodeCfg.Spec.DefaultEndpointToHostAction).Debug("Host Felix value already assigned")
 			}
 		}
+	}
+
+	return nil
+}
+
+// ensureKDDMigrated ensures any data migration needed is done.
+func ensureKDDMigrated(cfg *apiconfig.CalicoAPIConfig, cv3 client.Interface) error {
+	cv1, err := clients.LoadKDDClientV1FromAPIConfigV3(cfg)
+	if err != nil {
+		return err
+	}
+	m := migrator.New(cv3, cv1, nil)
+	yes, err := m.ShouldMigrate()
+	if err != nil {
+		return err
+	} else if yes {
+		log.Infof("Running migration")
+		if _, err = m.Migrate(); err != nil {
+			return errors.New(fmt.Sprintf("Migration failed: %v", err))
+		}
+		log.Infof("Migration successful")
+	} else {
+		log.Debugf("Migration is not needed")
 	}
 
 	return nil

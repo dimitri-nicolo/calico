@@ -22,6 +22,7 @@ packet.
 | 9000 | 9000 | 8980 | 8950 |
 | 1460 (GCE) | 1460 | 1440 | 1410 |
 | 9001 (AWS Jumbo) | 9001 | 8981 | 8951 |
+| 1450 (OpenStack VXLAN) | 1450 | 1430 | 1400 |
 
 #### Default MTU sizes
 
@@ -39,12 +40,30 @@ configured with VXLAN.
 ### Setting MTU for workload network interfaces
 
 It is the job of the network plugin to create new interfaces, the current
-major plugins are CNI and libnetwork.  Currently Docker and the Mesos Docker
-Containerizer integration use libnetwork which does **not** support setting MTU.
-CNI which is used by Kubernetes and the Mesos Unified Containerizer support
+major plugins are CNI and libnetwork. Currently Docker and the Mesos Docker
+Containerizer integration use libnetwork.
+
+CNI, which is used by Kubernetes and the Mesos Unified Containerizer, supports
 configuring the MTU through the CNI configuration file.
 
-#### MTU configuration with CNI
+The user will also want to configure {{site.prodname}}'s IP-in-IP interface MTU when
+IP-in-IP is enabled on the cluster. Refer to the MTU table at the top of the page
+to choose the value that matches your environment.
+
+> **Note**: The MTU on existing workloads will not be updated with these
+changes.  To have all workloads use the new MTU, they must be restarted.
+{: .alert .alert-info}
+
+### MTU configuration with libnetwork
+
+The MTU of the veth pairs created by the {{site.prodname}} libnetwork plugin can be configured
+by setting the `CALICO_LIBNETWORK_VETH_MTU` environment variable on the `libnetwork`
+process.
+
+This should either be set on the standalone `libnetwork` service, or on the
+`{{site.nodecontainer}}` container as a whole.
+
+### MTU configuration with CNI
 
 To set the MTU when using CNI the line `"mtu": <MTU size>` must be added to
 the CNI configuration file.
@@ -63,10 +82,6 @@ Example CNI configuration
 }
 ```
 
-> **Note**: The MTU on existing workloads will not be updated with this
-change.  To have all workloads use the new MTU, they must be restarted.
-{: .alert .alert-info}
-
 
 ### Setting MTU for tunnel network interfaces
 
@@ -75,12 +90,12 @@ configured by setting a Felix environment variable or using calicoctl to set
 the proper configuration variable.  Felix will set the tunnel interfaces to
 the specified MTU.
 
-#### Setting MTU through Felix Environment variable
+### Setting tunnel MTU through Felix Environment variable
 
 Passing in the environment variable `FELIX_IPINIPMTU` when running the
-calico/node container will set the MTU for Felix to use.
+`{{site.nodecontainer}}` container will set the MTU for Felix to use.
 
-#### Setting the MTU with calicoctl
+### Setting the tunnel MTU with calicoctl
 
 To set the IP-in-IP MTU value for all {{site.prodname}} nodes in your cluster, use the
 following command to set the global config value.
@@ -105,4 +120,4 @@ $ calicoctl replace -f felix.yaml
 
 When using self-hosted manifests with Kubernetes, the MTU should be set by
 updating the {{site.prodname}} manifest, applying the manifest with those changes, and
-then restarting each of the calico-node pods.
+then restarting each of the `{{site.noderunning}}` pods.

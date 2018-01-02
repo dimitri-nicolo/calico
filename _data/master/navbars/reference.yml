@@ -72,7 +72,7 @@ toc:
       - title: Profile
         path: /reference/calicoctl/resources/profile
       - title: Tier
-        path: /reference/calicoctl/resources/tier   
+        path: /reference/calicoctl/resources/tier
       - title: Workload Endpoint
         path: /reference/calicoctl/resources/workloadendpoint
   - title: Setup
@@ -119,7 +119,7 @@ toc:
       path: /reference/essentials/policy-violations
     - title: Policy Audit Mode
       path: /reference/essentials/policy-auditing
-- title: CNX Manager 
+- title: CNX Manager
   section:
     - title: Configuring user authentication
       path: /reference/essentials/authentication
@@ -129,6 +129,8 @@ toc:
   section:
     - title: AWS
       path: /reference/public-cloud/aws
+    - title: Azure
+      path: /reference/public-cloud/azure
     - title: GCE
       path: /reference/public-cloud/gce
 - title: Deploying on Private Cloud
@@ -166,6 +168,8 @@ toc:
     path: /reference/essentials/rbac-tiered-policies
 - title: System Requirements
   path: /reference/requirements
+- title: Deployment recommendations and limits
+  path: /reference/recommendations
 - title: Repo Structure
   path: /reference/repo-structure
 - title: Get Involved

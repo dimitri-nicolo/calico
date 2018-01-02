@@ -1,6 +1,5 @@
 ---
 title: Installing CNX manager and denied packet monitoring
-redirect_from: latest/getting-started/kubernetes/installation/hosted/essentials/cnx
 ---
 
 ## Requirements

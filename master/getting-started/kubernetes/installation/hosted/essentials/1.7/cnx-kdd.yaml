@@ -131,6 +131,32 @@ metadata:
 
 ---
 
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: cnx-manager
+  namespace: kube-system
+
+---
+
+# Give cnx-apiserver ServiceAccount same level of access
+# as calico-node ServiceAccount. This is needed for
+# accessing various CRDs and namespaces.
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: cnx-apiserver-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-node
+subjects:
+- kind: ServiceAccount
+  name: cnx-apiserver
+  namespace: kube-system
+
+---
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -208,6 +234,7 @@ spec:
         # a failure.  This annotation works in tandem with the toleration below.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      serviceAccountName: cnx-manager
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule

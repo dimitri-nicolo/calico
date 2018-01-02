@@ -1,6 +1,6 @@
 ---
 title: Network Policy (Universal Containerizer)
-redirect_from: latest/getting-started/mesos/tutorials/policy/universal-containerizer
+no_canonical: true
 ---
 
 This document will demonstrate how to manipulate policy for {{site.prodname}} using
