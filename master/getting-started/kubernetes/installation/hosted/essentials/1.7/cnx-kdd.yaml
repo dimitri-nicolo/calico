@@ -172,8 +172,8 @@ spec:
 
 ---
 
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
   name: cnx-apiserver
   namespace: kube-system
@@ -181,10 +181,14 @@ metadata:
     apiserver: "true"
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     apiserver: "true"
   template:
     metadata:
+      name: cnx-apiserver
+      namespace: kube-system
       labels:
         apiserver: "true"
     spec:
