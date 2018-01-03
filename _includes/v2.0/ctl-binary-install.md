@@ -1,1 +1,0 @@
-1. Download the calicoctl binary provided to you.
