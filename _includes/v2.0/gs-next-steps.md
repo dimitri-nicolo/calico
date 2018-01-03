@@ -1,6 +1,6 @@
 ### Next steps
 
-Consult the {{site.prodname}} for Kubernetes [demo](essentials/simple-policy-essentials), which
+Consult the {{site.prodname}} for Kubernetes [demo]({{site.baseurl}}/{{page.version}}/getting-started/essentials/simple-policy-essentials), which
 demonstrates the main features.
 
 For more detailed documentation on {{site.prodname}} features, see here:
