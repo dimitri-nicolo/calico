@@ -127,8 +127,8 @@ title: Installing CNX for OpenShift
        oadm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
 
 1. Configure authentication to allow CNX Manager users to edit policies.  Consult the
-   [CNX Manager](../../../../../reference/cnx/policy-editor) and
-   [Tiered policy RBAC](../../../../../reference/cnx/rbac-tiered-policy)
+   [CNX Manager](../../../reference/cnx/policy-editor) and
+   [Tiered policy RBAC](../../../reference/cnx/rbac-tiered-policies)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.

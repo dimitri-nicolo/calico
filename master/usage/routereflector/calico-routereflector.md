@@ -45,8 +45,8 @@ For an OpenStack deployment, read [Configuring BIRD as a BGP Route Reflector](bi
 Follow the appropriate section to start and configure your route reflectors depending on
 the datastore you are using for {{site.prodname}}:
 
--  [Using etcdv3 as the {{site.prodname}} datastore](#using-etcdv3-as-the-calico-datastore)
--  [Using the Kubernetes API as the {{site.prodname}} datastore](#using-the-kubernetes-api-as-the-calico-datastore)
+-  [Using etcdv3 as the {{site.prodname}} datastore](#using-etcdv3-as-the-cnx-datastore)
+-  [Using the Kubernetes API as the {{site.prodname}} datastore](#using-the-kubernetes-api-as-the-cnx-datastore)
 
 ### Using etcdv3 as the {{site.prodname}} datastore
 

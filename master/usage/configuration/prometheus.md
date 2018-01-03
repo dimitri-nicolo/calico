@@ -4,7 +4,7 @@ title: Configuring Prometheus
 
 Note: This document assumes that Prometheus and Alertmanager have been setup
 using _Prometheus Operator_ as described
-[here](../../getting-started/kubernetes/installation/hosted/cnx/).
+[here](../../getting-started/kubernetes/installation/hosted/cnx/cnx).
 
 #### Updating Denied Packets Rules
 

@@ -87,4 +87,4 @@ Below is an example of how to create a file of Nodes and delete them.
    ```
 
 [Node resource reference]: {{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node
-[calicoctl setup]: {{site.baseurl}}/{{page.version}}/usage/calicoctl/install-and-configuration
+[calicoctl setup]: {{site.baseurl}}/{{page.version}}/usage/calicoctl/install

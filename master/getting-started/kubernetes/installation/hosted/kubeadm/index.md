@@ -26,7 +26,7 @@ For {{site.prodname}} to be compatible with your kubeadm-created cluster:
    or in a config file).
 
 1. To use CNX Manager, authentication needs to be set up on the cluster in a supported way.
-   The [authentication documentation](../../../../reference/cnx/authentication) lists
+   The [authentication documentation](../../../../../reference/cnx/authentication) lists
    the supported methods and references the Kubernetes documentation for how to configure
    them.
 

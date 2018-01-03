@@ -66,7 +66,7 @@ kubectl get pods -n kube-system | grep cnx-node
 
 1. Configure authentication to allow {{site.prodname}} Manager users to edit policies.  Consult the
    [{{site.prodname}} Manager](../../../../../reference/cnx/policy-editor) and
-   [Tiered policy RBAC](../../../../../reference/cnx/rbac-tiered-policy)
+   [Tiered policy RBAC](../../../../../reference/cnx/rbac-tiered-policies)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.

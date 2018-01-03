@@ -17,7 +17,7 @@ first use case.
 
 ### Prerequisites
 
-- A Kubernetes cluster configured with [{{site.prodname}}](../kubernetes/installation/hosted/cnx/index)
+- A Kubernetes cluster configured with [{{site.prodname}}](../../kubernetes/installation/hosted/cnx/cnx)
 - [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup/) to work properly with your cluster
 - [calicoq installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoq/) to work with your cluster
 

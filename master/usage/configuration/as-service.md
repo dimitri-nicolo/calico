@@ -4,14 +4,14 @@ title: Running calico/node with an init system
 
 This guide explains how to run `{{site.nodecontainer}}` with an init system like
 systemd, inside either of the following container types:
-- [Docker](#running-caliconode-in-a-docker-container)
-- [rkt](#running-caliconode-in-a-rkt-container)
+- [Docker](#running-cnx-node-in-a-docker-container)
+- [rkt](#running-cnx-node-in-a-rkt-container)
 
 ## Running `{{site.nodecontainer}}` in a Docker container
 
 This section describes how to run `{{site.nodecontainer}}` as a Docker container.
 
-> **Note**: We include examples for systemd, but the commands can be 
+> **Note**: We include examples for systemd, but the commands can be
 > applied to other init daemons such as upstart.
 {: .alert .alert-info}
 

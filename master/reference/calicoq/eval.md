@@ -32,7 +32,8 @@ Endpoints matching selector role=='endfront':
 
 ## See also
 
--  [Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy) for
-   more information about the {{site.prodname}} selector-based policy model.
+-  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
+   [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy)
+   for more information about the {{site.prodname}} policy model.
 -  [calicoq and selectors]({{site.baseurl}}/{{page.version}}/reference/calicoq/selectors) for
    a recap on how selectors are used in {{site.prodname}} policy.

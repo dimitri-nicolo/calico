@@ -88,10 +88,10 @@ This procedure assumes the following:
         ```
         kubectl uncordon node-01
         ```
- 3. Install the policy query and violation alerting tools.  For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/).
+ 3. Install the policy query and violation alerting tools.  For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
 
     - Configure calico-monitoring namespace and deploy Prometheus Operator by
-      applying the [operator.yaml](installation/hosted/cnx/1.6/operator.yaml) manifest.
+      applying the [operator.yaml](installation/hosted/cnx/1.7/operator.yaml) manifest.
 
       ```
       kubectl apply -f operator.yaml
@@ -103,7 +103,7 @@ This procedure assumes the following:
       kubectl get thirdpartyresources --watch
       ```
 
-    - Apply the [monitor-calico.yaml](installation/hosted/cnx/1.6/monitor-calico.yaml) manifest which will
+    - Apply the [monitor-calico.yaml](installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
       install prometheus and alertmanager.
 
       ```
@@ -112,17 +112,17 @@ This procedure assumes the following:
 
 4. Add the {{site.prodname}} Manager.  Note that this step may require API downtime,
    because the API server's command line flags will probably need changing.
-   For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/).
+   For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
 
    - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
 
-   - Edit and apply the manifest ([etcd](installation/hosted/cnx/1.6/calico-k8sapiserver.yaml)
-     or [KDD](installation/hosted/cnx/1.6/calico-k8sapiserver-kdd.yaml))
+   - Edit and apply the manifest ([etcd](installation/hosted/cnx/1.7/calico-k8sapiserver.yaml)
+     or [KDD](installation/hosted/cnx/1.7/calico-k8sapiserver-kdd.yaml))
      defining the {{site.prodname}} Manager API server resources.
 
      See the main installation documentation for details on how to set the flags.
 
-   - Edit and apply [the manifest](installation/hosted/cnx/1.6/cnx-manager.yaml) defining the {{site.prodname}} Manager web application resources.
+   - Edit and apply [the manifest](installation/hosted/cnx/1.7/cnx-manager.yaml) defining the {{site.prodname}} Manager web application resources.
      The `tigera-cnx-manager-web-config` ConfigMap at the start of the file
      defines two parameters that may need changing: the OIDC client ID
      (only if using Google login), and the Kubernetes API location (must

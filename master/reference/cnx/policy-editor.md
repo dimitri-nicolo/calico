@@ -3,7 +3,7 @@ title: Tigera CNX Manager Policy Editor
 ---
 
 Tigera CNX Manager includes a web client for viewing and editing
-[tiered security policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier.md)
+[tiered security policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
 
 ## Policy Authentication
 
@@ -17,7 +17,7 @@ The options for authentication are described in detail [here](authentication).
 
 ## Access model
 
-The authorization model for policies uses the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier.md) each policy belongs to as an
+The authorization model for policies uses the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) each policy belongs to as an
 additional layer of authorization.  To perform any operation on a policy,
 the user must be allowed to `GET` the tier that policy is in (or will be
 created in).  The operation must still be authorized on the policy in the normal
