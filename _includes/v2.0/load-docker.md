@@ -22,18 +22,18 @@ If you do not already have a private registry, consider one of the following opt
 1. Import the files into the local Docker engine. 
 
    ```
-   docker load -i tigera_cnx-apiserver_v2.0.0-cnx-beta1.tar.xz
-   docker load -i tigera_cnx-node_v2.0.0-cnx-beta1.tar.xz
-   docker load -i tigera_cnx-manager_v2.0.0-cnx-beta1.xz
+   docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}.tar.xz
+   docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"].version}}.tar.xz
+   docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"].version}}.tar.xz
    ```
 
 1. Confirm that the images have loaded by typing `docker images`. 
 
    ```
    REPOSITORY            TAG               IMAGE ID       CREATED         SIZE
-   tigera/cnx-manager    v2.0.0-cnx-beta1  e07d59b0eb8a   2 minutes ago   30.8MB
-   tigera/cnx-node       v2.0.0-cnx-beta1  2bf19d491aac   3 minutes ago   263MB
-   tigera/cnx-apiserver  v2.0.0-cnx-beta1  acd3faa772d0   5 minutes ago   277MB
+   tigera/cnx-manager    {{site.data.versions[page.version].first.components["cnx-manager"].version}}  e07d59b0eb8a   2 minutes ago   30.8MB
+   tigera/cnx-node       {{site.data.versions[page.version].first.components["cnx-node"].version}}  2bf19d491aac   3 minutes ago   263MB
+   tigera/cnx-apiserver  {{site.data.versions[page.version].first.components["cnx-apiserver"].version}}  acd3faa772d0   5 minutes ago   277MB
    ```
    
 1. Retag the images as desired and necessary to load them to your private repository.
