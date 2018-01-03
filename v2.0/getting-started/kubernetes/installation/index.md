@@ -1,5 +1,5 @@
 ---
-title: Installing Calico on Kubernetes
+title: Installing CNX on Kubernetes
 ---
 
 {{site.prodname}} can be installed on a Kubernetes cluster in a number of configurations.  This document
