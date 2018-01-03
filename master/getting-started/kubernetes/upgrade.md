@@ -5,7 +5,7 @@ title: Upgrading CNX in Kubernetes
 This document covers:
 
 - [Upgrading an open source Calico cluster to {{site.prodname}}](#upgrading-an-open-source-calico-cluster-to-cnx)
-- [Upgrading a cluster with Tigera CNX Toolkit to {{site.prodname}}](#upgrading-a-cluster-with-tigera-cnx-toolkit-to-cnx)
+- [Upgrading a cluster with Tigera Essentials Toolkit to {{site.prodname}}](#upgrading-a-cluster-with-tigera-essentials-toolkit-to-cnx)
 
 The upgrade procedure is supported for Calico v1.6+.
 
@@ -47,13 +47,13 @@ documentation for guidance on migrating to 2.0.
 1. [Upgrade the open source Calico cluster](#upgrading-a-hosted-installation-of-calico).
 1. [Add {{site.prodname}}](#adding-cnx).
 
-## Upgrading a cluster with Tigera CNX Toolkit to {{site.prodname}}
+## Upgrading a cluster with Tigera Essentials Toolkit to {{site.prodname}}
 
 1. [Upgrade the open source Calico cluster](#upgrading-a-hosted-installation-of-calico).
 1. [Add {{site.prodname}}](#adding-cnx). Steps 1 to 3 are not required.
 
 ## Adding {{site.prodname}}
-This section covers taking an existing Kubernetes system with Calico and maybe Tigera CNX Toolkit, and adding {{site.prodname}}.
+This section covers taking an existing Kubernetes system with Calico and maybe Tigera Essentials Toolkit, and adding {{site.prodname}}.
 
 #### Prerequisites
 This procedure assumes the following:
