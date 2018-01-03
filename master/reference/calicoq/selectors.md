@@ -4,9 +4,9 @@ title: calicoq and selectors
 
 The queries that you can make with `calicoq` all involve computing the matches
 between endpoints and policies or profiles, via selectors.  The use of
-selectors in {{site.prodname}} policy is described in detail
-by
-[Policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/policy),
+selectors in {{site.prodname}} policy is described in detail by
+[NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
+[GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy),
 but to recap:
 
 - Selectors can be used in three contexts in {{site.prodname}} security policy

@@ -19,7 +19,7 @@ etcd user that has been given appropriate roles allowing access to the key
 prefixes or paths listed or linked below.
 - [cni-plugin](calico-etcdv3-paths#cni-plugin)
 - [{{site.prodname}} Kubernetes controllers](calico-etcdv3-paths#calicokube-controllers)
-- [{{site.nodecontainer}}](calico-etcdv3-paths#caliconode)
+- [{{site.nodecontainer}}](calico-etcdv3-paths#cnx-node)
 - It may also be useful to create a certificate key pair for use with
   calicoctl, even creating specific ones for
   [read only access](calico-etcdv3-paths#calicoctl-read-only-access),
@@ -52,7 +52,7 @@ component type listed above (cni-plugin, {{site.prodname}} Kubernetes controller
 `{{site.nodecontainer}}`).
 
 This setup needs similar updates to the manifest like what is described in
-[Using etcd RBAC to segment Kubernetes and {{site.prodname}}: Updating a hosted {{site.prodname}} manifest](kubernetes#updating-a-hosted-Calico-manifest),
+[Using etcd RBAC to segment Kubernetes and {{site.prodname}}: Updating a hosted {{site.prodname}} manifest](kubernetes#updating-a-hosted-cnx-manifest),
 with the in addition to those updates a separate Secret for *each* component
 must be created which holds the CA, certificate, and key data base64 encoded.
 Then the specific Secret for each component must be in the `volumes` list

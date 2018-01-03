@@ -12,7 +12,7 @@ or by [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-
 
 The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
-This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.6/)
+This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/)
 and that your cluster consists of the following nodes:
   * k8s-node1
   * k8s-node2

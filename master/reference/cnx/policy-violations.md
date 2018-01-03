@@ -73,7 +73,7 @@ packets originating from the IP Address "10.245.13.149".
 
 See
 the
-[Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#cnx-specific-configuration) for
+[Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#tigera-cnx-specific-configuration) for
 the settings that control the reporting of these metrics.  CNX manifests
 normally set `PrometheusReporterEnabled=true` and
 `PrometheusReporterPort=9081`, so these metrics are available on each compute
