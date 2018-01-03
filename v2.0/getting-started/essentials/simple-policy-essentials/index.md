@@ -6,14 +6,14 @@ This guide is a variation of the simple policy demo intended to introduce the ex
 
 It requires a Kubernetes cluster configured with Calico networking and {{site.prodname}}, and expects that you have `kubectl` configured to interact with the cluster.
 
-You can quickly and easily obtain such a cluster by setting up [{{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started/essentials/), and then:
-- following one of the [installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation), or
-- [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade).
+You can quickly and easily obtain such a cluster by following one of the
+[installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation),
+or by [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade).
 
 The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
 This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.6/)
-and that your cluster consists of the following nodes: 
+and that your cluster consists of the following nodes:
   * k8s-node1
   * k8s-node2
   * k8s-master
@@ -152,7 +152,7 @@ calico-node-prometheus     10.105.26.250    <nodes>       9090:30909/TCP      6h
 prometheus-operated        None             <none>        9090/TCP            6h
 
 ```
-This tells us that the `calico-node-prometheus` service is running using a NodePort on port 30909. Point a web browser at [http://k8s-node1:30909/graph](http://k8s-node1:30909/graph).  
+This tells us that the `calico-node-prometheus` service is running using a NodePort on port 30909. Point a web browser at [http://k8s-node1:30909/graph](http://k8s-node1:30909/graph).
 
 If you click on the drop down box `- insert metric at cursor -`, you should see a list of metrics which are available:
  - `calico_denied_packets`
@@ -161,7 +161,7 @@ If you click on the drop down box `- insert metric at cursor -`, you should see 
  - `scrape_duration_seconds`
  - `scrape_samples_post_metric_relabelling`
  - `scrape_samples_scraped`
- 
+
 The first 3 in the list above are useful for monitoring your deployment, while the last 3 are useful for monitoring the health of your monitoring system.
 
 Note that if you have not sent any denied packets recently, `calico_denied_packets` and `calico_denied_bytes` may not appear in the drop down.
@@ -178,7 +178,7 @@ Prometheus can also do some calculations based on metrics - for example to show 
 
 Now let's try setting off an alert.  If you click on 'Alerts', you'll see that we have a `DeniedPacketsRate` alert configured. Notice that it is green to indicate that it is not currently firing. If you click on it, it will show you that it will fire if `rate(calico_denied_packets[10s]) > 50`.
 
-If you click on that expression, it will skip back to the graph screen and show you all the times that rate of packets was > 50.  So let's send some denied packets.  In the `access` pod you created above, run the following command:  
+If you click on that expression, it will skip back to the graph screen and show you all the times that rate of packets was > 50.  So let's send some denied packets.  In the `access` pod you created above, run the following command:
 ```
 for i in `seq 1 10000`; do (wget -q --timeout=1 nginx -O - & sleep 0.01); done
 ```
@@ -211,8 +211,8 @@ spec:
 EOF
 ```
 
-> **Note**: The NetworkPolicy allows traffic from Pods with the label `run: access` 
-> to Pods with the label `run: nginx`.  These are the labels automatically added to 
+> **Note**: The NetworkPolicy allows traffic from Pods with the label `run: access`
+> to Pods with the label `run: nginx`.  These are the labels automatically added to
 > Pods started via `kubectl run` based on the name of the `Deployment`.
 {: .alert .alert-info}
 
