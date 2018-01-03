@@ -172,8 +172,8 @@ spec:
 
 ---
 
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
   name: cnx-apiserver
   namespace: kube-system
@@ -181,10 +181,14 @@ metadata:
     apiserver: "true"
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     apiserver: "true"
   template:
     metadata:
+      name: cnx-apiserver
+      namespace: kube-system
       labels:
         apiserver: "true"
     spec:
@@ -192,7 +196,6 @@ spec:
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
-      hostNetwork: true
       containers:
       - name: cnx-apiserver
         image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
@@ -242,7 +245,6 @@ spec:
       # This, along with the annotation above marks this pod as a critical add-on.
       - key: CriticalAddonsOnly
         operator: Exists
-      hostNetwork: true
       containers:
       - name: cnx-manager
         image: {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
