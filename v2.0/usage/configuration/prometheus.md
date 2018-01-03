@@ -4,7 +4,7 @@ title: Configuring Prometheus
 
 Note: This document assumes that Prometheus and Alertmanager have been setup
 using _Prometheus Operator_ as described
-[here](../../getting-started/kubernetes/installation/hosted/essentials/).
+[here](../../getting-started/kubernetes/installation/hosted/cnx/).
 
 #### Updating Denied Packets Rules
 
@@ -378,7 +378,7 @@ You now need to mount the Calico certificate (the concatenated certificate) and 
 into the `calico-node` daemonset.
 
 <div class="alert alert-info" role="alert">
-<b>Note</b>: The <samp>calico-node</samp> daemonset is found in the <samp>calico-essentials.yaml</samp> file provided as an example.
+<b>Note</b>: The <samp>calico-node</samp> daemonset is found in the <samp>calico-cnx.yaml</samp> file provided as an example.
 </div>
 
 Encode the concatenated certificate, the corresponding private key, and the CA
@@ -392,7 +392,7 @@ cat calico-key.pem | base64 -w 0
 cat ca.pem | base64 -w 0
 ```
 
-Create a secret for the files and place this in the `calico-essentials.yaml` file.
+Create a secret for the files and place this in the `calico-cnx.yaml` file.
 
 ```
 apiVersion: v1
@@ -573,7 +573,7 @@ field and instead set <samp>insecureskipVerify</samp> to <samp>true</samp>.
 Apply your changes.
 
 ```
-kubectl apply -f calico-essentials.yaml
+kubectl apply -f calico-cnx.yaml
 kubectl apply -f monitor-calico.yaml
 ```
 

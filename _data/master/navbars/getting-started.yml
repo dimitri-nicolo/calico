@@ -25,7 +25,7 @@ toc:
       - title: Kubernetes Datastore Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
       - title: Installing CNX manager and denied packet monitoring
-        path: /getting-started/kubernetes/installation/hosted/essentials/cnx
+        path: /getting-started/kubernetes/installation/hosted/cnx/cnx
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
     - title: AWS
@@ -47,9 +47,9 @@ toc:
     - title: Advanced network policy
       path: /getting-started/kubernetes/tutorials/advanced-policy
     - title: CNX for Kubernetes Demo
-      path: /getting-started/essentials/simple-policy-essentials
+      path: /getting-started/cnx/simple-policy-cnx
     - title: Tiered Policy Demo
-      path: /getting-started/essentials/tiered-policy-essentials
+      path: /getting-started/cnx/tiered-policy-cnx
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
   - title: Upgrade
@@ -78,9 +78,9 @@ toc:
     - title: CNX
       section:
       - title: Installing CNX for OpenShift
-        path: /getting-started/openshift/essentials/installation
+        path: /getting-started/openshift/cnx/installation
       - title: Using CNX for OpenShift
-        path: /getting-started/openshift/essentials/usage
+        path: /getting-started/openshift/cnx/usage
 
 - title: Host Protection
   section:

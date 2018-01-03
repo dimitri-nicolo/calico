@@ -8,7 +8,7 @@ Ensure that the kube-apiserver has been started with the appropriate flags.
 - Refer to the Kubernetes documentation to
   [Configure the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
   with the proper flags.
-- Refer to the [authentication guide]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication) to choose a supported authentication
+- Refer to the [authentication guide]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication) to choose a supported authentication
   mechanism and configure the Kubernetes API server accordingly.
 
 Ensure that Calico has been installed using the enhanced CNX node agent.
@@ -65,8 +65,8 @@ kubectl get pods -n kube-system | grep cnx-node
    ```
 
 1. Configure authentication to allow CNX Manager users to edit policies.  Consult the
-   [CNX Manager](../../../../../reference/essentials/policy-editor) and
-   [Tiered policy RBAC](../../../../../reference/essentials/rbac-tiered-policy)
+   [CNX Manager](../../../../../reference/cnx/policy-editor) and
+   [Tiered policy RBAC](../../../../../reference/cnx/rbac-tiered-policy)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.
@@ -212,7 +212,7 @@ with the following changes
 The [cnx.yaml](1.7/cnx.yaml) manifest must be updated with
 the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
-are described [here]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication).
+are described [here]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
 
 1. If using Google login, update the `tigera.cnx-manager.oidc-client-id` field
    in the `tigera-cnx-manager-config` ConfigMap.
@@ -339,7 +339,7 @@ spec:
 
 The {{site.prodname}} install manifests are based on [kubeadm hosted install](../kubeadm).
 
-The [cnx.yaml](1.7/calico-essentials.yaml) manifest does the following:
+The [cnx.yaml](1.7/calico-cnx.yaml) manifest does the following:
   - Installs the CNX API server, and configures the APIService to tell
     the Kubernetes API server to delegate to it.
   - Installs the CNX Manager web server, and configures it with the location

@@ -28,11 +28,11 @@ You can easily create a cluster compatible with these manifests by following [th
    or in a config file).
 
 1. To use CNX Manager, authentication needs to be set up on the cluster in a supported way.
-   The [authentication documentation](../../../../reference/essentials/authentication) lists
+   The [authentication documentation](../../../../reference/cnx/authentication) lists
    the supported methods and references the Kubernetes documentation for how to configure
    them.
 
-   This [kubeadm config file](../essentials/demo-manifests/kubeadm.yaml) is an example that
+   This [kubeadm config file](../cnx/demo-manifests/kubeadm.yaml) is an example that
    configures Google OIDC login using the email address as the username.
 
    Run kubeadm using the config file as follows.
@@ -97,7 +97,7 @@ kubectl apply -f calico.yaml
 ## Adding Tigera CNX
 
 Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](../essentials/cnx).
+[add CNX Manager](../cnx/cnx).
 
 ## Using calicoctl in a kubeadm cluster
 

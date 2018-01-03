@@ -134,7 +134,7 @@ the host. Instead, continue directly to the
    secret "cnx-manager-tls" created
    ```
 
-1. [Download the `cnx-etcd.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.7/cnx-etcd.yaml).
+1. [Download the `cnx-etcd.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml).
 
 1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-apiserver` and `cnx-manager` images.
 
@@ -255,9 +255,9 @@ Congratulations! You now have a single-host Kubernetes cluster
 equipped with {{site.prodname}}.
 
 ### Next steps
-**[Experiment with OIDC authentication strategy](/{{page.version}}/reference/essentials/authentication)**
+**[Experiment with OIDC authentication strategy](/{{page.version}}/reference/cnx/authentication)**
 
-**[Experiment with non-admin users and the web manager](/{{page.version}}/reference/essentials/non-admin-workflows)**
+**[Experiment with non-admin users and the web manager](/{{page.version}}/reference/cnx/non-admin-workflows)**
 
 **[Secure a simple application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 

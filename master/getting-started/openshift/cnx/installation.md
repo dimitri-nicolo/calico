@@ -5,7 +5,7 @@ title: Installing CNX for OpenShift
 1. Load the `cnx-apiserver`, `cnx-node`, and `cnx-manager` binaries into your
    private Docker registry.
 
-   See [Obtaining {{site.prodname}}][obtaining-essentials] for more information
+   See [Obtaining {{site.prodname}}][obtaining-cnx] for more information
    on how to acquire these images.
 
 1. Ensure your Docker daemon on all OpenShift nodes and masters is authenticated to pull images from that registry.
@@ -76,7 +76,7 @@ title: Installing CNX for OpenShift
 
 1. Download the {{site.prodname}} manifest:
 
-   - [cnx-etcd.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/1.7/cnx-etcd.yaml)
+   - [cnx-etcd.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml)
 
 1. Rename the file `cnx.yaml` - this is what subsequent instructions will refer to:
 
@@ -127,8 +127,8 @@ title: Installing CNX for OpenShift
        oadm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
 
 1. Configure authentication to allow CNX Manager users to edit policies.  Consult the
-   [CNX Manager](../../../../../reference/essentials/policy-editor) and
-   [Tiered policy RBAC](../../../../../reference/essentials/rbac-tiered-policy)
+   [CNX Manager](../../../../../reference/cnx/policy-editor) and
+   [Tiered policy RBAC](../../../../../reference/cnx/rbac-tiered-policy)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.
@@ -143,7 +143,7 @@ If you are unsure, a simple way to generate this token is to log into the OpenSh
 
 ### Next Steps
 
-- For information on customizing the CNX install manifest, see [Customizing the CNX Manager Manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/essentials/cnx#customizing-the-manifests)
+- For information on customizing the CNX install manifest, see [Customizing the CNX Manager Manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx#customizing-the-manifests)
 
 - [Using {{site.prodname}} for OpenShift](usage)
 
@@ -151,5 +151,5 @@ If you are unsure, a simple way to generate this token is to log into the OpenSh
 
 See [Using {{site.prodname}} for OpenShift](usage).
 
-[obtaining-essentials]: {{site.baseurl}}/{{page.version}}/getting-started/essentials/
+[obtaining-cnx]: {{site.baseurl}}/{{page.version}}/getting-started/cnx/
 [ocp-advanced-install]: https://access.redhat.com/documentation/en-us/openshift_container_platform/3.6/html-single/installation_and_configuration/#system-requirements

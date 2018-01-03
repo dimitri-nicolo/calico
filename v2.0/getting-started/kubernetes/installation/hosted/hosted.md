@@ -47,4 +47,4 @@ The above manifest supports a number of configuration options documented [here](
 ## Adding Tigera CNX
 
 Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](essentials/cnx).
+[add CNX Manager](cnx/cnx).

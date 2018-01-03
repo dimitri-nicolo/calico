@@ -17,7 +17,7 @@ More information on these exceptions is covered below.
 
 Once {{site.prodname}} is installed in OpenShift, each node is automatically configured with
 a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate
-requests to etcd. 
+requests to etcd.
 
 To install `calicoq` in OpenShift:
 
@@ -61,7 +61,7 @@ instance for you.
    ```
 
 1. Allow sleep pod to run with host networking:
-   
+
    ```
    oadm policy add-scc-to-user --namespace=calico-monitoring hostnetwork -z default
    ```
@@ -75,7 +75,7 @@ instance for you.
 >[Click here to view calico-monitoring.yml](../calico-monitoring.yml)
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
-See [Policy Violation Alerting](../../../reference/essentials/policy-violations) for more information.
+See [Policy Violation Alerting](../../../reference/cnx/policy-violations) for more information.
 
 ##### Updating Rules
 
@@ -84,4 +84,4 @@ will not get picked up by Prometheus until a SIGHUP signal is explicitly issued.
 
 ### Policy Audit Mode
 
-See [Policy Auditing](../../../reference/essentials/policy-auditing) for more information.
+See [Policy Auditing](../../../reference/cnx/policy-auditing) for more information.

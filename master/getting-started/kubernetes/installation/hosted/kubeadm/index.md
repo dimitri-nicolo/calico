@@ -2,9 +2,9 @@
 title: kubeadm Hosted Install
 ---
 
-This document outlines how to install {{site.prodname}} on a cluster initialized with 
+This document outlines how to install {{site.prodname}} on a cluster initialized with
 [kubeadm](http://kubernetes.io/docs/getting-started-guides/kubeadm/).  {{site.prodname}}
-is compatible with kubeadm-created clusters, as long as the [requirements](#requirements) are met. 
+is compatible with kubeadm-created clusters, as long as the [requirements](#requirements) are met.
 
 {% include {{page.version}}/load-docker.md %}
 
@@ -26,11 +26,11 @@ For {{site.prodname}} to be compatible with your kubeadm-created cluster:
    or in a config file).
 
 1. To use CNX Manager, authentication needs to be set up on the cluster in a supported way.
-   The [authentication documentation](../../../../reference/essentials/authentication) lists
+   The [authentication documentation](../../../../reference/cnx/authentication) lists
    the supported methods and references the Kubernetes documentation for how to configure
    them.
 
-   This [kubeadm config file](../essentials/demo-manifests/kubeadm.yaml) is an example that
+   This [kubeadm config file](../cnx/demo-manifests/kubeadm.yaml) is an example that
    configures Google OIDC login using the email address as the username.
 
    Run kubeadm using the config file as follows.
@@ -68,7 +68,7 @@ To install {{site.prodname}}, configured to use an etcd that you have already se
 
 1. Ensure your cluster meets the [requirements](#requirements) (or recreate it if not).
 
-2. Follow [the main etcd datastore instructions](../hosted). 
+2. Follow [the main etcd datastore instructions](../hosted).
 
 Download the calico manifest and update it with the path to your private docker registry.  Substitute
 `mydockerregistry:5000` with the location of your docker registry.
@@ -91,7 +91,7 @@ kubectl apply -f calico.yaml
 ## Adding Tigera CNX
 
 Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](../essentials/cnx).
+[add CNX Manager](../cnx/cnx).
 
 ## Using calicoctl in a kubeadm cluster
 

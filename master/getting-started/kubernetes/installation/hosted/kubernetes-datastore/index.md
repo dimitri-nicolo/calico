@@ -30,7 +30,7 @@ Ensure that the kube-apiserver has been started with the appropriate flags.
 - Refer to the Kubernetes documentation to
   [Configure the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
   with the proper flags.
-- Refer to the [authentication guide]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication) to choose a supported authentication
+- Refer to the [authentication guide]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication) to choose a supported authentication
   mechanism and configure the Kubernetes API server accordingly.
 
 > **Note**: If you are upgrading from Calico v2.1, the cluster-cidr
@@ -71,7 +71,7 @@ Install {{site.prodname}}'s RBAC manifest, which creates roles and role bindings
 ```
 kubectl apply rbac-kdd.yaml
 ```
-   > **Note**: You can also 
+   > **Note**: You can also
    > [view the YAML in your browser](../rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
@@ -106,31 +106,31 @@ kubectl apply -f calico.yaml
 
 1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml)
 
-2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to 
+2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
    more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha).
 
 3. Make sure your cluster CIDR matches the `CALICO_IPV4POOL_CIDR` environment variable in the manifest.
-   The cluster CIDR is configured by the  `--cluster-cidr` option passed to the Kubernetes 
+   The cluster CIDR is configured by the  `--cluster-cidr` option passed to the Kubernetes
    controller manager.  If you are using `kubeadm` that option is controlled by `kubeadm`'s
    `--pod-network-cidr` option.
-   
+
    > **Note**: {{site.prodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
-   > IP pool already created.  Changing the variable after the first node has started has no 
+   > IP pool already created.  Changing the variable after the first node has started has no
    > effect.
    {: .alert .alert-info}
 
 4. Apply the manifest: `kubectl apply -f calico.yaml`
 
-5. If your Kubernetes cluster has more than 100 nodes, we recommend disabling the 
+5. If your Kubernetes cluster has more than 100 nodes, we recommend disabling the
    node-to-node BGP mesh and configuring a pair of redundant route reflectors.
-   Due to limitations in the Kubernetes API, maintaining the node-to-node mesh 
-   uses significant CPU (in the `confd` process on each host and the API server) 
+   Due to limitations in the Kubernetes API, maintaining the node-to-node mesh
+   uses significant CPU (in the `confd` process on each host and the API server)
    as the number of nodes increases.
 
    Alternatively, if you're running on-premise, you may want to configure Calico
    to peer with your BGP infrastructure.
-    
-   In either case, see the [Configuring BGP Peers guide]({{site.baseurl}}/{{page.version}}/usage/configuration/bgp) 
+
+   In either case, see the [Configuring BGP Peers guide]({{site.baseurl}}/{{page.version}}/usage/configuration/bgp)
    for details on using `calicoctl` to configure your topology.
 
 ### <a name="policy-only"></a> Option 2: {{site.prodname}} policy-only with user-supplied networking
@@ -167,7 +167,7 @@ in the Canal project for details on installing {{site.prodname}} with flannel.
 ## Adding Tigera CNX
 
 Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](../essentials/cnx).
+[add CNX Manager](../cnx/cnx).
 
 ## Try it out
 
@@ -177,7 +177,7 @@ Below are a few examples for how to get started.
 
 ## Configuration details
 
-The following environment variable configuration options are supported by the various {{site.prodname}} 
+The following environment variable configuration options are supported by the various {{site.prodname}}
 components when using the Kubernetes API datastore.
 
 | Option           | Description    | Examples

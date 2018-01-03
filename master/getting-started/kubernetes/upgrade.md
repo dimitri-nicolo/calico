@@ -5,7 +5,7 @@ title: Upgrading CNX in Kubernetes
 This document covers:
 
 - [Upgrading an open source Calico cluster to {{site.prodname}}](#upgrading-an-open-source-calico-cluster-to-cnx)
-- [Upgrading a cluster with Tigera CNX Toolkit to {{site.prodname}}](#upgrading-a-cluster-with-tigera-essentials-toolkit-to-cnx)
+- [Upgrading a cluster with Tigera CNX Toolkit to {{site.prodname}}](#upgrading-a-cluster-with-tigera-cnx-toolkit-to-cnx)
 
 The upgrade procedure is supported for Calico v1.6+.
 
@@ -59,7 +59,7 @@ This section covers taking an existing Kubernetes system with Calico and maybe T
 This procedure assumes the following:
 
 - Your system is running the latest 3.0.x release of Calico.  If not, follow the instructions below to upgrade it to the latest 3.0.x release
-- You have obtained the {{site.prodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/essentials) and uploaded them to a private registry.
+- You have obtained the {{site.prodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/cnx) and uploaded them to a private registry.
 - You have the Calico manifest that was used to install your system available.  This is the manifest which includes the `calico/node` DaemonSet.
 
 #### Prepare for the Upgrade
@@ -88,10 +88,10 @@ This procedure assumes the following:
         ```
         kubectl uncordon node-01
         ```
- 3. Install the policy query and violation alerting tools.  For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/essentials/).
+ 3. Install the policy query and violation alerting tools.  For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/).
 
     - Configure calico-monitoring namespace and deploy Prometheus Operator by
-      applying the [operator.yaml](installation/hosted/essentials/1.6/operator.yaml) manifest.
+      applying the [operator.yaml](installation/hosted/cnx/1.6/operator.yaml) manifest.
 
       ```
       kubectl apply -f operator.yaml
@@ -103,7 +103,7 @@ This procedure assumes the following:
       kubectl get thirdpartyresources --watch
       ```
 
-    - Apply the [monitor-calico.yaml](installation/hosted/essentials/1.6/monitor-calico.yaml) manifest which will
+    - Apply the [monitor-calico.yaml](installation/hosted/cnx/1.6/monitor-calico.yaml) manifest which will
       install prometheus and alertmanager.
 
       ```
@@ -112,17 +112,17 @@ This procedure assumes the following:
 
 4. Add the {{site.prodname}} Manager.  Note that this step may require API downtime,
    because the API server's command line flags will probably need changing.
-   For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/essentials/).
+   For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/).
 
-   - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/essentials/authentication).
+   - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
 
-   - Edit and apply the manifest ([etcd](installation/hosted/essentials/1.6/calico-k8sapiserver.yaml)
-     or [KDD](installation/hosted/essentials/1.6/calico-k8sapiserver-kdd.yaml))
+   - Edit and apply the manifest ([etcd](installation/hosted/cnx/1.6/calico-k8sapiserver.yaml)
+     or [KDD](installation/hosted/cnx/1.6/calico-k8sapiserver-kdd.yaml))
      defining the {{site.prodname}} Manager API server resources.
 
      See the main installation documentation for details on how to set the flags.
 
-   - Edit and apply [the manifest](installation/hosted/essentials/1.6/cnx-manager.yaml) defining the {{site.prodname}} Manager web application resources.
+   - Edit and apply [the manifest](installation/hosted/cnx/1.6/cnx-manager.yaml) defining the {{site.prodname}} Manager web application resources.
      The `tigera-cnx-manager-web-config` ConfigMap at the start of the file
      defines two parameters that may need changing: the OIDC client ID
      (only if using Google login), and the Kubernetes API location (must
@@ -134,7 +134,7 @@ This procedure assumes the following:
      ```
 
    - Define RBAC permissions for users to access the {{site.prodname}} Manager.
-     [This document]({{site.baseurl}}/{{page.version}}/reference/essentials/rbac-tiered-policies) describes how to do that.
+     [This document]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies) describes how to do that.
 
 ## Upgrading a hosted installation of Calico
 
