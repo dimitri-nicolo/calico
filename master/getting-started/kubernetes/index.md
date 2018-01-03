@@ -240,7 +240,8 @@ the host. Instead, continue directly to the
 
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
-   > **Note**: If your browser is accessing a remote CNX installation via ssh tunnelling, make sure ssh tunnel has been setup correctly for both port 30003 and port 6443.{: .alert .alert-info}
+   > **Note**: If your browser is accessing a remote CNX installation via ssh tunnelling, make sure ssh tunnel has been setup correctly for both port 30003 and port 6443.
+   {: .alert .alert-info}
 
 1. Because we're using a self-signed certificate for a quick start, the
    browser will warn you of an insecure connection. Click past the warning.

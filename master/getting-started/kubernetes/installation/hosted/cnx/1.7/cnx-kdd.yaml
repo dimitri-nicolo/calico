@@ -22,7 +22,7 @@ metadata:
   namespace: kube-system
 data:
   # Authentication type.  Must be set to "OIDC", "Basic" or "StaticToken".
-  tigera.cnx-manager.authentication-type: "OIDC"
+  tigera.cnx-manager.authentication-type: "Basic"
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
   tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
