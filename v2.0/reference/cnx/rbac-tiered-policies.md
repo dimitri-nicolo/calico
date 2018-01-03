@@ -6,7 +6,7 @@ title: RBAC on tiered Policies
 
 ### Overview
 - Policy resources: NetworkPolicy and GlobalNetworkPolicy, along with Tier resource will be exposed via CNX Kubernetes extension API Server.
-- You can create a tier using the [Tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) resource and add policies to the tier using the tier field in the spec section of a global/networkpolicy resource. For a tutorial on tiers, refer to [Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/essentials/tiered-policy-essentials).
+- You can create a tier using the [Tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) resource and add policies to the tier using the tier field in the spec section of a global/networkpolicy resource. For a tutorial on tiers, refer to [Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/cnx/tiered-policy-cnx).
 - A user’s CRUD-ability (also watch, list etc, throughout) on a global/networkpolicy resource will be subject to the RBAC rules as set by the administrator on the global/networkpolicy resource for the user, as well as on the RBAC rules as set by the administrator on the tier resource associated with that given global/networkpolicy resource for the same user.
 - The associated RBAC role on tier for the user will only be evaluated for Read/"get" permission. I.e. as long as a user can "get" the tier, the user is free to perform any operations on policies in that tier subject to their roles for those policies.
 - See the [authentication guide](authentication) for how usernames and groups will be presented.
@@ -19,11 +19,11 @@ title: RBAC on tiered Policies
 
 ### Demo
 ```
-# Users: 
+# Users:
 - jane (non-admin)
 - kubernetes-admin (admin)
 ```
-User ‘jane’ doesn’t have permissions to CRUD either any of the networkpolicy or tier resources. 
+User ‘jane’ doesn’t have permissions to CRUD either any of the networkpolicy or tier resources.
 
 User ‘kubernetes-admin’ gives permission to ‘jane’ to read NetworkPolicies in Default Namespace. (can be extended with the verbs “create”, “update”, “delete”)
 
@@ -35,7 +35,7 @@ metadata:
   namespace: default
   name: policy-reader
 rules:
-- apiGroups: ["projectcalico.org"] 
+- apiGroups: ["projectcalico.org"]
   resources: ["networkpolicies"]
   verbs: ["get", "watch", "list"]
 ---

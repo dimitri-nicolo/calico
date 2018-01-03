@@ -17,7 +17,7 @@ first use case.
 
 ### Prerequisites
 
-- A Kubernetes cluster configured with [{{site.prodname}}](../kubernetes/installation/hosted/essentials/index)
+- A Kubernetes cluster configured with [{{site.prodname}}](../kubernetes/installation/hosted/cnx/index)
 - [calicoctl installed and set up](../../reference/calicoctl/setup) to work properly with your cluster
 
 ### Create Namespace and Enable Isolation

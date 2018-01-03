@@ -39,7 +39,7 @@ Policy Violation & Reporting is accomplished using 3 key pieces:
    metrics are configured in Prometheus and when triggered, fire alerts to
    the Prometheus Alertmanager.
 3. Prometheus Alertmanager (or simply Alertmanager), also deployed as part of
-   the _Essentials_ manifest, receives alerts from Prometheus and forwards
+   the _CNX_ manifest, receives alerts from Prometheus and forwards
    alerts to various alerting mechanisms such as _Pager Duty_, or _OpsGenie_.
 
 ### Metrics
@@ -73,8 +73,8 @@ packets originating from the IP Address "10.245.13.149".
 
 See
 the
-[Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#essentials-specific-configuration) for
-the settings that control the reporting of these metrics.  Essentials manifests
+[Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#cnx-specific-configuration) for
+the settings that control the reporting of these metrics.  CNX manifests
 normally set `PrometheusReporterEnabled=true` and
 `PrometheusReporterPort=9081`, so these metrics are available on each compute
 node at `http://<node-IP>:9081/metrics`.
