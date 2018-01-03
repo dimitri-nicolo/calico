@@ -6,8 +6,15 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	log "github.com/sirupsen/logrus"
 	. "github.com/tigera/calicoq/calicoq/commands"
 )
+
+func flagExpectedErrorLogs() {
+	// Some tests below generate ERROR logs that show up in stdout when running 'make ut'.
+	// Let's generate an additional ERROR log to make clear that those are expected.
+	log.Error("*** The following ERROR log is expected")
+}
 
 var _ = Describe("Test NewWorkloadEndpointPrintFromKey", func() {
 	It("Creates a new WorkloadEndpointPrint Object with a WorkloadEndpointKey", func() {
@@ -59,14 +66,17 @@ var _ = Describe("Test NewWorkloadEndpointPrintFromNameString", func() {
 
 	It("Returns nil for invalid name strings", func() {
 		tooManyWords := "Workload endpoint stuff testNode/testOrchestrator/testWorkload/testName"
+		flagExpectedErrorLogs()
 		wepp := NewWorkloadEndpointPrintFromNameString(tooManyWords)
 		Expect(wepp == nil).To(Equal(true))
 
 		wrongType := "Policy endpoint testNode/testOrchestrator/testWorkload/testName"
+		flagExpectedErrorLogs()
 		wepp = NewWorkloadEndpointPrintFromNameString(wrongType)
 		Expect(wepp == nil).To(Equal(true))
 
 		notEnoughIdents := "Workload endpoint testNode/testOrchestrator/testWorkload"
+		flagExpectedErrorLogs()
 		wepp = NewWorkloadEndpointPrintFromNameString(notEnoughIdents)
 		Expect(wepp == nil).To(Equal(true))
 	})
@@ -95,6 +105,7 @@ var _ = Describe("Test NewRulePrintFromMatchString", func() {
 
 	It("Creates an empty RulePrint Object for invalid match strings", func() {
 		formatWrong := "Policy \"test-namespace/default.testPolicy\" testDirection rule 1 testSelectorType match something; selector \"testSelector\""
+		flagExpectedErrorLogs()
 		rp := NewRulePrintFromMatchString(formatWrong)
 		Expect(rp.PolicyName).To(Equal(""))
 		Expect(rp.Direction).To(Equal(""))
@@ -116,6 +127,7 @@ var _ = Describe("Test NewRulePrintFromSelectorString", func() {
 
 	It("Creates an empty RulePrint Object with an invalid selector string", func() {
 		hasPrefix := APPLICABLE_ENDPOINTS + " testDirection rule 1 testSelectorType match; selector testSelector"
+		flagExpectedErrorLogs()
 		rp := NewRulePrintFromSelectorString(hasPrefix)
 		Expect(rp.Direction).To(Equal(""))
 		Expect(rp.SelectorType).To(Equal(""))
@@ -123,6 +135,7 @@ var _ = Describe("Test NewRulePrintFromSelectorString", func() {
 		Expect(rp.Order).To(Equal(0))
 
 		formatWrong := "testDirection ruleNum 1 testSelectorType match; selector testSelector"
+		flagExpectedErrorLogs()
 		rp = NewRulePrintFromSelectorString(formatWrong)
 		Expect(rp.Direction).To(Equal(""))
 		Expect(rp.SelectorType).To(Equal(""))
