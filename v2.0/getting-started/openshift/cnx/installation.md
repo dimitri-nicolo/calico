@@ -5,18 +5,18 @@ title: Installing CNX for OpenShift
 The installation process for {{site.prodname}} for OpenShift is identical to the
 standard [Calico-OpenShift installation process](../installation), but with a custom `calico/node` image.
 
-This guide describes how to modify the base install to launch the `calico/node` Essentials image in OpenShift.
+This guide describes how to modify the base install to launch the `calico/node` CNX image in OpenShift.
 
 ### Installation
 
-1. Push your `calico/node` Essentials image to a private Docker registry.
+1. Push your `calico/node` CNX image to a private Docker registry.
 2. Ensure your Docker daemon on all OpenShift nodes and masters is authenticated to pull images from that registry.
 3. Set `calico_node_image` to the {{site.prodname}} `calico/node` image.
 
 See [Obtaining {{site.prodname}}][obtaining-essentials] for more information
 on how to acquire the `calico/node` {{site.prodname}} image.
 
-See the [OCP Advanced Installation Instructions][ocp-advanced-install] for more 
+See the [OCP Advanced Installation Instructions][ocp-advanced-install] for more
 information on setting up custom Docker registries using the OpenShift installer.
 
 #### Example Inventory File

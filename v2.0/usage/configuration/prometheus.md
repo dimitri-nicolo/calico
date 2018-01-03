@@ -127,7 +127,7 @@ container inside the prometheus pod launched by the prometheus-operator
 
 #### Additional Alerting Rules
 
-The Alerting Rules installed by the _Essentials_ install manifest is a simple
+The Alerting Rules installed by the _CNX_ install manifest is a simple
 one that fires an alert when the rate of denied packets denied by a policy on
 a node from a particular Source IP exceeds a certain packets per second
 threshold. The _Prometheus_ query used for this (ignoring the threshold value
@@ -381,9 +381,9 @@ into the `calico-node` daemonset.
 <b>Note</b>: The <samp>calico-node</samp> daemonset is found in the <samp>calico-essentials.yaml</samp> file provided as an example.
 </div>
 
-Encode the concatenated certificate, the corresponding private key, and the CA 
+Encode the concatenated certificate, the corresponding private key, and the CA
 certificate used to sign the Prometheus certificate and key in base64 format. In the
-following commands, we call these files `concat-cert.pem`, `calico-key.pem`, and 
+following commands, we call these files `concat-cert.pem`, `calico-key.pem`, and
 `ca.pem`, respectively.
 
 ```

@@ -2,7 +2,7 @@
 title: Configuring Alertmanager
 ---
 
-Alertmanager is used by Tigera Essentials Toolkit to route alerts from Prometheus to the administrators.
+Alertmanager is used by Tigera CNX Toolkit to route alerts from Prometheus to the administrators.
 It handles routing, deduplicating, grouping, silencing and inhibition of alerts.
 
 More detailed information about Alertmanager is available in the [upstream documentation](https://prometheus.io/docs/alerting/configuration).
@@ -77,7 +77,7 @@ simply defining a Prometheus alerting rule would mean that you will get an
 page (if so defined in your alertmanager configuration) for every policy on
 every node for every Source IP. All these alerts can be combined into a single
 alert by configuring grouping. The Alertmanager configuration file that is
-provided with the Essentials v1.x release by default, groups alerts on a
+provided with the CNX v1.x release by default, groups alerts on a
 per-node basis. Instead, if the goal is to group all alerts with the same
 name, edit (and apply) the alertmanager configuartion file like so:
 

@@ -53,7 +53,7 @@ The full list of parameters which can be set is as follows.
 
 #### Kubernetes datastore configuration
 
-The Kubernetes datastore driver reads its configuration from Kubernetes-provided environment variables. 
+The Kubernetes datastore driver reads its configuration from Kubernetes-provided environment variables.
 
 #### iptables dataplane configuration
 
@@ -90,7 +90,7 @@ The Kubernetes datastore driver reads its configuration from Kubernetes-provided
 | ----------------------- | ----------------------- | ----------- | ------ |
 | `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces.  Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value, and our OpenStack integration sets the `tap` value. [Default: `cali`] | string |
 
-#### Tigera Essentials Toolkit specific configuration
+#### Tigera CNX Toolkit specific configuration
 
 | Setting                                 | Environment variable                    | Default                              | Meaning                                 |
 |-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
