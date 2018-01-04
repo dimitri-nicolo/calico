@@ -6,11 +6,6 @@ This document covers upgrading an open source Calico cluster to {{site.prodname}
 
 The upgrade procedure is supported for Calico v3.0.x.
 
-It is possible to upgrade the Calico and {{site.prodname}} components on a
-single node without affecting connectivity or network policy for any existing
-pods. However, we do not recommend deploying new pods to a node that is being
-upgraded.
-
 ## Upgrading an open source Calico cluster to {{site.prodname}}
 
 1. [Upgrade the open source Calico cluster](https://docs.projectcalico.org/v3.0/getting-started/kubernetes/upgrade/)
@@ -40,14 +35,15 @@ This procedure assumes the following:
 #### Perform the upgrade
  1. Use the following command to initiate a rolling update, using the the Calico manifest you prepared above.
 
-        ```
-        kubectl apply -f calico.yaml
-        ```
+    ```
+    kubectl apply -f calico.yaml
+    ```
+
     You can check the status of the rolling update by running:
 
-        ```
-        kubectl -n kube-system rollout status ds/calico-node
-        ```
+    ```
+    kubectl -n kube-system rollout status ds/calico-node
+    ```
 
  1. Install the policy query and violation alerting tools. For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
 
@@ -71,33 +67,35 @@ This procedure assumes the following:
       kubectl apply -f monitor-calico.yaml
       ```
 
-4. Add the {{site.prodname}} Manager. Note that this step may require API downtime,
-   because the API server's command line flags will probably need changing.
-   For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
+ 1. Add the {{site.prodname}} API Server and {{site.prodname}} Manager.
 
-   - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
+     **Note**: This step may require API downtime, because the API server's command line flags will probably need changing.
+    For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
+    {: .alert .alert-warn}
 
-   - Download the {{site.prodname}} manifest ([etcd](installation/hosted/cnx/1.7/cnx-etcd.yaml)
-     or [KDD](installation/hosted/cnx/1.7/cnx-kdd.yaml))
-     defining the {{site.prodname}} Manager API server and {{site.prodname}}
-     Manager web application resources.
+    - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
 
-   - Rename the file cnx.yaml - this is what subsequent instructions will refer to
+    - Download the {{site.prodname}} manifest ([etcd](installation/hosted/cnx/1.7/cnx-etcd.yaml)
+      or [KDD](installation/hosted/cnx/1.7/cnx-kdd.yaml))
+      defining the {{site.prodname}} Manager API server and {{site.prodname}}
+      Manager web application resources.
 
-   - Update the manifest with the path to your private Docker registry.
+    - Rename the file cnx.yaml - this is what subsequent instructions will refer to
 
-   - See the [main installation documentation]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx) for details on how to set the flags.
+    - Update the manifest with the path to your private Docker registry.
 
-   - The `tigera-cnx-manager-web-config` ConfigMap at the start of the manifest file
-     defines two parameters that may need changing: the OIDC client ID
-     (only if using Google login), and the Kubernetes API location (must
-     be reachable from any system running the web application).
+    - See the [main installation documentation]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx) for details on how to set the flags.
 
-   - Apply the manifest
+    - The `tigera-cnx-manager-config` ConfigMap at the start of the manifest file
+      defines three parameters that may need changing: the authentication type,
+      the OIDC client ID (only if using Google login), and the Kubernetes API
+      location (must be reachable from any system running the web application).
+
+    - Apply the manifest
 
      ```
      kubectl apply -f cnx.yaml
      ```
 
-   - Define RBAC permissions for users to access the {{site.prodname}} Manager.
-     [This document]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies) describes how to do that.
+    - Define RBAC permissions for users to access the {{site.prodname}} Manager.
+      [This document]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies) describes how to do that.
