@@ -214,7 +214,7 @@ the host. Instead, continue directly to the
 
    ```
    sudo sed -i \
-   "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://*\"" \
+   "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://127.0.0.1:30003\"" \
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 

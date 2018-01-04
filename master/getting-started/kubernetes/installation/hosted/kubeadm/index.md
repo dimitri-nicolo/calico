@@ -8,41 +8,24 @@ is compatible with kubeadm-created clusters, as long as the [requirements](#requ
 
 {% include {{page.version}}/load-docker.md %}
 
-## Installation
+## Requirements
 
 For {{site.prodname}} to be compatible with your kubeadm-created cluster:
 
-1. Calico installations require kubeadm initialized clusters to have set a `--pod-network-cidr`
-   which should match the value set by `CALICO_IPV4POOL_CIDR` in the manifest:
+* It must be running at least Kubernetes v1.8
 
-   ```yaml
-   - name: CALICO_IPV4POOL_CIDR
-     value: "192.168.0.0/16"
-   ```
+* There should be no other CNI network configurations installed in /etc/cni/net.d (or equivalent directory)
 
-   This value can be changed to any CIDR that does not overlap the cluster's service CIDR.
-   The manifests are currently setup to use the CIDR `192.168.0.0/16` so you would include
-   `--pod-network-cidr=192.168.0.0/16` in the `kubeadm init` call (either as a parameter
-   or in a config file).
+* The kubeadm flag `--pod-network-cidr` must be set when creating the cluster with `kubeadm init` 
+  and the CIDR(s) specified with the flag must match {{site.prodname}}'s IP pools. The default 
+  IP pool configured in {{site.prodname}}'s manifests is `192.168.0.0/16`
 
-1. To use CNX Manager, authentication needs to be set up on the cluster in a supported way.
-   The [authentication documentation](../../../../../reference/cnx/authentication) lists
-   the supported methods and references the Kubernetes documentation for how to configure
-   them.
-
-   This [kubeadm config file](../cnx/demo-manifests/kubeadm.yaml) is an example that
-   configures Google OIDC login using the email address as the username.
-
-   Run kubeadm using the config file as follows.
-   ```
-   kubeadm init --config=kubeadm.yaml
-   ```
-
-1. Ensure kubeadm sets the Kubernetes API server up to support aggregation.  Recent
-   versions of kubeadm should do this by default.  Please refer to the kubeadm
-   documentation for full details on how to do this.
-
-   The example kubeadm config file linked above does this explicitly.
+* The CIDR specified with the kubeadm flag `--service-cidr` must not overlap with 
+  {{site.prodname}}'s IP pools
+  
+  * The default CIDR for `--service-cidr` is `10.96.0.0/12`
+  
+  * The default IP pool configured in {{site.prodname}}'s manifests is `192.168.0.0/16`
 
 You can create a cluster compatible with these manifests by following [the official kubeadm guide](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
