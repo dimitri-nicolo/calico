@@ -173,10 +173,13 @@ func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion str
 	if clusterGUID == "" {
 		clusterGUID = "baddecaf"
 	}
+	clusterType = clusterType + ",cnx"
+	cnxVersion := "v2.0.0"
 	log.WithFields(log.Fields{
 		"clusterGUID":   clusterGUID,
 		"clusterType":   clusterType,
 		"calicoVersion": calicoVersion,
+		"cnxVersion":    cnxVersion,
 		"stats":         stats,
 		"version":       buildinfo.GitVersion,
 		"gitRevision":   buildinfo.GitRevision,
@@ -185,6 +188,7 @@ func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion str
 		"guid":    {clusterGUID},
 		"type":    {clusterType},
 		"cal_ver": {calicoVersion},
+		"cnx_ver": {cnxVersion},
 		"size":    {fmt.Sprintf("%v", stats.NumHosts)},
 		"weps":    {fmt.Sprintf("%v", stats.NumWorkloadEndpoints)},
 		"heps":    {fmt.Sprintf("%v", stats.NumHostEndpoints)},
