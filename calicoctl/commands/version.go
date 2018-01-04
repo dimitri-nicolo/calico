@@ -82,6 +82,7 @@ Description:
 		t = "unknown"
 	}
 
-	fmt.Println("Cluster Version:  ", v)
-	fmt.Println("Cluster Type:     ", t)
+	fmt.Println("Cluster Calico Version: ", v)
+	fmt.Println("Cluster CNX Version:    v2.0.0")
+	fmt.Println("Cluster Type:           ", t)
 }
