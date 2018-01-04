@@ -6,14 +6,10 @@ This document covers upgrading an open source Calico cluster to {{site.prodname}
 
 The upgrade procedure is supported for Calico v3.0.x.
 
-It is possible to upgrade the Calico and {{site.prodname}} components on a single node without affecting connectivity or
-network policy for any existing pods. However, we do not recommend deploying
-new pods to a node that is being upgraded.
-
-We recommend upgrading one node at a time, rendering each node as
-unschedulable using [kubectl cordon](http://kubernetes.io/docs/user-guide/kubectl/v1.8/#cordon)
-before upgrading the node, and then make the node schedulable after the upgrade is
-complete using [kubectl uncordon](http://kubernetes.io/docs/user-guide/kubectl/v1.8/#uncordon).
+It is possible to upgrade the Calico and {{site.prodname}} components on a
+single node without affecting connectivity or network policy for any existing
+pods. However, we do not recommend deploying new pods to a node that is being
+upgraded.
 
 ## Upgrading an open source Calico cluster to {{site.prodname}}
 
@@ -42,21 +38,18 @@ This procedure assumes the following:
      ```
 
 #### Perform the upgrade
- 1. Apply the Calico manifest you prepared above with a command like: `kubectl apply -f calico.yaml`
- 2. Upgrade each node. Perform the following steps on each node one at a time:
-    - First make the node unschedulable:
+ 1. Use the following command to initiate a rolling update, using the the Calico manifest you prepared above.
+
         ```
-        kubectl cordon node-01
+        kubectl apply -f calico.yaml
         ```
-    - Delete the calico-node pod running on the cordoned node and wait for the DaemonSet controller to deploy a replacement using the {{site.prodname}} image.
+    You can check the status of the rolling update by running:
+
         ```
-        kubectl delete pod -n kube-system calico-node-ajzy6e3t
+        kubectl -n kube-system rollout status ds/calico-node
         ```
-    - Once the new calico-node pod has started, make the node schedulable again.
-        ```
-        kubectl uncordon node-01
-        ```
- 3. Install the policy query and violation alerting tools. For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
+
+ 1. Install the policy query and violation alerting tools. For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
 
     - Configure calico-monitoring namespace and deploy Prometheus Operator by
       applying the [operator.yaml](installation/hosted/cnx/1.7/operator.yaml) manifest.
