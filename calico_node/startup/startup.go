@@ -61,8 +61,9 @@ var DEFAULT_INTERFACES_TO_EXCLUDE []string = []string{
 	"cali.*", "tunl.*", "flannel.*", "kube-ipvs.*",
 }
 
-// Version string, set during build.
-var VERSION string
+// Version strings, set during build.
+var CALICOVERSION string
+var CNXVERSION string
 
 // For testing purposes we define an exit function that we can override.
 var exitFunction = os.Exit
@@ -149,8 +150,8 @@ func main() {
 	// Write the startup.env file now that we are ready to start other
 	// components.
 	sEnv := map[string]string{
-		"NODENAME": nodeName,
-		"NODEVERSION": VERSION,
+		"NODENAME":   nodeName,
+		"CNXVERSION": CNXVERSION,
 	}
 	writeStartupEnv(sEnv)
 
@@ -817,7 +818,7 @@ func ensureDefaultConfig(ctx context.Context, cfg *apiconfig.CalicoAPIConfig, c 
 	// Ensure the ClusterInformation is populated.
 	// Get the ClusterType from ENV var. This is set from the manifest.
 	clusterType := os.Getenv("CLUSTER_TYPE")
-	c.EnsureInitialized(ctx, VERSION, clusterType)
+	c.EnsureInitialized(ctx, CALICOVERSION, clusterType)
 
 	// By default we set the global reporting interval to 0 - this is
 	// different from the defaults defined in Felix.
