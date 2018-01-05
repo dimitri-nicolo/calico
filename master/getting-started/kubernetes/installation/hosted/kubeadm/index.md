@@ -31,21 +31,24 @@ You can create a cluster compatible with these manifests by following [the offic
 
 ## Installing {{site.prodname}} with a Kubernetes-hosted etcd
 
-Download the [calico with single node etcd manifest](1.7/calico.yaml) and
-update it with the path to your private docker registry.
-Substitute`mydockerregistry:5000` with the location of your docker registry.
+As a non-production quick start, to install Calico with a single-node dedicated etcd cluster, running as a Kubernetes pod:
 
 1. Ensure your cluster meets the [requirements](#requirements) (or recreate it if not).
 
-```
-sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
-```
+1. Download the [calico with single node etcd manifest](1.7/calico.yaml) and
+   update it with the path to your private docker registry.
+   Substitute`mydockerregistry:5000` with the location of your docker registry.
+   ```
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
+   ```
 
-Then apply the manifest.
+1. Then apply the manifest.
 
-```shell
-kubectl apply -f calico.yaml
-```
+   ```shell
+   kubectl apply -f calico.yaml
+   ```
+
+## Installing with an existing etcd datastore
 
 To install {{site.prodname}}, configured to use an etcd that you have already set-up:
 
@@ -53,23 +56,13 @@ To install {{site.prodname}}, configured to use an etcd that you have already se
 
 2. Follow [the main etcd datastore instructions](../hosted).
 
-Download the calico manifest and update it with the path to your private docker registry.  Substitute
-`mydockerregistry:5000` with the location of your docker registry.
+## Kubernetes datastore
 
-```
-sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
-```
+To install {{site.prodname}}, configured to use the Kubernetes API as its sole data source:
 
-Then apply the manifests.
+1. Ensure your cluster meets the [requirements](#requirements) (or recreate it if not).
 
-```shell
-kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
-kubectl apply -f calico.yaml
-```
-
->[Click here to view the above RBAC yaml directly.](../rbac-kdd.yaml)
->
->[Click here to view the Calico yaml.](../kubernetes-datastore/calico-networking/1.7/calico.yaml)
+2. Follow [the main Kubernetes datastore instructions](../kubernetes-datastore).
 
 ## Adding Tigera CNX
 
