@@ -44,6 +44,8 @@ exclude:
   - DOC_STYLE_GUIDE.md
   - hack
   - calico_node
+  - Jenkinsfile
+  - Dockerfile-docs
 
 # Markdown Processors
 # TODO - we're not entirely sure what these are for

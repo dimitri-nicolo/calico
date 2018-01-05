@@ -26,6 +26,35 @@ pipeline{
             }
         }
 
+        stage('Build tigera/cnx-docs') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'master') {
+                        sh 'rm -rf _site'
+                        sh 'docker run --rm -i -e JEKYLL_UID=`id -u` -v $(pwd):/srv/jekyll jekyll/jekyll:3.5.2 jekyll build --incremental --config /srv/jekyll/_config.yml'
+                        sh 'docker build -t tigera/cnx-docs:master -f Dockerfile-docs .'
+                    }
+                }
+            }
+        }
+        stage('Push tigera/cnx-docs to GCR') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'master') {
+                        sh 'docker tag tigera/cnx-docs:master gcr.io/tigera-dev/cnx/tigera/cnx-docs:master'
+                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/cnx-docs:master'
+
+                        // Clean up images.
+                        // Hackey since empty displayed tags are not empty according to gcloud filter criteria
+                        sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-docs --format='get(digest)'); do
+                            if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-docs --filter=digest~${digest}) | awk '{print $6}'); then
+                                gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/cnx-docs@${digest}"
+                            fi
+                            done'''
+                    }
+                }
+            }
+        }
         stage('Build tigera/cnx-node') {
             steps {
                 ansiColor('xterm') {
