@@ -64,9 +64,18 @@ kubectl get pods -n kube-system | grep cnx-node
    kubectl apply -f cnx.yaml
    ```
 
-1. Configure authentication to allow {{site.prodname}} Manager users to edit policies.  Consult the
-   [{{site.prodname}} Manager](../../../../../reference/cnx/policy-editor) and
-   [Tiered policy RBAC](../../../../../reference/cnx/rbac-tiered-policies)
+1. Configure the kube-apiserver to allow
+   cross-origin resource sharing (CORS). This will allow the {{site.prodname}} Manager to communicate with {{site.prodname}} API server. CORS can be enabled by setting the flag [--cors-allowed-origins](https://kubernetes.io/docs/reference/generated/kube-apiserver/) on kube-apiserver. kube-apiserver should be restarted for the --cors-allowed-origin flag to take effect.
+
+   Example command:
+   ```
+   sudo sed -i \
+   "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://your-cnx-manager-url.example.com:cnx-manager-port\"" \
+   /etc/kubernetes/manifests/kube-apiserver.yaml
+   ```
+
+1. Configure authorization to allow {{site.prodname}} Manager users to edit policies.  Consult the
+   [{{site.prodname}} Manager](../../../../../reference/cnx/non-admin-workflows)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.

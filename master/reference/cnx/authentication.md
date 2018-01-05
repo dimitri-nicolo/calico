@@ -66,10 +66,10 @@ option in the {{site.prodname}} Manager web interface.
 Configure Kubernetes RBAC bindings using the username and groups defined in the
 basic authentication CSV file.
 
-### Static tokens
+### Static/Bearer tokens
 
 The **Login via static token** option tells {{site.prodname}} Manager to pass the token through
-to Kubernetes.  It has similar limitations to basic authentication.  The [Kubernetes docs](https://kubernetes.io/docs/admin/authentication/#static-token-file)
+to Kubernetes. The [Kubernetes docs](https://kubernetes.io/docs/admin/authentication/#static-token-file)
 describe how to set up this method.
 
 Like basic authentication, RBAC bindings use the username and groups defined in the token
