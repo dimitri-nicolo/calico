@@ -27,6 +27,8 @@ For {{site.prodname}} to be compatible with your kubeadm-created cluster:
   
   * The default IP pool configured in {{site.prodname}}'s manifests is `192.168.0.0/16`
 
+{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
+
 You can create a cluster compatible with these manifests by following [the official kubeadm guide](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
 ## Installing {{site.prodname}} with a Kubernetes-hosted etcd
