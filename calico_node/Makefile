@@ -15,8 +15,8 @@ VERSIONS_FILE?=$(CALICO_NODE_DIR)/../_data/versions.yml
 YAML_CMD:=$(shell which yaml || echo docker run --rm -i $(CALICO_BUILD) yaml)
 
 # Use := so that these V_ variables are computed only once per make run.
-V_CALICO := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
-V_CALICO_GIT := $(shell git describe --tags --dirty --always)
+V_CNX := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
+V_CNX_GIT := $(shell git describe --tags --dirty --always)
 V_BIRD := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico-bird.version')
 V_CONFD := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.confd.version')
 V_CALICOCTL := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoctl.version')
@@ -30,11 +30,12 @@ V_CALICOQ := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREA
 V_APISERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-apiserver.version')
 V_CNX_WEB_MANAGER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-manager.version')
 V_RR := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/routereflector.version')
+V_CALICO := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico.version')
 
 # Now use ?= to allow the versions derived from versions.yml to be
 # overriden (by the environment).
-CALICO_VER ?= $(V_CALICO)
-CALICO_GIT_VER ?= $(V_CALICO_GIT)
+CNX_VER ?= $(V_CNX)
+CNX_GIT_VER ?= $(V_CNX_GIT)
 BIRD_VER ?= $(V_BIRD)
 CONFD_VER ?= $(V_CONFD)
 CALICOCTL_VER ?= $(V_CALICOCTL)
@@ -48,9 +49,10 @@ CALICOQ_VER ?= $(V_CALICOQ)
 APISERVER_VER ?= $(V_APISERVER)
 CNX_WEB_MANAGER_VER ?= $(V_CNX_WEB_MANAGER)
 RR_VER ?= $(V_RR)
+CALICO_VER ?= $(V_CALICO)
 
-$(info $(shell printf "%-21s = %-10s\n" "CALICO_VER" $(CALICO_VER)))
-$(info $(shell printf "%-21s = %-10s\n" "CALICO_GIT_VER" $(CALICO_GIT_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "CNX_VER" $(CNX_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "CNX_GIT_VER" $(CNX_GIT_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "BIRD_VER" $(BIRD_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "CONFD_VER" $(CONFD_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "CALICOCTL_VER" $(CALICOCTL_VER)))
@@ -117,7 +119,7 @@ TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created')
 
 LOCAL_USER_ID?=$(shell id -u $$USER)
 
-LDFLAGS=-ldflags "-X main.VERSION=$(CALICO_GIT_VER)"
+LDFLAGS=-ldflags "-X main.CNXVERSION=$(CNX_GIT_VER) -X main.CALICOVERSION=$(CALICO_VER)"
 
 PACKAGE_NAME?=github.com/projectcalico/calico/calico_node
 
@@ -324,7 +326,7 @@ dist/startup: $(STARTUP_FILES) vendor
         -e VERSIONS_FILE=/versions.yaml \
 	  	$(CALICO_BUILD) sh -c '\
 			cd /go/src/$(PACKAGE_NAME) && \
-			make CALICO_GIT_VER=$(CALICO_GIT_VER) startup'
+			make CNX_GIT_VER=$(CNX_GIT_VER) startup'
 
 ## Build allocate_ipip_addr.go
 .PHONY: allocate-ipip-addr
@@ -343,7 +345,7 @@ dist/allocate-ipip-addr: $(ALLOCATE_IPIP_FILES) vendor
 	-v $(CURDIR)/dist:/go/src/$(PACKAGE_NAME)/dist \
 	  $(CALICO_BUILD) sh -c '\
 		cd /go/src/$(PACKAGE_NAME) && \
-		make CALICO_GIT_VER=$(CALICO_GIT_VER) allocate-ipip-addr'
+		make CNX_GIT_VER=$(CNX_GIT_VER) allocate-ipip-addr'
 
 # Pull the latest calicoq binary. Not used for STs yet.
 dist/calicoq:
@@ -613,7 +615,7 @@ node-test-at:
         -e CALICO_BGP_DAEMON_VER=$(GOBGPD_VER) \
         -e CALICO_FELIX_VER=$(FELIX_VER) \
         -e CONFD_VER=$(CONFD_VER) \
-	tigera/cnx-node:$(CALICO_VER) /bin/sh -c 'apk --no-cache add wget ca-certificates && \
+	tigera/cnx-node:$(CNX_VER) /bin/sh -c 'apk --no-cache add wget ca-certificates && \
 	wget -q -O /tmp/goss \
 	https://github.com/aelsabbahy/goss/releases/download/v0.3.4/goss-linux-amd64 && \
 	chmod +rx /tmp/goss && \
@@ -643,7 +645,7 @@ release: clean
 	@echo "Hit Return to go ahead and create the tag, or Ctrl-C to cancel."
 	@bash -c read
 
-	git tag $(CALICO_VER)
+	git tag $(CNX_VER)
 
 	# Build the tigera/cnx-node images.
 	FELIX_VER=$(FELIX_VER) $(MAKE) $(NODE_CONTAINER_NAME)
@@ -652,14 +654,14 @@ release: clean
 	CALICOCTL_VER=$(CALICOCTL_VER) CALICOQ_VER=$(CALICOQ_VER) $(MAKE) release-archive
 
 	# Retag images with corect version and GCR private registry
-	docker tag $(NODE_CONTAINER_NAME) gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CALICO_VER)
+	docker tag $(NODE_CONTAINER_NAME) gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)
 
 	# Create the release archive
 	$(MAKE) release-archive
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME)
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME):$(CALICO_VER)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME):$(CNX_VER)
 
 	# Check that the images container the right sub-components
 	docker run $(NODE_CONTAINER_NAME) calico-felix --version
@@ -667,16 +669,16 @@ release: clean
 
 	@echo "# See RELEASING.md for detailed instructions."
 	@echo "# Now push release images."
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CALICO_VER)"
+	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)"
 
 	@echo "# For the final release only, push the latest tag (not for RCs)"
 	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):latest"
 
 	@echo "# Only push the git tag AFTER this branch is merged to origin/master"
-	@echo "  git push origin $(CALICO_VER)"
+	@echo "  git push origin $(CNX_VER)"
 
 
-RELEASE_DIR?=release-$(CALICO_VER)
+RELEASE_DIR?=release-$(CNX_VER)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/k8s-manifests
 RELEASE_DIR_IMAGES?=$(RELEASE_DIR)/images
 RELEASE_DIR_BIN?=$(RELEASE_DIR)/bin
@@ -692,11 +694,11 @@ $(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/cnx-node.tar $(RELEASE_DIR_IMAGES)/
 $(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64 $(RELEASE_DIR_BIN)/calicoq
 
 $(RELEASE_DIR)/README:
-	@echo "This directory contains a complete release of Calico $(CALICO_VER)" >> $@
+	@echo "This directory contains a complete release of Calico $(CNX_VER)" >> $@
 	@echo "Documentation for this release can be found at http://docs.projectcalico.org/$(RELEASE_STREAM)" >> $@
 	@echo "" >> $@
 	@echo "Docker images (under 'images'). Load them with 'docker load'" >> $@
-	@echo "* The tigera/cnx-node docker image  (version $(CALICO_VER))" >> $@
+	@echo "* The tigera/cnx-node docker image  (version $(CNX_VER))" >> $@
 	@echo "* The tigera/typha docker image  (version $(TYPHA_VER))" >> $@
 	@echo "* The calico/cni docker image  (version $(CNI_VER))" >> $@
 	@echo "* The calico/kube-controllers docker image (version $(KUBE_CONTROLLERS_VER))" >> $@
@@ -729,7 +731,7 @@ $(RELEASE_DIR_K8S_MANIFESTS):
 
 $(RELEASE_DIR_IMAGES)/cnx-node.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
-	docker save --output $@ $(NODE_CONTAINER_NAME):$(CALICO_VER)
+	docker save --output $@ $(NODE_CONTAINER_NAME):$(CNX_VER)
 
 $(RELEASE_DIR_IMAGES)/calico-typha.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
