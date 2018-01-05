@@ -39,14 +39,35 @@ pipeline{
             }
         }
 
+        stage('Push image to GCR') {
+            steps {
+                script{
+                    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
+                    // Do that by moving this block to AFTER the tests.
+                    if (env.BRANCH_NAME == 'master') {
+                        sh 'docker tag tigera/cnx-node:latest gcr.io/tigera-dev/cnx/tigera/cnx-node:master'
+                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/cnx-node:master'
+
+                        // Clean up images.
+                        // Hackey since empty displayed tags are not empty according to gcloud filter criteria
+                        sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --format='get(digest)'); do
+                            if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --filter=digest~${digest}) | awk '{print $6}'); then
+                                gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/cnx-node@${digest}"
+                            fi
+                            done'''
+                    }
+                }
+            }
+        }
+
         stage('Get enterprise calicoctl') {
             steps {
                 dir('calico_node'){
                     // Get calicoctl
-		     // TODO: Matt L: remove the url and pulling release versions when it is verified that pulling from images works correctly
+                    // TODO: Matt L: remove the url and pulling release versions when it is verified that pulling from images works correctly
                     // sh "gsutil cp ${params.calicoctl_url} ./dist/calicoctl"
                     // sh "chmod +x ./dist/calicoctl"
-		     sh 'make dist/calicoctl'
+                    sh 'make dist/calicoctl'
                 }
             }
         }
@@ -57,44 +78,24 @@ pipeline{
                     dir('calico_node'){
                         // The following bit of nastiness works round a docker issue with ttys.
                         // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
-			sh 'ssh-keygen -f "/home/jenkins/.ssh/known_hosts" -R localhost'
+                        sh 'ssh-keygen -f "/home/jenkins/.ssh/known_hosts" -R localhost'
                         sh 'ssh -o StrictHostKeyChecking=no localhost -t -t "cd $WORKSPACE/calico_node && RELEASE_STREAM=master make st"'
                     }
                 }
             }
         }
+    }
 
-	stage('Push image to GCR') {
-            steps {
-                script{
-		    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
-                    // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
-                    if (env.BRANCH_NAME == 'master') {
-                        sh 'docker tag tigera/cnx-node:latest gcr.io/tigera-dev/cnx/tigera/cnx-node:master'
-                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/cnx-node:master'
-
-			// Clean up images.
-			// Hackey since empty displayed tags are not empty according to gcloud filter criteria
-			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --format='get(digest)'); do
-				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --filter=digest~${digest}) | awk '{print $6}'); then
-					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/cnx-node@${digest}"
-				fi
-			done'''
-                    }
-                }
-            }
+    post {
+        always {
+            junit("**/calico_node/nosetests.xml")
+            deleteDir()
+        }
+        success {
+            echo "Yay, we passed."
+        }
+        failure {
+            echo "Boo, we failed."
         }
     }
-  post {
-    always {
-      junit("**/calico_node/nosetests.xml")
-      deleteDir()
-    }
-    success {
-      echo "Yay, we passed."
-    }
-    failure {
-      echo "Boo, we failed."
-    }
-  }
 }
