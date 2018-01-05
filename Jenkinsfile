@@ -45,20 +45,20 @@ pipeline{
         stage('Push image to GCR') {
             steps {
                 script{
-		    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
+                    // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
                     // if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
                     if (env.BRANCH_NAME == 'master') {
-			 sh 'make tigera/calicoctl'
-			 sh 'docker tag tigera/calicoctl:latest gcr.io/tigera-dev/cnx/tigera/calicoctl:master'
-                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/calicoctl:master'
+                    sh 'make tigera/calicoctl'
+                    sh 'docker tag tigera/calicoctl:latest gcr.io/tigera-dev/cnx/tigera/calicoctl:master'
+                    sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/calicoctl:master'
 
-			// Clean up images.
-			// Hackey since empty displayed tags are not empty according to gcloud filter criteria
-			sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/calicoctl --format='get(digest)'); do
-				if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/calicoctl --filter=digest~${digest}) | awk '{print $6}'); then
-					gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/calicoctl@${digest}"
-				fi 
-			done'''
+                    // Clean up images.
+                    // Hackey since empty displayed tags are not empty according to gcloud filter criteria
+                    sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/calicoctl --format='get(digest)'); do
+                            if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/calicoctl --filter=digest~${digest}) | awk '{print $6}'); then
+                              gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/calicoctl@${digest}"
+                            fi
+                          done'''
                     }
                 }
             }
@@ -66,14 +66,19 @@ pipeline{
     }
   post {
     always {
-      junit("nosetests.xml")
-      deleteDir()
+        junit("nosetests.xml")
+        deleteDir()
     }
     success {
-      echo "Yay, we passed."
+        echo "Yay, we passed."
     }
     failure {
-      echo "Boo, we failed."
+        echo "Boo, we failed."
+        script {
+            if (env.BRANCH_NAME == 'master') {
+                slackSend message: "Failure during calicoctl-private:master CI!\nhttp://localhost:8080/view/Essentials/job/Tigera/job/calicoctl-private/job/master/", color: "warning", channel: "cnx-ci-failures"
+            }
+        }
     }
   }
 }
