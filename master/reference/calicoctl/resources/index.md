@@ -51,6 +51,7 @@ The following resources are supported:
 - [IPPool]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/ippool)
 - [Profile]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile)
 - [FelixConfiguration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/felixconfig)
+- [Tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
 - [WorkloadEndpoint]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/workloadendpoint)
 
 ### Resource name requirements
