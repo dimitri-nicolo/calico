@@ -184,7 +184,8 @@ spec:
   strategy:
     type: Recreate
   selector:
-    apiserver: "true"
+    matchLabels:
+      apiserver: "true"
   template:
     metadata:
       name: cnx-apiserver
