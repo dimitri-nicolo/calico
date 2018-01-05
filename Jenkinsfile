@@ -76,6 +76,11 @@ pipeline{
     }
     failure {
       echo "Boo, we failed."
+      script {
+            if (env.BRANCH_NAME == 'master') {
+                slackSend message: "Failure during calicoq:master CI!\nhttp://localhost:8080/view/Essentials/job/Tigera/job/calicoq/job/master/", color: "warning", channel: "cnx-ci-failures"
+            }
+      }
     }
   }
 }
