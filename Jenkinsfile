@@ -61,6 +61,11 @@ pipeline {
         }
         failure {
             echo "Boo, we failed."
+            script {
+                if (env.BRANCH_NAME == 'master') {
+                    slackSend message: "Failure during calico-k8sapiserver:master CI!\nhttp://localhost:8080/view/Essentials/job/Tigera/job/calico-k8sapiserver/job/master/", color: "warning", channel: "cnx-ci-failures"
+                }
+            }
         }
     }
 }
