@@ -15,8 +15,8 @@ See [network policy resource]({{site.baseurl}}/{{page.version}}/reference/calico
 `GlobalNetworkPolicy` resources can be used to define network connectivity rules between groups of {{site.prodname}} endpoints and host endpoints, and
 take precedence over [Profile resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile) if any are defined.
 
-GlobalNetworkPolicies are organised into tiers, which provide an additional layer of ordering—in particular, note that the `pass` action skips to the
-next tier, to enable hierarchical security policy.
+GlobalNetworkPolicies are organised into [tiers]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier), which provide an additional layer of ordering—in particular, note that the `Pass` action skips to the
+next [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier), to enable hierarchical security policy.
 
 For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `globalnetworkpolicy`, `globalnetworkpolicies`, `gnp`, `gnps`.
@@ -62,6 +62,7 @@ spec:
 | Field              | Description                                                                                                                                           | Accepted Values | Schema                | Default |
 |--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|-----------------------|---------|
 | order              | Controls the order of precedence. {{site.prodname}} applies the policy with the lowest value first.                                                   |                 | float                 |         |
+| tier               | Name of the [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier) this policy belongs to.                                                   |                 | string                 |  `default` |
 | selector           | Selects the endpoints to which this policy applies.                                                                                                   |                 | [selector](#selector) | all()   |
 | types              | Applies the policy based on the direction of the traffic. To apply the policy to inbound traffic, set to `Ingress`. To apply the policy to outbound traffic, set to `Egress`. To apply the policy to both, set to `Ingress, Egress`. | `Ingress`, `Egress`  | List of strings | Depends on presence of ingress/egress rules\* |
 | ingress            | Ordered list of ingress rules applied by policy.                                                                                                      |                 | List of [Rule](#rule) |         |
