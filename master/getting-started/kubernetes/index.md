@@ -52,10 +52,14 @@ the host. Instead, continue directly to the
    sudo kubeadm init --pod-network-cidr=192.168.0.0/16 --apiserver-cert-extra-sans=127.0.0.1
    ```
 
-1. Configure your web browser to trust the Kuberneter cluster certificate
-   authority, by importing `/etc/kubernetes/pki/ca.crt` as a trusted CA
-   certificate.  Then navigate to https://127.0.0.1:6443/api to test that: your
-   browser should indicate that you have a secure connection.
+1. Optionally, configure your web browser to trust the Kuberneter cluster
+   certificate authority, by importing `/etc/kubernetes/pki/ca.crt` as a
+   trusted CA certificate.
+
+1. Navigate to `https://127.0.0.1:6443/api` in your browser.  If you told your
+   browser to trust the cluster certificate authority, the browser should
+   indicate that you have a secure connection.  If not, click past the warning
+   about the connection being insecure.
 
 1. Execute the commands to configure kubectl as returned by
    `kubeadm init`. Most likely they will be as follows:
@@ -246,6 +250,11 @@ the host. Instead, continue directly to the
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
    > **Note**: If your browser is accessing a remote CNX installation via ssh tunnelling, make sure ssh tunnel has been setup correctly for both port 30003 and port 6443.
+   {: .alert .alert-info}
+
+   > **Note**: If you didn't configure your browser, above, to trust the
+   cluster CA certificate, the browser may warn you of an insecure
+   connection.  Click past the warning.
    {: .alert .alert-info}
 
 1. Type **jane** in the **Login** box and **welc0me** in the **Password** box.
