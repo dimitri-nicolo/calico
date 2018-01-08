@@ -26,12 +26,20 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 	// Get all appropriately named policies from any tier.
 	// kvs, err := bclient.List(ctx, model.PolicyListOptions{Name: policyName, Tier: ""}, "")
 	// policyName will be of the form <namespace>/<name>
-	var ns string
+	var name, ns string
 	parts := strings.SplitN(policyName, "/", 2)
-	name := parts[0]
 	if len(parts) == 2 {
 		ns = parts[0]
 		name = parts[1]
+	} else {
+		name = parts[0]
+	}
+
+	// Sanity check a name has been specified - this may be blank if someone specifies a
+	// name such as "/" or "namespace/".
+	if name == "" {
+		fmt.Println("The policy-name must be specified.")
+		log.WithField("<policy-name>", policyName).Error("The policy-name has not been specified")
 	}
 
 	// Handle tier prefix
@@ -40,19 +48,25 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 		name = "default." + name
 	}
 
-	npkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Namespace: ns, Kind: apiv3.KindNetworkPolicy}, "")
-	if err != nil {
-		log.Fatal("Failed to get network policy")
-		os.Exit(1)
+	// Query either the NP or the GNP depending on whether a namespace has also been supplied.
+	var kvs []*model.KVPair
+	if ns != "" {
+		npkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Namespace: ns, Kind: apiv3.KindNetworkPolicy}, "")
+		if err != nil {
+			fmt.Println("Failed to list NetworkPolicy resources.")
+			log.WithError(err).Error("Failed to get network policy")
+			os.Exit(1)
+		}
+		kvs = npkvs.KVPairs
+	} else {
+		gnpkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Kind: apiv3.KindGlobalNetworkPolicy}, "")
+		if err != nil {
+			fmt.Println("Failed to list GlobalNetworkPolicy resources.")
+			log.WithError(err).Error("Failed to get global network policy")
+			os.Exit(1)
+		}
+		kvs = gnpkvs.KVPairs
 	}
-
-	gnpkvs, err := bclient.List(ctx, model.ResourceListOptions{Name: name, Kind: apiv3.KindGlobalNetworkPolicy}, "")
-	if err != nil {
-		log.Fatal("Failed to get global network policy")
-		os.Exit(1)
-	}
-
-	kvs := append(npkvs.KVPairs, gnpkvs.KVPairs...)
 
 	for _, kv := range kvs {
 		log.Debugf("Policy: %#v", kv)
