@@ -64,7 +64,7 @@ Ensure you have a cluster which meets the above requirements.  There may be addi
 Install {{site.prodname}}'s RBAC manifest, which creates roles and role bindings for {{site.prodname}}'s components:
 
 ```
-kubectl apply rbac-kdd.yaml
+kubectl apply -f rbac-kdd.yaml
 ```
    > **Note**: You can also
    > [view the YAML in your browser](../rbac-kdd.yaml){:target="_blank"}.
