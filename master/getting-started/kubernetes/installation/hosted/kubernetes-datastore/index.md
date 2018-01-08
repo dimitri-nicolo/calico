@@ -26,12 +26,7 @@ You must have a Kubernetes cluster, which meets the following requirements:
 - Your Kubernetes API server is configured to [support the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/).
 - Your Kubernetes API server is configured to use a supported authentication method
 
-Ensure that the kube-apiserver has been started with the appropriate flags.
-- Refer to the Kubernetes documentation to
-  [Configure the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
-  with the proper flags.
-- Refer to the [authentication guide]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication) to choose a supported authentication
-  mechanism and configure the Kubernetes API server accordingly.
+{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
 > **Note**: If you are upgrading from Calico v2.1, the cluster-cidr
 > selected for your controller manager should remain
