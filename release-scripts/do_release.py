@@ -33,6 +33,13 @@ def release():
     if not new_version:
         new_version = raw_input("New Calico version? (vX.Y): ")
 
+    # replace index.html default version
+    index_html = open('index.html').read()
+    index_html = index_html.replace('master/introduction', '%s/introduction' % new_version)
+    updated = open('index.html', 'w')
+    updated.write(index_html)
+    updated.close()
+
     # Check if any of the new version dirs exist already
     new_dirs = ["./%s" % new_version,
             "./_data/%s" % new_version,
