@@ -194,6 +194,13 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 	# generate all pkg/client contents
 	$(DOCKER_GO_BUILD) \
 	   sh -c '$(BUILD_DIR)/update-client-gen.sh'
+	# generate openapi
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BINDIR)/openapi-gen \
+		--v 1 --logtostderr \
+		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v3,k8s.io/api/core/v1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/version,k8s.io/apimachinery/pkg/runtime" \
+		--output-package "$(CAPI_PKG)/pkg/openapi"'
 	touch $@
 
 # This section builds the output binaries.
