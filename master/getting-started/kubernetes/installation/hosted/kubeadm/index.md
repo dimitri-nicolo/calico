@@ -16,15 +16,15 @@ For {{site.prodname}} to be compatible with your kubeadm-created cluster:
 
 * There should be no other CNI network configurations installed in /etc/cni/net.d (or equivalent directory)
 
-* The kubeadm flag `--pod-network-cidr` must be set when creating the cluster with `kubeadm init` 
-  and the CIDR(s) specified with the flag must match {{site.prodname}}'s IP pools. The default 
+* The kubeadm flag `--pod-network-cidr` must be set when creating the cluster with `kubeadm init`
+  and the CIDR(s) specified with the flag must match {{site.prodname}}'s IP pools. The default
   IP pool configured in {{site.prodname}}'s manifests is `192.168.0.0/16`
 
-* The CIDR specified with the kubeadm flag `--service-cidr` must not overlap with 
+* The CIDR specified with the kubeadm flag `--service-cidr` must not overlap with
   {{site.prodname}}'s IP pools
-  
+
   * The default CIDR for `--service-cidr` is `10.96.0.0/12`
-  
+
   * The default IP pool configured in {{site.prodname}}'s manifests is `192.168.0.0/16`
 
 You can create a cluster compatible with these manifests by following [the official kubeadm guide](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
@@ -74,7 +74,10 @@ kubectl apply -f calico.yaml
 ## Adding Tigera CNX
 
 Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](../cnx/cnx).
+[add CNX Manager](../cnx/cnx).  Note that you can skip the step to [Configure
+the aggregation
+layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/),
+because kubeadm already does that.
 
 ## Using calicoctl in a kubeadm cluster
 
