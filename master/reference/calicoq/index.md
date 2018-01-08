@@ -4,7 +4,7 @@ title: calicoq
 
 `calicoq` is the {{site.prodname}} Policy Query Utility.  It is a command line tool that
 makes it easy to check your {{site.prodname}} security policies.
-See [Getting Started with {{site.prodname}}]({{site.baseurl}}/{{page.version}}/getting-started) for
+See [Installing calicoq]({{site.baseurl}}/{{page.version}}/usage/calicoq/) for
 how to download and install `calicoq`.
 
 ## Datastore configuration
