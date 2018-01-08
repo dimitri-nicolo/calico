@@ -52,7 +52,7 @@ the host. Instead, continue directly to the
    sudo kubeadm init --pod-network-cidr=192.168.0.0/16 --apiserver-cert-extra-sans=127.0.0.1
    ```
 
-1. Optionally, configure your web browser to trust the Kuberneter cluster
+1. Optionally, configure your web browser to trust the Kubernetes cluster
    certificate authority, by importing `/etc/kubernetes/pki/ca.crt` as a
    trusted CA certificate.
 
