@@ -22,15 +22,39 @@ This procedure assumes the following:
 - You have the Calico manifest that was used to install your system available. This is the manifest which includes the `calico/node` DaemonSet.
 
 #### Prepare for the Upgrade
- Edit your Calico manifest:
+ Edit your **calico** manifest:
    - change the calico/node `image:` key to point at the {{site.prodname}} `tigera/cnx-node` image in your private registry.
    - add the following to the `env:` section of the `calico-node` Daemonset:
+
      ```
      - name: FELIX_PROMETHEUSREPORTERENABLED
        value: "true"
      - name: FELIX_PROMETHEUSREPORTERPORT
        value: "9081"
      ```
+
+   - add the following policy at the end of the `CustomResourceDefinition` section:
+
+     ```
+     ---
+
+     apiVersion: apiextensions.k8s.io/v1beta1
+     description: Calico Tiers
+     kind: CustomResourceDefinition
+     metadata:
+       name: tiers.crd.projectcalico.org
+     spec:
+       scope: Cluster
+       group: crd.projectcalico.org
+       version: v1
+       names:
+        kind: Tier
+        plural: tiers
+        singular: tier
+     ```
+
+Edit your **rbac-kdd** manifest:
+  - add `tiers` to the list of resources under the `crd.projectcalico.org` apiGroup.
 
 #### Perform the upgrade
  1. Use the following command to initiate a rolling update, using the the Calico manifest you prepared above.
