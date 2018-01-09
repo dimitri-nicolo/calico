@@ -4,7 +4,7 @@ title: Using CNX for OpenShift
 
 {{site.prodname}} for OpenShift is mostly similar to {{site.prodname}} for Kubernetes, with a few exceptions:
 
-1. {{site.prodname}} settings are tweaked using [the Felix Configuration resource](../../../reference/calicoctl/resources/felixconfig) instead of editing manifests, since {{site.prodname}} is launched as a systemd service instead of a hosted install in OpenShift.
+1. {{site.prodname}} settings are tweaked using [the `FelixConfiguration` resource](../../../reference/calicoctl/resources/felixconfig) instead of editing manifests, since {{site.prodname}} is launched as a systemd service instead of a hosted install in OpenShift.
 1. A more static Prometheus is launched instead of Prometheus Operator since Third Party Resources
 are not supported by OpenShift.
 1. A `calicoctl.cfg` file owned by root exists in the default path on each host, which authenticates all {{site.prodname}}
@@ -36,9 +36,9 @@ we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometh
 
 **Prerequisite**: `calicoctl` [installed](../../../usage/calicoctl/install) and [configured](../../../usage/calicoctl/configure).
 
-1. Enable metrics in {{site.prodname}} for OpenShift by updating the `default` (global) FelixConfiguration resource.
+1. Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`).
 
-   - Save the current global FelixConfiguration resource to a file named `default-felixconfig.yaml`.
+   - Save the current global `FelixConfiguration` resource to a file named `default-felixconfig.yaml`.
    ```
    $ calicoctl get felixconfig default -o yaml --export | tee default-felixconfig.yaml
    kind: FelixConfiguration
