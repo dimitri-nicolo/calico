@@ -76,9 +76,14 @@ Description:
   policies and profiles that relate to those endpoints.
 
 Notes:
-  When a Calico endpoint or policy is mapped from a Kubernetes resource, its name includes the
-  Kubernetes namespace and name as "<namespace>.<name>".  For a policy, this is the whole of the
-  Calico policy name.
+  When specifying a namespaced NetworkPolicy name, the namespace should also be included by
+  specifying the <policy-name> in the format "<namespace>/<policy-name>". If the namespace is
+  omitted it is assumed the name refers to a GlobalNetworkPolicy.
+
+  When a Calico policy is mapped from a Kubernetes resource, the name will be prefixed with
+  "knp.default". For example to query the Kubernetes NetworkPolicy "test-policy" in the Namespace
+  "demo-ns" use the following command:
+      calicoq policy demo-ns/knp.default.test-policy
 
   For an endpoint, the full Calico ID is "<host>/<orchestrator>/<workload-name>/<endpoint-name>".
   In the Kubernetes case "<orchestrator>" is always "k8s", "<workload-name>" is "<pod
