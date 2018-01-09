@@ -16,7 +16,7 @@ datastore.
 1. Import the files into the local Docker engine.
 
    ```
-   docker load -i tigera_calicoq_{{site.data.versions[page.version].first.components["tigera-calicoq"].version}}.tar.xz.tar.xz
+   docker load -i tigera_calicoq_{{site.data.versions[page.version].first.components["calicoq"].version}}.tar.xz.tar.xz
    ```
 
 1. You can then extract the binary from the image or run `calicoq` in a container.
