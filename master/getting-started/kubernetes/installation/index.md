@@ -18,6 +18,7 @@ information.
   and utilized by the {{site.prodname}} components.  Examples exist for both the [etcd](rbac.yaml) and
   [kubernetes api](hosted/rbac-kdd.yaml) datastores.
 - The cluster must be able to load the Tigera CNX docker images - see following section.
+- Public clouds require special configuration. Refer to [AWS](../../../reference/public-cloud/aws), [Azure](../../../reference/public-cloud/azure), and [GCE](../../../reference/public-cloud/gce) configuration guides for details.
 
 {% include {{page.version}}/load-docker.md %}
 
@@ -33,13 +34,3 @@ own orchestration mechanisms (e.g ansible, chef, bash, etc)
 
 Follow the [integration guide](integration) if you're using a Kubernetes version < v1.4.0, or if you would like
 to integrate {{site.prodname}} into your own installation or deployment scripts.
-
-## Third Party Integrations
-
-A number of popular Kubernetes installers use {{site.prodname}} to provide networking and/or network policy.
-
-You can find some of them here, organized by cloud provider.
-
-- [Amazon Web Services](aws)
-- [Google Compute Engine](gce)
-- [Microsoft Azure](azure)
