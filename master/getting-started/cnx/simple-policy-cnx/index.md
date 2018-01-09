@@ -71,35 +71,24 @@ information about the policies for endpoints on a given host.
 
 ```
 $ ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoq host k8s-node1
-Policies that match each endpoint:
+Policies and profiles for each endpoint on host "k8s-node1":
 
 Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
   Policies:
-    Policy "calico-monitoring.calico-node-alertmanager" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'")
-    Policy "calico-monitoring.calico-node-alertmanager-mesh" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'")
-    Policy "k8s-policy-no-match" (order 2000; selector "has(calico/k8s_ns)")
+    Policy "calico-monitoring/knp.default.calico-node-alertmanager" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s' && alertmanager == 'calico-node-alertmanager' && app == 'alertmanager') && projectcalico.org/namespace == 'calico-monitoring'")
+    Policy "calico-monitoring/knp.default.calico-node-alertmanager-mesh" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s' && alertmanager == 'calico-node-alertmanager' && app == 'alertmanager') && projectcalico.org/namespace == 'calico-monitoring'")
+    Policy "calico-monitoring/knp.default.default-deny" (order 1000; selector "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'calico-monitoring'")
   Profiles:
-    Profile k8s_ns.calico-monitoring
-  Matched by policies:
-    Policy calico-monitoring.calico-node-alertmanager-mesh (rule 0 inbound source match; selector "app in { "alertmanager" } && alertmanager in { "calico-node-alertmanager" } && calico/k8s_ns == 'calico-monitoring'")
+    Profile "kns.calico-monitoring"
+  Rule matches:
+    Policy "calico-monitoring/knp.default.calico-node-alertmanager-mesh" inbound rule 1 source match; selector "(projectcalico.org/namespace == 'calico-monitoring') && (projectcalico.org/orchestrator == 'k8s' && app in { 'alertmanager' } && alertmanager in { 'calico-node-alertmanager' })"
 
 ...
 
-Workload endpoint k8s/calico-monitoring.prometheus-calico-node-prometheus-0/eth0
+Workload endpoint k8s/policy-demo.nginx-8586cf59-5bxvh/eth0
   Policies:
-    Policy "calico-monitoring.prometheus" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'prometheus' && prometheus == 'calico-node-prometheus'")
-    Policy "k8s-policy-no-match" (order 2000; selector "has(calico/k8s_ns)")
   Profiles:
-    Profile k8s_ns.calico-monitoring
-
-# This endpoint has no NetworkPolicies configured - just the default Calico policy to allow traffic.
-Workload endpoint k8s/policy-demo.nginx-2371676037-7w78m/eth0
-  Policies:
-    Policy "k8s-policy-no-match" (order 2000; selector "has(calico/k8s_ns)")
-  Profiles:
-    Profile k8s_ns.policy-demo
-
-...
+    Profile "kns.policy-demo"
 ```
 
 For each workload endpoint, the `Policies:` section lists the policies that
@@ -109,7 +98,8 @@ example focuses on the latter.  The `Matched by policies:` section lists the
 policies that match that endpoint in their rules, in other words that have
 rules that deny or allow that endpoint as a packet source or destination.
 
-Focusing on the `k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0` endpoint:
+Focusing on the
+`k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0` endpoint:
 
 - The first two policies are defined in the calico-monitoring.yaml manifest.
   The selectors here have been translated from the original NetworkPolicies to
