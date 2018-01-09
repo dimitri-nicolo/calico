@@ -3,21 +3,28 @@ title: Configuring Felix
 ---
 
 Configuration for Felix is read from one of four possible locations, in
-order, as follows.
+order, as follows. 
 
 1.  Environment variables.
 2.  The Felix configuration file.
-3.  Host specific configuration in etcd.
-4.  Global configuration in etcd.
+3.  Host-specific `FelixConfiguration` resources.
+4.  The global `FelixConfiguration` resource (`default`).
 
 The value of any configuration parameter is the value read from the
-*first* location containing a value. If not set in any of these
-locations, most configuration parameters have defaults, and it should be
-rare to have to explicitly set them.
+*first* location containing a value. For example, if an environment variable 
+contains a value, it takes top precedence.
+
+If not set in any of these locations, most configuration parameters have 
+defaults, and it should be rare to have to explicitly set them.
 
 The full list of parameters which can be set is as follows.
 
-#### Global configuration
+> **Note**: The following tables detail the configuration file and 
+> environment variable parameters. For `FelixConfiguration` resource settings, 
+> refer to [Felix Configuration Resource](../calicoctl/resources/felixconfig).
+{: .alert .alert-info}
+
+#### General configuration
 
 | Configuration parameter           | Environment variable                    | Description  | Schema |
 | --------------------------------- | --------------------------------------- | -------------| ------ |
@@ -59,7 +66,7 @@ The Kubernetes datastore driver reads its configuration from Kubernetes-provided
 | Configuration parameter              | Environment variable                       | Description | Schema |
 | ------------------------------------ | ------------------------------------------ | ----------- | ------ |
 | `DefaultEndpointToHostAction`        | `FELIX_DEFAULTENDPOINTTOHOSTACTION`        | This parameter controls what happens to traffic that goes from a workload endpoint to the host itself (after the traffic hits the endpoint egress policy). By default {{site.prodname}} blocks traffic from workload endpoints to the host itself with an iptables `Drop` action. If you want to allow some or all traffic from endpoint to host, set this parameter to `Return` or `Accept`.  Use `Return` if you have your own rules in the iptables "INPUT" chain; {{site.prodname}} will insert its rules at the top of that chain, then `Return` packets to the "INPUT" chain once it has completed processing workload endpoint egress policy. Use `Accept` to unconditionally accept packets from workloads after processing workload endpoint egress policy. [Default: `Drop`] | `Drop`, `Return`, `Accept` |
-| `ignoreLooseRPF`                     | `FELIX_IGNORELOOSERPF`                     | Set to `true` to allow Felix to run on systems with loose reverse path forwarding (RPF). **Warning**: {{site.prodname}} relies on "strict" RPF checking being enabled to prevent workloads, such as VMs and privileged containers, from spoofing their IP addresses and impersonating other workloads (or hosts). Only enable this flag if you need to run with "loose" RPF and you either trust your workloads or have another mechanism in place to prevent spoofing. | `true`,`false` |
+| `IgnoreLooseRPF`                     | `FELIX_IGNORELOOSERPF`                     | Set to `true` to allow Felix to run on systems with loose reverse path forwarding (RPF). **Warning**: {{site.prodname}} relies on "strict" RPF checking being enabled to prevent workloads, such as VMs and privileged containers, from spoofing their IP addresses and impersonating other workloads (or hosts). Only enable this flag if you need to run with "loose" RPF and you either trust your workloads or have another mechanism in place to prevent spoofing. | `true`,`false` |
 | `InterfaceExclude`                   | `FELIX_INTERFACEEXCLUDE`                   | A comma-separated list of interface names that should be excluded when Felix is resolving host endpoints. The default value ensures that Felix ignores Kubernetes' internal `kube-ipvs0` device. [Default: `kube-ipvs0`] | string |
 | `IptablesFilterAllowAction`          | `FELIX_IPTABLESALLOWACTION`                | This parameter controls what happens to traffic that is allowed by a Felix policy chain in the iptables filter table (i.e., a normal policy chain). The default will immediately `Accept` the traffic. Use `Return` to send the traffic back up to the system chains for further processing. [Default: `Accept`]  | `Accept`, `Return` |
 | `IptablesMangleAllowAction`          | `FELIX_IPTABLESALLOWACTION`                | This parameter controls what happens to traffic that is allowed by a Felix policy chain in the iptables mangle table (i.e., a pre-DNAT policy chain). The default will immediately `Accept` the traffic. Use `Return` to send the traffic back up to the system chains for further processing. [Default: `Accept`]  | `Accept`, `Return` |
@@ -76,44 +83,38 @@ The Kubernetes datastore driver reads its configuration from Kubernetes-provided
 | `IptablesLockProbeIntervalMillis`    | `FELIX_IPTABLESLOCKPROBEINTERVALMILLIS`    | Time, in milliseconds, that Felix will wait between attempts to acquire the iptables lock if it is not available.  Lower values make Felix more responsive when the lock is contended, but use more CPU. [Default: `50`]  | int |
 | `NetlinkTimeoutSecs`                 | `FELIX_NETLINKTIMEOUTSECS`                 | Time, in seconds, that Felix will wait for netlink (i.e. routing table list/update) operations to complete before giving up and retrying. [Default: `10`] | float |
 
-#### OpenStack-specific configuration
-
-| Configuration parameter | Environment variable | Description  | Schema |
-| ------------------------|--------------------- | ------------ | ------ |
-| `MetadataAddr`          | `FELIX_METADATAADDR` | The IP address or domain name of the server that can answer VM queries for cloud-init metadata. In OpenStack, this corresponds to the machine running nova-api (or in Ubuntu, nova-api-metadata). A value of `none`  (case insensitive) means that Felix should not set up any NAT rule for the metadata path. [Default: `127.0.0.1`]  | `<IPv4-address>`, `<hostname>`, `none` |
-| `MetadataPort`          | `FELIX_METADATAPORT` | The port of the metadata server. This, combined with global.MetadataAddr (if not 'None'), is used to set up a NAT rule, from 169.254.169.254:80 to MetadataAddr:MetadataPort. In most cases this should not need to be changed [Default: `8775`].  | int |
 
 #### Bare metal specific configuration
 
 | Configuration parameter | Environment variable    | Description | Schema |
 | ----------------------- | ----------------------- | ----------- | ------ |
-| `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces.  Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes and Docker integrations set the `cali` value, and our OpenStack integration sets the `tap` value. [Default: `cali`] | string |
+| `InterfacePrefix`       | `FELIX_INTERFACEPREFIX` | The interface name prefix that identifies workload endpoints and so distinguishes them from host endpoint interfaces.  Note: in environments other than bare metal, the orchestrators configure this appropriately.  For example our Kubernetes integration sets the `cali` value. [Default: `cali`] | string |
 
 #### Tigera CNX specific configuration
 
-| Setting                                 | Environment variable                    | Default                              | Meaning                                 |
-|-----------------------------------------|-----------------------------------------|--------------------------------------|-----------------------------------------|
-| DropActionOverride                      | FELIX_DROPACTIONOVERRIDE                | Drop                                 | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
-| PrometheusReporterEnabled               | FELIX_PROMETHEUSREPORTERENABLED         | false                                | Set to "true" to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
-| PrometheusReporterPort                  | FELIX_PROMETHEUSREPORTERPORT            | 9092                                 | The TCP port on which to report denied packet metrics.  |
+| Setting                     | Environment variable               | Default  | Meaning                                 |
+|-----------------------------|------------------------------------|----------|-----------------------------------------|
+| `DropActionOverride`        | `FELIX_DROPACTIONOVERRIDE`         | `Drop`   | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
+| `PrometheusReporterEnabled` | `FELIX_PROMETHEUSREPORTERENABLED`  | `false`  | Set to `true` to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
+| `PrometheusReporterPort`    | `FELIX_PROMETHEUSREPORTERPORT`     | `9092`   | The TCP port on which to report denied packet metrics.  |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current Calico policy - i.e. by the ordered combination of all the
 configured policies and profiles that apply to that packet.  It may be
 set to one of the following values:
 
-- Drop
-- Accept
-- LogAndDrop
-- LogAndAccept.
+- `Drop`
+- `Accept`
+- `LogAndDrop`
+- `LogAndAccept`
 
-Normally the "Drop" or "LogAndDrop" value should be used, as dropping a
+Normally the `Drop` or `LogAndDrop` value should be used, as dropping a
 packet is the obvious implication of that packet being denied.  However when
 experimenting, or debugging a scenario that is not behaving as you expect, the
-"Accept" and "LogAndAccept" values can be useful: then the packet will be
+`Accept` and `LogAndAccept` values can be useful: then the packet will be
 still be allowed through.
 
-When one of the "LogAnd..." values is set, each denied packet is logged in
+When set to `LogAndDrop` or `LogAndAccept`, each denied packet is logged in
 syslog, with an entry like this:
 
 ```
@@ -122,14 +123,14 @@ May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be
 
 When the reporting of denied packet metrics is enabled, Felix keeps counts of
 recently denied packets and publishes these as Prometheus metrics on the port
-configured by the PrometheusReporterPort setting.  Please
+configured by the `PrometheusReporterPort` setting.  Please
 see
 [Policy Violation Monitoring & Reporting]({{site.baseurl}}/{{page.version}}/reference/cnx/policy-violations) for
 more details.
 
 Note that denied packet metrics are independent of the DropActionOverride
 setting.  Specifically, if packets that would normally be denied are being
-allowed through by a setting of "Accept" or "LogAndAccept", those packets
+allowed through by a setting of `Accept` or `LogAndAccept`, those packets
 still contribute to the denied packet metrics as just described.
 
 Environment variables
@@ -152,12 +153,6 @@ using the `-c` or `--config-file` options on the command line. If the
 file exists, then it is read (ignoring section names) and all parameters
 are set from it.
 
-In OpenStack, we recommend putting all configuration into configuration
-files, since the etcd database is transient (and may be recreated by the
-OpenStack plugin in certain error cases). However, in a Docker
-environment the use of environment variables or etcd is often more
-convenient.
-
 ### Datastore
 
 Felix also reads configuration parameters from the datastore.  It supports
@@ -177,3 +172,4 @@ $ calicoctl replace -f felix.yaml
 ```
 
 For more information, see [Felix Configuration Resource](../calicoctl/resources/felixconfig).
+

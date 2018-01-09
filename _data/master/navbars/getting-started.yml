@@ -28,12 +28,6 @@ toc:
         path: /getting-started/kubernetes/installation/hosted/cnx/cnx
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
-    - title: AWS
-      path: /getting-started/kubernetes/installation/aws
-    - title: GCE
-      path: /getting-started/kubernetes/installation/gce
-    - title: Azure
-      path: /getting-started/kubernetes/installation/azure
   - title: Tutorials
     section:
     - title: Using calicoctl

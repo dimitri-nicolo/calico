@@ -4,8 +4,7 @@ title: Using CNX for OpenShift
 
 {{site.prodname}} for OpenShift is mostly similar to {{site.prodname}} for Kubernetes, with a few exceptions:
 
-1. {{site.prodname}} settings are tweaked by updating the [FelixConfiguration resource]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/felixconfig)
-instead of editing manifests, since {{site.prodname}} is launched as a systemd service instead of a hosted install in OpenShift.
+1. {{site.prodname}} settings are tweaked using [the `FelixConfiguration` resource](../../../reference/calicoctl/resources/felixconfig) instead of editing manifests, since {{site.prodname}} is launched as a systemd service instead of a hosted install in OpenShift.
 1. A more static Prometheus is launched instead of Prometheus Operator since Third Party Resources
 are not supported by OpenShift.
 1. A `calicoctl.cfg` file owned by root exists in the default path on each host, which authenticates all {{site.prodname}}
@@ -33,11 +32,13 @@ Policy Violation Alerting is mostly the same in {{site.prodname}} for OpenShift 
 cannot be done using Prometheus Operator, as Third Party Resources are not supported in OpenShift. Below,
 we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus without using Prometheus-Operator.
 
-##### Enable Metrics
+#### Enable Metrics
 
-1. Enable metrics in {{site.prodname}} for OpenShift by updating the `default` (global) FelixConfiguration resource.
+**Prerequisite**: `calicoctl` [installed](../../../usage/calicoctl/install) and [configured](../../../usage/calicoctl/configure).
 
-   - Save the current global FelixConfiguration resource to a file named `default-felixconfig.yaml`.
+1. Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`).
+
+   - Save the current global `FelixConfiguration` resource to a file named `default-felixconfig.yaml`.
    ```
    $ calicoctl get felixconfig default -o yaml --export | tee default-felixconfig.yaml
    kind: FelixConfiguration
@@ -51,6 +52,7 @@ we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometh
    ```
 
    - Update `default-felixconfig.yaml` and append the lines `prometheusReporterEnabled: true` and `prometheusReporterPort: 9081`.
+   
    ```
    $ cat default-felixconfig.yaml
    apiVersion: projectcalico.org/v3
@@ -79,7 +81,7 @@ we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometh
    iptables -I INPUT 1 -p tcp --dport 9081 -j ACCEPT
    ```
 
-##### Configure Prometheus
+#### Configure Prometheus
 
 With metrics enabled, you are ready to monitor `calico/node` by scraping the endpoint on each node
 in the cluster. If you do not have your own Prometheus, the following commands will launch a basic
@@ -108,7 +110,7 @@ instance for you.
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
 See [Policy Violation Alerting](../../../reference/cnx/policy-violations) for more information.
 
-##### Updating Rules
+#### Updating Rules
 
 Because Prometheus-Operator is not being used, updates made to the rules in the `calico-prometheus-dp-rate` ConfigMap
 will not get picked up by Prometheus until a SIGHUP signal is explicitly issued.

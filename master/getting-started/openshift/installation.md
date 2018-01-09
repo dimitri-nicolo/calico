@@ -1,5 +1,5 @@
 ---
-title: Installing Calico on OpenShift
+title: Installing CNX on OpenShift
 ---
 
 Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible v3.6.
