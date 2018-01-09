@@ -149,7 +149,7 @@ spec:
 #### Enabling TLS Verification for a Kubernetes extension API Server
 
 The Kubernetes extension API Server deployed by the provided
-[manifest](1.7/cnx.yaml) will communicate with the Kubernetes
+[manifest](1.7/cnx-etcd.yaml) will communicate with the Kubernetes
 API Server.  The manifest, by default, requires no updates to work but does not
 enable TLS verification on the connection between the two API servers. We
 recommend that this is enabled and you can follow the directions below to
@@ -200,7 +200,7 @@ Here is an example command to do the base64 encoding:
 
 ##### Add Certificate Files to the Manifest
 
-The [cnx.yaml](1.7/cnx.yaml) manifest must be updated
+The [cnx.yaml](1.7/cnx-etcd.yaml) manifest must be updated
 with the following changes
 
 1. Remove the line `insecureSkipTLSVerify: true` from the `APIService` section.
@@ -213,7 +213,7 @@ with the following changes
 
 ### Configure the {{site.prodname}} Manager Web Application
 
-The [cnx.yaml](1.7/cnx.yaml) manifest must be updated with
+The [cnx.yaml](1.7/cnx-etcd.yaml) manifest must be updated with
 the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
 are described [here]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).

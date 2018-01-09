@@ -15,8 +15,13 @@ installation method.
 
 ## Requirements
 
-- An existing Kubernetes cluster running Kubernetes >= v1.7.
+- An existing Kubernetes cluster running Kubernetes >= v1.8.
 - An `etcd` cluster accessible by all nodes in the Kubernetes cluster. {{site.prodname}} can share the etcd cluster used by Kubernetes, but in some cases it's recommended that a separate cluster is set up. A number of production users do share the etcd cluster between the two, but separating them gives better performance at high scale.
+- The CNX images must be made available to your cluster by either pre-loading
+  them on your hosts or setting up the appropriate configuration to allow
+  access to your private docker registry where they have been loaded.
+
+{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
 > **Note**: {{site.prodname}} can also be installed
 > [without a dependency on etcd](hosted/kubernetes-datastore/),
@@ -132,7 +137,7 @@ mkdir -p /etc/cni/net.d
 cat >/etc/cni/net.d/10-calico.conf <<EOF
 {
     "name": "calico-k8s-network",
-    "cniVersion": "0.1.0",
+    "cniVersion": "0.3.0",
     "type": "calico",
     "etcd_endpoints": "http://<ETCD_IP>:<ETCD_PORT>",
     "log_level": "info",
@@ -161,8 +166,8 @@ In addition to the CNI plugin specified by the CNI config file, Kubernetes requi
 Download the file `loopback` and copy it to the CNI binary directory.
 
 ```bash
-wget https://github.com/containernetworking/cni/releases/download/v0.3.0/cni-v0.3.0.tgz
-tar -zxvf cni-v0.3.0.tgz
+wget https://github.com/containernetworking/plugins/releases/download/v0.6.0/cni-v0.6.0.tgz
+tar -zxvf cni-v0.6.0.tgz
 sudo cp loopback /opt/cni/bin/
 ```
 
@@ -246,3 +251,8 @@ there are two ways to enable this behavior.
 
 See the [kube-proxy reference documentation](http://kubernetes.io/docs/admin/kube-proxy/)
 for more details.
+
+## Adding Tigera CNX
+
+Now you've installed Calico with the enhanced CNX node agent, you're ready to
+[add CNX Manager](hosted/cnx/cnx).
