@@ -22,7 +22,7 @@ Where you see references to these in the text below, substitute for your actual 
 
 ### Configure Namespaces
 
-This guide will deploy pods in a Kubernetes Namespaces.  Let's create the `Namespace` object for this guide.
+This guide will deploy pods in a Kubernetes namespace.  Let's create the `Namespace` object for this guide.
 
 ```
 kubectl create ns policy-demo
@@ -30,22 +30,24 @@ kubectl create ns policy-demo
 
 ### Create demo Pods
 
-We'll use Kubernetes `Deployment` objects to easily create pods in the `Namespace`.
+We'll use Kubernetes `Deployment` objects to easily create pods in that namespace.
 
-1) Create some nginx pods in the `policy-demo` Namespace, and expose them through a Service.
+1) Create some nginx pods in the `policy-demo` namespace
 
 ```shell
-# Run the Pods.
 kubectl run --namespace=policy-demo nginx --replicas=2 --image=nginx
+```
 
-# Create the Service.
+and expose them through a service on port 80.
+
+```shell
 kubectl expose --namespace=policy-demo deployment nginx --port=80
 ```
 
-2) Ensure the nginx service is accessible.
+2) Check that the nginx service is accessible, by trying to access it from
+another, busybox pod.
 
 ```
-# Run a Pod and try to access the `nginx` Service.
 $ kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
@@ -54,34 +56,30 @@ If you don't see a command prompt, try pressing enter.
 / # wget -q nginx -O -
 ```
 
-You should see a response from `nginx`.  Great! Our Service is accessible.  You can exit the Pod now.
+You should see a response from `nginx`.  Great! Our service is accessible.  You
+can exit the busybox pod now.
 
-Now let's inspect the network policies using calicoq.  calicoq complements calicoctl by inspecting the
-dynamic aspects of {{site.prodname}} Policy: in particular displaying the endpoints actually affected by policies,
-and the policies that actually apply to endpoints.
+3) Inspect the network policies using calicoq.  The `host` command displays
+information about the policies for endpoints on a given host.
 
-The full calicoq documentation is [here]({{site.baseurl}}/{{page.version}}/reference/calicoq).
+> **Note**: calicoq complements calicoctl by inspecting the
+> dynamic aspects of {{site.prodname}} Policy: in particular displaying the endpoints actually affected by policies,
+> and the policies that actually apply to endpoints.
+>
+> The full calicoq documentation is [here]({{site.baseurl}}/{{page.version}}/reference/calicoq).
+{: .alert .alert-info}
+
 ```
-# Point calicoq at etcd / the Kubernetes API Server in the same way as calicoctl.  You can also use a config file.
-# The host command displays information about the policies that select endpoints on a host.
-ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoq host k8s-node1
+$ ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoq host k8s-node1
 Policies that match each endpoint:
 
 Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
-  # These are the policies that apply directly to the endpoint.  calicoq can display both
-  # {{site.prodname}} Policies and Kubernetes NetworkPolicies, although this example focuses on the latter.
-  # They're listed in the order they apply.
   Policies:
-    # These first two policies are defined in the calico-monitoring.yaml manifest.
-    # The selectors here have been translated from the original NetworkPolicies to the {{site.prodname}}
-    # format (note the addition of the namespace test).
     Policy "calico-monitoring.calico-node-alertmanager" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'")
     Policy "calico-monitoring.calico-node-alertmanager-mesh" (order 1000; selector "calico/k8s_ns == 'calico-monitoring' && app == 'alertmanager' && alertmanager == 'calico-node-alertmanager'")
-    # This policy and the profile following it are created automatically by the policy controller.
     Policy "k8s-policy-no-match" (order 2000; selector "has(calico/k8s_ns)")
   Profiles:
     Profile k8s_ns.calico-monitoring
-  # These are the policies that match the endpoint in their rules.
   Matched by policies:
     Policy calico-monitoring.calico-node-alertmanager-mesh (rule 0 inbound source match; selector "app in { "alertmanager" } && alertmanager in { "calico-node-alertmanager" } && calico/k8s_ns == 'calico-monitoring'")
 
@@ -104,11 +102,27 @@ Workload endpoint k8s/policy-demo.nginx-2371676037-7w78m/eth0
 ...
 ```
 
+For each workload endpoint, the `Policies:` section lists the policies that
+apply to that endpoint, in the order they apply.  calicoq displays both
+{{site.prodname}} Policies and Kubernetes NetworkPolicies, although this
+example focuses on the latter.  The `Matched by policies:` section lists the
+policies that match that endpoint in their rules, in other words that have
+rules that deny or allow that endpoint as a packet source or destination.
+
+Focusing on the `k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0` endpoint:
+
+- The first two policies are defined in the calico-monitoring.yaml manifest.
+  The selectors here have been translated from the original NetworkPolicies to
+  the {{site.prodname}} format (note the addition of the namespace test).
+
+- The third policy and the following profile are created automatically by the
+  policy controller.
+
 ### Enable isolation
 
-Let's turn on isolation in our policy-demo Namespace. {{site.prodname}} will then prevent connections to pods in this Namespace.
+Let's turn on isolation in our policy-demo namespace. {{site.prodname}} will then prevent connections to pods in this namespace.
 
-Running the following command creates a NetworkPolicy which implements a default deny behavior for all pods in the `policy-demo` Namespace.
+Running the following command creates a NetworkPolicy which implements a default deny behavior for all pods in the `policy-demo` namespace.
 
 ```
 kubectl create -f - <<EOF
@@ -125,10 +139,10 @@ EOF
 
 #### Test Isolation
 
-This will prevent all access to the nginx Service.  We can see the effect by trying to access the Service again.
+This will prevent all access to the nginx service.  We can see the effect by trying to access the service again.
 
 ```
-# Run a Pod and try to access the `nginx` Service.
+# Run a Pod and try to access the `nginx` service.
 $ kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
@@ -139,7 +153,7 @@ wget: download timed out
 / #
 ```
 
-The request should time out after 5 seconds.  By enabling isolation on the Namespace, we've prevented access to the Service.
+The request should time out after 5 seconds.  By enabling isolation on the namespace, we've prevented access to the service.
 
 ### Denied packet metrics and Alerting
 Now would be a great time to take a look at the denied packet metrics.  Get the service listing from kubectl:
@@ -167,7 +181,10 @@ The first 3 in the list above are useful for monitoring your deployment, while t
 Note that if you have not sent any denied packets recently, `calico_denied_packets` and `calico_denied_bytes` may not appear in the drop down.
 
 Select `calico_denied_packets` and click the `Execute` button.  The `console` tab should now show a key like this:
-```calico_denied_packets{endpoint="calico-metrics-port",instance="10.240.0.16:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-zs6gt",policy="profile/k8s_ns.policy-demo/0/deny",service="calico-node-metrics",srcIP="192.168.213.12"}``` and a value.
+```
+calico_denied_packets{endpoint="calico-metrics-port",instance="10.240.0.16:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-zs6gt",policy="profile/k8s_ns.policy-demo/0/deny",service="calico-node-metrics",srcIP="192.168.213.12"}
+```
+and a value.
 
 This indicates that the pod `calico-node-zs6gt` has reported 3 denied packets from `192.168.213.12` and that the packets were denied by the `profile/k8s_ns.policy-demo/0/deny` - which is the namespace default deny rule you enabled above using the namespace annotation.
 
@@ -187,7 +204,7 @@ Refresh the graph and you should see some data points appear.  Now switch back t
 
 ### Allow Access using a NetworkPolicy
 
-Now, let's enable access to the nginx Service using a NetworkPolicy.  This will allow incoming connections from our `access` Pod, but not
+Now, let's enable access to the nginx service using a NetworkPolicy.  This will allow incoming connections from our `access` Pod, but not
 from anywhere else.
 
 Create a network policy `access-nginx` with the following contents:
@@ -217,10 +234,10 @@ EOF
 {: .alert .alert-info}
 
 
-We should now be able to access the Service from the `access` Pod.
+We should now be able to access the service from the `access` Pod.
 
 ```
-# Run a Pod and try to access the `nginx` Service.
+# Run a Pod and try to access the `nginx` service.
 $ kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
@@ -229,10 +246,10 @@ If you don't see a command prompt, try pressing enter.
 / # wget -q --timeout=5 nginx -O -
 ```
 
-However, we still cannot access the Service from a Pod without the label `run: access`:
+However, we still cannot access the service from a Pod without the label `run: access`:
 
 ```
-# Run a Pod and try to access the `nginx` Service.
+# Run a Pod and try to access the `nginx` service.
 $ kubectl run --namespace=policy-demo cant-access --rm -ti --image busybox /bin/sh
 Waiting for pod policy-demo/cant-access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
@@ -243,7 +260,7 @@ wget: download timed out
 / #
 ```
 
-You can clean up the demo by deleting the demo Namespace:
+You can clean up the demo by deleting the demo namespace:
 
 ```shell
 kubectl delete ns policy-demo
