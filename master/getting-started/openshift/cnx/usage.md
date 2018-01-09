@@ -36,30 +36,42 @@ we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometh
 
 **Prerequisite**: `calicoctl` [installed](../../../usage/calicoctl/install) and [configured](../../../usage/calicoctl/configure).
 
-1. Retrieve the current `FelixConfiguration` resource as a YAML file using the following command.
+1. Enable metrics in {{site.prodname}} for OpenShift by updating the `default` (global) FelixConfiguration resource.
 
+   - Save the current global FelixConfiguration resource to a file named `default-felixconfig.yaml`.
    ```
-   sudo calicoctl get FelixConfiguration --filename=felixconfig.yaml --output=yaml
+   $ calicoctl get felixconfig default -o yaml --export | tee default-felixconfig.yaml
+   kind: FelixConfiguration
+   metadata:
+   creationTimestamp: null
+   name: default
+   spec:
+   ipipEnabled: true
+   logSeverityScreen: Info
+   reportingInterval: 0s
    ```
+
+   - Update `default-felixconfig.yaml` and append the lines `prometheusReporterEnabled: true` and `prometheusReporterPort: 9081`.
    
-1. Open the file in your favorite editor and set `prometheusReporterEnabled` to `true` and `prometheusReporterPort` to `9081`. An example follows.
-
    ```
+   $ cat default-felixconfig.yaml
    apiVersion: projectcalico.org/v3
    kind: FelixConfiguration
    metadata:
+     creationTimestamp: null
      name: default
    spec:
-     ...
+     ipipEnabled: true
+     logSeverityScreen: Info
+     reportingInterval: 0s
      prometheusReporterEnabled: true
      prometheusReporterPort: 9081
-     ...
    ```
 
-1. Save the file and then use the following command to update the Felix Configuration resource with the new settings.
-
+   - Finally run the `calicoctl replace` command to update the `default` FelixConfiguration resource with the new fields for enabling metrics.
    ```
-   sudo calicoctl replace felixconfig.yaml
+   calicoctl replace -f default-felixconfig.yaml
+   Successfully replaced 1 'FelixConfiguration' resource(s)
    ```
 
 1. Allow Prometheus to scrape the metrics by opening up the port on the host:
