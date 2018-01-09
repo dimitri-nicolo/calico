@@ -82,9 +82,9 @@ title: Installing CNX for OpenShift
 
        mv cnx-etcd.yaml cnx.yaml
 
-1. Update the login method to "StaticToken":
+1. Update the login method to "Token":
 
-       sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "StaticToken"/g' cnx.yaml
+       sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "Token"/g' cnx.yaml
 
 1. Update the manifest with the path to your private Docker registry. Substitute
    `mydockerregistry:5000` with the location of your Docker registry.
