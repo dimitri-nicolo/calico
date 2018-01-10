@@ -20,8 +20,8 @@ When a new connection is processed by Calico, each Tier that contains a Policy t
 Tiers are sorted by their `order` - smallest number first.
 
 Policies in each Tier are then processed in order.
-- If a [NetworkPolicies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) or [GlobalNetworkPolicies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) in the Tier `Allow`s or `Deny`s the packet, then evaluation is done: the packet is handled accordingly.
-- If a [NetworkPolicies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) or [GlobalNetworkPolicies]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) in the Tier `Pass`es the packet, the next Tier containing a Policy that applies to the endpoint processes the packet.
+- If a [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) or [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) in the Tier `Allow`s or `Deny`s the packet, then evaluation is done: the packet is handled accordingly.
+- If a [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) or [GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy) in the Tier `Pass`es the packet, the next Tier containing a Policy that applies to the endpoint processes the packet.
 
 If the Tier applies to the endpoint, but takes no action on the packet the packet is dropped.
 
