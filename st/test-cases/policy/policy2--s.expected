@@ -1,20 +1,11 @@
-policy abcdefghijklmnopqrstuvwxyz --hide-selectors
+policy group2/abcdefghijklmnopqrstuvwxyz --hide-selectors
 
-Policy "abcdefghijklmnopqrstuvwxyz" applies to these endpoints:
+Policy "group2/abcdefghijklmnopqrstuvwxyz" applies to these endpoints:
   Workload endpoint host1/k8s/group2.g2w1/eth0
   Workload endpoint host1/k8s/group2.g2w2/eth0
   Workload endpoint host1/k8s/group2.g2w3/eth0
 
-Endpoints matching Policy "abcdefghijklmnopqrstuvwxyz" rules:
-  Workload endpoint host1/k8s/group1.g1w1/eth0
-    inbound rule 1 source match
-    outbound rule 1 destination match
-  Workload endpoint host1/k8s/group1.g1w2/eth0
-    inbound rule 1 source match
-    outbound rule 1 destination match
-  Workload endpoint host1/k8s/group1.g1w3/eth0
-    inbound rule 1 source match
-    outbound rule 1 destination match
+Endpoints matching Policy "group2/abcdefghijklmnopqrstuvwxyz" rules:
   Workload endpoint host1/k8s/group2.g2w1/eth0
     inbound rule 1 source match
     outbound rule 1 destination match

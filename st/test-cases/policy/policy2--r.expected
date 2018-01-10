@@ -1,6 +1,6 @@
-policy abcdefghijklmnopqrstuvwxyz --hide-rule-matches
+policy group2/abcdefghijklmnopqrstuvwxyz --hide-rule-matches
 
-Policy "abcdefghijklmnopqrstuvwxyz" applies to these endpoints:
-  Workload endpoint host1/k8s/group2.g2w1/eth0; selector "projectcalico.org/namespace == 'group2'"
-  Workload endpoint host1/k8s/group2.g2w2/eth0; selector "projectcalico.org/namespace == 'group2'"
-  Workload endpoint host1/k8s/group2.g2w3/eth0; selector "projectcalico.org/namespace == 'group2'"
+Policy "group2/abcdefghijklmnopqrstuvwxyz" applies to these endpoints:
+  Workload endpoint host1/k8s/group2.g2w1/eth0; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'"
+  Workload endpoint host1/k8s/group2.g2w2/eth0; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'"
+  Workload endpoint host1/k8s/group2.g2w3/eth0; selector "(projectcalico.org/namespace == 'group2') && projectcalico.org/namespace == 'group2'"

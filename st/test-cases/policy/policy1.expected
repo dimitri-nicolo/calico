@@ -1,20 +1,14 @@
-policy p1
+policy group1/p1
 
-Policy "p1" applies to these endpoints:
-  Workload endpoint host1/k8s/group1.g1w1/eth0; selector "projectcalico.org/namespace == 'group1'"
-  Workload endpoint host1/k8s/group1.g1w2/eth0; selector "projectcalico.org/namespace == 'group1'"
-  Workload endpoint host1/k8s/group1.g1w3/eth0; selector "projectcalico.org/namespace == 'group1'"
+Policy "group1/p1" applies to these endpoints:
+  Workload endpoint host1/k8s/group1.g1w1/eth0; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'"
+  Workload endpoint host1/k8s/group1.g1w2/eth0; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'"
+  Workload endpoint host1/k8s/group1.g1w3/eth0; selector "(projectcalico.org/namespace == 'group1') && projectcalico.org/namespace == 'group1'"
 
-Endpoints matching Policy "p1" rules:
+Endpoints matching Policy "group1/p1" rules:
   Workload endpoint host1/k8s/group1.g1w1/eth0
-    outbound rule 1 destination match; selector "projectcalico.org/namespace == 'group1'"
+    outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'group1') && (projectcalico.org/namespace == 'group1')"
   Workload endpoint host1/k8s/group1.g1w2/eth0
-    outbound rule 1 destination match; selector "projectcalico.org/namespace == 'group1'"
+    outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'group1') && (projectcalico.org/namespace == 'group1')"
   Workload endpoint host1/k8s/group1.g1w3/eth0
-    outbound rule 1 destination match; selector "projectcalico.org/namespace == 'group1'"
-  Workload endpoint host1/k8s/group2.g2w1/eth0
-    inbound rule 1 source match; selector "projectcalico.org/namespace == 'group2'"
-  Workload endpoint host1/k8s/group2.g2w2/eth0
-    inbound rule 1 source match; selector "projectcalico.org/namespace == 'group2'"
-  Workload endpoint host1/k8s/group2.g2w3/eth0
-    inbound rule 1 source match; selector "projectcalico.org/namespace == 'group2'"
+    outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'group1') && (projectcalico.org/namespace == 'group1')"
