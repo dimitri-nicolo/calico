@@ -40,20 +40,6 @@ component needs access to in etcd to function successfully.
 | /calico/ipam/v2/\*                        |   RW   |
 | /calico/resources/v3/projectcalico.org/\* |   RW   |
 
-## OpenStack Calico driver for Neutron
-
-| Path                                      | Access |
-|-------------------------------------------|--------|
-| /calico/ipam/v2/\*                        |   RW   |
-| /calico/resources/v3/projectcalico.org/\* |   RW   |
-
-## OpenStack Calico DHCP agent
-
-| Path                                      | Access |
-|-------------------------------------------|--------|
-| /calico/resources/v3/projectcalico.org/\* |   R    |
-| /calico/dhcp/v1/subnet/\*                 |   R    |
-
 ## calicoctl (read only access)
 
 | Path                                      | Access |
