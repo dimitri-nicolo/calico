@@ -108,6 +108,30 @@ Focusing on the
 - The third policy and the following profile are created automatically by the
   policy controller.
 
+4) Use calicoctl to see the detail of any particular policy or profile.  For
+example, for the `kns.policy-demo` profile, which defines default behavior for
+pods in the `policy-demo` namespace:
+
+```
+$ ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoctl get profile kns.policy-demo -o yaml
+apiVersion: projectcalico.org/v3
+kind: Profile
+metadata:
+  creationTimestamp: 2018-01-09T10:20:52Z
+  name: kns.policy-demo
+  resourceVersion: "661"
+  uid: c541b088-f526-11e7-a837-42010a80000a
+spec:
+  egress:
+  - action: Allow
+    destination: {}
+    source: {}
+  ingress:
+  - action: Allow
+    destination: {}
+    source: {}
+```
+
 ### Enable isolation
 
 Let's turn on isolation in our policy-demo namespace. {{site.prodname}} will then prevent connections to pods in this namespace.
