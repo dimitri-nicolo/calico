@@ -2,12 +2,12 @@
    Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
    with the name of your private Docker registry.
 
-   **Command syntax**
+   **Command**
    ```shell
    sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
    ```
    
-   **Sample command**
+   **Example**
 
    ```shell
    sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
