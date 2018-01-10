@@ -21,7 +21,7 @@ metadata:
   name: tigera-cnx-manager-config
   namespace: kube-system
 data:
-  # Authentication type.  Must be set to "OIDC", "Basic" or "StaticToken".
+  # Authentication type.  Must be set to "OIDC", "Basic" or "Token".
   tigera.cnx-manager.authentication-type: "Basic"
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
   tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
