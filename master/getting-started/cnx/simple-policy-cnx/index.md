@@ -151,12 +151,23 @@ spec:
 EOF
 ```
 
+> **Note**: Although that NetworkPolicy spec does not explicitly deny or drop
+> any packets, it has a 'default deny' effect because [CNX
+> semantics]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile#how-policy-is-evaluated)
+> are that a packet will be dropped if there are policies applying to an
+> endpoint, but those policies take no action on that packet.
+>
+> This is also why the denied packet metrics below have
+> `policy="default/no-policy-match-inbound/0/deny"` and not
+> `policy="policy-demo/knp.default.default-deny/0/deny"`.  `no-policy-match`
+> represents the CNX semantics as above.
+{: .alert .alert-info}
+
 #### Test Isolation
 
 This will prevent all access to the nginx service.  We can see the effect by trying to access the service again.
 
 ```
-# Run a Pod and try to access the `nginx` service.
 $ kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
@@ -172,7 +183,7 @@ The request should time out after 5 seconds.  By enabling isolation on the names
 ### Denied packet metrics and Alerting
 Now would be a great time to take a look at the denied packet metrics.  Get the service listing from kubectl:
 ```
-kubectl get svc -n calico-monitoring
+$ kubectl get svc -n calico-monitoring
 NAME                       CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
 alertmanager-operated      None             <none>        9093/TCP,6783/TCP   6h
 calico-node-alertmanager   10.105.253.248   <nodes>       9093:30903/TCP      6h
@@ -180,7 +191,7 @@ calico-node-prometheus     10.105.26.250    <nodes>       9090:30909/TCP      6h
 prometheus-operated        None             <none>        9090/TCP            6h
 
 ```
-This tells us that the `calico-node-prometheus` service is running using a NodePort on port 30909. Point a web browser at [http://k8s-node1:30909/graph](http://k8s-node1:30909/graph).
+This tells us that the `calico-node-prometheus` service is running using a NodePort on port 30909. Point a web browser at `http://k8s-node1:30909/graph`.
 
 If you click on the drop down box `- insert metric at cursor -`, you should see a list of metrics which are available:
  - `calico_denied_packets`
@@ -194,15 +205,15 @@ The first 3 in the list above are useful for monitoring your deployment, while t
 
 Note that if you have not sent any denied packets recently, `calico_denied_packets` and `calico_denied_bytes` may not appear in the drop down.
 
-Select `calico_denied_packets` and click the `Execute` button.  The `console` tab should now show a key like this:
+Select the `Console` tab, then in the text box at the top of the page type `calico_denied_packets[10m]` and Enter (or click the `Execute` button).  The `Console` tab should now show `calico_denied_packets` metrics for the last 10 minutes:
 ```
-calico_denied_packets{endpoint="calico-metrics-port",instance="10.240.0.16:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-zs6gt",policy="profile/k8s_ns.policy-demo/0/deny",service="calico-node-metrics",srcIP="192.168.213.12"}
+calico_denied_packets{endpoint="calico-metrics-port",instance="10.240.0.16:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-zs6gt",policy="default/no-policy-match-inbound/0/deny",service="calico-node-metrics",srcIP="192.168.213.12"}
 ```
-and a value.
+and a value and timestamp
 
-This indicates that the pod `calico-node-zs6gt` has reported 3 denied packets from `192.168.213.12` and that the packets were denied by the `profile/k8s_ns.policy-demo/0/deny` - which is the namespace default deny rule you enabled above using the namespace annotation.
+This indicates that the pod `calico-node-zs6gt` has reported 3 denied packets from `192.168.213.12`.
 
-If you now click on the `graph` tab, you will see a graph of the denied packet count against time:
+If you now click on the `Graph` tab and change the expression to just `calico_denied_packets`, you will see a graph of the denied packet count against time:
 ![Graph Example]({{site.baseurl}}/images/Graph.png)
 
 Prometheus can also do some calculations based on metrics - for example to show the *rate* of denied packets.  Update the expression text box to contain the expression `rate(calico_denied_packets[10s])` and click execute again.  The graph and table will now show you the rate of denied packets averaged over the last 10s.
@@ -251,19 +262,18 @@ EOF
 We should now be able to access the service from the `access` Pod.
 
 ```
-# Run a Pod and try to access the `nginx` service.
 $ kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
 Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
 If you don't see a command prompt, try pressing enter.
 
 / # wget -q --timeout=5 nginx -O -
+... HTTP response ...
 ```
 
 However, we still cannot access the service from a Pod without the label `run: access`:
 
 ```
-# Run a Pod and try to access the `nginx` service.
 $ kubectl run --namespace=policy-demo cant-access --rm -ti --image busybox /bin/sh
 Waiting for pod policy-demo/cant-access-472357175-y0m47 to be running, status is Pending, pod ready: false
 
@@ -281,6 +291,6 @@ kubectl delete ns policy-demo
 ```
 
 This was just a simple example of the Kubernetes NetworkPolicy API and how {{site.prodname}} can secure your Kubernetes cluster.  For more
-information on network policy in Kubernetes, see the [Kubernetes user-guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
+information on network policy in Kubernetes, see the [Kubernetes user guide](http://kubernetes.io/docs/user-guide/networkpolicies/).
 
-For a slightly more detailed demonstration of Policy, check out the [stars demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/).
+For a slightly more detailed demonstration of Policy, check out the [Stars Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/).
