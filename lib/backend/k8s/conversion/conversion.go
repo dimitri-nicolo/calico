@@ -582,13 +582,11 @@ func (c Converter) SplitNetworkPolicyRevision(rev string) (crdNPRev string, k8sN
 	}
 
 	revs := strings.Split(rev, "/")
-	if len(revs) != 2 {
-		err = fmt.Errorf("ResourceVersion is not valid: %s", rev)
-		return
-	}
-
+	// Since k8s NPs are not configurable, we always expect crdNPs but ignore k8sNPs.
 	crdNPRev = revs[0]
-	k8sNPRev = revs[1]
+	if len(revs) == 2 {
+		k8sNPRev = revs[1]
+	}
 	return
 }
 
