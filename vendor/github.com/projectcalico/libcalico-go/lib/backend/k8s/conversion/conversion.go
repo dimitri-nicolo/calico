@@ -580,8 +580,9 @@ func (c Converter) SplitNetworkPolicyRevision(rev string) (crdNPRev string, k8sN
 	if rev == "" {
 		return
 	}
-	revs := strings.Split(rev, "/")
 
+	revs := strings.Split(rev, "/")
+	// Since k8s NPs are not configurable, we always expect crdNPs but ignore k8sNPs.
 	crdNPRev = revs[0]
 	if len(revs) == 2 {
 		k8sNPRev = revs[1]
