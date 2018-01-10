@@ -36,6 +36,11 @@ pipeline {
         }
         failure {
             echo "Boo, we failed."
+            script {
+              if (env.BRANCH_NAME == 'master') {
+                slackSend message: "Failure during libcalico-go-private master CI!\nhttp://localhost:8080/view/Essentials/job/Tigera/job/libcalico-go-private/job/master/", color: "warning", channel: "cnx-ci-failures"
+              }
+            }
         }
     }
 }

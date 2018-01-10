@@ -75,7 +75,7 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 	return &resourceStore{
 		client:            c,
 		codec:             opts.RESTOptions.StorageConfig.Codec,
-		versioner:         etcd.APIObjectVersioner{},
+		versioner:         APIObjectVersioner{&etcd.APIObjectVersioner{}},
 		aapiType:          reflect.TypeOf(aapi.NetworkPolicy{}),
 		aapiListType:      reflect.TypeOf(aapi.NetworkPolicyList{}),
 		libCalicoType:     reflect.TypeOf(libcalicoapi.NetworkPolicy{}),

@@ -178,6 +178,16 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
 	}
 
+	updatedPolicy := policyServer
+	updatedPolicy.Labels = map[string]string{"foo": "bar"}
+	policyServer, err = policyClient.Update(updatedPolicy)
+	if nil != err {
+		return fmt.Errorf("error creating the policy '%v' (%v)", policy, err)
+	}
+	if defaultTierPolicyName != policyServer.Name {
+		return fmt.Errorf("didn't get the same policy back from the server \n%+v\n%+v", policy, policyServer)
+	}
+
 	// For testing out Tiered Policy
 	tierClient := client.Projectcalico().Tiers()
 	tier := &v3.Tier{
