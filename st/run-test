@@ -41,10 +41,10 @@ for c in `ls`; do
     USE_CFG_FILE=false
     CFG_FILE_INSERT=
     if [ -f config.sh ]; then
-	source config.sh
-	echo ETCD_PORT=${ETCD_PORT}
-	echo USE_CFG_FILE=${USE_CFG_FILE}
-	echo CFG_FILE_INSERT=${CFG_FILE_INSERT}
+        source config.sh
+        echo ETCD_PORT=${ETCD_PORT}
+        echo USE_CFG_FILE=${USE_CFG_FILE}
+        echo CFG_FILE_INSERT=${CFG_FILE_INSERT}
     fi
 
     # Run etcd.
@@ -62,14 +62,14 @@ for c in `ls`; do
 
     # Mark the DB as ready.
     while ! curl ${ETCD_ENDPOINTS}/v2/keys/calico/v1/Ready -XPUT -d value="true"; do
-	# TODO (mattl): Need to fix this so that adjusting this time does not affect tests
-	# Currently containerized tests will not pass in Jenkins most of the time with 2 set
-	sleep 4
+        # TODO (mattl): Need to fix this so that adjusting this time does not affect tests
+        # Currently containerized tests will not pass in Jenkins most of the time with 2 set
+        sleep 4
     done
 
     # Create config file, if wanted.
     if ${USE_CFG_FILE}; then
-	tee calicoq.cfg <<EOF
+        tee calicoq.cfg <<EOF
 apiVersion: projectcalico.org/v3
 ${CFG_FILE_INSERT}kind: CalicoAPIConfig
 metadata:
@@ -77,28 +77,28 @@ spec:
   datastoreType: "${DATASTORE_TYPE}"
   etcdEndpoints: "${ETCD_ENDPOINTS}"
 EOF
-	unset ETCD_ENDPOINTS DATASTORE_TYPE
+        unset ETCD_ENDPOINTS DATASTORE_TYPE
     fi
 
     # Check all the expected outputs.
     for expected in `ls *.expected`; do
-	actual=$(basename ${expected} .expected).actual
-	stderr=$(basename ${expected} .expected).stderr
-	head -2 ${expected} > ${actual}
-	eval '${CALICOQ} `head -1 ${expected}`' >> ${actual} 2> ${stderr}
-	stderr_lines=`wc -l ${stderr} | awk '{print $1;}'`
-	if test "$stderr_lines" -ne 0; then
-	    echo >> ${actual}
-	    echo "Plus $stderr_lines lines on stderr" >> ${actual}
-	fi
-	if diff -u ${expected} ${actual}; then
-	    echo TEST: ${c}/${expected}: PASSED
-	    let 'passed++'
-	else
-	    echo TEST: ${c}/${expected}: FAILED
-	    let 'failed++'
-	fi
-	rm ${actual} ${stderr}
+        actual=$(basename ${expected} .expected).actual
+        stderr=$(basename ${expected} .expected).stderr
+        head -2 ${expected} > ${actual}
+        eval '${CALICOQ} `head -1 ${expected}`' >> ${actual} 2> ${stderr}
+        stderr_lines=`wc -l ${stderr} | awk '{print $1;}'`
+        if test "$stderr_lines" -ne 0; then
+            echo >> ${actual}
+            echo "Plus $stderr_lines lines on stderr" >> ${actual}
+        fi
+        if diff -u ${expected} ${actual}; then
+            echo TEST: ${c}/${expected}: PASSED
+            let 'passed++'
+        else
+            echo TEST: ${c}/${expected}: FAILED
+            let 'failed++'
+        fi
+        rm ${actual} ${stderr}
     done
 
     docker rm -f calicoq-etcd >/dev/null

@@ -75,7 +75,7 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 		var policy *model.Policy
 		switch kv.Value.(type) {
 		case *apiv3.NetworkPolicy:
-			policy = convertNetworkPolicyV2ToV1Value(kv.Value.(*apiv3.NetworkPolicy).Spec, ns)
+			policy = convertNetworkPolicyV2ToV1Value(kv.Value.(*apiv3.NetworkPolicy).Spec, kv.Value.(*apiv3.NetworkPolicy).Namespace)
 		case *apiv3.GlobalNetworkPolicy:
 			policy = convertGlobalPolicyV2ToV1Spec(kv.Value.(*apiv3.GlobalNetworkPolicy).Spec)
 		}
