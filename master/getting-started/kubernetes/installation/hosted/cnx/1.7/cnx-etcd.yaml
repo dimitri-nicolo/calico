@@ -29,8 +29,7 @@ data:
   # Value is ignored if not using OIDC login.
   tigera.cnx-manager.oidc-client-id: "<fill-in-your-oauth-client-id-here>"
   # The location of the Kubernetes API.  This must be reachable from where the web interface
-  # will be accessed from.  `kubectl proxy --port=8080` can be used; in this case set the
-  # value of this field to "localhost:8080".
+  # will be accessed from.
   tigera.cnx-manager.kubernetes-api: "127.0.0.1:6443"
 
 ---
