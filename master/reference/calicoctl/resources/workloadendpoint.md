@@ -14,14 +14,13 @@ in a specific namespace only applies to the WorkloadEndpoint in that namespace.
 Two resources are in the same namespace if the namespace value is set the same
 on both.
 
-For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) 
-that specify a resource type on the CLI, the following aliases are supported (all case 
+For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/)
+that specify a resource type on the CLI, the following aliases are supported (all case
 insensitive): `workloadendpoint`, `workloadendpoints`, `wep`, `weps`.
 
 > **Note**: While `calicoctl` allows the user to fully manage Workload Endpoint resources,
 > the lifecycle of these resources is generally handled by an orchestrator-specific
-> plugin such as the {{site.prodname}} CNI plugin, the {{site.prodname}} Docker network plugin,
-> or the {{site.prodname}} OpenStack Neutron Driver. In general, we recommend that you only
+> plugin such as the {{site.prodname}} CNI plugin or the {{site.prodname}} Docker network plugin. In general, we recommend that you only
 > use `calicoctl` to view this resource type.
 {: .alert .alert-info}
 
@@ -79,7 +78,7 @@ spec:
 | node           | The node where this endpoint resides.                         |                 | string                                 |
 | containerID    | The CNI CONTAINER_ID of the workload endpoint.                |                 | string                                 |
 | pod            | Kubernetes pod name for this woekload endpoint.               |                 | string                                 |
-| endpoint       | Container network interface name.                             |                 | string                                 | 
+| endpoint       | Container network interface name.                             |                 | string                                 |
 | ipNetworks     | The CIDRs assigned to the interface.                          |                 | List of strings                        |
 | ipNATs         | List of 1:1 NAT mappings to apply to the endpoint.            |                 | List of [IPNATs](#ipnat)               |
 | ipv4Gateway    | The gateway IPv4 address for traffic from the workload.       |                 | string                                 |

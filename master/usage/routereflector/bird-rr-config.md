@@ -2,17 +2,17 @@
 title: Configuring BIRD as a BGP Route Reflector
 ---
 
-For many {{site.prodname}} deployments, the use of a Route Reflector is not required. 
+For many {{site.prodname}} deployments, the use of a Route Reflector is not required.
 However, for large scale deployments a full mesh of BGP peerings between each
 of your {{site.prodname}} nodes may become untenable.  In this case, route reflectors
 allow you to remove the full mesh and scale up the size of the cluster.
 
 These instructions will take you through installing BIRD as a BGP route
 reflector, and updating your other BIRD instances to speak to your new
-route reflector.  The instructions that are are valid for both Ubuntu 14.04 and 
-RHEL 7.  
+route reflector.  The instructions that are are valid for both Ubuntu 14.04 and
+RHEL 7.
 
-For a container-based deployment, using the `{{site.nodecontainer}}` container, check 
+For a container-based deployment, using the `{{site.nodecontainer}}` container, check
 out the [{{site.prodname}} BIRD Route Reflector container](calico-routereflector).
 
 ## Prerequisites
@@ -142,24 +142,11 @@ Optionally, if you configured IPv6 in step 3, also restart BIRD6:
     systemctl restart bird6
     systemctl enable bird6
 
-### Step 5: Reconfigure compute nodes 
-
-#### Openstack deployments
-
-If you used the `calico-gen-bird-conf.sh` script to configure your
-compute hosts, and you used the route reflector IP when you did, you do
-not need to do anything further.
-
-Otherwise, on each of your compute nodes, edit `/etc/bird/bird.conf`
-(and, if you're using IPv6, `/etc/bird/bird6.conf`) to remove all their
-peer relationships (the blocks beginning with `protocol bgp`) except for
-one. Edit that one's `neighbor` field IP address to be the IP address of
-the route reflector (either IPv4 or IPv6). Then, restart their BIRD
-instances as detailed in step 4.
+### Step 5: Reconfigure compute nodes
 
 #### Container-based deployments
 
-For container-based deployments using the `{{site.nodecontainer}}` container, use 
+For container-based deployments using the `{{site.nodecontainer}}` container, use
 `calicoctl` to disable the full mesh between each node and configure the
 route reflector as a global peer.
 

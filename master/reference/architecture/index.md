@@ -2,9 +2,9 @@
 title: Calico Architecture
 ---
 
-This document discusses the various pieces of {{site.prodname}}'s architecture, 
+This document discusses the various pieces of {{site.prodname}}'s architecture,
 with a focus on what specific role each component plays in
-the {{site.prodname}} network. 
+the {{site.prodname}} network.
 
 <!-- TODO(smc) data-model: Link to new data model docs. -->
 
@@ -74,15 +74,10 @@ and operators of the network.
 
 Unlike Felix there is no single 'orchestrator plugin': instead, there
 are separate plugins for each major cloud orchestration platform (e.g.
-OpenStack, Kubernetes). The purpose of these plugins is to bind {{site.prodname}}
+Kubernetes). The purpose of these plugins is to bind {{site.prodname}}
 more tightly into the orchestrator, allowing users to manage the {{site.prodname}}
 network just as they'd manage network tools that were built into the
 orchestrator.
-
-A good example of an orchestrator plugin is the {{site.prodname}} Neutron ML2
-mechanism driver. This component integrates with Neutron's ML2 plugin,
-and allows users to configure the {{site.prodname}} network by making Neutron API
-calls. This provides seamless integration with Neutron.
 
 The orchestrator plugin is responsible for the following tasks:
 
@@ -90,12 +85,12 @@ The orchestrator plugin is responsible for the following tasks:
 
 The orchestrator will inevitably have its own set of APIs for managing
 networks. The orchestrator plugin's primary job is to translate those
-APIs into {{site.prodname}}'s data-model and then store it in 
+APIs into {{site.prodname}}'s data-model and then store it in
 {{site.prodname}}'s datastore.
 
 Some of this translation will be very simple, other bits may be more
 complex in order to render a single complex operation (e.g. live
-migration) into the series of simpler operations the rest of the 
+migration) into the series of simpler operations the rest of the
 {{site.prodname}} network expects.
 
 #### Feedback
@@ -115,10 +110,7 @@ a consistent data store, which ensures {{site.prodname}} can always build an
 accurate network.
 
 Depending on the orchestrator plugin, etcd may either be the master data
-store or a lightweight mirror of a separate data store. For example, in
-an OpenStack deployment, the OpenStack database is considered the
-"source of truth" and etcd is used to mirror information about the
-network to the other {{site.prodname}} components.
+store or a lightweight mirror of a separate data store.
 
 The etcd component is distributed across the entire deployment. It is
 divided into two groups of machines: the core cluster, and the proxies.
@@ -126,8 +118,7 @@ divided into two groups of machines: the core cluster, and the proxies.
 For small deployments, the core cluster can be an etcd cluster of one
 node (which would typically be co-located with the
 [orchestrator plugin](#orchestrator-plugin) component). This deployment model is simple but provides no redundancy for etcd -- in the case of etcd failure the
-[orchstrator plugin](#orchestrator-plugin) would have to rebuild the database which, as noted for OpenStack, will simply require that the plugin resynchronizes
-state to etcd from the OpenStack database.
+[orchstrator plugin](#orchestrator-plugin) would have to rebuild the database.
 
 In larger deployments, the core cluster can be scaled up, as per the
 [etcd admin guide](https://coreos.com/etcd/docs/latest/admin_guide.html#optimal-cluster-size).

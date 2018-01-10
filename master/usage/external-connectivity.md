@@ -80,6 +80,6 @@ to discuss your environment.
 ### Orchestrator specific
 
 {{site.prodname}} supports a number of orchestrator specific options for inbound
-connectivity, such as Kubernetes service IPs, or OpenStack floating IPs.
+connectivity, such as Kubernetes service IPs.
 
 Consult the [documentation for your orchestrator]({{site.baseurl}}/{{page.version}}/getting-started) for more information.
