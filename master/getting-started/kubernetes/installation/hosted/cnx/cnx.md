@@ -4,15 +4,13 @@ title: Customizing the CNX manifests (advanced)
 
 ## About the manifests
 
-The {{site.prodname}} install manifests are based on [kubeadm hosted install](../kubeadm).
-
-The [cnx.yaml](1.7/calico-cnx.yaml) manifest does the following:
+The **[cnx.yaml](1.7/calico-cnx.yaml)** manifest does the following:
   - Installs the CNX API server, and configures the APIService to tell
     the Kubernetes API server to delegate to it.
   - Installs the CNX Manager web server, and configures it with the location
     of the Kubernetes API, login methods and SSL certificates.
 
-The manifest [operator.yaml](1.7/operator.yaml) does the following:
+The **[operator.yaml](1.7/operator.yaml)** manifest does the following:
   - Create a namespace called calico-monitoring
   - Create RBAC artifacts
       - ServiceAccounts: prometheus-operator and prometheus
@@ -21,7 +19,7 @@ The manifest [operator.yaml](1.7/operator.yaml) does the following:
     - Creates a kubernetes deployment, which in turn creates 3 _Custom Resource
       Definitions_(CRD): `prometheus`, `alertmanager` and "servicemonitor".
 
-The `monitor-calico.yaml` manifest does the following:
+The **[monitor-calico.yaml](1.7/monitor-calico.yaml)** manifest does the following:
   - Creates a new service: calico-node-metrics exposing prometheus reporting
     port.
   - A secret for storing alertmanager config - Should be customized for your
@@ -161,7 +159,7 @@ with the following changes
 1. Uncomment the line `apiserver.crt:` in the `cnx-apiserver-certs` `Secret`
    and append the base64 encoded certificate file contents.
 
-### Configure the {{site.prodname}} Manager
+## Configure the {{site.prodname}} Manager
 
 The [cnx.yaml](1.7/cnx-etcd.yaml) manifest must be updated with
 the following changes.  Some of the parameters depend on the chosen
@@ -181,7 +179,7 @@ are described [here]({{site.baseurl}}/{{page.version}}/reference/cnx/authenticat
    that for Google login, the URL of the application must be well known,
    and configured in the Google console (with /login/oidc/callback appended).
 
-### Configure Alertmanager Notifications
+## Configure Alertmanager Notifications
 
 Configuring Alertmanager to send alerts to _PagerDuty_ can be done as follows.
 The following Alertmanager configuration file, notifies _PagerDuty_ of all
@@ -208,7 +206,7 @@ receivers:
 Information on how to create a _Integration Key_ is available
 [here](https://support.pagerduty.com/hc/en-us/articles/202830340-Create-a-Generic-Events-API-Integration).
 
-### Advanced Alertmanager Notifications
+## Advanced Alertmanager Notifications
 
 Included in the manifests is a sample alertmanager webhook. _Apply_ this to
 deploy webserver that will pretty print to its stdout a JSON message (if it
@@ -234,32 +232,4 @@ receivers:
 ```
 
 To view the JSON output printed, examine the logs of the webhook pod.
-
-### Enabling denied packet monitoring
-
-1. Add the environment variable `FELIX_PROMETHEUSREPORTERENABLED` and set it 
-   to `true`.
-
-1. Add the environment variable `FELIX_PROMETHEUSREPORTERPORT` and set it to
-   the desired port.
-
-1. Configure calico-monitoring namespace and deploy Prometheus Operator by
-  applying the [operator.yaml](1.7/operator.yaml) manifest.
-
-   ```
-   kubectl apply -f operator.yaml
-   ```
-
-1. Wait for custom resource definitions to be created. Check by running:
-
-   ```
-   kubectl get customresourcedefinitions
-   ```
-
-1. Apply the [monitor-calico.yaml](1.7/monitor-calico.yaml) manifest which will
-  install Prometheus and alertmanager.
-
-   ```
-   kubectl apply -f monitor-calico.yaml
-   ```
 

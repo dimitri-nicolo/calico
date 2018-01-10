@@ -34,7 +34,6 @@ This document describes three installation options for {{site.prodname}} using K
 
 1. {{site.prodname}} policy with {{site.prodname}} networking (beta)
 2. {{site.prodname}} policy-only with user-supplied networking
-3. {{site.prodname}} policy-only with flannel networking
 
 Ensure you have a cluster which meets the above requirements.  There may be additional requirements based on the installation option you choose.
 
@@ -57,9 +56,8 @@ kubectl apply -f rbac-kdd.yaml
    > [view the YAML in your browser](../rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
->[Click here to view the above rbac-kdd.yaml for Kubernetes 1.7 clusters.](../rbac-kdd.yaml)
 
-### 1. {{site.prodname}} policy with {{site.prodname}} networking (Beta)
+### Option 1. {{site.prodname}} policy with {{site.prodname}} networking (Beta)
 
 With Kubernetes as the {{site.prodname}} datastore, {{site.prodname}} has beta support for {{site.prodname}} networking.  This provides BGP-based
 networking with a full node-to-node mesh and/or explicit configuration of peers.
@@ -67,26 +65,25 @@ networking with a full node-to-node mesh and/or explicit configuration of peers.
 To install {{site.prodname}} with {{site.prodname}} networking, run one of the commands below based on your Kubernetes version.
 This will install {{site.prodname}} and will initially create a full node-to-node mesh.
 
-> **Note**: Calico v2.5.0 or later with Kubernetes backend requires Kubernetes
-> v1.7.0 or higher.
-{: .alert .alert-info}
+1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml){:target="_blank"}
 
-Update the manifest with the path to your private docker registry.  Substitute
-`mydockerregistry:5000` with the location of your docker registry.
+1. Use the following `sed` command to update the manifest to point to the private
+   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
+   with the name of your private Docker registry.
 
-```
-sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/g' calico.yaml
-```
+   **Command**
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
+   ```
+   
+   **Example**
 
-Then apply the manifest.
-
-```
-kubectl apply -f calico.yaml
-```
-
->[Click here to view the calico.yaml for Kubernetes 1.7 clusters.](calico-networking/1.7/calico.yaml)
-
-1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml)
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
+   ```
+   > **Tip**: If you're hosting your own private repository, you may need to include
+   > a port number. For example, `bob:5000`.
+   {: .alert .alert-success}
 
 2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
    more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha).
@@ -124,27 +121,29 @@ To install {{site.prodname}} in policy-only mode:
 
 1. Download [the policy-only manifest](policy-only/1.7/calico.yaml)
 
-Update the manifest with the path to your private docker registry.  Substitute
-`mydockerregistry:5000` with the location of your docker registry.
+1. Use the following `sed` command to update the manifest to point to the private
+   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
+   with the name of your private Docker registry.
 
-```
-sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
-```
+   **Command**
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
+   ```
+   
+   **Example**
 
-Then apply the manifest.
-```
-kubectl apply -f calico.yaml
-```
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
+   ```
+   > **Tip**: If you're hosting your own private repository, you may need to include
+   > a port number. For example, `bob:5000`.
+   {: .alert .alert-success}
 
->[Click here to view the policy.yaml for Kubernetes 1.7 clusters.](policy-only/1.7/calico.yaml)
+1. Then apply the manifest.
 
-### Option 3: {{site.prodname}} policy-only with flannel networking
-
-The [Canal](https://github.com/projectcalico/canal) project provides a way to easily deploy
-{{site.prodname}} with flannel networking.
-
-Refer to the following [Kubernetes self-hosted install guide](https://github.com/projectcalico/canal/blob/master/k8s-install/README.md)
-in the Canal project for details on installing {{site.prodname}} with flannel.
+   ```
+   kubectl apply -f calico.yaml
+   ```
 
 ## Installing the CNX Manager
 

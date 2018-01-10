@@ -36,22 +36,23 @@ we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometh
 
 **Prerequisite**: `calicoctl` [installed](../../../usage/calicoctl/install) and [configured](../../../usage/calicoctl/configure).
 
-1. Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`).
+Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
-   - Save the current global `FelixConfiguration` resource to a file named `default-felixconfig.yaml`.
+1. Save the current global `FelixConfiguration` resource to a file named `default-felixconfig.yaml`.
+   
    ```
    $ calicoctl get felixconfig default -o yaml --export | tee default-felixconfig.yaml
    kind: FelixConfiguration
    metadata:
-   creationTimestamp: null
-   name: default
+     creationTimestamp: null
+     name: default
    spec:
-   ipipEnabled: true
-   logSeverityScreen: Info
-   reportingInterval: 0s
+     ipipEnabled: true
+     logSeverityScreen: Info
+     reportingInterval: 0s
    ```
 
-   - Update `default-felixconfig.yaml` and append the lines `prometheusReporterEnabled: true` and `prometheusReporterPort: 9081`.
+1. Update `default-felixconfig.yaml` and append the lines `prometheusReporterEnabled: true` and `prometheusReporterPort: 9081`.
    
    ```
    $ cat default-felixconfig.yaml
@@ -68,7 +69,8 @@ we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometh
      prometheusReporterPort: 9081
    ```
 
-   - Finally run the `calicoctl replace` command to update the `default` FelixConfiguration resource with the new fields for enabling metrics.
+1. Use the `calicoctl replace` command to update the `default` FelixConfiguration resource with the new fields for enabling metrics.
+   
    ```
    calicoctl replace -f default-felixconfig.yaml
    Successfully replaced 1 'FelixConfiguration' resource(s)

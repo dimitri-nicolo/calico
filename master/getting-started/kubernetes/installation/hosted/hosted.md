@@ -20,7 +20,7 @@ If deploying {{site.prodname}} on an RBAC-enabled cluster, you should first appl
 kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/rbac.yaml
 ```
 
-## Install {{site.prodname}}
+## Installing {{site.prodname}}
 
 To install {{site.prodname}}:
 
@@ -34,11 +34,21 @@ To install {{site.prodname}}:
 
 1. Use the following `sed` command to update the manifest to point to the private
    Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
-   with the location of your private Docker registry.
+   with the name of your private Docker registry.
 
+   **Command**
    ```shell
    sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
    ```
+   
+   **Example**
+
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
+   ```
+   > **Tip**: If you're hosting your own private repository, you may need to include
+   > a port number. For example, `bob:5000`.
+   {: .alert .alert-success}
    
    > **Note**: Refer to [Configuration options](index#configuration-options) for additional
    > settings that can be modified in the manifest.
