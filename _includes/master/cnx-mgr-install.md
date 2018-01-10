@@ -22,6 +22,11 @@
    You might want to reconfigure the service that gets traffic to the {{site.prodname}} Manager
    web server as well.
 
+   > If {{site.nodecontainer}} was not deployed with a Kubernetes manifest and
+   > no `calico-config` ConfigMap was created you must also update the file
+   > anywhere `calico-config` is referenced with the appropriate information.
+   {: .alert .alert-info}
+
 1. Generate TLS credentials - i.e. a web server certificate and key - for the
    {{site.prodname}} Manager.
 
