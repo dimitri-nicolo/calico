@@ -38,66 +38,54 @@ the `source` or `destination` of the policy's rules.
 
 ## Examples
 
-In this example there are two groups of three endpoints each.  Policy "p1"
-applies to all of the endpoints in the first group, and its rules reference
-both groups as possible (allowed or denied) sources or destinations:
+In this example there are three endpoints in one namespace "namespace1".  Policy "policy1"
+applies to all of the endpoints in the namespace, and its rules reference
+them as possible (allowed or denied) sources or destinations:
 ```
-$ calicoq policy p1
+$ calicoq policy namespace1/policy1
 
-Policy "p1" applies to these endpoints:
-  Workload endpoint host1/k8s/g1w1/eth0; selector "calico/k8s_ns == 'group1'"
-  Workload endpoint host1/k8s/g1w2/eth0; selector "calico/k8s_ns == 'group1'"
-  Workload endpoint host1/k8s/g1w3/eth0; selector "calico/k8s_ns == 'group1'"
+Policy "namespace1/policy1" applies to these endpoints:
+  Workload endpoint host1/k8s/namespace1.ns1wep1/eth0; selector "(projectcalico.org/namespace == 'namespace1') && projectcalico.org/namespace == 'namespace1'"
+  Workload endpoint host1/k8s/namespace1.ns1wep2/eth0; selector "(projectcalico.org/namespace == 'namespace1') && projectcalico.org/namespace == 'namespace1'"
+  Workload endpoint host1/k8s/namespace1.ns1wep3/eth0; selector "(projectcalico.org/namespace == 'namespace1') && projectcalico.org/namespace == 'namespace1'"
 
-Endpoints matching policy "p1" rules:
-  Workload endpoint host1/k8s/g1w1/eth0
-    outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
-  Workload endpoint host1/k8s/g1w2/eth0
-    outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
-  Workload endpoint host1/k8s/g1w3/eth0
-    outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
-  Workload endpoint host1/k8s/g2w1/eth0
-    inbound rule 1 source match; selector "calico/k8s_ns == 'group2'"
-  Workload endpoint host1/k8s/g2w2/eth0
-    inbound rule 1 source match; selector "calico/k8s_ns == 'group2'"
-  Workload endpoint host1/k8s/g2w3/eth0
-    inbound rule 1 source match; selector "calico/k8s_ns == 'group2'"
+Endpoints matching Policy "namespace1/policy1" rules:
+  Workload endpoint host1/k8s/namespace1.ns1wep1/eth0
+    outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'namespace1') && (projectcalico.org/namespace == 'namespace1')"
+  Workload endpoint host1/k8s/namespace1.ns1wep2/eth0
+    outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'namespace1') && (projectcalico.org/namespace == 'namespace1')"
+  Workload endpoint host1/k8s/namespace1.ns1wep3/eth0
+    outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'namespace1') && (projectcalico.org/namespace == 'namespace1')"
 ```
 
 You can simplify that output by specifying `--hide-selectors`:
 ```
-$ calicoq policy p1 --hide-selectors
+$ calicoq policy namespace1/policy1 --hide-selectors
 
-Policy "p1" applies to these endpoints:
-  Workload endpoint host1/k8s/g1w1/eth0
-  Workload endpoint host1/k8s/g1w2/eth0
-  Workload endpoint host1/k8s/g1w3/eth0
+Policy "namespace1/policy1" applies to these endpoints:
+  Workload endpoint host1/k8s/namespace1.ns1wep1/eth0
+  Workload endpoint host1/k8s/namespace1.ns1wep2/eth0
+  Workload endpoint host1/k8s/namespace1.ns1wep3/eth0
 
-Endpoints matching policy "p1" rules:
-  Workload endpoint host1/k8s/g1w1/eth0
+Endpoints matching Policy "namespace1/policy1" rules:
+  Workload endpoint host1/k8s/namespace1.ns1wep1/eth0
     outbound rule 1 destination match
-  Workload endpoint host1/k8s/g1w2/eth0
+  Workload endpoint host1/k8s/namespace1.ns1wep2/eth0
     outbound rule 1 destination match
-  Workload endpoint host1/k8s/g1w3/eth0
+  Workload endpoint host1/k8s/namespace1.ns1wep3/eth0
     outbound rule 1 destination match
-  Workload endpoint host1/k8s/g2w1/eth0
-    inbound rule 1 source match
-  Workload endpoint host1/k8s/g2w2/eth0
-    inbound rule 1 source match
-  Workload endpoint host1/k8s/g2w3/eth0
-    inbound rule 1 source match
 ```
 
 If you only wanted to know the endpoints whose ingress or egress traffic is
 policed according to that policy, you could simplify the output further by
 adding `--hide-rule-matches`:
 ```
-$ calicoq policy p1 --hide-rule-matches --hide-selectors
+$ calicoq policy namespace1/policy1 --hide-rule-matches --hide-selectors
 
-Policy "p1" applies to these endpoints:
-  Workload endpoint host1/k8s/g1w1/eth0
-  Workload endpoint host1/k8s/g1w2/eth0
-  Workload endpoint host1/k8s/g1w3/eth0
+Policy "namespace1/policy1" applies to these endpoints:
+  Workload endpoint host1/k8s/namespace1.ns1wep1/eth0
+  Workload endpoint host1/k8s/namespace1.ns1wep2/eth0
+  Workload endpoint host1/k8s/namespace1.ns1wep3/eth0
 ```
 
 ## See also

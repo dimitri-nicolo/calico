@@ -44,7 +44,7 @@ Workload endpoint k8s/policy-demo.nginx-2371676037-j2vmh/eth0
   Profiles:
     Profile "ns.projectcalico.org/policy-demo"
   Rule matches:
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "calico/k8s_ns == 'policy-demo'"
+    Policy "policy-demo/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match; selector "projectcalico.org/namespace == 'policy-demo'"
 ```
 
 ## See also
