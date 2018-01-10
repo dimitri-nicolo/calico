@@ -50,8 +50,9 @@ If you do not already have a private registry, consider one of the following opt
    docker login [registry-domain]
    ```
 
-1. Push the `cnx-manager`, `cnx-node`, and `cnx-apiserver` images to the
-   private registry.
+1. Use the following commands to push the `cnx-manager`, `cnx-node`, and `cnx-apiserver` 
+   images to the private registry, replacing `<YOUR_PRIVATE_DOCKER_REGISTRY>` with the
+   location of your registry first.
 
    ```
    docker push {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}

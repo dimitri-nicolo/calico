@@ -4,6 +4,12 @@ title: Standard Hosted Install
 
 The following steps install {{site.prodname}} as a Kubernetes add-on using your own etcd cluster.
 
+## Requirements
+
+- Kubernetes 1.8 or later
+
+{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
+
 {% include {{page.version}}/load-docker.md %}
 
 ## RBAC
@@ -18,16 +24,25 @@ kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/instal
 
 To install {{site.prodname}}:
 
-1. Download [calico.yaml](calico.yaml)
+1. [Open calico.yaml in a new tab](calico.yaml){:target="_blank"}.
 
-1. Configure `etcd_endpoints` in the provided ConfigMap to match your etcd cluster.
+1. Copy the contents, paste them into a new file, and save the file as calico.yaml.
 
-1. Update the manifest with the path to your private docker registry.  Substitute
-   `mydockerregistry:5000` with the location of your docker registry.
+1. Open the calico.yaml file in your favorite editor, navigate to the `ConfigMap`
+   section, and set `etcd_endpoints` to the correct value. Refer to [etcd configuration](index#etcd-configuration)
+   for more details.
 
+1. Use the following `sed` command to update the manifest to point to the private
+   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
+   with the location of your private Docker registry.
+
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
    ```
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
-   ```
+   
+   > **Note**: Refer to [Configuration options](index#configuration-options) for additional
+   > settings that can be modified in the manifest.
+   {: .alert .alert-info}
 
 1. Then simply apply the manifest:
 
@@ -35,16 +50,13 @@ To install {{site.prodname}}:
    kubectl apply -f calico.yaml
    ```
 
-> **Note**: Make sure you configure the provided ConfigMap with the
-> location of your etcd cluster before running the above command.
-{: .alert .alert-info}
+## Installing the CNX Manager
 
+1. [Open cnx-etcd.yaml in a new tab](1.7/cnx-etcd.yaml){:target="_blank"}.
 
-## Configuration Options
+1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
+   This is what subsequent instructions will refer to.
+   
+{% include {{page.version}}/cnx-mgr-install.md %}
 
-The above manifest supports a number of configuration options documented [here](index#configuration-options)
-
-## Adding Tigera CNX
-
-Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](cnx/cnx).
+{% include {{page.version}}/gs-next-steps.md %}

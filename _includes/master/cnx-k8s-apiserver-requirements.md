@@ -1,7 +1,10 @@
-Ensure that the kube-apiserver has been started with the appropriate flags.
-- Refer to the Kubernetes documentation to
-  [Configure the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
-  with the proper flags.
-- Refer to the [authentication guide]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication) to choose a supported authentication
-  mechanism and configure the Kubernetes API server accordingly.
-- The Kubernetes API server must be configured to provide HTTPS access.
+- The aggregation layer of kube-apiserver must be enabled. Refer to the 
+  [Kubernetes documentation](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
+  for details. 
+  
+- [Select a supported authentication method](../reference/cnx/authentication) 
+  and [configure kube-apiserver](https://kubernetes.io/docs/admin/authentication/) accordingly.
+  
+- Ensure that kube-apiserver allows TLS communications, which it usually
+  does by default. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/admin/accessing-the-api/)
+  for more information.

@@ -10,8 +10,6 @@ Note that this mode currently comes with a number of limitations, namely:
 - It does not yet support Calico IPAM.  It is recommended to use `host-local` IPAM in conjunction with Kubernetes pod CIDR assignments.
 - {{site.prodname}} networking support is in beta. Control of the node-to-node mesh, default AS Number and all BGP peering configuration should be configured using `calicoctl`.
 
-{% include {{page.version}}/load-docker.md %}
-
 ## Requirements
 
 The provided manifest configures {{site.prodname}} to use host-local IPAM in conjunction with the Kubernetes assigned
@@ -28,18 +26,7 @@ You must have a Kubernetes cluster, which meets the following requirements:
 
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
-> **Note**: If you are upgrading from Calico v2.1, the cluster-cidr
-> selected for your controller manager should remain
-> unchanged from the v2.1 install (the v2.1 manifests default to
-> `10.244.0.0/16`).
-{: .alert .alert-info}
-
-> **Important**: If you are using the Kubernetes datastore and upgrading
-> from Calico v2.4.x or earlier to Calico v2.5.x or later, you must
-> [migrate your Calico configuration data](https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md)
-> before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.
-{: .alert .alert-danger}
-
+{% include {{page.version}}/load-docker.md %}
 
 ## Installation
 
@@ -88,7 +75,7 @@ Update the manifest with the path to your private docker registry.  Substitute
 `mydockerregistry:5000` with the location of your docker registry.
 
 ```
-sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
+sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/g' calico.yaml
 ```
 
 Then apply the manifest.
@@ -159,16 +146,16 @@ The [Canal](https://github.com/projectcalico/canal) project provides a way to ea
 Refer to the following [Kubernetes self-hosted install guide](https://github.com/projectcalico/canal/blob/master/k8s-install/README.md)
 in the Canal project for details on installing {{site.prodname}} with flannel.
 
-## Adding Tigera CNX
+## Installing the CNX Manager
 
-Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](../cnx/cnx).
+1. [Open cnx-etcd.yaml in a new tab](1.7/cnx-kdd.yaml){:target="_blank"}.
 
-## Try it out
+1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
+   This is what subsequent instructions will refer to.
+   
+{% include {{page.version}}/cnx-mgr-install.md %}
 
-Once installed, you can try out NetworkPolicy by following the [simple policy guide](../../../tutorials/simple-policy).
-
-Below are a few examples for how to get started.
+{% include {{page.version}}/gs-next-steps.md %}
 
 ## Configuration details
 

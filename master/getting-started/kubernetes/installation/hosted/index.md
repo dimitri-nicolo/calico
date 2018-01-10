@@ -2,12 +2,7 @@
 title: Calico Kubernetes Hosted Install
 ---
 
-{% include {{page.version}}/load-docker.md %}
-
-## Installing
-
 CNX is installed on a cluster by configuring and applying Kubernetes manifests.
-
 We maintain several manifests.  Which ones you use depends on the specific
 requirements of your CNX installation:
 

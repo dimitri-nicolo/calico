@@ -1,109 +1,59 @@
 ---
-title: Installing CNX manager and denied packet monitoring
+title: Customizing the CNX manifests (advanced)
 ---
 
-## Requirements
+## About the manifests
 
-{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
+The {{site.prodname}} install manifests are based on [kubeadm hosted install](../kubeadm).
 
-Ensure that Calico has been installed using the enhanced CNX node agent.
+The [cnx.yaml](1.7/calico-cnx.yaml) manifest does the following:
+  - Installs the CNX API server, and configures the APIService to tell
+    the Kubernetes API server to delegate to it.
+  - Installs the CNX Manager web server, and configures it with the location
+    of the Kubernetes API, login methods and SSL certificates.
 
-```
-kubectl get pods -n kube-system | grep cnx-node
-```
+The manifest [operator.yaml](1.7/operator.yaml) does the following:
+  - Create a namespace called calico-monitoring
+  - Create RBAC artifacts
+      - ServiceAccounts: prometheus-operator and prometheus
+      - Corresponding ClusterRole and ClusterRoleBindings.
+  - Deploys prometheus-operator (in namespace calico-monitoring)
+    - Creates a kubernetes deployment, which in turn creates 3 _Custom Resource
+      Definitions_(CRD): `prometheus`, `alertmanager` and "servicemonitor".
 
-## Installation
+The `monitor-calico.yaml` manifest does the following:
+  - Creates a new service: calico-node-metrics exposing prometheus reporting
+    port.
+  - A secret for storing alertmanager config - Should be customized for your
+    environment.
+    - Refer to [standard alerting configuration documentation](https://prometheus.io/docs/alerting/configuration/)
+      and alertmanager.yaml in the current directory for what is included as a
+      default.
+  - Create a alertmanager instance and corresponding dash service
+  - Create a ServiceMonitor that selects on the calico-node-metrics service's
+    ports.
+  - ConfigMaps that define some [alerting rules](https://prometheus.io/docs/alerting/rules/)
+    for prometheus.
+    - We predefine denied packet alerts and instance down alerts. This can be
+      customized by modifying appropriate configmaps.
+  - Create a Prometheus instance and corresponding dash service. Prometheus
+    instance selects on:
+    - Alertmanager dash (for configuring alertmanagers)
+    - Servicemonitor selector (for populating calico-nodes to actually monitor).
+  - Create network policies as required for accessing all the services defined
+    above.
 
-1. Download the {{site.prodname}} manifest:
+The services (type _NodePort_) for prometheus and alertmanager are created in
+the `calico-monitoring` namespace and are named `calico-prometheus-dash`
+(port 30900) and `calico-alertmanager-dash` (port 30903).
 
-   - [Kubernetes datastore](1.7/cnx-kdd.yaml)
-
-   - [etcd datastore](1.7/cnx-etcd.yaml)
-
-   Rename the file `cnx.yaml` - this is what subsequent instructions will refer to.
-
-1. Update the manifest with the path to your private Docker registry.  Substitute
-   `mydockerregistry:5000` with the location of your Docker registry.
-
-   ```
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' cnx.yaml
-   ```
-
-1. Open the file in a text editor, and update the ConfigMap `tigera-cnx-manager-config`
-   according to the instructions in the file and your chosen authentication method.
-
-   You might want to reconfigure the service that gets traffic to the {{site.prodname}} Manager
-   web server as well.
-
-1. Generate TLS credentials - i.e. a web server certificate and key - for the
-   {{site.prodname}} Manager.
-
-   See
-   [Certificates](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
-   for various ways of generating TLS credentials.  As both its Common Name and
-   a Subject Alternative Name, the certificate must have the host name (or IP
-   address) that browsers will use to access the {{site.prodname}} Manager.  In a single-node
-   test deployment this can be just `127.0.0.1`, but in a real deployment it
-   should be a planned host name that maps to the `cnx-manager` service.
-
-1. Store those credentials as `cert` and `key` in a secret named
-   `cnx-manager-tls`.  For example:
-
-   ```
-   kubectl create secret generic cnx-manager-tls --from-file=cert=/path/to/certificate --from-file=key=/path/to/key -n kube-system
-   ```
-
-1. Apply the manifest to install {{site.prodname}} Manager and the {{site.prodname}} API server.
-
-   ```
-   kubectl apply -f cnx.yaml
-   ```
-
-1. Configure the kube-apiserver to allow
-   cross-origin resource sharing (CORS). This will allow the {{site.prodname}} Manager to communicate with {{site.prodname}} API server. CORS can be enabled by setting the flag [--cors-allowed-origins](https://kubernetes.io/docs/reference/generated/kube-apiserver/) on kube-apiserver. kube-apiserver should be restarted for the --cors-allowed-origin flag to take effect.
-
-   Example command:
-   ```
-   sudo sed -i \
-   "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://your-cnx-manager-url.example.com:cnx-manager-port\"" \
-   /etc/kubernetes/manifests/kube-apiserver.yaml
-   ```
-
-1. Configure authorization to allow {{site.prodname}} Manager users to edit policies.  Consult the
-   [{{site.prodname}} Manager](../../../../../reference/cnx/non-admin-workflows)
-   documents for advice on configuring this.  The authentication method you
-   chose when setting up the cluster defines what format you need to use for
-   usernames in the role bindings.
-
-1. Configure calico-monitoring namespace and deploy Prometheus Operator by
-  applying the [operator.yaml](1.7/operator.yaml) manifest.
-
-   ```
-   kubectl apply -f operator.yaml
-   ```
-
-1. Wait for custom resource definitions to be created. Check by running:
-
-   ```
-   kubectl get customresourcedefinitions
-   ```
-
-1. Apply the [monitor-calico.yaml](1.7/monitor-calico.yaml) manifest which will
-  install Prometheus and alertmanager.
-
-   ```
-   kubectl apply -f monitor-calico.yaml
-   ```
-
-### Customizing the manifests
-
-#### Ports of Services and NetworkPolicy
+## Ports of Services and NetworkPolicy
 
 There are a number of ports defined via _Services_. Ensure that they are updated
 to match your environment and also update any _NetworkPolicy_ that
 have the same ports.
 
-#### Node Selectors
+## Node Selectors
 
 There are 3 places where `nodeSelectors` can be customized. Ensure to update
 these.
@@ -146,14 +96,14 @@ spec:
             memory: 100Mi
 ```
 
-#### Enabling TLS Verification for a Kubernetes extension API Server
+## Enabling TLS Verification for a Kubernetes extension API Server
 
 The Kubernetes extension API Server deployed by the provided
 [manifest](1.7/cnx-etcd.yaml) will communicate with the Kubernetes
 API Server.  The manifest, by default, requires no updates to work but does not
 enable TLS verification on the connection between the two API servers. We
 recommend that this is enabled and you can follow the directions below to
-enable TLS.
+enable TLS verification.
 
 To enable TLS verification you will need to obtain or generate the following
 in PEM format:
@@ -161,7 +111,7 @@ in PEM format:
 - certificate signed by the CA
 - private key for the generated certificate
 
-##### Generating certificate files
+#### Generating certificate files
 
 1. Create a root key (This is only needed if you are generating your CA)
    ```
@@ -198,7 +148,7 @@ encoded before being added to the manifest file.
 Here is an example command to do the base64 encoding:
 `cat rootCA.pem | base64 -w 0`.
 
-##### Add Certificate Files to the Manifest
+#### Add Certificate Files to the Manifest
 
 The [cnx.yaml](1.7/cnx-etcd.yaml) manifest must be updated
 with the following changes
@@ -211,7 +161,7 @@ with the following changes
 1. Uncomment the line `apiserver.crt:` in the `cnx-apiserver-certs` `Secret`
    and append the base64 encoded certificate file contents.
 
-### Configure the {{site.prodname}} Manager Web Application
+### Configure the {{site.prodname}} Manager
 
 The [cnx.yaml](1.7/cnx-etcd.yaml) manifest must be updated with
 the following changes.  Some of the parameters depend on the chosen
@@ -285,39 +235,13 @@ receivers:
 
 To view the JSON output printed, examine the logs of the webhook pod.
 
-### Modifying an existing manifest to install {{site.prodname}}
+### Enabling denied packet monitoring
 
-Edit the manifest that deploys calico/node and update the following:
-  - Update the _DaemonSet_ template `image` to point to the new {{site.prodname}} image.
-  - Add the environment variable `FELIX_PROMETHEUSREPORTERENABLED` and make
-    sure it is set to `true` and
-  - Add the environment variable `FELIX_PROMETHEUSREPORTERPORT` and set it to
-    desired port.
+1. Add the environment variable `FELIX_PROMETHEUSREPORTERENABLED` and set it 
+   to `true`.
 
-Create a new _Service_ to expose {{site.prodname}} Prometheus Denied Packet Metrics and
-apply this manifest using `kubectl apply`
-
-```
-# This manifest installs the service which gets traffic to the calico-node
-# metrics reporting endpoint.
-apiVersion: v1
-kind: Service
-metadata:
-  namespace: kube-system
-  name: calico-node-metrics
-  labels:
-    k8s-app: calico-node
-spec:
-  selector:
-    k8s-app: calico-node
-  type: ClusterIP
-  clusterIP: None
-  ports:
-  - name: calico-metrics-port
-    port: 9081
-    targetPort: 9081
-    protocol: TCP
-```
+1. Add the environment variable `FELIX_PROMETHEUSREPORTERPORT` and set it to
+   the desired port.
 
 1. Configure calico-monitoring namespace and deploy Prometheus Operator by
   applying the [operator.yaml](1.7/operator.yaml) manifest.
@@ -339,49 +263,3 @@ spec:
    kubectl apply -f monitor-calico.yaml
    ```
 
-### Manifest Details
-
-The {{site.prodname}} install manifests are based on [kubeadm hosted install](../kubeadm).
-
-The [cnx.yaml](1.7/calico-cnx.yaml) manifest does the following:
-  - Installs the CNX API server, and configures the APIService to tell
-    the Kubernetes API server to delegate to it.
-  - Installs the CNX Manager web server, and configures it with the location
-    of the Kubernetes API, login methods and SSL certificates.
-
-The manifest [operator.yaml](1.7/operator.yaml) does the following:
-  - Create a namespace called calico-monitoring
-  - Create RBAC artifacts
-      - ServiceAccounts: prometheus-operator and prometheus
-      - Corresponding ClusterRole and ClusterRoleBindings.
-  - Deploys prometheus-operator (in namespace calico-monitoring)
-    - Creates a kubernetes deployment, which in turn creates 3 _Custom Resource
-      Definitions_(CRD): `prometheus`, `alertmanager` and "servicemonitor".
-
-The `monitor-calico.yaml` manifest does the following:
-  - Creates a new service: calico-node-metrics exposing prometheus reporting
-    port.
-  - A secret for storing alertmanager config - Should be customized for your
-    environment.
-    - Refer to [standard alerting configuration documentation](https://prometheus.io/docs/alerting/configuration/)
-      and alertmanager.yaml in the current directory for what is included as a
-      default.
-  - Create a alertmanager instance and corresponding dash service
-  - Create a ServiceMonitor that selects on the calico-node-metrics service's
-    ports.
-  - ConfigMaps that define some [alerting rules](https://prometheus.io/docs/alerting/rules/)
-    for prometheus.
-    - We predefine denied packet alerts and instance down alerts. This can be
-      customized by modifying appropriate configmaps.
-  - Create a Prometheus instance and corresponding dash service. Prometheus
-    instance selects on:
-    - Alertmanager dash (for configuring alertmanagers)
-    - Servicemonitor selector (for populating calico-nodes to actually monitor).
-  - Create network policies as required for accessing all the services defined
-    above.
-
-The services (type _NodePort_) for prometheus and alertmanager are created in
-the `calico-monitoring` namespace and are named `calico-prometheus-dash`
-(port 30900) and `calico-alertmanager-dash` (port 30903).
-
-{% include {{page.version}}/gs-next-steps.md %}
