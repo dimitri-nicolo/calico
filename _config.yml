@@ -19,7 +19,7 @@ cnx-api-image-name: <your-k8sapiserver-image-name>
 
 prodname: CNX
 nodecontainer: cnx-node
-noderunning: cnx-node
+noderunning: calico-node
 
 # Image names in case the host changes
 imageNames:

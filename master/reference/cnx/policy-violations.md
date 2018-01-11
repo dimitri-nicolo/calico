@@ -31,11 +31,10 @@ thresholds.
 
 Policy Violation & Reporting is accomplished using 3 key pieces:
 
-1. {{site.prodname}} specific `calico/node` image: A _{{site.prodname}}_ specific Felix
-   binary running inside `calico/node` monitors the host for Denied packets and
-   collects metrics.
-2. Prometheus Server(s) deployed as part of the _{{site.prodname}}_ manifest scrapes
-   every configured `calico/node` target. Alerting rules querying denied packet
+1. A {{site.prodname}} specific Felix binary running inside `{{site.noderunning}}` container
+   monitors the host for Denied packets and collects metrics.
+2. Prometheus Server(s) deployed as part of the {{site.prodname}} manifest scrapes
+   every configured `{{site.noderunning}}` target. Alerting rules querying denied packet
    metrics are configured in Prometheus and when triggered, fire alerts to
    the Prometheus Alertmanager.
 3. Prometheus Alertmanager (or simply Alertmanager), also deployed as part of
@@ -54,7 +53,7 @@ the source IP Address of the packets that were denied by this policy. Using
 Prometheus terminology, `calico_denied_packets` is the metric Name and `policy`
 and `srcIP` are labels. Each one of these metrics will be available as a
 combination of `{policy, srcIP}`. An HTTP GET request to retrieve metrics from a
-`calico/node` container will provide output like this:
+`{{site.noderunning}}` container will provide output like this:
 
 ```
 # HELP calico_denied_bytes Total number of bytes denied by calico policies.

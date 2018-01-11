@@ -89,7 +89,7 @@ in the `calico-monitoring` namespace with the labels
 labels should match the labels defined by the `ruleSelector` field of the
 _Prometheus_ manifest.
 
-As an example, to fire a alert when a calico/node instance has been down for
+As an example, to fire a alert when a {{site.noderunning}} instance has been down for
 more than 5 minutes, save the following to a file, say `calico-node-down-alert.yaml`
 
 ```
@@ -281,7 +281,7 @@ to configure the amount of time that metrics are stored on disk.
 You may wish to modify the scrape interval (time between Prometheus polling each node for new denied packet information).
 Increasing the interval reduces load on Prometheus and the amount of storage required, but decreases the detail of the collected metrics.
 
-  The scrape interval of endpoints (calico/node in our case) is defined as part of
+  The scrape interval of endpoints ({{site.noderunning}} in our case) is defined as part of
   the _ServiceMonitor_ manifest. To change the interval:
 
   - Save the current _ServiceMonitor_ manifest:
@@ -407,7 +407,7 @@ data:
 ```
 
 Add the appropriate `volumeMounts` and `volumes` to their corresponding sections in
-the `calico-node` daemonset.
+the `{{site.noderunning}}` daemonset.
 
 ```
       ...
