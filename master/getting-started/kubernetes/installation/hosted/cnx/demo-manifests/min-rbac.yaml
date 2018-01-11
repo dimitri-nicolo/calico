@@ -6,7 +6,9 @@ rules:
 - apiGroups: ["projectcalico.org","networking.k8s.io",""]
   resources: ["tiers","networkpolicies","globalnetworkpolicies","namespaces"]
   verbs: ["watch","list"]
+
 ---
+
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
@@ -16,7 +18,9 @@ rules:
   resources: ["tiers"]
   resourceNames: ["default"]
   verbs: ["get"]
+
 ---
+
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
@@ -26,7 +30,9 @@ rules:
 - apiGroups: ["projectcalico.org","networking.k8s.io"]
   resources: ["networkpolicies"]
   verbs: ["create","update","delete","patch","get","watch","list"]
+
 ---
+
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
@@ -39,7 +45,9 @@ roleRef:
   kind: ClusterRole
   name: ui-needed-listers
   apiGroup: rbac.authorization.k8s.io
+
 ---
+
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
@@ -52,7 +60,9 @@ roleRef:
   kind: ClusterRole
   name: default-tier-reader
   apiGroup: rbac.authorization.k8s.io
+
 ---
+
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
