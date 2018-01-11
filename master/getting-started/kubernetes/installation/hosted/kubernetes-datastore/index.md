@@ -86,7 +86,7 @@ This will install {{site.prodname}} and will initially create a full node-to-nod
    {: .alert .alert-success}
 
 2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
-   more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha).
+   more than 50 nodes, edit the manifest to [enable Typha](../cnx/cnx#enabling-typha).
 
 3. Make sure your cluster CIDR matches the `CALICO_IPV4POOL_CIDR` environment variable in the manifest.
    The cluster CIDR is configured by the  `--cluster-cidr` option passed to the Kubernetes
