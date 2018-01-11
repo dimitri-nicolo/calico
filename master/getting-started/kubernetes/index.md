@@ -229,7 +229,7 @@ the host. Instead, continue directly to the
 
 1. Restart kube-apiserver to pick up new settings:
     ```
-    sudo pkill kube-apiserver
+    sudo systemctl restart kubelet
     ```
 
 1. Bind `jane` with the `cluster-admin` role so that she can access any
