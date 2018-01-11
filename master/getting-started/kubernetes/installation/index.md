@@ -20,8 +20,6 @@ information.
 - The cluster must be able to load the Tigera CNX docker images - see following section.
 - Public clouds require special configuration. Refer to [AWS](../../../reference/public-cloud/aws), [Azure](../../../reference/public-cloud/azure), and [GCE](../../../reference/public-cloud/gce) configuration guides for details.
 
-{% include {{page.version}}/load-docker.md %}
-
 ## [{{site.prodname}} Hosted Install](hosted)
 
 Installs the {{site.prodname}} components as a DaemonSet entirely using Kubernetes manifests through a single

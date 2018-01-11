@@ -10,8 +10,6 @@ Note that this mode currently comes with a number of limitations, namely:
 - It does not yet support Calico IPAM.  It is recommended to use `host-local` IPAM in conjunction with Kubernetes pod CIDR assignments.
 - {{site.prodname}} networking support is in beta. Control of the node-to-node mesh, default AS Number and all BGP peering configuration should be configured using `calicoctl`.
 
-{% include {{page.version}}/load-docker.md %}
-
 ## Requirements
 
 The provided manifest configures {{site.prodname}} to use host-local IPAM in conjunction with the Kubernetes assigned
@@ -28,18 +26,7 @@ You must have a Kubernetes cluster, which meets the following requirements:
 
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
-> **Note**: If you are upgrading from Calico v2.1, the cluster-cidr
-> selected for your controller manager should remain
-> unchanged from the v2.1 install (the v2.1 manifests default to
-> `10.244.0.0/16`).
-{: .alert .alert-info}
-
-> **Important**: If you are using the Kubernetes datastore and upgrading
-> from Calico v2.4.x or earlier to Calico v2.5.x or later, you must
-> [migrate your Calico configuration data](https://github.com/projectcalico/calico/blob/master/upgrade/v2.5/README.md)
-> before upgrading. Otherwise, your cluster may lose connectivity after the upgrade.
-{: .alert .alert-danger}
-
+{% include {{page.version}}/load-docker.md %}
 
 ## Installation
 
@@ -47,7 +34,6 @@ This document describes three installation options for {{site.prodname}} using K
 
 1. {{site.prodname}} policy with {{site.prodname}} networking (beta)
 2. {{site.prodname}} policy-only with user-supplied networking
-3. {{site.prodname}} policy-only with flannel networking
 
 Ensure you have a cluster which meets the above requirements.  There may be additional requirements based on the installation option you choose.
 
@@ -70,9 +56,8 @@ kubectl apply -f rbac-kdd.yaml
    > [view the YAML in your browser](../rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
->[Click here to view the above rbac-kdd.yaml for Kubernetes 1.7 clusters.](../rbac-kdd.yaml)
 
-### 1. {{site.prodname}} policy with {{site.prodname}} networking (Beta)
+### Option 1. {{site.prodname}} policy with {{site.prodname}} networking (Beta)
 
 With Kubernetes as the {{site.prodname}} datastore, {{site.prodname}} has beta support for {{site.prodname}} networking.  This provides BGP-based
 networking with a full node-to-node mesh and/or explicit configuration of peers.
@@ -80,26 +65,25 @@ networking with a full node-to-node mesh and/or explicit configuration of peers.
 To install {{site.prodname}} with {{site.prodname}} networking, run one of the commands below based on your Kubernetes version.
 This will install {{site.prodname}} and will initially create a full node-to-node mesh.
 
-> **Note**: Calico v2.5.0 or later with Kubernetes backend requires Kubernetes
-> v1.7.0 or higher.
-{: .alert .alert-info}
+1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml){:target="_blank"}
 
-Update the manifest with the path to your private docker registry.  Substitute
-`mydockerregistry:5000` with the location of your docker registry.
+1. Use the following `sed` command to update the manifest to point to the private
+   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
+   with the name of your private Docker registry.
 
-```
-sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
-```
+   **Command**
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
+   ```
+   
+   **Example**
 
-Then apply the manifest.
-
-```
-kubectl apply -f calico.yaml
-```
-
->[Click here to view the calico.yaml for Kubernetes 1.7 clusters.](calico-networking/1.7/calico.yaml)
-
-1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml)
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
+   ```
+   > **Tip**: If you're hosting your own private repository, you may need to include
+   > a port number. For example, `bob:5000`.
+   {: .alert .alert-success}
 
 2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
    more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha).
@@ -137,38 +121,40 @@ To install {{site.prodname}} in policy-only mode:
 
 1. Download [the policy-only manifest](policy-only/1.7/calico.yaml)
 
-Update the manifest with the path to your private docker registry.  Substitute
-`mydockerregistry:5000` with the location of your docker registry.
+1. Use the following `sed` command to update the manifest to point to the private
+   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
+   with the name of your private Docker registry.
 
-```
-sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/mydockerregistry:5000/g' calico.yaml
-```
+   **Command**
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
+   ```
+   
+   **Example**
 
-Then apply the manifest.
-```
-kubectl apply -f calico.yaml
-```
+   ```shell
+   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
+   ```
+   > **Tip**: If you're hosting your own private repository, you may need to include
+   > a port number. For example, `bob:5000`.
+   {: .alert .alert-success}
 
->[Click here to view the policy.yaml for Kubernetes 1.7 clusters.](policy-only/1.7/calico.yaml)
+1. Then apply the manifest.
 
-### Option 3: {{site.prodname}} policy-only with flannel networking
+   ```
+   kubectl apply -f calico.yaml
+   ```
 
-The [Canal](https://github.com/projectcalico/canal) project provides a way to easily deploy
-{{site.prodname}} with flannel networking.
+## Installing the CNX Manager
 
-Refer to the following [Kubernetes self-hosted install guide](https://github.com/projectcalico/canal/blob/master/k8s-install/README.md)
-in the Canal project for details on installing {{site.prodname}} with flannel.
+1. [Open cnx-etcd.yaml in a new tab](1.7/cnx-kdd.yaml){:target="_blank"}.
 
-## Adding Tigera CNX
+1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
+   This is what subsequent instructions will refer to.
+   
+{% include {{page.version}}/cnx-mgr-install.md %}
 
-Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](../cnx/cnx).
-
-## Try it out
-
-Once installed, you can try out NetworkPolicy by following the [simple policy guide](../../../tutorials/simple-policy).
-
-Below are a few examples for how to get started.
+{% include {{page.version}}/gs-next-steps.md %}
 
 ## Configuration details
 

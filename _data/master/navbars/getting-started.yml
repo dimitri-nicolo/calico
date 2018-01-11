@@ -24,12 +24,14 @@ toc:
         path: /getting-started/kubernetes/installation/hosted/kubeadm/
       - title: Kubernetes Datastore Hosted Install
         path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
-      - title: Installing CNX manager and denied packet monitoring
+      - title: Customizing the CNX manifests (advanced)
         path: /getting-started/kubernetes/installation/hosted/cnx/cnx
     - title: Integration Guide
       path: /getting-started/kubernetes/installation/integration
   - title: Tutorials
     section:
+    - title: CNX for Kubernetes Demo
+      path: /getting-started/cnx/simple-policy-cnx/
     - title: Using calicoctl
       path: /getting-started/kubernetes/tutorials/using-calicoctl
     - title: Simple Policy Demo
