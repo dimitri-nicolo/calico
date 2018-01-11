@@ -16,7 +16,9 @@ installation method.
 ## Requirements
 
 - An existing Kubernetes cluster running Kubernetes >= v1.8.
+
 - An `etcd` cluster accessible by all nodes in the Kubernetes cluster. {{site.prodname}} can share the etcd cluster used by Kubernetes, but in some cases it's recommended that a separate cluster is set up. A number of production users do share the etcd cluster between the two, but separating them gives better performance at high scale.
+
 - The CNX images must be made available to your cluster by either pre-loading
   them on your hosts or setting up the appropriate configuration to allow
   access to your private docker registry where they have been loaded.
@@ -114,6 +116,11 @@ Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 > benefits up to 0.5 cores.
 {: .alert .alert-info}
 
+### Configuring {{site.nodecontainer}} for metrics collection
+
+Enable metrics in {{site.prodname}} by updating the global `FelixConfiguration` resource (`default`).
+
+{% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 
 ## Installing the {{site.prodname}} CNI plugins
 
@@ -255,4 +262,64 @@ for more details.
 ## Adding Tigera CNX
 
 Now you've installed Calico with the enhanced CNX node agent, you're ready to
-[add CNX Manager](hosted/cnx/cnx).
+add CNX Manager and Prometheus Monitoring.
+
+### Monitoring Prerequisites
+
+The [next steps](#installing-tigera-cnx) add Prometheus Monitoring and depends
+on selectable pods to target for Prometheus monitoring. If you wish to use the
+provided monitoring, the following manifest needs to be loaded to Kubernetes
+which will deploy dummy pods that will be used for Prometheus targeting. You
+should ensure that this manifest deploys one pod on each host running
+{{site.prodname}} that you wish to monitor, adjusting the annotations and
+tolerations as needed.
+
+```
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: kube-system
+  labels:
+    k8s-app: calico-node
+spec:
+  template:
+    metadata:
+      name: node-exporter
+      labels:
+        k8s-app: calico-node
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+      serviceAccountName: default
+      containers:
+      - image: busybox
+        command: ["sleep", "10000000"]
+        name: node-exporter
+        ports:
+        - containerPort: 9081
+          hostPort: 9081
+          name: scrape
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+      - operator: Exists
+        effect: NoSchedule
+```
+
+Another option for monitoring is to setup and configure your own Prometheus
+monitoring instead of using the monitoring provided in the next steps, then
+it would not be necessary to load the above manifest.
+
+### Installing Tigera CNX
+
+1. Select the CNX manifest for the datastore you are using:
+   - [Open ETCD manifest in a new tab](hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
+   - [Open Kuberentes API Datastore manifest in a new tab](hosted/cnx/1.7/cnx-kdd.yaml){:target="_blank"}.
+
+1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
+   This is what subsequent instructions will refer to.
+
+{% include {{page.version}}/cnx-mgr-install.md %}
+
+{% include {{page.version}}/gs-next-steps.md %}
