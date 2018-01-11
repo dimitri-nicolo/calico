@@ -52,15 +52,6 @@ the host. Instead, continue directly to the
    sudo kubeadm init --pod-network-cidr=192.168.0.0/16 --apiserver-cert-extra-sans=127.0.0.1
    ```
 
-1. Optionally, configure your web browser to trust the Kubernetes cluster
-   certificate authority, by importing `/etc/kubernetes/pki/ca.crt` as a
-   trusted CA certificate.
-
-1. Navigate to `https://127.0.0.1:6443/api` in your browser.  If you told your
-   browser to trust the cluster certificate authority, the browser should
-   indicate that you have a secure connection.  If not, click past the warning
-   about the connection being insecure.
-
 1. Execute the commands to configure kubectl as returned by
    `kubeadm init`. Most likely they will be as follows:
 
@@ -69,6 +60,64 @@ the host. Instead, continue directly to the
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
+
+1. Use the following command to create a file `basic_auth.csv` containing
+   a set of credentials.
+
+   ```
+   sudo sh -c "echo 'welc0me,jane,1' > /etc/kubernetes/pki/basic_auth.csv"
+   ```
+
+1. Add a reference to the `basic_auth.csv` file in `kube-apiserver.yaml`.
+
+   ```
+   sudo sed -i \
+   "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
+   /etc/kubernetes/manifests/kube-apiserver.yaml
+   ```
+
+   > **Note**: We created the basic_auth.csv under /etc/kubernetes/pki because that volume is
+   mounted by default on the kube-apiserver pod with a kubeadm installation.
+   {: .alert .alert-info}
+
+1. Configure the {{site.prodname}} API server to allow
+   cross-origin resource sharing (CORS). This will allow the {{site.prodname}} API
+   server to communicate with the {{site.prodname}} Manager.
+
+   ```
+   sudo sed -i \
+   "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://127.0.0.1:30003\"" \
+   /etc/kubernetes/manifests/kube-apiserver.yaml
+   ```
+
+1. Restart kube-apiserver to pick up new settings:
+    ```
+    sudo systemctl restart kubelet
+    ```
+
+1. Bind `jane` with the `cluster-admin` role so that she can access any
+   resources after logging in.
+
+   ```
+   kubectl create clusterrolebinding permissive-binding \
+   --clusterrole=cluster-admin \
+   --user=jane
+   ```
+
+   `kubectl` should return the following.
+
+   ```
+   clusterrolebinding "permissive-binding" created
+   ```
+
+1. Optionally, configure your web browser to trust the Kubernetes cluster
+   certificate authority, by importing `/etc/kubernetes/pki/ca.crt` as a
+   trusted CA certificate.
+
+1. Navigate to `https://127.0.0.1:6443/api` in your browser.  If you told your
+   browser to trust the cluster certificate authority, the browser should
+   indicate that you have a secure connection.  If not, click past the warning
+   about the connection being insecure.
 
 1. Download the [`calico.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml){:target="_blank"}.
 
@@ -197,55 +246,6 @@ the host. Instead, continue directly to the
    ```
 
 1. Press CTRL+C to exit `watch`.
-
-1. Use the following command to create a file `basic_auth.csv` containing
-   a set of credentials.
-
-   ```
-   sudo sh -c "echo 'welc0me,jane,1' > /etc/kubernetes/pki/basic_auth.csv"
-   ```
-
-1. Add a reference to the `basic_auth.csv` file in `kube-apiserver.yaml`.
-
-   ```
-   sudo sed -i \
-   "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
-   /etc/kubernetes/manifests/kube-apiserver.yaml
-   ```
-
-   > **Note**: We created the basic_auth.csv under /etc/kubernetes/pki because that volume is
-   mounted by default on the kube-apiserver pod with a kubeadm installation.
-   {: .alert .alert-info}
-
-1. Configure the {{site.prodname}} API server to allow
-   cross-origin resource sharing (CORS). This will allow the {{site.prodname}} API
-   server to communicate with the {{site.prodname}} Manager.
-
-   ```
-   sudo sed -i \
-   "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://127.0.0.1:30003\"" \
-   /etc/kubernetes/manifests/kube-apiserver.yaml
-   ```
-
-1. Restart kube-apiserver to pick up new settings:
-    ```
-    sudo systemctl restart kubelet
-    ```
-
-1. Bind `jane` with the `cluster-admin` role so that she can access any
-   resources after logging in.
-
-   ```
-   kubectl create clusterrolebinding permissive-binding \
-   --clusterrole=cluster-admin \
-   --user=jane
-   ```
-
-   `kubectl` should return the following.
-
-   ```
-   clusterrolebinding "permissive-binding" created
-   ```
 
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
