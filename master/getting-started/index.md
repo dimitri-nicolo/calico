@@ -2,17 +2,30 @@
 title: Getting started with CNX
 ---
 
-## Obtain the private binaries
+## Obtain the private binaries and images
 
-Contact your support representative to gain access to the following files.
+### Images
 
-   | TAR file                                                                       | Description                                |
-   | ------------------------------------------------------------------------------ | ------------------------------------------ |
-   | `tigera-calicoctl_{{site.data.versions[page.version].first.title}}.tar.xz`     | {{site.prodname}}-enhanced `calicoctl`     |
-   | `tigera-cnx-apiserver_{{site.data.versions[page.version].first.title}}.tar.xz` | Kubernetes extension API server component  |
-   | `tigera-cnx-node_{{site.data.versions[page.version].first.title}}.tar.xz`      | {{site.prodname}}-enhanced `calico/node`   |
-   | `tigera-calicoq_{{site.data.versions[page.version].first.title}}.tar.xz`       | Policy query command-line tool             |
-   | `tigera-cnx-manager_{{site.data.versions[page.version].first.title}}.xz`       | {{site.prodname}} Manager component        |
+Contact your support representative to gain access to the following images.
+
+   | File name                                                                      | Description                   |
+   | ------------------------------------------------------------------------------ | ----------------------------- |
+   | `tigera-calicoctl_{{site.data.versions[page.version].first.title}}.tar.xz`     | `calicoctl`                   |
+   | `tigera-calicoq_{{site.data.versions[page.version].first.title}}.tar.xz`       | `calicoq`                     |
+   | `tigera-cnx-apiserver_{{site.data.versions[page.version].first.title}}.tar.xz` | {{site.prodname}} API server  |
+   | `tigera-cnx-manager_{{site.data.versions[page.version].first.title}}.tar.xz`   | {{site.prodname}} Manager     |
+   | `tigera-cnx-node_{{site.data.versions[page.version].first.title}}.tar.xz`      | `{{site.nodecontainer}}`      |
+   | `tigera-typha_{{site.data.versions[page.version].first.title}}.tar.xz`         | Typha                         |
+
+### Binaries
+
+Contact your support representative to gain access to the following binaries.
+
+   | File name                                                    | Description  |
+   | ------------------------------------------------------------ | ------------ |
+   | `calicoctl_{{site.data.versions[page.version].first.title}}` | `calicoctl`  |
+   | `calicoq_{{site.data.versions[page.version].first.title}}`   | `calicoq`    |
+   | `felix_{{site.data.versions[page.version].first.title}}`     | Felix        |
 
 ## Choose your orchestrator
 

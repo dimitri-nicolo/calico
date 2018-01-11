@@ -56,10 +56,10 @@ See [policy spec]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resource
 To make use of {{site.prodname}}'s host endpoint support, you will need to complete
 the following steps.
 
-
+1.  [Install the Felix daemon on each host](bare-metal-install), then return to this
+    page to complete the remaining steps below.
 1.  [Create an etcd cluster, if you haven't already](#creating-an-etcd-cluster).
 1.  [Install and configure `calicoctl`](#install-and-configure-calicoctl).
-1.  [Install the Felix daemon on each host](#installing-felix).
 1.  [Initialize the etcd database](#initializing-the-etcd-database).
 1.  [Add policy to allow basic connectivity](#creating-basic-connectivity-and-policy).
 1.  [Create host endpoint objects in etcd](#creating-host-endpoint-objects) for each interface you want
@@ -91,51 +91,6 @@ To create a production cluster, you should follow the guidance in the
 1. [Configure calicoctl to connect to etcd](/{{page.version}}/usage/calicoctl/configure/).
 
 1. Return to this page and continue to the [next section](#installing-felix).
-
-## Installing Felix
-
-{% include ppa_repo_name %}
-
-There are several ways to install Felix.
-
--   If you are running Ubuntu 14.04 or 16.04, you can install from our PPA:
-
-        sudo add-apt-repository ppa:project-calico/{{ ppa_repo_name }}
-        sudo apt-get update
-        sudo apt-get upgrade
-        sudo apt-get install calico-felix
-
--   If you are running a RedHat 7-derived distribution, you can install
-    from our RPM repository:
-
-        cat > /etc/yum.repos.d/calico.repo <<EOF
-        [calico]
-        name=Calico Repository
-        baseurl=http://binaries.projectcalico.org/rpm/{{ ppa_repo_name }}/
-        enabled=1
-        skip_if_unavailable=0
-        gpgcheck=1
-        gpgkey=http://binaries.projectcalico.org/rpm/{{ ppa_repo_name }}/key
-        priority=97
-        EOF
-
-        yum install calico-felix
-
--   If you are running another distribution, follow the instructions in
-    [this document](bare-metal-install) to use the `calico-felix` binary
-    directly.
-
--   If you want to run under Docker, you can use `calicoctl node run --node-image={{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}` to start
-    the `{{site.nodecontainer}}` container image.  This container packages up the core {{site.prodname}}
-    components to provide both {{site.prodname}} networking and network policy.  Running
-    the container automatically pre-initializes the etcd database (which the
-    other installations methods do not).  See the
-    [`calicoctl node run`]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/node/run)
-    guide for details.
-
-Until you initialize the database, Felix will make a regular log that it
-is in state "wait-for-ready". The default location for the log file is
-`/var/log/calico/felix.log`.
 
 ## Initializing the etcd database
 
