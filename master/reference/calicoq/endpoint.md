@@ -35,43 +35,37 @@ as `<host-name>/<orchestrator>/<workload-name>/<endpoint-name>`.
 
 ## Examples
 
-Here is an example with three workloads in a group, named with a prefix that
-specifies the group; so `calicoq endpoint` with that prefix returns information
+Here is an example with three workloads in a namespace, named with a prefix that
+specifies the namespace; so `calicoq endpoint` with that prefix returns information
 about all three endpoints.
 ```
-$ calicoq endpoint g1w
+$ calicoq endpoint ns1
 
-Policies and profiles for endpoints matching "g1w":
+Policies and profiles for endpoints matching "ns1":
 
-Workload endpoint k8s/g1w1/eth0
+Workload endpoint k8s/namespace1.ns1wep1/eth0
   Policies:
-    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+    Policy "namespace1/policy1" (order 500; selector "(projectcalico.org/namespace == 'namespace1') && projectcalico.org/namespace == 'namespace1'")
   Profiles:
-    Profile "group1"
+    Profile "profile1"
   Rule matches:
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match; selector "calico/k8s_ns in {'group1','group2'}"
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "calico/k8s_ns in {'group1','group2'}"
-    Policy "p1" outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+    Policy "namespace1/policy1" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'namespace1') && (projectcalico.org/namespace == 'namespace1')"
 
-Workload endpoint k8s/g1w2/eth0
+Workload endpoint k8s/namespace1.ns1wep2/eth0
   Policies:
-    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+    Policy "namespace1/policy1" (order 500; selector "(projectcalico.org/namespace == 'namespace1') && projectcalico.org/namespace == 'namespace1'")
   Profiles:
-    Profile "group1"
+    Profile "profile1"
   Rule matches:
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match; selector "calico/k8s_ns in {'group1','group2'}"
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "calico/k8s_ns in {'group1','group2'}"
-    Policy "p1" outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+    Policy "namespace1/policy1" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'namespace1') && (projectcalico.org/namespace == 'namespace1')"
 
-Workload endpoint k8s/g1w3/eth0
+Workload endpoint k8s/namespace1.ns1wep3/eth0
   Policies:
-    Policy "p1" (order 500; selector "calico/k8s_ns == 'group1'")
+    Policy "namespace1/policy1" (order 500; selector "(projectcalico.org/namespace == 'namespace1') && projectcalico.org/namespace == 'namespace1'")
   Profiles:
-    Profile "group1"
+    Profile "profile1"
   Rule matches:
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" inbound rule 1 source match; selector "calico/k8s_ns in {'group1','group2'}"
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" outbound rule 1 destination match; selector "calico/k8s_ns in {'group1','group2'}"
-    Policy "p1" outbound rule 1 destination match; selector "calico/k8s_ns == 'group1'"
+    Policy "namespace1/policy1" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'namespace1') && (projectcalico.org/namespace == 'namespace1')"
 ```
 
 Here is an example of a workload to which both normal and untracked policy
@@ -84,10 +78,12 @@ Policies and profiles for endpoints matching "tigera-lwr-kubetest-02":
 
 Workload endpoint k8s/advanced-policy-demo.nginx-2371676037-bk6v2/eth0
   Policies:
-    Policy "donottrack" (order 500; selector "calico/k8s_ns == 'advanced-policy-demo'") [untracked]
-    Policy "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" (order 400; selector "calico/k8s_ns == 'advanced-policy-demo'")
+    Policy "donottrack" (order 500; selector "projectcalico.org/namespace == 'advanced-policy-demo'") [untracked]
+    Policy "advanced-policy-demo/abcdefghijklmnopqrstuvwxyz" (order 400; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && projectcalico.org/namespace == 'advanced-policy-demo'")
   Profiles:
-    Profile "k8s_ns.advanced-policy-demo"
+    Profile "k8s-ns.advanced-policy-demo"
+  Rule matches:
+    Policy "advanced-policy-demo/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match; selector "(projectcalico.org/namespace == 'advanced-policy-demo') && (projectcalico.org/namespace == 'advanced-policy-demo')"
 ```
 
 ## See also
