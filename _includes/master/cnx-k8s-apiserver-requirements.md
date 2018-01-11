@@ -2,7 +2,7 @@
   [Kubernetes documentation](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/)
   for details. 
   
-- [Select a supported authentication method](../reference/cnx/authentication) 
+- [Select a supported authentication method]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication)
   and [configure kube-apiserver](https://kubernetes.io/docs/admin/authentication/) accordingly.
   
 - Ensure that kube-apiserver allows TLS communications, which it usually
