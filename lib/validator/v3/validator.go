@@ -788,12 +788,13 @@ func validateTier(v *validator.Validate, structLevel *validator.StructLevel) {
 	tier := structLevel.CurrentStruct.Interface().(api.Tier)
 
 	// Check the name is within the max length.
-	if len(tier.Name) > k8svalidation.DNS1123SubdomainMaxLength {
+	// Tier names are dependent on the label max length since policy lookup by tier in KDD requires the name to fit in a label.
+	if len(tier.Name) > k8svalidation.DNS1123LabelMaxLength {
 		structLevel.ReportError(
 			reflect.ValueOf(tier.Name),
 			"Metadata.Name",
 			"",
-			reason(fmt.Sprintf("name is too long by %d bytes", len(tier.Name)-k8svalidation.DNS1123SubdomainMaxLength)),
+			reason(fmt.Sprintf("name is too long by %d bytes", len(tier.Name)-k8svalidation.DNS1123LabelMaxLength)),
 		)
 	}
 
