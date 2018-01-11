@@ -1,20 +1,4 @@
-1. Use the following `sed` command to update the manifest to point to the private
-   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
-   with the name of your private Docker registry.
-
-   **Command**
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
-   ```
-   
-   **Example**
-
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
-   ```
-   > **Tip**: If you're hosting your own private repository, you may need to include
-   > a port number. For example, `bob:5000`.
-   {: .alert .alert-success}
+{% include {{page.version}}/cnx-cred-sed.md %}
 
 1. Open the file in a text editor, and update the ConfigMap `tigera-cnx-manager-config`
    according to the instructions in the file and your chosen authentication method.

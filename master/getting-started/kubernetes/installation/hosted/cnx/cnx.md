@@ -259,41 +259,39 @@ To enable Typha in either the {{site.prodname}} networking manifest or the polic
    ```
    docker load -i tigera_typha_{{site.data.versions[page.version].first.components["typha"].version}}.tar.xz
    ```
-   
+
 1. Confirm that the image has loaded by typing `docker images`.
 
    ```
    REPOSITORY            TAG               IMAGE ID       CREATED         SIZE
-   tigera/typha          {{site.data.versions[page.version].first.components["calicoctl"].version}}  e07d59b0eb8a   2 minutes ago   30.8MB
+   tigera/typha          {{site.data.versions[page.version].first.components["typha"].version}}  e07d59b0eb8a   2 minutes ago   30.8MB
    ```
 
-1. If you plan to run Typha from the current host, skip to the next step.  
-   
-   If you want the nodes running Typha to be able to pull its image down from your private repository,
-   upload the image to the private repository and ensure that each node has the credentials to 
-   access the repository.
-   
-1. Use the following `sed` command to update the manifest to point to the location
-   of Typha. Before issuing this command, replace `<REPLACE_ME>` with the location 
-   of the Typha image.
+1. Retag the image as desired and necessary to load it to your private registry.
 
-   **Command**
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
+1. If you have not configured your local Docker instance with the credentials that will
+   allow you to access your private registry, do so now.
+
+   ```
+   docker login [registry-domain]
+   ```
+
+1. Use the following command to push the `typha` image to the private registry, replacing 
+   `<YOUR_PRIVATE_DOCKER_REGISTRY>` with the location of your registry first.
+
+   ```
+   docker push {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
    ```
    
-   **Example**
-
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
-   ```
-   > **Tip**: If you're hosting your own private repository, you may need to include
-   > a port number. For example, `bob:5000`.
-   {: .alert .alert-success}
+1. Open the manifest that corresponds to your desired configuration. 
+     - [Option 1: CNX policy with CNX networking](../kubernetes-datastore/calico-networking/1.7/calico.yaml){:target="_blank"}
+     - [Option 2: CNX policy-only with user-supplied networking](../kubernetes-datastore/policy-only/1.7/calico.yaml){:target="_blank"}
+   
+   You should have a modified copy stored locally.
 
 1. Change the `typha_service_name` variable in the ConfigMap from `"none"` to `"calico-typha"`.
 
-2. Modify the replica count in the `calico-typha` Deployment section to the desired number of replicas:
+1. Modify the replica count in the `calico-typha` Deployment section to the desired number of replicas:
     
    ```
    apiVersion: apps/v1beta1
@@ -312,7 +310,7 @@ To enable Typha in either the {{site.prodname}} networking manifest or the polic
    In production, we recommend starting at least 3 replicas to reduce the impact of rolling upgrades
    and failures.
 
-> **Note**: If you set `typha_service_name` without increasing the replica count from its default 
-> of `0` Felix will fail to start because it will try to connect to Typha but there 
-> will be no Typha instances to connect to.
-{: .alert .alert-info}
+   > **Note**: If you set `typha_service_name` without increasing the replica count from its default 
+   > of `0` Felix will fail to start because it will try to connect to Typha but there 
+   > will be no Typha instances to connect to.
+   {: .alert .alert-info}
