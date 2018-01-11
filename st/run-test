@@ -19,7 +19,7 @@ function summarise_test {
 # Get a calicoctl.
 cd st
 if ! test -x calicoctl; then
-    wget https://github.com/projectcalico/calicoctl/releases/download/v2.0.0-beta1/calicoctl
+    wget https://github.com/projectcalico/calicoctl/releases/download/v2.0.0/calicoctl
     chmod a+x calicoctl
 fi
 CALICOCTL=`pwd`/calicoctl
