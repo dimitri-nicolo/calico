@@ -57,13 +57,13 @@
    ```
 
 1. Configure authorization to allow {{site.prodname}} Manager users to edit policies.  Consult the
-   [{{site.prodname}} Manager](../../../../../reference/cnx/non-admin-workflows)
+   [{{site.prodname}} Manager]({{site.baseurl}}/{{page.version}}/reference/cnx/non-admin-workflows)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.
 
 1. Configure calico-monitoring namespace and deploy Prometheus Operator by
-  applying the [operator.yaml](1.7/operator.yaml) manifest.
+  applying the [operator.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml) manifest.
 
    ```
    kubectl apply -f operator.yaml
@@ -75,7 +75,7 @@
    kubectl get customresourcedefinitions
    ```
 
-1. Apply the [monitor-calico.yaml](1.7/monitor-calico.yaml) manifest which will
+1. Apply the [monitor-calico.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
   install Prometheus and alertmanager.
 
    ```
