@@ -79,7 +79,7 @@ every node for every Source IP. All these alerts can be combined into a single
 alert by configuring grouping. The Alertmanager configuration file that is
 provided with the CNX v1.x release by default, groups alerts on a
 per-node basis. Instead, if the goal is to group all alerts with the same
-name, edit (and apply) the alertmanager configuartion file like so:
+name, edit (and apply) the alertmanager configuration file like so:
 
 ```
 global:
@@ -96,6 +96,6 @@ receivers:
   - url: 'http://calico-alertmanager-webhook:30501/'
 ```
 
-More information, including descriptiong of the various options can be found under the
+More information, including descriptions of the various options can be found under the
 [route section](https://prometheus.io/docs/alerting/configuration/#route)
 of the Alertmanager Configuration guide.

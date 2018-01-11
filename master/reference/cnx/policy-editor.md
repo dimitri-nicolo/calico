@@ -58,7 +58,7 @@ roleRef:
 For a non-privileged user to be able to do something with the Web UI, they need to be
 granted access to one or more tiers.
 
-Tiers should be created by adminitrators, and the ability to perform CRUD operations
+Tiers should be created by administrators, and the ability to perform CRUD operations
 on tiers is tantamount to full administrative control of all network policy.  The ability
 to update a tier or create tiers allows that user to place their tier first
 and take control before other policy.

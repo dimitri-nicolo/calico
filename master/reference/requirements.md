@@ -7,7 +7,7 @@ Depending on the {{site.prodname}} functionality you are using, there are some r
 
 For large scale and production deployments, you should also consult the [deployment recommendations]({{site.baseurl}}/{{page.version}}/reference/recommendations) document.
 
-## Minumum Linux kernel versions
+## Minimum Linux kernel versions
 
 IPv4 only: `2.6.32`
 

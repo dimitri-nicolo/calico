@@ -190,7 +190,7 @@ fabric.
 of the routed traffic within the {{site.prodname}} network (the source and
 destination compute hosts).
 
-This model is substantially more robust to failure than a centralised
+This model is substantially more robust to failure than a centralized
 firewall-based model. In particular, the {{site.prodname}} approach has no
 single-point-of-failure: if the device enforcing the firewall has failed
 then so has one of the workloads involved in the traffic (because the

@@ -50,7 +50,7 @@ Labels field of the corresponding
 ```json
 {
   "id": "client",
-  "cmd": "while true; do let COUNTER+=1; curl --connect-timeout 1 -s webserver.marathon.containerip.dcos.thisdcos.directory > /dev/null && echo \"(connection $COUNTER succesful)\" || echo \"($COUNTER timed out)\"; sleep 1; done",
+  "cmd": "while true; do let COUNTER+=1; curl --connect-timeout 1 -s webserver.marathon.containerip.dcos.thisdcos.directory > /dev/null && echo \"(connection $COUNTER successful)\" || echo \"($COUNTER timed out)\"; sleep 1; done",
   "ipAddress": {
       "networkName": "calico",
       "labels": {

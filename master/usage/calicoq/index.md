@@ -22,5 +22,5 @@ datastore.
 1. You can then extract the binary from the image or run `calicoq` in a container.
 
 > **Note**: Move `calicoq` to a directory in your `PATH` or add the directory it is in to
-> your `PATH` to avoid prepending the path to invocations of `calicoq`.
+> your `PATH` to avoid having to prepend the path to invocations of `calicoq`.
 {: .alert .alert-info}

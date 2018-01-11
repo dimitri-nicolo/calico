@@ -85,7 +85,7 @@ To use these manifests with a TLS enabled etcd cluster you must do the following
 
 Calico's manifests assign its components one of two service accounts.
 Depending on your cluster's authorization mode, you'll want to back these
-ServiceAccounts with the neccessary permissions.
+ServiceAccounts with the necessary permissions.
 
 ### Other Configuration Options
 

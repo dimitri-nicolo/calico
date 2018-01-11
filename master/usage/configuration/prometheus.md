@@ -78,7 +78,7 @@ data:
 
 #### Creating a New Alerting Rule
 
-Creating a new alerting rule is straighforward once you figure out what you
+Creating a new alerting rule is straightforward once you figure out what you
 want your rule to look for. Check [alerting rules](https://prometheus.io/docs/alerting/rules/)
 and [Queries](https://prometheus.io/docs/querying/examples/) for more
 information.
@@ -213,7 +213,7 @@ if ephemeral storage is used, metrics will be lost. Configure the _Storage_ spec
 to store metrics persistently.
 
 The sample manifests do not define a _Storage_ spec. This means that if you
-use the default manifest, Prometheus will be deploymed with a `emptyDir`
+use the default manifest, Prometheus will be deployed with a `emptyDir`
 volume. Using a [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
 supported by Kubernetes is strongly recommended.
 
@@ -584,7 +584,7 @@ Congratulations! Your metrics are now secured with TLS.
 in order to schedule new pods with your changes.
 </div>
 
-### Troubeshooting Config Updates
+### Troubleshooting Config Updates
 
 Check config reloader logs to see if they detected any recent activity.
 

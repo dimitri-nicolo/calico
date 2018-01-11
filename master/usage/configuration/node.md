@@ -67,7 +67,7 @@ calicoctl node run --ip=10.0.2.10/24
 
 #### b) Autodetect the IP and subnet
 
-The `{{site.nodecontainer}}` container can be configured to autodetect the IPv4 address and subnet everytime it
+The `{{site.nodecontainer}}` container can be configured to autodetect the IPv4 address and subnet every time it
 is restarted.  Use a value of `autodetect` for the IP address in the `--ip` option
 on `calicoctl node run` or the `IP` environment variable if you are starting the container
 directly.

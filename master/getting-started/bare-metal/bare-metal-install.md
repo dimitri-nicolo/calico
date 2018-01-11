@@ -55,7 +55,7 @@ then make it executable and move it to a location on your path, for example:
 
 Felix should be started at boot by your init system and the init system
 **must** be configured to restart Felix if it stops. Felix relies on
-that behaviour for certain configuration changes.
+that behavior for certain configuration changes.
 
 If your distribution uses systemd, then you could use the following unit
 file:

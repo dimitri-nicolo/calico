@@ -85,7 +85,7 @@ Example CNI configuration
 
 ### Setting MTU for tunnel network interfaces
 
-If IP-in-IP is enabled and the MTU needs to be modifed then this must be
+If IP-in-IP is enabled and the MTU needs to be modified then this must be
 configured by setting a Felix environment variable or using calicoctl to set
 the proper configuration variable.  Felix will set the tunnel interfaces to
 the specified MTU.
