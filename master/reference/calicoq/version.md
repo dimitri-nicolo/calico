@@ -9,8 +9,8 @@ information about the source code it was built from, and when that was.
 
 ```
 $ calicoq version
-Version:      1.0.0
-Build date:   2017-05-24T15:42:25Z
-Git tag ref:  v1.0.0-1-g384f5c6
-Git commit:   384f5c65f252c7638b7104542355f781a268d781
+Version:      v2.0.0-cnx
+Build date:   2018-01-10T21:40:16+0000
+Git tag ref:  v2.0.0-cnx-rc1-12-g9157612
+Git commit:   9157612
 ```
