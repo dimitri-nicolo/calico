@@ -42,23 +42,7 @@ As a non-production quick start, to install Calico with a single-node dedicated 
 
 1. Copy the contents, paste them into a new file, and save the file as calico.yaml.
 
-1. Use the following `sed` command to update the manifest to point to the private
-   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
-   with the name of your private Docker registry.
-
-   **Command**
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
-   ```
-   
-   **Example**
-
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
-   ```
-   > **Tip**: If you're hosting your own private repository, you may need to include
-   > a port number. For example, `bob:5000`.
-   {: .alert .alert-success}
+{% include {{page.version}}/cnx-cred-sed.md %}
    
    > **Note**: Refer to [Configuration options](index#configuration-options) for additional
    > settings that can be modified in the manifest.

@@ -67,26 +67,10 @@ This will install {{site.prodname}} and will initially create a full node-to-nod
 
 1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml){:target="_blank"}
 
-1. Use the following `sed` command to update the manifest to point to the private
-   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
-   with the name of your private Docker registry.
-
-   **Command**
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
-   ```
-   
-   **Example**
-
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
-   ```
-   > **Tip**: If you're hosting your own private repository, you may need to include
-   > a port number. For example, `bob:5000`.
-   {: .alert .alert-success}
+{% include {{page.version}}/cnx-cred-sed.md %}
 
 2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
-   more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha).
+   more than 50 nodes, edit the manifest to [enable Typha](../cnx/cnx#enabling-typha).
 
 3. Make sure your cluster CIDR matches the `CALICO_IPV4POOL_CIDR` environment variable in the manifest.
    The cluster CIDR is configured by the  `--cluster-cidr` option passed to the Kubernetes
@@ -121,23 +105,7 @@ To install {{site.prodname}} in policy-only mode:
 
 1. Download [the policy-only manifest](policy-only/1.7/calico.yaml)
 
-1. Use the following `sed` command to update the manifest to point to the private
-   Docker registry. Before issuing this command, replace `<REPLACE_ME>` 
-   with the name of your private Docker registry.
-
-   **Command**
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
-   ```
-   
-   **Example**
-
-   ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/bob/g' calico.yaml
-   ```
-   > **Tip**: If you're hosting your own private repository, you may need to include
-   > a port number. For example, `bob:5000`.
-   {: .alert .alert-success}
+{% include {{page.version}}/cnx-cred-sed.md %}
 
 1. Then apply the manifest.
 

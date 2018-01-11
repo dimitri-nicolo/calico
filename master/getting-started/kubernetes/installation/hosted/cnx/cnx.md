@@ -233,3 +233,84 @@ receivers:
 
 To view the JSON output printed, examine the logs of the webhook pod.
 
+## Enabling Typha
+
+{{site.prodname}}'s Typha component helps {{site.prodname}} deployments that use the Kubernetes API
+datastore scale to high numbers of nodes without over-taxing the Kubernetes API server. 
+It sits between Felix ({{site.prodname}}'s per-host agent) and the API server, as fan-out proxy. 
+
+> **Important**: Typha runs as a host-networked pod and it opens a port on the host for Felix 
+> to connect to.  If your cluster runs in an untrusted environment, you **must** take steps to secure that
+> port so that only your Kubernetes nodes can access it.  You may wish to add a `nodeSelector` to the 
+> manifest to control where Typha runs (for example on the master) and then use {{site.prodname}} host protection
+> to secure those hosts.
+{: .alert .alert-danger}
+
+We recommend enabling Typha if you have more than 50 Kubernetes nodes in your cluster.  Without Typha, the 
+load on the API server and Felix's CPU usage increases substantially as the number of nodes is increased.
+In our testing, beyond 100 nodes, both Felix and the API server use an unacceptable amount of CPU.
+
+To enable Typha in either the {{site.prodname}} networking manifest or the policy only manifest:
+
+1. [Download the private, CNX-specific `typha` image](/{{page.version}}/getting-started/#images).
+
+1. Import the file into the local Docker engine.
+
+   ```
+   docker load -i tigera_typha_{{site.data.versions[page.version].first.components["typha"].version}}.tar.xz
+   ```
+
+1. Confirm that the image has loaded by typing `docker images`.
+
+   ```
+   REPOSITORY            TAG               IMAGE ID       CREATED         SIZE
+   tigera/typha          {{site.data.versions[page.version].first.components["typha"].version}}  e07d59b0eb8a   2 minutes ago   30.8MB
+   ```
+
+1. Retag the image as desired and necessary to load it to your private registry.
+
+1. If you have not configured your local Docker instance with the credentials that will
+   allow you to access your private registry, do so now.
+
+   ```
+   docker login [registry-domain]
+   ```
+
+1. Use the following command to push the `typha` image to the private registry, replacing 
+   `<YOUR_PRIVATE_DOCKER_REGISTRY>` with the location of your registry first.
+
+   ```
+   docker push {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
+   ```
+   
+1. Open the manifest that corresponds to your desired configuration. 
+     - [Option 1: CNX policy with CNX networking](../kubernetes-datastore/calico-networking/1.7/calico.yaml){:target="_blank"}
+     - [Option 2: CNX policy-only with user-supplied networking](../kubernetes-datastore/policy-only/1.7/calico.yaml){:target="_blank"}
+   
+   You should have a modified copy stored locally.
+
+1. Change the `typha_service_name` variable in the ConfigMap from `"none"` to `"calico-typha"`.
+
+1. Modify the replica count in the `calico-typha` Deployment section to the desired number of replicas:
+    
+   ```
+   apiVersion: apps/v1beta1
+   kind: Deployment
+   metadata:
+     name: calico-typha
+     ...
+   spec:
+     ...
+     replicas: <number of replicas>
+   ```
+   
+   We recommend starting at least one replica for every 200 nodes and, at most, 20 replicas (since each 
+   replica places some load on the API server).
+   
+   In production, we recommend starting at least 3 replicas to reduce the impact of rolling upgrades
+   and failures.
+
+   > **Note**: If you set `typha_service_name` without increasing the replica count from its default 
+   > of `0` Felix will fail to start because it will try to connect to Typha but there 
+   > will be no Typha instances to connect to.
+   {: .alert .alert-info}
