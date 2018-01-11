@@ -3,17 +3,13 @@ title: calicoq and selectors
 ---
 
 The queries that you can make with `calicoq` all involve computing the matches
-between endpoints and policies or profiles, via selectors.  The use of
-selectors in {{site.prodname}} policy is described in detail by
-[NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
-[GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy),
-but to recap:
+between endpoints and policies or profiles, via selectors.
 
-- Selectors can be used in three contexts in {{site.prodname}} security policy
-  definitions.
+Selectors can be used in the following three contexts in {{site.prodname}}
+security policy definitions:
 
-- A selector is used in the definition of each {{site.prodname}} Policy object, to specify
-  the endpoints (pods) that that Policy applies to (`spec.selector`).
+- A selector can be used in the definition of each {{site.prodname}} Policy object,
+  to specify the endpoints (pods) that that Policy applies to (`spec.selector`).
 
 - A selector can be used in each ingress Rule, to specify that the Rule only
   matches packets sent from a particular set of endpoints (`source.selector`),
@@ -23,6 +19,10 @@ but to recap:
   matches packets sent to a particular set of endpoints
   (`destination.selector`), or packets to all endpoints except a particular set
   (`destination.notSelector`).
+
+Note: the use of selectors in {{site.prodname}} policy is described in detail by
+[NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) and
+[GlobalNetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy).
 
 Kubernetes NetworkPolicy definitions are similar but less general: they do
 not support egress rules or the `notSelector` options.
