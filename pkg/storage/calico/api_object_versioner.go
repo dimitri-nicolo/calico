@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s/conversion"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/storage/etcd"
@@ -44,7 +45,12 @@ func (a APIObjectVersioner) ObjectResourceVersion(obj runtime.Object) (uint64, e
 	}
 	if strings.ContainsRune(version, '/') == true {
 		conv := conversion.Converter{}
-		version, _, _ = conv.SplitNetworkPolicyRevision(version)
+		crdNPRev, k8sNPRev, _ := conv.SplitNetworkPolicyRevision(version)
+		if crdNPRev == "" && k8sNPRev != "" {
+			reason := "kubernetes network policies must be managed through the kubernetes API"
+			return 0, errors.NewBadRequest(reason)
+		}
+		version = crdNPRev
 	}
 	return strconv.ParseUint(version, 10, 64)
 }
