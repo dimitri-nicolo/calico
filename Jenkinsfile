@@ -26,6 +26,14 @@ pipeline{
             }
         }
 
+        stage('Run htmlproofer') {
+            steps {
+                ansiColor('xterm') {
+                    sh 'make htmlproofer 2>&1 | awk -f filter-htmlproofer-false-negatives.awk'
+                }
+            }
+        }
+
         stage('Build tigera/cnx-docs') {
             steps {
                 script {
