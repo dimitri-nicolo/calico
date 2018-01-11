@@ -4,7 +4,7 @@ title: Customizing the CNX manifests (advanced)
 
 ## About the manifests
 
-The **[cnx.yaml](1.7/calico-cnx.yaml)** manifest does the following:
+The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests do the following:
   - Installs the CNX API server, and configures the APIService to tell
     the Kubernetes API server to delegate to it.
   - Installs the CNX Manager web server, and configures it with the location
@@ -97,7 +97,8 @@ spec:
 ## Enabling TLS Verification for a Kubernetes extension API Server
 
 The Kubernetes extension API Server deployed by the provided
-[manifest](1.7/cnx-etcd.yaml) will communicate with the Kubernetes
+**[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)**
+manifests will communicate with the Kubernetes
 API Server.  The manifest, by default, requires no updates to work but does not
 enable TLS verification on the connection between the two API servers. We
 recommend that this is enabled and you can follow the directions below to
@@ -148,7 +149,7 @@ Here is an example command to do the base64 encoding:
 
 #### Add Certificate Files to the Manifest
 
-The [cnx.yaml](1.7/cnx-etcd.yaml) manifest must be updated
+The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests must be updated
 with the following changes
 
 1. Remove the line `insecureSkipTLSVerify: true` from the `APIService` section.
@@ -161,7 +162,7 @@ with the following changes
 
 ## Configure the {{site.prodname}} Manager
 
-The [cnx.yaml](1.7/cnx-etcd.yaml) manifest must be updated with
+The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests must be updated with
 the following changes.  Some of the parameters depend on the chosen
 authentication method.  Authentication methods, and the relevant parameters
 are described [here]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
