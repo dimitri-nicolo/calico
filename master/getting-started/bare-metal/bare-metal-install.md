@@ -3,9 +3,7 @@ title: Installing Felix as a static binary
 ---
 
 These instructions will take you through a first-time install of
-Calico's per-host daemon, Felix, starting with the calico-felix binary.
-These instructions apply to Calico v2.1.0 and above.  Older versions
- were packaged differently.
+Calico's per-host daemon, Felix, starting with the Felix binary.
 
 > **Note**: This install process is most suited to bare-metal-only
 > installations where Felix is to be used to control policy for the
@@ -47,14 +45,11 @@ Felix has the following pre-requisites:
 
 ## Download and install the binary
 
-The calico-felix binary is distributed via the
-[Github releases page](https://github.com/projectcalico/felix/releases).
-Download the calico-felix attachment to your system, then make it executable
-and move it to a location on your path, for example:
+[Download the private, CNX-specific Felix binary](/{{page.version}}/getting-started/#binaries), 
+then make it executable and move it to a location on your path, for example:
 
-    curl -o calico-felix <URL of binary>
-    chmod +x calico-felix
-    sudo cp calico-felix /usr/local/bin
+    chmod +x felix-{{site.data.versions[page.version].first.components["felix"].version}}
+    sudo cp felix-{{site.data.versions[page.version].first.components["felix"].version}} /usr/local/bin
 
 ## Create a start-up script
 
@@ -72,7 +67,7 @@ file:
     [Service]
     User=root
     ExecStartPre=/usr/bin/mkdir -p /var/run/calico
-    ExecStart=/usr/local/bin/calico-felix
+    ExecStart=/usr/local/bin/felix-{{site.data.versions[page.version].first.components["felix"].version}}
     KillMode=process
     Restart=on-failure
     LimitNOFILE=32000
@@ -100,7 +95,7 @@ Or, for upstart:
       chown root:root /var/run/calico
     end script
 
-    exec /usr/local/bin/calico-felix
+    exec /usr/local/bin/felix-{{site.data.versions[page.version].first.components["felix"].version}}
 
 ## Configure Felix
 
@@ -125,15 +120,15 @@ Once you've configured Felix, start it up via your init system.
 
 For systemd, with the above unit file installed, you could run:
 
-    systemctl start calico-felix
+    systemctl start felix-{{site.data.versions[page.version].first.components["felix"].version}}
 
 For upstart:
 
-    start calico-felix
+    start felix-{{site.data.versions[page.version].first.components["felix"].version}}
 
 ## Running Felix manually
 
 For debugging, it's sometimes useful to run Felix manually and tell it
 to emit its logs to screen. You can do that with the following command:
 
-    FELIX_LOGSEVERITYSCREEN=INFO /opt/calico-felix/calico-felix
+    FELIX_LOGSEVERITYSCREEN=INFO /opt/calico-felix/felix-{{site.data.versions[page.version].first.components["felix"].version}}
