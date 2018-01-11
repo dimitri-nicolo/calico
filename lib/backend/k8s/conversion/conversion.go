@@ -582,7 +582,12 @@ func (c Converter) SplitNetworkPolicyRevision(rev string) (crdNPRev string, k8sN
 	}
 
 	revs := strings.Split(rev, "/")
-	// Since k8s NPs are not configurable, we always expect crdNPs but ignore k8sNPs.
+	if len(revs) > 2 {
+		err = fmt.Errorf("ResourceVersion is not valid: %s", rev)
+		return
+	}
+	// A single rev value is valid since AAPI is directly dealing with the conversion
+	// as part of the update request.
 	crdNPRev = revs[0]
 	if len(revs) == 2 {
 		k8sNPRev = revs[1]
