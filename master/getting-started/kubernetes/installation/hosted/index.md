@@ -1,5 +1,5 @@
 ---
-title: Calico Kubernetes Hosted Install
+title: CNX Kubernetes Hosted Install
 ---
 
 CNX is installed on a cluster by configuring and applying Kubernetes manifests.

@@ -1,5 +1,5 @@
 ---
-title: Troubleshooting Calico for Kubernetes
+title: Troubleshooting CNX for Kubernetes
 ---
 
 This article contains Kubernetes specific troubleshooting advice for {{site.prodname}} and

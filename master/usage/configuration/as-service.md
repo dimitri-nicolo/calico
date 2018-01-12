@@ -1,5 +1,5 @@
 ---
-title: Running calico/node with an init system
+title: Running cnx-node with an init system
 ---
 
 This guide explains how to run `{{site.nodecontainer}}` with an init system like

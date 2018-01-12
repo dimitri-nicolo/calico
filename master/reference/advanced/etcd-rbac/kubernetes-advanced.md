@@ -1,5 +1,5 @@
 ---
-title: Advanced etcd segmentation for Calico
+title: Advanced etcd segmentation for CNX
 ---
 
 This document describes advanced segmentation of the etcd roles to limit

@@ -1,6 +1,6 @@
 ---
 subtitle: 'At scale, and no, we''re not joking'
-title: Calico over an Ethernet interconnect fabric
+title: CNX over an Ethernet interconnect fabric
 ---
 
 

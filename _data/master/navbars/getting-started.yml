@@ -40,8 +40,6 @@ toc:
       path: /getting-started/kubernetes/tutorials/stars-policy/
     - title: Advanced network policy
       path: /getting-started/kubernetes/tutorials/advanced-policy
-    - title: CNX for Kubernetes Demo
-      path: /getting-started/cnx/simple-policy-cnx
     - title: Tiered Policy Demo
       path: /getting-started/cnx/tiered-policy-cnx
   - title: Troubleshooting / FAQ

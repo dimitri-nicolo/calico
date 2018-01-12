@@ -1,5 +1,5 @@
 ---
-title: IP Interconnect Fabrics in Calico
+title: IP Interconnect Fabrics in CNX
 lead_text: 'Where large-scale IP networks and hardware collide'
 ---
 
