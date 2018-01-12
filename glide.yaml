@@ -190,7 +190,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: e92613e27de185acd7ccec7bdbf238ccd1a1eb68
+  version: 97f06c66d59b9f61be21bdbb2a5a70d1e6c98a03
 - package: k8s.io/kubernetes
   version: c1d1b92688176f37893d81cf6d7a3abc5663a795
 - package: k8s.io/code-generator
