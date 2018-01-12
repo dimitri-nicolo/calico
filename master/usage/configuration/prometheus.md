@@ -79,7 +79,8 @@ data:
 #### Creating a New Alerting Rule
 
 Creating a new alerting rule is straightforward once you figure out what you
-want your rule to look for. Check [alerting rules](https://prometheus.io/docs/alerting/rules/)
+want your rule to look for. Check [alerting
+rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
 and [Queries](https://prometheus.io/docs/querying/examples/) for more
 information.
 

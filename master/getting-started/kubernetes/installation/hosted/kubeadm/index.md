@@ -44,7 +44,7 @@ As a non-production quick start, to install Calico with a single-node dedicated 
 
 {% include {{page.version}}/cnx-cred-sed.md %}
    
-   > **Note**: Refer to [Configuration options](index#configuration-options) for additional
+   > **Note**: Refer to [Configuration options](../index#configuration-options) for additional
    > settings that can be modified in the manifest.
    {: .alert .alert-info}
 
