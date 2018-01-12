@@ -48,9 +48,12 @@ kubectl expose --namespace=policy-demo deployment nginx --port=80
 another, busybox pod.
 
 ```
-$ kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
-Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
+kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
+```
 
+Once the pod is running, attempt to access the nginx service.
+
+```
 If you don't see a command prompt, try pressing enter.
 
 / # wget -q nginx -O -
@@ -70,7 +73,12 @@ information about the policies for endpoints on a given host.
 {: .alert .alert-info}
 
 ```
-$ ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoq host k8s-node1
+ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoq host k8s-node1
+```
+
+You should see the following output.
+
+```
 Policies and profiles for each endpoint on host "k8s-node1":
 
 Workload endpoint k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0
@@ -113,7 +121,12 @@ example, for the `kns.policy-demo` profile, which defines default behavior for
 pods in the `policy-demo` namespace:
 
 ```
-$ ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoctl get profile kns.policy-demo -o yaml
+ETCD_ENDPOINTS=http://10.96.232.136:6666 ./calicoctl get profile kns.policy-demo -o yaml
+```
+
+You should see the following output.
+
+```
 apiVersion: projectcalico.org/v3
 kind: Profile
 metadata:
@@ -166,24 +179,38 @@ EOF
 #### Test Isolation
 
 This will prevent all access to the nginx service.  We can see the effect by trying to access the service again.
+Start another pod within the `policy-demo` namespace.
 
 ```
-$ kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
-Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
+kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
+```
 
+Attempt to connect to the nginx service.
+
+```
 If you don't see a command prompt, try pressing enter.
 
 / # wget -q --timeout=5 nginx -O -
+```
+
+You should see the following output.
+
+```
 wget: download timed out
-/ #
 ```
 
 The request should time out after 5 seconds.  By enabling isolation on the namespace, we've prevented access to the service.
 
 ### Denied packet metrics and Alerting
 Now would be a great time to take a look at the denied packet metrics.  Get the service listing from kubectl:
+
 ```
-$ kubectl get svc -n calico-monitoring
+kubectl get svc -n calico-monitoring
+```
+
+You should see the following output.
+
+```
 NAME                       CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
 alertmanager-operated      None             <none>        9093/TCP,6783/TCP   6h
 calico-node-alertmanager   10.105.253.248   <nodes>       9093:30903/TCP      6h
@@ -191,6 +218,7 @@ calico-node-prometheus     10.105.26.250    <nodes>       9090:30909/TCP      6h
 prometheus-operated        None             <none>        9090/TCP            6h
 
 ```
+
 This tells us that the `calico-node-prometheus` service is running using a NodePort on port 30909. Point a web browser at `http://k8s-node1:30909/graph`.
 
 If you click on the drop down box `- insert metric at cursor -`, you should see a list of metrics which are available:
@@ -229,7 +257,7 @@ Refresh the graph and you should see some data points appear.  Now switch back t
 
 ### Allow Access using a NetworkPolicy
 
-Now, let's enable access to the nginx service using a NetworkPolicy.  This will allow incoming connections from our `access` Pod, but not
+Now, let's enable access to the nginx service using a NetworkPolicy.  This will allow incoming connections from our `access` pod, but not
 from anywhere else.
 
 Create a network policy `access-nginx` with the following contents:
@@ -253,35 +281,46 @@ spec:
 EOF
 ```
 
-> **Note**: The NetworkPolicy allows traffic from Pods with the label `run: access`
-> to Pods with the label `run: nginx`.  These are the labels automatically added to
-> Pods started via `kubectl run` based on the name of the `Deployment`.
+> **Note**: The NetworkPolicy allows traffic from pods with the label `run: access`
+> to pods with the label `run: nginx`.  These are the labels automatically added to
+> pods started via `kubectl run` based on the name of the `Deployment`.
 {: .alert .alert-info}
 
 
-We should now be able to access the service from the `access` Pod.
+We should now be able to access the service from the `access` pod.
 
 ```
-$ kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
-Waiting for pod policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
+kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
+```
 
+Attempt to access the service again.
+
+```
 If you don't see a command prompt, try pressing enter.
 
 / # wget -q --timeout=5 nginx -O -
-... HTTP response ...
 ```
 
-However, we still cannot access the service from a Pod without the label `run: access`:
+You should see an HTTP response.
+
+However, we still cannot access the service from a pod without the label `run: access`:
 
 ```
-$ kubectl run --namespace=policy-demo cant-access --rm -ti --image busybox /bin/sh
-Waiting for pod policy-demo/cant-access-472357175-y0m47 to be running, status is Pending, pod ready: false
+kubectl run --namespace=policy-demo cant-access --rm -ti --image busybox /bin/sh
+```
 
+Attempt to access the service again.
+
+```
 If you don't see a command prompt, try pressing enter.
 
 / # wget -q --timeout=5 nginx -O -
+```
+
+After 5 seconds, you should see the following output.
+
+```
 wget: download timed out
-/ #
 ```
 
 You can clean up the demo by deleting the demo namespace:

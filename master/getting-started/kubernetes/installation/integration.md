@@ -193,13 +193,18 @@ To install the controllers:
 - Install it using `kubectl`.
 
 ```shell
-$ kubectl create -f calico-kube-controllers.yaml
+kubectl create -f calico-kube-controllers.yaml
 ```
 
 After a few moments, you should see the controllers enter `Running` state:
 
 ```shell
-$ kubectl get pods --namespace=kube-system
+kubectl get pods --namespace=kube-system
+```
+
+You should see the following output.
+
+```
 NAME                                     READY     STATUS    RESTARTS   AGE
 calico-kube-controllers                  1/1       Running   0          1m
 ```

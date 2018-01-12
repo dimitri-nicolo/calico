@@ -28,8 +28,8 @@ kubectl get pods --all-namespaces --watch
 ```
 > Note that it may take several minutes to download the necessary Docker images for this demo.
 
-The management UI runs as a `NodePort` Service on Kubernetes, and shows the connectivity
-of the Services in this example.
+The management UI runs as a `NodePort` service on Kubernetes, and shows the connectivity
+of the services in this example.
 
 You can view the UI by visiting `http://<k8s-node-ip>:30002` in a browser.
 
@@ -42,7 +42,7 @@ represented by a single node in the graph.
 
 ### 2) Enable isolation
 
-Running following commands will prevent all access to the frontend, backend, and client Services.
+Running following commands will prevent all access to the frontend, backend, and client services.
 
 ```shell
 kubectl create -n stars -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/policies/default-deny.yaml
@@ -62,7 +62,7 @@ kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutor
 kubectl create -f {{site.url}}/{{page.version}}/getting-started/kubernetes/tutorials/stars-policy/policies/allow-ui-client.yaml
 ```
 
-After a few seconds, refresh the UI - it should now show the Services, but they should not be able to access each other any more.
+After a few seconds, refresh the UI - it should now show the services, but they should not be able to access each other any more.
 
 ### 4) Create the "backend-policy.yaml" file to allow traffic from the frontend to the backend.
 
@@ -89,7 +89,7 @@ To use Calico to enforce egress policy on Kubernetes pods, see [the advanced pol
 
 ### 6) (Optional) Clean up the demo environment.
 
-You can clean up the demo by deleting the demo Namespaces:
+You can clean up the demo by deleting the demo namespaces:
 
 ```shell
 kubectl delete ns client stars management-ui
