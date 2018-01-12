@@ -90,8 +90,8 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			ChainFailsafeOut,
 			chainTypeNormal,
 			true, // Host endpoints are always admin up.
-			uint16(1),
-			"inbound",
+			uint16(2),
+			"outbound",
 			egressPolicy,
 			r.filterAllowAction,
 		),
@@ -106,8 +106,8 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			ChainFailsafeIn,
 			chainTypeNormal,
 			true, // Host endpoints are always admin up.
-			uint16(2),
-			"outbound",
+			uint16(1),
+			"inbound",
 			ingressPolicy,
 			r.filterAllowAction,
 		),
@@ -122,8 +122,8 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			"", // No fail-safe chains for forward traffic.
 			chainTypeForward,
 			true, // Host endpoints are always admin up.
-			uint16(1),
-			"inbound",
+			uint16(2),
+			"outbound",
 			egressPolicy,
 			r.filterAllowAction,
 		),
@@ -138,8 +138,8 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			"", // No fail-safe chains for forward traffic.
 			chainTypeForward,
 			true, // Host endpoints are always admin up.
-			uint16(2),
-			"outbound",
+			uint16(1),
+			"inbound",
 			ingressPolicy,
 			r.filterAllowAction,
 		),
@@ -163,8 +163,8 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			ChainFailsafeOut,
 			chainTypeUntracked,
 			true, // Host endpoints are always admin up.
-			uint16(1),
-			"inbound",
+			uint16(2),
+			"outbound",
 			egressPolicy,
 			AcceptAction{},
 		),
@@ -179,8 +179,8 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			ChainFailsafeIn,
 			chainTypeUntracked,
 			true, // Host endpoints are always admin up.
-			uint16(2),
-			"outbound",
+			uint16(1),
+			"inbound",
 			ingressPolicy,
 			AcceptAction{},
 		),
