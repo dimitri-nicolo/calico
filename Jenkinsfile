@@ -70,7 +70,7 @@ pipeline{
                         // clear glide cache
                         sh 'sudo rm -rf ~/.glide/*'
                         sh 'make clean'
-                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make tigera/cnx-node && docker run --rm tigera/cnx-node:latest versions'
+                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && FELIX_VER=master make tigera/cnx-node && docker run --rm tigera/cnx-node:latest versions'
                     }
                 }
             }
