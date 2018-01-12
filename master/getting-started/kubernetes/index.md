@@ -266,7 +266,7 @@ equipped with {{site.prodname}}.
 ### Next steps
 **[Experiment with OIDC authentication strategy](/{{page.version}}/reference/cnx/authentication)**
 
-**[Experiment with non-admin users and the {{site.prodname}} manager](/{{page.version}}/reference/cnx/non-admin-workflows)**
+**[Experiment with non-admin users and the {{site.prodname}} manager](/{{page.version}}/reference/cnx/rbac-tiered-policies)**
 
 **[Secure a simple application using the Kubernetes `NetworkPolicy` API](tutorials/simple-policy)**
 
