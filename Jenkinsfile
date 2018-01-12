@@ -17,9 +17,9 @@ pipeline{
                 // Kill running containers:
                 sh "sudo docker kill `docker ps -qa` || true"
                 // Delete all containers (and their associated volumes):
-                sh "sudo docker rm -v `docker ps -qa` || true"
+                sh "sudo docker rm -v -f `docker ps -qa` || true"
                 // Remove all images:
-                sh "sudo docker rmi `docker images -q` || true"
+                sh "sudo docker rmi -f `docker images -q` || true"
                 // clear glide cache
                 sh 'sudo rm -rf ~/.glide/*'
                 }
