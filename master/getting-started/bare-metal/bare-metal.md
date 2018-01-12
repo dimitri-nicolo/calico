@@ -42,7 +42,7 @@ You can apply host endpoint policies to three types of traffic:
 same host.
 
 Set the `applyOnForward` flag to `true` to apply a policy to forwarded traffic.
-See [policy spec]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#spec).
+See [GlobalNetworkPolicy spec]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#spec).
 
 > **Note**: Both traffic forwarded between host endpoints and traffic forwarded 
 > between a host endpoint and a workload endpoint on the same host is regarded as
@@ -131,7 +131,7 @@ connectivity to a host:
     allowing traffic out to etcd's ports on any interface.
     
 -   Depending on your network, they may not cover all the ports that are
-    required; for example, your network may reply on allowing ICMP,
+    required; for example, your network may rely on allowing ICMP,
     or DHCP.
 
 Therefore, we recommend creating a failsafe {{site.prodname}} security policy that
@@ -146,6 +146,7 @@ policy resource, which:
     for each destination.
   - Allows inbound ICMP.
   - Allows outbound UDP on port 67, for DHCP.
+  - Allows inbound TCP on port 9081 for Prometheus metrics collection.
 
 When running this command, replace the placeholders in angle brackets with
 appropriate values for your deployment.
@@ -170,6 +171,14 @@ cat << EOF | calicoctl create -f -
         ports: [22]
     - action: Allow
       protocol: ICMP
+    - action: Allow
+      destination:
+        ports:
+        - 9081
+      protocol: TCP
+      source:
+         nets: 
+         - "<Prometheus IP>/32"
     egress:
     - action: Allow
       protocol: TCP
@@ -181,6 +190,10 @@ cat << EOF | calicoctl create -f -
       protocol: UDP
       destination:
         ports: [67]
+    tier: default
+    types:
+      - Ingress
+      - Egress
 EOF
 ```
 
@@ -207,7 +220,7 @@ Once you have such a policy in place, you may want to disable the
 
 For each host endpoint that you want {{site.prodname}} to secure, you'll need to
 create a host endpoint object in etcd.  Use the `calicoctl create` command
-to create a host endpoint resource (hostEndpoint).
+to create a host endpoint resource (`HostEndpoint`).
 
 There are two ways to specify the interface that a host endpoint should
 refer to. You can either specify the name of the interface or its
@@ -343,8 +356,10 @@ policy, {{site.prodname}} has a failsafe mechanism that keeps various pinholes o
 in the firewall.
 
 By default, {{site.prodname}} keeps port 22 inbound open on *all* host endpoints,
-which allows access to ssh; as well as inbound and outbound communications to
-ports 2379, 2380 (etcd's default ports), and to ports 6666, 6667 (etcd's ports
+which allows access to ssh; outbound UDP port 53 for DNS queries, 
+inbound UDP port 68 and outbound UDP 67 for DHCP; as well as inbound and outbound 
+communications to ports 179 ( Calico BGP peering ports), 
+2379, 2380 (etcd's default ports), and to ports 6666, 6667 (etcd's ports
 as deployed by {{site.prodname}}'s self-hosted Kubernetes manifests).
 
 The lists of failsafe ports can be configured via the configuration parameters
