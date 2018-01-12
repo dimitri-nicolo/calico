@@ -65,7 +65,7 @@
    ```
 
 1. Configure authorization to allow {{site.prodname}} Manager users to edit policies.  Consult the
-   [{{site.prodname}} Manager]({{site.baseurl}}/{{page.version}}/reference/cnx/non-admin-workflows)
+   [{{site.prodname}} Manager]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.
