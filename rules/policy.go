@@ -33,11 +33,11 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
 	inbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyInboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, true, policyID.Name+"/"+policyID.Tier, policy.Untracked),
+		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, true, policyID.Name+"|"+policyID.Tier, policy.Untracked),
 	}
 	outbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyOutboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, false, policyID.Name+"/"+policyID.Tier, policy.Untracked),
+		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, false, policyID.Name+"|"+policyID.Tier, policy.Untracked),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -58,7 +58,7 @@ func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
-		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, fmt.Sprintf("%d", ii)+"/"+prefix, untracked)...)
+		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, fmt.Sprintf("%d", ii)+"|"+prefix, untracked)...)
 	}
 	return rules
 }
@@ -510,7 +510,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:  nflogGroup,
-				Prefix: "A/" + prefix,
+				Prefix: "A|" + prefix,
 			})
 		}
 		actions = append(actions, iptables.ReturnAction{})
@@ -521,7 +521,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:  nflogGroup,
-				Prefix: "N/" + prefix,
+				Prefix: "N|" + prefix,
 			})
 		}
 		actions = append(actions, iptables.ReturnAction{})
@@ -531,7 +531,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:  nflogGroup,
-				Prefix: "D/" + prefix,
+				Prefix: "D|" + prefix,
 			})
 		}
 		actions = append(actions, r.DropActions()...)

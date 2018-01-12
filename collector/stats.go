@@ -108,7 +108,7 @@ var (
 	RuleTracePointParseError = errors.New("RuleTracePoint Parse Error")
 )
 
-var ruleSep = byte('/')
+var ruleSep = byte('|')
 
 // RuleTracePoint represents a rule and the tier and a policy that contains
 // it. The `Index` specifies the absolute position of a RuleTracePoint in the
@@ -302,11 +302,11 @@ func (t *RuleTrace) ToString() string {
 func (t *RuleTrace) ConcatBytes(buf *bytes.Buffer) {
 	p := t.VerdictRuleTracePoint()
 	buf.Write(p.TierID())
-	buf.Write([]byte("/"))
+	buf.Write([]byte("|"))
 	buf.Write(p.PolicyID())
-	buf.Write([]byte("/"))
+	buf.Write([]byte("|"))
 	buf.Write(p.Rule())
-	buf.Write([]byte("/"))
+	buf.Write([]byte("|"))
 	buf.Write(RuleActionToBytes[p.Action])
 	return
 }
