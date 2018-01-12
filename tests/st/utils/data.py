@@ -123,6 +123,17 @@ tier_name1_rev1 = {
     },
 }
 
+tier_name2_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'Tier',
+    'metadata': {
+        'name': 'before',
+    },
+    'spec': {
+        'Order': 100,
+    },
+}
+
 #
 # Network Policy
 #

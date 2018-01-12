@@ -826,6 +826,30 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("delete", data=k8s_np)
         rc.assert_error(text=NOT_SUPPORTED)
         rc.assert_error(text=KUBERNETES_NP)
+
+    def test_tier_list_order(self):
+        """
+        Test that the list output for a tier is ordered by
+        the order field.
+        """
+        # Create 3 tiers.
+        resources = [tier_name1_rev1, tier_name2_rev1, globalnetworkpolicy_name1_rev1]
+        rc = calicoctl ("create", data=resources)
+        rc.assert_no_error()
+
+        # Get all the tiers.
+        rc = calicoctl("get tiers -o yaml")
+        rc.assert_no_error()
+        tierList = rc.decoded
+
+        # Validate the tiers are ordered correctly. Default should have a value of nil and should be placed last.
+        self.assertEqual(tierList['items'][0]['metadata']['name'], name(tier_name2_rev1))
+        self.assertEqual(tierList['items'][1]['metadata']['name'], name(tier_name1_rev1))
+        self.assertEqual(tierList['items'][2]['metadata']['name'], 'default')
+
+        # Delete the resources
+        rc = calicoctl("delete", data=resources)
+        rc.assert_no_error()
 #
 #
 # class TestCreateFromFile(TestBase):
