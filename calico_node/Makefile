@@ -147,12 +147,6 @@ vendor: glide.yaml
 		  cd /go/src/$(PACKAGE_NAME) && \
       glide install -strip-vendor'
 
-
-# Download calicoctl v1.0.2 from releases.  Used for STs (testing pre/post v1.1.0 data model)
-dist/calicoctl-v1.0.2:
-	wget https://github.com/projectcalico/calicoctl/releases/download/v1.0.2/calicoctl -O dist/calicoctl-v1.0.2
-	chmod +x dist/calicoctl-v1.0.2
-
 # Pull calicoctl and CNI plugin binaries with versions as per XXX_VER
 # variables.  These are used for the STs.
 dist/calicoctl:
@@ -449,10 +443,9 @@ st-checks:
 
 ## Run the STs in a container
 .PHONY: st
-st: dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector.tar cnx-node.tar workload.tar run-etcd-host calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
+st: dist/calicoctl busybox.tar routereflector.tar cnx-node.tar workload.tar run-etcd-host calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
 	# Check versions of Calico binaries that ST execution will use.
 	dist/calicoctl --version
-	dist/calicoctl-v1.0.2 --version
 	dist/calico-cni-plugin -v
 	dist/calico-ipam-plugin -v
 	# Use the host, PID and network namespaces from the host.
