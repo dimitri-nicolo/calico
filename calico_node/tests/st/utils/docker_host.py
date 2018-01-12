@@ -176,6 +176,8 @@ class DockerHost(object):
                 self.execute("ip r")
                 self.execute("ping -c 1 -W 2 172.17.0.1")
 
+            self.execute("mkdir -p /var/log/calico")
+
             for command in post_docker_commands:
                 self.execute(command)
         elif not calico_node_autodetect_ip:
