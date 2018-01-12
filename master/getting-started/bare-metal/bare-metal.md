@@ -311,7 +311,10 @@ and (if used) the interface name in the configuration. If there was
 something wrong with the endpoint data, Felix will log a validation
 error at `WARNING` level and it will ignore the endpoint:
 
-    $ grep "Validation failed" /var/log/calico/felix.log
+    grep "Validation failed" /var/log/calico/felix.log
+
+You should see output similar to the following.
+
     2016-05-31 12:16:21,651 [WARNING][8657/3] calico.felix.fetcd 1017:
         Validation failed for host endpoint HostEndpointId<eth0>, treating as
         missing: 'name' or 'expected_ipvX_addrs' must be present.;

@@ -142,10 +142,14 @@ components when using the Kubernetes API datastore.
 An example using `calicoctl`:
 
 ```shell
-$ export DATASTORE_TYPE=kubernetes
-$ export KUBECONFIG=~/.kube/config
-$ calicoctl get workloadendpoints
+export DATASTORE_TYPE=kubernetes
+export KUBECONFIG=~/.kube/config
+calicoctl get workloadendpoints
+```
 
+You should see the following output.
+
+```
 HOSTNAME                      ORCHESTRATOR  WORKLOAD                                       NAME
 kubernetes-minion-group-tbmi  k8s           kube-system.kube-dns-v20-jhk10                 eth0
 kubernetes-minion-group-x7ce  k8s           kube-system.kubernetes-dashboard-v1.4.0-wtrtm  eth0

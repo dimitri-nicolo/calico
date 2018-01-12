@@ -11,7 +11,12 @@ However, you can also [install `calicoctl` as a pod](/{{page.version}}/usage/cal
 commands using `kubectl`:
 
 ```
-$ kubectl exec -ti -n kube-system calicoctl -- /calicoctl get profiles -o wide
+kubectl exec -ti -n kube-system calicoctl -- /calicoctl get profiles -o wide
+```
+
+You should see the following output.
+
+```
 NAME                 TAGS
 kns.default          kns.default
 kns.kube-system      kns.kube-system

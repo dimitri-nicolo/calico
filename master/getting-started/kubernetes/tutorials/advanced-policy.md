@@ -16,9 +16,9 @@ This guide walks through using Kubernetes `NetworkPolicy` to define more complex
 
 ### Tutorial Flow
 
-1. Create the Namespace and Nginx Service
+1. Create the namespace and nginx service
 1. Deny all ingress traffic
-1. Allow ingress traffic to Nginx
+1. Allow ingress traffic to nginx
 1. Deny all egress traffic
 1. Allow egress traffic to kube-dns
 1. Cleanup Namespace
@@ -38,10 +38,12 @@ kubectl expose --namespace=advanced-policy-demo deployment nginx --port=80
 Open up a second shell session which has `kubectl` connectivity to the Kubernetes cluster and create a busybox pod to test policy access.  This pod will be used throughout this tutorial to test policy access.
 
 ```shell
-$ kubectl run --namespace=advanced-policy-demo access --rm -ti --image busybox /bin/sh
+kubectl run --namespace=advanced-policy-demo access --rm -ti --image busybox /bin/sh
+```
 
-Waiting for pod advanced-policy-demo/access-472357175-y0m47 to be running, status is Pending, pod ready: false
+When the pod is ready, you should see the following output.
 
+```
 If you don't see a command prompt, try pressing enter.
 / #
 ```
@@ -78,12 +80,27 @@ EOF
 
 Because all pods in the namespace are now selected, any ingress traffic which is not explicitly allowed by a policy will be denied.
 
-We can see that this is the case by switching over to our "access" pod in the namespace and attempting to access the nginx Service.
+We can see that this is the case by switching over to our "access" pod in the namespace and attempting to access the nginx service.
 
 ```shell
 / # wget -q --timeout=5 nginx -O -
+```
+
+You should see the following output.
+
+```
 wget: download timed out
+```
+
+Attempt to access google.com.
+
+```
 / # wget -q --timeout=5 google.com -O -
+```
+
+You should see output similar to the following.
+
+```
 <!doctype html><html itemscope="" item....
 ```
 
@@ -117,13 +134,18 @@ Now ingress traffic to nginx will be allowed.  We can see that this is the case 
 
 ```shell
 / # wget -q --timeout=5 nginx -O -
+```
+
+You should now see something similar to the following output.
+
+```
 <!DOCTYPE html>
 <html>
 <head>
 <title>Welcome to nginx!</title>...
 ```
 
-After creating the policy, we can now access the nginx Service.
+After creating the policy, we can now access the nginx service.
 
 ### 4. Deny all egress traffic
 
@@ -153,12 +175,27 @@ namespace and attempting to `nslookup` nginx or `wget` google.com.
 
 ```shell
 / # nslookup nginx
+```
+
+You should see the following output
+
+```
 Server:    10.96.0.10
 Address 1: 10.96.0.10
 
 
 nslookup: can't resolve 'nginx'
+```
+
+Attempt to access google.com.
+
+```
 / # wget -q --timeout=5 google.com -O -
+```
+
+You should see the following output.
+
+```
 wget: bad address 'google.com'
 ```
 
@@ -203,9 +240,24 @@ We can see that this is the case by switching over to our "access" pod in the na
 
 ```shell
 / # nslookup nginx
+```
+
+You should now see the following output.
+
+```
 Server:    10.0.0.10
 Address 1: 10.0.0.10 kube-dns.kube-system.svc.cluster.local
+```
+
+Attempt to lookup google.com.
+
+```
 / # nslookup google.com
+```
+
+You should now see the following output.
+
+```
 Name:      google.com
 Address 1: 2607:f8b0:4005:807::200e sfo07s16-in-x0e.1e100.net
 Address 2: 216.58.195.78 sfo07s16-in-f14.1e100.net
@@ -244,11 +296,26 @@ namespace and attempting to access `nginx`.
 
 ```shell
 / # wget -q --timeout=5 nginx -O -
+```
+
+You should now see output similar to the following.
+
+```
 <!DOCTYPE html>
 <html>
 <head>
 <title>Welcome to nginx!</title>...
+```
+
+Now, if you attempt to access google.com
+
+```
 / # wget -q --timeout=5 google.com -O -
+```
+
+you should see the following output.
+
+```
 wget: download timed out
 ```
 
