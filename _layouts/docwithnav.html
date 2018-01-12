@@ -52,15 +52,6 @@ The code is a little roundabout for a few reasons:
     <script src="{{site.baseurl}}/js/jquery-2.2.0.min.js"></script>
     <script src="{{site.baseurl}}/js/bootstrap/bootstrap.min.js"></script>
     <script src="{{site.baseurl}}/js/script.js"></script>
-    <script>
-      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-      ga('create', 'UA-52125893-4', 'auto');
-      ga('send', 'pageview');
-    </script>
     <title>Calico - {{ page.title | json }}</title>
   </head>
   <body>
@@ -163,20 +154,6 @@ The code is a little roundabout for a few reasons:
             <button type="button" class="btn btn-primary btn-xs" data-toggle="offcanvas">Toggle nav</button>
           </p>
           <div class="col-xs-6 col-sm-4 col-md-3 sidebar-offcanvas">
-            <div class="row">
-              <script>
-                (function() {
-                  var cx = '015028447179048192876:xjzskk7awwe';
-                  var gcse = document.createElement('script');
-                  gcse.type = 'text/javascript';
-                  gcse.async = true;
-                  gcse.src = 'https://cse.google.com/cse.js?cx=' + cx;
-                  var s = document.getElementsByTagName('script')[0];
-                  s.parentNode.insertBefore(gcse, s);
-                })();
-              </script>
-              <gcse:search></gcse:search>
-            </div>
             <div id="sidebar">
             	{% include sidebar.html sidebar=this_pages_navbar.toc prefix="nav" %}
             	{% include docs_ad.html %}
@@ -184,11 +161,6 @@ The code is a little roundabout for a few reasons:
           </div>
           <div class="col-xs-12 col-sm-8 col-md-9">
             <div id="content-main">
-              <!-- TOP DOCUMENTATION PAGE NAVBAR -->
-              <div style="text-align: left; padding: 18px 0 9px 0; min-width: 500px; overflow-x: hidden;">
-
-              <a data-proofer-ignore href="https://github.com/projectcalico/calico/tree/master/{{page.path}}" style="color: #999; text-decoration: none; float: right;" target="_blank"><i class="fa fa-github" aria-hidden="true"></i> Edit this page</a></div>
-              <!-- END TOP DOCUMENTATION PAGE NAVBAR -->
               {% include version_warning.html %}
               <h1>{{ page.title }}</h1>
               {{ content }}
