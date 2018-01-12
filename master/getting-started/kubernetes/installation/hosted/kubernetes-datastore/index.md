@@ -17,7 +17,7 @@ pod CIDRs for each node.
 
 You must have a Kubernetes cluster, which meets the following requirements:
 
-- You are running Kubernetes `v1.7.0` or higher.
+- You are running Kubernetes `v1.8.0` or higher.
 - You have a Kubernetes cluster configured to use CNI network plugins (i.e. by passing `--network-plugin=cni` to the kubelet)
 - Your Kubernetes controller manager is configured to allocate pod CIDRs (i.e. by passing `--allocate-node-cidrs=true` to the controller manager)
 - Your Kubernetes controller manager has been provided a cluster-cidr (i.e. by passing `--cluster-cidr=192.168.0.0/16`, which the manifest expects by default).

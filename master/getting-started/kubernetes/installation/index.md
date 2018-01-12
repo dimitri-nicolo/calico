@@ -23,7 +23,7 @@ information.
 ## [{{site.prodname}} Hosted Install](hosted)
 
 Installs the {{site.prodname}} components as a DaemonSet entirely using Kubernetes manifests through a single
-kubectl command.  This method is supported for Kubernetes versions >= v1.4.0.
+kubectl command.
 
 ## [Custom Installation](integration)
 
