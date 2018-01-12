@@ -1,0 +1,31 @@
+PREREQUISITE: To view the documentation, you must have Docker
+installed. For installation instructions, refer to the Docker 
+documentation: https://docs.docker.com/engine/installation/
+
+---------------------------------------------------------------
+
+To launch the CNX documentation website:
+
+1. Import the file into your local Docker engine.
+
+   ```
+   docker load -i tigera_cnx-docs_v2.0.0.tar.xz
+   ```
+   
+2. Type `docker images` to confirm that it has loaded and to get 
+   the name of the image. It should be `/tigera/cnx-docs`.
+   
+3. Use the following command to load the Docker image and launch
+   the docs website.
+   
+   ```
+   docker run --rm -p 4000:4000 --name cnx-docs /tigera/cnx-docs
+   ```
+   
+4. Paste the following path in your browser.
+
+   ```
+   http://127.0.0.1:4000/v2.0/introduction/
+   ```
+   
+5. Enjoy!
