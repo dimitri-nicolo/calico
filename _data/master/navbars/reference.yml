@@ -121,6 +121,8 @@ toc:
   section:
     - title: Configuring user authentication
       path: /reference/cnx/authentication
+    - title: Configuring CNX RBAC
+      path: /reference/cnx/rbac-tiered-policies
     - title: Editing policies
       path: /reference/cnx/policy-editor
 - title: Deploying on Public Cloud
@@ -162,8 +164,6 @@ toc:
         path: /reference/advanced/etcd-rbac/kubernetes-advanced
       - title: etcd paths for CNX components
         path: /reference/advanced/etcd-rbac/calico-etcdv3-paths
-  - title: Configuring CNX RBAC
-    path: /reference/cnx/rbac-tiered-policies
 - title: System Requirements
   path: /reference/requirements
 - title: Deployment recommendations and limits
