@@ -128,10 +128,10 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 		}
 		outPrefix = "cali-to-"
 		inPrefix = "cali-from-"
-		inboundSuffix = "outbound"
-		inboundGroup = uint16(2)
-		outboundSuffix = "inbound"
-		outboundGroup = uint16(1)
+		inboundSuffix = "inbound"
+		inboundGroup = uint16(1)
+		outboundSuffix = "outbound"
+		outboundGroup = uint16(2)
 	}
 	for _, ifaceTierName := range ifaceTierNames {
 		var ifaceName, tierName, polName string

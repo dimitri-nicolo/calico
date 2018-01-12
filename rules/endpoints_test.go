@@ -311,8 +311,8 @@ var _ = Describe("Endpoints", func() {
 							Comment: "Return if policy accepted"},
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
-								Group:  1,
-								Prefix: "D|0|no-policy-match-inbound|tier1"}},
+								Group:  2,
+								Prefix: "D|0|no-policy-match-outbound|tier1"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -326,8 +326,8 @@ var _ = Describe("Endpoints", func() {
 							Action:  ReturnAction{},
 							Comment: "Return if profile accepted"},
 						{Action: NflogAction{
-							Group:  1,
-							Prefix: "D|0|no-profile-match-inbound"}},
+							Group:  2,
+							Prefix: "D|0|no-profile-match-outbound"}},
 
 						{Action: DropAction{},
 							Comment: "Drop if no profiles matched"},
@@ -361,8 +361,8 @@ var _ = Describe("Endpoints", func() {
 							Comment: "Return if policy accepted"},
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
-								Group:  2,
-								Prefix: "D|0|no-policy-match-outbound|tier1"}},
+								Group:  1,
+								Prefix: "D|0|no-policy-match-inbound|tier1"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -376,8 +376,8 @@ var _ = Describe("Endpoints", func() {
 							Action:  ReturnAction{},
 							Comment: "Return if profile accepted"},
 						{Action: NflogAction{
-							Group:  2,
-							Prefix: "D|0|no-profile-match-outbound"}},
+							Group:  1,
+							Prefix: "D|0|no-profile-match-inbound"}},
 
 						{Action: DropAction{},
 							Comment: "Drop if no profiles matched"},
@@ -408,8 +408,8 @@ var _ = Describe("Endpoints", func() {
 							Comment: "Return if policy accepted"},
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
-								Group:  1,
-								Prefix: "D|0|no-policy-match-inbound|fwdTier1"}},
+								Group:  2,
+								Prefix: "D|0|no-policy-match-outbound|fwdTier1"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -440,8 +440,8 @@ var _ = Describe("Endpoints", func() {
 							Comment: "Return if policy accepted"},
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
-								Group:  2,
-								Prefix: "D|0|no-policy-match-outbound|fwdTier1"}},
+								Group:  1,
+								Prefix: "D|0|no-policy-match-inbound|fwdTier1"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
