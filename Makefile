@@ -92,6 +92,22 @@ st-containerized: bin/calicoq build-image
 		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
 	$(MAKE) clean-image
 
+.PHONY: scale-test
+scale-test: bin/calicoq
+	CALICOQ=`pwd`/$^ scale-test/run-test
+
+.PHONY: scale-test-containerized
+scale-test-containerized: bin/calicoq build-image
+	docker run --net=host --privileged \
+		--rm -t \
+		--entrypoint '/bin/sh' \
+		-v $(CURDIR):/code/$(PACKAGE_NAME) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-w /code/$(PACKAGE_NAME) \
+		$(BUILD_IMAGE) \
+		-c 'CALICOQ=`pwd`/$(BINARY) scale-test/run-test'
+	$(MAKE) clean-image
+
 # Build image for containerized testing
 .PHONY: build-image
 build-image: bin/calicoq
