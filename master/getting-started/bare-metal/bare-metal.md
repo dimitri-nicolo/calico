@@ -90,7 +90,7 @@ To create a production cluster, you should follow the guidance in the
 
 1. [Configure calicoctl to connect to etcd](/{{page.version}}/usage/calicoctl/configure/).
 
-1. Return to this page and continue to the [next section](#installing-felix).
+1. Return to this page and continue to the [next section](#initializing-the-etcd-database).
 
 ## Initializing the etcd database
 
