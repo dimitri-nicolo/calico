@@ -9,7 +9,7 @@ This document outlines how to install {{site.prodname}} on a cluster initialized
 
 For {{site.prodname}} to be compatible with your kubeadm-created cluster:
 
-* It must be running at least Kubernetes v1.8
+* It must be running at least Kubernetes `v1.8.0`
 
 * There should be no other CNI network configurations installed in /etc/cni/net.d (or equivalent directory)
 
