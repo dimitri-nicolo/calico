@@ -89,3 +89,7 @@ node1
 [etcd]
 etcd1
 ```
+
+## Next steps
+
+Refer to [Installing CNX for OpenShift]({{site.baseurl}}/{{page.version}}/getting-started/openshift/cnx/installation) to complete the installation.

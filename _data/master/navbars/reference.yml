@@ -5,8 +5,6 @@ order: 3
 toc:
 - title: Reference
   path: /reference/
-- title: Supported Platforms
-  path: /reference/supported-platforms
 - title: calicoctl
   section:
   - title: Overview
@@ -99,7 +97,7 @@ toc:
     path: /reference/calicoq/policy
   - title: Version
     path: /reference/calicoq/version
-- title: calico/node
+- title: cnx-node
   section:
   - title: Configuration
     path: /reference/node/configuration
@@ -143,7 +141,7 @@ toc:
   section:
   - title: Introduction
     path: /reference/architecture/
-  - title: calico/node
+  - title: cnx-node
     path: /reference/architecture/components
   - title: Data Path
     path: /reference/architecture/data-path
@@ -170,9 +168,3 @@ toc:
   path: /reference/requirements
 - title: Deployment recommendations and limits
   path: /reference/recommendations
-- title: Repo Structure
-  path: /reference/repo-structure
-- title: Get Involved
-  path: /reference/involved
-- title: License
-  path: /reference/license

@@ -1,5 +1,5 @@
 ---
-title: Calico Architecture
+title: CNX Architecture
 ---
 
 This document discusses the various pieces of {{site.prodname}}'s architecture,

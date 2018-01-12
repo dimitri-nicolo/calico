@@ -1,5 +1,5 @@
 ---
-title: Configuring calico/node
+title: Configuring cnx-node
 ---
 
 The `{{site.nodecontainer}}` container is primarily configured through environment variables.

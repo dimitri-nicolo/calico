@@ -1,5 +1,5 @@
 ---
-title: Deploying Calico on Azure
+title: Deploying CNX on Azure
 no_canonical: true
 ---
 

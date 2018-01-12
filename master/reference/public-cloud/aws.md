@@ -1,5 +1,5 @@
 ---
-title: AWS
+title: Deploying CNX on AWS
 ---
 
 {{site.prodname}} provides the following advantages when running in AWS:
