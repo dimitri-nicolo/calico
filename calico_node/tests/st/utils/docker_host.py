@@ -366,41 +366,6 @@ class DockerHost(object):
                                         FELIX_LOG_FORMAT,
                                         TIMESTAMP_FORMAT)
 
-    def start_calico_node_with_docker(self):
-        """
-        Start calico in a container inside a host by calling docker directly.
-        """
-        if ETCD_SCHEME == "https":
-            etcd_auth = "%s:2379" % ETCD_HOSTNAME_SSL
-            ssl_args = "-e ETCD_CA_CERT_FILE=%s " \
-                       "-e ETCD_CERT_FILE=%s " \
-                       "-e ETCD_KEY_FILE=%s " \
-                       "-v %s/certs:%s/certs " \
-                       % (ETCD_CA, ETCD_CERT, ETCD_KEY,
-                          CHECKOUT_DIR, CHECKOUT_DIR)
-
-        else:
-            etcd_auth = "%s:2379" % get_ip()
-            ssl_args = ""
-
-        # If the hostname has been overridden on this host, then pass it in
-        # as an environment variable.
-        if self.override_hostname:
-            hostname_args = "-e HOSTNAME=%s" % self.override_hostname
-        else:
-            hostname_args = ""
-
-        self.execute("docker run -d --net=host --privileged "
-                     "--name=cnx-node "
-                     "%s "
-                     "-e IP=%s "
-                     "-e ETCD_ENDPOINTS=%s://%s %s "
-                     "-v /var/log/calico:/var/log/calico "
-                     "-v /var/run/calico:/var/run/calico "
-                     "%s" % (hostname_args, self.ip, ETCD_SCHEME, etcd_auth,
-                             ssl_args, NODE_CONTAINER_NAME)
-                     )
-
     def remove_workloads(self):
         """
         Remove all containers running on this host.
