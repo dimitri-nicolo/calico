@@ -69,8 +69,6 @@ Edit your **rbac-kdd** manifest:
     kubectl -n kube-system rollout status ds/calico-node
     ```
 
- 1. Install the policy query and violation alerting tools. For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
-
 1. Download the {{site.prodname}} manifest
 ([etcd](installation/hosted/cnx/1.7/cnx-etcd.yaml) or [KDD](installation/hosted/cnx/1.7/cnx-kdd.yaml))
 defining the {{site.prodname}} Manager API server and {{site.prodname}}
