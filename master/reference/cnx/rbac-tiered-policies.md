@@ -68,14 +68,13 @@ to implement your security model:
    sed -i -e 's/<USER>/<name/email>/g' min-rbac.yaml
    ```
 
-1. Modify the roles and bindings according to your specific security
-   requirements.
-
 1. Use the following command to install the bindings:
 
    ```
    kubectl apply -f min-rbac.yaml
    ```
+
+Add to the roles and bindings according to your specific security requirements.
 
 ### Example fine-grained permissions
 
@@ -83,42 +82,6 @@ to implement your security model:
 # Users:
 - jane (non-admin)
 - kubernetes-admin (admin)
-```
-
-User 'jane' doesn’t have permission to modify ("create," "read," "update,"
-or "delete") `NetworkPolicy` or `tier` resources.
-
-User 'kubernetes-admin' gives permission to 'jane' to read `NetworkPolicies`
-in the default namespace.
-
-```
-# cat policy-reader-auth.yaml
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  namespace: default
-  name: policy-reader
-rules:
-- apiGroups: ["projectcalico.org"]
-  resources: ["networkpolicies"]
-  verbs: ["get", "watch", "list"]
-
----
-
-# This role binding allows "jane" to read policies in the "default" namespace.
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
-metadata:
-  name: read-policies
-  namespace: default
-subjects:
-- kind: User
-  name: jane
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: Role
-  name: policy-reader
-  apiGroup: rbac.authorization.k8s.io
 ```
 
 User 'jane' is forbidden from reading policies in any tier (default, and
