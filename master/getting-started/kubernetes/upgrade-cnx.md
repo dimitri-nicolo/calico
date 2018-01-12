@@ -71,55 +71,13 @@ Edit your **rbac-kdd** manifest:
 
  1. Install the policy query and violation alerting tools. For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
 
-    - Configure calico-monitoring namespace and deploy Prometheus Operator by
-      applying the [operator.yaml](installation/hosted/cnx/1.7/operator.yaml) manifest.
+1. Download the {{site.prodname}} manifest
+([etcd](installation/hosted/cnx/1.7/cnx-etcd.yaml) or [KDD](installation/hosted/cnx/1.7/cnx-kdd.yaml))
+defining the {{site.prodname}} Manager API server and {{site.prodname}}
+Manager web application resources.
 
-      ```
-      kubectl apply -f operator.yaml
-      ```
+1. Rename the file cnx.yaml - this is what subsequent instructions will refer to
 
-    - Wait for custom resource definitions to be created. Check by running:
+{% include {{page.version}}/cnx-mgr-install.md %}
 
-      ```
-      kubectl get customresourcedefinitions --watch
-      ```
-
-    - Apply the [monitor-calico.yaml](installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
-      install prometheus and alertmanager.
-
-      ```
-      kubectl apply -f monitor-calico.yaml
-      ```
-
- 1. Add the {{site.prodname}} API Server and {{site.prodname}} Manager.
-
-     **Note**: This step may require API downtime, because the API server's command line flags will probably need changing.
-    For more information about the following instructions, see [{{site.prodname}} Hosted Install](installation/hosted/cnx/cnx).
-    {: .alert .alert-warn}
-
-    - [Decide on an authentication method, and configure Kubernetes]({{site.baseurl}}/{{page.version}}/reference/cnx/authentication).
-
-    - Download the {{site.prodname}} manifest ([etcd](installation/hosted/cnx/1.7/cnx-etcd.yaml)
-      or [KDD](installation/hosted/cnx/1.7/cnx-kdd.yaml))
-      defining the {{site.prodname}} Manager API server and {{site.prodname}}
-      Manager web application resources.
-
-    - Rename the file cnx.yaml - this is what subsequent instructions will refer to
-
-    - Update the manifest with the path to your private Docker registry.
-
-    - See the [main installation documentation]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx) for details on how to set the flags.
-
-    - The `tigera-cnx-manager-config` ConfigMap at the start of the manifest file
-      defines three parameters that may need changing: the authentication type,
-      the OIDC client ID (only if using Google login), and the Kubernetes API
-      location (must be reachable from any system running the web application).
-
-    - Apply the manifest
-
-     ```
-     kubectl apply -f cnx.yaml
-     ```
-
-    - Define RBAC permissions for users to access the {{site.prodname}} Manager.
-      [This document]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies) describes how to do that.
+{% include {{page.version}}/gs-next-steps.md %}
