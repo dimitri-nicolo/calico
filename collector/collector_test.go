@@ -59,10 +59,10 @@ var remoteWlEPKey1 = &model.WorkloadEndpointKey{
 // NFLOG datasource test parameters
 
 var (
-	defTierAllow = [64]byte{'A', '/', '0', '/', 'p', 'o', 'l', 'i', 'c', 'y', '1', '/', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
-	defTierDeny  = [64]byte{'D', '/', '0', '/', 'p', 'o', 'l', 'i', 'c', 'y', '2', '/', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
-	tier1Allow   = [64]byte{'A', '/', '0', '/', 'p', 'o', 'l', 'i', 'c', 'y', '3', '/', 't', 'i', 'e', 'r', '1'}
-	tier1Deny    = [64]byte{'D', '/', '0', '/', 'p', 'o', 'l', 'i', 'c', 'y', '4', '/', 't', 'i', 'e', 'r', '1'}
+	defTierAllow = [64]byte{'A', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '1', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
+	defTierDeny  = [64]byte{'D', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '2', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
+	tier1Allow   = [64]byte{'A', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '3', '|', 't', 'i', 'e', 'r', '1'}
+	tier1Deny    = [64]byte{'D', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '4', '|', 't', 'i', 'e', 'r', '1'}
 )
 
 var defTierAllowTp = &RuleTracePoint{
@@ -334,11 +334,11 @@ func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyName, tierN
 func RtpToBytes(tp *RuleTracePoint) []byte {
 	buf := &bytes.Buffer{}
 	buf.Write(tp.TierID())
-	buf.Write([]byte("/"))
+	buf.Write([]byte("|"))
 	buf.Write(tp.PolicyID())
-	buf.Write([]byte("/"))
+	buf.Write([]byte("|"))
 	buf.Write(tp.Rule())
-	buf.Write([]byte("/"))
+	buf.Write([]byte("|"))
 	buf.Write(RuleActionToBytes[tp.Action])
 	return buf.Bytes()
 }

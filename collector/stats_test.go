@@ -33,7 +33,7 @@ var _ = Describe("RuleTracePoint", func() {
 		Context("Policy", func() {
 			BeforeEach(func() {
 				var prefix [64]byte
-				pfxB := []byte("A/0/policy/tier")
+				pfxB := []byte("A|0|policy|tier")
 				copy(prefix[:], pfxB)
 				rtp, _ = NewRuleTracePoint(prefix, len(pfxB), wlEpKey1)
 			})
@@ -53,7 +53,7 @@ var _ = Describe("RuleTracePoint", func() {
 		Context("Profile", func() {
 			BeforeEach(func() {
 				var prefix [64]byte
-				pfxB := []byte("A/0/policy")
+				pfxB := []byte("A|0|policy")
 				copy(prefix[:], pfxB)
 				rtp, _ = NewRuleTracePoint(prefix, len(pfxB), wlEpKey1)
 			})
@@ -75,7 +75,7 @@ var _ = Describe("RuleTracePoint", func() {
 
 var (
 	allowTp0 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -85,7 +85,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	denyTp0 = &RuleTracePoint{
-		prefix:    [64]byte{'D', '/', 'R', '2', '/', 'P', '2', '/', 'T', '1'},
+		prefix:    [64]byte{'D', '|', 'R', '2', '|', 'P', '2', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -95,7 +95,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	allowTp1 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -105,7 +105,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	denyTp1 = &RuleTracePoint{
-		prefix:    [64]byte{'D', '/', 'R', '2', '/', 'P', '2', '/', 'T', '1'},
+		prefix:    [64]byte{'D', '|', 'R', '2', '|', 'P', '2', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -115,7 +115,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	allowTp2 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '2', '/', 'T', '2'},
+		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '2', '|', 'T', '2'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -125,7 +125,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	denyTp2 = &RuleTracePoint{
-		prefix:    [64]byte{'D', '/', 'R', '2', '/', 'P', '2', '/', 'T', '2'},
+		prefix:    [64]byte{'D', '|', 'R', '2', '|', 'P', '2', '|', 'T', '2'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -135,7 +135,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	nextTierTp0 = &RuleTracePoint{
-		prefix:    [64]byte{'N', '/', 'R', '3', '/', 'P', '1', '/', 'T', '1'},
+		prefix:    [64]byte{'N', '|', 'R', '3', '|', 'P', '1', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -145,7 +145,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	nextTierTp1 = &RuleTracePoint{
-		prefix:    [64]byte{'N', '/', 'R', '4', '/', 'P', '2', '/', 'T', '2'},
+		prefix:    [64]byte{'N', '|', 'R', '4', '|', 'P', '2', '|', 'T', '2'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -155,7 +155,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	allowTp11 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -165,7 +165,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	denyTp11 = &RuleTracePoint{
-		prefix:    [64]byte{'D', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		prefix:    [64]byte{'D', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -175,7 +175,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	allowTp21 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,
@@ -185,7 +185,7 @@ var (
 		EpKey:     wlEpKey1,
 	}
 	denyTp21 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '/', 'R', '1', '/', 'P', '1', '/', 'T', '1'},
+		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
 		pfxlen:    10,
 		tierIdx:   8,
 		policyIdx: 5,

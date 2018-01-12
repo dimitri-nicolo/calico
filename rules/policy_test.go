@@ -210,7 +210,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x80),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "A/foo",
+					Prefix: "A|foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -242,7 +242,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					Match: iptables.Match().MarkSet(0x100),
 					Action: iptables.NflogAction{
 						Group:  1,
-						Prefix: "N/foo",
+						Prefix: "N|foo",
 					},
 				}))
 				Expect(rules[2]).To(Equal(iptables.Rule{
@@ -313,7 +313,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "D/foo",
+					Prefix: "D|foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -342,7 +342,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "D/foo",
+					Prefix: "D|foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -377,7 +377,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "D/foo",
+					Prefix: "D|foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -411,7 +411,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "D/foo",
+					Prefix: "D|foo",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -426,7 +426,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		clearBothMarksRule       = "-A test --jump MARK --set-mark 0x0/0x600"
 		preSetAllBlocksMarkRule  = "-A test --jump MARK --set-mark 0x200/0x600"
 		allowIfAllMarkRule       = "-A test -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
-		nflogAllowRule           = "-A test -m mark --mark 0x80/0x80 --jump NFLOG --nflog-group 1 --nflog-prefix A/foo --nflog-range 80"
+		nflogAllowRule           = "-A test -m mark --mark 0x80/0x80 --jump NFLOG --nflog-group 1 --nflog-prefix A|foo --nflog-range 80"
 		allowIfAllMarkAndTCPRule = "-A test -p tcp -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
 		allowIfAllMarkAndUDPRule = "-A test -p udp -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
 		returnRule               = "-A test -m mark --mark 0x80/0x80 --jump RETURN"
