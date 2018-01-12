@@ -143,7 +143,7 @@ If you are unsure, a simple way to generate this token is to log into the OpenSh
 
 ### Next Steps
 
-- For information on customizing the CNX install manifest, see [Customizing the CNX Manager Manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx#customizing-the-manifests)
+- For information on customizing the CNX install manifest, see [Customizing the CNX Manager Manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx)
 
 - [Using {{site.prodname}} for OpenShift](usage)
 
@@ -151,5 +151,5 @@ If you are unsure, a simple way to generate this token is to log into the OpenSh
 
 See [Using {{site.prodname}} for OpenShift](usage).
 
-[obtaining-cnx]: {{site.baseurl}}/{{page.version}}/getting-started/cnx/
+[obtaining-cnx]: {{site.baseurl}}/{{page.version}}/getting-started/
 [ocp-advanced-install]: https://access.redhat.com/documentation/en-us/openshift_container_platform/3.6/html-single/installation_and_configuration/#system-requirements

@@ -11,7 +11,7 @@ datastore.
 
 ### Installing calicoq
 
-1. Ensure that you have [obtained the calicoq image](../../getting-started/#obtain-the-private-binaries).
+1. Ensure that you have [obtained the calicoq image](../../getting-started/#obtain-the-private-binaries-and-images).
 
 1. Import the files into the local Docker engine.
 

@@ -12,8 +12,8 @@ or by [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-
 
 The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
-This guide assumes that you have applied all the example manifests in the [examples directory]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/)
-and that your cluster consists of the following nodes:
+This guide assumes that you have installed all the CNX components from the
+guides above and that your cluster consists of the following nodes:
   * k8s-node1
   * k8s-node2
   * k8s-master
@@ -153,7 +153,7 @@ EOF
 
 > **Note**: Although that NetworkPolicy spec does not explicitly deny or drop
 > any packets, it has a 'default deny' effect because [CNX
-> semantics]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/profile#how-policy-is-evaluated)
+> semantics]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier#how-policy-is-evaluated)
 > are that a packet will be dropped if there are policies applying to an
 > endpoint, but those policies take no action on that packet.
 >

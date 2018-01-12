@@ -30,7 +30,7 @@ The **[monitor-calico.yaml](1.7/monitor-calico.yaml)** manifest does the followi
   - Create a alertmanager instance and corresponding dash service
   - Create a ServiceMonitor that selects on the calico-node-metrics service's
     ports.
-  - ConfigMaps that define some [alerting rules](https://prometheus.io/docs/alerting/rules/)
+  - ConfigMaps that define some [alerting rules](https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
     for prometheus.
     - We predefine denied packet alerts and instance down alerts. This can be
       customized by modifying appropriate configmaps.
