@@ -9,6 +9,13 @@ It supplements the Kubernetes [building large clusters](https://kubernetes.io/do
 guide and the OpenShift [cluster limits](https://docs.openshift.com/container-platform/3.7/scaling_performance/cluster_limits.html)
 guide.
 
+## General guidance
+
+- We recommend creating network policy to make it harder to accidentally lock yourselves out of CNX Manager.  Such policy should be created in a low ordered tier (i.e. one that applies early), and take the following form.
+  - An ingress policy to allow https (port 443) access to CNX Manager from wherever users will need to access CNX Manager.
+  - An ingress policy to allow access to the CNX API Servers from the Kubernetes API Servers on ports 443 and 5443.
+  - Egress policy to allow CNX API Server access to the Kubernetes API Server and Calico etcd.
+
 ## Cluster size based recommendations
 
 - Use BGP route reflectors for clusters of more than 50 nodes.  A multi-AS design peering to L3 switches
