@@ -128,6 +128,7 @@ func main() {
 
 	// Parse command-line args.
 	version := "Version:            " + buildinfo.GitVersion + "\n" +
+		"Release:            CNX\n" +
 		"Full git commit ID: " + buildinfo.GitRevision + "\n" +
 		"Build date:         " + buildinfo.BuildDate + "\n"
 	arguments, err := docopt.Parse(usage, nil, true, version, false)
@@ -137,6 +138,7 @@ func main() {
 	}
 	buildInfoLogCxt := log.WithFields(log.Fields{
 		"version":    buildinfo.GitVersion,
+		"release":    "CNX",
 		"buildDate":  buildinfo.BuildDate,
 		"gitCommit":  buildinfo.GitRevision,
 		"GOMAXPROCS": runtime.GOMAXPROCS(0),
