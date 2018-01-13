@@ -1,5 +1,5 @@
 ---
-title: Using Calico to Secure Host Interfaces
+title: Using CNX to Secure Host Interfaces
 ---
 
 This guide describes how to use {{site.prodname}} to secure the network interfaces
