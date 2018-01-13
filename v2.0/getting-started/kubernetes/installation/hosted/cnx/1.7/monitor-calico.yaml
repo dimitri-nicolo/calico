@@ -1,0 +1,294 @@
+---
+layout: null
+---
+
+# This manifest installs the Service which gets traffic to the calico-node metrics
+# reporting endpoint.
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kube-system
+  name: calico-node-metrics
+  labels:
+    k8s-app: calico-node
+spec:
+  selector:
+    k8s-app: calico-node
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: calico-metrics-port
+    port: 9081
+    targetPort: 9081
+    protocol: TCP
+---
+
+# This manifest creates a network policy to allow traffic to Alertmanager
+# (TCP port 9093).
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+  name: calico-node-alertmanager
+  namespace: calico-monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 9093
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      alertmanager: calico-node-alertmanager
+      app: alertmanager
+---
+
+# This manifest creates a network policy to allow traffic between
+# Alertmanagers for HA configuration (TCP port 6783).
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+  name: calico-node-alertmanager-mesh
+  namespace: calico-monitoring
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - alertmanager
+        - key: alertmanager
+          operator: In
+          values:
+          - calico-node-alertmanager
+    ports:
+    - port: 6783
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      alertmanager: calico-node-alertmanager
+      app: alertmanager
+---
+
+# This manifest creates a network policy to allow traffic to access the
+# Prometheus (TCP port 9090).
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+  name: prometheus
+  namespace: calico-monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 9090
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: prometheus
+      prometheus: calico-node-prometheus
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - services
+  - endpoints
+  - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["get"]
+- nonResourceURLs: ["/metrics"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: calico-monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: calico-monitoring
+---
+
+# This manifest creates a ServiceMonitor to select calico-node metrics endpoints.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: calico-node-monitor
+  namespace: calico-monitoring
+  labels:
+    team: network-operators
+spec:
+  selector:
+    matchLabels:
+      k8s-app: calico-node
+  namespaceSelector:
+    matchNames:
+    - kube-system
+  endpoints:
+  - port: calico-metrics-port
+    interval: 5s
+    scrapeTimeout: 5s
+---
+
+{% raw %}
+# This ConfigMap is used to create the denied packets alerting rules in Prometheus.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calico-prometheus-dp-rate
+  namespace: calico-monitoring
+  labels:
+    role: calico-prometheus-rules
+    prometheus: calico-node-prometheus
+data:
+  calico.rules.yaml: |+
+    groups:
+    - name: ./calico.rules
+      rules:
+      - alert: DeniedPacketsRate
+        expr: rate(calico_denied_packets[10s]) > 50
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{$labels.instance}} - Large rate of packets denied"
+          description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
+{% endraw %}
+---
+
+# This manifest creates a secret that will be mounted as the Alertmanager
+# configuration file.
+# Write your alertmanager configuration file based on
+# https://prometheus.io/docs/alerting/configuration/
+# and save it to a file, say alertmanager.yaml and then run:
+#
+#       $ cat alertmanager.yaml | base64 -w 0
+#
+# and paste the output below.
+#
+# The encoded secret below decodes to this configuration.
+#
+# global:
+#   resolve_timeout: 5m
+# route:
+#   group_by: ['job']
+#   group_wait: 30s
+#   group_interval: 1m
+#   repeat_interval: 5m
+#   receiver: 'webhook'
+#     group_by: ['alertname']
+# receivers:
+# - name: 'webhook'
+#   webhook_configs:
+#   - url: 'http://calico-alertmanager-webhook:30501/'
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-calico-node-alertmanager
+  namespace: calico-monitoring
+data:
+  alertmanager.yaml: Z2xvYmFsOgogIHJlc29sdmVfdGltZW91dDogNW0Kcm91dGU6CiAgZ3JvdXBfYnk6IFsnam9iJ10KICBncm91cF93YWl0OiAzMHMKICBncm91cF9pbnRlcnZhbDogMW0KICByZXBlYXRfaW50ZXJ2YWw6IDVtCiAgcmVjZWl2ZXI6ICd3ZWJob29rJwpyZWNlaXZlcnM6Ci0gbmFtZTogJ3dlYmhvb2snCiAgd2ViaG9va19jb25maWdzOgogIC0gdXJsOiAnaHR0cDovL2NhbGljby1hbGVydG1hbmFnZXItd2ViaG9vazozMDUwMS8nCg==
+---
+
+# This manifest creates the Calico AlertManager.
+apiVersion: monitoring.coreos.com/v1
+kind: Alertmanager
+metadata:
+  name: calico-node-alertmanager
+  namespace: calico-monitoring
+spec:
+  version: v0.11.0
+  # If necessary, uncomment the 2 lines below and edit the nodeSelector
+  # key:value pair with appropriate values for your environment.
+  #nodeSelector:
+    #node.role: infrastructure
+  replicas: 3
+---
+
+# This manifest installs the Service which gets traffic to the Calico
+# AlertManager.
+apiVersion: v1
+kind: Service
+metadata:
+  name: calico-node-alertmanager
+  namespace: calico-monitoring
+spec:
+  type: NodePort
+  ports:
+  - name: web
+    nodePort: 30903
+    port: 9093
+    protocol: TCP
+    targetPort: web
+  selector:
+    alertmanager: calico-node-alertmanager
+---
+
+# This manifest runs a Prometheus instance that will monitor calico-node
+# denied packet metrics.
+apiVersion: monitoring.coreos.com/v1
+kind: Prometheus
+metadata:
+  name: calico-node-prometheus
+  namespace: calico-monitoring
+spec:
+  # If necessary, uncomment the 2 lines below and edit the nodeSelector
+  # key:value pair with appropriate values for your environment.
+  #nodeSelector:
+    #node.role: infrastructure
+  serviceAccountName: prometheus
+  serviceMonitorSelector:
+    matchLabels:
+      team: network-operators
+  version: v2.0.0
+  retention: 1h
+  resources:
+    requests:
+      memory: 400Mi
+  ruleSelector:
+    matchLabels:
+      role: calico-prometheus-rules
+      prometheus: calico-node-prometheus
+  alerting:
+    alertmanagers:
+      - namespace: calico-monitoring
+        name: calico-node-alertmanager
+        port: web
+        scheme: http
+---
+
+# This manifest installs the Service which gets traffic to the Calico
+# Prometheus.
+apiVersion: v1
+kind: Service
+metadata:
+  name: calico-node-prometheus
+  namespace: calico-monitoring
+spec:
+  type: NodePort
+  ports:
+  - name: web
+    nodePort: 30909
+    port: 9090
+    protocol: TCP
+    targetPort: web
+  selector:
+    prometheus: calico-node-prometheus

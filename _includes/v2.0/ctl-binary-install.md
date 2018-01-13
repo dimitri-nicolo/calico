@@ -1,0 +1,1 @@
+1. [Download the private, CNX-specific `calicoctl` binary](/{{page.version}}/getting-started/#binaries).

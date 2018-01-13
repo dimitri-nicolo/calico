@@ -1,0 +1,7 @@
+            # Additional Felix configuration options
+            # Enable CNX Prometheus denied packet reporting
+            - name: FELIX_PROMETHEUSREPORTERENABLED
+              value: "true"
+            # Make CNX Prometheus metrics available on port 9081
+            - name: FELIX_PROMETHEUSREPORTERPORT
+              value: "9081"
