@@ -30,7 +30,7 @@ var VERSION, BUILD_DATE, GIT_REVISION string
 var VERSION_SUMMARY string
 
 func init() {
-	VERSION_SUMMARY = "calicoctl version " + VERSION + ", build " + GIT_REVISION
+	VERSION_SUMMARY = "calicoctl version " + VERSION + ", build " + GIT_REVISION + ", CNX"
 }
 
 func Version(args []string) {
@@ -56,6 +56,7 @@ Description:
 	}
 
 	fmt.Println("Client Version:   ", VERSION)
+	fmt.Println("Release:          ", "CNX")
 	fmt.Println("Build date:       ", BUILD_DATE)
 	fmt.Println("Git commit:       ", GIT_REVISION)
 
