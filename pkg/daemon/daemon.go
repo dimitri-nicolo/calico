@@ -127,6 +127,7 @@ func (t *TyphaDaemon) DoEarlyRuntimeSetup() {
 func (t *TyphaDaemon) ParseCommandLineArgs(argv []string) {
 	// Parse command-line args.
 	version := "Version:            " + buildinfo.GitVersion + "\n" +
+		"Release:            CNX\n" +
 		"Full git commit ID: " + buildinfo.GitRevision + "\n" +
 		"Build date:         " + buildinfo.BuildDate + "\n"
 	arguments, err := docopt.Parse(usage, argv, true, version, false)
@@ -139,6 +140,7 @@ func (t *TyphaDaemon) ParseCommandLineArgs(argv []string) {
 		"version":    buildinfo.GitVersion,
 		"buildDate":  buildinfo.BuildDate,
 		"gitCommit":  buildinfo.GitRevision,
+		"release":    "CNX",
 		"GOMAXPROCS": runtime.GOMAXPROCS(0),
 	})
 	t.BuildInfoLogCxt.Info("Typha starting up")
