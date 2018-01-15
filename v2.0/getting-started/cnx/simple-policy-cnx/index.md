@@ -102,7 +102,7 @@ Workload endpoint k8s/policy-demo.nginx-8586cf59-5bxvh/eth0
 For each workload endpoint, the `Policies:` section lists the policies that
 apply to that endpoint, in the order they apply.  calicoq displays both
 {{site.prodname}} Policies and Kubernetes NetworkPolicies, although this
-example focuses on the latter.  The `Matched by policies:` section lists the
+example focuses on the latter.  The `Rule matches:` section lists the
 policies that match that endpoint in their rules, in other words that have
 rules that deny or allow that endpoint as a packet source or destination.
 
