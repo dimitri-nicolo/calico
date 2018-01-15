@@ -24,6 +24,7 @@ This procedure assumes the following:
 #### Prepare for the Upgrade
  Edit your **calico** manifest:
    - change the calico/node `image:` key to point at the {{site.prodname}} `tigera/cnx-node` image in your private registry.
+   - if you're using Typha, change the calico/typha `image:` key to point at the {{site.prodname}} `tigera/typha` image in your private registry.
    - add the following to the `env:` section of the `calico-node` Daemonset:
 
      ```
@@ -53,7 +54,7 @@ This procedure assumes the following:
         singular: tier
      ```
 
-Edit your **rbac-kdd** manifest:
+Edit your **rbac-kdd** manifest if you used one:
   - add `tiers` to the list of resources under the `crd.projectcalico.org` apiGroup.
 
 #### Perform the upgrade
