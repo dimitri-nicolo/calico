@@ -2,10 +2,8 @@ v2.0:
 - title: v2.0.0
   note: |
     15 January 2018
-  note: |
-    15 January 2018
 
-    > **Important**: This release includes breaking changes to the data and 
+    > **Important**: This release includes breaking changes to the data and
     > resource model. You can only upgrade Calico v3.0.1 clusters to CNX.
     > Upgrades from Tigera Essentials Toolkit to CNX are not currently supported.
     > We expect to add support for Tigera Essentials Toolkit upgrades in a future
@@ -13,134 +11,134 @@ v2.0:
     {: .alert .alert-danger}
 
     #### What's new
-    
+
     ##### Tiered policy
-    
+
     Policies can be grouped into tiers to allow structured security policy.
 
     ##### CNX Manager
-    
+
     A new web interface allows you to edit and manage tiers and policies.
 
     ##### CNX API server
-    
-    A RESTful API to edit and manage tiers and policies that can impose 
+
+    A RESTful API to edit and manage tiers and policies that can impose
     fine-grained control over what tiers users can manipulate policies in.
 
     ##### Prometheus updates
-    
+
     The manifests now use Prometheus Operator v0.15.0 and are pinned to
     [Prometheus 2.0](https://prometheus.io/blog/2017/11/08/announcing-prometheus-2-0/).
-    
+
+    #### Calico features
+
+    CNX 2.0 is built on Calico 3.0.  The changelog for Calico 3.0 follows.
+
     ##### Support for etcdv3
 
     CNX now stores its data in [etcd version 3](https://coreos.com/blog/etcd3-a-new-etcd.html).
-    
-    ##### Support for Windows in policy-only mode
-    
-    Felix now compiles and runs on Windows in policy-only mode. [felix #1638](https://github.com/projectcalico/felix/pull/1638) (@nwoodmsft)
-    
+
     ##### calicoctl enhancements
 
-    - Those using the Kubernetes API datastore can now use `calicoctl` to 
+    - Those using the Kubernetes API datastore can now use `calicoctl` to
       create, read, update, and delete CNX policies and tiers.
-      
-    - `calicoctl` features two new resources: [BGP Configuration](../reference/calicoctl/resources/bgpconfig) 
+
+    - `calicoctl` features two new resources: [BGP Configuration](../reference/calicoctl/resources/bgpconfig)
       and [Felix Configuration](../reference/calicoctl/resources/felixconfig).
 
-    - The `calicoctl` policy resource has been split into new [network policy](../reference/calicoctl/resources/networkpolicy) 
+    - The `calicoctl` policy resource has been split into new [network policy](../reference/calicoctl/resources/networkpolicy)
       and [global network policy](../reference/calicoctl/resources/globalnetworkpolicy) resources.
 
-    - [Network policy](../reference/calicoctl/resources/networkpolicy) 
-      resources can include a `namespace` value, allowing you to create policies that 
-      only apply to [workload endpoint resources](../reference/calicoctl/resources/workloadendpoint) 
+    - [Network policy](../reference/calicoctl/resources/networkpolicy)
+      resources can include a `namespace` value, allowing you to create policies that
+      only apply to [workload endpoint resources](../reference/calicoctl/resources/workloadendpoint)
       in the same namespace.
 
-    - You can now specify `namespaceSelector` expressions in 
-      [network policy](../reference/calicoctl/resources/networkpolicy) 
+    - You can now specify `namespaceSelector` expressions in
+      [network policy](../reference/calicoctl/resources/networkpolicy)
       and [global network policy](../reference/calicoctl/resources/globalnetworkpolicy) rules to select one or more namespaces in their entirety.
 
-    - The `get`, `apply`, `create`, `delete`, and `replace` commands of `calicoctl` 
-      now include an optional `--namespace=<NS>` flag. Refer to the `calicoctl` 
+    - The `get`, `apply`, `create`, `delete`, and `replace` commands of `calicoctl`
+      now include an optional `--namespace=<NS>` flag. Refer to the `calicoctl`
       [Command reference](../reference/calicoctl/commands/) section for more details.
 
-    - The `get` command of `calicoctl` now includes optional `--all-namespaces` 
-      and `--export` flags. Refer to the [calicoctl get](../reference/calicoctl/commands/get) 
+    - The `get` command of `calicoctl` now includes optional `--all-namespaces`
+      and `--export` flags. Refer to the [calicoctl get](../reference/calicoctl/commands/get)
       section for more information.
 
-    - `calicoctl` no longer accepts the following flags in `get` commands: 
-      `--node=<NODE>`, `--orchestrator=<ORCH>`, `--workload=<WORKLOAD>`, and 
+    - `calicoctl` no longer accepts the following flags in `get` commands:
+      `--node=<NODE>`, `--orchestrator=<ORCH>`, `--workload=<WORKLOAD>`, and
       `--scope=<SCOPE>`. These options are now a part of the individual resources.
 
-    - `calicoctl` no longer includes a `config` command. To achieve the equivalent 
+    - `calicoctl` no longer includes a `config` command. To achieve the equivalent
       functionality, refer to [Modifying low-level component configurations](../reference/calicoctl/commands/#modifying-low-level-component-configurations).
 
     - You can now name [host](../reference/calicoctl/resources/hostendpoint#endpointport)
-      and [workload](../reference/calicoctl/resources/workloadendpoint#endpointport) 
+      and [workload](../reference/calicoctl/resources/workloadendpoint#endpointport)
       endpoint ports and reference them by name in your [policy rules](../reference/calicoctl/resources/networkpolicy#ports).
-    
-    - `calicoctl` now allows a `0` value for ICMP entries in policy resources, 
-      enabling `ping` responses. In addition, it now rejects `255` values in the 
-      `type` field due to lack of kernel support. Refer to the reference documentation 
-      of the [network policy](../reference/calicoctl/resources/networkpolicy#icmp) 
-      and [global network policy](../reference/calicoctl/resources/globalnetworkpolicy#icmp) 
+
+    - `calicoctl` now allows a `0` value for ICMP entries in policy resources,
+      enabling `ping` responses. In addition, it now rejects `255` values in the
+      `type` field due to lack of kernel support. Refer to the reference documentation
+      of the [network policy](../reference/calicoctl/resources/networkpolicy#icmp)
+      and [global network policy](../reference/calicoctl/resources/globalnetworkpolicy#icmp)
       resources for more information.
-      
-    - `calicoctl` now offers a new `convert` command, allowing 2.6.x manifests stored under 
+
+    - `calicoctl` now offers a new `convert` command, allowing 2.6.x manifests stored under
       version control to be converted to the v3.x format. [calicoctl #1782](https://github.com/projectcalico/calicoctl/pull/1782) (@gunjan5)
-    
+
     ##### Host endpoint policies can be applied to forwarded traffic
 
-    - The new `ApplyOnForward` flag allows you to specify if a host endpoint policy should 
-      apply to forwarded traffic or not. Forwarded traffic includes traffic forwarded between 
-      host endpoints and traffic forwarded between a host endpoint and a workload endpoint on 
-      the same host. Refer to [Using CNX to secure host interfaces](../getting-started/bare-metal/bare-metal) 
+    - The new `ApplyOnForward` flag allows you to specify if a host endpoint policy should
+      apply to forwarded traffic or not. Forwarded traffic includes traffic forwarded between
+      host endpoints and traffic forwarded between a host endpoint and a workload endpoint on
+      the same host. Refer to [Using CNX to secure host interfaces](../getting-started/bare-metal/bare-metal)
       for more details.
-    
+
     ##### CNI plugin changes
-    
+
     - CNX now assigns the host side of veth pairs a MAC address of `ee:ee:ee:ee:ee:ee`.
-      If this fails, it uses a kernel-generated MAC address as before. For more information, 
+      If this fails, it uses a kernel-generated MAC address as before. For more information,
       refer to the [Troubleshooting FAQ](../usage/troubleshooting/). [cni-plugin #436](https://github.com/projectcalico/cni-plugin/pull/436) (@tmjd)
-    
+
     - The CNI plugin now offers an optional environment variable called `CNI_OLD_CONF_NAME`.
-      If set, the CNI plug-in cleans up old configuration data during an upgrade, making it 
+      If set, the CNI plug-in cleans up old configuration data during an upgrade, making it
       easier to migrate to a new `CNI_CONF_NAME` value. [cni-plugin #392](https://github.com/projectcalico/cni-plugin/pull/392)(@weikinhuang)
-      
-    - The CNI plugin no longer throws a `file exists` message when programming routes. 
+
+    - The CNI plugin no longer throws a `file exists` message when programming routes.
       [cni-plugin #406](https://github.com/projectcalico/cni-plugin/pull/406) (@gunjan5)
 
-    - After a period of deprecation, this release removes support for the `ETCD_AUTHORITY` 
-      and `ETCD_SCHEME` environment variables. CNX no longer reads these values. If you have 
-      not transitioned to `ETCD_ENDPOINTS`, you must do so as of CNX v2.0. Refer to 
+    - After a period of deprecation, this release removes support for the `ETCD_AUTHORITY`
+      and `ETCD_SCHEME` environment variables. CNX no longer reads these values. If you have
+      not transitioned to `ETCD_ENDPOINTS`, you must do so as of CNX v2.0. Refer to
       [Configuring calicoctl to connect to an etcdv3 datastore](../reference/calicoctl/setup/etcdv3) for more information.
 
-    - A new node controller for Kubernetes deployments clears data associated with deleted 
-      nodes from the CNX datastore, preventing conflicts that can lead to crash loops. Refer 
+    - A new node controller for Kubernetes deployments clears data associated with deleted
+      nodes from the CNX datastore, preventing conflicts that can lead to crash loops. Refer
       to [Configuring the Calico Kubernetes controllers](../reference/kube-controllers/configuration) for more information.
 
     ##### Other changes
-    
-    - CNX now works with Kubernetes network services proxy with IPVS/LVS. CNX enforces 
-      network policies with kube-proxy running in IPVS mode for Kubernetes clusters. Currently 
+
+    - CNX now works with Kubernetes network services proxy with IPVS/LVS. CNX enforces
+      network policies with kube-proxy running in IPVS mode for Kubernetes clusters. Currently
       only workload ingress policy is supported.
 
-    - Rolling update is now enabled by default in the Kubernetes self-hosted manifests. 
+    - Rolling update is now enabled by default in the Kubernetes self-hosted manifests.
       [calico #1506](https://github.com/projectcalico/calico/pull/1506) (@caseydavenport)
-      
-    - Typha no longer sends incorrect `updateTypes` to Felix, increasing the accuracy of 
+
+    - Typha no longer sends incorrect `updateTypes` to Felix, increasing the accuracy of
       Felix statistics. [typha #70](https://github.com/projectcalico/typha/pull/70) (@fasaxc)
-      
+
     - The CNI plugin now offers an optional environment variable called `CNI_OLD_CONF_NAME`.
       If set, the CNI plug-in cleans up old configuration data during an upgrade, making it
       easier to migrate to a new `CNI_CONF_NAME` value. [cni-plugin #392](https://github.com/projectcalico/cni-plugin/pull/392)(@weikinhuang)
 
     #### Limitations
 
-    - **GoBGP not supported**: Setting the `CALICO_NETWORKING_BACKEND` environment 
-      variable to `gobgp` is not supported. See [Configuring cnx-node](../reference/node/configuration) 
+    - **GoBGP not supported**: Setting the `CALICO_NETWORKING_BACKEND` environment
+      variable to `gobgp` is not supported. See [Configuring cnx-node](../reference/node/configuration)
       for more information. We plan to resume support for GoBPG in a future release.
-    
+
     - **Route reflectors cannot be clustered**: We plan to resume support for
       this in a future release.
 
@@ -196,6 +194,9 @@ v2.0:
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
+    calico:
+      version: v3.0.1
+      url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
 
 - title: v2.0.0-cnx-rc1
   note: |
@@ -593,8 +594,7 @@ v2.0:
 # versions when a component changes.
 master:
 - title: master
-- note: ""
-  
+  note: ""
   components:
     cnx-manager:
       version: master

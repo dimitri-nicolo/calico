@@ -643,14 +643,12 @@ release: clean
 	# Build the tigera/cnx-node images.
 	FELIX_VER=$(FELIX_VER) $(MAKE) $(NODE_CONTAINER_NAME)
 
-	# Create the release archive
-	CALICOCTL_VER=$(CALICOCTL_VER) CALICOQ_VER=$(CALICOQ_VER) $(MAKE) release-archive
-
 	# Retag images with corect version and GCR private registry
+	docker tag $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_NAME):$(CNX_VER)
 	docker tag $(NODE_CONTAINER_NAME) gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)
 
 	# Create the release archive
-	$(MAKE) release-archive
+	CALICOCTL_VER=$(CALICOCTL_VER) CALICOQ_VER=$(CALICOQ_VER) $(MAKE) release-archive
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(NODE_CONTAINER_NAME)
