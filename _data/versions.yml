@@ -30,13 +30,13 @@ v2.0:
     The manifests now use Prometheus Operator v0.15.0 and are pinned to
     [Prometheus 2.0](https://prometheus.io/blog/2017/11/08/announcing-prometheus-2-0/).
 
+    #### Calico features
+
+    CNX 2.0 includes the features in Calico 3.0.  Those are listed below.
+
     ##### Support for etcdv3
 
     CNX now stores its data in [etcd version 3](https://coreos.com/blog/etcd3-a-new-etcd.html).
-
-    ##### Support for Windows in policy-only mode
-
-    Felix now compiles and runs on Windows in policy-only mode. [felix #1638](https://github.com/projectcalico/felix/pull/1638) (@nwoodmsft)
 
     ##### calicoctl enhancements
 
@@ -194,6 +194,9 @@ v2.0:
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
+    calico:
+      version: v3.0.1
+      url: https://github.com/projectcalico/calico/releases/tag/v3.0.1
 
 - title: v2.0.0-cnx-rc1
   note: |
