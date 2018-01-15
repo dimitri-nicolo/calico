@@ -32,7 +32,7 @@ v2.0:
 
     #### Calico features
 
-    CNX 2.0 includes the features in Calico 3.0.  Those are listed below.
+    CNX 2.0 is built on Calico 3.0.  The changelog for Calico 3.0 follows.
 
     ##### Support for etcdv3
 
