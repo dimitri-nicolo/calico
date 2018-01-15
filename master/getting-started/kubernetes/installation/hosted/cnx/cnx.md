@@ -43,7 +43,7 @@ The **[monitor-calico.yaml](1.7/monitor-calico.yaml)** manifest does the followi
 
 The services (type _NodePort_) for prometheus and alertmanager are created in
 the `calico-monitoring` namespace and are named `calico-prometheus-dash`
-(port 30900) and `calico-alertmanager-dash` (port 30903).
+(port 30909) and `calico-alertmanager-dash` (port 30903).
 
 ## Ports of Services and NetworkPolicy
 
