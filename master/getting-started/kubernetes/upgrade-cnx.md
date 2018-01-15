@@ -17,9 +17,10 @@ This section covers taking an existing Kubernetes system with Calico and adding 
 #### Prerequisites
 This procedure assumes the following:
 
-- Your system is running the latest 3.0.x release of Calico. If not, follow the [instructions to upgrade](https://docs.projectcalico.org/v3.0/getting-started/kubernetes/upgrade/) it to the latest 3.0.x release
-- You have obtained the {{site.prodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/) and uploaded them to a private registry.
-- You have the Calico manifest that was used to install your system available. This is the manifest which includes the `calico/node` DaemonSet.
+* Your system is running the latest 3.0.x release of Calico. If not, follow the [instructions to upgrade](https://docs.projectcalico.org/v3.0/getting-started/kubernetes/upgrade/) it to the latest 3.0.x release
+* You have obtained the {{site.prodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/) and uploaded them to a private registry.
+* You have the Calico manifest that was used to install your system available. This is the manifest which includes the `calico/node` DaemonSet.
+{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
 #### Prepare for the Upgrade
  Edit your **calico** manifest:
