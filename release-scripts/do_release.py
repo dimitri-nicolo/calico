@@ -23,6 +23,7 @@ Options:
 
 """
 import os
+import re
 import shutil
 
 from docopt import docopt
@@ -39,6 +40,13 @@ def release():
     updated = open('index.html', 'w')
     updated.write(index_html)
     updated.close()
+
+    # replace _includes/version_warning.html default version
+    warning_html = open('_includes/version_warning.html').read()
+    warning_html = re.sub("{{site.baseurl}}/(v[0-9].[0-9]{1,3})", '{{site.baseurl}}/%s' % new_version, warning_html)
+    warning_updated = open('_includes/version_warning.html', 'w')
+    warning_updated.write(warning_html)
+    warning_updated.close()
 
     # Check if any of the new version dirs exist already
     new_dirs = ["./%s" % new_version,
