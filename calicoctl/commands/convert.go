@@ -165,6 +165,8 @@ func getTypeConverter(resKind string) (converters.Converter, error) {
 		return converters.Profile{}, nil
 	case "policy":
 		return converters.Policy{}, nil
+	case "tier":
+		return converters.Tier{}, nil
 	case "ippool":
 		return converters.IPPool{}, nil
 	case "bgppeer":
