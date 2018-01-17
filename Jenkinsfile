@@ -20,10 +20,21 @@ pipeline{
                 // Kill running containers:
                 sh "sudo docker kill `docker ps -qa` || true"
                 // Delete all containers (and their associated volumes):
-                sh "sudo docker rm -v `docker ps -qa` || true"
+                sh "sudo docker rm -v -f `docker ps -qa` || true"
                 // Remove all images:
-                sh "sudo docker rmi `docker images -q` || true"
+                sh "sudo docker rmi -f `docker images -q` || true"
             }
+        }
+
+        stage('Check clean slate') {
+	    // It is a critical problem if we are not starting from a
+	    // clean position; so we intentionally fail the entire
+	    // pipeline if any of the following checks fail.
+	    steps {
+	        // Check nothing listening on the etcd ports.
+	        sh "! sudo ss -tnlp 'sport = 2379' | grep 2379"
+	        sh "! sudo ss -tnlp 'sport = 2380' | grep 2380"
+	    }
         }
 
         stage('Run htmlproofer') {
