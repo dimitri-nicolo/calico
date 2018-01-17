@@ -6,17 +6,6 @@ pipeline{
         cron('H H(0-7) * * *')
     }
     stages {
-        stage('Check clean slate') {
-	    // It is a critical problem if we are not starting from a
-	    // clean position; so we intentionally fail the entire
-	    // pipeline if any of the following checks fail.
-	    steps {
-	        // Check nothing listening on the etcd ports.
-	        sh "! sudo ss -tnlp 'sport = 2379' | grep 2379"
-	        sh "! sudo ss -tnlp 'sport = 2380' | grep 2380"
-	    }
-        }
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -35,6 +24,18 @@ pipeline{
                 sh 'sudo rm -rf ~/.glide/*'
                 }
         }
+
+        stage('Check clean slate') {
+	    // It is a critical problem if we are not starting from a
+	    // clean position; so we intentionally fail the entire
+	    // pipeline if any of the following checks fail.
+	    steps {
+	        // Check nothing listening on the etcd ports.
+	        sh "! sudo ss -tnlp 'sport = 2379' | grep 2379"
+	        sh "! sudo ss -tnlp 'sport = 2380' | grep 2380"
+	    }
+        }
+
 
         stage('Build calicoctl') {
             steps {
