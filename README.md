@@ -2,9 +2,7 @@
 
 k8s styled API server to interact with Calico resources.
 
-To deploy, bring up k8s >=1.6, preferably 1.7 since it comes with built-in aggregator.
-
-Also, 1.7 is when the apiregistration.k8s.io api version goes beta.
+To deploy, bring up k8s version v1.8+, preferably v1.9.
 
 ## Sample installation steps with kubeadm with Calico in ETCD mode
 
