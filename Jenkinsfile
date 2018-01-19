@@ -8,10 +8,27 @@ pipeline{
         pollSCM('H/5 * * * *')
         cron('H H(0-7) * * *')
     }
+    environment {
+        GIT_DOCS_ONLY = ""
+    }
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+                dir('calico') {
+                    script {
+                    GIT_DOCS_ONLY = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^calico_node/' || git diff --name-only HEAD^ | grep '^_data/versions.yml'")
+                    }
+                }
+            }
+        }
+
+        stage('Skip test evaluation') {
+            when {
+                expression { GIT_DOCS_ONLY == 1 }
+            }
+            steps {
+                echo "[INFO] Only doc changes found, will skip tests"
             }
         }
 
@@ -75,6 +92,10 @@ pipeline{
             }
         }
         stage('Build tigera/cnx-node') {
+            when {
+                expression { GIT_DOCS_ONLY == 0 }
+                // only run if nothing is returned from running git diff grep queries
+            }
             steps {
                 ansiColor('xterm') {
                     dir('calico_node'){
@@ -88,6 +109,10 @@ pipeline{
         }
 
         stage('Push image to GCR') {
+            when {
+                expression { GIT_DOCS_ONLY == 0 }
+                // only run if nothing is returned from running git diff grep queries
+            }
             steps {
                 script{
                     // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
@@ -109,6 +134,10 @@ pipeline{
         }
 
         stage('Get enterprise calicoctl') {
+            when {
+                expression { GIT_DOCS_ONLY == 0 }
+                // only run if nothing is returned from running git diff grep queries
+            }
             steps {
                 dir('calico_node'){
                     // Get calicoctl
@@ -121,6 +150,10 @@ pipeline{
         }
 
         stage('Run tigera/cnx-node FVs') {
+            when {
+                expression { GIT_DOCS_ONLY == 0 }
+                // only run if nothing is returned from running git diff grep queries
+            }
             steps {
                 ansiColor('xterm') {
                     dir('calico_node'){
