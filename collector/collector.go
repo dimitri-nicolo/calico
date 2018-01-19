@@ -27,6 +27,8 @@ type Config struct {
 	IngressGroup     int
 	EgressGroup      int
 
+	ConntrackPollingInterval time.Duration
+
 	AgeTimeout            time.Duration
 	InitialReportingDelay time.Duration
 	ExportingInterval     time.Duration
@@ -46,6 +48,7 @@ type Collector struct {
 	nfEgressC      chan *nfnetlink.NflogPacketAggregate
 	nfIngressDoneC chan struct{}
 	nfEgressDoneC  chan struct{}
+	ctEntriesC     chan []nfnetlink.CtEntry
 	epStats        map[Tuple]*Data
 	ticker         *jitter.Ticker
 	sigChan        chan os.Signal
@@ -61,6 +64,7 @@ func NewCollector(lm epLookup, rm *ReporterManager, config *Config) *Collector {
 		nfEgressC:      make(chan *nfnetlink.NflogPacketAggregate, 1000),
 		nfIngressDoneC: make(chan struct{}),
 		nfEgressDoneC:  make(chan struct{}),
+		ctEntriesC:     make(chan []nfnetlink.CtEntry, 10),
 		epStats:        make(map[Tuple]*Data),
 		ticker:         jitter.NewTicker(config.ExportingInterval, config.ExportingInterval/10),
 		sigChan:        make(chan os.Signal, 1),
@@ -83,6 +87,7 @@ func (c *Collector) Start() {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
 	}
+	go pollConntrack(c.config.ConntrackPollingInterval, c.ctEntriesC)
 }
 
 func (c *Collector) startStatsCollectionAndReporting() {
@@ -92,6 +97,8 @@ func (c *Collector) startStatsCollectionAndReporting() {
 	// 3. A done channel for stopping and cleaning up collector (TODO).
 	for {
 		select {
+		case ctEntries := <-c.ctEntriesC:
+			c.convertCtEntryAndApplyUpdate(ctEntries)
 		case nflogPacketAggr := <-c.nfIngressC:
 			c.convertNflogPktAndApplyUpdate(DirIn, nflogPacketAggr)
 		case nflogPacketAggr := <-c.nfEgressC:
@@ -218,6 +225,55 @@ func (c *Collector) reportMetrics(data *Data) {
 	data.clearDirtyFlag()
 }
 
+func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) error {
+	var (
+		ctTuple nfnetlink.CtTuple
+		err     error
+	)
+	for _, ctEntry := range ctEntries {
+		// There can be a maximum of 2 stat updates per ctentry, in the case of
+		// local-to-local traffic.
+		// The last entry is the tuple entry for endpoints
+		ctTuple, err = ctEntry.OriginalTuple()
+		if err != nil {
+			log.Error("Error when getting original tuple:", err)
+			continue
+		}
+
+		// We care about DNAT only which modifies the destination parts of the OriginalTuple.
+		if ctEntry.IsDNAT() {
+			ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
+			if err != nil {
+				log.Error("Error when extracting tuple without DNAT:", err)
+				continue
+			}
+		}
+		_, errSrc := c.lum.GetEndpointKey(ctTuple.Src)
+		_, errDst := c.lum.GetEndpointKey(ctTuple.Dst)
+		if errSrc == lookup.UnknownEndpointError && errDst == lookup.UnknownEndpointError {
+			// We always expect unknown entries for conntrack for things such as
+			// management or local traffic. This log can get spammy if we log everything
+			// because of which we don't return an error and log at debug level.
+			//log.Debugf("No known endpoints found for %v", ctEntry)
+			continue
+		}
+		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
+		c.applyStatUpdate(tuple,
+			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
+			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
+			AbsoluteCounter, DirUnknown, nil)
+		if errSrc == nil && errDst == nil {
+			// Locally to local packet will require a reversed tuple to collect reply stats.
+			tuple := extractTupleFromCtEntryTuple(ctTuple, true)
+			c.applyStatUpdate(tuple,
+				ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
+				ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
+				AbsoluteCounter, DirUnknown, nil)
+		}
+	}
+	return nil
+}
+
 func (c *Collector) convertNflogPktAndApplyUpdate(dir Direction, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
 		numPkts, numBytes int
@@ -235,7 +291,7 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir Direction, nPktAggr *nfnet
 
 	if err == lookup.UnknownEndpointError {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
-		log.Debugf("Failed to find endpoint for NFLOG packet %v/%v", nflogTuple, dir)
+		//log.Debugf("Failed to find endpoint for NFLOG packet %v/%v", nflogTuple, dir)
 		return errors.New("Couldn't find endpoint info for NFLOG packet")
 	}
 	for _, prefix := range nPktAggr.Prefixes {
@@ -276,6 +332,34 @@ func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {
 		l4Dst = nflogTuple.L4Dst.Port
 	}
 	return *NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
+}
+
+func pollConntrack(pollInterval time.Duration, ctEntriesChan chan []nfnetlink.CtEntry) {
+	poller := jitter.NewTicker(pollInterval, pollInterval/10)
+	for _ = range poller.C {
+		cte, err := nfnetlink.ConntrackList()
+		if err != nil {
+			log.Errorf("Error: ConntrackList: %v", err)
+			continue
+		}
+		ctEntriesChan <- cte
+	}
+}
+
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) Tuple {
+	var l4Src, l4Dst int
+	if ctTuple.ProtoNum == 1 {
+		l4Src = ctTuple.L4Src.Id
+		l4Dst = int(uint16(ctTuple.L4Dst.Type)<<8 | uint16(ctTuple.L4Dst.Code))
+	} else {
+		l4Src = ctTuple.L4Src.Port
+		l4Dst = ctTuple.L4Dst.Port
+	}
+	if !reverse {
+		return *NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
+	} else {
+		return *NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
+	}
 }
 
 func lookupRule(lum epLookup, prefix [64]byte, prefixLen int, epKey interface{}) (*RuleTracePoint, error) {
