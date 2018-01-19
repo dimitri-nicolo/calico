@@ -48,7 +48,7 @@ test: ut fv fv-kdd
 
 # Define some constants
 #######################
-K8S_VERSION    = v1.8.1
+K8S_VERSION    = v1.9.2
 BINDIR        ?= bin
 BUILD_DIR     ?= build
 CAPI_PKG       = github.com/tigera/calico-k8sapiserver
