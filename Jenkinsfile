@@ -164,14 +164,16 @@ pipeline{
                     }
                 }
             }
+            post {
+                always {
+                    junit("**/calico_node/nosetests.xml")
+                    deleteDir()
+                }
+            }
         }
     }
 
     post {
-        always {
-            junit("**/calico_node/nosetests.xml")
-            deleteDir()
-        }
         success {
             echo "Yay, we passed."
         }
