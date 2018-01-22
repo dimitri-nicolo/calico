@@ -160,6 +160,7 @@ metadata:
   namespace: kube-system
   labels:
     apiserver: "true"
+    k8s-app: cnx-apiserver
 spec:
   replicas: 1
   strategy:
@@ -173,6 +174,7 @@ spec:
       namespace: kube-system
       labels:
         apiserver: "true"
+        k8s-app: cnx-apiserver
     spec:
       serviceAccountName: cnx-apiserver
       tolerations:
