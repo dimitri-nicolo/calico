@@ -21,8 +21,8 @@
    deploy the `calicoctl` container image to each node, and then **Next step**. 
    We provide the following Kubernetes manifests to make the _deployment_ part easier.
    
-      - **etcd datastore**: [calicoctl.yaml]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calicoctl.yaml){:target="_blank"}
+      - **etcd datastore**: [calicoctl.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calicoctl.yaml){:target="_blank"}
       
-      - **Kubernetes API datastore**: [calicoctl.yaml]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml){:target="_blank"}
+      - **Kubernetes API datastore**: [calicoctl.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml){:target="_blank"}
 
-      
+
