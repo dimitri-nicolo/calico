@@ -122,6 +122,8 @@ To install {{site.prodname}} in policy-only mode:
    
 {% include {{page.version}}/cnx-mgr-install.md %}
 
+{% include {{page.version}}/cnx-monitor-install.md %}
+
 {% include {{page.version}}/gs-next-steps.md %}
 
 ## Configuration details

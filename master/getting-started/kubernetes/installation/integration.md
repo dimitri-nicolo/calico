@@ -327,4 +327,6 @@ it would not be necessary to load the above manifest.
 
 {% include {{page.version}}/cnx-mgr-install.md %}
 
+{% include {{page.version}}/cnx-monitor-install.md %}
+
 {% include {{page.version}}/gs-next-steps.md %}

@@ -19,6 +19,25 @@
    > a port number. For example, `my-repo:5000`.
    {: .alert .alert-success}
 
+{% if include.orchestrator == "openshift" %}
+
+1. Update the login method to `Token`:
+
+       sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "Token"/g' cnx.yaml
+
+1. Open the file in a text editor, and make the following modifications:
+
+   In the `Deployment` named `cnx-apiserver`:
+
+   - Uncomment the `ETCD_CA_CERT_FILE`, `ETCD_KEY_FILE`, and `ETCD_CERT_FILE` environment variables.
+   - Uncomment the `volumeMount` named `etcd-certs`.
+   - Uncomment the `volume` named `etcd-certs`.
+
+   You might want to reconfigure the service that gets traffic to the {{site.prodname}} Manager
+   web server as well.
+
+{% else %}
+
 1. Open the file in a text editor, and update the ConfigMap `tigera-cnx-manager-config`
    according to the instructions in the file and your chosen authentication method.
 
@@ -29,6 +48,8 @@
    > no `calico-config` ConfigMap was created you must also update the file
    > anywhere `calico-config` is referenced with the appropriate information.
    {: .alert .alert-info}
+
+{% endif %}
 
 1. Generate TLS credentials - i.e. a web server certificate and key - for the
    {{site.prodname}} Manager.
@@ -54,6 +75,14 @@
    kubectl apply -f cnx.yaml
    ```
 
+{% if include.orchestrator == "openshift" %}
+
+1. Allow cnx-manager to run as root:
+
+       oadm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
+
+{% else %}
+
 1. Configure the kube-apiserver to allow
    cross-origin resource sharing (CORS). This will allow the {{site.prodname}} Manager to communicate with {{site.prodname}} API server. CORS can be enabled by setting the flag [--cors-allowed-origins](https://kubernetes.io/docs/reference/generated/kube-apiserver/) on kube-apiserver. kube-apiserver should be restarted for the --cors-allowed-origin flag to take effect.
 
@@ -64,28 +93,10 @@
    /etc/kubernetes/manifests/kube-apiserver.yaml
    ```
 
+{% endif %}
+
 1. Configure authorization to allow {{site.prodname}} Manager users to edit policies.  Consult the
    [{{site.prodname}} Manager]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.
-
-1. Configure calico-monitoring namespace and deploy Prometheus Operator by
-  applying the [operator.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml) manifest.
-
-   ```
-   kubectl apply -f operator.yaml
-   ```
-
-1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com` and `servicemonitors.monitoring.coreos.com` custom resource definitions to be created. Check by running:
-
-   ```
-   kubectl get customresourcedefinitions
-   ```
-
-1. Apply the [monitor-calico.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
-  install Prometheus and alertmanager.
-
-   ```
-   kubectl apply -f monitor-calico.yaml
-   ```

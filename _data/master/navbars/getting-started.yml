@@ -51,12 +51,8 @@ toc:
   section:
     - title: Installation
       path: /getting-started/openshift/installation
-    - title: CNX
-      section:
-      - title: Installing CNX for OpenShift
-        path: /getting-started/openshift/cnx/installation
-      - title: Using CNX for OpenShift
-        path: /getting-started/openshift/cnx/usage
+    - title: Connecting to a dedicated etcd cluster (optional)
+      path: /getting-started/openshift/dedicated-etcd
     - title: Upgrade to CNX
       path: /getting-started/openshift/upgrade-cnx
 

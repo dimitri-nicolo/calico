@@ -84,4 +84,6 @@ To install {{site.prodname}}, configured to use the Kubernetes API as its sole d
    
 {% include {{page.version}}/cnx-mgr-install.md %}
 
+{% include {{page.version}}/cnx-monitor-install.md %}
+
 {% include {{page.version}}/gs-next-steps.md %}

@@ -18,8 +18,6 @@ If you do not already have a private registry, consider one of the following opt
 - [Amazon Web Services (AWS) Elastic Compute Cloud (EC2) Container Registry](https://aws.amazon.com/ecr/pricing/)
 - [Azure Container Registry](https://azure.microsoft.com/en-us/services/container-registry/)
 - [Quay](https://quay.io/repository/)
-- [OpenShift Container Platform](https://access.redhat.com/documentation/en-us/openshift_container_platform/3.6/html-single/installation_and_configuration/#system-requirements)
-
 
 ### Loading and pushing the private images
 
@@ -60,7 +58,21 @@ If you do not already have a private registry, consider one of the following opt
    docker push {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    ```
 
+{% if include.orchestrator == "openshift" %}
+
+1. Ensure your Docker daemon on all OpenShift nodes and masters is authenticated to pull images from that registry.
+
+   > **Note**: See the [OCP Advanced Installation Instructions][ocp-advanced-install]
+   for more information on setting up custom Docker registries using the OpenShift installer.
+   {: .alert .alert-info}
+
+{% else %}
+
 1. Next, you must determine how to configure Kubernetes to pull from your private registry. The method varies according to your private registry vendor and Kubernetes hosting. For specific instructions, refer to:
    - The documentation of your private registry vendor
    - Kubernetes [Using a Private Registry](https://kubernetes.io/docs/concepts/containers/images/#using-a-private-registry)
    - Heptio [How to: Pull from private registries with Kubernetes](http://docs.heptio.com/content/private-registries.html)
+
+{% endif %}
+
+[ocp-advanced-install]: https://access.redhat.com/documentation/en-us/openshift_container_platform/3.6/html-single/installation_and_configuration/#system-requirements
