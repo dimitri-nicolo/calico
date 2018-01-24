@@ -25,19 +25,15 @@
 
        sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "Token"/g' cnx.yaml
 
-1. Open the file in a text editor, and update the ConfigMap `tigera-cnx-manager-config`
-   according to the instructions in the file and your chosen authentication method.
+1. Open the file in a text editor, and make the following modifications:
 
-   You might want to reconfigure the service that gets traffic to the {{site.prodname}} Manager
-   web server as well.
+   For the Deployment named "cnx-apiserver":
 
-   {{site.prodname}} for OpenShift requires SSL certs to connect to etcd, so be sure to uncomment
-   all secrets connected to `calico-secrets`.
+   - Uncomment the `ETCD_*` environment variables.
+   - Uncomment the `etcd-certs` volumeMount.
+   - Uncomment the `etcd-certs` volume.
 
-   > If {{site.nodecontainer}} was not deployed with a Kubernetes manifest and
-   > no `calico-config` ConfigMap was created you must also update the file
-   > anywhere `calico-config` is referenced with the appropriate information.
-   {: .alert .alert-info}
+   Optionally configure the `cnx-manager` service which gets traffic to the {{site.prodname}} Manager.
 
 {% else %}
 
