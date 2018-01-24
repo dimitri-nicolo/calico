@@ -6,20 +6,7 @@ Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansibl
 The information below explains the variables which must be set during
 during the standard [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
 
-## Preparation
-
-1. Load the `cnx-apiserver`, `cnx-node`, and `cnx-manager` binaries into your
-   private Docker registry.
-
-   See [Obtaining {{site.prodname}}][obtaining-cnx] for more information
-   on how to acquire these images.
-
-1. Ensure your Docker daemon on all OpenShift nodes and masters is authenticated to pull images from that registry.
-
-   > **Note**: See the [OCP Advanced Installation Instructions][ocp-advanced-install]
-   for more information on setting up custom Docker registries using the OpenShift installer.
-   {: .alert .alert-info}
-
+{% include {{page.version}}/load-docker.md orchestrator="openshift" %}
 
 ## Installation
 
@@ -62,7 +49,7 @@ You are now ready to execute the ansible provision which will install {{site.pro
 certs to each node. If you would prefer Calico not connect to the same etcd as OpenShift, you may modify the install
 such that Calico connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
-### Installing the CNX Manager
+### Installing {{site.prodname}} Manager
 
 1. Create a Kubernetes secret from your etcd certificates. Example command:
 
@@ -92,64 +79,12 @@ such that Calico connects to an etcd you have already set up by following the [d
 
        kubectl apply -f ./calico-config.yaml
 
-1. Download the {{site.prodname}} manifest:
+1. [Open cnx-etcd.yaml in a new tab](../cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
 
-   - [cnx-etcd.yaml](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml)
+1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
+   This is what subsequent instructions will refer to.
 
-1. Rename the file `cnx.yaml` - this is what subsequent instructions will refer to:
-
-       mv cnx-etcd.yaml cnx.yaml
-
-1. Update the login method to "Token":
-
-       sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "Token"/g' cnx.yaml
-
-1. Update the manifest with the path to your private Docker registry. Substitute
-   `mydockerregistry:5000` with the location of your Docker registry.
-
-       sed -i -e 's?<YOUR_PRIVATE_DOCKER_REGISTRY>?mydockerregistry:5000?g' cnx.yaml
-
-1. Open the file in a text editor, and update the ConfigMap `tigera-cnx-manager-config`
-   according to the instructions in the file and your chosen authentication method.
-
-   You might want to reconfigure the service that gets traffic to the CNX Manager
-   web server as well.
-
-   {{site.prodname}} for OpenShift requires SSL certs to connect to etcd, so be sure to uncomment
-   all secrets connected to `calico-secrets`.
-
-1. Generate TLS credentials - i.e. a web server certificate and key - for the
-   CNX Manager.
-
-   See
-   [Certificates](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
-   for various ways of generating TLS credentials.  As both its Common Name and
-   a Subject Alternative Name, the certificate must have the host name (or IP
-   address) that browsers will use to access the CNX Manager.  In a single-node
-   test deployment this can be just `127.0.0.1`, but in a real deployment it
-   should be a planned host name that maps to the `cnx-manager` service.
-
-1. Store those credentials as `cert` and `key` in a secret named
-   `cnx-manager-tls`.  For example:
-
-       kubectl create secret generic cnx-manager-tls -n kube-system --from-file=cert=/path/to/certificate --from-file=key=/path/to/key
-
-1. Apply the manifest to install CNX Manager and the CNX API server.
-
-   ```
-   kubectl apply -f cnx.yaml
-   ```
-
-1. Allow cnx-manager to run as root:
-
-       oadm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
-
-1. Configure authentication to allow CNX Manager users to edit policies.  Consult the
-   [CNX Manager](../../reference/cnx/policy-editor) and
-   [Tiered policy RBAC](../../reference/cnx/rbac-tiered-policies)
-   documents for advice on configuring this.  The authentication method you
-   chose when setting up the cluster defines what format you need to use for
-   usernames in the role bindings.
+{% include {{page.version}}/cnx-mgr-install.md orchestrator="openshift" %}
 
 #### Signing into the CNX Manager UI in OpenShift
 
@@ -211,21 +146,25 @@ Operator, Prometheus, and Alertmanager instances for you.
 
    >[Click here to view operator-openshift-patch.yaml](operator-openshift-patch.yaml)
 
-1. Apply the Prometheus Operator manifest:
+1. Configure calico-monitoring namespace and deploy Prometheus Operator by
+  applying the [operator.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml) manifest.
 
    ```
    oc apply -f operator.yaml
    ```
 
-   >[Click here to view operator.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml)
+1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com` and `servicemonitors.monitoring.coreos.com` custom resource definitions to be created. Check by running:
 
-1. Apply Prometheus and Alertmanager:
+   ```
+   oc get customresourcedefinitions
+   ```
+
+1. Apply the [monitor-calico.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
+  install Prometheus and alertmanager.
 
    ```
    oc apply -f monitor-calico.yaml
    ```
-
-   >[Click here to view monitor-calico.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml)
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
 See [Policy Violation Alerting](../../reference/cnx/policy-violations) for more information.
@@ -248,5 +187,3 @@ See the [calicoq reference](../../reference/calicoq/) for more information on us
 - [Policy Auditing](../../reference/cnx/policy-auditing).
 
 [obtaining-cnx]: {{site.baseurl}}/{{page.version}}/getting-started/
-[ocp-advanced-install]: https://access.redhat.com/documentation/en-us/openshift_container_platform/3.6/html-single/installation_and_configuration/#system-requirements
-
