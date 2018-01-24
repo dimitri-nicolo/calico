@@ -3,8 +3,8 @@ title: Installing CNX on OpenShift
 ---
 
 Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible v3.6.
-The information below explains the variables which must be set during
-during the standard [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
+The information below explains the variables which must be set during the standard
+[Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" %}
 
@@ -61,25 +61,33 @@ such that Calico connects to an etcd you have already set up by following the [d
    ```
 
    >{{site.prodname}} APIServer and Manager require etcd connection information and
-   >certificates to be stored in kubernetes objects.
+   >certificates to be stored in Kubernetes objects.
    >The following preparation steps will upload this data.
    >
-   >If you are unsure of what to set these values to, check >`/etc/calico/calicoctl.cfg`
+   >If you are unsure of what to set these values to, check `/etc/calico/calicoctl.cfg`
    >on your master node, which will show what `calicoctl` is currently using to connect to etcd.
    {: .alert .alert-info}
 
-1. Download the {{site.prodname}} configmap: [calico-config.yaml](calico-config.yaml)
+1. Download [calico-config.yaml](calico-config.yaml).
 
-1. Update the CNX configmap with the path to your private Docker registry.
-   Substitute `$ETCD_ENDPOINTS` with the address of your etcd cluster.
+1. Use the following command to replace the value `<ETCD_ENDPOINTS>` in `calico-config.yaml` 
+   with the address of your etcd cluster:
 
-       sed -i -e "s?<ETCD_ENDPOINTS>?$ETCD_ENDPOINTS?g" calico-config.yaml
+   **Command**
+   ```shell
+   sed -i -e "s?<ETCD_ENDPOINTS>?<REPLACE_ME>?g" calico-config.yaml
+   ```
+   
+   **Example**
+   ```shell
+   sed -i -e 's?<ETCD_ENDPOINTS>?https://etcd:2379?g' calico.yaml
+   ```
 
 1. Apply it:
 
        kubectl apply -f ./calico-config.yaml
 
-1. [Open cnx-etcd.yaml in a new tab](../cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
+1. [Open cnx-etcd.yaml in a new tab](../kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
 
 1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
    This is what subsequent instructions will refer to.
@@ -96,8 +104,7 @@ If you are unsure, a simple way to generate this token is to log into the OpenSh
 
 ### Installing Policy Violation Alerting
 
-Policy Violation Alerting is mostly the same in {{site.prodname}} for OpenShift as it is in {{site.prodname}}. Below,
-we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
+Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
 
 #### Enable Metrics
 
@@ -116,7 +123,7 @@ Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixC
 
 #### Configure Prometheus
 
-With metrics enabled, you are ready to monitor `calico/node` by scraping the endpoint on each node
+With metrics enabled, you are ready to monitor `{{site.nodecontainer}}` by scraping the endpoint on each node
 in the cluster. If you do not have your own Prometheus, the following commands will launch a Prometheus
 Operator, Prometheus, and Alertmanager instances for you.
 
@@ -126,7 +133,7 @@ Operator, Prometheus, and Alertmanager instances for you.
    oadm policy add-scc-to-user --namespace=calico-monitoring anyuid -z default
    ```
 
-1. Allow Prometheus to configure and use a Security Context.
+1. Allow Prometheus to configure and use a security context.
 
    ```
    oadm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:prometheus
@@ -138,7 +145,7 @@ Operator, Prometheus, and Alertmanager instances for you.
    oadm policy add-scc-to-user --namespace=calico-monitoring hostnetwork -z default
    ```
 
-1. Apply the Openshift patches for Prometheus Operator:
+1. Apply the OpenShift patches for Prometheus Operator:
 
    ```
    oc apply -f operator-openshift-patch.yaml
@@ -160,7 +167,7 @@ Operator, Prometheus, and Alertmanager instances for you.
    ```
 
 1. Apply the [monitor-calico.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
-  install Prometheus and alertmanager.
+  install Prometheus and Alertmanager.
 
    ```
    oc apply -f monitor-calico.yaml

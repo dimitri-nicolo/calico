@@ -21,19 +21,20 @@
 
 {% if include.orchestrator == "openshift" %}
 
-1. Update the login method to "Token":
+1. Update the login method to `Token`:
 
        sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "Token"/g' cnx.yaml
 
 1. Open the file in a text editor, and make the following modifications:
 
-   For the Deployment named "cnx-apiserver":
+   In the `Deployment` named `cnx-apiserver`:
 
-   - Uncomment the `ETCD_*` environment variables.
-   - Uncomment the `etcd-certs` volumeMount.
-   - Uncomment the `etcd-certs` volume.
+   - Uncomment the `ETCD_CA_CERT_FILE`, `ETCD_KEY_FILE`, and `ETCD_CERT_FILE` environment variables.
+   - Uncomment the `volumeMount` named `etcd-certs`.
+   - Uncomment the `volume` named `etcd-certs`.
 
-   Optionally configure the `cnx-manager` service which gets traffic to the {{site.prodname}} Manager.
+   You might want to reconfigure the service that gets traffic to the {{site.prodname}} Manager
+   web server as well.
 
 {% else %}
 
@@ -73,8 +74,6 @@
    ```
    kubectl apply -f cnx.yaml
    ```
-
-inc.orch: {{ include.orchestrator }}
 
 {% if include.orchestrator == "openshift" %}
 
