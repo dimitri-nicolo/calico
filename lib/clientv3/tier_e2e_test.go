@@ -90,7 +90,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
 
-			err = c.EnsureInitialized(ctx, "", "")
+			err = c.EnsureInitialized(ctx, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 
 			By("Creating the default tier with not nil order")

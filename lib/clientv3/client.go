@@ -172,13 +172,13 @@ func (p poolAccessor) GetEnabledPools(ipVersion int) ([]net.IPNet, error) {
 // Most Calico deployment scenarios will automatically implicitly invoke this
 // method and so a general consumer of this API can assume that the datastore
 // is already initialized.
-func (c client) EnsureInitialized(ctx context.Context, calicoVersion, clusterType string) error {
+func (c client) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
 	// Perform datastore specific initialization first.
 	if err := c.backend.EnsureInitialized(); err != nil {
 		return err
 	}
 
-	if err := c.ensureClusterInformation(ctx, calicoVersion, clusterType); err != nil {
+	if err := c.ensureClusterInformation(ctx, calicoVersion, cnxVersion, clusterType); err != nil {
 		return err
 	}
 
@@ -192,8 +192,8 @@ func (c client) EnsureInitialized(ctx context.Context, calicoVersion, clusterTyp
 const globalClusterInfoName = "default"
 
 // ensureClusterInformation ensures that the ClusterInformation fields i.e. ClusterType,
-// CalicoVersion and ClusterGUID are set.  It creates/updates the ClusterInformation as needed.
-func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, clusterType string) error {
+// CalicoVersion, CNXVersion and ClusterGUID are set.  It creates/updates the ClusterInformation as needed.
+func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
 	// Append "kdd" last if the datastoreType is 'kubernetes'.
 	if c.config.Spec.DatastoreType == apiconfig.Kubernetes {
 		// If clusterType is already set then append ",kdd" at the end.
@@ -219,6 +219,7 @@ func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, clu
 				newClusterInfo := v3.NewClusterInformation()
 				newClusterInfo.Name = globalClusterInfoName
 				newClusterInfo.Spec.CalicoVersion = calicoVersion
+				newClusterInfo.Spec.CNXVersion = cnxVersion
 				newClusterInfo.Spec.ClusterType = clusterType
 				newClusterInfo.Spec.ClusterGUID = fmt.Sprintf("%s", hex.EncodeToString(uuid.NewV4().Bytes()))
 				datastoreReady := true
@@ -248,6 +249,16 @@ func (c client) ensureClusterInformation(ctx context.Context, calicoVersion, clu
 				updateNeeded = true
 			} else {
 				log.WithField("CalicoVersion", clusterInfo.Spec.CalicoVersion).Debug("Calico version value already assigned")
+			}
+		}
+
+		if cnxVersion != "" {
+			// Only update the version if it's different from what we have.
+			if clusterInfo.Spec.CNXVersion != cnxVersion {
+				clusterInfo.Spec.CNXVersion = cnxVersion
+				updateNeeded = true
+			} else {
+				log.WithField("CNXVersion", clusterInfo.Spec.CNXVersion).Debug("CNX version value already assigned")
 			}
 		}
 
