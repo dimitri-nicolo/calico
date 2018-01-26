@@ -81,6 +81,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 				"ClusterGUID":   "someguid",
 				"ClusterType":   "openstack,k8s,kdd",
 				"CalicoVersion": "v2.6.3",
+				"CNXVersion":    "v2.0.1",
 			}
 		}
 
@@ -122,7 +123,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 				Expect(q.Get("guid")).To(Equal("someguid"))
 				Expect(q.Get("type")).To(Equal("openstack,k8s,kdd,cnx"))
 				Expect(q.Get("cal_ver")).To(Equal("v2.6.3"))
-				Expect(q.Get("cnx_ver")).To(Equal("v2.0.0"))
+				Expect(q.Get("cnx_ver")).To(Equal("v2.0.1"))
 				Expect(q.Get("size")).To(Equal("1"))
 				Expect(q.Get("heps")).To(Equal("2"))
 				Expect(q.Get("weps")).To(Equal("3"))
@@ -158,6 +159,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 						"ClusterGUID":   "someguid2",
 						"ClusterType":   "openstack,k8s,kdd,typha",
 						"CalicoVersion": "v3.0.0",
+						"CNXVersion":    "v2.0.1",
 					}
 				})
 
@@ -174,7 +176,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					Expect(q.Get("guid")).To(Equal("someguid2"))
 					Expect(q.Get("type")).To(Equal("openstack,k8s,kdd,typha,cnx"))
 					Expect(q.Get("cal_ver")).To(Equal("v3.0.0"))
-					Expect(q.Get("cnx_ver")).To(Equal("v2.0.0"))
+					Expect(q.Get("cnx_ver")).To(Equal("v2.0.1"))
 					Expect(q.Get("size")).To(Equal("10"))
 					Expect(q.Get("heps")).To(Equal("20"))
 					Expect(q.Get("weps")).To(Equal("30"))
@@ -217,7 +219,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 	})
 
 	It("should calculate correct URL mainline", func() {
-		rawURL := u.calculateURL("theguid", "atype", "testVer", calc.StatsUpdate{
+		rawURL := u.calculateURL("theguid", "atype", "testVer", "testCNXVer", calc.StatsUpdate{
 			NumHostEndpoints:     123,
 			NumWorkloadEndpoints: 234,
 			NumHosts:             10,
@@ -229,7 +231,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 		Expect(q.Get("guid")).To(Equal("theguid"))
 		Expect(q.Get("type")).To(Equal("atype,cnx"))
 		Expect(q.Get("cal_ver")).To(Equal("testVer"))
-		Expect(q.Get("cnx_ver")).To(Equal("v2.0.0"))
+		Expect(q.Get("cnx_ver")).To(Equal("testCNXVer"))
 		Expect(q.Get("size")).To(Equal("10"))
 		Expect(q.Get("weps")).To(Equal("234"))
 		Expect(q.Get("heps")).To(Equal("123"))
@@ -241,7 +243,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 		Expect(url.Path).To(Equal("/UsageCheck/calicoVersionCheck"))
 	})
 	It("should default cluster type, GUID, and Calico Version", func() {
-		rawURL := u.calculateURL("", "", "", calc.StatsUpdate{
+		rawURL := u.calculateURL("", "", "", "", calc.StatsUpdate{
 			NumHostEndpoints:     123,
 			NumWorkloadEndpoints: 234,
 			NumHosts:             10,
@@ -253,7 +255,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 		Expect(q.Get("guid")).To(Equal("baddecaf"))
 		Expect(q.Get("type")).To(Equal("unknown,cnx"))
 		Expect(q.Get("cal_ver")).To(Equal("unknown"))
-		Expect(q.Get("cnx_ver")).To(Equal("v2.0.0"))
+		Expect(q.Get("cnx_ver")).To(Equal("unknown"))
 	})
 	It("should delay at least 5 minutes", func() {
 		Expect(u.calculateInitialDelay(0)).To(BeNumerically(">=", 5*time.Minute))
