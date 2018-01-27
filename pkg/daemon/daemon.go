@@ -282,7 +282,7 @@ configRetry:
 			log.Info("Initializing the datastore (if needed).")
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
-			err = t.DatastoreClient.EnsureInitialized(ctx, "", "typha")
+			err = t.DatastoreClient.EnsureInitialized(ctx, "", "", "typha")
 		}()
 		if err != nil {
 			log.WithError(err).Error("Failed to initialize datastore")
