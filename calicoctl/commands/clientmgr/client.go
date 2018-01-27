@@ -43,7 +43,7 @@ func NewClient(cf string) (client.Interface, error) {
 	}
 
 	// EnsureInitialized creates the default tier.
-	err = c.EnsureInitialized(context.Background(), "", "")
+	err = c.EnsureInitialized(context.Background(), "", "","")
 	if err != nil {
 		return nil, err
 	}

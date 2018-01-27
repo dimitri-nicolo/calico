@@ -74,16 +74,22 @@ Description:
 		os.Exit(1)
 	}
 
-	v := ci.Spec.CalicoVersion
-	if v == "" {
-		v = "unknown"
+	calicoVersion := ci.Spec.CalicoVersion
+	if calicoVersion == "" {
+		calicoVersion = "unknown"
 	}
+
+	cnxVersion := ci.Spec.CNXVersion
+	if cnxVersion == "" {
+		cnxVersion = "unknown"
+	}
+
 	t := ci.Spec.ClusterType
 	if t == "" {
 		t = "unknown"
 	}
 
-	fmt.Println("Cluster Calico Version: ", v)
-	fmt.Println("Cluster CNX Version:     v2.0.0")
+	fmt.Println("Cluster Calico Version: ", calicoVersion)
+	fmt.Println("Cluster CNX Version:    ", cnxVersion)
 	fmt.Println("Cluster Type:           ", t)
 }
