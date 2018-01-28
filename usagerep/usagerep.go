@@ -88,7 +88,7 @@ func (u *UsageReporter) PeriodicallyReportUsage(ctx context.Context) {
 	}
 
 	doReport := func() {
-		u.ReportUsage(config["ClusterGUID"], config["ClusterType"], config["CalicoVersion"], stats)
+		u.ReportUsage(config["ClusterGUID"], config["ClusterType"], config["CalicoVersion"], config["CNXVersion"], stats)
 	}
 
 	var ticker *jitter.Ticker
@@ -140,8 +140,8 @@ func (u *UsageReporter) calculateInitialDelay(numHosts int) time.Duration {
 	return initialDelay
 }
 
-func (u *UsageReporter) ReportUsage(clusterGUID, clusterType, calicoVersion string, stats calc.StatsUpdate) {
-	fullURL := u.calculateURL(clusterGUID, clusterType, calicoVersion, stats)
+func (u *UsageReporter) ReportUsage(clusterGUID, clusterType, calicoVersion, cnxVersion string, stats calc.StatsUpdate) {
+	fullURL := u.calculateURL(clusterGUID, clusterType, calicoVersion, cnxVersion, stats)
 	resp, err := u.httpClient.Get(fullURL)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -163,7 +163,7 @@ func (u *UsageReporter) ReportUsage(clusterGUID, clusterType, calicoVersion stri
 	}
 }
 
-func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion string, stats calc.StatsUpdate) string {
+func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion, cnxVersion string, stats calc.StatsUpdate) string {
 	if clusterType == "" {
 		clusterType = "unknown"
 	}
@@ -173,8 +173,11 @@ func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion str
 	if clusterGUID == "" {
 		clusterGUID = "baddecaf"
 	}
+	if cnxVersion == "" {
+		cnxVersion = "unknown"
+	}
+
 	clusterType = clusterType + ",cnx"
-	cnxVersion := "v2.0.0"
 	log.WithFields(log.Fields{
 		"clusterGUID":   clusterGUID,
 		"clusterType":   clusterType,

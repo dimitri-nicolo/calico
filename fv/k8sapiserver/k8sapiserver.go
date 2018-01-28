@@ -178,6 +178,7 @@ func SetUp() *Server {
 		err = server.CalicoClient.EnsureInitialized(
 			ctx,
 			"v3.0.0-test",
+			"v2.0.0-test",
 			"felix-fv,typha", // Including typha in clusterType to prevent config churn
 		)
 

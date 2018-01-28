@@ -836,7 +836,7 @@ func (fc *DataplaneConnector) handleProcessStatusUpdate(msg *proto.ProcessStatus
 	}
 }
 
-var handledConfigChanges = set.From("CalicoVersion", "ClusterGUID", "ClusterType")
+var handledConfigChanges = set.From("CalicoVersion", "CNXVersion", "ClusterGUID", "ClusterType")
 
 func (fc *DataplaneConnector) sendMessagesToDataplaneDriver() {
 	defer func() {
