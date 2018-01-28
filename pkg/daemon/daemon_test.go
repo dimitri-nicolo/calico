@@ -243,7 +243,7 @@ func (b *mockDatastore) SyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Synce
 	return &dummySyncer{}
 }
 
-func (b *mockDatastore) EnsureInitialized(ctx context.Context, version, clusterType string) error {
+func (b *mockDatastore) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	b.initCalled++
