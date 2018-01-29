@@ -111,8 +111,10 @@ toc:
   path: /reference/cni-plugin/configuration
 - title: Calico Kubernetes Controllers
   path: /reference/kube-controllers/configuration
-- title: Policy Auditing and Reporting
+- title: Auditing and Reporting
   section:
+    - title: Kubernetes Audit Logging
+      path: /reference/cnx/auditing
     - title: Policy Violation Monitoring & Reporting
       path: /reference/cnx/policy-violations
     - title: Policy Audit Mode

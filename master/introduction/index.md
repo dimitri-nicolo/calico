@@ -28,6 +28,7 @@ For guides on how to set up {{site.prodname}} and a demo of some its basic funct
 * [Demo of {{site.prodname}}](../getting-started/cnx/simple-policy-cnx)
 * [Demo of Tiered Policy using {{site.prodname}}](../getting-started/cnx/tiered-policy-cnx)
 * [Policy Query Utility (calicoq)](../reference/calicoq/)
+* [Kubernetes Auditing for {{site.prodname}}](../reference/cnx/auditing)
 * [Policy Audit Mode](../reference/cnx/policy-auditing)
 * [Policy Violation Alerting](../reference/cnx/policy-violations)
 * [RBAC on Tiered Policies](../reference/cnx/rbac-tiered-policies)
