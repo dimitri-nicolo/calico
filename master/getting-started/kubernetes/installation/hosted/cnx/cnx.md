@@ -99,13 +99,11 @@ spec:
 The Kubernetes extension API Server deployed by the provided
 **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)**
 manifests will communicate with the Kubernetes
-API Server.  The manifest, by default, requires no updates to work but does not
-enable TLS verification on the connection between the two API servers. We
-recommend that this is enabled and you can follow the directions below to
-enable TLS verification.
+API Server.  The manifest, by default, requires no updates to work but 
+uses a set of hard coded TLS certs and CA. We recommend that you use your
+own set of keys when deploying to production.
 
-To enable TLS verification you will need to obtain or generate the following
-in PEM format:
+You will need to obtain or generate the following in PEM format:
 - Certificate Authority (CA) certificate
 - certificate signed by the CA
 - private key for the generated certificate
@@ -152,13 +150,12 @@ Here is an example command to do the base64 encoding:
 The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests must be updated
 with the following changes
 
-1. Remove the line `insecureSkipTLSVerify: true` from the `APIService` section.
-1. Uncomment the line `caBundle:` in the `APIService` and append the base64
+1. Change the line `caBundle:` in the `APIService` to match your base64
    encoded CA file contents.
-1. Uncomment the line `apiserver.key:` in the `cnx-apiserver-certs` `Secret`
-   and append the base64 encoded key file contents.
-1. Uncomment the line `apiserver.crt:` in the `cnx-apiserver-certs` `Secret`
-   and append the base64 encoded certificate file contents.
+1. Change the line `apiserver.key:` in the `cnx-apiserver-certs` `Secret`
+   to match your base64 encoded key file contents.
+1. Change the line `apiserver.crt:` in the `cnx-apiserver-certs` `Secret`
+   to match your base64 encoded certificate file contents.
 
 ## Configure the {{site.prodname}} Manager
 
