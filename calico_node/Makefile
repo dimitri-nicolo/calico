@@ -206,8 +206,8 @@ calico_test.created: $(TEST_CONTAINER_FILES)
 
 $(NODE_CONTAINER_NAME): $(NODE_CONTAINER_CREATED)    ## Create the tigera/cnx-node image
 
-calico-node.tar: $(NODE_CONTAINER_CREATED)
-	# Check versions of the Calico binaries that will be in calico-node.tar.
+cnx-node.tar: $(NODE_CONTAINER_CREATED)
+	# Check versions of the Calico binaries that will be in cnx-node.tar.
 	# Since the binaries are built for Linux, run them in a container to allow the
 	# make target to be run on different platforms (e.g. MacOS).
 	docker run --rm $(NODE_CONTAINER_NAME) /bin/sh -c "\
