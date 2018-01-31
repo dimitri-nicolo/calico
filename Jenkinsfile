@@ -57,13 +57,13 @@ pipeline{
 
                             // Clean up images.
                             // Hackey since empty displayed tags are not empty according to gcloud filter criteria
-                            sh '''
-                                for digest in $(gcloud container images list-tags ${env.IMAGE_NAME} --format='get(digest)'); do
-                                    if ! test $(echo $(gcloud container images list-tags ${env.IMAGE_NAME} --filter=digest~${digest}) | awk '{print $6}'); then
-                                    gcloud container images delete -q --force-delete-tags "${env.IMAGE_NAME}@${digest}"
+                            sh """
+                                for digest in \$(gcloud container images list-tags ${env.IMAGE_NAME} --format='get(digest)'); do
+                                    if ! test \$(echo \$(gcloud container images list-tags ${env.IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
+                                    gcloud container images delete -q --force-delete-tags "${env.IMAGE_NAME}@\${digest}"
                                     fi
                                 done
-                            '''
+                            """
                         }
                     }
                 }
