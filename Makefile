@@ -190,21 +190,21 @@ endif
 	fi
 
 	# Retag images with correct version and GCR private registry
-	docker tag $(BUILD_IMAGE) gcr.io/tigera-dev/$(BUILD_IMAGE):$(VERSION)
+	docker tag $(BUILD_IMAGE) gcr.io/unique-caldron-775/$(BUILD_IMAGE):$(VERSION)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(BUILD_IMAGE)
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/$(BUILD_IMAGE):$(VERSION)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/unique-caldron-775/$(BUILD_IMAGE):$(VERSION)
 
 	@echo "\nNow push the tag and images. Then create a release on Github and"
 	@echo "attach bin/calicoq binary"
 	@echo "\nAdd release notes for calicoq. Use this command"
 	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
 	@echo "git push origin $(VERSION)"
-	@echo "gcloud docker -- push gcr.io/tigera-dev/cnx/$(BUILD_IMAGE):$(VERSION)"
+	@echo "gcloud docker -- push gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE):$(VERSION)"
 	@echo "\nIf this release version is the newest stable release, also push the"
 	@echo "image with the 'latest' tag"
-	@echo "gcloud docker -- push gcr.io/tigera-dev/cnx/$(BUILD_IMAGE):latest"
+	@echo "gcloud docker -- push gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE):latest"
 
 .PHONY: compress-release
 compressed-release: release/calicoq
