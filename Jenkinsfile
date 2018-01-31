@@ -26,17 +26,9 @@ pipeline{
             }
         }
 
-	stage('Clean artifacts') {
-            steps {
-                sh 'make clean'
-            }
-        }
-
         stage('Build calicoq') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
-                    // clear glide cache
-                    sh 'make clean'
                     sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make bin/calicoq'
                 }
             }
@@ -44,21 +36,18 @@ pipeline{
 
 	stage('Run Unit Tests') {
             steps {
-                // sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make ut-containerized'
                 sh 'make ut-containerized'
             }
         }
 
         stage('Run calicoq FVs') {
             steps {
-                // sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make fv-containerized'
                 sh 'make fv-containerized'
             }
         }
 
 	stage('Run STs') {
             steps {
-                //sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make st-containerized'
                 sh 'make st-containerized'
             }
         }
