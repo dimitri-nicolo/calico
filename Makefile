@@ -49,7 +49,7 @@ ARCH?=amd64
 ifeq ($(ARCH),amd64)
 	ARCHTAG?=
 	GO_BUILD_VER?=v0.9
-	FV_TYPHAIMAGE?=gcr.io/tigera-dev/cnx/tigera/typha:master
+	FV_TYPHAIMAGE?=gcr.io/unique-caldron-775/cnx/tigera/typha:master
 endif
 
 ifeq ($(ARCH),ppc64le)
@@ -557,13 +557,13 @@ continue-release:
 	@echo "Will now build release artifacts..."
 	@echo
 	$(MAKE) bin/calico-felix tigera/felix
-	docker tag tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:latest
+	docker tag tigera/felix:latest gcr.io/unique-caldron-775/cnx/tigera/felix:latest
 	docker tag tigera/felix:latest tigera/felix:$(VERSION)
-	docker tag tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)
+	docker tag tigera/felix:latest gcr.io/unique-caldron-775/cnx/tigera/felix:$(VERSION)
 	@echo
 	@echo "Checking built felix has correct version..."
 	@result=true; \
-	for img in tigera/felix:latest gcr.io/tigera-dev/cnx/tigera/felix:latest tigera/felix:$(VERSION) gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION); do \
+	for img in tigera/felix:latest gcr.io/unique-caldron-775/cnx/tigera/felix:latest tigera/felix:$(VERSION) gcr.io/unique-caldron-775/cnx/tigera/felix:$(VERSION); do \
 	  if docker run $$img calico-felix --version | grep -q '$(VERSION)$$'; \
 	  then \
 	    echo "Check successful. ($$img)"; \
@@ -578,7 +578,7 @@ continue-release:
 	@echo
 	@echo "- Binary:                 bin/calico-felix"
 	@echo "- Docker container image: tigera/felix:$(VERSION)"
-	@echo "- Same, tagged for GCR private registry:  gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)"
+	@echo "- Same, tagged for GCR private registry:  gcr.io/unique-caldron-775/cnx/tigera/felix:$(VERSION)"
 	@echo
 	@echo "Now to publish this release to Github:"
 	@echo
@@ -599,7 +599,7 @@ continue-release:
 	@echo
 	@echo "Then, push the versioned docker images to GCR ONLY:"
 	@echo
-	@echo "- gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/felix:$(VERSION)"
+	@echo "- gcloud docker -- push gcr.io/unique-caldron-775/cnx/tigera/felix:$(VERSION)"
 	@echo
 	@echo "If you also want to build Debian/Ubuntu and RPM packages for"
 	@echo "the new release, use 'make deb' and 'make rpm'."
