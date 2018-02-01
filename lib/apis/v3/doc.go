@@ -31,4 +31,7 @@ format also used by calicoctl is directly mapped from the JSON.
 */
 
 // +k8s:deepcopy-gen=package,register
+
+// +k8s:openapi-gen=true
+
 package v3
