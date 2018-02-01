@@ -9,7 +9,7 @@ through creating and distributing the following artifacts:
   containing the Felix binaries.  We attach that file to the
   Github release.
 - Docker container images: `tigera/felix:$VERSION` and
-  `gcr.io/tigera-dev/cnx/tigera/felix:$VERSION` containing the Felix binaries.  These
+  `gcr.io/unique-caldron-775/cnx/tigera/felix:$VERSION` containing the Felix binaries.  These
   are ready to push to Dockerhub and Quay.  They primarily form the input
   to the downstream `calico/node` build process but they could also
   be used to run Felix as a stand-alone container.
