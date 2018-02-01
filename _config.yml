@@ -27,6 +27,7 @@ imageNames:
   calicoctl: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/calicoctl
   typha: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/typha
   cnxManager: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-manager
+  cnxManagerProxy: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-manager-proxy
   cnxApiserver: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-apiserver
   cni: quay.io/calico/cni
   kubeControllers: quay.io/calico/kube-controllers

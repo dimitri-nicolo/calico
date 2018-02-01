@@ -28,6 +28,7 @@ If you do not already have a private registry, consider one of the following opt
    docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}.tar.xz
    docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"].version}}.tar.xz
    docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"].version}}.tar.xz
+   docker load -i tigera_cnx-manager-proxy_{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}.tar.xz
    ```
 
 1. Confirm that the images have loaded by typing `docker images`.
