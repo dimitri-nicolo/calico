@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -329,7 +329,8 @@ func NewSyslogReporter(network, address string) *SyslogReporter {
 	tag := "calico-felix"
 	w, err := syslog.Dial(network, address, priority, tag)
 	if err != nil {
-		log.Errorf("Syslog Reporting is disabled - Syslog Hook could not be configured %v", err)
+		// This isn't an error. A warning level should suffice.
+		log.Warnf("Syslog Reporting is disabled - Syslog Hook could not be configured %v", err)
 		return nil
 	}
 	syslogDest := logutils.NewSyslogDestination(
