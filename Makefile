@@ -288,11 +288,11 @@ release-once-tagged:
 	@echo
 	$(MAKE) bin/calico-typha-$(ARCH) tigera/typha
 	docker tag tigera/typha$(ARCHTAG) tigera/typha$(ARCHTAG):$(VERSION)
-	docker tag tigera/typha$(ARCHTAG) gcr.io/tigera-dev/cnx/tigera/typha$(ARCHTAG):latest
-	docker tag tigera/typha$(ARCHTAG):$(VERSION) gcr.io/tigera-dev/cnx/tigera/typha$(ARCHTAG):$(VERSION)
+	docker tag tigera/typha$(ARCHTAG) gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):latest
+	docker tag tigera/typha$(ARCHTAG):$(VERSION) gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION)
 	@echo
 	@echo "Checking built typha has correct version..."
-	@if docker run gcr.io/tigera-dev/cnx/tigera/typha$(ARCHTAG):$(VERSION) calico-typha --version | grep -q '$(VERSION)$$'; \
+	@if docker run gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION) calico-typha --version | grep -q '$(VERSION)$$'; \
 	then \
 	  echo "Check successful."; \
 	else \
@@ -304,7 +304,7 @@ release-once-tagged:
 	@echo
 	@echo "- Binary:                 bin/calico-typha-$(ARCH)"
 	@echo "- Docker container image: tigera/typha$(ARCHTAG):$(VERSION)"
-	@echo "- Same, tagged for GCR private registry:  gcr.io/tigera-dev/cnx/tigera/typha$(ARCHTAG):$(VERSION)"
+	@echo "- Same, tagged for GCR private registry:  gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION)"
 	@echo
 	@echo "Now to publish this release to Github:"
 	@echo
@@ -325,9 +325,9 @@ release-once-tagged:
 	@echo
 	@echo "Then, push the versioned docker images to GCR only:"
 	@echo
-	@echo "- gcloud docker -- docker push gcr.io/tigera-dev/cnx/tigera/typha$(ARCHTAG):$(VERSION)"
+	@echo "- gcloud docker -- docker push gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION)"
 	@echo
 	@echo "If this is the latest release from the most recent stable"
 	@echo "release series, also push the 'latest' tag:"
 	@echo
-	@echo "- gcloud docker -- docker push gcr.io/tigera-dev/cnx/tigera/typha$(ARCHTAG):latest"
+	@echo "- gcloud docker -- docker push gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):latest"
