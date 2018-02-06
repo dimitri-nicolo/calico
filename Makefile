@@ -199,7 +199,7 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 	   sh -c '$(BINDIR)/openapi-gen \
 		--v 1 --logtostderr \
 		--go-header-file "vendor/github.com/kubernetes/repo-infra/verify/boilerplate/boilerplate.go.txt" \
-		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v3,k8s.io/api/core/v1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/version,k8s.io/apimachinery/pkg/runtime" \
+		--input-dirs "$(CAPI_PKG)/pkg/apis/projectcalico/v3,k8s.io/api/core/v1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/version,k8s.io/apimachinery/pkg/runtime,github.com/projectcalico/libcalico-go/lib/apis/v3,github.com/projectcalico/libcalico-go/lib/apis/v1,github.com/projectcalico/libcalico-go/lib/numorstring" \
 		--output-package "$(CAPI_PKG)/pkg/openapi"'
 	touch $@
 

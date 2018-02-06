@@ -93,7 +93,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 		Expect(err).NotTo(HaveOccurred())
 		be.Clean()
 
-		err = c.EnsureInitialized(ctx, "", "")
+		err = c.EnsureInitialized(ctx, "", "", "")
 		Expect(err).NotTo(HaveOccurred())
 	})
 

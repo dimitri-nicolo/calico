@@ -92,7 +92,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 		Expect(err).NotTo(HaveOccurred())
 		be.Clean()
 
-		err = c.EnsureInitialized(ctx, "", "")
+		err = c.EnsureInitialized(ctx, "", "", "")
 		Expect(err).NotTo(HaveOccurred())
 	})
 

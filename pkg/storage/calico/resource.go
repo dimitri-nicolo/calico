@@ -85,7 +85,7 @@ func createClientFromConfig() clientv3.Interface {
 		os.Exit(1)
 	}
 
-	err = c.EnsureInitialized(context.Background(), "", "")
+	err = c.EnsureInitialized(context.Background(), "", "","")
 	if err != nil {
 		glog.Errorf("Failed initializing client: %q", err)
 		os.Exit(1)
