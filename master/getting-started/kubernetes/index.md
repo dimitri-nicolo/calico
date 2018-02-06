@@ -35,15 +35,16 @@ the host. Instead, continue directly to the
 1. As a regular user with sudo privileges, open a terminal on the host that
    you installed kubeadm on.
 
-1. [Download the `cnx-apiserver`, `cnx-node`, and `cnx-manager` private binaries](/{{page.version}}/getting-started/).
+1. [Download the `cnx-apiserver`, `cnx-node`, `cnx-manager`, and `cnx-manager-proxy` private binaries](/{{page.version}}/getting-started/).
 
-1. Load the `cnx-apiserver`, `cnx-node`, and `cnx-manager` binaries into your
+1. Load the `cnx-apiserver`, `cnx-node`, `cnx-manager`, and `cnx-manager-proxy` binaries into your
    local Docker engine.
 
    ```
    docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}.tar.xz
    docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"].version}}.tar.xz
    docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"].version}}.tar.xz
+   docker load -i tigera_cnx-manager-proxy_{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}.tar.xz
    ```
 
 1. Initialize the master using the following command.
@@ -80,16 +81,6 @@ the host. Instead, continue directly to the
    mounted by default on the kube-apiserver pod with a kubeadm installation.
    {: .alert .alert-info}
 
-1. Configure the {{site.prodname}} API server to allow
-   cross-origin resource sharing (CORS). This will allow the {{site.prodname}} API
-   server to communicate with the {{site.prodname}} Manager.
-
-   ```
-   sudo sed -i \
-   "/- kube-apiserver/a\    - --cors-allowed-origins=\"https://127.0.0.1:30003\"" \
-   /etc/kubernetes/manifests/kube-apiserver.yaml
-   ```
-
 1. Restart kube-apiserver to pick up new settings:
     ```
     sudo systemctl restart kubelet
@@ -109,15 +100,6 @@ the host. Instead, continue directly to the
    ```
    clusterrolebinding "permissive-binding" created
    ```
-
-1. Optionally, configure your web browser to trust the Kubernetes cluster
-   certificate authority, by importing `/etc/kubernetes/pki/ca.crt` as a
-   trusted CA certificate.
-
-1. Navigate to `https://127.0.0.1:6443/api` in your browser.  If you told your
-   browser to trust the cluster certificate authority, the browser should
-   indicate that you have a secure connection.  If not, click past the warning
-   about the connection being insecure.
 
 1. Download the [`calico.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml){:target="_blank"}.
 
@@ -194,7 +176,8 @@ the host. Instead, continue directly to the
 
 1. [Download the `cnx-etcd.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml).
 
-1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-apiserver` and `cnx-manager` images.
+1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from
+   the path to the `cnx-apiserver`, `cnx-manager` and `cnx-manager-proxy` images.
 
    ```
    sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' cnx-etcd.yaml

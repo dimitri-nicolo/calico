@@ -8,14 +8,15 @@ title: Getting started with CNX
 
 Contact your support representative to gain access to the following images.
 
-   | File name                                                                      | Description                   |
-   | ------------------------------------------------------------------------------ | ----------------------------- |
-   | `tigera-calicoctl_{{site.data.versions[page.version].first.title}}.tar.xz`     | `calicoctl`                   |
-   | `tigera-calicoq_{{site.data.versions[page.version].first.title}}.tar.xz`       | `calicoq`                     |
-   | `tigera-cnx-apiserver_{{site.data.versions[page.version].first.title}}.tar.xz` | {{site.prodname}} API server  |
-   | `tigera-cnx-manager_{{site.data.versions[page.version].first.title}}.tar.xz`   | {{site.prodname}} Manager     |
-   | `tigera-cnx-node_{{site.data.versions[page.version].first.title}}.tar.xz`      | `{{site.nodecontainer}}`      |
-   | `tigera-typha_{{site.data.versions[page.version].first.title}}.tar.xz`         | Typha                         |
+   | File name                                                                          | Description                     |
+   | ---------------------------------------------------------------------------------- | ------------------------------- |
+   | `tigera-calicoctl_{{site.data.versions[page.version].first.title}}.tar.xz`         | `calicoctl`                     |
+   | `tigera-calicoq_{{site.data.versions[page.version].first.title}}.tar.xz`           | `calicoq`                       |
+   | `tigera-cnx-apiserver_{{site.data.versions[page.version].first.title}}.tar.xz`     | {{site.prodname}} API server    |
+   | `tigera-cnx-manager_{{site.data.versions[page.version].first.title}}.tar.xz`       | {{site.prodname}} Manager       |
+   | `tigera-cnx-manager-proxy_{{site.data.versions[page.version].first.title}}.tar.xz` | {{site.prodname}} Manager Proxy |
+   | `tigera-cnx-node_{{site.data.versions[page.version].first.title}}.tar.xz`          | `{{site.nodecontainer}}`        |
+   | `tigera-typha_{{site.data.versions[page.version].first.title}}.tar.xz`             | Typha                           |
 
 ### Binaries
 

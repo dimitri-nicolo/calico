@@ -663,6 +663,9 @@ master:
     cnx-manager:
       version: master
       url: ""
+    cnx-manager-proxy:
+      version: master
+      url: ""
     cnx-apiserver:
       version: master
       url: ""
