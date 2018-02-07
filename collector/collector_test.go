@@ -8,6 +8,7 @@ import (
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
+	"github.com/tigera/nfnetlink/nfnl"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -184,7 +185,7 @@ var _ = Describe("NFLOG Datasource", func() {
 			}
 			lm := newMockLookupManager(epMap)
 			c = NewCollector(lm, rm, conf)
-			c.Start()
+			go c.startStatsCollectionAndReporting()
 		})
 		Describe("Test local destination", func() {
 			It("should receive a single stat update with allow rule tracepoint", func() {
@@ -201,6 +202,228 @@ var _ = Describe("NFLOG Datasource", func() {
 			})
 		})
 	})
+})
+
+// Entry remoteIp1:srcPort -> localIp1:dstPort
+var inCtEntry = nfnetlink.CtEntry{
+	OriginalTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        remoteIp1,
+			Dst:        localIp1,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
+		},
+	},
+	ReplyTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        localIp1,
+			Dst:        remoteIp1,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
+		},
+	},
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+}
+
+var outCtEntry = nfnetlink.CtEntry{
+	OriginalTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        localIp1,
+			Dst:        remoteIp1,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
+		},
+	},
+	ReplyTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        remoteIp1,
+			Dst:        localIp1,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
+		},
+	},
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+}
+
+var localCtEntry = nfnetlink.CtEntry{
+	OriginalTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        localIp1,
+			Dst:        localIp2,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
+		},
+	},
+	ReplyTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        localIp2,
+			Dst:        localIp1,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
+		},
+	},
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+}
+
+// DNAT Conntrack Entries
+// DNAT from localIp1DNAT:dstPortDNAT --> localIp1:dstPort
+var inCtEntryWithDNAT = nfnetlink.CtEntry{
+	OriginalTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        remoteIp1,
+			Dst:        localIp1DNAT,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
+		},
+	},
+	ReplyTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        localIp1,
+			Dst:        remoteIp1,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
+		},
+	},
+	Status:           nfnl.IPS_DST_NAT,
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+}
+
+// DNAT from localIp2DNAT:dstPortDNAT --> localIp2:dstPort
+var localCtEntryWithDNAT = nfnetlink.CtEntry{
+	OriginalTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        localIp1,
+			Dst:        localIp2DNAT,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
+		},
+	},
+	ReplyTuples: []nfnetlink.CtTuple{
+		nfnetlink.CtTuple{
+			Src:        localIp2,
+			Dst:        localIp1,
+			L3ProtoNum: ipv4,
+			ProtoNum:   proto_tcp,
+			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
+		},
+	},
+	Status:           nfnl.IPS_DST_NAT,
+	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
+	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
+}
+
+var _ = Describe("Conntrack Datasource", func() {
+	var c *Collector
+	conf := &Config{
+		StatsDumpFilePath:        "/tmp/qwerty",
+		NfNetlinkBufSize:         65535,
+		IngressGroup:             1200,
+		EgressGroup:              2200,
+		AgeTimeout:               time.Duration(10) * time.Second,
+		ConntrackPollingInterval: time.Duration(1) * time.Second,
+		InitialReportingDelay:    time.Duration(5) * time.Second,
+		ExportingInterval:        time.Duration(1) * time.Second,
+	}
+	rm := NewReporterManager()
+	BeforeEach(func() {
+		epMap := map[[16]byte]*model.WorkloadEndpointKey{
+			localIp1: localWlEPKey1,
+			localIp2: localWlEPKey2,
+		}
+		lm := newMockLookupManager(epMap)
+		c = NewCollector(lm, rm, conf)
+		go c.startStatsCollectionAndReporting()
+	})
+	Describe("Test local destination", func() {
+		It("should create a single entry", func() {
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.ctEntriesC <- []nfnetlink.CtEntry{inCtEntry}
+			Eventually(c.epStats).Should(HaveKey(*t))
+			data := c.epStats[*t]
+			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets, inCtEntry.OriginalCounters.Bytes)))
+			Expect(data.CountersReverse()).Should(Equal(*NewCounter(inCtEntry.ReplyCounters.Packets, inCtEntry.ReplyCounters.Bytes)))
+		})
+	})
+	Describe("Test local source", func() {
+		It("should receive a single stat update", func() {
+			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
+			c.ctEntriesC <- []nfnetlink.CtEntry{outCtEntry}
+			Eventually(c.epStats).Should(HaveKey(*t))
+			data := c.epStats[*t]
+			Expect(data.Counters()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Packets, outCtEntry.OriginalCounters.Bytes)))
+			Expect(data.CountersReverse()).Should(Equal(*NewCounter(outCtEntry.ReplyCounters.Packets, outCtEntry.ReplyCounters.Bytes)))
+		})
+	})
+	Describe("Test local source to local destination", func() {
+		It("should receive two stat updates - one for each endpoint", func() {
+			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			t2 := NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
+			c.ctEntriesC <- []nfnetlink.CtEntry{localCtEntry}
+			Eventually(c.epStats).Should(HaveKey(Equal(*t1)))
+			Eventually(c.epStats).Should(HaveKey(Equal(*t2)))
+			data1 := c.epStats[*t1]
+			data2 := c.epStats[*t2]
+			Expect(data1.Counters()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes)))
+			Expect(data1.CountersReverse()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes)))
+			// Counters are reversed.
+			Expect(data2.Counters()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes)))
+			Expect(data2.CountersReverse()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes)))
+		})
+	})
+	Describe("Test local destination with DNAT", func() {
+		It("should receive a single stat update with correct tuple extracted", func() {
+			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
+			c.ctEntriesC <- []nfnetlink.CtEntry{inCtEntryWithDNAT}
+			Eventually(c.epStats).Should(HaveKey(Equal(*t)))
+			data := c.epStats[*t]
+			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes)))
+			Expect(data.CountersReverse()).Should(Equal(*NewCounter(inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes)))
+			//su := NewStatUpdate(*t,
+			//	inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes,
+			//	inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes,
+			//	AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
+		})
+	})
+	Describe("Test local source to local destination with DNAT", func() {
+		It("should receive two stat updates - one for each endpoint - with correct tuple extracted", func() {
+			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
+			t2 := NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
+			c.ctEntriesC <- []nfnetlink.CtEntry{localCtEntryWithDNAT}
+			Eventually(c.epStats).Should(HaveKey(Equal(*t1)))
+			Eventually(c.epStats).Should(HaveKey(Equal(*t2)))
+			data1 := c.epStats[*t1]
+			data2 := c.epStats[*t2]
+			Expect(data1.Counters()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets, localCtEntryWithDNAT.OriginalCounters.Bytes)))
+			Expect(data1.CountersReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Packets, localCtEntryWithDNAT.ReplyCounters.Bytes)))
+			// Counters are reversed.
+			Expect(data2.Counters()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Packets, localCtEntryWithDNAT.ReplyCounters.Bytes)))
+			Expect(data2.CountersReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets, localCtEntryWithDNAT.OriginalCounters.Bytes)))
+		})
+	})
+
 })
 
 var _ = Describe("Rtp", func() {
@@ -249,7 +472,7 @@ var _ = Describe("Reporting Metrics", func() {
 		lm := newMockLookupManager(epMap)
 		rm.Start()
 		c = NewCollector(lm, rm, conf)
-		c.Start()
+		go c.startStatsCollectionAndReporting()
 	})
 	Describe("Report Denied Packets", func() {
 		var t *Tuple
