@@ -19,7 +19,9 @@ package server
 import (
 	"fmt"
 	"net"
+	"strings"
 
+	"github.com/go-openapi/spec"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
@@ -61,7 +63,16 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, apiserver.Scheme)
-	serverConfig.OpenAPIConfig.Info.Title = "cnx-apiserver"
+	if serverConfig.OpenAPIConfig.Info == nil {
+		serverConfig.OpenAPIConfig.Info = &spec.Info{}
+	}
+	if serverConfig.OpenAPIConfig.Info.Version == "" {
+		if serverConfig.Version != nil {
+			serverConfig.OpenAPIConfig.Info.Version = strings.Split(serverConfig.Version.String(), "-")[0]
+		} else {
+			serverConfig.OpenAPIConfig.Info.Version = "unversioned"
+		}
+	}
 	if err := o.RecommendedOptions.Etcd.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
