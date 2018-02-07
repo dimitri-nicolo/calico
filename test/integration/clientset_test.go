@@ -46,32 +46,32 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// TestGroupVersion is trivial.
-func TestGroupVersion(t *testing.T) {
-	rootTestFunc := func() func(t *testing.T) {
-		return func(t *testing.T) {
-			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
-				return &projectcalico.NetworkPolicy{}
-			})
-			defer shutdownServer()
-			if err := testGroupVersion(client); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-
-	if !t.Run("group version", rootTestFunc()) {
-		t.Error("test failed")
-	}
-}
-
-func testGroupVersion(client calicoclient.Interface) error {
-	gv := client.Projectcalico().RESTClient().APIVersion()
-	if gv.Group != projectcalico.GroupName {
-		return fmt.Errorf("we should be testing the servicecatalog group, not %s", gv.Group)
-	}
-	return nil
-}
+//// TestGroupVersion is trivial.
+//func TestGroupVersion(t *testing.T) {
+//	rootTestFunc := func() func(t *testing.T) {
+//		return func(t *testing.T) {
+//			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+//				return &projectcalico.NetworkPolicy{}
+//			})
+//			defer shutdownServer()
+//			if err := testGroupVersion(client); err != nil {
+//				t.Fatal(err)
+//			}
+//		}
+//	}
+//
+//	if !t.Run("group version", rootTestFunc()) {
+//		t.Error("test failed")
+//	}
+//}
+//
+//func testGroupVersion(client calicoclient.Interface) error {
+//	gv := client.Projectcalico().RESTClient().APIVersion()
+//	if gv.Group != projectcalico.GroupName {
+//		return fmt.Errorf("we should be testing the servicecatalog group, not %s", gv.Group)
+//	}
+//	return nil
+//}
 
 func TestEtcdHealthCheckerSuccess(t *testing.T) {
 	serverConfig := NewTestServerConfig()
