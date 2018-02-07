@@ -3,7 +3,7 @@
 default: all
 all: test
 test: ut
-deepcopy-gen: .deepcopy_gen
+code-gen: .code_gen
 
 # Define some constants
 #######################
@@ -173,12 +173,13 @@ clean:
 	find . -name '*.coverprofile' -type f -delete
 	rm -rf vendor .go-pkg-cache
 
-clean-deepcopy-gen: clean-bin
-	rm -f .deepcopy_gen
+clean-code-gen: clean-bin
+	rm -f .code_gen
 	find $(TOP_SRC_DIR) -name zz_generated* -exec rm {} \;
+	rm ./lib/apis/v3/openapi/openapi_generated.go
 
 clean-bin:
-	rm -rf $(BINDIR) .deepcopy_gen_exes
+	rm -rf $(BINDIR) .code_gen_exes
 
 .PHONY: help
 ## Display this help text
@@ -208,15 +209,18 @@ DOCKER_GO_BUILD := \
 		-w /go/src/github.com/projectcalico/libcalico-go \
 		$(CALICO_BUILD)
 
-.deepcopy_gen_exes: $(BINDIR)/deepcopy-gen
+.code_gen_exes: $(BINDIR)/code-gen
 	touch $@
 
-$(BINDIR)/deepcopy-gen:
+$(BINDIR)/code-gen:
 	$(DOCKER_GO_BUILD) \
 		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
+	$(DOCKER_GO_BUILD) \
+    		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+
 # Regenerate all files if the gen exe(s) changed
-.deepcopy_gen: .deepcopy_gen_exes
+.code_gen: .code_gen_exes
 	# Generate deep copies
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(BINDIR)/deepcopy-gen \
@@ -225,3 +229,25 @@ $(BINDIR)/deepcopy-gen:
 			--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v3" \
 			--bounding-dirs "github.com/projectcalico/libcalico-go" \
 			--output-file-base zz_generated.deepcopy'
+
+	# Generate OpenAPI spec
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BINDIR)/openapi-gen \
+		--v 1 --logtostderr \
+		--go-header-file "./docs/boilerplate.go.txt" \
+		--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v3,$(LIBCALICO-GO_PKG)/lib/apis/v1,$(LIBCALICO-GO_PKG)/lib/numorstring" \
+		--output-package "$(LIBCALICO-GO_PKG)/lib/apis/v3"'
+
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BINDIR)/openapi-gen \
+		--v 1 --logtostderr \
+		--go-header-file "./docs/boilerplate.go.txt" \
+		--input-dirs "$(LIBCALICO-GO_PKG)/lib/apis/v1,$(LIBCALICO-GO_PKG)/lib/numorstring" \
+		--output-package "$(LIBCALICO-GO_PKG)/lib/apis/v1"'
+
+	$(DOCKER_GO_BUILD) \
+	   sh -c '$(BINDIR)/openapi-gen \
+		--v 1 --logtostderr \
+		--go-header-file "./docs/boilerplate.go.txt" \
+		--input-dirs "$(LIBCALICO-GO_PKG)/lib/numorstring" \
+		--output-package "$(LIBCALICO-GO_PKG)/lib/numorstring"'
