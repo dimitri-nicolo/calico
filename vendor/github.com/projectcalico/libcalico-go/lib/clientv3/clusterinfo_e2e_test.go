@@ -41,12 +41,14 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 		ClusterGUID:    "test-cluster-guid1",
 		ClusterType:    "test-cluster-type1",
 		CalicoVersion:  "test-version1",
+		CNXVersion:     "cnx-test-version1",
 		DatastoreReady: &readyTrue,
 	}
 	spec2 := apiv3.ClusterInformationSpec{
 		ClusterGUID:   "test-cluster-guid2",
 		ClusterType:   "test-cluster-type2",
 		CalicoVersion: "test-version2",
+		CNXVersion:    "cnx-test-version2",
 	}
 
 	var c clientv3.Interface
@@ -66,7 +68,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 		var kddTypePart string
 
 		BeforeEach(func() {
-			err := c.EnsureInitialized(ctx, "v0.0.0", "test")
+			err := c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test")
 			Expect(err).NotTo(HaveOccurred())
 			if config.Spec.DatastoreType == "kubernetes" {
 				kddTypePart = ",kdd"
@@ -87,6 +89,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 					ClusterGUID:    res.Spec.ClusterGUID,
 					ClusterType:    "test" + kddTypePart,
 					CalicoVersion:  "v0.0.0",
+					CNXVersion:     "v0.0.1",
 					DatastoreReady: &readyTrue,
 				})
 		})
@@ -96,7 +99,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			Expect(err).NotTo(HaveOccurred())
 			guid := res.Spec.ClusterGUID
 
-			err = c.EnsureInitialized(ctx, "v0.0.0", "test")
+			err = c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test")
 			Expect(err).NotTo(HaveOccurred())
 
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
@@ -109,6 +112,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 					ClusterGUID:    guid,
 					ClusterType:    "test" + kddTypePart,
 					CalicoVersion:  "v0.0.0",
+					CNXVersion:     "v0.0.1",
 					DatastoreReady: &readyTrue,
 				})
 		})
@@ -118,7 +122,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			Expect(err).NotTo(HaveOccurred())
 			guid := res.Spec.ClusterGUID
 
-			err = c.EnsureInitialized(ctx, "v0.0.0", "test2")
+			err = c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test2")
 			Expect(err).NotTo(HaveOccurred())
 
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
@@ -127,13 +131,14 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				ClusterGUID:    guid,
 				ClusterType:    "test" + kddTypePart + ",test2",
 				CalicoVersion:  "v0.0.0",
+				CNXVersion:     "v0.0.1",
 				DatastoreReady: &readyTrue,
 			}
 			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
 				name, spec)
 
 			By("ignoring idempotent update 'test'")
-			err = c.EnsureInitialized(ctx, "v0.0.0", "test")
+			err = c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test")
 			Expect(err).NotTo(HaveOccurred())
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
@@ -141,7 +146,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				name, spec)
 
 			By("ignoring idempotent update 'test2'")
-			err = c.EnsureInitialized(ctx, "v0.0.0", "test2")
+			err = c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test2")
 			Expect(err).NotTo(HaveOccurred())
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
@@ -149,7 +154,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				name, spec)
 
 			By("ignoring idempotent update ''")
-			err = c.EnsureInitialized(ctx, "", "")
+			err = c.EnsureInitialized(ctx, "", "", "")
 			Expect(err).NotTo(HaveOccurred())
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
@@ -162,7 +167,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			Expect(err).NotTo(HaveOccurred())
 			guid := res.Spec.ClusterGUID
 
-			err = c.EnsureInitialized(ctx, "v0.0.1", "test")
+			err = c.EnsureInitialized(ctx, "v0.0.1", "v0.0.2", "test")
 			Expect(err).NotTo(HaveOccurred())
 
 			res, err = c.ClusterInformation().Get(ctx, name, options.GetOptions{})
@@ -171,6 +176,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 				ClusterGUID:    guid,
 				ClusterType:    "test" + kddTypePart,
 				CalicoVersion:  "v0.0.1",
+				CNXVersion:     "v0.0.2",
 				DatastoreReady: &readyTrue,
 			}
 			testutils.ExpectResource(res, apiv3.KindClusterInformation, testutils.ExpectNoNamespace,
@@ -188,7 +194,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			})
 
 			It("should not set it back to true", func() {
-				err := c.EnsureInitialized(ctx, "v0.0.0", "test")
+				err := c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test")
 				Expect(err).NotTo(HaveOccurred())
 				res, err := c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 				Expect(err).NotTo(HaveOccurred())
@@ -206,7 +212,7 @@ var _ = testutils.E2eDatastoreDescribe("ClusterInformation tests", testutils.Dat
 			})
 
 			It("should set it back to true", func() {
-				err := c.EnsureInitialized(ctx, "v0.0.0", "test")
+				err := c.EnsureInitialized(ctx, "v0.0.0", "v0.0.1", "test")
 				Expect(err).NotTo(HaveOccurred())
 				res, err := c.ClusterInformation().Get(ctx, name, options.GetOptions{})
 				Expect(err).NotTo(HaveOccurred())

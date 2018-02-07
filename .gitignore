@@ -2,3 +2,5 @@ calico-k8sapiserver
 artifacts/simple-image/calico-k8sapiserver
 bin/calico-k8sapiserver
 /bin
+.idea/
+vendor/.up-to-date
