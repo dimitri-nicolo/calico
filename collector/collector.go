@@ -230,17 +230,30 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 		ctTuple nfnetlink.CtTuple
 		err     error
 	)
+
+	// We expect and process connections (conntrack entries) of 3 different flavors.
+	//
+	// - Connections that *neither* begin *nor* terminate locally.
+	// - Connections that either begin or terminate locally.
+	// - Connections that begin *and* terminate locally.
+	//
+	// When processing these, we also check if the connection is flagged as a
+	// destination NAT (DNAT) connection. If it is a DNAT-ed connection, we
+	// process the conntrack entry after we figure out the connection's original
+	// destination IP address before DNAT modified the connections' destination
+	// IP/port.
 	for _, ctEntry := range ctEntries {
-		// There can be a maximum of 2 stat updates per ctentry, in the case of
-		// local-to-local traffic.
-		// The last entry is the tuple entry for endpoints
 		ctTuple, err = ctEntry.OriginalTuple()
 		if err != nil {
 			log.Error("Error when getting original tuple:", err)
 			continue
 		}
 
-		// We care about DNAT only which modifies the destination parts of the OriginalTuple.
+		// A conntrack entry that has the destination NAT (DNAT) flag set
+		// will have its destination ip-address set to the NAT-ed IP rather
+		// than the actual workload/host endpoint. To continue processing
+		// this conntrack entry, we need the actual IP address that corresponds
+		// to a Workload/Host Endpoint.
 		if ctEntry.IsDNAT() {
 			ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
 			if err != nil {
@@ -248,22 +261,37 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 				continue
 			}
 		}
+
+		// Check if the connection begins and/or terminates on this host. This is done
+		// by checking if the source and/or destination IP address from the conntrack
+		// entry that we are processing belong to endpoints.
 		_, errSrc := c.lum.GetEndpointKey(ctTuple.Src)
 		_, errDst := c.lum.GetEndpointKey(ctTuple.Dst)
+
+		// If we cannot find an endpoint for both the source and destination IP Addresses
+		// this means that this connection neither begins nor terminates locally.
+		// We can skip processing this conntrack entry.
 		if errSrc == lookup.UnknownEndpointError && errDst == lookup.UnknownEndpointError {
-			// We always expect unknown entries for conntrack for things such as
+			// Unknown conntrack entries are expected for things such as
 			// management or local traffic. This log can get spammy if we log everything
-			// because of which we don't return an error and log at debug level.
-			//log.Debugf("No known endpoints found for %v", ctEntry)
+			// because of which we don't return an error and don't log anything here.
 			continue
 		}
+
+		// At this point either the source or destination IP address from the conntrack entry
+		// belongs to an endpoint i.e., the connection either begins or terminates locally.
 		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
 		c.applyStatUpdate(tuple,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 			AbsoluteCounter, DirUnknown, nil)
+
+		// We create a reversed tuple, if we know that both the source and destination IP
+		// addresses from the conntrack entry belong to endpoints, i.e., the connection
+		// begins *and* terminates locally.
 		if errSrc == nil && errDst == nil {
-			// Locally to local packet will require a reversed tuple to collect reply stats.
+			// Packets/Connections from a local endpoint to another local endpoint
+			// require a reversed tuple to collect reply stats.
 			tuple := extractTupleFromCtEntryTuple(ctTuple, true)
 			c.applyStatUpdate(tuple,
 				ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
@@ -291,7 +319,6 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir Direction, nPktAggr *nfnet
 
 	if err == lookup.UnknownEndpointError {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
-		//log.Debugf("Failed to find endpoint for NFLOG packet %v/%v", nflogTuple, dir)
 		return errors.New("Couldn't find endpoint info for NFLOG packet")
 	}
 	for _, prefix := range nPktAggr.Prefixes {
