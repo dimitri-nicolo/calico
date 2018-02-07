@@ -1,17 +1,16 @@
 package collector
 
 import (
-	"bytes"
 	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 	"github.com/tigera/nfnetlink/nfnl"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 const (
@@ -50,67 +49,53 @@ var localWlEPKey2 = &model.WorkloadEndpointKey{
 	EndpointID:     "localepid2",
 }
 
-var remoteWlEPKey1 = &model.WorkloadEndpointKey{
-	Hostname:       "localhost",
-	OrchestratorID: "orchestrator",
-	WorkloadID:     "localworkloadid1",
-	EndpointID:     "remoteepid1",
-}
-
 // NFLOG datasource test parameters
 
 var (
 	defTierAllow = [64]byte{'A', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '1', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
 	defTierDeny  = [64]byte{'D', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '2', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
-	tier1Allow   = [64]byte{'A', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '3', '|', 't', 'i', 'e', 'r', '1'}
-	tier1Deny    = [64]byte{'D', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '4', '|', 't', 'i', 'e', 'r', '1'}
 )
 
-var defTierAllowTp = &RuleTracePoint{
-	prefix:    defTierAllow,
-	pfxlen:    19,
-	tierIdx:   12,
-	policyIdx: 4,
-	ruleIdx:   2,
-	Action:    AllowAction,
-	Index:     0,
-	EpKey:     localWlEPKey1,
-	Ctr:       *NewCounter(1, 100),
+var defTierAllowIngressTp = &RuleTracePoint{
+	RuleIDs: &RuleIDs{
+		Tier:      "default",
+		Policy:    "policy1",
+		Index:     "0",
+		Action:    ActionAllow,
+		Direction: RuleDirIngress,
+	},
+	Index: 0,
+	EpKey: localWlEPKey1,
+	Ctr:   *NewCounter(1, 100),
 }
 
-var defTierDenyTp = &RuleTracePoint{
-	prefix:    defTierDeny,
-	pfxlen:    19,
-	tierIdx:   12,
-	policyIdx: 4,
-	ruleIdx:   2,
-	Action:    DenyAction,
-	Index:     0,
-	EpKey:     localWlEPKey2,
-	Ctr:       *NewCounter(1, 100),
+var defTierAllowEgressTp = &RuleTracePoint{
+	RuleIDs: &RuleIDs{
+		Tier:      "default",
+		Policy:    "policy1",
+		Index:     "0",
+		Action:    ActionAllow,
+		Direction: RuleDirEgress,
+	},
+	Index: 0,
+	EpKey: localWlEPKey1,
+	Ctr:   *NewCounter(1, 100),
 }
 
-var tier1AllowTp = &RuleTracePoint{
-	prefix:    tier1Allow,
-	pfxlen:    17,
-	tierIdx:   12,
-	policyIdx: 4,
-	ruleIdx:   2,
-	Action:    AllowAction,
-	Index:     1,
+var defTierDenyIngressTp = &RuleTracePoint{
+	RuleIDs: &RuleIDs{
+		Tier:      "default",
+		Policy:    "policy2",
+		Index:     "0",
+		Action:    ActionDeny,
+		Direction: RuleDirIngress,
+	},
+	Index: 0,
+	EpKey: localWlEPKey2,
+	Ctr:   *NewCounter(1, 100),
 }
 
-var tier1DenyTp = &RuleTracePoint{
-	prefix:    tier1Deny,
-	pfxlen:    17,
-	tierIdx:   12,
-	policyIdx: 4,
-	ruleIdx:   2,
-	Action:    DenyAction,
-	Index:     1,
-}
-
-var inPkt = &nfnetlink.NflogPacketAggregate{
+var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
 			Prefix:  defTierAllow,
@@ -127,8 +112,28 @@ var inPkt = &nfnetlink.NflogPacketAggregate{
 		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 	},
 }
+var ingressPktAllowTuple = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
-var inPktDeny = &nfnetlink.NflogPacketAggregate{
+var egressPktAllow = &nfnetlink.NflogPacketAggregate{
+	Prefixes: []nfnetlink.NflogPrefix{
+		{
+			Prefix:  defTierAllow,
+			Len:     19,
+			Bytes:   100,
+			Packets: 1,
+		},
+	},
+	Tuple: &nfnetlink.NflogPacketTuple{
+		Src:   localIp1,
+		Dst:   remoteIp1,
+		Proto: proto_udp,
+		L4Src: nfnetlink.NflogL4Info{Port: srcPort},
+		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
+	},
+}
+var egressPktAllowTuple = NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstPort)
+
+var ingressPktDeny = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
 			Prefix:  defTierDeny,
@@ -145,6 +150,7 @@ var inPktDeny = &nfnetlink.NflogPacketAggregate{
 		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 	},
 }
+var ingressPktDenyTuple = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 var localPkt = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
@@ -190,7 +196,7 @@ var _ = Describe("NFLOG Datasource", func() {
 		Describe("Test local destination", func() {
 			It("should receive a single stat update with allow rule tracepoint", func() {
 				t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-				c.nfIngressC <- inPkt
+				c.nfIngressC <- ingressPktAllow
 				Eventually(c.epStats).Should(HaveKey(*t))
 			})
 		})
@@ -207,7 +213,7 @@ var _ = Describe("NFLOG Datasource", func() {
 // Entry remoteIp1:srcPort -> localIp1:dstPort
 var inCtEntry = nfnetlink.CtEntry{
 	OriginalTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        remoteIp1,
 			Dst:        localIp1,
 			L3ProtoNum: ipv4,
@@ -217,7 +223,7 @@ var inCtEntry = nfnetlink.CtEntry{
 		},
 	},
 	ReplyTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        localIp1,
 			Dst:        remoteIp1,
 			L3ProtoNum: ipv4,
@@ -232,7 +238,7 @@ var inCtEntry = nfnetlink.CtEntry{
 
 var outCtEntry = nfnetlink.CtEntry{
 	OriginalTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        localIp1,
 			Dst:        remoteIp1,
 			L3ProtoNum: ipv4,
@@ -242,7 +248,7 @@ var outCtEntry = nfnetlink.CtEntry{
 		},
 	},
 	ReplyTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        remoteIp1,
 			Dst:        localIp1,
 			L3ProtoNum: ipv4,
@@ -257,7 +263,7 @@ var outCtEntry = nfnetlink.CtEntry{
 
 var localCtEntry = nfnetlink.CtEntry{
 	OriginalTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        localIp1,
 			Dst:        localIp2,
 			L3ProtoNum: ipv4,
@@ -267,7 +273,7 @@ var localCtEntry = nfnetlink.CtEntry{
 		},
 	},
 	ReplyTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        localIp2,
 			Dst:        localIp1,
 			L3ProtoNum: ipv4,
@@ -284,7 +290,7 @@ var localCtEntry = nfnetlink.CtEntry{
 // DNAT from localIp1DNAT:dstPortDNAT --> localIp1:dstPort
 var inCtEntryWithDNAT = nfnetlink.CtEntry{
 	OriginalTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        remoteIp1,
 			Dst:        localIp1DNAT,
 			L3ProtoNum: ipv4,
@@ -294,7 +300,7 @@ var inCtEntryWithDNAT = nfnetlink.CtEntry{
 		},
 	},
 	ReplyTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        localIp1,
 			Dst:        remoteIp1,
 			L3ProtoNum: ipv4,
@@ -311,7 +317,7 @@ var inCtEntryWithDNAT = nfnetlink.CtEntry{
 // DNAT from localIp2DNAT:dstPortDNAT --> localIp2:dstPort
 var localCtEntryWithDNAT = nfnetlink.CtEntry{
 	OriginalTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        localIp1,
 			Dst:        localIp2DNAT,
 			L3ProtoNum: ipv4,
@@ -321,7 +327,7 @@ var localCtEntryWithDNAT = nfnetlink.CtEntry{
 		},
 	},
 	ReplyTuples: []nfnetlink.CtTuple{
-		nfnetlink.CtTuple{
+		{
 			Src:        localIp2,
 			Dst:        localIp1,
 			L3ProtoNum: ipv4,
@@ -404,7 +410,7 @@ var _ = Describe("Conntrack Datasource", func() {
 			//su := NewStatUpdate(*t,
 			//	inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes,
 			//	inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes,
-			//	AbsoluteCounter, DirUnknown, EmptyRuleTracePoint)
+			//	CounterAbsolute, DirUnknown, EmptyRuleTracePoint)
 		})
 	})
 	Describe("Test local source to local destination with DNAT", func() {
@@ -424,25 +430,6 @@ var _ = Describe("Conntrack Datasource", func() {
 		})
 	})
 
-})
-
-var _ = Describe("Rtp", func() {
-	Describe("Rtp lookup", func() {
-		Describe("Test lookupRule", func() {
-			epMap := map[[16]byte]*model.WorkloadEndpointKey{
-				localIp1: localWlEPKey1,
-				localIp2: localWlEPKey2,
-			}
-			lm := newMockLookupManager(epMap)
-			It("should parse correctly", func() {
-				prefix := defTierAllow
-				prefixLen := 19
-				rtp, _ := lookupRule(lm, prefix, prefixLen, localWlEPKey1)
-				rtp.Ctr = *NewCounter(1, 100)
-				Expect(rtp).To(Equal(defTierAllowTp))
-			})
-		})
-	})
 })
 
 var _ = Describe("Reporting Metrics", func() {
@@ -475,57 +462,68 @@ var _ = Describe("Reporting Metrics", func() {
 		go c.startStatsCollectionAndReporting()
 	})
 	Describe("Report Denied Packets", func() {
-		var t *Tuple
 		BeforeEach(func() {
-			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			c.nfIngressC <- inPktDeny
+			c.nfIngressC <- ingressPktDeny
 		})
 		Context("reporting tick", func() {
 			It("should receive metric", func() {
-				tmu := &testMetricUpdate{*t, RtpToBytes(defTierDenyTp)}
-				Eventually(func() *testMetricUpdate {
-					return <-mockReporter.reportChan
-				}, reportingDelay, exportingInterval).Should(Equal(tmu))
+				tmu := testMetricUpdate{
+					tuple:        *ingressPktDenyTuple,
+					ruleIDs:      defTierDenyIngressTp.RuleIDs,
+					isConnection: false,
+					trafficDir:   TrafficDirOutbound,
+				}
+				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
 		})
 	})
-	Describe("Don't Report Allowed Packets", func() {
-		var t *Tuple
+	Describe("Report Allowed Packets (ingress)", func() {
 		BeforeEach(func() {
-			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			c.nfIngressC <- inPkt
+			c.nfIngressC <- ingressPktAllow
 		})
 		Context("reporting tick", func() {
-			It("should not receive metric", func() {
-				Consistently(func() *testMetricUpdate {
-					var a *testMetricUpdate
-					select {
-					case a = <-mockReporter.reportChan:
-					default:
-					}
-					return a
-				}, ageTimeout, exportingInterval).Should(BeNil())
+			It("should receive metric", func() {
+				tmu := testMetricUpdate{
+					tuple:        *ingressPktAllowTuple,
+					ruleIDs:      defTierAllowIngressTp.RuleIDs,
+					isConnection: false,
+					trafficDir:   TrafficDirOutbound,
+				}
+				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
 		})
 	})
-	Describe("Don't Report Packets that switch from deny to allow", func() {
-		var t *Tuple
+	Describe("Report Packets that switch from deny to allow", func() {
 		BeforeEach(func() {
-			t = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			c.nfIngressC <- inPktDeny
+			c.nfIngressC <- ingressPktDeny
 			time.Sleep(time.Duration(500) * time.Millisecond)
-			c.nfIngressC <- inPkt
+			c.nfIngressC <- ingressPktAllow
 		})
 		Context("reporting tick", func() {
-			It("should not receive metric", func() {
-				Consistently(func() *testMetricUpdate {
-					var a *testMetricUpdate
-					select {
-					case a = <-mockReporter.reportChan:
-					default:
-					}
-					return a
-				}, ageTimeout, exportingInterval).Should(BeNil())
+			It("should receive metric", func() {
+				tmu := testMetricUpdate{
+					tuple:        *ingressPktAllowTuple,
+					ruleIDs:      defTierAllowIngressTp.RuleIDs,
+					isConnection: false,
+					trafficDir:   TrafficDirOutbound,
+				}
+				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
+			})
+		})
+	})
+	Describe("Report Allowed Packets (egress)", func() {
+		BeforeEach(func() {
+			c.nfEgressC <- egressPktAllow
+		})
+		Context("reporting tick", func() {
+			It("should receive metric", func() {
+				tmu := testMetricUpdate{
+					tuple:        *egressPktAllowTuple,
+					ruleIDs:      defTierAllowEgressTp.RuleIDs,
+					isConnection: false,
+					trafficDir:   TrafficDirOutbound,
+				}
+				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
 		})
 	})
@@ -550,36 +548,39 @@ func (lm *mockLookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) 
 	}
 }
 
-func (lm *mockLookupManager) GetPolicyIndex(epKey interface{}, policyName, tierName []byte) int {
+func (lm *mockLookupManager) GetTierIndex(epKey interface{}, tierName string) int {
 	return 0
 }
 
-func RtpToBytes(tp *RuleTracePoint) []byte {
-	buf := &bytes.Buffer{}
-	buf.Write(tp.TierID())
-	buf.Write([]byte("|"))
-	buf.Write(tp.PolicyID())
-	buf.Write([]byte("|"))
-	buf.Write(tp.Rule())
-	buf.Write([]byte("|"))
-	buf.Write(RuleActionToBytes[tp.Action])
-	return buf.Bytes()
-}
-
+// Define a separate metric type that doesn't include the actual stats.  We use this
+// for simpler comparisons.
 type testMetricUpdate struct {
-	tuple  Tuple
-	policy []byte
+	// Tuple key
+	tuple Tuple
+
+	// Rule identification
+	ruleIDs *RuleIDs
+
+	// Traffic direction.  For NFLOG entries, the traffic direction will always
+	// be "outbound" since the direction is already defined by the source and
+	// destination.
+	trafficDir TrafficDirection
+
+	// isConnection is true if this update is from an active connection (i.e. a conntrack
+	// update compared to an NFLOG update).
+	isConnection bool
 }
 
+// Create a mockReporter that acts as a pass-thru of the updates.
 type mockReporter struct {
-	reportChan chan *testMetricUpdate
-	expireChan chan *testMetricUpdate
+	reportChan chan testMetricUpdate
+	expireChan chan testMetricUpdate
 }
 
 func newMockReporter() *mockReporter {
 	return &mockReporter{
-		reportChan: make(chan *testMetricUpdate),
-		expireChan: make(chan *testMetricUpdate),
+		reportChan: make(chan testMetricUpdate),
+		expireChan: make(chan testMetricUpdate),
 	}
 }
 
@@ -588,12 +589,22 @@ func (mr *mockReporter) Start() {
 }
 
 func (mr *mockReporter) Report(mu *MetricUpdate) error {
-	mr.reportChan <- &testMetricUpdate{mu.tuple, mu.policy}
+	mr.reportChan <- testMetricUpdate{
+		tuple:        mu.tuple,
+		ruleIDs:      mu.ruleIDs,
+		trafficDir:   mu.trafficDir,
+		isConnection: mu.isConnection,
+	}
 	return nil
 }
 
 func (mr *mockReporter) Expire(mu *MetricUpdate) error {
-	mr.expireChan <- &testMetricUpdate{mu.tuple, mu.policy}
+	mr.expireChan <- testMetricUpdate{
+		tuple:        mu.tuple,
+		ruleIDs:      mu.ruleIDs,
+		trafficDir:   mu.trafficDir,
+		isConnection: mu.isConnection,
+	}
 	return nil
 }
 
@@ -617,7 +628,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		c.convertNflogPktAndApplyUpdate(DirIn, inPkt)
+		c.convertNflogPktAndApplyUpdate(RuleDirIngress, ingressPktAllow)
 	}
 }
 
@@ -638,7 +649,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	rm := NewReporterManager()
 	lm := newMockLookupManager(epMap)
 	c := NewCollector(lm, rm, conf)
-	tuples := []Tuple{}
+	var tuples []Tuple
 	MaxSrcPort := 1000
 	MaxDstPort := 1000
 	for sp := 1; sp < MaxSrcPort; sp++ {
@@ -647,17 +658,17 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 			tuples = append(tuples, *t)
 		}
 	}
-	tps := []*RuleTracePoint{}
+	var tps []*RuleTracePoint
 	MaxEntries := 10000
 	for i := 0; i < MaxEntries; i++ {
-		tp := defTierDenyTp
+		tp := defTierDenyIngressTp
 		tps = append(tps, tp)
 	}
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		for i := 0; i < MaxEntries; i++ {
-			c.applyStatUpdate(tuples[i], 0, 0, 0, 0, DeltaCounter, DirIn, tps[i])
+			c.applyNflogStatUpdate(tuples[i], tps[i])
 		}
 	}
 }

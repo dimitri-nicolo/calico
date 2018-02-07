@@ -251,6 +251,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               --net=host \
                               $(EXTRA_DOCKER_ARGS) \
                               -e LOCAL_USER_ID=$(MY_UID) \
+                              -e WHAT=$(WHAT) \
                               -v $${PWD}:/go/src/github.com/projectcalico/felix:rw \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
                               -w /go/src/github.com/projectcalico/felix \

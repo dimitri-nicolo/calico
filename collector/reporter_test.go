@@ -2,6 +2,8 @@
 
 package collector
 
+//TODO: RLB: Re-enable old metrics reporting
+/*
 import (
 	"bytes"
 	"math"
@@ -358,3 +360,4 @@ var _ = Describe("Prometheus Reporter", func() {
 		})
 	})
 })
+*/
