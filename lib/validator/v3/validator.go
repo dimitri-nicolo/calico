@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -182,6 +182,7 @@ func init() {
 	registerStructValidator(validatorPrimary, validateTier, api.Tier{})
 
 	// Register structs that have one level of additional structs to validate.
+	registerStructValidator(validatorSecondary, validateFelixConfigSpec, api.FelixConfigurationSpec{})
 	registerStructValidator(validatorSecondary, validateWorkloadEndpointSpec, api.WorkloadEndpointSpec{})
 	registerStructValidator(validatorSecondary, validateHostEndpointSpec, api.HostEndpointSpec{})
 	registerStructValidator(validatorSecondary, validateRule, api.Rule{})
@@ -189,6 +190,7 @@ func init() {
 	// Register structs that have two level of additional structs to validate.
 	registerStructValidator(validatorTertiary, validateNetworkPolicy, api.NetworkPolicy{})
 	registerStructValidator(validatorTertiary, validateGlobalNetworkPolicy, api.GlobalNetworkPolicy{})
+	registerStructValidator(validatorTertiary, validateGlobalNetworkSet, api.GlobalNetworkSet{})
 }
 
 // reason returns the provided error reason prefixed with an identifier that
@@ -488,6 +490,29 @@ func validateIPNAT(v *validator.Validate, structLevel *validator.StructLevel) {
 	}
 }
 
+func validateFelixConfigSpec(v *validator.Validate, structLevel *validator.StructLevel) {
+	c := structLevel.CurrentStruct.Interface().(api.FelixConfigurationSpec)
+
+	// Validate that the node port ranges list isn't too long and contains only numeric ports.
+	// We set the limit at 7 because the iptables multiport match can accept at most 15 port
+	// numbers, with each port range requiring 2 entries.
+	if c.KubeNodePortRanges != nil {
+		if len(*c.KubeNodePortRanges) > 7 {
+			structLevel.ReportError(reflect.ValueOf(*c.KubeNodePortRanges),
+				"KubeNodePortRanges", "",
+				reason("node port ranges list is too long (max 7)"))
+		}
+
+		for _, p := range *c.KubeNodePortRanges {
+			if p.PortName != "" {
+				structLevel.ReportError(reflect.ValueOf(*c.KubeNodePortRanges),
+					"KubeNodePortRanges", "",
+					reason("node port ranges should not contain named ports"))
+			}
+		}
+	}
+}
+
 func validateWorkloadEndpointSpec(v *validator.Validate, structLevel *validator.StructLevel) {
 	w := structLevel.CurrentStruct.Interface().(api.WorkloadEndpointSpec)
 
@@ -723,9 +748,9 @@ func validateNodeSpec(v *validator.Validate, structLevel *validator.StructLevel)
 	ns := structLevel.CurrentStruct.Interface().(api.NodeSpec)
 
 	if ns.BGP != nil {
-		if ns.BGP.IPv4Address == "" && ns.BGP.IPv6Address == "" && ns.BGP.IPv4IPIPTunnelAddr == "" {
-			structLevel.ReportError(reflect.ValueOf(ns.BGP.IPv4Address),
-				"BGP", "", reason("BGP IP or IPv4IPIPTunnelAddr should be set"))
+		if reflect.DeepEqual(*ns.BGP, api.NodeBGPSpec{}) {
+			structLevel.ReportError(reflect.ValueOf(ns.BGP), "BGP", "",
+				reason("Spec.BGP should not be empty"))
 		}
 	}
 }
@@ -851,6 +876,22 @@ func validateNetworkPolicy(v *validator.Validate, structLevel *validator.StructL
 
 	validateObjectMetaAnnotations(v, structLevel, np.Annotations)
 	validateObjectMetaLabels(v, structLevel, np.Labels)
+}
+
+func validateGlobalNetworkSet(v *validator.Validate, structLevel *validator.StructLevel) {
+	gns := structLevel.CurrentStruct.Interface().(api.GlobalNetworkSet)
+	for k := range gns.GetLabels() {
+		if k == "projectcalico.org/namespace" {
+			// The namespace label should only be used when mapping the real namespace through
+			// to the v1 datamodel.  It shouldn't appear in the v3 datamodel.
+			structLevel.ReportError(
+				reflect.ValueOf(k),
+				"Metadata.Labels (label)",
+				"",
+				reason("projectcalico.org/namespace is not a valid label name"),
+			)
+		}
+	}
 }
 
 func validateGlobalNetworkPolicy(v *validator.Validate, structLevel *validator.StructLevel) {
