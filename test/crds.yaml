@@ -159,6 +159,6 @@ items:
     group: crd.projectcalico.org
     version: v1
     names:
-      kind: BlobalNetworkSet
+      kind: GlobalNetworkSet
       plural: globalnetworksets
       singular: globalnetworkset
