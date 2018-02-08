@@ -172,6 +172,14 @@ data:
           summary: "Instance {{$labels.instance}} - Large rate of packets denied"
           description: "{{$labels.instance}} with calico-node pod {{$labels.pod}} has been denying packets at a fast rate {{$labels.sourceIp}} by policy {{$labels.policy}}."
 {% endraw %}
+    - name: consolidate
+      interval: %ds
+      rules:
+      - record: cnx_policy_rule_bytes_consolidated
+        expr: sum(cnx_policy_rule_bytes) by (tier, policy, namespace, rule_index, action, traffic_direction, rule_direction)
+      - record: cnx_policy_rule_packets_consolidated
+        expr: sum(cnx_policy_rule_packets) by (tier, policy, namespace, rule_index, action, traffic_direction, rule_direction)
+
 ---
 
 # This manifest creates a secret that will be mounted as the Alertmanager
