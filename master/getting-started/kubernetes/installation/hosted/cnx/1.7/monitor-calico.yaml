@@ -146,6 +146,7 @@ spec:
   - port: calico-metrics-port
     interval: 5s
     scrapeTimeout: 5s
+    honorLabels: true
 ---
 
 {% raw %}
