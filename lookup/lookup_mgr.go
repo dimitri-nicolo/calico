@@ -1,27 +1,20 @@
 // Copyright (c) 2016 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package lookup
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"sync"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/felix/hashutils"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
@@ -30,6 +23,7 @@ var UnknownEndpointError = errors.New("Unknown endpoint")
 type QueryInterface interface {
 	GetEndpointKey(addr [16]byte) (interface{}, error)
 	GetTierIndex(epKey interface{}, tierName string) int
+	GetNFLOGHashToRuleID(prefixHash string) (*collector.RuleIDs, error)
 }
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
@@ -45,6 +39,9 @@ type LookupManager struct {
 	hostEndpointTiers          map[model.HostEndpointKey][]*proto.TierInfo
 	hostEndpointUntrackedTiers map[model.HostEndpointKey][]*proto.TierInfo
 	hostEpMutex                sync.RWMutex
+
+	// TODO (gunjan5) use a fixed byte array instead of string.
+	nflogPrefixHash map[string]*collector.RuleIDs
 }
 
 func NewLookupManager() *LookupManager {
@@ -114,6 +111,47 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			delete(m.endpointTiers, wlEpKey)
 		}
 		m.epMutex.Unlock()
+
+	case *proto.ActivePolicyUpdate:
+		for idx, ibr := range msg.Policy.InboundRules {
+			rid := collector.RuleIDs{
+				Direction: collector.RuleDirIngress,
+				Index: strconv.Itoa(idx),
+			}
+
+			m.PushNFLOGPrefixHash(msg, ibr, rid)
+		}
+
+		for idx, obr := range msg.Policy.OutboundRules {
+			rid := collector.RuleIDs{
+				Direction: collector.RuleDirEgress,
+				Index: strconv.Itoa(idx),
+			}
+
+			m.PushNFLOGPrefixHash(msg, obr, rid)
+		}
+
+	case *proto.ActivePolicyRemove:
+		//for idx, ibr := range msg.Id.InboundRules {
+		//	rid := collector.RuleIDs{
+		//		Direction: collector.RuleDirIngress,
+		//		Index: strconv.Itoa(idx),
+		//	}
+		//
+		//	m.PushNFLOGPrefixHash(msg, ibr, rid)
+		//}
+		//
+		//for idx, obr := range msg.Policy.OutboundRules {
+		//	rid := collector.RuleIDs{
+		//		Direction: collector.RuleDirEgress,
+		//		Index: strconv.Itoa(idx),
+		//	}
+		//
+		//	m.PushNFLOGPrefixHash(msg, obr, rid)
+		//}
+
+
+
 	case *proto.HostEndpointUpdate:
 		// We omit setting Hostname since at this point it is implied that the
 		// endpoint belongs to this host.
@@ -164,6 +202,37 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		}
 		m.epMutex.Unlock()
 	}
+}
+
+// PushNFLOGPrefixHash takes proto message (ActivePolicyUpdate), proto rule and partially populated
+// RuleID (with rule direction and rule index) and calculates the NFLOG prefix, and if the prefix is too long then
+// calculates the hash. Finally it pushes it to a map for stats collector to access.
+func (m *LookupManager) PushNFLOGPrefixHash(msg  *proto.ActivePolicyUpdate, rule *proto.Rule, rid collector.RuleIDs){
+	rid.Action =  collector.RuleAction(rule.Action)
+	rid.Tier = msg.Id.Tier
+	rid.Policy = msg.Id.Name
+
+	prefixStr := rules.CalculateNFLOGPrefixStr(rid)
+
+	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
+	// separated by `|`s. Example: "D|0|default.deny-icmp|default".
+	// We calculate the hash of the prefix if its length exceeds NFLOG prefix max length which is 64 characters.
+	prefixHash := hashutils.GetLengthLimitedID("", prefixStr, rules.NFLOGPrefixMaxLength)
+
+	// Store the hash in a map.
+	m.nflogPrefixHash[prefixHash] = &rid
+}
+
+
+// GetNFLOGHashToRuleID returns RuleIDs associated with the NFLOG prefix string of hash from the nflogPrefixHash map.
+func (m *LookupManager) GetNFLOGHashToRuleID(prefixHash string) (*collector.RuleIDs, error){
+
+	rid, ok := m.nflogPrefixHash[prefixHash]
+	if !ok {
+		return nil, fmt.Errorf("cannot find the specified NFLOG prefix string or hash: %s in the lookup manager", prefixHash)
+	}
+
+	return rid, nil
 }
 
 func (m *LookupManager) CompleteDeferredWork() error {

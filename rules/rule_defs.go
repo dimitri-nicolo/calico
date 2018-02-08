@@ -86,6 +86,14 @@ const (
 
 	RuleHashPrefix = "cali:"
 
+	// NFLOG max prefix length is 64 characters.
+	// Ref: http://ipset.netfilter.org/iptables-extensions.man.html#lbDI
+	NFLOGPrefixMaxLength = 64
+
+	// NFLOG groups. 1 for inbound and 2 for outbound.
+	NFLOGInboundGroup uint16 = 1
+	NFLOGOutboundGroup uint16 = 2
+
 	// HistoricNATRuleInsertRegex is a regex pattern to match to match
 	// special-case rules inserted by old versions of felix.  Specifically,
 	// Python felix used to insert a masquerade rule directly into the

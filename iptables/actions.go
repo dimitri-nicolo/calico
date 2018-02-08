@@ -14,7 +14,12 @@
 
 package iptables
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/projectcalico/felix/hashutils"
+	"github.com/projectcalico/felix/rules"
+)
 
 type Action interface {
 	ToFragment() string
@@ -102,7 +107,13 @@ type NflogAction struct {
 
 func (n NflogAction) ToFragment() string {
 	// TODO (Matt): Review number of bytes
-	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, n.Prefix)
+
+	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
+	// separated by `|`s. Example: "D|0|default.deny-icmp|default".
+	// We calculate the hash of the prefix if its length exceeds NFLOG prefix max length which is 64 characters.
+	prefixHash := hashutils.GetLengthLimitedID("", n.Prefix, rules.NFLOGPrefixMaxLength)
+
+	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, prefixHash)
 }
 
 func (n NflogAction) String() string {
@@ -118,9 +129,9 @@ type DNATAction struct {
 func (g DNATAction) ToFragment() string {
 	if g.DestPort == 0 {
 		return fmt.Sprintf("--jump DNAT --to-destination %s", g.DestAddr)
-	} else {
-		return fmt.Sprintf("--jump DNAT --to-destination %s:%d", g.DestAddr, g.DestPort)
 	}
+	
+	return fmt.Sprintf("--jump DNAT --to-destination %s:%d", g.DestAddr, g.DestPort)
 }
 
 func (g DNATAction) String() string {

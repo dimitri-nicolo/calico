@@ -326,7 +326,7 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir RuleDirection, nPktAggr *n
 	}
 	for _, prefix := range nPktAggr.Prefixes {
 		// Lookup the ruleIDs from the prefix.
-		ruleIDs, err := lookupRuleIDsFromPrefix(dir, prefix.Prefix, prefix.Len)
+		ruleIDs, err := lookupRuleIDsFromPrefix(c.lum, dir, prefix.Prefix, prefix.Len)
 		if err != nil {
 			continue
 		}
@@ -360,7 +360,7 @@ func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacke
 }
 
 // lookupRuleIDsFromPrefix determines the RuleIDs from a given rule direction and NFLOG prefix.
-func lookupRuleIDsFromPrefix(dir RuleDirection, prefix [64]byte, prefixLen int) (*RuleIDs, error) {
+func lookupRuleIDsFromPrefix(lum lookup.QueryInterface, dir RuleDirection, prefix [64]byte, prefixLen int) (*RuleIDs, error) {
 	// Extract the RuleIDs from the prefix.
 	//TODO: RLB: We should keep a map[[64]byte]*RuleIDs to perform a fast lookup of the prefix
 	// to the rules IDs (using pointers to avoid additional allocation).  It is a little naughty
@@ -369,65 +369,71 @@ func lookupRuleIDsFromPrefix(dir RuleDirection, prefix [64]byte, prefixLen int) 
 	// methods to access the private member data.
 	//TODO: RLB: I think the prefix should be able to give us the rule direction too.
 
-	// Should have at least 2 separators, a action character and a rule (assuming
-	// we allow empty Policy names).
-	if prefixLen < 4 {
-		log.Errorf("Prefix is too short: %s (%d chars)", string(prefix[:prefixLen]), prefixLen)
-		return nil, RuleTracePointParseError
-	}
+	ruleIDs, err := lum.GetNFLOGHashToRuleID(string(prefix[:]))
 
-	// Initialise the RuleIDs struct.
-	ruleIDs := &RuleIDs{
-		Direction: dir,
-	}
+	ruleIDs.Direction = dir
 
-	// Extract and convert the action.
-	switch prefix[0] {
-	case 'A':
-		ruleIDs.Action = ActionAllow
-	case 'D':
-		ruleIDs.Action = ActionDeny
-	case 'N':
-		ruleIDs.Action = ActionNextTier
-	default:
-		log.Errorf("Unknown action %v: %v", prefix[0], string(prefix[:prefixLen]))
-		return nil, RuleTracePointParseError
-	}
+	return ruleIDs, err
 
-	// Determine the indices of the rule/policy/tier separators.
-	ruleIdx := 2
-	policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
-	if policySep == -1 {
-		log.Errorf("No separator char: %v", string(prefix[:prefixLen]))
-		return nil, RuleTracePointParseError
-	}
-	policyIdx := ruleIdx + policySep + 1
-	tierSep := bytes.IndexByte(prefix[policyIdx:], ruleSep)
-	var tierIdx int
-	if tierSep == -1 {
-		tierIdx = -1
-	} else {
-		tierIdx = policyIdx + tierSep + 1
-	}
+	//// Should have at least 2 separators, a action character and a rule (assuming
+	//// we allow empty Policy names).
+	//if prefixLen < 4 {
+	//	log.Errorf("Prefix is too short: %s (%d chars)", string(prefix[:prefixLen]), prefixLen)
+	//	return nil, RuleTracePointParseError
+	//}
+	//
+	//// Initialise the RuleIDs struct.
+	//ruleIDs := &RuleIDs{
+	//	Direction: dir,
+	//}
 
-	// Set the tier name.
-	if tierIdx == -1 {
-		ruleIDs.Tier = "profile"
-	} else {
-		ruleIDs.Tier = string(prefix[tierIdx:prefixLen])
-	}
-
-	// Set the policy name.
-	if tierIdx == -1 {
-		ruleIDs.Policy = string(prefix[policyIdx:prefixLen])
-	} else {
-		ruleIDs.Policy = string(prefix[policyIdx : tierIdx-1])
-	}
-
-	// Set the rule index.
-	ruleIDs.Index = string(prefix[ruleIdx : policyIdx-1])
-
-	return ruleIDs, nil
+	//// Extract and convert the action.
+	//switch prefix[0] {
+	//case 'A':
+	//	ruleIDs.Action = ActionAllow
+	//case 'D':
+	//	ruleIDs.Action = ActionDeny
+	//case 'N':
+	//	ruleIDs.Action = ActionNextTier
+	//default:
+	//	log.Errorf("Unknown action %v: %v", prefix[0], string(prefix[:prefixLen]))
+	//	return nil, RuleTracePointParseError
+	//}
+	//
+	//// Determine the indices of the rule/policy/tier separators.
+	//ruleIdx := 2
+	//policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
+	//if policySep == -1 {
+	//	log.Errorf("No separator char: %v", string(prefix[:prefixLen]))
+	//	return nil, RuleTracePointParseError
+	//}
+	//policyIdx := ruleIdx + policySep + 1
+	//tierSep := bytes.IndexByte(prefix[policyIdx:], ruleSep)
+	//var tierIdx int
+	//if tierSep == -1 {
+	//	tierIdx = -1
+	//} else {
+	//	tierIdx = policyIdx + tierSep + 1
+	//}
+	//
+	//// Set the tier name.
+	//if tierIdx == -1 {
+	//	ruleIDs.Tier = "profile"
+	//} else {
+	//	ruleIDs.Tier = string(prefix[tierIdx:prefixLen])
+	//}
+	//
+	//// Set the policy name.
+	//if tierIdx == -1 {
+	//	ruleIDs.Policy = string(prefix[policyIdx:prefixLen])
+	//} else {
+	//	ruleIDs.Policy = string(prefix[policyIdx : tierIdx-1])
+	//}
+	//
+	//// Set the rule index.
+	//ruleIDs.Index = string(prefix[ruleIdx : policyIdx-1])
+	//
+	//return ruleIDs, nil
 }
 
 func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {

@@ -552,6 +552,10 @@ func (lm *mockLookupManager) GetTierIndex(epKey interface{}, tierName string) in
 	return 0
 }
 
+func (m *mockLookupManager) GetNFLOGHashToRuleID(prefixHash string) (*RuleIDs, error) {
+	return nil, nil
+}
+
 // Define a separate metric type that doesn't include the actual stats.  We use this
 // for simpler comparisons.
 type testMetricUpdate struct {
