@@ -32,7 +32,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 
 	k8sapi "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -432,20 +432,20 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 	})
 
 	It("should handle a basic NetworkPolicy", func() {
-		np := extensions.NetworkPolicy{
+		np := networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-syncer-basic-net-policy",
 			},
-			Spec: extensions.NetworkPolicySpec{
+			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"label": "value"},
 				},
-				Ingress: []extensions.NetworkPolicyIngressRule{
+				Ingress: []networkingv1.NetworkPolicyIngressRule{
 					{
-						Ports: []extensions.NetworkPolicyPort{
+						Ports: []networkingv1.NetworkPolicyPort{
 							{},
 						},
-						From: []extensions.NetworkPolicyPeer{
+						From: []networkingv1.NetworkPolicyPeer{
 							{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
@@ -458,7 +458,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 				},
 			},
 		}
-		res := c.clientSet.ExtensionsV1beta1().RESTClient().
+		res := c.clientSet.NetworkingV1().RESTClient().
 			Post().
 			Resource("networkpolicies").
 			Namespace("default").
@@ -467,7 +467,7 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 
 		// Make sure we clean up after ourselves.
 		defer func() {
-			res := c.clientSet.ExtensionsV1beta1().RESTClient().
+			res := c.clientSet.NetworkingV1().RESTClient().
 				Delete().
 				Resource("networkpolicies").
 				Namespace("default").
@@ -496,8 +496,8 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 	defer func() {
 		log.Warnf("[TEST] Waiting for policies to tear down")
 		It("should clean up all policies", func() {
-			nps := extensions.NetworkPolicyList{}
-			err := c.clientSet.ExtensionsV1beta1().RESTClient().
+			nps := networkingv1.NetworkPolicyList{}
+			err := c.clientSet.NetworkingV1().RESTClient().
 				Get().
 				Resource("networkpolicies").
 				Namespace("default").
@@ -510,8 +510,8 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 				if len(nps.Items) == 0 {
 					return
 				}
-				nps := extensions.NetworkPolicyList{}
-				err := c.clientSet.ExtensionsV1beta1().RESTClient().
+				nps := networkingv1.NetworkPolicyList{}
+				err := c.clientSet.NetworkingV1().RESTClient().
 					Get().
 					Resource("networkpolicies").
 					Namespace("default").
@@ -696,6 +696,157 @@ var _ = Describe("Test Syncer API for Kubernetes backend", func() {
 		By("Checking cache has no Global Network Policy entries", func() {
 			Eventually(cb.GetSyncerValuePresentFunc(kvp1KeyV1)).Should(BeFalse())
 			Eventually(cb.GetSyncerValuePresentFunc(kvp2KeyV1)).Should(BeFalse())
+		})
+	})
+
+	It("should handle a CRUD of Host Endpoint", func() {
+		kvp1Name := "my-test-hep1"
+		kvp1a := &model.KVPair{
+			Key: model.ResourceKey{Name: kvp1Name, Kind: apiv3.KindHostEndpoint},
+			Value: &apiv3.HostEndpoint{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       apiv3.KindHostEndpoint,
+					APIVersion: apiv3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: kvp1Name,
+				},
+				Spec: apiv3.HostEndpointSpec{
+					Node:          "my-test-node1",
+					InterfaceName: "eth0",
+				},
+			},
+		}
+
+		kvp1b := &model.KVPair{
+			Key: model.ResourceKey{Name: kvp1Name, Kind: apiv3.KindHostEndpoint},
+			Value: &apiv3.HostEndpoint{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       apiv3.KindHostEndpoint,
+					APIVersion: apiv3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: kvp1Name,
+				},
+				Spec: apiv3.HostEndpointSpec{
+					Node:          "my-test-node1",
+					InterfaceName: "eth1",
+				},
+			},
+		}
+
+		kvp2Name := "my-test-hep2"
+		kvp2a := &model.KVPair{
+			Key: model.ResourceKey{Name: kvp2Name, Kind: apiv3.KindHostEndpoint},
+			Value: &apiv3.HostEndpoint{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       apiv3.KindHostEndpoint,
+					APIVersion: apiv3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: kvp2Name,
+				},
+				Spec: apiv3.HostEndpointSpec{
+					Node:          "my-test-node2",
+					InterfaceName: "eth0",
+				},
+			},
+		}
+
+		kvp2b := &model.KVPair{
+			Key: model.ResourceKey{Name: kvp2Name, Kind: apiv3.KindHostEndpoint},
+			Value: &apiv3.HostEndpoint{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       apiv3.KindHostEndpoint,
+					APIVersion: apiv3.GroupVersionCurrent,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: kvp2Name,
+				},
+				Spec: apiv3.HostEndpointSpec{
+					Node:          "my-test-node2",
+					InterfaceName: "eth1",
+				},
+			},
+		}
+
+		var kvpRes *model.KVPair
+		var err error
+
+		// Make sure we clean up after ourselves.  We allow this to fail because
+		// part of our explicit testing below is to delete the resource.
+		defer func() {
+			c.Delete(ctx, kvp1a.Key, "")
+			c.Delete(ctx, kvp2a.Key, "")
+		}()
+
+		By("Creating a Host Endpoint", func() {
+			kvpRes, err = c.Create(ctx, kvp1a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Attempting to recreate an existing Host Endpoint", func() {
+			_, err := c.Create(ctx, kvp1a)
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Updating an existing Host Endpoint", func() {
+			kvp1b.Revision = kvpRes.Revision
+			_, err := c.Update(ctx, kvp1b)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Create a non-existent Host Endpoint", func() {
+			kvpRes, err = c.Create(ctx, kvp2a)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Updating the Host Endpoint created by Create", func() {
+			kvp2b.Revision = kvpRes.Revision
+			_, err := c.Update(ctx, kvp2b)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		By("Getting a missing Host Endpoint", func() {
+			_, err := c.Get(ctx, model.ResourceKey{Name: "my-non-existent-test-hep", Kind: apiv3.KindHostEndpoint}, "")
+			Expect(err).To(HaveOccurred())
+		})
+
+		By("Listing a missing Host Endpoint", func() {
+			kvps, err := c.List(ctx, model.ResourceListOptions{Name: "my-non-existent-test-hep", Kind: apiv3.KindHostEndpoint}, "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps.KVPairs).To(HaveLen(0))
+		})
+
+		By("Listing an explicit Host Endpoint", func() {
+			kvps, err := c.List(ctx, model.ResourceListOptions{Name: kvp1Name, Kind: apiv3.KindHostEndpoint}, "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps.KVPairs).To(HaveLen(1))
+			Expect(kvps.KVPairs[0].Key).To(Equal(kvp1b.Key))
+			Expect(kvps.KVPairs[0].Value.(*apiv3.HostEndpoint).ObjectMeta.Name).To(Equal(kvp1b.Value.(*apiv3.HostEndpoint).ObjectMeta.Name))
+			Expect(kvps.KVPairs[0].Value.(*apiv3.HostEndpoint).Spec).To(Equal(kvp1b.Value.(*apiv3.HostEndpoint).Spec))
+		})
+
+		By("Listing all Host Endpoints", func() {
+			kvps, err := c.List(ctx, model.ResourceListOptions{Kind: apiv3.KindHostEndpoint}, "")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(kvps.KVPairs).To(HaveLen(2))
+			keys := []model.Key{}
+			vals := []interface{}{}
+			for _, k := range kvps.KVPairs {
+				keys = append(keys, k.Key)
+				vals = append(vals, k.Value.(*apiv3.HostEndpoint).Spec)
+			}
+			Expect(keys).To(ContainElement(kvp1b.Key))
+			Expect(keys).To(ContainElement(kvp2b.Key))
+			Expect(vals).To(ContainElement(kvp1b.Value.(*apiv3.HostEndpoint).Spec))
+			Expect(vals).To(ContainElement(kvp2b.Value.(*apiv3.HostEndpoint).Spec))
+
+		})
+
+		By("Deleting an existing Host Endpoint", func() {
+			_, err := c.Delete(ctx, kvp1a.Key, "")
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

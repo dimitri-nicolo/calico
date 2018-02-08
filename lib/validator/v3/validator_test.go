@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -249,6 +249,65 @@ func init() {
 			true,
 		),
 
+		Entry("should accept GlobalNetworkSetSpec with CIDRs and IPs",
+			api.GlobalNetworkSetSpec{
+				Nets: []string{
+					"10.0.0.1",
+					"11.0.0.0/8",
+					"dead:beef::",
+					"dead:beef::/96",
+				},
+			},
+			true,
+		),
+		Entry("should reject GlobalNetworkSetSpec with bad CIDR",
+			api.GlobalNetworkSetSpec{
+				Nets: []string{
+					"garbage",
+				},
+			},
+			false,
+		),
+		Entry("should accept GlobalNetworkSet with labels",
+			api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "testset",
+					Labels: map[string]string{
+						"a": "b",
+					},
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					Nets: []string{"10.0.0.1"},
+				},
+			},
+			true,
+		),
+		Entry("should reject GlobalNetworkSet with reserved labels",
+			api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "testset",
+					Labels: map[string]string{
+						"projectcalico.org/namespace": "foo",
+					},
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					Nets: []string{"10.0.0.1"},
+				},
+			},
+			false,
+		),
+		Entry("should reject GlobalNetworkSet with bad name",
+			api.GlobalNetworkSet{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test$set",
+				},
+				Spec: api.GlobalNetworkSetSpec{
+					Nets: []string{"10.0.0.1"},
+				},
+			},
+			false,
+		),
+
 		Entry("should accept a valid BGP logging level: Info", api.BGPConfigurationSpec{LogSeverityScreen: "Info"}, true),
 		Entry("should reject an invalid BGP logging level: info", api.BGPConfigurationSpec{LogSeverityScreen: "info"}, false),
 		Entry("should reject an invalid BGP logging level: INFO", api.BGPConfigurationSpec{LogSeverityScreen: "INFO"}, false),
@@ -409,6 +468,21 @@ func init() {
 		Entry("should accept a valid IptablesFilterAllowAction value 'Accept'", api.FelixConfigurationSpec{IptablesFilterAllowAction: "Accept"}, true),
 		Entry("should accept a valid IptablesMangleAllowAction value 'Return'", api.FelixConfigurationSpec{IptablesMangleAllowAction: "Return"}, true),
 		Entry("should reject an invalid IptablesMangleAllowAction value 'Drop'", api.FelixConfigurationSpec{IptablesMangleAllowAction: "Drop"}, false),
+		Entry("should accept a valid KubeNodePortRanges value", api.FelixConfigurationSpec{KubeNodePortRanges: &[]numorstring.Port{
+			mustParsePortRange(3000, 4000), mustParsePortRange(5000, 6000),
+			mustParsePortRange(7000, 8000), mustParsePortRange(8000, 9000),
+			mustParsePortRange(10000, 11000), mustParsePortRange(12000, 13000),
+			numorstring.SinglePort(15000),
+		}}, true),
+		Entry("should reject a too-long KubeNodePortRanges value", api.FelixConfigurationSpec{KubeNodePortRanges: &[]numorstring.Port{
+			mustParsePortRange(3000, 4000), mustParsePortRange(5000, 6000),
+			mustParsePortRange(7000, 8000), mustParsePortRange(8000, 9000),
+			mustParsePortRange(10000, 11000), mustParsePortRange(12000, 13000),
+			mustParsePortRange(14000, 15000), mustParsePortRange(16000, 17000),
+		}}, false),
+		Entry("should reject a named port KubeNodePortRanges value", api.FelixConfigurationSpec{KubeNodePortRanges: &[]numorstring.Port{
+			numorstring.NamedPort("testport"),
+		}}, false),
 
 		Entry("should reject an invalid LogSeverityScreen value 'badVal'", api.FelixConfigurationSpec{LogSeverityScreen: "badVal"}, false),
 		Entry("should reject an invalid LogSeverityFile value 'badVal'", api.FelixConfigurationSpec{LogSeverityFile: "badVal"}, false),
@@ -990,7 +1064,7 @@ func init() {
 		Entry("should accept node with IPv6 BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv6Address: netv6_1}}, true),
 		Entry("should accept node with tunnel IP in BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4IPIPTunnelAddr: "10.0.0.1"}}, true),
 		Entry("should accept node with no BGP", api.NodeSpec{}, true),
-		Entry("should reject node with BGP but no IPs", api.NodeSpec{BGP: &api.NodeBGPSpec{}}, false),
+		Entry("should reject node with an empty BGP", api.NodeSpec{BGP: &api.NodeBGPSpec{}}, false),
 		Entry("should reject node with IPv6 address in IPv4 field", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv4Address: netv6_1}}, false),
 		Entry("should reject node with IPv4 address in IPv6 field", api.NodeSpec{BGP: &api.NodeBGPSpec{IPv6Address: netv4_1}}, false),
 
@@ -1404,4 +1478,12 @@ func protocolFromString(s string) *numorstring.Protocol {
 func protocolFromInt(i uint8) *numorstring.Protocol {
 	p := numorstring.ProtocolFromInt(i)
 	return &p
+}
+
+func mustParsePortRange(min, max uint16) numorstring.Port {
+	p, err := numorstring.PortFromRange(min, max)
+	if err != nil {
+		panic(err)
+	}
+	return p
 }

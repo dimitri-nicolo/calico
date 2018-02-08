@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -150,6 +150,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindGlobalNetworkSet,
+		resources.NewGlobalNetworkSetClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindNetworkPolicy,
 		resources.NewNetworkPolicyClient(cs, crdClientV1),
 	)
@@ -194,6 +200,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindProfile,
 		resources.NewProfileClient(cs, ca.AlphaFeatures),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindHostEndpoint,
+		resources.NewHostEndpointClient(cs, crdClientV1),
 	)
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
@@ -271,7 +283,9 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindFelixConfiguration,
 		apiv3.KindGlobalNetworkPolicy,
 		apiv3.KindTier,
+		apiv3.KindGlobalNetworkSet,
 		apiv3.KindIPPool,
+		apiv3.KindHostEndpoint,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {
@@ -333,12 +347,16 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 				&apiv3.BGPConfigurationList{},
 				&apiv3.ClusterInformation{},
 				&apiv3.ClusterInformationList{},
+				&apiv3.GlobalNetworkSet{},
+				&apiv3.GlobalNetworkSetList{},
 				&apiv3.GlobalNetworkPolicy{},
 				&apiv3.GlobalNetworkPolicyList{},
 				&apiv3.NetworkPolicy{},
 				&apiv3.NetworkPolicyList{},
 				&apiv3.Tier{},
 				&apiv3.TierList{},
+				&apiv3.HostEndpoint{},
+				&apiv3.HostEndpointList{},
 			)
 			metav1.AddToGroupVersion(scheme, *cfg.GroupVersion)
 			return nil

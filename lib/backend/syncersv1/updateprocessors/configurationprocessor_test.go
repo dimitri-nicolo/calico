@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,6 +73,12 @@ var _ = Describe("Test the generic configuration update processor and the concre
 	numFelixConfigs := 60
 	numClusterConfigs := 5
 	numNodeClusterConfigs := 4
+	/*
+		// TODO: FIGURE OUT IF THIS IS CORRECT
+		numFelixConfigs := 51
+		numClusterConfigs := 4
+		numNodeClusterConfigs := 3
+	*/
 	numBgpConfigs := 3
 	felixMappedNames := map[string]interface{}{
 		"RouteRefreshInterval":    nil,
