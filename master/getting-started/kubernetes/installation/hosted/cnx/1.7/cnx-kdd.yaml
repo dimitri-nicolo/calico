@@ -28,9 +28,6 @@ data:
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
   tigera.cnx-manager.oidc-client-id: "<fill-in-your-oauth-client-id-here>"
-  # The location of the cnx-manager service. This must be reachable from where the web interface
-  # will be accessed from.
-  tigera.cnx-manager.kubernetes-api: "127.0.0.1:30003"
 ---
 
 # Optionally update this ConfigMap to use your own TLS certs.
@@ -284,11 +281,6 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-client-id
-          - name: CNX_WEB_K8S_API
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.kubernetes-api
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
@@ -310,11 +302,6 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-client-id
-          - name: CNX_WEB_K8S_API
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.kubernetes-api
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
