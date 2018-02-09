@@ -23,7 +23,7 @@ v2.0:
       version: v2.0.0
       url: ""
     calicoctl:
-      version: v2.0.0
+      version: v2.0.1
       url: ""
       download_url: ""
     cnx-node:
