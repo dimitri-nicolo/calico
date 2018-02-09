@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -27,172 +27,128 @@ var (
 	}
 )
 
-var _ = Describe("RuleTracePoint", func() {
-	var rtp *RuleTracePoint
-	Describe("Valid RuleTracePoint", func() {
-		Context("Policy", func() {
-			BeforeEach(func() {
-				var prefix [64]byte
-				pfxB := []byte("A|0|policy|tier")
-				copy(prefix[:], pfxB)
-				rtp, _ = NewRuleTracePoint(prefix, len(pfxB), wlEpKey1)
-			})
-			It("should have correct tier", func() {
-				Expect(rtp.TierID()).To(Equal([]byte("tier")))
-			})
-			It("should have correct policy", func() {
-				Expect(rtp.PolicyID()).To(Equal([]byte("policy")))
-			})
-			It("should have correct rule", func() {
-				Expect(rtp.Rule()).To(Equal([]byte("0")))
-			})
-			It("should have correct action", func() {
-				Expect(rtp.Action).To(Equal(AllowAction))
-			})
-		})
-		Context("Profile", func() {
-			BeforeEach(func() {
-				var prefix [64]byte
-				pfxB := []byte("A|0|policy")
-				copy(prefix[:], pfxB)
-				rtp, _ = NewRuleTracePoint(prefix, len(pfxB), wlEpKey1)
-			})
-			It("should have correct tier", func() {
-				Expect(rtp.TierID()).To(Equal([]byte("profile")))
-			})
-			It("should have correct policy", func() {
-				Expect(rtp.PolicyID()).To(Equal([]byte("policy")))
-			})
-			It("should have correct rule", func() {
-				Expect(rtp.Rule()).To(Equal([]byte("0")))
-			})
-			It("should have correct action", func() {
-				Expect(rtp.Action).To(Equal(AllowAction))
-			})
-		})
-	})
-})
-
 var (
-	allowTp0 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    AllowAction,
-		Index:     0,
-		EpKey:     wlEpKey1,
+	allowIngressTp0 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionAllow,
+			Index:     "R1",
+			Policy:    "P1",
+			Tier:      "T1",
+			Direction: RuleDirIngress,
+		},
+		Index: 0,
+		EpKey: wlEpKey1,
 	}
-	denyTp0 = &RuleTracePoint{
-		prefix:    [64]byte{'D', '|', 'R', '2', '|', 'P', '2', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    DenyAction,
-		Index:     0,
-		EpKey:     wlEpKey1,
+	denyIngressTp0 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionDeny,
+			Index:     "R2",
+			Policy:    "P2",
+			Tier:      "T1",
+			Direction: RuleDirIngress,
+		},
+		Index: 0,
+		EpKey: wlEpKey1,
 	}
-	allowTp1 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    AllowAction,
-		Index:     1,
-		EpKey:     wlEpKey1,
+	allowIngressTp1 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionAllow,
+			Index:     "R1",
+			Policy:    "P1",
+			Tier:      "T1",
+			Direction: RuleDirIngress,
+		},
+		Index: 1,
+		EpKey: wlEpKey1,
 	}
-	denyTp1 = &RuleTracePoint{
-		prefix:    [64]byte{'D', '|', 'R', '2', '|', 'P', '2', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    DenyAction,
-		Index:     1,
-		EpKey:     wlEpKey1,
+	denyIngressTp1 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionDeny,
+			Index:     "R2",
+			Policy:    "P2",
+			Tier:      "T1",
+			Direction: RuleDirIngress,
+		},
+		Index: 1,
+		EpKey: wlEpKey1,
 	}
-	allowTp2 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '2', '|', 'T', '2'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    AllowAction,
-		Index:     2,
-		EpKey:     wlEpKey1,
+	allowIngressTp2 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionAllow,
+			Index:     "R1",
+			Policy:    "P2",
+			Tier:      "T2",
+			Direction: RuleDirIngress,
+		},
+		Index: 2,
+		EpKey: wlEpKey1,
 	}
-	denyTp2 = &RuleTracePoint{
-		prefix:    [64]byte{'D', '|', 'R', '2', '|', 'P', '2', '|', 'T', '2'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    DenyAction,
-		Index:     2,
-		EpKey:     wlEpKey1,
+	nextTierIngressTp0 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionNextTier,
+			Index:     "R3",
+			Policy:    "P1",
+			Tier:      "T1",
+			Direction: RuleDirIngress,
+		},
+		Index: 0,
+		EpKey: wlEpKey1,
 	}
-	nextTierTp0 = &RuleTracePoint{
-		prefix:    [64]byte{'N', '|', 'R', '3', '|', 'P', '1', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    NextTierAction,
-		Index:     0,
-		EpKey:     wlEpKey1,
+	nextTierIngressTp1 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionNextTier,
+			Index:     "R4",
+			Policy:    "P2",
+			Tier:      "T2",
+			Direction: RuleDirIngress,
+		},
+		Index: 1,
+		EpKey: wlEpKey1,
 	}
-	nextTierTp1 = &RuleTracePoint{
-		prefix:    [64]byte{'N', '|', 'R', '4', '|', 'P', '2', '|', 'T', '2'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    NextTierAction,
-		Index:     1,
-		EpKey:     wlEpKey1,
+	allowIngressTp11 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionAllow,
+			Index:     "R1",
+			Policy:    "P1",
+			Tier:      "T1",
+			Direction: RuleDirIngress,
+		},
+		Index: 11,
+		EpKey: wlEpKey1,
 	}
-	allowTp11 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    AllowAction,
-		Index:     11,
-		EpKey:     wlEpKey1,
+	denyIngressTp21 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionDeny,
+			Index:     "R1",
+			Policy:    "P1",
+			Tier:      "T1",
+			Direction: RuleDirIngress,
+		},
+		Index: 21,
+		EpKey: wlEpKey1,
 	}
-	denyTp11 = &RuleTracePoint{
-		prefix:    [64]byte{'D', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    DenyAction,
-		Index:     11,
-		EpKey:     wlEpKey1,
+
+	nextTierEgressTp0 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionNextTier,
+			Index:     "R2",
+			Policy:    "P4",
+			Tier:      "T1",
+			Direction: RuleDirEgress,
+		},
+		Index: 0,
+		EpKey: wlEpKey1,
 	}
-	allowTp21 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    AllowAction,
-		Index:     21,
-		EpKey:     wlEpKey1,
-	}
-	denyTp21 = &RuleTracePoint{
-		prefix:    [64]byte{'A', '|', 'R', '1', '|', 'P', '1', '|', 'T', '1'},
-		pfxlen:    10,
-		tierIdx:   8,
-		policyIdx: 5,
-		ruleIdx:   2,
-		Action:    DenyAction,
-		Index:     21,
-		EpKey:     wlEpKey1,
+	allowEgressTp2 = &RuleTracePoint{
+		RuleIDs: &RuleIDs{
+			Action:    ActionAllow,
+			Index:     "R3",
+			Policy:    "P3",
+			Tier:      "T2",
+			Direction: RuleDirEgress,
+		},
+		Index: 2,
+		EpKey: wlEpKey1,
 	}
 )
 
@@ -236,37 +192,37 @@ var _ = Describe("Rule Trace", func() {
 
 	Describe("Adding a RuleTracePoint to the Ingress Rule Trace", func() {
 		BeforeEach(func() {
-			data.AddRuleTracePoint(allowTp0, DirIn)
+			data.AddRuleTracePoint(allowIngressTp0)
 		})
 		It("should have path length equal to 1", func() {
-			Expect(len(data.IngressRuleTrace.Path())).To(Equal(1))
+			Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
 		})
 		It("should have action set to allow", func() {
-			Expect(data.IngressAction()).To(Equal(AllowAction))
+			Expect(data.IngressAction()).To(Equal(ActionAllow))
 		})
 		It("should be dirty", func() {
 			Expect(data.IsDirty()).To(Equal(true))
 		})
-		It("should return a conflict for same rule index but different values", func() {
-			Expect(data.AddRuleTracePoint(denyTp0, DirIn)).To(Equal(RuleTracePointConflict))
+		It("should return a conflict for same rule Index but different values", func() {
+			Expect(data.AddRuleTracePoint(denyIngressTp0)).To(Equal(RuleTracePointConflict))
 		})
 	})
 
 	Describe("RuleTrace conflicts (ingress)", func() {
 		BeforeEach(func() {
-			data.AddRuleTracePoint(allowTp0, DirIn)
+			data.AddRuleTracePoint(allowIngressTp0)
 		})
 		Context("Adding a rule tracepoint that conflicts", func() {
 			var dirtyFlag bool
 			BeforeEach(func() {
 				dirtyFlag = data.IsDirty()
-				data.AddRuleTracePoint(denyTp0, DirIn)
+				data.AddRuleTracePoint(denyIngressTp0)
 			})
 			It("should have path length unchanged and equal to 1", func() {
-				Expect(len(data.IngressRuleTrace.Path())).To(Equal(1))
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
 			})
 			It("should have action unchanged and set to allow", func() {
-				Expect(data.IngressAction()).To(Equal(AllowAction))
+				Expect(data.IngressAction()).To(Equal(ActionAllow))
 			})
 			Specify("dirty flag should be unchanged", func() {
 				Expect(data.IsDirty()).To(Equal(dirtyFlag))
@@ -274,122 +230,137 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Replacing a rule tracepoint that was conflicting", func() {
 			BeforeEach(func() {
-				data.ReplaceRuleTracePoint(denyTp0, DirIn)
+				data.ReplaceRuleTracePoint(denyIngressTp0)
 			})
 			It("should have path length unchanged and equal to 1", func() {
-				Expect(len(data.IngressRuleTrace.Path())).To(Equal(1))
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
 			})
 			It("should have action set to deny", func() {
-				Expect(data.IngressAction()).To(Equal(DenyAction))
+				Expect(data.IngressAction()).To(Equal(ActionDeny))
 			})
 			It("should be dirty", func() {
 				Expect(data.IsDirty()).To(Equal(true))
 			})
 		})
 	})
-	Describe("RuleTraces with next tier", func() {
+	Describe("RuleTraces with next Tier", func() {
 		BeforeEach(func() {
-			data.AddRuleTracePoint(nextTierTp0, DirIn)
+			data.AddRuleTracePoint(nextTierIngressTp0)
 		})
 		Context("Adding a rule tracepoint with action", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(allowTp1, DirIn)
+				data.AddRuleTracePoint(allowIngressTp1)
 			})
 			It("should have path length 2", func() {
-				Expect(len(data.IngressRuleTrace.Path())).To(Equal(2))
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
 			})
 			It("should have length unchanged and equal to initial length", func() {
 				Expect(data.IngressRuleTrace.Len()).To(Equal(RuleTraceInitLen))
 			})
 			It("should have action set to allow", func() {
-				Expect(data.IngressAction()).To(Equal(AllowAction))
+				Expect(data.IngressAction()).To(Equal(ActionAllow))
 			})
 		})
-		Context("Adding a rule tracepoint with action and index past initial length", func() {
+		Context("Adding a rule tracepoint with action and Index past initial length", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(allowTp11, DirIn)
+				data.AddRuleTracePoint(allowIngressTp11)
 			})
 			It("should have path length 2", func() {
-				Expect(len(data.IngressRuleTrace.Path())).To(Equal(2))
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
 			})
 			It("should have length twice of initial length", func() {
 				Expect(data.IngressRuleTrace.Len()).To(Equal(RuleTraceInitLen * 2))
 			})
 			It("should have action set to allow", func() {
-				Expect(data.IngressAction()).To(Equal(AllowAction))
+				Expect(data.IngressAction()).To(Equal(ActionAllow))
 			})
 		})
-		Context("Adding a rule tracepoint with action and index past double the initial length", func() {
+		Context("Adding a rule tracepoint with action and Index past double the initial length", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(denyTp21, DirIn)
+				data.AddRuleTracePoint(denyIngressTp21)
 			})
 			It("should have path length 2", func() {
-				Expect(len(data.IngressRuleTrace.Path())).To(Equal(2))
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
 			})
 			It("should have length thrice of initial length", func() {
 				Expect(data.IngressRuleTrace.Len()).To(Equal(RuleTraceInitLen * 3))
 			})
 			It("should have action set to deny", func() {
-				Expect(data.IngressAction()).To(Equal(DenyAction))
+				Expect(data.IngressAction()).To(Equal(ActionDeny))
 			})
 		})
 		Context("Adding a rule tracepoint that conflicts", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(allowTp0, DirIn)
+				data.AddRuleTracePoint(allowIngressTp0)
 			})
 			It("should have path length unchanged and equal to 1", func() {
-				Expect(len(data.IngressRuleTrace.Path())).To(Equal(1))
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
 			})
 			It("should have not have action set", func() {
-				Expect(data.IngressAction()).NotTo(Equal(AllowAction))
-				Expect(data.IngressAction()).NotTo(Equal(DenyAction))
-				Expect(data.IngressAction()).NotTo(Equal(NextTierAction))
+				Expect(data.IngressAction()).NotTo(Equal(ActionAllow))
+				Expect(data.IngressAction()).NotTo(Equal(ActionDeny))
+				Expect(data.IngressAction()).NotTo(Equal(ActionNextTier))
 			})
 		})
 		Context("Replacing a rule tracepoint that was conflicting", func() {
 			BeforeEach(func() {
-				data.ReplaceRuleTracePoint(allowTp0, DirIn)
+				data.ReplaceRuleTracePoint(allowIngressTp0)
 			})
 			It("should have path length unchanged and equal to 1", func() {
 				Expect(len(data.IngressRuleTrace.Path())).To(Equal(1))
 			})
 			It("should have action set to allow", func() {
-				Expect(data.IngressAction()).To(Equal(AllowAction))
+				Expect(data.IngressAction()).To(Equal(ActionAllow))
 			})
 		})
 	})
 	Describe("RuleTraces with multiple tiers", func() {
 		BeforeEach(func() {
-			data.AddRuleTracePoint(nextTierTp0, DirIn)
-			data.AddRuleTracePoint(nextTierTp1, DirIn)
-			data.AddRuleTracePoint(allowTp2, DirIn)
+			// Ingress
+			err := data.AddRuleTracePoint(nextTierIngressTp0)
+			Expect(err).NotTo(HaveOccurred())
+			err = data.AddRuleTracePoint(nextTierIngressTp1)
+			Expect(err).NotTo(HaveOccurred())
+			err = data.AddRuleTracePoint(allowIngressTp2)
+			Expect(err).NotTo(HaveOccurred())
+			// Egress
+			err = data.AddRuleTracePoint(nextTierEgressTp0)
+			Expect(err).NotTo(HaveOccurred())
+			err = data.AddRuleTracePoint(allowEgressTp2)
+			Expect(err).NotTo(HaveOccurred())
 		})
-		It("should have path length equal to 3", func() {
-			Expect(len(data.IngressRuleTrace.Path())).To(Equal(3))
+		It("should have ingress path length equal to 3", func() {
+			Expect(data.IngressRuleTrace.Path()).To(HaveLen(3))
 		})
-		It("should have have action set to allow", func() {
-			Expect(data.IngressAction()).To(Equal(AllowAction))
+		It("should have egress path length equal to 2", func() {
+			Expect(data.EgressRuleTrace.Path()).To(HaveLen(2))
 		})
-		Context("Adding a rule tracepoint that conflicts", func() {
+		It("should have have ingress action set to allow", func() {
+			Expect(data.IngressAction()).To(Equal(ActionAllow))
+		})
+		It("should have have egress action set to allow", func() {
+			Expect(data.EgressAction()).To(Equal(ActionAllow))
+		})
+		Context("Adding an ingress rule tracepoint that conflicts", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(denyTp1, DirIn)
+				data.AddRuleTracePoint(denyIngressTp1)
 			})
 			It("should have path length unchanged and equal to 3", func() {
 				Expect(len(data.IngressRuleTrace.Path())).To(Equal(3))
 			})
 			It("should have have action set to allow", func() {
-				Expect(data.IngressAction()).To(Equal(AllowAction))
+				Expect(data.IngressAction()).To(Equal(ActionAllow))
 			})
 		})
-		Context("Replacing a rule tracepoint that was conflicting", func() {
+		Context("Replacing an ingress rule tracepoint that was conflicting", func() {
 			BeforeEach(func() {
-				data.ReplaceRuleTracePoint(denyTp1, DirIn)
+				data.ReplaceRuleTracePoint(denyIngressTp1)
 			})
 			It("should have path length unchanged and equal to 2", func() {
 				Expect(len(data.IngressRuleTrace.Path())).To(Equal(2))
 			})
 			It("should have action set to allow", func() {
-				Expect(data.IngressAction()).To(Equal(DenyAction))
+				Expect(data.IngressAction()).To(Equal(ActionDeny))
 			})
 		})
 	})

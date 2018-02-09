@@ -1,9 +1,8 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 package collector
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -11,22 +10,23 @@ import (
 	"time"
 
 	"github.com/gavv/monotime"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
-type Direction string
+type TrafficDirection string
+type RuleDirection string
 
 const (
-	DirIn      Direction = "in"
-	DirOut     Direction = "out"
-	DirUnknown Direction = "unknown"
+	TrafficDirInbound  TrafficDirection = "inbound"
+	TrafficDirOutbound TrafficDirection = "outbound"
+	RuleDirIngress     RuleDirection    = "ingress"
+	RuleDirEgress      RuleDirection    = "egress"
+	RuleDirUnknown     RuleDirection    = "unknown"
 )
 
 // Counter stores packet and byte statistics. It also maintains a delta of
-// changes made until a `Reset` is called. They can never be set to 0, except
-// when creating a new Counter.
+// changes made until a `ResetDeltas()` is called.
 type Counter struct {
 	packets      int
 	bytes        int
@@ -43,24 +43,35 @@ func (c *Counter) Values() (packets, bytes int) {
 	return c.packets, c.bytes
 }
 
-// DeltaValues returns the packet and byte deltas since the last `Reset()`.
+// DeltaValues returns the packet and byte deltas since the last `ResetDeltas()`.
 func (c *Counter) DeltaValues() (packets, bytes int) {
 	return c.deltaPackets, c.deltaBytes
 }
 
 // Set packet and byte values to `packets` and `bytes`. Returns true if value
 // was changed and false otherwise.
-func (c *Counter) Set(packets int, bytes int) (changed bool) {
-	if packets != 0 && bytes != 0 && packets > c.packets && bytes > c.bytes {
-		changed = true
-		dp := packets - c.packets
-		db := bytes - c.bytes
-		c.packets = packets
-		c.bytes = bytes
+func (c *Counter) Set(packets int, bytes int) bool {
+	if packets == c.packets && bytes != c.bytes {
+		return false
+	}
+
+	dp := packets - c.packets
+	db := bytes - c.bytes
+	if dp < 0 || db < 0 {
+		// There has been a reset event.  Best we can do is assume the counters were
+		// reset and therefore our delta counts should be incremented by the new
+		// values.
+		c.deltaPackets += packets
+		c.deltaBytes += bytes
+	} else {
+		// The counters are higher than before so assuming there has been no intermediate
+		// reset event, increment our deltas by the deltas of the new and previous counts.
 		c.deltaPackets += dp
 		c.deltaBytes += db
 	}
-	return
+	c.packets = packets
+	c.bytes = bytes
+	return true
 }
 
 // Increase packet and byte values by `packets` and `bytes`. Always returns
@@ -71,9 +82,17 @@ func (c *Counter) Increase(packets int, bytes int) (changed bool) {
 	return
 }
 
-// Reset sets the delta packet and byte values to zero. Non-delta packet and
-// bytes cannot be reset or set to zero.
+// Reset does a full reset of delta and absolute values tracked by this counter.
 func (c *Counter) Reset() {
+	c.packets = 0
+	c.bytes = 0
+	c.deltaPackets = 0
+	c.deltaBytes = 0
+}
+
+// ResetDeltas sets the delta packet and byte values to zero. Absolute counters are left
+// unchanged.
+func (c *Counter) ResetDeltas() {
 	c.deltaPackets = 0
 	c.deltaBytes = 0
 }
@@ -89,140 +108,76 @@ func (c *Counter) String() string {
 type RuleAction string
 
 const (
-	AllowAction    RuleAction = "allow"
-	DenyAction     RuleAction = "deny"
-	NextTierAction RuleAction = "pass"
+	ActionAllow    RuleAction = "allow"
+	ActionDeny     RuleAction = "deny"
+	ActionNextTier RuleAction = "pass"
 )
-
-var RuleActionToBytes = map[RuleAction][]byte{
-	AllowAction:    []byte("allow"),
-	DenyAction:     []byte("deny"),
-	NextTierAction: []byte("pass"),
-}
 
 const RuleTraceInitLen = 10
 
 var (
 	RuleTracePointConflict   = errors.New("Conflict in RuleTracePoint")
-	RuleTracePointExists     = errors.New("RuleTracePoint Exists")
 	RuleTracePointParseError = errors.New("RuleTracePoint Parse Error")
 )
 
-var ruleSep = byte('|')
+// RuleIDs contains the complete identifiers for a particular rule.
+type RuleIDs struct {
+	Action    RuleAction
+	Tier      string
+	Policy    string
+	Direction RuleDirection
+	Index     string
+}
 
-// RuleTracePoint represents a rule and the tier and a policy that contains
+// RuleTracePoint represents a rule and the Tier and a Policy that contains
 // it. The `Index` specifies the absolute position of a RuleTracePoint in the
 // RuleTrace list. The `EpKey` contains the corresponding workload or host
-// endpoint that the policy applied to.
+// endpoint that the Policy applied to.
 // Prefix formats are:
-// - A/rule index/profile name
-// - A/rule index/policy name/tier name
+// - A/rule Index/profile name
+// - A/rule Index/Policy name/Tier name
 type RuleTracePoint struct {
-	prefix    [64]byte
-	pfxlen    int
-	tierIdx   int
-	policyIdx int
-	ruleIdx   int
-	Action    RuleAction
-	Index     int
-	EpKey     interface{}
-	Ctr       Counter
+	RuleIDs *RuleIDs
+	Index   int
+	EpKey   interface{}
+	Ctr     Counter
 }
 
-func lookupAction(action byte) RuleAction {
-	switch action {
-	case 'A':
-		return AllowAction
-	case 'D':
-		return DenyAction
-	case 'N':
-		return NextTierAction
-	default:
-		log.Errorf("Unknown action %v", action)
-		return NextTierAction
+func NewRuleTracePoint(ruleIDs *RuleIDs, epKey interface{}, tierIndex, numPkts, numBytes int) *RuleTracePoint {
+	rtp := &RuleTracePoint{
+		RuleIDs: ruleIDs,
+		EpKey:   epKey,
+		Index:   tierIndex,
 	}
-}
-
-func NewRuleTracePoint(prefix [64]byte, prefixLen int, epKey interface{}) (*RuleTracePoint, error) {
-	pfxlen := prefixLen
-	// Should have at least 2 separators, a action character and a rule (assuming
-	// we allow empty policy names).
-	if pfxlen < 4 {
-		return nil, RuleTracePointParseError
-	}
-	action := lookupAction(prefix[0])
-	ruleIdx := 2
-	policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
-	if policySep == -1 {
-		return nil, RuleTracePointParseError
-	}
-	policyIdx := ruleIdx + policySep + 1
-	tierSep := bytes.IndexByte(prefix[policyIdx:], ruleSep)
-	var tierIdx int
-	if tierSep == -1 {
-		tierIdx = -1
-	} else {
-		tierIdx = policyIdx + tierSep + 1
-	}
-	rtp := &RuleTracePoint{}
-	rtp.prefix = prefix
-	rtp.pfxlen = pfxlen
-	rtp.ruleIdx = ruleIdx
-	rtp.policyIdx = policyIdx
-	rtp.Action = action
-	rtp.tierIdx = tierIdx
-	rtp.EpKey = epKey
-	return rtp, nil
-}
-
-func (rtp *RuleTracePoint) TierID() []byte {
-	if rtp.tierIdx == -1 {
-		return []byte("profile")
-	} else {
-		return rtp.prefix[rtp.tierIdx:rtp.pfxlen]
-	}
-}
-
-func (rtp *RuleTracePoint) PolicyID() []byte {
-	var t int
-	if rtp.tierIdx == -1 {
-		t = rtp.pfxlen
-	} else {
-		t = rtp.tierIdx - 1
-	}
-	return rtp.prefix[rtp.policyIdx:t]
-}
-
-func (rtp *RuleTracePoint) Rule() []byte {
-	return rtp.prefix[rtp.ruleIdx : rtp.policyIdx-1]
+	rtp.Ctr.Set(numPkts, numBytes)
+	return rtp
 }
 
 // Equals compares all but the Ctr field of a RuleTracePoint
 func (rtp *RuleTracePoint) Equals(cmpRtp *RuleTracePoint) bool {
-	return rtp.prefix == cmpRtp.prefix &&
-		rtp.Action == cmpRtp.Action &&
+	return rtp.RuleIDs == cmpRtp.RuleIDs &&
 		rtp.Index == cmpRtp.Index &&
 		rtp.EpKey == cmpRtp.EpKey
 }
 
 func (rtp *RuleTracePoint) String() string {
-	return fmt.Sprintf("tierId='%s' policyId='%s' rule='%s' action=%v index=%v ctr={%v}", rtp.TierID(), rtp.PolicyID(), rtp.Rule(), rtp.Action, rtp.Index, rtp.Ctr.String())
+	return fmt.Sprintf("tierId='%s' policyId='%s' rule='%s' action='%v' Index=%v Ctr={%v}", rtp.RuleIDs.Tier, rtp.RuleIDs.Policy, rtp.RuleIDs.Index, rtp.RuleIDs.Action, rtp.Index, rtp.Ctr.String())
 }
-
-var EmptyRuleTracePoint = RuleTracePoint{}
 
 // RuleTrace represents the list of rules (i.e, a Trace) that a packet hits.
 // The action of a RuleTrace object is the final RuleTracePoint action that
-// is not a next-tier action. A RuleTrace also contains a workload endpoint,
+// is not a next-Tier action. A RuleTrace also contains a workload endpoint,
 // which identifies the corresponding endpoint that the rule trace applied to.
 type RuleTrace struct {
 	path   []*RuleTracePoint
 	action RuleAction
 	epKey  interface{}
-	ctr    Counter
-	dirty  bool
+	//TODO: RLB: Do we need this counter?  I think it's always set to the same as the verdict
+	// trace point, so why can't we just access that one directly?
+	ctr   Counter
+	dirty bool
 
-	// Stores the index of the RuleTracePoint that has a RuleAction Allow or Deny
+	// Stores the Index of the RuleTracePoint that has a RuleAction Allow or Deny
 	verdictIdx int
 
 	// Optimization Note: When initializing a RuleTrace object, the pathArray
@@ -230,6 +185,7 @@ type RuleTrace struct {
 	// one allocation when creating a RuleTrace object. More info on this here:
 	// https://github.com/golang/go/wiki/Performance#memory-profiler
 	// (Search for "slice array preallocation").
+	// RLB: Could we just use a linked list instead - that avoids the need to allocate an array
 	pathArray [RuleTraceInitLen]*RuleTracePoint
 }
 
@@ -264,7 +220,7 @@ func (t *RuleTrace) Len() int {
 }
 
 func (t *RuleTrace) Path() []*RuleTracePoint {
-	// Minor optimiztion where we only do a rebuild when we don't have the full
+	// Minor optimization where we only do a rebuild when we don't have the full
 	// path.
 	rebuild := false
 	idx := 0
@@ -273,7 +229,7 @@ func (t *RuleTrace) Path() []*RuleTracePoint {
 			rebuild = true
 			break
 		}
-		if tp.Action == AllowAction || tp.Action == DenyAction {
+		if tp.RuleIDs.Action == ActionAllow || tp.RuleIDs.Action == ActionDeny {
 			idx = i
 			break
 		}
@@ -296,19 +252,7 @@ func (t *RuleTrace) ToString() string {
 	if p == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s/%s/%s/%v", p.TierID(), p.PolicyID(), p.Rule(), p.Action)
-}
-
-func (t *RuleTrace) ConcatBytes(buf *bytes.Buffer) {
-	p := t.VerdictRuleTracePoint()
-	buf.Write(p.TierID())
-	buf.Write([]byte("|"))
-	buf.Write(p.PolicyID())
-	buf.Write([]byte("|"))
-	buf.Write(p.Rule())
-	buf.Write([]byte("|"))
-	buf.Write(RuleActionToBytes[p.Action])
-	return
+	return fmt.Sprintf("%s/%s/%s/%v", p.RuleIDs.Tier, p.RuleIDs.Policy, p.RuleIDs.Index, p.RuleIDs.Action)
 }
 
 func (t *RuleTrace) Action() RuleAction {
@@ -324,7 +268,7 @@ func (t *RuleTrace) IsDirty() bool {
 }
 
 // VerdictRuleTracePoint returns the RuleTracePoint that contains either
-// AllowAction or DenyAction in a RuleTrace or nil if we haven't seen
+// ActionAllow or DenyAction in a RuleTrace or nil if we haven't seen
 // either of these yet.
 func (t *RuleTrace) VerdictRuleTracePoint() *RuleTracePoint {
 	if t.verdictIdx >= 0 {
@@ -336,23 +280,22 @@ func (t *RuleTrace) VerdictRuleTracePoint() *RuleTracePoint {
 
 func (t *RuleTrace) ClearDirtyFlag() {
 	t.dirty = false
-	t.ctr.Reset()
+	t.ctr.ResetDeltas()
 	p := t.VerdictRuleTracePoint()
 	if p != nil {
-		p.Ctr.Reset()
+		p.Ctr.ResetDeltas()
 	}
 }
 
 func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
-	var ctr Counter
-	ctr = tp.Ctr
+	ctr := tp.Ctr
 	if tp.Index > t.Len() {
-		// Insertion index greater than current length. Grow the path slice as long
+		// Insertion Index greater than current length. Grow the path slice as long
 		// as necessary.
-		newPath := make([]*RuleTracePoint, tp.Index)
+		incSize := (tp.Index / RuleTraceInitLen) * RuleTraceInitLen
+		newPath := make([]*RuleTracePoint, t.Len()+incSize)
 		copy(newPath, t.path)
-		nextSize := (tp.Index / RuleTraceInitLen) * RuleTraceInitLen
-		t.path = append(t.path, make([]*RuleTracePoint, nextSize)...)
+		t.path = newPath
 		t.path[tp.Index] = tp
 	} else {
 		existingTp := t.path[tp.Index]
@@ -368,8 +311,14 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 			return RuleTracePointConflict
 		}
 	}
-	if tp.Action != NextTierAction {
-		t.action = tp.Action
+	if tp.RuleIDs.Action != ActionNextTier {
+		t.action = tp.RuleIDs.Action
+		//TODO: RLB: This (and the replaceRPT below) means the RT counter is always
+		// kept in sync with the verdict RTP.  In which case do we need the complexity
+		// of this additional counter?  Now say the policy is updated such that the
+		// tier index changes for the verdict RTP, but the actual rule is the same - in
+		// this case we lose the counts for the same actual rule (just it's in a different
+		// location in the hierarchy).
 		t.ctr = ctr
 		t.epKey = tp.EpKey
 		t.verdictIdx = tp.Index
@@ -379,24 +328,39 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 }
 
 func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
-	if tp.Action == NextTierAction {
+	if tp.RuleIDs.Action == ActionNextTier {
 		t.path[tp.Index] = tp
 		return
 	}
-	// New tracepoint is not a next-tier action truncate at this index.
+	// New tracepoint is not a next-Tier action truncate at this Index.
 	t.path[tp.Index] = tp
 	newPath := make([]*RuleTracePoint, t.Len())
 	copy(newPath, t.path[:tp.Index+1])
 	t.path = newPath
-	t.action = tp.Action
+	t.action = tp.RuleIDs.Action
 	t.ctr = tp.Ctr
 	t.dirty = true
 	t.epKey = tp.EpKey
 	t.verdictIdx = tp.Index
 }
 
+// ToMetricUpdate converts the RuleTrace to a MetricUpdate used by the reporter.
+func (rt *RuleTrace) ToMetricUpdate(t Tuple) *MetricUpdate {
+	p, b := rt.ctr.Values()
+	dp, db := rt.ctr.DeltaValues()
+	return &MetricUpdate{
+		tuple:        t,
+		trafficDir:   TrafficDirOutbound,
+		ruleIDs:      rt.VerdictRuleTracePoint().RuleIDs,
+		packets:      p,
+		bytes:        b,
+		deltaPackets: dp,
+		deltaBytes:   db,
+	}
+}
+
 // Tuple represents a 5-Tuple value that identifies a connection/flow of packets
-// with an implicit notion of direction that comes with the use of a source and
+// with an implicit notion of Direction that comes with the use of a source and
 // destination. This is a hashable object and can be used as a map's key.
 type Tuple struct {
 	src   [16]byte
@@ -424,30 +388,35 @@ func (t *Tuple) String() string {
 // Data contains metadata and statistics such as rule counters and age of a
 // connection(Tuple). Each Data object contains:
 // - 2 RuleTrace's - Ingress and Egress - each providing information on the
-// where the policy was applied, with additional information on corresponding
+// where the Policy was applied, with additional information on corresponding
 // workload endpoint. The EgressRuleTrace and the IngressRuleTrace record the
 // policies that this tuple can hit - egress from the workload that is the
 // source of this connection and ingress into a workload that terminated this.
-// - 2 counters - ctr for the direction of the connection and ctrReverse for
-// the reverse/reply of this connection.
+// - 2 counters - connTrackCtr for the originating Direction of the connection
+// and connTrackCtrReverse for the reverse/reply of this connection.
 type Data struct {
-	Tuple            Tuple
-	ctr              Counter
-	ctrReverse       Counter
+	Tuple Tuple
+
+	// These are the counts from conntrack
+	connTrackCtr        Counter
+	connTrackCtrReverse Counter
+
+	// These contain the aggregated counts per tuple per rule.
+	//TODO: RLB: I don't think these need to be pointers, we can just embed the struct directly
+	//which saves on a couple of allocations.
 	IngressRuleTrace *RuleTrace
 	EgressRuleTrace  *RuleTrace
-	createdAt        time.Duration
-	updatedAt        time.Duration
-	ageTimeout       time.Duration
-	dirty            bool
+
+	createdAt  time.Duration
+	updatedAt  time.Duration
+	ageTimeout time.Duration
+	dirty      bool
 }
 
 func NewData(tuple Tuple, duration time.Duration) *Data {
 	now := monotime.Now()
 	return &Data{
 		Tuple:            tuple,
-		ctr:              *NewCounter(0, 0),
-		ctrReverse:       *NewCounter(0, 0),
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        now,
@@ -458,8 +427,8 @@ func NewData(tuple Tuple, duration time.Duration) *Data {
 }
 
 func (d *Data) String() string {
-	return fmt.Sprintf("tuple={%v}, counters={%v}, countersReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
-		&(d.Tuple), d.ctr.String(), d.ctrReverse.String(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
+	return fmt.Sprintf("tuple={%v}, connTrackCtr={%v}, connTrackCtrReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
+		&(d.Tuple), d.connTrackCtr.String(), d.connTrackCtrReverse.String(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
 }
 
 func (d *Data) touch() {
@@ -472,8 +441,8 @@ func (d *Data) setDirtyFlag() {
 
 func (d *Data) clearDirtyFlag() {
 	d.dirty = false
-	d.ctr.Reset()
-	d.ctrReverse.Reset()
+	d.connTrackCtr.ResetDeltas()
+	d.connTrackCtrReverse.ResetDeltas()
 	d.IngressRuleTrace.ClearDirtyFlag()
 	d.EgressRuleTrace.ClearDirtyFlag()
 }
@@ -509,17 +478,17 @@ func (d *Data) EgressAction() RuleAction {
 }
 
 func (d *Data) Counters() Counter {
-	return d.ctr
+	return d.connTrackCtr
 }
 
 func (d *Data) CountersReverse() Counter {
-	return d.ctrReverse
+	return d.connTrackCtrReverse
 }
 
 // Add packets and bytes to the Counters' values. Use the IncreaseCounters*
 // methods when the source of packets/bytes are delta values.
 func (d *Data) IncreaseCounters(packets int, bytes int) {
-	d.ctr.Increase(packets, bytes)
+	d.connTrackCtr.Increase(packets, bytes)
 	d.setDirtyFlag()
 	d.touch()
 }
@@ -527,7 +496,7 @@ func (d *Data) IncreaseCounters(packets int, bytes int) {
 // Add packets and bytes to the Reverse Counters' values. Use the IncreaseCounters*
 // methods when the source of packets/bytes are delta values.
 func (d *Data) IncreaseCountersReverse(packets int, bytes int) {
-	d.ctrReverse.Increase(packets, bytes)
+	d.connTrackCtrReverse.Increase(packets, bytes)
 	d.setDirtyFlag()
 	d.touch()
 }
@@ -535,7 +504,7 @@ func (d *Data) IncreaseCountersReverse(packets int, bytes int) {
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetCounters(packets int, bytes int) {
-	changed := d.ctr.Set(packets, bytes)
+	changed := d.connTrackCtr.Set(packets, bytes)
 	if changed {
 		d.setDirtyFlag()
 	}
@@ -545,25 +514,31 @@ func (d *Data) SetCounters(packets int, bytes int) {
 // Set In Counters' values to packets and bytes. Use the SetCounters* methods
 // when the source if packets/bytes are absolute values.
 func (d *Data) SetCountersReverse(packets int, bytes int) {
-	changed := d.ctrReverse.Set(packets, bytes)
+	changed := d.connTrackCtrReverse.Set(packets, bytes)
 	if changed {
 		d.setDirtyFlag()
 	}
 	d.touch()
 }
 
-func (d *Data) ResetCounters() {
-	d.ctr = *NewCounter(0, 0)
-	d.ctrReverse = *NewCounter(0, 0)
+// ResetConntrackCounters resets the counters associated with the tracked connection for
+// the data.
+func (d *Data) ResetConntrackCounters() {
+	d.connTrackCtr.Reset()
+	d.connTrackCtrReverse.Reset()
 }
 
-func (d *Data) AddRuleTracePoint(tp *RuleTracePoint, dir Direction) error {
+func (d *Data) AddRuleTracePoint(tp *RuleTracePoint) error {
 	var err error
-	if dir == DirIn {
+	switch tp.RuleIDs.Direction {
+	case RuleDirIngress:
 		err = d.IngressRuleTrace.addRuleTracePoint(tp)
-	} else {
+	case RuleDirEgress:
 		err = d.EgressRuleTrace.addRuleTracePoint(tp)
+	default:
+		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleIDs.Direction)
 	}
+
 	if err == nil {
 		d.touch()
 		d.setDirtyFlag()
@@ -571,19 +546,20 @@ func (d *Data) AddRuleTracePoint(tp *RuleTracePoint, dir Direction) error {
 	return err
 }
 
-func (d *Data) ReplaceRuleTracePoint(tp *RuleTracePoint, dir Direction) {
-	if dir == DirIn {
+func (d *Data) ReplaceRuleTracePoint(tp *RuleTracePoint) error {
+	var err error
+	switch tp.RuleIDs.Direction {
+	case RuleDirIngress:
 		d.IngressRuleTrace.replaceRuleTracePoint(tp)
-	} else {
+	case RuleDirEgress:
 		d.EgressRuleTrace.replaceRuleTracePoint(tp)
+	default:
+		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleIDs.Direction)
 	}
-	d.touch()
-	d.setDirtyFlag()
+
+	if err == nil {
+		d.touch()
+		d.setDirtyFlag()
+	}
+	return err
 }
-
-type CounterType string
-
-const (
-	AbsoluteCounter CounterType = "absolute"
-	DeltaCounter    CounterType = "delta"
-)

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 package collector
 
@@ -20,6 +20,10 @@ import (
 	"github.com/tigera/nfnetlink"
 )
 
+var (
+	ruleSep = byte('|')
+)
+
 type Config struct {
 	StatsDumpFilePath string
 
@@ -34,16 +38,11 @@ type Config struct {
 	ExportingInterval     time.Duration
 }
 
-type epLookup interface {
-	GetEndpointKey(addr [16]byte) (interface{}, error)
-	GetPolicyIndex(epKey interface{}, policyName, tierName []byte) int
-}
-
 // A Collector (a StatsManager really) collects StatUpdates from data sources
 // and stores them as a Data object in a map keyed by Tuple.
 // All data source channels must be specified when creating the collector.
 type Collector struct {
-	lum            epLookup
+	lum            lookup.QueryInterface
 	nfIngressC     chan *nfnetlink.NflogPacketAggregate
 	nfEgressC      chan *nfnetlink.NflogPacketAggregate
 	nfIngressDoneC chan struct{}
@@ -57,7 +56,7 @@ type Collector struct {
 	reporterMgr    *ReporterManager
 }
 
-func NewCollector(lm epLookup, rm *ReporterManager, config *Config) *Collector {
+func NewCollector(lm lookup.QueryInterface, rm *ReporterManager, config *Config) *Collector {
 	return &Collector{
 		lum:            lm,
 		nfIngressC:     make(chan *nfnetlink.NflogPacketAggregate, 1000),
@@ -100,9 +99,9 @@ func (c *Collector) startStatsCollectionAndReporting() {
 		case ctEntries := <-c.ctEntriesC:
 			c.convertCtEntryAndApplyUpdate(ctEntries)
 		case nflogPacketAggr := <-c.nfIngressC:
-			c.convertNflogPktAndApplyUpdate(DirIn, nflogPacketAggr)
+			c.convertNflogPktAndApplyUpdate(RuleDirIngress, nflogPacketAggr)
 		case nflogPacketAggr := <-c.nfEgressC:
-			c.convertNflogPktAndApplyUpdate(DirOut, nflogPacketAggr)
+			c.convertNflogPktAndApplyUpdate(RuleDirEgress, nflogPacketAggr)
 		case <-c.ticker.C:
 			c.checkEpStats()
 		case <-c.sigChan:
@@ -134,66 +133,66 @@ func (c *Collector) setupStatsDumping() {
 	c.dumpLog.Out = rotAwareFile
 }
 
-func (c *Collector) applyStatUpdate(tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int, ctrType CounterType, dir Direction, tp *RuleTracePoint) {
+// getData returns a pointer to the data structure keyed off the supplied tuple.  If there
+// is no entry one is created.
+func (c *Collector) getData(tuple Tuple) *Data {
 	data, ok := c.epStats[tuple]
 	if !ok {
-		// The entry does not exist. Go ahead and create one.
-		data = NewData(
-			tuple,
-			c.config.AgeTimeout)
-		if tp != nil {
-			data.AddRuleTracePoint(tp, dir)
-		}
-		if ctrType == AbsoluteCounter {
-			data.SetCounters(packets, bytes)
-			data.SetCountersReverse(reversePackets, reverseBytes)
-		} else {
-			data.IncreaseCounters(packets, bytes)
-			data.IncreaseCountersReverse(reversePackets, reverseBytes)
-		}
+		// The entry does not exist. Go ahead and create a new one and add it to the map.
+		data = NewData(tuple, c.config.AgeTimeout)
 		c.epStats[tuple] = data
-		return
 	}
-	// Entry does exists. Go ahead and update it.
-	if ctrType == AbsoluteCounter {
-		data.SetCounters(packets, bytes)
-		data.SetCountersReverse(reversePackets, reverseBytes)
-	} else {
-		data.IncreaseCounters(packets, bytes)
-		data.IncreaseCountersReverse(reversePackets, reverseBytes)
-	}
-	if tp != nil {
-		err := data.AddRuleTracePoint(tp, dir)
-		if err != nil {
-			// When a RuleTracePoint is replaced, we have to do some housekeeping before
-			// we can replace the RuleTracePoint, the first of which is to remove
-			// references from the reporter, which is done by calling expireMetric,
-			// followed by resetting counters.
-			if data.DurationSinceCreate() > c.config.InitialReportingDelay {
-				// We only need to expire metric entries that've probably been reported
-				// in the first place.
-				c.expireMetric(data)
-			}
-			data.ResetCounters()
-			data.ReplaceRuleTracePoint(tp, dir)
-		}
-	}
-	c.epStats[tuple] = data
+	return data
 }
 
-func (c *Collector) expireMetric(data *Data) {
-	if data.EgressRuleTrace.Action() == DenyAction {
-		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.EgressRuleTrace)
+// applyConnTrackStatUpdate applies a stats update from a conn track poll.
+func (c *Collector) applyConnTrackStatUpdate(
+	tuple Tuple, dir RuleDirection, packets int, bytes int, reversePackets int, reverseBytes int,
+) {
+	// Update the counters for the entry.  Since data is a pointer, we are updating the map
+	// entry in situ.
+	data := c.getData(tuple)
+	data.SetCounters(packets, bytes)
+	data.SetCountersReverse(reversePackets, reverseBytes)
+}
+
+// applyNflogStatUpdate applies a stats update from an NFLOG.
+func (c *Collector) applyNflogStatUpdate(tuple Tuple, tp *RuleTracePoint) {
+	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
+	data := c.getData(tuple)
+	if err := data.AddRuleTracePoint(tp); err == RuleTracePointConflict {
+		// When a RuleTracePoint is replaced, we have to do some housekeeping before
+		// we can replace the RuleTracePoint, the first of which is to remove
+		// references from the reporter, which is done by calling expireMetrics,
+		// followed by resetting counters.
+		if data.DurationSinceCreate() > c.config.InitialReportingDelay {
+			// We only need to expire metric entries that've probably been reported
+			// in the first place.
+			c.expireMetrics(data)
+		}
+
+		data.ResetConntrackCounters()
+		if err = data.ReplaceRuleTracePoint(tp); err != nil {
+			log.WithError(err).Warning("Unable to update rule trace point in metrics")
+		}
+	} else if err != nil {
+		log.WithError(err).Warning("Unable to add rule trace point to metrics")
+	}
+}
+
+func (c *Collector) expireMetrics(data *Data) {
+	if data.EgressRuleTrace.Action() == ActionDeny || data.EgressRuleTrace.Action() == ActionAllow {
+		mu := data.EgressRuleTrace.ToMetricUpdate(data.Tuple)
 		c.reporterMgr.ExpireChan <- mu
 	}
-	if data.IngressRuleTrace.Action() == DenyAction {
-		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.IngressRuleTrace)
+	if data.IngressRuleTrace.Action() == ActionDeny || data.IngressRuleTrace.Action() == ActionAllow {
+		mu := data.IngressRuleTrace.ToMetricUpdate(data.Tuple)
 		c.reporterMgr.ExpireChan <- mu
 	}
 }
 
 func (c *Collector) expireData(data *Data) {
-	c.expireMetric(data)
+	c.expireMetrics(data)
 	delete(c.epStats, data.Tuple)
 }
 
@@ -203,7 +202,7 @@ func (c *Collector) checkEpStats() {
 	// - check age and expire the entry if needed.
 	for _, data := range c.epStats {
 		if data.IsDirty() && data.DurationSinceCreate() >= c.config.InitialReportingDelay {
-			// We report Metrics only after an initial delay to allow any policy/rule
+			// We report Metrics only after an initial delay to allow any Policy/rule
 			// changes to show up as part of data.
 			c.reportMetrics(data)
 		}
@@ -214,14 +213,17 @@ func (c *Collector) checkEpStats() {
 }
 
 func (c *Collector) reportMetrics(data *Data) {
-	if data.EgressRuleTrace.Action() == DenyAction && data.EgressRuleTrace.IsDirty() {
-		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.EgressRuleTrace)
+	if (data.EgressRuleTrace.Action() == ActionDeny || data.EgressRuleTrace.Action() == ActionAllow) && data.EgressRuleTrace.IsDirty() {
+		mu := data.EgressRuleTrace.ToMetricUpdate(data.Tuple)
 		c.reporterMgr.ReportChan <- mu
 	}
-	if data.IngressRuleTrace.Action() == DenyAction && data.IngressRuleTrace.IsDirty() {
-		mu := NewMetricUpdateFromRuleTrace(data.Tuple, data.IngressRuleTrace)
+	if (data.IngressRuleTrace.Action() == ActionDeny || data.IngressRuleTrace.Action() == ActionAllow) && data.IngressRuleTrace.IsDirty() {
+		mu := data.IngressRuleTrace.ToMetricUpdate(data.Tuple)
 		c.reporterMgr.ReportChan <- mu
 	}
+
+	// Metrics have been reported, so acknowledge the stored data by resetting the dirty
+	// flag and resetting the delta counts.
 	data.clearDirtyFlag()
 }
 
@@ -281,10 +283,9 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 		// At this point either the source or destination IP address from the conntrack entry
 		// belongs to an endpoint i.e., the connection either begins or terminates locally.
 		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
-		c.applyStatUpdate(tuple,
+		c.applyConnTrackStatUpdate(tuple, RuleDirUnknown,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
-			AbsoluteCounter, DirUnknown, nil)
+			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes)
 
 		// We create a reversed tuple, if we know that both the source and destination IP
 		// addresses from the conntrack entry belong to endpoints, i.e., the connection
@@ -293,60 +294,140 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 			// Packets/Connections from a local endpoint to another local endpoint
 			// require a reversed tuple to collect reply stats.
 			tuple := extractTupleFromCtEntryTuple(ctTuple, true)
-			c.applyStatUpdate(tuple,
+			c.applyConnTrackStatUpdate(tuple, RuleDirUnknown,
 				ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
-				ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-				AbsoluteCounter, DirUnknown, nil)
+				ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes)
 		}
 	}
 	return nil
 }
 
-func (c *Collector) convertNflogPktAndApplyUpdate(dir Direction, nPktAggr *nfnetlink.NflogPacketAggregate) error {
+func (c *Collector) convertNflogPktAndApplyUpdate(dir RuleDirection, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
 		numPkts, numBytes int
 		epKey             interface{}
 		err               error
 	)
 	nflogTuple := nPktAggr.Tuple
-	// Determine the endpoint that this packet hit a rule for. This depends on the direction
+
+	// Determine the endpoint that this packet hit a rule for. This depends on the Direction
 	// because local -> local packets will be NFLOGed twice.
-	if dir == DirIn {
+	if dir == RuleDirIngress {
+		log.WithField("Dest", nflogTuple.Dst).Debug("Searching for endpoint")
 		epKey, err = c.lum.GetEndpointKey(nflogTuple.Dst)
 	} else {
+		log.WithField("Src", nflogTuple.Src).Debug("Searching for endpoint")
 		epKey, err = c.lum.GetEndpointKey(nflogTuple.Src)
 	}
 
-	if err == lookup.UnknownEndpointError {
+	if err != nil {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		return errors.New("Couldn't find endpoint info for NFLOG packet")
 	}
 	for _, prefix := range nPktAggr.Prefixes {
-		tp, err := lookupRule(c.lum, prefix.Prefix, prefix.Len, epKey)
+		// Lookup the ruleIDs from the prefix.
+		ruleIDs, err := lookupRuleIDsFromPrefix(dir, prefix.Prefix, prefix.Len)
 		if err != nil {
 			continue
 		}
-		if tp.Action == DenyAction || tp.Action == AllowAction {
+
+		// Determine the index of this trace point.  This is the index of the effective
+		// tiers for the endpoint (since there is only one allow/deny rule hit per Tier).
+		tierIdx := c.lum.GetTierIndex(epKey, ruleIDs.Tier)
+
+		// Determine the starting number of packets and bytes.
+		if ruleIDs.Action == ActionDeny || ruleIDs.Action == ActionAllow {
 			// NFLog based counters make sense only for denied packets or allowed packets
 			// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
 			// counters will overwrite these values anyway.
 			numPkts = prefix.Packets
 			numBytes = prefix.Bytes
 		} else {
-			// Don't update packet counts for NextTierAction to avoid multiply counting.
+			// Don't update packet counts for ActionNextTier to avoid multiply counting.
 			numPkts = 0
 			numBytes = 0
 		}
-		tp.Ctr = *NewCounter(numPkts, numBytes)
+
+		tp := NewRuleTracePoint(ruleIDs, epKey, tierIdx, numPkts, numBytes)
 		tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
-		// TODO(doublek): This DeltaCounter could be removed.
-		c.applyStatUpdate(tuple, 0, 0, 0, 0, DeltaCounter, dir, tp)
+		c.applyNflogStatUpdate(tuple, tp)
 	}
 	return nil
 }
 
 func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}) error {
 	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan)
+}
+
+// lookupRuleIDsFromPrefix determines the RuleIDs from a given rule direction and NFLOG prefix.
+func lookupRuleIDsFromPrefix(dir RuleDirection, prefix [64]byte, prefixLen int) (*RuleIDs, error) {
+	// Extract the RuleIDs from the prefix.
+	//TODO: RLB: We should keep a map[[64]byte]*RuleIDs to perform a fast lookup of the prefix
+	// to the rules IDs (using pointers to avoid additional allocation).  It is a little naughty
+	// passing pointers around since these structs are theoretically mutable. If we defined these
+	// structs in a separate types package then we could make them immutable by requiring accessor
+	// methods to access the private member data.
+	//TODO: RLB: I think the prefix should be able to give us the rule direction too.
+
+	// Should have at least 2 separators, a action character and a rule (assuming
+	// we allow empty Policy names).
+	if prefixLen < 4 {
+		log.Errorf("Prefix is too short: %s (%d chars)", string(prefix[:prefixLen]), prefixLen)
+		return nil, RuleTracePointParseError
+	}
+
+	// Initialise the RuleIDs struct.
+	ruleIDs := &RuleIDs{
+		Direction: dir,
+	}
+
+	// Extract and convert the action.
+	switch prefix[0] {
+	case 'A':
+		ruleIDs.Action = ActionAllow
+	case 'D':
+		ruleIDs.Action = ActionDeny
+	case 'N':
+		ruleIDs.Action = ActionNextTier
+	default:
+		log.Errorf("Unknown action %v: %v", prefix[0], string(prefix[:prefixLen]))
+		return nil, RuleTracePointParseError
+	}
+
+	// Determine the indices of the rule/policy/tier separators.
+	ruleIdx := 2
+	policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
+	if policySep == -1 {
+		log.Errorf("No separator char: %v", string(prefix[:prefixLen]))
+		return nil, RuleTracePointParseError
+	}
+	policyIdx := ruleIdx + policySep + 1
+	tierSep := bytes.IndexByte(prefix[policyIdx:], ruleSep)
+	var tierIdx int
+	if tierSep == -1 {
+		tierIdx = -1
+	} else {
+		tierIdx = policyIdx + tierSep + 1
+	}
+
+	// Set the tier name.
+	if tierIdx == -1 {
+		ruleIDs.Tier = "profile"
+	} else {
+		ruleIDs.Tier = string(prefix[tierIdx:prefixLen])
+	}
+
+	// Set the policy name.
+	if tierIdx == -1 {
+		ruleIDs.Policy = string(prefix[policyIdx:prefixLen])
+	} else {
+		ruleIDs.Policy = string(prefix[policyIdx : tierIdx-1])
+	}
+
+	// Set the rule index.
+	ruleIDs.Index = string(prefix[ruleIdx : policyIdx-1])
+
+	return ruleIDs, nil
 }
 
 func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {
@@ -387,16 +468,6 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) Tuple
 	} else {
 		return *NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
 	}
-}
-
-func lookupRule(lum epLookup, prefix [64]byte, prefixLen int, epKey interface{}) (*RuleTracePoint, error) {
-	rtp, err := NewRuleTracePoint(prefix, prefixLen, epKey)
-	if err != nil {
-		return rtp, err
-	}
-	index := lum.GetPolicyIndex(epKey, rtp.PolicyID(), rtp.TierID())
-	rtp.Index = index
-	return rtp, nil
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.

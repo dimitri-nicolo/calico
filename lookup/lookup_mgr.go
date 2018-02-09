@@ -15,7 +15,6 @@
 package lookup
 
 import (
-	"bytes"
 	"errors"
 	"net"
 	"sync"
@@ -27,6 +26,11 @@ import (
 )
 
 var UnknownEndpointError = errors.New("Unknown endpoint")
+
+type QueryInterface interface {
+	GetEndpointKey(addr [16]byte) (interface{}, error)
+	GetTierIndex(epKey interface{}, tierName string) int
+}
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
 type LookupManager struct {
@@ -187,17 +191,19 @@ func (m *LookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) {
 	return nil, UnknownEndpointError
 }
 
-// GetPolicyIndex returns the number of tiers that have been traversed before reaching a given Policy.
+// GetTierIndex returns the number of tiers that have been traversed before reaching a given Tier.
 // For a profile, this means it returns the total number of tiers that apply.
 // epKey is either a *model.WorkloadEndpointKey or *model.HostEndpointKey
-func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyName, tierName []byte) (tiersBefore int) {
+//TODO: RLB: Do we really need to keep track of EP vs. Tier indexes?  Seems an overkill - we only need
+// to know the overall tier order to determine the order of the NFLOGs in a set of traces.
+func (m *LookupManager) GetTierIndex(epKey interface{}, tierName string) (tiersBefore int) {
 	switch epKey.(type) {
 	case *model.WorkloadEndpointKey:
 		ek := epKey.(*model.WorkloadEndpointKey)
 		m.epMutex.RLock()
 		tiers := m.endpointTiers[*ek]
 		for _, tier := range tiers {
-			if bytes.Equal([]byte(tier.Name), tierName) {
+			if tier.Name == tierName {
 				break
 			} else {
 				tiersBefore++
@@ -209,7 +215,7 @@ func (m *LookupManager) GetPolicyIndex(epKey interface{}, policyName, tierName [
 		m.hostEpMutex.RLock()
 		tiers := append(m.hostEndpointUntrackedTiers[*ek], m.hostEndpointTiers[*ek]...)
 		for _, tier := range tiers {
-			if bytes.Equal([]byte(tier.Name), tierName) {
+			if tier.Name == tierName {
 				break
 			} else {
 				tiersBefore++
