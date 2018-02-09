@@ -368,17 +368,17 @@ endif
 	fi
 
 	# Retag images with correct version and GCR private registry
-	docker tag tigera/cnx-apiserver gcr.io/tigera-dev/cnx/tigera/cnx-apiserver:$(VERSION)
+	docker tag tigera/cnx-apiserver gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:$(VERSION)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" tigera/cnx-apiserver
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/cnx/tigera/cnx-apiserver:$(VERSION)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:$(VERSION)
 
 	@echo "\nNow push the tag and images. Then create a release on Github and"
 	@echo "\nAdd release notes for calico-k8sapiserver. Use this command"
 	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
 	@echo "git push origin $(VERSION)"
-	@echo "gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/cnx-apiserver:$(VERSION)"
+	@echo "gcloud docker -- push gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:$(VERSION)"
 
 .PHONY: kubeadm
 kubeadm:
