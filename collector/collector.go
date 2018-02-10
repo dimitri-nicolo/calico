@@ -151,7 +151,7 @@ func (c *Collector) getData(tuple Tuple) *Data {
 
 // applyConnTrackStatUpdate applies a stats update from a conn track poll.
 func (c *Collector) applyConnTrackStatUpdate(
-	tuple Tuple, dir rules.RuleDirection, packets int, bytes int, reversePackets int, reverseBytes int,
+	tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int,
 ) {
 	// Update the counters for the entry.  Since data is a pointer, we are updating the map
 	// entry in situ.
@@ -184,22 +184,6 @@ func (c *Collector) applyNflogStatUpdate(tuple Tuple, tp *RuleTracePoint) {
 	}
 }
 
-func (c *Collector) expireMetrics(data *Data) {
-	if data.EgressRuleTrace.Action() == rules.ActionDeny || data.EgressRuleTrace.Action() == rules.ActionAllow {
-		mu := data.EgressRuleTrace.ToMetricUpdate(data.Tuple)
-		c.reporterMgr.ExpireChan <- mu
-	}
-	if data.IngressRuleTrace.Action() == rules.ActionDeny || data.IngressRuleTrace.Action() == rules.ActionAllow {
-		mu := data.IngressRuleTrace.ToMetricUpdate(data.Tuple)
-		c.reporterMgr.ExpireChan <- mu
-	}
-}
-
-func (c *Collector) expireData(data *Data) {
-	c.expireMetrics(data)
-	delete(c.epStats, data.Tuple)
-}
-
 func (c *Collector) checkEpStats() {
 	// For each entry
 	// - report metrics
@@ -217,18 +201,16 @@ func (c *Collector) checkEpStats() {
 }
 
 func (c *Collector) reportMetrics(data *Data) {
-	if (data.EgressRuleTrace.Action() == rules.ActionDeny || data.EgressRuleTrace.Action() == rules.ActionAllow) && data.EgressRuleTrace.IsDirty() {
-		mu := data.EgressRuleTrace.ToMetricUpdate(data.Tuple)
-		c.reporterMgr.ReportChan <- mu
-	}
-	if (data.IngressRuleTrace.Action() == rules.ActionDeny || data.IngressRuleTrace.Action() == rules.ActionAllow) && data.IngressRuleTrace.IsDirty() {
-		mu := data.IngressRuleTrace.ToMetricUpdate(data.Tuple)
-		c.reporterMgr.ReportChan <- mu
-	}
+	data.Report(c.reporterMgr.ReportChan, false)
+}
 
-	// Metrics have been reported, so acknowledge the stored data by resetting the dirty
-	// flag and resetting the delta counts.
-	data.clearDirtyFlag()
+func (c *Collector) expireMetrics(data *Data) {
+	data.Report(c.reporterMgr.ReportChan, true)
+}
+
+func (c *Collector) expireData(data *Data) {
+	c.expireMetrics(data)
+	delete(c.epStats, data.Tuple)
 }
 
 func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) error {
@@ -277,7 +259,7 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 		// If we cannot find an endpoint for both the source and destination IP Addresses
 		// this means that this connection neither begins nor terminates locally.
 		// We can skip processing this conntrack entry.
-		if errSrc == lookup.UnknownEndpointError && errDst == lookup.UnknownEndpointError {
+		if errSrc != nil && errDst != nil {
 			// Unknown conntrack entries are expected for things such as
 			// management or local traffic. This log can get spammy if we log everything
 			// because of which we don't return an error and don't log anything here.
@@ -286,22 +268,10 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 
 		// At this point either the source or destination IP address from the conntrack entry
 		// belongs to an endpoint i.e., the connection either begins or terminates locally.
-		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
-		c.applyConnTrackStatUpdate(tuple, rules.RuleDirUnknown,
+		tuple := extractTupleFromCtEntryTuple(ctTuple)
+		c.applyConnTrackStatUpdate(tuple,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes)
-
-		// We create a reversed tuple, if we know that both the source and destination IP
-		// addresses from the conntrack entry belong to endpoints, i.e., the connection
-		// begins *and* terminates locally.
-		if errSrc == nil && errDst == nil {
-			// Packets/Connections from a local endpoint to another local endpoint
-			// require a reversed tuple to collect reply stats.
-			tuple := extractTupleFromCtEntryTuple(ctTuple, true)
-			c.applyConnTrackStatUpdate(tuple, rules.RuleDirUnknown,
-				ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
-				ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes)
-		}
 	}
 	return nil
 }
@@ -478,7 +448,7 @@ func pollConntrack(pollInterval time.Duration, ctEntriesChan chan []nfnetlink.Ct
 	}
 }
 
-func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) Tuple {
+func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) Tuple {
 	var l4Src, l4Dst int
 	if ctTuple.ProtoNum == 1 {
 		l4Src = ctTuple.L4Src.Id
@@ -487,11 +457,7 @@ func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple, reverse bool) Tuple
 		l4Src = ctTuple.L4Src.Port
 		l4Dst = ctTuple.L4Dst.Port
 	}
-	if !reverse {
-		return *NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
-	} else {
-		return *NewTuple(ctTuple.Dst, ctTuple.Src, ctTuple.ProtoNum, l4Dst, l4Src)
-	}
+	return *NewTuple(ctTuple.Src, ctTuple.Dst, ctTuple.ProtoNum, l4Src, l4Dst)
 }
 
 // Write stats to file pointed by Config.StatsDumpFilePath.

@@ -135,6 +135,13 @@ type RuleIDs struct {
 	Index     string
 }
 
+func (r *RuleIDs) Equals(cmpR *RuleIDs) bool {
+	return r.Action == cmpR.Action &&
+		r.Tier == cmpR.Tier &&
+		r.Policy == cmpR.Policy &&
+		r.Direction == cmpR.Direction
+}
+
 // Typedefs to prevent accidentally passing the wrong prefix to the Policy/ProfileChainName()
 type PolicyChainNamePrefix string
 type ProfileChainNamePrefix string

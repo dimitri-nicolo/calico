@@ -22,9 +22,7 @@ import (
 
 const checkInterval = 5 * time.Second
 
-type updateType bool
-
-// Calico Metrics
+// CNX Metrics
 var (
 	LABEL_TIER        = "tier"
 	LABEL_POLICY      = "policy"
@@ -55,8 +53,10 @@ var (
 		[]string{LABEL_TIER, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
 	)
 
-	updateTypeReport updateType = true
-	updateTypeExpire updateType = false
+	ruleDirToTrafficDir = map[rules.RuleDirection]rules.TrafficDirection{
+		rules.RuleDirIngress: rules.TrafficDirInbound,
+		rules.RuleDirEgress:  rules.TrafficDirOutbound,
+	}
 )
 
 // PrometheusReporter records denied packets and bytes statistics in prometheus metrics.
@@ -67,7 +67,6 @@ type PrometheusReporter struct {
 	caFile          string
 	registry        *prometheus.Registry
 	reportChan      chan *MetricUpdate
-	expireChan      chan *MetricUpdate
 	retentionTime   time.Duration
 	retentionTicker *jitter.Ticker
 
@@ -98,7 +97,6 @@ func NewPrometheusReporter(port int, retentionTime time.Duration, certFile, keyF
 		caFile:                 caFile,
 		registry:               registry,
 		reportChan:             make(chan *MetricUpdate),
-		expireChan:             make(chan *MetricUpdate),
 		retentionTime:          retentionTime,
 		retentionTicker:        jitter.NewTicker(tickerInterval, tickerInterval/10),
 		ruleAggStats:           make(map[RuleAggregateKey]*RuleAggregateValue),
@@ -108,15 +106,49 @@ func NewPrometheusReporter(port int, retentionTime time.Duration, certFile, keyF
 }
 
 type RuleAggregateKey struct {
-	ruleIDs    rules.RuleIDs
-	trafficDir rules.TrafficDirection
+	ruleIDs rules.RuleIDs
+}
+
+// getRuleAggregateKey returns a hashable key identifying a rule aggregation key.
+func getRuleAggregateKey(mu *MetricUpdate) RuleAggregateKey {
+	return RuleAggregateKey{
+		ruleIDs: *mu.ruleIDs,
+	}
+}
+
+// PacketByteLabels returns the Prometheus packet/byte counter labels associated
+// with a specific rule and traffic direction.
+func (k *RuleAggregateKey) PacketByteLabels(trafficDir rules.TrafficDirection) prometheus.Labels {
+	return prometheus.Labels{
+		LABEL_ACTION:      string(k.ruleIDs.Action),
+		LABEL_TIER:        k.ruleIDs.Tier,
+		LABEL_POLICY:      k.ruleIDs.Policy,
+		LABEL_RULE_DIR:    string(k.ruleIDs.Direction),
+		LABEL_RULE_IDX:    k.ruleIDs.Index,
+		LABEL_TRAFFIC_DIR: string(trafficDir),
+	}
+}
+
+// ConnectionLabels returns the Prometheus connection gauge labels associated
+// with a specific rule and traffic direction.
+func (k *RuleAggregateKey) ConnectionLabels() prometheus.Labels {
+	return prometheus.Labels{
+		LABEL_TIER:        k.ruleIDs.Tier,
+		LABEL_POLICY:      k.ruleIDs.Policy,
+		LABEL_RULE_DIR:    string(k.ruleIDs.Direction),
+		LABEL_RULE_IDX:    k.ruleIDs.Index,
+		LABEL_TRAFFIC_DIR: string(ruleDirToTrafficDir[k.ruleIDs.Direction]),
+	}
 }
 
 type RuleAggregateValue struct {
-	packets        prometheus.Counter
-	bytes          prometheus.Counter
+	inPackets      prometheus.Counter
+	inBytes        prometheus.Counter
+	outPackets     prometheus.Counter
+	outBytes       prometheus.Counter
 	numConnections prometheus.Gauge
-	connections    set.Set
+	tuples         set.Set
+	isConnection   bool
 }
 
 func (pr *PrometheusReporter) Start() {
@@ -130,42 +162,38 @@ func (pr *PrometheusReporter) Report(mu *MetricUpdate) error {
 	return nil
 }
 
-func (pr *PrometheusReporter) Expire(mu *MetricUpdate) error {
-	pr.expireChan <- mu
-	return nil
-}
-
-// getRuleAggregateKey returns a hashable key identifying a rule aggregation key.
-func (pr *PrometheusReporter) getRuleAggregateKey(mu *MetricUpdate) RuleAggregateKey {
-	return RuleAggregateKey{
-		ruleIDs:    *mu.ruleIDs,
-		trafficDir: mu.trafficDir,
+func getRuleAggregateValue(key RuleAggregateKey, isConnection bool) (*RuleAggregateValue, error) {
+	value := &RuleAggregateValue{
+		tuples:       set.New(),
+		isConnection: isConnection,
 	}
-}
-
-// getRulePacketByteLabels returns the Prometheus packet/byte counter labels associated
-// with a specific rule and traffic direction.
-func (pr *PrometheusReporter) getRulePacketByteLabels(key RuleAggregateKey) prometheus.Labels {
-	return prometheus.Labels{
-		LABEL_ACTION:      string(key.ruleIDs.Action),
-		LABEL_TIER:        key.ruleIDs.Tier,
-		LABEL_POLICY:      key.ruleIDs.Policy,
-		LABEL_RULE_DIR:    string(key.ruleIDs.Direction),
-		LABEL_RULE_IDX:    key.ruleIDs.Index,
-		LABEL_TRAFFIC_DIR: string(key.trafficDir),
+	switch key.ruleIDs.Direction {
+	case rules.RuleDirIngress:
+		pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound)
+		value.inPackets = counterRulePackets.With(pbInLabels)
+		value.inBytes = counterRuleBytes.With(pbInLabels)
+		if isConnection {
+			pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound)
+			value.outPackets = counterRulePackets.With(pbOutLabels)
+			value.outBytes = counterRuleBytes.With(pbOutLabels)
+		}
+	case rules.RuleDirEgress:
+		pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound)
+		value.outPackets = counterRulePackets.With(pbOutLabels)
+		value.outBytes = counterRuleBytes.With(pbOutLabels)
+		if isConnection {
+			pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound)
+			value.inPackets = counterRulePackets.With(pbInLabels)
+			value.inBytes = counterRuleBytes.With(pbInLabels)
+		}
+	default:
+		return nil, fmt.Errorf("Unknown traffic direction in ruleId %v", key.ruleIDs)
 	}
-}
-
-// getRuleConnectionLabels returns the Prometheus connection gauge labels associated
-// with a specific rule and traffic direction.
-func (pr *PrometheusReporter) getRuleConnectionLabels(key RuleAggregateKey) prometheus.Labels {
-	return prometheus.Labels{
-		LABEL_TIER:        key.ruleIDs.Tier,
-		LABEL_POLICY:      key.ruleIDs.Policy,
-		LABEL_RULE_DIR:    string(key.ruleIDs.Direction),
-		LABEL_RULE_IDX:    key.ruleIDs.Index,
-		LABEL_TRAFFIC_DIR: string(key.trafficDir),
+	if isConnection {
+		cLabels := key.ConnectionLabels()
+		value.numConnections = gaugeRuleConns.With(cLabels)
 	}
+	return value, nil
 }
 
 // servePrometheusMetrics starts a lightweight web server to server prometheus metrics.
@@ -208,8 +236,6 @@ func (pr *PrometheusReporter) startReporter() {
 		select {
 		case mu := <-pr.reportChan:
 			pr.reportMetric(mu)
-		case mu := <-pr.expireChan:
-			pr.expireMetric(mu)
 		case <-pr.retentionTicker.C:
 			//TODO: RLB: Maybe improve this processing using a linked-list (ordered by time)
 			now := pr.timeNowFn()
@@ -226,65 +252,66 @@ func (pr *PrometheusReporter) startReporter() {
 // reportMetric increments our counters from the metric update and ensures the metric
 // will expire if there are no associated connections and no activity within the
 // retention period.
-func (pr *PrometheusReporter) reportMetric(mu *MetricUpdate) {
-	pr.handleRuleMetric(mu, updateTypeReport)
-}
-
 // expireMetrics is actually similar to reportMetric, it increments our counters from the
 // metric update, removes any connection associated with the metric and ensures the metric
 // will expire if there are no associated connections and no activity within the retention
 // period. Unlike reportMetric, if there is no cached entry for this metric one is not
 // created and therefore the metric will not be reported.
-func (pr *PrometheusReporter) expireMetric(mu *MetricUpdate) {
-	pr.handleRuleMetric(mu, updateTypeExpire)
+func (pr *PrometheusReporter) reportMetric(mu *MetricUpdate) {
+	pr.handleRuleMetric(mu)
 }
 
 // handleRuleMetric handles reporting and expiration of Rule-aggregated metrics.
-func (pr *PrometheusReporter) handleRuleMetric(mu *MetricUpdate, ut updateType) {
-	key := pr.getRuleAggregateKey(mu)
+func (pr *PrometheusReporter) handleRuleMetric(mu *MetricUpdate) {
+	var (
+		value *RuleAggregateValue
+		err   error
+	)
+	key := getRuleAggregateKey(mu)
 	value, ok := pr.ruleAggStats[key]
 	if !ok {
 		// No entry exists.  If this is a report then create a blank entry and add
 		// to the map.  Otherwise, this is an expiration, so just return.
-		if ut == updateTypeExpire {
+		if mu.updateType == UpdateTypeExpire {
 			return
 		}
 
-		pbLabels := pr.getRulePacketByteLabels(key)
-		cLabels := pr.getRuleConnectionLabels(key)
-		value = &RuleAggregateValue{
-			packets:        counterRulePackets.With(pbLabels),
-			bytes:          counterRuleBytes.With(pbLabels),
-			numConnections: gaugeRuleConns.With(cLabels),
-			connections:    set.New(),
+		value, err = getRuleAggregateValue(key, mu.isConnection)
+		if err != nil {
+			log.WithField("key", key).Debugf("Cannot update metric. Skipping update.")
+			return
 		}
 		pr.ruleAggStats[key] = value
 	}
 
 	// Increment the packet counters if non-zero.
-	if mu.deltaPackets != 0 && mu.deltaBytes != 0 {
-		value.packets.Add(float64(mu.deltaPackets))
-		value.bytes.Add(float64(mu.deltaBytes))
+	if mu.inMetric.deltaPackets != 0 && mu.inMetric.deltaBytes != 0 {
+		value.inPackets.Add(float64(mu.inMetric.deltaPackets))
+		value.inBytes.Add(float64(mu.inMetric.deltaBytes))
+	}
+	if mu.outMetric.deltaPackets != 0 && mu.outMetric.deltaBytes != 0 {
+		value.outPackets.Add(float64(mu.outMetric.deltaPackets))
+		value.outBytes.Add(float64(mu.outMetric.deltaBytes))
 	}
 
 	// If this is an active connection (and we aren't expiring the stats), add to our
 	// active connections tuple, otherwise make sure it is removed.
-	oldConns := value.connections.Len()
-	if mu.isConnection && ut == updateTypeReport {
-		value.connections.Add(mu.tuple)
+	oldTuples := value.tuples.Len()
+	if mu.isConnection && mu.updateType == UpdateTypeReport {
+		value.tuples.Add(mu.tuple)
 	} else {
-		value.connections.Discard(mu.tuple)
+		value.tuples.Discard(mu.tuple)
 	}
-	newConns := value.connections.Len()
+	newTuples := value.tuples.Len()
 
 	// If the number of connections has changed then update our connections gauge.
-	if oldConns != newConns {
-		value.numConnections.Set(float64(newConns))
+	if mu.isConnection && oldTuples != newTuples {
+		value.numConnections.Set(float64(newTuples))
 	}
 
 	// If there are some connections for this rule then keep it active, otherwise (re)set the timeout
 	// for this metric to ensure we tidy up after a period of inactivity.
-	if newConns > 0 {
+	if newTuples > 0 {
 		pr.unmarkRuleAggregateForDeletion(key)
 	} else {
 		pr.markRuleAggregateForDeletion(key)
@@ -308,13 +335,31 @@ func (pr *PrometheusReporter) markRuleAggregateForDeletion(key RuleAggregateKey)
 // supplied key.
 func (pr *PrometheusReporter) deleteRuleAggregateMetric(key RuleAggregateKey) {
 	log.WithField("key", key).Debug("Cleaning up rule aggregate metric previously marked to be deleted.")
-	_, ok := pr.ruleAggStats[key]
-	if ok {
-		pbLabels := pr.getRulePacketByteLabels(key)
-		cLabels := pr.getRuleConnectionLabels(key)
-		counterRulePackets.Delete(pbLabels)
-		counterRuleBytes.Delete(pbLabels)
-		gaugeRuleConns.Delete(cLabels)
-		delete(pr.ruleAggStats, key)
+	value, ok := pr.ruleAggStats[key]
+	if !ok {
+		// Nothing to do here.
+		return
 	}
+	pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound)
+	pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound)
+	cLabels := key.ConnectionLabels()
+	switch key.ruleIDs.Direction {
+	case rules.RuleDirIngress:
+		counterRulePackets.Delete(pbInLabels)
+		counterRuleBytes.Delete(pbInLabels)
+		if value.isConnection {
+			counterRulePackets.Delete(pbOutLabels)
+			counterRuleBytes.Delete(pbOutLabels)
+			gaugeRuleConns.Delete(cLabels)
+		}
+	case rules.RuleDirEgress:
+		counterRulePackets.Delete(pbOutLabels)
+		counterRuleBytes.Delete(pbOutLabels)
+		if value.isConnection {
+			counterRulePackets.Delete(pbInLabels)
+			counterRuleBytes.Delete(pbInLabels)
+			gaugeRuleConns.Delete(cLabels)
+		}
+	}
+	delete(pr.ruleAggStats, key)
 }

@@ -381,7 +381,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		go c.startStatsCollectionAndReporting()
 	})
 	Describe("Test local destination", func() {
-		It("should create a single entry", func() {
+		It("should create a single entry in inbound direction", func() {
 			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			c.ctEntriesC <- []nfnetlink.CtEntry{inCtEntry}
 			Eventually(c.epStats).Should(HaveKey(*t))
@@ -391,7 +391,7 @@ var _ = Describe("Conntrack Datasource", func() {
 		})
 	})
 	Describe("Test local source", func() {
-		It("should receive a single stat update", func() {
+		It("should create a single entry with outbound direction", func() {
 			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
 			c.ctEntriesC <- []nfnetlink.CtEntry{outCtEntry}
 			Eventually(c.epStats).Should(HaveKey(*t))
@@ -401,49 +401,33 @@ var _ = Describe("Conntrack Datasource", func() {
 		})
 	})
 	Describe("Test local source to local destination", func() {
-		It("should receive two stat updates - one for each endpoint", func() {
+		It("should create a single entry with 'local' direction", func() {
 			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			t2 := NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
 			c.ctEntriesC <- []nfnetlink.CtEntry{localCtEntry}
 			Eventually(c.epStats).Should(HaveKey(Equal(*t1)))
-			Eventually(c.epStats).Should(HaveKey(Equal(*t2)))
-			data1 := c.epStats[*t1]
-			data2 := c.epStats[*t2]
-			Expect(data1.Counters()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes)))
-			Expect(data1.CountersReverse()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes)))
-			// Counters are reversed.
-			Expect(data2.Counters()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes)))
-			Expect(data2.CountersReverse()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes)))
+			data := c.epStats[*t1]
+			Expect(data.Counters()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes)))
+			Expect(data.CountersReverse()).Should(Equal(*NewCounter(localCtEntry.ReplyCounters.Packets, localCtEntry.ReplyCounters.Bytes)))
 		})
 	})
 	Describe("Test local destination with DNAT", func() {
-		It("should receive a single stat update with correct tuple extracted", func() {
+		It("should create a single entry with inbound connection direction and with correct tuple extracted", func() {
 			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 			c.ctEntriesC <- []nfnetlink.CtEntry{inCtEntryWithDNAT}
 			Eventually(c.epStats).Should(HaveKey(Equal(*t)))
 			data := c.epStats[*t]
 			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes)))
 			Expect(data.CountersReverse()).Should(Equal(*NewCounter(inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes)))
-			//su := NewStatUpdate(*t,
-			//	inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes,
-			//	inCtEntryWithDNAT.ReplyCounters.Packets, inCtEntryWithDNAT.ReplyCounters.Bytes,
-			//	CounterAbsolute, DirUnknown, EmptyRuleTracePoint)
 		})
 	})
 	Describe("Test local source to local destination with DNAT", func() {
-		It("should receive two stat updates - one for each endpoint - with correct tuple extracted", func() {
+		It("should create a single entry with 'local' connection direction and with correct tuple extracted", func() {
 			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			t2 := NewTuple(localIp2, localIp1, proto_tcp, dstPort, srcPort)
 			c.ctEntriesC <- []nfnetlink.CtEntry{localCtEntryWithDNAT}
 			Eventually(c.epStats).Should(HaveKey(Equal(*t1)))
-			Eventually(c.epStats).Should(HaveKey(Equal(*t2)))
-			data1 := c.epStats[*t1]
-			data2 := c.epStats[*t2]
-			Expect(data1.Counters()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets, localCtEntryWithDNAT.OriginalCounters.Bytes)))
-			Expect(data1.CountersReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Packets, localCtEntryWithDNAT.ReplyCounters.Bytes)))
-			// Counters are reversed.
-			Expect(data2.Counters()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Packets, localCtEntryWithDNAT.ReplyCounters.Bytes)))
-			Expect(data2.CountersReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets, localCtEntryWithDNAT.OriginalCounters.Bytes)))
+			data := c.epStats[*t1]
+			Expect(data.Counters()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets, localCtEntryWithDNAT.OriginalCounters.Bytes)))
+			Expect(data.CountersReverse()).Should(Equal(*NewCounter(localCtEntryWithDNAT.ReplyCounters.Packets, localCtEntryWithDNAT.ReplyCounters.Bytes)))
 		})
 	})
 
@@ -501,10 +485,10 @@ var _ = Describe("Reporting Metrics", func() {
 		Context("reporting tick", func() {
 			It("should receive metric", func() {
 				tmu := testMetricUpdate{
+					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktDenyTuple,
 					ruleIDs:      defTierDenyIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -517,10 +501,10 @@ var _ = Describe("Reporting Metrics", func() {
 		Context("reporting tick", func() {
 			It("should receive metric", func() {
 				tmu := testMetricUpdate{
+					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktAllowTuple,
 					ruleIDs:      defTierAllowIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -535,10 +519,10 @@ var _ = Describe("Reporting Metrics", func() {
 		Context("reporting tick", func() {
 			It("should receive metric", func() {
 				tmu := testMetricUpdate{
+					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktAllowTuple,
 					ruleIDs:      defTierAllowIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -551,10 +535,10 @@ var _ = Describe("Reporting Metrics", func() {
 		Context("reporting tick", func() {
 			It("should receive metric", func() {
 				tmu := testMetricUpdate{
+					updateType:   UpdateTypeReport,
 					tuple:        *egressPktAllowTuple,
 					ruleIDs:      defTierAllowEgressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -599,16 +583,13 @@ func (m *mockLookupManager) GetNFLOGHashToPolicyID(prefixHash [64]byte) ([]byte,
 // Define a separate metric type that doesn't include the actual stats.  We use this
 // for simpler comparisons.
 type testMetricUpdate struct {
+	updateType UpdateType
+
 	// Tuple key
 	tuple Tuple
 
 	// Rule identification
 	ruleIDs *rules.RuleIDs
-
-	// Traffic direction.  For NFLOG entries, the traffic direction will always
-	// be "outbound" since the direction is already defined by the source and
-	// destination.
-	trafficDir rules.TrafficDirection
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
@@ -618,13 +599,11 @@ type testMetricUpdate struct {
 // Create a mockReporter that acts as a pass-thru of the updates.
 type mockReporter struct {
 	reportChan chan testMetricUpdate
-	expireChan chan testMetricUpdate
 }
 
 func newMockReporter() *mockReporter {
 	return &mockReporter{
 		reportChan: make(chan testMetricUpdate),
-		expireChan: make(chan testMetricUpdate),
 	}
 }
 
@@ -634,19 +613,9 @@ func (mr *mockReporter) Start() {
 
 func (mr *mockReporter) Report(mu *MetricUpdate) error {
 	mr.reportChan <- testMetricUpdate{
+		updateType:   UpdateTypeReport,
 		tuple:        mu.tuple,
 		ruleIDs:      mu.ruleIDs,
-		trafficDir:   mu.trafficDir,
-		isConnection: mu.isConnection,
-	}
-	return nil
-}
-
-func (mr *mockReporter) Expire(mu *MetricUpdate) error {
-	mr.expireChan <- testMetricUpdate{
-		tuple:        mu.tuple,
-		ruleIDs:      mu.ruleIDs,
-		trafficDir:   mu.trafficDir,
 		isConnection: mu.isConnection,
 	}
 	return nil

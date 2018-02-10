@@ -128,7 +128,7 @@ func NewRuleTracePoint(ruleIDs *rules.RuleIDs, epKey interface{}, tierIndex, num
 
 // Equals compares all but the Ctr field of a RuleTracePoint
 func (rtp *RuleTracePoint) Equals(cmpRtp *RuleTracePoint) bool {
-	return rtp.RuleIDs == cmpRtp.RuleIDs &&
+	return rtp.RuleIDs.Equals(cmpRtp.RuleIDs) &&
 		rtp.Index == cmpRtp.Index &&
 		rtp.EpKey == cmpRtp.EpKey
 }
@@ -318,18 +318,38 @@ func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
 }
 
 // ToMetricUpdate converts the RuleTrace to a MetricUpdate used by the reporter.
-func (rt *RuleTrace) ToMetricUpdate(t Tuple) *MetricUpdate {
-	p, b := rt.ctr.Values()
-	dp, db := rt.ctr.DeltaValues()
-	return &MetricUpdate{
-		tuple:        t,
-		trafficDir:   rules.TrafficDirOutbound,
-		ruleIDs:      rt.VerdictRuleTracePoint().RuleIDs,
-		packets:      p,
-		bytes:        b,
-		deltaPackets: dp,
-		deltaBytes:   db,
+func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td rules.TrafficDirection, ctr *Counter, ctrRev *Counter) *MetricUpdate {
+	var (
+		dp, db, dpRev, dbRev int
+		isConn               bool
+	)
+	if ctr != nil && ctrRev != nil {
+		dp, db = ctr.DeltaValues()
+		dpRev, dbRev = ctrRev.DeltaValues()
+		isConn = true
+	} else {
+		dp, db = rt.ctr.DeltaValues()
+		isConn = false
 	}
+	mu := &MetricUpdate{
+		updateType:   ut,
+		tuple:        t,
+		ruleIDs:      rt.VerdictRuleTracePoint().RuleIDs,
+		isConnection: isConn,
+	}
+	switch td {
+	case rules.TrafficDirInbound:
+		mu.inMetric = MetricValue{dp, db}
+		if isConn {
+			mu.outMetric = MetricValue{dpRev, dbRev}
+		}
+	case rules.TrafficDirOutbound:
+		mu.outMetric = MetricValue{dp, db}
+		if isConn {
+			mu.inMetric = MetricValue{dpRev, dbRev}
+		}
+	}
+	return mu
 }
 
 // Tuple represents a 5-Tuple value that identifies a connection/flow of packets
@@ -369,6 +389,9 @@ func (t *Tuple) String() string {
 // and connTrackCtrReverse for the reverse/reply of this connection.
 type Data struct {
 	Tuple Tuple
+
+	// Indicates if this is a connection
+	isConnection bool
 
 	// These are the counts from conntrack
 	connTrackCtr        Counter
@@ -481,6 +504,7 @@ func (d *Data) SetCounters(packets int, bytes int) {
 	if changed {
 		d.setDirtyFlag()
 	}
+	d.isConnection = true
 	d.touch()
 }
 
@@ -491,12 +515,14 @@ func (d *Data) SetCountersReverse(packets int, bytes int) {
 	if changed {
 		d.setDirtyFlag()
 	}
+	d.isConnection = true
 	d.touch()
 }
 
 // ResetConntrackCounters resets the counters associated with the tracked connection for
 // the data.
 func (d *Data) ResetConntrackCounters() {
+	d.isConnection = false
 	d.connTrackCtr.Reset()
 	d.connTrackCtrReverse.Reset()
 }
@@ -535,4 +561,31 @@ func (d *Data) ReplaceRuleTracePoint(tp *RuleTracePoint) error {
 		d.setDirtyFlag()
 	}
 	return err
+}
+
+func (d *Data) Report(c chan<- *MetricUpdate, expired bool) {
+	ut := UpdateTypeReport
+	if expired {
+		ut = UpdateTypeExpire
+	}
+	if ((d.EgressRuleTrace.Action() == rules.ActionDeny || d.EgressRuleTrace.Action() == rules.ActionAllow) && (expired || d.EgressRuleTrace.IsDirty())) ||
+		(!expired && d.EgressRuleTrace.Action() == rules.ActionAllow && d.isConnection && d.IsDirty()) {
+		if d.isConnection {
+			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, rules.TrafficDirOutbound, &d.connTrackCtr, &d.connTrackCtrReverse)
+		} else {
+			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, rules.TrafficDirOutbound, nil, nil)
+		}
+	}
+	if ((d.IngressRuleTrace.Action() == rules.ActionDeny || d.IngressRuleTrace.Action() == rules.ActionAllow) && (expired || d.IngressRuleTrace.IsDirty())) ||
+		(!expired && d.IngressRuleTrace.Action() == rules.ActionAllow && d.isConnection && d.IsDirty()) {
+		if d.isConnection {
+			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, rules.TrafficDirInbound, &d.connTrackCtr, &d.connTrackCtrReverse)
+		} else {
+			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, rules.TrafficDirInbound, nil, nil)
+		}
+	}
+
+	// Metrics have been reported, so acknowledge the stored data by resetting the dirty
+	// flag and resetting the delta counts.
+	d.clearDirtyFlag()
 }
