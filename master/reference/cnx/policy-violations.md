@@ -78,6 +78,42 @@ normally set `PrometheusReporterEnabled=true` and
 `PrometheusReporterPort=9081`, so these metrics are available on each compute
 node at `http://<node-IP>:9081/metrics`.
 
+### Metrics in 2.1
+
+The metrics generated are:
+- `cnx_policy_rule_packets` - Sum of allowed/denied packets over rules processed by {{site.prodname}} policies.
+- `cnx_policy_rule_bytes` - Sum of allowed/denied bytes over rules processed by {{site.prodname}} policies.
+- `cnx_policy_rule_connections` - Sum of connections over rules processed by {{site.prodname}} policies.
+
+with Labels added by Felix:
+- tier: tier name
+- policy: policy name
+- namespace: namespace the policy is in (or __GLOBAL__ for GNPs)
+- rule_index: index of the rule in that policy (from zero)
+- action: allow or deny (applicable only to cnx_policy_rule_{packets/bytes})
+- traffic_direction: inbound or outbound
+- rule_direction: ingress or egress
+
+Using these metrics, one can identify allow, denied, passed byte rate and packet rate both inbound and outbound, indexed by both policy and rule.
+
+Example queries:
+- Query counts for rules: Packet rates for specific rule by traffic_direction
+```
+sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",rule_direction="ingress",rule_index="rule-5",tier="tier-0"}[30s])) without (instance)
+```
+- Query counts for rules: Packet rates for each rule in a policy by traffic_direction
+```
+sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",tier="tier-0"}[30s])) without (instance)
+```
+- Query counts for a single policy by traffic_direction and action
+```
+sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",tier="tier-0"}[30s])) without (instance,rule_index,rule_direction)
+```
+- Query counts for all policies across all tiers by traffic_direction and action
+```
+sum(irate(cnx_policy_rule_packets[30s])) without (instance,rule_index,rule_direction)
+```
+
 ### Lifetime of a Metric
 
 #### When are Metrics Generated?
