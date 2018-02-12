@@ -167,12 +167,6 @@ are described [here]({{site.baseurl}}/{{page.version}}/reference/cnx/authenticat
 1. If using Google login, update the `tigera.cnx-manager.oidc-client-id` field
    in the `tigera-cnx-manager-config` ConfigMap.
 
-1. Update the `tigera.cnx-manager.kubernetes-api` field
-   in the `tigera-cnx-manager-config` ConfigMap.  It must be a URL which
-   the web client can use to reach the Kubernetes API server.  Note that it
-   must be reachable from any system which is going to access the {{site.prodname}}
-   Manager web application (not just inside the cluster).
-
 1. Consider updating the NodePort that exposes the web application.  Note
    that for Google login, the URL of the application must be well known,
    and configured in the Google console (with /login/oidc/callback appended).
