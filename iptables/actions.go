@@ -19,6 +19,8 @@ import (
 
 	"github.com/projectcalico/felix/hashutils"
 	"github.com/projectcalico/felix/rules"
+	"regexp"
+	"strings"
 )
 
 type Action interface {
@@ -109,11 +111,28 @@ func (n NflogAction) ToFragment() string {
 	// TODO (Matt): Review number of bytes
 
 	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
-	// separated by `|`s. Example: "D|0|default.deny-icmp|default".
-	// We calculate the hash of the prefix if its length exceeds NFLOG prefix max length which is 64 characters.
-	prefixHash := hashutils.GetLengthLimitedID("", n.Prefix, rules.NFLOGPrefixMaxLength)
+	// separated by `|`s. Example: "D|0|default.deny-icmp|po".
+	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
+	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (9 for first (A|D|N) then a `|` then
+	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
+	//
+	// trimmedPrefix will split the prefix after "D|0|" (ActionID|RuleIndex|) so we get the profile/policy ID which includes tier and namespace.
+	//
+	// See lookup/lookup_mgr.go PushNFLOGPrefixHash() & PushNFLOGPrefixHash() funcs, these 3 functions need to be in sync,
+	// if you are updating the current function, we probably need to change that ones as well.
+	trimmedPrefixSlice :=rules.NFLOGPrefixRegexp.Split(n.Prefix, 2)
+	trimmedPrefix := trimmedPrefixSlice[0]
 
-	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, prefixHash)
+	// Remove the `|po` or `|pr` part before calculating the hash.
+	sepIdx := strings.Index(trimmedPrefix, "|")
+	if sepIdx != -1 {
+		trimmedPrefix = trimmedPrefix[:sepIdx]
+	}
+
+	prefixHash := hashutils.GetLengthLimitedID("", trimmedPrefix, rules.NFLOGPrefixMaxLength - 9)
+
+	// Reinsert the `|po` or `|pr` suffix before programming the rule.
+	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s", prefixHash, trimmedPrefix[sepIdx:]))
 }
 
 func (n NflogAction) String() string {

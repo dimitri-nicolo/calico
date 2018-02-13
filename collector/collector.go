@@ -21,7 +21,9 @@ import (
 )
 
 var (
-	ruleSep = byte('|')
+	ruleSep      = byte('|')
+	namespaceSep = byte('/')
+	tierSep      = byte('.')
 )
 
 type Config struct {
@@ -313,7 +315,7 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir RuleDirection, nPktAggr *n
 	// Determine the endpoint that this packet hit a rule for. This depends on the Direction
 	// because local -> local packets will be NFLOGed twice.
 	if dir == RuleDirIngress {
-		log.WithField("Dest", nflogTuple.Dst).Debug("Searching for endpoint")
+		log.WithField("Dst", nflogTuple.Dst).Debug("Searching for endpoint")
 		epKey, err = c.lum.GetEndpointKey(nflogTuple.Dst)
 	} else {
 		log.WithField("Src", nflogTuple.Src).Debug("Searching for endpoint")
@@ -322,11 +324,11 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir RuleDirection, nPktAggr *n
 
 	if err != nil {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
-		return errors.New("Couldn't find endpoint info for NFLOG packet")
+		return errors.New("couldn't find endpoint info for NFLOG packet")
 	}
 	for _, prefix := range nPktAggr.Prefixes {
 		// Lookup the ruleIDs from the prefix.
-		ruleIDs, err := lookupRuleIDsFromPrefix(c.lum, dir, prefix.Prefix, prefix.Len)
+		ruleIDs, err := c.lookupRuleIDsFromPrefix(dir, prefix.Prefix, prefix.Len)
 		if err != nil {
 			continue
 		}
@@ -360,7 +362,7 @@ func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacke
 }
 
 // lookupRuleIDsFromPrefix determines the RuleIDs from a given rule direction and NFLOG prefix.
-func lookupRuleIDsFromPrefix(lum lookup.QueryInterface, dir RuleDirection, prefix [64]byte, prefixLen int) (*RuleIDs, error) {
+func (c *Collector) lookupRuleIDsFromPrefix(dir RuleDirection, prefix [64]byte, prefixLen int) (*RuleIDs, error) {
 	// Extract the RuleIDs from the prefix.
 	//TODO: RLB: We should keep a map[[64]byte]*RuleIDs to perform a fast lookup of the prefix
 	// to the rules IDs (using pointers to avoid additional allocation).  It is a little naughty
@@ -369,71 +371,107 @@ func lookupRuleIDsFromPrefix(lum lookup.QueryInterface, dir RuleDirection, prefi
 	// methods to access the private member data.
 	//TODO: RLB: I think the prefix should be able to give us the rule direction too.
 
-	ruleIDs, err := lum.GetNFLOGHashToRuleID(string(prefix[:]))
+	// Should have at least 2 separators, a action character and a rule (assuming
+	// we allow empty Policy names).
+	if prefixLen < 4 {
+		log.Errorf("Prefix is too short: %s (%d chars)", string(prefix[:prefixLen]), prefixLen)
+		return nil, RuleTracePointParseError
+	}
 
-	ruleIDs.Direction = dir
+	// Initialise the RuleIDs struct.
+	ruleIDs := &RuleIDs{
+		Direction: dir,
+	}
 
-	return ruleIDs, err
+	// Extract and convert the action.
+	switch prefix[0] {
+	case 'A':
+		ruleIDs.Action = ActionAllow
+	case 'D':
+		ruleIDs.Action = ActionDeny
+	case 'N':
+		ruleIDs.Action = ActionNextTier
+	default:
+		log.Errorf("Unknown action %v: %v", prefix[0], string(prefix[:prefixLen]))
+		return nil, RuleTracePointParseError
+	}
 
-	//// Should have at least 2 separators, a action character and a rule (assuming
-	//// we allow empty Policy names).
-	//if prefixLen < 4 {
-	//	log.Errorf("Prefix is too short: %s (%d chars)", string(prefix[:prefixLen]), prefixLen)
-	//	return nil, RuleTracePointParseError
-	//}
-	//
-	//// Initialise the RuleIDs struct.
-	//ruleIDs := &RuleIDs{
-	//	Direction: dir,
-	//}
+	// Determine the indices of the rule/policy/tier separators.
+	ruleIdx := 2
+	policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
+	if policySep == -1 {
+		log.Errorf("No separator char: %v", string(prefix[:prefixLen]))
+		return nil, RuleTracePointParseError
+	}
+	policyIdx := ruleIdx + policySep + 1
 
-	//// Extract and convert the action.
-	//switch prefix[0] {
-	//case 'A':
-	//	ruleIDs.Action = ActionAllow
-	//case 'D':
-	//	ruleIDs.Action = ActionDeny
-	//case 'N':
-	//	ruleIDs.Action = ActionNextTier
-	//default:
-	//	log.Errorf("Unknown action %v: %v", prefix[0], string(prefix[:prefixLen]))
-	//	return nil, RuleTracePointParseError
-	//}
-	//
-	//// Determine the indices of the rule/policy/tier separators.
-	//ruleIdx := 2
-	//policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
-	//if policySep == -1 {
-	//	log.Errorf("No separator char: %v", string(prefix[:prefixLen]))
-	//	return nil, RuleTracePointParseError
-	//}
-	//policyIdx := ruleIdx + policySep + 1
-	//tierSep := bytes.IndexByte(prefix[policyIdx:], ruleSep)
-	//var tierIdx int
-	//if tierSep == -1 {
-	//	tierIdx = -1
-	//} else {
-	//	tierIdx = policyIdx + tierSep + 1
-	//}
-	//
-	//// Set the tier name.
-	//if tierIdx == -1 {
-	//	ruleIDs.Tier = "profile"
-	//} else {
-	//	ruleIDs.Tier = string(prefix[tierIdx:prefixLen])
-	//}
-	//
-	//// Set the policy name.
-	//if tierIdx == -1 {
-	//	ruleIDs.Policy = string(prefix[policyIdx:prefixLen])
-	//} else {
-	//	ruleIDs.Policy = string(prefix[policyIdx : tierIdx-1])
-	//}
-	//
-	//// Set the rule index.
-	//ruleIDs.Index = string(prefix[ruleIdx : policyIdx-1])
-	//
-	//return ruleIDs, nil
+	tierSepIdx := bytes.IndexByte(prefix[policyIdx:], ruleSep)
+	var tierIdx int
+	if tierSepIdx == -1 {
+		tierIdx = -1
+	} else {
+		tierIdx = policyIdx + tierSepIdx + 1
+	}
+
+	// Set the tier name.
+	if tierIdx == -1 {
+		ruleIDs.Tier = "profile"
+	} else {
+		ruleIDs.Tier = string(prefix[tierIdx:prefixLen])
+	}
+
+	// Set the policy name.
+	if tierIdx == -1 {
+		ruleIDs.Policy = string(prefix[policyIdx:prefixLen])
+	} else {
+		ruleIDs.Policy = string(prefix[policyIdx : tierIdx-1])
+	}
+
+	// Set the rule index.
+	ruleIDs.Index = string(prefix[ruleIdx : policyIdx-1])
+
+	var policyIDByte [64]byte
+	copy(policyIDByte[:], prefix[policyIdx:prefixLen])
+
+	policyIDUnhashed, err := c.lum.GetNFLOGHashToRuleID(policyIDByte)
+	if err != nil {
+		return nil, fmt.Errorf("error getting NFLOG policy/profile name identifier from the hash: %s", err)
+	}
+
+	if string(policyIDUnhashed[len(policyIDUnhashed)-3:]) == "|pr" {
+		ruleIDs.Tier = "profile"
+		ruleIDs.Policy = string(policyIDUnhashed[:len(policyIDUnhashed)-3])
+	} else {
+		nsIdx := bytes.IndexByte(policyIDUnhashed[:], namespaceSep)
+		tierIdx := bytes.IndexByte(policyIDUnhashed[:], tierSep)
+		if nsIdx == -1 {
+			// No namespace in the policy ID.
+			if tierIdx == -1 {
+				// It's a profile. Should already be handled.
+			} else {
+				// Policy without a namespace (default)
+
+				// Check if it's a knp.default policy.
+				if string(policyIDUnhashed[:tierIdx]) == "knp" && string(policyIDUnhashed[:12]) == "knp.default." {
+					ruleIDs.Tier = "default"
+					ruleIDs.Policy = string(policyIDUnhashed[12 : len(policyIDUnhashed)-3])
+				} else {
+					// It's a non-k8s policy.
+					ruleIDs.Tier = string(policyIDUnhashed[:tierIdx])
+					ruleIDs.Policy = string(policyIDUnhashed[tierIdx : len(policyIDUnhashed)-3])
+				}
+			}
+		} else {
+			if tierIdx == -1 {
+				// No tier means it's a profile, but profiles don't have namespace, so it should never get here.
+			} else {
+				ruleIDs.Tier = string(policyIDUnhashed[nsIdx:tierIdx])
+				ruleIDs.Policy = string(policyIDUnhashed[tierIdx : len(policyIDUnhashed)-3])
+			}
+		}
+	}
+
+	return ruleIDs, nil
 }
 
 func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {

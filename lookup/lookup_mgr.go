@@ -7,11 +7,9 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/hashutils"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
@@ -23,7 +21,7 @@ var UnknownEndpointError = errors.New("Unknown endpoint")
 type QueryInterface interface {
 	GetEndpointKey(addr [16]byte) (interface{}, error)
 	GetTierIndex(epKey interface{}, tierName string) int
-	GetNFLOGHashToRuleID(prefixHash string) (*collector.RuleIDs, error)
+	GetNFLOGHashToRuleID(prefixHash [64]byte) ([64]byte, error)
 }
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
@@ -40,8 +38,7 @@ type LookupManager struct {
 	hostEndpointUntrackedTiers map[model.HostEndpointKey][]*proto.TierInfo
 	hostEpMutex                sync.RWMutex
 
-	// TODO (gunjan5) use a fixed byte array instead of string.
-	nflogPrefixHash map[string]*collector.RuleIDs
+	nflogPrefixHash map[[64]byte][64]byte
 }
 
 func NewLookupManager() *LookupManager {
@@ -113,44 +110,16 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		m.epMutex.Unlock()
 
 	case *proto.ActivePolicyUpdate:
-		for idx, ibr := range msg.Policy.InboundRules {
-			rid := collector.RuleIDs{
-				Direction: collector.RuleDirIngress,
-				Index: strconv.Itoa(idx),
-			}
-
-			m.PushNFLOGPrefixHash(msg, ibr, rid)
-		}
-
-		for idx, obr := range msg.Policy.OutboundRules {
-			rid := collector.RuleIDs{
-				Direction: collector.RuleDirEgress,
-				Index: strconv.Itoa(idx),
-			}
-
-			m.PushNFLOGPrefixHash(msg, obr, rid)
-		}
+		m.PushPolicyNFLOGPrefixHash(msg)
 
 	case *proto.ActivePolicyRemove:
-		//for idx, ibr := range msg.Id.InboundRules {
-		//	rid := collector.RuleIDs{
-		//		Direction: collector.RuleDirIngress,
-		//		Index: strconv.Itoa(idx),
-		//	}
-		//
-		//	m.PushNFLOGPrefixHash(msg, ibr, rid)
-		//}
-		//
-		//for idx, obr := range msg.Policy.OutboundRules {
-		//	rid := collector.RuleIDs{
-		//		Direction: collector.RuleDirEgress,
-		//		Index: strconv.Itoa(idx),
-		//	}
-		//
-		//	m.PushNFLOGPrefixHash(msg, obr, rid)
-		//}
+		m.PopPolicyNFLOGPrefixHash(msg)
 
+	case *proto.ActiveProfileUpdate:
+		m.PushProfileNFLOGPrefixHash(msg)
 
+	case *proto.ActiveProfileRemove:
+		m.PopProfileNFLOGPrefixHash(msg)
 
 	case *proto.HostEndpointUpdate:
 		// We omit setting Hostname since at this point it is implied that the
@@ -204,35 +173,96 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 	}
 }
 
-// PushNFLOGPrefixHash takes proto message (ActivePolicyUpdate), proto rule and partially populated
-// RuleID (with rule direction and rule index) and calculates the NFLOG prefix, and if the prefix is too long then
+// PushPolicyNFLOGPrefixHash takes proto message (ActivePolicyUpdate) and calculates the NFLOG prefix, and if the prefix is too long then
 // calculates the hash. Finally it pushes it to a map for stats collector to access.
-func (m *LookupManager) PushNFLOGPrefixHash(msg  *proto.ActivePolicyUpdate, rule *proto.Rule, rid collector.RuleIDs){
-	rid.Action =  collector.RuleAction(rule.Action)
-	rid.Tier = msg.Id.Tier
-	rid.Policy = msg.Id.Name
-
-	prefixStr := rules.CalculateNFLOGPrefixStr(rid)
-
+func (m *LookupManager) PushPolicyNFLOGPrefixHash(msg *proto.ActivePolicyUpdate) {
 	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
-	// separated by `|`s. Example: "D|0|default.deny-icmp|default".
-	// We calculate the hash of the prefix if its length exceeds NFLOG prefix max length which is 64 characters.
-	prefixHash := hashutils.GetLengthLimitedID("", prefixStr, rules.NFLOGPrefixMaxLength)
+	// separated by `|`s. Example: "D|0|default.deny-icmp|po".
+	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
+	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (9 for first (A|D|N) then a `|` then
+	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
+	//
+	// See iptables/actions.go ToFragment() func, this needs to be in sync,
+	// if you are updating the current function, we probably need to change that one as well.
+	prefixHash := hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-9)
+	prefixHash += "|po"
 
-	// Store the hash in a map.
-	m.nflogPrefixHash[prefixHash] = &rid
+	var bph, polID [64]byte
+	copy(bph[:], []byte(prefixHash[:]))
+	copy(polID[:], []byte(msg.Id.Name))
+
+	// Store the hash in a map. With hash being the key and string being the value.
+	m.nflogPrefixHash[bph] = polID
 }
 
+// PushProfileNFLOGPrefixHash takes proto message (ActiveProfileUpdate) and calculates the NFLOG prefix, and if the prefix is too long then
+// calculates the hash. Finally it pushes it to a map for stats collector to access.
+func (m *LookupManager) PushProfileNFLOGPrefixHash(msg *proto.ActiveProfileUpdate) {
+	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
+	// separated by `|`s. Example: "D|0|profile-name|pr".
+	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
+	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (9 for first (A|D|N) then a `|` then
+	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
+	//
+	// See iptables/actions.go ToFragment() func, this needs to be in sync,
+	// if you are updating the current function, we probably need to change that one as well.
+	prefixHash := hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-9)
+	prefixHash += "|pr"
 
-// GetNFLOGHashToRuleID returns RuleIDs associated with the NFLOG prefix string of hash from the nflogPrefixHash map.
-func (m *LookupManager) GetNFLOGHashToRuleID(prefixHash string) (*collector.RuleIDs, error){
+	var bph, proID [64]byte
+	copy(bph[:], []byte(prefixHash[:]))
+	copy(proID[:], []byte(msg.Id.Name))
 
-	rid, ok := m.nflogPrefixHash[prefixHash]
-	if !ok {
-		return nil, fmt.Errorf("cannot find the specified NFLOG prefix string or hash: %s in the lookup manager", prefixHash)
+	// Store the hash in a map. With hash being the key and string being the value.
+	m.nflogPrefixHash[bph] = proID
+}
+
+// PopPolicyNFLOGPrefixHash takes proto message (ActivePolicyUpdate) and removes the hash to policy name map entry
+// from the nflogPrefixHash map.
+func (m *LookupManager) PopPolicyNFLOGPrefixHash(msg *proto.ActivePolicyRemove) {
+	var honByte [64]byte
+	hashOrName := msg.Id.Name
+
+	// +9 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
+	// and 3 more for the `|po` suffix at the end.
+	if len(msg.Id.Name)+9 > rules.NFLOGPrefixMaxLength {
+		hashOrName = hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-6)
 	}
 
-	return rid, nil
+	hashOrName += "|po"
+
+	copy(honByte[:], []byte(hashOrName))
+
+	delete(m.nflogPrefixHash, honByte)
+}
+
+// PopProfileNFLOGPrefixHash takes proto message (ActiveProfileRemove) and removes the hash to profile name map entry
+// from the nflogPrefixHash map.
+func (m *LookupManager) PopProfileNFLOGPrefixHash(msg *proto.ActiveProfileRemove) {
+	var honByte [64]byte
+
+	hashOrName := msg.Id.Name
+
+	// +9 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
+	// and 3 more for the `|po` suffix at the end.
+	if len(msg.Id.Name)+9 > rules.NFLOGPrefixMaxLength {
+		hashOrName = hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-6)
+	}
+	hashOrName += "|pr"
+
+	copy(honByte[:], []byte(hashOrName))
+
+	delete(m.nflogPrefixHash, honByte)
+}
+
+// GetNFLOGHashToPolicyID returns unhashed policy/profile ID (name) associated with the NFLOG prefix string or hash from the nflogPrefixHash map.
+func (m *LookupManager) GetNFLOGHashToPolicyID(prefixHash [64]byte) ([64]byte, error) {
+	policyID, ok := m.nflogPrefixHash[prefixHash]
+	if !ok {
+		return [64]byte{}, fmt.Errorf("cannot find the specified NFLOG prefix string or hash: %s in the lookup manager", prefixHash)
+	}
+
+	return policyID, nil
 }
 
 func (m *LookupManager) CompleteDeferredWork() error {

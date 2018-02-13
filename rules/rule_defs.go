@@ -16,11 +16,11 @@ package rules
 
 import (
 	"net"
+	"reflect"
+	"regexp"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
-
-	"reflect"
-	"strings"
 
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/ipsets"
@@ -137,6 +137,9 @@ var (
 	// LegacyV4IPSetNames contains some extra IP set names that were used in older versions of
 	// Felix and don't fit our versioned pattern.
 	LegacyV4IPSetNames = []string{"felix-masq-ipam-pools", "felix-all-ipam-pools"}
+
+	// NFLOG prefix regex.
+	NFLOGPrefixRegexp = regexp.MustCompile(`(A|N|D)\|\d+\|*`)
 )
 
 type RuleRenderer interface {

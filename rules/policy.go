@@ -555,7 +555,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 }
 
 // CalculateNFLOGPrefixStr calculates NFLOG prefix string from RuleIDs fields.
-// Example prefix string: "D|0|default.deny-icmp|default".
+// Example prefix string: "D|0|default.deny-icmp|default|po".
 func CalculateNFLOGPrefixStr(rid collector.RuleIDs) string {
 	var actionPrefix string
 
@@ -570,12 +570,12 @@ func CalculateNFLOGPrefixStr(rid collector.RuleIDs) string {
 
 	// For profiles we don't append tier name at the end. The way profile rules are identified are by
 	// looking at their tier name. If the tier name is "profile" then we classify that rule as a profile rule
-	// and don't append tier name at the end.
+	// and add `|pr` at the end.
 	if rid.Tier == "profile" {
-		return fmt.Sprintf("%s|%s|%s", actionPrefix, rid.Index, rid.Policy)
+		return fmt.Sprintf("%s|%s|%s|pr", actionPrefix, rid.Index, rid.Policy)
 	}
 
-	return fmt.Sprintf("%s|%s|%s|%s", actionPrefix, rid.Index, rid.Policy, rid.Tier)
+	return fmt.Sprintf("%s|%s|%s|po", actionPrefix, rid.Index, rid.Policy)
 }
 
 var SkipRule = errors.New("Rule skipped")
