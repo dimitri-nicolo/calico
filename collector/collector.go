@@ -17,6 +17,8 @@ import (
 
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/rules"
+
 	"github.com/tigera/nfnetlink"
 )
 
@@ -101,9 +103,9 @@ func (c *Collector) startStatsCollectionAndReporting() {
 		case ctEntries := <-c.ctEntriesC:
 			c.convertCtEntryAndApplyUpdate(ctEntries)
 		case nflogPacketAggr := <-c.nfIngressC:
-			c.convertNflogPktAndApplyUpdate(RuleDirIngress, nflogPacketAggr)
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, nflogPacketAggr)
 		case nflogPacketAggr := <-c.nfEgressC:
-			c.convertNflogPktAndApplyUpdate(RuleDirEgress, nflogPacketAggr)
+			c.convertNflogPktAndApplyUpdate(rules.RuleDirEgress, nflogPacketAggr)
 		case <-c.ticker.C:
 			c.checkEpStats()
 		case <-c.sigChan:
@@ -149,7 +151,7 @@ func (c *Collector) getData(tuple Tuple) *Data {
 
 // applyConnTrackStatUpdate applies a stats update from a conn track poll.
 func (c *Collector) applyConnTrackStatUpdate(
-	tuple Tuple, dir RuleDirection, packets int, bytes int, reversePackets int, reverseBytes int,
+	tuple Tuple, dir rules.RuleDirection, packets int, bytes int, reversePackets int, reverseBytes int,
 ) {
 	// Update the counters for the entry.  Since data is a pointer, we are updating the map
 	// entry in situ.
@@ -183,11 +185,11 @@ func (c *Collector) applyNflogStatUpdate(tuple Tuple, tp *RuleTracePoint) {
 }
 
 func (c *Collector) expireMetrics(data *Data) {
-	if data.EgressRuleTrace.Action() == ActionDeny || data.EgressRuleTrace.Action() == ActionAllow {
+	if data.EgressRuleTrace.Action() == rules.ActionDeny || data.EgressRuleTrace.Action() == rules.ActionAllow {
 		mu := data.EgressRuleTrace.ToMetricUpdate(data.Tuple)
 		c.reporterMgr.ExpireChan <- mu
 	}
-	if data.IngressRuleTrace.Action() == ActionDeny || data.IngressRuleTrace.Action() == ActionAllow {
+	if data.IngressRuleTrace.Action() == rules.ActionDeny || data.IngressRuleTrace.Action() == rules.ActionAllow {
 		mu := data.IngressRuleTrace.ToMetricUpdate(data.Tuple)
 		c.reporterMgr.ExpireChan <- mu
 	}
@@ -215,11 +217,11 @@ func (c *Collector) checkEpStats() {
 }
 
 func (c *Collector) reportMetrics(data *Data) {
-	if (data.EgressRuleTrace.Action() == ActionDeny || data.EgressRuleTrace.Action() == ActionAllow) && data.EgressRuleTrace.IsDirty() {
+	if (data.EgressRuleTrace.Action() == rules.ActionDeny || data.EgressRuleTrace.Action() == rules.ActionAllow) && data.EgressRuleTrace.IsDirty() {
 		mu := data.EgressRuleTrace.ToMetricUpdate(data.Tuple)
 		c.reporterMgr.ReportChan <- mu
 	}
-	if (data.IngressRuleTrace.Action() == ActionDeny || data.IngressRuleTrace.Action() == ActionAllow) && data.IngressRuleTrace.IsDirty() {
+	if (data.IngressRuleTrace.Action() == rules.ActionDeny || data.IngressRuleTrace.Action() == rules.ActionAllow) && data.IngressRuleTrace.IsDirty() {
 		mu := data.IngressRuleTrace.ToMetricUpdate(data.Tuple)
 		c.reporterMgr.ReportChan <- mu
 	}
@@ -285,7 +287,7 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 		// At this point either the source or destination IP address from the conntrack entry
 		// belongs to an endpoint i.e., the connection either begins or terminates locally.
 		tuple := extractTupleFromCtEntryTuple(ctTuple, false)
-		c.applyConnTrackStatUpdate(tuple, RuleDirUnknown,
+		c.applyConnTrackStatUpdate(tuple, rules.RuleDirUnknown,
 			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
 			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes)
 
@@ -296,7 +298,7 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 			// Packets/Connections from a local endpoint to another local endpoint
 			// require a reversed tuple to collect reply stats.
 			tuple := extractTupleFromCtEntryTuple(ctTuple, true)
-			c.applyConnTrackStatUpdate(tuple, RuleDirUnknown,
+			c.applyConnTrackStatUpdate(tuple, rules.RuleDirUnknown,
 				ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
 				ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes)
 		}
@@ -304,7 +306,7 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 	return nil
 }
 
-func (c *Collector) convertNflogPktAndApplyUpdate(dir RuleDirection, nPktAggr *nfnetlink.NflogPacketAggregate) error {
+func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDirection, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
 		numPkts, numBytes int
 		epKey             interface{}
@@ -314,7 +316,7 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir RuleDirection, nPktAggr *n
 
 	// Determine the endpoint that this packet hit a rule for. This depends on the Direction
 	// because local -> local packets will be NFLOGed twice.
-	if dir == RuleDirIngress {
+	if dir == rules.RuleDirIngress {
 		log.WithField("Dst", nflogTuple.Dst).Debug("Searching for endpoint")
 		epKey, err = c.lum.GetEndpointKey(nflogTuple.Dst)
 	} else {
@@ -338,7 +340,7 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir RuleDirection, nPktAggr *n
 		tierIdx := c.lum.GetTierIndex(epKey, ruleIDs.Tier)
 
 		// Determine the starting number of packets and bytes.
-		if ruleIDs.Action == ActionDeny || ruleIDs.Action == ActionAllow {
+		if ruleIDs.Action == rules.ActionDeny || ruleIDs.Action == rules.ActionAllow {
 			// NFLog based counters make sense only for denied packets or allowed packets
 			// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
 			// counters will overwrite these values anyway.
@@ -362,7 +364,7 @@ func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacke
 }
 
 // lookupRuleIDsFromPrefix determines the RuleIDs from a given rule direction and NFLOG prefix.
-func (c *Collector) lookupRuleIDsFromPrefix(dir RuleDirection, prefix [64]byte, prefixLen int) (*RuleIDs, error) {
+func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]byte, prefixLen int) (*rules.RuleIDs, error) {
 	// Extract the RuleIDs from the prefix.
 	//TODO: RLB: We should keep a map[[64]byte]*RuleIDs to perform a fast lookup of the prefix
 	// to the rules IDs (using pointers to avoid additional allocation).  It is a little naughty
@@ -379,18 +381,18 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir RuleDirection, prefix [64]byte, 
 	}
 
 	// Initialise the RuleIDs struct.
-	ruleIDs := &RuleIDs{
+	ruleIDs := &rules.RuleIDs{
 		Direction: dir,
 	}
 
 	// Extract and convert the action.
 	switch prefix[0] {
 	case 'A':
-		ruleIDs.Action = ActionAllow
+		ruleIDs.Action = rules.ActionAllow
 	case 'D':
-		ruleIDs.Action = ActionDeny
+		ruleIDs.Action = rules.ActionDeny
 	case 'N':
-		ruleIDs.Action = ActionNextTier
+		ruleIDs.Action = rules.ActionNextTier
 	default:
 		log.Errorf("Unknown action %v: %v", prefix[0], string(prefix[:prefixLen]))
 		return nil, RuleTracePointParseError
@@ -433,7 +435,7 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir RuleDirection, prefix [64]byte, 
 	var policyIDByte [64]byte
 	copy(policyIDByte[:], prefix[policyIdx:prefixLen])
 
-	policyIDUnhashed, err := c.lum.GetNFLOGHashToRuleID(policyIDByte)
+	policyIDUnhashed, err := c.lum.GetNFLOGHashToPolicyID(policyIDByte)
 	if err != nil {
 		return nil, fmt.Errorf("error getting NFLOG policy/profile name identifier from the hash: %s", err)
 	}

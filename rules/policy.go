@@ -17,12 +17,11 @@ package rules
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/hashutils"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
@@ -35,11 +34,11 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
 	inbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyInboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, collector.RuleIDs{Tier: policyID.Tier, Policy: policyID.Name, Direction: collector.RuleDirIngress}, policy.Untracked),
+		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleIDs{Tier: policyID.Tier, Policy: policyID.Name, Direction: RuleDirIngress}, policy.Untracked),
 	}
 	outbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyOutboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, collector.RuleIDs{Tier: policyID.Tier, Policy: policyID.Name, Direction: collector.RuleDirEgress}, policy.Untracked),
+		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleIDs{Tier: policyID.Tier, Policy: policyID.Name, Direction: RuleDirEgress}, policy.Untracked),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -47,16 +46,16 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
 	inbound := iptables.Chain{
 		Name:  ProfileChainName(ProfileInboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, collector.RuleIDs{Tier: "profile", Policy: profileID.Name, Direction: collector.RuleDirIngress}, false),
+		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, RuleIDs{Tier: "profile", Policy: profileID.Name, Direction: RuleDirIngress}, false),
 	}
 	outbound := iptables.Chain{
 		Name:  ProfileChainName(ProfileOutboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, collector.RuleIDs{Tier: "profile", Policy: profileID.Name, Direction: collector.RuleDirEgress}, false),
+		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, RuleIDs{Tier: "profile", Policy: profileID.Name, Direction: RuleDirEgress}, false),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
 
-func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, ruleIDs collector.RuleIDs, untracked bool) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, ruleIDs RuleIDs, untracked bool) []iptables.Rule {
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
@@ -83,7 +82,7 @@ func filterNets(mixedCIDRs []string, ipVersion uint8) (filtered []string, filter
 	return
 }
 
-func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, ruleIDs collector.RuleIDs, untracked bool) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, ruleIDs RuleIDs, untracked bool) []iptables.Rule {
 	// Filter the CIDRs to the IP version that we're rendering.  In general, we should have an
 	// explicit IP version in the rule and all CIDRs should match it (and calicoctl, for
 	// example, enforces that).  However, we try to handle a rule gracefully if it's missing a
@@ -486,7 +485,7 @@ func SplitPortList(ports []*proto.PortRange) (splits [][]*proto.PortRange) {
 	return
 }
 
-func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint8, ruleIDs collector.RuleIDs, untracked bool) (mark uint32, actions []iptables.Action) {
+func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint8, ruleIDs RuleIDs, untracked bool) (mark uint32, actions []iptables.Action) {
 	actions = []iptables.Action{}
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
@@ -501,7 +500,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 	}
 
 	nflogGroup := NFLOGOutboundGroup
-	if ruleIDs.Direction == collector.RuleDirIngress {
+	if ruleIDs.Direction == RuleDirIngress {
 		nflogGroup = NFLOGInboundGroup
 	}
 
@@ -510,7 +509,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		// Allow needs to set the accept mark, and then return to the calling chain for
 		// further processing.
 		mark = r.IptablesMarkAccept
-		ruleIDs.Action = collector.ActionAllow
+		ruleIDs.Action = ActionAllow
 
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
@@ -523,7 +522,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		// pass (called next-tier in the API for historical reasons) needs to set the pass
 		// mark, and then return to the calling chain for further processing.
 		mark = r.IptablesMarkPass
-		ruleIDs.Action = collector.ActionNextTier
+		ruleIDs.Action = ActionNextTier
 
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
@@ -535,7 +534,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 	case "deny":
 		// Deny maps to DROP.  We defer to DropActions() to allow for "sandbox" mode.
 		mark = r.IptablesMarkDrop
-		ruleIDs.Action = collector.ActionDeny
+		ruleIDs.Action = ActionDeny
 
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
@@ -556,15 +555,15 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 
 // CalculateNFLOGPrefixStr calculates NFLOG prefix string from RuleIDs fields.
 // Example prefix string: "D|0|default.deny-icmp|default|po".
-func CalculateNFLOGPrefixStr(rid collector.RuleIDs) string {
+func CalculateNFLOGPrefixStr(rid RuleIDs) string {
 	var actionPrefix string
 
 	switch rid.Action {
-	case collector.ActionAllow:
+	case ActionAllow:
 		actionPrefix = "A"
-	case collector.ActionNextTier:
+	case ActionNextTier:
 		actionPrefix = "N"
-	case collector.ActionDeny:
+	case ActionDeny:
 		actionPrefix = "D"
 	}
 

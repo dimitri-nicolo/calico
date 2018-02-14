@@ -16,11 +16,9 @@ package iptables
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/projectcalico/felix/hashutils"
-	"github.com/projectcalico/felix/rules"
-	"regexp"
-	"strings"
 )
 
 type Action interface {
@@ -120,8 +118,9 @@ func (n NflogAction) ToFragment() string {
 	//
 	// See lookup/lookup_mgr.go PushNFLOGPrefixHash() & PushNFLOGPrefixHash() funcs, these 3 functions need to be in sync,
 	// if you are updating the current function, we probably need to change that ones as well.
-	trimmedPrefixSlice :=rules.NFLOGPrefixRegexp.Split(n.Prefix, 2)
-	trimmedPrefix := trimmedPrefixSlice[0]
+
+	trimmedPrefixSlice :=strings.Split(n.Prefix, "|")
+	trimmedPrefix := trimmedPrefixSlice[2]
 
 	// Remove the `|po` or `|pr` part before calculating the hash.
 	sepIdx := strings.Index(trimmedPrefix, "|")
@@ -129,7 +128,8 @@ func (n NflogAction) ToFragment() string {
 		trimmedPrefix = trimmedPrefix[:sepIdx]
 	}
 
-	prefixHash := hashutils.GetLengthLimitedID("", trimmedPrefix, rules.NFLOGPrefixMaxLength - 9)
+	// Can't import rules.NFLOGPrefixMaxLength due to cyclic imports so use 64 instead.
+	prefixHash := hashutils.GetLengthLimitedID("", trimmedPrefix, 64 - 9)
 
 	// Reinsert the `|po` or `|pr` suffix before programming the rule.
 	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s", prefixHash, trimmedPrefix[sepIdx:]))

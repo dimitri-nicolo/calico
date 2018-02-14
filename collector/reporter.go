@@ -6,6 +6,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/rules"
 )
 
 const CheckInterval = time.Duration(1) * time.Second
@@ -15,12 +17,12 @@ type MetricUpdate struct {
 	tuple Tuple
 
 	// Rule identification
-	ruleIDs *RuleIDs
+	ruleIDs *rules.RuleIDs
 
 	// Traffic direction.  For NFLOG entries, the traffic direction will always
 	// be "outbound" since the direction is already defined by the source and
 	// destination.
-	trafficDir TrafficDirection
+	trafficDir rules.TrafficDirection
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).

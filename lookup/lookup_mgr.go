@@ -21,7 +21,7 @@ var UnknownEndpointError = errors.New("Unknown endpoint")
 type QueryInterface interface {
 	GetEndpointKey(addr [16]byte) (interface{}, error)
 	GetTierIndex(epKey interface{}, tierName string) int
-	GetNFLOGHashToRuleID(prefixHash [64]byte) ([64]byte, error)
+	GetNFLOGHashToPolicyID(prefixHash [64]byte) ([64]byte, error)
 }
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.

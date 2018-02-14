@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 	"github.com/tigera/nfnetlink/nfnl"
@@ -57,12 +58,12 @@ var (
 )
 
 var defTierAllowIngressTp = &RuleTracePoint{
-	RuleIDs: &RuleIDs{
+	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy1",
 		Index:     "0",
-		Action:    ActionAllow,
-		Direction: RuleDirIngress,
+		Action:    rules.ActionAllow,
+		Direction: rules.RuleDirIngress,
 	},
 	Index: 0,
 	EpKey: localWlEPKey1,
@@ -70,12 +71,12 @@ var defTierAllowIngressTp = &RuleTracePoint{
 }
 
 var defTierAllowEgressTp = &RuleTracePoint{
-	RuleIDs: &RuleIDs{
+	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy1",
 		Index:     "0",
-		Action:    ActionAllow,
-		Direction: RuleDirEgress,
+		Action:    rules.ActionAllow,
+		Direction: rules.RuleDirEgress,
 	},
 	Index: 0,
 	EpKey: localWlEPKey1,
@@ -83,12 +84,12 @@ var defTierAllowEgressTp = &RuleTracePoint{
 }
 
 var defTierDenyIngressTp = &RuleTracePoint{
-	RuleIDs: &RuleIDs{
+	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy2",
 		Index:     "0",
-		Action:    ActionDeny,
-		Direction: RuleDirIngress,
+		Action:    rules.ActionDeny,
+		Direction: rules.RuleDirIngress,
 	},
 	Index: 0,
 	EpKey: localWlEPKey2,
@@ -471,7 +472,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktDenyTuple,
 					ruleIDs:      defTierDenyIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   TrafficDirOutbound,
+					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -487,7 +488,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktAllowTuple,
 					ruleIDs:      defTierAllowIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   TrafficDirOutbound,
+					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -505,7 +506,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktAllowTuple,
 					ruleIDs:      defTierAllowIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   TrafficDirOutbound,
+					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -521,7 +522,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *egressPktAllowTuple,
 					ruleIDs:      defTierAllowEgressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   TrafficDirOutbound,
+					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -552,8 +553,8 @@ func (lm *mockLookupManager) GetTierIndex(epKey interface{}, tierName string) in
 	return 0
 }
 
-func (m *mockLookupManager) GetNFLOGHashToRuleID(prefixHash string) (*RuleIDs, error) {
-	return nil, nil
+func (m *mockLookupManager) GetNFLOGHashToPolicyID(prefixHash [64]byte) ([64]byte, error) {
+	return [64]byte{}, nil
 }
 
 // Define a separate metric type that doesn't include the actual stats.  We use this
@@ -563,12 +564,12 @@ type testMetricUpdate struct {
 	tuple Tuple
 
 	// Rule identification
-	ruleIDs *RuleIDs
+	ruleIDs *rules.RuleIDs
 
 	// Traffic direction.  For NFLOG entries, the traffic direction will always
 	// be "outbound" since the direction is already defined by the source and
 	// destination.
-	trafficDir TrafficDirection
+	trafficDir rules.TrafficDirection
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
@@ -632,7 +633,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		c.convertNflogPktAndApplyUpdate(RuleDirIngress, ingressPktAllow)
+		c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, ingressPktAllow)
 	}
 }
 
