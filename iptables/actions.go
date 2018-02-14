@@ -119,20 +119,13 @@ func (n NflogAction) ToFragment() string {
 	// See lookup/lookup_mgr.go PushNFLOGPrefixHash() & PushNFLOGPrefixHash() funcs, these 3 functions need to be in sync,
 	// if you are updating the current function, we probably need to change that ones as well.
 
-	trimmedPrefixSlice :=strings.Split(n.Prefix, "|")
-	trimmedPrefix := trimmedPrefixSlice[2]
-
-	// Remove the `|po` or `|pr` part before calculating the hash.
-	sepIdx := strings.Index(trimmedPrefix, "|")
-	if sepIdx != -1 {
-		trimmedPrefix = trimmedPrefix[:sepIdx]
-	}
+	trimmedPrefixSlice := strings.Split(n.Prefix, "|")
 
 	// Can't import rules.NFLOGPrefixMaxLength due to cyclic imports so use 64 instead.
-	prefixHash := hashutils.GetLengthLimitedID("", trimmedPrefix, 64 - 9)
+	prefixHash := hashutils.GetLengthLimitedID("", trimmedPrefixSlice[2], 64-9)
 
 	// Reinsert the `|po` or `|pr` suffix before programming the rule.
-	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s", prefixHash, trimmedPrefix[sepIdx:]))
+	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s|%s|%s", trimmedPrefixSlice[0], trimmedPrefixSlice[1], prefixHash, trimmedPrefixSlice[3]))
 }
 
 func (n NflogAction) String() string {
@@ -149,7 +142,7 @@ func (g DNATAction) ToFragment() string {
 	if g.DestPort == 0 {
 		return fmt.Sprintf("--jump DNAT --to-destination %s", g.DestAddr)
 	}
-	
+
 	return fmt.Sprintf("--jump DNAT --to-destination %s:%d", g.DestAddr, g.DestPort)
 }
 
