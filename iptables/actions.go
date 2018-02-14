@@ -111,7 +111,7 @@ func (n NflogAction) ToFragment() string {
 	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
 	// separated by `|`s. Example: "D|0|default.deny-icmp|po".
 	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
-	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (9 for first (A|D|N) then a `|` then
+	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (2 for first (A|D|N) then a `|` then
 	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
 	//
 	// trimmedPrefix will split the prefix after "D|0|" (ActionID|RuleIndex|) so we get the profile/policy ID which includes tier and namespace.
@@ -124,7 +124,6 @@ func (n NflogAction) ToFragment() string {
 	// Can't import rules.NFLOGPrefixMaxLength due to cyclic imports so use 64 instead.
 	prefixHash := hashutils.GetLengthLimitedID("", trimmedPrefixSlice[2], 64-9)
 
-	// Reinsert the `|po` or `|pr` suffix before programming the rule.
 	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s|%s|%s", trimmedPrefixSlice[0], trimmedPrefixSlice[1], prefixHash, trimmedPrefixSlice[3]))
 }
 

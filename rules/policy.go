@@ -567,8 +567,7 @@ func CalculateNFLOGPrefixStr(rid RuleIDs) string {
 		actionPrefix = "D"
 	}
 
-	// For profiles we don't append tier name at the end. The way profile rules are identified are by
-	// looking at their tier name. If the tier name is "profile" then we classify that rule as a profile rule
+	// If the tier name is "profile" then we classify that rule as a profile rule
 	// and add `|pr` at the end.
 	if rid.Tier == "profile" {
 		return fmt.Sprintf("%s|%s|%s|pr", actionPrefix, rid.Index, rid.Policy)
