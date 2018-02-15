@@ -799,6 +799,45 @@ bgpconfig_name2_rev3 = {
 }
 
 #
+# Remote cluster configs
+#
+rcc_rev1 = {
+    'apiVersion': API_VERSION,
+    'kind': 'RemoteClusterConfiguration',
+    'metadata': {
+        'name': 'rcc1',
+    },
+    'spec': {
+        'datastoreType': 'kubernetes',
+        'kubeconfig' : 'yes- this is a valid path!'
+    }
+}
+
+rcc_rev2 = {
+    'apiVersion': API_VERSION,
+    'kind': 'RemoteClusterConfiguration',
+    'metadata': {
+        'name': 'rcc1',
+    },
+    'spec': {
+        'datastoreType': 'kubernetes',
+        'kubeconfig' : '/more/normal'
+    }
+}
+
+rcc_rev3 = {
+    'apiVersion': API_VERSION,
+    'kind': 'RemoteClusterConfiguration',
+    'metadata': {
+        'name': 'rcc1',
+    },
+    'spec': {
+        'datastoreType': 'kubernetes',
+        'kubeconfig' : '/etc/config/kubeconfig'
+    }
+}
+
+#
 # FelixConfigs
 #
 felixconfig_name1_rev1 = {

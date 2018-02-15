@@ -687,6 +687,44 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("delete felixconfig %s" % name(rev2))
         rc.assert_no_error()
 
+    def test_remoteclustserconfiguration(self):
+        """
+        Test CRUD commands behave as expected on the remoteclusterconfiguration resource:
+        """
+        # Create a new configuration and get it to determine the current
+        # resource version.
+        rc = calicoctl("create", data=rcc_rev1)
+        rc.assert_no_error()
+        rc = calicoctl(
+            "get rcc %s -o yaml" % name(rcc_rev1))
+        rc.assert_no_error()
+        rev0 = rc.decoded
+
+        # Replace the config (with no resource version) and get it to
+        # assert the resource version is not the same.
+        rc = calicoctl("replace", data=rcc_rev2)
+        rc.assert_no_error()
+        rc = calicoctl(
+            "get RemoteClusterConfiguration"
+            " %s -o yaml" % name(rcc_rev2))
+        rc.assert_no_error()
+        rev1 = rc.decoded
+        self.assertNotEqual(rev0['metadata']['resourceVersion'], rev1['metadata']['resourceVersion'])
+
+        # Apply an update to the configuration and assert the resource version is not the same.
+        rc = calicoctl("apply", data=rcc_rev3)
+        rc.assert_no_error()
+        rc = calicoctl(
+            "get remoteclusterconfiguration %s -o yaml" % name(rcc_rev3))
+        rc.assert_no_error()
+        rev2 = rc.decoded
+        self.assertNotEqual(rev1['metadata']['resourceVersion'], rev2['metadata']['resourceVersion'])
+
+
+        # Delete the resource by name (i.e. without using a resource version).
+        rc = calicoctl("delete rcc %s" % name(rev2))
+        rc.assert_no_error()
+
     def test_clusterinfo(self):
         """
         Test CRUD commands behave as expected on the cluster information resource:

@@ -66,6 +66,7 @@ Description:
     * node
     * profile
     * workloadEndpoint
+    * remoteClusterConfiguration
 
   Attempting to replace a resource that does not exist is treated as a
   terminating error.

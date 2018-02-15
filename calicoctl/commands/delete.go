@@ -73,6 +73,7 @@ Description:
     * node
     * profile
     * workloadEndpoint
+    * remoteClusterConfiguration
 
   The resource type is case insensitive and may be pluralized.
 
