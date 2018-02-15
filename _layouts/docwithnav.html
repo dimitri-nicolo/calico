@@ -109,7 +109,7 @@ The code is a little roundabout for a few reasons:
               <ul class="nav navbar-nav navbar-right">
                 {% for navbar in navbars %}
                   <li {% if this_pages_navbar == navbar %} class="active"{% endif %}>
-                    <a href="{{site.baseurl}}/{{page.version}}{{navbar.path}}">{{ navbar.bigheader }}</a>
+                    <a href="{{site.baseurl}}/{{page.version}}{{navbar.path}}/">{{ navbar.bigheader }}</a>
                   </li>
                 {% endfor %}
               </ul>
@@ -118,8 +118,8 @@ The code is a little roundabout for a few reasons:
              <li class="dropdown">
                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Version ({% if page.version == 'master' %}nightly{% else %}{{page.version}}{% endif %})<span class="caret"></span></a>
                <ul class="dropdown-menu">
-                 <li><a href="{{site.baseurl}}/v2.0/introduction">v2.0</a></li>
-                 <li><a href="{{site.baseurl}}/master/introduction">nightly</a></li>
+                 <li><a href="{{site.baseurl}}/v2.0/introduction/">v2.0</a></li>
+                 <li><a href="{{site.baseurl}}/master/introduction/">nightly</a></li>
                  <li role="separator" class="divider"></li>
                </ul>
              </li>
@@ -131,14 +131,14 @@ The code is a little roundabout for a few reasons:
             <ul class="nav navbar-nav">
               {% for navbar in navbars %}
                 <li{% if this_pages_navbar == navbar %} class="active"{% endif %}>
-                  <a href="{{site.baseurl}}/{{page.version}}{{navbar.path}}"><span>{{ navbar.bigheader }}</span></a>
+                  <a href="{{site.baseurl}}/{{page.version}}{{navbar.path}}/"><span>{{ navbar.bigheader }}</span></a>
                 </li>
               {% endfor %}
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Version ({% if page.version == 'master' %}nightly{% else %}{{page.version}}{% endif %})<span class="caret"></span></a>
                 <ul class="dropdown-menu">
-                  <li><a href="{{site.baseurl}}/v2.0/introduction">v2.0</a></li>
-                  <li><a href="{{site.baseurl}}/master/introduction">nightly</a></li>
+                  <li><a href="{{site.baseurl}}/v2.0/introduction/">v2.0</a></li>
+                  <li><a href="{{site.baseurl}}/master/introduction/">nightly</a></li>
                 </ul>
               </li>
             </ul>
