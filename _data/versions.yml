@@ -4,7 +4,7 @@ v2.0:
     5 February 2018
 
     This version includes updated versions of the calicoq and cnx-node container
-    images. These new images fix some CVEs but introduce no new features or 
+    images. These new images fix some CVEs but introduce no new features or
     other bug fixes.
   components:
     cnx-manager:
@@ -688,8 +688,8 @@ master:
     calico/cni:
       version: master
       url: ""
-      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.0/calico
-      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.0/calico-ipam
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico-ipam
     calico-bird:
       version: v0.3.1
       url: https://github.com/projectcalico/calico-bird/releases/tag/v0.3.1
