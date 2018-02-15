@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/projectcalico/felix/hashutils"
+	log "github.com/sirupsen/logrus"
 )
 
 type Action interface {
@@ -120,6 +121,20 @@ func (n NflogAction) ToFragment() string {
 	// if you are updating the current function, we probably need to change that ones as well.
 
 	trimmedPrefixSlice := strings.Split(n.Prefix, "|")
+
+	log.WithFields(log.Fields{
+		"rawPrefix":    n.Prefix,
+		"ruleFragment": trimmedPrefixSlice,
+	}).Debug("******************** NFLOG PREFIX ************************")
+
+	fmt.Println("************** NFLOG PREFIX ***********")
+	fmt.Printf("rawPrefix %v \n\n fragments: %v \n\n", n.Prefix, trimmedPrefixSlice)
+
+	if len(trimmedPrefixSlice) < 4 {
+		log.Errorf("************* returning early")
+		fmt.Println("******************* returning early")
+		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix A|0|some.bloodypolicy|po --nflog-range 80", n.Group)
+	}
 
 	// Can't import rules.NFLOGPrefixMaxLength due to cyclic imports so use 64 instead.
 	prefixHash := hashutils.GetLengthLimitedID("", trimmedPrefixSlice[2], 64-9)
