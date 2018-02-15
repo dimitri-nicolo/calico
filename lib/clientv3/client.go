@@ -144,6 +144,11 @@ func (c client) ClusterInformation() ClusterInformationInterface {
 	return clusterInformation{client: c}
 }
 
+// RemoteClusterConfiguration returns an interface for managing remote cluster configuration resources.
+func (c client) RemoteClusterConfigurations() RemoteClusterConfigurationInterface {
+	return remoteClusterConfiguration{client: c}
+}
+
 type poolAccessor struct {
 	client *client
 }

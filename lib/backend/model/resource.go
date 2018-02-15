@@ -118,6 +118,11 @@ func init() {
 		"workloadendpoints",
 		reflect.TypeOf(apiv3.WorkloadEndpoint{}),
 	)
+	registerResourceInfo(
+		apiv3.KindRemoteClusterConfiguration,
+		"remoteclusterconfigurations",
+		reflect.TypeOf(apiv3.RemoteClusterConfiguration{}),
+	)
 }
 
 type ResourceKey struct {

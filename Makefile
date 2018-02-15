@@ -214,11 +214,11 @@ DOCKER_GO_BUILD := \
 
 $(BINDIR)/deepcopy-gen:
 	$(DOCKER_GO_BUILD) \
-		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
+		sh -c 'go build -o deepcopy-gen $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
 $(BINDIR)/openapi-gen:
 	$(DOCKER_GO_BUILD) \
-    		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+    		sh -c 'go build -o openapi-gen $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 # Regenerate all files if the gen exe(s) changed
 .code_gen: .code_gen_exes

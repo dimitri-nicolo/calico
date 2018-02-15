@@ -1535,6 +1535,138 @@ func init() {
 				},
 			}, true,
 		),
+
+
+		// RemoteClusterConfig field checks
+		//Entry("check datastore type", &api.RemoteClusterConfiguration{ObjectMeta: v1.ObjectMeta{Name: "any"}}, true),
+
+
+		Entry("allow etdv3 datastore type",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "etcdv3",
+				},
+			}, true,
+		),
+
+		Entry("allow k8s datastore type",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "kubernetes",
+				},
+			}, true,
+		),
+
+
+
+		Entry("disallow other datastore type",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "other",
+				},
+			}, false,
+		),
+
+		Entry("disallow blank datastore type",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+				},
+			}, false,
+		),
+
+		Entry("disallow k8s config if datastore type is etcd",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "etcdv3",
+					Kubeconfig: "/a/b/c/kubeconfig",
+				},
+			}, false,
+		),
+
+		Entry("disallow etcd config if datastore type is k8s",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "kubernetes",
+					EtcdEndpoints: "https://127.0.0.1:2379",
+				},
+			}, false,
+		),
+
+		Entry("allow correctly formatted cert path",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "kubernetes",
+					K8sKeyFile: "/a/cert.pem",
+				},
+			}, true,
+		),
+
+		Entry("disallow badly formatted cert",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "kubernetes",
+					K8sKeyFile: "/a/secret/\x00null/",
+				},
+			}, false,
+		),
+		Entry("allow correctly formatted etcd endpoint",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "etcdv3",
+					EtcdEndpoints: "http://123.123.123.123:2379",
+				},
+			}, true,
+		),
+
+		Entry("allow correctly formatted etcd endpoints",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "etcdv3",
+					EtcdEndpoints: "http://123.123.123.123:2379;https://1.1.1.1:123",
+				},
+			}, true,
+		),
+
+		Entry("disallow badly formatted etcd endpoint",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "etcdv3",
+					EtcdEndpoints: "httpp:/1:500",
+				},
+			}, false,
+		),
+
+
+		Entry("allow correctly formatted k8s endpoints",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "kubernetes",
+					K8sAPIEndpoint: "https://127.0.0.1:880",
+				},
+			}, true,
+		),
+
+		Entry("disallow badly formatted k8s endpoint",
+			&api.RemoteClusterConfiguration{
+				ObjectMeta: v1.ObjectMeta{Name: "thing"},
+				Spec: api.RemoteClusterConfigurationSpec{
+					DatastoreType: "kubernetes",
+					K8sAPIEndpoint: "htps://127.0.0.1:880",
+				},
+			}, false,
+		),
 	)
 }
 

@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	validator "gopkg.in/go-playground/validator.v8"
+	"gopkg.in/go-playground/validator.v8"
 
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,6 +76,9 @@ var (
 	datastoreType         = regexp.MustCompile("^(etcdv3|kubernetes)$")
 	dropAcceptReturnRegex = regexp.MustCompile("^(Drop|Accept|Return)$")
 	acceptReturnRegex     = regexp.MustCompile("^(Accept|Return)$")
+	fileRegex             = regexp.MustCompile("^[^\x00]+$")
+	k8sEndpointRegex      = regexp.MustCompile("^https?://[^:]+:\\d+$")
+	etcdEndpointsRegex    = regexp.MustCompile("^https?://[^:]+:\\d+(;https?://[^:]+:\\d+)*$")
 	reasonString          = "Reason: "
 	poolSmallIPv4         = "IP pool size is too small (min /26) for use with Calico IPAM"
 	poolSmallIPv6         = "IP pool size is too small (min /122) for use with Calico IPAM"
@@ -170,6 +173,11 @@ func init() {
 	registerFieldValidator("cidrv6", validateCIDRv6)
 	registerFieldValidator("cidr", validateCIDR)
 
+	// Register configuration validators
+	registerFieldValidator("file", validateFile)
+	registerFieldValidator("etcdEndpoints", validateEtcdEndpoints)
+	registerFieldValidator("k8sEndpoint", validateK8sEndpoint)
+
 	// Register structs that have no additional sub structs for first round of validation.
 	registerStructValidator(validatorPrimary, validateProtocol, numorstring.Protocol{})
 	registerStructValidator(validatorPrimary, validateProtoPort, api.ProtoPort{})
@@ -187,6 +195,7 @@ func init() {
 	registerStructValidator(validatorSecondary, validateWorkloadEndpointSpec, api.WorkloadEndpointSpec{})
 	registerStructValidator(validatorSecondary, validateHostEndpointSpec, api.HostEndpointSpec{})
 	registerStructValidator(validatorSecondary, validateRule, api.Rule{})
+	registerStructValidator(validatorSecondary, validateRemoteClusterConfigSpec, api.RemoteClusterConfigurationSpec{})
 
 	// Register structs that have two level of additional structs to validate.
 	registerStructValidator(validatorTertiary, validateNetworkPolicy, api.NetworkPolicy{})
@@ -491,6 +500,24 @@ func validateIPNAT(v *validator.Validate, structLevel *validator.StructLevel) {
 	}
 }
 
+func validateFile(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate file: %s", s)
+	return fileRegex.MatchString(s)
+}
+
+func validateK8sEndpoint(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate K8s Endpoint: %s", s)
+	return k8sEndpointRegex.MatchString(s)
+}
+
+func validateEtcdEndpoints(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate Etcd Endpoints: %s", s)
+	return etcdEndpointsRegex.MatchString(s)
+}
+
 func validateFelixConfigSpec(v *validator.Validate, structLevel *validator.StructLevel) {
 	c := structLevel.CurrentStruct.Interface().(api.FelixConfigurationSpec)
 
@@ -603,6 +630,70 @@ func validateHostEndpointSpec(v *validator.Validate, structLevel *validator.Stru
 	if h.Node == "" {
 		structLevel.ReportError(reflect.ValueOf(h.Node),
 			"InterfaceName", "", reason("no node has been specified"))
+	}
+}
+
+func validateRemoteClusterConfigSpec(v *validator.Validate, structLevel *validator.StructLevel) {
+	h := structLevel.CurrentStruct.Interface().(api.RemoteClusterConfigurationSpec)
+
+	// A remote cluster config must only have config that matches the datastore type
+	if h.DatastoreType == "etcdv3" {
+		if len(h.Kubeconfig) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.Kubeconfig),
+				"Kubeconfig", "", reason("Kubeconfig can't be specified if the datastore type is 'etcdv3'"))
+		}
+		if len(h.K8sAPIEndpoint) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.K8sAPIEndpoint),
+				"K8sAPIEndpoint", "", reason("K8sAPIEndpoint can't be specified if the datastore type is 'etcdv3'"))
+		}
+		if len(h.K8sAPIToken) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.K8sAPIToken),
+				"K8sAPIToken", "", reason("K8sAPIToken can't be specified if the datastore type is 'etcdv3'"))
+		}
+		if len(h.K8sCAFile) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.K8sCAFile),
+				"K8sCAFile", "", reason("K8sCAFile can't be specified if the datastore type is 'etcdv3'"))
+		}
+		if len(h.K8sCertFile) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.K8sCertFile),
+				"K8sCertFile", "", reason("K8sCertFile can't be specified if the datastore type is 'etcdv3'"))
+		}
+		if len(h.K8sKeyFile) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.K8sKeyFile),
+				"K8sKeyFile", "", reason("K8sKeyFile can't be specified if the datastore type is 'etcdv3'"))
+		}
+		if h.K8sInsecureSkipTLSVerify {
+			structLevel.ReportError(reflect.ValueOf(h.K8sInsecureSkipTLSVerify),
+				"K8sInsecureSkipTLSVerify", "", reason("K8sInsecureSkipTLSVerify can't be specified if the datastore type is 'etcdv3'"))
+		}
+
+	}
+	if h.DatastoreType == "kubernetes" {
+		if len(h.EtcdEndpoints) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.EtcdEndpoints),
+				"EtcdEndpoints", "", reason("EtcdEndpoints can't be specified if the datastore type is 'kubernetes'"))
+		}
+		if len(h.EtcdCACertFile) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.EtcdCACertFile),
+				"EtcdCACertFile", "", reason("EtcdCACertFile can't be specified if the datastore type is 'kubernetes'"))
+		}
+		if len(h.EtcdCertFile) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.EtcdCertFile),
+				"EtcdCertFile", "", reason("EtcdCertFile can't be specified if the datastore type is 'kubernetes'"))
+		}
+		if len(h.EtcdKeyFile) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.EtcdKeyFile),
+				"EtcdKeyFile", "", reason("EtcdKeyFile can't be specified if the datastore type is 'kubernetes'"))
+		}
+		if len(h.EtcdPassword) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.EtcdPassword),
+				"EtcdPassword", "", reason("EtcdPassword can't be specified if the datastore type is 'kubernetes'"))
+		}
+		if len(h.EtcdPassword) != 0 {
+			structLevel.ReportError(reflect.ValueOf(h.EtcdPassword),
+				"EtcdPassword", "", reason("EtcdPassword can't be specified if the datastore type is 'kubernetes'"))
+		}
+
 	}
 }
 

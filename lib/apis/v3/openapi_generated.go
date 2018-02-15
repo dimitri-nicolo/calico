@@ -3774,6 +3774,194 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfiguration contains the configuration for remote clusters.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the RemoteClusterConfiguration.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfigurationList contains a list of RemoteClusterConfiguration resources",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfigurationSpec contains the values of describing the cluster.",
+					Properties: map[string]spec.Schema{
+						"datastoreType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Indicates the datastore to use. If unspecified, defaults to etcdv3",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdEndpoints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A comma separated list of etcd endpoints.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdUsername": {
+							SchemaProps: spec.SchemaProps{
+								Description: "User name for RBAC.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdPassword": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Password for the given user name.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd key fil.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd client certificate.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdCACertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd Certificate Authority file.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"kubeconfig": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When using the Kubernetes datastore, the location of a kubeconfig file.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sAPIEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of the Kubernetes API. Not required if using kubeconfig.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client key for accessing the Kubernetes API.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client certificate for accessing the Kubernetes API.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a CA for accessing the Kubernetes API.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sAPIToken": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Token to be used for accessing the Kubernetes API.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sInsecureSkipTLSVerify": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
+						},
+					},
+					Required: []string{"datastoreType"},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
