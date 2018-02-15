@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/projectcalico/felix/hashutils"
-	log "github.com/sirupsen/logrus"
 )
 
 type Action interface {
@@ -119,27 +118,12 @@ func (n NflogAction) ToFragment() string {
 	//
 	// See lookup/lookup_mgr.go PushNFLOGPrefixHash() & PushNFLOGPrefixHash() funcs, these 3 functions need to be in sync,
 	// if you are updating the current function, we probably need to change that ones as well.
-
-	trimmedPrefixSlice := strings.Split(n.Prefix, "|")
-
-	log.WithFields(log.Fields{
-		"rawPrefix":    n.Prefix,
-		"ruleFragment": trimmedPrefixSlice,
-	}).Debug("******************** NFLOG PREFIX ************************")
-
-	fmt.Println("************** NFLOG PREFIX ***********")
-	fmt.Printf("rawPrefix %v \n\n fragments: %v \n\n", n.Prefix, trimmedPrefixSlice)
-
-	if len(trimmedPrefixSlice) < 4 {
-		log.Errorf("************* returning early")
-		fmt.Println("******************* returning early")
-		// return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix A|0|some.bloodypolicy|po --nflog-range 80", n.Group)
-	}
+	prefixParts := strings.Split(n.Prefix, "|")
 
 	// Can't import rules.NFLOGPrefixMaxLength due to cyclic imports so use 64 instead.
-	prefixHash := hashutils.GetLengthLimitedID("", trimmedPrefixSlice[2], 64-9)
+	prefixHash := hashutils.GetLengthLimitedID("", prefixParts[2], 64-9)
 
-	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s|%s|%s", trimmedPrefixSlice[0], trimmedPrefixSlice[1], prefixHash, trimmedPrefixSlice[3]))
+	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s|%s|%s", prefixParts[0], prefixParts[1], prefixHash, prefixParts[3]))
 }
 
 func (n NflogAction) String() string {
