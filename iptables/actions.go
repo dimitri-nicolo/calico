@@ -133,7 +133,7 @@ func (n NflogAction) ToFragment() string {
 	if len(trimmedPrefixSlice) < 4 {
 		log.Errorf("************* returning early")
 		fmt.Println("******************* returning early")
-		return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix A|0|some.bloodypolicy|po --nflog-range 80", n.Group)
+		// return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix A|0|some.bloodypolicy|po --nflog-range 80", n.Group)
 	}
 
 	// Can't import rules.NFLOGPrefixMaxLength due to cyclic imports so use 64 instead.
