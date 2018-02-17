@@ -513,8 +513,9 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
-				Group:  nflogGroup,
-				Prefix: CalculateNFLOGPrefixStr(ruleIDs),
+				Group:       nflogGroup,
+				Prefix:      CalculateNFLOGPrefixStr(ruleIDs),
+				SizeEnabled: r.EnableNflogSize,
 			})
 		}
 		actions = append(actions, iptables.ReturnAction{})
@@ -526,8 +527,9 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
-				Group:  nflogGroup,
-				Prefix: CalculateNFLOGPrefixStr(ruleIDs),
+				Group:       nflogGroup,
+				Prefix:      CalculateNFLOGPrefixStr(ruleIDs),
+				SizeEnabled: r.EnableNflogSize,
 			})
 		}
 		actions = append(actions, iptables.ReturnAction{})
@@ -538,8 +540,9 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
-				Group:  nflogGroup,
-				Prefix: CalculateNFLOGPrefixStr(ruleIDs),
+				Group:       nflogGroup,
+				Prefix:      CalculateNFLOGPrefixStr(ruleIDs),
+				SizeEnabled: r.EnableNflogSize,
 			})
 		}
 		actions = append(actions, r.DropActions()...)

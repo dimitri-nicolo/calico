@@ -155,6 +155,8 @@ type Config struct {
 
 	DisableConntrackInvalidCheck bool `config:"bool;false"`
 
+	EnableNflogSize bool `config:"bool;false"`
+
 	HealthEnabled                   bool `config:"bool;false"`
 	HealthPort                      int  `config:"int(0,65535);9099"`
 	PrometheusMetricsEnabled        bool `config:"bool;false"`
@@ -593,6 +595,7 @@ func New() *Config {
 		hostname = strings.ToLower(os.Getenv("HOSTNAME"))
 	}
 	p.FelixHostname = hostname
+	p.EnableNflogSize = isNflogSizeAvailable()
 	return p
 }
 

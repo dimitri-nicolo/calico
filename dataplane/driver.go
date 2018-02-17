@@ -93,6 +93,8 @@ func StartDataplaneDriver(configParams *config.Config, healthAggregator *health.
 				FailsafeOutboundHostPorts: configParams.FailsafeOutboundHostPorts,
 
 				DisableConntrackInvalid: configParams.DisableConntrackInvalidCheck,
+
+				EnableNflogSize: configParams.EnableNflogSize,
 			},
 			NfNetlinkBufSize:               configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:              configParams.StatsDumpFilePath,
