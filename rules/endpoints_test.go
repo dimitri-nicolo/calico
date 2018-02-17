@@ -160,7 +160,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
 								Group:  1,
-								Prefix: "D|0|no-policy-match-inbound|po"}},
+								Prefix: "D|0|tier1.no-policy-match-inbound|po"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -180,7 +180,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
 								Group:  1,
-								Prefix: "D|0|no-policy-match-inbound|po"}},
+								Prefix: "D|0|tier2.no-policy-match-inbound|po"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -227,7 +227,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
 								Group:  2,
-								Prefix: "D|0|no-policy-match-outbound|po"}},
+								Prefix: "D|0|tier1.no-policy-match-outbound|po"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -247,7 +247,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
 								Group:  2,
-								Prefix: "D|0|no-policy-match-outbound|po"}},
+								Prefix: "D|0|tier2.no-policy-match-outbound|po"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -312,7 +312,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
 								Group:  2,
-								Prefix: "D|0|no-policy-match-outbound|po"}},
+								Prefix: "D|0|tier1.no-policy-match-outbound|po"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -362,7 +362,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
 								Group:  1,
-								Prefix: "D|0|no-policy-match-inbound|po"}},
+								Prefix: "D|0|tier1.no-policy-match-inbound|po"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -409,7 +409,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
 								Group:  2,
-								Prefix: "D|0|no-policy-match-outbound|fwdTier1"}},
+								Prefix: "D|0|fwdTier1.no-policy-match-outbound|po"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},
@@ -441,7 +441,7 @@ var _ = Describe("Endpoints", func() {
 						{Match: Match().MarkClear(0x10),
 							Action: NflogAction{
 								Group:  1,
-								Prefix: "D|0|no-policy-match-inbound|fwdTier1"}},
+								Prefix: "D|0|fwdTier1.no-policy-match-inbound|po"}},
 						{Match: Match().MarkClear(0x10),
 							Action:  DropAction{},
 							Comment: "Drop if no policies passed packet"},

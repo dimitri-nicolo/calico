@@ -28,8 +28,8 @@ import (
 
 var ruleIDs = RuleIDs{
 	Direction: RuleDirIngress,
-	Policy: "foo",
-	Index: "0",
+	Policy:    "default.foo",
+	Index:     "0",
 }
 
 var ruleTestData = []TableEntry{
@@ -216,7 +216,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x80),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "A|0|foo|po",
+					Prefix: "A|0|default.foo|po",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -248,7 +248,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					Match: iptables.Match().MarkSet(0x100),
 					Action: iptables.NflogAction{
 						Group:  1,
-						Prefix: "N|0|foo|po",
+						Prefix: "N|0|default.foo|po",
 					},
 				}))
 				Expect(rules[2]).To(Equal(iptables.Rule{
@@ -319,7 +319,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "D|0|foo|po",
+					Prefix: "D|0|default.foo|po",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -348,7 +348,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "D|0|foo|po",
+					Prefix: "D|0|default.foo|po",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -383,7 +383,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "D|0|foo|po",
+					Prefix: "D|0|default.foo|po",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -417,7 +417,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 				Match: iptables.Match().MarkSet(0x800),
 				Action: iptables.NflogAction{
 					Group:  1,
-					Prefix: "D|0|foo|po",
+					Prefix: "D|0|default.foo|po",
 				},
 			}))
 			Expect(rules[2]).To(Equal(iptables.Rule{
@@ -432,7 +432,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 		clearBothMarksRule       = "-A test --jump MARK --set-mark 0x0/0x600"
 		preSetAllBlocksMarkRule  = "-A test --jump MARK --set-mark 0x200/0x600"
 		allowIfAllMarkRule       = "-A test -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
-		nflogAllowRule           = "-A test -m mark --mark 0x80/0x80 --jump NFLOG --nflog-group 1 --nflog-prefix A|0|foo|po --nflog-range 80"
+		nflogAllowRule           = "-A test -m mark --mark 0x80/0x80 --jump NFLOG --nflog-group 1 --nflog-prefix A|0|default.foo|po --nflog-range 80"
 		allowIfAllMarkAndTCPRule = "-A test -p tcp -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
 		allowIfAllMarkAndUDPRule = "-A test -p udp -m mark --mark 0x200/0x200 --jump MARK --set-mark 0x80/0x80"
 		returnRule               = "-A test -m mark --mark 0x80/0x80 --jump RETURN"

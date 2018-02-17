@@ -91,7 +91,7 @@ const (
 	NFLOGPrefixMaxLength = 64
 
 	// NFLOG groups. 1 for inbound and 2 for outbound.
-	NFLOGInboundGroup uint16 = 1
+	NFLOGInboundGroup  uint16 = 1
 	NFLOGOutboundGroup uint16 = 2
 
 	// HistoricNATRuleInsertRegex is a regex pattern to match to match

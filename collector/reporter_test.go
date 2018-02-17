@@ -41,7 +41,7 @@ var dummyWlEpKey = model.WorkloadEndpointKey{
 var defTierAllowT1 = &RuleTrace{
 	path: []*RuleTracePoint{
 		{
-			prefix:    [64]byte{'A', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '1', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'},
+			prefix:    [64]byte{'A', '|', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1', '|', 'p', 'o'},
 			pfxlen:    19,
 			tierIdx:   12,
 			policyIdx: 4,
@@ -56,7 +56,7 @@ var defTierAllowT1 = &RuleTrace{
 var defTierAllowT2 = &RuleTrace{
 	path: []*RuleTracePoint{
 		{
-			prefix:    [64]byte{'A', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '2', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'},
+			prefix:    [64]byte{'A', '|', '0', '|',  'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2', '|', 'p', 'o'},
 			pfxlen:    19,
 			tierIdx:   12,
 			policyIdx: 4,
@@ -71,7 +71,7 @@ var defTierAllowT2 = &RuleTrace{
 var defTierDenyT3 = &RuleTrace{
 	path: []*RuleTracePoint{
 		{
-			prefix:    [64]byte{'D', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '3', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'},
+			prefix:    [64]byte{'D', '|', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '3', '|', 'p', 'o'},
 			pfxlen:    19,
 			tierIdx:   12,
 			policyIdx: 4,
@@ -86,7 +86,7 @@ var defTierDenyT3 = &RuleTrace{
 var defTierDenyT4 = &RuleTrace{
 	path: []*RuleTracePoint{
 		{
-			prefix:    [64]byte{'D', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '4', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'},
+			prefix:    [64]byte{'D', '|', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '4', '|', 'p', 'o'},
 			pfxlen:    19,
 			tierIdx:   12,
 			policyIdx: 4,

@@ -407,28 +407,6 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 	}
 	policyIdx := ruleIdx + policySep + 1
 
-	tierSepIdx := bytes.IndexByte(prefix[policyIdx:], ruleSep)
-	var tierIdx int
-	if tierSepIdx == -1 {
-		tierIdx = -1
-	} else {
-		tierIdx = policyIdx + tierSepIdx + 1
-	}
-
-	// Set the tier name.
-	if tierIdx == -1 {
-		ruleIDs.Tier = "profile"
-	} else {
-		ruleIDs.Tier = string(prefix[tierIdx:prefixLen])
-	}
-
-	// Set the policy name.
-	if tierIdx == -1 {
-		ruleIDs.Policy = string(prefix[policyIdx:prefixLen])
-	} else {
-		ruleIDs.Policy = string(prefix[policyIdx : tierIdx-1])
-	}
-
 	// Set the rule index.
 	ruleIDs.Index = string(prefix[ruleIdx : policyIdx-1])
 
@@ -454,21 +432,21 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 				// Policy without a namespace (default)
 
 				// Check if it's a knp.default policy.
-				if string(policyIDUnhashed[:tierIdx]) == "knp" && string(policyIDUnhashed[:12]) == "knp.default." {
+				if bytes.HasPrefix(policyIDUnhashed[:12], []byte("knp.default.")) {
 					ruleIDs.Tier = "default"
 					ruleIDs.Policy = string(policyIDUnhashed[12 : len(policyIDUnhashed)-3])
 				} else {
 					// It's a non-k8s policy.
 					ruleIDs.Tier = string(policyIDUnhashed[:tierIdx])
-					ruleIDs.Policy = string(policyIDUnhashed[tierIdx : len(policyIDUnhashed)-3])
+					ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])
 				}
 			}
 		} else {
 			if tierIdx == -1 {
 				// No tier means it's a profile, but profiles don't have namespace, so it should never get here.
 			} else {
-				ruleIDs.Tier = string(policyIDUnhashed[nsIdx:tierIdx])
-				ruleIDs.Policy = string(policyIDUnhashed[tierIdx : len(policyIDUnhashed)-3])
+				ruleIDs.Tier = string(policyIDUnhashed[nsIdx+1 : tierIdx])
+				ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])
 			}
 		}
 	}

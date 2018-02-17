@@ -187,17 +187,15 @@ func (m *LookupManager) PushPolicyNFLOGPrefixHash(msg *proto.ActivePolicyUpdate)
 	//
 	// See iptables/actions.go ToFragment() func, this needs to be in sync,
 	// if you are updating the current function, we probably need to change that one as well.
-	prefixHash := hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-9)
+	prefixHash := hashutils.GetLengthLimitedID("", fmt.Sprintf("%s.%s", msg.Id.Tier, msg.Id.Name), rules.NFLOGPrefixMaxLength-9)
 	prefixHash += "|po"
 
 	var bph [64]byte
 	copy(bph[:], []byte(prefixHash[:]))
 
 	m.nflogMutex.Lock()
-
 	// Store the hash in a map. With hash being the key and string being the value.
-	m.nflogPrefixHash[bph] = []byte(msg.Id.Name)
-
+	m.nflogPrefixHash[bph] = []byte(fmt.Sprintf("%s.%s|po", msg.Id.Tier, msg.Id.Name))
 	m.nflogMutex.Unlock()
 }
 
@@ -219,10 +217,8 @@ func (m *LookupManager) PushProfileNFLOGPrefixHash(msg *proto.ActiveProfileUpdat
 	copy(bph[:], []byte(prefixHash[:]))
 
 	m.nflogMutex.Lock()
-
 	// Store the hash in a map. With hash being the key and string being the value.
-	m.nflogPrefixHash[bph] = []byte(msg.Id.Name)
-
+	m.nflogPrefixHash[bph] = []byte(fmt.Sprintf("%s|pr", msg.Id.Name))
 	m.nflogMutex.Unlock()
 }
 
@@ -232,10 +228,10 @@ func (m *LookupManager) PopPolicyNFLOGPrefixHash(msg *proto.ActivePolicyRemove) 
 	var honByte [64]byte
 	hashOrName := msg.Id.Name
 
-	// +9 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
-	// and 3 more for the `|po` suffix at the end.
-	if len(msg.Id.Name)+9 > rules.NFLOGPrefixMaxLength {
-		hashOrName = hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-6)
+	// +10 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
+	// and 3 more for the `|po` suffix at the end and 1 for the `.` between tier and policy name.
+	if len(msg.Id.Name)+len(msg.Id.Tier)+10 > rules.NFLOGPrefixMaxLength {
+		hashOrName = hashutils.GetLengthLimitedID("", fmt.Sprintf("%s.%s", msg.Id.Tier, msg.Id.Name), rules.NFLOGPrefixMaxLength-9)
 	}
 
 	hashOrName += "|po"
@@ -243,9 +239,7 @@ func (m *LookupManager) PopPolicyNFLOGPrefixHash(msg *proto.ActivePolicyRemove) 
 	copy(honByte[:], []byte(hashOrName))
 
 	m.nflogMutex.Lock()
-
 	delete(m.nflogPrefixHash, honByte)
-
 	m.nflogMutex.Unlock()
 }
 
@@ -266,9 +260,7 @@ func (m *LookupManager) PopProfileNFLOGPrefixHash(msg *proto.ActiveProfileRemove
 	copy(honByte[:], []byte(hashOrName))
 
 	m.nflogMutex.Lock()
-
 	delete(m.nflogPrefixHash, honByte)
-
 	m.nflogMutex.Unlock()
 }
 

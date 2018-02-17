@@ -326,7 +326,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					Match: Match().MarkClear(r.IptablesMarkPass),
 					Action: NflogAction{
 						Group:  nflogGroup,
-						Prefix: fmt.Sprintf("D|0|no-policy-match-%s|po", directionSuffix),
+						Prefix: fmt.Sprintf("D|0|%s.no-policy-match-%s|po", tier.Name, directionSuffix),
 					},
 				})
 				rules = append(rules, r.DropRules(
