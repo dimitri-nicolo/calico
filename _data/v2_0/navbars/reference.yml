@@ -125,7 +125,7 @@ toc:
       path: /reference/cnx/rbac-tiered-policies
     - title: Editing policies
       path: /reference/cnx/policy-editor
-    - title: Deployment recommendations and limitations
+    - title: Deploying CNX Manager
       path: /reference/cnx/recommendations
 - title: Deploying on Public Cloud
   section:
