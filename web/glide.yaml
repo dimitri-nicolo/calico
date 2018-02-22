@@ -1,0 +1,22 @@
+package: github.com/tigera/calicoq/web
+import:
+- package: github.com/satori/go.uuid
+  version: ^1.2.0
+- package: github.com/sirupsen/logrus
+  version: ^1.0.4
+- package: github.com/projectcalico/felix
+  vcs: git
+  repo: git@github.com:tigera/felix-private.git
+  version: v2.0.0
+  subpackages:
+  - labelindex
+- package: github.com/projectcalico/libcalico-go
+  vcs: git
+  repo: git@github.com:tigera/libcalico-go-private.git
+  version: v2.0.0
+  subpackages:
+  - lib/apiconfig
+  - lib/backend
+  - lib/backend/api
+  - lib/backend/model
+  - lib/selector
