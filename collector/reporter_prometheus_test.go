@@ -11,6 +11,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+
+	"github.com/projectcalico/felix/rules"
 )
 
 var (
@@ -26,12 +28,12 @@ var (
 
 // Common RuleIDs definitions
 var (
-	rule1Allow = RuleIDs{
-		Action:    ActionAllow,
+	rule1Allow = rules.RuleIDs{
+		Action:    rules.ActionAllow,
 		Index:     "0",
 		Policy:    "policy1",
 		Tier:      "default",
-		Direction: RuleDirIngress,
+		Direction: rules.RuleDirIngress,
 	}
 )
 
@@ -40,7 +42,7 @@ var (
 	// Identical rule/direction connections with differing tuples
 	muConn1InboundRule1Allow = &MetricUpdate{
 		ruleIDs:      &rule1Allow,
-		trafficDir:   TrafficDirInbound,
+		trafficDir:   rules.TrafficDirInbound,
 		tuple:        tuple1,
 		packets:      1,
 		bytes:        1,
@@ -50,7 +52,7 @@ var (
 	}
 	muConn2InboundRule1Allow = &MetricUpdate{
 		ruleIDs:      &rule1Allow,
-		trafficDir:   TrafficDirInbound,
+		trafficDir:   rules.TrafficDirInbound,
 		tuple:        tuple2,
 		packets:      10,
 		bytes:        20,
@@ -60,7 +62,7 @@ var (
 	}
 	muConn1OutboundRule1Allow = &MetricUpdate{
 		ruleIDs:      &rule1Allow,
-		trafficDir:   TrafficDirOutbound,
+		trafficDir:   rules.TrafficDirOutbound,
 		tuple:        tuple1,
 		packets:      30,
 		bytes:        40,
@@ -74,11 +76,11 @@ var (
 var (
 	keyRule1AllowInbound = RuleAggregateKey{
 		ruleIDs:    rule1Allow,
-		trafficDir: TrafficDirInbound,
+		trafficDir: rules.TrafficDirInbound,
 	}
 	keyRule1AllowOutbound = RuleAggregateKey{
 		ruleIDs:    rule1Allow,
-		trafficDir: TrafficDirOutbound,
+		trafficDir: rules.TrafficDirOutbound,
 	}
 )
 

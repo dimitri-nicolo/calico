@@ -14,7 +14,12 @@
 
 package iptables
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/projectcalico/felix/hashutils"
+)
 
 type Action interface {
 	ToFragment() string
@@ -102,7 +107,23 @@ type NflogAction struct {
 
 func (n NflogAction) ToFragment() string {
 	// TODO (Matt): Review number of bytes
-	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, n.Prefix)
+
+	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
+	// separated by `|`s. Example: "D|0|default.deny-icmp|po".
+	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
+	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (2 for first (A|D|N) then a `|` then
+	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
+	//
+	// trimmedPrefix will split the prefix after "D|0|" (ActionID|RuleIndex|) so we get the profile/policy ID which includes tier and namespace.
+	//
+	// See lookup/lookup_mgr.go PushNFLOGPrefixHash() & PushNFLOGPrefixHash() funcs, these 3 functions need to be in sync,
+	// if you are updating the current function, we probably need to change that ones as well.
+	prefixParts := strings.Split(n.Prefix, "|")
+
+	// Can't import rules.NFLOGPrefixMaxLength due to cyclic imports so use 64 instead.
+	prefixHash := hashutils.GetLengthLimitedID("", prefixParts[2], 64-9)
+
+	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s|%s|%s", prefixParts[0], prefixParts[1], prefixHash, prefixParts[3]))
 }
 
 func (n NflogAction) String() string {
@@ -118,9 +139,9 @@ type DNATAction struct {
 func (g DNATAction) ToFragment() string {
 	if g.DestPort == 0 {
 		return fmt.Sprintf("--jump DNAT --to-destination %s", g.DestAddr)
-	} else {
-		return fmt.Sprintf("--jump DNAT --to-destination %s:%d", g.DestAddr, g.DestPort)
 	}
+
+	return fmt.Sprintf("--jump DNAT --to-destination %s:%d", g.DestAddr, g.DestPort)
 }
 
 func (g DNATAction) String() string {

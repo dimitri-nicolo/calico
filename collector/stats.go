@@ -11,18 +11,8 @@ import (
 
 	"github.com/gavv/monotime"
 
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-)
-
-type TrafficDirection string
-type RuleDirection string
-
-const (
-	TrafficDirInbound  TrafficDirection = "inbound"
-	TrafficDirOutbound TrafficDirection = "outbound"
-	RuleDirIngress     RuleDirection    = "ingress"
-	RuleDirEgress      RuleDirection    = "egress"
-	RuleDirUnknown     RuleDirection    = "unknown"
 )
 
 // Counter stores packet and byte statistics. It also maintains a delta of
@@ -105,29 +95,12 @@ func (c *Counter) String() string {
 	return fmt.Sprintf("packets=%v bytes=%v", c.packets, c.bytes)
 }
 
-type RuleAction string
-
-const (
-	ActionAllow    RuleAction = "allow"
-	ActionDeny     RuleAction = "deny"
-	ActionNextTier RuleAction = "pass"
-)
-
 const RuleTraceInitLen = 10
 
 var (
 	RuleTracePointConflict   = errors.New("Conflict in RuleTracePoint")
 	RuleTracePointParseError = errors.New("RuleTracePoint Parse Error")
 )
-
-// RuleIDs contains the complete identifiers for a particular rule.
-type RuleIDs struct {
-	Action    RuleAction
-	Tier      string
-	Policy    string
-	Direction RuleDirection
-	Index     string
-}
 
 // RuleTracePoint represents a rule and the Tier and a Policy that contains
 // it. The `Index` specifies the absolute position of a RuleTracePoint in the
@@ -137,13 +110,13 @@ type RuleIDs struct {
 // - A/rule Index/profile name
 // - A/rule Index/Policy name/Tier name
 type RuleTracePoint struct {
-	RuleIDs *RuleIDs
+	RuleIDs *rules.RuleIDs
 	Index   int
 	EpKey   interface{}
 	Ctr     Counter
 }
 
-func NewRuleTracePoint(ruleIDs *RuleIDs, epKey interface{}, tierIndex, numPkts, numBytes int) *RuleTracePoint {
+func NewRuleTracePoint(ruleIDs *rules.RuleIDs, epKey interface{}, tierIndex, numPkts, numBytes int) *RuleTracePoint {
 	rtp := &RuleTracePoint{
 		RuleIDs: ruleIDs,
 		EpKey:   epKey,
@@ -170,7 +143,7 @@ func (rtp *RuleTracePoint) String() string {
 // which identifies the corresponding endpoint that the rule trace applied to.
 type RuleTrace struct {
 	path   []*RuleTracePoint
-	action RuleAction
+	action rules.RuleAction
 	epKey  interface{}
 	//TODO: RLB: Do we need this counter?  I think it's always set to the same as the verdict
 	// trace point, so why can't we just access that one directly?
@@ -229,7 +202,7 @@ func (t *RuleTrace) Path() []*RuleTracePoint {
 			rebuild = true
 			break
 		}
-		if tp.RuleIDs.Action == ActionAllow || tp.RuleIDs.Action == ActionDeny {
+		if tp.RuleIDs.Action == rules.ActionAllow || tp.RuleIDs.Action == rules.ActionDeny {
 			idx = i
 			break
 		}
@@ -255,7 +228,7 @@ func (t *RuleTrace) ToString() string {
 	return fmt.Sprintf("%s/%s/%s/%v", p.RuleIDs.Tier, p.RuleIDs.Policy, p.RuleIDs.Index, p.RuleIDs.Action)
 }
 
-func (t *RuleTrace) Action() RuleAction {
+func (t *RuleTrace) Action() rules.RuleAction {
 	return t.action
 }
 
@@ -311,7 +284,7 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 			return RuleTracePointConflict
 		}
 	}
-	if tp.RuleIDs.Action != ActionNextTier {
+	if tp.RuleIDs.Action != rules.ActionNextTier {
 		t.action = tp.RuleIDs.Action
 		//TODO: RLB: This (and the replaceRPT below) means the RT counter is always
 		// kept in sync with the verdict RTP.  In which case do we need the complexity
@@ -328,7 +301,7 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 }
 
 func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
-	if tp.RuleIDs.Action == ActionNextTier {
+	if tp.RuleIDs.Action == rules.ActionNextTier {
 		t.path[tp.Index] = tp
 		return
 	}
@@ -350,7 +323,7 @@ func (rt *RuleTrace) ToMetricUpdate(t Tuple) *MetricUpdate {
 	dp, db := rt.ctr.DeltaValues()
 	return &MetricUpdate{
 		tuple:        t,
-		trafficDir:   TrafficDirOutbound,
+		trafficDir:   rules.TrafficDirOutbound,
 		ruleIDs:      rt.VerdictRuleTracePoint().RuleIDs,
 		packets:      p,
 		bytes:        b,
@@ -468,12 +441,12 @@ func (d *Data) DurationSinceCreate() time.Duration {
 }
 
 // Returns the final action of the RuleTrace
-func (d *Data) IngressAction() RuleAction {
+func (d *Data) IngressAction() rules.RuleAction {
 	return d.IngressRuleTrace.action
 }
 
 // Returns the final action of the RuleTrace
-func (d *Data) EgressAction() RuleAction {
+func (d *Data) EgressAction() rules.RuleAction {
 	return d.EgressRuleTrace.action
 }
 
@@ -531,9 +504,9 @@ func (d *Data) ResetConntrackCounters() {
 func (d *Data) AddRuleTracePoint(tp *RuleTracePoint) error {
 	var err error
 	switch tp.RuleIDs.Direction {
-	case RuleDirIngress:
+	case rules.RuleDirIngress:
 		err = d.IngressRuleTrace.addRuleTracePoint(tp)
-	case RuleDirEgress:
+	case rules.RuleDirEgress:
 		err = d.EgressRuleTrace.addRuleTracePoint(tp)
 	default:
 		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleIDs.Direction)
@@ -549,9 +522,9 @@ func (d *Data) AddRuleTracePoint(tp *RuleTracePoint) error {
 func (d *Data) ReplaceRuleTracePoint(tp *RuleTracePoint) error {
 	var err error
 	switch tp.RuleIDs.Direction {
-	case RuleDirIngress:
+	case rules.RuleDirIngress:
 		d.IngressRuleTrace.replaceRuleTracePoint(tp)
-	case RuleDirEgress:
+	case rules.RuleDirEgress:
 		d.EgressRuleTrace.replaceRuleTracePoint(tp)
 	default:
 		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleIDs.Direction)

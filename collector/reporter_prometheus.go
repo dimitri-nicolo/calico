@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -107,8 +108,8 @@ func NewPrometheusReporter(port int, retentionTime time.Duration, certFile, keyF
 }
 
 type RuleAggregateKey struct {
-	ruleIDs    RuleIDs
-	trafficDir TrafficDirection
+	ruleIDs    rules.RuleIDs
+	trafficDir rules.TrafficDirection
 }
 
 type RuleAggregateValue struct {

@@ -7,7 +7,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"fmt"
+
 	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/nfnetlink"
 	"github.com/tigera/nfnetlink/nfnl"
@@ -50,19 +53,18 @@ var localWlEPKey2 = &model.WorkloadEndpointKey{
 }
 
 // NFLOG datasource test parameters
-
 var (
-	defTierAllow = [64]byte{'A', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '1', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
-	defTierDeny  = [64]byte{'D', '|', '0', '|', 'p', 'o', 'l', 'i', 'c', 'y', '2', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't'}
+	defTierAllow = [64]byte{'A', '|', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1', '|', 'p', 'o'}
+	defTierDeny  = [64]byte{'D', '|', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2', '|', 'p', 'o'}
 )
 
 var defTierAllowIngressTp = &RuleTracePoint{
-	RuleIDs: &RuleIDs{
+	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy1",
 		Index:     "0",
-		Action:    ActionAllow,
-		Direction: RuleDirIngress,
+		Action:    rules.ActionAllow,
+		Direction: rules.RuleDirIngress,
 	},
 	Index: 0,
 	EpKey: localWlEPKey1,
@@ -70,12 +72,12 @@ var defTierAllowIngressTp = &RuleTracePoint{
 }
 
 var defTierAllowEgressTp = &RuleTracePoint{
-	RuleIDs: &RuleIDs{
+	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy1",
 		Index:     "0",
-		Action:    ActionAllow,
-		Direction: RuleDirEgress,
+		Action:    rules.ActionAllow,
+		Direction: rules.RuleDirEgress,
 	},
 	Index: 0,
 	EpKey: localWlEPKey1,
@@ -83,12 +85,12 @@ var defTierAllowEgressTp = &RuleTracePoint{
 }
 
 var defTierDenyIngressTp = &RuleTracePoint{
-	RuleIDs: &RuleIDs{
+	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy2",
 		Index:     "0",
-		Action:    ActionDeny,
-		Direction: RuleDirIngress,
+		Action:    rules.ActionDeny,
+		Direction: rules.RuleDirIngress,
 	},
 	Index: 0,
 	EpKey: localWlEPKey2,
@@ -189,7 +191,14 @@ var _ = Describe("NFLOG Datasource", func() {
 				localIp1: localWlEPKey1,
 				localIp2: localWlEPKey2,
 			}
-			lm := newMockLookupManager(epMap)
+			nflogMap := map[[64]byte][]byte{}
+
+			for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
+				k, v := policyIDStrToByte(rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
+				nflogMap[k] = v
+			}
+
+			lm := newMockLookupManager(epMap, nflogMap)
 			c = NewCollector(lm, rm, conf)
 			go c.startStatsCollectionAndReporting()
 		})
@@ -359,7 +368,15 @@ var _ = Describe("Conntrack Datasource", func() {
 			localIp1: localWlEPKey1,
 			localIp2: localWlEPKey2,
 		}
-		lm := newMockLookupManager(epMap)
+
+		nflogMap := map[[64]byte][]byte{}
+
+		for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
+			k, v := policyIDStrToByte(rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
+			nflogMap[k] = v
+		}
+
+		lm := newMockLookupManager(epMap, nflogMap)
 		c = NewCollector(lm, rm, conf)
 		go c.startStatsCollectionAndReporting()
 	})
@@ -432,6 +449,14 @@ var _ = Describe("Conntrack Datasource", func() {
 
 })
 
+func policyIDStrToByte(tier, policy string) ([64]byte, []byte) {
+	byt := []byte(fmt.Sprintf("%s.%s", tier, policy))
+	var byt64 [64]byte
+	copy(byt64[:], byt)
+
+	return byt64, append(byt, '|', 'p', 'o')
+}
+
 var _ = Describe("Reporting Metrics", func() {
 	var c *Collector
 	const (
@@ -456,7 +481,15 @@ var _ = Describe("Reporting Metrics", func() {
 			localIp1: localWlEPKey1,
 			localIp2: localWlEPKey2,
 		}
-		lm := newMockLookupManager(epMap)
+
+		nflogMap := map[[64]byte][]byte{}
+
+		for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
+			k, v := policyIDStrToByte(rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
+			nflogMap[k] = v
+		}
+
+		lm := newMockLookupManager(epMap, nflogMap)
 		rm.Start()
 		c = NewCollector(lm, rm, conf)
 		go c.startStatsCollectionAndReporting()
@@ -471,7 +504,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktDenyTuple,
 					ruleIDs:      defTierDenyIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   TrafficDirOutbound,
+					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -487,7 +520,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktAllowTuple,
 					ruleIDs:      defTierAllowIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   TrafficDirOutbound,
+					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -505,7 +538,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktAllowTuple,
 					ruleIDs:      defTierAllowIngressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   TrafficDirOutbound,
+					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -521,7 +554,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *egressPktAllowTuple,
 					ruleIDs:      defTierAllowEgressTp.RuleIDs,
 					isConnection: false,
-					trafficDir:   TrafficDirOutbound,
+					trafficDir:   rules.TrafficDirOutbound,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
 			})
@@ -530,12 +563,14 @@ var _ = Describe("Reporting Metrics", func() {
 })
 
 type mockLookupManager struct {
-	epMap map[[16]byte]*model.WorkloadEndpointKey
+	epMap    map[[16]byte]*model.WorkloadEndpointKey
+	nflogMap map[[64]byte][]byte
 }
 
-func newMockLookupManager(em map[[16]byte]*model.WorkloadEndpointKey) *mockLookupManager {
+func newMockLookupManager(em map[[16]byte]*model.WorkloadEndpointKey, nm map[[64]byte][]byte) *mockLookupManager {
 	return &mockLookupManager{
-		epMap: em,
+		epMap:    em,
+		nflogMap: nm,
 	}
 }
 
@@ -543,13 +578,22 @@ func (lm *mockLookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) 
 	data, _ := lm.epMap[addr]
 	if data != nil {
 		return data, nil
-	} else {
-		return nil, lookup.UnknownEndpointError
 	}
+	return nil, lookup.UnknownEndpointError
+
 }
 
 func (lm *mockLookupManager) GetTierIndex(epKey interface{}, tierName string) int {
 	return 0
+}
+
+func (m *mockLookupManager) GetNFLOGHashToPolicyID(prefixHash [64]byte) ([]byte, error) {
+	policyID, ok := m.nflogMap[prefixHash]
+	if !ok {
+		return []byte{}, fmt.Errorf("cannot find the specified NFLOG prefix string or hash: %s in the lookup manager", prefixHash)
+	}
+
+	return policyID, nil
 }
 
 // Define a separate metric type that doesn't include the actual stats.  We use this
@@ -559,12 +603,12 @@ type testMetricUpdate struct {
 	tuple Tuple
 
 	// Rule identification
-	ruleIDs *RuleIDs
+	ruleIDs *rules.RuleIDs
 
 	// Traffic direction.  For NFLOG entries, the traffic direction will always
 	// be "outbound" since the direction is already defined by the source and
 	// destination.
-	trafficDir TrafficDirection
+	trafficDir rules.TrafficDirection
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
@@ -613,6 +657,14 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		localIp1: localWlEPKey1,
 		localIp2: localWlEPKey2,
 	}
+
+	nflogMap := map[[64]byte][]byte{}
+
+	for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
+		k, v := policyIDStrToByte(rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
+		nflogMap[k] = v
+	}
+
 	conf := &Config{
 		StatsDumpFilePath:     "/tmp/qwerty",
 		NfNetlinkBufSize:      65535,
@@ -623,12 +675,12 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		ExportingInterval:     time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupManager(epMap)
+	lm := newMockLookupManager(epMap, nflogMap)
 	c := NewCollector(lm, rm, conf)
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		c.convertNflogPktAndApplyUpdate(RuleDirIngress, ingressPktAllow)
+		c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, ingressPktAllow)
 	}
 }
 
@@ -637,6 +689,14 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		localIp1: localWlEPKey1,
 		localIp2: localWlEPKey2,
 	}
+
+	nflogMap := map[[64]byte][]byte{}
+
+	for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
+		k, v := policyIDStrToByte(rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
+		nflogMap[k] = v
+	}
+
 	conf := &Config{
 		StatsDumpFilePath:     "/tmp/qwerty",
 		NfNetlinkBufSize:      65535,
@@ -647,7 +707,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		ExportingInterval:     time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupManager(epMap)
+	lm := newMockLookupManager(epMap, nflogMap)
 	c := NewCollector(lm, rm, conf)
 	var tuples []Tuple
 	MaxSrcPort := 1000

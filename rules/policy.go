@@ -17,6 +17,7 @@ package rules
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -33,11 +34,11 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 	// TODO (Matt): Refactor the functions in this file to remove duplicate code and pass through better.
 	inbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyInboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, true, policyID.Name+"|"+policyID.Tier, policy.Untracked),
+		Rules: r.ProtoRulesToIptablesRules(policy.InboundRules, ipVersion, RuleIDs{Tier: policyID.Tier, Policy: policyID.Name, Direction: RuleDirIngress}, policy.Untracked),
 	}
 	outbound := iptables.Chain{
 		Name:  PolicyChainName(PolicyOutboundPfx, policyID),
-		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, false, policyID.Name+"|"+policyID.Tier, policy.Untracked),
+		Rules: r.ProtoRulesToIptablesRules(policy.OutboundRules, ipVersion, RuleIDs{Tier: policyID.Tier, Policy: policyID.Name, Direction: RuleDirEgress}, policy.Untracked),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
@@ -45,20 +46,21 @@ func (r *DefaultRuleRenderer) PolicyToIptablesChains(policyID *proto.PolicyID, p
 func (r *DefaultRuleRenderer) ProfileToIptablesChains(profileID *proto.ProfileID, profile *proto.Profile, ipVersion uint8) []*iptables.Chain {
 	inbound := iptables.Chain{
 		Name:  ProfileChainName(ProfileInboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, true, profileID.Name, false),
+		Rules: r.ProtoRulesToIptablesRules(profile.InboundRules, ipVersion, RuleIDs{Tier: "profile", Policy: profileID.Name, Direction: RuleDirIngress}, false),
 	}
 	outbound := iptables.Chain{
 		Name:  ProfileChainName(ProfileOutboundPfx, profileID),
-		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, false, profileID.Name, false),
+		Rules: r.ProtoRulesToIptablesRules(profile.OutboundRules, ipVersion, RuleIDs{Tier: "profile", Policy: profileID.Name, Direction: RuleDirEgress}, false),
 	}
 	return []*iptables.Chain{&inbound, &outbound}
 }
 
-func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, inbound bool, prefix string, untracked bool) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRulesToIptablesRules(protoRules []*proto.Rule, ipVersion uint8, ruleIDs RuleIDs, untracked bool) []iptables.Rule {
 	var rules []iptables.Rule
 	for ii, protoRule := range protoRules {
 		// TODO (Matt): Need rule hash when that's cleaned up.
-		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, inbound, fmt.Sprintf("%d", ii)+"|"+prefix, untracked)...)
+		ruleIDs.Index = strconv.Itoa(ii)
+		rules = append(rules, r.ProtoRuleToIptablesRules(protoRule, ipVersion, ruleIDs, untracked)...)
 	}
 	return rules
 }
@@ -80,7 +82,7 @@ func filterNets(mixedCIDRs []string, ipVersion uint8) (filtered []string, filter
 	return
 }
 
-func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string, untracked bool) []iptables.Rule {
+func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, ruleIDs RuleIDs, untracked bool) []iptables.Rule {
 	// Filter the CIDRs to the IP version that we're rendering.  In general, we should have an
 	// explicit IP version in the rule and all CIDRs should match it (and calicoctl, for
 	// example, enforces that).  However, we try to handle a rule gracefully if it's missing a
@@ -247,7 +249,7 @@ func (r *DefaultRuleRenderer) ProtoRuleToIptablesRules(pRule *proto.Rule, ipVers
 		// success.  Add a match on that bit to the calculated rule.
 		match = match.MarkSet(matchBlockBuilder.markAllBlocksPass)
 	}
-	markBit, actions := r.CalculateActions(&ruleCopy, ipVersion, inbound, prefix, untracked)
+	markBit, actions := r.CalculateActions(&ruleCopy, ipVersion, ruleIDs, untracked)
 	rs := matchBlockBuilder.Rules
 	if markBit != 0 {
 		// The rule needs to do more than one action. Render a rule that
@@ -483,13 +485,8 @@ func SplitPortList(ports []*proto.PortRange) (splits [][]*proto.PortRange) {
 	return
 }
 
-func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint8, inbound bool, prefix string, untracked bool) (mark uint32, actions []iptables.Action) {
+func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint8, ruleIDs RuleIDs, untracked bool) (mark uint32, actions []iptables.Action) {
 	actions = []iptables.Action{}
-
-	nflogGroup := uint16(2)
-	if inbound {
-		nflogGroup = uint16(1)
-	}
 
 	if pRule.LogPrefix != "" || pRule.Action == "log" {
 		// This rule should log (and possibly do something else too).
@@ -502,15 +499,22 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		})
 	}
 
+	nflogGroup := NFLOGOutboundGroup
+	if ruleIDs.Direction == RuleDirIngress {
+		nflogGroup = NFLOGInboundGroup
+	}
+
 	switch pRule.Action {
 	case "", "allow":
 		// Allow needs to set the accept mark, and then return to the calling chain for
 		// further processing.
 		mark = r.IptablesMarkAccept
+		ruleIDs.Action = ActionAllow
+
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:  nflogGroup,
-				Prefix: "A|" + prefix,
+				Prefix: CalculateNFLOGPrefixStr(ruleIDs),
 			})
 		}
 		actions = append(actions, iptables.ReturnAction{})
@@ -518,20 +522,24 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		// pass (called next-tier in the API for historical reasons) needs to set the pass
 		// mark, and then return to the calling chain for further processing.
 		mark = r.IptablesMarkPass
+		ruleIDs.Action = ActionNextTier
+
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:  nflogGroup,
-				Prefix: "N|" + prefix,
+				Prefix: CalculateNFLOGPrefixStr(ruleIDs),
 			})
 		}
 		actions = append(actions, iptables.ReturnAction{})
 	case "deny":
 		// Deny maps to DROP.  We defer to DropActions() to allow for "sandbox" mode.
 		mark = r.IptablesMarkDrop
+		ruleIDs.Action = ActionDeny
+
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:  nflogGroup,
-				Prefix: "D|" + prefix,
+				Prefix: CalculateNFLOGPrefixStr(ruleIDs),
 			})
 		}
 		actions = append(actions, r.DropActions()...)
@@ -543,6 +551,29 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		log.WithField("action", pRule.Action).Panic("Unknown rule action")
 	}
 	return
+}
+
+// CalculateNFLOGPrefixStr calculates NFLOG prefix string from RuleIDs fields.
+// Example prefix string: "D|0|default.deny-icmp|default|po".
+func CalculateNFLOGPrefixStr(rid RuleIDs) string {
+	var actionPrefix string
+
+	switch rid.Action {
+	case ActionAllow:
+		actionPrefix = "A"
+	case ActionNextTier:
+		actionPrefix = "N"
+	case ActionDeny:
+		actionPrefix = "D"
+	}
+
+	// If the tier name is "profile" then we classify that rule as a profile rule
+	// and add `|pr` at the end.
+	if rid.Tier == "profile" {
+		return fmt.Sprintf("%s|%s|%s|pr", actionPrefix, rid.Index, rid.Policy)
+	}
+
+	return fmt.Sprintf("%s|%s|%s|po", actionPrefix, rid.Index, rid.Policy)
 }
 
 var SkipRule = errors.New("Rule skipped")

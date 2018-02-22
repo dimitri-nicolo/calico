@@ -1,27 +1,18 @@
 // Copyright (c) 2016 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 package lookup
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/hashutils"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
@@ -30,6 +21,7 @@ var UnknownEndpointError = errors.New("Unknown endpoint")
 type QueryInterface interface {
 	GetEndpointKey(addr [16]byte) (interface{}, error)
 	GetTierIndex(epKey interface{}, tierName string) int
+	GetNFLOGHashToPolicyID(prefixHash [64]byte) ([]byte, error)
 }
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
@@ -45,6 +37,9 @@ type LookupManager struct {
 	hostEndpointTiers          map[model.HostEndpointKey][]*proto.TierInfo
 	hostEndpointUntrackedTiers map[model.HostEndpointKey][]*proto.TierInfo
 	hostEpMutex                sync.RWMutex
+
+	nflogPrefixHash map[[64]byte][]byte
+	nflogMutex      sync.RWMutex
 }
 
 func NewLookupManager() *LookupManager {
@@ -58,6 +53,8 @@ func NewLookupManager() *LookupManager {
 		hostEndpointUntrackedTiers: map[model.HostEndpointKey][]*proto.TierInfo{},
 		epMutex:                    sync.RWMutex{},
 		hostEpMutex:                sync.RWMutex{},
+		nflogPrefixHash:            map[[64]byte][]byte{},
+		nflogMutex:                 sync.RWMutex{},
 	}
 }
 
@@ -114,6 +111,19 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			delete(m.endpointTiers, wlEpKey)
 		}
 		m.epMutex.Unlock()
+
+	case *proto.ActivePolicyUpdate:
+		m.PushPolicyNFLOGPrefixHash(msg)
+
+	case *proto.ActivePolicyRemove:
+		m.PopPolicyNFLOGPrefixHash(msg)
+
+	case *proto.ActiveProfileUpdate:
+		m.PushProfileNFLOGPrefixHash(msg)
+
+	case *proto.ActiveProfileRemove:
+		m.PopProfileNFLOGPrefixHash(msg)
+
 	case *proto.HostEndpointUpdate:
 		// We omit setting Hostname since at this point it is implied that the
 		// endpoint belongs to this host.
@@ -164,6 +174,106 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		}
 		m.epMutex.Unlock()
 	}
+}
+
+// PushPolicyNFLOGPrefixHash takes proto message (ActivePolicyUpdate) and calculates the NFLOG prefix, and if the prefix is too long then
+// calculates the hash. Finally it pushes it to a map for stats collector to access.
+func (m *LookupManager) PushPolicyNFLOGPrefixHash(msg *proto.ActivePolicyUpdate) {
+	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
+	// separated by `|`s. Example: "D|0|default.deny-icmp|po".
+	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
+	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (2 for first (A|D|N) then a `|` then
+	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
+	//
+	// See iptables/actions.go ToFragment() func, this needs to be in sync,
+	// if you are updating the current function, we probably need to change that one as well.
+	prefixHash := hashutils.GetLengthLimitedID("", fmt.Sprintf("%s.%s", msg.Id.Tier, msg.Id.Name), rules.NFLOGPrefixMaxLength-9)
+	prefixHash += "|po"
+
+	var bph [64]byte
+	copy(bph[:], []byte(prefixHash[:]))
+
+	m.nflogMutex.Lock()
+	// Store the hash in a map. With hash being the key and string being the value.
+	m.nflogPrefixHash[bph] = []byte(fmt.Sprintf("%s.%s|po", msg.Id.Tier, msg.Id.Name))
+	m.nflogMutex.Unlock()
+}
+
+// PushProfileNFLOGPrefixHash takes proto message (ActiveProfileUpdate) and calculates the NFLOG prefix, and if the prefix is too long then
+// calculates the hash. Finally it pushes it to a map for stats collector to access.
+func (m *LookupManager) PushProfileNFLOGPrefixHash(msg *proto.ActiveProfileUpdate) {
+	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
+	// separated by `|`s. Example: "D|0|profile-name|pr".
+	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
+	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (2 for first (A|D|N) then a `|` then
+	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
+	//
+	// See iptables/actions.go ToFragment() func, this needs to be in sync,
+	// if you are updating the current function, we probably need to change that one as well.
+	prefixHash := hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-9)
+	prefixHash += "|pr"
+
+	var bph [64]byte
+	copy(bph[:], []byte(prefixHash[:]))
+
+	m.nflogMutex.Lock()
+	// Store the hash in a map. With hash being the key and string being the value.
+	m.nflogPrefixHash[bph] = []byte(fmt.Sprintf("%s|pr", msg.Id.Name))
+	m.nflogMutex.Unlock()
+}
+
+// PopPolicyNFLOGPrefixHash takes proto message (ActivePolicyUpdate) and removes the hash to policy name map entry
+// from the nflogPrefixHash map.
+func (m *LookupManager) PopPolicyNFLOGPrefixHash(msg *proto.ActivePolicyRemove) {
+	var honByte [64]byte
+	hashOrName := msg.Id.Name
+
+	// +10 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
+	// and 3 more for the `|po` suffix at the end and 1 for the `.` between tier and policy name.
+	if len(msg.Id.Name)+len(msg.Id.Tier)+10 > rules.NFLOGPrefixMaxLength {
+		hashOrName = hashutils.GetLengthLimitedID("", fmt.Sprintf("%s.%s", msg.Id.Tier, msg.Id.Name), rules.NFLOGPrefixMaxLength-9)
+	}
+
+	hashOrName += "|po"
+
+	copy(honByte[:], []byte(hashOrName))
+
+	m.nflogMutex.Lock()
+	delete(m.nflogPrefixHash, honByte)
+	m.nflogMutex.Unlock()
+}
+
+// PopProfileNFLOGPrefixHash takes proto message (ActiveProfileRemove) and removes the hash to profile name map entry
+// from the nflogPrefixHash map.
+func (m *LookupManager) PopProfileNFLOGPrefixHash(msg *proto.ActiveProfileRemove) {
+	var honByte [64]byte
+
+	hashOrName := msg.Id.Name
+
+	// +9 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
+	// and 3 more for the `|po` suffix at the end.
+	if len(msg.Id.Name)+9 > rules.NFLOGPrefixMaxLength {
+		hashOrName = hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-6)
+	}
+	hashOrName += "|pr"
+
+	copy(honByte[:], []byte(hashOrName))
+
+	m.nflogMutex.Lock()
+	delete(m.nflogPrefixHash, honByte)
+	m.nflogMutex.Unlock()
+}
+
+// GetNFLOGHashToPolicyID returns unhashed policy/profile ID (name) associated with the NFLOG prefix string or hash from the nflogPrefixHash map.
+func (m *LookupManager) GetNFLOGHashToPolicyID(prefixHash [64]byte) ([]byte, error) {
+	m.nflogMutex.RLock()
+	policyID, ok := m.nflogPrefixHash[prefixHash]
+	m.nflogMutex.RUnlock()
+	if !ok {
+		return []byte{}, fmt.Errorf("cannot find the specified NFLOG prefix string or hash: %s in the lookup manager", prefixHash)
+	}
+
+	return policyID, nil
 }
 
 func (m *LookupManager) CompleteDeferredWork() error {

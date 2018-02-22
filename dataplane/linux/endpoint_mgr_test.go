@@ -16,6 +16,7 @@ package intdataplane
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -235,7 +236,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 					Match: iptables.Match().MarkClear(16),
 					Action: iptables.NflogAction{
 						Group:  outboundGroup,
-						Prefix: "D|0|no-policy-match-" + outboundSuffix + "|" + tierName,
+						Prefix: fmt.Sprintf("D|0|%s.no-policy-match-%s|po", tierName, outboundSuffix),
 					},
 				})
 				outRules = append(outRules, iptables.Rule{
@@ -251,7 +252,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  outboundGroup,
-					Prefix: "D|0|no-profile-match-" + outboundSuffix,
+					Prefix: fmt.Sprintf("D|0|no-profile-match-%s|pr", outboundSuffix),
 				},
 			})
 			outRules = append(outRules, iptables.Rule{
@@ -316,7 +317,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 					Match: iptables.Match().MarkClear(16),
 					Action: iptables.NflogAction{
 						Group:  inboundGroup,
-						Prefix: "D|0|no-policy-match-" + inboundSuffix + "|" + tierName,
+						Prefix: fmt.Sprintf("D|0|%s.no-policy-match-%s|po", tierName, inboundSuffix),
 					},
 				})
 				inRules = append(inRules, iptables.Rule{
@@ -331,7 +332,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  inboundGroup,
-					Prefix: "D|0|no-profile-match-" + inboundSuffix,
+					Prefix: fmt.Sprintf("D|0|no-profile-match-%s|pr", inboundSuffix),
 				},
 			})
 			inRules = append(inRules, iptables.Rule{
@@ -796,8 +797,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 				Describe("replaced with applyOnForward version", func() {
 					JustBeforeEach(configureHostEp(&hostEpSpec{
-						id:      "id1",
-						name:    "eth0",
+						id:       "id1",
+						name:     "eth0",
 						tierName: "polA_applyOnForward",
 					}))
 					It("should have expected chains", expectChainsFor("eth0_polA_applyOnForward"))
@@ -881,8 +882,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 			Describe("with host endpoint with applyOnForward tier matching eth0", func() {
 				JustBeforeEach(configureHostEp(&hostEpSpec{
-					id:      "id1",
-					name:    "eth0",
+					id:       "id1",
+					name:     "eth0",
 					tierName: "polA_applyOnForward",
 				}))
 				It("should have expected chains", expectChainsFor("eth0_polA_applyOnForward"))
@@ -891,7 +892,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 					JustBeforeEach(configureHostEp(&hostEpSpec{
 						id:        "id0",
 						ipv4Addrs: []string{ipv4},
-						tierName:   "polB_applyOnForward",
+						tierName:  "polB_applyOnForward",
 					}))
 
 					It("should have expected chains", expectChainsFor("eth0_polB_applyOnForward"))
@@ -909,8 +910,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 				Describe("replaced with a tracked version", func() {
 					JustBeforeEach(configureHostEp(&hostEpSpec{
-						id:      "id1",
-						name:    "eth0",
+						id:       "id1",
+						name:     "eth0",
 						tierName: "polA",
 					}))
 					It("should have expected chains", expectChainsFor("eth0_polA"))
@@ -921,7 +922,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				JustBeforeEach(configureHostEp(&hostEpSpec{
 					id:        "id0",
 					ipv4Addrs: []string{ipv4},
-					tierName:   "polB_applyOnForward",
+					tierName:  "polB_applyOnForward",
 				}))
 
 				It("should have expected chains", expectChainsFor("eth0_polB_applyOnForward"))
