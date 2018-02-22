@@ -7,7 +7,7 @@ This guide is a variation of the simple policy demo intended to introduce the ex
 It requires a Kubernetes cluster configured with Calico networking and {{site.prodname}}, and expects that you have `kubectl` configured to interact with the cluster.
 
 You can quickly and easily obtain such a cluster by following one of the
-[installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation),
+[installation guides]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/),
 or by [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/upgrade-cnx).
 
 The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.

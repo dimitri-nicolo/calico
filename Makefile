@@ -58,3 +58,11 @@ endif
 
 	# Check the redirect_from lines and strip the .md from the URL
 	find $(VERSION) \( -name '*.md' -o -name '*.html' \) -exec sed -i 's#^\(redirect_from:.*\)\.md#\1#' '{}' \;
+
+publish-cnx-docs:
+	jekyll build
+	cp robots.txt _site/
+	cp -r fonts _site/
+	@echo Run the following command to update the GAE site:
+	@echo "  gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml"
+

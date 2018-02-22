@@ -87,3 +87,10 @@ Patch releases shouldn't include any new functionality, just bug fixes (expect d
 1. Now merge the PR - this will cause the live docs site to be updated (after a few minutes).
 1. Push the tag.
 1. Create a GitHub release on the Calico repo, and upload the release file (calico_node/release-<VERSION>.tgz)
+
+### Updating CNX Documentation
+Currently, updating the CNX documentation requires two manual steps:
+* `make publish-cnx-docs`
+* `gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml`
+
+Note that the latter step can only be run by people with owner or editor access to the `tigera-docs` GCP project.

@@ -51,7 +51,7 @@ users must be given 'read' access to the `default` tier.
 
 For details on creating a [tier]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
 resource and adding a Global/NetworkPolicy to that tier, refer to the
-[Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/cnx/tiered-policy-cnx).
+[Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/cnx/tiered-policy-cnx/).
 
 #### Restricting {{site.prodname}} permissions
 

@@ -38,6 +38,6 @@ your own servers, a quick set-up in a virtualized environment using Vagrant and
 a number of cloud services.
 
 Then follow one of our getting started guides.
-- [{{site.prodname}} with Kubernetes](kubernetes)
+- [{{site.prodname}} with Kubernetes](kubernetes/)
 - [{{site.prodname}} with OpenShift](openshift/installation)
 - [Host protection](bare-metal/bare-metal)

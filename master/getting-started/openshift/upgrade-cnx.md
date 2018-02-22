@@ -28,4 +28,4 @@ This procedure assumes the following:
 
        systemctl daemon-reload && systemctl restart calico
 
-Once complete, skip to step 4. of [the CNX installation doc](cnx/installation) for information on launching CNX Manager.
+Once complete, skip to step 4. of [the CNX installation doc](installation/) for information on launching CNX Manager.

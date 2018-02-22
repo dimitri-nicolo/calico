@@ -4,7 +4,7 @@ title: Troubleshooting CNX for Kubernetes
 
 This article contains Kubernetes specific troubleshooting advice for {{site.prodname}} and
 frequently asked questions.
-See also the [main troubleshooting](../../usage/troubleshooting) pages.
+See also the [main troubleshooting](../../usage/troubleshooting/) pages.
 
 ## Frequently Asked Questions
 

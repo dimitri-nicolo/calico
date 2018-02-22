@@ -1,0 +1,96 @@
+# A Google Application Engine "service" definition. The reference
+# to python is a red-herring - we're just statically serving the
+# contents of the _site subdirectory. GAE isn't setup to do this
+# easily - we need to tell it how to handle each type of file, as
+# well as infer "index.html" when we just refer to a site directory.
+#
+
+runtime: python27
+api_version: 1
+threadsafe: yes
+
+handlers:
+- url: /(.*\.js)
+  mime_type: text/javascript
+  static_files: _site/\1
+  upload: _site/(.*\.js)
+
+- url: /(.*\.html)
+  mime_type: text/html
+  static_files: _site/\1
+  upload: _site/(.*\.html)
+
+- url: /(.*\.yaml)
+  mime_type: text/x-yaml
+  static_files: _site/\1
+  upload: _site/(.*\.yaml)
+
+- url: /(.*\.txt)
+  mime_type: text/plain
+  static_files: _site/\1
+  upload: _site/(.*\.txt)
+
+- url: /(.*\.(jpg|png|ico))
+  static_files: _site/\1
+  upload: _site/(.*\.img)
+
+- url: /(.*\.css)
+  mime_type: text/css
+  static_files: _site/\1
+  upload: _site/(.*\.css)
+
+# fonts for collapsable sidebar
+#
+- url: /(.*\.eot)
+  mime_type: application/vnd.ms-fontobject
+  static_files: _site/\1
+  upload: _site/(.*\.eot)
+
+- url: /(.*\.svg)
+  mime_type: image/svg+xml
+  static_files: _site/\1
+  upload: _site/(.*\.svg)
+
+- url: /(.*\.ttf)
+  mime_type: application/x-font-truetype
+  static_files: _site/\1
+  upload: _site/(.*\.ttf)
+
+- url: /(.*\.woof)
+  mime_type: application/font-woff
+  static_files: _site/\1
+  upload: _site/(.*\.woof)
+
+- url: /(.*\.woff2)
+  mime_type: font/woff2
+  static_files: _site/\1
+  upload: _site/(.*\.woff2)
+
+# Default directory/html append rules
+#
+- url: /
+  static_files: _site/index.html
+  upload: _site/index.html
+
+- url: /(.+)/
+  static_files: _site/\1/index.html
+  upload: _site/(.+)/index.html
+  expiration: "15m"
+
+- url: /(.+[a-z0-9])
+  static_files: _site/\1.html
+  upload: _site/(.+[a-z]).html
+  expiration: "15m"
+
+- url: /(.+)
+  static_files: _site/\1/index.html
+  upload: _site/(.+)/index.html
+  expiration: "15m"
+
+- url: /(.*)
+  static_files: _site/\1
+  upload: _site/(.*)
+
+libraries:
+- name: webapp2
+  version: "2.5.2"
