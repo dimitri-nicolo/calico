@@ -176,6 +176,11 @@ type Config struct {
 	PrometheusReporterCertFile  string        `config:"string;"`
 	PrometheusReporterKeyFile   string        `config:"string;"`
 	PrometheusReporterCAFile    string        `config:"string;"`
+	CNXMetricsEnabled           bool          `config:"bool;false"`
+	CNXMetricsPrometheusPort    int           `config:"int(0,65535);9082"`
+	CNXPrometheusCertFile       string        `config:"string;"`
+	CNXPrometheusKeyFile        string        `config:"string;"`
+	CNXPrometheusCAFile         string        `config:"string;"`
 	SyslogReporterNetwork       string        `config:"string;"`
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`

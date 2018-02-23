@@ -106,6 +106,12 @@ type Config struct {
 	PrometheusReporterKeyFile  string
 	PrometheusReporterCAFile   string
 
+	CNXMetricsEnabled        bool
+	CNXMetricsPrometheusPort int
+	CNXPrometheusCertFile    string
+	CNXPrometheusKeyFile     string
+	CNXPrometheusCAFile      string
+
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
 
@@ -458,8 +464,15 @@ func (d *InternalDataplane) Start() {
 		ConntrackPollingInterval: DefaultConntrackPollingInterval,
 	}
 	rm := collector.NewReporterManager()
+	if d.config.CNXMetricsEnabled {
+		rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.CNXMetricsPrometheusPort,
+			d.config.DeletedMetricsRetentionSecs,
+			d.config.CNXPrometheusCertFile,
+			d.config.CNXPrometheusKeyFile,
+			d.config.CNXPrometheusCAFile))
+	}
 	if d.config.PrometheusReporterEnabled {
-		rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.PrometheusReporterPort,
+		rm.RegisterMetricsReporter(collector.NewDPPrometheusReporter(d.config.PrometheusReporterPort,
 			d.config.DeletedMetricsRetentionSecs,
 			d.config.PrometheusReporterCertFile,
 			d.config.PrometheusReporterKeyFile,
