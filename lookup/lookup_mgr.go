@@ -3,6 +3,7 @@
 package lookup
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -16,7 +17,14 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
-var UnknownEndpointError = errors.New("Unknown endpoint")
+var (
+	UnknownEndpointError = errors.New("Unknown endpoint")
+
+	// Hardcoded substrings present in NFLOG prefixes that are not present
+	// in the nflogPrefixHash map but we still need to return a proper value
+	noProfileMatch = []byte("no-profile-match-")
+	noPolicyMatch  = []byte("no-policy-match-")
+)
 
 type QueryInterface interface {
 	GetEndpointKey(addr [16]byte) (interface{}, error)
@@ -187,7 +195,7 @@ func (m *LookupManager) PushPolicyNFLOGPrefixHash(msg *proto.ActivePolicyUpdate)
 	//
 	// See iptables/actions.go ToFragment() func, this needs to be in sync,
 	// if you are updating the current function, we probably need to change that one as well.
-	prefixHash := hashutils.GetLengthLimitedID("", fmt.Sprintf("%s.%s", msg.Id.Tier, msg.Id.Name), rules.NFLOGPrefixMaxLength-9)
+	prefixHash := hashutils.GetLengthLimitedID("", fmt.Sprintf("%s", msg.Id.Name), rules.NFLOGPrefixMaxLength-9)
 	prefixHash += "|po"
 
 	var bph [64]byte
@@ -195,7 +203,7 @@ func (m *LookupManager) PushPolicyNFLOGPrefixHash(msg *proto.ActivePolicyUpdate)
 
 	m.nflogMutex.Lock()
 	// Store the hash in a map. With hash being the key and string being the value.
-	m.nflogPrefixHash[bph] = []byte(fmt.Sprintf("%s.%s|po", msg.Id.Tier, msg.Id.Name))
+	m.nflogPrefixHash[bph] = []byte(fmt.Sprintf("%s|po", msg.Id.Name))
 	m.nflogMutex.Unlock()
 }
 
@@ -228,10 +236,10 @@ func (m *LookupManager) PopPolicyNFLOGPrefixHash(msg *proto.ActivePolicyRemove) 
 	var honByte [64]byte
 	hashOrName := msg.Id.Name
 
-	// +10 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
-	// and 3 more for the `|po` suffix at the end and 1 for the `.` between tier and policy name.
-	if len(msg.Id.Name)+len(msg.Id.Tier)+10 > rules.NFLOGPrefixMaxLength {
-		hashOrName = hashutils.GetLengthLimitedID("", fmt.Sprintf("%s.%s", msg.Id.Tier, msg.Id.Name), rules.NFLOGPrefixMaxLength-9)
+	// +9 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
+	// and 3 more for the `|po` suffix at the end (the policy name has the tier and the "." character already in it).
+	if len(msg.Id.Name)+9 > rules.NFLOGPrefixMaxLength {
+		hashOrName = hashutils.GetLengthLimitedID("", fmt.Sprintf("%s", msg.Id.Name), rules.NFLOGPrefixMaxLength-9)
 	}
 
 	hashOrName += "|po"
@@ -253,7 +261,7 @@ func (m *LookupManager) PopProfileNFLOGPrefixHash(msg *proto.ActiveProfileRemove
 	// +9 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
 	// and 3 more for the `|po` suffix at the end.
 	if len(msg.Id.Name)+9 > rules.NFLOGPrefixMaxLength {
-		hashOrName = hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-6)
+		hashOrName = hashutils.GetLengthLimitedID("", msg.Id.Name, rules.NFLOGPrefixMaxLength-9)
 	}
 	hashOrName += "|pr"
 
@@ -270,6 +278,12 @@ func (m *LookupManager) GetNFLOGHashToPolicyID(prefixHash [64]byte) ([]byte, err
 	policyID, ok := m.nflogPrefixHash[prefixHash]
 	m.nflogMutex.RUnlock()
 	if !ok {
+		ph := prefixHash[:]
+		if bytes.Contains(ph, noProfileMatch) || bytes.Contains(ph, noPolicyMatch) {
+			// Trim out NUL characters that we get when converting
+			// from the [64]byte array to a []byte slice.
+			return bytes.Trim(ph, "\x00"), nil
+		}
 		return []byte{}, fmt.Errorf("cannot find the specified NFLOG prefix string or hash: %s in the lookup manager", prefixHash)
 	}
 
