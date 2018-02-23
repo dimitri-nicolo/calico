@@ -7,7 +7,7 @@ permalink:     /:title.html
 gems:
   - jekyll-redirect-from
 
-url: https://docs.projectcalico.org
+url: https://docs.tigera.io
 
 # <deprecated>
 # Remove once all references cleaned up
