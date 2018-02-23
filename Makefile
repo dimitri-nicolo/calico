@@ -62,7 +62,6 @@ endif
 publish-cnx-docs:
 	jekyll build
 	cp robots.txt _site/
-	cp -r fonts _site/
 	@echo Run the following command to update the GAE site:
 	@echo "  gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml"
 
