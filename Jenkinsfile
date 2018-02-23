@@ -1,23 +1,37 @@
-#!groovy
 pipeline{
-    agent { label 'containers' }
-    parameters {
-        string(name: 'calicoctl_url', defaultValue: 'gs://tigera-essentials/calicoctl-v2.0.0-cnx-beta1', description: 'URL of calicoctl to use in tests')
-    }
+    agent { label 'slave' }
     triggers{
         pollSCM('H/5 * * * *')
         cron('H H(0-7) * * *')
     }
     environment {
         GIT_DOCS_ONLY = ""
+        NODE_IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/cnx-node"
+
+        WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
+        BUILD_INFO = "https://wavetank.tigera.io/blue/organizations/jenkins/${env.JOB_NAME}/detail/${env.JOB_NAME}/${env.BUILD_NUMBER}/pipeline"
+
+        SANE_JOB_NAME = "${env.JOB_BASE_NAME}".replace('.', '-')
+        BUILD_INSTANCE_NAME = "wt-${SANE_JOB_NAME}-${env.BUILD_NUMBER}"
     }
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+                script {
+                    currentBuild.description = """
+                    BRANCH_NAME=${env.BRANCH_NAME}
+                    JOB_NAME=${env.JOB_NAME}
+                    NODE_IMAGE_NAME=${env.NODE_IMAGE_NAME}:${env.BRANCH_NAME}
+                    BUILD_INFO=${env.BUILD_INFO}""".stripIndent()
+                }
+            }
+        }
+        stage('Check docs-only') {
+            steps {
                 dir('calico') {
                     script {
-                    GIT_DOCS_ONLY = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^calico_node/' || git diff --name-only HEAD^ | grep '^_data/versions.yml'")
+                        GIT_DOCS_ONLY = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^calico_node/' || git diff --name-only HEAD^ | grep '^_data/versions.yml'")
                     }
                 }
             }
@@ -32,79 +46,48 @@ pipeline{
             }
         }
 
-        stage('Wipe out all docker state') {
-            steps {
-                // Kill running containers:
-                sh "sudo docker kill `docker ps -qa` || true"
-                // Delete all containers (and their associated volumes):
-                sh "sudo docker rm -v -f `docker ps -qa` || true"
-                // Remove all images:
-                sh "sudo docker rmi -f `docker images -q` || true"
+        stage('Prep GCE Build instance') {
+            when {
+                expression { GIT_DOCS_ONLY == 0 }
+                // only run if nothing is returned from running git diff grep queries
             }
-        }
-
-        stage('Check clean slate') {
-	    // It is a critical problem if we are not starting from a
-	    // clean position; so we intentionally fail the entire
-	    // pipeline if any of the following checks fail.
-	    steps {
-	        // Check nothing listening on the etcd ports.
-	        sh "! sudo ss -tnlp 'sport = 2379' | grep 2379"
-	        sh "! sudo ss -tnlp 'sport = 2380' | grep 2380"
-	    }
-        }
-
-        stage('Run htmlproofer') {
             steps {
-                ansiColor('xterm') {
-                    sh 'make htmlproofer 2>&1 | awk -f filter-htmlproofer-false-negatives.awk'
+                withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
+                    sh '''
+                        gcloud config set compute/zone us-central1-f && \
+                        gcloud config set project unique-caldron-775 && \
+                        gcloud compute instances create \
+                        --machine-type n1-standard-2 \
+                        --boot-disk-size 200GB \
+                        --image-project ubuntu-os-cloud \
+                        --image-family ubuntu-1604-lts \
+                        $BUILD_INSTANCE_NAME && \
+                        sleep 30
+                    '''
+                    sh 'gcloud compute scp $SSH_KEY ubuntu@${BUILD_INSTANCE_NAME}:.ssh/id_rsa'
+                    sh '''
+                        gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'sudo apt-get install -y docker.io make && \
+                        sudo usermod -aG docker ubuntu && \
+                        ssh-keyscan -t rsa github.com 2>&1 >> .ssh/known_hosts && \
+                        chmod 600 .ssh/id_rsa'
+                    '''
                 }
             }
         }
 
-        stage('Build tigera/cnx-docs') {
-            steps {
-                script {
-                    if (env.BRANCH_NAME == 'master') {
-                        sh 'rm -rf _site'
-                        sh 'docker run --rm -i -e JEKYLL_UID=`id -u` -v $(pwd):/srv/jekyll jekyll/jekyll:3.5.2 jekyll build --incremental --config /srv/jekyll/_config.yml'
-                        sh 'docker build -t tigera/cnx-docs:master -f Dockerfile-docs .'
-                    }
-                }
-            }
-        }
-        stage('Push tigera/cnx-docs to GCR') {
-            steps {
-                script {
-                    if (env.BRANCH_NAME == 'master') {
-                        sh 'docker tag tigera/cnx-docs:master gcr.io/tigera-dev/cnx/tigera/cnx-docs:master'
-                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/cnx-docs:master'
-
-                        // Clean up images.
-                        // Hackey since empty displayed tags are not empty according to gcloud filter criteria
-                        sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-docs --format='get(digest)'); do
-                            if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-docs --filter=digest~${digest}) | awk '{print $6}'); then
-                                gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/cnx-docs@${digest}"
-                            fi
-                            done'''
-                    }
-                }
-            }
-        }
         stage('Build tigera/cnx-node') {
             when {
                 expression { GIT_DOCS_ONLY == 0 }
                 // only run if nothing is returned from running git diff grep queries
             }
             steps {
-                ansiColor('xterm') {
-                    dir('calico_node'){
-                        // clear glide cache
-                        sh 'sudo rm -rf ~/.glide/*'
-                        sh 'make clean'
-                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && FELIX_VER=master make tigera/cnx-node && docker run --rm tigera/cnx-node:latest versions'
-                    }
-                }
+                sh """
+                    gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'eval `ssh-agent -s`; ssh-add .ssh/id_rsa && \
+                    git clone -b ${env.BRANCH_NAME} git@github.com:tigera/calico-private.git && \
+                    cd calico-private/calico_node && \
+                    FELIX_VER=master make tigera/cnx-node && \
+                    docker run --rm tigera/cnx-node:latest versions'
+                """
             }
         }
 
@@ -117,17 +100,24 @@ pipeline{
                 script{
                     // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
                     // Do that by moving this block to AFTER the tests.
-                    if (env.BRANCH_NAME == 'master') {
-                        sh 'docker tag tigera/cnx-node:latest gcr.io/tigera-dev/cnx/tigera/cnx-node:master'
-                        sh 'gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/cnx-node:master'
+                    withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
+                        if (env.BRANCH_NAME == 'master') {
+                            sh 'gcloud compute scp $DOCKER_AUTH ubuntu@${BUILD_INSTANCE_NAME}:key.json'
+                            sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud auth activate-service-account ${WAVETANK_SERVICE_ACCT} --key-file key.json'"
+                            sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud docker --authorize-only --server gcr.io'"
+                            sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'docker tag tigera/cnx-node:latest ${NODE_IMAGE_NAME}:${env.BRANCH_NAME}'"
+                            sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'docker push ${NODE_IMAGE_NAME}:${env.BRANCH_NAME}'"
 
-                        // Clean up images.
-                        // Hackey since empty displayed tags are not empty according to gcloud filter criteria
-                        sh '''for digest in $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --format='get(digest)'); do
-                            if ! test $(echo $(gcloud container images list-tags gcr.io/tigera-dev/cnx/tigera/cnx-node --filter=digest~${digest}) | awk '{print $6}'); then
-                                gcloud container images delete -q --force-delete-tags "gcr.io/tigera-dev/cnx/tigera/cnx-node@${digest}"
-                            fi
-                            done'''
+                            // Clean up images.
+                            // Hackey since empty displayed tags are not empty according to gcloud filter criteria
+                            sh """
+                                for digest in \$(gcloud container images list-tags ${env.NODE_IMAGE_NAME} --format='get(digest)'); do
+                                if ! test \$(echo \$(gcloud container images list-tags ${env.NODE_IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
+                                    gcloud container images delete -q --force-delete-tags "${env.NODE_IMAGE_NAME}@\${digest}"
+                                fi
+                                done
+                            """
+                        }
                     }
                 }
             }
@@ -139,13 +129,7 @@ pipeline{
                 // only run if nothing is returned from running git diff grep queries
             }
             steps {
-                dir('calico_node'){
-                    // Get calicoctl
-                    // TODO: Matt L: remove the url and pulling release versions when it is verified that pulling from images works correctly
-                    // sh "gsutil cp ${params.calicoctl_url} ./dist/calicoctl"
-                    // sh "chmod +x ./dist/calicoctl"
-                    sh 'make dist/calicoctl'
-                }
+                sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'cd calico-private/calico_node && make dist/calicoctl'"
             }
         }
 
@@ -155,30 +139,42 @@ pipeline{
                 // only run if nothing is returned from running git diff grep queries
             }
             steps {
-                ansiColor('xterm') {
-                    dir('calico_node'){
-                        // The following bit of nastiness works round a docker issue with ttys.
-                        // See http://stackoverflow.com/questions/29380344/docker-exec-it-returns-cannot-enable-tty-mode-on-non-tty-input for more
-                        sh 'ssh-keygen -f "/home/jenkins/.ssh/known_hosts" -R localhost'
-                        sh 'ssh -o StrictHostKeyChecking=no localhost -t -t "cd $WORKSPACE/calico_node && RELEASE_STREAM=master make st"'
-                    }
-                }
+               sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'cd calico-private/calico_node && RELEASE_STREAM=master make st'"
             }
             post {
                 always {
-                    junit("**/calico_node/nosetests.xml")
-                    deleteDir()
+                    sh "gcloud compute scp ubuntu@${BUILD_INSTANCE_NAME}:calico-private/calico_node/nosetests.xml nosetests.xml"
+                    junit("nosetests.xml")
                 }
             }
         }
-    }
 
+        stage('Run htmlproofer') {
+            steps {
+                sh 'make htmlproofer 2>&1 | awk -f filter-htmlproofer-false-negatives.awk'
+            }
+        }
+    }
     post {
+        always {
+            script {
+                if( GIT_DOCS_ONLY == 0 ){
+                    // only run if nothing is returned from running git diff grep queries
+                    // which determined if the gce build instance was launched
+                    sh "gcloud compute instances delete --quiet ${env.BUILD_INSTANCE_NAME} --project unique-caldron-775 --zone us-central1-f"
+                }
+            }
+        }
         success {
             echo "Yay, we passed."
         }
         failure {
             echo "Boo, we failed."
+            script {
+                if (env.BRANCH_NAME == 'master') {
+                    slackSend message: "Failure during ${env.JOB_NAME}:${env.BRANCH_NAME} CI!\n${env.BUILD_INFO}", color: "warning", channel: "cnx-ci-failures"
+                }
+            }
         }
     }
 }

@@ -95,19 +95,19 @@ NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
 NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
 FELIX_REPO?=tigera/felix
 FELIX_CONTAINER_NAME?=$(FELIX_REPO):$(FELIX_VER)
-FELIX_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/felix
+FELIX_PRIVATE_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/felix
 CONFD_REPO?=calico/confd
 CONFD_CONTAINER_NAME?=$(CONFD_REPO):$(CONFD_VER)
 LIBNETWORK_PLUGIN_REPO?=calico/libnetwork-plugin
 LIBNETWORK_PLUGIN_CONTAINER_NAME?=$(LIBNETWORK_PLUGIN_REPO):$(LIBNETWORK_PLUGIN_VER)
 CTL_CONTAINER_NAME?=tigera/calicoctl:$(CALICOCTL_VER)
-CTL_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/calicoctl
+CTL_PRIVATE_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/calicoctl
 CALICOQ_CONTAINER_NAME?=tigera/calicoq:$(CALICOQ_VER)
-CALICOQ_PRIVATE_IMAGE?=gcr.io/tigera-dev/cnx/tigera/calicoq
+CALICOQ_PRIVATE_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/calicoq
 APISERVER_CONTAINER_NAME?=tigera/cnx-apiserver:$(APISERVER_VER)
-APISERVER_IMAGE?=gcr.io/tigera-dev/cnx/tigera/cnx-apiserver
+APISERVER_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
 TYPHA_CONTAINER_NAME?=tigera/typha:$(TYPHA_VER)
-TYPHA_IMAGE?=gcr.io/tigera-dev/cnx/tigera/typha
+TYPHA_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/typha
 
 STARTUP_DIR=$(NODE_CONTAINER_DIR)/startup
 STARTUP_FILES=$(shell find $(STARTUP_DIR) -name '*.go')
@@ -146,6 +146,11 @@ vendor: glide.yaml
     $(CALICO_BUILD) /bin/sh -c ' \
 		  cd /go/src/$(PACKAGE_NAME) && \
       glide install -strip-vendor'
+
+# Download calicoctl v1.0.2 from releases.  Used for STs (testing pre/post v1.1.0 data model)
+dist/calicoctl-v1.0.2:
+	wget https://github.com/projectcalico/calicoctl/releases/download/v1.0.2/calicoctl -O dist/calicoctl-v1.0.2
+	chmod +x dist/calicoctl-v1.0.2
 
 # Pull calicoctl and CNI plugin binaries with versions as per XXX_VER
 # variables.  These are used for the STs.
@@ -449,7 +454,7 @@ st-checks:
 
 ## Run the STs in a container
 .PHONY: st
-st: dist/calicoctl busybox.tar routereflector.tar cnx-node.tar workload.tar run-etcd-host calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
+st: dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector.tar cnx-node.tar workload.tar run-etcd-host calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
 	# Check versions of Calico binaries that ST execution will use.
 	docker run --rm -v $(CURDIR)/dist:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
 	  echo; echo calicoctl --version;        /go/bin/calicoctl --version; \
@@ -654,7 +659,7 @@ release: clean
 
 	# Retag images with corect version and GCR private registry
 	docker tag $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_NAME):$(CNX_VER)
-	docker tag $(NODE_CONTAINER_NAME) gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)
+	docker tag $(NODE_CONTAINER_NAME) gcr.io/unique-caldron-775/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)
 
 	# Create the release archive
 	CALICOCTL_VER=$(CALICOCTL_VER) CALICOQ_VER=$(CALICOQ_VER) $(MAKE) release-archive
@@ -669,10 +674,10 @@ release: clean
 
 	@echo "# See RELEASING.md for detailed instructions."
 	@echo "# Now push release images."
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)"
+	@echo "  gcloud docker -- push gcr.io/unique-caldron-775/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)"
 
 	@echo "# For the final release only, push the latest tag (not for RCs)"
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/$(NODE_CONTAINER_NAME):latest"
+	@echo "  gcloud docker -- push gcr.io/unique-caldron-775/cnx/$(NODE_CONTAINER_NAME):latest"
 
 	@echo "# Only push the git tag AFTER this branch is merged to origin/master"
 	@echo "  git push origin $(CNX_VER)"
