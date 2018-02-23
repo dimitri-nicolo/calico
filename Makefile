@@ -61,7 +61,16 @@ endif
 
 publish-cnx-docs:
 	jekyll build
-	cp robots.txt _site/
-	@echo Run the following command to update the GAE site:
+	cp website/assets/robots.txt _site/
+	website/generate_site.sh > publish-cnx-docs.yaml
+	@echo "In order to publish the site to docs.tigera.io,"
+	@echo "run the following command:"
 	@echo "  gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml"
+	@echo
+	@echo "If you're on the gcloud console and wish to test the site"
+	@echo "on the staging server, run the following command:"
+	@echo "  dev_appserver.py publish-cnx-docs.yaml"
+	@echo
+	@echo "Then click on the \"Preview on port 8080\" icon."
+
 
