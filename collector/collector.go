@@ -389,6 +389,7 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 	}
 
 	if string(policyIDUnhashed[len(policyIDUnhashed)-3:]) == "|pr" {
+		// TODO(doublek): Maybe we should be smart about adding a namespace for "kns." profiles?
 		ruleIDs.Tier = "profile"
 		ruleIDs.Policy = string(policyIDUnhashed[:len(policyIDUnhashed)-3])
 	} else {
@@ -399,24 +400,27 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 			if tierIdx == -1 {
 				// It's a profile. Should already be handled.
 			} else {
-				// Policy without a namespace (default)
+				// Policy without a namespace (global namespace)
+				// It's a non-k8s policy.
+				ruleIDs.Tier = string(policyIDUnhashed[:tierIdx])
+				ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])
+				ruleIDs.Namespace = rules.NamespaceGlobal
 
-				// Check if it's a knp.default policy.
-				if bytes.HasPrefix(policyIDUnhashed[:12], []byte("knp.default.")) {
-					ruleIDs.Tier = "default"
-					ruleIDs.Policy = string(policyIDUnhashed[12 : len(policyIDUnhashed)-3])
-				} else {
-					// It's a non-k8s policy.
-					ruleIDs.Tier = string(policyIDUnhashed[:tierIdx])
-					ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])
-				}
 			}
 		} else {
 			if tierIdx == -1 {
 				// No tier means it's a profile, but profiles don't have namespace, so it should never get here.
 			} else {
-				ruleIDs.Tier = string(policyIDUnhashed[nsIdx+1 : tierIdx])
-				ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])
+				// Check if it's a knp.default policy.
+				if bytes.HasPrefix(policyIDUnhashed[nsIdx+1:nsIdx+13], []byte("knp.default.")) {
+					ruleIDs.Tier = "default"
+					ruleIDs.Policy = string(policyIDUnhashed[nsIdx+13 : len(policyIDUnhashed)-3])
+					ruleIDs.Namespace = rules.NamespaceDefault
+				} else {
+					ruleIDs.Tier = string(policyIDUnhashed[nsIdx+1 : tierIdx])
+					ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])
+					ruleIDs.Namespace = string(policyIDUnhashed[:nsIdx])
+				}
 			}
 		}
 	}

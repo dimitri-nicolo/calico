@@ -126,11 +126,17 @@ const (
 	ActionNextTier RuleAction = "pass"
 )
 
+const (
+	NamespaceGlobal  = "__GLOBAL__"
+	NamespaceDefault = "default"
+)
+
 // RuleIDs contains the complete identifiers for a particular rule.
 type RuleIDs struct {
 	Action    RuleAction
 	Tier      string
 	Policy    string
+	Namespace string
 	Direction RuleDirection
 	Index     string
 }
@@ -139,6 +145,7 @@ func (r *RuleIDs) Equals(cmpR *RuleIDs) bool {
 	return r.Action == cmpR.Action &&
 		r.Tier == cmpR.Tier &&
 		r.Policy == cmpR.Policy &&
+		r.Namespace == cmpR.Namespace &&
 		r.Direction == cmpR.Direction
 }
 

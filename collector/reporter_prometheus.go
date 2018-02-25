@@ -25,6 +25,7 @@ const checkInterval = 5 * time.Second
 // CNX Metrics
 var (
 	LABEL_TIER        = "tier"
+	LABEL_NAMESPACE   = "namespace"
 	LABEL_POLICY      = "policy"
 	LABEL_RULE_IDX    = "rule_index"
 	LABEL_ACTION      = "action"
@@ -36,21 +37,21 @@ var (
 			Name: "cnx_policy_rule_packets",
 			Help: "Total number of packets handled by CNX policy rules.",
 		},
-		[]string{LABEL_ACTION, LABEL_TIER, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
+		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
 	)
 	counterRuleBytes = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_bytes",
 			Help: "Total number of bytes handled by CNX policy rules.",
 		},
-		[]string{LABEL_ACTION, LABEL_TIER, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
+		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
 	)
 	gaugeRuleConns = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "cnx_policy_rule_connections",
 			Help: "Total number of connections handled by CNX policy rules.",
 		},
-		[]string{LABEL_TIER, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
+		[]string{LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
 	)
 
 	ruleDirToTrafficDir = map[rules.RuleDirection]rules.TrafficDirection{
@@ -122,6 +123,7 @@ func (k *RuleAggregateKey) PacketByteLabels(trafficDir rules.TrafficDirection) p
 	return prometheus.Labels{
 		LABEL_ACTION:      string(k.ruleIDs.Action),
 		LABEL_TIER:        k.ruleIDs.Tier,
+		LABEL_NAMESPACE:   k.ruleIDs.Namespace,
 		LABEL_POLICY:      k.ruleIDs.Policy,
 		LABEL_RULE_DIR:    string(k.ruleIDs.Direction),
 		LABEL_RULE_IDX:    k.ruleIDs.Index,
@@ -134,6 +136,7 @@ func (k *RuleAggregateKey) PacketByteLabels(trafficDir rules.TrafficDirection) p
 func (k *RuleAggregateKey) ConnectionLabels() prometheus.Labels {
 	return prometheus.Labels{
 		LABEL_TIER:        k.ruleIDs.Tier,
+		LABEL_NAMESPACE:   k.ruleIDs.Namespace,
 		LABEL_POLICY:      k.ruleIDs.Policy,
 		LABEL_RULE_DIR:    string(k.ruleIDs.Direction),
 		LABEL_RULE_IDX:    k.ruleIDs.Index,

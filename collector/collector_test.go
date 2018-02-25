@@ -62,6 +62,7 @@ var defTierAllowIngressTp = &RuleTracePoint{
 	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy1",
+		Namespace: "__GLOBAL__",
 		Index:     "0",
 		Action:    rules.ActionAllow,
 		Direction: rules.RuleDirIngress,
@@ -75,6 +76,7 @@ var defTierAllowEgressTp = &RuleTracePoint{
 	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy1",
+		Namespace: "__GLOBAL__",
 		Index:     "0",
 		Action:    rules.ActionAllow,
 		Direction: rules.RuleDirEgress,
@@ -88,6 +90,7 @@ var defTierDenyIngressTp = &RuleTracePoint{
 	RuleIDs: &rules.RuleIDs{
 		Tier:      "default",
 		Policy:    "policy2",
+		Namespace: "__GLOBAL__",
 		Index:     "0",
 		Action:    rules.ActionDeny,
 		Direction: rules.RuleDirIngress,
