@@ -34,4 +34,7 @@ var _ = Describe("Id", func() {
 	It("should return the hash if too long prefix", func() {
 		Expect(GetLengthLimitedID("felix", "12345678910", 13)).To(Equal("felix_Y2QCZIS"))
 	})
+	It("should return the hash for empty prefix and if too long prefix for long inputs", func() {
+		Expect(GetLengthLimitedID("", "1234567891123456789112345678910001234567891012345678911234567891123456789100012345678910", 50)).To(Equal("_0Z_h7TQKxoN74-LpYCZe2YrbMM6-s0HG8tkrocNTEEI"))
+	})
 })

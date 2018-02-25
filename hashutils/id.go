@@ -36,6 +36,9 @@ func GetLengthLimitedID(fixedPrefix, suffix string, maxLength int) string {
 		hasher.Write([]byte(suffix))
 		hash := base64.RawURLEncoding.EncodeToString(hasher.Sum(nil))
 		charsLeftForHash := maxLength - 1 - prefixLen
+		if len(hash) < charsLeftForHash {
+			charsLeftForHash = len(hash)
+		}
 		return fixedPrefix + shortenedPrefix + hash[0:charsLeftForHash]
 	}
 	// No need to shorten.
