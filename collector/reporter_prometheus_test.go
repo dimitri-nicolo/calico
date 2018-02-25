@@ -28,7 +28,7 @@ var (
 
 // Common RuleIDs definitions
 var (
-	rule1Allow = rules.RuleIDs{
+	ingressRule1Allow = rules.RuleIDs{
 		Action:    rules.ActionAllow,
 		Index:     "0",
 		Policy:    "policy1",
@@ -40,47 +40,60 @@ var (
 // Common MetricUpdate definitions
 var (
 	// Identical rule/direction connections with differing tuples
-	muConn1InboundRule1Allow = &MetricUpdate{
-		ruleIDs:      &rule1Allow,
-		trafficDir:   rules.TrafficDirInbound,
+	muConn1Rule1AllowUpdate = &MetricUpdate{
+		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
-		packets:      1,
-		bytes:        1,
-		deltaPackets: 1,
-		deltaBytes:   1,
+		ruleIDs:      &ingressRule1Allow,
 		isConnection: true,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   1,
+		},
+		outMetric: MetricValue{
+			deltaPackets: 3,
+			deltaBytes:   3,
+		},
 	}
-	muConn2InboundRule1Allow = &MetricUpdate{
-		ruleIDs:      &rule1Allow,
-		trafficDir:   rules.TrafficDirInbound,
+	muConn1Rule1AllowExpire = &MetricUpdate{
+		updateType:   UpdateTypeExpire,
+		tuple:        tuple1,
+		ruleIDs:      &ingressRule1Allow,
+		isConnection: true,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   1,
+		},
+		outMetric: MetricValue{
+			deltaPackets: 3,
+			deltaBytes:   3,
+		},
+	}
+	muConn2Rule1AllowUpdate = &MetricUpdate{
+		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
-		packets:      10,
-		bytes:        20,
-		deltaPackets: 2,
-		deltaBytes:   2,
+		ruleIDs:      &ingressRule1Allow,
 		isConnection: true,
+		inMetric: MetricValue{
+			deltaPackets: 2,
+			deltaBytes:   2,
+		},
 	}
-	muConn1OutboundRule1Allow = &MetricUpdate{
-		ruleIDs:      &rule1Allow,
-		trafficDir:   rules.TrafficDirOutbound,
-		tuple:        tuple1,
-		packets:      30,
-		bytes:        40,
-		deltaPackets: 3,
-		deltaBytes:   3,
+	muConn2Rule1AllowExpire = &MetricUpdate{
+		updateType:   UpdateTypeExpire,
+		tuple:        tuple2,
+		ruleIDs:      &ingressRule1Allow,
 		isConnection: true,
+		inMetric: MetricValue{
+			deltaPackets: 2,
+			deltaBytes:   2,
+		},
 	}
 )
 
 // Common RuleAggregateKey definitions
 var (
-	keyRule1AllowInbound = RuleAggregateKey{
-		ruleIDs:    rule1Allow,
-		trafficDir: rules.TrafficDirInbound,
-	}
-	keyRule1AllowOutbound = RuleAggregateKey{
-		ruleIDs:    rule1Allow,
-		trafficDir: rules.TrafficDirOutbound,
+	keyRule1Allow = RuleAggregateKey{
+		ruleIDs: ingressRule1Allow,
 	}
 )
 
@@ -136,8 +149,28 @@ func expectRuleAggregateKeys(pr *PrometheusReporter, keys []RuleAggregateKey) {
 	}
 }
 
+func getDirectionalPackets(dir rules.TrafficDirection, v *RuleAggregateValue) (ret prometheus.Counter) {
+	switch dir {
+	case rules.TrafficDirInbound:
+		ret = v.inPackets
+	case rules.TrafficDirOutbound:
+		ret = v.outPackets
+	}
+	return
+}
+
+func getDirectionalBytes(dir rules.TrafficDirection, v *RuleAggregateValue) (ret prometheus.Counter) {
+	switch dir {
+	case rules.TrafficDirInbound:
+		ret = v.inBytes
+	case rules.TrafficDirOutbound:
+		ret = v.outBytes
+	}
+	return
+}
+
 func expectRuleAggregates(
-	pr *PrometheusReporter, k RuleAggregateKey,
+	pr *PrometheusReporter, dir rules.TrafficDirection, k RuleAggregateKey,
 	expectedPackets int, expectedBytes int, expectedConnections int,
 ) {
 	Eventually(func() int {
@@ -145,14 +178,14 @@ func expectRuleAggregates(
 		if !ok {
 			return -1
 		}
-		return getMetricCount(value.packets)
+		return getMetricCount(getDirectionalPackets(dir, value))
 	}, expectTimeout).Should(Equal(expectedPackets))
 	Consistently(func() int {
 		value, ok := pr.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
-		return getMetricCount(value.packets)
+		return getMetricCount(getDirectionalPackets(dir, value))
 	}, expectTimeout).Should(Equal(expectedPackets))
 
 	Eventually(func() int {
@@ -160,16 +193,20 @@ func expectRuleAggregates(
 		if !ok {
 			return -1
 		}
-		return getMetricCount(value.bytes)
+		return getMetricCount(getDirectionalBytes(dir, value))
 	}, expectTimeout).Should(Equal(expectedBytes))
 	Consistently(func() int {
 		value, ok := pr.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
-		return getMetricCount(value.bytes)
+		return getMetricCount(getDirectionalBytes(dir, value))
 	}, expectTimeout).Should(Equal(expectedBytes))
 
+	if ruleDirToTrafficDir[k.ruleIDs.Direction] != dir {
+		// Don't check connections if rules doesn't match direction.
+		return
+	}
 	Eventually(func() int {
 		value, ok := pr.ruleAggStats[k]
 		if !ok {
@@ -207,84 +244,75 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		var expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound int
 
 		By("reporting two separate metrics for same rule and traffic direction, but different connections")
-		pr.Report(muConn1InboundRule1Allow)
-		expectedPacketsInbound += muConn1InboundRule1Allow.deltaPackets
-		expectedBytesInbound += muConn1InboundRule1Allow.deltaPackets
+		pr.Report(muConn1Rule1AllowUpdate)
+		expectedPacketsInbound += muConn1Rule1AllowUpdate.inMetric.deltaPackets
+		expectedBytesInbound += muConn1Rule1AllowUpdate.inMetric.deltaPackets
+		expectedPacketsOutbound += muConn1Rule1AllowUpdate.outMetric.deltaPackets
+		expectedBytesOutbound += muConn1Rule1AllowUpdate.outMetric.deltaBytes
 		expectedConnsInbound += 1
-		pr.Report(muConn2InboundRule1Allow)
-		expectedPacketsInbound += muConn2InboundRule1Allow.deltaPackets
-		expectedBytesInbound += muConn2InboundRule1Allow.deltaPackets
+		pr.Report(muConn2Rule1AllowUpdate)
+		expectedPacketsInbound += muConn2Rule1AllowUpdate.inMetric.deltaPackets
+		expectedBytesInbound += muConn2Rule1AllowUpdate.inMetric.deltaPackets
 		expectedConnsInbound += 1
 
 		By("checking for the correct number of aggregated statistics")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1AllowInbound})
+		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, keyRule1AllowInbound, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pr, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pr, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("reporting one of the same metrics")
-		pr.Report(muConn1InboundRule1Allow)
-		expectedPacketsInbound += muConn1InboundRule1Allow.deltaPackets
-		expectedBytesInbound += muConn1InboundRule1Allow.deltaPackets
+		pr.Report(muConn1Rule1AllowUpdate)
+		expectedPacketsInbound += muConn1Rule1AllowUpdate.inMetric.deltaPackets
+		expectedBytesInbound += muConn1Rule1AllowUpdate.inMetric.deltaPackets
+		expectedPacketsOutbound += muConn1Rule1AllowUpdate.outMetric.deltaPackets
+		expectedBytesOutbound += muConn1Rule1AllowUpdate.outMetric.deltaBytes
 		expectedConnsInbound += 0 // connection already registered
 
 		By("checking for the correct number of aggregated statistics")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1AllowInbound})
+		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, keyRule1AllowInbound, expectedPacketsInbound, expectedBytesInbound, 2)
-
-		By("reporting one of the same metrics but for a different traffic direction")
-		pr.Report(muConn1OutboundRule1Allow)
-		expectedPacketsOutbound += muConn1OutboundRule1Allow.deltaPackets
-		expectedBytesOutbound += muConn1OutboundRule1Allow.deltaPackets
-		expectedConnsOutbound += 1
-
-		By("checking for the correct number of aggregated statistics")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1AllowInbound, keyRule1AllowOutbound})
-
-		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, keyRule1AllowInbound, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pr, keyRule1AllowOutbound, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		expectRuleAggregates(pr, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pr, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("expiring one of the metric updates for Rule1 Inbound and one for Outbound")
-		pr.Expire(muConn1InboundRule1Allow)
-		expectedPacketsInbound += muConn1InboundRule1Allow.deltaPackets
-		expectedBytesInbound += muConn1InboundRule1Allow.deltaPackets
+		pr.Report(muConn1Rule1AllowExpire)
+		expectedPacketsInbound += muConn1Rule1AllowExpire.inMetric.deltaPackets
+		expectedBytesInbound += muConn1Rule1AllowExpire.inMetric.deltaBytes
+		expectedPacketsOutbound += muConn1Rule1AllowExpire.outMetric.deltaPackets
+		expectedBytesOutbound += muConn1Rule1AllowExpire.outMetric.deltaBytes
 		expectedConnsInbound -= 1
-		pr.Expire(muConn1OutboundRule1Allow)
-		expectedPacketsOutbound += muConn1OutboundRule1Allow.deltaPackets
-		expectedBytesOutbound += muConn1OutboundRule1Allow.deltaPackets
-		expectedConnsOutbound -= 1
 		// Adjust the clock, but not past the retention period, the outbound rule aggregate should
 		// not yet be expunged.
 		mt.incMockTime(retentionTime / 2)
 
 		By("checking for the correct number of aggregated statistics: outbound rule should be present for retention time")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1AllowInbound, keyRule1AllowOutbound})
+		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, keyRule1AllowInbound, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pr, keyRule1AllowOutbound, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		expectRuleAggregates(pr, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pr, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("incrementing time by the retention time - outbound rule should be expunged")
 		mt.incMockTime(retentionTime)
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1AllowInbound})
+		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
 
 		By("expiring the remaining Rule1 Inbound metric")
-		pr.Expire(muConn2InboundRule1Allow)
-		expectedPacketsInbound += muConn2InboundRule1Allow.deltaPackets
-		expectedBytesInbound += muConn2InboundRule1Allow.deltaPackets
+		pr.Report(muConn2Rule1AllowExpire)
+		expectedPacketsInbound += muConn2Rule1AllowExpire.inMetric.deltaPackets
+		expectedBytesInbound += muConn2Rule1AllowExpire.inMetric.deltaPackets
 		expectedConnsInbound -= 1
 		// Adjust the clock, but not past the retention period, the inbound rule aggregate should
 		// not yet be expunged.
 		mt.incMockTime(retentionTime / 2)
 
 		By("checking for the correct number of aggregated statistics: inbound rule should be present for retention time")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1AllowInbound})
+		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, keyRule1AllowInbound, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		expectRuleAggregates(pr, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
 
 		By("incrementing time by the retention time - inbound rule should be expunged")
 		mt.incMockTime(retentionTime)
