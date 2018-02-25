@@ -412,10 +412,10 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 				// No tier means it's a profile, but profiles don't have namespace, so it should never get here.
 			} else {
 				// Check if it's a knp.default policy.
-				if bytes.HasPrefix(policyIDUnhashed[nsIdx+1:nsIdx+13], []byte("knp.default.")) {
+				if bytes.Contains(policyIDUnhashed[:], []byte(rules.K8sPolicyPrefix)) {
 					ruleIDs.Tier = "default"
 					ruleIDs.Policy = string(policyIDUnhashed[nsIdx+13 : len(policyIDUnhashed)-3])
-					ruleIDs.Namespace = rules.NamespaceDefault
+					ruleIDs.Namespace = string(policyIDUnhashed[:nsIdx])
 				} else {
 					ruleIDs.Tier = string(policyIDUnhashed[nsIdx+1 : tierIdx])
 					ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])

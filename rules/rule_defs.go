@@ -128,7 +128,7 @@ const (
 
 const (
 	NamespaceGlobal  = "__GLOBAL__"
-	NamespaceDefault = "default"
+	K8sPolicyPrefix  = "knp.default."
 )
 
 // RuleIDs contains the complete identifiers for a particular rule.
