@@ -101,13 +101,12 @@ func (g AcceptAction) String() string {
 }
 
 type NflogAction struct {
-	Group  uint16
-	Prefix string
+	Group       uint16
+	Prefix      string
+	SizeEnabled bool
 }
 
 func (n NflogAction) ToFragment() string {
-	// TODO (Matt): Review number of bytes
-
 	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
 	// separated by `|`s. Example: "D|0|default.deny-icmp|po".
 	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
@@ -123,7 +122,14 @@ func (n NflogAction) ToFragment() string {
 	// Can't import rules.NFLOGPrefixMaxLength due to cyclic imports so use 64 instead.
 	prefixHash := hashutils.GetLengthLimitedID("", prefixParts[2], 64-9)
 
-	return fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s|%s|%s", prefixParts[0], prefixParts[1], prefixHash, prefixParts[3]))
+	var retStr string
+	if n.SizeEnabled {
+		retStr = fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-size 80", n.Group, fmt.Sprintf("%s|%s|%s|%s", prefixParts[0], prefixParts[1], prefixHash, prefixParts[3]))
+	} else {
+		retStr = fmt.Sprintf("--jump NFLOG --nflog-group %d --nflog-prefix %s --nflog-range 80", n.Group, fmt.Sprintf("%s|%s|%s|%s", prefixParts[0], prefixParts[1], prefixHash, prefixParts[3]))
+	}
+
+	return retStr
 }
 
 func (n NflogAction) String() string {

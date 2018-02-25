@@ -276,6 +276,8 @@ type Config struct {
 	FailsafeOutboundHostPorts []config.ProtoPort
 
 	DisableConntrackInvalid bool
+
+	EnableNflogSize bool
 }
 
 func (c *Config) validate() {
