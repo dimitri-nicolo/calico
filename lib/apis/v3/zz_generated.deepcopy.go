@@ -884,6 +884,28 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			}
 		}
 	}
+	if in.KubeIPVSSupportEnabled != nil {
+		in, out := &in.KubeIPVSSupportEnabled, &out.KubeIPVSSupportEnabled
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
+	if in.KubeNodePortRanges != nil {
+		in, out := &in.KubeNodePortRanges, &out.KubeNodePortRanges
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new([]numorstring.Port)
+			if **in != nil {
+				in, out := *in, *out
+				*out = make([]numorstring.Port, len(*in))
+				copy(*out, *in)
+			}
+		}
+	}
 	if in.UsageReportingEnabled != nil {
 		in, out := &in.UsageReportingEnabled, &out.UsageReportingEnabled
 		if *in == nil {
