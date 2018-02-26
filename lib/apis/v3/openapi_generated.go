@@ -2532,6 +2532,26 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"kubeIPVSSupportEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubeIPVSSupportEnabled must be set (only) if using Calico with Kubernetes and kube-proxy is running in ipvs mode.  It changes the way Felix renders iptables policy to be compatible with the ipvs packet flow. [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"kubeNodePortRanges": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubeNodePortRanges holds list of port ranges used for service node ports. Only used if ipvs support is enabled.  Felix uses these ranges to separate host and workload traffic. [Default: 30000:32767].",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										},
+									},
+								},
+							},
+						},
 						"usageReportingEnabled": {
 							SchemaProps: spec.SchemaProps{
 								Description: "UsageReportingEnabled reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]",
@@ -2645,7 +2665,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "github.com/projectcalico/libcalico-go/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy": {
 			Schema: spec.Schema{
@@ -2819,6 +2839,110 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs that share labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the NetworkSet.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSetList contains a list of NetworkSet resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSetSpec contains the specification for a NetworkSet resource.",
+					Properties: map[string]spec.Schema{
+						"nets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The list of IP networks that belong to this set.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPRule": {
 			Schema: spec.Schema{
