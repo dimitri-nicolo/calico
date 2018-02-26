@@ -17,6 +17,7 @@ package etcdv3
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -60,7 +61,11 @@ func NewEtcdV3Client(config *apiconfig.EtcdConfig) (api.Client, error) {
 		CertFile: config.EtcdCertFile,
 		KeyFile:  config.EtcdKeyFile,
 	}
-	tls, _ := tlsInfo.ClientConfig()
+
+	tls, err := tlsInfo.ClientConfig()
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize etcdv3 client: %+v", err)
+	}
 
 	// Build the etcdv3 config.
 	cfg := clientv3.Config{
@@ -130,7 +135,9 @@ func (c *etcdV3Client) Create(ctx context.Context, d *model.KVPair) (*model.KVPa
 	}
 
 	v, err := model.ParseValue(d.Key, []byte(value))
-	cerrors.PanicIfErrored(err, "Unexpected error parsing stored datastore entry: %v", value)
+	if err != nil {
+		return nil, cerrors.ErrorPartialFailure{Err: fmt.Errorf("Unexpected error parsing stored datastore entry '%v': %+v", value, err)}
+	}
 	d.Value = v
 	d.Revision = strconv.FormatInt(txnResp.Header.Revision, 10)
 
