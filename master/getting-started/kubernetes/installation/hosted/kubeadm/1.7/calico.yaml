@@ -171,17 +171,13 @@ spec:
     spec:
       hostNetwork: true
       tolerations:
-        # this taint is set by all kubelets running `--cloud-provider=external`
-        # so we should tolerate it to schedule the calico pods
-        - key: node.cloudprovider.kubernetes.io/uninitialized
-          value: "true"
-          effect: NoSchedule
-        # Allow the pod to run on the master.  This is required for
-        # the master to communicate with pods.
-        - key: node-role.kubernetes.io/master
-          effect: NoSchedule
+        # Make sure calico/node gets scheduled on all nodes.
+        - effect: NoSchedule
+          operator: Exists
         # Mark the pod as a critical add-on for rescheduling.
         - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoExecute
           operator: Exists
       serviceAccountName: calico-cni-plugin
       # Minimize downtime during a rolling upgrade or deletion; tell Kubernetes to do a "force
@@ -236,7 +232,7 @@ spec:
               value: "info"
             # Auto-detect the BGP IP address.
             - name: IP
-              value: ""
+              value: "autodetect"
             - name: FELIX_HEALTHENABLED
               value: "true"
 {% include {{page.version}}/extra-felix-config-12sp.yaml %}

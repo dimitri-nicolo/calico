@@ -1,5 +1,6 @@
 ---
 title: Kubernetes API datastore
+canonical_url: 'https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/hosted/kubernetes-datastore/'
 ---
 
 This document describes how to install {{site.prodname}} on Kubernetes without a separate etcd cluster.
@@ -30,7 +31,7 @@ You must have a Kubernetes cluster, which meets the following requirements:
 
 ## Installation
 
-This document describes three installation options for {{site.prodname}} using Kubernetes API as the datastore:
+This document describes two installation options for {{site.prodname}} using Kubernetes API as the datastore:
 
 1. {{site.prodname}} policy with {{site.prodname}} networking (beta)
 2. {{site.prodname}} policy-only with user-supplied networking
@@ -107,6 +108,19 @@ To install {{site.prodname}} in policy-only mode:
 
 {% include {{page.version}}/cnx-cred-sed.md %}
 
+1. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
+   more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha).
+
+1. Make sure your cluster CIDR matches the `CALICO_IPV4POOL_CIDR` environment variable in the manifest.
+   The cluster CIDR is configured by the  `--cluster-cidr` option passed to the Kubernetes
+   controller manager.  If you are using `kubeadm` that option is controlled by `kubeadm`'s
+   `--pod-network-cidr` option.
+
+   > **Note**: {{site.prodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
+   > IP pool already created.  Changing the variable after the first node has started has no
+   > effect.
+   {: .alert .alert-info}
+
 1. Then apply the manifest.
 
    ```
@@ -119,7 +133,7 @@ To install {{site.prodname}} in policy-only mode:
 
 1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
    This is what subsequent instructions will refer to.
-   
+
 {% include {{page.version}}/cnx-mgr-install.md %}
 
 {% include {{page.version}}/cnx-monitor-install.md %}
@@ -167,3 +181,48 @@ The above manifest deploys {{site.prodname}} such that Felix uses the Kubernetes
 removing {{site.prodname}}'s dependency on etcd and the need for the Kubernetes controllers.
 
 The CNI plugin is still required to configure each pod's virtual ethernet device and network namespace.
+
+## Enabling Typha
+
+{{site.prodname}}'s Typha component helps {{site.prodname}} scale to high numbers of
+nodes without over-taxing the Kubernetes API server.  It sits between Felix ({{site.prodname}}'s
+per-host agent) and the API server, as fan-out proxy.
+
+> **Important**: Typha runs as a host-networked pod and it opens a port on the host for Felix
+> to connect to.  If your cluster runs in an untrusted environment, you **must** take steps to secure that
+> port so that only your Kubernetes nodes can access it.  You may wish to add a `nodeSelector` to the
+> manifest to control where Typha runs (for example on the master) and then use {{site.prodname}} host protection
+> to secure those hosts.
+{: .alert .alert-danger}
+
+We recommend enabling Typha if you have more than 50 Kubernetes nodes in your cluster.  Without Typha, the
+load on the API server and Felix's CPU usage increases substantially as the number of nodes is increased.
+In our testing, beyond 100 nodes, both Felix and the API server use an unacceptable amount of CPU.
+
+To enable Typha in either the {{site.prodname}} networking manifest or the policy only manifest:
+
+1. Change the `typha_service_name` variable in the ConfigMap from `"none"` to `"calico-typha"`.
+
+2. Modify the replica count in the `calico-typha` Deployment section to the desired number of replicas:
+
+   ```
+   apiVersion: apps/v1beta1
+   kind: Deployment
+   metadata:
+     name: calico-typha
+     ...
+   spec:
+     ...
+     replicas: <number of replicas>
+   ```
+
+   We recommend starting at least one replica for every 200 nodes and, at most, 20 replicas (since each
+   replica places some load on the API server).
+
+   In production, we recommend starting at least 3 replicas to reduce the impact of rolling upgrades
+   and failures.
+
+> **Note**: If you set `typha_service_name` without increasing the replica count from its default
+> of `0` Felix will fail to start because it will try to connect to Typha but there
+> will be no Typha instances to connect to.
+{: .alert .alert-info}

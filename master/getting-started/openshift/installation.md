@@ -44,7 +44,7 @@ node1
 etcd1
 ```
 
-You are now ready to execute the ansible provision which will install {{site.prodname}}. Note that by default, 
+You are now ready to execute the ansible provision which will install {{site.prodname}}. Note that by default,
 {{site.prodname}} will connect to the same etcd that OpenShift uses, and in order to do so, will distribute etcd's
 certs to each node. If you would prefer Calico not connect to the same etcd as OpenShift, you may modify the install
 such that Calico connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
@@ -70,14 +70,14 @@ such that Calico connects to an etcd you have already set up by following the [d
 
 1. Download [calico-config.yaml](calico-config.yaml).
 
-1. Use the following command to replace the value `<ETCD_ENDPOINTS>` in `calico-config.yaml` 
+1. Use the following command to replace the value `<ETCD_ENDPOINTS>` in `calico-config.yaml`
    with the address of your etcd cluster:
 
    **Command**
    ```shell
    sed -i -e "s?<ETCD_ENDPOINTS>?<REPLACE_ME>?g" calico-config.yaml
    ```
-   
+
    **Example**
    ```shell
    sed -i -e 's?<ETCD_ENDPOINTS>?https://etcd:2379?g' calico.yaml

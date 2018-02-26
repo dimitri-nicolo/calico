@@ -13,8 +13,9 @@ VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 ###############################################################################
 # HtmlProofer
 HP_IGNORE_LOCAL_DIRS?=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - "htmlProoferLocalDirIgnore")
+HP_VERSION=v0.2
 
-JEKYLL_VERSION=3.5.2
+JEKYLL_VERSION=pages
 DEV?=false
 
 CONFIG=--config _config.yml
@@ -33,8 +34,8 @@ clean:
 	docker run --rm -e JEKYLL_UID=`id -u` -v $$PWD:/srv/jekyll jekyll/jekyll:$(JEKYLL_VERSION) jekyll clean
 
 htmlproofer: clean _site
-	docker run -e JEKYLL_UID=`id -u` --rm -v $$PWD/_site:/_site/ quay.io/calico/htmlproofer /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore "/docs.openshift.org/,#,/github.com\/projectcalico\/calico\/releases\/download/"
-	-docker run -e JEKYLL_UID=`id -u` --rm -v $$PWD/_site:/_site/ quay.io/calico/htmlproofer /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
+	docker run -e JEKYLL_UID=`id -u` --rm -v $$PWD/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore "/docs.openshift.org/,#,/github.com\/projectcalico\/calico\/releases\/download/"
+	-docker run -e JEKYLL_UID=`id -u` --rm -v $$PWD/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
 	# Rerun htmlproofer across _all_ files, but ignore failure, allowing us to notice legacy docs issues without failing CI
 
 	docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.1.1 -c 'find /calico/_site/master -name "*.yaml" |grep -v config.yaml | xargs /kubeval'
@@ -65,3 +66,7 @@ publish-cnx-docs:
 	@echo Run the following command to update the GAE site:
 	@echo "  gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml"
 
+update_canonical_urls:
+    # You must pass two version numbers into this command, e.g., make update_canonical_urls OLD=v3.0 NEW=v3.1
+    # Looks through all directories and replaces previous latest release version numbers in canonical URLs with new
+	find . \( -name '*.md' -o -name '*.html' \) -exec sed -i '/canonical_url:/s/$(OLD)/$(NEW)/g' {} \;

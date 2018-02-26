@@ -6,6 +6,7 @@ permalink:     /:title.html
 
 gems:
   - jekyll-redirect-from
+  - jekyll-seo-tag
 
 url: https://docs.tigera.io
 
@@ -19,6 +20,7 @@ cnx-api-image-name: <your-k8sapiserver-image-name>
 
 prodname: CNX
 nodecontainer: cnx-node
+repository: projectcalico/calico
 noderunning: calico-node
 
 # Image names in case the host changes
@@ -32,6 +34,7 @@ imageNames:
   cni: quay.io/calico/cni
   kubeControllers: quay.io/calico/kube-controllers
   calico-upgrade: quay.io/calico/upgrade
+  flannel: quay.io/coreos/flannel
 
 exclude:
   - release-scripts

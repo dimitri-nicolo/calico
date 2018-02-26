@@ -1,5 +1,6 @@
 ---
 title: Node Resource (Node)
+canonical_url: 'https://docs.projectcalico.org/v3.0/reference/calicoctl/resources/node'
 ---
 
 A node resource (`Node`) represents a node running {{site.prodname}}.  When adding a host
@@ -44,6 +45,14 @@ spec:
 | Field  | Description                 | Accepted Values   | Schema | Default    |
 |--------|-----------------------------|-------------------|--------|------------|
 | bgp    | BGP configuration for this node.  Omit if using {{site.prodname}} for policy only. | | [BGP](#bgp) |
+| orchRefs | Correlates this node to a node in another orchestrator. | | list of [OrchRefs](#OrchRef) |
+
+#### OrchRef
+
+| Field       | Description                 | Accepted Values   | Schema | Default    |
+|-------------|-----------------------------|-------------------|--------|------------|
+| nodeName    | Name of this node according to the orchestrator. | | string |
+| orchestrator | Name of the orchestrator. | k8s | string |
 
 #### BGP 
 

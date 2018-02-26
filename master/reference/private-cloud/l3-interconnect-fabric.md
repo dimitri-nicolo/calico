@@ -1,6 +1,7 @@
 ---
 title: IP Interconnect Fabrics in CNX
 lead_text: 'Where large-scale IP networks and hardware collide'
+canonical_url: 'https://docs.projectcalico.org/v3.0/reference/private-cloud/l3-interconnect-fabric'
 ---
 
 
@@ -121,7 +122,7 @@ The two methods are:
     [leaf/spine](http://bradhedlund.com/2012/10/24/video-a-basic-introduction-to-the-leafspine-data-center-networking-fabric-design/)
     architecture, or via a set of spine switches, each of which is also
     a unique AS. We'll refer to this as the *AS per rack* model. This
-    model is detailed in [this IETF RFC](https://tools.ietf.org/search/rfc7938).
+    model is detailed in [IETF RFC 7938](https://tools.ietf.org/search/rfc7938).
 2.  A BGP fabric where each of the compute servers is a unique AS, and
     the TOR switches make up a transit AS. We'll refer to this as the
     *AS per server* model.

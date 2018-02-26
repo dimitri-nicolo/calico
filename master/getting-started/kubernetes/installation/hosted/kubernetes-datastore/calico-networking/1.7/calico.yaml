@@ -102,12 +102,13 @@ spec:
         # if it ever gets evicted.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
-      # Since Calico can't network a pod until Typha is up, we need to run Typha itself
-      # as a host-networked pod.
       hostNetwork: true
       tolerations:
+        # Mark the pod as a critical add-on for rescheduling.
         - key: CriticalAddonsOnly
           operator: Exists
+      # Since Calico can't network a pod until Typha is up, we need to run Typha itself
+      # as a host-networked pod.
       serviceAccountName: calico-node
       containers:
       - image: {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
@@ -184,8 +185,7 @@ spec:
     spec:
       hostNetwork: true
       tolerations:
-        # Allow the pod to run on the master.  This is required for
-        # the master to communicate with pods.
+        # Make sure calico/node gets scheduled on all nodes.
         - effect: NoSchedule
           operator: Exists
         # Mark the pod as a critical add-on for rescheduling.
@@ -248,9 +248,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            # No IP address needed.
+            # Auto-detect the BGP IP address.
             - name: IP
-              value: ""
+              value: "autodetect"
             - name: FELIX_HEALTHENABLED
               value: "true"
 {% include {{page.version}}/extra-felix-config-12sp.yaml %}
@@ -388,6 +388,22 @@ spec:
 ---
 
 apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico HostEndpoints
+kind: CustomResourceDefinition
+metadata:
+  name: hostendpoints.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: HostEndpoint
+    plural: hostendpoints
+    singular: hostendpoint
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
 description: Calico Cluster Information
 kind: CustomResourceDefinition
 metadata:
@@ -416,6 +432,22 @@ spec:
     kind: GlobalNetworkPolicy
     plural: globalnetworkpolicies
     singular: globalnetworkpolicy
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico Global Network Sets
+kind: CustomResourceDefinition
+metadata:
+  name: globalnetworksets.crd.projectcalico.org
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: GlobalNetworkSet
+    plural: globalnetworksets
+    singular: globalnetworkset
 
 ---
 

@@ -7,10 +7,10 @@ of the host itself (as opposed to those of any container/VM workloads
 that are present on the host). We call such interfaces "host endpoints",
 to distinguish them from "workload endpoints" (such as containers or VMs).
 
-{{site.prodname}} supports the same rich security policy model for host endpoints (host 
-endpoint policy) that it supports for workload endpoints. Host endpoints can 
-have labels, and their labels are in the same "namespace" as those of workload 
-endpoints. This allows security rules for either type of endpoint to refer to 
+{{site.prodname}} supports the same rich security policy model for host endpoints (host
+endpoint policy) that it supports for workload endpoints. Host endpoints can
+have labels, and their labels are in the same "namespace" as those of workload
+endpoints. This allows security rules for either type of endpoint to refer to
 the other type (or a mix of the two) using labels and selectors.
 
 {{site.prodname}} does not support setting IPs or policing MAC addresses for host
@@ -33,20 +33,20 @@ to/from other interfaces is left alone.
 
 You can use host endpoint policy to secure a NAT gateway or router. {{site.prodname}}
 supports selector-based policy when running on a gateway or router, allowing for
-rich, dynamic security policy based on the labels attached to your host endpoints. 
+rich, dynamic security policy based on the labels attached to your host endpoints.
 
 You can apply host endpoint policies to three types of traffic:
 - Traffic that is terminated locally.
 - Traffic that is forwarded between host endpoints.
-- Traffic that is forwarded between a host endpoint and a workload endpoint on the 
+- Traffic that is forwarded between a host endpoint and a workload endpoint on the
 same host.
 
 Set the `applyOnForward` flag to `true` to apply a policy to forwarded traffic.
-See [GlobalNetworkPolicy spec]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#spec).
+See [GlobalNetworkPolicy spec]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/globalnetworkpolicy#spec).
 
-> **Note**: Both traffic forwarded between host endpoints and traffic forwarded 
+> **Note**: Both traffic forwarded between host endpoints and traffic forwarded
 > between a host endpoint and a workload endpoint on the same host is regarded as
-> `forwarded traffic`. 
+> `forwarded traffic`.
 >
 > ![]({{site.baseurl}}/images/bare-metal-packet-flows-AOF.png)
 {: .alert .alert-info}
@@ -63,8 +63,8 @@ the following steps.
 1.  [Initialize the etcd database](#initializing-the-etcd-database).
 1.  [Add policy to allow basic connectivity](#creating-basic-connectivity-and-policy).
 1.  [Create host endpoint objects in etcd](#creating-host-endpoint-objects) for each interface you want
-    {{site.prodname}} to police. (In a later 
-    release, we plan to support interface templates to remove the need to explicitly 
+    {{site.prodname}} to police. (In a later
+    release, we plan to support interface templates to remove the need to explicitly
     configure every interface).
 1.  [Insert policy into etcd](#creating-more-security-policy) for {{site.prodname}} to apply.
 1.  [Decide whether to disable "failsafe SSH/etcd" access](#failsafe-rules).
@@ -129,14 +129,14 @@ connectivity to a host:
 
 -   They are overly broad in allowing inbound SSH on any interface and
     allowing traffic out to etcd's ports on any interface.
-    
+
 -   Depending on your network, they may not cover all the ports that are
     required; for example, your network may rely on allowing ICMP,
     or DHCP.
 
 Therefore, we recommend creating a failsafe {{site.prodname}} security policy that
 is tailored to your environment. The example command below shows one
-example of how you might do that; the command uses `calicoctl` to create a single 
+example of how you might do that; the command uses `calicoctl` to create a single
 policy resource, which:
 
   - Applies to all known endpoints.
@@ -177,7 +177,7 @@ cat << EOF | calicoctl create -f -
         - 9081
       protocol: TCP
       source:
-         nets: 
+         nets:
          - "<Prometheus IP>/32"
     egress:
     - action: Allow
@@ -200,7 +200,7 @@ EOF
 Once you have such a policy in place, you may want to disable the
 [failsafe rules](#failsafe-rules).
 
-> **Note**: Packets that reach the end of the list of rules fall-through to the 
+> **Note**: Packets that reach the end of the list of rules fall-through to the
 > next policy (sorted by the `order` field).
 >
 > The selector in the policy, `all()`, will match *all* endpoints,
@@ -358,14 +358,23 @@ To avoid completely cutting off a host via incorrect or malformed
 policy, {{site.prodname}} has a failsafe mechanism that keeps various pinholes open
 in the firewall.
 
-By default, {{site.prodname}} keeps port 22 inbound open on *all* host endpoints,
-which allows access to ssh; outbound UDP port 53 for DNS queries, 
-inbound UDP port 68 and outbound UDP 67 for DHCP; as well as inbound and outbound 
-communications to ports 179 ( Calico BGP peering ports), 
-2379, 2380 (etcd's default ports), and to ports 6666, 6667 (etcd's ports
-as deployed by {{site.prodname}}'s self-hosted Kubernetes manifests).
+By default, {{site.prodname}} keeps the following ports open on *all* host endpoints:
+
+| Port   | Protocol | Direction           |              Purpose                           |
+|--------|----------|---------------------|------------------------------------------------|
+|   22   |   TCP    |  Inbound            |             SSH access                         |
+|   53   |   UDP    |  Outbound           |             DNS queries                        |
+|   67   |   UDP    |  Outbound           |             DHCP access                        |
+|   68   |   UDP    |  Inbound            |             DHCP access                        |
+|   179  |   TCP    |  Inbound & Outbound |             BGP access (Calico networking)     |
+|   2379 |   TCP    |  Inbound & Outbound |             etcd access                        |
+|   2380 |   TCP    |  Inbound & Outbound |             etcd access                        |
+|   6666 |   TCP    |  Inbound & Outbound |             etcd self-hosted service access    |
+|   6667 |   TCP    |  Inbound & Outbound |             etcd self-hosted service access    |
+
 
 The lists of failsafe ports can be configured via the configuration parameters
+`FailsafeInboundHostPorts` and `FailsafeOutboundHostPorts`
 described in [Configuring
 Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration).  They
 can be disabled by setting each configuration value to "none".
@@ -376,7 +385,7 @@ can be disabled by setting each configuration value to "none".
 > to etcd.
 >
 > Before disabling the failsafe rules, we recommend creating a policy to
-> replace it with more-specific rules for your environment: see 
+> replace it with more-specific rules for your environment: see
 > [above](#creating-basic-connectivity-and-policy).
 {: .alert .alert-danger}
 
@@ -457,14 +466,14 @@ outside the cluster:
 
 ## Policy on forwarded traffic
 If `applyOnForward` is `false`, the host endpoint policy applies to traffic to/from
- local processes only. 
+ local processes only.
 
 If `applyOnForward` is `true`, the host endpoint policy applies to forwarded traffic:
 - Incoming traffic from a host endpoint to a local workload (container/pod/VM).
 - Outgoing traffic from a local workload to a host endpoint.
 - Traffic from one host endpoint that is forwarded to another host endpoint.
 
-By default, `applyOnForward` is `false`. 
+By default, `applyOnForward` is `false`.
 
 Untracked policies and pre-DNAT policies must have `applyOnForward` set to `true`
 because they apply to all forwarded traffic.
@@ -496,7 +505,7 @@ calicoctl apply -f - <<EOF
   metadata:
     name: empty-default-deny
   spec:
-    types: 
+    types:
       - Ingress
       - Egress
     selector: has(host-endpoint)
@@ -505,7 +514,7 @@ EOF
 ```
 > **Note**: This policy has no `order` field specified which causes it to default
 > to the highest value. Because higher order values have the lowest order of precedence,
-> Calico will apply this policy after all other policies. Refer to the 
+> Calico will apply this policy after all other policies. Refer to the
 > [policy spec]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy#spec) for
 > more discussion.
 {: .alert .alert-info}
@@ -515,7 +524,7 @@ EOF
 As stated above, normal host endpoint policies apply to traffic that arrives on
 and/or is sent to a host interface, but the rules for applying untracked and
 pre-DNAT policies differ in some cases. Here we present and summarize all of
-those rules together, for all possible flows and all types of host endpoints 
+those rules together, for all possible flows and all types of host endpoints
 policy.
 
 For packets that arrive on a host interface and are destined for a local
@@ -523,12 +532,12 @@ workload, i.e., a locally-hosted pod, container or VM:
 
 - Pre-DNAT policies apply.
 
-- Normal policies do apply if `applyOnForward` is `true`. 
+- Normal policies do apply if `applyOnForward` is `true`.
   Normal policies do not apply if `applyOnForward` is `false`.
 
 - Untracked policies technically do apply, but never have any net positive
   effect for such flows.
-  
+
   > **Note**: To be precise, untracked policy for the incoming host interface may
   > apply in the forwards direction, and if so it will have the effect of forwarding
   > the packet to the workload without any connection tracking. But then, in
@@ -593,9 +602,9 @@ For packets that are sent from a local workload out of a host interface:
 
 - No untracked or pre-DNAT host endpoint policies apply.
 
-- Normal policies apply if `applyOnForward` is `true`: specifically, the egress 
+- Normal policies apply if `applyOnForward` is `true`: specifically, the egress
   rules of the normal policies that apply to the outgoing interface. (The reverse
-  direction is allowed by conntrack state.) Normal policies do not apply if 
+  direction is allowed by conntrack state.) Normal policies do not apply if
   `applyOnForward` is `false`.
 
 ## Host endpoint policy: a worked example
@@ -676,7 +685,7 @@ are in use in your own cluster.
 >
 > The explicit `drop-other-ingress` policy is needed because there is no
 > automatic default-drop semantic for pre-DNAT policy. There _is_ a
-> default-drop semantic for normal host endpoint policy but—as noted above—normal 
+> default-drop semantic for normal host endpoint policy but—as noted above—normal
 > host endpoint policy is not always enforced.
 {: .alert .alert-info}
 
