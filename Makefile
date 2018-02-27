@@ -13,7 +13,6 @@ PACKAGE_NAME     ?= projectcalico/libcalico-go
 LOCAL_USER_ID    ?= $(shell id -u $$USER)
 BINDIR           ?= bin
 LIBCALICO-GO_PKG  = github.com/projectcalico/libcalico-go
-TOP_SRC_DIR       = lib
 MY_UID           := $(shell id -u)
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
@@ -175,8 +174,8 @@ clean:
 
 clean-code-gen: clean-bin
 	rm -f .code_gen
-	find $(TOP_SRC_DIR) -name zz_generated* -exec rm {} \;
-	rm ./lib/apis/v3/openapi/openapi_generated.go
+	rm -f lib/apis/v3/zz_generated.deepcopy.go \
+	      lib/apis/v3/openapi_generated.go
 
 clean-bin:
 	rm -rf $(BINDIR) .code_gen_exes
@@ -209,13 +208,15 @@ DOCKER_GO_BUILD := \
 		-w /go/src/github.com/projectcalico/libcalico-go \
 		$(CALICO_BUILD)
 
-.code_gen_exes: $(BINDIR)/code-gen
+.code_gen_exes: $(BINDIR)/deepcopy-gen \
+                $(BINDIR)/openapi-gen
 	touch $@
 
-$(BINDIR)/code-gen:
+$(BINDIR)/deepcopy-gen:
 	$(DOCKER_GO_BUILD) \
 		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
+$(BINDIR)/openapi-gen:
 	$(DOCKER_GO_BUILD) \
     		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
