@@ -106,12 +106,6 @@ type Config struct {
 	PrometheusReporterKeyFile  string
 	PrometheusReporterCAFile   string
 
-	CNXMetricsEnabled        bool
-	CNXMetricsPrometheusPort int
-	CNXPrometheusCertFile    string
-	CNXPrometheusKeyFile     string
-	CNXPrometheusCAFile      string
-
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
 
@@ -464,19 +458,15 @@ func (d *InternalDataplane) Start() {
 		ConntrackPollingInterval: DefaultConntrackPollingInterval,
 	}
 	rm := collector.NewReporterManager()
-	if d.config.CNXMetricsEnabled {
-		rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.CNXMetricsPrometheusPort,
-			d.config.DeletedMetricsRetentionSecs,
-			d.config.CNXPrometheusCertFile,
-			d.config.CNXPrometheusKeyFile,
-			d.config.CNXPrometheusCAFile))
-	}
 	if d.config.PrometheusReporterEnabled {
-		rm.RegisterMetricsReporter(collector.NewDPPrometheusReporter(d.config.PrometheusReporterPort,
+		pr := collector.NewPrometheusReporter(d.config.PrometheusReporterPort,
 			d.config.DeletedMetricsRetentionSecs,
 			d.config.PrometheusReporterCertFile,
 			d.config.PrometheusReporterKeyFile,
-			d.config.PrometheusReporterCAFile))
+			d.config.PrometheusReporterCAFile)
+		pr.AddAggregator(collector.NewPolicyRulesAggregator(d.config.DeletedMetricsRetentionSecs))
+		pr.AddAggregator(collector.NewDeniedPacketsAggregator(d.config.DeletedMetricsRetentionSecs))
+		rm.RegisterMetricsReporter(pr)
 	}
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
 	if syslogReporter != nil {
