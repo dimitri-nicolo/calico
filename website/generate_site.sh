@@ -35,17 +35,17 @@ printf "  upload: _site/(.*\\.(%s))$\n" $suffixes
 
 # Get all the directories in the _site; e.g. "/v2.0/getting-started".
 # Output in form "/dir1|/dir2", etc.
-directories=`find _site -type d -print | sed 's/_site\///g' | sort | uniq | paste -sd "|" -`
+directories=`find _site -type d -print | sed 's/_site\///g' | sort | uniq | grep -v _site | paste -sd "|" -`
 
 # Create a handler for URLs with a directory that do NOT have a
 # terminal /. This is a fail-safe in case someone misconstructs
 # the URL without a terminal /.
 printf "\n"
-printf "# Handle all directories that are missing a terminal /\n"
+printf "# Handle any directory URLs that are missing a terminal /\n"
 printf "#\n"
 printf -- "- url: /(%s)$\n" $directories
 printf "  static_files: _site/\\\1/index.html\n"
-printf "  upload: _site/\\\1/index.html\n"
+printf "  upload: _site/(%s)/index.html\n" $directories
 
 cat <<EOF
 
