@@ -4,12 +4,11 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"math/big"
 	"math/rand"
-	"time"
-
-	"encoding/pem"
 	"os"
+	"time"
 )
 
 const (
@@ -33,6 +32,7 @@ const (
 // This function also populates Tigera org default information.
 func Generatex509Cert(start, exp time.Time, priv *rsa.PrivateKey) ([]byte, error) {
 	template := x509.Certificate{
+		Version:      3,
 		SerialNumber: big.NewInt(rand.Int63n(randSerialSeed)),
 		Subject: pkix.Name{
 			CommonName:   CertCommonName,

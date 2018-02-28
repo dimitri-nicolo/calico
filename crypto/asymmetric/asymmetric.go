@@ -42,7 +42,7 @@ func VerifySignedMessage(pub *rsa.PublicKey, message, signature []byte) error {
 func EncryptMessage(pub *rsa.PublicKey, message []byte) ([]byte, error) {
 	cipher, err := rsa.EncryptOAEP(DefaultEncryptionHash, RandomGen, pub, message, []byte(encryptionLable))
 	if err != nil {
-		return nil, fmt.Errorf("error encrypting message")
+		return nil, err
 	}
 
 	return cipher, nil
@@ -51,7 +51,7 @@ func EncryptMessage(pub *rsa.PublicKey, message []byte) ([]byte, error) {
 func DecryptMessage(priv *rsa.PrivateKey, cipher []byte) ([]byte, error) {
 	plainText, err := rsa.DecryptOAEP(DefaultEncryptionHash, RandomGen, priv, cipher, []byte(encryptionLable))
 	if err != nil {
-		return nil, fmt.Errorf("error decrypting message: %s", err)
+		return nil, err
 	}
 
 	return plainText, nil

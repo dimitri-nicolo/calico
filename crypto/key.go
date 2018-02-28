@@ -11,7 +11,7 @@ import (
 
 const (
 	// DefaultKeyLength is the default private key length.
-	DefaultKeyLength = 1024
+	DefaultKeyLength = 2048
 
 	// PrivKeyType is the const string to mark the beginning
 	// and end of a PEM encoded private key.

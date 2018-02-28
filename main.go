@@ -4,7 +4,11 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"log"
+	"strings"
 	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
+	uuid "github.com/satori/go.uuid"
 
 	cryptolicensing "github.com/tigera/licensing/crypto"
 	"github.com/tigera/licensing/crypto/asymmetric"
@@ -12,7 +16,9 @@ import (
 )
 
 func main() {
-	message := []byte("My name is G U N J A N 5")
+
+	//	message := []byte("My name is G U N J A N 5")
+	message := []byte("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lMDAwMCIsImFkbWluIjp0cnVlfQ.GeYDu1EGbeLldjwiUqM3PAqdP_WEq-xmEnL6d7hDt7k")
 
 	// Hash the message.
 	hashed := sha256.Sum256(message)
@@ -25,13 +31,29 @@ func main() {
 
 	pub := priv.PublicKey
 
-	privPem := cryptolicensing.ExportRsaPrivateKeyAsPemStr(priv)
-	pubPem, err := cryptolicensing.ExportRsaPublicKeyAsPemStr(&pub)
-	if err != nil {
-		log.Fatalf("error exporting public key: %s\n", err)
-	}
+	customerID := uuid.NewV4().String()
+	numNodes := strings.Itoa(42)
 
-	fmt.Printf("Priv:\n%s\nPub:\n%s\n", privPem, pubPem)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":     customerID,
+		"nodes":  numNodes,
+		"winter": "es aquí",
+		"nbf":    time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte("meepster"))
+
+	fmt.Println(tokenString, err)
+
+	//fmt.Println(token)
+
+	//privPem := cryptolicensing.ExportRsaPrivateKeyAsPemStr(priv)
+	//pubPem, err := cryptolicensing.ExportRsaPublicKeyAsPemStr(&pub)
+	//if err != nil {
+	//	log.Fatalf("error exporting public key: %s\n", err)
+	//}
+
+	//fmt.Printf("Priv:\n%s\nPub:\n%s\n", privPem, pubPem)
 
 	err = cryptolicensing.SavePrivateKeyAsPEM(priv, "privateKey.pem")
 	if err != nil {
