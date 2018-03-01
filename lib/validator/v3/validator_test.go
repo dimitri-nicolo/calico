@@ -1536,11 +1536,6 @@ func init() {
 			}, true,
 		),
 
-
-		// RemoteClusterConfig field checks
-		//Entry("check datastore type", &api.RemoteClusterConfiguration{ObjectMeta: v1.ObjectMeta{Name: "any"}}, true),
-
-
 		Entry("allow etdv3 datastore type",
 			&api.RemoteClusterConfiguration{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
@@ -1632,7 +1627,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "etcdv3",
-					EtcdEndpoints: "http://123.123.123.123:2379;https://1.1.1.1:123",
+					EtcdEndpoints: "http://123.123.123.123:2379,https://1.1.1.1:123",
 				},
 			}, true,
 		),

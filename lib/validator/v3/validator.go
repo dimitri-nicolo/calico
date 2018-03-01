@@ -77,8 +77,9 @@ var (
 	dropAcceptReturnRegex = regexp.MustCompile("^(Drop|Accept|Return)$")
 	acceptReturnRegex     = regexp.MustCompile("^(Accept|Return)$")
 	fileRegex             = regexp.MustCompile("^[^\x00]+$")
-	k8sEndpointRegex      = regexp.MustCompile("^https?://[^:]+:\\d+$")
-	etcdEndpointsRegex    = regexp.MustCompile("^https?://[^:]+:\\d+(;https?://[^:]+:\\d+)*$")
+	endpointFmt = "https?://[^:]+:\\d+"
+	k8sEndpointRegex      = regexp.MustCompile("^"+endpointFmt+"$")
+	etcdEndpointsRegex    = regexp.MustCompile("^"+endpointFmt +"(,"+endpointFmt +")*$")
 	reasonString          = "Reason: "
 	poolSmallIPv4         = "IP pool size is too small (min /26) for use with Calico IPAM"
 	poolSmallIPv6         = "IP pool size is too small (min /122) for use with Calico IPAM"

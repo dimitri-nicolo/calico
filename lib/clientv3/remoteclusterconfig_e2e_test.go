@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,8 +45,8 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 		EtcdPassword: "abc123",
 	}
 	spec2 := apiv3.RemoteClusterConfigurationSpec{
-		DatastoreType: "k8s",
-		K8sAPIEndpoint: "https://justatest:;123",
+		DatastoreType: "kubernetes",
+		K8sAPIEndpoint: "https://justatest:123",
 		K8sKeyFile: "/etc/made/up/file.key",
 		K8sCertFile:"/etc/made/up/file.cert",
 		K8sCAFile: "/etc/made/up/file.ca",
