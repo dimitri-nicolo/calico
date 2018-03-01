@@ -2165,6 +2165,57 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch", "github.com/projectcalico/libcalico-go/lib/numorstring.Port"},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"etcdEndpoints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdUsername": {
+							SchemaProps: spec.SchemaProps{
+								Description: "User name for RBAC. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdPassword": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Password for the given user name. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd key file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd client certificate. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdCACertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -3295,6 +3346,63 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kubeconfig": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sAPIEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sAPIToken": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sInsecureSkipTLSVerify": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -3868,84 +3976,84 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"etcdEndpoints": {
 							SchemaProps: spec.SchemaProps{
-								Description: "A comma separated list of etcd endpoints.",
+								Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"etcdUsername": {
 							SchemaProps: spec.SchemaProps{
-								Description: "User name for RBAC.",
+								Description: "User name for RBAC. Valid if DatastoreType is etcdv3.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"etcdPassword": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Password for the given user name.",
+								Description: "Password for the given user name. Valid if DatastoreType is etcdv3.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"etcdKeyFile": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Path to the etcd key fil.",
+								Description: "Path to the etcd key file. Valid if DatastoreType is etcdv3.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"etcdCertFile": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Path to the etcd client certificate.",
+								Description: "Path to the etcd client certificate. Valid if DatastoreType is etcdv3.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"etcdCACertFile": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Path to the etcd Certificate Authority file.",
+								Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"kubeconfig": {
 							SchemaProps: spec.SchemaProps{
-								Description: "When using the Kubernetes datastore, the location of a kubeconfig file.",
+								Description: "When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"k8sAPIEndpoint": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Location of the Kubernetes API. Not required if using kubeconfig.",
+								Description: "Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"k8sKeyFile": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Location of a client key for accessing the Kubernetes API.",
+								Description: "Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"k8sCertFile": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Location of a client certificate for accessing the Kubernetes API.",
+								Description: "Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"k8sCAFile": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Location of a CA for accessing the Kubernetes API.",
+								Description: "Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"k8sAPIToken": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Token to be used for accessing the Kubernetes API.",
+								Description: "Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
 								Type:        []string{"string"},
 								Format:      "",
 							},

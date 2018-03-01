@@ -41,28 +41,40 @@ type RemoteClusterConfiguration struct {
 type RemoteClusterConfigurationSpec struct {
 	// Indicates the datastore to use. If unspecified, defaults to etcdv3
 	DatastoreType string `json:"datastoreType" validate:"datastoreType"`
+
+	// Inline the ectd config fields
+	EtcdConfig `json:",inline"`
+
+	// Inline the k8s config fields.
+	KubeConfig `json:",inline"`
+}
+
+type EtcdConfig struct {
 	// A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.
-	EtcdEndpoints            string `json:"etcdEndpoints,omitempty" validate:"omitempty,etcdEndpoints"`
+	EtcdEndpoints string `json:"etcdEndpoints,omitempty" validate:"omitempty,etcdEndpoints"`
 	// User name for RBAC. Valid if DatastoreType is etcdv3.
-	EtcdUsername             string `json:"etcdUsername,omitempty" validate:"omitempty"`
+	EtcdUsername string `json:"etcdUsername,omitempty" validate:"omitempty"`
 	// Password for the given user name. Valid if DatastoreType is etcdv3.
-	EtcdPassword             string `json:"etcdPassword,omitempty" validate:"omitempty"`
+	EtcdPassword string `json:"etcdPassword,omitempty" validate:"omitempty"`
 	// Path to the etcd key file. Valid if DatastoreType is etcdv3.
-	EtcdKeyFile              string `json:"etcdKeyFile,omitempty" validate:"omitempty,file"`
+	EtcdKeyFile string `json:"etcdKeyFile,omitempty" validate:"omitempty,file"`
 	// Path to the etcd client certificate. Valid if DatastoreType is etcdv3.
-	EtcdCertFile             string `json:"etcdCertFile,omitempty" validate:"omitempty,file"`
+	EtcdCertFile string `json:"etcdCertFile,omitempty" validate:"omitempty,file"`
 	// Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.
-	EtcdCACertFile           string `json:"etcdCACertFile,omitempty" validate:"omitempty,file"`
+	EtcdCACertFile string `json:"etcdCACertFile,omitempty" validate:"omitempty,file"`
+}
+
+type KubeConfig struct {
 	// When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.
-	Kubeconfig               string `json:"kubeconfig,omitempty" validate:"omitempty,file"`
+	Kubeconfig string `json:"kubeconfig,omitempty" validate:"omitempty,file"`
 	// Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.
-	K8sAPIEndpoint           string `json:"k8sAPIEndpoint,omitempty" validate:"omitempty,k8sEndpoint"`
+	K8sAPIEndpoint string `json:"k8sAPIEndpoint,omitempty" validate:"omitempty,k8sEndpoint"`
 	// Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.
-	K8sKeyFile               string `json:"k8sKeyFile,omitempty" validate:"omitempty,file"`
+	K8sKeyFile string `json:"k8sKeyFile,omitempty" validate:"omitempty,file"`
 	// Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.
-	K8sCertFile              string `json:"k8sCertFile,omitempty" validate:"omitempty,file"`
+	K8sCertFile string `json:"k8sCertFile,omitempty" validate:"omitempty,file"`
 	// Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.
-	K8sCAFile                string `json:"k8sCAFile,omitempty" validate:"omitempty,file"`
+	K8sCAFile string `json:"k8sCAFile,omitempty" validate:"omitempty,file"`
 	// Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.
 	K8sAPIToken              string `json:"k8sAPIToken,omitempty" validate:"omitempty"`
 	K8sInsecureSkipTLSVerify bool   `json:"k8sInsecureSkipTLSVerify,omitempty" validate:"omitempty"`

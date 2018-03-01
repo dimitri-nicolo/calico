@@ -40,18 +40,21 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 	name2 := "rcc-2"
 	spec1 := apiv3.RemoteClusterConfigurationSpec{
 		DatastoreType: "etcdv3",
-		EtcdEndpoints: "https://127.0.0.1:999",
-		EtcdUsername: "user",
-		EtcdPassword: "abc123",
+		EtcdConfig: apiv3.EtcdConfig{
+			EtcdEndpoints: "https://127.0.0.1:999",
+			EtcdUsername:  "user",
+			EtcdPassword:  "abc123"},
 	}
 	spec2 := apiv3.RemoteClusterConfigurationSpec{
-		DatastoreType: "kubernetes",
-		K8sAPIEndpoint: "https://justatest:123",
-		K8sKeyFile: "/etc/made/up/file.key",
-		K8sCertFile:"/etc/made/up/file.cert",
-		K8sCAFile: "/etc/made/up/file.ca",
-		K8sAPIToken: "abcdef123",
-		K8sInsecureSkipTLSVerify: false,
+		DatastoreType:            "kubernetes",
+		KubeConfig: apiv3.KubeConfig{
+			K8sAPIEndpoint:           "https://justatest:123",
+			K8sKeyFile:               "/etc/made/up/file.key",
+			K8sCertFile:              "/etc/made/up/file.cert",
+			K8sCAFile:                "/etc/made/up/file.ca",
+			K8sAPIToken:              "abcdef123",
+			K8sInsecureSkipTLSVerify: false,
+		},
 	}
 
 	DescribeTable("RemoteClusterConfig e2e CRUD tests",
@@ -271,8 +274,6 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 		// Test 1: Pass two fully populated RemoteClusterConfigurationSpecs and expect the series of operations to succeed.
 		Entry("Two fully populated RemoteClusterConfigurationSpecs", name1, name2, spec1, spec2),
 	)
-
-
 
 	Describe("RemoteClusterConfiguration watch functionality", func() {
 		It("should handle watch events for different resource versions and event types", func() {
