@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"time"
+	"fmt"
 )
 
 const (
@@ -74,7 +75,37 @@ func SaveCertAsPEM(derBytes []byte, filePath string) error {
 	}
 	defer certPEMFile.Close()
 
-	pem.Encode(certPEMFile, &pem.Block{Type: CertType, Bytes: derBytes})
+	pem.Encode(certPEMFile,
+		&pem.Block{
+		Type: CertType,
+		Bytes: derBytes,
+		})
 
 	return nil
+}
+
+// ExportCertAsPemStr converts x.509 cert DER bytes to PEM encoded string.
+func ExportCertAsPemStr(derBytes []byte) string {
+	pubPem := pem.EncodeToMemory(
+		&pem.Block{
+			Type:  CertType,
+			Bytes: derBytes,
+		},
+	)
+
+	return string(pubPem)
+}
+
+func LoadCertFromPEM(pemBytes []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode([]byte(pemBytes))
+	if block == nil {
+		panic("failed to parse certificate PEM")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
 }
