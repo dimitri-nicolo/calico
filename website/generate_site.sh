@@ -19,6 +19,19 @@ runtime: python27
 api_version: 1
 threadsafe: yes
 
+handlers:
+# Serve up static files based on suffix. See:
+#   https://www.iana.org/assignments/media-types/media-types.xhtml
+#
+# Specify mime-type for yaml files since GAE doesn't handle this correctly.
+#
+- url: /(.*\.(yaml|yml))$
+  static_files: _site/\1
+  mime_type: text/yaml
+  upload: _site/(.*\.(yaml|yml))$
+
+# For all remaining files, let GAE infer mime-type
+#
 EOF
 
 # Get all the unique file suffixes in the _site; e.g. ".txt", ".png".
@@ -26,9 +39,6 @@ EOF
 suffixes=`find _site -type f -iname \*.* -print | sed 's/.*\.//' | sort | uniq | paste -sd "|" -`
 
 # Create a static file handler based on all the suffixes
-printf "# Serve up static files based on suffix, let GAE infer mime-type\n"
-printf "#\n"
-printf "handlers:\n"
 printf -- "- url: /(.*\\.(%s))$\n" $suffixes
 printf "  static_files: _site/\\\1\n"
 printf "  upload: _site/(.*\\.(%s))$\n" $suffixes
@@ -66,10 +76,12 @@ cat <<EOF
   static_files: _site/\1.html
   upload: _site/(.+[a-z]).html
   expiration: "15m"
+
 - url: /(.+)
   static_files: _site/\1/index.html
   upload: _site/(.+)/index.html
   expiration: "15m"
+
 - url: /(.*)
   static_files: _site/\1
   upload: _site/(.*)
