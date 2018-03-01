@@ -9,3 +9,14 @@ data:
   etcd_ca: "/calico-secrets/etcd-ca"
   etcd_cert: "/calico-secrets/etcd-cert"
   etcd_key: "/calico-secrets/etcd-key"
+
+---
+
+kind: OAuthClient
+apiVersion: v1
+metadata:
+ name: cnx-manager
+redirectURIs:
+ - "https://<cnx-manager-host>:<port>/login/oauth/callback" 
+grantMethod: prompt
+
