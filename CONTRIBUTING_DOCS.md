@@ -43,7 +43,7 @@ make serve
 
 Once the build completes, it returns a URL as the value of `Server address:`. Copy and paste this URL into your browser to view the site.
 
-> **Note**: To view the changes that you've made in the master branch, select **nightly** from the **Version** list box.
+> **Note**: To view the changes that you've made in the master branch, visit the `master` version: [master docs](https://docs.tigera.io/master/)
 
 > **Pro tip**: Jekyll can take a while to render every page. To speed up builds, a supplemental `_config_dev.yml` exists which excludes all directories except `master`. You can include it in your builds as follows `jekyll serve --config _config.yml,_config_dev.yml`. Alternatively, you can pass enable it in `make` using the following environment variable `DEV=true make serve`.
 
