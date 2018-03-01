@@ -46,5 +46,3 @@ import:
 - package: github.com/termie/go-shutil
 - package: google.golang.org/grpc
   version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d
-- package: github.com/coreos/etcd
-  version: v3.2.7
