@@ -459,11 +459,14 @@ func (d *InternalDataplane) Start() {
 	}
 	rm := collector.NewReporterManager()
 	if d.config.PrometheusReporterEnabled {
-		rm.RegisterMetricsReporter(collector.NewPrometheusReporter(d.config.PrometheusReporterPort,
+		pr := collector.NewPrometheusReporter(d.config.PrometheusReporterPort,
 			d.config.DeletedMetricsRetentionSecs,
 			d.config.PrometheusReporterCertFile,
 			d.config.PrometheusReporterKeyFile,
-			d.config.PrometheusReporterCAFile))
+			d.config.PrometheusReporterCAFile)
+		pr.AddAggregator(collector.NewPolicyRulesAggregator(d.config.DeletedMetricsRetentionSecs))
+		pr.AddAggregator(collector.NewDeniedPacketsAggregator(d.config.DeletedMetricsRetentionSecs))
+		rm.RegisterMetricsReporter(pr)
 	}
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
 	if syslogReporter != nil {
