@@ -2,25 +2,35 @@
 title: Installing calicoq
 ---
 
-This document outlines how to install `calicoq`.
+## About installing calicoq
 
-### Where to run calicoq
+You can run `calicoq` on any host with network access to the
+{{site.prodname}} datastore as either a binary or a container.
+For step-by-step instructions, refer to the section that
+corresponds to your desired deployment.
 
-You can run `calicoq` from any host with network access to the
-datastore.
+- [As a binary on a single host](#installing-calicoq-as-a-binary-on-a-single-host)
 
-### Installing calicoq
+- [As a container on a single host](#installing-calicoq-as-a-container-on-a-single-host)
 
-1. Ensure that you have [obtained the calicoq image](../../getting-started/#obtain-the-private-binaries-and-images).
+- [As a container on each node](#installing-calicoq-as-a-container-on-each-node)
 
-1. Import the files into the local Docker engine.
 
-   ```
-   docker load -i tigera_calicoq_{{site.data.versions[page.version].first.components["calicoq"].version}}.tar.xz.tar.xz
-   ```
+## Installing calicoq as a binary on a single host
 
-1. You can then extract the binary from the image or run `calicoq` in a container.
+1. Log into the host and open a terminal prompt.
 
-> **Note**: Move `calicoq` to a directory in your `PATH` or add the directory it is in to
-> your `PATH` to avoid having to prepend the path to invocations of `calicoq`.
-{: .alert .alert-info}
+{% include {{page.version}}/ctl-binary-install.md cli="calicoq" %}
+
+**Next step**:
+
+[Configure `calicoq` to connect to your datastore](/{{page.version}}/usage/calicoq/configure/).
+
+
+{% include {{page.version}}/ctl-container-install.md cli="calicoq" %}
+
+**Next step**:
+
+[Configure `calicoq` to connect to your datastore](/{{page.version}}/usage/calicoq/configure/).
+
+

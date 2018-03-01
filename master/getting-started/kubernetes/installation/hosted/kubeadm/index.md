@@ -30,7 +30,7 @@ Note that kubeadm enables the aggregation layer by default.
 
 You can create a cluster compatible with these manifests by following [the official kubeadm guide](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-{% include {{page.version}}/load-docker.md %}
+{% include {{page.version}}/load-docker.md yaml="calico" %}
 
 ## Installing {{site.prodname}}
 
@@ -42,7 +42,7 @@ As a non-production quick start, to install Calico with a single-node dedicated 
 
 1. Copy the contents, paste them into a new file, and save the file as calico.yaml.
 
-{% include {{page.version}}/cnx-cred-sed.md %}
+{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
    
    > **Note**: Refer to [Configuration options](../index#configuration-options) for additional
    > settings that can be modified in the manifest.

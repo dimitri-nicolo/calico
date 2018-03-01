@@ -23,12 +23,14 @@ noderunning: calico-node
 
 # Image names in case the host changes
 imageNames:
-  node: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-node
-  calicoctl: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/calicoctl
-  typha: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/typha
-  cnxManager: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-manager
-  cnxManagerProxy: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-manager-proxy
-  cnxApiserver: <YOUR_PRIVATE_DOCKER_REGISTRY>/tigera/cnx-apiserver
+  node: quay.io/tigera/cnx-node
+  calicoctl: quay.io/tigera/calicoctl
+  typha: quay.io/tigera/typha
+  cnxManager: quay.io/tigera/cnx-manager
+  cnxManagerProxy: quay.io/tigera/cnx-manager-proxy
+  cnxApiserver: quay.io/tigera/cnx-apiserver
+  felix: quay.io/tigera/felix
+  calicoq: quay.io/tigera/calicoq
   cni: quay.io/calico/cni
   kubeControllers: quay.io/calico/kube-controllers
   calico-upgrade: quay.io/calico/upgrade

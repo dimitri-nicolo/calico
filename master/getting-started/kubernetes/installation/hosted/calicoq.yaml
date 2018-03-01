@@ -4,20 +4,20 @@ layout: null
 # Calico Version {{site.data.versions[page.version].first.title}}
 # https://docs.projectcalico.org/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
 # This manifest includes the following component versions:
-#   calico/ctl:{{site.data.versions[page.version].first.components["calicoctl"].version}}
+#   {{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
 
 apiVersion: v1
 kind: Pod
 metadata:
-  name: calicoctl
+  name: calicoq
   namespace: kube-system
 spec:
-  hostNetwork: true
+  hostNetwork: false
   imagePullSecrets:
   - name: cnx-pull-secret
   containers:
-  - name: calicoctl
-    image: {{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
+  - name: calicoq
+    image: {{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
     command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
     env:
     - name: ETCD_ENDPOINTS

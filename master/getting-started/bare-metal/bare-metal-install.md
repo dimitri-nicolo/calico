@@ -45,11 +45,7 @@ Felix has the following pre-requisites:
 
 ## Download and install the binary
 
-[Download the private, CNX-specific Felix binary](/{{page.version}}/getting-started/#binaries), 
-then make it executable and move it to a location on your path, for example:
-
-    chmod +x felix-{{site.data.versions[page.version].first.components["felix"].version}}
-    sudo cp felix-{{site.data.versions[page.version].first.components["felix"].version}} /usr/local/bin
+{% include {{page.version}}/ctl-binary-install.md cli="felix" %}
 
 ## Create a start-up script
 
