@@ -2,14 +2,13 @@ pipeline{
     agent { label 'slave' }
     triggers{
         pollSCM('H/5 * * * *')
-        cron('H H(0-7) * * *')
+        cron('H H(0-7) * * 1-5')
     }
     environment {
         GIT_DOCS_ONLY = ""
         NODE_IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/cnx-node"
 
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
-        BUILD_INFO = "https://wavetank.tigera.io/blue/organizations/jenkins/${env.JOB_NAME}/detail/${env.JOB_NAME}/${env.BUILD_NUMBER}/pipeline"
 
         SANE_JOB_NAME = "${env.JOB_BASE_NAME}".replace('.', '-')
         BUILD_INSTANCE_NAME = "wt-${SANE_JOB_NAME}-${env.BUILD_NUMBER}"
@@ -23,7 +22,7 @@ pipeline{
                     BRANCH_NAME=${env.BRANCH_NAME}
                     JOB_NAME=${env.JOB_NAME}
                     NODE_IMAGE_NAME=${env.NODE_IMAGE_NAME}:${env.BRANCH_NAME}
-                    BUILD_INFO=${env.BUILD_INFO}""".stripIndent()
+                    BUILD_INFO=${env.RUN_DISPLAY_URL}""".stripIndent()
                 }
             }
         }
@@ -172,7 +171,7 @@ pipeline{
             echo "Boo, we failed."
             script {
                 if (env.BRANCH_NAME == 'master') {
-                    slackSend message: "Failure during ${env.JOB_NAME}:${env.BRANCH_NAME} CI!\n${env.BUILD_INFO}", color: "warning", channel: "cnx-ci-failures"
+                    slackSend message: "Failure during ${env.JOB_NAME} CI!\n${env.RUN_DISPLAY_URL}", color: "warning", channel: "cnx-ci-failures"
                 }
             }
         }
