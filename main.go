@@ -6,16 +6,18 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	uuid "github.com/satori/go.uuid"
 
-	"crypto/rsa"
 	"crypto/sha256"
 
 	cryptolicensing "github.com/tigera/licensing/crypto"
 	"github.com/tigera/licensing/crypto/asymmetric"
 	//"github.com/tigera/licensing/crypto/symmetric"
 
+	"encoding/json"
+
+	"github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/crypto/symmetric"
+	"bytes"
 )
 
 type LicenseClaims struct {
@@ -27,8 +29,8 @@ type LicenseClaims struct {
 }
 
 type License struct {
-	Claims string `json:"claims"`
-	Cert string `json:"cert"`
+	Claims    string `json:"claims"`
+	Cert      string `json:"cert"`
 	Signature []byte `json:"signature"`
 }
 
@@ -75,9 +77,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("error saving cert to file: %s", err)
 	}
-	certPem := cryptolicensing.ExportCertAsPemStr(derBytes)
+	// certPem := cryptolicensing.ExportCertAsPemStr(derBytes)
 
-	customerID := uuid.NewV4().String()
+	customerID := "21124-345235-3464574e574-455235" //uuid.NewV4()
 	numNodes := "42"
 
 	claims := LicenseClaims{
@@ -105,9 +107,8 @@ func main() {
 
 	lic := License{
 		Claims: tokenString,
-		Cert: cryptolicensing.ExportCertAsPemStr(derBytes),
+		Cert:   cryptolicensing.ExportCertAsPemStr(derBytes),
 	}
-
 
 	// fmt.Printf("^^^ lic string: %v\n", lic)
 	hashed := sha256.Sum256([]byte(lic.String()))
@@ -120,57 +121,73 @@ func main() {
 
 	lic.Signature = signature
 
-	symciphertext, err := symmetric.EncryptMessage([]byte(tokenString))
+	b, err := json.Marshal(lic)
+	if err != nil {
+		log.Fatalf("failed to marshal license: %s\n", err)
+	}
+
+	symciphertext, err := symmetric.EncryptMessage(b)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	symciphertext = bytes.Trim(symciphertext, "\x00")
 	// fmt.Printf("Signature: %x\n", signature)
-	fmt.Println(hashed[:])
+	fmt.Println(symciphertext)
 	fmt.Println(" ---------------------------------------------------------------------")
 	//fmt.Printf("** WIRE: Symmetric encryption:\n%s ----------> %x\n", tokenString, symciphertext)
-	copy(hashed[:], hashed[:len(hashed)-4])
+	copy(symciphertext[:], symciphertext[2:])
 	fmt.Println(" ---------------------------------------------------------------------")
-	fmt.Println(hashed)
+	fmt.Println(symciphertext)
 	// ---------------------------------------------------------------------
 	// ---------------------------------------------------------------------
+	//
 
-	symplaintext, err := symmetric.DecryptMessage(symciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//fmt.Printf("Symmetric decryption:\n%x ------> %s\n", symciphertext, symplaintext)
+	client.DecodeAndVerify(symciphertext)
 
-	cert, err := cryptolicensing.LoadCertFromPEM([]byte(certPem))
-
-	// verify cert chain here ////////////////////////////
-
-	// Verify the signed message with public key.
-	err = asymmetric.VerifySignedMessage(cert.PublicKey.(*rsa.PublicKey), hashed[:], signature)
-	if err != nil {
-		log.Fatalf("failed to verify signature: %s", err)
-	}
-	fmt.Printf("signature is verified\n")
-
-	tokenRcv, err := jwt.Parse(string(symplaintext), func(token *jwt.Token) (interface{}, error) {
-		return []byte("meepster"), nil
-	})
-
-	if tokenRcv.Valid {
-		log.Println("Token is valid!")
-	} else if ve, ok := err.(*jwt.ValidationError); ok {
-		if ve.Errors&jwt.ValidationErrorMalformed != 0 {
-			log.Fatalf("Not a valid JWT token: %s", symplaintext)
-		} else if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-			log.Println("JWT token is either expired or not active yet")
-		} else {
-			log.Fatalf("couldn't handle this token: %s\n", err)
-		}
-	} else {
-		log.Fatalf("couldn't handle this token: %s\n", err)
-	}
-
-	fmt.Printf("****** rcv: %v\n\n", tokenRcv.Claims)
+	//symplaintext, err := symmetric.DecryptMessage(symciphertext)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//var recLic License
+	//
+	//err = json.Unmarshal(symplaintext, &recLic)
+	//if err != nil {
+	//	log.Fatalf("failed to unmarshal license: %s\n", err)
+	//}
+	////fmt.Printf("Symmetric decryption:\n%x ------> %s\n", symciphertext, symplaintext)
+	//
+	//cert, err := cryptolicensing.LoadCertFromPEM([]byte(recLic.Cert))
+	//
+	//// verify cert chain here ////////////////////////////
+	//
+	//// Verify the signed message with public key.
+	//err = asymmetric.VerifySignedMessage(cert.PublicKey.(*rsa.PublicKey), hashed[:], recLic.Signature)
+	//if err != nil {
+	//	log.Fatalf("failed to verify signature: %s", err)
+	//}
+	//fmt.Printf("signature is verified\n")
+	//
+	//tokenRcv, err := jwt.Parse(string(recLic.Claims), func(token *jwt.Token) (interface{}, error) {
+	//	return []byte("meepster"), nil
+	//})
+	//
+	//if tokenRcv.Valid {
+	//	log.Println("Token is valid!")
+	//} else if ve, ok := err.(*jwt.ValidationError); ok {
+	//	if ve.Errors&jwt.ValidationErrorMalformed != 0 {
+	//		log.Fatalf("Not a valid JWT token: %s", symplaintext)
+	//	} else if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
+	//		log.Println("JWT token is either expired or not active yet")
+	//	} else {
+	//		log.Fatalf("couldn't handle this token: %s\n", err)
+	//	}
+	//} else {
+	//	log.Fatalf("couldn't handle this token: %s\n", err)
+	//}
+	//
+	//fmt.Printf("****** rcv: %v\n\n", tokenRcv.Claims)
 
 	//token.Method.Verify("")
 
