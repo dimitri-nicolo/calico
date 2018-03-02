@@ -219,6 +219,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 		"",
 		resources.NewAffinityBlockClient(cs),
 	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindRemoteClusterConfiguration,
+		resources.NewRemoteClusterConfigurationClient(cs, crdClientV1),
+	)
 
 	return kubeClient, nil
 }
@@ -286,6 +292,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindGlobalNetworkSet,
 		apiv3.KindIPPool,
 		apiv3.KindHostEndpoint,
+		apiv3.KindRemoteClusterConfiguration,
 	}
 	ctx := context.Background()
 	for _, k := range kinds {
@@ -357,6 +364,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 				&apiv3.TierList{},
 				&apiv3.HostEndpoint{},
 				&apiv3.HostEndpointList{},
+				&apiv3.RemoteClusterConfiguration{},
+				&apiv3.RemoteClusterConfigurationList{},
 			)
 			metav1.AddToGroupVersion(scheme, *cfg.GroupVersion)
 			return nil
