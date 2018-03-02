@@ -1,13 +1,9 @@
 #!groovy
 pipeline {
-    agent { label 'slave'}
+    agent { label 'slave-large'}
     triggers{
         pollSCM('H/5 * * * *')
-        cron('H H(0-7) * * *')
-    }
-    environment {
-        BUILD_INFO = "https://wavetank.tigera.io/blue/organizations/jenkins/${env.JOB_NAME}/detail/${env.JOB_NAME}/${env.BUILD_NUMBER}/pipeline"
-        SLACK_MSG = "Failure during ${env.JOB_NAME}:${env.BRANCH_NAME} CI!\n${env.BUILD_INFO}"
+        cron('H H(0-7) * * 1-5')
     }
     stages {
         stage('Checkout') {
@@ -17,7 +13,7 @@ pipeline {
                     currentBuild.description = """
                     BRANCH_NAME=${env.BRANCH_NAME}
                     JOB_NAME=${env.JOB_NAME}
-                    BUILD_INFO=${env.BUILD_INFO}""".stripIndent()
+                    BUILD_INFO=${env.RUN_DISPLAY_URL}""".stripIndent()
                 }
             }
         }
@@ -48,7 +44,7 @@ pipeline {
             echo "Boo, we failed."
             script {
               if (env.BRANCH_NAME == 'master') {
-                slackSend message: "${env.SLACK_MSG}", color: "warning", channel: "cnx-ci-failures"
+                slackSend message: "Failure during ${env.JOB_NAME} CI!\n${env.RUN_DISPLAY_URL}", color: "warning", channel: "cnx-ci-failures"
               }
             }
         }
