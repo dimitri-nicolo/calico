@@ -34,7 +34,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 			EtcdPassword:  "abc123"},
 	}
 	spec2 := apiv3.RemoteClusterConfigurationSpec{
-		DatastoreType:            "kubernetes",
+		DatastoreType: "kubernetes",
 		KubeConfig: apiv3.KubeConfig{
 			K8sAPIEndpoint:           "https://justatest:123",
 			K8sKeyFile:               "/etc/made/up/file.key",

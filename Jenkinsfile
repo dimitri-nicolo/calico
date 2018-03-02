@@ -30,7 +30,7 @@ pipeline {
                     // Needed to allow checkout of private repos
                     ansiColor('xterm') {
                         echo 'make test-containerized..'
-                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add SSH_KEY || true; fi && make vendor test-containerized'
+                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add SSH_KEY || true; fi && make vendor static-checks test-containerized'
                     }
                 }
             }
