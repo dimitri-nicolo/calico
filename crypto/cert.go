@@ -9,7 +9,6 @@ import (
 	"math/rand"
 	"os"
 	"time"
-	"fmt"
 )
 
 const (
@@ -77,8 +76,8 @@ func SaveCertAsPEM(derBytes []byte, filePath string) error {
 
 	pem.Encode(certPEMFile,
 		&pem.Block{
-		Type: CertType,
-		Bytes: derBytes,
+			Type:  CertType,
+			Bytes: derBytes,
 		})
 
 	return nil
