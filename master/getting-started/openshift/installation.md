@@ -80,12 +80,24 @@ such that Calico connects to an etcd you have already set up by following the [d
    
    **Example**
    ```shell
-   sed -i -e 's?<ETCD_ENDPOINTS>?https://etcd:2379?g' calico.yaml
+   sed -i -e 's?<ETCD_ENDPOINTS>?https://etcd:2379?g' calico-config.yaml
+   ```
+
+1. Use the following command to replace the value of `<CNX_MANAGER_ADDR>` in `calico-config.yaml` with the address of your cnx-manager service:
+
+   **Command**
+   ```shell
+   sed -i -e "s?<CNX_MANAGER_ADDR>?<REPLACE_ME>?g" calico-config.yaml
+   ```
+   
+   **Example**
+   ```shell
+   sed -i -e 's?<CNX_MANAGER_ADDR>?127.0.0.1:30003?g' calico-config.yaml
    ```
 
 1. Apply it:
 
-       kubectl apply -f ./calico-config.yaml
+       oc apply -f ./calico-config.yaml
 
 1. [Open cnx-etcd.yaml in a new tab](../kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
 

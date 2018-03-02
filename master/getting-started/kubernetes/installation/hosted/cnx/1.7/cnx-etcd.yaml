@@ -21,15 +21,15 @@ metadata:
   name: tigera-cnx-manager-config
   namespace: kube-system
 data:
-  # Authentication type.  Must be set to "OIDC", "Basic" or "Token" or "OAuth".
+  # Authentication type.  Must be set to "OIDC", "Basic", "Token", or "OAuth".
   tigera.cnx-manager.authentication-type: "Basic"
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
   tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
-  tigera.cnx-manager.oidc-client-id: "<fill-in-your-oauth-client-id-here>"
+  tigera.cnx-manager.oidc-client-id: "<oidc-client-id>"
   # The OAuth endpoint. Required if authentication-type is OAuth, ignored otherwise.
-  tigera.cnx-manager.oauth-authority: "https://127.0.0.1:8443"
+  tigera.cnx-manager.oauth-authority: "https://<oauth-authority>/oauth/authorize"
   # The OAuth client id to use for OAuth login. Value is ignored if not using OAuth login.
   tigera.cnx-manager.oauth-client-id: "cnx-manager"
 
