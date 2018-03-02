@@ -1554,8 +1554,6 @@ func init() {
 			}, true,
 		),
 
-
-
 		Entry("disallow other datastore type",
 			&api.RemoteClusterConfiguration{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
@@ -1568,8 +1566,7 @@ func init() {
 		Entry("disallow blank datastore type",
 			&api.RemoteClusterConfiguration{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
-				Spec: api.RemoteClusterConfigurationSpec{
-				},
+				Spec:       api.RemoteClusterConfigurationSpec{},
 			}, false,
 		),
 
@@ -1578,7 +1575,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "etcdv3",
-					KubeConfig: api.KubeConfig{Kubeconfig: "/a/b/c/kubeconfig"},
+					KubeConfig:    api.KubeConfig{Kubeconfig: "/a/b/c/kubeconfig"},
 				},
 			}, false,
 		),
@@ -1588,7 +1585,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "kubernetes",
-					EtcdConfig: api.EtcdConfig{EtcdEndpoints: "https://127.0.0.1:2379"},
+					EtcdConfig:    api.EtcdConfig{EtcdEndpoints: "https://127.0.0.1:2379"},
 				},
 			}, false,
 		),
@@ -1598,7 +1595,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "kubernetes",
-					KubeConfig: api.KubeConfig{K8sKeyFile: "/a/cert.pem"},
+					KubeConfig:    api.KubeConfig{K8sKeyFile: "/a/cert.pem"},
 				},
 			}, true,
 		),
@@ -1608,7 +1605,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "kubernetes",
-					KubeConfig: api.KubeConfig{K8sKeyFile: "/a/secret/\x00null/"},
+					KubeConfig:    api.KubeConfig{K8sKeyFile: "/a/secret/\x00null/"},
 				},
 			}, false,
 		),
@@ -1617,7 +1614,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "etcdv3",
-					EtcdConfig: api.EtcdConfig{EtcdEndpoints: "http://123.123.123.123:2379"},
+					EtcdConfig:    api.EtcdConfig{EtcdEndpoints: "http://123.123.123.123:2379"},
 				},
 			}, true,
 		),
@@ -1627,7 +1624,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "etcdv3",
-					EtcdConfig: api.EtcdConfig{EtcdEndpoints: "http://123.123.123.123:2379,https://1.1.1.1:123"},
+					EtcdConfig:    api.EtcdConfig{EtcdEndpoints: "http://123.123.123.123:2379,https://1.1.1.1:123"},
 				},
 			}, true,
 		),
@@ -1637,18 +1634,17 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "etcdv3",
-					EtcdConfig: api.EtcdConfig{EtcdEndpoints: "httpp:/1:500"},
+					EtcdConfig:    api.EtcdConfig{EtcdEndpoints: "httpp:/1:500"},
 				},
 			}, false,
 		),
-
 
 		Entry("allow correctly formatted k8s endpoints",
 			&api.RemoteClusterConfiguration{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "kubernetes",
-					KubeConfig: api.KubeConfig{K8sAPIEndpoint: "https://127.0.0.1:880"},
+					KubeConfig:    api.KubeConfig{K8sAPIEndpoint: "https://127.0.0.1:880"},
 				},
 			}, true,
 		),
@@ -1658,7 +1654,7 @@ func init() {
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "kubernetes",
-					KubeConfig: api.KubeConfig{K8sAPIEndpoint: "htps://127.0.0.1:880"},
+					KubeConfig:    api.KubeConfig{K8sAPIEndpoint: "htps://127.0.0.1:880"},
 				},
 			}, false,
 		),
