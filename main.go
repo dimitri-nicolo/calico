@@ -1,23 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	uuid "github.com/satori/go.uuid"
 
-	"crypto/sha256"
-
-	cryptolicensing "github.com/tigera/licensing/crypto"
-	"github.com/tigera/licensing/crypto/asymmetric"
-	//"github.com/tigera/licensing/crypto/symmetric"
-
-	"encoding/json"
+	jose "gopkg.in/square/go-jose.v2"
 
 	"github.com/tigera/licensing/client"
-	"github.com/tigera/licensing/crypto/symmetric"
-	"bytes"
+	cryptolicensing "github.com/tigera/licensing/crypto"
 )
 
 type LicenseClaims struct {
@@ -29,14 +24,14 @@ type LicenseClaims struct {
 }
 
 type License struct {
-	Claims    string `json:"claims"`
-	Cert      string `json:"cert"`
-	Signature []byte `json:"signature"`
+	Claims string `json:"claims"`
+	Cert   string `json:"cert"`
+	//Signature []byte `json:"signature"`
 }
 
-func (l License) String() string {
-	return fmt.Sprintf("%s.\n%s", l.Claims, l.Cert)
-}
+//func (l License) String() string {
+//	return fmt.Sprintf("%s.\n%s", l.Claims, l.Cert)
+//}
 
 func main() {
 
@@ -77,9 +72,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("error saving cert to file: %s", err)
 	}
-	// certPem := cryptolicensing.ExportCertAsPemStr(derBytes)
 
-	customerID := "21124-345235-3464574e574-455235" //uuid.NewV4()
+	customerID := uuid.NewV4().String()
 	numNodes := "42"
 
 	claims := LicenseClaims{
@@ -93,128 +87,52 @@ func main() {
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	tokenString, err := token.SignedString([]byte("meepster"))
-
-	fmt.Println(tokenString, err)
-
-	//fmt.Println(token.Method.Alg())
-
-	//hashedJWT := make([]byte, 1024)
-	//
-	//base64.StdEncoding.Encode(hashedJWT, []byte(tokenString))
-
-	lic := License{
-		Claims: tokenString,
-		Cert:   cryptolicensing.ExportCertAsPemStr(derBytes),
-	}
-
-	// fmt.Printf("^^^ lic string: %v\n", lic)
-	hashed := sha256.Sum256([]byte(lic.String()))
-
-	// Sign the message with private key.
-	signature, err := asymmetric.SignMessage(priv, hashed[:])
+	// Instantiate a signer using RSASSA-PSS (SHA512) with the given private key.
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.PS512, Key: priv}, nil)
 	if err != nil {
-		log.Fatalf("error signing the message: %s", err)
+		panic(err)
 	}
 
-	lic.Signature = signature
-
-	b, err := json.Marshal(lic)
+	b2, err := json.Marshal(claims)
 	if err != nil {
 		log.Fatalf("failed to marshal license: %s\n", err)
 	}
 
-	symciphertext, err := symmetric.EncryptMessage(b)
+	// Sign a sample payload. Calling the signer returns a protected JWS object,
+	// which can then be serialized for output afterwards. An error would
+	// indicate a problem in an underlying cryptographic primitive.
+	//var payload = []byte("Lorem ipsum dolor sit amet")
+	object, err := signer.Sign(b2)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
-	symciphertext = bytes.Trim(symciphertext, "\x00")
-	// fmt.Printf("Signature: %x\n", signature)
-	fmt.Println(symciphertext)
-	fmt.Println(" ---------------------------------------------------------------------")
-	//fmt.Printf("** WIRE: Symmetric encryption:\n%s ----------> %x\n", tokenString, symciphertext)
-	copy(symciphertext[:], symciphertext[2:])
-	fmt.Println(" ---------------------------------------------------------------------")
-	fmt.Println(symciphertext)
-	// ---------------------------------------------------------------------
-	// ---------------------------------------------------------------------
-	//
+	// Serialize the encrypted object using the full serialization format.
+	// Alternatively you can also use the compact format here by calling
+	// object.CompactSerialize() instead.
+	serialized := object.FullSerialize()
 
-	client.DecodeAndVerify(symciphertext)
+	fmt.Printf("serialized: %s\n", serialized)
 
-	//symplaintext, err := symmetric.DecryptMessage(symciphertext)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//var recLic License
-	//
-	//err = json.Unmarshal(symplaintext, &recLic)
-	//if err != nil {
-	//	log.Fatalf("failed to unmarshal license: %s\n", err)
-	//}
-	////fmt.Printf("Symmetric decryption:\n%x ------> %s\n", symciphertext, symplaintext)
-	//
-	//cert, err := cryptolicensing.LoadCertFromPEM([]byte(recLic.Cert))
-	//
-	//// verify cert chain here ////////////////////////////
-	//
-	//// Verify the signed message with public key.
-	//err = asymmetric.VerifySignedMessage(cert.PublicKey.(*rsa.PublicKey), hashed[:], recLic.Signature)
-	//if err != nil {
-	//	log.Fatalf("failed to verify signature: %s", err)
-	//}
-	//fmt.Printf("signature is verified\n")
-	//
-	//tokenRcv, err := jwt.Parse(string(recLic.Claims), func(token *jwt.Token) (interface{}, error) {
-	//	return []byte("meepster"), nil
-	//})
-	//
-	//if tokenRcv.Valid {
-	//	log.Println("Token is valid!")
-	//} else if ve, ok := err.(*jwt.ValidationError); ok {
-	//	if ve.Errors&jwt.ValidationErrorMalformed != 0 {
-	//		log.Fatalf("Not a valid JWT token: %s", symplaintext)
-	//	} else if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-	//		log.Println("JWT token is either expired or not active yet")
-	//	} else {
-	//		log.Fatalf("couldn't handle this token: %s\n", err)
-	//	}
-	//} else {
-	//	log.Fatalf("couldn't handle this token: %s\n", err)
-	//}
-	//
-	//fmt.Printf("****** rcv: %v\n\n", tokenRcv.Claims)
+	// publicKey := &privateKey.PublicKey
+	encrypter, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.A128GCMKW, Key: []byte("meepster124235546567546788888457")}, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	//token.Method.Verify("")
+	encObject, err := encrypter.Encrypt([]byte(serialized))
+	if err != nil {
+		panic(err)
+	}
 
-	//fmt.Println(token)
+	encSerialized := encObject.FullSerialize()
 
-	//privPem := cryptolicensing.ExportRsaPrivateKeyAsPemStr(priv)
-	//pubPem, err := cryptolicensing.ExportRsaPublicKeyAsPemStr(&pub)
-	//if err != nil {
-	//	log.Fatalf("error exporting public key: %s\n", err)
-	//}
+	licX := client.License{Claims: encSerialized, Cert: cryptolicensing.ExportCertAsPemStr(derBytes)}
 
-	//fmt.Printf("Priv:\n%s\nPub:\n%s\n", privPem, pubPem)
+	// -----------------------------------------------------------------
 
-	//// Asymmetrically encrypt the message with public key.
-	//cipherText, err := asymmetric.EncryptMessage(&pub, message)
-	//if err != nil {
-	//	log.Fatalf("error encrypting message: %s", err)
-	//}
-	//
-	//fmt.Printf("Asymmetric encryption:\n%s ------> %x\n", message, cipherText)
-	//
-	//// Asymmetrically decrypt the message with private key.
-	//plainText, err := asymmetric.DecryptMessage(priv, cipherText)
-	//if err != nil {
-	//	log.Fatalf("error decrypting message: %s\n", err)
-	//}
-	//
-	//fmt.Printf("Asymmetric decryption:\n%x ------> %s\n", cipherText, plainText)
+	fmt.Printf("\n ** on the WIRE: %v\n", licX)
+
+	client.DecodeAndVerify(licX)
 
 }

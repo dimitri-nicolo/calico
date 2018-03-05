@@ -54,6 +54,31 @@ func Generatex509Cert(start, exp time.Time, priv *rsa.PrivateKey) ([]byte, error
 	return x509.CreateCertificate(RandomGen, &template, &template, &priv.PublicKey, priv)
 }
 
+func Generatex509CertChain(start, exp time.Time, root *x509.Certificate, priv *rsa.PrivateKey) ([]byte, error) {
+	template := x509.Certificate{
+		Version:      3,
+		SerialNumber: big.NewInt(rand.Int63n(randSerialSeed)),
+		Subject: pkix.Name{
+			CommonName:   CertCommonName,
+			Organization: []string{CertOrgName},
+		},
+
+		NotBefore: start,
+		NotAfter:  exp,
+
+		SubjectKeyId: []byte{1, 2, 3, 4},
+		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+
+		BasicConstraintsValid: true,
+		IsCA:           true,
+		EmailAddresses: []string{CertEmailAddress},
+		DNSNames:       []string{CertTigeraDomain, CertLicensingDomain},
+	}
+
+	return x509.CreateCertificate(RandomGen, &template, root, &priv.PublicKey, priv)
+}
+
+
 func SaveCertToFile(derBytes []byte, filePath string) error {
 	certCerFile, err := os.Create(filePath)
 	if err != nil {

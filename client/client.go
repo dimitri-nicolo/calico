@@ -1,17 +1,14 @@
 package client
 
 import (
-	"github.com/tigera/licensing/crypto/symmetric"
-	"log"
 	"encoding/json"
-	"github.com/tigera/licensing/crypto/asymmetric"
-	cryptolicensing "github.com/tigera/licensing/crypto"
-	"crypto/rsa"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"crypto/sha256"
-)
+	"log"
 
+	"github.com/dgrijalva/jwt-go"
+	cryptolicensing "github.com/tigera/licensing/crypto"
+	jwtv2 "gopkg.in/square/go-jose.v2"
+)
 
 // TODO move these into types package
 type LicenseClaims struct {
@@ -23,61 +20,54 @@ type LicenseClaims struct {
 }
 
 type License struct {
-	Claims    string `json:"claims"`
-	Cert      string `json:"cert"`
-	Signature []byte `json:"signature"`
+	Claims string `json:"claims"`
+	Cert   string `json:"cert"`
+	//Signature []byte `json:"signature"`
 }
 
 func (l License) String() string {
 	return fmt.Sprintf("%s.\n%s", l.Claims, l.Cert)
 }
 
-func DecodeAndVerify(symciphertext []byte) {
+func DecodeAndVerify(lic License) {
 
-
-	symplaintext, err := symmetric.DecryptMessage(symciphertext)
+	encObjectRcv, err := jwtv2.ParseEncrypted(lic.Claims)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
-	var recLic License
-
-	err = json.Unmarshal(symplaintext, &recLic)
+	decrypted, err := encObjectRcv.Decrypt([]byte("meepster124235546567546788888457"))
 	if err != nil {
-		log.Fatalf("failed to unmarshal license: %s\n", err)
+		panic(err)
 	}
-	//fmt.Printf("Symmetric decryption:\n%x ------> %s\n", symciphertext, symplaintext)
 
-	cert, err := cryptolicensing.LoadCertFromPEM([]byte(recLic.Cert))
+	fmt.Printf("\n * decrypted %v\n", string(decrypted))
+
+	// Parse the serialized, protected JWS object. An error would indicate that
+	// the given input did not represent a valid message.
+	object, err := jwtv2.ParseSigned(string(decrypted))
+	if err != nil {
+		panic(err)
+	}
+
+	cert, err := cryptolicensing.LoadCertFromPEM([]byte(lic.Cert))
 
 	// verify cert chain here ////////////////////////////
 
-	hashed := sha256.Sum256([]byte(recLic.String()))
-
-	// Verify the signed message with public key.
-	err = asymmetric.VerifySignedMessage(cert.PublicKey.(*rsa.PublicKey), hashed[:], recLic.Signature)
+	// Now we can verify the signature on the payload. An error here would
+	// indicate the the message failed to verify, e.g. because the signature was
+	// broken or the message was tampered with.
+	output, err := object.Verify(cert.PublicKey)
 	if err != nil {
-		log.Fatalf("failed to verify signature: %s", err)
-	}
-	fmt.Printf("signature is verified\n")
-
-	tokenRcv, err := jwt.Parse(string(recLic.Claims), func(token *jwt.Token) (interface{}, error) {
-		return []byte("meepster"), nil
-	})
-
-	if tokenRcv.Valid {
-		log.Println("Token is valid!")
-	} else if ve, ok := err.(*jwt.ValidationError); ok {
-		if ve.Errors&jwt.ValidationErrorMalformed != 0 {
-			log.Fatalf("Not a valid JWT token: %s", symplaintext)
-		} else if ve.Errors&(jwt.ValidationErrorExpired|jwt.ValidationErrorNotValidYet) != 0 {
-			log.Println("JWT token is either expired or not active yet")
-		} else {
-			log.Fatalf("couldn't handle this token: %s\n", err)
-		}
-	} else {
-		log.Fatalf("couldn't handle this token: %s\n", err)
+		panic(err)
 	}
 
-	fmt.Printf("****** rcv: %v\n\n", tokenRcv.Claims)
+	var recLic LicenseClaims
+
+	err = json.Unmarshal(output, &recLic)
+	if err != nil {
+		log.Fatalf("failed to unmarshal license: %s\n", err)
+	}
+
+	fmt.Printf("\n\n final: %v\n", recLic)
 }
