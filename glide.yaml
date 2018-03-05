@@ -22,7 +22,7 @@ import:
   subpackages:
   - context
 - package: golang.org/x/sys
-  version: f6cff0780e542efa0c8e864dc8fa522808f6a598
+  version: 88d2dcc510266da9f7f8c7f34e1940716cab5f5c
   subpackages:
   - unix
   - windows
@@ -33,7 +33,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: master
+  version: cf8e7c5922b78444324a0fa8a15a8a79aaedaaa8
   subpackages:
   - lib
 - package: github.com/tigera/nfnetlink

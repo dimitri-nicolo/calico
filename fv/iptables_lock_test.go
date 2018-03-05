@@ -61,7 +61,7 @@ var _ = Describe("with running container", func() {
 			"--name", containerName,
 			"-v", fmt.Sprintf("%s/..:/codebase", myDir),
 			"--privileged",
-			"tigera/felix")
+			"tigera/felix:latest")
 		err = felixCmd.Start()
 		Expect(err).NotTo(HaveOccurred())
 
