@@ -220,7 +220,7 @@ func chainsForIfaces(ifaceTierNames []string,
 		epMark, err := epMarkMapper.GetEndpointMark(ifaceName)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"ifaces":    ifaceMetadata,
+				"ifaces":    ifaceTierNames,
 				"host":      host,
 				"tableKind": tableKind,
 			}).Debug("Failed to get endpoint mark for interface")

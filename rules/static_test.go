@@ -54,13 +54,13 @@ var _ = Describe("Static", func() {
 						{Protocol: "tcp", Port: 23},
 						{Protocol: "tcp", Port: 1023},
 					},
-					IptablesMarkAccept:   0x10,
-					IptablesMarkPass:     0x20,
-					IptablesMarkScratch0: 0x40,
-					IptablesMarkScratch1: 0x80,
-					IptablesMarkDrop:     0x200,
-					IptablesMarkEndpoint:        0xff00,
-					IptablesMarkNonCaliEndpoint: 0x100,
+					IptablesMarkAccept:          0x10,
+					IptablesMarkPass:            0x20,
+					IptablesMarkScratch0:        0x40,
+					IptablesMarkScratch1:        0x80,
+					IptablesMarkDrop:            0x200,
+					IptablesMarkEndpoint:        0xff000,
+					IptablesMarkNonCaliEndpoint: 0x1000,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
 					KubeNodePortRanges:          []numorstring.Port{{30030, 30040, ""}},
 				}
@@ -128,7 +128,7 @@ var _ = Describe("Static", func() {
 						Name: "cali-forward-endpoint-mark",
 						Rules: []Rule{
 							Rule{
-								Match:  Match().NotMarkMatchesWithMask(0x100, 0xff00),
+								Match:  Match().NotMarkMatchesWithMask(0x1000, 0xff000),
 								Action: JumpAction{Target: ChainDispatchFromEndPointMark},
 							},
 							Rule{
@@ -145,7 +145,7 @@ var _ = Describe("Static", func() {
 					expClearEndpointMark := &Chain{
 						Name: "cali-clear-endpoint-mark",
 						Rules: []Rule{
-							Rule{Action: ClearMarkAction{Mark: 0xff00}},
+							Rule{Action: ClearMarkAction{Mark: 0xff000}},
 						},
 					}
 
@@ -443,7 +443,7 @@ var _ = Describe("Static", func() {
 		})
 
 		Describe("with IPIP enabled", func() {
-			epMark := uint32(0xff00)
+			epMark := uint32(0xff000)
 			BeforeEach(func() {
 				conf = Config{
 					WorkloadIfacePrefixes:       []string{"cali"},
@@ -456,7 +456,7 @@ var _ = Describe("Static", func() {
 					IptablesMarkScratch0:        0x40,
 					IptablesMarkScratch1:        0x80,
 					IptablesMarkEndpoint:        epMark,
-					IptablesMarkNonCaliEndpoint: 0x100,
+					IptablesMarkNonCaliEndpoint: 0x1000,
 					IptablesMarkDrop:            0x200,
 					KubeIPVSSupportEnabled:      kubeIPVSEnabled,
 				}
@@ -609,7 +609,7 @@ var _ = Describe("Static", func() {
 					{Match: Match().OutInterface("cali+"), Action: GotoAction{Target: ChainDispatchClearEndPointMark}},
 
 					// forward traffic clear endpoint mark and return.
-					{Match: Match().MarkNotClear(0xff00),
+					{Match: Match().MarkNotClear(0xff000),
 						Action: GotoAction{Target: ChainDispatchClearEndPointMark},
 					},
 
@@ -682,7 +682,7 @@ var _ = Describe("Static", func() {
 					{Match: Match().OutInterface("cali+"), Action: GotoAction{Target: ChainDispatchClearEndPointMark}},
 
 					// forward traffic clear endpoint mark and return.
-					{Match: Match().MarkNotClear(0xff00),
+					{Match: Match().MarkNotClear(0xff000),
 						Action: GotoAction{Target: ChainDispatchClearEndPointMark},
 					},
 
@@ -789,8 +789,8 @@ var _ = Describe("Static", func() {
 				IptablesMarkPass:            0x20,
 				IptablesMarkScratch0:        0x40,
 				IptablesMarkScratch1:        0x80,
-				IptablesMarkEndpoint:        0xff00,
-				IptablesMarkNonCaliEndpoint: 0x100,
+				IptablesMarkEndpoint:        0xff000,
+				IptablesMarkNonCaliEndpoint: 0x1000,
 				IptablesMarkDrop:            0x200,
 				KubeIPVSSupportEnabled:      true,
 				KubeNodePortRanges: []numorstring.Port{
@@ -889,8 +889,8 @@ var _ = Describe("Static", func() {
 				IptablesMarkScratch0:         0x40,
 				IptablesMarkScratch1:         0x80,
 				IptablesMarkDrop:             0x200,
-				IptablesMarkEndpoint:         0xff00,
-				IptablesMarkNonCaliEndpoint:  0x100,
+				IptablesMarkEndpoint:         0xff000,
+				IptablesMarkNonCaliEndpoint:  0x1000,
 			}
 		})
 
@@ -993,8 +993,8 @@ var _ = Describe("Static", func() {
 				IptablesMarkScratch0:         0x40,
 				IptablesMarkScratch1:         0x80,
 				IptablesMarkDrop:             0x200,
-				IptablesMarkEndpoint:         0xff00,
-				IptablesMarkNonCaliEndpoint:  0x100,
+				IptablesMarkEndpoint:         0xff000,
+				IptablesMarkNonCaliEndpoint:  0x1000,
 				IptablesFilterAllowAction:    "RETURN",
 			}
 		})
@@ -1052,7 +1052,7 @@ var _ = Describe("Static", func() {
 	})
 
 	Describe("with RETURN accept action", func() {
-		epMark := uint32(0xff00)
+		epMark := uint32(0xff000)
 		BeforeEach(func() {
 			conf = Config{
 				WorkloadIfacePrefixes:       []string{"cali"},
@@ -1064,7 +1064,7 @@ var _ = Describe("Static", func() {
 				IptablesMarkScratch1:        0x80,
 				IptablesMarkDrop:            0x200,
 				IptablesMarkEndpoint:        epMark,
-				IptablesMarkNonCaliEndpoint: 0x100,
+				IptablesMarkNonCaliEndpoint: 0x1000,
 				IptablesFilterAllowAction:   "RETURN",
 				IptablesMangleAllowAction:   "RETURN",
 			}
@@ -1148,13 +1148,15 @@ var _ = Describe("Static", func() {
 	Describe("with drop override and multiple prefixes", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes: []string{"cali", "tap"},
-				ActionOnDrop:          "ACCEPT",
-				IptablesMarkAccept:    0x10,
-				IptablesMarkPass:      0x20,
-				IptablesMarkScratch0:  0x40,
-				IptablesMarkScratch1:  0x80,
-				IptablesMarkDrop:      0x100,
+				WorkloadIfacePrefixes:       []string{"cali", "tap"},
+				ActionOnDrop:                "ACCEPT",
+				IptablesMarkAccept:          0x10,
+				IptablesMarkPass:            0x20,
+				IptablesMarkScratch0:        0x40,
+				IptablesMarkScratch1:        0x80,
+				IptablesMarkDrop:            0x100,
+				IptablesMarkEndpoint:        0xff000,
+				IptablesMarkNonCaliEndpoint: 0x2000,
 			}
 		})
 
@@ -1177,7 +1179,7 @@ var _ = Describe("Static", func() {
 				// Outgoing host endpoint chains.
 				{Action: JumpAction{Target: ChainDispatchToHostEndpointForward}},
 				{
-					Match:   Match().MarkSet(0x10),
+					Match:   Match().MarkSingleBitSet(0x10),
 					Action:  AcceptAction{},
 					Comment: "Policy explicitly accepted packet.",
 				},
@@ -1187,7 +1189,7 @@ var _ = Describe("Static", func() {
 		expInputChainIPIP := &Chain{
 			Name: "cali-INPUT",
 			Rules: []Rule{
-				{Match: Match().MarkSet(0x10),
+				{Match: Match().MarkSingleBitSet(0x10),
 					Action: AcceptAction{}},
 
 				// Per-prefix workload jump rules.  Note use of goto so that we
@@ -1201,7 +1203,7 @@ var _ = Describe("Static", func() {
 				{Action: ClearMarkAction{Mark: 0xf0}},
 				{Action: JumpAction{Target: "cali-from-host-endpoint"}},
 				{
-					Match:   Match().MarkSet(0x10),
+					Match:   Match().MarkSingleBitSet(0x10),
 					Action:  AcceptAction{},
 					Comment: "Host endpoint policy accepted packet.",
 				},
@@ -1212,7 +1214,7 @@ var _ = Describe("Static", func() {
 			Name: "cali-OUTPUT",
 			Rules: []Rule{
 				// Untracked packets already matched in raw table.
-				{Match: Match().MarkSet(0x10),
+				{Match: Match().MarkSingleBitSet(0x10),
 					Action: AcceptAction{}},
 
 				// Return if to workload.
@@ -1225,7 +1227,7 @@ var _ = Describe("Static", func() {
 				{Action: ClearMarkAction{Mark: 0xf0}},
 				{Action: JumpAction{Target: "cali-to-host-endpoint"}},
 				{
-					Match:   Match().MarkSet(0x10),
+					Match:   Match().MarkSingleBitSet(0x10),
 					Action:  AcceptAction{},
 					Comment: "Host endpoint policy accepted packet.",
 				},
@@ -1295,13 +1297,15 @@ var _ = Describe("DropRules", func() {
 	Describe("with LOGandDROP override", func() {
 		BeforeEach(func() {
 			conf = Config{
-				WorkloadIfacePrefixes: []string{"cali", "tap"},
-				ActionOnDrop:          "LOGandDROP",
-				IptablesMarkAccept:    0x10,
-				IptablesMarkPass:      0x20,
-				IptablesMarkScratch0:  0x40,
-				IptablesMarkScratch1:  0x80,
-				IptablesMarkDrop:      0x100,
+				WorkloadIfacePrefixes:       []string{"cali", "tap"},
+				ActionOnDrop:                "LOGandDROP",
+				IptablesMarkAccept:          0x10,
+				IptablesMarkPass:            0x20,
+				IptablesMarkScratch0:        0x40,
+				IptablesMarkScratch1:        0x80,
+				IptablesMarkDrop:            0x200,
+				IptablesMarkEndpoint:        0xff000,
+				IptablesMarkNonCaliEndpoint: 0x1000,
 			}
 		})
 

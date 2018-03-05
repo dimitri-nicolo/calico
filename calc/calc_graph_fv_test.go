@@ -299,7 +299,7 @@ func describeSyncTests(baseTests []StateList) {
 // synchronous test above is passing.  It's much easier to debug a
 // deterministic test!
 var _ = Describe("Async calculation graph state sequencing tests:", func() {
-	describeAsyncTests(baseTests)
+	//describeAsyncTests(baseTests)
 })
 
 func describeAsyncTests(baseTests []StateList) {
