@@ -24,6 +24,8 @@ var (
 var (
 	tuple1 = *NewTuple(localIp1, remoteIp1, proto_tcp, srcPort1, dstPort)
 	tuple2 = *NewTuple(localIp1, remoteIp2, proto_tcp, srcPort2, dstPort)
+	tuple3 = *NewTuple(localIp2, remoteIp1, proto_tcp, srcPort1, dstPort)
+	tuple4 = *NewTuple(localIp2, remoteIp2, proto_tcp, srcPort2, dstPort)
 )
 
 // Common RuleIDs definitions
@@ -32,6 +34,7 @@ var (
 		Action:    rules.ActionAllow,
 		Index:     "0",
 		Policy:    "policy1",
+		Namespace: rules.NamespaceGlobal,
 		Tier:      "default",
 		Direction: rules.RuleDirIngress,
 	}
@@ -141,14 +144,6 @@ func getMetricGauge(m prometheus.Gauge) int {
 	return int(*dtoMetric.Gauge.Value)
 }
 
-func expectRuleAggregateKeys(pr *PrometheusReporter, keys []RuleAggregateKey) {
-	Eventually(pr.ruleAggStats, expectTimeout).Should(HaveLen(len(keys)))
-	Consistently(pr.ruleAggStats, expectTimeout).Should(HaveLen(len(keys)))
-	for _, key := range keys {
-		Expect(pr.ruleAggStats).To(HaveKey(key))
-	}
-}
-
 func getDirectionalPackets(dir rules.TrafficDirection, v *RuleAggregateValue) (ret prometheus.Counter) {
 	switch dir {
 	case rules.TrafficDirInbound:
@@ -169,19 +164,27 @@ func getDirectionalBytes(dir rules.TrafficDirection, v *RuleAggregateValue) (ret
 	return
 }
 
-func expectRuleAggregates(
-	pr *PrometheusReporter, dir rules.TrafficDirection, k RuleAggregateKey,
+func eventuallyExpectRuleAggregateKeys(pa *PolicyRulesAggregator, keys []RuleAggregateKey) {
+	Eventually(pa.ruleAggStats, expectTimeout).Should(HaveLen(len(keys)))
+	Consistently(pa.ruleAggStats, expectTimeout).Should(HaveLen(len(keys)))
+	for _, key := range keys {
+		Expect(pa.ruleAggStats).To(HaveKey(key))
+	}
+}
+
+func eventuallyExpectRuleAggregates(
+	pa *PolicyRulesAggregator, dir rules.TrafficDirection, k RuleAggregateKey,
 	expectedPackets int, expectedBytes int, expectedConnections int,
 ) {
 	Eventually(func() int {
-		value, ok := pr.ruleAggStats[k]
+		value, ok := pa.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
 		return getMetricCount(getDirectionalPackets(dir, value))
 	}, expectTimeout).Should(Equal(expectedPackets))
 	Consistently(func() int {
-		value, ok := pr.ruleAggStats[k]
+		value, ok := pa.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
@@ -189,14 +192,14 @@ func expectRuleAggregates(
 	}, expectTimeout).Should(Equal(expectedPackets))
 
 	Eventually(func() int {
-		value, ok := pr.ruleAggStats[k]
+		value, ok := pa.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
 		return getMetricCount(getDirectionalBytes(dir, value))
 	}, expectTimeout).Should(Equal(expectedBytes))
 	Consistently(func() int {
-		value, ok := pr.ruleAggStats[k]
+		value, ok := pa.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
@@ -208,14 +211,14 @@ func expectRuleAggregates(
 		return
 	}
 	Eventually(func() int {
-		value, ok := pr.ruleAggStats[k]
+		value, ok := pa.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
 		return getMetricGauge(value.numConnections)
 	}, expectTimeout).Should(Equal(expectedConnections))
 	Consistently(func() int {
-		value, ok := pr.ruleAggStats[k]
+		value, ok := pa.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
@@ -224,17 +227,24 @@ func expectRuleAggregates(
 }
 
 var _ = Describe("Prometheus Reporter verification", func() {
-	var pr *PrometheusReporter
+	var (
+		pr *PrometheusReporter
+		pa *PolicyRulesAggregator
+	)
 	mt := &mockTime{}
 	BeforeEach(func() {
 		// Create a PrometheusReporter and start the reporter without starting the HTTP service.
 		pr = NewPrometheusReporter(0, retentionTime, "", "", "")
+		pa = NewPolicyRulesAggregator(retentionTime)
 		pr.timeNowFn = mt.getMockTime
+		pa.timeNowFn = mt.getMockTime
+		pr.AddAggregator(pa)
 		go pr.startReporter()
 	})
 	AfterEach(func() {
 		counterRulePackets.Reset()
 		counterRuleBytes.Reset()
+		gaugeRuleConns.Reset()
 	})
 	// First set of test handle adding the same rules with two different connections and
 	// traffic directions.  Connections should not impact the number of Prometheus metrics,
@@ -256,11 +266,11 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		expectedConnsInbound += 1
 
 		By("checking for the correct number of aggregated statistics")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pr, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		eventuallyExpectRuleAggregates(pa, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("reporting one of the same metrics")
 		pr.Report(muConn1Rule1AllowUpdate)
@@ -271,11 +281,11 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		expectedConnsInbound += 0 // connection already registered
 
 		By("checking for the correct number of aggregated statistics")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pr, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		eventuallyExpectRuleAggregates(pa, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("expiring one of the metric updates for Rule1 Inbound and one for Outbound")
 		pr.Report(muConn1Rule1AllowExpire)
@@ -289,15 +299,15 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		mt.incMockTime(retentionTime / 2)
 
 		By("checking for the correct number of aggregated statistics: outbound rule should be present for retention time")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
-		expectRuleAggregates(pr, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+		eventuallyExpectRuleAggregates(pa, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, rules.TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
 
 		By("incrementing time by the retention time - outbound rule should be expunged")
 		mt.incMockTime(retentionTime)
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("expiring the remaining Rule1 Inbound metric")
 		pr.Report(muConn2Rule1AllowExpire)
@@ -309,13 +319,13 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		mt.incMockTime(retentionTime / 2)
 
 		By("checking for the correct number of aggregated statistics: inbound rule should be present for retention time")
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{keyRule1Allow})
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 
 		By("checking for the correct packet and byte counts")
-		expectRuleAggregates(pr, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, rules.TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
 
 		By("incrementing time by the retention time - inbound rule should be expunged")
 		mt.incMockTime(retentionTime)
-		expectRuleAggregateKeys(pr, []RuleAggregateKey{})
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{})
 	})
 })
