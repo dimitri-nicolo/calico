@@ -1,5 +1,5 @@
-hash: 2a4342d00f5cb7d4ba475a7900d08e175296016cf84093d68de05a088e268ddd
-updated: 2018-03-01T14:33:30.112361012Z
+hash: d669b517ea8b113dea97215f7782c4eab9c608e138cbfc033a02b8886b2bf5c0
+updated: 2018-03-05T14:11:41.469112414Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -121,7 +121,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/influxdata/influxdb
-  version: af1c35b4a213f41a7c51d643237e621b6d42e215
+  version: 044ca2ac892d61bf526c8e3722b2e0b4f19c84d7
   subpackages:
   - client/v2
   - models
@@ -141,7 +141,7 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/mattn/go-runewidth
-  version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
+  version: a9d6d1e4dc51df2130326793d49971f238839169
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -176,7 +176,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 49e4233a3b46c26dddd43cf84547cf31c92d0f2b
+  version: 6e33911c8481405188b3791f916ac125a6a404b4
   subpackages:
   - format
   - internal/assertion
@@ -330,7 +330,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: f6cff0780e542efa0c8e864dc8fa522808f6a598
+  version: 88d2dcc510266da9f7f8c7f34e1940716cab5f5c
   subpackages:
   - unix
   - windows
@@ -378,8 +378,11 @@ imports:
 - name: google.golang.org/grpc
   version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
   subpackages:
+  - balancer
   - codes
+  - connectivity
   - credentials
+  - grpclb/grpc_lb_v1/messages
   - grpclog
   - health/grpc_health_v1
   - internal
@@ -387,6 +390,7 @@ imports:
   - metadata
   - naming
   - peer
+  - resolver
   - stats
   - status
   - tap
