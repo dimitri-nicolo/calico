@@ -65,6 +65,7 @@ Description:
     * node
     * profile
     * workloadEndpoint
+    * remoteClusterConfiguration
 
   When applying a resource:
   -  if the resource does not already exist (as determined by it's primary
