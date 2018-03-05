@@ -47,7 +47,4 @@ import:
   - lib/upgrade
 - package: github.com/termie/go-shutil
 - package: google.golang.org/grpc
-- package: github.com/coreos/etcd
-  version: v3.3.0
-- package: github.com/prometheus/procfs
-  version: f98634e408857669d61064b283c4cde240622865
+  version: 8050b9cbc271307e5a716a9d782803d09b0d6f2d

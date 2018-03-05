@@ -1,5 +1,5 @@
-hash: d669b517ea8b113dea97215f7782c4eab9c608e138cbfc033a02b8886b2bf5c0
-updated: 2018-03-05T14:11:41.469112414Z
+hash: cecd108a2b4291f993a476e1b5fd9043ab26f20f0ac13347a55b871bcf3f01b4
+updated: 2018-03-05T14:28:14.926834533Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -20,9 +20,10 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
-  version: c23606781f63d09917a1e7abfcefeb337a9608ea
+  version: 28f3f26c0e303392556035b694f75768d449d33d
   subpackages:
   - auth/authpb
+  - client
   - clientv3
   - etcdserver/api/v3rpc/rpctypes
   - etcdserver/etcdserverpb
@@ -38,6 +39,8 @@ imports:
   version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
 - name: github.com/docopt/docopt-go
   version: ee0de3bc6815ee19d4a46c7eb90f829db0e014b1
+- name: github.com/dustin/go-humanize
+  version: bb3d318650d48840a39aa21a027c6630e198e626
 - name: github.com/eapache/channels
   version: 47238d5aae8c0fefd518ef2bee46290909cf8263
 - name: github.com/eapache/queue
@@ -217,7 +220,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: bea96abee9f6eb911d2810a5ea4eebbe407a4f41
+  version: edc3943b5224f2334f1283ccf160630be7f9b4e9
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -273,7 +276,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: f98634e408857669d61064b283c4cde240622865
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
   - xfs
 - name: github.com/PuerkitoBio/purell
@@ -378,11 +381,8 @@ imports:
 - name: google.golang.org/grpc
   version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
   subpackages:
-  - balancer
   - codes
-  - connectivity
   - credentials
-  - grpclb/grpc_lb_v1/messages
   - grpclog
   - health/grpc_health_v1
   - internal
@@ -390,7 +390,6 @@ imports:
   - metadata
   - naming
   - peer
-  - resolver
   - stats
   - status
   - tap

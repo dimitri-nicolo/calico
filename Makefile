@@ -260,11 +260,11 @@ endif
 	fi
 
 	# Retag images with correct version and GCR private registry
-	docker tag $(CTL_CONTAINER_NAME) gcr.io/tigera-dev/cnx/$(CTL_CONTAINER_NAME):$(VERSION)
+	docker tag $(CTL_CONTAINER_NAME) gcr.io/unique-caldron-775/cnx/$(CTL_CONTAINER_NAME):$(VERSION)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(CTL_CONTAINER_NAME)
-	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/tigera-dev/cnx/$(CTL_CONTAINER_NAME):$(VERSION)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" gcr.io/unique-caldron-775/cnx/$(CTL_CONTAINER_NAME):$(VERSION)
 
 	@echo ""
 	@echo "# Push the created tag to GitHub"
@@ -277,11 +277,11 @@ endif
 	@echo "# To find commit messages for the release notes:  git log --oneline <old_release_version>...$(VERSION)"
 	@echo ""
 	@echo "# Now push the newly created release images."
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/calicoctl:$(VERSION)"
+	@echo "  gcloud docker -- push gcr.io/unique-caldron-775/cnx/tigera/calicoctl:$(VERSION)"
 	@echo ""
 	@echo "# For the final release only, push the latest tag"
 	@echo "# DO NOT PUSH THESE IMAGES FOR RELEASE CANDIDATES OR ALPHA RELEASES" 
-	@echo "  gcloud docker -- push gcr.io/tigera-dev/cnx/tigera/calicoctl:latest"
+	@echo "  gcloud docker -- push gcr.io/unique-caldron-775/cnx/tigera/calicoctl:latest"
 	@echo ""
 	@echo "See RELEASING.md for detailed instructions."
 
