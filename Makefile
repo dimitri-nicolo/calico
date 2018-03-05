@@ -3,7 +3,6 @@
 default: all
 all: test
 test: ut
-code-gen: .code_gen
 
 # Define some constants
 #######################
@@ -29,12 +28,16 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
 VENDOR_REMADE := false
 
 .PHONY: static-checks
-static-checks: check-format
+static-checks: check-format check-gen-files
+
+.PHONY: check-gen-files
+check-gen-files: gen-files
+	git diff --exit-code || (echo "The generated targets changed, please 'make gen-files' and commit the results"; exit 1)
 
 .PHONY: check-format
 # Depends on the vendor directory because goimports needs to be able to resolve the imports.
 check-format: vendor/.up-to-date
-	@if $(DOCKER_GO_BUILD) goimports -l lib | grep .; then \
+	@if $(DOCKER_GO_BUILD) goimports -l lib | grep -v zz_generated | grep .; then \
 	  echo "Some files in ./lib are not goimported"; \
 	  false; \
 	else \
@@ -171,14 +174,15 @@ stop-etcd:
 clean:
 	find . -name '*.coverprofile' -type f -delete
 	rm -rf vendor .go-pkg-cache
+	rm -rf $(BINDIR)
 
-clean-code-gen: clean-bin
-	rm -f .code_gen
-	rm -f lib/apis/v3/zz_generated.deepcopy.go \
-	      lib/apis/v3/openapi_generated.go
-
-clean-bin:
-	rm -rf $(BINDIR) .code_gen_exes
+.PHONY: clean-gen-files
+## Convenience target for devs to remove generated files and related utilities
+clean-gen-files:
+	rm -f $(BINDIR)/deepcopy-gen
+	rm -f ./lib/apis/v3/zz_generated.deepcopy.go \
+	      ./lib/apis/v3/openapi_generated.go
+	rm -f ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go
 
 .PHONY: help
 ## Display this help text
@@ -208,21 +212,31 @@ DOCKER_GO_BUILD := \
 		-w /go/src/github.com/projectcalico/libcalico-go \
 		$(CALICO_BUILD)
 
-.code_gen_exes: $(BINDIR)/deepcopy-gen \
-                $(BINDIR)/openapi-gen
-	touch $@
-
-$(BINDIR)/deepcopy-gen:
+$(BINDIR)/deepcopy-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
 		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
-$(BINDIR)/openapi-gen:
+$(BINDIR)/openapi-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
     		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
-# Regenerate all files if the gen exe(s) changed
-.code_gen: .code_gen_exes
-	# Generate deep copies
+# Create a list of files upon which the generated file depends, skip the generated file itself
+UPGRADE_SRCS := $(filter-out ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go, \
+                             $(wildcard ./lib/upgrade/migrator/clients/v1/k8s/custom/*.go))
+
+./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go: ${UPGRADE_SRCS}
+	$(DOCKER_GO_BUILD) \
+		sh -c '$(BINDIR)/deepcopy-gen \
+			--v 1 --logtostderr \
+			--go-header-file "./docs/boilerplate.go.txt" \
+			--input-dirs "$(LIBCALICO-GO_PKG)/lib/upgrade/migrator/clients/v1/k8s/custom" \
+			--bounding-dirs "github.com/projectcalico/libcalico-go" \
+			--output-file-base zz_generated.deepcopy'
+
+# Create a list of filesupon which the generated files depend on, skip the generated files itself
+APIS_SRCS := $(filter-out ./lib/apis/v3/zz_generated.deepcopy.go ./lib/apis/v3/openapi_generated.go, $(wildcard ./lib/apis/v3/*.go))
+
+./lib/apis/v3/zz_generated.deepcopy.go: ${APIS_SRCS}
 	$(DOCKER_GO_BUILD) \
 		sh -c '$(BINDIR)/deepcopy-gen \
 			--v 1 --logtostderr \
@@ -231,6 +245,7 @@ $(BINDIR)/openapi-gen:
 			--bounding-dirs "github.com/projectcalico/libcalico-go" \
 			--output-file-base zz_generated.deepcopy'
 
+./lib/apis/v3/openapi_generated.go: ${APIS_SRCS}
 	# Generate OpenAPI spec
 	$(DOCKER_GO_BUILD) \
 	   sh -c '$(BINDIR)/openapi-gen \
@@ -252,3 +267,10 @@ $(BINDIR)/openapi-gen:
 		--go-header-file "./docs/boilerplate.go.txt" \
 		--input-dirs "$(LIBCALICO-GO_PKG)/lib/numorstring" \
 		--output-package "$(LIBCALICO-GO_PKG)/lib/numorstring"'
+
+.PHONY: gen-files
+## Build generated-go utilities (e.g. deepcopy_gen) and generated files
+gen-files: $(BINDIR)/deepcopy-gen $(BINDIR)/openapi-gen \
+           ./lib/apis/v3/zz_generated.deepcopy.go \
+           ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go \
+           ./lib/apis/v3/openapi_generated.go
