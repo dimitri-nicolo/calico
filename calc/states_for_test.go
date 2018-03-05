@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -68,15 +69,15 @@ var withPreDNATPolicy = initialisedStore.withKVUpdates(
 var localEp1WithPolicy = withPolicy.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
@@ -85,7 +86,7 @@ var localEp1WithPolicy = withPolicy.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("ep1 local, policy")
@@ -111,10 +112,10 @@ var localEp1WithNegatedNamedPortPolicy = empty.withKVUpdates(
 	"fc00:fe11::2,tcp:8080",
 }).withIPSet(allLessFoobarSelectorId, []string{
 	// The selector gets filled in because it's needed when doing the negation.
-	"10.0.0.1",
-	"10.0.0.2",
-	"fc00:fe11::1",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"10.0.0.2/32",
+	"fc00:fe11::1/128",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
@@ -123,7 +124,7 @@ var localEp1WithNegatedNamedPortPolicy = empty.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{
 			Name:               "default",
 			IngressPolicyNames: []string{"pol-1"},
@@ -149,17 +150,17 @@ var localHostEp1WithNamedPortPolicy = empty.withKVUpdates(
 	"fc00:fe11::1,tcp:8080",
 	"fc00:fe11::2,tcp:8080",
 }).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
 	proto.ProfileID{"prof-1"},
 ).withEndpoint(
 	"named",
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("Host endpoint, named port policy")
@@ -178,10 +179,10 @@ var localEp1WithNegatedNamedPortPolicyNoSelector = localEp1WithNamedPortPolicy.w
 var localEp1WithIngressPolicy = withPolicyIngressOnly.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
@@ -190,7 +191,7 @@ var localEp1WithIngressPolicy = withPolicyIngressOnly.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, nil},
 	},
 ).withName("ep1 local, ingress-only policy")
@@ -208,15 +209,15 @@ var localEp1WithNamedPortPolicyUDP = localEp1WithPolicy.withKVUpdates(
 var hostEp1WithPolicy = withPolicy.withKVUpdates(
 	KVPair{Key: hostEpWithNameKey, Value: &hostEpWithName},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
@@ -225,7 +226,7 @@ var hostEp1WithPolicy = withPolicy.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	hostEpWithNameId,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("host ep1, policy")
@@ -233,10 +234,10 @@ var hostEp1WithPolicy = withPolicy.withKVUpdates(
 var hostEp1WithIngressPolicy = withPolicyIngressOnly.withKVUpdates(
 	KVPair{Key: hostEpWithNameKey, Value: &hostEpWithName},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
@@ -245,7 +246,7 @@ var hostEp1WithIngressPolicy = withPolicyIngressOnly.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	hostEpWithNameId,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, nil},
 	},
 ).withName("host ep1, ingress-only policy")
@@ -253,10 +254,10 @@ var hostEp1WithIngressPolicy = withPolicyIngressOnly.withKVUpdates(
 var hostEp1WithEgressPolicy = withPolicyEgressOnly.withKVUpdates(
 	KVPair{Key: hostEpWithNameKey, Value: &hostEpWithName},
 ).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
@@ -265,7 +266,7 @@ var hostEp1WithEgressPolicy = withPolicyEgressOnly.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	hostEpWithNameId,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", nil, []string{"pol-1"}},
 	},
 ).withName("host ep1, egress-only policy")
@@ -273,15 +274,15 @@ var hostEp1WithEgressPolicy = withPolicyEgressOnly.withKVUpdates(
 var hostEp1WithUntrackedPolicy = withUntrackedPolicy.withKVUpdates(
 	KVPair{Key: hostEpWithNameKey, Value: &hostEpWithName},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withUntrackedPolicies(
@@ -292,20 +293,20 @@ var hostEp1WithUntrackedPolicy = withUntrackedPolicy.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpointUntracked(
 	hostEpWithNameId,
-	[]tierInfo{},
-	[]tierInfo{
+	[]mock.TierInfo{},
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withName("host ep1, untracked policy")
 
 var hostEp1WithPreDNATPolicy = withPreDNATPolicy.withKVUpdates(
 	KVPair{Key: hostEpWithNameKey, Value: &hostEpWithName},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pre-dnat-pol-1"},
 ).withPreDNATPolicies(
@@ -316,9 +317,9 @@ var hostEp1WithPreDNATPolicy = withPreDNATPolicy.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpointUntracked(
 	hostEpWithNameId,
-	[]tierInfo{},
-	[]tierInfo{},
-	[]tierInfo{
+	[]mock.TierInfo{},
+	[]mock.TierInfo{},
+	[]mock.TierInfo{
 		{"default", []string{"pre-dnat-pol-1"}, nil},
 	},
 ).withName("host ep1, pre-DNAT policy")
@@ -330,22 +331,22 @@ var hostEp1WithTrackedAndUntrackedPolicy = hostEp1WithUntrackedPolicy.withKVUpda
 	proto.PolicyID{"default", "pol-2"},
 ).withEndpointUntracked(
 	hostEpWithNameId,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-2"}, []string{"pol-2"}},
 	},
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withName("host ep1, tracked+untracked policy")
 
 var hostEp2WithPolicy = withPolicy.withKVUpdates(
 	KVPair{Key: hostEp2NoNameKey, Value: &hostEp2NoName},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
-	"10.0.0.3", // ep2
-	"fc00:fe11::3",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
 }).withIPSet(bEqBSelectorId, []string{}).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
@@ -353,7 +354,7 @@ var hostEp2WithPolicy = withPolicy.withKVUpdates(
 	proto.ProfileID{"prof-3"},
 ).withEndpoint(
 	hostEpNoNameId,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("host ep2, policy")
@@ -389,15 +390,15 @@ func policyOrderState(policyOrders [3]float64, expectedOrder [3]string) State {
 		KVPair{Key: PolicyKey{Name: "pol-2", Tier: "default"}, Value: &policies[1]},
 		KVPair{Key: PolicyKey{Name: "pol-3", Tier: "default"}, Value: &policies[2]},
 	).withIPSet(allSelectorId, []string{
-		"10.0.0.1", // ep1
-		"fc00:fe11::1",
-		"10.0.0.2", // ep1 and ep2
-		"fc00:fe11::2",
+		"10.0.0.1/32", // ep1
+		"fc00:fe11::1/128",
+		"10.0.0.2/32", // ep1 and ep2
+		"fc00:fe11::2/128",
 	}).withIPSet(bEqBSelectorId, []string{
-		"10.0.0.1",
-		"fc00:fe11::1",
-		"10.0.0.2",
-		"fc00:fe11::2",
+		"10.0.0.1/32",
+		"fc00:fe11::1/128",
+		"10.0.0.2/32",
+		"fc00:fe11::2/128",
 	}).withActivePolicies(
 		proto.PolicyID{"default", "pol-1"},
 		proto.PolicyID{"default", "pol-2"},
@@ -408,7 +409,7 @@ func policyOrderState(policyOrders [3]float64, expectedOrder [3]string) State {
 		proto.ProfileID{"prof-missing"},
 	).withEndpoint(
 		localWlEp1Id,
-		[]tierInfo{
+		[]mock.TierInfo{
 			{"default", expectedOrder[:], expectedOrder[:]},
 		},
 	).withName(fmt.Sprintf("ep1 local, 1 tier, policies %v", expectedOrder[:]))
@@ -420,10 +421,10 @@ func policyOrderState(policyOrders [3]float64, expectedOrder [3]string) State {
 var localEp2WithPolicy = withPolicy.withKVUpdates(
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
-	"10.0.0.3", // ep2
-	"fc00:fe11::3",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
 }).withIPSet(
 	bEqBSelectorId, []string{},
 ).withActivePolicies(
@@ -433,7 +434,7 @@ var localEp2WithPolicy = withPolicy.withKVUpdates(
 	proto.ProfileID{"prof-3"},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("ep2 local, policy")
@@ -446,17 +447,17 @@ var localEpsWithPolicy = withPolicy.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
-	"10.0.0.3", // ep2
-	"fc00:fe11::3",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
 }).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"default", "pol-1"},
 ).withActiveProfiles(
@@ -466,12 +467,12 @@ var localEpsWithPolicy = withPolicy.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"default", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("2 local, overlapping IPs & a policy")
@@ -529,10 +530,10 @@ var localEpsWithOverlappingIPsAndInheritedLabels = empty.withKVUpdates(
 	KVPair{Key: ProfileLabelsKey{ProfileKey{"prof-1"}}, Value: profileLabels1},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withActiveProfiles(
 	proto.ProfileID{"prof-1"},
 	proto.ProfileID{"prof-2"},
@@ -548,13 +549,13 @@ var localEpsAndNamedPortPolicyMatchingInheritedLabelOnEP1 = localEpsWithOverlapp
 	proto.PolicyID{Tier: "default", Name: "inherit-pol"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{{Name: "default",
+	[]mock.TierInfo{{Name: "default",
 		IngressPolicyNames: []string{"inherit-pol"},
 		EgressPolicyNames:  []string{"inherit-pol"},
 	}},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{{Name: "default",
+	[]mock.TierInfo{{Name: "default",
 		IngressPolicyNames: []string{"inherit-pol"},
 		EgressPolicyNames:  []string{"inherit-pol"},
 	}},
@@ -648,19 +649,19 @@ var localEpsWithPolicyUpdatedIPs = localEpsWithPolicy.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1DifferentIPs},
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 ).withIPSet(allSelectorId, []string{
-	"11.0.0.1", // ep1
-	"fc00:fe12::1",
-	"11.0.0.2",
-	"fc00:fe12::2",
-	"10.0.0.2", // now ep2 only
-	"fc00:fe11::2",
-	"10.0.0.3", // ep2
-	"fc00:fe11::3",
+	"11.0.0.1/32", // ep1
+	"fc00:fe12::1/128",
+	"11.0.0.2/32",
+	"fc00:fe12::2/128",
+	"10.0.0.2/32", // now ep2 only
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
 }).withIPSet(bEqBSelectorId, []string{
-	"11.0.0.1", // ep1
-	"fc00:fe12::1",
-	"11.0.0.2",
-	"fc00:fe12::2",
+	"11.0.0.1/32", // ep1
+	"fc00:fe12::1/128",
+	"11.0.0.2/32",
+	"fc00:fe12::2/128",
 })
 
 // withProfile adds a profile to the initialised state.
@@ -677,17 +678,17 @@ var localEpsWithProfile = withProfile.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
-	"10.0.0.3", // ep2
-	"fc00:fe11::3",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
 }).withIPSet(tag1LabelID, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActiveProfiles(
 	proto.ProfileID{"prof-1"},
 	proto.ProfileID{"prof-2"},
@@ -695,10 +696,10 @@ var localEpsWithProfile = withProfile.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withName("2 local, overlapping IPs & a profile")
 
 // localEpsWithNonMatchingProfile contains a pair of overlapping IP endpoints and a profile
@@ -709,10 +710,10 @@ var localEpsWithNonMatchingProfile = withProfile.withKVUpdates(
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2NoProfiles},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withName("2 local, overlapping IPs & a non-matching profile")
 
 // localEpsWithUpdatedProfile Follows on from localEpsWithProfile, changing the
@@ -724,18 +725,18 @@ var localEpsWithUpdatedProfile = localEpsWithProfile.withKVUpdates(
 ).withIPSet(
 	allSelectorId, nil,
 ).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withIPSet(
 	tag2LabelID, []string{},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withName("2 local, overlapping IPs & updated profile")
 
 var localEpsWithUpdatedProfileNegatedTags = localEpsWithUpdatedProfile.withKVUpdates(
@@ -755,10 +756,10 @@ var localEpsWithTagInheritProfile = withProfileTagInherit.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 ).withIPSet(tagSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withIPSet(
 	tagFoobarSelectorId, []string{},
 ).withActiveProfiles(
@@ -767,9 +768,9 @@ var localEpsWithTagInheritProfile = withProfileTagInherit.withKVUpdates(
 	proto.ProfileID{"prof-3"},
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
-	localWlEp1Id, []tierInfo{},
+	localWlEp1Id, []mock.TierInfo{},
 ).withEndpoint(
-	localWlEp2Id, []tierInfo{},
+	localWlEp2Id, []mock.TierInfo{},
 ).withName("2 local, overlapping IPs & a tag inherit profile")
 
 var withProfileTagOverriden = initialisedStore.withKVUpdates(
@@ -785,15 +786,15 @@ var localEpsWithTagOverriddenProfile = withProfileTagOverriden.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 ).withIPSet(tagSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withIPSet(tagFoobarSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withActiveProfiles(
 	proto.ProfileID{"prof-1"},
 	proto.ProfileID{"prof-2"},
@@ -801,11 +802,64 @@ var localEpsWithTagOverriddenProfile = withProfileTagOverriden.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{},
+	[]mock.TierInfo{},
 ).withName("2 local, overlapping IPs & a tag inherit profile")
+
+var hostEp1WithPolicyAndANetworkSet = hostEp1WithPolicy.withKVUpdates(
+	KVPair{Key: netSet1Key, Value: &netSet1},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1 and net set.
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"12.0.0.0/24",
+	"12.1.0.0/24",
+	"feed:beef::/32",
+}).withIPSet(bEqBSelectorId, []string{
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
+})
+
+var hostEp1WithPolicyAndTwoNetworkSets = hostEp1WithPolicyAndANetworkSet.withKVUpdates(
+	KVPair{Key: netSet2Key, Value: &netSet2},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
+	"12.0.0.0/24", // Shared by both net sets.
+	"12.1.0.0/24",
+	"feed:beef::/32",
+	"13.1.0.0/24", // Unique to netset-2
+}).withIPSet(bEqBSelectorId, []string{
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
+})
+
+var hostEp1WithPolicyAndANetworkSetMatchingBEqB = hostEp1WithPolicy.withKVUpdates(
+	KVPair{Key: netSet1Key, Value: &netSet1WithBEqB},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1 and net set.
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"12.0.0.0/24",
+	"12.1.0.0/24",
+}).withIPSet(bEqBSelectorId, []string{
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
+	"12.0.0.0/24",
+	"12.1.0.0/24",
+})
 
 type StateList []State
 

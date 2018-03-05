@@ -29,6 +29,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	"github.com/projectcalico/libcalico-go/lib/names"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 var (
@@ -151,7 +152,7 @@ type Config struct {
 	EndpointReportingEnabled   bool          `config:"bool;false"`
 	EndpointReportingDelaySecs time.Duration `config:"seconds;1"`
 
-	IptablesMarkMask uint32 `config:"mark-bitmask;0xff000000;non-zero,die-on-fail"`
+	IptablesMarkMask uint32 `config:"mark-bitmask;0xffff0000;non-zero,die-on-fail"`
 
 	DisableConntrackInvalidCheck bool `config:"bool;false"`
 
@@ -180,6 +181,9 @@ type Config struct {
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
+	KubeNodePortRanges     []numorstring.Port `config:"portrange-list;30000:32767"`
+	KubeIPVSSupportEnabled bool               `config:"bool;false"`
+
 	UsageReportingEnabled          bool          `config:"bool;true"`
 	UsageReportingInitialDelaySecs time.Duration `config:"seconds;300"`
 	UsageReportingIntervalSecs     time.Duration `config:"seconds;86400"`
@@ -199,8 +203,6 @@ type Config struct {
 	sourceToRawConfig map[Source]map[string]string
 	rawValues         map[string]string
 	Err               error
-
-	numIptablesBitsAllocated int
 }
 
 type ProtoPort struct {
@@ -267,30 +269,6 @@ func (config *Config) OpenstackActive() bool {
 	}
 	log.Debug("No evidence this is an OpenStack deployment; disabling OpenStack special-cases")
 	return false
-}
-
-func (config *Config) NextIptablesMark() uint32 {
-	mark := config.NthIPTablesMark(config.numIptablesBitsAllocated)
-	config.numIptablesBitsAllocated++
-	return mark
-}
-
-func (config *Config) NthIPTablesMark(n int) uint32 {
-	numBitsFound := 0
-	for shift := uint(0); shift < 32; shift++ {
-		candidate := uint32(1) << shift
-		if config.IptablesMarkMask&candidate > 0 {
-			if numBitsFound == n {
-				return candidate
-			}
-			numBitsFound += 1
-		}
-	}
-	log.WithFields(log.Fields{
-		"IptablesMarkMask": config.IptablesMarkMask,
-		"requestedMark":    n,
-	}).Panic("Not enough iptables mark bits available.")
-	return 0
 }
 
 func (config *Config) resolve() (changed bool, err error) {
@@ -523,6 +501,8 @@ func loadParams() {
 			param = &EndpointListParam{}
 		case "port-list":
 			param = &PortListParam{}
+		case "portrange-list":
+			param = &PortRangeListParam{}
 		case "hostname":
 			param = &RegexpParam{Regexp: HostnameRegexp,
 				Msg: "invalid hostname"}

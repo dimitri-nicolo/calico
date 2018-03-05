@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
 const (
@@ -57,7 +58,8 @@ const (
 	IPSetIDNATOutgoingAllPools  = "all-ipam-pools"
 	IPSetIDNATOutgoingMasqPools = "masq-ipam-pools"
 
-	IPSetIDAllHostIPs = "all-hosts"
+	IPSetIDAllHostIPs  = "all-hosts"
+	IPSetIDThisHostIPs = "this-host"
 
 	ChainFIPDnat = ChainNamePrefix + "fip-dnat"
 	ChainFIPSnat = ChainNamePrefix + "fip-snat"
@@ -75,9 +77,17 @@ const (
 	ChainDispatchFromHostEndpoint        = ChainNamePrefix + "from-host-endpoint"
 	ChainDispatchToHostEndpointForward   = ChainNamePrefix + "to-hep-forward"
 	ChainDispatchFromHostEndPointForward = ChainNamePrefix + "from-hep-forward"
+	ChainDispatchSetEndPointMark         = ChainNamePrefix + "set-endpoint-mark"
+	ChainDispatchFromEndPointMark        = ChainNamePrefix + "from-endpoint-mark"
+	ChainDispatchClearEndPointMark       = ChainNamePrefix + "clear-endpoint-mark"
+
+	ChainForwardCheck        = ChainNamePrefix + "forward-check"
+	ChainForwardEndpointMark = ChainNamePrefix + "forward-endpoint-mark"
 
 	WorkloadToEndpointPfx   = ChainNamePrefix + "tw-"
 	WorkloadFromEndpointPfx = ChainNamePrefix + "fw-"
+
+	SetEndPointMarkPfx = ChainNamePrefix + "sm-"
 
 	HostToEndpointPfx          = ChainNamePrefix + "th-"
 	HostFromEndpointPfx        = ChainNamePrefix + "fh-"
@@ -193,9 +203,16 @@ type RuleRenderer interface {
 	WorkloadDispatchChains(map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint) []*iptables.Chain
 	WorkloadEndpointToIptablesChains(
 		ifaceName string,
+		epMarkMapper EndpointMarkMapper,
 		adminUp bool,
 		tiers []*proto.TierInfo,
 		profileIDs []string,
+	) []*iptables.Chain
+
+	EndpointMarkDispatchChains(
+		epMarkMapper EndpointMarkMapper,
+		wlEndpoints map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint,
+		hepEndpoints map[string]proto.HostEndpointID,
 	) []*iptables.Chain
 
 	HostDispatchChains(map[string]proto.HostEndpointID, bool) []*iptables.Chain
@@ -204,6 +221,7 @@ type RuleRenderer interface {
 		ifaceName string,
 		tiers []*proto.TierInfo,
 		forwardTiers []*proto.TierInfo,
+		epMarkMapper EndpointMarkMapper,
 		profileIDs []string,
 	) []*iptables.Chain
 	HostEndpointToRawChains(
@@ -256,6 +274,13 @@ type Config struct {
 	IptablesMarkDrop     uint32
 	IptablesMarkScratch0 uint32
 	IptablesMarkScratch1 uint32
+	IptablesMarkEndpoint uint32
+	// IptablesMarkNonCaliEndpoint is an endpoint mark which is reserved
+	// to mark non-calico (workload or host) endpoint.
+	IptablesMarkNonCaliEndpoint uint32
+
+	KubeNodePortRanges     []numorstring.Port
+	KubeIPVSSupportEnabled bool
 
 	OpenStackMetadataIP          net.IP
 	OpenStackMetadataPort        uint16
@@ -289,7 +314,7 @@ func (c *Config) validate() {
 	usedBits := uint32(0)
 	for i := 0; i < myValue.NumField(); i++ {
 		fieldName := myType.Field(i).Name
-		if strings.HasPrefix(fieldName, "IptablesMark") {
+		if strings.HasPrefix(fieldName, "IptablesMark") && fieldName != "IptablesMarkNonCaliEndpoint" {
 			bits := myValue.Field(i).Interface().(uint32)
 			if bits == 0 {
 				log.WithField("field", fieldName).Panic(

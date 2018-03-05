@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,6 +54,35 @@ var wlDispatchEmpty = []*iptables.Chain{
 			},
 		},
 	},
+	{
+		Name: "cali-from-endpoint-mark",
+		Rules: []iptables.Rule{
+			{
+				Match:   iptables.Match(),
+				Action:  iptables.DropAction{},
+				Comment: "Unknown interface",
+			},
+		},
+	},
+	{
+		Name: "cali-set-endpoint-mark",
+		Rules: []iptables.Rule{
+			iptables.Rule{
+				Match:   iptables.Match().InInterface("cali+"),
+				Action:  iptables.DropAction{},
+				Comment: "Unknown endpoint",
+			},
+			iptables.Rule{
+				Match:   iptables.Match().InInterface("tap+"),
+				Action:  iptables.DropAction{},
+				Comment: "Unknown endpoint",
+			},
+			{
+				Action:  iptables.SetMaskedMarkAction{Mark: 0x0100, Mask: 0xff00},
+				Comment: "Non-Cali endpoint mark",
+			},
+		},
+	},
 }
 
 var hostDispatchEmptyNormal = []*iptables.Chain{
@@ -85,25 +114,28 @@ var fromHostDispatchEmpty = []*iptables.Chain{
 	},
 }
 
-func hostChainsForIfaces(ifaceTierNames []string) []*iptables.Chain {
-	return append(chainsForIfaces(ifaceTierNames, true, "normal"),
-		chainsForIfaces(ifaceTierNames, true, "applyOnForward")...,
+func hostChainsForIfaces(ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+	return append(chainsForIfaces(ifaceTierNames, epMarkMapper, true, "normal"),
+		chainsForIfaces(ifaceTierNames, epMarkMapper, true, "applyOnForward")...,
 	)
 }
 
-func rawChainsForIfaces(ifaceTierNames []string) []*iptables.Chain {
-	return chainsForIfaces(ifaceTierNames, true, "untracked")
+func rawChainsForIfaces(ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+	return chainsForIfaces(ifaceTierNames, epMarkMapper, true, "untracked")
 }
 
-func preDNATChainsForIfaces(ifaceTierNames []string) []*iptables.Chain {
-	return chainsForIfaces(ifaceTierNames, true, "preDNAT")
+func preDNATChainsForIfaces(ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+	return chainsForIfaces(ifaceTierNames, epMarkMapper, true, "preDNAT")
 }
 
-func wlChainsForIfaces(ifaceTierNames []string) []*iptables.Chain {
-	return chainsForIfaces(ifaceTierNames, false, "normal")
+func wlChainsForIfaces(ifaceTierNames []string, epMarkMapper rules.EndpointMarkMapper) []*iptables.Chain {
+	return chainsForIfaces(ifaceTierNames, epMarkMapper, false, "normal")
 }
 
-func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*iptables.Chain {
+func chainsForIfaces(ifaceTierNames []string,
+	epMarkMapper rules.EndpointMarkMapper,
+	host bool,
+	tableKind string) []*iptables.Chain {
 	log.WithFields(log.Fields{
 		"ifaces":    ifaceTierNames,
 		"host":      host,
@@ -112,6 +144,8 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 	chains := []*iptables.Chain{}
 	dispatchOut := []iptables.Rule{}
 	dispatchIn := []iptables.Rule{}
+	epMarkSet := []iptables.Rule{}
+	epMarkFrom := []iptables.Rule{}
 	hostOrWlLetter := "w"
 	hostOrWlDispatch := "wl-dispatch"
 	outPrefix := "cali-from-"
@@ -120,6 +154,11 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 	inboundGroup := uint16(1)
 	outboundSuffix := "outbound"
 	outboundGroup := uint16(2)
+	epMarkSetName := "cali-set-endpoint-mark"
+	epMarkFromName := "cali-from-endpoint-mark"
+	epMarkSetOnePrefix := "cali-sm-"
+	epmarkFromPrefix := outPrefix[:6]
+
 	if host {
 		hostOrWlLetter = "h"
 		hostOrWlDispatch = "host-endpoint"
@@ -133,6 +172,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 		inboundGroup = uint16(1)
 		outboundSuffix = "outbound"
 		outboundGroup = uint16(2)
+		epmarkFromPrefix = inPrefix[:6]
 	}
 	for _, ifaceTierName := range ifaceTierNames {
 		var ifaceName, tierName, polName string
@@ -177,6 +217,15 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 				ifaceKind = nameParts[2]
 			}
 		}
+		epMark, err := epMarkMapper.GetEndpointMark(ifaceName)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"ifaces":    ifaceMetadata,
+				"host":      host,
+				"tableKind": tableKind,
+			}).Debug("Failed to get endpoint mark for interface")
+			continue
+		}
 
 		if tableKind != ifaceKind && tableKind != "normal" && tableKind != "applyOnForward" {
 			continue
@@ -219,12 +268,12 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			})
 			if tableKind == "untracked" {
 				outRules = append(outRules, iptables.Rule{
-					Match:  iptables.Match().MarkSet(8),
+					Match:  iptables.Match().MarkSingleBitSet(8),
 					Action: iptables.NoTrackAction{},
 				})
 			}
 			outRules = append(outRules, iptables.Rule{
-				Match:   iptables.Match().MarkSet(8),
+				Match:   iptables.Match().MarkSingleBitSet(8),
 				Action:  iptables.ReturnAction{},
 				Comment: "Return if policy accepted",
 			})
@@ -300,12 +349,12 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			})
 			if tableKind == "untracked" {
 				inRules = append(inRules, iptables.Rule{
-					Match:  iptables.Match().MarkSet(8),
+					Match:  iptables.Match().MarkSingleBitSet(8),
 					Action: iptables.NoTrackAction{},
 				})
 			}
 			inRules = append(inRules, iptables.Rule{
-				Match:   iptables.Match().MarkSet(8),
+				Match:   iptables.Match().MarkSingleBitSet(8),
 				Action:  iptables.ReturnAction{},
 				Comment: "Return if policy accepted",
 			})
@@ -360,6 +409,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 				},
 			)
 		}
+
 		if host {
 			dispatchOut = append(dispatchOut,
 				iptables.Rule{
@@ -387,6 +437,32 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 				},
 			)
 		}
+
+		if tableKind != "preDNAT" && tableKind != "untracked" {
+			chains = append(chains,
+				&iptables.Chain{
+					Name: epMarkSetOnePrefix + ifaceName,
+					Rules: []iptables.Rule{
+						iptables.Rule{
+							Action: iptables.SetMaskedMarkAction{Mark: epMark, Mask: epMarkMapper.GetMask()},
+						},
+					},
+				},
+			)
+			epMarkSet = append(epMarkSet,
+				iptables.Rule{
+					Match:  iptables.Match().InInterface(ifaceName),
+					Action: iptables.GotoAction{Target: epMarkSetOnePrefix + ifaceName},
+				},
+			)
+			epMarkFrom = append(epMarkFrom,
+				iptables.Rule{
+					Match:  iptables.Match().MarkMatchesWithMask(epMark, epMarkMapper.GetMask()),
+					Action: iptables.GotoAction{Target: epmarkFromPrefix + hostOrWlLetter + "-" + ifaceName},
+				},
+			)
+		}
+
 	}
 	if !host {
 		dispatchOut = append(dispatchOut,
@@ -404,6 +480,43 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			},
 		)
 	}
+
+	if tableKind != "preDNAT" && tableKind != "untracked" {
+		epMarkSet = append(epMarkSet,
+			iptables.Rule{
+				Match:   iptables.Match().InInterface("cali+"),
+				Action:  iptables.DropAction{},
+				Comment: "Unknown endpoint",
+			},
+			iptables.Rule{
+				Match:   iptables.Match().InInterface("tap+"),
+				Action:  iptables.DropAction{},
+				Comment: "Unknown endpoint",
+			},
+			iptables.Rule{
+				Action:  iptables.SetMaskedMarkAction{Mark: 0x0100, Mask: 0xff00},
+				Comment: "Non-Cali endpoint mark",
+			},
+		)
+		epMarkFrom = append(epMarkFrom,
+			iptables.Rule{
+				Match:   iptables.Match(),
+				Action:  iptables.DropAction{},
+				Comment: "Unknown interface",
+			},
+		)
+		chains = append(chains,
+			&iptables.Chain{
+				Name:  epMarkSetName,
+				Rules: epMarkSet,
+			},
+			&iptables.Chain{
+				Name:  epMarkFromName,
+				Rules: epMarkFrom,
+			},
+		)
+	}
+
 	if tableKind == "preDNAT" {
 		chains = append(chains,
 			&iptables.Chain{
@@ -423,6 +536,7 @@ func chainsForIfaces(ifaceTierNames []string, host bool, tableKind string) []*ip
 			},
 		)
 	}
+
 	return chains
 }
 
@@ -490,15 +604,19 @@ func endpointManagerTests(ipVersion uint8) func() {
 
 		BeforeEach(func() {
 			rrConfigNormal = rules.Config{
-				IPIPEnabled:          true,
-				IPIPTunnelAddress:    nil,
-				IPSetConfigV4:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
-				IPSetConfigV6:        ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
-				IptablesMarkAccept:   0x8,
-				IptablesMarkPass:     0x10,
-				IptablesMarkScratch0: 0x20,
-				IptablesMarkScratch1: 0x40,
-				IptablesMarkDrop:     0x80,
+				IPIPEnabled:                 true,
+				IPIPTunnelAddress:           nil,
+				IPSetConfigV4:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV4, "cali", nil, nil),
+				IPSetConfigV6:               ipsets.NewIPVersionConfig(ipsets.IPFamilyV6, "cali", nil, nil),
+				IptablesMarkAccept:          0x8,
+				IptablesMarkPass:            0x10,
+				IptablesMarkScratch0:        0x20,
+				IptablesMarkScratch1:        0x40,
+				IptablesMarkDrop:            0x80,
+				IptablesMarkEndpoint:        0xff00,
+				IptablesMarkNonCaliEndpoint: 0x0100,
+				KubeIPVSSupportEnabled:      true,
+				WorkloadIfacePrefixes:       []string{"cali", "tap"},
 			}
 			eth0Addrs = set.New()
 			eth0Addrs.Add(ipv4)
@@ -527,6 +645,8 @@ func endpointManagerTests(ipVersion uint8) func() {
 				renderer,
 				routeTable,
 				ipVersion,
+				rules.NewEndpointMarkMapper(rrConfigNormal.IptablesMarkEndpoint, rrConfigNormal.IptablesMarkNonCaliEndpoint),
+				rrConfigNormal.KubeIPVSSupportEnabled,
 				[]string{"cali"},
 				statusReportRec.endpointStatusUpdateCallback,
 				mockProcSys.write,
@@ -642,13 +762,13 @@ func endpointManagerTests(ipVersion uint8) func() {
 			return func() {
 				filterTable.checkChains([][]*iptables.Chain{
 					wlDispatchEmpty,
-					hostChainsForIfaces(names),
+					hostChainsForIfaces(names, epMgr.epMarkMapper),
 				})
 				rawTable.checkChains([][]*iptables.Chain{
-					rawChainsForIfaces(names),
+					rawChainsForIfaces(names, epMgr.epMarkMapper),
 				})
 				mangleTable.checkChains([][]*iptables.Chain{
-					preDNATChainsForIfaces(names),
+					preDNATChainsForIfaces(names, epMgr.epMarkMapper),
 				})
 			}
 		}
@@ -1217,7 +1337,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				filterTable.checkChains([][]*iptables.Chain{
 					hostDispatchEmptyNormal,
 					hostDispatchEmptyForward,
-					wlChainsForIfaces(names),
+					wlChainsForIfaces(names, epMgr.epMarkMapper),
 				})
 				mangleTable.checkChains([][]*iptables.Chain{
 					fromHostDispatchEmpty,
@@ -1294,12 +1414,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 				It("should set routes", func() {
 					if ipVersion == 6 {
 						routeTable.checkRoutes("cali12345-ab", []routetable.Target{{
-							CIDR:    ip.MustParseCIDR("2001:db8:2::2/128"),
+							CIDR:    ip.MustParseCIDROrIP("2001:db8:2::2/128"),
 							DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 						}})
 					} else {
 						routeTable.checkRoutes("cali12345-ab", []routetable.Target{{
-							CIDR:    ip.MustParseCIDR("10.0.240.0/24"),
+							CIDR:    ip.MustParseCIDROrIP("10.0.240.0/24"),
 							DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 						}})
 					}
@@ -1398,30 +1518,30 @@ func endpointManagerTests(ipVersion uint8) func() {
 							if ipVersion == 6 {
 								routeTable.checkRoutes("cali12345-ab", []routetable.Target{
 									{
-										CIDR:    ip.MustParseCIDR("2001:db8:2::2/128"),
+										CIDR:    ip.MustParseCIDROrIP("2001:db8:2::2/128"),
 										DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 									},
 									{
-										CIDR:    ip.MustParseCIDR("2001:db8:3::2/128"),
+										CIDR:    ip.MustParseCIDROrIP("2001:db8:3::2/128"),
 										DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 									},
 									{
-										CIDR:    ip.MustParseCIDR("2001:db8:4::2/128"),
+										CIDR:    ip.MustParseCIDROrIP("2001:db8:4::2/128"),
 										DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 									},
 								})
 							} else {
 								routeTable.checkRoutes("cali12345-ab", []routetable.Target{
 									{
-										CIDR:    ip.MustParseCIDR("10.0.240.0/24"),
+										CIDR:    ip.MustParseCIDROrIP("10.0.240.0/24"),
 										DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 									},
 									{
-										CIDR:    ip.MustParseCIDR("172.16.1.3/32"),
+										CIDR:    ip.MustParseCIDROrIP("172.16.1.3/32"),
 										DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 									},
 									{
-										CIDR:    ip.MustParseCIDR("172.18.1.4/32"),
+										CIDR:    ip.MustParseCIDROrIP("172.18.1.4/32"),
 										DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 									},
 								})
@@ -1486,12 +1606,12 @@ func endpointManagerTests(ipVersion uint8) func() {
 						It("should have set routes for new iface", func() {
 							if ipVersion == 6 {
 								routeTable.checkRoutes("cali12345-cd", []routetable.Target{{
-									CIDR:    ip.MustParseCIDR("2001:db8:2::2/128"),
+									CIDR:    ip.MustParseCIDROrIP("2001:db8:2::2/128"),
 									DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 								}})
 							} else {
 								routeTable.checkRoutes("cali12345-cd", []routetable.Target{{
-									CIDR:    ip.MustParseCIDR("10.0.240.0/24"),
+									CIDR:    ip.MustParseCIDROrIP("10.0.240.0/24"),
 									DestMAC: testutils.MustParseMAC("01:02:03:04:05:06"),
 								}})
 							}

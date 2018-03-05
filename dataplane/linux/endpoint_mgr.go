@@ -50,8 +50,9 @@ type routeTable interface {
 // that fail are left in the pending state so they can be retried later.
 type endpointManager struct {
 	// Config.
-	ipVersion      uint8
-	wlIfacesRegexp *regexp.Regexp
+	ipVersion              uint8
+	wlIfacesRegexp         *regexp.Regexp
+	kubeIPVSSupportEnabled bool
 
 	// Our dependencies.
 	rawTable     iptablesTable
@@ -60,6 +61,7 @@ type endpointManager struct {
 	ruleRenderer rules.RuleRenderer
 	routeTable   routeTable
 	writeProcSys procSysWriter
+	epMarkMapper rules.EndpointMarkMapper
 
 	// Pending updates, cleared in CompleteDeferredWork as the data is copied to the activeXYZ
 	// fields.
@@ -67,11 +69,12 @@ type endpointManager struct {
 	pendingIfaceUpdates map[string]ifacemonitor.State
 
 	// Active state, updated in CompleteDeferredWork.
-	activeWlEndpoints      map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
-	activeWlIfaceNameToID  map[string]proto.WorkloadEndpointID
-	activeUpIfaces         set.Set
-	activeWlIDToChains     map[proto.WorkloadEndpointID][]*iptables.Chain
-	activeWlDispatchChains map[string]*iptables.Chain
+	activeWlEndpoints          map[proto.WorkloadEndpointID]*proto.WorkloadEndpoint
+	activeWlIfaceNameToID      map[string]proto.WorkloadEndpointID
+	activeUpIfaces             set.Set
+	activeWlIDToChains         map[proto.WorkloadEndpointID][]*iptables.Chain
+	activeWlDispatchChains     map[string]*iptables.Chain
+	activeEPMarkDispatchChains map[string]*iptables.Chain
 
 	// wlIfaceNamesToReconfigure contains names of workload interfaces that need to have
 	// their configuration (sysctls etc.) refreshed.
@@ -101,7 +104,8 @@ type endpointManager struct {
 	// activeIfaceNameToHostEpID records which endpoint we resolved each host interface to.
 	activeIfaceNameToHostEpID map[string]proto.HostEndpointID
 
-	needToCheckDispatchChains bool
+	needToCheckDispatchChains     bool
+	needToCheckEndpointMarkChains bool
 
 	// Callbacks
 	OnEndpointStatusUpdate EndpointStatusUpdateCallback
@@ -118,6 +122,8 @@ func newEndpointManager(
 	ruleRenderer rules.RuleRenderer,
 	routeTable routeTable,
 	ipVersion uint8,
+	epMarkMapper rules.EndpointMarkMapper,
+	kubeIPVSSupportEnabled bool,
 	wlInterfacePrefixes []string,
 	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
 ) *endpointManager {
@@ -128,6 +134,8 @@ func newEndpointManager(
 		ruleRenderer,
 		routeTable,
 		ipVersion,
+		epMarkMapper,
+		kubeIPVSSupportEnabled,
 		wlInterfacePrefixes,
 		onWorkloadEndpointStatusUpdate,
 		writeProcSys,
@@ -141,6 +149,8 @@ func newEndpointManagerWithShims(
 	ruleRenderer rules.RuleRenderer,
 	routeTable routeTable,
 	ipVersion uint8,
+	epMarkMapper rules.EndpointMarkMapper,
+	kubeIPVSSupportEnabled bool,
 	wlInterfacePrefixes []string,
 	onWorkloadEndpointStatusUpdate EndpointStatusUpdateCallback,
 	procSysWriter procSysWriter,
@@ -149,8 +159,9 @@ func newEndpointManagerWithShims(
 	wlIfacesRegexp := regexp.MustCompile(wlIfacesPattern)
 
 	return &endpointManager{
-		ipVersion:      ipVersion,
-		wlIfacesRegexp: wlIfacesRegexp,
+		ipVersion:              ipVersion,
+		wlIfacesRegexp:         wlIfacesRegexp,
+		kubeIPVSSupportEnabled: kubeIPVSSupportEnabled,
 
 		rawTable:     rawTable,
 		mangleTable:  mangleTable,
@@ -158,6 +169,7 @@ func newEndpointManagerWithShims(
 		ruleRenderer: ruleRenderer,
 		routeTable:   routeTable,
 		writeProcSys: procSysWriter,
+		epMarkMapper: epMarkMapper,
 
 		// Pending updates, we store these up as OnUpdate is called, then process them
 		// in CompleteDeferredWork and transfer the important data to the activeXYX fields.
@@ -188,7 +200,9 @@ func newEndpointManagerWithShims(
 		activeHostFilterDispatchChains: map[string]*iptables.Chain{},
 		activeHostMangleDispatchChains: map[string]*iptables.Chain{},
 		activeHostRawDispatchChains:    map[string]*iptables.Chain{},
+		activeEPMarkDispatchChains:     map[string]*iptables.Chain{},
 		needToCheckDispatchChains:      true, // Need to do start-of-day update.
+		needToCheckEndpointMarkChains:  true, // Need to do start-of-day update.
 
 		OnEndpointStatusUpdate: onWorkloadEndpointStatusUpdate,
 	}
@@ -258,6 +272,11 @@ func (m *endpointManager) CompleteDeferredWork() error {
 		log.Debug("Host endpoints updated, resolving them.")
 		m.resolveHostEndpoints()
 		m.hostEndpointsDirty = false
+	}
+
+	if m.kubeIPVSSupportEnabled && m.needToCheckEndpointMarkChains {
+		m.resolveEndpointMarks()
+		m.needToCheckEndpointMarkChains = false
 	}
 
 	// Now send any endpoint status updates.
@@ -389,6 +408,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 			logCxt.Info("Updating per-endpoint chains.")
 			if oldWorkload != nil && oldWorkload.Name != workload.Name {
 				logCxt.Debug("Interface name changed, cleaning up old state")
+				m.epMarkMapper.ReleaseEndpointMark(oldWorkload.Name)
 				m.filterTable.RemoveChains(m.activeWlIDToChains[id])
 				m.routeTable.SetRoutes(oldWorkload.Name, nil)
 				m.wlIfaceNamesToReconfigure.Discard(oldWorkload.Name)
@@ -397,6 +417,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 			adminUp := workload.State == "active"
 			chains := m.ruleRenderer.WorkloadEndpointToIptablesChains(
 				workload.Name,
+				m.epMarkMapper,
 				adminUp,
 				workload.Tiers,
 				workload.ProfileIds,
@@ -443,7 +464,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 				logCxt.Debug("Endpoint up, adding routes")
 				for _, s := range ipStrings {
 					routeTargets = append(routeTargets, routetable.Target{
-						CIDR:    ip.MustParseCIDR(s),
+						CIDR:    ip.MustParseCIDROrIP(s),
 						DestMAC: mac,
 					})
 				}
@@ -459,6 +480,7 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 			logCxt.Info("Workload removed, deleting its chains.")
 			m.filterTable.RemoveChains(m.activeWlIDToChains[id])
 			if oldWorkload != nil {
+				m.epMarkMapper.ReleaseEndpointMark(oldWorkload.Name)
 				// Remove any routes from the routing table.  The RouteTable will
 				// remove any conntrack entries as a side-effect.
 				logCxt.Info("Workload removed, deleting old state.")
@@ -479,6 +501,9 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 		newDispatchChains := m.ruleRenderer.WorkloadDispatchChains(m.activeWlEndpoints)
 		m.updateDispatchChains(m.activeWlDispatchChains, newDispatchChains, m.filterTable)
 		m.needToCheckDispatchChains = false
+
+		// Set flag to update endpoint mark chains.
+		m.needToCheckEndpointMarkChains = true
 	}
 
 	m.wlIfaceNamesToReconfigure.Iter(func(item interface{}) error {
@@ -490,6 +515,12 @@ func (m *endpointManager) resolveWorkloadEndpoints() {
 		}
 		return set.RemoveItem
 	})
+}
+
+func (m *endpointManager) resolveEndpointMarks() {
+	// Render endpoint mark chains for active workload and host endpoint.
+	newEndpointMarkDispatchChains := m.ruleRenderer.EndpointMarkDispatchChains(m.epMarkMapper, m.activeWlEndpoints, m.activeIfaceNameToHostEpID)
+	m.updateDispatchChains(m.activeEPMarkDispatchChains, newEndpointMarkDispatchChains, m.filterTable)
 }
 
 func (m *endpointManager) resolveHostEndpoints() {
@@ -627,6 +658,7 @@ func (m *endpointManager) resolveHostEndpoints() {
 			ifaceName,
 			hostEp.Tiers,
 			hostEp.ForwardTiers,
+			m.epMarkMapper,
 			hostEp.ProfileIds,
 		)
 
@@ -699,6 +731,8 @@ func (m *endpointManager) resolveHostEndpoints() {
 	log.WithField("resolvedHostEpIds", newIfaceNameToHostEpID).Debug("Rewrite filter dispatch chains?")
 	newFilterDispatchChains := m.ruleRenderer.HostDispatchChains(newIfaceNameToHostEpID, true)
 	m.updateDispatchChains(m.activeHostFilterDispatchChains, newFilterDispatchChains, m.filterTable)
+	// Set flag to update endpoint mark chains.
+	m.needToCheckEndpointMarkChains = true
 
 	// Rewrite the mangle dispatch chains if they've changed.
 	log.WithField("resolvedHostEpIds", newPreDNATIfaceNameToHostEpID).Debug("Rewrite mangle dispatch chains?")

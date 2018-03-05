@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,12 +20,19 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
+	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/utils"
@@ -66,12 +73,12 @@ func (w *Workload) Stop() {
 	}
 }
 
-func Run(c *containers.Container, name, interfaceName, ip, ports string, protocol string) (w *Workload) {
+func Run(c *containers.Felix, name, interfaceName, ip, ports string, protocol string) (w *Workload) {
 
 	// Build unique workload name and struct.
 	workloadIdx++
 	w = &Workload{
-		C:             c,
+		C:             c.Container,
 		Name:          fmt.Sprintf("%s-idx%v", name, workloadIdx),
 		InterfaceName: interfaceName,
 		IP:            ip,
@@ -150,7 +157,11 @@ func Run(c *containers.Container, name, interfaceName, ip, ports string, protoco
 	wep.Spec.Orchestrator = "felixfv"
 	wep.Spec.Workload = w.Name
 	wep.Spec.Endpoint = w.Name
-	wep.Spec.IPNetworks = []string{w.IP + "/32"}
+	prefixLen := "32"
+	if strings.Contains(w.IP, ":") {
+		prefixLen = "128"
+	}
+	wep.Spec.IPNetworks = []string{w.IP + "/" + prefixLen}
 	wep.Spec.InterfaceName = w.InterfaceName
 	wep.Spec.Profiles = []string{"default"}
 	w.WorkloadEndpoint = wep
@@ -165,7 +176,8 @@ func (w *Workload) IPNet() string {
 func (w *Workload) Configure(client client.Interface) {
 	wep := w.WorkloadEndpoint
 	wep.Namespace = "fv"
-	_, err := client.WorkloadEndpoints().Create(utils.Ctx, w.WorkloadEndpoint, utils.NoOptions)
+	var err error
+	w.WorkloadEndpoint, err = client.WorkloadEndpoints().Create(utils.Ctx, w.WorkloadEndpoint, utils.NoOptions)
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -201,6 +213,48 @@ func (w *Port) SourceName() string {
 		return w.Name
 	}
 	return fmt.Sprintf("%s:%d", w.Name, w.Port)
+}
+
+func (w *Workload) NamespaceID() string {
+	splits := strings.Split(w.namespacePath, "/")
+	return splits[len(splits)-1]
+}
+
+func (w *Workload) ExecOutput(args ...string) (string, error) {
+	args = append([]string{"ip", "netns", "exec", w.NamespaceID()}, args...)
+	return w.C.ExecOutput(args...)
+}
+
+var (
+	rttRegexp = regexp.MustCompile(`rtt=(.*) ms`)
+)
+
+func (w *Workload) LatencyTo(ip, port string) time.Duration {
+	if strings.Contains(ip, ":") {
+		ip = fmt.Sprintf("[%s]", ip)
+	}
+	out, err := w.ExecOutput("hping", "-p", port, "-c", "20", "--fast", "-S", "-n", ip)
+	stderr := ""
+	if err, ok := err.(*exec.ExitError); ok {
+		stderr = string(err.Stderr)
+	}
+	Expect(err).NotTo(HaveOccurred(), stderr)
+
+	lines := strings.Split(out, "\n")[1:] // Skip header line
+	var rttSum time.Duration
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		matches := rttRegexp.FindStringSubmatch(line)
+		Expect(matches).To(HaveLen(2), "Failed to extract RTT from line: "+line)
+		rttMsecStr := matches[1]
+		rttMsec, err := strconv.ParseFloat(rttMsecStr, 64)
+		Expect(err).ToNot(HaveOccurred())
+		rttSum += time.Duration(rttMsec * float64(time.Millisecond))
+	}
+	meanRtt := rttSum / time.Duration(len(lines))
+	return meanRtt
 }
 
 func (p *Port) CanConnectTo(ip, port, protocol string) bool {
@@ -331,6 +385,8 @@ type expectation struct {
 	expected bool
 }
 
+var UnactivatedConnectivityCheckers = set.New()
+
 // ConnectivityChecker records a set of connectivity expectations and supports calculating the
 // actual state of the connectivity between the given workloads.  It is expected to be used like so:
 //
@@ -348,6 +404,7 @@ type ConnectivityChecker struct {
 }
 
 func (c *ConnectivityChecker) ExpectSome(from connectionSource, to connectionTarget, explicitPort ...uint16) {
+	UnactivatedConnectivityCheckers.Add(c)
 	if c.ReverseDirection {
 		from, to = to.(connectionSource), from.(connectionTarget)
 	}
@@ -355,6 +412,7 @@ func (c *ConnectivityChecker) ExpectSome(from connectionSource, to connectionTar
 }
 
 func (c *ConnectivityChecker) ExpectNone(from connectionSource, to connectionTarget, explicitPort ...uint16) {
+	UnactivatedConnectivityCheckers.Add(c)
 	if c.ReverseDirection {
 		from, to = to.(connectionSource), from.(connectionTarget)
 	}
@@ -370,6 +428,7 @@ func (c *ConnectivityChecker) ResetExpectations() {
 // human readable, and they are in the same order and format as those returned by
 // ExpectedConnectivity().
 func (c *ConnectivityChecker) ActualConnectivity() []string {
+	UnactivatedConnectivityCheckers.Discard(c)
 	var wg sync.WaitGroup
 	result := make([]string, len(c.expectations))
 	for i, exp := range c.expectations {
@@ -399,6 +458,39 @@ func (c *ConnectivityChecker) ExpectedConnectivity() []string {
 	return result
 }
 
-func (c *ConnectivityChecker) CheckConnectivity() {
-	EventuallyWithOffset(1, c.ActualConnectivity(), "10s", "100ms").Should(Equal(c.ExpectedConnectivity()))
+func (c *ConnectivityChecker) CheckConnectivity(optionalDescription ...interface{}) {
+	c.CheckConnectivityWithTimeout(10*time.Second, optionalDescription...)
+}
+
+func (c *ConnectivityChecker) CheckConnectivityWithTimeout(timeout time.Duration, optionalDescription ...interface{}) {
+	expConnectivity := c.ExpectedConnectivity()
+	start := time.Now()
+
+	// Track the number of attempts. If the first connectivity check fails, we want to
+	// do at least one retry before we time out.  That covers the case where the first
+	// connectivity check takes longer than the timeout.
+	completedAttempts := 0
+	var actualConn []string
+	for time.Since(start) < timeout || completedAttempts < 2 {
+		actualConn = c.ActualConnectivity()
+		if reflect.DeepEqual(actualConn, expConnectivity) {
+			return
+		}
+		completedAttempts++
+	}
+
+	// Build a concise description of the incorrect connectivity.
+	for i := range actualConn {
+		if actualConn[i] != expConnectivity[i] {
+			actualConn[i] += " <---- WRONG"
+			expConnectivity[i] += " <----"
+		}
+	}
+
+	message := fmt.Sprintf(
+		"Connectivity was incorrect:\n\nExpected\n    %s\nto match\n    %s",
+		strings.Join(actualConn, "\n    "),
+		strings.Join(expConnectivity, "\n    "),
+	)
+	Fail(message, 1)
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
-	. "github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
@@ -30,15 +31,15 @@ type State struct {
 	Name string
 	// List of KVPairs that are in the datastore.  Stored as a list rather
 	// than a map to give us a deterministic ordering of injection.
-	DatastoreState                       []KVPair
+	DatastoreState                       []model.KVPair
 	ExpectedIPSets                       map[string]set.Set
 	ExpectedPolicyIDs                    set.Set
 	ExpectedUntrackedPolicyIDs           set.Set
 	ExpectedPreDNATPolicyIDs             set.Set
 	ExpectedProfileIDs                   set.Set
-	ExpectedEndpointPolicyOrder          map[string][]tierInfo
-	ExpectedUntrackedEndpointPolicyOrder map[string][]tierInfo
-	ExpectedPreDNATEndpointPolicyOrder   map[string][]tierInfo
+	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
+	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
+	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
 }
 
 func (s State) String() string {
@@ -50,15 +51,15 @@ func (s State) String() string {
 
 func NewState() State {
 	return State{
-		DatastoreState:                       []KVPair{},
+		DatastoreState:                       []model.KVPair{},
 		ExpectedIPSets:                       make(map[string]set.Set),
 		ExpectedPolicyIDs:                    set.New(),
 		ExpectedUntrackedPolicyIDs:           set.New(),
 		ExpectedPreDNATPolicyIDs:             set.New(),
 		ExpectedProfileIDs:                   set.New(),
-		ExpectedEndpointPolicyOrder:          make(map[string][]tierInfo),
-		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]tierInfo),
-		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]tierInfo),
+		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
+		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
+		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
 	}
 }
 
@@ -91,13 +92,13 @@ func (s State) Copy() State {
 // withKVUpdates returns a deep copy of the state, incorporating the passed KVs.
 // If a new KV is an update to an existing KV, the existing KV is discarded and
 // the new KV is appended.  If the value of a new KV is nil, it is removed.
-func (s State) withKVUpdates(kvs ...KVPair) (newState State) {
+func (s State) withKVUpdates(kvs ...model.KVPair) (newState State) {
 	// Start with a clean copy.
 	newState = s.Copy()
 	// But replace the datastoreState, which we're about to modify.
-	newState.DatastoreState = make([]KVPair, 0, len(kvs)+len(s.DatastoreState))
+	newState.DatastoreState = make([]model.KVPair, 0, len(kvs)+len(s.DatastoreState))
 	// Make a set containing the new keys.
-	newKeys := make(map[Key]bool)
+	newKeys := make(map[model.Key]bool)
 	for _, kv := range kvs {
 		newKeys[kv.Key] = true
 	}
@@ -133,11 +134,11 @@ func (s State) withIPSet(name string, members []string) (newState State) {
 	return
 }
 
-func (s State) withEndpoint(id string, tiers []tierInfo) State {
-	return s.withEndpointUntracked(id, tiers, []tierInfo{}, []tierInfo{})
+func (s State) withEndpoint(id string, tiers []mock.TierInfo) State {
+	return s.withEndpointUntracked(id, tiers, []mock.TierInfo{}, []mock.TierInfo{})
 }
 
-func (s State) withEndpointUntracked(id string, tiers, untrackedTiers, preDNATTiers []tierInfo) State {
+func (s State) withEndpointUntracked(id string, tiers, untrackedTiers, preDNATTiers []mock.TierInfo) State {
 	newState := s.Copy()
 	if tiers == nil {
 		delete(newState.ExpectedEndpointPolicyOrder, id)
@@ -201,8 +202,8 @@ func (s State) Keys() set.Set {
 	return set
 }
 
-func (s State) KVsCopy() map[Key]interface{} {
-	kvs := make(map[Key]interface{})
+func (s State) KVsCopy() map[model.Key]interface{} {
+	kvs := make(map[model.Key]interface{})
 	for _, kv := range s.DatastoreState {
 		kvs[kv.Key] = kv.Value
 	}
@@ -211,7 +212,7 @@ func (s State) KVsCopy() map[Key]interface{} {
 
 func (s State) KVDeltas(prev State) []api.Update {
 	newAndUpdatedKVs := s.KVsCopy()
-	updatedKVs := make(map[Key]bool)
+	updatedKVs := make(map[model.Key]bool)
 	for _, kv := range prev.DatastoreState {
 		if reflect.DeepEqual(newAndUpdatedKVs[kv.Key], kv.Value) {
 			// Key had same value in both states so we ignore it.
@@ -227,7 +228,7 @@ func (s State) KVDeltas(prev State) []api.Update {
 		if !currentKeys.Contains(kv.Key) {
 			deltas = append(
 				deltas,
-				api.Update{KVPair{Key: kv.Key}, api.UpdateTypeKVDeleted},
+				api.Update{model.KVPair{Key: kv.Key}, api.UpdateTypeKVDeleted},
 			)
 		}
 	}

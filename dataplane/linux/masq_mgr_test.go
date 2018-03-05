@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,16 +43,12 @@ var _ = Describe("Masquerade manager", func() {
 				nil,
 				nil,
 			),
-			IptablesMarkAccept:   0x80,
-			IptablesMarkPass:     0x100,
-			IptablesMarkScratch0: 0x200,
-			IptablesMarkScratch1: 0x400,
-			IptablesMarkDrop:     0x800,
-			//IptablesMarkPass:     0x1,
-			//IptablesMarkAccept:   0x2,
-			//IptablesMarkScratch0: 0x4,
-			//IptablesMarkScratch1: 0x8,
-			//IptablesMarkDrop:     0xa,
+			IptablesMarkPass:     0x1,
+			IptablesMarkAccept:   0x2,
+			IptablesMarkScratch0: 0x4,
+			IptablesMarkScratch1: 0x8,
+			IptablesMarkDrop:     0x10,
+			IptablesMarkEndpoint: 0x11110000,
 		})
 		masqMgr = newMasqManager(ipSets, natTable, ruleRenderer, 1024, 4)
 	})
@@ -98,8 +94,8 @@ var _ = Describe("Masquerade manager", func() {
 					{
 						Action: iptables.MasqAction{},
 						Match: iptables.Match().
-							SourceIPSet("cali4-masq-ipam-pools").
-							NotDestIPSet("cali4-all-ipam-pools"),
+							SourceIPSet("cali40masq-ipam-pools").
+							NotDestIPSet("cali40all-ipam-pools"),
 					},
 				},
 			}}})
@@ -145,8 +141,8 @@ var _ = Describe("Masquerade manager", func() {
 						{
 							Action: iptables.MasqAction{},
 							Match: iptables.Match().
-								SourceIPSet("cali4-masq-ipam-pools").
-								NotDestIPSet("cali4-all-ipam-pools"),
+								SourceIPSet("cali40masq-ipam-pools").
+								NotDestIPSet("cali40all-ipam-pools"),
 						},
 					},
 				}}})

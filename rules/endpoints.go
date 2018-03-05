@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,11 +31,13 @@ const (
 
 func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 	ifaceName string,
+	epMarkMapper EndpointMarkMapper,
 	adminUp bool,
 	tiers []*proto.TierInfo,
 	profileIDs []string,
 ) []*Chain {
-	return []*Chain{
+	result := []*Chain{}
+	result = append(result,
 		// Chain for traffic _to_ the endpoint.
 		r.endpointIptablesChain(
 			tiers,
@@ -68,17 +70,32 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			egressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
 		),
+	)
+
+	if r.KubeIPVSSupportEnabled {
+		// Chain for setting endpoint mark of an endpoint.
+		result = append(result,
+			r.endpointSetMarkChain(
+				ifaceName,
+				epMarkMapper,
+				SetEndPointMarkPfx,
+			),
+		)
 	}
+
+	return result
 }
 
 func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 	ifaceName string,
 	tiers []*proto.TierInfo,
 	forwardTiers []*proto.TierInfo,
+	epMarkMapper EndpointMarkMapper,
 	profileIDs []string,
 ) []*Chain {
 	log.WithField("ifaceName", ifaceName).Debug("Rendering filter host endpoint chain.")
-	return []*Chain{
+	result := []*Chain{}
+	result = append(result,
 		// Chain for output traffic _to_ the endpoint.
 		r.endpointIptablesChain(
 			tiers,
@@ -143,7 +160,20 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			ingressPolicy,
 			r.filterAllowAction,
 		),
+	)
+
+	if r.KubeIPVSSupportEnabled {
+		// Chain for setting endpoint mark of an endpoint.
+		result = append(result,
+			r.endpointSetMarkChain(
+				ifaceName,
+				epMarkMapper,
+				SetEndPointMarkPfx,
+			),
+		)
 	}
+
+	return result
 }
 
 func (r *DefaultRuleRenderer) HostEndpointToRawChains(
@@ -221,6 +251,28 @@ const (
 	chainTypePreDNAT
 	chainTypeForward
 )
+
+func (r *DefaultRuleRenderer) endpointSetMarkChain(
+	name string,
+	epMarkMapper EndpointMarkMapper,
+	endpointPrefix string,
+) *Chain {
+	rules := []Rule{}
+	chainName := EndpointChainName(endpointPrefix, name)
+
+	if endPointMark, err := epMarkMapper.GetEndpointMark(name); err == nil {
+		// Set endpoint mark.
+		rules = append(rules, Rule{
+			Action: SetMaskedMarkAction{
+				Mark: endPointMark,
+				Mask: epMarkMapper.GetMask()},
+		})
+	}
+	return &Chain{
+		Name:  chainName,
+		Rules: rules,
+	}
+}
 
 func (r *DefaultRuleRenderer) endpointIptablesChain(
 	tiers []*proto.TierInfo,
@@ -303,14 +355,14 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				if chainType == chainTypeUntracked {
 					// For an untracked policy, map allow to "NOTRACK and ALLOW".
 					rules = append(rules, Rule{
-						Match:  Match().MarkSet(r.IptablesMarkAccept),
+						Match:  Match().MarkSingleBitSet(r.IptablesMarkAccept),
 						Action: NoTrackAction{},
 					})
 				}
 				// If accept bit is set, return from this chain.  We don't immediately
 				// accept because there may be other policy still to apply.
 				rules = append(rules, Rule{
-					Match:   Match().MarkSet(r.IptablesMarkAccept),
+					Match:   Match().MarkSingleBitSet(r.IptablesMarkAccept),
 					Action:  ReturnAction{},
 					Comment: "Return if policy accepted",
 				})
@@ -346,7 +398,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 				// If policy marked packet as accepted, it returns, setting the
 				// accept mark bit.  If that is set, return from this chain.
 				Rule{
-					Match:   Match().MarkSet(r.IptablesMarkAccept),
+					Match:   Match().MarkSingleBitSet(r.IptablesMarkAccept),
 					Action:  ReturnAction{},
 					Comment: "Return if profile accepted",
 				})

@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
+	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -47,15 +48,15 @@ var withPolicyAndTier = initialisedStore.withKVUpdates(
 var localEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"tier-1", "pol-1"},
 ).withActiveProfiles(
@@ -64,7 +65,7 @@ var localEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("ep1 local, policy")
@@ -72,15 +73,15 @@ var localEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	KVPair{Key: hostEpWithNameKey, Value: &hostEpWithName},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
 }).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"tier-1", "pol-1"},
 ).withActiveProfiles(
@@ -89,7 +90,7 @@ var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	hostEpWithNameId,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("host ep1, policy")
@@ -97,10 +98,10 @@ var hostEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 var hostEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	KVPair{Key: hostEp2NoNameKey, Value: &hostEp2NoName},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
-	"10.0.0.3", // ep2
-	"fc00:fe11::3",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
 }).withIPSet(bEqBSelectorId, []string{}).withActivePolicies(
 	proto.PolicyID{"tier-1", "pol-1"},
 ).withActiveProfiles(
@@ -108,7 +109,7 @@ var hostEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	proto.ProfileID{"prof-3"},
 ).withEndpoint(
 	hostEpNoNameId,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("host ep2, policy")
@@ -145,15 +146,15 @@ func commercialPolicyOrderState(policyOrders [3]float64, expectedOrder [3]string
 		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-2"}, Value: &policies[1]},
 		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "pol-3"}, Value: &policies[2]},
 	).withIPSet(allSelectorId, []string{
-		"10.0.0.1", // ep1
-		"fc00:fe11::1",
-		"10.0.0.2", // ep1 and ep2
-		"fc00:fe11::2",
+		"10.0.0.1/32", // ep1
+		"fc00:fe11::1/128",
+		"10.0.0.2/32", // ep1 and ep2
+		"fc00:fe11::2/128",
 	}).withIPSet(bEqBSelectorId, []string{
-		"10.0.0.1",
-		"fc00:fe11::1",
-		"10.0.0.2",
-		"fc00:fe11::2",
+		"10.0.0.1/32",
+		"fc00:fe11::1/128",
+		"10.0.0.2/32",
+		"fc00:fe11::2/128",
 	}).withActivePolicies(
 		proto.PolicyID{"tier-1", "pol-1"},
 		proto.PolicyID{"tier-1", "pol-2"},
@@ -164,7 +165,7 @@ func commercialPolicyOrderState(policyOrders [3]float64, expectedOrder [3]string
 		proto.ProfileID{"prof-missing"},
 	).withEndpoint(
 		localWlEp1Id,
-		[]tierInfo{
+		[]mock.TierInfo{
 			{"tier-1", expectedOrder[:], expectedOrder[:]},
 		},
 	).withName(fmt.Sprintf("ep1 local, 1 tier, policies %v", expectedOrder[:]))
@@ -226,7 +227,7 @@ func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
 		proto.ProfileID{"prof-missing"},
 	).withEndpoint(
 		localWlEp1Id,
-		[]tierInfo{
+		[]mock.TierInfo{
 			{expectedOrder[0], []string{expectedOrder[0] + "-pol"}, []string{expectedOrder[0] + "-pol"}},
 			{expectedOrder[1], []string{expectedOrder[1] + "-pol"}, []string{expectedOrder[1] + "-pol"}},
 			{expectedOrder[2], []string{expectedOrder[2] + "-pol"}, []string{expectedOrder[2] + "-pol"}},
@@ -240,10 +241,10 @@ func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
 var localEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
-	"10.0.0.3", // ep2
-	"fc00:fe11::3",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
 }).withIPSet(
 	bEqBSelectorId, []string{},
 ).withActivePolicies(
@@ -253,7 +254,7 @@ var localEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	proto.ProfileID{"prof-3"},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("ep2 local, policy")
@@ -266,17 +267,17 @@ var localEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 ).withIPSet(allSelectorId, []string{
-	"10.0.0.1", // ep1
-	"fc00:fe11::1",
-	"10.0.0.2", // ep1 and ep2
-	"fc00:fe11::2",
-	"10.0.0.3", // ep2
-	"fc00:fe11::3",
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
 }).withIPSet(bEqBSelectorId, []string{
-	"10.0.0.1",
-	"fc00:fe11::1",
-	"10.0.0.2",
-	"fc00:fe11::2",
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
 }).withActivePolicies(
 	proto.PolicyID{"tier-1", "pol-1"},
 ).withActiveProfiles(
@@ -286,12 +287,12 @@ var localEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	proto.ProfileID{"prof-missing"},
 ).withEndpoint(
 	localWlEp1Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withEndpoint(
 	localWlEp2Id,
-	[]tierInfo{
+	[]mock.TierInfo{
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withName("2 local, overlapping IPs & a policy")
@@ -360,3 +361,9 @@ var _ = Describe("COMMERCIAL: Calculation graph state sequencing tests:", func()
 var _ = Describe("COMMERCIAL: Async calculation graph state sequencing tests:", func() {
 	describeAsyncTests(commercialTests)
 })
+
+type tierInfo struct {
+	Name               string
+	IngressPolicyNames []string
+	EgressPolicyNames  []string
+}

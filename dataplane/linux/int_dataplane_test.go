@@ -64,6 +64,7 @@ var _ = Describe("Constructor test", func() {
 				IptablesMarkScratch0: 0x4000000,
 				IptablesMarkScratch1: 0x8000000,
 				IptablesMarkDrop:     0x0800000,
+				IptablesMarkEndpoint: 0x000ff00,
 
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
