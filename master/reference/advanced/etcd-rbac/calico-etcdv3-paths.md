@@ -1,6 +1,6 @@
 ---
 title: Calico key and path prefixes in etcd v3
-no_canonical: true
+canonical_url: 'https://docs.projectcalico.org/v3.0/reference/advanced/etcd-rbac/calico-etcdv3-paths'
 ---
 
 The paths listed here are the key or path prefixes that a particular {{site.prodname}}
@@ -19,12 +19,12 @@ component needs access to in etcd to function successfully.
 | /calico/ipam/v2/\*                        |   RW   |
 | /calico/resources/v3/projectcalico.org/\* |   RW   |
 
-## felix as a stand alone process
+## Felix as a stand alone process
 
 | Path                                      | Access |
 |-------------------------------------------|--------|
 | /calico/felix/v1/\*                       |   RW   |
-| /calico/resources/v3/projectcalico.org/\* |   RW   |
+| /calico/resources/v3/projectcalico.org/\* |   R    |
 
 ## CNI-plugin
 
@@ -54,6 +54,7 @@ component needs access to in etcd to function successfully.
 | /calico/ipam/v2/\*                                              |   R    |
 | /calico/resources/v3/projectcalico.org/\*                       |   R    |
 | /calico/resources/v3/projectcalico.org/globalnetworkpolicies/\* |   RW   |
+| /calico/resources/v3/projectcalico.org/globalnetworksets/\*     |   RW   |
 | /calico/resources/v3/projectcalico.org/networkpolicies/\*       |   RW   |
 | /calico/resources/v3/projectcalico.org/profiles/\*              |   RW   |
 

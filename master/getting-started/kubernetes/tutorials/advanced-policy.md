@@ -1,5 +1,6 @@
 ---
 title: Controlling ingress and egress traffic with network policy
+canonical_url: 'https://docs.projectcalico.org/v3.0/getting-started/kubernetes/tutorials/advanced-policy'
 ---
 
 The Kubernetes `NetworkPolicy` API allows users to express ingress and egress policies (starting with Kubernetes 1.8.0) to Kubernetes pods
@@ -59,7 +60,7 @@ Both of the commands should respond with raw HTML response data from the nginx a
 
 ### 2. Deny all ingress traffic
 
-Enable ingress isolation on the namespace by deploying a [default deny all ingress traffic policy](https://Kubernetes.io/docs/concepts/services-networking/network-policies/#default-deny-all-ingress-traffic).
+Enable ingress isolation on the namespace by deploying a [default deny all ingress traffic policy](https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-deny-all-ingress-traffic).
 
 ```shell
 kubectl create -f - <<EOF
@@ -149,7 +150,7 @@ After creating the policy, we can now access the nginx service.
 
 ### 4. Deny all egress traffic
 
-Enable egress isolation on the namespace by deploying a [default deny all egress traffic policy](https://Kubernetes.io/docs/concepts/services-networking/network-policies/#4-deny-all-egress-traffic).
+Enable egress isolation on the namespace by deploying a [default deny all egress traffic policy](https://kubernetes.io/docs/concepts/services-networking/network-policies/#4-deny-all-egress-traffic).
 
 ```shell
 kubectl create -f - <<EOF

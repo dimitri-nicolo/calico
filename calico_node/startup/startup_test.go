@@ -38,6 +38,7 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/libcalico-go/lib/names"
 )
 
 var exitCode int
@@ -95,7 +96,7 @@ type EnvItem struct {
 
 var _ = Describe("FV tests against a real etcd", func() {
 	ctx := context.Background()
-	changedEnvVars := []string{"CALICO_IPV4POOL_CIDR", "CALICO_IPV6POOL_CIDR", "NO_DEFAULT_POOLS", "CALICO_IPV4POOL_IPIP", "CALICO_IPV6POOL_NAT_OUTGOING", "CALICO_IPV4POOL_NAT_OUTGOING", "IP", "CLUSTER_TYPE"}
+	changedEnvVars := []string{"CALICO_IPV4POOL_CIDR", "CALICO_IPV6POOL_CIDR", "NO_DEFAULT_POOLS", "CALICO_IPV4POOL_IPIP", "CALICO_IPV6POOL_NAT_OUTGOING", "CALICO_IPV4POOL_NAT_OUTGOING", "IP", "CLUSTER_TYPE", "CALICO_K8S_NODE_REF", "CALICO_UNKNOWN_NODE_REF"}
 
 	BeforeEach(func() {
 		for _, envName := range changedEnvVars {
@@ -228,6 +229,57 @@ var _ = Describe("FV tests against a real etcd", func() {
 			},
 			"192.168.0.0/16", "fd80:24e2:f998:72d6::/64", "Off", false, true),
 	)
+
+	Describe("Test clearing of node IPs", func() {
+		Context("clearing node IPs", func() {
+			cfg, err := apiconfig.LoadClientConfigFromEnvironment()
+			It("should be able to load Calico client from ENV", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			c, err := client.New(*cfg)
+			It("should be able to create a new Calico client", func() {
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			node := makeNode("192.168.0.1/24", "fdff:ffff:ffff:ffff:ffff::/80")
+			node.Name = "clearips.test.node"
+			It("should create a Node with IPv4 and IPv6 addresses", func() {
+				_, err = c.Nodes().Create(ctx, node, options.SetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			var n *api.Node
+			It("should get the Node", func() {
+				n, err = c.Nodes().Get(ctx, node.Name, options.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).NotTo(BeNil())
+				Expect(n.ResourceVersion).NotTo(Equal(""))
+			})
+
+			It("should clear the Node's IPv4 address", func() {
+				clearNodeIPs(ctx, c, n, true, false)
+				dn, err := c.Nodes().Get(ctx, node.Name, options.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dn.Spec.BGP.IPv4Address).To(Equal(""))
+				Expect(dn.Spec.BGP.IPv6Address).ToNot(Equal(""))
+			})
+
+			It("should get the Node", func() {
+				n, err = c.Nodes().Get(ctx, node.Name, options.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(n).NotTo(BeNil())
+				Expect(n.ResourceVersion).NotTo(Equal(""))
+			})
+
+			It("should clear the Node's IPv6 address", func() {
+				clearNodeIPs(ctx, c, n, false, true)
+				dn, err := c.Nodes().Get(ctx, node.Name, options.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dn.Spec.BGP).To(BeNil())
+			})
+		})
+	})
 
 	Describe("Test NO_DEFAULT_POOLS env variable", func() {
 		Context("Should have no pools defined", func() {
@@ -670,6 +722,47 @@ var _ = Describe("FV tests against a real etcd", func() {
 				Expect(strings.Count(clusterInfo.Spec.ClusterType, "type2")).To(Equal(1), "Should only have one instance of type1, read '%s", clusterInfo.Spec.ClusterType)
 			})
 		})
+
+		Describe("Test OrchRef configuration", func() {
+			DescribeTable("Should configure the OrchRef with the proper env var set", func(envs []EnvItem, expected api.OrchRef, isEqual bool) {
+				node := &api.Node{}
+
+				for _, env := range envs {
+					os.Setenv(env.key, env.value)
+				}
+
+				configureNodeRef(node)
+				// If we receieve an invalid env var then none will be set.
+				if len(node.Spec.OrchRefs) > 0 {
+					ref := node.Spec.OrchRefs[0]
+					Expect(ref == expected).To(Equal(isEqual))
+				} else {
+					Fail("OrchRefs slice was empty, expected at least one")
+				}
+			},
+
+				Entry("valid single k8s env var", []EnvItem{{"CALICO_K8S_NODE_REF", "node1"}}, api.OrchRef{"node1", "k8s"}, true),
+			)
+
+			It("Should not configure any OrchRefs when no valid env vars are passed", func() {
+				os.Setenv("CALICO_UNKNOWN_NODE_REF", "node1")
+
+				node := &api.Node{}
+				configureNodeRef(node)
+
+				Expect(node.Spec.OrchRefs).To(HaveLen(0))
+			})
+			It("Should not set an OrchRef if it is already set", func() {
+				os.Setenv("CALICO_K8S_NODE_REF", "node1")
+
+				node := &api.Node{}
+				node.Spec.OrchRefs = append(node.Spec.OrchRefs, api.OrchRef{"node1", "k8s"})
+				configureNodeRef(node)
+
+				Expect(node.Spec.OrchRefs).To(HaveLen(1))
+			})
+		})
+
 	})
 })
 
@@ -682,9 +775,10 @@ var _ = Describe("UT for Node IP assignment and conflict checking.", func() {
 				os.Setenv(item.key, item.value)
 			}
 
-			check := configureIPsAndSubnets(node)
+			check, err := configureIPsAndSubnets(node)
 
 			Expect(check).To(Equal(expected))
+			Expect(err).NotTo(HaveOccurred())
 		},
 
 		Entry("Test with no \"IP\" env var set", &api.Node{}, []EnvItem{{"IP", ""}}, true),
@@ -780,4 +874,35 @@ var _ = Describe("FV tests against K8s API server.", func() {
 			cs.CoreV1().Nodes().Delete(node.Name, &metav1.DeleteOptions{})
 		}
 	})
+})
+
+var _ = Describe("UT for node name determination", func() {
+	hn, _ := names.Hostname()
+	DescribeTable("Test variations on how node names are detected.",
+		func(nodenameEnv, hostnameEnv, expectedNodeName string) {
+
+			if nodenameEnv != "" {
+				os.Setenv("NODENAME", nodenameEnv)
+			} else {
+				os.Unsetenv("NODENAME")
+			}
+			if hostnameEnv != "" {
+				os.Setenv("HOSTNAME", hostnameEnv)
+			} else {
+				os.Unsetenv("HOSTNAME")
+			}
+			nodeName := determineNodeName()
+			os.Unsetenv("NODENAME")
+			os.Unsetenv("HOSTNAME")
+			Expect(nodeName).To(Equal(expectedNodeName))
+
+		},
+
+		Entry("Valid NODENAME and valid HOSTNAME", "abc-def.ghi123", "foo1.bar2-baz3", "abc-def.ghi123"),
+		Entry("Uppercase NODENAME and valid HOSTNAME (leaves uppercase)", "MyHostname-123", "valid.hostname", "MyHostname-123"),
+		Entry("Whitespace NODENAME, valid HOSTNAME", "  ", "host123", "host123"),
+		Entry("No NODENAME, uppercase HOSTNAME", "", "HOSTName", "hostname"),
+		Entry("No NODENAME, no HOSTNAME", "", "", hn),
+		Entry("Whitespace NODENAME and HOSTNAME", "  ", "  ", hn),
+	)
 })

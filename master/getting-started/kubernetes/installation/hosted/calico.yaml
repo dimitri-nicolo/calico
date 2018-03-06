@@ -109,8 +109,7 @@ spec:
     spec:
       hostNetwork: true
       tolerations:
-        # Allow the pod to run on the master.  This is required for
-        # the master to communicate with pods.
+        # Make sure calico/node gets scheduled on all nodes.
         - effect: NoSchedule
           operator: Exists
         # Mark the pod as a critical add-on for rescheduling.
@@ -189,7 +188,7 @@ spec:
                   key: etcd_cert
             # Auto-detect the BGP IP address.
             - name: IP
-              value: ""
+              value: "autodetect"
             - name: FELIX_HEALTHENABLED
               value: "true"
 {% include {{page.version}}/extra-felix-config-12sp.yaml %}
@@ -296,8 +295,7 @@ spec:
       # it isn't governed by policy that would prevent it from working.
       hostNetwork: true
       tolerations:
-        # Allow this pod to be rescheduled while the node is in "critical add-ons only" mode.
-        # This, along with the annotation above marks this pod as a critical add-on.
+        # Mark the pod as a critical add-on for rescheduling.
         - key: CriticalAddonsOnly
           operator: Exists
         - key: node-role.kubernetes.io/master

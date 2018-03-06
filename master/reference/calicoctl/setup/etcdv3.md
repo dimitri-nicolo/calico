@@ -1,6 +1,5 @@
 ---
 redirect_to: /master/usage/calicoctl/configure/etcd
-no_canonical: true
 ---
 
 This document covers the configuration options for calicoctl when using an etcdv3 datastore.

@@ -1,5 +1,6 @@
 ---
 title: Host Endpoint Resource (HostEndpoint)
+canonical_url: 'https://docs.projectcalico.org/v3.0/reference/calicoctl/resources/hostendpoint'
 ---
 
 A host endpoint resource (`HostEndpoint`) represents an interface attached to a host that is running {{site.prodname}}.
@@ -12,6 +13,11 @@ any policy.
 
 For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
 aliases are supported (all case insensitive): `hostendpoint`, `hostendpoints`, `hep`, `heps`.
+
+> **Important**: When rendering security rules on other hosts, {{site.prodname}} uses the
+> `expectedIPs` field to resolve label selectors to IP addresses. If the `expectedIPs` field
+> is omitted then security rules that use labels will fail to match this endpoint.
+{: .alert .alert-danger}
 
 ### Sample YAML
 
@@ -68,4 +74,4 @@ spec:
 | Datastore type        | Create/Delete | Update | Get/List | Notes
 |-----------------------|---------------|--------|----------|------
 | etcdv3                | Yes           | Yes    | Yes      |
-| Kubernetes API server | No            | No     | No       |
+| Kubernetes API server | Yes           | Yes    | Yes      |
