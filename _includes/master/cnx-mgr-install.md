@@ -21,9 +21,15 @@
 
 {% if include.orchestrator == "openshift" %}
 
-1. Update the login method to `Token`:
+1. Update the login method to `OAuth`:
 
-       sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "Token"/g' cnx.yaml
+       sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "OAuth"/g' cnx.yaml
+
+1. Update the `OAuth` authority API endpoint with OpenShift master address.
+
+   Example: If OpenShift master were at 127.0.0.1:8443, then the following command can be used to set up the parameter.
+
+       sed -i -e 's/tigera.cnx-manager.oauth-authority:.*$/tigera.cnx-manager.oauth-authority: "https:\/\/127.0.0.1:8443\/oauth\/authorize"/g' cnx.yaml
 
 1. Open the file in a text editor, and make the following modifications:
 
@@ -88,3 +94,15 @@
    documents for advice on configuring this.  The authentication method you
    chose when setting up the cluster defines what format you need to use for
    usernames in the role bindings.
+
+1. Optionally add network policy to ensure requests to CNX are permitted.  By default Kubernetes doesn't
+   install any network policy, and therefore CNX Manager is accessible, but it is easy to
+   unintentionally block it when editing policy so this is a recommended step.  Download the
+   [cnx-poolicy.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml)
+   file and apply it.  The file doesn't require any customization, but contains some comments
+   suggesting ways to make the policy more fine grained if you know where CNX Manager will be
+   accessed from or the addresses of your Kubernetes API Servers.
+
+   ```
+   kubectl apply -f cnx-policy.yaml
+   ```

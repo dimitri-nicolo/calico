@@ -10,3 +10,4 @@ _site
 .releasedata
 calico_node/testfile
 Gemfile.lock
+publish-cnx-docs.yaml

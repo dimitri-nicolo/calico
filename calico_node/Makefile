@@ -20,6 +20,7 @@ CALICO_BUILD?=calico/go-build$(ARCHTAG):$(GO_BUILD_VER)
 
 CALICO_NODE_DIR=$(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 VERSIONS_FILE?=$(CALICO_NODE_DIR)/../_data/versions.yml
+CNX_REPOSITORY?=gcr.io/unique-caldron-775
 
 ###############################################################################
 # Determine whether there's a local yaml installed or use dockerized version.
@@ -110,19 +111,19 @@ NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
 NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
 FELIX_REPO?=tigera/felix
 FELIX_CONTAINER_NAME?=$(FELIX_REPO)$(ARCHTAG):$(FELIX_VER)
-FELIX_PRIVATE_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/felix
+FELIX_PRIVATE_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/felix
 CONFD_REPO?=calico/confd
 CONFD_CONTAINER_NAME?=$(CONFD_REPO)$(ARCHTAG):$(CONFD_VER)
 LIBNETWORK_PLUGIN_REPO?=calico/libnetwork-plugin
 LIBNETWORK_PLUGIN_CONTAINER_NAME?=$(LIBNETWORK_PLUGIN_REPO)$(ARCHTAG):$(LIBNETWORK_PLUGIN_VER)
 CTL_CONTAINER_NAME?=tigera/calicoctl$(ARCHTAG):$(CALICOCTL_VER)
-CTL_PRIVATE_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/calicoctl
+CTL_PRIVATE_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/calicoctl
 CALICOQ_CONTAINER_NAME?=tigera/calicoq:$(CALICOQ_VER)
-CALICOQ_PRIVATE_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/calicoq
+CALICOQ_PRIVATE_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/calicoq
 APISERVER_CONTAINER_NAME?=tigera/cnx-apiserver:$(APISERVER_VER)
-APISERVER_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
+APISERVER_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/cnx-apiserver
 TYPHA_CONTAINER_NAME?=tigera/typha:$(TYPHA_VER)
-TYPHA_IMAGE?=gcr.io/unique-caldron-775/cnx/tigera/typha
+TYPHA_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/typha
 
 RR_CONTAINER_NAME?=calico/routereflector$(ARCHTAG)
 
@@ -668,6 +669,9 @@ release: CALICOCTL_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RE
 release: CALICOQ_VER:=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
 release: clean
 	@echo ""
+	@echo "# It is recommended to authenticate Docker to our Container Registry using gcloud's provided Docker credential helper."
+	@echo "# ie gcloud components install docker-credential-gcr"
+	@echo "# docker-credential-gcr configure-docker"
 	@echo "Hit Return to go ahead and create the tag, or Ctrl-C to cancel."
 	@bash -c read
 
@@ -678,7 +682,9 @@ release: clean
 
 	# Retag images with corect version and GCR private registry
 	docker tag $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_NAME):$(CNX_VER)
-	docker tag $(NODE_CONTAINER_NAME) gcr.io/unique-caldron-775/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)
+	docker tag $(NODE_CONTAINER_NAME) $(CNX_REPOSITORY)/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)
+	docker push $(CNX_REPOSITORY)/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)
+	docker push $(CNX_REPOSITORY)/cnx/$(NODE_CONTAINER_NAME):latest
 
 	# Create the release archive
 	CALICOCTL_VER=$(CALICOCTL_VER) CALICOQ_VER=$(CALICOQ_VER) $(MAKE) release-archive
@@ -692,15 +698,47 @@ release: clean
 	docker run $(NODE_CONTAINER_NAME) libnetwork-plugin -v
 
 	@echo "# See RELEASING.md for detailed instructions."
-	@echo "# Now push release images."
-	@echo "  gcloud docker -- push gcr.io/unique-caldron-775/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)"
-
-	@echo "# For the final release only, push the latest tag (not for RCs)"
-	@echo "  gcloud docker -- push gcr.io/unique-caldron-775/cnx/$(NODE_CONTAINER_NAME):latest"
-
+	@echo "# NOTE: \"make release\" was updated to automatically push $(NODE_CONTAINER_NAME):$(CNX_VER) and $(NODE_CONTAINER_NAME):latest to GCR"
 	@echo "# Only push the git tag AFTER this branch is merged to origin/master"
 	@echo "  git push origin $(CNX_VER)"
 
+	@echo "# Once this branch is merged to origin/master and the git tag is pushed, the \"make publish-release\" target can be run."
+	@echo "# This will publish the CNX images to the CustomerSupport quay.io private registry."
+
+
+## Publish images to the CS quay.io private registry
+publish-release:
+	@echo "# See RELEASING.md for detailed instructions."
+	@echo "# Use this target to pull $(CNX_VER) tagged GCR images and push them to CustomerSupport's private quay.io registry"
+	@echo "# NOTE: you must authenticate with quay.io using the CustomerSupport provided robot token"
+	@echo "# ie put the provided robot token in ~/.quay.io"
+	@echo "# cat ~/.quay.io | docker login quay.io --username tigera+engineering_release --password-stdin"
+	@echo "# It is recommended to authenticate Docker with our Container Registry as well using the gcloud provided credential helper."
+	@echo "# ie docker-credential-gcr configure-docker"
+	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/calicoctl:$(CALICOCTL_VER)"
+	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/calicoq:$(CALICOQ_VER)"
+	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/cnx-apiserver:$(APISERVER_VER)"
+	@echo " docker pull $(CNX_REPOSITORY)/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)"
+	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/cnx-manager:$(CNX_WEB_MANAGER_VER)"
+	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/cnx-manager-proxy:$(CNX_WEB_MANAGER_VER)"
+	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/typha:$(TYPHA_VER)"
+
+
+	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/calicoctl:$(CALICOCTL_VER) quay.io/tigera/calicoctl:$(CALICOCTL_VER)"
+	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/calicoq:$(CALICOQ_VER) quay.io/tigera/calicoq:$(CALICOQ_VER)"
+	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/cnx-apiserver:$(APISERVER_VER) quay.io/tigera/cnx-apiserver:$(APISERVER_VER)"
+	@echo " docker tag $(CNX_REPOSITORY)/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER) quay.io/$(NODE_CONTAINER_NAME):$(CNX_VER)"
+	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/cnx-manager:$(CNX_WEB_MANAGER_VER) quay.io/tigera/cnx-manager:$(CNX_WEB_MANAGER_VER)"
+	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/cnx-manager-proxy:$(CNX_WEB_MANAGER_VER) quay.io/tigera/cnx-manager-proxy:$(CNX_WEB_MANAGER_VER)"
+	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/typha:$(TYPHA_VER) quay.io/tigera/typha:$(TYPHA_VER)"
+
+	@echo " docker push quay.io/tigera/calicoctl:$(CALICOCTL_VER)"
+	@echo " docker push quay.io/tigera/calicoq:$(CALICOQ_VER)"
+	@echo " docker push quay.io/tigera/cnx-apiserver:$(APISERVER_VER)"
+	@echo " docker push quay.io/$(NODE_CONTAINER_NAME):$(CNX_VER)"
+	@echo " docker push quay.io/tigera/cnx-manager:$(CNX_WEB_MANAGER_VER)"
+	@echo " docker push quay.io/tigera/cnx-manager-proxy:$(CNX_WEB_MANAGER_VER)"
+	@echo " docker push quay.io/tigera/typha:$(TYPHA_VER)"
 
 RELEASE_DIR?=release-$(CNX_VER)
 RELEASE_DIR_K8S_MANIFESTS?=$(RELEASE_DIR)/k8s-manifests

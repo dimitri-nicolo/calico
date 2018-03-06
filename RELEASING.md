@@ -97,3 +97,39 @@ Currently, updating the CNX documentation requires two manual steps:
 * `gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml`
 
 Note that the latter step can only be run by people with owner or editor access to the `tigera-docs` GCP project.
+
+### Publishing the final release images
+There is a new makefile target "publish-release" which will print out the commands to push tagged images to quay.io
+CS (customer-support) maintains a private quay.io repository which Engineering is responsible for pushing out the final release images.
+The process pulls the final images from our gcr.io/unique-caldron-775 registry locally, re-tags them, then pushes them out. The versions
+used are calculated from `../_data/versions.yaml` but can be overridden if need be. Engineering does not publish the tar'd images
+to EssentialsDeliverables google drive with the introduction of the "publish-release" target.
+
+1. Aquire the quay.io robot acocunt token for the "tigera+engineering_release" user from CS (Grant Voss)
+2. Authenticate your docker engine with quay.io
+` cat ~/.quay.io | docker login quay.io --username tigera+engineering_release --password-stdin`
+3. Run the `make publish-release` target, copy/paste the commands to your terminal
+ie
+```
+ docker pull gcr.io/unique-caldron-775/cnx/tigera/calicoctl:v2.0.1
+ docker pull gcr.io/unique-caldron-775/cnx/tigera/calicoq:v2.0.1
+ docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:v2.0.0
+ docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-node:v2.0.1
+ docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:v2.0.0
+ docker pull gcr.io/unique-caldron-775/cnx/tigera/cnx-manager-proxy:v2.0.0
+ docker pull gcr.io/unique-caldron-775/cnx/tigera/typha:v2.0.0
+ docker tag gcr.io/unique-caldron-775/cnx/tigera/calicoctl:v2.0.1 quay.io/tigera/calicoctl:v2.0.1
+ docker tag gcr.io/unique-caldron-775/cnx/tigera/calicoq:v2.0.1 quay.io/tigera/calicoq:v2.0.1
+ docker tag gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:v2.0.0 quay.io/tigera/cnx-apiserver:v2.0.0
+ docker tag gcr.io/unique-caldron-775/cnx/tigera/cnx-node:v2.0.1 quay.io/tigera/cnx-node:v2.0.1
+ docker tag gcr.io/unique-caldron-775/cnx/tigera/cnx-manager:v2.0.0 quay.io/tigera/cnx-manager:v2.0.0
+ docker tag gcr.io/unique-caldron-775/cnx/tigera/cnx-manager-proxy:v2.0.0 quay.io/tigera/cnx-manager-proxy:v2.0.0
+ docker tag gcr.io/unique-caldron-775/cnx/tigera/typha:v2.0.0 quay.io/tigera/typha:v2.0.0
+ docker push quay.io/tigera/calicoctl:v2.0.1
+ docker push quay.io/tigera/calicoq:v2.0.1
+ docker push quay.io/tigera/cnx-apiserver:v2.0.0
+ docker push quay.io/tigera/cnx-node:v2.0.1
+ docker push quay.io/tigera/cnx-manager:v2.0.0
+ docker push quay.io/tigera/cnx-manager-proxy:v2.0.0
+ docker push quay.io/tigera/typha:v2.0.0
+```

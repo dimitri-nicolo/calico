@@ -50,6 +50,7 @@ exclude:
   - calico_node
   - Jenkinsfile
   - Dockerfile-docs
+  - website
 
 # Markdown Processors
 # TODO - we're not entirely sure what these are for

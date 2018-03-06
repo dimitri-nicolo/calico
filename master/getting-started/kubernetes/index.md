@@ -164,7 +164,7 @@ the host. Instead, continue directly to the
    TLS-encrypted communications with the {{site.prodname}} Manager.
 
    ```
-   sudo kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
+   sudo -E kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
    --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
    ```
 
@@ -229,6 +229,17 @@ the host. Instead, continue directly to the
    ```
 
 1. Press CTRL+C to exit `watch`.
+
+1. Optionally add network policy to ensure requests to CNX are permitted.  By default Kubernetes doesn't
+   install any network policy, and therefore CNX Manager is accessible, but it is easy to
+   unintentionally block it when editing policy so this is a recommended step.  Download the
+   [cnx-poolicy.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml)
+   file and apply it.  This step is an example of applying CNX Tiered Security Policy using
+   the `kubectl` command line tool.
+
+   ```
+   kubectl apply -f cnx-policy.yaml
+   ```
 
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
