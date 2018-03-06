@@ -21,9 +21,15 @@
 
 {% if include.orchestrator == "openshift" %}
 
-1. Update the login method to `Token`:
+1. Update the login method to `OAuth`:
 
-       sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "Token"/g' cnx.yaml
+       sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "OAuth"/g' cnx.yaml
+
+1. Update the `OAuth` authority API endpoint with OpenShift master address.
+
+   Example: If OpenShift master were at 127.0.0.1:8443, then the following command can be used to set up the parameter.
+
+       sed -i -e 's/tigera.cnx-manager.oauth-authority:.*$/tigera.cnx-manager.oauth-authority: "https:\/\/127.0.0.1:8443\/oauth\/authorize"/g' cnx.yaml
 
 1. Open the file in a text editor, and make the following modifications:
 

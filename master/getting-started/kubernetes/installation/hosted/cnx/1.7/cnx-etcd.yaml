@@ -21,13 +21,17 @@ metadata:
   name: tigera-cnx-manager-config
   namespace: kube-system
 data:
-  # Authentication type.  Must be set to "OIDC", "Basic" or "Token".
+  # Authentication type.  Must be set to "OIDC", "Basic", "Token", or "OAuth".
   tigera.cnx-manager.authentication-type: "Basic"
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
   tigera.cnx-manager.oidc-authority: "https://accounts.google.com"
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
-  tigera.cnx-manager.oidc-client-id: "<fill-in-your-oauth-client-id-here>"
+  tigera.cnx-manager.oidc-client-id: "<oidc-client-id>"
+  # The OAuth endpoint. Required if authentication-type is OAuth, ignored otherwise.
+  tigera.cnx-manager.oauth-authority: "https://<oauth-authority>/oauth/authorize"
+  # The OAuth client id to use for OAuth login. Value is ignored if not using OAuth login.
+  tigera.cnx-manager.oauth-client-id: "cnx-manager"
 
 ---
 
@@ -277,6 +281,16 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-client-id
+          - name: CNX_WEB_OAUTH_AUTHORITY
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.oauth-authority
+          - name: CNX_WEB_OAUTH_CLIENT_ID
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.oauth-client-id
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
@@ -298,6 +312,16 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-client-id
+          - name: CNX_WEB_OAUTH_AUTHORITY
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.oauth-authority
+          - name: CNX_WEB_OAUTH_CLIENT_ID
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.oauth-client-id
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
