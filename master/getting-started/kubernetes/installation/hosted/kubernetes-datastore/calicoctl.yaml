@@ -65,6 +65,7 @@ rules:
       - felixconfigurations
       - globalnetworkpolicies
       - globalnetworksets
+      - remoteclusterconfigurations
       - ippools
       - networkpolicies
       - hostendpoints
