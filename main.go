@@ -1,15 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	uuid "github.com/satori/go.uuid"
-
 	jose "gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	"github.com/tigera/licensing/client"
 	cryptolicensing "github.com/tigera/licensing/crypto"
@@ -20,34 +18,20 @@ type LicenseClaims struct {
 	Nodes    string   `json:"nodes" validate:"required"`
 	Name     string   `json:"name" validate:"required"`
 	Features []string `json:"features"`
-	jwt.StandardClaims
+	jwt.Claims
 }
 
 type License struct {
 	Claims string `json:"claims"`
 	Cert   string `json:"cert"`
-	//Signature []byte `json:"signature"`
 }
 
-//func (l License) String() string {
-//	return fmt.Sprintf("%s.\n%s", l.Claims, l.Cert)
-//}
-
 func main() {
-
-	//	message := []byte("My name is G U N J A N 5")
-	//	message := []byte("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lMDAwMCIsImFkbWluIjp0cnVlfQ.GeYDu1EGbeLldjwiUqM3PAqdP_WEq-xmEnL6d7hDt7k")
-
-	// Hash the message.
-	//hashed := sha256.Sum256(message)
-
 	// Generate Pub/Priv key pair.
 	priv, err := cryptolicensing.GenerateKeyPair()
 	if err != nil {
 		log.Fatalf("error generating pub/priv key pair")
 	}
-
-	//pub := priv.PublicKey
 
 	err = cryptolicensing.SavePrivateKeyAsPEM(priv, "privateKey.pem")
 	if err != nil {
@@ -81,10 +65,21 @@ func main() {
 		Nodes:    numNodes,
 		Name:     "MyFavCustomer99",
 		Features: []string{"everything", "for", "you"},
-		StandardClaims: jwt.StandardClaims{
-			NotBefore: time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+		Claims: jwt.Claims{
+			NotBefore: jwt.NumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix()),
 			Issuer:    "Gunjan's office number 5",
 		},
+	}
+
+	enc, err := jose.NewEncrypter(
+		jose.A128GCM,
+		jose.Recipient{
+			Algorithm: jose.A128GCMKW,
+			Key:       []byte("meepster124235546567546788888457"),
+		},
+		(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"))
+	if err != nil {
+		panic(err)
 	}
 
 	// Instantiate a signer using RSASSA-PSS (SHA512) with the given private key.
@@ -93,46 +88,14 @@ func main() {
 		panic(err)
 	}
 
-	b2, err := json.Marshal(claims)
-	if err != nil {
-		log.Fatalf("failed to marshal license: %s\n", err)
-	}
-
-	// Sign a sample payload. Calling the signer returns a protected JWS object,
-	// which can then be serialized for output afterwards. An error would
-	// indicate a problem in an underlying cryptographic primitive.
-	//var payload = []byte("Lorem ipsum dolor sit amet")
-	object, err := signer.Sign(b2)
+	raw, err := jwt.SignedAndEncrypted(signer, enc).Claims(claims).CompactSerialize()
 	if err != nil {
 		panic(err)
 	}
 
-	// Serialize the encrypted object using the full serialization format.
-	// Alternatively you can also use the compact format here by calling
-	// object.CompactSerialize() instead.
-	serialized := object.FullSerialize()
-
-	fmt.Printf("serialized: %s\n", serialized)
-
-	// publicKey := &privateKey.PublicKey
-	encrypter, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.A128GCMKW, Key: []byte("meepster124235546567546788888457")}, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	encObject, err := encrypter.Encrypt([]byte(serialized))
-	if err != nil {
-		panic(err)
-	}
-
-	encSerialized := encObject.FullSerialize()
-
-	licX := client.License{Claims: encSerialized, Cert: cryptolicensing.ExportCertAsPemStr(derBytes)}
-
-	// -----------------------------------------------------------------
+	licX := client.License{Claims: raw, Cert: cryptolicensing.ExportCertAsPemStr(derBytes)}
 
 	fmt.Printf("\n ** on the WIRE: %v\n", licX)
 
 	client.DecodeAndVerify(licX)
-
 }
