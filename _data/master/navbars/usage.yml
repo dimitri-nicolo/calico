@@ -61,6 +61,8 @@ toc:
   path: /usage/configuration/prometheus
 - title: Configuring Alertmanager
   path: /usage/configuration/alertmanager
+- title: Federated Endpoint Identity for Kubernetes
+  path: /usage/federation
 - title: Troubleshooting
   path: /usage/troubleshooting/
 - title: Logging
