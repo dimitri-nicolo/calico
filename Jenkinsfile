@@ -11,7 +11,7 @@ pipeline{
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
 
         SANE_JOB_NAME = "${env.JOB_BASE_NAME}".replace('.', '-')
-        BUILD_INSTANCE_NAME = "wt-${SANE_JOB_NAME}-${env.BUILD_NUMBER}"
+        BUILD_INSTANCE_NAME = "wt-${SANE_JOB_NAME}-${env.BUILD_NUMBER}".toLowerCase()
     }
     stages {
         stage('Checkout') {
