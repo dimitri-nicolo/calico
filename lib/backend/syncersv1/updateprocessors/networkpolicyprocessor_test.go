@@ -230,6 +230,7 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		Expect(kvps[0]).To(Equal(&model.KVPair{
 			Key: v1NetworkPolicyKey3,
 			Value: &model.Policy{
+				Namespace: "namespace3",
 				Selector:       "projectcalico.org/namespace == 'namespace3'",
 				ApplyOnForward: true,
 			},
