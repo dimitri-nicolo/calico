@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ const (
 	OrchestratorKubernetes = "k8s"
 	OrchestratorCNI        = "cni"
 	OrchestratorDocker     = "libnetwork"
+	OrchestratorOpenStack  = "openstack"
 
 	// Label used to denote the Tier. This is added to policies by Calico so that label matches
 	// can be made for tiers.

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,10 +59,10 @@ type Rule struct {
 	Destination EntityRule `json:"destination,omitempty" validate:"omitempty"`
 
 	// HTTP contains match criteria that apply to HTTP requests.
-	HTTP *HTTPRule `json:"http,omitempty" validate:"omitempty"`
+	HTTP *HTTPMatch `json:"http,omitempty" validate:"omitempty"`
 }
 
-type HTTPRule struct {
+type HTTPMatch struct {
 	// Methods is an optional field that restricts the rule to apply only to HTTP requests that use one of the listed
 	// HTTP Methods (e.g. GET, PUT, etc.)
 	Methods []string `json:"methods,omitempty" validate:"omitempty"`
@@ -152,7 +152,7 @@ type ServiceAccountMatch struct {
 	// Selector is an optional field that restricts the rule to only apply to traffic that originates from
 	// (or terminates at) a pod running as a service account that matches the given label selector.
 	// If both Names and Selector are specified then they are AND'ed.
-	Selector string `json:"selector,omitempty" validate:"omitempty"`
+	Selector string `json:"selector,omitempty" validate:"omitempty,selector"`
 }
 
 type Action string
