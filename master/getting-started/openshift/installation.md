@@ -106,21 +106,13 @@ such that Calico connects to an etcd you have already set up by following the [d
 
 {% include {{page.version}}/cnx-mgr-install.md orchestrator="openshift" %}
 
-#### Signing into the CNX Manager UI in OpenShift
-
-The CNX Manager requires an [OpenShift access token](https://docs.openshift.com/container-platform/3.7/install_config/configuring_authentication.html#token-options) for login. You will need
-to consult the OpenShift docs on how to generate an access token using your configured
-identity provider.
-
-If you are unsure, a simple way to generate this token is to log into the OpenShift UI, then visit `<master>/oauth/token/request` for your token.
-
 ### Installing Policy Violation Alerting
 
 Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
 
 #### Enable Metrics
 
-**Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/).
+**Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container) calicoctl as a container in OpenShift.
 
 Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 
