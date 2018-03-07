@@ -9,22 +9,10 @@ import (
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
+	yaml "github.com/projectcalico/go-yaml-wrapper"
 	"github.com/tigera/licensing/client"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )
-
-type LicenseClaims struct {
-	ID       string   `json:"id"`
-	Nodes    string   `json:"nodes" validate:"required"`
-	Name     string   `json:"name" validate:"required"`
-	Features []string `json:"features"`
-	jwt.Claims
-}
-
-type License struct {
-	Claims string `json:"claims"`
-	Cert   string `json:"cert"`
-}
 
 func main() {
 	// Generate Pub/Priv key pair.
@@ -58,13 +46,15 @@ func main() {
 	}
 
 	customerID := uuid.NewV4().String()
-	numNodes := "42"
+	numNodes := 42
 
-	claims := LicenseClaims{
-		ID:       customerID,
-		Nodes:    numNodes,
-		Name:     "MyFavCustomer99",
-		Features: []string{"everything", "for", "you"},
+	claims := client.LicenseClaims{
+		ID:          customerID,
+		Nodes:       numNodes,
+		Name:        "MyFavCustomer99",
+		Features:    []string{"everything", "for", "you"},
+		GracePeriod: 90,
+		Term: 365,
 		Claims: jwt.Claims{
 			NotBefore: jwt.NumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix()),
 			Issuer:    "Gunjan's office number 5",
@@ -97,5 +87,16 @@ func main() {
 
 	fmt.Printf("\n ** on the WIRE: %v\n", licX)
 
-	client.DecodeAndVerify(licX)
+	writeYAML(licX)
+
+	// client.DecodeAndVerify(licX)
+}
+
+func writeYAML(license client.License) error {
+	output, err := yaml.Marshal(license)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%s", string(output))
+	return nil
 }
