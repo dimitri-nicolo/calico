@@ -2,10 +2,52 @@
 
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/inconshreveable/mousetrap"
+  packages = ["."]
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+  version = "v1.0"
+
+[[projects]]
+  branch = "calico"
+  name = "github.com/projectcalico/go-json"
+  packages = ["json"]
+  revision = "6219dc7339ba20ee4c57df0a8baac62317d19cb1"
+
+[[projects]]
+  branch = "calico"
+  name = "github.com/projectcalico/go-yaml"
+  packages = ["."]
+  revision = "955bc3e451ef0c9df8b9113bf2e341139cdafab2"
+
+[[projects]]
+  branch = "calico"
+  name = "github.com/projectcalico/go-yaml-wrapper"
+  packages = ["."]
+  revision = "598e54215bee41a19677faa4f0c32acd2a87eb56"
+
+[[projects]]
   name = "github.com/satori/go.uuid"
   packages = ["."]
   revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
   version = "v1.2.0"
+
+[[projects]]
+  name = "github.com/spf13/cobra"
+  packages = ["."]
+  revision = "7b2c5ac9fc04fc5efafb60700713d4fa609b777b"
+  version = "v0.0.1"
+
+[[projects]]
+  name = "github.com/spf13/pflag"
+  packages = ["."]
+  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -30,6 +72,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b937fce6af2513410917a4a27c35f2b814cd57b00fc05d7d2b58417d17fc4e92"
+  inputs-digest = "b2570491bf45dea472e2984f3d39019decc58b0c4d237c87beaa0aa41a8b4133"
   solver-name = "gps-cdcl"
   solver-version = 1

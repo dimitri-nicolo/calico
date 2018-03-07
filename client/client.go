@@ -10,16 +10,18 @@ import (
 
 // TODO move these into types package
 type LicenseClaims struct {
-	ID       string   `json:"id"`
-	Nodes    string   `json:"nodes" validate:"required"`
-	Name     string   `json:"name" validate:"required"`
-	Features []string `json:"features"`
+	ID          string   `json:"id"`
+	Nodes       int   `json:"nodes" validate:"required"`
+	Name        string   `json:"name" validate:"required"`
+	Features    []string `json:"features"`
+	GracePeriod int     `json:"grace_period"`
+	Term        int     `json:"term"`
 	jwt.Claims
 }
 
 type License struct {
-	Claims string `json:"claims"`
-	Cert   string `json:"cert"`
+	Claims string `json:"claims" yaml:"Claims"`
+	Cert   string `json:"cert" yaml:"Cert"`
 }
 
 func DecodeAndVerify(lic License) {
