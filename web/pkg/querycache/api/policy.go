@@ -2,6 +2,7 @@ package api
 
 type Policy interface {
 	GetResource() Resource
+	GetTier() string
 	GetEndpointCounts() EndpointCounts
 	GetRuleEndpointCounts() Rule
 }

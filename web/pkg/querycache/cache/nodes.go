@@ -16,6 +16,7 @@ type NodeCache interface {
 	TotalNodesWithNoHostEndpoints() int
 	OnUpdate(update dispatcherv1v3.Update)
 	GetNodes() []api.Node
+	GetNode(string) api.Node
 }
 
 func NewNodeCache() NodeCache {
@@ -42,6 +43,13 @@ func (c *nodeCache) GetNodes() []api.Node {
 		nodes = append(nodes, nd)
 	}
 	return nodes
+}
+
+func (c *nodeCache) GetNode(name string) api.Node {
+	if node := c.nodes[name]; node != nil {
+		return node
+	}
+	return nil
 }
 
 func (c *nodeCache) TotalNodes() int {

@@ -9,27 +9,31 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/calicoq/web/pkg/querycache/client"
 )
 
 const (
-	queryLabelPrefix      = "label_"
-	querySelector         = "selector"
-	queryPolicy    = "policy"
-	queryRuleDirection    = "ruleDirection"
-	queryRuleIndex        = "ruleIndex"
-	queryRuleEntity       = "ruleEntity"
+	queryLabelPrefix         = "label_"
+	querySelector            = "selector"
+	queryPolicy              = "policy"
+	queryRuleDirection       = "ruleDirection"
+	queryRuleIndex           = "ruleIndex"
+	queryRuleEntity          = "ruleEntity"
 	queryRuleNegatedSelector = "ruleNegatedSelector"
-	queryPageNum          = "page"
-	queryNumPerPage       = "maxItems"
-	queryEndpoint     = "endpoint"
-	queryUnmatched        = "unmatched"
-	queryTier             = "tier"
+	queryPageNum             = "page"
+	queryNumPerPage          = "maxItems"
+	queryEndpoint            = "endpoint"
+	queryUnmatched           = "unmatched"
+	queryTier                = "tier"
 
 	allResults     = "all"
 	resultsPerPage = 100
+
+	numURLSegmentsWithName = 3
 )
 
 var (
@@ -37,15 +41,24 @@ var (
 		" or " + queryUnmatched)
 	errorEndpointMultiParm = errors.New("specify only one of " + querySelector +
 		" or " + queryPolicy)
-	errorInvalidWEPName = errors.New("the workload endpoint name is not valid; it should be of the format " +
-		"<namespace>/<workload endpoint name>")
+	errorInvalidEndpointName = errors.New("the endpoint name is not valid; it should be of the format " +
+		"<HostEndpoint name> or <namespace>/<WorkloadEndpoint name>")
 	errorInvalidPolicyName = errors.New("the policy name is not valid; it should be of the format " +
-		"<namespace>/<workload endpoint name>")
+		"<GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>")
+	errorInvalidEndpointURL = errors.New("the URL does not contain a valid endpoint name; the final URL segments should " +
+		"be of the format <HostEndpoint name> or <namespace>/<WorkloadEndpoint name>")
+	errorInvalidPolicyURL = errors.New("the URL does not contain a valid endpoint name; the final URL segments should " +
+		"be of the format <GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>")
+	errorInvalidNodeURL = errors.New("the URL does not contain a valid node name; the final URL segments should " +
+		"be of the format <Node name>")
 )
 
 type Query interface {
+	Policy(w http.ResponseWriter, r *http.Request)
 	Policies(w http.ResponseWriter, r *http.Request)
+	Node(w http.ResponseWriter, r *http.Request)
 	Nodes(w http.ResponseWriter, r *http.Request)
+	Endpoint(w http.ResponseWriter, r *http.Request)
 	Endpoints(w http.ResponseWriter, r *http.Request)
 	Summary(w http.ResponseWriter, r *http.Request)
 }
@@ -56,6 +69,10 @@ func NewQuery(qi client.QueryInterface) Query {
 
 type query struct {
 	qi client.QueryInterface
+}
+
+func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
+	q.runQuery(w, r, client.QueryClusterReq{})
 }
 
 func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
@@ -73,20 +90,30 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 	if len(policies) > 0 {
 		policy = policies[0]
 	}
-	endpoints, err := q.getEndpoints(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	q.runQuery(w, r, client.QueryEndpointsReq{
+		Selector:            selector,
+		Policy:              policy,
+		RuleDirection:       r.URL.Query().Get(queryRuleDirection),
+		RuleIndex:           q.getInt(r, queryRuleIndex, 0),
+		RuleEntity:          r.URL.Query().Get(queryRuleEntity),
+		RuleNegatedSelector: q.getBool(r, queryRuleNegatedSelector),
+		Page:                q.getPage(r),
+	})
+}
+
+func (q *query) Endpoint(w http.ResponseWriter, r *http.Request) {
+	urlParts := strings.SplitN(r.URL.Path, "/", numURLSegmentsWithName)
+	if len(urlParts) != numURLSegmentsWithName {
+		http.Error(w, errorInvalidEndpointURL.Error(), http.StatusBadRequest)
+		return
+	}
+	endpoint, ok := q.getEndpointKeyFromCombinedName(urlParts[numURLSegmentsWithName-1])
+	if !ok {
+		http.Error(w, errorInvalidEndpointURL.Error(), http.StatusBadRequest)
 		return
 	}
 	q.runQuery(w, r, client.QueryEndpointsReq{
-		Selector: selector,
-		Endpoints: endpoints,
-		Policy: policy,
-		RuleDirection: r.URL.Query().Get(queryRuleDirection),
-		RuleIndex: q.getInt(r, queryRuleIndex, 0),
-		RuleEntity: r.URL.Query().Get(queryRuleEntity),
-		RuleNegatedSelector: q.getBool(r, queryRuleNegatedSelector),
-		Page: q.getPage(r),
+		Endpoint: endpoint,
 	})
 }
 
@@ -105,28 +132,50 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 	if len(endpoints) > 0 {
 		endpoint = endpoints[0]
 	}
-	policies, err := q.getPolicies(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	q.runQuery(w, r, client.QueryPoliciesReq{
 		Tier:      r.URL.Query().Get(queryTier),
 		Labels:    q.getLabels(r),
 		Endpoint:  endpoint,
-		Policies:  policies,
 		Unmatched: unmatched,
-		Page: q.getPage(r),
+		Page:      q.getPage(r),
 	})
 }
 
-func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
-	q.runQuery(w, r, client.QueryClusterReq{})
+func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
+	urlParts := strings.SplitN(r.URL.Path, "/", numURLSegmentsWithName)
+	if len(urlParts) != numURLSegmentsWithName {
+		http.Error(w, errorInvalidPolicyURL.Error(), http.StatusBadRequest)
+		return
+	}
+	policy, ok := q.getPolicyKeyFromCombinedName(urlParts[numURLSegmentsWithName-1])
+	if !ok {
+		http.Error(w, errorInvalidPolicyURL.Error(), http.StatusBadRequest)
+		return
+	}
+	q.runQuery(w, r, client.QueryPoliciesReq{
+		Policy: policy,
+	})
 }
 
 func (q *query) Nodes(w http.ResponseWriter, r *http.Request) {
 	q.runQuery(w, r, client.QueryNodesReq{
 		Page: q.getPage(r),
+	})
+}
+
+func (q *query) Node(w http.ResponseWriter, r *http.Request) {
+	urlParts := strings.SplitN(r.URL.Path, "/", numURLSegmentsWithName)
+	if len(urlParts) != numURLSegmentsWithName {
+		http.Error(w, errorInvalidNodeURL.Error(), http.StatusBadRequest)
+		return
+	}
+	node, ok := q.getNodeKeyFromCombinedName(urlParts[numURLSegmentsWithName-1])
+	if !ok {
+		http.Error(w, errorInvalidNodeURL.Error(), http.StatusBadRequest)
+		return
+	}
+	q.runQuery(w, r, client.QueryNodesReq{
+		Node: node,
 	})
 }
 
@@ -162,20 +211,11 @@ func (q *query) getEndpoints(r *http.Request) ([]model.Key, error) {
 	eps := r.URL.Query()[queryEndpoint]
 	reps := make([]model.Key, 0, len(eps))
 	for _, ep := range eps {
-		parts := strings.Split(ep, "/")
-		if len(parts) > 2 {
-			return nil, errorInvalidWEPName
-		} else if len(parts) == 1 {
-			reps = append(reps, model.ResourceKey{
-				Kind: v3.KindHostEndpoint,
-				Name: parts[0],
-			})
+		rep, ok := q.getEndpointKeyFromCombinedName(ep)
+		if !ok {
+			return nil, errorInvalidEndpointName
 		}
-		reps = append(reps, model.ResourceKey{
-			Kind:      v3.KindWorkloadEndpoint,
-			Namespace: parts[0],
-			Name:      parts[1],
-		})
+		reps = append(reps, rep)
 	}
 	return reps, nil
 }
@@ -184,22 +224,84 @@ func (q *query) getPolicies(r *http.Request) ([]model.Key, error) {
 	pols := r.URL.Query()[queryPolicy]
 	rpols := make([]model.Key, 0, len(pols))
 	for _, pol := range pols {
-		parts := strings.Split(pol, "/")
-		if len(parts) > 2 {
-			return nil, errorInvalidPolicyName
-		} else if len(parts) == 1 {
-			rpols = append(rpols, model.ResourceKey{
-				Kind: v3.KindGlobalNetworkPolicy,
-				Name: parts[0],
-			})
+		rpol, ok := q.getPolicyKeyFromCombinedName(pol)
+		if !ok {
+			return nil, errorInvalidEndpointName
 		}
-		rpols = append(rpols,  model.ResourceKey{
+		rpols = append(rpols, rpol)
+	}
+	return rpols, nil
+}
+
+func (q *query) getNameNamespaceFromCombinedName(combined string) ([]string, bool) {
+	parts := strings.Split(combined, "/")
+	for _, part := range parts {
+		if part == "" {
+			return nil, false
+		}
+	}
+	if len(parts) != 1 && len(parts) != 2 {
+		return nil, false
+	}
+	return parts, true
+}
+
+func (q *query) getPolicyKeyFromCombinedName(combined string) (model.Key, bool) {
+	logCxt := log.WithField("name", combined)
+	logCxt.Info("Extracting policy key from combined name")
+	parts, ok := q.getNameNamespaceFromCombinedName(combined)
+	if !ok {
+		logCxt.Info("Unable to extract name or namespace and name")
+		return nil, false
+	}
+	switch len(parts) {
+	case 1:
+		logCxt.Info("Returning GNP")
+		return model.ResourceKey{
+			Kind: v3.KindGlobalNetworkPolicy,
+			Name: parts[0],
+		}, true
+	case 2:
+		logCxt.Info("Returning NP")
+		return model.ResourceKey{
 			Kind:      v3.KindNetworkPolicy,
 			Namespace: parts[0],
 			Name:      parts[1],
-		})
+		}, true
 	}
-	return rpols, nil
+	return nil, false
+}
+
+func (q *query) getEndpointKeyFromCombinedName(combined string) (model.Key, bool) {
+	parts, ok := q.getNameNamespaceFromCombinedName(combined)
+	if !ok {
+		return nil, false
+	}
+	switch len(parts) {
+	case 1:
+		return model.ResourceKey{
+			Kind: v3.KindHostEndpoint,
+			Name: parts[0],
+		}, true
+	case 2:
+		return model.ResourceKey{
+			Kind:      v3.KindWorkloadEndpoint,
+			Namespace: parts[0],
+			Name:      parts[1],
+		}, true
+	}
+	return nil, false
+}
+
+func (q *query) getNodeKeyFromCombinedName(combined string) (model.Key, bool) {
+	parts, ok := q.getNameNamespaceFromCombinedName(combined)
+	if !ok || len(parts) != 1 {
+		return nil, false
+	}
+	return model.ResourceKey{
+		Kind: v3.KindNode,
+		Name: parts[0],
+	}, true
 }
 
 func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}) {

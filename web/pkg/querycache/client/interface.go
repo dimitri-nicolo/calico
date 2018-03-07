@@ -37,6 +37,9 @@ type QueryClusterResp struct {
 }
 
 type QueryNodesReq struct {
+	// Queries
+	Node model.Key
+
 	// Filters
 	Page *Page
 }
@@ -58,11 +61,11 @@ type QueryPoliciesReq struct {
 	Endpoint  model.Key
 	Unmatched bool
 	Labels    map[string]string
-	Policies  []model.Key //TODO
+	Policy    model.Key
 
 	// Filters
-	Page      *Page
-	Tier      string
+	Page *Page
+	Tier string
 }
 
 type QueryPoliciesResp struct {
@@ -75,10 +78,10 @@ type Policy struct {
 	Name                 string          `json:"name"`
 	Namespace            string          `json:"namespace,omitempty"`
 	Tier                 string          `json:"tier"`
-	Ingress              []RuleDirection `json:"ingress"`
-	Egress               []RuleDirection `json:"egress"`
 	NumWorkloadEndpoints int             `json:"numWorkloadEndpoints"`
 	NumHostEndpoints     int             `json:"numHostEndpoints"`
+	Ingress              []RuleDirection `json:"ingressRules"`
+	Egress               []RuleDirection `json:"egressRules"`
 }
 
 type RuleDirection struct {
@@ -104,17 +107,17 @@ type QueryEndpointsReq struct {
 	RuleEntity          string
 	RuleNegatedSelector bool
 	Selector            string
-	Endpoints           []model.Key  // TODO
+	Endpoint            model.Key
 
 	// Filters
-	Node                string   // TODO
-	Page                *Page
+	Node string
+	Page *Page
 }
 
 const (
-	RuleDirectionIngress = "ingress"
-	RuleDirectionEgress = "egress"
-	RuleEntitySource = "source"
+	RuleDirectionIngress  = "ingress"
+	RuleDirectionEgress   = "egress"
+	RuleEntitySource      = "source"
 	RuleEntityDestination = "destination"
 )
 
@@ -134,11 +137,18 @@ type PolicyCount struct {
 }
 
 type Endpoint struct {
-	Name                     string `json:"name"`
-	Namespace                string `json:"namespace,omitempty"`
-	Kind                     string `json:"kind"`
-	NumGlobalNetworkPolicies int    `json:"numGlobalNetworkPolicies"`
-	NumNetworkPolicies       int    `json:"numNetworkPolicies"`
+	Kind                     string            `json:"kind"`
+	Name                     string            `json:"name"`
+	Namespace                string            `json:"namespace,omitempty"`
+	Node                     string            `json:"node"`
+	Workload                 string            `json:"workload"`
+	Orchestrator             string            `json:"orchestrator"`
+	Pod                      string            `json:"pod"`
+	InterfaceName            string            `json:"interfaceName"`
+	IPNetworks               []string          `json:"ipNetworks"`
+	Labels                   map[string]string `json:"labels"`
+	NumGlobalNetworkPolicies int               `json:"numGlobalNetworkPolicies"`
+	NumNetworkPolicies       int               `json:"numNetworkPolicies"`
 }
 
 type Page struct {

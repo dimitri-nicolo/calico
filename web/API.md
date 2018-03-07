@@ -8,30 +8,55 @@ targeted at internal use (cnx-manager/webapp only).
 * [Version](#version)
 * [Summary](#summary)
 * [Policies](#policies)
-  * [Global Network Policy](#globalnetworkpolicies)
-  * [Network Policy](#networkpolicies)
 * [Endpoints](#endpoints)
-  * [Workload Endpoints](#workload-endpoints)
-  * [Host Endpoints](#host-endpoints)
 * [Nodes](#nodes)
 
 ### General API Principles
 
 1. All APIS are read-only and *only* support the GET method.
-1. There is currently no pagination available. The API will return the first
-   `n` matching policies. Because of this behaviour, all APIs will return a
-   `count` field that that gives the total count and the actual entries will
-    be limited to `n`.
-
-TODO(doublek):
-1. What is the value of `n`.
+1. Pagination is available on all query URLs.  The query parameters are:
+- `page`
+  - page number
+  - defaults to 0 if not specified
+- `maxItems`
+  - max number of items to return per page
+  - defaults to 100
+  - a value of `all` may be used to return all items at once.
 
 ### Version
 
 Returns the version of `calicoqweb`.
 
+#### URL
+
 ```
 http://host:port/base/version
+```
+
+#### Query Parameters
+
+None supported.
+
+#### Response
+
+Returns a JSON object with the following fields.
+
+| Field | Description | Scheme |
+| ----- | ----------- | ------ |
+| version | The version | string |
+| buildDate | The build date | string |
+| gitTagRef | The git tag reference | string |
+| gitCommit | The git commit hash | string |
+
+#### Examples
+
+```
+{
+  "version": "v2.0.0-cnx-rc1-33-g0fa9177-dirty",
+  "buildDate": "2018-03-07T19:44:50+0000",
+  "gitTagRef": "v2.0.0-cnx-rc1-33-g0fa9177",
+  "gitCommit": "0fa9177"
+}
 ```
 
 ### Summary
@@ -43,12 +68,14 @@ UI Req:
 packet/connection statistics, the dashboard contains a panel to show total
 policies/endpoints and nodes.
 
+#### URL
+
 ```
 http://host:port/base/summary
 ```
 
-TODO(doublek):
-1. The dashboard requires unused policy count and denying policy count. We could include unused here?
+TODO(doublek/rlb):
+1. Include unused policy count and denying policy count.
 
 #### Query Parameters
 
@@ -60,18 +87,37 @@ Returns a JSON object with the following fields.
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| numGlobalNetworkPolicies | Count of globalnetworkpolicies | number |
-| numNetworkPolicies | Count of (namespaced) networkpolicies | number |
-| numWorkloadEndpoints | Count of workload endpoints | number |
-| numUnlabelledWorkloadEndpoints | Count of workload endpoints that do not have a label associated | number |
-| numUnlabelledHostEndpoints | Count of host endpoints that do not have a label associated | number |
-| numNodesWithNoHostEndpoints | Count of nodes that do not have any host endpoints configured | number |
-| numHostEndpoints | Count of host endpoints | number |
-| numNodes | Count of nodes | number |
+| numGlobalNetworkPolicies | Count of GlobalNetworkPolicy resources | number |
+| numNetworkPolicies | Count of (namespaced) NetworkPolicy resources | number |
+| numHostEndpoints | Count of HostEndpoint resources | number |
+| numWorkloadEndpoints | Count of WorkloadEndpoint resources | number |
+| numUnlabelledWorkloadEndpoints | Count of WorkloadEndpoint resources that do not have any explicitly configured labels | number |
+| numUnlabelledHostEndpoints | Count of host endpoints that do not have a any explicitly configured labels | number |
+| numNodes | Count of Nodes | number |
+| numNodesWithNoEndpoints | Count of Nodes that do not have any HostEndpoint or WorkloadEndpoint resources configured | number |
+| numNodesWithNoWorkloadEndpoints | Count of Nodes that do not have any WorkloadEndpoint resources configured | number |
+| numNodesWithNoHostEndpoints | Count of Nodes that do not have any HostEndpoint resources configured | number |
 
 NOTE:
 1. To get the total endpoint count to for this policy, sum `numWorkloadEndpoints` and `numHostEndpoints`.
 1. `numNodesWithNoHostEndpoints` is loosely equivalent to "Unprotected Nodes"
+
+#### Examples Response
+
+```
+{
+  "numGlobalNetworkPolicies": 1,
+  "numNetworkPolicies": 3,
+  "numHostEndpoints": 3,
+  "numWorkloadEndpoints": 5,
+  "numUnlabelledWorkloadEndpoints": 1,
+  "numUnlabelledHostEndpoints": 1,
+  "numNodes": 4,
+  "numNodesWithNoEndpoints": 1,
+  "numNodesWithNoWorkloadEndpoints": 2,
+  "numNodesWithNoHostEndpoints": 2
+}
+```
 
 ### Policies
 
@@ -91,67 +137,87 @@ rule.
 traffic seen by the system but by examining policy selectors and such.
 
 Design Note:
-1. The API is split into two, globalnetworkpolicies and networkpolicies to keep
-   close with how the AAPI server provides APIs.
-1. However, in the calicoqweb implementation, we will not provide a per namespace
-   resource API. Instead the namespace will be included as part of the query
-   parameter.
+1. A single endpoint is used to query both NetworkPolicy and GlobalNetworkPolicy resources.
 
-#### GlobalNetworkPolicies
+#### URL: exact get for GlobalNetworkPolicy
 
 ```
-http://host:port/base/globalnetworkpolicies/{name}
+http://host:port/base/policies/{name}
 ```
 
-- `{name}` is optional and omitting it means return all GlobalNetworkPolicies
+No query parameters supported for this URL format.
 
-##### Query Parameters
+#### URL: exact get for (namespaced) NetworkPolicy
+
+```
+http://host:port/base/policies/{namespace}/{name}
+```
+
+No query parameters supported for this URL format.
+
+#### URL: query
+
+```
+http://host:port/base/policies
+```
+
+#### Query Parameters
 
 | Name | Description | Type | Repeated | Required |
 | ---- | ----------- | ---- | -------- | -------- |
-| tier | Get globalnetworkpolicies that are in a tier | string | no | no |
-| unmatched | Get globalnetworkpolicies whose selectors do not match any endpoints | boolean | no | no |
-| workloadEndpoint | Get globalnetworkpolicies that match a workload endpoint | string | no | no |
-| hostEndpoint | Get globalnetworkpolicies that match a host endpoint | string | no | no |
-| selector | Get globalnetworkpolicies that match a selector | [selector expression](#selectors) | yes | no |
+| tier | Get policies that are in a tier | string | no | no |
+| unmatched | Get policies whose selectors do not match any endpoints | boolean | no | no |
+| endpoint | Get policies that match an endpoint | [endpoint name](#endpoint-name) | no | no |
+| label_* | Get policies that match a set of labels | [labels](#labels) | yes | no |
 
-- When no query parameter is provided, results should be returned for all tiers.
+- When no query parameter is provided, data for all policies across all tiers will be returned.
 - Multiple query parameters can be combined together (read exceptions below) and
   they will be treated as a logical AND. Results matching all the query
   parameters should be returned.
-- The `workloadEndpoint` and `hostEndpoint` query parameters cannot be combined
+- The `workloadEndpoint`, `hostEndpoint` and `unmatched` query parameters cannot be combined
   in a single query.
 - When the `tier` is specified, results will be limited to the specified `tier`.
 
-##### Selectors
+##### Endpoint name
 
-The query parameter `selector` has to be in the policy selector format (Refer
-to policy resource docs).
-The `selector` field can also be repeated multiple times and they will be
-combined using logical AND (`&&`). Only policies that match all provided
-selectors will be returned.
+The name of an endpoint may be specified as a query parameter. Policies whose main selector
+matches that endpoint.
+
+For a WorkloadEndpoint use the name format `{namespace}/{name}`.
+
+##### Labels
+
+It is possible to query the policies whose main selector will match a set of labels. Specify each label as a
+separate query parameter prefixed with `label_`.
+
+If labels are specified in addition to an endpoint, the set of policies returned will be
+those that match both the endpoint and match the supplied set of labels.
+
+Use the label `projectcalico.org/namespace` and `projectcalico.org/orchestrator` to specify the 
+namespace and orchestrator of the endpoint being emulated by the set of labels.
 
 #### Response
-
-TODO(doublek):
-1. Note on sorting order
 
 Returns a JSON object with the following fields.
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
 | count | Count of policies matching the request | number |
-| items | A list of globalnetworkpolicies that match the query | list of [global network policy response objects](#global-network-policy-response-object)|
+| items | A list of policies that match the query | list of [policy response objects](#policy-response-object)|
 
-##### Global Network Policy Response Object
+Items will be sorted by the tier and policy `Order` parameter, i.e. in the order the policy is applied to the
+endpoints.
+
+##### Policy Response Object
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| name | The name of the globalnetworkpolicy | string |
-| tier | The tier the globalnetworkpolicy belongs to | string |
-| numWorkloadEndpoints | The number of workload endpoints matching the globalnetworkpolicy | number |
-| numHostEndpoints | The number of host endpoints matching the globalnetworkpolicy | number |
-| numNodes | The number of nodes this globalnetworkpolicy is applied | number |
+| kind | The kind of policy | GlobalNetworkPolicy or NetworkPolicy |
+| name | The name of the policy | string |
+| namespace | The namespace (only for NetworkPolicy) | string |
+| tier | The Tier the policy is in | string |
+| numWorkloadEndpoints | The number of WorkloadEndpoint resources matching the policy | number |
+| numHostEndpoints | The number of HostEndpoint resources matching the policy | number |
 | ingressRules | List of ingress rules | list of [rule](#rule-response-object) |
 | egressRules | List of egress rules | list of [rule](#rule-response-object) |
 
@@ -160,89 +226,292 @@ NOTE:
    - It is prefixed with the tier name.
 1. To get the total endpoint count to for this policy, sum
    `numWorkloadEndpoints` and `numHostEndpoints`.
+   
+TODO(rlb):  Need numNodes that policy is applied to.
+
+TODO(rlb):  Maybe need indication of whether actual policy will apply to an endpoint (e.g. if there are
+            multiple matching policies within the same tier, or if none of the rules in the previous tier 
+            have a pass action)
 
 ##### Rule Response Object
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| numWorkloadEndpoints | The number of workload endpoints matching the rule selector (if any) | number |
-| numHostEndpoints | The number of host endpoints matching the rule selector (if any) | number |
+| source | The source entity | [rule entity](#rule-entity-object) |
+| destination | The destination entity | [rule entity](#rule-entity-object) |
 
-#### NetworkPolicies
-
-```
-http://host:port/base/networkpolicies/{name}
-```
-
-- `{name}` is optional and omitting it means return all NetworkPolicies
-  (including Kubernetes Network Policies).
-- When provided `{name}` should be prefixed with `knp.default.` for
-  Kubernetes Network Policy or with the correct tier name.
-
-#### Query Parameters
-
-| Name | Description | Type | Repeated | Required |
-| ---- | ----------- | ---- | -------- | -------- |
-| namespace | Get networkpolicies that are in a namespace | string | no | no |
-| unused | Get unused networkpolicies | boolean | no | no |
-| workloadEndpoint | Get networkpolicies that match a workload endpoint | string | no | no |
-| hostEndpoint | Get networkpolicies that match a host endpoint | string | no | no |
-| selector | Get networkpolicies that match a selector | [selector expression](#selectors) | yes | no |
-
-- When no query parameter is provided, results should be returned for all tiers and all namespaces.
-- Multiple query parameters can be combined together and they will be treated
-  as a logical AND. Results matching all the query parameters should be
-  returned.
-- The `workloadEndpoint` and `hostEndpoint` query parameters cannot be combined
-  in a single query.
-- When the `tier` is specified, results will be limited to the specified `tier`.
-
-- TODO(doublek): What to do when namespace is not present in the query parameter.
-  Do we return all or default to `default`. In the latter case, then namespace
-  should be in the path.
-
-#### Response
-
-TODO(doublek):
-1. Note on sorting order
-
-Returns a JSON object with the following fields.
+##### Rule Entity Object
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| count | Count of policies matching the request | number |
-| items | A list of policies that match the query | list of [network policy response objects](#network-policy-response-object)|
+| selector | The rule selector | [rule endpoints](#rule-endpoints-object) |
+| notSelector | The rule negated selector | [rule endpoints](#rule-endpoints-object) |
 
-##### Network Policy Response Object
-
-| Field | Description | Scheme |
-| ----- | ----------- | ------ |
-| name | The name of the policy | string |
-| namespace | The namespace the policy belongs to | string |
-| tier | The tier the policy belongs to | string |
-| numWorkloadEndpoints | The number of workload endpoints matching the policy | number |
-| numHostEndpoints | The number of host endpoints matching the policy | number |
-| numNodes | The number of nodes this policy is applied | number |
-| ingressRules | List of ingress rules | list of [rule](#rule-response-object) |
-| egressRules | List of egress rules | list of [rule](#rule-response-object) |
-
-NOTE:
-1. The `name` parameter is exactly the same as in the v3 client.
-   - It is prefixed with `knp.default.` for Kubernetes network policy,
-   - It is prefixed with the tier name otherwise.
-1. To get the total endpoint count to for this policy, sum
-   `numWorkloadEndpoints` and `numHostEndpoints`.
-
-##### Rule Response Object
+##### Rule Endpoints Object
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| numWorkloadEndpoints | The number of workload endpoints matching the rule selector (if any) | number |
-| numHostEndpoints | The number of host endpoints matching the rule selector (if any) | number |
+| numWorkloadEndpoints | The number of WorkloadEndpoint resources matching the rule selector | number |
+| numHostEndpoints | The number of HostEndpoint resources matching the rule selector | number |
 
 #### Example
 
-TODO(doublek)
+```
+# Query by endpoint, filtering on tier, page 0, 1 item per page.
+curl "localhost:8080/policies?endpoint=namespace1/rack1--host1-k8s-pod.name-eth0&tier=tier2&page=0&maxItems=1"
+{
+  "count": 1,
+  "items": [
+    {
+      "kind": "NetworkPolicy",
+      "name": "tier2.sad-pandas",
+      "namespace": "namespace1",
+      "tier": "tier2",
+      "numWorkloadEndpoints": 1,
+      "numHostEndpoints": 0,
+      "ingressRules": [
+        {
+          "source": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          },
+          "destination": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          }
+        }
+      ],
+      "egressRules": [
+        {
+          "source": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          },
+          "destination": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+# Query by labels
+curl "localhost:8080/policies?label_panda=reallyverysad&label_projectcalico.org/namespace=namespace1"
+{
+  "count": 1,
+  "items": [
+    {
+      "kind": "NetworkPolicy",
+      "name": "tier3.another-sad-panda",
+      "namespace": "namespace1",
+      "tier": "tier3",
+      "numWorkloadEndpoints": 1,
+      "numHostEndpoints": 0,
+      "ingressRules": [
+        {
+          "source": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          },
+          "destination": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          }
+        }
+      ],
+      "egressRules": [
+        {
+          "source": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          },
+          "destination": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+# Query a specific GlobalNetworkPolicy resource
+curl "localhost:8080/policies/tier1.host-eps"
+{
+  "count": 1,
+  "items": [
+    {
+      "kind": "GlobalNetworkPolicy",
+      "name": "tier1.host-eps",
+      "tier": "tier1",
+      "numWorkloadEndpoints": 0,
+      "numHostEndpoints": 2,
+      "ingressRules": [
+        {
+          "source": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          },
+          "destination": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          }
+        }
+      ],
+      "egressRules": [
+        {
+          "source": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          },
+          "destination": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+# Query a specific (namespaced) NetworkPolicy resource
+curl "localhost:8080/policies/namespace1/tier3.very-sad-pandas"
+{
+  "count": 1,
+  "items": [
+    {
+      "kind": "NetworkPolicy",
+      "name": "tier3.very-sad-pandas",
+      "namespace": "namespace1",
+      "tier": "tier3",
+      "numWorkloadEndpoints": 0,
+      "numHostEndpoints": 0,
+      "ingressRules": [
+        {
+          "source": {
+            "selector": {
+              "numWorkloadEndpoints": 1,
+              "numHostEndpoints": 0
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          },
+          "destination": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          }
+        }
+      ],
+      "egressRules": [
+        {
+          "source": {
+            "selector": {
+              "numWorkloadEndpoints": 1,
+              "numHostEndpoints": 0
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          },
+          "destination": {
+            "selector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            },
+            "notSelector": {
+              "numWorkloadEndpoints": 5,
+              "numHostEndpoints": 3
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
 
 ### Endpoints
 
@@ -254,43 +523,56 @@ filter by a policy.
 about the endpoint such as IP addresses, labels and all policies that apply to this endpoint.
 
 Design Note:
-1. The API is split into two, workloadendpoints and hostendpoints to keep
-   close with how the AAPI server may provide APIs in the future.
-1. However, in the calicoqweb implementation, we will not provide a per namespace
-   resource API. Instead the namespace will be included as part of the query
-   parameter.
-1. Clicking on a endpoint, expands to provide additional details about the node
-   such as endpoints and IP addresses. On this event, the web client is
-   expected to issue [endpoints](#endpoints) query with the appropriate
-   `node` query parameter filled in.
+1. A single endpoint is used to query both HostEndpoint and WorkloadEndpoint resources.
 
-#### Workload Endpoints
+#### URL: exact get for HostEndpoint
 
 ```
-http://host:port/base/workloadendpoints/{name}
+http://host:port/base/endpoints/{name}
 ```
 
-- `{name}` is optional and omitting it means return all WorkloadEndpoints matching any other query parameter.
+No query parameters supported for this URL format.
 
-TODO(doublek):
-1. Note on sorting order - instead of returning endpoints, should we return
-   a list of nodes, each containing endpoints and hence grouping by nodes?
+#### URL: exact get for (namespaced) WorkloadEndpoint
+
+```
+http://host:port/base/endpoints/{namespace}/{name}
+```
+
+No query parameters supported for this URL format.
+
+#### URL: query
+
+```
+http://host:port/base/endpoints
+```
 
 #### Query Parameters
 
-| Name | Description | Type | Repeated | Required |
+| Name | Description | Schema | Repeated | Required |
 | ---- | ----------- | ---- | -------- | -------- |
-| namespace | Get endpoints that are in a namespace | string | no | no |
-| node | Get endpoints that the endpoint resides in | string | no | no |
-| policy | Get endpoints that the a policy applies on | string | no | no |
-| selector | Get workloadendpoints that match a selector | [selector expression](#selectors) | yes | no |
-| namespaceSelector | Get workloadendpoints that belong in a namespace | [selector expression](#selectors) | yes | no |
+| node | Filter endpoints that are on a specific node. | string | no | no |
+| policy | Get endpoints that the policy applies to. | string | no | no |
+| ruleDirection | Specify the direction of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | ingress or egress | no | no |
+| ruleIndex | Specify the direction of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | int | no | no |
+| ruleEntity | Specify the entity of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | source or destination | no | no |
+| ruleNegatedSelector | Specify when the enumerate the selector or negated selector of the specified rule. Only valid when policy is specified, all other rule options should also be specified. | string | no | no |
+| selector | Get endpoints that match a selector | [selector expression](#selectors) | no | no |
 
 - When no query parameter is provided, results should be returned for all namespaces.
-- Multiple query parameters can be combined together and they will be treated
-  as a logical AND. Results matching all the query parameters should be
-  returned.
+- A selector may not be specified if the policy or policy rule are specified.
+- To enumerate the endpoints associated with a specific policy rule, include each of the rule* query parameters to index the actual
+  rule selector that you are enumerating.
 - `namespaceSelector` is meant to be used when dealing with `NetworkPolicy` rules.
+
+TODO (rlb): Add namespace option
+
+TODO (rlb): Add namespace selector option
+
+TODO (rlb): Maybe add multiple nodes options
+
+TODO (rlb): Rather than specifying the rule selector by indexing into the policy rules, we could just use the Namespace, NamespaceSelector, Selector etc.
+  to calculate the effective selector.
 
 #### Response
 
@@ -298,71 +580,200 @@ Returns a JSON object with the following fields.
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| count | Count of workloadendpoints matching the request | number |
-| items | A list of workloadendpoints that match the query | list of [workloadendpoint response objects](#workload-endpoint-response-object) |
+| count | Count of endpoints matching the request | number |
+| items | A list of endpoints that match the query | list of [endpoint response objects](#endpoint-response-object) |
 
-##### Workload Endpoint Response Object
+Items will be sorted by name and then namespace.
+
+##### Endpoint Response Object
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| name | The name of the the endpoint | string |
+| kind | The kind of endpoint | HostEndpoint or WorkloadEndpoint |
+| name | The name of the endpoint | string |
+| namespace | The namespace (only for WorkloadEndpoint) | string |
+| node | The node that the endpoint resides in | string |
+| numGlobalNetworkPolicies | The number of GlobalNetworkPolicies that match the endpoint | number |
+| numNetworkPolicies | The number of NetworkPolicies that match the endpoint | number |
 | workload | The name of the workload to which this endpoint belongs | string |
 | orchestrator | The orchestrator that created this endpoint | string |
 | pod | The kubernetes pod name (if orchestrator value is `k8s`) | string |
-| ipNetworks | List of CIDRs assigned to this endpoint | list of strings |
-| labels | List of labels that applies to this endpoint | list of key-value pairs |
-| node | The node that the endpoint resides in | string |
+| ipNetworks | List of CIDRs assigned to this endpoint. For HostEndpoints, this is the expected list of IP Addresses if configured. | list of strings |
+| labels | List of labels that applies to this endpoint | map of key-value pairs |
 | interfaceName | The name of the interface attached to this endpoint | string |
-| numPolicies | The number of policies that are applied to this endpoints | number |
 
 #### Example
 
-TODO(doublek)
-
-#### Host Endpoints
-
 ```
-http://host:port/base/hostendpoints/{name}
+# Query the endpoints that match the main policy selector for the Network Policy tier2.sad-pandas
+curl "localhost:8080/endpoints?policy=namespace1/tier2.sad-pandas"
+{
+  "count": 1,
+  "items": [
+    {
+      "kind": "WorkloadEndpoint",
+      "name": "rack1--host1-k8s-pod.name-eth0",
+      "namespace": "namespace1",
+      "node": "rack1-host1",
+      "workload": "default.frontend-m33p",
+      "orchestrator": "k8s",
+      "pod": "pod.name",
+      "interfaceName": "cali0ef24ba",
+      "ipNetworks": [
+        "192.168.9.0/32"
+      ],
+      "labels": {
+        "app": "frontend",
+        "projectcalico.org/namespace": "namespace1",
+        "projectcalico.org/orchestrator": "k8s"
+      },
+      "numGlobalNetworkPolicies": 0,
+      "numNetworkPolicies": 1
+    }
+  ]
+}
+
+# Return the endpoints that match the (non-negated) selector in the policy tier2.sad-pandas, in the first egress source 
+# rule. Return a max of two results (out of a total of 8)
+curl "localhost:8080/endpoints?policy=namespace1/tier2.sad-pandas&ruleDirection=egress&ruleIndex=0&ruleEntity=source&negatedSelector=false&maxItems=2"
+{
+  "count": 8,
+  "items": [
+    {
+      "kind": "HostEndpoint",
+      "name": "rack1--host1-endpoint1",
+      "node": "rack1-host1",
+      "workload": "",
+      "orchestrator": "",
+      "pod": "",
+      "interfaceName": "eth0",
+      "ipNetworks": [
+        "1.2.3.4"
+      ],
+      "labels": {
+        "host": ""
+      },
+      "numGlobalNetworkPolicies": 1,
+      "numNetworkPolicies": 0
+    },
+    {
+      "kind": "WorkloadEndpoint",
+      "name": "rack1--host1-k8s-pod.name-eth0",
+      "namespace": "namespace1",
+      "node": "rack1-host1",
+      "workload": "default.frontend-m33p",
+      "orchestrator": "k8s",
+      "pod": "pod.name",
+      "interfaceName": "cali0ef24ba",
+      "ipNetworks": [
+        "192.168.9.0/32"
+      ],
+      "labels": {
+        "app": "frontend",
+        "projectcalico.org/namespace": "namespace1",
+        "projectcalico.org/orchestrator": "k8s"
+      },
+      "numGlobalNetworkPolicies": 0,
+      "numNetworkPolicies": 1
+    }
+  ]
+}
+
+# Return endpoints matching the selector "has(host)"
+curl localhost:8080/endpoints?selector=has\(host\)
+{
+  "count": 2,
+  "items": [
+    {
+      "kind": "HostEndpoint",
+      "name": "rack1--host1-endpoint1",
+      "node": "rack1-host1",
+      "workload": "",
+      "orchestrator": "",
+      "pod": "",
+      "interfaceName": "eth0",
+      "ipNetworks": [
+        "1.2.3.4"
+      ],
+      "labels": {
+        "host": ""
+      },
+      "numGlobalNetworkPolicies": 1,
+      "numNetworkPolicies": 0
+    },
+    {
+      "kind": "HostEndpoint",
+      "name": "rack1--host2-endpoint1",
+      "node": "rack1-host2",
+      "workload": "",
+      "orchestrator": "",
+      "pod": "",
+      "interfaceName": "eth0",
+      "ipNetworks": [
+        "1.2.3.5"
+      ],
+      "labels": {
+        "host": ""
+      },
+      "numGlobalNetworkPolicies": 1,
+      "numNetworkPolicies": 0
+    }
+  ]
+}
+
+# Return a specific WorkloadEndpoint
+curl localhost:8080/endpoints/namespace1/rack1--host1-k8s-pod.name-eth0
+{
+  "count": 1,
+  "items": [
+    {
+      "kind": "WorkloadEndpoint",
+      "name": "rack1--host1-k8s-pod.name-eth0",
+      "namespace": "namespace1",
+      "node": "rack1-host1",
+      "workload": "default.frontend-m33p",
+      "orchestrator": "k8s",
+      "pod": "pod.name",
+      "interfaceName": "cali0ef24ba",
+      "ipNetworks": [
+        "192.168.9.0/32"
+      ],
+      "labels": {
+        "app": "frontend",
+        "projectcalico.org/namespace": "namespace1",
+        "projectcalico.org/orchestrator": "k8s"
+      },
+      "numGlobalNetworkPolicies": 0,
+      "numNetworkPolicies": 1
+    }
+  ]
+}
+
+# Return a specific HostEndpoint
+curl localhost:8080/endpoints/rack1--host2-endpoint1
+{
+  "count": 1,
+  "items": [
+    {
+      "kind": "HostEndpoint",
+      "name": "rack1--host2-endpoint1",
+      "node": "rack1-host2",
+      "workload": "",
+      "orchestrator": "",
+      "pod": "",
+      "interfaceName": "eth0",
+      "ipNetworks": [
+        "1.2.3.5"
+      ],
+      "labels": {
+        "host": ""
+      },
+      "numGlobalNetworkPolicies": 1,
+      "numNetworkPolicies": 0
+    }
+  ]
+}
 ```
-
-- `{name}` is optional and omitting it means return all HostEndpoints (filtered by any other query parameter).
-
-#### Query Parameters
-
-| Name | Description | Type | Repeated | Required |
-| ---- | ----------- | ---- | -------- | -------- |
-| node | Get hostendpoints that the resides on a node | string | no | no |
-| policy | Get hostendpoints that the a policy applies on | string | no | no |
-| selector | Get hostendpoints that match a selector | [selector expression](#selectors) | yes | no |
-
-- When no query parameter is provided, results should returned all host endpoints.
-- Multiple query parameters can be combined together and they will be treated
-  as a logical AND. Results matching all the query parameters should be
-  returned.
-
-#### Response
-
-Returns a JSON object with the following fields.
-
-| Field | Description | Scheme |
-| ----- | ----------- | ------ |
-| count | Count of hostendpoints matching the request | number |
-| items | A list of hostendpoints that match the query | list of [hostendpoint response objects](#host-endpoint-response-object) |
-
-##### Host Endpoint Response Object
-
-| Field | Description | Scheme |
-| ----- | ----------- | ------ |
-| name | The name of the the endpoint | string |
-| labels | List of labels that applies to this endpoint | list of key-value pairs |
-| expectedIps | List of expected IPs associated with this interface | list of strings |
-| node | The node that the endpoint resides in | string |
-| interfaceName | The name of the interface attached to this endpoint | string |
-| numPolicies | The number of policies that are applied to this endpoints | number |
-
-#### Example
-
-TODO(doublek)
 
 ### Nodes
 
@@ -380,15 +791,21 @@ Design Note:
    expected to issue [endpoints](#endpoints) query with the appropriate
    `node` query parameter filled in.
 
+#### URL: exact get for Node
+
 ```
 http://host:port/base/nodes/{name}
 ```
 
-- `{name}` is optional and omitting it means return all Nodes
+#### URL: query
+
+```
+http://host:port/base/nodes
+```
 
 #### Query Parameters
 
-There are currently no supported query parameters for the `nodes` API.
+The only supported query parameters are the paging parameters.
 
 #### Response
 
@@ -404,9 +821,48 @@ Returns a JSON object with the following fields.
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
 | name | Name of the node | string |
+| bgpIPAddresses | The configured BGP IP addresses for this node | list of string |
 | numWorkloadEndpoints | The number of workload endpoints residing on this node | number |
 | numHostEndpoints | The number of host endpoints present on this node | number |
 
 #### Example
 
-TODO(doublek)
+```
+# Query all nodes, max 2 per page, second page (indexing starts at 0).
+curl "localhost:8080/nodes?maxItems=2&page=1"
+{
+  "count": 4,
+  "items": [
+    {
+      "name": "rack1-host3",
+      "bgpIPAddresses": [
+        "1.2.3.4",
+        "aa:bb:cc::"
+      ],
+      "numWorkloadEndpoints": 0,
+      "numHostEndpoints": 0
+    },
+    {
+      "name": "rack2-host1",
+      "bgpIPAddresses": null,
+      "numWorkloadEndpoints": 3,
+      "numHostEndpoints": 0
+    }
+  ]
+}
+
+# Query specific node
+curl localhost:8080/nodes/rack1-host1
+{
+  "count": 1,
+  "items": [
+    {
+      "name": "rack1-host1",
+      "bgpIPAddresses": null,
+      "numWorkloadEndpoints": 2,
+      "numHostEndpoints": 1
+    }
+  ]
+}
+
+```

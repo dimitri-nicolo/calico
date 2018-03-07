@@ -2,6 +2,7 @@ package api
 
 type Endpoint interface {
 	GetResource() Resource
+	GetNode() string
 	GetPolicyCounts() PolicyCounts
 }
 

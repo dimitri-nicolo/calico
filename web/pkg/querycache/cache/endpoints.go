@@ -87,7 +87,10 @@ func (c *endpointsCache) OnUpdate(update dispatcherv1v3.Update) {
 }
 
 func (c *endpointsCache) GetEndpoint(key model.Key) api.Endpoint {
-	return c.getEndpoint(key)
+	if ep := c.getEndpoint(key); ep != nil {
+		return ep
+	}
+	return nil
 }
 
 func (c *endpointsCache) PolicyEndpointMatch(matchType labelhandler.MatchType, selector labelhandler.SelectorID, epKey model.Key) {
@@ -150,6 +153,16 @@ func (e *endpointData) GetPolicyCounts() api.PolicyCounts {
 
 func (e *endpointData) GetResource() api.Resource {
 	return e.resource
+}
+
+func (e *endpointData) GetNode() string {
+	switch r := e.resource.(type) {
+	case *v3.WorkloadEndpoint:
+		return r.Spec.Node
+	case *v3.HostEndpoint:
+		return r.Spec.Node
+	}
+	return ""
 }
 
 func (e *endpointData) unlabelled() bool {

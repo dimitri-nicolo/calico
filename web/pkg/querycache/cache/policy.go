@@ -13,7 +13,6 @@ import (
 	"github.com/tigera/calicoq/web/pkg/querycache/api"
 	"github.com/tigera/calicoq/web/pkg/querycache/dispatcherv1v3"
 	"github.com/tigera/calicoq/web/pkg/querycache/labelhandler"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type PolicyCache interface {
@@ -160,16 +159,15 @@ func (c *policyCache) TotalPolicies() api.PolicyCounts {
 }
 
 func (c *policyCache) GetPolicy(key model.Key) api.Policy {
-	return c.getPolicy(key)
+	if policy := c.getPolicy(key); policy != nil {
+		return policy
+	}
+	return nil
 }
 
 func (c *policyCache) GetTier(key model.Key) api.Tier {
-	tk, ok := key.(model.TierKey)
-	if !ok {
-		return nil
-	}
 	c.orderPolicies()
-	return c.tiers[tk.Name]
+	return c.tiers[key.(model.ResourceKey).Name]
 }
 
 func (c *policyCache) GetOrderedPolicies(keys set.Set) []api.Tier {
@@ -274,8 +272,14 @@ func (d *policyData) GetResource() api.Resource {
 	return d.resource
 }
 
-func (d *policyData) GetName() string {
-	return d.resource.(v1.ObjectMetaAccessor).GetObjectMeta().GetName()
+func (d *policyData) GetTier() string {
+	switch r := d.resource.(type) {
+	case *v3.NetworkPolicy:
+		return r.Spec.Tier
+	case *v3.GlobalNetworkPolicy:
+		return r.Spec.Tier
+	}
+	return ""
 }
 
 func (d *policyData) getKey() model.Key {

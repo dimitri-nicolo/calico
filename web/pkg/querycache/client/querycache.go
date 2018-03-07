@@ -176,7 +176,40 @@ func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{
 	}
 }
 
+func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) (*QueryClusterResp, error) {
+	pols := c.policies.TotalPolicies()
+	eps := c.endpoints.TotalEndpoints()
+	ueps := c.endpoints.EndpointsWithNoLabels()
+	resp := &QueryClusterResp{
+		NumGlobalNetworkPolicies:        pols.NumGlobalNetworkPolicies,
+		NumNetworkPolicies:              pols.NumNetworkPolicies,
+		NumHostEndpoints:                eps.NumHostEndpoints,
+		NumWorkloadEndpoints:            eps.NumWorkloadEndpoints,
+		NumUnlabelledHostEndpoints:      ueps.NumHostEndpoints,
+		NumUnlabelledWorkloadEndpoints:  ueps.NumWorkloadEndpoints,
+		NumNodes:                        c.nodes.TotalNodes(),
+		NumNodesWithNoEndpoints:         c.nodes.TotalNodesWithNoEndpoints(),
+		NumNodesWithNoWorkloadEndpoints: c.nodes.TotalNodesWithNoWorkloadEndpoints(),
+		NumNodesWithNoHostEndpoints:     c.nodes.TotalNodesWithNoHostEndpoints(),
+	}
+	return resp, nil
+}
+
 func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsReq) (*QueryEndpointsResp, error) {
+	// If an endpoint was specified, just return that (if it exists).
+	if req.Endpoint != nil {
+		ep := c.endpoints.GetEndpoint(req.Endpoint)
+		if ep == nil {
+			return nil, fmt.Errorf("resource %s does not exist", req.Endpoint.String())
+		}
+		return &QueryEndpointsResp{
+			Count: 1,
+			Items: []Endpoint{
+				*c.apiEndpointToQueryEndpoint(ep),
+			},
+		}, nil
+	}
+
 	var err error
 	selector := req.Selector
 	if req.Policy != nil {
@@ -194,18 +227,13 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 	}
 
 	count := len(epkeys)
-	items := make([]Endpoint, count)
-	for i, result := range epkeys {
+	items := make([]Endpoint, 0, count)
+	for _, result := range epkeys {
 		ep := c.endpoints.GetEndpoint(result)
-		pc := ep.GetPolicyCounts()
-		res := ep.GetResource()
-		items[i] = Endpoint{
-			Name:                     res.GetObjectMeta().GetName(),
-			Namespace:                res.GetObjectMeta().GetNamespace(),
-			Kind:                     res.GetObjectKind().GroupVersionKind().Kind,
-			NumGlobalNetworkPolicies: pc.NumGlobalNetworkPolicies,
-			NumNetworkPolicies:       pc.NumNetworkPolicies,
+		if req.Node != "" && ep.GetNode() != req.Node {
+			continue
 		}
+		items = append(items, *c.apiEndpointToQueryEndpoint(ep))
 	}
 	sort.Sort(sortableEndpoints(items))
 
@@ -228,7 +256,49 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 	}, nil
 }
 
+func (c *cachedQuery) apiEndpointToQueryEndpoint(ep api.Endpoint) *Endpoint {
+	pc := ep.GetPolicyCounts()
+	res := ep.GetResource()
+	e := &Endpoint{
+		Kind:      res.GetObjectKind().GroupVersionKind().Kind,
+		Name:      res.GetObjectMeta().GetName(),
+		Namespace: res.GetObjectMeta().GetNamespace(),
+		Node:      ep.GetNode(),
+		NumGlobalNetworkPolicies: pc.NumGlobalNetworkPolicies,
+		NumNetworkPolicies:       pc.NumNetworkPolicies,
+		Labels:                   res.GetObjectMeta().GetLabels(),
+	}
+
+	switch rt := res.(type) {
+	case *v3.WorkloadEndpoint:
+		e.Workload = rt.Spec.Workload
+		e.Orchestrator = rt.Spec.Orchestrator
+		e.Pod = rt.Spec.Pod
+		e.InterfaceName = rt.Spec.InterfaceName
+		e.IPNetworks = rt.Spec.IPNetworks
+	case *v3.HostEndpoint:
+		e.InterfaceName = rt.Spec.InterfaceName
+		e.IPNetworks = rt.Spec.ExpectedIPs
+	}
+
+	return e
+}
+
 func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq) (*QueryPoliciesResp, error) {
+	// If a policy was specified, just return that (if it exists).
+	if req.Policy != nil {
+		ep := c.policies.GetPolicy(req.Policy)
+		if ep == nil {
+			return nil, fmt.Errorf("resource %s does not exist", req.Policy.String())
+		}
+		return &QueryPoliciesResp{
+			Count: 1,
+			Items: []Policy{
+				*c.apiPolicyToQueryPolicy(ep),
+			},
+		}, nil
+	}
+
 	// If an endpoint has been specified, determine the labels on the endpoint.
 	var policySet set.Set
 	var err error
@@ -261,6 +331,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 
 	var ordered []api.Tier
 	if policySet == nil && req.Tier != "" {
+		// If a tier has been specified, but no other query parameters then we can request just
+		// the policies associated with a Tier as a minor finesse.
 		tier := c.policies.GetTier(model.ResourceKey{
 			Kind: v3.KindTier,
 			Name: req.Tier,
@@ -269,6 +341,8 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 			ordered = append(ordered, tier)
 		}
 	} else {
+		// Get the required policies ordered by tier and policy Order parameter. If the policy set is
+		// empty this will return all policies across all tiers.
 		ordered = c.policies.GetOrderedPolicies(policySet)
 	}
 	log.WithField("ordered", ordered).Info("Pre filter list")
@@ -278,6 +352,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	items := make([]Policy, 0)
 	for _, t := range ordered {
 		op := t.GetOrderedPolicies()
+		// If a tier is specified, filter out policies that are not in the requested tier.
 		if req.Tier != "" && t.GetName() != req.Tier {
 			log.Info("Filter out wrong tier")
 			continue
@@ -289,17 +364,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				log.Info("Filter out matched policy")
 				continue
 			}
-			policy := Policy{
-				Name:                 p.GetResource().GetObjectMeta().GetName(),
-				Namespace:            p.GetResource().GetObjectMeta().GetNamespace(),
-				Kind:                 p.GetResource().GetObjectKind().GroupVersionKind().Kind,
-				Tier:                 t.GetName(),
-				NumHostEndpoints:     ep.NumHostEndpoints,
-				NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
-				Ingress:              c.convertRules(p.GetRuleEndpointCounts().Ingress),
-				Egress:               c.convertRules(p.GetRuleEndpointCounts().Egress),
-			}
-			items = append(items, policy)
+			items = append(items, *c.apiPolicyToQueryPolicy(p))
 		}
 	}
 
@@ -324,28 +389,43 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	}, nil
 }
 
-func (c * cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection {
+func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy) *Policy {
+	ep := p.GetEndpointCounts()
+	res := p.GetResource()
+	return &Policy{
+		Name:                 res.GetObjectMeta().GetName(),
+		Namespace:            res.GetObjectMeta().GetNamespace(),
+		Kind:                 res.GetObjectKind().GroupVersionKind().Kind,
+		Tier:                 p.GetTier(),
+		NumHostEndpoints:     ep.NumHostEndpoints,
+		NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
+		Ingress:              c.convertRules(p.GetRuleEndpointCounts().Ingress),
+		Egress:               c.convertRules(p.GetRuleEndpointCounts().Egress),
+	}
+}
+
+func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection {
 	r := make([]RuleDirection, len(apiRules))
 	for i, ar := range apiRules {
 		r[i] = RuleDirection{
 			Source: RuleEntity{
 				Selector: RuleEntityEndpoints{
 					NumWorkloadEndpoints: ar.Source.Selector.NumWorkloadEndpoints,
-					NumHostEndpoints: ar.Source.Selector.NumHostEndpoints,
+					NumHostEndpoints:     ar.Source.Selector.NumHostEndpoints,
 				},
 				NotSelector: RuleEntityEndpoints{
 					NumWorkloadEndpoints: ar.Source.NotSelector.NumWorkloadEndpoints,
-					NumHostEndpoints: ar.Source.NotSelector.NumHostEndpoints,
+					NumHostEndpoints:     ar.Source.NotSelector.NumHostEndpoints,
 				},
 			},
 			Destination: RuleEntity{
 				Selector: RuleEntityEndpoints{
 					NumWorkloadEndpoints: ar.Destination.Selector.NumWorkloadEndpoints,
-					NumHostEndpoints: ar.Destination.Selector.NumHostEndpoints,
+					NumHostEndpoints:     ar.Destination.Selector.NumHostEndpoints,
 				},
 				NotSelector: RuleEntityEndpoints{
 					NumWorkloadEndpoints: ar.Destination.NotSelector.NumWorkloadEndpoints,
-					NumHostEndpoints: ar.Destination.NotSelector.NumHostEndpoints,
+					NumHostEndpoints:     ar.Destination.NotSelector.NumHostEndpoints,
 				},
 			},
 		}
@@ -353,50 +433,27 @@ func (c * cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirectio
 	return r
 }
 
-func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) (*QueryClusterResp, error) {
-	pols := c.policies.TotalPolicies()
-	eps := c.endpoints.TotalEndpoints()
-	ueps := c.endpoints.EndpointsWithNoLabels()
-	resp := &QueryClusterResp{
-		NumGlobalNetworkPolicies:        pols.NumGlobalNetworkPolicies,
-		NumNetworkPolicies:              pols.NumNetworkPolicies,
-		NumHostEndpoints:                eps.NumHostEndpoints,
-		NumWorkloadEndpoints:            eps.NumWorkloadEndpoints,
-		NumUnlabelledHostEndpoints:      ueps.NumHostEndpoints,
-		NumUnlabelledWorkloadEndpoints:  ueps.NumWorkloadEndpoints,
-		NumNodes:                        c.nodes.TotalNodes(),
-		NumNodesWithNoEndpoints:         c.nodes.TotalNodesWithNoEndpoints(),
-		NumNodesWithNoWorkloadEndpoints: c.nodes.TotalNodesWithNoWorkloadEndpoints(),
-		NumNodesWithNoHostEndpoints:     c.nodes.TotalNodesWithNoHostEndpoints(),
-	}
-	return resp, nil
-}
-
 func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*QueryNodesResp, error) {
+	// If a policy was specified, just return that (if it exists).
+	if req.Node != nil {
+		ep := c.nodes.GetNode(req.Node.(model.ResourceKey).Name)
+		if ep == nil {
+			return nil, fmt.Errorf("resource %s does not exist", req.Node.String())
+		}
+		return &QueryNodesResp{
+			Count: 1,
+			Items: []Node{
+				*c.apiNodeToQueryNode(ep),
+			},
+		}, nil
+	}
+
 	// Sort the nodes by name (which is the only current option).
 	nodes := c.nodes.GetNodes()
 
-	items := make([]Node, len(nodes))
-	for i, n := range nodes {
-		ep := n.GetEndpointCounts()
-		node := Node{
-			Name:                 n.GetName(),
-			NumHostEndpoints:     ep.NumHostEndpoints,
-			NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
-		}
-		r := n.GetResource()
-		if r != nil {
-			nr := r.(*v3.Node)
-			if nr.Spec.BGP != nil {
-				if len(nr.Spec.BGP.IPv4Address) > 0 {
-					node.BGPIPAddresses = append(node.BGPIPAddresses, nr.Spec.BGP.IPv4Address)
-				}
-				if len(nr.Spec.BGP.IPv6Address) > 0 {
-					node.BGPIPAddresses = append(node.BGPIPAddresses, nr.Spec.BGP.IPv6Address)
-				}
-			}
-		}
-		items[i] = node
+	items := make([]Node, 0, len(nodes))
+	for _, n := range nodes {
+		items = append(items, *c.apiNodeToQueryNode(n))
 	}
 	sort.Sort(sortableNodes(items))
 
@@ -411,13 +468,35 @@ func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*Qu
 		if toIdx > len(nodes) {
 			toIdx = len(nodes)
 		}
-		nodes = nodes[fromIdx:toIdx]
+		items = items[fromIdx:toIdx]
 	}
 
 	return &QueryNodesResp{
 		Count: len(nodes),
 		Items: items,
 	}, nil
+}
+
+func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
+	ep := n.GetEndpointCounts()
+	node := &Node{
+		Name:                 n.GetName(),
+		NumHostEndpoints:     ep.NumHostEndpoints,
+		NumWorkloadEndpoints: ep.NumWorkloadEndpoints,
+	}
+	r := n.GetResource()
+	if r != nil {
+		nr := r.(*v3.Node)
+		if nr.Spec.BGP != nil {
+			if len(nr.Spec.BGP.IPv4Address) > 0 {
+				node.BGPIPAddresses = append(node.BGPIPAddresses, nr.Spec.BGP.IPv4Address)
+			}
+			if len(nr.Spec.BGP.IPv6Address) > 0 {
+				node.BGPIPAddresses = append(node.BGPIPAddresses, nr.Spec.BGP.IPv6Address)
+			}
+		}
+	}
+	return node
 }
 
 func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]string, []string, error) {
@@ -524,7 +603,7 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 		rd = pv1.OutboundRules
 	}
 
-	if rd != nil && index >=0 && index < len(rd) {
+	if rd != nil && index >= 0 && index < len(rd) {
 		r := rd[index]
 		switch entity {
 		case RuleEntitySource:
