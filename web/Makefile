@@ -60,6 +60,22 @@ vendor vendor/.up-to-date: glide.lock
 update-vendor:
 	glide up --strip-vendor
 
+.PHONY: ut
+ut: 
+	@echo "Need to add tests. This is a no-op"
+
+.PHONY: ut-containerized
+ut-containerized:
+	@echo "Need to add tests. This is a no-op"
+
+.PHONY: fv-containerized
+fv-containerized:
+	@echo "Need to add tests. This is a no-op"
+
+.PHONY: st-containerized
+st-containerized:
+	@echo "Need to add tests. This is a no-op"
+
 # Build image for containerized testing
 .PHONY: build-image
 build-image .container-created: bin/calicoqweb

@@ -5,7 +5,6 @@ pipeline{
         cron('H H(0-7) * * 1-5')
     }
     environment {
-        SKIP_CALICOQ_WEB_BUILD = ""
         IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/calicoq"
         WEB_IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/calicoqweb"
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
@@ -52,6 +51,38 @@ pipeline{
             }
         }
 
+        stage('Run calicoqweb UTs') {
+            when {
+                expression { SKIP_CALICOQ_WEB_BUILD == 0 }
+            }
+            steps {
+                dir('web') {
+                    sh 'make ut-containerized'
+                }
+            }
+        }
+
+        stage('Run calicoqweb FVs') {
+            when {
+                expression { SKIP_CALICOQ_WEB_BUILD == 0 }
+            }
+            steps {
+                dir('web') {
+                    sh 'make fv-containerized'
+                }
+            }
+        }
+
+        stage('Run calicoqweb STs') {
+            when {
+                expression { SKIP_CALICOQ_WEB_BUILD == 0 }
+            }
+            steps {
+                dir('web') {
+                    sh 'make st-containerized'
+                }
+            }
+        }
         stage('Push calicoqweb image to GCR') {
             when {
                 expression { SKIP_CALICOQ_WEB_BUILD == 0 }
@@ -85,7 +116,17 @@ pipeline{
             }
         }
 
+        stage('Check calicoq changes') {
+            steps {
+                script {
+                    SKIP_CALICOQ_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep -v '^web/'")
+                }
+            }
+        }
         stage('Build calicoq') {
+            when {
+                expression { SKIP_CALICOQ_BUILD == 0 }
+            }
              steps {
                  withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
                      sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make bin/calicoq'
@@ -94,24 +135,36 @@ pipeline{
         }
 
         stage('Run calicoq UTs') {
+            when {
+                expression { SKIP_CALICOQ_BUILD == 0 }
+            }
             steps {
                 sh 'make ut-containerized'
             }
         }
 
         stage('Run calicoq FVs') {
+            when {
+                expression { SKIP_CALICOQ_BUILD == 0 }
+            }
             steps {
                 sh 'make fv-containerized'
             }
         }
 
         stage('Run calicoq STs') {
+            when {
+                expression { SKIP_CALICOQ_BUILD == 0 }
+            }
             steps {
                 sh 'make st-containerized'
             }
         }
 
         stage('Push calicoq image to GCR') {
+            when {
+                expression { SKIP_CALICOQ_BUILD == 0 }
+            }
             steps {
                 script {
                     withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
