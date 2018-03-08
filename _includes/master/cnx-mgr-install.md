@@ -75,6 +75,8 @@
    kubectl create secret generic cnx-manager-tls --from-file=cert=/path/to/certificate --from-file=key=/path/to/key -n kube-system
    ```
 
+1. Optionally [enable]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx#enabling-tls-verification-for-a-kubernetes-extension-api-server) TLS verification for CNX API Server.
+
 1. Apply the manifest to install {{site.prodname}} Manager and the {{site.prodname}} API server.
 
    ```
