@@ -44,8 +44,8 @@ metadata:
   name: cnx-apiserver-certs
   namespace: kube-system
 data:
-  # Populate the following files with etcd TLS configuration if desired,
-  # but leave blank if not using TLS for Kubernetes etcd.
+  # Populate the following files with apiserver TLS configuration if desired,
+  # but leave blank if not using TLS between Kubernetes APIServer and CNX APIServer.
   # This self-hosted install expects three files with the following names. The values
   # should be base64 encoded strings of the entire contents of each file.
   #apiserver.key:
