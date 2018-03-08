@@ -76,6 +76,25 @@ spec:
 
 ---
 
+# Create a NodePort to expose the calicoqweb application
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    k8s-app: "cnx-apiserver"
+  name: calicoqweb
+  namespace: kube-system
+spec:
+  selector:
+    k8s-app: "cnx-apiserver"
+  ports:
+    - targetPort: 8080
+      port: 8080
+      nodePort: 30808
+  type: NodePort
+
+---
+
 # Optionally update this ConfigMap to use your own caBundle.
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
@@ -224,6 +243,38 @@ spec:
           #   name: etcd-certs
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
+      - name: calicoqweb
+        image: {{site.imageNames["calicoqweb"]}}:{{site.data.versions[page.version].first.components["calicoqweb"].version}}
+        env:
+          - name: ETCD_ENDPOINTS
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_endpoints
+          - name: DATASTORE_TYPE
+            value: "etcdv3"
+          # If you're using TLS enabled etcd uncomment the following.
+          # Location of the CA certificate for etcd.
+          # - name: ETCD_CA_CERT_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_ca
+          # Location of the client key for etcd.
+          # - name: ETCD_KEY_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_key
+          # Location of the client certificate for etcd.
+          # - name: ETCD_CERT_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_cert
+        volumeMounts:
+          # - mountPath: /calico-secrets
+          #   name: etcd-certs
       volumes:
         # If you're using TLS enabled etcd uncomment the following.
         # - name: etcd-certs

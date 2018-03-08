@@ -738,6 +738,9 @@ master:
     calicoq:
       version: master
       url: ""
+    calicoqweb:
+      version: master
+      url: ""
     felix:
       version: master
       url: ""

@@ -57,4 +57,7 @@ spec:
       nets: ["0.0.0.0/0"]
     destination:
       # The ports CNX API Server is configured to listen on.
-      ports: [443, 5443]
+      # 8080 is calicoqweb
+      # TODO(doublek): Update this when we have a default TLS port
+      # for calicoq.
+      ports: [443, 5443, 8080]
