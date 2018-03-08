@@ -14,11 +14,12 @@
 package main
 
 import (
-	"bytes"
 	"context"
+	cryptorand "crypto/rand"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"reflect"
 	"regexp"
@@ -45,7 +46,6 @@ import (
 
 const (
 	DEFAULT_IPV4_POOL_CIDR              = "192.168.0.0/16"
-	DEFAULT_IPV6_POOL_CIDR              = "fd80:24e2:f998:72d6::/64"
 	DEFAULT_IPV4_POOL_NAME              = "default-ipv4-ippool"
 	DEFAULT_IPV6_POOL_NAME              = "default-ipv6-ippool"
 	AUTODETECTION_METHOD_FIRST          = "first-found"
@@ -86,8 +86,7 @@ func main() {
 	// Check $CALICO_STARTUP_LOGLEVEL to capture early log statements
 	configureLogging()
 
-	// Determine the name for this node and ensure the environment is always
-	// available in the startup env file that is sourced in rc.local.
+	// Determine the name for this node.
 	nodeName := determineNodeName()
 
 	// Create the Calico API cli.
@@ -171,13 +170,8 @@ func main() {
 		terminate()
 	}
 
-	// Write the startup.env file now that we are ready to start other
-	// components.
-	sEnv := map[string]string{
-		"NODENAME":   nodeName,
-		"CNXVERSION": CNXVERSION,
-	}
-	writeStartupEnv(sEnv)
+	// Write config files now that we are ready to start other components.
+	writeNodeConfig(nodeName)
 
 	// Tell the user what the name of the node is.
 	log.Infof("Using node name: %s", nodeName)
@@ -266,11 +260,14 @@ func determineNodeName() string {
 
 	// Determine the name of this node.  Precedence is:
 	// -  NODENAME
+	// -  Value stored in /var/lib/calico/nodename
 	// -  HOSTNAME (lowercase)
 	// -  os.Hostname (lowercase).
 	// We use the names.Hostname which lowercases and trims the name.
 	if nodeName = strings.TrimSpace(os.Getenv("NODENAME")); nodeName != "" {
 		log.Infof("Using NODENAME environment for node name")
+	} else if nodeName = nodenameFromFile(); nodeName != "" {
+		log.Info("Using stored node name from /var/lib/calico/nodename")
 	} else if nodeName = strings.ToLower(strings.TrimSpace(os.Getenv("HOSTNAME"))); nodeName != "" {
 		log.Infof("Using HOSTNAME environment (lowercase) for node name")
 	} else if nodeName, err = names.Hostname(); err != nil {
@@ -280,9 +277,25 @@ func determineNodeName() string {
 		log.Warn("Using auto-detected node name. It is recommended that an explicit value is supplied using " +
 			"the NODENAME environment variable.")
 	}
-	log.Infof("Node name: %s", nodeName)
+	log.Infof("Determined node name: %s", nodeName)
 
 	return nodeName
+}
+
+// nodenameFromFile reads the /var/lib/calico/nodename file if it exists and
+// returns the nodename within.
+func nodenameFromFile() string {
+	data, err := ioutil.ReadFile("/var/lib/calico/nodename")
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist, return empty string.
+			log.Debug("File does not exist: /var/lib/calico/nodename")
+			return ""
+		}
+		log.WithError(err).Error("Failed to read /var/lib/calico/nodename")
+		terminate()
+	}
+	return string(data)
 }
 
 // waitForConnection waits for the datastore to become accessible.
@@ -314,20 +327,13 @@ func waitForConnection(ctx context.Context, c client.Interface) {
 	log.Info("Datastore connection verified")
 }
 
-// writeStartupEnv writes out the startup.env file to set environment variables
-// that are required by confd/bird etc. but may not have been passed into the
-// container.
-func writeStartupEnv(envVars map[string]string) {
-	var textBuf bytes.Buffer
-	for k, v := range envVars {
-		textBuf.WriteString(fmt.Sprintf("export %s=%s\n", strings.ToUpper(k), v))
-	}
-
-	// Write out the startup.env file to ensure required environments are
-	// set (which they might not otherwise be).
-	if err := ioutil.WriteFile("startup.env", textBuf.Bytes(), 0666); err != nil {
-		log.WithError(err).Info("Unable to write to startup.env")
-		log.Warn("Unable to write to local filesystem")
+// writeNodeConfig writes out the this node's configuration to disk for use by other components.
+// Specifically, it creates:
+// - /var/lib/calico/nodename - used to persist the determined node name to disk for future use.
+func writeNodeConfig(nodeName string) {
+	log.Debugf("Writing %s to /var/lib/calico/nodename", nodeName)
+	if err := ioutil.WriteFile("/var/lib/calico/nodename", []byte(nodeName), 0644); err != nil {
+		log.WithError(err).Error("Unable to write to /var/lib/calico/nodename")
 		terminate()
 	}
 }
@@ -626,6 +632,21 @@ func configureASNumber(node *api.Node) {
 	}
 }
 
+// generateIPv6ULAPrefix return a random generated ULA IPv6 prefix as per RFC 4193.  The pool
+// is generated from bytes pulled from a secure random source.
+func GenerateIPv6ULAPrefix() (string, error) {
+	ulaAddr := []byte{0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	_, err := cryptorand.Read(ulaAddr[1:6])
+	if err != nil {
+		return "", err
+	}
+	ipNet := net.IPNet{
+		IP:   net.IP(ulaAddr),
+		Mask: net.CIDRMask(48, 128),
+	}
+	return ipNet.String(), nil
+}
+
 // configureIPPools ensures that default IP pools are created (unless explicitly
 // requested otherwise).
 func configureIPPools(ctx context.Context, client client.Interface) {
@@ -680,9 +701,13 @@ func configureIPPools(ctx context.Context, client client.Interface) {
 		return // not really needed but allows testing to function
 	}
 
-	// Read IPV6 CIDR from env if set and parse then check it for errors
+	// If no IPv6 pool is specified, generate one.
 	if ipv6Pool == "" {
-		ipv6Pool = DEFAULT_IPV6_POOL_CIDR
+		ipv6Pool, err = GenerateIPv6ULAPrefix()
+		if err != nil {
+			log.Errorf("Failed to generate an IPv6 default pool")
+			terminate()
+		}
 	}
 	_, ipv6Cidr, err := cnet.ParseCIDR(ipv6Pool)
 	if err != nil || ipv6Cidr.Version() != 6 {
@@ -862,8 +887,20 @@ func ensureFilesystemAsExpected() {
 				log.Errorf("Unable to create '%s'", runDir)
 				terminate()
 			}
-			log.Warnf("%s was not mounted, 'calicoctl node status' may provide incomplete status information", runDir)
+			log.Warnf("Expected %s to be mounted into the container but it wasn't present. 'calicoctl node status' may provide incomplete status information", runDir)
 		}
+	}
+
+	// Make sure the /var/lib/calico directory exists.
+	libDir := "/var/lib/calico"
+	// Check if directory already exists
+	if _, err := os.Stat(libDir); err != nil {
+		// Create the libDir
+		if err = os.MkdirAll(libDir, os.ModeDir); err != nil {
+			log.Errorf("Unable to create '%s'", libDir)
+			terminate()
+		}
+		log.Warnf("Expected %s to be mounted into the container but it wasn't present. Node name may not be detected properly", libDir)
 	}
 
 	// Ensure the log directory exists but only if logging to file is enabled.
@@ -876,7 +913,7 @@ func ensureFilesystemAsExpected() {
 				log.Errorf("Unable to create '%s'", logDir)
 				terminate()
 			}
-			log.Warnf("%s was not mounted, 'calicoctl node diags' will not be able to collect logs", logDir)
+			log.Warnf("Expected %s to be mounted into the container but it wasn't present. 'calicoctl node diags' will not be able to collect calico/node logs", logDir)
 		}
 	}
 
