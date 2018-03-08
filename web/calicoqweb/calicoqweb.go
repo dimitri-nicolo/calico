@@ -26,5 +26,5 @@ func main() {
 	http.HandleFunc("/nodes/", h.Node)
 	http.HandleFunc("/summary", h.Summary)
 	http.HandleFunc("/version", handlers.VersionHandler)
-	log.Fatal(http.ListenAndServe("localhost:8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
