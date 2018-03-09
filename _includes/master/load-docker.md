@@ -1,79 +1,214 @@
-## Private image and registry set up
+{% if include.yaml == "calico" %}
 
-CNX is delivered as a set of `.tar.xz` compressed Docker image files.  To use
-those, you need to load each image into your local Docker engine, then push
-from there to a private Docker registry, then deploy into Kubernetes by
-applying manifests that will pull from that registry.
+## Setting up access to the private {{site.prodname}} images
 
-### Prerequisite
+### About setting up access to the private {{site.prodname}} images
 
-You must have a private registry that each node can access.
+{{site.prodname}} includes several private images. You can set up access to these
+in either of the following ways.
 
-> **Important**: Do not push the private {{site.prodname}} images to a public registry.
-{: .alert .alert-danger}
+- [Pull the images from Tigera's private registry](#pulling-the-images-from-tigeras-private-registry). 
 
-If you do not already have a private registry, consider one of the following options.
-- [Docker Hub](https://hub.docker.com/)
-- [Google Container Registry](https://cloud.google.com/container-registry/)
-- [Amazon Web Services (AWS) Elastic Compute Cloud (EC2) Container Registry](https://aws.amazon.com/ecr/pricing/)
-- [Azure Container Registry](https://azure.microsoft.com/en-us/services/container-registry/)
-- [Quay](https://quay.io/repository/)
-
-### Loading and pushing the private images
-
-
-1. Import the files into the local Docker engine.
-
-   ```
-   docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}.tar.xz
-   docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"].version}}.tar.xz
-   docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"].version}}.tar.xz
-   docker load -i tigera_cnx-manager-proxy_{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}.tar.xz
-   ```
-
-1. Confirm that the images have loaded by typing `docker images`.
-
-   ```
-   REPOSITORY            TAG               IMAGE ID       CREATED         SIZE
-   tigera/cnx-manager    {{site.data.versions[page.version].first.components["cnx-manager"].version}}  e07d59b0eb8a   2 minutes ago   30.8MB
-   tigera/cnx-node       {{site.data.versions[page.version].first.components["cnx-node"].version}}  2bf19d491aac   3 minutes ago   263MB
-   tigera/cnx-apiserver  {{site.data.versions[page.version].first.components["cnx-apiserver"].version}}  acd3faa772d0   5 minutes ago   277MB
-   ```
-
-1. Retag the images as desired and necessary to load them to your private registry.
-
-1. If you have not configured your local Docker instance with the credentials that will
-   allow you to access your private registry, do so now.
-
-   ```
-   docker login [registry-domain]
-   ```
-
-1. Use the following commands to push the `cnx-manager`, `cnx-node`, and `cnx-apiserver` 
-   images to the private registry, replacing `<YOUR_PRIVATE_DOCKER_REGISTRY>` with the
-   location of your registry first.
-
-   ```
-   docker push {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
-   docker push {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
-   docker push {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
-   ```
-
-{% if include.orchestrator == "openshift" %}
-
-1. Ensure your Docker daemon on all OpenShift nodes and masters is authenticated to pull images from that registry.
-
-   > **Note**: See the [OCP Advanced Installation Instructions][ocp-advanced-install]
-   for more information on setting up custom Docker registries using the OpenShift installer.
-   {: .alert .alert-info}
-
-{% else %}
-
-1. Next, you must determine how to configure Kubernetes to pull from your private registry. The method varies according to your private registry vendor and Kubernetes hosting. For specific instructions, refer to:
-   - The documentation of your private registry vendor
-   - Kubernetes [Using a Private Registry](https://kubernetes.io/docs/concepts/containers/images/#using-a-private-registry)
-   - Heptio [How to: Pull from private registries with Kubernetes](http://docs.heptio.com/content/private-registries.html)
+- [Pull the images from another private registry](#pulling-the-images-from-another-private-registry). (Advanced) 
 
 {% endif %}
 
-[ocp-advanced-install]: https://access.redhat.com/documentation/en-us/openshift_container_platform/3.6/html-single/installation_and_configuration/#system-requirements
+### Pulling the images from Tigera's private registry
+
+**Prerequisite**: Ensure that you have the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials).
+
+1. From a terminal prompt, navigate to the location of the `config.json` file.
+
+1. Strip the spaces, tabs, carriage returns, and newlines from the `config.json` 
+   file and base64 encode the string. If you're on Linux, you can use the 
+   following command.
+
+   ```bash
+   cat config.json | tr -d '\n\r\t ' | base64 -w 0
+   ```
+
+1. Open a new file in your favorite editor called `cnx-pull-secret.yml`.
+
+   ```bash
+   vi cnx-pull-secret.yml
+   ```
+   
+1. Paste in the following YAML.
+
+   ```yaml
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: cnx-pull-secret
+     namespace: kube-system
+   data:
+     .dockerconfigjson: <BASE64-STRING>
+   type: kubernetes.io/dockerconfigjson
+   ```
+
+1. Replace `<BASE64-STRING>` with the base64-encoded config.json returned to your
+   shell previously.
+   
+1. Save and close the file.
+
+1. Use the following command to add the secret to Kubernetes.
+
+   ```bash
+   kubectl create -f cnx-pull-secret.yml
+   ```
+   
+   It should return the following.
+   
+   ```bash
+   secret "cnx-pull-secret" created
+   ```
+
+{% if include.yaml != "calico" %}
+
+1. Use the YAML that matches your datastore type to deploy the `{{include.yaml}}` container to your nodes.
+   
+   - **etcd**
+
+     ```
+     kubectl apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
+     ```
+   
+     > **Note**: You can also 
+     > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml){:target="_blank"}.
+     {: .alert .alert-info}
+   
+   - **Kubernetes API datastore**
+
+     ```
+     kubectl apply -f \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
+     ```
+   
+     > **Note**: You can also 
+     > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}.
+     {: .alert .alert-info}
+     
+**Next step**:
+
+[Configure `{{include.yaml}}` to connect to your datastore](/{{page.version}}/usage/include.yaml/configure/).
+
+{% endif %}
+
+### Pulling the image from another private registry
+
+
+**Prerequisite**: Ensure that you have the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials).
+   
+1. From a terminal prompt, use the following command to either create or open the `~/.docker/config.json` file.
+
+   ```bash
+   vi ~/.docker/config.json
+   ```
+   
+1. Depending on the existing contents of the file, edit it in one of the following ways.
+
+   - **New file**: Paste in the entire contents of the `config.json` file from Tigera. 
+   
+   - **Existing file without quay.io object**: Add the following lines from the `config.json` inside the `"auth"` object.
+   
+     ```json
+     "quay.io": {
+       "auth": "<ROBOT-TOKEN-VALUE>",
+       "email": ""
+     }
+     ```
+   
+   - **Existing file with quay.io object**: Add the following lines from the `config.json` inside the `"quay.io"` object.
+   
+     ```json
+     "auth": "<ROBOT-TOKEN-VALUE>",
+     "email": ""
+     ```
+
+1. Save and close the file.
+
+{% if include.yaml == "calico" %}
+
+1. Use the following commands to pull the {{site.prodname}} images from the Tigera
+   registry.
+
+   ```bash
+   docker pull {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+   docker pull {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker pull {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker pull {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
+   ```
+
+1. Retag the images with the name of your private registry.
+
+   ```bash
+   docker tag {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}} <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+   docker tag {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}} <YOUR-REGISTRY>/tigera/cnx-manager:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker tag {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}} <YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker tag {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}} <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
+   ```
+   > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`) 
+   > when retagging the images, as shown above and below.
+   {: .alert .alert-info}
+
+1. Push the images to your private registry. 
+
+   ```bash
+   docker push <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+   docker push <YOUR-REGISTRY>/tigera/cnx-manager:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker push <YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+   docker push <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
+   ```
+   
+   > **Important**: Do not push the private {{site.prodname}} images to a public registry.
+   {: .alert .alert-danger}
+   
+{% else %}
+
+1. Use the following commands to pull the `{{include.yaml}}` image from the Tigera
+   registry.
+
+   ```bash
+   docker pull {{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   ```
+
+1. Retag the image with the name of your private registry.
+
+   ```bash
+   docker tag {{site.imageNames[include.yaml]}}:{{site.data.versions[page.version].first.components[include.yaml].version}} <YOUR-REGISTRY>/tigera/{{include.yaml}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   ```
+   > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`), 
+   > as shown above. This will make it easier to complete the instructions that follow.
+   {: .alert .alert-info}
+
+1. Push the images to your private registry. 
+
+   ```bash
+   docker push <YOUR-REGISTRY>/tigera/{{include.yaml}}:{{site.data.versions[page.version].first.components[include.yaml].version}}
+   ```
+
+{% endif %}
+
+1. Push the credentials of your private repository up to Kubernetes as a [secret](https://kubernetes.io/docs/concepts/containers/images/#creating-a-secret-with-a-docker-config) 
+named `cnx-pull-secret` in the `kube-system` namespace.
+
+{% if include.yaml != "calico" %}
+
+1. Open the YAML that matches your datastore type in a new tab.
+   
+   - [etcd]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml){:target="_blank"}
+
+   - [Kubernetes API datastore]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}
+   
+1. Copy the contents, paste them into a new file, and save the file as {{include.yaml}}.yaml. This is what subsequent instructions will refer to.
+
+{% include {{page.version}}/cnx-cred-sed.md yaml=include.yaml %}
+
+1. Apply the YAML file.
+
+   ```bash
+   kubectl apply -f {{include.yaml}}.yaml
+   ```
+   
+{% endif %}

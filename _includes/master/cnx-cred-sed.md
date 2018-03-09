@@ -1,21 +1,19 @@
-
-1. Use the following `sed` command to quickly replace `<YOUR_PRIVATE_DOCKER_REGISTRY>`
-   in the manifest with the name of your private registry. Since the manifest 
-   already contains the names of the images and their version numbers, you
-   just need to replace `<REPLACE_ME>` with the name of the private
-   repository before issuing the command.
+1. If you are pulling from a quay.io registry, skip to the next step. Otherwise, use 
+   the following command to replace `quay.io` in the manifest with the name of your 
+   private registry. 
+   
+   {{include.yaml}}
 
    **Command**
    ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/<REPLACE_ME>/g' calico.yaml
+   sed -i -e 's/quay.io/<REPLACE_ME>/g' {{include.yaml}}.yaml
    ```
    
    **Example**
-
    ```shell
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>/my-repo/g' calico.yaml
+   sed -i -e 's/quay.io/my-repo.com/g' {{include.yaml}}.yaml
    ```
    
-   > **Tip**: If you're hosting your own private repository, you may need to include
-   > a port number. For example, `my-repo:5000`.
+   > **Tip**: If you're hosting your own private registry, you may need to include
+   > a port number. For example, `my-repo.com:5000`.
    {: .alert .alert-success}

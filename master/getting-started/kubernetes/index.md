@@ -32,19 +32,29 @@ the host. Instead, continue directly to the
 
 ### Create a single-host Kubernetes cluster
 
+1. Ensure that you have the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials).
+   
 1. As a regular user with sudo privileges, open a terminal on the host that
    you installed kubeadm on.
+   
+1. Open the `~/.docker/config.json` file in your favorite editor.
 
-1. [Download the `cnx-apiserver`, `cnx-node`, `cnx-manager`, and `cnx-manager-proxy` private binaries](/{{page.version}}/getting-started/).
-
-1. Load the `cnx-apiserver`, `cnx-node`, `cnx-manager`, and `cnx-manager-proxy` binaries into your
-   local Docker engine.
-
+   ```bash
+   vi ~/.docker/config.json
    ```
-   docker load -i tigera_cnx-apiserver_{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}.tar.xz
-   docker load -i tigera_cnx-node_{{site.data.versions[page.version].first.components["cnx-node"].version}}.tar.xz
-   docker load -i tigera_cnx-manager_{{site.data.versions[page.version].first.components["cnx-manager"].version}}.tar.xz
-   docker load -i tigera_cnx-manager-proxy_{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}.tar.xz
+   
+1. If the file did not already exist, paste in the entire contents of the
+   `config.json` file from Tigera. Otherwise, just add an entry for `"quay.io"`
+   under `"auths"` and paste in the `"auth"` and `"email"` lines.
+
+1. Save and close the file.
+
+1. Use the following commands to pull the {{site.prodname}} images.
+
+   ```bash
+   docker pull {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.title}}
+   docker pull {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.title}}
+   docker pull {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
    ```
 
 1. Initialize the master using the following command.
@@ -82,9 +92,10 @@ the host. Instead, continue directly to the
    {: .alert .alert-info}
 
 1. Restart kube-apiserver to pick up new settings:
-    ```
-    sudo systemctl restart kubelet
-    ```
+
+   ```
+   sudo systemctl restart kubelet
+   ```
 
 1. Bind `jane` with the `cluster-admin` role so that she can access any
    resources after logging in.
@@ -101,19 +112,16 @@ the host. Instead, continue directly to the
    clusterrolebinding "permissive-binding" created
    ```
 
-1. Download the [`calico.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml){:target="_blank"}.
-
-1. Since you have loaded the private {{site.prodname}} images locally, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from the path to the `cnx-node` image.
+1. Install {{site.prodname}} and a single node etcd with the following command.
 
    ```
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' calico.yaml
+   kubectl apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
    ```
-
-1. Use the following command to apply the manifest.
-
-   ```
-   kubectl apply -f calico.yaml
-   ```
+   
+   > **Note**: You can also 
+   > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml){:target="_blank"}.
+   {: .alert .alert-info}
 
    You should see the following output.
 
@@ -173,21 +181,17 @@ the host. Instead, continue directly to the
    ```
    secret "cnx-manager-tls" created
    ```
-
-1. [Download the `cnx-etcd.yaml` manifest](/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml).
-
-1. As with the `calico.yaml` manifest, run the following command to remove `<YOUR_PRIVATE_DOCKER_REGISTRY>` from
-   the path to the `cnx-apiserver`, `cnx-manager` and `cnx-manager-proxy` images.
+   
+1. Install {{site.prodname}} and a single node etcd with the following command.
 
    ```
-   sed -i -e 's/<YOUR_PRIVATE_DOCKER_REGISTRY>\///g' cnx-etcd.yaml
+   kubectl apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
    ```
-
-1. Use the following command to install the additional {{site.prodname}} components.
-
-   ```
-   kubectl apply -f cnx-etcd.yaml
-   ```
+   
+   > **Note**: You can also 
+   > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
+   {: .alert .alert-info}
 
    You should see the following output.
 

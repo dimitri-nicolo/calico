@@ -6,7 +6,7 @@ Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansibl
 The information below explains the variables which must be set during the standard
 [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
 
-{% include {{page.version}}/load-docker.md orchestrator="openshift" %}
+{% include {{page.version}}/load-docker.md yaml="calico" %}
 
 ## Installation
 

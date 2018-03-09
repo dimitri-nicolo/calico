@@ -2,7 +2,6 @@
 title: Quickstart for Tigera CNX on Kubernetes
 ---
 
-
 ### Overview
 
 This quickstart gets you a single-host Kubernetes cluster with {{site.prodname}}

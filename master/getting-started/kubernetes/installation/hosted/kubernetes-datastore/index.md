@@ -27,7 +27,7 @@ You must have a Kubernetes cluster, which meets the following requirements:
 
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
-{% include {{page.version}}/load-docker.md %}
+{% include {{page.version}}/load-docker.md yaml="calico" %}
 
 ## Installation
 
@@ -68,7 +68,7 @@ This will install {{site.prodname}} and will initially create a full node-to-nod
 
 1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml){:target="_blank"}
 
-{% include {{page.version}}/cnx-cred-sed.md %}
+{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
 2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
    more than 50 nodes, edit the manifest to [enable Typha](../cnx/cnx#enabling-typha).
@@ -106,7 +106,7 @@ To install {{site.prodname}} in policy-only mode:
 
 1. Download [the policy-only manifest](policy-only/1.7/calico.yaml)
 
-{% include {{page.version}}/cnx-cred-sed.md %}
+{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
 1. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
    more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha).

@@ -13,6 +13,8 @@ metadata:
   namespace: kube-system
 spec:
   hostNetwork: true
+  imagePullSecrets:
+  - name: cnx-pull-secret
   containers:
   - name: calicoctl
     image: {{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}

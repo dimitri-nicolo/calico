@@ -11,7 +11,7 @@ The following steps install {{site.prodname}} as a Kubernetes add-on using your 
 
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
-{% include {{page.version}}/load-docker.md %}
+{% include {{page.version}}/load-docker.md yaml="calico" %}
 
 ## RBAC
 
@@ -33,17 +33,17 @@ To install {{site.prodname}}:
    section, and set `etcd_endpoints` to the correct value. Refer to [etcd configuration](index#etcd-configuration)
    for more details.
 
-{% include {{page.version}}/cnx-cred-sed.md %}
-   
-   > **Note**: Refer to [Configuration options](index#configuration-options) for additional
-   > settings that can be modified in the manifest.
-   {: .alert .alert-info}
+{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
 1. Then simply apply the manifest:
 
    ```shell
    kubectl apply -f calico.yaml
    ```
+
+   > **Note**: Refer to [Configuration options](index#configuration-options) for additional
+   > settings that can be modified in the manifest.
+   {: .alert .alert-info}
 
 ## Installing the CNX Manager
 

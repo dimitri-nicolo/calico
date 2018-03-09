@@ -1,28 +1,62 @@
+## Installing {{include.cli}} as a container on a single host
 
+1. Ensure that you have the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials).
+   
+1. From a terminal prompt, use the following command to either create or open the `~/.docker/config.json` file.
 
-1. [Download the private, CNX-specific `calicoctl` image](/{{page.version}}/getting-started/#images).
-
-1. Import the file into the local Docker engine.
-
+   ```bash
+   vi ~/.docker/config.json
    ```
-   docker load -i tigera_calicoctl_{{site.data.versions[page.version].first.components["calicoctl"].version}}.tar.xz
+   
+1. Depending on the existing contents of the file, edit it in one of the following ways.
+
+   - **New file**: Paste in the entire contents of the `config.json` file from Tigera. 
+   
+   - **Existing file without quay.io object**: Add the following lines from the `config.json` inside the `"auth"` object.
+   
+     ```json
+     "quay.io": {
+       "auth": "<ROBOT-TOKEN-VALUE>",
+       "email": ""
+     }
+     ```
+   
+   - **Existing file with quay.io object**: Add the following lines from the `config.json` inside the `"quay.io"` object.
+   
+     ```json
+     "auth": "<ROBOT-TOKEN-VALUE>",
+     "email": ""
+     ```
+
+1. Save and close the file.
+
+1. Use the following commands to pull the `{{include.cli}}` image from the Tigera
+   registry.
+
+   ```bash
+   docker pull {{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
    ```
+   
 1. Confirm that the image has loaded by typing `docker images`.
 
+   ```bash
+   REPOSITORY                TAG               IMAGE ID       CREATED         SIZE
+   {{site.imageNames[include.cli]}}    {{site.data.versions[page.version].first.components[include.cli].version}}            e07d59b0eb8a   2 minutes ago   42MB
    ```
-   REPOSITORY            TAG               IMAGE ID       CREATED         SIZE
-   tigera/calicoctl      {{site.data.versions[page.version].first.components["calicoctl"].version}}  e07d59b0eb8a   2 minutes ago   30.8MB
-   ```
 
-1. If you want to run `calicoctl` from the current host, skip to **Next step**! 
+**Next step**:
+[Configure `{{include.cli}}` to connect to your datastore](/{{page.version}}/usage/{{include.cli}}/configure/).
+
    
-   Otherwise, you must upload the image to a private repository accessible to
-   each node, ensure that each node has the credentials to access the repository,
-   deploy the `calicoctl` container image to each node, and then **Next step**. 
-   We provide the following Kubernetes manifests to make the _deployment_ part easier.
-   
-      - **etcd datastore**: [calicoctl.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/calicoctl.yaml){:target="_blank"}
-      
-      - **Kubernetes API datastore**: [calicoctl.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml){:target="_blank"}
+## Installing {{include.cli}} as a container on each node
 
+### About installing {{include.cli}} as a container on each node
 
+The steps to install `{{include.cli}}` as a container on each node vary according to where you 
+want to pull the image from. Refer to the section that corresponds to your preferred 
+private repository.
+
+- [Pulling the image from Tigera's private registry](#pulling-the-image-from-tigeras-private-registry)
+- [Pulling the image from another private registry](#pulling-the-image-from-another-private-registry)
+
+{% include {{page.version}}/load-docker.md yaml=include.cli %}
