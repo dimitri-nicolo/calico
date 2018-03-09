@@ -32,7 +32,6 @@ import (
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/net"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -374,11 +373,6 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 	schemeBuilder.AddToScheme(scheme.Scheme)
 
 	return cli, nil
-}
-
-// Syncer returns a v1 Syncer used to stream resource updates.
-func (c *KubeClient) Syncer(callbacks api.SyncerCallbacks) api.Syncer {
-	return felixsyncer.New(c, callbacks, apiconfig.Kubernetes)
 }
 
 // Create an entry in the datastore.  This errors if the entry already exists.

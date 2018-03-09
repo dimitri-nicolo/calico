@@ -2583,16 +2583,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
-						"kubeIPVSSupportEnabled": {
-							SchemaProps: spec.SchemaProps{
-								Description: "KubeIPVSSupportEnabled must be set (only) if using Calico with Kubernetes and kube-proxy is running in ipvs mode.  It changes the way Felix renders iptables policy to be compatible with the ipvs packet flow. [Default: false]",
-								Type:        []string{"boolean"},
-								Format:      "",
-							},
-						},
 						"kubeNodePortRanges": {
 							SchemaProps: spec.SchemaProps{
-								Description: "KubeNodePortRanges holds list of port ranges used for service node ports. Only used if ipvs support is enabled.  Felix uses these ranges to separate host and workload traffic. [Default: 30000:32767].",
+								Description: "KubeNodePortRanges holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode. Felix uses these ranges to separate host and workload traffic. [Default: 30000:32767].",
 								Type:        []string{"array"},
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
@@ -2995,7 +2988,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPRule": {
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Properties: map[string]spec.Schema{
@@ -4127,7 +4120,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"http": {
 							SchemaProps: spec.SchemaProps{
 								Description: "HTTP contains match criteria that apply to HTTP requests.",
-								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPRule"),
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch"),
 							},
 						},
 					},
@@ -4135,7 +4128,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch": {
 			Schema: spec.Schema{
