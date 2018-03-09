@@ -28,6 +28,7 @@ data:
         {
           "type": "calico",
           "log_level": "info",
+          "nodename_file_optional": true,
           "datastore_type": "kubernetes",
           "nodename": "__KUBERNETES_NODE_NAME__",
           "mtu": 1500,
