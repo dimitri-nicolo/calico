@@ -8,7 +8,7 @@ canonical_url: 'https://docs.projectcalico.org/v3.0/usage/calicoctl/install'
 `calicoctl` allows you to create, read, update, and delete {{site.prodname}} objects
 from the command line. 
 
-You can run `calicoq` on any host with network access to the
+You can run `calicoctl` on any host with network access to the
 {{site.prodname}} datastore as either a binary or a container.
 For step-by-step instructions, refer to the section that
 corresponds to your desired deployment.
