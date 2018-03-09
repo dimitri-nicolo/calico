@@ -30,6 +30,13 @@ handlers:
   mime_type: text/yaml
   upload: _site/(.*\.(yaml|yml))$
 
+# Specify mime-type for sh files since GAE doesn't handle this correctly.
+#
+- url: /(.*\.(sh|bash))$
+  static_files: _site/\1
+  mime_type: text/x-shellscript
+  upload: _site/(.*\.(sh|bash))$
+
 # For all remaining files, let GAE infer mime-type
 #
 EOF

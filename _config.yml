@@ -53,6 +53,7 @@ exclude:
   - Jenkinsfile
   - Dockerfile-docs
   - website
+  - filter-htmlproofer-false-negatives.awk
 
 # Markdown Processors
 # TODO - we're not entirely sure what these are for
