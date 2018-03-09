@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	log "github.com/sirupsen/logrus"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 )
 
 // MATT: How to make includeRules actually work?
@@ -123,7 +124,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	disp.Register(model.ProfileRulesKey{}, arc.OnUpdate)
 
 	bclient := GetClient(configFile)
-	syncer := bclient.Syncer(cbs)
+	syncer := felixsyncer.New(bclient, cbs)
 	syncer.Start()
 
 	// The describeCmd will notify us once it's in sync and has finished outputting.

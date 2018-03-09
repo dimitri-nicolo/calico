@@ -12,6 +12,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	log "github.com/sirupsen/logrus"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 )
 
 // Restructuring like this should also be useful for a permanently running webserver variant too.
@@ -81,7 +82,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 	cbs.dispatcher.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
 
 	bclient := GetClient(cbs.configFile)
-	syncer := bclient.Syncer(cbs)
+	syncer := felixsyncer.New(bclient, cbs)
 	syncer.Start()
 }
 
