@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	uuid "github.com/satori/go.uuid"
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -90,6 +91,13 @@ func main() {
 	writeYAML(licX)
 
 	// client.DecodeAndVerify(licX)
+
+//	spew.Dump(licX)
+
+	licY := client.ReadFile("./license.yaml")
+
+	cl, _ := client.DecodeAndVerify(licY)
+	spew.Dump(cl)
 }
 
 func writeYAML(license client.License) error {

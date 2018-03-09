@@ -22,6 +22,10 @@ import (
 var (
 	licClaimes                              client.LicenseClaims
 	nameFlag, termFlag, nodeFlag, graceFlag *pflag.FlagSet
+
+	// Symmetric key to encrypt and decrypt the JWT.
+	// Carefully selected key. It has to be 32-bit long.
+	symKey = []byte("Rob likes tea & kills chickens!!")
 )
 
 func init() {
@@ -74,7 +78,7 @@ var GenerateLicenseCmd = &cobra.Command{
 			jose.A128GCM,
 			jose.Recipient{
 				Algorithm: jose.A128GCMKW,
-				Key:       []byte("meepster124235546567546788888457"),
+				Key:       symKey,
 			},
 			(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"))
 		if err != nil {
@@ -98,6 +102,8 @@ var GenerateLicenseCmd = &cobra.Command{
 
 		fmt.Println("*******")
 		spew.Dump(claims)
+
+		fmt.Println("Created license file 'license.yaml'")
 	},
 }
 
@@ -107,6 +113,17 @@ func writeYAML(license client.License) error {
 		return err
 	}
 	fmt.Printf("%s", string(output))
+
+	f, err := os.Create("./license.yaml")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	_, err = f.Write(output)
+	if err != nil {
+		panic(err)
+	}
 	return nil
 }
 
@@ -117,8 +134,8 @@ func GetLicenseProperties(override bool) client.LicenseClaims {
 		fmt.Println("Enter the customer name:")
 		n, err := fmt.Scanf("%s", &lic.Name)
 		if n == 0 {
-				fmt.Println("[ERROR] Company name cannot be empty!")
-				return GetLicenseProperties(true)
+			fmt.Println("[ERROR] Company name cannot be empty!")
+			return GetLicenseProperties(true)
 		}
 		if err != nil {
 			fmt.Printf("[ERROR] invalid input: %s\n", err)
