@@ -193,6 +193,9 @@ To install `calicoq` in OpenShift:
 
 See the [calicoq reference](../../reference/calicoq/) for more information on using `calicoq`.
 
+> **Note**: We recommend [installing `calicoq` as a container](../../usage/calicoq/#installing-calicoq-as-a-container-on-each-node) in OpenShift. Ensure that your configuration takes into account TLS enabled etcd in OpenShift.
+{: .alert .alert-info}
+
 ### Next Steps
 
 - [Policy Auditing](../../reference/cnx/policy-auditing).
