@@ -3,6 +3,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -12,6 +13,11 @@ import (
 )
 
 func main() {
+	// TODO: Make this a better check than just pulling variables
+	// Possibly switch this to use the golang TLSConfig if necessary.
+	webKey := os.Getenv("CALICOQ_WEB_KEY")
+	webCert := os.Getenv("CALICOQ_WEB_CERT")
+
 	c, err := clientmgr.NewClient("")
 	if err != nil {
 		panic(err)
@@ -26,5 +32,10 @@ func main() {
 	http.HandleFunc("/nodes/", h.Node)
 	http.HandleFunc("/summary", h.Summary)
 	http.HandleFunc("/version", handlers.VersionHandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+
+	if webKey != "" && webCert != "" {
+		log.Fatal(http.ListenAndServeTLS(":10443", webCert, webKey, nil))
+	} else {
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}
 }
