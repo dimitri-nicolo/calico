@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"database/sql"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -19,8 +20,8 @@ type DB struct {
 	*sql.DB
 }
 
-func NewDB(dataSourceName string) (*DB, error) {
-	db, err := sql.Open("mysql", dataSourceName)
+func NewDB(dsn string) (*DB, error) {
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}

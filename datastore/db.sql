@@ -5,10 +5,10 @@ CREATE TABLE companies
 (
   id    INT AUTO_INCREMENT PRIMARY KEY,
   uuid  CHAR(36) NOT NULL,
-  `key` VARCHAR(20) NOT NULL,
+  ckey VARCHAR(20) NOT NULL,
   name  NVARCHAR(100) NOT NULL,
   CONSTRAINT companies_uuid_uindex UNIQUE (uuid),
-  CONSTRAINT companies_key_uindex UNIQUE (`key`)
+  CONSTRAINT companies_key_uindex UNIQUE (ckey)
 ) ENGINE = InnoDB;
 
 CREATE TABLE licenses
@@ -19,5 +19,5 @@ CREATE TABLE licenses
   CONSTRAINT licenses_companies_id_fk FOREIGN KEY (company_id) REFERENCES companies (id)
 ) ENGINE = InnoDB;
 
-CREATE INDEX licenses_company_id_index ON licenses (company_id);
+CREATE INDEX licenses_company_id_index ON licenses (company_id, id);
 
