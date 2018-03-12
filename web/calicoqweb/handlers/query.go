@@ -233,7 +233,7 @@ func (q *query) getPolicies(r *http.Request) ([]model.Key, error) {
 	return rpols, nil
 }
 
-func (q *query) getNameNamespaceFromCombinedName(combined string) ([]string, bool) {
+func (q *query) getNameAndNamespaceFromCombinedName(combined string) ([]string, bool) {
 	parts := strings.Split(combined, "/")
 	for _, part := range parts {
 		if part == "" {
@@ -249,7 +249,7 @@ func (q *query) getNameNamespaceFromCombinedName(combined string) ([]string, boo
 func (q *query) getPolicyKeyFromCombinedName(combined string) (model.Key, bool) {
 	logCxt := log.WithField("name", combined)
 	logCxt.Info("Extracting policy key from combined name")
-	parts, ok := q.getNameNamespaceFromCombinedName(combined)
+	parts, ok := q.getNameAndNamespaceFromCombinedName(combined)
 	if !ok {
 		logCxt.Info("Unable to extract name or namespace and name")
 		return nil, false
@@ -273,7 +273,7 @@ func (q *query) getPolicyKeyFromCombinedName(combined string) (model.Key, bool) 
 }
 
 func (q *query) getEndpointKeyFromCombinedName(combined string) (model.Key, bool) {
-	parts, ok := q.getNameNamespaceFromCombinedName(combined)
+	parts, ok := q.getNameAndNamespaceFromCombinedName(combined)
 	if !ok {
 		return nil, false
 	}
@@ -294,7 +294,7 @@ func (q *query) getEndpointKeyFromCombinedName(combined string) (model.Key, bool
 }
 
 func (q *query) getNodeKeyFromCombinedName(combined string) (model.Key, bool) {
-	parts, ok := q.getNameNamespaceFromCombinedName(combined)
+	parts, ok := q.getNameAndNamespaceFromCombinedName(combined)
 	if !ok || len(parts) != 1 {
 		return nil, false
 	}

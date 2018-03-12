@@ -14,9 +14,9 @@ type NodeCache interface {
 	TotalNodesWithNoEndpoints() int
 	TotalNodesWithNoWorkloadEndpoints() int
 	TotalNodesWithNoHostEndpoints() int
-	OnUpdate(update dispatcherv1v3.Update)
 	GetNodes() []api.Node
 	GetNode(string) api.Node
+	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 }
 
 func NewNodeCache() NodeCache {
@@ -32,7 +32,7 @@ type nodeCache struct {
 	numNodesWithHostEndpoints     int
 	numNodesWithWorkloadEndpoints int
 
-	// The node that a host endpoint is on is not related to the node name, thus we need
+	// The node that a host endpoint is on is not related to the hostendpoint name, thus we need
 	// to separately track the mapping between the hostEndpoint key and the node name.
 	hostEndpoints map[model.Key]*nodeData
 }
@@ -68,7 +68,13 @@ func (c *nodeCache) TotalNodesWithNoHostEndpoints() int {
 	return len(c.nodes) - c.numNodesWithHostEndpoints
 }
 
-func (c *nodeCache) OnUpdate(update dispatcherv1v3.Update) {
+func (c *nodeCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
+	dispatcher.RegisterHandler(v3.KindWorkloadEndpoint, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindHostEndpoint, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindNode, c.onUpdate)
+}
+
+func (c *nodeCache) onUpdate(update dispatcherv1v3.Update) {
 	var nd *nodeData
 	uv3 := update.UpdateV3
 	rk := uv3.Key.(model.ResourceKey)
@@ -113,7 +119,7 @@ func (c *nodeCache) OnUpdate(update dispatcherv1v3.Update) {
 			nd = c.nodes[c.getNodeFromWEPName(rk.Name)]
 			c.updateEndpointsCounts(nd, -1, 0)
 		case v3.KindHostEndpoint:
-			nd := c.hostEndpoints[rk]
+			nd = c.hostEndpoints[rk]
 			c.updateEndpointsCounts(nd, 0, -1)
 			delete(c.hostEndpoints, rk)
 		}

@@ -84,28 +84,17 @@ func NewQueryInterface(ci clientv3.Interface) QueryInterface {
 	dispatcher := dispatcherv1v3.New(dispatcherTypes)
 
 	// Register the caches for updates from the dispatcher.
-	dispatcher.RegisterHandler(v3.KindWorkloadEndpoint, cq.endpoints.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindHostEndpoint, cq.endpoints.OnUpdate)
-
-	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, cq.policies.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindNetworkPolicy, cq.policies.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindTier, cq.policies.OnUpdate)
-
-	dispatcher.RegisterHandler(v3.KindWorkloadEndpoint, cq.nodes.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindHostEndpoint, cq.nodes.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindNode, cq.nodes.OnUpdate)
+	cq.endpoints.RegisterWithDispatcher(dispatcher)
+	cq.policies.RegisterWithDispatcher(dispatcher)
+	cq.nodes.RegisterWithDispatcher(dispatcher)
 
 	// Register the label handlers *after* the actual resource caches (since the
 	// resource caches register for updates from the label handler)
-	dispatcher.RegisterHandler(v3.KindProfile, cq.polEplabelHandler.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindWorkloadEndpoint, cq.polEplabelHandler.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindHostEndpoint, cq.polEplabelHandler.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, cq.polEplabelHandler.OnUpdate)
-	dispatcher.RegisterHandler(v3.KindNetworkPolicy, cq.polEplabelHandler.OnUpdate)
+	cq.polEplabelHandler.RegisterWithDispatcher(dispatcher)
 
 	// Register the policy and endpoint caches for updates from the label handler.
-	cq.polEplabelHandler.RegisterHandler(cq.endpoints.PolicyEndpointMatch)
-	cq.polEplabelHandler.RegisterHandler(cq.policies.PolicyEndpointMatch)
+	cq.endpoints.RegisterWithLabelHandler(cq.polEplabelHandler)
+	cq.policies.RegisterWithLabelHandler(cq.polEplabelHandler)
 
 	// Create a SyncerQueryHandler which ensures syncer updates and query requests are
 	// serialized. This handler will pass syncer updates to the dispatcher (see below),
@@ -151,7 +140,7 @@ type cachedQuery struct {
 	nodes cache.NodeCache
 
 	// polEplabelHandler handles the relationship between policy and rule selectors and endpoint labels.
-	polEplabelHandler labelhandler.LabelHandler
+	polEplabelHandler labelhandler.Interface
 
 	// Converters for some of the resources.
 	wepConverter dispatcherv1v3.Converter
@@ -226,8 +215,7 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 		return nil, err
 	}
 
-	count := len(epkeys)
-	items := make([]Endpoint, 0, count)
+	items := make([]Endpoint, 0, len(epkeys))
 	for _, result := range epkeys {
 		ep := c.endpoints.GetEndpoint(result)
 		if req.Node != "" && ep.GetNode() != req.Node {
@@ -237,6 +225,7 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 	}
 	sort.Sort(sortableEndpoints(items))
 
+	count := len(items)
 	if req.Page != nil {
 		perPage := req.Page.NumPerPage
 		fromIdx := req.Page.PageNum * perPage
@@ -521,6 +510,10 @@ func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]st
 				Value: ep.GetResource(),
 			},
 		})
+		// If the WEP has been filtered out, then the value may be nil.
+		if epv1 == nil {
+			return nil, nil, fmt.Errorf("endpoint %s is not valid; no policy is enforced on this endpoint", key)
+		}
 		wep := epv1.Value.(*model.WorkloadEndpoint)
 		labels = wep.Labels
 		profiles = wep.ProfileIDs

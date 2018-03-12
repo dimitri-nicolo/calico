@@ -16,11 +16,11 @@ import (
 	"github.com/tigera/calicoq/web/pkg/querycache/dispatcherv1v3"
 )
 
-type LabelHandler interface {
-	OnUpdate(update dispatcherv1v3.Update)
+type Interface interface {
 	QueryEndpoints(selector string) ([]model.Key, error)
 	QuerySelectors(labels map[string]string, profiles []string) ([]SelectorID, error)
 	RegisterHandler(callback MatchFn)
+	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 }
 
 type SelectorID interface {
@@ -41,7 +41,7 @@ const (
 
 type MatchFn func(matchType MatchType, selectorId SelectorID, endpoint model.Key)
 
-func NewLabelHandler() LabelHandler {
+func NewLabelHandler() Interface {
 	cq := &labelHandler{
 		rules: make(map[model.Key]rules, 0),
 	}
@@ -113,27 +113,12 @@ func (s selectorId) IsNegated() bool {
 	return s.flags&selectorFlagNegated != 0
 }
 
-// OnUpdate handler
-func (c *labelHandler) OnUpdate(update dispatcherv1v3.Update) {
-	uv3 := update.UpdateV3
-	rk, ok := uv3.Key.(model.ResourceKey)
-	if !ok {
-		log.WithField("key", uv3.Key).Error("Unexpected resource in event type")
-	}
-	switch rk.Kind {
-	case v3.KindProfile:
-		c.onUpdateProfile(update)
-	case v3.KindGlobalNetworkPolicy:
-		c.onUpdatePolicy(update)
-	case v3.KindNetworkPolicy:
-		c.onUpdatePolicy(update)
-	case v3.KindWorkloadEndpoint:
-		c.onUpdateWorkloadEndpoint(update)
-	case v3.KindHostEndpoint:
-		c.onUpdateHostEndpoint(update)
-	default:
-		log.WithField("key", uv3.Key).Error("Unexpected resource in event type")
-	}
+func (c *labelHandler) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
+	dispatcher.RegisterHandler(v3.KindProfile, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindWorkloadEndpoint, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindHostEndpoint, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindNetworkPolicy, c.onUpdate)
 }
 
 func (c *labelHandler) RegisterHandler(callback MatchFn) {
@@ -181,6 +166,29 @@ func (c *labelHandler) QuerySelectors(labels map[string]string, profiles []strin
 	return results, nil
 }
 
+// OnUpdate handler
+func (c *labelHandler) onUpdate(update dispatcherv1v3.Update) {
+	uv3 := update.UpdateV3
+	rk, ok := uv3.Key.(model.ResourceKey)
+	if !ok {
+		log.WithField("key", uv3.Key).Error("Unexpected resource in event type")
+	}
+	switch rk.Kind {
+	case v3.KindProfile:
+		c.onUpdateProfile(update)
+	case v3.KindGlobalNetworkPolicy:
+		c.onUpdatePolicy(update)
+	case v3.KindNetworkPolicy:
+		c.onUpdatePolicy(update)
+	case v3.KindWorkloadEndpoint:
+		c.onUpdateWorkloadEndpoint(update)
+	case v3.KindHostEndpoint:
+		c.onUpdateHostEndpoint(update)
+	default:
+		log.WithField("key", uv3.Key).Error("Unexpected resource in event type")
+	}
+}
+
 // onUpdateWorkloadEndpoints is called when the syncer has an update for a WorkloadEndpoint.
 // This updates the InheritIndex helper and tracks global counts.
 func (c *labelHandler) onUpdateWorkloadEndpoint(update dispatcherv1v3.Update) {
@@ -191,11 +199,17 @@ func (c *labelHandler) onUpdateWorkloadEndpoint(update dispatcherv1v3.Update) {
 		c.index.DeleteLabels(key)
 		return
 	}
+	if uv1.Value == nil {
+		// The v1 resource value is nil even though the v3 update is not a delete. The update processor
+		// must be filtering this out, so treat as a delete.
+		c.index.DeleteLabels(key)
+		return
+	}
 	value := uv1.Value.(*model.WorkloadEndpoint)
 	c.index.UpdateLabels(uv3.Key, value.Labels, value.ProfileIDs)
 }
 
-// onUpdateHostEndpoints is called when the syncer has an update for a WorkloadEndpoint.
+// onUpdateHostEndpoints is called when the syncer has an update for a HostEndpoint.
 // This updates the InheritIndex helper and tracks global counts.
 func (c *labelHandler) onUpdateHostEndpoint(update dispatcherv1v3.Update) {
 	uv3 := update.UpdateV3
@@ -317,7 +331,7 @@ func (c *labelHandler) onUpdatePolicy(update dispatcherv1v3.Update) {
 	c.rules[key] = rulesAfter
 }
 
-// onUpdatePolicy is called when the syncer has an update for a Policy.
+// onDeletePolicy is called when the syncer has a delete for a Policy.
 // This is used to register/unregister match updates from the InheritIndex helper for the
 // policy selector so that we can track total endpoint counts for each policy.
 func (c *labelHandler) onDeletePolicy(key model.ResourceKey, rules rules) {
@@ -329,9 +343,9 @@ func (c *labelHandler) onDeletePolicy(key model.ResourceKey, rules rules) {
 	delete(c.rules, key)
 }
 
-// onUpdatePolicy is called when the syncer has an update for a Policy.
+// onDeletePolicyRules is called when the syncer has a delete for a Policy.
 // This is used to register/unregister match updates from the InheritIndex helper for the
-// policy selector so that we can track total endpoint counts for each policy.
+// policy rules selectors so that we can track total endpoint counts for each policy.
 func (c *labelHandler) onDeletePolicyRules(key model.ResourceKey, rulesNow, rulesAfter rules) {
 	for i := rulesAfter.egress; i < rulesNow.egress; i++ {
 		c.index.DeleteSelector(selectorId{

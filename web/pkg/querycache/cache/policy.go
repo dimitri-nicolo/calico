@@ -17,11 +17,11 @@ import (
 
 type PolicyCache interface {
 	TotalPolicies() api.PolicyCounts
-	OnUpdate(update dispatcherv1v3.Update)
 	GetPolicy(model.Key) api.Policy
 	GetTier(model.Key) api.Tier
 	GetOrderedPolicies(set.Set) []api.Tier
-	PolicyEndpointMatch(matchType labelhandler.MatchType, selector labelhandler.SelectorID, endpoint model.Key)
+	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
+	RegisterWithLabelHandler(handler labelhandler.Interface)
 }
 
 func NewPolicyCache() PolicyCache {
@@ -41,7 +41,108 @@ type policyCache struct {
 	orderedTiers          []api.Tier
 }
 
-func (c *policyCache) OnUpdate(update dispatcherv1v3.Update) {
+func (c *policyCache) TotalPolicies() api.PolicyCounts {
+	return api.PolicyCounts{
+		NumGlobalNetworkPolicies: len(c.globalNetworkPolicies),
+		NumNetworkPolicies:       len(c.networkPolicies),
+	}
+}
+
+func (c *policyCache) GetPolicy(key model.Key) api.Policy {
+	if policy := c.getPolicy(key); policy != nil {
+		return policy
+	}
+	return nil
+}
+
+func (c *policyCache) GetTier(key model.Key) api.Tier {
+	c.orderPolicies()
+	return c.tiers[key.(model.ResourceKey).Name]
+}
+
+func (c *policyCache) GetOrderedPolicies(keys set.Set) []api.Tier {
+	c.orderPolicies()
+	if keys == nil {
+		return c.orderedTiers
+	}
+
+	tiers := make([]api.Tier, 0)
+	for _, t := range c.orderedTiers {
+		td := &tierData{
+			resource: t.(*tierData).resource,
+			name:     t.(*tierData).name,
+		}
+		for _, p := range t.GetOrderedPolicies() {
+			if keys.Contains(p.(*policyData).getKey()) {
+				td.orderedPolicies = append(td.orderedPolicies, p)
+			}
+		}
+		if len(td.orderedPolicies) > 0 {
+			tiers = append(tiers, td)
+		}
+	}
+
+	return tiers
+}
+
+func (c *policyCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
+	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindNetworkPolicy, c.onUpdate)
+	dispatcher.RegisterHandler(v3.KindTier, c.onUpdate)
+}
+
+func (c *policyCache) RegisterWithLabelHandler(handler labelhandler.Interface) {
+	handler.RegisterHandler(c.policyEndpointMatch)
+}
+
+func (c *policyCache) policyEndpointMatch(matchType labelhandler.MatchType, selector labelhandler.SelectorID, epKey model.Key) {
+	erk := epKey.(model.ResourceKey)
+	pd := c.getPolicy(selector.Policy())
+	if pd == nil {
+		// The policy has been deleted. Since the policy cache is updated before the index handler is updated this is
+		// a valid scenario, and should be treated as a no-op.
+		return
+	}
+	var epc *api.EndpointCounts
+	if selector.IsRule() {
+		var recs []api.RuleDirection
+		var reec *api.RuleEntity
+		if selector.IsIngress() {
+			recs = pd.ruleEndpoints.Ingress
+		} else {
+			recs = pd.ruleEndpoints.Egress
+		}
+		if selector.Index() >= len(recs) {
+			// If the rules length has decreased we will get deleted updates for rules
+			// that we no longer have cached.
+			return
+		}
+		rec := &recs[selector.Index()]
+		if selector.IsSource() {
+			reec = &rec.Source
+		} else {
+			reec = &rec.Destination
+		}
+		if selector.IsNegated() {
+			epc = &reec.NotSelector
+		} else {
+			epc = &reec.Selector
+		}
+	} else {
+		epc = &pd.endpoints
+	}
+
+	switch erk.Kind {
+	case v3.KindHostEndpoint:
+		epc.NumHostEndpoints += matchTypeToDelta[matchType]
+	case v3.KindWorkloadEndpoint:
+		epc.NumWorkloadEndpoints += matchTypeToDelta[matchType]
+	default:
+		log.WithField("key", selector.Policy()).Error("Unexpected resource in event type, expecting a v3 policy type")
+	}
+}
+
+func (c *policyCache) onUpdate(update dispatcherv1v3.Update) {
 	uv1 := update.UpdateV1
 	uv3 := update.UpdateV3
 
@@ -61,7 +162,7 @@ func (c *policyCache) OnUpdate(update dispatcherv1v3.Update) {
 			delete(c.tiers, name)
 		}
 	case model.PolicyKey:
-		m := c.getMap(uv3.Key)
+		m := c.getPolicyCache(uv3.Key)
 		if m == nil {
 			return
 		}
@@ -109,92 +210,6 @@ func (c *policyCache) OnUpdate(update dispatcherv1v3.Update) {
 	}
 }
 
-func (c *policyCache) PolicyEndpointMatch(matchType labelhandler.MatchType, selector labelhandler.SelectorID, epKey model.Key) {
-	erk := epKey.(model.ResourceKey)
-	epd := c.getPolicy(selector.Policy())
-	var epc *api.EndpointCounts
-	if selector.IsRule() {
-		var recs []api.RuleDirection
-		var reec *api.RuleEntity
-		if selector.IsIngress() {
-			recs = epd.ruleEndpoints.Ingress
-		} else {
-			recs = epd.ruleEndpoints.Egress
-		}
-		if selector.Index() > len(recs) {
-			// If the rules length has decreased we will get deleted updates for rules
-			// that we no longer have cached.
-			return
-		}
-		rec := &recs[selector.Index()]
-		if selector.IsSource() {
-			reec = &rec.Source
-		} else {
-			reec = &rec.Destination
-		}
-		if selector.IsNegated() {
-			epc = &reec.NotSelector
-		} else {
-			epc = &reec.Selector
-		}
-	} else {
-		epc = &epd.endpoints
-	}
-
-	switch erk.Kind {
-	case v3.KindHostEndpoint:
-		epc.NumHostEndpoints += matchTypeToDelta[matchType]
-	case v3.KindWorkloadEndpoint:
-		epc.NumWorkloadEndpoints += matchTypeToDelta[matchType]
-	default:
-		log.WithField("key", selector.Policy()).Error("Unexpected resource in event type, expecting a v3 policy type")
-	}
-}
-
-func (c *policyCache) TotalPolicies() api.PolicyCounts {
-	return api.PolicyCounts{
-		NumGlobalNetworkPolicies: len(c.globalNetworkPolicies),
-		NumNetworkPolicies:       len(c.networkPolicies),
-	}
-}
-
-func (c *policyCache) GetPolicy(key model.Key) api.Policy {
-	if policy := c.getPolicy(key); policy != nil {
-		return policy
-	}
-	return nil
-}
-
-func (c *policyCache) GetTier(key model.Key) api.Tier {
-	c.orderPolicies()
-	return c.tiers[key.(model.ResourceKey).Name]
-}
-
-func (c *policyCache) GetOrderedPolicies(keys set.Set) []api.Tier {
-	c.orderPolicies()
-	if keys == nil {
-		return c.orderedTiers
-	}
-
-	tiers := make([]api.Tier, 0)
-	for _, t := range c.orderedTiers {
-		td := &tierData{
-			resource: t.(*tierData).resource,
-			name:     t.(*tierData).name,
-		}
-		for _, p := range t.GetOrderedPolicies() {
-			if keys.Contains(p.(*policyData).getKey()) {
-				td.orderedPolicies = append(td.orderedPolicies, p)
-			}
-		}
-		if len(td.orderedPolicies) > 0 {
-			tiers = append(tiers, td)
-		}
-	}
-
-	return tiers
-}
-
 func (c *policyCache) orderPolicies() {
 	if c.orderedTiers != nil {
 		return
@@ -208,6 +223,8 @@ func (c *policyCache) orderPolicies() {
 		}
 		c.orderedTiers = append(c.orderedTiers, td)
 
+		// Reset and reconstruct the ordered policies slice.
+		td.orderedPolicies = nil
 		for _, policy := range tier.OrderedPolicies {
 			policyData := c.getPolicyFromV1Key(policy.Key)
 			td.orderedPolicies = append(td.orderedPolicies, policyData)
@@ -231,14 +248,14 @@ func (c *policyCache) getPolicyFromV1Key(key model.PolicyKey) *policyData {
 }
 
 func (c *policyCache) getPolicy(key model.Key) *policyData {
-	m := c.getMap(key)
+	m := c.getPolicyCache(key)
 	if m == nil {
 		return nil
 	}
 	return m[key]
 }
 
-func (c *policyCache) getMap(polKey model.Key) map[model.Key]*policyData {
+func (c *policyCache) getPolicyCache(polKey model.Key) map[model.Key]*policyData {
 	if rKey, ok := polKey.(model.ResourceKey); ok {
 		switch rKey.Kind {
 		case v3.KindGlobalNetworkPolicy:

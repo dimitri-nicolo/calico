@@ -13,3 +13,4 @@ env
 vendor
 venv
 .*-created
+.go-pkg-cache

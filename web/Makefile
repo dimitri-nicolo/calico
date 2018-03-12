@@ -52,7 +52,7 @@ vendor vendor/.up-to-date: glide.lock
 		-v $(HOME)/.glide:/home/user/.glide:rw \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
-		calico/go-build \
+		$(GO_BUILD_CONTAINER) \
 		sh -c 'glide install --strip-vendor'
 	touch vendor/.up-to-date
 
@@ -62,14 +62,20 @@ update-vendor:
 
 .PHONY: ut
 ut: 
-	@echo "Need to add tests. This is a no-op"
+ut: vendor/.up-to-date
+	./run-uts
 
 .PHONY: ut-containerized
-ut-containerized:
-	@echo "Need to add tests. This is a no-op"
+fv-containerized: vendor/.up-to-date run-etcd vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
+	-mkdir -p .go-pkg-cache
+	docker run --rm --privileged --net=host \
+    -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+    -v $(CURDIR)/.go-pkg-cache:/go/pkg/:rw \
+    -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+    $(GO_BUILD_CONTAINER) sh -c 'cd /go/src/$(PACKAGE_NAME) && make WHAT=$(WHAT) SKIP=$(SKIP) ut'
 
 .PHONY: fv-containerized
-fv-containerized:
+ut-containerized:
 	@echo "Need to add tests. This is a no-op"
 
 .PHONY: st-containerized

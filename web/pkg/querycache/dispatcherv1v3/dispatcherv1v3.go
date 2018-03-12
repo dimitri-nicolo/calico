@@ -82,7 +82,7 @@ func (d *dispatcher) OnUpdates(updates []api.Update) {
 			updatev1v3.UpdateV1 = rt.converter.ConvertV3ToV1(update)
 		}
 
-		// Invoke each callbackin the registered order with the update.
+		// Invoke each callback in the registered order with the update.
 		for _, cb := range rt.callbacks {
 			cb(updatev1v3)
 		}
@@ -116,6 +116,12 @@ func (s *supConverter) ConvertV3ToV1(v3Update *api.Update) *api.Update {
 		log.WithError(err).Error("Unable to convert v3 value to v1")
 		return nil
 	}
+	if v1Updates == nil {
+		// Resource must have been filtered out.  Not a lot we can do here.  Return a nil
+		// update.
+		log.WithField("Resource", v3Update.Key).Info("The v1 resource has been filtered out")
+		return nil
+	}
 	if len(v1Updates) != 1 {
 		// The v3 update has resulted in a different number of v1 updates.  This will only happen if
 		// the v3 resource is made up of multiple v1 resources, or there is not a fixed mapping between
@@ -125,7 +131,6 @@ func (s *supConverter) ConvertV3ToV1(v3Update *api.Update) *api.Update {
 			"v1-updates": v1Updates,
 		}).Fatal("Unexpected v1 updates from a v3 update")
 	}
-
 	return &api.Update{
 		UpdateType: v3Update.UpdateType,
 		KVPair:     *v1Updates[0],
