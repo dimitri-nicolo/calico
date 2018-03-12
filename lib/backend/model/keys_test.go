@@ -95,6 +95,11 @@ var _ = DescribeTable(
 		NetworkSetKey{Name: "netsetname"},
 	),
 	Entry(
+		"license key",
+		"/calico/v1/licensekey/default",
+		LicenseKeyKey{Name: "default"},
+	),
+	Entry(
 		"ready flag",
 		"/calico/v1/Ready",
 		ReadyFlagKey{},

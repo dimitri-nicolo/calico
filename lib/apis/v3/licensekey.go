@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ type LicenseKey struct {
 // LicenseKeySpec contains the license key itself.
 type LicenseKeySpec struct {
 	// Token is the JWT containing the license claims
-	Token string `json:"token,omitempty" validate:"omitempty"`
+	Token string `json:"token"`
 	// Certificate is used to validate the token.
 	Certificate string `json:"certificate,omitempty" validate:"omitempty"`
 }
@@ -64,7 +64,7 @@ func NewLicenseKey() *LicenseKey {
 	}
 }
 
-// NewLicenseKeyList creates a new 9zeroed) LicenseKeyList struct with the TypeMetadata
+// NewLicenseKeyList creates a new (zeroed) LicenseKeyList struct with the TypeMetadata
 // initialized to the current version.
 func NewLicenseKeyList() *LicenseKeyList {
 	return &LicenseKeyList{

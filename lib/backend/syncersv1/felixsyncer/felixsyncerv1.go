@@ -35,6 +35,10 @@ func New(client api.Client, callbacks api.SyncerCallbacks, datastoreType apiconf
 			UpdateProcessor: updateprocessors.NewClusterInfoUpdateProcessor(),
 		},
 		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindLicenseKey},
+			UpdateProcessor: updateprocessors.NewLicenseKeyUpdateProcessor(),
+		},
+		{
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindFelixConfiguration},
 			UpdateProcessor: updateprocessors.NewFelixConfigUpdateProcessor(),
 		},

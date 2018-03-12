@@ -238,6 +238,27 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 				Revision: gns.ResourceVersion,
 			})
 
+			By("Creating a LicenseKey")
+			lk := apiv3.NewLicenseKey()
+			lk.Name = "default"
+			lk.Spec.Token = "token"
+			lk.Spec.Certificate = "certificate"
+			lk, err = c.LicenseKeys().Create(
+				ctx,
+				lk,
+				options.SetOptions{},
+			)
+			expectedCacheSize++
+			syncTester.ExpectCacheSize(expectedCacheSize)
+			syncTester.ExpectData(model.KVPair{
+				Key: model.LicenseKeyKey{Name: "default"},
+				Value: &model.LicenseKey{
+					Token:       "token",
+					Certificate: "certificate",
+				},
+				Revision: lk.ResourceVersion,
+			})
+
 			By("Creating a HostEndpoint")
 			hep, err := c.HostEndpoints().Create(
 				ctx,

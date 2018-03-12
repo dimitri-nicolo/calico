@@ -49,8 +49,10 @@ type Interface interface {
 	FelixConfigurations() FelixConfigurationInterface
 	// ClusterInformation returns an interface for managing the cluster information resource.
 	ClusterInformation() ClusterInformationInterface
-	// RemoteClusterConfiguration returns an interface for managing the remote cluster configuration resource.
+	// RemoteClusterConfiguration returns an interface for managing the remote cluster configuration resources.
 	RemoteClusterConfigurations() RemoteClusterConfigurationInterface
+	// LicenseKey returns an interface for managing the license key resource.
+	LicenseKey() LicenseKeyInterface
 
 	// EnsureInitialized is used to ensure the backend datastore is correctly
 	// initialized for use by Calico.  This method may be called multiple times, and

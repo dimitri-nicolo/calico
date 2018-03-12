@@ -232,6 +232,11 @@ func KeyFromDefaultPath(path string) Key {
 		return NetworkSetKey{
 			Name: unescapeName(m[1]),
 		}
+	} else if m := matchLicenseKey.FindStringSubmatch(path); m != nil {
+		log.Debugf("Path is a license key: %v", path)
+		return LicenseKeyKey{
+			Name: unescapeName(m[1]),
+		}
 	} else if m := matchPolicy.FindStringSubmatch(path); m != nil {
 		log.Debugf("Path is a policy: %v", path)
 		return PolicyKey{
