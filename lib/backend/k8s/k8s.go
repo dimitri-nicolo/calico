@@ -362,7 +362,7 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 				&apiv3.ClusterInformation{},
 				&apiv3.ClusterInformationList{},
 				&apiv3.LicenseKey{},
-				&apiv3.LicenseKeys{},
+				&apiv3.LicenseKeyList{},
 				&apiv3.GlobalNetworkSet{},
 				&apiv3.GlobalNetworkSetList{},
 				&apiv3.GlobalNetworkPolicy{},

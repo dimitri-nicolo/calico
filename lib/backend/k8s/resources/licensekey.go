@@ -26,15 +26,15 @@ import (
 
 const (
 	LicenseKeyResourceName = "LicenseKeys"
-	LicenseKeyCRDName      = "LicenseKeys.crd.projectcalico.org"
+	LicenseKeyCRDName      = "licensekeys.crd.projectcalico.org"
 )
 
 func NewLicenseKeyClient(c *kubernetes.Clientset, r *rest.RESTClient) K8sResourceClient {
 	return &customK8sResourceClient{
 		clientSet:       c,
 		restClient:      r,
-		name:            ClusterInfoCRDName,
-		resource:        ClusterInfoResourceName,
+		name:            LicenseKeyCRDName,
+		resource:        LicenseKeyResourceName,
 		description:     "Tigera CNX License Key",
 		k8sResourceType: reflect.TypeOf(apiv3.LicenseKey{}),
 		k8sResourceTypeMeta: metav1.TypeMeta{

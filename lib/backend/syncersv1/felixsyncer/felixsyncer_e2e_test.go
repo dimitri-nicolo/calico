@@ -243,7 +243,7 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			lk.Name = "default"
 			lk.Spec.Token = "token"
 			lk.Spec.Certificate = "certificate"
-			lk, err = c.LicenseKeys().Create(
+			lk, err = c.LicenseKey().Create(
 				ctx,
 				lk,
 				options.SetOptions{},

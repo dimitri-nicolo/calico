@@ -35,14 +35,14 @@ type LicenseKeyInterface interface {
 }
 
 // LicenseKey implements LicenseKeyInterface
-type LicenseKey struct {
+type licenseKey struct {
 	client client
 }
 
 // Create takes the representation of a LicenseKey and creates it.
 // Returns the stored representation of the LicenseKey, and an error
 // if there is any.
-func (r LicenseKey) Create(ctx context.Context, res *apiv3.LicenseKey, opts options.SetOptions) (*apiv3.LicenseKey, error) {
+func (r licenseKey) Create(ctx context.Context, res *apiv3.LicenseKey, opts options.SetOptions) (*apiv3.LicenseKey, error) {
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (r LicenseKey) Create(ctx context.Context, res *apiv3.LicenseKey, opts opti
 // Update takes the representation of a LicenseKey and updates it.
 // Returns the stored representation of the LicenseKey, and an error
 // if there is any.
-func (r LicenseKey) Update(ctx context.Context, res *apiv3.LicenseKey, opts options.SetOptions) (*apiv3.LicenseKey, error) {
+func (r licenseKey) Update(ctx context.Context, res *apiv3.LicenseKey, opts options.SetOptions) (*apiv3.LicenseKey, error) {
 	if err := validator.Validate(res); err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (r LicenseKey) Update(ctx context.Context, res *apiv3.LicenseKey, opts opti
 
 // Delete takes name of the LicenseKey and deletes it. Returns an
 // error if one occurs.
-func (r LicenseKey) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.LicenseKey, error) {
+func (r licenseKey) Delete(ctx context.Context, name string, opts options.DeleteOptions) (*apiv3.LicenseKey, error) {
 	out, err := r.client.resources.Delete(ctx, opts, apiv3.KindLicenseKey, noNamespace, name)
 	if out != nil {
 		return out.(*apiv3.LicenseKey), err
@@ -84,7 +84,7 @@ func (r LicenseKey) Delete(ctx context.Context, name string, opts options.Delete
 
 // Get takes name of the LicenseKey, and returns the corresponding
 // LicenseKey object, and an error if there is any.
-func (r LicenseKey) Get(ctx context.Context, name string, opts options.GetOptions) (*apiv3.LicenseKey, error) {
+func (r licenseKey) Get(ctx context.Context, name string, opts options.GetOptions) (*apiv3.LicenseKey, error) {
 	out, err := r.client.resources.Get(ctx, opts, apiv3.KindLicenseKey, noNamespace, name)
 	if out != nil {
 		return out.(*apiv3.LicenseKey), err
@@ -93,7 +93,7 @@ func (r LicenseKey) Get(ctx context.Context, name string, opts options.GetOption
 }
 
 // List returns the list of LicenseKey objects that match the supplied options.
-func (r LicenseKey) List(ctx context.Context, opts options.ListOptions) (*apiv3.LicenseKeyList, error) {
+func (r licenseKey) List(ctx context.Context, opts options.ListOptions) (*apiv3.LicenseKeyList, error) {
 	res := &apiv3.LicenseKeyList{}
 	if err := r.client.resources.List(ctx, opts, apiv3.KindLicenseKey, apiv3.KindLicenseKeyList, res); err != nil {
 		return nil, err
@@ -103,6 +103,6 @@ func (r LicenseKey) List(ctx context.Context, opts options.ListOptions) (*apiv3.
 
 // Watch returns a watch.Interface that watches the LicenseKey that
 // match the supplied options.
-func (r LicenseKey) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
+func (r licenseKey) Watch(ctx context.Context, opts options.ListOptions) (watch.Interface, error) {
 	return r.client.resources.Watch(ctx, opts, apiv3.KindLicenseKey, nil)
 }
