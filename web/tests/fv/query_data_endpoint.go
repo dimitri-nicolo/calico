@@ -193,6 +193,42 @@ func endpointTestQueryData() []testQueryData {
 			[]resourcemgr.ResourceObject{
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
 				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				wep2_n1_ns1_filtered_out,
+			},
+			client.QueryEndpointsReq{
+				Policy: resourceKey(gnp1_t1_o3),
+			},
+			&client.QueryEndpointsResp{
+				Count: 4,
+				Items: []client.Endpoint{
+					qcEndpoint(wep1_n1_ns1, 2, 1), qcEndpoint(wep3_n1_ns2, 2, 1), qcEndpoint(wep4_n2_ns1, 2, 0),
+					qcEndpoint(hep1_n2, 2, 0),
+				},
+			},
+		},
+		{
+			"multiple weps and heps, tier1 policy - endpoints matching policy selector gnp1_t1_o3, filter in wep2",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				wep2_n1_ns1_filtered_in,
+			},
+			client.QueryEndpointsReq{
+				Policy: resourceKey(gnp1_t1_o3),
+			},
+			&client.QueryEndpointsResp{
+				Count: 5,
+				Items: []client.Endpoint{
+					qcEndpoint(wep1_n1_ns1, 2, 1), qcEndpoint(wep2_n1_ns1_filtered_in, 2, 1),
+					qcEndpoint(wep3_n1_ns2, 2, 1), qcEndpoint(wep4_n2_ns1, 2, 0), qcEndpoint(hep1_n2, 2, 0),
+				},
+			},
+		},
+		{
+			"multiple weps and heps, tier1 policy - endpoints matching policy selector gnp1_t1_o3",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
 			},
 			client.QueryEndpointsReq{
 				Policy: resourceKey(gnp1_t1_o3),

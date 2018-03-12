@@ -185,10 +185,6 @@ func (nd *nodeData) canDelete() bool {
 	return nd.resource == nil && nd.endpoints.NumWorkloadEndpoints == 0 && nd.endpoints.NumHostEndpoints == 0
 }
 
-func (nd *nodeData) hasHostEndpoints() bool {
-	return nd.endpoints.NumHostEndpoints > 0
-}
-
 func (nd *nodeData) GetResource() api.Resource {
 	return nd.resource
 }
