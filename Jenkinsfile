@@ -6,7 +6,7 @@ pipeline {
         cron('H H(0-7) * * 1-5')
     }
     environment {
-        IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/calico-k8sapiserver"
+        IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver"
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
     }
     stages {
