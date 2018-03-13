@@ -96,8 +96,9 @@ func main() {
 
 	licY := client.ReadFile("./license.yaml")
 
-	cl, _ := client.DecodeAndVerify(licY)
+	cl, valid := client.DecodeAndVerify(licY)
 	spew.Dump(cl)
+	fmt.Println(valid)
 }
 
 func writeYAML(license client.License) error {

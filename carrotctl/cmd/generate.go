@@ -73,6 +73,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		}
 
 		claims := GetLicenseProperties(false)
+		claims.NotBefore = jwt.NewNumericDate(then)
 
 		enc, err := jose.NewEncrypter(
 			jose.A128GCM,

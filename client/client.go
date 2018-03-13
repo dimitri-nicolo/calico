@@ -66,7 +66,10 @@ func DecodeAndVerify(lic License) (LicenseClaims, bool) {
 		return LicenseClaims{}, false
 	}
 
+	// TODO remove all the debug logs from the client library.
 	fmt.Printf("*** %v\n", out)
+	fmt.Printf("*** TimeExp %v\n\n", out.Claims.NotBefore.Time())
+	fmt.Printf("*** TimeNow %v\n\n", time.Now())
 
 	return out, out.Claims.NotBefore.Time().After(time.Now())
 }
