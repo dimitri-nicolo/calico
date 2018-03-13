@@ -5,8 +5,8 @@ pipeline{
         cron('H H(0-7) * * 1-5')
     }
     environment {
-        IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/calicoq"
-        WEB_IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/calicoqweb"
+        CALICOQ_IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/calicoq"
+        QUERYSERVER_IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/cnx-queryserver"
         WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
     }
     stages {
@@ -17,8 +17,8 @@ pipeline{
                         currentBuild.description = """
                         BRANCH_NAME=${env.BRANCH_NAME}
                         JOB_NAME=${env.JOB_NAME}
-                        IMAGE_NAME=${env.IMAGE_NAME}:${env.BRANCH_NAME}
-                        WEB_IMAGE_NAME=${env.WEB_IMAGE_NAME}:${env.BRANCH_NAME}
+                        CALICOQ_IMAGE_NAME=${env.CALICOQ_IMAGE_NAME}:${env.BRANCH_NAME}
+                        QUERYSERVER_IMAGE_NAME=${env.QUERYSERVER_IMAGE_NAME}:${env.BRANCH_NAME}
                         BUILD_INFO=${env.RUN_DISPLAY_URL}""".stripIndent()
                     }
             }
@@ -29,31 +29,31 @@ pipeline{
             }
         }
 
-        stage('Check calicoqweb changes') {
+        stage('Check cnx-queryserver changes') {
             steps {
                 script {
-                    SKIP_CALICOQ_WEB_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^web/'")
+                    SKIP_CNX_QUERYSERVER_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^web/'")
                 }
             }
         }
 
-        stage('Build calicoqweb') {
+        stage('Build cnx-queryserver') {
             when {
-                expression { SKIP_CALICOQ_WEB_BUILD == 0 }
+                expression { SKIP_CNX_QUERYSERVER_BUILD == 0 }
             }
-            // only run if there were calicoqweb changes returned from running git diff grep queries
+            // only run if there were cnx-queryserver changes returned from running git diff grep queries
             steps {
                 dir('web') {
                     withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
-                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make build-image'
+                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && make tigera/cnx-queryserver'
                     }
                 }
             }
         }
 
-        stage('Run calicoqweb UTs') {
+        stage('Run cnx-queryserver UTs') {
             when {
-                expression { SKIP_CALICOQ_WEB_BUILD == 0 }
+                expression { SKIP_CNX_QUERYSERVER_BUILD == 0 }
             }
             steps {
                 dir('web') {
@@ -62,9 +62,9 @@ pipeline{
             }
         }
 
-        stage('Run calicoqweb FVs') {
+        stage('Run cnx-queryserver FVs') {
             when {
-                expression { SKIP_CALICOQ_WEB_BUILD == 0 }
+                expression { SKIP_CNX_QUERYSERVER_BUILD == 0 }
             }
             steps {
                 dir('web') {
@@ -73,9 +73,9 @@ pipeline{
             }
         }
 
-        stage('Run calicoqweb STs') {
+        stage('Run cnx-queryserver STs') {
             when {
-                expression { SKIP_CALICOQ_WEB_BUILD == 0 }
+                expression { SKIP_CNX_QUERYSERVER_BUILD == 0 }
             }
             steps {
                 dir('web') {
@@ -83,11 +83,11 @@ pipeline{
                 }
             }
         }
-        stage('Push calicoqweb image to GCR') {
+        stage('Push cnx-queryserver image to GCR') {
             when {
-                expression { SKIP_CALICOQ_WEB_BUILD == 0 }
+                expression { SKIP_CNX_QUERYSERVER_BUILD == 0 }
             }
-            // only run if there were calicoqweb changes returned from running git diff grep queries
+            // only run if there were cnx-queryserver changes returned from running git diff grep queries
             steps {
                 dir('web') {
                     script {
@@ -97,15 +97,15 @@ pipeline{
                                 sh "gcloud auth activate-service-account ${env.WAVETANK_SERVICE_ACCT} --key-file key.json"
                                 sh "gcloud docker --authorize-only --server gcr.io"
 
-                                sh "docker tag tigera/calicoqweb:latest ${env.WEB_IMAGE_NAME}:${env.BRANCH_NAME}"
-                                sh "docker push ${env.WEB_IMAGE_NAME}:${env.BRANCH_NAME}"
+                                sh "docker tag tigera/cnx-queryserver:latest ${env.QUERYSERVER_IMAGE_NAME}:${env.BRANCH_NAME}"
+                                sh "docker push ${env.QUERYSERVER_IMAGE_NAME}:${env.BRANCH_NAME}"
 
                                 // Clean up images.
                                 // Hackey since empty displayed tags are not empty according to gcloud filter criteria
                                 sh """
-                                    for digest in \$(gcloud container images list-tags ${env.WEB_IMAGE_NAME} --format='get(digest)'); do
-                                    if ! test \$(echo \$(gcloud container images list-tags ${env.WEB_IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
-                                        gcloud container images delete -q --force-delete-tags "${env.WEB_IMAGE_NAME}@\${digest}"
+                                    for digest in \$(gcloud container images list-tags ${env.QUERYSERVER_IMAGE_NAME} --format='get(digest)'); do
+                                    if ! test \$(echo \$(gcloud container images list-tags ${env.QUERYSERVER_IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
+                                        gcloud container images delete -q --force-delete-tags "${env.QUERYSERVER_IMAGE_NAME}@\${digest}"
                                     fi
                                     done
                                 """
@@ -174,15 +174,15 @@ pipeline{
                             sh "gcloud docker --authorize-only --server gcr.io"
 
                             sh 'make build-image'
-                            sh "docker tag tigera/calicoq:latest ${env.IMAGE_NAME}:${env.BRANCH_NAME}"
-                            sh "docker push ${env.IMAGE_NAME}:${env.BRANCH_NAME}"
+                            sh "docker tag tigera/calicoq:latest ${env.CALICOQ_IMAGE_NAME}:${env.BRANCH_NAME}"
+                            sh "docker push ${env.CALICOQ_IMAGE_NAME}:${env.BRANCH_NAME}"
 
                             // Clean up images.
                             // Hackey since empty displayed tags are not empty according to gcloud filter criteria
                             sh """
-                                for digest in \$(gcloud container images list-tags ${env.IMAGE_NAME} --format='get(digest)'); do
-                                if ! test \$(echo \$(gcloud container images list-tags ${env.IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
-                                    gcloud container images delete -q --force-delete-tags "${env.IMAGE_NAME}@\${digest}"
+                                for digest in \$(gcloud container images list-tags ${env.CALICOQ_IMAGE_NAME} --format='get(digest)'); do
+                                if ! test \$(echo \$(gcloud container images list-tags ${env.CALICOQ_IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
+                                    gcloud container images delete -q --force-delete-tags "${env.CALICOQ_IMAGE_NAME}@\${digest}"
                                 fi
                                 done
                             """

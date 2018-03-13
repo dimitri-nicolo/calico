@@ -26,5 +26,5 @@ import (
 func TestClient(t *testing.T) {
 	testutils.HookLogrusForGinkgo()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "calicoqweb FV Suite")
+	RunSpecs(t, "queryserver FV Suite")
 }

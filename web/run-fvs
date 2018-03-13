@@ -2,7 +2,7 @@
 
 set -e
 
-SKIP="calicoqweb,pkg,vendor"
+SKIP="queryserver,pkg,vendor"
 
 echo "Removing old coverprofiles..."
 find . -name "*.coverprofile" -type f -delete

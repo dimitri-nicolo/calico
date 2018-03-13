@@ -1,6 +1,6 @@
 FROM alpine:3.6
 
-ADD bin/calicoqweb ./calicoqweb
+ADD bin/cnx-queryserver ./cnx-queryserver
 
 WORKDIR /root
-ENTRYPOINT ["/calicoqweb"]
+ENTRYPOINT ["/cnx-queryserver"]

@@ -1,13 +1,13 @@
-## calicoqweb
+## queryserver
 
 This directory contains a proof of concept for a "calicoq" web server.
 
 ### Code structure
 
-#### /calicoqweb
+#### /queryserver
 Main web server binary.  Registers a bunch of handlers for each URL endpoint.
 
-#### /calicoqweb/handlers
+#### /queryserver/handlers
 Handlers which parse query parameters and convert web queries into querycache queries.
 
 #### /pkg

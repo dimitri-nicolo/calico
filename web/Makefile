@@ -24,22 +24,22 @@ GO_BUILD_CONTAINER?=calico/go-build$(ARCHTAG):$(GO_BUILD_VER)
 PACKAGE_NAME?=github.com/tigera/calicoq/web
 
 # The container image name
-BUILD_IMAGE:=tigera/calicoqweb
+BUILD_IMAGE:=tigera/cnx-queryserver
 
 # The binary image name
-BINARY:=bin/calicoqweb
+BINARY:=bin/cnx-queryserver
 
 # Local environment
 LOCAL_USER_ID?=$(shell id -u $$USER)
-CALICOQWEB_VERSION?=$(shell git describe --tags --dirty --always)
-CALICOQWEB_BUILD_DATE?=$(shell date -u +'%FT%T%z')
-CALICOQWEB_GIT_REVISION?=$(shell git rev-parse --short HEAD)
-CALICOQWEB_GIT_DESCRIPTION?=$(shell git describe --tags)
+QUERYSERVER_VERSION?=$(shell git describe --tags --dirty --always)
+QUERYSERVER_BUILD_DATE?=$(shell date -u +'%FT%T%z')
+QUERYSERVER_GIT_REVISION?=$(shell git rev-parse --short HEAD)
+QUERYSERVER_GIT_DESCRIPTION?=$(shell git describe --tags)
 
-VERSION_FLAGS=-X $(PACKAGE_NAME)/calicoqweb/handlers.VERSION=$(CALICOQWEB_VERSION) \
-	-X $(PACKAGE_NAME)/calicoqweb/handlers.BUILD_DATE=$(CALICOQWEB_BUILD_DATE) \
-	-X $(PACKAGE_NAME)/calicoqweb/handlers.GIT_DESCRIPTION=$(CALICOQWEB_GIT_DESCRIPTION) \
-	-X $(PACKAGE_NAME)/calicoqweb/handlers.GIT_REVISION=$(CALICOQWEB_GIT_REVISION)
+VERSION_FLAGS=-X $(PACKAGE_NAME)/queryserver/handlers.VERSION=$(QUERYSERVER_VERSION) \
+	-X $(PACKAGE_NAME)/queryserver/handlers.BUILD_DATE=$(QUERYSERVER_BUILD_DATE) \
+	-X $(PACKAGE_NAME)/queryserver/handlers.GIT_DESCRIPTION=$(QUERYSERVER_GIT_DESCRIPTION) \
+	-X $(PACKAGE_NAME)/queryserver/handlers.GIT_REVISION=$(QUERYSERVER_GIT_REVISION)
 BUILD_LDFLAGS=-ldflags "$(VERSION_FLAGS)"
 RELEASE_LDFLAGS=-ldflags "$(VERSION_FLAGS) -s -w"
 
@@ -86,8 +86,8 @@ st-containerized:
 	@echo "Need to add tests. This is a no-op"
 
 # Build image for containerized testing
-.PHONY: build-image
-build-image .container-created: bin/calicoqweb
+.PHONY: build-image tigera/cnx-queryserver
+tigera/cnx-queryserver build-image .container-created: bin/cnx-queryserver
 	docker build -t $(BUILD_IMAGE) `pwd`
 	touch .container-created
 
@@ -96,10 +96,10 @@ build-image .container-created: bin/calicoqweb
 clean-image:
 	docker rmi -f $(shell docker images -a | grep $(BUILD_IMAGE) | awk '{print $$3}' | awk '!a[$$0]++')
 
-# All calicoq Go source files.
-CALICOQWEB_GO_FILES:=$(shell find calicoqweb pkg -type f -name '*.go' -print)
+# All queryserver Go source files.
+QUERYSERVER_GO_FILES:=$(shell find queryserver pkg -type f -name '*.go' -print)
 
-bin/calicoqweb: $(CALICOQWEB_GO_FILES) vendor/.up-to-date vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
+bin/cnx-queryserver: $(QUERYSERVER_GO_FILES) vendor/.up-to-date vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
 	$(MAKE) binary-containerized
 
 .PHONY: binary-containerized
@@ -118,12 +118,12 @@ endif
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(GO_BUILD_CONTAINER) \
-		sh -c 'go build $(LDFLAGS) -o "$(BINARY)" "./calicoqweb/calicoqweb.go"'
+		sh -c 'go build $(LDFLAGS) -o "$(BINARY)" "./queryserver/queryserver.go"'
 
 .PHONY: binary
-binary: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(CALICOQWEB_GO_FILES)
+binary: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(QUERYSERVER_GO_FILES)
 	mkdir -p bin
-	go build $(BUILD_LDFLAGS) -o "$(BINARY)" "./calicoqweb/calicoqweb.go"
+	go build $(BUILD_LDFLAGS) -o "$(BINARY)" "./queryserver/queryserver.go"
 
 # Generate the protobuf bindings for Felix.
 vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go: vendor/github.com/projectcalico/felix/proto/felixbackend.proto
@@ -158,19 +158,19 @@ run-etcd: stop-etcd
 stop-etcd:
 	-docker rm -f calico-etcd
 
-run-calicoqweb: stop-calicoqweb .container-created
+run-cnx-queryserver: stop-cnx-queryserver .container-created
 	docker run --detach \
 	--net=host \
-	--name calicoqweb \
+	--name cnx-queryserver \
 	-e DATASTORE_TYPE=etcdv3 \
 	-e ETCD_ENDPOINTS=http://localhost:2379 \
 	$(BUILD_IMAGE)
 
-## Stop the calicoqweb container (calico-etcd)
-stop-calicoqweb:
-	-docker rm -f calicoqweb
+## Stop the cnx-queryserver container (calico-etcd)
+stop-cnx-queryserver:
+	-docker rm -f cnx-queryserver
 
-testenv: run-etcd run-calicoqweb .testenv-container-created
+testenv: run-etcd run-cnx-queryserver .testenv-container-created
 	-docker run --net=host --privileged \
 	           --uts=host \
 	           --pid=host \
@@ -180,12 +180,11 @@ testenv: run-etcd run-calicoqweb .testenv-container-created
 	           -v `pwd`:/code \
                -v /var/run/docker.sock:/var/run/docker.sock \
 	           --name=testenv \
-	           tigera/calicoqweb-testenv \
+	           tigera/cnx-queryserver-testenv \
 	           sh
 
 # Build image for containerized testing
 .PHONY: testenv-build-image
 testenv-build-image .testenv-container-created:
-	docker build -f Dockerfile.testenv -t tigera/calicoqweb-testenv `pwd`
+	docker build -f Dockerfile.testenv -t tigera/cnx-queryserver-testenv `pwd`
 	touch .testenv-container-created
-
