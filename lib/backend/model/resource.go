@@ -69,6 +69,11 @@ func init() {
 		reflect.TypeOf(apiv3.ClusterInformation{}),
 	)
 	registerResourceInfo(
+		apiv3.KindLicenseKey,
+		"licensekeys",
+		reflect.TypeOf(apiv3.LicenseKey{}),
+	)
+	registerResourceInfo(
 		apiv3.KindFelixConfiguration,
 		"felixconfigurations",
 		reflect.TypeOf(apiv3.FelixConfiguration{}),

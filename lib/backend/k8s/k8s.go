@@ -191,6 +191,12 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	kubeClient.registerResourceClient(
 		reflect.TypeOf(model.ResourceKey{}),
 		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindLicenseKey,
+		resources.NewLicenseKeyClient(cs, crdClientV1),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
 		apiv3.KindNode,
 		resources.NewNodeClient(cs),
 	)
@@ -285,6 +291,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindBGPConfiguration,
 		apiv3.KindBGPPeer,
 		apiv3.KindClusterInformation,
+		apiv3.KindLicenseKey,
 		apiv3.KindFelixConfiguration,
 		apiv3.KindGlobalNetworkPolicy,
 		apiv3.KindTier,
@@ -353,6 +360,8 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 				&apiv3.BGPConfigurationList{},
 				&apiv3.ClusterInformation{},
 				&apiv3.ClusterInformationList{},
+				&apiv3.LicenseKey{},
+				&apiv3.LicenseKeyList{},
 				&apiv3.GlobalNetworkSet{},
 				&apiv3.GlobalNetworkSetList{},
 				&apiv3.GlobalNetworkPolicy{},

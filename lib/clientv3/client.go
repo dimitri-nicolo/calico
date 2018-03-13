@@ -144,6 +144,11 @@ func (c client) ClusterInformation() ClusterInformationInterface {
 	return clusterInformation{client: c}
 }
 
+// LicenseKey returns an interface for managing the license key resource.
+func (c client) LicenseKey() LicenseKeyInterface {
+	return licenseKey{client: c}
+}
+
 // RemoteClusterConfiguration returns an interface for managing remote cluster configuration resources.
 func (c client) RemoteClusterConfigurations() RemoteClusterConfigurationInterface {
 	return remoteClusterConfiguration{client: c}
