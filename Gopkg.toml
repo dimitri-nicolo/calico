@@ -38,6 +38,15 @@
   unused-packages = true
 
 [[constraint]]
+  branch = "master"
+  name = "github.com/projectcalico/libcalico-go"
+  source = "github.com/tigera/libcalico-go-private"
+
+[[override]]
+  revision = "4972c8e335e32ab65ba45bde0a99c6544c8a8e4c"
+  name = "k8s.io/apimachinery"
+
+[[constraint]]
   branch = "calico"
   name = "github.com/projectcalico/go-yaml-wrapper"
 

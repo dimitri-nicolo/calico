@@ -11,10 +11,11 @@ import (
 	"github.com/spf13/pflag"
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
-
 	"github.com/davecgh/go-spew/spew"
+	uuid "github.com/satori/go.uuid"
 
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )
@@ -26,6 +27,16 @@ var (
 	// Symmetric key to encrypt and decrypt the JWT.
 	// Carefully selected key. It has to be 32-bit long.
 	symKey = []byte("Rob likes tea & kills chickens!!")
+
+	// Tigera private key location.
+	pkeyPath = "./tigera.io_private_key.pem"
+
+	// Tigera license signing certificate path.
+	certPath = "tigera.io_certificate.pem"
+
+	jwtTyp = jose.ContentType("JWT")
+
+	jwtContentType = jose.ContentType("JWT")
 )
 
 func init() {
@@ -46,9 +57,13 @@ var GenerateLicenseCmd = &cobra.Command{
 
 		claims := GetLicenseProperties(false)
 
-		now := time.Now()
+		now := time.Now().UTC()
 		exp := now.Add(time.Hour * 24 * time.Duration(claims.Term))
 		claims.NotBefore = jwt.NewNumericDate(exp)
+		claims.CustomerID = uuid.NewV4().String()
+
+		// This might be used in future. Or it could be used for debugging.
+		claims.IssuedAt = jwt.NewNumericDate(time.Now().UTC())
 
 		enc, err := jose.NewEncrypter(
 			jose.A128GCM,
@@ -56,12 +71,12 @@ var GenerateLicenseCmd = &cobra.Command{
 				Algorithm: jose.A128GCMKW,
 				Key:       symKey,
 			},
-			(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"))
+			(&jose.EncrypterOptions{}).WithType(jwtTyp).WithContentType(jwtContentType))
 		if err != nil {
 			panic(err)
 		}
 
-		priv, err := cryptolicensing.ReadPrivateKeyFromFile("./privateKey.pem")
+		priv, err := cryptolicensing.ReadPrivateKeyFromFile(pkeyPath)
 		if err != nil {
 			log.Panicf("error reading private key: %s\n", err)
 		}
@@ -77,25 +92,25 @@ var GenerateLicenseCmd = &cobra.Command{
 			panic(err)
 		}
 
-		licX := client.License{Claims: raw, Cert: cryptolicensing.ReadCertPemFromFile("./tigera.io.pem")}
+		licX := api.NewLicenseKey()
+		licX.Name = client.ResourceName
+		licX.Spec.Token = raw
+		licX.Spec.Certificate = cryptolicensing.ReadCertPemFromFile(certPath)
 
-		writeYAML(licX)
+		writeYAML(*licX, claims.Name)
 
-		fmt.Println("*******")
 		spew.Dump(claims)
-
-		fmt.Println("Created license file 'license.yaml'")
 	},
 }
 
-func writeYAML(license client.License) error {
+func writeYAML(license api.LicenseKey, filePrefix string) error {
 	output, err := yaml.Marshal(license)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("%s", string(output))
 
-	f, err := os.Create("./license.yaml")
+	f, err := os.Create(fmt.Sprintf("./%s-license.yaml", filePrefix))
 	if err != nil {
 		panic(err)
 	}
@@ -105,6 +120,9 @@ func writeYAML(license client.License) error {
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Printf("Created license file '%s-license.yaml'", filePrefix)
+
 	return nil
 }
 
