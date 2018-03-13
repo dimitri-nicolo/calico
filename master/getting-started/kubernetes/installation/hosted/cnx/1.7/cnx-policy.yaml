@@ -56,8 +56,5 @@ spec:
       # the addresses of your Kubernetes API Servers if those are static.
       nets: ["0.0.0.0/0"]
     destination:
-      # The ports CNX API Server is configured to listen on.
-      # 8080 is calicoqweb
-      # TODO(doublek): Update this when we have a default TLS port
-      # for calicoq.
-      ports: [443, 5443, 8080]
+      # The ports CNX API Server and CNX Query Server are configured to listen on.
+      ports: [443, 5443, 8080, 10443]
