@@ -154,7 +154,7 @@ spec:
     port: 443
     protocol: TCP
     targetPort: 5443
-  - name: calicoqweb
+  - name: queryserver
     port: 8080
     protocol: TCP
     targetPort: 8080
@@ -229,8 +229,8 @@ spec:
           #   name: etcd-certs
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
-      - name: calicoqweb
-        image: {{site.imageNames["calicoqweb"]}}:{{site.data.versions[page.version].first.components["calicoqweb"].version}}
+      - name: cnx-queryserver
+        image: {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
           - name: ETCD_ENDPOINTS
             valueFrom:

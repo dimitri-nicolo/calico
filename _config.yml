@@ -31,9 +31,9 @@ imageNames:
   cnxManager: quay.io/tigera/cnx-manager
   cnxManagerProxy: quay.io/tigera/cnx-manager-proxy
   cnxApiserver: quay.io/tigera/cnx-apiserver
+  cnxQueryserver: quay.io/tigera/cnx-queryserver
   felix: quay.io/tigera/felix
   calicoq: quay.io/tigera/calicoq
-  calicoqweb: quay.io/tigera/calicoqweb
   cni: quay.io/calico/cni
   kubeControllers: quay.io/calico/kube-controllers
   calico-upgrade: quay.io/calico/upgrade
