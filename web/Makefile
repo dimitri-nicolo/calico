@@ -61,9 +61,12 @@ update-vendor:
 	glide up --strip-vendor
 
 .PHONY: ut
-ut: 
 ut: vendor/.up-to-date
 	./run-uts
+
+.PHONY: fv
+fv: vendor/.up-to-date
+	./run-fvs
 
 .PHONY: ut-containerized
 fv-containerized: vendor/.up-to-date run-etcd vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
@@ -72,7 +75,7 @@ fv-containerized: vendor/.up-to-date run-etcd vendor/github.com/projectcalico/fe
     -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
     -v $(CURDIR)/.go-pkg-cache:/go/pkg/:rw \
     -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-    $(GO_BUILD_CONTAINER) sh -c 'cd /go/src/$(PACKAGE_NAME) && make WHAT=$(WHAT) SKIP=$(SKIP) ut'
+    $(GO_BUILD_CONTAINER) sh -c 'cd /go/src/$(PACKAGE_NAME) && make WHAT=$(WHAT) SKIP=$(SKIP) fv'
 
 .PHONY: fv-containerized
 ut-containerized:

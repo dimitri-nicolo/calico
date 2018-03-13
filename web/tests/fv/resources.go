@@ -20,41 +20,42 @@ This file defines a number of WEP, HEP, GNP, NP resources that can be used to te
 Summary of configuration below.  Rules not explicitly specified have an all() or empty selector.
 
 Endpoint                     rack  server  ns
-
+------------------------------------------------------------------------------
 hep4_n4_unlabelled
-hep3_n4                      99
-wep1_n1_ns1                  1     1       1                          (using profile-rack-001)
-wep1_n1_ns1_updated_profile  99    1       1                          (using profile-rack-099)
-wep3_n1_ns2                  1     1       2
-wep4_n2_ns1                  1     2       1
-hep1_n2                      1     2
+hep3_n4                      099
+wep1_n1_ns1                  001   1       1                          (using profile-rack-001)
+wep1_n1_ns1_updated_profile  099   1       1                          (using profile-rack-099)
+wep2_n1_ns1_filtered_out     001   1       1
+wep2_n1_ns1_filtered_in      001   1       1
+wep3_n1_ns2                  001   1       2
+wep4_n2_ns1                  001   2       1
+hep1_n2                      001   2
 wep5_n3_ns2_unlabelled                     2
-hep2_n3                      2     1
-wep2_n1_ns1_filtered_out     1     1       1
+hep2_n3                      002   1
 
-Policy  Rule                 rack  server  ns  numEgress numIngress
-
-np1_t1_o1_ns1                1     1       1   1         0
-np2_t1_o2_ns1                              2   1         1
-gnp1_t1_o3                   1                 1         1
-gnp2_t1_o4                                     2         2
-        egress;0;src;!sel    1     1
-        egess;1;src;sel      1     2
-        ingress;0;dest;sel   !=1
-        ingress;1;dest;!sel  !=2
-np1_t2_o1_ns1                1     2       1   1         1
-np2_t2_o2_ns2                              2   1         1
-gnp1_t2_o3                   !has              1         1
-gnp2_t2_o4                                     1         1
-
-gnp1_t1_o4_more_rules        1                 2         2
-        egress;0;src!sel     1     1
-        ingress;0;dest;sel   !=1
-gnp2_t1_o3_fewer_rules
-        egress;0;src;sel     1     2
-        ingress;0;dest;!sel  !=2
+Policy  Rule                 rack  server  ns  numEgress numIngress tier
+------------------------------------------------------------------------------
+np1_t1_o1_ns1                001   1       1   1         0          1
+np2_t1_o2_ns1                              2   1         1          1
+gnp1_t1_o3                   001               1         1          1
+gnp2_t1_o3_fewer_rules                                              1
+        egress;0;src;sel     001   2
+        ingress;0;dest;!sel  !=002
+gnp1_t1_o4_more_rules        001               2         2          1
+        egress;0;src!sel     001   1
+        ingress;0;dest;sel   !=001
+gnp2_t1_o4                                     2         2          1
+        egress;0;src;!sel    001   1
+        egess;1;src;sel      001   2
+        ingress;0;dest;sel   !=001
+        ingress;1;dest;!sel  !=002
+np1_t2_o1_ns1                001   2       1   1         1          2
+np2_t2_o2_ns2                              2   1         1          2
+gnp1_t2_o3                   !has              1         1          2
+gnp2_t2_o4                                     1         1          2
 
 Profile                      rack  server
+------------------------------------------------------------------------------
 profile-rack-001             1
 profile-rack-099             99
 */
@@ -215,6 +216,33 @@ var (
 			InterfaceName: "cali987654",
 			// No IPNetworks, so WEP will be filtered out.
 			IPNetworks: []string{},
+		},
+	}
+
+	wep2_n1_ns1_filtered_in = &apiv3.WorkloadEndpoint{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindWorkloadEndpoint,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "rack.1--server.1-k8s-pod1--abc-eth0",
+			Namespace: "namespace-1",
+			Labels: map[string]string{
+				"rack":   "001",
+				"server": "1",
+				"name":   "wep2_n1_ns1_filtered_out",
+			},
+		},
+		Spec: apiv3.WorkloadEndpointSpec{
+			Node:          "rack.1-server.1",
+			Workload:      "",
+			Orchestrator:  "k8s",
+			Pod:           "pod1-abc",
+			ContainerID:   "abcdefg",
+			Endpoint:      "eth0",
+			InterfaceName: "cali987654",
+			// Thie one has an IP address and will therefore be filtered in.
+			IPNetworks: []string{"10.20.30.40/32"},
 		},
 	}
 

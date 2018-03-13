@@ -28,12 +28,12 @@ type QueryClusterResp struct {
 	NumNetworkPolicies              int `json:"numNetworkPolicies"`
 	NumHostEndpoints                int `json:"numHostEndpoints"`
 	NumWorkloadEndpoints            int `json:"numWorkloadEndpoints"`
-	NumUnlabelledWorkloadEndpoints  int `json:"numUnlabelledWorkloadEndpoints"`
 	NumUnlabelledHostEndpoints      int `json:"numUnlabelledHostEndpoints"`
+	NumUnlabelledWorkloadEndpoints  int `json:"numUnlabelledWorkloadEndpoints"`
 	NumNodes                        int `json:"numNodes"`
 	NumNodesWithNoEndpoints         int `json:"numNodesWithNoEndpoints"`
-	NumNodesWithNoWorkloadEndpoints int `json:"numNodesWithNoWorkloadEndpoints"`
 	NumNodesWithNoHostEndpoints     int `json:"numNodesWithNoHostEndpoints"`
+	NumNodesWithNoWorkloadEndpoints int `json:"numNodesWithNoWorkloadEndpoints"`
 }
 
 type QueryNodesReq struct {
@@ -52,8 +52,8 @@ type QueryNodesResp struct {
 type Node struct {
 	Name                 string   `json:"name"`
 	BGPIPAddresses       []string `json:"bgpIPAddresses"`
-	NumWorkloadEndpoints int      `json:"numWorkloadEndpoints"`
 	NumHostEndpoints     int      `json:"numHostEndpoints"`
+	NumWorkloadEndpoints int      `json:"numWorkloadEndpoints"`
 }
 
 type QueryPoliciesReq struct {
@@ -78,8 +78,8 @@ type Policy struct {
 	Name                 string          `json:"name"`
 	Namespace            string          `json:"namespace,omitempty"`
 	Tier                 string          `json:"tier"`
-	NumWorkloadEndpoints int             `json:"numWorkloadEndpoints"`
 	NumHostEndpoints     int             `json:"numHostEndpoints"`
+	NumWorkloadEndpoints int             `json:"numWorkloadEndpoints"`
 	Ingress              []RuleDirection `json:"ingressRules"`
 	Egress               []RuleDirection `json:"egressRules"`
 }
@@ -95,8 +95,8 @@ type RuleEntity struct {
 }
 
 type RuleEntityEndpoints struct {
-	NumWorkloadEndpoints int `json:"numWorkloadEndpoints"`
 	NumHostEndpoints     int `json:"numHostEndpoints"`
+	NumWorkloadEndpoints int `json:"numWorkloadEndpoints"`
 }
 
 type QueryEndpointsReq struct {
@@ -127,8 +127,8 @@ type QueryEndpointsResp struct {
 }
 
 type EndpointCount struct {
-	NumWorkloadEndpoints int `json:"numWorkloadEndpoints"`
 	NumHostEndpoints     int `json:"numHostEndpoints"`
+	NumWorkloadEndpoints int `json:"numWorkloadEndpoints"`
 }
 
 type PolicyCount struct {

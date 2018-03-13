@@ -2,36 +2,24 @@
 
 set -e
 
-if [ -z $SKIP ]
-then
-    SKIP="tests,vendor"
-else
-    SKIP="tests,vendor,$SKIP"
-fi
+SKIP="calicoqweb,pkg,vendor"
 
 echo "Removing old coverprofiles..."
 find . -name "*.coverprofile" -type f -delete
 
-if [ -z $WHAT ]
-then
-    echo "Calculating packages to cover..."
-    go_dirs=$(find -type f -name '*.go' | \
-	          grep -vE '/tests/|/vendor/|.glide|.git' | \
-	          xargs -n 1 dirname | \
-	          sort | uniq | \
-	          tr '\n' ',' | \
-	          sed 's/,$//' )
-else
-    go_dirs=$WHAT
-fi
+echo "Calculating packages to cover..."
+go_dirs=$(find -type f -name '*.go' | \
+          grep -vE '/vendor/|.glide|.git' | \
+          xargs -n 1 dirname | \
+          sort | uniq | \
+          tr '\n' ',' | \
+          sed 's/,$//' )
 
 echo "Covering: $go_dirs"
 test ! -z "$go_dirs"
 
 # Run tests in random order find tests recursively (-r).
-echo WHAT: $WHAT
-echo SKIP: $SKIP
-ginkgo -cover -coverpkg=${go_dirs} -r --skipPackage $SKIP $WHAT
+ginkgo -cover -coverpkg=${go_dirs} -r --skipPackage $SKIP ./tests/fv
 
 echo
 echo '+==============+'
