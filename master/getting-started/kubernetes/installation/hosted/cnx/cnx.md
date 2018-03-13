@@ -131,7 +131,7 @@ You will need to obtain or generate the following in PEM format:
    openssl req -new -key calico.key -out calico.csr
    ```
    At each of the prompts press enter except at the Common Name prompt enter
-   `cnx-apiserver.kube-system.svc`
+   `api.kube-system.svc`
 
 
 1. Generate the signed certificate
@@ -154,6 +154,7 @@ with the following changes
 1. Uncomment the line `caBundle:` in the `APIService` and append the base64 encoded CA file contents.
 1. Uncomment the line `apiserver.key:` in the `cnx-apiserver-certs` `Secret` and append the base64 encoded key file contents.
 1. Uncomment the line `apiserver.crt:` in the `cnx-apiserver-certs` `Secret` and append the base64 encoded certificate file contents.
+1. Uncomment the lines associated with `volumeMounts` and `volumes` named `apiserver-certs`.
 
 ## Configure the {{site.prodname}} Manager
 

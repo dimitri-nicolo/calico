@@ -226,12 +226,14 @@ spec:
           - name: DATASTORE_TYPE
             value: "kubernetes"
         volumeMounts:
-          - mountPath: /code/apiserver.local.config/certificates
-            name: apiserver-certs
+          # - mountPath: /code/apiserver.local.config/certificates
+          #   name: apiserver-certs
       volumes:
-        - name: apiserver-certs
-          secret:
-            secretName: cnx-apiserver-certs
+        # If you're using TLS with certificate verification then 
+        # uncomment the following.
+        # - name: apiserver-certs
+        #   secret:
+        #     secretName: cnx-apiserver-certs
 
 ---
 
