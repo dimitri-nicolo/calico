@@ -42,38 +42,13 @@ func init() {
 var GenerateLicenseCmd = &cobra.Command{
 	Use: "generate license",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Generate Pub/Priv key pair.
-		priv, err := cryptolicensing.GenerateKeyPair()
-		if err != nil {
-			log.Fatalf("error generating pub/priv key pair")
-		}
 
-		err = cryptolicensing.SavePrivateKeyAsPEM(priv, "privateKey.pem")
-		if err != nil {
-			log.Fatalf("error saving private key to file: %s", err)
-		}
-
-		// Generate x.509 certificate.
-		now := time.Now()
-		// Valid for one year from now.
-		then := now.Add(60 * 60 * 24 * 365 * 1000 * 1000 * 1000)
-		derBytes, err := cryptolicensing.Generatex509Cert(now, then, priv)
-		if err != nil {
-			log.Fatalf("error generating x.509 certificate: %s", err)
-		}
-
-		err = cryptolicensing.SaveCertToFile(derBytes, "tigera.io.cer")
-		if err != nil {
-			log.Fatalf("error saving cert to file: %s", err)
-		}
-
-		err = cryptolicensing.SaveCertAsPEM(derBytes, "tigera.io.pem")
-		if err != nil {
-			log.Fatalf("error saving cert to file: %s", err)
-		}
 
 		claims := GetLicenseProperties(false)
-		claims.NotBefore = jwt.NewNumericDate(then)
+
+		now := time.Now()
+		exp := now.Add(time.Hour * 24 * time.Duration(claims.Term))
+		claims.NotBefore = jwt.NewNumericDate(exp)
 
 		enc, err := jose.NewEncrypter(
 			jose.A128GCM,
@@ -84,6 +59,11 @@ var GenerateLicenseCmd = &cobra.Command{
 			(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"))
 		if err != nil {
 			panic(err)
+		}
+
+		priv, err := cryptolicensing.ReadPrivateKeyFromFile("./privateKey.pem")
+		if err != nil {
+			log.Panicf("error reading private key: %s\n", err)
 		}
 
 		// Instantiate a signer using RSASSA-PSS (SHA512) with the given private key.
@@ -97,7 +77,7 @@ var GenerateLicenseCmd = &cobra.Command{
 			panic(err)
 		}
 
-		licX := client.License{Claims: raw, Cert: cryptolicensing.ExportCertAsPemStr(derBytes)}
+		licX := client.License{Claims: raw, Cert: cryptolicensing.ReadCertPemFromFile("./tigera.io.pem")}
 
 		writeYAML(licX)
 

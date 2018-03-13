@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"io/ioutil"
 )
 
 const (
@@ -77,6 +78,16 @@ func ParseRsaPrivateKeyFromPemStr(privPEM string) (*rsa.PrivateKey, error) {
 	}
 
 	return priv, nil
+}
+
+
+func ReadPrivateKeyFromFile(path string)(*rsa.PrivateKey, error){
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+
+	return ParseRsaPrivateKeyFromPemStr(string(data))
 }
 
 // ExportRsaPublicKeyAsPemStr converts RSA public key to PEM encoded string.
