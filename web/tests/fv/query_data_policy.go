@@ -42,6 +42,16 @@ func policyTestQueryData() []testQueryData {
 	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1.Ingress[0].Destination.NotSelector.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1.Ingress[0].Destination.NotSelector.NumWorkloadEndpoints = 3
 
+	qcPolicy_gnp2_t1_some_unmatched := qcPolicy(gnp2_t1_o4, 3, 2, 3, 2)
+	qcPolicy_gnp2_t1_some_unmatched.Egress[0].Source.NotSelector.NumHostEndpoints = 0
+	qcPolicy_gnp2_t1_some_unmatched.Egress[0].Source.NotSelector.NumWorkloadEndpoints = 1
+	qcPolicy_gnp2_t1_some_unmatched.Egress[1].Source.Selector.NumHostEndpoints = 1
+	qcPolicy_gnp2_t1_some_unmatched.Egress[1].Source.Selector.NumWorkloadEndpoints = 1
+	qcPolicy_gnp2_t1_some_unmatched.Ingress[0].Destination.Selector.NumHostEndpoints = 2
+	qcPolicy_gnp2_t1_some_unmatched.Ingress[0].Destination.Selector.NumWorkloadEndpoints = 0
+	qcPolicy_gnp2_t1_some_unmatched.Ingress[1].Destination.NotSelector.NumHostEndpoints = 2
+	qcPolicy_gnp2_t1_some_unmatched.Ingress[1].Destination.NotSelector.NumWorkloadEndpoints = 2
+
 	return []testQueryData{
 		{
 			"multiple gnps and nps, no endpoints - query exact np",
@@ -394,6 +404,44 @@ func policyTestQueryData() []testQueryData {
 					qcPolicy_gnp2_t1_all_res_fewer_updated_wep1, qcPolicy_gnp1_t1_all_res_more_updated_wep1,
 					qcPolicy(np1_t2_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t2_o2_ns2, 0, 2, 4, 4),
 					qcPolicy(gnp1_t2_o3, 1, 1, 4, 4), qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+				},
+			},
+		},
+		{
+			"tier1 and tier2 policies, but no namespace-2 endpoints and no rackless endpoints; some policies unmatched",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, wep4_n2_ns1, profile_rack_001, wep1_n1_ns1,
+				wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicy(np1_t1_o1_ns1, 0, 1, 3, 2), qcPolicy(np2_t1_o2_ns2, 0, 0, 3, 2),
+					qcPolicy(gnp1_t1_o3, 1, 2, 3, 2), qcPolicy_gnp2_t1_some_unmatched,
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 3, 2), qcPolicy(np2_t2_o2_ns2, 0, 0, 3, 2),
+					qcPolicy(gnp1_t2_o3, 0, 0, 3, 2), qcPolicy(gnp2_t2_o4, 3, 2, 3, 2),
+				},
+			},
+		},
+		{
+			"tier1 and tier2 policies, but no namespace-2 endpoints and no rackless endpoints; some policies unmatched; filter on unmatched",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, wep4_n2_ns1, profile_rack_001, wep1_n1_ns1,
+				wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Unmatched: true,
+			},
+			&client.QueryPoliciesResp{
+				Count: 3,
+				Items: []client.Policy{
+					qcPolicy(np2_t1_o2_ns2, 0, 0, 3, 2), qcPolicy(np2_t2_o2_ns2, 0, 0, 3, 2),
+					qcPolicy(gnp1_t2_o3, 0, 0, 3, 2),
 				},
 			},
 		},

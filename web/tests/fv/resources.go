@@ -36,7 +36,7 @@ hep2_n3                      002   1
 Policy  Rule                 rack  server  ns  numEgress numIngress tier
 ------------------------------------------------------------------------------
 np1_t1_o1_ns1                001   1       1   1         0          1
-np2_t1_o2_ns1                              2   1         1          1
+np2_t1_o2_ns2                              2   1         1          1
 gnp1_t1_o3                   001               1         1          1
 gnp2_t1_o3_fewer_rules                                              1
         egress;0;src;sel     001   2
