@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"time"
+	"io/ioutil"
 )
 
 const (
@@ -106,6 +107,15 @@ func SaveCertAsPEM(derBytes []byte, filePath string) error {
 		})
 
 	return nil
+}
+
+func ReadCertPemFromFile(path string) string {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(data)
 }
 
 // ExportCertAsPemStr converts x.509 cert DER bytes to PEM encoded string.

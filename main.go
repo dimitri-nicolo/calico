@@ -16,36 +16,6 @@ import (
 )
 
 func main() {
-	// Generate Pub/Priv key pair.
-	priv, err := cryptolicensing.GenerateKeyPair()
-	if err != nil {
-		log.Fatalf("error generating pub/priv key pair")
-	}
-
-	err = cryptolicensing.SavePrivateKeyAsPEM(priv, "privateKey.pem")
-	if err != nil {
-		log.Fatalf("error saving private key to file: %s", err)
-	}
-
-	// Generate x.509 certificate.
-	now := time.Now()
-	// Valid for one year from now.
-	then := now.Add(60 * 60 * 24 * 365 * 1000 * 1000 * 1000)
-	derBytes, err := cryptolicensing.Generatex509Cert(now, then, priv)
-	if err != nil {
-		log.Fatalf("error generating x.509 certificate: %s", err)
-	}
-
-	err = cryptolicensing.SaveCertToFile(derBytes, "tigera.io.cer")
-	if err != nil {
-		log.Fatalf("error saving cert to file: %s", err)
-	}
-
-	err = cryptolicensing.SaveCertAsPEM(derBytes, "tigera.io.pem")
-	if err != nil {
-		log.Fatalf("error saving cert to file: %s", err)
-	}
-
 	customerID := uuid.NewV4().String()
 	numNodes := 42
 
@@ -73,6 +43,11 @@ func main() {
 		panic(err)
 	}
 
+	priv, err := cryptolicensing.ReadPrivateKeyFromFile("./privateKey.pem")
+	if err != nil {
+		log.Panicf("error reading private key: %s\n", err)
+	}
+
 	// Instantiate a signer using RSASSA-PSS (SHA512) with the given private key.
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.PS512, Key: priv}, nil)
 	if err != nil {
@@ -84,7 +59,7 @@ func main() {
 		panic(err)
 	}
 
-	licX := client.License{Claims: raw, Cert: cryptolicensing.ExportCertAsPemStr(derBytes)}
+	licX := client.License{Claims: raw, Cert: cryptolicensing.ReadCertPemFromFile("./tigera.io.pem")}
 
 	fmt.Printf("\n ** on the WIRE: %v\n", licX)
 
