@@ -35,8 +35,8 @@ data:
 
 ---
 
-# Optionally update this ConfigMap to enable TLS between the CNX API
-# server and Kubernetes API server.
+# Optionally update this ConfigMap to enable TLS with certificate verification when CNX API
+# server communicates with the Kubernetes API server.
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -45,8 +45,8 @@ metadata:
   namespace: kube-system
 data:
   # Populate the following files with apiserver TLS configuration if desired,
-  # but leave blank if not using TLS between Kubernetes APIServer and CNX APIServer.
-  # This self-hosted install expects three files with the following names. The values
+  # but leave blank if not using TLS with certificate verification.
+  # This self-hosted install expects two files with the following names. The values
   # should be base64 encoded strings of the entire contents of each file.
   #apiserver.key:
   #apiserver.crt:
@@ -90,7 +90,7 @@ spec:
     namespace: kube-system
   version: v3
   # Optionally update the caBundle and disable insecureSkipTLSVerify in order
-  # use your own caBundle
+  # to enable TLS certificate verification.
   insecureSkipTLSVerify: true
   #caBundle:
 
@@ -220,16 +220,18 @@ spec:
         volumeMounts:
           # - mountPath: /calico-secrets
           #   name: etcd-certs
-          - mountPath: /code/apiserver.local.config/certificates
-            name: apiserver-certs
+          # - mountPath: /code/apiserver.local.config/certificates
+          #   name: apiserver-certs
       volumes:
         # If you're using TLS enabled etcd uncomment the following.
         # - name: etcd-certs
         #   secret:
         #     secretName: calico-etcd-secrets
-        - name: apiserver-certs
-          secret:
-            secretName: cnx-apiserver-certs
+        # If you're using TLS with certificate verification then 
+        # uncomment the following.
+        # - name: apiserver-certs
+        #   secret:
+        #     secretName: cnx-apiserver-certs
 
 ---
 
