@@ -38,9 +38,9 @@ type LicenseKey struct {
 // LicenseKeySpec contains the license key itself.
 type LicenseKeySpec struct {
 	// Token is the JWT containing the license claims
-	Token string `json:"token"`
+	Token string `json:"token" yaml:"token"`
 	// Certificate is used to validate the token.
-	Certificate string `json:"certificate,omitempty" validate:"omitempty"`
+	Certificate string `json:"certificate,omitempty" yaml:"certificate" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
