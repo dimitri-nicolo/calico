@@ -1,7 +1,7 @@
 package datastore
 
 type License struct {
-	Id int
+	Id int64
 	CompanyId int
 	Jwt string
 }
@@ -40,8 +40,11 @@ func (db *DB) GetLicenseById(id int) (*License, error) {
 }
 
 func (db *DB) CreateLicense(license *License) (*License, error) {
-	err := db.QueryRow("INSERT INTO licenses (company_id, jwt) VALUES (?, ?); SELECT LAST_INSERT_ID();",
-		license.CompanyId, license.Jwt).Scan(&license.Id)
+	res, err := db.Exec("INSERT INTO licenses (company_id, jwt) VALUES (?, ?)", license.CompanyId, license.Jwt)
+	if err != nil {
+		return nil, err
+	}
+	license.Id, err = res.LastInsertId()
 	if err != nil {
 		return nil, err
 	}
