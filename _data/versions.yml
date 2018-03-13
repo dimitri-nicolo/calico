@@ -1,4 +1,70 @@
 v2.0:
+- title: v2.0.2
+  note: |
+    6 March 2018
+    This release fixes a manifest problem with Kubernetes 1.8.8 and 1.9.3, as well
+    as incorporating some other minor fixes.  It does not add any new features.
+    - Ignore hidden files when checking for etcd certificates to copy over when installing CNI. [cni-plugin #473](https://github.com/projectcalico/cni-plugin/pull/473) (@tmjd)
+    - Improved error messages when failing to initialize a connection to etcd [libcalico-go #794](https://github.com/projectcalico/libcalico-go/pull/794) (@ozdanborne)
+    - Fixed a bug where CNX would silently lose its connection to etcd and never recover when the etcd server was terminated. [libcalico-go #780](https://github.com/projectcalico/libcalico-go/pull/780) (@caseydavenport)
+    - Fixed a bug when multiple nodes are restarted simultaneously and swap IP addresses [calico #1681](https://github.com/projectcalico/calico/pull/1681) (@caseydavenport)
+    - Fixed a route scan issue where upon startup bird did not notice that tunneled routes needed to be updated to be non-tunneled. [calico #1679](https://github.com/projectcalico/calico/pull/1679) (@caseydavenport)
+    - Enable Kubernetes node references for automatic cleanup of Node resources in etcd. [calico #1678](https://github.com/projectcalico/calico/pull/1678) (@caseydavenport)
+    - Fixed a panic when BGP is disabled. [calico #1674](https://github.com/projectcalico/calico/pull/1674) (@tmjd)
+    - Kubernetes self-hosted manifests now enable BGP IP address auto-detection by default. [calico #1588](https://github.com/projectcalico/calico/pull/1588) (@caseydavenport)
+  components:
+    cnx-manager:
+      version: v2.0.0
+      url: ""
+    cnx-apiserver:
+      version: v2.0.0
+      url: ""
+    calicoq:
+      version: v2.0.1
+      url: ""
+    felix:
+      version: v2.0.2
+      url: ""
+    typha:
+      version: v2.0.2
+      url: ""
+    calicoctl:
+      version: v2.0.2
+      url: ""
+      download_url: ""
+    cnx-node:
+      version: v2.0.2
+      url: ""
+    calico/cni:
+      version: v2.0.1
+      url: https://github.com/projectcalico/cni-plugin/releases/tag/v2.0.1
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico-ipam
+    calico/kube-controllers:
+      version: v2.0.1
+      url: https://github.com/projectcalico/k8s-policy/releases/tag/v2.0.1
+    confd:
+      version: v1.0.2
+      url: https://github.com/projectcalico/confd/releases/tag/v1.0.2
+    calico-bird:
+      version: v0.3.2
+      url: https://github.com/projectcalico/calico-bird/releases/tag/v0.3.2
+    calico/routereflector:
+      version: v0.5.0
+      url: https://github.com/projectcalico/routereflector/releases/tag/v0.5.0
+    calico:
+      version: v3.0.3
+      url: ""
+    calico-bgp-daemon:
+      version: v0.2.1
+      url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
+    libnetwork-plugin:
+      version: v1.1.0
+      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
+    networking-calico:
+      version: 1.4.3
+      url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
+
 - title: v2.0.1
   note: |
     5 February 2018
@@ -712,7 +778,7 @@ master:
       url: ""
     calico:
       version: v3.0.2
-      url: https://github.com/projectcalico/calico/releases/tag/v3.0.2    
+      url: https://github.com/projectcalico/calico/releases/tag/v3.0.2
 
 # vX.Y format: update during major release process
 currentReleaseStream: v2.0
