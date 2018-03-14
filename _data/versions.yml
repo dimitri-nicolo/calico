@@ -735,10 +735,10 @@ master:
     cnx-apiserver:
       version: master
       url: ""
-    calicoq:
+    cnx-queryserver:
       version: master
       url: ""
-    calicoqweb:
+    calicoq:
       version: master
       url: ""
     felix:
