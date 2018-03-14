@@ -92,7 +92,7 @@ pipeline{
                 dir('web') {
                     script {
                         withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
-                            if (env.BRANCH_NAME == 'calicoqweb-integration') {
+                            if (env.BRANCH_NAME == 'master') {
                                 sh "cp $DOCKER_AUTH key.json"
                                 sh "gcloud auth activate-service-account ${env.WAVETANK_SERVICE_ACCT} --key-file key.json"
                                 sh "gcloud docker --authorize-only --server gcr.io"
