@@ -7,9 +7,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/calicoq/web/queryserver/handlers"
 	"github.com/tigera/calicoq/web/pkg/clientmgr"
 	"github.com/tigera/calicoq/web/pkg/querycache/client"
+	"github.com/tigera/calicoq/web/queryserver/handlers"
 )
 
 func main() {

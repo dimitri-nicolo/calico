@@ -35,6 +35,7 @@ func NewEndpointsCache() EndpointsCache {
 		hostEndpoints:     newEndpointCache(),
 	}
 }
+
 // endpointsCache implements the EndpointsCache interface.  It separates out the workload and host endpoints into
 // separate sub-caches. Events and requests are handled using the appropriate sub-cache.
 type endpointsCache struct {

@@ -26,6 +26,8 @@ const (
 	queryRuleNegatedSelector = "ruleNegatedSelector"
 	queryPageNum             = "page"
 	queryNumPerPage          = "maxItems"
+	querySortBy              = "sortBy"
+	queryReverseSort         = "reverseSort"
 	queryEndpoint            = "endpoint"
 	queryUnmatched           = "unmatched"
 	queryTier                = "tier"
@@ -98,6 +100,7 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 		RuleEntity:          r.URL.Query().Get(queryRuleEntity),
 		RuleNegatedSelector: q.getBool(r, queryRuleNegatedSelector),
 		Page:                q.getPage(r),
+		Sort:                q.getSort(r),
 	})
 }
 
@@ -138,6 +141,7 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		Endpoint:  endpoint,
 		Unmatched: unmatched,
 		Page:      q.getPage(r),
+		Sort:      q.getSort(r),
 	})
 }
 
@@ -160,6 +164,7 @@ func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
 func (q *query) Nodes(w http.ResponseWriter, r *http.Request) {
 	q.runQuery(w, r, client.QueryNodesReq{
 		Page: q.getPage(r),
+		Sort: q.getSort(r),
 	})
 }
 
@@ -329,5 +334,17 @@ func (q *query) getPage(r *http.Request) *client.Page {
 	return &client.Page{
 		PageNum:    q.getInt(r, queryPageNum, 0),
 		NumPerPage: q.getInt(r, queryNumPerPage, resultsPerPage),
+	}
+}
+
+func (q *query) getSort(r *http.Request) *client.Sort {
+	sortBy := r.URL.Query()[querySortBy]
+	reverse := q.getBool(r, queryReverseSort)
+	if len(sortBy) == 0 && !reverse {
+		return nil
+	}
+	return &client.Sort{
+		SortBy:  sortBy,
+		Reverse: reverse,
 	}
 }
