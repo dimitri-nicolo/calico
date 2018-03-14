@@ -9,13 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"github.com/davecgh/go-spew/spew"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 
-	yaml "github.com/projectcalico/go-yaml-wrapper"
-	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )
@@ -24,19 +21,11 @@ var (
 	licClaimes                              client.LicenseClaims
 	nameFlag, debugFlag, termFlag, nodeFlag, graceFlag *pflag.FlagSet
 
-	// Symmetric key to encrypt and decrypt the JWT.
-	// Carefully selected key. It has to be 32-bit long.
-	symKey = []byte("Rob likes tea & kills chickens!!")
-
 	// Tigera private key location.
 	pkeyPath = "./tigera.io_private_key.pem"
 
 	// Tigera license signing certificate path.
 	certPath = "./tigera.io_certificate.pem"
-
-	jwtTyp = jose.ContentType("JWT")
-
-	jwtContentType = jose.ContentType("JWT")
 
 	debug = false
 )
@@ -69,43 +58,15 @@ var GenerateLicenseCmd = &cobra.Command{
 		// This might be used in future. Or it could be used for debugging.
 		claims.IssuedAt = jwt.NewNumericDate(time.Now().UTC())
 
-		enc, err := jose.NewEncrypter(
-			jose.A128GCM,
-			jose.Recipient{
-				Algorithm: jose.A128GCMKW,
-				Key:       symKey,
-			},
-			(&jose.EncrypterOptions{}).WithType(jwtTyp).WithContentType(jwtContentType))
-		if err != nil {
-			log.Fatalf("error generating claims: %s", err)
+		lic, err := cryptolicensing.GetLicenseFromClaims(claims, pkeyPath, certPath)
+		if err != nil{
+			log.Fatalf("error generating license from claims: %s", err)
 		}
 
-		priv, err := cryptolicensing.ReadPrivateKeyFromFile(pkeyPath)
-		if err != nil {
-			log.Fatalf("error reading private key: %s\n", err)
-		}
-
-		// Instantiate a signer using RSASSA-PSS (SHA512) with the given private key.
-		signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.PS512, Key: priv}, nil)
-		if err != nil {
-			log.Fatalf("error creating signer: %s", err)
-		}
-
-		raw, err := jwt.SignedAndEncrypted(signer, enc).Claims(claims).CompactSerialize()
-		if err != nil {
-			log.Fatalf("error signing the JWT: %s", err)
-		}
-
-		licX := api.NewLicenseKey()
-		licX.Name = client.ResourceName
-		licX.Spec.Token = raw
-		licX.Spec.Certificate = cryptolicensing.ReadCertPemFromFile(certPath)
-
-		err = writeYAML(*licX, claims.Name)
+		err = WriteYAML(*lic, claims.Name)
 		if err != nil {
 			log.Fatalf("error creating the license file: %s", err)
 		}
-
 
 		if debug {
 			spew.Dump(claims)
@@ -113,31 +74,6 @@ var GenerateLicenseCmd = &cobra.Command{
 	},
 }
 
-func writeYAML(license api.LicenseKey, filePrefix string) error {
-	output, err := yaml.Marshal(license)
-	if err != nil {
-		return err
-	}
-
-	if debug {
-		fmt.Printf("\nLicense file contents: \n %s\n", string(output))
-	}
-
-	f, err := os.Create(fmt.Sprintf("./%s-license.yaml", filePrefix))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(output)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("\nCreated license file '%s-license.yaml'\n\n", filePrefix)
-
-	return nil
-}
 
 func GetLicenseProperties(override bool) client.LicenseClaims {
 	var lic client.LicenseClaims
