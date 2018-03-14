@@ -150,21 +150,21 @@ runIgnoreErrors() {
 # runAsRoot() - run sudo command, bail on errors, discard output
 #
 runAsRoot() {
-  run sudo "$@"
+  run sudo -E "$@"
 }
 
 #
 # runAsRootIgnoreErrors() - run sudo command, ignore errors, discard output
 #
 runAsRootIgnoreErrors() {
-  runIgnoreErrors sudo "$@"
+  runIgnoreErrors sudo -E "$@"
 }
 
 #
 # runAsRoot() - run sudo command, bail on errors, echo output
 #
 runAsRootGetOutput() {
-  runGetOutput sudo "$@"
+  runGetOutput sudo -E "$@"
 }
 
 #
@@ -267,7 +267,10 @@ deleteImagePullSecret() {
 #
 setupBasicAuth() {
   # Create basic auth csv file
-  run echo welc0me,jane,1 > basic_auth.csv
+    cat > basic_auth.csv <<EOF
+welc0me,jane,1
+EOF
+
   runAsRoot mv basic_auth.csv /etc/kubernetes/pki/basic_auth.csv
   runAsRoot chown root /etc/kubernetes/pki/basic_auth.csv
   runAsRoot chmod 400 /etc/kubernetes/pki/basic_auth.csv
