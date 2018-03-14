@@ -150,7 +150,7 @@ pipeline{
 
         stage('Run htmlproofer') {
             steps {
-                sh 'make htmlproofer 2>&1 | awk -f filter-htmlproofer-false-negatives.awk'
+                sh 'JEKYLL_UID=10000 make htmlproofer 2>&1 | awk -f filter-htmlproofer-false-negatives.awk'
             }
         }
     }
