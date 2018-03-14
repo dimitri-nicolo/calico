@@ -1,14 +1,12 @@
 package client
 
 import (
-	"fmt"
-	"io/ioutil"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/square/go-jose.v2/jwt"
 
-	yaml "github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )
 
@@ -16,33 +14,46 @@ var (
 	// Symmetric key to encrypt and decrypt the JWT.
 	// Carefully selected key. It has to be 32-bit long.
 	symKey = []byte("Rob likes tea & kills chickens!!")
+
+	// LicenseKey is a singleton resource, and has to have the name "default".
+	ResourceName = "default"
 )
 
-// TODO move these into types package
 // LicenseClaims contains all the license control fields.
 // This includes custom JWT fields and the default ones.
 type LicenseClaims struct {
-	ID          string   `json:"id"`
-	Nodes       int      `json:"nodes" validate:"required"`
-	Name        string   `json:"name" validate:"required"`
-	Features    []string `json:"features"`
-	GracePeriod int      `json:"grace_period"`
-	Term        int      `json:"term"`
-	jwt.Claims
-}
+	// CustomerID is a unique UUID assigned for each customer license.
+	CustomerID          string   `json:"customer_id"`
 
-// License contains signed and encrypted JWT (aka JWS & JWE - nested)
-// as well as the certificate signed by Tigera root certificate to
-// verify if the license was issued by Tigera.
-type License struct {
-	Claims string `json:"claims" yaml:"Claims"`
-	Cert   string `json:"cert" yaml:"Cert"`
+	// Node count is not enforced in v2.1.
+	Nodes       int      `json:"nodes" validate:"required"`
+
+	// Name is name of the customer, so we can use the same name for multiple
+	// licenses for a customer, but they'd have different CustomerID.
+	Name        string   `json:"name" validate:"required"`
+
+	// Features field is for future use.
+	Features    []string `json:"features"`
+
+	// GracePeriod is how many days the cluster will keep working even after
+	// the license expires. This defaults to 90 days.
+	// Currently not enforced.
+	GracePeriod int      `json:"grace_period"`
+
+	// Term is the actual license term in days.
+	Term        int      `json:"term"`
+
+	// Offline field is not used in v2.1.
+	Offline     bool     `json:"offline"`
+
+	// Include the default JWT claims.
+	jwt.Claims
 }
 
 // DecodeAndVerify takes a license resource and will verify and decode the claims
 // It returns the decoded LicenseClaims and a bool indicating if the license is valid.
-func DecodeAndVerify(lic License) (LicenseClaims, bool) {
-	tok, err := jwt.ParseSignedAndEncrypted(lic.Claims)
+func DecodeAndVerify(lic api.LicenseKey) (LicenseClaims, bool) {
+	tok, err := jwt.ParseSignedAndEncrypted(lic.Spec.Token)
 	if err != nil {
 		log.Errorf("error parsing license: %s", err)
 		return LicenseClaims{}, false
@@ -54,38 +65,20 @@ func DecodeAndVerify(lic License) (LicenseClaims, bool) {
 		return LicenseClaims{}, false
 	}
 
-	cert, err := cryptolicensing.LoadCertFromPEM([]byte(lic.Cert))
+	cert, err := cryptolicensing.LoadCertFromPEM([]byte(lic.Spec.Certificate))
 	if err != nil {
 		log.Errorf("error loading license certificate: %s", err)
 		return LicenseClaims{}, false
 	}
 
-	var out LicenseClaims
-	if err := nested.Claims(cert.PublicKey, &out); err != nil {
+	var claims LicenseClaims
+	if err := nested.Claims(cert.PublicKey, &claims); err != nil {
 		log.Errorf("error parsing license claims: %s", err)
 		return LicenseClaims{}, false
 	}
 
-	// TODO remove all the debug logs from the client library.
-	fmt.Printf("*** %v\n", out)
-	fmt.Printf("*** TimeExp %v\n\n", out.Claims.NotBefore.Time())
-	fmt.Printf("*** TimeNow %v\n\n", time.Now())
+	// Check if the license is expired.
+	expired := claims.Claims.NotBefore.Time().After(time.Now().UTC())
 
-	return out, out.Claims.NotBefore.Time().After(time.Now())
-}
-
-// This is temp, until libcalico-go resource is merged.
-func ReadFile(path string) License {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-
-	var lic License
-	err = yaml.Unmarshal(data, &lic)
-	if err != nil {
-		panic(err)
-	}
-
-	return lic
+	return claims, expired
 }

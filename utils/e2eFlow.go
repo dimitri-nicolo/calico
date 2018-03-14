@@ -1,8 +1,9 @@
-package main
+package utils
 
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -11,23 +12,24 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )
 
-func main() {
+func e2eFlow() {
 	customerID := uuid.NewV4().String()
 	numNodes := 42
 
 	claims := client.LicenseClaims{
-		ID:          customerID,
+		CustomerID:          customerID,
 		Nodes:       numNodes,
 		Name:        "MyFavCustomer99",
 		Features:    []string{"everything", "for", "you"},
 		GracePeriod: 90,
-		Term: 365,
+		Term:        365,
 		Claims: jwt.Claims{
-			NotBefore: jwt.NumericDate(time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix()),
+			NotBefore: jwt.NumericDate(time.Date(2019, 10, 10, 12, 0, 0, 0, time.UTC).Unix()),
 			Issuer:    "Gunjan's office number 5",
 		},
 	}
@@ -36,14 +38,14 @@ func main() {
 		jose.A128GCM,
 		jose.Recipient{
 			Algorithm: jose.A128GCMKW,
-			Key:       []byte("meepster124235546567546788888457"),
+			Key:       []byte("Rob likes tea & kills chickens!!"),
 		},
 		(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"))
 	if err != nil {
 		panic(err)
 	}
 
-	priv, err := cryptolicensing.ReadPrivateKeyFromFile("./privateKey.pem")
+	priv, err := cryptolicensing.ReadPrivateKeyFromFile("./tigera.io_private_key.pem")
 	if err != nil {
 		log.Panicf("error reading private key: %s\n", err)
 	}
@@ -59,28 +61,38 @@ func main() {
 		panic(err)
 	}
 
-	licX := client.License{Claims: raw, Cert: cryptolicensing.ReadCertPemFromFile("./tigera.io.pem")}
+	licX := api.NewLicenseKey()
+	licX.Name = client.ResourceName
+	licX.Spec.Token = raw
+	licX.Spec.Certificate = cryptolicensing.ReadCertPemFromFile("./tigera.io_certificate.pem")
 
 	fmt.Printf("\n ** on the WIRE: %v\n", licX)
 
-	writeYAML(licX)
+	writeYAML(*licX)
 
-	// client.DecodeAndVerify(licX)
-
-//	spew.Dump(licX)
-
-	licY := client.ReadFile("./license.yaml")
+	licY := ReadFile("./license.yaml")
 
 	cl, valid := client.DecodeAndVerify(licY)
 	spew.Dump(cl)
 	fmt.Println(valid)
 }
 
-func writeYAML(license client.License) error {
+func writeYAML(license api.LicenseKey) error {
 	output, err := yaml.Marshal(license)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("%s", string(output))
+
+	f, err := os.Create("./license.yaml")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	_, err = f.Write(output)
+	if err != nil {
+		panic(err)
+	}
 	return nil
 }
