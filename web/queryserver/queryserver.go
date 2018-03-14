@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/tigera/calicoq/web/calicoqweb/handlers"
+	"github.com/tigera/calicoq/web/queryserver/handlers"
 	"github.com/tigera/calicoq/web/pkg/clientmgr"
 	"github.com/tigera/calicoq/web/pkg/querycache/client"
 )
@@ -15,8 +15,8 @@ import (
 func main() {
 	// TODO: Make this a better check than just pulling variables
 	// Possibly switch this to use the golang TLSConfig if necessary.
-	webKey := os.Getenv("CALICOQ_WEB_KEY")
-	webCert := os.Getenv("CALICOQ_WEB_CERT")
+	webKey := os.Getenv("QUERYSERVER_KEY")
+	webCert := os.Getenv("QUERYSERVER_CERT")
 
 	c, err := clientmgr.NewClient("")
 	if err != nil {

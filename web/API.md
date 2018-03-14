@@ -1,4 +1,4 @@
-## calicoqweb API Documentation
+## cnx-queryserver API Documentation
 
 This API documentation is not meant for external/public consumption and is
 targeted at internal use (cnx-manager/webapp only).
@@ -25,7 +25,7 @@ targeted at internal use (cnx-manager/webapp only).
 
 ### Version
 
-Returns the version of `calicoqweb`.
+Returns the version of `cnx-queryserver`.
 
 #### URL
 
