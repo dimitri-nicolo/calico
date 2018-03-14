@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )
 
-func main() {
+func e2eFlow() {
 	customerID := uuid.NewV4().String()
 	numNodes := 42
 
@@ -45,7 +45,7 @@ func main() {
 		panic(err)
 	}
 
-	priv, err := cryptolicensing.ReadPrivateKeyFromFile("./privateKey.pem")
+	priv, err := cryptolicensing.ReadPrivateKeyFromFile("./tigera.io_private_key.pem")
 	if err != nil {
 		log.Panicf("error reading private key: %s\n", err)
 	}
@@ -64,13 +64,13 @@ func main() {
 	licX := api.NewLicenseKey()
 	licX.Name = client.ResourceName
 	licX.Spec.Token = raw
-	licX.Spec.Certificate = cryptolicensing.ReadCertPemFromFile("./tigera.io.pem")
+	licX.Spec.Certificate = cryptolicensing.ReadCertPemFromFile("./tigera.io_certificate.pem")
 
 	fmt.Printf("\n ** on the WIRE: %v\n", licX)
 
 	writeYAML(*licX)
 
-	licY := client.ReadFile("./license.yaml")
+	licY := ReadFile("./license.yaml")
 
 	cl, valid := client.DecodeAndVerify(licY)
 	spew.Dump(cl)

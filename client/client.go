@@ -1,13 +1,11 @@
 package client
 
 import (
-	"io/ioutil"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/square/go-jose.v2/jwt"
 
-	"github.com/projectcalico/go-yaml-wrapper"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )
@@ -83,20 +81,4 @@ func DecodeAndVerify(lic api.LicenseKey) (LicenseClaims, bool) {
 	expired := claims.Claims.NotBefore.Time().After(time.Now().UTC())
 
 	return claims, expired
-}
-
-// This is temp, until libcalico-go resource is merged.
-func ReadFile(path string) api.LicenseKey {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		panic(err)
-	}
-
-	lic := api.NewLicenseKey()
-	err = yaml.Unmarshal(data, &lic)
-	if err != nil {
-		panic(err)
-	}
-
-	return *lic
 }
