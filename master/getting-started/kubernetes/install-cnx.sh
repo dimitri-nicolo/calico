@@ -273,15 +273,15 @@ EOF
 
   runAsRoot mv basic_auth.csv /etc/kubernetes/pki/basic_auth.csv
   runAsRoot chown root /etc/kubernetes/pki/basic_auth.csv
-  runAsRoot chmod 400 /etc/kubernetes/pki/basic_auth.csv
+  runAsRoot chmod 644 /etc/kubernetes/pki/basic_auth.csv
 
   # Append basic auth setting into kube-apiserver command line
   cat > sedcmd.txt <<EOF
 /- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv
 EOF
 
-  # Create a backup version of the file (kube-apiserver.yaml.backup)
-  runAsRoot sed --in-place=.backup -f sedcmd.txt /etc/kubernetes/manifests/kube-apiserver.yaml
+  # Insert basic-auth option into kube-apiserver manifest
+  runAsRoot sed -i -f sedcmd.txt /etc/kubernetes/manifests/kube-apiserver.yaml
   run rm -f sedcmd.txt
 
   # Restart kubelet in order to make basic_auth settings take effect
@@ -298,7 +298,11 @@ EOF
 deleteBasicAuth() {
   runAsRoot rm -f /etc/kubernetes/pki/basic_auth.csv
   runAsRootIgnoreErrors kubectl delete clusterrolebinding permissive-binding
-  runAsRootIgnoreErrors cp /etc/kubernetes/manifests/kube-apiserver.yaml.backup /etc/kubernetes/manifests/kube-apiserver.yaml
+  cat > sedcmd.txt <<EOF
+/    - --basic-auth-file=\/etc\/kubernetes\/pki\/basic_auth.csv/d
+EOF
+  runAsRoot sed -i -f sedcmd.txt /etc/kubernetes/manifests/kube-apiserver.yaml
+  run rm -f sedcmd.txt
 
   # Restart kubelet in order to make basic_auth settings take effect
   runAsRoot systemctl restart kubelet
