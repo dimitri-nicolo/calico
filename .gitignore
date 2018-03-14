@@ -3,11 +3,6 @@
 bin
 release
 build
-calicobuild.created
-calico_containers/pycalico.egg-info/
-calicoctl/calicoctl
-calicoctl/calicoctl-*
-caliconode.created
 cover
 .coverage
 *.coverprofile
@@ -17,3 +12,5 @@ env
 *.pyc
 vendor
 venv
+.*-created
+.go-pkg-cache
