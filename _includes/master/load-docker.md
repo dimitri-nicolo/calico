@@ -135,7 +135,9 @@ in either of the following ways.
 
    ```bash
    docker pull {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+   docker pull {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
    docker pull {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker pull {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker pull {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker pull {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
    ```
@@ -144,7 +146,9 @@ in either of the following ways.
 
    ```bash
    docker tag {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}} <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+   docker tag {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}} <YOUR-REGISTRY>/tigera/cnx-queryserver:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
    docker tag {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}} <YOUR-REGISTRY>/tigera/cnx-manager:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker tag {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}} <YOUR-REGISTRY>/tigera/cnx-manager-proxy:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker tag {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}} <YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker tag {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}} <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
    ```
@@ -156,7 +160,9 @@ in either of the following ways.
 
    ```bash
    docker push <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
+   docker push <YOUR-REGISTRY>/tigera/cnx-queryserver:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-manager:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
+   docker push <YOUR-REGISTRY>/tigera/cnx-manager-proxy:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker push <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
    ```

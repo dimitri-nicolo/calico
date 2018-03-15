@@ -53,7 +53,9 @@ the host. Instead, continue directly to the
 
    ```bash
    docker pull {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.title}}
+   docker pull {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.title}}
    docker pull {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.title}}
+   docker pull {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.title}}
    docker pull {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
    ```
 
