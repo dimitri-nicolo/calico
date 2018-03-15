@@ -22,6 +22,15 @@ targeted at internal use (cnx-manager/webapp only).
   - max number of items to return per page
   - defaults to 100
   - a value of `all` may be used to return all items at once.
+- `sortBy`
+  - name of the field to sort by
+  - see tables to see which fields are sortable, the query will error if the field is not 
+    a valid SortableBy field.
+  - tables indicate default sort field by (*) or (*1)... in the SortableBy column (number indicates sort order)
+  - multiple sortBy entries may be specified, the default sort field is always added as the
+    final sort field.
+- `reverseSort`
+  - set to `true` to reverse the sort order.
 
 ### Version
 
@@ -210,22 +219,24 @@ endpoints.
 
 ##### Policy Response Object
 
-| Field | Description | Scheme |
-| ----- | ----------- | ------ |
-| kind | The kind of policy | GlobalNetworkPolicy or NetworkPolicy |
-| name | The name of the policy | string |
-| namespace | The namespace (only for NetworkPolicy) | string |
-| tier | The Tier the policy is in | string |
-| numWorkloadEndpoints | The number of WorkloadEndpoint resources matching the policy | number |
-| numHostEndpoints | The number of HostEndpoint resources matching the policy | number |
-| ingressRules | List of ingress rules | list of [rule](#rule-response-object) |
-| egressRules | List of egress rules | list of [rule](#rule-response-object) |
+| Field | Description | Scheme | SortableBy |
+| ----- | ----------- | ------ | ---------- |
+| index | The relative index the policies are applied in within the scope of the query | int | true (*) |
+| kind | The kind of policy | GlobalNetworkPolicy or NetworkPolicy | true |
+| name | The name of the policy | string | true |
+| namespace | The namespace (only for NetworkPolicy) | string | true |
+| tier | The Tier the policy is in | string | true |
+| numWorkloadEndpoints | The number of WorkloadEndpoint resources matching the policy | number | true |
+| numHostEndpoints | The number of HostEndpoint resources matching the policy | number | true |
+| ingressRules | List of ingress rules | list of [rule](#rule-response-object) | false |
+| egressRules | List of egress rules | list of [rule](#rule-response-object) | false |
 
 NOTE:
 1. The `name` parameter is exactly the same as in the v3 client.
    - It is prefixed with the tier name.
 1. To get the total endpoint count to for this policy, sum
    `numWorkloadEndpoints` and `numHostEndpoints`.
+1. You can use `numEndpoints` as a sort field to sort on the total endpoint count.
    
 TODO(rlb):  Need numNodes that policy is applied to.
 
@@ -587,20 +598,23 @@ Items will be sorted by name and then namespace.
 
 ##### Endpoint Response Object
 
-| Field | Description | Scheme |
-| ----- | ----------- | ------ |
-| kind | The kind of endpoint | HostEndpoint or WorkloadEndpoint |
-| name | The name of the endpoint | string |
-| namespace | The namespace (only for WorkloadEndpoint) | string |
-| node | The node that the endpoint resides in | string |
-| numGlobalNetworkPolicies | The number of GlobalNetworkPolicies that match the endpoint | number |
-| numNetworkPolicies | The number of NetworkPolicies that match the endpoint | number |
-| workload | The name of the workload to which this endpoint belongs | string |
-| orchestrator | The orchestrator that created this endpoint | string |
-| pod | The kubernetes pod name (if orchestrator value is `k8s`) | string |
-| ipNetworks | List of CIDRs assigned to this endpoint. For HostEndpoints, this is the expected list of IP Addresses if configured. | list of strings |
-| labels | List of labels that applies to this endpoint | map of key-value pairs |
-| interfaceName | The name of the interface attached to this endpoint | string |
+| Field | Description | Scheme | SortableBy |
+|-------|-------------|--------|------------|
+| kind | The kind of endpoint | HostEndpoint or WorkloadEndpoint | true |
+| name | The name of the endpoint | string | true (*1) |
+| namespace | The namespace (only for WorkloadEndpoint) | string | true (*2) |
+| node | The node that the endpoint resides in | string | true |
+| numGlobalNetworkPolicies | The number of GlobalNetworkPolicies that match the endpoint | number | true |
+| numNetworkPolicies | The number of NetworkPolicies that match the endpoint | number | true |
+| workload | The name of the workload to which this endpoint belongs | string | true |
+| orchestrator | The orchestrator that created this endpoint | string | true |
+| pod | The kubernetes pod name (if orchestrator value is `k8s`) | string | true |
+| ipNetworks | List of CIDRs assigned to this endpoint. For HostEndpoints, this is the expected list of IP Addresses if configured. | list of strings | true |
+| labels | List of labels that applies to this endpoint | map of key-value pairs | false |
+| interfaceName | The name of the interface attached to this endpoint | string | true |
+
+Notes:
+1. You can use `numPolicies` as a sort field to sort on the total policy count.
 
 #### Example
 
@@ -818,12 +832,15 @@ Returns a JSON object with the following fields.
 
 ##### Node Response Object
 
-| Field | Description | Scheme |
-| ----- | ----------- | ------ |
-| name | Name of the node | string |
-| bgpIPAddresses | The configured BGP IP addresses for this node | list of string |
-| numWorkloadEndpoints | The number of workload endpoints residing on this node | number |
-| numHostEndpoints | The number of host endpoints present on this node | number |
+| Field | Description | Scheme | SortableBy |
+| ----- | ----------- | ------ |------------|
+| name | Name of the node | string | true (*) |
+| bgpIPAddresses | The configured BGP IP addresses for this node | list of string | true |
+| numWorkloadEndpoints | The number of workload endpoints residing on this node | number | true |
+| numHostEndpoints | The number of host endpoints present on this node | number | true |
+
+Notes:
+1. You can use `numEndpoints` as a sort field to sort on the total endpoint count.
 
 #### Example
 

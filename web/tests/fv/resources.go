@@ -19,18 +19,18 @@ import (
 This file defines a number of WEP, HEP, GNP, NP resources that can be used to test the EP<->Policy mappings.
 Summary of configuration below.  Rules not explicitly specified have an all() or empty selector.
 
-Endpoint                     rack  server  ns
+Endpoint                     rack  server  ns  orch       pod
 ------------------------------------------------------------------------------
 hep4_n4_unlabelled
 hep3_n4                      099
-wep1_n1_ns1                  001   1       1                          (using profile-rack-001)
-wep1_n1_ns1_updated_profile  099   1       1                          (using profile-rack-099)
-wep2_n1_ns1_filtered_out     001   1       1
-wep2_n1_ns1_filtered_in      001   1       1
-wep3_n1_ns2                  001   1       2
-wep4_n2_ns1                  001   2       1
+wep1_n1_ns1                  001   1       1   k8s        pod1-aaa         (needs profile-rack-001)
+wep1_n1_ns1_updated_profile  099   1       1   k8s        pod1-aaa         (needs profile-rack-099)
+wep2_n1_ns1_filtered_out     001   1       1   k8s        pod1-abc
+wep2_n1_ns1_filtered_in      001   1       1   k8s        pod1-abc
+wep3_n1_ns2                  001   1       2   k8s        pod2-acd
+wep4_n2_ns1                  001   2       1   openstack
 hep1_n2                      001   2
-wep5_n3_ns2_unlabelled                     2
+wep5_n3_ns2_unlabelled                     2   cni
 hep2_n3                      002   1
 
 Policy  Rule                 rack  server  ns  numEgress numIngress tier
@@ -58,6 +58,13 @@ Profile                      rack  server
 ------------------------------------------------------------------------------
 profile-rack-001             1
 profile-rack-099             99
+
+Node    Name
+-------------------------
+node4   master-node.0001
+node1   rack.1-server.1
+node2   rack.1-server.2
+node3   rack.2-server.1
 */
 
 var (
@@ -213,7 +220,7 @@ var (
 			Pod:           "pod1-abc",
 			ContainerID:   "abcdefg",
 			Endpoint:      "eth0",
-			InterfaceName: "cali987654",
+			InterfaceName: "cali9b9b9b",
 			// No IPNetworks, so WEP will be filtered out.
 			IPNetworks: []string{},
 		},
@@ -240,7 +247,7 @@ var (
 			Pod:           "pod1-abc",
 			ContainerID:   "abcdefg",
 			Endpoint:      "eth0",
-			InterfaceName: "cali987654",
+			InterfaceName: "cali9b9b9b",
 			// Thie one has an IP address and will therefore be filtered in.
 			IPNetworks: []string{"10.20.30.40/32"},
 		},
@@ -934,7 +941,7 @@ var (
 )
 
 // qcNode returns a client.Node from an v3.Node, v3.WorkloadEndpoint or v3.HostEndpoint.
-func qcNode(r api.Resource, numWEP, numHEP int) client.Node {
+func qcNode(r api.Resource, numHEP, numWEP int) client.Node {
 	n := client.Node{
 		NumWorkloadEndpoints: numWEP,
 		NumHostEndpoints:     numHEP,
@@ -1045,6 +1052,12 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		p.Ingress = createRulesFn(len(er.Spec.Ingress))
 		p.Egress = createRulesFn(len(er.Spec.Egress))
 	}
+	return p
+}
+
+func qcPolicyWithIdx(r api.Resource, idx, numHEP, numWEP, totHEP, totWEP int) client.Policy {
+	p := qcPolicy(r, numHEP, numWEP, totHEP, totWEP)
+	p.Index = idx
 	return p
 }
 

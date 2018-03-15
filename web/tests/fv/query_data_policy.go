@@ -18,7 +18,7 @@ func policyTestQueryData() []testQueryData {
 	qcPolicy_gnp2_t1_all_res.Ingress[1].Destination.NotSelector.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_all_res.Ingress[1].Destination.NotSelector.NumWorkloadEndpoints = 3
 
-	qcPolicy_gnp1_t1_all_res_more := qcPolicy(gnp1_t1_o4_more_rules, 1, 3	, 4, 4)
+	qcPolicy_gnp1_t1_all_res_more := qcPolicy(gnp1_t1_o4_more_rules, 1, 3, 4, 4)
 	qcPolicy_gnp1_t1_all_res_more.Egress[0].Source.NotSelector.NumHostEndpoints = 0
 	qcPolicy_gnp1_t1_all_res_more.Egress[0].Source.NotSelector.NumWorkloadEndpoints = 2
 	qcPolicy_gnp1_t1_all_res_more.Ingress[0].Destination.Selector.NumHostEndpoints = 2
@@ -52,7 +52,19 @@ func policyTestQueryData() []testQueryData {
 	qcPolicy_gnp2_t1_some_unmatched.Ingress[1].Destination.NotSelector.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_some_unmatched.Ingress[1].Destination.NotSelector.NumWorkloadEndpoints = 2
 
-	return []testQueryData{
+	qcPolicy_gnp2_t1_all_res_with_index := qcPolicyWithIdx(gnp2_t1_o4, 3, 4, 4, 4, 4)
+	qcPolicy_gnp2_t1_all_res_with_index.Egress[0].Source.NotSelector.NumHostEndpoints = 0
+	qcPolicy_gnp2_t1_all_res_with_index.Egress[0].Source.NotSelector.NumWorkloadEndpoints = 2
+	qcPolicy_gnp2_t1_all_res_with_index.Egress[1].Source.Selector.NumHostEndpoints = 1
+	qcPolicy_gnp2_t1_all_res_with_index.Egress[1].Source.Selector.NumWorkloadEndpoints = 1
+	qcPolicy_gnp2_t1_all_res_with_index.Ingress[0].Destination.Selector.NumHostEndpoints = 2
+	qcPolicy_gnp2_t1_all_res_with_index.Ingress[0].Destination.Selector.NumWorkloadEndpoints = 0
+	qcPolicy_gnp2_t1_all_res_with_index.Ingress[1].Destination.NotSelector.NumHostEndpoints = 2
+	qcPolicy_gnp2_t1_all_res_with_index.Ingress[1].Destination.NotSelector.NumWorkloadEndpoints = 3
+
+	// Define a bunch of test query data for policies that test results returned in the policy appication index order.
+	// We tweak this data after to assign the policy index so that we don't have to specify it in every test here.
+	tqds := []testQueryData{
 		{
 			"multiple gnps and nps, no endpoints - query exact np",
 			[]resourcemgr.ResourceObject{
@@ -288,9 +300,9 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
 			},
 			client.QueryPoliciesReq{
-				Labels: map[string]string {
+				Labels: map[string]string{
 					"projectcalico.org/namespace": "namespace-1",
-					"rack": "001",
+					"rack":   "001",
 					"server": "1",
 				},
 			},
@@ -330,9 +342,9 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
 			},
 			client.QueryPoliciesReq{
-				Labels: map[string]string {
+				Labels: map[string]string{
 					"projectcalico.org/namespace": "namespace-1",
-					"rack": "001",
+					"rack":   "001",
 					"server": "1",
 				},
 				Endpoint: resourceKey(wep4_n2_ns1),
@@ -354,13 +366,13 @@ func policyTestQueryData() []testQueryData {
 				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
 			},
 			client.QueryPoliciesReq{
-				Labels: map[string]string {
+				Labels: map[string]string{
 					"projectcalico.org/namespace": "namespace-1",
-					"rack": "001",
+					"rack":   "001",
 					"server": "1",
 				},
 				Endpoint: resourceKey(wep4_n2_ns1),
-				Tier: tier2.Name,
+				Tier:     tier2.Name,
 			},
 			&client.QueryPoliciesResp{
 				Count: 1,
@@ -455,4 +467,235 @@ func policyTestQueryData() []testQueryData {
 			},
 		},
 	}
+	// All of the above queries are returning the policies in order application index which means the index is the same
+	// as the index into the items slice.  Fix them up here so that we don't need to above.
+	for _, tqd := range tqds {
+		startIdx := 0
+		qpreq := tqd.query.(client.QueryPoliciesReq)
+		if qpreq.Page != nil {
+			startIdx = qpreq.Page.PageNum * qpreq.Page.NumPerPage
+		}
+		qpr, ok := tqd.response.(*client.QueryPoliciesResp)
+		if !ok {
+			continue
+		}
+		for i := 0; i < len(qpr.Items); i++ {
+			qpr.Items[i].Index = startIdx + i
+		}
+	}
+
+	// The following tests are to test the different sort parameters.
+	tqdsSortFields := []testQueryData{
+		{
+			"multiple gnps and nps, endpoints - reverse sort",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					Reverse: true,
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4), qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4),
+					qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4),
+					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4),
+					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4), qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4),
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by index",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"index"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by kind",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"kind"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by name",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"name"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by namespace",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"namespace"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4),
+					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by tier",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"tier"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by numHostEndpoints",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"numHostEndpoints"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4),
+					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by numWorkloadEndpoints",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"numWorkloadEndpoints"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
+					qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4), qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4),
+					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+				},
+			},
+		},
+		{
+			"multiple gnps and nps, endpoints - sort by endpoints (host + workload)",
+			[]resourcemgr.ResourceObject{
+				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+			},
+			client.QueryPoliciesReq{
+				Sort: &client.Sort{
+					SortBy: []string{"numEndpoints"},
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 8,
+				Items: []client.Policy{
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4),
+					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4),
+					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+				},
+			},
+		},
+	}
+
+	tqds = append(tqds, tqdsSortFields...)
+
+	return tqds
 }

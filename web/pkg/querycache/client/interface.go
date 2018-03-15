@@ -42,6 +42,7 @@ type QueryNodesReq struct {
 
 	// Filters
 	Page *Page
+	Sort *Sort
 }
 
 type QueryNodesResp struct {
@@ -58,14 +59,15 @@ type Node struct {
 
 type QueryPoliciesReq struct {
 	// Queries (select one)
-	Endpoint  model.Key
-	Unmatched bool
-	Labels    map[string]string
-	Policy    model.Key
+	Endpoint model.Key
+	Labels   map[string]string
+	Policy   model.Key
 
 	// Filters
-	Page *Page
-	Tier string
+	Unmatched bool
+	Tier      string
+	Page      *Page
+	Sort      *Sort
 }
 
 type QueryPoliciesResp struct {
@@ -74,6 +76,7 @@ type QueryPoliciesResp struct {
 }
 
 type Policy struct {
+	Index                int             `json:"index"'`
 	Kind                 string          `json:"kind"`
 	Name                 string          `json:"name"`
 	Namespace            string          `json:"namespace,omitempty"`
@@ -112,6 +115,7 @@ type QueryEndpointsReq struct {
 	// Filters
 	Node string
 	Page *Page
+	Sort *Sort
 }
 
 const (
@@ -154,4 +158,9 @@ type Endpoint struct {
 type Page struct {
 	PageNum    int
 	NumPerPage int
+}
+
+type Sort struct {
+	SortBy  []string
+	Reverse bool
 }

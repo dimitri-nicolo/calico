@@ -5,7 +5,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	log "github.com/sirupsen/logrus"
 
@@ -223,7 +222,7 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 		}
 		items = append(items, *c.apiEndpointToQueryEndpoint(ep))
 	}
-	sort.Sort(sortableEndpoints(items))
+	sortEndpoints(items, req.Sort)
 
 	count := len(items)
 	if req.Page != nil {
@@ -283,7 +282,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		return &QueryPoliciesResp{
 			Count: 1,
 			Items: []Policy{
-				*c.apiPolicyToQueryPolicy(ep),
+				*c.apiPolicyToQueryPolicy(ep, 0),
 			},
 		}, nil
 	}
@@ -353,8 +352,13 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 				log.Info("Filter out matched policy")
 				continue
 			}
-			items = append(items, *c.apiPolicyToQueryPolicy(p))
+			items = append(items, *c.apiPolicyToQueryPolicy(p, len(items)))
 		}
+	}
+
+	if req.Sort != nil {
+		// User has specified a different sort order, so re-order the policies according to the sort fields.
+		sortPolicies(items, req.Sort)
 	}
 
 	// If we are paging results then return the required page-worths of results.
@@ -378,10 +382,11 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 	}, nil
 }
 
-func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy) *Policy {
+func (c *cachedQuery) apiPolicyToQueryPolicy(p api.Policy, idx int) *Policy {
 	ep := p.GetEndpointCounts()
 	res := p.GetResource()
 	return &Policy{
+		Index:                idx,
 		Name:                 res.GetObjectMeta().GetName(),
 		Namespace:            res.GetObjectMeta().GetNamespace(),
 		Kind:                 res.GetObjectKind().GroupVersionKind().Kind,
@@ -444,7 +449,7 @@ func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*Qu
 	for _, n := range nodes {
 		items = append(items, *c.apiNodeToQueryNode(n))
 	}
-	sort.Sort(sortableNodes(items))
+	sortNodes(items, req.Sort)
 
 	// If we are paging the results then only keep the required page worth of results.
 	if req.Page != nil {
@@ -616,28 +621,4 @@ func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index i
 		}
 	}
 	return "", fmt.Errorf("rule parameters request is not valid: %s", key.String())
-}
-
-type sortableNodes []Node
-
-func (s sortableNodes) Len() int {
-	return len(s)
-}
-func (s sortableNodes) Less(i, j int) bool {
-	return s[i].Name < s[j].Name
-}
-func (s sortableNodes) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-type sortableEndpoints []Endpoint
-
-func (s sortableEndpoints) Len() int {
-	return len(s)
-}
-func (s sortableEndpoints) Less(i, j int) bool {
-	return s[i].Name < s[j].Name || (s[i].Name == s[j].Name && s[i].Namespace < s[j].Namespace)
-}
-func (s sortableEndpoints) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
 }
