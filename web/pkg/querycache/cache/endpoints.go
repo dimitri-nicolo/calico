@@ -6,6 +6,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/tigera/calicoq/web/pkg/querycache/api"
 	"github.com/tigera/calicoq/web/pkg/querycache/dispatcherv1v3"
 	"github.com/tigera/calicoq/web/pkg/querycache/labelhandler"
@@ -23,6 +24,7 @@ var (
 type EndpointsCache interface {
 	TotalEndpoints() api.EndpointCounts
 	EndpointsWithNoLabels() api.EndpointCounts
+	EndpointsWithNoPolicies() api.EndpointCounts
 	GetEndpoint(model.Key) api.Endpoint
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 	RegisterWithLabelHandler(handler labelhandler.Interface)
@@ -46,7 +48,8 @@ type endpointsCache struct {
 // newEndpointCache creates a new endpointCache.
 func newEndpointCache() *endpointCache {
 	return &endpointCache{
-		endpoints: make(map[model.Key]*endpointData),
+		endpoints:            make(map[model.Key]*endpointData),
+		unProtectedEndpoints: set.New(),
 	}
 }
 
@@ -58,6 +61,9 @@ type endpointCache struct {
 	// The number of unlabelled (that is explicitly added labels rather than implicitly
 	// added) endpoints in this cache.
 	numUnlabelled int
+
+	// Stores endpoint keys that have no policies associated (i.e., "unprotected").
+	unProtectedEndpoints set.Set
 }
 
 func (c *endpointsCache) TotalEndpoints() api.EndpointCounts {
@@ -74,6 +80,13 @@ func (c *endpointsCache) EndpointsWithNoLabels() api.EndpointCounts {
 	}
 }
 
+func (c *endpointsCache) EndpointsWithNoPolicies() api.EndpointCounts {
+	return api.EndpointCounts{
+		NumWorkloadEndpoints: c.workloadEndpoints.unProtectedEndpoints.Len(),
+		NumHostEndpoints:     c.hostEndpoints.unProtectedEndpoints.Len(),
+	}
+}
+
 func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 	uv3 := update.UpdateV3
 	ec := c.getEndpointCache(uv3.Key)
@@ -85,6 +98,9 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		ed := &endpointData{resource: uv3.Value.(api.Resource)}
 		ec.updateHasLabelsCounts(false, ed.unlabelled())
 		ec.endpoints[uv3.Key] = ed
+		// All endpoints are unprotected initially. policyEndpointMatch() will
+		// remove them from this set if policies apply on this endpoint.
+		ec.unProtectedEndpoints.Add(uv3.Key)
 	case bapi.UpdateTypeKVUpdated:
 		ed := ec.endpoints[uv3.Key]
 		wasUnlabelled := ed.unlabelled()
@@ -93,6 +109,7 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 	case bapi.UpdateTypeKVDeleted:
 		ed := ec.endpoints[uv3.Key]
 		ec.updateHasLabelsCounts(ed.unlabelled(), false)
+		ec.unProtectedEndpoints.Discard(uv3.Key)
 		delete(ec.endpoints, uv3.Key)
 	}
 }
@@ -132,6 +149,13 @@ func (c *endpointsCache) policyEndpointMatch(matchType labelhandler.MatchType, s
 		epd.policies.NumNetworkPolicies += matchTypeToDelta[matchType]
 	default:
 		log.WithField("key", selector.Policy()).Error("Unexpected resource in event type, expecting a v3 policy type")
+	}
+
+	ec := c.getEndpointCache(epKey)
+	if epd.IsProtected() {
+		ec.unProtectedEndpoints.Discard(epKey)
+	} else {
+		ec.unProtectedEndpoints.Add(epKey)
 	}
 }
 
@@ -188,6 +212,12 @@ func (e *endpointData) GetNode() string {
 		return r.Spec.Node
 	}
 	return ""
+}
+
+// IsProtected returns true when an endpoint has one or more GlobalNetworkPolicies
+// or NetworkPolicies that apply to it.
+func (e *endpointData) IsProtected() bool {
+	return e.policies.NumGlobalNetworkPolicies > 0 || e.policies.NumNetworkPolicies > 0
 }
 
 func (e *endpointData) unlabelled() bool {

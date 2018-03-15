@@ -4,6 +4,7 @@ type Endpoint interface {
 	GetResource() Resource
 	GetNode() string
 	GetPolicyCounts() PolicyCounts
+	IsProtected() bool
 }
 
 type EndpointCounts struct {
