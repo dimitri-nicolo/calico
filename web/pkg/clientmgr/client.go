@@ -21,31 +21,11 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 )
 
 const (
 	DefaultConfigPath = ""
 )
-
-// NewClient creates a new CalicoClient using connection information in the specified
-// filename (if it exists), dropping back to environment variables for any
-// parameter not loaded from file.
-func NewClient(cf string) (client.Interface, error) {
-	cfg, err := LoadClientConfig(cf)
-	if err != nil {
-		log.Info("Error loading config")
-		return nil, err
-	}
-	log.Infof("Loaded client config: %#v", cfg.Spec)
-
-	c, err := client.New(*cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return c, err
-}
 
 // LoadClientConfig loads the client config from file if the file exists,
 // otherwise will load from environment variables.

@@ -17,32 +17,33 @@ import (
 )
 
 const (
-	queryLabelPrefix         = "label_"
-	querySelector            = "selector"
-	queryPolicy              = "policy"
-	queryRuleDirection       = "ruleDirection"
-	queryRuleIndex           = "ruleIndex"
-	queryRuleEntity          = "ruleEntity"
-	queryRuleNegatedSelector = "ruleNegatedSelector"
-	queryPageNum             = "page"
-	queryNumPerPage          = "maxItems"
-	querySortBy              = "sortBy"
-	queryReverseSort         = "reverseSort"
-	queryEndpoint            = "endpoint"
-	queryUnmatched           = "unmatched"
-	queryTier                = "tier"
+	QueryLabelPrefix         = "label_"
+	QuerySelector            = "selector"
+	QueryPolicy              = "policy"
+	QueryNode                = "node"
+	QueryRuleDirection       = "ruleDirection"
+	QueryRuleIndex           = "ruleIndex"
+	QueryRuleEntity          = "ruleEntity"
+	QueryRuleNegatedSelector = "ruleNegatedSelector"
+	QueryPageNum             = "page"
+	QueryNumPerPage          = "maxItems"
+	QuerySortBy              = "sortBy"
+	QueryReverseSort         = "reverseSort"
+	QueryEndpoint            = "endpoint"
+	QueryUnmatched           = "unmatched"
+	QueryTier                = "tier"
 
-	allResults     = "all"
+	AllResults     = "all"
 	resultsPerPage = 100
 
 	numURLSegmentsWithName = 3
 )
 
 var (
-	errorPolicyMultiParm = errors.New("specify only one of " + queryEndpoint +
-		" or " + queryUnmatched)
-	errorEndpointMultiParm = errors.New("specify only one of " + querySelector +
-		" or " + queryPolicy)
+	errorPolicyMultiParm = errors.New("specify only one of " + QueryEndpoint +
+		" or " + QueryUnmatched)
+	errorEndpointMultiParm = errors.New("specify only one of " + QuerySelector +
+		" or " + QueryPolicy)
 	errorInvalidEndpointName = errors.New("the endpoint name is not valid; it should be of the format " +
 		"<HostEndpoint name> or <namespace>/<WorkloadEndpoint name>")
 	errorInvalidPolicyName = errors.New("the policy name is not valid; it should be of the format " +
@@ -78,7 +79,7 @@ func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
 }
 
 func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
-	selector := r.URL.Query().Get(querySelector)
+	selector := r.URL.Query().Get(QuerySelector)
 	policies, err := q.getPolicies(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -95,12 +96,13 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 	q.runQuery(w, r, client.QueryEndpointsReq{
 		Selector:            selector,
 		Policy:              policy,
-		RuleDirection:       r.URL.Query().Get(queryRuleDirection),
-		RuleIndex:           q.getInt(r, queryRuleIndex, 0),
-		RuleEntity:          r.URL.Query().Get(queryRuleEntity),
-		RuleNegatedSelector: q.getBool(r, queryRuleNegatedSelector),
+		RuleDirection:       r.URL.Query().Get(QueryRuleDirection),
+		RuleIndex:           q.getInt(r, QueryRuleIndex, 0),
+		RuleEntity:          r.URL.Query().Get(QueryRuleEntity),
+		RuleNegatedSelector: q.getBool(r, QueryRuleNegatedSelector),
 		Page:                q.getPage(r),
 		Sort:                q.getSort(r),
+		Node:                r.URL.Query().Get(QueryNode),
 	})
 }
 
@@ -126,7 +128,7 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	unmatched := q.getBool(r, queryUnmatched)
+	unmatched := q.getBool(r, QueryUnmatched)
 	if (unmatched && len(endpoints) > 0) || len(endpoints) > 1 {
 		http.Error(w, errorPolicyMultiParm.Error(), http.StatusBadRequest)
 		return
@@ -136,7 +138,7 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		endpoint = endpoints[0]
 	}
 	q.runQuery(w, r, client.QueryPoliciesReq{
-		Tier:      r.URL.Query().Get(queryTier),
+		Tier:      r.URL.Query().Get(QueryTier),
 		Labels:    q.getLabels(r),
 		Endpoint:  endpoint,
 		Unmatched: unmatched,
@@ -205,15 +207,15 @@ func (q *query) getLabels(r *http.Request) map[string]string {
 	parms := r.URL.Query()
 	labels := make(map[string]string, 0)
 	for k, pvs := range parms {
-		if strings.HasPrefix(k, queryLabelPrefix) {
-			labels[strings.TrimPrefix(k, queryLabelPrefix)] = pvs[0]
+		if strings.HasPrefix(k, QueryLabelPrefix) {
+			labels[strings.TrimPrefix(k, QueryLabelPrefix)] = pvs[0]
 		}
 	}
 	return labels
 }
 
 func (q *query) getEndpoints(r *http.Request) ([]model.Key, error) {
-	eps := r.URL.Query()[queryEndpoint]
+	eps := r.URL.Query()[QueryEndpoint]
 	reps := make([]model.Key, 0, len(eps))
 	for _, ep := range eps {
 		rep, ok := q.getEndpointKeyFromCombinedName(ep)
@@ -226,7 +228,7 @@ func (q *query) getEndpoints(r *http.Request) ([]model.Key, error) {
 }
 
 func (q *query) getPolicies(r *http.Request) ([]model.Key, error) {
-	pols := r.URL.Query()[queryPolicy]
+	pols := r.URL.Query()[QueryPolicy]
 	rpols := make([]model.Key, 0, len(pols))
 	for _, pol := range pols {
 		rpol, ok := q.getPolicyKeyFromCombinedName(pol)
@@ -328,18 +330,18 @@ func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}
 }
 
 func (q *query) getPage(r *http.Request) *client.Page {
-	if r.URL.Query().Get(queryPageNum) == allResults {
+	if r.URL.Query().Get(QueryPageNum) == AllResults {
 		return nil
 	}
 	return &client.Page{
-		PageNum:    q.getInt(r, queryPageNum, 0),
-		NumPerPage: q.getInt(r, queryNumPerPage, resultsPerPage),
+		PageNum:    q.getInt(r, QueryPageNum, 0),
+		NumPerPage: q.getInt(r, QueryNumPerPage, resultsPerPage),
 	}
 }
 
 func (q *query) getSort(r *http.Request) *client.Sort {
-	sortBy := r.URL.Query()[querySortBy]
-	reverse := q.getBool(r, queryReverseSort)
+	sortBy := r.URL.Query()[QuerySortBy]
+	reverse := q.getBool(r, QueryReverseSort)
 	if len(sortBy) == 0 && !reverse {
 		return nil
 	}
