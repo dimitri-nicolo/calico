@@ -239,7 +239,7 @@ the host. Instead, continue directly to the
 1. Optionally add network policy to ensure requests to CNX are permitted.  By default Kubernetes doesn't
    install any network policy, and therefore CNX Manager is accessible, but it is easy to
    unintentionally block it when editing policy so this is a recommended step.  Download the
-   [cnx-poolicy.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml)
+   [cnx-policy.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml)
    file and apply it.  This step is an example of applying CNX Tiered Security Policy using
    the `kubectl` command line tool.
 

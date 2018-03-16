@@ -98,7 +98,7 @@
 1. Optionally add network policy to ensure requests to CNX are permitted.  By default Kubernetes doesn't
    install any network policy, and therefore CNX Manager is accessible, but it is easy to
    unintentionally block it when editing policy so this is a recommended step.  Download the
-   [cnx-poolicy.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml)
+   [cnx-policy.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml)
    file and apply it.  The file doesn't require any customization, but contains some comments
    suggesting ways to make the policy more fine grained if you know where CNX Manager will be
    accessed from or the addresses of your Kubernetes API Servers.
