@@ -735,6 +735,9 @@ master:
     cnx-apiserver:
       version: master
       url: ""
+    cnx-queryserver:
+      version: master
+      url: ""
     calicoq:
       version: master
       url: ""

@@ -31,6 +31,7 @@ imageNames:
   cnxManager: quay.io/tigera/cnx-manager
   cnxManagerProxy: quay.io/tigera/cnx-manager-proxy
   cnxApiserver: quay.io/tigera/cnx-apiserver
+  cnxQueryserver: quay.io/tigera/cnx-queryserver
   felix: quay.io/tigera/felix
   calicoq: quay.io/tigera/calicoq
   cni: quay.io/calico/cni

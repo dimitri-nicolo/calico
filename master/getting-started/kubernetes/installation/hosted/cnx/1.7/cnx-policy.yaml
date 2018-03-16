@@ -56,5 +56,5 @@ spec:
       # the addresses of your Kubernetes API Servers if those are static.
       nets: ["0.0.0.0/0"]
     destination:
-      # The ports CNX API Server is configured to listen on.
-      ports: [443, 5443]
+      # The ports CNX API Server and CNX Query Server are configured to listen on.
+      ports: [443, 5443, 8080, 10443]

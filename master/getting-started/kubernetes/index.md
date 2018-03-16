@@ -53,7 +53,9 @@ the host. Instead, continue directly to the
 
    ```bash
    docker pull {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.title}}
+   docker pull {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.title}}
    docker pull {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.title}}
+   docker pull {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.title}}
    docker pull {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
    ```
 
@@ -120,7 +122,7 @@ the host. Instead, continue directly to the
    ```
    
    > **Note**: You can also 
-   > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml){:target="_blank"}.
+   > [view the YAML in a new tab]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
    You should see the following output.
@@ -190,7 +192,7 @@ the host. Instead, continue directly to the
    ```
    
    > **Note**: You can also 
-   > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
+   > [view the YAML in a new tab]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
    You should see the following output.

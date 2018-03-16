@@ -41,6 +41,7 @@ V_LIBNETWORK_PLUGIN := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(REL
 V_TYPHA := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.typha.version')
 V_CALICOQ := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
 V_APISERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-apiserver.version')
+V_QUERYSERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-queryserver.version')
 V_CNX_WEB_MANAGER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-manager.version')
 V_RR := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/routereflector.version')
 V_CALICO := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico.version')
@@ -60,6 +61,7 @@ LIBNETWORK_PLUGIN_VER ?= $(V_LIBNETWORK_PLUGIN)
 TYPHA_VER ?= $(V_TYPHA)
 CALICOQ_VER ?= $(V_CALICOQ)
 APISERVER_VER ?= $(V_APISERVER)
+QUERYSERVER_VER ?= $(V_QUERYSERVER)
 CNX_WEB_MANAGER_VER ?= $(V_CNX_WEB_MANAGER)
 RR_VER ?= $(V_RR)
 CALICO_VER ?= $(V_CALICO)
@@ -78,6 +80,7 @@ $(info $(shell printf "%-21s = %-10s\n" "TYPHA_VER" $(TYPHA_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "CALICOQ_VER" $(CALICOQ_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "CNX_WEB_MANAGER_VER" $(CNX_WEB_MANAGER_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "APISERVER_VER" $(APISERVER_VER)))
+$(info $(shell printf "%-21s = %-10s\n" "QUERYSERVER_VER" $(QUERYSERVER_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "RR_VER" $(RR_VER)))
 
 SYSTEMTEST_CONTAINER_VER ?= latest
@@ -122,6 +125,8 @@ CALICOQ_CONTAINER_NAME?=tigera/calicoq:$(CALICOQ_VER)
 CALICOQ_PRIVATE_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/calicoq
 APISERVER_CONTAINER_NAME?=tigera/cnx-apiserver:$(APISERVER_VER)
 APISERVER_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/cnx-apiserver
+QUERYSERVER_CONTAINER_NAME?=tigera/cnx-queryserver:$(QUERYSERVER_VER)
+QUERYSERVER_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/cnx-queryserver
 TYPHA_CONTAINER_NAME?=tigera/typha:$(TYPHA_VER)
 TYPHA_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/typha
 
@@ -718,6 +723,7 @@ publish-release:
 	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/calicoctl:$(CALICOCTL_VER)"
 	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/calicoq:$(CALICOQ_VER)"
 	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/cnx-apiserver:$(APISERVER_VER)"
+	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/cnx-queryserver:$(QUERYSERVER_VER)"
 	@echo " docker pull $(CNX_REPOSITORY)/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER)"
 	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/cnx-manager:$(CNX_WEB_MANAGER_VER)"
 	@echo " docker pull $(CNX_REPOSITORY)/cnx/tigera/cnx-manager-proxy:$(CNX_WEB_MANAGER_VER)"
@@ -727,6 +733,7 @@ publish-release:
 	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/calicoctl:$(CALICOCTL_VER) quay.io/tigera/calicoctl:$(CALICOCTL_VER)"
 	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/calicoq:$(CALICOQ_VER) quay.io/tigera/calicoq:$(CALICOQ_VER)"
 	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/cnx-apiserver:$(APISERVER_VER) quay.io/tigera/cnx-apiserver:$(APISERVER_VER)"
+	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/cnx-queryserver:$(QUERYSERVER_VER) quay.io/tigera/cnx-queryserver:$(QUERYSERVER_VER)"
 	@echo " docker tag $(CNX_REPOSITORY)/cnx/$(NODE_CONTAINER_NAME):$(CNX_VER) quay.io/$(NODE_CONTAINER_NAME):$(CNX_VER)"
 	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/cnx-manager:$(CNX_WEB_MANAGER_VER) quay.io/tigera/cnx-manager:$(CNX_WEB_MANAGER_VER)"
 	@echo " docker tag $(CNX_REPOSITORY)/cnx/tigera/cnx-manager-proxy:$(CNX_WEB_MANAGER_VER) quay.io/tigera/cnx-manager-proxy:$(CNX_WEB_MANAGER_VER)"
@@ -735,6 +742,7 @@ publish-release:
 	@echo " docker push quay.io/tigera/calicoctl:$(CALICOCTL_VER)"
 	@echo " docker push quay.io/tigera/calicoq:$(CALICOQ_VER)"
 	@echo " docker push quay.io/tigera/cnx-apiserver:$(APISERVER_VER)"
+	@echo " docker push quay.io/tigera/cnx-queryserver:$(QUERYSERVER_VER)"
 	@echo " docker push quay.io/$(NODE_CONTAINER_NAME):$(CNX_VER)"
 	@echo " docker push quay.io/tigera/cnx-manager:$(CNX_WEB_MANAGER_VER)"
 	@echo " docker push quay.io/tigera/cnx-manager-proxy:$(CNX_WEB_MANAGER_VER)"
@@ -752,7 +760,7 @@ release-archive: $(RELEASE_DIR).tgz
 $(RELEASE_DIR).tgz: $(RELEASE_DIR) $(RELEASE_DIR_K8S_MANIFESTS) $(RELEASE_DIR_IMAGES) $(RELEASE_DIR_BIN) $(RELEASE_DIR)/README
 	tar -czvf $(RELEASE_DIR).tgz $(RELEASE_DIR)/*
 
-$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/cnx-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar $(RELEASE_DIR_IMAGES)/cnx-apiserver.tar
+$(RELEASE_DIR_IMAGES): $(RELEASE_DIR_IMAGES)/cnx-node.tar $(RELEASE_DIR_IMAGES)/calico-typha.tar $(RELEASE_DIR_IMAGES)/calico-cni.tar $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar $(RELEASE_DIR_IMAGES)/cnx-apiserver.tar $(RELEASE_DIR_IMAGES)/cnx-queryserver.tar
 $(RELEASE_DIR_BIN): $(RELEASE_DIR_BIN)/calicoctl $(RELEASE_DIR_BIN)/calicoctl-windows-amd64.exe $(RELEASE_DIR_BIN)/calicoctl-darwin-amd64 $(RELEASE_DIR_BIN)/calicoq
 
 $(RELEASE_DIR)/README:
@@ -765,6 +773,7 @@ $(RELEASE_DIR)/README:
 	@echo "* The calico/cni docker image  (version $(CNI_VER))" >> $@
 	@echo "* The calico/kube-controllers docker image (version $(KUBE_CONTROLLERS_VER))" >> $@
 	@echo "* The tigera/cnx-apiserver docker image (version $(APISERVER_VER))" >> $@
+	@echo "* The tigera/cnx-queryserver docker image (version $(QUERYSERVER_VER))" >> $@
 	@echo "" >> $@
 	@echo "Binaries (for amd64) (under 'bin')" >> $@
 	@echo "* The calicoctl binary (for Linux) (version $(CALICOCTL_VER))" >> $@
@@ -820,6 +829,14 @@ $(RELEASE_DIR_IMAGES)/cnx-apiserver.tar:
 	  docker tag $(APISERVER_IMAGE):$(APISERVER_VER) $(APISERVER_CONTAINER_NAME); \
 	fi;
 	docker save --output $@ tigera/cnx-apiserver:$(APISERVER_VER)
+
+$(RELEASE_DIR_IMAGES)/cnx-queryserver.tar:
+	mkdir -p $(RELEASE_DIR_IMAGES)
+	if [ "$(docker images -q $$(QUERYSERVER_CONTAINER_NAME))" = "" ]; then \
+	  gcloud docker -- pull $(QUERYSERVER_IMAGE):$(QUERYSERVER_VER); \
+	  docker tag $(QUERYSERVER_IMAGE):$(QUERYSERVER_VER) $(QUERYSERVER_CONTAINER_NAME); \
+	fi;
+	docker save --output $@ tigera/cnx-queryserver:$(QUERYSERVER_VER)
 
 $(RELEASE_DIR_BIN)/%:
 	mkdir -p $(RELEASE_DIR_BIN)

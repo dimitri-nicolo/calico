@@ -184,9 +184,14 @@ metadata:
   namespace: kube-system
 spec:
   ports:
-  - port: 443
+  - name: apiserver
+    port: 443
     protocol: TCP
     targetPort: 5443
+  - name: queryserver
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
   selector:
     apiserver: "true"
 
@@ -230,6 +235,11 @@ spec:
         volumeMounts:
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
+      - name: cnx-queryserver
+        image: {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
+        env:
+          - name: DATASTORE_TYPE
+            value: "kubernetes"
       volumes:
         # If you're using TLS with certificate verification then 
         # uncomment the following.

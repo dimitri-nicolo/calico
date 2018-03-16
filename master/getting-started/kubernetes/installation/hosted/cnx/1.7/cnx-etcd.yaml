@@ -150,9 +150,14 @@ metadata:
   namespace: kube-system
 spec:
   ports:
-  - port: 443
+  - name: apiserver
+    port: 443
     protocol: TCP
     targetPort: 5443
+  - name: queryserver
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
   selector:
     apiserver: "true"
 
@@ -224,6 +229,38 @@ spec:
           #   name: etcd-certs
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
+      - name: cnx-queryserver
+        image: {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
+        env:
+          - name: ETCD_ENDPOINTS
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_endpoints
+          - name: DATASTORE_TYPE
+            value: "etcdv3"
+          # If you're using TLS enabled etcd uncomment the following.
+          # Location of the CA certificate for etcd.
+          # - name: ETCD_CA_CERT_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_ca
+          # Location of the client key for etcd.
+          # - name: ETCD_KEY_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_key
+          # Location of the client certificate for etcd.
+          # - name: ETCD_CERT_FILE
+          #   valueFrom:
+          #     configMapKeyRef:
+          #       name: calico-config
+          #       key: etcd_cert
+        volumeMounts:
+          # - mountPath: /calico-secrets
+          #   name: etcd-certs
       volumes:
         # If you're using TLS enabled etcd uncomment the following.
         # - name: etcd-certs
