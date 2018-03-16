@@ -18,6 +18,7 @@ var (
 	wg     sync.WaitGroup
 )
 
+// Start the query server.
 func Start(addr string, cfg *apiconfig.CalicoAPIConfig, webKey, webCert string) error {
 	c, err := clientv3.New(*cfg)
 	if err != nil {
@@ -34,23 +35,19 @@ func Start(addr string, cfg *apiconfig.CalicoAPIConfig, webKey, webCert string) 
 	sm.HandleFunc("/summary", qh.Summary)
 	sm.HandleFunc("/version", handlers.VersionHandler)
 
+	server = &http.Server{
+		Addr:    addr,
+		Handler: sm,
+	}
 	if webKey != "" && webCert != "" {
-		server = &http.Server{
-			Addr:    addr,
-			Handler: sm,
-		}
-		log.Debug("Starting HTTPS server")
+		log.WithField("Addr", server.Addr).Info("Starting HTTPS server")
 		wg.Add(1)
 		go func() {
 			log.Warning(server.ListenAndServeTLS(webCert, webKey))
 			wg.Done()
 		}()
 	} else {
-		server = &http.Server{
-			Addr:    addr,
-			Handler: sm,
-		}
-		log.Debug("Starting HTTP server")
+		log.WithField("Addr", server.Addr).Info("Starting HTTP server")
 		wg.Add(1)
 		go func() {
 			log.Warning(server.ListenAndServe())
@@ -61,12 +58,15 @@ func Start(addr string, cfg *apiconfig.CalicoAPIConfig, webKey, webCert string) 
 	return nil
 }
 
+// Wait for the query server to terminate.
 func Wait() {
 	wg.Wait()
 }
 
+// Stop the query server.
 func Stop() {
 	if server != nil {
+		log.WithField("Addr", server.Addr).Info("Stopping HTTPS server")
 		server.Shutdown(nil)
 		server = nil
 		wg.Wait()

@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"net"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -40,8 +41,14 @@ var _ = testutils.E2eDatastoreDescribe("Node tests", testutils.DatastoreEtcdV3, 
 			Expect(err).NotTo(HaveOccurred())
 			be.Clean()
 
-			By("Starting the query server")
-			server.Start(":8080", &config, "", "")
+			// Choose an arbitrary port for the server to listen on.
+			By("Choosing an arbitrary available local port for the queryserver")
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			addr := listener.Addr().String()
+			listener.Close()
+
+			By("Starting the queryserver")
+			server.Start(addr, &config, "", "")
 			defer server.Stop()
 
 			var configured map[model.ResourceKey]resourcemgr.ResourceObject
@@ -51,7 +58,7 @@ var _ = testutils.E2eDatastoreDescribe("Node tests", testutils.DatastoreEtcdV3, 
 				configured = createResources(c, tqd.resources, configured)
 
 				By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
-				url := calculateQueryUrl(tqd.query)
+				url := calculateQueryUrl(addr, tqd.query)
 
 				By(fmt.Sprintf("Running query for test: %s", tqd.description))
 				queryFn := func() interface{} {
@@ -99,14 +106,14 @@ var _ = testutils.E2eDatastoreDescribe("Node tests", testutils.DatastoreEtcdV3, 
 	)
 })
 
-func calculateQueryUrl(query interface{}) string {
+func calculateQueryUrl(addr string, query interface{}) string {
 	var parms []string
-	var url string
+	u := "http://" + addr + "/"
 	switch qt := query.(type) {
 	case client.QueryEndpointsReq:
-		url = "http://localhost:8080/endpoints"
+		u += "endpoints"
 		if qt.Endpoint != nil {
-			url = url + "/" + getNameFromResource(qt.Endpoint)
+			u = u + "/" + getNameFromResource(qt.Endpoint)
 			break
 		}
 		parms = appendStringParm(parms, handlers.QuerySelector, qt.Selector)
@@ -119,9 +126,9 @@ func calculateQueryUrl(query interface{}) string {
 		parms = appendPageParms(parms, qt.Page)
 		parms = appendSortParms(parms, qt.Sort)
 	case client.QueryPoliciesReq:
-		url = "http://localhost:8080/policies"
+		u += "policies"
 		if qt.Policy != nil {
-			url = url + "/" + getNameFromResource(qt.Policy)
+			u = u + "/" + getNameFromResource(qt.Policy)
 			break
 		}
 		parms = appendResourceParm(parms, handlers.QueryEndpoint, qt.Endpoint)
@@ -133,21 +140,21 @@ func calculateQueryUrl(query interface{}) string {
 		parms = appendPageParms(parms, qt.Page)
 		parms = appendSortParms(parms, qt.Sort)
 	case client.QueryNodesReq:
-		url = "http://localhost:8080/nodes"
+		u += "nodes"
 		if qt.Node != nil {
-			url = url + "/" + getNameFromResource(qt.Node)
+			u = u + "/" + getNameFromResource(qt.Node)
 			break
 		}
 		parms = appendPageParms(parms, qt.Page)
 		parms = appendSortParms(parms, qt.Sort)
 	case client.QueryClusterReq:
-		return "http://localhost:8080/summary"
+		u += "summary"
 	}
 
 	if len(parms) == 0 {
-		return url
+		return u
 	}
-	return url + "?" + strings.Join(parms, "&")
+	return u + "?" + strings.Join(parms, "&")
 }
 
 func appendPageParms(parms []string, page *client.Page) []string {
