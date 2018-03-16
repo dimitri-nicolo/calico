@@ -153,6 +153,30 @@ pipeline{
                 sh 'JEKYLL_UID=10000 make htmlproofer 2>&1 | awk -f filter-htmlproofer-false-negatives.awk'
             }
         }
+
+        stage('Build docs') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'master') {
+                        sh 'JEKYLL_UID=10000 make publish-cnx-docs 2>&1'
+                    }
+                }
+            }
+        }
+
+        stage('Update docs.tigera.io') {
+            steps {
+                script {
+                    withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
+                        if (env.BRANCH_NAME == 'master') {
+                            sh "gcloud auth activate-service-account ${WAVETANK_SERVICE_ACCT} --key-file $DOCKER_AUTH --project=tigera-docs"
+                            sh "gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml"
+                        }
+                    }
+                }
+            }
+        }
+
     }
     post {
         always {
