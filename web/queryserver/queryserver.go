@@ -2,14 +2,12 @@
 package main
 
 import (
-	"net/http"
 	"os"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/calicoq/web/pkg/clientmgr"
-	"github.com/tigera/calicoq/web/pkg/querycache/client"
-	"github.com/tigera/calicoq/web/queryserver/handlers"
+	"github.com/tigera/calicoq/web/queryserver/server"
 )
 
 func main() {
@@ -18,24 +16,19 @@ func main() {
 	webKey := os.Getenv("QUERYSERVER_KEY")
 	webCert := os.Getenv("QUERYSERVER_CERT")
 
-	c, err := clientmgr.NewClient("")
+	// Load the client configuration.  Currently we only support loading from environment.
+	cfg, err := clientmgr.LoadClientConfig("")
 	if err != nil {
-		panic(err)
+		log.Error("Error loading config")
 	}
-	h := handlers.NewQuery(client.NewQueryInterface(c))
-
-	http.HandleFunc("/endpoints", h.Endpoints)
-	http.HandleFunc("/endpoints/", h.Endpoint)
-	http.HandleFunc("/policies", h.Policies)
-	http.HandleFunc("/policies/", h.Policy)
-	http.HandleFunc("/nodes", h.Nodes)
-	http.HandleFunc("/nodes/", h.Node)
-	http.HandleFunc("/summary", h.Summary)
-	http.HandleFunc("/version", handlers.VersionHandler)
+	log.Infof("Loaded client config: %#v", cfg.Spec)
 
 	if webKey != "" && webCert != "" {
-		log.Fatal(http.ListenAndServeTLS(":10443", webCert, webKey, nil))
+		server.Start(":10443", cfg, webCert, webKey)
 	} else {
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		server.Start(":8080", cfg, "", "")
 	}
+
+	// Wait while the server is running
+	server.Wait()
 }
