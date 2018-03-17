@@ -26,7 +26,7 @@ _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
 
 POST_DOCKER_COMMANDS = [
-    "docker load -i /code/calico-node.tar",
+    "docker load -i /code/cnx-node.tar",
 ]
 
 
@@ -261,12 +261,12 @@ class TestFelixConfig(TestBase):
 
     @staticmethod
     def log_screen_snapshot(host, snapshot):
-        cmd = "docker logs calico-node > %s 2>&1" % snapshot
+        cmd = "docker logs cnx-node > %s 2>&1" % snapshot
         host.execute(cmd)
 
     @staticmethod
     def log_screen_diff(host, snapshot, diff_file):
-        cmd = "docker logs calico-node > tmp_snapshot 2>&1"
+        cmd = "docker logs cnx-node > tmp_snapshot 2>&1"
         host.execute(cmd)
 
         # busybox diff does not support -c option.
@@ -277,17 +277,17 @@ class TestFelixConfig(TestBase):
 
     @staticmethod
     def remove_ipset_command(host):
-        cmd = "docker exec calico-node mv /usr/sbin/ipset /usr/sbin/ipset.backup"
+        cmd = "docker exec cnx-node mv /usr/sbin/ipset /usr/sbin/ipset.backup"
         host.execute(cmd)
 
     @staticmethod
     def restore_ipset_command(host):
-        cmd = "docker exec calico-node mv /usr/sbin/ipset.backup /usr/sbin/ipset"
+        cmd = "docker exec cnx-node mv /usr/sbin/ipset.backup /usr/sbin/ipset"
         host.execute(cmd)
 
     @staticmethod
     def empty_log_file(host, log_file):
-        cmd = "docker exec calico-node cat /dev/null > %s" % log_file
+        cmd = "docker exec cnx-node cat /dev/null > %s" % log_file
         host.execute(cmd)
 
     def check_log_levels(self, host, log_file, levels, retries, snapshot=""):
@@ -297,16 +297,16 @@ class TestFelixConfig(TestBase):
 
     def restart_felix_no_config_file(self, host):
         _log.info("Try to remove default felix config file and restart felix")
-        cmd = "docker exec calico-node rm -f /etc/calico/felix.cfg"
+        cmd = "docker exec cnx-node rm -f /etc/calico/felix.cfg"
         host.execute(cmd)
-        cmd = "docker exec calico-node pkill -f calico-felix"
+        cmd = "docker exec cnx-node pkill -f calico-felix"
         host.execute(cmd)
 
         self.wait_for_felix(host)
 
     def wait_for_felix(self, host):
         for retry in range(5):
-            result = host.execute("docker exec calico-node ps -a | grep -c calico-felix || exit 0")
+            result = host.execute("docker exec cnx-node ps -a | grep -c calico-felix || exit 0")
             if result == "1":
                 _log.info("calico-felix restarted.")
                 return
