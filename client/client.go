@@ -40,13 +40,12 @@ type LicenseClaims struct {
 	// Currently not enforced.
 	GracePeriod int      `json:"grace_period"`
 
-	// Term is the actual license term in days.
-	Term        int      `json:"term"`
-
 	// Offline field is not used in v2.1.
 	Offline     bool     `json:"offline"`
 
 	// Include the default JWT claims.
+	// Built-in field `NotBefore` is used to set the license expiration date.
+	// Precision is day, and expires at 23:59:59:59 (down to nanoseconds) on that date.
 	jwt.Claims
 }
 

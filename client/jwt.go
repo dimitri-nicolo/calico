@@ -1,4 +1,4 @@
-package crypto
+package client
 
 import (
 	"fmt"
@@ -6,15 +6,11 @@ import (
 	jose "gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
-	"github.com/tigera/licensing/client"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	cryptolicensing "github.com/tigera/licensing/crypto"
 )
 
 var (
-	// Symmetric key to encrypt and decrypt the JWT.
-	// Carefully selected key. It has to be 32-bit long.
-	symKey = []byte("Rob likes tea & kills chickens!!")
-
 	// Tigera private key location.
 	pkeyPath = "./tigera.io_private_key.pem"
 
@@ -26,7 +22,10 @@ var (
 	jwtContentType = jose.ContentType("JWT")
 )
 
-func GetLicenseFromClaims(claims client.LicenseClaims, pkeyPath, certPath string) (*api.LicenseKey, error) {
+// GetLicenseFromClaims generates LicenseKey resource from LicenseClaims with the
+// JWT that is encrypted and signed using the private key provided and includes the certificate
+// at the path provided to this function.
+func GetLicenseFromClaims(claims LicenseClaims, pkeyPath, certPath string) (*api.LicenseKey, error) {
 
 	enc, err := jose.NewEncrypter(
 		jose.A128GCM,
@@ -39,7 +38,7 @@ func GetLicenseFromClaims(claims client.LicenseClaims, pkeyPath, certPath string
 		return nil, fmt.Errorf("error generating claims: %s", err)
 	}
 
-	priv, err := ReadPrivateKeyFromFile(pkeyPath)
+	priv, err := cryptolicensing.ReadPrivateKeyFromFile(pkeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading private key: %s\n", err)
 	}
@@ -56,9 +55,9 @@ func GetLicenseFromClaims(claims client.LicenseClaims, pkeyPath, certPath string
 	}
 
 	licX := api.NewLicenseKey()
-	licX.Name = client.ResourceName
+	licX.Name = ResourceName
 	licX.Spec.Token = raw
-	licX.Spec.Certificate = ReadCertPemFromFile(certPath)
+	licX.Spec.Certificate = cryptolicensing.ReadCertPemFromFile(certPath)
 
 	return licX, nil
 }
