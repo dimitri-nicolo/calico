@@ -80,3 +80,4 @@ func (db *DB) DeleteCompanyById(id int64) error {
 	}
 	return nil
 }
+

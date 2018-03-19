@@ -16,49 +16,58 @@ const (
 
 func TestInsertGetDeleteCompany(t *testing.T) {
 	t.Run("Test Insert Company", func(t *testing.T) {
+		req := require.New(t)
 		dsn := os.Getenv("TEST_DSN")
 		if dsn == "" {
 			t.Skip("TestInsertGetDeleteCompany being skipped due to a missing 'TEST_DSN' env variable")
 		}
-		db, _ := NewDB(dsn)
+
+		db, err := NewDB(dsn)
+		req.Nil(err, "error connecting to database: %s", err)
+		req.NotNil(db, "db reference is nil!")
+
 		c, err := db.CreateCompany(&Company{Key: testKey, Name: testName})
-		if err != nil {
-			t.Fatalf("error creating company: %s", err.Error())
-		}
+		req.Nil(err, "error creating company: %s", err)
+		req.NotNil(c, "company reference is nil!")
 
 		id := c.Id
 		uuid := c.Uuid
 
-		require.Equal(t, testKey, c.Key)
-		require.Equal(t, testName, c.Name)
+		req.Equal(testKey, c.Key)
+		req.Equal(testName, c.Name)
 
 		c, err = db.GetCompanyById(c.Id)
-		if err != nil {
-			t.Fatalf("error getting company: %s", err.Error())
-		}
-		require.Equal(t, id, c.Id)
-		require.Equal(t, uuid, c.Uuid)
-		require.Equal(t, testKey, c.Key)
-		require.Equal(t, testName, c.Name)
+		req.Nil(err, "error getting company: %s", err)
+		req.NotNil(c, "company reference is nil!")
 
-		err = db.DeleteCompanyById(c.Id)
-		if err != nil {
-			t.Fatalf("error deleting company: %s", err.Error())
-		}
+		req.Equal(id, c.Id)
+		req.Equal(uuid, c.Uuid)
+		req.Equal(testKey, c.Key)
+		req.Equal(testName, c.Name)
 
 		c, err = db.GetCompanyByUuid(c.Uuid)
-		if err == nil {
-			t.Fatalf("company should not exist, but it does")
-		}
+		req.Nil(err, "error getting company: %s", err)
+		req.NotNil(c, "company reference is nil!")
+
+		req.Equal(id, c.Id)
+		req.Equal(uuid, c.Uuid)
+		req.Equal(testKey, c.Key)
+		req.Equal(testName, c.Name)
+
+		err = db.DeleteCompanyById(c.Id)
+		req.Nil(err, "error deleting company: %s", err)
+
+		c, err = db.GetCompanyByUuid(c.Uuid)
+		req.NotNil(err, "company should not exist, but it does")
+		req.Nil(c, "company should not exist, but it does")
 	})
 }
 
 func TestInsertCompanyUsingMock(t *testing.T) {
 	t.Run("Test Insert Company Using an SQL mock", func(t *testing.T) {
+		req := require.New(t)
 		dbm, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-		}
+		req.Nil(err, "error occurred when creating mock db:  %s", err)
 		defer dbm.Close()
 		db := &DB{dbm}
 
@@ -68,28 +77,25 @@ func TestInsertCompanyUsingMock(t *testing.T) {
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
 		c, err := db.CreateCompany(&Company{Uuid: uuid, Key: testKey, Name: testName})
-		if err != nil {
-			t.Errorf("error creating company")
-		}
+		req.Nil(err, "error occurred when creating company:  %s", err)
+		req.NotNil(c, "company reference cannot be nil")
 
-		require.Equal(t, int64(1), c.Id)
-		require.Equal(t, uuid, c.Uuid)
-		require.Equal(t, testKey, c.Key)
-		require.Equal(t, testName, c.Name)
+		req.Equal(int64(1), c.Id)
+		req.Equal(uuid, c.Uuid)
+		req.Equal(testKey, c.Key)
+		req.Equal(testName, c.Name)
 
 		// we make sure that all expectations were met
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("there were unfulfilled expectations: %s", err)
-		}
+		err = mock.ExpectationsWereMet()
+		req.Nil(err, "there were unfulfilled expectations: %s", err)
 	})
 }
 
 func TestAllCompaniesUsingMock(t *testing.T) {
 	t.Run("Test All Companies APIs using an SQL mock", func(t *testing.T) {
+		req := require.New(t)
 		dbm, mock, err := sqlmock.New()
-		if err != nil {
-			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-		}
+		req.Nil(err, "error occurred when creating mock db:  %s", err)
 		defer dbm.Close()
 		db := &DB{dbm}
 
@@ -101,21 +107,19 @@ func TestAllCompaniesUsingMock(t *testing.T) {
 			WillReturnRows(rows)
 
 		ca, err := db.AllCompanies()
-		if err != nil {
-			t.Errorf("error querying companies")
-		}
+		req.Nil(err, "error occurred when getting all companies:  %s", err)
+		req.NotNil(ca, "company reference cannot be nil")
 
 		for _, c := range ca {
-			require.Equal(t, int64(1), c.Id)
-			require.Equal(t, uuid, c.Uuid)
-			require.Equal(t, testKey, c.Key)
-			require.Equal(t, testName, c.Name)
+			req.Equal(int64(1), c.Id)
+			req.Equal(uuid, c.Uuid)
+			req.Equal(testKey, c.Key)
+			req.Equal(testName, c.Name)
 		}
-		require.Equal(t, 1, len(ca))
+		req.Equal(1, len(ca))
 
 		// we make sure that all expectations were met
-		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("there were unfulfilled expectations: %s", err)
-		}
+		err = mock.ExpectationsWereMet()
+		req.Nil(err, "there were unfulfilled expectations: %s", err)
 	})
 }

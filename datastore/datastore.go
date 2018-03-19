@@ -11,6 +11,8 @@ type Datastore interface {
 	GetCompanyById(id int) (*Company, error)
 	GetCompanyByUuid(uuid string) (*Company, error)
 	CreateCompany(company *Company) (*Company, error)
+	DeleteCompanyById(id int64) error
+
 	AllLicenses(companyId int) ([]*License, error)
 	GetLicenseById(id int) (*License, error)
 	CreateLicense(license *License) (*License, error)
