@@ -203,7 +203,6 @@ var tokenToLicense = []struct {
 
 		valid: true,
 	},
-
 	{
 		description: "claim with the JWT header meddled with",
 		license: api.LicenseKey{
@@ -220,7 +219,6 @@ var tokenToLicense = []struct {
 
 		valid: false,
 	},
-
 	{
 		description: "claim with the JWT payload meddled with",
 		license: api.LicenseKey{
@@ -237,7 +235,6 @@ var tokenToLicense = []struct {
 
 		valid: false,
 	},
-
 	{
 		description: "claim with the JWT signed by some evil random private key",
 		license: api.LicenseKey{
@@ -254,9 +251,39 @@ var tokenToLicense = []struct {
 
 		valid: false,
 	},
-
 	{
+		description: "claim with the JWT signed by tigera but certificate is swapped out with an evil certificate",
+		license: api.LicenseKey{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: api.LicenseKeySpec{
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJ3WWpuYjV6TTF5MlV6RFZ4IiwidGFnIjoiN1dSUkxPanNGQ0F1R3pNRGg5akc1USIsInR5cCI6IkpXVCJ9.HtXrz5-Q_vVfKwgn9Ig_zQ.xf6FZYH3315Tffzv.v7JNl7qOWTivF3Y0Fla-5uG-SM7zCVWcOWEncS7y5kc_uIIRTvTqXV7LAB0b6rZFkXGYxo3X0nBADh7yVJO2S9LX3AbjhF4g_5Vu1uVHwNyKEmSxoMhJGK8v0kwtmXWF7dgICKlAWcSE2kscr-1P-m-MgjTPIZaQU27EN3KFNBgPtLalSKcTRoKMWbqnZRyZFB4gIhpXRKOi2wSlRwbzflumRt5PBGQ6AAdqJaZhEDKYIRVwiYiLh8ODXC2WNhF9KS7GqXRE9QopOcQkh3n_AAADIgzOMdrVr26VTXKXZlwtTYZ5cNPxRZA7QkQVB9HMh7WwwstcSLlVRnHcGZJwmTUfpdGExAywCu4DkqJRnarfJUmG1Y86ecOFnmuycFo0NPuruUEXUG33Nd_670qOWzICjqu68cx3AXcwh46m8hZGR3Zbs1usYfrWTVfFZxNUYlAOCmjrnIAKfxDe4B4fBKYEyFM7PTUQj1UTChgv5G3wRBZiVPDv67gnOrqtQQNyAtJvWsaSdxEu5LGzO68ntauYM4wohnqx4JBzFrd5YkWivHf10yFb7_mGYxhqG7_lPiWAd7zxJNGYrOHi8qEMPFtKANI4UKLAbyXVgPJuTo_kAmoHpSqvAf2DTNODBJQb_hl6F6gX0gWsJIQ1V7O7xn6aAc0nkiizYSLuoKLSsF8rWSyASnPuHhc5AeFVEqA8oRYeZLMh9BBYr8w3kGa6eobtp8j8g2YcEy-KSCgxuef94OIRn6EPbvkfhhz8bZm9c1670N701J91WnIG7l1WXFAxXnfO055W0ulpbE99sw.HACGOFtKA6ZvoAg4Prgiaw",
+				Certificate: evilCert,
+			},
+		},
 
+		claim: client.LicenseClaims{},
+
+		valid: false,
+	},
+	{
+		description: "claim with the JWT signed by an evil private key but certificate is still the tigera original cert",
+		license: api.LicenseKey{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: api.LicenseKeySpec{
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJLeWE0VHpEaWY2eFM3TTl2IiwidGFnIjoiYVhHR3d0alczSjhKeWgtb2hWajRJdyIsInR5cCI6IkpXVCJ9.LgbBH-IGmLH2iUFY171xwA.NImD2DVyH1ahbruT.DHhdADLX7BfwwYoknoTnPEQGh7vItF7YhYukfPDm_VlwgERXTDdqb6wFQQOZOvFFlcMRYBBzDQBguSkYEHYWegHIuZ7Amfh8uCcI0l93BPz1TrOZdX4fukikb5YVTbRJjxgJTvakucG9dh45hwks9gUCGdXFvVAJH_wMDc_kPVeb0fx84f_H30gNswvKItyIT09lOiRCfy9HOGdpo1RlA0UCZvIPYD9zSl1_ldGZ5Oj2RYz9HU7bhuqV4AU7OuglE_8yvNMmkqSD9BmiLOxzxMVvg3uj5trmuTOy4pAZuchykM3p-DgGiWuo4kyaHvpcfIISSyBU8xtVMyWALayeaschyvlAvRJHAVjKd9Cubx5akA23w4KpBGsJ2EgQPNmyHdEoxqKohO6KbYcOvsD7PThH8e9UV7GgGrQp4OUBZXfym-_yi_erI6FC91n3rgcSMqYpIrhC5-dPSExKuPVA_94dlcP-cDxAtuL8W0T8mafTqKl4Vg-Ojaj7pul4-i7223loZSbkYEpuoTzHYglgB2_PfHgkZsqgl8adlm7muKpxSe_TH-6wQh6fXxGzUJEu7DLvcy82r5v_HcWtJUj43qu8BTHR4sc4_1NU8eHya_HtwgvOo98Ze1Gd9qC_GOFkMYomEk2ogarPnGGKD-gfMN3GxziUz5d4kpb8mzknGIX5hqaxcslV4HDnSA97zjssyajg1Eh-a6xOIaPOlYW3YzXQ3GQPABLn18V2hFCNhB-ml6KWceYA6EsxnKqdEK2KN8dnDGESdjwCIUfcY7KFRD30qhAOUAKpU14.YvpAmE0JPK1Brn7kgGphlg",
+				Certificate: testCert,
+			},
+		},
+
+		claim: client.LicenseClaims{},
+
+		valid: false,
+	},
+	{
 		// TODO (gunjan5): THIS TEST SHOULD FAIL ONCE WE ADD CERT CHAIN VALIDATION!!!!
 		description: "claim with the JWT with an evil cert and signed by an evil private key",
 		license: api.LicenseKey{
