@@ -167,14 +167,17 @@ func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{
 func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) (*QueryClusterResp, error) {
 	pols := c.policies.TotalPolicies()
 	eps := c.endpoints.TotalEndpoints()
-	ueps := c.endpoints.EndpointsWithNoLabels()
+	uleps := c.endpoints.EndpointsWithNoLabels()
+	upeps := c.endpoints.EndpointsWithNoPolicies()
 	resp := &QueryClusterResp{
 		NumGlobalNetworkPolicies:        pols.NumGlobalNetworkPolicies,
 		NumNetworkPolicies:              pols.NumNetworkPolicies,
 		NumHostEndpoints:                eps.NumHostEndpoints,
 		NumWorkloadEndpoints:            eps.NumWorkloadEndpoints,
-		NumUnlabelledHostEndpoints:      ueps.NumHostEndpoints,
-		NumUnlabelledWorkloadEndpoints:  ueps.NumWorkloadEndpoints,
+		NumUnlabelledHostEndpoints:      uleps.NumHostEndpoints,
+		NumUnlabelledWorkloadEndpoints:  uleps.NumWorkloadEndpoints,
+		NumUnprotectedHostEndpoints:     upeps.NumHostEndpoints,
+		NumUnprotectedWorkloadEndpoints: upeps.NumWorkloadEndpoints,
 		NumNodes:                        c.nodes.TotalNodes(),
 		NumNodesWithNoEndpoints:         c.nodes.TotalNodesWithNoEndpoints(),
 		NumNodesWithNoWorkloadEndpoints: c.nodes.TotalNodesWithNoWorkloadEndpoints(),
@@ -218,6 +221,9 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 	for _, result := range epkeys {
 		ep := c.endpoints.GetEndpoint(result)
 		if req.Node != "" && ep.GetNode() != req.Node {
+			continue
+		}
+		if req.Unprotected && ep.IsProtected() {
 			continue
 		}
 		items = append(items, *c.apiEndpointToQueryEndpoint(ep))

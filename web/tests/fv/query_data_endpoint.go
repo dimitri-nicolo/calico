@@ -52,6 +52,23 @@ func endpointTestQueryData() []testQueryData {
 			},
 		},
 		{
+			"multiple weps and heps, no policy - query unprotected endpoints",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, wep1_n1_ns1, wep5_n3_ns2_unlabelled,
+			},
+			client.QueryEndpointsReq{
+				Unprotected: true,
+			},
+			&client.QueryEndpointsResp{
+				Count: 8,
+				Items: []client.Endpoint{
+					qcEndpoint(hep4_n4_unlabelled, 0, 0), qcEndpoint(hep3_n4, 0, 0), qcEndpoint(wep1_n1_ns1, 0, 0),
+					qcEndpoint(wep3_n1_ns2, 0, 0), qcEndpoint(wep4_n2_ns1, 0, 0), qcEndpoint(hep1_n2, 0, 0),
+					qcEndpoint(wep5_n3_ns2_unlabelled, 0, 0), qcEndpoint(hep2_n3, 0, 0),
+				},
+			},
+		},
+		{
 			"multiple weps and heps, no policy - query all of them - page 0 of 2",
 			[]resourcemgr.ResourceObject{
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, wep1_n1_ns1, wep5_n3_ns2_unlabelled,
@@ -123,6 +140,22 @@ func endpointTestQueryData() []testQueryData {
 			},
 		},
 		{
+			"multiple weps and heps, no policy - query unprotected nodes, filter on node2",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, wep1_n1_ns1, wep5_n3_ns2_unlabelled,
+			},
+			client.QueryEndpointsReq{
+				Unprotected: true,
+				Node:        node2.Name,
+			},
+			&client.QueryEndpointsResp{
+				Count: 2,
+				Items: []client.Endpoint{
+					qcEndpoint(wep4_n2_ns1, 0, 0), qcEndpoint(hep1_n2, 0, 0),
+				},
+			},
+		},
+		{
 			"multiple weps and heps, selector: all()",
 			[]resourcemgr.ResourceObject{
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, wep1_n1_ns1, wep5_n3_ns2_unlabelled,
@@ -168,6 +201,37 @@ func endpointTestQueryData() []testQueryData {
 					qcEndpoint(hep4_n4_unlabelled, 1, 0), qcEndpoint(hep3_n4, 1, 0), qcEndpoint(wep1_n1_ns1, 2, 1),
 					qcEndpoint(wep3_n1_ns2, 2, 1), qcEndpoint(wep4_n2_ns1, 2, 0), qcEndpoint(hep1_n2, 2, 0),
 					qcEndpoint(wep5_n3_ns2_unlabelled, 1, 1), qcEndpoint(hep2_n3, 1, 0),
+				},
+			},
+		},
+		{
+			"multiple weps and heps, tier1 policy - query unprotected endpoints",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			client.QueryEndpointsReq{
+				Unprotected: true,
+			},
+			&client.QueryEndpointsResp{
+				Count: 0,
+				Items: []client.Endpoint{},
+			},
+		},
+		{
+			"multiple weps and heps, some tier1 policies (no all() policies) - query unprotected endpoints",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, gnp1_t1_o3,
+			},
+			client.QueryEndpointsReq{
+				Unprotected: true,
+			},
+			&client.QueryEndpointsResp{
+				Count: 4,
+				Items: []client.Endpoint{
+					qcEndpoint(hep4_n4_unlabelled, 0, 0), qcEndpoint(hep3_n4, 0, 0),
+					qcEndpoint(wep5_n3_ns2_unlabelled, 0, 0), qcEndpoint(hep2_n3, 0, 0),
 				},
 			},
 		},

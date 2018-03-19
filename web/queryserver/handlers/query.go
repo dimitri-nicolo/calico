@@ -31,6 +31,7 @@ const (
 	QueryReverseSort         = "reverseSort"
 	QueryEndpoint            = "endpoint"
 	QueryUnmatched           = "unmatched"
+	QueryUnprotected         = "unprotected"
 	QueryTier                = "tier"
 
 	AllResults     = "all"
@@ -85,7 +86,8 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if (selector != "" && len(policies) > 0) || len(policies) > 1 {
+	unprotected := q.getBool(r, QueryUnprotected)
+	if (selector != "" && len(policies) > 0) || (unprotected && len(policies) > 0) || len(policies) > 1 {
 		http.Error(w, errorEndpointMultiParm.Error(), http.StatusBadRequest)
 		return
 	}
@@ -96,6 +98,7 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 	q.runQuery(w, r, client.QueryEndpointsReq{
 		Selector:            selector,
 		Policy:              policy,
+		Unprotected:         unprotected,
 		RuleDirection:       r.URL.Query().Get(QueryRuleDirection),
 		RuleIndex:           q.getInt(r, QueryRuleIndex, 0),
 		RuleEntity:          r.URL.Query().Get(QueryRuleEntity),

@@ -101,7 +101,9 @@ Returns a JSON object with the following fields.
 | numHostEndpoints | Count of HostEndpoint resources | number |
 | numWorkloadEndpoints | Count of WorkloadEndpoint resources | number |
 | numUnlabelledWorkloadEndpoints | Count of WorkloadEndpoint resources that do not have any explicitly configured labels | number |
-| numUnlabelledHostEndpoints | Count of host endpoints that do not have a any explicitly configured labels | number |
+| numUnlabelledHostEndpoints | Count of host endpoints that do not have any explicitly configured labels | number |
+| numUnprotectedWorkloadEndpoints | Count of WorkloadEndpoint resources that do not have any policies applied on them | number |
+| numUnprotectedHostEndpoints | Count of HostEndpoints that do not have any policies applied on them | number |
 | numNodes | Count of Nodes | number |
 | numNodesWithNoEndpoints | Count of Nodes that do not have any HostEndpoint or WorkloadEndpoint resources configured | number |
 | numNodesWithNoWorkloadEndpoints | Count of Nodes that do not have any WorkloadEndpoint resources configured | number |
@@ -121,6 +123,8 @@ NOTE:
   "numWorkloadEndpoints": 5,
   "numUnlabelledWorkloadEndpoints": 1,
   "numUnlabelledHostEndpoints": 1,
+  "numUnprotectedWorkloadEndpoints": 0,
+  "numUnprotectedHostEndpoints": 0,
   "numNodes": 4,
   "numNodesWithNoEndpoints": 1,
   "numNodesWithNoWorkloadEndpoints": 2,
@@ -564,6 +568,7 @@ http://host:port/base/endpoints
 | ---- | ----------- | ---- | -------- | -------- |
 | node | Filter endpoints that are on a specific node. | string | no | no |
 | policy | Get endpoints that the policy applies to. | string | no | no |
+| unprotected | Get endpoints that do not have any policies applied on them. | boolean | no | no |
 | ruleDirection | Specify the direction of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | ingress or egress | no | no |
 | ruleIndex | Specify the direction of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | int | no | no |
 | ruleEntity | Specify the entity of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | source or destination | no | no |
@@ -572,6 +577,7 @@ http://host:port/base/endpoints
 
 - When no query parameter is provided, results should be returned for all namespaces.
 - A selector may not be specified if the policy or policy rule are specified.
+- A selector or policy should not be specified when requesting `unprotected` endpoints.
 - To enumerate the endpoints associated with a specific policy rule, include each of the rule* query parameters to index the actual
   rule selector that you are enumerating.
 - `namespaceSelector` is meant to be used when dealing with `NetworkPolicy` rules.

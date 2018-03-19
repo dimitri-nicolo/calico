@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
-	"net"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -28,7 +29,7 @@ import (
 	"github.com/tigera/calicoq/web/queryserver/server"
 )
 
-var _ = testutils.E2eDatastoreDescribe("Node tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
+var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
 
 	DescribeTable("Query tests",
 		func(tqds []testQueryData) {
@@ -117,6 +118,7 @@ func calculateQueryUrl(addr string, query interface{}) string {
 			break
 		}
 		parms = appendStringParm(parms, handlers.QuerySelector, qt.Selector)
+		parms = appendStringParm(parms, handlers.QueryUnprotected, strconv.FormatBool(qt.Unprotected))
 		parms = appendStringParm(parms, handlers.QueryNode, qt.Node)
 		parms = appendResourceParm(parms, handlers.QueryPolicy, qt.Policy)
 		parms = appendStringParm(parms, handlers.QueryRuleDirection, qt.RuleDirection)

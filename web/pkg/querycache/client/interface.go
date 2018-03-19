@@ -30,6 +30,8 @@ type QueryClusterResp struct {
 	NumWorkloadEndpoints            int `json:"numWorkloadEndpoints"`
 	NumUnlabelledHostEndpoints      int `json:"numUnlabelledHostEndpoints"`
 	NumUnlabelledWorkloadEndpoints  int `json:"numUnlabelledWorkloadEndpoints"`
+	NumUnprotectedHostEndpoints     int `json:"numUnprotectedHostEndpoints"`
+	NumUnprotectedWorkloadEndpoints int `json:"numUnprotectedWorkloadEndpoints"`
 	NumNodes                        int `json:"numNodes"`
 	NumNodesWithNoEndpoints         int `json:"numNodesWithNoEndpoints"`
 	NumNodesWithNoHostEndpoints     int `json:"numNodesWithNoHostEndpoints"`
@@ -111,6 +113,7 @@ type QueryEndpointsReq struct {
 	RuleNegatedSelector bool
 	Selector            string
 	Endpoint            model.Key
+	Unprotected         bool
 
 	// Filters
 	Node string
