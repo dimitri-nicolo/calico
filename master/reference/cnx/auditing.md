@@ -2,23 +2,24 @@
 title: CNX Resource Auditing with Kubernetes
 ---
 
-This document describes audit logging setup for {{site.prodname}}
-resources and how to set it up.
+This document describes how to set up audit logging for {{site.prodname}}
+resources. See [OpenShift Audit Logging](openshift-auditing){:target="_blank"} if you are running OpenShift.
 
 Kubernetes provides a rich set of auditing features to audit log resources access
-activities in chronological order. See [Kubernetes audit logging documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/) for more details.
+activities in chronological order. See [Kubernetes audit logging documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/){:target="_blank"} for more details.
 
 Audit logging needs to be setup at kubernetes kube-apiserver level. 
-At minimum you need the `--audit-log-path` and `--audit-policy-file` [kube-apiserver flags](https://kubernetes.io/docs/reference/generated/kube-apiserver/)
+At minimum you need the `--audit-log-path` and `--audit-policy-file` [kube-apiserver flags](https://kubernetes.io/docs/reference/generated/kube-apiserver/){:target="_blank"}
 specified, with the former one being the path to a file to output the audit logs and the
 later one being the audit policy configuration.
 
 > **Note**: Kubernetes audit logging won't log anything by default if audit policy file
 > i.e. `--audit-policy-file` is not provided or is empty.
+{: .alert .alert-info}
 
-## Sample Auditing Policy
+## Sample auditing policy
 
-The sample auditing policy provided below will log the following CNX resources:
+The sample auditing policy provided below will log the following {{site.prodname}} resources:
 
 - `GlobalNetworkPolicy`
 - `NetworkPolicy`
@@ -30,11 +31,11 @@ It will log the following actions on those resources:
 - `update`
 - `delete`
 
-For brevity, we are omitting `RequestReceived` stage logging here since we are logging
-the request when they are processed, rather than when they are received.
+For brevity, we omit the `RequestReceived` stage logging below since we log
+the requests as they are processed, rather than when they are received.
 
-We are also recording the events with their response from the API server at `RequestResponse` level
-for better insights into the request life-cycle. 
+We also record the events with their response from the API server at the `RequestResponse` level
+for better insights into the request life cycle. 
 
 ```yaml
 apiVersion: audit.k8s.io/v1beta1
@@ -60,17 +61,18 @@ rules:
 
 ## Audit log viewing options
 
-Kubernetes provides a few options to log the audit events.
+Use either of the following options to log audit events.
 
-1. Logging the events to a file, which can be [mounted](https://kubernetes.io/docs/concepts/storage/volumes/) to the the host as a file or a [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
-1. Exporting the audit logs to a remote API such as Logstach or Fluentd. See [kubernetes docs on sample config](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#log-collector-examples)
+1. Logging the events to a file, which can be [mounted](https://kubernetes.io/docs/concepts/storage/volumes/){:target="_blank"} to the the host as a file or a [persistent volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/){:target="_blank"}.
+1. Exporting the audit logs to a remote API such as Logstash or Fluentd. See the Kubernetes documentation for [Log Collector Examples](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#log-collector-examples){:target="_blank"}.
 
 
 
 ## See also
 
+- [OpenShift Audit Logging](openshift-auditing)
 - [Policy Audit Mode](policy-auditing)
 - [Policy Violation Alerting](policy-violations)
 - [{{site.prodname}} Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on the {{site.prodname}} resource types.
-- [Kubernetes Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/) for details on configuring auditing.
-- [Kubernetes API Server flags](https://kubernetes.io/docs/reference/generated/kube-apiserver/) for audit logging related flags.
+- [Kubernetes documentation on Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/){:target="_blank"} for details on configuring auditing.
+- [Kubernetes documentation on API Server flags](https://kubernetes.io/docs/reference/generated/kube-apiserver/){:target="_blank"} for audit logging related flags.

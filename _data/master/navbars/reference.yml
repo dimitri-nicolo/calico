@@ -119,6 +119,8 @@ toc:
   section:
     - title: Kubernetes Audit Logging
       path: /reference/cnx/auditing
+    - title: OpenShift Audit Logging
+      path: /reference/cnx/openshift-auditing
     - title: Policy Violation Monitoring & Reporting
       path: /reference/cnx/policy-violations
     - title: Policy Audit Mode
