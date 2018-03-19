@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"github.com/davecgh/go-spew/spew"
+
 	"github.com/tigera/licensing/client"
-	"strconv"
-	"github.com/satori/go.uuid"
 )
 
 var (
-	licClaimes                                         client.LicenseClaims
+	licClaimes                                        client.LicenseClaims
 	nameFlag, debugFlag, expFlag, nodeFlag, graceFlag *pflag.FlagSet
 
 	// Tigera private key location.
@@ -25,6 +27,8 @@ var (
 
 	// Tigera license signing certificate path.
 	certPath = "./tigera.io_certificate.pem"
+
+	absPkeyPath, absCertPath string
 
 	debug = false
 
@@ -42,13 +46,15 @@ func init() {
 	expFlag.StringVar(&exp, "term", "", "license expiration date. Expires on that day at 23:59:59:999999999 (nanoseconds).")
 	nodeFlag.IntVar(&licClaimes.Nodes, "nodes", 0, "number of nodes customer is licensed for")
 	graceFlag.IntVar(&licClaimes.GracePeriod, "graceperiod", 90, "number of nodes customer is licensed for")
-	debugFlag.BoolVar(&debug, "debug", false, "print debug information about the license fields" )
+	debugFlag.BoolVar(&debug, "debug", false, "print debug information about the license fields")
+
+	absPkeyPath, _ = filepath.Abs(pkeyPath)
+	absCertPath, _ = filepath.Abs(certPath)
 }
 
 var GenerateLicenseCmd = &cobra.Command{
 	Use: "generate license",
 	Run: func(cmd *cobra.Command, args []string) {
-
 
 		claims := GetLicenseProperties(false)
 
@@ -61,8 +67,8 @@ var GenerateLicenseCmd = &cobra.Command{
 		// This might be used in future. Or it could be used for debugging.
 		claims.IssuedAt = jwt.NewNumericDate(time.Now().UTC())
 
-		lic, err := client.GetLicenseFromClaims(claims, pkeyPath, certPath)
-		if err != nil{
+		lic, err := client.GetLicenseFromClaims(claims, absPkeyPath, absCertPath)
+		if err != nil {
 			log.Fatalf("error generating license from claims: %s", err)
 		}
 
@@ -76,7 +82,6 @@ var GenerateLicenseCmd = &cobra.Command{
 		}
 	},
 }
-
 
 func GetLicenseProperties(override bool) client.LicenseClaims {
 	var lic client.LicenseClaims
@@ -115,58 +120,11 @@ func GetLicenseProperties(override bool) client.LicenseClaims {
 			fmt.Printf("[ERROR] invalid input: %s\n", err)
 			os.Exit(1)
 		}
-		expSlice := strings.Split(licExpStr, "/")
-		if len(expSlice) != 3 {
-			fmt.Println("[ERROR] expiration date must be in DD/MM/YYYY format")
-			os.Exit(1)
-		}
-		yyyy, err := strconv.Atoi(expSlice[2])
-		if err != nil {
-			log.Fatalf("[ERROR] invalid year\n")
-		}
 
-		mm, err := strconv.Atoi(expSlice[0])
-		if err != nil || mm < 1 || mm > 12 {
-			log.Fatalf("[ERROR] invalid month\n")
-		}
-
-		dd, err := strconv.Atoi(expSlice[1])
-		if err != nil || dd < 1 || dd > 31 {
-			log.Fatalf("[ERROR] invalid date\n")
-		}
-
-		if yyyy < time.Now().Year() {
-			log.Fatalf("[ERROR] Year cannot be in the past! Unless you're a time traveller, in which case go back in time and stop me from writing this validation :P")
-		}
-
-		lic.Claims.NotBefore = jwt.NewNumericDate(time.Date(yyyy, time.Month(mm), dd, 23, 59, 59, 999999999, time.Local))
+		lic.Claims.NotBefore = parseDate(licExpStr)
 
 	} else {
-		expSlice := strings.Split(exp, "/")
-		if len(expSlice) != 3 {
-			fmt.Println("[ERROR] expiration date must be in DD/MM/YYYY format")
-			os.Exit(1)
-		}
-		yyyy, err := strconv.Atoi(expSlice[2])
-		if err != nil {
-			log.Fatalf("[ERROR] invalid year\n")
-		}
-
-		mm, err := strconv.Atoi(expSlice[0])
-		if err != nil || mm < 1 || mm > 12 {
-			log.Fatalf("[ERROR] invalid month\n")
-		}
-
-		dd, err := strconv.Atoi(expSlice[1])
-		if err != nil || dd < 1 || dd > 31 {
-			log.Fatalf("[ERROR] invalid date\n")
-		}
-
-		if yyyy < time.Now().Year() {
-			log.Fatalf("[ERROR] Year cannot be in the past! Unless you're a time traveller, in which case go back in time and stop me from writing this validation :P")
-		}
-
-		lic.Claims.NotBefore = jwt.NewNumericDate(time.Date(yyyy, time.Month(mm), dd, 23, 59, 59, 59, time.Local))
+		lic.Claims.NotBefore = parseDate(exp)
 	}
 
 	lic.GracePeriod = licClaimes.GracePeriod
@@ -193,4 +151,31 @@ func GetLicenseProperties(override bool) client.LicenseClaims {
 	}
 
 	return lic
+}
+
+func parseDate(dateStr string) jwt.NumericDate {
+	expSlice := strings.Split(dateStr, "/")
+	if len(expSlice) != 3 {
+		log.Fatal("[ERROR] expiration date must be in DD/MM/YYYY format")
+	}
+	yyyy, err := strconv.Atoi(expSlice[2])
+	if err != nil {
+		log.Fatalf("[ERROR] invalid year\n")
+	}
+
+	mm, err := strconv.Atoi(expSlice[0])
+	if err != nil || mm < 1 || mm > 12 {
+		log.Fatalf("[ERROR] invalid month\n")
+	}
+
+	dd, err := strconv.Atoi(expSlice[1])
+	if err != nil || dd < 1 || dd > 31 {
+		log.Fatalf("[ERROR] invalid date\n")
+	}
+
+	if yyyy < time.Now().Year() {
+		log.Fatalf("[ERROR] Year cannot be in the past! Unless you're a time traveller, in which case go back in time and stop me from writing this validation :P")
+	}
+
+	return jwt.NewNumericDate(time.Date(yyyy, time.Month(mm), dd, 23, 59, 59, 59, time.Local))
 }

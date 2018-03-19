@@ -1,17 +1,18 @@
 package client_test
 
 import (
-	"testing"
-
-	. "github.com/onsi/gomega"
-
 	"path/filepath"
+	"testing"
 	"time"
 
-	"github.com/tigera/licensing/client"
-	"gopkg.in/square/go-jose.v2/jwt"
-	"github.com/davecgh/go-spew/spew"
+	. "github.com/onsi/gomega"
 	"github.com/satori/go.uuid"
+	"gopkg.in/square/go-jose.v2/jwt"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/davecgh/go-spew/spew"
+
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/tigera/licensing/client"
 )
 
 var (
@@ -67,11 +68,33 @@ CrsfFSIo6is9W3G+E+7LcsZySLji8JatxslsGg==
 -----END CERTIFICATE-----
 `
 
+	evilCert = `-----BEGIN CERTIFICATE-----
+MIIDSDCCAjCgAwIBAgIITWWCIQf8/VIwDQYJKoZIhvcNAQELBQAwKjEUMBIGA1UE
+ChMLVGlnZXJhIEluYy4xEjAQBgNVBAMTCXRpZ2VyYS5pbzAeFw0xODAzMTkxODQ1
+MzZaFw0yMzAzMTgxODQ1MzZaMCoxFDASBgNVBAoTC1RpZ2VyYSBJbmMuMRIwEAYD
+VQQDEwl0aWdlcmEuaW8wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCu
+u2TJTR5L0fav6P0X7KRT2/ttxMJZ3+nSn4moebeM88SzsDdFjkFbE1mVYy2Sf5lN
+zPxYhfTwxHPPawXhaSRsDqYKDpOgpP3phEUsubsRTXOPtrYLUbfjDMcgpnHStQSm
+gX1jccVBfM2FxjY9Tb4DRdNHax0cwgKDfeo4+FhwQDiK+zykttdDM01T6ca/3OsU
+yxihbf8HPkKRiWLpvZ1QyifyrIPOstw+gmRyGGvOIIDXOM6s+RVQVJqSkbTOXAbx
+4km3+CSckoewOOe/O0kL7dM7zLxKN00SOpJ4cWa+D4eG4bYNiLtR+nKHBcAmdeYQ
+fgZo8V1N/RR1H/8ueQsnAgMBAAGjcjBwMA4GA1UdDwEB/wQEAwICpDAPBgNVHRMB
+Af8EBTADAQH/MA0GA1UdDgQGBAQBAgMEMD4GA1UdEQQ3MDWCCXRpZ2VyYS5pb4IT
+bGljZW5zaW5nLnRpZ2VyYS5pb4ETbGljZW5zaW5nQHRpZ2VyYS5pbzANBgkqhkiG
+9w0BAQsFAAOCAQEAeKuGfizTKtSa6D/0XO+9MHKC8GGsSdf9KKy9ZTHG2W/fiYIn
+o0FUoymcr+Dnv9KziH5TF2+YtvAKYIzoREoWIfqL1RmDsyBcLNRsOf8OtXjfFyrF
+rUc7uMYa/IhE505K6Q/4636BXb/+/hr0PnACW2x+rO26bLu1h0Ky95eqcwKoewNr
+batmSSXOYT9ysh1kfcDJW2ky4aruz7va2/oCsHjTltaBkh3O3VIpqBeHa+i4qxB1
+SSsNpgNEXVNjF07I4OdHVdyWyWezqAPWFRdairdhXrHVqO3EJ05Ik83sO0ZCNLwe
+XJiNPmt5C55ETI7JUGZM466nO/ymmfMo0feFZw==
+-----END CERTIFICATE-----
+`
+
 	// Tigera private key location.
-	pkeyPath = "./test_tigera.io_private_key.pem"
+	pkeyPath = "../test-data/test_tigera.io_private_key.pem"
 
 	// Tigera license signing certificate path.
-	certPath = "./test_tigera.io_certificate.pem"
+	certPath = "../test-data/test_tigera.io_certificate.pem"
 
 	absPkeyPath, absCertPath string
 )
@@ -80,39 +103,6 @@ func init() {
 	absPkeyPath, _ = filepath.Abs(pkeyPath)
 	absCertPath, _ = filepath.Abs(certPath)
 }
-
-func TestCryptoBasics(t *testing.T) {
-	// Generate Pub/Priv key pair.
-	//priv, err := cryptolicensing.GenerateKeyPair()
-	//if err != nil {
-	//	log.Fatalf("error generating pub/priv key pair")
-	//}
-	//
-	//err = cryptolicensing.SavePrivateKeyAsPEM(priv, "privateKey.pem")
-	//if err != nil {
-	//	log.Fatalf("error saving private key to file: %s", err)
-	//}
-	//
-	//// Generate x.509 certificate.
-	//now := time.Now()
-	//// Valid for one year from now.
-	//then := now.Add(60 * 60 * 24 * 365 * 1000 * 1000 * 1000)
-	//derBytes, err := cryptolicensing.Generatex509Cert(now, then, priv)
-	//if err != nil {
-	//	log.Fatalf("error generating x.509 certificate: %s", err)
-	//}
-	//
-	//err = cryptolicensing.SaveCertToFile(derBytes, "tigera.io.cer")
-	//if err != nil {
-	//	log.Fatalf("error saving cert to file: %s", err)
-	//}
-	//
-	//err = cryptolicensing.SaveCertAsPEM(derBytes, "tigera.io.pem")
-	//if err != nil {
-	//	log.Fatalf("error saving cert to file: %s", err)
-	//}
-}
-
 
 var claimToJWTTable = []struct {
 	description string
@@ -129,7 +119,7 @@ var claimToJWTTable = []struct {
 			Offline:     true,
 			Claims: jwt.Claims{
 				NotBefore: jwt.NewNumericDate(time.Date(2022, 3, 14, 23, 59, 59, 999999999, time.Local)),
-				IssuedAt: jwt.NewNumericDate(time.Now().Local()),
+				IssuedAt:  jwt.NewNumericDate(time.Now().Local()),
 			},
 		},
 	},
@@ -149,9 +139,9 @@ var claimToJWTTable = []struct {
 	{
 		description: "partially populated claim",
 		claim: client.LicenseClaims{
-			CustomerID:  uuid.NewV4().String(),
-			Nodes:       1000,
-			Name:        "lame-banana-inc",
+			CustomerID: uuid.NewV4().String(),
+			Nodes:      1000,
+			Name:       "lame-banana-inc",
 			Claims: jwt.Claims{
 				NotBefore: jwt.NewNumericDate(time.Date(2021, 3, 14, 23, 59, 59, 999999999, time.Local)),
 			},
@@ -181,46 +171,131 @@ func TestGetLicenseFromClaims(t *testing.T) {
 	}
 }
 
-//var tokenToLicense = []struct {
-//	description string
-//	license     api.LicenseKey
-//	claim       client.LicenseClaims
-//}{
-//	{
-//		description: "fully populated claim",
-//		license: api.LicenseKey{
-//			ObjectMeta: v1.ObjectMeta{
-//				Name: "default",
-//			},
-//			Spec: api.LicenseKeySpec{
-//				Token:    "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJ3WWpuYjV6TTF5MlV6RFZ4IiwidGFnIjoiN1dSUkxPanNGQ0F1R3pNRGg5akc1USIsInR5cCI6IkpXVCJ9.HtXrz5-Q_vVfKwgn9Ig_zQ.xf6FZYH3315Tffzv.v7JNl7qOWTivF3Y0Fla-5uG-SM7zCVWcOWEncS7y5kc_uIIRTvTqXV7LAB0b6rZFkXGYxo3X0nBADh7yVJO2S9LX3AbjhF4g_5Vu1uVHwNyKEmSxoMhJGK8v0kwtmXWF7dgICKlAWcSE2kscr-1P-m-MgjTPIZaQU27EN3KFNBgPtLalSKcTRoKMWbqnZRyZFB4gIhpXRKOi2wSlRwbzflumRt5PBGQ6AAdqJaZhEDKYIRVwiYiLh8ODXC2WNhF9KS7GqXRE9QopOcQkh3n_AAADIgzOMdrVr26VTXKXZlwtTYZ5cNPxRZA7QkQVB9HMh7WwwstcSLlVRnHcGZJwmTUfpdGExAywCu4DkqJRnarfJUmG1Y86ecOFnmuycFo0NPuruUEXUG33Nd_670qOWzICjqu68cx3AXcwh46m8hZGR3Zbs1usYfrWTVfFZxNUYlAOCmjrnIAKfxDe4B4fBKYEyFM7PTUQj1UTChgv5G3wRBZiVPDv67gnOrqtQQNyAtJvWsaSdxEu5LGzO68ntauYM4wohnqx4JBzFrd5YkWivHf10yFb7_mGYxhqG7_lPiWAd7zxJNGYrOHi8qEMPFtKANI4UKLAbyXVgPJuTo_kAmoHpSqvAf2DTNODBJQb_hl6F6gX0gWsJIQ1V7O7xn6aAc0nkiizYSLuoKLSsF8rWSyASnPuHhc5AeFVEqA8oRYeZLMh9BBYr8w3kGa6eobtp8j8g2YcEy-KSCgxuef94OIRn6EPbvkfhhz8bZm9c1670N701J91WnIG7l1WXFAxXnfO055W0ulpbE99sw.HACGOFtKA6ZvoAg4Prgiaw",
-//				Certificate: testCert,
-//			},
-//		},
-//
-//		claim: client.LicenseClaims{
-//			CustomerID:  "meow23424coldcovfefe0nmyfac3",
-//			Nodes:       420,
-//			Name:        "meepster-inc",
-//			Features:    []string{"nice", "features", "for", "you"},
-//			GracePeriod: 88,
-//			Offline:     true,
-//			Claims: jwt.Claims{
-//				NotBefore: jwt.NewNumericDate(time.Date(2020, 3, 14, 23, 59, 59, 59, time.Local)),
-//			},
-//		},
-//	},
-//}
+var tokenToLicense = []struct {
+	description string
+	license     api.LicenseKey
+	claim       client.LicenseClaims
+	valid       bool
+}{
+	{
+		description: "fully populated claim",
+		license: api.LicenseKey{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: api.LicenseKeySpec{
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJ3WWpuYjV6TTF5MlV6RFZ4IiwidGFnIjoiN1dSUkxPanNGQ0F1R3pNRGg5akc1USIsInR5cCI6IkpXVCJ9.HtXrz5-Q_vVfKwgn9Ig_zQ.xf6FZYH3315Tffzv.v7JNl7qOWTivF3Y0Fla-5uG-SM7zCVWcOWEncS7y5kc_uIIRTvTqXV7LAB0b6rZFkXGYxo3X0nBADh7yVJO2S9LX3AbjhF4g_5Vu1uVHwNyKEmSxoMhJGK8v0kwtmXWF7dgICKlAWcSE2kscr-1P-m-MgjTPIZaQU27EN3KFNBgPtLalSKcTRoKMWbqnZRyZFB4gIhpXRKOi2wSlRwbzflumRt5PBGQ6AAdqJaZhEDKYIRVwiYiLh8ODXC2WNhF9KS7GqXRE9QopOcQkh3n_AAADIgzOMdrVr26VTXKXZlwtTYZ5cNPxRZA7QkQVB9HMh7WwwstcSLlVRnHcGZJwmTUfpdGExAywCu4DkqJRnarfJUmG1Y86ecOFnmuycFo0NPuruUEXUG33Nd_670qOWzICjqu68cx3AXcwh46m8hZGR3Zbs1usYfrWTVfFZxNUYlAOCmjrnIAKfxDe4B4fBKYEyFM7PTUQj1UTChgv5G3wRBZiVPDv67gnOrqtQQNyAtJvWsaSdxEu5LGzO68ntauYM4wohnqx4JBzFrd5YkWivHf10yFb7_mGYxhqG7_lPiWAd7zxJNGYrOHi8qEMPFtKANI4UKLAbyXVgPJuTo_kAmoHpSqvAf2DTNODBJQb_hl6F6gX0gWsJIQ1V7O7xn6aAc0nkiizYSLuoKLSsF8rWSyASnPuHhc5AeFVEqA8oRYeZLMh9BBYr8w3kGa6eobtp8j8g2YcEy-KSCgxuef94OIRn6EPbvkfhhz8bZm9c1670N701J91WnIG7l1WXFAxXnfO055W0ulpbE99sw.HACGOFtKA6ZvoAg4Prgiaw",
+				Certificate: testCert,
+			},
+		},
 
-//func TestDecodeAndVerify(t *testing.T) {
-//	for _, entry := range tokenToLicense {
-//		t.Run(entry.description, func(t *testing.T) {
-//			RegisterTestingT(t)
-//
-//			claims, valid := client.DecodeAndVerify(entry.license)
-//			Expect(valid).To(BeTrue())
-//
-//			Expect(claims).Should(Equal(entry.claim))
-//		})
-//	}
-//}
+		claim: client.LicenseClaims{
+			CustomerID:  "meow23424coldcovfefe0nmyfac3",
+			Nodes:       420,
+			Name:        "meepster-inc",
+			Features:    []string{"nice", "features", "for", "you"},
+			GracePeriod: 88,
+			Offline:     true,
+			Claims: jwt.Claims{
+				NotBefore: jwt.NewNumericDate(time.Date(2020, 3, 14, 23, 59, 59, 59, time.Local)),
+			},
+		},
+
+		valid: true,
+	},
+
+	{
+		description: "claim with the JWT header meddled with",
+		license: api.LicenseKey{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: api.LicenseKeySpec{
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJ3WWpuYjV6TTF5MlV6RFZ4IiwidFnIjoiN1dSUkxPanNGQ0F1R3pNRGg5akc1USIsInR5cCI6IkpXVCJ9.HtXrz5-Q_vVfKwgn9Ig_zQ.xf6FZYH3315Tffzv.v7JNl7qOWTivF3Y0Fla-5uG-SM7zCVWcOWEncS7y5kc_uIIRTvTqXV7LAB0b6rZFkXGYxo3X0nBADh7yVJO2S9LX3AbjhF4g_5Vu1uVHwNyKEmSxoMhJGK8v0kwtmXWF7dgICKlAWcSE2kscr-1P-m-MgjTPIZaQU27EN3KFNBgPtLalSKcTRoKMWbqnZRyZFB4gIhpXRKOi2wSlRwbzflumRt5PBGQ6AAdqJaZhEDKYIRVwiYiLh8ODXC2WNhF9KS7GqXRE9QopOcQkh3n_AAADIgzOMdrVr26VTXKXZlwtTYZ5cNPxRZA7QkQVB9HMh7WwwstcSLlVRnHcGZJwmTUfpdGExAywCu4DkqJRnarfJUmG1Y86ecOFnmuycFo0NPuruUEXUG33Nd_670qOWzICjqu68cx3AXcwh46m8hZGR3Zbs1usYfrWTVfFZxNUYlAOCmjrnIAKfxDe4B4fBKYEyFM7PTUQj1UTChgv5G3wRBZiVPDv67gnOrqtQQNyAtJvWsaSdxEu5LGzO68ntauYM4wohnqx4JBzFrd5YkWivHf10yFb7_mGYxhqG7_lPiWAd7zxJNGYrOHi8qEMPFtKANI4UKLAbyXVgPJuTo_kAmoHpSqvAf2DTNODBJQb_hl6F6gX0gWsJIQ1V7O7xn6aAc0nkiizYSLuoKLSsF8rWSyASnPuHhc5AeFVEqA8oRYeZLMh9BBYr8w3kGa6eobtp8j8g2YcEy-KSCgxuef94OIRn6EPbvkfhhz8bZm9c1670N701J91WnIG7l1WXFAxXnfO055W0ulpbE99sw.HACGOFtKA6ZvoAg4Prgiaw",
+				Certificate: testCert,
+			},
+		},
+
+		claim: client.LicenseClaims{},
+
+		valid: false,
+	},
+
+	{
+		description: "claim with the JWT payload meddled with",
+		license: api.LicenseKey{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: api.LicenseKeySpec{
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJ3WWpuYjV6TTF5MlV6RFZ4IiwidGFnIjoiN1dSUkxPanNGQ0F1R3pNRGg5akc1USIsInR5cCI6IkpXVCJ9.HtXrz5-Q_vVfKwgn9Ig_zQ.xf6FZYH3315Tffzv.v7JNl7qOWTivFY0Fla-5uG-SM7zCVWcOWEncS7y5kc_uIIRTvTqXV7LAB0b6rZFkXGYxo3X0nBADh7yVJO2S9LX3AbjhF4g_5Vu1uVHwNyKEmSxoMhJGK8v0kwtmXWF7dgICKlAWcSE2kscr-1P-m-MgjTPIZaQU27EN3KFNBgPtLalSKcTRoKMWbqnZRyZFB4gIhpXRKOi2wSlRwbzflumRt5PBGQ6AAdqJaZhEDKYIRVwiYiLh8ODXC2WNhF9KS7GqXRE9QopOcQkh3n_AAADIgzOMdrVr26VTXKXZlwtTYZ5cNPxRZA7QkQVB9HMh7WwwstcSLlVRnHcGZJwmTUfpdGExAywCu4DkqJRnarfJUmG1Y86ecOFnmuycFo0NPuruUEXUG33Nd_670qOWzICjqu68cx3AXcwh46m8hZGR3Zbs1usYfrWTVfFZxNUYlAOCmjrnIAKfxDe4B4fBKYEyFM7PTUQj1UTChgv5G3wRBZiVPDv67gnOrqtQQNyAtJvWsaSdxEu5LGzO68ntauYM4wohnqx4JBzFrd5YkWivHf10yFb7_mGYxhqG7_lPiWAd7zxJNGYrOHi8qEMPFtKANI4UKLAbyXVgPJuTo_kAmoHpSqvAf2DTNODBJQb_hl6F6gX0gWsJIQ1V7O7xn6aAc0nkiizYSLuoKLSsF8rWSyASnPuHhc5AeFVEqA8oRYeZLMh9BBYr8w3kGa6eobtp8j8g2YcEy-KSCgxuef94OIRn6EPbvkfhhz8bZm9c1670N701J91WnIG7l1WXFAxXnfO055W0ulpbE99sw.HACGOFtKA6ZvoAg4Prgiaw",
+				Certificate: testCert,
+			},
+		},
+
+		claim: client.LicenseClaims{},
+
+		valid: false,
+	},
+
+	{
+		description: "claim with the JWT signed by some evil random private key",
+		license: api.LicenseKey{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: api.LicenseKeySpec{
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJVeG1hUnBucS1Oc2JORWY1IiwidGFnIjoiZkFnR2I0U2R5WlRTTWJVTFZSVE91dyIsInR5cCI6IkpXVCJ9.ao8K2OAgme4kwVejNn-Lvg.CyEws8QbrDGjtkVx.Pebt9PmCpWvPcVYkzkY2BSP92RGCOfg7oGHSfo5MiabnXXn6KDQ6rT2wxHjcHTNcszYO8nZ_w4nUIvH0Vg-7VAbHhvYFpsbtuc8eXRSbqV9Vt0-jm4N9iQFbT5bEi-qyPk5p-OjK_UO8tAPll7foQz9DlqG1h55Pn2RyrjL2-oTJeDb5b7uRkLFASeD-ApqB6NylQ6oskCr9GN5vHaV5_tRaoaWTlCPFwUIQc1TMwoBDoyNTWJUV45QeuT6ha1T4IgiDS7uJcvPb7omm7dhoXK5aw-b-G8wVlWbfD-0ygzPr9qehkh9IYmJAQtYo46dTJBKIInQUss-IpURNUQKVuYrODFkw4GEpQ4FQAamIktYt_EHudzMrrtJM3xhvtYT9bYJz-0_wYnloy7kJMd7JHPaRxH3wICAw0UUe-0F8sViA5NTnADKSXnpWRRDArsFKezywdUqCgRV9lwHbaDKSJFaMSOMJ3BmTXOz_vJ1hiWCjelAUU0sE6r0tcIYPgc705hLYnRb5Xk_qePhtFdAZkqRkymnYJVRRYmQhVYaDEB33E9UYFLqL1EOhkfRnu-iNuMky9OfjuwrjoBaVJDlBQ9y76iOMoDZr4hpEIsESli8nY0MzzHLc2T4WUd1rx9XSw7VaojSYPvpK9JWhJkWcQVb28FNJB6Fui7V_T1bnF44vBqy2OKY3iK-OotULdm76Jm_rSXgpoJldUOjc31f6qTD78SeZ5UhyxgLGCzS5lHri1FCiYDjy6dcFGNfoWJ1Lpj5mTY_4OLnfLG2yqlyqRfrX8bTq5X0.V1LdXb0VgrJDlkeQ95GWmQ",
+				Certificate: testCert,
+			},
+		},
+
+		claim: client.LicenseClaims{},
+
+		valid: false,
+	},
+
+	{
+
+		// TODO (gunjan5): THIS TEST SHOULD FAIL ONCE WE ADD CERT CHAIN VALIDATION!!!!
+		description: "claim with the JWT with an evil cert and signed by an evil private key",
+		license: api.LicenseKey{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "default",
+			},
+			Spec: api.LicenseKeySpec{
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJLeWE0VHpEaWY2eFM3TTl2IiwidGFnIjoiYVhHR3d0alczSjhKeWgtb2hWajRJdyIsInR5cCI6IkpXVCJ9.LgbBH-IGmLH2iUFY171xwA.NImD2DVyH1ahbruT.DHhdADLX7BfwwYoknoTnPEQGh7vItF7YhYukfPDm_VlwgERXTDdqb6wFQQOZOvFFlcMRYBBzDQBguSkYEHYWegHIuZ7Amfh8uCcI0l93BPz1TrOZdX4fukikb5YVTbRJjxgJTvakucG9dh45hwks9gUCGdXFvVAJH_wMDc_kPVeb0fx84f_H30gNswvKItyIT09lOiRCfy9HOGdpo1RlA0UCZvIPYD9zSl1_ldGZ5Oj2RYz9HU7bhuqV4AU7OuglE_8yvNMmkqSD9BmiLOxzxMVvg3uj5trmuTOy4pAZuchykM3p-DgGiWuo4kyaHvpcfIISSyBU8xtVMyWALayeaschyvlAvRJHAVjKd9Cubx5akA23w4KpBGsJ2EgQPNmyHdEoxqKohO6KbYcOvsD7PThH8e9UV7GgGrQp4OUBZXfym-_yi_erI6FC91n3rgcSMqYpIrhC5-dPSExKuPVA_94dlcP-cDxAtuL8W0T8mafTqKl4Vg-Ojaj7pul4-i7223loZSbkYEpuoTzHYglgB2_PfHgkZsqgl8adlm7muKpxSe_TH-6wQh6fXxGzUJEu7DLvcy82r5v_HcWtJUj43qu8BTHR4sc4_1NU8eHya_HtwgvOo98Ze1Gd9qC_GOFkMYomEk2ogarPnGGKD-gfMN3GxziUz5d4kpb8mzknGIX5hqaxcslV4HDnSA97zjssyajg1Eh-a6xOIaPOlYW3YzXQ3GQPABLn18V2hFCNhB-ml6KWceYA6EsxnKqdEK2KN8dnDGESdjwCIUfcY7KFRD30qhAOUAKpU14.YvpAmE0JPK1Brn7kgGphlg",
+				Certificate: evilCert,
+			},
+		},
+
+		claim: client.LicenseClaims{
+			CustomerID:  "fda67a1c-1791-4157-8ddc-f11f265db0d0",
+			Nodes:       555,
+			Name:        "iwantcake5",
+			GracePeriod: 88,
+			Offline:     true,
+			Claims: jwt.Claims{
+				NotBefore: jwt.NewNumericDate(time.Date(2029, 3, 14, 23, 59, 59, 59, time.Local)),
+				IssuedAt:  1521485204,
+			},
+		},
+
+		valid: true,
+	},
+}
+
+func TestDecodeAndVerify(t *testing.T) {
+	for _, entry := range tokenToLicense {
+		t.Run(entry.description, func(t *testing.T) {
+			RegisterTestingT(t)
+
+			claims, valid := client.DecodeAndVerify(entry.license)
+			Expect(valid).Should(Equal(entry.valid), entry.description)
+
+			if entry.valid {
+				Expect(claims).Should(Equal(entry.claim), entry.description)
+			}
+		})
+	}
+}

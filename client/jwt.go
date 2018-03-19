@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 
-	jose "gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -11,12 +11,6 @@ import (
 )
 
 var (
-	// Tigera private key location.
-	pkeyPath = "./tigera.io_private_key.pem"
-
-	// Tigera license signing certificate path.
-	certPath = "./tigera.io_certificate.pem"
-
 	jwtTyp = jose.ContentType("JWT")
 
 	jwtContentType = jose.ContentType("JWT")
