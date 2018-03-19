@@ -43,7 +43,7 @@ func init() {
 	debugFlag = GenerateLicenseCmd.PersistentFlags()
 
 	nameFlag.StringVar(&licClaimes.Name, "name", "", "customer name")
-	expFlag.StringVar(&exp, "term", "", "license expiration date. Expires on that day at 23:59:59:999999999 (nanoseconds).")
+	expFlag.StringVar(&exp, "term", "", "license expiration date in DD/MM/YYYY format. Expires on that day at 23:59:59:999999999 (nanoseconds).")
 	nodeFlag.IntVar(&licClaimes.Nodes, "nodes", 0, "number of nodes customer is licensed for")
 	graceFlag.IntVar(&licClaimes.GracePeriod, "graceperiod", 90, "number of nodes customer is licensed for")
 	debugFlag.BoolVar(&debug, "debug", false, "print debug information about the license fields")
@@ -113,9 +113,9 @@ func GetLicenseProperties(override bool) client.LicenseClaims {
 	}
 
 	if !expFlag.Changed("term") || override {
-		fmt.Println("Enter the license expiration date (DD/MM/YYYY):")
+		fmt.Println("Enter the license expiration date (MM/DD/YYYY):")
 		var licExpStr string
-		_, err := fmt.Scanf("%s", licExpStr)
+		_, err := fmt.Scanf("%s", &licExpStr)
 		if err != nil {
 			fmt.Printf("[ERROR] invalid input: %s\n", err)
 			os.Exit(1)
@@ -132,7 +132,7 @@ func GetLicenseProperties(override bool) client.LicenseClaims {
 		fmt.Println("Enter the grace period (in days) [default 90]:")
 		n, _ := fmt.Scanf("%d", &lic.GracePeriod)
 		if n == 0 {
-			lic.GracePeriod = licClaimes.GracePeriod
+			lic.GracePeriod = 90
 		}
 	}
 
@@ -156,7 +156,7 @@ func GetLicenseProperties(override bool) client.LicenseClaims {
 func parseDate(dateStr string) jwt.NumericDate {
 	expSlice := strings.Split(dateStr, "/")
 	if len(expSlice) != 3 {
-		log.Fatal("[ERROR] expiration date must be in DD/MM/YYYY format")
+		log.Fatal("[ERROR] expiration date must be in MM/DD/YYYY format")
 	}
 	yyyy, err := strconv.Atoi(expSlice[2])
 	if err != nil {
