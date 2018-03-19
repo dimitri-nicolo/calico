@@ -116,9 +116,10 @@ type QueryEndpointsReq struct {
 	Unprotected         bool
 
 	// Filters
-	Node string
-	Page *Page
-	Sort *Sort
+	Node       string
+	Unlabelled bool
+	Page       *Page
+	Sort       *Sort
 }
 
 const (

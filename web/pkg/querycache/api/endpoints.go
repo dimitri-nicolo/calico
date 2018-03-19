@@ -5,6 +5,7 @@ type Endpoint interface {
 	GetNode() string
 	GetPolicyCounts() PolicyCounts
 	IsProtected() bool
+	IsLabelled() bool
 }
 
 type EndpointCounts struct {

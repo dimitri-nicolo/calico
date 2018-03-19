@@ -119,6 +119,7 @@ func calculateQueryUrl(addr string, query interface{}) string {
 		}
 		parms = appendStringParm(parms, handlers.QuerySelector, qt.Selector)
 		parms = appendStringParm(parms, handlers.QueryUnprotected, strconv.FormatBool(qt.Unprotected))
+		parms = appendStringParm(parms, handlers.QueryUnlabelled, fmt.Sprint(qt.Unlabelled))
 		parms = appendStringParm(parms, handlers.QueryNode, qt.Node)
 		parms = appendResourceParm(parms, handlers.QueryPolicy, qt.Policy)
 		parms = appendStringParm(parms, handlers.QueryRuleDirection, qt.RuleDirection)
