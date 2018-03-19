@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"os"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -8,12 +9,52 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInsertCompany(t *testing.T) {
+const (
+	testKey = "TestCompanyKey"
+	testName = "Test Company Name"
+)
+
+func TestInsertGetDeleteCompany(t *testing.T) {
 	t.Run("Test Insert Company", func(t *testing.T) {
-		const (
-			testKey = "TestCompanyKey"
-			testName = "Test Company Name"
-		)
+		dsn := os.Getenv("TEST_DSN")
+		if dsn == "" {
+			t.Skip("TestInsertGetDeleteCompany being skipped due to a missing 'TEST_DSN' env variable")
+		}
+		db, _ := NewDB(dsn)
+		c, err := db.CreateCompany(&Company{Key: testKey, Name: testName})
+		if err != nil {
+			t.Fatalf("error creating company: %s", err.Error())
+		}
+
+		id := c.Id
+		uuid := c.Uuid
+
+		require.Equal(t, testKey, c.Key)
+		require.Equal(t, testName, c.Name)
+
+		c, err = db.GetCompanyById(c.Id)
+		if err != nil {
+			t.Fatalf("error getting company: %s", err.Error())
+		}
+		require.Equal(t, id, c.Id)
+		require.Equal(t, uuid, c.Uuid)
+		require.Equal(t, testKey, c.Key)
+		require.Equal(t, testName, c.Name)
+
+		err = db.DeleteCompanyById(c.Id)
+		if err != nil {
+			t.Fatalf("error deleting company: %s", err.Error())
+		}
+
+		c, err = db.GetCompanyByUuid(c.Uuid)
+		if err == nil {
+			t.Fatalf("company should not exist, but it does")
+		}
+	})
+}
+
+func TestInsertCompanyUsingMock(t *testing.T) {
+	t.Run("Test Insert Company Using an SQL mock", func(t *testing.T) {
 		dbm, mock, err := sqlmock.New()
 		if err != nil {
 			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
@@ -43,12 +84,8 @@ func TestInsertCompany(t *testing.T) {
 	})
 }
 
-func TestAllCompanies(t *testing.T) {
-	t.Run("Test All Companies APIs", func(t *testing.T) {
-		const (
-			testKey = "TestCompanyKey"
-			testName = "Test Company Name"
-		)
+func TestAllCompaniesUsingMock(t *testing.T) {
+	t.Run("Test All Companies APIs using an SQL mock", func(t *testing.T) {
 		dbm, mock, err := sqlmock.New()
 		if err != nil {
 			t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
