@@ -1,7 +1,7 @@
 ---
 layout: null
 ---
-# Calico Version {{site.data.versions[page.version].first.title}}
+# CNX Version {{site.data.versions[page.version].first.title}}
 # https://docs.projectcalico.org/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
 # This manifest includes the following component versions:
 #   {{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
