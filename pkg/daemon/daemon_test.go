@@ -323,6 +323,14 @@ func (b *mockDatastore) ClusterInformation() clientv3.ClusterInformationInterfac
 	panic("not implemented")
 }
 
+func (b *mockDatastore) RemoteClusterConfigurations() clientv3.RemoteClusterConfigurationInterface {
+	panic("not implemented")
+}
+
+func (b *mockDatastore) LicenseKey() clientv3.LicenseKeyInterface {
+	panic("not implemented")
+}
+
 func (b *mockDatastore) Backend() bapi.Client {
 	panic("not implemented")
 }
@@ -339,5 +347,9 @@ type dummySyncer struct {
 }
 
 func (*dummySyncer) Start() {
+
+}
+
+func (*dummySyncer) Stop() {
 
 }
