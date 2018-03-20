@@ -1,6 +1,8 @@
 package datastore
 
 import (
+	"errors"
+
 	"github.com/satori/go.uuid"
 )
 
@@ -67,3 +69,15 @@ func (db *DB) CreateCompany(company *Company) (*Company, error) {
 	}
 	return company, nil
 }
+
+func (db *DB) DeleteCompanyById(id int64) error {
+	res, err := db.Exec("DELETE FROM companies WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+	if ra, err := res.RowsAffected(); err != nil || ra != 1 {
+		return errors.New("unable to delete company by id")
+	}
+	return nil
+}
+
