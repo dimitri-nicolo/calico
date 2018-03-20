@@ -569,6 +569,7 @@ http://host:port/base/endpoints
 | node | Filter endpoints that are on a specific node. | string | no | no |
 | policy | Get endpoints that the policy applies to. | string | no | no |
 | unprotected | Get endpoints that do not have any policies applied on them. | boolean | no | no |
+| unlabelled | Get endpoints that do not have any explicitly configured labels. | boolean | no | no |
 | ruleDirection | Specify the direction of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | ingress or egress | no | no |
 | ruleIndex | Specify the direction of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | int | no | no |
 | ruleEntity | Specify the entity of the rule whose selector you want to enumerate. Only valid when policy is specified, all other rule options should also be specified. | source or destination | no | no |

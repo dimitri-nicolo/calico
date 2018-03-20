@@ -96,20 +96,20 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 	switch uv3.UpdateType {
 	case bapi.UpdateTypeKVNew:
 		ed := &endpointData{resource: uv3.Value.(api.Resource)}
-		ec.updateHasLabelsCounts(false, ed.unlabelled())
+		ec.updateHasLabelsCounts(false, !ed.IsLabelled())
 		ec.endpoints[uv3.Key] = ed
 		// All endpoints are unprotected initially. policyEndpointMatch() will
 		// remove them from this set if policies apply on this endpoint.
 		ec.unProtectedEndpoints.Add(uv3.Key)
 	case bapi.UpdateTypeKVUpdated:
 		ed := ec.endpoints[uv3.Key]
-		wasUnlabelled := ed.unlabelled()
+		wasUnlabelled := !ed.IsLabelled()
 		ed.resource = uv3.Value.(api.Resource)
-		ec.updateHasLabelsCounts(wasUnlabelled, ed.unlabelled())
+		ec.updateHasLabelsCounts(wasUnlabelled, !ed.IsLabelled())
 	case bapi.UpdateTypeKVDeleted:
 		ed := ec.endpoints[uv3.Key]
-		ec.updateHasLabelsCounts(ed.unlabelled(), false)
 		ec.unProtectedEndpoints.Discard(uv3.Key)
+		ec.updateHasLabelsCounts(!ed.IsLabelled(), false)
 		delete(ec.endpoints, uv3.Key)
 	}
 }
@@ -220,13 +220,16 @@ func (e *endpointData) IsProtected() bool {
 	return e.policies.NumGlobalNetworkPolicies > 0 || e.policies.NumNetworkPolicies > 0
 }
 
-func (e *endpointData) unlabelled() bool {
+// IsLabelled returns true when there are explicitly configured labels on the endpoint.
+// This ignores implicitly added labels such as projectcalico/org/namespace, or labels
+// inherited through a profile.
+func (e *endpointData) IsLabelled() bool {
 	switch e.resource.GetObjectKind().GroupVersionKind().Kind {
 	case v3.KindWorkloadEndpoint:
 		// WEPs automatically have a namespace and orchestrator label added to them.
-		return len(e.resource.GetObjectMeta().GetLabels()) <= 2
+		return len(e.resource.GetObjectMeta().GetLabels()) > 2
 	case v3.KindHostEndpoint:
-		return len(e.resource.GetObjectMeta().GetLabels()) == 0
+		return len(e.resource.GetObjectMeta().GetLabels()) > 0
 	}
 	return false
 }

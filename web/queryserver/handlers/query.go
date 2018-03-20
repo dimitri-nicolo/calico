@@ -32,6 +32,7 @@ const (
 	QueryEndpoint            = "endpoint"
 	QueryUnmatched           = "unmatched"
 	QueryUnprotected         = "unprotected"
+	QueryUnlabelled          = "unlabelled"
 	QueryTier                = "tier"
 
 	AllResults     = "all"
@@ -103,6 +104,7 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 		RuleIndex:           q.getInt(r, QueryRuleIndex, 0),
 		RuleEntity:          r.URL.Query().Get(QueryRuleEntity),
 		RuleNegatedSelector: q.getBool(r, QueryRuleNegatedSelector),
+		Unlabelled:          q.getBool(r, QueryUnlabelled),
 		Page:                q.getPage(r),
 		Sort:                q.getSort(r),
 		Node:                r.URL.Query().Get(QueryNode),

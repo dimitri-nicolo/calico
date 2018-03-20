@@ -226,6 +226,9 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 		if req.Unprotected && ep.IsProtected() {
 			continue
 		}
+		if req.Unlabelled && ep.IsLabelled() {
+			continue
+		}
 		items = append(items, *c.apiEndpointToQueryEndpoint(ep))
 	}
 	sortEndpoints(items, req.Sort)
