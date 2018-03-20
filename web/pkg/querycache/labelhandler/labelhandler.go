@@ -18,7 +18,7 @@ import (
 
 type Interface interface {
 	QueryEndpoints(selector string) ([]model.Key, error)
-	QuerySelectors(labels map[string]string, profiles []string) ([]SelectorID, error)
+	QuerySelectors(labels map[string]string, profiles []string) []SelectorID
 	RegisterHandler(callback MatchFn)
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 }
@@ -147,10 +147,7 @@ func (c *labelHandler) QueryEndpoints(selectorExpression string) ([]model.Key, e
 
 // QuerySelectors returns a list of SelectorIDs that match the supplied
 // selector.
-//TODO (rlb):  I think the handling of rules is wrong now that I think about it.  The rules
-// will need to be handled by an active rules calculator, otherwise we won't include the rules
-// from the profile.
-func (c *labelHandler) QuerySelectors(labels map[string]string, profiles []string) ([]SelectorID, error) {
+func (c *labelHandler) QuerySelectors(labels map[string]string, profiles []string) []SelectorID {
 	// Add a fake endpoint with the requested labels and profiles.
 	endpointId := queryId(uuid.NewV4())
 	c.index.UpdateLabels(endpointId, labels, profiles)
@@ -163,7 +160,7 @@ func (c *labelHandler) QuerySelectors(labels map[string]string, profiles []strin
 
 	// Remove the fake endpoint so that we are no longer tracking it.
 	c.index.DeleteLabels(endpointId)
-	return results, nil
+	return results
 }
 
 // OnUpdate handler

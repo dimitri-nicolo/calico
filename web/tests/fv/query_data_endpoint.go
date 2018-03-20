@@ -1,14 +1,49 @@
 package fv
 
 import (
-	"errors"
+	"net/http"
 
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/calicoq/web/pkg/querycache/client"
 )
 
 func endpointTestQueryData() []testQueryData {
 	return []testQueryData{
+		{
+			"multiple weps and heps, no policy - query exact wep, doesn't exist",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, wep1_n1_ns1, wep5_n3_ns2_unlabelled,
+			},
+			client.QueryEndpointsReq{
+				Endpoint: model.ResourceKey{
+					Kind:      v3.KindWorkloadEndpoint,
+					Name:      "foobarbaz",
+					Namespace: "not-a-namespace",
+				},
+			},
+			errorResponse{
+				text: "Error: resource does not exist: WorkloadEndpoint(not-a-namespace/foobarbaz)",
+				code: http.StatusNotFound,
+			},
+		},
+		{
+			"multiple weps and heps, no policy - query exact hep, doesn't exist",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, wep1_n1_ns1, wep5_n3_ns2_unlabelled,
+			},
+			client.QueryEndpointsReq{
+				Endpoint: model.ResourceKey{
+					Kind: v3.KindHostEndpoint,
+					Name: "foobarbaz",
+				},
+			},
+			errorResponse{
+				text: "Error: resource does not exist: HostEndpoint(foobarbaz)",
+				code: http.StatusNotFound,
+			},
+		},
 		{
 			"multiple weps and heps, no policy - query exact wep",
 			[]resourcemgr.ResourceObject{
@@ -269,6 +304,42 @@ func endpointTestQueryData() []testQueryData {
 			},
 		},
 		{
+			"multiple weps and heps, tier1 policy - query unprotected and matching policy (invalid query)",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			client.QueryEndpointsReq{
+				Unprotected: true,
+				Policy:      resourceKey(gnp1_t1_o3),
+			},
+			errorResponse{
+				text: "Error: invalid query: specify only one of selector or policy, or specify one of policy or " +
+					"unprotected",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
+			"multiple weps and heps, tier1 policy - query invalid policy name",
+			[]resourcemgr.ResourceObject{
+				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
+				wep5_n3_ns2_unlabelled, tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
+			},
+			// The namespace has a slash which will get rendered into the URL (and will error).
+			client.QueryEndpointsReq{
+				Policy:      model.ResourceKey{
+					Kind: v3.KindNetworkPolicy,
+					Namespace: "this/has",
+					Name: "a.slash",
+				},
+			},
+			errorResponse{
+				text: "Error: invalid query: the policy name is not valid; it should be of the format " +
+					"<GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
 			"multiple weps and heps, tier1 policy - endpoints matching policy selector gnp1_t1_o3",
 			[]resourcemgr.ResourceObject{
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
@@ -477,7 +548,10 @@ func endpointTestQueryData() []testQueryData {
 				RuleEntity:          "destination",
 				RuleNegatedSelector: true,
 			},
-			errors.New("rule parameters request is not valid: GlobalNetworkPolicy(ccc-tier1.gnp2-t1-o4)"),
+			errorResponse{
+				text: "Error: rule parameters request is not valid: GlobalNetworkPolicy(ccc-tier1.gnp2-t1-o4)",
+				code: http.StatusBadRequest,
+			},
 		},
 		{
 			"updated GNPs orders and rules - endpoints matching gnp1_t1_o4;ingress;idx=0;destination;selector (should match rules from previous gnp2)",

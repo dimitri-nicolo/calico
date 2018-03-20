@@ -14,6 +14,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/tigera/calicoq/web/pkg/querycache/api"
 	"github.com/tigera/calicoq/web/pkg/querycache/cache"
@@ -191,7 +192,10 @@ func (c *cachedQuery) runQueryEndpoints(cxt context.Context, req QueryEndpointsR
 	if req.Endpoint != nil {
 		ep := c.endpoints.GetEndpoint(req.Endpoint)
 		if ep == nil {
-			return nil, fmt.Errorf("resource %s does not exist", req.Endpoint.String())
+			// Endpoint does not exist, return no results.
+			return nil, errors.ErrorResourceDoesNotExist{
+				Identifier: req.Endpoint,
+			}
 		}
 		return &QueryEndpointsResp{
 			Count: 1,
@@ -284,21 +288,22 @@ func (c *cachedQuery) apiEndpointToQueryEndpoint(ep api.Endpoint) *Endpoint {
 func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq) (*QueryPoliciesResp, error) {
 	// If a policy was specified, just return that (if it exists).
 	if req.Policy != nil {
-		ep := c.policies.GetPolicy(req.Policy)
-		if ep == nil {
-			return nil, fmt.Errorf("resource %s does not exist", req.Policy.String())
+		p := c.policies.GetPolicy(req.Policy)
+		if p == nil {
+			return nil, errors.ErrorResourceDoesNotExist{
+				Identifier: req.Policy,
+			}
 		}
 		return &QueryPoliciesResp{
 			Count: 1,
 			Items: []Policy{
-				*c.apiPolicyToQueryPolicy(ep, 0),
+				*c.apiPolicyToQueryPolicy(p, 0),
 			},
 		}, nil
 	}
 
 	// If an endpoint has been specified, determine the labels on the endpoint.
 	var policySet set.Set
-	var err error
 
 	if req.Endpoint != nil {
 		// Endpoint is requested, get the labels and profiles and calculate the matching
@@ -307,23 +312,15 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		if err != nil {
 			return nil, err
 		}
-		policySet, err = c.queryPoliciesByLabel(labels, profiles, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		log.WithField("policySet", policySet).Info("Endpoint query")
+		policySet = c.queryPoliciesByLabel(labels, profiles, nil)
+		log.WithField("policySet", policySet).Debug("Endpoint query")
 	}
 
 	if len(req.Labels) > 0 {
 		// Labels have been specified, calculate the matching policies. If we matched on endpoint
 		// then only filter in the common elements.
-		policySet, err = c.queryPoliciesByLabel(req.Labels, nil, policySet)
-		if err != nil {
-			return nil, err
-		}
-
-		log.WithField("policySet", policySet).Info("Labels query")
+		policySet = c.queryPoliciesByLabel(req.Labels, nil, policySet)
+		log.WithField("policySet", policySet).Debug("Labels query")
 	}
 
 	var ordered []api.Tier
@@ -439,14 +436,17 @@ func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection
 func (c *cachedQuery) runQueryNodes(cxt context.Context, req QueryNodesReq) (*QueryNodesResp, error) {
 	// If a policy was specified, just return that (if it exists).
 	if req.Node != nil {
-		ep := c.nodes.GetNode(req.Node.(model.ResourceKey).Name)
-		if ep == nil {
-			return nil, fmt.Errorf("resource %s does not exist", req.Node.String())
+		n := c.nodes.GetNode(req.Node.(model.ResourceKey).Name)
+		if n == nil {
+			// Node does not exist.
+			return nil, errors.ErrorResourceDoesNotExist{
+				Identifier: req.Node,
+			}
 		}
 		return &QueryNodesResp{
 			Count: 1,
 			Items: []Node{
-				*c.apiNodeToQueryNode(ep),
+				*c.apiNodeToQueryNode(n),
 			},
 		}, nil
 	}
@@ -505,7 +505,9 @@ func (c *cachedQuery) apiNodeToQueryNode(n api.Node) *Node {
 func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]string, []string, error) {
 	ep := c.endpoints.GetEndpoint(key)
 	if ep == nil {
-		return nil, nil, fmt.Errorf("resource does not exist: %s", key.String())
+		return nil, nil, errors.ErrorResourceDoesNotExist{
+			Identifier: key,
+		}
 	}
 
 	// For host endpoints, return the labels unchanged.
@@ -526,7 +528,7 @@ func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]st
 		})
 		// If the WEP has been filtered out, then the value may be nil.
 		if epv1 == nil {
-			return nil, nil, fmt.Errorf("endpoint %s is not valid; no policy is enforced on this endpoint", key)
+			return nil, nil, fmt.Errorf("endpoint %s is not valid: no policy is enforced on this endpoint", key)
 		}
 		wep := epv1.Value.(*model.WorkloadEndpoint)
 		labels = wep.Labels
@@ -541,15 +543,8 @@ func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]st
 	return labels, profiles, nil
 }
 
-func (c *cachedQuery) queryPoliciesByLabel(
-	labels map[string]string,
-	profiles []string,
-	filterIn set.Set,
-) (set.Set, error) {
-	selIds, err := c.polEplabelHandler.QuerySelectors(labels, profiles)
-	if err != nil {
-		return nil, err
-	}
+func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []string, filterIn set.Set) set.Set {
+	selIds := c.polEplabelHandler.QuerySelectors(labels, profiles)
 
 	// Filter out the rule matches, and only filter in those in the supplied set (if supplied).
 	results := set.New()
@@ -563,13 +558,15 @@ func (c *cachedQuery) queryPoliciesByLabel(
 		}
 		results.Add(selId.Policy())
 	}
-	return results, nil
+	return results
 }
 
 func (c *cachedQuery) getPolicySelector(key model.Key, direction string, index int, entity string, negatedSelector bool) (string, error) {
 	p := c.policies.GetPolicy(key)
 	if p == nil {
-		return "", fmt.Errorf("resource does not exist: %s", key.String())
+		return "", errors.ErrorResourceDoesNotExist{
+			Identifier: key,
+		}
 	}
 	pr := p.GetResource()
 

@@ -13,6 +13,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/tigera/calicoq/web/pkg/querycache/client"
 )
 
@@ -42,17 +43,17 @@ const (
 )
 
 var (
-	errorPolicyMultiParm = errors.New("specify only one of " + QueryEndpoint +
+	errorPolicyMultiParm = errors.New("invalid query: specify only one of " + QueryEndpoint +
 		" or " + QueryUnmatched)
-	errorEndpointMultiParm = errors.New("specify only one of " + QuerySelector +
-		" or " + QueryPolicy)
-	errorInvalidEndpointName = errors.New("the endpoint name is not valid; it should be of the format " +
+	errorEndpointMultiParm = errors.New("invalid query: specify only one of " + QuerySelector +
+		" or " + QueryPolicy + ", or specify one of " + QueryPolicy + " or " + QueryUnprotected)
+	errorInvalidEndpointName = errors.New("invalid query: the endpoint name is not valid; it should be of the format " +
 		"<HostEndpoint name> or <namespace>/<WorkloadEndpoint name>")
-	errorInvalidPolicyName = errors.New("the policy name is not valid; it should be of the format " +
+	errorInvalidPolicyName = errors.New("invalid query: the policy name is not valid; it should be of the format " +
 		"<GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>")
 	errorInvalidEndpointURL = errors.New("the URL does not contain a valid endpoint name; the final URL segments should " +
 		"be of the format <HostEndpoint name> or <namespace>/<WorkloadEndpoint name>")
-	errorInvalidPolicyURL = errors.New("the URL does not contain a valid endpoint name; the final URL segments should " +
+	errorInvalidPolicyURL = errors.New("the URL does not contain a valid policy name; the final URL segments should " +
 		"be of the format <GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>")
 	errorInvalidNodeURL = errors.New("the URL does not contain a valid node name; the final URL segments should " +
 		"be of the format <Node name>")
@@ -77,19 +78,19 @@ type query struct {
 }
 
 func (q *query) Summary(w http.ResponseWriter, r *http.Request) {
-	q.runQuery(w, r, client.QueryClusterReq{})
+	q.runQuery(w, r, client.QueryClusterReq{}, false)
 }
 
 func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 	selector := r.URL.Query().Get(QuerySelector)
 	policies, err := q.getPolicies(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		q.writeError(w, err, http.StatusBadRequest)
 		return
 	}
 	unprotected := q.getBool(r, QueryUnprotected)
 	if (selector != "" && len(policies) > 0) || (unprotected && len(policies) > 0) || len(policies) > 1 {
-		http.Error(w, errorEndpointMultiParm.Error(), http.StatusBadRequest)
+		q.writeError(w, errorEndpointMultiParm, http.StatusBadRequest)
 		return
 	}
 	var policy model.Key
@@ -108,34 +109,34 @@ func (q *query) Endpoints(w http.ResponseWriter, r *http.Request) {
 		Page:                q.getPage(r),
 		Sort:                q.getSort(r),
 		Node:                r.URL.Query().Get(QueryNode),
-	})
+	}, false)
 }
 
 func (q *query) Endpoint(w http.ResponseWriter, r *http.Request) {
 	urlParts := strings.SplitN(r.URL.Path, "/", numURLSegmentsWithName)
 	if len(urlParts) != numURLSegmentsWithName {
-		http.Error(w, errorInvalidEndpointURL.Error(), http.StatusBadRequest)
+		q.writeError(w, errorInvalidEndpointURL, http.StatusBadRequest)
 		return
 	}
 	endpoint, ok := q.getEndpointKeyFromCombinedName(urlParts[numURLSegmentsWithName-1])
 	if !ok {
-		http.Error(w, errorInvalidEndpointURL.Error(), http.StatusBadRequest)
+		q.writeError(w, errorInvalidEndpointURL, http.StatusBadRequest)
 		return
 	}
 	q.runQuery(w, r, client.QueryEndpointsReq{
 		Endpoint: endpoint,
-	})
+	}, true)
 }
 
 func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 	endpoints, err := q.getEndpoints(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		q.writeError(w, err, http.StatusBadRequest)
 		return
 	}
 	unmatched := q.getBool(r, QueryUnmatched)
 	if (unmatched && len(endpoints) > 0) || len(endpoints) > 1 {
-		http.Error(w, errorPolicyMultiParm.Error(), http.StatusBadRequest)
+		q.writeError(w, errorPolicyMultiParm, http.StatusBadRequest)
 		return
 	}
 	var endpoint model.Key
@@ -149,46 +150,46 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		Unmatched: unmatched,
 		Page:      q.getPage(r),
 		Sort:      q.getSort(r),
-	})
+	}, false)
 }
 
 func (q *query) Policy(w http.ResponseWriter, r *http.Request) {
 	urlParts := strings.SplitN(r.URL.Path, "/", numURLSegmentsWithName)
 	if len(urlParts) != numURLSegmentsWithName {
-		http.Error(w, errorInvalidPolicyURL.Error(), http.StatusBadRequest)
+		q.writeError(w, errorInvalidPolicyURL, http.StatusBadRequest)
 		return
 	}
 	policy, ok := q.getPolicyKeyFromCombinedName(urlParts[numURLSegmentsWithName-1])
 	if !ok {
-		http.Error(w, errorInvalidPolicyURL.Error(), http.StatusBadRequest)
+		q.writeError(w, errorInvalidPolicyURL, http.StatusBadRequest)
 		return
 	}
 	q.runQuery(w, r, client.QueryPoliciesReq{
 		Policy: policy,
-	})
+	}, true)
 }
 
 func (q *query) Nodes(w http.ResponseWriter, r *http.Request) {
 	q.runQuery(w, r, client.QueryNodesReq{
 		Page: q.getPage(r),
 		Sort: q.getSort(r),
-	})
+	}, false)
 }
 
 func (q *query) Node(w http.ResponseWriter, r *http.Request) {
 	urlParts := strings.SplitN(r.URL.Path, "/", numURLSegmentsWithName)
 	if len(urlParts) != numURLSegmentsWithName {
-		http.Error(w, errorInvalidNodeURL.Error(), http.StatusBadRequest)
+		q.writeError(w, errorInvalidNodeURL, http.StatusBadRequest)
 		return
 	}
 	node, ok := q.getNodeKeyFromCombinedName(urlParts[numURLSegmentsWithName-1])
 	if !ok {
-		http.Error(w, errorInvalidNodeURL.Error(), http.StatusBadRequest)
+		q.writeError(w, errorInvalidNodeURL, http.StatusBadRequest)
 		return
 	}
 	q.runQuery(w, r, client.QueryNodesReq{
 		Node: node,
-	})
+	}, true)
 }
 
 func (q *query) getInt(r *http.Request, queryParm string, def int) int {
@@ -238,7 +239,7 @@ func (q *query) getPolicies(r *http.Request) ([]model.Key, error) {
 	for _, pol := range pols {
 		rpol, ok := q.getPolicyKeyFromCombinedName(pol)
 		if !ok {
-			return nil, errorInvalidEndpointName
+			return nil, errorInvalidPolicyName
 		}
 		rpols = append(rpols, rpol)
 	}
@@ -316,22 +317,31 @@ func (q *query) getNodeKeyFromCombinedName(combined string) (model.Key, bool) {
 	}, true
 }
 
-func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}) {
+func (q *query) runQuery(w http.ResponseWriter, r *http.Request, req interface{}, exact bool) {
 	resp, err := q.qi.RunQuery(context.Background(), req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if _, ok := err.(cerrors.ErrorResourceDoesNotExist); ok && exact {
+		// This is an exact get and the resource does not exist. Return a 404 not found.
+		q.writeError(w, err, http.StatusNotFound)
+		return
+	} else if err != nil {
+		// All other errors return as a 400 Bad request.
+		q.writeError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	js, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		q.writeError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 	w.Write([]byte{'\n'})
+}
+
+func (q *query) writeError(w http.ResponseWriter, err error, code int) {
+	http.Error(w, "Error: "+err.Error(), code)
 }
 
 func (q *query) getPage(r *http.Request) *client.Page {

@@ -2,7 +2,6 @@ package fv
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -77,7 +76,10 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 					}
 					bodyString := string(bodyBytes)
 					if r.StatusCode != http.StatusOK {
-						return errors.New(strings.TrimSpace(bodyString))
+						return errorResponse{
+							text: strings.TrimSpace(bodyString),
+							code: r.StatusCode,
+						}
 					}
 
 					// The response body should be json and the same type as the expected response object.
