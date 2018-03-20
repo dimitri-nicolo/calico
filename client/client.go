@@ -22,17 +22,27 @@ var (
 // LicenseClaims contains all the license control fields.
 // This includes custom JWT fields and the default ones.
 type LicenseClaims struct {
-	// CustomerID is a unique UUID assigned for each customer license.
-	CustomerID          string   `json:"customer_id"`
+	// LicenseID is a unique UUID assigned for each customer license.
+	LicenseID          string   `json:"license_id"`
 
-	// Node count is not enforced in v2.1.
+	// Node count is not enforced in v2.1. Set to -1 for unlimited nodes (site license)
 	Nodes       int      `json:"nodes" validate:"required"`
 
-	// Name is name of the customer, so we can use the same name for multiple
-	// licenses for a customer, but they'd have different CustomerID.
-	Name        string   `json:"name" validate:"required"`
+	// Customer is the name of the customer, so we can use the same name for multiple
+	// licenses for a customer, but they'd have different LicenseID.
+	Customer        string   `json:"name" validate:"required"`
+
+	// ClusterGUID is an optional field that can be filled out to limit the use of license only on
+	// a cluster with this specific ClusterGUID. This can also be used when client sends
+	// license call-home checkins. Not used for v2.1.
+	ClusterGUID string `json:"cluster_guid"`
+
+	// Version of the license claims. Could be useful in future if/when we add new fields in
+	// the license. This is different from the LicenseKey APIVersion field.
+	Version string `json:"version"`
 
 	// Features field is for future use.
+	// We will default this with `[ “cnx”, “all”]` for v2.1
 	Features    []string `json:"features"`
 
 	// GracePeriod is how many days the cluster will keep working even after
@@ -40,12 +50,14 @@ type LicenseClaims struct {
 	// Currently not enforced.
 	GracePeriod int      `json:"grace_period"`
 
-	// Offline field is not used in v2.1.
-	Offline     bool     `json:"offline"`
+	// CheckinInterval is how frequently we call home.
+	// Not used for v2.1. Defaults to once a week. Set to 0 for offline license.
+	CheckinInterval time.Duration `json:"checkin_interval"`
 
 	// Include the default JWT claims.
-	// Built-in field `NotBefore` is used to set the license expiration date.
-	// Precision is day, and expires at 23:59:59:59 (down to nanoseconds) on that date.
+	// Built-in field `Expiry` is used to set the license expiration date.
+	// Precision is day, and expires at 23:59:59:999999999 (down to nanoseconds) on that
+	// date (on customer local timezone).
 	jwt.Claims
 }
 
@@ -77,7 +89,7 @@ func DecodeAndVerify(lic api.LicenseKey) (LicenseClaims, bool) {
 	}
 
 	// Check if the license is expired.
-	expired := claims.Claims.NotBefore.Time().After(time.Now().UTC())
+	expired := claims.Claims.Expiry.Time().After(time.Now().UTC())
 
 	return claims, expired
 }

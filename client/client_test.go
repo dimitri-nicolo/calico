@@ -111,7 +111,7 @@ var claimToJWTTable = []struct {
 	{
 		description: "fully populated claim",
 		claim: client.LicenseClaims{
-			CustomerID:  uuid.NewV4().String(),
+			LicenseID:   uuid.NewV4().String(),
 			Nodes:       420,
 			Name:        "meepster-inc",
 			Features:    []string{"nice", "features", "for", "you"},
@@ -126,7 +126,7 @@ var claimToJWTTable = []struct {
 	{
 		description: "only required fields for v2.1 populated",
 		claim: client.LicenseClaims{
-			CustomerID:  uuid.NewV4().String(),
+			LicenseID:   uuid.NewV4().String(),
 			Nodes:       555,
 			Name:        "cool-cat-inc",
 			GracePeriod: 90,
@@ -139,9 +139,9 @@ var claimToJWTTable = []struct {
 	{
 		description: "partially populated claim",
 		claim: client.LicenseClaims{
-			CustomerID: uuid.NewV4().String(),
-			Nodes:      1000,
-			Name:       "lame-banana-inc",
+			LicenseID: uuid.NewV4().String(),
+			Nodes:     1000,
+			Name:      "lame-banana-inc",
 			Claims: jwt.Claims{
 				NotBefore: jwt.NewNumericDate(time.Date(2021, 3, 14, 23, 59, 59, 999999999, time.Local)),
 			},
@@ -154,7 +154,7 @@ func TestGetLicenseFromClaims(t *testing.T) {
 		t.Run(entry.description, func(t *testing.T) {
 			RegisterTestingT(t)
 
-			lic, err := client.GetLicenseFromClaims(entry.claim, absPkeyPath, absCertPath)
+			lic, err := client.GenerateLicenseFromClaims(entry.claim, absPkeyPath, absCertPath)
 
 			spew.Dump(time.Now().Local())
 
@@ -190,7 +190,7 @@ var tokenToLicense = []struct {
 		},
 
 		claim: client.LicenseClaims{
-			CustomerID:  "meow23424coldcovfefe0nmyfac3",
+			LicenseID:   "meow23424coldcovfefe0nmyfac3",
 			Nodes:       420,
 			Name:        "meepster-inc",
 			Features:    []string{"nice", "features", "for", "you"},
@@ -297,7 +297,7 @@ var tokenToLicense = []struct {
 		},
 
 		claim: client.LicenseClaims{
-			CustomerID:  "fda67a1c-1791-4157-8ddc-f11f265db0d0",
+			LicenseID:   "fda67a1c-1791-4157-8ddc-f11f265db0d0",
 			Nodes:       555,
 			Name:        "iwantcake5",
 			GracePeriod: 88,

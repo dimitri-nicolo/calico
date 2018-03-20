@@ -174,14 +174,12 @@
 [[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
-  revision = "7b2c5ac9fc04fc5efafb60700713d4fa609b777b"
-  version = "v0.0.1"
+  revision = "19e54c4a2b8a78c9d54b2bed61b1a6c5e1bfcf6f"
 
 [[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
+  revision = "4c012f6dcd9546820e378d0bdda4d8fc772cdfea"
 
 [[projects]]
   name = "github.com/stretchr/testify"
@@ -317,6 +315,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8a3a3fb4bb696a59f46ec3f2eff82ef49e6e0a2f05124413fec8cc4b6cf1cb07"
+  inputs-digest = "ee4b74faf34a6bcaa6ff674e4a2e8ffbbe24341f06f9f074173a60d269f0c81b"
   solver-name = "gps-cdcl"
   solver-version = 1

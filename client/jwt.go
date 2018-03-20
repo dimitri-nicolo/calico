@@ -11,15 +11,13 @@ import (
 )
 
 var (
-	jwtTyp = jose.ContentType("JWT")
-
-	jwtContentType = jose.ContentType("JWT")
+	jwtType = jose.ContentType("JWT")
 )
 
-// GetLicenseFromClaims generates LicenseKey resource from LicenseClaims with the
+// GenerateLicenseFromClaims generates LicenseKey resource from LicenseClaims with the
 // JWT that is encrypted and signed using the private key provided and includes the certificate
 // at the path provided to this function.
-func GetLicenseFromClaims(claims LicenseClaims, pkeyPath, certPath string) (*api.LicenseKey, error) {
+func GenerateLicenseFromClaims(claims LicenseClaims, pkeyPath, certPath string) (*api.LicenseKey, error) {
 
 	enc, err := jose.NewEncrypter(
 		jose.A128GCM,
@@ -27,7 +25,7 @@ func GetLicenseFromClaims(claims LicenseClaims, pkeyPath, certPath string) (*api
 			Algorithm: jose.A128GCMKW,
 			Key:       symKey,
 		},
-		(&jose.EncrypterOptions{}).WithType(jwtTyp).WithContentType(jwtContentType))
+		(&jose.EncrypterOptions{}).WithType(jwtType).WithContentType(jwtType))
 	if err != nil {
 		return nil, fmt.Errorf("error generating claims: %s", err)
 	}
