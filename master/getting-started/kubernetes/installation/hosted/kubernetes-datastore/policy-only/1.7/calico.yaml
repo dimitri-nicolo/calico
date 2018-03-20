@@ -1,8 +1,8 @@
 ---
 layout: null
 ---
-# Calico Version {{site.data.versions[page.version].first.title}}
-# https://docs.projectcalico.org/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
+# CNX Version {{site.data.versions[page.version].first.title}}
+# {{site.url}}/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
 # This manifest includes the following component versions:
 #   calico/node:{{site.data.versions[page.version].first.title}}
 #   calico/cni:{{site.data.versions[page.version].first.components["calico/cni"].version}}
@@ -230,7 +230,9 @@ spec:
             # Wait for the datastore.
             - name: WAIT_FOR_DATASTORE
               value: "true"
-            # The Calico IPv4 pool to use.  This should match `--cluster-cidr`
+            # The default IPv4 pool to create on startup if none exists. Pod IPs will be
+            # chosen from this range. Changing this value after installation will have
+            # no effect. This should fall within `--cluster-cidr`.
             - name: CALICO_IPV4POOL_CIDR
               value: "192.168.0.0/16"
             # Enable IPIP

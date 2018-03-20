@@ -1,8 +1,8 @@
 ---
 layout: null
 ---
-# Calico Version {{site.data.versions[page.version].first.title}}
-# https://docs.projectcalico.org/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
+# CNX Version {{site.data.versions[page.version].first.title}}
+# {{site.url}}/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
 # This manifest includes the following component versions:
 #   calico/node:{{site.data.versions[page.version].first.title}}
 #   calico/cni:{{site.data.versions[page.version].first.components["calico/cni"].version}}
@@ -155,7 +155,9 @@ spec:
             # Set Felix endpoint to host default action to ACCEPT.
             - name: FELIX_DEFAULTENDPOINTTOHOSTACTION
               value: "ACCEPT"
-            # Configure the IP Pool from which Pod IPs will be chosen.
+            # The default IPv4 pool to create on startup if none exists. Pod IPs will be
+            # chosen from this range. Changing this value after installation will have
+            # no effect. This should fall within `--cluster-cidr`.
             - name: CALICO_IPV4POOL_CIDR
               value: "192.168.0.0/16"
             - name: CALICO_IPV4POOL_IPIP
@@ -268,10 +270,12 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
-        # Mount in the etcd TLS secrets.
+        # Mount in the etcd TLS secrets with mode 400.
+        # See https://kubernetes.io/docs/concepts/configuration/secret/
         - name: etcd-certs
           secret:
             secretName: calico-etcd-secrets
+            defaultMode: 0400
 
 ---
 
@@ -344,10 +348,12 @@ spec:
             - mountPath: /calico-secrets
               name: etcd-certs
       volumes:
-        # Mount in the etcd TLS secrets.
+        # Mount in the etcd TLS secrets with mode 400.
+        # See https://kubernetes.io/docs/concepts/configuration/secret/
         - name: etcd-certs
           secret:
             secretName: calico-etcd-secrets
+            defaultMode: 0400
 
 ---
 

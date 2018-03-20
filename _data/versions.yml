@@ -782,9 +782,3 @@ master:
     calico:
       version: v3.0.2
       url: https://github.com/projectcalico/calico/releases/tag/v3.0.2
-
-# vX.Y format: update during major release process
-currentReleaseStream: v2.0
-
-# Local directories to ignore when checking external links
-htmlProoferLocalDirIgnore:

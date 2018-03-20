@@ -11,10 +11,6 @@ CALICO_DIR=$(shell git rev-parse --show-toplevel)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 
 ###############################################################################
-# HtmlProofer
-HP_IGNORE_LOCAL_DIRS?=$(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - "htmlProoferLocalDirIgnore")
-HP_VERSION=v0.2
-
 JEKYLL_VERSION=pages
 JEKYLL_UID?=`id -u`
 DEV?=false
@@ -36,11 +32,11 @@ clean:
 	@rm -f publish-cnx-docs.yaml
 
 htmlproofer: clean _site
-	docker run -e JEKYLL_UID=$(JEKYLL_UID) --rm -v $$PWD/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore "/docs.openshift.org/,#,/github.com\/projectcalico\/calico\/releases\/download/"
-	-docker run -e JEKYLL_UID=$(JEKYLL_UID) --rm -v $$PWD/_site:/_site/ quay.io/calico/htmlproofer:$(HP_VERSION) /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
-	# Rerun htmlproofer across _all_ files, but ignore failure, allowing us to notice legacy docs issues without failing CI
+	# Run htmlproofer, failing if we hit any errors. 
+	./htmlproofer.sh
 
-	docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.1.1 -c 'find /calico/_site/master -name "*.yaml" |grep -v config.yaml | xargs /kubeval'
+	# Run kubeval to check master manifests are valid Kubernetes resources.
+	docker run -v $$PWD:/calico --entrypoint /bin/sh -ti garethr/kubeval:0.1.1 -c 'find /calico/_site/master -name "*.yaml" |grep -v config.yaml | xargs /kubeval'
 
 strip_redirects:
 	find \( -name '*.md' -o -name '*.html' \) -exec sed -i'' '/redirect_from:/d' '{}' \;
