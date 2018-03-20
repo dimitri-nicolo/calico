@@ -44,7 +44,7 @@ func (key HostEndpointKey) defaultPath() (string, error) {
 		return "", errors.ErrorInsufficientIdentifiers{Name: "name"}
 	}
 	e := fmt.Sprintf("/calico/v1/host/%s/endpoint/%s",
-		key.Hostname, escapeName(key.EndpointID))
+		escapeName(key.Hostname), escapeName(key.EndpointID))
 	return e, nil
 }
 
@@ -74,7 +74,7 @@ func (options HostEndpointListOptions) defaultPathRoot() string {
 	if options.Hostname == "" {
 		return k
 	}
-	k = k + fmt.Sprintf("/%s/endpoint", options.Hostname)
+	k = k + fmt.Sprintf("/%s/endpoint", escapeName(options.Hostname))
 	if options.EndpointID == "" {
 		return k
 	}
@@ -89,7 +89,7 @@ func (options HostEndpointListOptions) KeyFromDefaultPath(path string) Key {
 		log.Debugf("Didn't match regex")
 		return nil
 	}
-	hostname := r[0][1]
+	hostname := unescapeName(r[0][1])
 	endpointID := unescapeName(r[0][2])
 	if options.Hostname != "" && hostname != options.Hostname {
 		log.Debugf("Didn't match hostname %s != %s", options.Hostname, hostname)

@@ -76,11 +76,17 @@ func New(client api.Client, callbacks api.SyncerCallbacks) api.Syncer {
 			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindHostEndpoint},
 			UpdateProcessor: updateprocessors.NewHostEndpointUpdateProcessor(),
 		},
+		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindRemoteClusterConfiguration},
+			UpdateProcessor: nil, // No need to process the updates so pass nil
+		},
 	}
 
+	// The "main" watchersyncer will spawn additional watchersyncers for any remote clusters that are found.
+	// The callbacks are wrapped to allow the messages to be intercepted so that the additional watchersyncers can be spawned.
 	return watchersyncer.New(
 		client,
 		resourceTypes,
-		callbacks,
+		NewWrappedCallbacks(callbacks),
 	)
 }
