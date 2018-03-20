@@ -47,6 +47,7 @@ import (
 	"github.com/projectcalico/typha/pkg/logutils"
 	"github.com/projectcalico/typha/pkg/snapcache"
 	"github.com/projectcalico/typha/pkg/syncserver"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 )
 
 const usage = `Typha, Calico's fan-out proxy.
@@ -393,7 +394,7 @@ type ClientV3Shim struct {
 }
 
 func (s ClientV3Shim) SyncerByIface(callbacks bapi.SyncerCallbacks) bapi.Syncer {
-	return s.Backend().Syncer(callbacks)
+	return felixsyncer.New(s.Backend(), callbacks)
 }
 
 // DatastoreClient is our interface to the datastore, used for mocking in the UTs.
