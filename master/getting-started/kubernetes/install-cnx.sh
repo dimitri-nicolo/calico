@@ -366,11 +366,50 @@ deleteCNXPolicyManifest() {
 }
 
 #
+# isCRDRunning() - return 1 exit code if the CRD is running
+#
+isCRDRunning() {
+  crd=$1
+
+  if (kubectl get crd | grep -v NAME | grep -q $1); then
+    return 0
+  else
+    return 1
+  fi
+}
+
+#
+# checkCRDs() - poll running CRDs until all
+# operator CRDs are running, or timeout and fail.
+#
+checkCRDs() {
+  alertCRD="alertmanagers.monitoring.coreos.com"
+  promCRD="prometheuses.monitoring.coreos.com"
+  svcCRD="servicemonitors.monitoring.coreos.com"
+
+  echo -n "Waiting for Custom Resource Defintions to be created: "
+
+  count=30
+  while [[ $count -ne 0 ]]; do
+    if (isCRDRunning $alertCRD) && (isCRDRunning $promCRD) && (isCRDRunning $svcCRD); then
+        echo " all CRDs running!"
+        return
+    fi
+
+    echo -n .
+    ((count = count - 1))
+    sleep 1
+  done
+
+  fatalError "Not all CRDs are running."
+}
+
+#
 # applyOperatorManifest()
 #
 applyOperatorManifest() {
   run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
-  countDownSecs 10 "Applying operator.yaml manifest"
+  checkCRDs
 }
 
 #
