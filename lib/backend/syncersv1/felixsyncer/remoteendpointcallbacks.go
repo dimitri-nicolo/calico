@@ -51,6 +51,20 @@ func (rec *remoteEndpointCallbacks) OnUpdates(updates []api.Update) {
 				updates[i].Value.(*model.ProfileRules).OutboundRules = []model.Rule{}
 				updates[i].Key = t
 			}
+		} else if update.UpdateType == api.UpdateTypeKVDeleted {
+			switch t := update.Key.(type) {
+			default:
+				log.Warnf("unexpected type %T\n", t)
+			case model.HostEndpointKey:
+				t.Hostname = rec.clusterName + "/" + t.Hostname
+				updates[i].Key = t
+			case model.WorkloadEndpointKey:
+				t.Hostname = rec.clusterName + "/" + t.Hostname
+				updates[i].Key = t
+			case model.ProfileRulesKey:
+				t.Name = rec.clusterName + "/" + t.Name
+				updates[i].Key = t
+			}
 		}
 	}
 
