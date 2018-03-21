@@ -1,5 +1,5 @@
-hash: 0ff820d693cd2cb0b91a12b8d8784f4643bc4f91abecd3234be5e3fdc7f8983d
-updated: 2018-03-09T12:27:10.111137-08:00
+hash: d764b7f4d226fed2dd1d858637d149ef1217dfb825c3670463eca26b926064a7
+updated: 2018-03-23T13:36:57.016721566-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
@@ -34,7 +34,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
-  version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
+  version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/dustin/go-humanize
   version: bb3d318650d48840a39aa21a027c6630e198e626
 - name: github.com/emicklei/go-restful
@@ -52,7 +52,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: a3092263d8b39f66ff6fe87b0109668eca1e24ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -73,11 +73,11 @@ imports:
   - ptypes/duration
   - ptypes/timestamp
 - name: github.com/google/btree
-  version: 925471ac9e2131377a91e1595defec898166fe49
+  version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/googleapis/gnostic
-  version: 68f4ded48ba9414dab2ae69b3f0d69971da73aa5
+  version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
   - OpenAPIv2
   - compiler
@@ -118,7 +118,7 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
   - pbutil
 - name: github.com/onsi/ginkgo
@@ -161,7 +161,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/calicoctl
-  version: aa8e733443635b87886b49ffb90a2432292cb159
+  version: af27f877c1b867baa58d47b9e3cfe56a048ed132
   repo: git@github.com:tigera/calicoctl-private.git
   vcs: git
   subpackages:
@@ -233,7 +233,7 @@ imports:
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
-  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -253,15 +253,15 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
+  version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: golang.org/x/crypto
-  version: 1351f936d976c60a0a48d728281922cf63eafb8d
+  version: 88942b9c40a4c9d203b82b3731787b672d6e809b
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
-  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
   - context/ctxhttp
@@ -274,6 +274,7 @@ imports:
   - internal/timeseries
   - lex/httplex
   - trace
+  - websocket
 - name: golang.org/x/oauth2
   version: a6bd8cefa1811bd24b86f8902872e4e8225f74c4
   subpackages:
@@ -282,9 +283,10 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: e48874b42435b4347fc52bdee0424a52abc974d7
+  version: 88d2dcc510266da9f7f8c7f34e1940716cab5f5c
   subpackages:
   - unix
+  - windows
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
@@ -354,7 +356,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 9b9dca205a15b6ce9ef10091f05d60a13fdcf418
+  version: 3c2a58f9923aeb5d27fa4d91249e45a1460ca3bd
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -381,7 +383,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 5134afd2c0c91158afac0d8a28bd2177185a3bcc
+  version: ab7fc865fb0881d161f37adef3e5a67b89a18d05
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
