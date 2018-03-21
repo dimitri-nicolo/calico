@@ -48,6 +48,48 @@ var (
 	resourceListType = reflect.TypeOf(model.ResourceListOptions{})
 )
 
+func init() {
+	ver := schema.GroupVersion{
+		Group:   "crd.projectcalico.org",
+		Version: "v1",
+	}
+	// Register resources once only.
+	schemeBuilder := runtime.NewSchemeBuilder(
+		func(scheme *runtime.Scheme) error {
+			scheme.AddKnownTypes(
+				ver,
+				&apiv3.FelixConfiguration{},
+				&apiv3.FelixConfigurationList{},
+				&apiv3.IPPool{},
+				&apiv3.IPPoolList{},
+				&apiv3.BGPPeer{},
+				&apiv3.BGPPeerList{},
+				&apiv3.BGPConfiguration{},
+				&apiv3.BGPConfigurationList{},
+				&apiv3.ClusterInformation{},
+				&apiv3.ClusterInformationList{},
+				&apiv3.LicenseKey{},
+				&apiv3.LicenseKeyList{},
+				&apiv3.GlobalNetworkSet{},
+				&apiv3.GlobalNetworkSetList{},
+				&apiv3.GlobalNetworkPolicy{},
+				&apiv3.GlobalNetworkPolicyList{},
+				&apiv3.NetworkPolicy{},
+				&apiv3.NetworkPolicyList{},
+				&apiv3.Tier{},
+				&apiv3.TierList{},
+				&apiv3.HostEndpoint{},
+				&apiv3.HostEndpointList{},
+				&apiv3.RemoteClusterConfiguration{},
+				&apiv3.RemoteClusterConfigurationList{},
+			)
+			metav1.AddToGroupVersion(scheme, ver)
+			return nil
+		})
+
+	schemeBuilder.AddToScheme(scheme.Scheme)
+}
+
 type KubeClient struct {
 	// Main Kubernetes clients.
 	ClientSet *kubernetes.Clientset
@@ -344,42 +386,6 @@ func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// We also need to register resources.
-	schemeBuilder := runtime.NewSchemeBuilder(
-		func(scheme *runtime.Scheme) error {
-			scheme.AddKnownTypes(
-				*cfg.GroupVersion,
-				&apiv3.FelixConfiguration{},
-				&apiv3.FelixConfigurationList{},
-				&apiv3.IPPool{},
-				&apiv3.IPPoolList{},
-				&apiv3.BGPPeer{},
-				&apiv3.BGPPeerList{},
-				&apiv3.BGPConfiguration{},
-				&apiv3.BGPConfigurationList{},
-				&apiv3.ClusterInformation{},
-				&apiv3.ClusterInformationList{},
-				&apiv3.LicenseKey{},
-				&apiv3.LicenseKeyList{},
-				&apiv3.GlobalNetworkSet{},
-				&apiv3.GlobalNetworkSetList{},
-				&apiv3.GlobalNetworkPolicy{},
-				&apiv3.GlobalNetworkPolicyList{},
-				&apiv3.NetworkPolicy{},
-				&apiv3.NetworkPolicyList{},
-				&apiv3.Tier{},
-				&apiv3.TierList{},
-				&apiv3.HostEndpoint{},
-				&apiv3.HostEndpointList{},
-				&apiv3.RemoteClusterConfiguration{},
-				&apiv3.RemoteClusterConfigurationList{},
-			)
-			metav1.AddToGroupVersion(scheme, *cfg.GroupVersion)
-			return nil
-		})
-
-	schemeBuilder.AddToScheme(scheme.Scheme)
 
 	return cli, nil
 }
