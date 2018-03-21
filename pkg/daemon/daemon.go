@@ -35,6 +35,7 @@ import (
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator"
@@ -47,7 +48,6 @@ import (
 	"github.com/projectcalico/typha/pkg/logutils"
 	"github.com/projectcalico/typha/pkg/snapcache"
 	"github.com/projectcalico/typha/pkg/syncserver"
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 )
 
 const usage = `Typha, Calico's fan-out proxy.

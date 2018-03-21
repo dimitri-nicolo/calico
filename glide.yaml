@@ -32,6 +32,7 @@ import:
   subpackages:
   - lib
 - package: github.com/sirupsen/logrus
+  # v1.0.5 causes test breakages.
   version: v1.0.4
 - package: github.com/kardianos/osext
 - package: github.com/mipearson/rfw
