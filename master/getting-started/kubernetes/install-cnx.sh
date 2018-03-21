@@ -29,7 +29,7 @@ CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 # cleanup CNX installation
 CLEANUP=0
 
-# Convenience variables to cut down on tiresome typing 
+# Convenience variables to cut down on tiresome typing
 CNX_PULL_SECRET_FILENAME=${CNX_PULL_SECRET_FILENAME:="cnx-pull-secret.yml"}
 
 #
@@ -40,7 +40,7 @@ checkSettings() {
   echo '  CREDENTIALS_FILE='${CREDENTIALS_FILE}
   echo '  DOCS_LOCATION='${DOCS_LOCATION}
   echo '  DOCS_VERSION='${DOCS_VERSION}
-  
+
   echo
   echo -n About to "$1" CNX.
   read -n 1 -p " Proceed? (y/n): " answer
@@ -286,7 +286,7 @@ EOF
 
   # Restart kubelet in order to make basic_auth settings take effect
   runAsRoot systemctl restart kubelet
-  countDownSecs 20 "Restarting kubelet"
+  countDownSecs 20 "Setting up basic authentication in the kubernetes cluster"
 
   # Give user Jane cluster admin permissions
   runAsRoot kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --user=jane
@@ -350,10 +350,59 @@ deleteCNXManifest() {
 }
 
 #
+# applyCNXPolicyManifest()
+#
+applyCNXPolicyManifest() {
+  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+  countDownSecs 10 "Applying cnx-policy.yaml manifest"
+}
+
+#
+# deleteCNXPolicyManifest()
+#
+deleteCNXPolicyManifest() {
+  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+  countDownSecs 5 "Deleting cnx-policy.yaml manifest"
+}
+
+#
+# applyOperatorManifest()
+#
+applyOperatorManifest() {
+  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
+  countDownSecs 10 "Applying operator.yaml manifest"
+}
+
+#
+# deleteOperatorManifest()
+#
+deleteOperatorManifest() {
+  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
+  countDownSecs 5 "Deleting operator.yaml manifest"
+}
+
+#
+# applyMonitorCalicoManifest()
+#
+applyMonitorCalicoManifest() {
+  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+  countDownSecs 10 "Applying monitor-calico.yaml manifest"
+}
+
+#
+# deleteMonitorCalicoManifest()
+#
+deleteMonitorCalicoManifest() {
+  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+  countDownSecs 5 "Deleting monitor-calico.yaml manifest"
+}
+
+#
 # createCNXManagerSecret()
 #
 createCNXManagerSecret() {
   runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
+  countDownSecs 1 "Creating cnx-manager-tls secret"
 }
 
 #
@@ -378,6 +427,9 @@ installCNX() {
   removeMasterTaints            # Remove master taints
   createCNXManagerSecret        # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest              # Apply cnx-etcd.yaml
+  applyCNXPolicyManifest        # Apply cnx-policy.yaml
+  applyOperatorManifest         # Apply operator.yaml
+  applyMonitorCalicoManifest    # Apply monitor-calico.yaml
 
   echo CNX installation complete. Point your browser to https://127.0.0.1:30003, username=jane, password=welc0me
 }
@@ -388,11 +440,16 @@ installCNX() {
 #
 cleanup() {
   checkSettings uninstall       # Verify settings are correct with user
-  deleteCNXManifest
-  deleteCalicoManifest
-  deleteCNXManagerSecret
-  deleteImagePullSecret
-  deleteBasicAuth
+
+  deleteMonitorCalicoManifest   # Delete monitor-calico.yaml
+  deleteOperatorManifest        # Delete operator.yaml
+  deleteCNXPolicyManifest       # Delete cnx-policy.yaml
+  deleteCNXManifest             # Delete cnx-etcd.yaml
+  deleteCalicoManifest          # Delete calico.yaml
+  deleteCNXManagerSecret        # Delete TLS secret
+  deleteImagePullSecret         # Delete pull secret
+  deleteBasicAuth               # Remove basic auth updates, restart kubelet
+
   run rm -f ${CNX_PULL_SECRET_FILENAME}
 }
 

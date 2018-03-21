@@ -31,8 +31,8 @@ spec:
       # only certain subnets should be allowed.
       nets: ["0.0.0.0/0"]
     destination:
-      # By default, CNX Manager is accessed over https.  Update this if needed.
-      ports: [443]
+      # By default, CNX Manager is accessed over https. Update this if needed.
+      ports: [9443]
 
 ---
 
