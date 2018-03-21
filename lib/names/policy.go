@@ -11,6 +11,7 @@ import (
 const (
 	DefaultTierName            = "default"
 	K8sNetworkPolicyNamePrefix = "knp.default"
+	OssNetworkPolicyNamePrefix = "ossg."
 )
 
 // TierFromPolicyName extracts the tier from a tiered policy name.
@@ -51,7 +52,7 @@ func validateBackendTieredPolicyName(policy, tier string) error {
 	}
 	// If it is a K8s network policy, then simply return the policy name as is.
 	// We expect K8s network policies to be formatted properly in the first place.
-	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) {
+	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) || strings.HasPrefix(policy, OssNetworkPolicyNamePrefix) {
 		return nil
 	}
 
@@ -67,8 +68,8 @@ func TieredPolicyName(policy string) string {
 	if policy == "" {
 		return ""
 	}
-	// If it is a K8s network policy, then simply return the policy name as is.
-	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) {
+	// If it is a K8s network policy or OSSG, then simply return the policy name as is.
+	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) || strings.HasPrefix(policy, OssNetworkPolicyNamePrefix) {
 		return policy
 	}
 
@@ -90,8 +91,8 @@ func ClientTieredPolicyName(policy string) (string, error) {
 	if policy == "" {
 		return "", errors.New("Policy name is empty")
 	}
-	// If it is a K8s network policy, then simply return the policy name as is.
-	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) {
+	// If it is a K8s network policy or OSSG, then simply return the policy name as is.
+	if strings.HasPrefix(policy, K8sNetworkPolicyNamePrefix) || strings.HasPrefix(policy, OssNetworkPolicyNamePrefix) {
 		return policy, nil
 	}
 	parts := strings.SplitN(policy, ".", 2)

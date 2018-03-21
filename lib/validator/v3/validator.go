@@ -61,8 +61,8 @@ var (
 
 	// NetworkPolicy names must either be a simple DNS1123 label format (nameLabelFmt), or
 	// nameLabelFmt.nameLabelFmt (with a single dot), or
-	// must be the standard name format (nameRegex) prefixed with "knp.default".
-	networkPolicyNameRegex = regexp.MustCompile("^((" + nameLabelFmt + ")(\\." + nameLabelFmt + ")?|(knp\\.default\\.(" + nameSubdomainFmt + ")))$")
+	// must be the standard name format (nameRegex) prefixed with "knp.default" or "ossg.default".
+	networkPolicyNameRegex = regexp.MustCompile("^((" + nameLabelFmt + ")(\\." + nameLabelFmt + ")?|((?:knp|ossg)\\.default\\.(" + nameSubdomainFmt + ")))$")
 
 	// GlobalNetworkPolicy names must be a simple DNS1123 label format (nameLabelFmt) or
 	// have a single dot.
