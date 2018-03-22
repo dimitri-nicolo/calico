@@ -27,7 +27,7 @@ handlers:
 #
 - url: /(.*\.(yaml|yml))$
   static_files: _site/\1
-  mime_type: text/yaml
+  mime_type: text/x-yaml
   upload: _site/(.*\.(yaml|yml))$
 
 # Specify mime-type for sh files since GAE doesn't handle this correctly.
