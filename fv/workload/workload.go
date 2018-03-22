@@ -32,6 +32,8 @@ import (
 	"github.com/onsi/gomega/types"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/libcalico-go/lib/options"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"github.com/projectcalico/felix/fv/containers"
@@ -178,6 +180,11 @@ func (w *Workload) Configure(client client.Interface) {
 	wep.Namespace = "fv"
 	var err error
 	w.WorkloadEndpoint, err = client.WorkloadEndpoints().Create(utils.Ctx, w.WorkloadEndpoint, utils.NoOptions)
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func (w *Workload) RemoveFromDatastore(client client.Interface) {
+	_, err := client.WorkloadEndpoints().Delete(utils.Ctx, "fv", w.WorkloadEndpoint.Name, options.DeleteOptions{})
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -458,11 +465,19 @@ func (c *ConnectivityChecker) ExpectedConnectivity() []string {
 	return result
 }
 
+func (c *ConnectivityChecker) CheckConnectivityOffset(offset int, optionalDescription ...interface{}) {
+	c.CheckConnectivityWithTimeoutOffset(offset+2, 10*time.Second, optionalDescription...)
+}
+
 func (c *ConnectivityChecker) CheckConnectivity(optionalDescription ...interface{}) {
-	c.CheckConnectivityWithTimeout(10*time.Second, optionalDescription...)
+	c.CheckConnectivityWithTimeoutOffset(2, 10*time.Second, optionalDescription...)
 }
 
 func (c *ConnectivityChecker) CheckConnectivityWithTimeout(timeout time.Duration, optionalDescription ...interface{}) {
+	c.CheckConnectivityWithTimeoutOffset(2, timeout, optionalDescription...)
+}
+
+func (c *ConnectivityChecker) CheckConnectivityWithTimeoutOffset(callerSkip int, timeout time.Duration, optionalDescription ...interface{}) {
 	expConnectivity := c.ExpectedConnectivity()
 	start := time.Now()
 
@@ -492,5 +507,5 @@ func (c *ConnectivityChecker) CheckConnectivityWithTimeout(timeout time.Duration
 		strings.Join(actualConn, "\n    "),
 		strings.Join(expConnectivity, "\n    "),
 	)
-	Fail(message, 1)
+	Fail(message, callerSkip)
 }
