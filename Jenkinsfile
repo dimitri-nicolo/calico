@@ -12,6 +12,7 @@ pipeline{
 
         SANE_JOB_NAME = "${env.JOB_BASE_NAME}".replace('.', '-')
         BUILD_INSTANCE_NAME = "wt-${SANE_JOB_NAME}-${env.BUILD_NUMBER}".toLowerCase()
+        CHECKOUT_BRANCH = "${env.GIT_BRANCH}"
     }
     stages {
         stage('Checkout') {
@@ -23,6 +24,11 @@ pipeline{
                     JOB_NAME=${env.JOB_NAME}
                     NODE_IMAGE_NAME=${env.NODE_IMAGE_NAME}:${env.BRANCH_NAME}
                     BUILD_INFO=${env.RUN_DISPLAY_URL}""".stripIndent()
+                }
+		script {
+		    if(CHECKOUT_BRANCH != "master"){
+                        CHECKOUT_BRANCH = env.CHANGE_BRANCH
+                    }
                 }
             }
         }
@@ -82,10 +88,8 @@ pipeline{
             steps {
                 sh """
                     gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'eval `ssh-agent -s`; ssh-add .ssh/id_rsa && \
-                    git clone git@github.com:tigera/calico-private.git && \
+                    git clone -b $CHECKOUT_BRANCH git@github.com:tigera/calico-private.git && \
                     cd calico-private/calico_node && \
-                    git fetch origin pull/${env.CHANGE_ID}/head:${env.BRANCH_NAME} && \
-                    git checkout ${env.BRANCH_NAME} && \
                     FELIX_VER=master make tigera/cnx-node && \
                     docker run --rm tigera/cnx-node:latest versions'
                 """
