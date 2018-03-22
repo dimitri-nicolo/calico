@@ -84,7 +84,8 @@ pipeline{
                     gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'eval `ssh-agent -s`; ssh-add .ssh/id_rsa && \
                     git clone git@github.com:tigera/calico-private.git && \
                     cd calico-private/calico_node && \
-                    git checkout ${env.GIT_COMMIT} && \
+                    git fetch origin pull/${env.CHANGE_ID}/head:${env.BRANCH_NAME} && \
+                    git checkout ${env.BRANCH_NAME} && \
                     FELIX_VER=master make tigera/cnx-node && \
                     docker run --rm tigera/cnx-node:latest versions'
                 """
