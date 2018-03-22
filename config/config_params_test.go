@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,6 +50,9 @@ var _ = Describe("FelixConfig vs ConfigParams parity", func() {
 		"IpInIpTunnelAddr",
 
 		"EnableNflogSize",
+
+		// FIXME Remove this once libcalico-go supports policy-sync API!
+		"PolicySyncPathPrefix",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",
@@ -323,10 +326,6 @@ var _ = DescribeTable("Config parsing",
 			{Protocol: "tcp", Port: 6667},
 		},
 	),
-	Entry("KubeIPVSSupportEnabled empty", "KubeIPVSSupportEnabled", "", false),
-	Entry("KubeIPVSSupportEnabled true", "KubeIPVSSupportEnabled", "true", true),
-	Entry("KubeIPVSSupportEnabled false", "KubeIPVSSupportEnabled", "false", false),
-
 	Entry("KubeNodePortRanges empty", "KubeNodePortRanges", "",
 		[]numorstring.Port{
 			{30000, 32767, ""},

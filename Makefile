@@ -60,17 +60,30 @@ ifeq ($(ARCH),ppc64le)
 	FV_TYPHAIMAGE?=calico/typha-ppc64le:latest
 endif
 
+ifeq ($(ARCH),s390x)
+	ARCHTAG:=-s390x
+	GO_BUILD_VER?=latest
+	FV_TYPHAIMAGE?=calico/typha-s390x:latest
+endif
+
 GO_BUILD_CONTAINER?=calico/go-build$(ARCHTAG):$(GO_BUILD_VER)
 PROTOC_CONTAINER?=calico/protoc$(ARCHTAG):$(PROTOC_VER)
 
 # Name used to tag the Felix container image when building.
-FELIX_IMAGE_NAME?=calico/felix$(ARCHTAG):latest
+FELIX_IMAGE_NAME?=tigera/felix$(ARCHTAG):latest
 
 # Name of the images to run FV tests against.
 FV_FELIXIMAGE?=$(FELIX_IMAGE_NAME)
 FV_ETCDIMAGE?=quay.io/coreos/etcd:v3.2.5$(ARCHTAG)
 FV_K8SIMAGE?=gcr.io/google_containers/hyperkube$(ARCHTAG):v1.7.5
-FV_GINKGO_NODES?=4
+
+# Total number of ginkgo batches to run.  The CI system sets this according to the number
+# of jobs that it divides the FVs into.
+FV_NUM_BATCHES?=3
+# Space-delimited list of FV batches to run in parallel.  Defaults to running all batches
+# in parallel on this host.  The CI system runs a subset of batches in each parallel job.
+FV_BATCHES_TO_RUN?=$(shell seq $(FV_NUM_BATCHES))
+FV_SLOW_SPEC_THRESH=90
 
 help:
 	@echo "Felix Makefile"
@@ -297,7 +310,7 @@ protobuf: proto/felixbackend.pb.go
 proto/felixbackend.pb.go: proto/felixbackend.proto
 	$(DOCKER_RUN_RM) -v $${PWD}/proto:/src:rw \
 	              $(PROTOC_CONTAINER) \
-	              --gogofaster_out=. \
+	              --gogofaster_out=plugins=grpc:. \
 	              felixbackend.proto
 
 # Update the vendored dependencies with the latest upstream versions matching
@@ -403,38 +416,30 @@ check-licenses/dependency-licenses.txt: vendor/.up-to-date
 .PHONY: ut
 ut combined.coverprofile: vendor/.up-to-date $(FELIX_GO_FILES)
 	@echo Running Go UTs.
-	$(DOCKER_GO_BUILD) ./utils/run-coverage
+	$(DOCKER_GO_BUILD) ./utils/run-coverage $(GINKGO_ARGS)
 
-FV_TESTS=$(subst _suite_test.go,.test,$(shell find fv -name "*_suite_test.go"))
-
-$(FV_TESTS): vendor/.up-to-date $(FELIX_GO_FILES)
+fv/fv.test: vendor/.up-to-date $(FELIX_GO_FILES)
 	# We pre-build the FV test binaries so that we can run them
 	# outside a container and allow them to interact with docker.
 	$(DOCKER_GO_BUILD) go test ./$(shell dirname $@) -c --tags fvtests -o $@
 
 .PHONY: fv
-fv fv/latency.log: tigera/felix bin/iptables-locker bin/test-workload bin/test-connection $(FV_TESTS)
-	# Copy the ginkgo binary out of the container since we need to run the fv tests directly
-	# on the host (because they need to be able to manipulate docker).  It'd be even nicer
-	# if we could give the build container access to the docker API but we've so-far struggled
-	# to get that working.
-	@echo Running Go FVs.
-	$(DOCKER_GO_BUILD) cp /go/bin/ginkgo bin/ginkgo
-	# fv.test is not expecting a container name with an ARCHTAG.
-	-docker tag tigera/felix$(ARCHTAG) tigera/felix
-	rm -rf fv/latency.log
-	for t in $(FV_TESTS); do \
-	    cd $(TOPDIR)/`dirname $$t` && \
-	    FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
-	    FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
-	    FV_TYPHAIMAGE=$(FV_TYPHAIMAGE) \
-	    FV_K8SIMAGE=$(FV_K8SIMAGE) \
-	    $(TOPDIR)/bin/ginkgo $(GINKGO_ARGS) -slowSpecThreshold 80 -nodes $(FV_GINKGO_NODES) ./`basename $$t` || exit; \
-	done
-	@echo
-	@echo "Latency results:"
-	@echo
-	-@cat fv/latency.log
+fv fv/latency.log: tigera/felix bin/iptables-locker bin/test-workload bin/test-connection fv/fv.test
+	cd fv && \
+	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
+	  FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
+	  FV_TYPHAIMAGE=$(FV_TYPHAIMAGE) \
+	  FV_K8SIMAGE=$(FV_K8SIMAGE) \
+	  FV_NUM_BATCHES=$(FV_NUM_BATCHES) \
+	  FV_BATCHES_TO_RUN="$(FV_BATCHES_TO_RUN)" \
+	  GINKGO_ARGS='$(GINKGO_ARGS)' \
+	  ./run-batches
+	@if [ -e fv/latency.log ]; then \
+	   echo; \
+	   echo "Latency results:"; \
+	   echo; \
+	   cat fv/latency.log; \
+	fi
 
 bin/check-licenses: $(FELIX_GO_FILES)
 	$(DOCKER_GO_BUILD) go build -v -i -o $@ "github.com/projectcalico/felix/check-licenses"
@@ -476,12 +481,12 @@ static-checks:
 .PHONY: ut-no-cover
 ut-no-cover: vendor/.up-to-date $(FELIX_GO_FILES)
 	@echo Running Go UTs without coverage.
-	$(DOCKER_GO_BUILD) ginkgo -r -skipPackage fv,k8sfv,windows $(GINKGO_OPTIONS)
+	$(DOCKER_GO_BUILD) ginkgo -r -skipPackage fv,k8sfv,windows $(GINKGO_ARGS)
 
 .PHONY: ut-watch
 ut-watch: vendor/.up-to-date $(FELIX_GO_FILES)
 	@echo Watching go UTs for changes...
-	$(DOCKER_GO_BUILD) ginkgo watch -r -skipPackage fv,k8sfv,windows $(GINKGO_OPTIONS)
+	$(DOCKER_GO_BUILD) ginkgo watch -r -skipPackage fv,k8sfv,windows $(GINKGO_ARGS)
 
 # Launch a browser with Go coverage stats for the whole project.
 .PHONY: cover-browser

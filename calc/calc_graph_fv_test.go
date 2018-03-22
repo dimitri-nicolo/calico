@@ -318,7 +318,7 @@ func describeAsyncTests(baseTests []StateList) {
 					conf := config.New()
 					conf.FelixHostname = localHostname
 					outputChan := make(chan interface{})
-					asyncGraph := NewAsyncCalcGraph(conf, outputChan, nil)
+					asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, nil)
 					// And a validation filter, with a channel between it
 					// and the async graph.
 					validator := NewValidationFilter(asyncGraph)
@@ -517,7 +517,7 @@ var _ = Describe("calc graph with health state", func() {
 		conf.FelixHostname = localHostname
 		outputChan := make(chan interface{})
 		healthAggregator := health.NewHealthAggregator()
-		asyncGraph := NewAsyncCalcGraph(conf, outputChan, healthAggregator)
+		asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, healthAggregator)
 		Expect(asyncGraph).NotTo(BeNil())
 	})
 })

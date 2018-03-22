@@ -1,5 +1,5 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
-//
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -121,6 +121,8 @@ type Config struct {
 	IpsetsRefreshInterval              time.Duration `config:"seconds;10"`
 	MaxIpsetSize                       int           `config:"int;1048576;non-zero"`
 
+	PolicySyncPathPrefix string `config:"file;;"`
+
 	NetlinkTimeoutSecs time.Duration `config:"seconds;10"`
 
 	MetadataAddr string `config:"hostname;127.0.0.1;die-on-fail"`
@@ -181,8 +183,7 @@ type Config struct {
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
-	KubeNodePortRanges     []numorstring.Port `config:"portrange-list;30000:32767"`
-	KubeIPVSSupportEnabled bool               `config:"bool;false"`
+	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 
 	UsageReportingEnabled          bool          `config:"bool;true"`
 	UsageReportingInitialDelaySecs time.Duration `config:"seconds;300"`
