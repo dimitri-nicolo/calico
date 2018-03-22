@@ -1,5 +1,5 @@
 hash: 5ef14fdecd4b36a86b4668edc52d713be8a7c81f346ae9492be64c4a96b34706
-updated: 2018-03-20T13:57:04.46581932-07:00
+updated: 2018-03-21T17:27:08.606398479-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -16,7 +16,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
@@ -108,7 +108,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hashicorp/hcl
-  version: b1738d9053e05547fce5e3111b7ed28582f70692
+  version: f40e974e75af4e271d97ce0fc917af5898ae7bda
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -124,7 +124,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/influxdata/influxdb
-  version: 49ed5f3f5ba91b77feb8ea7888c2d75186da09b2
+  version: aa61359cc74f220f4e5680de3a6d699691c0b793
   subpackages:
   - client/v2
   - models
@@ -146,7 +146,7 @@ imports:
 - name: github.com/mattn/go-runewidth
   version: a9d6d1e4dc51df2130326793d49971f238839169
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/mcuadros/go-version
@@ -179,7 +179,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: c893efa28eb45626cdaa76c9f653b62488858837
+  version: 003f63b7f4cff3fc95357005358af2de0f5fe152
   subpackages:
   - format
   - internal/assertion
@@ -220,7 +220,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: c5aadfb4b9bbee55610c917139939141d64a8c47
+  version: e93f907cde6e7c897354f32ee4a10637bee5890f
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -263,7 +263,7 @@ imports:
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -299,7 +299,7 @@ imports:
 - name: github.com/termie/go-shutil
   version: bcacb06fecaeec8dc42af03c87c6949f4a05c74c
 - name: github.com/vishvananda/netlink
-  version: 41009d533ba0788a139b0b6ef38923a23b3766d3
+  version: 5f5d5cddcf414bb44941b9c6c0d2df31253ec40e
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -404,7 +404,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 389dfa299845bcf399c16af89987e8775718ea48
+  version: 3c2a58f9923aeb5d27fa4d91249e45a1460ca3bd
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -431,7 +431,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: bc110fd540ab678abbf2bc71d9ce908eb9325ef6
+  version: ab7fc865fb0881d161f37adef3e5a67b89a18d05
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
