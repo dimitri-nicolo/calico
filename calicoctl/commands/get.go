@@ -78,8 +78,8 @@ Description:
     * node
     * profile
     * workloadEndpoint
-	* remoteClusterConfiguration
-	* licenseKey
+    * remoteClusterConfiguration
+    * licenseKey
 
   The resource type is case insensitive and may be pluralized.
 
