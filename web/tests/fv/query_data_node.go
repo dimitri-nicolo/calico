@@ -1,12 +1,30 @@
 package fv
 
 import (
+	"net/http"
+
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/tigera/calicoq/web/pkg/querycache/client"
 )
 
 func nodeTestQueryData() []testQueryData {
 	return []testQueryData{
+		{
+			"query exact node - does not exist",
+			[]resourcemgr.ResourceObject{node1, node2, node3, node4},
+			client.QueryNodesReq{
+				Node: model.ResourceKey{
+					Kind: v3.KindNode,
+					Name: "foobarbaz",
+				},
+			},
+			errorResponse{
+				text: "Error: resource does not exist: Node(foobarbaz)",
+				code: http.StatusNotFound,
+			},
+		},
 		{
 			"single node",
 			[]resourcemgr.ResourceObject{node1},

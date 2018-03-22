@@ -10,3 +10,8 @@ type testQueryData struct {
 	query       interface{}
 	response    interface{}
 }
+
+type errorResponse struct {
+	text string
+	code int
+}
