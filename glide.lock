@@ -1,5 +1,5 @@
-hash: b7f0552d670e189305c3b1c0dbc5b4adfd5bb100a2f9b724260e5a11066f77f9
-updated: 2018-03-09T11:58:25.539200883-08:00
+hash: 43cd7d86d8a8d87f2d516917f5b77a2bbeb34b22ee159e2e99583393e93637e9
+updated: 2018-03-22T13:49:37.47913614-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
@@ -122,9 +122,10 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/onsi/ginkgo
-  version: f40a49d81e5c12e90400620b6242fb29a8e7c9d9
+  version: 9eda700730cba42af70d53180f9dcce9266bc2bc
   subpackages:
   - config
+  - extensions/table
   - internal/codelocation
   - internal/containernode
   - internal/failer
@@ -155,10 +156,18 @@ imports:
   - matchers/support/goraph/node
   - matchers/support/goraph/util
   - types
+- name: github.com/pborman/uuid
+  version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/projectcalico/calicoctl
+  version: b6c904aa23774e4b10c62a4f9c6dd764663161db
+  subpackages:
+  - calicoctl/commands/argutils
+  - calicoctl/resourcemgr
+  - calicoctl/util/yaml
 - name: github.com/projectcalico/felix
-  version: 9d1cb1d513ea244bd133b3a0bd84462fb49914f4
+  version: 430ce63155e03b99fb4a78e0b98f92a02ae99e71
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -178,7 +187,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 4ffad06ba7e80533e257557b1db03b46b418d4ad
+  version: e93f907cde6e7c897354f32ee4a10637bee5890f
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -196,20 +205,27 @@ imports:
   - lib/backend/syncersv1/felixsyncer
   - lib/backend/syncersv1/updateprocessors
   - lib/backend/watchersyncer
+  - lib/clientv3
   - lib/errors
   - lib/hash
   - lib/health
+  - lib/ipam
   - lib/ipip
+  - lib/logutils
   - lib/names
   - lib/namespace
   - lib/net
   - lib/numorstring
+  - lib/options
   - lib/scope
   - lib/selector
   - lib/selector/parser
   - lib/selector/tokenizer
   - lib/set
+  - lib/testutils
   - lib/validator/v1
+  - lib/validator/v3
+  - lib/watch
 - name: github.com/prometheus/client_golang
   version: 967789050ba94deca04a5e84cce8ad472ce313c1
   subpackages:
@@ -219,7 +235,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 6fb6fce6f8b75884b92e1889c150403fc0872c5e
+  version: e4aa40a9169a88835b849a6efb71e05dc04b88f0
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -232,12 +248,14 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/satori/go.uuid
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: f4ee69125072b22721efbe639bd0da9c9d19b8cc
+  version: 90150a8ed11b6ce285e77e8af2b0109559ce4777
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: golang.org/x/crypto
-  version: c7dcf104e3a7a1417abc0230cb0d5240d764159d
+  version: 88942b9c40a4c9d203b82b3731787b672d6e809b
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -316,7 +334,6 @@ imports:
   - credentials
   - grpclb/grpc_lb_v1/messages
   - grpclog
-  - health
   - health/grpc_health_v1
   - internal
   - keepalive
@@ -335,7 +352,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 389dfa299845bcf399c16af89987e8775718ea48
+  version: 3c2a58f9923aeb5d27fa4d91249e45a1460ca3bd
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -362,7 +379,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 4972c8e335e32ab65ba45bde0a99c6544c8a8e4c
+  version: ab7fc865fb0881d161f37adef3e5a67b89a18d05
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
@@ -397,6 +414,7 @@ imports:
   - pkg/util/net
   - pkg/util/runtime
   - pkg/util/sets
+  - pkg/util/uuid
   - pkg/util/validation
   - pkg/util/validation/field
   - pkg/util/wait
