@@ -15,8 +15,9 @@ import (
 	"github.com/tigera/calicoq/web/pkg/querycache/labelhandler"
 )
 
-type PolicyCache interface {
+type PoliciesCache interface {
 	TotalPolicies() api.PolicyCounts
+	UnmatchedPolicies() api.PolicyCounts
 	GetPolicy(model.Key) api.Policy
 	GetTier(model.Key) api.Tier
 	GetOrderedPolicies(set.Set) []api.Tier
@@ -24,43 +25,62 @@ type PolicyCache interface {
 	RegisterWithLabelHandler(handler labelhandler.Interface)
 }
 
-func NewPolicyCache() PolicyCache {
-	return &policyCache{
-		globalNetworkPolicies: make(map[model.Key]*policyData, 0),
-		networkPolicies:       make(map[model.Key]*policyData, 0),
+func NewPoliciesCache() PoliciesCache {
+	return &policiesCache{
+		globalNetworkPolicies: newPolicyCache(),
+		networkPolicies:       newPolicyCache(),
 		tiers:                 make(map[string]*tierData, 0),
 		policySorter:          calc.NewPolicySorter(),
 	}
 }
 
-type policyCache struct {
-	globalNetworkPolicies map[model.Key]*policyData
-	networkPolicies       map[model.Key]*policyData
+type policiesCache struct {
+	globalNetworkPolicies *policyCache
+	networkPolicies       *policyCache
 	tiers                 map[string]*tierData
 	policySorter          *calc.PolicySorter
 	orderedTiers          []api.Tier
 }
 
-func (c *policyCache) TotalPolicies() api.PolicyCounts {
-	return api.PolicyCounts{
-		NumGlobalNetworkPolicies: len(c.globalNetworkPolicies),
-		NumNetworkPolicies:       len(c.networkPolicies),
+type policyCache struct {
+	policies          map[model.Key]*policyData
+	unmatchedPolicies set.Set
+}
+
+func newPolicyCache() *policyCache {
+	return &policyCache{
+		policies: make(map[model.Key]*policyData, 0),
+		unmatchedPolicies: set.New(),
 	}
 }
 
-func (c *policyCache) GetPolicy(key model.Key) api.Policy {
+func (c *policiesCache) TotalPolicies() api.PolicyCounts {
+	return api.PolicyCounts{
+		NumGlobalNetworkPolicies: len(c.globalNetworkPolicies.policies),
+		NumNetworkPolicies:       len(c.networkPolicies.policies),
+	}
+}
+
+func (c *policiesCache) UnmatchedPolicies() api.PolicyCounts {
+	return api.PolicyCounts{
+		NumGlobalNetworkPolicies: c.globalNetworkPolicies.unmatchedPolicies.Len(),
+		NumNetworkPolicies:       c.networkPolicies.unmatchedPolicies.Len(),
+	}
+}
+
+func (c *policiesCache) GetPolicy(key model.Key) api.Policy {
 	if policy := c.getPolicy(key); policy != nil {
 		return policy
 	}
 	return nil
 }
 
-func (c *policyCache) GetTier(key model.Key) api.Tier {
+func (c *policiesCache) GetTier(key model.Key) api.Tier {
 	c.orderPolicies()
 	return c.tiers[key.(model.ResourceKey).Name]
 }
 
-func (c *policyCache) GetOrderedPolicies(keys set.Set) []api.Tier {
+func (c *policiesCache) GetOrderedPolicies(keys set.Set) []api.Tier {
 	c.orderPolicies()
 	if keys == nil {
 		return c.orderedTiers
@@ -85,19 +105,20 @@ func (c *policyCache) GetOrderedPolicies(keys set.Set) []api.Tier {
 	return tiers
 }
 
-func (c *policyCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
+func (c *policiesCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
 	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindTier, c.onUpdate)
 }
 
-func (c *policyCache) RegisterWithLabelHandler(handler labelhandler.Interface) {
+func (c *policiesCache) RegisterWithLabelHandler(handler labelhandler.Interface) {
 	handler.RegisterHandler(c.policyEndpointMatch)
 }
 
-func (c *policyCache) policyEndpointMatch(matchType labelhandler.MatchType, selector labelhandler.SelectorID, epKey model.Key) {
+func (c *policiesCache) policyEndpointMatch(matchType labelhandler.MatchType, selector labelhandler.SelectorID, epKey model.Key) {
 	erk := epKey.(model.ResourceKey)
-	pd := c.getPolicy(selector.Policy())
+	pc := c.getPolicyCache(selector.Policy())
+	pd := pc.policies[selector.Policy()]
 	if pd == nil {
 		// The policy has been deleted. Since the policy cache is updated before the index handler is updated this is
 		// a valid scenario, and should be treated as a no-op.
@@ -140,9 +161,15 @@ func (c *policyCache) policyEndpointMatch(matchType labelhandler.MatchType, sele
 	default:
 		log.WithField("key", selector.Policy()).Error("Unexpected resource in event type, expecting a v3 policy type")
 	}
+
+	if pd.IsUnmatched() {
+		pc.unmatchedPolicies.Add(selector.Policy())
+	} else {
+		pc.unmatchedPolicies.Discard(selector.Policy())
+	}
 }
 
-func (c *policyCache) onUpdate(update dispatcherv1v3.Update) {
+func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 	uv1 := update.UpdateV1
 	uv3 := update.UpdateV3
 
@@ -162,8 +189,8 @@ func (c *policyCache) onUpdate(update dispatcherv1v3.Update) {
 			delete(c.tiers, name)
 		}
 	case model.PolicyKey:
-		m := c.getPolicyCache(uv3.Key)
-		if m == nil {
+		c := c.getPolicyCache(uv3.Key)
+		if c == nil {
 			return
 		}
 		switch uv3.UpdateType {
@@ -174,10 +201,11 @@ func (c *policyCache) onUpdate(update dispatcherv1v3.Update) {
 			}
 			pd.ruleEndpoints.Ingress = make([]api.RuleDirection, len(pv1.InboundRules))
 			pd.ruleEndpoints.Egress = make([]api.RuleDirection, len(pv1.OutboundRules))
-			m[uv3.Key] = pd
+			c.policies[uv3.Key] = pd
+			c.unmatchedPolicies.Add(uv3.Key)
 		case bapi.UpdateTypeKVUpdated:
 			pv1 := uv1.Value.(*model.Policy)
-			existing := m[uv3.Key]
+			existing := c.policies[uv3.Key]
 			existing.resource = uv3.Value.(api.Resource)
 			// Extend or shrink our rules slices if necessary.
 			deltaIngress := len(pv1.InboundRules) - len(existing.ruleEndpoints.Ingress)
@@ -199,7 +227,8 @@ func (c *policyCache) onUpdate(update dispatcherv1v3.Update) {
 				existing.ruleEndpoints.Egress = existing.ruleEndpoints.Egress[:len(pv1.OutboundRules)]
 			}
 		case bapi.UpdateTypeKVDeleted:
-			delete(m, uv3.Key)
+			delete(c.policies, uv3.Key)
+			c.unmatchedPolicies.Discard(uv3.Key)
 		}
 	}
 
@@ -210,7 +239,7 @@ func (c *policyCache) onUpdate(update dispatcherv1v3.Update) {
 	}
 }
 
-func (c *policyCache) orderPolicies() {
+func (c *policiesCache) orderPolicies() {
 	if c.orderedTiers != nil {
 		return
 	}
@@ -232,30 +261,30 @@ func (c *policyCache) orderPolicies() {
 	}
 }
 
-func (c *policyCache) getPolicyFromV1Key(key model.PolicyKey) *policyData {
+func (c *policiesCache) getPolicyFromV1Key(key model.PolicyKey) *policyData {
 	parts := strings.Split(key.Name, "/")
 	if len(parts) == 1 {
-		return c.globalNetworkPolicies[model.ResourceKey{
+		return c.globalNetworkPolicies.policies[model.ResourceKey{
 			Kind: v3.KindGlobalNetworkPolicy,
 			Name: parts[0],
 		}]
 	}
-	return c.networkPolicies[model.ResourceKey{
+	return c.networkPolicies.policies[model.ResourceKey{
 		Kind:      v3.KindNetworkPolicy,
 		Namespace: parts[0],
 		Name:      parts[1],
 	}]
 }
 
-func (c *policyCache) getPolicy(key model.Key) *policyData {
-	m := c.getPolicyCache(key)
-	if m == nil {
+func (c *policiesCache) getPolicy(key model.Key) *policyData {
+	pc := c.getPolicyCache(key)
+	if pc == nil {
 		return nil
 	}
-	return m[key]
+	return pc.policies[key]
 }
 
-func (c *policyCache) getPolicyCache(polKey model.Key) map[model.Key]*policyData {
+func (c *policiesCache) getPolicyCache(polKey model.Key) *policyCache {
 	if rKey, ok := polKey.(model.ResourceKey); ok {
 		switch rKey.Kind {
 		case v3.KindGlobalNetworkPolicy:
@@ -264,7 +293,6 @@ func (c *policyCache) getPolicyCache(polKey model.Key) map[model.Key]*policyData
 			return c.networkPolicies
 		}
 	}
-
 	log.WithField("key", polKey).Error("Unexpected resource in event type, expecting a v3 policy type")
 	return nil
 }
@@ -297,6 +325,10 @@ func (d *policyData) GetTier() string {
 		return r.Spec.Tier
 	}
 	return ""
+}
+
+func (d *policyData) IsUnmatched() bool {
+	return d.endpoints.NumWorkloadEndpoints == 0 && d.endpoints.NumHostEndpoints == 0
 }
 
 func (d *policyData) getKey() model.Key {

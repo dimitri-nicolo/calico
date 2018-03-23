@@ -327,10 +327,10 @@ func endpointTestQueryData() []testQueryData {
 			},
 			// The namespace has a slash which will get rendered into the URL (and will error).
 			client.QueryEndpointsReq{
-				Policy:      model.ResourceKey{
-					Kind: v3.KindNetworkPolicy,
+				Policy: model.ResourceKey{
+					Kind:      v3.KindNetworkPolicy,
 					Namespace: "this/has",
-					Name: "a.slash",
+					Name:      "a.slash",
 				},
 			},
 			errorResponse{

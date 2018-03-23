@@ -5,6 +5,7 @@ type Policy interface {
 	GetTier() string
 	GetEndpointCounts() EndpointCounts
 	GetRuleEndpointCounts() Rule
+	IsUnmatched() bool
 }
 
 type PolicyCounts struct {

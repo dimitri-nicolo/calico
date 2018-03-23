@@ -25,7 +25,7 @@ import (
 // NewQueryInterface returns a queryable resource cache.
 func NewQueryInterface(ci clientv3.Interface) QueryInterface {
 	cq := &cachedQuery{
-		policies:          cache.NewPolicyCache(),
+		policies:          cache.NewPoliciesCache(),
 		endpoints:         cache.NewEndpointsCache(),
 		nodes:             cache.NewNodeCache(),
 		polEplabelHandler: labelhandler.NewLabelHandler(),
@@ -130,7 +130,7 @@ type backend interface {
 type cachedQuery struct {
 	// A cache of all loaded policy (keyed off name) and endpoint resources (keyed off key).
 	// The cache includes Tiers, GNPs and NPs.
-	policies cache.PolicyCache
+	policies cache.PoliciesCache
 
 	// A cache of all loaded endpoints. The cache includes both HEPs and WEPs.
 	endpoints cache.EndpointsCache
@@ -170,19 +170,22 @@ func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) 
 	eps := c.endpoints.TotalEndpoints()
 	uleps := c.endpoints.EndpointsWithNoLabels()
 	upeps := c.endpoints.EndpointsWithNoPolicies()
+	upols := c.policies.UnmatchedPolicies()
 	resp := &QueryClusterResp{
-		NumGlobalNetworkPolicies:        pols.NumGlobalNetworkPolicies,
-		NumNetworkPolicies:              pols.NumNetworkPolicies,
-		NumHostEndpoints:                eps.NumHostEndpoints,
-		NumWorkloadEndpoints:            eps.NumWorkloadEndpoints,
-		NumUnlabelledHostEndpoints:      uleps.NumHostEndpoints,
-		NumUnlabelledWorkloadEndpoints:  uleps.NumWorkloadEndpoints,
-		NumUnprotectedHostEndpoints:     upeps.NumHostEndpoints,
-		NumUnprotectedWorkloadEndpoints: upeps.NumWorkloadEndpoints,
-		NumNodes:                        c.nodes.TotalNodes(),
-		NumNodesWithNoEndpoints:         c.nodes.TotalNodesWithNoEndpoints(),
-		NumNodesWithNoWorkloadEndpoints: c.nodes.TotalNodesWithNoWorkloadEndpoints(),
-		NumNodesWithNoHostEndpoints:     c.nodes.TotalNodesWithNoHostEndpoints(),
+		NumGlobalNetworkPolicies:          pols.NumGlobalNetworkPolicies,
+		NumNetworkPolicies:                pols.NumNetworkPolicies,
+		NumHostEndpoints:                  eps.NumHostEndpoints,
+		NumWorkloadEndpoints:              eps.NumWorkloadEndpoints,
+		NumUnmatchedGlobalNetworkPolicies: upols.NumGlobalNetworkPolicies,
+		NumUnmatchedNetworkPolicies:       upols.NumNetworkPolicies,
+		NumUnlabelledHostEndpoints:        uleps.NumHostEndpoints,
+		NumUnlabelledWorkloadEndpoints:    uleps.NumWorkloadEndpoints,
+		NumUnprotectedHostEndpoints:       upeps.NumHostEndpoints,
+		NumUnprotectedWorkloadEndpoints:   upeps.NumWorkloadEndpoints,
+		NumNodes:                          c.nodes.TotalNodes(),
+		NumNodesWithNoEndpoints:           c.nodes.TotalNodesWithNoEndpoints(),
+		NumNodesWithNoWorkloadEndpoints:   c.nodes.TotalNodesWithNoWorkloadEndpoints(),
+		NumNodesWithNoHostEndpoints:       c.nodes.TotalNodesWithNoHostEndpoints(),
 	}
 	return resp, nil
 }
@@ -353,8 +356,7 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		}
 
 		for _, p := range op {
-			ep := p.GetEndpointCounts()
-			if req.Unmatched && (ep.NumWorkloadEndpoints > 0 || ep.NumHostEndpoints > 0) {
+			if req.Unmatched && !p.IsUnmatched() {
 				log.Info("Filter out matched policy")
 				continue
 			}
