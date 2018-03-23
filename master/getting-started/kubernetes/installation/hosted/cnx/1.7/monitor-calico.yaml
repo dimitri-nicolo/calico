@@ -225,6 +225,10 @@ metadata:
   namespace: calico-monitoring
 spec:
   version: v0.11.0
+  # When using a private registry to serve container images, uncomment
+  # the following line and replace "<YOUR-REGISTRY>" with the URL of
+  # your registry.
+  #baseImage: <YOUR-REGISTRY>/alertmanager 
   # If necessary, uncomment the 2 lines below and edit the nodeSelector
   # key:value pair with appropriate values for your environment.
   #nodeSelector:
@@ -259,6 +263,10 @@ metadata:
   name: calico-node-prometheus
   namespace: calico-monitoring
 spec:
+  # When using a private registry to serve container images, uncomment
+  # the following line and replace "<YOUR-REGISTRY>" with the URL of
+  # your registry.
+  #baseImage: <YOUR-REGISTRY>/prometheus 
   # If necessary, uncomment the 2 lines below and edit the nodeSelector
   # key:value pair with appropriate values for your environment.
   #nodeSelector:
