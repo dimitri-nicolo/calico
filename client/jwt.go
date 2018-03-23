@@ -1,0 +1,55 @@
+package client
+
+import (
+	"fmt"
+
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
+
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	cryptolicensing "github.com/tigera/licensing/crypto"
+)
+
+var (
+	jwtType = jose.ContentType("JWT")
+)
+
+// GenerateLicenseFromClaims generates LicenseKey resource from LicenseClaims with the
+// JWT that is encrypted and signed using the private key provided and includes the certificate
+// at the path provided to this function.
+func GenerateLicenseFromClaims(claims LicenseClaims, pkeyPath, certPath string) (*api.LicenseKey, error) {
+
+	enc, err := jose.NewEncrypter(
+		jose.A128GCM,
+		jose.Recipient{
+			Algorithm: jose.A128GCMKW,
+			Key:       symKey,
+		},
+		(&jose.EncrypterOptions{}).WithType(jwtType).WithContentType(jwtType))
+	if err != nil {
+		return nil, fmt.Errorf("error generating claims: %s", err)
+	}
+
+	priv, err := cryptolicensing.ReadPrivateKeyFromFile(pkeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading private key: %s\n", err)
+	}
+
+	// Instantiate a signer using RSASSA-PSS (SHA512) with the given private key.
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.PS512, Key: priv}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating signer: %s", err)
+	}
+
+	raw, err := jwt.SignedAndEncrypted(signer, enc).Claims(claims).CompactSerialize()
+	if err != nil {
+		return nil, fmt.Errorf("error signing the JWT: %s", err)
+	}
+
+	licX := api.NewLicenseKey()
+	licX.Name = ResourceName
+	licX.Spec.Token = raw
+	licX.Spec.Certificate = cryptolicensing.ReadCertPemFromFile(certPath)
+
+	return licX, nil
+}

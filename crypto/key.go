@@ -84,7 +84,7 @@ func ParseRsaPrivateKeyFromPemStr(privPEM string) (*rsa.PrivateKey, error) {
 func ReadPrivateKeyFromFile(path string)(*rsa.PrivateKey, error){
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error reading private key file: %s",err)
 	}
 
 	return ParseRsaPrivateKeyFromPemStr(string(data))

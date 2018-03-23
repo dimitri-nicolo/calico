@@ -13,7 +13,7 @@ func init() {
 var RootCmd = &cobra.Command{
 	Use: "carrotctl",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("welcome to carrotctl :)")
-
+		fmt.Println("carrotctl <command> [<args>...]")
+		fmt.Println("enter 'carrotctl -h' for help")
 	},
 }

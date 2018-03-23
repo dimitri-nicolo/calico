@@ -2,6 +2,7 @@ package utils
 
 import (
 	"io/ioutil"
+	"log"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
@@ -17,7 +18,7 @@ func ReadFile(path string) api.LicenseKey {
 	lic := api.NewLicenseKey()
 	err = yaml.Unmarshal(data, &lic)
 	if err != nil {
-		panic(err)
+		log.Fatalf("error unmarshaling the license data")
 	}
 
 	return *lic

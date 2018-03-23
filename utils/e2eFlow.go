@@ -22,12 +22,11 @@ func e2eFlow() {
 	numNodes := 42
 
 	claims := client.LicenseClaims{
-		CustomerID:          customerID,
+		LicenseID:   customerID,
 		Nodes:       numNodes,
 		Name:        "MyFavCustomer99",
 		Features:    []string{"everything", "for", "you"},
 		GracePeriod: 90,
-		Term:        365,
 		Claims: jwt.Claims{
 			NotBefore: jwt.NumericDate(time.Date(2019, 10, 10, 12, 0, 0, 0, time.UTC).Unix()),
 			Issuer:    "Gunjan's office number 5",
@@ -72,7 +71,7 @@ func e2eFlow() {
 
 	licY := ReadFile("./license.yaml")
 
-	cl, valid := client.DecodeAndVerify(licY)
+	cl, valid := client.Decode(licY)
 	spew.Dump(cl)
 	fmt.Println(valid)
 }

@@ -44,11 +44,11 @@
 
 [[constraint]]
   name = "github.com/spf13/cobra"
-  version = "0.0.1"
+  revision = "19e54c4a2b8a78c9d54b2bed61b1a6c5e1bfcf6f"
 
 [[constraint]]
   name = "github.com/spf13/pflag"
-  version = "1.0.0"
+  revision = "4c012f6dcd9546820e378d0bdda4d8fc772cdfea"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
