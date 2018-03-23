@@ -6,11 +6,20 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/tigera/calicoq/web/pkg/clientmgr"
 	"github.com/tigera/calicoq/web/queryserver/server"
 )
 
 func main() {
+	// Set the logging level (default to warning).
+	logLevel := log.WarnLevel
+	logLevelStr := os.Getenv("LOGLEVEL")
+	if logLevelStr != "" {
+		logLevel = logutils.SafeParseLogLevel(logLevelStr)
+	}
+	log.SetLevel(logLevel)
+
 	// TODO: Make this a better check than just pulling variables
 	// Possibly switch this to use the golang TLSConfig if necessary.
 	webKey := os.Getenv("QUERYSERVER_KEY")

@@ -24,18 +24,20 @@ type QueryClusterReq struct {
 }
 
 type QueryClusterResp struct {
-	NumGlobalNetworkPolicies        int `json:"numGlobalNetworkPolicies"`
-	NumNetworkPolicies              int `json:"numNetworkPolicies"`
-	NumHostEndpoints                int `json:"numHostEndpoints"`
-	NumWorkloadEndpoints            int `json:"numWorkloadEndpoints"`
-	NumUnlabelledHostEndpoints      int `json:"numUnlabelledHostEndpoints"`
-	NumUnlabelledWorkloadEndpoints  int `json:"numUnlabelledWorkloadEndpoints"`
-	NumUnprotectedHostEndpoints     int `json:"numUnprotectedHostEndpoints"`
-	NumUnprotectedWorkloadEndpoints int `json:"numUnprotectedWorkloadEndpoints"`
-	NumNodes                        int `json:"numNodes"`
-	NumNodesWithNoEndpoints         int `json:"numNodesWithNoEndpoints"`
-	NumNodesWithNoHostEndpoints     int `json:"numNodesWithNoHostEndpoints"`
-	NumNodesWithNoWorkloadEndpoints int `json:"numNodesWithNoWorkloadEndpoints"`
+	NumGlobalNetworkPolicies          int `json:"numGlobalNetworkPolicies"`
+	NumNetworkPolicies                int `json:"numNetworkPolicies"`
+	NumHostEndpoints                  int `json:"numHostEndpoints"`
+	NumWorkloadEndpoints              int `json:"numWorkloadEndpoints"`
+	NumUnmatchedGlobalNetworkPolicies int `json:"numUnmatchedGlobalNetworkPolicies"`
+	NumUnmatchedNetworkPolicies       int `json:"numUnmatchedNetworkPolicies"`
+	NumUnlabelledHostEndpoints        int `json:"numUnlabelledHostEndpoints"`
+	NumUnlabelledWorkloadEndpoints    int `json:"numUnlabelledWorkloadEndpoints"`
+	NumUnprotectedHostEndpoints       int `json:"numUnprotectedHostEndpoints"`
+	NumUnprotectedWorkloadEndpoints   int `json:"numUnprotectedWorkloadEndpoints"`
+	NumNodes                          int `json:"numNodes"`
+	NumNodesWithNoEndpoints           int `json:"numNodesWithNoEndpoints"`
+	NumNodesWithNoHostEndpoints       int `json:"numNodesWithNoHostEndpoints"`
+	NumNodesWithNoWorkloadEndpoints   int `json:"numNodesWithNoWorkloadEndpoints"`
 }
 
 type QueryNodesReq struct {
@@ -78,7 +80,7 @@ type QueryPoliciesResp struct {
 }
 
 type Policy struct {
-	Index                int             `json:"index"'`
+	Index                int             `json:"index"`
 	Kind                 string          `json:"kind"`
 	Name                 string          `json:"name"`
 	Namespace            string          `json:"namespace,omitempty"`

@@ -49,7 +49,7 @@ type endpointsCache struct {
 func newEndpointCache() *endpointCache {
 	return &endpointCache{
 		endpoints:            make(map[model.Key]*endpointData),
-		unProtectedEndpoints: set.New(),
+		unprotectedEndpoints: set.New(),
 	}
 }
 
@@ -63,7 +63,7 @@ type endpointCache struct {
 	numUnlabelled int
 
 	// Stores endpoint keys that have no policies associated (i.e., "unprotected").
-	unProtectedEndpoints set.Set
+	unprotectedEndpoints set.Set
 }
 
 func (c *endpointsCache) TotalEndpoints() api.EndpointCounts {
@@ -82,8 +82,8 @@ func (c *endpointsCache) EndpointsWithNoLabels() api.EndpointCounts {
 
 func (c *endpointsCache) EndpointsWithNoPolicies() api.EndpointCounts {
 	return api.EndpointCounts{
-		NumWorkloadEndpoints: c.workloadEndpoints.unProtectedEndpoints.Len(),
-		NumHostEndpoints:     c.hostEndpoints.unProtectedEndpoints.Len(),
+		NumWorkloadEndpoints: c.workloadEndpoints.unprotectedEndpoints.Len(),
+		NumHostEndpoints:     c.hostEndpoints.unprotectedEndpoints.Len(),
 	}
 }
 
@@ -100,7 +100,7 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		ec.endpoints[uv3.Key] = ed
 		// All endpoints are unprotected initially. policyEndpointMatch() will
 		// remove them from this set if policies apply on this endpoint.
-		ec.unProtectedEndpoints.Add(uv3.Key)
+		ec.unprotectedEndpoints.Add(uv3.Key)
 	case bapi.UpdateTypeKVUpdated:
 		ed := ec.endpoints[uv3.Key]
 		wasUnlabelled := !ed.IsLabelled()
@@ -108,7 +108,7 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		ec.updateHasLabelsCounts(wasUnlabelled, !ed.IsLabelled())
 	case bapi.UpdateTypeKVDeleted:
 		ed := ec.endpoints[uv3.Key]
-		ec.unProtectedEndpoints.Discard(uv3.Key)
+		ec.unprotectedEndpoints.Discard(uv3.Key)
 		ec.updateHasLabelsCounts(!ed.IsLabelled(), false)
 		delete(ec.endpoints, uv3.Key)
 	}
@@ -153,9 +153,9 @@ func (c *endpointsCache) policyEndpointMatch(matchType labelhandler.MatchType, s
 
 	ec := c.getEndpointCache(epKey)
 	if epd.IsProtected() {
-		ec.unProtectedEndpoints.Discard(epKey)
+		ec.unprotectedEndpoints.Discard(epKey)
 	} else {
-		ec.unProtectedEndpoints.Add(epKey)
+		ec.unprotectedEndpoints.Add(epKey)
 	}
 }
 

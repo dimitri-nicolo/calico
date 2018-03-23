@@ -100,6 +100,8 @@ Returns a JSON object with the following fields.
 | numNetworkPolicies | Count of (namespaced) NetworkPolicy resources | number |
 | numHostEndpoints | Count of HostEndpoint resources | number |
 | numWorkloadEndpoints | Count of WorkloadEndpoint resources | number |
+| numUnmatchedGlobalNetworkPolicies | Count of GlobalNetworkPolicies that do not match any endpoints | number |
+| numUnmatchedNetworkPolicies | Count of NetworkPolicies that do not match any endpoints | number |
 | numUnlabelledWorkloadEndpoints | Count of WorkloadEndpoint resources that do not have any explicitly configured labels | number |
 | numUnlabelledHostEndpoints | Count of host endpoints that do not have any explicitly configured labels | number |
 | numUnprotectedWorkloadEndpoints | Count of WorkloadEndpoint resources that do not have any policies applied on them | number |
@@ -121,6 +123,8 @@ NOTE:
   "numNetworkPolicies": 3,
   "numHostEndpoints": 3,
   "numWorkloadEndpoints": 5,
+  "numUnmatchedGlobalNetworkPolicies": 0,
+  "numUnmatchedNetworkPolicies": 1,
   "numUnlabelledWorkloadEndpoints": 1,
   "numUnlabelledHostEndpoints": 1,
   "numUnprotectedWorkloadEndpoints": 0,
