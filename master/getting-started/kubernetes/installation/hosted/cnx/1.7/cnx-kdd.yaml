@@ -219,6 +219,7 @@ spec:
       namespace: kube-system
       labels:
         apiserver: "true"
+        k8s-app: cnx-apiserver
     spec:
       serviceAccountName: cnx-apiserver
       tolerations:
