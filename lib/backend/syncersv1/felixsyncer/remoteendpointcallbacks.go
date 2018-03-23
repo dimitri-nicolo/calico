@@ -50,6 +50,12 @@ func (rec *remoteEndpointCallbacks) OnUpdates(updates []api.Update) {
 				updates[i].Value.(*model.ProfileRules).InboundRules = []model.Rule{}
 				updates[i].Value.(*model.ProfileRules).OutboundRules = []model.Rule{}
 				updates[i].Key = t
+			case model.ProfileLabelsKey:
+				t.Name = rec.clusterName + "/" + t.Name
+				updates[i].Key = t
+			case model.ProfileTagsKey:
+				t.Name = rec.clusterName + "/" + t.Name
+				updates[i].Key = t
 			}
 		} else if update.UpdateType == api.UpdateTypeKVDeleted {
 			switch t := update.Key.(type) {
@@ -62,6 +68,12 @@ func (rec *remoteEndpointCallbacks) OnUpdates(updates []api.Update) {
 				t.Hostname = rec.clusterName + "/" + t.Hostname
 				updates[i].Key = t
 			case model.ProfileRulesKey:
+				t.Name = rec.clusterName + "/" + t.Name
+				updates[i].Key = t
+			case model.ProfileLabelsKey:
+				t.Name = rec.clusterName + "/" + t.Name
+				updates[i].Key = t
+			case model.ProfileTagsKey:
 				t.Name = rec.clusterName + "/" + t.Name
 				updates[i].Key = t
 			}
