@@ -22,7 +22,7 @@ func e2eFlow() {
 	numNodes := 42
 
 	claims := client.LicenseClaims{
-		CustomerID:          customerID,
+		LicenseID:   customerID,
 		Nodes:       numNodes,
 		Name:        "MyFavCustomer99",
 		Features:    []string{"everything", "for", "you"},
@@ -71,7 +71,7 @@ func e2eFlow() {
 
 	licY := ReadFile("./license.yaml")
 
-	cl, valid := client.DecodeAndVerify(licY)
+	cl, valid := client.Decode(licY)
 	spew.Dump(cl)
 	fmt.Println(valid)
 }

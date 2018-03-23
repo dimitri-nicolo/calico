@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/gomega"
 	"github.com/satori/go.uuid"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/davecgh/go-spew/spew"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client"
@@ -97,6 +97,9 @@ XJiNPmt5C55ETI7JUGZM466nO/ymmfMo0feFZw==
 	certPath = "../test-data/test_tigera.io_certificate.pem"
 
 	absPkeyPath, absCertPath string
+
+	numNodes1 = 555
+	numNodes2 = 420
 )
 
 func init() {
@@ -112,14 +115,13 @@ var claimToJWTTable = []struct {
 		description: "fully populated claim",
 		claim: client.LicenseClaims{
 			LicenseID:   uuid.NewV4().String(),
-			Nodes:       420,
-			Name:        "meepster-inc",
+			Nodes:       &numNodes2,
+			Customer:    "meepster-inc",
 			Features:    []string{"nice", "features", "for", "you"},
 			GracePeriod: 88,
-			Offline:     true,
 			Claims: jwt.Claims{
-				NotBefore: jwt.NewNumericDate(time.Date(2022, 3, 14, 23, 59, 59, 999999999, time.Local)),
-				IssuedAt:  jwt.NewNumericDate(time.Now().Local()),
+				Expiry:   jwt.NewNumericDate(time.Date(2022, 3, 14, 23, 59, 59, 999999999, time.Local)),
+				IssuedAt: jwt.NewNumericDate(time.Now().UTC()),
 			},
 		},
 	},
@@ -127,12 +129,11 @@ var claimToJWTTable = []struct {
 		description: "only required fields for v2.1 populated",
 		claim: client.LicenseClaims{
 			LicenseID:   uuid.NewV4().String(),
-			Nodes:       555,
-			Name:        "cool-cat-inc",
+			Nodes:       &numNodes1,
+			Customer:    "cool-cat-inc",
 			GracePeriod: 90,
-			Offline:     true,
 			Claims: jwt.Claims{
-				NotBefore: jwt.NewNumericDate(time.Date(2022, 3, 14, 23, 59, 59, 999999999, time.Local)),
+				Expiry: jwt.NewNumericDate(time.Date(2022, 3, 14, 23, 59, 59, 999999999, time.Local)),
 			},
 		},
 	},
@@ -140,10 +141,10 @@ var claimToJWTTable = []struct {
 		description: "partially populated claim",
 		claim: client.LicenseClaims{
 			LicenseID: uuid.NewV4().String(),
-			Nodes:     1000,
-			Name:      "lame-banana-inc",
+			Nodes:     &numNodes2,
+			Customer:  "lame-banana-inc",
 			Claims: jwt.Claims{
-				NotBefore: jwt.NewNumericDate(time.Date(2021, 3, 14, 23, 59, 59, 999999999, time.Local)),
+				Expiry: jwt.NewNumericDate(time.Date(2021, 3, 14, 23, 59, 59, 999999999, time.Local)),
 			},
 		},
 	},
@@ -164,8 +165,8 @@ func TestGetLicenseFromClaims(t *testing.T) {
 			// We can verify the generated resource's Objectmeta name.
 			Expect(lic.Name).Should(Equal("default"), entry.description)
 
-			claims, valid := client.DecodeAndVerify(*lic)
-			Expect(valid).Should(BeTrue(), entry.description)
+			claims, err := client.Decode(*lic)
+			Expect(err).NotTo(HaveOccurred(), entry.description)
 			Expect(claims).Should(Equal(entry.claim), entry.description)
 		})
 	}
@@ -175,33 +176,33 @@ var tokenToLicense = []struct {
 	description string
 	license     api.LicenseKey
 	claim       client.LicenseClaims
-	valid       bool
+	corrupt     bool
 }{
 	{
-		description: "fully populated claim",
+		description: "fully populated uncorrupt claim",
 		license: api.LicenseKey{
 			ObjectMeta: v1.ObjectMeta{
 				Name: "default",
 			},
 			Spec: api.LicenseKeySpec{
-				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJ3WWpuYjV6TTF5MlV6RFZ4IiwidGFnIjoiN1dSUkxPanNGQ0F1R3pNRGg5akc1USIsInR5cCI6IkpXVCJ9.HtXrz5-Q_vVfKwgn9Ig_zQ.xf6FZYH3315Tffzv.v7JNl7qOWTivF3Y0Fla-5uG-SM7zCVWcOWEncS7y5kc_uIIRTvTqXV7LAB0b6rZFkXGYxo3X0nBADh7yVJO2S9LX3AbjhF4g_5Vu1uVHwNyKEmSxoMhJGK8v0kwtmXWF7dgICKlAWcSE2kscr-1P-m-MgjTPIZaQU27EN3KFNBgPtLalSKcTRoKMWbqnZRyZFB4gIhpXRKOi2wSlRwbzflumRt5PBGQ6AAdqJaZhEDKYIRVwiYiLh8ODXC2WNhF9KS7GqXRE9QopOcQkh3n_AAADIgzOMdrVr26VTXKXZlwtTYZ5cNPxRZA7QkQVB9HMh7WwwstcSLlVRnHcGZJwmTUfpdGExAywCu4DkqJRnarfJUmG1Y86ecOFnmuycFo0NPuruUEXUG33Nd_670qOWzICjqu68cx3AXcwh46m8hZGR3Zbs1usYfrWTVfFZxNUYlAOCmjrnIAKfxDe4B4fBKYEyFM7PTUQj1UTChgv5G3wRBZiVPDv67gnOrqtQQNyAtJvWsaSdxEu5LGzO68ntauYM4wohnqx4JBzFrd5YkWivHf10yFb7_mGYxhqG7_lPiWAd7zxJNGYrOHi8qEMPFtKANI4UKLAbyXVgPJuTo_kAmoHpSqvAf2DTNODBJQb_hl6F6gX0gWsJIQ1V7O7xn6aAc0nkiizYSLuoKLSsF8rWSyASnPuHhc5AeFVEqA8oRYeZLMh9BBYr8w3kGa6eobtp8j8g2YcEy-KSCgxuef94OIRn6EPbvkfhhz8bZm9c1670N701J91WnIG7l1WXFAxXnfO055W0ulpbE99sw.HACGOFtKA6ZvoAg4Prgiaw",
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJseTlfT2VJQ25HSld3RFpXIiwidGFnIjoibFg3MldreXNrVUZFX1NwejA0S2FHdyIsInR5cCI6IkpXVCJ9.iX2GYOdRB6bSxVLkPjx67Q.SCTp7VI9stKLvnyO.x3LUBgNWbwTExAoOiIF1e2caxPQbDruWSaISh_k8kbcZLOcgBnplk8TSlJcKJWCc1vWJZvlQAYMrw6NndzG1beAhmVjmd5DV8RHXhmhLUewsRHIUc5i7bE23EqQHXkkbmOjAWO5l3MxyHvhFK_z3z3hoyN8mNsKv4mIh-6-vMhRUcf3xCvSuvxDdkzqhn-il--PwDEsVyAYynefY0A3fM012fCwjyE41FR9ghxjZrIkKUqMOKFA8GHPoFuEldVnESuVKj-g1ZlKVsjGj1TITOgNc1JtJWhR3LyNIwPVy3Ve2KjUFDe3LHj0Fj7OlPu2xZLAu-Y2usDdzrTgMosTTVwTnRnIAuiDuDrNTYE2i2YO93HjXPgH4C-j5BdPTrFC9IzA91vrAPQNSdn4A5IZTkI-3LwIhKgeN8cb9L3kJtJhg6_4nOKXEXxGyGoQjfQCQt4MZVJIYz0xy04omAev9DSgONeQIs8uuRpUd8tlZ-QN0iUQ8wDEk-FVaqmdk3NQc5XSTK6FDW8laQV7qAHP6sLAOkwpS25YukmdfPSXLx6lQv6Nl-WXsnOHPs5epbW-LgRejfnHs3U-invFuKDKc8q7v_slz5GyKvSjQY47hX_0Farn6ryvyxGm2G2Edv_KPIe2u5HT_e6FfdQLcD8XczjminltHA1A1WnYDQlhPVVdvFc8fMBsNmjrwG7iFewkUQKyzGtE-ujoD_e0WhQBufD8_9baPKvrCMlAtv7leTBbmcpV3WR8qyTotzgqVkg6f9fNgXhxQMpLdGR18eqVeURkpyWLL0GnL0aPTHNjdK4ZYKZ4IJk0mKjP-emGSOOr6pFKyUBXiJCggdJF3F746bL7YScuknOtwpnnWHZYlbUkCSmmCEFoHdRJ_ft8.KNYzgwh7IzhRwhN95Sf31g",
 				Certificate: testCert,
 			},
 		},
 
 		claim: client.LicenseClaims{
-			LicenseID:   "meow23424coldcovfefe0nmyfac3",
-			Nodes:       420,
-			Name:        "meepster-inc",
-			Features:    []string{"nice", "features", "for", "you"},
+			LicenseID:   "5fa38831-fca5-4ea1-9722-ac601aa6852a",
+			Nodes:       &numNodes2,
+			Customer:    "meepster-inc",
+			Features:    []string{"cnx", "all"},
 			GracePeriod: 88,
-			Offline:     true,
 			Claims: jwt.Claims{
-				NotBefore: jwt.NewNumericDate(time.Date(2020, 3, 14, 23, 59, 59, 59, time.Local)),
+				Expiry: jwt.NewNumericDate(time.Date(2022, 3, 14, 23, 59, 59, 59, time.Local)),
+				IssuedAt: 1521764255,
 			},
 		},
 
-		valid: true,
+		corrupt: false,
 	},
 	{
 		description: "claim with the JWT header meddled with",
@@ -217,7 +218,7 @@ var tokenToLicense = []struct {
 
 		claim: client.LicenseClaims{},
 
-		valid: false,
+		corrupt: true,
 	},
 	{
 		description: "claim with the JWT payload meddled with",
@@ -233,7 +234,7 @@ var tokenToLicense = []struct {
 
 		claim: client.LicenseClaims{},
 
-		valid: false,
+		corrupt: true,
 	},
 	{
 		description: "claim with the JWT signed by some evil random private key",
@@ -249,7 +250,7 @@ var tokenToLicense = []struct {
 
 		claim: client.LicenseClaims{},
 
-		valid: false,
+		corrupt: true,
 	},
 	{
 		description: "claim with the JWT signed by tigera but certificate is swapped out with an evil certificate",
@@ -265,7 +266,7 @@ var tokenToLicense = []struct {
 
 		claim: client.LicenseClaims{},
 
-		valid: false,
+		corrupt: true,
 	},
 	{
 		description: "claim with the JWT signed by an evil private key but certificate is still the tigera original cert",
@@ -281,34 +282,34 @@ var tokenToLicense = []struct {
 
 		claim: client.LicenseClaims{},
 
-		valid: false,
+		corrupt: true,
 	},
 	{
 		// TODO (gunjan5): THIS TEST SHOULD FAIL ONCE WE ADD CERT CHAIN VALIDATION!!!!
-		description: "claim with the JWT with an evil cert and signed by an evil private key",
+		description: "claim with the JWT signed by an evil private key with an evil cert",
 		license: api.LicenseKey{
 			ObjectMeta: v1.ObjectMeta{
 				Name: "default",
 			},
 			Spec: api.LicenseKeySpec{
-				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJLeWE0VHpEaWY2eFM3TTl2IiwidGFnIjoiYVhHR3d0alczSjhKeWgtb2hWajRJdyIsInR5cCI6IkpXVCJ9.LgbBH-IGmLH2iUFY171xwA.NImD2DVyH1ahbruT.DHhdADLX7BfwwYoknoTnPEQGh7vItF7YhYukfPDm_VlwgERXTDdqb6wFQQOZOvFFlcMRYBBzDQBguSkYEHYWegHIuZ7Amfh8uCcI0l93BPz1TrOZdX4fukikb5YVTbRJjxgJTvakucG9dh45hwks9gUCGdXFvVAJH_wMDc_kPVeb0fx84f_H30gNswvKItyIT09lOiRCfy9HOGdpo1RlA0UCZvIPYD9zSl1_ldGZ5Oj2RYz9HU7bhuqV4AU7OuglE_8yvNMmkqSD9BmiLOxzxMVvg3uj5trmuTOy4pAZuchykM3p-DgGiWuo4kyaHvpcfIISSyBU8xtVMyWALayeaschyvlAvRJHAVjKd9Cubx5akA23w4KpBGsJ2EgQPNmyHdEoxqKohO6KbYcOvsD7PThH8e9UV7GgGrQp4OUBZXfym-_yi_erI6FC91n3rgcSMqYpIrhC5-dPSExKuPVA_94dlcP-cDxAtuL8W0T8mafTqKl4Vg-Ojaj7pul4-i7223loZSbkYEpuoTzHYglgB2_PfHgkZsqgl8adlm7muKpxSe_TH-6wQh6fXxGzUJEu7DLvcy82r5v_HcWtJUj43qu8BTHR4sc4_1NU8eHya_HtwgvOo98Ze1Gd9qC_GOFkMYomEk2ogarPnGGKD-gfMN3GxziUz5d4kpb8mzknGIX5hqaxcslV4HDnSA97zjssyajg1Eh-a6xOIaPOlYW3YzXQ3GQPABLn18V2hFCNhB-ml6KWceYA6EsxnKqdEK2KN8dnDGESdjwCIUfcY7KFRD30qhAOUAKpU14.YvpAmE0JPK1Brn7kgGphlg",
+				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJyS0UycFlocnhkWl9Fd2NOIiwidGFnIjoiQ0ZEcUotaTJTRUQwVmN5Si1EdGxiUSIsInR5cCI6IkpXVCJ9.FvqJP0N6R-udVr993WXaow.T8D4LnRW5LHtlI9N.NXK2hpRK9jHK6g00PJfGD1xK5YDDtSYP0kMM6BCEjSNcGiCrKAt9bDEHsYUttkY74OO_pMfGJOx_-RdFcfk_JxKJLR2mtTX6Tyx0oP3QN6OoHbzqfIEs_FWjqyLvxnGvIgzJpusF_LBg3MOuRflLr8Wn9bGNZN37er0PtZs2L5KqtgFmPKe-IqVNXIqZ7F1DUhwNmWruGguffGtnavuXcHYvqyAX5PUsatia0tGrkIP8810DgwqPBqzZquZIncR6n_1HdW1jFFJ4SWv2J4CkKct74jxPbxQHoItvTeqtlvntjclri1LiLRzkbPU4yYA3MFibexaIbn6yD6aCZkPOwjtkciB7f-Wg-Vx7DHV6_XbEtTFjummiJY87e8R-gCxFQNRmZ5zJKuoFCo_KGLL_HRG6plNmt3M6Z3vrk28Gx26Pv_caSA9IY3hcGn89ah4Nif1pSf7ioRZDjeac3wusBper_TsZ5FJd-DSI91laYNwAh3_Obp0YswxigFLIpZzGICac6CPFx58zQp8XZAPG8LeL049Byx_yTheOwfsWIeplrBrnCCXqSQ4fPrW2Lx7aS-VyWgcDX7JhO54YzGsL9k5WUcYjVxCsO1tPdfv4uzVBRJYR27oodwdCs0cOEAP8uZBDpGGFeVlWDAZatSCX8MLSBzu3Fo97HafabQ8jg3Piy0XTaBUC1fWJU6ygLdLxtzpRERUJL32-DbdWw0j4YfgDrqYZhpk_XXhNHiPKUbyC7kPh8jaFwHgYbq2jwHBMo4pOs3tLH9-36q4FNeHOIFN7ZqsGENLl-3bgHfRj5eJT1nhcc2z_6D0036pgZDcTOh_wfFoI0FujD0A3NKNhBUueo_rTjFIqA7l_WiNZj0HLaCU1ezx1GuoM.UPz5crKaIBcSwsaeLvaq6w",
 				Certificate: evilCert,
 			},
 		},
 
 		claim: client.LicenseClaims{
-			LicenseID:   "fda67a1c-1791-4157-8ddc-f11f265db0d0",
-			Nodes:       555,
-			Name:        "iwantcake5",
+			LicenseID:   "a34d87c2-aea0-4b40-8c8b-1dae3fd13990",
+			Nodes:       &numNodes1,
+			Customer:    "iwantcake5",
+			Features: []string{"cnx", "all"},
 			GracePeriod: 88,
-			Offline:     true,
 			Claims: jwt.Claims{
-				NotBefore: jwt.NewNumericDate(time.Date(2029, 3, 14, 23, 59, 59, 59, time.Local)),
-				IssuedAt:  1521485204,
+				Expiry:   jwt.NewNumericDate(time.Date(2029, 3, 14, 23, 59, 59, 59, time.Local)),
+				IssuedAt: 1521765193,
 			},
 		},
 
-		valid: true,
+		corrupt: false,
 	},
 }
 
@@ -317,10 +318,12 @@ func TestDecodeAndVerify(t *testing.T) {
 		t.Run(entry.description, func(t *testing.T) {
 			RegisterTestingT(t)
 
-			claims, valid := client.DecodeAndVerify(entry.license)
-			Expect(valid).Should(Equal(entry.valid), entry.description)
+			claims, err := client.Decode(entry.license)
 
-			if entry.valid {
+			if entry.corrupt {
+				Expect(err).To(HaveOccurred(), entry.description)
+			} else {
+				Expect(err).NotTo(HaveOccurred(), entry.description)
 				Expect(claims).Should(Equal(entry.claim), entry.description)
 			}
 		})

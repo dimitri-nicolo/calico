@@ -10,7 +10,7 @@ import (
 
 var (
 	// Carefully selected key. It has to be 32-bit long.
-	symKey = []byte("Rob likes tea & kills chickens!!")
+	symKey = []byte("i༒2ஹ阳0?!pᄚ3-)0$߷५ૠm")
 
 	// RandomGen is a crypto pseudo-random generator.
 	RandomGen = rand.Reader
