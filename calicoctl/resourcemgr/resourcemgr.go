@@ -27,7 +27,7 @@ import (
 
 	"github.com/projectcalico/calicoctl/calicoctl/commands/argutils"
 	yamlsep "github.com/projectcalico/calicoctl/calicoctl/util/yaml"
-	yaml "github.com/projectcalico/go-yaml-wrapper"
+	"github.com/projectcalico/go-yaml-wrapper"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	validator "github.com/projectcalico/libcalico-go/lib/validator/v3"
@@ -495,7 +495,7 @@ func (rh resourceHelper) GetTableTemplate(headings []string, printNamespace bool
 	buf.WriteByte('\n')
 
 	// If this is a list type, we need to iterate over the list items.
-	if rh.isList {
+	if rh.isList && rh.listResource.GetObjectKind().GroupVersionKind().Kind != "LicenseKeyList"{
 		buf.WriteString("{{range .Items}}")
 	}
 
@@ -517,7 +517,7 @@ func (rh resourceHelper) GetTableTemplate(headings []string, printNamespace bool
 	buf.WriteByte('\n')
 
 	// If this is a list, close off the range.
-	if rh.isList {
+	if rh.isList && rh.listResource.GetObjectKind().GroupVersionKind().Kind != "LicenseKeyList" {
 		buf.WriteString("{{end}}")
 	}
 

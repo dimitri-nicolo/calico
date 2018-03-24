@@ -21,6 +21,7 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	licClient "github.com/tigera/licensing/client"
 )
 
 func init() {
@@ -29,19 +30,31 @@ func init() {
 		api.NewLicenseKeyList(),
 		false,
 		[]string{"license", "licensekey", "lic", "licenses"},
-		[]string{"NAME", "TOKEN"},
-		[]string{"NAME", "TOKEN", "CERTIFICATE"},
+		[]string{"LICENSEID", "EXPIRATION", "NODES"},
+		[]string{"LICENSEID", "EXPIRATION", "NODES", "FEATURES", "GRACEPERIOD"},
 		map[string]string{
-			"NAME":     "{{.ObjectMeta.Name}}",
-			"TOKEN":    "{{.Spec.Token}}",
-			"CERTIFICATE": "{{.Spec.Certificate}}",
+			"LICENSEID":   "{{.LicenseID}}",
+			"EXPIRATION":  "{{localtime .Claims.Expiry}}",
+			"NODES":       "{{.Nodes}}",
+			"FEATURES":    "{{.Features}}",
+			"GRACEPERIOD": "{{.GracePeriod}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.LicenseKey)
+			_, err := licClient.Decode(*r)
+			if err != nil {
+				return nil, fmt.Errorf("LicekseKey is corrupted: %s", err.Error())
+			}
+
 			return client.LicenseKey().Create(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.LicenseKey)
+			_, err := licClient.Decode(*r)
+			if err != nil {
+				return nil, fmt.Errorf("LicekseKey is corrupted: %s", err.Error())
+			}
+
 			return client.LicenseKey().Update(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {

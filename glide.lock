@@ -1,5 +1,5 @@
-hash: 5ef14fdecd4b36a86b4668edc52d713be8a7c81f346ae9492be64c4a96b34706
-updated: 2018-03-21T17:27:08.606398479-07:00
+hash: 2fad51a3550a3a7c99e611d2f9cefce6ae8fa03b8c72d1843b511add1aa1be3a
+updated: 2018-03-23T15:52:45.969470037-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -124,7 +124,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/influxdata/influxdb
-  version: aa61359cc74f220f4e5680de3a6d699691c0b793
+  version: ef2ba80ce2a1ad95a99aac3cc76f5b75a0a0e758
   subpackages:
   - client/v2
   - models
@@ -208,7 +208,7 @@ imports:
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/pelletier/go-toml
-  version: 05bcc0fb0d3e60da4b8dd5bd7e0ea563eb4ca943
+  version: 66540cf1fcd2c3aee6f6787dfa32a6ae9a870f12
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/go-json
@@ -220,7 +220,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e93f907cde6e7c897354f32ee4a10637bee5890f
+  version: 3a570da01b58c51f8a79293f874394156bedf862
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -285,7 +285,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/afero
-  version: bbf41cb36dffe15dff5bf7e18c447801e7ffe163
+  version: a880a37ed1804d98f64b3b7d58b5e3f8fbf421c4
   subpackages:
   - mem
 - name: github.com/spf13/cast
@@ -298,6 +298,11 @@ imports:
   version: b5e8006cbee93ec955a89ab31e0e3ce3204f3736
 - name: github.com/termie/go-shutil
   version: bcacb06fecaeec8dc42af03c87c6949f4a05c74c
+- name: github.com/tigera/licensing
+  version: 26571335eb1d44e6b41b3fa417ce4d146e382be8
+  subpackages:
+  - client
+  - crypto
 - name: github.com/vishvananda/netlink
   version: 5f5d5cddcf414bb44941b9c6c0d2df31253ec40e
   subpackages:
@@ -307,6 +312,8 @@ imports:
 - name: golang.org/x/crypto
   version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
+  - ed25519
+  - ed25519/internal/edwards25519
   - ssh/terminal
 - name: golang.org/x/net
   version: 66aacef3dd8a676686c7ae3716979581e8b03c47
@@ -399,6 +406,12 @@ imports:
   version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/square/go-jose.v2
+  version: 552e98edab5d620205ff1a8960bf52a5a10aad03
+  subpackages:
+  - cipher
+  - json
+  - jwt
 - name: gopkg.in/tomb.v2
   version: d5d1b5820637886def9eef33e03a27a9f166942c
 - name: gopkg.in/yaml.v2

@@ -26,13 +26,16 @@ import (
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/square/go-jose.v2/jwt"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/go-json/json"
 	"github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	licClient "github.com/tigera/licensing/client"
 )
 
 type resourcePrinter interface {
@@ -122,6 +125,7 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 			"join":            join,
 			"joinAndTruncate": joinAndTruncate,
 			"config":          config(client),
+			"localtime":       localTime,
 		}
 		tmpl, err := template.New("get").Funcs(fns).Parse(tpls)
 		if err != nil {
@@ -130,10 +134,28 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 
 		// Use a tabwriter to write out the template - this provides better formatting.
 		writer := tabwriter.NewWriter(os.Stdout, 5, 1, 3, ' ', 0)
-		err = tmpl.Execute(writer, resource)
-		if err != nil {
-			panic(err)
+
+		if resource.GetObjectKind().GroupVersionKind().Kind == "LicenseKeyList" {
+			for _, res := range resource.(*api.LicenseKeyList).Items {
+				claims, err1 := licClient.Decode(res)
+				if err1 != nil {
+					panic(err1)
+				}
+				err = tmpl.Execute(writer, claims)
+			}
+		} else if resource.GetObjectKind().GroupVersionKind().Kind == "LicenseKey" {
+			claims, err1 := licClient.Decode(*resource.(*api.LicenseKey))
+			if err1 != nil {
+				panic(err1)
+			}
+			err = tmpl.Execute(writer, claims)
+		} else {
+			err = tmpl.Execute(writer, resource)
+			if err != nil {
+				panic(err)
+			}
 		}
+
 		writer.Flush()
 
 		// Templates for ps format are internally defined and therefore we should not
@@ -176,6 +198,7 @@ func (r resourcePrinterTemplate) print(client client.Interface, resources []runt
 		"join":            join,
 		"joinAndTruncate": joinAndTruncate,
 		"config":          config(client),
+		"localtime":       localTime,
 	}
 	tmpl, err := template.New("get").Funcs(fns).Parse(r.template)
 	if err != nil {
@@ -184,6 +207,17 @@ func (r resourcePrinterTemplate) print(client client.Interface, resources []runt
 
 	err = tmpl.Execute(os.Stdout, resources)
 	return err
+}
+
+// localTime takes jwt.NumericDate which is an alias for time.Unix (int64)
+// and converts it to time.Time for the local timezone.
+func localTime(t interface{}) string {
+	exp, ok := t.(jwt.NumericDate)
+	if !ok {
+		return "unknown - license corrupted"
+	}
+
+	return exp.Time().Local().String()
 }
 
 // join is similar to strings.Join() but takes an arbitrary slice of interfaces and converts
@@ -213,7 +247,7 @@ func joinAndTruncate(items interface{}, separator string, maxLen int) string {
 		if maxLen > 0 && buf.Len() > maxLen {
 			// Break out early so that we don't have to stringify a long list, only to then throw it away.
 			const truncationSuffix = "..."
-			buf.Truncate(maxLen-len(truncationSuffix))
+			buf.Truncate(maxLen - len(truncationSuffix))
 			buf.WriteString(truncationSuffix)
 			break
 		}
@@ -224,7 +258,7 @@ func joinAndTruncate(items interface{}, separator string, maxLen int) string {
 // config returns a function that returns the current global named config
 // value.
 func config(client client.Interface) func(string) string {
-	var asValue string
+	var asValue, exp string
 	return func(name string) string {
 		switch strings.ToLower(name) {
 		case "asnumber":
@@ -236,6 +270,20 @@ func config(client client.Interface) func(string) string {
 				}
 			}
 			return asValue
+		case "expiration":
+			if exp == "" {
+				if lic, err := client.LicenseKey().Get(context.Background(), "default", options.GetOptions{}); err != nil {
+					exp = "unknown"
+				} else {
+					claims, err := licClient.Decode(*lic)
+					if err != nil {
+						exp = "unknown - license corrupted"
+					} else {
+						exp = claims.Claims.Expiry.Time().Local().String()
+					}
+				}
+			}
+			return exp
 		}
 		panic("unhandled config type")
 	}
