@@ -137,16 +137,16 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 
 		if resource.GetObjectKind().GroupVersionKind().Kind == "LicenseKeyList" {
 			for _, res := range resource.(*api.LicenseKeyList).Items {
-				claims, err1 := licClient.Decode(res)
-				if err1 != nil {
-					panic(err1)
+				claims, err := licClient.Decode(res)
+				if err != nil {
+					return fmt.Errorf("LicekseKey is corrupted: %s", err)
 				}
 				err = tmpl.Execute(writer, claims)
 			}
 		} else if resource.GetObjectKind().GroupVersionKind().Kind == "LicenseKey" {
-			claims, err1 := licClient.Decode(*resource.(*api.LicenseKey))
-			if err1 != nil {
-				panic(err1)
+			claims, err := licClient.Decode(*resource.(*api.LicenseKey))
+			if err != nil {
+				return fmt.Errorf("LicekseKey is corrupted: %s", err)
 			}
 			err = tmpl.Execute(writer, claims)
 		} else {
