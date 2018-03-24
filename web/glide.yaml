@@ -25,3 +25,5 @@ import:
   repo: git@github.com:tigera/calicoctl-private.git
   subpackages:
   - calicoctl/resourcemgr
+- package: k8s.io/client-go
+  version: 82aa063804cf055e16e8911250f888bc216e8b61
