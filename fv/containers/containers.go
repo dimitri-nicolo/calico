@@ -462,6 +462,7 @@ func RunFelix(etcdIP string, options TopologyOptions) *Felix {
 		"-e", "FELIX_LOGSEVERITYSCREEN=" + options.FelixLogSeverity,
 		"-e", "FELIX_DATASTORETYPE=etcdv3",
 		"-e", "FELIX_PROMETHEUSMETRICSENABLED=true",
+		"-e", "FELIX_PROMETHEUSREPORTERENABLED=true",
 		"-e", "FELIX_USAGEREPORTINGENABLED=false",
 		"-e", "FELIX_IPV6SUPPORT=" + ipv6Enabled,
 		"-v", "/lib/modules:/lib/modules",
