@@ -64,12 +64,12 @@ Created license file 'happy-carrot-inc-license.yaml'
 
 ## Retrieve a license from database
 
-`carrotctl list --name=boxy-box-inc` will list all key license fields for all the licenses issued for a customer name matching `boxy-box-inc*`
+`carrotctl list --customer=boxy-box-inc` will list all key license fields for all the licenses issued for a customer name matching `boxy-box-inc*`
 
 It will list `CustomerID` for each license issued for that customer, which can be used to retrieve the
-license with `carrotctl retrieve --cid=<customer-id>` command.
+license with `carrotctl retrieve --licenseuuid=<license-uuid>` command.
 
-Each license has a unique customer ID (UUID), even if it is for the same customer.
+Each license has a unique ID (LICENSEUUID), even if it is for the same customer.
 
 ### Example
 
@@ -77,16 +77,17 @@ Each license has a unique customer ID (UUID), even if it is for the same custome
 
 ```
 carrotctl list --name="team-rocket-inc"
+LICENSE UUID                           MAX NODES   EXPIRY                          FEATURES
+7874cac9-4710-4c6b-8e92-ee2cb47a069d         113   0001-01-01 00:00:00 +0000 UTC   cnx|all
+6f3af9e5-c487-4eba-811f-e024e3007a8f          14   2019-01-01 00:00:00 +0000 UTC   cnx|all
+d19fc66e-bf33-4d97-be16-aaba34d2b0d3          15   2019-01-01 00:00:00 +0000 UTC   cnx|all
 
-NAME                CUSTOMERID          TERM        NODES
-team-rocket-inc     ash212453efsdf      3/14/2030   100
-team-rocket-inc-ish meow15dsd3424f      1/1/2019    10
 ```
 
 - Re-generate the license.yaml for the second license from database:
 
 ```
-carrotctl retrieve --cid=meow15dsd3424f
+carrotctl retrieve --licenseuuid=meow15dsd3424f
 
 Created license file 'team-rocket-inc-ish-license.yaml'
 ```

@@ -2,27 +2,33 @@ package datastore
 
 import (
 	"strings"
+	"time"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client"
 )
 
-/* Comment out for now: fix up when list and get are implemented.
-func (db *DB) AllLicenses(companyId int) ([]*License, error) {
-	rows, err := db.Query("SELECT id, jwt FROM licenses WHERE company_id = ?", companyId)
+type LicenseInfo struct {
+	UUID     string
+	Expiry   time.Time
+	Nodes    int
+	Features string
+}
+
+func (db *DB) GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error) {
+	rows, err := db.Query("SELECT license_uuid, expiry, nodes, features FROM licenses WHERE company_id = ?", companyID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	licenses := make([]*License, 0)
+	licenses := make([]*LicenseInfo, 0)
 	for rows.Next() {
-		lic := &License{}
-		err := rows.Scan(&lic.Id, &lic.Jwt)
+		lic := &LicenseInfo{}
+		err := rows.Scan(&lic.UUID, &lic.Expiry, &lic.Nodes, &lic.Features)
 		if err != nil {
 			return nil, err
 		}
-		lic.CompanyId = companyId
 		licenses = append(licenses, lic)
 	}
 	if err = rows.Err(); err != nil {
@@ -31,6 +37,7 @@ func (db *DB) AllLicenses(companyId int) ([]*License, error) {
 	return licenses, nil
 }
 
+/* Comment out for now: fix up when list and get are implemented.
 func (db *DB) GetLicenseById(id int) (*License, error) {
 	lic := &License{}
 	row := db.QueryRow("SELECT id, jwt FROM licenses WHERE id = ?", id)

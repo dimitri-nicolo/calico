@@ -9,7 +9,7 @@ import (
 	"github.com/tigera/licensing/client"
 )
 
-var DSN string = "tigera_carrotctl:JbUEMjuHqVpyCCjt@/tigera_backoffice"
+var DSN string = "tigera_carrotctl:JbUEMjuHqVpyCCjt@/tigera_backoffice?parseTime=true"
 
 type Datastore interface {
 	AllCompanies() ([]*Company, error)
@@ -19,8 +19,8 @@ type Datastore interface {
 	CreateCompany(name string) (int64, error)
 	DeleteCompanyById(id int64) error
 
-	//AllLicenses(companyId int) ([]*License, error)
 	//GetLicenseById(id int) (*License, error)
+	GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error)
 	CreateLicense(license *api.LicenseKey, companyID int, claims *client.LicenseClaims) (int64, error)
 	DeleteLicense(licenseID int64) error
 }
