@@ -1,0 +1,2 @@
+V	190326164328Z		2EAE1DB63D17988ACFA986FC08DEF2A1	root.crt	/C=US/O=Tigera Inc./L=San Francisco/ST=California/CN=Tigera Inc. Cert Authority
+V	190326164400Z		FF2C3DC4B4C95E8142243A2A71E54F20	intermediate.crt	/C=US/O=Tigera Inc./L=San Francisco/ST=California/CN=Tigera Inc. Lic signing - Internal
