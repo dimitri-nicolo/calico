@@ -66,7 +66,7 @@ Created license file 'happy-carrot-inc-license.yaml'
 
 `carrotctl list --name=boxy-box-inc` will list all key license fields for all the licenses issued for a customer name matching `boxy-box-inc*`
 
-It will list `CustomerID` for each license issued for that customer, which can be used to retrieve the 
+It will list `CustomerID` for each license issued for that customer, which can be used to retrieve the
 license with `carrotctl retrieve --cid=<customer-id>` command.
 
 Each license has a unique customer ID (UUID), even if it is for the same customer.
@@ -89,4 +89,36 @@ team-rocket-inc-ish meow15dsd3424f      1/1/2019    10
 carrotctl retrieve --cid=meow15dsd3424f
 
 Created license file 'team-rocket-inc-ish-license.yaml'
+```
+
+# Building
+
+## DB setup
+
+To develop the tool, you'll need to set up a suitable license database to test against.
+Do NOT run on the official AWS instance: it will interact with the real license database.
+
+```
+# Install mariadb; you may need to consult your distribution's instructions.
+pacman -Syu mysql
+
+# Create the tables and user
+```
+mysql -u root -p < datastore/db.sql
+```
+
+## Building
+
+With dep installed (`go get -u github.com/golang/dep/cmd/dep`), run the following.
+
+```
+dep ensure
+go build -o dist/carrotctl ./carrotctl
+```
+
+## Testing
+
+You can run generate like the following.  It'll pick up the certificates in the repo.
+```
+dist/carrotctl generate -c tigera -e 01/01/2019 -n 10
 ```

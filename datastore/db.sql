@@ -1,6 +1,9 @@
 CREATE DATABASE IF NOT EXISTS tigera_backoffice CHARACTER SET utf8 COLLATE utf8_general_ci;
 USE tigera_backoffice;
 
+GRANT ALL PRIVILEGES ON tigera_backoffice.* TO 'tigera_carrotctl'@'localhost' IDENTIFIED BY 'JbUEMjuHqVpyCCjt';
+FLUSH PRIVILEGES;
+
 CREATE TABLE companies
 (
   id    INT AUTO_INCREMENT PRIMARY KEY,

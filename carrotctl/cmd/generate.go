@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -14,8 +15,10 @@ import (
 	"github.com/spf13/pflag"
 	"gopkg.in/square/go-jose.v2/jwt"
 
-	"github.com/tigera/licensing/client"
 	"path/filepath"
+
+	"github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/datastore"
 )
 
 var (
@@ -54,7 +57,6 @@ func init() {
 	nodeFlag = GenerateLicenseCmd.PersistentFlags()
 	nodeFlag.IntVarP(&nodes, "nodes", "n", 0, "Number of nodes customer is licensed for. If not specified, it'll be an unlimited nodes license.")
 
-
 	graceFlag = GenerateLicenseCmd.PersistentFlags()
 	graceFlag.IntVarP(&claims.GracePeriod, "graceperiod", "g", 90, "Number of days the cluster will keep working after the license expires")
 
@@ -72,10 +74,10 @@ func init() {
 }
 
 var GenerateLicenseCmd = &cobra.Command{
-	Use: "generate",
-	Aliases: []string{"gen", "gen-lic", "generate-license", "make-me-a-license"},
+	Use:        "generate",
+	Aliases:    []string{"gen", "gen-lic", "generate-license", "make-me-a-license"},
 	SuggestFor: []string{"gen", "generat", "generate-license"},
-	Short: "Generate tigera CNX license file",
+	Short:      "Generate tigera CNX license file",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		// Parse expiration date into time format and set it to end of the day for that date.
@@ -86,9 +88,12 @@ var GenerateLicenseCmd = &cobra.Command{
 
 		// If the nodes flag is specified then set the value here
 		// else leave it to nil (default) - which means unlimited nodes license.
-		if nodeFlag.Changed("nodes"){
+		if nodeFlag.Changed("nodes") {
 			claims.Nodes = &nodes
 		}
+
+		// License claims version 1.
+		claims.Version = "1"
 
 		// This might be configurable in future. Right now we just license all the features.
 		claims.Features = allFeaturesV21
@@ -136,7 +141,6 @@ var GenerateLicenseCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-
 		absPrivKeyPath, err := filepath.Abs(privKeyPath)
 		if err != nil {
 			log.Fatalf("error getting the absolute path for '%s' : %s", privKeyPath, err)
@@ -152,8 +156,49 @@ var GenerateLicenseCmd = &cobra.Command{
 			log.Fatalf("error generating license from claims: %s", err)
 		}
 
+		// Store the license in the license database.
+		db, err := datastore.NewDB(datastore.DSN)
+		if err != nil {
+			log.Fatalf("error connecting to license database: %s", err)
+		}
+
+		// Find or create the Company entry for the license.
+		companyID, err := db.GetCompanyByName(claims.Customer)
+		if err == sql.ErrNoRows {
+			// Confirm creation of company with the user in case they mistyped.
+			fmt.Printf("Customer %s not found in company database.  Create new company? [y/N]\n", claims.Customer)
+			var create string
+			fmt.Scanf("%s", &create)
+
+			if strings.ToLower(create) != "y" {
+				os.Exit(1)
+			}
+
+			companyID, err = db.CreateCompany(claims.Customer)
+			if err != nil {
+				log.Fatalf("error creating company: %s", err)
+			}
+		} else if err != nil {
+			log.Fatalf("error looking up company: %s", err)
+		}
+
+		// Save the license in the DB.
+		licenseID, err := db.CreateLicense(lic, companyID, &claims)
+		if err != nil {
+			log.Fatalf("error saving license to database: %s", err)
+		}
+
+		// License successfully stored in database: emit yaml file.
 		err = WriteYAML(*lic, claims.Customer)
 		if err != nil {
+			// Remove the license from the database (leave the company around).
+			cleanupErr := db.DeleteLicense(licenseID)
+			if cleanupErr != nil {
+				log.Fatalf("error creating the license file: %s and error cleaning license up from database: %s",
+					err,
+					cleanupErr,
+				)
+			}
 			log.Fatalf("error creating the license file: %s", err)
 		}
 

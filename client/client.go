@@ -5,9 +5,10 @@ import (
 
 	"gopkg.in/square/go-jose.v2/jwt"
 
+	"fmt"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cryptolicensing "github.com/tigera/licensing/crypto"
-	"fmt"
 )
 
 var (
