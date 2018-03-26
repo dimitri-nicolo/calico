@@ -30,7 +30,7 @@ var ListLicensesCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if len(customerListName) < 3 {
-			log.Fatal("[ERROR] Customer name must be at least 3 charecters long")
+			log.Fatal("[ERROR] Customer name must be at least 3 characters long")
 		}
 
 		// Connect to the license database.

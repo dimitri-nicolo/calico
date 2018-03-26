@@ -19,7 +19,7 @@ type Datastore interface {
 	CreateCompany(name string) (int64, error)
 	DeleteCompanyById(id int64) error
 
-	//GetLicenseById(id int) (*License, error)
+	GetLicenseByUUID(uuid string) (*LicenseInfo, error)
 	GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error)
 	CreateLicense(license *api.LicenseKey, companyID int, claims *client.LicenseClaims) (int64, error)
 	DeleteLicense(licenseID int64) error

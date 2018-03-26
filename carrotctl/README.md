@@ -67,7 +67,7 @@ Created license file 'happy-carrot-inc-license.yaml'
 `carrotctl list --customer=boxy-box-inc` will list all key license fields for all the licenses issued for a customer name matching `boxy-box-inc*`
 
 It will list `CustomerID` for each license issued for that customer, which can be used to retrieve the
-license with `carrotctl retrieve --licenseuuid=<license-uuid>` command.
+license with `carrotctl retrieve --license-uuid=<license-uuid>` command.
 
 Each license has a unique ID (LICENSEUUID), even if it is for the same customer.
 
@@ -87,9 +87,9 @@ d19fc66e-bf33-4d97-be16-aaba34d2b0d3          15   2019-01-01 00:00:00 +0000 UTC
 - Re-generate the license.yaml for the second license from database:
 
 ```
-carrotctl retrieve --licenseuuid=meow15dsd3424f
+carrotctl retrieve --license-uuid=d19fc66e-bf33-4d97-be16-aaba34d2b0d3
 
-Created license file 'team-rocket-inc-ish-license.yaml'
+Created license file 'd19fc66e-bf33-4d97-be16-aaba34d2b0d3.yaml'
 ```
 
 # Building

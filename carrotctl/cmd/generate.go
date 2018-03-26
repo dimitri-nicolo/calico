@@ -102,7 +102,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		claims.IssuedAt = jwt.NewNumericDate(time.Now().UTC())
 
 		if len(claims.Customer) < 3 {
-			log.Fatal("[ERROR] Customer name must be at least 3 charecters long")
+			log.Fatal("[ERROR] Customer name must be at least 3 characters long")
 		}
 
 		nodeCountStr := ""
@@ -146,7 +146,7 @@ var GenerateLicenseCmd = &cobra.Command{
 			log.Fatalf("error getting the absolute path for '%s' : %s", privKeyPath, err)
 		}
 
-		absCertPath, _ = filepath.Abs(certPath)
+		absCertPath, err = filepath.Abs(certPath)
 		if err != nil {
 			log.Fatalf("error getting the absolute path for '%s' : %s", certPath, err)
 		}

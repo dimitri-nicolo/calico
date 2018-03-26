@@ -13,10 +13,11 @@ type LicenseInfo struct {
 	Expiry   time.Time
 	Nodes    int
 	Features string
+	JWT      string
 }
 
 func (db *DB) GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error) {
-	rows, err := db.Query("SELECT license_uuid, expiry, nodes, features FROM licenses WHERE company_id = ?", companyID)
+	rows, err := db.Query("SELECT license_uuid, expiry, nodes, features, jwt FROM licenses WHERE company_id = ?", companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +26,7 @@ func (db *DB) GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error) {
 	licenses := make([]*LicenseInfo, 0)
 	for rows.Next() {
 		lic := &LicenseInfo{}
-		err := rows.Scan(&lic.UUID, &lic.Expiry, &lic.Nodes, &lic.Features)
+		err := rows.Scan(&lic.UUID, &lic.Expiry, &lic.Nodes, &lic.Features, &lic.JWT)
 		if err != nil {
 			return nil, err
 		}
@@ -37,17 +38,16 @@ func (db *DB) GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error) {
 	return licenses, nil
 }
 
-/* Comment out for now: fix up when list and get are implemented.
-func (db *DB) GetLicenseById(id int) (*License, error) {
-	lic := &License{}
-	row := db.QueryRow("SELECT id, jwt FROM licenses WHERE id = ?", id)
-	err := row.Scan(&lic.Id, &lic.Jwt)
+func (db *DB) GetLicenseByUUID(uuid string) (*LicenseInfo, error) {
+	lic := &LicenseInfo{}
+	row := db.QueryRow("SELECT expiry, nodes, features, jwt FROM licenses WHERE license_uuid = ?", uuid)
+	err := row.Scan(&lic.Expiry, &lic.Nodes, &lic.Features, &lic.JWT)
 	if err != nil {
 		return nil, err
 	}
+	lic.UUID = uuid
 	return lic, nil
 }
-*/
 
 // CreateLicense saves a license in the database; returning success and the licenseID.
 func (db *DB) CreateLicense(license *api.LicenseKey, companyID int64, claims *client.LicenseClaims) (int64, error) {
