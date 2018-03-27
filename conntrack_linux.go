@@ -36,9 +36,9 @@ func ConntrackList() ([]CtEntry, error) {
 
 func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 	ctentry := CtEntry{}
-	attrs, err := nfnl.ParseNetfilterAttr(m)
+	var attrs [nfnl.CTA_MAX]nfnl.NetlinkNetfilterAttr
+	err := nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
-		nfnl.AttrPool.Put(attrs)
 		return ctentry, err
 	}
 
@@ -52,13 +52,11 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 		switch attrType {
 		case nfnl.CTA_TUPLE_ORIG:
 			if !isNestedAttr {
-				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			parseConntrackTuple(&ctentry.OriginalTuple, attr.Value, family)
 		case nfnl.CTA_TUPLE_REPLY:
 			if !isNestedAttr {
-				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			parseConntrackTuple(&ctentry.ReplyTuple, attr.Value, family)
@@ -70,13 +68,11 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 			ctentry.Mark = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_COUNTERS_ORIG:
 			if !isNestedAttr {
-				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			ctentry.OriginalCounters, _ = parseConntrackCounters(attr.Value)
 		case nfnl.CTA_COUNTERS_REPLY:
 			if !isNestedAttr {
-				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
 			ctentry.ReplyCounters, _ = parseConntrackCounters(attr.Value)
@@ -90,14 +86,13 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 			ctentry.Secmark = int(native.Uint32(attr.Value[0:4]))
 		}
 	}
-	nfnl.AttrPool.Put(attrs)
 	return ctentry, nil
 }
 
 func parseConntrackTuple(tuple *CtTuple, value []byte, family uint8) error {
-	attrs, err := nfnl.ParseNetfilterAttr(value)
+	var attrs [nfnl.CTA_TUPLE_MAX]nfnl.NetlinkNetfilterAttr
+	err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
-		nfnl.AttrPool.Put(attrs)
 		return err
 	}
 	tuple.L3ProtoNum = int(family)
@@ -110,13 +105,11 @@ func parseConntrackTuple(tuple *CtTuple, value []byte, family uint8) error {
 		switch attrType {
 		case nfnl.CTA_TUPLE_IP:
 			if !isNestedAttr {
-				nfnl.AttrPool.Put(attrs)
 				return errors.New("Nested attribute value expected")
 			}
 			parseTupleIp(tuple, attr.Value)
 		case nfnl.CTA_TUPLE_PROTO:
 			if !isNestedAttr {
-				nfnl.AttrPool.Put(attrs)
 				return errors.New("Nested attribute value expected")
 			}
 			parseTupleProto(tuple, attr.Value)
@@ -125,17 +118,15 @@ func parseConntrackTuple(tuple *CtTuple, value []byte, family uint8) error {
 		}
 	}
 	if err != nil {
-		nfnl.AttrPool.Put(attrs)
 		return err
 	}
-	nfnl.AttrPool.Put(attrs)
 	return nil
 }
 
 func parseTupleIp(tuple *CtTuple, value []byte) error {
-	attrs, err := nfnl.ParseNetfilterAttr(value)
+	var attrs [nfnl.CTA_IP_MAX]nfnl.NetlinkNetfilterAttr
+	err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
-		nfnl.AttrPool.Put(attrs)
 		return err
 	}
 	for _, attr := range attrs {
@@ -146,14 +137,13 @@ func parseTupleIp(tuple *CtTuple, value []byte) error {
 			copy(tuple.Dst[:], net.IP(attr.Value).To16()[:16])
 		}
 	}
-	nfnl.AttrPool.Put(attrs)
 	return err
 }
 
 func parseTupleProto(tuple *CtTuple, value []byte) error {
-	attrs, err := nfnl.ParseNetfilterAttr(value)
+	var attrs [nfnl.CTA_PROTO_MAX]nfnl.NetlinkNetfilterAttr
+	err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
-		nfnl.AttrPool.Put(attrs)
 		return err
 	}
 	native := binary.BigEndian
@@ -173,15 +163,14 @@ func parseTupleProto(tuple *CtTuple, value []byte) error {
 			tuple.L4Dst.Code = int(attr.Value[0])
 		}
 	}
-	nfnl.AttrPool.Put(attrs)
 	return err
 }
 
 func parseConntrackCounters(value []byte) (CtCounters, error) {
 	counters := CtCounters{}
-	attrs, err := nfnl.ParseNetfilterAttr(value)
+	var attrs [nfnl.CTA_COUNTERS_MAX]nfnl.NetlinkNetfilterAttr
+	err := nfnl.ParseNetfilterAttr(value, attrs[:])
 	if err != nil {
-		nfnl.AttrPool.Put(attrs)
 		return counters, err
 	}
 	native := binary.BigEndian
@@ -197,6 +186,5 @@ func parseConntrackCounters(value []byte) (CtCounters, error) {
 			counters.Bytes = int(native.Uint32(attr.Value[0:8]))
 		}
 	}
-	nfnl.AttrPool.Put(attrs)
 	return counters, err
 }

@@ -191,11 +191,9 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 
 func parseNflog(m []byte) (*NflogPacket, error) {
 	nflogPacket := &NflogPacket{}
-	attrs, err := nfnl.ParseNetfilterAttr(m)
+	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
+	err := nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
-		// TODO(doublek): Exported AttrPool is a bit ugly, need to keep this local to
-		// parseNflog.
-		nfnl.AttrPool.Put(attrs)
 		return nflogPacket, err
 	}
 
@@ -223,7 +221,6 @@ func parseNflog(m []byte) (*NflogPacket, error) {
 	}
 	nflogPacket.Prefix.Packets = 1
 	nflogPacket.Prefix.Bytes = nflogPacket.Bytes
-	nfnl.AttrPool.Put(attrs)
 	return nflogPacket, nil
 }
 
