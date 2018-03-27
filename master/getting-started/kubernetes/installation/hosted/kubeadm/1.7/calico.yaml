@@ -31,7 +31,6 @@ data:
           "type": "calico",
           "etcd_endpoints": "__ETCD_ENDPOINTS__",
           "log_level": "info",
-          "nodename_file_optional": true,
           "mtu": 1500,
           "ipam": {
               "type": "calico-ipam"
