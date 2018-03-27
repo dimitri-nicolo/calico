@@ -65,6 +65,7 @@ rules:
       - networkpolicies
       - tiers
       - clusterinformations
+      - licensekeys
     verbs:
       - create
       - get
