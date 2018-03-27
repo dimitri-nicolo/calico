@@ -1,7 +1,5 @@
-hash: ff29335413cae831e9ef0cbfae5e2ca140164f6e0e93c7b0da7157cc26be3c5b
-updated: 2018-03-22T02:16:34.213180649Z
-hash: f74d4ae389ac0f1b81448a9fb109956d4d8203338922aee36abd48f3ba8a9c0b
-updated: 2018-03-19T18:38:03.784460197Z
+hash: bfe2b0f8825034ad7e5af3a5a69d0d14cdcbc104fae551d8b53dac3ebcd1c52b
+updated: 2018-03-26T17:25:43.978432522-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -16,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/containernetworking/cni
@@ -209,7 +207,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e93f907cde6e7c897354f32ee4a10637bee5890f
+  version: 3a570da01b58c51f8a79293f874394156bedf862
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -249,7 +247,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: d7cd2082753412e73ac2033d4beb4184032c929a
+  version: 459cccfdc7804a46176d4f466adffcbdb8c183f3
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -265,7 +263,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e4aa40a9169a88835b849a6efb71e05dc04b88f0
+  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -299,7 +297,7 @@ imports:
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
-  version: c3a3ad6d03f7a915c0f7e194b7152974bb73d287
+  version: 88942b9c40a4c9d203b82b3731787b672d6e809b
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net

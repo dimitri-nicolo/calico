@@ -36,7 +36,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: master
+  version: 3a570da01b58c51f8a79293f874394156bedf862
   subpackages:
   - lib
 - package: github.com/tigera/nfnetlink
@@ -58,7 +58,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: master
+  version: 459cccfdc7804a46176d4f466adffcbdb8c183f3
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
