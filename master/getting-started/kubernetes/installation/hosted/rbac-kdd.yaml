@@ -69,6 +69,7 @@ rules:
       - ippools
       - globalnetworkpolicies
       - globalnetworksets
+      - remoteclusterconfigurations
       - networkpolicies
       - tiers
       - clusterinformations
