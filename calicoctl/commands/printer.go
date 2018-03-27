@@ -135,18 +135,22 @@ func (r resourcePrinterTable) print(client client.Interface, resources []runtime
 		// Use a tabwriter to write out the template - this provides better formatting.
 		writer := tabwriter.NewWriter(os.Stdout, 5, 1, 3, ' ', 0)
 
+		// LicenseKey resource can't be printed as it is since the information is encrypted in the token,
+		// so we need to decode it first, make sure it's not corrupt then parse the license claims onto the
+		// Go template to print the output. Same goes for LicenseKeyList resource, rest of the resources
+		// can be sent to Go template directly (in the last else branch).
 		if resource.GetObjectKind().GroupVersionKind().Kind == "LicenseKeyList" {
 			for _, res := range resource.(*api.LicenseKeyList).Items {
 				claims, err := licClient.Decode(res)
 				if err != nil {
-					return fmt.Errorf("LicekseKey is corrupted: %s", err)
+					return fmt.Errorf("LicenseKey is corrupted: %s", err)
 				}
 				err = tmpl.Execute(writer, claims)
 			}
 		} else if resource.GetObjectKind().GroupVersionKind().Kind == "LicenseKey" {
 			claims, err := licClient.Decode(*resource.(*api.LicenseKey))
 			if err != nil {
-				return fmt.Errorf("LicekseKey is corrupted: %s", err)
+				return fmt.Errorf("LicenseKey is corrupted: %s", err)
 			}
 			err = tmpl.Execute(writer, claims)
 		} else {
@@ -258,7 +262,7 @@ func joinAndTruncate(items interface{}, separator string, maxLen int) string {
 // config returns a function that returns the current global named config
 // value.
 func config(client client.Interface) func(string) string {
-	var asValue, exp string
+	var asValue string
 	return func(name string) string {
 		switch strings.ToLower(name) {
 		case "asnumber":
@@ -270,20 +274,6 @@ func config(client client.Interface) func(string) string {
 				}
 			}
 			return asValue
-		case "expiration":
-			if exp == "" {
-				if lic, err := client.LicenseKey().Get(context.Background(), "default", options.GetOptions{}); err != nil {
-					exp = "unknown"
-				} else {
-					claims, err := licClient.Decode(*lic)
-					if err != nil {
-						exp = "unknown - license corrupted"
-					} else {
-						exp = claims.Claims.Expiry.Time().Local().String()
-					}
-				}
-			}
-			return exp
 		}
 		panic("unhandled config type")
 	}

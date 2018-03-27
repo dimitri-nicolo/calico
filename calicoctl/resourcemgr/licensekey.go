@@ -29,21 +29,20 @@ func init() {
 		api.NewLicenseKey(),
 		api.NewLicenseKeyList(),
 		false,
-		[]string{"license", "licensekey", "lic", "licenses"},
+		[]string{"license", "licensekey", "lic", "licenses", "licensekeys"},
 		[]string{"LICENSEID", "EXPIRATION", "NODES"},
-		[]string{"LICENSEID", "EXPIRATION", "NODES", "FEATURES", "GRACEPERIOD"},
+		[]string{"LICENSEID", "EXPIRATION", "NODES", "FEATURES"},
 		map[string]string{
 			"LICENSEID":   "{{.LicenseID}}",
 			"EXPIRATION":  "{{localtime .Claims.Expiry}}",
 			"NODES":       "{{.Nodes}}",
 			"FEATURES":    "{{.Features}}",
-			"GRACEPERIOD": "{{.GracePeriod}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.LicenseKey)
 			_, err := licClient.Decode(*r)
 			if err != nil {
-				return nil, fmt.Errorf("LicekseKey is corrupted: %s", err.Error())
+				return nil, fmt.Errorf("LicenseKey is corrupted: %s", err.Error())
 			}
 
 			return client.LicenseKey().Create(ctx, r, options.SetOptions{})
@@ -52,7 +51,7 @@ func init() {
 			r := resource.(*api.LicenseKey)
 			_, err := licClient.Decode(*r)
 			if err != nil {
-				return nil, fmt.Errorf("LicekseKey is corrupted: %s", err.Error())
+				return nil, fmt.Errorf("LicenseKey is corrupted: %s", err.Error())
 			}
 
 			return client.LicenseKey().Update(ctx, r, options.SetOptions{})
