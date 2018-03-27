@@ -55,15 +55,13 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
-			tuple, _ := parseConntrackTuple(attr.Value, family)
-			ctentry.OriginalTuples = append(ctentry.OriginalTuples, tuple)
+			ctentry.OriginalTuple, _ = parseConntrackTuple(attr.Value, family)
 		case nfnl.CTA_TUPLE_REPLY:
 			if !isNestedAttr {
 				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
-			tuple, _ := parseConntrackTuple(attr.Value, family)
-			ctentry.ReplyTuples = append(ctentry.ReplyTuples, tuple)
+			ctentry.ReplyTuple, _ = parseConntrackTuple(attr.Value, family)
 		case nfnl.CTA_STATUS:
 			ctentry.Status = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_TIMEOUT:

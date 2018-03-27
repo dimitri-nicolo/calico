@@ -54,15 +54,15 @@ type CtNat struct {
 // TODO(doublek): Methods to compare conntrackTuple's
 
 type CtEntry struct {
-	OriginalTuples []CtTuple
-	ReplyTuples    []CtTuple
-	Timeout        int
-	Mark           int
-	Secmark        int
-	Status         int
-	Use            int
-	Id             int
-	Zone           int
+	OriginalTuple CtTuple
+	ReplyTuple    CtTuple
+	Timeout       int
+	Mark          int
+	Secmark       int
+	Status        int
+	Use           int
+	Id            int
+	Zone          int
 
 	OriginalCounters CtCounters
 	ReplyCounters    CtCounters
@@ -92,47 +92,23 @@ func (cte *CtEntry) IsDNAT() bool {
 	return false
 }
 
-func (cte *CtEntry) OriginalTuple() (CtTuple, error) {
-	l := len(cte.OriginalTuples)
-	if l == 0 {
-		return EmptyCtTuple, errors.New("OriginalTuples is empty")
-	}
-	return cte.OriginalTuples[l-1], nil
-}
-
-func (cte *CtEntry) ReplyTuple() (CtTuple, error) {
-	l := len(cte.ReplyTuples)
-	if l == 0 {
-		return EmptyCtTuple, errors.New("ReplyTuples is empty")
-	}
-	return cte.ReplyTuples[l-1], nil
-}
-
 func (cte *CtEntry) OriginalTupleWithoutDNAT() (CtTuple, error) {
 	if !cte.IsDNAT() {
 		return EmptyCtTuple, errors.New("Entry is not DNAT-ed")
 	}
-	reply, err := cte.ReplyTuple()
-	if err != nil {
-		return EmptyCtTuple, err
-	}
-	original, err := cte.OriginalTuple()
-	if err != nil {
-		return EmptyCtTuple, err
-	}
 
 	var src CtL4Src
 	var dst CtL4Dst
-	if original.ProtoNum == nfnl.ICMP_PROTO {
-		src = CtL4Src{Id: reply.L4Src.Id}
-		dst = CtL4Dst{Type: reply.L4Dst.Type, Code: reply.L4Dst.Code}
-	} else if original.ProtoNum == nfnl.TCP_PROTO || original.ProtoNum == nfnl.UDP_PROTO {
-		src = CtL4Src{Port: reply.L4Dst.Port}
-		dst = CtL4Dst{Port: reply.L4Src.Port}
+	if cte.OriginalTuple.ProtoNum == nfnl.ICMP_PROTO {
+		src = CtL4Src{Id: cte.ReplyTuple.L4Src.Id}
+		dst = CtL4Dst{Type: cte.ReplyTuple.L4Dst.Type, Code: cte.ReplyTuple.L4Dst.Code}
+	} else if cte.OriginalTuple.ProtoNum == nfnl.TCP_PROTO || cte.OriginalTuple.ProtoNum == nfnl.UDP_PROTO {
+		src = CtL4Src{Port: cte.ReplyTuple.L4Dst.Port}
+		dst = CtL4Dst{Port: cte.ReplyTuple.L4Src.Port}
 	} else {
-		src = CtL4Src{All: reply.L4Dst.All}
-		dst = CtL4Dst{All: reply.L4Src.All}
+		src = CtL4Src{All: cte.ReplyTuple.L4Dst.All}
+		dst = CtL4Dst{All: cte.ReplyTuple.L4Src.All}
 	}
 
-	return CtTuple{original.Src, reply.Src, original.L3ProtoNum, original.ProtoNum, original.Zone, src, dst}, nil
+	return CtTuple{cte.OriginalTuple.Src, cte.ReplyTuple.Src, cte.OriginalTuple.L3ProtoNum, cte.OriginalTuple.ProtoNum, cte.OriginalTuple.Zone, src, dst}, nil
 }

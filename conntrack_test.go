@@ -40,8 +40,8 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 			},
 		}
 		cte = nfnetlink.CtEntry{
-			OriginalTuples: []nfnetlink.CtTuple{original_dnat},
-			ReplyTuples:    []nfnetlink.CtTuple{reply},
+			OriginalTuple: original_dnat,
+			ReplyTuple:    reply,
 		}
 	})
 	Describe("Check DNAT", func() {
