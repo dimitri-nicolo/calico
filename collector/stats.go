@@ -262,8 +262,8 @@ func (t *RuleTrace) ClearDirtyFlag() {
 
 func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 	ctr := tp.Ctr
-	if tp.Index > t.Len() {
-		// Insertion Index greater than current length. Grow the path slice as long
+	if tp.Index >= t.Len() {
+		// Insertion Index is beyond than current length. Grow the path slice as long
 		// as necessary.
 		incSize := (tp.Index / RuleTraceInitLen) * RuleTraceInitLen
 		newPath := make([]*RuleTracePoint, t.Len()+incSize)
@@ -307,9 +307,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
 	}
 	// New tracepoint is not a next-Tier action truncate at this Index.
 	t.path[tp.Index] = tp
-	newPath := make([]*RuleTracePoint, t.Len())
-	copy(newPath, t.path[:tp.Index+1])
-	t.path = newPath
+	t.path = t.path[:tp.Index+1]
 	t.action = tp.RuleIDs.Action
 	t.ctr = tp.Ctr
 	t.dirty = true
