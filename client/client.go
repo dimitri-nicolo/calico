@@ -8,7 +8,33 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 	"fmt"
+	"crypto/x509"
 )
+
+// TODO: replace this with the actual cert once it's available.
+const rootPEM = `-----BEGIN CERTIFICATE-----
+MIID2DCCAsCgAwIBAgIRAMasaTPup3Kvwz1Y3Gx62w4wDQYJKoZIhvcNAQELBQAw
+dTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
+biBGcmFuY2lzY28xFDASBgNVBAoTC1RpZ2VyYSBJbmMuMSMwIQYDVQQDExpUaWdl
+cmEgSW5jLiBDZXJ0IEF1dGhvcml0eTAeFw0xODAzMjYxNjMxNTdaFw0xOTAzMjYx
+NjMxNTZaMHUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYD
+VQQHEw1TYW4gRnJhbmNpc2NvMRQwEgYDVQQKEwtUaWdlcmEgSW5jLjEjMCEGA1UE
+AxMaVGlnZXJhIEluYy4gQ2VydCBBdXRob3JpdHkwggEiMA0GCSqGSIb3DQEBAQUA
+A4IBDwAwggEKAoIBAQCzNYU41SwTeAuOXc9zJwQKYjWNO6+peLwnzcoWTnBQWkEa
+a+nqOs7J4uTGiMQdwHdwGMNPSQLUzjZa4AmxljqOIVcKmfwIUPjuAAgbP27fuFCI
+c/W8BMTseutBOYCwo+ZRlklSMv294kU4UeiGGjj1ndT994xnv198iMlG+7s737OH
+7fk9+I1JWSPFoFvKAtrpCcPXos/pSNbLr2Ojp77Jc6EX2gXj5F3qb4ppqG8Rtbe+
+bAHgeyfMBUKj8G/wZel1T4m25HrB/b5uWxsxcPkzJ9SA9WOlC3FsfoWyR3XbmkLu
+DRIm8dCXhE8xiXG+X0UkHj0qX4R+W+6qRb5jeSGRAgMBAAGjYzBhMA4GA1UdDwEB
+/wQEAwIBhjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQwgD9AwdAx2j8933UU
+7uZYVOw2kDAfBgNVHSMEGDAWgBQwgD9AwdAx2j8933UU7uZYVOw2kDANBgkqhkiG
+9w0BAQsFAAOCAQEAMX0rkwC1b2+uNZDXpVHBYQ3KmkcL2GFxMypLEnH5W+PHJgEi
+2JKz4g83M1zzrEHO+0RTwMuUVOD5/Mrwn8AcQvG5AOjdS946AEfhoso1RH1wy5y+
++cj9T8fELoFj/pwWN1zaCmLEh1WYX0unUM1XGlQD51S7fYg1g/4Z/HzBy4mgUE1M
+4D3zV7y6S7l1VUwK9daStUZU9HN/Wa9Q0QsnASMSh5aAmPsC5uAfZT0Q7guD/O1b
+eLb7zca40mf4yNSlgKRB9OpyP/XpbpOvPsNpVfzO5IFMGyJSZ6rB9zLoAaevJ2sH
+41uNeuDypKIVzJ6Uz/hBiPp9JratP7x9iAukpA==
+-----END CERTIFICATE-----`
 
 var (
 	// Symmetric key to encrypt and decrypt the JWT.
@@ -17,8 +43,25 @@ var (
 
 	// LicenseKey is a singleton resource, and has to have the name "default".
 	ResourceName = "default"
+
+	opts x509.VerifyOptions
+
 )
 
+func init() {
+	// First, create the set of root certificates. For this example we only
+	// have one. It's also possible to omit this in order to use the
+	// default root set of the current operating system.
+	roots := x509.NewCertPool()
+	ok := roots.AppendCertsFromPEM([]byte(rootPEM))
+	if !ok {
+		panic("failed to load root cert")
+	}
+
+	opts = x509.VerifyOptions{
+		Roots:   roots,
+	}
+}
 // LicenseClaims contains all the license control fields.
 // This includes custom JWT fields and the default ones.
 type LicenseClaims struct {
@@ -78,6 +121,10 @@ func Decode(lic api.LicenseKey) (LicenseClaims, error) {
 	cert, err := cryptolicensing.LoadCertFromPEM([]byte(lic.Spec.Certificate))
 	if err != nil {
 		return LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
+	}
+
+	if _, err := cert.Verify(opts); err != nil {
+		return LicenseClaims{}, fmt.Errorf("failed to verify the certificate: %s", err)
 	}
 
 	var claims LicenseClaims
