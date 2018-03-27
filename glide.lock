@@ -1,5 +1,5 @@
-hash: 43cd7d86d8a8d87f2d516917f5b77a2bbeb34b22ee159e2e99583393e93637e9
-updated: 2018-03-22T13:49:37.47913614-07:00
+hash: ae56e772a2b6488e4ff033809f6ae624215667352489d056920c9f606f8e071a
+updated: 2018-03-26T15:09:30.17488199-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -34,7 +34,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
-  version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
+  version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/docopt/docopt-go
   version: ee0de3bc6815ee19d4a46c7eb90f829db0e014b1
 - name: github.com/emicklei/go-restful
@@ -52,7 +52,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: d8000b5bfbd1147255710505a27c735b6b2ae2ac
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -73,11 +73,11 @@ imports:
   - ptypes/duration
   - ptypes/timestamp
 - name: github.com/google/btree
-  version: 925471ac9e2131377a91e1595defec898166fe49
+  version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/googleapis/gnostic
-  version: 68f4ded48ba9414dab2ae69b3f0d69971da73aa5
+  version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
   - OpenAPIv2
   - compiler
@@ -161,7 +161,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/calicoctl
-  version: b6c904aa23774e4b10c62a4f9c6dd764663161db
+  version: 54a19c568787ce7e935a5c084097c305cfae62c2
   subpackages:
   - calicoctl/commands/argutils
   - calicoctl/resourcemgr
@@ -187,7 +187,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e93f907cde6e7c897354f32ee4a10637bee5890f
+  version: 3a570da01b58c51f8a79293f874394156bedf862
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -235,7 +235,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e4aa40a9169a88835b849a6efb71e05dc04b88f0
+  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -477,7 +477,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 50ae88d24ede7b8bad68e23c805b5d3da5c8abaf
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 testImports: []
