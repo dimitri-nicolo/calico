@@ -33,6 +33,8 @@ import:
 - package: github.com/sirupsen/logrus
   version: v1.0.4
 - package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
   subpackages:
   - client
 - package: gopkg.in/square/go-jose.v2

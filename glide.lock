@@ -1,5 +1,5 @@
-hash: 2fad51a3550a3a7c99e611d2f9cefce6ae8fa03b8c72d1843b511add1aa1be3a
-updated: 2018-03-23T15:52:45.969470037-07:00
+hash: 936b764473d7635097b92bd3deb7a6d2dbb445cbd1337e7448006e8cd54044d6
+updated: 2018-03-28T11:26:06.612801657-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -299,7 +299,9 @@ imports:
 - name: github.com/termie/go-shutil
   version: bcacb06fecaeec8dc42af03c87c6949f4a05c74c
 - name: github.com/tigera/licensing
-  version: 26571335eb1d44e6b41b3fa417ce4d146e382be8
+  version: d19ba67c471a7616e40de13a841bb17faebdbe40
+  repo: git@github.com:tigera/licensing
+  vcs: git
   subpackages:
   - client
   - crypto
