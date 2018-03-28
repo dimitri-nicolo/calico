@@ -47,6 +47,10 @@ func (c *ModelAdaptor) Clean() error {
 	return c.client.Clean()
 }
 
+func (c *ModelAdaptor) Close() error {
+	return c.client.Close()
+}
+
 // Create an entry in the datastore.  This errors if the entry already exists.
 func (c *ModelAdaptor) Create(ctx context.Context, d *model.KVPair) (*model.KVPair, error) {
 	var err error

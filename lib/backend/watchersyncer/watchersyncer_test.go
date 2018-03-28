@@ -988,6 +988,11 @@ func (c *fakeClient) Clean() error {
 	return nil
 }
 
+func (c *fakeClient) Close() error {
+	panic("should not be called")
+	return nil
+}
+
 func (c *fakeClient) List(ctx context.Context, list model.ListInterface, revision string) (*model.KVPairList, error) {
 	// Create a fake watcher keyed off the ListOptions (root path).
 	name := model.ListOptionsToDefaultPathRoot(list)

@@ -42,6 +42,9 @@ type RemoteSyncer struct {
 	// The watchersyncer used to get updates from this remote cluster.
 	syncer api.Syncer
 
+	// The client used by the watchersyncer
+	client api.Client
+
 	// The cancel function can be called to stop attempting to connect to this remote.
 	cancel context.CancelFunc
 
@@ -202,6 +205,7 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 
 		remoteWatcher := watchersyncer.New(backendClient, remoteResources, &remoteEndpointCallbacks)
 		a.remotes[key].syncer = remoteWatcher
+		a.remotes[key].client = backendClient
 		remoteWatcher.Start()
 	}
 }
@@ -215,6 +219,12 @@ func (a *wrappedCallbacks) deleteRCC(update api.Update) {
 	if a.remotes[update.Key].syncer != nil {
 		// Stop the watcher and generate a delete event for each item in the watch cache
 		a.remotes[update.Key].syncer.Stop()
+
+		// Stop the client
+		err := a.remotes[update.Key].client.Close()
+		if err != nil {
+			log.Warnf("Hit error closing client. Ignoring. %v", err)
+		}
 
 		// Finish the remote (before deleting it)
 		a.finishRemote(update.Key, true)

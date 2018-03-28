@@ -371,6 +371,12 @@ func (c *KubeClient) Clean() error {
 	return nil
 }
 
+// Close the underlying client
+func (c *KubeClient) Close() error {
+	log.Debugf("Closing client - NOOP")
+	return nil
+}
+
 // buildCRDClientV1 builds a RESTClient configured to interact with Calico CustomResourceDefinitions
 func buildCRDClientV1(cfg rest.Config) (*rest.RESTClient, error) {
 	// Generate config using the base config.
