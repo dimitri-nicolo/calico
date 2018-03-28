@@ -32,6 +32,14 @@ import:
 # v1.0.5 seems to have a bad interaction with our logging hooks.
 - package: github.com/sirupsen/logrus
   version: v1.0.4
+- package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  subpackages:
+  - client
+- package: gopkg.in/square/go-jose.v2
+  subpackages:
+  - jwt
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:

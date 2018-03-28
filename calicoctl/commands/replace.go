@@ -67,6 +67,7 @@ Description:
     * profile
     * workloadEndpoint
     * remoteClusterConfiguration
+    * licenseKey
 
   Attempting to replace a resource that does not exist is treated as a
   terminating error.
