@@ -61,7 +61,7 @@ var _ = Describe("Prometheus Policy Rules Aggregator verification", func() {
 	registry := prometheus.NewRegistry()
 	BeforeEach(func() {
 		// Create a PolicyRulesAggregator
-		pa = NewPolicyRulesAggregator(retentionTime)
+		pa = NewPolicyRulesAggregator(retentionTime, "testHost")
 		pa.timeNowFn = mt.getMockTime
 		pa.RegisterMetrics(registry)
 	})

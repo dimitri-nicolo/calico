@@ -166,6 +166,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			PostInSyncCallback:              func() { logutils.DumpHeapMemoryProfile(configParams) },
 			HealthAggregator:                healthAggregator,
 			DebugSimulateDataplaneHangAfter: configParams.DebugSimulateDataplaneHangAfter,
+			FelixHostname:                   configParams.FelixHostname,
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
 		intDP.Start()

@@ -137,6 +137,8 @@ type Config struct {
 	HealthAggregator   *health.HealthAggregator
 
 	DebugSimulateDataplaneHangAfter time.Duration
+
+	FelixHostname string
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -487,8 +489,8 @@ func (d *InternalDataplane) Start() {
 			d.config.PrometheusReporterCertFile,
 			d.config.PrometheusReporterKeyFile,
 			d.config.PrometheusReporterCAFile)
-		pr.AddAggregator(collector.NewPolicyRulesAggregator(d.config.DeletedMetricsRetentionSecs))
-		pr.AddAggregator(collector.NewDeniedPacketsAggregator(d.config.DeletedMetricsRetentionSecs))
+		pr.AddAggregator(collector.NewPolicyRulesAggregator(d.config.DeletedMetricsRetentionSecs, d.config.FelixHostname))
+		pr.AddAggregator(collector.NewDeniedPacketsAggregator(d.config.DeletedMetricsRetentionSecs, d.config.FelixHostname))
 		rm.RegisterMetricsReporter(pr)
 	}
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
