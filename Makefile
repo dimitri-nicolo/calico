@@ -8,7 +8,7 @@ ARCH?=amd64
 ARCHTAG?=
 
 ifeq ($(ARCH),amd64)
-GO_BUILD_VER:=v0.6
+GO_BUILD_VER:=v0.9
 endif
 
 ifeq ($(ARCH),ppc64le)
@@ -134,33 +134,33 @@ vendor vendor/.up-to-date: glide.lock
                 $(BINDIR)/openapi-gen
 	touch $@
 
-$(BINDIR)/defaulter-gen: 
+$(BINDIR)/defaulter-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/defaulter-gen'
 
-$(BINDIR)/deepcopy-gen:
+$(BINDIR)/deepcopy-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/deepcopy-gen'
 
-$(BINDIR)/conversion-gen: 
+$(BINDIR)/conversion-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/conversion-gen'
 
-$(BINDIR)/client-gen:
+$(BINDIR)/client-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/client-gen'
 
-$(BINDIR)/lister-gen:
+$(BINDIR)/lister-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/lister-gen'
 
-$(BINDIR)/informer-gen:
+$(BINDIR)/informer-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
 	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/informer-gen'
 
-$(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
+$(BINDIR)/openapi-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
-	    sh -c 'go build -o $@ $(CAPI_PKG)/$^'
+	    sh -c 'go build -o $@ $(CAPI_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 # Regenerate all files if the gen exes changed or any "types.go" files changed
 .generate_files: .generate_exes $(TYPES_FILES)
@@ -207,7 +207,7 @@ $(BINDIR)/openapi-gen: vendor/k8s.io/code-generator/cmd/openapi-gen
 # Some will have dedicated targets to make it easier to type, for example
 # "apiserver" instead of "$(BINDIR)/apiserver".
 #########################################################################
-$(BINDIR)/calico-k8sapiserver: .generate_files $(K8SAPISERVER_GO_FILES) vendor/.up-to-date
+$(BINDIR)/calico-k8sapiserver: vendor/.up-to-date .generate_files $(K8SAPISERVER_GO_FILES)
 ifndef RELEASE_BUILD
 	$(eval LDFLAGS:=$(RELEASE_LDFLAGS))
 else
@@ -230,7 +230,7 @@ tigera/cnx-apiserver: vendor/.up-to-date .generate_files \
 	docker build --pull -t tigera/cnx-apiserver$(ARCHTAG) --file ./docker-image/Dockerfile$(ARCHTAG) docker-image
 
 .PHONY: ut
-ut: run-etcd
+ut: vendor/.up-to-date run-etcd
 	$(DOCKER_GO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" go test $(UNIT_TEST_FLAGS) \
 			$(addprefix $(CAPI_PKG)/,$(TEST_DIRS))'
@@ -249,7 +249,7 @@ stop-etcd:
 	-docker rm -f calico-etcd
 
 .PHONY: fv
-fv: run-etcd
+fv: vendor/.up-to-date run-etcd
 	$(DOCKER_GO_BUILD) \
 		sh -c 'ETCD_ENDPOINTS="http://127.0.0.1:2379" DATASTORE_TYPE="etcdv3" test/integration.sh'
 
@@ -323,7 +323,7 @@ stop-kubernetes-master:
 	-docker rm -f st-apiserver st-controller-manager
 
 .PHONY: fv-kdd
-fv-kdd: run-kubernetes-master
+fv-kdd: vendor/.up-to-date run-kubernetes-master
 	$(DOCKER_GO_BUILD) \
 		sh -c 'K8S_API_ENDPOINT="http://localhost:8080" DATASTORE_TYPE="kubernetes" test/integration.sh'
 

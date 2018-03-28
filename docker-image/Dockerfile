@@ -1,7 +1,7 @@
 FROM alpine:3.4
 
-# Put out binary in /code rather than directly in /usr/bin.  This allows the downstream builds
-# to more easily extract the apiserver build artefacts from the container.
+# Put our binary in /code rather than directly in /usr/bin.  This allows the downstream builds
+# to more easily extract the apiserver build artifacts from the container.
 RUN mkdir /code
 ADD bin/calico-k8sapiserver /code
 WORKDIR /code
