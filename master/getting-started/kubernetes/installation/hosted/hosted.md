@@ -11,7 +11,11 @@ The following steps install {{site.prodname}} as a Kubernetes add-on using your 
 
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
-{% include {{page.version}}/load-docker.md yaml="calico" %}
+{% include {{page.version}}/load-docker-intro.md %}
+
+{% include {{page.version}}/load-docker-our-reg.md yaml="calico" %}
+
+{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
 ## RBAC
 
