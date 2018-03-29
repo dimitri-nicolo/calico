@@ -1,5 +1,5 @@
-hash: ab075667c5847dc1ce46e092cc299ceaadee950946d7b3b5cb055db77a1f53a1
-updated: 2018-03-26T16:00:06.461944185-07:00
+hash: 2053f6f563bdb8f6eb0740100646b325953816eeebb05e30639d91e479259260
+updated: 2018-03-29T14:03:03.590227707-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -178,7 +178,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 3a570da01b58c51f8a79293f874394156bedf862
+  version: d518bb7f48f322c89d8420b3d5c21cdfc38a3d9e
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -320,7 +320,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 5bee14b453b4c71be47ec1781b0fa61c2ea182db
+  version: ad39d7fab7c60b2493fdc318c3d2cdb2128f92a4
   subpackages:
   - internal
   - internal/app_identity
