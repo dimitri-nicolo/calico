@@ -17,7 +17,7 @@ corresponds to your desired deployment.
 
 - [As a container on a single host](#installing-calicoctl-as-a-container-on-a-single-host)
 
-- [As a container on each node](#installing-calicoctl-as-a-container-on-each-node)
+- [As a Kubernetes pod](#installing-calicoctl-as-a-kubernetes-pod)
 
 
 ## Installing calicoctl as a binary on a single host
