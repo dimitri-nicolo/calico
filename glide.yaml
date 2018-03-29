@@ -39,6 +39,11 @@ import:
   version: d518bb7f48f322c89d8420b3d5c21cdfc38a3d9e
   subpackages:
   - lib
+- package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  subpackages:
+  - client
 - package: github.com/tigera/nfnetlink
   repo:    git@github.com:tigera/nfnetlink
 - package: github.com/sirupsen/logrus

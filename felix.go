@@ -54,10 +54,11 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
-	errors2 "github.com/projectcalico/libcalico-go/lib/errors"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/health"
 	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/typha/pkg/syncclient"
+	licClient "github.com/tigera/licensing/client"
 )
 
 const usage = `Felix, the Calico per-host daemon.
@@ -226,7 +227,7 @@ configRetry:
 		}
 		numClientsCreated++
 		for {
-			globalConfig, hostConfig, err := loadConfigFromDatastore(
+			globalConfig, hostConfig, licValid, err := loadConfigFromDatastore(
 				ctx, backendClient, configParams.FelixHostname)
 			if err == ErrNotReady {
 				log.Warn("Waiting for datastore to be initialized (or migrated)")
@@ -240,6 +241,8 @@ configRetry:
 			}
 			configParams.UpdateFrom(globalConfig, config.DatastoreGlobal)
 			configParams.UpdateFrom(hostConfig, config.DatastorePerHost)
+			configParams.LicenseValid = licValid
+
 			break
 		}
 		configParams.Validate()
@@ -656,7 +659,7 @@ var (
 
 func loadConfigFromDatastore(
 	ctx context.Context, client bapi.Client, hostname string,
-) (globalConfig, hostConfig map[string]string, err error) {
+) (globalConfig, hostConfig map[string]string, licenseValid bool, err error) {
 
 	// The configuration is split over 3 different resource types and 4 different resource
 	// instances in the v3 data model:
@@ -711,6 +714,38 @@ func loadConfigFromDatastore(
 		return
 	}
 
+	// Get the LicenseKey resource directly from the backend datastore client.
+	lic, err := client.Get(ctx, model.ResourceKey{
+		Kind:      apiv3.KindLicenseKey,
+		Name:      "default",
+		Namespace: "",
+	}, "")
+	if err != nil {
+		switch err.(type) {
+		case cerrors.ErrorResourceDoesNotExist:
+			log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).Debug("No config of this type")
+			return
+		default:
+			log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(err).Info("Failed to load LicenseKey from datastore")
+			return
+		}
+	}
+
+	lk, ok := lic.Value.(*apiv3.LicenseKey)
+	if !ok {
+		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "KVPair": lic}).Error("Error asserting LicenseKey")
+	}
+
+	// Decode the LicenseKey.
+	claims, err := licClient.Decode(*lk)
+	if err != nil {
+		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(err).Info("Corrupted LicenseKey")
+		return
+	}
+
+	// Check if the license is valid.
+	licenseValid = claims.IsValid()
+
 	return
 }
 
@@ -732,7 +767,7 @@ func getAndMergeConfig(
 	}, "")
 	if err != nil {
 		switch err.(type) {
-		case errors2.ErrorResourceDoesNotExist:
+		case cerrors.ErrorResourceDoesNotExist:
 			logCxt.Info("No config of this type")
 			return nil
 		default:

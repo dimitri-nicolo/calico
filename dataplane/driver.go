@@ -84,6 +84,10 @@ func StartDataplaneDriver(configParams *config.Config,
 			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
 		}).Info("Calculated iptables mark bits")
 
+		if !configParams.LicenseValid {
+			configParams.DropActionOverride = "DROP"
+		}
+
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExcludes(),
@@ -137,7 +141,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			},
 			NfNetlinkBufSize:               configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:              configParams.StatsDumpFilePath,
-			PrometheusReporterEnabled:      configParams.PrometheusReporterEnabled,
+			PrometheusReporterEnabled:      configParams.LicenseValid && configParams.PrometheusReporterEnabled,
 			PrometheusReporterPort:         configParams.PrometheusReporterPort,
 			PrometheusReporterCertFile:     configParams.PrometheusReporterCertFile,
 			PrometheusReporterKeyFile:      configParams.PrometheusReporterKeyFile,
