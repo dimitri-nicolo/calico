@@ -110,7 +110,7 @@ type Client interface {
 	Clean() error
 
 	// Close the client.
-	//Close()
+	Close() error
 }
 
 type Syncer interface {
