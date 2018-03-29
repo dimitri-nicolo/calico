@@ -115,7 +115,7 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 	var da *DeniedPacketsAggregator
 	BeforeEach(func() {
 		registry := prometheus.NewRegistry()
-		da = NewDeniedPacketsAggregator(retentionTime)
+		da = NewDeniedPacketsAggregator(retentionTime, "testHost")
 		da.RegisterMetrics(registry)
 	})
 	AfterEach(func() {
@@ -277,12 +277,14 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 				policy: getPolicyName(ingressRulePolicy4Deny),
 			}
 			label1 := prometheus.Labels{
-				"srcIP":  net.IP(localIp1[:16]).String(),
-				"policy": getPolicyName(ingressRulePolicy3Deny),
+				"srcIP":        net.IP(localIp1[:16]).String(),
+				"policy":       getPolicyName(ingressRulePolicy3Deny),
+				LABEL_INSTANCE: "testHost",
 			}
 			label2 := prometheus.Labels{
-				"srcIP":  net.IP(localIp2[:16]).String(),
-				"policy": getPolicyName(ingressRulePolicy4Deny),
+				"srcIP":        net.IP(localIp2[:16]).String(),
+				"policy":       getPolicyName(ingressRulePolicy4Deny),
+				LABEL_INSTANCE: "testHost",
 			}
 			value1 = DeniedPacketsAggregateValue{
 				packets: gaugeDeniedPackets.With(label1),

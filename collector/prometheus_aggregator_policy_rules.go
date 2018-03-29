@@ -22,27 +22,28 @@ var (
 	LABEL_ACTION      = "action"
 	LABEL_TRAFFIC_DIR = "traffic_direction"
 	LABEL_RULE_DIR    = "rule_direction"
+	LABEL_INSTANCE    = "instance"
 
 	counterRulePackets = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_packets",
 			Help: "Total number of packets handled by CNX policy rules.",
 		},
-		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
+		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
 	counterRuleBytes = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_bytes",
 			Help: "Total number of bytes handled by CNX policy rules.",
 		},
-		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
+		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
 	gaugeRuleConns = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "cnx_policy_rule_connections",
 			Help: "Total number of connections handled by CNX policy rules.",
 		},
-		[]string{LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR},
+		[]string{LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
 
 	ruleDirToTrafficDir = map[rules.RuleDirection]rules.TrafficDirection{
@@ -64,7 +65,7 @@ func getRuleAggregateKey(mu *MetricUpdate) RuleAggregateKey {
 
 // PacketByteLabels returns the Prometheus packet/byte counter labels associated
 // with a specific rule and traffic direction.
-func (k *RuleAggregateKey) PacketByteLabels(trafficDir rules.TrafficDirection) prometheus.Labels {
+func (k *RuleAggregateKey) PacketByteLabels(trafficDir rules.TrafficDirection, felixHostname string) prometheus.Labels {
 	return prometheus.Labels{
 		LABEL_ACTION:      string(k.ruleIDs.Action),
 		LABEL_TIER:        k.ruleIDs.Tier,
@@ -73,12 +74,13 @@ func (k *RuleAggregateKey) PacketByteLabels(trafficDir rules.TrafficDirection) p
 		LABEL_RULE_DIR:    string(k.ruleIDs.Direction),
 		LABEL_RULE_IDX:    k.ruleIDs.Index,
 		LABEL_TRAFFIC_DIR: string(trafficDir),
+		LABEL_INSTANCE:    felixHostname,
 	}
 }
 
 // ConnectionLabels returns the Prometheus connection gauge labels associated
 // with a specific rule and traffic direction.
-func (k *RuleAggregateKey) ConnectionLabels() prometheus.Labels {
+func (k *RuleAggregateKey) ConnectionLabels(felixHostname string) prometheus.Labels {
 	return prometheus.Labels{
 		LABEL_TIER:        k.ruleIDs.Tier,
 		LABEL_NAMESPACE:   k.ruleIDs.Namespace,
@@ -86,6 +88,7 @@ func (k *RuleAggregateKey) ConnectionLabels() prometheus.Labels {
 		LABEL_RULE_DIR:    string(k.ruleIDs.Direction),
 		LABEL_RULE_IDX:    k.ruleIDs.Index,
 		LABEL_TRAFFIC_DIR: string(ruleDirToTrafficDir[k.ruleIDs.Direction]),
+		LABEL_INSTANCE:    felixHostname,
 	}
 }
 
@@ -98,13 +101,13 @@ type RuleAggregateValue struct {
 	tuples         set.Set
 }
 
-func newRuleAggregateValue(key RuleAggregateKey) *RuleAggregateValue {
+func newRuleAggregateValue(key RuleAggregateKey, felixHostname string) *RuleAggregateValue {
 	// Initialize all the counters. Although we may not strictly need reverse counters if the rule has
 	// not resulted in any connections, we create the counters anyways - the rule stats are expected to
 	// be semi-long lived.
-	cLabels := key.ConnectionLabels()
-	pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound)
-	pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound)
+	cLabels := key.ConnectionLabels(felixHostname)
+	pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound, felixHostname)
+	pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound, felixHostname)
 	return &RuleAggregateValue{
 		tuples:         set.New(),
 		inPackets:      counterRulePackets.With(pbInLabels),
@@ -118,6 +121,7 @@ func newRuleAggregateValue(key RuleAggregateKey) *RuleAggregateValue {
 // PolicyRulesAggregator aggregates directional packets, bytes, and connections statistics in prometheus metrics.
 type PolicyRulesAggregator struct {
 	retentionTime time.Duration
+	felixHostname string
 
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
@@ -127,12 +131,13 @@ type PolicyRulesAggregator struct {
 	retainedRuleAggMetrics map[RuleAggregateKey]time.Duration
 }
 
-func NewPolicyRulesAggregator(rTime time.Duration) *PolicyRulesAggregator {
+func NewPolicyRulesAggregator(rTime time.Duration, felixHostname string) *PolicyRulesAggregator {
 	return &PolicyRulesAggregator{
 		ruleAggStats:           make(map[RuleAggregateKey]*RuleAggregateValue),
 		retainedRuleAggMetrics: make(map[RuleAggregateKey]time.Duration),
 		timeNowFn:              monotime.Now,
 		retentionTime:          rTime,
+		felixHostname:          felixHostname,
 	}
 }
 
@@ -155,7 +160,7 @@ func (pa *PolicyRulesAggregator) OnUpdate(mu *MetricUpdate) {
 	key := getRuleAggregateKey(mu)
 	value, ok := pa.ruleAggStats[key]
 	if !ok {
-		value = newRuleAggregateValue(key)
+		value = newRuleAggregateValue(key, pa.felixHostname)
 		pa.ruleAggStats[key] = value
 	}
 
@@ -226,9 +231,9 @@ func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey)
 		// Nothing to do here.
 		return
 	}
-	pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound)
-	pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound)
-	cLabels := key.ConnectionLabels()
+	pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound, pa.felixHostname)
+	pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound, pa.felixHostname)
+	cLabels := key.ConnectionLabels(pa.felixHostname)
 	switch key.ruleIDs.Direction {
 	case rules.RuleDirIngress:
 		counterRulePackets.Delete(pbInLabels)

@@ -21,13 +21,13 @@ var (
 		Name: "calico_denied_packets",
 		Help: "Total number of packets denied by calico policies.",
 	},
-		[]string{"srcIP", "policy"},
+		[]string{"srcIP", "policy", LABEL_INSTANCE},
 	)
 	gaugeDeniedBytes = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "calico_denied_bytes",
 		Help: "Total number of bytes denied by calico policies.",
 	},
-		[]string{"srcIP", "policy"},
+		[]string{"srcIP", "policy", LABEL_INSTANCE},
 	)
 )
 
@@ -63,14 +63,16 @@ type DeniedPacketsAggregator struct {
 	// Stats are aggregated by policy (mangled tiered policy rule) and source IP.
 	aggStats        map[DeniedPacketsAggregateKey]DeniedPacketsAggregateValue
 	retainedMetrics map[DeniedPacketsAggregateKey]time.Duration
+	felixHostname   string
 }
 
-func NewDeniedPacketsAggregator(rTime time.Duration) *DeniedPacketsAggregator {
+func NewDeniedPacketsAggregator(rTime time.Duration, felixHostname string) *DeniedPacketsAggregator {
 	return &DeniedPacketsAggregator{
 		aggStats:        make(map[DeniedPacketsAggregateKey]DeniedPacketsAggregateValue),
 		retainedMetrics: make(map[DeniedPacketsAggregateKey]time.Duration),
 		retentionTime:   rTime,
 		timeNowFn:       monotime.Now,
+		felixHostname:   felixHostname,
 	}
 }
 
@@ -112,8 +114,9 @@ func (dp *DeniedPacketsAggregator) reportMetric(mu *MetricUpdate) {
 		value.refs.Add(mu.tuple)
 	} else {
 		l := prometheus.Labels{
-			"srcIP":  net.IP(key.srcIP[:16]).String(),
-			"policy": key.policy,
+			"srcIP":        net.IP(key.srcIP[:16]).String(),
+			"policy":       key.policy,
+			LABEL_INSTANCE: dp.felixHostname,
 		}
 		value = DeniedPacketsAggregateValue{
 			labels:  l,
