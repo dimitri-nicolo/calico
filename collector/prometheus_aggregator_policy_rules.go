@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gavv/monotime"
@@ -97,41 +96,23 @@ type RuleAggregateValue struct {
 	outBytes       prometheus.Counter
 	numConnections prometheus.Gauge
 	tuples         set.Set
-	isConnection   bool
 }
 
-func getRuleAggregateValue(key RuleAggregateKey, isConnection bool) (*RuleAggregateValue, error) {
-	value := &RuleAggregateValue{
-		tuples:       set.New(),
-		isConnection: isConnection,
+func newRuleAggregateValue(key RuleAggregateKey) *RuleAggregateValue {
+	// Initialize all the counters. Although we may not strictly need reverse counters if the rule has
+	// not resulted in any connections, we create the counters anyways - the rule stats are expected to
+	// be semi-long lived.
+	cLabels := key.ConnectionLabels()
+	pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound)
+	pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound)
+	return &RuleAggregateValue{
+		tuples:         set.New(),
+		inPackets:      counterRulePackets.With(pbInLabels),
+		inBytes:        counterRuleBytes.With(pbInLabels),
+		outPackets:     counterRulePackets.With(pbOutLabels),
+		outBytes:       counterRuleBytes.With(pbOutLabels),
+		numConnections: gaugeRuleConns.With(cLabels),
 	}
-	switch key.ruleIDs.Direction {
-	case rules.RuleDirIngress:
-		pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound)
-		value.inPackets = counterRulePackets.With(pbInLabels)
-		value.inBytes = counterRuleBytes.With(pbInLabels)
-		if isConnection {
-			pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound)
-			value.outPackets = counterRulePackets.With(pbOutLabels)
-			value.outBytes = counterRuleBytes.With(pbOutLabels)
-		}
-	case rules.RuleDirEgress:
-		pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound)
-		value.outPackets = counterRulePackets.With(pbOutLabels)
-		value.outBytes = counterRuleBytes.With(pbOutLabels)
-		if isConnection {
-			pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound)
-			value.inPackets = counterRulePackets.With(pbInLabels)
-			value.inBytes = counterRuleBytes.With(pbInLabels)
-		}
-	default:
-		return nil, fmt.Errorf("Unknown traffic direction in ruleId %v", key.ruleIDs)
-	}
-	if isConnection {
-		cLabels := key.ConnectionLabels()
-		value.numConnections = gaugeRuleConns.With(cLabels)
-	}
-	return value, nil
 }
 
 // PolicyRulesAggregator aggregates directional packets, bytes, and connections statistics in prometheus metrics.
@@ -171,24 +152,10 @@ func (pa *PolicyRulesAggregator) RegisterMetrics(registry *prometheus.Registry) 
 // and no activity within the retention period. Unlike reportMetric, if there is no cached
 // entry for this metric one is not created and therefore the metric will not be reported.
 func (pa *PolicyRulesAggregator) OnUpdate(mu *MetricUpdate) {
-	var (
-		value *RuleAggregateValue
-		err   error
-	)
 	key := getRuleAggregateKey(mu)
 	value, ok := pa.ruleAggStats[key]
 	if !ok {
-		// No entry exists.  If this is a report then create a blank entry and add
-		// to the map.  Otherwise, this is an expiration, so just return.
-		if mu.updateType == UpdateTypeExpire {
-			return
-		}
-
-		value, err = getRuleAggregateValue(key, mu.isConnection)
-		if err != nil {
-			log.WithField("key", key).Debugf("Cannot update metric. Skipping update.")
-			return
-		}
+		value = newRuleAggregateValue(key)
 		pa.ruleAggStats[key] = value
 	}
 
@@ -254,7 +221,7 @@ func (pa *PolicyRulesAggregator) markRuleAggregateForDeletion(key RuleAggregateK
 // supplied key.
 func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey) {
 	log.WithField("key", key).Debug("Cleaning up rule aggregate metric previously marked to be deleted.")
-	value, ok := pa.ruleAggStats[key]
+	_, ok := pa.ruleAggStats[key]
 	if !ok {
 		// Nothing to do here.
 		return
@@ -266,19 +233,15 @@ func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey)
 	case rules.RuleDirIngress:
 		counterRulePackets.Delete(pbInLabels)
 		counterRuleBytes.Delete(pbInLabels)
-		if value.isConnection {
-			counterRulePackets.Delete(pbOutLabels)
-			counterRuleBytes.Delete(pbOutLabels)
-			gaugeRuleConns.Delete(cLabels)
-		}
+		counterRulePackets.Delete(pbOutLabels)
+		counterRuleBytes.Delete(pbOutLabels)
+		gaugeRuleConns.Delete(cLabels)
 	case rules.RuleDirEgress:
 		counterRulePackets.Delete(pbOutLabels)
 		counterRuleBytes.Delete(pbOutLabels)
-		if value.isConnection {
-			counterRulePackets.Delete(pbInLabels)
-			counterRuleBytes.Delete(pbInLabels)
-			gaugeRuleConns.Delete(cLabels)
-		}
+		counterRulePackets.Delete(pbInLabels)
+		counterRuleBytes.Delete(pbInLabels)
+		gaugeRuleConns.Delete(cLabels)
 	}
 	delete(pa.ruleAggStats, key)
 }

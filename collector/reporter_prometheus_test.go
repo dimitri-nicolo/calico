@@ -42,6 +42,18 @@ var (
 
 // Common MetricUpdate definitions
 var (
+	// Metric update without a connection (ingress stats match those of muConn1Rule1AllowUpdate).
+	muNoConn1Rule1AllowUpdate = &MetricUpdate{
+		updateType:   UpdateTypeReport,
+		tuple:        tuple1,
+		ruleIDs:      &ingressRule1Allow,
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+	}
+
 	// Identical rule/direction connections with differing tuples
 	muConn1Rule1AllowUpdate = &MetricUpdate{
 		updateType:   UpdateTypeReport,
@@ -49,12 +61,12 @@ var (
 		ruleIDs:      &ingressRule1Allow,
 		isConnection: true,
 		inMetric: MetricValue{
-			deltaPackets: 1,
-			deltaBytes:   1,
+			deltaPackets: 2,
+			deltaBytes:   22,
 		},
 		outMetric: MetricValue{
 			deltaPackets: 3,
-			deltaBytes:   3,
+			deltaBytes:   33,
 		},
 	}
 	muConn1Rule1AllowExpire = &MetricUpdate{
@@ -63,12 +75,12 @@ var (
 		ruleIDs:      &ingressRule1Allow,
 		isConnection: true,
 		inMetric: MetricValue{
-			deltaPackets: 1,
-			deltaBytes:   1,
+			deltaPackets: 4,
+			deltaBytes:   44,
 		},
 		outMetric: MetricValue{
 			deltaPackets: 3,
-			deltaBytes:   3,
+			deltaBytes:   24,
 		},
 	}
 	muConn2Rule1AllowUpdate = &MetricUpdate{
@@ -77,8 +89,8 @@ var (
 		ruleIDs:      &ingressRule1Allow,
 		isConnection: true,
 		inMetric: MetricValue{
-			deltaPackets: 2,
-			deltaBytes:   2,
+			deltaPackets: 7,
+			deltaBytes:   77,
 		},
 	}
 	muConn2Rule1AllowExpire = &MetricUpdate{
@@ -87,8 +99,8 @@ var (
 		ruleIDs:      &ingressRule1Allow,
 		isConnection: true,
 		inMetric: MetricValue{
-			deltaPackets: 2,
-			deltaBytes:   2,
+			deltaPackets: 8,
+			deltaBytes:   88,
 		},
 	}
 )
@@ -256,13 +268,13 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		By("reporting two separate metrics for same rule and traffic direction, but different connections")
 		pr.Report(muConn1Rule1AllowUpdate)
 		expectedPacketsInbound += muConn1Rule1AllowUpdate.inMetric.deltaPackets
-		expectedBytesInbound += muConn1Rule1AllowUpdate.inMetric.deltaPackets
+		expectedBytesInbound += muConn1Rule1AllowUpdate.inMetric.deltaBytes
 		expectedPacketsOutbound += muConn1Rule1AllowUpdate.outMetric.deltaPackets
 		expectedBytesOutbound += muConn1Rule1AllowUpdate.outMetric.deltaBytes
 		expectedConnsInbound += 1
 		pr.Report(muConn2Rule1AllowUpdate)
 		expectedPacketsInbound += muConn2Rule1AllowUpdate.inMetric.deltaPackets
-		expectedBytesInbound += muConn2Rule1AllowUpdate.inMetric.deltaPackets
+		expectedBytesInbound += muConn2Rule1AllowUpdate.inMetric.deltaBytes
 		expectedConnsInbound += 1
 
 		By("checking for the correct number of aggregated statistics")
@@ -275,7 +287,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		By("reporting one of the same metrics")
 		pr.Report(muConn1Rule1AllowUpdate)
 		expectedPacketsInbound += muConn1Rule1AllowUpdate.inMetric.deltaPackets
-		expectedBytesInbound += muConn1Rule1AllowUpdate.inMetric.deltaPackets
+		expectedBytesInbound += muConn1Rule1AllowUpdate.inMetric.deltaBytes
 		expectedPacketsOutbound += muConn1Rule1AllowUpdate.outMetric.deltaPackets
 		expectedBytesOutbound += muConn1Rule1AllowUpdate.outMetric.deltaBytes
 		expectedConnsInbound += 0 // connection already registered
@@ -312,7 +324,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		By("expiring the remaining Rule1 Inbound metric")
 		pr.Report(muConn2Rule1AllowExpire)
 		expectedPacketsInbound += muConn2Rule1AllowExpire.inMetric.deltaPackets
-		expectedBytesInbound += muConn2Rule1AllowExpire.inMetric.deltaPackets
+		expectedBytesInbound += muConn2Rule1AllowExpire.inMetric.deltaBytes
 		expectedConnsInbound -= 1
 		// Adjust the clock, but not past the retention period, the inbound rule aggregate should
 		// not yet be expunged.
