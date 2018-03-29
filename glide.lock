@@ -1,5 +1,5 @@
-hash: bfe2b0f8825034ad7e5af3a5a69d0d14cdcbc104fae551d8b53dac3ebcd1c52b
-updated: 2018-03-26T17:25:43.978432522-07:00
+hash: 394d729efa1f5b82fa81b09114fcd5f55fd76b4c90565e92ffd242af111571f4
+updated: 2018-03-29T14:07:22.322025521-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -115,7 +115,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
-  version: 59b4549305c9c7a81367b9ff34597ba8babea832
+  version: 4b54e7d2460df21c1c2d345af2337f91bfc938ca
 - name: github.com/jbenet/go-reuseport
   version: 7eed93a5b50b20c209baefe9fafa53c3d965a33c
   repo: https://github.com/fasaxc/go-reuseport.git
@@ -207,7 +207,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 3a570da01b58c51f8a79293f874394156bedf862
+  version: d518bb7f48f322c89d8420b3d5c21cdfc38a3d9e
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -247,7 +247,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 459cccfdc7804a46176d4f466adffcbdb8c183f3
+  version: 705231cfce26087c1d09864c23fac63db8e986eb
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -289,7 +289,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: 41009d533ba0788a139b0b6ef38923a23b3766d3
+  version: 85aa3b74a43a9fa174a588ce9a042c9b71b0842c
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -352,7 +352,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 5bee14b453b4c71be47ec1781b0fa61c2ea182db
+  version: ad39d7fab7c60b2493fdc318c3d2cdb2128f92a4
   subpackages:
   - internal
   - internal/app_identity
