@@ -59,4 +59,6 @@ private repository.
 - [Pulling the image from Tigera's private registry](#pulling-the-image-from-tigeras-private-registry)
 - [Pulling the image from another private registry](#pulling-the-image-from-another-private-registry)
 
+### Pulling the image from Tigera's private registry
+
 {% include {{page.version}}/load-docker.md yaml=include.cli %}

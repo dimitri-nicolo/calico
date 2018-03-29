@@ -53,8 +53,6 @@ toc:
       path: /getting-started/openshift/installation
     - title: Connecting to a dedicated etcd cluster (optional)
       path: /getting-started/openshift/dedicated-etcd
-    - title: Upgrade to CNX
-      path: /getting-started/openshift/upgrade-cnx
 
 - title: Host Protection
   section:

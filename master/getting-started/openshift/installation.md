@@ -6,7 +6,9 @@ Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansibl
 The information below explains the variables which must be set during the standard
 [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
 
-{% include {{page.version}}/load-docker.md yaml="calico" %}
+## Pulling the private {{site.prodname}} images
+
+{% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
 
 ## Installation
 
@@ -16,7 +18,7 @@ inventory file:
   - `os_sdn_network_plugin_name=cni`
   - `openshift_use_calico=true`
   - `openshift_use_openshift_sdn=false`
-  - `calico_node_image={{site.nodecontainer}}`
+  - `calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
 
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
 
@@ -32,7 +34,7 @@ etcd
 os_sdn_network_plugin_name=cni
 openshift_use_calico=true
 openshift_use_openshift_sdn=false
-calico_node_image=calico/node:{{site.data.versions[page.version].first.title}}
+calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
 
 [masters]
 master1

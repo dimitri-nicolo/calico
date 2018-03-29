@@ -1,85 +1,29 @@
 ---
-title: Upgrading CNX in Kubernetes
+title: Upgrading a Kubernetes cluster with Calico to CNX 
 ---
 
-This document covers upgrading an open source Calico cluster to {{site.prodname}}.
+## Prerequisite
 
-The upgrade procedure is supported for Calico v3.0.x.
+Ensure that the open source Calico cluster is on the latest v3.1.x
+release.
 
-## Upgrading an open source Calico cluster to {{site.prodname}}
+If not, follow the [Calico upgrade documentation](https://docs.projectcalico.org/v3.1/getting-started/kubernetes/upgrade/) 
+before continuing.
 
-1. [Upgrade the open source Calico cluster](https://docs.projectcalico.org/v3.0/getting-started/kubernetes/upgrade/)
-1. [Add {{site.prodname}}](#adding-cnx).
+## Upgrading Calico to {{site.prodname}}
 
-## Adding {{site.prodname}}
-This section covers taking an existing Kubernetes system with Calico and adding {{site.prodname}}.
+If you used the manifests provided on the [Calico documentation site](https://docs.projectcalico.org/) 
+to install Calico, complete the {{site.prodname}} installation procedure that 
+corresponds to your Calico installation method.
 
-#### Prerequisites
-This procedure assumes the following:
+- [Standard hosted install](installation/hosted/hosted)
 
-* Your system is running the latest 3.0.x release of Calico. If not, follow the [instructions to upgrade](https://docs.projectcalico.org/v3.0/getting-started/kubernetes/upgrade/) it to the latest 3.0.x release
-* You have obtained the {{site.prodname}} specific binaries by following the instructions in [getting started]({{site.baseurl}}/{{page.version}}/getting-started/) and uploaded them to a private registry.
-* You have the Calico manifest that was used to install your system available. This is the manifest which includes the `calico/node` DaemonSet.
-{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
+- [kubeadm hosted install](installation/hosted/kubeadm/)
 
-#### Prepare for the Upgrade
- Edit your **calico** manifest:
-   - change the calico/node `image:` key to point at the {{site.prodname}} `tigera/cnx-node` image in your private registry.
-   - if you're using Typha, change the calico/typha `image:` key to point at the {{site.prodname}} `tigera/typha` image in your private registry.
-   - add the following to the `env:` section of the `calico-node` Daemonset:
+- [Kubernetes API datastore](installation/hosted/kubernetes-datastore/)
 
-     ```
-     - name: FELIX_PROMETHEUSREPORTERENABLED
-       value: "true"
-     - name: FELIX_PROMETHEUSREPORTERPORT
-       value: "9081"
-     ```
+If you modified the manifests or used the 
+[Integration Guide](https://docs.projectcalico.org/latest/getting-started/kubernetes/installation/integration) 
+to install Calico, contact Tigera support for assistance with your upgrade 
+to {{site.prodname}}.
 
-   - add the following policy at the end of the `CustomResourceDefinition` section:
-
-     ```
-     ---
-
-     apiVersion: apiextensions.k8s.io/v1beta1
-     description: Calico Tiers
-     kind: CustomResourceDefinition
-     metadata:
-       name: tiers.crd.projectcalico.org
-     spec:
-       scope: Cluster
-       group: crd.projectcalico.org
-       version: v1
-       names:
-        kind: Tier
-        plural: tiers
-        singular: tier
-     ```
-
-Edit your **rbac-kdd** manifest if you used one:
-  - add `tiers` to the list of resources under the `crd.projectcalico.org` apiGroup.
-
-#### Perform the upgrade
- 1. Use the following command to initiate a rolling update, using the the Calico manifest you prepared above.
-
-    ```
-    kubectl apply -f calico.yaml
-    ```
-
-    You can check the status of the rolling update by running:
-
-    ```
-    kubectl -n kube-system rollout status ds/calico-node
-    ```
-
-1. Download the {{site.prodname}} manifest
-([etcd](installation/hosted/cnx/1.7/cnx-etcd.yaml) or [KDD](installation/hosted/cnx/1.7/cnx-kdd.yaml))
-defining the {{site.prodname}} Manager API server and {{site.prodname}}
-Manager web application resources.
-
-1. Rename the file cnx.yaml - this is what subsequent instructions will refer to
-
-{% include {{page.version}}/cnx-mgr-install.md %}
-
-{% include {{page.version}}/cnx-monitor-install.md %}
-
-{% include {{page.version}}/gs-next-steps.md %}

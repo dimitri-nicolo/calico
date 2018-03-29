@@ -31,7 +31,11 @@ Note that kubeadm enables the aggregation layer by default.
 
 You can create a cluster compatible with these manifests by following [the official kubeadm guide](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-{% include {{page.version}}/load-docker.md yaml="calico" %}
+{% include {{page.version}}/load-docker-intro.md %}
+
+{% include {{page.version}}/load-docker-our-reg.md yaml="calico" %}
+
+{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
 ## Installing {{site.prodname}}
 
