@@ -135,15 +135,15 @@ toc:
       path: /reference/cnx/policy-editor
     - title: Deploying CNX Manager
       path: /reference/cnx/recommendations
-- title: Deploying on Public Cloud
+- title: Configuration on public clouds
   section:
-    - title: AWS
+    - title: Amazon Web Services
       path: /reference/public-cloud/aws
     - title: Azure
       path: /reference/public-cloud/azure
-    - title: GCE
+    - title: Google Compute Engine
       path: /reference/public-cloud/gce
-- title: Deploying on Private Cloud
+- title: Network design
   section:
     - title: CNX Over Ethernet Fabrics
       path: /reference/private-cloud/l2-interconnect-fabric
@@ -174,5 +174,3 @@ toc:
         path: /reference/advanced/etcd-rbac/kubernetes-advanced
       - title: etcd paths for CNX components
         path: /reference/advanced/etcd-rbac/calico-etcdv3-paths
-- title: System Requirements
-  path: /reference/requirements
