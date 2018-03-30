@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -87,6 +88,8 @@ func StartDataplaneDriver(configParams *config.Config,
 		if !configParams.LicenseValid {
 			configParams.DropActionOverride = "DROP"
 		}
+
+		spew.Dump(configParams)
 
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
