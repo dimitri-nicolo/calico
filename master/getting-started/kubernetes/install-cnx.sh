@@ -26,6 +26,9 @@ DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
 #
 CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 
+# don't prompt for agreement
+QUIET=${QUIET:=0}
+
 # cleanup CNX installation
 CLEANUP=0
 
@@ -43,11 +46,14 @@ checkSettings() {
 
   echo
   echo -n About to "$1" CNX.
-  read -n 1 -p " Proceed? (y/n): " answer
-  echo
-  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
-    echo Exiting.
-    exit 1
+  if [ "$QUIET" -eq 0 ]; then
+    read -n 1 -p " Proceed? (y/n): " answer
+
+    echo
+    if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+      echo Exiting.
+      exit 1
+    fi
   fi
 
   echo Proceeding ...
@@ -64,6 +70,7 @@ Usage: $(basename "$0")
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
           [-v version]        # CNX version; default: "v2.0"
           [-u]                # Remove CNX
+          [-q]                # Quiet (don't prompt)
           [-h]                # Print usage
           [-x]                # Enable verbose mode
 
@@ -72,12 +79,13 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:hv:ux" opt; do
+  while getopts "c:d:hqv:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       v )  DOCS_VERSION=$OPTARG;;
       x )  set -x;;
+      q )  QUIET=1;;
       u )  CLEANUP=1;;
       h )  usage;;
       \? ) usage;;
@@ -313,7 +321,8 @@ EOF
 # applyCalicoManifest()
 #
 applyCalicoManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+  run kubectl apply -f calico.yaml
   countDownSecs 30 "Applying calico.yaml manifest"
 }
 
@@ -337,7 +346,8 @@ removeMasterTaints() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+  run kubectl apply -f cnx-etcd.yaml
   countDownSecs 30 "Applying cnx-etcd.yaml manifest"
 }
 
@@ -353,7 +363,8 @@ deleteCNXManifest() {
 # applyCNXPolicyManifest()
 #
 applyCNXPolicyManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+  run kubectl apply -f cnx-policy.yaml
   countDownSecs 10 "Applying cnx-policy.yaml manifest"
 }
 
@@ -408,7 +419,8 @@ checkCRDs() {
 # applyOperatorManifest()
 #
 applyOperatorManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
+  run kubectl apply -f operator.yaml
   checkCRDs
 }
 
@@ -424,7 +436,8 @@ deleteOperatorManifest() {
 # applyMonitorCalicoManifest()
 #
 applyMonitorCalicoManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+  run kubectl apply -f monitor-calico.yaml
   countDownSecs 10 "Applying monitor-calico.yaml manifest"
 }
 
@@ -449,6 +462,7 @@ createCNXManagerSecret() {
 #
 deleteCNXManagerSecret() {
   runAsRootIgnoreErrors kubectl delete secret cnx-manager-tls -n kube-system
+  countDownSecs 1 "Deleting cnx-manager-tls secret"
 }
 
 #
@@ -488,8 +502,6 @@ cleanup() {
   deleteCNXManagerSecret        # Delete TLS secret
   deleteImagePullSecret         # Delete pull secret
   deleteBasicAuth               # Remove basic auth updates, restart kubelet
-
-  run rm -f ${CNX_PULL_SECRET_FILENAME}
 }
 
 #
