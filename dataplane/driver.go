@@ -32,7 +32,6 @@ import (
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/health"
-	"github.com/davecgh/go-spew/spew"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -85,11 +84,20 @@ func StartDataplaneDriver(configParams *config.Config,
 			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
 		}).Info("Calculated iptables mark bits")
 
+		// If PrometheusMetricsEnabled is set to true and license isn't applied or valid then throw a warning message.
+		if configParams.PrometheusMetricsEnabled && !configParams.LicenseValid {
+			log.Warn("Not licensed for Prometheus Metrics feature. License not applied or invalid. Contact licensing@tigera.io to obtain your license to use this feature")
+		}
+
+		// If DropActionOverride is set to non-default "DROP" and license is not applied or valid the nthrow a warning message.
+		if configParams.DropActionOverride != "DROP" && !configParams.LicenseValid {
+			log.Warn("Not licensed for DropActionOverride feature. License not applied or invalid. Contact licensing@tigera.io to obtain your license to use this feature")
+		}
+
+		// If license isn't applied or invalid then set DropActionOverride to "DROP".
 		if !configParams.LicenseValid {
 			configParams.DropActionOverride = "DROP"
 		}
-
-		spew.Dump(configParams)
 
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
