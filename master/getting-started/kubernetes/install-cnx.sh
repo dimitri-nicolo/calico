@@ -321,7 +321,8 @@ EOF
 # applyCalicoManifest()
 #
 applyCalicoManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+  run kubectl apply -f calico.yaml
   countDownSecs 30 "Applying calico.yaml manifest"
 }
 
@@ -345,7 +346,8 @@ removeMasterTaints() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+  run kubectl apply -f cnx-etcd.yaml
   countDownSecs 30 "Applying cnx-etcd.yaml manifest"
 }
 
@@ -361,7 +363,8 @@ deleteCNXManifest() {
 # applyCNXPolicyManifest()
 #
 applyCNXPolicyManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+  run kubectl apply -f cnx-policy.yaml
   countDownSecs 10 "Applying cnx-policy.yaml manifest"
 }
 
@@ -416,7 +419,8 @@ checkCRDs() {
 # applyOperatorManifest()
 #
 applyOperatorManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
+  run kubectl apply -f operator.yaml
   checkCRDs
 }
 
@@ -432,7 +436,8 @@ deleteOperatorManifest() {
 # applyMonitorCalicoManifest()
 #
 applyMonitorCalicoManifest() {
-  run kubectl apply -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+  run kubectl apply -f monitor-calico.yaml
   countDownSecs 10 "Applying monitor-calico.yaml manifest"
 }
 
@@ -457,6 +462,7 @@ createCNXManagerSecret() {
 #
 deleteCNXManagerSecret() {
   runAsRootIgnoreErrors kubectl delete secret cnx-manager-tls -n kube-system
+  countDownSecs 1 "Deleting cnx-manager-tls secret"
 }
 
 #
@@ -496,8 +502,6 @@ cleanup() {
   deleteCNXManagerSecret        # Delete TLS secret
   deleteImagePullSecret         # Delete pull secret
   deleteBasicAuth               # Remove basic auth updates, restart kubelet
-
-  run rm -f ${CNX_PULL_SECRET_FILENAME}
 }
 
 #
