@@ -32,6 +32,7 @@ import (
 	"github.com/projectcalico/felix/markbits"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func StartDataplaneDriver(configParams *config.Config,
@@ -83,6 +84,8 @@ func StartDataplaneDriver(configParams *config.Config,
 			"endpointMark":        markEndpointMark,
 			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
 		}).Info("Calculated iptables mark bits")
+
+		spew.Dump(configParams)
 
 		// If PrometheusMetricsEnabled is set to true and license isn't applied or valid then throw a warning message.
 		if configParams.PrometheusMetricsEnabled && !configParams.LicenseValid {
