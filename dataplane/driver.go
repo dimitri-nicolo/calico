@@ -88,17 +88,21 @@ func StartDataplaneDriver(configParams *config.Config,
 		spew.Dump(configParams)
 
 		// If PrometheusMetricsEnabled is set to true and license isn't applied or valid then throw a warning message.
-		if configParams.PrometheusMetricsEnabled && !configParams.LicenseValid {
+		if configParams.PrometheusReporterEnabled && !configParams.LicenseValid {
 			log.Warn("Not licensed for Prometheus Metrics feature. License not applied or invalid. Contact licensing@tigera.io to obtain your license to use this feature")
+
+			// Set Prometheus metrics process and reporting configs to false.
+			configParams.PrometheusMetricsEnabled = false
+			configParams.PrometheusReporterEnabled = false
+			configParams.PrometheusGoMetricsEnabled = false
+			configParams.PrometheusProcessMetricsEnabled = false
 		}
 
 		// If DropActionOverride is set to non-default "DROP" and license is not applied or valid the nthrow a warning message.
 		if configParams.DropActionOverride != "DROP" && !configParams.LicenseValid {
 			log.Warn("Not licensed for DropActionOverride feature. License not applied or invalid. Contact licensing@tigera.io to obtain your license to use this feature")
-		}
 
-		// If license isn't applied or invalid then set DropActionOverride to "DROP".
-		if !configParams.LicenseValid {
+			// Set DropActionOverride to "DROP".
 			configParams.DropActionOverride = "DROP"
 		}
 
@@ -155,7 +159,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			},
 			NfNetlinkBufSize:               configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:              configParams.StatsDumpFilePath,
-			PrometheusReporterEnabled:      configParams.LicenseValid && configParams.PrometheusReporterEnabled,
+			PrometheusReporterEnabled:      configParams.PrometheusReporterEnabled,
 			PrometheusReporterPort:         configParams.PrometheusReporterPort,
 			PrometheusReporterCertFile:     configParams.PrometheusReporterCertFile,
 			PrometheusReporterKeyFile:      configParams.PrometheusReporterKeyFile,
