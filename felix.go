@@ -715,18 +715,18 @@ func loadConfigFromDatastore(
 	}
 
 	// Get the LicenseKey resource directly from the backend datastore client.
-	lic, err := client.Get(ctx, model.ResourceKey{
+	lic, errLic := client.Get(ctx, model.ResourceKey{
 		Kind:      apiv3.KindLicenseKey,
 		Name:      "default",
 		Namespace: "",
 	}, "")
-	if err != nil {
-		switch err.(type) {
+	if errLic != nil {
+		switch errLic.(type) {
 		case cerrors.ErrorResourceDoesNotExist:
 			log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).Debug("No config of this type")
 			return
 		default:
-			log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(err).Info("Failed to load LicenseKey from datastore")
+			log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(errLic).Info("Failed to load LicenseKey from datastore")
 			return
 		}
 	}
@@ -737,9 +737,9 @@ func loadConfigFromDatastore(
 	}
 
 	// Decode the LicenseKey.
-	claims, err := licClient.Decode(*lk)
-	if err != nil {
-		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(err).Info("Corrupted LicenseKey")
+	claims, errLic := licClient.Decode(*lk)
+	if errLic != nil {
+		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(errLic).Error("Corrupted LicenseKey")
 		return
 	}
 

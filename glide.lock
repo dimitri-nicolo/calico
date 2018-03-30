@@ -1,5 +1,5 @@
-hash: 18b47356fee6d81006e43c7506d3e47415e292f39bf2e7ba366264cebc6d9cda
-updated: 2018-03-29T15:03:31.641669-07:00
+hash: 2d790ed11eca1cfeb9fab27e81ed29f0f3519dff149101157b24300e2cbe2370
+updated: 2018-03-29T16:59:54.139686724-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/containernetworking/cni
@@ -59,7 +59,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: 9acd88844bc186c3ec7f318cd3d56f1114b4ab99
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -115,7 +115,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
-  version: 7ce9f81585a31f4d6528d46bce26919f325deb94
+  version: 4b54e7d2460df21c1c2d345af2337f91bfc938ca
 - name: github.com/jbenet/go-reuseport
   version: 7eed93a5b50b20c209baefe9fafa53c3d965a33c
   repo: https://github.com/fasaxc/go-reuseport.git
@@ -140,6 +140,10 @@ imports:
   - buffer
   - jlexer
   - jwriter
+- name: github.com/mattn/go-colorable
+  version: efa589957cd060542a26d2dd7832fd6a6c6c3ade
+- name: github.com/mattn/go-isatty
+  version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -186,7 +190,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: 216894e5277dc6098f93ceca97beb6101610b418
+  version: 328fceb7548c744337cd010914152b74eaf4c4ab
   subpackages:
   - ext
   - log
@@ -279,7 +283,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: d19ba67c471a7616e40de13a841bb17faebdbe40
+  version: 0e8569031a0fcb72ada9f643cc49d921f5f23b2a
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -292,7 +296,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: 5f5d5cddcf414bb44941b9c6c0d2df31253ec40e
+  version: 85aa3b74a43a9fa174a588ce9a042c9b71b0842c
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -369,7 +373,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
+  version: ab0870e398d5dd054b868c0db1481ab029b9a9f2
   subpackages:
   - googleapis
   - googleapis/rpc/status
@@ -398,7 +402,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/square/go-jose.v2
-  version: 552e98edab5d620205ff1a8960bf52a5a10aad03
+  version: 76dd09796242edb5b897103a75df2645c028c960
   subpackages:
   - cipher
   - json
@@ -531,7 +535,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 868f2f29720b192240e18284659231b440f9cda5
+  version: 50ae88d24ede7b8bad68e23c805b5d3da5c8abaf
   subpackages:
   - pkg/common
 testImports: []
