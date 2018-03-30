@@ -26,6 +26,9 @@ DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
 #
 CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 
+# don't prompt for agreement
+QUIET=${QUIET:=0}
+
 # cleanup CNX installation
 CLEANUP=0
 
@@ -43,11 +46,14 @@ checkSettings() {
 
   echo
   echo -n About to "$1" CNX.
-  read -n 1 -p " Proceed? (y/n): " answer
-  echo
-  if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
-    echo Exiting.
-    exit 1
+  if [ "$QUIET" -eq 0 ]; then
+    read -n 1 -p " Proceed? (y/n): " answer
+
+    echo
+    if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+      echo Exiting.
+      exit 1
+    fi
   fi
 
   echo Proceeding ...
@@ -64,6 +70,7 @@ Usage: $(basename "$0")
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
           [-v version]        # CNX version; default: "v2.0"
           [-u]                # Remove CNX
+          [-q]                # Quiet (don't prompt)
           [-h]                # Print usage
           [-x]                # Enable verbose mode
 
@@ -72,12 +79,13 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:hv:ux" opt; do
+  while getopts "c:d:hqv:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       v )  DOCS_VERSION=$OPTARG;;
       x )  set -x;;
+      q )  QUIET=1;;
       u )  CLEANUP=1;;
       h )  usage;;
       \? ) usage;;
