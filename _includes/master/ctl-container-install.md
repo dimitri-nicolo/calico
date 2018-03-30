@@ -48,9 +48,9 @@
 [Configure `{{include.cli}}` to connect to your datastore](/{{page.version}}/usage/{{include.cli}}/configure/).
 
    
-## Installing {{include.cli}} as a container on each node
+## Installing {{include.cli}} as a Kubernetes pod
 
-### About installing {{include.cli}} as a container on each node
+### About installing {{include.cli}} as a Kubernetes pod
 
 The steps to install `{{include.cli}}` as a container on each node vary according to where you 
 want to pull the image from. Refer to the section that corresponds to your preferred 
@@ -60,5 +60,9 @@ private repository.
 - [Pulling the image from another private registry](#pulling-the-image-from-another-private-registry)
 
 ### Pulling the image from Tigera's private registry
+
+{% include {{page.version}}/load-docker-our-reg.md yaml=include.cli %}
+
+### Pulling the image from another private registry
 
 {% include {{page.version}}/load-docker.md yaml=include.cli %}

@@ -1,8 +1,6 @@
 1. If you are pulling from a quay.io registry, skip to the next step. Otherwise, use 
    the following command to replace `quay.io` in the manifest with the name of your 
    private registry. 
-   
-   {{include.yaml}}
 
    **Command**
    ```shell

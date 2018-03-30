@@ -18,17 +18,6 @@ pod CIDRs for each node.
 
 - Ensure that your cluster meets the {{site.prodname}} [System requirements](../../../requirements). 
 
-- Your Kubernetes API server is configured to [support the aggregation layer](https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/).
-- Your Kubernetes API server is configured to use a supported authentication method
-
-{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
-
-{% include {{page.version}}/load-docker-intro.md %}
-
-{% include {{page.version}}/load-docker-our-reg.md yaml="calico" %}
-
-{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
-
 - If your cluster has RBAC enabled, install {{site.prodname}}'s RBAC manifest, 
   which creates roles and role bindings for {{site.prodname}}'s components:
 
@@ -38,6 +27,12 @@ pod CIDRs for each node.
    > **Note**: You can also 
    > [view the YAML in your browser](../rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
+   
+{% include {{page.version}}/load-docker-intro.md %}
+
+{% include {{page.version}}/load-docker-our-reg.md yaml="calico" %}
+
+{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
 ## Installation
 
@@ -61,18 +56,14 @@ When using the Kubernetes API datastore, {{site.prodname}} has beta support for
 mesh and/or explicit configuration of peers.  (The "beta" label is because {{site.prodname}} IPAM is 
 not yet supported.)
 
-With Kubernetes as the {{site.prodname}} datastore, {{site.prodname}} has beta support for {{site.prodname}} networking.  This provides BGP-based
-networking with a full node-to-node mesh and/or explicit configuration of peers.
+To install {{site.prodname}} with BGP networking:
 
-To install {{site.prodname}} with {{site.prodname}} networking, run one of the commands below based on your Kubernetes version.
-This will install {{site.prodname}} and will initially create a full node-to-node mesh.
-
-1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml){:target="_blank"}
+1. Download [the {{site.prodname}} networking manifest](calico-networking/1.7/calico.yaml)
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
-2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
-   more than 50 nodes, edit the manifest to [enable Typha](../cnx/cnx#enabling-typha).
+2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to 
+   more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha). 
 
 3. Make sure your cluster CIDR matches the `CALICO_IPV4POOL_CIDR` environment variable in the manifest.
    The cluster CIDR is configured by the  `--cluster-cidr` option passed to the Kubernetes
@@ -80,16 +71,16 @@ This will install {{site.prodname}} and will initially create a full node-to-nod
    `--pod-network-cidr` option.
 
    > **Note**: {{site.prodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
-   > IP pool already created.  Changing the variable after the first node has started has no
+   > IP pool already created.  Changing the variable after the first node has started has no 
    > effect.
    {: .alert .alert-info}
 
 4. Apply the manifest: `kubectl apply -f calico.yaml`
 
-5. If your Kubernetes cluster has more than 100 nodes, we recommend disabling the
+5. If your Kubernetes cluster has more than 100 nodes, we recommend disabling the 
    node-to-node BGP mesh and configuring a pair of redundant route reflectors.
-   Due to limitations in the Kubernetes API, maintaining the node-to-node mesh
-   uses significant CPU (in the `confd` process on each host and the API server)
+   Due to limitations in the Kubernetes API, maintaining the node-to-node mesh 
+   uses significant CPU (in the `confd` process on each host and the API server) 
    as the number of nodes increases.
 
    Alternatively, if you're running on-premise, you may want to configure {{site.prodname}}
@@ -109,24 +100,20 @@ To install {{site.prodname}} in policy-only mode:
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
-1. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
+2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to 
    more than 50 nodes, edit the manifest to [enable Typha](#enabling-typha).
 
-1. Make sure your cluster CIDR matches the `CALICO_IPV4POOL_CIDR` environment variable in the manifest.
+3. Make sure your cluster CIDR matches the `CALICO_IPV4POOL_CIDR` environment variable in the manifest.
    The cluster CIDR is configured by the  `--cluster-cidr` option passed to the Kubernetes
    controller manager.  If you are using `kubeadm` that option is controlled by `kubeadm`'s
    `--pod-network-cidr` option.
 
    > **Note**: {{site.prodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
-   > IP pool already created.  Changing the variable after the first node has started has no
+   > IP pool already created.  Changing the variable after the first node has started has no 
    > effect.
    {: .alert .alert-info}
 
-1. Then apply the manifest.
-
-   ```
-   kubectl apply -f calico.yaml
-   ```
+4. Apply the manifest: `kubectl apply -f calico.yaml`
 
 ## Installing the CNX Manager
 
@@ -172,18 +159,7 @@ kubernetes-minion-group-tbmi  k8s           kube-system.kube-dns-v20-jhk10      
 kubernetes-minion-group-x7ce  k8s           kube-system.kubernetes-dashboard-v1.4.0-wtrtm  eth0
 ```
 
-## How it works
-
-{{site.prodname}} typically uses `etcd` to store information about Kubernetes pods, namespaces, and network policies.  This information
-is populated to etcd by the CNI plugin and the Kubernetes controllers, and is interpreted by Felix and BIRD to program the dataplane on
-each host in the cluster.
-
-The above manifest deploys {{site.prodname}} such that Felix uses the Kubernetes API directly to learn the required information to enforce policy,
-removing {{site.prodname}}'s dependency on etcd and the need for the Kubernetes controllers.
-
-The CNI plugin is still required to configure each pod's virtual ethernet device and network namespace.
-
-## Enabling Typha
+### Enabling Typha
 
 {{site.prodname}}'s Typha component helps {{site.prodname}} scale to high numbers of
 nodes without over-taxing the Kubernetes API server.  It sits between Felix ({{site.prodname}}'s
@@ -223,7 +199,18 @@ To enable Typha in either the {{site.prodname}} networking manifest or the polic
    In production, we recommend starting at least 3 replicas to reduce the impact of rolling upgrades
    and failures.
 
-> **Note**: If you set `typha_service_name` without increasing the replica count from its default
+> **Note**: If you set `typha_service_name` without increasing the replica count from its default 
 > of `0` Felix will fail to start because it will try to connect to Typha but there
 > will be no Typha instances to connect to.
 {: .alert .alert-info}
+
+## How it works
+
+{{site.prodname}} typically uses `etcd` to store information about Kubernetes pods, namespaces, and network policies.  This information
+is populated to etcd by the CNI plugin and the Kubernetes controllers, and is interpreted by Felix and BIRD to program the dataplane on
+each host in the cluster.
+
+The above manifest deploys {{site.prodname}} such that Felix uses the Kubernetes API directly to learn the required information to enforce policy,
+removing {{site.prodname}}'s dependency on etcd and the need for the Kubernetes controllers.
+
+The CNI plugin is still required to configure each pod's virtual ethernet device and network namespace.

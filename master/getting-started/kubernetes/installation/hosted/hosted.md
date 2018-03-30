@@ -6,16 +6,6 @@ canonical_url: 'https://docs.projectcalico.org/v3.0/getting-started/kubernetes/i
 The following steps install {{site.prodname}} as a Kubernetes add-on using 
 your own etcd cluster.
 
-## Requirements
-
-{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
-
-{% include {{page.version}}/load-docker-intro.md %}
-
-{% include {{page.version}}/load-docker-our-reg.md yaml="calico" %}
-
-{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
-
 ## Before you begin
 
 - Ensure that your cluster meets the {{site.prodname}} [system requirements](../../requirements). 
@@ -27,29 +17,36 @@ your own etcd cluster.
    kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/rbac.yaml
    ```
 
-## Installing {{site.prodname}}
+{% include {{page.version}}/load-docker-intro.md %}
+
+{% include {{page.version}}/load-docker-our-reg.md yaml="calico" %}
+
+{% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
+
+## Install {{site.prodname}}
 
 To install {{site.prodname}}:
 
-1. [Open calico.yaml in a new tab](calico.yaml){:target="_blank"}.
+1. Download [calico.yaml](calico.yaml)
 
-1. Copy the contents, paste them into a new file, and save the file as calico.yaml.
-
-1. Open the calico.yaml file in your favorite editor, navigate to the `ConfigMap`
-   section, and set `etcd_endpoints` to the correct value. Refer to [etcd configuration](index#etcd-configuration)
-   for more details.
+1. Configure `etcd_endpoints` in the provided ConfigMap to match your etcd cluster.
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
-1. Then simply apply the manifest:
+1. Apply the manifest:
 
    ```shell
    kubectl apply -f calico.yaml
    ```
 
-   > **Note**: Refer to [Configuration options](index#configuration-options) for additional
-   > settings that can be modified in the manifest.
-   {: .alert .alert-info}
+> **Note**: Make sure you configure the provided ConfigMap with the 
+> location of your etcd cluster before running the above command.
+{: .alert .alert-info}
+
+
+## Configuration Options
+
+The above manifest supports a number of configuration options documented [here](index#configuration-options)
 
 ## Installing the CNX Manager
 

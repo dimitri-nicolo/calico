@@ -22,8 +22,6 @@ corresponds to your desired deployment.
 
 ## Installing calicoctl as a binary on a single host
 
-1. Log into the host and open a terminal prompt.
-
 {% include {{page.version}}/ctl-binary-install.md cli="calicoctl" %}
 
 **Next step**:
