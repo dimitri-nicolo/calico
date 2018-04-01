@@ -26,7 +26,7 @@ DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
 #
 CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 
-# when set to 1, don't prompt for agreement
+# when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
 
 # cleanup CNX installation
@@ -326,7 +326,7 @@ downloadManifest() {
   filename=$(basename -- "$manifest")
 
   if [ ! -f "$filename" ]; then
-    echo Ddownloading "$manifest"
+    echo Downloading "$manifest"
     run curl --compressed -O "$manifest"
   else
     echo "$filename" already exists, not downloading
@@ -356,7 +356,7 @@ applyCalicoManifest() {
 # deleteCalicoManifest()
 #
 deleteCalicoManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+  runIgnoreErrors kubectl delete -f calico.yaml
   countDownSecs 5 "Deleting calico.yaml manifest"
 }
 
@@ -380,8 +380,8 @@ applyCNXManifest() {
 # deleteCNXManifest()
 #
 deleteCNXManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
-  countDownSecs 20 "Deleting cnx-etcd.yaml manifest"
+  runIgnoreErrors kubectl delete -f cnx-etcd.yaml
+  countDownSecs 30 "Deleting cnx-etcd.yaml manifest"
 }
 
 #
@@ -396,7 +396,7 @@ applyCNXPolicyManifest() {
 # deleteCNXPolicyManifest()
 #
 deleteCNXPolicyManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+  runIgnoreErrors kubectl delete -f cnx-policy.yaml
   countDownSecs 20 "Deleting cnx-policy.yaml manifest"
 }
 
@@ -451,7 +451,7 @@ applyOperatorManifest() {
 # deleteOperatorManifest()
 #
 deleteOperatorManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
+  runIgnoreErrors kubectl delete -f operator.yaml
   countDownSecs 5 "Deleting operator.yaml manifest"
 }
 
@@ -467,7 +467,7 @@ applyMonitorCalicoManifest() {
 # deleteMonitorCalicoManifest()
 #
 deleteMonitorCalicoManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+  runIgnoreErrors kubectl delete -f monitor-calico.yaml
   countDownSecs 5 "Deleting monitor-calico.yaml manifest"
 }
 
@@ -516,6 +516,8 @@ installCNX() {
 #
 cleanup() {
   checkSettings uninstall       # Verify settings are correct with user
+
+  downloadManifests             # Download all manifests
 
   deleteMonitorCalicoManifest   # Delete monitor-calico.yaml
   deleteOperatorManifest        # Delete operator.yaml
