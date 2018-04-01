@@ -26,7 +26,7 @@ DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
 #
 CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 
-# don't prompt for agreement
+# when set to 1, don't prompt for agreement
 QUIET=${QUIET:=0}
 
 # cleanup CNX installation
@@ -318,10 +318,36 @@ EOF
 }
 
 #
+# downloadManifest()
+# Do not overwrite existing copy of the manifest.
+#
+downloadManifest() {
+  manifest="$1"
+  filename=$(basename -- "$manifest")
+
+  if [ ! -f "$filename" ]; then
+    echo Ddownloading "$manifest"
+    run curl --compressed -O "$manifest"
+  else
+    echo "$filename" already exists, not downloading
+  fi
+}
+
+#
+# downloadManifests()
+#
+downloadManifests() {
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
+}
+
+#
 # applyCalicoManifest()
 #
 applyCalicoManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
   run kubectl apply -f calico.yaml
   countDownSecs 30 "Applying calico.yaml manifest"
 }
@@ -346,7 +372,6 @@ removeMasterTaints() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
   run kubectl apply -f cnx-etcd.yaml
   countDownSecs 30 "Applying cnx-etcd.yaml manifest"
 }
@@ -356,14 +381,13 @@ applyCNXManifest() {
 #
 deleteCNXManifest() {
   runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
-  countDownSecs 5 "Deleting cnx-etcd.yaml manifest"
+  countDownSecs 20 "Deleting cnx-etcd.yaml manifest"
 }
 
 #
 # applyCNXPolicyManifest()
 #
 applyCNXPolicyManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
   run kubectl apply -f cnx-policy.yaml
   countDownSecs 10 "Applying cnx-policy.yaml manifest"
 }
@@ -373,7 +397,7 @@ applyCNXPolicyManifest() {
 #
 deleteCNXPolicyManifest() {
   runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
-  countDownSecs 5 "Deleting cnx-policy.yaml manifest"
+  countDownSecs 20 "Deleting cnx-policy.yaml manifest"
 }
 
 #
@@ -419,7 +443,6 @@ checkCRDs() {
 # applyOperatorManifest()
 #
 applyOperatorManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
   run kubectl apply -f operator.yaml
   checkCRDs
 }
@@ -436,7 +459,6 @@ deleteOperatorManifest() {
 # applyMonitorCalicoManifest()
 #
 applyMonitorCalicoManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
   run kubectl apply -f monitor-calico.yaml
   countDownSecs 10 "Applying monitor-calico.yaml manifest"
 }
@@ -476,6 +498,7 @@ installCNX() {
   createImagePullSecret         # Create the image pull secret
   setupBasicAuth                # Create 'jane/welc0me' account w/cluster admin privs
 
+  downloadManifests             # Download all manifests
   applyCalicoManifest           # Apply calico.yaml
   removeMasterTaints            # Remove master taints
   createCNXManagerSecret        # Create cnx-manager-tls to enable manager/apiserver communication
