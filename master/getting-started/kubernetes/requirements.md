@@ -10,9 +10,9 @@ canonical_url: 'https://docs.projectcalico.org/v3.1/getting-started/kubernetes/r
 #### Supported versions
 
 We test {{site.prodname}} {{page.version}} against the following Kubernetes versions.
-- 1.7
 - 1.8
 - 1.9
+- 1.10
 
 Other versions are likely to work, but we do not actively test {{site.prodname}} 
 {{page.version}} against them.
@@ -47,5 +47,7 @@ IP ranges in your network, including:
 Our manifests default to `192.168.0.0/16` for the pod IP range except [Canal/flannel](./installation/hosted/canal), 
 which defaults to `10.244.0.0/16`. Refer to [Configuring the pod IP range](./installation/hosted/#configuring-the-pod-ip-range)
 for information on modifying the defaults.
+
+{% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
 {% include {{page.version}}/reqs-kernel.md %}

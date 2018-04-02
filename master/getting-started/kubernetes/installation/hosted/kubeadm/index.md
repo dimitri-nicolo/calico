@@ -12,38 +12,32 @@ This document outlines how to install {{site.prodname}} on a cluster initialized
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
-## Installing {{site.prodname}}
+## Installing {{site.prodname}} with a Kubernetes-hosted etcd
+
+As a non-production quick start, to install {{site.prodname}} with a single-node dedicated etcd cluster,
+running as a Kubernetes pod:
 
 1. If you have an existing cluster, ensure that it meets the {{site.prodname}} [system requirements](../../../requirements). Otherwise, you can create a cluster compatible with these manifests by following [the official kubeadm guide](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-### Installing {{site.prodname}} with a Kubernetes-hosted etcd
-
-As a non-production quick start, to install Calico with a single-node dedicated etcd cluster, running as a Kubernetes pod:
-
-1. [Open calico.yaml in a new tab](1.7/calico.yaml){:target="_blank"}.
-
-1. Copy the contents, paste them into a new file, and save the file as calico.yaml.
-
-{% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+2. Apply the single-node etcd manifest:
    
-   > **Note**: Refer to [Configuration options](../index#configuration-options) for additional
-   > settings that can be modified in the manifest.
+   ```shell
+   kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+   ```
+   
+   > **Note**: You can also 
+   > [view the YAML in your browser](1.7/calico.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
-1. Then apply the manifest.
-
-   ```shell
-   kubectl apply -f calico.yaml
-   ```
 1. Continue to [Installing the CNX Manager](#installing-the-cnx-manager)
 
-### Installing {{site.prodname}} with an existing etcd datastore
+## Installing with an existing etcd datastore
 
 To install {{site.prodname}}, configured to use an etcd that you have already set-up:
 
 1. Ensure your cluster meets the {{site.prodname}} [system requirements](../../../requirements) (or recreate it if not).
 
-2. Follow [the main etcd datastore instructions](../hosted).
+2. Follow [the main etcd datastore instructions](../hosted). 
 
 1. Continue to [Installing the CNX Manager](#installing-the-cnx-manager)
 

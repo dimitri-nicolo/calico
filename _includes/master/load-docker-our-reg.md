@@ -1,4 +1,6 @@
+{% if include.yaml == "calico" %}
 ### Pulling the images from Tigera's private registry
+{% endif %}
 
 **Prerequisite**: Ensure that you have the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials).
 
@@ -76,8 +78,6 @@
 
 **Next step**:
 
-[Configure `{{include.yaml}}` to connect to your datastore](/{{page.version}}/usage/include.yaml/configure/).
+[Configure `{{include.yaml}}` to connect to your datastore](/{{page.version}}/usage/{{include.yaml}}/configure/).
 
 {% endif %}
-
-### Pulling the image from another private registry

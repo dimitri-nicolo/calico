@@ -13,12 +13,10 @@ corresponds to your desired deployment.
 
 - [As a container on a single host](#installing-calicoq-as-a-container-on-a-single-host)
 
-- [As a container on each node](#installing-calicoq-as-a-container-on-each-node)
+- [As a Kubernetes pod](#installing-calicoq-as-a-kubernetes-pod)
 
 
 ## Installing calicoq as a binary on a single host
-
-1. Log into the host and open a terminal prompt.
 
 {% include {{page.version}}/ctl-binary-install.md cli="calicoq" %}
 
