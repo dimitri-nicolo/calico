@@ -28,6 +28,11 @@ data:
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
   tigera.cnx-manager.oidc-client-id: "<fill-in-your-oauth-client-id-here>"
+  # Prometheus server resource path
+  tigera.cnx-manager.prometheus-api-url: "/api/v1/namespaces/calico-monitoring/services/calico-node-prometheus:9090/proxy/api/v1"
+  # Query api url
+  tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/api:8080/proxy"
+
 ---
 
 # Optionally update this ConfigMap to enable TLS with certificate verification when CNX API
@@ -242,7 +247,7 @@ spec:
           - name: DATASTORE_TYPE
             value: "kubernetes"
       volumes:
-        # If you're using TLS with certificate verification then 
+        # If you're using TLS with certificate verification then
         # uncomment the following.
         # - name: apiserver-certs
         #   secret:
@@ -300,6 +305,16 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-client-id
+          - name: CNX_PROMETHEUS_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.prometheus-api-url
+          - name: CNX_QUERY_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.query-api-url
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
