@@ -29,6 +29,9 @@ CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 # when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
 
+# when set to 1, don't install prometheus components
+SKIP_PROMETHEUS=${SKIP_PROMETHEUS:=0}
+
 # cleanup CNX installation
 CLEANUP=0
 
@@ -69,7 +72,7 @@ Usage: $(basename "$0")
           [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
           [-v version]        # CNX version; default: "v2.0"
-          [-u]                # Remove CNX
+          [-u]                # Uninstall CNX
           [-q]                # Quiet (don't prompt)
           [-h]                # Print usage
           [-x]                # Enable verbose mode
@@ -79,13 +82,14 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:hqv:ux" opt; do
+  while getopts "c:d:hpqv:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       v )  DOCS_VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
+      p )  SKIP_PROMETHEUS=1;;
       u )  CLEANUP=1;;
       h )  usage;;
       \? ) usage;;
@@ -181,14 +185,13 @@ runAsRootGetOutput() {
 blockUntilSuccess() {
   cmd="$1"
   secs="$2"
-  echo -n "Blocking for $secs seconds until \"$1\" succeeds: "
+  echo -n "Waiting for $secs seconds until \"$1\" completes: "
   until $cmd 2>/dev/null 1>/dev/null; do
     : $((secs--))
     echo -n .
     sleep 1
     if [ "$secs" -eq 0 ]; then
-      echo Bailing out! Failure
-      exit 1    # fatalError
+      fatalError Restarting kubelet failed.
     fi
   done
   echo "$1 succeeded."
@@ -522,9 +525,12 @@ installCNX() {
   removeMasterTaints            # Remove master taints
   createCNXManagerSecret        # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest              # Apply cnx-etcd.yaml
-  applyCNXPolicyManifest        # Apply cnx-policy.yaml
-  applyOperatorManifest         # Apply operator.yaml
-  applyMonitorCalicoManifest    # Apply monitor-calico.yaml
+
+  if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
+    applyCNXPolicyManifest      # Apply cnx-policy.yaml
+    applyOperatorManifest       # Apply operator.yaml
+    applyMonitorCalicoManifest  # Apply monitor-calico.yaml
+  fi
 
   echo CNX installation complete. Point your browser to https://127.0.0.1:30003, username=jane, password=welc0me
 }
@@ -538,9 +544,12 @@ cleanup() {
 
   downloadManifests             # Download all manifests
 
-  deleteMonitorCalicoManifest   # Delete monitor-calico.yaml
-  deleteOperatorManifest        # Delete operator.yaml
-  deleteCNXPolicyManifest       # Delete cnx-policy.yaml
+  if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
+    deleteMonitorCalicoManifest # Delete monitor-calico.yaml
+    deleteOperatorManifest      # Delete operator.yaml
+    deleteCNXPolicyManifest     # Delete cnx-policy.yaml
+  fi
+
   deleteCNXManifest             # Delete cnx-etcd.yaml
   deleteCalicoManifest          # Delete calico.yaml
   deleteCNXManagerSecret        # Delete TLS secret
