@@ -1,3 +1,4 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 package fv
 
 import (
@@ -1003,7 +1004,7 @@ func qcEndpoint(r api.Resource, numGNP, numNP int) client.Endpoint {
 
 // qcPolicy returns a client.Policy from an v3.NetworkPolicy or v3.GlobalNetworkPolicy.
 // To keep the interface simple, it assigns the totWEP and totHEP values to all of the
-// rule selectors and not selectors (i.e. it assumes they simply match all).
+// rule selectors (i.e. it assumes they simply match all).
 func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy {
 	p := client.Policy{
 		Kind:                 r.GetObjectKind().GroupVersionKind().Kind,
@@ -1018,24 +1019,12 @@ func qcPolicy(r api.Resource, numHEP, numWEP, totHEP, totWEP int) client.Policy 
 		for i := 0; i < num; i++ {
 			rules[i] = client.RuleDirection{
 				Source: client.RuleEntity{
-					Selector: client.RuleEntityEndpoints{
-						NumWorkloadEndpoints: totWEP,
-						NumHostEndpoints:     totHEP,
-					},
-					NotSelector: client.RuleEntityEndpoints{
-						NumWorkloadEndpoints: totWEP,
-						NumHostEndpoints:     totHEP,
-					},
+					NumWorkloadEndpoints: totWEP,
+					NumHostEndpoints:     totHEP,
 				},
 				Destination: client.RuleEntity{
-					Selector: client.RuleEntityEndpoints{
-						NumWorkloadEndpoints: totWEP,
-						NumHostEndpoints:     totHEP,
-					},
-					NotSelector: client.RuleEntityEndpoints{
-						NumWorkloadEndpoints: totWEP,
-						NumHostEndpoints:     totHEP,
-					},
+					NumWorkloadEndpoints: totWEP,
+					NumHostEndpoints:     totHEP,
 				},
 			}
 		}

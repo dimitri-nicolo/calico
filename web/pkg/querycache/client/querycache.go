@@ -1,5 +1,4 @@
 // Copyright (c) 2018 Tigera, Inc. All rights reserved.
-
 package client
 
 import (
@@ -411,24 +410,12 @@ func (c *cachedQuery) convertRules(apiRules []api.RuleDirection) []RuleDirection
 	for i, ar := range apiRules {
 		r[i] = RuleDirection{
 			Source: RuleEntity{
-				Selector: RuleEntityEndpoints{
-					NumWorkloadEndpoints: ar.Source.Selector.NumWorkloadEndpoints,
-					NumHostEndpoints:     ar.Source.Selector.NumHostEndpoints,
-				},
-				NotSelector: RuleEntityEndpoints{
-					NumWorkloadEndpoints: ar.Source.NotSelector.NumWorkloadEndpoints,
-					NumHostEndpoints:     ar.Source.NotSelector.NumHostEndpoints,
-				},
+				NumWorkloadEndpoints: ar.Source.NumWorkloadEndpoints,
+				NumHostEndpoints:     ar.Source.NumHostEndpoints,
 			},
 			Destination: RuleEntity{
-				Selector: RuleEntityEndpoints{
-					NumWorkloadEndpoints: ar.Destination.Selector.NumWorkloadEndpoints,
-					NumHostEndpoints:     ar.Destination.Selector.NumHostEndpoints,
-				},
-				NotSelector: RuleEntityEndpoints{
-					NumWorkloadEndpoints: ar.Destination.NotSelector.NumWorkloadEndpoints,
-					NumHostEndpoints:     ar.Destination.NotSelector.NumHostEndpoints,
-				},
+				NumWorkloadEndpoints: ar.Destination.NumWorkloadEndpoints,
+				NumHostEndpoints:     ar.Destination.NumHostEndpoints,
 			},
 		}
 	}
@@ -546,20 +533,17 @@ func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]st
 }
 
 func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []string, filterIn set.Set) set.Set {
-	selIds := c.polEplabelHandler.QuerySelectors(labels, profiles)
+	policies := c.polEplabelHandler.QueryPolicies(labels, profiles)
 
 	// Filter out the rule matches, and only filter in those in the supplied set (if supplied).
 	results := set.New()
-	for _, selId := range selIds {
-		if selId.IsRule() {
-			continue
-		}
-		p := selId.Policy()
+	for _, p := range policies {
 		if filterIn != nil && !filterIn.Contains(p) {
 			continue
 		}
-		results.Add(selId.Policy())
+		results.Add(p)
 	}
+	log.WithField("NumResults", results.Len()).Info("Returning policies from label query")
 	return results
 }
 

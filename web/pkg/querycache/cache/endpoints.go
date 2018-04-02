@@ -1,3 +1,4 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 package cache
 
 import (
@@ -127,28 +128,24 @@ func (c *endpointsCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interf
 }
 
 func (c *endpointsCache) RegisterWithLabelHandler(handler labelhandler.Interface) {
-	handler.RegisterHandler(c.policyEndpointMatch)
+	handler.RegisterPolicyHandler(c.policyEndpointMatch)
 }
 
-func (c *endpointsCache) policyEndpointMatch(matchType labelhandler.MatchType, selector labelhandler.SelectorID, epKey model.Key) {
-	if selector.IsRule() {
-		// Skip updates from rule selectors
-		return
-	}
+func (c *endpointsCache) policyEndpointMatch(matchType labelhandler.MatchType, polKey model.Key, epKey model.Key) {
 	epd := c.getEndpoint(epKey)
 	if epd == nil {
 		// The endpoint has been deleted. Since the endpoint cache is updated before the index handler is updated this is
 		// a valid scenario, and should be treated as a no-op.
 		return
 	}
-	prk := selector.Policy().(model.ResourceKey)
+	prk := polKey.(model.ResourceKey)
 	switch prk.Kind {
 	case v3.KindGlobalNetworkPolicy:
 		epd.policies.NumGlobalNetworkPolicies += matchTypeToDelta[matchType]
 	case v3.KindNetworkPolicy:
 		epd.policies.NumNetworkPolicies += matchTypeToDelta[matchType]
 	default:
-		log.WithField("key", selector.Policy()).Error("Unexpected resource in event type, expecting a v3 policy type")
+		log.WithField("key", prk).Error("Unexpected resource in event type, expecting a v3 policy type")
 	}
 
 	ec := c.getEndpointCache(epKey)

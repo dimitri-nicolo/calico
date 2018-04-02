@@ -13,7 +13,7 @@ targeted at internal use (cnx-manager/webapp only).
 
 ### General API Principles
 
-1. All APIS are read-only and *only* support the GET method.
+1. All APIs are read-only and *only* support the GET method.
 1. Pagination is available on all query URLs.  The query parameters are:
 - `page`
   - page number
@@ -256,22 +256,15 @@ TODO(rlb):  Maybe need indication of whether actual policy will apply to an endp
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| source | The source entity | [rule entity](#rule-entity-object) |
-| destination | The destination entity | [rule entity](#rule-entity-object) |
-
-##### Rule Entity Object
-
-| Field | Description | Scheme |
-| ----- | ----------- | ------ |
-| selector | The rule selector | [rule endpoints](#rule-endpoints-object) |
-| notSelector | The rule negated selector | [rule endpoints](#rule-endpoints-object) |
+| source | The source entity | [rule entity](#rule-endpoints-object) |
+| destination | The destination entity | [rule entity](#rule-endpoints-object) |
 
 ##### Rule Endpoints Object
 
 | Field | Description | Scheme |
 | ----- | ----------- | ------ |
-| numWorkloadEndpoints | The number of WorkloadEndpoint resources matching the rule selector | number |
-| numHostEndpoints | The number of HostEndpoint resources matching the rule selector | number |
+| numWorkloadEndpoints | The number of WorkloadEndpoint resources matching the rule selector(s) | number |
+| numHostEndpoints | The number of HostEndpoint resources matching the rule selector(s) | number |
 
 #### Example
 
@@ -291,48 +284,24 @@ curl "localhost:8080/policies?endpoint=namespace1/rack1--host1-k8s-pod.name-eth0
       "ingressRules": [
         {
           "source": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           },
           "destination": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           }
         }
       ],
       "egressRules": [
         {
           "source": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           },
           "destination": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           }
         }
       ]
@@ -355,48 +324,24 @@ curl "localhost:8080/policies?label_panda=reallyverysad&label_projectcalico.org/
       "ingressRules": [
         {
           "source": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           },
           "destination": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           }
         }
       ],
       "egressRules": [
         {
           "source": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           },
           "destination": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           }
         }
       ]
@@ -418,48 +363,24 @@ curl "localhost:8080/policies/tier1.host-eps"
       "ingressRules": [
         {
           "source": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           },
           "destination": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           }
         }
       ],
       "egressRules": [
         {
           "source": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           },
           "destination": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           }
         }
       ]
@@ -482,48 +403,24 @@ curl "localhost:8080/policies/namespace1/tier3.very-sad-pandas"
       "ingressRules": [
         {
           "source": {
-            "selector": {
-              "numWorkloadEndpoints": 1,
-              "numHostEndpoints": 0
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 1,
+            "numHostEndpoints": 0
           },
           "destination": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           }
         }
       ],
       "egressRules": [
         {
           "source": {
-            "selector": {
-              "numWorkloadEndpoints": 1,
-              "numHostEndpoints": 0
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 1,
+            "numHostEndpoints": 0
           },
           "destination": {
-            "selector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            },
-            "notSelector": {
-              "numWorkloadEndpoints": 5,
-              "numHostEndpoints": 3
-            }
+            "numWorkloadEndpoints": 5,
+            "numHostEndpoints": 3
           }
         }
       ]

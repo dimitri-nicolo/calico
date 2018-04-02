@@ -4,26 +4,19 @@ import:
   version: ^1.2.0
 - package: github.com/sirupsen/logrus
   version: ^1.0.4
-- package: github.com/projectcalico/felix
-  vcs: git
-  repo: git@github.com:tigera/felix-private.git
-  version: 9d1cb1d513ea244bd133b3a0bd84462fb49914f4
-  subpackages:
-  - labelindex
 - package: github.com/projectcalico/libcalico-go
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: f19fc82b15d5d5dcb5eee48a12753ff41f2f13ff
-  subpackages:
-  - lib/apiconfig
-  - lib/backend
-  - lib/backend/api
-  - lib/backend/model
-  - lib/selector
+  version: 3a570da01b58c51f8a79293f874394156bedf862
 - package: github.com/projectcalico/calicoctl
   vcs: git
   repo: git@github.com:tigera/calicoctl-private.git
   subpackages:
   - calicoctl/resourcemgr
+- package: github.com/projectcalico/felix
+  vcs: git
+  repo: git@github.com:tigera/felix-private.git
+  subpackages:
+  - labelindex
 - package: k8s.io/client-go
   version: 82aa063804cf055e16e8911250f888bc216e8b61

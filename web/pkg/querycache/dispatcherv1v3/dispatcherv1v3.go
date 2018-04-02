@@ -1,11 +1,21 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 package dispatcherv1v3
 
 import (
+	"fmt"
+	"runtime"
+	"time"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
+	"github.com/tigera/calicoq/web/pkg/querycache/envoptions"
+)
+
+const (
+	numUpdatesPerPerfLog = 500
 )
 
 type Interface interface {
@@ -41,7 +51,10 @@ func New(rs []Resource) Interface {
 		})
 	}
 
-	return &dispatcher{resourceTypes: resourceTypes}
+	return &dispatcher{
+		resourceTypes:   resourceTypes,
+		outputPerfStats: envoptions.OutputPerfStats(),
+	}
 }
 
 type resourceType struct {
@@ -51,6 +64,13 @@ type resourceType struct {
 
 type dispatcher struct {
 	resourceTypes map[string]*resourceType
+
+	// Performance statistics tracking
+	startSync       time.Time
+	updateIdx       int
+	updateTime      time.Duration
+	outputPerfStats bool
+	memstats        runtime.MemStats
 }
 
 func (d *dispatcher) RegisterHandler(kind string, callbackFn CallbackFn) {
@@ -77,6 +97,11 @@ func (d *dispatcher) OnUpdates(updates []api.Update) {
 			UpdateV3: update,
 		}
 
+		var startTime time.Time
+		if d.outputPerfStats {
+			startTime = time.Now()
+		}
+
 		// Convert the update to an equivalent set of v1 updates using the update processor.
 		if rt.converter != nil {
 			updatev1v3.UpdateV1 = rt.converter.ConvertV3ToV1(update)
@@ -86,6 +111,24 @@ func (d *dispatcher) OnUpdates(updates []api.Update) {
 		for _, cb := range rt.callbacks {
 			cb(updatev1v3)
 		}
+
+		if d.outputPerfStats {
+			d.updateTime += time.Since(startTime)
+			if d.updateIdx%numUpdatesPerPerfLog == 0 {
+				runtime.ReadMemStats(&d.memstats)
+				duration := d.updateTime
+				if d.updateIdx != 0 {
+					duration = duration / time.Duration(numUpdatesPerPerfLog)
+				}
+				fmt.Printf("NumUpdate = %v\tAvgUpdateDuration = %v\t"+
+					"HeapAlloc = %v\tSys = %v\tNumGC = %v\nNumGoRoutines = %v\n",
+					d.updateIdx, duration, d.memstats.HeapAlloc/1024,
+					d.memstats.Sys/1024, d.memstats.NumGC, runtime.NumGoroutine(),
+				)
+				d.updateTime = 0
+			}
+			d.updateIdx++
+		}
 	}
 }
 
@@ -94,6 +137,17 @@ func (d *dispatcher) OnUpdates(updates []api.Update) {
 // This is a no-op.
 func (d *dispatcher) OnStatusUpdated(status api.SyncStatus) {
 	log.WithField("status", status).Debug("OnStatusUpdated")
+	if d.outputPerfStats {
+		switch status {
+		case api.WaitForDatastore:
+			fmt.Println("Waiting for datastore for sync")
+		case api.ResyncInProgress:
+			fmt.Println("Datastore sync started")
+			d.startSync = time.Now()
+		case api.InSync:
+			fmt.Printf("Datastore sync completed after %v\n", time.Since(d.startSync))
+		}
+	}
 }
 
 // Create a Converter from a SyncerUpdateProcessor.  Care is needed here.  Updates only
