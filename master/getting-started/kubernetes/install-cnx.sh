@@ -348,7 +348,7 @@ downloadManifest() {
     echo Downloading "$manifest"
     run curl --compressed -O "$manifest"
   else
-    echo "$filename" already exists, not downloading
+    echo "\"$filename\" already exists, not downloading."
   fi
 }
 
