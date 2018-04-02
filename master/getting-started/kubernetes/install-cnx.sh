@@ -26,8 +26,11 @@ DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
 #
 CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 
-# don't prompt for agreement
+# when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
+
+# when set to 1, don't install prometheus components
+SKIP_PROMETHEUS=${SKIP_PROMETHEUS:=0}
 
 # cleanup CNX installation
 CLEANUP=0
@@ -69,7 +72,7 @@ Usage: $(basename "$0")
           [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
           [-v version]        # CNX version; default: "v2.0"
-          [-u]                # Remove CNX
+          [-u]                # Uninstall CNX
           [-q]                # Quiet (don't prompt)
           [-h]                # Print usage
           [-x]                # Enable verbose mode
@@ -79,13 +82,14 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:hqv:ux" opt; do
+  while getopts "c:d:hpqv:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       v )  DOCS_VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
+      p )  SKIP_PROMETHEUS=1;;
       u )  CLEANUP=1;;
       h )  usage;;
       \? ) usage;;
@@ -173,6 +177,24 @@ runAsRootIgnoreErrors() {
 #
 runAsRootGetOutput() {
   runGetOutput sudo -E "$@"
+}
+
+#
+# blockUntilSuccess()
+#
+blockUntilSuccess() {
+  cmd="$1"
+  secs="$2"
+  echo -n "Waiting for $secs seconds until \"$1\" completes: "
+  until $cmd 2>/dev/null 1>/dev/null; do
+    : $((secs--))
+    echo -n .
+    sleep 1
+    if [ "$secs" -eq 0 ]; then
+      fatalError Restarting kubelet failed.
+    fi
+  done
+  echo "$1 succeeded."
 }
 
 #
@@ -294,7 +316,7 @@ EOF
 
   # Restart kubelet in order to make basic_auth settings take effect
   runAsRoot systemctl restart kubelet
-  countDownSecs 20 "Setting up basic authentication in the kubernetes cluster"
+  blockUntilSuccess "kubectl get nodes" 60
 
   # Give user Jane cluster admin permissions
   runAsRoot kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --user=jane
@@ -314,14 +336,40 @@ EOF
 
   # Restart kubelet in order to make basic_auth settings take effect
   runAsRoot systemctl restart kubelet
-  countDownSecs 20 "Restarting kubelet"
+  blockUntilSuccess "kubectl get nodes" 60
+}
+
+#
+# downloadManifest()
+# Do not overwrite existing copy of the manifest.
+#
+downloadManifest() {
+  manifest="$1"
+  filename=$(basename -- "$manifest")
+
+  if [ ! -f "$filename" ]; then
+    echo Downloading "$manifest"
+    run curl --compressed -O "$manifest"
+  else
+    echo "\"$filename\" already exists, not downloading."
+  fi
+}
+
+#
+# downloadManifests()
+#
+downloadManifests() {
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
+  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
 }
 
 #
 # applyCalicoManifest()
 #
 applyCalicoManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
   run kubectl apply -f calico.yaml
   countDownSecs 30 "Applying calico.yaml manifest"
 }
@@ -330,7 +378,7 @@ applyCalicoManifest() {
 # deleteCalicoManifest()
 #
 deleteCalicoManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+  runIgnoreErrors kubectl delete -f calico.yaml
   countDownSecs 5 "Deleting calico.yaml manifest"
 }
 
@@ -346,7 +394,6 @@ removeMasterTaints() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
   run kubectl apply -f cnx-etcd.yaml
   countDownSecs 30 "Applying cnx-etcd.yaml manifest"
 }
@@ -355,15 +402,14 @@ applyCNXManifest() {
 # deleteCNXManifest()
 #
 deleteCNXManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
-  countDownSecs 5 "Deleting cnx-etcd.yaml manifest"
+  runIgnoreErrors kubectl delete -f cnx-etcd.yaml
+  countDownSecs 30 "Deleting cnx-etcd.yaml manifest"
 }
 
 #
 # applyCNXPolicyManifest()
 #
 applyCNXPolicyManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
   run kubectl apply -f cnx-policy.yaml
   countDownSecs 10 "Applying cnx-policy.yaml manifest"
 }
@@ -372,8 +418,8 @@ applyCNXPolicyManifest() {
 # deleteCNXPolicyManifest()
 #
 deleteCNXPolicyManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
-  countDownSecs 5 "Deleting cnx-policy.yaml manifest"
+  runIgnoreErrors kubectl delete -f cnx-policy.yaml
+  countDownSecs 20 "Deleting cnx-policy.yaml manifest"
 }
 
 #
@@ -419,7 +465,6 @@ checkCRDs() {
 # applyOperatorManifest()
 #
 applyOperatorManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
   run kubectl apply -f operator.yaml
   checkCRDs
 }
@@ -428,7 +473,7 @@ applyOperatorManifest() {
 # deleteOperatorManifest()
 #
 deleteOperatorManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
+  runIgnoreErrors kubectl delete -f operator.yaml
   countDownSecs 5 "Deleting operator.yaml manifest"
 }
 
@@ -436,7 +481,6 @@ deleteOperatorManifest() {
 # applyMonitorCalicoManifest()
 #
 applyMonitorCalicoManifest() {
-  run curl --compressed -O ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
   run kubectl apply -f monitor-calico.yaml
   countDownSecs 10 "Applying monitor-calico.yaml manifest"
 }
@@ -445,7 +489,7 @@ applyMonitorCalicoManifest() {
 # deleteMonitorCalicoManifest()
 #
 deleteMonitorCalicoManifest() {
-  runIgnoreErrors kubectl delete -f ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+  runIgnoreErrors kubectl delete -f monitor-calico.yaml
   countDownSecs 5 "Deleting monitor-calico.yaml manifest"
 }
 
@@ -476,13 +520,17 @@ installCNX() {
   createImagePullSecret         # Create the image pull secret
   setupBasicAuth                # Create 'jane/welc0me' account w/cluster admin privs
 
+  downloadManifests             # Download all manifests
   applyCalicoManifest           # Apply calico.yaml
   removeMasterTaints            # Remove master taints
   createCNXManagerSecret        # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest              # Apply cnx-etcd.yaml
-  applyCNXPolicyManifest        # Apply cnx-policy.yaml
-  applyOperatorManifest         # Apply operator.yaml
-  applyMonitorCalicoManifest    # Apply monitor-calico.yaml
+
+  if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
+    applyCNXPolicyManifest      # Apply cnx-policy.yaml
+    applyOperatorManifest       # Apply operator.yaml
+    applyMonitorCalicoManifest  # Apply monitor-calico.yaml
+  fi
 
   echo CNX installation complete. Point your browser to https://127.0.0.1:30003, username=jane, password=welc0me
 }
@@ -494,9 +542,14 @@ installCNX() {
 cleanup() {
   checkSettings uninstall       # Verify settings are correct with user
 
-  deleteMonitorCalicoManifest   # Delete monitor-calico.yaml
-  deleteOperatorManifest        # Delete operator.yaml
-  deleteCNXPolicyManifest       # Delete cnx-policy.yaml
+  downloadManifests             # Download all manifests
+
+  if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
+    deleteMonitorCalicoManifest # Delete monitor-calico.yaml
+    deleteOperatorManifest      # Delete operator.yaml
+    deleteCNXPolicyManifest     # Delete cnx-policy.yaml
+  fi
+
   deleteCNXManifest             # Delete cnx-etcd.yaml
   deleteCalicoManifest          # Delete calico.yaml
   deleteCNXManagerSecret        # Delete TLS secret
