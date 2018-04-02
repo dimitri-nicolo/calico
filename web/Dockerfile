@@ -1,6 +1,8 @@
 FROM alpine:3.6
 
-ADD bin/cnx-queryserver ./cnx-queryserver
+RUN mkdir /code
+ADD bin/cnx-queryserver /code
+WORKDIR /code
+RUN ln -s /code/cnx-queryserver /usr/bin
 
-WORKDIR /root
-ENTRYPOINT ["/cnx-queryserver"]
+ENTRYPOINT ["cnx-queryserver"]
