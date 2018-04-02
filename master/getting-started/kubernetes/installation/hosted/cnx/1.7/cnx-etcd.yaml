@@ -32,6 +32,10 @@ data:
   tigera.cnx-manager.oauth-authority: "https://<oauth-authority>/oauth/authorize"
   # The OAuth client id to use for OAuth login. Value is ignored if not using OAuth login.
   tigera.cnx-manager.oauth-client-id: "cnx-manager"
+  # Prometheus server resource path
+  tigera.cnx-manager.prometheus-api-url: "/api/v1/namespaces/calico-monitoring/services/calico-node-prometheus:9090/proxy/api/v1"
+  # Query api url
+  tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/api:8080/proxy"
 
 ---
 
@@ -266,7 +270,7 @@ spec:
         # - name: etcd-certs
         #   secret:
         #     secretName: calico-etcd-secrets
-        # If you're using TLS with certificate verification then 
+        # If you're using TLS with certificate verification then
         # uncomment the following.
         # - name: apiserver-certs
         #   secret:
@@ -336,6 +340,16 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oauth-client-id
+          - name: CNX_PROMETHEUS_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.prometheus-api-url
+          - name: CNX_QUERY_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.query-api-url
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
