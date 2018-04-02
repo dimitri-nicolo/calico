@@ -176,6 +176,25 @@ runAsRootGetOutput() {
 }
 
 #
+# blockUntilSuccess()
+#
+blockUntilSuccess() {
+  cmd="$1"
+  secs="$2"
+  echo -n "Blocking for $secs seconds until \"$1\" succeeds: "
+  until $cmd 2>/dev/null 1>/dev/null; do
+    : $((secs--))
+    echo -n .
+    sleep 1
+    if [ "$secs" -eq 0 ]; then
+      echo Bailing out! Failure
+      exit 1    # fatalError
+    fi
+  done
+  echo "$1 succeeded."
+}
+
+#
 # programIsInstalled()
 #
 programIsInstalled() {
@@ -294,7 +313,7 @@ EOF
 
   # Restart kubelet in order to make basic_auth settings take effect
   runAsRoot systemctl restart kubelet
-  countDownSecs 20 "Setting up basic authentication in the kubernetes cluster"
+  blockUntilSuccess "kubectl get nodes" 60
 
   # Give user Jane cluster admin permissions
   runAsRoot kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --user=jane
@@ -314,7 +333,7 @@ EOF
 
   # Restart kubelet in order to make basic_auth settings take effect
   runAsRoot systemctl restart kubelet
-  countDownSecs 20 "Restarting kubelet"
+  blockUntilSuccess "kubectl get nodes" 60
 }
 
 #
