@@ -1,6 +1,6 @@
-1. If you are pulling from a quay.io registry, skip to the next step. Otherwise, use 
-   the following command to replace `quay.io` in the manifest with the name of your 
-   private registry. 
+1. If you are pulling from a quay.io registry, skip to the next step. If you 
+   are not pulling from quay.io, use the following command to replace `quay.io` 
+   in the manifest with the name of your private registry. 
 
    **Command**
    ```shell
