@@ -7,13 +7,13 @@ trap "exit 1" TERM
 export TOP_PID=$$
 
 # Override DOCS_VERSION to point to alternate CNX docs version, e.g.
-#   DOCS_VERSION=v2.0 ./install-cnx.sh
+#   DOCS_VERSION=v2.1 ./install-cnx.sh
 #
 # DOCS_VERSION is used to retrieve manifests, e.g.
 #   ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
 #      - resolves to -
-#   http://0.0.0.0:4000/v2.0/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
-DOCS_VERSION=${DOCS_VERSION:="v2.0"}
+#   http://0.0.0.0:4000/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+DOCS_VERSION=${DOCS_VERSION:="v2.1"}
 
 # Override DOCS_LOCATION to point to alternate CNX docs location, e.g.
 #   DOCS_LOCATION=http://0.0.0.0:4000 ./install-cnx.sh
@@ -39,6 +39,22 @@ CLEANUP=0
 CNX_PULL_SECRET_FILENAME=${CNX_PULL_SECRET_FILENAME:="cnx-pull-secret.yml"}
 
 #
+# promptToContinue()
+#
+promptToContinue() {
+  if [ "$QUIET" -eq 0 ]; then
+    read -n 1 -p " Proceed? (y/n): " answer
+
+    echo
+    if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
+      echo Exiting.
+      exit 1
+    fi
+  fi
+  echo Proceeding ...
+}
+
+#
 # checkSettings()
 #
 checkSettings() {
@@ -49,17 +65,7 @@ checkSettings() {
 
   echo
   echo -n About to "$1" CNX.
-  if [ "$QUIET" -eq 0 ]; then
-    read -n 1 -p " Proceed? (y/n): " answer
-
-    echo
-    if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
-      echo Exiting.
-      exit 1
-    fi
-  fi
-
-  echo Proceeding ...
+  promptToContinue
 }
 
 #
@@ -71,7 +77,7 @@ parseOptions() {
 Usage: $(basename "$0")
           [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
-          [-v version]        # CNX version; default: "v2.0"
+          [-v version]        # CNX version; default: "v2.1"
           [-u]                # Uninstall CNX
           [-q]                # Quiet (don't prompt)
           [-h]                # Print usage
@@ -222,6 +228,36 @@ checkRequirementsInstalled() {
   sed --version 2>&1 | grep -q GNU
   if [ $? -ne 0 ]; then
     fatalError Please install gnu-sed. On MacOS, \'brew install gnu-sed --with-default-names \'
+  fi
+}
+
+#
+# checkNetworkManager()
+# Warn user if NetworkManager is enabled and there's
+# no exception for "cali*" interfaces.
+#
+checkNetworkManager() {
+
+  NMConfig="/etc/NetworkManager/NetworkManager.conf"
+
+  echo -n "Checking status of Network Manager: "
+
+  $(programIsInstalled "nmcli") && $(nmcli dev status 2>&1 1>/dev/null)
+  if [ "$?" -eq 0 ]; then
+    echo "running."
+
+    # Raise a warning if NM is running and the "cali" interfaces are
+    # not marked as "unmanaged" by NM.
+    if $( ! test -f "${NMConfig}" || ! grep -qs "cali" "${NMConfig}" ); then
+      echo "  WARNING: We've detected that Network Manager is running and that"
+      echo "  it is not configured to ignore \"cali\" interfaces. This will"
+      echo "  interfere with Calico networking. Remove, disable, or configure"
+      echo "  Network Manager to ignore \"cali\" interfaces. Refer to"
+      echo "  \"Troubleshooting\" on https://docs.tigera.io for more information."
+      promptToContinue
+    fi
+  else
+    echo "not running."
   fi
 }
 
@@ -516,6 +552,7 @@ installCNX() {
   checkSettings install         # Verify settings are correct with user
   checkRequiredFilesPresent     # Validate kubernetes files are present
   checkRequirementsInstalled    # Validate that all required programs are installed
+  checkNetworkManager           # Warn user if NetworkMgr is enabled w/o "cali" interace exception
 
   createImagePullSecret         # Create the image pull secret
   setupBasicAuth                # Create 'jane/welc0me' account w/cluster admin privs
