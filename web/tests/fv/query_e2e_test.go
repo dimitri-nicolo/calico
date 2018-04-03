@@ -19,6 +19,7 @@ import (
 
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -31,7 +32,7 @@ import (
 var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
 
 	DescribeTable("Query tests",
-		func(tqds []testQueryData) {
+		func(tqds []testQueryData, crossCheck func(tqd testQueryData, addr string, netClient *http.Client)) {
 			By("Creating a v3 client interface")
 			c, err := clientv3.New(config)
 			Expect(err).NotTo(HaveOccurred())
@@ -57,57 +58,60 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 				By(fmt.Sprintf("Creating the resources for test: %s", tqd.description))
 				configured = createResources(c, tqd.resources, configured)
 
-				By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
-				url := calculateQueryUrl(addr, tqd.query)
-
 				By(fmt.Sprintf("Running query for test: %s", tqd.description))
-				queryFn := func() interface{} {
-					// Return the result if we have it, otherwise the error, this allows us to use Eventually to
-					// check both values and errors.
-					log.WithField("url", url).Debug("Running query")
-					r, err := netClient.Get(url)
-					if err != nil {
-						return err
-					}
-					defer r.Body.Close()
-					bodyBytes, err := ioutil.ReadAll(r.Body)
-					if err != nil {
-						return err
-					}
-					bodyString := string(bodyBytes)
-					if r.StatusCode != http.StatusOK {
-						return errorResponse{
-							text: strings.TrimSpace(bodyString),
-							code: r.StatusCode,
-						}
-					}
+				queryFn := getQueryFunction(tqd, addr, netClient)
+				Eventually(queryFn).Should(Equal(tqd.response))
+				Consistently(queryFn).Should(Equal(tqd.response))
 
-					// The response body should be json and the same type as the expected response object.
-					ro := reflect.New(reflect.TypeOf(tqd.response).Elem()).Interface()
-					err = json.Unmarshal(bodyBytes, ro)
-					if err != nil {
-						return fmt.Errorf("unmarshal error: %v: %v: %v", reflect.TypeOf(ro), err, bodyString)
-					}
-					return ro
+				if crossCheck != nil {
+					By("Running a cross-check query")
+					crossCheck(tqd, addr, netClient)
 				}
-				Eventually(queryFn).Should(Equal(tqd.response))
-				Consistently(queryFn).Should(Equal(tqd.response))
-
-				By(fmt.Sprintf("Reapplying the same resources for test: %s", tqd.description))
-				configured = createResources(c, tqd.resources, configured)
-
-				By(fmt.Sprintf("Re-running the same query for test: %s", tqd.description))
-				Eventually(queryFn).Should(Equal(tqd.response))
-				Consistently(queryFn).Should(Equal(tqd.response))
 			}
 		},
 
-		Entry("Summary queries", summaryTestQueryData()),
-		Entry("Node queries", nodeTestQueryData()),
-		Entry("Endpoint queries", endpointTestQueryData()),
-		Entry("Policy queries", policyTestQueryData()),
+		Entry("Summary queries", summaryTestQueryData(), nil),
+		Entry("Node queries", nodeTestQueryData(), nil),
+		Entry("Endpoint queries", endpointTestQueryData(), crossCheckEndpointQuery),
+		Entry("Policy queries", policyTestQueryData(), crossCheckPolicyQuery),
 	)
 })
+
+func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) func() interface{} {
+	By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
+	url := calculateQueryUrl(addr, tqd.query)
+
+	By(fmt.Sprintf("Creating the query function for test: %s", tqd.description))
+	return func() interface{} {
+		// Return the result if we have it, otherwise the error, this allows us to use Eventually to
+		// check both values and errors.
+		log.WithField("url", url).Debug("Running query")
+		r, err := netClient.Get(url)
+		if err != nil {
+			return err
+		}
+		defer r.Body.Close()
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			return err
+		}
+		bodyString := string(bodyBytes)
+		if r.StatusCode != http.StatusOK {
+			return errorResponse{
+				text: strings.TrimSpace(bodyString),
+				code: r.StatusCode,
+			}
+		}
+
+		// The response body should be json and the same type as the expected response object.
+		ro := reflect.New(reflect.TypeOf(tqd.response).Elem()).Interface()
+		err = json.Unmarshal(bodyBytes, ro)
+		if err != nil {
+			return fmt.Errorf("unmarshal error: %v: %v: %v", reflect.TypeOf(ro), err, bodyString)
+		}
+		return ro
+	}
+}
 
 func calculateQueryUrl(addr string, query interface{}) string {
 	var parms []string
@@ -202,6 +206,80 @@ func getNameFromResource(k model.Key) string {
 		return rk.Namespace + "/" + rk.Name
 	}
 	return rk.Name
+}
+
+func crossCheckPolicyQuery(tqd testQueryData, addr string, netClient *http.Client) {
+	qpr, ok := tqd.response.(*client.QueryPoliciesResp)
+	if !ok {
+		// Don't attempt to cross check errored queries since we have nothing to cross-check.
+		return
+	}
+	for _, p := range qpr.Items {
+		policy := p.Name
+		if p.Namespace != "" {
+			policy = p.Namespace + "/" + policy
+		}
+
+		By(fmt.Sprintf("Running endpoint query for policy: %s", policy))
+		qurl := "http://" + addr + "/endpoints?policy=" + policy + "&page=all"
+
+		r, err := netClient.Get(qurl)
+		Expect(err).NotTo(HaveOccurred())
+		defer r.Body.Close()
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(r.StatusCode).To(Equal(http.StatusOK))
+		output := client.QueryEndpointsResp{}
+		err = json.Unmarshal(bodyBytes, &output)
+		Expect(err).NotTo(HaveOccurred())
+		var numWeps, numHeps int
+		for _, i := range output.Items {
+			if i.Kind == v3.KindWorkloadEndpoint {
+				numWeps++
+			} else {
+				numHeps++
+			}
+		}
+		Expect(numHeps).To(Equal(p.NumHostEndpoints))
+		Expect(numWeps).To(Equal(p.NumWorkloadEndpoints))
+	}
+}
+
+func crossCheckEndpointQuery(tqd testQueryData, addr string, netClient *http.Client) {
+	qpr, ok := tqd.response.(*client.QueryEndpointsResp)
+	if !ok {
+		// Don't attempt to cross check errored queries since we have nothing to cross-check.
+		return
+	}
+	for _, p := range qpr.Items {
+		endpoint := p.Name
+		if p.Namespace != "" {
+			endpoint = p.Namespace + "/" + endpoint
+		}
+
+		By(fmt.Sprintf("Running policy query for endpoint: %s", endpoint))
+		qurl := "http://" + addr + "/policies?endpoint=" + endpoint + "&page=all"
+
+		r, err := netClient.Get(qurl)
+		Expect(err).NotTo(HaveOccurred())
+		defer r.Body.Close()
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(r.StatusCode).To(Equal(http.StatusOK))
+		output := client.QueryPoliciesResp{}
+		err = json.Unmarshal(bodyBytes, &output)
+		Expect(err).NotTo(HaveOccurred())
+		var numNps, numGnps int
+		for _, i := range output.Items {
+			if i.Kind == v3.KindNetworkPolicy {
+				numNps++
+			} else {
+				numGnps++
+			}
+		}
+		Expect(numNps).To(Equal(p.NumNetworkPolicies))
+		Expect(numGnps).To(Equal(p.NumGlobalNetworkPolicies))
+	}
 }
 
 //TODO(rlb):
