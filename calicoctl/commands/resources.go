@@ -29,8 +29,11 @@ import (
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	calicoErrors "github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	licClient "github.com/tigera/licensing/client"
 )
 
 type action int
@@ -219,6 +222,39 @@ func executeConfigCommand(args map[string]interface{}, action action) commandRes
 // executeResourceAction fans out the specific resource action to the appropriate method
 // on the ResourceManager for the specific resource.
 func executeResourceAction(args map[string]interface{}, client client.Interface, resource resourcemgr.ResourceObject, action action) ([]runtime.Object, error) {
+	ctx := context.Background()
+
+	// If the resource is Tier/TierList or RemoteClusterConfiguration/RemoteClusterConfigurationList then check the
+	// license first then continue only if the license is valid.
+	resGVK := resource.GetObjectKind().GroupVersionKind().String()
+	if resGVK == api.NewTier().GroupVersionKind().String() || resGVK == api.NewTierList().GroupVersionKind().String() ||
+		resGVK == api.NewRemoteClusterConfiguration().GroupVersionKind().String() || resGVK == api.NewRemoteClusterConfigurationList().GroupVersionKind().String() {
+
+		lic, err := client.LicenseKey().Get(ctx, "default", options.GetOptions{ResourceVersion: ""}) // ?????
+		if err != nil {
+			// License not found (not applied) or datastore down.
+			switch err.(type) {
+			case calicoErrors.ErrorConnectionUnauthorized:
+				return nil, fmt.Errorf("connection to datastore is unauthorized: %s", err)
+			case calicoErrors.ErrorDatastoreError:
+				return nil, fmt.Errorf("cannot connect to the datastore: %s", err)
+			case calicoErrors.ErrorResourceDoesNotExist:
+				return nil, fmt.Errorf("not licensed for this feature. LicenseKey does not exist")
+			default:
+				return nil, fmt.Errorf("unable to get the resource from the datastore")
+			}
+		}
+
+		claims, err := licClient.Decode(*lic)
+		if err != nil {
+			// This means the license is there but is corrupted or has been messed with.
+			// do nothing.
+		} else if !claims.IsValid() {
+			// If the license has expired then return with an error.
+			return nil, fmt.Errorf("license expired or invalid. Please contact licensing@tigera.io")
+		}
+	}
+
 	rm := resourcemgr.GetResourceManager(resource)
 
 	err := handleNamespace(resource, rm, args)
@@ -227,7 +263,6 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 	}
 
 	var resOut runtime.Object
-	ctx := context.Background()
 
 	switch action {
 	case actionApply:
