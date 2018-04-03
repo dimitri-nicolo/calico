@@ -35,7 +35,7 @@ data:
   # Prometheus server resource path
   tigera.cnx-manager.prometheus-api-url: "/api/v1/namespaces/calico-monitoring/services/calico-node-prometheus:9090/proxy/api/v1"
   # Query api url
-  tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/api:8080/proxy"
+  tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/https:api:8080/proxy"
 
 ---
 
