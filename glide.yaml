@@ -1,200 +1,45 @@
 package: github.com/tigera/calico-k8sapiserver
 import:
-- package: bitbucket.org/ww/goautoneg
-  version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
-- package: github.com/PuerkitoBio/purell
-  version: v1.0.0
-- package: github.com/PuerkitoBio/urlesc
-  version: 5bd2802263f21d8788851d5305584c82a5c75d7e
-- package: github.com/beorn7/perks
-  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
-  subpackages:
-  - quantile
 - package: github.com/coreos/etcd
-  version: v3.1.5
+  version: c23606781f63d09917a1e7abfcefeb337a9608ea
   subpackages:
-  - auth/authpb
   - client
   - clientv3
-  - etcdserver/api/v3rpc/rpctypes
-  - etcdserver/etcdserverpb
   - mvcc/mvccpb
-  - pkg/fileutil
-  - pkg/pathutil
-  - pkg/tlsutil
   - pkg/transport
-  - pkg/types
-- package: github.com/coreos/go-systemd
-  version: v14
+- package: github.com/projectcalico/libcalico-go
+  repo: git@github.com:tigera/libcalico-go-private.git
+  version: 3a570da01b58c51f8a79293f874394156bedf862
   subpackages:
-  - daemon
-  - journal
-- package: github.com/coreos/pkg
-  version: fa29b1d70f0beaddd4c7021607cc3c3be8ce94b8
-  subpackages:
-  - capnslog
-- package: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
-  subpackages:
-  - spew
-- package: github.com/docker/distribution
-  version: 63cb8cf23b53424ac4fe483a2e58de8358c70e82
-  subpackages:
-  - digest
-  - reference
-- package: github.com/elazarl/go-bindata-assetfs
-  version: 3dcc96556217539f50599357fb481ac0dc7439b9
-- package: github.com/emicklei/go-restful
-  version: ff4f55a206334ef123e4f79bbf348980da81ca46
-- package: github.com/evanphx/json-patch
-  version: ba18e35c5c1b36ef6334cad706eb681153d2d379
-- package: github.com/ghodss/yaml
-  version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
-- package: github.com/go-openapi/jsonpointer
-  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
-- package: github.com/go-openapi/jsonreference
-  version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
-- package: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
-- package: github.com/go-openapi/swag
-  version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
-- package: github.com/gogo/protobuf
-  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
-  subpackages:
-  - proto
-  - sortkeys
-- package: github.com/golang/glog
-  version: 44145f04b68cf362d9c4df2182967c2275eaefed
-- package: github.com/golang/groupcache
-  version: 02826c3e79038b59d737d3b1c0a1d937f71a4433
-  subpackages:
-  - lru
-- package: github.com/golang/protobuf
-  version: 4bd1920723d7b7c925de087aa32e2187708897f7
-  subpackages:
-  - jsonpb
-  - proto
-- package: github.com/google/gofuzz
-  version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
-- package: github.com/grpc-ecosystem/go-grpc-prometheus
-  version: 2500245aa6110c562d17020fb31a2c133d737799
-- package: github.com/grpc-ecosystem/grpc-gateway
-  version: 84398b94e188ee336f307779b57b3aa91af7063c
-  subpackages:
-  - runtime
-  - runtime/internal
-  - utilities
-- package: github.com/howeyc/gopass
-  version: 3ca23474a7c7203e0a0a070fd33508f6efdb9b3d
-- package: github.com/imdario/mergo
-  version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
-- package: github.com/inconshreveable/mousetrap
-  version: v1.0
-- package: github.com/juju/ratelimit
-  version: a4f3c04b4245e91ee302f52cc5d175cb8b3278ee
-- package: github.com/mailru/easyjson
-  version: d5b7844b561a7bc640052f1b935f7b800330d7e0
-  subpackages:
-  - buffer
-  - jlexer
-  - jwriter
-- package: github.com/matttproud/golang_protobuf_extensions
-  version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
-  subpackages:
-  - pbutil
-- package: github.com/pborman/uuid
-  version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
-- package: github.com/pkg/errors
-  version: a22138067af1c4942683050411a841ade67fe1eb
-- package: github.com/prometheus/client_golang
-  version: e51041b3fa41cece0dca035740ba6411905be473
-  subpackages:
-  - prometheus
-- package: github.com/prometheus/client_model
-  version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
-  subpackages:
-  - go
-- package: github.com/prometheus/common
-  version: ffe929a3f4c4faeaa10f2b9535c2b1be3ad15650
-  subpackages:
-  - expfmt
-  - model
-- package: github.com/prometheus/procfs
-  version: 454a56f35412459b5e684fd5ec0f9211b94f002a
+  - lib/apiconfig
+  - lib/apis/v3
+  - lib/backend/k8s/conversion
+  - lib/clientv3
+  - lib/errors
+  - lib/options
+  - lib/watch
+- package: k8s.io/apiserver
+  version: kubernetes-1.8.2
+- package: k8s.io/kubernetes
+  version: release-1.8
+- package: k8s.io/apimachinery
+  version: release-1.8
+- package: k8s.io/api
+  version: release-1.8
+- package: k8s.io/client-go
+  version: 82aa063804cf055e16e8911250f888bc216e8b61
+- package: k8s.io/code-generator
+  version: release-1.8
+- package: k8s.io/gengo
+  version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
+- package: google.golang.org/grpc
+  version: ^1.10.0
 - package: github.com/spf13/cobra
   version: f62e98d28ab7ad31d707ba837a966378465c7b57
 - package: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - package: github.com/ugorji/go
-  version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
+  version: bdcc60b419d136a85cdf2e7cbcac34b3f1cd6e57
   subpackages:
   - codec
-- package: golang.org/x/crypto
-  version: d172538b2cfce0c13cee31e647d0367aa8cd2486
-  subpackages:
-  - ssh/terminal
-- package: golang.org/x/net
-  version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
-  subpackages:
-  - context
-  - html
-  - html/atom
-  - http2
-  - http2/hpack
-  - idna
-  - internal/timeseries
-  - lex/httplex
-  - trace
-  - websocket
-- package: golang.org/x/sys
-  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
-  subpackages:
-  - unix
-- package: golang.org/x/text
-  version: 2910a502d2bf9e43193af9d68ca516529614eed3
-  subpackages:
-  - cases
-  - internal/tag
-  - language
-  - runes
-  - secure/bidirule
-  - secure/precis
-  - transform
-  - unicode/bidi
-  - unicode/norm
-  - width
-- package: google.golang.org/grpc
-  version: v1.0.4
-  subpackages:
-  - codes
-  - credentials
-  - grpclog
-  - internal
-  - metadata
-  - naming
-  - peer
-  - transport
-- package: gopkg.in/inf.v0
-  version: v0.9.0
-- package: gopkg.in/natefinch/lumberjack.v2
-  version: 20b71e5b60d756d3d2f80def009790325acc2b23
-- package: gopkg.in/yaml.v2
-  version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
-- package: k8s.io/apimachinery
-  version: kubernetes-1.8.2
-- package: k8s.io/api
-  version: kubernetes-1.8.2
-- package: k8s.io/apiserver
-  version: kubernetes-1.8.2 
-- package: k8s.io/client-go
-  version: 82aa063804cf055e16e8911250f888bc216e8b61
-- package: github.com/projectcalico/libcalico-go
-  repo: git@github.com:tigera/libcalico-go-private.git
-  version: 45af193b097e86c8289bbdff0c20592c32695f18
-- package: k8s.io/kubernetes
-  version: c1d1b92688176f37893d81cf6d7a3abc5663a795
-- package: k8s.io/code-generator
-  version: kubernetes-1.8.3
-- package: k8s.io/gengo
-  version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
 - package: github.com/kubernetes/repo-infra
