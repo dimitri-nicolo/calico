@@ -24,8 +24,8 @@ var (
 
 func init() {
 	retrieveUUIDFlag = RetrieveLicenseCmd.PersistentFlags()
-	retrieveUUIDFlag.StringVarP(&retrieveUUID, "license-uuid", "u", "", "License UUID")
-	RetrieveLicenseCmd.MarkPersistentFlagRequired("license-uuid")
+	retrieveUUIDFlag.StringVarP(&retrieveUUID, "license-id", "i", "", "License ID")
+	RetrieveLicenseCmd.MarkPersistentFlagRequired("license-id")
 
 	retrieveCertPathFlag = RetrieveLicenseCmd.PersistentFlags()
 	retrieveCertPathFlag.StringVar(&retrieveCertPath, "certificate", "./tigera.io_certificate.pem", "Licensing intermediate certificate path")
@@ -39,7 +39,7 @@ var RetrieveLicenseCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if len(retrieveUUID) != 36 {
-			log.Fatal("[ERROR] License UUID must be 36 characters long")
+			log.Fatal("[ERROR] License ID must be 36 characters long")
 		}
 
 		// Connect to the license database.

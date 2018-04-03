@@ -11,7 +11,7 @@ import (
 type LicenseInfo struct {
 	UUID     string
 	Expiry   time.Time
-	Nodes    int
+	Nodes    *int
 	Features string
 	JWT      string
 }
@@ -49,7 +49,7 @@ func (db *DB) GetLicenseByUUID(uuid string) (*LicenseInfo, error) {
 	return lic, nil
 }
 
-// CreateLicense saves a license in the database; returning success and the licenseID.
+// CreateLicense saves a license in the database; returning the LicenseID or an error.
 func (db *DB) CreateLicense(license *api.LicenseKey, companyID int64, claims *client.LicenseClaims) (int64, error) {
 	// Leave the following fields unset since they're not implemented yet:
 	// - cluster_guid
@@ -68,12 +68,12 @@ func (db *DB) CreateLicense(license *api.LicenseKey, companyID int64, claims *cl
 		license.Spec.Token,
 	)
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 
 	licenseID, err := res.LastInsertId()
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 
 	return licenseID, nil

@@ -54,9 +54,13 @@ var ListLicensesCmd = &cobra.Command{
 			log.Fatalf("error getting licenses: %s", err)
 		}
 
-		fmt.Println("LICENSE UUID                           MAX NODES   EXPIRY                          FEATURES")
+		fmt.Println("LICENSE ID                             MAX NODES   EXPIRY                          FEATURES")
 		for _, lic := range licenses {
-			fmt.Printf("%s   %9d   %s   %s\n", lic.UUID, lic.Nodes, lic.Expiry, lic.Features)
+			nodes := "Unlimited"
+			if lic.Nodes != nil {
+				nodes = fmt.Sprintf("%9d", *lic.Nodes)
+			}
+			fmt.Printf("%s   %s   %s   %s\n", lic.UUID, nodes, lic.Expiry, lic.Features)
 		}
 	},
 }
