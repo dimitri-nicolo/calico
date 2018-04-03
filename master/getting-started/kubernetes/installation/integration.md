@@ -266,16 +266,7 @@ Another option for monitoring is to setup and configure your own Prometheus
 monitoring instead of using the monitoring provided in the next steps, then
 it would not be necessary to load the above manifest.
 
-### Installing Tigera CNX
-
-1. Select the CNX manifest for the datastore you are using:
-   - [Open ETCD manifest in a new tab](hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
-   - [Open Kuberentes API Datastore manifest in a new tab](hosted/cnx/1.7/cnx-kdd.yaml){:target="_blank"}.
-
-1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
-   This is what subsequent instructions will refer to.
-
-{% include {{page.version}}/cnx-mgr-install.md %}
+{% include {{page.version}}/cnx-mgr-install.md init="systemd" %}
 
 {% include {{page.version}}/cnx-monitor-install.md %}
 

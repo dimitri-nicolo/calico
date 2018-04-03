@@ -1,21 +1,26 @@
-1. If you are pulling the private {{site.prodname}} images from a quay.io
-   registry, skip to the next step. Otherwise, use the following command
-   to replace `quay.io` in the manifest with the name of your private registry.
+{% if include.init == "systemd" %}
 
-   **Command**
-   ```shell
-   sed -i -e 's/quay.io/<REPLACE_ME>/g' cnx.yaml
+### Installing Tigera CNX
+
+1. If you are using the etcd datastore, open the 
+   [cnx-configmap.yaml file](hosted/cnx/1.7/cnx-configmap.yaml),
+   copy its contents, save it in a new file, and replace `<ETCD_ENDPOINTS>`
+   with the IP address of your etcd datastore. Then apply the manifest.
+   
+   ```bash
+   kubectl apply -f cnx-configmap.yaml
    ```
 
-   **Example**
+1. Open the manifest that corresponds to your datastore type.
+   - [etcd](hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}
+   - [Kubernetes API datastore](hosted/cnx/1.7/cnx-kdd.yaml){:target="_blank"}
 
-   ```shell
-   sed -i -e 's/quay.io/my-repo.com/g' cnx.yaml
-   ```
+1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
+   This is what subsequent instructions will refer to.
 
-   > **Tip**: If you're hosting your own private repository, you may need to include
-   > a port number. For example, `my-repo.com:5000`.
-   {: .alert .alert-success}
+{% endif %}
+
+{% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}
 
 {% if include.orchestrator == "openshift" %}
 
@@ -35,25 +40,19 @@
 
    - Uncomment the `ETCD_CA_CERT_FILE`, `ETCD_KEY_FILE`, and `ETCD_CERT_FILE` environment variables.
    - Uncomment the `volumeMount` named `etcd-certs`.
-   - Uncomment the `volume` named `etcd-certs`.
-
-   You might want to reconfigure the service that gets traffic to the {{site.prodname}} Manager
-   web server as well.
+   - Uncomment the `volume` named `etcd-certs`. 
 
 {% else %}
 
-1. Open the file in a text editor, and update the ConfigMap `tigera-cnx-manager-config`
-   according to the instructions in the file and your chosen authentication method.
-
-   You might want to reconfigure the service that gets traffic to the {{site.prodname}} Manager
-   web server as well.
-
-   > If {{site.nodecontainer}} was not deployed with a Kubernetes manifest and
-   > no `calico-config` ConfigMap was created you must also update the file
-   > anywhere `calico-config` is referenced with the appropriate information.
-   {: .alert .alert-info}
-
+1. By default, {{site.prodname}} uses basic authentication. To use OpenID 
+   Connect or OAuth, open cnx.yaml in your favorite text editor and
+   modify the `ConfigMap` of `tigera-cnx-manager-config` as needed.
+   
 {% endif %}
+
+1. If you want the CNX Manager to listen on a port other than
+   30003 or you plan to set up a load balancer in front of it, edit the 
+   `Service` object named `cnx-manager` as needed.  
 
 1. Generate TLS credentials - i.e. a web server certificate and key - for the
    {{site.prodname}} Manager.

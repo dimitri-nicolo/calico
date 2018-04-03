@@ -12,7 +12,7 @@ layout: null
 #   between the CNX API server and Kubernetes API server.
 # - This manifest makes the CNX Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
-#   so by editing the tigera-cnx-manager-access Service below.
+#   so by editing the cnx-manager Service below.
 
 # Update this ConfigMap with the Google login client id.
 kind: ConfigMap
