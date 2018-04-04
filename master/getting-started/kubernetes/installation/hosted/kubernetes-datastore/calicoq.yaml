@@ -66,6 +66,7 @@ rules:
       - globalnetworkpolicies
       - ippools
       - networkpolicies
+      - tiers
     verbs:
       - create
       - get

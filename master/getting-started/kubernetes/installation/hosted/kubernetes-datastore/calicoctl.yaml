@@ -68,6 +68,7 @@ rules:
       - remoteclusterconfigurations
       - ippools
       - networkpolicies
+      - tiers
       - hostendpoints
     verbs:
       - create
