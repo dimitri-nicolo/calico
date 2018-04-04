@@ -59,6 +59,7 @@ rules:
       - bgpconfigurations
       - ippools
       - globalnetworkpolicies
+      - tiers
       - networkpolicies
       - clusterinformations
       - licensekeys
