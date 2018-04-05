@@ -230,7 +230,7 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 	if resGVK == api.NewTier().GroupVersionKind().String() || resGVK == api.NewTierList().GroupVersionKind().String() ||
 		resGVK == api.NewRemoteClusterConfiguration().GroupVersionKind().String() || resGVK == api.NewRemoteClusterConfigurationList().GroupVersionKind().String() {
 
-		lic, err := client.LicenseKey().Get(ctx, "default", options.GetOptions{ResourceVersion: ""}) // ?????
+		lic, err := client.LicenseKey().Get(ctx, "default", options.GetOptions{ResourceVersion: ""})
 		if err != nil {
 			// License not found (not applied) or datastore down.
 			switch err.(type) {
@@ -251,9 +251,19 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 			return nil, fmt.Errorf("license corrupted. Please contact Tigera support")
 		}
 
-		if !claims.IsValid() {
-			// If the license has expired then return with an error.
-			return nil, fmt.Errorf("license expired or invalid. Please contact Tigera support")
+		if err = claims.Validate(); err != nil {
+			// If the license is expired (but within grace period) then show this warning banner, but continue to work.
+			// in CNX v2.1, grace period is infinite.
+			fmt.Println("********************************************")
+			fmt.Println("**             !!! WARNING !!!            **")
+			fmt.Println("********************************************")
+			fmt.Println("**                                        **")
+			fmt.Println("**     LicenseKey expired or invalid.     **")
+			fmt.Println("**     Please contact Tigera support      **")
+			fmt.Println("**     to avoid traffic disruptions.      **")
+			fmt.Println("**                                        **")
+			fmt.Println("********************************************")
+			fmt.Println()
 		}
 	}
 
