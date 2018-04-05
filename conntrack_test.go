@@ -1,8 +1,6 @@
 package nfnetlink_test
 
 import (
-	"net"
-
 	"github.com/tigera/nfnetlink"
 	"github.com/tigera/nfnetlink/nfnl"
 
@@ -16,8 +14,8 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 
 	BeforeEach(func() {
 		original_dnat = nfnetlink.CtTuple{
-			Src:        net.ParseIP("1.1.1.1"),
-			Dst:        net.ParseIP("3.3.3.3"),
+			Src:        [16]byte{1, 1, 1, 1},
+			Dst:        [16]byte{3, 3, 3, 3},
 			L3ProtoNum: 2048,
 			ProtoNum:   6,
 			L4Src: nfnetlink.CtL4Src{
@@ -28,8 +26,8 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 			},
 		}
 		reply = nfnetlink.CtTuple{
-			Src:        net.ParseIP("2.2.2.2"),
-			Dst:        net.ParseIP("1.1.1.1"),
+			Src:        [16]byte{2, 2, 2, 2},
+			Dst:        [16]byte{1, 1, 1, 1},
 			L3ProtoNum: 2048,
 			ProtoNum:   6,
 			L4Src: nfnetlink.CtL4Src{
@@ -56,12 +54,6 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 		})
 		It("should return false for SNAT check", func() {
 			Expect(cte.IsSNAT()).To(Equal(false))
-		})
-		It("should return original tuple", func() {
-			Expect(cte.OriginalTuple()).To(Equal(original_dnat))
-		})
-		It("should return reply tuple", func() {
-			Expect(cte.ReplyTuple()).To(Equal(reply))
 		})
 		It("should return tuple after parsing DNAT info", func() {
 			t, _ := cte.OriginalTupleWithoutDNAT()
