@@ -55,13 +55,13 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
-			ctentry.OriginalTuple, _ = parseConntrackTuple(attr.Value, family)
+			parseConntrackTuple(&ctentry.OriginalTuple, attr.Value, family)
 		case nfnl.CTA_TUPLE_REPLY:
 			if !isNestedAttr {
 				nfnl.AttrPool.Put(attrs)
 				return ctentry, errors.New("Nested attribute value expected")
 			}
-			ctentry.ReplyTuple, _ = parseConntrackTuple(attr.Value, family)
+			parseConntrackTuple(&ctentry.ReplyTuple, attr.Value, family)
 		case nfnl.CTA_STATUS:
 			ctentry.Status = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_TIMEOUT:
@@ -94,13 +94,12 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 	return ctentry, nil
 }
 
-func parseConntrackTuple(value []byte, family uint8) (CtTuple, error) {
+func parseConntrackTuple(tuple *CtTuple, value []byte, family uint8) error {
 	attrs, err := nfnl.ParseNetfilterAttr(value)
 	if err != nil {
 		nfnl.AttrPool.Put(attrs)
-		return CtTuple{}, err
+		return err
 	}
-	tuple := CtTuple{}
 	tuple.L3ProtoNum = int(family)
 
 	native := binary.BigEndian
@@ -112,25 +111,25 @@ func parseConntrackTuple(value []byte, family uint8) (CtTuple, error) {
 		case nfnl.CTA_TUPLE_IP:
 			if !isNestedAttr {
 				nfnl.AttrPool.Put(attrs)
-				return tuple, errors.New("Nested attribute value expected")
+				return errors.New("Nested attribute value expected")
 			}
-			parseTupleIp(&tuple, attr.Value)
+			parseTupleIp(tuple, attr.Value)
 		case nfnl.CTA_TUPLE_PROTO:
 			if !isNestedAttr {
 				nfnl.AttrPool.Put(attrs)
-				return tuple, errors.New("Nested attribute value expected")
+				return errors.New("Nested attribute value expected")
 			}
-			parseTupleProto(&tuple, attr.Value)
+			parseTupleProto(tuple, attr.Value)
 		case nfnl.CTA_ZONE:
 			tuple.Zone = int(native.Uint16(attr.Value[0:2]))
 		}
 	}
 	if err != nil {
 		nfnl.AttrPool.Put(attrs)
-		return CtTuple{}, err
+		return err
 	}
 	nfnl.AttrPool.Put(attrs)
-	return tuple, nil
+	return nil
 }
 
 func parseTupleIp(tuple *CtTuple, value []byte) error {
