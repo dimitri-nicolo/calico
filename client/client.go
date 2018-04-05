@@ -5,10 +5,11 @@ import (
 
 	"gopkg.in/square/go-jose.v2/jwt"
 
+	"crypto/x509"
+	"fmt"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cryptolicensing "github.com/tigera/licensing/crypto"
-	"fmt"
-	"crypto/x509"
 )
 
 // TODO: replace this with the actual cert once it's available.
@@ -45,7 +46,6 @@ var (
 	ResourceName = "default"
 
 	opts x509.VerifyOptions
-
 )
 
 func init() {
@@ -59,9 +59,10 @@ func init() {
 	}
 
 	opts = x509.VerifyOptions{
-		Roots:   roots,
+		Roots: roots,
 	}
 }
+
 // LicenseClaims contains all the license control fields.
 // This includes custom JWT fields and the default ones.
 type LicenseClaims struct {
@@ -123,9 +124,26 @@ func Decode(lic api.LicenseKey) (LicenseClaims, error) {
 		return LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
 	}
 
-	if _, err := cert.Verify(opts); err != nil {
+	rootCert, err := cryptolicensing.LoadCertFromPEM([]byte(rootPEM))
+	if err != nil {
+		return LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
+	}
+
+	// We only check if the certificate was signed by Tigera root certificate.
+	// Verify() also checks if the certificate is expired before checking if it was signed by the root cert,
+	// which is not what we want to do for v2.1 behavior.
+	if err = cert.CheckSignatureFrom(rootCert); err != nil {
 		return LicenseClaims{}, fmt.Errorf("failed to verify the certificate: %s", err)
 	}
+
+	// For v2.1 we are not checking certificate expiration, verifying the cert chain also checks if the leaf certificate
+	// is expired, and since we don't really stop any features from working after the license expires (at least in v2.1)
+	// We have to deal with a case where the certificate is expired but license is still "valid" - i.e. within the grace period
+	// which could be max int.
+	// We can uncomment this when we actually enforce license and stop the features from running.
+	//if _, err := cert.Verify(opts); err != nil {
+	//	return LicenseClaims{}, fmt.Errorf("failed to verify the certificate: %s", err)
+	//}
 
 	var claims LicenseClaims
 	if err := nested.Claims(cert.PublicKey, &claims); err != nil {
@@ -135,7 +153,25 @@ func Decode(lic api.LicenseKey) (LicenseClaims, error) {
 	return claims, nil
 }
 
-// IsValid checks if the license is expired.
-func (c LicenseClaims) IsValid() bool {
-	return c.Claims.Expiry.Time().After(time.Now().Local())
+// ErrExpiredButWithinGracePeriod indicates the license has expired but is within the grace period.
+type ErrExpiredButWithinGracePeriod struct {
+	Err error
+}
+
+func (e ErrExpiredButWithinGracePeriod) Error() string {
+	return "license expired"
+}
+
+
+// Validate checks if the license is expired.
+func (c LicenseClaims) Validate() error {
+	if c.Claims.Expiry.Time().After(time.Now().Local()) {
+		return nil
+	}
+
+	// In v2.1, since we're not enforcing the licenses, we treat all the expired licenses as within the grace period
+	// making it an unlimited grace period.
+	// This will change post v2.1, and will return a non-nil error code if the license is expired and is not within
+	// the grace period.
+	return ErrExpiredButWithinGracePeriod{}
 }
