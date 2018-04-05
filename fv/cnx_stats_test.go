@@ -9,6 +9,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
@@ -146,7 +147,7 @@ var _ = Context("CNX Metrics, etcd datastore, 2 workloads", func() {
 			// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header.
 			Expect(func() (int, error) {
 				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "policy-1", "inbound", "ingress")
-			}()).Should(BeNumerically("==", 30))
+			}()).Should(BeNumerically("==", calculateBytesForPacket("ICMP", 1, 2)))
 			Expect(func() (int, error) {
 				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "default", "policy-1")
 			}()).Should(BeNumerically("==", 1))
@@ -185,7 +186,7 @@ var _ = Context("CNX Metrics, etcd datastore, 2 workloads", func() {
 			// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header.
 			Expect(func() (int, error) {
 				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "policy-icmp", "outbound", "egress")
-			}()).Should(BeNumerically("==", 30))
+			}()).Should(BeNumerically("==", calculateBytesForPacket("ICMP", 1, 2)))
 			Expect(func() (int, error) {
 				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "default", "policy-icmp")
 			}()).Should(BeNumerically("==", 1))
@@ -232,7 +233,7 @@ var _ = Context("CNX Metrics, etcd datastore, 2 workloads", func() {
 			// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header.
 			Expect(func() (int, error) {
 				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "tier1", "policy-1", "inbound", "ingress")
-			}()).Should(BeNumerically("==", 30))
+			}()).Should(BeNumerically("==", calculateBytesForPacket("ICMP", 1, 2)))
 			Expect(func() (int, error) {
 				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier1", "policy-1")
 			}()).Should(BeNumerically("==", 1))
@@ -252,10 +253,72 @@ var _ = Context("CNX Metrics, etcd datastore, 2 workloads", func() {
 			// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header.
 			Expect(func() (int, error) {
 				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "tier1", "policy-1", "inbound", "ingress")
-			}()).Should(BeNumerically("==", 60))
+			}()).Should(BeNumerically("==", calculateBytesForPacket("ICMP", 1, 2)*2))
 			Expect(func() (int, error) {
 				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier1", "policy-1")
 			}()).Should(BeNumerically("==", 2))
 		})
 	})
+	Context("Tests with different packet and byte sizes", func() {
+		BeforeEach(func() {
+			tier := api.NewTier()
+			tier.Name = "tier2"
+			o := 10.00
+			tier.Spec.Order = &o
+			_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			policy := api.NewNetworkPolicy()
+			policy.Namespace = "fv"
+			policy.Name = "tier2.policy-1"
+			policy.Spec.Tier = "tier2"
+			policy.Spec.Types = []api.PolicyType{api.PolicyTypeIngress}
+			policy.Spec.Ingress = []api.Rule{{Action: api.Deny}}
+			policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
+			policy.Spec.Selector = w[1].NameSelector()
+			_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		DescribeTable("Deny metrics",
+			func(pktCount, pktSize int) {
+				// Indicates we need to create the tier.
+				By("Verifying that w0 cannot reach w1")
+				time.Sleep(pollingInterval)
+				err, stderr := w[0].SendPacketsTo(w[1].IP, pktCount, pktSize)
+				Expect(err).To(HaveOccurred(), stderr)
+
+				By("Ensuring the stats are accurate")
+				// Pause to allow felix to export metrics.
+				time.Sleep(pollingInterval)
+				Expect(func() (int, error) {
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier2", "policy-1", "inbound")
+				}()).Should(BeNumerically("==", 0))
+				Expect(func() (int, error) {
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "tier2", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", pktCount))
+				Expect(func() (int, error) {
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "tier2", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", calculateBytesForPacket("ICMP", pktCount, pktSize)))
+				Expect(func() (int, error) {
+					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier2", "policy-1")
+				}()).Should(BeNumerically("==", pktCount))
+			},
+			Entry("Set 1", 1, 2),
+			Entry("Set 2", 5, 10),
+			Entry("Set 3", 3, 7),
+			Entry("Set 4", 5, 5),
+		)
+	})
 })
+
+func calculateBytesForPacket(proto string, pktCount, packetSize int) int {
+	switch proto {
+	case "ICMP":
+		// 8 byte ICMP header + 20 byte IP header
+		return (packetSize + 8 + 20) * pktCount
+	default:
+		// Not implemented for now.
+		return -1
+	}
+}
