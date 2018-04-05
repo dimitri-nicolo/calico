@@ -264,6 +264,20 @@ func (w *Workload) LatencyTo(ip, port string) time.Duration {
 	return meanRtt
 }
 
+func (w *Workload) SendPacketsTo(ip string, count int, size int) (error, string) {
+	if strings.Contains(ip, ":") {
+		ip = fmt.Sprintf("[%s]", ip)
+	}
+	c := fmt.Sprintf("%d", count)
+	s := fmt.Sprintf("%d", size)
+	_, err := w.ExecOutput("ping", "-c", c, "-W", "1", "-s", s, ip)
+	stderr := ""
+	if err, ok := err.(*exec.ExitError); ok {
+		stderr = string(err.Stderr)
+	}
+	return err, stderr
+}
+
 func (p *Port) CanConnectTo(ip, port, protocol string) bool {
 
 	// Ensure that the host has the 'test-connection' binary.
