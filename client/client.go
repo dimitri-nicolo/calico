@@ -5,35 +5,51 @@ import (
 
 	"gopkg.in/square/go-jose.v2/jwt"
 
+	"crypto/x509"
+	"fmt"
+
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cryptolicensing "github.com/tigera/licensing/crypto"
-	"fmt"
-	"crypto/x509"
 )
 
-// TODO: replace this with the actual cert once it's available.
+// Tigera entitlements root CA cert.
+// All future licenseKeys' certificates will be signed by this
+// cert's private key and can be verified using this certificate.
 const rootPEM = `-----BEGIN CERTIFICATE-----
-MIID1zCCAr+gAwIBAgIQLq4dtj0XmIrPqYb8CN7yoTANBgkqhkiG9w0BAQsFADB1
-MQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2Fu
-IEZyYW5jaXNjbzEUMBIGA1UEChMLVGlnZXJhIEluYy4xIzAhBgNVBAMTGlRpZ2Vy
-YSBJbmMuIENlcnQgQXV0aG9yaXR5MB4XDTE4MDMyNjE2NDMyOVoXDTE5MDMyNjE2
-NDMyOFowdTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNV
-BAcTDVNhbiBGcmFuY2lzY28xFDASBgNVBAoTC1RpZ2VyYSBJbmMuMSMwIQYDVQQD
-ExpUaWdlcmEgSW5jLiBDZXJ0IEF1dGhvcml0eTCCASIwDQYJKoZIhvcNAQEBBQAD
-ggEPADCCAQoCggEBAL/DjPf5w2obb3fItwIf9Jt3ovTQfD08ZiHUSluD/+mvOOK5
-wnyzTsS/AXWa67v3W5iY1fe9+fT0r5myfRfmuAI0tmWu6Q/PUJufAkAC6PKMRxa+
-yCErQIjpLkQL4sSTq8l0yNg7yBXBDBgqBDxevMzIMMBbgnyrvhCG3LLlgaeNFtDL
-/BdandVcX5dcioixv/R+qx3KMIZEKaW++tDFFQAGpuXEhw0ztTykStnvImZq34eV
-Qcj2qTs7GXXoNTNt6CwyXzCh9Gx8+db7Zb/AuMyGdQNJ7RRSjIILJp6Y/cGmX2NC
-OOTyCw42L+ARKPKBowcDNLEIw2cBwY47G1zN9KUCAwEAAaNjMGEwDgYDVR0PAQH/
-BAQDAgGGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFGib49CAau909ncUpB/a
-akasszreMB8GA1UdIwQYMBaAFGib49CAau909ncUpB/aakasszreMA0GCSqGSIb3
-DQEBCwUAA4IBAQBIzRPohd5AtllbAnWCVttMRH7Y97GSFpPI17J2mtqS9XhrQUT/
-TUSbF542W1k9WXhOWJWzZi01/P+Hp+t+qy/iz43yWxXvj4/SIpL34gX7DKWkTaQD
-N+bc0jx5v3wb44jQpyAanFdX/upswnp26QO03IjitgHa5mAqNcZfTCv0RSCQJSaK
-91S1lpS35aZExZ1AL6atfdyQ+mkUMOoJpa7NwSraLEOvO39AJ4asP513+mZ54+wC
-kojBo4VD7iOZCgMrs1IUC+1AXz7WiueZcTOHVsFjE8MmKNsrVAnHH3B3lutxCIWU
-Nj31BRTwnoxsuc6T4FJ862XNBLoEQRjOzJa3
+MIIGVDCCBDygAwIBAgIRALEvIBUYzHtatmXRoFZFvSkwDQYJKoZIhvcNAQELBQAw
+gawxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQHEw1T
+YW4gRnJhbmNpc2NvMRQwEgYDVQQKEwtUaWdlcmEsIEluYzEiMCAGA1UECwwZU2Vj
+dXJpdHkgPHNpcnRAdGlnZXJhLmlvPjE2MDQGA1UEAxMtVGlnZXJhIFNlbGYtU2ln
+bmVkIFJvb3QgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MB4XDTE4MDQwNTIxMjk0NVoX
+DTI4MDQxMjIxMjk0MlowgbUxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9y
+bmlhMRYwFAYDVQQHEw1TYW4gRnJhbmNpc2NvMRQwEgYDVQQKEwtUaWdlcmEsIElu
+YzEiMCAGA1UECwwZU2VjdXJpdHkgPHNpcnRAdGlnZXJhLmlvPjE/MD0GA1UEAxM2
+VGlnZXJhIEVudGl0bGVtZW50cyBJbnRlcm1lZGlhdGUgQ2VydGlmaWNhdGUgQXV0
+aG9yaXR5MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAyxR6cSweVsw1
+TDPU2Oo7MQIIZczguKAdjW7dCx+AIX+08NzmPpsV9xqiGGGoKnNsxzCz1QHPV+h3
+AbWo7GlOrlGVITpad6igXJ5oE0sfZZprt1fvKY/ZE+1n31b6SV5FOYdn5prL5hUq
+/xI55jQrayXTVjRq8B8JfC2pLOs0dkxLC6+HoGkyWE+uvfS+svGdGjLVO4P+TqIA
+YNGPkSfn7fUI+ilbsS0F3YQ2prKcqvxkoMO6RlOJw4Zh8HXSJuq4sIqRY2KxWGLN
+QQX46NJTzFLylPz0h4Tud3P49eHcgr2WQpepgclTxFxtOi3TTSoMwfg+bAgHsoJm
+qDXiYgmq0D35gPAI4ElIBqCoGGaFhctwlpMpbuwYwmxSYE6xkVdQoxnueR4qgGCv
+31WpoaEqOTVtiZuLppnVxofP0IiKVoB8GuliWz5BkH/aWpXbnGf13WoVIAZSVyfu
+aE60/Jnm9AL5yEAJSErVrU82kHvaWwZ7vexRwj6PpRc/MT7zidUdfZqXijeUl+rx
+o02ToOzYYri5HU3kCG5B/Gut8FIVt3oiNhwEFq0lBX6s6YYLdWo32lMNM4t5yong
+j5O2qKGd4mZpuGQVjyvV210EvBGsRBgUy2tDcmCzvibZaQMclOayLbKmlogRp9B6
+da9NNOgTY83w8OtVnudwM97vtkZLLU0CAwEAAaNmMGQwDgYDVR0PAQH/BAQDAgGG
+MBIGA1UdEwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYEFMWQOZIn86ODZ4kHxim/uMK7
+kyBaMB8GA1UdIwQYMBaAFLBHvSxhIUK0KGQcRVLYs9mEfB/nMA0GCSqGSIb3DQEB
+CwUAA4ICAQAXYQY3O2BtdHI50YGe7owxXTpYTg9tt6/2rAgdU9KpquyfLzH1qTO+
+ZafW6/lXZdrMXgI19Txl9RBPw2DwQJIFYRpFFuQfkHiJumNtDFKt+PH13ZiukZid
++kei1ktoxxRzzpa8Rks2b70fruwfBmx7/KCKFEUcbdJGfpdy6yIgtVcPkBz/y6Qw
+66Wopw61fF9Kr8Ugat18V/OIlOR1ErsoKA2GHohkTDwIHLMEXRArR/st3FnTMpb5
+gIaNtObfh72ugVXhWslDC3CkIGtGLK/zak/LTqNwFeuYFTGE6op4jtocV7zQzJWx
+POSjWs8qhHjhRle3DWwwooz4CfCFSWHWiaa6G4MXyY3+VNoG+0Gse3709ut45zjm
+8cuyIHuPbbRO/Pr2Q1mplZdRqDxXIVAssiS/vwSieC+7jYeIDoXvFb6BRnSjdQuF
+b8wF262rMiZlYhWlrbTYMTlyymxLp4H3nZ/V2XjFFWtC4iI4ImvPCUJRFtPZvwIR
+r4MoQ19OK0Mqny70PbosS9FI3wIfkPm0Ih4VrecAlMnvpo6wuYV/kONx6DaUGr7s
+ZVOtL6cv8afMyoaAQ/+O4xCd6bkCUnZe9DRp7AFfns6tY64MMvft/34Z1q0OyE01
+6YA0CdAuqhS47spN26cyJUfj+JTO9rqnHvSy+h7QZgBQCu16a6ZEIA==
 -----END CERTIFICATE-----`
 
 var (
@@ -45,7 +61,6 @@ var (
 	ResourceName = "default"
 
 	opts x509.VerifyOptions
-
 )
 
 func init() {
@@ -59,9 +74,10 @@ func init() {
 	}
 
 	opts = x509.VerifyOptions{
-		Roots:   roots,
+		Roots: roots,
 	}
 }
+
 // LicenseClaims contains all the license control fields.
 // This includes custom JWT fields and the default ones.
 type LicenseClaims struct {
@@ -123,9 +139,26 @@ func Decode(lic api.LicenseKey) (LicenseClaims, error) {
 		return LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
 	}
 
-	if _, err := cert.Verify(opts); err != nil {
+	rootCert, err := cryptolicensing.LoadCertFromPEM([]byte(rootPEM))
+	if err != nil {
+		return LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
+	}
+
+	// We only check if the certificate was signed by Tigera root certificate.
+	// Verify() also checks if the certificate is expired before checking if it was signed by the root cert,
+	// which is not what we want to do for v2.1 behavior.
+	if err = cert.CheckSignatureFrom(rootCert); err != nil {
 		return LicenseClaims{}, fmt.Errorf("failed to verify the certificate: %s", err)
 	}
+
+	// For v2.1 we are not checking certificate expiration, verifying the cert chain also checks if the leaf certificate
+	// is expired, and since we don't really stop any features from working after the license expires (at least in v2.1)
+	// We have to deal with a case where the certificate is expired but license is still "valid" - i.e. within the grace period
+	// which could be max int.
+	// We can uncomment this when we actually enforce license and stop the features from running.
+	//if _, err := cert.Verify(opts); err != nil {
+	//	return LicenseClaims{}, fmt.Errorf("failed to verify the certificate: %s", err)
+	//}
 
 	var claims LicenseClaims
 	if err := nested.Claims(cert.PublicKey, &claims); err != nil {
@@ -135,7 +168,25 @@ func Decode(lic api.LicenseKey) (LicenseClaims, error) {
 	return claims, nil
 }
 
-// IsValid checks if the license is expired.
-func (c LicenseClaims) IsValid() bool {
-	return c.Claims.Expiry.Time().After(time.Now().Local())
+// ErrExpiredButWithinGracePeriod indicates the license has expired but is within the grace period.
+type ErrExpiredButWithinGracePeriod struct {
+	Err error
+}
+
+func (e ErrExpiredButWithinGracePeriod) Error() string {
+	return "license expired"
+}
+
+
+// Validate checks if the license is expired.
+func (c LicenseClaims) Validate() error {
+	if c.Claims.Expiry.Time().After(time.Now().Local()) {
+		return nil
+	}
+
+	// In v2.1, since we're not enforcing the licenses, we treat all the expired licenses as within the grace period
+	// making it an unlimited grace period.
+	// This will change post v2.1, and will return a non-nil error code if the license is expired and is not within
+	// the grace period.
+	return ErrExpiredButWithinGracePeriod{}
 }
