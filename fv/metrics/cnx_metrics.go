@@ -22,6 +22,21 @@ func CnxPortString() string {
 	return strconv.Itoa(CnxPort)
 }
 
+/*
+# HELP cnx_policy_rule_bytes Total number of bytes handled by CNX policy rules.
+# TYPE cnx_policy_rule_bytes counter
+cnx_policy_rule_bytes{namespace="test",policy="default",rule_direction="ingress",rule_index="0",tier="profile",traffic_direction="inbound"} 25
+# HELP cnx_policy_rule_connections Total number of connections handled by CNX policy rules.
+# TYPE cnx_policy_rule_connections gauge
+cnx_policy_rule_connections{namespace="test",policy="default",rule_direction="ingress",rule_index="0",tier="profile",traffic_direction="inbound"} 25
+# HELP cnx_policy_rule_packets Total number of packets handled by CNX policy rules.
+# TYPE cnx_policy_rule_packets counter
+cnx_policy_rule_packets{action="allow",namespace="fv",policy="policy-1",rule_direction="ingress",rule_index="0",tier="default",traffic_direction="inbound"} 81
+cnx_policy_rule_packets{action="deny",namespace="fv",policy="policy-icmp",rule_direction="ingress",rule_index="0",tier="tier-1",traffic_direction="outbound"} 1
+# HELP calico_denied_packets Total number of packets denied by calico policies.
+# TYPE calico_denied_packets gauge
+calico_denied_packets{policy="tier1|fv/policy-1|0|deny",srcIP="10.245.13.133"} 5
+*/
 func GetCNXMetrics(felixIP, name string) (metricLines []string, err error) {
 	var resp *http.Response
 	resp, err = http.Get("http://" + felixIP + ":" + CnxPortString() + "/metrics")

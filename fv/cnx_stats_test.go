@@ -6,6 +6,7 @@ package fv_test
 
 import (
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +18,11 @@ import (
 	"github.com/projectcalico/felix/fv/workload"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
+
+// Pause time before felix will generate CNX metrics
+var pollingInterval = time.Duration(10) * time.Second
 
 var _ = Context("CNX Metrics, etcd datastore, 2 workloads", func() {
 
@@ -82,23 +87,31 @@ var _ = Context("CNX Metrics, etcd datastore, 2 workloads", func() {
 	})
 
 	It("should generate connection metrics when full connectivity to and from workload 0", func() {
-		Expect(w[1]).To(HaveConnectivityTo(w[0]))
-		Expect(w[0]).To(HaveConnectivityTo(w[1]))
-		Eventually(func() (int, error) {
+		time.Sleep(pollingInterval)
+		err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+		Expect(err).NotTo(HaveOccurred(), stderr)
+		err, stderr = w[1].SendPacketsTo(w[0].IP, 1, 2)
+		Expect(err).NotTo(HaveOccurred(), stderr)
+
+		// Pause to allow felix to export metrics.
+		time.Sleep(pollingInterval)
+		// Local-to-Local traffic causes accounting from both workload perspectives.
+		Expect(func() (int, error) {
 			return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "profile", "default", "outbound")
-		}, "30s", "1s").Should(BeNumerically(">", 0))
-		Eventually(func() (int, error) {
+		}()).Should(BeNumerically("==", 2))
+		Expect(func() (int, error) {
 			return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "profile", "default", "outbound", "ingress")
-		}, "30s", "1s").Should(BeNumerically(">", 0))
-		Eventually(func() (int, error) {
+		}()).Should(BeNumerically("==", 2))
+		Expect(func() (int, error) {
 			return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "profile", "default", "inbound", "ingress")
-		}, "30s", "1s").Should(BeNumerically(">", 0))
-		Eventually(func() (int, error) {
+		}()).Should(BeNumerically("==", 2))
+		// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header, plus Local-to-Local accounting from both workload perspectives.
+		Expect(func() (int, error) {
 			return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "profile", "default", "outbound", "ingress")
-		}, "30s", "1s").Should(BeNumerically(">", 0))
-		Eventually(func() (int, error) {
+		}()).Should(BeNumerically("==", 60))
+		Expect(func() (int, error) {
 			return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "profile", "default", "inbound", "ingress")
-		}, "30s", "1s").Should(BeNumerically(">", 0))
+		}()).Should(BeNumerically("==", 60))
 	})
 
 	Context("should generate denied packet metrics with deny rule", func() {
@@ -116,53 +129,133 @@ var _ = Context("CNX Metrics, etcd datastore, 2 workloads", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("w1 cannot connect to w1 and denied packet metrics are generated", func() {
-			Eventually(w[0], "10s", "1s").ShouldNot(HaveConnectivityTo(w[1]))
-			Expect(w[0]).NotTo(HaveConnectivityTo(w[1]))
-			Eventually(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "deny", "policy-1", "inbound")
-			}, "30s", "1s").Should(BeNumerically("==", 0))
-			Eventually(func() (int, error) {
+		It("w0 cannot connect to w1 and denied packet metrics are generated", func() {
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			Expect(err).To(HaveOccurred(), stderr)
+
+			// Pause to allow felix to export metrics.
+			time.Sleep(pollingInterval)
+			Expect(func() (int, error) {
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-1", "inbound")
+			}()).Should(BeNumerically("==", 0))
+			Expect(func() (int, error) {
 				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "policy-1", "inbound", "ingress")
-			}, "30s", "1s").Should(BeNumerically(">", 0))
-			Eventually(func() (int, error) {
+			}()).Should(BeNumerically("==", 1))
+			// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header.
+			Expect(func() (int, error) {
 				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "policy-1", "inbound", "ingress")
-			}, "30s", "1s").Should(BeNumerically(">", 0))
-			Eventually(func() (int, error) {
+			}()).Should(BeNumerically("==", 30))
+			Expect(func() (int, error) {
 				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "default", "policy-1")
-			}, "30s", "1s").Should(BeNumerically(">", 0))
+			}()).Should(BeNumerically("==", 1))
 		})
 	})
 	Context("should generate metrics with egress deny rule", func() {
 
 		BeforeEach(func() {
+			proto := numorstring.ProtocolFromString("ICMP")
 			policy := api.NewNetworkPolicy()
 			policy.Namespace = "fv"
-			policy.Name = "default.policy-1"
+			policy.Name = "default.policy-icmp"
 			policy.Spec.Tier = "default"
 			policy.Spec.Types = []api.PolicyType{api.PolicyTypeEgress}
 			policy.Spec.Ingress = []api.Rule{{Action: api.Deny}}
-			policy.Spec.Egress = []api.Rule{{Action: api.Deny}}
+			policy.Spec.Egress = []api.Rule{{Protocol: &proto, Action: api.Deny}}
 			policy.Spec.Selector = w[0].NameSelector()
 			_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("w0 cannot connect to w1 and denied packet metrics are generated", func() {
-			Eventually(w[0], "10s", "1s").ShouldNot(HaveConnectivityTo(w[1]))
-			Expect(w[0]).NotTo(HaveConnectivityTo(w[1]))
-			Eventually(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "deny", "policy-1", "outbound")
-			}, "30s", "1s").Should(BeNumerically("==", 0))
-			Eventually(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "policy-1", "outbound", "egress")
-			}, "30s", "1s").Should(BeNumerically(">", 0))
-			Eventually(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "policy-1", "outbound", "egress")
-			}, "30s", "1s").Should(BeNumerically(">", 0))
-			Eventually(func() (int, error) {
-				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "default", "policy-1")
-			}, "30s", "1s").Should(BeNumerically(">", 0))
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			Expect(err).To(HaveOccurred(), stderr)
+
+			// Pause to allow felix to export metrics.
+			time.Sleep(pollingInterval)
+			Expect(func() (int, error) {
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-icmp", "outbound")
+			}()).Should(BeNumerically("==", 0))
+			Expect(func() (int, error) {
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "policy-icmp", "outbound", "egress")
+			}()).Should(BeNumerically("==", 1))
+			// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header.
+			Expect(func() (int, error) {
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "policy-icmp", "outbound", "egress")
+			}()).Should(BeNumerically("==", 30))
+			Expect(func() (int, error) {
+				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "default", "policy-icmp")
+			}()).Should(BeNumerically("==", 1))
+		})
+	})
+	Context("should generate denied packet metrics with deny rule in a different tier", func() {
+
+		BeforeEach(func() {
+			tier := api.NewTier()
+			tier.Name = "tier1"
+			o := 10.00
+			tier.Spec.Order = &o
+			_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			policy := api.NewNetworkPolicy()
+			policy.Namespace = "fv"
+			policy.Name = "tier1.policy-1"
+			policy.Spec.Tier = "tier1"
+			policy.Spec.Types = []api.PolicyType{api.PolicyTypeIngress}
+			policy.Spec.Ingress = []api.Rule{{Action: api.Deny}}
+			policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
+			policy.Spec.Selector = w[1].NameSelector()
+			_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("w0 cannot connect to w1 and denied packet metrics are generated for tier1", func() {
+			By("Verifying that w0 cannot reach w1")
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			Expect(err).To(HaveOccurred(), stderr)
+
+			By("Ensuring the stats are accurate")
+			// Pause to allow felix to export metrics.
+			time.Sleep(pollingInterval)
+			Expect(func() (int, error) {
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier1", "policy-1", "inbound")
+			}()).Should(BeNumerically("==", 0))
+			Expect(func() (int, error) {
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "tier1", "policy-1", "inbound", "ingress")
+			}()).Should(BeNumerically("==", 1))
+			// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header.
+			Expect(func() (int, error) {
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "tier1", "policy-1", "inbound", "ingress")
+			}()).Should(BeNumerically("==", 30))
+			Expect(func() (int, error) {
+				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier1", "policy-1")
+			}()).Should(BeNumerically("==", 1))
+
+			By("Pinging again and verifying that w0 cannot reach w1")
+			err, stderr = w[0].SendPacketsTo(w[1].IP, 1, 2)
+			Expect(err).To(HaveOccurred(), stderr)
+
+			By("Ensuring the stats are updated")
+			time.Sleep(pollingInterval)
+			Expect(func() (int, error) {
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier1", "policy-1", "inbound")
+			}()).Should(BeNumerically("==", 0))
+			Expect(func() (int, error) {
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "tier1", "policy-1", "inbound", "ingress")
+			}()).Should(BeNumerically("==", 2))
+			// We are sending 2 bytes + 8 byte ICMP header + 20 byte IP header.
+			Expect(func() (int, error) {
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "tier1", "policy-1", "inbound", "ingress")
+			}()).Should(BeNumerically("==", 60))
+			Expect(func() (int, error) {
+				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier1", "policy-1")
+			}()).Should(BeNumerically("==", 2))
 		})
 	})
 })
