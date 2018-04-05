@@ -182,23 +182,38 @@ func (p poolAccessor) GetEnabledPools(ipVersion int) ([]net.IPNet, error) {
 
 // EnsureInitialized is used to ensure the backend datastore is correctly
 // initialized for use by Calico.  This method may be called multiple times, and
-// will have no effect if the datastore is already correctly initialized.
+// will have no effect if the datastore is already correctly initialized. This method
+// is fail-slow in that it does as much initialization as it can, only returning error
+// after attempting all initialization steps - this allows partial initialization for
+// components that have restricted access to the Calico resources (mainly a KDD thing).
 //
 // Most Calico deployment scenarios will automatically implicitly invoke this
 // method and so a general consumer of this API can assume that the datastore
 // is already initialized.
 func (c client) EnsureInitialized(ctx context.Context, calicoVersion, cnxVersion, clusterType string) error {
+	var errs []error
+
 	// Perform datastore specific initialization first.
 	if err := c.backend.EnsureInitialized(); err != nil {
-		return err
+		log.WithError(err).Info("Unable to initialize backend datastore")
+		errs = append(errs, err)
 	}
 
 	if err := c.ensureClusterInformation(ctx, calicoVersion, cnxVersion, clusterType); err != nil {
-		return err
+		log.WithError(err).Info("Unable to initialize ClusterInformation")
+		errs = append(errs, err)
 	}
 
 	if err := c.ensureDefaultTierExists(ctx); err != nil {
-		return err
+		log.WithError(err).Info("Unable to initialize default Tier")
+		errs = append(errs, err)
+	}
+
+	// If there are any errors return the first error. We could combine the error text here and return
+	// a generic error, but an application may be expecting a certain error code, so best just return
+	// the original error.
+	if len(errs) > 0 {
+		return errs[0]
 	}
 
 	return nil
