@@ -1,3 +1,4 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 package cache
 
 import (
@@ -31,6 +32,7 @@ func NewPoliciesCache() PoliciesCache {
 		networkPolicies:       newPolicyCache(),
 		tiers:                 make(map[string]*tierData, 0),
 		policySorter:          calc.NewPolicySorter(),
+		ruleSelectors:         make(map[string]*ruleSelectorInfo),
 	}
 }
 
@@ -39,7 +41,12 @@ type policiesCache struct {
 	networkPolicies       *policyCache
 	tiers                 map[string]*tierData
 	policySorter          *calc.PolicySorter
-	orderedTiers          []api.Tier
+	orderedTiers          []*tierData
+
+	// Rule selectors are consolidated to reduce occupancy. We register with the label handler which
+	// selectors we require for the rules.
+	ruleRegistration labelhandler.RuleRegistrationInterface
+	ruleSelectors    map[string]*ruleSelectorInfo
 }
 
 type policyCache struct {
@@ -49,7 +56,7 @@ type policyCache struct {
 
 func newPolicyCache() *policyCache {
 	return &policyCache{
-		policies: make(map[model.Key]*policyData, 0),
+		policies:          make(map[model.Key]*policyData, 0),
 		unmatchedPolicies: set.New(),
 	}
 }
@@ -70,36 +77,47 @@ func (c *policiesCache) UnmatchedPolicies() api.PolicyCounts {
 
 func (c *policiesCache) GetPolicy(key model.Key) api.Policy {
 	if policy := c.getPolicy(key); policy != nil {
-		return policy
+		return c.combinePolicyDataWithRules(policy)
 	}
 	return nil
 }
 
 func (c *policiesCache) GetTier(key model.Key) api.Tier {
 	c.orderPolicies()
-	return c.tiers[key.(model.ResourceKey).Name]
+	t := c.tiers[key.(model.ResourceKey).Name]
+	if t == nil {
+		return nil
+	}
+	return c.combineTierDataWithRules(t)
 }
 
 func (c *policiesCache) GetOrderedPolicies(keys set.Set) []api.Tier {
 	c.orderPolicies()
+	var tierDatas []*tierData
 	if keys == nil {
-		return c.orderedTiers
-	}
-
-	tiers := make([]api.Tier, 0)
-	for _, t := range c.orderedTiers {
-		td := &tierData{
-			resource: t.(*tierData).resource,
-			name:     t.(*tierData).name,
-		}
-		for _, p := range t.GetOrderedPolicies() {
-			if keys.Contains(p.(*policyData).getKey()) {
-				td.orderedPolicies = append(td.orderedPolicies, p)
+		tierDatas = c.orderedTiers
+	} else {
+		tierDatas = make([]*tierData, 0)
+		for _, t := range c.orderedTiers {
+			td := &tierData{
+				resource: t.resource,
+				name:     t.name,
+			}
+			for _, p := range t.orderedPolicies {
+				if keys.Contains(p.getKey()) {
+					td.orderedPolicies = append(td.orderedPolicies, p)
+				}
+			}
+			if len(td.orderedPolicies) > 0 {
+				tierDatas = append(tierDatas, td)
 			}
 		}
-		if len(td.orderedPolicies) > 0 {
-			tiers = append(tiers, td)
-		}
+	}
+
+	// Add the rule information to the tiers before returning.
+	tiers := make([]api.Tier, len(tierDatas))
+	for i, td := range tierDatas {
+		tiers[i] = c.combineTierDataWithRules(td)
 	}
 
 	return tiers
@@ -112,60 +130,51 @@ func (c *policiesCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interfa
 }
 
 func (c *policiesCache) RegisterWithLabelHandler(handler labelhandler.Interface) {
-	handler.RegisterHandler(c.policyEndpointMatch)
+	handler.RegisterPolicyHandler(c.policyEndpointMatch)
+	c.ruleRegistration = handler.RegisterRuleHandler(c.ruleEndpointMatch)
 }
 
-func (c *policiesCache) policyEndpointMatch(matchType labelhandler.MatchType, selector labelhandler.SelectorID, epKey model.Key) {
+func (c *policiesCache) policyEndpointMatch(matchType labelhandler.MatchType, polKey model.Key, epKey model.Key) {
 	erk := epKey.(model.ResourceKey)
-	pc := c.getPolicyCache(selector.Policy())
-	pd := pc.policies[selector.Policy()]
+	pc := c.getPolicyCache(polKey)
+	pd := pc.policies[polKey]
 	if pd == nil {
 		// The policy has been deleted. Since the policy cache is updated before the index handler is updated this is
 		// a valid scenario, and should be treated as a no-op.
 		return
 	}
-	var epc *api.EndpointCounts
-	if selector.IsRule() {
-		var recs []api.RuleDirection
-		var reec *api.RuleEntity
-		if selector.IsIngress() {
-			recs = pd.ruleEndpoints.Ingress
-		} else {
-			recs = pd.ruleEndpoints.Egress
-		}
-		if selector.Index() >= len(recs) {
-			// If the rules length has decreased we will get deleted updates for rules
-			// that we no longer have cached.
-			return
-		}
-		rec := &recs[selector.Index()]
-		if selector.IsSource() {
-			reec = &rec.Source
-		} else {
-			reec = &rec.Destination
-		}
-		if selector.IsNegated() {
-			epc = &reec.NotSelector
-		} else {
-			epc = &reec.Selector
-		}
+	switch erk.Kind {
+	case v3.KindHostEndpoint:
+		pd.endpoints.NumHostEndpoints += matchTypeToDelta[matchType]
+	case v3.KindWorkloadEndpoint:
+		pd.endpoints.NumWorkloadEndpoints += matchTypeToDelta[matchType]
+	default:
+		log.WithField("key", erk).Error("Unexpected resource in event type, expecting a v3 endpoint type")
+	}
+
+	if pd.IsUnmatched() {
+		pc.unmatchedPolicies.Add(polKey)
 	} else {
-		epc = &pd.endpoints
+		pc.unmatchedPolicies.Discard(polKey)
+	}
+}
+
+func (c *policiesCache) ruleEndpointMatch(matchType labelhandler.MatchType, selector string, epKey model.Key) {
+	erk := epKey.(model.ResourceKey)
+	rsi := c.ruleSelectors[selector]
+	// The current rule selector may not be registered if the rule was modified or deleted.  No worries
+	// - just skip this match update.
+	if rsi == nil {
+		return
 	}
 
 	switch erk.Kind {
 	case v3.KindHostEndpoint:
-		epc.NumHostEndpoints += matchTypeToDelta[matchType]
+		rsi.endpoints.NumHostEndpoints += matchTypeToDelta[matchType]
 	case v3.KindWorkloadEndpoint:
-		epc.NumWorkloadEndpoints += matchTypeToDelta[matchType]
+		rsi.endpoints.NumWorkloadEndpoints += matchTypeToDelta[matchType]
 	default:
-		log.WithField("key", selector.Policy()).Error("Unexpected resource in event type, expecting a v3 policy type")
-	}
-
-	if pd.IsUnmatched() {
-		pc.unmatchedPolicies.Add(selector.Policy())
-	} else {
-		pc.unmatchedPolicies.Discard(selector.Policy())
+		log.WithField("key", erk).Error("Unexpected resource in event type, expecting a v3 endpoint type")
 	}
 }
 
@@ -189,8 +198,8 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 			delete(c.tiers, name)
 		}
 	case model.PolicyKey:
-		c := c.getPolicyCache(uv3.Key)
-		if c == nil {
+		pc := c.getPolicyCache(uv3.Key)
+		if pc == nil {
 			return
 		}
 		switch uv3.UpdateType {
@@ -198,37 +207,27 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 			pv1 := uv1.Value.(*model.Policy)
 			pd := &policyData{
 				resource: uv3.Value.(api.Resource),
+				v1Policy: pv1,
 			}
-			pd.ruleEndpoints.Ingress = make([]api.RuleDirection, len(pv1.InboundRules))
-			pd.ruleEndpoints.Egress = make([]api.RuleDirection, len(pv1.OutboundRules))
-			c.policies[uv3.Key] = pd
-			c.unmatchedPolicies.Add(uv3.Key)
+			pc.policies[uv3.Key] = pd
+			pc.unmatchedPolicies.Add(uv3.Key)
+			// Add rule selectors for this new policy
+			c.addPolicyRuleSelectors(pv1)
 		case bapi.UpdateTypeKVUpdated:
 			pv1 := uv1.Value.(*model.Policy)
-			existing := c.policies[uv3.Key]
+			existing := pc.policies[uv3.Key]
 			existing.resource = uv3.Value.(api.Resource)
-			// Extend or shrink our rules slices if necessary.
-			deltaIngress := len(pv1.InboundRules) - len(existing.ruleEndpoints.Ingress)
-			deltaEgress := len(pv1.OutboundRules) - len(existing.ruleEndpoints.Egress)
-			if deltaIngress > 0 {
-				existing.ruleEndpoints.Ingress = append(
-					existing.ruleEndpoints.Ingress,
-					make([]api.RuleDirection, deltaIngress)...,
-				)
-			} else if deltaEgress < 0 {
-				existing.ruleEndpoints.Ingress = existing.ruleEndpoints.Ingress[:len(pv1.InboundRules)]
-			}
-			if deltaEgress > 0 {
-				existing.ruleEndpoints.Egress = append(
-					existing.ruleEndpoints.Egress,
-					make([]api.RuleDirection, deltaEgress)...,
-				)
-			} else if deltaEgress < 0 {
-				existing.ruleEndpoints.Egress = existing.ruleEndpoints.Egress[:len(pv1.OutboundRules)]
-			}
+			// Update rule selectors for this policy. We add the new ones first and then unregister
+			// the old ones - that prevents us potentially removing and adding back in a selector.
+			c.addPolicyRuleSelectors(pv1)
+			c.deletePolicyRuleSelectors(existing.v1Policy)
+			existing.v1Policy = pv1
 		case bapi.UpdateTypeKVDeleted:
-			delete(c.policies, uv3.Key)
-			c.unmatchedPolicies.Discard(uv3.Key)
+			existing := pc.policies[uv3.Key]
+			delete(pc.policies, uv3.Key)
+			pc.unmatchedPolicies.Discard(uv3.Key)
+			// Remove the rule selectors for this policy.
+			c.deletePolicyRuleSelectors(existing.v1Policy)
 		}
 	}
 
@@ -239,12 +238,135 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 	}
 }
 
+// addPolicyRuleSelectors ensures we are tracking the rule selectors in the policy. This tracks
+// based on the selector string and ensures we track identical selectors only once.
+func (c *policiesCache) addPolicyRuleSelectors(p *model.Policy) {
+	add := func(s string) {
+		rsi := c.ruleSelectors[s]
+		if rsi == nil {
+			rsi = &ruleSelectorInfo{}
+			c.ruleSelectors[s] = rsi
+		}
+		rsi.numRuleRefs++
+		if rsi.numRuleRefs == 1 {
+			c.ruleRegistration.AddRuleSelector(s)
+		}
+	}
+
+	for i := range p.InboundRules {
+		r := &p.InboundRules[i]
+		add(c.getSrcSelector(r))
+		add(c.getDstSelector(r))
+	}
+	for i := range p.OutboundRules {
+		r := &p.OutboundRules[i]
+		add(c.getSrcSelector(r))
+		add(c.getDstSelector(r))
+	}
+}
+
+// deletePolicyRuleSelectors deletes the tracking of the rule selectors in the policy.
+func (c *policiesCache) deletePolicyRuleSelectors(p *model.Policy) {
+	del := func(s string) {
+		rsi := c.ruleSelectors[s]
+		rsi.numRuleRefs--
+		if rsi.numRuleRefs == 0 {
+			delete(c.ruleSelectors, s)
+			c.ruleRegistration.RemoveRuleSelector(s)
+		}
+	}
+
+	for i := range p.InboundRules {
+		r := &p.InboundRules[i]
+		del(c.getSrcSelector(r))
+		del(c.getDstSelector(r))
+	}
+	for i := range p.OutboundRules {
+		r := &p.OutboundRules[i]
+		del(c.getSrcSelector(r))
+		del(c.getDstSelector(r))
+	}
+}
+
+// combinePolicyDataWithRules combines the policyData with the cached rule data. The rule data
+// is looked up from the effective selector string for each rule.
+func (c *policiesCache) combinePolicyDataWithRules(p *policyData) *policyDataWithRuleData {
+	prd := &policyDataWithRuleData{
+		policyData: p,
+		ruleEndpoints: api.Rule{
+			Ingress: make([]api.RuleDirection, len(p.v1Policy.InboundRules)),
+			Egress:  make([]api.RuleDirection, len(p.v1Policy.OutboundRules)),
+		},
+	}
+
+	for i := range prd.ruleEndpoints.Ingress {
+		v1r := &p.v1Policy.InboundRules[i]
+		r := &prd.ruleEndpoints.Ingress[i]
+		r.Destination = c.ruleSelectors[c.getDstSelector(v1r)].endpoints
+		r.Source = c.ruleSelectors[c.getSrcSelector(v1r)].endpoints
+	}
+	for i := range prd.ruleEndpoints.Egress {
+		v1r := &p.v1Policy.OutboundRules[i]
+		r := &prd.ruleEndpoints.Egress[i]
+		r.Destination = c.ruleSelectors[c.getDstSelector(v1r)].endpoints
+		r.Source = c.ruleSelectors[c.getSrcSelector(v1r)].endpoints
+	}
+
+	return prd
+}
+
+// getSrcSelector returns the effective source selector by combining the positive and negative
+// selectors.
+func (c *policiesCache) getSrcSelector(r *model.Rule) string {
+	return c.combineSelector(r.SrcSelector, r.NotSrcSelector)
+}
+
+// getSrcSelector returns the effective destination selector by combining the positive and negative
+// selectors.
+func (c *policiesCache) getDstSelector(r *model.Rule) string {
+	return c.combineSelector(r.DstSelector, r.NotDstSelector)
+}
+
+// combineSelector combines the positive and negative selectors into a single selector string.
+// This is slightly different from Felix which only combines the selectors provided the positive
+// selector is not empty (since that means "anywhere"), but since we are only interested in
+// endpoint counts, we can treat and empty positive selector as "all()" which means we can
+// always combine the two selectors into a single selector.
+func (c *policiesCache) combineSelector(sel, notSel string) string {
+	if sel == "" {
+		if notSel == "" {
+			return ""
+		}
+		return "!(" + notSel + ")"
+	}
+	if notSel == "" {
+		return sel
+	}
+	return "(" + sel + ") && !(" + notSel + ")"
+}
+
+// combineTierDataWithRules returns the tier data with the cached rule data.
+func (c *policiesCache) combineTierDataWithRules(t *tierData) *tierDataWithRuleData {
+	tdr := &tierDataWithRuleData{
+		tierData:                t,
+		orderedPoliciesWithData: make([]api.Policy, len(t.orderedPolicies)),
+	}
+
+	for i := range t.orderedPolicies {
+		tdr.orderedPoliciesWithData[i] = c.combinePolicyDataWithRules(t.orderedPolicies[i])
+	}
+
+	return tdr
+}
+
+// orderPolicies orders the tierData and policyData within each Tier based on the order of
+// application by Felix.
 func (c *policiesCache) orderPolicies() {
 	if c.orderedTiers != nil {
 		return
 	}
 	tiers := c.policySorter.Sorted()
-	c.orderedTiers = make([]api.Tier, 0, len(tiers))
+	c.orderedTiers = make([]*tierData, 0, len(tiers))
 	for _, tier := range tiers {
 		td := c.tiers[tier.Name]
 		if td == nil {
@@ -298,19 +420,16 @@ func (c *policiesCache) getPolicyCache(polKey model.Key) *policyCache {
 }
 
 // policyData is used to hold policy data in the cache, and also implements the Policy interface
-// for returning on queries.
+// for returning on queries. The v1 data model is maintained to enable us to track rule selector
+// references.
 type policyData struct {
-	resource      api.Resource
-	endpoints     api.EndpointCounts
-	ruleEndpoints api.Rule
+	resource  api.Resource
+	endpoints api.EndpointCounts
+	v1Policy  *model.Policy
 }
 
 func (d *policyData) GetEndpointCounts() api.EndpointCounts {
 	return d.endpoints
-}
-
-func (d *policyData) GetRuleEndpointCounts() api.Rule {
-	return d.ruleEndpoints
 }
 
 func (d *policyData) GetResource() api.Resource {
@@ -344,11 +463,7 @@ func (d *policyData) getKey() model.Key {
 type tierData struct {
 	name            string
 	resource        api.Resource
-	orderedPolicies []api.Policy
-}
-
-func (d *tierData) GetOrderedPolicies() []api.Policy {
-	return d.orderedPolicies
+	orderedPolicies []*policyData
 }
 
 func (d *tierData) GetName() string {
@@ -357,4 +472,29 @@ func (d *tierData) GetName() string {
 
 func (d *tierData) GetResource() api.Resource {
 	return d.resource
+}
+
+type ruleSelectorInfo struct {
+	numRuleRefs int
+	endpoints   api.EndpointCounts
+}
+
+// policyDataWithRuleData is a non-cached version of the policy data, but it includes
+// the rule endpoint stats that are dynamically created.
+type policyDataWithRuleData struct {
+	*policyData
+	ruleEndpoints api.Rule
+}
+
+func (d *policyDataWithRuleData) GetRuleEndpointCounts() api.Rule {
+	return d.ruleEndpoints
+}
+
+type tierDataWithRuleData struct {
+	*tierData
+	orderedPoliciesWithData []api.Policy
+}
+
+func (d *tierDataWithRuleData) GetOrderedPolicies() []api.Policy {
+	return d.orderedPoliciesWithData
 }

@@ -97,11 +97,6 @@ type RuleDirection struct {
 }
 
 type RuleEntity struct {
-	Selector    RuleEntityEndpoints `json:"selector"`
-	NotSelector RuleEntityEndpoints `json:"notSelector"`
-}
-
-type RuleEntityEndpoints struct {
 	NumHostEndpoints     int `json:"numHostEndpoints"`
 	NumWorkloadEndpoints int `json:"numWorkloadEndpoints"`
 }

@@ -1,3 +1,4 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 package api
 
 type Policy interface {
@@ -19,11 +20,6 @@ type Rule struct {
 }
 
 type RuleDirection struct {
-	Source      RuleEntity
-	Destination RuleEntity
-}
-
-type RuleEntity struct {
-	Selector    EndpointCounts
-	NotSelector EndpointCounts
+	Source      EndpointCounts
+	Destination EndpointCounts
 }

@@ -175,10 +175,11 @@ testenv: run-etcd run-cnx-queryserver .testenv-container-created
 	           --uts=host \
 	           --pid=host \
 	           --rm -ti \
+	           -e OUTPUT_PERF_STATS=yes \
 	           -e DATASTORE_TYPE=etcdv3 \
 	           -e ETCD_ENDPOINTS=http://127.0.0.1:2379 \
 	           -v `pwd`:/code \
-               -v /var/run/docker.sock:/var/run/docker.sock \
+	           -v /var/run/docker.sock:/var/run/docker.sock \
 	           --name=testenv \
 	           tigera/cnx-queryserver-testenv \
 	           sh
