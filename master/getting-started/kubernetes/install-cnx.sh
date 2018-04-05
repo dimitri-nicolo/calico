@@ -26,6 +26,11 @@ DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
 #
 CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 
+# Override DATASTORE to point to kdd or etcd (default), e.g.
+#  DATASTORE="kdd" ./install-cnx.sh
+#
+DATASTORE=${DATASTORE:="etcd"}
+
 # when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
 
@@ -43,7 +48,7 @@ CNX_PULL_SECRET_FILENAME=${CNX_PULL_SECRET_FILENAME:="cnx-pull-secret.yml"}
 #
 promptToContinue() {
   if [ "$QUIET" -eq 0 ]; then
-    read -n 1 -p " Proceed? (y/n): " answer
+    read -n 1 -p "Proceed? (y/n): " answer
 
     echo
     if [ "$answer" != "y" ] && [ "$answer" != "Y" ]; then
@@ -62,46 +67,11 @@ checkSettings() {
   echo '  CREDENTIALS_FILE='${CREDENTIALS_FILE}
   echo '  DOCS_LOCATION='${DOCS_LOCATION}
   echo '  DOCS_VERSION='${DOCS_VERSION}
+  echo '  DATASTORE='${DATASTORE}
 
   echo
-  echo -n About to "$1" CNX.
+  echo -n "About to "$1" CNX. "
   promptToContinue
-}
-
-#
-# parseOptions() - parse command line options
-#
-parseOptions() {
-  usage() {
-    cat <<HELP_USAGE
-Usage: $(basename "$0")
-          [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
-          [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
-          [-v version]        # CNX version; default: "v2.1"
-          [-u]                # Uninstall CNX
-          [-q]                # Quiet (don't prompt)
-          [-h]                # Print usage
-          [-x]                # Enable verbose mode
-
-HELP_USAGE
-    exit 1
-  }
-
-  local OPTIND
-  while getopts "c:d:hpqv:ux" opt; do
-    case ${opt} in
-      c )  CREDENTIALS_FILE=$OPTARG;;
-      d )  DOCS_LOCATION=$OPTARG;;
-      v )  DOCS_VERSION=$OPTARG;;
-      x )  set -x;;
-      q )  QUIET=1;;
-      p )  SKIP_PROMETHEUS=1;;
-      u )  CLEANUP=1;;
-      h )  usage;;
-      \? ) usage;;
-    esac
-  done
-  shift $((OPTIND -1))
 }
 
 #
@@ -113,11 +83,51 @@ fatalError() {
 }
 
 #
+# parseOptions() - parse command line options
+#
+parseOptions() {
+  usage() {
+    cat <<HELP_USAGE
+Usage: $(basename "$0")
+          [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
+          [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
+          [-k datastore]      # Specify the datastore ("etcd"|"kdd"); default: "etcd"
+          [-v version]        # CNX version; default: "v2.1"
+          [-u]                # Uninstall CNX
+          [-q]                # Quiet (don't prompt)
+          [-h]                # Print usage
+          [-x]                # Enable verbose mode
+
+HELP_USAGE
+    exit 1
+  }
+
+  local OPTIND
+  while getopts "c:d:hk:pqv:ux" opt; do
+    case ${opt} in
+      c )  CREDENTIALS_FILE=$OPTARG;;
+      d )  DOCS_LOCATION=$OPTARG;;
+      k )  DATASTORE=$OPTARG;;
+      v )  DOCS_VERSION=$OPTARG;;
+      x )  set -x;;
+      q )  QUIET=1;;
+      p )  SKIP_PROMETHEUS=1;;
+      u )  CLEANUP=1;;
+      h )  usage;;
+      \? ) usage;;
+    esac
+  done
+  shift $((OPTIND -1))
+
+  [ "$DATASTORE" == "etcd" ] || [ "$DATASTORE" == "kdd" ] || fatalError "Datastore \"$DATASTORE\" is not valid, must be either \"etcd\" or \"kdd\"."
+}
+
+#
 # countDownSecs() - count down by seconds
 #
 countDownSecs() {
   secs="$1"
-  echo -n "$2" '- waiting for' "$secs" 'seconds: '
+  echo -n "$2" '- waiting ' "$secs" 'seconds: '
   while [ $secs -gt 0 ]; do
     echo -n .
     sleep 1
@@ -191,7 +201,7 @@ runAsRootGetOutput() {
 blockUntilSuccess() {
   cmd="$1"
   secs="$2"
-  echo -n "Waiting up to $secs seconds for \"$cmd\" to complete: "
+  echo -n "waiting up to $secs seconds for \"$cmd\" to complete: "
   until $cmd 2>/dev/null 1>/dev/null; do
     : $((secs--))
     echo -n .
@@ -293,7 +303,7 @@ function blockUntilPodIsReady() {
   secs="$2"
   friendlyPodName="$3"
 
-  echo -n "Waiting up to ${secs} seconds for \"${friendlyPodName}\" to be ready: "
+  echo -n "waiting up to ${secs} seconds for \"${friendlyPodName}\" to be ready: "
   until [[ $(podStatus "${label}") =~ "true" ]]; do
     if [ "$secs" -eq 0 ]; then
       fatalError "\"${friendlyPodName}\" never stabilized."
@@ -417,8 +427,8 @@ EOF
 # Do not overwrite existing copy of the manifest.
 #
 downloadManifest() {
-  manifest="$1"
-  filename=$(basename -- "$manifest")
+  local manifest="$1"
+  local filename=$(basename -- "$manifest")
 
   if [ ! -f "$filename" ]; then
     echo Downloading "$manifest"
@@ -432,18 +442,31 @@ downloadManifest() {
 # downloadManifests()
 #
 downloadManifests() {
-  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
-  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
   downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
   downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
   downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
+
+  if [ "$DATASTORE" == "etcd" ]; then
+    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
+    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
+  else
+    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
+    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
+    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml"
+  fi
 }
 
 #
 # applyCalicoManifest()
 #
 applyCalicoManifest() {
-  echo -n "Applying \"calico.yaml\" manifest: "
+  # Apply rbac for kdd datastore
+  if [ "$DATASTORE" == "kdd" ]; then
+    run kubectl apply -f rbac-kdd.yaml
+    countDownSecs 5 "Applying \"rbac-kdd.yaml\" manifest: "
+  fi
+
+  echo -n "Applying \"calico.yaml\" ("$DATASTORE") manifest: "
   run kubectl apply -f calico.yaml
   blockUntilPodIsReady "k8s-app=kube-dns" 180 "kube-dns"  # Block until kube-dns pod is running & ready
 }
@@ -454,6 +477,37 @@ applyCalicoManifest() {
 deleteCalicoManifest() {
   runIgnoreErrors kubectl delete -f calico.yaml
   countDownSecs 5 "Deleting calico.yaml manifest"
+}
+
+#
+# validateDatastore() - warn the user if they're switching
+# between kdd/etcd datastore, but leaving the wrong manifest
+# laying around (specifically calico.yaml). Use the existence
+# of cnx-kdd.yaml|cnx-etcd.yaml as an indicator for which
+# type of install/uninstall the user tried earlier.
+#
+function validateDatastore() {
+  local operation="$1"           # install, uninstall
+  local installedManifest=""     # set to "kdd" or "etcd" if there's a problem
+
+  # Check if we're installing one datastore type but there's a manifest
+  # for the "opposite" datastore type laying around the current directory.
+
+  if [ "$DATASTORE" == "etcd" ]; then
+    if [ -f "cnx-kdd.yaml" ]; then
+      installedManifest="kdd"
+    fi
+  elif [ -f "cnx-etcd.yaml" ]; then
+      installedManifest="etcd"
+  fi
+
+  if [ "$installedManifest" ]; then
+    echo
+    echo "Warning: the current $operation specifies \"$DATASTORE\", however \"cnx-$installedManifest.yaml\" exists"
+    echo "         in the current directory. Either remove all the manifests from the"
+    echo "         currect directory or use the \"-k $installedManifest\" flag and restart the $operation."
+    promptToContinue
+  fi
 }
 
 #
@@ -468,8 +522,8 @@ removeMasterTaints() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
-  echo -n "Applying \"cnx-etcd.yaml\" manifest: "
-  run kubectl apply -f cnx-etcd.yaml
+  echo -n "Applying \"cnx-${DATASTORE}.yaml\" manifest: "
+  run kubectl apply -f cnx-"${DATASTORE}".yaml
   blockUntilPodIsReady "k8s-app=cnx-apiserver" 180 "cnx-apiserver"  # Block until cnx-apiserver pod is running & ready
   blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
   countDownSecs 10 "Waiting for cnx-apiserver to stabilize"         # Wait until cnx-apiserver completes registration w/kube-apiserver
@@ -479,8 +533,8 @@ applyCNXManifest() {
 # deleteCNXManifest()
 #
 deleteCNXManifest() {
-  runIgnoreErrors kubectl delete -f cnx-etcd.yaml
-  countDownSecs 30 "Deleting cnx-etcd.yaml manifest"
+  runIgnoreErrors kubectl delete -f cnx-"${DATASTORE}".yaml
+  countDownSecs 30 "Deleting \"cnx-${DATASTORE}.yaml\" manifest"
 }
 
 #
@@ -496,7 +550,7 @@ applyCNXPolicyManifest() {
 #
 deleteCNXPolicyManifest() {
   runIgnoreErrors kubectl delete -f cnx-policy.yaml
-  countDownSecs 20 "Deleting cnx-policy.yaml manifest"
+  countDownSecs 20 "Deleting \"cnx-policy.yaml\" manifest"
 }
 
 #
@@ -505,7 +559,7 @@ deleteCNXPolicyManifest() {
 isCRDRunning() {
   crd=$1
 
-  if (kubectl get crd | grep -v NAME | grep -q $1); then
+  if (kubectl get crd 2>/dev/null | grep -v NAME | grep -q $1); then
     return 0
   else
     return 1
@@ -552,7 +606,7 @@ applyOperatorManifest() {
 #
 deleteOperatorManifest() {
   runIgnoreErrors kubectl delete -f operator.yaml
-  countDownSecs 5 "Deleting operator.yaml manifest"
+  countDownSecs 5 "Deleting \"operator.yaml\" manifest"
 }
 
 #
@@ -569,7 +623,7 @@ applyMonitorCalicoManifest() {
 #
 deleteMonitorCalicoManifest() {
   runIgnoreErrors kubectl delete -f monitor-calico.yaml
-  countDownSecs 5 "Deleting monitor-calico.yaml manifest"
+  countDownSecs 5 "Deleting \"monitor-calico.yaml\" manifest"
 }
 
 #
@@ -593,6 +647,8 @@ deleteCNXManagerSecret() {
 #
 installCNX() {
   checkSettings install         # Verify settings are correct with user
+  validateDatastore install     # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
+
   checkRequiredFilesPresent     # Validate kubernetes files are present
   checkRequirementsInstalled    # Validate that all required programs are installed
   checkNetworkManager           # Warn user if NetworkMgr is enabled w/o "cali" interace exception
@@ -604,7 +660,7 @@ installCNX() {
   applyCalicoManifest           # Apply calico.yaml
   removeMasterTaints            # Remove master taints
   createCNXManagerSecret        # Create cnx-manager-tls to enable manager/apiserver communication
-  applyCNXManifest              # Apply cnx-etcd.yaml
+  applyCNXManifest              # Apply cnx-[etcd|kdd].yaml
 
   if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
     applyCNXPolicyManifest      # Apply cnx-policy.yaml
@@ -616,11 +672,12 @@ installCNX() {
 }
 
 #
-# cleanup() - remove CNX and related changes.
+# uninstallCNX() - remove CNX and related changes.
 # Ignore errors.
 #
-cleanup() {
+uninstallCNX() {
   checkSettings uninstall       # Verify settings are correct with user
+  validateDatastore uninstall   # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
 
   downloadManifests             # Download all manifests
 
@@ -630,7 +687,7 @@ cleanup() {
     deleteCNXPolicyManifest     # Delete cnx-policy.yaml
   fi
 
-  deleteCNXManifest             # Delete cnx-etcd.yaml
+  deleteCNXManifest             # Delete cnx-[etcd|kdd].yaml
   deleteCalicoManifest          # Delete calico.yaml
   deleteCNXManagerSecret        # Delete TLS secret
   deleteImagePullSecret         # Delete pull secret
@@ -643,7 +700,7 @@ cleanup() {
 parseOptions "$@"               # Set up variables based on args
 
 if [ "$CLEANUP" -eq 1 ]; then
-  cleanup                       # Remove CNX, cleanup related files
+  uninstallCNX                  # Remove CNX, cleanup related files
 else
   installCNX                    # Install CNX
 fi
