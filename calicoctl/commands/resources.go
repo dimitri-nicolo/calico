@@ -248,10 +248,12 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 		claims, err := licClient.Decode(*lic)
 		if err != nil {
 			// This means the license is there but is corrupted or has been messed with.
-			// do nothing.
-		} else if !claims.IsValid() {
+			return nil, fmt.Errorf("license corrupted. Please contact Tigera support")
+		}
+
+		if !claims.IsValid() {
 			// If the license has expired then return with an error.
-			return nil, fmt.Errorf("license expired or invalid. Please contact licensing@tigera.io")
+			return nil, fmt.Errorf("license expired or invalid. Please contact Tigera support")
 		}
 	}
 
