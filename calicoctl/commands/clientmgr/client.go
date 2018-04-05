@@ -15,7 +15,6 @@
 package clientmgr
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -38,12 +37,6 @@ func NewClient(cf string) (client.Interface, error) {
 	log.Infof("Loaded client config: %#v", cfg.Spec)
 
 	c, err := client.New(*cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	// EnsureInitialized creates the default tier.
-	err = c.EnsureInitialized(context.Background(), "", "","")
 	if err != nil {
 		return nil, err
 	}

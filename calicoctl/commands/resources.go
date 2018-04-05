@@ -182,6 +182,12 @@ func executeConfigCommand(args map[string]interface{}, action action) commandRes
 		results.singleKind = kind
 	}
 
+	// For commands that modify config, first attempt to initialize the datastore.
+	switch action {
+	case actionApply, actionCreate, actionUpdate:
+		tryEnsureInitialized(context.Background(), client)
+	}
+
 	// Now execute the command on each resource in order, exiting as soon as we hit an
 	// error.
 	export := argutils.ArgBoolOrFalse(args, "--export")
@@ -240,7 +246,6 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 		resOut, err = rm.Delete(ctx, client, resource)
 	case actionGetOrList:
 		resOut, err = rm.GetOrList(ctx, client, resource)
-
 	}
 
 	// Skip over some errors depending on command line options.
@@ -259,6 +264,16 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 	}
 
 	return []runtime.Object{resOut}, err
+}
+
+// tryEnsureInitialized is called from any write action (apply, create, update). This
+// attempts to initialize the datastore. We do not fail the user action if this fails
+// since the users access permissions may be restricted to only allow modification
+// of certain resource types.
+func tryEnsureInitialized(ctx context.Context, client client.Interface) {
+	if err := client.EnsureInitialized(ctx, "", "", ""); err != nil {
+		log.WithError(err).Info("Unable to initialize datastore")
+	}
 }
 
 // handleNamespace fills in the namespace information in the resource (if required),
