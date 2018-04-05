@@ -46,7 +46,7 @@ var (
 	muNoConn1Rule1AllowUpdate = &MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
-		ruleIDs:      &ingressRule1Allow,
+		ruleIDs:      ingressRule1Allow,
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 1,
@@ -58,7 +58,7 @@ var (
 	muConn1Rule1AllowUpdate = &MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
-		ruleIDs:      &ingressRule1Allow,
+		ruleIDs:      ingressRule1Allow,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 2,
@@ -72,7 +72,7 @@ var (
 	muConn1Rule1AllowExpire = &MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
-		ruleIDs:      &ingressRule1Allow,
+		ruleIDs:      ingressRule1Allow,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 4,
@@ -86,7 +86,7 @@ var (
 	muConn2Rule1AllowUpdate = &MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
-		ruleIDs:      &ingressRule1Allow,
+		ruleIDs:      ingressRule1Allow,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 7,
@@ -96,7 +96,7 @@ var (
 	muConn2Rule1AllowExpire = &MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple2,
-		ruleIDs:      &ingressRule1Allow,
+		ruleIDs:      ingressRule1Allow,
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 8,
