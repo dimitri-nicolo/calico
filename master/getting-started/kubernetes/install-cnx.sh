@@ -191,16 +191,16 @@ runAsRootGetOutput() {
 blockUntilSuccess() {
   cmd="$1"
   secs="$2"
-  echo -n "Waiting for $secs seconds until \"$1\" completes: "
+  echo -n "Waiting up to $secs seconds for \"$cmd\" to complete: "
   until $cmd 2>/dev/null 1>/dev/null; do
     : $((secs--))
     echo -n .
     sleep 1
     if [ "$secs" -eq 0 ]; then
-      fatalError Restarting kubelet failed.
+      fatalError "\"$cmd\" failed."
     fi
   done
-  echo "$1 succeeded."
+  echo " \"$cmd\" succeeded."
 }
 
 #
@@ -242,8 +242,8 @@ checkNetworkManager() {
 
   echo -n "Checking status of Network Manager: "
 
-  $(programIsInstalled "nmcli") && $(nmcli dev status 2>&1 1>/dev/null)
-  if [ "$?" -eq 0 ]; then
+  $(nmcli dev status 2>/dev/null 1>/dev/null)
+  if [ $? -eq 0 ]; then
     echo "running."
 
     # Raise a warning if NM is running and the "cali" interfaces are
@@ -268,6 +268,43 @@ checkRequiredFilesPresent() {
   echo -n Verifying that we\'re on the Kubernetes master node ...' '
   runAsRoot ls -l /etc/kubernetes/manifests/kube-apiserver.yaml
   echo verified.
+}
+
+#
+# podStatus() - takes a selector as argument, e.g. "k8s-app=kube-dns"
+# and returns the pod "ready" status as a bool string ("true"). Note that if
+# the pod is in the "pending" state, there is no containerStatus yet, so
+# podStatus() returns an empty string. Success means seeing the "true"
+# substring, but failure can be "false" or an empty string.
+#
+function podStatus() {
+  label="$1"
+  status=$(kubectl get pods --selector="${label}" -o json --all-namespaces | jq -r '.items[] | .status.containerStatuses[]? | [.name, .image, .ready|tostring] |join(":")')
+  echo "${status}"
+}
+
+#
+# blockUntilPodIsReady() - takes a pod selector, a timeout in seconds
+# and a "friendly" pod name as arguements. If the pod never stabilizes,
+# bail. Otherwise return as soon as the pod is "ready."
+#
+function blockUntilPodIsReady() {
+  label="$1"
+  secs="$2"
+  friendlyPodName="$3"
+
+  echo -n "Waiting up to ${secs} seconds for \"${friendlyPodName}\" to be ready: "
+  until [[ $(podStatus "${label}") =~ "true" ]]; do
+    if [ "$secs" -eq 0 ]; then
+      fatalError "\"${friendlyPodName}\" never stabilized."
+    fi
+
+    : $((secs--))
+    echo -n .
+    sleep 1
+  done
+
+  echo " \"${friendlyPodName}\" is ready."
 }
 
 #
@@ -406,8 +443,9 @@ downloadManifests() {
 # applyCalicoManifest()
 #
 applyCalicoManifest() {
+  echo -n "Applying \"calico.yaml\" manifest: "
   run kubectl apply -f calico.yaml
-  countDownSecs 30 "Applying calico.yaml manifest"
+  blockUntilPodIsReady "k8s-app=kube-dns" 180 "kube-dns"  # Block until kube-dns pod is running & ready
 }
 
 #
@@ -430,8 +468,11 @@ removeMasterTaints() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
+  echo -n "Applying \"cnx-etcd.yaml\" manifest: "
   run kubectl apply -f cnx-etcd.yaml
-  countDownSecs 30 "Applying cnx-etcd.yaml manifest"
+  blockUntilPodIsReady "k8s-app=cnx-apiserver" 180 "cnx-apiserver"  # Block until cnx-apiserver pod is running & ready
+  blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
+  countDownSecs 10 "Waiting for cnx-apiserver to stabilize"         # Wait until cnx-apiserver completes registration w/kube-apiserver
 }
 
 #
@@ -447,7 +488,7 @@ deleteCNXManifest() {
 #
 applyCNXPolicyManifest() {
   run kubectl apply -f cnx-policy.yaml
-  countDownSecs 10 "Applying cnx-policy.yaml manifest"
+  countDownSecs 10 "Applying \"cnx-policy.yaml\" manifest"
 }
 
 #
@@ -480,12 +521,12 @@ checkCRDs() {
   promCRD="prometheuses.monitoring.coreos.com"
   svcCRD="servicemonitors.monitoring.coreos.com"
 
-  echo -n "Waiting for Custom Resource Defintions to be created: "
+  echo -n "waiting for Custom Resource Defintions to be created: "
 
   count=30
   while [[ $count -ne 0 ]]; do
     if (isCRDRunning $alertCRD) && (isCRDRunning $promCRD) && (isCRDRunning $svcCRD); then
-        echo " all CRDs running!"
+        echo "all CRDs running!"
         return
     fi
 
@@ -501,6 +542,7 @@ checkCRDs() {
 # applyOperatorManifest()
 #
 applyOperatorManifest() {
+  echo -n "Applying \"operator.yaml\" manifest: "
   run kubectl apply -f operator.yaml
   checkCRDs
 }
@@ -517,8 +559,9 @@ deleteOperatorManifest() {
 # applyMonitorCalicoManifest()
 #
 applyMonitorCalicoManifest() {
+  echo -n "Applying \"monitor-calico.yaml\" manifest: "
   run kubectl apply -f monitor-calico.yaml
-  countDownSecs 10 "Applying monitor-calico.yaml manifest"
+  blockUntilPodIsReady "app=prometheus" 180 "prometheus-calico-node"      # Block until prometheus-calico-nod pod is running & ready
 }
 
 #
@@ -534,7 +577,7 @@ deleteMonitorCalicoManifest() {
 #
 createCNXManagerSecret() {
   runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
-  countDownSecs 1 "Creating cnx-manager-tls secret"
+  countDownSecs 5 "Creating cnx-manager-tls secret"
 }
 
 #
@@ -542,7 +585,7 @@ createCNXManagerSecret() {
 #
 deleteCNXManagerSecret() {
   runAsRootIgnoreErrors kubectl delete secret cnx-manager-tls -n kube-system
-  countDownSecs 1 "Deleting cnx-manager-tls secret"
+  echo "Deleting cnx-manager-tls secret"
 }
 
 #
