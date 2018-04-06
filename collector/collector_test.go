@@ -224,75 +224,63 @@ var _ = Describe("NFLOG Datasource", func() {
 
 // Entry remoteIp1:srcPort -> localIp1:dstPort
 var inCtEntry = nfnetlink.CtEntry{
-	OriginalTuples: []nfnetlink.CtTuple{
-		{
-			Src:        remoteIp1,
-			Dst:        localIp1,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
-		},
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        remoteIp1,
+		Dst:        localIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
 	},
-	ReplyTuples: []nfnetlink.CtTuple{
-		{
-			Src:        localIp1,
-			Dst:        remoteIp1,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
-		},
+	ReplyTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        remoteIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 	},
 	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
 	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
 }
 
 var outCtEntry = nfnetlink.CtEntry{
-	OriginalTuples: []nfnetlink.CtTuple{
-		{
-			Src:        localIp1,
-			Dst:        remoteIp1,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
-		},
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        remoteIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
 	},
-	ReplyTuples: []nfnetlink.CtTuple{
-		{
-			Src:        remoteIp1,
-			Dst:        localIp1,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
-		},
+	ReplyTuple: nfnetlink.CtTuple{
+		Src:        remoteIp1,
+		Dst:        localIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 	},
 	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
 	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
 }
 
 var localCtEntry = nfnetlink.CtEntry{
-	OriginalTuples: []nfnetlink.CtTuple{
-		{
-			Src:        localIp1,
-			Dst:        localIp2,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
-		},
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        localIp2,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPort},
 	},
-	ReplyTuples: []nfnetlink.CtTuple{
-		{
-			Src:        localIp2,
-			Dst:        localIp1,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
-		},
+	ReplyTuple: nfnetlink.CtTuple{
+		Src:        localIp2,
+		Dst:        localIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 	},
 	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
 	ReplyCounters:    nfnetlink.CtCounters{Packets: 2, Bytes: 250},
@@ -301,25 +289,21 @@ var localCtEntry = nfnetlink.CtEntry{
 // DNAT Conntrack Entries
 // DNAT from localIp1DNAT:dstPortDNAT --> localIp1:dstPort
 var inCtEntryWithDNAT = nfnetlink.CtEntry{
-	OriginalTuples: []nfnetlink.CtTuple{
-		{
-			Src:        remoteIp1,
-			Dst:        localIp1DNAT,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
-		},
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        remoteIp1,
+		Dst:        localIp1DNAT,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
 	},
-	ReplyTuples: []nfnetlink.CtTuple{
-		{
-			Src:        localIp1,
-			Dst:        remoteIp1,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
-		},
+	ReplyTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        remoteIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 	},
 	Status:           nfnl.IPS_DST_NAT,
 	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},
@@ -328,25 +312,21 @@ var inCtEntryWithDNAT = nfnetlink.CtEntry{
 
 // DNAT from localIp2DNAT:dstPortDNAT --> localIp2:dstPort
 var localCtEntryWithDNAT = nfnetlink.CtEntry{
-	OriginalTuples: []nfnetlink.CtTuple{
-		{
-			Src:        localIp1,
-			Dst:        localIp2DNAT,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: srcPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
-		},
+	OriginalTuple: nfnetlink.CtTuple{
+		Src:        localIp1,
+		Dst:        localIp2DNAT,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: srcPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: dstPortDNAT},
 	},
-	ReplyTuples: []nfnetlink.CtTuple{
-		{
-			Src:        localIp2,
-			Dst:        localIp1,
-			L3ProtoNum: ipv4,
-			ProtoNum:   proto_tcp,
-			L4Src:      nfnetlink.CtL4Src{Port: dstPort},
-			L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
-		},
+	ReplyTuple: nfnetlink.CtTuple{
+		Src:        localIp2,
+		Dst:        localIp1,
+		L3ProtoNum: ipv4,
+		ProtoNum:   proto_tcp,
+		L4Src:      nfnetlink.CtL4Src{Port: dstPort},
+		L4Dst:      nfnetlink.CtL4Dst{Port: srcPort},
 	},
 	Status:           nfnl.IPS_DST_NAT,
 	OriginalCounters: nfnetlink.CtCounters{Packets: 1, Bytes: 100},

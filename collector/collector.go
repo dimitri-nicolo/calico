@@ -231,11 +231,7 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 	// destination IP address before DNAT modified the connections' destination
 	// IP/port.
 	for _, ctEntry := range ctEntries {
-		ctTuple, err = ctEntry.OriginalTuple()
-		if err != nil {
-			log.Error("Error when getting original tuple:", err)
-			continue
-		}
+		ctTuple = ctEntry.OriginalTuple
 
 		// A conntrack entry that has the destination NAT (DNAT) flag set
 		// will have its destination ip-address set to the NAT-ed IP rather
