@@ -4,12 +4,14 @@ canonical_url: 'https://docs.projectcalico.org/v3.0/getting-started/kubernetes/i
 ---
 
 
-This document explains the components necessary to install {{site.prodname}} on Kubernetes for integrating
-with custom configuration management.
+This document explains the components necessary to install {{site.prodname}} on 
+Kubernetes for integrating with custom configuration management.
 
-The [self-hosted installation method](hosted/) will perform these steps automatically for you and is *strongly* recommended
-for most users.  These instructions should only be followed by users who have a specific need that cannot be met by the self-hosted
-installation method.
+The manifests we provide in [Installing {{site.prodname}} for policy and networking](calico),
+[Installing {{site.prodname}} for policy and flannel for networking](flannel), and 
+[Installing {{site.prodname}} for policy](other) will perform these steps automatically 
+for you and are *strongly* recommended for most users. These instructions should only 
+be followed by users who have a specific need that cannot be met by using manifests.
 
 * TOC
 {:toc}
@@ -132,7 +134,7 @@ mkdir -p /etc/cni/net.d
 cat >/etc/cni/net.d/10-calico.conf <<EOF
 {
     "name": "calico-k8s-network",
-    "cniVersion": "0.1.0",
+    "cniVersion": "0.6.0",
     "type": "calico",
     "etcd_endpoints": "http://<ETCD_IP>:<ETCD_PORT>",
     "log_level": "info",

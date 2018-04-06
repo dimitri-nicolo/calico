@@ -3,6 +3,8 @@ abstract: "Background information on Calico"
 path: /introduction
 order: 0
 toc:
-- title: About CNX
+- title: About Calico
   path: /introduction/
+- title: Sample deployments
+  path: /introduction/deployments
 

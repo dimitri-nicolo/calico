@@ -16,19 +16,15 @@ toc:
     section:
     - title: Introduction
       path: /getting-started/kubernetes/installation/
-    - title: Hosted (via kubectl)
-      section:
-      - title: Introduction
-        path: /getting-started/kubernetes/installation/hosted/
-      - title: Standard Hosted Install
-        path: /getting-started/kubernetes/installation/hosted/hosted
-      - title: kubeadm Hosted Install
-        path: /getting-started/kubernetes/installation/hosted/kubeadm/
-      - title: Kubernetes Datastore Hosted Install
-        path: /getting-started/kubernetes/installation/hosted/kubernetes-datastore/
-      - title: Customizing the CNX manifests (advanced)
-        path: /getting-started/kubernetes/installation/hosted/cnx/cnx
-    - title: Integration Guide
+    - title: Installing CNX for policy and networking (recommended)
+      path: /getting-started/kubernetes/installation/calico
+    - title: Installing CNX for policy (advanced)
+      path: /getting-started/kubernetes/installation/other
+    - title: Customizing the manifests (advanced)
+      path: /getting-started/kubernetes/installation/config-options
+    - title: Customizing the CNX manifests (advanced)
+      path: /getting-started/kubernetes/installation/hosted/cnx/cnx
+    - title: Integration guide (advanced) 
       path: /getting-started/kubernetes/installation/integration
   - title: Tutorials
     section:
