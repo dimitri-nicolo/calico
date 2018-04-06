@@ -723,10 +723,16 @@ func loadConfigFromDatastore(
 	if errLic != nil {
 		switch errLic.(type) {
 		case cerrors.ErrorResourceDoesNotExist:
-			log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).Debug("No config of this type")
+			log.WithFields(log.Fields{
+				"kind": apiv3.KindLicenseKey,
+				"name": "default",
+			}).Debug("No config of this type")
 			return
 		default:
-			log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(errLic).Info("Failed to load LicenseKey from datastore")
+			log.WithFields(log.Fields{
+				"kind": apiv3.KindLicenseKey,
+				"name": "default",
+			}).WithError(errLic).Info("Failed to load LicenseKey from datastore")
 			return
 		}
 	}
@@ -734,17 +740,26 @@ func loadConfigFromDatastore(
 	lk, ok := lic.Value.(*apiv3.LicenseKey)
 	if !ok {
 		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "KVPair": lic}).Error("Error asserting LicenseKey")
+		return
 	}
 
 	// Decode the LicenseKey.
 	claims, errLic := licClient.Decode(*lk)
 	if errLic != nil {
+		// We return at a corrupted LicenseKey because calicoctl validates the license key before letting a customer apply it
+		// so if a LicenseKey is corrupted then someone is trying to defraud us or etcd itself is corrupted,
+		// in that case license is the least of their concern.
 		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(errLic).Error("Corrupted LicenseKey")
 		return
 	}
 
-	// Check if the license is valid.
-	licenseValid = claims.IsValid()
+	// Check if the license is valid. In CNX v2.1, we continue to work even after the license expires and
+	// even after the end of the grace period, but we show this warning message and continue to work as licensed cluster.
+	if err = claims.Validate(); err != nil {
+		log.Errorf("LicenseKey expired or invalid. Please contact Tigera support to avoid traffic disruptions.")
+	}
+
+	licenseValid = true
 
 	return
 }
