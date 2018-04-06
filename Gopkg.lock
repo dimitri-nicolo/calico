@@ -186,6 +186,16 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/tigera/licensing"
+  packages = [
+    "carrotctl/cmd",
+    "client",
+    "crypto"
+  ]
+  revision = "55a808c36b11f26f665027eed5bc7c03d67dd1ae"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "ed25519",
@@ -299,6 +309,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0a20fde30b9b3332b5ce4a8785346738f2dd057e8cc3e7a3124c689a2fb6edba"
+  inputs-digest = "e145486446d2037da146907ef3a260f958748b3baa86f58f1a649f6adaca71bf"
   solver-name = "gps-cdcl"
   solver-version = 1

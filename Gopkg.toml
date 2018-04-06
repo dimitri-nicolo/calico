@@ -51,10 +51,6 @@
   revision = "4c012f6dcd9546820e378d0bdda4d8fc772cdfea"
 
 [[constraint]]
-  name = "github.com/sirupsen/logrus"
-  version = "1.0.4"
-
-[[constraint]]
   name = "github.com/go-sql-driver/mysql"
   version = "1.3.0"
 
