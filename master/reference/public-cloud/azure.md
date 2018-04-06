@@ -13,9 +13,6 @@ While Azure does not support {{site.prodname}} networking, you can use
   [Configuring {{site.nodecontainer}}](../node/configuration) and [Azure user-defined routes](#azure-user-defined-routes) for more information. If you're on Kubernetes, refer to [Installing {{site.prodname}} for policy (advanced)](../../getting-started/kubernetes/installation/other) for 
   a sample manifest.
 
-- **flannel** (Kubernetes only): Refer to [Installing {{site.prodname}} for policy and flannel for networking](../../getting-started/kubernetes/installation/flannel) 
-  for specific instructions and a manifest. This option does use overlays.
-
 - **Azure CNI IPAM plug-in**: Configure {{site.prodname}} to use the 
   [Azure CNI plug-in](https://github.com/Azure/azure-container-networking/blob/master/docs/cni.md)
   instead of the {{site.prodname}} CNI plug-in.
