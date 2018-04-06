@@ -733,6 +733,10 @@ func loadConfigFromDatastore(
 				"kind": apiv3.KindLicenseKey,
 				"name": "default",
 			}).WithError(errLic).Info("Failed to load LicenseKey from datastore")
+			// For any other errors, we return the error, so the main retry loop can retry.
+			// We only hit this case when there is some datastore connection issue like etcd down or unreachable,
+			// so we want to retry.
+			err = errLic
 			return
 		}
 	}
@@ -749,7 +753,7 @@ func loadConfigFromDatastore(
 		// We return at a corrupted LicenseKey because calicoctl validates the license key before letting a customer apply it
 		// so if a LicenseKey is corrupted then someone is trying to defraud us or etcd itself is corrupted,
 		// in that case license is the least of their concern.
-		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(errLic).Error("Corrupted LicenseKey")
+		log.WithError(errLic).Error("License corrupted. Please contact Tigera support")
 		return
 	}
 
