@@ -9,6 +9,11 @@ import:
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
   version: 3a570da01b58c51f8a79293f874394156bedf862
+- package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  subpackages:
+  - client
 - package: github.com/projectcalico/go-yaml-wrapper
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega

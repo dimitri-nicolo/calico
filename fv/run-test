@@ -9,6 +9,11 @@ EOF
 passed=0
 failed=0
 
+CALICOCTL=`pwd`/fv/calicoctl
+
+export ETCD_ENDPOINTS=http://127.0.0.1:2379
+export DATASTORE_TYPE=etcdv3
+
 function run_test {
     expected_result=$1
     shift
@@ -36,12 +41,22 @@ function summarise_test {
     echo
 }
 
+function apply_license {
+    # Apply a license key for the test case.
+    ${CALICOCTL} apply -f `pwd`/fv/good-license.yaml
+}
+
 run_test 0 ${CALICOQ} -h
 
 run_test 0 ${CALICOQ} --help
 
-run_test 0 ${CALICOQ} --version
+# Try to use calicoq without applying a license.
+# This should fail.
+run_test 1 ${CALICOQ} version
 
+apply_license
+
+# calicoq actions should pass after applying a license.
 run_test 0 ${CALICOQ} version
 
 run_test 0 ${CALICOQ} endpoint -h

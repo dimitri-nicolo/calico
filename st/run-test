@@ -16,13 +16,10 @@ function summarise_test {
     echo
 }
 
-# Get a calicoctl.
-cd st
-if ! test -x calicoctl; then
-    wget https://github.com/projectcalico/calicoctl/releases/download/v2.0.0/calicoctl
-    chmod a+x calicoctl
-fi
-CALICOCTL=`pwd`/calicoctl
+CALICOCTL=`pwd`/fv/calicoctl
+
+export ETCD_ENDPOINTS=http://127.0.0.1:2379
+export DATASTORE_TYPE=etcdv3
 
 # Check there isn't already a calicoq-etcd container.
 docker rm -f calicoq-etcd 2>/dev/null
@@ -56,6 +53,9 @@ for c in `ls`; do
     etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
     export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
     export DATASTORE_TYPE=etcdv3
+
+    # Apply a working CNX license.
+     ${CALICOCTL} apply -f `pwd`/fv/good-license.yaml
 
     # Apply the resources for the test case.
     ${CALICOCTL} apply -f apply.yaml
