@@ -65,7 +65,7 @@ fv: bin/calicoq
 	CALICOQ=`pwd`/$^ fv/run-test
 
 .PHONY: fv-containerized
-fv-containerized: bin/calicoq build-image
+fv-containerized: bin/calicoq build-image run-etcd
 	docker run --net=host --privileged \
 		--rm -t \
 		--entrypoint '/bin/sh' \
@@ -220,6 +220,19 @@ vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go: vendor/github.co
 	              calico/protoc \
 	              --gogofaster_out=. \
 	              felixbackend.proto
+
+## Run etcd as a container (calico-etcd)
+run-etcd: stop-etcd
+	docker run --detach \
+	--net=host \
+	--entrypoint=/usr/local/bin/etcd \
+	--name calico-etcd quay.io/coreos/etcd:v3.1.7 \
+	--advertise-client-urls "http://$(LOCAL_IP_ENV):2379,http://127.0.0.1:2379,http://$(LOCAL_IP_ENV):4001,http://127.0.0.1:4001" \
+	--listen-client-urls "http://0.0.0.0:2379,http://0.0.0.0:4001"
+
+## Stop the etcd container (calico-etcd)
+stop-etcd:
+	-docker rm -f calico-etcd
 
 .PHONY: clean-release
 clean-release:
