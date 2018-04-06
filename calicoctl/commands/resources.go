@@ -234,14 +234,11 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 		if err != nil {
 			// License not found (not applied) or datastore down.
 			switch err.(type) {
-			case calicoErrors.ErrorConnectionUnauthorized:
-				return nil, fmt.Errorf("connection to datastore is unauthorized: %s", err)
-			case calicoErrors.ErrorDatastoreError:
-				return nil, fmt.Errorf("cannot connect to the datastore: %s", err)
 			case calicoErrors.ErrorResourceDoesNotExist:
 				return nil, fmt.Errorf("not licensed for this feature. LicenseKey does not exist")
 			default:
-				return nil, fmt.Errorf("unable to get the resource from the datastore")
+				// For any other error - datastore error, unauthorized, etc., we just return the error as-is.
+				return nil, err
 			}
 		}
 
