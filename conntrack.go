@@ -97,18 +97,32 @@ func (cte *CtEntry) OriginalTupleWithoutDNAT() (CtTuple, error) {
 		return EmptyCtTuple, errors.New("Entry is not DNAT-ed")
 	}
 
-	var src CtL4Src
-	var dst CtL4Dst
 	if cte.OriginalTuple.ProtoNum == nfnl.ICMP_PROTO {
-		src = CtL4Src{Id: cte.ReplyTuple.L4Src.Id}
-		dst = CtL4Dst{Type: cte.ReplyTuple.L4Dst.Type, Code: cte.ReplyTuple.L4Dst.Code}
+		return CtTuple{
+			cte.OriginalTuple.Src,
+			cte.ReplyTuple.Src,
+			cte.OriginalTuple.L3ProtoNum,
+			cte.OriginalTuple.ProtoNum,
+			cte.OriginalTuple.Zone,
+			CtL4Src{Id: cte.ReplyTuple.L4Src.Id},
+			CtL4Dst{Type: cte.ReplyTuple.L4Dst.Type, Code: cte.ReplyTuple.L4Dst.Code}}, nil
 	} else if cte.OriginalTuple.ProtoNum == nfnl.TCP_PROTO || cte.OriginalTuple.ProtoNum == nfnl.UDP_PROTO {
-		src = CtL4Src{Port: cte.ReplyTuple.L4Dst.Port}
-		dst = CtL4Dst{Port: cte.ReplyTuple.L4Src.Port}
+		return CtTuple{
+			cte.OriginalTuple.Src,
+			cte.ReplyTuple.Src,
+			cte.OriginalTuple.L3ProtoNum,
+			cte.OriginalTuple.ProtoNum,
+			cte.OriginalTuple.Zone,
+			CtL4Src{Port: cte.ReplyTuple.L4Dst.Port},
+			CtL4Dst{Port: cte.ReplyTuple.L4Src.Port}}, nil
 	} else {
-		src = CtL4Src{All: cte.ReplyTuple.L4Dst.All}
-		dst = CtL4Dst{All: cte.ReplyTuple.L4Src.All}
+		return CtTuple{
+			cte.OriginalTuple.Src,
+			cte.ReplyTuple.Src,
+			cte.OriginalTuple.L3ProtoNum,
+			cte.OriginalTuple.ProtoNum,
+			cte.OriginalTuple.Zone,
+			CtL4Src{All: cte.ReplyTuple.L4Dst.All},
+			CtL4Dst{All: cte.ReplyTuple.L4Src.All}}, nil
 	}
-
-	return CtTuple{cte.OriginalTuple.Src, cte.ReplyTuple.Src, cte.OriginalTuple.L3ProtoNum, cte.OriginalTuple.ProtoNum, cte.OriginalTuple.Zone, src, dst}, nil
 }
