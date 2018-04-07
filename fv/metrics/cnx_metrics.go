@@ -10,6 +10,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"fmt"
 )
 
 func init() {
@@ -59,14 +60,24 @@ func GetCNXMetrics(felixIP, name string) (metricLines []string, err error) {
 	return
 }
 
-func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficDirection string) (sum int, err error) {
+// GetCNXConnectionMetricsIntForPolicy returns the total number of connections associated with a
+// policy for a specific traffic direction. You may optionally specify a rule index.
+func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficDirection string, ruleIdx... int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_connections")
 	if err != nil {
 		return
 	}
+	tierName = "tier=\"" + tierName + "\""
+	policyName = "policy=\"" + policyName + "\""
+	trafficDirection = "traffic_direction=\"" + trafficDirection + "\""
+	ruleIdxStr := ""
+	if len(ruleIdx) > 0 {
+		ruleIdxStr = fmt.Sprintf("rule_index=\"%d\"", ruleIdx[0])
+	}
 	s := 0
 	for _, line := range lines {
-		if strings.Contains(line, tierName) && strings.Contains(line, policyName) && strings.Contains(line, trafficDirection) {
+		if strings.Contains(line, tierName) && strings.Contains(line, policyName) &&
+			strings.Contains(line, trafficDirection) && strings.Contains(line, ruleIdxStr) {
 			words := strings.Split(line, " ")
 			s, err = strconv.Atoi(strings.TrimSpace(words[1]))
 			if err != nil {
@@ -89,14 +100,26 @@ func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficD
 	return
 }
 
-func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string) (sum int, err error) {
+// GetCNXPacketMetricsIntForPolicy returns the total number of packets associated with a
+// policy for a specific traffic and rule direction. You may optionally specify a rule index.
+func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx... int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_packets")
 	if err != nil {
 		return
 	}
+	action = "action=\"" + action + "\""
+	tierName = "tier=\"" + tierName + "\""
+	policyName = "policy=\"" + policyName + "\""
+	trafficDirection = "traffic_direction=\"" + trafficDirection + "\""
+	ruleDirection = "rule_direction=\"" + ruleDirection + "\""
+	ruleIdxStr := ""
+	if len(ruleIdx) > 0 {
+		ruleIdxStr = fmt.Sprintf("rule_index=\"%d\"", ruleIdx[0])
+	}
 	s := 0
 	for _, line := range lines {
-		if strings.Contains(line, action) && strings.Contains(line, tierName) && strings.Contains(line, policyName) && strings.Contains(line, trafficDirection) && strings.Contains(line, ruleDirection) {
+		if strings.Contains(line, action) && strings.Contains(line, tierName) && strings.Contains(line, policyName) &&
+			strings.Contains(line, trafficDirection) && strings.Contains(line, ruleDirection) && strings.Contains(line, ruleIdxStr) {
 			words := strings.Split(line, " ")
 			s, err = strconv.Atoi(strings.TrimSpace(words[1]))
 			if err != nil {
@@ -105,7 +128,7 @@ func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, traf
 			}
 			sum += s
 		}
-		
+
 	}
 	log.WithFields(log.Fields{
 		"action":           action,
@@ -118,14 +141,26 @@ func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, traf
 	return
 }
 
-func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string) (sum int, err error) {
+// GetCNXByteMetricsIntForPolicy returns the total number of bytes associated with a
+// policy for a specific traffic and rule direction. You may optionally specify a rule index.
+func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx... int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_bytes")
 	if err != nil {
 		return
 	}
+	action = "action=\"" + action + "\""
+	tierName = "tier=\"" + tierName + "\""
+	policyName = "policy=\"" + policyName + "\""
+	trafficDirection = "traffic_direction=\"" + trafficDirection + "\""
+	ruleDirection = "rule_direction=\"" + ruleDirection + "\""
+	ruleIdxStr := ""
+	if len(ruleIdx) > 0 {
+		ruleIdxStr = fmt.Sprintf("rule_index=\"%d\"", ruleIdx[0])
+	}
 	s := 0
 	for _, line := range lines {
-		if strings.Contains(line, action) && strings.Contains(line, tierName) && strings.Contains(line, policyName) && strings.Contains(line, trafficDirection) && strings.Contains(line, ruleDirection) {
+		if strings.Contains(line, action) && strings.Contains(line, tierName) && strings.Contains(line, policyName) &&
+			strings.Contains(line, trafficDirection) && strings.Contains(line, ruleDirection) && strings.Contains(line, ruleIdxStr) {
 			words := strings.Split(line, " ")
 			s, err = strconv.Atoi(strings.TrimSpace(words[1]))
 			if err != nil {
@@ -134,7 +169,7 @@ func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, traffi
 			}
 			sum += s
 		}
-		
+
 	}
 	log.WithFields(log.Fields{
 		"action":           action,
@@ -165,9 +200,9 @@ func GetCalicoDeniedPacketMetrics(felixIP, tierName, policyName string) (sum int
 		}
 	}
 	log.WithFields(log.Fields{
-		"tier":             tierName,
-		"policy":           policyName,
-		"sum":              sum,
+		"tier":   tierName,
+		"policy": policyName,
+		"sum":    sum,
 	}).Debug("calico_denied_packets")
 	return
 }
