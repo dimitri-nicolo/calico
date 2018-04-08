@@ -150,7 +150,7 @@ type RuleIDs struct {
 	Index     string
 }
 
-func (r *RuleIDs) Equals(cmpR *RuleIDs) bool {
+func (r *RuleIDs) Equals(cmpR RuleIDs) bool {
 	return r.Action == cmpR.Action &&
 		r.Tier == cmpR.Tier &&
 		r.Policy == cmpR.Policy &&

@@ -283,10 +283,8 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDirection, nPktA
 	// Determine the endpoint that this packet hit a rule for. This depends on the Direction
 	// because local -> local packets will be NFLOGed twice.
 	if dir == rules.RuleDirIngress {
-		log.WithField("Dst", nflogTuple.Dst).Debug("Searching for endpoint")
 		epKey, err = c.lum.GetEndpointKey(nflogTuple.Dst)
 	} else {
-		log.WithField("Src", nflogTuple.Src).Debug("Searching for endpoint")
 		epKey, err = c.lum.GetEndpointKey(nflogTuple.Src)
 	}
 
@@ -330,7 +328,7 @@ func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacke
 }
 
 // lookupRuleIDsFromPrefix determines the RuleIDs from a given rule direction and NFLOG prefix.
-func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]byte, prefixLen int) (*rules.RuleIDs, error) {
+func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]byte, prefixLen int) (rules.RuleIDs, error) {
 	// Extract the RuleIDs from the prefix.
 	//TODO: RLB: We should keep a map[[64]byte]*RuleIDs to perform a fast lookup of the prefix
 	// to the rules IDs (using pointers to avoid additional allocation).  It is a little naughty
@@ -339,17 +337,17 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 	// methods to access the private member data.
 	//TODO: RLB: I think the prefix should be able to give us the rule direction too.
 
+	// Initialise the RuleIDs struct.
+	ruleIDs := rules.RuleIDs{}
+
 	// Should have at least 2 separators, a action character and a rule (assuming
 	// we allow empty Policy names).
 	if prefixLen < 4 {
 		log.Errorf("Prefix is too short: %s (%d chars)", string(prefix[:prefixLen]), prefixLen)
-		return nil, RuleTracePointParseError
+		return ruleIDs, RuleTracePointParseError
 	}
 
-	// Initialise the RuleIDs struct.
-	ruleIDs := &rules.RuleIDs{
-		Direction: dir,
-	}
+	ruleIDs.Direction = dir
 
 	// Extract and convert the action.
 	switch prefix[0] {
@@ -361,7 +359,7 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 		ruleIDs.Action = rules.ActionNextTier
 	default:
 		log.Errorf("Unknown action %v: %v", prefix[0], string(prefix[:prefixLen]))
-		return nil, RuleTracePointParseError
+		return ruleIDs, RuleTracePointParseError
 	}
 
 	// Determine the indices of the rule/policy/tier separators.
@@ -369,7 +367,7 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 	policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
 	if policySep == -1 {
 		log.Errorf("No separator char: %v", string(prefix[:prefixLen]))
-		return nil, RuleTracePointParseError
+		return ruleIDs, RuleTracePointParseError
 	}
 	policyIdx := ruleIdx + policySep + 1
 
@@ -379,47 +377,13 @@ func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]
 	var policyIDByte [64]byte
 	copy(policyIDByte[:], prefix[policyIdx:prefixLen])
 
-	policyIDUnhashed, err := c.lum.GetNFLOGHashToPolicyID(policyIDByte)
+	ruleIDParts, err := c.lum.GetNFLOGHashToPolicyID(policyIDByte)
 	if err != nil {
-		return nil, fmt.Errorf("error getting NFLOG policy/profile name identifier from the hash: %s", err)
+		return ruleIDs, fmt.Errorf("error getting NFLOG policy/profile name identifier from the hash: %s", err)
 	}
-
-	if string(policyIDUnhashed[len(policyIDUnhashed)-3:]) == "|pr" {
-		// TODO(doublek): Maybe we should be smart about adding a namespace for "kns." profiles?
-		ruleIDs.Tier = "profile"
-		ruleIDs.Policy = string(policyIDUnhashed[:len(policyIDUnhashed)-3])
-	} else {
-		nsIdx := bytes.IndexByte(policyIDUnhashed[:], namespaceSep)
-		tierIdx := bytes.IndexByte(policyIDUnhashed[:], tierSep)
-		if nsIdx == -1 {
-			// No namespace in the policy ID.
-			if tierIdx == -1 {
-				// It's a profile. Should already be handled.
-			} else {
-				// Policy without a namespace (global namespace)
-				// It's a non-k8s policy.
-				ruleIDs.Tier = string(policyIDUnhashed[:tierIdx])
-				ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])
-				ruleIDs.Namespace = rules.NamespaceGlobal
-
-			}
-		} else {
-			if tierIdx == -1 {
-				// No tier means it's a profile, but profiles don't have namespace, so it should never get here.
-			} else {
-				// Check if it's a knp.default policy.
-				if bytes.Contains(policyIDUnhashed[:], []byte(rules.K8sPolicyPrefix)) {
-					ruleIDs.Tier = "default"
-					ruleIDs.Policy = string(policyIDUnhashed[nsIdx+13 : len(policyIDUnhashed)-3])
-					ruleIDs.Namespace = string(policyIDUnhashed[:nsIdx])
-				} else {
-					ruleIDs.Tier = string(policyIDUnhashed[nsIdx+1 : tierIdx])
-					ruleIDs.Policy = string(policyIDUnhashed[tierIdx+1 : len(policyIDUnhashed)-3])
-					ruleIDs.Namespace = string(policyIDUnhashed[:nsIdx])
-				}
-			}
-		}
-	}
+	ruleIDs.Tier = ruleIDParts.Tier
+	ruleIDs.Policy = ruleIDParts.Policy
+	ruleIDs.Namespace = ruleIDParts.Namespace
 
 	return ruleIDs, nil
 }

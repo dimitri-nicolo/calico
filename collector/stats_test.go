@@ -31,7 +31,7 @@ var (
 
 var (
 	allowIngressTp0 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionAllow,
 			Index:     "R1",
 			Policy:    "P1",
@@ -42,7 +42,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	denyIngressTp0 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionDeny,
 			Index:     "R2",
 			Policy:    "P2",
@@ -53,7 +53,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	allowIngressTp1 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionAllow,
 			Index:     "R1",
 			Policy:    "P1",
@@ -64,7 +64,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	denyIngressTp1 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionDeny,
 			Index:     "R2",
 			Policy:    "P2",
@@ -75,7 +75,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	allowIngressTp2 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionAllow,
 			Index:     "R1",
 			Policy:    "P2",
@@ -86,7 +86,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	nextTierIngressTp0 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionNextTier,
 			Index:     "R3",
 			Policy:    "P1",
@@ -97,7 +97,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	nextTierIngressTp1 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionNextTier,
 			Index:     "R4",
 			Policy:    "P2",
@@ -108,7 +108,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	allowIngressTp11 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionAllow,
 			Index:     "R1",
 			Policy:    "P1",
@@ -119,7 +119,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	denyIngressTp21 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionDeny,
 			Index:     "R1",
 			Policy:    "P1",
@@ -131,7 +131,7 @@ var (
 	}
 
 	nextTierEgressTp0 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionNextTier,
 			Index:     "R2",
 			Policy:    "P4",
@@ -142,7 +142,7 @@ var (
 		EpKey: wlEpKey1,
 	}
 	allowEgressTp2 = &RuleTracePoint{
-		RuleIDs: &rules.RuleIDs{
+		RuleIDs: rules.RuleIDs{
 			Action:    rules.ActionAllow,
 			Index:     "R3",
 			Policy:    "P3",

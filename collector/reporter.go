@@ -37,7 +37,7 @@ type MetricUpdate struct {
 	isConnection bool
 
 	// Rule identification
-	ruleIDs *rules.RuleIDs
+	ruleIDs rules.RuleIDs
 
 	inMetric  MetricValue
 	outMetric MetricValue
@@ -76,7 +76,6 @@ func (r *ReporterManager) startManaging() {
 		// TODO(doublek): Channel for stopping the reporter.
 		select {
 		case mu := <-r.ReportChan:
-			log.Debugf("Reporting metric update %+v", mu)
 			for _, reporter := range r.reporters {
 				reporter.Report(mu)
 			}

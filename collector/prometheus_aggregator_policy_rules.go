@@ -59,7 +59,7 @@ type RuleAggregateKey struct {
 // getRuleAggregateKey returns a hashable key identifying a rule aggregation key.
 func getRuleAggregateKey(mu *MetricUpdate) RuleAggregateKey {
 	return RuleAggregateKey{
-		ruleIDs: *mu.ruleIDs,
+		ruleIDs: mu.ruleIDs,
 	}
 }
 
@@ -212,13 +212,11 @@ func (pa *PolicyRulesAggregator) CheckRetainedMetrics(now time.Duration) {
 // unmarkRuleAggregateForDeletion removes a rule aggregate metric from the expiration
 // list.
 func (pa *PolicyRulesAggregator) unmarkRuleAggregateForDeletion(key RuleAggregateKey) {
-	log.WithField("key", key).Debug("Unmarking rule aggregate metric for deletion.")
 	delete(pa.retainedRuleAggMetrics, key)
 }
 
 // markRuleAggregateForDeletion marks a rule aggregate metric for expiration.
 func (pa *PolicyRulesAggregator) markRuleAggregateForDeletion(key RuleAggregateKey) {
-	log.WithField("key", key).Debug("Marking rule aggregate metric for deletion.")
 	pa.retainedRuleAggMetrics[key] = pa.timeNowFn() + pa.retentionTime
 }
 

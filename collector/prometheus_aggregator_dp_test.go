@@ -25,7 +25,7 @@ var dummyWlEpKey = model.WorkloadEndpointKey{
 }
 
 var (
-	ingressRulePolicy1Allow = &rules.RuleIDs{
+	ingressRulePolicy1Allow = rules.RuleIDs{
 		Action:    rules.ActionAllow,
 		Index:     "0",
 		Policy:    "policy1",
@@ -33,7 +33,7 @@ var (
 		Namespace: rules.NamespaceGlobal,
 		Direction: rules.RuleDirIngress,
 	}
-	ingressRulePolicy2Allow = &rules.RuleIDs{
+	ingressRulePolicy2Allow = rules.RuleIDs{
 		Action:    rules.ActionAllow,
 		Index:     "0",
 		Policy:    "policy1",
@@ -41,7 +41,7 @@ var (
 		Namespace: rules.NamespaceGlobal,
 		Direction: rules.RuleDirIngress,
 	}
-	ingressRulePolicy3Deny = &rules.RuleIDs{
+	ingressRulePolicy3Deny = rules.RuleIDs{
 		Action:    rules.ActionDeny,
 		Index:     "0",
 		Policy:    "policy3",
@@ -49,7 +49,7 @@ var (
 		Namespace: rules.NamespaceGlobal,
 		Direction: rules.RuleDirIngress,
 	}
-	ingressRulePolicy4Deny = &rules.RuleIDs{
+	ingressRulePolicy4Deny = rules.RuleIDs{
 		Action:    rules.ActionDeny,
 		Index:     "0",
 		Policy:    "policy4",
@@ -92,7 +92,7 @@ var (
 	}
 )
 
-func getPolicyName(r *rules.RuleIDs) string {
+func getPolicyName(r rules.RuleIDs) string {
 	if r.Namespace == rules.NamespaceGlobal {
 		return fmt.Sprintf("%s|%s|%s|%s", r.Tier, r.Policy, r.Index, r.Action)
 	} else {

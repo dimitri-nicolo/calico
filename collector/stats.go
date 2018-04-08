@@ -110,13 +110,13 @@ var (
 // - A/rule Index/profile name
 // - A/rule Index/Policy name/Tier name
 type RuleTracePoint struct {
-	RuleIDs *rules.RuleIDs
+	RuleIDs rules.RuleIDs
 	Index   int
 	EpKey   interface{}
 	Ctr     Counter
 }
 
-func NewRuleTracePoint(ruleIDs *rules.RuleIDs, epKey interface{}, tierIndex, numPkts, numBytes int) *RuleTracePoint {
+func NewRuleTracePoint(ruleIDs rules.RuleIDs, epKey interface{}, tierIndex, numPkts, numBytes int) *RuleTracePoint {
 	rtp := &RuleTracePoint{
 		RuleIDs: ruleIDs,
 		EpKey:   epKey,
