@@ -2,14 +2,13 @@
 package collector
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"fmt"
 
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
@@ -56,160 +55,64 @@ var localWlEPKey2 = &model.WorkloadEndpointKey{
 
 // Nflog prefix test parameters
 var (
-	defTierAllowNFLOGPrefix          = [64]byte{'A', '|', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1', '|', 'p', 'o'}
-	defTierDenyNFLOGPrefix           = [64]byte{'D', '|', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2', '|', 'p', 'o'}
-	defTierPolicy1AllowIngressRuleID = rules.RuleIDs{
+	defTierAllowIngressNFLOGPrefix   = [64]byte{'A', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+	defTierAllowEgressNFLOGPrefix    = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
+	defTierDenyIngressNFLOGPrefix    = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
+	defTierPolicy1AllowIngressRuleID = lookup.RuleID{
 		Tier:      "default",
-		Policy:    "policy1",
-		Namespace: "__GLOBAL__",
-		Index:     "0",
-		Action:    rules.ActionAllow,
+		Name:      "policy1",
+		Namespace: "",
+		Index:     0,
+		IndexStr:  "0",
+		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirIngress,
 	}
-	defTierPolicy1AllowEgressRuleID = rules.RuleIDs{
+	defTierPolicy1AllowEgressRuleID = lookup.RuleID{
 		Tier:      "default",
-		Policy:    "policy1",
-		Namespace: "__GLOBAL__",
-		Index:     "0",
-		Action:    rules.ActionAllow,
+		Name:      "policy1",
+		Namespace: "",
+		Index:     0,
+		IndexStr:  "0",
+		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirEgress,
 	}
-	defTierPolicy2DenyIngressRuleID = rules.RuleIDs{
+	defTierPolicy2DenyIngressRuleID = lookup.RuleID{
 		Tier:      "default",
-		Policy:    "policy2",
-		Namespace: "__GLOBAL__",
-		Index:     "0",
-		Action:    rules.ActionDeny,
+		Name:      "policy2",
+		Namespace: "",
+		Index:     0,
+		IndexStr:  "0",
+		Action:    rules.RuleActionDeny,
 		Direction: rules.RuleDirIngress,
 	}
 )
 
-var _ = Describe("Lookup Rule ID", func() {
-	// Test setup
-	var c *Collector
-	const (
-		ageTimeout        = time.Duration(3) * time.Second
-		reportingDelay    = time.Duration(2) * time.Second
-		exportingInterval = time.Duration(1) * time.Second
-		pollingInterval   = time.Duration(1) * time.Second
-	)
-	conf := &Config{
-		StatsDumpFilePath:        "/tmp/qwerty",
-		NfNetlinkBufSize:         65535,
-		IngressGroup:             1200,
-		EgressGroup:              2200,
-		AgeTimeout:               ageTimeout,
-		ConntrackPollingInterval: pollingInterval,
-		InitialReportingDelay:    reportingDelay,
-		ExportingInterval:        exportingInterval,
-	}
-	rm := NewReporterManager()
-
-	// Test data
-	tier1 := "tier1"
-	namespace1 := "namespace1"
-	np1 := "np1"   // Should include namespace and tier to make this a valid policy name
-	gnp1 := "gnp1" // Should include tier to make this a valid policy name.
-	k8snp1 := "knp.default.knp1"
-	profile1 := "profile1"
-
-	type testTierPolicy struct {
-		namespace string
-		tier      string
-		policy    string
-	}
-	data := []testTierPolicy{
-		{namespace1, tier1, np1},
-		{"__GLOBAL__", tier1, gnp1},
-		{namespace1, "default", k8snp1},
-		{namespace1, "profile", profile1},
-	}
-
-	epMap := map[[16]byte]*model.WorkloadEndpointKey{
-		localIp1: localWlEPKey1,
-		localIp2: localWlEPKey2,
-	}
-
-	nflogMap := map[[64]byte]lookup.RuleIDParts{}
-
-	for _, d := range data {
-		k, v := policyIDStrToRuleIDParts(d.namespace, d.tier, d.policy)
-		nflogMap[k] = v
-	}
-
-	lm := newMockLookupManager(epMap, nflogMap)
-	rm.Start()
-	c = NewCollector(lm, rm, conf)
-
-	It("should process policies", func() {
-		By("processing ingress allow policies")
-		pfx, pfxLen, expectedRuleIDs := getNflogPrefix(rules.RuleDirIngress, rules.ActionAllow, 0, tier1, np1, namespace1)
-		actualRuleIds, err := c.lookupRuleIDsFromPrefix(rules.RuleDirIngress, pfx, pfxLen)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(actualRuleIds).Should(Equal(expectedRuleIDs))
-
-		By("processing egress allow policies")
-		pfx, pfxLen, expectedRuleIDs = getNflogPrefix(rules.RuleDirEgress, rules.ActionAllow, 0, tier1, np1, namespace1)
-		actualRuleIds, err = c.lookupRuleIDsFromPrefix(rules.RuleDirEgress, pfx, pfxLen)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(actualRuleIds).Should(Equal(expectedRuleIDs))
-
-		By("processing ingress deny policies")
-		pfx, pfxLen, expectedRuleIDs = getNflogPrefix(rules.RuleDirIngress, rules.ActionDeny, 0, tier1, np1, namespace1)
-		actualRuleIds, err = c.lookupRuleIDsFromPrefix(rules.RuleDirIngress, pfx, pfxLen)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(actualRuleIds).Should(Equal(expectedRuleIDs))
-
-		By("processing ingress allow gnp")
-		pfx, pfxLen, expectedRuleIDs = getNflogPrefix(rules.RuleDirIngress, rules.ActionAllow, 0, tier1, gnp1, "")
-		actualRuleIds, err = c.lookupRuleIDsFromPrefix(rules.RuleDirIngress, pfx, pfxLen)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(actualRuleIds).Should(Equal(expectedRuleIDs))
-	})
-
-	It("should process k8s network policies", func() {
-		By("processing ingress allow k8s policy")
-		pfx, pfxLen, expectedRuleIDs := getNflogPrefix(rules.RuleDirIngress, rules.ActionAllow, 0, "", k8snp1, namespace1)
-		actualRuleIds, err := c.lookupRuleIDsFromPrefix(rules.RuleDirIngress, pfx, pfxLen)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(actualRuleIds).Should(Equal(expectedRuleIDs))
-	})
-
-	It("should process profiles", func() {
-		By("processing ingress allow profile")
-		pfx, pfxLen, expectedRuleIDs := getNflogPrefix(rules.RuleDirIngress, rules.ActionAllow, 0, "profile", profile1, namespace1)
-		actualRuleIds, err := c.lookupRuleIDsFromPrefix(rules.RuleDirIngress, pfx, pfxLen)
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(actualRuleIds).Should(Equal(expectedRuleIDs))
-	})
-})
-
 var defTierAllowIngressTp = &RuleTracePoint{
-	RuleIDs: defTierPolicy1AllowIngressRuleID,
-	Index:   0,
-	EpKey:   localWlEPKey1,
-	Ctr:     *NewCounter(1, 100),
+	RuleID: &defTierPolicy1AllowIngressRuleID,
+	Index:  0,
+	EpKey:  localWlEPKey1,
+	Ctr:    *NewCounter(1, 100),
 }
 
 var defTierAllowEgressTp = &RuleTracePoint{
-	RuleIDs: defTierPolicy1AllowEgressRuleID,
-	Index:   0,
-	EpKey:   localWlEPKey1,
-	Ctr:     *NewCounter(1, 100),
+	RuleID: &defTierPolicy1AllowEgressRuleID,
+	Index:  0,
+	EpKey:  localWlEPKey1,
+	Ctr:    *NewCounter(1, 100),
 }
 
 var defTierDenyIngressTp = &RuleTracePoint{
-	RuleIDs: defTierPolicy2DenyIngressRuleID,
-	Index:   0,
-	EpKey:   localWlEPKey2,
-	Ctr:     *NewCounter(1, 100),
+	RuleID: &defTierPolicy2DenyIngressRuleID,
+	Index:  0,
+	EpKey:  localWlEPKey2,
+	Ctr:    *NewCounter(1, 100),
 }
 
 var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
-			Prefix:  defTierAllowNFLOGPrefix,
-			Len:     22,
+			Prefix:  defTierAllowIngressNFLOGPrefix,
+			Len:     20,
 			Bytes:   100,
 			Packets: 1,
 		},
@@ -227,8 +130,8 @@ var ingressPktAllowTuple = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dst
 var egressPktAllow = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
-			Prefix:  defTierAllowNFLOGPrefix,
-			Len:     22,
+			Prefix:  defTierAllowEgressNFLOGPrefix,
+			Len:     20,
 			Bytes:   100,
 			Packets: 1,
 		},
@@ -246,8 +149,8 @@ var egressPktAllowTuple = NewTuple(localIp1, remoteIp1, proto_udp, srcPort, dstP
 var ingressPktDeny = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
-			Prefix:  defTierDenyNFLOGPrefix,
-			Len:     22,
+			Prefix:  defTierDenyIngressNFLOGPrefix,
+			Len:     20,
 			Bytes:   100,
 			Packets: 1,
 		},
@@ -265,7 +168,7 @@ var ingressPktDenyTuple = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstP
 var localPkt = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
 		{
-			Prefix:  defTierDenyNFLOGPrefix,
+			Prefix:  defTierDenyIngressNFLOGPrefix,
 			Len:     22,
 			Bytes:   100,
 			Packets: 1,
@@ -300,11 +203,10 @@ var _ = Describe("NFLOG Datasource", func() {
 				localIp1: localWlEPKey1,
 				localIp2: localWlEPKey2,
 			}
-			nflogMap := map[[64]byte]lookup.RuleIDParts{}
+			nflogMap := map[[64]byte]*lookup.RuleID{}
 
 			for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-				k, v := policyIDStrToRuleIDParts("__GLOBAL__", rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
-				nflogMap[k] = v
+				nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
 			}
 
 			lm := newMockLookupManager(epMap, nflogMap)
@@ -458,11 +360,10 @@ var _ = Describe("Conntrack Datasource", func() {
 			localIp2: localWlEPKey2,
 		}
 
-		nflogMap := map[[64]byte]lookup.RuleIDParts{}
+		nflogMap := map[[64]byte]*lookup.RuleID{}
 
 		for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-			k, v := policyIDStrToRuleIDParts("__GLOBAL__", rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
-			nflogMap[k] = v
+			nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
 		}
 
 		lm := newMockLookupManager(epMap, nflogMap)
@@ -522,69 +423,25 @@ var _ = Describe("Conntrack Datasource", func() {
 
 })
 
-func policyIDStrToRuleIDParts(namespace, tier, policy string) ([64]byte, lookup.RuleIDParts) {
+func policyIDStrToRuleIDParts(r *lookup.RuleID) [64]byte {
 	var (
-		s     string
+		name  string
 		byt64 [64]byte
 	)
-	if namespace != "__GLOBAL__" {
-		if strings.HasPrefix(policy, "knp.default.") {
-			s = fmt.Sprintf("%s/%s|po", namespace, policy)
+
+	if r.Namespace != "" {
+		if strings.HasPrefix(r.Name, "knp.default.") {
+			name = fmt.Sprintf("%s/%s", r.Namespace, r.Name)
 		} else {
-			s = fmt.Sprintf("%s/%s.%s|po", namespace, tier, policy)
+			name = fmt.Sprintf("%s/%s.%s", r.Namespace, r.Tier, r.Name)
 		}
 	} else {
-		s = fmt.Sprintf("%s.%s|po", tier, policy)
+		name = fmt.Sprintf("%s.%s", r.Tier, r.Name)
 	}
 
-	byt := []byte(s)
-	copy(byt64[:], byt)
-
-	return byt64, lookup.RuleIDParts{
-		Namespace: namespace,
-		Tier:      tier,
-		Policy:    policy,
-	}
-}
-
-func getNflogPrefix(ruleDir rules.RuleDirection, action rules.RuleAction, ruleIndex int, tier, policy, namespace string) ([64]byte, int, rules.RuleIDs) {
-	var (
-		actPfx, ns string
-		pfxArr     [64]byte
-		prefix     []byte
-	)
-	switch action {
-	case rules.ActionAllow:
-		actPfx = "A"
-	case rules.ActionDeny:
-		actPfx = "D"
-	case rules.ActionNextTier:
-		actPfx = "N"
-	}
-
-	if namespace != "" {
-		if strings.HasPrefix(policy, "knp.default.") {
-			prefix = []byte(fmt.Sprintf("%s|%d|%s/%s|po", actPfx, ruleIndex, namespace, policy))
-			tier = "default"
-		} else {
-			prefix = []byte(fmt.Sprintf("%s|%d|%s/%s.%s|po", actPfx, ruleIndex, namespace, tier, policy))
-		}
-		ns = namespace
-	} else {
-		prefix = []byte(fmt.Sprintf("%s|%d|%s.%s|po", actPfx, ruleIndex, tier, policy))
-		ns = "__GLOBAL__"
-	}
-	copy(pfxArr[:], prefix)
-
-	rid := rules.RuleIDs{
-		Tier:      tier,
-		Policy:    policy,
-		Namespace: ns,
-		Index:     fmt.Sprintf("%d", ruleIndex),
-		Action:    action,
-		Direction: ruleDir,
-	}
-	return pfxArr, len(prefix), rid
+	prefix := rules.CalculateNFLOGPrefixStr(r.Action, rules.RuleOwnerTypePolicy, r.Direction, r.Index, name)
+	copy(byt64[:], []byte(prefix))
+	return byt64
 }
 
 var _ = Describe("Reporting Metrics", func() {
@@ -614,11 +471,10 @@ var _ = Describe("Reporting Metrics", func() {
 			localIp2: localWlEPKey2,
 		}
 
-		nflogMap := map[[64]byte]lookup.RuleIDParts{}
+		nflogMap := map[[64]byte]*lookup.RuleID{}
 
 		for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-			k, v := policyIDStrToRuleIDParts("__GLOBAL__", rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
-			nflogMap[k] = v
+			nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
 		}
 
 		lm := newMockLookupManager(epMap, nflogMap)
@@ -635,7 +491,7 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktDenyTuple,
-					ruleIDs:      defTierDenyIngressTp.RuleIDs,
+					ruleID:       defTierDenyIngressTp.RuleID,
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -651,7 +507,7 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktAllowTuple,
-					ruleIDs:      defTierAllowIngressTp.RuleIDs,
+					ruleID:       defTierAllowIngressTp.RuleID,
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -669,7 +525,7 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktAllowTuple,
-					ruleIDs:      defTierAllowIngressTp.RuleIDs,
+					ruleID:       defTierAllowIngressTp.RuleID,
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -685,7 +541,7 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *egressPktAllowTuple,
-					ruleIDs:      defTierAllowEgressTp.RuleIDs,
+					ruleID:       defTierAllowEgressTp.RuleID,
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -696,10 +552,10 @@ var _ = Describe("Reporting Metrics", func() {
 
 type mockLookupManager struct {
 	epMap    map[[16]byte]*model.WorkloadEndpointKey
-	nflogMap map[[64]byte]lookup.RuleIDParts
+	nflogMap map[[64]byte]*lookup.RuleID
 }
 
-func newMockLookupManager(em map[[16]byte]*model.WorkloadEndpointKey, nm map[[64]byte]lookup.RuleIDParts) *mockLookupManager {
+func newMockLookupManager(em map[[16]byte]*model.WorkloadEndpointKey, nm map[[64]byte]*lookup.RuleID) *mockLookupManager {
 	return &mockLookupManager{
 		epMap:    em,
 		nflogMap: nm,
@@ -719,13 +575,8 @@ func (lm *mockLookupManager) GetTierIndex(epKey interface{}, tierName string) in
 	return 0
 }
 
-func (m *mockLookupManager) GetNFLOGHashToPolicyID(prefixHash [64]byte) (lookup.RuleIDParts, error) {
-	policyID, ok := m.nflogMap[prefixHash]
-	if !ok {
-		return lookup.RuleIDParts{}, fmt.Errorf("cannot find the specified NFLOG prefix string or hash: %s in the lookup manager", prefixHash)
-	}
-
-	return policyID, nil
+func (m *mockLookupManager) GetRuleIDsFromNFLOGPrefix(prefixHash [64]byte) *lookup.RuleID {
+	return m.nflogMap[prefixHash]
 }
 
 // Define a separate metric type that doesn't include the actual stats.  We use this
@@ -737,7 +588,7 @@ type testMetricUpdate struct {
 	tuple Tuple
 
 	// Rule identification
-	ruleIDs rules.RuleIDs
+	ruleID *lookup.RuleID
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
@@ -763,7 +614,7 @@ func (mr *mockReporter) Report(mu *MetricUpdate) error {
 	mr.reportChan <- testMetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        mu.tuple,
-		ruleIDs:      mu.ruleIDs,
+		ruleID:       mu.ruleID,
 		isConnection: mu.isConnection,
 	}
 	return nil
@@ -775,11 +626,10 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		localIp2: localWlEPKey2,
 	}
 
-	nflogMap := map[[64]byte]lookup.RuleIDParts{}
+	nflogMap := map[[64]byte]*lookup.RuleID{}
 
 	for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-		k, v := policyIDStrToRuleIDParts("__GLOBAL__", rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
-		nflogMap[k] = v
+		nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
 	}
 
 	conf := &Config{
@@ -808,11 +658,9 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		localIp2: localWlEPKey2,
 	}
 
-	nflogMap := map[[64]byte]lookup.RuleIDParts{}
-
+	nflogMap := map[[64]byte]*lookup.RuleID{}
 	for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-		k, v := policyIDStrToRuleIDParts("__GLOBAL__", rtp.RuleIDs.Tier, rtp.RuleIDs.Policy)
-		nflogMap[k] = v
+		nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
 	}
 
 	conf := &Config{
@@ -850,99 +698,4 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 			c.applyNflogStatUpdate(tuples[i], tps[i])
 		}
 	}
-}
-
-var r rules.RuleIDs
-
-func benchmarkLookupRuleIDs(b *testing.B, nflogMap map[[64]byte]lookup.RuleIDParts, ruleDir rules.RuleDirection, pfx [64]byte, pfxLen int) {
-	epMap := map[[16]byte]*model.WorkloadEndpointKey{
-		localIp1: localWlEPKey1,
-		localIp2: localWlEPKey2,
-	}
-
-	conf := &Config{
-		StatsDumpFilePath:        "/tmp/qwerty",
-		NfNetlinkBufSize:         65535,
-		IngressGroup:             1200,
-		EgressGroup:              2200,
-		AgeTimeout:               time.Duration(10) * time.Second,
-		ConntrackPollingInterval: time.Duration(1) * time.Second,
-		InitialReportingDelay:    time.Duration(5) * time.Second,
-		ExportingInterval:        time.Duration(1) * time.Second,
-	}
-	rm := NewReporterManager()
-	lm := newMockLookupManager(epMap, nflogMap)
-	c := NewCollector(lm, rm, conf)
-
-	var actualRuleIds rules.RuleIDs
-	b.ResetTimer()
-	b.ReportAllocs()
-	for n := 0; n < b.N; n++ {
-		actualRuleIds, _ = c.lookupRuleIDsFromPrefix(ruleDir, pfx, pfxLen)
-	}
-	r = actualRuleIds
-}
-
-func BenchmarkLookupRuleIDs(b *testing.B) {
-	nflogMap := map[[64]byte]lookup.RuleIDParts{}
-
-	// Test data
-	tier1 := "tier1"
-	namespace1 := "namespace1"
-	np1 := "np1"   // Should include namespace and tier to make this a valid policy name
-	gnp1 := "gnp1" // Should include tier to make this a valid policy name.
-	k8snp1 := "knp.default.knp1"
-
-	type testTierPolicy struct {
-		namespace string
-		tier      string
-		policy    string
-	}
-	data := []testTierPolicy{
-		{namespace1, tier1, np1},
-		{"__GLOBAL__", tier1, gnp1},
-		{namespace1, "default", k8snp1},
-	}
-
-	for _, d := range data {
-		k, v := policyIDStrToRuleIDParts(d.namespace, d.tier, d.policy)
-		nflogMap[k] = v
-	}
-
-	pfx, pfxLen, _ := getNflogPrefix(rules.RuleDirIngress, rules.ActionAllow, 0, tier1, np1, namespace1)
-	benchmarkLookupRuleIDs(b, nflogMap, rules.RuleDirIngress, pfx, pfxLen)
-}
-
-func BenchmarkLookupRuleIDsNoPolicyMatchWithMap(b *testing.B) {
-	nflogMap := map[[64]byte]lookup.RuleIDParts{}
-
-	// Test data
-	tier1 := "tier1"
-	namespace1 := "namespace1"
-	np1 := "np1"   // Should include namespace and tier to make this a valid policy name
-	gnp1 := "gnp1" // Should include tier to make this a valid policy name.
-	k8snp1 := "knp.default.knp1"
-	noPolicyIn := "no-policy-match-inbound"
-	noPolicyOut := "no-policy-match-outbound"
-
-	type testTierPolicy struct {
-		namespace string
-		tier      string
-		policy    string
-	}
-	data := []testTierPolicy{
-		{namespace1, tier1, np1},
-		{"__GLOBAL__", tier1, gnp1},
-		{namespace1, "default", k8snp1},
-		{"__GLOBAL__", "default", noPolicyIn},
-		{"__GLOBAL__", "default", noPolicyOut},
-	}
-
-	for _, d := range data {
-		k, v := policyIDStrToRuleIDParts(d.namespace, d.tier, d.policy)
-		nflogMap[k] = v
-	}
-
-	pfx, pfxLen, _ := getNflogPrefix(rules.RuleDirIngress, rules.ActionDeny, 0, "default", noPolicyIn, "")
-	benchmarkLookupRuleIDs(b, nflogMap, rules.RuleDirIngress, pfx, pfxLen)
 }

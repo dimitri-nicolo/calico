@@ -30,17 +30,19 @@ var pollingInterval = time.Duration(10) * time.Second
 var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 
 	var (
-		etcd   *containers.Container
-		felix  *infrastructure.Felix
-		client client.Interface
-		w      [4]*workload.Workload
+		defaultProfile *api.Profile
+		etcd           *containers.Container
+		felix          *infrastructure.Felix
+		client         client.Interface
+		w              [4]*workload.Workload
+		err            error
 	)
 
 	BeforeEach(func() {
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
 
 		// Default profile that ensures connectivity.
-		defaultProfile := api.NewProfile()
+		defaultProfile = api.NewProfile()
 		defaultProfile.Name = "default"
 		defaultProfile.Spec.LabelsToApply = map[string]string{"default": ""}
 		defaultProfile.Spec.Egress = []api.Rule{{Action: api.Allow}}
@@ -48,7 +50,7 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 			Action: api.Allow,
 			Source: api.EntityRule{Selector: "default == ''"},
 		}}
-		_, err := client.Profiles().Create(utils.Ctx, defaultProfile, utils.NoOptions)
+		defaultProfile, err = client.Profiles().Create(utils.Ctx, defaultProfile, utils.NoOptions)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Create two workloads, using the profile created above.
@@ -112,20 +114,20 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 			time.Sleep(pollingInterval)
 			// Local-to-Local traffic causes accounting from both workload perspectives.
 			Expect(func() (int, error) {
-				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "profile", "default", "outbound")
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "__PROFILE__", "default", "outbound")
 			}()).Should(BeNumerically("==", conns))
 			// ICMP request and responses are the same size.
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "profile", "default", "outbound", "ingress")
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "default", "outbound", "ingress")
 			}()).Should(BeNumerically("==", packets))
 			Expect(func() (int, error) {
-				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "profile", "default", "inbound", "ingress")
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "default", "inbound", "ingress")
 			}()).Should(BeNumerically("==", packets))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "profile", "default", "outbound", "ingress")
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "default", "outbound", "ingress")
 			}()).Should(BeNumerically("==", bytes))
 			Expect(func() (int, error) {
-				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "profile", "default", "inbound", "ingress")
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "__PROFILE__", "default", "inbound", "ingress")
 			}()).Should(BeNumerically("==", bytes))
 		}
 
@@ -368,7 +370,7 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 		})
 	})
 
-	Context("should generate denied packet metrics with deny rule to w1", func() {
+	Context("should generate denied packet metrics with ingress deny rule to w1", func() {
 
 		BeforeEach(func() {
 			policy := api.NewNetworkPolicy()
@@ -602,6 +604,144 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 			Expect(func() (int, error) {
 				return metrics.GetCalicoDeniedPacketMetrics(felix.IP, longTierName, longPolicyName)
 			}()).Should(BeNumerically("==", 3))
+		})
+	})
+
+	Context("should generate tier ingress-drop matches", func() {
+
+		BeforeEach(func() {
+			policy := api.NewNetworkPolicy()
+			policy.Namespace = "fv"
+			policy.Name = "default.ingress-drop"
+			policy.Spec.Tier = "default"
+			policy.Spec.Types = []api.PolicyType{api.PolicyTypeIngress}
+			policy.Spec.Ingress = []api.Rule{}
+			policy.Spec.Selector = w[1].NameSelector()
+			_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("w0 cannot connect to w1 and tier drop metrics are generated", func() {
+			By("Sending pings from w0->w1")
+			packets := 1
+			packetSize := 2
+			bytes := calculateBytesForPacket("ICMP", packets, packetSize)
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, stderr := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
+			Expect(err).To(HaveOccurred(), stderr)
+
+			By("Checking tier ingress-drop counts")
+			time.Sleep(pollingInterval)
+			Expect(func() (int, error) {
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-1", "inbound")
+			}()).Should(BeNumerically("==", 0))
+			Expect(func() (int, error) {
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "__NO_MATCH__", "inbound", "ingress")
+			}()).Should(BeNumerically("==", packets))
+			Expect(func() (int, error) {
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "__NO_MATCH__", "inbound", "ingress")
+			}()).Should(BeNumerically("==", bytes))
+		})
+	})
+
+	Context("should generate tier egress-drop matches", func() {
+
+		BeforeEach(func() {
+			policy := api.NewNetworkPolicy()
+			policy.Namespace = "fv"
+			policy.Name = "default.ingress-drop"
+			policy.Spec.Tier = "default"
+			policy.Spec.Types = []api.PolicyType{api.PolicyTypeEgress}
+			policy.Spec.Egress = []api.Rule{}
+			policy.Spec.Selector = w[1].NameSelector()
+			_, err := client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("w0 cannot connect to w1 and tier drop metrics are generated", func() {
+			By("Sending pings from w1->w0")
+			packets := 1
+			packetSize := 2
+			bytes := calculateBytesForPacket("ICMP", packets, packetSize)
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, stderr := w[1].SendPacketsTo(w[0].IP, packets, packetSize)
+			Expect(err).To(HaveOccurred(), stderr)
+
+			By("Checking tier egress-drop counts")
+			time.Sleep(pollingInterval)
+			Expect(func() (int, error) {
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "default", "policy-1", "outbound")
+			}()).Should(BeNumerically("==", 0))
+			Expect(func() (int, error) {
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "default", "__NO_MATCH__", "outbound", "egress")
+			}()).Should(BeNumerically("==", packets))
+			Expect(func() (int, error) {
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "default", "__NO_MATCH__", "outbound", "egress")
+			}()).Should(BeNumerically("==", bytes))
+		})
+	})
+
+	Context("should generate profile ingress-drop matches", func() {
+
+		It("w0 cannot connect to w1 and profile drop metrics are generated", func() {
+			By("Updating the default profile to not match on ingress")
+			defaultProfile.Spec.Ingress = []api.Rule{}
+			defaultProfile, err = client.Profiles().Update(utils.Ctx, defaultProfile, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Sending pings from w0->w1")
+			packets := 1
+			packetSize := 2
+			bytes := calculateBytesForPacket("ICMP", packets, packetSize)
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, stderr := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
+			Expect(err).To(HaveOccurred(), stderr)
+
+			By("Checking profile ingress-drop counts")
+			time.Sleep(pollingInterval)
+			Expect(func() (int, error) {
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "__PROFILE__", "default", "inbound")
+			}()).Should(BeNumerically("==", 0))
+			Expect(func() (int, error) {
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "__PROFILE__", "__NO_MATCH__", "inbound", "ingress")
+			}()).Should(BeNumerically("==", packets))
+			Expect(func() (int, error) {
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "__PROFILE__", "__NO_MATCH__", "inbound", "ingress")
+			}()).Should(BeNumerically("==", bytes))
+		})
+	})
+
+	Context("should generate profile egress-drop matches", func() {
+
+		It("w0 cannot connect to w1 and profile drop metrics are generated", func() {
+			By("Updating the default profile to not match on egress")
+			defaultProfile.Spec.Egress = []api.Rule{}
+			defaultProfile, err = client.Profiles().Update(utils.Ctx, defaultProfile, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Sending pings from w0->w1")
+			packets := 1
+			packetSize := 2
+			bytes := calculateBytesForPacket("ICMP", packets, packetSize)
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, stderr := w[0].SendPacketsTo(w[1].IP, packets, packetSize)
+			Expect(err).To(HaveOccurred(), stderr)
+
+			By("Checking profile egress-drop counts")
+			time.Sleep(pollingInterval)
+			Expect(func() (int, error) {
+				return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "__PROFILE__", "default", "outbound")
+			}()).Should(BeNumerically("==", 0))
+			Expect(func() (int, error) {
+				return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "__PROFILE__", "__NO_MATCH__", "outbound", "egress")
+			}()).Should(BeNumerically("==", packets))
+			Expect(func() (int, error) {
+				return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "__PROFILE__", "__NO_MATCH__", "outbound", "egress")
+			}()).Should(BeNumerically("==", bytes))
 		})
 	})
 })

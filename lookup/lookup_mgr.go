@@ -6,97 +6,146 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/hashutils"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
+
+const (
+	// String values used in the string representation of the RuleID. These are used
+	// in some of the external APIs and therefore should not be modified.
+	RuleDirIngressStr  string = "ingress"
+	RuleDirEgressStr          = "egress"
+	ActionAllowStr            = "allow"
+	ActionDenyStr             = "deny"
+	ActionNextTierStr         = "pass"
+	GlobalNamespaceStr        = "__GLOBAL__"
+	ProfileTierStr            = "__PROFILE__"
+	NoMatchNameStr            = "__NO_MATCH__"
+)
+
+// RuleID contains the complete identifiers for a particular rule. This is a breakdown of the
+// Felix v1 representation into the v3 representation used by the API and the collector.
+type RuleID struct {
+	// The tier name. If this is blank this represents a Profile backed rule.
+	Tier string
+	// The policy or profile name. This has the tier removed from the name. If this is blank, this represents
+	// a "no match" rule. For k8s policies, this will be the full v3 name (knp.default.<k8s name>) - this avoids
+	// name conflicts with Calico policies.
+	Name string
+	// The namespace. This is only non-blank for a NetworkPolicy type. For Tiers, GlobalNetworkPolicies and the
+	// no match rules this will be blank.
+	Namespace string
+	// The rule direction.
+	Direction rules.RuleDir
+	// The index into the rule slice.
+	Index int
+	// A stringified version of the above index (stored to avoid frequent conversion)
+	IndexStr string
+	// The rule action.
+	Action rules.RuleAction
+}
+
+func (r1 *RuleID) Equals(r2 *RuleID) bool {
+	return r1.Tier == r2.Tier &&
+		r1.Name == r2.Name &&
+		r1.Namespace == r2.Namespace &&
+		r1.Direction == r2.Direction &&
+		r1.Index == r2.Index &&
+		r1.Action == r2.Action
+}
+
+func (r *RuleID) String() string {
+	return fmt.Sprintf(
+		"Rule(Tier=%s,Name=%s,Namespace=%s,Direction=%s,Index=%d,Action=%s)",
+		r.TierString(), r.NameString(), r.NamespaceString(), r.DirectionString(), r.IndexStr, r.ActionString(),
+	)
+}
+
+func (r *RuleID) IsNamespaced() bool {
+	return len(r.Namespace) != 0
+}
+
+func (r *RuleID) IsProfile() bool {
+	return len(r.Tier) == 0
+}
+
+func (r *RuleID) IsNoMatchRule() bool {
+	return len(r.Name) == 0
+}
+
+// TierString returns either the Tier name or the Profile indication string.
+func (r *RuleID) TierString() string {
+	if len(r.Tier) == 0 {
+		return ProfileTierStr
+	}
+	return r.Tier
+}
+
+// NameString returns either the resource name or the No-match indication string.
+func (r *RuleID) NameString() string {
+	if len(r.Name) == 0 {
+		return NoMatchNameStr
+	}
+	return r.Name
+}
+
+// NamespaceString returns either the resource namespace or the Global indication string.
+func (r *RuleID) NamespaceString() string {
+	if len(r.Namespace) == 0 {
+		return GlobalNamespaceStr
+	}
+	return r.Namespace
+}
+
+// ActionString converts the action to a string value.
+func (r *RuleID) ActionString() string {
+	switch r.Action {
+	case rules.RuleActionDeny:
+		return ActionDenyStr
+	case rules.RuleActionAllow:
+		return ActionAllowStr
+	case rules.RuleActionNextTier:
+		return ActionNextTierStr
+	}
+	return ""
+}
+
+// DirectionString converts the direction to a string value.
+func (r *RuleID) DirectionString() string {
+	switch r.Direction {
+	case rules.RuleDirIngress:
+		return RuleDirIngressStr
+	case rules.RuleDirEgress:
+		return RuleDirEgressStr
+	}
+	return ""
+}
 
 var (
 	UnknownEndpointError = errors.New("Unknown endpoint")
-
-	// Hardcoded substrings present in NFLOG prefixes that are not present
-	// in the nflogPrefixHash map but we still need to return a proper value
-	noProfileMatchInboundS  = "no-profile-match-inbound"
-	noProfileMatchOutboundS = "no-profile-match-outbound"
-	noPolicyMatchInboundS   = "no-policy-match-inbound"
-	noPolicyMatchOutboundS  = "no-policy-match-outbound"
-
-	noProfileMatchInboundB  = []byte(noProfileMatchInboundS)
-	noProfileMatchOutboundB = []byte(noProfileMatchOutboundS)
-	noPolicyMatchInboundB   = []byte(noPolicyMatchInboundS)
-	noPolicyMatchOutboundB  = []byte(noPolicyMatchOutboundS)
-
-	globalNamespace = "__GLOBAL__"
-	// TODO(doublek): Maybe __PROFILE__ ?
-	profileTier = "profile"
 )
-
-type RuleIDParts struct {
-	Tier      string
-	Policy    string
-	Namespace string
-}
-
-func getRuleIDPartsFromPolicyName(name string) (RuleIDParts, error) {
-	rp := RuleIDParts{}
-	// name is of the format namespace/tier.policy for a namespaced networkpolicy
-	// namespace is empty (and no /) for global network policy.
-	// k8s network policy is of the form namespace/knp.default.policyname.
-	parts := strings.Split(name, "/")
-	if len(parts) == 1 {
-		// Global Network policy.
-		parts := strings.Split(name, ".")
-		if len(parts) != 2 {
-			return rp, fmt.Errorf("Could not parse policy %s", name)
-		}
-		rp.Tier = parts[0]
-		rp.Policy = parts[1]
-		rp.Namespace = globalNamespace
-		return rp, nil
-	} else if len(parts) == 2 {
-		rp.Namespace = parts[0]
-		nameParts := strings.Split(parts[1], ".")
-		if len(nameParts) == 2 {
-			rp.Tier = nameParts[0]
-			rp.Policy = nameParts[1]
-			return rp, nil
-		} else if len(nameParts) == 3 && strings.HasPrefix(parts[1], "knp.default.") {
-			rp.Tier = "default"
-			rp.Policy = parts[1]
-			return rp, nil
-		} else {
-			return rp, fmt.Errorf("Could not parse policy %s", name)
-		}
-	}
-	return rp, fmt.Errorf("Could not parse policy %s", name)
-}
-
-func getRuleIDPartsFromProfileName(name string) (RuleIDParts, error) {
-	return RuleIDParts{
-		Tier:   profileTier,
-		Policy: name,
-	}, nil
-}
 
 type QueryInterface interface {
 	GetEndpointKey(addr [16]byte) (interface{}, error)
 	GetTierIndex(epKey interface{}, tierName string) int
-	GetNFLOGHashToPolicyID(prefixHash [64]byte) (RuleIDParts, error)
+	GetRuleIDsFromNFLOGPrefix(prefix [64]byte) *RuleID
 }
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
 type LookupManager struct {
 	// `string`s are IP.String().
-	endpoints        map[[16]byte]*model.WorkloadEndpointKey
-	endpointsReverse map[model.WorkloadEndpointKey]*[16]byte
-	endpointTiers    map[model.WorkloadEndpointKey][]*proto.TierInfo
-	epMutex          sync.RWMutex
+	workloadEndpoints        map[[16]byte]*model.WorkloadEndpointKey
+	workloadEndpointsReverse map[model.WorkloadEndpointKey]*[16]byte
+	workloadEndpointTiers    map[model.WorkloadEndpointKey][]*proto.TierInfo
+	epMutex                  sync.RWMutex
 
 	hostEndpoints              map[[16]byte]*model.HostEndpointKey
 	hostEndpointsReverse       map[model.HostEndpointKey]*[16]byte
@@ -104,29 +153,56 @@ type LookupManager struct {
 	hostEndpointUntrackedTiers map[model.HostEndpointKey][]*proto.TierInfo
 	hostEpMutex                sync.RWMutex
 
-	nflogPrefixHash map[[64]byte]RuleIDParts
-	nflogMutex      sync.RWMutex
+	nflogPrefixesPolicy  map[model.PolicyKey]set.Set
+	nflogPrefixesProfile map[model.ProfileKey]set.Set
+	nflogPrefixHash      map[[64]byte]*RuleID
+	nflogMutex           sync.RWMutex
 
 	tierRefs map[string]int
 }
 
 func NewLookupManager() *LookupManager {
 	lm := &LookupManager{
-		endpoints:                  map[[16]byte]*model.WorkloadEndpointKey{},
-		endpointsReverse:           map[model.WorkloadEndpointKey]*[16]byte{},
-		endpointTiers:              map[model.WorkloadEndpointKey][]*proto.TierInfo{},
+		workloadEndpoints:          map[[16]byte]*model.WorkloadEndpointKey{},
+		workloadEndpointsReverse:   map[model.WorkloadEndpointKey]*[16]byte{},
+		workloadEndpointTiers:      map[model.WorkloadEndpointKey][]*proto.TierInfo{},
 		hostEndpoints:              map[[16]byte]*model.HostEndpointKey{},
 		hostEndpointsReverse:       map[model.HostEndpointKey]*[16]byte{},
 		hostEndpointTiers:          map[model.HostEndpointKey][]*proto.TierInfo{},
 		hostEndpointUntrackedTiers: map[model.HostEndpointKey][]*proto.TierInfo{},
 		epMutex:                    sync.RWMutex{},
 		hostEpMutex:                sync.RWMutex{},
-		nflogPrefixHash:            map[[64]byte]RuleIDParts{},
+		nflogPrefixesPolicy:        map[model.PolicyKey]set.Set{},
+		nflogPrefixesProfile:       map[model.ProfileKey]set.Set{},
+		nflogPrefixHash:            map[[64]byte]*RuleID{},
 		nflogMutex:                 sync.RWMutex{},
 		tierRefs:                   map[string]int{},
 	}
-	lm.pushProfileNFLOGPrefixHash(noProfileMatchOutboundS)
-	lm.pushProfileNFLOGPrefixHash(noProfileMatchInboundS)
+	// Add NFLog mappings for the no-profile match.
+	lm.addNFLogPrefixEntry(
+		rules.CalculateNoMatchProfileNFLOGPrefixStr(rules.RuleDirIngress),
+		&RuleID{
+			Tier:      "",
+			Name:      "",
+			Namespace: "",
+			Direction: rules.RuleDirIngress,
+			Index:     0,
+			IndexStr:  "0",
+			Action:    rules.RuleActionDeny,
+		},
+	)
+	lm.addNFLogPrefixEntry(
+		rules.CalculateNoMatchProfileNFLOGPrefixStr(rules.RuleDirEgress),
+		&RuleID{
+			Tier:      "",
+			Name:      "",
+			Namespace: "",
+			Direction: rules.RuleDirEgress,
+			Index:     0,
+			IndexStr:  "0",
+			Action:    rules.RuleActionDeny,
+		},
+	)
 	return lm
 }
 
@@ -142,7 +218,7 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		}
 		m.epMutex.Lock()
 		// Store tiers and policies
-		m.endpointTiers[wlEpKey] = msg.Endpoint.Tiers
+		m.workloadEndpointTiers[wlEpKey] = msg.Endpoint.Tiers
 		// Store IP addresses
 		for _, ipv4 := range msg.Endpoint.Ipv4Nets {
 			addr, _, err := net.ParseCIDR(ipv4)
@@ -152,8 +228,8 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			}
 			var addrB [16]byte
 			copy(addrB[:], addr.To16()[:16])
-			m.endpoints[addrB] = &wlEpKey
-			m.endpointsReverse[wlEpKey] = &addrB
+			m.workloadEndpoints[addrB] = &wlEpKey
+			m.workloadEndpointsReverse[wlEpKey] = &addrB
 		}
 		for _, ipv6 := range msg.Endpoint.Ipv6Nets {
 			addr, _, err := net.ParseCIDR(ipv6)
@@ -163,8 +239,8 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			}
 			var addrB [16]byte
 			copy(addrB[:], addr.To16()[:16])
-			m.endpoints[addrB] = &wlEpKey
-			m.endpointsReverse[wlEpKey] = &addrB
+			m.workloadEndpoints[addrB] = &wlEpKey
+			m.workloadEndpointsReverse[wlEpKey] = &addrB
 		}
 		m.epMutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
@@ -176,25 +252,25 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			EndpointID:     msg.Id.EndpointId,
 		}
 		m.epMutex.Lock()
-		epIp := m.endpointsReverse[wlEpKey]
+		epIp := m.workloadEndpointsReverse[wlEpKey]
 		if epIp != nil {
-			delete(m.endpoints, *epIp)
-			delete(m.endpointsReverse, wlEpKey)
-			delete(m.endpointTiers, wlEpKey)
+			delete(m.workloadEndpoints, *epIp)
+			delete(m.workloadEndpointsReverse, wlEpKey)
+			delete(m.workloadEndpointTiers, wlEpKey)
 		}
 		m.epMutex.Unlock()
 
 	case *proto.ActivePolicyUpdate:
-		m.PushPolicyNFLOGPrefixHash(msg)
+		m.updatePolicyRulesNFLOGPrefixes(msg)
 
 	case *proto.ActivePolicyRemove:
-		m.PopPolicyNFLOGPrefixHash(msg)
+		m.removePolicyRulesNFLOGPrefixes(msg)
 
 	case *proto.ActiveProfileUpdate:
-		m.PushProfileNFLOGPrefixHash(msg)
+		m.updateProfileRulesNFLOGPrefixes(msg)
 
 	case *proto.ActiveProfileRemove:
-		m.PopProfileNFLOGPrefixHash(msg)
+		m.removeProfileRulesNFLOGPrefixes(msg)
 
 	case *proto.HostEndpointUpdate:
 		// We omit setting Hostname since at this point it is implied that the
@@ -248,155 +324,209 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 	}
 }
 
-// PushPolicyNFLOGPrefixHash takes proto message (ActivePolicyUpdate) and calculates the NFLOG prefix, and if the prefix is too long then
-// calculates the hash. Finally it pushes it to a map for stats collector to access.
-func (m *LookupManager) PushPolicyNFLOGPrefixHash(msg *proto.ActivePolicyUpdate) {
+func (m *LookupManager) CompleteDeferredWork() error {
+	return nil
+}
+
+func (m *LookupManager) addNFLogPrefixEntry(prefix string, ruleIDs *RuleID) {
+	var bph [64]byte
+	copy(bph[:], []byte(prefix[:]))
+	m.nflogMutex.Lock()
+	defer m.nflogMutex.Unlock()
+	m.nflogPrefixHash[bph] = ruleIDs
+}
+
+func (m *LookupManager) deleteNFLogPrefixEntry(prefix string) {
+	var bph [64]byte
+	copy(bph[:], []byte(prefix[:]))
+	m.nflogMutex.Lock()
+	defer m.nflogMutex.Unlock()
+	delete(m.nflogPrefixHash, bph)
+}
+
+// updatePolicyRulesNFLOGPrefixes stores the required prefix to RuleID maps for a policy, deleting any
+// stale entries if the number of rules or action types have changed.
+func (m *LookupManager) updatePolicyRulesNFLOGPrefixes(msg *proto.ActivePolicyUpdate) {
+	// If this is the first time we have seen this tier, add the default deny entries for the tier.
 	count, ok := m.tierRefs[msg.Id.Tier]
 	if !ok {
-		// This is the first time we are seeing this tier. Add a entry to our hash and
-		// add default deny entries.
-		m.pushPolicyNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchInboundS))
-		m.pushPolicyNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchOutboundS))
+		m.addNFLogPrefixEntry(
+			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirIngress, msg.Id.Tier),
+			&RuleID{
+				Tier:      msg.Id.Tier,
+				Name:      "",
+				Namespace: "",
+				Direction: rules.RuleDirIngress,
+				Index:     0,
+				IndexStr:  "0",
+				Action:    rules.RuleActionDeny,
+			},
+		)
+		m.addNFLogPrefixEntry(
+			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirEgress, msg.Id.Tier),
+			&RuleID{
+				Tier:      msg.Id.Tier,
+				Name:      "",
+				Namespace: "",
+				Direction: rules.RuleDirEgress,
+				Index:     0,
+				IndexStr:  "0",
+				Action:    rules.RuleActionDeny,
+			},
+		)
 	}
-	// Tier exists. Update the reference count and continue.
 	m.tierRefs[msg.Id.Tier] = count + 1
-	m.pushPolicyNFLOGPrefixHash(msg.Id.Name)
-}
 
-func (m *LookupManager) pushPolicyNFLOGPrefixHash(name string) {
-	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
-	// separated by `|`s. Example: "D|0|default.no-policy-match-inbound|po".
-	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
-	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (2 for first (A|D|N) then a `|` then
-	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
-	//
-	// See iptables/actions.go ToFragment() func, this needs to be in sync,
-	// if you are updating the current function, we probably need to change that one as well.
-	prefixHash := hashutils.GetLengthLimitedID("", name, rules.NFLOGPrefixMaxLength-9)
-	prefixHash += "|po"
-
-	var bph [64]byte
-	copy(bph[:], []byte(prefixHash[:]))
-
-	rp, err := getRuleIDPartsFromPolicyName(name)
+	namespace, tier, name, err := deconstructPolicyName(msg.Id.Name)
 	if err != nil {
-		log.WithError(err).Infof("Error when storing nflog prefix hash for policy")
+		log.WithError(err).Error("Unable to parse policy name")
 		return
 	}
-	// Store the hash in a map. With hash being the key and value being parsed data.
-	m.nflogMutex.Lock()
-	defer m.nflogMutex.Unlock()
-	m.nflogPrefixHash[bph] = rp
-}
 
-// PushProfileNFLOGPrefixHash takes proto message (ActiveProfileUpdate) and calculates the NFLOG prefix, and if the prefix is too long then
-// calculates the hash. Finally it pushes it to a map for stats collector to access.
-func (m *LookupManager) PushProfileNFLOGPrefixHash(msg *proto.ActiveProfileUpdate) {
-	m.pushProfileNFLOGPrefixHash(msg.Id.Name)
-}
-
-func (m *LookupManager) pushProfileNFLOGPrefixHash(name string) {
-	// NFLOG prefix which is a combination of action, rule index, policy/profile and tier name
-	// separated by `|`s. Example: "D|0|profile-name|pr".
-	// We calculate the hash of the prefix's policy/profile name part (which includes tier name and namespace, if applicable)
-	// if its length exceeds NFLOG prefix max length which is 64 characters - 9 (2 for first (A|D|N) then a `|` then
-	// 3 digits for up to 999 for rule indexes, a `|` after that and 3 more for the `|po` suffix at the end.
-	//
-	// See iptables/actions.go ToFragment() func, this needs to be in sync,
-	// if you are updating the current function, we probably need to change that one as well.
-	prefixHash := hashutils.GetLengthLimitedID("", name, rules.NFLOGPrefixMaxLength-9)
-	prefixHash += "|pr"
-
-	var bph [64]byte
-	copy(bph[:], []byte(prefixHash[:]))
-
-	rp, err := getRuleIDPartsFromProfileName(name)
-	if err != nil {
-		log.WithError(err).Infof("Error when storing nflog prefix hash for profile")
-		return
+	key := model.PolicyKey{
+		Tier: msg.Id.Tier,
+		Name: msg.Id.Name,
 	}
-	// Store the hash in a map. With hash being the key and string being the value.
-	m.nflogMutex.Lock()
-	defer m.nflogMutex.Unlock()
-	m.nflogPrefixHash[bph] = rp
+	oldPrefixes := m.nflogPrefixesPolicy[key]
+	m.nflogPrefixesPolicy[key] = m.updateRulesNFLOGPrefixes(
+		msg.Id.Name,
+		namespace,
+		tier,
+		name,
+		oldPrefixes,
+		msg.Policy.InboundRules,
+		msg.Policy.OutboundRules,
+	)
 }
 
-// PopPolicyNFLOGPrefixHash takes proto message (ActivePolicyUpdate) and removes the hash to policy name map entry
-// from the nflogPrefixHash map.
-func (m *LookupManager) PopPolicyNFLOGPrefixHash(msg *proto.ActivePolicyRemove) {
-	count, ok := m.tierRefs[msg.Id.Tier]
-	if !ok {
-		log.Errorf("Tier refs not found for tier %v", msg.Id.Tier)
-		return
-	}
+// removePolicyRulesNFLOGPrefixes removes the prefix to RuleID maps for a policy.
+func (m *LookupManager) removePolicyRulesNFLOGPrefixes(msg *proto.ActivePolicyRemove) {
+	// If this is the last entry for the tier, remove the default deny entries for the tier.
+	// Increment the reference count so that we don't keep adding tiers.
+	count := m.tierRefs[msg.Id.Tier]
 	if count == 1 {
-		m.popNoPolicyMatchNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchInboundS))
-		m.popNoPolicyMatchNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchOutboundS))
 		delete(m.tierRefs, msg.Id.Tier)
+		m.deleteNFLogPrefixEntry(
+			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirIngress, msg.Id.Tier),
+		)
+		m.deleteNFLogPrefixEntry(
+			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirEgress, msg.Id.Tier),
+		)
 	} else {
 		m.tierRefs[msg.Id.Tier] = count - 1
 	}
-	m.popNoPolicyMatchNFLOGPrefixHash(msg.Id.Name)
+
+	key := model.PolicyKey{
+		Tier: msg.Id.Tier,
+		Name: msg.Id.Name,
+	}
+	oldPrefixes := m.nflogPrefixesPolicy[key]
+	m.deleteRulesNFLOGPrefixes(oldPrefixes)
+	delete(m.nflogPrefixesPolicy, key)
 }
 
-func (m *LookupManager) popNoPolicyMatchNFLOGPrefixHash(name string) {
-	var honByte [64]byte
-	hashOrName := name
+// updateProfileRulesNFLOGPrefixes stores the required prefix to RuleID maps for a profile, deleting any
+// stale entries if the number of rules or action types have changed.
+func (m *LookupManager) updateProfileRulesNFLOGPrefixes(msg *proto.ActiveProfileUpdate) {
+	key := model.ProfileKey{
+		Name: msg.Id.Name,
+	}
+	oldPrefixes := m.nflogPrefixesProfile[key]
+	m.nflogPrefixesProfile[key] = m.updateRulesNFLOGPrefixes(
+		msg.Id.Name,
+		"",
+		"",
+		msg.Id.Name,
+		oldPrefixes,
+		msg.Profile.InboundRules,
+		msg.Profile.OutboundRules,
+	)
+}
 
-	// +9 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
-	// and 3 more for the `|po` suffix at the end (the policy name has the tier and the "." character already in it).
-	if len(name)+9 > rules.NFLOGPrefixMaxLength {
-		hashOrName = hashutils.GetLengthLimitedID("", name, rules.NFLOGPrefixMaxLength-9)
+// removeProfileRulesNFLOGPrefixes removes the prefix to RuleID maps for a profile.
+func (m *LookupManager) removeProfileRulesNFLOGPrefixes(msg *proto.ActiveProfileRemove) {
+	key := model.ProfileKey{
+		Name: msg.Id.Name,
+	}
+	oldPrefixes := m.nflogPrefixesProfile[key]
+	m.deleteRulesNFLOGPrefixes(oldPrefixes)
+	delete(m.nflogPrefixesProfile, key)
+}
+
+func (m *LookupManager) updateRulesNFLOGPrefixes(
+	v1Name, namespace, tier, name string, oldPrefixes set.Set, ingress []*proto.Rule, egress []*proto.Rule,
+) set.Set {
+	newPrefixes := set.New()
+
+	convertAction := func(a string) rules.RuleAction {
+		switch a {
+		case "allow":
+			return rules.RuleActionAllow
+		case "deny":
+			return rules.RuleActionDeny
+		case "pass", "next-tier":
+			return rules.RuleActionNextTier
+		}
+		return rules.RuleActionDeny
+	}
+	owner := rules.RuleOwnerTypePolicy
+	if tier == "" {
+		owner = rules.RuleOwnerTypeProfile
+	}
+	for ii, rule := range ingress {
+		action := convertAction(rule.Action)
+		prefix := rules.CalculateNFLOGPrefixStr(action, owner, rules.RuleDirIngress, ii, v1Name)
+		m.addNFLogPrefixEntry(
+			prefix,
+			&RuleID{
+				Tier:      tier,
+				Name:      name,
+				Namespace: namespace,
+				Direction: rules.RuleDirIngress,
+				Index:     ii,
+				IndexStr:  strconv.Itoa(ii),
+				Action:    action,
+			},
+		)
+		newPrefixes.Add(prefix)
+	}
+	for ii, rule := range egress {
+		action := convertAction(rule.Action)
+		prefix := rules.CalculateNFLOGPrefixStr(action, owner, rules.RuleDirEgress, ii, v1Name)
+		m.addNFLogPrefixEntry(
+			prefix,
+			&RuleID{
+				Tier:      tier,
+				Name:      name,
+				Namespace: namespace,
+				Direction: rules.RuleDirEgress,
+				Index:     ii,
+				IndexStr:  strconv.Itoa(ii),
+				Action:    action,
+			},
+		)
+		newPrefixes.Add(prefix)
 	}
 
-	hashOrName += "|po"
-
-	copy(honByte[:], []byte(hashOrName))
-
-	m.nflogMutex.Lock()
-	defer m.nflogMutex.Unlock()
-	delete(m.nflogPrefixHash, honByte)
-}
-
-// PopProfileNFLOGPrefixHash takes proto message (ActiveProfileRemove) and removes the hash to profile name map entry
-// from the nflogPrefixHash map.
-func (m *LookupManager) PopProfileNFLOGPrefixHash(msg *proto.ActiveProfileRemove) {
-	m.popProfileNFLOGPrefixHash(msg.Id.Name)
-}
-
-func (m *LookupManager) popProfileNFLOGPrefixHash(name string) {
-	var honByte [64]byte
-
-	hashOrName := name
-
-	// +9 because 2 for first (A|D|N) then a `|` then 3 digits for up to 999 for rule indexes, a `|` after that
-	// and 3 more for the `|po` suffix at the end.
-	if len(name)+9 > rules.NFLOGPrefixMaxLength {
-		hashOrName = hashutils.GetLengthLimitedID("", name, rules.NFLOGPrefixMaxLength-9)
-	}
-	hashOrName += "|pr"
-
-	copy(honByte[:], []byte(hashOrName))
-
-	m.nflogMutex.Lock()
-	defer m.nflogMutex.Unlock()
-	delete(m.nflogPrefixHash, honByte)
-}
-
-// GetNFLOGHashToPolicyID returns unhashed policy/profile ID (name) associated with the NFLOG prefix string or hash from the nflogPrefixHash map.
-func (m *LookupManager) GetNFLOGHashToPolicyID(prefixHash [64]byte) (RuleIDParts, error) {
-	m.nflogMutex.RLock()
-	rp, ok := m.nflogPrefixHash[prefixHash]
-	m.nflogMutex.RUnlock()
-	if !ok {
-		return rp, fmt.Errorf("cannot find the specified NFLOG prefix string or hash: %s in the lookup manager", prefixHash)
+	if oldPrefixes != nil {
+		oldPrefixes.Iter(func(item interface{}) error {
+			if !newPrefixes.Contains(item) {
+				m.deleteNFLogPrefixEntry(item.(string))
+			}
+			return nil
+		})
 	}
 
-	return rp, nil
+	return newPrefixes
 }
 
-func (m *LookupManager) CompleteDeferredWork() error {
-	return nil
+func (m *LookupManager) deleteRulesNFLOGPrefixes(oldPrefixes set.Set) {
+	if oldPrefixes != nil {
+		oldPrefixes.Iter(func(item interface{}) error {
+			m.deleteNFLogPrefixEntry(item.(string))
+			return nil
+		})
+	}
 }
 
 // GetEndpointKey returns either a *model.WorkloadEndpointKey or *model.HostEndpointKey
@@ -406,7 +536,7 @@ func (m *LookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) {
 	m.epMutex.RLock()
 	// There's no need to copy the result because we never modify fields,
 	// only delete or replace.
-	epKey := m.endpoints[addr]
+	epKey := m.workloadEndpoints[addr]
 	m.epMutex.RUnlock()
 	if epKey != nil {
 		return epKey, nil
@@ -425,32 +555,92 @@ func (m *LookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) {
 // epKey is either a *model.WorkloadEndpointKey or *model.HostEndpointKey
 //TODO: RLB: Do we really need to keep track of EP vs. Tier indexes?  Seems an overkill - we only need
 // to know the overall tier order to determine the order of the NFLOGs in a set of traces.
-func (m *LookupManager) GetTierIndex(epKey interface{}, tierName string) (tiersBefore int) {
+//
+// Returns -1 if unable to determine the tier index.
+func (m *LookupManager) GetTierIndex(epKey interface{}, tierName string) int {
 	switch epKey.(type) {
 	case *model.WorkloadEndpointKey:
 		ek := epKey.(*model.WorkloadEndpointKey)
 		m.epMutex.RLock()
-		tiers := m.endpointTiers[*ek]
-		for _, tier := range tiers {
+		tiers := m.workloadEndpointTiers[*ek]
+		m.epMutex.RUnlock()
+		if tierName == "" {
+			// Finesse the profile case (tier is blank).
+			return len(tiers)
+		}
+		for i, tier := range tiers {
 			if tier.Name == tierName {
-				break
-			} else {
-				tiersBefore++
+				return i
 			}
 		}
-		m.epMutex.RUnlock()
 	case *model.HostEndpointKey:
 		ek := epKey.(*model.HostEndpointKey)
 		m.hostEpMutex.RLock()
-		tiers := append(m.hostEndpointUntrackedTiers[*ek], m.hostEndpointTiers[*ek]...)
-		for _, tier := range tiers {
+		untrackedTiers := m.hostEndpointUntrackedTiers[*ek]
+		tiers := m.hostEndpointTiers[*ek]
+		m.hostEpMutex.RUnlock()
+		if tierName == "" {
+			// Finesse the profile case (tier is blank).
+			return len(untrackedTiers) + len(tiers)
+		}
+		for i, tier := range untrackedTiers {
 			if tier.Name == tierName {
-				break
-			} else {
-				tiersBefore++
+				return i
 			}
 		}
-		m.hostEpMutex.RUnlock()
+		for i, tier := range tiers {
+			if tier.Name == tierName {
+				return len(untrackedTiers) + i
+			}
+		}
 	}
-	return tiersBefore
+	return -1
+}
+
+func (m *LookupManager) GetRuleIDsFromNFLOGPrefix(prefix [64]byte) *RuleID {
+	m.nflogMutex.RLock()
+	defer m.nflogMutex.RUnlock()
+	return m.nflogPrefixHash[prefix]
+}
+
+// deconstructPolicyName deconstructs the v1 policy name that is constructed by the SyncerUpdateProcessors in
+// libcalico-go and extracts the v3 fields: namespace, tier, name.
+//
+// The v1 policy name is of the format:
+// -  <namespace>/<tier>.<name> for a namespaced NetworkPolicies
+// -  <tier>.<name> for GlobalNetworkPolicies.
+// -  <namespace>/knp.default.k8spolicy for a k8s NetworkPolicies
+//
+// The namespace is returned blank for GlobalNetworkPolicies.
+// For k8s network policies, the tier is always "default" and the name will be returned including the
+// knp.default prefix.
+func deconstructPolicyName(name string) (string, string, string, error) {
+	parts := strings.Split(name, "/")
+	switch len(parts) {
+	case 1: // GlobalNetworkPolicy
+		nameParts := strings.Split(parts[0], ".")
+		if len(nameParts) != 2 {
+			return "", "", "", fmt.Errorf("Could not parse policy %s", name)
+		}
+		return "", nameParts[0], nameParts[1], nil
+	case 2: // NetworkPolicy
+		nameParts := strings.Split(parts[1], ".")
+		switch len(nameParts) {
+		case 2: // Non-k8s
+			return parts[0], nameParts[0], nameParts[1], nil
+		case 3: // K8s
+			if nameParts[0] == "knp" && nameParts[1] == "default" {
+				return parts[0], nameParts[1], parts[1], nil
+			}
+		}
+	}
+	return "", "", "", fmt.Errorf("Could not parse policy %s", name)
+}
+
+func (m *LookupManager) Dump() string {
+	lines := []string{}
+	for p, r := range m.nflogPrefixHash {
+		lines = append(lines, string(p[:])+": "+r.String())
+	}
+	return strings.Join(lines, "\n")
 }

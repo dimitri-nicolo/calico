@@ -11,9 +11,39 @@ import (
 
 	"github.com/gavv/monotime"
 
+	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
+
+type TrafficDirection int
+
+const (
+	TrafficDirInbound TrafficDirection = iota
+	TrafficDirOutbound
+)
+
+const (
+	TrafficDirInboundStr  = "inbound"
+	TrafficDirOutboundStr = "outbound"
+)
+
+func (t TrafficDirection) String() string {
+	if t == TrafficDirInbound {
+		return TrafficDirInboundStr
+	}
+	return TrafficDirOutboundStr
+}
+
+// ruleDirToTrafficDir converts the rule direction to the equivalent traffic direction
+// (useful for NFLOG based updates where ingress/inbound and egress/outbound are
+// tied).
+func ruleDirToTrafficDir(r rules.RuleDir) TrafficDirection {
+	if r == rules.RuleDirIngress {
+		return TrafficDirInbound
+	}
+	return TrafficDirOutbound
+}
 
 // Counter stores packet and byte statistics. It also maintains a delta of
 // changes made until a `ResetDeltas()` is called.
@@ -98,8 +128,7 @@ func (c *Counter) String() string {
 const RuleTraceInitLen = 10
 
 var (
-	RuleTracePointConflict   = errors.New("Conflict in RuleTracePoint")
-	RuleTracePointParseError = errors.New("RuleTracePoint Parse Error")
+	RuleTracePointConflict = errors.New("Conflict in RuleTracePoint")
 )
 
 // RuleTracePoint represents a rule and the Tier and a Policy that contains
@@ -110,17 +139,17 @@ var (
 // - A/rule Index/profile name
 // - A/rule Index/Policy name/Tier name
 type RuleTracePoint struct {
-	RuleIDs rules.RuleIDs
-	Index   int
-	EpKey   interface{}
-	Ctr     Counter
+	RuleID *lookup.RuleID
+	Index  int
+	EpKey  interface{}
+	Ctr    Counter
 }
 
-func NewRuleTracePoint(ruleIDs rules.RuleIDs, epKey interface{}, tierIndex, numPkts, numBytes int) *RuleTracePoint {
+func NewRuleTracePoint(ruleIDs *lookup.RuleID, epKey interface{}, tierIndex, numPkts, numBytes int) *RuleTracePoint {
 	rtp := &RuleTracePoint{
-		RuleIDs: ruleIDs,
-		EpKey:   epKey,
-		Index:   tierIndex,
+		RuleID: ruleIDs,
+		EpKey:  epKey,
+		Index:  tierIndex,
 	}
 	rtp.Ctr.Set(numPkts, numBytes)
 	return rtp
@@ -128,13 +157,14 @@ func NewRuleTracePoint(ruleIDs rules.RuleIDs, epKey interface{}, tierIndex, numP
 
 // Equals compares all but the Ctr field of a RuleTracePoint
 func (rtp *RuleTracePoint) Equals(cmpRtp *RuleTracePoint) bool {
-	return rtp.RuleIDs.Equals(cmpRtp.RuleIDs) &&
+	return rtp.RuleID.Equals(cmpRtp.RuleID) &&
 		rtp.Index == cmpRtp.Index &&
 		rtp.EpKey == cmpRtp.EpKey
 }
 
 func (rtp *RuleTracePoint) String() string {
-	return fmt.Sprintf("tierId='%s' policyId='%s' rule='%s' action='%v' Index=%v Ctr={%v}", rtp.RuleIDs.Tier, rtp.RuleIDs.Policy, rtp.RuleIDs.Index, rtp.RuleIDs.Action, rtp.Index, rtp.Ctr.String())
+	return fmt.Sprintf("tierId='%s' policyId='%s' rule='%s' action='%v' Index=%v Ctr={%v}",
+		rtp.RuleID.Tier, rtp.RuleID.Name, rtp.RuleID.Index, rtp.RuleID.Action, rtp.Index, rtp.Ctr.String())
 }
 
 // RuleTrace represents the list of rules (i.e, a Trace) that a packet hits.
@@ -202,7 +232,7 @@ func (t *RuleTrace) Path() []*RuleTracePoint {
 			rebuild = true
 			break
 		}
-		if tp.RuleIDs.Action == rules.ActionAllow || tp.RuleIDs.Action == rules.ActionDeny {
+		if tp.RuleID.Action == rules.RuleActionAllow || tp.RuleID.Action == rules.RuleActionDeny {
 			idx = i
 			break
 		}
@@ -225,7 +255,7 @@ func (t *RuleTrace) ToString() string {
 	if p == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s/%s/%s/%v", p.RuleIDs.Tier, p.RuleIDs.Policy, p.RuleIDs.Index, p.RuleIDs.Action)
+	return fmt.Sprintf("%s/%s/%s/%v", p.RuleID.Tier, p.RuleID.Name, p.RuleID.Index, p.RuleID.Action)
 }
 
 func (t *RuleTrace) Action() rules.RuleAction {
@@ -284,8 +314,8 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 			return RuleTracePointConflict
 		}
 	}
-	if tp.RuleIDs.Action != rules.ActionNextTier {
-		t.action = tp.RuleIDs.Action
+	if tp.RuleID.Action != rules.RuleActionNextTier {
+		t.action = tp.RuleID.Action
 		//TODO: RLB: This (and the replaceRPT below) means the RT counter is always
 		// kept in sync with the verdict RTP.  In which case do we need the complexity
 		// of this additional counter?  Now say the policy is updated such that the
@@ -301,14 +331,14 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 }
 
 func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
-	if tp.RuleIDs.Action == rules.ActionNextTier {
+	if tp.RuleID.Action == rules.RuleActionNextTier {
 		t.path[tp.Index] = tp
 		return
 	}
 	// New tracepoint is not a next-Tier action truncate at this Index.
 	t.path[tp.Index] = tp
 	t.path = t.path[:tp.Index+1]
-	t.action = tp.RuleIDs.Action
+	t.action = tp.RuleID.Action
 	t.ctr = tp.Ctr
 	t.dirty = true
 	t.epKey = tp.EpKey
@@ -316,7 +346,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
 }
 
 // ToMetricUpdate converts the RuleTrace to a MetricUpdate used by the reporter.
-func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td rules.TrafficDirection, ctr *Counter, ctrRev *Counter) *MetricUpdate {
+func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td TrafficDirection, ctr *Counter, ctrRev *Counter) *MetricUpdate {
 	var (
 		dp, db, dpRev, dbRev int
 		isConn               bool
@@ -332,16 +362,16 @@ func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td rules.TrafficDire
 	mu := &MetricUpdate{
 		updateType:   ut,
 		tuple:        t,
-		ruleIDs:      rt.VerdictRuleTracePoint().RuleIDs,
+		ruleID:       rt.VerdictRuleTracePoint().RuleID,
 		isConnection: isConn,
 	}
 	switch td {
-	case rules.TrafficDirInbound:
+	case TrafficDirInbound:
 		mu.inMetric = MetricValue{dp, db}
 		if isConn {
 			mu.outMetric = MetricValue{dpRev, dbRev}
 		}
-	case rules.TrafficDirOutbound:
+	case TrafficDirOutbound:
 		mu.outMetric = MetricValue{dp, db}
 		if isConn {
 			mu.inMetric = MetricValue{dpRev, dbRev}
@@ -527,13 +557,13 @@ func (d *Data) ResetConntrackCounters() {
 
 func (d *Data) AddRuleTracePoint(tp *RuleTracePoint) error {
 	var err error
-	switch tp.RuleIDs.Direction {
+	switch tp.RuleID.Direction {
 	case rules.RuleDirIngress:
 		err = d.IngressRuleTrace.addRuleTracePoint(tp)
 	case rules.RuleDirEgress:
 		err = d.EgressRuleTrace.addRuleTracePoint(tp)
 	default:
-		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleIDs.Direction)
+		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleID.Direction)
 	}
 
 	if err == nil {
@@ -545,13 +575,13 @@ func (d *Data) AddRuleTracePoint(tp *RuleTracePoint) error {
 
 func (d *Data) ReplaceRuleTracePoint(tp *RuleTracePoint) error {
 	var err error
-	switch tp.RuleIDs.Direction {
+	switch tp.RuleID.Direction {
 	case rules.RuleDirIngress:
 		d.IngressRuleTrace.replaceRuleTracePoint(tp)
 	case rules.RuleDirEgress:
 		d.EgressRuleTrace.replaceRuleTracePoint(tp)
 	default:
-		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleIDs.Direction)
+		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleID.Direction)
 	}
 
 	if err == nil {
@@ -566,20 +596,20 @@ func (d *Data) Report(c chan<- *MetricUpdate, expired bool) {
 	if expired {
 		ut = UpdateTypeExpire
 	}
-	if ((d.EgressRuleTrace.Action() == rules.ActionDeny || d.EgressRuleTrace.Action() == rules.ActionAllow) && (expired || d.EgressRuleTrace.IsDirty())) ||
-		(!expired && d.EgressRuleTrace.Action() == rules.ActionAllow && d.isConnection && d.IsDirty()) {
+	if ((d.EgressRuleTrace.Action() == rules.RuleActionDeny || d.EgressRuleTrace.Action() == rules.RuleActionAllow) && (expired || d.EgressRuleTrace.IsDirty())) ||
+		(!expired && d.EgressRuleTrace.Action() == rules.RuleActionAllow && d.isConnection && d.IsDirty()) {
 		if d.isConnection {
-			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, rules.TrafficDirOutbound, &d.connTrackCtr, &d.connTrackCtrReverse)
+			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, TrafficDirOutbound, &d.connTrackCtr, &d.connTrackCtrReverse)
 		} else {
-			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, rules.TrafficDirOutbound, nil, nil)
+			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, TrafficDirOutbound, nil, nil)
 		}
 	}
-	if ((d.IngressRuleTrace.Action() == rules.ActionDeny || d.IngressRuleTrace.Action() == rules.ActionAllow) && (expired || d.IngressRuleTrace.IsDirty())) ||
-		(!expired && d.IngressRuleTrace.Action() == rules.ActionAllow && d.isConnection && d.IsDirty()) {
+	if ((d.IngressRuleTrace.Action() == rules.RuleActionDeny || d.IngressRuleTrace.Action() == rules.RuleActionAllow) && (expired || d.IngressRuleTrace.IsDirty())) ||
+		(!expired && d.IngressRuleTrace.Action() == rules.RuleActionAllow && d.isConnection && d.IsDirty()) {
 		if d.isConnection {
-			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, rules.TrafficDirInbound, &d.connTrackCtr, &d.connTrackCtrReverse)
+			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, TrafficDirInbound, &d.connTrackCtr, &d.connTrackCtrReverse)
 		} else {
-			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, rules.TrafficDirInbound, nil, nil)
+			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, TrafficDirInbound, nil, nil)
 		}
 	}
 

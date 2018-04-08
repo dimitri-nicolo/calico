@@ -15,8 +15,6 @@
 package rules
 
 import (
-	"fmt"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/hashutils"
@@ -50,7 +48,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			chainTypeNormal,
 			adminUp,
 			uint16(1),
-			"inbound",
+			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
 		),
@@ -66,7 +64,7 @@ func (r *DefaultRuleRenderer) WorkloadEndpointToIptablesChains(
 			chainTypeNormal,
 			adminUp,
 			uint16(2),
-			"outbound",
+			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction, // Workload endpoint chains are only used in the filter table
 		),
@@ -108,7 +106,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			chainTypeNormal,
 			true, // Host endpoints are always admin up.
 			uint16(2),
-			"outbound",
+			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction,
 		),
@@ -124,7 +122,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			chainTypeNormal,
 			true, // Host endpoints are always admin up.
 			uint16(1),
-			"inbound",
+			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction,
 		),
@@ -140,7 +138,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			chainTypeForward,
 			true, // Host endpoints are always admin up.
 			uint16(2),
-			"outbound",
+			RuleDirEgress,
 			egressPolicy,
 			r.filterAllowAction,
 		),
@@ -156,7 +154,7 @@ func (r *DefaultRuleRenderer) HostEndpointToFilterChains(
 			chainTypeForward,
 			true, // Host endpoints are always admin up.
 			uint16(1),
-			"inbound",
+			RuleDirIngress,
 			ingressPolicy,
 			r.filterAllowAction,
 		),
@@ -194,7 +192,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			chainTypeUntracked,
 			true, // Host endpoints are always admin up.
 			uint16(2),
-			"outbound",
+			RuleDirEgress,
 			egressPolicy,
 			AcceptAction{},
 		),
@@ -210,7 +208,7 @@ func (r *DefaultRuleRenderer) HostEndpointToRawChains(
 			chainTypeUntracked,
 			true, // Host endpoints are always admin up.
 			uint16(1),
-			"inbound",
+			RuleDirIngress,
 			ingressPolicy,
 			AcceptAction{},
 		),
@@ -236,7 +234,7 @@ func (r *DefaultRuleRenderer) HostEndpointToMangleChains(
 			chainTypePreDNAT,
 			true, // Host endpoints are always admin up.
 			uint16(1),
-			"inbound",
+			RuleDirIngress,
 			ingressPolicy,
 			r.mangleAllowAction,
 		),
@@ -285,7 +283,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 	chainType endpointChainType,
 	adminUp bool,
 	nflogGroup uint16,
-	directionSuffix string,
+	dir RuleDir,
 	policyType string,
 	allowAction Action,
 ) *Chain {
@@ -378,7 +376,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 					Match: Match().MarkClear(r.IptablesMarkPass),
 					Action: NflogAction{
 						Group:       nflogGroup,
-						Prefix:      fmt.Sprintf("D|0|%s.no-policy-match-%s|po", tier.Name, directionSuffix),
+						Prefix:      CalculateNoMatchPolicyNFLOGPrefixStr(dir, tier.Name),
 						SizeEnabled: r.EnableNflogSize,
 					},
 				})
@@ -416,7 +414,7 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			Match: Match(),
 			Action: NflogAction{
 				Group:       nflogGroup,
-				Prefix:      fmt.Sprintf("D|0|no-profile-match-%s|pr", directionSuffix),
+				Prefix:      CalculateNoMatchProfileNFLOGPrefixStr(dir),
 				SizeEnabled: r.EnableNflogSize,
 			},
 		})
