@@ -4,7 +4,7 @@ import:
   version: v1.0.4
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: master
+  version: faca912cb5a084b6f1e23021ebfbaceb8970400a
   subpackages:
   - lib/api
   - lib/client
