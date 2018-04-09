@@ -68,7 +68,7 @@ var (
 	// have a single dot.
 	globalNetworkPolicyNameRegex = regexp.MustCompile("^(" + nameLabelFmt + "\\.)?" + nameLabelFmt + "$")
 
-	interfaceRegex        = regexp.MustCompile("^[a-zA-Z0-9_-]{1,15}$")
+	interfaceRegex        = regexp.MustCompile("^[a-zA-Z0-9_.-]{1,15}$")
 	actionRegex           = regexp.MustCompile("^(Allow|Deny|Log|Pass)$")
 	protocolRegex         = regexp.MustCompile("^(TCP|UDP|ICMP|ICMPv6|SCTP|UDPLite)$")
 	ipipModeRegex         = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
