@@ -251,17 +251,16 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 // PushPolicyNFLOGPrefixHash takes proto message (ActivePolicyUpdate) and calculates the NFLOG prefix, and if the prefix is too long then
 // calculates the hash. Finally it pushes it to a map for stats collector to access.
 func (m *LookupManager) PushPolicyNFLOGPrefixHash(msg *proto.ActivePolicyUpdate) {
-	m.pushPolicyNFLOGPrefixHash(msg.Id.Name)
-	// Check if this is the first time we are seeing this tier. If it is then add a entry to our hash.
-	// Otherwise no-op.
 	count, ok := m.tierRefs[msg.Id.Tier]
-	if ok {
-		// Tier exists. Update the reference count and continue.
-		m.tierRefs[msg.Id.Tier] = count + 1
-		return
+	if !ok {
+		// This is the first time we are seeing this tier. Add a entry to our hash and
+		// add default deny entries.
+		m.pushPolicyNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchInboundS))
+		m.pushPolicyNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchOutboundS))
 	}
-	m.pushPolicyNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchInboundS))
-	m.pushPolicyNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchOutboundS))
+	// Tier exists. Update the reference count and continue.
+	m.tierRefs[msg.Id.Tier] = count + 1
+	m.pushPolicyNFLOGPrefixHash(msg.Id.Name)
 }
 
 func (m *LookupManager) pushPolicyNFLOGPrefixHash(name string) {
@@ -325,14 +324,19 @@ func (m *LookupManager) pushProfileNFLOGPrefixHash(name string) {
 // PopPolicyNFLOGPrefixHash takes proto message (ActivePolicyUpdate) and removes the hash to policy name map entry
 // from the nflogPrefixHash map.
 func (m *LookupManager) PopPolicyNFLOGPrefixHash(msg *proto.ActivePolicyRemove) {
-	m.popNoPolicyMatchNFLOGPrefixHash(msg.Id.Name)
 	count, ok := m.tierRefs[msg.Id.Tier]
-	if !ok || count > 1 {
+	if !ok {
+		log.Errorf("Tier refs not found for tier %v", msg.Id.Tier)
 		return
 	}
-	m.popNoPolicyMatchNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchInboundS))
-	m.popNoPolicyMatchNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchOutboundS))
-	delete(m.tierRefs, msg.Id.Tier)
+	if count == 1 {
+		m.popNoPolicyMatchNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchInboundS))
+		m.popNoPolicyMatchNFLOGPrefixHash(fmt.Sprintf("%s.%s", msg.Id.Tier, noPolicyMatchOutboundS))
+		delete(m.tierRefs, msg.Id.Tier)
+	} else {
+		m.tierRefs[msg.Id.Tier] = count - 1
+	}
+	m.popNoPolicyMatchNFLOGPrefixHash(msg.Id.Name)
 }
 
 func (m *LookupManager) popNoPolicyMatchNFLOGPrefixHash(name string) {
