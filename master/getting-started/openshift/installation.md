@@ -10,6 +10,10 @@ The information below explains the variables which must be set during the standa
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
 
+## Before you begin
+
+Ensure that your cluster meets the {{site.prodname}} [system requirements](requirements). 
+
 ## Installation
 
 To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
