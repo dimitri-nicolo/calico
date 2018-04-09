@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/containers"
+	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/metrics"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
@@ -29,13 +30,13 @@ var _ = Context("CNX Metrics, etcd datastore, 2 workloads", func() {
 
 	var (
 		etcd   *containers.Container
-		felix  *containers.Felix
+		felix  *infrastructure.Felix
 		client client.Interface
 		w      [2]*workload.Workload
 	)
 
 	BeforeEach(func() {
-		felix, etcd, client = containers.StartSingleNodeEtcdTopology(containers.DefaultTopologyOptions())
+		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
 
 		// Default profile that ensures connectivity.
 		defaultProfile := api.NewProfile()

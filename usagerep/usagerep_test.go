@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ import (
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
 )
+
+const expectedNumberOfURLParams = 11
 
 // These tests start a local HTTP server on a random port and tell the usage reporter to
 // connect to it.  Then we can check that it correctly makes HTTP requests at the right times.
@@ -99,6 +101,8 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					NumHosts:             1,
 					NumHostEndpoints:     2,
 					NumWorkloadEndpoints: 3,
+					NumPolicies:          4,
+					NumProfiles:          5,
 				}
 			}
 
@@ -119,7 +123,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(url.Path).To(Equal("/UsageCheck/calicoVersionCheck"))
 				q := url.Query()
-				Expect(len(q)).To(Equal(9))
+				Expect(q).To(HaveLen(expectedNumberOfURLParams), "unexpected number of URL parameters")
 				Expect(q.Get("guid")).To(Equal("someguid"))
 				Expect(q.Get("type")).To(Equal("openstack,k8s,kdd,cnx"))
 				Expect(q.Get("cal_ver")).To(Equal("v2.6.3"))
@@ -127,6 +131,8 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 				Expect(q.Get("size")).To(Equal("1"))
 				Expect(q.Get("heps")).To(Equal("2"))
 				Expect(q.Get("weps")).To(Equal("3"))
+				Expect(q.Get("policies")).To(Equal("4"))
+				Expect(q.Get("profiles")).To(Equal("5"))
 
 				By("checking in again")
 				Eventually(httpHandler.GetRequestURIs, "2s", "100ms").Should(HaveLen(2))
@@ -154,6 +160,8 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 						NumHosts:             10,
 						NumHostEndpoints:     20,
 						NumWorkloadEndpoints: 30,
+						NumPolicies:          40,
+						NumProfiles:          50,
 					}
 					configUpdateC <- map[string]string{
 						"ClusterGUID":   "someguid2",
@@ -172,7 +180,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					url, err := url.Parse(uri)
 					Expect(err).NotTo(HaveOccurred())
 					q := url.Query()
-					Expect(len(q)).To(Equal(9))
+					Expect(q).To(HaveLen(expectedNumberOfURLParams), "unexpected number of URL parameters")
 					Expect(q.Get("guid")).To(Equal("someguid2"))
 					Expect(q.Get("type")).To(Equal("openstack,k8s,kdd,typha,cnx"))
 					Expect(q.Get("cal_ver")).To(Equal("v3.0.0"))
@@ -180,6 +188,8 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					Expect(q.Get("size")).To(Equal("10"))
 					Expect(q.Get("heps")).To(Equal("20"))
 					Expect(q.Get("weps")).To(Equal("30"))
+					Expect(q.Get("policies")).To(Equal("40"))
+					Expect(q.Get("profiles")).To(Equal("50"))
 				})
 			})
 		})
@@ -227,7 +237,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 		url, err := url.Parse(rawURL)
 		Expect(err).NotTo(HaveOccurred())
 		q := url.Query()
-		Expect(len(q)).To(Equal(9))
+		Expect(q).To(HaveLen(expectedNumberOfURLParams), "unexpected number of URL parameters")
 		Expect(q.Get("guid")).To(Equal("theguid"))
 		Expect(q.Get("type")).To(Equal("atype,cnx"))
 		Expect(q.Get("cal_ver")).To(Equal("testVer"))
@@ -251,7 +261,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 		url, err := url.Parse(rawURL)
 		Expect(err).NotTo(HaveOccurred())
 		q := url.Query()
-		Expect(len(q)).To(Equal(9))
+		Expect(q).To(HaveLen(expectedNumberOfURLParams), "unexpected number of URL parameters")
 		Expect(q.Get("guid")).To(Equal("baddecaf"))
 		Expect(q.Get("type")).To(Equal("unknown,cnx"))
 		Expect(q.Get("cal_ver")).To(Equal("unknown"))

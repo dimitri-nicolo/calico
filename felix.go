@@ -395,7 +395,7 @@ configRetry:
 			statsChanIn <- stats
 			return nil
 		})
-		statsCollector.RegisterWith(asyncCalcGraph.Dispatcher)
+		statsCollector.RegisterWith(asyncCalcGraph.CalcGraph)
 
 		// Rather than sending the updates directly to the usage reporting thread, we
 		// decouple with an extra goroutine.  This prevents blocking the calculation graph
@@ -434,7 +434,7 @@ configRetry:
 		statsCollector := calc.NewStatsCollector(func(stats calc.StatsUpdate) error {
 			return nil
 		})
-		statsCollector.RegisterWith(asyncCalcGraph.Dispatcher)
+		statsCollector.RegisterWith(asyncCalcGraph.CalcGraph)
 	}
 
 	// Create the validator, which sits between the syncer and the
