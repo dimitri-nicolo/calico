@@ -57,7 +57,7 @@ ut-containerized: bin/calicoq
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		calico/go-build \
+		$(GO_BUILD) \
 		sh -c 'make ut'
 
 .PHONY: fv
@@ -65,48 +65,45 @@ fv: bin/calicoq
 	CALICOQ=`pwd`/$^ fv/run-test
 
 .PHONY: fv-containerized
-fv-containerized: bin/calicoq build-image run-etcd
+fv-containerized: build-image run-etcd
 	docker run --net=host --privileged \
 		--rm -t \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
-		$(BUILD_IMAGE) \
+		$(GO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) fv/run-test'
-	$(MAKE) clean-image
 
 .PHONY: st
 st: bin/calicoq
 	CALICOQ=`pwd`/$^ st/run-test
 
 .PHONY: st-containerized
-st-containerized: bin/calicoq build-image
+st-containerized: build-image
 	docker run --net=host --privileged \
 		--rm -t \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
-		$(BUILD_IMAGE) \
+		$(GO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) st/run-test'
-	$(MAKE) clean-image
 
 .PHONY: scale-test
 scale-test: bin/calicoq
 	CALICOQ=`pwd`/$^ scale-test/run-test
 
 .PHONY: scale-test-containerized
-scale-test-containerized: bin/calicoq build-image
+scale-test-containerized: build-image
 	docker run --net=host --privileged \
 		--rm -t \
 		--entrypoint '/bin/sh' \
 		-v $(CURDIR):/code/$(PACKAGE_NAME) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /code/$(PACKAGE_NAME) \
-		$(BUILD_IMAGE) \
+		$(GO_BUILD) \
 		-c 'CALICOQ=`pwd`/$(BINARY) scale-test/run-test'
-	$(MAKE) clean-image
 
 # Build image for containerized testing
 .PHONY: build-image

@@ -1,10 +1,6 @@
-FROM alpine:3.6
+FROM scratch
 
-ADD bin/calicoq ./calicoq
+LABEL maintainer="tom@tigera.io"
 
-ENV PATH=$PATH:/
-
-RUN apk add --no-cache bash curl docker wget
-
-WORKDIR /root
+COPY bin/calicoq /
 ENTRYPOINT ["/calicoq"]
