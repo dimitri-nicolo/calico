@@ -51,7 +51,14 @@ pipeline {
         }
         stage('Run FVs') {
             steps {
-                sh "echo 'Run FVs' && make fv"
+                script{
+                    withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
+                        sh "cp $DOCKER_AUTH key.json"
+                        sh "gcloud auth activate-service-account ${env.WAVETANK_SERVICE_ACCT} --key-file key.json"
+                        sh "gcloud docker --authorize-only --server gcr.io"
+                        sh "echo 'Run FVs' && make fv"
+                    }
+                }
             }
         }
 
