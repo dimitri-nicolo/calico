@@ -49,6 +49,11 @@ pipeline {
                 sh "echo 'Run unit Tests' && make ut-no-cover"
             }
         }
+        stage('Run FVs') {
+            steps {
+                sh "echo 'Run FVs' && make fv"
+            }
+        }
 
         stage('Push image to GCR') {
             steps {
