@@ -33,13 +33,15 @@ func printJSON(outputs []OutputList) error {
 }
 
 type OutputList struct {
-	Description       string                   `json:"description"`
-	Endpoints         []*WorkloadEndpointPrint `json:"endpoints,omitempty"`
-	ApplyToEndpoints  []*WorkloadEndpointPrint `json:"policy_applies_to_endpoints,omitempty"`
-	MatchingEndpoints []*WorkloadEndpointPrint `json:"endpoints_match_policy,omitempty"`
+	Description       string           `json:"description"`
+	Endpoints         []*EndpointPrint `json:"endpoints,omitempty"`
+	ApplyToEndpoints  []*EndpointPrint `json:"policy_applies_to_endpoints,omitempty"`
+	MatchingEndpoints []*EndpointPrint `json:"endpoints_match_policy,omitempty"`
+	Tier              string           `json:"-"`
+	InputName         string           `json:"-"`
 }
 
-type WorkloadEndpointPrint struct {
+type EndpointPrint struct {
 	Node         string         `json:"node,omitempty"`
 	Orchestrator string         `json:"orchestrator,omitempty"`
 	Workload     string         `json:"workload,omitempty"`
@@ -50,28 +52,29 @@ type WorkloadEndpointPrint struct {
 	Selector     string         `json:"selector,omitempty"`
 }
 
-func NewWorkloadEndpointPrintFromEndpointDatum(epd endpointDatum) *WorkloadEndpointPrint {
-	return NewWorkloadEndpointPrintFromKey(epd.epID)
+func NewEndpointPrintFromEndpointDatum(epd endpointDatum) *EndpointPrint {
+	return NewEndpointPrintFromKey(epd.epID)
 }
 
-func NewWorkloadEndpointPrintFromKey(key interface{}) *WorkloadEndpointPrint {
-	wepp := &WorkloadEndpointPrint{}
+func NewEndpointPrintFromKey(key interface{}) *EndpointPrint {
+	epp := &EndpointPrint{}
 	switch epID := key.(type) {
 	case model.WorkloadEndpointKey:
-		wepp.Node = epID.Hostname
-		wepp.Orchestrator = epID.OrchestratorID
-		wepp.Workload = epID.WorkloadID
-		wepp.Name = epID.EndpointID
+		epp.Node = epID.Hostname
+		epp.Orchestrator = epID.OrchestratorID
+		epp.Workload = epID.WorkloadID
+		epp.Name = epID.EndpointID
 	case model.HostEndpointKey:
-		wepp.Name = epID.EndpointID
+		epp.Node = epID.Hostname
+		epp.Name = epID.EndpointID
 	}
-	return wepp
+	return epp
 }
 
-func NewWorkloadEndpointPrintFromNameString(name string) *WorkloadEndpointPrint {
+func NewEndpointPrintFromNameString(name string) *EndpointPrint {
 	// name is of the form "Workload endpoint <node>/<orchestrator>/<workload>/<name>
 	// sel is of the form "applicable endpoints; selector <selector>
-	wepp := &WorkloadEndpointPrint{}
+	epp := &EndpointPrint{}
 	endpointStrings := strings.Split(name, " ")
 	if len(endpointStrings) != 3 || endpointStrings[0] != "Workload" || endpointStrings[1] != "endpoint" {
 		log.Errorf("Workload endpoint name is not in the \"Workload endpoint <node>/<orchestrator>/<workload>/<name>\" format: %s", name)
@@ -83,20 +86,45 @@ func NewWorkloadEndpointPrintFromNameString(name string) *WorkloadEndpointPrint 
 		log.Errorf("Workload endpoint name does not have its identifiers <node>/<orchestrator>/<workload>/<name> separated by \"/\": %s", name)
 		return nil
 	}
-	wepp.Node = endpointIdents[0]
-	wepp.Orchestrator = endpointIdents[1]
-	wepp.Workload = endpointIdents[2]
-	wepp.Name = endpointIdents[3]
+	epp.Node = endpointIdents[0]
+	epp.Orchestrator = endpointIdents[1]
+	epp.Workload = endpointIdents[2]
+	epp.Name = endpointIdents[3]
 
-	return wepp
+	return epp
+}
+
+func (epp *EndpointPrint) PrintName() string {
+	// Workload Endpoints will have all these fields specified
+	if epp.IsWorkloadEndpoint() {
+		return fmt.Sprintf("Workload endpoint %v/%v/%v/%v", epp.Node, epp.Orchestrator, convertWorkloadID(epp.Workload), epp.Name)
+	}
+
+	// If it is not a Workload Endpoint, it is a Host Endpoint
+	return fmt.Sprintf("Host endpoint %v/%v", epp.Node, epp.Name)
+}
+
+func (epp *EndpointPrint) PrintNameWithoutNode() string {
+	// Workload Endpoints will have all these fields specified
+	if epp.IsWorkloadEndpoint() {
+		return fmt.Sprintf("Workload endpoint %v/%v/%v", epp.Orchestrator, convertWorkloadID(epp.Workload), epp.Name)
+	}
+
+	// If it is not a Workload Endpoint, it is a Host Endpoint
+	return fmt.Sprintf("Host endpoint %v", epp.Name)
+}
+
+func (epp *EndpointPrint) IsWorkloadEndpoint() bool {
+	return epp.Node != "" && epp.Orchestrator != "" && epp.Workload != "" && epp.Name != ""
 }
 
 type PolicyPrint struct {
-	Name      string `json:"name,omitempty"`
-	Order     string `json:"order,omitempty"`
-	Selector  string `json:"selector,omitempty"`
-	TierName  string `json:"tier_name,omitempty"`
-	TierOrder string `json:"tier_order,omitempty"`
+	Name            string `json:"name,omitempty"`
+	Order           string `json:"order,omitempty"`
+	Selector        string `json:"selector,omitempty"`
+	TierName        string `json:"tier_name,omitempty"`
+	TierOrder       string `json:"tier_order,omitempty"`
+	UntrackedSuffix string `json:"-"`
 }
 
 type ProfilePrint struct {

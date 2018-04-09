@@ -1,0 +1,4 @@
+host somewhere_else -o yaml
+
+- description: Policies and profiles for each endpoint on host "somewhere_else"
+
