@@ -1,5 +1,5 @@
-hash: 2053f6f563bdb8f6eb0740100646b325953816eeebb05e30639d91e479259260
-updated: 2018-03-29T14:03:03.590227707-07:00
+hash: 07133ded02274e852abfefda282004f5024fc278984aee53b55b175b69568080
+updated: 2018-04-09T13:43:56.325169779Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -53,7 +53,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: 6333e38ac20b8949a8dd68baa3650f4dee8f39f0
+  version: 5e9692864e22d02ac79e2fa499cffb00520b4fea
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -152,7 +152,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 003f63b7f4cff3fc95357005358af2de0f5fe152
+  version: 649b44d988ce182cabcda7dba01fcf3b6179ad19
   subpackages:
   - format
   - internal/assertion
@@ -178,7 +178,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d518bb7f48f322c89d8420b3d5c21cdfc38a3d9e
+  version: faca912cb5a084b6f1e23021ebfbaceb8970400a
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -264,7 +264,7 @@ imports:
   - list
   - trie/ctrie
 - name: golang.org/x/crypto
-  version: 88942b9c40a4c9d203b82b3731787b672d6e809b
+  version: b2aa35443fbc700ab74c586ae79b81c171851023
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -320,7 +320,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: ad39d7fab7c60b2493fdc318c3d2cdb2128f92a4
+  version: 0a24098c0ec68416ec050f567f75df563d6b231e
   subpackages:
   - internal
   - internal/app_identity
