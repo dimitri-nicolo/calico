@@ -16,11 +16,9 @@ If you used the manifests provided on the [Calico documentation site](https://do
 to install Calico, complete the {{site.prodname}} installation procedure that 
 corresponds to your Calico installation method.
 
-- [Standard hosted install](installation/hosted/hosted)
+- [Installing {{site.prodname}} for policy and networking](installation/calico)
 
-- [kubeadm hosted install](installation/hosted/kubeadm/)
-
-- [Kubernetes API datastore](installation/hosted/kubernetes-datastore/)
+- [Installing {{site.prodname}} for policy](installation/other)
 
 If you modified the manifests or used the 
 [Integration Guide](https://docs.projectcalico.org/latest/getting-started/kubernetes/installation/integration) 
