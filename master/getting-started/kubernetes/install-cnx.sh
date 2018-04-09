@@ -6,14 +6,14 @@
 trap "exit 1" TERM
 export TOP_PID=$$
 
-# Override DOCS_VERSION to point to alternate CNX docs version, e.g.
-#   DOCS_VERSION=v2.1 ./install-cnx.sh
+# Override VERSION to point to alternate CNX docs version, e.g.
+#   VERSION=v2.1 ./install-cnx.sh
 #
-# DOCS_VERSION is used to retrieve manifests, e.g.
-#   ${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+# VERSION is used to retrieve manifests, e.g.
+#   ${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
 #      - resolves to -
 #   http://0.0.0.0:4000/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
-DOCS_VERSION=${DOCS_VERSION:="v2.1"}
+VERSION=${VERSION:="v2.1"}
 
 # Override DOCS_LOCATION to point to alternate CNX docs location, e.g.
 #   DOCS_LOCATION=http://0.0.0.0:4000 ./install-cnx.sh
@@ -43,6 +43,8 @@ CLEANUP=0
 # Convenience variables to cut down on tiresome typing
 CNX_PULL_SECRET_FILENAME=${CNX_PULL_SECRET_FILENAME:="cnx-pull-secret.yml"}
 
+CALICOCTL_REGISTRY=${CALICOCTL_REGISTRY:="quay.io/tigera"}
+
 #
 # promptToContinue()
 #
@@ -66,7 +68,7 @@ checkSettings() {
   echo Settings:
   echo '  CREDENTIALS_FILE='${CREDENTIALS_FILE}
   echo '  DOCS_LOCATION='${DOCS_LOCATION}
-  echo '  DOCS_VERSION='${DOCS_VERSION}
+  echo '  VERSION='${VERSION}
   echo '  DATASTORE='${DATASTORE}
 
   echo
@@ -108,7 +110,7 @@ HELP_USAGE
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       k )  DATASTORE=$OPTARG;;
-      v )  DOCS_VERSION=$OPTARG;;
+      v )  VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
       p )  SKIP_PROMETHEUS=1;;
@@ -423,6 +425,107 @@ EOF
 }
 
 #
+# dockerLogin() - login to Tigera registry
+#
+dockerLogin() {
+  if [ ! -f "$CREDENTIALS_FILE" ]; then
+    fatalError "$CREDENTIALS_FILE" does not exist.
+  fi
+
+  dockerCredentials=$(cat "${CREDENTIALS_FILE}" | jq --raw-output '.auths[].auth' | base64 -d)
+  username=$(echo -n $dockerCredentials | awk -F ":" '{print $1}')
+  token=$(echo -n $dockerCredentials | awk -F ":" '{print $2}')
+
+  echo -n "Logging in to ${CALICOCTL_REGISTRY} ... "
+  run "docker login --username=${username} --password=${token} ${CALICOCTL_REGISTRY}"
+  echo "done."
+}
+
+#
+# createCalicoctlCfg() - if it doesn't exist, create "/etc/calico/calicoctl.cfg"
+#
+createCalicoctlCfg() {
+  local cfgFile="/etc/calico/calicoctl.cfg"
+  if [ -f "$cfgFile" ]; then
+    echo "Note: not creating \"$cfgFile\" because it already exists."
+    return
+  fi
+
+  # Create /etc/calico/calicoctl.cfg: etcd
+  if [ "$DATASTORE" == "etcd" ]; then
+
+    # Extract etcd server url from "calico.yaml"
+    if [ ! -f calico.yaml ]; then
+      fatalError "Error: did not find \"calico.yaml\" manifest."   # Sanity check
+    fi
+    local etcdEndpoints=$(grep etcd_endpoints calico.yaml | sed 's/etcd_endpoints: //g')
+
+    cat > calicoctl.cfg <<EOF
+apiVersion: projectcalico.org/v3
+kind: CalicoAPIConfig
+metadata:
+spec:
+  etcdEndpoints: ${etcdEndpoints}
+EOF
+
+  # Create /etc/calico/calicoctl.cfg: kdd
+  elif [ "$DATASTORE" == "kdd" ]; then
+    local kubeConfig="$HOME"/.kube/config
+    if [ ! -f "$kubeConfig" ]; then
+      fatalError "Did not find $kubeConfig"
+    fi
+
+    cat > calicoctl.cfg <<EOF
+apiVersion: projectcalico.org/v3
+kind: CalicoAPIConfig
+metadata:
+spec:
+  datastoreType: "kubernetes"
+  kubeconfig: "${kubeConfig}"
+EOF
+  fi
+
+  runAsRoot "mkdir -p /etc/calico/"
+  runAsRoot "mv calicoctl.cfg $cfgFile"
+}
+
+#
+# deleteCalicoctlCfg() - delete "/etc/calico/calicoctl.cfg"
+#
+deleteCalicoctlCfg() {
+  local cfgFile="/etc/calico/calicoctl.cfg"
+  runAsRoot "rm -f $cfgFile"
+}
+
+#
+# installCalicoCtlBinary() - pull the calicoctl container image
+# and copy the binary to /usr/local/bin
+#
+installCalicoCtlBinary() {
+  dockerLogin    # login to quay.io/tigera
+
+  # Pull calicoctl container image
+  echo "Pulling calicoctl:${VERSION} from ${CALICOCTL_REGISTRY}."
+  run "docker pull ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
+
+  # Create a local copy of calicoctl image
+  echo "Copying of the calicoctl:${VERSION} container."
+  runIgnoreErrors "docker rm calicoctl-copy"
+  run "docker create --name calicoctl-copy ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
+
+  # Copy calicoctl binary to current directory
+  echo "Copying calicoctl file to current directory"
+  run "docker cp calicoctl-copy:/calicoctl ./calicoctl"
+  run "chmod +x ./calicoctl"
+
+  # Clean up images
+  runIgnoreErrors "docker rm calicoctl-copy"
+  run "docker rmi ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
+
+  createCalicoctlCfg    # If not already present, create "/etc/calico/calicoctl.cfg"
+}
+
+#
 # downloadManifest()
 # Do not overwrite existing copy of the manifest.
 #
@@ -442,17 +545,17 @@ downloadManifest() {
 # downloadManifests()
 #
 downloadManifests() {
-  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
-  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
-  downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
+  downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
+  downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
+  downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
 
   if [ "$DATASTORE" == "etcd" ]; then
-    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
-    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
   else
-    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
-    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
-    downloadManifest "${DOCS_LOCATION}/${DOCS_VERSION}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml"
   fi
 }
 
@@ -656,8 +759,8 @@ installCNX() {
   createImagePullSecret         # Create the image pull secret
   setupBasicAuth                # Create 'jane/welc0me' account w/cluster admin privs
 
-  downloadManifests             # Download all manifests
-  applyCalicoManifest           # Apply calico.yaml
+  downloadManifests             # Download all manifests, if they're not already present in current dir
+  applyCalicoManifest           # Apply calico.yaml (also apply rbac.yaml for kdd)
   removeMasterTaints            # Remove master taints
   createCNXManagerSecret        # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest              # Apply cnx-[etcd|kdd].yaml
@@ -667,6 +770,8 @@ installCNX() {
     applyOperatorManifest       # Apply operator.yaml
     applyMonitorCalicoManifest  # Apply monitor-calico.yaml
   fi
+
+  installCalicoCtlBinary        # Copy quay.io/tigera/calicoctl to $cwd, create /etc/calico/calicoctl.cfg
 
   echo CNX installation complete. Point your browser to https://127.0.0.1:30003, username=jane, password=welc0me
 }
@@ -678,6 +783,7 @@ installCNX() {
 uninstallCNX() {
   checkSettings uninstall       # Verify settings are correct with user
   validateDatastore uninstall   # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
+  deleteCalicoctlCfg            # delete /etc/calico/calicoct.cfg
 
   downloadManifests             # Download all manifests
 
