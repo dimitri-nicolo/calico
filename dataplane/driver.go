@@ -84,6 +84,22 @@ func StartDataplaneDriver(configParams *config.Config,
 			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
 		}).Info("Calculated iptables mark bits")
 
+		// If PrometheusMetricsEnabled is set to true and license isn't applied or valid then throw a warning message.
+		if configParams.PrometheusReporterEnabled && !configParams.LicenseValid {
+			log.Warn("Not licensed for Prometheus Metrics feature. License not applied or invalid. Please contact Tigera support")
+
+			// Set Prometheus metrics process and reporting configs to false.
+			configParams.PrometheusReporterEnabled = false
+		}
+
+		// If DropActionOverride is set to non-default "DROP" and license is not applied or valid then throw a warning message.
+		if configParams.DropActionOverride != "DROP" && !configParams.LicenseValid {
+			log.Warn("Not licensed for DropActionOverride feature. License not applied or invalid. Please contact Tigera support")
+
+			// Set DropActionOverride to "DROP".
+			configParams.DropActionOverride = "DROP"
+		}
+
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExcludes(),

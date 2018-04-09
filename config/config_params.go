@@ -198,6 +198,10 @@ type Config struct {
 	DebugSimulateCalcGraphHangAfter time.Duration `config:"seconds;0"`
 	DebugSimulateDataplaneHangAfter time.Duration `config:"seconds;0"`
 
+	// This MUST be ignored if set using config/env var, so DO NOT add
+	// the `config` struct tag to this.
+	LicenseValid bool
+
 	// State tracking.
 
 	// nameToSource tracks where we loaded each config param from.
