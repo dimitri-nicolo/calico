@@ -10,6 +10,7 @@ targeted at internal use (cnx-manager/webapp only).
 * [Policies](#policies)
 * [Endpoints](#endpoints)
 * [Nodes](#nodes)
+* [License](#license)
 
 ### General API Principles
 
@@ -790,4 +791,78 @@ curl localhost:8080/nodes/rack1-host1
   ]
 }
 
+```
+
+### License
+
+Returns the status of CNX cluster license.
+There are 5 different possible scenarios:
+1. License not applied
+2. License applied, and valid
+3. License applied, but expired (but still in the grace period)
+4. License applied, but really expired (out of the grace period)
+5. License applied, but is corrupted
+
+`is_valid` will be `false` for all except case #2
+`warning` will be populated when `is_valid` is `false` else it won't exist. 
+
+
+#### URL
+
+```
+http://host:port/base/license
+```
+
+#### Query Parameters
+
+None supported.
+
+#### Response
+
+Returns a JSON object with the following fields.
+
+| Field | Description | Scheme |
+| ----- | ----------- | ------ |
+| is_valid | If the license is valid or not | boolean |
+| warning | Warning message if the license is not valid | string |
+
+#### Examples
+
+1. License not applied
+
+```
+{
+  "is_valid": false,
+  "warning": "No valid license was found for your environment. Please contact Tigera support",
+}
+```
+
+2. License applied, and valid
+
+```
+{
+  "is_valid": true,
+}
+
+```
+
+3. License applied, but expired (but still in the grace period)
+ AND 
+4. License applied, but really expired (out of the grace period)
+(For CNX v2.1 both cases 3 and 4 are the same)
+
+```
+{
+  "is_valid": false,
+  "warning": "LicenseKey expired or invalid. Please contact Tigera support to avoid traffic disruptions",
+}
+```
+
+5. License applied, but is corrupted
+
+```
+{
+  "is_valid": false,
+  "warning": "License corrupted. Please contact Tigera support",
+}
 ```
