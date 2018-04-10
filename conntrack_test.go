@@ -1,7 +1,9 @@
-package nfnetlink_test
+package nfnetlink
 
 import (
-	"github.com/tigera/nfnetlink"
+	"syscall"
+	"testing"
+
 	"github.com/tigera/nfnetlink/nfnl"
 
 	. "github.com/onsi/ginkgo"
@@ -9,35 +11,35 @@ import (
 )
 
 var _ = Describe("Conntrack Entry DNAT", func() {
-	var cte nfnetlink.CtEntry
-	var original_dnat, reply nfnetlink.CtTuple
+	var cte CtEntry
+	var original_dnat, reply CtTuple
 
 	BeforeEach(func() {
-		original_dnat = nfnetlink.CtTuple{
+		original_dnat = CtTuple{
 			Src:        [16]byte{1, 1, 1, 1},
 			Dst:        [16]byte{3, 3, 3, 3},
 			L3ProtoNum: 2048,
 			ProtoNum:   6,
-			L4Src: nfnetlink.CtL4Src{
+			L4Src: CtL4Src{
 				Port: 12345,
 			},
-			L4Dst: nfnetlink.CtL4Dst{
+			L4Dst: CtL4Dst{
 				Port: 80,
 			},
 		}
-		reply = nfnetlink.CtTuple{
+		reply = CtTuple{
 			Src:        [16]byte{2, 2, 2, 2},
 			Dst:        [16]byte{1, 1, 1, 1},
 			L3ProtoNum: 2048,
 			ProtoNum:   6,
-			L4Src: nfnetlink.CtL4Src{
+			L4Src: CtL4Src{
 				Port: 80,
 			},
-			L4Dst: nfnetlink.CtL4Dst{
+			L4Dst: CtL4Dst{
 				Port: 12345,
 			},
 		}
-		cte = nfnetlink.CtEntry{
+		cte = CtEntry{
 			OriginalTuple: original_dnat,
 			ReplyTuple:    reply,
 		}
@@ -67,3 +69,16 @@ var _ = Describe("Conntrack Entry DNAT", func() {
 
 	})
 })
+
+func BenchmarkConntrackEntryFromNfAttrs(b *testing.B) {
+	// Setup
+	data := [...]byte{52, 0, 1, 128, 20, 0, 1, 128, 8, 0, 1, 0, 10, 0, 2, 2, 8, 0, 2, 0, 10, 0, 2, 15, 28, 0, 2, 128, 5, 0, 1, 0, 6, 0, 0, 0, 6, 0, 2, 0, 207, 206, 0, 0, 6, 0, 3, 0, 0, 22, 0, 0, 52, 0, 2, 128, 20, 0, 1, 128, 8, 0, 1, 0, 10, 0, 2, 15, 8, 0, 2, 0, 10, 0, 2, 2, 28, 0, 2, 128, 5, 0, 1, 0, 6, 0, 0, 0, 6, 0, 2, 0, 0, 22, 0, 0, 6, 0, 3, 0, 207, 206, 0, 0, 8, 0, 3, 0, 0, 0, 1, 142, 8, 0, 7, 0, 0, 6, 145, 147, 48, 0, 4, 128, 44, 0, 1, 128, 5, 0, 1, 0, 3, 0, 0, 0, 5, 0, 2, 0, 0, 0, 0, 0, 5, 0, 3, 0, 0, 0, 0, 0, 6, 0, 4, 0, 32, 0, 0, 0, 6, 0, 5, 0, 32, 0, 0, 0, 8, 0, 8, 0, 0, 0, 0, 0, 8, 0, 12, 0, 186, 125, 96, 0, 8, 0, 11, 0, 0, 0, 0, 1}
+
+	// Test
+	b.ResetTimer()
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		conntrackEntryFromNfAttrs(data[:], syscall.AF_INET)
+
+	}
+}

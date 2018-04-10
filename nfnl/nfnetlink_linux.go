@@ -2,7 +2,6 @@ package nfnl
 
 import (
 	"encoding/binary"
-	"sync"
 	"syscall"
 	"unsafe"
 )
@@ -26,12 +25,6 @@ const (
 	SizeofNfGenMsg = 0x4
 	SizeofNfAttr   = syscall.SizeofNlAttr
 )
-
-var AttrPool = sync.Pool{
-	New: func() interface{} {
-		return make([]NetlinkNetfilterAttr, 50)
-	},
-}
 
 type NlMsghdr struct {
 	syscall.NlMsghdr
@@ -106,21 +99,19 @@ type NetlinkNetfilterAttr struct {
 	Value []byte
 }
 
-func ParseNetfilterAttr(b []byte) ([]NetlinkNetfilterAttr, error) {
-	attrs := AttrPool.Get().([]NetlinkNetfilterAttr)
-	attrs = attrs[:0]
+func ParseNetfilterAttr(b []byte, attrs []NetlinkNetfilterAttr) error {
 	j := 0
 	for len(b) >= SizeofNfAttr {
 		a, vbuf, alen, err := netlinkNetfilterAttrAndValue(b)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ra := NetlinkNetfilterAttr{Attr: *a, Value: vbuf[:int(a.NlAttr.Len)-SizeofNfAttr]}
-		attrs = append(attrs, ra)
+		attrs[j] = ra
 		b = b[alen:]
 		j++
 	}
-	return attrs[:j], nil
+	return nil
 }
 
 func netlinkNetfilterAttrAndValue(b []byte) (*NfAttr, []byte, int, error) {
