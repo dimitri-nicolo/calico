@@ -40,16 +40,16 @@ func (np *NflogPrefix) Equals(cmp *NflogPrefix) bool {
 }
 
 type NflogPacket struct {
-	Header    *NflogPacketHeader
+	Header    NflogPacketHeader
 	Mark      int
-	Timestamp *NflogPacketTimestamp
+	Timestamp NflogPacketTimestamp
 	Prefix    NflogPrefix
 	Gid       int
-	Tuple     *NflogPacketTuple
+	Tuple     NflogPacketTuple
 	Bytes     int
 }
 
 type NflogPacketAggregate struct {
-	Tuple    *NflogPacketTuple
+	Tuple    NflogPacketTuple
 	Prefixes []NflogPrefix
 }
