@@ -2,7 +2,6 @@ package nfnetlink
 
 import (
 	"encoding/binary"
-	"fmt"
 	"syscall"
 	"time"
 
@@ -155,7 +154,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 					}
 					var pktAggr *NflogPacketAggregate
 					updatePrefix := true
-					pktAggr, seen := aggregate[*nflogPacket.Tuple]
+					pktAggr, seen := aggregate[nflogPacket.Tuple]
 					if seen {
 						for i, prefix := range pktAggr.Prefixes {
 							if prefix.Equals(&nflogPacket.Prefix) {
@@ -175,7 +174,7 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 					}
 					if updatePrefix {
 						pktAggr.Prefixes = append(pktAggr.Prefixes, nflogPacket.Prefix)
-						aggregate[*nflogPacket.Tuple] = pktAggr
+						aggregate[nflogPacket.Tuple] = pktAggr
 					}
 				}
 			case <-sendTicker.C:
@@ -189,8 +188,8 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 	return nil
 }
 
-func parseNflog(m []byte) (*NflogPacket, error) {
-	nflogPacket := &NflogPacket{}
+func parseNflog(m []byte) (NflogPacket, error) {
+	nflogPacket := NflogPacket{}
 	var attrs [nfnl.NFULA_MAX]nfnl.NetlinkNetfilterAttr
 	err := nfnl.ParseNetfilterAttr(m, attrs[:])
 	if err != nil {
@@ -202,14 +201,12 @@ func parseNflog(m []byte) (*NflogPacket, error) {
 		native := binary.BigEndian
 		switch attr.Attr.Type {
 		case nfnl.NFULA_PACKET_HDR:
-			header := &NflogPacketHeader{}
-			header.HwProtocol = int(native.Uint16(attr.Value[0:2]))
-			header.Hook = int(attr.Value[2])
-			nflogPacket.Header = header
+			nflogPacket.Header.HwProtocol = int(native.Uint16(attr.Value[0:2]))
+			nflogPacket.Header.Hook = int(attr.Value[2])
 		case nfnl.NFULA_MARK:
 			nflogPacket.Mark = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.NFULA_PAYLOAD:
-			nflogPacket.Tuple, _ = parsePacketHeader(nflogPacket.Header.HwProtocol, attr.Value)
+			parsePacketHeader(&nflogPacket.Tuple, nflogPacket.Header.HwProtocol, attr.Value)
 			nflogPacket.Bytes = len(attr.Value)
 		case nfnl.NFULA_PREFIX:
 			p := NflogPrefix{Len: len(attr.Value) - 1}
@@ -224,40 +221,39 @@ func parseNflog(m []byte) (*NflogPacket, error) {
 	return nflogPacket, nil
 }
 
-func parsePacketHeader(hwProtocol int, nflogPayload []byte) (*NflogPacketTuple, error) {
-	tuple := &NflogPacketTuple{}
+func parsePacketHeader(tuple *NflogPacketTuple, hwProtocol int, nflogPayload []byte) error {
 	switch hwProtocol {
 	case IPv4Proto:
 		ipHeader := pkt.ParseIPv4Header(nflogPayload)
 		copy(tuple.Src[:], ipHeader.Saddr.To16()[:16])
 		copy(tuple.Dst[:], ipHeader.Daddr.To16()[:16])
 		tuple.Proto = int(ipHeader.Protocol)
-		srcL4, dstL4, _ := parseLayer4Header(int(ipHeader.Protocol), nflogPayload[ipHeader.IHL:])
-		tuple.L4Src = srcL4
-		tuple.L4Dst = dstL4
+		parseLayer4Header(tuple, nflogPayload[ipHeader.IHL:])
 	case IPv6Proto:
-		fmt.Println("IPv6 Packet")
+		ipHeader := pkt.ParseIPv6Header(nflogPayload)
+		copy(tuple.Src[:], ipHeader.Saddr.To16()[:16])
+		copy(tuple.Dst[:], ipHeader.Daddr.To16()[:16])
+		tuple.Proto = int(ipHeader.NextHeader)
+		parseLayer4Header(tuple, nflogPayload[ipHeader.Length:])
 	}
-	return tuple, nil
+	return nil
 }
 
-func parseLayer4Header(IPProto int, l4payload []byte) (NflogL4Info, NflogL4Info, error) {
-	srcL4Info := NflogL4Info{}
-	dstL4Info := NflogL4Info{}
-	switch IPProto {
+func parseLayer4Header(tuple *NflogPacketTuple, l4payload []byte) error {
+	switch tuple.Proto {
 	case ProtoIcmp:
 		header := pkt.ParseICMPHeader(l4payload)
-		srcL4Info.Id = int(header.Id)
-		dstL4Info.Type = int(header.Type)
-		dstL4Info.Code = int(header.Code)
+		tuple.L4Src.Id = int(header.Id)
+		tuple.L4Dst.Type = int(header.Type)
+		tuple.L4Dst.Code = int(header.Code)
 	case ProtoTcp:
 		header := pkt.ParseTCPHeader(l4payload)
-		srcL4Info.Port = int(header.Source)
-		dstL4Info.Port = int(header.Dest)
+		tuple.L4Src.Port = int(header.Source)
+		tuple.L4Dst.Port = int(header.Dest)
 	case ProtoUdp:
 		header := pkt.ParseUDPHeader(l4payload)
-		srcL4Info.Port = int(header.Source)
-		dstL4Info.Port = int(header.Dest)
+		tuple.L4Src.Port = int(header.Source)
+		tuple.L4Dst.Port = int(header.Dest)
 	}
-	return srcL4Info, dstL4Info, nil
+	return nil
 }

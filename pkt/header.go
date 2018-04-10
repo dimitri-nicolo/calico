@@ -25,9 +25,9 @@ type IPv4Header struct {
 	Daddr    net.IP
 }
 
-func ParseIPv4Header(b []byte) *IPv4Header {
+func ParseIPv4Header(b []byte) IPv4Header {
 	endian := binary.BigEndian
-	return &IPv4Header{
+	return IPv4Header{
 		Version:  b[0] >> 4,
 		IHL:      b[0] & 0x0F << 2,
 		TOS:      b[1],
@@ -54,9 +54,9 @@ type TCPHeader struct {
 	UrgPtr uint16
 }
 
-func ParseTCPHeader(b []byte) *TCPHeader {
+func ParseTCPHeader(b []byte) TCPHeader {
 	endian := binary.BigEndian
-	return &TCPHeader{
+	return TCPHeader{
 		Source: endian.Uint16(b[0:2]),
 		Dest:   endian.Uint16(b[2:4]),
 		Seq:    endian.Uint32(b[4:8]),
@@ -75,9 +75,9 @@ type UDPHeader struct {
 	Check  uint16
 }
 
-func ParseUDPHeader(b []byte) *UDPHeader {
+func ParseUDPHeader(b []byte) UDPHeader {
 	endian := binary.BigEndian
-	return &UDPHeader{
+	return UDPHeader{
 		Source: endian.Uint16(b[0:2]),
 		Dest:   endian.Uint16(b[2:4]),
 		Len:    endian.Uint16(b[4:6]),
@@ -92,12 +92,37 @@ type ICMPHeader struct {
 	Id       uint16
 }
 
-func ParseICMPHeader(b []byte) *ICMPHeader {
+func ParseICMPHeader(b []byte) ICMPHeader {
 	endian := binary.BigEndian
-	return &ICMPHeader{
+	return ICMPHeader{
 		Type:     b[0],
 		Code:     b[1],
 		Checksum: endian.Uint16(b[2:4]),
 		Id:       endian.Uint16(b[4:6]),
+	}
+}
+
+type IPv6Header struct {
+	Version      uint8
+	TrafficClass uint8
+	FlowLabel    uint32
+	Length       uint16
+	NextHeader   uint8
+	HopLimit     uint8
+	Saddr        net.IP
+	Daddr        net.IP
+}
+
+func ParseIPv6Header(b []byte) IPv6Header {
+	endian := binary.BigEndian
+	return IPv6Header{
+		Version:      b[0] >> 4,
+		TrafficClass: uint8((endian.Uint16(b[0:2]) >> 4) & 0x00FF),
+		FlowLabel:    endian.Uint32(b[0:4]) & 0x000FFFFF,
+		Length:       endian.Uint16(b[4:6]),
+		NextHeader:   b[6],
+		HopLimit:     b[7],
+		Saddr:        net.IP(b[8:24]),
+		Daddr:        net.IP(b[24:40]),
 	}
 }
