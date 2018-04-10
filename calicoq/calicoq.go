@@ -3,12 +3,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/docopt/docopt-go"
 	log "github.com/sirupsen/logrus"
+
+	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/tigera/calicoq/calicoq/commands"
+	licClient "github.com/tigera/licensing/client"
 )
 
 const usage = `Calico query tool.
@@ -87,6 +93,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = checkLicense(arguments["--config"].(string))
+	if err != nil {
+		fmt.Printf("Failed to run the command: %s\n", err)
+		os.Exit(1)
+	}
+
 	for cmd, thunk := range map[string]func() error{
 		"version": commands.Version,
 		"eval": func() error {
@@ -141,4 +153,53 @@ func main() {
 		log.WithError(err).Error("Command failed")
 		os.Exit(1)
 	}
+}
+
+func checkLicense(configFile string) error {
+	client := commands.GetClient(configFile)
+	ctx := context.Background()
+	// Get the LicenseKey resource directly from the backend datastore client.
+	lic, err := client.Get(ctx, model.ResourceKey{
+		Kind:      apiv3.KindLicenseKey,
+		Name:      "default",
+	}, "")
+	if err != nil {
+		switch err.(type) {
+		case cerrors.ErrorResourceDoesNotExist:
+			return fmt.Errorf("not licensed for this feature. LicenseKey does not exist")
+		default:
+			return err
+		}
+	}
+
+	lk, ok := lic.Value.(*apiv3.LicenseKey)
+	if !ok {
+		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "KVPair": lic}).Error("Error asserting LicenseKey")
+		return fmt.Errorf("error asserting LicenseKey")
+	}
+
+	// Decode the LicenseKey.
+	claims, err := licClient.Decode(*lk)
+	if err != nil {
+		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(err).Error("Corrupted LicenseKey")
+		return fmt.Errorf("license corrupted. Please contact Tigera support")
+	}
+
+	// Check if the license is valid.
+	if err := claims.Validate(); err != nil {
+		// If the license is expired (but within grace period) then show this warning banner, but continue to work.
+		// in CNX v2.1, grace period is infinite.
+		fmt.Println("********************************************")
+		fmt.Println("**             !!! WARNING !!!            **")
+		fmt.Println("********************************************")
+		fmt.Println("**                                        **")
+		fmt.Println("**     LicenseKey expired or invalid.     **")
+		fmt.Println("**     Please contact Tigera support      **")
+		fmt.Println("**     to avoid traffic disruptions.      **")
+		fmt.Println("**                                        **")
+		fmt.Println("********************************************")
+		fmt.Println()
+	}
+
+	return nil
 }

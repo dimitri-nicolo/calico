@@ -1,5 +1,5 @@
-hash: ae56e772a2b6488e4ff033809f6ae624215667352489d056920c9f606f8e071a
-updated: 2018-03-26T15:09:30.17488199-07:00
+hash: b8c6e709560b029f73ea75e50812b6fbb108091b083329c89ef98b0e40cfe02b
+updated: 2018-04-06T11:49:09.778878164-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -18,7 +18,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
-  version: c23606781f63d09917a1e7abfcefeb337a9608ea
+  version: e348b1aedd9167360c466ae98f7343d3e22281f8
   subpackages:
   - auth/authpb
   - client
@@ -36,7 +36,9 @@ imports:
 - name: github.com/dgrijalva/jwt-go
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/docopt/docopt-go
-  version: ee0de3bc6815ee19d4a46c7eb90f829db0e014b1
+  version: 784ddc588536785e7299f7272f39101f7faccc3f
+- name: github.com/dustin/go-humanize
+  version: bb3d318650d48840a39aa21a027c6630e198e626
 - name: github.com/emicklei/go-restful
   version: 777bb3f19bcafe2575ffb2a3e46af92509ae9594
   subpackages:
@@ -46,7 +48,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: 6333e38ac20b8949a8dd68baa3650f4dee8f39f0
+  version: 5e9692864e22d02ac79e2fa499cffb00520b4fea
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -161,13 +163,13 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/calicoctl
-  version: 54a19c568787ce7e935a5c084097c305cfae62c2
+  version: 4e01112058e6f27fa12c4c30d4e5277adc4277f6
   subpackages:
   - calicoctl/commands/argutils
   - calicoctl/resourcemgr
   - calicoctl/util/yaml
 - name: github.com/projectcalico/felix
-  version: 430ce63155e03b99fb4a78e0b98f92a02ae99e71
+  version: c65f3376291eb74b6efa35075b94fb439b4998b6
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -235,7 +237,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -251,12 +253,21 @@ imports:
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: 90150a8ed11b6ce285e77e8af2b0109559ce4777
+  version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
-- name: golang.org/x/crypto
-  version: 88942b9c40a4c9d203b82b3731787b672d6e809b
+- name: github.com/tigera/licensing
+  version: 55a808c36b11f26f665027eed5bc7c03d67dd1ae
+  repo: git@github.com:tigera/licensing
+  vcs: git
   subpackages:
+  - client
+  - crypto
+- name: golang.org/x/crypto
+  version: 81e90905daefcd6fd217b62423c0908922eadb30
+  subpackages:
+  - ed25519
+  - ed25519/internal/edwards25519
   - ssh/terminal
 - name: golang.org/x/net
   version: 66aacef3dd8a676686c7ae3716979581e8b03c47
@@ -310,7 +321,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 5bee14b453b4c71be47ec1781b0fa61c2ea182db
+  version: 0a24098c0ec68416ec050f567f75df563d6b231e
   subpackages:
   - internal
   - internal/app_identity
@@ -349,6 +360,12 @@ imports:
   version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/square/go-jose.v2
+  version: 76dd09796242edb5b897103a75df2645c028c960
+  subpackages:
+  - cipher
+  - json
+  - jwt
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
