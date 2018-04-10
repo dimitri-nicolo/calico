@@ -45,6 +45,9 @@ CNX_PULL_SECRET_FILENAME=${CNX_PULL_SECRET_FILENAME:="cnx-pull-secret.yml"}
 
 CALICOCTL_REGISTRY=${CALICOCTL_REGISTRY:="quay.io/tigera"}
 
+# Calicoctl binary install directory
+CALICOCTL_INSTALL_DIR=${CALICOCTL_INSTALL_DIR:="/usr/local/bin"}
+
 #
 # promptToContinue()
 #
@@ -458,7 +461,7 @@ createCalicoctlCfg() {
     if [ ! -f calico.yaml ]; then
       fatalError "Error: did not find \"calico.yaml\" manifest."   # Sanity check
     fi
-    local etcdEndpoints=$(grep etcd_endpoints calico.yaml | sed 's/etcd_endpoints: //g')
+    local etcdEndpoints=$(grep etcd_endpoints calico.yaml | grep -i http | sed 's/etcd_endpoints: //g')
 
     cat > calicoctl.cfg <<EOF
 apiVersion: projectcalico.org/v3
@@ -490,11 +493,13 @@ EOF
 }
 
 #
-# deleteCalicoctlCfg() - delete "/etc/calico/calicoctl.cfg"
+# deleteCalicoctl() - delete "/etc/calico/calicoctl.cfg"
+# and calicoctl binary.
 #
-deleteCalicoctlCfg() {
+deleteCalicoctl() {
   local cfgFile="/etc/calico/calicoctl.cfg"
   runAsRoot "rm -f $cfgFile"
+  runAsRoot "rm -f ${CALICOCTL_INSTALL_DIR}/calicoctl"
 }
 
 #
@@ -505,22 +510,32 @@ installCalicoCtlBinary() {
   dockerLogin    # login to quay.io/tigera
 
   # Pull calicoctl container image
-  echo "Pulling calicoctl:${VERSION} from ${CALICOCTL_REGISTRY}."
+  echo -n "Pulling calicoctl:${VERSION} from ${CALICOCTL_REGISTRY} ... "
   run "docker pull ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
+  echo "done."
 
   # Create a local copy of calicoctl image
-  echo "Copying of the calicoctl:${VERSION} container."
+  echo -n "Copying of the calicoctl:${VERSION} container ... "
   runIgnoreErrors "docker rm calicoctl-copy"
   run "docker create --name calicoctl-copy ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
+  echo "done."
 
   # Copy calicoctl binary to current directory
-  echo "Copying calicoctl file to current directory"
+  echo -n "Copying calicoctl file to current directory ... "
   run "docker cp calicoctl-copy:/calicoctl ./calicoctl"
   run "chmod +x ./calicoctl"
+  echo "done."
 
-  # Clean up images
+  # Copy calicoctl to ${CALICOCTL_INSTALL_DIR} (/usr/local/bin/)
+  echo -n "Installing calicoctl in ${CALICOCTL_INSTALL_DIR} ... "
+  runAsRoot "mkdir -p ${CALICOCTL_INSTALL_DIR}"
+  runAsRoot "cp ./calicoctl ${CALICOCTL_INSTALL_DIR}"
+  echo "done."
+
+  # Clean up
   runIgnoreErrors "docker rm calicoctl-copy"
   run "docker rmi ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
+  run "rm -f ./calicoctl"
 
   createCalicoctlCfg    # If not already present, create "/etc/calico/calicoctl.cfg"
 }
@@ -783,7 +798,7 @@ installCNX() {
 uninstallCNX() {
   checkSettings uninstall       # Verify settings are correct with user
   validateDatastore uninstall   # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
-  deleteCalicoctlCfg            # delete /etc/calico/calicoct.cfg
+  deleteCalicoctl               # delete /etc/calico/calicoct.cfg
 
   downloadManifests             # Download all manifests
 
