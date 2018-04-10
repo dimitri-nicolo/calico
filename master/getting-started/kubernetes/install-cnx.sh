@@ -100,10 +100,10 @@ parseOptions() {
   usage() {
     cat <<HELP_USAGE
 Usage: $(basename "$0")
+           -l license.yaml    # Required - specify the path to the CNX license file
           [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
           [-k datastore]      # Specify the datastore ("etcd"|"kdd"); default: "etcd"
-          [-l license.yaml]   # Specify the CNX license file; default: "none"
           [-v version]        # CNX version; default: "v2.1"
           [-u]                # Uninstall CNX
           [-q]                # Quiet (don't prompt)
@@ -135,8 +135,11 @@ HELP_USAGE
   # Validate $DATASTORE is either "kdd" or "etcd"
   [ "$DATASTORE" == "etcd" ] || [ "$DATASTORE" == "kdd" ] || fatalError "Datastore \"$DATASTORE\" is not valid, must be either \"etcd\" or \"kdd\"."
 
-  # If license file is specified, confirm it is readable
-  [ "$LICENSE_FILE" ] && [ ! -r "$LICENSE_FILE" ] && fatalError "Couldn't locate license file: $LICENSE_FILE"
+  # Confirm user specified a license file
+  [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a CNX license file."
+
+  # Confirm license file is readable
+  [ ! -r "$LICENSE_FILE" ] && fatalError "Couldn't locate license file: $LICENSE_FILE"
 }
 
 #
