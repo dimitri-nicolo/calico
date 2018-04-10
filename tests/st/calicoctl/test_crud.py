@@ -35,6 +35,11 @@ class TestCalicoctlCommands(TestBase):
     BGP exported routes are hard to test and aren't expected to change much so
     write tests for them (yet)
     """
+    
+    def setUp(self):
+        super(TestCalicoctlCommands, self).setUp()
+        rc = calicoctl("create", data=valid_cnx_license)
+        rc.assert_no_error()
 
     def test_get(self):
         """

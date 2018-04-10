@@ -29,8 +29,11 @@ import (
 	"github.com/projectcalico/calicoctl/calicoctl/commands/clientmgr"
 	"github.com/projectcalico/calicoctl/calicoctl/resourcemgr"
 	yaml "github.com/projectcalico/go-yaml-wrapper"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	calicoErrors "github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/libcalico-go/lib/options"
+	licClient "github.com/tigera/licensing/client"
 )
 
 type action int
@@ -225,6 +228,48 @@ func executeConfigCommand(args map[string]interface{}, action action) commandRes
 // executeResourceAction fans out the specific resource action to the appropriate method
 // on the ResourceManager for the specific resource.
 func executeResourceAction(args map[string]interface{}, client client.Interface, resource resourcemgr.ResourceObject, action action) ([]runtime.Object, error) {
+	ctx := context.Background()
+
+	// If the resource is Tier/TierList or RemoteClusterConfiguration/RemoteClusterConfigurationList then check the
+	// license first then continue only if the license is valid.
+	resGVK := resource.GetObjectKind().GroupVersionKind().String()
+	if resGVK == api.NewTier().GroupVersionKind().String() || resGVK == api.NewTierList().GroupVersionKind().String() ||
+		resGVK == api.NewRemoteClusterConfiguration().GroupVersionKind().String() || resGVK == api.NewRemoteClusterConfigurationList().GroupVersionKind().String() {
+
+		lic, err := client.LicenseKey().Get(ctx, "default", options.GetOptions{ResourceVersion: ""})
+		if err != nil {
+			// License not found (not applied) or datastore down.
+			switch err.(type) {
+			case calicoErrors.ErrorResourceDoesNotExist:
+				return nil, fmt.Errorf("not licensed for this feature. LicenseKey does not exist")
+			default:
+				// For any other error - datastore error, unauthorized, etc., we just return the error as-is.
+				return nil, err
+			}
+		}
+
+		claims, err := licClient.Decode(*lic)
+		if err != nil {
+			// This means the license is there but is corrupted or has been messed with.
+			return nil, fmt.Errorf("license corrupted. Please contact Tigera support")
+		}
+
+		if err = claims.Validate(); err != nil {
+			// If the license is expired (but within grace period) then show this warning banner, but continue to work.
+			// in CNX v2.1, grace period is infinite.
+			fmt.Println("********************************************")
+			fmt.Println("**             !!! WARNING !!!            **")
+			fmt.Println("********************************************")
+			fmt.Println("**                                        **")
+			fmt.Println("**     LicenseKey expired or invalid.     **")
+			fmt.Println("**     Please contact Tigera support      **")
+			fmt.Println("**     to avoid traffic disruptions.      **")
+			fmt.Println("**                                        **")
+			fmt.Println("********************************************")
+			fmt.Println()
+		}
+	}
+
 	rm := resourcemgr.GetResourceManager(resource)
 
 	err := handleNamespace(resource, rm, args)
@@ -233,7 +278,6 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 	}
 
 	var resOut runtime.Object
-	ctx := context.Background()
 
 	switch action {
 	case actionApply:

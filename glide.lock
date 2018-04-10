@@ -1,5 +1,5 @@
 hash: 936b764473d7635097b92bd3deb7a6d2dbb445cbd1337e7448006e8cd54044d6
-updated: 2018-03-29T14:53:57.07683724-07:00
+updated: 2018-04-05T15:31:20.504283877-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -108,7 +108,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hashicorp/hcl
-  version: f40e974e75af4e271d97ce0fc917af5898ae7bda
+  version: ef8a98b0bbce4a65b5aa4c368430a80ddc533168
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -124,7 +124,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/influxdata/influxdb
-  version: 8682fa9c3e25ec731c64229b0a682683d5b5f625
+  version: 72bceca888a8f55b5dca922f24a514e329cd5e8f
   subpackages:
   - client/v2
   - models
@@ -220,7 +220,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d518bb7f48f322c89d8420b3d5c21cdfc38a3d9e
+  version: 3a570da01b58c51f8a79293f874394156bedf862
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -285,7 +285,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/afero
-  version: a880a37ed1804d98f64b3b7d58b5e3f8fbf421c4
+  version: 63644898a8da0bc22138abf860edaf5277b6102e
   subpackages:
   - mem
 - name: github.com/spf13/cast
@@ -295,11 +295,11 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/spf13/viper
-  version: b5e8006cbee93ec955a89ab31e0e3ce3204f3736
+  version: 8dc2790b029dc41e2b8ff772c63c26adbb1db70d
 - name: github.com/termie/go-shutil
   version: bcacb06fecaeec8dc42af03c87c6949f4a05c74c
 - name: github.com/tigera/licensing
-  version: d19ba67c471a7616e40de13a841bb17faebdbe40
+  version: 55a808c36b11f26f665027eed5bc7c03d67dd1ae
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -369,7 +369,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: ad39d7fab7c60b2493fdc318c3d2cdb2128f92a4
+  version: 0a24098c0ec68416ec050f567f75df563d6b231e
   subpackages:
   - internal
   - internal/app_identity
