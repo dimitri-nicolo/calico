@@ -12,7 +12,14 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout([
+                        $class: 'GitSCM',
+                        branches: scm.branches,
+                        doGenerateSubModuleConfigurations: scm.doGenerateSubmoduleConfigurations,
+                        extensions: scm.extensions + [[$class: 'CloneOption', noTags: false]],
+                        submoduleCfg: [],
+                        userRemoteConfigs: scm.userRemoteConfigs
+                ])
                 script {
                     currentBuild.description = """
                     BRANCH_NAME=${env.BRANCH_NAME}
@@ -47,6 +54,18 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 sh "echo 'Run unit Tests' && make ut-no-cover"
+            }
+        }
+        stage('Run FVs') {
+            steps {
+                script{
+                    withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
+                        sh "cp $DOCKER_AUTH key.json"
+                        sh "gcloud auth activate-service-account ${env.WAVETANK_SERVICE_ACCT} --key-file key.json"
+                        sh "gcloud docker --authorize-only --server gcr.io"
+                        sh "echo 'Run FVs' && make fv"
+                    }
+                }
             }
         }
 
