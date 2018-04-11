@@ -209,18 +209,18 @@ var _ = Describe("health tests", func() {
 	startFelix := func(typhaAddr string, getDockerArgs func() []string, calcGraphHangTime string, dataplaneHangTime string) {
 		felixContainer = containers.Run("felix",
 			containers.RunOpts{AutoRemove: true},
-			"--privileged",
-			"-e", "FELIX_IPV6SUPPORT=false",
-			"-e", "FELIX_HEALTHENABLED=true",
-			"-e", "FELIX_LOGSEVERITYSCREEN=info",
-			"-e", "FELIX_PROMETHEUSMETRICSENABLED=true",
-			"-e", "FELIX_USAGEREPORTINGENABLED=false",
-			"-e", "FELIX_DEBUGMEMORYPROFILEPATH=\"heap-<timestamp>\"",
-			"-e", "FELIX_DebugSimulateCalcGraphHangAfter="+calcGraphHangTime,
-			"-e", "FELIX_DebugSimulateDataplaneHangAfter="+dataplaneHangTime,
-			"-e", "FELIX_TYPHAADDR="+typhaAddr,
-			"tigera/felix:latest",
-		)
+			append(getDockerArgs(),
+				"--privileged",
+				"-e", "FELIX_IPV6SUPPORT=false",
+				"-e", "FELIX_HEALTHENABLED=true",
+				"-e", "FELIX_LOGSEVERITYSCREEN=info",
+				"-e", "FELIX_PROMETHEUSMETRICSENABLED=true",
+				"-e", "FELIX_USAGEREPORTINGENABLED=false",
+				"-e", "FELIX_DEBUGMEMORYPROFILEPATH=\"heap-<timestamp>\"",
+				"-e", "FELIX_DebugSimulateCalcGraphHangAfter="+calcGraphHangTime,
+				"-e", "FELIX_DebugSimulateDataplaneHangAfter="+dataplaneHangTime,
+				"-e", "FELIX_TYPHAADDR="+typhaAddr,
+				utils.Config.FelixImage)...)
 		Expect(felixContainer).NotTo(BeNil())
 
 		felixReady = getHealthStatus(felixContainer.IP, "9099", "readiness")
