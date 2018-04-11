@@ -11,7 +11,7 @@ from multiprocessing.dummy import Pool
 
 from tests.st.test_base import TestBase, HOST_IPV4
 from tests.st.utils.docker_host import DockerHost
-from tests.st.utils.utils import assert_number_endpoints, get_ip, \
+from tests.st.utils.utils import apply_cnx_license, assert_number_endpoints, get_ip, \
     ETCD_CA, ETCD_CERT, ETCD_KEY, ETCD_HOSTNAME_SSL, ETCD_SCHEME, \
     wipe_etcd
 
@@ -125,6 +125,7 @@ class TieredPolicyWorkloads(TestBase):
     def setUpClass(cls):
         _log.debug("Wiping etcd")
         wipe_etcd(HOST_IPV4)
+
         cls.policy_tier_name = "default"
         cls.next_tier_allowed = False
         cls.hosts = []
@@ -136,6 +137,10 @@ class TieredPolicyWorkloads(TestBase):
                                     additional_docker_options=ADDITIONAL_DOCKER_OPTIONS,
                                     post_docker_commands=POST_DOCKER_COMMANDS,
                                     start_calico=False))
+
+        # Add a CNX license key
+        apply_cnx_license(cls.hosts[0])
+
         for host in cls.hosts:
             host.start_calico_node()
         # Allow time for cnx-node to load
