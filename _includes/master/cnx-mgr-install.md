@@ -1,28 +1,104 @@
-{% if include.init == "systemd" %}
+{% if include.init == "systemd" or include.init == "kubernetes" %}
 
-### Installing Tigera CNX
-
-1. If you are using the etcd datastore, open the 
-   [cnx-configmap.yaml file](hosted/cnx/1.7/cnx-configmap.yaml),
-   copy its contents, save it in a new file, and replace `<ETCD_ENDPOINTS>`
-   with the IP address of your etcd datastore. Then apply the manifest.
-   
-   ```bash
-   kubectl apply -f cnx-configmap.yaml
-   ```
-
-1. Open the manifest that corresponds to your datastore type.
-   - [etcd](hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}
-   - [Kubernetes API datastore](hosted/cnx/1.7/cnx-kdd.yaml){:target="_blank"}
-
-1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
-   This is what subsequent instructions will refer to.
+## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager and API Server
 
 {% endif %}
 
+{% if include.init == "systemd" %}
+
+1. Load the following manifest to Kubernetes to deploy dummy pods that 
+   will be used for Prometheus targeting. You should ensure that this manifest 
+   deploys one pod on each host running {{site.prodname}} that you wish to 
+   monitor, adjusting the annotations and tolerations as needed.
+
+   ```
+   apiVersion: extensions/v1beta1
+   kind: DaemonSet
+   metadata:
+     name: node-exporter
+     namespace: kube-system
+     labels:
+       k8s-app: calico-node
+   spec:
+     template:
+       metadata:
+         name: node-exporter
+         labels:
+           k8s-app: calico-node
+         annotations:
+           scheduler.alpha.kubernetes.io/critical-pod: ''
+       spec:
+         serviceAccountName: default
+         containers:
+         - image: busybox
+           command: ["sleep", "10000000"]
+           name: node-exporter
+           ports:
+           - containerPort: 9081
+             hostPort: 9081
+             name: scrape
+         hostNetwork: true
+         hostPID: true
+         tolerations:
+         - operator: Exists
+           effect: NoSchedule
+   ```
+   > **Note**: Another option for monitoring is to set up and configure your own 
+   > Prometheus monitoring instead of using the monitoring provided in the next 
+   > steps, then it would not be necessary to load the above manifest.
+   {: .alert .alert-info}
+
+
+1. If you are using the etcd datastore: 
+
+   1. Download the [cnx-configmap.yaml file](hosted/cnx/1.7/cnx-configmap.yaml).
+   
+      ```bash
+      curl --compressed -o cnx-configmap.yaml \
+      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-configmap.yaml
+      ```
+   
+   1. Replace `<ETCD_ENDPOINTS>` with the IP address of your etcd server.
+     
+      **Command**
+      ```bash
+      sed -i -e "s?<ETCD_ENDPOINTS>?<REPLACE_ME>?g" cnx-configmap.yaml
+      ```
+
+      **Example**
+      ```bash
+      sed -i -e "s?<ETCD_ENDPOINTS>?http://10.96.232.136:6666?g" cnx-configmap.yaml
+      ```
+         
+      > **Tip**: You can specify more than one etcd server, using commas as delimiters.
+      {: .alert .alert-success}
+     
+   1. Apply the manifest.
+     
+      ```bash
+      kubectl apply -f cnx-configmap.yaml
+      ```
+   
+{% endif %}
+
+1. Download the manifest that corresponds to your datastore type and save the file 
+   as cnx.yaml. That is how we will refer to it in later steps. 
+   
+   **etcd datastore**
+   ```bash
+   curl -o --compressed cnx.yaml \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+   ```
+   
+   **Kubernetes API datastore**
+   ```bash
+   curl -o --compressed cnx.yaml \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
+   ```
+
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}
 
-{% if include.orchestrator == "openshift" %}
+{% if include.init == "openshift" %}
 
 1. Update the login method to `OAuth`:
 
@@ -50,29 +126,26 @@
    
 {% endif %}
 
-1. If you want the CNX Manager to listen on a port other than
+1. If you want the {{site.prodname}} Manager to listen on a port other than
    30003 or you plan to set up a load balancer in front of it, edit the 
    `Service` object named `cnx-manager` as needed.  
 
-1. Generate TLS credentials - i.e. a web server certificate and key - for the
-   {{site.prodname}} Manager.
+1. Create a secret containing a TLS certificate and the private key used to
+   sign it. The following command uses a self-signed certificate and key that
+   should be present as part of your Kubernetes deployment to get you started. 
 
-   See
-   [Certificates](https://kubernetes.io/docs/concepts/cluster-administration/certificates/)
-   for various ways of generating TLS credentials.  As both its Common Name and
-   a Subject Alternative Name, the certificate must have the host name (or IP
-   address) that browsers will use to access the {{site.prodname}} Manager.  In a single-node
-   test deployment this can be just `127.0.0.1`, but in a real deployment it
-   should be a planned host name that maps to the `cnx-manager` service.
-
-1. Store those credentials as `cert` and `key` in a secret named
-   `cnx-manager-tls`.  For example:
-
+   ```bash
+   kubectl create secret generic cnx-manager-tls \
+   --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
+   --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
    ```
-   kubectl create secret generic cnx-manager-tls --from-file=cert=/path/to/certificate --from-file=key=/path/to/key -n kube-system
-   ```
-
-1. Optionally [enable]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/cnx#enabling-tls-verification-for-a-kubernetes-extension-api-server) TLS verification for CNX API Server.
+   
+   > **Note**: Web browsers will warn end users about the self-signed certificate 
+   > used in the above command. To stop the warnings by using valid certificates 
+   > instead, refer to [Securing {{site.prodname}} Manager with TLS](../../../reference/cnx/securing-with-tls).
+   > Refer to [Enabling TLS verification](../../../reference/cnx/enabling-tls-verification) 
+   > to achieve further security.
+   {: .alert .alert-info}
 
 1. Apply the manifest to install {{site.prodname}} Manager and the {{site.prodname}} API server.
 
@@ -80,28 +153,29 @@
    kubectl apply -f cnx.yaml
    ```
 
-{% if include.orchestrator == "openshift" %}
+{% if include.init == "openshift" %}
 
-1. Allow cnx-manager to run as root:
+1. Allow the {{site.prodname}} Manager to run as root:
 
        oadm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
 
 {% endif %}
 
-1. Configure authorization to allow {{site.prodname}} Manager users to edit policies.  Consult the
-   [{{site.prodname}} Manager]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
-   documents for advice on configuring this.  The authentication method you
-   chose when setting up the cluster defines what format you need to use for
-   usernames in the role bindings.
-
-1. Optionally add network policy to ensure requests to CNX are permitted.  By default Kubernetes doesn't
-   install any network policy, and therefore CNX Manager is accessible, but it is easy to
-   unintentionally block it when editing policy so this is a recommended step.  Download the
-   [cnx-policy.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml)
-   file and apply it.  The file doesn't require any customization, but contains some comments
-   suggesting ways to make the policy more fine grained if you know where CNX Manager will be
-   accessed from or the addresses of your Kubernetes API Servers.
+1. Confirm that all of the pods are running with the following command.
 
    ```
-   kubectl apply -f cnx-policy.yaml
+   watch kubectl get pods --all-namespaces
    ```
+
+   Wait until each pod has the `STATUS` of `Running`.
+
+1. Apply the following manifest to set network policy that permits requests to {{site.prodname}}. 
+
+   ```
+   kubectl apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
+   ```
+   
+   > **Note**: You can also 
+   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml){:target="_blank"}.
+   {: .alert .alert-info}

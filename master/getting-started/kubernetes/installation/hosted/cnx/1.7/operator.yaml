@@ -108,13 +108,9 @@ spec:
       containers:
       - name: calico-prometheus-operator
         image: quay.io/coreos/prometheus-operator:v0.15.0
-        # When using a private registry to serve container images, delete the "image:" line
-        # above, uncomment the following lines, and replace "<YOUR-REGISTRY>" with your
-        # registry's URL.
-        #image: <YOUR-REGISTRY>/prometheus-operator:v0.15.0
-        #args:
-          #- --prometheus-config-reloader=<YOUR-REGISTRY>/prometheus-config-reloader:v0.0.2
-          #- --config-reloader-image=<YOUR-REGISTRY>/configmap-reload:v0.0.1
+        args:
+          - --prometheus-config-reloader=quay.io/coreos/prometheus-config-reloader:v0.0.2
+          - --config-reloader-image=quay.io/coreos/configmap-reload:v0.0.1
         resources:
           requests:
             cpu: 100m

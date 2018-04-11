@@ -139,6 +139,8 @@ toc:
       path: /reference/cnx/recommendations
     - title: Securing CNX Manager with TLS
       path: /reference/cnx/securing-with-tls
+    - title: Enabling TLS verification
+      path: /reference/cnx/enabling-tls-verification
 - title: Configuration on public clouds
   section:
     - title: Amazon Web Services

@@ -217,7 +217,7 @@ data:
   alertmanager.yaml: Z2xvYmFsOgogIHJlc29sdmVfdGltZW91dDogNW0Kcm91dGU6CiAgZ3JvdXBfYnk6IFsnam9iJ10KICBncm91cF93YWl0OiAzMHMKICBncm91cF9pbnRlcnZhbDogMW0KICByZXBlYXRfaW50ZXJ2YWw6IDVtCiAgcmVjZWl2ZXI6ICd3ZWJob29rJwpyZWNlaXZlcnM6Ci0gbmFtZTogJ3dlYmhvb2snCiAgd2ViaG9va19jb25maWdzOgogIC0gdXJsOiAnaHR0cDovL2NhbGljby1hbGVydG1hbmFnZXItd2ViaG9vazozMDUwMS8nCg==
 ---
 
-# This manifest creates the Calico AlertManager.
+# This manifest creates the {{site.prodname}} Alertmanager.
 apiVersion: monitoring.coreos.com/v1
 kind: Alertmanager
 metadata:
@@ -225,10 +225,7 @@ metadata:
   namespace: calico-monitoring
 spec:
   version: v0.11.0
-  # When using a private registry to serve container images, uncomment
-  # the following line and replace "<YOUR-REGISTRY>" with the URL of
-  # your registry.
-  #baseImage: <YOUR-REGISTRY>/alertmanager 
+  baseImage: quay.io/prometheus/alertmanager
   # If necessary, uncomment the 2 lines below and edit the nodeSelector
   # key:value pair with appropriate values for your environment.
   #nodeSelector:
@@ -263,10 +260,7 @@ metadata:
   name: calico-node-prometheus
   namespace: calico-monitoring
 spec:
-  # When using a private registry to serve container images, uncomment
-  # the following line and replace "<YOUR-REGISTRY>" with the URL of
-  # your registry.
-  #baseImage: <YOUR-REGISTRY>/prometheus 
+  baseImage: quay.io/prometheus/prometheus
   # If necessary, uncomment the 2 lines below and edit the nodeSelector
   # key:value pair with appropriate values for your environment.
   #nodeSelector:

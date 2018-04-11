@@ -9,9 +9,9 @@
    
    **Example**
    ```shell
-   sed -i -e 's/quay.io/my-repo.com/g' {{include.yaml}}.yaml
+   sed -i -e 's/quay.io/my-registry.com/g' {{include.yaml}}.yaml
    ```
    
    > **Tip**: If you're hosting your own private registry, you may need to include
-   > a port number. For example, `my-repo.com:5000`.
+   > a port number. For example, `my-registry.com:5000`.
    {: .alert .alert-success}

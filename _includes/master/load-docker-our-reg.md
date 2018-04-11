@@ -49,6 +49,8 @@
    ```bash
    secret "cnx-pull-secret" created
    ```
+   
+1. Continue to [Installing {{site.prodname}}](#install-cnx).
 
 {% if include.yaml != "calico" %}
 

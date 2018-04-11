@@ -15,7 +15,7 @@ follow the steps in [Using kubeadm to create a cluster](http://kubernetes.io/doc
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
    
-## Installing {{site.prodname}} for policy and networking
+## <a name="install-cnx"></a>Installing {{site.prodname}} for policy and networking
 
 ### Selecting your datastore type and number of nodes
 
@@ -68,6 +68,8 @@ datastore type and number of nodes.
    ```bash
    kubectl apply -f calico.yaml
    ```
+   
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr).
 
 ### Installing with the Kubernetes API datastore—50 nodes or less
 
@@ -106,6 +108,7 @@ datastore type and number of nodes.
    kubectl apply -f calico.yaml
    ```
 
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr).
 
 ### Installing with the Kubernetes API datastore—more than 50 nodes
 
@@ -168,15 +171,9 @@ datastore type and number of nodes.
    ```bash
    kubectl apply -f calico.yaml
    ```
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr).
    
-## Installing the CNX Manager
-
-1. [Open cnx-etcd.yaml in a new tab](cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
-
-1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
-   This is what subsequent instructions will refer to.
-   
-{% include {{page.version}}/cnx-mgr-install.md %}
+{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
 
 {% include {{page.version}}/cnx-monitor-install.md %}
 

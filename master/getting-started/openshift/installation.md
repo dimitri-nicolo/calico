@@ -105,12 +105,7 @@ such that Calico connects to an etcd you have already set up by following the [d
 
        oc apply -f ./calico-config.yaml
 
-1. [Open cnx-etcd.yaml in a new tab](../kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
-
-1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
-   This is what subsequent instructions will refer to.
-
-{% include {{page.version}}/cnx-mgr-install.md orchestrator="openshift" %}
+{% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
 ### Installing Policy Violation Alerting
 
@@ -186,24 +181,15 @@ Operator, Prometheus, and Alertmanager instances for you.
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
 See [Policy Violation Alerting](../../reference/cnx/policy-violations) for more information.
 
-#### Policy Query with calicoq
+#### Policy query with calicoq
 
 Once {{site.prodname}} is installed in OpenShift, each node is automatically configured with
-a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate
-requests to etcd.
+a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate requests to etcd.
 
-To install `calicoq` in OpenShift:
+We recommend installing calicoq as a container in OpenShift. Refer to [Installing calicoq as a container on a single host](../../usage/calicoq/#installing-calicoq-as-a-container-on-a-single-host) for instructions. 
 
-1. Download it to any node.
-1. Run it as root user.
-
-See the [calicoq reference](../../reference/calicoq/) for more information on using `calicoq`.
-
-> **Note**: We recommend [installing `calicoq` as a container](../../usage/calicoq/#installing-calicoq-as-a-container-on-each-node) in OpenShift. Ensure that your configuration takes into account TLS enabled etcd in OpenShift.
+> **Note**: Ensure that your configuration takes into account TLS-enabled etcd in OpenShift.
 {: .alert .alert-info}
 
-### Next Steps
+See the [calicoq reference section](../../reference/calicoq/) for more information on using `calicoq`.
 
-- [Policy Auditing](../../reference/cnx/policy-auditing).
-
-[obtaining-cnx]: {{site.baseurl}}/{{page.version}}/getting-started/
