@@ -179,8 +179,14 @@ func NflogSubscribe(groupNum int, bufSize int, ch chan<- *NflogPacketAggregate, 
 				}
 			case <-sendTicker.C:
 				for t, pktAddr := range aggregate {
-					ch <- pktAddr
-					delete(aggregate, t)
+					// Don't block when trying to send to slow receivers.
+					// In case of slow receivers, simply continue aggregating and
+					// retry sending next time around.
+					select {
+					case ch <- pktAddr:
+						delete(aggregate, t)
+					default:
+					}
 				}
 			}
 		}
