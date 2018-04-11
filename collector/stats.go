@@ -191,8 +191,8 @@ type RuleTrace struct {
 	pathArray [RuleTraceInitLen]*RuleTracePoint
 }
 
-func NewRuleTrace() *RuleTrace {
-	rt := &RuleTrace{verdictIdx: -1}
+func NewRuleTrace() RuleTrace {
+	rt := RuleTrace{verdictIdx: -1}
 	rt.path = rt.pathArray[:]
 	return rt
 }
@@ -336,7 +336,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
 }
 
 // ToMetricUpdate converts the RuleTrace to a MetricUpdate used by the reporter.
-func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td TrafficDirection, ctr *Counter, ctrRev *Counter) *MetricUpdate {
+func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td TrafficDirection, ctr *Counter, ctrRev *Counter) MetricUpdate {
 	var (
 		dp, db, dpRev, dbRev int
 		isConn               bool
@@ -349,7 +349,7 @@ func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td TrafficDirection,
 		dp, db = rt.ctr.DeltaValues()
 		isConn = false
 	}
-	mu := &MetricUpdate{
+	mu := MetricUpdate{
 		updateType:   ut,
 		tuple:        t,
 		ruleID:       rt.VerdictRuleTracePoint().RuleID,
@@ -416,10 +416,8 @@ type Data struct {
 	connTrackCtrReverse Counter
 
 	// These contain the aggregated counts per tuple per rule.
-	//TODO: RLB: I don't think these need to be pointers, we can just embed the struct directly
-	//which saves on a couple of allocations.
-	IngressRuleTrace *RuleTrace
-	EgressRuleTrace  *RuleTrace
+	IngressRuleTrace RuleTrace
+	EgressRuleTrace  RuleTrace
 
 	createdAt  time.Duration
 	updatedAt  time.Duration
@@ -581,7 +579,7 @@ func (d *Data) ReplaceRuleTracePoint(tp *RuleTracePoint) error {
 	return err
 }
 
-func (d *Data) Report(c chan<- *MetricUpdate, expired bool) {
+func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	ut := UpdateTypeReport
 	if expired {
 		ut = UpdateTypeExpire

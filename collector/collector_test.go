@@ -589,7 +589,7 @@ func (mr *mockReporter) Start() {
 	// Do nothing. We are a mock anyway.
 }
 
-func (mr *mockReporter) Report(mu *MetricUpdate) error {
+func (mr *mockReporter) Report(mu MetricUpdate) error {
 	mr.reportChan <- testMetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        mu.tuple,

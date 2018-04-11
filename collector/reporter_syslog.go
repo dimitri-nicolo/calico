@@ -74,7 +74,7 @@ func (sr *SyslogReporter) Start() {
 	log.Info("Staring SyslogReporter")
 }
 
-func (sr *SyslogReporter) Report(mu *MetricUpdate) error {
+func (sr *SyslogReporter) Report(mu MetricUpdate) error {
 	if (mu.inMetric.deltaPackets == 0 && mu.inMetric.deltaBytes == 0) &&
 		(mu.outMetric.deltaPackets == 0 && mu.outMetric.deltaBytes == 0) {
 		// No update. It isn't an error.
