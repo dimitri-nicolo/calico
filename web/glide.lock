@@ -1,5 +1,5 @@
-hash: b13b1cddae35d2b61552a281b7b5207f938b5093738f4f3daca876cd54d53c2d
-updated: 2018-03-29T13:34:06.537911-07:00
+hash: 3cc964b399b14b1a9281655d414c45e9077c8ed590fbd26c611d594191608d86
+updated: 2018-04-10T17:38:29.50115-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -46,13 +46,13 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 6333e38ac20b8949a8dd68baa3650f4dee8f39f0
+  version: 5e9692864e22d02ac79e2fa499cffb00520b4fea
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: d8000b5bfbd1147255710505a27c735b6b2ae2ac
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -161,7 +161,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/calicoctl
-  version: 584f00026068b421f9f6639f601d340ac800262c
+  version: 7e32a52dd2c1fa28d4de47a25db906facf872dbf
   repo: git@github.com:tigera/calicoctl-private.git
   vcs: git
   subpackages:
@@ -169,7 +169,7 @@ imports:
   - calicoctl/resourcemgr
   - calicoctl/util/yaml
 - name: github.com/projectcalico/felix
-  version: 430ce63155e03b99fb4a78e0b98f92a02ae99e71
+  version: c65f3376291eb74b6efa35075b94fb439b4998b6
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -236,7 +236,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e4aa40a9169a88835b849a6efb71e05dc04b88f0
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -256,7 +256,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: d19ba67c471a7616e40de13a841bb17faebdbe40
+  version: 55a808c36b11f26f665027eed5bc7c03d67dd1ae
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -321,7 +321,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 5bee14b453b4c71be47ec1781b0fa61c2ea182db
+  version: 0a24098c0ec68416ec050f567f75df563d6b231e
   subpackages:
   - internal
   - internal/app_identity
@@ -494,7 +494,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 50ae88d24ede7b8bad68e23c805b5d3da5c8abaf
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 testImports: []

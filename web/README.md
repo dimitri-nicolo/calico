@@ -53,7 +53,7 @@ docker ps
 curl localhost:8080/version
 
 # Check summary stats.  Should be nothing configured
-curl localhost:8080/summary
+curl https://localhost:8080/summary -k
 
 # Apply endpoint config, but no policy at the moment.
 # 1 WEP with label "panda=sad", namespace1
@@ -62,13 +62,13 @@ curl localhost:8080/summary
 calicoctl apply -f 1.yaml
 
 # Check summary stats.  Should be some endpoint counts and no policies.
-curl localhost:8080/summary
+curl https://localhost:8080/summary -k
 
 # Query endpoints by selector.  Should be a o workload endpoint with level gold.
-curl localhost:8080/endpoints?selector=panda==\'sad\'
+curl https://localhost:8080/endpoints?selector=panda==\'sad\' -k
 
 # and two host endpoints which have a host label.
-curl localhost:8080/endpoints?selector=has\(host\)
+curl https://localhost:8080/endpoints?selector=has\(host\) -k
 
 # Apply policy configuration.
 # GNP matching all(host):  should match both HEPs
@@ -77,14 +77,14 @@ curl localhost:8080/endpoints?selector=has\(host\)
 calicoctl apply -f 2.yaml
 
 # Check summary stats.  Should be some total endpoint counts and endpoint counts for each policies.
-curl localhost:8080/summary
+curl https://localhost:8080/summary -k
 
 # Query endpoints by selector.  Should be a couple referenced, with total policies that match these endpoints.
-curl localhost:8080/endpoints?selector=panda==\'verysad\'
+curl https://localhost:8080/endpoints?selector=panda==\'verysad\' -k
 
 # Query which GNP policies match a particular label set.
-curl localhost:8080/policies?host=yes
+curl https://localhost:8080/policies?host=yes -k
 
 # And for NPs, include the namespace label.
-curl "localhost:8080/policies?panda=verysad&projectcalico.org/namespace=namespace1"
+curl "https://localhost:8080/policies?panda=verysad&projectcalico.org/namespace=namespace1" -k
 ```

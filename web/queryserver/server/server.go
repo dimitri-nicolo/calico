@@ -35,6 +35,9 @@ func Start(addr string, cfg *apiconfig.CalicoAPIConfig, webKey, webCert string) 
 	sm.HandleFunc("/summary", qh.Summary)
 	sm.HandleFunc("/version", handlers.VersionHandler)
 
+	lic := handlers.License{c}
+	sm.HandleFunc("/license", lic.LicenseHandler)
+
 	server = &http.Server{
 		Addr:    addr,
 		Handler: sm,
