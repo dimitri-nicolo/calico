@@ -1,3 +1,4 @@
+{% comment %}
 {% capture canonical_path %}
 {{- page.canonical_url | remove: "https://docs.projectcalico.org/" -}}
 {% endcapture %}
@@ -16,3 +17,4 @@
     {% endif %}
   </div>
 {% endif %}
+{% endcomment %}
