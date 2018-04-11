@@ -17,7 +17,7 @@ When using the kubernetes datastore with RBAC enabled on the remote cluster, the
 
 For more details on the federation feature see [here](/{{page.version}}/usage/federation)
 
-The meaning of the fields matches the configuration used for configuring calicoctl, see the [etcd](/{{page.version}}/setup/etcdv3) and [kubernetes](/{{page.version}}/setup/kubernetes) instructions for more details.
+The meaning of the fields matches the configuration used for configuring calicoctl, see the [etcd](../../../usage/calicoctl/configure/etcd) and [kubernetes](../../../usage/calicoctl/configure/kdd) instructions for more details.
 
 For `calicoctl` commands that specify a resource type on the CLI, the following aliases are supported
 (all case insensitive): `remoteclusterconfiguration`, `remoteclusterconfigurations`, `remoteclusterconfig`,

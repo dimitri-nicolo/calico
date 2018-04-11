@@ -12,8 +12,6 @@ and [Installing {{site.prodname}} for policy](other) will perform these steps au
 for you and are *strongly* recommended for most users. These instructions should only 
 be followed by users who have a specific need that cannot be met by using manifests.
 
-* TOC
-{:toc}
 
 ## Before you begin
 

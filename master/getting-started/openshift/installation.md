@@ -113,7 +113,7 @@ Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch 
 
 #### Enable Metrics
 
-**Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container) calicoctl as a container in OpenShift.
+**Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
 Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
 

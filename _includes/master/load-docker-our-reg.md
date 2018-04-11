@@ -50,7 +50,9 @@
    secret "cnx-pull-secret" created
    ```
    
+{% if include.yaml == "calico" %}
 1. Continue to [Installing {{site.prodname}}](#install-cnx).
+{% endif %}
 
 {% if include.yaml != "calico" %}
 
