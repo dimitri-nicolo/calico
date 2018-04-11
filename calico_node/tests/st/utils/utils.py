@@ -118,7 +118,7 @@ def log_and_run(command, raise_exception_on_failure=True):
             raise CommandExecError(e)
 
 
-def retry_until_success(function, retries=10, ex_class=Exception, *args, **kwargs):
+def retry_until_success(function, retries=10, ex_class=Exception):
     """
     Retries function until no exception is thrown. If exception continues,
     it is reraised.
@@ -131,7 +131,7 @@ def retry_until_success(function, retries=10, ex_class=Exception, *args, **kwarg
     """
     for retry in range(retries + 1):
         try:
-            result = function(*args, **kwargs)
+            result = function()
         except ex_class:
             if retry < retries:
                 sleep(1)
