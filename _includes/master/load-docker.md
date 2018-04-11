@@ -115,7 +115,7 @@
 
 {% endif %}
 
-{% if include.orchestrator == "kubernetes" %}
+{% if include.orchestrator == "kubernetes" and include.yaml == "calico" %}
 
 1. Push the credentials of your private repository up to Kubernetes as a [secret](https://kubernetes.io/docs/concepts/containers/images/#creating-a-secret-with-a-docker-config)
 named `cnx-pull-secret` in the `kube-system` namespace.

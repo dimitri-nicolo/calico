@@ -5,7 +5,7 @@ layout: docwithnav
 ---
 
 {{site.prodname}} adds complementary monitoring and policy management
-tools on top of [Project Calico](about-calico). Features included as part of
+tools on top of [Project Calico](https://docs.projectcalico.org/latest/introduction/). Features included as part of
 the {{site.prodname}} release are:
 
 

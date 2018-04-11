@@ -142,8 +142,8 @@
    
    > **Note**: Web browsers will warn end users about the self-signed certificate 
    > used in the above command. To stop the warnings by using valid certificates 
-   > instead, refer to [Securing {{site.prodname}} Manager with TLS](../../../reference/cnx/securing-with-tls).
-   > Refer to [Enabling TLS verification](../../../reference/cnx/enabling-tls-verification) 
+   > instead, refer to [Securing {{site.prodname}} Manager with TLS]({{site.url}}/{{page.version}}/reference/cnx/securing-with-tls).
+   > Refer to [Enabling TLS verification]({{site.url}}/{{page.version}}/reference/cnx/enabling-tls-verification) 
    > to achieve further security.
    {: .alert .alert-info}
 
