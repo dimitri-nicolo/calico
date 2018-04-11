@@ -21,7 +21,7 @@ from nose_parameterized import parameterized
 
 from tests.st.test_base import TestBase, HOST_IPV4
 from tests.st.utils.docker_host import DockerHost
-from tests.st.utils.utils import assert_number_endpoints, ETCD_CA, ETCD_CERT, \
+from tests.st.utils.utils import assert_number_endpoints, apply_cnx_license, ETCD_CA, ETCD_CERT, \
     ETCD_KEY, ETCD_HOSTNAME_SSL, ETCD_SCHEME, get_ip, log_and_run, retry_until_success, \
     wipe_etcd
 
@@ -159,6 +159,9 @@ class TestFelixOnGateway(TestBase):
 
         # And an nginx server on the external network only.
         log_and_run("docker run --network=cali-st-ext -d --name=cali-st-ext-nginx nginx")
+
+        # Add a CNX license key
+        apply_cnx_license(cls.hosts[0])
 
         for host in cls.hosts:
             host.start_calico_node()
