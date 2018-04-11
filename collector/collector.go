@@ -327,7 +327,7 @@ func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacke
 	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan)
 }
 
-func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {
+func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
 	var l4Src, l4Dst int
 	if nflogTuple.Proto == 1 {
 		l4Src = nflogTuple.L4Src.Id
