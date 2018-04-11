@@ -33,6 +33,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
@@ -220,7 +221,7 @@ exit11KQv8F3kTIUQRm0qw00TSBjuQHKoG83yfimlQ8OazciT+aLpVaY8SOrrNnL
 IJ8dHgTpF9WWHxx04DDzqrT7Xq99F9RzDzM7dSizGxIxonoWcBjiF6n5
 -----END CERTIFICATE-----`
 		_, err = calicoClient.LicenseKey().Create(ctx, licenseKey, options.SetOptions{})
-		if err != nil && err.Error() == "resource already exists: LicenseKey(default)" {
+		if _, ok := err.(cerrors.ErrorResourceAlreadyExists); ok {
 			// Fine; suppress this 'error'.
 			err = nil
 		}
