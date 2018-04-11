@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017, 2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -220,6 +220,10 @@ exit11KQv8F3kTIUQRm0qw00TSBjuQHKoG83yfimlQ8OazciT+aLpVaY8SOrrNnL
 IJ8dHgTpF9WWHxx04DDzqrT7Xq99F9RzDzM7dSizGxIxonoWcBjiF6n5
 -----END CERTIFICATE-----`
 		_, err = calicoClient.LicenseKey().Create(ctx, licenseKey, options.SetOptions{})
+		if err != nil && err.Error() == "resource already exists: LicenseKey(default)" {
+			// Fine; suppress this 'error'.
+			err = nil
+		}
 
 		return
 	}, "60s", "2s").ShouldNot(HaveOccurred())
