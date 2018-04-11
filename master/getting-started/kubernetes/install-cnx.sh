@@ -31,6 +31,11 @@ CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 #
 DATASTORE=${DATASTORE:="etcd"}
 
+# Specify a license file, e.g.
+#   LICENSE_FILE="./my-great-license.yaml ./install-cnx.sh
+#
+LICENSE_FILE=${LICENSE_FILE:=""}
+
 # when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
 
@@ -73,6 +78,7 @@ checkSettings() {
   echo '  DOCS_LOCATION='${DOCS_LOCATION}
   echo '  VERSION='${VERSION}
   echo '  DATASTORE='${DATASTORE}
+  [ "$LICENSE_FILE" ] && echo  '  LICENSE_FILE='${LICENSE_FILE}
 
   echo
   echo -n "About to "$1" CNX. "
@@ -94,6 +100,7 @@ parseOptions() {
   usage() {
     cat <<HELP_USAGE
 Usage: $(basename "$0")
+           -l license.yaml    # Required - specify the path to the CNX license file
           [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
           [-k datastore]      # Specify the datastore ("etcd"|"kdd"); default: "etcd"
@@ -108,11 +115,12 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:hk:pqv:ux" opt; do
+  while getopts "c:d:hk:l:pqv:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       k )  DATASTORE=$OPTARG;;
+      l )  LICENSE_FILE=$OPTARG;;
       v )  VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
@@ -124,7 +132,14 @@ HELP_USAGE
   done
   shift $((OPTIND -1))
 
+  # Validate $DATASTORE is either "kdd" or "etcd"
   [ "$DATASTORE" == "etcd" ] || [ "$DATASTORE" == "kdd" ] || fatalError "Datastore \"$DATASTORE\" is not valid, must be either \"etcd\" or \"kdd\"."
+
+  # Confirm user specified a license file
+  [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a CNX license file."
+
+  # Confirm license file is readable
+  [ ! -r "$LICENSE_FILE" ] && fatalError "Couldn't locate license file: $LICENSE_FILE"
 }
 
 #
@@ -557,7 +572,9 @@ downloadManifest() {
 }
 
 #
-# downloadManifests()
+# downloadManifests() - download all required manifests. Note
+# that if a particular manifest exists already in current dir,
+# do not download/overwrite that manifest.
 #
 downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml"
@@ -575,15 +592,35 @@ downloadManifests() {
 }
 
 #
-# applyCalicoManifest()
+# applyKddRbacManifest() - kdd-only, apply kdd-rbac.yaml
 #
-applyCalicoManifest() {
+applyKddRbacManifest() {
   # Apply rbac for kdd datastore
   if [ "$DATASTORE" == "kdd" ]; then
     run kubectl apply -f rbac-kdd.yaml
     countDownSecs 5 "Applying \"rbac-kdd.yaml\" manifest: "
   fi
+}
 
+#
+# applyLicenseManifest()
+# If the user specified a license file, apply it. Note there may be a race condition
+# where felix (calico-node) starts before we apply the license. In this case, the
+# license will be installed, but felix will think that it is unlicensed. Restart
+# calico-node pod(s) as a workaround if you encounter this issue.
+#
+applyLicenseManifest() {
+  if [ "$LICENSE_FILE" ]; then
+    echo -n "Applying license file: ${LICENSE_FILE} "
+    run "calicoctl apply -f ${LICENSE_FILE}"
+    echo "done."
+  fi
+}
+
+#
+# applyCalicoManifest()
+#
+applyCalicoManifest() {
   echo -n "Applying \"calico.yaml\" ("$DATASTORE") manifest: "
   run kubectl apply -f calico.yaml
   blockUntilPodIsReady "k8s-app=kube-dns" 180 "kube-dns"  # Block until kube-dns pod is running & ready
@@ -775,7 +812,13 @@ installCNX() {
   setupBasicAuth                # Create 'jane/welc0me' account w/cluster admin privs
 
   downloadManifests             # Download all manifests, if they're not already present in current dir
-  applyCalicoManifest           # Apply calico.yaml (also apply rbac.yaml for kdd)
+  installCalicoCtlBinary        # Copy quay.io/tigera/calicoctl to $cwd, create /etc/calico/calicoctl.cfg
+
+  applyKddRbacManifest          # Apply "rbac-kdd.yaml" (kdd datastore only)
+  applyCalicoManifest           # Apply calico.yaml
+
+  applyLicenseManifest          # If the user specified a license file, apply it
+
   removeMasterTaints            # Remove master taints
   createCNXManagerSecret        # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest              # Apply cnx-[etcd|kdd].yaml
@@ -785,8 +828,6 @@ installCNX() {
     applyOperatorManifest       # Apply operator.yaml
     applyMonitorCalicoManifest  # Apply monitor-calico.yaml
   fi
-
-  installCalicoCtlBinary        # Copy quay.io/tigera/calicoctl to $cwd, create /etc/calico/calicoctl.cfg
 
   echo CNX installation complete. Point your browser to https://127.0.0.1:30003, username=jane, password=welc0me
 }
