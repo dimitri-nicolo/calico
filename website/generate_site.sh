@@ -29,7 +29,6 @@ handlers:
   static_files: _site/\1
   mime_type: text/x-yaml
   upload: _site/(.*\.(yaml|yml))$
-  secure: always
 
 # Specify mime-type for sh files since GAE doesn't handle this correctly.
 #
@@ -37,7 +36,6 @@ handlers:
   static_files: _site/\1
   mime_type: text/x-shellscript
   upload: _site/(.*\.(sh|bash))$
-  secure: always
 
 # For all remaining files, let GAE infer mime-type
 #
