@@ -29,6 +29,7 @@ handlers:
   static_files: _site/\1
   mime_type: text/x-yaml
   upload: _site/(.*\.(yaml|yml))$
+  secure: always
 
 # Specify mime-type for sh files since GAE doesn't handle this correctly.
 #
@@ -36,6 +37,7 @@ handlers:
   static_files: _site/\1
   mime_type: text/x-shellscript
   upload: _site/(.*\.(sh|bash))$
+  secure: always
 
 # For all remaining files, let GAE infer mime-type
 #
@@ -49,6 +51,7 @@ suffixes=`find _site -type f -iname \*.* -print | sed 's/.*\.//' | sort | uniq |
 printf -- "- url: /(.*\\.(%s))$\n" $suffixes
 printf "  static_files: _site/\\\1\n"
 printf "  upload: _site/(.*\\.(%s))$\n" $suffixes
+printf "  secure: always\n"
 
 # Get all the directories in the _site; e.g. "/v2.0/getting-started".
 # Output in form "/dir1|/dir2", etc.
@@ -63,6 +66,7 @@ printf "#\n"
 printf -- "- url: /(%s)$\n" $directories
 printf "  static_files: _site/\\\1/index.html\n"
 printf "  upload: _site/(%s)/index.html\n" $directories
+printf "  secure: always\n"
 
 cat <<EOF
 
@@ -71,27 +75,32 @@ cat <<EOF
 - url: /
   static_files: _site/index.html
   upload: _site/index.html
+  secure: always
 
 # For directories indicated by a terminal /, append "/index.html"
 - url: /(.+)/
   static_files: _site/\1/index.html
   upload: _site/(.+)/index.html
   expiration: "15m"
+  secure: always
 
 # For md files, append ".html"
 - url: /(.+[a-z0-9])
   static_files: _site/\1.html
   upload: _site/(.+[a-z]).html
   expiration: "15m"
+  secure: always
 
 - url: /(.+)
   static_files: _site/\1/index.html
   upload: _site/(.+)/index.html
   expiration: "15m"
+  secure: always
 
 - url: /(.*)
   static_files: _site/\1
   upload: _site/(.*)
+  secure: always
 
 libraries:
 - name: webapp2
