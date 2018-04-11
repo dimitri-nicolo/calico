@@ -11,7 +11,6 @@ import (
 
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 // CNX Metrics
@@ -94,7 +93,7 @@ type RuleAggregateValue struct {
 	outPackets     prometheus.Counter
 	outBytes       prometheus.Counter
 	numConnections prometheus.Gauge
-	tuples         set.Set
+	tuples         tupleSet
 }
 
 func newRuleAggregateValue(key RuleAggregateKey, felixHostname string) *RuleAggregateValue {
@@ -105,7 +104,7 @@ func newRuleAggregateValue(key RuleAggregateKey, felixHostname string) *RuleAggr
 	pbInLabels := key.PacketByteLabels(TrafficDirInbound, felixHostname)
 	pbOutLabels := key.PacketByteLabels(TrafficDirOutbound, felixHostname)
 	return &RuleAggregateValue{
-		tuples:         set.New(),
+		tuples:         NewTupleSet(),
 		inPackets:      counterRulePackets.With(pbInLabels),
 		inBytes:        counterRuleBytes.With(pbInLabels),
 		outPackets:     counterRulePackets.With(pbOutLabels),
