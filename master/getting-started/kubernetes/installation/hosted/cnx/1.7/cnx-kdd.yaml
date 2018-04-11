@@ -241,11 +241,25 @@ spec:
         volumeMounts:
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
+        livenessProbe:
+          httpGet:
+            path: /apis/
+            port: 5443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
       - name: cnx-queryserver
         image: {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
           - name: DATASTORE_TYPE
             value: "kubernetes"
+        livenessProbe:
+          httpGet:
+            path: /apis/
+            port: 5443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
       volumes:
         # If you're using TLS with certificate verification then
         # uncomment the following.
@@ -315,6 +329,13 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.query-api-url
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
@@ -339,6 +360,13 @@ spec:
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
       volumes:
       - name: cnx-manager-tls
         secret:
