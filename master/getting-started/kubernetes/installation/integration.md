@@ -8,8 +8,7 @@ This document explains the components necessary to install {{site.prodname}} on
 Kubernetes for integrating with custom configuration management.
 
 The manifests we provide in [Installing {{site.prodname}} for policy and networking](calico),
-[Installing {{site.prodname}} for policy and flannel for networking](flannel), and 
-[Installing {{site.prodname}} for policy](other) will perform these steps automatically 
+and [Installing {{site.prodname}} for policy](other) will perform these steps automatically 
 for you and are *strongly* recommended for most users. These instructions should only 
 be followed by users who have a specific need that cannot be met by using manifests.
 
@@ -215,58 +214,6 @@ kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/instal
 ```
 
 [Click here to view the above yaml directly.](rbac.yaml)
-
-## Adding Tigera CNX
-
-Now you've installed Calico with the enhanced CNX node agent, you're ready to
-add CNX Manager and Prometheus Monitoring.
-
-### Monitoring Prerequisites
-
-The [next steps](#installing-tigera-cnx) add Prometheus Monitoring and depends
-on selectable pods to target for Prometheus monitoring. If you wish to use the
-provided monitoring, the following manifest needs to be loaded to Kubernetes
-which will deploy dummy pods that will be used for Prometheus targeting. You
-should ensure that this manifest deploys one pod on each host running
-{{site.prodname}} that you wish to monitor, adjusting the annotations and
-tolerations as needed.
-
-```
-apiVersion: extensions/v1beta1
-kind: DaemonSet
-metadata:
-  name: node-exporter
-  namespace: kube-system
-  labels:
-    k8s-app: calico-node
-spec:
-  template:
-    metadata:
-      name: node-exporter
-      labels:
-        k8s-app: calico-node
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
-    spec:
-      serviceAccountName: default
-      containers:
-      - image: busybox
-        command: ["sleep", "10000000"]
-        name: node-exporter
-        ports:
-        - containerPort: 9081
-          hostPort: 9081
-          name: scrape
-      hostNetwork: true
-      hostPID: true
-      tolerations:
-      - operator: Exists
-        effect: NoSchedule
-```
-
-Another option for monitoring is to setup and configure your own Prometheus
-monitoring instead of using the monitoring provided in the next steps, then
-it would not be necessary to load the above manifest.
 
 {% include {{page.version}}/cnx-mgr-install.md init="systemd" %}
 

@@ -44,11 +44,11 @@
    docker pull {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker pull {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker pull {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
+   docker pull quay.io/coreos/configmap-reload:v0.0.1
+   docker pull quay.io/coreos/prometheus-config-reloader:v0.0.2
    docker pull quay.io/coreos/prometheus-operator:v0.15.0
    docker pull quay.io/prometheus/alertmanager:v0.11.0
    docker pull quay.io/prometheus/prometheus:v2.0.0
-   docker pull quay.io/coreos/prometheus-config-reloader:v0.0.2
-   docker pull quay.io/coreos/configmap-reload:v0.0.1
    ```
 
 1. Retag the images with the name of your private registry.
@@ -60,11 +60,11 @@
    docker tag {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}} <YOUR-REGISTRY>/tigera/cnx-manager-proxy:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker tag {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}} <YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker tag {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}} <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
-   docker tag quay.io/coreos/prometheus-operator:v0.15.0 <YOUR-REGISTRY>/prometheus-operator:v0.15.0
-   docker tag quay.io/prometheus/alertmanager:v0.11.0 <YOUR-REGISTRY>/alertmanager:v0.11.0
-   docker tag quay.io/prometheus/prometheus:v2.0.0 <YOUR-REGISTRY>/prometheus:v2.0.0
-   docker tag quay.io/coreos/prometheus-config-reloader:v0.0.2 <YOUR-REGISTRY>/prometheus-config-reloader:v0.0.2
-   docker tag quay.io/coreos/configmap-reload:v0.0.1 <YOUR-REGISTRY>/configmap-reload:v0.0.1
+   docker tag quay.io/coreos/configmap-reload:v0.0.1 <YOUR-REGISTRY>/coreos/configmap-reload:v0.0.1
+   docker tag quay.io/coreos/prometheus-config-reloader:v0.0.2 <YOUR-REGISTRY>/coreos/prometheus-config-reloader:v0.0.2
+   docker tag quay.io/coreos/prometheus-operator:v0.15.0 <YOUR-REGISTRY>/coreos/prometheus-operator:v0.15.0
+   docker tag quay.io/prometheus/alertmanager:v0.11.0 <YOUR-REGISTRY>/prometheus/alertmanager:v0.11.0
+   docker tag quay.io/prometheus/prometheus:v2.0.0 <YOUR-REGISTRY>/prometheus/prometheus:v2.0.0
    ```
    > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`)
    > when retagging the images, as shown above and below.
@@ -79,11 +79,11 @@
    docker push <YOUR-REGISTRY>/tigera/cnx-manager-proxy:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker push <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
-   docker push <YOUR-REGISTRY>/prometheus-operator:v0.15.0
-   docker push <YOUR-REGISTRY>/alertmanager:v0.11.0
-   docker push <YOUR-REGISTRY>/prometheus:v2.0.0
-   docker push <YOUR-REGISTRY>/prometheus-config-reloader:v0.0.2
-   docker push <YOUR-REGISTRY>/configmap-reload:v0.0.1
+   docker push <YOUR-REGISTRY>/coreos/configmap-reload:v0.0.1
+   docker push <YOUR-REGISTRY>/coreos/prometheus-config-reloader:v0.0.2
+   docker push <YOUR-REGISTRY>/coreos/prometheus-operator:v0.15.0
+   docker push <YOUR-REGISTRY>/prometheus/alertmanager:v0.11.0
+   docker push <YOUR-REGISTRY>/prometheus/prometheus:v2.0.0
    ```
 
    > **Important**: Do not push the private {{site.prodname}} images to a public registry.
@@ -119,6 +119,8 @@
 
 1. Push the credentials of your private repository up to Kubernetes as a [secret](https://kubernetes.io/docs/concepts/containers/images/#creating-a-secret-with-a-docker-config)
 named `cnx-pull-secret` in the `kube-system` namespace.
+
+1. Continue to [Installing {{site.prodname}}](#install-cnx).
 
 {% endif %}
 

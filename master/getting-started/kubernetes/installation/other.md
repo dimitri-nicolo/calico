@@ -15,6 +15,8 @@ complete the following steps.
 
 {% include {{page.version}}/load-docker.md yaml="calico" orchestrator="kubernetes" %}
 
+## <a name="install-cnx"></a>Installing {{site.prodname}} for policy
+
 1. Ensure that you have a Kubernetes cluster that meets the 
    {{site.prodname}} [system requirements](../requirements). If you don't, 
    follow the steps in [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
@@ -82,14 +84,9 @@ complete the following steps.
    kubectl apply -f calico.yaml
    ```
 
-## Installing the CNX Manager
-
-1. [Open cnx-etcd.yaml in a new tab](cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
-
-1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
-   This is what subsequent instructions will refer to.
+1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr).
    
-{% include {{page.version}}/cnx-mgr-install.md %}
+{% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
 
 {% include {{page.version}}/cnx-monitor-install.md %}
 
