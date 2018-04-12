@@ -89,7 +89,8 @@ checkSettings() {
 # fatalError() - log error to stderr, exit
 #
 fatalError() {
-  >&2 echo "$@"
+  >&2 echo "Fatal Error: $@"
+  >&2 echo "In order to retry installation, uninstall CNX first (i.e. re-run with \"-u\" flag)."
   kill -s TERM $TOP_PID   # we're likely running in a subshell, signal parent by PID
 }
 
@@ -623,7 +624,8 @@ applyLicenseManifest() {
 applyCalicoManifest() {
   echo -n "Applying \"calico.yaml\" ("$DATASTORE") manifest: "
   run kubectl apply -f calico.yaml
-  blockUntilPodIsReady "k8s-app=kube-dns" 180 "kube-dns"  # Block until kube-dns pod is running & ready
+  blockUntilPodIsReady "k8s-app=calico-node" 180 "calico-node" # Block until calico-node pod is running & ready
+  blockUntilPodIsReady "k8s-app=kube-dns" 180 "kube-dns"       # Block until kube-dns pod is running & ready
 }
 
 #
