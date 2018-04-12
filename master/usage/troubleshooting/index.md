@@ -1,6 +1,5 @@
 ---
 title: Troubleshooting
-canonical_url: 'https://docs.projectcalico.org/v3.0/usage/troubleshooting/'
 ---
 
 * TOC

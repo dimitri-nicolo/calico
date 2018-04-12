@@ -1,6 +1,5 @@
 ---
 title: Federated Endpoint Identity for Kubernetes
-canonical_url: 'https://docs.projectcalico.org/v3.0/usage/decommissioning-a-node'
 ---
 
 Federated endpoint identity allows local policy rules to reference the labels on workload and host endpoints from a remote cluster. This means that the policies rendered on the local cluster can reference endpoints from remote clusters.

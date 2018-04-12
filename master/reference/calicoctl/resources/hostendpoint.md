@@ -1,6 +1,5 @@
 ---
 title: Host Endpoint Resource (HostEndpoint)
-canonical_url: 'https://docs.projectcalico.org/v3.0/reference/calicoctl/resources/hostendpoint'
 ---
 
 A host endpoint resource (`HostEndpoint`) represents an interface attached to a host that is running {{site.prodname}}.
