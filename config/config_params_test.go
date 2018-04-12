@@ -40,6 +40,7 @@ var _ = Describe("FelixConfig vs ConfigParams parity", func() {
 		"Err",
 		"numIptablesBitsAllocated",
 		"LicenseValid",
+		"LicensePollingIntervalSecs",
 
 		// Moved to ClusterInformation
 		"ClusterGUID",

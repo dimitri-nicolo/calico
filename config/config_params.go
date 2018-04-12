@@ -203,7 +203,7 @@ type Config struct {
 	LicenseValid bool // Don't add config tag here!
 
 	// LicensePollingIntervalSecs is how frequently we check for license update.
-	LicensePollingIntervalSecs  time.Duration `config:"seconds;10"`
+	LicensePollingIntervalSecs  time.Duration `config:"seconds;30"`
 
 	// State tracking.
 
