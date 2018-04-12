@@ -50,18 +50,19 @@ run_test 0 ${CALICOQ} -h
 
 run_test 0 ${CALICOQ} --help
 
+# Version check should work without applying license.
+run_test 0 ${CALICOQ} version
+
 # Try to use calicoq without applying a license.
 # This should fail.
-run_test 1 ${CALICOQ} version
+run_test 1 ${CALICOQ} eval "\"has(abs)\""
 
 apply_license
 
 # calicoq actions should pass after applying a license.
-run_test 0 ${CALICOQ} version
+run_test 0 ${CALICOQ} --debug eval "\"has(abs)\""
 
 run_test 0 ${CALICOQ} endpoint -h
-
-run_test 0 ${CALICOQ} eval -h
 
 run_test 0 ${CALICOQ} host -h
 
