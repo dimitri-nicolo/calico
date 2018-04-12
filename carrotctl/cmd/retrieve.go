@@ -2,13 +2,11 @@ package cmd
 
 import (
 	"log"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/tigera/licensing/client"
-	cryptolicensing "github.com/tigera/licensing/crypto"
 	"github.com/tigera/licensing/datastore"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -26,9 +24,6 @@ func init() {
 	retrieveUUIDFlag = RetrieveLicenseCmd.PersistentFlags()
 	retrieveUUIDFlag.StringVarP(&retrieveUUID, "license-id", "i", "", "License ID")
 	RetrieveLicenseCmd.MarkPersistentFlagRequired("license-id")
-
-	retrieveCertPathFlag = RetrieveLicenseCmd.PersistentFlags()
-	retrieveCertPathFlag.StringVar(&retrieveCertPath, "certificate", "./tigera.io_certificate.pem", "Licensing intermediate certificate path")
 }
 
 var RetrieveLicenseCmd = &cobra.Command{
@@ -54,16 +49,11 @@ var RetrieveLicenseCmd = &cobra.Command{
 			log.Fatalf("error getting license: %s", err)
 		}
 
-		absCertPath, err := filepath.Abs(retrieveCertPath)
-		if err != nil {
-			log.Fatalf("error getting the absolute path for '%s' : %s", retrieveCertPath, err)
-		}
-
 		// Regenerate the license.
 		lic := api.NewLicenseKey()
 		lic.Name = client.ResourceName
 		lic.Spec.Token = licenseInfo.JWT
-		lic.Spec.Certificate = cryptolicensing.ReadCertPemFromFile(absCertPath)
+		lic.Spec.Certificate = licenseInfo.Cert
 
 		// License successfully stored in database: emit yaml file.
 		err = WriteYAML(*lic, retrieveUUID)

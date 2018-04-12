@@ -67,9 +67,9 @@ Created license file 'happy-carrot-inc-license.yaml'
 `carrotctl list --customer=boxy-box-inc` will list all key license fields for all the licenses issued for a customer name matching `boxy-box-inc*`
 
 It will list `CustomerID` for each license issued for that customer, which can be used to retrieve the
-license with `carrotctl retrieve --license-uuid=<license-uuid>` command.
+license with `carrotctl retrieve --license-id=<license-id>` command.
 
-Each license has a unique ID (LICENSEUUID), even if it is for the same customer.
+Each license has a unique ID (LICENSEID), even if it is for the same customer.
 
 ### Example
 
@@ -77,7 +77,7 @@ Each license has a unique ID (LICENSEUUID), even if it is for the same customer.
 
 ```
 carrotctl list --name="team-rocket-inc"
-LICENSE UUID                           MAX NODES   EXPIRY                          FEATURES
+LICENSE ID                             MAX NODES   EXPIRY                          FEATURES
 7874cac9-4710-4c6b-8e92-ee2cb47a069d         113   0001-01-01 00:00:00 +0000 UTC   cnx|all
 6f3af9e5-c487-4eba-811f-e024e3007a8f          14   2019-01-01 00:00:00 +0000 UTC   cnx|all
 d19fc66e-bf33-4d97-be16-aaba34d2b0d3          15   2019-01-01 00:00:00 +0000 UTC   cnx|all
@@ -87,7 +87,7 @@ d19fc66e-bf33-4d97-be16-aaba34d2b0d3          15   2019-01-01 00:00:00 +0000 UTC
 - Re-generate the license.yaml for the second license from database:
 
 ```
-carrotctl retrieve --license-uuid=d19fc66e-bf33-4d97-be16-aaba34d2b0d3
+carrotctl retrieve --license-id=d19fc66e-bf33-4d97-be16-aaba34d2b0d3
 
 Created license file 'd19fc66e-bf33-4d97-be16-aaba34d2b0d3.yaml'
 ```
@@ -101,11 +101,32 @@ Do NOT run on the official AWS instance: it will interact with the real license 
 
 ```
 # Install mariadb; you may need to consult your distribution's instructions.
-pacman -Syu mysql
+pacman -Sy mysql
+sudo systemctl start mysqld
 
 # Create the tables and user
-```
 mysql -u root -p < datastore/db.sql
+```
+
+### Checking the DB
+
+Consult the internet for SQL documentation, but as a quickstart:
+
+```
+mysql -u root -p
+USE tigera_backoffice;
+SELECT * FROM companies;
+SELECT (id, nodes, company_id, expiry) FROM licenses;
+SELECT (jwt) FROM licenses WHERE company_id=2;
+```
+
+### Wiping the DB
+```
+mysql -u root << EOF
+USE tigera_backoffice;
+DROP TABLE licenses;
+DROP TABLE companies;
+EOF
 ```
 
 ## Building

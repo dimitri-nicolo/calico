@@ -25,8 +25,9 @@ CREATE TABLE licenses
   expiry       DATE NOT NULL,
   issued_at    DATE NOT NULL,
   jwt          VARCHAR(7000) NOT NULL,
+  certificate  VARCHAR(5000) NOT NULL,
 
-  CONSTRAINT licenses_license_uuid_uindex UNIQUE (license_uuid)
+  CONSTRAINT licenses_license_uuid_uindex UNIQUE (license_uuid),
   CONSTRAINT licenses_company_id_fk FOREIGN KEY (company_id) REFERENCES companies (id)
 ) ENGINE = InnoDB;
 

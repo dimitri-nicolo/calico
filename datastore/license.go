@@ -14,10 +14,11 @@ type LicenseInfo struct {
 	Nodes    *int
 	Features string
 	JWT      string
+	Cert     string
 }
 
 func (db *DB) GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error) {
-	rows, err := db.Query("SELECT license_uuid, expiry, nodes, features, jwt FROM licenses WHERE company_id = ?", companyID)
+	rows, err := db.Query("SELECT license_uuid, expiry, nodes, features, jwt, certificate FROM licenses WHERE company_id = ?", companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +27,7 @@ func (db *DB) GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error) {
 	licenses := make([]*LicenseInfo, 0)
 	for rows.Next() {
 		lic := &LicenseInfo{}
-		err := rows.Scan(&lic.UUID, &lic.Expiry, &lic.Nodes, &lic.Features, &lic.JWT)
+		err := rows.Scan(&lic.UUID, &lic.Expiry, &lic.Nodes, &lic.Features, &lic.JWT, &lic.Cert)
 		if err != nil {
 			return nil, err
 		}
@@ -40,8 +41,8 @@ func (db *DB) GetLicensesByCompany(companyID int64) ([]*LicenseInfo, error) {
 
 func (db *DB) GetLicenseByUUID(uuid string) (*LicenseInfo, error) {
 	lic := &LicenseInfo{}
-	row := db.QueryRow("SELECT expiry, nodes, features, jwt FROM licenses WHERE license_uuid = ?", uuid)
-	err := row.Scan(&lic.Expiry, &lic.Nodes, &lic.Features, &lic.JWT)
+	row := db.QueryRow("SELECT expiry, nodes, features, jwt, certificate FROM licenses WHERE license_uuid = ?", uuid)
+	err := row.Scan(&lic.Expiry, &lic.Nodes, &lic.Features, &lic.JWT, &lic.Cert)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +55,8 @@ func (db *DB) CreateLicense(license *api.LicenseKey, companyID int64, claims *cl
 	// Leave the following fields unset since they're not implemented yet:
 	// - cluster_guid
 	res, err := db.Exec("INSERT INTO licenses "+
-		"(license_uuid, nodes, company_id, version, features, grace_period, checkin_int, expiry, issued_at, jwt) "+
-		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		"(license_uuid, nodes, company_id, version, features, grace_period, checkin_int, expiry, issued_at, jwt, certificate) "+
+		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		claims.LicenseID,
 		claims.Nodes,
 		companyID,
@@ -66,6 +67,7 @@ func (db *DB) CreateLicense(license *api.LicenseKey, companyID int64, claims *cl
 		claims.Expiry.Time(),
 		claims.IssuedAt.Time(),
 		license.Spec.Token,
+		license.Spec.Certificate,
 	)
 	if err != nil {
 		return -1, err
