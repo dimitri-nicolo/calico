@@ -42,6 +42,7 @@ import (
 	"github.com/projectcalico/felix/config"
 	_ "github.com/projectcalico/felix/config"
 	dp "github.com/projectcalico/felix/dataplane"
+	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/policysync"
 	"github.com/projectcalico/felix/proto"
@@ -171,6 +172,7 @@ func main() {
 	var configParams *config.Config
 	var typhaAddr string
 	var numClientsCreated int
+	var licenseKey *apiv3.LicenseKey
 configRetry:
 	for {
 		if numClientsCreated > 60 {
@@ -227,7 +229,7 @@ configRetry:
 		}
 		numClientsCreated++
 		for {
-			globalConfig, hostConfig, licValid, err := loadConfigFromDatastore(
+			globalConfig, hostConfig, licenseKey, licValid, err := loadConfigFromDatastore(
 				ctx, backendClient, configParams.FelixHostname)
 			if err == ErrNotReady {
 				log.Warn("Waiting for datastore to be initialized (or migrated)")
@@ -508,9 +510,59 @@ configRetry:
 	// On receipt of SIGUSR1, write out heap profile.
 	logutils.DumpHeapMemoryOnSignal(configParams)
 
+	go watchLicenseChanges(backendClient, configParams, licenseKey)
+
 	// Now monitor the worker process and our worker threads and shut
 	// down the process gracefully if they fail.
 	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
+}
+
+func watchLicenseChanges(client bapi.Client, configParams *config.Config, bootupLicense *apiv3.LicenseKey) {
+	for {
+
+		ticker := jitter.NewTicker(configParams.LicensePollingIntervalSecs, configParams.LicensePollingIntervalSecs/10)
+		<-ticker.C
+
+		// Get the LicenseKey resource directly from the backend datastore client.
+		lic, err := client.Get(context.Background(), model.ResourceKey{
+			Kind:      apiv3.KindLicenseKey,
+			Name:      "default",
+			Namespace: "",
+		}, "")
+		if err != nil {
+			switch err.(type) {
+			case cerrors.ErrorResourceDoesNotExist:
+				log.WithFields(log.Fields{
+					"kind": apiv3.KindLicenseKey,
+					"name": "default",
+				}).Debug("License not found.")
+				continue
+			default:
+				log.WithFields(log.Fields{
+					"kind": apiv3.KindLicenseKey,
+					"name": "default",
+				}).WithError(err).Info("Failed to load LicenseKey from datastore")
+				// For any other errors, we return the error, so the main retry loop can retry.
+				// We only hit this case when there is some datastore connection issue like etcd down or unreachable,
+				// so we want to retry.
+				continue
+			}
+		} else {
+			log.Debug("License resource found")
+			if bootupLicense != nil {
+				// We have a non-nil license upon boot-up, not check if the one we just polled is different from that before rebooting.
+				if lic.Value.(*apiv3.LicenseKey).Spec.Token != bootupLicense.Spec.Token || lic.Value.(*apiv3.LicenseKey).Spec.Certificate != bootupLicense.Spec.Certificate {
+					// Restart Felix to pickup the new license change.
+					exitWithCustomRC(configChangedRC, "Exiting for license config change")
+					continue
+				}
+			} else {
+				// We didn't boot-up with a license and now we have one so reboot to pickup the new license.
+				exitWithCustomRC(configChangedRC, "Exiting for license config change")
+				continue
+			}
+		}
+	}
 }
 
 func servePrometheusMetrics(configParams *config.Config) {
@@ -659,7 +711,7 @@ var (
 
 func loadConfigFromDatastore(
 	ctx context.Context, client bapi.Client, hostname string,
-) (globalConfig, hostConfig map[string]string, licenseValid bool, err error) {
+) (globalConfig, hostConfig map[string]string, license *apiv3.LicenseKey, licenseValid bool, err error) {
 
 	// The configuration is split over 3 different resource types and 4 different resource
 	// instances in the v3 data model:
@@ -743,14 +795,14 @@ func loadConfigFromDatastore(
 		log.Info("License resource found")
 	}
 
-	lk, ok := lic.Value.(*apiv3.LicenseKey)
+	license, ok := lic.Value.(*apiv3.LicenseKey)
 	if !ok {
 		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "KVPair": lic}).Error("Error asserting LicenseKey")
 		return
 	}
 
 	// Decode the LicenseKey.
-	claims, errLic := licClient.Decode(*lk)
+	claims, errLic := licClient.Decode(*license)
 	if errLic != nil {
 		// We return at a corrupted LicenseKey because calicoctl validates the license key before letting a customer apply it
 		// so if a LicenseKey is corrupted then someone is trying to defraud us or etcd itself is corrupted,

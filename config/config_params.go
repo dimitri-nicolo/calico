@@ -200,7 +200,10 @@ type Config struct {
 
 	// This MUST be ignored if set using config/env var, so DO NOT add
 	// the `config` struct tag to this.
-	LicenseValid bool
+	LicenseValid bool // Don't add config tag here!
+
+	// LicensePollingIntervalSecs is how frequently we check for license update.
+	LicensePollingIntervalSecs  time.Duration `config:"seconds;10"`
 
 	// State tracking.
 
