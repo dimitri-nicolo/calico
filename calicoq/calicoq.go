@@ -93,10 +93,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = checkLicense(arguments["--config"].(string))
-	if err != nil {
-		fmt.Printf("Failed to run the command: %s\n", err)
-		os.Exit(1)
+	// Check for license before executing the command.
+	// With the exception of version command.
+	if !arguments["version"].(bool) {
+		if err = checkLicense(arguments["--config"].(string)); err != nil {
+			fmt.Printf("Failed to run the command: %s\n", err)
+			os.Exit(1)
+		}
 	}
 
 	for cmd, thunk := range map[string]func() error{
@@ -160,16 +163,18 @@ func checkLicense(configFile string) error {
 	ctx := context.Background()
 	// Get the LicenseKey resource directly from the backend datastore client.
 	lic, err := client.Get(ctx, model.ResourceKey{
-		Kind:      apiv3.KindLicenseKey,
-		Name:      "default",
+		Kind: apiv3.KindLicenseKey,
+		Name: "default",
 	}, "")
 	if err != nil {
 		switch err.(type) {
 		case cerrors.ErrorResourceDoesNotExist:
-			return fmt.Errorf("not licensed for this feature. LicenseKey does not exist")
+			return fmt.Errorf("not licensed for this feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
 		default:
 			return err
 		}
+	} else {
+		log.Info("License resource found")
 	}
 
 	lk, ok := lic.Value.(*apiv3.LicenseKey)
@@ -182,23 +187,18 @@ func checkLicense(configFile string) error {
 	claims, err := licClient.Decode(*lk)
 	if err != nil {
 		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(err).Error("Corrupted LicenseKey")
-		return fmt.Errorf("license corrupted. Please contact Tigera support")
+		return fmt.Errorf("license is corrupted. Please contact Tigera support or email licensing@tigera.io")
 	}
 
 	// Check if the license is valid.
 	if err := claims.Validate(); err != nil {
 		// If the license is expired (but within grace period) then show this warning banner, but continue to work.
 		// in CNX v2.1, grace period is infinite.
-		fmt.Println("********************************************")
-		fmt.Println("**             !!! WARNING !!!            **")
-		fmt.Println("********************************************")
-		fmt.Println("**                                        **")
-		fmt.Println("**     LicenseKey expired or invalid.     **")
-		fmt.Println("**     Please contact Tigera support      **")
-		fmt.Println("**     to avoid traffic disruptions.      **")
-		fmt.Println("**                                        **")
-		fmt.Println("********************************************")
+		fmt.Println("[WARNING] Your license has expired. Please update your license to restore normal operations.")
+		fmt.Println("Contact Tigera support or email licensing@tigera.io")
 		fmt.Println()
+	} else {
+		log.Info("License is valid")
 	}
 
 	return nil

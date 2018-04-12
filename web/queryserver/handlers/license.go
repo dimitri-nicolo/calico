@@ -37,7 +37,7 @@ func (l License) LicenseHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err.(type) {
 		case cerrors.ErrorResourceDoesNotExist:
-			licResp.Warning = "No valid license was found for your environment. Please contact Tigera support"
+			licResp.Warning = "No valid license was found for your environment. Please contact Tigera support or email licensing@tigera.io"
 			writeResponse(w, licResp)
 			return
 		default:
@@ -51,7 +51,7 @@ func (l License) LicenseHandler(w http.ResponseWriter, r *http.Request) {
 	claims, err := licClient.Decode(*lic)
 	if err != nil {
 		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "name": "default"}).WithError(err).Error("Corrupted LicenseKey")
-		licResp.Warning = "License corrupted. Please contact Tigera support"
+		licResp.Warning = "License is corrupted. Please contact Tigera support or email licensing@tigera.io"
 		writeResponse(w, licResp)
 		return
 	}
@@ -60,7 +60,7 @@ func (l License) LicenseHandler(w http.ResponseWriter, r *http.Request) {
 	if err := claims.Validate(); err != nil {
 		// If the license is expired (but within grace period) then show this warning banner, but continue to work.
 		// in CNX v2.1, grace period is infinite.
-		licResp.Warning = "License expired or invalid. Please contact Tigera support to avoid traffic disruptions"
+		licResp.Warning = "[WARNING] Your license has expired. Please update your license to restore normal operations. Contact Tigera support or email licensing@tigera.io"
 		writeResponse(w, licResp)
 		return
 	}
