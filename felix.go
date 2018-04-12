@@ -726,7 +726,7 @@ func loadConfigFromDatastore(
 			log.WithFields(log.Fields{
 				"kind": apiv3.KindLicenseKey,
 				"name": "default",
-			}).Debug("No config of this type")
+			}).Debug("License not found.")
 			return
 		default:
 			log.WithFields(log.Fields{
@@ -739,6 +739,8 @@ func loadConfigFromDatastore(
 			err = errLic
 			return
 		}
+	} else {
+		log.Info("License resource found")
 	}
 
 	lk, ok := lic.Value.(*apiv3.LicenseKey)
@@ -753,14 +755,16 @@ func loadConfigFromDatastore(
 		// We return at a corrupted LicenseKey because calicoctl validates the license key before letting a customer apply it
 		// so if a LicenseKey is corrupted then someone is trying to defraud us or etcd itself is corrupted,
 		// in that case license is the least of their concern.
-		log.WithError(errLic).Error("License corrupted. Please contact Tigera support")
+		log.WithError(errLic).Error("license is corrupted. Please contact Tigera support or email licensing@tigera.io")
 		return
 	}
 
 	// Check if the license is valid. In CNX v2.1, we continue to work even after the license expires and
 	// even after the end of the grace period, but we show this warning message and continue to work as licensed cluster.
 	if err = claims.Validate(); err != nil {
-		log.Errorf("LicenseKey expired or invalid. Please contact Tigera support to avoid traffic disruptions.")
+		log.Errorf("Your license has expired. Please update your license to restore normal operations. Contact Tigera support or email licensing@tigera.io")
+	} else {
+		log.Info("License is valid")
 	}
 
 	licenseValid = true
