@@ -1,14 +1,14 @@
 ---
 layout: null
 ---
-# {{site.prodname}} Version {{site.data.versions[page.version].first.title}}
+# CNX Version {{site.data.versions[page.version].first.title}}
 # {{site.url}}/{{page.version}}/releases#{{site.data.versions[page.version].first.title}}
 # This manifest includes the following component versions:
 #   calico/node:{{site.data.versions[page.version].first.title}}
 #   calico/cni:{{site.data.versions[page.version].first.components["calico/cni"].version}}
 #   calico/kube-controllers:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
 
-# This ConfigMap is used to configure a self-hosted {{site.prodname}} installation.
+# This ConfigMap is used to configure a self-hosted Calico installation.
 kind: ConfigMap
 apiVersion: v1
 metadata:
@@ -18,11 +18,8 @@ data:
   # Configure this with the location of your etcd cluster.
   etcd_endpoints: "http://127.0.0.1:2379"
 
-  # Configure the {{site.prodname}} backend to use.
+  # Configure the Calico backend to use.
   calico_backend: "bird"
-
-  # Configure the MTU to use
-  veth_mtu: "1440"
 
   # The CNI network configuration to install on each node.
   cni_network_config: |-
@@ -37,7 +34,7 @@ data:
           "etcd_cert_file": "__ETCD_CERT_FILE__",
           "etcd_ca_cert_file": "__ETCD_CA_CERT_FILE__",
           "log_level": "info",
-          "mtu": __CNI_MTU__,
+          "mtu": 1500,
           "ipam": {
               "type": "calico-ipam"
           },
@@ -84,7 +81,7 @@ data:
 ---
 
 # This manifest installs the calico/node container, as well
-# as the {{site.prodname}} CNI plugins and network config on
+# as the Calico CNI plugins and network config on
 # each master and worker node in a Kubernetes cluster.
 kind: DaemonSet
 apiVersion: extensions/v1beta1
@@ -131,7 +128,7 @@ spec:
         - name: calico-node
           image: {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
           env:
-            # The location of the {{site.prodname}} etcd cluster.
+            # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
@@ -172,10 +169,7 @@ spec:
               value: "info"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: veth_mtu
+              value: "1440"
             # Location of the CA certificate for etcd.
             - name: ETCD_CA_CERT_FILE
               valueFrom:
@@ -213,11 +207,9 @@ spec:
             initialDelaySeconds: 10
             failureThreshold: 6
           readinessProbe:
-            exec:
-              command:
-              - /bin/readiness
-              - -bird
-              - -felix
+            httpGet:
+              path: /readiness
+              port: 9099
             periodSeconds: 10
           volumeMounts:
             - mountPath: /lib/modules
@@ -231,7 +223,7 @@ spec:
               readOnly: false
             - mountPath: /calico-secrets
               name: etcd-certs
-        # This container installs the {{site.prodname}} CNI binaries
+        # This container installs the Calico CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
           image: {{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}
@@ -240,7 +232,7 @@ spec:
             # Name of the CNI config file to create.
             - name: CNI_CONF_NAME
               value: "10-calico.conflist"
-            # The location of the {{site.prodname}} etcd cluster.
+            # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
@@ -252,12 +244,6 @@ spec:
                 configMapKeyRef:
                   name: calico-config
                   key: cni_network_config
-            # CNI MTU Config variable
-            - name: CNI_MTU
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: veth_mtu
           volumeMounts:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
@@ -292,7 +278,7 @@ spec:
 
 ---
 
-# This manifest deploys the {{site.prodname}} Kubernetes controllers.
+# This manifest deploys the Calico Kubernetes controllers.
 # See https://github.com/projectcalico/kube-controllers
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -329,7 +315,7 @@ spec:
         - name: calico-kube-controllers
           image: {{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
           env:
-            # The location of the {{site.prodname}} etcd cluster.
+            # The location of the Calico etcd cluster.
             - name: ETCD_ENDPOINTS
               valueFrom:
                 configMapKeyRef:
