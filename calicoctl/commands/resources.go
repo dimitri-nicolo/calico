@@ -241,32 +241,29 @@ func executeResourceAction(args map[string]interface{}, client client.Interface,
 			// License not found (not applied) or datastore down.
 			switch err.(type) {
 			case calicoErrors.ErrorResourceDoesNotExist:
-				return nil, fmt.Errorf("not licensed for this feature. LicenseKey does not exist")
+				return nil, fmt.Errorf("not licensed for this feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
 			default:
 				// For any other error - datastore error, unauthorized, etc., we just return the error as-is.
 				return nil, err
 			}
+		} else {
+			log.Info("License resource found")
 		}
 
 		claims, err := licClient.Decode(*lic)
 		if err != nil {
 			// This means the license is there but is corrupted or has been messed with.
-			return nil, fmt.Errorf("license corrupted. Please contact Tigera support")
+			return nil, fmt.Errorf("license is corrupted. Please contact Tigera support or email licensing@tigera.io")
 		}
 
 		if err = claims.Validate(); err != nil {
 			// If the license is expired (but within grace period) then show this warning banner, but continue to work.
 			// in CNX v2.1, grace period is infinite.
-			fmt.Println("********************************************")
-			fmt.Println("**             !!! WARNING !!!            **")
-			fmt.Println("********************************************")
-			fmt.Println("**                                        **")
-			fmt.Println("**     LicenseKey expired or invalid.     **")
-			fmt.Println("**     Please contact Tigera support      **")
-			fmt.Println("**     to avoid traffic disruptions.      **")
-			fmt.Println("**                                        **")
-			fmt.Println("********************************************")
+			fmt.Println("[WARNING] Your license has expired. Please update your license to restore normal operations.")
+			fmt.Println("Contact Tigera support or email licensing@tigera.io")
 			fmt.Println()
+		} else {
+			log.Info("License is valid")
 		}
 	}
 
