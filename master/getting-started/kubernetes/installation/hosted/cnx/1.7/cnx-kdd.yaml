@@ -255,8 +255,8 @@ spec:
             value: "kubernetes"
         livenessProbe:
           httpGet:
-            path: /apis/
-            port: 5443
+            path: /version
+            port: 8080
             scheme: HTTPS
           initialDelaySeconds: 5
           periodSeconds: 3
