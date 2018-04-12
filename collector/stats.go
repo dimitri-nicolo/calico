@@ -13,7 +13,6 @@ import (
 
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 type TrafficDirection int
@@ -139,17 +138,17 @@ var (
 // - A/rule Index/profile name
 // - A/rule Index/Policy name/Tier name
 type RuleTracePoint struct {
-	RuleID *lookup.RuleID
-	Index  int
-	EpKey  interface{}
-	Ctr    Counter
+	RuleID       *lookup.RuleID
+	Index        int
+	EndpointName string
+	Ctr          Counter
 }
 
-func NewRuleTracePoint(ruleIDs *lookup.RuleID, epKey interface{}, tierIndex, numPkts, numBytes int) *RuleTracePoint {
+func NewRuleTracePoint(ruleIDs *lookup.RuleID, epName string, tierIndex, numPkts, numBytes int) *RuleTracePoint {
 	rtp := &RuleTracePoint{
-		RuleID: ruleIDs,
-		EpKey:  epKey,
-		Index:  tierIndex,
+		RuleID:       ruleIDs,
+		EndpointName: epName,
+		Index:        tierIndex,
 	}
 	rtp.Ctr.Set(numPkts, numBytes)
 	return rtp
@@ -159,7 +158,7 @@ func NewRuleTracePoint(ruleIDs *lookup.RuleID, epKey interface{}, tierIndex, num
 func (rtp *RuleTracePoint) Equals(cmpRtp *RuleTracePoint) bool {
 	return rtp.RuleID.Equals(cmpRtp.RuleID) &&
 		rtp.Index == cmpRtp.Index &&
-		rtp.EpKey == cmpRtp.EpKey
+		rtp.EndpointName == cmpRtp.EndpointName
 }
 
 func (rtp *RuleTracePoint) String() string {
@@ -174,7 +173,7 @@ func (rtp *RuleTracePoint) String() string {
 type RuleTrace struct {
 	path   []*RuleTracePoint
 	action rules.RuleAction
-	epKey  interface{}
+	epName string
 	//TODO: RLB: Do we need this counter?  I think it's always set to the same as the verdict
 	// trace point, so why can't we just access that one directly?
 	ctr   Counter
@@ -206,16 +205,7 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%s)", tp))
 	}
-	var epStr string
-	switch t.epKey.(type) {
-	case *model.WorkloadEndpointKey:
-		epKey := t.epKey.(*model.WorkloadEndpointKey)
-		epStr = fmt.Sprintf("workloadEndpoint={workload=%v endpoint=%v}", epKey.WorkloadID, epKey.EndpointID)
-	case *model.HostEndpointKey:
-		epKey := t.epKey.(*model.HostEndpointKey)
-		epStr = fmt.Sprintf("hostEndpoint={endpoint=%v}", epKey.EndpointID)
-	}
-	return fmt.Sprintf("path=[%v], action=%v ctr={%v} %s", strings.Join(rtParts, ", "), t.action, t.ctr.String(), epStr)
+	return fmt.Sprintf("path=[%v], action=%v ctr={%v} %s", strings.Join(rtParts, ", "), t.action, t.ctr.String(), t.epName)
 }
 
 func (t *RuleTrace) Len() int {
@@ -323,7 +313,7 @@ func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
 		// this case we lose the counts for the same actual rule (just it's in a different
 		// location in the hierarchy).
 		t.ctr = ctr
-		t.epKey = tp.EpKey
+		t.epName = tp.EndpointName
 		t.verdictIdx = tp.Index
 	}
 	t.dirty = true
@@ -341,7 +331,7 @@ func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
 	t.action = tp.RuleID.Action
 	t.ctr = tp.Ctr
 	t.dirty = true
-	t.epKey = tp.EpKey
+	t.epName = tp.EndpointName
 	t.verdictIdx = tp.Index
 }
 

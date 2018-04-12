@@ -279,7 +279,7 @@ var _ = Describe("LookupManager tests", func() {
 	DescribeTable(
 		"Check default rules are installed",
 		func(prefix [64]byte, expectedRuleID *RuleID) {
-			rid := lm.GetRuleIDsFromNFLOGPrefix(prefix)
+			rid := lm.GetRuleIDFromNFLOGPrefix(prefix)
 			Expect(rid).NotTo(BeNil())
 			Expect(*rid).To(Equal(*expectedRuleID))
 		},
@@ -293,7 +293,7 @@ var _ = Describe("LookupManager tests", func() {
 			// Send the policy update and check that the entry is now in the cache
 			c := "Querying prefix " + string(prefix[:]) + "\n"
 			lm.OnUpdate(pu)
-			rid := lm.GetRuleIDsFromNFLOGPrefix(prefix)
+			rid := lm.GetRuleIDFromNFLOGPrefix(prefix)
 			Expect(rid).NotTo(BeNil(), c+lm.Dump())
 			Expect(*rid).To(Equal(*expectedRuleID))
 
@@ -301,7 +301,7 @@ var _ = Describe("LookupManager tests", func() {
 			lm.OnUpdate(&proto.ActivePolicyRemove{
 				Id: pu.Id,
 			})
-			rid = lm.GetRuleIDsFromNFLOGPrefix(prefix)
+			rid = lm.GetRuleIDFromNFLOGPrefix(prefix)
 			Expect(rid).To(BeNil(), c+lm.Dump())
 		},
 		Entry("GNP1 (0i0e) no match tier-1 ingress", gnp1_t1_0i0e, prefix_nomatch_t1_i, ruleID_nomatch_t1_i),
@@ -328,7 +328,7 @@ var _ = Describe("LookupManager tests", func() {
 			// Send the policy update and check that the entry is now in the cache
 			c := "Querying prefix " + string(prefix[:]) + "\n"
 			lm.OnUpdate(pu)
-			rid := lm.GetRuleIDsFromNFLOGPrefix(prefix)
+			rid := lm.GetRuleIDFromNFLOGPrefix(prefix)
 			Expect(rid).NotTo(BeNil(), c+lm.Dump())
 			Expect(*rid).To(Equal(*expectedRuleID))
 
@@ -336,7 +336,7 @@ var _ = Describe("LookupManager tests", func() {
 			lm.OnUpdate(&proto.ActiveProfileRemove{
 				Id: pu.Id,
 			})
-			rid = lm.GetRuleIDsFromNFLOGPrefix(prefix)
+			rid = lm.GetRuleIDFromNFLOGPrefix(prefix)
 			Expect(rid).To(BeNil(), c+lm.Dump())
 		},
 		Entry("Pr1 (1i1e) i0", pr1_1i1e, prefix_prof_i0D, ruleID_prof_i0D),
@@ -348,10 +348,10 @@ var _ = Describe("LookupManager tests", func() {
 		lm.OnUpdate(gnp1_t1_0i0e)
 
 		By("Checking the default tier drops are cached")
-		rid := lm.GetRuleIDsFromNFLOGPrefix(prefix_nomatch_t1_i)
+		rid := lm.GetRuleIDFromNFLOGPrefix(prefix_nomatch_t1_i)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_nomatch_t1_i))
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_nomatch_t1_e)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_nomatch_t1_e)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_nomatch_t1_e))
 
@@ -359,10 +359,10 @@ var _ = Describe("LookupManager tests", func() {
 		lm.OnUpdate(np1_t1_0i1e)
 
 		By("Checking the default tier drops are cached")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_nomatch_t1_i)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_nomatch_t1_i)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_nomatch_t1_i))
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_nomatch_t1_e)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_nomatch_t1_e)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_nomatch_t1_e))
 
@@ -372,10 +372,10 @@ var _ = Describe("LookupManager tests", func() {
 		})
 
 		By("Checking the default tier drops are cached")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_nomatch_t1_i)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_nomatch_t1_i)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_nomatch_t1_i))
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_nomatch_t1_e)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_nomatch_t1_e)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_nomatch_t1_e))
 
@@ -385,9 +385,9 @@ var _ = Describe("LookupManager tests", func() {
 		})
 
 		By("Checking the default tier drops are no longer cached")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_nomatch_t1_i)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_nomatch_t1_i)
 		Expect(rid).To(BeNil(), lm.Dump())
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_nomatch_t1_e)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_nomatch_t1_e)
 		Expect(rid).To(BeNil(), lm.Dump())
 	})
 
@@ -396,39 +396,39 @@ var _ = Describe("LookupManager tests", func() {
 		lm.OnUpdate(gnp1_t1_1i1e)
 
 		By("Checking the ingress and egress rules are cached")
-		rid := lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_i0A)
+		rid := lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i0A)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_gnp1_t1_i0A))
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e0D)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e0D)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_gnp1_t1_e0D))
 
 		By("Checking that some ingress and egress rules are not yet cached")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_i1D)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i1D)
 		Expect(rid).To(BeNil(), lm.Dump())
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e1A)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e1A)
 		Expect(rid).To(BeNil(), lm.Dump())
 
 		By("Creating policy GNP1 in tier 1")
 		lm.OnUpdate(gnp1_t1_4i2e)
 
 		By("Checking the old ingress rule is still cached (it is unchanged by the update)")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_i0A)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i0A)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_gnp1_t1_i0A))
 
 		By("Checking the old egress rule has been replaced (the rule action has changed)")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e0D)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e0D)
 		Expect(rid).To(BeNil(), lm.Dump())
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e0A)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e0A)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_gnp1_t1_e0A))
 
 		By("Checking the some ingress and egress rules are now cached")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_i1D)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i1D)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_gnp1_t1_i1D))
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e1A)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e1A)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_gnp1_t1_e1A))
 
@@ -436,30 +436,30 @@ var _ = Describe("LookupManager tests", func() {
 		lm.OnUpdate(gnp1_t1_1i1e)
 
 		By("Checking the ingress and egress rules are cached")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_i0A)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i0A)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_gnp1_t1_i0A))
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e0D)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e0D)
 		Expect(rid).NotTo(BeNil(), lm.Dump())
 		Expect(*rid).To(Equal(*ruleID_gnp1_t1_e0D))
 
 		By("Checking the some ingress and egress rules are not cached")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_i1D)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i1D)
 		Expect(rid).To(BeNil(), lm.Dump())
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e1A)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e1A)
 		Expect(rid).To(BeNil(), lm.Dump())
 
 		By("Update policy GNP1 in tier 1 with no rules")
 		lm.OnUpdate(gnp1_t1_0i0e)
 
 		By("Checking the ingress and egress rules are not cached")
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_i0A)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i0A)
 		Expect(rid).To(BeNil(), lm.Dump())
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e0D)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e0D)
 		Expect(rid).To(BeNil(), lm.Dump())
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_i1D)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_i1D)
 		Expect(rid).To(BeNil(), lm.Dump())
-		rid = lm.GetRuleIDsFromNFLOGPrefix(prefix_gnp1_t1_e1A)
+		rid = lm.GetRuleIDFromNFLOGPrefix(prefix_gnp1_t1_e1A)
 		Expect(rid).To(BeNil(), lm.Dump())
 	})
 })

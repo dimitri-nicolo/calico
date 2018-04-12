@@ -3,7 +3,6 @@
 package lookup
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -53,13 +52,13 @@ type RuleID struct {
 	Action rules.RuleAction
 }
 
-func (r1 *RuleID) Equals(r2 *RuleID) bool {
-	return r1.Tier == r2.Tier &&
-		r1.Name == r2.Name &&
-		r1.Namespace == r2.Namespace &&
-		r1.Direction == r2.Direction &&
-		r1.Index == r2.Index &&
-		r1.Action == r2.Action
+func (r *RuleID) Equals(r2 *RuleID) bool {
+	return r.Tier == r2.Tier &&
+		r.Name == r2.Name &&
+		r.Namespace == r2.Namespace &&
+		r.Direction == r2.Direction &&
+		r.Index == r2.Index &&
+		r.Action == r2.Action
 }
 
 func (r *RuleID) String() string {
@@ -129,29 +128,22 @@ func (r *RuleID) DirectionString() string {
 	return ""
 }
 
-var (
-	UnknownEndpointError = errors.New("Unknown endpoint")
-)
-
-type QueryInterface interface {
-	GetEndpointKey(addr [16]byte) (interface{}, error)
-	GetTierIndex(epKey interface{}, tierName string) int
-	GetRuleIDsFromNFLOGPrefix(prefix [64]byte) *RuleID
+// Endpoint is the minimum cached information for each endpoint.
+type Endpoint struct {
+	// The endpoint name (usable as a unique key for an endpoint)
+	Name string
+	// An ordered set of tiers that may apply to this endpoint.
+	OrderedTiers []string
 }
 
 // TODO (Matt): WorkloadEndpoints are only local; so we can't get nice information for the remote ends.
+// TODO (rlb): The reverse mapping doesn't work if there are multiple addresses (e.g. IPv4 and IPv6) per
+//             endpoint.
 type LookupManager struct {
 	// `string`s are IP.String().
-	workloadEndpoints        map[[16]byte]*model.WorkloadEndpointKey
-	workloadEndpointsReverse map[model.WorkloadEndpointKey]*[16]byte
-	workloadEndpointTiers    map[model.WorkloadEndpointKey][]*proto.TierInfo
-	epMutex                  sync.RWMutex
-
-	hostEndpoints              map[[16]byte]*model.HostEndpointKey
-	hostEndpointsReverse       map[model.HostEndpointKey]*[16]byte
-	hostEndpointTiers          map[model.HostEndpointKey][]*proto.TierInfo
-	hostEndpointUntrackedTiers map[model.HostEndpointKey][]*proto.TierInfo
-	hostEpMutex                sync.RWMutex
+	epMutex          sync.RWMutex
+	endpoints        map[[16]byte]Endpoint
+	endpointsReverse map[string]*[16]byte
 
 	nflogPrefixesPolicy  map[model.PolicyKey]set.Set
 	nflogPrefixesProfile map[model.ProfileKey]set.Set
@@ -163,20 +155,14 @@ type LookupManager struct {
 
 func NewLookupManager() *LookupManager {
 	lm := &LookupManager{
-		workloadEndpoints:          map[[16]byte]*model.WorkloadEndpointKey{},
-		workloadEndpointsReverse:   map[model.WorkloadEndpointKey]*[16]byte{},
-		workloadEndpointTiers:      map[model.WorkloadEndpointKey][]*proto.TierInfo{},
-		hostEndpoints:              map[[16]byte]*model.HostEndpointKey{},
-		hostEndpointsReverse:       map[model.HostEndpointKey]*[16]byte{},
-		hostEndpointTiers:          map[model.HostEndpointKey][]*proto.TierInfo{},
-		hostEndpointUntrackedTiers: map[model.HostEndpointKey][]*proto.TierInfo{},
-		epMutex:                    sync.RWMutex{},
-		hostEpMutex:                sync.RWMutex{},
-		nflogPrefixesPolicy:        map[model.PolicyKey]set.Set{},
-		nflogPrefixesProfile:       map[model.ProfileKey]set.Set{},
-		nflogPrefixHash:            map[[64]byte]*RuleID{},
-		nflogMutex:                 sync.RWMutex{},
-		tierRefs:                   map[string]int{},
+		endpoints:            map[[16]byte]Endpoint{},
+		endpointsReverse:     map[string]*[16]byte{},
+		epMutex:              sync.RWMutex{},
+		nflogPrefixesPolicy:  map[model.PolicyKey]set.Set{},
+		nflogPrefixesProfile: map[model.ProfileKey]set.Set{},
+		nflogPrefixHash:      map[[64]byte]*RuleID{},
+		nflogMutex:           sync.RWMutex{},
+		tierRefs:             map[string]int{},
 	}
 	// Add NFLog mappings for the no-profile match.
 	lm.addNFLogPrefixEntry(
@@ -209,17 +195,16 @@ func NewLookupManager() *LookupManager {
 func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 	switch msg := protoBufMsg.(type) {
 	case *proto.WorkloadEndpointUpdate:
-		// We omit setting Hostname since at this point it is implied that the
-		// endpoint belongs to this host.
-		wlEpKey := model.WorkloadEndpointKey{
-			OrchestratorID: msg.Id.OrchestratorId,
-			WorkloadID:     msg.Id.WorkloadId,
-			EndpointID:     msg.Id.EndpointId,
+		name := workloadEndpointName(msg.Id)
+		ep := Endpoint{
+			Name:         name,
+			OrderedTiers: make([]string, len(msg.Endpoint.Tiers)),
 		}
-		m.epMutex.Lock()
-		// Store tiers and policies
-		m.workloadEndpointTiers[wlEpKey] = msg.Endpoint.Tiers
-		// Store IP addresses
+		for i := range msg.Endpoint.Tiers {
+			ep.OrderedTiers[i] = msg.Endpoint.Tiers[i].Name
+		}
+
+		// Store the endpoint keyed off the IP addresses, and the reverse maps.
 		for _, ipv4 := range msg.Endpoint.Ipv4Nets {
 			addr, _, err := net.ParseCIDR(ipv4)
 			if err != nil {
@@ -228,8 +213,10 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			}
 			var addrB [16]byte
 			copy(addrB[:], addr.To16()[:16])
-			m.workloadEndpoints[addrB] = &wlEpKey
-			m.workloadEndpointsReverse[wlEpKey] = &addrB
+			m.epMutex.Lock()
+			m.endpoints[addrB] = ep
+			m.endpointsReverse[name] = &addrB
+			m.epMutex.Unlock()
 		}
 		for _, ipv6 := range msg.Endpoint.Ipv6Nets {
 			addr, _, err := net.ParseCIDR(ipv6)
@@ -239,24 +226,18 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			}
 			var addrB [16]byte
 			copy(addrB[:], addr.To16()[:16])
-			m.workloadEndpoints[addrB] = &wlEpKey
-			m.workloadEndpointsReverse[wlEpKey] = &addrB
+			m.epMutex.Lock()
+			m.endpoints[addrB] = ep
+			m.endpointsReverse[name] = &addrB
+			m.epMutex.Unlock()
 		}
-		m.epMutex.Unlock()
 	case *proto.WorkloadEndpointRemove:
-		// We omit setting Hostname since at this point it is implied that the
-		// endpoint belongs to this host.
-		wlEpKey := model.WorkloadEndpointKey{
-			OrchestratorID: msg.Id.OrchestratorId,
-			WorkloadID:     msg.Id.WorkloadId,
-			EndpointID:     msg.Id.EndpointId,
-		}
+		name := workloadEndpointName(msg.Id)
 		m.epMutex.Lock()
-		epIp := m.workloadEndpointsReverse[wlEpKey]
+		epIp := m.endpointsReverse[name]
 		if epIp != nil {
-			delete(m.workloadEndpoints, *epIp)
-			delete(m.workloadEndpointsReverse, wlEpKey)
-			delete(m.workloadEndpointTiers, wlEpKey)
+			delete(m.endpoints, *epIp)
+			delete(m.endpointsReverse, name)
 		}
 		m.epMutex.Unlock()
 
@@ -273,16 +254,20 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 		m.removeProfileRulesNFLOGPrefixes(msg)
 
 	case *proto.HostEndpointUpdate:
-		// We omit setting Hostname since at this point it is implied that the
-		// endpoint belongs to this host.
-		hostEpKey := model.HostEndpointKey{
-			EndpointID: msg.Id.EndpointId,
+		name := hostEndpointName(msg.Id)
+		numUntracked := len(msg.Endpoint.UntrackedTiers)
+		ep := Endpoint{
+			Name:         name,
+			OrderedTiers: make([]string, numUntracked+len(msg.Endpoint.Tiers)),
 		}
-		m.hostEpMutex.Lock()
-		// Store tiers and policies
-		m.hostEndpointTiers[hostEpKey] = msg.Endpoint.Tiers
-		m.hostEndpointUntrackedTiers[hostEpKey] = msg.Endpoint.UntrackedTiers
-		// Store IP addresses
+		for i := range msg.Endpoint.UntrackedTiers {
+			ep.OrderedTiers[i] = msg.Endpoint.UntrackedTiers[i].Name
+		}
+		for i := range msg.Endpoint.Tiers {
+			ep.OrderedTiers[numUntracked+i] = msg.Endpoint.Tiers[i].Name
+		}
+
+		// Store the endpoint keyed off the IP addresses, and the reverse maps.
 		for _, ipv4 := range msg.Endpoint.ExpectedIpv4Addrs {
 			addr := net.ParseIP(ipv4)
 			if addr == nil {
@@ -291,8 +276,10 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			}
 			var addrB [16]byte
 			copy(addrB[:], addr.To16()[:16])
-			m.hostEndpoints[addrB] = &hostEpKey
-			m.hostEndpointsReverse[hostEpKey] = &addrB
+			m.epMutex.Lock()
+			m.endpoints[addrB] = ep
+			m.endpointsReverse[name] = &addrB
+			m.epMutex.Unlock()
 		}
 		for _, ipv6 := range msg.Endpoint.ExpectedIpv6Addrs {
 			addr := net.ParseIP(ipv6)
@@ -302,23 +289,20 @@ func (m *LookupManager) OnUpdate(protoBufMsg interface{}) {
 			}
 			var addrB [16]byte
 			copy(addrB[:], addr.To16()[:16])
-			m.hostEndpoints[addrB] = &hostEpKey
-			m.hostEndpointsReverse[hostEpKey] = &addrB
+			m.epMutex.Lock()
+			m.endpoints[addrB] = ep
+			m.endpointsReverse[name] = &addrB
+			m.epMutex.Unlock()
 		}
-		m.hostEpMutex.Unlock()
 	case *proto.HostEndpointRemove:
 		// We omit setting Hostname since at this point it is implied that the
 		// endpoint belongs to this host.
-		hostEpKey := model.HostEndpointKey{
-			EndpointID: msg.Id.EndpointId,
-		}
+		name := hostEndpointName(msg.Id)
 		m.epMutex.Lock()
-		epIp := m.hostEndpointsReverse[hostEpKey]
+		epIp := m.endpointsReverse[name]
 		if epIp != nil {
-			delete(m.hostEndpoints, *epIp)
-			delete(m.hostEndpointsReverse, hostEpKey)
-			delete(m.hostEndpointTiers, hostEpKey)
-			delete(m.hostEndpointUntrackedTiers, hostEpKey)
+			delete(m.endpoints, *epIp)
+			delete(m.endpointsReverse, name)
 		}
 		m.epMutex.Unlock()
 	}
@@ -328,6 +312,21 @@ func (m *LookupManager) CompleteDeferredWork() error {
 	return nil
 }
 
+// workloadEndpointName returns a single string rep of the workload endpoint that can also
+// be used as a lookup key in our maps.
+func workloadEndpointName(wep *proto.WorkloadEndpointID) string {
+	// We are only interested in local endpoints, so host does not need to be included.
+	return "WEP(" + wep.OrchestratorId + "/" + wep.WorkloadId + "/" + wep.EndpointId + ")"
+}
+
+// hostEndpointName returns a single string rep of the host endpoint that can also
+// be used as a lookup key in our maps.
+func hostEndpointName(hep *proto.HostEndpointID) string {
+	// We are only interested in local endpoints, so host does not need to be included.
+	return "HEP(" + hep.EndpointId + ")"
+}
+
+// addNFLogPrefixEntry adds a single NFLOG prefix entry to our internal cache.
 func (m *LookupManager) addNFLogPrefixEntry(prefix string, ruleIDs *RuleID) {
 	var bph [64]byte
 	copy(bph[:], []byte(prefix[:]))
@@ -336,6 +335,7 @@ func (m *LookupManager) addNFLogPrefixEntry(prefix string, ruleIDs *RuleID) {
 	m.nflogPrefixHash[bph] = ruleIDs
 }
 
+// deleteNFLogPrefixEntry deletes a single NFLOG prefix entry to our internal cache.
 func (m *LookupManager) deleteNFLogPrefixEntry(prefix string) {
 	var bph [64]byte
 	copy(bph[:], []byte(prefix[:]))
@@ -453,6 +453,10 @@ func (m *LookupManager) removeProfileRulesNFLOGPrefixes(msg *proto.ActiveProfile
 	delete(m.nflogPrefixesProfile, key)
 }
 
+// updateRulesNFLOGPrefixes updates our NFLOG prefix to RuleID map based on the supplied set of
+// ingress and egress rules, and the old set of prefixes associated with the previous resource
+// settings. This method adds any new rules and removes any obsolete rules.
+// TODO (rlb): Maybe we should do a lazy clean up of rules?
 func (m *LookupManager) updateRulesNFLOGPrefixes(
 	v1Name, namespace, tier, name string, oldPrefixes set.Set, ingress []*proto.Rule, egress []*proto.Rule,
 ) set.Set {
@@ -508,6 +512,7 @@ func (m *LookupManager) updateRulesNFLOGPrefixes(
 		newPrefixes.Add(prefix)
 	}
 
+	// Delete the stale prefixes.
 	if oldPrefixes != nil {
 		oldPrefixes.Iter(func(item interface{}) error {
 			if !newPrefixes.Contains(item) {
@@ -520,84 +525,34 @@ func (m *LookupManager) updateRulesNFLOGPrefixes(
 	return newPrefixes
 }
 
-func (m *LookupManager) deleteRulesNFLOGPrefixes(oldPrefixes set.Set) {
-	if oldPrefixes != nil {
-		oldPrefixes.Iter(func(item interface{}) error {
+// deleteRulesNFLOGPrefixes deletes the supplied set of prefixes.
+func (m *LookupManager) deleteRulesNFLOGPrefixes(prefixes set.Set) {
+	if prefixes != nil {
+		prefixes.Iter(func(item interface{}) error {
 			m.deleteNFLogPrefixEntry(item.(string))
 			return nil
 		})
 	}
 }
 
-// GetEndpointKey returns either a *model.WorkloadEndpointKey or *model.HostEndpointKey
-// or nil if addr is a Workload Endpoint or a HostEndpoint or if we don't have any
-// idea about it.
-func (m *LookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) {
+// IsEndpoint returns true if the supplied address is a local endpoint, otherwise returns false.
+func (m *LookupManager) IsEndpoint(addr [16]byte) bool {
 	m.epMutex.RLock()
-	// There's no need to copy the result because we never modify fields,
-	// only delete or replace.
-	epKey := m.workloadEndpoints[addr]
-	m.epMutex.RUnlock()
-	if epKey != nil {
-		return epKey, nil
-	}
-	m.hostEpMutex.RLock()
-	hostEpKey := m.hostEndpoints[addr]
-	m.hostEpMutex.RUnlock()
-	if hostEpKey != nil {
-		return hostEpKey, nil
-	}
-	return nil, UnknownEndpointError
+	defer m.epMutex.RUnlock()
+	_, ok := m.endpoints[addr]
+	return ok
 }
 
-// GetTierIndex returns the number of tiers that have been traversed before reaching a given Tier.
-// For a profile, this means it returns the total number of tiers that apply.
-// epKey is either a *model.WorkloadEndpointKey or *model.HostEndpointKey
-//TODO: RLB: Do we really need to keep track of EP vs. Tier indexes?  Seems an overkill - we only need
-// to know the overall tier order to determine the order of the NFLOGs in a set of traces.
-//
-// Returns -1 if unable to determine the tier index.
-func (m *LookupManager) GetTierIndex(epKey interface{}, tierName string) int {
-	switch epKey.(type) {
-	case *model.WorkloadEndpointKey:
-		ek := epKey.(*model.WorkloadEndpointKey)
-		m.epMutex.RLock()
-		tiers := m.workloadEndpointTiers[*ek]
-		m.epMutex.RUnlock()
-		if tierName == "" {
-			// Finesse the profile case (tier is blank).
-			return len(tiers)
-		}
-		for i, tier := range tiers {
-			if tier.Name == tierName {
-				return i
-			}
-		}
-	case *model.HostEndpointKey:
-		ek := epKey.(*model.HostEndpointKey)
-		m.hostEpMutex.RLock()
-		untrackedTiers := m.hostEndpointUntrackedTiers[*ek]
-		tiers := m.hostEndpointTiers[*ek]
-		m.hostEpMutex.RUnlock()
-		if tierName == "" {
-			// Finesse the profile case (tier is blank).
-			return len(untrackedTiers) + len(tiers)
-		}
-		for i, tier := range untrackedTiers {
-			if tier.Name == tierName {
-				return i
-			}
-		}
-		for i, tier := range tiers {
-			if tier.Name == tierName {
-				return len(untrackedTiers) + i
-			}
-		}
-	}
-	return -1
+// GetEndpoint returns the ordered list of tiers for a particular endpoint.
+func (m *LookupManager) GetEndpoint(addr [16]byte) (Endpoint, bool) {
+	m.epMutex.RLock()
+	defer m.epMutex.RUnlock()
+	ep, ok := m.endpoints[addr]
+	return ep, ok
 }
 
-func (m *LookupManager) GetRuleIDsFromNFLOGPrefix(prefix [64]byte) *RuleID {
+// GetRuleIDFromNFLOGPrefix returns the RuleID associated with the supplied NFLOG prefix.
+func (m *LookupManager) GetRuleIDFromNFLOGPrefix(prefix [64]byte) *RuleID {
 	m.nflogMutex.RLock()
 	defer m.nflogMutex.RUnlock()
 	return m.nflogPrefixHash[prefix]
@@ -637,10 +592,32 @@ func deconstructPolicyName(name string) (string, string, string, error) {
 	return "", "", "", fmt.Errorf("Could not parse policy %s", name)
 }
 
+// Dump returns the contents of important structures in the LookupManager used for
+// logging purposes in the test code. This should not be used in any mainline code.
 func (m *LookupManager) Dump() string {
 	lines := []string{}
 	for p, r := range m.nflogPrefixHash {
 		lines = append(lines, string(p[:])+": "+r.String())
 	}
 	return strings.Join(lines, "\n")
+}
+
+// SetMockData fills in some of the data structures for use in the test code. This should not
+// be called from any mainline code.
+func (m *LookupManager) SetMockData(
+	em map[[16]byte]*model.WorkloadEndpointKey,
+	nm map[[64]byte]*RuleID,
+) {
+	m.nflogPrefixHash = nm
+	for ip, wep := range em {
+		ep := Endpoint{
+			Name: workloadEndpointName(&proto.WorkloadEndpointID{
+				OrchestratorId: wep.OrchestratorID,
+				WorkloadId:     wep.WorkloadID,
+				EndpointId:     wep.EndpointID,
+			}),
+			OrderedTiers: []string{"default"},
+		}
+		m.endpoints[ip] = ep
+	}
 }

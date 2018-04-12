@@ -88,24 +88,24 @@ var (
 )
 
 var defTierAllowIngressTp = &RuleTracePoint{
-	RuleID: &defTierPolicy1AllowIngressRuleID,
-	Index:  0,
-	EpKey:  localWlEPKey1,
-	Ctr:    *NewCounter(1, 100),
+	RuleID:       &defTierPolicy1AllowIngressRuleID,
+	Index:        0,
+	EndpointName: "WEP(orchestrator/localworkloadid1/localepid1)",
+	Ctr:          *NewCounter(1, 100),
 }
 
 var defTierAllowEgressTp = &RuleTracePoint{
-	RuleID: &defTierPolicy1AllowEgressRuleID,
-	Index:  0,
-	EpKey:  localWlEPKey1,
-	Ctr:    *NewCounter(1, 100),
+	RuleID:       &defTierPolicy1AllowEgressRuleID,
+	Index:        0,
+	EndpointName: "WEP(orchestrator/localworkloadid1/localepid1)",
+	Ctr:          *NewCounter(1, 100),
 }
 
 var defTierDenyIngressTp = &RuleTracePoint{
-	RuleID: &defTierPolicy2DenyIngressRuleID,
-	Index:  0,
-	EpKey:  localWlEPKey2,
-	Ctr:    *NewCounter(1, 100),
+	RuleID:       &defTierPolicy2DenyIngressRuleID,
+	Index:        0,
+	EndpointName: "WEP(orchestrator/localworkloadid2/localepid2)",
+	Ctr:          *NewCounter(1, 100),
 }
 
 var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
@@ -550,33 +550,12 @@ var _ = Describe("Reporting Metrics", func() {
 	})
 })
 
-type mockLookupManager struct {
-	epMap    map[[16]byte]*model.WorkloadEndpointKey
-	nflogMap map[[64]byte]*lookup.RuleID
-}
-
-func newMockLookupManager(em map[[16]byte]*model.WorkloadEndpointKey, nm map[[64]byte]*lookup.RuleID) *mockLookupManager {
-	return &mockLookupManager{
-		epMap:    em,
-		nflogMap: nm,
-	}
-}
-
-func (lm *mockLookupManager) GetEndpointKey(addr [16]byte) (interface{}, error) {
-	data, _ := lm.epMap[addr]
-	if data != nil {
-		return data, nil
-	}
-	return nil, lookup.UnknownEndpointError
-
-}
-
-func (lm *mockLookupManager) GetTierIndex(epKey interface{}, tierName string) int {
-	return 0
-}
-
-func (m *mockLookupManager) GetRuleIDsFromNFLOGPrefix(prefixHash [64]byte) *lookup.RuleID {
-	return m.nflogMap[prefixHash]
+func newMockLookupManager(
+	em map[[16]byte]*model.WorkloadEndpointKey, nm map[[64]byte]*lookup.RuleID,
+) *lookup.LookupManager {
+	l := lookup.NewLookupManager()
+	l.SetMockData(em, nm)
+	return l
 }
 
 // Define a separate metric type that doesn't include the actual stats.  We use this
