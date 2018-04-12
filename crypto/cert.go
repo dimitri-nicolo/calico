@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 	"io/ioutil"
+	"fmt"
+	"log"
 )
 
 const (
@@ -19,7 +21,7 @@ const (
 
 	CertOrgName = "Tigera Inc."
 
-	CertTigeraDomain = "tigera.io"
+	CertTigeraDomain = "https://tigera.io"
 
 	CertLicensingDomain = "licensing.tigera.io"
 
@@ -49,7 +51,7 @@ func Generatex509Cert(start, exp time.Time, priv *rsa.PrivateKey) ([]byte, error
 		BasicConstraintsValid: true,
 		IsCA:           true,
 		EmailAddresses: []string{CertEmailAddress},
-		DNSNames:       []string{CertTigeraDomain, CertLicensingDomain},
+		DNSNames:       []string{CertTigeraDomain},
 	}
 
 	return x509.CreateCertificate(RandomGen, &template, &template, &priv.PublicKey, priv)
@@ -61,19 +63,19 @@ func Generatex509CertChain(start, exp time.Time, root *x509.Certificate, priv *r
 		SerialNumber: big.NewInt(rand.Int63n(randSerialSeed)),
 		Subject: pkix.Name{
 			CommonName:   CertCommonName,
-			Organization: []string{CertOrgName},
+			Organization: []string{"tigera-leaf"},
 		},
 
 		NotBefore: start,
 		NotAfter:  exp,
 
-		SubjectKeyId: []byte{1, 2, 3, 4},
+	//	SubjectKeyId: []byte{1, 2, 3, 4},
 		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 
 		BasicConstraintsValid: true,
-		IsCA:           true,
+		IsCA:           false,
 		EmailAddresses: []string{CertEmailAddress},
-		DNSNames:       []string{CertTigeraDomain, CertLicensingDomain},
+		DNSNames:       []string{CertTigeraDomain},
 	}
 
 	return x509.CreateCertificate(RandomGen, &template, root, &priv.PublicKey, priv)
@@ -112,7 +114,7 @@ func SaveCertAsPEM(derBytes []byte, filePath string) error {
 func ReadCertPemFromFile(path string) string {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic(err)
+		log.Fatalf("error reading file: %s", err)
 	}
 
 	return string(data)
@@ -133,7 +135,7 @@ func ExportCertAsPemStr(derBytes []byte) string {
 func LoadCertFromPEM(pemBytes []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode([]byte(pemBytes))
 	if block == nil {
-		panic("failed to parse certificate PEM")
+		return nil, fmt.Errorf("failed to parse certificate PEM")
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
