@@ -117,7 +117,7 @@ var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
 			Packets: 1,
 		},
 	},
-	Tuple: &nfnetlink.NflogPacketTuple{
+	Tuple: nfnetlink.NflogPacketTuple{
 		Src:   remoteIp1,
 		Dst:   localIp1,
 		Proto: proto_tcp,
@@ -136,7 +136,7 @@ var egressPktAllow = &nfnetlink.NflogPacketAggregate{
 			Packets: 1,
 		},
 	},
-	Tuple: &nfnetlink.NflogPacketTuple{
+	Tuple: nfnetlink.NflogPacketTuple{
 		Src:   localIp1,
 		Dst:   remoteIp1,
 		Proto: proto_udp,
@@ -155,7 +155,7 @@ var ingressPktDeny = &nfnetlink.NflogPacketAggregate{
 			Packets: 1,
 		},
 	},
-	Tuple: &nfnetlink.NflogPacketTuple{
+	Tuple: nfnetlink.NflogPacketTuple{
 		Src:   remoteIp1,
 		Dst:   localIp1,
 		Proto: proto_tcp,
@@ -174,7 +174,7 @@ var localPkt = &nfnetlink.NflogPacketAggregate{
 			Packets: 1,
 		},
 	},
-	Tuple: &nfnetlink.NflogPacketTuple{
+	Tuple: nfnetlink.NflogPacketTuple{
 		Src:   localIp1,
 		Dst:   localIp2,
 		Proto: proto_tcp,
