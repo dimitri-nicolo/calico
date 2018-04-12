@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 	"io/ioutil"
+	"fmt"
+	"log"
 )
 
 const (
@@ -112,7 +114,7 @@ func SaveCertAsPEM(derBytes []byte, filePath string) error {
 func ReadCertPemFromFile(path string) string {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		panic(err)
+		log.Fatalf("error reading file: %s", err)
 	}
 
 	return string(data)
@@ -133,7 +135,7 @@ func ExportCertAsPemStr(derBytes []byte) string {
 func LoadCertFromPEM(pemBytes []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode([]byte(pemBytes))
 	if block == nil {
-		panic("failed to parse certificate PEM")
+		return nil, fmt.Errorf("failed to parse certificate PEM")
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
