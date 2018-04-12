@@ -1,7 +1,6 @@
 ---
 title: IP Interconnect Fabrics in CNX
 lead_text: 'Where large-scale IP networks and hardware collide'
-canonical_url: 'https://docs.projectcalico.org/v3.0/reference/private-cloud/l3-interconnect-fabric'
 ---
 
 

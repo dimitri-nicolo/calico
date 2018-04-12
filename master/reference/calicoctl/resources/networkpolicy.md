@@ -1,6 +1,5 @@
 ---
 title: Network Policy Resource (NetworkPolicy)
-canonical_url: 'https://docs.projectcalico.org/v3.0/reference/calicoctl/resources/networkpolicy'
 ---
 
 A network policy resource (`NetworkPolicy`) represents an ordered set of rules which are applied

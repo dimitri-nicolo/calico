@@ -1,6 +1,5 @@
 ---
 title: Pre-DNAT policy
-canonical_url: 'https://docs.projectcalico.org/v3.1/getting-started/bare-metal/policy/pre-dnat'
 ---
 
 
