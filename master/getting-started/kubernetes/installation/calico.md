@@ -4,9 +4,12 @@ title: Installing CNX for policy and networking (recommended)
 
 ## Before you begin
 
-Ensure that you have a Kubernetes cluster that meets the 
-{{site.prodname}} [system requirements](../requirements). If you don't, 
-follow the steps in [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
+- Ensure that you have a Kubernetes cluster that meets the {{site.prodname}} 
+  [system requirements](../requirements). If you don't, follow the steps in 
+  [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
+  
+- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials) 
+  and a [license key](../../../getting-started/#obtain-a-license-key).
 
 {% include {{page.version}}/load-docker-intro.md %}
 
@@ -175,5 +178,7 @@ datastore type and number of nodes.
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
 
 {% include {{page.version}}/cnx-monitor-install.md %}
+
+{% include {{page.version}}/apply-license.md %}
 
 {% include {{page.version}}/gs-next-steps.md %}

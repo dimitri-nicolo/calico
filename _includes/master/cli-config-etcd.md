@@ -11,7 +11,8 @@
 | `etcdCACertFile`           | `ETCD_CA_CERT_FILE`  | Path to the etcd Certificate Authority file. Example: `/etc/calico/ca.pem` (optional) | string
 
 > **Note**:
-> - If you are running with TLS enabled, ensure your endpoint addresses use HTTPS.
+> - We recommend you use TLS and restrict access to the certificates to cluster administrators.
+>   If you are running with TLS enabled, ensure your endpoint addresses use HTTPS.
 > - When specifying through environment variables, the `DATASTORE_TYPE` environment
 >   is not required for etcdv3.
 > - All environment variables may also be prefixed with `CALICO_`, for example
