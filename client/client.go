@@ -177,7 +177,6 @@ func (e ErrExpiredButWithinGracePeriod) Error() string {
 	return "license expired"
 }
 
-
 // Validate checks if the license is expired.
 func (c LicenseClaims) Validate() error {
 	if c.Claims.Expiry.Time().After(time.Now().Local()) {
