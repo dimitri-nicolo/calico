@@ -12,24 +12,32 @@ Dump all conntrack entries to screen
 package main
 
 import (
-	"fmt"
+        "fmt"
 
-	"github.com/tigera/nfnetlink"
+        "github.com/tigera/nfnetlink"
 )
 
+type Handler struct {
+        count int
+}
+
+func (h *Handler) HandleConntrackEntry(cte nfnetlink.CtEntry) {
+        fmt.Printf("%+v\n", cte)
+        h.count++
+}
+
 func ctdump() {
-	ctentries, err := nfnetlink.ConntrackList()
-	if err != nil {
-		fmt.Println("Error: ", err)
-	}
-	for _, entry := range ctentries {
-		fmt.Printf("%+v\n", entry)
-	}
+        handler := &Handler{}
+        err := nfnetlink.ConntrackList(handler.HandleConntrackEntry)
+        if err != nil {
+                fmt.Println("Error: ", err)
+        }
+        fmt.Printf("Num entries returned %+v\n", handler.count)
 }
 
 func main() {
-	fmt.Println("Running")
-	ctdump()
+        fmt.Println("Running")
+        ctdump()
 }
 ```
 

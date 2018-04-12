@@ -10,7 +10,9 @@ import (
 	"github.com/vishvananda/netlink/nl"
 )
 
-func ConntrackList() ([]CtEntry, error) {
+type ConntrackEntryHandler func(cte CtEntry)
+
+func ConntrackList(ceh ConntrackEntryHandler) error {
 	nlMsgType := nfnl.NFNL_SUBSYS_CTNETLINK<<8 | nfnl.IPCTNL_MSG_CT_GET
 	nlMsgFlags := syscall.NLM_F_REQUEST | syscall.NLM_F_DUMP
 	// TODO(doublek): Look into how vishvananda/netlink/handle_linux.go to reuse sockets
@@ -20,18 +22,18 @@ func ConntrackList() ([]CtEntry, error) {
 
 	msgs, err := req.Execute(syscall.NETLINK_NETFILTER, 0)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var res []CtEntry
 	for _, m := range msgs {
 		msg := nfnl.DeserializeNfGenMsg(m)
 		ctentry, err := conntrackEntryFromNfAttrs(m[msg.Len():], msg.Family)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		res = append(res, ctentry)
+		ceh(ctentry)
+
 	}
-	return res, nil
+	return nil
 }
 
 func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
