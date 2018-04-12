@@ -1,36 +1,34 @@
 ---
-title: Tigera CNX
+title: About CNX
 description: Home
 layout: docwithnav
 ---
 
-{{site.prodname}} adds complementary monitoring and policy management
-tools on top of [Project Calico](https://docs.projectcalico.org/latest/introduction/). Features included as part of
-the {{site.prodname}} release are:
+Modern applications are more distributed, dynamically orchestrated, and
+run across multi-cloud infrastructure. To protect workloads and enforce
+compliance, connectivity must be established and secured in a highly dynamic
+environment that includes microservices, containers, and virtual machines.
 
+CNX provides secure application connectivity across multi-cloud and
+legacy environments, with the enterprise control and compliance capabilities
+required for mission-critical deployments.
 
-* CNX Manager
-  * Web interface for managing tiered security policy
-* Policy Query Utility
-  * Query policies that are currently being enforced for a given pod
-  * Query pods that are affected by a given policy
-* Policy Audit Mode
-  * Ability to override policy deny actions with log-and-drop or log-and-allow behavior
-* Policy Violation Alerting
-  * Setup proactive alerting based on connection attempts that violate a policy
+Designed from the ground up as cloud-native software, CNX builds on leading 
+open source projects like [Calico](https://docs.projectcalico.org/). 
+It connects and secures container, virtual machine, and bare metal host
+workloads in public cloud and private data centers.
 
-For guides on how to set up {{site.prodname}} and a demo of some its basic function, see the following links:
+# Get started
 
-
-* [Obtaining {{site.prodname}}](../getting-started/)
-* [Quickstart for {{site.prodname}} on Kubernetes](../getting-started/kubernetes/)
-* [Installing {{site.prodname}} for Kubernetes](../getting-started/kubernetes/installation/)
-* [Demo of {{site.prodname}}](../getting-started/cnx/simple-policy-cnx/)
-* [Demo of Tiered Policy using {{site.prodname}}](../getting-started/cnx/tiered-policy-cnx/)
-* [Policy Query Utility (calicoq)](../reference/calicoq/)
-* [Kubernetes Auditing for {{site.prodname}}](../reference/cnx/auditing)
-* [Policy Audit Mode](../reference/cnx/policy-auditing)
-* [Policy Violation Alerting](../reference/cnx/policy-violations)
-* [RBAC on Tiered Policies](../reference/cnx/rbac-tiered-policies)
-* [Configuring user authentication to {{site.prodname}} Manager](../reference/cnx/authentication)
-* [Editing policies with {{site.prodname}} Manager](../reference/cnx/policy-editor)
+<div class="row">
+  <div class="col-xs-6 col-md-3">
+    <a href="/{{page.version}}/getting-started/kubernetes/" class="thumbnail">
+      <img src="{{site.baseurl}}/images/kubernetes-button.svg" alt="Kubernetes" width="40%">
+    </a>
+  </div>
+  <div class="col-xs-6 col-md-3">
+    <a href="/{{page.version}}/getting-started/openshift/installation" class="thumbnail">
+      <img src="{{site.baseurl}}/images/openshift-button.svg" alt="OpenShift" width="35%">
+    </a>
+  </div>
+</div>
