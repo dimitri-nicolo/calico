@@ -46,6 +46,7 @@ import:
   - client
 - package: github.com/tigera/nfnetlink
   repo:    git@github.com:tigera/nfnetlink
+  version: master
 - package: github.com/sirupsen/logrus
   version: v1.0.4
 - package: github.com/kardianos/osext

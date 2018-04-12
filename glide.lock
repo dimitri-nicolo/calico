@@ -1,5 +1,5 @@
-hash: 2155cdaad0924df9de1944c39536308f4a3f0a9e0a6bd2272d4a6e9eae4036c9
-updated: 2018-04-09T17:00:01.898939702Z
+hash: 33b363eedbdad22a607d8ac5c7a44af3fda62b070d675cb8dede9df51d87b2d1
+updated: 2018-04-12T14:03:05.660745772-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -59,7 +59,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 370d9e047557906322be8396e77cb0376be6cb96
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -190,7 +190,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: 8013ba5856cd701278d1111c5b4dd69e580a86c9
+  version: 6c572c00d1830223701e155de97408483dfcd14a
   subpackages:
   - ext
   - log
@@ -263,7 +263,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -283,7 +283,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: 86d9ffb97fa91a116b201ccc0225311dcee0504d
+  version: 55a808c36b11f26f665027eed5bc7c03d67dd1ae
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -373,7 +373,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: ce84044298496ef4b54b4a0a0909ba593cc60e30
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis
   - googleapis/rpc/status
@@ -535,7 +535,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: cd0308977f05a0de033c0e8ce1860b317e360dca
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 testImports: []

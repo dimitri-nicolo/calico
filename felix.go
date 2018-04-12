@@ -172,7 +172,7 @@ func main() {
 	var configParams *config.Config
 	var typhaAddr string
 	var numClientsCreated int
-	var licenseKey *apiv3.LicenseKey
+	var bootupLicenseKey *apiv3.LicenseKey
 configRetry:
 	for {
 		if numClientsCreated > 60 {
@@ -245,6 +245,8 @@ configRetry:
 			configParams.UpdateFrom(hostConfig, config.DatastorePerHost)
 			configParams.LicenseValid = licValid
 
+			// Set the global boot-up licenseKey to what we got.
+			bootupLicenseKey = licenseKey
 			break
 		}
 		configParams.Validate()
@@ -510,7 +512,7 @@ configRetry:
 	// On receipt of SIGUSR1, write out heap profile.
 	logutils.DumpHeapMemoryOnSignal(configParams)
 
-	go watchLicenseChanges(backendClient, configParams, licenseKey)
+	go watchLicenseChanges(backendClient, configParams, bootupLicenseKey)
 
 	// Now monitor the worker process and our worker threads and shut
 	// down the process gracefully if they fail.
