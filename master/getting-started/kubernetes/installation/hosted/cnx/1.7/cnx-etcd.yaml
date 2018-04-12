@@ -233,6 +233,13 @@ spec:
           #   name: etcd-certs
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
+        livenessProbe:
+          httpGet:
+            path: /apis/
+            port: 5443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
       - name: cnx-queryserver
         image: {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
@@ -265,6 +272,13 @@ spec:
         volumeMounts:
           # - mountPath: /calico-secrets
           #   name: etcd-certs
+        livenessProbe:
+          httpGet:
+            path: /version
+            port: 8080
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
       volumes:
         # If you're using TLS enabled etcd uncomment the following.
         # - name: etcd-certs
@@ -353,6 +367,13 @@ spec:
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
       - name: cnx-manager-proxy
         image: {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
         env:
@@ -384,6 +405,13 @@ spec:
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 3
       volumes:
       - name: cnx-manager-tls
         secret:
