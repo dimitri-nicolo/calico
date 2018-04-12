@@ -17,7 +17,6 @@ package rules
 import (
 	"net"
 	"reflect"
-	"regexp"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -116,46 +115,64 @@ const (
 		`-A POSTROUTING -o tunl0 -m addrtype ! --src-type LOCAL --limit-iface-out -m addrtype --src-type LOCAL -j MASQUERADE`
 )
 
-type TrafficDirection string
-type RuleDirection string
+type RuleAction byte
 
 const (
-	TrafficDirInbound  TrafficDirection = "inbound"
-	TrafficDirOutbound TrafficDirection = "outbound"
-	RuleDirIngress     RuleDirection    = "ingress"
-	RuleDirEgress      RuleDirection    = "egress"
-	RuleDirUnknown     RuleDirection    = "unknown"
+	// We define these with specific byte values as we write this value directly into the NFLOG
+	// prefix.
+	RuleActionAllow    RuleAction = 'A'
+	RuleActionDeny     RuleAction = 'D'
+	RuleActionNextTier RuleAction = 'N'
 )
 
-type RuleAction string
-
-const (
-	ActionAllow    RuleAction = "allow"
-	ActionDeny     RuleAction = "deny"
-	ActionNextTier RuleAction = "pass"
-)
-
-const (
-	NamespaceGlobal  = "__GLOBAL__"
-	K8sPolicyPrefix  = "knp.default."
-)
-
-// RuleIDs contains the complete identifiers for a particular rule.
-type RuleIDs struct {
-	Action    RuleAction
-	Tier      string
-	Policy    string
-	Namespace string
-	Direction RuleDirection
-	Index     string
+func (r RuleAction) String() string {
+	switch r {
+	case RuleActionAllow:
+		return "Allow"
+	case RuleActionDeny:
+		return "Deny"
+	case RuleActionNextTier:
+		return "Pass"
+	}
+	return ""
 }
 
-func (r *RuleIDs) Equals(cmpR RuleIDs) bool {
-	return r.Action == cmpR.Action &&
-		r.Tier == cmpR.Tier &&
-		r.Policy == cmpR.Policy &&
-		r.Namespace == cmpR.Namespace &&
-		r.Direction == cmpR.Direction
+type RuleDir byte
+
+const (
+	// We define these with specific byte values as we write this value directly into the NFLOG
+	// prefix.
+	RuleDirIngress RuleDir = 'I'
+	RuleDirEgress  RuleDir = 'E'
+)
+
+func (r RuleDir) String() string {
+	switch r {
+	case RuleDirIngress:
+		return "Ingress"
+	case RuleDirEgress:
+		return "Egress"
+	}
+	return ""
+}
+
+type RuleOwnerType byte
+
+const (
+	// We define these with specific byte values as we write this value directly into the NFLOG
+	// prefix.
+	RuleOwnerTypePolicy  RuleOwnerType = 'P'
+	RuleOwnerTypeProfile RuleOwnerType = 'R'
+)
+
+func (r RuleOwnerType) String() string {
+	switch r {
+	case RuleOwnerTypePolicy:
+		return "Policy"
+	case RuleOwnerTypeProfile:
+		return "Profile"
+	}
+	return ""
 }
 
 // Typedefs to prevent accidentally passing the wrong prefix to the Policy/ProfileChainName()
@@ -188,9 +205,6 @@ var (
 	// LegacyV4IPSetNames contains some extra IP set names that were used in older versions of
 	// Felix and don't fit our versioned pattern.
 	LegacyV4IPSetNames = []string{"felix-masq-ipam-pools", "felix-all-ipam-pools"}
-
-	// NFLOG prefix regex.
-	NFLOGPrefixRegexp = regexp.MustCompile(`(A|N|D)\|\d+\|*`)
 )
 
 type RuleRenderer interface {
@@ -234,7 +248,7 @@ type RuleRenderer interface {
 
 	PolicyToIptablesChains(policyID *proto.PolicyID, policy *proto.Policy, ipVersion uint8) []*iptables.Chain
 	ProfileToIptablesChains(profileID *proto.ProfileID, policy *proto.Profile, ipVersion uint8) []*iptables.Chain
-	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, ruleIDs RuleIDs, untracked bool) []iptables.Rule
+	ProtoRuleToIptablesRules(pRule *proto.Rule, ipVersion uint8, owner RuleOwnerType, dir RuleDir, idx int, name string, untracked bool) []iptables.Rule
 
 	NATOutgoingChain(active bool, ipVersion uint8) *iptables.Chain
 

@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -37,16 +38,30 @@ type DeniedPacketsAggregateKey struct {
 }
 
 func getDeniedPacketsAggregateKey(mu *MetricUpdate) DeniedPacketsAggregateKey {
-	var policy string
-	if mu.ruleIDs.Namespace == rules.NamespaceGlobal {
-		// Don't include "__GLOBAL__" namespace identifier to be compatible to pre RuleID policy name key.
-		policy = fmt.Sprintf("%s|%s|%s|%s", mu.ruleIDs.Tier, mu.ruleIDs.Policy, mu.ruleIDs.Index, mu.ruleIDs.Action)
-	} else {
-		// Include the namespace otherwise.
-		policy = fmt.Sprintf("%s|%s/%s|%s|%s", mu.ruleIDs.Tier, mu.ruleIDs.Namespace, mu.ruleIDs.Policy, mu.ruleIDs.Index, mu.ruleIDs.Action)
+	return DeniedPacketsAggregateKey{
+		policy: getDeniedPacketRuleName(mu.ruleID),
+		srcIP:  mu.tuple.src,
 	}
-	srcIP := mu.tuple.src
-	return DeniedPacketsAggregateKey{policy, srcIP}
+}
+
+func getDeniedPacketRuleName(r *lookup.RuleID) string {
+	if r.IsNamespaced() {
+		return fmt.Sprintf(
+			"%s|%s|%s|%s",
+			r.TierString(),
+			r.NameString(),
+			r.IndexStr,
+			r.ActionString(),
+		)
+	}
+	return fmt.Sprintf(
+		"%s|%s/%s|%s|%s",
+		r.TierString(),
+		r.Namespace,
+		r.NameString(),
+		r.IndexStr,
+		r.ActionString(),
+	)
 }
 
 type DeniedPacketsAggregateValue struct {
@@ -82,7 +97,7 @@ func (dp *DeniedPacketsAggregator) RegisterMetrics(registry *prometheus.Registry
 }
 
 func (dp *DeniedPacketsAggregator) OnUpdate(mu *MetricUpdate) {
-	if mu.ruleIDs.Action != rules.ActionDeny {
+	if mu.ruleID.Action != rules.RuleActionDeny {
 		// We only want denied packets. Skip the rest of them.
 		return
 	}
@@ -125,7 +140,7 @@ func (dp *DeniedPacketsAggregator) reportMetric(mu *MetricUpdate) {
 			refs:    set.FromArray([]Tuple{mu.tuple}),
 		}
 	}
-	switch mu.ruleIDs.Direction {
+	switch mu.ruleID.Direction {
 	case rules.RuleDirIngress:
 		value.packets.Add(float64(mu.inMetric.deltaPackets))
 		value.bytes.Add(float64(mu.inMetric.deltaBytes))
@@ -149,7 +164,7 @@ func (dp *DeniedPacketsAggregator) expireMetric(mu *MetricUpdate) {
 	// We retain deleted metric for a little bit so that prometheus can get a chance
 	// to scrape the metric.
 	var deltaPackets, deltaBytes int
-	switch mu.ruleIDs.Direction {
+	switch mu.ruleID.Direction {
 	case rules.RuleDirIngress:
 		deltaPackets = mu.inMetric.deltaPackets
 		deltaBytes = mu.inMetric.deltaBytes

@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -45,35 +46,30 @@ var (
 		},
 		[]string{LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
-
-	ruleDirToTrafficDir = map[rules.RuleDirection]rules.TrafficDirection{
-		rules.RuleDirIngress: rules.TrafficDirInbound,
-		rules.RuleDirEgress:  rules.TrafficDirOutbound,
-	}
 )
 
 type RuleAggregateKey struct {
-	ruleIDs rules.RuleIDs
+	ruleID lookup.RuleID
 }
 
 // getRuleAggregateKey returns a hashable key identifying a rule aggregation key.
 func getRuleAggregateKey(mu *MetricUpdate) RuleAggregateKey {
 	return RuleAggregateKey{
-		ruleIDs: mu.ruleIDs,
+		ruleID: *mu.ruleID,
 	}
 }
 
 // PacketByteLabels returns the Prometheus packet/byte counter labels associated
 // with a specific rule and traffic direction.
-func (k *RuleAggregateKey) PacketByteLabels(trafficDir rules.TrafficDirection, felixHostname string) prometheus.Labels {
+func (k *RuleAggregateKey) PacketByteLabels(trafficDir TrafficDirection, felixHostname string) prometheus.Labels {
 	return prometheus.Labels{
-		LABEL_ACTION:      string(k.ruleIDs.Action),
-		LABEL_TIER:        k.ruleIDs.Tier,
-		LABEL_NAMESPACE:   k.ruleIDs.Namespace,
-		LABEL_POLICY:      k.ruleIDs.Policy,
-		LABEL_RULE_DIR:    string(k.ruleIDs.Direction),
-		LABEL_RULE_IDX:    k.ruleIDs.Index,
-		LABEL_TRAFFIC_DIR: string(trafficDir),
+		LABEL_ACTION:      k.ruleID.ActionString(),
+		LABEL_TIER:        k.ruleID.TierString(),
+		LABEL_NAMESPACE:   k.ruleID.NamespaceString(),
+		LABEL_POLICY:      k.ruleID.NameString(),
+		LABEL_RULE_DIR:    k.ruleID.DirectionString(),
+		LABEL_RULE_IDX:    k.ruleID.IndexStr,
+		LABEL_TRAFFIC_DIR: trafficDir.String(),
 		LABEL_INSTANCE:    felixHostname,
 	}
 }
@@ -82,12 +78,12 @@ func (k *RuleAggregateKey) PacketByteLabels(trafficDir rules.TrafficDirection, f
 // with a specific rule and traffic direction.
 func (k *RuleAggregateKey) ConnectionLabels(felixHostname string) prometheus.Labels {
 	return prometheus.Labels{
-		LABEL_TIER:        k.ruleIDs.Tier,
-		LABEL_NAMESPACE:   k.ruleIDs.Namespace,
-		LABEL_POLICY:      k.ruleIDs.Policy,
-		LABEL_RULE_DIR:    string(k.ruleIDs.Direction),
-		LABEL_RULE_IDX:    k.ruleIDs.Index,
-		LABEL_TRAFFIC_DIR: string(ruleDirToTrafficDir[k.ruleIDs.Direction]),
+		LABEL_TIER:        k.ruleID.TierString(),
+		LABEL_NAMESPACE:   k.ruleID.NamespaceString(),
+		LABEL_POLICY:      k.ruleID.NameString(),
+		LABEL_RULE_DIR:    k.ruleID.DirectionString(),
+		LABEL_RULE_IDX:    k.ruleID.IndexStr,
+		LABEL_TRAFFIC_DIR: ruleDirToTrafficDir(k.ruleID.Direction).String(),
 		LABEL_INSTANCE:    felixHostname,
 	}
 }
@@ -106,8 +102,8 @@ func newRuleAggregateValue(key RuleAggregateKey, felixHostname string) *RuleAggr
 	// not resulted in any connections, we create the counters anyways - the rule stats are expected to
 	// be semi-long lived.
 	cLabels := key.ConnectionLabels(felixHostname)
-	pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound, felixHostname)
-	pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound, felixHostname)
+	pbInLabels := key.PacketByteLabels(TrafficDirInbound, felixHostname)
+	pbOutLabels := key.PacketByteLabels(TrafficDirOutbound, felixHostname)
 	return &RuleAggregateValue{
 		tuples:         set.New(),
 		inPackets:      counterRulePackets.With(pbInLabels),
@@ -229,10 +225,10 @@ func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey)
 		// Nothing to do here.
 		return
 	}
-	pbInLabels := key.PacketByteLabels(rules.TrafficDirInbound, pa.felixHostname)
-	pbOutLabels := key.PacketByteLabels(rules.TrafficDirOutbound, pa.felixHostname)
+	pbInLabels := key.PacketByteLabels(TrafficDirInbound, pa.felixHostname)
+	pbOutLabels := key.PacketByteLabels(TrafficDirOutbound, pa.felixHostname)
 	cLabels := key.ConnectionLabels(pa.felixHostname)
-	switch key.ruleIDs.Direction {
+	switch key.ruleID.Direction {
 	case rules.RuleDirIngress:
 		counterRulePackets.Delete(pbInLabels)
 		counterRuleBytes.Delete(pbInLabels)

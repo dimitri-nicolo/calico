@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/felix/lookup"
 )
 
 const (
@@ -15,11 +15,11 @@ const (
 	bufferSize    = 1000
 )
 
-type UpdateType string
+type UpdateType int
 
 const (
-	UpdateTypeReport UpdateType = "report"
-	UpdateTypeExpire UpdateType = "expire"
+	UpdateTypeReport UpdateType = iota
+	UpdateTypeExpire
 )
 
 type MetricValue struct {
@@ -37,7 +37,7 @@ type MetricUpdate struct {
 	isConnection bool
 
 	// Rule identification
-	ruleIDs rules.RuleIDs
+	ruleID *lookup.RuleID
 
 	inMetric  MetricValue
 	outMetric MetricValue

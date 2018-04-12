@@ -18,14 +18,11 @@ import (
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
-
 	"github.com/tigera/nfnetlink"
 )
 
 var (
-	ruleSep      = byte('|')
-	namespaceSep = byte('/')
-	tierSep      = byte('.')
+	noEndpointErr = errors.New("couldn't find endpoint info for NFLOG packet")
 )
 
 type Config struct {
@@ -272,7 +269,7 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 	return nil
 }
 
-func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDirection, nPktAggr *nfnetlink.NflogPacketAggregate) error {
+func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
 		numPkts, numBytes int
 		epKey             interface{}
@@ -290,21 +287,24 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDirection, nPktA
 
 	if err != nil {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
-		return errors.New("couldn't find endpoint info for NFLOG packet")
+		return noEndpointErr
 	}
 	for _, prefix := range nPktAggr.Prefixes {
-		// Lookup the ruleIDs from the prefix.
-		ruleIDs, err := c.lookupRuleIDsFromPrefix(dir, prefix.Prefix, prefix.Len)
-		if err != nil {
+		// Lookup the ruleID from the prefix.
+		ruleID := c.lum.GetRuleIDsFromNFLOGPrefix(prefix.Prefix)
+		if ruleID == nil {
 			continue
 		}
 
 		// Determine the index of this trace point.  This is the index of the effective
 		// tiers for the endpoint (since there is only one allow/deny rule hit per Tier).
-		tierIdx := c.lum.GetTierIndex(epKey, ruleIDs.Tier)
+		tierIdx := c.lum.GetTierIndex(epKey, ruleID.Tier)
+		if tierIdx == -1 {
+			continue
+		}
 
 		// Determine the starting number of packets and bytes.
-		if ruleIDs.Action == rules.ActionDeny || ruleIDs.Action == rules.ActionAllow {
+		if ruleID.Action == rules.RuleActionDeny || ruleID.Action == rules.RuleActionAllow {
 			// NFLog based counters make sense only for denied packets or allowed packets
 			// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
 			// counters will overwrite these values anyway.
@@ -316,7 +316,7 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDirection, nPktA
 			numBytes = 0
 		}
 
-		tp := NewRuleTracePoint(ruleIDs, epKey, tierIdx, numPkts, numBytes)
+		tp := NewRuleTracePoint(ruleID, epKey, tierIdx, numPkts, numBytes)
 		tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
 		c.applyNflogStatUpdate(tuple, tp)
 	}
@@ -325,67 +325,6 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDirection, nPktA
 
 func subscribeToNflog(gn int, nlBufSiz int, nflogChan chan *nfnetlink.NflogPacketAggregate, nflogDoneChan chan struct{}) error {
 	return nfnetlink.NflogSubscribe(gn, nlBufSiz, nflogChan, nflogDoneChan)
-}
-
-// lookupRuleIDsFromPrefix determines the RuleIDs from a given rule direction and NFLOG prefix.
-func (c *Collector) lookupRuleIDsFromPrefix(dir rules.RuleDirection, prefix [64]byte, prefixLen int) (rules.RuleIDs, error) {
-	// Extract the RuleIDs from the prefix.
-	//TODO: RLB: We should keep a map[[64]byte]*RuleIDs to perform a fast lookup of the prefix
-	// to the rules IDs (using pointers to avoid additional allocation).  It is a little naughty
-	// passing pointers around since these structs are theoretically mutable. If we defined these
-	// structs in a separate types package then we could make them immutable by requiring accessor
-	// methods to access the private member data.
-	//TODO: RLB: I think the prefix should be able to give us the rule direction too.
-
-	// Initialise the RuleIDs struct.
-	ruleIDs := rules.RuleIDs{}
-
-	// Should have at least 2 separators, a action character and a rule (assuming
-	// we allow empty Policy names).
-	if prefixLen < 4 {
-		log.Errorf("Prefix is too short: %s (%d chars)", string(prefix[:prefixLen]), prefixLen)
-		return ruleIDs, RuleTracePointParseError
-	}
-
-	ruleIDs.Direction = dir
-
-	// Extract and convert the action.
-	switch prefix[0] {
-	case 'A':
-		ruleIDs.Action = rules.ActionAllow
-	case 'D':
-		ruleIDs.Action = rules.ActionDeny
-	case 'N':
-		ruleIDs.Action = rules.ActionNextTier
-	default:
-		log.Errorf("Unknown action %v: %v", prefix[0], string(prefix[:prefixLen]))
-		return ruleIDs, RuleTracePointParseError
-	}
-
-	// Determine the indices of the rule/policy/tier separators.
-	ruleIdx := 2
-	policySep := bytes.IndexByte(prefix[ruleIdx:], ruleSep)
-	if policySep == -1 {
-		log.Errorf("No separator char: %v", string(prefix[:prefixLen]))
-		return ruleIDs, RuleTracePointParseError
-	}
-	policyIdx := ruleIdx + policySep + 1
-
-	// Set the rule index.
-	ruleIDs.Index = string(prefix[ruleIdx : policyIdx-1])
-
-	var policyIDByte [64]byte
-	copy(policyIDByte[:], prefix[policyIdx:prefixLen])
-
-	ruleIDParts, err := c.lum.GetNFLOGHashToPolicyID(policyIDByte)
-	if err != nil {
-		return ruleIDs, fmt.Errorf("error getting NFLOG policy/profile name identifier from the hash: %s", err)
-	}
-	ruleIDs.Tier = ruleIDParts.Tier
-	ruleIDs.Policy = ruleIDParts.Policy
-	ruleIDs.Namespace = ruleIDParts.Namespace
-
-	return ruleIDs, nil
 }
 
 func extractTupleFromNflogTuple(nflogTuple *nfnetlink.NflogPacketTuple) Tuple {

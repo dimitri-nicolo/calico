@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"fmt"
 	"math"
 	"net"
 	"reflect"
@@ -12,49 +11,28 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-var dummyWlEpKey = model.WorkloadEndpointKey{
-	Hostname:       "localhost",
-	OrchestratorID: "orchestrator",
-	WorkloadID:     "workloadid",
-	EndpointID:     "epid",
-}
-
 var (
-	ingressRulePolicy1Allow = rules.RuleIDs{
-		Action:    rules.ActionAllow,
-		Index:     "0",
-		Policy:    "policy1",
+	ingressRulePolicy3Deny = &lookup.RuleID{
+		Action:    rules.RuleActionDeny,
+		Index:     0,
+		IndexStr:  "0",
+		Name:      "policy3",
 		Tier:      "default",
-		Namespace: rules.NamespaceGlobal,
+		Namespace: "",
 		Direction: rules.RuleDirIngress,
 	}
-	ingressRulePolicy2Allow = rules.RuleIDs{
-		Action:    rules.ActionAllow,
-		Index:     "0",
-		Policy:    "policy1",
+	ingressRulePolicy4Deny = &lookup.RuleID{
+		Action:    rules.RuleActionDeny,
+		Index:     0,
+		IndexStr:  "0",
+		Name:      "policy4",
 		Tier:      "default",
-		Namespace: rules.NamespaceGlobal,
-		Direction: rules.RuleDirIngress,
-	}
-	ingressRulePolicy3Deny = rules.RuleIDs{
-		Action:    rules.ActionDeny,
-		Index:     "0",
-		Policy:    "policy3",
-		Tier:      "default",
-		Namespace: rules.NamespaceGlobal,
-		Direction: rules.RuleDirIngress,
-	}
-	ingressRulePolicy4Deny = rules.RuleIDs{
-		Action:    rules.ActionDeny,
-		Index:     "0",
-		Policy:    "policy4",
-		Tier:      "default",
-		Namespace: rules.NamespaceGlobal,
+		Namespace: "",
 		Direction: rules.RuleDirIngress,
 	}
 )
@@ -64,7 +42,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		isConnection: true,
-		ruleIDs:      ingressRulePolicy3Deny,
+		ruleID:       ingressRulePolicy3Deny,
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -74,7 +52,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
 		isConnection: true,
-		ruleIDs:      ingressRulePolicy3Deny,
+		ruleID:       ingressRulePolicy3Deny,
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -84,21 +62,13 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple3,
 		isConnection: true,
-		ruleIDs:      ingressRulePolicy4Deny,
+		ruleID:       ingressRulePolicy4Deny,
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
 		},
 	}
 )
-
-func getPolicyName(r rules.RuleIDs) string {
-	if r.Namespace == rules.NamespaceGlobal {
-		return fmt.Sprintf("%s|%s|%s|%s", r.Tier, r.Policy, r.Index, r.Action)
-	} else {
-		return fmt.Sprintf("%s|%s/%s|%s|%s", r.Tier, r.Namespace, r.Policy, r.Index, r.Action)
-	}
-}
 
 func getMetricNumber(m prometheus.Gauge) int {
 	// The actual number stored inside a prometheus metric is surprisingly hard to
@@ -134,7 +104,7 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 				BeforeEach(func() {
 					key = DeniedPacketsAggregateKey{
 						srcIP:  localIp1,
-						policy: getPolicyName(ingressRulePolicy3Deny),
+						policy: getDeniedPacketRuleName(ingressRulePolicy3Deny),
 					}
 					refs = set.New()
 					refs.AddAll([]Tuple{tuple1, tuple2})
@@ -186,11 +156,11 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 				BeforeEach(func() {
 					key1 = DeniedPacketsAggregateKey{
 						srcIP:  localIp1,
-						policy: getPolicyName(ingressRulePolicy3Deny),
+						policy: getDeniedPacketRuleName(ingressRulePolicy3Deny),
 					}
 					key2 = DeniedPacketsAggregateKey{
 						srcIP:  localIp2,
-						policy: getPolicyName(ingressRulePolicy4Deny),
+						policy: getDeniedPacketRuleName(ingressRulePolicy4Deny),
 					}
 					refs1 = set.New()
 					refs1.AddAll([]Tuple{tuple1, tuple2})
@@ -270,20 +240,20 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 		BeforeEach(func() {
 			key1 = DeniedPacketsAggregateKey{
 				srcIP:  localIp1,
-				policy: getPolicyName(ingressRulePolicy3Deny),
+				policy: getDeniedPacketRuleName(ingressRulePolicy3Deny),
 			}
 			key2 = DeniedPacketsAggregateKey{
 				srcIP:  localIp2,
-				policy: getPolicyName(ingressRulePolicy4Deny),
+				policy: getDeniedPacketRuleName(ingressRulePolicy4Deny),
 			}
 			label1 := prometheus.Labels{
 				"srcIP":        net.IP(localIp1[:16]).String(),
-				"policy":       getPolicyName(ingressRulePolicy3Deny),
+				"policy":       getDeniedPacketRuleName(ingressRulePolicy3Deny),
 				LABEL_INSTANCE: "testHost",
 			}
 			label2 := prometheus.Labels{
 				"srcIP":        net.IP(localIp2[:16]).String(),
-				"policy":       getPolicyName(ingressRulePolicy4Deny),
+				"policy":       getDeniedPacketRuleName(ingressRulePolicy4Deny),
 				LABEL_INSTANCE: "testHost",
 			}
 			value1 = DeniedPacketsAggregateValue{

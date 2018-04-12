@@ -150,9 +150,7 @@ func chainsForIfaces(ifaceTierNames []string,
 	hostOrWlDispatch := "wl-dispatch"
 	outPrefix := "cali-from-"
 	inPrefix := "cali-to-"
-	inboundSuffix := "inbound"
 	inboundGroup := uint16(1)
-	outboundSuffix := "outbound"
 	outboundGroup := uint16(2)
 	epMarkSetName := "cali-set-endpoint-mark"
 	epMarkFromName := "cali-from-endpoint-mark"
@@ -168,9 +166,7 @@ func chainsForIfaces(ifaceTierNames []string,
 		}
 		outPrefix = "cali-to-"
 		inPrefix = "cali-from-"
-		inboundSuffix = "inbound"
 		inboundGroup = uint16(1)
-		outboundSuffix = "outbound"
 		outboundGroup = uint16(2)
 		epmarkFromPrefix = inPrefix[:6]
 	}
@@ -285,7 +281,7 @@ func chainsForIfaces(ifaceTierNames []string,
 					Match: iptables.Match().MarkClear(16),
 					Action: iptables.NflogAction{
 						Group:  outboundGroup,
-						Prefix: fmt.Sprintf("D|0|%s.no-policy-match-%s|po", tierName, outboundSuffix),
+						Prefix: fmt.Sprintf("DPE|%s", tierName),
 					},
 				})
 				outRules = append(outRules, iptables.Rule{
@@ -301,7 +297,7 @@ func chainsForIfaces(ifaceTierNames []string,
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  outboundGroup,
-					Prefix: fmt.Sprintf("D|0|no-profile-match-%s|pr", outboundSuffix),
+					Prefix: "DRE",
 				},
 			})
 			outRules = append(outRules, iptables.Rule{
@@ -366,7 +362,7 @@ func chainsForIfaces(ifaceTierNames []string,
 					Match: iptables.Match().MarkClear(16),
 					Action: iptables.NflogAction{
 						Group:  inboundGroup,
-						Prefix: fmt.Sprintf("D|0|%s.no-policy-match-%s|po", tierName, inboundSuffix),
+						Prefix: fmt.Sprintf("DPI|%s", tierName),
 					},
 				})
 				inRules = append(inRules, iptables.Rule{
@@ -381,7 +377,7 @@ func chainsForIfaces(ifaceTierNames []string,
 				Match: iptables.Match(),
 				Action: iptables.NflogAction{
 					Group:  inboundGroup,
-					Prefix: fmt.Sprintf("D|0|no-profile-match-%s|pr", inboundSuffix),
+					Prefix: "DRI",
 				},
 			})
 			inRules = append(inRules, iptables.Rule{
