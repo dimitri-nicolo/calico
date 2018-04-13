@@ -9,154 +9,99 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
-
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
 )
 
 var (
-	wlEpKey1 = model.WorkloadEndpointKey{
-		Hostname:       "MyHost",
-		OrchestratorID: "ASDF",
-		WorkloadID:     "workload1",
-		EndpointID:     "endpoint1",
+	allowIngressRid0 = &lookup.RuleID{
+		Action:    rules.RuleActionAllow,
+		Index:     1,
+		IndexStr:  "1",
+		Name:      "P1",
+		Tier:      "T1",
+		Direction: rules.RuleDirIngress,
 	}
-)
-
-var (
-	allowIngressTp0 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionAllow,
-			Index:     1,
-			IndexStr:  "1",
-			Name:      "P1",
-			Tier:      "T1",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        0,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	denyIngressRid0 = &lookup.RuleID{
+		Action:    rules.RuleActionDeny,
+		Index:     2,
+		IndexStr:  "2",
+		Name:      "P2",
+		Tier:      "T1",
+		Direction: rules.RuleDirIngress,
 	}
-	denyIngressTp0 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionDeny,
-			Index:     2,
-			IndexStr:  "2",
-			Name:      "P2",
-			Tier:      "T1",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        0,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	allowIngressRid1 = &lookup.RuleID{
+		Action:    rules.RuleActionAllow,
+		Index:     1,
+		IndexStr:  "1",
+		Name:      "P1",
+		Tier:      "T1",
+		Direction: rules.RuleDirIngress,
 	}
-	allowIngressTp1 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionAllow,
-			Index:     1,
-			IndexStr:  "1",
-			Name:      "P1",
-			Tier:      "T1",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        1,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	denyIngressRid1 = &lookup.RuleID{
+		Action:    rules.RuleActionDeny,
+		Index:     2,
+		IndexStr:  "2",
+		Name:      "P2",
+		Tier:      "T1",
+		Direction: rules.RuleDirIngress,
 	}
-	denyIngressTp1 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionDeny,
-			Index:     2,
-			IndexStr:  "2",
-			Name:      "P2",
-			Tier:      "T1",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        1,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	allowIngressRid2 = &lookup.RuleID{
+		Action:    rules.RuleActionAllow,
+		Index:     1,
+		IndexStr:  "1",
+		Name:      "P2",
+		Tier:      "T2",
+		Direction: rules.RuleDirIngress,
 	}
-	allowIngressTp2 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionAllow,
-			Index:     1,
-			IndexStr:  "1",
-			Name:      "P2",
-			Tier:      "T2",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        2,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	nextTierIngressRid0 = &lookup.RuleID{
+		Action:    rules.RuleActionNextTier,
+		Index:     3,
+		IndexStr:  "3",
+		Name:      "P1",
+		Tier:      "T1",
+		Direction: rules.RuleDirIngress,
 	}
-	nextTierIngressTp0 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionNextTier,
-			Index:     3,
-			IndexStr:  "3",
-			Name:      "P1",
-			Tier:      "T1",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        0,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	nextTierIngressRid1 = &lookup.RuleID{
+		Action:    rules.RuleActionNextTier,
+		Index:     4,
+		IndexStr:  "4",
+		Name:      "P2",
+		Tier:      "T2",
+		Direction: rules.RuleDirIngress,
 	}
-	nextTierIngressTp1 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionNextTier,
-			Index:     4,
-			IndexStr:  "4",
-			Name:      "P2",
-			Tier:      "T2",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        1,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	allowIngressRid11 = &lookup.RuleID{
+		Action:    rules.RuleActionAllow,
+		Index:     1,
+		IndexStr:  "1",
+		Name:      "P1",
+		Tier:      "T1",
+		Direction: rules.RuleDirIngress,
 	}
-	allowIngressTp11 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionAllow,
-			Index:     1,
-			IndexStr:  "1",
-			Name:      "P1",
-			Tier:      "T1",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        11,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
-	}
-	denyIngressTp21 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionDeny,
-			Index:     1,
-			IndexStr:  "1",
-			Name:      "P1",
-			Tier:      "T1",
-			Direction: rules.RuleDirIngress,
-		},
-		Index:        21,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	denyIngressRid21 = &lookup.RuleID{
+		Action:    rules.RuleActionDeny,
+		Index:     1,
+		IndexStr:  "1",
+		Name:      "P1",
+		Tier:      "T1",
+		Direction: rules.RuleDirIngress,
 	}
 
-	nextTierEgressTp0 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionNextTier,
-			Index:     2,
-			IndexStr:  "2",
-			Name:      "P4",
-			Tier:      "T1",
-			Direction: rules.RuleDirEgress,
-		},
-		Index:        0,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	nextTierEgressRid0 = &lookup.RuleID{
+		Action:    rules.RuleActionNextTier,
+		Index:     2,
+		IndexStr:  "2",
+		Name:      "P4",
+		Tier:      "T1",
+		Direction: rules.RuleDirEgress,
 	}
-	allowEgressTp2 = &RuleTracePoint{
-		RuleID: &lookup.RuleID{
-			Action:    rules.RuleActionAllow,
-			Index:     3,
-			IndexStr:  "3",
-			Name:      "P3",
-			Tier:      "T2",
-			Direction: rules.RuleDirEgress,
-		},
-		Index:        2,
-		EndpointName: "WEP(ASDF/workload1/endpoint1)",
+	allowEgressRid2 = &lookup.RuleID{
+		Action:    rules.RuleActionAllow,
+		Index:     3,
+		IndexStr:  "3",
+		Name:      "P3",
+		Tier:      "T2",
+		Direction: rules.RuleDirEgress,
 	}
 )
 
@@ -185,7 +130,7 @@ var _ = Describe("Rule Trace", func() {
 		copy(src[:], net.ParseIP("127.0.0.1").To16())
 		copy(dst[:], net.ParseIP("127.1.1.1").To16())
 		tuple = NewTuple(src, dst, 6, 12345, 80)
-		data = NewData(*tuple, time.Duration(10)*time.Second)
+		data = NewData(*tuple, "", time.Duration(10)*time.Second)
 	})
 
 	Describe("Data with no ingress or egress rule trace ", func() {
@@ -198,9 +143,9 @@ var _ = Describe("Rule Trace", func() {
 		})
 	})
 
-	Describe("Adding a RuleTracePoint to the Ingress Rule Trace", func() {
+	Describe("Adding a RuleID to the Ingress Rule Trace", func() {
 		BeforeEach(func() {
-			data.AddRuleTracePoint(allowIngressTp0)
+			data.AddRuleID(allowIngressRid0, 0, 0, 0)
 		})
 		It("should have path length equal to 1", func() {
 			Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
@@ -209,22 +154,22 @@ var _ = Describe("Rule Trace", func() {
 			Expect(data.IngressAction()).To(Equal(rules.RuleActionAllow))
 		})
 		It("should be dirty", func() {
-			Expect(data.IsDirty()).To(Equal(true))
+			Expect(data.IsDirty()).To(BeTrue())
 		})
 		It("should return a conflict for same rule Index but different values", func() {
-			Expect(data.AddRuleTracePoint(denyIngressTp0)).To(Equal(RuleTracePointConflict))
+			Expect(data.AddRuleID(denyIngressRid1, 0, 0, 0)).To(BeFalse())
 		})
 	})
 
 	Describe("RuleTrace conflicts (ingress)", func() {
 		BeforeEach(func() {
-			data.AddRuleTracePoint(allowIngressTp0)
+			data.AddRuleID(allowIngressRid0, 0, 0, 0)
 		})
 		Context("Adding a rule tracepoint that conflicts", func() {
 			var dirtyFlag bool
 			BeforeEach(func() {
 				dirtyFlag = data.IsDirty()
-				data.AddRuleTracePoint(denyIngressTp0)
+				data.AddRuleID(denyIngressRid0, 0, 0, 0)
 			})
 			It("should have path length unchanged and equal to 1", func() {
 				Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
@@ -238,7 +183,7 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Replacing a rule tracepoint that was conflicting", func() {
 			BeforeEach(func() {
-				data.ReplaceRuleTracePoint(denyIngressTp0)
+				data.ReplaceRuleID(denyIngressRid0, 0, 0, 0)
 			})
 			It("should have path length unchanged and equal to 1", func() {
 				Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
@@ -253,11 +198,11 @@ var _ = Describe("Rule Trace", func() {
 	})
 	Describe("RuleTraces with next Tier", func() {
 		BeforeEach(func() {
-			data.AddRuleTracePoint(nextTierIngressTp0)
+			data.AddRuleID(nextTierIngressRid0, 0, 0, 0)
 		})
 		Context("Adding a rule tracepoint with action", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(allowIngressTp1)
+				data.AddRuleID(allowIngressRid1, 1, 0, 0)
 			})
 			It("should have path length 2", func() {
 				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
@@ -271,7 +216,7 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Adding a rule tracepoint with action and Index past initial length", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(allowIngressTp11)
+				data.AddRuleID(allowIngressRid11, 11, 0, 0)
 			})
 			It("should have path length 2", func() {
 				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
@@ -285,7 +230,7 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Adding a rule tracepoint with action and Index past double the initial length", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(denyIngressTp21)
+				data.AddRuleID(denyIngressRid21, 21, 0, 0)
 			})
 			It("should have path length 2", func() {
 				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
@@ -299,7 +244,7 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Adding a rule tracepoint that conflicts", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(allowIngressTp0)
+				data.AddRuleID(allowIngressRid0, 0, 0, 0)
 			})
 			It("should have path length unchanged and equal to 1", func() {
 				Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
@@ -307,12 +252,12 @@ var _ = Describe("Rule Trace", func() {
 			It("should have not have action set", func() {
 				Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionAllow))
 				Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionDeny))
-				Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionNextTier))
+				//Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionNextTier))
 			})
 		})
 		Context("Replacing a rule tracepoint that was conflicting", func() {
 			BeforeEach(func() {
-				data.ReplaceRuleTracePoint(allowIngressTp0)
+				data.ReplaceRuleID(allowIngressRid0, 0, 0, 0)
 			})
 			It("should have path length unchanged and equal to 1", func() {
 				Expect(len(data.IngressRuleTrace.Path())).To(Equal(1))
@@ -325,17 +270,17 @@ var _ = Describe("Rule Trace", func() {
 	Describe("RuleTraces with multiple tiers", func() {
 		BeforeEach(func() {
 			// Ingress
-			err := data.AddRuleTracePoint(nextTierIngressTp0)
-			Expect(err).NotTo(HaveOccurred())
-			err = data.AddRuleTracePoint(nextTierIngressTp1)
-			Expect(err).NotTo(HaveOccurred())
-			err = data.AddRuleTracePoint(allowIngressTp2)
-			Expect(err).NotTo(HaveOccurred())
+			ok := data.AddRuleID(nextTierIngressRid0, 0, 0, 0)
+			Expect(ok).To(BeTrue())
+			ok = data.AddRuleID(nextTierIngressRid1, 1, 0, 0)
+			Expect(ok).To(BeTrue())
+			ok = data.AddRuleID(allowIngressRid2, 2, 0, 0)
+			Expect(ok).To(BeTrue())
 			// Egress
-			err = data.AddRuleTracePoint(nextTierEgressTp0)
-			Expect(err).NotTo(HaveOccurred())
-			err = data.AddRuleTracePoint(allowEgressTp2)
-			Expect(err).NotTo(HaveOccurred())
+			ok = data.AddRuleID(nextTierEgressRid0, 0, 0, 0)
+			Expect(ok).To(BeTrue())
+			ok = data.AddRuleID(allowEgressRid2, 2, 0, 0)
+			Expect(ok).To(BeTrue())
 		})
 		It("should have ingress path length equal to 3", func() {
 			Expect(data.IngressRuleTrace.Path()).To(HaveLen(3))
@@ -351,7 +296,7 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Adding an ingress rule tracepoint that conflicts", func() {
 			BeforeEach(func() {
-				data.AddRuleTracePoint(denyIngressTp1)
+				data.AddRuleID(denyIngressRid1, 1, 0, 0)
 			})
 			It("should have path length unchanged and equal to 3", func() {
 				Expect(len(data.IngressRuleTrace.Path())).To(Equal(3))
@@ -362,7 +307,7 @@ var _ = Describe("Rule Trace", func() {
 		})
 		Context("Replacing an ingress rule tracepoint that was conflicting", func() {
 			BeforeEach(func() {
-				data.ReplaceRuleTracePoint(denyIngressTp1)
+				data.ReplaceRuleID(denyIngressRid1, 1, 0, 0)
 			})
 			It("should have path length unchanged and equal to 2", func() {
 				Expect(len(data.IngressRuleTrace.Path())).To(Equal(2))
