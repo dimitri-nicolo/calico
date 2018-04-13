@@ -43,7 +43,7 @@ type Config struct {
 // and stores them as a Data object in a map keyed by Tuple.
 // All data source channels must be specified when creating the collector.
 type Collector struct {
-	lum            lookup.QueryInterface
+	lum            *lookup.LookupManager
 	nfIngressC     chan *nfnetlink.NflogPacketAggregate
 	nfEgressC      chan *nfnetlink.NflogPacketAggregate
 	nfIngressDoneC chan struct{}
@@ -57,7 +57,7 @@ type Collector struct {
 	reporterMgr    *ReporterManager
 }
 
-func NewCollector(lm lookup.QueryInterface, rm *ReporterManager, config *Config) *Collector {
+func NewCollector(lm *lookup.LookupManager, rm *ReporterManager, config *Config) *Collector {
 	return &Collector{
 		lum:            lm,
 		nfIngressC:     make(chan *nfnetlink.NflogPacketAggregate, 1000),
@@ -246,16 +246,10 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 		// Check if the connection begins and/or terminates on this host. This is done
 		// by checking if the source and/or destination IP address from the conntrack
 		// entry that we are processing belong to endpoints.
-		_, errSrc := c.lum.GetEndpointKey(ctTuple.Src)
-		_, errDst := c.lum.GetEndpointKey(ctTuple.Dst)
-
 		// If we cannot find an endpoint for both the source and destination IP Addresses
 		// this means that this connection neither begins nor terminates locally.
 		// We can skip processing this conntrack entry.
-		if errSrc != nil && errDst != nil {
-			// Unknown conntrack entries are expected for things such as
-			// management or local traffic. This log can get spammy if we log everything
-			// because of which we don't return an error and don't log anything here.
+		if !c.lum.IsEndpoint(ctTuple.Src) && !c.lum.IsEndpoint(ctTuple.Dst) {
 			continue
 		}
 
@@ -272,53 +266,61 @@ func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) 
 func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
 		numPkts, numBytes int
-		epKey             interface{}
-		err               error
+		ep                lookup.Endpoint
+		ok                bool
 	)
 	nflogTuple := nPktAggr.Tuple
 
 	// Determine the endpoint that this packet hit a rule for. This depends on the Direction
 	// because local -> local packets will be NFLOGed twice.
 	if dir == rules.RuleDirIngress {
-		epKey, err = c.lum.GetEndpointKey(nflogTuple.Dst)
+		ep, ok = c.lum.GetEndpoint(nflogTuple.Dst)
 	} else {
-		epKey, err = c.lum.GetEndpointKey(nflogTuple.Src)
+		ep, ok = c.lum.GetEndpoint(nflogTuple.Src)
 	}
 
-	if err != nil {
+	if !ok {
 		// TODO (Matt): This branch becomes much more interesting with graceful restart.
 		return noEndpointErr
 	}
 	for _, prefix := range nPktAggr.Prefixes {
 		// Lookup the ruleID from the prefix.
-		ruleID := c.lum.GetRuleIDsFromNFLOGPrefix(prefix.Prefix)
+		ruleID := c.lum.GetRuleIDFromNFLOGPrefix(prefix.Prefix)
 		if ruleID == nil {
 			continue
 		}
 
-		// Determine the index of this trace point.  This is the index of the effective
-		// tiers for the endpoint (since there is only one allow/deny rule hit per Tier).
-		tierIdx := c.lum.GetTierIndex(epKey, ruleID.Tier)
-		if tierIdx == -1 {
+		apply := func(tierIdx int) {
+			// Determine the starting number of packets and bytes.
+			if ruleID.Action == rules.RuleActionDeny || ruleID.Action == rules.RuleActionAllow {
+				// NFLog based counters make sense only for denied packets or allowed packets
+				// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
+				// counters will overwrite these values anyway.
+				numPkts = prefix.Packets
+				numBytes = prefix.Bytes
+			} else {
+				// Don't update packet counts for ActionNextTier to avoid multiply counting.
+				numPkts = 0
+				numBytes = 0
+			}
+
+			tp := NewRuleTracePoint(ruleID, ep.Name, tierIdx, numPkts, numBytes)
+			tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
+			c.applyNflogStatUpdate(tuple, tp)
+		}
+
+		// A blank tier indicates a profile match. This should be directly after the last tier.
+		if len(ruleID.Tier) == 0 {
+			apply(len(ep.OrderedTiers))
 			continue
 		}
 
-		// Determine the starting number of packets and bytes.
-		if ruleID.Action == rules.RuleActionDeny || ruleID.Action == rules.RuleActionAllow {
-			// NFLog based counters make sense only for denied packets or allowed packets
-			// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
-			// counters will overwrite these values anyway.
-			numPkts = prefix.Packets
-			numBytes = prefix.Bytes
-		} else {
-			// Don't update packet counts for ActionNextTier to avoid multiply counting.
-			numPkts = 0
-			numBytes = 0
+		for tierIdx, tier := range ep.OrderedTiers {
+			if tier == ruleID.Tier {
+				apply(tierIdx)
+				break
+			}
 		}
-
-		tp := NewRuleTracePoint(ruleID, epKey, tierIdx, numPkts, numBytes)
-		tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
-		c.applyNflogStatUpdate(tuple, tp)
 	}
 	return nil
 }

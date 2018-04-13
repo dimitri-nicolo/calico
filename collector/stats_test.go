@@ -34,8 +34,8 @@ var (
 			Tier:      "T1",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 0,
-		EpKey: wlEpKey1,
+		Index:        0,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	denyIngressTp0 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -46,8 +46,8 @@ var (
 			Tier:      "T1",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 0,
-		EpKey: wlEpKey1,
+		Index:        0,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	allowIngressTp1 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -58,8 +58,8 @@ var (
 			Tier:      "T1",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 1,
-		EpKey: wlEpKey1,
+		Index:        1,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	denyIngressTp1 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -70,8 +70,8 @@ var (
 			Tier:      "T1",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 1,
-		EpKey: wlEpKey1,
+		Index:        1,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	allowIngressTp2 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -82,8 +82,8 @@ var (
 			Tier:      "T2",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 2,
-		EpKey: wlEpKey1,
+		Index:        2,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	nextTierIngressTp0 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -94,8 +94,8 @@ var (
 			Tier:      "T1",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 0,
-		EpKey: wlEpKey1,
+		Index:        0,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	nextTierIngressTp1 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -106,8 +106,8 @@ var (
 			Tier:      "T2",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 1,
-		EpKey: wlEpKey1,
+		Index:        1,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	allowIngressTp11 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -118,8 +118,8 @@ var (
 			Tier:      "T1",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 11,
-		EpKey: wlEpKey1,
+		Index:        11,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	denyIngressTp21 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -130,8 +130,8 @@ var (
 			Tier:      "T1",
 			Direction: rules.RuleDirIngress,
 		},
-		Index: 21,
-		EpKey: wlEpKey1,
+		Index:        21,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 
 	nextTierEgressTp0 = &RuleTracePoint{
@@ -143,8 +143,8 @@ var (
 			Tier:      "T1",
 			Direction: rules.RuleDirEgress,
 		},
-		Index: 0,
-		EpKey: wlEpKey1,
+		Index:        0,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 	allowEgressTp2 = &RuleTracePoint{
 		RuleID: &lookup.RuleID{
@@ -155,8 +155,8 @@ var (
 			Tier:      "T2",
 			Direction: rules.RuleDirEgress,
 		},
-		Index: 2,
-		EpKey: wlEpKey1,
+		Index:        2,
+		EndpointName: "WEP(ASDF/workload1/endpoint1)",
 	}
 )
 
