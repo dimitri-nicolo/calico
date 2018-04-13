@@ -197,6 +197,7 @@ func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion, cn
 		"heps":     {fmt.Sprint(stats.NumHostEndpoints)},
 		"version":  {buildinfo.GitVersion},
 		"rev":      {buildinfo.GitRevision},
+		"tiers":    {fmt.Sprint(stats.NumTiers)},
 		"policies": {fmt.Sprint(stats.NumPolicies)},
 		"profiles": {fmt.Sprint(stats.NumProfiles)},
 	}

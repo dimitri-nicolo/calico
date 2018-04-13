@@ -513,6 +513,9 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 		Expect(mockDataplane.ActivePreDNATPolicies()).To(Equal(state.ExpectedPreDNATPolicyIDs),
 			"PreDNAT policies incorrect after moving to state: %v",
 			state.Name)
+		Expect(lastStats.NumTiers).To(Equal(state.NumTiers()),
+			"number of tiers stat incorrect after moving to state: %v\n%+v",
+			state.Name, spew.Sdump(state.DatastoreState))
 		Expect(lastStats.NumPolicies).To(Equal(state.NumPolicies()),
 			"number of policies stat incorrect after moving to state: %v\n%+v",
 			state.Name, spew.Sdump(state.DatastoreState))

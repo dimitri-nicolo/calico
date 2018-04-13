@@ -31,7 +31,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 )
 
-const expectedNumberOfURLParams = 11
+const expectedNumberOfURLParams = 12
 
 // These tests start a local HTTP server on a random port and tell the usage reporter to
 // connect to it.  Then we can check that it correctly makes HTTP requests at the right times.
@@ -101,6 +101,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					NumHosts:             1,
 					NumHostEndpoints:     2,
 					NumWorkloadEndpoints: 3,
+					NumTiers:             4,
 					NumPolicies:          4,
 					NumProfiles:          5,
 				}
@@ -131,6 +132,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 				Expect(q.Get("size")).To(Equal("1"))
 				Expect(q.Get("heps")).To(Equal("2"))
 				Expect(q.Get("weps")).To(Equal("3"))
+				Expect(q.Get("tiers")).To(Equal("4"))
 				Expect(q.Get("policies")).To(Equal("4"))
 				Expect(q.Get("profiles")).To(Equal("5"))
 
@@ -160,6 +162,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 						NumHosts:             10,
 						NumHostEndpoints:     20,
 						NumWorkloadEndpoints: 30,
+						NumTiers:             35,
 						NumPolicies:          40,
 						NumProfiles:          50,
 					}
@@ -188,6 +191,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					Expect(q.Get("size")).To(Equal("10"))
 					Expect(q.Get("heps")).To(Equal("20"))
 					Expect(q.Get("weps")).To(Equal("30"))
+					Expect(q.Get("tiers")).To(Equal("35"))
 					Expect(q.Get("policies")).To(Equal("40"))
 					Expect(q.Get("profiles")).To(Equal("50"))
 				})

@@ -244,6 +244,10 @@ func (s State) KVDeltas(prev State) []api.Update {
 	return deltas
 }
 
+func (s State) NumTiers() int {
+	return s.ActiveKeys(model.TierKey{}).Len()
+}
+
 func (s State) NumPolicies() int {
 	return s.ActiveKeys(model.PolicyKey{}).Len()
 }
