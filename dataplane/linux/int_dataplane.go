@@ -470,7 +470,7 @@ func (d *InternalDataplane) Start() {
 		DefaultAgeTimeout               = time.Duration(10) * time.Second
 		DefaultInitialReportingDelay    = time.Duration(5) * time.Second
 		DefaultExportingInterval        = time.Duration(1) * time.Second
-		DefaultConntrackPollingInterval = time.Duration(1) * time.Second
+		DefaultConntrackPollingInterval = time.Duration(5) * time.Second
 	)
 	collectorConfig := &collector.Config{
 		StatsDumpFilePath:        d.config.StatsDumpFilePath,
