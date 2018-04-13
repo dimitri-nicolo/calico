@@ -37,7 +37,7 @@ var (
 )
 
 var (
-	denyPacketTuple1DenyT3 = &MetricUpdate{
+	denyPacketTuple1DenyT3 = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		isConnection: true,
@@ -47,7 +47,7 @@ var (
 			deltaBytes:   1,
 		},
 	}
-	denyPacketTuple2DenyT3 = &MetricUpdate{
+	denyPacketTuple2DenyT3 = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
 		isConnection: true,
@@ -57,7 +57,7 @@ var (
 			deltaBytes:   1,
 		},
 	}
-	denyPacketTuple3DenyT4 = &MetricUpdate{
+	denyPacketTuple3DenyT4 = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple3,
 		isConnection: true,

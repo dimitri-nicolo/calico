@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	CheckInterval = time.Duration(1) * time.Second
-	bufferSize    = 1000
+	CheckInterval          = time.Duration(1) * time.Second
+	reporterChanBufferSize = 1000
 )
 
 type UpdateType int
@@ -45,17 +45,17 @@ type MetricUpdate struct {
 
 type MetricsReporter interface {
 	Start()
-	Report(mu *MetricUpdate) error
+	Report(mu MetricUpdate) error
 }
 
 type ReporterManager struct {
-	ReportChan chan *MetricUpdate
+	ReportChan chan MetricUpdate
 	reporters  []MetricsReporter
 }
 
 func NewReporterManager() *ReporterManager {
 	return &ReporterManager{
-		ReportChan: make(chan *MetricUpdate, bufferSize),
+		ReportChan: make(chan MetricUpdate, reporterChanBufferSize),
 	}
 }
 

@@ -52,7 +52,7 @@ type RuleAggregateKey struct {
 }
 
 // getRuleAggregateKey returns a hashable key identifying a rule aggregation key.
-func getRuleAggregateKey(mu *MetricUpdate) RuleAggregateKey {
+func getRuleAggregateKey(mu MetricUpdate) RuleAggregateKey {
 	return RuleAggregateKey{
 		ruleID: *mu.ruleID,
 	}
@@ -151,7 +151,7 @@ func (pa *PolicyRulesAggregator) RegisterMetrics(registry *prometheus.Registry) 
 // with the metric and ensures the metric will expire if there are no associated connections
 // and no activity within the retention period. Unlike reportMetric, if there is no cached
 // entry for this metric one is not created and therefore the metric will not be reported.
-func (pa *PolicyRulesAggregator) OnUpdate(mu *MetricUpdate) {
+func (pa *PolicyRulesAggregator) OnUpdate(mu MetricUpdate) {
 	key := getRuleAggregateKey(mu)
 	value, ok := pa.ruleAggStats[key]
 	if !ok {

@@ -25,7 +25,7 @@ type Aggregator interface {
 	RegisterMetrics(registry *prometheus.Registry)
 	// OnUpdate is called everytime a new MetricUpdate is received by the
 	// PrometheusReporter.
-	OnUpdate(mu *MetricUpdate)
+	OnUpdate(mu MetricUpdate)
 	// CheckRetainedMetrics is called everytime the aggregator should check if a retained
 	// metric has expired.
 	CheckRetainedMetrics(now time.Duration)
@@ -38,7 +38,7 @@ type PrometheusReporter struct {
 	keyFile         string
 	caFile          string
 	registry        *prometheus.Registry
-	reportChan      chan *MetricUpdate
+	reportChan      chan MetricUpdate
 	retentionTime   time.Duration
 	retentionTicker *jitter.Ticker
 	aggregators     []Aggregator
@@ -62,7 +62,7 @@ func NewPrometheusReporter(port int, retentionTime time.Duration, certFile, keyF
 		keyFile:         keyFile,
 		caFile:          caFile,
 		registry:        registry,
-		reportChan:      make(chan *MetricUpdate),
+		reportChan:      make(chan MetricUpdate),
 		retentionTicker: jitter.NewTicker(tickerInterval, tickerInterval/10),
 		retentionTime:   retentionTime,
 		timeNowFn:       monotime.Now,
@@ -80,7 +80,7 @@ func (pr *PrometheusReporter) Start() {
 	go pr.startReporter()
 }
 
-func (pr *PrometheusReporter) Report(mu *MetricUpdate) error {
+func (pr *PrometheusReporter) Report(mu MetricUpdate) error {
 	pr.reportChan <- mu
 	return nil
 }

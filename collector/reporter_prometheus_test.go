@@ -44,7 +44,7 @@ var (
 // Common MetricUpdate definitions
 var (
 	// Metric update without a connection (ingress stats match those of muConn1Rule1AllowUpdate).
-	muNoConn1Rule1AllowUpdate = &MetricUpdate{
+	muNoConn1Rule1AllowUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		ruleID:       ingressRule1Allow,
@@ -56,7 +56,7 @@ var (
 	}
 
 	// Identical rule/direction connections with differing tuples
-	muConn1Rule1AllowUpdate = &MetricUpdate{
+	muConn1Rule1AllowUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		ruleID:       ingressRule1Allow,
@@ -70,7 +70,7 @@ var (
 			deltaBytes:   33,
 		},
 	}
-	muConn1Rule1AllowExpire = &MetricUpdate{
+	muConn1Rule1AllowExpire = MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
 		ruleID:       ingressRule1Allow,
@@ -84,7 +84,7 @@ var (
 			deltaBytes:   24,
 		},
 	}
-	muConn2Rule1AllowUpdate = &MetricUpdate{
+	muConn2Rule1AllowUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
 		ruleID:       ingressRule1Allow,
@@ -94,7 +94,7 @@ var (
 			deltaBytes:   77,
 		},
 	}
-	muConn2Rule1AllowExpire = &MetricUpdate{
+	muConn2Rule1AllowExpire = MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple2,
 		ruleID:       ingressRule1Allow,

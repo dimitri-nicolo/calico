@@ -36,7 +36,7 @@ type DeniedPacketsAggregateKey struct {
 	srcIP  [16]byte
 }
 
-func getDeniedPacketsAggregateKey(mu *MetricUpdate) DeniedPacketsAggregateKey {
+func getDeniedPacketsAggregateKey(mu MetricUpdate) DeniedPacketsAggregateKey {
 	return DeniedPacketsAggregateKey{
 		policy: getDeniedPacketRuleName(mu.ruleID),
 		srcIP:  mu.tuple.src,
@@ -95,7 +95,7 @@ func (dp *DeniedPacketsAggregator) RegisterMetrics(registry *prometheus.Registry
 	registry.MustRegister(gaugeDeniedBytes)
 }
 
-func (dp *DeniedPacketsAggregator) OnUpdate(mu *MetricUpdate) {
+func (dp *DeniedPacketsAggregator) OnUpdate(mu MetricUpdate) {
 	if mu.ruleID.Action != rules.RuleActionDeny {
 		// We only want denied packets. Skip the rest of them.
 		return
@@ -117,7 +117,7 @@ func (dp *DeniedPacketsAggregator) CheckRetainedMetrics(now time.Duration) {
 	}
 }
 
-func (dp *DeniedPacketsAggregator) reportMetric(mu *MetricUpdate) {
+func (dp *DeniedPacketsAggregator) reportMetric(mu MetricUpdate) {
 	key := getDeniedPacketsAggregateKey(mu)
 	value, ok := dp.aggStats[key]
 	if ok {
@@ -154,7 +154,7 @@ func (dp *DeniedPacketsAggregator) reportMetric(mu *MetricUpdate) {
 	return
 }
 
-func (dp *DeniedPacketsAggregator) expireMetric(mu *MetricUpdate) {
+func (dp *DeniedPacketsAggregator) expireMetric(mu MetricUpdate) {
 	key := getDeniedPacketsAggregateKey(mu)
 	value, ok := dp.aggStats[key]
 	if !ok || !value.refs.Contains(mu.tuple) {
