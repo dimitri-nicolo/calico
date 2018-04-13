@@ -82,15 +82,32 @@ pipeline {
           deleteDir()
         }
         success {
-          echo "Yay, we passed."
+            echo "Yay, we passed."
+        }
+        changed { // Notify only on change to success
+            script {
+                if (env.BRANCH_NAME == 'master') {
+                    GIT_HASH = env.GIT_COMMIT[0..6]
+                    if (currentBuild.currentResult == 'SUCCESS' && currentBuild.getPreviousBuild()?.result) {
+                        msg = "Passing again ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        slackSend message: msg, color: "good", channel: "ci-notifications-cnx"
+                    }
+                }
+            }
         }
         failure {
-          echo "Boo, we failed."
-          script {
-            if (env.BRANCH_NAME == 'master') {
-                slackSend message: "Failure during ${env.JOB_NAME} CI!\n${env.RUN_DISPLAY_URL}", color: "warning", channel: "cnx-ci-failures"
+            echo "Boo, we failed."
+            script {
+                if (env.BRANCH_NAME == 'master') {
+                    GIT_HASH = env.GIT_COMMIT[0..6]
+                    if (currentBuild.getPreviousBuild()?.result == 'FAILURE') {
+                        msg = "Still failing ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                    } else {
+                        msg = "New failure ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                    }
+                    slackSend message: msg, color: "danger", channel: "ci-notifications-cnx"
+                }
             }
-          }
         }
     }
 }
