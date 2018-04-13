@@ -168,6 +168,10 @@ func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv
 		// Need to add all the endpoints that this policy "applies to" to a set as well as the selector that qualified it.
 		// Selector strings may be hidden by input options or by Felix options.
 		for _, sel := range matches[wepName] {
+			if epp.Cluster != "" {
+				// Endpoints from a remote cluster can't apply on the local cluster, so skip them.
+				break
+			}
 			// If this endpoint has a selector that specifies the policy "applies to" this endpoint, add it to the "applies to" set
 			if strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
 				// sel is of the form "applicable endpoints; selector <selector>
@@ -220,7 +224,11 @@ func EvalPolicySelectorsPrint(output OutputList) {
 	if len(output.MatchingEndpoints) > 0 {
 		buf.WriteString(fmt.Sprintf("\nEndpoints matching %vPolicy \"%v\" rules:\n", tierPrefix, output.InputName))
 		for _, epp := range output.MatchingEndpoints {
-			endpointPrefix := fmt.Sprintf("  Workload endpoint %v/%v/%v/%v\n", epp.Node, epp.Orchestrator, epp.Workload, epp.Name)
+			cluster := ""
+			if epp.Cluster != "" {
+				cluster = epp.Cluster + "/"
+			}
+			endpointPrefix := fmt.Sprintf("  Workload endpoint %v%v/%v/%v/%v\n", cluster, epp.Node, epp.Orchestrator, epp.Workload, epp.Name)
 			for _, rp := range epp.Rules {
 				sel := fmt.Sprintf("%v rule %v %v match", rp.Direction, rp.Order, rp.SelectorType)
 				if rp.Selector != "" {
