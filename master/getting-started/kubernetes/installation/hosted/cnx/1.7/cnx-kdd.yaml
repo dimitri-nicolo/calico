@@ -167,6 +167,7 @@ rules:
       - tiers
       - clusterinformations
       - hostendpoints
+      - licensekeys
     verbs:
       - "*"
 
