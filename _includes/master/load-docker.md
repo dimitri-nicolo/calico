@@ -1,4 +1,4 @@
-{% if include.yaml == "calico" %}
+{% if include.yaml == "calico" and include.orchestrator == "kubernetes" %}
 ### Pulling the images from another private registry
 {% endif %}
 

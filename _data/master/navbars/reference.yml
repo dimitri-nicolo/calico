@@ -53,28 +53,30 @@ toc:
     section:
       - title: Overview
         path: /reference/calicoctl/resources/
-      - title: BGP Peer
-        path: /reference/calicoctl/resources/bgppeer
       - title: BGP Configuration
         path: /reference/calicoctl/resources/bgpconfig
+      - title: BGP Peer
+        path: /reference/calicoctl/resources/bgppeer
       - title: Felix Configuration
         path: /reference/calicoctl/resources/felixconfig
-      - title: Remote Cluster Configuration
-        path: /reference/calicoctl/resources/remoteclusterconfiguration
+      - title: Global Network Policy
+        path: /reference/calicoctl/resources/globalnetworkpolicy
       - title: Global Network Set
         path: /reference/calicoctl/resources/globalnetworkset
       - title: Host Endpoint
         path: /reference/calicoctl/resources/hostendpoint
       - title: IP Pool
         path: /reference/calicoctl/resources/ippool
-      - title: Node
-        path: /reference/calicoctl/resources/node
+      - title: License Key
+        path: /reference/calicoctl/resources/licensekey
       - title: Network Policy
         path: /reference/calicoctl/resources/networkpolicy
-      - title: Global Network Policy
-        path: /reference/calicoctl/resources/globalnetworkpolicy
+      - title: Node
+        path: /reference/calicoctl/resources/node
       - title: Profile
         path: /reference/calicoctl/resources/profile
+      - title: Remote Cluster Configuration
+        path: /reference/calicoctl/resources/remoteclusterconfiguration
       - title: Tier
         path: /reference/calicoctl/resources/tier
       - title: Workload Endpoint

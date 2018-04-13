@@ -19,17 +19,40 @@ in JSON format. When you open the file, it should look something like the follow
 ```
 
 The file should be named `config.json`. It contains a robot account token that will allow you to retrieve the {{site.prodname}} images from the private Tigera repository.
+
+## Obtain a license key
+
+Contact your Tigera support representative to obtain a license key in YAML format. 
+When you open the file, it should look something like the following.
+
+```yaml
+apiVersion: projectcalico.org/v3
+kind: LicenseKey
+metadata:
+  creationTimestamp: null
+  name: default
+spec:
+  certificate: |
+    -----BEGIN CERTIFICATE-----
+    MII...n5
+    -----END CERTIFICATE-----
+  token: eyJ...zaQ
+```
+
+The file should be named `<customer-name>-licensekey.yaml`. For example, if your customer name
+was Awesome Corp, the file would be named `awesome-corp-licensekey.yaml`.
    
-## Choose your orchestrator
+## Get started
 
-To get started using {{site.prodname}}, we recommend running
-through one or more of the available tutorials linked below.
-
-These tutorials will help you understand the different environment options when
-using {{site.prodname}}.  In most cases we provide worked examples using manual setup on
-your own servers, a quick set-up in a virtualized environment using Vagrant and
-a number of cloud services.
-
-- [{{site.prodname}} with Kubernetes](kubernetes)
-- [{{site.prodname}} with OpenShift](openshift/installation)
-- [Host protection](bare-metal/bare-metal)
+<div class="row">
+  <div class="col-xs-6 col-md-3">
+    <a href="/{{page.version}}/getting-started/kubernetes/" class="thumbnail">
+      <img src="{{site.baseurl}}/images/kubernetes-button.svg" alt="Kubernetes" width="40%">
+    </a>
+  </div>
+  <div class="col-xs-6 col-md-3">
+    <a href="/{{page.version}}/getting-started/openshift/installation" class="thumbnail">
+      <img src="{{site.baseurl}}/images/openshift-button.svg" alt="OpenShift" width="35%">
+    </a>
+  </div>
+</div>

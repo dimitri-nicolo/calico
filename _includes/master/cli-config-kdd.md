@@ -11,6 +11,11 @@
 | `k8sToken`                | `K8S_TOKEN`          | Token to be used for accessing the Kubernetes API.                                                        | string
 
 
+> **Important**: The `kubeconfig` file specifies the user whose privileges are used. We recommend
+> giving only trusted administrator the permission to modify {{site.prodname}}
+> Custom Resource Definitions.
+{: .alert .alert-danger}
+
 > **Note**: All environment variables may also be prefixed with `"CALICO_"`, for
 > example `"CALICO_DATASTORE_TYPE"` and `"CALICO_KUBECONFIG"` etc. may be used.
 > This is useful if the non-prefixed names clash with existing environment

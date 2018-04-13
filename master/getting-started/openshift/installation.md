@@ -2,17 +2,20 @@
 title: Installing CNX on OpenShift
 ---
 
-Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible v3.6.
+Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.
 The information below explains the variables which must be set during the standard
 [Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
+
+## Before you begin
+
+- Ensure that you meet the {{site.prodname}} [system requirements](requirements). 
+
+- Ensure that you have the [private registry credentials](../../getting-started/#obtain-the-private-registry-credentials) 
+  and a [license key](../../getting-started/#obtain-a-license-key).
 
 ## Pulling the private {{site.prodname}} images
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
-
-## Before you begin
-
-Ensure that your cluster meets the {{site.prodname}} [system requirements](requirements). 
 
 ## Installation
 
@@ -55,7 +58,7 @@ You are now ready to execute the ansible provision which will install {{site.pro
 certs to each node. If you would prefer Calico not connect to the same etcd as OpenShift, you may modify the install
 such that Calico connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
-### Installing {{site.prodname}} Manager
+## Installing {{site.prodname}} Manager
 
 1. Create a Kubernetes secret from your etcd certificates. Example command:
 
@@ -107,11 +110,11 @@ such that Calico connects to an etcd you have already set up by following the [d
 
 {% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
-### Installing Policy Violation Alerting
+## Installing Policy Violation Alerting
 
 Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
 
-#### Enable Metrics
+### Enable Metrics
 
 **Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
@@ -181,7 +184,7 @@ Operator, Prometheus, and Alertmanager instances for you.
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
 See [Policy Violation Alerting](../../reference/cnx/policy-violations) for more information.
 
-#### Policy query with calicoq
+### Policy query with calicoq
 
 Once {{site.prodname}} is installed in OpenShift, each node is automatically configured with
 a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate requests to etcd.
@@ -193,3 +196,4 @@ We recommend installing calicoq as a container in OpenShift. Refer to [Installin
 
 See the [calicoq reference section](../../reference/calicoq/) for more information on using `calicoq`.
 
+{% include {{page.version}}/apply-license.md %}

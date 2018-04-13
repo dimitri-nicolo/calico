@@ -14,8 +14,10 @@ be followed by users who have a specific need that cannot be met by using manife
 
 ## Before you begin
 
-Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements). 
+- Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements). 
 
+- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials) 
+  and a [license key](../../../getting-started/#obtain-a-license-key).
 
 ## About the {{site.prodname}} components
 
@@ -215,5 +217,7 @@ kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/instal
 {% include {{page.version}}/cnx-mgr-install.md init="systemd" %}
 
 {% include {{page.version}}/cnx-monitor-install.md %}
+
+{% include {{page.version}}/apply-license.md %}
 
 {% include {{page.version}}/gs-next-steps.md %}
