@@ -57,7 +57,8 @@ type PolicyMatchListener interface {
 // The rules in a policy may also contain selectors; those are are ignored here; they are
 // mapped to IP sets by the RuleScanner.
 type ActiveRulesCalculator struct {
-	// Caches of all known policies/profiles.
+	// Caches of all known tiers/policies/profiles.
+	allTiers        map[string]*model.Tier
 	allPolicies     map[model.PolicyKey]*model.Policy
 	allProfileRules map[string]*model.ProfileRules
 
@@ -80,14 +81,15 @@ type ActiveRulesCalculator struct {
 	// Callback objects.
 	RuleScanner           ruleScanner
 	PolicyMatchListener   PolicyMatchListener
-	OnPolicyCountsChanged func(numPolicies, numProfiles int)
+	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles int)
 }
 
 func NewActiveRulesCalculator() *ActiveRulesCalculator {
 	arc := &ActiveRulesCalculator{
-		// Caches of all known policies/profiles.
+		// Caches of all known policies/profiles and tiers.
 		allPolicies:     make(map[model.PolicyKey]*model.Policy),
 		allProfileRules: make(map[string]*model.ProfileRules),
+		allTiers:        make(map[string]*model.Tier),
 
 		// Policy/profile ID to matching endpoint sets.
 		policyIDToEndpointKeys:  multidict.NewIfaceToIface(),
@@ -110,6 +112,8 @@ func (arc *ActiveRulesCalculator) RegisterWith(localEndpointDispatcher, allUpdDi
 	allUpdDispatcher.Register(model.ProfileRulesKey{}, arc.OnUpdate)
 	allUpdDispatcher.Register(model.ProfileLabelsKey{}, arc.OnUpdate)
 	allUpdDispatcher.Register(model.ProfileTagsKey{}, arc.OnUpdate)
+	// ... and tiers as well. only required for stats update.
+	allUpdDispatcher.Register(model.TierKey{}, arc.OnUpdate)
 	allUpdDispatcher.RegisterStatusHandler(arc.OnStatusUpdate)
 }
 
@@ -161,7 +165,7 @@ func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (_ bool) {
 				log.Debugf("Profile rules deleted while inactive: %v", key.Name)
 			}
 		}
-		// Update the policy/profile counts.
+		// Update the tier/policy/profile counts.
 		arc.updateStats()
 	case model.PolicyKey:
 		if update.Value != nil {
@@ -189,7 +193,18 @@ func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (_ bool) {
 			// No need to call updatePolicy() because we'll have got a matchStopped
 			// callback.
 		}
-		// Update the policy/profile counts.
+		// Update the tier/policy/profile counts.
+		arc.updateStats()
+	case model.TierKey:
+		if update.Value != nil {
+			log.Debugf("Updating ARC for tier %v", key)
+			tier := update.Value.(*model.Tier)
+			arc.allTiers[key.Name] = tier
+		} else {
+			log.Debugf("Removing tier %v from ARC", key)
+			delete(arc.allTiers, key.Name)
+		}
+		// Update the tier/policy/profile counts.
 		arc.updateStats()
 	default:
 		log.Infof("Ignoring unexpected update: %v %#v",
@@ -203,7 +218,7 @@ func (arc *ActiveRulesCalculator) updateStats() {
 	if arc.OnPolicyCountsChanged == nil {
 		return
 	}
-	arc.OnPolicyCountsChanged(len(arc.allPolicies), len(arc.allProfileRules))
+	arc.OnPolicyCountsChanged(len(arc.allTiers), len(arc.allPolicies), len(arc.allProfileRules))
 }
 
 func (arc *ActiveRulesCalculator) OnStatusUpdate(status api.SyncStatus) {
