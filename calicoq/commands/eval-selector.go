@@ -3,7 +3,9 @@
 package commands
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	log "github.com/sirupsen/logrus"
@@ -18,27 +20,29 @@ func EvalSelector(configFile, sel string, outputFormat string) (err error) {
 	cbs.Start(noopFilter)
 
 	matches := cbs.GetMatches()
+	output := EvalSelectorPrintObjects(sel, matches)
 
 	switch outputFormat {
 	case "yaml":
-		EvalSelectorPrintYAML(sel, matches)
+		EvalSelectorPrintYAML(output)
 	case "json":
-		EvalSelectorPrintJSON(sel, matches)
+		EvalSelectorPrintJSON(output)
 	case "ps":
-		EvalSelectorPrint(sel, matches)
+		EvalSelectorPrint(output)
 	}
 	return
 }
 
-func EvalSelectorPrint(sel string, matches map[interface{}][]string) {
-	fmt.Printf("Endpoints matching selector %v:\n", sel)
-	for endpoint := range matches {
-		fmt.Printf("  %v\n", endpointName(endpoint))
+func EvalSelectorPrint(output OutputList) {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("%v:\n", output.Description))
+	for _, endpoint := range output.Endpoints {
+		buf.WriteString(fmt.Sprintf("  %v\n", endpoint.PrintName()))
 	}
+	buf.WriteTo(os.Stdout)
 }
 
-func EvalSelectorPrintYAML(sel string, matches map[interface{}][]string) {
-	output := EvalSelectorPrintObjects(sel, matches)
+func EvalSelectorPrintYAML(output OutputList) {
 	err := printYAML([]OutputList{output})
 	if err != nil {
 		log.Errorf("Unexpected error printing to YAML: %s", err)
@@ -46,8 +50,7 @@ func EvalSelectorPrintYAML(sel string, matches map[interface{}][]string) {
 	}
 }
 
-func EvalSelectorPrintJSON(sel string, matches map[interface{}][]string) {
-	output := EvalSelectorPrintObjects(sel, matches)
+func EvalSelectorPrintJSON(output OutputList) {
 	err := printJSON([]OutputList{output})
 	if err != nil {
 		log.Errorf("Unexpected error printing to JSON: %s", err)
@@ -57,10 +60,10 @@ func EvalSelectorPrintJSON(sel string, matches map[interface{}][]string) {
 
 func EvalSelectorPrintObjects(sel string, matches map[interface{}][]string) OutputList {
 	output := OutputList{
-		Description: fmt.Sprintf("Endpoints matching selector %v:\n", sel),
+		Description: fmt.Sprintf("Endpoints matching selector %v", sel),
 	}
 	for endpoint := range matches {
-		output.Endpoints = append(output.Endpoints, NewWorkloadEndpointPrintFromKey(endpoint))
+		output.Endpoints = append(output.Endpoints, NewEndpointPrintFromKey(endpoint))
 	}
 
 	return output

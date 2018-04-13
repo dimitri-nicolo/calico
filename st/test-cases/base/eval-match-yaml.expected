@@ -1,0 +1,9 @@
+eval app=="frontend" -o yaml
+
+- description: Endpoints matching selector app=="frontend"
+  endpoints:
+  - name: eth0
+    node: rack1-host1
+    orchestrator: k8s
+    workload: default/frontend-5gs43
+

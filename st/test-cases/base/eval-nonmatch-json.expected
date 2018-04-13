@@ -1,0 +1,7 @@
+eval app=="rubbish" -o json
+
+[
+  {
+    "description": "Endpoints matching selector app==\"rubbish\""
+  }
+]

@@ -3,6 +3,7 @@
 package commands
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -97,21 +98,22 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 			matches[endpointName(endpointID)] = selectors
 		}
 
+		output := EvalPolicySelectorsPrintObjects(policyName, hideRuleMatches, kv, matches)
+
 		switch outputFormat {
 		case "yaml":
-			EvalPolicySelectorsPrintYAML(policyName, hideRuleMatches, kv, matches)
+			EvalPolicySelectorsPrintYAML(output)
 		case "json":
-			EvalPolicySelectorsPrintJSON(policyName, hideRuleMatches, kv, matches)
+			EvalPolicySelectorsPrintJSON(output)
 		case "ps":
-			EvalPolicySelectorsPrint(policyName, hideRuleMatches, kv, matches)
+			EvalPolicySelectorsPrint(output)
 		}
 	}
 
 	return
 }
 
-func EvalPolicySelectorsPrintYAML(policyName string, hideRuleMatches bool, kv *model.KVPair, matches map[string][]string) {
-	output := EvalPolicySelectorsPrintObjects(policyName, hideRuleMatches, kv, matches)
+func EvalPolicySelectorsPrintYAML(output OutputList) {
 	err := printYAML([]OutputList{output})
 	if err != nil {
 		log.Errorf("Unexpected error printing to YAML: %s", err)
@@ -119,8 +121,7 @@ func EvalPolicySelectorsPrintYAML(policyName string, hideRuleMatches bool, kv *m
 	}
 }
 
-func EvalPolicySelectorsPrintJSON(policyName string, hideRuleMatches bool, kv *model.KVPair, matches map[string][]string) {
-	output := EvalPolicySelectorsPrintObjects(policyName, hideRuleMatches, kv, matches)
+func EvalPolicySelectorsPrintJSON(output OutputList) {
 	err := printJSON([]OutputList{output})
 	if err != nil {
 		log.Errorf("Unexpected error printing to JSON: %s", err)
@@ -129,11 +130,14 @@ func EvalPolicySelectorsPrintJSON(policyName string, hideRuleMatches bool, kv *m
 }
 
 func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv *model.KVPair, matches map[string][]string) OutputList {
-	names := []string{}
+	// matches is a mapping of Workload Endpoint names to a list of Felix selector strings.
+	// The selector strings specify whether the endpoint matches a rule for the policy or if the policy applies to this endpoint.
+	// wepNames represents all the Workload Endpoint name strings passed in from Felix.
+	wepNames := []string{}
 	for name, _ := range matches {
-		names = append(names, name)
+		wepNames = append(wepNames, name)
 	}
-	sort.Strings(names)
+	sort.Strings(wepNames)
 
 	// Display tier when non-default.
 	var tier string
@@ -150,78 +154,86 @@ func EvalPolicySelectorsPrintObjects(policyName string, hideRuleMatches bool, kv
 
 	output := OutputList{
 		Description: fmt.Sprintf("Endpoints that %sPolicy %s applies to and the endpoints that match the policy", tierPrefix, policyName),
+		Tier:        tier,
+		InputName:   policyName,
 	}
 
-	for _, name := range names {
-		wepp := NewWorkloadEndpointPrintFromNameString(name)
-		if wepp == nil {
+	for _, wepName := range wepNames {
+		// Create the Workload Endpoint object from the name
+		epp := NewEndpointPrintFromNameString(wepName)
+		if epp == nil {
 			continue
 		}
 
-		for _, sel := range matches[name] {
+		// Need to add all the endpoints that this policy "applies to" to a set as well as the selector that qualified it.
+		// Selector strings may be hidden by input options or by Felix options.
+		for _, sel := range matches[wepName] {
+			// If this endpoint has a selector that specifies the policy "applies to" this endpoint, add it to the "applies to" set
 			if strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
 				// sel is of the form "applicable endpoints; selector <selector>
-				// if the selector is hidden, it will be of the form "applicable endpoints"
-				if len(sel) == 4 {
+				// If the selector is hidden, it will be of the form "applicable endpoints"
+				// Add the selector to the endpoint if one exists.
+				if strings.HasPrefix(sel, "applicable endpoints; selector") {
 					selector := strings.SplitN(sel, " ", 4)[3]
-					wepp.Selector = selector[1 : len(selector)-1]
-					output.ApplyToEndpoints = append(output.ApplyToEndpoints, wepp)
-					break
+					epp.Selector = selector[1 : len(selector)-1]
 				}
-			} else if !hideRuleMatches {
-				wepp.Rules = append(wepp.Rules, NewRulePrintFromSelectorString(sel))
+				output.ApplyToEndpoints = append(output.ApplyToEndpoints, epp)
+				break
 			}
 		}
 
-		output.MatchingEndpoints = append(output.MatchingEndpoints, wepp)
+		// Add the relevant rules to any matching endpoints
+		if !hideRuleMatches {
+			sort.Strings(matches[wepName])
+			// Need to loop over the selectors again since now we are adding every valid rule to an endpoint
+			for _, sel := range matches[wepName] {
+				if !strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
+					epp.Rules = append(epp.Rules, NewRulePrintFromSelectorString(sel))
+				}
+			}
+			output.MatchingEndpoints = append(output.MatchingEndpoints, epp)
+		}
 	}
 
 	return output
 }
 
-func EvalPolicySelectorsPrint(policyName string, hideRuleMatches bool, kv *model.KVPair, matches map[string][]string) {
-	names := []string{}
-	for name, _ := range matches {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+func EvalPolicySelectorsPrint(output OutputList) {
+	// Write all output to a buffer and then write that buffer to Stdout
+	var buf bytes.Buffer
 
 	// Display tier when non-default.
-	var tier string
-	switch kv.Value.(type) {
-	case *apiv3.NetworkPolicy:
-		tier = kv.Value.(*apiv3.NetworkPolicy).Spec.Tier
-	case *apiv3.GlobalNetworkPolicy:
-		tier = kv.Value.(*apiv3.GlobalNetworkPolicy).Spec.Tier
-	}
 	tierPrefix := ""
-	if tier != "default" && tier != "" {
-		tierPrefix = "Tier \"" + tier + "\" "
+	if output.Tier != "default" && output.Tier != "" {
+		tierPrefix = "Tier \"" + output.Tier + "\" "
 	}
 
-	fmt.Printf("%vPolicy \"%v\" applies to these endpoints:\n", tierPrefix, policyName)
-	for _, name := range names {
-		for _, sel := range matches[name] {
-			if strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
-				fmt.Printf("  %v%v\n", name, strings.TrimPrefix(sel, APPLICABLE_ENDPOINTS))
-				break
-			}
+	buf.WriteString(fmt.Sprintf("%vPolicy \"%v\" applies to these endpoints:\n", tierPrefix, output.InputName))
+	for _, epp := range output.ApplyToEndpoints {
+		appliesToEndpointString := fmt.Sprintf("  Workload endpoint %v/%v/%v/%v\n", epp.Node, epp.Orchestrator, epp.Workload, epp.Name)
+		if epp.Selector != "" {
+			appliesToEndpointString = fmt.Sprintf("  Workload endpoint %v/%v/%v/%v; selector \"%v\"\n", epp.Node, epp.Orchestrator, epp.Workload, epp.Name, epp.Selector)
 		}
+		buf.WriteString(appliesToEndpointString)
 	}
 
-	if !hideRuleMatches {
-		fmt.Printf("\nEndpoints matching %vPolicy \"%v\" rules:\n", tierPrefix, policyName)
-		for _, name := range names {
-			endpointPrefix := fmt.Sprintf("  %v\n", name)
-			sort.Strings(matches[name])
-			for _, sel := range matches[name] {
-				if !strings.HasPrefix(sel, APPLICABLE_ENDPOINTS) {
-					fmt.Printf("%v    %v\n", endpointPrefix, sel)
-					endpointPrefix = ""
+	if len(output.MatchingEndpoints) > 0 {
+		buf.WriteString(fmt.Sprintf("\nEndpoints matching %vPolicy \"%v\" rules:\n", tierPrefix, output.InputName))
+		for _, epp := range output.MatchingEndpoints {
+			endpointPrefix := fmt.Sprintf("  Workload endpoint %v/%v/%v/%v\n", epp.Node, epp.Orchestrator, epp.Workload, epp.Name)
+			for _, rp := range epp.Rules {
+				sel := fmt.Sprintf("%v rule %v %v match", rp.Direction, rp.Order, rp.SelectorType)
+				if rp.Selector != "" {
+					sel = fmt.Sprintf("%v rule %v %v match; selector \"%v\"", rp.Direction, rp.Order, rp.SelectorType, rp.Selector)
 				}
+				buf.WriteString(fmt.Sprintf("%v    %v\n", endpointPrefix, sel))
+				endpointPrefix = ""
 			}
 		}
 	}
+
+	// Write the buffer to Stdout
+	buf.WriteTo(os.Stdout)
 }
 
 // These are slightly modified copies (they do not return an error) of

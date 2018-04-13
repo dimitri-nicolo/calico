@@ -16,8 +16,8 @@ func flagExpectedErrorLogs() {
 	log.Error("*** The following ERROR log is expected")
 }
 
-var _ = Describe("Test NewWorkloadEndpointPrintFromKey", func() {
-	It("Creates a new WorkloadEndpointPrint Object with a WorkloadEndpointKey", func() {
+var _ = Describe("Test NewEndpointPrintFromKey", func() {
+	It("Creates a new EndpointPrint Object with a WorkloadEndpointKey", func() {
 		key := model.WorkloadEndpointKey{
 			Hostname:       "testNode",
 			OrchestratorID: "testOrchestrator",
@@ -25,60 +25,60 @@ var _ = Describe("Test NewWorkloadEndpointPrintFromKey", func() {
 			EndpointID:     "testEndpoint",
 		}
 
-		wepp := NewWorkloadEndpointPrintFromKey(key)
-		Expect(wepp.Node).To(Equal("testNode"))
-		Expect(wepp.Orchestrator).To(Equal("testOrchestrator"))
-		Expect(wepp.Workload).To(Equal("testWorkload"))
-		Expect(wepp.Name).To(Equal("testEndpoint"))
+		epp := NewEndpointPrintFromKey(key)
+		Expect(epp.Node).To(Equal("testNode"))
+		Expect(epp.Orchestrator).To(Equal("testOrchestrator"))
+		Expect(epp.Workload).To(Equal("testWorkload"))
+		Expect(epp.Name).To(Equal("testEndpoint"))
 	})
 
-	It("Creates a new WorkloadEndpointPrint Object with a HostEndpointKey", func() {
+	It("Creates a new EndpointPrint Object with a HostEndpointKey", func() {
 		key := model.HostEndpointKey{
 			EndpointID: "testEndpoint",
 		}
 
-		wepp := NewWorkloadEndpointPrintFromKey(key)
-		Expect(wepp.Name).To(Equal("testEndpoint"))
+		epp := NewEndpointPrintFromKey(key)
+		Expect(epp.Name).To(Equal("testEndpoint"))
 	})
 
-	It("Creates an empty WorkloadEndpointPrint Object if a different Key is given", func() {
+	It("Creates an empty EndpointPrint Object if a different Key is given", func() {
 		key := model.PolicyKey{
 			Name: "testPolicy",
 		}
 
-		wepp := NewWorkloadEndpointPrintFromKey(key)
-		Expect(wepp.Node).To(Equal(""))
-		Expect(wepp.Orchestrator).To(Equal(""))
-		Expect(wepp.Workload).To(Equal(""))
-		Expect(wepp.Name).To(Equal(""))
+		epp := NewEndpointPrintFromKey(key)
+		Expect(epp.Node).To(Equal(""))
+		Expect(epp.Orchestrator).To(Equal(""))
+		Expect(epp.Workload).To(Equal(""))
+		Expect(epp.Name).To(Equal(""))
 	})
 })
 
-var _ = Describe("Test NewWorkloadEndpointPrintFromNameString", func() {
-	It("Creates a new WorkloadEndpointPrint Object with a valid name string", func() {
+var _ = Describe("Test NewEndpointPrintFromNameString", func() {
+	It("Creates a new EndpointPrint Object with a valid name string", func() {
 		nameString := "Workload endpoint testNode/testOrchestrator/testWorkload/testName"
-		wepp := NewWorkloadEndpointPrintFromNameString(nameString)
-		Expect(wepp.Node).To(Equal("testNode"))
-		Expect(wepp.Orchestrator).To(Equal("testOrchestrator"))
-		Expect(wepp.Workload).To(Equal("testWorkload"))
-		Expect(wepp.Name).To(Equal("testName"))
+		epp := NewEndpointPrintFromNameString(nameString)
+		Expect(epp.Node).To(Equal("testNode"))
+		Expect(epp.Orchestrator).To(Equal("testOrchestrator"))
+		Expect(epp.Workload).To(Equal("testWorkload"))
+		Expect(epp.Name).To(Equal("testName"))
 	})
 
 	It("Returns nil for invalid name strings", func() {
 		tooManyWords := "Workload endpoint stuff testNode/testOrchestrator/testWorkload/testName"
 		flagExpectedErrorLogs()
-		wepp := NewWorkloadEndpointPrintFromNameString(tooManyWords)
-		Expect(wepp == nil).To(Equal(true))
+		epp := NewEndpointPrintFromNameString(tooManyWords)
+		Expect(epp == nil).To(Equal(true))
 
 		wrongType := "Policy endpoint testNode/testOrchestrator/testWorkload/testName"
 		flagExpectedErrorLogs()
-		wepp = NewWorkloadEndpointPrintFromNameString(wrongType)
-		Expect(wepp == nil).To(Equal(true))
+		epp = NewEndpointPrintFromNameString(wrongType)
+		Expect(epp == nil).To(Equal(true))
 
 		notEnoughIdents := "Workload endpoint testNode/testOrchestrator/testWorkload"
 		flagExpectedErrorLogs()
-		wepp = NewWorkloadEndpointPrintFromNameString(notEnoughIdents)
-		Expect(wepp == nil).To(Equal(true))
+		epp = NewEndpointPrintFromNameString(notEnoughIdents)
+		Expect(epp == nil).To(Equal(true))
 	})
 })
 

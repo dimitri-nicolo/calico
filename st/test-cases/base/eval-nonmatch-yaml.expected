@@ -1,0 +1,4 @@
+eval app=="rubbish" -o yaml
+
+- description: Endpoints matching selector app=="rubbish"
+
