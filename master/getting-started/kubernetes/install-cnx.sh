@@ -48,10 +48,11 @@ CLEANUP=0
 # Convenience variables to cut down on tiresome typing
 CNX_PULL_SECRET_FILENAME=${CNX_PULL_SECRET_FILENAME:="cnx-pull-secret.yml"}
 
-CALICOCTL_REGISTRY=${CALICOCTL_REGISTRY:="quay.io/tigera"}
+# Registry to pull calicoctl and calicoq from
+CALICO_UTILS_REGISTRY=${CALICO_UTILS_REGISTRY:="quay.io/tigera"}
 
-# Calicoctl binary install directory
-CALICOCTL_INSTALL_DIR=${CALICOCTL_INSTALL_DIR:="/usr/local/bin"}
+# Calicoctl and calicoq binary install directory
+CALICO_UTILS_INSTALL_DIR=${CALICO_UTILS_INSTALL_DIR:="/usr/local/bin"}
 
 #
 # promptToContinue()
@@ -427,7 +428,8 @@ EOF
 }
 
 #
-# deleteBasicAuth()
+# deleteBasicAuth() - clean up basic auth file and
+# delete cluster admin role for user=jane.
 #
 deleteBasicAuth() {
   runAsRoot rm -f /etc/kubernetes/pki/basic_auth.csv
@@ -444,6 +446,16 @@ EOF
 }
 
 #
+# deleteKubeDnsPod() - delete kube-dns pod so that subsequent installs
+# block on DNS pod coming up.
+#
+deleteKubeDnsPod() {
+  echo -n "Restarting kube-dns ... "
+  runAsRoot "kubectl -n kube-system delete pod --selector=k8s-app=kube-dns"
+  echo "done."
+}
+
+#
 # dockerLogin() - login to Tigera registry
 #
 dockerLogin() {
@@ -455,8 +467,8 @@ dockerLogin() {
   username=$(echo -n $dockerCredentials | awk -F ":" '{print $1}')
   token=$(echo -n $dockerCredentials | awk -F ":" '{print $2}')
 
-  echo -n "Logging in to ${CALICOCTL_REGISTRY} ... "
-  run "docker login --username=${username} --password=${token} ${CALICOCTL_REGISTRY}"
+  echo -n "Logging in to ${CALICO_UTILS_REGISTRY} ... "
+  run "docker login --username=${username} --password=${token} ${CALICO_UTILS_REGISTRY}"
   echo "done."
 }
 
@@ -509,49 +521,57 @@ EOF
 }
 
 #
-# deleteCalicoctl() - delete "/etc/calico/calicoctl.cfg"
-# and calicoctl binary.
+# deleteCalicoBinaries() - delete "/etc/calico/calicoctl.cfg",
+# calicoctl, and calicoq binaries.
 #
-deleteCalicoctl() {
+deleteCalicoBinaries() {
   local cfgFile="/etc/calico/calicoctl.cfg"
   runAsRoot "rm -f $cfgFile"
-  runAsRoot "rm -f ${CALICOCTL_INSTALL_DIR}/calicoctl"
+  runAsRoot "rm -f ${CALICO_UTILS_INSTALL_DIR}/calicoctl"
+  runAsRoot "rm -f ${CALICO_UTILS_INSTALL_DIR}/calicoq"
 }
 
 #
-# installCalicoCtlBinary() - pull the calicoctl container image
-# and copy the binary to /usr/local/bin
+# installCalicoBinary() - takes utility name as arg, e.g. "calicoctl".
+# Pulls the appropriate container image, copies the binary to local
+# file system (/usr/local/bin/ by default). Also creates calicoctl
+# config file.
 #
-installCalicoCtlBinary() {
-  dockerLogin    # login to quay.io/tigera
+installCalicoBinary() {
+  dockerLogin             # login to quay.io/tigera
 
-  # Pull calicoctl container image
-  echo -n "Pulling calicoctl:${VERSION} from ${CALICOCTL_REGISTRY} ... "
-  run "docker pull ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
+  local utilityName=$1    # either "calicoctl" or "calicoq"
+
+  # Validate arg
+  [ "$utilityName" == "calicoctl" ] || [ "$utilityName" == "calicoq" ] || fatalError "Utility name \"${utilityName}\" is not valid, must be either \"calicoctl\" or \"calicoq\"."
+
+  # Pull utility's container image
+  echo -n "Pulling ${utilityName}:${VERSION} from ${CALICO_UTILS_REGISTRY} ... "
+  run "docker pull ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
   echo "done."
 
-  # Create a local copy of calicoctl image
-  echo -n "Copying of the calicoctl:${VERSION} container ... "
-  runIgnoreErrors "docker rm calicoctl-copy"
-  run "docker create --name calicoctl-copy ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
+  # Create a local copy of utility image
+  echo -n "Copying the ${utilityName}:${VERSION} container ... "
+  runIgnoreErrors "docker rm calico-utility-copy"
+  run "docker create --name calico-utility-copy ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
   echo "done."
 
-  # Copy calicoctl binary to current directory
-  echo -n "Copying calicoctl file to current directory ... "
-  run "docker cp calicoctl-copy:/calicoctl ./calicoctl"
-  run "chmod +x ./calicoctl"
+  # Copy binary to current directory
+  echo -n "Copying \"${utilityName}\" to current directory ... "
+  run "docker cp calico-utility-copy:/${utilityName} ./${utilityName}"
+  run "chmod +x ./${utilityName}"
   echo "done."
 
-  # Copy calicoctl to ${CALICOCTL_INSTALL_DIR} (/usr/local/bin/)
-  echo -n "Installing calicoctl in ${CALICOCTL_INSTALL_DIR} ... "
-  runAsRoot "mkdir -p ${CALICOCTL_INSTALL_DIR}"
-  runAsRoot "cp ./calicoctl ${CALICOCTL_INSTALL_DIR}"
+  # Copy binary to ${CALICO_UTILS_INSTALL_DIR} (/usr/local/bin/)
+  echo -n "Installing ${utilityName} in ${CALICO_UTILS_INSTALL_DIR} ... "
+  runAsRoot "mkdir -p ${CALICO_UTILS_INSTALL_DIR}"
+  runAsRoot "cp ./${utilityName} ${CALICO_UTILS_INSTALL_DIR}"
   echo "done."
 
   # Clean up
-  runIgnoreErrors "docker rm calicoctl-copy"
-  run "docker rmi ${CALICOCTL_REGISTRY}/calicoctl:${VERSION}"
-  run "rm -f ./calicoctl"
+  runIgnoreErrors "docker rm calico-utility-copy"
+  run "docker rmi ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  run "rm -f ./${utilityName}"
 
   createCalicoctlCfg    # If not already present, create "/etc/calico/calicoctl.cfg"
 }
@@ -803,32 +823,34 @@ deleteCNXManagerSecret() {
 # installCNX() - install CNX
 #
 installCNX() {
-  checkSettings install         # Verify settings are correct with user
-  validateDatastore install     # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
+  checkSettings install           # Verify settings are correct with user
+  validateDatastore install       # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
 
-  checkRequiredFilesPresent     # Validate kubernetes files are present
-  checkRequirementsInstalled    # Validate that all required programs are installed
-  checkNetworkManager           # Warn user if NetworkMgr is enabled w/o "cali" interace exception
+  checkRequiredFilesPresent       # Validate kubernetes files are present
+  checkRequirementsInstalled      # Validate that all required programs are installed
+  checkNetworkManager             # Warn user if NetworkMgr is enabled w/o "cali" interace exception
 
-  createImagePullSecret         # Create the image pull secret
-  setupBasicAuth                # Create 'jane/welc0me' account w/cluster admin privs
+  createImagePullSecret           # Create the image pull secret
+  setupBasicAuth                  # Create 'jane/welc0me' account w/cluster admin privs
 
-  downloadManifests             # Download all manifests, if they're not already present in current dir
-  installCalicoCtlBinary        # Copy quay.io/tigera/calicoctl to $cwd, create /etc/calico/calicoctl.cfg
+  downloadManifests               # Download all manifests, if they're not already present in current dir
 
-  applyKddRbacManifest          # Apply "rbac-kdd.yaml" (kdd datastore only)
-  applyCalicoManifest           # Apply calico.yaml
+  installCalicoBinary "calicoctl" # Install quay.io/tigera/calicoctl binary, create /etc/calico/calicoctl.cfg
+  installCalicoBinary "calicoq"   # Install quay.io/tigera/calicoq binary
 
-  applyLicenseManifest          # If the user specified a license file, apply it
+  applyKddRbacManifest            # Apply "rbac-kdd.yaml" (kdd datastore only)
+  applyCalicoManifest             # Apply calico.yaml
 
-  removeMasterTaints            # Remove master taints
-  createCNXManagerSecret        # Create cnx-manager-tls to enable manager/apiserver communication
-  applyCNXManifest              # Apply cnx-[etcd|kdd].yaml
+  applyLicenseManifest            # If the user specified a license file, apply it
+
+  removeMasterTaints              # Remove master taints
+  createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
+  applyCNXManifest                # Apply cnx-[etcd|kdd].yaml
 
   if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
-    applyCNXPolicyManifest      # Apply cnx-policy.yaml
-    applyOperatorManifest       # Apply operator.yaml
-    applyMonitorCalicoManifest  # Apply monitor-calico.yaml
+    applyCNXPolicyManifest        # Apply cnx-policy.yaml
+    applyOperatorManifest         # Apply operator.yaml
+    applyMonitorCalicoManifest    # Apply monitor-calico.yaml
   fi
 
   echo CNX installation complete. Point your browser to https://127.0.0.1:30003, username=jane, password=welc0me
@@ -841,7 +863,7 @@ installCNX() {
 uninstallCNX() {
   checkSettings uninstall       # Verify settings are correct with user
   validateDatastore uninstall   # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
-  deleteCalicoctl               # delete /etc/calico/calicoct.cfg
+  deleteCalicoBinaries          # delete /etc/calico/calicoct.cfg, calicoctl, and calicoq
 
   downloadManifests             # Download all manifests
 
@@ -856,6 +878,7 @@ uninstallCNX() {
   deleteCNXManagerSecret        # Delete TLS secret
   deleteImagePullSecret         # Delete pull secret
   deleteBasicAuth               # Remove basic auth updates, restart kubelet
+  deleteKubeDnsPod              # Return kube-dns pod to "pending" state 
 }
 
 #
