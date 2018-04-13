@@ -18,10 +18,13 @@ type version struct {
 }
 
 func VersionHandler(w http.ResponseWriter, r *http.Request) {
-	log.Debugf("Version:     ", VERSION)
-	log.Debugf("Build date:  ", BUILD_DATE)
-	log.Debugf("Git tag ref: ", GIT_DESCRIPTION)
-	log.Debugf("Git commit:  ", GIT_REVISION)
+	log.WithFields(log.Fields{
+		"Version":   VERSION,
+		"BuildDate": BUILD_DATE,
+		"GitTagRef": GIT_DESCRIPTION,
+		"GitCommit": GIT_REVISION,
+	}).Debug("Handling version request")
+
 	v := version{
 		Version:   VERSION,
 		BuildDate: BUILD_DATE,
