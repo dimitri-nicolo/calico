@@ -373,7 +373,7 @@ var _ = Describe("Conntrack Datasource", func() {
 	Describe("Test local destination", func() {
 		It("should create a single entry in inbound direction", func() {
 			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			c.ctEntriesC <- []nfnetlink.CtEntry{inCtEntry}
+			c.handleCtEntry(inCtEntry)
 			Eventually(c.epStats).Should(HaveKey(*t))
 			data := c.epStats[*t]
 			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntry.OriginalCounters.Packets, inCtEntry.OriginalCounters.Bytes)))
@@ -383,7 +383,7 @@ var _ = Describe("Conntrack Datasource", func() {
 	Describe("Test local source", func() {
 		It("should create a single entry with outbound direction", func() {
 			t := NewTuple(localIp1, remoteIp1, proto_tcp, srcPort, dstPort)
-			c.ctEntriesC <- []nfnetlink.CtEntry{outCtEntry}
+			c.handleCtEntry(outCtEntry)
 			Eventually(c.epStats).Should(HaveKey(*t))
 			data := c.epStats[*t]
 			Expect(data.Counters()).Should(Equal(*NewCounter(outCtEntry.OriginalCounters.Packets, outCtEntry.OriginalCounters.Bytes)))
@@ -393,7 +393,7 @@ var _ = Describe("Conntrack Datasource", func() {
 	Describe("Test local source to local destination", func() {
 		It("should create a single entry with 'local' direction", func() {
 			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			c.ctEntriesC <- []nfnetlink.CtEntry{localCtEntry}
+			c.handleCtEntry(localCtEntry)
 			Eventually(c.epStats).Should(HaveKey(Equal(*t1)))
 			data := c.epStats[*t1]
 			Expect(data.Counters()).Should(Equal(*NewCounter(localCtEntry.OriginalCounters.Packets, localCtEntry.OriginalCounters.Bytes)))
@@ -403,7 +403,7 @@ var _ = Describe("Conntrack Datasource", func() {
 	Describe("Test local destination with DNAT", func() {
 		It("should create a single entry with inbound connection direction and with correct tuple extracted", func() {
 			t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
-			c.ctEntriesC <- []nfnetlink.CtEntry{inCtEntryWithDNAT}
+			c.handleCtEntry(inCtEntryWithDNAT)
 			Eventually(c.epStats).Should(HaveKey(Equal(*t)))
 			data := c.epStats[*t]
 			Expect(data.Counters()).Should(Equal(*NewCounter(inCtEntryWithDNAT.OriginalCounters.Packets, inCtEntryWithDNAT.OriginalCounters.Bytes)))
@@ -413,7 +413,7 @@ var _ = Describe("Conntrack Datasource", func() {
 	Describe("Test local source to local destination with DNAT", func() {
 		It("should create a single entry with 'local' connection direction and with correct tuple extracted", func() {
 			t1 := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
-			c.ctEntriesC <- []nfnetlink.CtEntry{localCtEntryWithDNAT}
+			c.handleCtEntry(localCtEntryWithDNAT)
 			Eventually(c.epStats).Should(HaveKey(Equal(*t1)))
 			data := c.epStats[*t1]
 			Expect(data.Counters()).Should(Equal(*NewCounter(localCtEntryWithDNAT.OriginalCounters.Packets, localCtEntryWithDNAT.OriginalCounters.Bytes)))

@@ -48,8 +48,8 @@ type Collector struct {
 	nfEgressC      chan *nfnetlink.NflogPacketAggregate
 	nfIngressDoneC chan struct{}
 	nfEgressDoneC  chan struct{}
-	ctEntriesC     chan []nfnetlink.CtEntry
 	epStats        map[Tuple]*Data
+	poller         *jitter.Ticker
 	ticker         *jitter.Ticker
 	sigChan        chan os.Signal
 	config         *Config
@@ -64,8 +64,8 @@ func NewCollector(lm *lookup.LookupManager, rm *ReporterManager, config *Config)
 		nfEgressC:      make(chan *nfnetlink.NflogPacketAggregate, 1000),
 		nfIngressDoneC: make(chan struct{}),
 		nfEgressDoneC:  make(chan struct{}),
-		ctEntriesC:     make(chan []nfnetlink.CtEntry, 10),
 		epStats:        make(map[Tuple]*Data),
+		poller:         jitter.NewTicker(config.ConntrackPollingInterval, config.ConntrackPollingInterval/10),
 		ticker:         jitter.NewTicker(config.ExportingInterval, config.ExportingInterval/10),
 		sigChan:        make(chan os.Signal, 1),
 		config:         config,
@@ -87,7 +87,6 @@ func (c *Collector) Start() {
 		log.Errorf("Error when subscribing to NFLOG: %v", err)
 		return
 	}
-	go pollConntrack(c.config.ConntrackPollingInterval, c.ctEntriesC)
 }
 
 func (c *Collector) startStatsCollectionAndReporting() {
@@ -97,8 +96,8 @@ func (c *Collector) startStatsCollectionAndReporting() {
 	// 3. A done channel for stopping and cleaning up collector (TODO).
 	for {
 		select {
-		case ctEntries := <-c.ctEntriesC:
-			c.convertCtEntryAndApplyUpdate(ctEntries)
+		case <-c.poller.C:
+			nfnetlink.ConntrackList(c.handleCtEntry)
 		case nflogPacketAggr := <-c.nfIngressC:
 			c.convertNflogPktAndApplyUpdate(rules.RuleDirIngress, nflogPacketAggr)
 		case nflogPacketAggr := <-c.nfEgressC:
@@ -210,57 +209,56 @@ func (c *Collector) expireData(data *Data) {
 	delete(c.epStats, data.Tuple)
 }
 
-func (c *Collector) convertCtEntryAndApplyUpdate(ctEntries []nfnetlink.CtEntry) error {
+// handleCtEntry handles a conntrack entry
+// We expect and process connections (conntrack entries) of 3 different flavors.
+//
+// - Connections that *neither* begin *nor* terminate locally.
+// - Connections that either begin or terminate locally.
+// - Connections that begin *and* terminate locally.
+//
+// When processing these, we also check if the connection is flagged as a
+// destination NAT (DNAT) connection. If it is a DNAT-ed connection, we
+// process the conntrack entry after we figure out the connection's original
+// destination IP address before DNAT modified the connections' destination
+// IP/port.
+func (c *Collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	var (
 		ctTuple nfnetlink.CtTuple
 		err     error
 	)
 
-	// We expect and process connections (conntrack entries) of 3 different flavors.
-	//
-	// - Connections that *neither* begin *nor* terminate locally.
-	// - Connections that either begin or terminate locally.
-	// - Connections that begin *and* terminate locally.
-	//
-	// When processing these, we also check if the connection is flagged as a
-	// destination NAT (DNAT) connection. If it is a DNAT-ed connection, we
-	// process the conntrack entry after we figure out the connection's original
-	// destination IP address before DNAT modified the connections' destination
-	// IP/port.
-	for _, ctEntry := range ctEntries {
-		ctTuple = ctEntry.OriginalTuple
+	ctTuple = ctEntry.OriginalTuple
 
-		// A conntrack entry that has the destination NAT (DNAT) flag set
-		// will have its destination ip-address set to the NAT-ed IP rather
-		// than the actual workload/host endpoint. To continue processing
-		// this conntrack entry, we need the actual IP address that corresponds
-		// to a Workload/Host Endpoint.
-		if ctEntry.IsDNAT() {
-			ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
-			if err != nil {
-				log.Error("Error when extracting tuple without DNAT:", err)
-				continue
-			}
+	// A conntrack entry that has the destination NAT (DNAT) flag set
+	// will have its destination ip-address set to the NAT-ed IP rather
+	// than the actual workload/host endpoint. To continue processing
+	// this conntrack entry, we need the actual IP address that corresponds
+	// to a Workload/Host Endpoint.
+	if ctEntry.IsDNAT() {
+		ctTuple, err = ctEntry.OriginalTupleWithoutDNAT()
+		if err != nil {
+			log.Error("Error when extracting tuple without DNAT:", err)
+			return
 		}
-
-		// Check if the connection begins and/or terminates on this host. This is done
-		// by checking if the source and/or destination IP address from the conntrack
-		// entry that we are processing belong to endpoints.
-		// If we cannot find an endpoint for both the source and destination IP Addresses
-		// this means that this connection neither begins nor terminates locally.
-		// We can skip processing this conntrack entry.
-		if !c.lum.IsEndpoint(ctTuple.Src) && !c.lum.IsEndpoint(ctTuple.Dst) {
-			continue
-		}
-
-		// At this point either the source or destination IP address from the conntrack entry
-		// belongs to an endpoint i.e., the connection either begins or terminates locally.
-		tuple := extractTupleFromCtEntryTuple(ctTuple)
-		c.applyConnTrackStatUpdate(tuple,
-			ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-			ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes)
 	}
-	return nil
+
+	// Check if the connection begins and/or terminates on this host. This is done
+	// by checking if the source and/or destination IP address from the conntrack
+	// entry that we are processing belong to endpoints.
+	// If we cannot find an endpoint for both the source and destination IP Addresses
+	// this means that this connection neither begins nor terminates locally.
+	// We can skip processing this conntrack entry.
+	if !c.lum.IsEndpoint(ctTuple.Src) && !c.lum.IsEndpoint(ctTuple.Dst) {
+		return
+	}
+
+	// At this point either the source or destination IP address from the conntrack entry
+	// belongs to an endpoint i.e., the connection either begins or terminates locally.
+	tuple := extractTupleFromCtEntryTuple(ctTuple)
+	c.applyConnTrackStatUpdate(tuple,
+		ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
+		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes)
+	return
 }
 
 func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *nfnetlink.NflogPacketAggregate) error {
@@ -339,18 +337,6 @@ func extractTupleFromNflogTuple(nflogTuple nfnetlink.NflogPacketTuple) Tuple {
 		l4Dst = nflogTuple.L4Dst.Port
 	}
 	return *NewTuple(nflogTuple.Src, nflogTuple.Dst, nflogTuple.Proto, l4Src, l4Dst)
-}
-
-func pollConntrack(pollInterval time.Duration, ctEntriesChan chan []nfnetlink.CtEntry) {
-	poller := jitter.NewTicker(pollInterval, pollInterval/10)
-	for _ = range poller.C {
-		cte, err := nfnetlink.ConntrackList()
-		if err != nil {
-			log.Errorf("Error: ConntrackList: %v", err)
-			continue
-		}
-		ctEntriesChan <- cte
-	}
 }
 
 func extractTupleFromCtEntryTuple(ctTuple nfnetlink.CtTuple) Tuple {

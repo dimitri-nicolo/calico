@@ -290,7 +290,7 @@ imports:
   - client
   - crypto
 - name: github.com/tigera/nfnetlink
-  version: 14fc08336feb62eb3801dbff584b668a94a770f6
+  version: 1e9e6913b87c3816f3b22e759e2f4e28c51ea5c6
   repo: git@github.com:tigera/nfnetlink
   subpackages:
   - nfnl
