@@ -468,7 +468,7 @@ dockerLogin() {
   token=$(echo -n $dockerCredentials | awk -F ":" '{print $2}')
 
   echo -n "Logging in to ${CALICO_UTILS_REGISTRY} ... "
-  run "docker login --username=${username} --password=${token} ${CALICO_UTILS_REGISTRY}"
+  runAsRoot "docker login --username=${username} --password=${token} ${CALICO_UTILS_REGISTRY}"
   echo "done."
 }
 
@@ -547,19 +547,19 @@ installCalicoBinary() {
 
   # Pull utility's container image
   echo -n "Pulling ${utilityName}:${VERSION} from ${CALICO_UTILS_REGISTRY} ... "
-  run "docker pull ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  runAsRoot "docker pull ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
   echo "done."
 
   # Create a local copy of utility image
   echo -n "Copying the ${utilityName}:${VERSION} container ... "
-  runIgnoreErrors "docker rm calico-utility-copy"
-  run "docker create --name calico-utility-copy ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  runAsRootIgnoreErrors "docker rm calico-utility-copy"
+  runAsRoot "docker create --name calico-utility-copy ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
   echo "done."
 
   # Copy binary to current directory
   echo -n "Copying \"${utilityName}\" to current directory ... "
-  run "docker cp calico-utility-copy:/${utilityName} ./${utilityName}"
-  run "chmod +x ./${utilityName}"
+  runAsRoot "docker cp calico-utility-copy:/${utilityName} ./${utilityName}"
+  runAsRoot "chmod +x ./${utilityName}"
   echo "done."
 
   # Copy binary to ${CALICO_UTILS_INSTALL_DIR} (/usr/local/bin/)
@@ -569,9 +569,9 @@ installCalicoBinary() {
   echo "done."
 
   # Clean up
-  runIgnoreErrors "docker rm calico-utility-copy"
-  run "docker rmi ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
-  run "rm -f ./${utilityName}"
+  runAsRootIgnoreErrors "docker rm calico-utility-copy"
+  runAsRoot "docker rmi ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  runAsRoot "rm -f ./${utilityName}"
 
   createCalicoctlCfg    # If not already present, create "/etc/calico/calicoctl.cfg"
 }
@@ -633,7 +633,7 @@ applyKddRbacManifest() {
 applyLicenseManifest() {
   if [ "$LICENSE_FILE" ]; then
     echo -n "Applying license file: ${LICENSE_FILE} "
-    run "calicoctl apply -f ${LICENSE_FILE}"
+    run "${CALICO_UTILS_INSTALL_DIR}/calicoctl apply -f ${LICENSE_FILE}"
     echo "done."
   fi
 }
