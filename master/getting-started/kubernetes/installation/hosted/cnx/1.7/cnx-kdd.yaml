@@ -150,7 +150,7 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: cnx-apiserver-role
 rules:
-  - apiGroups: ["extensions"]
+  - apiGroups: ["extensions","networking.k8s.io"]
     resources:
       - networkpolicies
     verbs:
