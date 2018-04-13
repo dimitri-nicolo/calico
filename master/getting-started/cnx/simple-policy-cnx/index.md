@@ -145,6 +145,8 @@ spec:
     source: {}
 ```
 
+5) Alternatively, you may also use {{site.prodname}} Manager to inspect and view information and statistics associated with Network policies, Endpoints and Nodes.
+
 ### Enable isolation
 
 Let's turn on isolation in our policy-demo namespace. {{site.prodname}} will then prevent connections to pods in this namespace.
@@ -154,7 +156,7 @@ Running the following command creates a NetworkPolicy which implements a default
 ```
 kubectl create -f - <<EOF
 kind: NetworkPolicy
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 metadata:
   name: default-deny
   namespace: policy-demo
@@ -163,18 +165,6 @@ spec:
     matchLabels: {}
 EOF
 ```
-
-> **Note**: Although that NetworkPolicy spec does not explicitly deny or drop
-> any packets, it has a 'default deny' effect because [CNX
-> semantics]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier#how-policy-is-evaluated)
-> are that a packet will be dropped if there are policies applying to an
-> endpoint, but those policies take no action on that packet.
->
-> This is also why the denied packet metrics below have
-> `policy="default/no-policy-match-inbound/0/deny"` and not
-> `policy="policy-demo/knp.default.default-deny/0/deny"`.  `no-policy-match`
-> represents the CNX semantics as above.
-{: .alert .alert-info}
 
 #### Test Isolation
 
@@ -201,59 +191,22 @@ wget: download timed out
 
 The request should time out after 5 seconds.  By enabling isolation on the namespace, we've prevented access to the service.
 
-### Denied packet metrics and Alerting
-Now would be a great time to take a look at the denied packet metrics.  Get the service listing from kubectl:
+### CNX Metrics
+Now would be a great time to take a look at the metrics.
 
-```
-kubectl get svc -n calico-monitoring
-```
+In {{site.prodname}} Manager, head to the dashboard view. You will see graphs associated with allowed packets/bytes and denied packets/bytes. The graphs represent the rates at which packets/bytes are being allowed or denied.
 
-You should see the following output.
+Now if we wanted to dig in further and find out whats causing the packets to be denied, we could take a look at the 'Packets by Policy' bar graph. Each individual bar represents a Policy that has either denied or allowed a packet.
 
-```
-NAME                       CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
-alertmanager-operated      None             <none>        9093/TCP,6783/TCP   6h
-calico-node-alertmanager   10.105.253.248   <nodes>       9093:30903/TCP      6h
-calico-node-prometheus     10.105.26.250    <nodes>       9090:30909/TCP      6h
-prometheus-operated        None             <none>        9090/TCP            6h
-
-```
-
-This tells us that the `calico-node-prometheus` service is running using a NodePort on port 30909. Point a web browser at `http://k8s-node1:30909/graph`.
-
-If you click on the drop down box `- insert metric at cursor -`, you should see a list of metrics which are available:
- - `calico_denied_packets`
- - `calico_denied_bytes`
- - `up`
- - `scrape_duration_seconds`
- - `scrape_samples_post_metric_relabelling`
- - `scrape_samples_scraped`
-
-The first 3 in the list above are useful for monitoring your deployment, while the last 3 are useful for monitoring the health of your monitoring system.
-
-Note that if you have not sent any denied packets recently, `calico_denied_packets` and `calico_denied_bytes` may not appear in the drop down.
-
-Select the `Console` tab, then in the text box at the top of the page type `calico_denied_packets[10m]` and Enter (or click the `Execute` button).  The `Console` tab should now show `calico_denied_packets` metrics for the last 10 minutes:
-```
-calico_denied_packets{endpoint="calico-metrics-port",instance="10.240.0.16:9081",job="calico-node-metrics",namespace="kube-system",pod="calico-node-zs6gt",policy="default/no-policy-match-inbound/0/deny",service="calico-node-metrics",srcIP="192.168.213.12"}
-```
-and a value and timestamp
-
-This indicates that the pod `calico-node-zs6gt` has reported 3 denied packets from `192.168.213.12`.
-
-If you now click on the `Graph` tab and change the expression to just `calico_denied_packets`, you will see a graph of the denied packet count against time:
-![Graph Example]({{site.baseurl}}/images/Graph.png)
-
-Prometheus can also do some calculations based on metrics - for example to show the *rate* of denied packets.  Update the expression text box to contain the expression `rate(calico_denied_packets[10s])` and click execute again.  The graph and table will now show you the rate of denied packets averaged over the last 10s.
-
-Now let's try setting off an alert.  If you click on 'Alerts', you'll see that we have a `DeniedPacketsRate` alert configured. Notice that it is green to indicate that it is not currently firing. If you click on it, it will show you that it will fire if `rate(calico_denied_packets[10s]) > 50`.
-
-If you click on that expression, it will skip back to the graph screen and show you all the times that rate of packets was > 50.  So let's send some denied packets.  In the `access` pod you created above, run the following command:
-```
-for i in `seq 1 10000`; do (wget -q --timeout=1 nginx -O - & sleep 0.01); done
-```
-Refresh the graph and you should see some data points appear.  Now switch back to the Alerts page and see that the Alert fires.  You may need to refresh the Alerts page a few times until the Alert goes red.  Now if you click on the Alert, it will show you the combination of labels that is firing the Alert:
-![Alert Example]({{site.baseurl}}/images/Alert.png)
+> **Note**: The NetworkPolicy spec for `default-deny` does not come configured
+> with any rules. It's a special policy that has a 'default deny' effect because
+> of the way [CNX]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier#how-policy-is-evaluated)
+> evaluates it. In that, a packet will be dropped if the policies (like default-deny in this case) affecting the 
+> endpoint takes no action.
+>
+> The metrics associated with such a behavior is reflected under the `Implict Drops` block.
+> To view it, go to the `Policy` page and enable `Implicit Drops` from the `eye` dropdown.
+{: .alert .alert-info}
 
 ### Allow Access using a NetworkPolicy
 
@@ -300,10 +253,11 @@ If you don't see a command prompt, try pressing enter.
 
 / # wget -q --timeout=5 nginx -O -
 ```
-
 You should see an HTTP response.
 
-However, we still cannot access the service from a pod without the label `run: access`:
+You may also now confirm that `access-nginx` is actually the policy that is causing the packets to be accepted. You may do this by going back to the dashboard page on {{site.prodname}} Manager and observing the `Packets by Policy` bar graph. Other inspection workflows/options include: filtering through the information presented in Policies, Endpoints and Nodes pages. (for the purpose of demo you may run wget in a loop.)
+
+Coming back, however, we still cannot access the service from a pod without the label `run: access`:
 
 ```
 kubectl run --namespace=policy-demo cant-access --rm -ti --image busybox /bin/sh
