@@ -200,7 +200,7 @@ pipeline{
             script {
                 if (env.BRANCH_NAME == 'master') {
                     GIT_HASH = env.GIT_COMMIT[0..6]
-                    if (currentBuild.currentResult == 'SUCCESS') {
+                    if (currentBuild.currentResult == 'SUCCESS' && currentBuild.getPreviousBuild()?.result) {
                         msg = "Passing again ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                         slackSend message: msg, color: "good", channel: "ci-notifications-cnx"
                     }
@@ -212,7 +212,7 @@ pipeline{
             script {
                 if (env.BRANCH_NAME == 'master') {
                     GIT_HASH = env.GIT_COMMIT[0..6]
-                    if (currentBuild.getPreviousBuild().result == 'FAILURE') {
+                    if (currentBuild.getPreviousBuild()?.result == 'FAILURE') {
                         msg = "Still failing ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                     } else {
                         msg = "New failure ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
