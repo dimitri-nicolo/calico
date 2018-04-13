@@ -3,8 +3,9 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var VERSION, BUILD_DATE, GIT_DESCRIPTION, GIT_REVISION string
@@ -17,10 +18,10 @@ type version struct {
 }
 
 func VersionHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Version:     ", VERSION)
-	fmt.Println("Build date:  ", BUILD_DATE)
-	fmt.Println("Git tag ref: ", GIT_DESCRIPTION)
-	fmt.Println("Git commit:  ", GIT_REVISION)
+	log.Debugf("Version:     ", VERSION)
+	log.Debugf("Build date:  ", BUILD_DATE)
+	log.Debugf("Git tag ref: ", GIT_DESCRIPTION)
+	log.Debugf("Git commit:  ", GIT_REVISION)
 	v := version{
 		Version:   VERSION,
 		BuildDate: BUILD_DATE,
