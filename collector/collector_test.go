@@ -58,7 +58,7 @@ var (
 	defTierAllowIngressNFLOGPrefix   = [64]byte{'A', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierAllowEgressNFLOGPrefix    = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierDenyIngressNFLOGPrefix    = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
-	defTierPolicy1AllowIngressRuleID = lookup.RuleID{
+	defTierPolicy1AllowIngressRuleID = &lookup.RuleID{
 		Tier:      "default",
 		Name:      "policy1",
 		Namespace: "",
@@ -67,7 +67,7 @@ var (
 		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirIngress,
 	}
-	defTierPolicy1AllowEgressRuleID = lookup.RuleID{
+	defTierPolicy1AllowEgressRuleID = &lookup.RuleID{
 		Tier:      "default",
 		Name:      "policy1",
 		Namespace: "",
@@ -76,7 +76,7 @@ var (
 		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirEgress,
 	}
-	defTierPolicy2DenyIngressRuleID = lookup.RuleID{
+	defTierPolicy2DenyIngressRuleID = &lookup.RuleID{
 		Tier:      "default",
 		Name:      "policy2",
 		Namespace: "",
@@ -87,26 +87,10 @@ var (
 	}
 )
 
-var defTierAllowIngressTp = &RuleTracePoint{
-	RuleID:       &defTierPolicy1AllowIngressRuleID,
-	Index:        0,
-	EndpointName: "WEP(orchestrator/localworkloadid1/localepid1)",
-	Ctr:          *NewCounter(1, 100),
-}
-
-var defTierAllowEgressTp = &RuleTracePoint{
-	RuleID:       &defTierPolicy1AllowEgressRuleID,
-	Index:        0,
-	EndpointName: "WEP(orchestrator/localworkloadid1/localepid1)",
-	Ctr:          *NewCounter(1, 100),
-}
-
-var defTierDenyIngressTp = &RuleTracePoint{
-	RuleID:       &defTierPolicy2DenyIngressRuleID,
-	Index:        0,
-	EndpointName: "WEP(orchestrator/localworkloadid2/localepid2)",
-	Ctr:          *NewCounter(1, 100),
-}
+var (
+	wl1Ep1 = "WEP(orchestrator/localworkloadid1/localepid1)"
+	wl2Ep2 = "WEP(orchestrator/localworkloadid2/localepid2)"
+)
 
 var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
 	Prefixes: []nfnetlink.NflogPrefix{
@@ -125,6 +109,7 @@ var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
 		L4Dst: nfnetlink.NflogL4Info{Port: dstPort},
 	},
 }
+
 var ingressPktAllowTuple = NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 
 var egressPktAllow = &nfnetlink.NflogPacketAggregate{
@@ -205,8 +190,8 @@ var _ = Describe("NFLOG Datasource", func() {
 			}
 			nflogMap := map[[64]byte]*lookup.RuleID{}
 
-			for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-				nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
+			for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
 			lm := newMockLookupManager(epMap, nflogMap)
@@ -214,14 +199,14 @@ var _ = Describe("NFLOG Datasource", func() {
 			go c.startStatsCollectionAndReporting()
 		})
 		Describe("Test local destination", func() {
-			It("should receive a single stat update with allow rule tracepoint", func() {
+			It("should receive a single stat update with allow ruleid trace", func() {
 				t := NewTuple(remoteIp1, localIp1, proto_tcp, srcPort, dstPort)
 				c.nfIngressC <- ingressPktAllow
 				Eventually(c.epStats).Should(HaveKey(*t))
 			})
 		})
 		Describe("Test local to local", func() {
-			It("should receive a single stat update with deny rule tracepoint", func() {
+			It("should receive a single stat update with deny ruleid trace", func() {
 				t := NewTuple(localIp1, localIp2, proto_tcp, srcPort, dstPort)
 				c.nfIngressC <- localPkt
 				Eventually(c.epStats).Should(HaveKey(*t))
@@ -362,8 +347,8 @@ var _ = Describe("Conntrack Datasource", func() {
 
 		nflogMap := map[[64]byte]*lookup.RuleID{}
 
-		for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-			nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
+		for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
 		lm := newMockLookupManager(epMap, nflogMap)
@@ -473,8 +458,8 @@ var _ = Describe("Reporting Metrics", func() {
 
 		nflogMap := map[[64]byte]*lookup.RuleID{}
 
-		for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-			nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
+		for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
 		lm := newMockLookupManager(epMap, nflogMap)
@@ -491,7 +476,7 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktDenyTuple,
-					ruleID:       defTierDenyIngressTp.RuleID,
+					ruleID:       defTierPolicy2DenyIngressRuleID,
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -507,7 +492,7 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktAllowTuple,
-					ruleID:       defTierAllowIngressTp.RuleID,
+					ruleID:       defTierPolicy1AllowIngressRuleID,
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -525,7 +510,7 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktAllowTuple,
-					ruleID:       defTierAllowIngressTp.RuleID,
+					ruleID:       defTierPolicy1AllowIngressRuleID,
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -541,7 +526,7 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *egressPktAllowTuple,
-					ruleID:       defTierAllowEgressTp.RuleID,
+					ruleID:       defTierPolicy1AllowEgressRuleID,
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -607,8 +592,8 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 
 	nflogMap := map[[64]byte]*lookup.RuleID{}
 
-	for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-		nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
+	for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+		nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 	}
 
 	conf := &Config{
@@ -638,8 +623,8 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	}
 
 	nflogMap := map[[64]byte]*lookup.RuleID{}
-	for _, rtp := range []*RuleTracePoint{defTierAllowEgressTp, defTierAllowIngressTp, defTierDenyIngressTp} {
-		nflogMap[policyIDStrToRuleIDParts(rtp.RuleID)] = rtp.RuleID
+	for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+		nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 	}
 
 	conf := &Config{
@@ -664,17 +649,17 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 			tuples = append(tuples, *t)
 		}
 	}
-	var tps []*RuleTracePoint
+	var rids []*lookup.RuleID
 	MaxEntries := 10000
 	for i := 0; i < MaxEntries; i++ {
-		tp := defTierDenyIngressTp
-		tps = append(tps, tp)
+		rid := defTierPolicy1AllowIngressRuleID
+		rids = append(rids, rid)
 	}
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		for i := 0; i < MaxEntries; i++ {
-			c.applyNflogStatUpdate(tuples[i], tps[i])
+			c.applyNflogStatUpdate(tuples[i], rids[i], wl1Ep1, 0, 1, 2)
 		}
 	}
 }

@@ -135,11 +135,11 @@ func (c *Collector) setupStatsDumping() {
 
 // getData returns a pointer to the data structure keyed off the supplied tuple.  If there
 // is no entry one is created.
-func (c *Collector) getData(tuple Tuple) *Data {
+func (c *Collector) getData(tuple Tuple, epName string) *Data {
 	data, ok := c.epStats[tuple]
 	if !ok {
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
-		data = NewData(tuple, c.config.AgeTimeout)
+		data = NewData(tuple, epName, c.config.AgeTimeout)
 		c.epStats[tuple] = data
 	}
 	return data
@@ -151,18 +151,18 @@ func (c *Collector) applyConnTrackStatUpdate(
 ) {
 	// Update the counters for the entry.  Since data is a pointer, we are updating the map
 	// entry in situ.
-	data := c.getData(tuple)
+	data := c.getData(tuple, "")
 	data.SetCounters(packets, bytes)
 	data.SetCountersReverse(reversePackets, reverseBytes)
 }
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
-func (c *Collector) applyNflogStatUpdate(tuple Tuple, tp *RuleTracePoint) {
+func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *lookup.RuleID, epName string, tierIdx, numPkts, numBytes int) {
 	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
-	data := c.getData(tuple)
-	if err := data.AddRuleTracePoint(tp); err == RuleTracePointConflict {
-		// When a RuleTracePoint is replaced, we have to do some housekeeping before
-		// we can replace the RuleTracePoint, the first of which is to remove
+	data := c.getData(tuple, epName)
+	if ok := data.AddRuleID(ruleID, tierIdx, numPkts, numBytes); !ok {
+		// When a RuleTrace RuleID is replaced, we have to do some housekeeping
+		// before we can replace it, the first of which is to remove references
 		// references from the reporter, which is done by calling expireMetrics,
 		// followed by resetting counters.
 		if data.DurationSinceCreate() > c.config.InitialReportingDelay {
@@ -172,11 +172,9 @@ func (c *Collector) applyNflogStatUpdate(tuple Tuple, tp *RuleTracePoint) {
 		}
 
 		data.ResetConntrackCounters()
-		if err = data.ReplaceRuleTracePoint(tp); err != nil {
-			log.WithError(err).Warning("Unable to update rule trace point in metrics")
+		if ok = data.ReplaceRuleID(ruleID, tierIdx, numPkts, numBytes); !ok {
+			log.Warning("Unable to update rule trace point in metrics")
 		}
-	} else if err != nil {
-		log.WithError(err).Warning("Unable to add rule trace point to metrics")
 	}
 }
 
@@ -302,9 +300,8 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 				numBytes = 0
 			}
 
-			tp := NewRuleTracePoint(ruleID, ep.Name, tierIdx, numPkts, numBytes)
 			tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
-			c.applyNflogStatUpdate(tuple, tp)
+			c.applyNflogStatUpdate(tuple, ruleID, ep.Name, tierIdx, numPkts, numBytes)
 		}
 
 		// A blank tier indicates a profile match. This should be directly after the last tier.

@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -126,60 +125,19 @@ func (c *Counter) String() string {
 
 const RuleTraceInitLen = 10
 
-var (
-	RuleTracePointConflict = errors.New("Conflict in RuleTracePoint")
-)
-
-// RuleTracePoint represents a rule and the Tier and a Policy that contains
-// it. The `Index` specifies the absolute position of a RuleTracePoint in the
-// RuleTrace list. The `EpKey` contains the corresponding workload or host
-// endpoint that the Policy applied to.
-// Prefix formats are:
-// - A/rule Index/profile name
-// - A/rule Index/Policy name/Tier name
-type RuleTracePoint struct {
-	RuleID       *lookup.RuleID
-	Index        int
-	EndpointName string
-	Ctr          Counter
-}
-
-func NewRuleTracePoint(ruleIDs *lookup.RuleID, epName string, tierIndex, numPkts, numBytes int) *RuleTracePoint {
-	rtp := &RuleTracePoint{
-		RuleID:       ruleIDs,
-		EndpointName: epName,
-		Index:        tierIndex,
-	}
-	rtp.Ctr.Set(numPkts, numBytes)
-	return rtp
-}
-
-// Equals compares all but the Ctr field of a RuleTracePoint
-func (rtp *RuleTracePoint) Equals(cmpRtp *RuleTracePoint) bool {
-	return rtp.RuleID.Equals(cmpRtp.RuleID) &&
-		rtp.Index == cmpRtp.Index &&
-		rtp.EndpointName == cmpRtp.EndpointName
-}
-
-func (rtp *RuleTracePoint) String() string {
-	return fmt.Sprintf("tierId='%s' policyId='%s' rule='%s' action='%v' Index=%v Ctr={%v}",
-		rtp.RuleID.Tier, rtp.RuleID.Name, rtp.RuleID.Index, rtp.RuleID.Action, rtp.Index, rtp.Ctr.String())
-}
-
 // RuleTrace represents the list of rules (i.e, a Trace) that a packet hits.
-// The action of a RuleTrace object is the final RuleTracePoint action that
-// is not a next-Tier action. A RuleTrace also contains a workload endpoint,
-// which identifies the corresponding endpoint that the rule trace applied to.
+// The action of a RuleTrace object is the final action that is not a
+// next-Tier/pass action. A RuleTrace also contains a endpoint that the rule
+// trace applied to,
 type RuleTrace struct {
-	path   []*RuleTracePoint
+	path   []*lookup.RuleID
 	action rules.RuleAction
-	epName string
-	//TODO: RLB: Do we need this counter?  I think it's always set to the same as the verdict
-	// trace point, so why can't we just access that one directly?
+
+	// Counter to store the packets and byte counts for the RuleTrace
 	ctr   Counter
 	dirty bool
 
-	// Stores the Index of the RuleTracePoint that has a RuleAction Allow or Deny
+	// Stores the Index of the RuleID that has a RuleAction Allow or Deny
 	verdictIdx int
 
 	// Optimization Note: When initializing a RuleTrace object, the pathArray
@@ -187,8 +145,7 @@ type RuleTrace struct {
 	// one allocation when creating a RuleTrace object. More info on this here:
 	// https://github.com/golang/go/wiki/Performance#memory-profiler
 	// (Search for "slice array preallocation").
-	// RLB: Could we just use a linked list instead - that avoids the need to allocate an array
-	pathArray [RuleTraceInitLen]*RuleTracePoint
+	pathArray [RuleTraceInitLen]*lookup.RuleID
 }
 
 func NewRuleTrace() RuleTrace {
@@ -205,24 +162,24 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%s)", tp))
 	}
-	return fmt.Sprintf("path=[%v], action=%v ctr={%v} %s", strings.Join(rtParts, ", "), t.action, t.ctr.String(), t.epName)
+	return fmt.Sprintf("path=[%v], action=%v ctr={%v} %s", strings.Join(rtParts, ", "), t.Action(), t.ctr.String())
 }
 
 func (t *RuleTrace) Len() int {
 	return len(t.path)
 }
 
-func (t *RuleTrace) Path() []*RuleTracePoint {
+func (t *RuleTrace) Path() []*lookup.RuleID {
 	// Minor optimization where we only do a rebuild when we don't have the full
 	// path.
 	rebuild := false
 	idx := 0
-	for i, tp := range t.path {
-		if tp == nil {
+	for i, ruleID := range t.path {
+		if ruleID == nil {
 			rebuild = true
 			break
 		}
-		if tp.RuleID.Action == rules.RuleActionAllow || tp.RuleID.Action == rules.RuleActionDeny {
+		if ruleID.Action == rules.RuleActionAllow || ruleID.Action == rules.RuleActionDeny {
 			idx = i
 			break
 		}
@@ -230,7 +187,7 @@ func (t *RuleTrace) Path() []*RuleTracePoint {
 	if !rebuild {
 		return t.path[:idx+1]
 	}
-	path := make([]*RuleTracePoint, 0, RuleTraceInitLen)
+	path := make([]*lookup.RuleID, 0, RuleTraceInitLen)
 	for _, tp := range t.path {
 		if tp == nil {
 			continue
@@ -241,15 +198,20 @@ func (t *RuleTrace) Path() []*RuleTracePoint {
 }
 
 func (t *RuleTrace) ToString() string {
-	p := t.VerdictRuleTracePoint()
-	if p == nil {
+	ruleID := t.VerdictRuleID()
+	if ruleID == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s/%s/%s/%v", p.RuleID.Tier, p.RuleID.Name, p.RuleID.Index, p.RuleID.Action)
+	return fmt.Sprintf("%s/%s/%s/%v", ruleID.Tier, ruleID.Name, ruleID.Index, ruleID.Action)
 }
 
 func (t *RuleTrace) Action() rules.RuleAction {
-	return t.action
+	ruleID := t.VerdictRuleID()
+	if ruleID == nil {
+		// We don't know the verdict RuleID yet.
+		return rules.RuleActionNextTier
+	}
+	return ruleID.Action
 }
 
 func (t *RuleTrace) Counters() Counter {
@@ -260,10 +222,9 @@ func (t *RuleTrace) IsDirty() bool {
 	return t.dirty
 }
 
-// VerdictRuleTracePoint returns the RuleTracePoint that contains either
-// ActionAllow or DenyAction in a RuleTrace or nil if we haven't seen
-// either of these yet.
-func (t *RuleTrace) VerdictRuleTracePoint() *RuleTracePoint {
+// VerdictRuleID returns the RuleID that contains either ActionAllow or
+// DenyAction in a RuleTrace or nil if we haven't seen either of these yet.
+func (t *RuleTrace) VerdictRuleID() *lookup.RuleID {
 	if t.verdictIdx >= 0 {
 		return t.path[t.verdictIdx]
 	} else {
@@ -274,65 +235,45 @@ func (t *RuleTrace) VerdictRuleTracePoint() *RuleTracePoint {
 func (t *RuleTrace) ClearDirtyFlag() {
 	t.dirty = false
 	t.ctr.ResetDeltas()
-	p := t.VerdictRuleTracePoint()
-	if p != nil {
-		p.Ctr.ResetDeltas()
-	}
 }
 
-func (t *RuleTrace) addRuleTracePoint(tp *RuleTracePoint) error {
-	ctr := tp.Ctr
-	if tp.Index >= t.Len() {
+func (t *RuleTrace) addRuleID(rid *lookup.RuleID, tierIdx, numPkts, numBytes int) bool {
+	if tierIdx >= t.Len() {
 		// Insertion Index is beyond than current length. Grow the path slice as long
 		// as necessary.
-		incSize := (tp.Index / RuleTraceInitLen) * RuleTraceInitLen
-		newPath := make([]*RuleTracePoint, t.Len()+incSize)
+		incSize := (tierIdx / RuleTraceInitLen) * RuleTraceInitLen
+		newPath := make([]*lookup.RuleID, t.Len()+incSize)
 		copy(newPath, t.path)
 		t.path = newPath
-		t.path[tp.Index] = tp
+		t.path[tierIdx] = rid
 	} else {
-		existingTp := t.path[tp.Index]
+		existingRuleID := t.path[tierIdx]
 		switch {
-		case existingTp == nil:
+		case existingRuleID == nil:
 			// Position is empty, insert and be done.
-			t.path[tp.Index] = tp
-		case existingTp.Equals(tp):
-			p, b := tp.Ctr.Values()
-			existingTp.Ctr.Increase(p, b)
-			ctr = existingTp.Ctr
-		default:
-			return RuleTracePointConflict
+			t.path[tierIdx] = rid
+		case !existingRuleID.Equals(rid):
+			return false
 		}
 	}
-	if tp.RuleID.Action != rules.RuleActionNextTier {
-		t.action = tp.RuleID.Action
-		//TODO: RLB: This (and the replaceRPT below) means the RT counter is always
-		// kept in sync with the verdict RTP.  In which case do we need the complexity
-		// of this additional counter?  Now say the policy is updated such that the
-		// tier index changes for the verdict RTP, but the actual rule is the same - in
-		// this case we lose the counts for the same actual rule (just it's in a different
-		// location in the hierarchy).
-		t.ctr = ctr
-		t.epName = tp.EndpointName
-		t.verdictIdx = tp.Index
+	if rid.Action != rules.RuleActionNextTier {
+		t.ctr.Increase(numPkts, numBytes)
+		t.verdictIdx = tierIdx
 	}
 	t.dirty = true
-	return nil
+	return true
 }
 
-func (t *RuleTrace) replaceRuleTracePoint(tp *RuleTracePoint) {
-	if tp.RuleID.Action == rules.RuleActionNextTier {
-		t.path[tp.Index] = tp
+func (t *RuleTrace) replaceRuleID(rid *lookup.RuleID, tierIdx, numPkts, numBytes int) {
+	if rid.Action == rules.RuleActionNextTier {
+		t.path[tierIdx] = rid
 		return
 	}
 	// New tracepoint is not a next-Tier action truncate at this Index.
-	t.path[tp.Index] = tp
-	t.path = t.path[:tp.Index+1]
-	t.action = tp.RuleID.Action
-	t.ctr = tp.Ctr
+	t.path[tierIdx] = rid
+	t.ctr = *NewCounter(numPkts, numBytes)
 	t.dirty = true
-	t.epName = tp.EndpointName
-	t.verdictIdx = tp.Index
+	t.verdictIdx = tierIdx
 }
 
 // ToMetricUpdate converts the RuleTrace to a MetricUpdate used by the reporter.
@@ -352,7 +293,7 @@ func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td TrafficDirection,
 	mu := MetricUpdate{
 		updateType:   ut,
 		tuple:        t,
-		ruleID:       rt.VerdictRuleTracePoint().RuleID,
+		ruleID:       rt.VerdictRuleID(),
 		isConnection: isConn,
 	}
 	switch td {
@@ -406,7 +347,8 @@ func (t *Tuple) String() string {
 // - 2 counters - connTrackCtr for the originating Direction of the connection
 // and connTrackCtrReverse for the reverse/reply of this connection.
 type Data struct {
-	Tuple Tuple
+	Tuple  Tuple
+	epName string
 
 	// Indicates if this is a connection
 	isConnection bool
@@ -425,10 +367,11 @@ type Data struct {
 	dirty      bool
 }
 
-func NewData(tuple Tuple, duration time.Duration) *Data {
+func NewData(tuple Tuple, epName string, duration time.Duration) *Data {
 	now := monotime.Now()
 	return &Data{
 		Tuple:            tuple,
+		epName:           epName,
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        now,
@@ -481,12 +424,12 @@ func (d *Data) DurationSinceCreate() time.Duration {
 
 // Returns the final action of the RuleTrace
 func (d *Data) IngressAction() rules.RuleAction {
-	return d.IngressRuleTrace.action
+	return d.IngressRuleTrace.Action()
 }
 
 // Returns the final action of the RuleTrace
 func (d *Data) EgressAction() rules.RuleAction {
-	return d.EgressRuleTrace.action
+	return d.EgressRuleTrace.Action()
 }
 
 func (d *Data) Counters() Counter {
@@ -543,40 +486,33 @@ func (d *Data) ResetConntrackCounters() {
 	d.connTrackCtrReverse.Reset()
 }
 
-func (d *Data) AddRuleTracePoint(tp *RuleTracePoint) error {
-	var err error
-	switch tp.RuleID.Direction {
+func (d *Data) AddRuleID(ruleID *lookup.RuleID, tierIdx, numPkts, numBytes int) bool {
+	var ok bool
+	switch ruleID.Direction {
 	case rules.RuleDirIngress:
-		err = d.IngressRuleTrace.addRuleTracePoint(tp)
+		ok = d.IngressRuleTrace.addRuleID(ruleID, tierIdx, numPkts, numBytes)
 	case rules.RuleDirEgress:
-		err = d.EgressRuleTrace.addRuleTracePoint(tp)
-	default:
-		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleID.Direction)
+		ok = d.EgressRuleTrace.addRuleID(ruleID, tierIdx, numPkts, numBytes)
 	}
 
-	if err == nil {
+	if ok {
 		d.touch()
 		d.setDirtyFlag()
 	}
-	return err
+	return ok
 }
 
-func (d *Data) ReplaceRuleTracePoint(tp *RuleTracePoint) error {
-	var err error
-	switch tp.RuleID.Direction {
+func (d *Data) ReplaceRuleID(ruleID *lookup.RuleID, tierIdx, numPkts, numBytes int) bool {
+	switch ruleID.Direction {
 	case rules.RuleDirIngress:
-		d.IngressRuleTrace.replaceRuleTracePoint(tp)
+		d.IngressRuleTrace.replaceRuleID(ruleID, tierIdx, numPkts, numBytes)
 	case rules.RuleDirEgress:
-		d.EgressRuleTrace.replaceRuleTracePoint(tp)
-	default:
-		err = fmt.Errorf("unknown rule Direction: %v", tp.RuleID.Direction)
+		d.EgressRuleTrace.replaceRuleID(ruleID, tierIdx, numPkts, numBytes)
 	}
 
-	if err == nil {
-		d.touch()
-		d.setDirtyFlag()
-	}
-	return err
+	d.touch()
+	d.setDirtyFlag()
+	return true
 }
 
 func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
