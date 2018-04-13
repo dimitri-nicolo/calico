@@ -13,7 +13,6 @@ import (
 
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 // Calico Metrics
@@ -68,7 +67,7 @@ type DeniedPacketsAggregateValue struct {
 	labels  prometheus.Labels
 	packets prometheus.Gauge
 	bytes   prometheus.Gauge
-	refs    set.Set
+	refs    tupleSet
 }
 
 // DeniedPacketsAggregator aggregates denied packets and bytes statistics in prometheus metrics.
@@ -137,8 +136,9 @@ func (dp *DeniedPacketsAggregator) reportMetric(mu *MetricUpdate) {
 			labels:  l,
 			packets: gaugeDeniedPackets.With(l),
 			bytes:   gaugeDeniedBytes.With(l),
-			refs:    set.FromArray([]Tuple{mu.tuple}),
+			refs:    NewTupleSet(),
 		}
+		value.refs.Add(mu.tuple)
 	}
 	switch mu.ruleID.Direction {
 	case rules.RuleDirIngress:

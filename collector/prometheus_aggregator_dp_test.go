@@ -13,7 +13,6 @@ import (
 
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 var (
@@ -98,7 +97,7 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 				var (
 					key   DeniedPacketsAggregateKey
 					value DeniedPacketsAggregateValue
-					refs  set.Set
+					refs  tupleSet
 					ok    bool
 				)
 				BeforeEach(func() {
@@ -106,8 +105,9 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 						srcIP:  localIp1,
 						policy: getDeniedPacketRuleName(ingressRulePolicy3Deny),
 					}
-					refs = set.New()
-					refs.AddAll([]Tuple{tuple1, tuple2})
+					refs = NewTupleSet()
+					refs.Add(tuple1)
+					refs.Add(tuple2)
 					da.OnUpdate(denyPacketTuple1DenyT3)
 					da.OnUpdate(denyPacketTuple2DenyT3)
 				})
@@ -135,22 +135,22 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 					}()).Should(Equal(2))
 				})
 				It("should have correct refs", func() {
-					Expect(func() bool {
+					Expect(func() tupleSet {
 						value, ok = da.aggStats[key]
 						// If we didn't find the key now, we'll
 						// not want to look into the value.
 						if !ok {
-							return false
+							return nil
 						}
-						return value.refs.Equals(refs)
-					}()).Should(BeTrue())
+						return value.refs
+					}()).To(Equal(refs))
 				})
 			})
 			Describe("Different source IPs and Policies", func() {
 				var (
 					key1, key2     DeniedPacketsAggregateKey
 					value1, value2 DeniedPacketsAggregateValue
-					refs1, refs2   set.Set
+					refs1, refs2   tupleSet
 					ok             bool
 				)
 				BeforeEach(func() {
@@ -162,10 +162,11 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 						srcIP:  localIp2,
 						policy: getDeniedPacketRuleName(ingressRulePolicy4Deny),
 					}
-					refs1 = set.New()
-					refs1.AddAll([]Tuple{tuple1, tuple2})
-					refs2 = set.New()
-					refs2.AddAll([]Tuple{tuple3})
+					refs1 = NewTupleSet()
+					refs1.Add(tuple1)
+					refs1.Add(tuple2)
+					refs2 = NewTupleSet()
+					refs2.Add(tuple3)
 					da.OnUpdate(denyPacketTuple1DenyT3)
 					da.OnUpdate(denyPacketTuple2DenyT3)
 					da.OnUpdate(denyPacketTuple3DenyT4)
@@ -212,24 +213,24 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 					}()).Should(Equal(1))
 				})
 				It("should have correct refs", func() {
-					Expect(func() bool {
+					Expect(func() tupleSet {
 						value1, ok = da.aggStats[key1]
 						// If we didn't find the key now, we'll
 						// not want to look into the value.
 						if !ok {
-							return false
+							return nil
 						}
-						return value1.refs.Equals(refs1)
-					}()).Should(BeTrue())
-					Expect(func() bool {
+						return value1.refs
+					}()).To(Equal(refs1))
+					Expect(func() tupleSet {
 						value2, ok = da.aggStats[key2]
 						// If we didn't find the key now, we'll
 						// not want to look into the value.
 						if !ok {
-							return false
+							return nil
 						}
-						return value2.refs.Equals(refs2)
-					}()).Should(BeTrue())
+						return value2.refs
+					}()).To(Equal(refs2))
 				})
 			})
 		})
@@ -259,15 +260,18 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 			value1 = DeniedPacketsAggregateValue{
 				packets: gaugeDeniedPackets.With(label1),
 				bytes:   gaugeDeniedBytes.With(label1),
-				refs:    set.FromArray([]Tuple{tuple1, tuple2}),
+				refs:    NewTupleSet(),
 			}
+			value1.refs.Add(tuple1)
+			value1.refs.Add(tuple2)
 			value1.packets.Set(3)
 			value1.bytes.Set(3)
 			value2 = DeniedPacketsAggregateValue{
 				packets: gaugeDeniedPackets.With(label2),
 				bytes:   gaugeDeniedBytes.With(label2),
-				refs:    set.FromArray([]Tuple{tuple3}),
+				refs:    NewTupleSet(),
 			}
+			value2.refs.Add(tuple3)
 			value2.packets.Set(2)
 			value2.bytes.Set(4)
 			da.aggStats[key1] = value1
@@ -276,14 +280,14 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 		Describe("Delete a entry has more than one reference", func() {
 			var (
 				v1, v2       DeniedPacketsAggregateValue
-				refs1, refs2 set.Set
+				refs1, refs2 tupleSet
 				ok           bool
 			)
 			BeforeEach(func() {
-				refs1 = set.New()
-				refs1.AddAll([]Tuple{tuple2})
-				refs2 = set.New()
-				refs2.AddAll([]Tuple{tuple3})
+				refs1 = NewTupleSet()
+				refs1.Add(tuple2)
+				refs2 = NewTupleSet()
+				refs2.Add(tuple3)
 				denyPacketTuple1DenyT3.inMetric.deltaPackets = 0
 				denyPacketTuple1DenyT3.inMetric.deltaBytes = 0
 				denyPacketTuple1DenyT3.updateType = UpdateTypeExpire
@@ -335,35 +339,37 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 				}()).Should(Equal(4))
 			})
 			It("should have correct refs", func() {
-				Expect(func() bool {
+				Expect(func() tupleSet {
 					v1, ok = da.aggStats[key1]
 					// If we didn't find the key now, we'll
 					// not want to look into the value.
 					if !ok {
-						return false
+						return nil
 					}
-					return v1.refs.Equals(refs1)
-				}()).Should(BeTrue())
-				Expect(func() bool {
+					return v1.refs
+				}()).To(Equal(refs1))
+				Expect(func() tupleSet {
 					v2, ok = da.aggStats[key2]
 					// If we didn't find the key now, we'll
 					// not want to look into the value.
 					if !ok {
-						return false
+						return nil
 					}
-					return v2.refs.Equals(refs2)
-				}()).Should(BeTrue())
+					return v2.refs
+				}()).To(Equal(refs2))
 			})
 		})
 		Describe("Delete a entry has only one reference", func() {
 			var (
 				v1    DeniedPacketsAggregateValue
-				refs1 set.Set
+				refs1 tupleSet
 				ok    bool
 			)
 			BeforeEach(func() {
 				v1 = da.aggStats[key1]
-				refs1 = set.FromArray([]Tuple{tuple1, tuple2})
+				refs1 = NewTupleSet()
+				refs1.Add(tuple1)
+				refs1.Add(tuple2)
 				denyPacketTuple3DenyT4.updateType = UpdateTypeExpire
 				da.OnUpdate(denyPacketTuple3DenyT4)
 			})
@@ -391,15 +397,15 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 				}()).Should(Equal(3))
 			})
 			It("should have correct refs", func() {
-				Expect(func() bool {
+				Expect(func() tupleSet {
 					v1, ok = da.aggStats[key1]
 					// If we didn't find the key now, we'll
 					// not want to look into the value.
 					if !ok {
-						return false
+						return nil
 					}
-					return v1.refs.Equals(refs1)
-				}()).Should(BeTrue())
+					return v1.refs
+				}()).To(Equal(refs1))
 			})
 			It("should have the deleted entry as candidate for deletion", func() {
 				Expect(da.retainedMetrics).Should(HaveKey(key2))
