@@ -145,7 +145,7 @@ spec:
     source: {}
 ```
 
-5) Alternatively, you may also use {{site.prodname}} Manager to inspect and view information and statistics associated with Network policies, Endpoints and Nodes.
+5) Alternatively, you may also use {{site.prodname}} Manager to inspect and view information and metrics associated with policies, endpoints, and nodes.
 
 ### Enable isolation
 
@@ -191,21 +191,19 @@ wget: download timed out
 
 The request should time out after 5 seconds.  By enabling isolation on the namespace, we've prevented access to the service.
 
-### CNX Metrics
+### {{site.prodname}} Metrics
 Now would be a great time to take a look at the metrics.
 
 In {{site.prodname}} Manager, head to the dashboard view. You will see graphs associated with allowed packets/bytes and denied packets/bytes. The graphs represent the rates at which packets/bytes are being allowed or denied.
 
-Now if we wanted to dig in further and find out whats causing the packets to be denied, we could take a look at the 'Packets by Policy' bar graph. Each individual bar represents a Policy that has either denied or allowed a packet.
+Now if we wanted to dig in further and find out what's causing the packets to be denied, we could take a look at the **Packets by Policy** bar graph. Each individual bar represents a policy that has either denied or allowed a packet.
 
-> **Note**: The NetworkPolicy spec for `default-deny` does not come configured
-> with any rules. It's a special policy that has a 'default deny' effect because
-> of the way [CNX]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier#how-policy-is-evaluated)
-> evaluates it. In that, a packet will be dropped if the policies (like default-deny in this case) affecting the 
+> **Note**: The `NetworkPolicy` spec for [`default-deny`]({{site.baseurl}}/{{page.version}}/getting-started/cnx/simple-policy-cnx/#enable-isolation) does not come configured
+> with any rules. This policy results in a 'default deny' because of how it is [evaluated]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier#how-policy-is-evaluated). A packet will be dropped if the policies (like default-deny in this case) affecting the 
 > endpoint takes no action.
 >
-> The metrics associated with such a behavior is reflected under the `Implict Drops` block.
-> To view it, go to the `Policy` page and enable `Implicit Drops` from the `eye` dropdown.
+> You can review the metrics associated with such behavior in the **Implict Drops** block.
+> To view it, go to the policy page and enable **Implicit Drops** from the **Eye** (next to **Add New Tier** button) dropdown.
 {: .alert .alert-info}
 
 ### Allow Access using a NetworkPolicy
@@ -255,7 +253,13 @@ If you don't see a command prompt, try pressing enter.
 ```
 You should see an HTTP response.
 
-You may also now confirm that `access-nginx` is actually the policy that is causing the packets to be accepted. You may do this by going back to the dashboard page on {{site.prodname}} Manager and observing the `Packets by Policy` bar graph. Other inspection workflows/options include: filtering through the information presented in Policies, Endpoints and Nodes pages. (for the purpose of demo you may run wget in a loop.)
+Return to the **Dashboard** page and review the **Packets by Policy** bar graph to confirm that `access-nginx` causes the packets to be accepted.
+Other inspection workflows/options include: filtering through the information presented in policies, endpoints and nodes pages. 
+
+To set a stream of allowed packets run the following command:
+```	
+-for i in `seq 1 10000`; do (wget -q --timeout=1 nginx -O - & sleep 0.01); done	
+-```
 
 Coming back, however, we still cannot access the service from a pod without the label `run: access`:
 

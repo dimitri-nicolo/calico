@@ -21,7 +21,7 @@ ifeq ($(DEV),true)
 endif
 
 serve:
-	docker run --rm -e JEKYLL_UID=$(JEKYLL_UID) -p 4000:4000 -v $$PWD:/srv/jekyll jekyll/jekyll:$(JEKYLL_VERSION) jekyll serve --incremental $(CONFIG) --no-watch
+	docker run --rm -e JEKYLL_UID=$(JEKYLL_UID) -p 4000:4000 -v $$PWD:/srv/jekyll jekyll/jekyll:$(JEKYLL_VERSION) jekyll serve --incremental $(CONFIG)
 
 .PHONY: build
 _site build:
@@ -32,7 +32,7 @@ clean:
 	@rm -f publish-cnx-docs.yaml
 
 htmlproofer: clean _site
-	# Run htmlproofer, failing if we hit any errors.
+	# Run htmlproofer, failing if we hit any errors. 
 	./htmlproofer.sh
 
 	# Run kubeval to check master manifests are valid Kubernetes resources.
