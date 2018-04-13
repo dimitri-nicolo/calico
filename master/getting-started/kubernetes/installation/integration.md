@@ -7,14 +7,23 @@ This document explains the components necessary to install {{site.prodname}} on
 Kubernetes for integrating with custom configuration management.
 
 The manifests we provide in [Installing {{site.prodname}} for policy and networking](calico),
+<<<<<<< HEAD
 and [Installing {{site.prodname}} for policy](other) will perform these steps automatically
+=======
+[Installing {{site.prodname}} for policy and flannel for networking](flannel), and
+[Installing {{site.prodname}} for policy](other) will perform these steps automatically
+>>>>>>> 01eb63c4... Add /var/lib/calico mount to integration guide
 for you and are *strongly* recommended for most users. These instructions should only
 be followed by users who have a specific need that cannot be met by using manifests.
 
 
 ## Before you begin
 
+<<<<<<< HEAD
 - Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements).
+=======
+Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements).
+>>>>>>> 01eb63c4... Add /var/lib/calico mount to integration guide
 
 - Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
@@ -77,16 +86,17 @@ ExecStart=/usr/bin/docker run --net=host --privileged --name={{site.noderunning}
   -e ETCD_ENDPOINTS=${ETCD_ENDPOINTS} \
   -e NODENAME=${HOSTNAME} \
   -e IP= \
-  -e NO_DEFAULT_POOLS= \
-  -e AS= \
   -e IP6= \
+  -e AS= \
+  -e NO_DEFAULT_POOLS= \
+  -e CALICO_LIBNETWORK_ENABLED=false \
   -e CALICO_NETWORKING_BACKEND=bird \
   -e FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT \
-  -v /var/run/calico:/var/run/calico \
   -v /lib/modules:/lib/modules \
   -v /run/docker/plugins:/run/docker/plugins \
-  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /var/run/calico:/var/run/calico \
   -v /var/log/calico:/var/log/calico \
+  -v /var/lib/calico:/var/lib/calico \
   {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.title}}
 ExecStop=/usr/bin/docker rm -f {{site.noderunning}}
 Restart=always
@@ -103,12 +113,15 @@ Replace `<ETCD_IP>:<ETCD_PORT>` with your etcd configuration.
 > benefits up to 0.5 cores.
 {: .alert .alert-info}
 
+<<<<<<< HEAD
 ### Configuring {{site.nodecontainer}} for metrics collection
 
 Enable metrics in {{site.prodname}} by updating the global `FelixConfiguration` resource (`default`).
 
 {% include {{page.version}}/enable-felix-prometheus-reporting.md %}
 
+=======
+>>>>>>> 01eb63c4... Add /var/lib/calico mount to integration guide
 ## Installing the {{site.prodname}} CNI plugins
 
 The Kubernetes `kubelet` should be configured to use the `calico` and `calico-ipam` plugins.
