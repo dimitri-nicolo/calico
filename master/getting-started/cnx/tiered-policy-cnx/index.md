@@ -80,7 +80,7 @@ Now enable isolation in the `policy-demo` Namespace.
 ```
 kubectl create -f - <<EOF
 kind: NetworkPolicy
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 metadata:
   name: default-deny
   namespace: policy-demo

@@ -1,18 +1,28 @@
 ---
-title: Policy Violation Monitoring & Reporting
+title: Policy Monitoring & Reporting
 ---
 
-{{site.prodname}} adds the ability to monitor violations of policy
-configured in your cluster. By defining a set of simple rules and thresholds,
-you can monitor denied traffic and receive alerts when it exceeds configured
-thresholds.
+{{site.prodname}} adds the ability to monitor effects of policies configured in your cluster.
+By defining a set of simple rules and thresholds, you can monitor traffic metrics and receive
+alerts when it exceeds configured thresholds.
 
 ### Architecture
 
 ```
-
- +-----------------+
- | Host            |
+                                      +------------+
+                                      |            |
+                                      |    CNX     |
+                                      |   Manager  |
+                                      |            |
+                                      |            |
+                                      |            |
+                                      +------------+
+                                            ^
+                                            |
+                                            |
+                                            |
+ +-----------------+                        |
+ | Host            |                        |
  | +-----------------+     denied     +------------+     +------------+
  | | Host            |------------->--|            |     |            |--->--
  | | +-----------------+   packet     | Prometheus |     | Prometheus |        alert
@@ -29,26 +39,45 @@ thresholds.
                                                             alert receivers.
 ```
 
-Policy Violation & Reporting is accomplished using 3 key pieces:
+Policy Inspection & Reporting is accomplished using 4 key pieces:
 
-1. A {{site.prodname}} specific Felix binary running inside `{{site.noderunning}}` container
-   monitors the host for Denied packets and collects metrics.
+1. A {{site.prodname}} specific Felix binary running inside `{{site.noderunning}}` container 
+   monitors the host for denied/allowed packets and collects metrics.
 2. Prometheus Server(s) deployed as part of the {{site.prodname}} manifest scrapes
    every configured `{{site.noderunning}}` target. Alerting rules querying denied packet
    metrics are configured in Prometheus and when triggered, fire alerts to
    the Prometheus Alertmanager.
-3. Prometheus Alertmanager (or simply Alertmanager), also deployed as part of
-   the _CNX_ manifest, receives alerts from Prometheus and forwards
+3. Prometheus Alertmanager (or simply Alertmanager), deployed as part of
+   the {{site.prodname}} manifest, receives alerts from Prometheus and forwards
    alerts to various alerting mechanisms such as _Pager Duty_, or _OpsGenie_.
+4. {{site.prodname}} Manager (UI), also deployed as part of the {{site.prodname}} manifest, 
+   processes the metrics using pre-defined prometheus queries and provides with intuitive 
+   dashboards and associated workflows.
 
-### Metrics
+### {{site.prodname}} Manager Dashboard 
 
-The metrics generated are:
+In the Dashboard, you will find graphs associated with allowed and denied packets, bytes, and connections. 
+The graphs represent the rates at which the packets, bytes, and connections are being allowed or denied.
+
+In the Dashboard, you will also find a **Packets by Policy** bar graph. Each individual bar represents
+a policy that has either denied or allowed a packet.
+
+
+### The Prometheus Metrics
+
+Internally, the metrics generated are:
 
 - `calico_denied_packets` - Total number of packets denied by {{site.prodname}} policies.
 - `calico_denied_bytes` - Total number of bytes denied by {{site.prodname}} policies.
+- `cnx_policy_rule_packets` - Sum of allowed/denied packets over rules processed by
+  {{site.prodname}} policies.
+- `cnx_policy_rule_bytes` - Sum of allowed/denied bytes over rules processed by 
+  {{site.prodname}} policies.
+- `cnx_policy_rule_connections` - Sum of connections over rules processed by {{site.prodname}} 
+  policies.
 
-Using these metrics, one can identify the policy that denied packets as well as
+The metrics `calico_denied_packets` and `calico_denied_bytes` have the labels `policy` and `srcIP`.
+Using these two metrics, one can identify the policy that denied packets as well as
 the source IP Address of the packets that were denied by this policy. Using
 Prometheus terminology, `calico_denied_packets` is the metric Name and `policy`
 and `srcIP` are labels. Each one of these metrics will be available as a
@@ -70,62 +99,42 @@ This means that the profile `k8s_ns.ns-0` denied 5 packets (totaling 300 bytes)
 originating from the IP Address "10.245.13.133" and the same profile denied 14
 packets originating from the IP Address "10.245.13.149".
 
-See
-the
+The metrics `cnx_policy_rule_packets`, `cnx_policy_rule_bytes` and `cnx_policy_rule_connections` have the
+labels: `tier`, `policy`, `namespace`, `rule_index`, `action`, `traffic_direction`, `rule_direction`.
+
+Using these metrics, one can identify allow, denied, passed byte rate and packet rate both inbound and outbound, indexed by both policy and rule. {{site.prodname}} Manager Dashboard makes heavy usage of these metrics by issuing queries such as: 
+```
+- Query counts for rules: Packet rates for specific rule by traffic_direction
+sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",rule_direction="ingress",rule_index="rule-5",tier="tier-0"}[30s])) without (instance)
+
+- Query counts for rules: Packet rates for each rule in a policy by traffic_direction
+sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",tier="tier-0"}[30s])) without (instance)
+
+- Query counts for a single policy by traffic_direction and action
+sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",tier="tier-0"}[30s])) without (instance,rule_index,rule_direction)
+
+- Query counts for all policies across all tiers by traffic_direction and action
+sum(irate(cnx_policy_rule_packets[30s])) without (instance,rule_index,rule_direction)
+```
+
+See the 
 [Felix configuration reference]({{site.baseurl}}/{{page.version}}/reference/felix/configuration#tigera-cnx-specific-configuration) for
 the settings that control the reporting of these metrics.  CNX manifests
 normally set `PrometheusReporterEnabled=true` and
 `PrometheusReporterPort=9081`, so these metrics are available on each compute
 node at `http://<node-IP>:9081/metrics`.
 
-### Metrics in 2.1
-
-The metrics generated are:
-- `cnx_policy_rule_packets` - Sum of allowed/denied packets over rules processed by {{site.prodname}} policies.
-- `cnx_policy_rule_bytes` - Sum of allowed/denied bytes over rules processed by {{site.prodname}} policies.
-- `cnx_policy_rule_connections` - Sum of connections over rules processed by {{site.prodname}} policies.
-
-with Labels added by Felix:
-- tier: tier name
-- policy: policy name
-- namespace: namespace the policy is in (or __GLOBAL__ for GNPs)
-- rule_index: index of the rule in that policy (from zero)
-- action: allow or deny (applicable only to cnx_policy_rule_{packets/bytes})
-- traffic_direction: inbound or outbound
-- rule_direction: ingress or egress
-
-Using these metrics, one can identify allow, denied, passed byte rate and packet rate both inbound and outbound, indexed by both policy and rule.
-
-Example queries:
-- Query counts for rules: Packet rates for specific rule by traffic_direction
-```
-sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",rule_direction="ingress",rule_index="rule-5",tier="tier-0"}[30s])) without (instance)
-```
-- Query counts for rules: Packet rates for each rule in a policy by traffic_direction
-```
-sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",tier="tier-0"}[30s])) without (instance)
-```
-- Query counts for a single policy by traffic_direction and action
-```
-sum(irate(cnx_policy_rule_packets{namespace="namespace-2",policy="policy-0",tier="tier-0"}[30s])) without (instance,rule_index,rule_direction)
-```
-- Query counts for all policies across all tiers by traffic_direction and action
-```
-sum(irate(cnx_policy_rule_packets[30s])) without (instance,rule_index,rule_direction)
-```
-
 ### Lifetime of a Metric
 
 #### When are Metrics Generated?
 
-Metrics with a `{policy, srcIP}` label pair will only be generated at a node
-when there are packets directed at an _Endpoint_ that are being actively denied
-by a policy. Once generated they stay alive for 60 seconds after the last
-packet was denied by a policy.
+Metrics will only be generated at a node when there are packets directed at an _Endpoint_ 
+that are being actively profiled by a policy. Once generated they stay alive for 60 seconds 
+after the last packet was denied by a policy.
 
 #### Prometheus
 
-Once Prometheus scrapes a node and collects denied packet metrics, it will be
+Once Prometheus scrapes a node and collects packet metrics, it will be
 available at Prometheus until the metric is considered _stale_, i.e.,
 Prometheus has not seen any updates to this metric for some time. This time is
 configurable and details on how to do this are available in the
@@ -134,6 +143,7 @@ configurable and details on how to do this are available in the
 #### Metric Resets and Empty Responses
 
 Because of metrics being expired, as just described, it is entirely possible
-for a GET on the denied metrics URL to return no information.  This is expected
+for a GET on the metrics URL to return no information.  This is expected
 if there have not been any packets being denied by a policy on that node, in
 the last 60 seconds.
+
