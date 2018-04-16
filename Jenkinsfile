@@ -176,7 +176,7 @@ pipeline{
                     withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
                         if (env.BRANCH_NAME == 'master') {
                             sh "gcloud auth activate-service-account ${WAVETANK_SERVICE_ACCT} --key-file $DOCKER_AUTH --project=tigera-docs"
-                            sh "gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml"
+                            sh "gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml --stop-previous-version --promote"
                         }
                     }
                 }
