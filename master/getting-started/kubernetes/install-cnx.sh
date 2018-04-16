@@ -36,6 +36,11 @@ DATASTORE=${DATASTORE:="etcd"}
 #
 LICENSE_FILE=${LICENSE_FILE:=""}
 
+# Specify an external etcd endpoint(s), e.g.
+#   ETCD_ENDPOINTS=https://192.168.0.1:2379 ./install-cnx.sh
+# Default is to pull the string from calico.yaml
+ETCD_ENDPOINTS=${ETCD_ENDPOINTS:=""}
+
 # when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
 
@@ -79,7 +84,8 @@ checkSettings() {
   echo '  DOCS_LOCATION='${DOCS_LOCATION}
   echo '  VERSION='${VERSION}
   echo '  DATASTORE='${DATASTORE}
-  [ "$LICENSE_FILE" ] && echo  '  LICENSE_FILE='${LICENSE_FILE}
+  echo '  LICENSE_FILE='${LICENSE_FILE}
+  [ "$ETCD_ENDPOINTS" ] && echo  '  ETCD_ENDPOINTS='${ETCD_ENDPOINTS}
 
   echo
   echo -n "About to "$1" CNX. "
@@ -105,6 +111,7 @@ Usage: $(basename "$0")
            -l license.yaml    # Required - specify the path to the CNX license file
           [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
+          [-e etcd_endpoints] # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]      # Specify the datastore ("etcd"|"kdd"); default: "etcd"
           [-v version]        # CNX version; default: "v2.1"
           [-u]                # Uninstall CNX
@@ -117,10 +124,11 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:hk:l:pqv:ux" opt; do
+  while getopts "c:d:e:hk:l:pqv:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
+      e )  ETCD_ENDPOINTS=$OPTARG;;
       k )  DATASTORE=$OPTARG;;
       l )  LICENSE_FILE=$OPTARG;;
       v )  VERSION=$OPTARG;;
@@ -473,33 +481,60 @@ dockerLogin() {
 }
 
 #
-# createCalicoctlCfg() - if it doesn't exist, create "/etc/calico/calicoctl.cfg"
+# setupEtcdEndpoints() - if DATASTORE is etcd, setup
+# ${ETCD_ENDPOINTS}. Optionally update calico.yaml if
+# the user specified a different etcd endpoint.
+#
+setupEtcdEndpoints() {
+
+  if [ "$DATASTORE" == "etcd" ]; then
+
+    # Sanity checking - we need calico.yaml
+    if [ ! -f calico.yaml ]; then
+      fatalError "Error: did not find \"calico.yaml\" manifest."
+    fi
+
+    # $ETCD_ENDPOINTS is ""; user wants to use the default etcd endpoint specified in "calico.yaml"
+    if [ -z ${ETCD_ENDPOINTS} ]; then
+
+      # Extract etcd server url from "calico.yaml"
+      export ETCD_ENDPOINTS=$(grep etcd_endpoints calico.yaml | grep -i http | sed 's/etcd_endpoints: //g')
+
+    else
+
+      # User specified an ETCD_ENDPOINT setting - overwrite default etcd_endpoints in calico.yaml.
+      # This sed cmd matches <etcd_endpoints: "http*> up to the end of the line and replaces it with:
+      #                      <etcd_endpoints: "$ETCD_ENDPOINTS">
+      sed -Ei "s|etcd_endpoints: \"http.*|etcd_endpoints: \"$ETCD_ENDPOINTS\"|" calico.yaml
+    fi
+
+    echo "Setting etcd_endpoints to: ${ETCD_ENDPOINTS}"
+  fi
+}
+
+#
+# createCalicoctlCfg() - create or replace "/etc/calico/calicoctl.cfg"
 #
 createCalicoctlCfg() {
   local cfgFile="/etc/calico/calicoctl.cfg"
-  if [ -f "$cfgFile" ]; then
-    echo "Note: not creating \"$cfgFile\" because it already exists."
-    return
-  fi
 
-  # Create /etc/calico/calicoctl.cfg: etcd
+  # etcd: create or replace /etc/calico/calicoctl.cfg
   if [ "$DATASTORE" == "etcd" ]; then
 
-    # Extract etcd server url from "calico.yaml"
-    if [ ! -f calico.yaml ]; then
-      fatalError "Error: did not find \"calico.yaml\" manifest."   # Sanity check
+    # Sanity checking
+    if [ -z "$ETCD_ENDPOINTS" ]; then
+      fatalError "ETCD_ENDPOINTS not set"
     fi
-    local etcdEndpoints=$(grep etcd_endpoints calico.yaml | grep -i http | sed 's/etcd_endpoints: //g')
 
     cat > calicoctl.cfg <<EOF
 apiVersion: projectcalico.org/v3
 kind: CalicoAPIConfig
 metadata:
 spec:
-  etcdEndpoints: ${etcdEndpoints}
+  etcdEndpoints: ${ETCD_ENDPOINTS}
 EOF
 
-  # Create /etc/calico/calicoctl.cfg: kdd
+  # kdd: create or replace /etc/calico/calicoctl.cfg
   elif [ "$DATASTORE" == "kdd" ]; then
     local kubeConfig="$HOME"/.kube/config
     if [ ! -f "$kubeConfig" ]; then
@@ -834,6 +869,7 @@ installCNX() {
   setupBasicAuth                  # Create 'jane/welc0me' account w/cluster admin privs
 
   downloadManifests               # Download all manifests, if they're not already present in current dir
+  setupEtcdEndpoints              # Determine etcd endpoints, set ${ETCD_ENDPOINTS}
 
   installCalicoBinary "calicoctl" # Install quay.io/tigera/calicoctl binary, create /etc/calico/calicoctl.cfg
   installCalicoBinary "calicoq"   # Install quay.io/tigera/calicoq binary
