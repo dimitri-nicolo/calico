@@ -42,7 +42,7 @@ You will need to obtain or generate the following in PEM format:
    openssl req -new -key calico.key -out calico.csr
    ```
    At each of the prompts press enter except at the Common Name prompt enter
-   `api.kube-system.svc`
+   `cnx-api.kube-system.svc`
 
 
 1. Generate the signed certificate
