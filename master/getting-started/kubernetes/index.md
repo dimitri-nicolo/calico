@@ -33,10 +33,10 @@ the host. Instead, continue directly to the
 
 
 ### Create a single-host Kubernetes cluster
-   
+
 1. As a regular user with sudo privileges, open a terminal on the host that
    you installed kubeadm on.
-   
+
 1. Initialize the master using the following command.
 
    ```bash
@@ -51,18 +51,21 @@ the host. Instead, continue directly to the
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
-   
+
 1. Ensure that you have a local copy of the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials),
    ideally in your current directory.
-   
+
+1. Ensure that you have a CNX license file, e.g. `license.yaml`. Use the `-l license.yaml`
+   flag to tell `install-cnx.sh` where the license file is located.
+
 1. Download the installation script.
-   
+
    ```bash
    curl --compressed {{site.url}}/{{page.version}}/getting-started/kubernetes/install-cnx.sh -O
    ```
 
 1. Set the `install-cnx.sh` file to be executable.
-   
+
    ```bash
    chmod +x install-cnx.sh
    ```
@@ -70,13 +73,13 @@ the host. Instead, continue directly to the
 1. Use the following command to execute the script.
 
    ```
-   ./install-cnx.sh -v {{page.version}}
+   ./install-cnx.sh -v {{page.version}} -l license.yaml
    ```
- 
+
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
-   > **Note**: Your browser may warn you of an insecure connection due to 
-   > the self-signed certificate. Click past this warning to access the 
+   > **Note**: Your browser may warn you of an insecure connection due to
+   > the self-signed certificate. Click past this warning to access the
    > {{site.prodname}} web interface.
    {: .alert .alert-info}
 
