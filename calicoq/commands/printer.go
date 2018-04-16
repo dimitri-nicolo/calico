@@ -50,6 +50,7 @@ type EndpointPrint struct {
 	Profiles     []ProfilePrint `json:"profiles,omitempty"`
 	Rules        []RulePrint    `json:"rule_matches,omitempty"`
 	Selector     string         `json:"selector,omitempty"`
+	Cluster      string         `json:"remote_cluster,omitempty"`
 }
 
 func NewEndpointPrintFromEndpointDatum(epd endpointDatum) *EndpointPrint {
@@ -82,10 +83,16 @@ func NewEndpointPrintFromNameString(name string) *EndpointPrint {
 	}
 
 	endpointIdents := strings.Split(endpointStrings[2], "/")
-	if len(endpointIdents) != 4 {
+	if len(endpointIdents) != 4 && len(endpointIdents) != 5 {
 		log.Errorf("Workload endpoint name does not have its identifiers <node>/<orchestrator>/<workload>/<name> separated by \"/\": %s", name)
 		return nil
 	}
+
+	if len(endpointIdents) == 5 {
+		// If there's a cluster/ at the front, then "pop" it off the endpointIdents slice.
+		epp.Cluster, endpointIdents = endpointIdents[0], endpointIdents[1:]
+	}
+
 	epp.Node = endpointIdents[0]
 	epp.Orchestrator = endpointIdents[1]
 	epp.Workload = endpointIdents[2]
