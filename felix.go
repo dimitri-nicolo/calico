@@ -815,7 +815,7 @@ func loadConfigFromDatastore(
 
 	// Check if the license is valid. In CNX v2.1, we continue to work even after the license expires and
 	// even after the end of the grace period, but we show this warning message and continue to work as licensed cluster.
-	if err = claims.Validate(); err != nil {
+	if errLic = claims.Validate(); errLic!= nil {
 		log.Errorf("Your license has expired. Please update your license to restore normal operations. Contact Tigera support or email licensing@tigera.io")
 	} else {
 		log.Info("License is valid")
