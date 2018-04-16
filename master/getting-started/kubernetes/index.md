@@ -55,6 +55,9 @@ the host. Instead, continue directly to the
 1. Ensure that you have a local copy of the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials),
    ideally in your current directory.
 
+1. Ensure that you have a CNX license file, e.g. `license.yaml`. Use the `-l license.yaml`
+   flag to tell `install-cnx.sh` where the license file is located.
+
 1. Download the installation script.
 
    ```bash
@@ -70,7 +73,7 @@ the host. Instead, continue directly to the
 1. Use the following command to execute the script.
 
    ```
-   ./install-cnx.sh -v {{page.version}}
+   ./install-cnx.sh -v {{page.version}} -l license.yaml
    ```
 
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.

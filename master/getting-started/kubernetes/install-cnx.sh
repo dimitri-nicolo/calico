@@ -138,7 +138,7 @@ HELP_USAGE
   [ "$DATASTORE" == "etcd" ] || [ "$DATASTORE" == "kdd" ] || fatalError "Datastore \"$DATASTORE\" is not valid, must be either \"etcd\" or \"kdd\"."
 
   # Confirm user specified a license file
-  [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a CNX license file."
+  [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a CNX license file, e.g. '-l license.yaml'"
 
   # Confirm license file is readable
   [ ! -r "$LICENSE_FILE" ] && fatalError "Couldn't locate license file: $LICENSE_FILE"
