@@ -38,7 +38,7 @@ class TestCalicoctlCommands(TestBase):
     
     def setUp(self):
         super(TestCalicoctlCommands, self).setUp()
-        rc = calicoctl("create", data=valid_cnx_license)
+        rc = calicoctl("create", data=valid_cnx_license_expires_jan_1st_2020)
         rc.assert_no_error()
 
     def test_get(self):
@@ -324,6 +324,43 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("get workloadendpoints -o yaml")
         rc.assert_empty_list("WorkloadEndpoint")
 
+    def test_license(self):
+        """
+        Test license operations are handled as expected.
+        - Shouldn't be able to apply/create an expired license
+        - Shouldn't be able to delete an existing license
+        - Should be able to reapply the same valid license again
+        - Should be able to apply a newer license which expires later than the one that's already applied
+        - Shouldn't be able to apply/replace another valid license that expires sooner than the one currently applied
+        - Should be able to get license
+        """
+        rc = calicoctl("apply", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_no_error()
+
+        rc = calicoctl("create", data=expired_cnx_license)
+        rc.assert_error()
+
+        rc = calicoctl("apply", data=expired_cnx_license)
+        rc.assert_error()
+
+        rc = calicoctl("delete", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_error()
+
+        rc = calicoctl("apply", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_no_error()
+
+        rc = calicoctl("apply", data=valid_cnx_license_expires_march_14_2020)
+        rc.assert_no_error()
+
+        rc = calicoctl("apply", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_error()
+
+        rc = calicoctl("replace", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_error()
+
+        rc = calicoctl("get license -o wide")
+        rc.assert_no_error()
+
     @parameterized.expand([
         (ippool_name1_rev1_v4,),
         (profile_name1_rev1,),
@@ -335,6 +372,7 @@ class TestCalicoctlCommands(TestBase):
         (node_name1_rev1,),
         (tier_name1_rev1,),
     ])
+
     def test_non_namespaced(self, data):
         """
         Test namespace is handled as expected for each non-namespaced resource type.
