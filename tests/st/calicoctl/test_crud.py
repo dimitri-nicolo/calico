@@ -324,23 +324,12 @@ class TestCalicoctlCommands(TestBase):
         rc = calicoctl("get workloadendpoints -o yaml")
         rc.assert_empty_list("WorkloadEndpoint")
 
-    @parameterized.expand([
-        (ippool_name1_rev1_v4,),
-        (profile_name1_rev1,),
-        (globalnetworkpolicy_name1_rev1,),
-        (globalnetworkset_name1_rev1,),
-        (globalnetworkset_name1_rev1_large,),
-        (hostendpoint_name1_rev1,),
-        (bgppeer_name1_rev1_v4,),
-        (node_name1_rev1,),
-        (tier_name1_rev1,),
-    ])
-
     def test_license(self):
         """
         Test license operations are handled as expected.
         - Shouldn't be able to apply/create an expired license
         - Should be able to reapply the same valid license again
+        - Shouldn't be able to delete an existing license
         - Shouldn't be able to apply/replace another valid license that expires sooner than the one currently applied
         - Should be able to get license
         """
@@ -364,6 +353,18 @@ class TestCalicoctlCommands(TestBase):
 
         rc = calicoctl("get license -o wide")
         rc.assert_no_error()
+
+    @parameterized.expand([
+        (ippool_name1_rev1_v4,),
+        (profile_name1_rev1,),
+        (globalnetworkpolicy_name1_rev1,),
+        (globalnetworkset_name1_rev1,),
+        (globalnetworkset_name1_rev1_large,),
+        (hostendpoint_name1_rev1,),
+        (bgppeer_name1_rev1_v4,),
+        (node_name1_rev1,),
+        (tier_name1_rev1,),
+    ])
 
     def test_non_namespaced(self, data):
         """
