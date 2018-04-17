@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"fmt"
 	"net"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -38,29 +36,9 @@ type DeniedPacketsAggregateKey struct {
 
 func getDeniedPacketsAggregateKey(mu MetricUpdate) DeniedPacketsAggregateKey {
 	return DeniedPacketsAggregateKey{
-		policy: getDeniedPacketRuleName(mu.ruleID),
+		policy: mu.ruleID.GetDeniedPacketRuleName(),
 		srcIP:  mu.tuple.src,
 	}
-}
-
-func getDeniedPacketRuleName(r *lookup.RuleID) string {
-	if r.IsNamespaced() {
-		return fmt.Sprintf(
-			"%s|%s|%s|%s",
-			r.TierString(),
-			r.NameString(),
-			r.IndexStr,
-			r.ActionString(),
-		)
-	}
-	return fmt.Sprintf(
-		"%s|%s/%s|%s|%s",
-		r.TierString(),
-		r.Namespace,
-		r.NameString(),
-		r.IndexStr,
-		r.ActionString(),
-	)
 }
 
 type DeniedPacketsAggregateValue struct {
