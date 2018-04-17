@@ -1,4 +1,4 @@
-## Applying your license key 
+## Applying your license key
 
 1. [Install calicoctl]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install).
 
@@ -15,4 +15,9 @@
    ```
    calicoctl apply -f awesome-corp-license.yaml
    ```
-   
+
+1. Confirm that the license was applied:
+
+   ```
+   calicoctl get license
+   ```
