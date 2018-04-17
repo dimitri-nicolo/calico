@@ -782,3 +782,18 @@ master:
     calico:
       version: v3.0.2
       url: https://github.com/projectcalico/calico/releases/tag/v3.0.2
+    prometheus-operator:
+      version: v0.18.1
+      url: ""
+    prometheus:
+      version: v2.2.1
+      url: ""
+    alertmanager:
+      version: v0.14.0
+      url: ""
+    prometheus-config-reloader:
+      version: v0.0.3
+      url: ""
+    configmap-reload:
+      version: v0.0.1
+      url: ""

@@ -109,7 +109,7 @@ rules that deny or allow that endpoint as a packet source or destination.
 Focusing on the
 `k8s/calico-monitoring.alertmanager-calico-node-alertmanager-0/eth0` endpoint:
 
-- The first two policies are defined in the calico-monitoring.yaml manifest.
+- The first two policies are defined in the monitor-calico.yaml manifest.
   The selectors here have been translated from the original NetworkPolicies to
   the {{site.prodname}} format (note the addition of the namespace test).
 
