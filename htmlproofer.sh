@@ -16,7 +16,7 @@ JEKYLL_UID=${JEKYLL_UID:=`id -u`}
 # The htmlproofer check is flaky, so we retry a number of times if we get a bad result.
 # If it doesn't pass once in 10 tries, we count it as a failed check.
 echo "Running a hard URL check against recent releases"
-for i in `seq 1 1`; do  # cnx htmlproofer not flakey so much as full of broken links
+for i in `seq 1 10`; do  # cnx htmlproofer not flakey so much as full of broken links
 	echo "htmlproofer attempt #${i}"
 	docker run -ti -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS}
 
