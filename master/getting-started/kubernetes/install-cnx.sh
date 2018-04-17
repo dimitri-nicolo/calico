@@ -280,22 +280,22 @@ checkNetworkManager() {
 
   NMConfig="/etc/NetworkManager/NetworkManager.conf"
 
-  echo -n "Checking status of Network Manager: "
+  echo -n "Checking status of NetworkManager: "
 
   $(nmcli dev status 2>/dev/null 1>/dev/null)
   if [ $? -eq 0 ]; then
     echo "running."
 
-    # Raise a warning if NM is running and the "cali" interfaces are
-    # not marked as "unmanaged" by NM.
-    if $( ! test -f "${NMConfig}" || ! grep -qs "cali" "${NMConfig}" ); then
-      echo "  WARNING: We've detected that Network Manager is running and that"
-      echo "  it is not configured to ignore \"cali\" interfaces. This will"
-      echo "  interfere with Calico networking. Remove, disable, or configure"
-      echo "  Network Manager to ignore \"cali\" interfaces. Refer to"
-      echo "  \"Troubleshooting\" on https://docs.tigera.io for more information."
-      promptToContinue
-    fi
+    # Raise a warning that NM is running. It's possible the user has
+    # configured exceptions for "cali*" and "tunl*" interfaces which
+    # should be sufficient for NM and CNX to interoperate.
+    echo
+    echo "  WARNING: We've detected that NetworkManager is running. Unless you've"
+    echo "  configured exceptions for CNX network interfaces, NetworkManager"
+    echo "  will interfere with CNX networking. Remove, disable, or configure"
+    echo "  NetworkingManager to ignore CNX network interfaces. Refer to"
+    echo "  \"Troubleshooting\" on https://docs.tigera.io for more information."
+    promptToContinue
   else
     echo "not running."
   fi
