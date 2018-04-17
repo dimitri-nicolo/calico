@@ -169,6 +169,16 @@
 
    Wait until each pod has the `STATUS` of `Running`.
 
+1. Remove the taints on the master so that you can schedule pods on it.
+   ```
+   kubectl taint nodes --all node-role.kubernetes.io/master-
+   ```
+
+   It should return the following.
+   ```
+   node "<your-hostname>" untainted
+   ```
+
 1. Apply the following manifest to set network policy that permits requests to {{site.prodname}}. 
 
    ```
