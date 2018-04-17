@@ -2,6 +2,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
@@ -70,7 +71,7 @@ func Wait() {
 func Stop() {
 	if server != nil {
 		log.WithField("Addr", server.Addr).Info("Stopping HTTPS server")
-		server.Shutdown(nil)
+		server.Shutdown(context.Background())
 		server = nil
 		wg.Wait()
 	}
