@@ -2,7 +2,9 @@
 layout: null
 ---
 # This manifest includes the following component versions:
-#   coreos/prometheus-operator:v0.12.0
+#   quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
+#   quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
+#   quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
 ---
 
 # This manifest creates a namespace for deploying prometheus-operator,
@@ -107,10 +109,10 @@ spec:
       serviceAccountName: calico-prometheus-operator
       containers:
       - name: calico-prometheus-operator
-        image: quay.io/coreos/prometheus-operator:v0.15.0
+        image: quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
         args:
-          - --prometheus-config-reloader=quay.io/coreos/prometheus-config-reloader:v0.0.2
-          - --config-reloader-image=quay.io/coreos/configmap-reload:v0.0.1
+          - --prometheus-config-reloader=quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
+          - --config-reloader-image=quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
         resources:
           requests:
             cpu: 100m

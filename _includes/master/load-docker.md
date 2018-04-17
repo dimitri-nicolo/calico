@@ -44,11 +44,11 @@
    docker pull {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker pull {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker pull {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
-   docker pull quay.io/coreos/configmap-reload:v0.0.1
-   docker pull quay.io/coreos/prometheus-config-reloader:v0.0.2
-   docker pull quay.io/coreos/prometheus-operator:v0.15.0
-   docker pull quay.io/prometheus/alertmanager:v0.11.0
-   docker pull quay.io/prometheus/prometheus:v2.0.0
+   docker pull quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
+   docker pull quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
+   docker pull quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
+   docker pull quay.io/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
+   docker pull quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    ```
 
 1. Retag the images with the name of your private registry.
@@ -60,11 +60,11 @@
    docker tag {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}} <YOUR-REGISTRY>/tigera/cnx-manager-proxy:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker tag {{site.imageNames["node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}} <YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker tag {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}} <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
-   docker tag quay.io/coreos/configmap-reload:v0.0.1 <YOUR-REGISTRY>/coreos/configmap-reload:v0.0.1
-   docker tag quay.io/coreos/prometheus-config-reloader:v0.0.2 <YOUR-REGISTRY>/coreos/prometheus-config-reloader:v0.0.2
-   docker tag quay.io/coreos/prometheus-operator:v0.15.0 <YOUR-REGISTRY>/coreos/prometheus-operator:v0.15.0
-   docker tag quay.io/prometheus/alertmanager:v0.11.0 <YOUR-REGISTRY>/prometheus/alertmanager:v0.11.0
-   docker tag quay.io/prometheus/prometheus:v2.0.0 <YOUR-REGISTRY>/prometheus/prometheus:v2.0.0
+   docker tag quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}} <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
+   docker tag quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}} <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
+   docker tag quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}} <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
+   docker tag quay.io/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}} <YOUR-REGISTRY>/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
+   docker tag quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}} <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    ```
    > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`)
    > when retagging the images, as shown above and below.
@@ -79,11 +79,11 @@
    docker push <YOUR-REGISTRY>/tigera/cnx-manager-proxy:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
    docker push <YOUR-REGISTRY>/tigera/typha:{{site.data.versions[page.version].first.components["typha"].version}}
-   docker push <YOUR-REGISTRY>/coreos/configmap-reload:v0.0.1
-   docker push <YOUR-REGISTRY>/coreos/prometheus-config-reloader:v0.0.2
-   docker push <YOUR-REGISTRY>/coreos/prometheus-operator:v0.15.0
-   docker push <YOUR-REGISTRY>/prometheus/alertmanager:v0.11.0
-   docker push <YOUR-REGISTRY>/prometheus/prometheus:v2.0.0
+   docker push <YOUR-REGISTRY>/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
+   docker push <YOUR-REGISTRY>/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
+   docker push <YOUR-REGISTRY>/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
+   docker push <YOUR-REGISTRY>/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
+   docker push <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    ```
 
    > **Important**: Do not push the private {{site.prodname}} images to a public registry.
