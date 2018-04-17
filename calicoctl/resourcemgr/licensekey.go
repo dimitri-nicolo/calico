@@ -51,7 +51,7 @@ func init() {
 			// Validate the license before applying.
 			if err = licClaims.Validate(); err != nil {
 				// License is already expired. Don't apply it.
-				return nil, fmt.Errorf("the license you're trying to creat is already expired on %s", licClaims.Expiry.Time().Local())
+				return nil, fmt.Errorf("the license you're trying to create expired on %s", licClaims.Expiry.Time().Local())
 			}
 			log.Debug("License is valid")
 
@@ -70,7 +70,7 @@ func init() {
 			// Validate the license before applying.
 			if err = licClaims.Validate(); err != nil {
 				// License is already expired. Don't apply it.
-				return nil, fmt.Errorf("the license you're trying to apply is already expired on %s", licClaims.Expiry.Time().Local())
+				return nil, fmt.Errorf("the license you're trying to apply expired on %s", licClaims.Expiry.Time().Local())
 			}
 			log.Debug("License is valid")
 
