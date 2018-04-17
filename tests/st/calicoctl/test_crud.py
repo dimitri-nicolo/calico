@@ -38,7 +38,7 @@ class TestCalicoctlCommands(TestBase):
     
     def setUp(self):
         super(TestCalicoctlCommands, self).setUp()
-        rc = calicoctl("create", data=valid_cnx_license)
+        rc = calicoctl("create", data=valid_cnx_license_expires_march_14_2020)
         rc.assert_no_error()
 
     def test_get(self):
@@ -335,6 +335,36 @@ class TestCalicoctlCommands(TestBase):
         (node_name1_rev1,),
         (tier_name1_rev1,),
     ])
+
+    def test_license(self):
+        """
+        Test license operations are handled as expected.
+        - Shouldn't be able to apply/create an expired license
+        - Should be able to reapply the same valid license again
+        - Shouldn't be able to apply/replace another valid license that expires sooner than the one currently applied
+        - Should be able to get license
+        """
+        rc = calicoctl("create", data=expired_cnx_license)
+        rc.assert_error()
+
+        rc = calicoctl("apply", data=expired_cnx_license)
+        rc.assert_error()
+
+        rc = calicoctl("apply", data=valid_cnx_license_expires_march_14_2020)
+        rc.assert_no_error()
+
+        rc = calicoctl("delete", data=valid_cnx_license_expires_march_14_2020)
+        rc.assert_error()
+
+        rc = calicoctl("apply", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_error()
+
+        rc = calicoctl("replace", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_error()
+
+        rc = calicoctl("get license -o wide")
+        rc.assert_no_error()
+
     def test_non_namespaced(self, data):
         """
         Test namespace is handled as expected for each non-namespaced resource type.
