@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Script to install CNX on a kubeadm cluster. Requires the docker
 # authentication json file. Note the script must be run on master node.
@@ -12,11 +12,11 @@ export TOP_PID=$$
 # VERSION is used to retrieve manifests, e.g.
 #   ${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
 #      - resolves to -
-#   http://0.0.0.0:4000/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+#   https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
 VERSION=${VERSION:="v2.1"}
 
 # Override DOCS_LOCATION to point to alternate CNX docs location, e.g.
-#   DOCS_LOCATION=http://0.0.0.0:4000 ./install-cnx.sh
+#   DOCS_LOCATION="https://docs.tigera.io" ./install-cnx.sh
 #
 DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
 
@@ -26,19 +26,19 @@ DOCS_LOCATION=${DOCS_LOCATION:="https://docs.tigera.io"}
 #
 CREDENTIALS_FILE=${CREDENTIALS_FILE:="config.json"}
 
-# Override DATASTORE to point to kdd or etcd (default), e.g.
-#  DATASTORE="kdd" ./install-cnx.sh
+# Override DATASTORE to point to "kubernetes" or "etcdv3" (default), e.g.
+#  DATASTORE="kubernetes" ./install-cnx.sh
 #
-DATASTORE=${DATASTORE:="etcd"}
+DATASTORE=${DATASTORE:="etcdv3"}
 
 # Specify a license file, e.g.
-#   LICENSE_FILE="./my-great-license.yaml ./install-cnx.sh
+#   LICENSE_FILE="./my-great-license.yaml" ./install-cnx.sh
 #
-LICENSE_FILE=${LICENSE_FILE:=""}
+LICENSE_FILE=${LICENSE_FILE:="license.yaml"}
 
 # Specify an external etcd endpoint(s), e.g.
 #   ETCD_ENDPOINTS=https://192.168.0.1:2379 ./install-cnx.sh
-# Default is to pull the string from calico.yaml
+# Default is to pull the endpoint(s) from calico.yaml
 ETCD_ENDPOINTS=${ETCD_ENDPOINTS:=""}
 
 # when set to 1, don't prompt for agreement to proceed
@@ -108,11 +108,11 @@ parseOptions() {
   usage() {
     cat <<HELP_USAGE
 Usage: $(basename "$0")
-           -l license.yaml    # Required - specify the path to the CNX license file
+          [-l license.yaml]   # Specify the path to the CNX license file; default "license.yaml". Note license is required.
           [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
           [-d docs_location]  # CNX documentation location; default: "https://docs.tigera.io"
           [-e etcd_endpoints] # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
-          [-k datastore]      # Specify the datastore ("etcd"|"kdd"); default: "etcd"
+          [-k datastore]      # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
           [-v version]        # CNX version; default: "v2.1"
           [-u]                # Uninstall CNX
           [-q]                # Quiet (don't prompt)
@@ -142,8 +142,8 @@ HELP_USAGE
   done
   shift $((OPTIND -1))
 
-  # Validate $DATASTORE is either "kdd" or "etcd"
-  [ "$DATASTORE" == "etcd" ] || [ "$DATASTORE" == "kdd" ] || fatalError "Datastore \"$DATASTORE\" is not valid, must be either \"etcd\" or \"kdd\"."
+  # Validate $DATASTORE is either "kubernetes" or "etcdv3"
+  [ "$DATASTORE" == "etcdv3" ] || [ "$DATASTORE" == "kubernetes" ] || fatalError "Datastore \"$DATASTORE\" is not valid, must be either \"etcdv3\" or \"kubernetes\"."
 
   # Confirm user specified a license file
   [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a CNX license file, e.g. '-l license.yaml'"
@@ -481,13 +481,13 @@ dockerLogin() {
 }
 
 #
-# setupEtcdEndpoints() - if DATASTORE is etcd, setup
+# setupEtcdEndpoints() - if DATASTORE is etcdv3, setup
 # ${ETCD_ENDPOINTS}. Optionally update calico.yaml if
 # the user specified a different etcd endpoint.
 #
 setupEtcdEndpoints() {
 
-  if [ "$DATASTORE" == "etcd" ]; then
+  if [ "$DATASTORE" == "etcdv3" ]; then
 
     # Sanity checking - we need calico.yaml
     if [ ! -f calico.yaml ]; then
@@ -519,7 +519,7 @@ createCalicoctlCfg() {
   local cfgFile="/etc/calico/calicoctl.cfg"
 
   # etcd: create or replace /etc/calico/calicoctl.cfg
-  if [ "$DATASTORE" == "etcd" ]; then
+  if [ "$DATASTORE" == "etcdv3" ]; then
 
     # Sanity checking
     if [ -z "$ETCD_ENDPOINTS" ]; then
@@ -534,8 +534,8 @@ spec:
   etcdEndpoints: ${ETCD_ENDPOINTS}
 EOF
 
-  # kdd: create or replace /etc/calico/calicoctl.cfg
-  elif [ "$DATASTORE" == "kdd" ]; then
+  # kubernetes: create or replace /etc/calico/calicoctl.cfg
+  elif [ "$DATASTORE" == "kubernetes" ]; then
     local kubeConfig="$HOME"/.kube/config
     if [ ! -f "$kubeConfig" ]; then
       fatalError "Did not find $kubeConfig"
@@ -637,7 +637,7 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
 
-  if [ "$DATASTORE" == "etcd" ]; then
+  if [ "$DATASTORE" == "etcdv3" ]; then
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
   else
@@ -652,7 +652,7 @@ downloadManifests() {
 #
 applyKddRbacManifest() {
   # Apply rbac for kdd datastore
-  if [ "$DATASTORE" == "kdd" ]; then
+  if [ "$DATASTORE" == "kubernetes" ]; then
     run kubectl apply -f rbac-kdd.yaml
     countDownSecs 5 "Applying \"rbac-kdd.yaml\" manifest: "
   fi
@@ -693,31 +693,33 @@ deleteCalicoManifest() {
 
 #
 # validateDatastore() - warn the user if they're switching
-# between kdd/etcd datastore, but leaving the wrong manifest
-# laying around (specifically calico.yaml). Use the existence
-# of cnx-kdd.yaml|cnx-etcd.yaml as an indicator for which
-# type of install/uninstall the user tried earlier.
+# between kubernetes/etcdv3 datastore, but leaving the wrong
+# manifest laying around (specifically calico.yaml). Use the
+# existence of cnx-kdd.yaml|cnx-etcd.yaml as an indicator for
+# which type of install/uninstall the user tried earlier.
 #
 function validateDatastore() {
   local operation="$1"           # install, uninstall
-  local installedManifest=""     # set to "kdd" or "etcd" if there's a problem
+  local installedManifest=""     # set to "kdd" or "etcd" if there's a problem.
 
   # Check if we're installing one datastore type but there's a manifest
   # for the "opposite" datastore type laying around the current directory.
 
-  if [ "$DATASTORE" == "etcd" ]; then
+  if [ "$DATASTORE" == "etcdv3" ]; then
     if [ -f "cnx-kdd.yaml" ]; then
       installedManifest="kdd"
+      datastoreFlag="kubernetes"
     fi
   elif [ -f "cnx-etcd.yaml" ]; then
       installedManifest="etcd"
+      datastoreFlag="etcdv3"
   fi
 
   if [ "$installedManifest" ]; then
     echo
     echo "Warning: the current $operation specifies \"$DATASTORE\", however \"cnx-$installedManifest.yaml\" exists"
     echo "         in the current directory. Either remove all the manifests from the"
-    echo "         currect directory or use the \"-k $installedManifest\" flag and restart the $operation."
+    echo "         currect directory or use the \"-k $datastoreFlag\" flag and restart the $operation."
     promptToContinue
   fi
 }
@@ -734,8 +736,13 @@ removeMasterTaints() {
 # applyCNXManifest()
 #
 applyCNXManifest() {
-  echo -n "Applying \"cnx-${DATASTORE}.yaml\" manifest: "
-  run kubectl apply -f cnx-"${DATASTORE}".yaml
+  if [ "$DATASTORE" == "kubernetes" ]; then
+    echo -n "Applying \"cnx-kdd.yaml\" manifest: "
+    run kubectl apply -f cnx-kdd.yaml
+  elif [ "$DATASTORE" == "etcdv3" ]; then
+    echo -n "Applying \"cnx-etcd.yaml\" manifest: "
+    run kubectl apply -f cnx-etcd.yaml
+  fi
   blockUntilPodIsReady "k8s-app=cnx-apiserver" 180 "cnx-apiserver"  # Block until cnx-apiserver pod is running & ready
   blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
   countDownSecs 10 "Waiting for cnx-apiserver to stabilize"         # Wait until cnx-apiserver completes registration w/kube-apiserver
@@ -745,8 +752,13 @@ applyCNXManifest() {
 # deleteCNXManifest()
 #
 deleteCNXManifest() {
-  runIgnoreErrors kubectl delete -f cnx-"${DATASTORE}".yaml
-  countDownSecs 30 "Deleting \"cnx-${DATASTORE}.yaml\" manifest"
+  if [ "$DATASTORE" == "kubernetes" ]; then
+    runIgnoreErrors "kubectl delete -f cnx-kdd.yaml"
+    countDownSecs 30 "Deleting \"cnx-kdd.yaml\" manifest"
+  elif [ "$DATASTORE" == "etcdv3" ]; then
+    runIgnoreErrors "kubectl delete -f cnx-etcd.yaml"
+    countDownSecs 30 "Deleting \"cnx-etcd.yaml\" manifest"
+  fi
 }
 
 #
@@ -766,9 +778,9 @@ deleteCNXPolicyManifest() {
 }
 
 #
-# isCRDRunning() - return 1 exit code if the CRD is running
+# doesCRDExist() - return 1 exit code if the CRD exists
 #
-isCRDRunning() {
+doesCRDExist() {
   crd=$1
 
   if (kubectl get crd 2>/dev/null | grep -v NAME | grep -q $1); then
@@ -791,8 +803,8 @@ checkCRDs() {
 
   count=30
   while [[ $count -ne 0 ]]; do
-    if (isCRDRunning $alertCRD) && (isCRDRunning $promCRD) && (isCRDRunning $svcCRD); then
-        echo "all CRDs running!"
+    if (doesCRDExist $alertCRD) && (doesCRDExist $promCRD) && (doesCRDExist $svcCRD); then
+        echo "all CRDs exist!"
         return
     fi
 
