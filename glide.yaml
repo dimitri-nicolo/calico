@@ -36,17 +36,18 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: faca912cb5a084b6f1e23021ebfbaceb8970400a
+  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
   subpackages:
   - lib
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
+  version: 8ec33856e26f386598a81bf6c1fde26166fff80a
   subpackages:
   - client
 - package: github.com/tigera/nfnetlink
   repo:    git@github.com:tigera/nfnetlink
-  version: master
+  version: 1e9e6913b87c3816f3b22e759e2f4e28c51ea5c6
 - package: github.com/sirupsen/logrus
   version: v1.0.4
 - package: github.com/kardianos/osext
@@ -64,7 +65,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 9e42a247b06932a44adaa34fb5fa838bb3d22516
+  version: d6869cb5dde2a0225480f99960d9227e36ac532a
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
