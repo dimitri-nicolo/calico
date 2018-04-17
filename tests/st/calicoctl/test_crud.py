@@ -38,7 +38,7 @@ class TestCalicoctlCommands(TestBase):
     
     def setUp(self):
         super(TestCalicoctlCommands, self).setUp()
-        rc = calicoctl("create", data=valid_cnx_license_expires_march_14_2020)
+        rc = calicoctl("create", data=valid_cnx_license_expires_jan_1st_2020)
         rc.assert_no_error()
 
     def test_get(self):
@@ -328,22 +328,29 @@ class TestCalicoctlCommands(TestBase):
         """
         Test license operations are handled as expected.
         - Shouldn't be able to apply/create an expired license
-        - Should be able to reapply the same valid license again
         - Shouldn't be able to delete an existing license
+        - Should be able to reapply the same valid license again
+        - Should be able to apply a newer license which expires later than the one that's already applied
         - Shouldn't be able to apply/replace another valid license that expires sooner than the one currently applied
         - Should be able to get license
         """
+        rc = calicoctl("apply", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_no_error()
+
         rc = calicoctl("create", data=expired_cnx_license)
         rc.assert_error()
 
         rc = calicoctl("apply", data=expired_cnx_license)
         rc.assert_error()
 
-        rc = calicoctl("apply", data=valid_cnx_license_expires_march_14_2020)
+        rc = calicoctl("delete", data=valid_cnx_license_expires_jan_1st_2020)
+        rc.assert_error()
+
+        rc = calicoctl("apply", data=valid_cnx_license_expires_jan_1st_2020)
         rc.assert_no_error()
 
-        rc = calicoctl("delete", data=valid_cnx_license_expires_march_14_2020)
-        rc.assert_error()
+        rc = calicoctl("apply", data=valid_cnx_license_expires_march_14_2020)
+        rc.assert_no_error()
 
         rc = calicoctl("apply", data=valid_cnx_license_expires_jan_1st_2020)
         rc.assert_error()
