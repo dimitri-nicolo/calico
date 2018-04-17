@@ -66,7 +66,7 @@ publish-cnx-docs.yaml: build website/generate_site.sh
 .PHONY: publish-cnx-docs
 publish-cnx-docs: publish-cnx-docs.yaml
 	@echo "In order to publish the site, run the following command:"
-	@echo "  gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml"
+	@echo "  gcloud app deploy --project=tigera-docs publish-cnx-docs.yaml --stop-previous-version --promote"
 	@echo
 	@echo "Then visit: https://docs.tigera.io."
 	@echo
@@ -83,7 +83,7 @@ publish-cnx-docs: publish-cnx-docs.yaml
 #
 .PHONY: publish-cnx-docs-staging
 publish-cnx-docs-staging: publish-cnx-docs.yaml
-	gcloud app deploy --project=tigera-docs-staging publish-cnx-docs.yaml
+	gcloud app deploy --project=tigera-docs-staging publish-cnx-docs.yaml --stop-previous-version --promote
 	@echo "Visit https://tigera-docs-staging.appspot.com"
 	@echo
 	@echo "Note you'll need to authenticate with your tigera.io google account."
