@@ -50,6 +50,23 @@ type RuleID struct {
 	IndexStr string
 	// The rule action.
 	Action rules.RuleAction
+
+	// Optimization so that the hot path doesn't need to create strings.
+	dpName string
+}
+
+func NewRuleID(tier, policy, namespace string, ruleIndex int, ruleDirection rules.RuleDir, ruleAction rules.RuleAction) *RuleID {
+	rid := &RuleID{
+		Tier:      tier,
+		Name:      policy,
+		Namespace: namespace,
+		Direction: ruleDirection,
+		Index:     ruleIndex,
+		IndexStr:  strconv.Itoa(ruleIndex),
+		Action:    ruleAction,
+	}
+	rid.setDeniedPacketRuleName()
+	return rid
 }
 
 func (r *RuleID) Equals(r2 *RuleID) bool {
@@ -128,6 +145,33 @@ func (r *RuleID) DirectionString() string {
 	return ""
 }
 
+func (r *RuleID) setDeniedPacketRuleName() {
+	if r.Action != rules.RuleActionDeny {
+		return
+	}
+	if r.IsNamespaced() {
+		r.dpName = fmt.Sprintf(
+			"%s|%s|%s|%s",
+			r.TierString(),
+			r.NameString(),
+			r.IndexStr,
+			r.ActionString(),
+		)
+	}
+	r.dpName = fmt.Sprintf(
+		"%s|%s/%s|%s|%s",
+		r.TierString(),
+		r.Namespace,
+		r.NameString(),
+		r.IndexStr,
+		r.ActionString(),
+	)
+}
+
+func (r *RuleID) GetDeniedPacketRuleName() string {
+	return r.dpName
+}
+
 // Endpoint is the minimum cached information for each endpoint.
 type Endpoint struct {
 	// The endpoint name (usable as a unique key for an endpoint)
@@ -167,27 +211,12 @@ func NewLookupManager() *LookupManager {
 	// Add NFLog mappings for the no-profile match.
 	lm.addNFLogPrefixEntry(
 		rules.CalculateNoMatchProfileNFLOGPrefixStr(rules.RuleDirIngress),
-		&RuleID{
-			Tier:      "",
-			Name:      "",
-			Namespace: "",
-			Direction: rules.RuleDirIngress,
-			Index:     0,
-			IndexStr:  "0",
-			Action:    rules.RuleActionDeny,
-		},
+		NewRuleID("", "", "", 0, rules.RuleDirIngress, rules.RuleActionDeny),
 	)
+
 	lm.addNFLogPrefixEntry(
 		rules.CalculateNoMatchProfileNFLOGPrefixStr(rules.RuleDirEgress),
-		&RuleID{
-			Tier:      "",
-			Name:      "",
-			Namespace: "",
-			Direction: rules.RuleDirEgress,
-			Index:     0,
-			IndexStr:  "0",
-			Action:    rules.RuleActionDeny,
-		},
+		NewRuleID("", "", "", 0, rules.RuleDirEgress, rules.RuleActionDeny),
 	)
 	return lm
 }
@@ -352,27 +381,11 @@ func (m *LookupManager) updatePolicyRulesNFLOGPrefixes(msg *proto.ActivePolicyUp
 	if !ok {
 		m.addNFLogPrefixEntry(
 			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirIngress, msg.Id.Tier),
-			&RuleID{
-				Tier:      msg.Id.Tier,
-				Name:      "",
-				Namespace: "",
-				Direction: rules.RuleDirIngress,
-				Index:     0,
-				IndexStr:  "0",
-				Action:    rules.RuleActionDeny,
-			},
+			NewRuleID(msg.Id.Tier, "", "", 0, rules.RuleDirIngress, rules.RuleActionDeny),
 		)
 		m.addNFLogPrefixEntry(
 			rules.CalculateNoMatchPolicyNFLOGPrefixStr(rules.RuleDirEgress, msg.Id.Tier),
-			&RuleID{
-				Tier:      msg.Id.Tier,
-				Name:      "",
-				Namespace: "",
-				Direction: rules.RuleDirEgress,
-				Index:     0,
-				IndexStr:  "0",
-				Action:    rules.RuleActionDeny,
-			},
+			NewRuleID(msg.Id.Tier, "", "", 0, rules.RuleDirEgress, rules.RuleActionDeny),
 		)
 	}
 	m.tierRefs[msg.Id.Tier] = count + 1
@@ -482,15 +495,7 @@ func (m *LookupManager) updateRulesNFLOGPrefixes(
 		prefix := rules.CalculateNFLOGPrefixStr(action, owner, rules.RuleDirIngress, ii, v1Name)
 		m.addNFLogPrefixEntry(
 			prefix,
-			&RuleID{
-				Tier:      tier,
-				Name:      name,
-				Namespace: namespace,
-				Direction: rules.RuleDirIngress,
-				Index:     ii,
-				IndexStr:  strconv.Itoa(ii),
-				Action:    action,
-			},
+			NewRuleID(tier, name, namespace, ii, rules.RuleDirIngress, action),
 		)
 		newPrefixes.Add(prefix)
 	}
@@ -499,15 +504,7 @@ func (m *LookupManager) updateRulesNFLOGPrefixes(
 		prefix := rules.CalculateNFLOGPrefixStr(action, owner, rules.RuleDirEgress, ii, v1Name)
 		m.addNFLogPrefixEntry(
 			prefix,
-			&RuleID{
-				Tier:      tier,
-				Name:      name,
-				Namespace: namespace,
-				Direction: rules.RuleDirEgress,
-				Index:     ii,
-				IndexStr:  strconv.Itoa(ii),
-				Action:    action,
-			},
+			NewRuleID(tier, name, namespace, ii, rules.RuleDirEgress, action),
 		)
 		newPrefixes.Add(prefix)
 	}

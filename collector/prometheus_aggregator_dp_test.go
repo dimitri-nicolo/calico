@@ -6,6 +6,7 @@ import (
 	"math"
 	"net"
 	"reflect"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -103,7 +104,7 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 				BeforeEach(func() {
 					key = DeniedPacketsAggregateKey{
 						srcIP:  localIp1,
-						policy: getDeniedPacketRuleName(ingressRulePolicy3Deny),
+						policy: ingressRulePolicy3Deny.GetDeniedPacketRuleName(),
 					}
 					refs = NewTupleSet()
 					refs.Add(tuple1)
@@ -156,11 +157,11 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 				BeforeEach(func() {
 					key1 = DeniedPacketsAggregateKey{
 						srcIP:  localIp1,
-						policy: getDeniedPacketRuleName(ingressRulePolicy3Deny),
+						policy: ingressRulePolicy3Deny.GetDeniedPacketRuleName(),
 					}
 					key2 = DeniedPacketsAggregateKey{
 						srcIP:  localIp2,
-						policy: getDeniedPacketRuleName(ingressRulePolicy4Deny),
+						policy: ingressRulePolicy4Deny.GetDeniedPacketRuleName(),
 					}
 					refs1 = NewTupleSet()
 					refs1.Add(tuple1)
@@ -241,20 +242,20 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 		BeforeEach(func() {
 			key1 = DeniedPacketsAggregateKey{
 				srcIP:  localIp1,
-				policy: getDeniedPacketRuleName(ingressRulePolicy3Deny),
+				policy: ingressRulePolicy3Deny.GetDeniedPacketRuleName(),
 			}
 			key2 = DeniedPacketsAggregateKey{
 				srcIP:  localIp2,
-				policy: getDeniedPacketRuleName(ingressRulePolicy4Deny),
+				policy: ingressRulePolicy4Deny.GetDeniedPacketRuleName(),
 			}
 			label1 := prometheus.Labels{
 				"srcIP":        net.IP(localIp1[:16]).String(),
-				"policy":       getDeniedPacketRuleName(ingressRulePolicy3Deny),
+				"policy":       ingressRulePolicy3Deny.GetDeniedPacketRuleName(),
 				LABEL_INSTANCE: "testHost",
 			}
 			label2 := prometheus.Labels{
 				"srcIP":        net.IP(localIp2[:16]).String(),
-				"policy":       getDeniedPacketRuleName(ingressRulePolicy4Deny),
+				"policy":       ingressRulePolicy4Deny.GetDeniedPacketRuleName(),
 				LABEL_INSTANCE: "testHost",
 			}
 			value1 = DeniedPacketsAggregateValue{
@@ -413,3 +414,26 @@ var _ = Describe("Denied packets Prometheus Aggregator", func() {
 		})
 	})
 })
+
+var resKey DeniedPacketsAggregateKey
+
+func BenchmarkCalicoDeniedPacketPolicyAggregateKey(b *testing.B) {
+	var key DeniedPacketsAggregateKey
+	rid := lookup.NewRuleID("default", "policy1", "__GLOBAL__", 0, rules.RuleDirIngress, rules.RuleActionDeny)
+	mu := MetricUpdate{
+		updateType:   UpdateTypeReport,
+		tuple:        tuple1,
+		isConnection: true,
+		ruleID:       rid,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   1,
+		},
+	}
+	b.ResetTimer()
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		key = getDeniedPacketsAggregateKey(mu)
+	}
+	resKey = key
+}

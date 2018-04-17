@@ -40,25 +40,9 @@ var (
 		},
 	}
 	prefix_gnp1_t1_i0A = toprefix("API0|tier-1.policy-1")
-	ruleID_gnp1_t1_i0A = &RuleID{
-		Tier:      "tier-1",
-		Name:      "policy-1",
-		Namespace: "",
-		Direction: rules.RuleDirIngress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionAllow,
-	}
+	ruleID_gnp1_t1_i0A = NewRuleID("tier-1", "policy-1", "", 0, rules.RuleDirIngress, rules.RuleActionAllow)
 	prefix_gnp1_t1_e0D = toprefix("DPE0|tier-1.policy-1")
-	ruleID_gnp1_t1_e0D = &RuleID{
-		Tier:      "tier-1",
-		Name:      "policy-1",
-		Namespace: "",
-		Direction: rules.RuleDirEgress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_gnp1_t1_e0D = NewRuleID("tier-1", "policy-1", "", 0, rules.RuleDirEgress, rules.RuleActionDeny)
 
 	gnp1_t1_4i2e = &proto.ActivePolicyUpdate{
 		Id: &proto.PolicyID{
@@ -77,55 +61,15 @@ var (
 	//prefix_gnp1_t1_i0A defined above
 	//ruleID_gnp1_t1_i0A defined above
 	prefix_gnp1_t1_i1D = toprefix("DPI1|tier-1.policy-1")
-	ruleID_gnp1_t1_i1D = &RuleID{
-		Tier:      "tier-1",
-		Name:      "policy-1",
-		Namespace: "",
-		Direction: rules.RuleDirIngress,
-		Index:     1,
-		IndexStr:  "1",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_gnp1_t1_i1D = NewRuleID("tier-1", "policy-1", "", 1, rules.RuleDirIngress, rules.RuleActionDeny)
 	prefix_gnp1_t1_i2N = toprefix("NPI2|tier-1.policy-1")
-	ruleID_gnp1_t1_i2N = &RuleID{
-		Tier:      "tier-1",
-		Name:      "policy-1",
-		Namespace: "",
-		Direction: rules.RuleDirIngress,
-		Index:     2,
-		IndexStr:  "2",
-		Action:    rules.RuleActionNextTier,
-	}
+	ruleID_gnp1_t1_i2N = NewRuleID("tier-1", "policy-1", "", 2, rules.RuleDirIngress, rules.RuleActionNextTier)
 	prefix_gnp1_t1_i3P = toprefix("NPI3|tier-1.policy-1")
-	ruleID_gnp1_t1_i3P = &RuleID{
-		Tier:      "tier-1",
-		Name:      "policy-1",
-		Namespace: "",
-		Direction: rules.RuleDirIngress,
-		Index:     3,
-		IndexStr:  "3",
-		Action:    rules.RuleActionNextTier,
-	}
+	ruleID_gnp1_t1_i3P = NewRuleID("tier-1", "policy-1", "", 3, rules.RuleDirIngress, rules.RuleActionNextTier)
 	prefix_gnp1_t1_e0A = toprefix("APE0|tier-1.policy-1")
-	ruleID_gnp1_t1_e0A = &RuleID{
-		Tier:      "tier-1",
-		Name:      "policy-1",
-		Namespace: "",
-		Direction: rules.RuleDirEgress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionAllow,
-	}
+	ruleID_gnp1_t1_e0A = NewRuleID("tier-1", "policy-1", "", 0, rules.RuleDirEgress, rules.RuleActionAllow)
 	prefix_gnp1_t1_e1A = toprefix("APE1|tier-1.policy-1")
-	ruleID_gnp1_t1_e1A = &RuleID{
-		Tier:      "tier-1",
-		Name:      "policy-1",
-		Namespace: "",
-		Direction: rules.RuleDirEgress,
-		Index:     1,
-		IndexStr:  "1",
-		Action:    rules.RuleActionAllow,
-	}
+	ruleID_gnp1_t1_e1A = NewRuleID("tier-1", "policy-1", "", 1, rules.RuleDirEgress, rules.RuleActionAllow)
 
 	// NetworkPolicy namespace-1/tier-1.policy-1
 	np1_t1_0i1e = &proto.ActivePolicyUpdate{
@@ -140,15 +84,7 @@ var (
 		},
 	}
 	prefix_np1_t1_e0A = toprefix("APE0|namespace-1/tier-1.policy-2")
-	ruleID_np1_t1_e0A = &RuleID{
-		Tier:      "tier-1",
-		Name:      "policy-2",
-		Namespace: "namespace-1",
-		Direction: rules.RuleDirEgress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionAllow,
-	}
+	ruleID_np1_t1_e0A = NewRuleID("tier-1", "policy-2", "namespace-1", 0, rules.RuleDirEgress, rules.RuleActionAllow)
 
 	// K8s NetworkPolicy namespace-1/knp.default.policy-1
 	knp1_t1_1i0e = &proto.ActivePolicyUpdate{
@@ -163,15 +99,7 @@ var (
 		},
 	}
 	prefix_knp1_t1_i0D = toprefix("DPI0|namespace-1/knp.default.policy-1")
-	ruleID_knp1_t1_i0D = &RuleID{
-		Tier:      "default",
-		Name:      "knp.default.policy-1",
-		Namespace: "namespace-1",
-		Direction: rules.RuleDirIngress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_knp1_t1_i0D = NewRuleID("default", "knp.default.policy-1", "namespace-1", 0, rules.RuleDirIngress, rules.RuleActionDeny)
 
 	// Profile profile-1
 	pr1_1i1e = &proto.ActiveProfileUpdate{
@@ -189,88 +117,24 @@ var (
 	}
 	prefix_prof_i0D = toprefix("DRI0|profile-1")
 	prefix_prof_e0D = toprefix("DRE0|profile-1")
-	ruleID_prof_i0D = &RuleID{
-		Tier:      "",
-		Name:      "profile-1",
-		Namespace: "",
-		Direction: rules.RuleDirIngress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
-	ruleID_prof_e0D = &RuleID{
-		Tier:      "",
-		Name:      "profile-1",
-		Namespace: "",
-		Direction: rules.RuleDirEgress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_prof_i0D = NewRuleID("", "profile-1", "", 0, rules.RuleDirIngress, rules.RuleActionDeny)
+	ruleID_prof_e0D = NewRuleID("", "profile-1", "", 0, rules.RuleDirEgress, rules.RuleActionDeny)
 
 	// Tier no-matches
 	prefix_nomatch_t1_i = toprefix("DPI|tier-1")
-	ruleID_nomatch_t1_i = &RuleID{
-		Tier:      "tier-1",
-		Name:      "",
-		Namespace: "",
-		Direction: rules.RuleDirIngress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_nomatch_t1_i = NewRuleID("tier-1", "", "", 0, rules.RuleDirIngress, rules.RuleActionDeny)
 	prefix_nomatch_t1_e = toprefix("DPE|tier-1")
-	ruleID_nomatch_t1_e = &RuleID{
-		Tier:      "tier-1",
-		Name:      "",
-		Namespace: "",
-		Direction: rules.RuleDirEgress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_nomatch_t1_e = NewRuleID("tier-1", "", "", 0, rules.RuleDirEgress, rules.RuleActionDeny)
 	prefix_nomatch_td_i = toprefix("DPI|default")
-	ruleID_nomatch_td_i = &RuleID{
-		Tier:      "default",
-		Name:      "",
-		Namespace: "",
-		Direction: rules.RuleDirIngress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_nomatch_td_i = NewRuleID("default", "", "", 0, rules.RuleDirIngress, rules.RuleActionDeny)
 	prefix_nomatch_td_e = toprefix("DPE|default")
-	ruleID_nomatch_td_e = &RuleID{
-		Tier:      "default",
-		Name:      "",
-		Namespace: "",
-		Direction: rules.RuleDirEgress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_nomatch_td_e = NewRuleID("default", "", "", 0, rules.RuleDirEgress, rules.RuleActionDeny)
 
 	// Profile no-matches
 	prefix_nomatch_prof_i = toprefix("DRI")
-	ruleID_nomatch_prof_i = &RuleID{
-		Tier:      "",
-		Name:      "",
-		Namespace: "",
-		Direction: rules.RuleDirIngress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_nomatch_prof_i = NewRuleID("", "", "", 0, rules.RuleDirIngress, rules.RuleActionDeny)
 	prefix_nomatch_prof_e = toprefix("DRE")
-	ruleID_nomatch_prof_e = &RuleID{
-		Tier:      "",
-		Name:      "",
-		Namespace: "",
-		Direction: rules.RuleDirEgress,
-		Index:     0,
-		IndexStr:  "0",
-		Action:    rules.RuleActionDeny,
-	}
+	ruleID_nomatch_prof_e = NewRuleID("", "", "", 0, rules.RuleDirEgress, rules.RuleActionDeny)
 )
 
 var _ = Describe("LookupManager tests", func() {
