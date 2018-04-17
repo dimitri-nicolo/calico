@@ -1,5 +1,5 @@
-hash: 936b764473d7635097b92bd3deb7a6d2dbb445cbd1337e7448006e8cd54044d6
-updated: 2018-04-05T15:31:20.504283877-07:00
+hash: 6fa30e06d8afd6c21020cd0bdd4f63fcf4981e4996d3e36e83b3e368c31bd3e8
+updated: 2018-04-17T22:05:02.92036926Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -38,7 +38,7 @@ imports:
 - name: github.com/dgrijalva/jwt-go
   version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
 - name: github.com/docopt/docopt-go
-  version: 784ddc588536785e7299f7272f39101f7faccc3f
+  version: ee0de3bc6815ee19d4a46c7eb90f829db0e014b1
 - name: github.com/dustin/go-humanize
   version: bb3d318650d48840a39aa21a027c6630e198e626
 - name: github.com/eapache/channels
@@ -60,7 +60,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: 370d9e047557906322be8396e77cb0376be6cb96
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -124,7 +124,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/influxdata/influxdb
-  version: 72bceca888a8f55b5dca922f24a514e329cd5e8f
+  version: 12b1ecc40ee64bf79999a3bcdd34a7f457c0e5ed
   subpackages:
   - client/v2
   - models
@@ -144,7 +144,7 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/mattn/go-runewidth
-  version: a9d6d1e4dc51df2130326793d49971f238839169
+  version: ce7b0b5c7b45a81508558cd1dba6bb1e4ddb51bb
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -179,7 +179,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 003f63b7f4cff3fc95357005358af2de0f5fe152
+  version: dcabb60a477c2b6f456df65037cb6708210fbb02
   subpackages:
   - format
   - internal/assertion
@@ -220,7 +220,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 3a570da01b58c51f8a79293f874394156bedf862
+  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -299,7 +299,7 @@ imports:
 - name: github.com/termie/go-shutil
   version: bcacb06fecaeec8dc42af03c87c6949f4a05c74c
 - name: github.com/tigera/licensing
-  version: 55a808c36b11f26f665027eed5bc7c03d67dd1ae
+  version: 8ec33856e26f386598a81bf6c1fde26166fff80a
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -544,7 +544,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 868f2f29720b192240e18284659231b440f9cda5
+  version: cd0308977f05a0de033c0e8ce1860b317e360dca
   subpackages:
   - pkg/common
 testImports: []
