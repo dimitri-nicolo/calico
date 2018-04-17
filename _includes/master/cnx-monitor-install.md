@@ -15,7 +15,7 @@
    > 1. Download the Prometheus operator manifest.
    >
    >    ```
-   >    curl -o --compressed \
+   >    curl --compressed -o\
    >    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
    >    ``` 
    > 
@@ -60,7 +60,7 @@
    > 1. Download the Prometheus and Alertmanager manifest.
    >
    >    ```
-   >    curl -o --compressed \
+   >    curl --compressed -o\
    >    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
    >    ``` 
    >      

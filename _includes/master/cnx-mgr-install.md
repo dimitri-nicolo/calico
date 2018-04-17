@@ -86,13 +86,13 @@
    
    **etcd datastore**
    ```bash
-   curl -o --compressed cnx.yaml \
+   curl --compressed -o cnx.yaml \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
    ```
    
    **Kubernetes API datastore**
    ```bash
-   curl -o --compressed cnx.yaml \
+   curl --compressed -o cnx.yaml \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
    ```
 
