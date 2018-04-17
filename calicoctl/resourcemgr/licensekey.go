@@ -36,7 +36,7 @@ func init() {
 		map[string]string{
 			"LICENSEID":  "{{.LicenseID}}",
 			"EXPIRATION": "{{localtime .Claims.Expiry}}",
-			"NODES":      "{{.Nodes}}",
+			"NODES":      "{{ if not .Nodes }}(Unlimited){{ else }}{{.Nodes}}{{ end }}",
 			"FEATURES":   "{{.Features}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
