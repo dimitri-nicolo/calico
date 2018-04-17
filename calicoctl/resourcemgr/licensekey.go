@@ -22,6 +22,8 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	licClient "github.com/tigera/licensing/client"
+	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -40,24 +42,62 @@ func init() {
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.LicenseKey)
-			_, err := licClient.Decode(*r)
+			licClaims, err := licClient.Decode(*r)
 			if err != nil {
-				return nil, fmt.Errorf("LicenseKey is corrupted: %s", err.Error())
+				return nil, fmt.Errorf("license is corrupted: %s", err.Error())
+			}
+
+			if err = licClaims.Validate(); err != nil {
+				// License is already expired. Don't apply it.
+				return nil, fmt.Errorf("the license you're trying to creat is already expired on %s", licClaims.Expiry.Time().Local())
+			} else {
+				log.Debug("License is valid")
 			}
 
 			return client.LicenseKey().Create(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.LicenseKey)
-			_, err := licClient.Decode(*r)
+			licClaims, err := licClient.Decode(*r)
 			if err != nil {
-				return nil, fmt.Errorf("LicenseKey is corrupted: %s", err.Error())
+				return nil, fmt.Errorf("license is corrupted: %s", err.Error())
+			}
+
+			if err = licClaims.Validate(); err != nil {
+				// License is already expired. Don't apply it.
+				return nil, fmt.Errorf("the license you're trying to apply is already expired on %s", licClaims.Expiry.Time().Local())
+			} else {
+				log.Debug("License is valid")
+			}
+
+			currentLic, err := client.LicenseKey().Get(ctx, "default", options.GetOptions{})
+			if err != nil {
+				switch err.(type) {
+				case cerrors.ErrorResourceDoesNotExist:
+					log.Debugf("Check for an existing LicenseKey: not found. Moving on")
+				default:
+					log.WithError(err).Debug("Failed to load the existing LicenseKey from datastore. Moving on")
+				}
+			} else {
+				log.Info("License resource found")
+				currentLicClaims, err := licClient.Decode(*currentLic)
+				if err != nil {
+					// Existing license is likely corrupted.
+					// Do nothing.
+				} else {
+					if licClaims.Expiry.Time().Before(currentLicClaims.Expiry.Time()) {
+						// The license we're applying expires sooner than the one that's already applied.
+						// We reject this change so users don't shoot themselves in the foot.
+						return nil, fmt.Errorf("the license you're applying expires on %s, which is sooner than " +
+							"the one already applied %s", licClaims.Expiry.Time().Local(), currentLicClaims.Expiry.Time().Local())
+					}
+				}
 			}
 
 			return client.LicenseKey().Update(ctx, r, options.SetOptions{})
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
-			return nil, fmt.Errorf("deleting a LicenseKey is not supported")
+			return nil, fmt.Errorf("deleting a license is not supported")
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.LicenseKey)
