@@ -53,20 +53,51 @@ Or, as for a quickstart step for the email address you want to login with, bind 
    --user=<email_address>
    ```
 
-### Basic authentication (username / password)
+### Basic authentication
 
 Basic authentication allows users to configure Kubernetes with a list of username/passwords.
 It is intended for testing purposes, and has significant limitations—notably
 the Kubernetes API server must be restarted after making any changes.
 
 Consult the [Kubernetes docs](https://kubernetes.io/docs/admin/authentication/#static-password-file)
-to configure this login mode, and select the **Login via username and password**
-option in the {{site.prodname}} Manager web interface.
+to configure this login mode.
 
-Configure Kubernetes RBAC bindings using the username and groups defined in the
-basic authentication CSV file.
+On a kubeadm system, you can use the following steps to set up basic authentication.
 
-### Static/Bearer tokens
+1. Use the following command to create a file `basic_auth.csv` containing
+   a set of credentials.
+
+   ```
+   sudo sh -c "echo '<password>,<username>,1' > /etc/kubernetes/pki/basic_auth.csv"
+   ```
+
+1. Add a reference to the `basic_auth.csv` file in `kube-apiserver.yaml`.
+
+   ```
+   sudo sed -i \
+   "/- kube-apiserver/a\    - --basic-auth-file=/etc/kubernetes/pki/basic_auth.csv" \
+   /etc/kubernetes/manifests/kube-apiserver.yaml
+   ```
+
+   > **Note**: We created the basic_auth.csv under /etc/kubernetes/pki because that volume is
+   mounted by default on the kube-apiserver pod with a kubeadm installation.
+   {: .alert .alert-info}
+
+1. Restart kube-apiserver to pick up new settings:
+
+   ```
+   sudo systemctl restart kubelet
+   ```
+
+1. Select the **Login via username and password** option in the {{site.prodname}} 
+   Manager web interface.
+
+1. Configure Kubernetes RBAC bindings using the username and groups defined in the
+   basic authentication CSV file.
+
+
+
+### Bearer tokens
 
 The **Login via static token** option tells {{site.prodname}} Manager to pass the token through
 to Kubernetes. The [Kubernetes docs](https://kubernetes.io/docs/admin/authentication/#static-token-file)
