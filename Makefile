@@ -344,10 +344,15 @@ clean-bin:
 			docker-image/bin
 
 .PHONY: release
-release:
+release: clean
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
+
+	# Rebuild all the checked in generated files.  If any weren't the same, then
+	# the dirty check will fail.
+	$(MAKE) .generate_files
+
 	git tag $(VERSION)
 
 	# Check to make sure the tag isn't "dirty"
