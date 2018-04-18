@@ -79,6 +79,8 @@ var GenerateLicenseCmd = &cobra.Command{
 	SuggestFor: []string{"gen", "generat", "generate-license"},
 	Short:      "Generate tigera CNX license file",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Lower case customer name for consistency.
+		claims.Customer = strings.ToLower(claims.Customer)
 
 		// Parse expiration date into time format and set it to end of the day for that date.
 		claims.Expiry = parseExpiryDate(exp)
@@ -166,7 +168,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		companyID, err := db.GetCompanyByName(claims.Customer)
 		if err == sql.ErrNoRows {
 			// Confirm creation of company with the user in case they mistyped.
-			fmt.Printf("Customer %s not found in company database.  Create new company? [y/N]\n", claims.Customer)
+			fmt.Printf("Customer '%s' not found in company database.  Create new company? [y/N]\n", claims.Customer)
 			var create string
 			fmt.Scanf("%s", &create)
 

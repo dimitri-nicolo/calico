@@ -12,7 +12,7 @@ type Company struct {
 }
 
 func (db *DB) AllCompanies() ([]*Company, error) {
-	rows, err := db.Query("SELECT id, uuid, ckey, name FROM companies")
+	rows, err := db.Query("SELECT id, name FROM companies")
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,7 @@ func (db *DB) AllCompanies() ([]*Company, error) {
 	companies := make([]*Company, 0)
 	for rows.Next() {
 		cmp := &Company{}
-		err := rows.Scan(&cmp.ID, &cmp.UUID, &cmp.Key, &cmp.Name)
+		err := rows.Scan(&cmp.ID, &cmp.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -45,8 +45,8 @@ func (db *DB) GetCompanyByName(name string) (int64, error) {
 
 func (db *DB) GetCompanyById(id int64) (*Company, error) {
 	cmp := &Company{}
-	row := db.QueryRow("SELECT id, uuid, ckey, name FROM companies WHERE id = ?", id)
-	err := row.Scan(&cmp.ID, &cmp.UUID, &cmp.Key, &cmp.Name)
+	row := db.QueryRow("SELECT id, name FROM companies WHERE id = ?", id)
+	err := row.Scan(&cmp.ID, &cmp.Name)
 	if err != nil {
 		return nil, err
 	}
