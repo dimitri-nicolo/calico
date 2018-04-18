@@ -1,0 +1,57 @@
+---
+layout: null
+---
+# This manifest creates a deployment for a json-echo server
+# listening on port 5001
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: calico-alertmanager-webhook
+  namespace: calico-monitoring
+spec:
+  template:
+    metadata:
+      labels:
+        app: webhook
+    spec:
+
+      containers:
+        - name: json-echo
+          image: doublek/json-echo:latest
+          ports:
+          - containerPort: 5001
+---
+
+# This manifest creates a service for a alertmanager webhook
+# exposed on port 30501
+apiVersion: v1
+kind: Service
+metadata:
+  name: calico-alertmanager-webhook
+  namespace: calico-monitoring
+spec:
+  type: ClusterIP
+  ports:
+  - name: calico-alertmanager-webhook
+    port: 30501
+    targetPort: 5001
+    protocol: TCP
+  selector:
+    app: webhook
+
+---
+
+# This manifest allows traffic to port 5001 to the webhook pod
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+  name: calico-alertmanager-webhook
+  namespace: calico-monitoring
+spec:
+  ingress:
+  - ports:
+    - port: 5001
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app: webhook
