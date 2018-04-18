@@ -1,5 +1,5 @@
-hash: c202e41dc78cc51d90093793e6320a9252a6471577d012290a9994df6d9a8569
-updated: 2018-04-09T14:30:40.6108345Z
+hash: 10896816ab51884295632da93914eaff5266f8567255bbaf135cd55a6b67f46a
+updated: 2018-04-18T13:40:12.284741182Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -33,7 +33,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
+  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
@@ -55,7 +55,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 370d9e047557906322be8396e77cb0376be6cb96
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -170,7 +170,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: faca912cb5a084b6f1e23021ebfbaceb8970400a
+  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/api
@@ -246,7 +246,7 @@ imports:
   subpackages:
   - codec
 - name: golang.org/x/crypto
-  version: b2aa35443fbc700ab74c586ae79b81c171851023
+  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -271,7 +271,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: bb24a47a89eac6c1227fbcb2ae37a8b9ed323366
+  version: ebfc5b4631820b793c9010c87fd8fef0f39eb082
   subpackages:
   - unix
   - windows
@@ -469,7 +469,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: cd0308977f05a0de033c0e8ce1860b317e360dca
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 testImports: []

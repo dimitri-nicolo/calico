@@ -42,7 +42,6 @@ V_CNI := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".
 V_FELIX := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.felix.version')
 V_GOBGPD := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico-bgp-daemon.version')
 V_KUBE_CONTROLLERS := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/kube-controllers.version')
-V_LIBNETWORK_PLUGIN := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.libnetwork-plugin.version')
 V_TYPHA := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.typha.version')
 V_CALICOQ := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoq.version')
 V_APISERVER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.cnx-apiserver.version')
@@ -62,7 +61,6 @@ CNI_VER ?= $(V_CNI)
 FELIX_VER ?= $(V_FELIX)
 GOBGPD_VER ?= $(V_GOBGPD)
 KUBE_CONTROLLERS_VER ?= $(V_KUBE_CONTROLLERS)
-LIBNETWORK_PLUGIN_VER ?= $(V_LIBNETWORK_PLUGIN)
 TYPHA_VER ?= $(V_TYPHA)
 CALICOQ_VER ?= $(V_CALICOQ)
 APISERVER_VER ?= $(V_APISERVER)
@@ -80,7 +78,6 @@ $(info $(shell printf "%-21s = %-10s\n" "CNI_VER" $(CNI_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "FELIX_VER" $(FELIX_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "GOBGPD_VER" $(GOBGPD_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "KUBE_CONTROLLERS_VER" $(KUBE_CONTROLLERS_VER)))
-$(info $(shell printf "%-21s = %-10s\n" "LIBNETWORK_PLUGIN_VER" $(LIBNETWORK_PLUGIN_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "TYPHA_VER" $(TYPHA_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "CALICOQ_VER" $(CALICOQ_VER)))
 $(info $(shell printf "%-21s = %-10s\n" "CNX_WEB_MANAGER_VER" $(CNX_WEB_MANAGER_VER)))
@@ -116,14 +113,13 @@ NODE_CONTAINER_NAME?=tigera/cnx-node$(ARCHTAG)
 NODE_CONTAINER_FILES=$(shell find $(NODE_CONTAINER_DIR)/filesystem -type f)
 NODE_CONTAINER_CREATED=$(NODE_CONTAINER_DIR)/.cnx_node.created
 NODE_CONTAINER_BIN_DIR=$(NODE_CONTAINER_DIR)/filesystem/bin
-NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd libnetwork-plugin
+NODE_CONTAINER_BINARIES=startup allocate-ipip-addr calico-felix bird calico-bgp-daemon confd
+
 FELIX_REPO?=tigera/felix
 FELIX_CONTAINER_NAME?=$(FELIX_REPO)$(ARCHTAG):$(FELIX_VER)
 FELIX_PRIVATE_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/felix
 CONFD_REPO?=calico/confd
 CONFD_CONTAINER_NAME?=$(CONFD_REPO)$(ARCHTAG):$(CONFD_VER)
-LIBNETWORK_PLUGIN_REPO?=calico/libnetwork-plugin
-LIBNETWORK_PLUGIN_CONTAINER_NAME?=$(LIBNETWORK_PLUGIN_REPO)$(ARCHTAG):$(LIBNETWORK_PLUGIN_VER)
 CTL_CONTAINER_NAME?=tigera/calicoctl$(ARCHTAG):$(CALICOCTL_VER)
 CTL_PRIVATE_IMAGE?=$(CNX_REPOSITORY)/cnx/tigera/calicoctl
 CALICOQ_CONTAINER_NAME?=tigera/calicoq:$(CALICOQ_VER)
@@ -250,7 +246,6 @@ cnx-node.tar: $(NODE_CONTAINER_CREATED)
 	  echo bird --version;         /bin/bird --version; \
 	  echo calico-bgp-daemon -v;   /bin/calico-bgp-daemon -v; \
 	  echo confd --version;        /bin/confd --version; \
-	  echo libnetwork-plugin -v;   /bin/libnetwork-plugin -v; \
 	"
 	docker save --output $@ $(NODE_CONTAINER_NAME)
 
@@ -271,7 +266,6 @@ $(NODE_CONTAINER_CREATED): $(NODE_CONTAINER_DIR)/Dockerfile$(ARCHTAG) $(NODE_CON
 	  echo; echo bird --version;         /go/bin/bird --version; \
 	  echo; echo calico-bgp-daemon -v;   /go/bin/calico-bgp-daemon -v; \
 	  echo; echo confd --version;        /go/bin/confd --version; \
-	  echo; echo libnetwork-plugin -v;   /go/bin/libnetwork-plugin -v; echo;\
 	"
 	docker build --pull -t $(NODE_CONTAINER_NAME) $(NODE_CONTAINER_DIR) -f $(NODE_CONTAINER_DIR)/Dockerfile$(ARCHTAG)
 	touch $@
@@ -295,16 +289,6 @@ $(NODE_CONTAINER_BIN_DIR)/calico-felix update-felix:
 	  test -e $(NODE_CONTAINER_BIN_DIR)/calico-felix && \
 	  touch $(NODE_CONTAINER_BIN_DIR)/calico-felix
 	-docker rm -f calico-felix
-
-# Get libnetwork-plugin binaries
-$(NODE_CONTAINER_BIN_DIR)/libnetwork-plugin:
-	-docker rm -f calico-$(@F)
-	# Latest libnetwork-plugin binaries are stored in automated builds of calico/libnetwork-plugin.
-	# To get them, we pull that image, then copy the binaries out to our host
-	docker pull $(LIBNETWORK_PLUGIN_CONTAINER_NAME)
-	docker create --name calico-$(@F) $(LIBNETWORK_PLUGIN_CONTAINER_NAME)
-	docker cp calico-$(@F):/$(@F) $(@D)
-	-docker rm -f calico-$(@F)
 
 # Get the confd binary
 $(NODE_CONTAINER_BIN_DIR)/confd:
@@ -708,7 +692,6 @@ release: clean
 
 	# Check that the images container the right sub-components
 	docker run $(NODE_CONTAINER_NAME) calico-felix --version
-	docker run $(NODE_CONTAINER_NAME) libnetwork-plugin -v
 
 	@echo "# See RELEASING.md for detailed instructions."
 	@echo "# NOTE: \"make release\" was updated to automatically push $(NODE_CONTAINER_NAME):$(CNX_VER) and $(NODE_CONTAINER_NAME):latest to GCR"

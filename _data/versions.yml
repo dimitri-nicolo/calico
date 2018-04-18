@@ -1,3 +1,80 @@
+v2.1:
+- title: v2.1.0-rc1
+  note: |
+    18 April 2018
+
+    First release candidate for CNX v2.1.  Release notes coming shortly.
+  components:
+    cnx-manager:
+      version: v2.1.0-rc1
+      url: ""
+    cnx-manager-proxy:
+      version: v2.1.0-rc1
+      url: ""
+    cnx-apiserver:
+      version: v2.1.0-rc1
+      url: ""
+    cnx-queryserver:
+      version: v2.1.0-rc1
+      url: ""
+    calicoq:
+      version: v2.1.0-rc1
+      url: ""
+    felix:
+      version: v2.1.0-rc1
+      url: ""
+    typha:
+      version: v2.1.0-rc1
+      url: ""
+    calicoctl:
+      version: v2.1.0-rc1
+      url: ""
+      download_url: ""
+    cnx-node:
+      version: v2.1.0-rc1
+      url: ""
+    calico/cni:
+      version: v3.1.0
+      url: ""
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.1.0/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.1.0/calico-ipam
+    calico-bird:
+      version: v0.3.2
+      url: https://github.com/projectcalico/calico-bird/releases/tag/v0.3.2
+    confd:
+      version: v3.1.0
+      url: https://github.com/projectcalico/confd/releases/tag/v3.1.0
+    calico-bgp-daemon:
+      version: v0.2.2
+      url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.2
+    calico/kube-controllers:
+      version: v3.1.0
+      url: https://github.com/projectcalico/k8s-policy/releases/tag/v3.1.0
+    networking-calico:
+      version: 3.1.0
+      url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=3.1.0
+    calico/routereflector:
+      version: v0.6.1
+      url: https://github.com/projectcalico/routereflector/releases/tag/v0.6.1
+    calico:
+      version: v3.1.0
+      url: https://github.com/projectcalico/calico/releases/tag/v3.1.0
+    prometheus-operator:
+      version: v0.18.1
+      url: ""
+    prometheus:
+      version: v2.2.1
+      url: ""
+    alertmanager:
+      version: v0.14.0
+      url: ""
+    prometheus-config-reloader:
+      version: v0.0.3
+      url: ""
+    configmap-reload:
+      version: v0.0.1
+      url: ""
+
 v2.0:
 - title: v2.0.2
   note: |
@@ -767,9 +844,6 @@ master:
     calico-bgp-daemon:
       version: v0.2.2
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.2
-    libnetwork-plugin:
-      version: master
-      url: ""
     calico/kube-controllers:
       version: master
       url: ""
@@ -777,11 +851,11 @@ master:
       version: master
       url: ""
     calico/routereflector:
-      version: v0.5.0
+      version: v0.6.1
       url: ""
     calico:
-      version: v3.0.2
-      url: https://github.com/projectcalico/calico/releases/tag/v3.0.2
+      version: v3.1.0
+      url: https://github.com/projectcalico/calico/releases/tag/v3.1.0
     prometheus-operator:
       version: v0.18.1
       url: ""
