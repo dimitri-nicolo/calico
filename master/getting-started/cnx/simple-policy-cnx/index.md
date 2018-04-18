@@ -258,8 +258,8 @@ Other inspection workflows/options include: filtering through the information pr
 
 To set a stream of allowed packets run the following command:
 ```	
--for i in `seq 1 10000`; do (wget -q --timeout=1 nginx -O - & sleep 0.01); done	
--```
+for i in `seq 1 10000`; do (wget -q --timeout=1 nginx -O - & sleep 0.01); done	
+```
 
 Coming back, however, we still cannot access the service from a pod without the label `run: access`:
 
