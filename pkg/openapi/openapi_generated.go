@@ -2168,6 +2168,57 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch", "github.com/projectcalico/libcalico-go/lib/numorstring.Port"},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.EtcdConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"etcdEndpoints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdUsername": {
+							SchemaProps: spec.SchemaProps{
+								Description: "User name for RBAC. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdPassword": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Password for the given user name. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd key file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd client certificate. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdCACertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.FelixConfiguration": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -2535,6 +2586,19 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"kubeNodePortRanges": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubeNodePortRanges holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode. Felix uses these ranges to separate host and workload traffic. [Default: 30000:32767].",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
+										},
+									},
+								},
+							},
+						},
 						"usageReportingEnabled": {
 							SchemaProps: spec.SchemaProps{
 								Description: "UsageReportingEnabled reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]",
@@ -2648,7 +2712,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.ProtoPort", "github.com/projectcalico/libcalico-go/lib/numorstring.Port", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkPolicy": {
 			Schema: spec.Schema{
@@ -2823,7 +2887,111 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule"},
 		},
-		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPRule": {
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSet contains a set of arbitrary IP sub-networks/CIDRs that share labels to allow rules to refer to them via selectors.  The labels of GlobalNetworkSet are not namespaced.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the NetworkSet.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSetList contains a list of NetworkSet resources.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.GlobalNetworkSetSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "GlobalNetworkSetSpec contains the specification for a NetworkSet resource.",
+					Properties: map[string]spec.Schema{
+						"nets": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The list of IP networks that belong to this set.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Properties: map[string]spec.Schema{
@@ -3173,6 +3341,168 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v1.IPIPConfiguration"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.KubeConfig": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kubeconfig": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sAPIEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sAPIToken": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sInsecureSkipTLSVerify": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LicenseKey contains the Tigera CNX license key for the cluster.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.  This resource is a singleton, always named \"default\".",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the LicenseKey.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeyList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LicenseKeyList contains a list of LicenseKey resources (even though there should only be one).",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKey", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.LicenseKeySpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LicenseKeySpec contains the license key itself.",
+					Properties: map[string]spec.Schema{
+						"token": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Token is the JWT containing the license claims",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"certificate": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Certificate is used to validate the token.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+					Required: []string{"token"},
+				},
+			},
+			Dependencies: []string{},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.NetworkPolicy": {
 			Schema: spec.Schema{
@@ -3653,6 +3983,194 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfiguration contains the configuration for remote clusters.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object's metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"spec": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Specification of the RemoteClusterConfiguration.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfigurationList contains a list of RemoteClusterConfiguration resources",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Type: []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"metadata", "items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfiguration", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.RemoteClusterConfigurationSpec": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "RemoteClusterConfigurationSpec contains the values of describing the cluster.",
+					Properties: map[string]spec.Schema{
+						"datastoreType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Indicates the datastore to use. If unspecified, defaults to etcdv3",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdEndpoints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "A comma separated list of etcd endpoints. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdUsername": {
+							SchemaProps: spec.SchemaProps{
+								Description: "User name for RBAC. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdPassword": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Password for the given user name. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd key file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd client certificate. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"etcdCACertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Path to the etcd Certificate Authority file. Valid if DatastoreType is etcdv3.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"kubeconfig": {
+							SchemaProps: spec.SchemaProps{
+								Description: "When using the Kubernetes datastore, the location of a kubeconfig file. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sAPIEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of the Kubernetes API. Not required if using kubeconfig. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client key for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a client certificate for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Location of a CA for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sAPIToken": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Token to be used for accessing the Kubernetes API. Valid if DatastoreType is kubernetes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"k8sInsecureSkipTLSVerify": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"boolean"},
+								Format: "",
+							},
+						},
+					},
+					Required: []string{"datastoreType"},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.Rule": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -3710,7 +4228,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"http": {
 							SchemaProps: spec.SchemaProps{
 								Description: "HTTP contains match criteria that apply to HTTP requests.",
-								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPRule"),
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch"),
 							},
 						},
 					},
@@ -3718,7 +4236,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.EntityRule", "github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch", "github.com/projectcalico/libcalico-go/lib/apis/v3.ICMPFields", "github.com/projectcalico/libcalico-go/lib/numorstring.Protocol"},
 		},
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.ServiceAccountMatch": {
 			Schema: spec.Schema{
@@ -8580,7 +9098,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"scaleIO": {
 							SchemaProps: spec.SchemaProps{
 								Description: "ScaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.",
-								Ref:         ref("k8s.io/api/core/v1.ScaleIOVolumeSource"),
+								Ref:         ref("k8s.io/api/core/v1.ScaleIOPersistentVolumeSource"),
 							},
 						},
 						"local": {
@@ -8599,7 +9117,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource", "k8s.io/api/core/v1.AzureDiskVolumeSource", "k8s.io/api/core/v1.AzureFilePersistentVolumeSource", "k8s.io/api/core/v1.CephFSPersistentVolumeSource", "k8s.io/api/core/v1.CinderVolumeSource", "k8s.io/api/core/v1.FCVolumeSource", "k8s.io/api/core/v1.FlexVolumeSource", "k8s.io/api/core/v1.FlockerVolumeSource", "k8s.io/api/core/v1.GCEPersistentDiskVolumeSource", "k8s.io/api/core/v1.GlusterfsVolumeSource", "k8s.io/api/core/v1.HostPathVolumeSource", "k8s.io/api/core/v1.ISCSIVolumeSource", "k8s.io/api/core/v1.LocalVolumeSource", "k8s.io/api/core/v1.NFSVolumeSource", "k8s.io/api/core/v1.PhotonPersistentDiskVolumeSource", "k8s.io/api/core/v1.PortworxVolumeSource", "k8s.io/api/core/v1.QuobyteVolumeSource", "k8s.io/api/core/v1.RBDVolumeSource", "k8s.io/api/core/v1.ScaleIOVolumeSource", "k8s.io/api/core/v1.StorageOSPersistentVolumeSource", "k8s.io/api/core/v1.VsphereVirtualDiskVolumeSource"},
+				"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource", "k8s.io/api/core/v1.AzureDiskVolumeSource", "k8s.io/api/core/v1.AzureFilePersistentVolumeSource", "k8s.io/api/core/v1.CephFSPersistentVolumeSource", "k8s.io/api/core/v1.CinderVolumeSource", "k8s.io/api/core/v1.FCVolumeSource", "k8s.io/api/core/v1.FlexVolumeSource", "k8s.io/api/core/v1.FlockerVolumeSource", "k8s.io/api/core/v1.GCEPersistentDiskVolumeSource", "k8s.io/api/core/v1.GlusterfsVolumeSource", "k8s.io/api/core/v1.HostPathVolumeSource", "k8s.io/api/core/v1.ISCSIVolumeSource", "k8s.io/api/core/v1.LocalVolumeSource", "k8s.io/api/core/v1.NFSVolumeSource", "k8s.io/api/core/v1.PhotonPersistentDiskVolumeSource", "k8s.io/api/core/v1.PortworxVolumeSource", "k8s.io/api/core/v1.QuobyteVolumeSource", "k8s.io/api/core/v1.RBDVolumeSource", "k8s.io/api/core/v1.ScaleIOPersistentVolumeSource", "k8s.io/api/core/v1.StorageOSPersistentVolumeSource", "k8s.io/api/core/v1.VsphereVirtualDiskVolumeSource"},
 		},
 		"k8s.io/api/core/v1.PersistentVolumeSpec": {
 			Schema: spec.Schema{
@@ -8730,7 +9248,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"scaleIO": {
 							SchemaProps: spec.SchemaProps{
 								Description: "ScaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.",
-								Ref:         ref("k8s.io/api/core/v1.ScaleIOVolumeSource"),
+								Ref:         ref("k8s.io/api/core/v1.ScaleIOPersistentVolumeSource"),
 							},
 						},
 						"local": {
@@ -8797,7 +9315,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource", "k8s.io/api/core/v1.AzureDiskVolumeSource", "k8s.io/api/core/v1.AzureFilePersistentVolumeSource", "k8s.io/api/core/v1.CephFSPersistentVolumeSource", "k8s.io/api/core/v1.CinderVolumeSource", "k8s.io/api/core/v1.FCVolumeSource", "k8s.io/api/core/v1.FlexVolumeSource", "k8s.io/api/core/v1.FlockerVolumeSource", "k8s.io/api/core/v1.GCEPersistentDiskVolumeSource", "k8s.io/api/core/v1.GlusterfsVolumeSource", "k8s.io/api/core/v1.HostPathVolumeSource", "k8s.io/api/core/v1.ISCSIVolumeSource", "k8s.io/api/core/v1.LocalVolumeSource", "k8s.io/api/core/v1.NFSVolumeSource", "k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.PhotonPersistentDiskVolumeSource", "k8s.io/api/core/v1.PortworxVolumeSource", "k8s.io/api/core/v1.QuobyteVolumeSource", "k8s.io/api/core/v1.RBDVolumeSource", "k8s.io/api/core/v1.ScaleIOVolumeSource", "k8s.io/api/core/v1.StorageOSPersistentVolumeSource", "k8s.io/api/core/v1.VsphereVirtualDiskVolumeSource", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+				"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource", "k8s.io/api/core/v1.AzureDiskVolumeSource", "k8s.io/api/core/v1.AzureFilePersistentVolumeSource", "k8s.io/api/core/v1.CephFSPersistentVolumeSource", "k8s.io/api/core/v1.CinderVolumeSource", "k8s.io/api/core/v1.FCVolumeSource", "k8s.io/api/core/v1.FlexVolumeSource", "k8s.io/api/core/v1.FlockerVolumeSource", "k8s.io/api/core/v1.GCEPersistentDiskVolumeSource", "k8s.io/api/core/v1.GlusterfsVolumeSource", "k8s.io/api/core/v1.HostPathVolumeSource", "k8s.io/api/core/v1.ISCSIVolumeSource", "k8s.io/api/core/v1.LocalVolumeSource", "k8s.io/api/core/v1.NFSVolumeSource", "k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.PhotonPersistentDiskVolumeSource", "k8s.io/api/core/v1.PortworxVolumeSource", "k8s.io/api/core/v1.QuobyteVolumeSource", "k8s.io/api/core/v1.RBDVolumeSource", "k8s.io/api/core/v1.ScaleIOPersistentVolumeSource", "k8s.io/api/core/v1.StorageOSPersistentVolumeSource", "k8s.io/api/core/v1.VsphereVirtualDiskVolumeSource", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
 		},
 		"k8s.io/api/core/v1.PersistentVolumeStatus": {
 			Schema: spec.Schema{
@@ -10834,6 +11352,87 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
+		"k8s.io/api/core/v1.ScaleIOPersistentVolumeSource": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "ScaleIOPersistentVolumeSource represents a persistent ScaleIO volume",
+					Properties: map[string]spec.Schema{
+						"gateway": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The host address of the ScaleIO API Gateway.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"system": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the storage system as configured in ScaleIO.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"secretRef": {
+							SchemaProps: spec.SchemaProps{
+								Description: "SecretRef references to the secret for ScaleIO user and other sensitive information. If this is not provided, Login operation will fail.",
+								Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+							},
+						},
+						"sslEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Flag to enable/disable SSL communication with Gateway, default false",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"protectionDomain": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of the ScaleIO Protection Domain for the configured storage.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"storagePool": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The ScaleIO Storage Pool associated with the protection domain.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"storageMode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"volumeName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The name of a volume already created in the ScaleIO system that is associated with this volume source.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"fsType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"readOnly": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+					},
+					Required: []string{"gateway", "system", "secretRef"},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/core/v1.SecretReference"},
+		},
 		"k8s.io/api/core/v1.ScaleIOVolumeSource": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -10868,21 +11467,21 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"protectionDomain": {
 							SchemaProps: spec.SchemaProps{
-								Description: "The name of the Protection Domain for the configured storage (defaults to \"default\").",
+								Description: "The name of the ScaleIO Protection Domain for the configured storage.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"storagePool": {
 							SchemaProps: spec.SchemaProps{
-								Description: "The Storage Pool associated with the protection domain (defaults to \"default\").",
+								Description: "The ScaleIO Storage Pool associated with the protection domain.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"storageMode": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Indicates whether the storage for a volume should be thick or thin (defaults to \"thin\").",
+								Description: "Indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
