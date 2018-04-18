@@ -60,19 +60,21 @@ var ListLicensesCmd = &cobra.Command{
 
 			company, err := db.GetCompanyById(companyID)
 			if err != nil {
-				log.Fatalf("** error looking up company: %s", err)
+				log.Fatalf("[ERROR] error looking up company: %s", err)
 			}
 			companyList = append(companyList, company)
 		} else {
+			// If '--all' flag is specified then get all companies and append them to the companyList.
 			allComp, err := db.AllCompanies()
 			if err != nil {
-				log.Fatalf("error looking up all companies: %s", err)
+				log.Fatalf("[ERROR] error looking up all companies: %s", err)
 			}
 			companyList = append(companyList, allComp...)
 		}
 
 		fmt.Println("COMPANY                    LICENSE_ID                                 NODES          EXPIRY                          FEATURES")
 
+		// Go through all or a specific company and list their license info.
 		for _, comp := range companyList {
 			// Get the licenses for that company.
 			licenses, err := db.GetLicensesByCompany(comp.ID)
