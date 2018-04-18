@@ -1,5 +1,5 @@
-hash: b8c6e709560b029f73ea75e50812b6fbb108091b083329c89ef98b0e40cfe02b
-updated: 2018-04-06T11:49:09.778878164-07:00
+hash: 88e6a30be9892d3f656697649614cf0bf6b76454788a8583fd741f8053ceafc9
+updated: 2018-04-18T01:42:26.882794621+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -36,7 +36,7 @@ imports:
 - name: github.com/dgrijalva/jwt-go
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/docopt/docopt-go
-  version: 784ddc588536785e7299f7272f39101f7faccc3f
+  version: ee0de3bc6815ee19d4a46c7eb90f829db0e014b1
 - name: github.com/dustin/go-humanize
   version: bb3d318650d48840a39aa21a027c6630e198e626
 - name: github.com/emicklei/go-restful
@@ -48,7 +48,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: 5e9692864e22d02ac79e2fa499cffb00520b4fea
+  version: ace140f73450505f33e8b8418216792275ae82a7
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -163,13 +163,13 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/calicoctl
-  version: 4e01112058e6f27fa12c4c30d4e5277adc4277f6
+  version: 8e04ac76a198b72c513888e06de649f556df07b5
   subpackages:
   - calicoctl/commands/argutils
   - calicoctl/resourcemgr
   - calicoctl/util/yaml
 - name: github.com/projectcalico/felix
-  version: c65f3376291eb74b6efa35075b94fb439b4998b6
+  version: 848339f0e387a2496f81c57e412948961d28652f
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -189,7 +189,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 3a570da01b58c51f8a79293f874394156bedf862
+  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -257,7 +257,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: 55a808c36b11f26f665027eed5bc7c03d67dd1ae
+  version: 8ec33856e26f386598a81bf6c1fde26166fff80a
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
