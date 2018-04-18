@@ -82,6 +82,9 @@ var GenerateLicenseCmd = &cobra.Command{
 		// Lower case customer name for consistency.
 		claims.Customer = strings.ToLower(claims.Customer)
 
+		// Replace spaces with '-' so the generated file name doesn't have spaces in the name.
+		claims.Customer = strings.Replace(claims.Customer, " ", "-", -1)
+
 		// Parse expiration date into time format and set it to end of the day for that date.
 		claims.Expiry = parseExpiryDate(exp)
 
