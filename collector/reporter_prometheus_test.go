@@ -228,14 +228,14 @@ func eventuallyExpectRuleAggregates(
 		if !ok {
 			return -1
 		}
-		return getMetricGauge(value.numConnections)
+		return getMetricCount(value.numConnections)
 	}, expectTimeout).Should(Equal(expectedConnections))
 	Consistently(func() int {
 		value, ok := pa.ruleAggStats[k]
 		if !ok {
 			return -1
 		}
-		return getMetricGauge(value.numConnections)
+		return getMetricCount(value.numConnections)
 	}, expectTimeout).Should(Equal(expectedConnections))
 }
 
@@ -257,7 +257,7 @@ var _ = Describe("Prometheus Reporter verification", func() {
 	AfterEach(func() {
 		counterRulePackets.Reset()
 		counterRuleBytes.Reset()
-		gaugeRuleConns.Reset()
+		counterRuleConns.Reset()
 	})
 	// First set of test handle adding the same rules with two different connections and
 	// traffic directions.  Connections should not impact the number of Prometheus metrics,
@@ -306,7 +306,6 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		expectedBytesInbound += muConn1Rule1AllowExpire.inMetric.deltaBytes
 		expectedPacketsOutbound += muConn1Rule1AllowExpire.outMetric.deltaPackets
 		expectedBytesOutbound += muConn1Rule1AllowExpire.outMetric.deltaBytes
-		expectedConnsInbound -= 1
 		// Adjust the clock, but not past the retention period, the outbound rule aggregate should
 		// not yet be expunged.
 		mt.incMockTime(retentionTime / 2)
@@ -326,7 +325,6 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		pr.Report(muConn2Rule1AllowExpire)
 		expectedPacketsInbound += muConn2Rule1AllowExpire.inMetric.deltaPackets
 		expectedBytesInbound += muConn2Rule1AllowExpire.inMetric.deltaBytes
-		expectedConnsInbound -= 1
 		// Adjust the clock, but not past the retention period, the inbound rule aggregate should
 		// not yet be expunged.
 		mt.incMockTime(retentionTime / 2)
