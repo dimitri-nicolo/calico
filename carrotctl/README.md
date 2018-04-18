@@ -57,6 +57,8 @@ ________________________________________________________________________
 
 Is the license information correct? [y/N]
 y
+Customer 'happy-carrot-inc-license.yaml' not found in company database.  Create new company? [y/N]
+y
 
 Created license file 'happy-carrot-inc-license.yaml'
 ```
@@ -66,30 +68,81 @@ Created license file 'happy-carrot-inc-license.yaml'
 
 `carrotctl list --customer=boxy-box-inc` will list all key license fields for all the licenses issued for a customer name matching `boxy-box-inc*`
 
-It will list `CustomerID` for each license issued for that customer, which can be used to retrieve the
+To list all customers and their licenses, use `carrotctl list --all` command.
+
+It will list `LicenseID` for each license issued for that customer, which can be used to retrieve the
 license with `carrotctl retrieve --license-id=<license-id>` command.
 
 Each license has a unique ID (LICENSEID), even if it is for the same customer.
 
-### Example
+### Usage
 
-- List all the licenses issued for customer `team-rocket-inc`
+List licenses for a specific or all customers
 
 ```
-carrotctl list --name="team-rocket-inc"
-LICENSE ID                             MAX NODES   EXPIRY                          FEATURES
-7874cac9-4710-4c6b-8e92-ee2cb47a069d         113   0001-01-01 00:00:00 +0000 UTC   cnx|all
-6f3af9e5-c487-4eba-811f-e024e3007a8f          14   2019-01-01 00:00:00 +0000 UTC   cnx|all
-d19fc66e-bf33-4d97-be16-aaba34d2b0d3          15   2019-01-01 00:00:00 +0000 UTC   cnx|all
+List licenses
+
+Usage:
+  carrotctl list licenses for a specific or all customers [flags]
+
+Aliases:
+  list, list, list-licenses
+
+Flags:
+      --all               List all companies and their licenses
+  -c, --customer string   Customer name
+  -h, --help              help for list
+```
+
+Re-generate a license listed in the list command
+
+```
+Retrieve a license
+
+Usage:
+  carrotctl retrieve a previously generated license from the database [flags]
+
+Aliases:
+  retrieve, retrieve, retrieve-license
+
+Flags:
+  -h, --help                help for retrieve
+  -i, --license-id string   License ID
+```
+
+
+### Example
+
+- List all customers and their licenses (this could take a while if there's a lot of customers and licenses in the database)
+
+```
+carrotctl list --all
+COMPANY                    LICENSE_ID                                 NODES          EXPIRY                          FEATURES
+ayyyyyyyyyyyyyyoooooooo    e971637d-19df-4f0f-8f8d-2a1f73887b33       Unlimited      2020-03-05 00:00:00 +0000 UTC   cnx|all
+Box                        f012f6b8-579a-4c2d-b16b-74e3c882cb07       Unlimited      2020-03-05 00:00:00 +0000 UTC   cnx|all
+Box                        37d8927b-a90b-4df5-b59d-00a4d72b5a89       Unlimited      2020-03-05 00:00:00 +0000 UTC   cnx|all
+boxy                       57b415fd-cb48-4c4f-b12d-693e4466c42c       Unlimited      2020-03-05 00:00:00 +0000 UTC   cnx|all
+weetabix-inc               f9fb8c9d-6d12-4ab7-80dd-201ec2289faa       Unlimited      2021-07-08 00:00:00 +0000 UTC   cnx|all
+weetabix-inc               137ca41f-62f6-4862-8329-b3056db5ba87       Unlimited      2021-07-08 00:00:00 +0000 UTC   cnx|all
+```
+
+
+- List all the licenses issued for customer `weetabix-inc`
+
+```
+carrotctl list --customer weetabix-inc
+COMPANY                    LICENSE_ID                                 NODES          EXPIRY                          FEATURES
+weetabix-inc               f9fb8c9d-6d12-4ab7-80dd-201ec2289faa       Unlimited      2021-07-08 00:00:00 +0000 UTC   cnx|all
+weetabix-inc               137ca41f-62f6-4862-8329-b3056db5ba87       Unlimited      2021-07-08 00:00:00 +0000 UTC   cnx|all
 
 ```
 
 - Re-generate the license.yaml for the second license from database:
 
 ```
-carrotctl retrieve --license-id=d19fc66e-bf33-4d97-be16-aaba34d2b0d3
+carrotctl retrieve --license-id=f9fb8c9d-6d12-4ab7-80dd-201ec2289faa
 
-Created license file 'd19fc66e-bf33-4d97-be16-aaba34d2b0d3.yaml'
+Created license file 'f9fb8c9d-6d12-4ab7-80dd-201ec2289faa-license.yaml'
 ```
 
 # Building

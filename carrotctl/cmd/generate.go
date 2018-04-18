@@ -168,7 +168,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		companyID, err := db.GetCompanyByName(claims.Customer)
 		if err == sql.ErrNoRows {
 			// Confirm creation of company with the user in case they mistyped.
-			fmt.Printf("Customer %s not found in company database.  Create new company? [y/N]\n", claims.Customer)
+			fmt.Printf("Customer '%s' not found in company database.  Create new company? [y/N]\n", claims.Customer)
 			var create string
 			fmt.Scanf("%s", &create)
 

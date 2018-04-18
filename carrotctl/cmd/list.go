@@ -26,10 +26,10 @@ func init() {
 }
 
 var ListLicensesCmd = &cobra.Command{
-	Use:        "list licenses for a customer",
+	Use:        "list licenses for a specific or all customers",
 	Aliases:    []string{"list", "list-licenses"},
 	SuggestFor: []string{"ls", "get"},
-	Short:      "List licenses for a customer",
+	Short:      "List licenses",
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if customerListFlag.Changed("customer") && allFlag.Changed("all") {
