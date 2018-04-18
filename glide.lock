@@ -1,5 +1,5 @@
-hash: f094b3d492d1a777157a31feb3e51b10cf4826454b599962cd15d3f2dc712cb3
-updated: 2018-04-02T15:43:50.358994-07:00
+hash: 76bc349a090825febce50e88c67d13a9bcae13afbcb45fd3ee5675b88a7436cf
+updated: 2018-04-18T01:01:52.084488489Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -131,7 +131,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/kubernetes/repo-infra
-  version: 06471ba92308f7bfff038aa0850f31cbb7254ea3
+  version: d9bb9fdc907665c61c228baa64fed9b91c7dc1b0
 - name: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -165,7 +165,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 3a570da01b58c51f8a79293f874394156bedf862
+  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -275,7 +275,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 5bee14b453b4c71be47ec1781b0fa61c2ea182db
+  version: 0a24098c0ec68416ec050f567f75df563d6b231e
   subpackages:
   - internal
   - internal/app_identity
@@ -291,7 +291,7 @@ imports:
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: 1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34
+  version: d11072e7ca9811b1100b80ca0269ac831f06d024
   subpackages:
   - balancer
   - balancer/base
@@ -325,7 +325,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 3c2a58f9923aeb5d27fa4d91249e45a1460ca3bd
+  version: ceb25c9d04f0c3a10a185499c03194f54069b290
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -352,7 +352,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: ab7fc865fb0881d161f37adef3e5a67b89a18d05
+  version: 62737119932505aba8df99644184e0705ea58df1
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
@@ -596,7 +596,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/code-generator
-  version: acb3006c59dc9e9b7a2a1df2bdf9e5f4dfb36c4f
+  version: 6158d2a0650650695aaabafc8ebcb2ef55480c6f
 - name: k8s.io/gengo
   version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
 - name: k8s.io/kube-openapi
@@ -607,7 +607,7 @@ imports:
   - pkg/handler
   - pkg/util
 - name: k8s.io/kubernetes
-  version: 732d2facbd264a316fc79ba720744860a9c25560
+  version: af8f238d872a8536b42797824852a45151d5deb0
   subpackages:
   - pkg/api
   - pkg/api/install
