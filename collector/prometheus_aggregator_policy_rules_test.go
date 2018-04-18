@@ -49,7 +49,7 @@ func expectRuleAggregates(
 		if !ok {
 			return -1
 		}
-		return getMetricGauge(value.numConnections)
+		return getMetricCount(value.numConnections)
 	}()).To(Equal(expectedConnections))
 }
 
@@ -112,7 +112,7 @@ var _ = Describe("Prometheus Policy Rules Aggregator verification", func() {
 		expectedBytesInbound += muConn1Rule1AllowUpdate.inMetric.deltaBytes
 		expectedPacketsOutbound += muConn1Rule1AllowUpdate.outMetric.deltaPackets
 		expectedBytesOutbound += muConn1Rule1AllowUpdate.outMetric.deltaBytes
-		expectedConnsInbound += 0 // connection already registered
+		expectedConnsInbound += 0 // connection is not new.
 
 		expectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule1Allow})
 		expectRuleAggregates(pa, TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
@@ -124,7 +124,6 @@ var _ = Describe("Prometheus Policy Rules Aggregator verification", func() {
 		expectedBytesInbound += muConn1Rule1AllowExpire.inMetric.deltaBytes
 		expectedPacketsOutbound += muConn1Rule1AllowExpire.outMetric.deltaPackets
 		expectedBytesOutbound += muConn1Rule1AllowExpire.outMetric.deltaBytes
-		expectedConnsInbound -= 1
 		// Adjust the clock, but not past the retention period, the outbound rule aggregate should
 		// not yet be expunged.
 		mt.incMockTime(retentionTime / 2)
@@ -143,7 +142,6 @@ var _ = Describe("Prometheus Policy Rules Aggregator verification", func() {
 		pa.OnUpdate(muConn2Rule1AllowExpire)
 		expectedPacketsInbound += muConn2Rule1AllowExpire.inMetric.deltaPackets
 		expectedBytesInbound += muConn2Rule1AllowExpire.inMetric.deltaBytes
-		expectedConnsInbound -= 1
 		// Adjust the clock, but not past the retention period, the inbound rule aggregate should
 		// not yet be expunged.
 		mt.incMockTime(retentionTime / 2)

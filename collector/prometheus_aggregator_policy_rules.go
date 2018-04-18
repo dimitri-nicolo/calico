@@ -38,8 +38,8 @@ var (
 		},
 		[]string{LABEL_ACTION, LABEL_TIER, LABEL_NAMESPACE, LABEL_POLICY, LABEL_RULE_DIR, LABEL_RULE_IDX, LABEL_TRAFFIC_DIR, LABEL_INSTANCE},
 	)
-	gaugeRuleConns = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
+	counterRuleConns = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
 			Name: "cnx_policy_rule_connections",
 			Help: "Total number of connections handled by CNX policy rules.",
 		},
@@ -92,7 +92,7 @@ type RuleAggregateValue struct {
 	inBytes        prometheus.Counter
 	outPackets     prometheus.Counter
 	outBytes       prometheus.Counter
-	numConnections prometheus.Gauge
+	numConnections prometheus.Counter
 	tuples         tupleSet
 }
 
@@ -109,7 +109,7 @@ func newRuleAggregateValue(key RuleAggregateKey, felixHostname string) *RuleAggr
 		inBytes:        counterRuleBytes.With(pbInLabels),
 		outPackets:     counterRulePackets.With(pbOutLabels),
 		outBytes:       counterRuleBytes.With(pbOutLabels),
-		numConnections: gaugeRuleConns.With(cLabels),
+		numConnections: counterRuleConns.With(cLabels),
 	}
 }
 
@@ -139,7 +139,7 @@ func NewPolicyRulesAggregator(rTime time.Duration, felixHostname string) *Policy
 func (pa *PolicyRulesAggregator) RegisterMetrics(registry *prometheus.Registry) {
 	registry.MustRegister(counterRuleBytes)
 	registry.MustRegister(counterRulePackets)
-	registry.MustRegister(gaugeRuleConns)
+	registry.MustRegister(counterRuleConns)
 }
 
 // OnUpdate handles reporting and expiration of Rule-aggregated metrics.
@@ -169,24 +169,21 @@ func (pa *PolicyRulesAggregator) OnUpdate(mu MetricUpdate) {
 		value.outBytes.Add(float64(mu.outMetric.deltaBytes))
 	}
 
-	// If this is an active connection (and we aren't expiring the stats), add to our
-	// active connections tuple, otherwise make sure it is removed.
-	oldTuples := value.tuples.Len()
+	// If this is an new connection (and we aren't expiring the stats), add to our
+	// connections tuple and update our connections counter, otherwise make sure
+	// it is removed.
 	if mu.isConnection && mu.updateType == UpdateTypeReport {
-		value.tuples.Add(mu.tuple)
+		if !value.tuples.Contains(mu.tuple) {
+			value.tuples.Add(mu.tuple)
+			value.numConnections.Inc()
+		}
 	} else {
 		value.tuples.Discard(mu.tuple)
-	}
-	newTuples := value.tuples.Len()
-
-	// If the number of connections has changed then update our connections gauge.
-	if mu.isConnection && oldTuples != newTuples {
-		value.numConnections.Set(float64(newTuples))
 	}
 
 	// If there are some connections for this rule then keep it active, otherwise (re)set the timeout
 	// for this metric to ensure we tidy up after a period of inactivity.
-	if newTuples > 0 {
+	if value.tuples.Len() > 0 {
 		pa.unmarkRuleAggregateForDeletion(key)
 	} else {
 		pa.markRuleAggregateForDeletion(key)
@@ -233,13 +230,13 @@ func (pa *PolicyRulesAggregator) deleteRuleAggregateMetric(key RuleAggregateKey)
 		counterRuleBytes.Delete(pbInLabels)
 		counterRulePackets.Delete(pbOutLabels)
 		counterRuleBytes.Delete(pbOutLabels)
-		gaugeRuleConns.Delete(cLabels)
+		counterRuleConns.Delete(cLabels)
 	case rules.RuleDirEgress:
 		counterRulePackets.Delete(pbOutLabels)
 		counterRuleBytes.Delete(pbOutLabels)
 		counterRulePackets.Delete(pbInLabels)
 		counterRuleBytes.Delete(pbInLabels)
-		gaugeRuleConns.Delete(cLabels)
+		counterRuleConns.Delete(cLabels)
 	}
 	delete(pa.ruleAggStats, key)
 }
