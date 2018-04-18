@@ -79,6 +79,8 @@ var GenerateLicenseCmd = &cobra.Command{
 	SuggestFor: []string{"gen", "generat", "generate-license"},
 	Short:      "Generate tigera CNX license file",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Lower case customer name for consistency.
+		claims.Customer = strings.ToLower(claims.Customer)
 
 		// Parse expiration date into time format and set it to end of the day for that date.
 		claims.Expiry = parseExpiryDate(exp)
