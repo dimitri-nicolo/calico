@@ -18,7 +18,7 @@ corresponds to your desired deployment.
 
 ## Installing calicoq as a binary on a single host
 
-{% include {{page.version}}/ctl-binary-install.md cli="calicoq" %}
+{% include {{page.version}}/ctl-binary-install.md cli="calicoq" codepath="/calicoq" %}
 
 **Next step**:
 

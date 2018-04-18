@@ -1,7 +1,7 @@
 1. Log into the host, open a terminal prompt, and navigate to the location where
 you want to install the binary. 
 
-   > **Tip**: Consider navigating to a location that's in your `PATH`. For example, 
+   > **Tip**: Navigate to a location that's in your `PATH`. For example, 
    > `/usr/local/bin/`.
    {: .alert .alert-success}
 
@@ -57,7 +57,7 @@ you want to install the binary.
 1. Copy the {{include.cli}} file from the container to the local file system. The following command copies it to a common `$PATH` location.
 
    ```bash
-   docker cp {{include.cli}}-copy:/{{include.cli}} /usr/local/bin/{{include.cli}}
+   docker cp {{include.cli}}-copy:{{include.codepath}} {{include.cli}}
    ```
    
 1. Use the following command to delete the copy of the {{include.cli}} container.
@@ -69,10 +69,5 @@ you want to install the binary.
 1. Set the file to be executable.
 
    ```
-   chmod +x calicoctl
+   chmod +x {{include.cli}}
    ```
-
-   > **Note**: If the location of `calicoctl` is not already in your `PATH`, move the file
-   > to one that is or add its location to your `PATH`. This will allow you to invoke it
-   > without having to prepend its location.
-   {: .alert .alert-info}

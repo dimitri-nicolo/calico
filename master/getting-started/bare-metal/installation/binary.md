@@ -32,7 +32,7 @@ Felix has the following pre-requisites:
 
 ## Download and install the binary
 
-{% include {{page.version}}/ctl-binary-install.md cli="felix" %}
+{% include {{page.version}}/ctl-binary-install.md cli="felix" codepath="/code/calico-felix" %}
 
 ## Create a start-up script
 
