@@ -135,9 +135,6 @@ v2.0:
     calico-bgp-daemon:
       version: v0.2.1
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
-    libnetwork-plugin:
-      version: v1.1.0
-      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
@@ -195,9 +192,6 @@ v2.0:
     calico-bgp-daemon:
       version: v0.2.2
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
-    libnetwork-plugin:
-      version: v1.1.2
-      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
@@ -395,9 +389,6 @@ v2.0:
     calico-bgp-daemon:
       version: v0.2.2
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
-    libnetwork-plugin:
-      version: v1.1.2
-      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
@@ -475,9 +466,6 @@ v2.0:
     calico-bgp-daemon:
       version: v0.2.2
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.2
-    libnetwork-plugin:
-      version: v1.1.2
-      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.2
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
@@ -558,9 +546,6 @@ v2.0:
     calico-bgp-daemon:
       version: v0.2.1
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
-    libnetwork-plugin:
-      version: v1.1.0
-      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
@@ -638,9 +623,6 @@ v2.0:
     calico-bgp-daemon:
       version: v0.2.1
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
-    libnetwork-plugin:
-      version: v1.1.0
-      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
@@ -718,9 +700,6 @@ v2.0:
     calico-bgp-daemon:
       version: v0.2.1
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
-    libnetwork-plugin:
-      version: v1.1.0
-      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3
@@ -777,9 +756,6 @@ v2.0:
     calico-bgp-daemon:
       version: v0.2.1
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.1
-    libnetwork-plugin:
-      version: v1.1.0
-      url: https://github.com/projectcalico/libnetwork-plugin/releases/tag/v1.1.0
     networking-calico:
       version: 1.4.3
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=1.4.3

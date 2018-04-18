@@ -91,7 +91,6 @@ ExecStart=/usr/bin/docker run --net=host --privileged --name={{site.noderunning}
   -e IP= \
   -e NO_DEFAULT_POOLS= \
   -e AS= \
-  -e CALICO_LIBNETWORK_ENABLED=true \
   -e IP6= \
   -e CALICO_NETWORKING_BACKEND=bird \
   -e FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT \

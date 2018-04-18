@@ -3,20 +3,20 @@ title: Integration Guide
 ---
 
 
-This document explains the components necessary to install {{site.prodname}} on 
+This document explains the components necessary to install {{site.prodname}} on
 Kubernetes for integrating with custom configuration management.
 
 The manifests we provide in [Installing {{site.prodname}} for policy and networking](calico),
-and [Installing {{site.prodname}} for policy](other) will perform these steps automatically 
-for you and are *strongly* recommended for most users. These instructions should only 
+and [Installing {{site.prodname}} for policy](other) will perform these steps automatically
+for you and are *strongly* recommended for most users. These instructions should only
 be followed by users who have a specific need that cannot be met by using manifests.
 
 
 ## Before you begin
 
-- Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements). 
+- Ensure that your cluster meets the {{site.prodname}} [system requirements](../requirements).
 
-- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials) 
+- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
 
 ## About the {{site.prodname}} components
@@ -79,7 +79,6 @@ ExecStart=/usr/bin/docker run --net=host --privileged --name={{site.noderunning}
   -e IP= \
   -e NO_DEFAULT_POOLS= \
   -e AS= \
-  -e CALICO_LIBNETWORK_ENABLED=true \
   -e IP6= \
   -e CALICO_NETWORKING_BACKEND=bird \
   -e FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT \
