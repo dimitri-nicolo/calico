@@ -1,5 +1,5 @@
-hash: 3cc964b399b14b1a9281655d414c45e9077c8ed590fbd26c611d594191608d86
-updated: 2018-04-10T17:38:29.50115-07:00
+hash: ac83b37341d61177885081cab4b8d5a188936ca2e3697027778aa4436f8b2cf7
+updated: 2018-04-18T01:44:01.47283766+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -46,7 +46,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 5e9692864e22d02ac79e2fa499cffb00520b4fea
+  version: ace140f73450505f33e8b8418216792275ae82a7
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -161,7 +161,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/calicoctl
-  version: 7e32a52dd2c1fa28d4de47a25db906facf872dbf
+  version: e106d251c0f809e4ab3fec6e9113ee821193c93a
   repo: git@github.com:tigera/calicoctl-private.git
   vcs: git
   subpackages:
@@ -169,7 +169,7 @@ imports:
   - calicoctl/resourcemgr
   - calicoctl/util/yaml
 - name: github.com/projectcalico/felix
-  version: c65f3376291eb74b6efa35075b94fb439b4998b6
+  version: 848339f0e387a2496f81c57e412948961d28652f
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -189,7 +189,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 3a570da01b58c51f8a79293f874394156bedf862
+  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -256,7 +256,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: 55a808c36b11f26f665027eed5bc7c03d67dd1ae
+  version: 8ec33856e26f386598a81bf6c1fde26166fff80a
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
