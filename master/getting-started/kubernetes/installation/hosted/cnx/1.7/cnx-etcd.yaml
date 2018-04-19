@@ -243,6 +243,9 @@ spec:
       - name: cnx-queryserver
         image: {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
+          # Set queryserver logging to "info"
+          - name: LOGLEVEL
+            value: "info"
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
