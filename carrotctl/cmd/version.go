@@ -9,7 +9,7 @@ import (
 var VERSION, BUILD_DATE, GIT_REVISION string
 
 func init()  {
-	
+
 }
 
 var VersionCmd = &cobra.Command{
@@ -22,12 +22,5 @@ var VersionCmd = &cobra.Command{
 		fmt.Println("Build Version:    ", VERSION)
 		fmt.Println("Build date:       ", BUILD_DATE)
 		fmt.Println("Git commit:       ", GIT_REVISION)
-		printVersion()
 	},
-}
-
-func printVersion(){
-	fmt.Println("Build Version:    ", VERSION)
-	fmt.Println("Build date:       ", BUILD_DATE)
-	fmt.Println("Git commit:       ", GIT_REVISION)
 }
