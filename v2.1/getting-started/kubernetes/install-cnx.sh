@@ -59,6 +59,9 @@ CALICO_UTILS_REGISTRY=${CALICO_UTILS_REGISTRY:="quay.io/tigera"}
 # Calicoctl and calicoq binary install directory
 CALICO_UTILS_INSTALL_DIR=${CALICO_UTILS_INSTALL_DIR:="/usr/local/bin"}
 
+# Utility container "rc-?" suffix.
+CALICO_UTILS_RC_SUFFIX=${CALICO_UTILS_RC_SUFFIX:=".0-rc1"}
+
 #
 # promptToContinue()
 #
@@ -581,14 +584,14 @@ installCalicoBinary() {
   [ "$utilityName" == "calicoctl" ] || [ "$utilityName" == "calicoq" ] || fatalError "Utility name \"${utilityName}\" is not valid, must be either \"calicoctl\" or \"calicoq\"."
 
   # Pull utility's container image
-  echo -n "Pulling ${utilityName}:${VERSION} from ${CALICO_UTILS_REGISTRY} ... "
-  runAsRoot "docker pull ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  echo -n "Pulling ${utilityName}:${VERSION}${CALICO_UTILS_RC_SUFFIX} from ${CALICO_UTILS_REGISTRY} ... "
+  runAsRoot "docker pull ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}${CALICO_UTILS_RC_SUFFIX}"
   echo "done."
 
   # Create a local copy of utility image
-  echo -n "Copying the ${utilityName}:${VERSION} container ... "
+  echo -n "Copying the ${utilityName}:${VERSION}${CALICO_UTILS_RC_SUFFIX} container ... "
   runAsRootIgnoreErrors "docker rm calico-utility-copy"
-  runAsRoot "docker create --name calico-utility-copy ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  runAsRoot "docker create --name calico-utility-copy ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}${CALICO_UTILS_RC_SUFFIX}"
   echo "done."
 
   # Copy binary to current directory
@@ -605,7 +608,7 @@ installCalicoBinary() {
 
   # Clean up
   runAsRootIgnoreErrors "docker rm calico-utility-copy"
-  runAsRoot "docker rmi ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  runAsRoot "docker rmi ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}${CALICO_UTILS_RC_SUFFIX}"
   runAsRoot "rm -f ./${utilityName}"
 
   createCalicoctlCfg    # If not already present, create "/etc/calico/calicoctl.cfg"
