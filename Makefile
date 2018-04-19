@@ -19,20 +19,17 @@ LDFLAGS=-ldflags "-X github.com/tigera/licensing/carrotctl/cmd.VERSION=$(CARROTC
 ## Build carrotctl
 build: vendor dist/carrotctl dist/carrotctl-linux-amd64 dist/carrotctl-darwin-amd64 dist/carrotctl-windows-amd64.exe
 
-dist/carrotctl: vendor
-	dist/carrotctl-linux-amd64
-	cp dist/carrotctl-linux--amd64 dist/carrotctl
+dist/carrotctl: vendor dist/carrotctl-linux-amd64
+	cp dist/carrotctl-linux-amd64 dist/carrotctl
 
 dist/carrotctl-linux-amd64: vendor
-	OS=linux ARCH=amd64 go build -o dist/carrotctl $(LDFLAGS) "./carrotctl/carrotctl.go"
+	GOOS=linux GOARCH=amd64 go build -o dist/carrotctl-linux-amd64 $(LDFLAGS) "./carrotctl/carrotctl.go"
 
 dist/carrotctl-darwin-amd64: vendor
-	OS=darwin ARCH=amd64 go build -o dist/carrotctl-darwin-amd64 $(LDFLAGS) "./carrotctl/carrotctl.go"
+	GOOS=darwin GOARCH=amd64 go build -o dist/carrotctl-darwin-amd64 $(LDFLAGS) "./carrotctl/carrotctl.go"
 
 dist/carrotctl-windows-amd64.exe: vendor
-	OS=windows ARCH=amd64 go build -o dist/carrotctl-windows-amd64.exe $(LDFLAGS) "./carrotctl/carrotctl.go"
-	mv dist/carrotctl-windows-amd64 dist/carrotctl-windows-amd64.exe
-
+	GOOS=windows GOARCH=amd64 go build -o dist/carrotctl-windows-amd64.exe $(LDFLAGS) "./carrotctl/carrotctl.go"
 
 .PHONY: install
 install:
