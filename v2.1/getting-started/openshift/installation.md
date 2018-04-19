@@ -161,6 +161,13 @@ Operator, Prometheus, and Alertmanager instances for you.
 
    >[Click here to view operator-openshift-patch.yaml](operator-openshift-patch.yaml)
 
+   > **Note**: If you are installing on OpenShift v3.9.0, you will need to allow all pods in the `kube-system` namespace on each node.
+   This can be done by adding the `openshift.io/node-selector` annotation to the `kube-system` namespace. Add this annotation by running the following.
+   ```
+   oc annotate ns kube-system openshift.io/node-selector="" --overwrite
+   ```
+   {: .alert .alert-info}
+
 1. Configure calico-monitoring namespace and deploy Prometheus Operator by
   applying the [operator.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml) manifest.
 
