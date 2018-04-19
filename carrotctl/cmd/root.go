@@ -10,6 +10,7 @@ func init() {
 	RootCmd.AddCommand(GenerateLicenseCmd)
 	RootCmd.AddCommand(ListLicensesCmd)
 	RootCmd.AddCommand(RetrieveLicenseCmd)
+	RootCmd.AddCommand(VersionCmd)
 }
 
 var RootCmd = &cobra.Command{
