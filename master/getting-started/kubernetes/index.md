@@ -80,12 +80,12 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
 
    **Command**
    ```
-   ./install-cnx.sh -v {{page.version}} -l <customer-name>-license.yaml
+   ./install-cnx.sh -l <customer-name>-license.yaml
    ```
    
    **Example**
    ```
-   ./install-cnx.sh -v {{page.version}} -l awesome-corp-license.yaml
+   ./install-cnx.sh -l awesome-corp-license.yaml
    ```
 
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.

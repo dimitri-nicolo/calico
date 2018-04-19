@@ -1,3 +1,6 @@
+---
+layout: null
+---
 #!/usr/bin/env bash
 #
 # Script to install CNX on a kubeadm cluster. Requires the docker
@@ -13,7 +16,7 @@ export TOP_PID=$$
 #   ${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
 #      - resolves to -
 #   https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
-VERSION=${VERSION:="v2.1"}
+VERSION=${VERSION:="{{page.version}}"}
 
 # Override DOCS_LOCATION to point to alternate CNX docs location, e.g.
 #   DOCS_LOCATION="https://docs.tigera.io" ./install-cnx.sh
@@ -580,15 +583,26 @@ installCalicoBinary() {
   # Validate arg
   [ "$utilityName" == "calicoctl" ] || [ "$utilityName" == "calicoq" ] || fatalError "Utility name \"${utilityName}\" is not valid, must be either \"calicoctl\" or \"calicoq\"."
 
+  # We've already downloaded the uiltity manifests, i.e. "calicoctl.yaml"
+  # or "calicoq.yaml". Perform sanity checking to make sure they exist.
+  utilityManifest=${utilityName}.yaml
+
+  if [ ! -f ${utilityManifest} ]; then
+    fatalError "Unable to locate ${utilityManifest}"
+  fi
+
+  # Extract the versioned container url from the appropriate manifest, e.g. "quay.io/tigera/calicoq:v2.1.0-rc1"
+  utilityContainerURL=$(grep image: ${utilityManifest} | sed 's/\s*image:\s*//')
+
   # Pull utility's container image
-  echo -n "Pulling ${utilityName}:${VERSION} from ${CALICO_UTILS_REGISTRY} ... "
-  runAsRoot "docker pull ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  echo -n "Pulling ${utilityContainerURL} ... "
+  runAsRoot "docker pull ${utilityContainerURL}"
   echo "done."
 
   # Create a local copy of utility image
-  echo -n "Copying the ${utilityName}:${VERSION} container ... "
+  echo -n "Copying the ${utilityContainerURL} container ... "
   runAsRootIgnoreErrors "docker rm calico-utility-copy"
-  runAsRoot "docker create --name calico-utility-copy ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  runAsRoot "docker create --name calico-utility-copy ${utilityContainerURL}"
   echo "done."
 
   # Copy binary to current directory
@@ -605,7 +619,7 @@ installCalicoBinary() {
 
   # Clean up
   runAsRootIgnoreErrors "docker rm calico-utility-copy"
-  runAsRoot "docker rmi ${CALICO_UTILS_REGISTRY}/${utilityName}:${VERSION}"
+  runAsRoot "docker rmi ${utilityContainerURL}"
   runAsRoot "rm -f ./${utilityName}"
 
   createCalicoctlCfg    # If not already present, create "/etc/calico/calicoctl.cfg"
@@ -640,10 +654,18 @@ downloadManifests() {
   if [ "$DATASTORE" == "etcdv3" ]; then
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
+
+    # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calicoctl.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calicoq.yaml"
   else
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml"
+
+    # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoq.yaml"
   fi
 }
 
