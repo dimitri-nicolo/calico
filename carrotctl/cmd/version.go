@@ -8,10 +8,6 @@ import (
 
 var VERSION, BUILD_DATE, GIT_REVISION string
 
-func init()  {
-
-}
-
 var VersionCmd = &cobra.Command{
 	Use:        "version",
 	Aliases:    []string{"version", "ver", "who-dis"},
