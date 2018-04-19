@@ -26,7 +26,7 @@ corresponds to your desired deployment.
 
 ## Installing calicoctl as a binary on a single host
 
-{% include {{page.version}}/ctl-binary-install.md cli="calicoctl" %}
+{% include {{page.version}}/ctl-binary-install.md cli="calicoctl" codepath="/calicoctl" %}
 
 **Next step**:
 
