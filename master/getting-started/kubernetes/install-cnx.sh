@@ -1,3 +1,6 @@
+---
+layout: null
+---
 #!/usr/bin/env bash
 #
 # Script to install CNX on a kubeadm cluster. Requires the docker
@@ -13,7 +16,7 @@ export TOP_PID=$$
 #   ${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
 #      - resolves to -
 #   https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
-VERSION=${VERSION:="master"}
+VERSION=${VERSION:="{{page.version}}"}
 
 # Override DOCS_LOCATION to point to alternate CNX docs location, e.g.
 #   DOCS_LOCATION="https://docs.tigera.io" ./install-cnx.sh
