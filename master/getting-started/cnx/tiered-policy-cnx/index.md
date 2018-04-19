@@ -18,7 +18,7 @@ first use case.
 ### Prerequisites
 
 - A Kubernetes cluster configured with [{{site.prodname}}](../../kubernetes/installation/)
-- [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup/) to work properly with your cluster
+- [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoctl/configure/) to work properly with your cluster
 - [calicoq installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoq/) to work with your cluster
 
 > **Note**: Commands using calicoctl can be replaced with kubectl if the CNX Manager and CNX API server are installed.
@@ -197,6 +197,7 @@ Your output should look like the following.
 
 ```
 NAME      ORDER
+allow-cnx 100
 default   <nil>
 ```
 
@@ -217,7 +218,7 @@ spec:
 EOF
 ```
 
-You should see the message `Successfully created 1 'tier' resource(s)` to
+You should see the message `Successfully created 1 'Tier' resource(s)` to
 indicate that the tier was created successfully. You can view your current
 tiers as follows.
 
@@ -229,6 +230,7 @@ You should now see:
 
 ```
 NAME      ORDER
+allow-cnx 100
 netops    100
 default   <nil>
 ```
@@ -274,7 +276,7 @@ tiered policy names and calicoctl will exit with an error message if this requir
 isn't met.
 
 The following GlobalNetworkPolicy in the netops tier will prevent DNS requests to Google DNS
-servers from pods in the polidy-demo namespace. We use the "Pass" action to give the lower
+servers from pods in the policy-demo namespace. We use the "Pass" action to give the lower
 ordered tiers a chance to define policies. If a policy in a tier is applied to an endpoint but
 no policy in the tier acts on the traffic, it will be dropped at the end of the tier.
 
@@ -467,7 +469,7 @@ policy-demo	knp.default.access-nginx                          default
 policy-demo	knp.default.default-deny                          default
 ```
 
-Start another pod to test our `access-nginx` policy.
+Start another pod to test our `access-nginx` policy and leave it running temporarily.
 
 ```
 kubectl run --namespace=policy-demo access --rm -ti --image busybox /bin/sh
@@ -480,7 +482,7 @@ If you don't see a command prompt, try pressing enter.
 / # wget -q --timeout=5 nginx -O -
 ```
 
-We should now be able to see all the endpoints our `access-nginx` policy applies
+From another terminal, we should now be able to see all the endpoints our `access-nginx` policy applies
 to as well as the endpoint for our `access` pod we used to test the accessibility
 of the service.
 
