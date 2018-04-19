@@ -101,6 +101,8 @@ spec:
         # if it ever gets evicted.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      imagePullSecrets:
+        - name: cnx-pull-secret
       hostNetwork: true
       tolerations:
         # Mark the pod as a critical add-on for rescheduling.
