@@ -1,5 +1,5 @@
-hash: 76bc349a090825febce50e88c67d13a9bcae13afbcb45fd3ee5675b88a7436cf
-updated: 2018-04-18T01:01:52.084488489Z
+hash: 14a8aa8676f94c2b0109681d782a07e13b34e03dc730825838142afafd82cf8f
+updated: 2018-04-20T19:56:02.107627497Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -165,7 +165,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
+  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -607,7 +607,7 @@ imports:
   - pkg/handler
   - pkg/util
 - name: k8s.io/kubernetes
-  version: af8f238d872a8536b42797824852a45151d5deb0
+  version: 545ea2e893bb3b61e6c8d62d2cf094cd6b64af09
   subpackages:
   - pkg/api
   - pkg/api/install
