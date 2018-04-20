@@ -1,6 +1,24 @@
 ## Applying your license key
 
+{% if include.init == "openshift" %}
+
+1. [Install calicoctl]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-kubernetes-pod).
+
+   > **Note**: We highly recommend you install calicoctl as a Kubernetes pod in OpenShift.
+   This ensures that you are using the latest version of calicoctl and its accompanying configuration.
+   If you choose to [install calicoctl as a binary on a single host]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install#installing-calicoctl-as-a-binary-on-a-single-host),
+   we recommend you uninstall any versions of calicoctl that may have shipped alongside OpenShift with the following commands.
+   ```
+   rm /usr/local/bin/calicoctl
+   rm /etc/calico/calicoctl.cfg
+   ```
+   {: .alert .alert-info}
+   
+{% else %}
+
 1. [Install calicoctl]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install).
+
+{% endif %}
 
 1. [Configure calicoctl to connect to your datastore]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure).
 

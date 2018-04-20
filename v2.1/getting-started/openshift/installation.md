@@ -58,6 +58,8 @@ You are now ready to execute the ansible provision which will install {{site.pro
 certs to each node. If you would prefer Calico not connect to the same etcd as OpenShift, you may modify the install
 such that Calico connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
+{% include {{page.version}}/apply-license.md init="openshift" %}
+
 ## Installing {{site.prodname}} Manager
 
 1. Create a Kubernetes secret from your etcd certificates. Example command:
@@ -72,9 +74,6 @@ such that Calico connects to an etcd you have already set up by following the [d
    >{{site.prodname}} APIServer and Manager require etcd connection information and
    >certificates to be stored in Kubernetes objects.
    >The following preparation steps will upload this data.
-   >
-   >If you are unsure of what to set these values to, check `/etc/calico/calicoctl.cfg`
-   >on your master node, which will show what `calicoctl` is currently using to connect to etcd.
    {: .alert .alert-info}
 
 1. Download [calico-config.yaml](calico-config.yaml).
@@ -202,5 +201,3 @@ We recommend installing calicoq as a container in OpenShift. Refer to [Installin
 {: .alert .alert-info}
 
 See the [calicoq reference section](../../reference/calicoq/) for more information on using `calicoq`.
-
-{% include {{page.version}}/apply-license.md %}
