@@ -17,6 +17,8 @@ package clientv3
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/options"
@@ -89,28 +91,43 @@ func (r tiers) Delete(ctx context.Context, name string, opts options.DeleteOptio
 		}
 	}
 
-	// Check if there are any policies associated with the tier first.
-	npList, err := r.client.NetworkPolicies().List(ctx, options.ListOptions{
+	// List the NetworkPolicy and GlobalNetworkPolicy resources that are prefixed with this tier name.  Note that
+	// a prefix matching may return additional results that are not actually in this tier, so we also need to check
+	// the spec field to be certain.
+	policyListOptions := options.ListOptions{
 		Prefix: true,
 		Name:   name + ".",
-	})
-	if err != nil {
-		return nil, err
 	}
 
-	gnpList, err := r.client.GlobalNetworkPolicies().List(ctx, options.ListOptions{
-		Prefix: true,
-		Name:   name + ".",
-	})
-	if err != nil {
+	// Check NetworkPolicy resources.
+	if npList, err := r.client.NetworkPolicies().List(ctx, policyListOptions); err != nil {
 		return nil, err
+	} else {
+		for _, np := range npList.Items {
+			if np.Spec.Tier == name {
+				log.WithField("name", np.Name).Debug("Enumerated NetworkPolicy is in this tier")
+				return nil, cerrors.ErrorOperationNotSupported{
+					Operation:  "delete",
+					Identifier: name,
+					Reason:     "Cannot delete a non-empty tier",
+				}
+			}
+		}
 	}
 
-	if len(npList.Items) > 0 || len(gnpList.Items) > 0 {
-		return nil, cerrors.ErrorOperationNotSupported{
-			Operation:  "delete",
-			Identifier: name,
-			Reason:     "Cannot delete a non-empty tier",
+	// Check GlobalNetworkPolicy resources.
+	if gnpList, err := r.client.GlobalNetworkPolicies().List(ctx, policyListOptions); err != nil {
+		return nil, err
+	} else {
+		for _, gnp := range gnpList.Items {
+			if gnp.Spec.Tier == name {
+				log.WithField("name", gnp.Name).Debug("Enumerated GlobalNetworkPolicy is in this tier")
+				return nil, cerrors.ErrorOperationNotSupported{
+					Operation:  "delete",
+					Identifier: name,
+					Reason:     "Cannot delete a non-empty tier",
+				}
+			}
 		}
 	}
 
