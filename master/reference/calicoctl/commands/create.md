@@ -115,5 +115,5 @@ Failed to create any resources: resource already exists: Profile(name=profile1)
 -  [Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on all valid resources, including file format
    and schema
 -  [NetworkPolicy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/networkpolicy) for details on the {{site.prodname}} selector-based policy model
--  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup) for details on configuring `calicoctl` to access
+-  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) for details on configuring `calicoctl` to access
    the {{site.prodname}} datastore.
