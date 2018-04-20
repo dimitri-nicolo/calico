@@ -42,12 +42,12 @@ function git_commit_id {
 
 # Convert PEP 440 version to Debian.
 function git_version_to_deb {
-    echo $1 | sed 's/\([0-9]\)-\?\(a\|b\|rc\|pre\)/\1~\2/'
+    echo $1 | sed 's/v?\([0-9]\)-\?\(a\|b\|rc\|pre\)/\1~\2/'
 }
 
 # Convert PEP 440 version to RPM.
 function git_version_to_rpm {
-    echo $1 | sed 's/\([0-9]\)-\?\(a\|b\|rc\|pre\)/\1_\2/'
+    echo $1 | sed 's/v?\([0-9]\)-\?\(a\|b\|rc\|pre\)/\1_\2/'
 }
 
 # Check that version is valid.
@@ -55,7 +55,7 @@ function validate_version {
     version=$1
 
     # We allow.
-    REGEX="^[0-9]+\.[0-9]+\.[0-9]+(-?e[0-9]+\.[0-9]+\.[0-9]+)?(-?(a|b|rc|pre).*)?$"
+    REGEX="^v?[0-9]+\.[0-9]+\.[0-9]+(-?e[0-9]+\.[0-9]+\.[0-9]+)?(-?(a|b|rc|pre).*)?$"
 
     if [[ $version =~ $REGEX ]]; then
 	return 0
@@ -113,7 +113,7 @@ function test_validate_version {
     expect_valid 2.0.0-beta-rc2
     expect_valid 2.0.0-beta.2
     expect_valid 2.0.0-beta.3
-    expect_invalid v2.0.0-beta-rc1
+    expect_valid v2.0.0-beta-rc1
 }
 
 # Return the series of tags from HEAD back to (but excluding) the
