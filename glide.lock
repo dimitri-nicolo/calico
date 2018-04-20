@@ -1,5 +1,5 @@
-hash: 6fa30e06d8afd6c21020cd0bdd4f63fcf4981e4996d3e36e83b3e368c31bd3e8
-updated: 2018-04-17T22:05:02.92036926Z
+hash: bb20290d7d8c774471ce29d5538d5f6ed25661f89518b961e4c8ac37e3ec23c5
+updated: 2018-04-20T19:26:13.179369407Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -60,7 +60,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 370d9e047557906322be8396e77cb0376be6cb96
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -220,7 +220,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
+  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -544,7 +544,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: cd0308977f05a0de033c0e8ce1860b317e360dca
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 testImports: []
