@@ -81,9 +81,11 @@
    
 {% endif %}
 
-1. Download the manifest that corresponds to your datastore type and save the file 
-   as cnx.yaml. That is how we will refer to it in later steps. 
-   
+{% if include.init != "openshift" %}
+
+1. Download the manifest that corresponds to your datastore type and save the file
+   as cnx.yaml. That is how we will refer to it in later steps.
+
    **etcd datastore**
    ```bash
    curl --compressed -o cnx.yaml \
@@ -96,6 +98,17 @@
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
    ```
 
+{% else %}
+
+1. Download the {{site.prodname}} manifest for etcd and save the file as cnx.yaml. That is how we will refer to it in later steps:
+
+   ```bash
+   curl --compressed -o cnx.yaml \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+   ```
+
+{% endif %}
+
 {% include {{page.version}}/cnx-cred-sed.md yaml="cnx" %}
 
 {% if include.init == "openshift" %}
@@ -104,17 +117,17 @@
 
        sed -i -e 's/tigera.cnx-manager.authentication-type:.*$/tigera.cnx-manager.authentication-type: "OAuth"/g' cnx.yaml
 
-1. Update the `OAuth` authority API endpoint with OpenShift master address.
+1. Update the `OAuth` authority API endpoint with your OpenShift master address. This address should be accessible from your browser.
 
-   Example: If OpenShift master were at 127.0.0.1:8443, then the following command can be used to set up the parameter.
+   Example: If OpenShift master were at `https://master.openshift.example.com:8443`, then the following command could be used to set up the parameter.
 
-       sed -i -e 's/tigera.cnx-manager.oauth-authority:.*$/tigera.cnx-manager.oauth-authority: "https:\/\/127.0.0.1:8443\/oauth\/authorize"/g' cnx.yaml
+       sed -i -e 's?tigera.cnx-manager.oauth-authority:.*$?tigera.cnx-manager.oauth-authority: "https://master.openshift.example.com:8443/oauth/authorize"?g' cnx.yaml
 
 1. Open the file in a text editor, and make the following modifications:
 
    In the `Deployment` named `cnx-apiserver`:
 
-   - Uncomment the `ETCD_CA_CERT_FILE`, `ETCD_KEY_FILE`, and `ETCD_CERT_FILE` environment variables.
+   - Uncomment the `ETCD_CA_CERT_FILE`, `ETCD_KEY_FILE`, and `ETCD_CERT_FILE` environment variables in both the cnx-apiserver and cnx-queryserver containers.
    - Uncomment the `volumeMount` named `etcd-certs`.
    - Uncomment the `volume` named `etcd-certs`. 
 
@@ -151,16 +164,28 @@
 
 1. Create a secret containing a TLS certificate and the private key used to
    sign it. The following command uses a self-signed certificate and key that
-   should be present as part of your Kubernetes deployment to get you started. 
+   should be present as part of your Kubernetes deployment to get you started.
+
+{% if include.init == "openshift" %}
+
+   ```bash
+   oc create secret generic cnx-manager-tls \
+   --from-file=cert=/etc/origin/master/master.server.crt \
+   --from-file=key=/etc/origin/master/master.server.key -n kube-system
+   ```
+
+{% else %}
 
    ```bash
    kubectl create secret generic cnx-manager-tls \
    --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
    --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
    ```
-   
-   > **Note**: Web browsers will warn end users about the self-signed certificate 
-   > used in the above command. To stop the warnings by using valid certificates 
+
+{% endif %}
+
+   > **Note**: Web browsers will warn end users about the self-signed certificate
+   > used in the above command. To stop the warnings by using valid certificates
    > instead, refer to [Securing {{site.prodname}} Manager with TLS]({{site.url}}/{{page.version}}/reference/cnx/securing-with-tls).
    > Refer to [Enabling TLS verification]({{site.url}}/{{page.version}}/reference/cnx/enabling-tls-verification) 
    > to achieve further security.
@@ -168,15 +193,25 @@
 
 1. Apply the manifest to install {{site.prodname}} Manager and the {{site.prodname}} API server.
 
+{% if include.init == "openshift" %}
+
+   ```
+   oc apply -f cnx.yaml
+   ```
+
+{% else %}
+
    ```
    kubectl apply -f cnx.yaml
    ```
+
+{% endif %}
 
 {% if include.init == "openshift" %}
 
 1. Allow the {{site.prodname}} Manager to run as root:
 
-       oadm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
+       oc adm policy add-scc-to-user anyuid system:serviceaccount:kube-system:cnx-manager
 
 {% endif %}
 
