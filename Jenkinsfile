@@ -1,5 +1,8 @@
 #!groovy
 pipeline {
+    options {
+        disableConcurrentBuilds()
+    }
     agent { label 'slave-large'}
     triggers{
         pollSCM('H/5 * * * *')
