@@ -32,6 +32,8 @@ imageNames:
   flannel: quay.io/coreos/flannel
 
 exclude:
+  - htmlproofer.sh
+  - v2.0
   - release-scripts
   - LICENSE
   - Makefile
