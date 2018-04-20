@@ -1,55 +1,55 @@
 v2.1:
-- title: v2.1.0-rc1
+- title: v2.1.0
   note: |
-    18 April 2018
+    20 April 2018
 
-    First release candidate for CNX v2.1.  Release notes coming shortly.
+    Release notes coming shortly.
   components:
     cnx-manager:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
     cnx-manager-proxy:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
     cnx-apiserver:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
     cnx-queryserver:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
     calicoq:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
     felix:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
     typha:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
     calicoctl:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
       download_url: ""
     cnx-node:
-      version: v2.1.0-rc1
+      version: v2.1.0
       url: ""
     calico/cni:
-      version: v3.1.0
+      version: v3.1.1
       url: ""
-      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.1.0/calico
-      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.1.0/calico-ipam
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.1.1/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.1.1/calico-ipam
     calico-bird:
       version: v0.3.2
       url: https://github.com/projectcalico/calico-bird/releases/tag/v0.3.2
     confd:
-      version: v3.1.0
-      url: https://github.com/projectcalico/confd/releases/tag/v3.1.0
+      version: v3.1.1
+      url: https://github.com/projectcalico/confd/releases/tag/v3.1.1
     calico-bgp-daemon:
       version: v0.2.2
       url: https://github.com/projectcalico/calico-bgp-daemon/releases/tag/v0.2.2
     calico/kube-controllers:
-      version: v3.1.0
-      url: https://github.com/projectcalico/k8s-policy/releases/tag/v3.1.0
+      version: v3.1.1
+      url: https://github.com/projectcalico/k8s-policy/releases/tag/v3.1.1
     networking-calico:
       version: 3.1.0
       url: http://git.openstack.org/cgit/openstack/networking-calico/commit/?h=3.1.0
@@ -57,8 +57,8 @@ v2.1:
       version: v0.6.1
       url: https://github.com/projectcalico/routereflector/releases/tag/v0.6.1
     calico:
-      version: v3.1.0
-      url: https://github.com/projectcalico/calico/releases/tag/v3.1.0
+      version: v3.1.1
+      url: https://github.com/projectcalico/calico/releases/tag/v3.1.1
     prometheus-operator:
       version: v0.18.1
       url: ""
