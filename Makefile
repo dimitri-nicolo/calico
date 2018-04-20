@@ -22,6 +22,7 @@ clean:
 	docker run --rm -e JEKYLL_UID=$(JEKYLL_UID) -v $$PWD:/srv/jekyll jekyll/jekyll:$(JEKYLL_VERSION) jekyll clean
 	@rm -f publish-cnx-docs.yaml
 
+ci: htmlproofer
 htmlproofer: clean _site
 	# Run htmlproofer, failing if we hit any errors. 
 	./htmlproofer.sh
