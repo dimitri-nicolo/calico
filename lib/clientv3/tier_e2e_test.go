@@ -15,14 +15,13 @@
 package clientv3_test
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"context"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -546,6 +545,208 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 				},
 			})
 			testWatcher4.Stop()
+		})
+	})
+
+	Describe("Tier delete functionality", func() {
+		var c clientv3.Interface
+		var err error
+
+		BeforeEach(func() {
+			c, err = clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			be, err := backend.NewClient(config)
+			Expect(err).NotTo(HaveOccurred())
+			be.Clean()
+
+			// These tests use the default tier, so make sure it's created.
+			err = c.EnsureInitialized(ctx, "", "", "")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("cannot delete tier `tier-1` if there is a GlobalNetworkPolicy configured in it", func() {
+			By("Configuring a Tier called tier-1")
+			tier, err := c.Tiers().Create(
+				ctx,
+				&apiv3.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: "tier-1"},
+					Spec:       spec1,
+				},
+				options.SetOptions{},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Configuring a GlobalNetworkPolicy in tier-1")
+			gnp, err := c.GlobalNetworkPolicies().Create(
+				ctx,
+				&apiv3.GlobalNetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "tier-1.gnp1"},
+					Spec: apiv3.GlobalNetworkPolicySpec{
+						Tier:     "tier-1",
+						Order:    &order2,
+						Ingress:  []apiv3.Rule{},
+						Egress:   []apiv3.Rule{},
+						Selector: "thing2 == 'value2'",
+					},
+				},
+				options.SetOptions{},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Attempting to delete tier-1 (expecting failure)")
+			_, err = c.Tiers().Delete(ctx, "tier-1", options.DeleteOptions{ResourceVersion: tier.ResourceVersion})
+			Expect(err).To(HaveOccurred())
+
+			By("Deleting the GNP")
+			_, err = c.GlobalNetworkPolicies().Delete(
+				ctx, "tier-1.gnp1", options.DeleteOptions{ResourceVersion: gnp.ResourceVersion},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Attempting to delete tier-1 (expecting success)")
+			_, err = c.Tiers().Delete(ctx, "tier-1", options.DeleteOptions{ResourceVersion: tier.ResourceVersion})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("cannot delete tier `tier-1` if there is a NetworkPolicy configured in it", func() {
+			By("Configuring a Tier called tier-1")
+			tier, err := c.Tiers().Create(
+				ctx,
+				&apiv3.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: "tier-1"},
+					Spec:       spec1,
+				},
+				options.SetOptions{},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Configuring a NetworkPolicy in tier-1")
+			np, err := c.NetworkPolicies().Create(
+				ctx,
+				&apiv3.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "tier-1.np1", Namespace: "namespace-1"},
+					Spec: apiv3.NetworkPolicySpec{
+						Tier:     "tier-1",
+						Order:    &order2,
+						Ingress:  []apiv3.Rule{},
+						Egress:   []apiv3.Rule{},
+						Selector: "thing2 == 'value2'",
+					},
+				},
+				options.SetOptions{},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Attempting to delete tier-1 (expecting failure)")
+			_, err = c.Tiers().Delete(ctx, "tier-1", options.DeleteOptions{ResourceVersion: tier.ResourceVersion})
+			Expect(err).To(HaveOccurred())
+
+			By("Deleting the NP")
+			_, err = c.NetworkPolicies().Delete(
+				ctx, "namespace-1", "tier-1.np1", options.DeleteOptions{ResourceVersion: np.ResourceVersion},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Attempting to delete tier-1 (expecting success)")
+			_, err = c.Tiers().Delete(ctx, "tier-1", options.DeleteOptions{ResourceVersion: tier.ResourceVersion})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		if config.Spec.DatastoreType != apiconfig.Kubernetes {
+			// The issue with knp tier not being deletable was due to the prefix based enumeration of policies in etcdv3.
+			// For kubernetes, we use label matching instead - and so it isn't an issue. We skip this test for kubernetes
+			// because it isn'tt possible to create pretend "k8s" policies through the Calico API.
+			It("can delete tier `knp` if there is a k8s-backed NetworkPolicy configured", func() {
+				By("Configuring a Tier called knp")
+				tier, err := c.Tiers().Create(
+					ctx,
+					&apiv3.Tier{
+						ObjectMeta: metav1.ObjectMeta{Name: "knp"},
+						Spec:       spec1,
+					},
+					options.SetOptions{},
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Configuring a k8s-backed NetworkPolicy called knp.default.test")
+				np, err := c.NetworkPolicies().Create(
+					ctx,
+					&apiv3.NetworkPolicy{
+						ObjectMeta: metav1.ObjectMeta{Name: "knp.default.np", Namespace: "namespace-1"},
+						Spec: apiv3.NetworkPolicySpec{
+							Tier:     "default",
+							Order:    &order2,
+							Ingress:  []apiv3.Rule{},
+							Egress:   []apiv3.Rule{},
+							Selector: "thing2 == 'value2'",
+						},
+					},
+					options.SetOptions{},
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Attempting to delete tier-1 (expecting success)")
+				_, err = c.Tiers().Delete(ctx, "knp", options.DeleteOptions{ResourceVersion: tier.ResourceVersion})
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Deleting the NP")
+				_, err = c.NetworkPolicies().Delete(
+					ctx, "namespace-1", "knp.default.np", options.DeleteOptions{ResourceVersion: np.ResourceVersion},
+				)
+				Expect(err).ToNot(HaveOccurred())
+			})
+		}
+
+		It("cannot delete tier `knp` if there is a NetworkPolicy configured in it", func() {
+			c, err := clientv3.New(config)
+			Expect(err).NotTo(HaveOccurred())
+
+			be, err := backend.NewClient(config)
+			Expect(err).NotTo(HaveOccurred())
+			be.Clean()
+
+			By("Configuring a Tier called knp")
+			tier, err := c.Tiers().Create(
+				ctx,
+				&apiv3.Tier{
+					ObjectMeta: metav1.ObjectMeta{Name: "knp"},
+					Spec:       spec1,
+				},
+				options.SetOptions{},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Configuring a NetworkPolicy called knp.default.test")
+			np, err := c.NetworkPolicies().Create(
+				ctx,
+				&apiv3.NetworkPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "knp.np1", Namespace: "namespace-1"},
+					Spec: apiv3.NetworkPolicySpec{
+						Tier:     "knp",
+						Order:    &order2,
+						Ingress:  []apiv3.Rule{},
+						Egress:   []apiv3.Rule{},
+						Selector: "thing2 == 'value2'",
+					},
+				},
+				options.SetOptions{},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Attempting to delete tier-1 (expecting failure)")
+			_, err = c.Tiers().Delete(ctx, "knp", options.DeleteOptions{ResourceVersion: tier.ResourceVersion})
+			Expect(err).To(HaveOccurred())
+
+			By("Deleting the NP")
+			_, err = c.NetworkPolicies().Delete(
+				ctx, "namespace-1", "knp.np1", options.DeleteOptions{ResourceVersion: np.ResourceVersion},
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Attempting to delete tier-1 (expecting success)")
+			_, err = c.Tiers().Delete(ctx, "knp", options.DeleteOptions{ResourceVersion: tier.ResourceVersion})
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })
