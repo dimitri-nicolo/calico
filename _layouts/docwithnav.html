@@ -162,6 +162,20 @@ The code is a little roundabout for a few reasons:
             <button type="button" class="btn btn-primary btn-xs" data-toggle="offcanvas">Toggle nav</button>
           </p>
           <div class="col-xs-6 col-sm-4 col-md-3 sidebar-offcanvas">
+            <div class="row">
+              <script>
+                (function() {
+                  var cx = '006142519575987378096:_kqrwt6swpa';
+                  var gcse = document.createElement('script');
+                  gcse.type = 'text/javascript';
+                  gcse.async = true;
+                  gcse.src = 'https://cse.google.com/cse.js?cx=' + cx;
+                  var s = document.getElementsByTagName('script')[0];
+                  s.parentNode.insertBefore(gcse, s);
+                })();
+              </script>
+              <gcse:search></gcse:search>
+            </div>  
             <div id="sidebar">
             	{% include sidebar.html sidebar=this_pages_navbar.toc prefix="nav" %}
 			</div>
