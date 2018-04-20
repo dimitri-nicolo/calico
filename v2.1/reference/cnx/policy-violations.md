@@ -83,12 +83,12 @@ and `srcIP` are labels. Each one of these metrics will be available as a
 combination of `{policy, srcIP}`.
 
 Example queries:
-- Total number of bytes, denied by calico policies, originating from the IP address "10.245.13.133"
+- Total number of bytes, denied by {{site.prodname}} policies, originating from the IP address "10.245.13.133"
 by `k8s_ns.ns-0` profile.
 ```
 calico_denied_bytes{policy="profile|k8s_ns.ns-0|0|deny", srcIP="10.245.13.133"} 
 ```
-- Total number of packets denied by calico policies, originating from the IP address "10.245.13.149"
+- Total number of packets denied by {{site.prodname}} policies, originating from the IP address "10.245.13.149"
 by `k8s_ns.ns-0` profile.
 ```
 calico_denied_packets{policy="profile|k8s_ns.ns-0|0|deny", srcIP="10.245.13.149"}}
