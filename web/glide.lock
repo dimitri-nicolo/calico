@@ -1,5 +1,5 @@
-hash: ac83b37341d61177885081cab4b8d5a188936ca2e3697027778aa4436f8b2cf7
-updated: 2018-04-18T01:44:01.47283766+01:00
+hash: 1d954dcdab6f998d9c0c9be00aa6f9d9659d7b2e0f2d30959b5a39217e85f3dc
+updated: 2018-04-20T21:10:51.352252462+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -46,7 +46,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: ace140f73450505f33e8b8418216792275ae82a7
+  version: 6529cf7c58879c08d927016dde4477f18a0634cb
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -161,7 +161,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/calicoctl
-  version: e106d251c0f809e4ab3fec6e9113ee821193c93a
+  version: 904830690a1e32c199c24256c930e5df1e51f8f6
   repo: git@github.com:tigera/calicoctl-private.git
   vcs: git
   subpackages:
@@ -169,7 +169,7 @@ imports:
   - calicoctl/resourcemgr
   - calicoctl/util/yaml
 - name: github.com/projectcalico/felix
-  version: 848339f0e387a2496f81c57e412948961d28652f
+  version: 51d5200862f2f306c0a0ffadffd6d5f59602d995
   repo: git@github.com:tigera/felix-private.git
   vcs: git
   subpackages:
@@ -189,7 +189,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
+  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
   repo: git@github.com:tigera/libcalico-go-private.git
   vcs: git
   subpackages:
@@ -256,7 +256,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: 8ec33856e26f386598a81bf6c1fde26166fff80a
+  version: cb027c7c879597e0e02f2411c0c201752bab39c8
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -369,7 +369,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: 3c2a58f9923aeb5d27fa4d91249e45a1460ca3bd
+  version: ceb25c9d04f0c3a10a185499c03194f54069b290
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -396,7 +396,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: ab7fc865fb0881d161f37adef3e5a67b89a18d05
+  version: 62737119932505aba8df99644184e0705ea58df1
   subpackages:
   - pkg/api/equality
   - pkg/api/errors

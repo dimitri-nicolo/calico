@@ -7,23 +7,23 @@ import:
 - package: github.com/projectcalico/libcalico-go
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
+  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: 8ec33856e26f386598a81bf6c1fde26166fff80a
+  version: cb027c7c879597e0e02f2411c0c201752bab39c8
   subpackages:
   - client
 - package: github.com/projectcalico/calicoctl
   vcs: git
   repo: git@github.com:tigera/calicoctl-private.git
-  version: e106d251c0f809e4ab3fec6e9113ee821193c93a
+  version: 904830690a1e32c199c24256c930e5df1e51f8f6
   subpackages:
   - calicoctl/resourcemgr
 - package: github.com/projectcalico/felix
   vcs: git
   repo: git@github.com:tigera/felix-private.git
-  version: 848339f0e387a2496f81c57e412948961d28652f
+  version: 51d5200862f2f306c0a0ffadffd6d5f59602d995
   subpackages:
   - labelindex
 - package: k8s.io/client-go
