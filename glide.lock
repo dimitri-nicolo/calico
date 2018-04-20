@@ -1,5 +1,5 @@
-hash: bbadf9804c08db82d7a93353d91093475e7c8556fd3b32ab17fe4755c7552e30
-updated: 2018-04-17T22:08:37.641453682Z
+hash: eff043adc50bd4e23beaf1cf8320a0ace7d89e4033db099dc0789493c1c3ef1b
+updated: 2018-04-20T19:36:36.645186155Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -53,7 +53,7 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: ace140f73450505f33e8b8418216792275ae82a7
+  version: 6529cf7c58879c08d927016dde4477f18a0634cb
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -207,7 +207,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 29ab272405312dbded3e182ca99fc4d16bf6162d
+  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -247,7 +247,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: d6869cb5dde2a0225480f99960d9227e36ac532a
+  version: 369d44836c4cde09746f2d357775d4f287043378
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -283,7 +283,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: 8ec33856e26f386598a81bf6c1fde26166fff80a
+  version: cb027c7c879597e0e02f2411c0c201752bab39c8
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -296,7 +296,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: 85aa3b74a43a9fa174a588ce9a042c9b71b0842c
+  version: dc00cf9d5c07f9a1e0ccb307443b2194ca1aaacb
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -535,7 +535,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: f442ecb314a3679150c272e2b9713d8deed5955d
+  version: 0f2f0396e266ad24afbd02375ba74c0dda1e3611
   subpackages:
   - pkg/common
 testImports: []
