@@ -22,7 +22,7 @@ setup as calicoctl, which means that:
   location: `DATASTORE_TYPE` and so on.
 
 For more detail, see
-[Configuring calicoctl]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup).
+[Configuring calicoctl]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/).
 
 ## Commands
 

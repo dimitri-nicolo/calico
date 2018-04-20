@@ -142,7 +142,7 @@ or you can set environment variables for `sudo` commands like this:
 
 Also be aware that connection information can be specified as a config
 file rather than using environment variables.  See the
-[calicoctl Configuration Overview]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup)
+[calicoctl Configuration Overview]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/)
 guide for details.
 
 ## Collecting diagnostics
