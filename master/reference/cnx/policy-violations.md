@@ -51,17 +51,18 @@ Policy inspection and reporting is accomplished using four key pieces:
    the {{site.prodname}} manifest, receives alerts from Prometheus and forwards
    alerts to various alerting mechanisms such as _Pager Duty_, or _OpsGenie_.
 -  {{site.prodname}} Manager, also deployed as part of the {{site.prodname}} manifest, 
-   processes the metrics using pre-defined Prometheus queries and provides  
-   dashboards and associated workflows.
+   processes the metrics using pre-defined Prometheus queries and provides dashboards and associated workflows.
 
-### {{site.prodname}} Manager Dashboard 
+### {{site.prodname}} Manager 
 
-In the Dashboard, you will find graphs associated with allowed and denied packets, bytes, and connections. 
+In the Dashboard view, you will find graphs associated with allowed and denied packets, bytes, and connections. 
 The graphs represent the rates at which the packets, bytes, and connections are being allowed or denied.
 
-In the Dashboard, you will also find a **Packets by Policy** bar graph. Each individual bar represents
-a policy that has either allowed or denied packets.
+You will also find a **Packets by Policy** bar graph. Each individual bar represents a policy that has 
+either allowed or denied packets.
 
+You can also inspect per policy metrics by switching to the Policy page. Once there, click on the **Eye** icon 
+and enable desired metric views.
 
 ### The Prometheus Metrics
 
@@ -81,23 +82,19 @@ Using these two metrics, one can identify the policy that denied packets as well
 the source IP address of the packets that were denied by this policy. Using
 Prometheus terminology, `calico_denied_packets` is the metric name and `policy`
 and `srcIP` are labels. Each one of these metrics will be available as a
-combination of `{policy, srcIP}`. An HTTP GET request to retrieve metrics from a
-`{{site.noderunning}}` container will provide output like this:
+combination of `{policy, srcIP}`.
 
+Example queries:
+- Total number of bytes, denied by {{site.prodname}} policies, originating from the IP address "10.245.13.133"
+by `k8s_ns.ns-0` profile.
 ```
-# HELP calico_denied_bytes Total number of bytes denied by calico policies.
-# TYPE calico_denied_bytes gauge
-calico_denied_bytes{policy="profile/k8s_ns.ns-0/0/deny",srcIP="10.245.13.133"} 300
-calico_denied_bytes{policy="profile/k8s_ns.ns-0/0/deny",srcIP="10.245.13.149"} 840
-# HELP calico_denied_packets Total number of packets denied by calico policies.
-# TYPE calico_denied_packets gauge
-calico_denied_packets{policy="profile/k8s_ns.ns-0/0/deny",srcIP="10.245.13.133"} 5
-calico_denied_packets{policy="profile/k8s_ns.ns-0/0/deny",srcIP="10.245.13.149"} 14
+calico_denied_bytes{policy="profile|k8s_ns.ns-0|0|deny", srcIP="10.245.13.133"} 
 ```
-
-This means that the profile `k8s_ns.ns-0` denied 5 packets (totaling 300 bytes)
-originating from the IP address "10.245.13.133" and the same profile denied 14
-packets originating from the IP address "10.245.13.149".
+- Total number of packets denied by {{site.prodname}} policies, originating from the IP address "10.245.13.149"
+by `k8s_ns.ns-0` profile.
+```
+calico_denied_packets{policy="profile|k8s_ns.ns-0|0|deny", srcIP="10.245.13.149"}}
+```
 
 The metrics `cnx_policy_rule_packets`, `cnx_policy_rule_bytes` and `cnx_policy_rule_connections` have the
 labels: `tier`, `policy`, `namespace`, `rule_index`, `action`, `traffic_direction`, `rule_direction`.
@@ -148,6 +145,6 @@ configurable and details on how to do this are available in the
 
 Because of metrics being expired, as just described, it is entirely possible
 for a GET on a metrics query URL to return no information.  This is expected
-if there have not been any packets being denied by a policy on that node, in
+if there have not been any packets being processed by a policy on that node, in
 the last 60 seconds.
 

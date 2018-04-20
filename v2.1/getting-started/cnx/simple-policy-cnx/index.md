@@ -194,9 +194,9 @@ The request should time out after 5 seconds.  By enabling isolation on the names
 ### {{site.prodname}} Metrics
 Now would be a great time to take a look at the metrics.
 
-In {{site.prodname}} Manager, head to the dashboard view. You will see graphs associated with allowed packets/bytes and denied packets/bytes. The graphs represent the rates at which packets/bytes are being allowed or denied.
+In {{site.prodname}} Manager, head to the dashboard view. You will see graphs associated with allowed packets/bytes and denied packets/bytes. The graphs represent the rates at which packets/bytes are being allowed or denied and are time windowed.
 
-Now if we wanted to dig in further and find out what's causing the packets to be denied, we could take a look at the **Packets by Policy** bar graph. Each individual bar represents a policy that has either denied or allowed a packet.
+Now if we wanted to dig in further and find out what's causing the packets to be denied, we could take a look at the **Packets by Policy** bar graph. Each individual bar represents a policy that has either denied or allowed a packet. Also, the policies shown by the graph, just like the rest of the dashboard graphs, are time-windowed i.e. they will reflect only the ones that were recently exercised.
 
 > **Note**: The `NetworkPolicy` spec for [`default-deny`]({{site.baseurl}}/{{page.version}}/getting-started/cnx/simple-policy-cnx/#enable-isolation) does not come configured
 > with any rules. This policy results in a 'default deny' because of how it is [evaluated]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier#how-policy-is-evaluated). A packet will be dropped if the policies (like default-deny in this case) affecting the 
