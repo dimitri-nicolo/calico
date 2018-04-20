@@ -38,5 +38,5 @@ Use `calicoctl version` to obtain the following data.
 
 ## See also
 
--  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/setup) 
+-  [calicoctl configuration]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) 
    for details on configuring `calicoctl` to access the {{site.prodname}} datastore.

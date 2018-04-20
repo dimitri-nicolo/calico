@@ -18,8 +18,8 @@ first use case.
 ### Prerequisites
 
 - A Kubernetes cluster configured with [{{site.prodname}}](../../kubernetes/installation/)
-- [calicoctl installed and set up]({{site.url}}/{{page.version}}/reference/calicoctl/configure/) to work properly with your cluster
-- [calicoq installed and set up]({{site.url}}/{{page.version}}/reference/calicoq/) to work with your cluster
+- [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) to work properly with your cluster
+- [calicoq installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoq/) to work with your cluster
 
 > **Note**: Commands using calicoctl can be replaced with kubectl if the CNX Manager and CNX API server are installed.
 {: .alert .alert-info}
