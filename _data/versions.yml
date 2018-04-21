@@ -3,7 +3,6 @@ v2.1:
   note: |
     20 April 2018
 
-    Release notes coming shortly.
   components:
     cnx-manager:
       version: v2.1.0
