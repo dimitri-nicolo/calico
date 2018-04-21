@@ -79,6 +79,8 @@ Once execution is complete, apply the OpenShift patches for {{site.prodname}}'s 
 
   >[Click here to view kube-controllers-patch.yaml](kube-controllers-patch.yaml)
 
+{% include {{page.version}}/apply-license.md init="openshift" %}
+
 ## Installing {{site.prodname}} Manager
 
 1. Create a Kubernetes secret from your etcd certificates. Example command:
@@ -93,9 +95,6 @@ Once execution is complete, apply the OpenShift patches for {{site.prodname}}'s 
    >{{site.prodname}} APIServer and Manager require etcd connection information and
    >certificates to be stored in Kubernetes objects.
    >The following preparation steps will upload this data.
-   >
-   >If you are unsure of what to set these values to, check `/etc/calico/calicoctl.cfg`
-   >on your master node, which will show what `calicoctl` is currently using to connect to etcd.
    {: .alert .alert-info}
 
 1. Download [calico-config.yaml](calico-config.yaml).
@@ -222,5 +221,3 @@ We recommend installing `calicoq` as a container in OpenShift. Refer to [Install
 {: .alert .alert-info}
 
 See the [calicoq reference section](../../reference/calicoq/) for more information on using `calicoq`.
-
-{% include {{page.version}}/apply-license.md %}
