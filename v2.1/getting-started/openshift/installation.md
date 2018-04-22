@@ -21,13 +21,13 @@ The information below explains the variables which must be set during the standa
 
 Before we begin, apply the following two patches to your OpenShift install:
 
-1. Apply the container_runtime hotfix for OpenShift:
-
-       echo "- role: container_runtime" >> /usr/share/ansible/openshift-ansible/roles/calico/meta/main.yml
-
 1. Add `"nodename_file_optional": true` to {{site.prodname}}'s CNI config:
 
        sed -i 's/"name": "calico",$/"name": "calico",\n  "nodename_file_optional": true,/g' /usr/share/ansible/openshift-ansible/roles/calico/templates/10-calico.conf.j2
+
+1. **For users running OpenShift v3.9.0 only**: apply the container_runtime hotfix for OpenShift:
+
+       echo "- role: container_runtime" >> /usr/share/ansible/openshift-ansible/roles/calico/meta/main.yml
 
 To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
 inventory file:
