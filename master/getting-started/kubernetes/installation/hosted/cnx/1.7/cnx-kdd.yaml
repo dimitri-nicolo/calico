@@ -222,7 +222,6 @@ spec:
   selector:
     matchLabels:
       apiserver: "true"
-      k8s-app: cnx-apiserver
   template:
     metadata:
       name: cnx-apiserver
