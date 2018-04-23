@@ -94,6 +94,8 @@ complete the following steps.
    kubectl apply -f calico.yaml
    ```
 
+1. Follow the [steps to apply your {{site.prodname}} license](#applying-your-license-key)
+
 1. Continue to [Installing the {{site.prodname}} Manager and API Server](#install-cnx-mgr).
    
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}

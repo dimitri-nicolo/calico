@@ -65,7 +65,7 @@ is currently a singleton: the only valid name is `default`.
 
 ### Supported operations
 
-| Datastore type        | Create/Delete | Update | Get/List | Notes
-|-----------------------|---------------|--------|----------|------
-| etcdv3                | Yes           | Yes    | Yes      |
-| Kubernetes API server | Yes           | Yes    | Yes      |
+| Datastore type        | Create | Delete | Update | Get/List | Notes
+|-----------------------|--------|--------|--------|----------|------
+| etcdv3                | Yes    |   No   | Yes    | Yes      |
+| Kubernetes API server | Yes    |   No   | Yes    | Yes      |
