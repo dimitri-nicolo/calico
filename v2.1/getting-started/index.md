@@ -39,8 +39,8 @@ spec:
   token: eyJ...zaQ
 ```
 
-The file should be named `<customer-name>-licensekey.yaml`. For example, if your customer name
-was Awesome Corp, the file would be named `awesome-corp-licensekey.yaml`.
+The file should be named `<customer-name>-license.yaml`. For example, if your customer name
+was Awesome Corp, the file would be named `awesome-corp-license.yaml`.
    
 ## Get started
 

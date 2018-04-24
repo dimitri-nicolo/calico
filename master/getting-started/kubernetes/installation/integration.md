@@ -214,10 +214,10 @@ kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/instal
 
 [Click here to view the above yaml directly.](rbac.yaml)
 
+{% include {{page.version}}/apply-license.md %}
+
 {% include {{page.version}}/cnx-mgr-install.md init="systemd" %}
 
 {% include {{page.version}}/cnx-monitor-install.md %}
-
-{% include {{page.version}}/apply-license.md %}
 
 {% include {{page.version}}/gs-next-steps.md %}
