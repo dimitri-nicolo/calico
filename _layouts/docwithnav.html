@@ -53,15 +53,6 @@ The code is a little roundabout for a few reasons:
     <script src="{{site.baseurl}}/js/bootstrap/bootstrap.min.js"></script>
     <script src="{{site.baseurl}}/js/script.js"></script>
     <title>CNX - {{ page.title | json }}</title>
-    <script>
-      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-
-      ga('create', 'UA-52125893-4', 'auto');
-      ga('send', 'pageview');
-    </script>
     {% seo %}
   </head>
   <body>
@@ -82,39 +73,6 @@ The code is a little roundabout for a few reasons:
             </a>
           </div>
           <div id="tigera-navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav navbar-right">
-              <li><a href="https://projectcalico.org">Home</a></li>
-              <li class="active"><a href="https://projectcalico.org/resources"><span>Resources</span></a>
-                <ul>
-                    <!-- <li><a href="{{site.baseurl}}/latest/getting-started/"><i class="fa fa-tachometer" aria-hidden="true"></i> &nbsp; Getting Started</a></li> -->
-                    <li><a href="{{site.baseurl}}"><i class="fa fa-book" aria-hidden="true"></i> &nbsp; Documentation</a></li>
-                    <!--<li><a href="https://www.projectcalico.org/tutorials"><i class="fa fa-file-code-o" aria-hidden="true"></i> &nbsp; Tutorials &amp; Examples</a></li>
-                    <li><a href=""><i class="fa fa-paper-plane-o" aria-hidden="true"></i> &nbsp; Online Workshops</a></li>-->
-                    <li><a href="https://www.projectcalico.org/videos"><i class="fa fa-video-camera" aria-hidden="true"></i> &nbsp; Videos &amp; Webinars</a></li>
-                    <li><a href="https://www.projectcalico.org/training"><i class="fa fa-graduation-cap" aria-hidden="true"></i> &nbsp; Training</a></li>
-                    <!-- <li><a href="{{site.baseurl}}/latest/releases/"><i class="fa fa-clock-o" aria-hidden="true"></i> &nbsp; Releases</a></li> -->
-                    <!-- <li><a href="/mvp"><i class="fa fa-star" aria-hidden="true"></i> &nbsp; MVP Program</a></li> -->
-                    <li><a href="https://www.projectcalico.org/blog"><i class="fa fa-bookmark" aria-hidden="true"></i> &nbsp; Blog</a></li>
-                </ul>
-              </li>
-              <li><a href="https://www.projectcalico.org/community">Community</a>
-                <ul>
-                    <li><a href="https://slack.projectcalico.org/"><i class="fa fa-slack" aria-hidden="true"></i> &nbsp; Slack</a></li>
-                    <!--<li><a href="https://stackoverflow.com/questions/tagged/project-calico" target="_blank"><i class="fa fa-stack-overflow" aria-hidden="true"></i> &nbsp; StackOverflow</a></li>-->
-                    <li><a href="https://www.projectcalico.org/mvp"><i class="fa fa-star" aria-hidden="true"></i> &nbsp; MVP Program</a></li>
-                    <li><a href="https://www.projectcalico.org/community#events"><i class="fa fa-calendar" aria-hidden="true"></i> &nbsp; Upcoming Events</a></li>
-                    <li><a href="https://www.projectcalico.org/newsletters"><i class="fa fa-envelope-o" aria-hidden="true"></i> &nbsp; Newsletter</a></li>
-                    <li><a href="https://github.com/projectcalico" target="_blank"><i class="fa fa-github" aria-hidden="true"></i> &nbsp; GitHub</a></li>
-                    <li><a href="https://www.projectcalico.org/jobs"><i class="fa fa-briefcase" aria-hidden="true"></i> &nbsp; Jobs</a></li>
-                    <li><a href="https://www.projectcalico.org/blog"><i class="fa fa-bookmark" aria-hidden="true"></i> &nbsp; Blog</a></li>
-                </ul>
-              </li>
-              <li><a href="https://www.projectcalico.org/mvp" style="font-weight: bold;">MVP</a></li>
-              <li><a href="https://www.projectcalico.org/support">Support</a></li>
-              <li class="hidden-xs"><a href="https://www.projectcalico.org/support">
-                <img class="desktopImage" width="30" align="absmiddle" src="https://www.projectcalico.org/images/tigera_trans_sm.png" alt="Tigera"></a>
-              </li>
-            </ul>
             <form class="navbar-form visible-xs">
               <ul class="nav navbar-nav navbar-right">
                 {% for navbar in navbars %}
