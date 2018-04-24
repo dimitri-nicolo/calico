@@ -23,11 +23,30 @@ Before we begin, apply the following two patches to your OpenShift install:
 
 1. Add `"nodename_file_optional": true` to {{site.prodname}}'s CNI config:
 
-       sed -i 's/"name": "calico",$/"name": "calico",\n  "nodename_file_optional": true,/g' /usr/share/ansible/openshift-ansible/roles/calico/templates/10-calico.conf.j2
+   ```
+   sed -i 's/"name": "calico",$/"name": "calico",\n  "nodename_file_optional": true,/g' /usr/share/ansible/openshift-ansible/roles/calico/templates/10-calico.conf.j2
+   ```
+
+1. Configure NetworkManager to not manage calico interfaces. On each host in your cluster, run:
+   ```
+   cat << EOF | sudo tee /etc/NetworkManager/conf.d/calico.conf
+   [keyfile]
+   unmanaged-devices=interface-name:cali*;interface-name:tunl0
+   EOF
+   ```
+
+   Then restart NetworkManager to uptake the changes:
+
+   ```
+   sudo systemctl daemon-reload
+   sudo systemctl restart NetworkManager
+   ```
 
 1. **For users running OpenShift v3.9.0 only**: apply the container_runtime hotfix for OpenShift:
 
-       echo "- role: container_runtime" >> /usr/share/ansible/openshift-ansible/roles/calico/meta/main.yml
+   ```
+   echo "- role: container_runtime" >> /usr/share/ansible/openshift-ansible/roles/calico/meta/main.yml
+   ```
 
 To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
 inventory file:
@@ -73,11 +92,45 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 
 Once execution is complete, apply the OpenShift patches for {{site.prodname}}'s kube-controllers:
 
-   ```
-   oc apply -f kube-controllers-patch.yaml
-   ```
+```
+oc apply -f kube-controllers-patch.yaml
+```
 
-  >[Click here to view kube-controllers-patch.yaml](kube-controllers-patch.yaml)
+>[Click here to view kube-controllers-patch.yaml](kube-controllers-patch.yaml)
+
+Now, configure kube-proxy to forward traffic between hosts. On each node in your cluster, open `/etc/origin/node/node-config.yaml` and add a `cluster-cidr` under `proxyArguments`.
+You want to populate `cluster-cidr` with the value of `osm_cluster_network_cidr` that you may have set in your ansible inventory file.
+
+```
+cluster-cidr:
+- <osm_cluster_network_cidr value>
+```
+
+If you have not explicitly set `osm_cluster_network_cidr`, the default value is `10.128.0.0/14`. Your `node-config.yaml` should look similar to:
+
+```
+...
+proxyArguments:
+  cluster-cidr:
+  - 10.128.0.0/14 
+  proxy-mode:
+     - iptables
+...
+```
+
+Once you have set the correct kube-proxy arguments, restart the OpenShift services. This command will differ depending on if your cluster is running OpenShift Origin or OpenShift Container Platform.
+
+OpenShift Container Platform (OCP):
+
+```
+sudo systemctl restart atomic-openshift-node
+```
+
+OpenShift Origin:
+
+```
+sudo systemctl restart origin-node
+```
 
 {% include {{page.version}}/apply-license.md init="openshift" %}
 
