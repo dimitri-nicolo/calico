@@ -68,7 +68,7 @@ pipeline {
                         sh """
                             for digest in \$(gcloud container images list-tags ${env.IMAGE_NAME} --format='get(digest)'); do
                             if ! test \$(echo \$(gcloud container images list-tags ${env.IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
-                                gcloud container images delete -q --force-delete-tags "${env.IMAGE_NAME}@\${digest}"
+                                gcloud container images delete -q --force-delete-tags "${env.IMAGE_NAME}@\${digest}" || true
                             fi
                             done
                         """
