@@ -106,7 +106,7 @@ pipeline{
                                 sh """
                                     for digest in \$(gcloud container images list-tags ${env.QUERYSERVER_IMAGE_NAME} --format='get(digest)'); do
                                     if ! test \$(echo \$(gcloud container images list-tags ${env.QUERYSERVER_IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
-                                        gcloud container images delete -q --force-delete-tags "${env.QUERYSERVER_IMAGE_NAME}@\${digest}"
+                                        gcloud container images delete -q --force-delete-tags "${env.QUERYSERVER_IMAGE_NAME}@\${digest}" || true
                                     fi
                                     done
                                 """
@@ -184,7 +184,7 @@ pipeline{
                             sh """
                                 for digest in \$(gcloud container images list-tags ${env.CALICOQ_IMAGE_NAME} --format='get(digest)'); do
                                 if ! test \$(echo \$(gcloud container images list-tags ${env.CALICOQ_IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
-                                    gcloud container images delete -q --force-delete-tags "${env.CALICOQ_IMAGE_NAME}@\${digest}"
+                                    gcloud container images delete -q --force-delete-tags "${env.CALICOQ_IMAGE_NAME}@\${digest}" || true
                                 fi
                                 done
                             """
