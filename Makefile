@@ -10,6 +10,7 @@ REGISTRY_PREFIX?=gcr.io/unique-caldron-775/cnx/
 PACKAGE_NAME?=github.com/tigera/calicoq
 LOCAL_USER_ID?=$(shell id -u $$USER)
 BINARY:=bin/calicoq
+QUERYSERVER_IMAGE:=tigera/cnx-queryserver
 
 GO_BUILD_VER?=latest
 GO_BUILD?=calico/go-build:$(GO_BUILD_VER)
@@ -157,6 +158,9 @@ binary: vendor vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go $(
 	mkdir -p bin
 	go build $(BUILD_LDFLAGS) -o "$(BINARY)" "./calicoq/calicoq.go"
 
+.PHONY: release
+release: clean clean-release release/calicoq
+
 release/calicoq: $(CALICOQ_GO_FILES) clean
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=v.X.Y.Z)
@@ -170,6 +174,11 @@ endif
 	# Build the calicoq binaries and image
 	$(MAKE) binary-containerized RELEASE_BUILD=1
 	$(MAKE) build-image
+
+	# Build CNX queryserver.  Delete the image here as well to catch if the
+	# container name changes in the slave Makefile.
+	docker rmi $(QUERYSERVER_IMAGE):latest || true
+	$(MAKE) -C web clean clean-release $(QUERYSERVER_IMAGE) RELEASE_BUILD=1
 
 	# Make the release directory and move over the relevant files
 	mkdir -p release
@@ -188,20 +197,24 @@ endif
 
 	# Retag images with correct version and registry prefix
 	docker tag $(BUILD_IMAGE) $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)
+	docker tag $(QUERYSERVER_IMAGE) $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):$(VERSION)
 
 	# Check that images were created recently and that the IDs of the versioned and latest images match
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(BUILD_IMAGE)
 	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(QUERYSERVER_IMAGE)
+	@docker images --format "{{.CreatedAt}}\tID:{{.ID}}\t{{.Repository}}:{{.Tag}}" $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):$(VERSION)
 
-	@echo "\nNow push the tag and images. Then create a release on Github and"
-	@echo "attach bin/calicoq binary"
-	@echo "\nAdd release notes for calicoq. Use this command"
-	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
+	@echo "\nNow push the tag and images."
 	@echo "git push origin $(VERSION)"
 	@echo "gcloud docker -- push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)"
-	@echo "\nIf this release version is the newest stable release, also push the"
-	@echo "image with the 'latest' tag"
+	@echo "gcloud docker -- push $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):$(VERSION)"
+	@echo "\nIf this release version is the newest stable release, also tag and push the"
+	@echo "images with the 'latest' tag"
+	@echo "docker tag $(BUILD_IMAGE) $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
+	@echo "docker tag $(QUERYSERVER_IMAGE):latest $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):latest"
 	@echo "gcloud docker -- push $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
+	@echo "gcloud docker -- push $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):latest"
 
 .PHONY: compress-release
 compressed-release: release/calicoq
