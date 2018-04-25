@@ -152,14 +152,18 @@ func (st *SyncerTester) ParseFailed(rawKey string, rawValue string) {
 // of the syncer API only migrate status in increasing readiness, this means it should be
 // called once each for the following statuses in order:  WaitingForDatastore, ResyncInProgress, InSync.
 // The OnStatusUpdate callback will panic if the above is not true.
-func (st *SyncerTester) ExpectStatusUpdate(status api.SyncStatus) {
+func (st *SyncerTester) ExpectStatusUpdate(status api.SyncStatus, timeout ...time.Duration) {
 	log.Infof("Expecting status of: %s", status)
 	cs := func() api.SyncStatus {
 		st.lock.Lock()
 		defer st.lock.Unlock()
 		return st.status
 	}
-	Eventually(cs, 6*time.Second, time.Millisecond).Should(Equal(status))
+	if len(timeout) == 0 {
+		Eventually(cs, 6*time.Second, time.Millisecond).Should(Equal(status))
+	} else {
+		Eventually(cs, timeout[0], time.Millisecond).Should(Equal(status))
+	}
 	Consistently(cs).Should(Equal(status))
 
 	log.Infof("Status is at expected status: %s", status)
@@ -301,6 +305,42 @@ func (st *SyncerTester) ExpectUpdates(expected []api.Update, checkOrder bool) {
 	updates := st.updates
 	st.updates = nil
 	st.onUpdates = nil
+
+	if checkOrder {
+		Expect(updates).To(Equal(expected))
+	} else {
+		Expect(updates).To(ConsistOf(expected))
+	}
+}
+
+// Call to test a sanitized set of onUpdate events. The supplied sanitizer should modify the supplied
+// update to make comparison with the expected set of data. For example, this could remove revision
+// information, UUIDs or other dynamic data that would otherwise make comparison difficult.
+// This removes all updates/onUpdate events from this receiver, so that the
+// next call to this just requires the next set of updates.
+func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder bool, sanitizer func(u *api.Update)) {
+	log.Infof("Expecting updates of %v", expected)
+
+	// Poll until we have the correct number of updates to check.
+	gu := func() []api.Update {
+		st.lock.Lock()
+		defer st.lock.Unlock()
+		updates := make([]api.Update, len(st.updates))
+		copy(updates, st.updates)
+		return updates
+	}
+	Eventually(gu, "2s", "100ms").Should(HaveLen(len(expected)))
+
+	// Extract the updates and remove the updates and onUpdates from our cache.
+	st.lock.Lock()
+	defer st.lock.Unlock()
+	updates := st.updates
+	st.updates = nil
+	st.onUpdates = nil
+
+	for i := range updates {
+		sanitizer(&updates[i])
+	}
 
 	if checkOrder {
 		Expect(updates).To(Equal(expected))
