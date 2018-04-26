@@ -45,10 +45,11 @@ pipeline {
         }
         changed { // Notify only on change to success
             script {
-                if (env.BRANCH_NAME == 'master') {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                     GIT_HASH = env.GIT_COMMIT[0..6]
+                    GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
                     if (currentBuild.currentResult == 'SUCCESS' && currentBuild.getPreviousBuild()?.result) {
-                        msg = "Passing again ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        msg = "Passing again ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                         slackSend message: msg, color: "good", channel: "ci-notifications-cnx"
                     }
                 }
@@ -57,12 +58,13 @@ pipeline {
         failure {
             echo "Boo, we failed."
             script {
-                if (env.BRANCH_NAME == 'master') {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                     GIT_HASH = env.GIT_COMMIT[0..6]
+                    GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
                     if (currentBuild.getPreviousBuild()?.result == 'FAILURE') {
-                        msg = "Still failing ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        msg = "Still failing ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                     } else {
-                        msg = "New failure ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        msg = "New failure ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                     }
                     slackSend message: msg, color: "danger", channel: "ci-notifications-cnx"
                 }
