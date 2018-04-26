@@ -69,7 +69,6 @@ pipeline{
     post {
         always {
             junit("nosetests.xml")
-            deleteDir()
         }
         success {
             echo "Yay, we passed."
