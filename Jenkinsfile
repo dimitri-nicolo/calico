@@ -92,7 +92,7 @@ pipeline {
         failure {
             echo "Boo, we failed."
             script {
-                if (env.BRANCH_NAME == 'master') {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                     GIT_HASH = env.GIT_COMMIT[0..6]
                     GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
                     if (currentBuild.getPreviousBuild()?.result == 'FAILURE') {
