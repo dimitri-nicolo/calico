@@ -26,9 +26,8 @@ pipeline{
                     BUILD_INFO=${env.RUN_DISPLAY_URL}""".stripIndent()
                 }
 		script {
-		    if(CHECKOUT_BRANCH != "master"){
-                        CHECKOUT_BRANCH = env.CHANGE_BRANCH
-                    }
+                    CHECKOUT_BRANCH = (env.CHECKOUT_BRANCH ==~ /(master|release-v.*)/) ? env.CHECKOUT_BRANCH : env.CHANGE_BRANCH
+                    CLONE_ORG = env.CHANGE_FORK ? env.CHANGE_FORK : 'tigera'
                 }
             }
         }
@@ -88,7 +87,7 @@ pipeline{
             steps {
                 sh """
                     gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'eval `ssh-agent -s`; ssh-add .ssh/id_rsa && \
-                    git clone -b $CHECKOUT_BRANCH git@github.com:tigera/calico-private.git && \
+                    git clone -b $CHECKOUT_BRANCH git@github.com:$CLONE_ORG/calico-private.git && \
                     cd calico-private/calico_node && \
                     FELIX_VER=master make tigera/cnx-node && \
                     docker run --rm tigera/cnx-node:latest versions'
@@ -106,7 +105,7 @@ pipeline{
                     // Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
                     // Do that by moving this block to AFTER the tests.
                     withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
-                        if (env.BRANCH_NAME == 'master') {
+                        if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                             sh 'gcloud compute scp $DOCKER_AUTH ubuntu@${BUILD_INSTANCE_NAME}:key.json'
                             sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud auth activate-service-account ${WAVETANK_SERVICE_ACCT} --key-file key.json'"
                             sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud docker --authorize-only --server gcr.io'"
@@ -198,10 +197,11 @@ pipeline{
         }
         changed { // Notify only on change to success
             script {
-                if (env.BRANCH_NAME == 'master') {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                     GIT_HASH = env.GIT_COMMIT[0..6]
+                    GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
                     if (currentBuild.currentResult == 'SUCCESS' && currentBuild.getPreviousBuild()?.result) {
-                        msg = "Passing again ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        msg = "Passing again ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                         slackSend message: msg, color: "good", channel: "ci-notifications-cnx"
                     }
                 }
@@ -210,12 +210,13 @@ pipeline{
         failure {
             echo "Boo, we failed."
             script {
-                if (env.BRANCH_NAME == 'master') {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                     GIT_HASH = env.GIT_COMMIT[0..6]
+                    GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
                     if (currentBuild.getPreviousBuild()?.result == 'FAILURE') {
-                        msg = "Still failing ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        msg = "Still failing ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                     } else {
-                        msg = "New failure ${env.JOB_NAME}\n${env.CHANGE_AUTHOR_DISPLAY_NAME} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        msg = "New failure ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                     }
                     slackSend message: msg, color: "danger", channel: "ci-notifications-cnx"
                 }
