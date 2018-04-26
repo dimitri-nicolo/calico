@@ -28,7 +28,6 @@ docker rm -f calicoq-etcd 2>/dev/null
 # Run each test case in turn (note that this script is actually run from the parent directory in the Makefile).
 cd st/test-cases
 for c in `ls`; do
-
     cd ${c}
 
     echo ------------------------------------------------------
@@ -56,17 +55,10 @@ for c in `ls`; do
     export DATASTORE_TYPE=etcdv3
 
     # Apply a working CNX license.
-     ${CALICOCTL} apply -f $LICENSE
+    ${CALICOCTL} apply -f $LICENSE
 
     # Apply the resources for the test case.
     ${CALICOCTL} apply -f apply.yaml
-
-    # Mark the DB as ready.
-    while ! curl ${ETCD_ENDPOINTS}/v2/keys/calico/v1/Ready -XPUT -d value="true"; do
-        # TODO (mattl): Need to fix this so that adjusting this time does not affect tests
-        # Currently containerized tests will not pass in Jenkins most of the time with 2 set
-        sleep 4
-    done
 
     # Create config file, if wanted.
     if ${USE_CFG_FILE}; then
@@ -111,6 +103,67 @@ EOF
     cd ..
 
 done
+
+# Remote cluster tests are similar, but handled separately as we want to check stderr output as well.
+cd ../rcc-test-cases
+
+echo ------------------------------------------------------
+echo TEST: rcc-test-cases
+
+# Establish settings for this test case directory.
+ETCD_PORT=2379
+
+# Run etcd.
+docker run --detach --name calicoq-etcd \
+   quay.io/coreos/etcd \
+   etcd \
+   --advertise-client-urls "http://127.0.0.1:${ETCD_PORT}" \
+   --listen-client-urls "http://0.0.0.0:${ETCD_PORT}"
+etcd_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' calicoq-etcd)
+export ETCD_ENDPOINTS=http://${etcd_ip}:${ETCD_PORT}
+export DATASTORE_TYPE=etcdv3
+
+# Apply a working CNX license.
+${CALICOCTL} apply -f $LICENSE
+
+# Apply the resources for the test case. This includes some bad remote cluster configuration.
+${CALICOCTL} apply -f apply.yaml
+
+# Check all the expected outputs. We expect each test to produce the same error message about RCC.
+# The common error message is in the expected.stderr.common file.
+for expected in `ls *.expected`; do
+    actual=$(basename ${expected} .expected).actual
+    stderr=$(basename ${expected} .expected).stderr
+
+    head -2 ${expected} > ${actual}
+    eval '${CALICOQ} `head -1 ${expected}`' >> ${actual} 2> ${stderr}
+
+    # Replace all IP/ports with x.x.x.x:y for easier comparison.
+    sed -r 's/([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}/x.x.x.x:y/' <${stderr} >${stderr}.sub
+    mv ${stderr}.sub ${stderr}
+
+    if diff -u ${expected} ${actual}; then
+        if diff -u expected.stderr.common ${stderr}; then
+            echo TEST: ${c}/${expected}: PASSED
+            let 'passed++'
+        else
+            echo TEST: ${c}/${expected}: FAILED
+            let 'failed++'
+        fi
+    else
+        echo TEST: ${c}/${expected}: FAILED
+        let 'failed++'
+    fi
+    rm ${actual} ${stderr}
+done
+
+docker rm -f calicoq-etcd >/dev/null
+rm -f calicoq.cfg
+
+echo ------------------------------------------------------
+echo
+
+cd ..
 
 summarise_test
 

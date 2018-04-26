@@ -41,6 +41,7 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 	if name == "" {
 		fmt.Println("The policy-name must be specified.")
 		log.WithField("<policy-name>", policyName).Error("The policy-name has not been specified")
+		os.Exit(1)
 	}
 
 	// Handle tier prefix
@@ -69,6 +70,7 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 		kvs = gnpkvs.KVPairs
 	}
 
+	var rcc *remoteClusterHandler
 	for _, kv := range kvs {
 		log.Debugf("Policy: %#v", kv)
 		// Convert the V2 Policy object to a V1 Policy object
@@ -108,7 +110,15 @@ func EvalPolicySelectors(configFile, policyName string, hideSelectors, hideRuleM
 		case "ps":
 			EvalPolicySelectorsPrint(output)
 		}
+
+		// We track the remoteClusterHandler and return errors associated with the remote clusters, for the
+		// last policy that we process in this loop - it's assumed that the same set of errors would be
+		// returned on each policy query, so just handling the last should be sufficient.
+		rcc = cbs.rcc
 	}
+
+	// If there are any errors connecting to the remote clusters, report the errors and exit.
+	rcc.CheckForErrorAndExit()
 
 	return
 }
