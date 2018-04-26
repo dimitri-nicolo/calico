@@ -78,9 +78,6 @@ pipeline {
         }
     }
     post {
-        always {
-          deleteDir()
-        }
         success {
             echo "Yay, we passed."
         }
