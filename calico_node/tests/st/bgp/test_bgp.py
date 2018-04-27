@@ -53,7 +53,7 @@ class TestReadiness(TestBase):
 
             # Run readiness checks against felix
             self.assertRaisesRegexp(CalledProcessError, "calico/node is not ready: felix is not ready", host1.execute,
-                               "docker exec calico-node /bin/readiness -felix")
+                               "docker exec cnx-node /bin/readiness -felix")
 
     def test_not_ready_with_no_networking_and_broken_felix(self):
         """
@@ -66,7 +66,7 @@ class TestReadiness(TestBase):
 
             # Run readiness checks against felix
             self.assertRaisesRegexp(CalledProcessError, "calico/node is not ready: felix is not ready", host1.execute,
-                               "docker exec calico-node /bin/readiness -felix")
+                               "docker exec cnx-node /bin/readiness -felix")
 
     def test_bird_readiness(self):
         """
@@ -96,14 +96,14 @@ class TestReadiness(TestBase):
             # Block bgp connectivity between hosts
             host1.execute("iptables -t raw -I PREROUTING  -p tcp -m multiport --dport 179 -j DROP")
             host2.execute("iptables -t raw -I PREROUTING -p tcp -m multiport --dport 179 -j DROP")
-            host1.execute("docker exec -it calico-node pkill -9 bird")
-            host2.execute("docker exec -it calico-node pkill -9 bird")
+            host1.execute("docker exec -it cnx-node pkill -9 bird")
+            host2.execute("docker exec -it cnx-node pkill -9 bird")
 
             # Check that the readiness script is reporting 'not ready'
             self.assertRaisesRegexp(CalledProcessError, "calico/node is not ready: BIRD is not ready: BGP not established with",
-                                    host1.execute, "docker exec calico-node /bin/readiness -bird -felix")
+                                    host1.execute, "docker exec cnx-node /bin/readiness -bird -felix")
             self.assertRaisesRegexp(CalledProcessError, "calico/node is not ready: BIRD is not ready: BGP not established with",
-                                    host1.execute, "docker exec calico-node /bin/readiness -bird -felix")
+                                    host1.execute, "docker exec cnx-node /bin/readiness -bird -felix")
 
             # Restore connectivity
             host1.execute("iptables -t raw -D PREROUTING -p tcp -m multiport --dports 179 -j DROP")

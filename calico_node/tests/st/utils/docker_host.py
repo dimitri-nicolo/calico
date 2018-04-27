@@ -190,7 +190,7 @@ class DockerHost(object):
             self.start_calico_node(env_options=' -e FELIX_HEALTHENABLED=true ')
 
     def assert_is_ready(self, bird=True, felix=True):
-        cmd = "docker exec calico-node /bin/readiness"
+        cmd = "docker exec cnx-node /bin/readiness"
         if bird:
             cmd += " -bird"
         if felix:
@@ -697,7 +697,7 @@ class DockerHost(object):
         log_and_run("docker logs %s" % self.name, raise_exception_on_failure=False)
 
     def delete_conntrack_state_to_ip(self, protocol, dst_ip):
-        self.execute("docker exec calico-node conntrack -D -p %s --orig-dst %s" % (protocol, dst_ip),
+        self.execute("docker exec cnx-node conntrack -D -p %s --orig-dst %s" % (protocol, dst_ip),
                      raise_exception_on_failure=False)
 
     def delete_conntrack_state_to_workloads(self, protocol):
