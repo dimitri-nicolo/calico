@@ -17,6 +17,7 @@ function summarise_test {
 }
 
 CALICOCTL=`pwd`/fv/calicoctl
+LICENSE=`pwd`/fv/good-license.yaml
 
 export ETCD_ENDPOINTS=http://127.0.0.1:2379
 export DATASTORE_TYPE=etcdv3
@@ -24,8 +25,8 @@ export DATASTORE_TYPE=etcdv3
 # Check there isn't already a calicoq-etcd container.
 docker rm -f calicoq-etcd 2>/dev/null
 
-# Run each test case in turn.
-cd test-cases
+# Run each test case in turn (note that this script is actually run from the parent directory in the Makefile).
+cd st/test-cases
 for c in `ls`; do
 
     cd ${c}
@@ -55,7 +56,7 @@ for c in `ls`; do
     export DATASTORE_TYPE=etcdv3
 
     # Apply a working CNX license.
-     ${CALICOCTL} apply -f `pwd`/fv/good-license.yaml
+     ${CALICOCTL} apply -f $LICENSE
 
     # Apply the resources for the test case.
     ${CALICOCTL} apply -f apply.yaml
