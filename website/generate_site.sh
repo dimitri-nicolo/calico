@@ -100,6 +100,11 @@ cat <<EOF
   upload: _site/(.*)
   secure: always
 
+# skip directories that may contain large files
+#
+skip_files:
+  - calico_node/filesystem/bin/
+
 libraries:
 - name: webapp2
   version: "2.5.2"
