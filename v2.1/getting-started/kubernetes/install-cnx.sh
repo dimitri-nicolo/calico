@@ -50,6 +50,9 @@ QUIET=${QUIET:=0}
 # when set to 1, don't install prometheus components
 SKIP_PROMETHEUS=${SKIP_PROMETHEUS:=0}
 
+# when set to 1, download the manifests, then quit
+DOWNLOAD_MANIFESTS_ONLY=${DOWNLOAD_MANIFESTS_ONLY:=0}
+
 # cleanup CNX installation
 CLEANUP=0
 
@@ -88,6 +91,7 @@ checkSettings() {
   echo '  VERSION='${VERSION}
   echo '  DATASTORE='${DATASTORE}
   echo '  LICENSE_FILE='${LICENSE_FILE}
+  [ "$DOWNLOAD_MANIFESTS_ONLY" == 1 ] && echo '  DOWNLOAD_MANIFESTS_ONLY='${DOWNLOAD_MANIFESTS_ONLY}
   [ "$ETCD_ENDPOINTS" ] && echo  '  ETCD_ENDPOINTS='${ETCD_ENDPOINTS}
 
   echo
@@ -119,6 +123,7 @@ Usage: $(basename "$0")
           [-v version]        # CNX version; default: "v2.1"
           [-u]                # Uninstall CNX
           [-q]                # Quiet (don't prompt)
+          [-m]                # Download manifests (then quit)
           [-h]                # Print usage
           [-x]                # Enable verbose mode
 
@@ -127,7 +132,7 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:e:hk:l:pqv:ux" opt; do
+  while getopts "c:d:e:hk:l:mpqv:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
@@ -138,6 +143,7 @@ HELP_USAGE
       x )  set -x;;
       q )  QUIET=1;;
       p )  SKIP_PROMETHEUS=1;;
+      m )  DOWNLOAD_MANIFESTS_ONLY=1;;
       u )  CLEANUP=1;;
       h )  usage;;
       \? ) usage;;
@@ -667,6 +673,11 @@ downloadManifests() {
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoq.yaml"
   fi
+
+  if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
+    echo "CNX manifests downloaded."
+    kill -s TERM $TOP_PID   # quit
+  fi
 }
 
 #
@@ -899,10 +910,10 @@ installCNX() {
   checkRequirementsInstalled      # Validate that all required programs are installed
   checkNetworkManager             # Warn user if NetworkMgr is enabled w/o "cali" interace exception
 
+  downloadManifests               # Download all manifests, if they're not already present in current dir
   createImagePullSecret           # Create the image pull secret
   setupBasicAuth                  # Create 'jane/welc0me' account w/cluster admin privs
 
-  downloadManifests               # Download all manifests, if they're not already present in current dir
   setupEtcdEndpoints              # Determine etcd endpoints, set ${ETCD_ENDPOINTS}
 
   installCalicoBinary "calicoctl" # Install quay.io/tigera/calicoctl binary, create /etc/calico/calicoctl.cfg
