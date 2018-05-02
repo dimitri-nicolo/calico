@@ -1,9 +1,13 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+
 package felixsyncer
 
 import (
 	"context"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -12,7 +16,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
-	log "github.com/sirupsen/logrus"
 )
 
 // Time to wait before retry failed connections to datastores.
@@ -49,7 +52,7 @@ type RemoteSyncer struct {
 	cancel context.CancelFunc
 
 	// If the remote can be connected to then it will block the insync status coming from the local cluster.
-	// Once any error is received from the remote, then it not longer blocks.
+	// Once any error is received from the remote, then it no longer blocks.
 	shouldBlockInsync bool
 }
 
@@ -133,6 +136,18 @@ func (a *wrappedCallbacks) newRCC(update api.Update) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
+	// Send a status update for the remote cluster indicating that it is starting connection processing. We do
+	// this synchronously from the RCC update thread to ensure this is the first event for each RCC.
+	a.callbacks.OnUpdates([]api.Update{{
+		KVPair: model.KVPair{
+			Key: model.RemoteClusterStatusKey{Name: config.Name},
+			Value: &model.RemoteClusterStatus{
+				Status: model.RemoteClusterConnecting,
+			},
+		},
+		UpdateType: api.UpdateTypeKVNew,
+	}})
+
 	ctx, cancel := context.WithCancel(context.Background())
 	if a.allRCCsAreSynced {
 		// The initial list of remote clusters are synced. This update is after the initial sync so it shouldn't block.
@@ -146,6 +161,7 @@ func (a *wrappedCallbacks) newRCC(update api.Update) {
 }
 
 func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key, name string, datastoreConfig *apiconfig.CalicoAPIConfig) {
+
 	// Create a backend client.
 	// This can fail (e.g. if the remote cluster can't be reached) and should be retried in the background.
 	// If there are any failures then Typha won't be blocked from starting, it will be allowed to start, potentially
@@ -156,13 +172,18 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 		var err error
 		backendClient, err = backend.NewClient(*datastoreConfig)
 		if err != nil {
-			// Hit an error, don't block on this remote. Sleep and try later.
+			// Hit an error. Handle by not blocking on this remote, and by sending a status update.
 			log.Warnf("Could not connect to remote cluster. Will retry in %v: %s %v", retrySeconds, key, err)
-			a.finishRemote(key, false)
+			if done := a.handleConnectionFailed(ctx, key, name, err); done {
+				log.Infof("Abandoning creation of syncer for %s", key)
+				return
+			}
+
+			// Sleep and try later. We have already unblocked this remote in the call to handleConnectionFailure
+			// above.
 			select {
 			case <-ctx.Done():
 				log.Infof("Abandoning creation of syncer for %s", key)
-				a.finishRemote(key, false)
 				return
 			case <-time.After(retrySeconds):
 			}
@@ -177,9 +198,23 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 	// Check the context again inside the lock. This will ensure that a syncer doesn't get created if it doesn't need to be.
 	case <-ctx.Done():
 		log.Infof("Abandoning creation of syncer for %s", key)
+		if err := backendClient.Close(); err != nil {
+			log.Warnf("Hit error closing client. Ignoring. %v", err)
+		}
 		a.finishRemote(key, true)
 	default:
 		log.Infof("Creating syncer for %s", key)
+
+		// Send a status update for this remote cluster, to indicate that we are synchronizing data.
+		a.callbacks.OnUpdates([]api.Update{{
+			KVPair: model.KVPair{
+				Key: model.RemoteClusterStatusKey{Name: name},
+				Value: &model.RemoteClusterStatus{
+					Status: model.RemoteClusterResyncInProgress,
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		}})
 
 		// Resources that are fetched from remote clusters
 		remoteResources := []watchersyncer.ResourceType{
@@ -200,7 +235,7 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 		remoteEndpointCallbacks := remoteEndpointCallbacks{
 			wrappedCallbacks: a.callbacks,
 			clusterName:      name,
-			insync:           func() { a.finishRemote(key, true) },
+			insync:           func() { a.handleRemoteInSync(ctx, key, name) },
 		}
 
 		remoteWatcher := watchersyncer.New(backendClient, remoteResources, &remoteEndpointCallbacks)
@@ -210,31 +245,101 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 	}
 }
 
+// handleRemoteInSync processes an in-sync event from a remote cluster syncer. This sends an in-sync status message
+// for that cluster and then flags the cluster that we should no longer block waiting for it.
+func (a *wrappedCallbacks) handleRemoteInSync(ctx context.Context, key model.Key, name string) {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	select {
+	case <-ctx.Done():
+		log.Infof("Remote cluster deleted, no need to send in-sync event: %s", key)
+	default:
+		log.Infof("Sending in-sync update for %s", key)
+		// Send a status update to indicate that we are in-sync for a particular remote cluster.
+		a.callbacks.OnUpdates([]api.Update{{
+			KVPair: model.KVPair{
+				Key: model.RemoteClusterStatusKey{Name: name},
+				Value: &model.RemoteClusterStatus{
+					Status: model.RemoteClusterInSync,
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		}})
+	}
+	a.finishRemote(key, true)
+}
+
+// handleConnectionFailed processes a connection failure by flagging that we should not block on this remote, and
+// sending an error provided the remote has not been deleted. Returns true if the remote cluster has been
+// deleted.
+func (a *wrappedCallbacks) handleConnectionFailed(ctx context.Context, key model.Key, name string, err error) bool {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	a.finishRemote(key, true)
+	select {
+	case <-ctx.Done():
+		log.Infof("Remote cluster deleted, no need to send connection failed event: %s", key)
+		return true
+	default:
+		log.WithError(err).Infof("Sending connection failed update for %s", key)
+		// Send a status update to indicate that the connection has failed to a particular remote cluster.
+		a.callbacks.OnUpdates([]api.Update{{
+			KVPair: model.KVPair{
+				Key: model.RemoteClusterStatusKey{Name: name},
+				Value: &model.RemoteClusterStatus{
+					Status: model.RemoteClusterConnectionFailed,
+					Error:  err.Error(),
+				},
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		}})
+		return false
+	}
+}
+
 func (a *wrappedCallbacks) deleteRCC(update api.Update) {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 	// The key in remote will be guaranteed to exist, since a delete can't be sent before an update.
 	// Call cancel() so any update processing happening in the background can stop.
-	a.remotes[update.Key].cancel()
-	if a.remotes[update.Key].syncer != nil {
-		// Stop the watcher and generate a delete event for each item in the watch cache
-		a.remotes[update.Key].syncer.Stop()
+	remote := a.remotes[update.Key]
 
-		// Stop the client
-		err := a.remotes[update.Key].client.Close()
-		if err != nil {
+	log.Infof("Cancel remote context for %s", update.Key)
+	remote.cancel()
+	if remote.syncer != nil {
+		// Stop the watcher and generate a delete event for each item in the watch cache
+		log.Infof("Stop syncer for %s", update.Key)
+		remote.syncer.Stop()
+	}
+
+	if remote.client != nil {
+		// Stop the client.
+		log.Infof("Close client for %s", update.Key)
+		if err := remote.client.Close(); err != nil {
 			log.Warnf("Hit error closing client. Ignoring. %v", err)
 		}
-
-		// Finish the remote (before deleting it)
-		a.finishRemote(update.Key, true)
-
-		// Delete the remote from the list of remotes.
-		delete(a.remotes, update.Key)
 	}
+
+	// Finish the remote (before deleting it)
+	a.finishRemote(update.Key, true)
+
+	// Delete the remote from the list of remotes.
+	delete(a.remotes, update.Key)
+
+	// Send a delete for the remote cluster status. We do this after all other deletion processing to ensure
+	// no other events for this remote cluster occur after this deletion event.
+	rccKey := update.Key.(model.ResourceKey)
+	a.callbacks.OnUpdates([]api.Update{{
+		KVPair: model.KVPair{
+			Key: model.RemoteClusterStatusKey{Name: rccKey.Name},
+		},
+		UpdateType: api.UpdateTypeKVDeleted,
+	}})
 }
 
 func (a *wrappedCallbacks) finishRemote(key model.Key, alreadyLocked bool) {
+	log.Infof("Finish processing for remote cluster: %s", key)
+
 	if !alreadyLocked {
 		a.lock.Lock()
 		defer a.lock.Unlock()

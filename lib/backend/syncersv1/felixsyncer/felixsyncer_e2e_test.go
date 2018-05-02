@@ -35,6 +35,50 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
 
+// Kubernetes will have a profile for each of the namespaces that is configured.
+// We expect:  default, kube-system, kube-public, namespace-1, namespace-2
+var defaultKubernetesResource = []model.KVPair{
+	{
+		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.default"}},
+		Value: &model.ProfileRules{
+			InboundRules:  []model.Rule{{Action: "allow"}},
+			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	},
+	{
+		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-public"}},
+		Value: &model.ProfileRules{
+			InboundRules:  []model.Rule{{Action: "allow"}},
+			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	},
+	{
+		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-system"}},
+		Value: &model.ProfileRules{
+			InboundRules:  []model.Rule{{Action: "allow"}},
+			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	},
+	{
+		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.namespace-1"}},
+		Value: &model.ProfileRules{
+			InboundRules:  []model.Rule{{Action: "allow"}},
+			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	},
+	{
+		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.namespace-2"}},
+		Value: &model.ProfileRules{
+			InboundRules:  []model.Rule{{Action: "allow"}},
+			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	},
+	{
+		Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
+		Value: "10.10.10.1",
+	},
+}
+
 var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 
 	ctx := context.Background()
@@ -63,50 +107,13 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
 			syncTester.ExpectStatusUpdate(api.InSync)
-			// Kubernetes will have a profile for each of the namespaces that is configured.
-			// We expect:  default, kube-system, kube-public, namespace-1, namespace-2
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
-				expectedCacheSize += 6
+				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment.
+				expectedCacheSize += len(defaultKubernetesResource)
 				syncTester.ExpectCacheSize(expectedCacheSize)
-				syncTester.ExpectData(model.KVPair{
-					Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.default"}},
-					Value: &model.ProfileRules{
-						InboundRules:  []model.Rule{{Action: "allow"}},
-						OutboundRules: []model.Rule{{Action: "allow"}},
-					},
-				})
-				syncTester.ExpectData(model.KVPair{
-					Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-public"}},
-					Value: &model.ProfileRules{
-						InboundRules:  []model.Rule{{Action: "allow"}},
-						OutboundRules: []model.Rule{{Action: "allow"}},
-					},
-				})
-				syncTester.ExpectData(model.KVPair{
-					Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.kube-system"}},
-					Value: &model.ProfileRules{
-						InboundRules:  []model.Rule{{Action: "allow"}},
-						OutboundRules: []model.Rule{{Action: "allow"}},
-					},
-				})
-				syncTester.ExpectData(model.KVPair{
-					Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.namespace-1"}},
-					Value: &model.ProfileRules{
-						InboundRules:  []model.Rule{{Action: "allow"}},
-						OutboundRules: []model.Rule{{Action: "allow"}},
-					},
-				})
-				syncTester.ExpectData(model.KVPair{
-					Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "kns.namespace-2"}},
-					Value: &model.ProfileRules{
-						InboundRules:  []model.Rule{{Action: "allow"}},
-						OutboundRules: []model.Rule{{Action: "allow"}},
-					},
-				})
-				syncTester.ExpectData(model.KVPair{
-					Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
-					Value: "10.10.10.1",
-				})
+				for _, r := range defaultKubernetesResource {
+					syncTester.ExpectData(r)
+				}
 			}
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
