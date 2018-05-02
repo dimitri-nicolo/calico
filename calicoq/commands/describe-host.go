@@ -36,6 +36,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 		epIDToProfileIDs:  make(map[interface{}][]string),
 		policySorter:      calc.NewPolicySorter(),
 		evalCmd:           nil,
+		rcc:               NewRemoteClusterHandler(),
 	}
 	nrs := &noopRuleScanner{}
 	arc := calc.NewActiveRulesCalculator()
@@ -124,6 +125,7 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 	disp.Register(model.TierKey{}, cbs.policySorter.OnUpdate)
 	disp.Register(model.ProfileLabelsKey{}, arc.OnUpdate)
 	disp.Register(model.ProfileRulesKey{}, arc.OnUpdate)
+	disp.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
 	bclient := GetClient(configFile)
 	syncer := felixsyncer.New(bclient, cbs)
@@ -131,6 +133,10 @@ func DescribeEndpointOrHost(configFile, endpointSubstring, hostname string, hide
 
 	// The describeCmd will notify us once it's in sync and has finished outputting.
 	<-cbs.done
+
+	// If there are any errors connecting to the remote clusters, report the errors and exit.
+	cbs.rcc.CheckForErrorAndExit()
+
 	return
 }
 
@@ -173,6 +179,10 @@ type describeCmd struct {
 	policySorter          *calc.PolicySorter
 
 	evalCmd *EvalCmd
+
+	// Remote cluster handler is used to output errors associated with failures to connect to a configured
+	// remote cluster.
+	rcc *remoteClusterHandler
 
 	done chan bool
 }

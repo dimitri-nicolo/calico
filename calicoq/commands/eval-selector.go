@@ -30,6 +30,10 @@ func EvalSelector(configFile, sel string, outputFormat string) (err error) {
 	case "ps":
 		EvalSelectorPrint(output)
 	}
+
+	// If there are any errors connecting to the remote clusters, report the errors and exit.
+	cbs.rcc.CheckForErrorAndExit()
+
 	return
 }
 

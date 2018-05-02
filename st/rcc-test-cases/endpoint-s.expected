@@ -1,0 +1,54 @@
+endpoint host1 -s
+
+Policies and profiles for endpoints matching "host1":
+
+Workload endpoint k8s/group1.g1w1/eth0
+  Policies:
+    Policy "group1/p1" (order 500)
+  Profiles:
+    Profile "group1"
+  Rule matches:
+    Policy "group1/p1" outbound rule 1 destination match
+
+Workload endpoint k8s/group1.g1w2/eth0
+  Policies:
+    Policy "group1/p1" (order 500)
+  Profiles:
+    Profile "group1"
+  Rule matches:
+    Policy "group1/p1" outbound rule 1 destination match
+
+Workload endpoint k8s/group1.g1w3/eth0
+  Policies:
+    Policy "group1/p1" (order 500)
+  Profiles:
+    Profile "group1"
+  Rule matches:
+    Policy "group1/p1" outbound rule 1 destination match
+
+Workload endpoint k8s/group2.g2w1/eth0
+  Policies:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400)
+  Profiles:
+    Profile "group2"
+  Rule matches:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" inbound rule 1 source match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match
+
+Workload endpoint k8s/group2.g2w2/eth0
+  Policies:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400)
+  Profiles:
+    Profile "group2"
+  Rule matches:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" inbound rule 1 source match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match
+
+Workload endpoint k8s/group2.g2w3/eth0
+  Policies:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" (order 400)
+  Profiles:
+    Profile "group2"
+  Rule matches:
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" inbound rule 1 source match
+    Policy "group2/abcdefghijklmnopqrstuvwxyz" outbound rule 1 destination match

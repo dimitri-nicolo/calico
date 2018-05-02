@@ -10,9 +10,9 @@ import (
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/libcalico-go/lib/selector"
 	log "github.com/sirupsen/logrus"
-	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 )
 
 // Restructuring like this should also be useful for a permanently running webserver variant too.
@@ -23,6 +23,7 @@ func NewEvalCmd(configFile string) (cbs *EvalCmd) {
 		dispatcher: disp,
 		done:       make(chan bool),
 		matches:    make(map[interface{}][]string),
+		rcc:        NewRemoteClusterHandler(),
 	}
 	cbs.index = labelindex.NewInheritIndex(cbs.onMatchStarted, cbs.onMatchStopped)
 	return cbs
@@ -80,6 +81,7 @@ func (cbs *EvalCmd) Start(endpointFilter dispatcher.UpdateHandler) {
 	cbs.dispatcher.Register(model.WorkloadEndpointKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.HostEndpointKey{}, cbs.OnUpdate)
 	cbs.dispatcher.Register(model.ProfileLabelsKey{}, cbs.OnUpdate)
+	cbs.dispatcher.Register(model.RemoteClusterStatusKey{}, cbs.rcc.OnUpdate)
 
 	bclient := GetClient(cbs.configFile)
 	syncer := felixsyncer.New(bclient, cbs)
@@ -106,6 +108,10 @@ type EvalCmd struct {
 	dispatcher    *dispatcher.Dispatcher
 	index         *labelindex.InheritIndex
 	matches       map[interface{}][]string
+
+	// Remote cluster handler is used to output errors associated with failures to connect to a configured
+	// remote cluster.
+	rcc *remoteClusterHandler
 
 	done chan bool
 }
