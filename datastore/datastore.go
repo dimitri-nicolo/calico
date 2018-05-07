@@ -2,14 +2,32 @@ package datastore
 
 import (
 	"database/sql"
+	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/kelseyhightower/envconfig"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client"
 )
 
-var DSN string = "tigera_carrotctl:JbUEMjuHqVpyCCjt@/tigera_backoffice?parseTime=true"
+var DSN string
+
+type DBAccess struct {
+	User     string `default:"tigera_carrotctl"`
+	Password string `default:"JbUEMjuHqVpyCCjt"`
+	DNS      string `default:"localhost"`
+	Port     string `default:"3306"`
+	Name     string `default:"tigera_backoffice"`
+}
+
+func init() {
+	// Parse env variables to get DB access information.
+	var db DBAccess
+	envconfig.Process("carrotctl", &db)
+
+	DSN = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", db.User, db.Password, db.DNS, db.Port, db.Name)
+}
 
 type Datastore interface {
 	AllCompanies() ([]*Company, error)

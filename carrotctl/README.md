@@ -2,10 +2,21 @@
 
 Tigera licensing and entitlement commandline tool
 
-![carrotctl](./carrabbit.jpg) <!-- .element height="20%" width="20%" -->
+![carrotctl](./carrabbit.png) <!-- .element height="20%" width="20%" -->
 
 
-carrotctl can generate and retrieve licenses.
+## Setup 
+
+Download the `carrotctl` binary from the releases page on Github.
+
+Update the `example.env` file with the database access information and credentials.
+Then source the file by `source ./example.env`
+
+Note: you don't need to do that for a local dev setup where DB is on the same host. 
+
+# Using carrotctl
+
+`carrotctl` can generate and retrieve licenses.
 
 For v2.1 we basically have 2 major features:
 

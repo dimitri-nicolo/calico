@@ -161,6 +161,10 @@ var GenerateLicenseCmd = &cobra.Command{
 			log.Fatalf("error generating license from claims: %s", err)
 		}
 
+		if debug {
+			fmt.Printf("Connecting to: '%s'\n", datastore.DSN)
+		}
+
 		// Store the license in the license database.
 		db, err := datastore.NewDB(datastore.DSN)
 		if err != nil {
