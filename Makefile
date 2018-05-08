@@ -330,9 +330,11 @@ release-once-tagged:
 	@echo
 	@echo "Then, push the versioned docker images to GCR only:"
 	@echo
-	@echo "- gcloud docker -- docker push gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION)"
+	@echo "- gcloud auth configure-docker"
+	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION)"
 	@echo
 	@echo "If this is the latest release from the most recent stable"
 	@echo "release series, also push the 'latest' tag:"
 	@echo
-	@echo "- gcloud docker -- docker push gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):latest"
+	@echo "- gcloud auth configure-docker"
+	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):latest"
