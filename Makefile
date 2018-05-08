@@ -623,7 +623,8 @@ continue-release:
 	@echo
 	@echo "Then, push the versioned docker images to GCR ONLY:"
 	@echo
-	@echo "- gcloud docker -- push gcr.io/unique-caldron-775/cnx/tigera/felix:$(VERSION)"
+	@echo "- gcloud auth configure-docker"
+	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/felix:$(VERSION)"
 	@echo
 	@echo "If you also want to build Debian/Ubuntu and RPM packages for"
 	@echo "the new release, use 'make deb' and 'make rpm'."
