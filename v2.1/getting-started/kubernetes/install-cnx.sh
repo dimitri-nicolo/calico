@@ -65,6 +65,12 @@ CALICO_UTILS_REGISTRY=${CALICO_UTILS_REGISTRY:="quay.io/tigera"}
 # Calicoctl and calicoq binary install directory
 CALICO_UTILS_INSTALL_DIR=${CALICO_UTILS_INSTALL_DIR:="/usr/local/bin"}
 
+# Location of kube-apiserver manifest
+KUBE_APISERVER_MANIFEST=${KUBE_APISERVER_MANIFEST:="/etc/kubernetes/manifests/kube-apiserver.yaml"}
+
+# Kubernetes installer type - "KOPS" or "KUBEADM"
+INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
+
 #
 # promptToContinue()
 #
@@ -91,8 +97,9 @@ checkSettings() {
   echo '  VERSION='${VERSION}
   echo '  DATASTORE='${DATASTORE}
   echo '  LICENSE_FILE='${LICENSE_FILE}
+  echo '  INSTALL_TYPE='${INSTALL_TYPE}
   [ "$DOWNLOAD_MANIFESTS_ONLY" == 1 ] && echo '  DOWNLOAD_MANIFESTS_ONLY='${DOWNLOAD_MANIFESTS_ONLY}
-  [ "$ETCD_ENDPOINTS" ] && echo  '  ETCD_ENDPOINTS='${ETCD_ENDPOINTS}
+  [ "$ETCD_ENDPOINTS" ] && echo '  ETCD_ENDPOINTS='${ETCD_ENDPOINTS}
 
   echo
   echo -n "About to "$1" CNX. "
@@ -104,7 +111,9 @@ checkSettings() {
 #
 fatalError() {
   >&2 echo "Fatal Error: $@"
-  >&2 echo "In order to retry installation, uninstall CNX first (i.e. re-run with \"-u\" flag)."
+  if [ "$CLEANUP" -eq 0 ]; then  # If this is a fresh install (not an uninstall), tell user how to retry
+    >&2 echo "In order to retry installation, uninstall CNX first (i.e. re-run with \"-u\" flag)."
+  fi
   kill -s TERM $TOP_PID   # we're likely running in a subshell, signal parent by PID
 }
 
@@ -150,15 +159,34 @@ HELP_USAGE
     esac
   done
   shift $((OPTIND -1))
+}
 
+#
+# validateSettings() - ensure all required files and directories are present,
+# and that global variables have reasonable values.
+#
+validateSettings() {
   # Validate $DATASTORE is either "kubernetes" or "etcdv3"
   [ "$DATASTORE" == "etcdv3" ] || [ "$DATASTORE" == "kubernetes" ] || fatalError "Datastore \"$DATASTORE\" is not valid, must be either \"etcdv3\" or \"kubernetes\"."
 
-  # Confirm user specified a license file
-  [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a CNX license file, e.g. '-l license.yaml'"
+  # Validate $INSTALL_TYPE is either "KOPS" or "KUBEADM"
+  [ "$INSTALL_TYPE" == "KOPS" ] || [ "$INSTALL_TYPE" == "KUBEADM" ] || fatalError "Installation type \"$INSTALL_TYPE\" is not valid, must be either \"KOPS\" or \"KUBEADM\"."
 
-  # Confirm license file is readable
-  [ ! -r "$LICENSE_FILE" ] && fatalError "Couldn't locate license file: $LICENSE_FILE"
+  # If we're installing, confirm user specified a readable license file
+  if [ "$CLEANUP" -eq 0 ]; then
+    [ -z "$LICENSE_FILE" ] && fatalError "Must specify the location of a CNX license file, e.g. '-l license.yaml'"
+
+    # Confirm license file is readable
+    [ ! -r "$LICENSE_FILE" ] && fatalError "Couldn't locate license file: $LICENSE_FILE"
+  fi
+
+  # Confirm kube-apiserver manifest exists
+  [ ! -f "$KUBE_APISERVER_MANIFEST" ] && fatalError "Couldn't locate kube-apiserver manifest: $KUBE_APISERVER_MANIFEST"
+
+  # If it's set, validate that ETCD_ENDPOINTS is of the form "http[s]://ipv4:port"
+  if [ ! -z "$ETCD_ENDPOINTS" ]; then
+    [[ "$ETCD_ENDPOINTS" =~ ^http(s)?://.*:[0-9]+$ ]] || fatalError "Invalid ETCD_ENDPOINTS=\"${ETCD_ENDPOINTS}\", expect \"http(s)://ipv4:port\""
+  fi
 }
 
 #
@@ -262,18 +290,35 @@ programIsInstalled() {
 }
 
 #
+# determineInstallerType()
+# Determine whether this cluster was installed by one of the two supported
+# kubernetes installers - "KOPS" or "KUBEADM"
+# Set INSTALL_TYPE to "KOPS" or "KUBEADM"
+#
+determineInstallerType() {
+  # Assume Kubeadm by default. Check for directories and files used by Kops and override if necessary
+  if [[ -z "$INSTALL_TYPE" && -d "/srv/kubernetes/" && -e "/etc/kubernetes/manifests/kube-apiserver.manifest" ]]; then
+    INSTALL_TYPE="KOPS"
+    KUBE_APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.manifest"
+
+    # give kops clusters a working default etcd endpoint, if not already set
+    [ -z "$ETCD_ENDPOINTS" ] && ETCD_ENDPOINTS="http://100.64.1.5:6666"
+  fi
+}
+
+#
 # checkRequirementsInstalled() - check package dependencies
 #
 checkRequirementsInstalled() {
-  programIsInstalled jq || fatalError Please install 'jq' and re-run "$(basename $0)".
-  programIsInstalled sed || fatalError Please install 'sed' and re-run "$(basename "$0")".
-  programIsInstalled base64 || fatalError Please install 'base64' and re-run "$(basename "$0")".
+  programIsInstalled jq || fatalError "Please install \"jq\" and re-run $(basename $0)".
+  programIsInstalled sed || fatalError "Please install \"sed\" and re-run $(basename "$0")".
+  programIsInstalled base64 || fatalError "Please install \"base64\" and re-run $(basename "$0")".
+  programIsInstalled ip || fatalError "Please install \"ip\" and re-run $(basename "$0")".
 
   # Check that kubectl can connect to the cluster
   run kubectl version
 
-  # Check that gnu-sed is installed. To install gnu-sed on MacOS:
-  #  'brew install gnu-sed --with-default-names'
+  # Check that gnu-sed is installed.
   sed --version 2>&1 | grep -q GNU
   if [ $? -ne 0 ]; then
     fatalError Please install gnu-sed. On MacOS, \'brew install gnu-sed --with-default-names \'
@@ -315,7 +360,7 @@ checkNetworkManager() {
 #
 checkRequiredFilesPresent() {
   echo -n Verifying that we\'re on the Kubernetes master node ...' '
-  runAsRoot ls -l /etc/kubernetes/manifests/kube-apiserver.yaml
+  runAsRoot ls -l "$KUBE_APISERVER_MANIFEST"
   echo verified.
 }
 
@@ -415,9 +460,11 @@ deleteImagePullSecret() {
 }
 
 #
-# setupBasicAuth()
+# setupBasicAuthKubeadm() - specialized function for Kubeadm-based kubernetes
+# clusters
 #
-setupBasicAuth() {
+setupBasicAuthKubeadm() {
+
   # Create basic auth csv file
     cat > basic_auth.csv <<EOF
 welc0me,jane,1
@@ -425,7 +472,7 @@ EOF
 
   runAsRoot mv basic_auth.csv /etc/kubernetes/pki/basic_auth.csv
   runAsRoot chown root /etc/kubernetes/pki/basic_auth.csv
-  runAsRoot chmod 644 /etc/kubernetes/pki/basic_auth.csv
+  runAsRoot chmod 600 /etc/kubernetes/pki/basic_auth.csv
 
   # Append basic auth setting into kube-apiserver command line
   cat > sedcmd.txt <<EOF
@@ -433,15 +480,36 @@ EOF
 EOF
 
   # Insert basic-auth option into kube-apiserver manifest
-  runAsRoot sed -i -f sedcmd.txt /etc/kubernetes/manifests/kube-apiserver.yaml
+  runAsRoot sed -i -f sedcmd.txt "$KUBE_APISERVER_MANIFEST"
   run rm -f sedcmd.txt
 
   # Restart kubelet in order to make basic_auth settings take effect
   runAsRoot systemctl restart kubelet
   blockUntilSuccess "kubectl get nodes" 60
 
-  # Give user Jane cluster admin permissions
+  # Give user "Jane" cluster admin permissions
   runAsRoot kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --user=jane
+}
+
+#
+# setupBasicAuthKops() - currently a no-op
+# because Kops preprovisions an "admin" user and the
+# /srv/kubernetes/basic_auth.csv is not modifiable.
+#
+setupBasicAuthKops() {
+  echo "Using \"admin\" user provisioned by Kops."
+}
+
+#
+# setupBasicAuth()
+#
+setupBasicAuth() {
+
+  if [ "$INSTALL_TYPE" == "KUBEADM" ]; then
+    setupBasicAuthKubeadm
+  elif [ "$INSTALL_TYPE" == "KOPS" ]; then
+    setupBasicAuthKops
+  fi
 }
 
 #
@@ -449,17 +517,21 @@ EOF
 # delete cluster admin role for user=jane.
 #
 deleteBasicAuth() {
-  runAsRoot rm -f /etc/kubernetes/pki/basic_auth.csv
-  runAsRootIgnoreErrors kubectl delete clusterrolebinding permissive-binding
-  cat > sedcmd.txt <<EOF
+  if [ "$INSTALL_TYPE" == "KUBEADM" ]; then
+    runAsRoot rm -f /etc/kubernetes/pki/basic_auth.csv
+    cat > sedcmd.txt <<EOF
 /    - --basic-auth-file=\/etc\/kubernetes\/pki\/basic_auth.csv/d
 EOF
-  runAsRoot sed -i -f sedcmd.txt /etc/kubernetes/manifests/kube-apiserver.yaml
-  run rm -f sedcmd.txt
+    runAsRoot sed -i -f sedcmd.txt "$KUBE_APISERVER_MANIFEST"
+    run rm -f sedcmd.txt
 
-  # Restart kubelet in order to make basic_auth settings take effect
-  runAsRoot systemctl restart kubelet
-  blockUntilSuccess "kubectl get nodes" 60
+    # Restart kubelet in order to make basic_auth settings take effect
+    runAsRoot systemctl restart kubelet
+    blockUntilSuccess "kubectl get nodes" 60
+
+    # Cleanup permissive-binding role
+    runAsRootIgnoreErrors kubectl delete clusterrolebinding permissive-binding
+  fi
 }
 
 #
@@ -504,7 +576,7 @@ setupEtcdEndpoints() {
     fi
 
     # $ETCD_ENDPOINTS is ""; user wants to use the default etcd endpoint specified in "calico.yaml"
-    if [ -z ${ETCD_ENDPOINTS} ]; then
+    if [ -z "${ETCD_ENDPOINTS}" ]; then
 
       # Extract etcd server url from "calico.yaml"
       export ETCD_ENDPOINTS=$(grep etcd_endpoints calico.yaml | grep -i http | sed 's/etcd_endpoints: //g')
@@ -515,6 +587,11 @@ setupEtcdEndpoints() {
       # This sed cmd matches <etcd_endpoints: "http*> up to the end of the line and replaces it with:
       #                      <etcd_endpoints: "$ETCD_ENDPOINTS">
       sed -Ei "s|etcd_endpoints: \"http.*|etcd_endpoints: \"$ETCD_ENDPOINTS\"|" calico.yaml
+
+      # Update the clusterIP of the etcd service as well
+      # Take a schema, e.g. "https://10.1.1.9:6666", and convert to IPv4 address, e.g. "10.1.1.9"
+      local ETCD_IP=$(echo "$ETCD_ENDPOINTS" | sed 's/.*\(http:\/\/\|https:\/\/\)//' | sed 's/:.*//')
+      sed -Ei "s|clusterIP:.*|clusterIP: \"$ETCD_IP\"|" calico.yaml
     fi
 
     echo "Setting etcd_endpoints to: ${ETCD_ENDPOINTS}"
@@ -887,7 +964,16 @@ deleteMonitorCalicoManifest() {
 # createCNXManagerSecret()
 #
 createCNXManagerSecret() {
-  runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert=/etc/kubernetes/pki/apiserver.crt --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
+
+  if [ "$INSTALL_TYPE" == "KUBEADM" ]; then
+    local API_SERVER_CRT="/etc/kubernetes/pki/apiserver.crt"
+    local API_SERVER_KEY="/etc/kubernetes/pki/apiserver.key"
+  elif [ "$INSTALL_TYPE" == "KOPS" ]; then
+    local API_SERVER_CRT="/srv/kubernetes/server.cert"
+    local API_SERVER_KEY="/srv/kubernetes/server.key"
+  fi
+
+  runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert="$API_SERVER_CRT" --from-file=key="$API_SERVER_KEY" -n kube-system
   countDownSecs 5 "Creating cnx-manager-tls secret"
 }
 
@@ -900,6 +986,25 @@ deleteCNXManagerSecret() {
 }
 
 #
+# reportSuccess() - tell user how to login
+#
+reportSuccess() {
+  echo
+  echo "---------------------------------------------------------------------------------------"
+  echo "CNX installation is complete. CNX is listening on all network interfaces on port 30003."
+  echo "For example:"
+  echo "  https://127.0.0.1:30003"
+  echo "  https://$(ip route get 8.8.8.8 | head -1 | awk '{print $7}'):30003"
+  echo
+
+  if [ "$INSTALL_TYPE" == "KUBEADM" ]; then
+    echo "Login credentials: username=\"jane\", password=\"welc0me\""
+  elif [ "$INSTALL_TYPE" == "KOPS" ]; then
+    echo "Login credentials: username=\"admin\", password=\`kops get secrets kube -o plaintext\`"
+  fi
+}
+
+#
 # installCNX() - install CNX
 #
 installCNX() {
@@ -907,8 +1012,7 @@ installCNX() {
   validateDatastore install       # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
 
   checkRequiredFilesPresent       # Validate kubernetes files are present
-  checkRequirementsInstalled      # Validate that all required programs are installed
-  checkNetworkManager             # Warn user if NetworkMgr is enabled w/o "cali" interace exception
+  checkNetworkManager             # Warn user if NetworkMgr is enabled w/o "cali" interface exception
 
   downloadManifests               # Download all manifests, if they're not already present in current dir
   createImagePullSecret           # Create the image pull secret
@@ -916,7 +1020,7 @@ installCNX() {
 
   setupEtcdEndpoints              # Determine etcd endpoints, set ${ETCD_ENDPOINTS}
 
-  installCalicoBinary "calicoctl" # Install quay.io/tigera/calicoctl binary, create /etc/calico/calicoctl.cfg
+  installCalicoBinary "calicoctl" # Install quay.io/tigera/calicoctl binary, create "/etc/calico/calicoctl.cfg"
   installCalicoBinary "calicoq"   # Install quay.io/tigera/calicoq binary
 
   applyKddRbacManifest            # Apply "rbac-kdd.yaml" (kdd datastore only)
@@ -934,7 +1038,7 @@ installCNX() {
     applyMonitorCalicoManifest    # Apply monitor-calico.yaml
   fi
 
-  echo CNX installation complete. Point your browser to https://127.0.0.1:30003, username=jane, password=welc0me
+  reportSuccess                   # Tell user how to login
 }
 
 #
@@ -959,17 +1063,20 @@ uninstallCNX() {
   deleteCNXManagerSecret        # Delete TLS secret
   deleteImagePullSecret         # Delete pull secret
   deleteBasicAuth               # Remove basic auth updates, restart kubelet
-  deleteKubeDnsPod              # Return kube-dns pod to "pending" state 
+  deleteKubeDnsPod              # Return kube-dns pod to "pending" state
 }
 
 #
 # main()
 #
+checkRequirementsInstalled      # Validate that all required programs are installed
+
+determineInstallerType          # Set INSTALL_TYPE to "KOPS" or "KUBEADM"
 parseOptions "$@"               # Set up variables based on args
+validateSettings                # Check for missing files/dirs
 
 if [ "$CLEANUP" -eq 1 ]; then
   uninstallCNX                  # Remove CNX, cleanup related files
 else
   installCNX                    # Install CNX
 fi
-
