@@ -383,7 +383,8 @@ endif
 	@echo "\nAdd release notes for calico-k8sapiserver. Use this command"
 	@echo "to find commit messages for this release: git log --oneline <old_release_version>...$(VERSION)"
 	@echo "git push origin $(VERSION)"
-	@echo "gcloud docker -- push gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:$(VERSION)"
+	@echo "gcloud auth configure-docker"
+	@echo "docker push gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver:$(VERSION)"
 
 .PHONY: kubeadm
 kubeadm:

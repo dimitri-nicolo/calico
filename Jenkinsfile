@@ -54,7 +54,7 @@ pipeline {
                         if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                             sh "cp $DOCKER_AUTH key.json"
                             sh "gcloud auth activate-service-account ${env.WAVETANK_SERVICE_ACCT} --key-file key.json"
-                            sh "gcloud docker --authorize-only --server gcr.io"
+                            sh "gcloud auth configure-docker"
                             sh "docker tag tigera/cnx-apiserver:latest ${env.IMAGE_NAME}:${env.BRANCH_NAME}"
                             sh "docker push ${env.IMAGE_NAME}:${env.BRANCH_NAME}"
 
