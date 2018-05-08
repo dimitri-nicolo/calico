@@ -70,7 +70,11 @@ pipeline{
                     '''
                     sh 'gcloud compute scp $SSH_KEY ubuntu@${BUILD_INSTANCE_NAME}:.ssh/id_rsa'
                     sh '''
-                        gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'sudo apt-get install -y docker.io make && \
+                        gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
+                        echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+                        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
+                        sudo apt-get update && \
+                        sudo apt-get install -y docker.io make google-cloud-sdk && \
                         sudo usermod -aG docker ubuntu && \
                         ssh-keyscan -t rsa github.com 2>&1 >> .ssh/known_hosts && \
                         chmod 600 .ssh/id_rsa'
@@ -108,7 +112,7 @@ pipeline{
                         if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                             sh 'gcloud compute scp $DOCKER_AUTH ubuntu@${BUILD_INSTANCE_NAME}:key.json'
                             sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud auth activate-service-account ${WAVETANK_SERVICE_ACCT} --key-file key.json'"
-                            sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud docker --authorize-only --server gcr.io'"
+                            sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud auth configure-docker'"
                             sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'docker tag tigera/cnx-node:latest ${NODE_IMAGE_NAME}:${env.BRANCH_NAME}'"
                             sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'docker push ${NODE_IMAGE_NAME}:${env.BRANCH_NAME}'"
 
