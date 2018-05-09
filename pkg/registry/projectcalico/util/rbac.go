@@ -32,8 +32,13 @@ func logAuthorizerAttributes(requestAttributes authorizer.Attributes) {
 	glog.Infof("Authorizer Verb: %s", requestAttributes.GetVerb())
 }
 
-func setTierSelector(options *metainternalversion.ListOptions) {
-	options.FieldSelector = fields.SelectorFromSet(map[string]string{"spec.tier": defaultTier})
+func setDefaultTierSelector(options *metainternalversion.ListOptions) {
+	defaultTierSelector := fields.SelectorFromSet(map[string]string{"spec.tier": defaultTier})
+	if options.FieldSelector == nil {
+		options.FieldSelector = defaultTierSelector
+	} else {
+		options.FieldSelector = fields.AndSelectors(options.FieldSelector, defaultTierSelector)
+	}
 }
 
 func GetTierNameFromSelector(options *metainternalversion.ListOptions) (string, error) {
@@ -58,15 +63,17 @@ func GetTierNameFromSelector(options *metainternalversion.ListOptions) (string, 
 					return "", fmt.Errorf("multi-valued selector not supported")
 				}
 				tierName, ok := requirement.Values().PopAny()
-				if ok {
+				if ok && (requirement.Operator() == selection.Equals ||
+					requirement.Operator() == selection.DoubleEquals) {
 					return tierName, nil
 				}
+				return "", fmt.Errorf("Non equal selector operator not supported for label projectcalico.org/tier")
 			}
 		}
 	}
 
 	// Reaching here implies tier is 'default' and hasn't been explicitly set as part of the selectors.
-	setTierSelector(options)
+	setDefaultTierSelector(options)
 	return defaultTier, nil
 }
 
@@ -90,8 +97,8 @@ func AuthorizeTierOperation(ctx genericapirequest.Context, authz authorizer.Auth
 	attrs.Verb = "get"
 	attrs.ResourceRequest = attributes.IsResourceRequest()
 	attrs.Path = "/apis/projectcalico.org/v3/tiers/" + tierName
-	glog.Infof("Tier Auth Attributes for the given Policy")
-	logAuthorizerAttributes(attrs)
+	// glog.Infof("Tier Auth Attributes for the given Policy")
+	// logAuthorizerAttributes(attrs)
 	authorized, reason, err := authz.Authorize(attrs)
 	if err != nil {
 		return err
