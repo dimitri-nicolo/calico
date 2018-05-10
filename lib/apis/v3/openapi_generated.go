@@ -2557,6 +2557,25 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"prometheusMetricsCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "TLS credentials for this port.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"prometheusMetricsKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"prometheusMetricsCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
 						"failsafeInboundHostPorts": {
 							SchemaProps: spec.SchemaProps{
 								Description: "FailsafeInboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints on irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each port should be specified as tcp:<port-number> or udp:<port-number>. For back-compatibility, if the protocol is not specified, it defaults to “tcp”. To disable all inbound host ports, use the value none. The default value allows ssh access and DHCP. [Default: tcp:22, udp:68]",

@@ -164,6 +164,10 @@ type FelixConfigurationSpec struct {
 	// PrometheusProcessMetricsEnabled disables process metrics collection, which the Prometheus client does by default, when
 	// set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]
 	PrometheusProcessMetricsEnabled *bool `json:"prometheusProcessMetricsEnabled,omitempty"`
+	// TLS credentials for this port.
+	PrometheusMetricsCertFile string `json:"prometheusMetricsCertFile,omitempty"`
+	PrometheusMetricsKeyFile  string `json:"prometheusMetricsKeyFile,omitempty"`
+	PrometheusMetricsCAFile   string `json:"prometheusMetricsCAFile,omitempty"`
 
 	// FailsafeInboundHostPorts is a comma-delimited list of UDP/TCP ports that Felix will allow incoming traffic to host endpoints
 	// on irrespective of the security policy. This is useful to avoid accidently cutting off a host with incorrect configuration. Each
