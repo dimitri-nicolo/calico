@@ -16,9 +16,7 @@ package daemon
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
@@ -30,7 +28,6 @@ import (
 
 	docopt "github.com/docopt/docopt-go"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -38,6 +35,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/security"
 	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator"
 	"github.com/projectcalico/libcalico-go/lib/upgrade/migrator/clients"
 	"github.com/projectcalico/typha/pkg/buildinfo"
@@ -467,8 +465,13 @@ func servePrometheusMetrics(configParams *config.Config) {
 				prometheus.Unregister(prometheus.NewProcessCollector(os.Getpid(), ""))
 			}
 		}
-		http.Handle("/metrics", promhttp.Handler())
-		err := http.ListenAndServe(fmt.Sprintf(":%v", configParams.PrometheusMetricsPort), nil)
+		err := security.ServePrometheusMetrics(
+			prometheus.DefaultGatherer,
+			configParams.PrometheusMetricsPort,
+			configParams.PrometheusMetricsCertFile,
+			configParams.PrometheusMetricsKeyFile,
+			configParams.PrometheusMetricsCAFile,
+		)
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)
