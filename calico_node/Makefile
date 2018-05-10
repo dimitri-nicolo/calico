@@ -183,7 +183,8 @@ dist/calicoctl-v1.0.2:
 dist/calicoctl:
 	-docker rm -f calicoctl
 	if [ "$(docker images -q $$(CTL_CONTAINER_NAME))" = "" ]; then \
-	  gcloud docker -- pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
+	  gcloud auth configure-docker; \
+	  docker pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
 	  docker tag $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER) $(CTL_CONTAINER_NAME); \
 	fi;
 	docker create --name calicoctl $(CTL_CONTAINER_NAME)
@@ -207,7 +208,8 @@ dist/calico-cni-plugin dist/calico-ipam-plugin:
 dist/calicoctl-darwin-amd64:
 	-docker rm -f calicoctl
 	if [ "$(docker images -q $$(CTL_CONTAINER_NAME))" = "" ]; then \
-	  gcloud docker -- pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
+	  gcloud auth configure-docker; \
+	  docker pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
 	  docker tag $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER) $(CTL_CONTAINER_NAME); \
 	fi;
 	docker create --name calicoctl $(CTL_CONTAINER_NAME)
@@ -220,7 +222,8 @@ dist/calicoctl-darwin-amd64:
 dist/calicoctl-windows-amd64.exe:
 	-docker rm -f calicoctl
 	if [ "$(docker images -q $$(CTL_CONTAINER_NAME))" = "" ]; then \
-	  gcloud docker -- pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
+	  gcloud auth configure-docker; \
+	  docker pull $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER); \
 	  docker tag $(CTL_PRIVATE_IMAGE):$(CALICOCTL_VER) $(CTL_CONTAINER_NAME); \
 	fi;
 	docker create --name calicoctl $(CTL_CONTAINER_NAME)
@@ -280,7 +283,8 @@ $(NODE_CONTAINER_BIN_DIR)/calico-felix update-felix:
 	# To get them, we create (but don't start) a container from that image.
 	# Check if need to pull calico/felix from private repo or if it was built locally
 	if [ "$(docker images -q $$(FELIX_CONTAINER_NAME))" = "" ]; then \
-	  gcloud docker -- pull $(FELIX_PRIVATE_IMAGE):$(FELIX_VER); \
+          gcloud auth configure-docker; \
+	  docker pull $(FELIX_PRIVATE_IMAGE):$(FELIX_VER); \
 	  docker tag $(FELIX_PRIVATE_IMAGE):$(FELIX_VER) $(FELIX_CONTAINER_NAME); \
 	fi;
 	docker create --name calico-felix $(FELIX_CONTAINER_NAME)
@@ -398,7 +402,8 @@ dist/allocate-ipip-addr: $(ALLOCATE_IPIP_FILES) vendor
 dist/calicoq:
 	-docker rm -f calicoq
 	if [ "$(docker images -q $$(CALICOQ_CONTAINER_NAME))" = "" ]; then \
-	  gcloud docker -- pull $(CALICOQ_PRIVATE_IMAGE):$(CALICOQ_VER); \
+	  gcloud auth configure-docker; \
+	  docker pull $(CALICOQ_PRIVATE_IMAGE):$(CALICOQ_VER); \
 	  docker tag $(CALICOQ_PRIVATE_IMAGE):$(CALICOQ_VER) $(CALICOQ_CONTAINER_NAME); \
 	fi;
 	docker create --name calicoq $(CALICOQ_CONTAINER_NAME)
@@ -824,7 +829,8 @@ $(RELEASE_DIR_IMAGES)/cnx-node.tar:
 $(RELEASE_DIR_IMAGES)/calico-typha.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
 	if [ "$(docker images -q $$(TYPHA_CONTAINER_NAME))" = "" ]; then \
-	  gcloud docker -- pull $(TYPHA_IMAGE):$(TYPHA_VER); \
+	  gcloud auth configure-docker; \
+	  docker pull $(TYPHA_IMAGE):$(TYPHA_VER); \
 	  docker tag $(TYPHA_IMAGE):$(TYPHA_VER) $(TYPHA_CONTAINER_NAME); \
 	fi;
 	docker save --output $@ tigera/typha:$(TYPHA_VER)
@@ -842,7 +848,8 @@ $(RELEASE_DIR_IMAGES)/calico-kube-controllers.tar:
 $(RELEASE_DIR_IMAGES)/cnx-apiserver.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
 	if [ "$(docker images -q $$(APISERVER_CONTAINER_NAME))" = "" ]; then \
-	  gcloud docker -- pull $(APISERVER_IMAGE):$(APISERVER_VER); \
+	  gcloud auth configure-docker; \
+	  docker pull $(APISERVER_IMAGE):$(APISERVER_VER); \
 	  docker tag $(APISERVER_IMAGE):$(APISERVER_VER) $(APISERVER_CONTAINER_NAME); \
 	fi;
 	docker save --output $@ tigera/cnx-apiserver:$(APISERVER_VER)
@@ -850,7 +857,8 @@ $(RELEASE_DIR_IMAGES)/cnx-apiserver.tar:
 $(RELEASE_DIR_IMAGES)/cnx-queryserver.tar:
 	mkdir -p $(RELEASE_DIR_IMAGES)
 	if [ "$(docker images -q $$(QUERYSERVER_CONTAINER_NAME))" = "" ]; then \
-	  gcloud docker -- pull $(QUERYSERVER_IMAGE):$(QUERYSERVER_VER); \
+	  gcloud auth configure-docker; \
+	  docker pull $(QUERYSERVER_IMAGE):$(QUERYSERVER_VER); \
 	  docker tag $(QUERYSERVER_IMAGE):$(QUERYSERVER_VER) $(QUERYSERVER_CONTAINER_NAME); \
 	fi;
 	docker save --output $@ tigera/cnx-queryserver:$(QUERYSERVER_VER)

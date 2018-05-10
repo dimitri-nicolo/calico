@@ -74,7 +74,7 @@ pipeline{
                         if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
                             sh 'gcloud compute scp $DOCKER_AUTH ubuntu@${BUILD_INSTANCE_NAME}:key.json'
                             sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud auth activate-service-account ${WAVETANK_SERVICE_ACCT} --key-file key.json'"
-                            sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud docker --authorize-only --server gcr.io'"
+                            sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'gcloud auth configure-docker'"
                             sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'docker tag tigera/cnx-node:latest ${NODE_IMAGE_NAME}:${env.BRANCH_NAME}'"
                             sh "gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'docker push ${NODE_IMAGE_NAME}:${env.BRANCH_NAME}'"
 
