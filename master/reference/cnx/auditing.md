@@ -9,7 +9,7 @@ Kubernetes provides a rich set of auditing features to audit log resources acces
 activities in chronological order. See [Kubernetes audit logging documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/){:target="_blank"} for more details.
 
 Audit logging needs to be setup at kubernetes kube-apiserver level. 
-At minimum you need the `--audit-log-path` and `--audit-policy-file` [kube-apiserver flags](https://kubernetes.io/docs/reference/generated/kube-apiserver/){:target="_blank"}
+At minimum you need the `--audit-log-path` and `--audit-policy-file` kube-apiserver flags
 specified, with the former one being the path to a file to output the audit logs and the
 later one being the audit policy configuration.
 
@@ -75,4 +75,3 @@ Use either of the following options to log audit events.
 - [Policy Violation Alerting](policy-violations)
 - [{{site.prodname}} Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on the {{site.prodname}} resource types.
 - [Kubernetes documentation on Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/){:target="_blank"} for details on configuring auditing.
-- [Kubernetes documentation on API Server flags](https://kubernetes.io/docs/reference/generated/kube-apiserver/){:target="_blank"} for audit logging related flags.
