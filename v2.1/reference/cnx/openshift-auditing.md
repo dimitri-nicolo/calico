@@ -90,4 +90,3 @@ Use either of the following options to log audit events.
 - [Policy Violation Alerting](policy-violations)
 - [{{site.prodname}} Resources]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/) for details on the {{site.prodname}} resource types.
 - [Kubernetes documentation on Auditing](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/){:target="_blank"} for details on configuring auditing.
-- [Kubernetes documentation on API Server flags](https://kubernetes.io/docs/reference/generated/kube-apiserver/){:target="_blank"} for audit logging related flags.
