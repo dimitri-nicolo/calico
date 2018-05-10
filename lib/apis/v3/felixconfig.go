@@ -121,6 +121,9 @@ type FelixConfigurationSpec struct {
 	// LogPrefix is the log prefix that Felix uses when rendering LOG rules. [Default: calico-packet]
 	LogPrefix string `json:"logPrefix,omitempty"`
 
+	// LogDropActionOverride specifies whether or not to include the DropActionOverride in the logs when it is triggered.
+	LogDropActionOverride *bool `json:"logDropActionOverride,omitempty"`
+
 	// LogFilePath is the full path to the Felix log. Set to none to disable file logging. [Default: /var/log/calico/felix.log]
 	LogFilePath string `json:"logFilePath,omitempty"`
 

@@ -784,6 +784,15 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
+	if in.LogDropActionOverride != nil {
+		in, out := &in.LogDropActionOverride, &out.LogDropActionOverride
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
 	if in.IPIPEnabled != nil {
 		in, out := &in.IPIPEnabled, &out.IPIPEnabled
 		if *in == nil {

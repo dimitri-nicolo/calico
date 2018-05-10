@@ -2440,6 +2440,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"logDropActionOverride": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogDropActionOverride specifies whether or not to include the DropActionOverride in the logs when it is triggered.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
 						"logFilePath": {
 							SchemaProps: spec.SchemaProps{
 								Description: "LogFilePath is the full path to the Felix log. Set to none to disable file logging. [Default: /var/log/calico/felix.log]",
