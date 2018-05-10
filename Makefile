@@ -207,14 +207,15 @@ endif
 
 	@echo "\nNow push the tag and images."
 	@echo "git push origin $(VERSION)"
-	@echo "gcloud docker -- push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)"
-	@echo "gcloud docker -- push $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):$(VERSION)"
+	@echo "gcloud auth configure-docker"
+	@echo "docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):$(VERSION)"
+	@echo "docker push $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):$(VERSION)"
 	@echo "\nIf this release version is the newest stable release, also tag and push the"
 	@echo "images with the 'latest' tag"
 	@echo "docker tag $(BUILD_IMAGE) $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
 	@echo "docker tag $(QUERYSERVER_IMAGE):latest $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):latest"
-	@echo "gcloud docker -- push $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
-	@echo "gcloud docker -- push $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):latest"
+	@echo "docker push $(REGISTRY_PREFIX)$(BUILD_IMAGE):latest"
+	@echo "docker push $(REGISTRY_PREFIX)$(QUERYSERVER_IMAGE):latest"
 
 .PHONY: compress-release
 compressed-release: release/calicoq
