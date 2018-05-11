@@ -78,12 +78,18 @@ type passthruCallbacks interface {
 	OnNamespaceRemove(proto.NamespaceID)
 }
 
+type ipsecCallbacks interface {
+	OnIPSecBindingAdded(b IPSecBinding)
+	OnIPSecBindingRemoved(b IPSecBinding)
+}
+
 type PipelineCallbacks interface {
 	ipSetUpdateCallbacks
 	rulesUpdateCallbacks
 	endpointCallbacks
 	configCallbacks
 	passthruCallbacks
+	ipsecCallbacks
 }
 
 type CalcGraph struct {
@@ -315,6 +321,12 @@ func NewCalculationGraph(callbacks PipelineCallbacks, hostname string) *CalcGrap
 	//
 	profileDecoder := NewProfileDecoder(callbacks)
 	profileDecoder.RegisterWith(allUpdDispatcher)
+
+	// The IPSecBindingCalculator calculates the bindings between IPsec tunnels and workload IPs.
+	ipSecBindingCalc := NewIPSecBindingCalculator()
+	ipSecBindingCalc.RegisterWith(allUpdDispatcher)
+	ipSecBindingCalc.OnBindingAdded = callbacks.OnIPSecBindingAdded
+	ipSecBindingCalc.OnBindingRemoved = callbacks.OnIPSecBindingRemoved
 
 	return &CalcGraph{
 		AllUpdDispatcher:      allUpdDispatcher,
