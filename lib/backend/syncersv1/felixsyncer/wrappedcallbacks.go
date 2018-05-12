@@ -205,17 +205,6 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 	default:
 		log.Infof("Creating syncer for %s", key)
 
-		// Send a status update for this remote cluster, to indicate that we are synchronizing data.
-		a.callbacks.OnUpdates([]api.Update{{
-			KVPair: model.KVPair{
-				Key: model.RemoteClusterStatusKey{Name: name},
-				Value: &model.RemoteClusterStatus{
-					Status: model.RemoteClusterResyncInProgress,
-				},
-			},
-			UpdateType: api.UpdateTypeKVUpdated,
-		}})
-
 		// Resources that are fetched from remote clusters
 		remoteResources := []watchersyncer.ResourceType{
 			{
@@ -236,6 +225,19 @@ func (a *wrappedCallbacks) createRemoteSyncer(ctx context.Context, key model.Key
 			wrappedCallbacks: a.callbacks,
 			clusterName:      name,
 			insync:           func() { a.handleRemoteInSync(ctx, key, name) },
+			syncErr:          func(err error) { a.handleConnectionFailed(ctx, key, name, err) },
+			resync: func() {
+				// Send a status update for this remote cluster, to indicate that we are synchronizing data.
+				a.callbacks.OnUpdates([]api.Update{{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: name},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterResyncInProgress,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				}})
+			},
 		}
 
 		remoteWatcher := watchersyncer.New(backendClient, remoteResources, &remoteEndpointCallbacks)
