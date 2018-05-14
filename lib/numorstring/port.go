@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+
+	"github.com/go-openapi/spec"
+	openapi "k8s.io/kube-openapi/pkg/common"
 )
 
 // Port represents either a range of numeric ports or a named port.
@@ -140,5 +143,16 @@ func (p Port) String() string {
 		return strconv.FormatUint(uint64(p.MinPort), 10)
 	} else {
 		return fmt.Sprintf("%d:%d", p.MinPort, p.MaxPort)
+	}
+}
+
+func (_ Port) OpenAPIDefinition() openapi.OpenAPIDefinition {
+	return openapi.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type:   []string{"string"},
+				Format: "int-or-string",
+			},
+		},
 	}
 }
