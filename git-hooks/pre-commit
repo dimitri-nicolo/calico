@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2016 Tigera, Inc. All rights reserved.
+# Copyright (c) 2016, 2018 Tigera, Inc. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,6 @@ year=$(date +'%Y')
 copyright_re="Copyright \(c\) .*${year}.* ${copyright_owner}\. All rights reserved\."
 
 py_copyright_check_failed=false
-py_apache_check_failed=false
 
 for filename in $changed_py_files; do
   if [ ! -e  "${filename}" ]; then
@@ -44,10 +43,6 @@ for filename in $changed_py_files; do
   if ! grep -q -E "$copyright_re" "${filename}"; then
     echo "  Changed file is missing ${copyright_owner} copyright:" ${filename}
     py_copyright_check_failed=true
-  fi
-  if ! grep -q -E "Licensed under the Apache License, Version 2.0" "${filename}"; then
-    echo "  Changed file is missing Apache license:" ${filename}
-    py_apache_check_failed=true
   fi
 done
 
@@ -63,29 +58,11 @@ if $py_copyright_check_failed; then
   echo "Change expected copyright owner by creating git-hooks/settings.sh."
 fi
 
-if $py_apache_check_failed; then
-  echo
-  echo "Python Apache license header should be:"
-  echo
-  echo '# Licensed under the Apache License, Version 2.0 (the "License");'
-  echo '# you may not use this file except in compliance with the License.'
-  echo '# You may obtain a copy of the License at'
-  echo '#'
-  echo '#     http://www.apache.org/licenses/LICENSE-2.0'
-  echo '#'
-  echo '# Unless required by applicable law or agreed to in writing, software'
-  echo '# distributed under the License is distributed on an "AS IS" BASIS,'
-  echo '# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.'
-  echo '# See the License for the specific language governing permissions and'
-  echo '# limitations under the License.'
-fi
-
 
 # Run go fmt over the changed files.
 echo "Checking changed Go files for formatting, license etc..."
 go_copyright_check_failed=false
 gofmt_failed=false
-go_apache_check_failed=false
 logrus_hook_check_failed=false
 focussing_check_failed=false
 junit_hook_check_failed=false
@@ -97,10 +74,6 @@ for filename in $changed_go_files; do
   if gofmt -d "${filename}" | grep '.'; then
     echo "  gofmt would make changes to file:" ${filename}
     gofmt_failed=true
-  fi
-  if ! grep -q -E "Licensed under the Apache License, Version 2.0" "${filename}"; then
-    echo "  Changed file is missing Apache license:" ${filename}
-    go_apache_check_failed=true
   fi
   if echo $filename | grep -q '_suite_test.go'; then
     if ! grep -q 'HookLogrus' "$filename"; then
@@ -181,28 +154,8 @@ if $go_copyright_check_failed; then
   echo "Change expected copyright owner by creating git-hooks/settings.sh."
 fi
 
-if $go_apache_check_failed; then
-  echo
-  echo "Apache license header should be as follows (with blank line before"
-  echo "package):"
-  echo
-  echo '// Licensed under the Apache License, Version 2.0 (the "License");'
-  echo '// you may not use this file except in compliance with the License.'
-  echo '// You may obtain a copy of the License at'
-  echo '//'
-  echo '//     http://www.apache.org/licenses/LICENSE-2.0'
-  echo '//'
-  echo '// Unless required by applicable law or agreed to in writing, software'
-  echo '// distributed under the License is distributed on an "AS IS" BASIS,'
-  echo '// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.'
-  echo '// See the License for the specific language governing permissions and'
-  echo '// limitations under the License.'
-  echo
-  echo 'package ...'
-fi
-
-if $go_apache_check_failed || $go_copyright_check_failed || \
-   $py_apache_check_failed || $py_copyright_check_failed || \
+if $go_copyright_check_failed || \
+   $py_copyright_check_failed || \
    $logrus_hook_check_failed || $focussing_check_failed || \
    $junit_hook_check_failed ; then
   exit 1
