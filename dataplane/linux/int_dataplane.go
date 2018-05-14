@@ -28,6 +28,7 @@ import (
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/ifacemonitor"
+	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
@@ -181,6 +182,8 @@ type InternalDataplane struct {
 	ipSets               []*ipsets.IPSets
 
 	ipipManager *ipipManager
+
+	ipSecDataplane ipSecDataplane
 
 	ifaceMonitor     *ifacemonitor.InterfaceMonitor
 	ifaceUpdates     chan *ifaceUpdate
@@ -421,6 +424,11 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	for _, t := range dp.iptablesRawTables {
 		dp.allIptablesTables = append(dp.allIptablesTables, t)
 	}
+
+	// Set up IPsec.
+	dp.ipSecDataplane = ipsec.NewDataplane("192.168.171.136", "topsecret")
+	ipSecManager := newIPSecManager(dp.ipSecDataplane)
+	dp.allManagers = append(dp.allManagers, ipSecManager)
 
 	// Register that we will report liveness and readiness.
 	if config.HealthAggregator != nil {

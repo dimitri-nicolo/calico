@@ -90,4 +90,5 @@ import:
   version: f98634e408857669d61064b283c4cde240622865
   subpackages:
   - xfs
-
+- package: github.com/bronze1man/goStrongswanVici
+  repo:    git@github.com:tigera/goStrongswanVici
