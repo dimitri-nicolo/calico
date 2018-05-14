@@ -26,6 +26,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"net"
+
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsec"
@@ -426,9 +428,28 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	}
 
 	// Set up IPsec.
-	dp.ipSecDataplane = ipsec.NewDataplane("192.168.171.136", "topsecret")
-	ipSecManager := newIPSecManager(dp.ipSecDataplane)
-	dp.allManagers = append(dp.allManagers, ipSecManager)
+	// FIXME: use correct local tunnel address (the one from our HostIP?)
+	addrs, _ := net.InterfaceAddrs()
+	for _, a := range addrs {
+		ipNet, ok := a.(*net.IPNet)
+		if !ok {
+			continue
+		}
+
+		ip := ipNet.IP.String()
+		if strings.HasPrefix(ip, "127.") {
+			continue
+		}
+		if strings.Contains(ip, ":") {
+			continue
+		}
+
+		// FIXME: "topsecret" isn't the most secure PSK.
+		dp.ipSecDataplane = ipsec.NewDataplane(ip, "topsecret")
+		ipSecManager := newIPSecManager(dp.ipSecDataplane)
+		dp.allManagers = append(dp.allManagers, ipSecManager)
+		break
+	}
 
 	// Register that we will report liveness and readiness.
 	if config.HealthAggregator != nil {

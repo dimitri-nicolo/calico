@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sync"
 
+	"time"
+
 	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -24,6 +26,13 @@ func NewDataplane(localTunnelAddr string, preSharedKey string) *Dataplane { // S
 		panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
 	}
 	d.ikeDaemon = ikeDaemon
+
+	time.Sleep(1 * time.Second)
+	err = ikeDaemon.LoadSharedKey(localTunnelAddr, preSharedKey)
+	if err != nil {
+		panic(err)
+	}
+
 	return d
 }
 

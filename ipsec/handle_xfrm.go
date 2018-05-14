@@ -1,3 +1,4 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 // Copyright 2017 flannel authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +19,7 @@ import (
 	"fmt"
 	"net"
 
-	log "github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
 
@@ -39,9 +40,9 @@ func AddXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, re
 		Reqid: reqID,
 	}
 
-	log.Infof("Adding ipsec policy: %+v", tmpl)
-
 	policy.Tmpls = append(policy.Tmpls, tmpl)
+
+	log.Infof("Adding ipsec policy: %+v", policy)
 
 	if err := netlink.XfrmPolicyAdd(&policy); err != nil {
 		fmt.Println(fmt.Errorf("error adding policy: %+v err: %v", policy, err))

@@ -686,12 +686,13 @@ func (buf *EventSequencer) OnIPSecBindingRemoved(b IPSecBinding) {
 func (buf *EventSequencer) flushIPSecBindings() {
 	updatesByTunnel := map[ip.Addr]*proto.IPSecBindingUpdate{}
 
-	getOrCreateUpd := func(addr ip.Addr) *proto.IPSecBindingUpdate {
-		upd := updatesByTunnel[addr]
+	getOrCreateUpd := func(tunnelAddr ip.Addr) *proto.IPSecBindingUpdate {
+		upd := updatesByTunnel[tunnelAddr]
 		if upd == nil {
 			upd = &proto.IPSecBindingUpdate{}
-			updatesByTunnel[addr] = upd
+			updatesByTunnel[tunnelAddr] = upd
 		}
+		upd.TunnelAddr = tunnelAddr.String()
 		return upd
 	}
 	buf.pendingIPSecBindingAdds.Iter(func(item interface{}) error {

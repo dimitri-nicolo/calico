@@ -1,3 +1,4 @@
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 // Copyright 2017 flannel authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,15 +20,19 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"context"
 
+	"io/ioutil"
+	"strconv"
+
+	"strings"
+
 	"github.com/bronze1man/goStrongswanVici"
-	log "github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 )
 
 type Uri struct {
@@ -41,6 +46,28 @@ type CharonIKEDaemon struct {
 }
 
 func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup) (*CharonIKEDaemon, error) {
+	os.MkdirAll("/var/run/", 0700)
+	if f, err := os.Open("/var/run/charon.pid"); err == nil {
+		defer f.Close()
+		bs, err := ioutil.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+		pid, err := strconv.Atoi(strings.TrimSpace(string(bs)))
+		if err != nil {
+			return nil, err
+		}
+		log.WithField("pid", pid).Info("charon already running, killing it")
+		proc, err := os.FindProcess(pid)
+		if err == nil {
+			err = proc.Kill()
+			if err != nil {
+				log.WithError(err).Error("Failed to kill old Charon")
+				return nil, err
+			}
+		}
+		os.Remove("/var/run/charon.pid")
+	}
 
 	charon := &CharonIKEDaemon{ctx: ctx, espProposal: "aes128gcm16-sha256-prfsha256-ecp256"}
 
@@ -127,14 +154,18 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 		Owners: []string{remoteIP},
 	}
 
+	retried := false
 	for {
 		err = client.LoadShared(sharedKey)
 		if err != nil {
-			log.Errorf("Failed to load my key. Retrying. %v", err)
+			log.Errorf("Failed to load key for %v. Retrying. %v", remoteIP, err)
 			time.Sleep(time.Second)
-		} else {
-			break
+			retried = true
+			continue
+		} else if retried {
+			log.Info("Loaded key on retry")
 		}
+		break
 	}
 
 	log.Infof("Loaded shared key for: %v", remoteIP)
@@ -144,6 +175,13 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
 	var err error
 	var client *goStrongswanVici.ClientConn
+
+	if localIP == "" || remoteIP == "" {
+		log.WithFields(log.Fields{
+			"localIP":  localIP,
+			"remoteIP": remoteIP,
+		}).Panic("Missing local or remote address")
+	}
 
 	client, err = charon.getClient(true)
 	if err != nil {
