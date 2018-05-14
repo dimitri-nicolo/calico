@@ -44,7 +44,11 @@ pipeline{
                     '''
                     sh 'gcloud compute scp $SSH_KEY ubuntu@${BUILD_INSTANCE_NAME}:.ssh/id_rsa'
                     sh '''
-                        gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'sudo apt-get install -y docker.io make && \
+                        gcloud compute ssh ubuntu@${BUILD_INSTANCE_NAME} -- 'export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
+                        echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
+                        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - && \
+                        sudo apt-get update && \
+                        sudo apt-get install -y docker.io make google-cloud-sdk && \
                         sudo usermod -aG docker ubuntu && \
                         ssh-keyscan -t rsa github.com 2>&1 >> .ssh/known_hosts && \
                         chmod 600 .ssh/id_rsa'
