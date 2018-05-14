@@ -19,10 +19,13 @@ package server
 import (
 	"fmt"
 	"net"
+	"strings"
 
+	"github.com/go-openapi/spec"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
+	"github.com/tigera/calico-k8sapiserver/pkg/openapi"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
@@ -59,6 +62,17 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 	}
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
+	serverConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, apiserver.Scheme)
+	if serverConfig.OpenAPIConfig.Info == nil {
+		serverConfig.OpenAPIConfig.Info = &spec.Info{}
+	}
+	if serverConfig.OpenAPIConfig.Info.Version == "" {
+		if serverConfig.Version != nil {
+			serverConfig.OpenAPIConfig.Info.Version = strings.Split(serverConfig.Version.String(), "-")[0]
+		} else {
+			serverConfig.OpenAPIConfig.Info.Version = "unversioned"
+		}
+	}
 	if err := o.RecommendedOptions.Etcd.ApplyTo(&serverConfig.Config); err != nil {
 		return nil, err
 	}
