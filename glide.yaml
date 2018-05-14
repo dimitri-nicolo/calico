@@ -57,6 +57,7 @@ import:
 - package: github.com/gogo/protobuf
   version: ^0.5.0
 - package: github.com/vishvananda/netlink
+  version: dc00cf9d5c07f9a1e0ccb307443b2194ca1aaacb
 - package: github.com/onsi/ginkgo
   version: ^1.4.0
 - package: github.com/onsi/gomega

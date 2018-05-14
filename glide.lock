@@ -303,7 +303,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: 769bb84935352fee05c1390d5301ed39b95208d2
+  version: dc00cf9d5c07f9a1e0ccb307443b2194ca1aaacb
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
