@@ -32,13 +32,14 @@ import (
 )
 
 type TopologyOptions struct {
-	FelixLogSeverity  string
-	EnableIPv6        bool
-	ExtraEnvVars      map[string]string
-	ExtraVolumes      map[string]string
-	WithTypha         bool
-	WithFelixTyphaTLS bool
-	TyphaLogSeverity  string
+	FelixLogSeverity      string
+	EnableIPv6            bool
+	ExtraEnvVars          map[string]string
+	ExtraVolumes          map[string]string
+	WithTypha             bool
+	WithFelixTyphaTLS     bool
+	TyphaLogSeverity      string
+	WithPrometheusPortTLS bool
 }
 
 func DefaultTopologyOptions() TopologyOptions {
@@ -131,14 +132,17 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		}).ShouldNot(HaveOccurred())
 	}
 
+	typhaIP := ""
 	if opts.WithTypha {
 		typha := RunTypha(infra, opts)
 		opts.ExtraEnvVars["FELIX_TYPHAADDR"] = typha.IP + ":5473"
+		typhaIP = typha.IP
 	}
 
 	for i := 0; i < n; i++ {
 		// Then start Felix and create a node for it.
 		felix := RunFelix(infra, opts)
+		felix.TyphaIP = typhaIP
 
 		var w chan struct{}
 		if felix.ExpectedIPIPTunnelAddr != "" {
