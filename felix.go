@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -28,9 +27,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/docopt/docopt-go"
+	docopt "github.com/docopt/docopt-go"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -57,6 +55,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	"github.com/projectcalico/libcalico-go/lib/security"
 	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/typha/pkg/syncclient"
 	licClient "github.com/tigera/licensing/client"
@@ -582,8 +581,13 @@ func servePrometheusMetrics(configParams *config.Config) {
 				prometheus.Unregister(prometheus.NewProcessCollector(os.Getpid(), ""))
 			}
 		}
-		http.Handle("/metrics", promhttp.Handler())
-		err := http.ListenAndServe(fmt.Sprintf(":%v", configParams.PrometheusMetricsPort), nil)
+		err := security.ServePrometheusMetrics(
+			prometheus.DefaultGatherer,
+			configParams.PrometheusMetricsPort,
+			configParams.PrometheusMetricsCertFile,
+			configParams.PrometheusMetricsKeyFile,
+			configParams.PrometheusMetricsCAFile,
+		)
 		log.WithError(err).Error(
 			"Prometheus metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)
@@ -815,7 +819,7 @@ func loadConfigFromDatastore(
 
 	// Check if the license is valid. In CNX v2.1, we continue to work even after the license expires and
 	// even after the end of the grace period, but we show this warning message and continue to work as licensed cluster.
-	if errLic = claims.Validate(); errLic!= nil {
+	if errLic = claims.Validate(); errLic != nil {
 		log.Errorf("Your license has expired. Please update your license to restore normal operations. Contact Tigera support or email licensing@tigera.io")
 	} else {
 		log.Info("License is valid")

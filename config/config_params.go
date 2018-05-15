@@ -160,12 +160,15 @@ type Config struct {
 
 	EnableNflogSize bool `config:"bool;false"`
 
-	HealthEnabled                   bool `config:"bool;false"`
-	HealthPort                      int  `config:"int(0,65535);9099"`
-	PrometheusMetricsEnabled        bool `config:"bool;false"`
-	PrometheusMetricsPort           int  `config:"int(0,65535);9091"`
-	PrometheusGoMetricsEnabled      bool `config:"bool;true"`
-	PrometheusProcessMetricsEnabled bool `config:"bool;true"`
+	HealthEnabled                   bool   `config:"bool;false"`
+	HealthPort                      int    `config:"int(0,65535);9099"`
+	PrometheusMetricsEnabled        bool   `config:"bool;false"`
+	PrometheusMetricsPort           int    `config:"int(0,65535);9091"`
+	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
+	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
+	PrometheusMetricsCertFile       string `config:"file(must-exist);"`
+	PrometheusMetricsKeyFile        string `config:"file(must-exist);"`
+	PrometheusMetricsCAFile         string `config:"file(must-exist);"`
 
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
@@ -176,9 +179,9 @@ type Config struct {
 
 	PrometheusReporterEnabled   bool          `config:"bool;false"`
 	PrometheusReporterPort      int           `config:"int(0,65535);9092"`
-	PrometheusReporterCertFile  string        `config:"string;"`
-	PrometheusReporterKeyFile   string        `config:"string;"`
-	PrometheusReporterCAFile    string        `config:"string;"`
+	PrometheusReporterCertFile  string        `config:"file(must-exist);"`
+	PrometheusReporterKeyFile   string        `config:"file(must-exist);"`
+	PrometheusReporterCAFile    string        `config:"file(must-exist);"`
 	SyslogReporterNetwork       string        `config:"string;"`
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
@@ -203,7 +206,7 @@ type Config struct {
 	LicenseValid bool // Don't add config tag here!
 
 	// LicensePollingIntervalSecs is how frequently we check for license update.
-	LicensePollingIntervalSecs  time.Duration `config:"seconds;30"`
+	LicensePollingIntervalSecs time.Duration `config:"seconds;30"`
 
 	// State tracking.
 
