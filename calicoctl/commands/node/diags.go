@@ -89,7 +89,7 @@ func runDiags(logDir string) {
 		{"Dumping iptables (IPv4)", "iptables-save -c", "ipv4_tables"},
 		{"Dumping iptables (IPv6)", "ip6tables-save -c", "ipv6_tables"},
 		{"Dumping ipsets", "ipset list", "ipsets"},
-		{"Dumping ipsets (container)", "docker run --privileged --net=host tigera/cnx-node ipset list", "ipset_container"},
+		{"Dumping ipsets (container)", "docker run --privileged --net=host calico/node ipset list", "ipset_container"},
 		{"Copying journal for cnx-node.service", "journalctl -u cnx-node.service --no-pager", "journalctl_cnx_node"},
 		{"Dumping felix stats", "pkill -SIGUSR1 felix", ""},
 	}
@@ -165,7 +165,7 @@ func getNodeContainerLogs(logDir string) {
 	os.Mkdir(logDir, os.ModeDir)
 
 	// Get a list of Calico containers running on this Node.
-	result, err := exec.Command("docker", "ps", "-a", "--filter", "\"name=calico\"", "--format", "{{.Names}}: {{.CreatedAt}}").CombinedOutput()
+	result, err := exec.Command("docker", "ps", "-a", "--filter", "name=calico", "--format", "{{.Names}}: {{.CreatedAt}}").CombinedOutput()
 	if err != nil {
 		fmt.Printf("Could not run docker command: %s\n", string(result))
 		return
