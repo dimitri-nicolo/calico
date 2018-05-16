@@ -7,7 +7,7 @@ test: ut
 # Define some constants
 #######################
 K8S_VERSION       = v1.8.1
-GO_BUILD_VER     ?= v0.9
+GO_BUILD_VER     ?= v0.12
 CALICO_BUILD     ?= calico/go-build:$(GO_BUILD_VER)
 PACKAGE_NAME     ?= projectcalico/libcalico-go
 LOCAL_USER_ID    ?= $(shell id -u $$USER)
@@ -218,7 +218,7 @@ $(BINDIR)/deepcopy-gen: vendor/.up-to-date
 
 $(BINDIR)/openapi-gen: vendor/.up-to-date
 	$(DOCKER_GO_BUILD) \
-    		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
+		sh -c 'go build -o $@ $(LIBCALICO-GO_PKG)/vendor/k8s.io/code-generator/cmd/openapi-gen'
 
 # Create a list of files upon which the generated file depends, skip the generated file itself
 UPGRADE_SRCS := $(filter-out ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go, \
