@@ -1,5 +1,5 @@
-hash: acbe59ae1310c22249231f46f4b2c6faadb193e73f3b2406f38bbaee07290f39
-updated: 2018-05-16T17:16:17.326987927Z
+hash: 3584c3eb82eaab1cfd850ac2c02265a9595a4cd27b6576ac32c63c3683de7591
+updated: 2018-05-17T16:04:33.01243385-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
@@ -34,7 +34,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
+  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
@@ -181,7 +181,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: db4f8a84c381a5c1b7e2390a7aaa3b30dd3a3169
+  version: 00d31bd57278c707283084690bf93cb730881983
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -235,11 +235,11 @@ imports:
   - prometheus
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: d811d2e9bf898806ecfb6ef6296774b13ffc314c
+  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -268,7 +268,7 @@ imports:
   - list
   - trie/ctrie
 - name: golang.org/x/crypto
-  version: 1a580b3eff7814fc9b40602fd35256c63b50f491
+  version: 81e90905daefcd6fd217b62423c0908922eadb30
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -324,7 +324,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 962cbd1200af94a5a35ba8d512e9f91271b4d01a
+  version: 4f7eeb5305a4ba1966344836ba4af9996b7b4e05
   subpackages:
   - internal
   - internal/app_identity
