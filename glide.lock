@@ -1,5 +1,5 @@
-hash: 8f6acc72d842f5aa1a228bc2f16b0bd0439330c6af742fa2e00907c113b42b51
-updated: 2018-05-17T09:30:37.367294283Z
+hash: f7c9660b3348db95b624d6ef26eb99a1fb7239e59f6b09f8523a6a7716b2b952
+updated: 2018-05-17T16:29:24.372799884-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
 - name: github.com/containernetworking/cni
@@ -62,7 +62,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -214,7 +214,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: db4f8a84c381a5c1b7e2390a7aaa3b30dd3a3169
+  version: 00d31bd57278c707283084690bf93cb730881983
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -255,7 +255,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 038ca6e2e02725a30e45083f3254f8b0579bd134
+  version: a0a97c5cc67f30fa0d1eed19021e592f42ac4b4b
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -268,11 +268,11 @@ imports:
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: d811d2e9bf898806ecfb6ef6296774b13ffc314c
+  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -305,7 +305,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: dc00cf9d5c07f9a1e0ccb307443b2194ca1aaacb
+  version: 85aa3b74a43a9fa174a588ce9a042c9b71b0842c
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
@@ -370,7 +370,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: b9aad5d628b283f265adf8d3557faae187a8d015
+  version: 4f7eeb5305a4ba1966344836ba4af9996b7b4e05
   subpackages:
   - internal
   - internal/app_identity
@@ -382,7 +382,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: 7fd901a49ba6a7f87732eb344f6e3c5b19d1b200
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis
   - googleapis/rpc/status
@@ -544,7 +544,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: b3f03f55328800731ce03a164b80973014ecd455
+  version: 0c329704159e3b051aafac400b15baacf2a94a04
   subpackages:
   - pkg/common
 testImports: []
