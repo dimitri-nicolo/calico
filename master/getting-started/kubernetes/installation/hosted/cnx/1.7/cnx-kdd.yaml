@@ -311,6 +311,17 @@ spec:
         operator: Exists
       imagePullSecrets:
         - name: cnx-pull-secret
+      # cnx-manager-init-pem writes a "pem" file into a volume shared by
+      # cnx-manager-proxy.
+      initContainers:
+      - name: cnx-manager-init-pem # create /cache/pem for cnx-manager-proxy
+        image: alpine:3.7
+        command: ['sh', '-c', 'cat /etc/cnx-manager-web-tls/cert /etc/cnx-manager-web-tls/key > /cache/pem']
+        volumeMounts:
+        - mountPath: /cache
+          name: cnx-cache-volume
+        - mountPath: /etc/cnx-manager-web-tls
+          name: cnx-manager-tls
       containers:
       - name: cnx-manager
         image: {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
@@ -371,6 +382,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
+        - mountPath: /cache
+          name: cnx-cache-volume
         livenessProbe:
           httpGet:
             path: /
@@ -379,6 +392,8 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 3
       volumes:
+      - name: cnx-cache-volume
+        emptyDir: {}
       - name: cnx-manager-tls
         secret:
           secretName: cnx-manager-tls
