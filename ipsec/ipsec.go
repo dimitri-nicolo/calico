@@ -48,14 +48,14 @@ type Dataplane struct {
 	wg sync.WaitGroup
 }
 
-func (d *Dataplane) AddBinding(tunnelAddress, workloadAddress string) {
-	log.Debug("Adding IPsec binding", workloadAddress, "via tunnel", tunnelAddress)
-	if _, ok := d.bindingsByTunnel[tunnelAddress]; !ok {
-		d.configureTunnel(tunnelAddress)
-		d.bindingsByTunnel[tunnelAddress] = set.New()
+func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
+	log.Debug("Adding IPsec binding", workloadAddress, "via tunnel", remoteTunnelAddr)
+	if _, ok := d.bindingsByTunnel[remoteTunnelAddr]; !ok {
+		d.configureTunnel(remoteTunnelAddr)
+		d.bindingsByTunnel[remoteTunnelAddr] = set.New()
 	}
-	d.bindingsByTunnel[tunnelAddress].Add(workloadAddress)
-	d.configureXfrm(tunnelAddress, workloadAddress)
+	d.bindingsByTunnel[remoteTunnelAddr].Add(workloadAddress)
+	d.configureXfrm(remoteTunnelAddr, workloadAddress)
 }
 
 func (d *Dataplane) RemoveBinding(tunnelAddress, workloadAddress string) {
