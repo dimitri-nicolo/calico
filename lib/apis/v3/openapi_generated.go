@@ -2523,6 +2523,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "",
 							},
 						},
+						"healthHost": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
 						"healthPort": {
 							SchemaProps: spec.SchemaProps{
 								Type:   []string{"integer"},
@@ -2613,6 +2619,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 										},
 									},
 								},
+							},
+						},
+						"policySyncPathPrefix": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PolicySyncPathPrefix is used to by Felix to communicate policy changes to external services, like Application layer policy. [Default: Empty]",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"usageReportingEnabled": {
@@ -3010,10 +3023,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
+					Description: "HTTPMatch is an optional field that apply only to HTTP requests The Methods and Path fields are joined with AND",
 					Properties: map[string]spec.Schema{
 						"methods": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Methods is an optional field that restricts the rule to apply only to HTTP requests that use one of the listed HTTP Methods (e.g. GET, PUT, etc.)",
+								Description: "Methods is an optional field that restricts the rule to apply only to HTTP requests that use one of the listed HTTP Methods (e.g. GET, PUT, etc.) Multiple methods are OR'd together.",
 								Type:        []string{"array"},
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
@@ -3023,6 +3037,42 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 										},
 									},
 								},
+							},
+						},
+						"paths": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Paths is an optional field that restricts the rule to apply to HTTP requests that use one of the listed HTTP Paths. Multiple paths are OR'd together. e.g: - exact: /foo - prefix: /bar NOTE: Each entry may ONLY specify either a `exact` or a `prefix` match. The validator will check for it.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HTTPPath specifies an HTTP path to match. It may be either of the form: exact: <path>: which matches the path exactly or prefix: <path-prefix>: which matches the path prefix",
+					Properties: map[string]spec.Schema{
+						"exact": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"prefix": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
 							},
 						},
 					},

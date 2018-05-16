@@ -152,8 +152,10 @@ type FelixConfigurationSpec struct {
 
 	DisableConntrackInvalidCheck *bool `json:"disableConntrackInvalidCheck,omitempty"`
 
-	HealthEnabled *bool `json:"healthEnabled,omitempty"`
-	HealthPort    *int  `json:"healthPort,omitempty"`
+	HealthEnabled *bool   `json:"healthEnabled,omitempty"`
+	HealthHost    *string `json:"healthHost,omitempty"`
+	HealthPort    *int    `json:"healthPort,omitempty"`
+
 	// PrometheusMetricsEnabled enables the experimental Prometheus metrics server in Felix if set to true. [Default: false]
 	PrometheusMetricsEnabled *bool `json:"prometheusMetricsEnabled,omitempty"`
 	// PrometheusMetricsPort is the TCP port that the experimental Prometheus metrics server should bind to. [Default:9091]
@@ -185,6 +187,10 @@ type FelixConfigurationSpec struct {
 	// KubeNodePortRanges holds list of port ranges used for service node ports. Only used if felix detects kube-proxy running in ipvs mode.
 	// Felix uses these ranges to separate host and workload traffic. [Default: 30000:32767].
 	KubeNodePortRanges *[]numorstring.Port `json:"kubeNodePortRanges,omitempty" validate:"omitempty,dive"`
+
+	// PolicySyncPathPrefix is used to by Felix to communicate policy changes to external services,
+	// like Application layer policy. [Default: Empty]
+	PolicySyncPathPrefix string `json:"policySyncPathPrefix,omitempty"`
 
 	// UsageReportingEnabled reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage
 	// server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]

@@ -110,10 +110,22 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment.
 				expectedCacheSize += len(defaultKubernetesResource)
-				syncTester.ExpectCacheSize(expectedCacheSize)
 				for _, r := range defaultKubernetesResource {
 					syncTester.ExpectData(r)
 				}
+				expectedCacheSize += func(syncTester *testutils.SyncerTester, namespaces []string) int {
+					for _, n := range namespaces {
+						syncTester.ExpectData(model.KVPair{
+							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
+							Value: &model.ProfileRules{
+								InboundRules:  nil,
+								OutboundRules: nil,
+							},
+						})
+					}
+					return len(namespaces)
+				}(syncTester, []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"})
+				syncTester.ExpectCacheSize(expectedCacheSize)
 			}
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
