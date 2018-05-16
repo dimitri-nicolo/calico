@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 )
 
 var _ = DescribeTable("Config parsing",
@@ -68,8 +69,55 @@ var _ = DescribeTable("Config parsing",
 	Entry("LogSeveritySys", "LogSeveritySys", "error", "ERROR"),
 	Entry("LogSeveritySys", "LogSeveritySys", "critical", "CRITICAL"),
 
+	Entry("HealthEnabled", "HealthEnabled", "true", true),
+	Entry("HealthHost", "HealthHost", "127.0.0.1", "127.0.0.1"),
+	Entry("HealthPort", "HealthPort", "1234", int(1234)),
+
 	Entry("PrometheusMetricsEnabled", "PrometheusMetricsEnabled", "true", true),
 	Entry("PrometheusMetricsPort", "PrometheusMetricsPort", "1234", int(1234)),
 	Entry("PrometheusGoMetricsEnabled", "PrometheusGoMetricsEnabled", "false", false),
 	Entry("PrometheusProcessMetricsEnabled", "PrometheusProcessMetricsEnabled", "false", false),
+)
+
+var _ = DescribeTable("Config validation",
+	func(settings map[string]string, ok bool) {
+		cfg := New()
+		cfg.UpdateFrom(settings, ConfigFile)
+		err := cfg.Validate()
+		log.WithError(err).Info("Validation result")
+		if !ok {
+			Expect(err).To(HaveOccurred())
+		} else {
+			Expect(err).NotTo(HaveOccurred())
+		}
+	},
+
+	Entry("no settings", map[string]string{}, true),
+	Entry("just one TLS setting", map[string]string{
+		"ServerKeyFile": "/usr",
+	}, false),
+	Entry("TLS certs and key but no CN or URI SAN", map[string]string{
+		"ServerKeyFile":  "/usr",
+		"ServerCertFile": "/usr",
+		"CAFile":         "/usr",
+	}, false),
+	Entry("TLS certs and key and CN but no URI SAN", map[string]string{
+		"ServerKeyFile":  "/usr",
+		"ServerCertFile": "/usr",
+		"CAFile":         "/usr",
+		"ClientCN":       "typha-peer",
+	}, true),
+	Entry("TLS certs and key and URI SAN but no CN", map[string]string{
+		"ServerKeyFile":  "/usr",
+		"ServerCertFile": "/usr",
+		"CAFile":         "/usr",
+		"ClientURISAN":   "spiffe://k8s.example.com/typha-peer",
+	}, true),
+	Entry("all Felix-Typha TLS params", map[string]string{
+		"ServerKeyFile":  "/usr",
+		"ServerCertFile": "/usr",
+		"CAFile":         "/usr",
+		"ClientCN":       "typha-peer",
+		"ClientURISAN":   "spiffe://k8s.example.com/typha-peer",
+	}, true),
 )
