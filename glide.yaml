@@ -36,7 +36,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: c8829d2bb9da69b0814b60e26b6ea32875e3b8c5
+  version: merge-open-source
   subpackages:
   - lib
 - package: github.com/tigera/licensing
@@ -65,7 +65,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 3fcfb3bf75f1704faaf52820040b2dcd220d51ff
+  version: merge-open-source
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful

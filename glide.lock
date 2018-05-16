@@ -1,5 +1,5 @@
-hash: 29b072c61cb6e00400ac7b6a1fb83fde3bf2fec6b1202f3ff89badd34ab4df02
-updated: 2018-05-15T11:22:20.190663411Z
+hash: 1a02382b145ab62739493537fd7a8729d5a73928a7beb282c015b995b28a6253
+updated: 2018-05-16T11:23:35.139779764Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -211,7 +211,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: c8829d2bb9da69b0814b60e26b6ea32875e3b8c5
+  version: eae054a76eee27b81ac6c44cfd3353d733afdd48
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -252,11 +252,12 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 3fcfb3bf75f1704faaf52820040b2dcd220d51ff
+  version: 71844956ae3abeed4f76ab90af303378e67d8ea5
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
+  - pkg/tlsutils
 - name: github.com/prometheus/client_golang
   version: 967789050ba94deca04a5e84cce8ad472ce313c1
   subpackages:
