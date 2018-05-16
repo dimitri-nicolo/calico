@@ -106,6 +106,18 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
+							Value: &model.ProfileRules{
+								InboundRules:  nil,
+								OutboundRules: nil,
+							},
+						},
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
 			}
 
 			// Sanitize the actual events received to remove revision info and to handle prefix matching of the
@@ -215,6 +227,18 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 				for _, r := range defaultKubernetesResource {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair:     r,
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
+							Value: &model.ProfileRules{
+								InboundRules:  nil,
+								OutboundRules: nil,
+							},
+						},
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}
@@ -481,6 +505,18 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 				for _, r := range defaultKubernetesResource {
 					expectedEvents = append(expectedEvents, api.Update{
 						KVPair:     r,
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
+							Value: &model.ProfileRules{
+								InboundRules:  nil,
+								OutboundRules: nil,
+							},
+						},
 						UpdateType: api.UpdateTypeKVNew,
 					})
 				}

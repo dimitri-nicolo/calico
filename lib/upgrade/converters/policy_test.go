@@ -433,7 +433,7 @@ var policyTableBackend = []struct {
 		},
 		v3API: apiv3.GlobalNetworkPolicy{
 			ObjectMeta: v1.ObjectMeta{
-				Name: "somekey",
+				Name: "default.somekey",
 			},
 			Spec: apiv3.GlobalNetworkPolicySpec{
 				Order: &order1,
@@ -445,6 +445,7 @@ var policyTableBackend = []struct {
 				PreDNAT:        true,
 				ApplyOnForward: true,
 				Types:          []apiv3.PolicyType{apiv3.PolicyTypeIngress},
+				Tier:           "default",
 			},
 		},
 	},
