@@ -14,14 +14,15 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func NewDataplane(localTunnelAddr string, preSharedKey string) *Dataplane { // Start the charon
+func NewDataplane(localTunnelAddr string, preSharedKey string, ikeProposal, espProposal string) *Dataplane { // Start the charon
 	d := &Dataplane{
 		preSharedKey:     preSharedKey,
 		localTunnelAddr:  localTunnelAddr,
 		bindingsByTunnel: map[string]set.Set{},
+		ikeProposal:      ikeProposal,
 	}
 
-	ikeDaemon, err := NewCharonIKEDaemon(context.TODO(), &d.wg)
+	ikeDaemon, err := NewCharonIKEDaemon(context.TODO(), &d.wg, espProposal)
 	if err != nil {
 		panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
 	}
@@ -38,6 +39,7 @@ func NewDataplane(localTunnelAddr string, preSharedKey string) *Dataplane { // S
 
 type Dataplane struct {
 	preSharedKey string
+	ikeProposal  string
 	ikeDaemon    *CharonIKEDaemon
 
 	localTunnelAddr  string
@@ -111,7 +113,7 @@ func (d *Dataplane) configureTunnel(tunnelAddr string) {
 		return
 	}
 	panicIfErr(d.ikeDaemon.LoadSharedKey(tunnelAddr, d.preSharedKey))
-	panicIfErr(d.ikeDaemon.LoadConnection(d.localTunnelAddr, tunnelAddr))
+	panicIfErr(d.ikeDaemon.LoadConnection(d.localTunnelAddr, tunnelAddr, d.ikeProposal))
 }
 
 func (d *Dataplane) removeTunnel(tunnelAddr string) {

@@ -45,7 +45,7 @@ type CharonIKEDaemon struct {
 	ctx         context.Context
 }
 
-func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup) (*CharonIKEDaemon, error) {
+func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal string) (*CharonIKEDaemon, error) {
 	os.MkdirAll("/var/run/", 0700)
 	if f, err := os.Open("/var/run/charon.pid"); err == nil {
 		defer f.Close()
@@ -69,7 +69,7 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup) (*CharonIKEDaem
 		os.Remove("/var/run/charon.pid")
 	}
 
-	charon := &CharonIKEDaemon{ctx: ctx, espProposal: "aes128gcm16-sha256-prfsha256-ecp256"}
+	charon := &CharonIKEDaemon{ctx: ctx, espProposal: espProposal}
 
 	addr := strings.Split("unix:///var/run/charon.vici", "://")
 	charon.viciUri = Uri{addr[0], addr[1]}
@@ -172,7 +172,7 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 	return nil
 }
 
-func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
+func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP, ikeProposal string) error {
 	var err error
 	var client *goStrongswanVici.ClientConn
 
@@ -216,7 +216,7 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
 	ikeConf := goStrongswanVici.IKEConf{
 		LocalAddrs:  []string{localIP},
 		RemoteAddrs: []string{remoteIP},
-		Proposals:   []string{"aes256-sha256-modp4096"},
+		Proposals:   []string{ikeProposal},
 		Version:     "2",
 		KeyingTries: "0", //continues to retry
 		LocalAuth:   localAuthConf,

@@ -177,6 +177,10 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			NetlinkTimeout: configParams.NetlinkTimeoutSecs,
 
+			IPSecPSK:         configParams.IPSecPSK,
+			IPSecIKEProposal: configParams.IPSecIKEProposal,
+			IPSecESPProposal: configParams.IPSecESPProposal,
+
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 
 			PostInSyncCallback:              func() { logutils.DumpHeapMemoryProfile(configParams) },

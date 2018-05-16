@@ -142,6 +142,10 @@ type Config struct {
 	DebugSimulateDataplaneHangAfter time.Duration
 
 	FelixHostname string
+
+	IPSecPSK         string
+	IPSecIKEProposal string
+	IPSecESPProposal string
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -427,28 +431,33 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		dp.allIptablesTables = append(dp.allIptablesTables, t)
 	}
 
-	// Set up IPsec.
-	// FIXME: use correct local tunnel address (the one from our HostIP?)
-	addrs, _ := net.InterfaceAddrs()
-	for _, a := range addrs {
-		ipNet, ok := a.(*net.IPNet)
-		if !ok {
-			continue
-		}
+	if config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" {
+		// Set up IPsec.
+		// FIXME: use correct local tunnel address (the one from our HostIP?)
+		addrs, _ := net.InterfaceAddrs()
+		for _, a := range addrs {
+			ipNet, ok := a.(*net.IPNet)
+			if !ok {
+				continue
+			}
 
-		ip := ipNet.IP.String()
-		if strings.HasPrefix(ip, "127.") {
-			continue
+			ip := ipNet.IP.String()
+			if strings.HasPrefix(ip, "127.") {
+				continue
+			}
+			if strings.Contains(ip, ":") {
+				continue
+			}
+			dp.ipSecDataplane = ipsec.NewDataplane(
+				ip,
+				config.IPSecPSK,
+				config.IPSecIKEProposal,
+				config.IPSecESPProposal,
+			)
+			ipSecManager := newIPSecManager(dp.ipSecDataplane)
+			dp.allManagers = append(dp.allManagers, ipSecManager)
+			break
 		}
-		if strings.Contains(ip, ":") {
-			continue
-		}
-
-		// FIXME: "topsecret" isn't the most secure PSK.
-		dp.ipSecDataplane = ipsec.NewDataplane(ip, "topsecret")
-		ipSecManager := newIPSecManager(dp.ipSecDataplane)
-		dp.allManagers = append(dp.allManagers, ipSecManager)
-		break
 	}
 
 	// Register that we will report liveness and readiness.
