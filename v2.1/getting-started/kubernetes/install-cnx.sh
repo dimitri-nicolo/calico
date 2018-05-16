@@ -356,6 +356,25 @@ checkNetworkManager() {
 }
 
 #
+# checkNumberOfCores() - ensure master node has at least
+# $MIN_REQUIRED_CORES. Note, just issue a warning rather
+# than blocking the installation to avoid false negatives.
+#
+checkNumberOfCores() {
+  local MIN_REQUIRED_CORES=2
+  cores=$(getconf _NPROCESSORS_ONLN 2>/dev/null)
+  if [ $? -eq 0 ]; then
+    if [ "$cores" \< "$MIN_REQUIRED_CORES" ]; then
+      echo "Warning: CNX requires ${MIN_REQUIRED_CORES} processor cores, however it looks as though your machine has only ${cores} core(s)."
+    else
+      echo "Verified your machine has the required minimum number (${MIN_REQUIRED_CORES}) of processor cores : ${cores} present."
+    fi
+  else
+    echo "Unable to retrieve number of processor cores - minimum required is ${MIN_REQUIRED_CORES}."
+  fi
+}
+
+#
 # checkRequiredFilesPresent() - check kubernetes files are present
 #
 checkRequiredFilesPresent() {
@@ -1011,6 +1030,7 @@ installCNX() {
   checkSettings install           # Verify settings are correct with user
   validateDatastore install       # Warn if there's etcd manifest, but we're doing kdd install (and vice versa)
 
+  checkNumberOfCores              # Warn user if insufficient processor cores are present (>= 2).
   checkRequiredFilesPresent       # Validate kubernetes files are present
   checkNetworkManager             # Warn user if NetworkMgr is enabled w/o "cali" interface exception
 
