@@ -1,5 +1,5 @@
-hash: 1a02382b145ab62739493537fd7a8729d5a73928a7beb282c015b995b28a6253
-updated: 2018-05-16T11:23:35.139779764Z
+hash: d137d1e713b58d5759fd46b9e672f06f9a3c46c2d4c0b4030f2b89bc365b4825
+updated: 2018-05-16T13:37:03.011905561Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -23,7 +23,8 @@ imports:
   - pkg/ns
   - pkg/types
 - name: github.com/coreos/etcd
-  version: c23606781f63d09917a1e7abfcefeb337a9608ea
+  version: e8287287893bd4080040e4fe68dae8a20476b095
+  repo: https://github.com/projectcalico/etcd.git
   subpackages:
   - auth/authpb
   - client
@@ -42,6 +43,8 @@ imports:
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
+- name: github.com/dustin/go-humanize
+  version: bb3d318650d48840a39aa21a027c6630e198e626
 - name: github.com/emicklei/go-restful
   version: 777bb3f19bcafe2575ffb2a3e46af92509ae9594
   subpackages:

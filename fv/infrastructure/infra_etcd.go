@@ -57,6 +57,8 @@ func (eds *EtcdDatastoreInfra) GetDockerArgs() []string {
 	return []string{
 		"-e", "CALICO_DATASTORE_TYPE=etcdv3",
 		"-e", "FELIX_DATASTORETYPE=etcdv3",
+		"-e", "TYPHA_DATASTORETYPE=etcdv3",
+		"-e", "TYPHA_ETCDENDPOINTS=http://" + eds.etcdContainer.IP + ":2379",
 		"-e", "CALICO_ETCD_ENDPOINTS=http://" + eds.etcdContainer.IP + ":2379",
 	}
 }
@@ -65,22 +67,26 @@ func (eds *EtcdDatastoreInfra) GetBadEndpointDockerArgs() []string {
 	return []string{
 		"-e", "CALICO_DATASTORE_TYPE=etcdv3",
 		"-e", "FELIX_DATASTORETYPE=etcdv3",
+		"-e", "TYPHA_DATASTORETYPE=etcdv3",
+		"-e", "TYPHA_ETCDENDPOINTS=http://" + eds.etcdContainer.IP + ":2379",
 		"-e", "CALICO_ETCD_ENDPOINTS=http://" + eds.etcdContainer.IP + ":1234",
 	}
 }
 
 func (eds *EtcdDatastoreInfra) GetCalicoClient() client.Interface {
-	return utils.GetEtcdClient(eds.etcdContainer.IP, "")
+	return utils.GetEtcdClient(eds.etcdContainer.IP)
 }
 
 func (eds *EtcdDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 	felixNode := api.NewNode()
 	felixNode.Name = felix.Hostname
 	if needBGP {
+		tunnelAddr := fmt.Sprintf("10.65.%d.1", idx)
 		felixNode.Spec.BGP = &api.NodeBGPSpec{
 			IPv4Address:        felix.IP,
-			IPv4IPIPTunnelAddr: fmt.Sprintf("10.65.%d.1", idx),
+			IPv4IPIPTunnelAddr: tunnelAddr,
 		}
+		felix.ExpectedIPIPTunnelAddr = tunnelAddr
 	}
 	Eventually(func() error {
 		_, err := eds.GetCalicoClient().Nodes().Create(utils.Ctx, felixNode, utils.NoOptions)

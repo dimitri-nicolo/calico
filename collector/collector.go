@@ -15,10 +15,11 @@ import (
 	"github.com/mipearson/rfw"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/tigera/nfnetlink"
+
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
-	"github.com/tigera/nfnetlink"
 )
 
 var (

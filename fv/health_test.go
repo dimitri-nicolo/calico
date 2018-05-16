@@ -194,6 +194,7 @@ var _ = Describe("health tests", func() {
 			append(getDockerArgs(),
 				"--privileged",
 				"-e", "TYPHA_HEALTHENABLED=true",
+				"-e", "TYPHA_HEALTHHOST=0.0.0.0",
 				"-e", "TYPHA_LOGSEVERITYSCREEN=info",
 				"-e", "TYPHA_DATASTORETYPE=kubernetes",
 				"-e", "TYPHA_PROMETHEUSMETRICSENABLED=true",
@@ -206,13 +207,14 @@ var _ = Describe("health tests", func() {
 		typhaLiveness = getHealthStatus(typhaContainer.IP, "9098", "liveness")
 	}
 
-	startFelix := func(typhaAddr string, getDockerArgs func() []string, calcGraphHangTime string, dataplaneHangTime string) {
+	startFelix := func(typhaAddr string, getDockerArgs func() []string, calcGraphHangTime, dataplaneHangTime, healthHost string) {
 		felixContainer = containers.Run("felix",
 			containers.RunOpts{AutoRemove: true},
 			append(getDockerArgs(),
 				"--privileged",
 				"-e", "FELIX_IPV6SUPPORT=false",
 				"-e", "FELIX_HEALTHENABLED=true",
+				"-e", "FELIX_HEALTHHOST="+healthHost,
 				"-e", "FELIX_LOGSEVERITYSCREEN=info",
 				"-e", "FELIX_PROMETHEUSMETRICSENABLED=true",
 				"-e", "FELIX_USAGEREPORTINGENABLED=false",
@@ -227,9 +229,35 @@ var _ = Describe("health tests", func() {
 		felixLiveness = getHealthStatus(felixContainer.IP, "9099", "liveness")
 	}
 
+	Describe("healthHost not 'all interfaces'", func() {
+		checkHealthInternally := func() error {
+			_, err := felixContainer.ExecOutput("wget", "-S", "-T", "2", "http://127.0.0.1:9099/readiness", "-O", "-")
+			return err
+		}
+
+		It("should run healthchecks on localhost by default", func() {
+			startFelix("", k8sInfra.GetDockerArgs, "", "", "")
+			Eventually(checkHealthInternally, "10s", "100ms").ShouldNot(HaveOccurred())
+		})
+
+		It("should run support running healthchecks on '127.0.0.1'", func() {
+			startFelix("", k8sInfra.GetDockerArgs, "", "", "127.0.0.1")
+			Eventually(checkHealthInternally, "10s", "100ms").ShouldNot(HaveOccurred())
+		})
+
+		It("should support running healthchecks on 'localhost'", func() {
+			startFelix("", k8sInfra.GetDockerArgs, "", "", "localhost")
+			Eventually(checkHealthInternally, "10s", "100ms").ShouldNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			felixContainer.Stop()
+		})
+	})
+
 	Describe("with Felix running (no Typha)", func() {
 		BeforeEach(func() {
-			startFelix("", k8sInfra.GetDockerArgs, "", "")
+			startFelix("", k8sInfra.GetDockerArgs, "", "", "0.0.0.0")
 		})
 
 		AfterEach(func() {
@@ -241,7 +269,7 @@ var _ = Describe("health tests", func() {
 
 	Describe("with Felix (no Typha) and Felix calc graph set to hang", func() {
 		BeforeEach(func() {
-			startFelix("", k8sInfra.GetDockerArgs, "5", "")
+			startFelix("", k8sInfra.GetDockerArgs, "5", "", "0.0.0.0")
 		})
 
 		AfterEach(func() {
@@ -257,7 +285,7 @@ var _ = Describe("health tests", func() {
 
 	Describe("with Felix (no Typha) and Felix dataplane set to hang", func() {
 		BeforeEach(func() {
-			startFelix("", k8sInfra.GetDockerArgs, "", "5")
+			startFelix("", k8sInfra.GetDockerArgs, "", "5", "0.0.0.0")
 		})
 
 		AfterEach(func() {
@@ -274,7 +302,7 @@ var _ = Describe("health tests", func() {
 	Describe("with Felix and Typha running", func() {
 		BeforeEach(func() {
 			startTypha(k8sInfra.GetDockerArgs)
-			startFelix(typhaContainer.IP+":5473", k8sInfra.GetDockerArgs, "", "")
+			startFelix(typhaContainer.IP+":5473", k8sInfra.GetDockerArgs, "", "", "0.0.0.0")
 		})
 
 		AfterEach(func() {
@@ -335,7 +363,7 @@ var _ = Describe("health tests", func() {
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			startFelix("", k8sInfra.GetDockerArgs, "", "")
+			startFelix("", k8sInfra.GetDockerArgs, "", "", "0.0.0.0")
 		})
 
 		AfterEach(func() {

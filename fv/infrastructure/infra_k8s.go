@@ -271,7 +271,7 @@ func (kds *K8sDatastoreInfra) EnsureReady() {
 	}
 	ready := true
 	info.Spec.DatastoreReady = &ready
-	info, err = kds.GetCalicoClient().ClusterInformation().Update(
+	_, err = kds.GetCalicoClient().ClusterInformation().Update(
 		context.Background(),
 		info,
 		options.SetOptions{},
@@ -295,6 +295,7 @@ func (kds *K8sDatastoreInfra) GetDockerArgs() []string {
 	return []string{
 		"-e", "CALICO_DATASTORE_TYPE=kubernetes",
 		"-e", "FELIX_DATASTORETYPE=kubernetes",
+		"-e", "TYPHA_DATASTORETYPE=kubernetes",
 		"-e", "K8S_API_ENDPOINT=" + kds.Endpoint,
 		"-e", "K8S_INSECURE_SKIP_TLS_VERIFY=true",
 		"-v", kds.CertFileName + ":/tmp/apiserver.crt",
@@ -305,6 +306,7 @@ func (kds *K8sDatastoreInfra) GetBadEndpointDockerArgs() []string {
 	return []string{
 		"-e", "CALICO_DATASTORE_TYPE=kubernetes",
 		"-e", "FELIX_DATASTORETYPE=kubernetes",
+		"-e", "TYPHA_DATASTORETYPE=kubernetes",
 		"-e", "K8S_API_ENDPOINT=" + kds.BadEndpoint,
 		"-e", "K8S_INSECURE_SKIP_TLS_VERIFY=true",
 		"-v", kds.CertFileName + ":/tmp/apiserver.crt",
@@ -331,6 +333,7 @@ func (kds *K8sDatastoreInfra) AddNode(felix *Felix, idx int, needBGP bool) {
 	if err != nil {
 		panic(err)
 	}
+	felix.ExpectedIPIPTunnelAddr = fmt.Sprintf("10.65.%d.0", idx)
 }
 
 func (kds *K8sDatastoreInfra) AddWorkload(wep *api.WorkloadEndpoint) (*api.WorkloadEndpoint, error) {
