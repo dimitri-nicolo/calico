@@ -9,6 +9,7 @@ const (
 	SizeofIPv4Header = 0x14
 	SizeofTCPHeader  = 0x14
 	SizeofUDPHeader  = 0x8
+	IPv6HeaderLen    = 40
 )
 
 type IPv4Header struct {
@@ -106,6 +107,8 @@ type IPv6Header struct {
 	Version      uint8
 	TrafficClass uint8
 	FlowLabel    uint32
+	// Payload length in bytes. This is the length of the packet data
+	// following the IPv6 packet header.
 	Length       uint16
 	NextHeader   uint8
 	HopLimit     uint8

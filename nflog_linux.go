@@ -240,7 +240,7 @@ func parsePacketHeader(tuple *NflogPacketTuple, hwProtocol int, nflogPayload []b
 		copy(tuple.Src[:], ipHeader.Saddr.To16()[:16])
 		copy(tuple.Dst[:], ipHeader.Daddr.To16()[:16])
 		tuple.Proto = int(ipHeader.NextHeader)
-		parseLayer4Header(tuple, nflogPayload[ipHeader.Length:])
+		parseLayer4Header(tuple, nflogPayload[pkt.IPv6HeaderLen:])
 	}
 	return nil
 }
