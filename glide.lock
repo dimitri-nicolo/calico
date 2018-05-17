@@ -1,5 +1,5 @@
-hash: 29b072c61cb6e00400ac7b6a1fb83fde3bf2fec6b1202f3ff89badd34ab4df02
-updated: 2018-05-15T11:22:20.190663411Z
+hash: 8f6acc72d842f5aa1a228bc2f16b0bd0439330c6af742fa2e00907c113b42b51
+updated: 2018-05-17T09:30:37.367294283Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -23,7 +23,8 @@ imports:
   - pkg/ns
   - pkg/types
 - name: github.com/coreos/etcd
-  version: c23606781f63d09917a1e7abfcefeb337a9608ea
+  version: e8287287893bd4080040e4fe68dae8a20476b095
+  repo: https://github.com/projectcalico/etcd.git
   subpackages:
   - auth/authpb
   - client
@@ -42,6 +43,8 @@ imports:
   version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
+- name: github.com/dustin/go-humanize
+  version: bb3d318650d48840a39aa21a027c6630e198e626
 - name: github.com/emicklei/go-restful
   version: 777bb3f19bcafe2575ffb2a3e46af92509ae9594
   subpackages:
@@ -115,7 +118,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
-  version: 0ef81702b797a2ecef05f45dcc82b15298f54355
+  version: b9df188d0fae32d69c1a519fa81741668a12f55a
   subpackages:
   - tracer
   - tracer/wire
@@ -211,7 +214,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: c8829d2bb9da69b0814b60e26b6ea32875e3b8c5
+  version: db4f8a84c381a5c1b7e2390a7aaa3b30dd3a3169
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -252,11 +255,12 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 3fcfb3bf75f1704faaf52820040b2dcd220d51ff
+  version: 038ca6e2e02725a30e45083f3254f8b0579bd134
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
+  - pkg/tlsutils
 - name: github.com/prometheus/client_golang
   version: 967789050ba94deca04a5e84cce8ad472ce313c1
   subpackages:
@@ -366,7 +370,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 962cbd1200af94a5a35ba8d512e9f91271b4d01a
+  version: b9aad5d628b283f265adf8d3557faae187a8d015
   subpackages:
   - internal
   - internal/app_identity

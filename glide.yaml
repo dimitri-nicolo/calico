@@ -5,8 +5,10 @@ owners:
 - name: Rob Brockbank
   email: rob@tigera.io
 import:
+# v3.3.3 + our fixes.
 - package: github.com/coreos/etcd
-  version: v3.3.0
+  version: e8287287893bd4080040e4fe68dae8a20476b095
+  repo: https://github.com/projectcalico/etcd.git
   subpackages:
   - client
   - pkg/transport
@@ -36,7 +38,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: c8829d2bb9da69b0814b60e26b6ea32875e3b8c5
+  version: db4f8a84c381a5c1b7e2390a7aaa3b30dd3a3169
   subpackages:
   - lib
 - package: github.com/tigera/licensing
@@ -65,7 +67,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 3fcfb3bf75f1704faaf52820040b2dcd220d51ff
+  version: 038ca6e2e02725a30e45083f3254f8b0579bd134
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful

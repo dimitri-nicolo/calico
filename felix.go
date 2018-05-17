@@ -34,6 +34,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	licClient "github.com/tigera/licensing/client"
+
 	"github.com/projectcalico/felix/binder"
 	"github.com/projectcalico/felix/buildinfo"
 	"github.com/projectcalico/felix/calc"
@@ -55,10 +57,10 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/health"
+	lclogutils "github.com/projectcalico/libcalico-go/lib/logutils"
 	"github.com/projectcalico/libcalico-go/lib/security"
 	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/projectcalico/typha/pkg/syncclient"
-	licClient "github.com/tigera/licensing/client"
 )
 
 const usage = `Felix, the Calico per-host daemon.
@@ -166,7 +168,7 @@ func main() {
 	// Load the configuration from all the different sources including the
 	// datastore and merge. Keep retrying on failure.  We'll sit in this
 	// loop until the datastore is ready.
-	log.Infof("Loading configuration...")
+	log.Info("Loading configuration...")
 	var backendClient bapi.Client
 	var configParams *config.Config
 	var typhaAddr string
@@ -215,17 +217,20 @@ configRetry:
 
 		// Each time round this loop, check that we're serving health reports if we should
 		// be, or cancel any existing server if we should not be serving any more.
-		healthAggregator.ServeHTTP(configParams.HealthEnabled, configParams.HealthPort)
+		healthAggregator.ServeHTTP(configParams.HealthEnabled, configParams.HealthHost, configParams.HealthPort)
 
 		// We should now have enough config to connect to the datastore
 		// so we can load the remainder of the config.
 		datastoreConfig := configParams.DatastoreConfig()
+		// Can't dump the whole config because it may have sensitive information...
+		log.WithField("datastore", datastoreConfig.Spec.DatastoreType).Info("Connecting to datastore")
 		backendClient, err = backend.NewClient(datastoreConfig)
 		if err != nil {
 			log.WithError(err).Error("Failed to create datastore client")
 			time.Sleep(1 * time.Second)
 			continue configRetry
 		}
+		log.Info("Created datastore client")
 		numClientsCreated++
 		for {
 			globalConfig, hostConfig, licenseKey, licValid, err := loadConfigFromDatastore(
@@ -290,7 +295,7 @@ configRetry:
 	healthAggregator.Report(healthName, &health.HealthReport{Live: true, Ready: true})
 
 	// Enable or disable the health HTTP server according to coalesced config.
-	healthAggregator.ServeHTTP(configParams.HealthEnabled, configParams.HealthPort)
+	healthAggregator.ServeHTTP(configParams.HealthEnabled, configParams.HealthHost, configParams.HealthPort)
 
 	// If we get here, we've loaded the configuration successfully.
 	// Update log levels before we do anything else.
@@ -372,6 +377,11 @@ configRetry:
 			&syncclient.Options{
 				ReadTimeout:  configParams.TyphaReadTimeout,
 				WriteTimeout: configParams.TyphaWriteTimeout,
+				KeyFile:      configParams.TyphaKeyFile,
+				CertFile:     configParams.TyphaCertFile,
+				CAFile:       configParams.TyphaCAFile,
+				ServerCN:     configParams.TyphaCN,
+				ServerURISAN: configParams.TyphaURISAN,
 			},
 		)
 	} else {
@@ -508,8 +518,8 @@ configRetry:
 		go servePrometheusMetrics(configParams)
 	}
 
-	// On receipt of SIGUSR1, write out heap profile.
-	logutils.DumpHeapMemoryOnSignal(configParams)
+	// Register signal handlers to dump memory/CPU profiles.
+	logutils.RegisterProfilingSignalHandlers(configParams)
 
 	go watchLicenseChanges(backendClient, configParams, bootupLicenseKey)
 
@@ -702,13 +712,13 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 }
 
 func exitWithCustomRC(rc int, message string) {
-	// To ensure that the logs get flushed, we need to exit with Panic() or Fatal().
-	// However, Fatal() doesn't let us set a custom RC.  To work around that, we create a panic,
-	// but then intercept it and exit with the desired RC.
-	log.WithField("rc", rc).Info("Exiting with custom RC")
-	defer os.Exit(rc)
-	log.Panic(message)
-	panic(message) // defensive.
+	// Since log writing is done a background thread, we set the force-flush flag on this log to ensure that
+	// all the in-flight logs get written before we exit.
+	log.WithFields(log.Fields{
+		"rc": rc,
+		lclogutils.FieldForceFlush: true,
+	}).Info(message)
+	os.Exit(rc)
 }
 
 var (
