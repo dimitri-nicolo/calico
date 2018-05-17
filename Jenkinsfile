@@ -1,4 +1,15 @@
 #!groovy
+def AuthorizeGCR() {
+    script {
+        withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
+            sh "echo 'Authorize gcr.io access'"
+            sh "cp $DOCKER_AUTH key.json"
+            sh "gcloud auth activate-service-account ${env.WAVETANK_SERVICE_ACCT} --key-file key.json"
+            sh "gcloud docker --authorize-only --server gcr.io"
+        }
+    }
+}
+
 pipeline {
     agent { label 'slave' }
     triggers{
@@ -38,9 +49,9 @@ pipeline {
                 }
             }
         }
-        stage('Check Typha pin') {
+        stage('Check Typha pins') {
             steps {
-                sh "echo 'Check Type pin'"
+                sh "echo 'Check Typha pins'"
                 sh "make check-typha-pins"
             }
         }
@@ -51,36 +62,27 @@ pipeline {
             }
         }
 
-        stage('Unit Tests') {
-            steps {
-                sh "echo 'Run unit Tests' && make ut-no-cover"
-            }
-        }
-
         stage('Push image to GCR') {
             steps {
-                script{
-                    withCredentials([file(credentialsId: 'wavetank_service_account', variable: 'DOCKER_AUTH')]) {
-		    	// Will eventually want to only push for passing builds. Cannot for now since the builds don't all pass currently
-                    	// if (env.BRANCH_NAME == 'master' && (currentBuild.result == null || currentBuild.result == 'SUCCESS')) {
-                        if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
-			     sh "cp $DOCKER_AUTH key.json"
-			     sh "gcloud auth activate-service-account ${env.WAVETANK_SERVICE_ACCT} --key-file key.json"
-			     sh "gcloud auth configure-docker"
-			     sh 'make tigera/felix'
-			     sh "docker tag tigera/felix:latest ${env.IMAGE_NAME}:${env.BRANCH_NAME}"
-                            sh "docker push ${env.IMAGE_NAME}:${env.BRANCH_NAME}"
+                script {
+                    if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
+                        AuthorizeGCR()
+                        sh 'make tigera/felix'
 
-			    // Clean up images.
-			    // Hackey since empty displayed tags are not empty according to gcloud filter criteria
-			    sh """
-				for digest in \$(gcloud container images list-tags ${env.IMAGE_NAME} --format='get(digest)'); do 
-				    if ! test \$(echo \$(gcloud container images list-tags ${env.IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
-					    gcloud container images delete -q --force-delete-tags "${env.IMAGE_NAME}@\${digest}" || true
-				    fi 
-			        done
-			    """
-                        }
+                        // Will eventually want to only push for passing builds.
+                        // Cannot for now since the builds don't all pass currently.
+                        sh "docker tag tigera/felix:latest ${env.IMAGE_NAME}:${env.BRANCH_NAME}"
+                        sh "docker push ${env.IMAGE_NAME}:${env.BRANCH_NAME}"
+
+                        // Clean up images.
+                        // Hackey since empty displayed tags are not empty according to gcloud filter criteria
+                        sh """
+                            for digest in \$(gcloud container images list-tags ${env.IMAGE_NAME} --format='get(digest)'); do
+                                if ! test \$(echo \$(gcloud container images list-tags ${env.IMAGE_NAME} --filter=digest~\${digest}) | awk '{print \$6}'); then
+                                    gcloud container images delete -q --force-delete-tags "${env.IMAGE_NAME}@\${digest}" || true
+                                fi
+                            done
+                        """
                     }
                 }
             }

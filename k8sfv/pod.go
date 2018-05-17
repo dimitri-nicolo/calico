@@ -286,8 +286,8 @@ func runNmap(pod1, pod2 *v1.Pod) {
 	defer localNetworkingMutex.Unlock()
 
 	err := localNetworkingMap[pod1.ObjectMeta.Namespace+"."+pod1.ObjectMeta.Name].namespace.Do(func(_ ns.NetNS) (err error) {
-		err = runCommand("ping", "-c", "1", "-W", "1", pod2.Status.PodIP)
-		err = runCommand("nmap", "-Pn", "-T5", pod2.Status.PodIP)
+		runCommand("ping", "-c", "1", "-W", "1", pod2.Status.PodIP)
+		runCommand("nmap", "-Pn", "-T5", pod2.Status.PodIP)
 		return
 	})
 	panicIfError(err)

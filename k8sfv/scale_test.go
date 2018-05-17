@@ -164,7 +164,8 @@ var _ = Context("with a k8s clientset", func() {
 			d = NewDeployment(clientset, 0, true)
 		})
 
-		It("denied packets between 2 local endpoints", func() {
+		// Slow: takes about 10 minutes.
+		It("denied packets between 2 local endpoints [slow]", func() {
 			for cycle, isolated := range []bool{false, true, false, true, false, true} {
 				nsName := nsPrefix + "test" + fmt.Sprintf("%v", cycle)
 				if isolated {
