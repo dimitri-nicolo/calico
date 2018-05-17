@@ -331,6 +331,11 @@ func (t *TyphaDaemon) CreateServer() {
 			MaxConns:                t.ConfigParams.MaxConnectionsUpperLimit,
 			Port:                    t.ConfigParams.ServerPort,
 			HealthAggregator:        t.healthAggregator,
+			KeyFile:                 t.ConfigParams.ServerKeyFile,
+			CertFile:                t.ConfigParams.ServerCertFile,
+			CAFile:                  t.ConfigParams.CAFile,
+			ClientCN:                t.ConfigParams.ClientCN,
+			ClientURISAN:            t.ConfigParams.ClientURISAN,
 		},
 	)
 }
@@ -360,8 +365,11 @@ func (t *TyphaDaemon) Start(cxt context.Context) {
 	}
 
 	if t.ConfigParams.HealthEnabled {
-		log.WithField("port", t.ConfigParams.HealthPort).Info("Health enabled.  Starting server.")
-		t.healthAggregator.ServeHTTP(t.ConfigParams.HealthEnabled, t.ConfigParams.HealthPort)
+		log.WithFields(log.Fields{
+			"host": t.ConfigParams.HealthHost,
+			"port": t.ConfigParams.HealthPort,
+		}).Info("Health enabled.  Starting server.")
+		t.healthAggregator.ServeHTTP(t.ConfigParams.HealthEnabled, t.ConfigParams.HealthHost, t.ConfigParams.HealthPort)
 	}
 }
 

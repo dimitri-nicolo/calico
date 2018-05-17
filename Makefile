@@ -1,27 +1,51 @@
 ###############################################################################
-# The build architecture is select by setting the ARCH variable.
-# For example: When building on ppc64le you could use ARCH=ppc64le make <....>.
-# When ARCH is undefined it defaults to amd64.
-ARCH?=amd64
-ifeq ($(ARCH),amd64)
-	ARCHTAG?=
-	GO_BUILD_VER?=v0.9
+# Both native and cross architecture builds are supported.
+# The target architecture is select by setting the ARCH variable.
+# When ARCH is undefined it is set to the detected host architecture.
+# When ARCH differs from the host architecture a crossbuild will be performed.
+ARCHES=$(patsubst docker-image/Dockerfile.%,%,$(wildcard docker-image/Dockerfile.*))
+
+# BUILDARCH is the host architecture
+# ARCH is the target architecture
+# we need to keep track of them separately
+BUILDARCH ?= $(shell uname -m)
+BUILDOS ?= $(shell uname -s | tr A-Z a-z)
+
+# canonicalized names for host architecture
+ifeq ($(BUILDARCH),aarch64)
+        BUILDARCH=arm64
+endif
+ifeq ($(BUILDARCH),x86_64)
+        BUILDARCH=amd64
 endif
 
-ifeq ($(ARCH),ppc64le)
-	ARCHTAG:=-ppc64le
-	GO_BUILD_VER?=latest
+# unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
+ARCH ?= $(BUILDARCH)
+
+# canonicalized names for target architecture
+ifeq ($(ARCH),aarch64)
+        override ARCH=arm64
+endif
+ifeq ($(ARCH),x86_64)
+    override ARCH=amd64
 endif
 
-ifeq ($(ARCH),s390x)
-	ARCHTAG:=-s390x
-	GO_BUILD_VER?=latest
-endif
+GO_BUILD_VER ?= v0.14
+join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
+
+# for building, we use the go-build image for the *host* architecture, even if the target is different
+# the one for the host should contain all the necessary cross-compilation tools
+GO_BUILD_CONTAINER = calico/go-build:$(GO_BUILD_VER)-$(BUILDARCH)
 
 help:
 	@echo "Typha Makefile"
 	@echo
 	@echo "Dependencies: docker 1.12+; go 1.8+"
+	@echo
+	@echo "For any target, set ARCH=<target> to build for a given target."
+	@echo "For example, to build for arm64:"
+	@echo
+	@echo "  make build ARCH=arm64"
 	@echo
 	@echo "Initial set-up:"
 	@echo
@@ -44,6 +68,11 @@ help:
 	@echo "                      in glide.lock."
 	@echo "  make go-fmt        Format our go code."
 	@echo "  make clean         Remove binary files."
+	@echo "-----------------------------------------"
+	@echo "ARCH (target):          $(ARCH)"
+	@echo "BUILDARCH (host):       $(BUILDARCH)"
+	@echo "GO_BUILD_CONTAINER:     $(GO_BUILD_CONTAINER)"
+	@echo "-----------------------------------------"
 
 # Disable make's implicit rules, which are not useful for golang, and slow down the build
 # considerably.
@@ -52,7 +81,15 @@ help:
 all: tigera/typha bin/typha-client-$(ARCH)
 test: ut
 
-GO_BUILD_CONTAINER?=calico/go-build$(ARCHTAG):$(GO_BUILD_VER)
+# Targets used when cross building.
+.PHONY: register
+# Enable binfmt adding support for miscellaneous binary formats.
+# This is only needed when running non-native binaries.
+register:
+ifneq ($(BUILDARCH),$(ARCH))
+	docker run --rm --privileged multiarch/qemu-user-static:register || true
+endif
+
 
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
@@ -77,12 +114,16 @@ MY_UID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
 # Build the tigera/typha docker image, which contains only Typha.
-.PHONY: tigera/typha
+.PHONY: image tigera/typha
+image: tigera/typha
 tigera/typha: bin/calico-typha-$(ARCH)
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-typha-$(ARCH) docker-image/bin/
-	docker build -t tigera/typha$(ARCHTAG) docker-image -f docker-image/Dockerfile$(ARCHTAG)
+	docker build --pull -t tigera/typha:latest-$(ARCH) docker-image --file docker-image/Dockerfile.$(ARCH)
+ifeq ($(ARCH),amd64)
+	docker tag tigera/typha:latest-$(ARCH) tigera/typha:latest
+endif
 
 # Pre-configured docker run command that runs as this user with the repo
 # checked out to /code, uses the --rm flag to avoid leaving the container
@@ -102,6 +143,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               --net=host \
                               $(EXTRA_DOCKER_ARGS) \
                               -e LOCAL_USER_ID=$(MY_UID) \
+                              -e GOARCH=$(ARCH) \
                               -v $${PWD}:/go/src/github.com/projectcalico/typha:rw \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
                               -w /go/src/github.com/projectcalico/typha \
@@ -137,7 +179,11 @@ LDFLAGS:=-ldflags "\
         -X github.com/projectcalico/typha/pkg/buildinfo.GitRevision=$(GIT_COMMIT) \
         -B 0x$(BUILD_ID)"
 
+.PHONY: build
+build: bin/calico-typha
+bin/calico-typha: bin/calico-typha-$(ARCH)
 bin/calico-typha-$(ARCH): $(TYPHA_GO_FILES) vendor/.up-to-date
+	$(MAKE) register
 	@echo Building typha...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
@@ -147,6 +193,7 @@ bin/calico-typha-$(ARCH): $(TYPHA_GO_FILES) vendor/.up-to-date
 		( echo "Error: bin/calico-typha-$(ARCH) was not statically linked"; false ) )'
 
 bin/typha-client-$(ARCH): $(TYPHA_GO_FILES) vendor/.up-to-date
+	$(MAKE) register
 	@echo Building typha client...
 	mkdir -p bin
 	$(DOCKER_GO_BUILD) \
@@ -291,13 +338,19 @@ release-once-tagged:
 	@echo
 	@echo "Will now build release artifacts..."
 	@echo
-	$(MAKE) bin/calico-typha-$(ARCH) tigera/typha
-	docker tag tigera/typha$(ARCHTAG) tigera/typha$(ARCHTAG):$(VERSION)
-	docker tag tigera/typha$(ARCHTAG) gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):latest
-	docker tag tigera/typha$(ARCHTAG):$(VERSION) gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION)
+	$(MAKE) bin/calico-typha tigera/typha
+	ifeq ($(ARCH),amd64)
+	docker tag tigera/typha:latest-$(ARCH) tigera/typha:latest
+	docker tag tigera/typha:latest-$(ARCH) gcr.io/unique-caldron-775/cnx/tigera/typha:latest
+	docker tag tigera/typha:latest tigera/typha:$(VERSION)
+	docker tag tigera/typha:$(VERSION) gcr.io/unique-caldron-775/cnx/tigera/typha:$(VERSION)
+	endif
+	docker tag tigera/typha:latest-$(ARCH) tigera/typha:$(VERSION)-$(ARCH)
+	docker tag tigera/typha:latest-$(ARCH) gcr.io/unique-caldron-775/cnx/tigera/typha:latest-$(ARCH)
+	docker tag tigera/typha:$(VERSION)-$(ARCH) gcr.io/unique-caldron-775/cnx/tigera/typha:$(VERSION)-$(ARCH)
 	@echo
 	@echo "Checking built typha has correct version..."
-	@if docker run gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION) calico-typha --version | grep -q '$(VERSION)$$'; \
+	@if docker run gcr.io/unique-caldron-775/cnx/tigera/typha:$(VERSION)-$(ARCH) calico-typha --version | grep -q '$(VERSION)$$'; \
 	then \
 	  echo "Check successful."; \
 	else \
@@ -308,8 +361,8 @@ release-once-tagged:
 	@echo "Typha release artifacts have been built:"
 	@echo
 	@echo "- Binary:                 bin/calico-typha-$(ARCH)"
-	@echo "- Docker container image: tigera/typha$(ARCHTAG):$(VERSION)"
-	@echo "- Same, tagged for GCR private registry:  gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION)"
+	@echo "- Docker container image: tigera/typha:$(VERSION)-$(ARCH)"
+	@echo "- Same, tagged for GCR private registry:  gcr.io/unique-caldron-775/cnx/tigera/typha:$(VERSION)-$(ARCH)"
 	@echo
 	@echo "Now to publish this release to Github:"
 	@echo
@@ -331,10 +384,16 @@ release-once-tagged:
 	@echo "Then, push the versioned docker images to GCR only:"
 	@echo
 	@echo "- gcloud auth configure-docker"
-	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):$(VERSION)"
+	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/typha:$(VERSION)-$(ARCH)"
+	ifeq ($(ARCH),amd64)
+	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/typha:$(VERSION)"
+	endif
 	@echo
 	@echo "If this is the latest release from the most recent stable"
 	@echo "release series, also push the 'latest' tag:"
 	@echo
 	@echo "- gcloud auth configure-docker"
-	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/typha$(ARCHTAG):latest"
+	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/typha:latest-$(ARCH)"
+	ifeq ($(ARCH),amd64)
+	@echo "- docker push gcr.io/unique-caldron-775/cnx/tigera/typha:latest"
+	endif
