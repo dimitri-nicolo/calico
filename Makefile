@@ -181,7 +181,8 @@ clean:
 clean-gen-files:
 	rm -f $(BINDIR)/deepcopy-gen
 	rm -f ./lib/apis/v3/zz_generated.deepcopy.go \
-	      ./lib/apis/v3/openapi_generated.go
+	      ./lib/apis/v3/openapi_generated.go \
+	      ./lib/numorstring/openapi_generated.go
 	rm -f ./lib/upgrade/migrator/clients/v1/k8s/custom/zz_generated.deepcopy.go
 
 .PHONY: help
@@ -266,7 +267,10 @@ APIS_SRCS := $(filter-out ./lib/apis/v3/zz_generated.deepcopy.go ./lib/apis/v3/o
 		--v 1 --logtostderr \
 		--go-header-file "./docs/boilerplate.go.txt" \
 		--input-dirs "$(LIBCALICO-GO_PKG)/lib/numorstring" \
-		--output-package "$(LIBCALICO-GO_PKG)/lib/numorstring"'
+		--output-package "$(LIBCALICO-GO_PKG)/lib/numorstring"; \
+		sed -i "/numorstring /d" ./lib/numorstring/openapi_generated.go'
+		# Above 'sed' to workaround a bug in openapi-gen which ends up 
+		# importing "numorstring github.com/.../lib/numorstring" causing eventual build error
 
 .PHONY: gen-files
 ## Build generated-go utilities (e.g. deepcopy_gen) and generated files

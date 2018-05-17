@@ -17,6 +17,9 @@ package numorstring
 import (
 	"encoding/json"
 	"strconv"
+
+	"github.com/go-openapi/spec"
+	openapi "k8s.io/kube-openapi/pkg/common"
 )
 
 // UInt8OrString is a type that can hold an uint8 or a string.  When used in
@@ -77,4 +80,15 @@ func (i Uint8OrString) NumValue() (uint8, error) {
 		return uint8(num), err
 	}
 	return i.NumVal, nil
+}
+
+func (_ Uint8OrString) OpenAPIDefinition() openapi.OpenAPIDefinition {
+	return openapi.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type:   []string{"string"},
+				Format: "int-or-string",
+			},
+		},
+	}
 }
