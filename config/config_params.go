@@ -148,6 +148,7 @@ type Config struct {
 	IptablesFilterAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
 	IptablesMangleAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
 	LogPrefix                   string `config:"string;calico-drop"`
+	LogDropActionOverride       bool   `config:"bool;false"`
 
 	LogFilePath string `config:"file;/var/log/calico/felix.log;die-on-fail"`
 

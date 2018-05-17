@@ -141,6 +141,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
 
 				IptablesLogPrefix:         configParams.LogPrefix,
+				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
 				ActionOnDrop:              configParams.DropActionOverride,
 				EndpointToHostAction:      configParams.DefaultEndpointToHostAction,
 				IptablesFilterAllowAction: configParams.IptablesFilterAllowAction,
