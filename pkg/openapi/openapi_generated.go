@@ -22,6 +22,7 @@ package openapi
 
 import (
 	spec "github.com/go-openapi/spec"
+	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	common "k8s.io/kube-openapi/pkg/common"
 )
@@ -4580,92 +4581,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"github.com/projectcalico/libcalico-go/lib/apis/v3.EndpointPort", "github.com/projectcalico/libcalico-go/lib/apis/v3.IPNAT"},
 		},
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Port": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "Port represents either a range of numeric ports or a named port.\n\n    - For a named port, set the PortName, leaving MinPort and MaxPort as 0.\n    - For a port range, set MinPort and MaxPort to the (inclusive) port numbers.  Set\n      PortName to \"\".\n    - For a single port, set MinPort = MaxPort and PortName = \"\".",
-					Properties: map[string]spec.Schema{
-						"MinPort": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "int32",
-							},
-						},
-						"MaxPort": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "int32",
-							},
-						},
-						"PortName": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"string"},
-								Format: "",
-							},
-						},
-					},
-					Required: []string{"MinPort", "MaxPort", "PortName"},
-				},
-			},
-			Dependencies: []string{},
-		},
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Properties: map[string]spec.Schema{
-						"Type": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "int32",
-							},
-						},
-						"NumVal": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "byte",
-							},
-						},
-						"StrVal": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"string"},
-								Format: "",
-							},
-						},
-					},
-					Required: []string{"Type", "NumVal", "StrVal"},
-				},
-			},
-			Dependencies: []string{},
-		},
-		"github.com/projectcalico/libcalico-go/lib/numorstring.Uint8OrString": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "UInt8OrString is a type that can hold an uint8 or a string.  When used in JSON or YAML marshalling and unmarshalling, it produces or consumes the inner type.  This allows you to have, for example, a JSON field that can accept a name or number.",
-					Properties: map[string]spec.Schema{
-						"Type": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "int32",
-							},
-						},
-						"NumVal": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"integer"},
-								Format: "byte",
-							},
-						},
-						"StrVal": {
-							SchemaProps: spec.SchemaProps{
-								Type:   []string{"string"},
-								Format: "",
-							},
-						},
-					},
-					Required: []string{"Type", "NumVal", "StrVal"},
-				},
-			},
-			Dependencies: []string{},
-		},
+		"github.com/projectcalico/libcalico-go/lib/numorstring.Port":          numorstring.Port{}.OpenAPIDefinition(),
+		"github.com/projectcalico/libcalico-go/lib/numorstring.Protocol":      numorstring.Protocol{}.OpenAPIDefinition(),
+		"github.com/projectcalico/libcalico-go/lib/numorstring.Uint8OrString": numorstring.Uint8OrString{}.OpenAPIDefinition(),
 		"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3.GlobalNetworkPolicy": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
