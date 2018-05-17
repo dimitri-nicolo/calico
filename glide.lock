@@ -1,5 +1,5 @@
-hash: d137d1e713b58d5759fd46b9e672f06f9a3c46c2d4c0b4030f2b89bc365b4825
-updated: 2018-05-16T13:37:03.011905561Z
+hash: 8f6acc72d842f5aa1a228bc2f16b0bd0439330c6af742fa2e00907c113b42b51
+updated: 2018-05-17T09:30:37.367294283Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -118,7 +118,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
-  version: 0ef81702b797a2ecef05f45dcc82b15298f54355
+  version: b9df188d0fae32d69c1a519fa81741668a12f55a
   subpackages:
   - tracer
   - tracer/wire
@@ -214,7 +214,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: eae054a76eee27b81ac6c44cfd3353d733afdd48
+  version: db4f8a84c381a5c1b7e2390a7aaa3b30dd3a3169
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -255,7 +255,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 71844956ae3abeed4f76ab90af303378e67d8ea5
+  version: 038ca6e2e02725a30e45083f3254f8b0579bd134
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -370,7 +370,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 962cbd1200af94a5a35ba8d512e9f91271b4d01a
+  version: b9aad5d628b283f265adf8d3557faae187a8d015
   subpackages:
   - internal
   - internal/app_identity
