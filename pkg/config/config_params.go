@@ -351,8 +351,13 @@ func loadParams() {
 		`([^;]*))?$`)
 	for ii := 0; ii < kind.NumField(); ii++ {
 		field := kind.Field(ii)
+		if field.Tag == "" {
+			// Skip fields with no tag.
+			continue
+		}
 		tag := field.Tag.Get("config")
 		if tag == "" {
+			log.Panicf("Missing or malformed config tag for config param %v", field.Name)
 			continue
 		}
 		captures := metaRegexp.FindStringSubmatch(tag)
