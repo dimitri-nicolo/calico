@@ -251,6 +251,11 @@ func (c *Container) DockerInspect(format string) string {
 	return string(outputBytes)
 }
 
+func (c *Container) GetID() string {
+	output := c.DockerInspect("{{.Id}}")
+	return strings.TrimSpace(output)
+}
+
 func (c *Container) GetIP() string {
 	output := c.DockerInspect("{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}")
 	return strings.TrimSpace(output)

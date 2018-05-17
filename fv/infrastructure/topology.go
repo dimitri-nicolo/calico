@@ -36,6 +36,7 @@ type TopologyOptions struct {
 	ExtraEnvVars          map[string]string
 	ExtraVolumes          map[string]string
 	AlphaFeaturesToEnable string
+	IPIPEnabled           bool
 }
 
 func DefaultTopologyOptions() TopologyOptions {
@@ -44,6 +45,7 @@ func DefaultTopologyOptions() TopologyOptions {
 		EnableIPv6:       true,
 		ExtraEnvVars:     map[string]string{},
 		ExtraVolumes:     map[string]string{},
+		IPIPEnabled:      true,
 	}
 }
 
@@ -120,7 +122,9 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			ipPool := api.NewIPPool()
 			ipPool.Name = "test-pool"
 			ipPool.Spec.CIDR = "10.65.0.0/16"
-			ipPool.Spec.IPIPMode = api.IPIPModeAlways
+			if opts.IPIPEnabled {
+				ipPool.Spec.IPIPMode = api.IPIPModeAlways
+			}
 			_, err = client.IPPools().Create(ctx, ipPool, options.SetOptions{})
 			return err
 		}).ShouldNot(HaveOccurred())
@@ -144,8 +148,13 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			}
 
 			jBlock := fmt.Sprintf("10.65.%d.0/24", j)
-			err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP, "dev", "tunl0", "onlink")
-			Expect(err).ToNot(HaveOccurred())
+			if opts.IPIPEnabled {
+				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP, "dev", "tunl0", "onlink")
+				Expect(err).ToNot(HaveOccurred())
+			} else {
+				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP)
+				Expect(err).ToNot(HaveOccurred())
+			}
 		}
 	}
 	success = true
