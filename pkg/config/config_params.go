@@ -109,9 +109,9 @@ type Config struct {
 	PrometheusMetricsPort           int    `config:"int(0,65535);9093"`
 	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
 	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
-	PrometheusMetricsCertFile       string `config:"file(must-exist);;`
-	PrometheusMetricsKeyFile        string `config:"file(must-exist);;`
-	PrometheusMetricsCAFile         string `config:"file(must-exist);;`
+	PrometheusMetricsCertFile       string `config:"file(must-exist);;"`
+	PrometheusMetricsKeyFile        string `config:"file(must-exist);;"`
+	PrometheusMetricsCAFile         string `config:"file(must-exist);;"`
 
 	SnapshotCacheMaxBatchSize int `config:"int(1,);100"`
 
