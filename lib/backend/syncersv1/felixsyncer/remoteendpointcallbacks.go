@@ -13,6 +13,8 @@ type remoteEndpointCallbacks struct {
 	wrappedCallbacks api.SyncerCallbacks
 	insync           func()
 	clusterName      string
+	syncErr          func(error)
+	resync           func()
 }
 
 func (rec *remoteEndpointCallbacks) OnStatusUpdated(status api.SyncStatus) {
@@ -21,6 +23,7 @@ func (rec *remoteEndpointCallbacks) OnStatusUpdated(status api.SyncStatus) {
 	case api.InSync:
 		rec.insync()
 	case api.ResyncInProgress:
+		rec.resync()
 	default:
 		log.Warnf("Unknown event type: %s", status)
 	}
@@ -83,4 +86,10 @@ func (rec *remoteEndpointCallbacks) OnUpdates(updates []api.Update) {
 	}
 
 	rec.wrappedCallbacks.OnUpdates(updates)
+}
+
+// Resources from remote clusters need to handle connection failures
+// so they do not block "InSync" status
+func (rec *remoteEndpointCallbacks) SyncFailed(err error) {
+	rec.syncErr(err)
 }

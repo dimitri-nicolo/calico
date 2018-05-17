@@ -144,6 +144,14 @@ type SyncerParseFailCallbacks interface {
 	ParseFailed(rawKey string, rawValue string)
 }
 
+// SyncFailCallbacks is an optional interface that can be
+// implemented by a syncer callback. Callbacks that support it can report
+// a failure to sync with a remote cluster backend.
+type SyncFailCallbacks interface {
+	// TODO: Should also add a Connected callback to handle when a connection is available again.
+	SyncFailed(err error)
+}
+
 // Update from the Syncer.  A KV pair plus extra metadata.
 type Update struct {
 	model.KVPair

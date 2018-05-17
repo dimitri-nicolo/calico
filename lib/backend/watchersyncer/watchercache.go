@@ -186,6 +186,11 @@ func (wc *watcherCache) resyncAndCreateWatcher(ctx context.Context) {
 			if err != nil {
 				// Failed to perform the list.  Pause briefly (so we don't tight loop) and retry.
 				wc.logger.WithError(err).Info("Failed to perform list of current data during resync")
+				// Need to send back an error here for handling. Only callbacks with connection failure handling should actually kick off anything.
+				wc.results <- errorSyncBackendError{
+					Err: err,
+				}
+
 				select {
 				case <-time.After(ListRetryInterval):
 					continue
@@ -233,6 +238,11 @@ func (wc *watcherCache) resyncAndCreateWatcher(ctx context.Context) {
 					wc.cleanExistingWatcher()
 					return
 				}
+			}
+
+			// Need to send back an error here for handling. Only connection errors on remote datastores should actually kick off any handling.
+			wc.results <- errorSyncBackendError{
+				Err: err,
 			}
 
 			// We hit an error creating the Watch.  Trigger a full resync.
@@ -312,7 +322,7 @@ func (wc *watcherCache) handleWatchListEvent(kvp *model.KVPair) {
 		wc.handleConvertedWatchEvent(kvp)
 	}
 
-	// If we hit a conversion error, notify the main syncer.
+	// If we hit a conversion error, log the error and notify the main syncer.
 	if err != nil {
 		wc.results <- err
 	}

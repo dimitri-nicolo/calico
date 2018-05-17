@@ -19,10 +19,18 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
+	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 	"github.com/projectcalico/libcalico-go/lib/testutils"
 )
+
+// Set the list interval and watch interval in the WatcherSyncer.  We do this to reduce
+// the test time.
+func setWatchIntervals(listRetryInterval, watchPollInterval time.Duration) {
+	watchersyncer.ListRetryInterval = listRetryInterval
+	watchersyncer.WatchPollInterval = watchPollInterval
+}
 
 var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection failures", testutils.DatastoreAll, func(config apiconfig.CalicoAPIConfig) {
 
@@ -159,9 +167,9 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 			},
 			"could not initialize etcdv3 client: open foo: no such file or directory", 3*time.Second,
 		),
-		//TODO: This test is pending a fix for CNX-2562
-		// An invalid kubernetes endpoint will successfully create the client, but will fail in the watchersyncer
-		// when attempting to List and Watch the remote.
+		//TODO: This test is pending the fix for CNX-3031
+		// WatcherCaches each send a connection error which triggers the remote connection failed handling.
+		// This should be refactored so that only the first watcher cache to receive an error sends an error in the updates.
 		PEntry("invalid k8s endpoint", "bad-k8s-1",
 			apiv3.RemoteClusterConfigurationSpec{
 				DatastoreType: "kubernetes",
@@ -179,6 +187,132 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests - connection
 				},
 			},
 			"stat foobarbaz: no such file or directory", 3*time.Second,
+		),
+	)
+
+	// TODO: This test should be removed and replaced with the one above when the watcher
+	// syncer is refactored so that connection errors from the watcher cache are all consolidated
+	// into one error update.
+	DescribeTable("Configuring another RemoteClusterConfiguration resource with",
+		func(name string, spec apiv3.RemoteClusterConfigurationSpec, errPrefix string, connTimeout time.Duration) {
+			By("Creating the RemoteClusterConfiguration")
+			_, outError := c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Spec:       spec,
+			}, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Setting longer list intervals")
+			defer setWatchIntervals(watchersyncer.ListRetryInterval, watchersyncer.WatchPollInterval)
+			setWatchIntervals(12*time.Second, watchersyncer.WatchPollInterval)
+
+			By("Creating and starting a syncer")
+			syncTester = testutils.NewSyncerTester()
+			syncer = felixsyncer.New(be, syncTester)
+			syncer.Start()
+
+			By("Checking status is updated to sync'd at start of day")
+			syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+			syncTester.ExpectStatusUpdate(api.InSync, connTimeout)
+
+			By("Checking we received the event messages for the remote cluster")
+			// We should receive Connecting and 3 ConnectionFaileds
+			// There will be 1 ConnectionFailed for each watchercache that is created for this test
+			expectedEvents := []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: name},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterConnecting,
+						},
+					},
+					UpdateType: api.UpdateTypeKVNew,
+				},
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: name},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterConnectionFailed,
+							Error:  errPrefix,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: name},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterConnectionFailed,
+							Error:  errPrefix,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: name},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterConnectionFailed,
+							Error:  errPrefix,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+			}
+			if config.Spec.DatastoreType == apiconfig.Kubernetes {
+				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
+				// those events too.
+				for _, r := range defaultKubernetesResource {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair:     r,
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
+							Value: &model.ProfileRules{
+								InboundRules:  nil,
+								OutboundRules: nil,
+							},
+						},
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+			}
+
+			// Sanitize the actual events received to remove revision info and to handle prefix matching of the
+			// RemoteClusterStatus error. Compare with the expected events.
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) {
+				u.Revision = ""
+				u.TTL = 0
+
+				if r, ok := u.Value.(*model.RemoteClusterStatus); ok {
+					// Need to clip off the exact client error
+					// ex: "Get http://foobarbaz:1000/api/v1/namespaces: ..."
+					splitErr := strings.SplitN(r.Error, ": ", 2)
+					if len(splitErr) == 2 {
+						r.Error = splitErr[1]
+					}
+					if r.Error != "" && strings.HasPrefix(r.Error, errPrefix) {
+						// The error has the expected prefix. Substitute the actual error for the prefix so that the
+						// exact comparison can be made.
+						r.Error = errPrefix
+					}
+				}
+			})
+		},
+
+		Entry("invalid k8s endpoint", "bad-k8s-1",
+			apiv3.RemoteClusterConfigurationSpec{
+				DatastoreType: "kubernetes",
+				KubeConfig: apiv3.KubeConfig{
+					K8sAPIEndpoint: "http://foobarbaz:1000",
+				},
+			},
+			"dial tcp: lookup foobarbaz on", 15*time.Second,
 		),
 	)
 

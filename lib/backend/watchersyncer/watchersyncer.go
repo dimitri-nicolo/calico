@@ -40,6 +40,15 @@ type ResourceType struct {
 	UpdateProcessor SyncerUpdateProcessor
 }
 
+// Error indicating a problem with a watcher communicating with the backend.
+type errorSyncBackendError struct {
+	Err error
+}
+
+func (e errorSyncBackendError) Error() string {
+	return e.Err.Error()
+}
+
 // SyncerUpdateProcessor is used to convert a Watch update into one or more additional
 // Syncer updates.
 type SyncerUpdateProcessor interface {
@@ -194,10 +203,17 @@ func (ws *watcherSyncer) processResult(updates []api.Update, result interface{})
 		// If this is a parsing error, and if the callbacks support
 		// it, then send the error update.
 		log.WithError(r).Info("Error received in main syncer event processing loop")
-		if ec, ok := ws.callbacks.(api.SyncerParseFailCallbacks); ok {
-			log.Debug("syncer receiver can receive parse failed callbacks")
-			if pe, ok := r.(cerrors.ErrorParsingDatastoreEntry); ok {
+		if pe, ok := r.(cerrors.ErrorParsingDatastoreEntry); ok {
+			if ec, ok := ws.callbacks.(api.SyncerParseFailCallbacks); ok {
+				log.Debug("syncer receiver can receive parse failed callbacks")
 				ec.ParseFailed(pe.RawKey, pe.RawValue)
+			}
+		}
+
+		if se, ok := r.(errorSyncBackendError); ok {
+			if ec, ok := ws.callbacks.(api.SyncFailCallbacks); ok {
+				log.Debug("syncer receiver can receive sync failed callbacks")
+				ec.SyncFailed(se.Err)
 			}
 		}
 
