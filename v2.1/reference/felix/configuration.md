@@ -119,6 +119,7 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `DropActionOverride`        | `FELIX_DROPACTIONOVERRIDE`         | `Drop`   | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
 | `PrometheusReporterEnabled` | `FELIX_PROMETHEUSREPORTERENABLED`  | `false`  | Set to `true` to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
 | `PrometheusReporterPort`    | `FELIX_PROMETHEUSREPORTERPORT`     | `9092`   | The TCP port on which to report denied packet metrics.  |
+| `LogDropActionOverride`     | `FELIX_LOGDROPACTIONOVERRIDE`      | `false`  | Set to `true` to add the `DropActionOverride` to the syslog entries. For more detail please see below. |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current Calico policy - i.e. by the ordered combination of all the
@@ -141,6 +142,12 @@ syslog, with an entry like this:
 
 ```
 May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop: IN=tunl0 OUT=cali76be879f658 MAC= SRC=192.168.128.30 DST=192.168.157.26 LEN=60 TOS=0x00 PREC=0x00 TTL=62 ID=56743 DF PROTO=TCP SPT=56248 DPT=80 WINDOW=29200 RES=0x00 SYN URGP=0 MARK=0xa000000
+```
+
+If the `LogDropActionOverride` flag is set, then the `DropActionOverride` will also appear in the syslog entry:
+
+```
+May 18 18:42:44 ubuntu kernel: [ 1156.246182] calico-drop LOGandDROP: IN=tunl0 OUT=cali76be879f658 MAC= SRC=192.168.128.30 DST=192.168.157.26 LEN=60 TOS=0x00 PREC=0x00 TTL=62 ID=56743 DF PROTO=TCP SPT=56248 DPT=80 WINDOW=29200 RES=0x00 SYN URGP=0 MARK=0xa000000
 ```
 
 When the reporting of denied packet metrics is enabled, Felix keeps counts of
