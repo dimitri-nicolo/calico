@@ -109,9 +109,9 @@ type Config struct {
 	PrometheusMetricsPort           int    `config:"int(0,65535);9093"`
 	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
 	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
-	PrometheusMetricsCertFile       string `config:"file(must-exist);;`
-	PrometheusMetricsKeyFile        string `config:"file(must-exist);;`
-	PrometheusMetricsCAFile         string `config:"file(must-exist);;`
+	PrometheusMetricsCertFile       string `config:"file(must-exist);;"`
+	PrometheusMetricsKeyFile        string `config:"file(must-exist);;"`
+	PrometheusMetricsCAFile         string `config:"file(must-exist);;"`
 
 	SnapshotCacheMaxBatchSize int `config:"int(1,);100"`
 
@@ -351,8 +351,13 @@ func loadParams() {
 		`([^;]*))?$`)
 	for ii := 0; ii < kind.NumField(); ii++ {
 		field := kind.Field(ii)
+		if field.Tag == "" {
+			// Skip fields with no tag.
+			continue
+		}
 		tag := field.Tag.Get("config")
 		if tag == "" {
+			log.Panicf("Missing or malformed config tag for config param %v", field.Name)
 			continue
 		}
 		captures := metaRegexp.FindStringSubmatch(tag)
