@@ -112,5 +112,5 @@ The CNX Manager Web UI uses HTTPS to securely access the CNX Manager and
 Kubernetes and CNX API servers over TLS - where 'securely' means that these
 communications are encrypted and that the browser can be sure that it is
 speaking to those servers.  The web browser should display `Secure` in the
-address bar, to indicate this. See the [Securing CNX Manager with TLS Documentation](securing-with-tls)
+address bar, to indicate this. See [CNX Manager connections](../../usage/encrypt-comms#cnx-manager-connections)
 for more information.

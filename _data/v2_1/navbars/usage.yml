@@ -29,6 +29,14 @@ toc:
       path: /usage/calicoq/configure/etcd
     - title: Kubernetes API datastore options
       path: /usage/calicoq/configure/kdd
+- title: Securing CNX communications
+  section:
+  - title: Scheduling to well-known nodes
+    path: /usage/reduce-nodes
+  - title: Configuring encryption and authentication
+    path: /usage/encrypt-comms
+  - title: Securing endpoints with CNX policy
+    path: /usage/policy/secure-metrics
 - title: Running cnx-node with an init system
   path: /usage/configuration/as-service
 - title: Configuring BGP Peers
