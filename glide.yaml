@@ -67,7 +67,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: a0a97c5cc67f30fa0d1eed19021e592f42ac4b4b
+  version: 446c6364eb3af752fa650eb505f290353be66c02
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful

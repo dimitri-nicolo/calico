@@ -16,6 +16,7 @@ package infrastructure
 
 import (
 	"fmt"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 
@@ -29,6 +30,9 @@ type Felix struct {
 	// ExpectedIPIPTunnelAddr contains the IP that the infrastructure expects to
 	// get assigned to the IPIP tunnel.  Filled in by AddNode().
 	ExpectedIPIPTunnelAddr string
+
+	// IP of the Typha that this Felix is using (if any).
+	TyphaIP string
 }
 
 func (f *Felix) GetFelixPID() int {
@@ -53,6 +57,17 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 		"-e", "FELIX_IPV6SUPPORT="+ipv6Enabled,
 		"-v", "/lib/modules:/lib/modules",
 	)
+
+	if options.WithPrometheusPortTLS {
+		EnsureTLSCredentials()
+		options.ExtraVolumes[CertDir] = CertDir
+		options.ExtraEnvVars["FELIX_PROMETHEUSREPORTERCAFILE"] = filepath.Join(CertDir, "ca.crt")
+		options.ExtraEnvVars["FELIX_PROMETHEUSREPORTERKEYFILE"] = filepath.Join(CertDir, "server.key")
+		options.ExtraEnvVars["FELIX_PROMETHEUSREPORTERCERTFILE"] = filepath.Join(CertDir, "server.crt")
+		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSCAFILE"] = filepath.Join(CertDir, "ca.crt")
+		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSKEYFILE"] = filepath.Join(CertDir, "server.key")
+		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSCERTFILE"] = filepath.Join(CertDir, "server.crt")
+	}
 
 	for k, v := range options.ExtraEnvVars {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))

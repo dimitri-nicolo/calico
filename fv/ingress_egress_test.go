@@ -17,6 +17,7 @@
 package fv_test
 
 import (
+	"path/filepath"
 	"strconv"
 
 	. "github.com/onsi/ginkgo"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/metrics"
 	"github.com/projectcalico/felix/fv/utils"
 	"github.com/projectcalico/felix/fv/workload"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -307,4 +309,119 @@ var _ = Context("with Typha and Felix-Typha TLS", func() {
 			Expect(w[0]).To(HaveConnectivityTo(w[1]))
 		})
 	})
+})
+
+var _ = Context("with TLS-secured Prometheus ports", func() {
+
+	var (
+		etcd    *containers.Container
+		felix   *infrastructure.Felix
+		client  client.Interface
+		w       [3]*workload.Workload
+		options infrastructure.TopologyOptions
+	)
+
+	BeforeEach(func() {
+		options = infrastructure.DefaultTopologyOptions()
+		options.WithTypha = true
+		options.WithPrometheusPortTLS = true
+		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(options)
+
+		// Install a default profile that allows workloads with this profile to talk to each
+		// other, in the absence of any Policy.
+		defaultProfile := api.NewProfile()
+		defaultProfile.Name = "default"
+		defaultProfile.Spec.LabelsToApply = map[string]string{"default": ""}
+		defaultProfile.Spec.Egress = []api.Rule{{Action: api.Allow}}
+		defaultProfile.Spec.Ingress = []api.Rule{{
+			Action: api.Allow,
+			Source: api.EntityRule{Selector: "default == ''"},
+		}}
+		_, err := client.Profiles().Create(utils.Ctx, defaultProfile, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create three workloads, using that profile.
+		for ii := range w {
+			iiStr := strconv.Itoa(ii)
+			w[ii] = workload.Run(felix, "w"+iiStr, "default", "10.65.0.1"+iiStr, "8055", "tcp")
+			w[ii].Configure(client)
+		}
+	})
+
+	AfterEach(func() {
+
+		if CurrentGinkgoTestDescription().Failed {
+			felix.Exec("iptables-save", "-c")
+			felix.Exec("ip", "r")
+		}
+
+		for ii := range w {
+			w[ii].Stop()
+		}
+		felix.Stop()
+
+		if CurrentGinkgoTestDescription().Failed {
+			etcd.Exec("etcdctl", "ls", "--recursive", "/")
+		}
+		etcd.Stop()
+	})
+
+	It("full connectivity to and from workload 0", func() {
+		Expect(w[1]).To(HaveConnectivityTo(w[0]))
+		Expect(w[2]).To(HaveConnectivityTo(w[0]))
+		Expect(w[0]).To(HaveConnectivityTo(w[1]))
+		Expect(w[0]).To(HaveConnectivityTo(w[2]))
+	})
+
+	testAccess := func(tester func(caFile, certFile, keyFile string) error) func(certKeyName string, canAccess bool) func() {
+		return func(certKeyName string, canAccess bool) func() {
+			return func() {
+				var caFile, certFile, keyFile string
+				if certKeyName != "" {
+					caFile = filepath.Join(infrastructure.CertDir, "ca.crt")
+					certFile = filepath.Join(infrastructure.CertDir, certKeyName+".crt")
+					keyFile = filepath.Join(infrastructure.CertDir, certKeyName+".key")
+				}
+				err := tester(caFile, certFile, keyFile)
+				if canAccess {
+					Expect(err).NotTo(HaveOccurred())
+				} else {
+					Expect(err).To(HaveOccurred())
+				}
+			}
+		}
+	}
+
+	testFelixReporter := testAccess(func(caFile, certFile, keyFile string) error {
+		_, err := metrics.GetMetric(felix.IP, 9092, "calico_denied_packets", caFile, certFile, keyFile)
+		return err
+	})
+
+	testFelixMetrics := testAccess(func(caFile, certFile, keyFile string) error {
+		_, err := metrics.GetMetric(felix.IP, 9091, "felix_host", caFile, certFile, keyFile)
+		return err
+	})
+
+	testTyphaMetrics := testAccess(func(caFile, certFile, keyFile string) error {
+		_, err := metrics.GetMetric(felix.TyphaIP, 9093, "typha_connections_active", caFile, certFile, keyFile)
+		return err
+	})
+
+	It("should not be able to access Felix Reporter port over http", testFelixReporter("", false))
+
+	It("should not be able to access Felix Metrics port over http", testFelixMetrics("", false))
+
+	It("should not be able to access Typha Metrics port over http", testTyphaMetrics("", false))
+
+	It("should not be able to access Felix Reporter port with untrusted cert", testFelixReporter("client-untrusted", false))
+
+	It("should not be able to access Felix Metrics port with untrusted cert", testFelixMetrics("client-untrusted", false))
+
+	It("should not be able to access Typha Metrics port with untrusted cert", testTyphaMetrics("client-untrusted", false))
+
+	It("should be able to access Felix Reporter port with trusted cert", testFelixReporter("client", true))
+
+	It("should be able to access Felix Metrics port with trusted cert", testFelixMetrics("client", true))
+
+	It("should be able to access Typha Metrics port with trusted cert", testTyphaMetrics("client", true))
 })
