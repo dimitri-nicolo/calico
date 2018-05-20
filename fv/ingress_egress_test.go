@@ -373,8 +373,8 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 		Expect(w[0]).To(HaveConnectivityTo(w[2]))
 	})
 
-	testAccess := func(tester func(caFile, certFile, keyFile string) error) func(certKeyName string, expected bool) func() {
-		return func(certKeyName string, expected bool) func() {
+	testAccess := func(tester func(caFile, certFile, keyFile string) error) func(certKeyName string, canAccess bool) func() {
+		return func(certKeyName string, canAccess bool) func() {
 			return func() {
 				var caFile, certFile, keyFile string
 				if certKeyName != "" {
@@ -383,7 +383,7 @@ var _ = Context("with TLS-secured Prometheus ports", func() {
 					keyFile = filepath.Join(infrastructure.CertDir, certKeyName+".key")
 				}
 				err := tester(caFile, certFile, keyFile)
-				if expected {
+				if canAccess {
 					Expect(err).NotTo(HaveOccurred())
 				} else {
 					Expect(err).To(HaveOccurred())
