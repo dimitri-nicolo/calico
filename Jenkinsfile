@@ -32,8 +32,8 @@ pipeline{
         stage('Check cnx-queryserver changes') {
             steps {
                 script {
-                    // SKIP_CNX_QUERYSERVER_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^web/'")
-                    SKIP_CNX_QUERYSERVER_BUILD = 0
+                    SKIP_CNX_QUERYSERVER_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep '^web/'")
+                    echo "SKIP_CNX_QUERYSERVER_BUILD=${SKIP_CNX_QUERYSERVER_BUILD}"
                 }
             }
         }
@@ -120,8 +120,8 @@ pipeline{
         stage('Check calicoq changes') {
             steps {
                 script {
-                    // SKIP_CALICOQ_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep -v '^web/'")
-                    SKIP_CALICOQ_BUILD = 0
+                    SKIP_CALICOQ_BUILD = sh(returnStatus: true, script: "git diff --name-only HEAD^ | grep -v '^web/'")
+                    echo "SKIP_CALICOQ_BUILD=${SKIP_CALICOQ_BUILD}"
                 }
             }
         }
