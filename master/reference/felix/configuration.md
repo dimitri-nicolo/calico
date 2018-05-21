@@ -114,12 +114,18 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 
 #### Tigera CNX specific configuration
 
-| Setting                     | Environment variable               | Default  | Meaning                                 |
-|-----------------------------|------------------------------------|----------|-----------------------------------------|
-| `DropActionOverride`        | `FELIX_DROPACTIONOVERRIDE`         | `Drop`   | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
-| `PrometheusReporterEnabled` | `FELIX_PROMETHEUSREPORTERENABLED`  | `false`  | Set to `true` to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
-| `PrometheusReporterPort`    | `FELIX_PROMETHEUSREPORTERPORT`     | `9092`   | The TCP port on which to report denied packet metrics.  |
-| `LogDropActionOverride`     | `FELIX_LOGDROPACTIONOVERRIDE`      | `false`  | Set to `true` to add the `DropActionOverride` to the syslog entries. For more detail please see below. |
+| Setting                      | Environment variable               | Default | Meaning                                 |
+|------------------------------|------------------------------------|---------|-----------------------------------------|
+| `DropActionOverride`         | `FELIX_DROPACTIONOVERRIDE`         | `Drop`  | How to treat packets that are disallowed by the current Calico policy.  For more detail please see below. |
+| `LogDropActionOverride`      | `FELIX_LOGDROPACTIONOVERRIDE`      | `false` | Set to `true` to add the `DropActionOverride` to the syslog entries. For more detail please see below. |
+| `PrometheusReporterEnabled`  | `FELIX_PROMETHEUSREPORTERENABLED`  | `false` | Set to `true` to enable Prometheus reporting of denied packet metrics.  For more detail please see below. |
+| `PrometheusReporterPort`     | `FELIX_PROMETHEUSREPORTERPORT`     | `9092`  | The TCP port on which to report denied packet metrics.  |
+| `PrometheusReporterCertFile` | `FELIX_PROMETHEUSREPORTERCERTFILE` | None    | Certificate for encrypting Prometheus denied packet metrics.  |
+| `PrometheusReporterKeyFile`  | `FELIX_PROMETHEUSREPORTERKEYFILE`  | None    | Private key for encrypting Prometheus denied packet metrics.  |
+| `PrometheusReporterCAFile`   | `FELIX_PROMETHEUSREPORTERCAFILE`   | None    | Trusted CA file for clients attempting to read Prometheus denied packet metrics.  |
+| `PrometheusMetricsCertFile`  | `FELIX_PROMETHEUSMETRICSCERTFILE`  | None    | Certificate for encrypting general Felix Prometheus metrics.  |
+| `PrometheusMetricsKeyFile`   | `FELIX_PROMETHEUSMETRICSKEYFILE`   | None    | Private key for encrypting general Felix Prometheus metrics.  |
+| `PrometheusMetricsCAFile`    | `FELIX_PROMETHEUSMETRICSCAFILE`    | None    | Trusted CA file for clients attempting to read general Felix Prometheus metrics.  |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current Calico policy - i.e. by the ordered combination of all the
@@ -162,6 +168,13 @@ setting.  Specifically, if packets that would normally be denied are being
 allowed through by a setting of `Accept` or `LogAndAccept`, those packets
 still contribute to the denied packet metrics as just described.
 
+When the `PrometheusReporter...File` and `PrometheusMetrics...File`
+parameters are set, Felix's Prometheus ports are TLS-secured such that
+only a validated client can read Prometheus metrics, and the data is
+encrypted in transit.  A valid client must then connect over HTTPS and
+present a certificate that is signed by one of the trusted CAs in the
+relevant `Prometheus...CAFile` setting.
+
 Environment variables
 ---------------------
 
@@ -201,4 +214,3 @@ $ calicoctl replace -f felix.yaml
 ```
 
 For more information, see [Felix Configuration Resource](../calicoctl/resources/felixconfig).
-
