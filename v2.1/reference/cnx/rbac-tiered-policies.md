@@ -3,49 +3,34 @@ title: RBAC on tiered Policies
 ---
 
 The {{site.prodname}} API server adds the ability to manage tiered
-policies as Kubernetes resources. This allows administrators to apply
-Kubernetes RBAC Authorization APIs to CNX resources.
+policies as Kubernetes resources. This allows administrators to manage
+access to {{site.prodname}} resources using Kubernetes RBAC
+Authorization APIs.
 
-### Admin permissions
-
-By default, admin users have sufficient permission to access all the resources
-in the {{site.prodname}} UI.
-
-### Granting new users {{site.prodname}} UI permissions
-
-Under Kubernetes, newly created users are not granted RBAC permissions. In
-order to give a user sufficient permissions to use the {{site.prodname}} UI,
-bind a user to the `cluster-admin` role:
-
-```
-kubectl create clusterrolebinding permissive-binding \
-    --clusterrole=cluster-admin \
-    --user=<USER>
-```
-
-As result of this operation, the user now has full permission to access all
-resources in the {{site.prodname}} UI.
-
-### Fine-grained permissions
-
-#### Policies and tiers
+### Policy and tier RBAC
 
 In {{site.prodname}}, `GlobalNetworkPolicy` and `NetworkPolicy` resources
 are associated with a specific tier. In addition to the permissions associated
-with resources, {{site.prodname}} also gives you the ability to set permissions
-for tiers.
+with the policy resources themselves, {{site.prodname}} also gives you the
+ability to set permissions based on the tier the policies are in.
 
-Giving a non-admin user 'read' permission for a tier is a prerequisite for
-performing any operations on Global/NetworkPolicies in that tier. Once a
-non-admin user is given 'read' tier permission, their ability to operate on
-Global/NetworkPolicies is limited by their resource permissions (e.g.
-`apiGroup: "networking.k8s.io"`, `resource: "networkpolicies"`).
+To allow a non-admin user to perform any operations on [Global]NetworkPolicies,
+you must give them the 'get' permission on the tier(s) they are allowed to
+manage policies in.  They must also have permission for the action
+(not necessarily 'get') on the policy resources themselves.
+
+For example, to 'create' a network policy in the default tier, a user must have
+the 'create' permission for NetworkPolicies (in the namespace they specify on
+the resource), and the 'get' permission on the default tier.
+
+Permission to write (create, update, delete, etc) any tiers is approximately
+equal to complete control of all network policies: we recommend non-admin users
+not be given any write permissions on tiers.
 
 #### The default tier
 
 Policies created by the underlying orchestration integration such as Kubernetes
-are placed in the `default` tier. In order to use the {{site.prodname}} UI,
-users must be given 'read' access to the `default` tier.
+are placed in the `default` tier.
 
 #### Associating a resource with a tier
 
@@ -53,19 +38,37 @@ For details on creating a [tier]({{site.baseurl}}/{{page.version}}/reference/cal
 resource and adding a Global/NetworkPolicy to that tier, refer to the
 [Tiered Policy Demo]({{site.baseurl}}/{{page.version}}/getting-started/cnx/tiered-policy-cnx/).
 
-#### Restricting {{site.prodname}} permissions
+### Permissions required for {{site.prodname}} UI
 
-In order to limit permissions for non-admin users for resources
-outside the `default` tier, use the following steps as a starting point
-to implement your security model:
+All of the RBAC examples below require the user to be specified (by replacing the
+text '<USER>').  Consult the Kubernetes documentation for more information on
+[how to identify users based on your chosen authentication method](https://kubernetes.io/docs/admin/authentication/),
+and [how to use the RBAC resources](https://kubernetes.io/docs/admin/authorization/rbac/).
+
+#### Admin users
+
+The quickest way to test the {{site.prodname}} UI is by using an admin user, who
+will have full access to the UI (as well as everything else in the cluster).
+
+```
+kubectl create clusterrolebinding permissive-binding \
+    --clusterrole=cluster-admin \
+    --user=<USER>
+```
+
+#### Non-admin users
+
+We provide an example manifest to give a non-admin user permission to use the
+{{site.prodname}} UI and manage policiies in the default tier and default
+namespace.
 
 1. Download the [`min-rbac.yaml` manifest]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/demo-manifests/min-rbac.yaml).
 
-1. Run the following command to replace `<USER>` with the `name/email` of
-   the non-admin user you are providing permissions to:
+1. Run the following command to replace `<USER>` with the `name or email` of
+   the user you are providing permissions to:
 
    ```
-   sed -i -e 's/<USER>/<name/email>/g' min-rbac.yaml
+   sed -i -e 's/<USER>/<name or email>/g' min-rbac.yaml
    ```
 
 1. Use the following command to install the bindings:
@@ -74,7 +77,8 @@ to implement your security model:
    kubectl apply -f min-rbac.yaml
    ```
 
-Add to the roles and bindings according to your specific security requirements.
+The roles and bindings in that file should provide a starting point for setting
+up RBAC for your users according to your specific security requirements.
 
 ### Example fine-grained permissions
 
@@ -97,7 +101,8 @@ Error from server: (Forbidden) Policy operation is associated with tier net-sec.
 
 > **Note**: The appended '.p' with the networkpolicies resource in the kubectl
   command. That is short for "networkpolicies.projectcalico.org" and is needed
-  to differentiate from the Kubernetes namesake NetworkPolicy resource.
+  to differentiate from the Kubernetes namesake NetworkPolicy resource and
+  (if using the Kubernetes Datastore Driver) the underlying CRDs.
 {: .alert .alert-info}
 
 > **Note**: Currently, the tier collection on a Policy resource through the
@@ -109,19 +114,21 @@ Error from server: (Forbidden) Policy operation is associated with tier net-sec.
   on for the purpose.
 {: .alert .alert-info}
 
-kubernetes-admin gives user 'jane' permission to read tier 'default':
+Give user 'jane' permission to read tier 'default':
 
 ```
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  # "namespace" omitted since ClusterRoles are not namespaced
   name: tier-default-reader
 rules:
 - apiGroups: ["projectcalico.org"]
   resources: ["tiers"]
   resourceNames: ["default"]
   verbs: ["get"]
+- apiGroups: ["projectcalico.org"]
+  resources: ["networkpolicies"]
+  verbs: ["get", "list"]
 
 ---
 
