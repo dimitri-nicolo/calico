@@ -36,6 +36,11 @@ pipeline{
                 sh "make st"
             }
         }
+        stage('Run calicoctl test-containerized') {
+            steps {
+                sh "make test-containerized"
+            }
+        }
         stage('Push image to GCR') {
             steps {
                 script{
