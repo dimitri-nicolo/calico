@@ -11,8 +11,9 @@ import (
 	"sync"
 
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/felix/fv/utils"
 	"github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/fv/utils"
 )
 
 func AttachTCPDump(c *Container, iface string) *TCPDump {

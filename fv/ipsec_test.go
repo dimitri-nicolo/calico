@@ -5,11 +5,11 @@
 package fv_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
 	"fmt"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"regexp"
 
@@ -85,6 +85,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 				felix.Exec("ipset", "list")
 				felix.Exec("ip", "r")
 				felix.Exec("ip", "a")
+				felix.Exec("ip", "xfrm", "state")
+				felix.Exec("ip", "xfrm", "policy")
 			}
 		}
 
@@ -113,11 +115,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		}
 	}
 
-	It("workload-to-workload connections should be encrypted", func() {
-		cc.ExpectSome(w[0], w[1])
-		cc.ExpectSome(w[1], w[0])
-		cc.CheckConnectivity()
-
+	expectEncryption := func() {
 		for i := range felixes {
 			By(fmt.Sprintf("Doing IKE and ESP (felix %v)", i))
 
@@ -135,6 +133,14 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 				return tcpdumpMatches(i, "numWorkloadPackets")() - tcpdumpMatches(1, "numInboundESPPackets")()
 			}).Should(BeZero(), "Number of inbound unencrypted packets didn't match number of inbound ESP packets")
 		}
+	}
+
+	It("workload-to-workload connections should be encrypted", func() {
+		cc.ExpectSome(w[0], w[1])
+		cc.ExpectSome(w[1], w[0])
+		cc.CheckConnectivity()
+
+		expectEncryption()
 	})
 
 	// TODO: Should this traffic be encrypted?
