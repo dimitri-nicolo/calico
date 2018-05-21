@@ -31,14 +31,18 @@ pipeline{
                 }
             }
         }
-        stage('Run calicoctl FVs') {
-            steps {
-                sh "make st"
-            }
-        }
-        stage('Run calicoctl test-containerized') {
-            steps {
-                sh "make test-containerized"
+        stage('Run calicoctl tests') {
+            parallel {
+                stage('Run calicoctl FVs') {
+                    steps {
+                        sh "make st"
+                    }
+                }
+                stage('Run calicoctl UTs') {
+                    steps {
+                        sh "make test-containerized"
+                    }
+                }
             }
         }
         stage('Push image to GCR') {
