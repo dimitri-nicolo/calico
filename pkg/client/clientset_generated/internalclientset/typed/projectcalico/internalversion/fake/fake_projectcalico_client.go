@@ -16,6 +16,10 @@ func (c *FakeProjectcalico) GlobalNetworkPolicies() internalversion.GlobalNetwor
 	return &FakeGlobalNetworkPolicies{c}
 }
 
+func (c *FakeProjectcalico) GlobalNetworkSets() internalversion.GlobalNetworkSetInterface {
+	return &FakeGlobalNetworkSets{c}
+}
+
 func (c *FakeProjectcalico) NetworkPolicies(namespace string) internalversion.NetworkPolicyInterface {
 	return &FakeNetworkPolicies{c, namespace}
 }

@@ -41,6 +41,11 @@ func convertToAAPI(libcalicoObject runtime.Object) (res runtime.Object) {
 		aapiPolicy := &aapi.GlobalNetworkPolicy{}
 		convertToAAPIGlobalNetworkPolicy(aapiPolicy, lcgPolicy)
 		return aapiPolicy
+	case *libcalicoapi.GlobalNetworkSet:
+		lcgNetworkSet := libcalicoObject.(*libcalicoapi.GlobalNetworkSet)
+		aapiNetworkSet := &aapi.GlobalNetworkSet{}
+		convertToAAPIGlobalNetworkSet(aapiNetworkSet, lcgNetworkSet)
+		return aapiNetworkSet
 	default:
 		return nil
 	}
@@ -99,4 +104,16 @@ func convertToAAPIGlobalNetworkPolicy(globalNetworkPolicy *aapi.GlobalNetworkPol
 		globalNetworkPolicy.Labels = make(map[string]string)
 	}
 	globalNetworkPolicy.Labels["projectcalico.org/tier"] = globalNetworkPolicy.Spec.Tier
+}
+
+func convertToLibcalicoGlobalNetworkSet(netset *aapi.GlobalNetworkSet, libcalicoNetworkSet *libcalicoapi.GlobalNetworkSet) {
+	libcalicoNetworkSet.TypeMeta = netset.TypeMeta
+	libcalicoNetworkSet.ObjectMeta = netset.ObjectMeta
+	libcalicoNetworkSet.Spec = netset.Spec
+}
+
+func convertToAAPIGlobalNetworkSet(netset *aapi.GlobalNetworkSet, libcalicoNetworkSet *libcalicoapi.GlobalNetworkSet) {
+	netset.Spec = libcalicoNetworkSet.Spec
+	netset.TypeMeta = libcalicoNetworkSet.TypeMeta
+	netset.ObjectMeta = libcalicoNetworkSet.ObjectMeta
 }

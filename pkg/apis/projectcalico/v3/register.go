@@ -53,6 +53,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&TierList{},
 		&GlobalNetworkPolicy{},
 		&GlobalNetworkPolicyList{},
+		&GlobalNetworkSet{},
+		&GlobalNetworkSetList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

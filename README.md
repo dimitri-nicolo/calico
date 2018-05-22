@@ -28,6 +28,7 @@ docker image (`make tigera/cnx-apiserver`) has been built.
 8. kubectl create -f artifacts/policies/policy.yaml <-- Creating a NetworkPolicy
 9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
 10. kubectl create -f artifacts/policies/globalpolicy.yaml <-- Creating a GlobalNetworkPolicy
+11. kubectl create -f artifacts/calico/globalnetworkset.yaml <-- Creating a GlobalNetworkSet
 .
 .
 .
@@ -52,6 +53,7 @@ docker image (`make tigera/cnx-apiserver`) has been built.
 8. kubectl create -f artifacts/policies/policy.yaml <-- Creating a NetworkPolicy
 9. kubectl create -f artifacts/policies/tier.yaml <-- Creating a Tier
 10. kubectl create -f artifacts/policies/globalpolicy.yaml <-- Creating a GlobalNetworkPolicy
+11. kubectl create -f artifacts/calico/globalnetworkset.yaml <-- Creating a GlobalNetworkSet
 .
 .
 .
@@ -144,6 +146,12 @@ NOTE: Use above endpoint for CREATE, UPDATE and DELETE on core networkpolicies.
 
 Listing Namespaces - APIVersion: v1 Kind: Namespace
 15. List K8s Namespaces:https://10.0.2.15:6443/api/v1/namespaces
+
+GlobalNetworkSets - APIVersion: projectcalico.org/v3 Kind: GlobalNetworkSet
+16. Listing globalnetworksets: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworkpolicies
+17. Getting a globalnetworkset: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets/sample-global-network-set
+18. Posting a globalnetworkset: -XPOST -d @globalnetworkset.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets
+19. Watching a globalnetworkset: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets/sample-global-network-set?watch=true
 ``` 
 
 ## Testing

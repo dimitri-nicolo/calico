@@ -444,3 +444,68 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 
 	return nil
 }
+
+// TestGlobalNetworkSetClient exercises the GlobalNetworkSet client.
+func TestGlobalNetworkSetClient(t *testing.T) {
+	const name = "test-globalnetworkset"
+	rootTestFunc := func() func(t *testing.T) {
+		return func(t *testing.T) {
+			client, shutdownServer := getFreshApiserverAndClient(t, func() runtime.Object {
+				return &projectcalico.GlobalNetworkSet{}
+			})
+			defer shutdownServer()
+			if err := testGlobalNetworkSetClient(client, name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if !t.Run(name, rootTestFunc()) {
+		t.Errorf("test-globalnetworkset test failed")
+	}
+}
+
+func testGlobalNetworkSetClient(client calicoclient.Interface, name string) error {
+	globalNetworkSetClient := client.Projectcalico().GlobalNetworkSets()
+	globalNetworkSet := &v3.GlobalNetworkSet{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+	}
+
+	// start from scratch
+	globalNetworkSets, err := globalNetworkSetClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalNetworkSets (%s)", err)
+	}
+	if globalNetworkSets.Items == nil {
+		return fmt.Errorf("Items field should not be set to nil")
+	}
+
+	globalNetworkSetServer, err := globalNetworkSetClient.Create(globalNetworkSet)
+	if nil != err {
+		return fmt.Errorf("error creating the globalNetworkSet '%v' (%v)", globalNetworkSet, err)
+	}
+	if name != globalNetworkSetServer.Name {
+		return fmt.Errorf("didn't get the same globalNetworkSet back from the server \n%+v\n%+v", globalNetworkSet, globalNetworkSetServer)
+	}
+
+	globalNetworkSets, err = globalNetworkSetClient.List(metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing globalNetworkSets (%s)", err)
+	}
+
+	globalNetworkSetServer, err = globalNetworkSetClient.Get(name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting globalNetworkSet %s (%s)", name, err)
+	}
+	if name != globalNetworkSetServer.Name &&
+		globalNetworkSet.ResourceVersion == globalNetworkSetServer.ResourceVersion {
+		return fmt.Errorf("didn't get the same globalNetworkSet back from the server \n%+v\n%+v", globalNetworkSet, globalNetworkSetServer)
+	}
+
+	err = globalNetworkSetClient.Delete(name, &metav1.DeleteOptions{})
+	if nil != err {
+		return fmt.Errorf("globalNetworkSet should be deleted (%s)", err)
+	}
+
+	return nil
+}

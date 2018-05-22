@@ -12,6 +12,7 @@ import (
 type ProjectcalicoV3Interface interface {
 	RESTClient() rest.Interface
 	GlobalNetworkPoliciesGetter
+	GlobalNetworkSetsGetter
 	NetworkPoliciesGetter
 	TiersGetter
 }
@@ -23,6 +24,10 @@ type ProjectcalicoV3Client struct {
 
 func (c *ProjectcalicoV3Client) GlobalNetworkPolicies() GlobalNetworkPolicyInterface {
 	return newGlobalNetworkPolicies(c)
+}
+
+func (c *ProjectcalicoV3Client) GlobalNetworkSets() GlobalNetworkSetInterface {
+	return newGlobalNetworkSets(c)
 }
 
 func (c *ProjectcalicoV3Client) NetworkPolicies(namespace string) NetworkPolicyInterface {

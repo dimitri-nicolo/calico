@@ -17,6 +17,8 @@ func NewStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		return NewTierStorage(opts)
 	case "projectcalico.org/globalnetworkpolicies":
 		return NewGlobalNetworkPolicyStorage(opts)
+	case "projectcalico.org/globalnetworksets":
+		return NewGlobalNetworkSetStorage(opts)
 	default:
 		glog.Fatalf("Unable to create storage for resource %v", opts.RESTOptions.ResourcePrefix)
 		return nil, nil
