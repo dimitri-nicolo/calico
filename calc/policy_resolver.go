@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -97,7 +97,9 @@ func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
 	case model.PolicyKey:
 		log.Debugf("Policy update: %v", key)
 		policiesDirty = pr.policySorter.OnUpdate(update)
-		pr.markEndpointsMatchingPolicyDirty(key)
+		if policiesDirty {
+			pr.markEndpointsMatchingPolicyDirty(key)
+		}
 	case model.TierKey:
 		log.Debugf("Tier update: %v", key)
 		policiesDirty = pr.policySorter.OnUpdate(update)

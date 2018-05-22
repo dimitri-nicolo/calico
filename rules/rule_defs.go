@@ -306,6 +306,7 @@ type Config struct {
 	IPIPTunnelAddress net.IP
 
 	IptablesLogPrefix         string
+	IncludeDropActionInPrefix bool
 	EndpointToHostAction      string
 	ActionOnDrop              string
 	IptablesFilterAllowAction string
@@ -360,6 +361,9 @@ func NewRenderer(config Config) RuleRenderer {
 		logPrefix := "calico-drop"
 		if config.IptablesLogPrefix != "" {
 			logPrefix = config.IptablesLogPrefix
+			if config.IncludeDropActionInPrefix {
+				logPrefix = config.IptablesLogPrefix + " " + config.ActionOnDrop
+			}
 		}
 		dropActions = append(dropActions, iptables.LogAction{Prefix: logPrefix})
 	}

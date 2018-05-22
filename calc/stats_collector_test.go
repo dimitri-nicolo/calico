@@ -96,7 +96,7 @@ var _ = Describe("Stats collector", func() {
 		It("should count a policy", func() {
 			sc.UpdatePolicyCounts(1, 1, 0)
 			Expect(*lastStatsUpdate).To(Equal(StatsUpdate{
-				NumTiers: 1,
+				NumTiers:    1,
 				NumPolicies: 1,
 			}))
 		})

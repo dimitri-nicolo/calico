@@ -109,6 +109,17 @@ type Config struct {
 	TyphaReadTimeout    time.Duration `config:"seconds;30;local"`
 	TyphaWriteTimeout   time.Duration `config:"seconds;10;local"`
 
+	// Client-side TLS config for Felix's communication with Typha.  If any of these are
+	// specified, they _all_ must be - except that either TyphaCN or TyphaURISAN may be left
+	// unset.  Felix will then initiate a secure (TLS) connection to Typha.  Typha must present
+	// a certificate signed by a CA in TyphaCAFile, and with CN matching TyphaCN or URI SAN
+	// matching TyphaURISAN.
+	TyphaKeyFile  string `config:"file(must-exist);;local"`
+	TyphaCertFile string `config:"file(must-exist);;local"`
+	TyphaCAFile   string `config:"file(must-exist);;local"`
+	TyphaCN       string `config:"string;;local"`
+	TyphaURISAN   string `config:"string;;local"`
+
 	Ipv6Support    bool `config:"bool;true"`
 	IgnoreLooseRPF bool `config:"bool;false"`
 
@@ -137,6 +148,7 @@ type Config struct {
 	IptablesFilterAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
 	IptablesMangleAllowAction   string `config:"oneof(ACCEPT,RETURN);ACCEPT;non-zero,die-on-fail"`
 	LogPrefix                   string `config:"string;calico-drop"`
+	LogDropActionOverride       bool   `config:"bool;false"`
 
 	LogFilePath string `config:"file;/var/log/calico/felix.log;die-on-fail"`
 
@@ -160,12 +172,16 @@ type Config struct {
 
 	EnableNflogSize bool `config:"bool;false"`
 
-	HealthEnabled                   bool `config:"bool;false"`
-	HealthPort                      int  `config:"int(0,65535);9099"`
-	PrometheusMetricsEnabled        bool `config:"bool;false"`
-	PrometheusMetricsPort           int  `config:"int(0,65535);9091"`
-	PrometheusGoMetricsEnabled      bool `config:"bool;true"`
-	PrometheusProcessMetricsEnabled bool `config:"bool;true"`
+	HealthEnabled                   bool   `config:"bool;false"`
+	HealthPort                      int    `config:"int(0,65535);9099"`
+	HealthHost                      string `config:"string;localhost"`
+	PrometheusMetricsEnabled        bool   `config:"bool;false"`
+	PrometheusMetricsPort           int    `config:"int(0,65535);9091"`
+	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
+	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
+	PrometheusMetricsCertFile       string `config:"file(must-exist);"`
+	PrometheusMetricsKeyFile        string `config:"file(must-exist);"`
+	PrometheusMetricsCAFile         string `config:"file(must-exist);"`
 
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
@@ -176,9 +192,9 @@ type Config struct {
 
 	PrometheusReporterEnabled   bool          `config:"bool;false"`
 	PrometheusReporterPort      int           `config:"int(0,65535);9092"`
-	PrometheusReporterCertFile  string        `config:"string;"`
-	PrometheusReporterKeyFile   string        `config:"string;"`
-	PrometheusReporterCAFile    string        `config:"string;"`
+	PrometheusReporterCertFile  string        `config:"file(must-exist);"`
+	PrometheusReporterKeyFile   string        `config:"file(must-exist);"`
+	PrometheusReporterCAFile    string        `config:"file(must-exist);"`
 	SyslogReporterNetwork       string        `config:"string;"`
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
@@ -194,6 +210,7 @@ type Config struct {
 	CNXVersion                     string        `config:"string;"`
 
 	DebugMemoryProfilePath          string        `config:"file;;"`
+	DebugCPUProfilePath             string        `config:"file;/tmp/felix-cpu-<timestamp>.pprof;"`
 	DebugDisableLogDropping         bool          `config:"bool;false"`
 	DebugSimulateCalcGraphHangAfter time.Duration `config:"seconds;0"`
 	DebugSimulateDataplaneHangAfter time.Duration `config:"seconds;0"`
@@ -436,6 +453,24 @@ func (config *Config) Validate() (err error) {
 		}
 		if config.EtcdAddr == "" {
 			err = errors.New("EtcdEndpoints and EtcdAddr both missing")
+		}
+	}
+
+	// If any client-side TLS config parameters are specified, they _all_ must be - except that
+	// either TyphaCN or TyphaURISAN may be left unset.
+	if config.TyphaCAFile != "" ||
+		config.TyphaCertFile != "" ||
+		config.TyphaKeyFile != "" ||
+		config.TyphaCN != "" ||
+		config.TyphaURISAN != "" {
+		// Some TLS config specified.
+		if config.TyphaKeyFile == "" ||
+			config.TyphaCertFile == "" ||
+			config.TyphaCAFile == "" ||
+			(config.TyphaCN == "" && config.TyphaURISAN == "") {
+			err = errors.New("If any Felix-Typha TLS config parameters are specified," +
+				" they _all_ must be" +
+				" - except that either TyphaCN or TyphaURISAN may be left unset.")
 		}
 	}
 

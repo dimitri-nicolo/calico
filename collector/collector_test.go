@@ -10,11 +10,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/tigera/nfnetlink"
+	"github.com/tigera/nfnetlink/nfnl"
+
 	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
-	"github.com/tigera/nfnetlink"
-	"github.com/tigera/nfnetlink/nfnl"
 )
 
 const (

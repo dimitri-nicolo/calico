@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"fmt"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -62,7 +63,7 @@ func GetCNXMetrics(felixIP, name string) (metricLines []string, err error) {
 
 // GetCNXConnectionMetricsIntForPolicy returns the total number of connections associated with a
 // policy for a specific traffic direction. You may optionally specify a rule index.
-func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficDirection string, ruleIdx... int) (sum int, err error) {
+func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficDirection string, ruleIdx ...int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_connections")
 	if err != nil {
 		return
@@ -102,7 +103,7 @@ func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficD
 
 // GetCNXPacketMetricsIntForPolicy returns the total number of packets associated with a
 // policy for a specific traffic and rule direction. You may optionally specify a rule index.
-func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx... int) (sum int, err error) {
+func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx ...int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_packets")
 	if err != nil {
 		return
@@ -143,7 +144,7 @@ func GetCNXPacketMetricsIntForPolicy(felixIP, action, tierName, policyName, traf
 
 // GetCNXByteMetricsIntForPolicy returns the total number of bytes associated with a
 // policy for a specific traffic and rule direction. You may optionally specify a rule index.
-func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx... int) (sum int, err error) {
+func GetCNXByteMetricsIntForPolicy(felixIP, action, tierName, policyName, trafficDirection, ruleDirection string, ruleIdx ...int) (sum int, err error) {
 	lines, err := GetCNXMetrics(felixIP, "cnx_policy_rule_bytes")
 	if err != nil {
 		return

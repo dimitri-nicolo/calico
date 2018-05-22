@@ -23,6 +23,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"runtime/debug"
+
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/external"
 	"github.com/projectcalico/felix/dataplane/linux"
@@ -141,6 +143,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
 
 				IptablesLogPrefix:         configParams.LogPrefix,
+				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
 				ActionOnDrop:              configParams.DropActionOverride,
 				EndpointToHostAction:      configParams.DefaultEndpointToHostAction,
 				IptablesFilterAllowAction: configParams.IptablesFilterAllowAction,
@@ -185,7 +188,16 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 
-			PostInSyncCallback:              func() { logutils.DumpHeapMemoryProfile(configParams) },
+			PostInSyncCallback: func() {
+				// The initial resync uses a lot of scratch space so now is
+				// a good time to force a GC and return any RAM that we can.
+				debug.FreeOSMemory()
+
+				if configParams.DebugMemoryProfilePath == "" {
+					return
+				}
+				logutils.DumpHeapMemoryProfile(configParams.DebugMemoryProfilePath)
+			},
 			HealthAggregator:                healthAggregator,
 			DebugSimulateDataplaneHangAfter: configParams.DebugSimulateDataplaneHangAfter,
 			FelixHostname:                   configParams.FelixHostname,

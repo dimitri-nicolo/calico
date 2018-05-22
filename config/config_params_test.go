@@ -27,6 +27,8 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
@@ -52,9 +54,6 @@ var _ = Describe("FelixConfig vs ConfigParams parity", func() {
 		"IpInIpTunnelAddr",
 
 		"EnableNflogSize",
-
-		// FIXME Remove this once libcalico-go supports policy-sync API!
-		"PolicySyncPathPrefix",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",
@@ -168,6 +167,7 @@ var _ = DescribeTable("Config parsing",
 	Entry("InterfaceExclude list", "InterfaceExclude", "kube-ipvs0,dummy", "kube-ipvs0,dummy"),
 
 	Entry("ChainInsertMode append", "ChainInsertMode", "append", "append"),
+	Entry("ChainInsertMode append", "ChainInsertMode", "Append", "append"),
 
 	Entry("IptablesPostWriteCheckIntervalSecs", "IptablesPostWriteCheckIntervalSecs",
 		"1.5", 1500*time.Millisecond),
@@ -238,6 +238,10 @@ var _ = DescribeTable("Config parsing",
 
 	Entry("MaxIpsetSize", "MaxIpsetSize", "12345", int(12345)),
 	Entry("IptablesMarkMask", "IptablesMarkMask", "0xf0f0", uint32(0xf0f0)),
+
+	Entry("HealthEnabled", "HealthEnabled", "true", true),
+	Entry("HealthHost", "HealthHost", "127.0.0.1", "127.0.0.1"),
+	Entry("HealthPort", "HealthPort", "1234", int(1234)),
 
 	Entry("PrometheusMetricsEnabled", "PrometheusMetricsEnabled", "true", true),
 	Entry("PrometheusMetricsPort", "PrometheusMetricsPort", "1234", int(1234)),
@@ -405,3 +409,46 @@ var _ = Describe("DatastoreConfig tests", func() {
 		})
 	})
 })
+
+var _ = DescribeTable("Config validation",
+	func(settings map[string]string, ok bool) {
+		cfg := New()
+		cfg.UpdateFrom(settings, ConfigFile)
+		err := cfg.Validate()
+		log.WithError(err).Info("Validation result")
+		if !ok {
+			Expect(err).To(HaveOccurred())
+		} else {
+			Expect(err).NotTo(HaveOccurred())
+		}
+	},
+
+	Entry("no settings", map[string]string{}, true),
+	Entry("just one TLS setting", map[string]string{
+		"TyphaKeyFile": "/usr",
+	}, false),
+	Entry("TLS certs and key but no CN or URI SAN", map[string]string{
+		"TyphaKeyFile":  "/usr",
+		"TyphaCertFile": "/usr",
+		"TyphaCAFile":   "/usr",
+	}, false),
+	Entry("TLS certs and key and CN but no URI SAN", map[string]string{
+		"TyphaKeyFile":  "/usr",
+		"TyphaCertFile": "/usr",
+		"TyphaCAFile":   "/usr",
+		"TyphaCN":       "typha-peer",
+	}, true),
+	Entry("TLS certs and key and URI SAN but no CN", map[string]string{
+		"TyphaKeyFile":  "/usr",
+		"TyphaCertFile": "/usr",
+		"TyphaCAFile":   "/usr",
+		"TyphaURISAN":   "spiffe://k8s.example.com/typha-peer",
+	}, true),
+	Entry("all Felix-Typha TLS params", map[string]string{
+		"TyphaKeyFile":  "/usr",
+		"TyphaCertFile": "/usr",
+		"TyphaCAFile":   "/usr",
+		"TyphaCN":       "typha-peer",
+		"TyphaURISAN":   "spiffe://k8s.example.com/typha-peer",
+	}, true),
+)

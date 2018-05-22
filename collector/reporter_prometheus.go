@@ -3,19 +3,14 @@
 package collector
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"time"
 
 	"github.com/gavv/monotime"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/libcalico-go/lib/security"
 )
 
 const checkInterval = 5 * time.Second
@@ -88,29 +83,7 @@ func (pr *PrometheusReporter) Report(mu MetricUpdate) error {
 // servePrometheusMetrics starts a lightweight web server to server prometheus metrics.
 func (pr *PrometheusReporter) servePrometheusMetrics() {
 	for {
-		mux := http.NewServeMux()
-		handler := promhttp.HandlerFor(pr.registry, promhttp.HandlerOpts{})
-		mux.Handle("/metrics", handler)
-		var err error
-		if pr.certFile != "" && pr.keyFile != "" && pr.caFile != "" {
-			caCert, err := ioutil.ReadFile(pr.caFile)
-			if err == nil {
-				caCertPool := x509.NewCertPool()
-				caCertPool.AppendCertsFromPEM(caCert)
-				cfg := &tls.Config{
-					ClientAuth: tls.RequireAndVerifyClientCert,
-					ClientCAs:  caCertPool,
-				}
-				srv := &http.Server{
-					Addr:      fmt.Sprintf(":%v", pr.port),
-					Handler:   handler,
-					TLSConfig: cfg,
-				}
-				err = srv.ListenAndServeTLS(pr.certFile, pr.keyFile)
-			}
-		} else {
-			err = http.ListenAndServe(fmt.Sprintf(":%v", pr.port), handler)
-		}
+		err := security.ServePrometheusMetrics(pr.registry, pr.port, pr.certFile, pr.keyFile, pr.caFile)
 		log.WithError(err).Error(
 			"Prometheus reporter metrics endpoint failed, trying to restart it...")
 		time.Sleep(1 * time.Second)

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,11 +16,17 @@ package metrics
 
 import (
 	"bufio"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/projectcalico/typha/pkg/tlsutils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,10 +40,54 @@ func PortString() string {
 	return strconv.Itoa(Port)
 }
 
-func GetFelixMetric(felixIP, name string) (metric string, err error) {
-	var resp *http.Response
+func GetMetric(ip string, port int, name, caFile, certFile, keyFile string) (metric string, err error) {
 	httpClient := http.Client{Timeout: time.Second}
-	resp, err = httpClient.Get("http://" + felixIP + ":" + PortString() + "/metrics")
+	method := "http"
+	// Client setup for TLS.
+	if certFile != "" {
+		// Start with default HTTP transport.
+		transport := *(http.DefaultTransport.(*http.Transport))
+		// Add client's key/cert pair.
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			log.WithError(err).Error("Failed to read cert/key files")
+			return "", err
+		}
+		transport.TLSClientConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+		// If caFile given, verify the server.
+		if caFile != "" {
+			// Set InsecureSkipVerify true, because when it's false crypto/tls insists
+			// on verifying the server's hostname or IP address against
+			// tlsConfig.ServerName, and we don't want that.  We will do certificate
+			// chain verification ourselves inside CertificateVerifier.
+			transport.TLSClientConfig.InsecureSkipVerify = true
+			caPEMBlock, err := ioutil.ReadFile(caFile)
+			if err != nil {
+				log.WithError(err).Error("Failed to read CA data")
+				return "", err
+			}
+			transport.TLSClientConfig.RootCAs = x509.NewCertPool()
+			ok := transport.TLSClientConfig.RootCAs.AppendCertsFromPEM(caPEMBlock)
+			if !ok {
+				log.Error("Failed to add CA data to pool")
+				return "", errors.New("Failed to add CA data to pool")
+			}
+			transport.TLSClientConfig.VerifyPeerCertificate = tlsutils.CertificateVerifier(
+				log.WithField("caFile", caFile),
+				transport.TLSClientConfig.RootCAs,
+				"",
+				"",
+			)
+		} else {
+			transport.TLSClientConfig.InsecureSkipVerify = true
+		}
+		httpClient.Transport = &transport
+		method = "https"
+	}
+	var resp *http.Response
+	resp, err = httpClient.Get(fmt.Sprintf("%v://%v:%v/metrics", method, ip, port))
 	if err != nil {
 		return
 	}
@@ -58,10 +108,23 @@ func GetFelixMetric(felixIP, name string) (metric string, err error) {
 	return
 }
 
+func GetFelixMetric(felixIP, name string) (metric string, err error) {
+	metric, err = GetMetric(felixIP, Port, name, "", "", "")
+	return
+}
+
 func GetFelixMetricInt(felixIP, name string) (metric int, err error) {
 	s, err := GetFelixMetric(felixIP, name)
 	if err != nil {
 		return 0, err
 	}
 	return strconv.Atoi(s)
+}
+
+func GetFelixMetricFloat(felixIP, name string) (metric float64, err error) {
+	s, err := GetFelixMetric(felixIP, name)
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseFloat(s, 64)
 }

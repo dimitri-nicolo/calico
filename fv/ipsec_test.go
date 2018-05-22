@@ -38,6 +38,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 	BeforeEach(func() {
 		var err error
+
 		infra, err = getInfra()
 		Expect(err).NotTo(HaveOccurred())
 		topologyOptions := infrastructure.DefaultTopologyOptions()
