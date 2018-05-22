@@ -157,12 +157,6 @@ pipeline{
             }
         }
 
-        stage('Run htmlproofer') {
-            steps {
-                sh 'JEKYLL_UID=10000 make htmlproofer'
-            }
-        }
-
         stage('Build docs') {
             steps {
                 script {
