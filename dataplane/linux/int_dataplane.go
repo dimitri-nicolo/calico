@@ -453,6 +453,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 				config.IPSecPSK,
 				config.IPSecIKEProposal,
 				config.IPSecESPProposal,
+				config.RulesConfig.IptablesMarkIPsec,
 			)
 			ipSecManager := newIPSecManager(dp.ipSecDataplane)
 			dp.allManagers = append(dp.allManagers, ipSecManager)

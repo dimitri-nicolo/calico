@@ -23,13 +23,17 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func AddXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, reqID int) error {
+func AddXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, reqID int, optionalMark ...*netlink.XfrmMark) error {
 	_, srcNet, _ := net.ParseCIDR(src)
 	_, dstNet, _ := net.ParseCIDR(dst)
 	policy := netlink.XfrmPolicy{
 		Src: srcNet,
 		Dst: dstNet,
 		Dir: dir,
+	}
+
+	if len(optionalMark) > 0 {
+		policy.Mark = optionalMark[0]
 	}
 
 	tmpl := netlink.XfrmPolicyTmpl{
@@ -51,7 +55,7 @@ func AddXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, re
 	return nil
 }
 
-func DeleteXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, reqID int) error {
+func DeleteXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, reqID int, optionalMark ...*netlink.XfrmMark) error {
 	_, srcNet, _ := net.ParseCIDR(src)
 	_, dstNet, _ := net.ParseCIDR(dst)
 
@@ -59,6 +63,10 @@ func DeleteXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir,
 		Src: srcNet,
 		Dst: dstNet,
 		Dir: dir,
+	}
+
+	if len(optionalMark) > 0 {
+		policy.Mark = optionalMark[0]
 	}
 
 	tmpl := netlink.XfrmPolicyTmpl{

@@ -54,6 +54,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		markAccept, _ := markBitsManager.NextSingleBitMark()
 		markPass, _ := markBitsManager.NextSingleBitMark()
 		markDrop, _ := markBitsManager.NextSingleBitMark()
+		markIPsec, _ := markBitsManager.NextSingleBitMark()
 		// Short-lived mark bits for local calculations within a chain.
 		markScratch0, _ := markBitsManager.NextSingleBitMark()
 		markScratch1, _ := markBitsManager.NextSingleBitMark()
@@ -130,6 +131,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesMarkAccept:          markAccept,
 				IptablesMarkPass:            markPass,
 				IptablesMarkDrop:            markDrop,
+				IptablesMarkIPsec:           markIPsec,
 				IptablesMarkScratch0:        markScratch0,
 				IptablesMarkScratch1:        markScratch1,
 				IptablesMarkEndpoint:        markEndpointMark,

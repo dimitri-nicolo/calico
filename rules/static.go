@@ -453,7 +453,8 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 		Rule{
 			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
 			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
-			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ r.IptablesMarkAccept},
+			// Similarly, the IPsec bit is used across multiple tables.
+			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)},
 		},
 		Rule{
 			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
@@ -786,6 +787,13 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
 		})
 	}
 
+	if ipVersion == 4 {
+		rules = append(rules, Rule{
+			Match:  Match().MarkSingleBitSet(markFromWorkload),
+			Action: SetMarkAction{Mark: r.IptablesMarkIPsec},
+		})
+	}
+
 	if ipVersion == 6 {
 		// Apply strict RPF check to packets from workload interfaces.  This prevents
 		// workloads from spoofing their IPs.  Note: non-privileged containers can't
@@ -820,7 +828,8 @@ func (r *DefaultRuleRenderer) allCalicoMarkBits() uint32 {
 	return r.IptablesMarkAccept |
 		r.IptablesMarkPass |
 		r.IptablesMarkScratch0 |
-		r.IptablesMarkScratch1
+		r.IptablesMarkScratch1 |
+		r.IptablesMarkIPsec
 }
 
 func (r *DefaultRuleRenderer) StaticRawOutputChain() *Chain {

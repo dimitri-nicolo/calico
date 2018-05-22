@@ -285,6 +285,7 @@ type Config struct {
 	IptablesMarkAccept   uint32
 	IptablesMarkPass     uint32
 	IptablesMarkDrop     uint32
+	IptablesMarkIPsec    uint32
 	IptablesMarkScratch0 uint32
 	IptablesMarkScratch1 uint32
 	IptablesMarkEndpoint uint32

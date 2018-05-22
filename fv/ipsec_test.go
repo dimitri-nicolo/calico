@@ -55,12 +55,16 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		// Start tcpdump inside each host container.  Dumping inside the container means that we'll see a lot less
 		// noise from the rest of the system.
+		tcpdumps = nil
 		for _, f := range felixes {
 			tcpdump := containers.AttachTCPDump(f.Container, "eth0")
 			tcpdump.AddMatcher("numIKEPackets", regexp.MustCompile(`.*isakmp:.*`))
 			tcpdump.AddMatcher("numInboundESPPackets", regexp.MustCompile(`.*`+regexp.QuoteMeta("> "+f.IP)+`.*ESP.*`))
 			tcpdump.AddMatcher("numOutboundESPPackets", regexp.MustCompile(`.*`+regexp.QuoteMeta(f.IP+" >")+`.*ESP.*`))
-			tcpdump.AddMatcher("numWorkloadPackets", regexp.MustCompile(`.*10\.65\.\d+\.2.*`))
+			tcpdump.AddMatcher("numInboundWorkloadPackets",
+				regexp.MustCompile(`.*`+regexp.QuoteMeta(">")+` 10\.65\.\d+\.2.*`))
+			tcpdump.AddMatcher("numInboundWorkloadToHostPackets",
+				regexp.MustCompile(`.*10\.65\.\d+\.2.\d+ `+regexp.QuoteMeta("> "+f.IP)))
 			tcpdump.Start()
 			tcpdumps = append(tcpdumps, tcpdump)
 		}
@@ -115,23 +119,33 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		}
 	}
 
-	expectEncryption := func() {
+	expectIKE := func() {
 		for i := range felixes {
-			By(fmt.Sprintf("Doing IKE and ESP (felix %v)", i))
-
+			By(fmt.Sprintf("Doing IKE (felix %v)", i))
 			Eventually(tcpdumpMatches(i, "numIKEPackets")).Should(BeNumerically(">", 0),
 				"tcpdump didn't record and IKE packets")
-			Eventually(tcpdumpMatches(i, "numInboundESPPackets")).Should(BeNumerically(">", 0),
-				"tcpdump didn't record any ESP packets")
-			Eventually(tcpdumpMatches(i, "numOutboundESPPackets")).Should(BeNumerically(">", 0),
-				"tcpdump didn't record any ESP packets")
+		}
+	}
 
-			// When snooping, tcpdump sees both inbound post-decryption packets as well as both inbound and outbound
-			// encrypted packets.  That means we expect the number of unencrypted packets that we see in the capture
-			// to be equal to the number of inbound encrypted packets.
-			Eventually(func() int {
-				return tcpdumpMatches(i, "numWorkloadPackets")() - tcpdumpMatches(1, "numInboundESPPackets")()
-			}).Should(BeZero(), "Number of inbound unencrypted packets didn't match number of inbound ESP packets")
+	expectNoESP := func() {
+		for i := range felixes {
+			By(fmt.Sprintf("Doing no ESP (felix %v)", i))
+			Eventually(tcpdumpMatches(i, "numInboundESPPackets")).Should(BeNumerically("==", 0),
+				"tcpdump didn't record any inbound ESP packets")
+			Eventually(tcpdumpMatches(i, "numOutboundESPPackets")).Should(BeNumerically("==", 0),
+				"tcpdump didn't record any inbound ESP packets")
+		}
+	}
+
+	expectIKEAndESP := func() {
+		expectIKE()
+
+		for i := range felixes {
+			By(fmt.Sprintf("Doing ESP (felix %v)", i))
+			Eventually(tcpdumpMatches(i, "numInboundESPPackets")).Should(BeNumerically(">", 0),
+				"tcpdump didn't record any inbound ESP packets")
+			Eventually(tcpdumpMatches(i, "numOutboundESPPackets")).Should(BeNumerically(">", 0),
+				"tcpdump didn't record any inbound ESP packets")
 		}
 	}
 
@@ -140,20 +154,50 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		cc.ExpectSome(w[1], w[0])
 		cc.CheckConnectivity()
 
-		expectEncryption()
+		expectIKEAndESP()
+
+		for i := range felixes {
+			By(fmt.Sprintf("Doing IKE and ESP (felix %v)", i))
+
+			// When snooping, tcpdump sees both inbound post-decryption packets as well as both inbound and outbound
+			// encrypted packets.  That means we expect the number of unencrypted packets that we see in the capture
+			// to be equal to the number of inbound encrypted packets.
+			Eventually(func() int {
+				return tcpdumpMatches(i, "numInboundWorkloadPackets")() -
+					tcpdumpMatches(i, "numInboundESPPackets")()
+			}).Should(BeZero(), "Number of inbound unencrypted packets didn't match number of inbound ESP packets")
+		}
 	})
 
-	// TODO: Should this traffic be encrypted?
-	It("should have host to workload connectivity", func() {
+	It("host-to-workload connections should be encrypted", func() {
 		cc.ExpectSome(felixes[0], w[1])
-		cc.ExpectSome(felixes[0], w[0])
+		cc.ExpectSome(felixes[1], w[0])
 		cc.CheckConnectivity()
+
+		expectIKEAndESP()
+
+		for i := range felixes {
+			By(fmt.Sprintf("Doing having expected mix of encrypted/unencrypted packets (felix %v)", i))
+
+			// When snooping, tcpdump sees both inbound post-decryption packets as well as both inbound and outbound
+			// encrypted packets.  That means we expect the number of unencrypted packets that we see in the capture
+			// to be equal to the number of inbound encrypted packets.
+			Eventually(func() int {
+				return tcpdumpMatches(i, "numInboundWorkloadPackets")() +
+					tcpdumpMatches(i, "numInboundWorkloadToHostPackets")() -
+					tcpdumpMatches(i, "numInboundESPPackets")()
+			}).Should(BeZero(), "Number of inbound unencrypted packets didn't match number of inbound ESP packets")
+		}
 	})
 
+	// FIXME: Do we want to do host-to-host encryption?
 	It("should have host to host connectivity", func() {
 		cc.ExpectSome(felixes[0], hostW[1])
 		cc.ExpectSome(felixes[1], hostW[0])
 		cc.CheckConnectivity()
+
+		expectIKE()
+		expectNoESP()
 	})
 
 	// FIXME: This doesn't work because the host policy blocks the encrypted IPsec tunnel.

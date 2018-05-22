@@ -61,7 +61,7 @@ func (t *TCPDump) MatchCount(name string) int {
 	defer t.lock.Unlock()
 
 	c := t.matchers[name].count
-	logrus.Infof("Match count for %s is %v", name, c)
+	logrus.Infof("[%s] Match count for %s is %v", t.containerName, name, c)
 	return c
 }
 
@@ -95,7 +95,7 @@ func (t *TCPDump) readStdout() {
 	s := bufio.NewScanner(t.out)
 	for s.Scan() {
 		line := s.Text()
-		logrus.Infof("tcpdump [%s] %s", t.containerName, line)
+		logrus.Infof("[%s] %s", t.containerName, line)
 
 		t.lock.Lock()
 		for _, m := range t.matchers {
