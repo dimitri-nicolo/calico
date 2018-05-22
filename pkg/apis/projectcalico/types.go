@@ -84,3 +84,25 @@ type GlobalNetworkPolicy struct {
 
 	Spec calico.GlobalNetworkPolicySpec
 }
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// GlobalNetworkPolicyList is a list of Policy objects.
+type GlobalNetworkSetList struct {
+	metav1.TypeMeta
+	metav1.ListMeta
+
+	Items []GlobalNetworkSet
+}
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type GlobalNetworkSet struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	Spec calico.GlobalNetworkSetSpec
+}

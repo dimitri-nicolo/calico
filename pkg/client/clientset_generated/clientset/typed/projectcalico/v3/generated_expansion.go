@@ -4,6 +4,8 @@ Copyright 2017 Tigera.
 
 type GlobalNetworkPolicyExpansion interface{}
 
+type GlobalNetworkSetExpansion interface{}
+
 type NetworkPolicyExpansion interface{}
 
 type TierExpansion interface{}
