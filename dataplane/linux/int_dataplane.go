@@ -30,13 +30,13 @@ import (
 
 	"net"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
@@ -207,7 +207,7 @@ type InternalDataplane struct {
 
 	ruleRenderer rules.RuleRenderer
 
-	lookupManager *lookup.LookupManager
+	lookupCache *calc.LookupsCache
 
 	interfacePrefixes []string
 
@@ -241,7 +241,7 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-func NewIntDataplaneDriver(config Config) *InternalDataplane {
+func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDataplane {
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
@@ -353,8 +353,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		config.RulesConfig.WorkloadIfacePrefixes,
 		dp.endpointStatusCombiner.OnEndpointStatusUpdate))
 	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4))
-	dp.lookupManager = lookup.NewLookupManager()
-	dp.RegisterManager(dp.lookupManager)
+	dp.lookupCache = cache
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
 		// Create and maintain the IPIP tunnel device
@@ -567,7 +566,7 @@ func (d *InternalDataplane) Start() {
 		rm.RegisterMetricsReporter(syslogReporter)
 	}
 	rm.Start()
-	statsCollector := collector.NewCollector(d.lookupManager, rm, collectorConfig)
+	statsCollector := collector.NewCollector(d.lookupCache, rm, collectorConfig)
 	statsCollector.Start()
 }
 

@@ -13,7 +13,7 @@ import (
 	"github.com/tigera/nfnetlink"
 	"github.com/tigera/nfnetlink/nfnl"
 
-	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
@@ -59,7 +59,7 @@ var (
 	defTierAllowIngressNFLOGPrefix   = [64]byte{'A', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierAllowEgressNFLOGPrefix    = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierDenyIngressNFLOGPrefix    = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
-	defTierPolicy1AllowIngressRuleID = &lookup.RuleID{
+	defTierPolicy1AllowIngressRuleID = &calc.RuleID{
 		Tier:      "default",
 		Name:      "policy1",
 		Namespace: "",
@@ -68,7 +68,7 @@ var (
 		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirIngress,
 	}
-	defTierPolicy1AllowEgressRuleID = &lookup.RuleID{
+	defTierPolicy1AllowEgressRuleID = &calc.RuleID{
 		Tier:      "default",
 		Name:      "policy1",
 		Namespace: "",
@@ -77,7 +77,7 @@ var (
 		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirEgress,
 	}
-	defTierPolicy2DenyIngressRuleID = &lookup.RuleID{
+	defTierPolicy2DenyIngressRuleID = &calc.RuleID{
 		Tier:      "default",
 		Name:      "policy2",
 		Namespace: "",
@@ -89,8 +89,16 @@ var (
 )
 
 var (
-	wl1Ep1 = "WEP(orchestrator/localworkloadid1/localepid1)"
-	wl2Ep2 = "WEP(orchestrator/localworkloadid2/localepid2)"
+	wl1Ep1 = model.WorkloadEndpointKey{
+		OrchestratorID: "orchestrator",
+		WorkloadID:     "localworkloadid1",
+		EndpointID:     "localepid1",
+	}
+	wl2Ep2 = model.WorkloadEndpointKey{
+		OrchestratorID: "orchestrator",
+		WorkloadID:     "localworkloadid2",
+		EndpointID:     "localepid2",
+	}
 )
 
 var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
@@ -189,13 +197,13 @@ var _ = Describe("NFLOG Datasource", func() {
 				localIp1: localWlEPKey1,
 				localIp2: localWlEPKey2,
 			}
-			nflogMap := map[[64]byte]*lookup.RuleID{}
+			nflogMap := map[[64]byte]*calc.RuleID{}
 
-			for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+			for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
-			lm := newMockLookupManager(epMap, nflogMap)
+			lm := newMockLookupsCache(epMap, nflogMap)
 			c = NewCollector(lm, rm, conf)
 			go c.startStatsCollectionAndReporting()
 		})
@@ -346,13 +354,13 @@ var _ = Describe("Conntrack Datasource", func() {
 			localIp2: localWlEPKey2,
 		}
 
-		nflogMap := map[[64]byte]*lookup.RuleID{}
+		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupManager(epMap, nflogMap)
+		lm := newMockLookupsCache(epMap, nflogMap)
 		c = NewCollector(lm, rm, conf)
 		go c.startStatsCollectionAndReporting()
 	})
@@ -409,7 +417,7 @@ var _ = Describe("Conntrack Datasource", func() {
 
 })
 
-func policyIDStrToRuleIDParts(r *lookup.RuleID) [64]byte {
+func policyIDStrToRuleIDParts(r *calc.RuleID) [64]byte {
 	var (
 		name  string
 		byt64 [64]byte
@@ -457,13 +465,13 @@ var _ = Describe("Reporting Metrics", func() {
 			localIp2: localWlEPKey2,
 		}
 
-		nflogMap := map[[64]byte]*lookup.RuleID{}
+		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupManager(epMap, nflogMap)
+		lm := newMockLookupsCache(epMap, nflogMap)
 		rm.Start()
 		c = NewCollector(lm, rm, conf)
 		go c.startStatsCollectionAndReporting()
@@ -536,10 +544,10 @@ var _ = Describe("Reporting Metrics", func() {
 	})
 })
 
-func newMockLookupManager(
-	em map[[16]byte]*model.WorkloadEndpointKey, nm map[[64]byte]*lookup.RuleID,
-) *lookup.LookupManager {
-	l := lookup.NewLookupManager()
+func newMockLookupsCache(
+	em map[[16]byte]*model.WorkloadEndpointKey, nm map[[64]byte]*calc.RuleID,
+) *calc.LookupsCache {
+	l := calc.NewLookupsCache()
 	l.SetMockData(em, nm)
 	return l
 }
@@ -553,7 +561,7 @@ type testMetricUpdate struct {
 	tuple Tuple
 
 	// Rule identification
-	ruleID *lookup.RuleID
+	ruleID *calc.RuleID
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
@@ -591,9 +599,9 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		localIp2: localWlEPKey2,
 	}
 
-	nflogMap := map[[64]byte]*lookup.RuleID{}
+	nflogMap := map[[64]byte]*calc.RuleID{}
 
-	for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+	for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 		nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 	}
 
@@ -608,7 +616,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		ExportingInterval:        time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupManager(epMap, nflogMap)
+	lm := newMockLookupsCache(epMap, nflogMap)
 	c := NewCollector(lm, rm, conf)
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -623,8 +631,8 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		localIp2: localWlEPKey2,
 	}
 
-	nflogMap := map[[64]byte]*lookup.RuleID{}
-	for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+	nflogMap := map[[64]byte]*calc.RuleID{}
+	for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 		nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 	}
 
@@ -639,7 +647,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		ExportingInterval:        time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupManager(epMap, nflogMap)
+	lm := newMockLookupsCache(epMap, nflogMap)
 	c := NewCollector(lm, rm, conf)
 	var tuples []Tuple
 	MaxSrcPort := 1000
@@ -650,7 +658,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 			tuples = append(tuples, *t)
 		}
 	}
-	var rids []*lookup.RuleID
+	var rids []*calc.RuleID
 	MaxEntries := 10000
 	for i := 0; i < MaxEntries; i++ {
 		rid := defTierPolicy1AllowIngressRuleID

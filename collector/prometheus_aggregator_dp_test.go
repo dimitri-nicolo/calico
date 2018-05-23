@@ -12,12 +12,12 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 )
 
 var (
-	ingressRulePolicy3Deny = &lookup.RuleID{
+	ingressRulePolicy3Deny = &calc.RuleID{
 		Action:    rules.RuleActionDeny,
 		Index:     0,
 		IndexStr:  "0",
@@ -26,7 +26,7 @@ var (
 		Namespace: "",
 		Direction: rules.RuleDirIngress,
 	}
-	ingressRulePolicy4Deny = &lookup.RuleID{
+	ingressRulePolicy4Deny = &calc.RuleID{
 		Action:    rules.RuleActionDeny,
 		Index:     0,
 		IndexStr:  "0",
@@ -419,7 +419,7 @@ var resKey DeniedPacketsAggregateKey
 
 func BenchmarkCalicoDeniedPacketPolicyAggregateKey(b *testing.B) {
 	var key DeniedPacketsAggregateKey
-	rid := lookup.NewRuleID("default", "policy1", "__GLOBAL__", 0, rules.RuleDirIngress, rules.RuleActionDeny)
+	rid := calc.NewRuleID("default", "policy1", "__GLOBAL__", 0, rules.RuleDirIngress, rules.RuleActionDeny)
 	mu := MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,

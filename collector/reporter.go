@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/calc"
 )
 
 const (
@@ -37,7 +37,7 @@ type MetricUpdate struct {
 	isConnection bool
 
 	// Rule identification
-	ruleID *lookup.RuleID
+	ruleID *calc.RuleID
 
 	inMetric  MetricValue
 	outMetric MetricValue

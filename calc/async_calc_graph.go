@@ -94,9 +94,10 @@ func NewAsyncCalcGraph(
 	conf *config.Config,
 	outputChannels []chan<- interface{},
 	healthAggregator *health.HealthAggregator,
+	lookupCache *LookupsCache,
 ) *AsyncCalcGraph {
 	eventBuffer := NewEventSequencer(conf)
-	calcGraph := NewCalculationGraph(eventBuffer, conf.FelixHostname)
+	calcGraph := NewCalculationGraph(eventBuffer, lookupCache, conf.FelixHostname)
 	if conf.IPSecEnabled() {
 		log.Info("IPsec enabled, adding the binding calculator to calculation graph")
 		calcGraph.EnableIPSec(eventBuffer)

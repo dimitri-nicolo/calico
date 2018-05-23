@@ -494,6 +494,94 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 	"10.0.0.2",
 ).withName("3 endpoints sharing an IP with a duplicate host IP defined")
 
+var remoteWlEpKey2 = WorkloadEndpointKey{remoteHostname, "orch", "wl2", "ep2"}
+var remoteWlEp2ID = "orch/wl2/ep2"
+
+var remoteWlEp1 = WorkloadEndpoint{
+	State: "active",
+	Name:  "cali1",
+	Mac:   mustParseMac("01:02:03:04:05:06"),
+	IPv4Nets: []calinet.IPNet{mustParseNet("10.1.0.1/32"),
+		mustParseNet("10.1.0.2/32")},
+	IPv6Nets: []calinet.IPNet{mustParseNet("fe80:fe11::1/128"),
+		mustParseNet("fe80:fe11::2/128")},
+	Labels: map[string]string{
+		"id": "rem-ep-1",
+		"x":  "x",
+		"y":  "y",
+	},
+}
+
+var remoteWlEp1NoIpv6 = WorkloadEndpoint{
+	State: "active",
+	Name:  "cali1",
+	Mac:   mustParseMac("01:02:03:04:05:06"),
+	IPv4Nets: []calinet.IPNet{mustParseNet("10.1.0.1/32"),
+		mustParseNet("10.1.0.2/32")},
+	Labels: map[string]string{
+		"id": "rem-ep-1",
+		"x":  "x",
+		"y":  "y",
+	},
+}
+
+var remoteWlEp2 = WorkloadEndpoint{
+	State: "active",
+	Name:  "cali2",
+	Mac:   mustParseMac("02:03:04:05:06:07"),
+	IPv4Nets: []net.IPNet{mustParseNet("10.2.0.1/32"),
+		mustParseNet("10.2.0.2/32")},
+	IPv6Nets: []net.IPNet{mustParseNet("fe80:fe11::1/128"),
+		mustParseNet("fe80:fe11::2/128")},
+	Labels: map[string]string{
+		"id": "rem-ep-1",
+		"x":  "x",
+		"y":  "y",
+	},
+}
+
+var remoteWlEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
+	KVPair{Key: remoteWlEpKey1, Value: &remoteWlEp1},
+).withRemoteEndpoint(
+	remoteWlEp2ID,
+).withName("1 remote endpoint")
+
+// localEpAndRemoteEpWithPolicyAndTier contains one local and one remote endpoint.
+// It should give us a local state corresponding to the local endpoint and
+// record the remote endpoint as well.
+var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
+	// Two local endpoints with overlapping IPs.
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+	KVPair{Key: remoteWlEpKey2, Value: &remoteWlEp2},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // local ep
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
+	"10.2.0.1/32", // remote ep
+	"fe80:fe11::1/128",
+	"10.2.0.2/32",
+	"fe80:fe11::2/128",
+}).withIPSet(bEqBSelectorId, []string{
+	"10.0.0.1/32",
+	"fc00:fe11::1/128",
+	"10.0.0.2/32",
+	"fc00:fe11::2/128",
+}).withActivePolicies(
+	proto.PolicyID{"tier-1", "pol-1"},
+).withActiveProfiles(
+	proto.ProfileID{"prof-1"},
+	proto.ProfileID{"prof-2"},
+	proto.ProfileID{"prof-missing"},
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
+	},
+).withRemoteEndpoint(
+	remoteWlEp2ID,
+).withName("1 local and 1 remote")
+
 var commercialTests = []StateList{
 	// Empty should be empty!
 	{},
@@ -598,6 +686,9 @@ var commercialTests = []StateList{
 	// IPsec deletion tests (removing host IPs).
 	{localEp1WithNode, localEp1WithPolicy},
 	{localEp2WithNode, localEp2WithPolicy},
+
+	// Remote endpoint tests.
+	{remoteWlEp1WithPolicyAndTier, localEpAndRemoteEpWithPolicyAndTier},
 
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints

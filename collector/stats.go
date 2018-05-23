@@ -10,8 +10,9 @@ import (
 
 	"github.com/gavv/monotime"
 
-	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 type TrafficDirection int
@@ -130,7 +131,7 @@ const RuleTraceInitLen = 10
 // next-Tier/pass action. A RuleTrace also contains a endpoint that the rule
 // trace applied to,
 type RuleTrace struct {
-	path   []*lookup.RuleID
+	path   []*calc.RuleID
 	action rules.RuleAction
 
 	// Counter to store the packets and byte counts for the RuleTrace
@@ -145,7 +146,7 @@ type RuleTrace struct {
 	// one allocation when creating a RuleTrace object. More info on this here:
 	// https://github.com/golang/go/wiki/Performance#memory-profiler
 	// (Search for "slice array preallocation").
-	pathArray [RuleTraceInitLen]*lookup.RuleID
+	pathArray [RuleTraceInitLen]*calc.RuleID
 }
 
 func NewRuleTrace() RuleTrace {
@@ -169,7 +170,7 @@ func (t *RuleTrace) Len() int {
 	return len(t.path)
 }
 
-func (t *RuleTrace) Path() []*lookup.RuleID {
+func (t *RuleTrace) Path() []*calc.RuleID {
 	// Minor optimization where we only do a rebuild when we don't have the full
 	// path.
 	rebuild := false
@@ -187,7 +188,7 @@ func (t *RuleTrace) Path() []*lookup.RuleID {
 	if !rebuild {
 		return t.path[:idx+1]
 	}
-	path := make([]*lookup.RuleID, 0, RuleTraceInitLen)
+	path := make([]*calc.RuleID, 0, RuleTraceInitLen)
 	for _, tp := range t.path {
 		if tp == nil {
 			continue
@@ -224,7 +225,7 @@ func (t *RuleTrace) IsDirty() bool {
 
 // VerdictRuleID returns the RuleID that contains either ActionAllow or
 // DenyAction in a RuleTrace or nil if we haven't seen either of these yet.
-func (t *RuleTrace) VerdictRuleID() *lookup.RuleID {
+func (t *RuleTrace) VerdictRuleID() *calc.RuleID {
 	if t.verdictIdx >= 0 {
 		return t.path[t.verdictIdx]
 	} else {
@@ -237,12 +238,12 @@ func (t *RuleTrace) ClearDirtyFlag() {
 	t.ctr.ResetDeltas()
 }
 
-func (t *RuleTrace) addRuleID(rid *lookup.RuleID, tierIdx, numPkts, numBytes int) bool {
+func (t *RuleTrace) addRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) bool {
 	if tierIdx >= t.Len() {
 		// Insertion Index is beyond than current length. Grow the path slice as long
 		// as necessary.
 		incSize := (tierIdx / RuleTraceInitLen) * RuleTraceInitLen
-		newPath := make([]*lookup.RuleID, t.Len()+incSize)
+		newPath := make([]*calc.RuleID, t.Len()+incSize)
 		copy(newPath, t.path)
 		t.path = newPath
 		t.path[tierIdx] = rid
@@ -264,7 +265,7 @@ func (t *RuleTrace) addRuleID(rid *lookup.RuleID, tierIdx, numPkts, numBytes int
 	return true
 }
 
-func (t *RuleTrace) replaceRuleID(rid *lookup.RuleID, tierIdx, numPkts, numBytes int) {
+func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) {
 	if rid.Action == rules.RuleActionNextTier {
 		t.path[tierIdx] = rid
 		return
@@ -347,8 +348,8 @@ func (t *Tuple) String() string {
 // - 2 counters - connTrackCtr for the originating Direction of the connection
 // and connTrackCtrReverse for the reverse/reply of this connection.
 type Data struct {
-	Tuple  Tuple
-	epName string
+	Tuple Tuple
+	key   model.Key
 
 	// Indicates if this is a connection
 	isConnection bool
@@ -367,11 +368,11 @@ type Data struct {
 	dirty      bool
 }
 
-func NewData(tuple Tuple, epName string, duration time.Duration) *Data {
+func NewData(tuple Tuple, key model.Key, duration time.Duration) *Data {
 	now := monotime.Now()
 	return &Data{
 		Tuple:            tuple,
-		epName:           epName,
+		key:              key,
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        now,
@@ -382,8 +383,8 @@ func NewData(tuple Tuple, epName string, duration time.Duration) *Data {
 }
 
 func (d *Data) String() string {
-	return fmt.Sprintf("tuple={%v}, connTrackCtr={%v}, connTrackCtrReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
-		&(d.Tuple), d.connTrackCtr.String(), d.connTrackCtrReverse.String(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
+	return fmt.Sprintf("tuple={%v}, ep={%v} connTrackCtr={%v}, connTrackCtrReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
+		&(d.Tuple), endpointName(d.key), d.connTrackCtr.String(), d.connTrackCtrReverse.String(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
 }
 
 func (d *Data) touch() {
@@ -486,7 +487,7 @@ func (d *Data) ResetConntrackCounters() {
 	d.connTrackCtrReverse.Reset()
 }
 
-func (d *Data) AddRuleID(ruleID *lookup.RuleID, tierIdx, numPkts, numBytes int) bool {
+func (d *Data) AddRuleID(ruleID *calc.RuleID, tierIdx, numPkts, numBytes int) bool {
 	var ok bool
 	switch ruleID.Direction {
 	case rules.RuleDirIngress:
@@ -502,7 +503,7 @@ func (d *Data) AddRuleID(ruleID *lookup.RuleID, tierIdx, numPkts, numBytes int) 
 	return ok
 }
 
-func (d *Data) ReplaceRuleID(ruleID *lookup.RuleID, tierIdx, numPkts, numBytes int) bool {
+func (d *Data) ReplaceRuleID(ruleID *calc.RuleID, tierIdx, numPkts, numBytes int) bool {
 	switch ruleID.Direction {
 	case rules.RuleDirIngress:
 		d.IngressRuleTrace.replaceRuleID(ruleID, tierIdx, numPkts, numBytes)
@@ -540,4 +541,23 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	// Metrics have been reported, so acknowledge the stored data by resetting the dirty
 	// flag and resetting the delta counts.
 	d.clearDirtyFlag()
+}
+
+// endpointName is a convenience function to return a printable name for an endpoint.
+func endpointName(key model.Key) (name string) {
+	switch k := key.(type) {
+	case model.WorkloadEndpointKey:
+		name = workloadEndpointName(k)
+	case model.HostEndpointKey:
+		name = hostEndpointName(k)
+	}
+	return
+}
+
+func workloadEndpointName(wep model.WorkloadEndpointKey) string {
+	return "WEP(" + wep.Hostname + "/" + wep.OrchestratorID + "/" + wep.WorkloadID + "/" + wep.EndpointID + ")"
+}
+
+func hostEndpointName(hep model.HostEndpointKey) string {
+	return "HEP(" + hep.Hostname + "/" + hep.EndpointID + ")"
 }

@@ -25,6 +25,7 @@ import (
 
 	"runtime/debug"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/external"
 	"github.com/projectcalico/felix/dataplane/linux"
@@ -38,6 +39,7 @@ import (
 
 func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
+	cache *calc.LookupsCache,
 	configChangedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
 	if configParams.UseInternalDataplaneDriver {
 		log.Info("Using internal (linux) dataplane driver.")
@@ -216,7 +218,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			DebugSimulateDataplaneHangAfter: configParams.DebugSimulateDataplaneHangAfter,
 			FelixHostname:                   configParams.FelixHostname,
 		}
-		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
+		intDP := intdataplane.NewIntDataplaneDriver(cache, dpConfig)
 		intDP.Start()
 
 		return intDP, nil

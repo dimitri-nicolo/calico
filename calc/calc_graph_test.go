@@ -46,7 +46,8 @@ var _ = DescribeTable("Calculation graph pass-through tests",
 			log.WithField("message", message).Info("Received message")
 			messageReceived = message
 		}
-		cg := NewCalculationGraph(eb, "hostname").AllUpdDispatcher
+		lookupsCache := NewLookupsCache()
+		cg := NewCalculationGraph(eb, lookupsCache, "hostname").AllUpdDispatcher
 
 		// Send in the update and flush the buffer.  It should deposit the message
 		// via our callback.
@@ -130,7 +131,8 @@ var _ = Describe("Host IP duplicate squashing test", func() {
 			log.WithField("message", message).Info("Received message")
 			messagesReceived = append(messagesReceived, message)
 		}
-		cg = NewCalculationGraph(eb, "hostname").AllUpdDispatcher
+		lookupsCache := NewLookupsCache()
+		cg = NewCalculationGraph(eb, lookupsCache, "hostname").AllUpdDispatcher
 	})
 
 	It("should coalesce duplicate updates", func() {
@@ -233,7 +235,8 @@ var _ = Describe("specific scenario tests", func() {
 		mockDataplane = mock.NewMockDataplane()
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
-		calcGraph = NewCalculationGraph(eventBuf, localHostname)
+		lookupsCache := NewLookupsCache()
+		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, localHostname)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			log.WithField("stats", stats).Info("Stats update")
 			return nil

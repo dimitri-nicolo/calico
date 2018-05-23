@@ -81,6 +81,7 @@ type ActiveRulesCalculator struct {
 	// Callback objects.
 	RuleScanner           ruleScanner
 	PolicyMatchListener   PolicyMatchListener
+	PolicyLookupCache     ruleScanner
 	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles int)
 }
 
@@ -334,8 +335,10 @@ func (arc *ActiveRulesCalculator) sendProfileUpdate(profileID string) {
 			rules = &DummyDropRules
 		}
 		arc.RuleScanner.OnProfileActive(key, rules)
+		arc.PolicyLookupCache.OnProfileActive(key, rules)
 	} else {
 		arc.RuleScanner.OnProfileInactive(key)
+		arc.PolicyLookupCache.OnProfileInactive(key)
 	}
 }
 
@@ -351,8 +354,10 @@ func (arc *ActiveRulesCalculator) sendPolicyUpdate(policyKey model.PolicyKey) {
 			log.WithField("policyKey", policyKey).Panic("Unknown policy became active!")
 		}
 		arc.RuleScanner.OnPolicyActive(policyKey, policy)
+		arc.PolicyLookupCache.OnPolicyActive(policyKey, policy)
 	} else {
 		arc.RuleScanner.OnPolicyInactive(policyKey)
+		arc.PolicyLookupCache.OnPolicyInactive(policyKey)
 	}
 }
 

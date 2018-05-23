@@ -39,6 +39,7 @@ type State struct {
 	ExpectedProfileIDs                   set.Set
 	ExpectedIPSecBindings                set.Set
 	ExpectedIPSecBlacklist               set.Set
+	ExpectedRemoteEndpoints              set.Set
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
@@ -61,6 +62,7 @@ func NewState() State {
 		ExpectedProfileIDs:                   set.New(),
 		ExpectedIPSecBindings:                set.New(),
 		ExpectedIPSecBlacklist:               nil, // Created on demand, nil means "ignore"
+		ExpectedRemoteEndpoints:              set.New(),
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
@@ -92,6 +94,7 @@ func (s State) Copy() State {
 	if s.ExpectedIPSecBlacklist != nil {
 		cpy.ExpectedIPSecBlacklist = s.ExpectedIPSecBlacklist.Copy()
 	}
+	cpy.ExpectedRemoteEndpoints = s.ExpectedRemoteEndpoints.Copy()
 
 	cpy.Name = s.Name
 	return cpy
@@ -157,6 +160,13 @@ func (s State) withEndpointUntracked(id string, tiers, untrackedTiers, preDNATTi
 		newState.ExpectedUntrackedEndpointPolicyOrder[id] = untrackedTiers
 		newState.ExpectedPreDNATEndpointPolicyOrder[id] = preDNATTiers
 	}
+	return newState
+}
+
+func (s State) withRemoteEndpoint(id string) State {
+	newState := s.Copy()
+	newState.ExpectedRemoteEndpoints = set.New()
+	newState.ExpectedRemoteEndpoints.Add(id)
 	return newState
 }
 

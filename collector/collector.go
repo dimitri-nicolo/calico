@@ -17,9 +17,10 @@ import (
 
 	"github.com/tigera/nfnetlink"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 var (
@@ -44,7 +45,7 @@ type Config struct {
 // and stores them as a Data object in a map keyed by Tuple.
 // All data source channels must be specified when creating the collector.
 type Collector struct {
-	lum            *lookup.LookupManager
+	luc            *calc.LookupsCache
 	nfIngressC     chan *nfnetlink.NflogPacketAggregate
 	nfEgressC      chan *nfnetlink.NflogPacketAggregate
 	nfIngressDoneC chan struct{}
@@ -58,9 +59,9 @@ type Collector struct {
 	reporterMgr    *ReporterManager
 }
 
-func NewCollector(lm *lookup.LookupManager, rm *ReporterManager, config *Config) *Collector {
+func NewCollector(lc *calc.LookupsCache, rm *ReporterManager, config *Config) *Collector {
 	return &Collector{
-		lum:            lm,
+		luc:            lc,
 		nfIngressC:     make(chan *nfnetlink.NflogPacketAggregate, 1000),
 		nfEgressC:      make(chan *nfnetlink.NflogPacketAggregate, 1000),
 		nfIngressDoneC: make(chan struct{}),
@@ -136,11 +137,11 @@ func (c *Collector) setupStatsDumping() {
 
 // getData returns a pointer to the data structure keyed off the supplied tuple.  If there
 // is no entry one is created.
-func (c *Collector) getData(tuple Tuple, epName string) *Data {
+func (c *Collector) getData(tuple Tuple, key model.Key) *Data {
 	data, ok := c.epStats[tuple]
 	if !ok {
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
-		data = NewData(tuple, epName, c.config.AgeTimeout)
+		data = NewData(tuple, key, c.config.AgeTimeout)
 		c.epStats[tuple] = data
 	}
 	return data
@@ -152,15 +153,15 @@ func (c *Collector) applyConnTrackStatUpdate(
 ) {
 	// Update the counters for the entry.  Since data is a pointer, we are updating the map
 	// entry in situ.
-	data := c.getData(tuple, "")
+	data := c.getData(tuple, nil)
 	data.SetCounters(packets, bytes)
 	data.SetCountersReverse(reversePackets, reverseBytes)
 }
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
-func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *lookup.RuleID, epName string, tierIdx, numPkts, numBytes int) {
+func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, key model.Key, tierIdx, numPkts, numBytes int) {
 	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
-	data := c.getData(tuple, epName)
+	data := c.getData(tuple, key)
 	if ok := data.AddRuleID(ruleID, tierIdx, numPkts, numBytes); !ok {
 		// When a RuleTrace RuleID is replaced, we have to do some housekeeping
 		// before we can replace it, the first of which is to remove references
@@ -247,7 +248,7 @@ func (c *Collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	// If we cannot find an endpoint for both the source and destination IP Addresses
 	// this means that this connection neither begins nor terminates locally.
 	// We can skip processing this conntrack entry.
-	if !c.lum.IsEndpoint(ctTuple.Src) && !c.lum.IsEndpoint(ctTuple.Dst) {
+	if !c.luc.IsEndpoint(ctTuple.Src) && !c.luc.IsEndpoint(ctTuple.Dst) {
 		return
 	}
 
@@ -263,7 +264,7 @@ func (c *Collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
 		numPkts, numBytes int
-		ep                lookup.Endpoint
+		ep                calc.EndpointData
 		ok                bool
 	)
 	nflogTuple := nPktAggr.Tuple
@@ -271,9 +272,9 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 	// Determine the endpoint that this packet hit a rule for. This depends on the Direction
 	// because local -> local packets will be NFLOGed twice.
 	if dir == rules.RuleDirIngress {
-		ep, ok = c.lum.GetEndpoint(nflogTuple.Dst)
+		ep, ok = c.luc.GetEndpoint(nflogTuple.Dst)
 	} else {
-		ep, ok = c.lum.GetEndpoint(nflogTuple.Src)
+		ep, ok = c.luc.GetEndpoint(nflogTuple.Src)
 	}
 
 	if !ok {
@@ -282,7 +283,7 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 	}
 	for _, prefix := range nPktAggr.Prefixes {
 		// Lookup the ruleID from the prefix.
-		ruleID := c.lum.GetRuleIDFromNFLOGPrefix(prefix.Prefix)
+		ruleID := c.luc.GetRuleIDFromNFLOGPrefix(prefix.Prefix)
 		if ruleID == nil {
 			continue
 		}
@@ -302,7 +303,7 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 			}
 
 			tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
-			c.applyNflogStatUpdate(tuple, ruleID, ep.Name, tierIdx, numPkts, numBytes)
+			c.applyNflogStatUpdate(tuple, ruleID, ep.Key, tierIdx, numPkts, numBytes)
 		}
 
 		// A blank tier indicates a profile match. This should be directly after the last tier.

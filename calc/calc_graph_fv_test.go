@@ -323,7 +323,8 @@ func describeAsyncTests(baseTests []StateList) {
 					conf.IPSecIKEAlgorithm = "somealgo"
 					conf.IPSecESPAlgorithm = "somealgo"
 					outputChan := make(chan interface{})
-					asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, nil)
+					lookupsCache := NewLookupsCache()
+					asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, nil, lookupsCache)
 					// And a validation filter, with a channel between it
 					// and the async graph.
 					validator := NewValidationFilter(asyncGraph)
@@ -441,9 +442,10 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 
 	BeforeEach(func() {
 		mockDataplane = mock.NewMockDataplane()
+		lookupsCache := NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
-		calcGraph = NewCalculationGraph(eventBuf, localHostname)
+		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, localHostname)
 		calcGraph.EnableIPSec(eventBuf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			log.WithField("stats", stats).Info("Stats update")
@@ -556,7 +558,8 @@ var _ = Describe("calc graph with health state", func() {
 		conf.FelixHostname = localHostname
 		outputChan := make(chan interface{})
 		healthAggregator := health.NewHealthAggregator()
-		asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, healthAggregator)
+		lookupsCache := NewLookupsCache()
+		asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, healthAggregator, lookupsCache)
 		Expect(asyncGraph).NotTo(BeNil())
 	})
 })
