@@ -112,13 +112,13 @@ If you have not explicitly set `osm_cluster_network_cidr`, the default value is 
 ...
 proxyArguments:
   cluster-cidr:
-  - 10.128.0.0/14 
+  - 10.128.0.0/14
   proxy-mode:
      - iptables
 ...
 ```
 
-Once you have set the correct kube-proxy arguments, restart the OpenShift services. This command will differ depending on if your cluster is running OpenShift Origin or OpenShift Container Platform.
+Once you have set the correct kube-proxy arguments, restart the OpenShift node service. This command will differ depending on if your cluster is running OpenShift Origin or OpenShift Container Platform.
 
 OpenShift Container Platform (OCP):
 
@@ -152,29 +152,31 @@ sudo systemctl restart origin-node
 
 1. Download [calico-config.yaml](calico-config.yaml).
 
+   ```bash
+   curl {{site.url}}/{{page.version}}/getting-started/openshift/calico-config.yaml -O
+   ```
+
+1. To make the following commands easier to copy and paste, set two environment variables
+   called `ETCD_ENDPOINTS` and `CNX_MANAGER_ADDR` containing the addresses of your etcd
+   cluster and {{site.prodname}} Manager web interface, respectively. An example follows.
+
+   ```bash
+   ETCD_ENDPOINTS=10.90.89.100:2379,10.90.89.101:2379 \
+   CNX_MANAGER_ADDR=127.0.0.1:30003
+   ```
+
 1. Use the following command to replace the value `<ETCD_ENDPOINTS>` in `calico-config.yaml`
-   with the address of your etcd cluster:
+   with the address of your etcd cluster.
 
-   **Command**
    ```shell
-   sed -i -e "s?<ETCD_ENDPOINTS>?<REPLACE_ME>?g" calico-config.yaml
+   sed -i -e "s?<ETCD_ENDPOINTS>?$ETCD_ENDPOINTS?g" calico-config.yaml
    ```
 
-   **Example**
-   ```shell
-   sed -i -e 's?<ETCD_ENDPOINTS>?https://etcd:2379?g' calico-config.yaml
-   ```
+1. Use the following command to replace the value of `<CNX_MANAGER_ADDR>` in `calico-config.yaml`
+   with the address of your cnx-manager service.
 
-1. Use the following command to replace the value of `<CNX_MANAGER_ADDR>` in `calico-config.yaml` with the address of your cnx-manager service:
-
-   **Command**
    ```shell
-   sed -i -e "s?<CNX_MANAGER_ADDR>?<REPLACE_ME>?g" calico-config.yaml
-   ```
-
-   **Example**
-   ```shell
-   sed -i -e 's?<CNX_MANAGER_ADDR>?127.0.0.1:30003?g' calico-config.yaml
+   sed -i -e "s?<CNX_MANAGER_ADDR>?$CNX_MANAGER_ADDR?g" calico-config.yaml
    ```
 
 1. Apply it:
