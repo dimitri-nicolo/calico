@@ -36,6 +36,7 @@ type MockDataplane struct {
 	activeUntrackedPolicies        set.Set
 	activePreDNATPolicies          set.Set
 	activeProfiles                 set.Set
+	activeIPSecBindings            set.Set
 	endpointToPolicyOrder          map[string][]TierInfo
 	endpointToUntrackedPolicyOrder map[string][]TierInfo
 	endpointToPreDNATPolicyOrder   map[string][]TierInfo
@@ -102,6 +103,14 @@ func (d *MockDataplane) ActiveProfiles() set.Set {
 
 	return d.activeProfiles.Copy()
 }
+
+func (d *MockDataplane) ActiveIPSecBindings() set.Set {
+	d.Lock()
+	defer d.Unlock()
+
+	return d.activeIPSecBindings.Copy()
+}
+
 func (d *MockDataplane) EndpointToProfiles() map[string][]string {
 	d.Lock()
 	defer d.Unlock()
@@ -198,6 +207,7 @@ func NewMockDataplane() *MockDataplane {
 		activeProfiles:                 set.New(),
 		activeUntrackedPolicies:        set.New(),
 		activePreDNATPolicies:          set.New(),
+		activeIPSecBindings:            set.New(),
 		endpointToPolicyOrder:          make(map[string][]TierInfo),
 		endpointToUntrackedPolicyOrder: make(map[string][]TierInfo),
 		endpointToPreDNATPolicyOrder:   make(map[string][]TierInfo),
@@ -378,6 +388,19 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		id := *event.Id
 		Expect(d.namespaces).To(HaveKey(id))
 		delete(d.namespaces, id)
+	case *proto.IPSecBindingUpdate:
+		for _, addr := range event.RemovedAddrs {
+			b := IPSecBinding{event.TunnelAddr, addr}
+			Expect(d.activeIPSecBindings.Contains(b)).To(BeTrue(),
+				fmt.Sprintf("Unknown IPsec binding removed: %v (all bindings: %v)", b, d.activeIPSecBindings))
+			d.activeIPSecBindings.Discard(b)
+		}
+		for _, addr := range event.AddedAddrs {
+			b := IPSecBinding{event.TunnelAddr, addr}
+			Expect(d.activeIPSecBindings.Contains(b)).To(BeFalse(),
+				fmt.Sprintf("IPsec binding duplicate added: %v (all bindings: %v)", b, d.activeIPSecBindings))
+			d.activeIPSecBindings.Add(b)
+		}
 	}
 }
 
@@ -406,4 +429,8 @@ type hostEpId proto.HostEndpointID
 
 func (i *hostEpId) String() string {
 	return i.EndpointId
+}
+
+type IPSecBinding struct {
+	TunnelAddr, EndpointAddr string
 }

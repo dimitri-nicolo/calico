@@ -303,6 +303,10 @@ func (config *Config) OpenstackActive() bool {
 	return false
 }
 
+func (c *Config) IPSecEnabled() bool {
+	return c.IPSecPSK != "" && c.IPSecIKEProposal != "" && c.IPSecESPProposal != ""
+}
+
 func (config *Config) resolve() (changed bool, err error) {
 	newRawValues := make(map[string]string)
 	nameToSource := make(map[string]Source)

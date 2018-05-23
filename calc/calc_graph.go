@@ -322,16 +322,18 @@ func NewCalculationGraph(callbacks PipelineCallbacks, hostname string) *CalcGrap
 	profileDecoder := NewProfileDecoder(callbacks)
 	profileDecoder.RegisterWith(allUpdDispatcher)
 
-	// The IPSecBindingCalculator calculates the bindings between IPsec tunnels and workload IPs.
-	ipSecBindingCalc := NewIPSecBindingCalculator()
-	ipSecBindingCalc.RegisterWith(allUpdDispatcher)
-	ipSecBindingCalc.OnBindingAdded = callbacks.OnIPSecBindingAdded
-	ipSecBindingCalc.OnBindingRemoved = callbacks.OnIPSecBindingRemoved
-
 	return &CalcGraph{
 		AllUpdDispatcher:      allUpdDispatcher,
 		activeRulesCalculator: activeRulesCalc,
 	}
+}
+
+func (c *CalcGraph) EnableIPSec(callbacks ipsecCallbacks) {
+	// The IPSecBindingCalculator calculates the bindings between IPsec tunnels and workload IPs.
+	ipSecBindingCalc := NewIPSecBindingCalculator()
+	ipSecBindingCalc.RegisterWith(c.AllUpdDispatcher)
+	ipSecBindingCalc.OnBindingAdded = callbacks.OnIPSecBindingAdded
+	ipSecBindingCalc.OnBindingRemoved = callbacks.OnIPSecBindingRemoved
 }
 
 type localEndpointDispatcherReg dispatcher.Dispatcher

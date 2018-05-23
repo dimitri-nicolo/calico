@@ -56,7 +56,16 @@ func StartDataplaneDriver(configParams *config.Config,
 		markAccept, _ := markBitsManager.NextSingleBitMark()
 		markPass, _ := markBitsManager.NextSingleBitMark()
 		markDrop, _ := markBitsManager.NextSingleBitMark()
-		markIPsec, _ := markBitsManager.NextSingleBitMark()
+		var markIPsec uint32
+		if configParams.IPSecEnabled() {
+			markIPsec, _ := markBitsManager.NextSingleBitMark()
+			if markIPsec == 0 {
+				log.WithFields(log.Fields{
+					"Name":     "felix-iptables",
+					"MarkMask": configParams.IptablesMarkMask,
+				}).Panic("Failed to allocate a mark bit for IPsec, not enough mark bits available.")
+			}
+		}
 		// Short-lived mark bits for local calculations within a chain.
 		markScratch0, _ := markBitsManager.NextSingleBitMark()
 		markScratch1, _ := markBitsManager.NextSingleBitMark()

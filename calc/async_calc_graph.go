@@ -97,6 +97,10 @@ func NewAsyncCalcGraph(
 ) *AsyncCalcGraph {
 	eventBuffer := NewEventSequencer(conf)
 	calcGraph := NewCalculationGraph(eventBuffer, conf.FelixHostname)
+	if conf.IPSecEnabled() {
+		log.Info("IPsec enabled, adding the binding calculator to calculation graph")
+		calcGraph.EnableIPSec(eventBuffer)
+	}
 	g := &AsyncCalcGraph{
 		CalcGraph:        calcGraph,
 		inputEvents:      make(chan interface{}, 10),
