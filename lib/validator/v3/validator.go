@@ -74,6 +74,8 @@ var (
 	protocolRegex         = regexp.MustCompile("^(TCP|UDP|ICMP|ICMPv6|SCTP|UDPLite)$")
 	ipipModeRegex         = regexp.MustCompile("^(Always|CrossSubnet|Never)$")
 	logLevelRegex         = regexp.MustCompile("^(Debug|Info|Warning|Error|Fatal)$")
+	IPSeclogLevelRegex    = regexp.MustCompile("^(None|Notice|Info|Debug|Verbose)$")
+	IPSecModeRegex        = regexp.MustCompile("^(PSK)$")
 	datastoreType         = regexp.MustCompile("^(etcdv3|kubernetes)$")
 	dropAcceptReturnRegex = regexp.MustCompile("^(Drop|Accept|Return)$")
 	acceptReturnRegex     = regexp.MustCompile("^(Accept|Return)$")
@@ -156,6 +158,8 @@ func init() {
 	registerFieldValidator("ipIpMode", validateIPIPMode)
 	registerFieldValidator("policyType", validatePolicyType)
 	registerFieldValidator("logLevel", validateLogLevel)
+	registerFieldValidator("ipsecLogLevel", validateIPSecLogLevel)
+	registerFieldValidator("ipsecMode", validateIPSecMode)
 	registerFieldValidator("dropAcceptReturn", validateFelixEtoHAction)
 	registerFieldValidator("acceptReturn", validateAcceptReturn)
 	registerFieldValidator("portName", validatePortName)
@@ -297,6 +301,18 @@ func validateLogLevel(v *validator.Validate, topStruct reflect.Value, currentStr
 	s := field.String()
 	log.Debugf("Validate Felix log level: %s", s)
 	return logLevelRegex.MatchString(s)
+}
+
+func validateIPSecLogLevel(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate IPSec log level: %s", s)
+	return IPSeclogLevelRegex.MatchString(s)
+}
+
+func validateIPSecMode(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	s := field.String()
+	log.Debugf("Validate IPSec mode: %s", s)
+	return IPSecModeRegex.MatchString(s)
 }
 
 func validateFelixEtoHAction(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {

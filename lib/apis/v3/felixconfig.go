@@ -226,6 +226,19 @@ type FelixConfigurationSpec struct {
 
 	SyslogReporterNetwork string `json:"syslogReporterNetwork,omitempty"`
 	SyslogReporterAddress string `json:"syslogReporterAddress,omitempty"`
+
+	// IPSecMode controls which mode IPSec is operating on.
+	// Default value means IPSec is not enabled. [Default: ""]
+	IPSecMode string `json:"ipsecMode,omitempty" validate:"omitempty,ipsecMode"`
+	// IPSecIKEAlgorithm sets IPSec IKE algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-prfsha256-ecp256]
+	IPSecIKEAlgorithm string `json:"ipsecIKEAlgorithm,omitempty"`
+	// IPSecESAlgorithm sets IPSec ESP algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-ecp256]
+	IPSecESPAlgorithm string `json:"ipsecESPAlgorithm,omitempty"`
+	// IPSecLogLevel controls log level for IPSec components. Set to NONE for no logging.
+	// A generic log level terminology is used [NONE, NOTICE, INFO, DEBUG, VERBOSE] and map to
+	// corresponding strongSwan log level values.
+	// [Default: INFO]
+	IPSecLogLevel string `json:"ipsecLogLevel,omitempty" validate:"omitempty,ipsecLogLevel"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.
