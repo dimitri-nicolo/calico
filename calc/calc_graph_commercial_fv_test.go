@@ -1,16 +1,4 @@
-// Copyright (c) 2016-2017 Tigera, Inc. All rights reserved.
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
 
 package calc_test
 
@@ -22,6 +10,7 @@ import (
 	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
+	calinet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
 // Canned tiers/policies.
@@ -297,6 +286,125 @@ var localEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	},
 ).withName("2 local, overlapping IPs & a policy")
 
+// One local endpoint with a host IP, should generate an IPsec binding for each IP of the endpoint.
+var localEp1WithNode = localEp1WithPolicy.withKVUpdates(
+	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.1",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.2",
+).withName("Local endpoint 1 with a host IP")
+
+var localEp1WithNodeDiffIP = localEp1WithPolicy.withKVUpdates(
+	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.2")},
+).withIPSecBinding(
+	"192.168.0.2", "10.0.0.1",
+).withIPSecBinding(
+	"192.168.0.2", "10.0.0.2",
+).withName("Local endpoint 1 with a (different) host IP")
+
+var localEp1WithNodesSharingIP = localEp1WithPolicy.withKVUpdates(
+	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
+	KVPair{Key: HostIPKey{Hostname: remoteHostname}, Value: calinet.ParseIP("192.168.0.1")},
+).withName("Local endpoint 1 with pair of hosts sharing IP")
+
+const remoteHostname2 = "remotehostname2"
+
+var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
+	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
+	KVPair{Key: HostIPKey{Hostname: remoteHostname}, Value: calinet.ParseIP("192.168.0.1")},
+	KVPair{Key: HostIPKey{Hostname: remoteHostname2}, Value: calinet.ParseIP("192.168.0.1")},
+).withName("Local endpoint 1 with triple of hosts sharing IP")
+
+// Different local endpoint with a host IP, should generate an IPsec binding for each IP of the endpoint.
+var localEp2WithNode = localEp2WithPolicy.withKVUpdates(
+	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.2",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.3",
+).withName("Local endpoint 2 with a host IP")
+
+// Endpoint 2 using endpoint 1's key (so we can simulate changing an endpoint's IPs.
+var localEp2AsEp1WithNode = localEp2WithNode.withKVUpdates(
+	KVPair{Key: localWlEpKey2},
+	KVPair{Key: localWlEpKey1, Value: &localWlEp2},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.2",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.3",
+).withEndpoint(
+	localWlEp1Id,
+	[]mock.TierInfo{
+		{"default", []string{"pol-1"}, []string{"pol-1"}},
+	},
+).withEndpoint(localWlEp2Id, nil).withName("Local endpoint 2 (using key for ep 1) with a host IP")
+
+// Endpoint 1 and 2 sharing an IP with a node too.
+var localWlEpKey3 = WorkloadEndpointKey{localHostname, "orch", "wl3", "ep3"}
+var localWlEp3 = WorkloadEndpoint{
+	State: "active",
+	Name:  "cali3",
+	IPv4Nets: []calinet.IPNet{
+		mustParseNet("10.0.0.2/32"), // Shared with all endpoints
+		mustParseNet("10.0.0.4/32"), // unique to this endpoint
+	},
+}
+
+const localWlEp3Id = "orch/wl3/ep3"
+
+var localEp1And2WithNode = localEpsWithPolicy.withKVUpdates(
+	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.1",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.3",
+).withName("Local endpoints 1 and 2 sharing an IP with a host IP defined")
+
+// Endpoint 1, 2 and 3 sharing an IP with a node too.
+var threeEndpointsSharingIPWithNode = localEpsWithPolicy.withKVUpdates(
+	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
+	KVPair{Key: localWlEpKey3, Value: &localWlEp3},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.1",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.3",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.4",
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1, ep2 and ep3
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
+	"10.0.0.4/32", // ep3
+}).withEndpoint(
+	localWlEp3Id,
+	[]mock.TierInfo{},
+).withName("3 endpoints sharing an IP with a host IP defined")
+
+var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates(
+	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
+	KVPair{Key: HostIPKey{Hostname: remoteHostname}, Value: calinet.ParseIP("192.168.0.1")},
+	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
+	KVPair{Key: localWlEpKey3, Value: &localWlEp3},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1, ep2 and ep3
+	"fc00:fe11::2/128",
+	"10.0.0.3/32", // ep2
+	"fc00:fe11::3/128",
+	"10.0.0.4/32", // ep3
+}).withEndpoint(
+	localWlEp3Id,
+	[]mock.TierInfo{},
+).withName("3 endpoints sharing an IP with a duplicate host IP defined")
+
 var commercialTests = []StateList{
 	// Empty should be empty!
 	{},
@@ -347,6 +455,37 @@ var commercialTests = []StateList{
 
 	// Host endpoint tests.
 	{hostEp1WithPolicyAndTier, hostEp2WithPolicyAndTier},
+
+	// IPsec basic tests.
+	{localEp1WithNode},
+	{localEp2WithNode},
+	{localEp2AsEp1WithNode},
+
+	// IPsec mutation tests (changing IPs etc)
+	{localEp1WithNode, localEp2WithNode},
+	{localEp1WithNode, localEp2AsEp1WithNode, localEp2WithNode},
+	{localEp1WithNode, localEp1WithNodeDiffIP, localEp2AsEp1WithNode, localEp2WithNode},
+	{localEp1WithNode, localEp2AsEp1WithNode, localEp1WithNodeDiffIP, localEp2WithNode},
+
+	// IPSec Ambiguous binding tests: hosts sharing IP.
+	{localEp1WithNodesSharingIP},
+	{localEp1WithNode, localEp1WithNodesSharingIP, localEp1WithNode, localEp1WithNodesSharingIP},
+	{localEp1WithNode, localEp1With3NodesSharingIP, localEp1WithNode},
+
+	// IPSec ambiguous binding tests: endpoints sharing IP.
+	{localEp1And2WithNode},
+	{localEp1WithNode, localEp1And2WithNode, localEp1WithNode},
+	{localEp1WithNode, localEp1And2WithNode, localEp2WithNode},
+	{localEp1And2WithNode, localEp1WithNodesSharingIP, localEp1WithNode},
+	{localEp1And2WithNode, localEp1WithNodesSharingIP, localEp2WithNode},
+	{threeEndpointsSharingIPWithNode},
+	{threeEndpointsSharingIPWithNode, localEp1And2WithNode, localEp1WithNode},
+	{threeEndpointsSharingIPWithDulicateNodeIP, threeEndpointsSharingIPWithNode, localEp1And2WithNode},
+	{threeEndpointsSharingIPWithDulicateNodeIP, localEp1WithNodesSharingIP, localEp1And2WithNode},
+
+	// IPsec deletion tests (removing host IPs).
+	{localEp1WithNode, localEp1WithPolicy},
+	{localEp2WithNode, localEp2WithPolicy},
 
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints

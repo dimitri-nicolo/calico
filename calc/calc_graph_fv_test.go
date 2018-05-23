@@ -318,6 +318,9 @@ func describeAsyncTests(baseTests []StateList) {
 					// Create the calculation graph.
 					conf := config.New()
 					conf.FelixHostname = localHostname
+					conf.IPSecPSK = "topsecret"
+					conf.IPSecIKEProposal = "somealgo"
+					conf.IPSecESPProposal = "somealgo"
 					outputChan := make(chan interface{})
 					asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, nil)
 					// And a validation filter, with a channel between it
@@ -435,6 +438,7 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
 		calcGraph = NewCalculationGraph(eventBuf, localHostname)
+		calcGraph.EnableIPSec(eventBuf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			log.WithField("stats", stats).Info("Stats update")
 			lastStats = stats
