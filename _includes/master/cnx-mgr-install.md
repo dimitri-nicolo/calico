@@ -58,20 +58,14 @@
       {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-configmap.yaml
       ```
 
-   1. Replace `<ETCD_ENDPOINTS>` with the IP address of your etcd server.
+   1. Use the following commands to: set an environment variable called `ETCD_ENDPOINTS`
+      containing the location of the private registry and replace `<ETCD_ENDPOINTS>` in the manifest
+      with the location of your etcd cluster.
 
-      **Command**
       ```bash
-      sed -i -e "s?<ETCD_ENDPOINTS>?<REPLACE_ME>?g" cnx-configmap.yaml
+      ETCD_ENDPOINTS=10.90.89.100:2379,10.90.89.101:2379 \
+      sed -i -e "s?<ETCD_ENDPOINTS>?$ETCD_ENDPOINTS?g" cnx-configmap.yaml
       ```
-
-      **Example**
-      ```bash
-      sed -i -e "s?<ETCD_ENDPOINTS>?http://10.96.232.136:6666?g" cnx-configmap.yaml
-      ```
-
-      > **Tip**: You can specify more than one etcd server, using commas as delimiters.
-      {: .alert .alert-success}
 
    1. Apply the manifest.
 
