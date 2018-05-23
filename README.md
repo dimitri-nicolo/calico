@@ -148,7 +148,7 @@ Listing Namespaces - APIVersion: v1 Kind: Namespace
 15. List K8s Namespaces:https://10.0.2.15:6443/api/v1/namespaces
 
 GlobalNetworkSets - APIVersion: projectcalico.org/v3 Kind: GlobalNetworkSet
-16. Listing globalnetworksets: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworkpolicies
+16. Listing globalnetworksets: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets
 17. Getting a globalnetworkset: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets/sample-global-network-set
 18. Posting a globalnetworkset: -XPOST -d @globalnetworkset.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets
 19. Watching a globalnetworkset: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets/sample-global-network-set?watch=true
