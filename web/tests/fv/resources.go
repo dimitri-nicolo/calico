@@ -37,6 +37,14 @@ hep2_n3                      002   1
 Policy  Rule                 rack  server  ns  numEgress numIngress tier
 ------------------------------------------------------------------------------
 np1_t1_o1_ns1                001   1       1   1         0          1
+np1_t1_o1_ns1_not_rack1      001   1       1   1         0          1
+        egress;0;src;!sel    !=001
+        egress;0;dest;!sel   !=001
+np1_t1_o1_ns1_not_rack1_src  001   1       1   1         0          1
+        egress;0;src;!sel    !=001
+np1_t1_o1_ns1_not_rack1_2    002   1       1   1         0          1
+        egress;0;src;!sel    !=001
+        egress;0;dest;!sel   !=001
 np2_t1_o2_ns2                              2   1         1          1
 gnp1_t1_o3                   001               1         1          1
 gnp2_t1_o3_fewer_rules                                              1
@@ -50,8 +58,19 @@ gnp2_t1_o4                                     2         2          1
         egess;1;src;sel      001   2
         ingress;0;dest;sel   !=001
         ingress;1;dest;!sel  !=002
+gnp2_t1_o4_rack2_only        002               2         2          1
+        egress;0;src;!sel    001   1
+        egress;0;dest;sel          1
+        egress;1;src;sel     002
+        ingress;0;dest;sel   !=001
+        ingress;1;dest;!sel  !=002
 np1_t2_o1_ns1                001   2       1   1         1          2
 np2_t2_o2_ns2                              2   1         1          2
+np1_t2_o1_ns1_rack2_only     001   1       1   1         1          2
+        egress;0;src;sel     002
+        egress;0;dest;sel    002
+        ingress;0;src;sel    002
+        ingress;0;dest;sel   002
 gnp1_t2_o3                   !has              1         1          2
 gnp2_t2_o4                                     1         1          2
 
@@ -66,6 +85,10 @@ node4   master-node.0001
 node1   rack.1-server.1
 node2   rack.1-server.2
 node3   rack.2-server.1
+
+NetworkSet                   rack  server
+------------------------------------------------------------------------------
+globalnetset1                001   1
 */
 
 var (
@@ -493,6 +516,93 @@ var (
 		},
 	}
 
+	np1_t1_o1_ns1_not_rack1 = &apiv3.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindNetworkPolicy,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ccc-tier1.np1-t1-o1-ns1",
+			Namespace: "namespace-1",
+		},
+		Spec: apiv3.NetworkPolicySpec{
+			Tier:     "ccc-tier1",
+			Selector: "rack == '001' && server == '1'",
+			Order:    &order1,
+			Egress: []apiv3.Rule{
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "rack == '001'",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "rack == '001'",
+					},
+				},
+			},
+		},
+	}
+
+	np1_t1_o1_ns1_not_rack1_src = &apiv3.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindNetworkPolicy,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ccc-tier1.np1-t1-o1-ns1",
+			Namespace: "namespace-1",
+		},
+		Spec: apiv3.NetworkPolicySpec{
+			Tier:     "ccc-tier1",
+			Selector: "rack == '001' && server == '1'",
+			Order:    &order1,
+			Egress: []apiv3.Rule{
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "rack == '001'",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "",
+					},
+				},
+			},
+		},
+	}
+
+	np1_t1_o1_ns1_not_rack1_2 = &apiv3.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindNetworkPolicy,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ccc-tier1.np1-t1-o1-ns1",
+			Namespace: "namespace-1",
+		},
+		Spec: apiv3.NetworkPolicySpec{
+			Tier:     "ccc-tier1",
+			Selector: "rack == '002' && server == '1'",
+			Order:    &order1,
+			Egress: []apiv3.Rule{
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "rack == '001'",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "rack == '001'",
+					},
+				},
+			},
+		},
+	}
+
 	np2_t1_o2_ns2 = &apiv3.NetworkPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
@@ -639,6 +749,69 @@ var (
 		},
 	}
 
+	gnp2_t1_o4_rack2_only = &apiv3.GlobalNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindGlobalNetworkPolicy,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ccc-tier1.gnp2-t1-o4-rack2-only",
+		},
+		Spec: apiv3.GlobalNetworkPolicySpec{
+			Tier:     "ccc-tier1",
+			Selector: "rack == '002'",
+			Order:    &order4,
+			Egress: []apiv3.Rule{
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "rack == '001' && server == '1'",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "server == '1'",
+						NotSelector: "",
+					},
+				},
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector:    "rack == '002'",
+						NotSelector: "",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "",
+					},
+				},
+			},
+			Ingress: []apiv3.Rule{
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "has(rack) && rack != '001'",
+						NotSelector: "",
+					},
+				},
+				{
+					Action: "Deny",
+					Source: apiv3.EntityRule{
+						Selector:    "all()",
+						NotSelector: "",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "",
+						NotSelector: "has(rack) && rack != '002'",
+					},
+				},
+			},
+		},
+	}
+
 	np1_t2_o1_ns1 = &apiv3.NetworkPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
@@ -716,6 +889,48 @@ var (
 					},
 					Destination: apiv3.EntityRule{
 						Selector:    "",
+						NotSelector: "",
+					},
+				},
+			},
+		},
+	}
+
+	np1_t2_o1_ns1_rack2_only = &apiv3.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindNetworkPolicy,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "aaa-tier2.np1-t2-o1-ns1-rack2-only",
+			Namespace: "namespace-1",
+		},
+		Spec: apiv3.NetworkPolicySpec{
+			Tier:     "aaa-tier2",
+			Selector: "rack == '001' && server == '1'",
+			Order:    &order1,
+			Egress: []apiv3.Rule{
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector:    "rack == '002'",
+						NotSelector: "",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "rack == '002'",
+						NotSelector: "",
+					},
+				},
+			},
+			Ingress: []apiv3.Rule{
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector:    "rack == '002'",
+						NotSelector: "",
+					},
+					Destination: apiv3.EntityRule{
+						Selector:    "rack == '002'",
 						NotSelector: "",
 					},
 				},
@@ -937,6 +1152,23 @@ var (
 			LabelsToApply: map[string]string{
 				"rack": "099",
 			},
+		},
+	}
+
+	globalnetset1 = &apiv3.GlobalNetworkSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindGlobalNetworkSet,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "globalnetset1",
+			Labels: map[string]string{
+				"rack":   "001",
+				"server": "1",
+			},
+		},
+		Spec: apiv3.GlobalNetworkSetSpec{
+			Nets: []string{"198.51.100.0/28"},
 		},
 	}
 )

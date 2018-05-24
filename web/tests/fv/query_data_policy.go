@@ -335,7 +335,7 @@ func policyTestQueryData() []testQueryData {
 				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
 				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
-				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
 			},
 			client.QueryPoliciesReq{
 				Tier: tier1.Name,
@@ -377,7 +377,7 @@ func policyTestQueryData() []testQueryData {
 				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
 				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
-				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
 			},
 			client.QueryPoliciesReq{
 				Endpoint: resourceKey(wep4_n2_ns1),
@@ -456,7 +456,7 @@ func policyTestQueryData() []testQueryData {
 				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
 				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
-				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
 			},
 			client.QueryPoliciesReq{
 				Labels: map[string]string{
@@ -480,7 +480,7 @@ func policyTestQueryData() []testQueryData {
 				tier1, np1_t1_o1_ns1, np2_t1_o2_ns2, gnp1_t1_o3, gnp2_t1_o4,
 				tier2, np1_t2_o1_ns1, np2_t2_o2_ns2, gnp1_t2_o3, gnp2_t2_o4,
 				hep2_n3, hep3_n4, hep1_n2, hep4_n4_unlabelled, wep4_n2_ns1, wep3_n1_ns2, profile_rack_001, wep1_n1_ns1,
-				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out,
+				wep5_n3_ns2_unlabelled, wep2_n1_ns1_filtered_out, globalnetset1,
 			},
 			client.QueryPoliciesReq{
 				Labels: map[string]string{
@@ -571,6 +571,86 @@ func policyTestQueryData() []testQueryData {
 				Items: []client.Policy{
 					qcPolicy(np2_t1_o2_ns2, 0, 0, 3, 2), qcPolicy(np2_t2_o2_ns2, 0, 0, 3, 2),
 					qcPolicy(gnp1_t2_o3, 0, 0, 3, 2),
+				},
+			},
+		},
+		{
+			"tier1 and tier2 policies, query on a networkset",
+			[]resourcemgr.ResourceObject{
+				tier1, tier2, gnp2_t1_o4_rack2_only, globalnetset1,
+				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1, np1_t2_o1_ns1_rack2_only,
+			},
+			client.QueryPoliciesReq{
+				NetworkSet: model.ResourceKey{
+					Kind: v3.KindGlobalNetworkSet,
+					Name: "globalnetset1",
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 2,
+				Items: []client.Policy{
+					qcPolicy(np1_t1_o1_ns1, 0, 0, 0, 0),
+					qcPolicy(gnp2_t1_o4_rack2_only, 0, 0, 0, 0),
+				},
+			},
+		},
+		{
+			"tier1 and tier2 policies that match on networksets on one less rule, query on a networkset",
+			[]resourcemgr.ResourceObject{
+				tier1, tier2, gnp2_t1_o4_rack2_only, globalnetset1,
+				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1_not_rack1_src, np1_t2_o1_ns1_rack2_only,
+			},
+			client.QueryPoliciesReq{
+				NetworkSet: model.ResourceKey{
+					Kind: v3.KindGlobalNetworkSet,
+					Name: "globalnetset1",
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 2,
+				Items: []client.Policy{
+					qcPolicy(np1_t1_o1_ns1_not_rack1_src, 0, 0, 0, 0),
+					qcPolicy(gnp2_t1_o4_rack2_only, 0, 0, 0, 0),
+				},
+			},
+		},
+		{
+			"tier1 and tier2 policies, one policy has been changed to not match the networkset on any rules, query on a networkset",
+			[]resourcemgr.ResourceObject{
+				tier1, tier2, gnp2_t1_o4_rack2_only, globalnetset1,
+				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1_not_rack1, np1_t2_o1_ns1_rack2_only,
+			},
+			client.QueryPoliciesReq{
+				NetworkSet: model.ResourceKey{
+					Kind: v3.KindGlobalNetworkSet,
+					Name: "globalnetset1",
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 1,
+				Items: []client.Policy{
+					qcPolicy(gnp2_t1_o4_rack2_only, 0, 0, 0, 0),
+				},
+			},
+		},
+		{
+			"tier1 and tier2 policies, query on a networkset and endpoints, make sure only policies that match both are returned",
+			[]resourcemgr.ResourceObject{
+				tier1, tier2, gnp2_t1_o4_rack2_only, globalnetset1, hep2_n3,
+				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1, np1_t2_o1_ns1_rack2_only,
+				np1_t1_o1_ns1_not_rack1_2,
+			},
+			client.QueryPoliciesReq{
+				Endpoint: resourceKey(hep2_n3),
+				NetworkSet: model.ResourceKey{
+					Kind: v3.KindGlobalNetworkSet,
+					Name: "globalnetset1",
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 1,
+				Items: []client.Policy{
+					qcPolicy(gnp2_t1_o4_rack2_only, 1, 0, 1, 0),
 				},
 			},
 		},

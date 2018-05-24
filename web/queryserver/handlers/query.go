@@ -35,6 +35,7 @@ const (
 	QueryUnprotected         = "unprotected"
 	QueryUnlabelled          = "unlabelled"
 	QueryTier                = "tier"
+	QueryNetworkSet          = "networkset"
 
 	AllResults     = "all"
 	resultsPerPage = 100
@@ -51,6 +52,8 @@ var (
 		"<HostEndpoint name> or <namespace>/<WorkloadEndpoint name>")
 	errorInvalidPolicyName = errors.New("invalid query: the policy name is not valid; it should be of the format " +
 		"<GlobalNetworkPolicy name> or <namespace>/<NetworkPolicy name>")
+	errorInvalidNetworkSetName = errors.New("invalid query: the networkset name is not valid; it should be of the format " +
+		"<GlobalNetworkSet name>")
 	errorInvalidEndpointURL = errors.New("the URL does not contain a valid endpoint name; the final URL segments should " +
 		"be of the format <HostEndpoint name> or <namespace>/<WorkloadEndpoint name>")
 	errorInvalidPolicyURL = errors.New("the URL does not contain a valid policy name; the final URL segments should " +
@@ -134,22 +137,35 @@ func (q *query) Policies(w http.ResponseWriter, r *http.Request) {
 		q.writeError(w, err, http.StatusBadRequest)
 		return
 	}
+	networksets, err := q.getNetworkSets(r)
+	if err != nil {
+		q.writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
 	unmatched := q.getBool(r, QueryUnmatched)
-	if (unmatched && len(endpoints) > 0) || len(endpoints) > 1 {
+	if (unmatched && (len(endpoints) > 0 || len(networksets) > 0)) || len(endpoints) > 1 || len(networksets) > 1 {
 		q.writeError(w, errorPolicyMultiParm, http.StatusBadRequest)
 		return
 	}
+
 	var endpoint model.Key
 	if len(endpoints) > 0 {
 		endpoint = endpoints[0]
 	}
+	var networkset model.Key
+	if len(networksets) > 0 {
+		networkset = networksets[0]
+	}
+
 	q.runQuery(w, r, client.QueryPoliciesReq{
-		Tier:      r.URL.Query().Get(QueryTier),
-		Labels:    q.getLabels(r),
-		Endpoint:  endpoint,
-		Unmatched: unmatched,
-		Page:      q.getPage(r),
-		Sort:      q.getSort(r),
+		Tier:       r.URL.Query().Get(QueryTier),
+		Labels:     q.getLabels(r),
+		Endpoint:   endpoint,
+		NetworkSet: networkset,
+		Unmatched:  unmatched,
+		Page:       q.getPage(r),
+		Sort:       q.getSort(r),
 	}, false)
 }
 
@@ -246,6 +262,19 @@ func (q *query) getPolicies(r *http.Request) ([]model.Key, error) {
 	return rpols, nil
 }
 
+func (q *query) getNetworkSets(r *http.Request) ([]model.Key, error) {
+	netsets := r.URL.Query()[QueryNetworkSet]
+	rnetsets := make([]model.Key, 0, len(netsets))
+	for _, netset := range netsets {
+		rnetset, ok := q.getNetworkSetKeyFromCombinedName(netset)
+		if !ok {
+			return nil, errorInvalidNetworkSetName
+		}
+		rnetsets = append(rnetsets, rnetset)
+	}
+	return rnetsets, nil
+}
+
 func (q *query) getNameAndNamespaceFromCombinedName(combined string) ([]string, bool) {
 	parts := strings.Split(combined, "/")
 	for _, part := range parts {
@@ -313,6 +342,17 @@ func (q *query) getNodeKeyFromCombinedName(combined string) (model.Key, bool) {
 	}
 	return model.ResourceKey{
 		Kind: v3.KindNode,
+		Name: parts[0],
+	}, true
+}
+
+func (q *query) getNetworkSetKeyFromCombinedName(combined string) (model.Key, bool) {
+	parts, ok := q.getNameAndNamespaceFromCombinedName(combined)
+	if !ok || len(parts) != 1 {
+		return nil, false
+	}
+	return model.ResourceKey{
+		Kind: v3.KindGlobalNetworkSet,
 		Name: parts[0],
 	}, true
 }
