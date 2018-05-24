@@ -1,5 +1,5 @@
-hash: 74a492896167106541ca45a3fa21854926208ece4981439cfa98d98364ad4111
-updated: 2018-05-18T13:20:43.065556507Z
+hash: 9634dee0526db4b0b40e8e8b7cc9adc47e3c8695a69fc5cb612af52b4f8d4e4f
+updated: 2018-05-24T18:12:05.606507711Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/containernetworking/cni
@@ -118,11 +118,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
-  version: b9df188d0fae32d69c1a519fa81741668a12f55a
-  subpackages:
-  - tracer
-  - tracer/wire
-  - writer
+  version: 7ecd3df29a4a648fd3ecd1e78d19d1bfcaacee0f
 - name: github.com/jbenet/go-reuseport
   version: 7eed93a5b50b20c209baefe9fafa53c3d965a33c
   repo: https://github.com/fasaxc/go-reuseport.git
@@ -268,11 +264,11 @@ imports:
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 49fee292b27bfff7f354ee0f64e1bc4850462edf
+  version: d0f7cd64bda49e08b22ae8a730aa57aa0db125d6
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -299,7 +295,7 @@ imports:
   - client
   - crypto
 - name: github.com/tigera/nfnetlink
-  version: 1e9e6913b87c3816f3b22e759e2f4e28c51ea5c6
+  version: 0c33d6eace301fb92cfd3e54c2109d97f463db17
   repo: git@github.com:tigera/nfnetlink
   subpackages:
   - nfnl
@@ -370,7 +366,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 4f7eeb5305a4ba1966344836ba4af9996b7b4e05
+  version: 0a24098c0ec68416ec050f567f75df563d6b231e
   subpackages:
   - internal
   - internal/app_identity
