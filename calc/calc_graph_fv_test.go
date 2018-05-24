@@ -318,9 +318,10 @@ func describeAsyncTests(baseTests []StateList) {
 					// Create the calculation graph.
 					conf := config.New()
 					conf.FelixHostname = localHostname
-					conf.IPSecPSK = "topsecret"
-					conf.IPSecIKEProposal = "somealgo"
-					conf.IPSecESPProposal = "somealgo"
+					conf.IPSecMode = "PSK"
+					conf.IPSecPSKFile = "/proc/1/cmdline"
+					conf.IPSecIKEAlgorithm = "somealgo"
+					conf.IPSecESPAlgorithm = "somealgo"
 					outputChan := make(chan interface{})
 					asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, nil)
 					// And a validation filter, with a channel between it
