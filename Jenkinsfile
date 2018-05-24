@@ -61,7 +61,11 @@ pipeline {
                 sh "make tigera/felix"
             }
         }
-
+        stage('Unit Tests') {
+            steps {
+                sh "echo 'Run unit Tests' && make ut-no-cover"
+            }
+        }
         stage('Push image to GCR') {
             steps {
                 script {
