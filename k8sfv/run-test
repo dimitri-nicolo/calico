@@ -165,7 +165,7 @@ done
 
 if ${USE_TYPHA}; then
     if [[ "${FV_TYPHAIMAGE}" == *"gcr.io"* ]]; then
-	gcloud auth configure-docker
+	gcloud auth configure-docker --quiet
         docker pull ${FV_TYPHAIMAGE}
     fi
     # Run Typha.
@@ -191,7 +191,7 @@ fi
 # If the image is a GCR image, pull it with gcloud.
 #
 if [[ "${FV_FELIXIMAGE}" == *"gcr.io"* ]]; then
-    gcloud auth configure-docker
+    gcloud auth configure-docker --quiet
     docker pull ${FV_FELIXIMAGE}
 fi
 
