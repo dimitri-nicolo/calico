@@ -16,7 +16,7 @@ its connections as follows.
   - [{{site.nodecontainer}}](../reference/node/configuration)
   - [`calicoctl`](./calicoctl/configure/etcd)
   - [CNI plugin](../reference/cni-plugin/configuration#etcd-location)
-  - [Felix](../reference/felix/configuration#etcdv3-datastore-configuration) (on
+  - [Felix](../reference/felix/configuration#etcd-datastore-configuration) (on
     [bare metal hosts](../getting-started/bare-metal/installation/))
   - {{site.prodname}} API Server
   - {{site.prodname}} Query Server
