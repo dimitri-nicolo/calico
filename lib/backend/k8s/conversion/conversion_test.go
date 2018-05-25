@@ -486,6 +486,40 @@ var _ = Describe("Test Pod conversion", func() {
 		// Assert ResourceVersion is present.
 		Expect(wep.Revision).To(Equal("1234"))
 	})
+
+	DescribeTable("AWS security group annotation",
+		func(annotation string, expectedLabels []string) {
+			pod := kapiv1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "podB",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"aws.tigera.io/security-groups": annotation,
+					},
+				},
+				Spec: kapiv1.PodSpec{
+					NodeName: "nodeA",
+				},
+				Status: kapiv1.PodStatus{
+					PodIP: "192.168.0.1",
+				},
+			}
+
+			wep, err := c.PodToWorkloadEndpoint(&pod)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Finally, assert the expected result.
+			for _, label := range expectedLabels {
+				Expect(wep.Value.(*apiv3.WorkloadEndpoint).ObjectMeta.Labels).To(
+					HaveKeyWithValue("sg.aws.tigera.io/"+label, ""))
+			}
+		},
+
+		Entry("should handle an empty annotation", "[]", []string{}),
+		Entry("should handle one Security Group", "[\"sg-test\"]", []string{"sg-test"}),
+		Entry("should handle two Security Groups", "[\"sg-test-1\",\"sg-test-2\"]", []string{"sg-test-1", "sg-test-2"}),
+		Entry("should handle bad Security Groups string", "sg-test-1,sg-test-2", []string{}),
+	)
 })
 
 var _ = Describe("Test NetworkPolicy conversion", func() {

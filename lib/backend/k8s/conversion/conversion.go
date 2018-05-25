@@ -17,6 +17,7 @@ package conversion
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -217,6 +218,17 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 
 	if pod.Spec.ServiceAccountName != "" {
 		labels[apiv3.LabelServiceAccount] = pod.Spec.ServiceAccountName
+	}
+
+	if v, ok := pod.Annotations[AnnotationSecurityGroups]; ok {
+		var sgs []string
+		if err := json.Unmarshal([]byte(v), &sgs); err != nil {
+			log.WithError(err).Warnf("unable to parse %s annotation", AnnotationSecurityGroups)
+		} else {
+			for _, sg := range sgs {
+				labels[SecurityGroupLabelPrefix+"/"+sg] = ""
+			}
+		}
 	}
 
 	// Map any named ports through.

@@ -26,4 +26,7 @@ const (
 	// since we write it ourselves, we can make sure that it is written synchronously
 	// and quickly.
 	AnnotationPodIP = "cni.projectcalico.org/podIP"
+
+	AnnotationSecurityGroups = "aws.tigera.io/security-groups"
+	SecurityGroupLabelPrefix = "sg.aws.tigera.io"
 )
