@@ -203,6 +203,12 @@ func (s State) withIPSecBinding(tunnelAddr, endpointAddr string) (newState State
 	return
 }
 
+func (s State) withoutIPSecBinding(tunnelAddr, endpointAddr string) (newState State) {
+	newState = s.Copy()
+	newState.ExpectedIPSecBindings.Discard(mock.IPSecBinding{tunnelAddr, endpointAddr})
+	return
+}
+
 func (s State) Keys() set.Set {
 	set := set.New()
 	for _, kv := range s.DatastoreState {
