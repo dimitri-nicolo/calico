@@ -18,6 +18,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -55,7 +56,17 @@ func VethNameForWorkload(namespace, podname string) string {
 	// veth name and mac addr.
 	h := sha1.New()
 	h.Write([]byte(fmt.Sprintf("%s.%s", namespace, podname)))
-	return fmt.Sprintf("cali%s", hex.EncodeToString(h.Sum(nil))[:11])
+	prefix := os.Getenv("FELIX_INTERFACEPREFIX")
+	if prefix == "" {
+		// Prefix is not set. Default to "cali"
+		prefix = "cali"
+	} else {
+		// Prefix is set - use the first value in the list.
+		splits := strings.Split(prefix, ",")
+		prefix = splits[0]
+	}
+	log.WithField("prefix", prefix).Debugf("Using prefix to create a WorkloadEndpoint veth name")
+	return fmt.Sprintf("%s%s", prefix, hex.EncodeToString(h.Sum(nil))[:11])
 }
 
 // ParseWorkloadName extracts the Node name, Orchestrator, Pod name and endpoint from the
@@ -380,6 +391,10 @@ func (c Converter) k8sSelectorToCalico(s *metav1.LabelSelector, selectorType sel
 		selectors = append(selectors, fmt.Sprintf("%s == 'k8s'", apiv3.LabelOrchestrator))
 	}
 
+	if s == nil {
+		return strings.Join(selectors, " && ")
+	}
+
 	// For namespace selectors, if they are present but have no terms, it means "select all
 	// namespaces". We use empty string to represent the nil namespace selector, so use all() to
 	// represent all namespaces.
@@ -536,16 +551,6 @@ func (c Converter) k8sPeerToCalicoFields(peer *networkingv1.NetworkPolicyPeer, n
 	}
 	// Peer information available.
 	// Determine the source selector for the rule.
-	// Only one of PodSelector / NamespaceSelector can be defined.
-	if peer.PodSelector != nil {
-		selector = c.k8sSelectorToCalico(peer.PodSelector, SelectorPod)
-		return
-	}
-	if peer.NamespaceSelector != nil {
-		nsSelector = c.k8sSelectorToCalico(peer.NamespaceSelector, SelectorNamespace)
-		selector = fmt.Sprintf("%s == 'k8s'", apiv3.LabelOrchestrator)
-		return
-	}
 	if peer.IPBlock != nil {
 		// Convert the CIDR to include.
 		_, ipNet, err := cnet.ParseCIDR(peer.IPBlock.CIDR)
@@ -565,8 +570,14 @@ func (c Converter) k8sPeerToCalicoFields(peer *networkingv1.NetworkPolicyPeer, n
 			}
 			notNets = append(notNets, ipNet.String())
 		}
+		// If IPBlock is set, then PodSelector and NamespaceSelector cannot be.
 		return
 	}
+
+	// IPBlock is not set to get here.
+	// Note that k8sSelectorToCalico() accepts nil values of the selector.
+	selector = c.k8sSelectorToCalico(peer.PodSelector, SelectorPod)
+	nsSelector = c.k8sSelectorToCalico(peer.NamespaceSelector, SelectorNamespace)
 	return
 }
 
