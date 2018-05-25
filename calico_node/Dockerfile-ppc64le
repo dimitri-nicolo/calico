@@ -16,7 +16,7 @@ FROM ppc64le/alpine:3.7
 MAINTAINER David Wilder <wilder@us.ibm.com>
 
 # Install remaining runtime deps required for felix from the global repository
-RUN apk add --no-cache ip6tables ipset iputils iproute2 conntrack-tools runit file
+RUN apk add --no-cache ip6tables ipset iputils iproute2 conntrack-tools runit file strongswan
 
 # Copy in the filesystem - this contains felix, bird, gobgp etc...
 COPY filesystem /
