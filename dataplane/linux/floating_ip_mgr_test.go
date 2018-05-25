@@ -82,6 +82,7 @@ func floatingIPManagerTests(ipVersion uint8) func() {
 				IptablesMarkScratch1: 0x40,
 				IptablesMarkDrop:     0x80,
 				IptablesMarkEndpoint: 0xff00,
+				IptablesMarkIPsec:    0x10000,
 			}
 		})
 

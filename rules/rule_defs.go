@@ -329,7 +329,11 @@ func (c *Config) validate() {
 	usedBits := uint32(0)
 	for i := 0; i < myValue.NumField(); i++ {
 		fieldName := myType.Field(i).Name
-		if strings.HasPrefix(fieldName, "IptablesMark") && fieldName != "IptablesMarkNonCaliEndpoint" {
+		if fieldName == "IptablesMarkNonCaliEndpoint" ||
+			fieldName == "IptablesMarkIPsec" {
+			continue
+		}
+		if strings.HasPrefix(fieldName, "IptablesMark") {
 			bits := myValue.Field(i).Interface().(uint32)
 			if bits == 0 {
 				log.WithField("field", fieldName).Panic(

@@ -787,7 +787,7 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
 		})
 	}
 
-	if ipVersion == 4 {
+	if ipVersion == 4 && r.IptablesMarkIPsec != 0 {
 		rules = append(rules, Rule{
 			Match:  Match().MarkSingleBitSet(markFromWorkload),
 			Action: SetMarkAction{Mark: r.IptablesMarkIPsec},

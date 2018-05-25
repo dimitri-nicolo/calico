@@ -609,6 +609,7 @@ func endpointManagerTests(ipVersion uint8) func() {
 				IptablesMarkScratch0:        0x20,
 				IptablesMarkScratch1:        0x40,
 				IptablesMarkDrop:            0x80,
+				IptablesMarkIPsec:           0x10000,
 				IptablesMarkEndpoint:        0xff00,
 				IptablesMarkNonCaliEndpoint: 0x0100,
 				KubeIPVSSupportEnabled:      true,
