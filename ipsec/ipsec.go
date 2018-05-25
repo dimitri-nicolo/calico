@@ -55,6 +55,16 @@ type Dataplane struct {
 	wg sync.WaitGroup
 }
 
+func (d *Dataplane) AddBlacklist(workloadAddress string) {
+	log.Debug("Adding IPsec blacklist", workloadAddress)
+
+}
+
+func (d *Dataplane) RemoveBlacklist(workloadAddress string) {
+	log.Debug("Removing IPsec blacklist", workloadAddress)
+
+}
+
 func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
 	log.Debug("Adding IPsec binding", workloadAddress, "via tunnel", remoteTunnelAddr)
 	if _, ok := d.bindingsByTunnel[remoteTunnelAddr]; !ok {

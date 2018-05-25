@@ -18,6 +18,8 @@ func newIPSecManager(ipSecDataplane ipSecDataplane) *ipsecManager {
 type ipSecDataplane interface {
 	AddBinding(tunnelAddress, workloadAddress string)
 	RemoveBinding(tunnelAddress, workloadAddress string)
+	AddBlacklist(workloadAddress string)
+	RemoveBlacklist(workloadAddress string)
 }
 
 type ipsecManager struct {
@@ -37,11 +39,21 @@ func (d *ipsecManager) OnUpdate(msg interface{}) {
 			"num_added":   len(msg.AddedAddrs),
 			"num_removed": len(msg.RemovedAddrs),
 		}).Debug("IPSec bindings updated")
-		for _, removed := range msg.RemovedAddrs {
-			d.dataplane.RemoveBinding(msg.TunnelAddr, removed)
-		}
-		for _, added := range msg.AddedAddrs {
-			d.dataplane.AddBinding(msg.TunnelAddr, added)
+		if msg.TunnelAddr == "" {
+			// Blacklist.
+			for _, removed := range msg.RemovedAddrs {
+				d.dataplane.RemoveBlacklist(removed)
+			}
+			for _, added := range msg.AddedAddrs {
+				d.dataplane.AddBlacklist(added)
+			}
+		} else {
+			for _, removed := range msg.RemovedAddrs {
+				d.dataplane.RemoveBinding(msg.TunnelAddr, removed)
+			}
+			for _, added := range msg.AddedAddrs {
+				d.dataplane.AddBinding(msg.TunnelAddr, added)
+			}
 		}
 	}
 }

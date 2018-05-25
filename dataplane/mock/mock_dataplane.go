@@ -37,6 +37,7 @@ type MockDataplane struct {
 	activePreDNATPolicies          set.Set
 	activeProfiles                 set.Set
 	activeIPSecBindings            set.Set
+	activeIPSecBlacklist           set.Set
 	endpointToPolicyOrder          map[string][]TierInfo
 	endpointToUntrackedPolicyOrder map[string][]TierInfo
 	endpointToPreDNATPolicyOrder   map[string][]TierInfo
@@ -208,6 +209,7 @@ func NewMockDataplane() *MockDataplane {
 		activeUntrackedPolicies:        set.New(),
 		activePreDNATPolicies:          set.New(),
 		activeIPSecBindings:            set.New(),
+		activeIPSecBlacklist:           set.New(),
 		endpointToPolicyOrder:          make(map[string][]TierInfo),
 		endpointToUntrackedPolicyOrder: make(map[string][]TierInfo),
 		endpointToPreDNATPolicyOrder:   make(map[string][]TierInfo),
@@ -389,6 +391,21 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		Expect(d.namespaces).To(HaveKey(id))
 		delete(d.namespaces, id)
 	case *proto.IPSecBindingUpdate:
+		if event.TunnelAddr == "" {
+			// Blacklist entry
+			for _, addr := range event.RemovedAddrs {
+				Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeTrue(),
+					fmt.Sprintf("Unknown IPsec blacklist removed: %v (all: %v)", addr, d.activeIPSecBlacklist))
+				d.activeIPSecBlacklist.Discard(addr)
+			}
+			for _, addr := range event.AddedAddrs {
+				Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeFalse(),
+					fmt.Sprintf("IPsec blacklist duplicate added: %v (all: %v)", addr, d.activeIPSecBlacklist))
+				d.activeIPSecBlacklist.Add(addr)
+			}
+			break
+		}
+
 		for _, addr := range event.RemovedAddrs {
 			b := IPSecBinding{event.TunnelAddr, addr}
 			Expect(d.activeIPSecBindings.Contains(b)).To(BeTrue(),

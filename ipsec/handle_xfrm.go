@@ -23,6 +23,10 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+func AddBlock(dst string, dir netlink.Dir) error {
+	return nil
+}
+
 func AddXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, reqID int, optionalMark ...*netlink.XfrmMark) error {
 	_, srcNet, _ := net.ParseCIDR(src)
 	_, dstNet, _ := net.ParseCIDR(dst)
