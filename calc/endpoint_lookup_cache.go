@@ -199,7 +199,9 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, ed EndpointDa
 		ec.removeEndpointFromIpMapping(ip, key)
 		return set.RemoveItem
 	})
-	ec.endpointToIps[key] = newIPs
+	if len(nets) > 0 && len(newIPs) != 0 {
+		ec.endpointToIps[key] = newIPs
+	}
 }
 
 // removeEndpoint removes the endpoint from the EndpointLookupsCache.endpointToIps map

@@ -2,7 +2,10 @@
 
 package calc
 
-import "github.com/projectcalico/libcalico-go/lib/backend/model"
+import (
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/set"
+)
 
 // LookupsCache provides an API to do the following:
 // - lookup endpoint information given an IP
@@ -57,4 +60,35 @@ func (lc *LookupsCache) SetMockData(
 		}
 		lc.epCache.ipToEndpoints[ip] = []EndpointData{ep}
 	}
+}
+
+// GetEndpointKeys returns all endpoint keys that the cache is tracking.
+// Convenience method only used for testing purposes.
+func (lc *LookupsCache) GetEndpointKeys() []model.Key {
+	lc.epCache.epMutex.RLock()
+	defer lc.epCache.epMutex.RUnlock()
+	eps := []model.Key{}
+	for key, _ := range lc.epCache.endpointToIps {
+		eps = append(eps, key)
+	}
+	return eps
+}
+
+// GetEndpointData returns all endpoint data that the cache is tracking.
+// Convenience method only used for testing purposes.
+func (lc *LookupsCache) GetAllEndpointData() []EndpointData {
+	lc.epCache.epMutex.RLock()
+	defer lc.epCache.epMutex.RUnlock()
+	uniq := set.New()
+	allEds := []EndpointData{}
+	for _, eds := range lc.epCache.ipToEndpoints {
+		for _, ed := range eds {
+			if uniq.Contains(ed.Key) {
+				continue
+			}
+			uniq.Add(ed.Key)
+			allEds = append(allEds, ed)
+		}
+	}
+	return allEds
 }

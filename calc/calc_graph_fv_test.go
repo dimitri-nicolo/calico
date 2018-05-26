@@ -381,6 +381,18 @@ func describeAsyncTests(baseTests []StateList) {
 					}
 					state := test[len(test)-1]
 
+					getCachedRemoteEndpoints := func() []EndpointData {
+						remoteEds := []EndpointData{}
+						eds := lookupsCache.GetAllEndpointData()
+						for _, ed := range eds {
+							if ed.IsLocal() {
+								continue
+							}
+							remoteEds = append(remoteEds, ed)
+						}
+						return remoteEds
+					}
+
 					// Async tests are slower to run so we do all the assertions
 					// on each test rather than as separate It() blocks.
 					Expect(mockDataplane.IPSets()).To(Equal(state.ExpectedIPSets),
@@ -415,6 +427,11 @@ func describeAsyncTests(baseTests []StateList) {
 							"IPsec blacklist incorrect after moving to state: %v",
 							state.Name)
 					}
+					// We don't need to check for ordering here since the cached remote endpoints could
+					// be returned in any order. Hence the use of "ConsistOf" instead of "Equal".
+					Expect(getCachedRemoteEndpoints()).To(ConsistOf(state.ExpectedCachedRemoteEndpoints),
+						"Remote endpoints are cached: %v\n%+v",
+						state.Name)
 				})
 			}
 		}
@@ -432,6 +449,7 @@ const (
 
 func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 	var validationFilter *ValidationFilter
+	var lookupsCache *LookupsCache
 	var calcGraph *CalcGraph
 	var mockDataplane *mock.MockDataplane
 	var eventBuf *EventSequencer
@@ -442,7 +460,7 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 
 	BeforeEach(func() {
 		mockDataplane = mock.NewMockDataplane()
-		lookupsCache := NewLookupsCache()
+		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
 		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, localHostname)
@@ -503,6 +521,18 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 		}
 	}
 
+	getCachedRemoteEndpoints := func() []EndpointData {
+		remoteEds := []EndpointData{}
+		eds := lookupsCache.GetAllEndpointData()
+		for _, ed := range eds {
+			if ed.IsLocal() {
+				continue
+			}
+			remoteEds = append(remoteEds, ed)
+		}
+		return remoteEds
+	}
+
 	// Note: these used to be separate It() blocks but combining them knocks ~10s off the
 	// runtime, which is worthwhile!
 	It("should result in correct active state", iterStates(func() {
@@ -547,6 +577,11 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 				"IPsec blacklist incorrect after moving to state: %v",
 				state.Name)
 		}
+		// We don't need to check for ordering here since the cached remote endpoints could
+		// be returned in any order. Hence the use of "ConsistOf" instead of "Equal".
+		Expect(getCachedRemoteEndpoints()).To(ConsistOf(state.ExpectedCachedRemoteEndpoints),
+			"Remote endpoints are cached: %v\n%+v",
+			state.Name)
 	}))
 }
 

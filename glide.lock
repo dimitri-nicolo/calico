@@ -551,4 +551,8 @@ imports:
   version: 0c329704159e3b051aafac400b15baacf2a94a04
   subpackages:
   - pkg/common
+- name: github.com/aws/aws-sdk-go
+  version: v1.13.54
+- name: github.com/jmespath/go-jmespath
+  version: 0.2.2
 testImports: []

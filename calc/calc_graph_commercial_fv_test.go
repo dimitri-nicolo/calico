@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
 	. "github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -363,6 +364,11 @@ var localEp1With3NodesSharingIPAndRemoteEp = localEp1With3NodesSharingIP.withKVU
 	"10.0.0.2",
 	"10.0.1.1",
 	"10.0.1.2",
+).withRemoteEndpoint(
+	calc.EndpointData{
+		Key:      remoteWlEpKey1,
+		Endpoint: &commRemoteWlEp1,
+	},
 ).withName("Local endpoint 1 with triple of hosts sharing IP and a remote endpoint")
 
 var localEp1With3NodesSharingIPAndRemoteEps = localEp1With3NodesSharingIPAndRemoteEp.withKVUpdates(
@@ -377,6 +383,11 @@ var localEp1With3NodesSharingIPAndRemoteEps = localEp1With3NodesSharingIPAndRemo
 	"10.0.2.2/32", // remote ep2
 }).withIPSecBlacklist(
 	"10.0.2.2",
+).withRemoteEndpoint(
+	calc.EndpointData{
+		Key:      remoteWlEpKey2,
+		Endpoint: &commRemoteWlEp2,
+	},
 ).withName("Local endpoint 1 with triple of hosts sharing IP and a remote endpoints on both remote hosts")
 
 var localAndRemoteEndpointsWithMissingRemoteNode = localEp1WithNode.withKVUpdates(
@@ -391,6 +402,11 @@ var localAndRemoteEndpointsWithMissingRemoteNode = localEp1WithNode.withKVUpdate
 }).withIPSecBlacklist(
 	"10.0.1.1",
 	"10.0.1.2",
+).withRemoteEndpoint(
+	calc.EndpointData{
+		Key:      remoteWlEpKey1,
+		Endpoint: &commRemoteWlEp1,
+	},
 ).withName("Local endpoint 1 with remote endpoint but missing remote node")
 
 // Different local endpoint with a host IP, should generate an IPsec binding for each IP of the endpoint.
@@ -494,8 +510,8 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 	"10.0.0.2",
 ).withName("3 endpoints sharing an IP with a duplicate host IP defined")
 
-var remoteWlEpKey2 = WorkloadEndpointKey{remoteHostname, "orch", "wl2", "ep2"}
-var remoteWlEp2ID = "orch/wl2/ep2"
+var remoteWlEpKey3 = WorkloadEndpointKey{remoteHostname, "orch", "wl3", "ep3"}
+var remoteWlEp3ID = "orch/wl2/ep2"
 
 var remoteWlEp1 = WorkloadEndpoint{
 	State: "active",
@@ -525,16 +541,16 @@ var remoteWlEp1NoIpv6 = WorkloadEndpoint{
 	},
 }
 
-var remoteWlEp2 = WorkloadEndpoint{
+var remoteWlEp3 = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali2",
 	Mac:   mustParseMac("02:03:04:05:06:07"),
-	IPv4Nets: []net.IPNet{mustParseNet("10.2.0.1/32"),
+	IPv4Nets: []calinet.IPNet{mustParseNet("10.2.0.1/32"),
 		mustParseNet("10.2.0.2/32")},
-	IPv6Nets: []net.IPNet{mustParseNet("fe80:fe11::1/128"),
-		mustParseNet("fe80:fe11::2/128")},
+	IPv6Nets: []calinet.IPNet{mustParseNet("fe80:fe22::1/128"),
+		mustParseNet("fe80:fe22::2/128")},
 	Labels: map[string]string{
-		"id": "rem-ep-1",
+		"id": "rem-ep-2",
 		"x":  "x",
 		"y":  "y",
 	},
@@ -543,7 +559,10 @@ var remoteWlEp2 = WorkloadEndpoint{
 var remoteWlEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	KVPair{Key: remoteWlEpKey1, Value: &remoteWlEp1},
 ).withRemoteEndpoint(
-	remoteWlEp2ID,
+	calc.EndpointData{
+		Key:      remoteWlEpKey1,
+		Endpoint: &remoteWlEp1,
+	},
 ).withName("1 remote endpoint")
 
 // localEpAndRemoteEpWithPolicyAndTier contains one local and one remote endpoint.
@@ -552,16 +571,16 @@ var remoteWlEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	// Two local endpoints with overlapping IPs.
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
-	KVPair{Key: remoteWlEpKey2, Value: &remoteWlEp2},
+	KVPair{Key: remoteWlEpKey3, Value: &remoteWlEp3},
 ).withIPSet(allSelectorId, []string{
 	"10.0.0.1/32", // local ep
 	"fc00:fe11::1/128",
 	"10.0.0.2/32",
 	"fc00:fe11::2/128",
 	"10.2.0.1/32", // remote ep
-	"fe80:fe11::1/128",
+	"fe80:fe22::1/128",
 	"10.2.0.2/32",
-	"fe80:fe11::2/128",
+	"fe80:fe22::2/128",
 }).withIPSet(bEqBSelectorId, []string{
 	"10.0.0.1/32",
 	"fc00:fe11::1/128",
@@ -579,8 +598,26 @@ var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withRemoteEndpoint(
-	remoteWlEp2ID,
+	calc.EndpointData{
+		Key:      remoteWlEpKey3,
+		Endpoint: &remoteWlEp3,
+	},
 ).withName("1 local and 1 remote")
+
+var remoteEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
+	KVPair{Key: remoteWlEpKey1, Value: &remoteWlEp1},
+	KVPair{Key: remoteWlEpKey3, Value: &remoteWlEp3},
+).withRemoteEndpoint(
+	calc.EndpointData{
+		Key:      remoteWlEpKey1,
+		Endpoint: &remoteWlEp1,
+	},
+).withRemoteEndpoint(
+	calc.EndpointData{
+		Key:      remoteWlEpKey3,
+		Endpoint: &remoteWlEp3,
+	},
+).withName("2 remote endpoints")
 
 var commercialTests = []StateList{
 	// Empty should be empty!
@@ -688,7 +725,9 @@ var commercialTests = []StateList{
 	{localEp2WithNode, localEp2WithPolicy},
 
 	// Remote endpoint tests.
-	{remoteWlEp1WithPolicyAndTier, localEpAndRemoteEpWithPolicyAndTier},
+	{remoteWlEp1WithPolicyAndTier,
+		localEpAndRemoteEpWithPolicyAndTier,
+		remoteEpsWithPolicyAndTier},
 
 	// TODO(smc): Test config calculation
 	// TODO(smc): Test mutation of endpoints

@@ -114,6 +114,8 @@ type Config struct {
 	PrometheusReporterKeyFile  string
 	PrometheusReporterCAFile   string
 
+	CloudWatchReporterEnabled bool
+
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
 
@@ -560,6 +562,11 @@ func (d *InternalDataplane) Start() {
 		pr.AddAggregator(collector.NewPolicyRulesAggregator(d.config.DeletedMetricsRetentionSecs, d.config.FelixHostname))
 		pr.AddAggregator(collector.NewDeniedPacketsAggregator(d.config.DeletedMetricsRetentionSecs, d.config.FelixHostname))
 		rm.RegisterMetricsReporter(pr)
+	}
+	// TODO: Pass in the the necessary AWS client config.
+	if d.config.CloudWatchReporterEnabled {
+		cw := collector.NewCloudWatchReporter(d.config.DeletedMetricsRetentionSecs)
+		rm.RegisterMetricsReporter(cw)
 	}
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
 	if syslogReporter != nil {
