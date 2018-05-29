@@ -195,6 +195,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			IPSecPSK:         configParams.GetPSKFromFile(),
 			IPSecIKEProposal: configParams.IPSecIKEAlgorithm,
 			IPSecESPProposal: configParams.IPSecESPAlgorithm,
+			IPSecLogLevel:    configParams.IPSecLogLevel,
 
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 

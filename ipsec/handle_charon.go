@@ -261,6 +261,23 @@ func (charon *CharonIKEDaemon) UnloadCharonConnection(localIP, remoteIP string) 
 	return nil
 }
 
+func (charon *CharonIKEDaemon) ReloadConfig() error {
+	client, err := charon.getClient(true)
+	if err != nil {
+		log.Errorf("Failed to acquire Vici client: %s", err)
+		return err
+	}
+	defer client.Close()
+
+	requestMap := &map[string]interface{}{}
+	msg, err := client.Request("reload-settings", *requestMap)
+	if msg["success"] != "yes" {
+		return fmt.Errorf("unsuccessful LoadConn: %v", msg["errmsg"])
+	}
+
+	return nil
+}
+
 func formatName(local, remote string) string {
 	return fmt.Sprintf("%s-%s", local, remote)
 }

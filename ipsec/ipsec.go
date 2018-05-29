@@ -15,7 +15,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
-func NewDataplane(localTunnelAddr string, preSharedKey string, ikeProposal, espProposal string, forwardMark uint32) *Dataplane { // Start the charon
+func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal, logLevel string, forwardMark uint32) *Dataplane { // Start the charon
+
 	if forwardMark == 0 {
 		log.Panic("IPsec forward mark is 0")
 	}
@@ -26,7 +27,11 @@ func NewDataplane(localTunnelAddr string, preSharedKey string, ikeProposal, espP
 		bindingsByTunnel: map[string]set.Set{},
 		ikeProposal:      ikeProposal,
 		forwardMark:      forwardMark,
+		config:           newCharonConfig(charonFelixConfigFile),
 	}
+
+	d.config.SetLogLevel(logLevel)
+	d.config.RenderToFile()
 
 	ikeDaemon, err := NewCharonIKEDaemon(context.TODO(), &d.wg, espProposal)
 	if err != nil {
@@ -51,6 +56,8 @@ type Dataplane struct {
 	forwardMark      uint32
 	localTunnelAddr  string
 	bindingsByTunnel map[string]set.Set
+
+	config *CharonConfig
 
 	wg sync.WaitGroup
 }
@@ -151,4 +158,10 @@ func (d *Dataplane) removeTunnel(tunnelAddr string) {
 		return
 	}
 	panicIfErr(d.ikeDaemon.UnloadCharonConnection(d.localTunnelAddr, tunnelAddr))
+}
+
+func (d *Dataplane) reloadConfig() {
+	log.Infof("Reloading IPSec config with %v", d.config)
+	d.config.RenderToFile()
+	panicIfErr(d.ikeDaemon.ReloadConfig())
 }
