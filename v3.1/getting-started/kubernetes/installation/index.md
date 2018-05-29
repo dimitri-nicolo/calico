@@ -10,8 +10,8 @@ for instructions.
 
 - [Installing {{site.prodname}} for policy (advanced)](other)
 
-Should you wish to modify the manifests before applying them, refer to 
-[Customizing the manifests](config-options). 
+Should you wish to modify the manifests before applying them, refer to
+[Customizing the manifests](config-options).
 
-If you prefer not to use Kubernetes to start the {{site.prodname}} services, refer to the 
+If you prefer not to use Kubernetes to start the {{site.prodname}} services, refer to the
 [Integration guide](integration).

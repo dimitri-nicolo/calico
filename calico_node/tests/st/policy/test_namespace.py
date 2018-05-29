@@ -27,8 +27,8 @@ _log = logging.getLogger(__name__)
 _log.setLevel(logging.DEBUG)
 
 POST_DOCKER_COMMANDS = [
-    "docker load -i /code/cnx-node.tar",
-    "docker load -i /code/workload.tar",
+    "docker load -q -i /code/cnx-node.tar",
+    "docker load -q -i /code/workload.tar",
 ]
 NAMESPACE_PREFIX = "pcns"
 
@@ -81,8 +81,8 @@ class TestNamespace(TestBase):
         for host in cls.hosts:
             host.start_calico_node(env_options=" -e FELIX_HEALTHENABLED=true ")
 
-        retry_until_success(cls.host1.assert_is_ready, retries=10)
-        retry_until_success(cls.host2.assert_is_ready, retries=10)
+        handle_failure(lambda: retry_until_success(cls.host1.assert_is_ready, retries=20))
+        handle_failure(lambda: retry_until_success(cls.host2.assert_is_ready, retries=20))
 
         # Prepare namespace profile so that we can use namespaceSelector for non-k8s deployment.
         # CNI will use the existing profile which is setup here instead of creating its own.

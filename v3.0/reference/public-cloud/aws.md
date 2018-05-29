@@ -25,7 +25,7 @@ in AWS.
 | BGP           | Custom TCP Rule | TCP      | 179        |
 | IPIP*         | Custom Protocol | IPIP     | all        |
 
-\* The IPIP exception is required only when using {{site.prodname}} with IPIP encapsulation. Keep reading 
+\* The IPIP exception is required only when using {{site.prodname}} with IPIP encapsulation. Keep reading
 for information on when IPIP is required in AWS.
 
 #### Routing Traffic Within a Single VPC Subnet
