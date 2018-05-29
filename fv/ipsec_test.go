@@ -150,7 +150,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		}
 	}
 
-	It("workload-to-workload connections should be encrypted", func() {
+	It("workload-to-workload should be allowed and encrypted", func() {
 		cc.ExpectSome(w[0], w[1])
 		cc.ExpectSome(w[1], w[0])
 		cc.CheckConnectivity()
@@ -178,7 +178,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		expectIKEAndESP()
 
 		for i := range felixes {
-			By(fmt.Sprintf("Doing having expected mix of encrypted/unencrypted packets (felix %v)", i))
+			By(fmt.Sprintf("Having expected mix of encrypted/unencrypted packets (felix %v)", i))
 
 			// When snooping, tcpdump sees both inbound post-decryption packets as well as both inbound and outbound
 			// encrypted packets.  That means we expect the number of unencrypted packets that we see in the capture

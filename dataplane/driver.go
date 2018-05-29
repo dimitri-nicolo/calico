@@ -58,7 +58,8 @@ func StartDataplaneDriver(configParams *config.Config,
 		markDrop, _ := markBitsManager.NextSingleBitMark()
 		var markIPsec uint32
 		if configParams.IPSecEnabled() {
-			markIPsec, _ := markBitsManager.NextSingleBitMark()
+			log.Info("IPsec enabled, allocating a mark bit")
+			markIPsec, _ = markBitsManager.NextSingleBitMark()
 			if markIPsec == 0 {
 				log.WithFields(log.Fields{
 					"Name":     "felix-iptables",
