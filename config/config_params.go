@@ -313,22 +313,24 @@ func (c *Config) IPSecEnabled() bool {
 	return c.IPSecMode != "" && c.IPSecIKEAlgorithm != "" && c.IPSecESPAlgorithm != ""
 }
 
-func (c *Config)GetPSKFromFile() string {
+func (c *Config) GetPSKFromFile() string {
 	// Extract pre-shared key from file.
 	if c.IPSecMode != "PSK" {
 		return ""
 	}
 
 	if _, err := os.Stat(c.IPSecPSKFile); os.IsNotExist(err) {
-		panic(fmt.Errorf("error file not exists for PSK: %s", c.IPSecPSKFile))
-
+		log.Panicf("error file not exists for PSK: %s", c.IPSecPSKFile)
 	}
 
 	data, err := ioutil.ReadFile(c.IPSecPSKFile)
 	if err != nil {
-		panic(fmt.Errorf("error reading PSK from file: %s", c.IPSecPSKFile))
-
+		log.Panicf("error reading PSK from file: %s, err %v", c.IPSecPSKFile, err)
 	}
+	if len(data) == 0 {
+		log.Panicf("error reading PSK from file: %s, read zero bytes", c.IPSecPSKFile)
+	}
+
 	return string(data)
 }
 

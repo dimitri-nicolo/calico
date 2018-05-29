@@ -27,11 +27,14 @@ func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal
 		bindingsByTunnel: map[string]set.Set{},
 		ikeProposal:      ikeProposal,
 		forwardMark:      forwardMark,
-		config:           newCharonConfig(charonFelixConfigFile),
+		config:           NewCharonConfig(charonConfigRootDir, charonMainConfigFile),
 	}
 
+	// Initialise charon main config file.
 	d.config.SetLogLevel(logLevel)
+	d.config.SetFollowRedirects(false)
 	d.config.RenderToFile()
+	log.Infof("Initialising charon config %+v", d.config)
 
 	ikeDaemon, err := NewCharonIKEDaemon(context.TODO(), &d.wg, espProposal)
 	if err != nil {
@@ -160,8 +163,3 @@ func (d *Dataplane) removeTunnel(tunnelAddr string) {
 	panicIfErr(d.ikeDaemon.UnloadCharonConnection(d.localTunnelAddr, tunnelAddr))
 }
 
-func (d *Dataplane) reloadConfig() {
-	log.Infof("Reloading IPSec config with %v", d.config)
-	d.config.RenderToFile()
-	panicIfErr(d.ikeDaemon.ReloadConfig())
-}

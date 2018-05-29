@@ -22,8 +22,8 @@ import (
 	"reflect"
 	"time"
 
-	"strings"
 	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -352,7 +352,6 @@ var _ = DescribeTable("Config parsing",
 	Entry("IPSecIKEAlgorithm", "IPSecIKEAlgorithm", "aes256gcm16-prfsha384-ecp384", "aes256gcm16-prfsha384-ecp384"),
 	Entry("IPSecESPAlgorithm", "IPSecESPAlgorithm", "aes256gcm16-ecp384", "aes256gcm16-ecp384"),
 
-
 	Entry("IPSecLogLevel", "IPSecLogLevel", "none", ""),
 	Entry("IPSecLogLevel", "IPSecLogLevel", "notice", "NOTICE"),
 	Entry("IPSecLogLevel", "IPSecLogLevel", "info", "INFO"),
@@ -475,7 +474,7 @@ var _ = Describe("IPSec PSK parameters test", func() {
 	Describe("with IPSec PSK File", func() {
 		BeforeEach(func() {
 			c = New()
-			err :=ioutil.WriteFile(pskFile, []byte(psk), 0400)
+			err := ioutil.WriteFile(pskFile, []byte(psk), 0400)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		AfterEach(func() {
@@ -487,10 +486,16 @@ var _ = Describe("IPSec PSK parameters test", func() {
 			c.IPSecPSKFile = pskFile
 			Expect(c.GetPSKFromFile()).To(Equal(psk))
 		})
-		It("should read empty PSK", func() {
+		It("should read empty PSK if IPSec is not enabled", func() {
 			c.IPSecMode = ""
 			c.IPSecPSKFile = pskFile
 			Expect(c.GetPSKFromFile()).Should(BeEmpty())
+		})
+		It("should report error on empty PSK file", func() {
+			c.IPSecMode = "PSK"
+			c.IPSecPSKFile = pskFile
+			err := ioutil.WriteFile(pskFile, []byte{}, 0400)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

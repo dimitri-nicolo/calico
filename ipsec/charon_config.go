@@ -1,16 +1,4 @@
-// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
 package ipsec
 
@@ -19,16 +7,18 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"reflect"
+	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	charonConfigRootDir   = "/etc/strongswan.d"
-	charonMainConfigFile  = "charon.conf"
-	charonFelixConfigFile = "set-by-felix.conf"
+	charonConfigRootDir  = "/etc/strongswan.d"
+	charonMainConfigFile = "charon.conf"
 
+	charonFollowRedirects = "charon.follow_redirects"
 	charonConfigItemStdoutLogLevel = "charon.filelog.stdout.default"
 	charonConfigItemStderrLogLevel = "charon.filelog.stderr.default"
 )
@@ -36,15 +26,16 @@ const (
 var (
 	// https://wiki.strongswan.org/projects/strongswan/wiki/LoggerConfiguration
 	felixLogLevelToCharonLogLevel = map[string]string{
-		"NONE": "-1",
-		"NOTICE": "0",
-		"INFO": "1",
-		"DEBUG": "2",
+		"NONE":    "-1",
+		"NOTICE":  "0",
+		"INFO":    "1",
+		"DEBUG":   "2",
 		"VERBOSE": "4",
 	}
 )
 
-// Data structure to handle charon config.
+// Data structure for rendering the Charon's config format,
+// which is a tree consisting of named sections and config fields.
 // https://wiki.strongswan.org/projects/strongswan/wiki/StrongswanConf
 // Each section has a name, followed by C-Style curly brackets defining the sections body.
 // Each section body contains a set of subsections and key/value pairs
@@ -52,13 +43,13 @@ var (
 //        section  := name { settings }
 //        keyvalue := key = value\n
 
-type configTree struct {
-	section map[string]*configTree
+type ConfigTree struct {
+	section map[string]*ConfigTree
 	kv      map[string]string
 }
 
-func newConfigTree(items map[string]string) *configTree {
-	tree := &configTree{}
+func NewConfigTree(items map[string]string) *ConfigTree {
+	tree := &ConfigTree{}
 	for k, v := range items {
 		if err := tree.AddOneKV(k, v); err != nil {
 			log.WithFields(log.Fields{
@@ -72,13 +63,13 @@ func newConfigTree(items map[string]string) *configTree {
 }
 
 // Add a dot notation kv pair to config tree.
-func (t *configTree) AddOneKV(key, value string) error {
+func (t *ConfigTree) AddOneKV(key, value string) error {
 	// Breakdown key name into section slice and the real key.
 	slice := strings.Split(key, ".")
 	length := len(slice)
-	if length <= 2 {
+	if length < 2 {
 		// No dot in key name
-		return fmt.Errorf("No dot in key name for configTree")
+		return fmt.Errorf("No dot in key for configTree. Len %d, slice %v", key, length, slice)
 	}
 	realKey := slice[length-1]
 	sections := slice[:length-1]
@@ -91,9 +82,9 @@ func (t *configTree) AddOneKV(key, value string) error {
 			// Add or create a new section inside current section.
 			// Make next section point to it.
 			if currentSection.section == nil {
-				currentSection.section = map[string]*configTree{sectionName: &configTree{}}
+				currentSection.section = map[string]*ConfigTree{sectionName: &ConfigTree{}}
 			} else {
-				currentSection.section[sectionName] = &configTree{}
+				currentSection.section[sectionName] = &ConfigTree{}
 			}
 			nextSection = currentSection.section[sectionName]
 		}
@@ -123,50 +114,69 @@ func (t *configTree) AddOneKV(key, value string) error {
 //      }
 //      stderr {
 //        default = 2
-//        timestamp = %e %b %F
+//        time_format = %e %b %F
 //      }
 //    }
 //  }
-func (c *configTree) render(startSection, linePrefix string) string {
+//
+// This function will render each section and config items in an ordered pattern.
+// It is not mandatory but it makes UT and debug easier.
+func (c *ConfigTree) Render(startSection, linePrefix string) string {
 	var result string
 
 	if startSection != "" {
 		// Add indent for all except start of the tree.
 		linePrefix += "  "
 	}
-	for k, v := range c.section {
+	for _, k := range getSortedKey(c.section) {
+		v := c.section[k]
 		if v != nil {
 			sectionHead := fmt.Sprintf("%s%s {\n", linePrefix, k)
-			sectionBody := v.render(k, linePrefix)
+			sectionBody := v.Render(k, linePrefix)
 			sectionEnd := fmt.Sprintf("%s}\n", linePrefix)
 			result += sectionHead + sectionBody + sectionEnd
 		}
 	}
 
-	for k, v := range c.kv {
-		result += fmt.Sprintf("  %s%s = %s\n", linePrefix, k, v)
+	for _, k := range getSortedKey(c.kv) {
+		v := c.kv[k]
+		result += fmt.Sprintf("%s%s = %s\n", linePrefix, k, v)
 	}
 	return result
+}
+
+func getSortedKey(m interface{}) (keyList []string) {
+	if reflect.ValueOf(m).Kind() != reflect.Map {
+		return
+	}
+
+	keys := reflect.ValueOf(m).MapKeys()
+	for _, key := range keys {
+		keyList = append(keyList, key.Interface().(string))
+	}
+	sort.Strings(keyList)
+	return
 }
 
 // Structure to hold current charon config.
 // We use dot notation for each config item, same as strongswan config doc.
 // e.g. charon.filelog.stderr.default = 2
 type CharonConfig struct {
-	configFile string            // config file name
+	rootDir    string
+	configFile string            // main config file
 	items      map[string]string // dot notation key
 }
 
-func newCharonConfig(configFile string) *CharonConfig {
-	// Initialise an empty felix config file.
-	felixConfig := path.Join(charonConfigRootDir, configFile)
-	panicIfErr(writeStringToFile(felixConfig, " "))
+func NewCharonConfig(rootDir, configFile string) *CharonConfig {
+	mainConfig := path.Join(rootDir, configFile)
 
-	// Insert felix config file into main charon config file.
-	mainConfig := path.Join(charonConfigRootDir, charonMainConfigFile)
-	panicIfErr(appendStringToFile(mainConfig, fmt.Sprintf("include %s\n", felixConfig)))
+	// Main config file should exists.
+	if _, err := os.Stat(mainConfig); os.IsNotExist(err) {
+		log.Panicf("Main config file not exists for charon")
+	}
 
 	return &CharonConfig{
+		rootDir:    rootDir,
 		configFile: configFile,
 		items:      map[string]string{},
 	}
@@ -181,41 +191,36 @@ func (c *CharonConfig) AddKVs(kv map[string]string) {
 }
 
 func (c *CharonConfig) renderToString() string {
-	return newConfigTree(c.items).render("", "")
+	return NewConfigTree(c.items).Render("", "")
 }
 
-// Render current charon config to config file.
+// Render current charon config to main config file.
 func (c *CharonConfig) RenderToFile() {
-	config := path.Join(charonConfigRootDir, c.configFile)
+	config := path.Join(c.rootDir, c.configFile)
 	panicIfErr(writeStringToFile(config, c.renderToString()))
 }
 
+func (c *CharonConfig) SetFollowRedirects(bValue bool) {
+	yesOrNo := map[bool]string{true: "yes", false: "no"}
+	c.AddKVs(map[string]string{
+		charonFollowRedirects: yesOrNo[bValue],
+	})
+}
+
 func (c *CharonConfig) SetLogLevel(felixLevel string) {
-	charonLevel := felixLogLevelToCharonLogLevel[strings.ToUpper(felixLevel)]
+	charonLevel, ok := felixLogLevelToCharonLogLevel[strings.ToUpper(felixLevel)]
+	if !ok {
+		log.Panicf("Set charon log level with wrong felix log value <%s>", felixLevel)
+	}
 	c.AddKVs(map[string]string{
 		charonConfigItemStderrLogLevel: charonLevel,
 		charonConfigItemStdoutLogLevel: charonLevel,
-		"charon.filelog.stdout.time_format": "%b %e %T", //This is for test purpose for now. Will remove it later.
 	})
 }
 
 func writeStringToFile(path, text string) error {
 	if err := ioutil.WriteFile(path, []byte(text), 0600); err != nil {
 		return fmt.Errorf("Failed to write file %s", path)
-	}
-	return nil
-}
-
-func appendStringToFile(path, text string) error {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.WriteString(text)
-	if err != nil {
-		return err
 	}
 	return nil
 }
