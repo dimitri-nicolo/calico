@@ -921,3 +921,9 @@ master:
     configmap-reload:
       version: v0.0.1
       url: ""
+    calico/dikastes:
+      version: 20180328162858
+    flexvol:
+      version: latest
+    pilot-webhook:
+      version: 20180319220721
