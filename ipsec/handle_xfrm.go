@@ -24,6 +24,36 @@ import (
 )
 
 func AddBlock(dst string, dir netlink.Dir) error {
+	_, dstNet, _ := net.ParseCIDR(dst)
+	policy := netlink.XfrmPolicy{
+		Dst:    dstNet,
+		Dir:    dir,
+		Action: netlink.XFRM_POLICY_BLOCK,
+	}
+
+	log.Infof("Adding ipsec block: %+v", policy)
+
+	if err := netlink.XfrmPolicyAdd(&policy); err != nil {
+		fmt.Println(fmt.Errorf("error adding block: %+v err: %v", policy, err))
+	}
+
+	return nil
+}
+
+func RemoveBlock(dst string, dir netlink.Dir) error {
+	_, dstNet, _ := net.ParseCIDR(dst)
+	policy := netlink.XfrmPolicy{
+		Dst:    dstNet,
+		Dir:    dir,
+		Action: netlink.XFRM_POLICY_BLOCK,
+	}
+
+	log.Infof("Adding ipsec block: %+v", policy)
+
+	if err := netlink.XfrmPolicyDel(&policy); err != nil {
+		fmt.Println(fmt.Errorf("error adding block: %+v err: %v", policy, err))
+	}
+
 	return nil
 }
 
