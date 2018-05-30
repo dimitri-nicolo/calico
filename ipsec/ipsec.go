@@ -16,6 +16,10 @@ import (
 )
 
 func NewDataplane(localTunnelAddr string, preSharedKey string, ikeProposal, espProposal string, forwardMark uint32) *Dataplane { // Start the charon
+	if forwardMark == 0 {
+		log.Panic("IPsec forward mark is 0")
+	}
+
 	d := &Dataplane{
 		preSharedKey:     preSharedKey,
 		localTunnelAddr:  localTunnelAddr,
