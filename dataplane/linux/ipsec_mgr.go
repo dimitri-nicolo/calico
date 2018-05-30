@@ -47,6 +47,5 @@ func (d *ipsecManager) OnUpdate(msg interface{}) {
 }
 
 func (d *ipsecManager) CompleteDeferredWork() error {
-
 	return nil
 }

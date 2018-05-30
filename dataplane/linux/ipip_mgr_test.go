@@ -24,9 +24,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
-
-	"github.com/projectcalico/felix/proto"
-	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 var (
@@ -37,7 +34,6 @@ var (
 var _ = Describe("IpipMgr (tunnel configuration)", func() {
 	var (
 		ipipMgr   *ipipManager
-		ipSets    *mockIPSets
 		dataplane *mockIPIPDataplane
 	)
 
@@ -52,8 +48,7 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 
 	BeforeEach(func() {
 		dataplane = &mockIPIPDataplane{}
-		ipSets = newMockIPSets()
-		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, dataplane)
+		ipipMgr = newIPIPManagerWithShim(dataplane)
 	})
 
 	Describe("after calling configureIPIPDevice", func() {
@@ -193,134 +188,6 @@ var _ = Describe("IpipMgr (tunnel configuration)", func() {
 			})
 		})
 	}
-})
-
-var _ = Describe("ipipManager IP set updates", func() {
-	var (
-		ipipMgr   *ipipManager
-		ipSets    *mockIPSets
-		dataplane *mockIPIPDataplane
-	)
-
-	BeforeEach(func() {
-		dataplane = &mockIPIPDataplane{}
-		ipSets = newMockIPSets()
-		ipipMgr = newIPIPManagerWithShim(ipSets, 1024, dataplane)
-	})
-
-	It("should not create the IP set until first call to CompleteDeferredWork()", func() {
-		Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
-		ipipMgr.CompleteDeferredWork()
-		Expect(ipSets.AddOrReplaceCalled).To(BeTrue())
-	})
-
-	allHostsSet := func() set.Set {
-		Expect(ipSets.Members).To(HaveLen(1))
-		return ipSets.Members["all-hosts"]
-	}
-
-	Describe("after adding an IP for host1", func() {
-		BeforeEach(func() {
-			ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
-				Hostname: "host1",
-				Ipv4Addr: "10.0.0.1",
-			})
-			ipipMgr.CompleteDeferredWork()
-		})
-
-		It("should add host1's IP to the IP set", func() {
-			Expect(allHostsSet()).To(Equal(set.From("10.0.0.1")))
-		})
-
-		Describe("after adding an IP for host2", func() {
-			BeforeEach(func() {
-				ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
-					Hostname: "host2",
-					Ipv4Addr: "10.0.0.2",
-				})
-				ipipMgr.CompleteDeferredWork()
-			})
-			It("should add the IP to the IP set", func() {
-				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", "10.0.0.2")))
-			})
-		})
-
-		Describe("after adding a duplicate IP", func() {
-			BeforeEach(func() {
-				ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
-					Hostname: "host2",
-					Ipv4Addr: "10.0.0.1",
-				})
-				ipipMgr.CompleteDeferredWork()
-			})
-			It("should tolerate the duplicate", func() {
-				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1")))
-			})
-
-			Describe("after removing a duplicate IP", func() {
-				BeforeEach(func() {
-					ipipMgr.OnUpdate(&proto.HostMetadataRemove{
-						Hostname: "host2",
-					})
-					ipipMgr.CompleteDeferredWork()
-				})
-				It("should keep the IP in the IP set", func() {
-					Expect(allHostsSet()).To(Equal(set.From("10.0.0.1")))
-				})
-
-				Describe("after removing initial copy of IP", func() {
-					BeforeEach(func() {
-						ipipMgr.OnUpdate(&proto.HostMetadataRemove{
-							Hostname: "host1",
-						})
-						ipipMgr.CompleteDeferredWork()
-					})
-					It("should remove the IP", func() {
-						Expect(allHostsSet().Len()).To(BeZero())
-					})
-				})
-			})
-		})
-
-		Describe("after adding/removing a duplicate IP in one batch", func() {
-			BeforeEach(func() {
-				ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
-					Hostname: "host2",
-					Ipv4Addr: "10.0.0.1",
-				})
-				ipipMgr.OnUpdate(&proto.HostMetadataRemove{
-					Hostname: "host2",
-				})
-				ipipMgr.CompleteDeferredWork()
-			})
-			It("should keep the IP in the IP set", func() {
-				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1")))
-			})
-		})
-
-		Describe("after changing IP for host1", func() {
-			BeforeEach(func() {
-				ipipMgr.OnUpdate(&proto.HostMetadataUpdate{
-					Hostname: "host1",
-					Ipv4Addr: "10.0.0.2",
-				})
-				ipipMgr.CompleteDeferredWork()
-			})
-			It("should update the IP set", func() {
-				Expect(allHostsSet()).To(Equal(set.From("10.0.0.2")))
-			})
-		})
-
-		Describe("after a no-op batch", func() {
-			BeforeEach(func() {
-				ipSets.AddOrReplaceCalled = false
-				ipipMgr.CompleteDeferredWork()
-			})
-			It("shouldn't rewrite the IP set", func() {
-				Expect(ipSets.AddOrReplaceCalled).To(BeFalse())
-			})
-		})
-	})
 })
 
 type mockIPIPDataplane struct {
