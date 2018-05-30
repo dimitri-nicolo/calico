@@ -40,7 +40,7 @@ Returns the version of `cnx-queryserver`.
 #### URL
 
 ```
-http://host:port/base/version
+https://host:port/base/version
 ```
 
 #### Query Parameters
@@ -81,7 +81,7 @@ policies/endpoints and nodes.
 #### URL
 
 ```
-http://host:port/base/summary
+https://host:port/base/summary
 ```
 
 TODO(doublek/rlb):
@@ -160,7 +160,7 @@ Design Note:
 #### URL: exact get for GlobalNetworkPolicy
 
 ```
-http://host:port/base/policies/{name}
+https://host:port/base/policies/{name}
 ```
 
 No query parameters supported for this URL format.
@@ -168,7 +168,7 @@ No query parameters supported for this URL format.
 #### URL: exact get for (namespaced) NetworkPolicy
 
 ```
-http://host:port/base/policies/{namespace}/{name}
+https://host:port/base/policies/{namespace}/{name}
 ```
 
 No query parameters supported for this URL format.
@@ -176,7 +176,7 @@ No query parameters supported for this URL format.
 #### URL: query
 
 ```
-http://host:port/base/policies
+https://host:port/base/policies
 ```
 
 #### Query Parameters
@@ -445,7 +445,7 @@ Design Note:
 #### URL: exact get for HostEndpoint
 
 ```
-http://host:port/base/endpoints/{name}
+https://host:port/base/endpoints/{name}
 ```
 
 No query parameters supported for this URL format.
@@ -453,7 +453,7 @@ No query parameters supported for this URL format.
 #### URL: exact get for (namespaced) WorkloadEndpoint
 
 ```
-http://host:port/base/endpoints/{namespace}/{name}
+https://host:port/base/endpoints/{namespace}/{name}
 ```
 
 No query parameters supported for this URL format.
@@ -461,7 +461,7 @@ No query parameters supported for this URL format.
 #### URL: query
 
 ```
-http://host:port/base/endpoints
+https://host:port/base/endpoints
 ```
 
 #### Query Parameters
@@ -717,13 +717,13 @@ Design Note:
 #### URL: exact get for Node
 
 ```
-http://host:port/base/nodes/{name}
+https://host:port/base/nodes/{name}
 ```
 
 #### URL: query
 
 ```
-http://host:port/base/nodes
+https://host:port/base/nodes
 ```
 
 #### Query Parameters
@@ -805,12 +805,12 @@ There are 5 different possible scenarios:
 
 `is_valid` will be `false` for all except case #2
 `warning` will be populated when `is_valid` is `false` else it won't exist. 
-
+`expiry` will be populated for all cases except when license is not found or is corrupted.
 
 #### URL
 
 ```
-http://host:port/base/license
+https://host:port/base/license
 ```
 
 #### Query Parameters
@@ -825,6 +825,7 @@ Returns a JSON object with the following fields.
 | ----- | ----------- | ------ |
 | is_valid | If the license is valid or not | boolean |
 | warning | Warning message if the license is not valid | string |
+| expiry  | License expiry date, time and timezone if the license is found and not corrupted | string |
 
 #### Examples
 
@@ -842,6 +843,7 @@ Returns a JSON object with the following fields.
 ```
 {
   "is_valid": true,
+  "expiry": "Sun Mar 15 06:59:59 UTC 2020"
 }
 
 ```
@@ -855,6 +857,7 @@ Returns a JSON object with the following fields.
 {
   "is_valid": false,
   "warning": "LicenseKey expired or invalid. Please contact Tigera support to avoid traffic disruptions",
+  "expiry": "Sun Mar 15 06:59:59 UTC 2020"
 }
 ```
 

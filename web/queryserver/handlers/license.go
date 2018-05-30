@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -21,9 +22,16 @@ type License struct {
 	Client clientv3.Interface
 }
 
+type UnixJSONTime time.Time
+
+func (t UnixJSONTime) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("\"%s\"", time.Time(t).Format(time.UnixDate))), nil
+}
+
 type licenseResponse struct {
-	IsValid bool   `json:"is_valid"`
-	Warning string `json:"warning,omitempty"`
+	IsValid bool          `json:"is_valid"`
+	Warning string        `json:"warning,omitempty"`
+	Expiry  *UnixJSONTime `json:"expiry,omitempty"`
 }
 
 func (l License) LicenseHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +63,9 @@ func (l License) LicenseHandler(w http.ResponseWriter, r *http.Request) {
 		writeResponse(w, licResp)
 		return
 	}
+
+	exp := UnixJSONTime(claims.Claims.Expiry.Time())
+	licResp.Expiry = &exp
 
 	// Check if the license is valid.
 	if err := claims.Validate(); err != nil {
