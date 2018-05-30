@@ -22,6 +22,7 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	log "github.com/sirupsen/logrus"
 )
 
 var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
@@ -124,7 +125,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		for i := range felixes {
 			By(fmt.Sprintf("Doing IKE (felix %v)", i))
 			Eventually(tcpdumpMatches(i, "numIKEPackets")).Should(BeNumerically(">", 0),
-				"tcpdump didn't record and IKE packets")
+				"tcpdump didn't record any IKE packets")
 		}
 	}
 
@@ -191,8 +192,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		}
 	})
 
-	// FIXME: Do we want to do host-to-host encryption?
-	It("should have host to host connectivity", func() {
+	It("should have host to host connectivity (no encryption)", func() {
 		cc.ExpectSome(felixes[0], hostW[1])
 		cc.ExpectSome(felixes[1], hostW[0])
 		cc.CheckConnectivity()
@@ -235,18 +235,25 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 	})
 
-	// FIXME: This doesn't work because we currently allow unencrypted traffic if it's from a workload that we don't have IPsec config for.
-	PContext("after removing BGP address from nodes", func() {
-		// Simulate having a host send IPsec traffic from an unknown source, should get blocked.
+	Context("after removing host address from nodes", func() {
+		// In this scenario, we remove the host IP from one of the nodes, this should trigger Felix to
+		// blacklist the workload IPs on the remote host.
+
+		var node *api.Node
+		var savedBGPSpec *api.NodeBGPSpec
+
 		BeforeEach(func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			l, err := client.Nodes().List(ctx, options.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			for _, node := range l.Items {
-				node.Spec.BGP = nil
-				_, err := client.Nodes().Update(ctx, &node, options.SetOptions{})
+			for _, n := range l.Items {
+				log.WithField("node", n).Info("Removing BGP state from node")
+				savedBGPSpec = n.Spec.BGP
+				n.Spec.BGP = nil
+				node, err = client.Nodes().Update(ctx, &n, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
+				break // Removing the IP from one node should be enough.
 			}
 
 			// Removing the BGP config triggers a Felix restart and Felix has a 2s timer during
@@ -255,13 +262,26 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			for _, f := range felixes {
 				Eventually(func() int {
 					return getNumIPSetMembers(f.Container, "cali40all-hosts")
-				}, "5s", "200ms").Should(BeZero())
+				}, "5s", "200ms").Should(Equal(1))
 			}
 		})
 
-		It("should have no workload to workload connectivity", func() {
+		It("should have no workload to workload connectivity until we restore the host IP", func() {
+			By("Having no connectivity initially")
 			cc.ExpectNone(w[0], w[1])
 			cc.ExpectNone(w[1], w[0])
+			cc.CheckConnectivity()
+
+			By("Having connectivity after we restore the host IP")
+			node.Spec.BGP = savedBGPSpec
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+			_, err := client.Nodes().Update(ctx, node, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			cc.ResetExpectations()
+			cc.ExpectSome(w[0], w[1])
+			cc.ExpectSome(w[1], w[0])
 			cc.CheckConnectivity()
 		})
 	})
