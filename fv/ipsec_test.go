@@ -48,8 +48,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
-		time.Sleep(10 * time.Second) // FIXME: allow time for the charon to boot
-
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		err = infra.AddDefaultAllow()
 		Expect(err).NotTo(HaveOccurred())
