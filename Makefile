@@ -357,7 +357,11 @@ endif
 	utils/make-packages.sh rpm
 
 .PHONY: protobuf
-protobuf: proto/felixbackend.pb.go
+protobuf: clean-protobuf proto/felixbackend.pb.go
+
+.PHONY: clean-protobuf
+clean-protobuf:
+	rm -f proto/felixbackend.pb.go
 
 # Generate the protobuf bindings for go.
 proto/felixbackend.pb.go: proto/felixbackend.proto
