@@ -105,6 +105,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		for _, t := range tcpdumps {
 			t.Stop()
 		}
+
+		// Work around
+		time.Sleep(2 * time.Second)
+
 		for _, felix := range felixes {
 			felix.Stop()
 		}
@@ -247,6 +251,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			defer cancel()
 			l, err := client.Nodes().List(ctx, options.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
+
 			for _, n := range l.Items {
 				log.WithField("node", n).Info("Removing BGP state from node")
 				savedBGPSpec = n.Spec.BGP
@@ -256,14 +261,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 				break // Removing the IP from one node should be enough.
 			}
 
-			// Removing the BGP config triggers a Felix restart and Felix has a 2s timer during
-			// a config restart to ensure that it doesn't tight loop.  Wait for the ipset to be
-			// updated as a signal that Felix has restarted.
-			for _, f := range felixes {
-				Eventually(func() int {
-					return getNumIPSetMembers(f.Container, "cali40all-hosts")
-				}, "5s", "200ms").Should(Equal(1))
-			}
+			time.Sleep(3 * time.Second) // Felix takes 2 seconds to restart after a config change.
 		})
 
 		It("should have no workload to workload connectivity until we restore the host IP", func() {
@@ -278,6 +276,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			defer cancel()
 			_, err := client.Nodes().Update(ctx, node, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
+
+			time.Sleep(3 * time.Second) // Felix takes 2 seconds to restart after a config change.
 
 			cc.ResetExpectations()
 			cc.ExpectSome(w[0], w[1])
