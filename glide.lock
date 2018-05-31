@@ -1,5 +1,5 @@
-hash: e942ea837593543a922872113fc4d96ef82b8b575e391b9482de50859633b2b4
-updated: 2018-05-29T14:29:54.973756218Z
+hash: cd874196e1a5715b37f9f41968365f25cf896c708cbef22f75b5a49da2003ee0
+updated: 2018-05-31T10:13:22.992613063+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -302,7 +302,7 @@ imports:
   - client
   - crypto
 - name: github.com/tigera/nfnetlink
-  version: 1e9e6913b87c3816f3b22e759e2f4e28c51ea5c6
+  version: 0c33d6eace301fb92cfd3e54c2109d97f463db17
   repo: git@github.com:tigera/nfnetlink
   subpackages:
   - nfnl
