@@ -149,6 +149,13 @@ lineLoop:
 			logCxt.Info("One of our packages")
 			continue
 		}
+		// Ignore licensing in tigera packages since they are unlicensed (and no copyright either)
+		if strings.HasPrefix(pkgName, "github.com/projectcalico/felix/vendor/github.com/tigera/") ||
+			(strings.HasPrefix(pkgName, "github.com/projectcalico/") &&
+				!strings.Contains(pkgName, "vendor")) {
+			logCxt.Info("One of our packages")
+			continue
+		}
 		if whitelistedLicenses.Contains(license) {
 			logCxt.Info("License is whitelisted")
 			continue
