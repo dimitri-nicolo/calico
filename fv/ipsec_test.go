@@ -43,7 +43,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		Expect(err).NotTo(HaveOccurred())
 		topologyOptions := infrastructure.DefaultTopologyOptions()
 		// Enable IPsec.
-		topologyOptions.ExtraEnvVars["FELIX_IPSECPSK"] = "my-top-secret-pre-shared-key"
+		topologyOptions.ExtraEnvVars["FELIX_IPSECMODE"] = "PSK"
+		topologyOptions.ExtraEnvVars["FELIX_IPSECPSKFILE"] = "/proc/1/cmdline"
+		topologyOptions.ExtraEnvVars["FELIX_IPSECIKEAlGORITHM"] = "aes128gcm16-prfsha256-ecp256"
+		topologyOptions.ExtraEnvVars["FELIX_IPSECESPAlGORITHM"] = "aes128gcm16-ecp256"
 		topologyOptions.IPIPEnabled = false
 
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)

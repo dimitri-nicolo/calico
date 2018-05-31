@@ -146,6 +146,7 @@ type Config struct {
 	IPSecPSK         string
 	IPSecIKEProposal string
 	IPSecESPProposal string
+	IPSecLogLevel    string
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -453,6 +454,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 				config.IPSecPSK,
 				config.IPSecIKEProposal,
 				config.IPSecESPProposal,
+				config.IPSecLogLevel,
 				config.RulesConfig.IptablesMarkIPsec,
 			)
 			ipSecManager := newIPSecManager(dp.ipSecDataplane)
