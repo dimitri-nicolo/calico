@@ -13,15 +13,21 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 
+	"strings"
+
+	"time"
+
+	"github.com/onsi/ginkgo"
 	"github.com/projectcalico/felix/fv/utils"
 )
 
 func AttachTCPDump(c *Container, iface string) *TCPDump {
 	t := &TCPDump{
-		containerID:   c.GetID(),
-		containerName: c.Name,
-		iface:         iface,
-		matchers:      map[string]*tcpDumpMatcher{},
+		containerID:      c.GetID(),
+		containerName:    c.Name,
+		iface:            iface,
+		matchers:         map[string]*tcpDumpMatcher{},
+		listeningStarted: make(chan struct{}),
 	}
 	return t
 }
@@ -38,11 +44,12 @@ type tcpDumpMatcher struct {
 type TCPDump struct {
 	lock sync.Mutex
 
-	containerID   string
-	containerName string
-	iface         string
-	cmd           *exec.Cmd
-	out           io.ReadCloser
+	containerID      string
+	containerName    string
+	iface            string
+	cmd              *exec.Cmd
+	out, err         io.ReadCloser
+	listeningStarted chan struct{}
 
 	matchers map[string]*tcpDumpMatcher
 }
@@ -78,9 +85,20 @@ func (t *TCPDump) Start() {
 	t.out, err = t.cmd.StdoutPipe()
 	Expect(err).NotTo(HaveOccurred())
 
+	t.err, err = t.cmd.StderrPipe()
+	Expect(err).NotTo(HaveOccurred())
+
 	go t.readStdout()
+	go t.readStderr()
 
 	err = t.cmd.Start()
+
+	select {
+	case <-t.listeningStarted:
+	case <-time.After(30 * time.Second):
+		ginkgo.Fail("Failed to start tcpdump: it never reported that it was listening")
+	}
+
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -106,4 +124,24 @@ func (t *TCPDump) readStdout() {
 		t.lock.Unlock()
 	}
 	logrus.WithError(s.Err()).Info("TCPDump stdout finished")
+}
+
+func (t *TCPDump) readStderr() {
+	s := bufio.NewScanner(t.err)
+	closedChan := false
+	safeClose := func() {
+		if !closedChan {
+			close(t.listeningStarted)
+			closedChan = true
+		}
+	}
+	defer safeClose()
+	for s.Scan() {
+		line := s.Text()
+		logrus.Infof("[%s] ERR: %s", t.containerName, line)
+		if strings.Contains(line, "listening") {
+			safeClose()
+		}
+	}
+	logrus.WithError(s.Err()).Info("TCPDump stderr finished")
 }
