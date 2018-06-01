@@ -474,7 +474,7 @@ var _ = Describe("IPSec PSK parameters test", func() {
 	Describe("with IPSec PSK File", func() {
 		BeforeEach(func() {
 			c = New()
-			err := ioutil.WriteFile(pskFile, []byte(psk), 0400)
+			err := ioutil.WriteFile(pskFile, []byte(psk), 0600)
 			Expect(err).NotTo(HaveOccurred())
 		})
 		AfterEach(func() {
@@ -491,11 +491,14 @@ var _ = Describe("IPSec PSK parameters test", func() {
 			c.IPSecPSKFile = pskFile
 			Expect(c.GetPSKFromFile()).Should(BeEmpty())
 		})
-		It("should report error on empty PSK file", func() {
+		It("should panic on empty PSK file", func() {
 			c.IPSecMode = "PSK"
 			c.IPSecPSKFile = pskFile
-			err := ioutil.WriteFile(pskFile, []byte{}, 0400)
-			Expect(err).To(HaveOccurred())
+			err := ioutil.WriteFile(pskFile, []byte{}, 0600)
+			Expect(err).NotTo(HaveOccurred())
+
+			panicWrapper := func() { c.GetPSKFromFile() }
+			Expect(panicWrapper).To(Panic())
 		})
 	})
 })
