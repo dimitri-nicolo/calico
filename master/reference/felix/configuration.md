@@ -126,6 +126,11 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `PrometheusMetricsCertFile`  | `FELIX_PROMETHEUSMETRICSCERTFILE`  | None    | Certificate for encrypting general Felix Prometheus metrics.  |
 | `PrometheusMetricsKeyFile`   | `FELIX_PROMETHEUSMETRICSKEYFILE`   | None    | Private key for encrypting general Felix Prometheus metrics.  |
 | `PrometheusMetricsCAFile`    | `FELIX_PROMETHEUSMETRICSCAFILE`    | None    | Trusted CA file for clients attempting to read general Felix Prometheus metrics.  |
+| `IPSecMode`                  | `FELIX_IPSECMODE`                  | ``      | Controls which mode IPSec is operating on. The only supported value is `PSK`. An empty value means IPSec is not enabled. |
+| `IPSecIKEAlgorithm`          | `FELIX_IPSECIKEALGORITHM`          | `aes128gcm16-prfsha256-ecp256`   | IPSec IKE algorithm. Default is NIST suite B recommendation.|
+| `IPSecESPAlgorithm`          | `FELIX_IPSECESPALGORITHM`          | `aes128gcm16-ecp256`             | IPSec ESP algorithm. Default is NIST suite B recommendation.|
+| `IPSecLogLevel`              | `FELIX_IPSECLOGLEVEL`              | `Info`  | Controls log level for IPSec components. Set to `None` for no logging. Other valid values are `Notice`, `Info`, `Debug` and `Verbose` (not case sensitive) |
+| `IPSecPSKFile`               | `FELIX_IPSECPSKFILE`               | ``      | The path to the pre shared key file for IPSec. |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current Calico policy - i.e. by the ordered combination of all the
