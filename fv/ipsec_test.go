@@ -15,6 +15,8 @@ import (
 
 	"context"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/workload"
@@ -22,7 +24,6 @@ import (
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
-	log "github.com/sirupsen/logrus"
 )
 
 var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
@@ -44,12 +45,13 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		Expect(err).NotTo(HaveOccurred())
 		topologyOptions := infrastructure.DefaultTopologyOptions()
 		// Enable IPsec.
-		topologyOptions.ExtraEnvVars["FELIX_IPSECPSK"] = "my-top-secret-pre-shared-key"
+		topologyOptions.ExtraEnvVars["FELIX_IPSECMODE"] = "PSK"
+		topologyOptions.ExtraEnvVars["FELIX_IPSECPSKFILE"] = "/proc/1/cmdline"
+		topologyOptions.ExtraEnvVars["FELIX_IPSECIKEAlGORITHM"] = "aes128gcm16-prfsha256-ecp256"
+		topologyOptions.ExtraEnvVars["FELIX_IPSECESPAlGORITHM"] = "aes128gcm16-ecp256"
 		topologyOptions.IPIPEnabled = false
 
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
-
-		time.Sleep(10 * time.Second) // FIXME: allow time for the charon to boot
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		err = infra.AddDefaultAllow()

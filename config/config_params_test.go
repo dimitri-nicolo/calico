@@ -17,10 +17,12 @@ package config_test
 import (
 	. "github.com/projectcalico/felix/config"
 
+	"io/ioutil"
 	"net"
 	"reflect"
 	"time"
 
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -344,6 +346,17 @@ var _ = DescribeTable("Config parsing",
 			{30500, 30600, ""},
 		},
 	),
+
+	Entry("IPSecMode", "IPSecMode", "PSK", "PSK"),
+	Entry("IPSecPSKFile", "IPSecPSKFile", "/proc/1/cmdline", "/proc/1/cmdline"),
+	Entry("IPSecIKEAlgorithm", "IPSecIKEAlgorithm", "aes256gcm16-prfsha384-ecp384", "aes256gcm16-prfsha384-ecp384"),
+	Entry("IPSecESPAlgorithm", "IPSecESPAlgorithm", "aes256gcm16-ecp384", "aes256gcm16-ecp384"),
+
+	Entry("IPSecLogLevel", "IPSecLogLevel", "none", ""),
+	Entry("IPSecLogLevel", "IPSecLogLevel", "notice", "NOTICE"),
+	Entry("IPSecLogLevel", "IPSecLogLevel", "info", "INFO"),
+	Entry("IPSecLogLevel", "IPSecLogLevel", "debug", "DEBUG"),
+	Entry("IPSecLogLevel", "IPSecLogLevel", "verbose", "VERBOSE"),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",
@@ -452,3 +465,37 @@ var _ = DescribeTable("Config validation",
 		"TyphaURISAN":   "spiffe://k8s.example.com/typha-peer",
 	}, true),
 )
+
+var _ = Describe("IPSec PSK parameters test", func() {
+	var c *Config
+	psk := "pre-shared-key"
+	pskFile := "./tmp-psk-file-ut"
+
+	Describe("with IPSec PSK File", func() {
+		BeforeEach(func() {
+			c = New()
+			err := ioutil.WriteFile(pskFile, []byte(psk), 0400)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		AfterEach(func() {
+			err := os.Remove(pskFile)
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("should read PSK correctly", func() {
+			c.IPSecMode = "PSK"
+			c.IPSecPSKFile = pskFile
+			Expect(c.GetPSKFromFile()).To(Equal(psk))
+		})
+		It("should read empty PSK if IPSec is not enabled", func() {
+			c.IPSecMode = ""
+			c.IPSecPSKFile = pskFile
+			Expect(c.GetPSKFromFile()).Should(BeEmpty())
+		})
+		It("should report error on empty PSK file", func() {
+			c.IPSecMode = "PSK"
+			c.IPSecPSKFile = pskFile
+			err := ioutil.WriteFile(pskFile, []byte{}, 0400)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+})

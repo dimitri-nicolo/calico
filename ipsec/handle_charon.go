@@ -16,7 +16,9 @@
 package ipsec
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -82,6 +84,7 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal str
 	} else {
 		log.Info("Charon daemon started")
 	}
+
 	wg.Add(1)
 	go func() {
 		select {
@@ -129,9 +132,22 @@ func (charon *CharonIKEDaemon) runBundled(execPath string) (cmd *exec.Cmd, err e
 		SysProcAttr: &syscall.SysProcAttr{
 			Pdeathsig: syscall.SIGTERM,
 		},
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
 	}
+
+	// Start charon log collector
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Errorf("Error get stdout pipe: %v", err)
+		return nil, err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Errorf("Error get sterr pipe: %v", err)
+		return nil, err
+	}
+	go copyOutputToLog("stdout", stdout)
+	go copyOutputToLog("stderr", stderr)
+
 	err = cmd.Start()
 	return
 }
@@ -259,6 +275,23 @@ func (charon *CharonIKEDaemon) UnloadCharonConnection(localIP, remoteIP string) 
 
 	log.Infof("Unloaded connection: %v", connectionName)
 	return nil
+}
+
+func copyOutputToLog(streamName string, stream io.Reader) {
+	scanner := bufio.NewScanner(stream)
+	scanner.Buffer(nil, 4*1024*1024) // Increase maximum buffer size (but don't pre-alloc).
+	for scanner.Scan() {
+		line := scanner.Text()
+		log.Info("[", streamName, "] ", line)
+	}
+	logCxt := log.WithFields(log.Fields{
+		"name":   "charon",
+		"stream": stream,
+	})
+	if err := scanner.Err(); err != nil {
+		log.Panicf("Non-EOF error reading charon [%s], err %v", streamName, err)
+	}
+	logCxt.Info("Stream finished")
 }
 
 func formatName(local, remote string) string {

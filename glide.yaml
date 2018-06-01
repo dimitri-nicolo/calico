@@ -38,7 +38,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: 00d31bd57278c707283084690bf93cb730881983
+  version: feature-ipsec
   subpackages:
   - lib
 - package: github.com/tigera/licensing
