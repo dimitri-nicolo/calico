@@ -203,10 +203,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		expectNoESP()
 	})
 
-	// FIXME: This doesn't work because the host policy blocks the encrypted IPsec tunnel.
-	PContext("with host protection policy in place", func() {
+	Context("with host protection policy in place", func() {
 		BeforeEach(func() {
-			// Make sure our new host endpoints don't cut felix off from the datastore.
+			// Make sure host endpoints don't block IPSec traffic (since they deny all traffic by default)
 			err := infra.AddAllowToDatastore("host-endpoint=='true'")
 			Expect(err).NotTo(HaveOccurred())
 
@@ -230,7 +229,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			// Host endpoints (with no policies) block host-host traffic due to default drop.
 			cc.ExpectNone(felixes[0], hostW[1])
 			cc.ExpectNone(felixes[1], hostW[0])
-			// But the rules to allow IPIP between our hosts let the workload traffic through.
+			// But the rules to allow IPSec between our hosts let the workload traffic through.
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
 			cc.CheckConnectivity()

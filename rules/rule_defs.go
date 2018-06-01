@@ -318,6 +318,7 @@ type Config struct {
 	DisableConntrackInvalid bool
 
 	EnableNflogSize bool
+	IPSecEnabled    bool
 }
 
 func (c *Config) validate() {

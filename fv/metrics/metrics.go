@@ -26,8 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/projectcalico/typha/pkg/tlsutils"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/typha/pkg/tlsutils"
 )
 
 func init() {
