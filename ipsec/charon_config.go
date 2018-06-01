@@ -18,13 +18,15 @@ const (
 	charonConfigRootDir  = "/etc/strongswan.d"
 	charonMainConfigFile = "charon.conf"
 
-	charonFollowRedirects = "charon.follow_redirects"
-	charonConfigItemStdoutLogLevel = "charon.filelog.stdout.default"
-	charonConfigItemStderrLogLevel = "charon.filelog.stderr.default"
+	CharonFollowRedirects          = "charon.follow_redirects"
+	CharonMakeBeforeBreak          = "charon.make_before_break"
+	CharonConfigItemStdoutLogLevel = "charon.filelog.stdout.default"
+	CharonConfigItemStderrLogLevel = "charon.filelog.stderr.default"
 )
 
 var (
 	// https://wiki.strongswan.org/projects/strongswan/wiki/LoggerConfiguration
+	// Map felix log levels to charon log levels.
 	felixLogLevelToCharonLogLevel = map[string]string{
 		"NONE":    "-1",
 		"NOTICE":  "0",
@@ -32,6 +34,9 @@ var (
 		"DEBUG":   "2",
 		"VERBOSE": "4",
 	}
+
+	// Map boolean values to charon config "yes" or "no" options.
+	yesOrNo = map[bool]string{true: "yes", false: "no"}
 )
 
 // Data structure for rendering the Charon's config format,
@@ -200,10 +205,9 @@ func (c *CharonConfig) RenderToFile() {
 	panicIfErr(writeStringToFile(config, c.renderToString()))
 }
 
-func (c *CharonConfig) SetFollowRedirects(bValue bool) {
-	yesOrNo := map[bool]string{true: "yes", false: "no"}
+func (c *CharonConfig) SetBooleanOption(key string, bValue bool) {
 	c.AddKVs(map[string]string{
-		charonFollowRedirects: yesOrNo[bValue],
+		key: yesOrNo[bValue],
 	})
 }
 
@@ -213,8 +217,8 @@ func (c *CharonConfig) SetLogLevel(felixLevel string) {
 		log.Panicf("Set charon log level with wrong felix log value <%s>", felixLevel)
 	}
 	c.AddKVs(map[string]string{
-		charonConfigItemStderrLogLevel: charonLevel,
-		charonConfigItemStdoutLogLevel: charonLevel,
+		CharonConfigItemStderrLogLevel: charonLevel,
+		CharonConfigItemStdoutLogLevel: charonLevel,
 	})
 }
 

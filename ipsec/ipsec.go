@@ -32,7 +32,8 @@ func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal
 
 	// Initialise charon main config file.
 	d.config.SetLogLevel(logLevel)
-	d.config.SetFollowRedirects(false)
+	d.config.SetBooleanOption(CharonFollowRedirects, false)
+	d.config.SetBooleanOption(CharonMakeBeforeBreak, true)
 	d.config.RenderToFile()
 	log.Infof("Initialising charon config %+v", d.config)
 
@@ -162,4 +163,3 @@ func (d *Dataplane) removeTunnel(tunnelAddr string) {
 	}
 	panicIfErr(d.ikeDaemon.UnloadCharonConnection(d.localTunnelAddr, tunnelAddr))
 }
-
