@@ -50,13 +50,8 @@ var _ = DescribeTable("config tree rendering tests",
 )
 
 var _ = DescribeTable("charon config file tests",
-	func(felixLogLevel, charonLogLevel string, followRedirects bool) {
-		var redirects string
-		if followRedirects {
-			redirects = "yes"
-		} else {
-			redirects = "no"
-		}
+	func(felixLogLevel, charonLogLevel string, followRedirects, makeBeforeBreak bool) {
+		yesOrNo := map[bool]string{true: "yes", false: "no"}
 
 		//initialise main config
 		mainConfig := path.Join(".", "charon.conf")
@@ -65,7 +60,8 @@ var _ = DescribeTable("charon config file tests",
 
 		c := NewCharonConfig(".", "charon.conf")
 		c.SetLogLevel(felixLogLevel)
-		c.SetFollowRedirects(followRedirects)
+		c.SetBooleanOption(CharonFollowRedirects, followRedirects)
+		c.SetBooleanOption(CharonMakeBeforeBreak, makeBeforeBreak)
 		c.RenderToFile()
 		format := `charon {
   filelog {
@@ -77,9 +73,13 @@ var _ = DescribeTable("charon config file tests",
     }
   }
   follow_redirects = %s
+  make_before_break = %s
 }
 `
-		expected := fmt.Sprintf(format, charonLogLevel, charonLogLevel, redirects)
+		expected := fmt.Sprintf(format, charonLogLevel, charonLogLevel,
+			yesOrNo[followRedirects],
+			yesOrNo[makeBeforeBreak],
+		)
 
 		content, err := ioutil.ReadFile(mainConfig)
 		Expect(err).NotTo(HaveOccurred())
@@ -89,9 +89,9 @@ var _ = DescribeTable("charon config file tests",
 		Expect(err).NotTo(HaveOccurred())
 	},
 
-	Entry("with no log", "none", "-1", true),
-	Entry("log level notice", "Notice", "0", false),
-	Entry("log level info", "INFO", "1", true),
-	Entry("log level debug", "Debug", "2", false),
-	Entry("log level verbose", "VERBOSE", "4", true),
+	Entry("with no log", "none", "-1", true, true),
+	Entry("log level notice", "Notice", "0", false, true),
+	Entry("log level info", "INFO", "1", true, false),
+	Entry("log level debug", "Debug", "2", false, false),
+	Entry("log level verbose", "VERBOSE", "4", true, true),
 )
