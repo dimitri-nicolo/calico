@@ -25,9 +25,9 @@ from tests.st.utils.utils import ETCD_CA, ETCD_CERT, \
     retry_until_success, wipe_etcd
 
 POST_DOCKER_COMMANDS = [
-    "docker load -i /code/cnx-node.tar",
-    "docker load -i /code/busybox.tar",
-    "docker load -i /code/workload.tar",
+    "docker load -q -i /code/cnx-node.tar",
+    "docker load -q -i /code/busybox.tar",
+    "docker load -q -i /code/workload.tar",
 ]
 
 if ETCD_SCHEME == "https":

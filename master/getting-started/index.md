@@ -4,7 +4,7 @@ title: Getting started with CNX
 
 ## Obtain the private registry credentials
 
-Contact your Tigera support representative to obtain a Docker configuration file 
+Contact your Tigera support representative to obtain a Docker configuration file
 in JSON format. When you open the file, it should look something like the following.
 
 ```json
@@ -22,7 +22,7 @@ The file should be named `config.json`. It contains a robot account token that w
 
 ## Obtain a license key
 
-Contact your Tigera support representative to obtain a license key in YAML format. 
+Contact your Tigera support representative to obtain a license key in YAML format.
 When you open the file, it should look something like the following.
 
 ```yaml
@@ -41,7 +41,7 @@ spec:
 
 The file should be named `<customer-name>-license.yaml`. For example, if your customer name
 was Awesome Corp, the file would be named `awesome-corp-license.yaml`.
-   
+
 ## Get started
 
 <div class="row">

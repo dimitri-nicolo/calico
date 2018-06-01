@@ -33,7 +33,7 @@ To install {{site.prodname}}:
    for more details.
 
 {% include {{page.version}}/cnx-cred-sed.md %}
-   
+
    > **Note**: Refer to [Configuration options](index#configuration-options) for additional
    > settings that can be modified in the manifest.
    {: .alert .alert-info}
@@ -44,13 +44,17 @@ To install {{site.prodname}}:
    kubectl apply -f calico.yaml
    ```
 
+   > **Note**: Make sure you configure the provided ConfigMap with the
+   > location of your etcd cluster before running the above command.
+   {: .alert .alert-info}
+
 ## Installing the CNX Manager
 
 1. [Open cnx-etcd.yaml in a new tab](cnx/1.7/cnx-etcd.yaml){:target="_blank"}.
 
 1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
    This is what subsequent instructions will refer to.
-   
+
 {% include {{page.version}}/cnx-mgr-install.md %}
 
 {% include {{page.version}}/gs-next-steps.md %}

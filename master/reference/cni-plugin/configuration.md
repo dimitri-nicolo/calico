@@ -124,6 +124,26 @@ Example CNI config:
 
 Any IP pools specified in the CNI config must have already been created. It is an error to specify IP pools in the config that do not exist.
 
+### Container settings
+
+The following options allow configuration of settings within the container namespace.
+
+* allow_ip_forwarding (default is `false`)
+
+```json
+{
+    "name": "any_name",
+    "cniVersion": "0.1.0",
+    "type": "calico",
+    "ipam": {
+        "type": "calico-ipam"
+    },
+    "container_settings": {
+        "allow_ip_forwarding": true
+    }
+}
+```
+
 ## Kubernetes specific
 
 When using the Calico CNI plugin with Kubernetes, the plugin must be able to access the Kubernetes API server in order to find the labels assigned to the Kubernetes pods. The recommended way to configure access is through a `kubeconfig` file specified in the `kubernetes` section of the network config. e.g.
@@ -182,21 +202,6 @@ you must also run calico/kube-controllers with the policy, profile, and workload
 ```
 
 When using `type: k8s`, the Calico CNI plugin requires read-only Kubernetes API access to the `Pods` resource in all namespaces.
-
-Previous versions of the plugin (`v1.3.1` and earlier) supported an alternative type called [`k8s-annotations`](https://github.com/projectcalico/calicoctl/blob/v0.20.0/docs/cni/kubernetes/AnnotationPolicy.md) This uses annotations on pods to specify network policy but is no longer supported.
-
-### Deprecated ways of specifying Kubernetes API access details
-
-From the examples above, you can see that the `k8s_api_root` can appear in either the `kubernetes` or `policy` configuration blocks.
-
-* `k8s_api_root` (default `http://127.0.0.1:8080`)
-
-In addition, the following methods are supported in the `policy` section of the CNI network config only. None of them have default values.
-
-* `k8s_auth_token`
-* `k8s_client_certificate`
-* `k8s_client_key`
-* `k8s_certificate_authority`
 
 ## IPAM
 
@@ -280,6 +285,26 @@ There are two annotations to request a specific IP address:
    annotations:
         "cni.projectcalico.org/ipAddrsNoIpam": "[\"10.0.0.1\"]"
    ```
+
+   The ipAddrsNoIpam feature is disabled by default. It can be enabled in the feature_control section of the CNI network config:
+
+   ```json
+   {
+        "name": "any_name",
+        "cniVersion": "0.1.0",
+        "type": "calico",
+        "ipam": {
+            "type": "calico-ipam"
+        },
+       "feature_control": {
+           "ip_addrs_no_ipam": true
+       }
+   }
+   ```
+
+   > **Warning**: This feature allows for the bypassing of network policy via IP spoofing.
+   > Users should make sure the proper admission control is in place to prevent users from selecting arbitrary IP addresses.
+   {: .alert .alert-danger}
 
 > **Note**:
 > - The `ipAddrs` and `ipAddrsNoIpam` annotations can't be used together.

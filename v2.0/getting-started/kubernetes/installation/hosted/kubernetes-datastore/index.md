@@ -107,7 +107,20 @@ To install {{site.prodname}} in policy-only mode:
 
 {% include {{page.version}}/cnx-cred-sed.md %}
 
-1. Then apply the manifest.
+2. If your Kubernetes cluster contains more than 50 nodes, or it is likely to grow to
+   more than 50 nodes, edit the manifest to [enable Typha](../cnx/cnx#enabling-typha).
+
+3. Make sure your cluster CIDR matches the `CALICO_IPV4POOL_CIDR` environment variable in the manifest.
+   The cluster CIDR is configured by the  `--cluster-cidr` option passed to the Kubernetes
+   controller manager.  If you are using `kubeadm` that option is controlled by `kubeadm`'s
+   `--pod-network-cidr` option.
+
+   > **Note**: {{site.prodname}} only uses the `CALICO_IPV4POOL_CIDR` variable if there is no
+   > IP pool already created.  Changing the variable after the first node has started has no
+   > effect.
+   {: .alert .alert-info}
+
+4. Then apply the manifest.
 
    ```
    kubectl apply -f calico.yaml
@@ -119,7 +132,7 @@ To install {{site.prodname}} in policy-only mode:
 
 1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
    This is what subsequent instructions will refer to.
-   
+
 {% include {{page.version}}/cnx-mgr-install.md %}
 
 {% include {{page.version}}/gs-next-steps.md %}

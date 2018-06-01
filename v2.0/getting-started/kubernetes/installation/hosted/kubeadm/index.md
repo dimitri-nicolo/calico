@@ -3,7 +3,7 @@ title: kubeadm Hosted Install
 ---
 
 This document outlines how to install {{site.prodname}} on a cluster initialized with
-[kubeadm](http://kubernetes.io/docs/getting-started-guides/kubeadm/).  
+[kubeadm](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
 ## Requirements
 
@@ -26,7 +26,7 @@ For {{site.prodname}} to be compatible with your kubeadm-created cluster:
 
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
-Note that kubeadm enables the aggregation layer by default. 
+Note that kubeadm enables the aggregation layer by default.
 
 You can create a cluster compatible with these manifests by following [the official kubeadm guide](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
@@ -43,7 +43,7 @@ As a non-production quick start, to install Calico with a single-node dedicated 
 1. Copy the contents, paste them into a new file, and save the file as calico.yaml.
 
 {% include {{page.version}}/cnx-cred-sed.md %}
-   
+
    > **Note**: Refer to [Configuration options](../index#configuration-options) for additional
    > settings that can be modified in the manifest.
    {: .alert .alert-info}
@@ -81,7 +81,7 @@ To install {{site.prodname}}, configured to use the Kubernetes API as its sole d
 
 1. Copy the contents, paste them into a new file, and save the file as cnx.yaml.
    This is what subsequent instructions will refer to.
-   
+
 {% include {{page.version}}/cnx-mgr-install.md %}
 
 {% include {{page.version}}/gs-next-steps.md %}

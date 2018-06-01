@@ -17,7 +17,7 @@ options for doing this depending on your deployment.
 | IPIP*        | 4        | all        |
 
 
-\* The IPIP rule is required only when using {{site.prodname}} with IPIP encapsulation. Keep reading 
+\* The IPIP rule is required only when using {{site.prodname}} with IPIP encapsulation. Keep reading
 for information on when IPIP is required in GCE.
 
 

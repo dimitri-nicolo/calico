@@ -13,8 +13,8 @@ CNX provides secure application connectivity across multi-cloud and
 legacy environments, with the enterprise control and compliance capabilities
 required for mission-critical deployments.
 
-Designed from the ground up as cloud-native software, CNX builds on leading 
-open source projects like [Calico](https://docs.projectcalico.org/). 
+Designed from the ground up as cloud-native software, CNX builds on leading
+open source projects like [Calico](https://docs.projectcalico.org/).
 It connects and secures container, virtual machine, and bare metal host
 workloads in public cloud and private data centers.
 

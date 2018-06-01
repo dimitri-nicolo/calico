@@ -2,11 +2,11 @@
 title: BGP Peer Resource (BGPPeer)
 ---
 
-A BGP peer resource (`BGPPeer`) represents a remote BGP peer with 
-which the node(s) in a {{site.prodname}} cluster will peer.  
-Configuring BGP peers allows you to peer a {{site.prodname}} network 
-with your datacenter fabric (e.g. ToR). For more 
-information on cluster layouts, see {{site.prodname}}'s documentation on 
+A BGP peer resource (`BGPPeer`) represents a remote BGP peer with
+which the node(s) in a {{site.prodname}} cluster will peer.
+Configuring BGP peers allows you to peer a {{site.prodname}} network
+with your datacenter fabric (e.g. ToR). For more
+information on cluster layouts, see {{site.prodname}}'s documentation on
 [L3 Topologies]({{site.baseurl}}/{{page.version}}/reference/private-cloud/l3-interconnect-fabric).
 
 For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
@@ -43,12 +43,12 @@ spec:
 
 ### Peer Scopes
 
-BGP Peers can exist at either a global scope or a node scope. A peer's scope 
+BGP Peers can exist at either a global scope or a node scope. A peer's scope
 determines which `{{site.nodecontainer}}` will attempt to establish a BGP session with that peer.
 
 #### Global Peer
 
-To assign a BGP peer a global scope, omit the `node` field. All nodes in 
+To assign a BGP peer a global scope, omit the `node` field. All nodes in
 the cluster will attempt to establish BGP connections with it
 
 #### Node Peer
