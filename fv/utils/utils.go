@@ -16,7 +16,9 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -25,6 +27,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+
+	"regexp"
+	"strconv"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/ipsets"
@@ -161,4 +166,134 @@ func IPSetNameForSelector(ipVersion int, rawSelector string) string {
 	)
 
 	return ipVerConf.NameForMainIPSet(setID)
+}
+
+// Run a connection test command.
+// Report if connection test is successful and packet loss string for packet loss test.
+func RunConnectionCmd(connectionCmd *exec.Cmd) (bool, string) {
+	outPipe, err := connectionCmd.StdoutPipe()
+	Expect(err).NotTo(HaveOccurred())
+	errPipe, err := connectionCmd.StderrPipe()
+	Expect(err).NotTo(HaveOccurred())
+	err = connectionCmd.Start()
+	Expect(err).NotTo(HaveOccurred())
+
+	wOut, err := ioutil.ReadAll(outPipe)
+	Expect(err).NotTo(HaveOccurred())
+	wErr, err := ioutil.ReadAll(errPipe)
+	Expect(err).NotTo(HaveOccurred())
+	err = connectionCmd.Wait()
+
+	log.WithFields(log.Fields{
+		"stdout": string(wOut),
+		"stderr": string(wErr)}).WithError(err).Info("Connection test")
+
+	return (err == nil), extractPacketStatString(string(wErr))
+}
+
+const ConnectionTypeStream = "stream"
+const ConnectionTypePing = "ping"
+
+type ConnConfig struct {
+	ConnType string
+	ConnID   string
+}
+
+func (cc ConnConfig) getTestMessagePrefix() string {
+	return cc.ConnType + ":" + cc.ConnID + "~"
+}
+
+// Assembly a test message.
+func (cc ConnConfig) GetTestMessage(sequence int) string {
+	return cc.getTestMessagePrefix() + fmt.Sprintf("%d", sequence)
+}
+
+// Extract sequence number from test message.
+func (cc ConnConfig) GetTestMessageSequence(msg string) (int, error) {
+	msg = strings.TrimSpace(msg)
+	seqString := strings.TrimPrefix(msg, cc.getTestMessagePrefix())
+	if seqString == msg {
+		// TrimPrefix failed.
+		return 0, errors.New("invalid message prefix format:" + msg)
+	}
+
+	seq, err := strconv.Atoi(seqString)
+	if err != nil || seq < 0 {
+		return 0, errors.New("invalid message sequence format:" + msg)
+	}
+	return seq, nil
+}
+
+func IsMessagePartOfStream(msg string) bool {
+	return strings.HasPrefix(strings.TrimSpace(msg), ConnectionTypeStream)
+}
+
+const (
+	PacketLossPrefix       = "PacketLossPercent"
+	PacketTotalReqPrefix   = "TotalReq"
+	PacketTotalReplyPrefix = "TotalReply"
+)
+
+// extract packet stat string from an output.
+func extractPacketStatString(s string) string {
+	re := regexp.MustCompile(PacketTotalReqPrefix + `<\d+>` + "," + PacketTotalReplyPrefix + `<\d+>`)
+	stat := re.FindString(s)
+
+	return stat
+}
+
+func FormPacketStatString(totalReq, totalReply int) string {
+	return fmt.Sprintf("%s<%d>,%s<%d>", PacketTotalReqPrefix, totalReq, PacketTotalReplyPrefix, totalReply)
+}
+
+// extract packet loss string from an output.
+// The format of packet loss string should be the same as the output of test-connection binary.
+func extractPacketLossString(s string) string {
+	re := regexp.MustCompile(PacketLossPrefix + `<\d+>`)
+	lossString := re.FindString(s)
+
+	return lossString
+}
+
+// Form a packet loss string from a uint.
+func FormPacketLossString(u uint) string {
+	return fmt.Sprintf("%s<%d>", PacketLossPrefix, u)
+}
+
+func GetPacketLossDirect(s string) uint {
+	re := regexp.MustCompile(`\d+`)
+	number := re.FindString(extractPacketLossString(s))
+	Expect(number).NotTo(BeEmpty())
+
+	loss, err := strconv.Atoi(number)
+	Expect(err).NotTo(HaveOccurred())
+	return uint(loss)
+}
+
+func extractPacketNumbers(s string) (int, int) {
+	re := regexp.MustCompile(`\d+`)
+	numbers := re.FindAllString(extractPacketStatString(s), -1)
+	Expect(len(numbers)).To(Equal(2))
+
+	totalReq, err := strconv.Atoi(numbers[0])
+	Expect(err).NotTo(HaveOccurred())
+
+	totalReply, err := strconv.Atoi(numbers[1])
+	Expect(err).NotTo(HaveOccurred())
+
+	return totalReq, totalReply
+}
+
+func GetPacketLossFromStat(s string) (uint, int) {
+	totalReq, totalReply := extractPacketNumbers(s)
+	diff := totalReq - totalReply
+
+	// Calculate packet loss and print out result.
+	loss := float64(diff) / float64(totalReq) * 100
+	if loss > 0 && uint(loss) == 0 {
+		// Set minimal loss to 1 percent.
+		return 1, diff
+	} else {
+		return uint(loss), diff
+	}
 }

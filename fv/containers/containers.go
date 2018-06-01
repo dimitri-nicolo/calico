@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -437,30 +436,14 @@ func (c *Container) SourceName() string {
 	return c.Name
 }
 
-func (c *Container) CanConnectTo(ip, port, protocol string) bool {
+func (c *Container) CanConnectTo(ip, port, protocol string, duration uint) (bool, string) {
 
 	// Ensure that the container has the 'test-connection' binary.
 	c.EnsureBinary("test-connection")
 
 	// Run 'test-connection' to the target.
 	connectionCmd := utils.Command("docker", "exec", c.Name,
-		"/test-connection", "--protocol="+protocol, "-", ip, port)
-	outPipe, err := connectionCmd.StdoutPipe()
-	Expect(err).NotTo(HaveOccurred())
-	errPipe, err := connectionCmd.StderrPipe()
-	Expect(err).NotTo(HaveOccurred())
-	err = connectionCmd.Start()
-	Expect(err).NotTo(HaveOccurred())
+		"/test-connection", "--protocol="+protocol, "-", ip, port, fmt.Sprintf("--duration=%d", duration))
 
-	wOut, err := ioutil.ReadAll(outPipe)
-	Expect(err).NotTo(HaveOccurred())
-	wErr, err := ioutil.ReadAll(errPipe)
-	Expect(err).NotTo(HaveOccurred())
-	err = connectionCmd.Wait()
-
-	log.WithFields(log.Fields{
-		"stdout": string(wOut),
-		"stderr": string(wErr)}).WithError(err).Info("Connection test")
-
-	return err == nil
+	return utils.RunConnectionCmd(connectionCmd)
 }
