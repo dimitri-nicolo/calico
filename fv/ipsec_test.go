@@ -31,9 +31,11 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		felixes  []*infrastructure.Felix
 		tcpdumps []*containers.TCPDump
 		client   client.Interface
-		w        [2]*workload.Workload
-		hostW    [2]*workload.Workload
-		cc       *workload.ConnectivityChecker
+		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
+		w [2]*workload.Workload
+		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
+		hostW [2]*workload.Workload
+		cc    *workload.ConnectivityChecker
 	)
 
 	BeforeEach(func() {
@@ -125,7 +127,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		for i := range felixes {
 			By(fmt.Sprintf("Doing IKE (felix %v)", i))
 			Eventually(tcpdumpMatches(i, "numIKEPackets")).Should(BeNumerically(">", 0),
-				"tcpdump didn't record and IKE packets")
+				"tcpdump didn't record any IKE packets")
 		}
 	}
 
@@ -133,9 +135,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		for i := range felixes {
 			By(fmt.Sprintf("Doing no ESP (felix %v)", i))
 			Eventually(tcpdumpMatches(i, "numInboundESPPackets")).Should(BeNumerically("==", 0),
-				"tcpdump didn't record any inbound ESP packets")
+				"tcpdump saw unexpected inbound ESP packets")
 			Eventually(tcpdumpMatches(i, "numOutboundESPPackets")).Should(BeNumerically("==", 0),
-				"tcpdump didn't record any inbound ESP packets")
+				"tcpdump saw unexpected outbound ESP packets")
 		}
 	}
 
@@ -192,8 +194,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		}
 	})
 
-	// FIXME: Do we want to do host-to-host encryption?
-	It("should have host to host connectivity", func() {
+	It("should have unencrypted host to host connectivity", func() {
 		cc.ExpectSome(felixes[0], hostW[1])
 		cc.ExpectSome(felixes[1], hostW[0])
 		cc.CheckConnectivity()

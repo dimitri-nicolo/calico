@@ -331,6 +331,8 @@ func (c *Config) validate() {
 		fieldName := myType.Field(i).Name
 		if fieldName == "IptablesMarkNonCaliEndpoint" ||
 			fieldName == "IptablesMarkIPsec" {
+			// These mark bits are only used when needed (by IPVS and IPsec support, respectively) so we allow them to
+			// be zero.
 			continue
 		}
 		if strings.HasPrefix(fieldName, "IptablesMark") {

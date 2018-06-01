@@ -15,6 +15,11 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+const (
+	anyAddress = ""
+	reqID      = 50 // Used to correlate between the policy and state tables.
+)
+
 func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal, logLevel string, forwardMark uint32) *Dataplane { // Start the charon
 
 	if forwardMark == 0 {
@@ -37,7 +42,7 @@ func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal
 	d.config.RenderToFile()
 	log.Infof("Initialising charon config %+v", d.config)
 
-	ikeDaemon, err := NewCharonIKEDaemon(context.TODO(), &d.wg, espProposal)
+	ikeDaemon, err := NewCharonIKEDaemon(context.Background(), &d.wg, espProposal)
 	if err != nil {
 		panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
 	}
@@ -75,13 +80,13 @@ func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
 		if remoteTunnelAddr != d.localTunnelAddr {
 			// Allow the remote host to send encrypted traffic to our local workloads.  This balances the OUT rule
 			// that will get programmed on the remote host in order to send traffic to our workloads.
-			panicIfErr(AddXFRMPolicy(remoteTunnelAddr+"/32", "", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, 50))
+			panicIfErr(AddXFRMPolicy(remoteTunnelAddr+"/32", "", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
 			// Allow iptables to selectively encrypt packets to the host itself.  This allows us to encrypt traffic
 			// from local workloads to the remote host.
 			panicIfErr(AddXFRMPolicy(
 				"0.0.0.0/0", remoteTunnelAddr+"/32",
 				d.localTunnelAddr, remoteTunnelAddr,
-				netlink.XFRM_DIR_OUT, 50,
+				netlink.XFRM_DIR_OUT, reqID,
 				&netlink.XfrmMark{Value: d.forwardMark, Mask: d.forwardMark},
 			))
 		}
@@ -96,11 +101,11 @@ func (d *Dataplane) RemoveBinding(remoteTunnelAddr, workloadAddress string) {
 	d.bindingsByTunnel[remoteTunnelAddr].Discard(workloadAddress)
 	if d.bindingsByTunnel[remoteTunnelAddr].Len() == 0 {
 		if remoteTunnelAddr != d.localTunnelAddr {
-			panicIfErr(DeleteXFRMPolicy(remoteTunnelAddr+"/32", "", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, 50))
+			panicIfErr(DeleteXFRMPolicy(remoteTunnelAddr+"/32", "", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
 			panicIfErr(DeleteXFRMPolicy(
 				"0.0.0.0/0", remoteTunnelAddr+"/32",
 				d.localTunnelAddr, remoteTunnelAddr,
-				netlink.XFRM_DIR_OUT, 50,
+				netlink.XFRM_DIR_OUT, reqID,
 				&netlink.XfrmMark{Value: d.forwardMark, Mask: d.forwardMark}))
 		}
 
@@ -110,20 +115,18 @@ func (d *Dataplane) RemoveBinding(remoteTunnelAddr, workloadAddress string) {
 }
 
 func (d *Dataplane) configureXfrm(remoteTunnelAddr, workloadAddr string) {
-	any := "0.0.0.0/0" // From any IP - this means host to pod and pod to host traffic will be encrypted too (hopefully)
-	reqID := 50
 	if remoteTunnelAddr == d.localTunnelAddr {
 		return
 	}
-	log.Debug("Adding IPsec policy: %s %s %s %s - ", any, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
+	log.Debugf("Adding IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
 	workloadAddr += "/32"
 	// Remote workload to local workload traffic, hits the FWD xfrm policy.
-	panicIfErr(AddXFRMPolicy(workloadAddr, any, remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
+	panicIfErr(AddXFRMPolicy(workloadAddr, anyAddress, remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
 	// Remote workload to local host, hits the IN xfrm policy.
 	panicIfErr(AddXFRMPolicy(workloadAddr, d.localTunnelAddr+"/32", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_IN, reqID))
 	// Local traffic to remote workload.
-	panicIfErr(AddXFRMPolicy(any, workloadAddr, d.localTunnelAddr, remoteTunnelAddr, netlink.XFRM_DIR_OUT, reqID))
-	log.Debug("Added IPsec policy: %s %s %s %s - ", any, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
+	panicIfErr(AddXFRMPolicy(anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr, netlink.XFRM_DIR_OUT, reqID))
+	log.Debugf("Added IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
 }
 
 func panicIfErr(err error) {
@@ -134,17 +137,15 @@ func panicIfErr(err error) {
 }
 
 func (d *Dataplane) removeXfrm(remoteTunnelAddr, workloadAddr string) {
-	reqID := 50        // FIXME: does this need to be unique per tunnel?
-	any := "0.0.0.0/0" // From any IP - this means host to pod and pod to host traffic will be encrypted too (hopefully)
 	if remoteTunnelAddr == d.localTunnelAddr {
 		return
 	}
-	log.Debug("Removing IPsec policy: %s %s %s %s - ", any, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
+	log.Debugf("Removing IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
 	workloadAddr += "/32"
-	panicIfErr(DeleteXFRMPolicy(workloadAddr, any, remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
+	panicIfErr(DeleteXFRMPolicy(workloadAddr, anyAddress, remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
 	panicIfErr(DeleteXFRMPolicy(workloadAddr, d.localTunnelAddr+"/32", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_IN, reqID))
-	panicIfErr(DeleteXFRMPolicy(any, workloadAddr, d.localTunnelAddr, remoteTunnelAddr, netlink.XFRM_DIR_OUT, reqID))
-	log.Debug("Removing IPsec policy: %s %s %s %s - ", any, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
+	panicIfErr(DeleteXFRMPolicy(anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr, netlink.XFRM_DIR_OUT, reqID))
+	log.Debugf("Removing IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
 }
 
 func (d *Dataplane) configureTunnel(tunnelAddr string) {
