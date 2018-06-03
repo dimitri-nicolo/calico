@@ -1,5 +1,5 @@
-hash: da44c0566075e04f9808f1ac115798f5ff6963b6a6dc92ceb3460efe1c484645
-updated: 2018-06-01T17:51:05.359734192+01:00
+hash: 27f4f6cb0806acd5cadaf67d6ce9d04288effeb9e6aa89eb3b555c36056e7a26
+updated: 2018-06-03T23:11:38.850020223Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -33,7 +33,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: 568e959cd89871e61434c1143528d9162da89ef2
+  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew

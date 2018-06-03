@@ -16,6 +16,8 @@ import:
   - lib/numorstring
 - package: github.com/coreos/etcd
   version: v3.3.0
+- package: github.com/coreos/go-semver
+  version: v0.2.0
 - package: github.com/prometheus/procfs
   version: f98634e408857669d61064b283c4cde240622865
 - package: golang.org/x/net
