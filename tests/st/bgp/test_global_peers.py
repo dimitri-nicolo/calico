@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import re
 
 from nose.plugins.attrib import attr
 from unittest import skip
@@ -23,6 +22,7 @@ from tests.st.utils.constants import (DEFAULT_IPV4_ADDR_1, DEFAULT_IPV4_ADDR_2,
 from tests.st.utils.utils import check_bird_status, update_bgp_config
 
 from .peer import create_bgp_peer
+
 
 class TestGlobalPeers(TestBase):
 
@@ -36,17 +36,21 @@ class TestGlobalPeers(TestBase):
         with DockerHost('host1',
                         additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS,
                         start_calico=False) as host1, \
-             DockerHost('host2',
-                        additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS,
-                        start_calico=False) as host2:
+                DockerHost('host2',
+                           additional_docker_options=CLUSTER_STORE_DOCKER_OPTIONS,
+                           start_calico=False) as host2:
             # Start both hosts using specific AS numbers.
             host1.start_calico_node("--backend=%s --as=%s" % (backend, LARGE_AS_NUM))
             host2.start_calico_node("--backend=%s --as=%s" % (backend, LARGE_AS_NUM))
 
             # Create a network and a couple of workloads on each host.
             network1 = host1.create_network("subnet1", subnet=DEFAULT_IPV4_POOL_CIDR)
-            workload_host1 = host1.create_workload("workload1", network=network1, ip=DEFAULT_IPV4_ADDR_1)
-            workload_host2 = host2.create_workload("workload2", network=network1, ip=DEFAULT_IPV4_ADDR_2)
+            workload_host1 = host1.create_workload("workload1",
+                                                   network=network1,
+                                                   ip=DEFAULT_IPV4_ADDR_1)
+            workload_host2 = host2.create_workload("workload2",
+                                                   network=network1,
+                                                   ip=DEFAULT_IPV4_ADDR_2)
 
             # Allow network to converge
             self.assert_true(workload_host1.check_can_ping(DEFAULT_IPV4_ADDR_2, retries=10))

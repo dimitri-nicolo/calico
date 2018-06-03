@@ -223,7 +223,7 @@ class TestIPIP(TestBase):
                 # Shutdown the calico-node on host1, we should still have connectivity because
                 # the node was shut down without removing the routes.  Check tunnel usage based
                 # on the current IPIP mode (only a mode of Always will use the tunnel).
-                host1.execute("docker rm -f calico-node")
+                host1.execute("docker rm -f cnx-node")
                 self.assert_ipip_routing(host1, workload_host1, workload_host2,
                                          modes[-1] == "Always")
 
@@ -509,6 +509,11 @@ class TestIPIP(TestBase):
                             # e.g. "local 192.168.128.1 dev tunl0 table local ..."
                             # Local routing table entry associated with tunl0
                             # device IP address.
+                            pass
+                        elif line.startswith("broadcast") and "dev tunl0" in line:
+                            # e.g. "broadcast 192.168.154.129 dev tunl0 table local proto kernel scope link src 192.168.154.129"
+                            # Broadcast routing table entry associated with
+                            # tunl0 device.
                             pass
                         elif "172.17.0.1 dev eth0 lladdr" in line:
                             # Ex: "172.17.0.1 dev eth0 lladdr 02:03:04:05:06:07 REACHABLE"

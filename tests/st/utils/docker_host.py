@@ -37,7 +37,7 @@ CHECKOUT_DIR = os.getenv("HOST_CHECKOUT_DIR", "")
 if CHECKOUT_DIR == "":
     CHECKOUT_DIR = os.getcwd()
 
-NODE_CONTAINER_NAME = os.getenv("NODE_CONTAINER_NAME", "calico/node:latest")
+NODE_CONTAINER_NAME = os.getenv("NODE_CONTAINER_NAME", "tigera/cnx-node:latest")
 
 FELIX_LOGLEVEL = os.getenv("ST_FELIX_LOGLEVEL", "")
 
@@ -60,7 +60,7 @@ class DockerHost(object):
 
     :param calico_node_autodetect_ip: When set to True, the test framework
     will not perform IP detection, and will run `calicoctl node` without
-    explicitly passing in a value for --ip. This means calico-node will be
+    explicitly passing in a value for --ip. This means cnx-node will be
     forced to do its IP detection.
     :param override_hostname: When set to True, the test framework will
     choose an alternate hostname for the host which it will pass to all
@@ -80,7 +80,7 @@ class DockerHost(object):
 
     def __init__(self, name, start_calico=True, dind=True,
                  additional_docker_options="",
-                 post_docker_commands=["docker load -q -i /code/calico-node.tar",
+                 post_docker_commands=["docker load -q -i /code/cnx-node.tar",
                                        "docker load -q -i /code/busybox.tar"],
                  calico_node_autodetect_ip=False,
                  simulate_gce_routing=False,
@@ -121,6 +121,7 @@ class DockerHost(object):
 
         docker_args = "--privileged -tid " \
                       "-v /lib/modules:/lib/modules " \
+                      "-v /dev/log:/dev/log " \
                       "-v %s/certs:%s/certs -v %s:/code --name %s" % \
                       (CHECKOUT_DIR, CHECKOUT_DIR, CHECKOUT_DIR,
                        self.name)
@@ -175,6 +176,8 @@ class DockerHost(object):
                 self.execute("ip r")
                 self.execute("ping -c 1 -W 2 172.17.0.1")
 
+            self.execute("mkdir -p /var/log/calico")
+
             for command in post_docker_commands:
                 self.execute(command)
         elif not calico_node_autodetect_ip:
@@ -187,7 +190,7 @@ class DockerHost(object):
             self.start_calico_node(env_options=' -e FELIX_HEALTHENABLED=true ')
 
     def assert_is_ready(self, bird=True, felix=True):
-        cmd = "docker exec calico-node /bin/readiness"
+        cmd = "docker exec cnx-node /bin/readiness"
         if bird:
             cmd += " -bird"
         if felix:
@@ -333,9 +336,9 @@ class DockerHost(object):
             output = self.calicoctl(cmd)
 
             # Look for the line in the output that includes "docker run",
-            # "--net=host" and "--name=calico-node".
+            # "--net=host" and "--name=cnx-node".
             for line in output.split('\n'):
-                if re.match(r'docker run .*--net=host .*--name=calico-node', line):
+                if re.match(r'docker run .*--net=host .*--name=cnx-node', line):
                     # This is the line we want to modify.
                     break
             else:
@@ -382,41 +385,6 @@ class DockerHost(object):
                                         "/var/log/calico/felix/current",
                                         FELIX_LOG_FORMAT,
                                         TIMESTAMP_FORMAT)
-
-    def start_calico_node_with_docker(self):
-        """
-        Start calico in a container inside a host by calling docker directly.
-        """
-        if ETCD_SCHEME == "https":
-            etcd_auth = "%s:2379" % ETCD_HOSTNAME_SSL
-            ssl_args = "-e ETCD_CA_CERT_FILE=%s " \
-                       "-e ETCD_CERT_FILE=%s " \
-                       "-e ETCD_KEY_FILE=%s " \
-                       "-v %s/certs:%s/certs " \
-                       % (ETCD_CA, ETCD_CERT, ETCD_KEY,
-                          CHECKOUT_DIR, CHECKOUT_DIR)
-
-        else:
-            etcd_auth = "%s:2379" % get_ip()
-            ssl_args = ""
-
-        # If the hostname has been overridden on this host, then pass it in
-        # as an environment variable.
-        if self.override_hostname:
-            hostname_args = "-e HOSTNAME=%s" % self.override_hostname
-        else:
-            hostname_args = ""
-
-        self.execute("docker run -d --net=host --privileged "
-                     "--name=calico-node "
-                     "%s "
-                     "-e IP=%s "
-                     "-e ETCD_ENDPOINTS=%s://%s %s "
-                     "-v /var/log/calico:/var/log/calico "
-                     "-v /var/run/calico:/var/run/calico "
-                     "%s" % (hostname_args, self.ip, ETCD_SCHEME, etcd_auth,
-                             ssl_args, NODE_CONTAINER_NAME)
-                     )
 
     def remove_workloads(self):
         """
@@ -520,7 +488,7 @@ class DockerHost(object):
             # and delete the calico node.
             self.remove_workloads()
             self.cleanup_networks()
-            log_and_run("docker rm -f calico-node || true")
+            log_and_run("docker rm -f cnx-node || true")
 
         self._cleaned = True
 
@@ -715,13 +683,13 @@ class DockerHost(object):
         self.execute("ip6tables-save -c", raise_exception_on_failure=False)
         self.execute("ipset save", raise_exception_on_failure=False)
         self.execute("ps", raise_exception_on_failure=False)
-        self.execute("docker logs calico-node", raise_exception_on_failure=False)
-        self.execute("docker exec calico-node ls -l /var/log/calico/felix", raise_exception_on_failure=False)
-        self.execute("docker exec calico-node cat /var/log/calico/felix/*", raise_exception_on_failure=False)
-        self.execute("docker exec calico-node ls -l /var/log/calico/confd", raise_exception_on_failure=False)
-        self.execute("docker exec calico-node cat /var/log/calico/confd/*", raise_exception_on_failure=False)
-        self.execute("docker exec calico-node ls -l /var/log/calico/bird", raise_exception_on_failure=False)
-        self.execute("docker exec calico-node cat /var/log/calico/bird/*", raise_exception_on_failure=False)
+        self.execute("docker logs cnx-node", raise_exception_on_failure=False)
+        self.execute("docker exec cnx-node ls -l /var/log/calico/felix", raise_exception_on_failure=False)
+        self.execute("docker exec cnx-node cat /var/log/calico/felix/*", raise_exception_on_failure=False)
+        self.execute("docker exec cnx-node ls -l /var/log/calico/confd", raise_exception_on_failure=False)
+        self.execute("docker exec cnx-node cat /var/log/calico/confd/*", raise_exception_on_failure=False)
+        self.execute("docker exec cnx-node ls -l /var/log/calico/bird", raise_exception_on_failure=False)
+        self.execute("docker exec cnx-node cat /var/log/calico/bird/*", raise_exception_on_failure=False)
 
         self.execute("docker ps -a", raise_exception_on_failure=False)
         for wl in self.workloads:
@@ -729,7 +697,7 @@ class DockerHost(object):
         log_and_run("docker logs %s" % self.name, raise_exception_on_failure=False)
 
     def delete_conntrack_state_to_ip(self, protocol, dst_ip):
-        self.execute("docker exec calico-node conntrack -D -p %s --orig-dst %s" % (protocol, dst_ip),
+        self.execute("docker exec cnx-node conntrack -D -p %s --orig-dst %s" % (protocol, dst_ip),
                      raise_exception_on_failure=False)
 
     def delete_conntrack_state_to_workloads(self, protocol):

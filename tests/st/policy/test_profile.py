@@ -23,7 +23,7 @@ from tests.st.utils.network import NETWORKING_CNI, NETWORKING_LIBNETWORK
 from tests.st.utils.utils import assert_profile, \
     assert_number_endpoints, get_profile_name
 
-POST_DOCKER_COMMANDS = ["docker load -q -i /code/calico-node.tar",
+POST_DOCKER_COMMANDS = ["docker load -q -i /code/cnx-node.tar",
                         "docker load -q -i /code/busybox.tar",
                         "docker load -q -i /code/workload.tar"]
 
