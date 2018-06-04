@@ -46,22 +46,27 @@ func (d *ipsecManager) OnUpdate(msg interface{}) {
 			"num_added":   len(msg.AddedAddrs),
 			"num_removed": len(msg.RemovedAddrs),
 		}).Debug("IPSec bindings updated")
-		if msg.TunnelAddr == "" {
-			// Blacklist.
-			for _, removed := range msg.RemovedAddrs {
-				d.dataplane.RemoveBlacklist(removed)
-			}
-			for _, added := range msg.AddedAddrs {
-				d.dataplane.AddBlacklist(added)
-			}
-		} else {
-			for _, removed := range msg.RemovedAddrs {
-				d.dataplane.RemoveBinding(msg.TunnelAddr, removed)
-			}
-			for _, added := range msg.AddedAddrs {
-				d.dataplane.AddBinding(msg.TunnelAddr, added)
-			}
+		for _, removed := range msg.RemovedAddrs {
+			d.dataplane.RemoveBinding(msg.TunnelAddr, removed)
 		}
+		for _, added := range msg.AddedAddrs {
+			d.dataplane.AddBinding(msg.TunnelAddr, added)
+		}
+	case *proto.IPSecBlacklistAdd:
+		log.WithFields(log.Fields{
+			"num_added": len(msg.AddedAddrs),
+		}).Debug("IPSec blacklist entries added")
+		for _, added := range msg.AddedAddrs {
+			d.dataplane.AddBlacklist(added)
+		}
+	case *proto.IPSecBlacklistRemove:
+		log.WithFields(log.Fields{
+			"num_added": len(msg.RemovedAddrs),
+		}).Debug("IPSec blacklist entries removed")
+		for _, added := range msg.RemovedAddrs {
+			d.dataplane.RemoveBlacklist(added)
+		}
+
 	}
 }
 

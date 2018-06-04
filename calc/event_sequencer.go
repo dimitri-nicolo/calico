@@ -712,7 +712,7 @@ func (buf *EventSequencer) flushIPSecBindings() {
 			addrs = append(addrs, item.(ip.Addr).String())
 			return set.RemoveItem
 		})
-		upd := &proto.IPSecBindingUpdate{
+		upd := &proto.IPSecBlacklistRemove{
 			RemovedAddrs: addrs,
 		}
 		buf.Callback(upd)
@@ -754,7 +754,7 @@ func (buf *EventSequencer) flushIPSecBindings() {
 			addrs = append(addrs, item.(ip.Addr).String())
 			return set.RemoveItem
 		})
-		upd := &proto.IPSecBindingUpdate{
+		upd := &proto.IPSecBlacklistAdd{
 			AddedAddrs: addrs,
 		}
 		buf.Callback(upd)

@@ -398,26 +398,6 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		Expect(d.namespaces).To(HaveKey(id))
 		delete(d.namespaces, id)
 	case *proto.IPSecBindingUpdate:
-		if event.TunnelAddr == "" {
-			// Blacklist entry
-			for _, addr := range event.RemovedAddrs {
-				Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeTrue(),
-					fmt.Sprintf("Unknown IPsec blacklist removed: %v (all: %v)", addr, d.activeIPSecBlacklist))
-				d.activeIPSecBlacklist.Discard(addr)
-			}
-			for _, addr := range event.AddedAddrs {
-				Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeFalse(),
-					fmt.Sprintf("IPsec blacklist duplicate added: %v (all: %v)", addr, d.activeIPSecBlacklist))
-				d.activeIPSecBindings.Iter(func(item interface{}) error {
-					b := item.(IPSecBinding)
-					Expect(b.EndpointAddr).NotTo(Equal(addr), "Blacklist added but still have an active binding")
-					return nil
-				})
-				d.activeIPSecBlacklist.Add(addr)
-			}
-			break
-		}
-
 		for _, addr := range event.RemovedAddrs {
 			b := IPSecBinding{event.TunnelAddr, addr}
 			Expect(d.activeIPSecBindings.Contains(b)).To(BeTrue(),
@@ -434,6 +414,23 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 				return nil
 			})
 			d.activeIPSecBindings.Add(b)
+		}
+	case *proto.IPSecBlacklistAdd:
+		for _, addr := range event.AddedAddrs {
+			Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeFalse(),
+				fmt.Sprintf("IPsec blacklist duplicate added: %v (all: %v)", addr, d.activeIPSecBlacklist))
+			d.activeIPSecBindings.Iter(func(item interface{}) error {
+				b := item.(IPSecBinding)
+				Expect(b.EndpointAddr).NotTo(Equal(addr), "Blacklist added but still have an active binding")
+				return nil
+			})
+			d.activeIPSecBlacklist.Add(addr)
+		}
+	case *proto.IPSecBlacklistRemove:
+		for _, addr := range event.RemovedAddrs {
+			Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeTrue(),
+				fmt.Sprintf("Unknown IPsec blacklist removed: %v (all: %v)", addr, d.activeIPSecBlacklist))
+			d.activeIPSecBlacklist.Discard(addr)
 		}
 	}
 }
