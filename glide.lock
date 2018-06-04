@@ -1,5 +1,5 @@
-hash: 540a8978cbc0396ab1e0ec24203069c35f31cf035589d429a55dfa1646a32167
-updated: 2018-05-29T16:02:37.670724257Z
+hash: 14816e834afa5459b07b36f60f5990617ecac64b838f50746cebfab36af497ca
+updated: 2018-06-04T14:47:57.826765407-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/BurntSushi/toml
@@ -118,7 +118,7 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/pborman/uuid
@@ -134,7 +134,8 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d6aff54dc3527357f016c0cd5c5364f21a15e9b4
+  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
+  repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
@@ -219,7 +220,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: ebfc5b4631820b793c9010c87fd8fef0f39eb082
+  version: 88d2dcc510266da9f7f8c7f34e1940716cab5f5c
   subpackages:
   - unix
   - windows
@@ -238,7 +239,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 0a24098c0ec68416ec050f567f75df563d6b231e
   subpackages:
   - internal
   - internal/app_identity
