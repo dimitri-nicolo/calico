@@ -188,7 +188,8 @@ type InternalDataplane struct {
 	iptablesFilterTables []*iptables.Table
 	ipSets               []*ipsets.IPSets
 
-	ipipManager *ipipManager
+	ipipManager          *ipipManager
+	allHostsIpsetManager *allHostsIpsetManager
 
 	ipSecDataplane ipSecDataplane
 
@@ -352,10 +353,16 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	dp.RegisterManager(dp.lookupManager)
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
-		// Add a manger to keep the all-hosts IP set up to date.
-		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize)
-		dp.RegisterManager(dp.ipipManager) // IPv4-only
+		// Create and maintain the IPIP tunnel device
+		dp.ipipManager = newIPIPManager()
 	}
+
+	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled {
+		// Add a manger to keep the all-hosts IP set up to date.
+		dp.allHostsIpsetManager = newAllHostsIpsetManager(ipSetsV4, config.MaxIPSetSize)
+		dp.RegisterManager(dp.allHostsIpsetManager) // IPv4-only
+	}
+
 	if config.IPv6Enabled {
 		mangleTableV6 := iptables.NewTable(
 			"mangle",

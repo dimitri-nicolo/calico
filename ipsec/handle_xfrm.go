@@ -80,7 +80,7 @@ func AddXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, re
 
 	policy.Tmpls = append(policy.Tmpls, tmpl)
 
-	log.Infof("Adding ipsec policy: %+v", policy)
+	log.Debugf("Adding ipsec policy: %+v", policy)
 
 	if err := netlink.XfrmPolicyAdd(&policy); err != nil {
 		fmt.Println(fmt.Errorf("error adding policy: %+v err: %v", policy, err))
@@ -111,9 +111,9 @@ func DeleteXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir,
 		Reqid: reqID,
 	}
 
-	log.Infof("Deleting ipsec policy: %+v", tmpl)
-
 	policy.Tmpls = append(policy.Tmpls, tmpl)
+
+	log.Debugf("Deleting ipsec policy: %+v", policy)
 
 	if err := netlink.XfrmPolicyDel(&policy); err != nil {
 		return fmt.Errorf("error deleting policy: %+v err: %v", policy, err)

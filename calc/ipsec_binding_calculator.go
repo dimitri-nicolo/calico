@@ -26,13 +26,17 @@ func NewIPSecBindingCalculator() *IPSecBindingCalculator {
 // IPSecBindingCalculator resolves the set of IPs behind each IPsec tunnel.  There is an IPsec tunnel
 // to each host's IP, and the IPs behind its tunnel are all the workloads on that host.
 //
-// In order to make the calculation robust against misconfiguration, we need to deal with:
+// In order to make the calculation robust against races and misconfiguration, we need to deal with:
 //
 // - host IPs being missing (these are populated asynchronously by the kubelet, for example)
 // - host IPs being duplicated (where one node is being deleted async, while its IP is being reused)
 // - host IPs being deleted before/after workload IPs (where felix's general contract applies: it should apply
 //   the same policy given the same state of the datastore, no matter what path was taken to get there)
-// - workload IPs being reused (and so transiently appearing on multiple workload endpoints on a host).
+// - workload IPs being reused (and so transiently appearing on multiple workload endpoints on a host)
+// - incorrect data created by a user (which may only be resolved much later when they spot their mistake).
+//
+// In particular, we need to do something safe while the misconfiguration is in place and then we need to
+// correct the state when the misconfiguration is removed.
 type IPSecBindingCalculator struct {
 	nodeNameToNodeInfo map[string]nodeInfo
 	addressToNodeNames map[ip.Addr][]string

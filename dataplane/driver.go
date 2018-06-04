@@ -152,6 +152,8 @@ func StartDataplaneDriver(configParams *config.Config,
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
 
+				IPSecEnabled: configParams.IPSecEnabled(),
+
 				IptablesLogPrefix:         configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
 				ActionOnDrop:              configParams.DropActionOverride,

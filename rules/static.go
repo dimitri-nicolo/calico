@@ -34,7 +34,9 @@ const (
 	ProtoIPIP   = 4
 	ProtoTCP    = 6
 	ProtoUDP    = 17
+	ProtoESP    = 50
 	ProtoICMPv6 = 58
+	PortIKE     = 500
 )
 
 func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain {
@@ -224,6 +226,40 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		)
 		inputRules = append(inputRules,
 			r.DropRules(Match().ProtocolNum(ProtoIPIP), "Drop IPIP packets from non-Calico hosts")...,
+		)
+	}
+
+	if ipVersion == 4 && r.IPSecEnabled {
+		// IPIP is enabled, filter incoming IPSec IKE and ESP packets to ensure they come from a
+		// recognised host and are going to a local address on the host.  We use the protocol
+		// number for ESP packets rather than its name because the name is not guaranteed to be known by the kernel.
+		// For IKE packets, only port 500 is used since there can be no NAT between the hosts.
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoESP).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPSec ESP packets from Calico hosts",
+			},
+		)
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(PortIKE).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPSec IKEv2 packets from Calico hosts",
+			},
+		)
+		inputRules = append(inputRules,
+			r.DropRules(Match().ProtocolNum(ProtoESP), "Drop IPSec ESP packets from non-Calico hosts")...,
+		)
+		inputRules = append(inputRules,
+			r.DropRules(Match().ProtocolNum(ProtoUDP).
+				DestPorts(PortIKE),
+				"Drop IPSec IKE packets from non-Calico hosts")...,
 		)
 	}
 
@@ -572,6 +608,32 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 					SrcAddrType(AddrTypeLocal, false),
 				Action:  r.filterAllowAction,
 				Comment: "Allow IPIP packets to other Calico hosts",
+			},
+		)
+	}
+
+	if ipVersion == 4 && r.IPSecEnabled {
+		// When IPSec is enabled, auto-allow IPSec traffic to other Calico nodes.  Without this,
+		// it's too easy to make a host policy that blocks IPSec traffic, resulting in very confusing
+		// connectivity problems.
+		rules = append(rules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoESP).
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					SrcAddrType(AddrTypeLocal, false),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPSec ESP packets to other Calico hosts",
+			},
+		)
+
+		rules = append(rules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(PortIKE).
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					SrcAddrType(AddrTypeLocal, false),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPSec IKE packets to other Calico hosts",
 			},
 		)
 	}

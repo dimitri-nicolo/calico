@@ -48,6 +48,7 @@ type CharonIKEDaemon struct {
 }
 
 func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal string) (*CharonIKEDaemon, error) {
+	// FIXME: Reevaluate directory permissions.
 	os.MkdirAll("/var/run/", 0700)
 	if f, err := os.Open("/var/run/charon.pid"); err == nil {
 		defer f.Close()
@@ -72,11 +73,9 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal str
 	}
 
 	charon := &CharonIKEDaemon{ctx: ctx, espProposal: espProposal}
+	charon.viciUri = Uri{"unix", "/var/run/charon.vici"}
 
-	addr := strings.Split("unix:///var/run/charon.vici", "://")
-	charon.viciUri = Uri{addr[0], addr[1]}
-
-	cmd, err := charon.runBundled("/usr/lib/strongswan/charon")
+	cmd, err := charon.runAndCaptureLogs("/usr/lib/strongswan/charon")
 
 	if err != nil {
 		log.Errorf("Error starting charon daemon: %v", err)
@@ -122,7 +121,7 @@ func (charon *CharonIKEDaemon) getClient(wait bool) (client *goStrongswanVici.Cl
 	}
 }
 
-func (charon *CharonIKEDaemon) runBundled(execPath string) (cmd *exec.Cmd, err error) {
+func (charon *CharonIKEDaemon) runAndCaptureLogs(execPath string) (cmd *exec.Cmd, err error) {
 	path, err := exec.LookPath(execPath)
 	if err != nil {
 		return nil, err
@@ -170,16 +169,12 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 		Owners: []string{remoteIP},
 	}
 
-	retried := false
 	for {
 		err = client.LoadShared(sharedKey)
 		if err != nil {
 			log.Errorf("Failed to load key for %v. Retrying. %v", remoteIP, err)
 			time.Sleep(time.Second)
-			retried = true
 			continue
-		} else if retried {
-			log.Info("Loaded key on retry")
 		}
 		break
 	}

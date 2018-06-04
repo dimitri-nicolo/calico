@@ -1,5 +1,5 @@
-hash: 8670389a83b2709dce638212a01d71c96d297d22dd9058b2eb4d82f14a936296
-updated: 2018-06-01T11:01:23.712892312+01:00
+hash: 4cd7dbdec66ecb1a95b1a15be2bf5eaee85e06618d68d2b12ff999c21f6e8058
+updated: 2018-06-04T10:44:36.696538004+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -65,7 +65,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -258,7 +258,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 446c6364eb3af752fa650eb505f290353be66c02
+  version: 575108c3db2f8a73afa9d70d787c45a9a1434e01
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -548,7 +548,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 41e43949ca69d04b66104069ed3ffd619b289b3d
+  version: 0c329704159e3b051aafac400b15baacf2a94a04
   subpackages:
   - pkg/common
 testImports: []

@@ -33,9 +33,11 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		felixes  []*infrastructure.Felix
 		tcpdumps []*containers.TCPDump
 		client   client.Interface
-		w        [2]*workload.Workload
-		hostW    [2]*workload.Workload
-		cc       *workload.ConnectivityChecker
+		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
+		w [2]*workload.Workload
+		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
+		hostW [2]*workload.Workload
+		cc    *workload.ConnectivityChecker
 	)
 
 	BeforeEach(func() {
@@ -139,9 +141,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		for i := range felixes {
 			By(fmt.Sprintf("Doing no ESP (felix %v)", i))
 			Eventually(tcpdumpMatches(i, "numInboundESPPackets")).Should(BeNumerically("==", 0),
-				"tcpdump didn't record any inbound ESP packets")
+				"tcpdump saw unexpected inbound ESP packets")
 			Eventually(tcpdumpMatches(i, "numOutboundESPPackets")).Should(BeNumerically("==", 0),
-				"tcpdump didn't record any inbound ESP packets")
+				"tcpdump saw unexpected outbound ESP packets")
 		}
 	}
 
@@ -198,7 +200,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		}
 	})
 
-	It("should have host to host connectivity (no encryption)", func() {
+	It("should have unencrypted host to host connectivity", func() {
 		cc.ExpectSome(felixes[0], hostW[1])
 		cc.ExpectSome(felixes[1], hostW[0])
 		cc.CheckConnectivity()
@@ -207,10 +209,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		expectNoESP()
 	})
 
-	// FIXME: This doesn't work because the host policy blocks the encrypted IPsec tunnel.
-	PContext("with host protection policy in place", func() {
+	Context("with host protection policy in place", func() {
 		BeforeEach(func() {
-			// Make sure our new host endpoints don't cut felix off from the datastore.
+			// Make sure host endpoints don't block IPSec traffic (since they deny all traffic by default)
 			err := infra.AddAllowToDatastore("host-endpoint=='true'")
 			Expect(err).NotTo(HaveOccurred())
 
@@ -234,7 +235,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			// Host endpoints (with no policies) block host-host traffic due to default drop.
 			cc.ExpectNone(felixes[0], hostW[1])
 			cc.ExpectNone(felixes[1], hostW[0])
-			// But the rules to allow IPIP between our hosts let the workload traffic through.
+			// But the rules to allow IPSec between our hosts let the workload traffic through.
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
 			cc.CheckConnectivity()

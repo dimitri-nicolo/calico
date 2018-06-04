@@ -691,9 +691,9 @@ func (buf *EventSequencer) flushIPSecBindings() {
 		if upd == nil {
 			upd = &proto.IPSecBindingUpdate{}
 			updatesByTunnel[tunnelAddr] = upd
-		}
-		if tunnelAddr != nil {
-			upd.TunnelAddr = tunnelAddr.String()
+			if tunnelAddr != nil {
+				upd.TunnelAddr = tunnelAddr.String()
+			}
 		}
 		return upd
 	}

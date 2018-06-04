@@ -407,7 +407,6 @@ var localEp2AsEp1WithNode = localEp2WithNode.withKVUpdates(
 	},
 ).withEndpoint(localWlEp2Id, nil).withName("Local endpoint 2 (using key for ep 1) with a host IP")
 
-// Endpoint 1 and 2 sharing an IP with a node too.
 var localWlEpKey3 = WorkloadEndpointKey{localHostname, "orch", "wl3", "ep3"}
 var localWlEp3 = WorkloadEndpoint{
 	State: "active",
@@ -420,6 +419,7 @@ var localWlEp3 = WorkloadEndpoint{
 
 const localWlEp3Id = "orch/wl3/ep3"
 
+// A node, with two local endpoints that share an IP.
 var localEp1And2WithNode = localEpsWithPolicy.withKVUpdates(
 	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
 ).withIPSecBinding(
