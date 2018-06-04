@@ -66,7 +66,6 @@ func (d *ipsecManager) OnUpdate(msg interface{}) {
 		for _, added := range msg.RemovedAddrs {
 			d.dataplane.RemoveBlacklist(added)
 		}
-
 	}
 }
 
