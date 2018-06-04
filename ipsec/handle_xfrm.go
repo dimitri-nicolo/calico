@@ -25,6 +25,9 @@ import (
 
 func AddBlock(dst string, dir netlink.Dir) error {
 	_, dstNet, _ := net.ParseCIDR(dst)
+	if dstNet == nil {
+		log.WithField("dst", dst).Panic("Failed to parse destination for IP block")
+	}
 	policy := netlink.XfrmPolicy{
 		Dst:    dstNet,
 		Dir:    dir,
@@ -34,7 +37,7 @@ func AddBlock(dst string, dir netlink.Dir) error {
 	log.Infof("Adding ipsec block: %+v", policy)
 
 	if err := netlink.XfrmPolicyAdd(&policy); err != nil {
-		fmt.Println(fmt.Errorf("error adding block: %+v err: %v", policy, err))
+		return fmt.Errorf("error adding block: %+v err: %v", policy, err)
 	}
 
 	return nil
@@ -48,10 +51,10 @@ func RemoveBlock(dst string, dir netlink.Dir) error {
 		Action: netlink.XFRM_POLICY_BLOCK,
 	}
 
-	log.Infof("Adding ipsec block: %+v", policy)
+	log.Infof("Removing ipsec block: %+v", policy)
 
 	if err := netlink.XfrmPolicyDel(&policy); err != nil {
-		fmt.Println(fmt.Errorf("error adding block: %+v err: %v", policy, err))
+		return fmt.Errorf("error removing block: %+v err: %v", policy, err)
 	}
 
 	return nil

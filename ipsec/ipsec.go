@@ -73,14 +73,14 @@ type Dataplane struct {
 
 func (d *Dataplane) AddBlacklist(workloadAddress string) {
 	log.Warning("Adding IPsec blacklist", workloadAddress)
-	AddBlock(workloadAddress, netlink.XFRM_DIR_FWD)
-	AddBlock(workloadAddress, netlink.XFRM_DIR_OUT)
+	AddBlock(workloadAddress+"/32", netlink.XFRM_DIR_FWD)
+	AddBlock(workloadAddress+"/32", netlink.XFRM_DIR_OUT)
 }
 
 func (d *Dataplane) RemoveBlacklist(workloadAddress string) {
 	log.Warning("Removing IPsec blacklist", workloadAddress)
-	RemoveBlock(workloadAddress, netlink.XFRM_DIR_FWD)
-	RemoveBlock(workloadAddress, netlink.XFRM_DIR_OUT)
+	RemoveBlock(workloadAddress+"/32", netlink.XFRM_DIR_FWD)
+	RemoveBlock(workloadAddress+"/32", netlink.XFRM_DIR_OUT)
 }
 
 func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
