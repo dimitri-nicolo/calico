@@ -78,6 +78,11 @@ spec:
 | usageReportingEnabled              | Reports anonymous {{site.prodname}} version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of {{site.prodname}} being used. | boolean | boolean | `true` |
 | usageReportingInitialDelaySecs     | Minimum initial delay before first usage report, in seconds. | int | int | `300` |
 | usageReportingIntervalSecs         | The interval at which Felix does usage reports, in seconds.  The default is 1 day.  | int | int | `86400` |
+| ipsecMode                  | Controls which mode IPSec is operating on. The only supported value is `PSK`. An empty value means IPSec is not enabled. | PSK | string | `""` |
+| ipsecIKEAlgorithm          | IPSec IKE algorithm. Default is NIST suite B recommendation.| string  | string | `aes128gcm16-prfsha256-ecp256` |
+| ipsecESPAlgorithm          | IPSec ESP algorithm. Default is NIST suite B recommendation.| string  | string | `aes128gcm16-ecp256`
+| ipsecLogLevel              | Controls log level for IPSec components. Set to `None` for no logging. | None,Notice,Info,Debug,Verbose | string | `Info` |
+| ipsecPSKFile               | The path to the pre shared key file for IPSec. | string | string | `""` |
 
 \* When `dropActionOverride` is set to `LogAndDrop` or `LogAndAccept`, the `syslog` entries look something like the following.
    ```
