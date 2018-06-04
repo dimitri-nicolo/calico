@@ -409,6 +409,11 @@ func describeAsyncTests(baseTests []StateList) {
 					Expect(mockDataplane.ActiveIPSecBindings()).To(Equal(state.ExpectedIPSecBindings),
 						"IPsec bindings incorrect after moving to state: %v",
 						state.Name)
+					if state.ExpectedIPSecBlacklist != nil {
+						Expect(mockDataplane.ActiveIPSecBlacklist()).To(Equal(state.ExpectedIPSecBlacklist),
+							"IPsec blacklist incorrect after moving to state: %v",
+							state.Name)
+					}
 				})
 			}
 		}
@@ -535,6 +540,11 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 		Expect(mockDataplane.ActiveIPSecBindings()).To(Equal(state.ExpectedIPSecBindings),
 			"IPsec bindings incorrect after moving to state: %v",
 			state.Name)
+		if state.ExpectedIPSecBlacklist != nil {
+			Expect(mockDataplane.ActiveIPSecBlacklist()).To(Equal(state.ExpectedIPSecBlacklist),
+				"IPsec blacklist incorrect after moving to state: %v",
+				state.Name)
+		}
 	}))
 }
 

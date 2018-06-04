@@ -112,6 +112,13 @@ func (d *MockDataplane) ActiveIPSecBindings() set.Set {
 	return d.activeIPSecBindings.Copy()
 }
 
+func (d *MockDataplane) ActiveIPSecBlacklist() set.Set {
+	d.Lock()
+	defer d.Unlock()
+
+	return d.activeIPSecBlacklist.Copy()
+}
+
 func (d *MockDataplane) EndpointToProfiles() map[string][]string {
 	d.Lock()
 	defer d.Unlock()

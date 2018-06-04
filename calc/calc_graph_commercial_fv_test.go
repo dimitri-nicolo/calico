@@ -358,6 +358,11 @@ var localEp1With3NodesSharingIPAndRemoteEp = localEp1With3NodesSharingIP.withKVU
 	"192.168.0.1", "10.0.0.1",
 ).withoutIPSecBinding(
 	"192.168.0.1", "10.0.0.2",
+).withIPSecBlacklist(
+	"10.0.0.1",
+	"10.0.0.2",
+	"10.0.1.1",
+	"10.0.1.2",
 ).withName("Local endpoint 1 with triple of hosts sharing IP and a remote endpoint")
 
 var localEp1With3NodesSharingIPAndRemoteEps = localEp1With3NodesSharingIPAndRemoteEp.withKVUpdates(
@@ -370,7 +375,9 @@ var localEp1With3NodesSharingIPAndRemoteEps = localEp1With3NodesSharingIPAndRemo
 	"10.0.1.1/32", // remote ep1
 	"10.0.1.2/32", // remote ep1
 	"10.0.2.2/32", // remote ep2
-}).withName("Local endpoint 1 with triple of hosts sharing IP and a remote endpoints on both remote hosts")
+}).withIPSecBlacklist(
+	"10.0.2.2",
+).withName("Local endpoint 1 with triple of hosts sharing IP and a remote endpoints on both remote hosts")
 
 var localAndRemoteEndpointsWithMissingRemoteNode = localEp1WithNode.withKVUpdates(
 	KVPair{Key: remoteWlEpKey1, Value: &commRemoteWlEp1},
@@ -381,7 +388,10 @@ var localAndRemoteEndpointsWithMissingRemoteNode = localEp1WithNode.withKVUpdate
 	"fc00:fe11::2/128",
 	"10.0.1.1/32", // remote ep1
 	"10.0.1.2/32", // remote ep1
-}).withName("Local endpoint 1 with remote endpoint but missing remote node")
+}).withIPSecBlacklist(
+	"10.0.1.1",
+	"10.0.1.2",
+).withName("Local endpoint 1 with remote endpoint but missing remote node")
 
 // Different local endpoint with a host IP, should generate an IPsec binding for each IP of the endpoint.
 var localEp2WithNode = localEp2WithPolicy.withKVUpdates(
@@ -426,6 +436,8 @@ var localEp1And2WithNode = localEpsWithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.1",
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.3",
+).withIPSecBlacklist(
+	"10.0.0.2",
 ).withName("Local endpoints 1 and 2 sharing an IP with a host IP defined")
 
 // Endpoint 1, 2 and 3 sharing an IP with a node too.
@@ -451,6 +463,8 @@ var threeEndpointsSharingIPWithNode = localEpsWithPolicy.withKVUpdates(
 }).withEndpoint(
 	localWlEp3Id,
 	[]mock.TierInfo{},
+).withIPSecBlacklist(
+	"10.0.0.2",
 ).withName("3 endpoints sharing an IP with a host IP defined")
 
 var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates(
@@ -476,6 +490,8 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 }).withEndpoint(
 	localWlEp3Id,
 	[]mock.TierInfo{},
+).withIPSecBlacklist(
+	"10.0.0.2",
 ).withName("3 endpoints sharing an IP with a duplicate host IP defined")
 
 var commercialTests = []StateList{

@@ -38,6 +38,7 @@ type State struct {
 	ExpectedPreDNATPolicyIDs             set.Set
 	ExpectedProfileIDs                   set.Set
 	ExpectedIPSecBindings                set.Set
+	ExpectedIPSecBlacklist               set.Set
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
@@ -59,6 +60,7 @@ func NewState() State {
 		ExpectedPreDNATPolicyIDs:             set.New(),
 		ExpectedProfileIDs:                   set.New(),
 		ExpectedIPSecBindings:                set.New(),
+		ExpectedIPSecBlacklist:               nil, // Created on demand, nil means "ignore"
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
@@ -87,6 +89,9 @@ func (s State) Copy() State {
 	cpy.ExpectedPreDNATPolicyIDs = s.ExpectedPreDNATPolicyIDs.Copy()
 	cpy.ExpectedProfileIDs = s.ExpectedProfileIDs.Copy()
 	cpy.ExpectedIPSecBindings = s.ExpectedIPSecBindings.Copy()
+	if s.ExpectedIPSecBlacklist != nil {
+		cpy.ExpectedIPSecBlacklist = s.ExpectedIPSecBlacklist.Copy()
+	}
 
 	cpy.Name = s.Name
 	return cpy
@@ -199,13 +204,32 @@ func (s State) withActiveProfiles(ids ...proto.ProfileID) (newState State) {
 
 func (s State) withIPSecBinding(tunnelAddr, endpointAddr string) (newState State) {
 	newState = s.Copy()
+	if newState.ExpectedIPSecBlacklist == nil {
+		// Once we're checking IPsec state, make sure we check the blacklist too...
+		newState.ExpectedIPSecBlacklist = set.New()
+	}
 	newState.ExpectedIPSecBindings.Add(mock.IPSecBinding{tunnelAddr, endpointAddr})
 	return
 }
 
 func (s State) withoutIPSecBinding(tunnelAddr, endpointAddr string) (newState State) {
 	newState = s.Copy()
+	if newState.ExpectedIPSecBlacklist == nil {
+		// Once we're checking IPsec state, make sure we check the blacklist too...
+		newState.ExpectedIPSecBlacklist = set.New()
+	}
 	newState.ExpectedIPSecBindings.Discard(mock.IPSecBinding{tunnelAddr, endpointAddr})
+	return
+}
+
+func (s State) withIPSecBlacklist(endpointAddr ...string) (newState State) {
+	newState = s.Copy()
+	if newState.ExpectedIPSecBlacklist == nil {
+		newState.ExpectedIPSecBlacklist = set.New()
+	}
+	for _, a := range endpointAddr {
+		newState.ExpectedIPSecBlacklist.Add(a)
+	}
 	return
 }
 
