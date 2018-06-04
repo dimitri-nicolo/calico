@@ -129,7 +129,7 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `IPSecMode`                  | `FELIX_IPSECMODE`                  | ``      | Controls which mode IPSec is operating on. The only supported value is `PSK`. An empty value means IPSec is not enabled. |
 | `IPSecIKEAlgorithm`          | `FELIX_IPSECIKEALGORITHM`          | `aes128gcm16-prfsha256-ecp256`   | IPSec IKE algorithm. Default is NIST suite B recommendation.|
 | `IPSecESPAlgorithm`          | `FELIX_IPSECESPALGORITHM`          | `aes128gcm16-ecp256`             | IPSec ESP algorithm. Default is NIST suite B recommendation.|
-| `IPSecLogLevel`              | `FELIX_IPSECLOGLEVEL`              | `Info`  | Controls log level for IPSec components. Set to `None` for no logging. Other valid values are `Notice`, `Info`, `Debug` and `Verbose` (not case sensitive) |
+| `IPSecLogLevel`              | `FELIX_IPSECLOGLEVEL`              | `Info`  | Controls log level for IPSec components. Set to `None` for no logging. Other valid values are `Notice`, `Info`, `Debug` and `Verbose`. |
 | `IPSecPSKFile`               | `FELIX_IPSECPSKFILE`               | ``      | The path to the pre shared key file for IPSec. |
 
 DropActionOverride controls what happens to each packet that is denied by
