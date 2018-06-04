@@ -398,8 +398,8 @@ calico_test.created: $(TEST_CONTAINER_FILES)
 	cd calico_test && docker build -f Dockerfile$(ARCHTAG).calico_test -t $(TEST_CONTAINER_NAME) .
 	touch calico_test.created
 
-calico-node.tar: $(NODE_CONTAINER_CREATED)
-	# Check versions of the Calico binaries that will be in calico-node.tar.
+cnx-node.tar: $(NODE_CONTAINER_CREATED)
+	# Check versions of the Calico binaries that will be in cnx-node.tar.
 	# Since the binaries are built for Linux, run them in a container to allow the
 	# make target to be run on different platforms (e.g. MacOS).
 	docker run --rm $(NODE_CONTAINER_NAME) /bin/sh -c "\
@@ -412,7 +412,7 @@ calico-node.tar: $(NODE_CONTAINER_CREATED)
 
 # Build ACI (the APPC image file format) of calico/node.
 # Requires docker2aci installed on host: https://github.com/appc/docker2aci
-calico-node-latest.aci: calico-node.tar
+cnx-node-latest.aci: cnx-node.tar
 	docker2aci $<
 
 .PHONY: st-checks
@@ -426,7 +426,7 @@ st-checks:
 
 .PHONY: st
 ## Run the system tests
-st: dist/calicoq dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector.tar calico-node.tar workload.tar run-etcd calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
+st: dist/calicoq dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector.tar cnx-node.tar workload.tar run-etcd calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
 	# Check versions of Calico binaries that ST execution will use.
 	docker run --rm -v $(CURDIR)/dist:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
 	  echo; echo calicoctl --version;        /go/bin/calicoctl --version; \
@@ -459,7 +459,7 @@ st: dist/calicoq dist/calicoctl dist/calicoctl-v1.0.2 busybox.tar routereflector
 
 # Run the STs in a container using etcd with SSL certificate/key/CA verification.
 .PHONY: st-ssl
-st-ssl: run-etcd-ssl dist/calicoctl busybox.tar calico-node.tar routereflector.tar workload.tar calico_test.created
+st-ssl: run-etcd-ssl dist/calicoctl busybox.tar cnx-node.tar routereflector.tar workload.tar calico_test.created
 	# Use the host, PID and network namespaces from the host.
 	# Privileged is needed since 'calico node' write to /proc (to enable ip_forwarding)
 	# Map the docker socket in so docker can be used from inside the container
