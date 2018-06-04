@@ -44,8 +44,10 @@ type IPSecBindingCalculator struct {
 	ipToEndpointKeys  map[ip.Addr][]model.WorkloadEndpointKey
 	endpointKeysToIPs map[model.WorkloadEndpointKey][]ip.Addr
 
-	OnBindingAdded   func(b IPSecBinding)
-	OnBindingRemoved func(b IPSecBinding)
+	OnBindingAdded     func(b IPSecBinding)
+	OnBindingRemoved   func(b IPSecBinding)
+	OnBlacklistAdded   func(workloadAddr ip.Addr)
+	OnBlacklistRemoved func(workloadAddr ip.Addr)
 }
 
 type nodeInfo struct {
@@ -193,7 +195,7 @@ func (c *IPSecBindingCalculator) activateBindingsForNode(nodeName string, nodeIP
 				continue
 			}
 			// This is a unique binding, emit it.
-			c.OnBindingRemoved(IPSecBinding{WorkloadAddr: addr, TunnelAddr: nil})
+			c.unblacklistIP(addr)
 			c.OnBindingAdded(IPSecBinding{WorkloadAddr: addr, TunnelAddr: nodeIP})
 		}
 	}
@@ -213,7 +215,7 @@ func (c *IPSecBindingCalculator) deactivateBindingsForNode(nodeName string, node
 			}
 			// This was a unique binding, remove it.
 			c.OnBindingRemoved(IPSecBinding{WorkloadAddr: addr, TunnelAddr: nodeIP})
-			c.OnBindingAdded(IPSecBinding{WorkloadAddr: addr, TunnelAddr: nil})
+			c.blacklistIP(addr)
 		}
 	}
 }
@@ -403,11 +405,11 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 }
 
 func (c *IPSecBindingCalculator) blacklistIP(addr ip.Addr) {
-	c.OnBindingAdded(IPSecBinding{TunnelAddr: nil, WorkloadAddr: addr})
+	c.OnBlacklistAdded(addr)
 }
 
 func (c *IPSecBindingCalculator) unblacklistIP(addr ip.Addr) {
-	c.OnBindingRemoved(IPSecBinding{TunnelAddr: nil, WorkloadAddr: addr})
+	c.OnBlacklistRemoved(addr)
 }
 
 func (c *IPSecBindingCalculator) addIPToKey(addr ip.Addr, wepKey model.WorkloadEndpointKey) {
