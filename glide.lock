@@ -1,5 +1,5 @@
-hash: 280c58f246261b4e986abd169218bb4adf153332d7c1bff103b20db2569a78d1
-updated: 2018-06-01T11:39:01.022338567+01:00
+hash: e206aed2fd87e15cb3cb6bce59bb27a0ea046dacbc1e29337a29b95901327af1
+updated: 2018-06-04T14:18:02.425722663Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -65,7 +65,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -385,7 +385,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: 86e600f69ee4704c6efbf6a2a40a5c10700e76c2
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis
   - googleapis/rpc/status
@@ -547,7 +547,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 0c329704159e3b051aafac400b15baacf2a94a04
+  version: 8a9b82f00b3a86eac24681da3f9fe6c34c01cea2
   subpackages:
   - pkg/common
 testImports: []
