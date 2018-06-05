@@ -48,7 +48,9 @@ func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal
 	}
 	d.ikeDaemon = ikeDaemon
 
+	// FIXME The following LoadSharedKey call fails if we don't wait for the Charon to start first.
 	time.Sleep(1 * time.Second)
+
 	err = ikeDaemon.LoadSharedKey(localTunnelAddr, preSharedKey)
 	if err != nil {
 		panic(err)

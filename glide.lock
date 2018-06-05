@@ -1,5 +1,5 @@
-hash: 4cd7dbdec66ecb1a95b1a15be2bf5eaee85e06618d68d2b12ff999c21f6e8058
-updated: 2018-06-04T10:44:36.696538004+01:00
+hash: 2351bed82c0d28f5d084ccb490b966068d1492dc7bd120ce54495c7b16da552a
+updated: 2018-06-05T10:03:20.608378605+01:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -386,7 +386,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: 86e600f69ee4704c6efbf6a2a40a5c10700e76c2
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis
   - googleapis/rpc/status
