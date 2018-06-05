@@ -12,15 +12,16 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 const (
 	anyAddress = ""
-	reqID      = 50 // Used to correlate between the policy and state tables.
+	ReqID      = 50 // Used to correlate between the policy and state tables.
 )
 
-func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal, logLevel string, forwardMark uint32) *Dataplane { // Start the charon
+func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal, logLevel string, forwardMark uint32, polTable *PolicyTable) *Dataplane { // Start the charon
 
 	if forwardMark == 0 {
 		log.Panic("IPsec forward mark is 0")
@@ -33,6 +34,7 @@ func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal
 		ikeProposal:      ikeProposal,
 		forwardMark:      forwardMark,
 		config:           NewCharonConfig(charonConfigRootDir, charonMainConfigFile),
+		polTable:         polTable,
 	}
 
 	// Initialise charon main config file.
@@ -71,22 +73,53 @@ type Dataplane struct {
 	config *CharonConfig
 
 	wg sync.WaitGroup
+
+	polTable *PolicyTable
 }
 
 func (d *Dataplane) AddBlacklist(workloadAddress string) {
-	log.Warning("Adding IPsec blacklist", workloadAddress)
-	AddBlock(workloadAddress+"/32", netlink.XFRM_DIR_FWD)
-	AddBlock(workloadAddress+"/32", netlink.XFRM_DIR_OUT)
+	log.Warningf("Adding IPsec blacklist for %v", workloadAddress)
+
+	cidr := ip.FromString(workloadAddress).AsCIDR().(ip.V4CIDR)
+	fwdSel := PolicySelector{
+		TrafficDst: cidr,
+		Dir:        netlink.XFRM_DIR_FWD,
+	}
+	outSel := PolicySelector{
+		TrafficDst: cidr,
+		Dir:        netlink.XFRM_DIR_OUT,
+	}
+
+	d.polTable.SetRule(fwdSel, &blockRule)
+	d.polTable.SetRule(outSel, &blockRule)
 }
 
 func (d *Dataplane) RemoveBlacklist(workloadAddress string) {
-	log.Warning("Removing IPsec blacklist", workloadAddress)
-	RemoveBlock(workloadAddress+"/32", netlink.XFRM_DIR_FWD)
-	RemoveBlock(workloadAddress+"/32", netlink.XFRM_DIR_OUT)
+	log.Warningf("Removing IPsec blacklist for %v", workloadAddress)
+	cidr := stringToV4CIDR(workloadAddress)
+	fwdSel := PolicySelector{
+		TrafficDst: cidr,
+		Dir:        netlink.XFRM_DIR_FWD,
+	}
+	outSel := PolicySelector{
+		TrafficDst: cidr,
+		Dir:        netlink.XFRM_DIR_OUT,
+	}
+
+	d.polTable.DeleteRule(fwdSel)
+	d.polTable.DeleteRule(outSel)
+}
+
+func stringToV4CIDR(addr string) (cidr ip.V4CIDR) {
+	return ip.FromString(addr).AsCIDR().(ip.V4CIDR)
+}
+
+func stringToV4IP(addr string) ip.V4Addr {
+	return ip.FromString(addr).(ip.V4Addr)
 }
 
 func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
-	log.Debug("Adding IPsec binding", workloadAddress, "via tunnel", remoteTunnelAddr)
+	log.Debug("Adding IPsec binding ", workloadAddress, " via tunnel ", remoteTunnelAddr)
 	if _, ok := d.bindingsByTunnel[remoteTunnelAddr]; !ok {
 		d.configureTunnel(remoteTunnelAddr)
 		d.bindingsByTunnel[remoteTunnelAddr] = set.New()
@@ -94,15 +127,25 @@ func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
 		if remoteTunnelAddr != d.localTunnelAddr {
 			// Allow the remote host to send encrypted traffic to our local workloads.  This balances the OUT rule
 			// that will get programmed on the remote host in order to send traffic to our workloads.
-			panicIfErr(AddXFRMPolicy(remoteTunnelAddr+"/32", "", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
+			d.polTable.SetRule(PolicySelector{
+				TrafficSrc: stringToV4CIDR(remoteTunnelAddr),
+				Dir:        netlink.XFRM_DIR_FWD,
+			}, &PolicyRule{
+				TunnelSrc: stringToV4IP(remoteTunnelAddr),
+				TunnelDst: stringToV4IP(d.localTunnelAddr),
+			})
+
 			// Allow iptables to selectively encrypt packets to the host itself.  This allows us to encrypt traffic
 			// from local workloads to the remote host.
-			panicIfErr(AddXFRMPolicy(
-				"0.0.0.0/0", remoteTunnelAddr+"/32",
-				d.localTunnelAddr, remoteTunnelAddr,
-				netlink.XFRM_DIR_OUT, reqID,
-				&netlink.XfrmMark{Value: d.forwardMark, Mask: d.forwardMark},
-			))
+			d.polTable.SetRule(PolicySelector{
+				TrafficDst: stringToV4CIDR(remoteTunnelAddr),
+				Dir:        netlink.XFRM_DIR_OUT,
+			}, &PolicyRule{
+				TunnelSrc: stringToV4IP(d.localTunnelAddr),
+				TunnelDst: stringToV4IP(remoteTunnelAddr),
+				Mark:      d.forwardMark,
+				MarkMask:  d.forwardMark,
+			})
 		}
 	}
 	d.bindingsByTunnel[remoteTunnelAddr].Add(workloadAddress)
@@ -110,17 +153,19 @@ func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
 }
 
 func (d *Dataplane) RemoveBinding(remoteTunnelAddr, workloadAddress string) {
-	log.Debug("Removing IPsec binding", workloadAddress, "via tunnel", remoteTunnelAddr)
+	log.Debug("Removing IPsec binding ", workloadAddress, " via tunnel ", remoteTunnelAddr)
 	d.removeXfrm(remoteTunnelAddr, workloadAddress)
 	d.bindingsByTunnel[remoteTunnelAddr].Discard(workloadAddress)
 	if d.bindingsByTunnel[remoteTunnelAddr].Len() == 0 {
 		if remoteTunnelAddr != d.localTunnelAddr {
-			panicIfErr(DeleteXFRMPolicy(remoteTunnelAddr+"/32", "", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
-			panicIfErr(DeleteXFRMPolicy(
-				"0.0.0.0/0", remoteTunnelAddr+"/32",
-				d.localTunnelAddr, remoteTunnelAddr,
-				netlink.XFRM_DIR_OUT, reqID,
-				&netlink.XfrmMark{Value: d.forwardMark, Mask: d.forwardMark}))
+			d.polTable.DeleteRule(PolicySelector{
+				TrafficSrc: stringToV4CIDR(remoteTunnelAddr),
+				Dir:        netlink.XFRM_DIR_FWD,
+			})
+			d.polTable.DeleteRule(PolicySelector{
+				TrafficDst: stringToV4CIDR(remoteTunnelAddr),
+				Dir:        netlink.XFRM_DIR_OUT,
+			})
 		}
 
 		d.removeTunnel(remoteTunnelAddr)
@@ -133,13 +178,31 @@ func (d *Dataplane) configureXfrm(remoteTunnelAddr, workloadAddr string) {
 		return
 	}
 	log.Debugf("Adding IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
-	workloadAddr += "/32"
 	// Remote workload to local workload traffic, hits the FWD xfrm policy.
-	panicIfErr(AddXFRMPolicy(workloadAddr, anyAddress, remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
+	d.polTable.SetRule(PolicySelector{
+		TrafficSrc: stringToV4CIDR(workloadAddr),
+		Dir:        netlink.XFRM_DIR_FWD,
+	}, &PolicyRule{
+		TunnelSrc: stringToV4IP(remoteTunnelAddr),
+		TunnelDst: stringToV4IP(d.localTunnelAddr),
+	})
 	// Remote workload to local host, hits the IN xfrm policy.
-	panicIfErr(AddXFRMPolicy(workloadAddr, d.localTunnelAddr+"/32", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_IN, reqID))
+	d.polTable.SetRule(PolicySelector{
+		TrafficSrc: stringToV4CIDR(workloadAddr),
+		TrafficDst: stringToV4CIDR(d.localTunnelAddr),
+		Dir:        netlink.XFRM_DIR_IN,
+	}, &PolicyRule{
+		TunnelSrc: stringToV4IP(remoteTunnelAddr),
+		TunnelDst: stringToV4IP(d.localTunnelAddr),
+	})
 	// Local traffic to remote workload.
-	panicIfErr(AddXFRMPolicy(anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr, netlink.XFRM_DIR_OUT, reqID))
+	d.polTable.SetRule(PolicySelector{
+		TrafficDst: stringToV4CIDR(workloadAddr),
+		Dir:        netlink.XFRM_DIR_OUT,
+	}, &PolicyRule{
+		TunnelSrc: stringToV4IP(d.localTunnelAddr),
+		TunnelDst: stringToV4IP(remoteTunnelAddr),
+	})
 	log.Debugf("Added IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
 }
 
@@ -155,10 +218,22 @@ func (d *Dataplane) removeXfrm(remoteTunnelAddr, workloadAddr string) {
 		return
 	}
 	log.Debugf("Removing IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
-	workloadAddr += "/32"
-	panicIfErr(DeleteXFRMPolicy(workloadAddr, anyAddress, remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_FWD, reqID))
-	panicIfErr(DeleteXFRMPolicy(workloadAddr, d.localTunnelAddr+"/32", remoteTunnelAddr, d.localTunnelAddr, netlink.XFRM_DIR_IN, reqID))
-	panicIfErr(DeleteXFRMPolicy(anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr, netlink.XFRM_DIR_OUT, reqID))
+	// Remote workload to local workload traffic, hits the FWD xfrm policy.
+	d.polTable.DeleteRule(PolicySelector{
+		TrafficSrc: stringToV4CIDR(workloadAddr),
+		Dir:        netlink.XFRM_DIR_FWD,
+	})
+	// Remote workload to local host, hits the IN xfrm policy.
+	d.polTable.DeleteRule(PolicySelector{
+		TrafficSrc: stringToV4CIDR(workloadAddr),
+		TrafficDst: stringToV4CIDR(d.localTunnelAddr),
+		Dir:        netlink.XFRM_DIR_IN,
+	})
+	// Local traffic to remote workload.
+	d.polTable.DeleteRule(PolicySelector{
+		TrafficDst: stringToV4CIDR(workloadAddr),
+		Dir:        netlink.XFRM_DIR_OUT,
+	})
 	log.Debugf("Removing IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
 }
 

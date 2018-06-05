@@ -191,6 +191,7 @@ type InternalDataplane struct {
 	ipipManager          *ipipManager
 	allHostsIpsetManager *allHostsIpsetManager
 
+	ipSecPolTable  *ipsec.PolicyTable
 	ipSecDataplane ipSecDataplane
 
 	ifaceMonitor     *ifacemonitor.InterfaceMonitor
@@ -456,6 +457,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 			if strings.Contains(ip, ":") {
 				continue
 			}
+			dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID)
 			dp.ipSecDataplane = ipsec.NewDataplane(
 				ip,
 				config.IPSecPSK,
@@ -463,6 +465,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 				config.IPSecESPProposal,
 				config.IPSecLogLevel,
 				config.RulesConfig.IptablesMarkIPsec,
+				dp.ipSecPolTable,
 			)
 			ipSecManager := newIPSecManager(dp.ipSecDataplane)
 			dp.allManagers = append(dp.allManagers, ipSecManager)
@@ -958,6 +961,10 @@ func (d *InternalDataplane) apply() {
 		if err != nil {
 			d.dataplaneNeedsSync = true
 		}
+	}
+
+	if d.ipSecPolTable != nil {
+		d.ipSecPolTable.Apply()
 	}
 
 	if d.forceRouteRefresh {

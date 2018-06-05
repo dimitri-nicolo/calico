@@ -51,6 +51,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		topologyOptions.ExtraEnvVars["FELIX_IPSECIKEAlGORITHM"] = "aes128gcm16-prfsha256-ecp256"
 		topologyOptions.ExtraEnvVars["FELIX_IPSECESPAlGORITHM"] = "aes128gcm16-ecp256"
 		topologyOptions.IPIPEnabled = false
+		topologyOptions.FelixLogSeverity = "debug"
 
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
