@@ -92,16 +92,15 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 					continue
 				}
 
-				wIP := fmt.Sprintf("10.65.%d.2", j)
 				polCount := func() int {
 					out, err := f.ExecOutput("ip", "xfrm", "policy")
 					Expect(err).NotTo(HaveOccurred())
-					return strings.Count(out, wIP)
+					return strings.Count(out, w[j].IP)
 				}
 				// Felix might restart during set up, causing a 2s delay here.
 				Eventually(polCount, "5s", "100ms").Should(Equal(numPoliciesPerWep),
 					fmt.Sprintf("Expected to see %d IPsec policies for workload IP %s in felix container %s",
-						numPoliciesPerWep, wIP, f.Name))
+						numPoliciesPerWep, w[j].IP, f.Name))
 			}
 		}
 
