@@ -5,15 +5,14 @@
 package fv_test
 
 import (
+	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"regexp"
-
-	"context"
 
 	log "github.com/sirupsen/logrus"
 
@@ -83,6 +82,28 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			w[ii].ConfigureInDatastore(infra)
 
 			hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", "tcp")
+		}
+
+		// Wait for Felix to program the IPsec policy.  Otherwise, we might see some unencrypted traffic at
+		// start-of-day.  There's not much we can do about that in general since we don't know the workload's IP
+		// to blacklist it until we hear about the workload.
+		const numPoliciesPerWep = 3
+		for i, f := range felixes {
+			for j := range felixes {
+				if i == j {
+					continue
+				}
+
+				polCount := func() int {
+					out, err := f.ExecOutput("ip", "xfrm", "policy")
+					Expect(err).NotTo(HaveOccurred())
+					return strings.Count(out, w[j].IP)
+				}
+				// Felix might restart during set up, causing a 2s delay here.
+				Eventually(polCount, "5s", "100ms").Should(Equal(numPoliciesPerWep),
+					fmt.Sprintf("Expected to see %d IPsec policies for workload IP %s in felix container %s",
+						numPoliciesPerWep, w[j].IP, f.Name))
+			}
 		}
 
 		cc = &workload.ConnectivityChecker{}
