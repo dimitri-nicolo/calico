@@ -38,7 +38,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: feature-ipsec
+  version: e633cdfd7e6c096ca893a876ad6a80b661e0a4b4
   subpackages:
   - lib
 - package: github.com/tigera/licensing
@@ -68,7 +68,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: feature-ipsec
+  version: 15c67ff21e8c1cad6dbf57fa4af8920d2d4a6f40
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
