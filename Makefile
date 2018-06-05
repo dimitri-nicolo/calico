@@ -34,7 +34,7 @@ endif
 RELEASE_BRANCH?=master
 
 # Select which registry to push image to.
-REGISTRY?=gcr.io/unique-caldron-775/cnx/tigera
+REGISTRY?=gcr.io/unique-caldron-775/cnx
 
 # Disable make's implicit rules, which are not useful for golang, and slow down the build
 # considerably.
@@ -45,10 +45,10 @@ all: clean test
 GO_BUILD_VER?=latest
 GO_BUILD_CONTAINER = calico/go-build:$(GO_BUILD_VER)-$(BUILDARCH)
 
-CONTAINER_NAME=calico/confd
+CONTAINER_NAME=tigera/confd
 
 CALICOCTL_VER=master
-CALICOCTL_CONTAINER_NAME=calico/ctl:$(CALICOCTL_VER)-$(ARCH)
+CALICOCTL_CONTAINER_NAME=$(REGISTRY)/tigera/calicoctl:$(CALICOCTL_VER)
 K8S_VERSION=v1.8.1
 ETCD_VER=v3.2.5
 BIRD_VER=v0.3.1
