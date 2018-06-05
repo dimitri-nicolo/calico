@@ -499,6 +499,15 @@ func init() {
 		Entry("should reject an invalid (removed) DropActionOverride value 'LOG-and-DROP'", api.FelixConfigurationSpec{DropActionOverride: "LOG-and-DROP"}, false),
 		Entry("should reject an invalid DropActionOverride value 'badval'", api.FelixConfigurationSpec{DropActionOverride: "badval"}, false),
 
+		Entry("should accept an valid IPSecMode value 'PSK'", api.FelixConfigurationSpec{IPSecMode: "PSK"}, true),
+		Entry("should reject an invalid IPSecMode value 'badVal'", api.FelixConfigurationSpec{IPSecMode: "badVal"}, false),
+		Entry("should accept an valid IPSecLogLevel value 'None'", api.FelixConfigurationSpec{IPSecLogLevel: "None"}, true),
+		Entry("should accept an valid IPSecLogLevel value 'Notice'", api.FelixConfigurationSpec{IPSecLogLevel: "Notice"}, true),
+		Entry("should accept an valid IPSecLogLevel value 'Info'", api.FelixConfigurationSpec{IPSecLogLevel: "Info"}, true),
+		Entry("should accept an valid IPSecLogLevel value 'Debug'", api.FelixConfigurationSpec{IPSecLogLevel: "Debug"}, true),
+		Entry("should accept an valid IPSecLogLevel value 'Verbose'", api.FelixConfigurationSpec{IPSecLogLevel: "Verbose"}, true),
+		Entry("should reject an invalid IPSecLogLevel value 'Warning'", api.FelixConfigurationSpec{IPSecLogLevel: "Warning"}, false),
+
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),
 		Entry("should accept protocol UDP", protocolFromString("UDP"), true),
