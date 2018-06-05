@@ -16,7 +16,7 @@ RUN apk --no-cache add wget ca-certificates libgcc && \
     rm -f glibc-2.23-r3.apk glibc-bin-2.23-r3.apk
 
 # Install Felix's dependencies.
-RUN apk --no-cache add ip6tables ipset iputils iproute2 conntrack-tools
+RUN apk --no-cache add ip6tables ipset iputils iproute2 conntrack-tools strongswan
 
 ADD felix.cfg /etc/calico/felix.cfg
 ADD calico-felix-wrapper usr/bin

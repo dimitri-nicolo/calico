@@ -56,6 +56,17 @@ func StartDataplaneDriver(configParams *config.Config,
 		markAccept, _ := markBitsManager.NextSingleBitMark()
 		markPass, _ := markBitsManager.NextSingleBitMark()
 		markDrop, _ := markBitsManager.NextSingleBitMark()
+		var markIPsec uint32
+		if configParams.IPSecEnabled() {
+			log.Info("IPsec enabled, allocating a mark bit")
+			markIPsec, _ = markBitsManager.NextSingleBitMark()
+			if markIPsec == 0 {
+				log.WithFields(log.Fields{
+					"Name":     "felix-iptables",
+					"MarkMask": configParams.IptablesMarkMask,
+				}).Panic("Failed to allocate a mark bit for IPsec, not enough mark bits available.")
+			}
+		}
 		// Short-lived mark bits for local calculations within a chain.
 		markScratch0, _ := markBitsManager.NextSingleBitMark()
 		markScratch1, _ := markBitsManager.NextSingleBitMark()
@@ -132,6 +143,7 @@ func StartDataplaneDriver(configParams *config.Config,
 				IptablesMarkAccept:          markAccept,
 				IptablesMarkPass:            markPass,
 				IptablesMarkDrop:            markDrop,
+				IptablesMarkIPsec:           markIPsec,
 				IptablesMarkScratch0:        markScratch0,
 				IptablesMarkScratch1:        markScratch1,
 				IptablesMarkEndpoint:        markEndpointMark,
@@ -139,6 +151,8 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				IPIPEnabled:       configParams.IpInIpEnabled,
 				IPIPTunnelAddress: configParams.IpInIpTunnelAddr,
+
+				IPSecEnabled: configParams.IPSecEnabled(),
 
 				IptablesLogPrefix:         configParams.LogPrefix,
 				IncludeDropActionInPrefix: configParams.LogDropActionOverride,
@@ -179,6 +193,11 @@ func StartDataplaneDriver(configParams *config.Config,
 			StatusReportingInterval:        configParams.ReportingIntervalSecs,
 
 			NetlinkTimeout: configParams.NetlinkTimeoutSecs,
+
+			IPSecPSK:         configParams.GetPSKFromFile(),
+			IPSecIKEProposal: configParams.IPSecIKEAlgorithm,
+			IPSecESPProposal: configParams.IPSecESPAlgorithm,
+			IPSecLogLevel:    configParams.IPSecLogLevel,
 
 			ConfigChangedRestartCallback: configChangedRestartCallback,
 

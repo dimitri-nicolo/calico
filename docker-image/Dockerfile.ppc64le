@@ -19,7 +19,7 @@ COPY --from=qemu /usr/bin/qemu-*-static /usr/bin/
 
 RUN apk --no-cache add --update tini
 # Install Felix's dependencies.
-RUN apk --no-cache add ip6tables ipset iputils iproute2 conntrack-tools file
+RUN apk --no-cache add ip6tables ipset iputils iproute2 conntrack-tools file strongswan
 
 ADD felix.cfg /etc/calico/felix.cfg
 ADD calico-felix-wrapper usr/bin

@@ -285,6 +285,7 @@ type Config struct {
 	IptablesMarkAccept   uint32
 	IptablesMarkPass     uint32
 	IptablesMarkDrop     uint32
+	IptablesMarkIPsec    uint32
 	IptablesMarkScratch0 uint32
 	IptablesMarkScratch1 uint32
 	IptablesMarkEndpoint uint32
@@ -317,6 +318,7 @@ type Config struct {
 	DisableConntrackInvalid bool
 
 	EnableNflogSize bool
+	IPSecEnabled    bool
 }
 
 func (c *Config) validate() {
@@ -328,7 +330,13 @@ func (c *Config) validate() {
 	usedBits := uint32(0)
 	for i := 0; i < myValue.NumField(); i++ {
 		fieldName := myType.Field(i).Name
-		if strings.HasPrefix(fieldName, "IptablesMark") && fieldName != "IptablesMarkNonCaliEndpoint" {
+		if fieldName == "IptablesMarkNonCaliEndpoint" ||
+			fieldName == "IptablesMarkIPsec" {
+			// These mark bits are only used when needed (by IPVS and IPsec support, respectively) so we allow them to
+			// be zero.
+			continue
+		}
+		if strings.HasPrefix(fieldName, "IptablesMark") {
 			bits := myValue.Field(i).Interface().(uint32)
 			if bits == 0 {
 				log.WithField("field", fieldName).Panic(

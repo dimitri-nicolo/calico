@@ -1,0 +1,76 @@
+// Copyright (c) 2016-2018 Tigera, Inc. All rights reserved.
+package intdataplane
+
+import (
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/ipsets"
+	"github.com/projectcalico/felix/proto"
+	"github.com/projectcalico/felix/rules"
+)
+
+// allHostsIpsetManager manages the all-hosts IP set, which is used by some rules in our static chains
+// when IPIP or IPSec are enabled.  It doesn't actually program the rules, because they are part of the
+// top-level static chains.
+type allHostsIpsetManager struct {
+	ipsetsDataplane ipsetsDataplane
+
+	// activeHostnameToIP maps hostname to string IP address.  We don't bother to parse into
+	// net.IPs because we're going to pass them directly to the IPSet API.
+	activeHostnameToIP map[string]string
+	ipSetInSync        bool
+
+	// Config for creating/refreshing the IP set.
+	ipSetMetadata ipsets.IPSetMetadata
+}
+
+func newAllHostsIpsetManager(ipsetsDataplane ipsetsDataplane, maxIPSetSize int) *allHostsIpsetManager {
+	return &allHostsIpsetManager{
+		ipsetsDataplane:    ipsetsDataplane,
+		activeHostnameToIP: map[string]string{},
+		ipSetMetadata: ipsets.IPSetMetadata{
+			MaxSize: maxIPSetSize,
+			SetID:   rules.IPSetIDAllHostIPs,
+			Type:    ipsets.IPSetTypeHashIP,
+		},
+	}
+}
+
+func (d *allHostsIpsetManager) OnUpdate(msg interface{}) {
+	switch msg := msg.(type) {
+	case *proto.HostMetadataUpdate:
+		log.WithField("hostanme", msg.Hostname).Debug("Host update/create")
+		d.activeHostnameToIP[msg.Hostname] = msg.Ipv4Addr
+		d.ipSetInSync = false
+	case *proto.HostMetadataRemove:
+		log.WithField("hostname", msg.Hostname).Debug("Host removed")
+		delete(d.activeHostnameToIP, msg.Hostname)
+		d.ipSetInSync = false
+	}
+}
+
+func (m *allHostsIpsetManager) CompleteDeferredWork() error {
+	if !m.ipSetInSync {
+		// For simplicity (and on the assumption that host add/removes are rare) rewrite
+		// the whole IP set whenever we get a change.  To replace this with delta handling
+		// would require reference counting the IPs because it's possible for two hosts
+		// to (at least transiently) share an IP.  That would add occupancy and make the
+		// code more complex.
+		log.Info("All-hosts IP set out-of sync, refreshing it.")
+		members := make([]string, 0, len(m.activeHostnameToIP))
+		for _, ip := range m.activeHostnameToIP {
+			members = append(members, ip)
+		}
+		m.ipsetsDataplane.AddOrReplaceIPSet(m.ipSetMetadata, members)
+		m.ipSetInSync = true
+	}
+	return nil
+}
+
+// ipsetsDataplane is a shim interface for mocking the IPSets object.
+type ipsetsDataplane interface {
+	AddOrReplaceIPSet(setMetadata ipsets.IPSetMetadata, members []string)
+	AddMembers(setID string, newMembers []string)
+	RemoveMembers(setID string, removedMembers []string)
+	RemoveIPSet(setID string)
+}

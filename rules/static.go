@@ -34,7 +34,9 @@ const (
 	ProtoIPIP   = 4
 	ProtoTCP    = 6
 	ProtoUDP    = 17
+	ProtoESP    = 50
 	ProtoICMPv6 = 58
+	PortIKE     = 500
 )
 
 func (r *DefaultRuleRenderer) StaticFilterInputChains(ipVersion uint8) []*Chain {
@@ -224,6 +226,40 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		)
 		inputRules = append(inputRules,
 			r.DropRules(Match().ProtocolNum(ProtoIPIP), "Drop IPIP packets from non-Calico hosts")...,
+		)
+	}
+
+	if ipVersion == 4 && r.IPSecEnabled {
+		// IPIP is enabled, filter incoming IPSec IKE and ESP packets to ensure they come from a
+		// recognised host and are going to a local address on the host.  We use the protocol
+		// number for ESP packets rather than its name because the name is not guaranteed to be known by the kernel.
+		// For IKE packets, only port 500 is used since there can be no NAT between the hosts.
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoESP).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPSec ESP packets from Calico hosts",
+			},
+		)
+		inputRules = append(inputRules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(PortIKE).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					DestAddrType(AddrTypeLocal),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPSec IKEv2 packets from Calico hosts",
+			},
+		)
+		inputRules = append(inputRules,
+			r.DropRules(Match().ProtocolNum(ProtoESP), "Drop IPSec ESP packets from non-Calico hosts")...,
+		)
+		inputRules = append(inputRules,
+			r.DropRules(Match().ProtocolNum(ProtoUDP).
+				DestPorts(PortIKE),
+				"Drop IPSec IKE packets from non-Calico hosts")...,
 		)
 	}
 
@@ -453,7 +489,8 @@ func (r *DefaultRuleRenderer) StaticFilterForwardChains() []*Chain {
 		Rule{
 			// we're clearing all our mark bits to minimise non-determinism caused by rules in other chains.
 			// We exclude the accept bit because we use that to communicate from the raw/pre-dnat chains.
-			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ r.IptablesMarkAccept},
+			// Similarly, the IPsec bit is used across multiple tables.
+			Action: ClearMarkAction{Mark: r.allCalicoMarkBits() &^ (r.IptablesMarkAccept | r.IptablesMarkIPsec)},
 		},
 		Rule{
 			// Apply forward policy for the incoming Host endpoint if accept bit is clear which means the packet
@@ -571,6 +608,32 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 					SrcAddrType(AddrTypeLocal, false),
 				Action:  r.filterAllowAction,
 				Comment: "Allow IPIP packets to other Calico hosts",
+			},
+		)
+	}
+
+	if ipVersion == 4 && r.IPSecEnabled {
+		// When IPSec is enabled, auto-allow IPSec traffic to other Calico nodes.  Without this,
+		// it's too easy to make a host policy that blocks IPSec traffic, resulting in very confusing
+		// connectivity problems.
+		rules = append(rules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoESP).
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					SrcAddrType(AddrTypeLocal, false),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPSec ESP packets to other Calico hosts",
+			},
+		)
+
+		rules = append(rules,
+			Rule{
+				Match: Match().ProtocolNum(ProtoUDP).
+					DestPorts(PortIKE).
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					SrcAddrType(AddrTypeLocal, false),
+				Action:  r.filterAllowAction,
+				Comment: "Allow IPSec IKE packets to other Calico hosts",
 			},
 		)
 	}
@@ -786,6 +849,13 @@ func (r *DefaultRuleRenderer) StaticRawPreroutingChain(ipVersion uint8) *Chain {
 		})
 	}
 
+	if ipVersion == 4 && r.IptablesMarkIPsec != 0 {
+		rules = append(rules, Rule{
+			Match:  Match().MarkSingleBitSet(markFromWorkload),
+			Action: SetMarkAction{Mark: r.IptablesMarkIPsec},
+		})
+	}
+
 	if ipVersion == 6 {
 		// Apply strict RPF check to packets from workload interfaces.  This prevents
 		// workloads from spoofing their IPs.  Note: non-privileged containers can't
@@ -820,7 +890,8 @@ func (r *DefaultRuleRenderer) allCalicoMarkBits() uint32 {
 	return r.IptablesMarkAccept |
 		r.IptablesMarkPass |
 		r.IptablesMarkScratch0 |
-		r.IptablesMarkScratch1
+		r.IptablesMarkScratch1 |
+		r.IptablesMarkIPsec
 }
 
 func (r *DefaultRuleRenderer) StaticRawOutputChain() *Chain {

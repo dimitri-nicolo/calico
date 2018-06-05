@@ -38,7 +38,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: c33472a5c5423e2932d73058622aa65676370789
+  version: e633cdfd7e6c096ca893a876ad6a80b661e0a4b4
   subpackages:
   - lib
 - package: github.com/tigera/licensing
@@ -59,7 +59,7 @@ import:
 - package: github.com/gogo/protobuf
   version: ^0.5.0
 - package: github.com/vishvananda/netlink
-  version: 85aa3b74a43a9fa174a588ce9a042c9b71b0842c
+  version: f07d9d5231b9cd05ddf2e5a8ef6582f385bc1770
 - package: github.com/onsi/ginkgo
   version: ^1.4.0
 - package: github.com/onsi/gomega
@@ -68,7 +68,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: a088dcd20305835c5b7e6d0d4735afe6b8e592af
+  version: 15c67ff21e8c1cad6dbf57fa4af8920d2d4a6f40
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
@@ -96,3 +96,5 @@ import:
   version: f98634e408857669d61064b283c4cde240622865
   subpackages:
   - xfs
+- package: github.com/bronze1man/goStrongswanVici
+  repo:    git@github.com:tigera/goStrongswanVici

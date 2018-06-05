@@ -37,6 +37,7 @@ type State struct {
 	ExpectedUntrackedPolicyIDs           set.Set
 	ExpectedPreDNATPolicyIDs             set.Set
 	ExpectedProfileIDs                   set.Set
+	ExpectedIPSecBindings                set.Set
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
@@ -57,6 +58,7 @@ func NewState() State {
 		ExpectedUntrackedPolicyIDs:           set.New(),
 		ExpectedPreDNATPolicyIDs:             set.New(),
 		ExpectedProfileIDs:                   set.New(),
+		ExpectedIPSecBindings:                set.New(),
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
@@ -84,6 +86,7 @@ func (s State) Copy() State {
 	cpy.ExpectedUntrackedPolicyIDs = s.ExpectedUntrackedPolicyIDs.Copy()
 	cpy.ExpectedPreDNATPolicyIDs = s.ExpectedPreDNATPolicyIDs.Copy()
 	cpy.ExpectedProfileIDs = s.ExpectedProfileIDs.Copy()
+	cpy.ExpectedIPSecBindings = s.ExpectedIPSecBindings.Copy()
 
 	cpy.Name = s.Name
 	return cpy
@@ -192,6 +195,12 @@ func (s State) withActiveProfiles(ids ...proto.ProfileID) (newState State) {
 		newState.ExpectedProfileIDs.Add(id)
 	}
 	return newState
+}
+
+func (s State) withIPSecBinding(tunnelAddr, endpointAddr string) (newState State) {
+	newState = s.Copy()
+	newState.ExpectedIPSecBindings.Add(mock.IPSecBinding{tunnelAddr, endpointAddr})
+	return
 }
 
 func (s State) Keys() set.Set {

@@ -26,8 +26,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
+	"net"
+
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/ifacemonitor"
+	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
@@ -139,6 +142,11 @@ type Config struct {
 	DebugSimulateDataplaneHangAfter time.Duration
 
 	FelixHostname string
+
+	IPSecPSK         string
+	IPSecIKEProposal string
+	IPSecESPProposal string
+	IPSecLogLevel    string
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -180,7 +188,10 @@ type InternalDataplane struct {
 	iptablesFilterTables []*iptables.Table
 	ipSets               []*ipsets.IPSets
 
-	ipipManager *ipipManager
+	ipipManager          *ipipManager
+	allHostsIpsetManager *allHostsIpsetManager
+
+	ipSecDataplane ipSecDataplane
 
 	ifaceMonitor     *ifacemonitor.InterfaceMonitor
 	ifaceUpdates     chan *ifaceUpdate
@@ -342,10 +353,16 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	dp.RegisterManager(dp.lookupManager)
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
-		// Add a manger to keep the all-hosts IP set up to date.
-		dp.ipipManager = newIPIPManager(ipSetsV4, config.MaxIPSetSize)
-		dp.RegisterManager(dp.ipipManager) // IPv4-only
+		// Create and maintain the IPIP tunnel device
+		dp.ipipManager = newIPIPManager()
 	}
+
+	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled {
+		// Add a manger to keep the all-hosts IP set up to date.
+		dp.allHostsIpsetManager = newAllHostsIpsetManager(ipSetsV4, config.MaxIPSetSize)
+		dp.RegisterManager(dp.allHostsIpsetManager) // IPv4-only
+	}
+
 	if config.IPv6Enabled {
 		mangleTableV6 := iptables.NewTable(
 			"mangle",
@@ -420,6 +437,37 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 	}
 	for _, t := range dp.iptablesRawTables {
 		dp.allIptablesTables = append(dp.allIptablesTables, t)
+	}
+
+	if config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" {
+		// Set up IPsec.
+		// FIXME: use correct local tunnel address (the one from our HostIP?)
+		addrs, _ := net.InterfaceAddrs()
+		for _, a := range addrs {
+			ipNet, ok := a.(*net.IPNet)
+			if !ok {
+				continue
+			}
+
+			ip := ipNet.IP.String()
+			if strings.HasPrefix(ip, "127.") {
+				continue
+			}
+			if strings.Contains(ip, ":") {
+				continue
+			}
+			dp.ipSecDataplane = ipsec.NewDataplane(
+				ip,
+				config.IPSecPSK,
+				config.IPSecIKEProposal,
+				config.IPSecESPProposal,
+				config.IPSecLogLevel,
+				config.RulesConfig.IptablesMarkIPsec,
+			)
+			ipSecManager := newIPSecManager(dp.ipSecDataplane)
+			dp.allManagers = append(dp.allManagers, ipSecManager)
+			break
+		}
 	}
 
 	// Register that we will report liveness and readiness.

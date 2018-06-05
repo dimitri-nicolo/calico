@@ -17,6 +17,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"reflect"
@@ -215,6 +216,18 @@ type Config struct {
 	DebugSimulateCalcGraphHangAfter time.Duration `config:"seconds;0"`
 	DebugSimulateDataplaneHangAfter time.Duration `config:"seconds;0"`
 
+	// IPSecMode controls which mode IPSec is operating on.
+	// Default value means IPSec is not enabled.
+	IPSecMode string `config:"string;"`
+	// File contains PSK.
+	IPSecPSKFile string `config:"file(must-exist);;local"`
+	// Defaults are the RFC 6379 Suite B recommendations:
+	// https://wiki.strongswan.org/projects/strongswan/wiki/IKEv2CipherSuites#Suite-B-Cryptographic-Suites-for-IPsec-RFC-6379
+	IPSecIKEAlgorithm string `config:"string;aes128gcm16-prfsha256-ecp256"`
+	IPSecESPAlgorithm string `config:"string;aes128gcm16-ecp256"`
+	// IPSecLogLevel controls log level for IPSec components. [Default: Info]
+	IPSecLogLevel string `config:"oneof(NOTICE,INFO,DEBUG,VERBOSE);INFO"`
+
 	// This MUST be ignored if set using config/env var, so DO NOT add
 	// the `config` struct tag to this.
 	LicenseValid bool // Don't add config tag here!
@@ -294,6 +307,31 @@ func (config *Config) OpenstackActive() bool {
 	}
 	log.Debug("No evidence this is an OpenStack deployment; disabling OpenStack special-cases")
 	return false
+}
+
+func (c *Config) IPSecEnabled() bool {
+	return c.IPSecMode != "" && c.IPSecIKEAlgorithm != "" && c.IPSecESPAlgorithm != ""
+}
+
+func (c *Config) GetPSKFromFile() string {
+	// Extract pre-shared key from file.
+	if c.IPSecMode != "PSK" {
+		return ""
+	}
+
+	if _, err := os.Stat(c.IPSecPSKFile); os.IsNotExist(err) {
+		log.Panicf("error file not exists for PSK: %s", c.IPSecPSKFile)
+	}
+
+	data, err := ioutil.ReadFile(c.IPSecPSKFile)
+	if err != nil {
+		log.Panicf("error reading PSK from file: %s, err %v", c.IPSecPSKFile, err)
+	}
+	if len(data) == 0 {
+		log.Panicf("error reading PSK from file: %s, read zero bytes", c.IPSecPSKFile)
+	}
+
+	return string(data)
 }
 
 func (config *Config) resolve() (changed bool, err error) {

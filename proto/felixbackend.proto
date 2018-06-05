@@ -97,6 +97,9 @@ message ToDataplane {
     NamespaceUpdate namespace_update = 21;
     // NamespaceRemove is sent when a Namespace is removed.
     NamespaceRemove namespace_remove = 22;
+
+    // Sent when the set of IPs behind one of our IPsec tunnels changes.
+    IPSecBindingUpdate ipsec_binding_update = 23;
   }
 }
 
@@ -400,6 +403,15 @@ message HostMetadataUpdate {
 message HostMetadataRemove {
   string hostname = 1;
   string ipv4_addr = 2;
+}
+
+message IPSecBindingUpdate {
+  // The address of the host's tunnel.
+  string tunnel_addr = 1;
+  // Newly added addresses behind the tunnel.
+  repeated string added_addrs = 2;
+  // Newly removed addresses behind the tunnel.
+  repeated string removed_addrs = 3;
 }
 
 message IPAMPoolUpdate {

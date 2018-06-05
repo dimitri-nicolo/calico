@@ -67,6 +67,8 @@ type EventSequencer struct {
 	pendingServiceAccountDeletes set.Set
 	pendingNamespaceUpdates      map[proto.NamespaceID]*proto.NamespaceUpdate
 	pendingNamespaceDeletes      set.Set
+	pendingIPSecBindingAdds      set.Set
+	pendingIPSecBindingRemoves   set.Set
 
 	// Sets to record what we've sent downstream.  Updated whenever we flush.
 	sentIPSets          set.Set
@@ -114,6 +116,8 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingServiceAccountDeletes: set.New(),
 		pendingNamespaceUpdates:      map[proto.NamespaceID]*proto.NamespaceUpdate{},
 		pendingNamespaceDeletes:      set.New(),
+		pendingIPSecBindingAdds:      set.New(),
+		pendingIPSecBindingRemoves:   set.New(),
 
 		// Sets to record what we've sent downstream.  Updated whenever we flush.
 		sentIPSets:          set.New(),
@@ -568,6 +572,9 @@ func (buf *EventSequencer) Flush() {
 	buf.flushServiceAccounts()
 	buf.flushNamespaces()
 
+	// Flush IPSec bindings, these have no particular ordering with other updates.
+	buf.flushIPSecBindings()
+
 	// Flush (rare) cluster-wide updates.  There's no particular ordering to these so we might
 	// as well do deletions first to minimise occupancy.
 	buf.flushHostIPDeletes()
@@ -656,6 +663,54 @@ func (buf *EventSequencer) flushServiceAccounts() {
 	}
 	buf.pendingServiceAccountUpdates = make(map[proto.ServiceAccountID]*proto.ServiceAccountUpdate)
 	log.Debug("Done flushing Service Accounts")
+}
+
+func (buf *EventSequencer) OnIPSecBindingAdded(b IPSecBinding) {
+	if buf.pendingIPSecBindingRemoves.Contains(b) {
+		// We haven't sent this remove through to the dataplane yet so we can squash it here...
+		buf.pendingIPSecBindingRemoves.Discard(b)
+	} else {
+		buf.pendingIPSecBindingAdds.Add(b)
+	}
+}
+
+func (buf *EventSequencer) OnIPSecBindingRemoved(b IPSecBinding) {
+	if buf.pendingIPSecBindingAdds.Contains(b) {
+		// We haven't sent this add through to the dataplane yet so we can squash it here...
+		buf.pendingIPSecBindingAdds.Discard(b)
+	} else {
+		buf.pendingIPSecBindingRemoves.Add(b)
+	}
+}
+
+func (buf *EventSequencer) flushIPSecBindings() {
+	updatesByTunnel := map[ip.Addr]*proto.IPSecBindingUpdate{}
+
+	getOrCreateUpd := func(tunnelAddr ip.Addr) *proto.IPSecBindingUpdate {
+		upd := updatesByTunnel[tunnelAddr]
+		if upd == nil {
+			upd = &proto.IPSecBindingUpdate{}
+			updatesByTunnel[tunnelAddr] = upd
+			upd.TunnelAddr = tunnelAddr.String()
+		}
+		return upd
+	}
+	buf.pendingIPSecBindingAdds.Iter(func(item interface{}) error {
+		b := item.(IPSecBinding)
+		upd := getOrCreateUpd(b.TunnelAddr)
+		upd.AddedAddrs = append(upd.AddedAddrs, b.WorkloadAddr.String())
+		return set.RemoveItem
+	})
+	buf.pendingIPSecBindingRemoves.Iter(func(item interface{}) error {
+		b := item.(IPSecBinding)
+		upd := getOrCreateUpd(b.TunnelAddr)
+		upd.RemovedAddrs = append(upd.RemovedAddrs, b.WorkloadAddr.String())
+		return set.RemoveItem
+	})
+
+	for _, upd := range updatesByTunnel {
+		buf.Callback(upd)
+	}
 }
 
 func (buf *EventSequencer) OnNamespaceUpdate(update *proto.NamespaceUpdate) {

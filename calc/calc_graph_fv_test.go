@@ -318,6 +318,10 @@ func describeAsyncTests(baseTests []StateList) {
 					// Create the calculation graph.
 					conf := config.New()
 					conf.FelixHostname = localHostname
+					conf.IPSecMode = "PSK"
+					conf.IPSecPSKFile = "/proc/1/cmdline"
+					conf.IPSecIKEAlgorithm = "somealgo"
+					conf.IPSecESPAlgorithm = "somealgo"
 					outputChan := make(chan interface{})
 					asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, nil)
 					// And a validation filter, with a channel between it
@@ -401,6 +405,10 @@ func describeAsyncTests(baseTests []StateList) {
 					Expect(mockDataplane.EndpointToUntrackedPolicyOrder()).To(Equal(state.ExpectedUntrackedEndpointPolicyOrder),
 						"Endpoint untracked policy order incorrect after moving to state: %v",
 						state.Name)
+
+					Expect(mockDataplane.ActiveIPSecBindings()).To(Equal(state.ExpectedIPSecBindings),
+						"IPsec bindings incorrect after moving to state: %v",
+						state.Name)
 				})
 			}
 		}
@@ -431,6 +439,7 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
 		calcGraph = NewCalculationGraph(eventBuf, localHostname)
+		calcGraph.EnableIPSec(eventBuf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			log.WithField("stats", stats).Info("Stats update")
 			lastStats = stats
@@ -523,6 +532,9 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 		Expect(lastStats.NumProfiles).To(Equal(state.NumProfileRules()),
 			"number of profiles stat incorrect after moving to state: %v\n%+v",
 			state.Name, spew.Sdump(state.DatastoreState))
+		Expect(mockDataplane.ActiveIPSecBindings()).To(Equal(state.ExpectedIPSecBindings),
+			"IPsec bindings incorrect after moving to state: %v",
+			state.Name)
 	}))
 }
 
