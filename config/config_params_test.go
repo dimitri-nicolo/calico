@@ -56,6 +56,13 @@ var _ = PDescribe("FelixConfig vs ConfigParams parity", func() {
 		"IpInIpTunnelAddr",
 
 		"EnableNflogSize",
+
+		// Until libcalico-go-private gets Cloudwatch logs config
+		"CloudWatchLogsReporterEnabled",
+		"CloudWatchLogsFlushInterval",
+		"CloudWatchLogsLogGroupName",
+		"CloudWatchLogsLogStreamName",
+		"CloudWatchLogsIncludeLabels",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",

@@ -278,7 +278,7 @@ func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes i
 }
 
 // ToMetricUpdate converts the RuleTrace to a MetricUpdate used by the reporter.
-func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td TrafficDirection, ctr *Counter, ctrRev *Counter) MetricUpdate {
+func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, srcEp, dstEp *calc.EndpointData, td TrafficDirection, ctr *Counter, ctrRev *Counter) MetricUpdate {
 	var (
 		dp, db, dpRev, dbRev int
 		isConn               bool
@@ -294,6 +294,8 @@ func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, td TrafficDirection,
 	mu := MetricUpdate{
 		updateType:   ut,
 		tuple:        t,
+		srcEp:        srcEp,
+		dstEp:        dstEp,
 		ruleID:       rt.VerdictRuleID(),
 		isConnection: isConn,
 	}
@@ -349,7 +351,12 @@ func (t *Tuple) String() string {
 // and connTrackCtrReverse for the reverse/reply of this connection.
 type Data struct {
 	Tuple Tuple
-	key   model.Key
+
+	// Contains endpoint information corresponding to source and
+	// destination endpoints. Either of these values can be nil
+	// if we don't have information about the endpoint.
+	srcEp *calc.EndpointData
+	dstEp *calc.EndpointData
 
 	// Indicates if this is a connection
 	isConnection bool
@@ -368,11 +375,12 @@ type Data struct {
 	dirty      bool
 }
 
-func NewData(tuple Tuple, key model.Key, duration time.Duration) *Data {
+func NewData(tuple Tuple, sep, dep *calc.EndpointData, duration time.Duration) *Data {
 	now := monotime.Now()
 	return &Data{
 		Tuple:            tuple,
-		key:              key,
+		srcEp:            sep,
+		dstEp:            dep,
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        now,
@@ -383,8 +391,19 @@ func NewData(tuple Tuple, key model.Key, duration time.Duration) *Data {
 }
 
 func (d *Data) String() string {
-	return fmt.Sprintf("tuple={%v}, ep={%v} connTrackCtr={%v}, connTrackCtrReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
-		&(d.Tuple), endpointName(d.key), d.connTrackCtr.String(), d.connTrackCtrReverse.String(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
+	var srcName, dstName string
+	if d.srcEp != nil {
+		srcName = endpointName(d.srcEp.Key)
+	} else {
+		srcName = "<unknown>"
+	}
+	if d.dstEp != nil {
+		dstName = endpointName(d.dstEp.Key)
+	} else {
+		dstName = "<unknown>"
+	}
+	return fmt.Sprintf("tuple={%v}, srcEp={%v} dstEp={%v} connTrackCtr={%v}, connTrackCtrReverse={%v}, updatedAt=%v ingressRuleTrace={%v} egressRuleTrace={%v}",
+		&(d.Tuple), srcName, dstName, d.connTrackCtr.String(), d.connTrackCtrReverse.String(), d.updatedAt, d.IngressRuleTrace, d.EgressRuleTrace)
 }
 
 func (d *Data) touch() {
@@ -524,17 +543,17 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	if ((d.EgressRuleTrace.Action() == rules.RuleActionDeny || d.EgressRuleTrace.Action() == rules.RuleActionAllow) && (expired || d.EgressRuleTrace.IsDirty())) ||
 		(!expired && d.EgressRuleTrace.Action() == rules.RuleActionAllow && d.isConnection && d.IsDirty()) {
 		if d.isConnection {
-			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, TrafficDirOutbound, &d.connTrackCtr, &d.connTrackCtrReverse)
+			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirOutbound, &d.connTrackCtr, &d.connTrackCtrReverse)
 		} else {
-			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, TrafficDirOutbound, nil, nil)
+			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirOutbound, nil, nil)
 		}
 	}
 	if ((d.IngressRuleTrace.Action() == rules.RuleActionDeny || d.IngressRuleTrace.Action() == rules.RuleActionAllow) && (expired || d.IngressRuleTrace.IsDirty())) ||
 		(!expired && d.IngressRuleTrace.Action() == rules.RuleActionAllow && d.isConnection && d.IsDirty()) {
 		if d.isConnection {
-			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, TrafficDirInbound, &d.connTrackCtr, &d.connTrackCtrReverse)
+			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirInbound, &d.connTrackCtr, &d.connTrackCtrReverse)
 		} else {
-			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, TrafficDirInbound, nil, nil)
+			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirInbound, nil, nil)
 		}
 	}
 

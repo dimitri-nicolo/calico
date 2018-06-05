@@ -365,7 +365,7 @@ var localEp1With3NodesSharingIPAndRemoteEp = localEp1With3NodesSharingIP.withKVU
 	"10.0.1.1",
 	"10.0.1.2",
 ).withRemoteEndpoint(
-	calc.EndpointData{
+	&calc.EndpointData{
 		Key:      remoteWlEpKey1,
 		Endpoint: &commRemoteWlEp1,
 	},
@@ -384,7 +384,7 @@ var localEp1With3NodesSharingIPAndRemoteEps = localEp1With3NodesSharingIPAndRemo
 }).withIPSecBlacklist(
 	"10.0.2.2",
 ).withRemoteEndpoint(
-	calc.EndpointData{
+	&calc.EndpointData{
 		Key:      remoteWlEpKey2,
 		Endpoint: &commRemoteWlEp2,
 	},
@@ -403,7 +403,7 @@ var localAndRemoteEndpointsWithMissingRemoteNode = localEp1WithNode.withKVUpdate
 	"10.0.1.1",
 	"10.0.1.2",
 ).withRemoteEndpoint(
-	calc.EndpointData{
+	&calc.EndpointData{
 		Key:      remoteWlEpKey1,
 		Endpoint: &commRemoteWlEp1,
 	},
@@ -575,7 +575,7 @@ var remoteWlEp3 = WorkloadEndpoint{
 var remoteWlEp1WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	KVPair{Key: remoteWlEpKey1, Value: &remoteWlEp1},
 ).withRemoteEndpoint(
-	calc.EndpointData{
+	&calc.EndpointData{
 		Key:      remoteWlEpKey1,
 		Endpoint: &remoteWlEp1,
 	},
@@ -614,7 +614,7 @@ var localEpAndRemoteEpWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 		{"tier-1", []string{"pol-1"}, []string{"pol-1"}},
 	},
 ).withRemoteEndpoint(
-	calc.EndpointData{
+	&calc.EndpointData{
 		Key:      remoteWlEpKey3,
 		Endpoint: &remoteWlEp3,
 	},
@@ -624,12 +624,12 @@ var remoteEpsWithPolicyAndTier = withPolicyAndTier.withKVUpdates(
 	KVPair{Key: remoteWlEpKey1, Value: &remoteWlEp1},
 	KVPair{Key: remoteWlEpKey3, Value: &remoteWlEp3},
 ).withRemoteEndpoint(
-	calc.EndpointData{
+	&calc.EndpointData{
 		Key:      remoteWlEpKey1,
 		Endpoint: &remoteWlEp1,
 	},
 ).withRemoteEndpoint(
-	calc.EndpointData{
+	&calc.EndpointData{
 		Key:      remoteWlEpKey3,
 		Endpoint: &remoteWlEp3,
 	},

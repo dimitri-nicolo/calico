@@ -24,7 +24,7 @@ type EndpointData struct {
 // IsLocal returns if this EndpointData corresponds to a local endpoint or not.
 // This works because, we don't process tier information for remote endpoints
 // and only do so for remote endpoints.
-func (e EndpointData) IsLocal() bool {
+func (e *EndpointData) IsLocal() bool {
 	return e.OrderedTiers != nil
 }
 
@@ -40,13 +40,13 @@ func (e EndpointData) IsLocal() bool {
 // cache appropriately.
 type EndpointLookupsCache struct {
 	epMutex       sync.RWMutex
-	ipToEndpoints map[[16]byte][]EndpointData
+	ipToEndpoints map[[16]byte][]*EndpointData
 	endpointToIps map[model.Key]set.Set
 }
 
 func NewEndpointLookupsCache() *EndpointLookupsCache {
 	ec := &EndpointLookupsCache{
-		ipToEndpoints: map[[16]byte][]EndpointData{},
+		ipToEndpoints: map[[16]byte][]*EndpointData{},
 		endpointToIps: map[model.Key]set.Set{},
 		epMutex:       sync.RWMutex{},
 	}
@@ -70,7 +70,7 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := ep.(*model.WorkloadEndpoint)
-			ed := EndpointData{
+			ed := &EndpointData{
 				Key:          k,
 				Endpoint:     ep,
 				OrderedTiers: make([]string, len(filteredTiers)),
@@ -86,7 +86,7 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := ep.(*model.HostEndpoint)
-			ed := EndpointData{
+			ed := &EndpointData{
 				Key:          k,
 				Endpoint:     ep,
 				OrderedTiers: make([]string, len(filteredTiers)),
@@ -116,7 +116,7 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := epUpdate.Value.(*model.WorkloadEndpoint)
-			ed := EndpointData{
+			ed := &EndpointData{
 				Key:      k,
 				Endpoint: epUpdate.Value,
 			}
@@ -127,7 +127,7 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := epUpdate.Value.(*model.HostEndpoint)
-			ed := EndpointData{
+			ed := &EndpointData{
 				Key:      k,
 				Endpoint: epUpdate.Value,
 			}
@@ -144,7 +144,7 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 
 // addOrUpdateEndpoint tracks endpoint to IP mapping as well as IP to endpoint reverse mapping
 // for a workload or host endpoint.
-func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, ed EndpointData, nets [][16]byte) {
+func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, ed *EndpointData, nets [][16]byte) {
 	// If the endpoint exists, it was updated, then we might have to add or
 	// remove IPs.
 	// First up, get all current ip addresses.
@@ -211,7 +211,7 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, ed EndpointDa
 // ip address in the ipToEndpoints map.
 // This method isn't safe to be used concurrently and the caller should acquire the
 // EndpointLookupsCache.epMutex before calling this method.
-func (ec *EndpointLookupsCache) updateIPToEndpointMapping(ip [16]byte, ed EndpointData) {
+func (ec *EndpointLookupsCache) updateIPToEndpointMapping(ip [16]byte, ed *EndpointData) {
 	// Check if this IP is already has a corresponding endpoint.
 	// If it has one, then append the endpoint to it. This is
 	// expected to happen if an IP address is reused in a very
@@ -219,7 +219,7 @@ func (ec *EndpointLookupsCache) updateIPToEndpointMapping(ip [16]byte, ed Endpoi
 	// mapping entry.
 	existingEps, ok := ec.ipToEndpoints[ip]
 	if !ok {
-		ec.ipToEndpoints[ip] = []EndpointData{ed}
+		ec.ipToEndpoints[ip] = []*EndpointData{ed}
 	} else {
 		isExistingEp := false
 		for i := range existingEps {
@@ -274,7 +274,7 @@ func (ec *EndpointLookupsCache) removeEndpointIpMapping(key model.Key, ip [16]by
 		// If there is more than one endpoint, then keep the reverse ip
 		// to endpoint mapping but only remove the endpoint corresponding
 		// to this remove call.
-		newEps := make([]EndpointData, 0, len(existingEps)-1)
+		newEps := make([]*EndpointData, 0, len(existingEps)-1)
 		for _, ep := range existingEps {
 			if ep.Key == key {
 				continue
@@ -308,7 +308,7 @@ func (ec *EndpointLookupsCache) IsEndpoint(addr [16]byte) bool {
 }
 
 // GetEndpoint returns the ordered list of tiers for a particular endpoint.
-func (ec *EndpointLookupsCache) GetEndpoint(addr [16]byte) (EndpointData, bool) {
+func (ec *EndpointLookupsCache) GetEndpoint(addr [16]byte) (*EndpointData, bool) {
 	ec.epMutex.RLock()
 	defer ec.epMutex.RUnlock()
 	eps, ok := ec.ipToEndpoints[addr]
@@ -316,7 +316,7 @@ func (ec *EndpointLookupsCache) GetEndpoint(addr [16]byte) (EndpointData, bool) 
 		// We return the last observed endpoint.
 		return eps[len(eps)-1], ok
 	}
-	return EndpointData{}, ok
+	return nil, ok
 }
 
 // endpointName is a convenience function to return a printable name for an endpoint.

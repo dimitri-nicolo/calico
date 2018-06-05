@@ -114,7 +114,11 @@ type Config struct {
 	PrometheusReporterKeyFile  string
 	PrometheusReporterCAFile   string
 
-	CloudWatchReporterEnabled bool
+	CloudWatchLogsReporterEnabled bool
+	CloudWatchLogsFlushInterval   time.Duration
+	CloudWatchLogsLogGroupName    string
+	CloudWatchLogsLogStreamName   string
+	CloudWatchLogsIncludeLabels   bool
 
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
@@ -564,8 +568,19 @@ func (d *InternalDataplane) Start() {
 		rm.RegisterMetricsReporter(pr)
 	}
 	// TODO: Pass in the the necessary AWS client config.
-	if d.config.CloudWatchReporterEnabled {
-		cw := collector.NewCloudWatchReporter(d.config.DeletedMetricsRetentionSecs)
+	log.Infof("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
+	if d.config.CloudWatchLogsReporterEnabled {
+		logGroupName := "/sample-infra-org/anx/flowlogs/"
+		if d.config.CloudWatchLogsLogGroupName != "" {
+			logGroupName = d.config.CloudWatchLogsLogGroupName
+		}
+		logStreamName := d.config.FelixHostname + "_FlowLogs"
+		if d.config.CloudWatchLogsLogStreamName != "" {
+			logStreamName = d.config.CloudWatchLogsLogStreamName
+		}
+		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, nil)
+		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval)
+		cw.AddAggregator(collector.NewCloudWatchAggregator(d.config.CloudWatchLogsIncludeLabels))
 		rm.RegisterMetricsReporter(cw)
 	}
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
