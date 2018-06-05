@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	kapiv1 "k8s.io/api/core/v1"
@@ -37,6 +38,8 @@ const (
 	nodeBgpIpv4AddrAnnotation = "projectcalico.org/IPv4Address"
 	nodeBgpIpv6AddrAnnotation = "projectcalico.org/IPv6Address"
 	nodeBgpAsnAnnotation      = "projectcalico.org/ASNumber"
+	k8sOrchestratorName       = "k8s"
+	providerIDSep             = "://"
 )
 
 func NewNodeClient(c *kubernetes.Clientset) K8sResourceClient {
@@ -223,6 +226,21 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node) (*model.KVPair, error) {
 	} else if bgpSpec.IPv4Address != "" || bgpSpec.IPv6Address != "" || bgpSpec.ASNumber != nil {
 		log.Warnf("Node %s does not have podCIDR to use to calculate the IPIP Tunnel Address", k8sNode.Name)
 		calicoNode.Spec.BGP = bgpSpec
+	}
+
+	calicoNode.Spec.OrchRefs = []apiv3.OrchRef{
+		{
+			Orchestrator: k8sOrchestratorName,
+			NodeName:     k8sNode.Name,
+		},
+	}
+	// ProdviderID is of the form <cloud>://<instance ID>
+	pidParts := strings.SplitN(k8sNode.Spec.ProviderID, providerIDSep, 2)
+	if len(pidParts) == 2 {
+		calicoNode.Spec.OrchRefs = append(calicoNode.Spec.OrchRefs, apiv3.OrchRef{
+			Orchestrator: pidParts[0],
+			NodeName:     pidParts[1],
+		})
 	}
 
 	// Create the resource key from the node name.

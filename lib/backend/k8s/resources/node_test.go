@@ -182,6 +182,49 @@ var _ = Describe("Test Node conversion", func() {
 		Expect(ipInIpAddr).To(Equal("10.0.0.1"))
 	})
 
+	It("should parse a k8s Node with ProviderID to CalicoNode with OrchestratorRef", func() {
+		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
+		node := k8sapi.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "TestNode",
+				Labels:          l,
+				ResourceVersion: "1234",
+				Annotations: map[string]string{
+					nodeBgpIpv4AddrAnnotation: "172.17.17.10",
+					nodeBgpAsnAnnotation:      "2546",
+				},
+			},
+			Status: k8sapi.NodeStatus{
+				Addresses: []k8sapi.NodeAddress{
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeInternalIP,
+						Address: "172.17.17.10",
+					},
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeExternalIP,
+						Address: "192.168.1.100",
+					},
+					k8sapi.NodeAddress{
+						Type:    k8sapi.NodeHostName,
+						Address: "172-17-17-10",
+					},
+				},
+			},
+			Spec: k8sapi.NodeSpec{
+				PodCIDR:    "10.0.0.1/24",
+				ProviderID: "aws:///us-west-1/i-12345678abcdef01",
+			},
+		}
+
+		n, err := K8sNodeToCalico(&node)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(n.Value.(*apiv3.Node).Spec.OrchRefs).To(Equal([]apiv3.OrchRef{
+			{Orchestrator: "k8s", NodeName: "TestNode"},
+			{Orchestrator: "aws", NodeName: "/us-west-1/i-12345678abcdef01"},
+		}))
+	})
+
 	It("Should parse and remove BGP info when given Calico Node with empty BGP spec", func() {
 		l := map[string]string{"net.beta.kubernetes.io/role": "master"}
 		k8sNode := &k8sapi.Node{
@@ -239,6 +282,7 @@ var _ = Describe("Test Node conversion", func() {
 				IPv6Address: "aa:bb:cc::ffff/120",
 				ASNumber:    &asn,
 			},
+			OrchRefs: []apiv3.OrchRef{{Orchestrator: "k8s", NodeName: "TestNode"}},
 		}
 
 		newK8sNode, err := mergeCalicoNodeIntoK8sNode(calicoNode, k8sNode)
