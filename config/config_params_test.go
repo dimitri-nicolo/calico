@@ -371,6 +371,8 @@ var _ = DescribeTable("Config parsing",
 	Entry("IPSecLogLevel", "IPSecLogLevel", "info", "INFO"),
 	Entry("IPSecLogLevel", "IPSecLogLevel", "debug", "DEBUG"),
 	Entry("IPSecLogLevel", "IPSecLogLevel", "verbose", "VERBOSE"),
+
+	Entry("IPSecRekeyTime", "IPSecRekeyTime", "123", 123*time.Second),
 )
 
 var _ = DescribeTable("OpenStack heuristic tests",

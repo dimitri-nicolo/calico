@@ -331,7 +331,7 @@ func (c *Container) GetSinglePID(processName string) int {
 			return pids[0]
 		}
 		Expect(time.Since(start)).To(BeNumerically("<", time.Second),
-			"Timed out waiting for there to be a single PID")
+			fmt.Sprintf("Timed out waiting for there to be a single PID for %s", processName))
 		time.Sleep(50 * time.Millisecond)
 	}
 }
@@ -436,14 +436,14 @@ func (c *Container) SourceName() string {
 	return c.Name
 }
 
-func (c *Container) CanConnectTo(ip, port, protocol string, duration uint) (bool, string) {
+func (c *Container) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
 
 	// Ensure that the container has the 'test-connection' binary.
 	c.EnsureBinary("test-connection")
 
 	// Run 'test-connection' to the target.
 	connectionCmd := utils.Command("docker", "exec", c.Name,
-		"/test-connection", "--protocol="+protocol, "-", ip, port, fmt.Sprintf("--duration=%d", duration))
+		"/test-connection", "--protocol="+protocol, "-", ip, port, fmt.Sprintf("--duration=%d", int(duration.Seconds())))
 
 	return utils.RunConnectionCmd(connectionCmd)
 }
