@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -40,6 +41,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/projectcalico/libcalico-go/lib/options"
+	"github.com/projectcalico/node/pkg/startup/autodetection"
 )
 
 var exitCode int
@@ -951,3 +953,61 @@ var _ = Describe("UT for GenerateIPv6ULAPrefix", func() {
 		Fail("random bits were all zeros")
 	})
 })
+
+var _ = Describe("UT for cloud orchestrator refs", func() {
+	var node api.Node
+	var oldDetectors map[string]autodetection.CloudDetector
+
+	BeforeEach(func() {
+		oldDetectors = autodetection.CloudDetectors
+		node.Spec.OrchRefs = []api.OrchRef{{Orchestrator: "k8s", NodeName: "testnode"}}
+	})
+
+	Context("when cloud detector succeeds", func() {
+		BeforeEach(func() {
+			autodetection.CloudDetectors = map[string]autodetection.CloudDetector{
+				"test": testDetector{
+					ref: api.OrchRef{Orchestrator: "cloudo", NodeName: "cloudo-001"},
+				},
+			}
+			configureCloudOrchRef(&node)
+		})
+
+		It("should add the OrchRef", func() {
+			Expect(node.Spec.OrchRefs).To(Equal([]api.OrchRef{
+				{Orchestrator: "k8s", NodeName: "testnode"},
+				{Orchestrator: "cloudo", NodeName: "cloudo-001"},
+			}))
+		})
+	})
+
+	Context("when cloud detector fails", func() {
+		BeforeEach(func() {
+			autodetection.CloudDetectors = map[string]autodetection.CloudDetector{
+				"test": testDetector{
+					err: errors.New("failed"),
+				},
+			}
+			configureCloudOrchRef(&node)
+		})
+
+		It("should leave OrchRef unchanged", func() {
+			Expect(node.Spec.OrchRefs).To(Equal([]api.OrchRef{
+				{Orchestrator: "k8s", NodeName: "testnode"},
+			}))
+		})
+	})
+
+	AfterEach(func() {
+		autodetection.CloudDetectors = oldDetectors
+	})
+})
+
+type testDetector struct {
+	ref api.OrchRef
+	err error
+}
+
+func (td testDetector) GetOrchRef() (api.OrchRef, error) {
+	return td.ref, td.err
+}
