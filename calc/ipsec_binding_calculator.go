@@ -108,7 +108,7 @@ func (c *IPSecBindingCalculator) OnHostIPUpdate(update api.Update) (_ bool) {
 
 		newNumNodesSharingIP := c.numActiveNodesSharingIP(oldIP)
 
-		if oldNumNodesSharingIP == 2 && newNumNodesSharingIP == 1 {
+		if oldNumNodesSharingIP > 1 && newNumNodesSharingIP == 1 {
 			// Previously, we were sharing this IP with another node (so we couldn't emit any bindings for either node)
 			// but now it only belongs to the other node. Emit any bindings that belong to the other node.
 			logCxt.Debug("Removing node made IP unique, emitting bindings for other node")
@@ -122,7 +122,7 @@ func (c *IPSecBindingCalculator) OnHostIPUpdate(update api.Update) (_ bool) {
 
 	if newIP != nil {
 		// Figure out how many active (i.e. with workloads) nodes were sharing the new IP before and after updating the
-		// index.  The delta will tell us if we have any clean up to do.
+		// index.  The exact values will tell us if we have any clean up to do.
 		oldNumNodesSharingIP := c.numActiveNodesSharingIP(newIP)
 
 		// Put the new IP in the node IP indexes.
@@ -133,11 +133,11 @@ func (c *IPSecBindingCalculator) OnHostIPUpdate(update api.Update) (_ bool) {
 
 		newNumNodesSharingIP := c.numActiveNodesSharingIP(newIP)
 
-		if oldNumNodesSharingIP == 0 && newNumNodesSharingIP == 1 {
+		if oldNumNodesSharingIP < 1 && newNumNodesSharingIP == 1 {
 			// No active node had this IP before and we just claimed it.
 			logCxt.Debug("New IP is unique, emitting bindings")
 			c.activateBindingsForNode(nodeName, newIP)
-		} else if oldNumNodesSharingIP == 1 && newNumNodesSharingIP == 2 {
+		} else if oldNumNodesSharingIP == 1 && newNumNodesSharingIP > 1 {
 			// IP previously belonged solely to another node but now it's ambiguous, need to remove the bindings that
 			// were associated with the old node.
 			logCxt.Warn("New IP was previously owned by another node but now it's shared, removing bindings")

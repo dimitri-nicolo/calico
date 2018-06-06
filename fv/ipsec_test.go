@@ -131,9 +131,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			t.Stop()
 		}
 
-		// Work around
-		time.Sleep(2 * time.Second)
-
 		for _, felix := range felixes {
 			felix.Stop()
 		}
