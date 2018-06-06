@@ -100,6 +100,11 @@ message ToDataplane {
 
     // Sent when the set of IPs behind one of our IPsec tunnels changes.
     IPSecBindingUpdate ipsec_binding_update = 23;
+
+    // Send when one or more IPs is blacklisted.
+    IPSecBlacklistAdd ipsec_binding_add = 24;
+    // Send when one or more IPs is un-blacklisted.
+    IPSecBlacklistRemove ipsec_binding_remove = 25;
   }
 }
 
@@ -412,6 +417,14 @@ message IPSecBindingUpdate {
   repeated string added_addrs = 2;
   // Newly removed addresses behind the tunnel.
   repeated string removed_addrs = 3;
+}
+
+message IPSecBlacklistAdd {
+  repeated string added_addrs = 1;
+}
+
+message IPSecBlacklistRemove {
+  repeated string removed_addrs = 1;
 }
 
 message IPAMPoolUpdate {

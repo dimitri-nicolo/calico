@@ -15,7 +15,7 @@ import (
 
 func NewIPSecBindingCalculator() *IPSecBindingCalculator {
 	return &IPSecBindingCalculator{
-		nodeNameToAddress:  map[string]ip.Addr{},
+		nodeNameToNodeInfo: map[string]nodeInfo{},
 		addressToNodeNames: map[ip.Addr][]string{},
 
 		ipToEndpointKeys:  map[ip.Addr][]model.WorkloadEndpointKey{},
@@ -38,14 +38,21 @@ func NewIPSecBindingCalculator() *IPSecBindingCalculator {
 // In particular, we need to do something safe while the misconfiguration is in place and then we need to
 // correct the state when the misconfiguration is removed.
 type IPSecBindingCalculator struct {
-	nodeNameToAddress  map[string]ip.Addr
+	nodeNameToNodeInfo map[string]nodeInfo
 	addressToNodeNames map[ip.Addr][]string
 
 	ipToEndpointKeys  map[ip.Addr][]model.WorkloadEndpointKey
 	endpointKeysToIPs map[model.WorkloadEndpointKey][]ip.Addr
 
-	OnBindingAdded   func(b IPSecBinding)
-	OnBindingRemoved func(b IPSecBinding)
+	OnBindingAdded     func(b IPSecBinding)
+	OnBindingRemoved   func(b IPSecBinding)
+	OnBlacklistAdded   func(workloadAddr ip.Addr)
+	OnBlacklistRemoved func(workloadAddr ip.Addr)
+}
+
+type nodeInfo struct {
+	addr          ip.Addr
+	workloadCount int
 }
 
 type IPSecBinding struct {
@@ -60,64 +67,122 @@ func (c *IPSecBindingCalculator) RegisterWith(allUpdDispatcher *dispatcher.Dispa
 func (c *IPSecBindingCalculator) OnHostIPUpdate(update api.Update) (_ bool) {
 	hostIPKey := update.Key.(model.HostIPKey)
 	nodeName := hostIPKey.Hostname
-	var oldIP = c.nodeNameToAddress[nodeName]
+	oldNodeInfo := c.nodeNameToNodeInfo[nodeName]
+	oldIP := oldNodeInfo.addr
 	var newIP ip.Addr
 	logCxt := log.WithField("host", hostIPKey.Hostname)
 	if update.Value != nil {
 		logCxt = logCxt.WithField("newIP", update.Value)
 		logCxt.Debug("Updating IP for host")
 		newIP = ip.FromNetIP(update.Value.(*net.IP).IP)
+	} else {
+		logCxt.Debug("Host deleted")
 	}
 
 	if oldIP == newIP {
 		// No change. Ignore.
+		logCxt.Debug("IP didn't change, ignoring")
 		return
 	}
 
-	// First remove the old IP.
+	// First remove the old IP.  For simplicity we treat a mutation as a remove followed by an add.
 	if oldIP != nil {
-		if numHostsSharingIP := len(c.addressToNodeNames[oldIP]); numHostsSharingIP == 1 {
-			// IP was uniquely owned by this host; there may have been bindings associated with it, clean those up.
-			logCxt.Debug("IP was unique before, removing bindings")
-			c.removeBindingsForNode(nodeName, oldIP)
-			delete(c.addressToNodeNames, oldIP)
-		} else if numHostsSharingIP > 1 {
-			// Remove the node from the index first, so we can easily find the other node that shares the IP below.
-			c.addressToNodeNames[oldIP] = filterOutString(c.addressToNodeNames[oldIP], nodeName)
-			if numHostsSharingIP == 2 {
-				// Removing the old IP means that the IP is now uniquely owned by a single other node, we now need to emit
-				// bindings for that node.
-				logCxt.Debug("Old IP is now unique, emitting bindings")
-				otherNode := c.addressToNodeNames[oldIP][0]
-				c.emitBindingsForNode(otherNode, oldIP)
-			}
-		}
+		// Figure out how many active (i.e. with workloads) nodes were sharing the old IP before and after updating the
+		// index.  The delta will tell us if we have any clean up to do.
+		oldNumNodesSharingIP := c.numActiveNodesSharingIP(oldIP)
+
 		// Fix up the index.
-		delete(c.nodeNameToAddress, nodeName)
+		if oldNodeInfo.workloadCount == 0 {
+			delete(c.nodeNameToNodeInfo, nodeName)
+		} else {
+			newNodeInfo := oldNodeInfo
+			newNodeInfo.addr = nil
+			c.nodeNameToNodeInfo[nodeName] = newNodeInfo
+		}
+		updatedNodeNames := filterOutString(c.addressToNodeNames[oldIP], nodeName)
+		if len(updatedNodeNames) == 0 {
+			delete(c.addressToNodeNames, oldIP)
+		} else {
+			c.addressToNodeNames[oldIP] = updatedNodeNames
+		}
+
+		newNumNodesSharingIP := c.numActiveNodesSharingIP(oldIP)
+
+		if oldNumNodesSharingIP > 1 && newNumNodesSharingIP == 1 {
+			// Previously, we were sharing this IP with another node (so we couldn't emit any bindings for either node)
+			// but now it only belongs to the other node. Emit any bindings that belong to the other node.
+			logCxt.Debug("Removing node made IP unique, emitting bindings for other node")
+			otherNode := c.findActiveNodeByIP(oldIP)
+			c.activateBindingsForNode(otherNode, oldIP)
+		} else if oldNumNodesSharingIP == 1 && newNumNodesSharingIP == 0 {
+			logCxt.Debug("IP was unique before, removing bindings")
+			c.deactivateBindingsForNode(nodeName, oldIP)
+		}
 	}
 
 	if newIP != nil {
-		// Add the new IP.
-		if numHostsSharingIP := len(c.addressToNodeNames[newIP]); numHostsSharingIP == 0 {
-			// IP previously had no owner so IP is now uniquely owned by this host.  Check for any pre-existing
-			// workloads that were waiting for this binding to show up.
+		// Figure out how many active (i.e. with workloads) nodes were sharing the new IP before and after updating the
+		// index.  The exact values will tell us if we have any clean up to do.
+		oldNumNodesSharingIP := c.numActiveNodesSharingIP(newIP)
+
+		// Put the new IP in the node IP indexes.
+		newNodeInfo := oldNodeInfo
+		newNodeInfo.addr = newIP
+		c.nodeNameToNodeInfo[nodeName] = newNodeInfo
+		c.addressToNodeNames[newIP] = append(c.addressToNodeNames[newIP], nodeName)
+
+		newNumNodesSharingIP := c.numActiveNodesSharingIP(newIP)
+
+		if oldNumNodesSharingIP < 1 && newNumNodesSharingIP == 1 {
+			// No active node had this IP before and we just claimed it.
 			logCxt.Debug("New IP is unique, emitting bindings")
-			c.emitBindingsForNode(nodeName, newIP)
-		} else if numHostsSharingIP == 1 {
+			c.activateBindingsForNode(nodeName, newIP)
+		} else if oldNumNodesSharingIP == 1 && newNumNodesSharingIP > 1 {
 			// IP previously belonged solely to another node but now it's ambiguous, need to remove the bindings that
 			// were associated with the old node.
 			logCxt.Warn("New IP was previously owned by another node but now it's shared, removing bindings")
 			otherNode := c.addressToNodeNames[newIP][0]
-			c.removeBindingsForNode(otherNode, newIP)
+			c.deactivateBindingsForNode(otherNode, newIP)
 		}
-		// Put the new IP in the node IP indexes.
-		c.nodeNameToAddress[nodeName] = newIP
-		c.addressToNodeNames[newIP] = append(c.addressToNodeNames[newIP], nodeName)
 	}
 	return
 }
 
-func (c *IPSecBindingCalculator) emitBindingsForNode(nodeName string, nodeIP ip.Addr) {
+func (c *IPSecBindingCalculator) numActiveNodesSharingIP(nodeIP ip.Addr) (count int) {
+	if nodeIP == nil {
+		return
+	}
+	for _, nodeName := range c.addressToNodeNames[nodeIP] {
+		nodeInfo := c.nodeNameToNodeInfo[nodeName]
+		if nodeInfo.addr != nodeIP {
+			log.WithFields(log.Fields{
+				"expectedIP": nodeIP,
+				"node":       nodeName,
+				"recordedIP": nodeInfo.addr,
+			}).Panic("Bug: forward and reverse indexes disagree")
+		}
+		if nodeInfo.workloadCount > 0 {
+			count++
+		}
+	}
+	return
+}
+
+func (c *IPSecBindingCalculator) findActiveNodeByIP(nodeIP ip.Addr) (nodeName string) {
+	for _, nodeName = range c.addressToNodeNames[nodeIP] {
+		nodeInfo := c.nodeNameToNodeInfo[nodeName]
+		if nodeInfo.workloadCount != 0 {
+			break
+		}
+	}
+	if nodeName == "" {
+		log.WithField("ip", nodeIP).Panic(
+			"Bug: failed to find node matching IP after previously looking it up.")
+	}
+	return
+}
+
+func (c *IPSecBindingCalculator) activateBindingsForNode(nodeName string, nodeIP ip.Addr) {
 	for wepKey, addrs := range c.endpointKeysToIPs {
 		if wepKey.Hostname != nodeName {
 			continue
@@ -130,12 +195,13 @@ func (c *IPSecBindingCalculator) emitBindingsForNode(nodeName string, nodeIP ip.
 				continue
 			}
 			// This is a unique binding, emit it.
+			c.unblacklistIP(addr)
 			c.OnBindingAdded(IPSecBinding{WorkloadAddr: addr, TunnelAddr: nodeIP})
 		}
 	}
 }
 
-func (c *IPSecBindingCalculator) removeBindingsForNode(nodeName string, nodeIP ip.Addr) {
+func (c *IPSecBindingCalculator) deactivateBindingsForNode(nodeName string, nodeIP ip.Addr) {
 	for wepKey, addrs := range c.endpointKeysToIPs {
 		if wepKey.Hostname != nodeName {
 			continue
@@ -149,6 +215,7 @@ func (c *IPSecBindingCalculator) removeBindingsForNode(nodeName string, nodeIP i
 			}
 			// This was a unique binding, remove it.
 			c.OnBindingRemoved(IPSecBinding{WorkloadAddr: addr, TunnelAddr: nodeIP})
+			c.blacklistIP(addr)
 		}
 	}
 }
@@ -171,10 +238,50 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 	})
 	logCxt.Debug("Updating endpoint IPs")
 
-	// Look up its node and IP and do a reverse lookup to check whether the node has a unique IP.
+	// Look up the node that this workload is on and update the node->workload reference count.  If we're adding
+	// or removing an endpoint then we may have made the node active or inactive and that may have a knock-on
+	// effect on whether the node's IP is being shared.
 	node := wepKey.Hostname
-	nodeIP := c.nodeNameToAddress[node]
-	nodesWithThatIP := c.addressToNodeNames[nodeIP]
+	nodeInfo := c.nodeNameToNodeInfo[node]
+	nodeIP := nodeInfo.addr
+	oldNodesWithThatIP := c.numActiveNodesSharingIP(nodeIP)
+
+	if len(oldIPs) == 0 && len(newIPs) != 0 {
+		nodeInfo.workloadCount++
+		c.nodeNameToNodeInfo[node] = nodeInfo
+	} else if len(newIPs) == 0 && len(oldIPs) != 0 {
+		nodeInfo.workloadCount--
+		if nodeInfo.workloadCount == 0 && nodeInfo.addr == nil {
+			delete(c.nodeNameToNodeInfo, node)
+		} else {
+			c.nodeNameToNodeInfo[node] = nodeInfo
+		}
+	}
+
+	newNodesWithThatIP := c.numActiveNodesSharingIP(nodeIP)
+
+	if oldNodesWithThatIP == 1 && newNodesWithThatIP == 2 {
+		// Adding this workload made a node active but that means that two nodes are now sharing an IP.  We need to
+		// remove the bindings that were attached to the old node.
+		for _, otherNodeName := range c.addressToNodeNames[nodeIP] {
+			if node == otherNodeName {
+				continue
+			}
+			otherNodeInfo := c.nodeNameToNodeInfo[otherNodeName]
+			if otherNodeInfo.workloadCount == 0 {
+				continue
+			}
+
+			// Found the other node...
+			c.deactivateBindingsForNode(otherNodeName, nodeIP)
+			break
+		}
+	} else if oldNodesWithThatIP == 2 && newNodesWithThatIP == 1 {
+		// Removing this workload has made the node inactive and, previously, it was sharing an IP with another node.
+		// Since the other node is now the sole owner of the IP, we need to emit the bindings for the other node.
+		otherNode := c.findActiveNodeByIP(nodeIP)
+		c.activateBindingsForNode(otherNode, nodeIP)
+	}
 
 	removedIPs := set.FromArray(oldIPs)
 	addedIPs := set.New()
@@ -195,35 +302,45 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 		// Now check what that leaves behind.
 		numWepsStillSharingIP := len(c.ipToEndpointKeys[addr])
 		if numWepsStillSharingIP > 1 {
-			// IP wasn't unique before and it's still not unique.  We won't have emitted any bindings for it before.
+			// IP wasn't unique before and it's still not unique.  IP should already be blacklisted so we have nothing
+			// to do.
 			log.WithField("ip", addr).Warn("Workload IP is not unique, unable to do IPsec to IP.")
 			return nil
-		}
-		if numWepsStillSharingIP == 1 {
-			// Must have been 2 workloads sharing that IP before but now there's only one.  We need to look up the
-			// other workload and see if its binding is now unambiguous.
+		} else if numWepsStillSharingIP == 1 {
+			// Must have been 2 workloads sharing that IP before but now there's only one.  Previously we'll have
+			// blacklisted the IP.  We need to look up the other workload and see if its binding is now unambiguous.
 			otherWepKey := c.ipToEndpointKeys[addr][0]
 			otherNode := otherWepKey.Hostname
-			otherNodesIP := c.nodeNameToAddress[otherNode]
+			otherNodesIP := c.nodeNameToNodeInfo[otherNode].addr
 			if otherNodesIP == nil {
 				log.WithField("node", otherNode).Warn(
 					"Missing node IP, unable to do IPsec for workload on that node.")
 				return nil
 			}
-			nodesWithOtherNodesIP := c.addressToNodeNames[otherNodesIP]
-			if len(nodesWithOtherNodesIP) != 1 {
-				log.WithFields(log.Fields{"ip": otherNodesIP, "nodes": nodesWithOtherNodesIP}).Warn(
+			if c.numActiveNodesSharingIP(otherNodesIP) != 1 {
+				log.WithFields(log.Fields{"ip": otherNodesIP, "nodes": c.addressToNodeNames[addr]}).Warn(
 					"Node's IP is not unique, unable to do IPsec for workloads on that node.")
 				return nil
 			}
+			c.unblacklistIP(addr)
 			c.OnBindingAdded(IPSecBinding{TunnelAddr: otherNodesIP, WorkloadAddr: addr})
 			return nil
 		}
 
-		// numWepsStillSharingIP == 0: there must have been exactly one workload with this IP. Check if its node was
-		// unique.
-		if len(nodesWithThatIP) != 1 {
-			log.WithFields(log.Fields{"workloadIP": addr, "nodeIP": nodeIP}).Debug("Node IP wasn't unique.")
+		// If we get here, numWepsStillSharingIP == 0: there must have been exactly one workload with this IP.
+		if oldNodesWithThatIP == 0 {
+			// The workload was on a node with missing IP; we'll previously have blacklisted the workload's IP.
+			// Remove the blacklist.
+			log.WithFields(log.Fields{"workloadIP": addr, "nodeIP": nodeIP}).Debug(
+				"Removing IP from endpoint that had missing node IP.")
+			c.unblacklistIP(addr)
+			return nil
+		} else if oldNodesWithThatIP > 1 {
+			// The workload was on a node with conflicting IP; we'll previously have blacklisted the workload's IP.
+			// Remove the blacklist.
+			log.WithFields(log.Fields{"workloadIP": addr, "nodeIP": nodeIP}).Debug(
+				"Removing IP from endpoint that had conflicted node IP.")
+			c.unblacklistIP(addr)
 			return nil
 		}
 
@@ -244,11 +361,12 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 			// The IP currently has a unique owner, check if their node has a unique address...
 			otherWepKey := c.ipToEndpointKeys[addr][0]
 			otherNode := otherWepKey.Hostname
-			otherNodesIP := c.nodeNameToAddress[otherNode]
-			if otherNodesIP != nil && len(c.addressToNodeNames[otherNodesIP]) == 1 {
+			otherNodesIP := c.nodeNameToNodeInfo[otherNode].addr
+			if otherNodesIP != nil && c.numActiveNodesSharingIP(otherNodesIP) == 1 {
 				log.WithField("node", otherNode).Warn(
 					"IP address now owned by multiple workloads, unable to do IPsec for that IP.")
 				c.OnBindingRemoved(IPSecBinding{TunnelAddr: otherNodesIP, WorkloadAddr: addr})
+				c.blacklistIP(addr)
 			}
 		}
 
@@ -256,14 +374,24 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 		c.addIPToKey(addr, wepKey)
 
 		if numWepsWithThatIP != 0 {
+			// IP is shared; if it only just became so, we'll have blacklisted it above, otherwise, it should already
+			// be blacklisted so we don't need to do anything.
 			log.WithField("ip", addr).Warn(
 				"Workload IP address not unique, unable to do IPsec for that IP.")
 			return nil
 		}
 
-		if len(nodesWithThatIP) != 1 {
-			log.WithFields(log.Fields{"workloadIP": addr, "nodeIP": nodeIP}).Debug(
-				"Node IP wasn't unique. Unable to do IPsec for this workload.")
+		// If we get here, the new IP is uniquely owned by this workload.  Check whether we have a unique IP on its
+		// node too.
+		if newNodesWithThatIP == 0 {
+			log.WithFields(log.Fields{"workloadIP": addr, "nodeIP": nodeIP, "node": node}).Debug(
+				"Node IP not known. Unable to do IPsec for this workload.")
+			c.blacklistIP(addr)
+			return nil
+		} else if newNodesWithThatIP > 1 {
+			log.WithFields(log.Fields{"workloadIP": addr, "nodeIP": nodeIP, "node": node}).Debug(
+				"Node IP not unique. Unable to do IPsec for this workload.")
+			c.blacklistIP(addr)
 			return nil
 		}
 
@@ -274,6 +402,14 @@ func (c *IPSecBindingCalculator) OnEndpointUpdate(update api.Update) (_ bool) {
 	})
 
 	return
+}
+
+func (c *IPSecBindingCalculator) blacklistIP(addr ip.Addr) {
+	c.OnBlacklistAdded(addr)
+}
+
+func (c *IPSecBindingCalculator) unblacklistIP(addr ip.Addr) {
+	c.OnBlacklistRemoved(addr)
 }
 
 func (c *IPSecBindingCalculator) addIPToKey(addr ip.Addr, wepKey model.WorkloadEndpointKey) {

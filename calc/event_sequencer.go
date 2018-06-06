@@ -69,6 +69,8 @@ type EventSequencer struct {
 	pendingNamespaceDeletes      set.Set
 	pendingIPSecBindingAdds      set.Set
 	pendingIPSecBindingRemoves   set.Set
+	pendingIPSecBlacklistAdds    set.Set
+	pendingIPSecBlacklistRemoves set.Set
 
 	// Sets to record what we've sent downstream.  Updated whenever we flush.
 	sentIPSets          set.Set
@@ -118,6 +120,8 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingNamespaceDeletes:      set.New(),
 		pendingIPSecBindingAdds:      set.New(),
 		pendingIPSecBindingRemoves:   set.New(),
+		pendingIPSecBlacklistAdds:    set.New(),
+		pendingIPSecBlacklistRemoves: set.New(),
 
 		// Sets to record what we've sent downstream.  Updated whenever we flush.
 		sentIPSets:          set.New(),
@@ -683,7 +687,40 @@ func (buf *EventSequencer) OnIPSecBindingRemoved(b IPSecBinding) {
 	}
 }
 
+func (buf *EventSequencer) OnIPSecBlacklistAdded(b ip.Addr) {
+	if buf.pendingIPSecBlacklistRemoves.Contains(b) {
+		// We haven't sent this remove through to the dataplane yet so we can squash it here...
+		buf.pendingIPSecBlacklistRemoves.Discard(b)
+	} else {
+		buf.pendingIPSecBlacklistAdds.Add(b)
+	}
+}
+
+func (buf *EventSequencer) OnIPSecBlacklistRemoved(b ip.Addr) {
+	if buf.pendingIPSecBlacklistAdds.Contains(b) {
+		// We haven't sent this add through to the dataplane yet so we can squash it here...
+		buf.pendingIPSecBlacklistAdds.Discard(b)
+	} else {
+		buf.pendingIPSecBlacklistRemoves.Add(b)
+	}
+}
+
 func (buf *EventSequencer) flushIPSecBindings() {
+	// Flush the blacklist removals first, otherwise, the presence of a blacklist entry prevents
+	// the dataplane from adding a proper binding.
+	if buf.pendingIPSecBlacklistRemoves.Len() > 0 {
+		var addrs []string
+		buf.pendingIPSecBlacklistRemoves.Iter(func(item interface{}) error {
+			addrs = append(addrs, item.(ip.Addr).String())
+			return set.RemoveItem
+		})
+		upd := &proto.IPSecBlacklistRemove{
+			RemovedAddrs: addrs,
+		}
+		buf.Callback(upd)
+	}
+
+	// Then, flush the bindings add/removes.
 	updatesByTunnel := map[ip.Addr]*proto.IPSecBindingUpdate{}
 
 	getOrCreateUpd := func(tunnelAddr ip.Addr) *proto.IPSecBindingUpdate {
@@ -709,6 +746,20 @@ func (buf *EventSequencer) flushIPSecBindings() {
 	})
 
 	for _, upd := range updatesByTunnel {
+		buf.Callback(upd)
+	}
+
+	// Finally Add blacklist entries.  We do this after we remove the real entries to avoid clashes
+	// in the dataplane.
+	if buf.pendingIPSecBlacklistAdds.Len() > 0 {
+		var addrs []string
+		buf.pendingIPSecBlacklistAdds.Iter(func(item interface{}) error {
+			addrs = append(addrs, item.(ip.Addr).String())
+			return set.RemoveItem
+		})
+		upd := &proto.IPSecBlacklistAdd{
+			AddedAddrs: addrs,
+		}
 		buf.Callback(upd)
 	}
 }

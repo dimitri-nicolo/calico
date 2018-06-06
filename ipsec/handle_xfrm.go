@@ -23,6 +23,43 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+func AddBlock(dst string, dir netlink.Dir) error {
+	_, dstNet, _ := net.ParseCIDR(dst)
+	if dstNet == nil {
+		log.WithField("dst", dst).Panic("Failed to parse destination for IP block")
+	}
+	policy := netlink.XfrmPolicy{
+		Dst:    dstNet,
+		Dir:    dir,
+		Action: netlink.XFRM_POLICY_BLOCK,
+	}
+
+	log.Infof("Adding ipsec block: %+v", policy)
+
+	if err := netlink.XfrmPolicyAdd(&policy); err != nil {
+		return fmt.Errorf("error adding block: %+v err: %v", policy, err)
+	}
+
+	return nil
+}
+
+func RemoveBlock(dst string, dir netlink.Dir) error {
+	_, dstNet, _ := net.ParseCIDR(dst)
+	policy := netlink.XfrmPolicy{
+		Dst:    dstNet,
+		Dir:    dir,
+		Action: netlink.XFRM_POLICY_BLOCK,
+	}
+
+	log.Infof("Removing ipsec block: %+v", policy)
+
+	if err := netlink.XfrmPolicyDel(&policy); err != nil {
+		return fmt.Errorf("error removing block: %+v err: %v", policy, err)
+	}
+
+	return nil
+}
+
 func AddXFRMPolicy(src, dst, tunnelLeft, tunnelRight string, dir netlink.Dir, reqID int, optionalMark ...*netlink.XfrmMark) error {
 	_, srcNet, _ := net.ParseCIDR(src)
 	_, dstNet, _ := net.ParseCIDR(dst)

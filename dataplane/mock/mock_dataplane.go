@@ -37,6 +37,7 @@ type MockDataplane struct {
 	activePreDNATPolicies          set.Set
 	activeProfiles                 set.Set
 	activeIPSecBindings            set.Set
+	activeIPSecBlacklist           set.Set
 	endpointToPolicyOrder          map[string][]TierInfo
 	endpointToUntrackedPolicyOrder map[string][]TierInfo
 	endpointToPreDNATPolicyOrder   map[string][]TierInfo
@@ -109,6 +110,13 @@ func (d *MockDataplane) ActiveIPSecBindings() set.Set {
 	defer d.Unlock()
 
 	return d.activeIPSecBindings.Copy()
+}
+
+func (d *MockDataplane) ActiveIPSecBlacklist() set.Set {
+	d.Lock()
+	defer d.Unlock()
+
+	return d.activeIPSecBlacklist.Copy()
 }
 
 func (d *MockDataplane) EndpointToProfiles() map[string][]string {
@@ -208,6 +216,7 @@ func NewMockDataplane() *MockDataplane {
 		activeUntrackedPolicies:        set.New(),
 		activePreDNATPolicies:          set.New(),
 		activeIPSecBindings:            set.New(),
+		activeIPSecBlacklist:           set.New(),
 		endpointToPolicyOrder:          make(map[string][]TierInfo),
 		endpointToUntrackedPolicyOrder: make(map[string][]TierInfo),
 		endpointToPreDNATPolicyOrder:   make(map[string][]TierInfo),
@@ -399,7 +408,29 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 			b := IPSecBinding{event.TunnelAddr, addr}
 			Expect(d.activeIPSecBindings.Contains(b)).To(BeFalse(),
 				fmt.Sprintf("IPsec binding duplicate added: %v (all bindings: %v)", b, d.activeIPSecBindings))
+			d.activeIPSecBlacklist.Iter(func(item interface{}) error {
+				a := item.(string)
+				Expect(addr).NotTo(Equal(a), "Binding added but still have an active blacklist")
+				return nil
+			})
 			d.activeIPSecBindings.Add(b)
+		}
+	case *proto.IPSecBlacklistAdd:
+		for _, addr := range event.AddedAddrs {
+			Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeFalse(),
+				fmt.Sprintf("IPsec blacklist duplicate added: %v (all: %v)", addr, d.activeIPSecBlacklist))
+			d.activeIPSecBindings.Iter(func(item interface{}) error {
+				b := item.(IPSecBinding)
+				Expect(b.EndpointAddr).NotTo(Equal(addr), "Blacklist added but still have an active binding")
+				return nil
+			})
+			d.activeIPSecBlacklist.Add(addr)
+		}
+	case *proto.IPSecBlacklistRemove:
+		for _, addr := range event.RemovedAddrs {
+			Expect(d.activeIPSecBlacklist.Contains(addr)).To(BeTrue(),
+				fmt.Sprintf("Unknown IPsec blacklist removed: %v (all: %v)", addr, d.activeIPSecBlacklist))
+			d.activeIPSecBlacklist.Discard(addr)
 		}
 	}
 }

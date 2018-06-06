@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dispatcher"
+	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/labelindex"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -81,6 +82,8 @@ type passthruCallbacks interface {
 type ipsecCallbacks interface {
 	OnIPSecBindingAdded(b IPSecBinding)
 	OnIPSecBindingRemoved(b IPSecBinding)
+	OnIPSecBlacklistAdded(workloadAddr ip.Addr)
+	OnIPSecBlacklistRemoved(workloadAddr ip.Addr)
 }
 
 type PipelineCallbacks interface {
@@ -334,6 +337,8 @@ func (c *CalcGraph) EnableIPSec(callbacks ipsecCallbacks) {
 	ipSecBindingCalc.RegisterWith(c.AllUpdDispatcher)
 	ipSecBindingCalc.OnBindingAdded = callbacks.OnIPSecBindingAdded
 	ipSecBindingCalc.OnBindingRemoved = callbacks.OnIPSecBindingRemoved
+	ipSecBindingCalc.OnBlacklistAdded = callbacks.OnIPSecBlacklistAdded
+	ipSecBindingCalc.OnBlacklistRemoved = callbacks.OnIPSecBlacklistRemoved
 }
 
 type localEndpointDispatcherReg dispatcher.Dispatcher

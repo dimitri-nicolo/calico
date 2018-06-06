@@ -14,6 +14,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/workload"
@@ -128,6 +130,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		for _, t := range tcpdumps {
 			t.Stop()
 		}
+
 		for _, felix := range felixes {
 			felix.Stop()
 		}
@@ -257,33 +260,49 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 	})
 
-	// FIXME: This doesn't work because we currently allow unencrypted traffic if it's from a workload that we don't have IPsec config for.
-	PContext("after removing BGP address from nodes", func() {
-		// Simulate having a host send IPsec traffic from an unknown source, should get blocked.
+	Context("after removing host address from nodes", func() {
+		// In this scenario, we remove the host IP from one of the nodes, this should trigger Felix to
+		// blacklist the workload IPs on the remote host.
+
+		var node *api.Node
+		var savedBGPSpec *api.NodeBGPSpec
+
 		BeforeEach(func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			l, err := client.Nodes().List(ctx, options.ListOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			for _, node := range l.Items {
-				node.Spec.BGP = nil
-				_, err := client.Nodes().Update(ctx, &node, options.SetOptions{})
+
+			for _, n := range l.Items {
+				log.WithField("node", n).Info("Removing BGP state from node")
+				savedBGPSpec = n.Spec.BGP
+				n.Spec.BGP = nil
+				node, err = client.Nodes().Update(ctx, &n, options.SetOptions{})
 				Expect(err).NotTo(HaveOccurred())
+				break // Removing the IP from one node should be enough.
 			}
 
-			// Removing the BGP config triggers a Felix restart and Felix has a 2s timer during
-			// a config restart to ensure that it doesn't tight loop.  Wait for the ipset to be
-			// updated as a signal that Felix has restarted.
-			for _, f := range felixes {
-				Eventually(func() int {
-					return getNumIPSetMembers(f.Container, "cali40all-hosts")
-				}, "5s", "200ms").Should(BeZero())
-			}
+			time.Sleep(3 * time.Second) // Felix takes 2 seconds to restart after a config change.
 		})
 
-		It("should have no workload to workload connectivity", func() {
+		It("should have no workload to workload connectivity until we restore the host IP", func() {
+			By("Having no connectivity initially")
 			cc.ExpectNone(w[0], w[1])
 			cc.ExpectNone(w[1], w[0])
+			cc.CheckConnectivity()
+
+			By("Having connectivity after we restore the host IP")
+			node.Spec.BGP = savedBGPSpec
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+			_, err := client.Nodes().Update(ctx, node, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			time.Sleep(3 * time.Second) // Felix takes 2 seconds to restart after a config change.
+
+			cc.ResetExpectations()
+			cc.ExpectSome(w[0], w[1])
+			cc.ExpectSome(w[1], w[0])
 			cc.CheckConnectivity()
 		})
 	})

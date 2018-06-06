@@ -303,9 +303,14 @@ var localEp1WithNodeDiffIP = localEp1WithPolicy.withKVUpdates(
 	"192.168.0.2", "10.0.0.2",
 ).withName("Local endpoint 1 with a (different) host IP")
 
+// Two nodes sharing an IP but only one of them has endpoints so the other will get ignored.
 var localEp1WithNodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
 	KVPair{Key: HostIPKey{Hostname: remoteHostname}, Value: calinet.ParseIP("192.168.0.1")},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.1",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.2",
 ).withName("Local endpoint 1 with pair of hosts sharing IP")
 
 const remoteHostname2 = "remotehostname2"
@@ -314,7 +319,79 @@ var localEp1With3NodesSharingIP = localEp1WithPolicy.withKVUpdates(
 	KVPair{Key: HostIPKey{Hostname: localHostname}, Value: calinet.ParseIP("192.168.0.1")},
 	KVPair{Key: HostIPKey{Hostname: remoteHostname}, Value: calinet.ParseIP("192.168.0.1")},
 	KVPair{Key: HostIPKey{Hostname: remoteHostname2}, Value: calinet.ParseIP("192.168.0.1")},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.1",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.2",
 ).withName("Local endpoint 1 with triple of hosts sharing IP")
+
+var commRemoteWlEp1 = WorkloadEndpoint{
+	State:      "active",
+	Name:       "cali1",
+	Mac:        mustParseMac("01:02:03:04:05:06"),
+	ProfileIDs: []string{"prof-1"},
+	IPv4Nets: []calinet.IPNet{mustParseNet("10.0.1.1/32"),
+		mustParseNet("10.0.1.2/32")},
+}
+
+var commRemoteWlEp2 = WorkloadEndpoint{
+	State:      "active",
+	Name:       "cali1",
+	Mac:        mustParseMac("01:02:03:04:05:06"),
+	ProfileIDs: []string{"prof-1"},
+	IPv4Nets: []calinet.IPNet{mustParseNet("10.0.1.1/32"), // shared
+		mustParseNet("10.0.2.2/32")},
+}
+
+// Adding an endpoint to the remote host marks it as active, so we now have a conflict between active hosts and
+// we remove the IPsec bindings.
+var localEp1With3NodesSharingIPAndRemoteEp = localEp1With3NodesSharingIP.withKVUpdates(
+	KVPair{Key: remoteWlEpKey1, Value: &commRemoteWlEp1},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.1.1/32", // remote ep1
+	"10.0.1.2/32", // remote ep1
+}).withoutIPSecBinding(
+	"192.168.0.1", "10.0.0.1",
+).withoutIPSecBinding(
+	"192.168.0.1", "10.0.0.2",
+).withIPSecBlacklist(
+	"10.0.0.1",
+	"10.0.0.2",
+	"10.0.1.1",
+	"10.0.1.2",
+).withName("Local endpoint 1 with triple of hosts sharing IP and a remote endpoint")
+
+var localEp1With3NodesSharingIPAndRemoteEps = localEp1With3NodesSharingIPAndRemoteEp.withKVUpdates(
+	KVPair{Key: remoteWlEpKey2, Value: &commRemoteWlEp2},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.1.1/32", // remote ep1
+	"10.0.1.2/32", // remote ep1
+	"10.0.2.2/32", // remote ep2
+}).withIPSecBlacklist(
+	"10.0.2.2",
+).withName("Local endpoint 1 with triple of hosts sharing IP and a remote endpoints on both remote hosts")
+
+var localAndRemoteEndpointsWithMissingRemoteNode = localEp1WithNode.withKVUpdates(
+	KVPair{Key: remoteWlEpKey1, Value: &commRemoteWlEp1},
+).withIPSet(allSelectorId, []string{
+	"10.0.0.1/32", // ep1
+	"fc00:fe11::1/128",
+	"10.0.0.2/32", // ep1 and ep2
+	"fc00:fe11::2/128",
+	"10.0.1.1/32", // remote ep1
+	"10.0.1.2/32", // remote ep1
+}).withIPSecBlacklist(
+	"10.0.1.1",
+	"10.0.1.2",
+).withName("Local endpoint 1 with remote endpoint but missing remote node")
 
 // Different local endpoint with a host IP, should generate an IPsec binding for each IP of the endpoint.
 var localEp2WithNode = localEp2WithPolicy.withKVUpdates(
@@ -359,6 +436,8 @@ var localEp1And2WithNode = localEpsWithPolicy.withKVUpdates(
 	"192.168.0.1", "10.0.0.1",
 ).withIPSecBinding(
 	"192.168.0.1", "10.0.0.3",
+).withIPSecBlacklist(
+	"10.0.0.2",
 ).withName("Local endpoints 1 and 2 sharing an IP with a host IP defined")
 
 // Endpoint 1, 2 and 3 sharing an IP with a node too.
@@ -384,6 +463,8 @@ var threeEndpointsSharingIPWithNode = localEpsWithPolicy.withKVUpdates(
 }).withEndpoint(
 	localWlEp3Id,
 	[]mock.TierInfo{},
+).withIPSecBlacklist(
+	"10.0.0.2",
 ).withName("3 endpoints sharing an IP with a host IP defined")
 
 var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates(
@@ -392,6 +473,12 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 	KVPair{Key: localWlEpKey1, Value: &localWlEp1},
 	KVPair{Key: localWlEpKey2, Value: &localWlEp2},
 	KVPair{Key: localWlEpKey3, Value: &localWlEp3},
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.1",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.3",
+).withIPSecBinding(
+	"192.168.0.1", "10.0.0.4",
 ).withIPSet(allSelectorId, []string{
 	"10.0.0.1/32", // ep1
 	"fc00:fe11::1/128",
@@ -403,6 +490,8 @@ var threeEndpointsSharingIPWithDulicateNodeIP = localEpsWithPolicy.withKVUpdates
 }).withEndpoint(
 	localWlEp3Id,
 	[]mock.TierInfo{},
+).withIPSecBlacklist(
+	"10.0.0.2",
 ).withName("3 endpoints sharing an IP with a duplicate host IP defined")
 
 var commercialTests = []StateList{
@@ -462,17 +551,31 @@ var commercialTests = []StateList{
 	{localEp2AsEp1WithNode},
 
 	// IPsec mutation tests (changing IPs etc)
-	{localEp1WithNode, localEp2WithNode},
-	{localEp1WithNode, localEp2AsEp1WithNode, localEp2WithNode},
-	{localEp1WithNode, localEp1WithNodeDiffIP, localEp2AsEp1WithNode, localEp2WithNode},
-	{localEp1WithNode, localEp2AsEp1WithNode, localEp1WithNodeDiffIP, localEp2WithNode},
+	{localEp1WithNode, localEp2WithNode}, // Remove one endpoint, add in the other.
+	{
+		localEp1WithNode,      // Start with a local endpoint.
+		localEp2AsEp1WithNode, // Switch the endpoint's spec, changing its IPs.
+		localEp2WithNode,      // Delete and re-add as a different endpoint.
+	},
+	{
+		localEp1WithNode,       //Start with a local endpoint.
+		localEp1WithNodeDiffIP, // Change its node's IP.
+		localEp2AsEp1WithNode,  // Change node IP and endpoint IP.
+		localEp2WithNode,       // Delete and re-add as a different endpoint.
+	},
+	{
+		localEp1WithNode,
+		localEp2AsEp1WithNode,  // As above but change the IP first.
+		localEp1WithNodeDiffIP, // then change the node and IP.
+		localEp2WithNode,
+	},
 
-	// IPSec Ambiguous binding tests: hosts sharing IP.
+	// IPSec ambiguous binding tests: nodes sharing IPs but remote nodes have no enpdoints.
 	{localEp1WithNodesSharingIP},
 	{localEp1WithNode, localEp1WithNodesSharingIP, localEp1WithNode, localEp1WithNodesSharingIP},
 	{localEp1WithNode, localEp1With3NodesSharingIP, localEp1WithNode},
 
-	// IPSec ambiguous binding tests: endpoints sharing IP.
+	// IPsec ambiguous binding tests: endpoints sharing IPs.
 	{localEp1And2WithNode},
 	{localEp1WithNode, localEp1And2WithNode, localEp1WithNode},
 	{localEp1WithNode, localEp1And2WithNode, localEp2WithNode},
@@ -482,6 +585,15 @@ var commercialTests = []StateList{
 	{threeEndpointsSharingIPWithNode, localEp1And2WithNode, localEp1WithNode},
 	{threeEndpointsSharingIPWithDulicateNodeIP, threeEndpointsSharingIPWithNode, localEp1And2WithNode},
 	{threeEndpointsSharingIPWithDulicateNodeIP, localEp1WithNodesSharingIP, localEp1And2WithNode},
+	{localEp1With3NodesSharingIPAndRemoteEp},
+	{localEp1With3NodesSharingIP, localEp1With3NodesSharingIPAndRemoteEp, localEp1WithNode},
+	{
+		localEp1WithNode,                             // Start with a local endpoint with some bindings.
+		localAndRemoteEndpointsWithMissingRemoteNode, // Add remote endpoint but no remote node.  Shouldn't change.
+		localEp1With3NodesSharingIPAndRemoteEp,       // Add in remote nodes, bindings now ambiguous.
+		localEp1WithNode,                             // Remote the remote nodes again, bindings go back to local endpoint.
+	},
+	{localEp1With3NodesSharingIPAndRemoteEps, localEp1With3NodesSharingIPAndRemoteEp, localEp1WithNode},
 
 	// IPsec deletion tests (removing host IPs).
 	{localEp1WithNode, localEp1WithPolicy},

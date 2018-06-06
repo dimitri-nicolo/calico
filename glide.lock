@@ -1,5 +1,5 @@
-hash: 122406a0b3f0fd519b63daaac53bd06d0aa841bf446c5e050c1ac1ed0de10409
-updated: 2018-06-05T13:07:08.72251624Z
+hash: d3ecc5a2865cd1c9acc181501d5b40f3cb4d3419672d9761b50e9616c41c10ab
+updated: 2018-06-05T14:04:25.350229562Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -308,7 +308,8 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: f07d9d5231b9cd05ddf2e5a8ef6582f385bc1770
+  version: 791a9e9d9b790967fed2b77fbb1ddf99bc299326
+  repo: git@github.com:tigera/netlink.git
   subpackages:
   - nl
 - name: github.com/vishvananda/netns

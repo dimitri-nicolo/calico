@@ -463,10 +463,10 @@ func (config *Config) DatastoreConfig() apiconfig.CalicoAPIConfig {
 		}
 	}
 
-	if !config.IpInIpEnabled {
+	if !config.IpInIpEnabled && !config.IPSecEnabled() {
 		// Polling k8s for node updates is expensive (because we get many superfluous
 		// updates) so disable if we don't need it.
-		log.Info("IPIP disabled, disabling node poll (if KDD is in use).")
+		log.Info("IPIP and IPsec disabled, disabling node poll (if KDD is in use).")
 		cfg.Spec.K8sDisableNodePoll = true
 	}
 	return *cfg

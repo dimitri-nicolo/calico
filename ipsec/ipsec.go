@@ -73,6 +73,18 @@ type Dataplane struct {
 	wg sync.WaitGroup
 }
 
+func (d *Dataplane) AddBlacklist(workloadAddress string) {
+	log.Warning("Adding IPsec blacklist", workloadAddress)
+	AddBlock(workloadAddress+"/32", netlink.XFRM_DIR_FWD)
+	AddBlock(workloadAddress+"/32", netlink.XFRM_DIR_OUT)
+}
+
+func (d *Dataplane) RemoveBlacklist(workloadAddress string) {
+	log.Warning("Removing IPsec blacklist", workloadAddress)
+	RemoveBlock(workloadAddress+"/32", netlink.XFRM_DIR_FWD)
+	RemoveBlock(workloadAddress+"/32", netlink.XFRM_DIR_OUT)
+}
+
 func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
 	log.Debug("Adding IPsec binding", workloadAddress, "via tunnel", remoteTunnelAddr)
 	if _, ok := d.bindingsByTunnel[remoteTunnelAddr]; !ok {

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo"
+
 	"github.com/projectcalico/felix/fv/utils"
 )
 
