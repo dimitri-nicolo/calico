@@ -2417,7 +2417,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"defaultEndpointToHostAction": {
 							SchemaProps: spec.SchemaProps{
-								Description: "DefaultEndpointToHostAction controls what happens to traffic that goes from a workload endpoint to the host itself (after the traffic hits the endpoint egress policy). By default Calico blocks traffic from workload endpoints to the host itself with an iptables “DROP” action. If you want to allow some or all traffic from endpoint to host, set this parameter to RETURN or ACCEPT. Use RETURN if you have your own rules in the iptables “INPUT” chain; Calico will insert its rules at the top of that chain, then “RETURN” packets to the “INPUT” chain once it has completed processing workload endpoint egress policy. Use ACCEPT to unconditionally accept packets from workloads after processing workload endpoint egress policy. [Default: DROP]",
+								Description: "DefaultEndpointToHostAction controls what happens to traffic that goes from a workload endpoint to the host itself (after the traffic hits the endpoint egress policy). By default Calico blocks traffic from workload endpoints to the host itself with an iptables “DROP” action. If you want to allow some or all traffic from endpoint to host, set this parameter to RETURN or ACCEPT. Use RETURN if you have your own rules in the iptables “INPUT” chain; Calico will insert its rules at the top of that chain, then “RETURN” packets to the “INPUT” chain once it has completed processing workload endpoint egress policy. Use ACCEPT to unconditionally accept packets from workloads after processing workload endpoint egress policy. [Default: Drop]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -2457,21 +2457,21 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"logSeverityFile": {
 							SchemaProps: spec.SchemaProps{
-								Description: "LogSeverityFile is the log severity above which logs are sent to the log file. [Default: INFO]",
+								Description: "LogSeverityFile is the log severity above which logs are sent to the log file. [Default: Info]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"logSeverityScreen": {
 							SchemaProps: spec.SchemaProps{
-								Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: INFO]",
+								Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: Info]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"logSeveritySys": {
 							SchemaProps: spec.SchemaProps{
-								Description: "LogSeveritySys is the log severity above which logs are sent to the syslog. Set to NONE for no logging to syslog. [Default: INFO]",
+								Description: "LogSeveritySys is the log severity above which logs are sent to the syslog. Set to None for no logging to syslog. [Default: Info]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -2743,6 +2743,34 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Type:   []string{"string"},
 								Format: "",
+							},
+						},
+						"ipsecMode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecMode controls which mode IPSec is operating on. Default value means IPSec is not enabled. [Default: \"\"]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ipsecIKEAlgorithm": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecIKEAlgorithm sets IPSec IKE algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-prfsha256-ecp256]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ipsecESPAlgorithm": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecESAlgorithm sets IPSec ESP algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-ecp256]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ipsecLogLevel": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecLogLevel controls log level for IPSec components. Set to None for no logging. A generic log level terminology is used [None, Notice, Info, Debug, Verbose]. [Default: Info]",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 					},
