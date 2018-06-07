@@ -41,13 +41,13 @@ func (e EndpointData) IsLocal() bool {
 type EndpointLookupsCache struct {
 	epMutex       sync.RWMutex
 	ipToEndpoints map[[16]byte][]EndpointData
-	endpointToIps map[model.Key][][16]byte
+	endpointToIps map[model.Key]set.Set
 }
 
 func NewEndpointLookupsCache() *EndpointLookupsCache {
 	ec := &EndpointLookupsCache{
 		ipToEndpoints: map[[16]byte][]EndpointData{},
-		endpointToIps: map[model.Key][][16]byte{},
+		endpointToIps: map[model.Key]set.Set{},
 		epMutex:       sync.RWMutex{},
 	}
 	return ec
@@ -142,19 +142,27 @@ func (ec *EndpointLookupsCache) OnUpdate(epUpdate api.Update) (_ bool) {
 	return
 }
 
-// addOrUpdateEndpoint tracks IP to endpoint reverse mapping for a workload or host endpoint.
+// addOrUpdateEndpoint tracks endpoint to IP mapping as well as IP to endpoint reverse mapping
+// for a workload or host endpoint.
 func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, ed EndpointData, nets [][16]byte) {
 	// If the endpoint exists, it was updated, then we might have to add or
 	// remove IPs.
 	// First up, get all current ip addresses.
-	// Note: We don't acquire a lock when reading this map because the only writes
-	// are done via the calc_graph thread.
-	currentIps, _ := ec.endpointToIps[key]
-	ipsToRemove := set.FromArray(currentIps)
+	// Note: We don't acquire a lock when reading this map to get the current IP addresses
+	// because the only writes are done via the calc_graph thread.
+	var ipsToRemove set.Set
+	currentIPs, ok := ec.endpointToIps[key]
+	// Create a copy so that we can figure out which IPs to keep and
+	// which ones to remove.
+	if !ok {
+		ipsToRemove = set.New()
+	} else {
+		ipsToRemove = currentIPs.Copy()
+	}
 
 	// Collect all IPs that correspond to this endpoint and mark
 	// any IP that shouldn't be discarded.
-	newIPs := [][16]byte{}
+	newIPs := set.New()
 	for _, ip := range nets {
 		// If this is an already existing IP, then remove it,
 		// but skip adding the the new IP list to avoid adding
@@ -163,44 +171,70 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, ed EndpointDa
 			ipsToRemove.Discard(ip)
 			continue
 		}
-		newIPs = append(newIPs, ip)
+		newIPs.Add(ip)
 	}
 
 	ec.epMutex.Lock()
 	defer ec.epMutex.Unlock()
-	for _, ip := range newIPs {
-		// Check if this IP is already has a corresponding endpoint.
-		// If it has one, then append the endpoint to it. This is
-		// expected to happen if an IP address is reused in a very
-		// short interval. Otherwise, create a new IP to endpoint
-		// mapping entry.
-		existingEps, ok := ec.ipToEndpoints[ip]
-		if !ok {
-			ec.ipToEndpoints[ip] = []EndpointData{ed}
-		} else {
-			isExistingEp := false
-			for i := range existingEps {
-				// Check if this is an existing endpoint. If it is,
-				// then just store the updated endpoint.
-				if ed.Key == existingEps[i].Key {
-					existingEps[i] = ed
-					isExistingEp = true
-					break
-				}
-			}
-			if !isExistingEp {
-				existingEps = append(existingEps, ed)
-			}
-			ec.ipToEndpoints[ip] = existingEps
-		}
-	}
+	newIPs.Iter(func(item interface{}) error {
+		newIP := item.([16]byte)
+		ec.updateIPToEndpointMapping(newIP, ed)
+		return nil
+	})
 	ipsToRemove.Iter(func(item interface{}) error {
 		ip := item.([16]byte)
-		ec.removeEndpointFromIpMapping(ip, key)
+		ec.removeEndpointIpMapping(key, ip)
 		return set.RemoveItem
 	})
-	if len(nets) > 0 && len(newIPs) != 0 {
+	if newIPs.Len() != 0 {
 		ec.endpointToIps[key] = newIPs
+	}
+
+	// At this point, we can check if we need to update endpoint data
+	// for existing IP addresses.
+	cips, ok := ec.endpointToIps[key]
+	if !ok {
+		return
+	}
+	cips.Iter(func(item interface{}) error {
+		curIP := item.([16]byte)
+		if newIPs.Contains(curIP) {
+			// Already updated above.
+			return nil
+		}
+		ec.updateIPToEndpointMapping(curIP, ed)
+		return nil
+	})
+}
+
+// updateIPToEndpointMapping creates or appends the EndpointData to a corresponding
+// ip address in the ipToEndpoints map.
+// This method isn't safe to be used concurrently and the caller should acquire the
+// EndpointLookupsCache.epMutex before calling this method.
+func (ec *EndpointLookupsCache) updateIPToEndpointMapping(ip [16]byte, ed EndpointData) {
+	// Check if this IP is already has a corresponding endpoint.
+	// If it has one, then append the endpoint to it. This is
+	// expected to happen if an IP address is reused in a very
+	// short interval. Otherwise, create a new IP to endpoint
+	// mapping entry.
+	existingEps, ok := ec.ipToEndpoints[ip]
+	if !ok {
+		ec.ipToEndpoints[ip] = []EndpointData{ed}
+	} else {
+		isExistingEp := false
+		for i := range existingEps {
+			// Check if this is an existing endpoint. If it is,
+			// then just store the updated endpoint.
+			if ed.Key == existingEps[i].Key {
+				existingEps[i] = ed
+				isExistingEp = true
+				break
+			}
+		}
+		if !isExistingEp {
+			existingEps = append(existingEps, ed)
+		}
+		ec.ipToEndpoints[ip] = existingEps
 	}
 }
 
@@ -216,40 +250,53 @@ func (ec *EndpointLookupsCache) removeEndpoint(key model.Key) {
 		// We don't know about this endpoint. Nothing to do here.
 		return
 	}
-	for _, ip := range currentIPs {
-		ec.removeEndpointFromIpMapping(ip, key)
-	}
+	currentIPs.Iter(func(item interface{}) error {
+		ip := item.([16]byte)
+		ec.removeEndpointIpMapping(key, ip)
+		return nil
+	})
 	delete(ec.endpointToIps, key)
 }
 
-// removeEndpointFromIpMapping checks if there is an existing IP to WEP/HEP relation
-// that is being tracked and removes it if there is one.
+// removeEndpointIpMapping checks if  there is an existing
+//  - IP to WEP/HEP relation that is being tracked and removes it if there is one.
+//  - Endpoint to IP relation that is being tracked and removes it if there is one.
 // This method isn't safe to be used concurrently and the caller should acquire the
 // EndpointLookupsCache.epMutex before calling this method.
-func (ec *EndpointLookupsCache) removeEndpointFromIpMapping(ip [16]byte, key model.Key) {
+func (ec *EndpointLookupsCache) removeEndpointIpMapping(key model.Key, ip [16]byte) {
+	// Remove existing IP to endpoint mapping.
 	existingEps, ok := ec.ipToEndpoints[ip]
-	if !ok {
-		// Looks like the reverse mapping is missing or already
-		// deleted. So, nothing to do here.
-		return
-	}
-	if len(existingEps) == 1 {
-		// There is only a single endpoint corresponding to this
-		// IP address so it is safe to remove this mapping.
+	if !ok || len(existingEps) == 1 {
+		// There are no entries or only a single endpoint corresponding
+		// to this IP address so it is safe to remove this mapping.
 		delete(ec.ipToEndpoints, ip)
+	} else {
+		// If there is more than one endpoint, then keep the reverse ip
+		// to endpoint mapping but only remove the endpoint corresponding
+		// to this remove call.
+		newEps := make([]EndpointData, 0, len(existingEps)-1)
+		for _, ep := range existingEps {
+			if ep.Key == key {
+				continue
+			}
+			newEps = append(newEps, ep)
+		}
+		ec.ipToEndpoints[ip] = newEps
+	}
+
+	// Remove endpoint to IP mapping.
+	existingIps, ok := ec.endpointToIps[key]
+	if !ok {
 		return
 	}
-	// If there is more than one endpoint, then keep the reverse ip
-	// to endpoint mapping but only remove the endpoint corresponding
-	// to this remove call.
-	newEps := make([]EndpointData, 0, len(existingEps)-1)
-	for _, ep := range existingEps {
-		if ep.Key == key {
-			continue
-		}
-		newEps = append(newEps, ep)
+	if existingIps.Len() == 1 {
+		// There is only a single ip corresponding to this
+		// key so it is safe to remove this mapping.
+		delete(ec.endpointToIps, key)
+	} else {
+		existingIps.Discard(ip)
+		ec.endpointToIps[key] = existingIps
 	}
-	ec.ipToEndpoints[ip] = newEps
 }
 
 // IsEndpoint returns true if the supplied address is a endpoint, otherwise returns false.
@@ -344,9 +391,11 @@ func (ec *EndpointLookupsCache) DumpEndpoints() string {
 	lines = append(lines, "-------")
 	for key, ips := range ec.endpointToIps {
 		ipStr := []string{}
-		for _, ip := range ips {
+		ips.Iter(func(item interface{}) error {
+			ip := item.([16]byte)
 			ipStr = append(ipStr, net.IP(ip[:16]).String())
-		}
+			return nil
+		})
 		lines = append(lines, endpointName(key), ": ", strings.Join(ipStr, ","))
 	}
 	return strings.Join(lines, "\n")

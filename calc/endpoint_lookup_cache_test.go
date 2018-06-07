@@ -92,9 +92,14 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 			},
 			UpdateType: api.UpdateTypeKVNew,
 		}
+		origRemoteWepLabels := map[string]string{
+			"id": "rem-ep-1",
+			"x":  "x",
+			"y":  "y",
+		}
 		ec.OnUpdate(update)
 
-		verifyIpToEndpoint := func(key model.Key, ipAddr net.IP, exists bool) {
+		verifyIpToEndpoint := func(key model.Key, ipAddr net.IP, exists bool, labels map[string]string) {
 			var name string
 			switch k := key.(type) {
 			case model.WorkloadEndpointKey:
@@ -109,6 +114,14 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 			if exists {
 				Expect(ok).To(BeTrue(), name+"\n"+ec.DumpEndpoints())
 				Expect(ed.Key).To(Equal(key), ec.DumpEndpoints())
+				if labels != nil {
+					switch ep := ed.Endpoint.(type) {
+					case *model.WorkloadEndpoint:
+						Expect(ep.Labels).To(Equal(labels), ec.DumpEndpoints())
+					case *model.HostEndpoint:
+						Expect(ep.Labels).To(Equal(labels), ec.DumpEndpoints())
+					}
+				}
 			} else {
 				Expect(ok).To(BeFalse(), name+".\n"+ec.DumpEndpoints())
 			}
@@ -116,10 +129,10 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 
 		By("verifying all IPv4 and IPv6 addresses of the workload endpoint are present in the mapping")
 		for _, ipv4 := range remoteWlEp1.IPv4Nets {
-			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, true)
+			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, true, origRemoteWepLabels)
 		}
 		for _, ipv6 := range remoteWlEp1.IPv6Nets {
-			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, true)
+			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, true, origRemoteWepLabels)
 		}
 
 		By("adding a host endpoint with multiple ipv4 and ipv6 ip addresses")
@@ -130,14 +143,19 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 			},
 			UpdateType: api.UpdateTypeKVNew,
 		}
+		hepLabels := map[string]string{
+			"id": "loc-ep-1",
+			"a":  "a",
+			"b":  "b",
+		}
 		ec.OnUpdate(update)
 
 		By("verifying all IPv4 and IPv6 addresses of the host endpoint are present in the mapping")
 		for _, ipv4 := range hostEpWithName.ExpectedIPv4Addrs {
-			verifyIpToEndpoint(hostEpWithNameKey, ipv4.IP, true)
+			verifyIpToEndpoint(hostEpWithNameKey, ipv4.IP, true, hepLabels)
 		}
 		for _, ipv6 := range hostEpWithName.ExpectedIPv6Addrs {
-			verifyIpToEndpoint(hostEpWithNameKey, ipv6.IP, true)
+			verifyIpToEndpoint(hostEpWithNameKey, ipv6.IP, true, hepLabels)
 		}
 
 		By("deleting the host endpoint")
@@ -151,13 +169,39 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 
 		By("verifying all IPv4 and IPv6 addresses of the host endpoint are not present in the mapping")
 		for _, ipv4 := range hostEpWithName.ExpectedIPv4Addrs {
-			verifyIpToEndpoint(hostEpWithNameKey, ipv4.IP, false)
+			verifyIpToEndpoint(hostEpWithNameKey, ipv4.IP, false, nil)
 		}
 		for _, ipv6 := range hostEpWithName.ExpectedIPv6Addrs {
-			verifyIpToEndpoint(hostEpWithNameKey, ipv6.IP, false)
+			verifyIpToEndpoint(hostEpWithNameKey, ipv6.IP, false, nil)
 		}
 
-		By("updating the workload endpoint and removing all IPv6 addresses")
+		By("updating the workload endpoint and adding new labels")
+		update = api.Update{
+			KVPair: model.KVPair{
+				Key:   remoteWlEpKey1,
+				Value: &remoteWlEp1UpdatedLabels,
+			},
+			UpdateType: api.UpdateTypeKVUpdated,
+		}
+		ec.OnUpdate(update)
+
+		updatedRemoteWepLabels := map[string]string{
+			"id": "rem-ep-1",
+			"x":  "x",
+			"y":  "y",
+			"z":  "z",
+		}
+		By("verifying all IPv4 and IPv6 addresses are present with updated labels")
+		// For verification we iterate using the original WEP with IPv6 so that it is easy to
+		// get a list of Ipv6 addresses to check against.
+		for _, ipv4 := range remoteWlEp1.IPv4Nets {
+			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, true, updatedRemoteWepLabels)
+		}
+		for _, ipv6 := range remoteWlEp1.IPv6Nets {
+			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, true, updatedRemoteWepLabels)
+		}
+
+		By("updating the workload endpoint and removing all IPv6 addresses, and reverting labels back to original")
 		update = api.Update{
 			KVPair: model.KVPair{
 				Key:   remoteWlEpKey1,
@@ -167,14 +211,14 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 		}
 		ec.OnUpdate(update)
 
-		By("verifying all IPv4 are present but no Ipv6 addresses are present")
+		By("verifying all IPv4 are present and no Ipv6 addresses are present")
 		// For verification we iterate using the original WEP with IPv6 so that it is easy to
 		// get a list of Ipv6 addresses to check against.
 		for _, ipv4 := range remoteWlEp1.IPv4Nets {
-			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, true)
+			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, true, origRemoteWepLabels)
 		}
 		for _, ipv6 := range remoteWlEp1.IPv6Nets {
-			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, false)
+			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, false, nil)
 		}
 
 		By("updating the workload endpoint keeping all the information as before")
@@ -191,10 +235,10 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 		// For verification we iterate using the original WEP with IPv6 so that it is easy to
 		// get a list of Ipv6 addresses to check against.
 		for _, ipv4 := range remoteWlEp1.IPv4Nets {
-			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, true)
+			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, true, origRemoteWepLabels)
 		}
 		for _, ipv6 := range remoteWlEp1.IPv6Nets {
-			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, false)
+			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, false, nil)
 		}
 
 		By("finally removing the WEP and no mapping is present")
@@ -210,10 +254,10 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 		// For verification we iterate using the original WEP with IPv6 so that it is easy to
 		// get a list of Ipv6 addresses to check against.
 		for _, ipv4 := range remoteWlEp1.IPv4Nets {
-			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, false)
+			verifyIpToEndpoint(remoteWlEpKey1, ipv4.IP, false, nil)
 		}
 		for _, ipv6 := range remoteWlEp1.IPv6Nets {
-			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, false)
+			verifyIpToEndpoint(remoteWlEpKey1, ipv6.IP, false, nil)
 		}
 	})
 

@@ -541,6 +541,22 @@ var remoteWlEp1NoIpv6 = WorkloadEndpoint{
 	},
 }
 
+var remoteWlEp1UpdatedLabels = WorkloadEndpoint{
+	State: "active",
+	Name:  "cali1",
+	Mac:   mustParseMac("01:02:03:04:05:06"),
+	IPv4Nets: []calinet.IPNet{mustParseNet("10.1.0.1/32"),
+		mustParseNet("10.1.0.2/32")},
+	IPv6Nets: []calinet.IPNet{mustParseNet("fe80:fe11::1/128"),
+		mustParseNet("fe80:fe11::2/128")},
+	Labels: map[string]string{
+		"id": "rem-ep-1",
+		"x":  "x",
+		"y":  "y",
+		"z":  "z",
+	},
+}
+
 var remoteWlEp3 = WorkloadEndpoint{
 	State: "active",
 	Name:  "cali2",
