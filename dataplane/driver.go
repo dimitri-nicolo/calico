@@ -123,6 +123,14 @@ func StartDataplaneDriver(configParams *config.Config,
 			configParams.CloudWatchLogsReporterEnabled = false
 		}
 
+		// If CloudWatchMetricsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
+		if configParams.CloudWatchMetricsReporterEnabled && !configParams.LicenseValid {
+			log.Warn("Not licensed for CloudWatch Metrics feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
+
+			// Set CloudWatchMetricsReporterEnabled to false.
+			configParams.CloudWatchMetricsReporterEnabled = false
+		}
+
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExcludes(),
@@ -178,6 +186,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				EnableNflogSize: configParams.EnableNflogSize,
 			},
+
 			NfNetlinkBufSize:              configParams.NfNetlinkBufSize,
 			StatsDumpFilePath:             configParams.StatsDumpFilePath,
 			PrometheusReporterEnabled:     configParams.PrometheusReporterEnabled,
@@ -193,19 +202,22 @@ func StartDataplaneDriver(configParams *config.Config,
 			CloudWatchLogsLogGroupName:    configParams.CloudWatchLogsLogGroupName,
 			CloudWatchLogsLogStreamName:   configParams.CloudWatchLogsLogStreamName,
 			CloudWatchLogsAggregationKind: configParams.CloudWatchLogsAggregationKind,
-			IPIPMTU:                        configParams.IpInIpMtu,
-			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
-			RouteRefreshInterval:           configParams.RouteRefreshInterval,
-			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
-			IptablesPostWriteCheckInterval: configParams.IptablesPostWriteCheckIntervalSecs,
-			IptablesInsertMode:             configParams.ChainInsertMode,
-			IptablesLockFilePath:           configParams.IptablesLockFilePath,
-			IptablesLockTimeout:            configParams.IptablesLockTimeoutSecs,
-			IptablesLockProbeInterval:      configParams.IptablesLockProbeIntervalMillis,
-			MaxIPSetSize:                   configParams.MaxIpsetSize,
-			IgnoreLooseRPF:                 configParams.IgnoreLooseRPF,
-			IPv6Enabled:                    configParams.Ipv6Support,
-			StatusReportingInterval:        configParams.ReportingIntervalSecs,
+			IPIPMTU:                           configParams.IpInIpMtu,
+			IptablesRefreshInterval:           configParams.IptablesRefreshInterval,
+			RouteRefreshInterval:              configParams.RouteRefreshInterval,
+			IPSetsRefreshInterval:             configParams.IpsetsRefreshInterval,
+			IptablesPostWriteCheckInterval:    configParams.IptablesPostWriteCheckIntervalSecs,
+			IptablesInsertMode:                configParams.ChainInsertMode,
+			IptablesLockFilePath:              configParams.IptablesLockFilePath,
+			IptablesLockTimeout:               configParams.IptablesLockTimeoutSecs,
+			IptablesLockProbeInterval:         configParams.IptablesLockProbeIntervalMillis,
+			MaxIPSetSize:                      configParams.MaxIpsetSize,
+			IgnoreLooseRPF:                    configParams.IgnoreLooseRPF,
+			IPv6Enabled:                       configParams.Ipv6Support,
+			StatusReportingInterval:           configParams.ReportingIntervalSecs,
+			CloudWatchMetricsReporterEnabled:  configParams.CloudWatchMetricsReporterEnabled,
+			CloudWatchMetricsPushIntervalSecs: configParams.CloudWatchMetricsPushIntervalSecs,
+			ClusterGUID:                       configParams.ClusterGUID,
 
 			NetlinkTimeout: configParams.NetlinkTimeoutSecs,
 

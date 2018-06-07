@@ -53,7 +53,7 @@ func expectRuleAggregates(
 	}()).To(Equal(expectedConnections))
 }
 
-var _ = Describe("Prometheus Policy Rules Aggregator verification", func() {
+var _ = Describe("Prometheus Policy Rules PromAggregator verification", func() {
 	var pa *PolicyRulesAggregator
 	mt := &mockTime{}
 	registry := prometheus.NewRegistry()
