@@ -187,13 +187,13 @@ https://host:port/base/policies
 | unmatched | Get policies whose selectors do not match any endpoints | boolean | no | no |
 | endpoint | Get policies that match an endpoint | [endpoint name](#endpoint-name) | no | no |
 | label_* | Get policies that match a set of labels | [labels](#labels) | yes | no |
+| networkset | Get policies whose rules match a networkset | [networkset name](#networkset-name) | no | no |
 
 - When no query parameter is provided, data for all policies across all tiers will be returned.
 - Multiple query parameters can be combined together (read exceptions below) and
   they will be treated as a logical AND. Results matching all the query
   parameters should be returned.
-- The `workloadEndpoint`, `hostEndpoint` and `unmatched` query parameters cannot be combined
-  in a single query.
+- The `endpoint` and `unmatched` query parameters cannot be combined in a single query.
 - When the `tier` is specified, results will be limited to the specified `tier`.
 
 ##### Endpoint name
@@ -213,6 +213,11 @@ those that match both the endpoint and match the supplied set of labels.
 
 Use the label `projectcalico.org/namespace` and `projectcalico.org/orchestrator` to specify the 
 namespace and orchestrator of the endpoint being emulated by the set of labels.
+
+##### Networkset name
+
+The name of a networkset may be specified as a query parameter. Used to select policies whose rule
+selectors match the labels on the networkset.
 
 #### Response
 
