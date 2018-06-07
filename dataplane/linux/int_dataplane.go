@@ -440,6 +440,10 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		dp.allIptablesTables = append(dp.allIptablesTables, t)
 	}
 
+	// We always create the IPsec policy table (the component that manipulates the IPsec dataplane).  That ensures
+	// that we clean up our old policies if IPsec is disabled.
+	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID)
+
 	if config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" {
 		// Set up IPsec.
 		// FIXME: use correct local tunnel address (the one from our HostIP?)
@@ -457,7 +461,6 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 			if strings.Contains(ip, ":") {
 				continue
 			}
-			dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID)
 			dp.ipSecDataplane = ipsec.NewDataplane(
 				ip,
 				config.IPSecPSK,
@@ -963,9 +966,7 @@ func (d *InternalDataplane) apply() {
 		}
 	}
 
-	if d.ipSecPolTable != nil {
-		d.ipSecPolTable.Apply()
-	}
+	d.ipSecPolTable.Apply()
 
 	if d.forceRouteRefresh {
 		// Refresh timer popped.

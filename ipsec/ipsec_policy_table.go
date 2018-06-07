@@ -3,15 +3,11 @@
 package ipsec
 
 import (
-	"reflect"
-
-	"time"
-
-	"net"
-
-	"syscall"
-
 	"fmt"
+	"net"
+	"reflect"
+	"syscall"
+	"time"
 
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -36,72 +32,6 @@ func init() {
 	prometheus.MustRegister(countNumIPSecErrors)
 }
 
-type PolicySelector struct {
-	TrafficSrc ip.V4CIDR
-	TrafficDst ip.V4CIDR
-	Dir        netlink.Dir
-}
-
-func (sel PolicySelector) String() string {
-	return fmt.Sprintf("%v -> %v (%v)", sel.TrafficSrc, sel.TrafficDst, sel.Dir)
-}
-
-func (sel PolicySelector) Populate(pol *netlink.XfrmPolicy) {
-	if sel.TrafficSrc.Prefix() > 0 {
-		src := sel.TrafficSrc.ToIPNet()
-		pol.Src = &src
-	}
-	if sel.TrafficDst.Prefix() > 0 {
-		dst := sel.TrafficDst.ToIPNet()
-		pol.Dst = &dst
-	}
-	pol.Dir = sel.Dir
-}
-
-type PolicyRule struct {
-	Action netlink.XfrmPolicyAction
-
-	Mark     uint32
-	MarkMask uint32
-
-	TunnelSrc ip.V4Addr
-	TunnelDst ip.V4Addr
-}
-
-func (r PolicyRule) String() string {
-	s := r.Action.String()
-	if r.MarkMask != 0 {
-		s += fmt.Sprintf(" mask %#x/%#x", r.Mark, r.MarkMask)
-	}
-	if r.Action != netlink.XFRM_POLICY_BLOCK {
-		s += fmt.Sprintf(" tunnel %v -> %v", r.TunnelSrc, r.TunnelDst)
-	}
-	return s
-}
-
-func (r *PolicyRule) Populate(pol *netlink.XfrmPolicy, ourReqID int) {
-	if r == nil {
-		return
-	}
-	if r.MarkMask != 0 {
-		pol.Mark = &netlink.XfrmMark{
-			Value: r.Mark,
-			Mask:  r.MarkMask,
-		}
-	}
-	pol.Action = r.Action
-
-	// Note: for a block action, the template doesn't get used.  However, we include it because it allows us
-	// to include a ReqID, which we use to match our policies during resync.
-	pol.Tmpls = append(pol.Tmpls, netlink.XfrmPolicyTmpl{
-		Src:   r.TunnelSrc.AsNetIP(),
-		Dst:   r.TunnelDst.AsNetIP(),
-		Proto: netlink.XFRM_PROTO_ESP,
-		Mode:  netlink.XFRM_MODE_TUNNEL,
-		Reqid: ourReqID,
-	})
-}
-
 func (p *PolicyTable) xfrmPolToOurPol(xfrmPol netlink.XfrmPolicy) (sel PolicySelector, rule *PolicyRule) {
 	if len(xfrmPol.Tmpls) == 0 {
 		return
@@ -119,13 +49,13 @@ func (p *PolicyTable) xfrmPolToOurPol(xfrmPol netlink.XfrmPolicy) (sel PolicySel
 	rule = &PolicyRule{}
 	rule.Action = xfrmPol.Action
 	if xfrmPol.Mark != nil {
-		rule.Mark = xfrmPol.Mark.Value
-		rule.MarkMask = xfrmPol.Mark.Mask
+		sel.Mark = xfrmPol.Mark.Value
+		sel.MarkMask = xfrmPol.Mark.Mask
 	}
-	if !tmpl.Src.IsUnspecified() {
+	if tmpl.Src != nil && !tmpl.Src.IsUnspecified() {
 		rule.TunnelSrc = ip.FromNetIP(tmpl.Src).(ip.V4Addr)
 	}
-	if !tmpl.Dst.IsUnspecified() {
+	if tmpl.Src != nil && !tmpl.Dst.IsUnspecified() {
 		rule.TunnelDst = ip.FromNetIP(tmpl.Dst).(ip.V4Addr)
 	}
 
@@ -152,8 +82,8 @@ type PolicyTable struct {
 
 	selectorToRule map[PolicySelector]*PolicyRule
 
-	nlHandleFactory func() (xfrmIface, error)
-	nlHndl          xfrmIface
+	nlHandleFactory func() (NetlinkXFRMIface, error)
+	nlHndl          NetlinkXFRMIface
 
 	// Shim for time.Sleep()
 	sleep func(time.Duration)
@@ -167,11 +97,11 @@ func NewPolicyTable(ourReqID int) *PolicyTable {
 	)
 }
 
-func newRealNetlinkHandle() (xfrmIface, error) {
+func newRealNetlinkHandle() (NetlinkXFRMIface, error) {
 	return netlink.NewHandle(syscall.NETLINK_XFRM)
 }
 
-func NewPolicyTableWithShims(ourReqID int, nlHandleFactory func() (xfrmIface, error), sleep func(time.Duration)) *PolicyTable {
+func NewPolicyTableWithShims(ourReqID int, nlHandleFactory func() (NetlinkXFRMIface, error), sleep func(time.Duration)) *PolicyTable {
 	return &PolicyTable{
 		ourReqID:           ourReqID,
 		resyncRequired:     true,
@@ -184,6 +114,10 @@ func NewPolicyTableWithShims(ourReqID int, nlHandleFactory func() (xfrmIface, er
 }
 
 var blockRule = PolicyRule{Action: netlink.XFRM_POLICY_BLOCK}
+
+func (p *PolicyTable) QueueResync() {
+	p.resyncRequired = true
+}
 
 func (p *PolicyTable) SetRule(sel PolicySelector, rule *PolicyRule) {
 	debug := log.GetLevel() >= log.DebugLevel
@@ -275,7 +209,7 @@ func (p *PolicyTable) Apply() {
 		break
 	}
 	if !success {
-		p.dumpStateToLog()
+		p.DumpStateToLog()
 		log.WithError(err).Panic("Failed to update IPsec bindings after multiple retries.")
 	}
 	gaugeNumIPSecBindings.Set(float64(len(p.selectorToRule)))
@@ -310,18 +244,45 @@ func (p *PolicyTable) tryResync() (numProblems int, err error) {
 			}
 			continue // Not one of our policies
 		}
+
+		// Record the actual state of the dataplane.
 		actualState[sel] = pol
-		if expectedPol, ok := expectedState[sel]; !ok {
-			// Policy exists in dataplane but not in our expected state.
-			if _, ok := p.pendingRuleUpdates[sel]; ok || p.pendingDeletions.Contains(sel) {
-				// We've already got an update queued up, which will replace the unexpected policy.
+		// Look up what we were expecting to be there.
+		expectedPol := expectedState[sel]
+		// Remove it from the old map; once we're done with this loop, the old map will contain any policies that
+		// are missing from the dataplane.
+		delete(expectedState, sel)
+
+		if pendingUpdate, ok := p.pendingRuleUpdates[sel]; ok {
+			if reflect.DeepEqual(pendingUpdate, pol) {
+				// We were just about to set up exactly this policy, skip the update.
 				if debug {
 					log.WithField("policy", xfrmPol).Debug(
-						"IPsec resync: found unexpected policy but it's already queued for update/deletion")
+						"IPsec resync: found pending policy was already in place, skipping update")
 				}
+				delete(p.pendingRuleUpdates, sel)
 				continue
 			}
-			// Queue up a deletion to bring us back into sync.
+			// We've already got an update queued up, which will replace the unexpected policy.
+			if debug {
+				log.WithField("policy", xfrmPol).Debug(
+					"IPsec resync: found unexpected policy but it's already queued for update/deletion")
+			}
+			continue
+		}
+
+		if p.pendingDeletions.Contains(sel) {
+			// We've already got a delete queued up, which will remove the policy.
+			if debug {
+				log.WithField("policy", xfrmPol).Debug(
+					"IPsec resync: found policy in dataplane but it's already queued for deletion")
+			}
+			continue
+		}
+
+		if expectedPol == nil {
+			// Policy exists in dataplane but not in our expected state.
+			// Queue up a deletion to bring the kernel back into sync.
 			if debug || !loggedDelete {
 				log.WithField("selector", sel).Warn(
 					"IPsec resync: queueing deletion of unexpected policy (skipping further logs of this type).")
@@ -329,41 +290,36 @@ func (p *PolicyTable) tryResync() (numProblems int, err error) {
 			}
 			numProblems++
 			p.pendingDeletions.Add(sel)
-		} else {
-			// Mark this endpoint as seen.
-			delete(expectedState, sel)
-			// Policy exists in dataplane and our expected state, check whether they match.
-			if reflect.DeepEqual(expectedPol, pol) {
-				actualState[sel] = expectedPol
-				if debug {
-					log.WithField("policy", xfrmPol).Debug("IPsec resync: policy matches our state")
-				}
-				continue // match, nothing to do
-			}
-			if _, ok := p.pendingRuleUpdates[sel]; ok || p.pendingDeletions.Contains(sel) {
-				// We've already got an update queued up that will replace the incorrect policy.
-				continue
-			}
-			// Queue up a repair to bring us back into sync.
-
-			if debug || !loggedRepair {
-				log.WithField("policy", xfrmPol).Warn(
-					"IPsec resync: found incorrect policy in dataplane, queueing a repair " +
-						"(skipping further logs of this type).")
-				loggedRepair = true
-			}
-			numProblems++
-			p.pendingRuleUpdates[sel] = expectedPol
+			continue
 		}
+
+		if reflect.DeepEqual(expectedPol, pol) {
+			// Policy in dataplane matches our expectation.
+			if debug {
+				log.WithField("policy", xfrmPol).Debug("IPsec resync: policy matches our state")
+			}
+			continue // match, nothing to do
+		}
+
+		// Queue up a repair to bring us back into sync.
+		if debug || !loggedRepair {
+			log.WithField("policy", xfrmPol).Warn(
+				"IPsec resync: found incorrect policy in dataplane, queueing a repair " +
+					"(skipping further logs of this type).")
+			loggedRepair = true
+		}
+		numProblems++
+		p.pendingRuleUpdates[sel] = expectedPol
 	}
 
 	loggedReplace := false
 	for sel, pol := range expectedState {
 		if _, ok := p.pendingRuleUpdates[sel]; ok {
-			// We've already got an update queued up, which will replace the incorrect policy.
+			// We've already got an update queued up, which will replace the missing policy.
 			continue
 		}
 		if p.pendingDeletions.Contains(sel) {
+			log.WithField("sel", sel).Debug("IPsec resync: Found pending deletion had already been done")
 			p.pendingDeletions.Discard(sel)
 			continue
 		}
@@ -434,8 +390,26 @@ func (p *PolicyTable) tryUpdates() (err error) {
 	return lastErr
 }
 
-func (p *PolicyTable) dumpStateToLog() {
-
+func (p *PolicyTable) DumpStateToLog() {
+	log.Info("Dumping internal IPsec state...")
+	for sel, pol := range p.selectorToRule {
+		log.Infof("Expected policy: %v %v", sel, pol)
+	}
+	for sel, pol := range p.pendingRuleUpdates {
+		log.Infof("Pending policy update: %v %v", sel, pol)
+	}
+	p.pendingDeletions.Iter(func(item interface{}) error {
+		log.Infof("Pending deletion: %v", item)
+		return nil
+	})
+	pols, err := p.nl().XfrmPolicyList(netlink.FAMILY_V4)
+	if err != nil {
+		log.WithError(err).Error("Failed to read XFRM policies from kernel")
+		return
+	}
+	for _, pol := range pols {
+		log.Infof("Kernel policy: %v", pol)
+	}
 }
 
 func (p *PolicyTable) closeNL() {
@@ -446,7 +420,7 @@ func (p *PolicyTable) closeNL() {
 	p.nlHndl = nil
 }
 
-func (p *PolicyTable) nl() xfrmIface {
+func (p *PolicyTable) nl() NetlinkXFRMIface {
 	if p.nlHndl == nil {
 		var err error
 		for attempt := 0; attempt < 3; attempt++ {
@@ -463,9 +437,75 @@ func (p *PolicyTable) nl() xfrmIface {
 	return p.nlHndl
 }
 
-type xfrmIface interface {
+type NetlinkXFRMIface interface {
 	XfrmPolicyList(family int) ([]netlink.XfrmPolicy, error)
 	XfrmPolicyUpdate(policy *netlink.XfrmPolicy) error
 	XfrmPolicyDel(policy *netlink.XfrmPolicy) error
 	Delete()
+}
+
+type PolicySelector struct {
+	TrafficSrc ip.V4CIDR
+	TrafficDst ip.V4CIDR
+	Mark       uint32
+	MarkMask   uint32
+	Dir        netlink.Dir
+}
+
+func (sel PolicySelector) String() string {
+	s := fmt.Sprintf("%v -> %v (%v)", sel.TrafficSrc, sel.TrafficDst, sel.Dir)
+	if sel.MarkMask != 0 {
+		s += fmt.Sprintf(" mask %#x/%#x", sel.Mark, sel.MarkMask)
+	}
+	return s
+}
+
+func (sel PolicySelector) Populate(pol *netlink.XfrmPolicy) {
+	if sel.TrafficSrc.Prefix() > 0 {
+		src := sel.TrafficSrc.ToIPNet()
+		pol.Src = &src
+	}
+	if sel.TrafficDst.Prefix() > 0 {
+		dst := sel.TrafficDst.ToIPNet()
+		pol.Dst = &dst
+	}
+	if sel.MarkMask != 0 {
+		pol.Mark = &netlink.XfrmMark{
+			Value: sel.Mark,
+			Mask:  sel.MarkMask,
+		}
+	}
+	pol.Dir = sel.Dir
+}
+
+type PolicyRule struct {
+	Action netlink.XfrmPolicyAction
+
+	TunnelSrc ip.V4Addr
+	TunnelDst ip.V4Addr
+}
+
+func (r PolicyRule) String() string {
+	s := r.Action.String()
+	if r.Action != netlink.XFRM_POLICY_BLOCK {
+		s += fmt.Sprintf(" tunnel %v -> %v", r.TunnelSrc, r.TunnelDst)
+	}
+	return s
+}
+
+func (r *PolicyRule) Populate(pol *netlink.XfrmPolicy, ourReqID int) {
+	if r == nil {
+		return
+	}
+	pol.Action = r.Action
+
+	// Note: for a block action, the template doesn't get used.  However, we include it because it allows us
+	// to include a ReqID, which we use to match our policies during resync.
+	pol.Tmpls = append(pol.Tmpls, netlink.XfrmPolicyTmpl{
+		Src:   r.TunnelSrc.AsNetIP(),
+		Dst:   r.TunnelDst.AsNetIP(),
+		Proto: netlink.XFRM_PROTO_ESP,
+		Mode:  netlink.XFRM_MODE_TUNNEL,
+		Reqid: ourReqID,
+	})
 }

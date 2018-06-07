@@ -140,11 +140,11 @@ func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
 			d.polTable.SetRule(PolicySelector{
 				TrafficDst: stringToV4CIDR(remoteTunnelAddr),
 				Dir:        netlink.XFRM_DIR_OUT,
+				Mark:       d.forwardMark,
+				MarkMask:   d.forwardMark,
 			}, &PolicyRule{
 				TunnelSrc: stringToV4IP(d.localTunnelAddr),
 				TunnelDst: stringToV4IP(remoteTunnelAddr),
-				Mark:      d.forwardMark,
-				MarkMask:  d.forwardMark,
 			})
 		}
 	}
