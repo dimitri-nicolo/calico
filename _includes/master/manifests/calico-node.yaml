@@ -109,14 +109,6 @@ spec:
             # Use Kubernetes API as the backing datastore.
             - name: DATASTORE_TYPE
               value: "kubernetes"
-  {%- if include.typha == "true" %}
-            # Typha support: controlled by the ConfigMap.
-            - name: FELIX_TYPHAK8SSERVICENAME
-              valueFrom:
-                configMapKeyRef:
-                  name: {{include.variant_name | downcase}}-config
-                  key: typha_service_name
-  {%- endif %}
             # Wait for the datastore.
             - name: WAIT_FOR_DATASTORE
               value: "true"
@@ -125,6 +117,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+{%- endif %}
+{%- if include.typha == "true" %}
+            # Typha support: controlled by the ConfigMap.
+            - name: FELIX_TYPHAK8SSERVICENAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{include.variant_name | downcase}}-config
+                  key: typha_service_name
 {%- endif %}
 {%- if include.network == "calico" %}
             # Choose the backend to use.
