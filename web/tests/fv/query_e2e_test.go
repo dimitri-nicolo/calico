@@ -142,6 +142,7 @@ func calculateQueryUrl(addr string, query interface{}) string {
 			break
 		}
 		parms = appendResourceParm(parms, handlers.QueryEndpoint, qt.Endpoint)
+		parms = appendResourceParm(parms, handlers.QueryNetworkSet, qt.NetworkSet)
 		parms = appendStringParm(parms, handlers.QueryTier, qt.Tier)
 		parms = appendStringParm(parms, handlers.QueryUnmatched, fmt.Sprint(qt.Unmatched))
 		for k, v := range qt.Labels {

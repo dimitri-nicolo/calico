@@ -16,6 +16,7 @@ import (
 type Interface interface {
 	QueryEndpoints(selector string) ([]model.Key, error)
 	QueryPolicies(labels map[string]string, profiles []string) []model.Key
+	QueryRuleSelectors(labels map[string]string, profiles []string) []string
 	RegisterPolicyHandler(pcb PolicyMatchFn)
 	RegisterRuleHandler(rcb RuleMatchFn) RuleRegistrationInterface
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
@@ -55,12 +56,21 @@ type labelHandler struct {
 	// The accumulated matches added during a query.  If there is no query in progress
 	// these are nil.
 	results []model.Key
+
+	// The accumulated rule selector ID matches added during a query on rule selectors.
+	// If there is no rule selector query in progress, these are nil.
+	ruleSelectorResults []string
 }
 
-// A queryId is used to identify either a selector or endpoint that have been injected in to
+// A policyQueryId is used to identify either a selector or endpoint that have been injected in to
 // the InheritIndex helper when running a query. Match policyCallbacks with these identifiers can be
 // ignored for our cache, but will be included in the query responses.
-type queryId uuid.UUID
+type policyQueryId uuid.UUID
+
+// A ruleQueryId is used to identify a networkset that has been injected in to the InheritIndex
+// helper when running a query. It is used exclusively for querying matches on the rule selectors
+// on a policy.
+type ruleQueryId uuid.UUID
 
 // The rule selector ID is simply the selector string.  To minimize occupancy and processing we consolidate
 // common selectors across the rules and just track and send notifications once.
@@ -93,7 +103,7 @@ func (c *labelHandler) QueryEndpoints(selectorExpression string) ([]model.Key, e
 	}
 
 	// Start by adding the query selector to the required list of selectors.
-	selectorId := queryId(uuid.NewV4())
+	selectorId := policyQueryId(uuid.NewV4())
 	c.registerSelector(selectorId, parsedSel)
 
 	// The register selector call will result in synchronous matchStarted policyCallbacks to update our
@@ -111,7 +121,7 @@ func (c *labelHandler) QueryEndpoints(selectorExpression string) ([]model.Key, e
 // selector.
 func (c *labelHandler) QueryPolicies(labels map[string]string, profiles []string) []model.Key {
 	// Add a fake endpoint with the requested labels and profiles.
-	endpointId := queryId(uuid.NewV4())
+	endpointId := policyQueryId(uuid.NewV4())
 	c.index.UpdateLabels(endpointId, labels, profiles)
 
 	// The addition of the endpoint will result in synchronous policyCallbacks to update our matches.  Thus
@@ -119,6 +129,22 @@ func (c *labelHandler) QueryPolicies(labels map[string]string, profiles []string
 	// endpoint.
 	results := c.results
 	c.results = nil
+
+	// Remove the fake endpoint so that we are no longer tracking it.
+	c.index.DeleteLabels(endpointId)
+	return results
+}
+
+func (c *labelHandler) QueryRuleSelectors(labels map[string]string, profiles []string) []string {
+	// Add a fake endpoint with the requested labels and profiles.
+	endpointId := ruleQueryId(uuid.NewV4())
+	c.index.UpdateLabels(endpointId, labels, profiles)
+
+	// The addition of the endpoint will result in synchronous policyCallbacks to update our matches.  Thus
+	// our match map should now have the results we need.  All of the updates will be for this specific
+	// endpoint.
+	results := c.ruleSelectorResults
+	c.ruleSelectorResults = nil
 
 	// Remove the fake endpoint so that we are no longer tracking it.
 	c.index.DeleteLabels(endpointId)
@@ -263,16 +289,25 @@ func (c *labelHandler) unregisterSelector(selectorId interface{}) {
 // started.
 func (c *labelHandler) onMatchStarted(selId, epId interface{}) {
 	switch s := selId.(type) {
-	case queryId:
-		c.results = append(c.results, epId.(model.Key))
+	case policyQueryId:
+		switch epId.(type) {
+		case model.NetworkSetKey:
+			// No op for network set queries - we don't return network sets matching
+			// policy selectors.
+		default:
+			c.results = append(c.results, epId.(model.Key))
+		}
 	case ruleSelectorId:
 		switch e := epId.(type) {
 		case model.Key:
 			for _, cb := range c.ruleCallbacks {
 				cb(MatchStarted, string(s), e)
 			}
-		case queryId:
+		case policyQueryId:
 			// No op for endpoint queries - we don't return rule matches.
+		case ruleQueryId:
+			// Return matching rule selectors
+			c.ruleSelectorResults = append(c.ruleSelectorResults, string(s))
 		default:
 			log.WithFields(log.Fields{
 				"selId": selId,
@@ -285,7 +320,7 @@ func (c *labelHandler) onMatchStarted(selId, epId interface{}) {
 			for _, cb := range c.policyCallbacks {
 				cb(MatchStarted, s, e)
 			}
-		case queryId:
+		case policyQueryId:
 			c.results = append(c.results, s)
 		default:
 			log.WithFields(log.Fields{
@@ -305,7 +340,7 @@ func (c *labelHandler) onMatchStarted(selId, epId interface{}) {
 // stopped.
 func (c *labelHandler) onMatchStopped(selId, epId interface{}) {
 	switch s := selId.(type) {
-	case queryId:
+	case policyQueryId:
 		// noop required - this occurs when the query is deleted.
 	case ruleSelectorId:
 		switch e := epId.(type) {
@@ -313,8 +348,10 @@ func (c *labelHandler) onMatchStopped(selId, epId interface{}) {
 			for _, cb := range c.ruleCallbacks {
 				cb(MatchStopped, string(s), e)
 			}
-		case queryId:
+		case policyQueryId:
 			// No op for endpoint queries - we don't return rule matches.
+		case ruleQueryId:
+			// No op required - this occurs when a rule selector query is deleted.
 		default:
 			log.WithFields(log.Fields{
 				"selId": selId,
@@ -327,7 +364,7 @@ func (c *labelHandler) onMatchStopped(selId, epId interface{}) {
 			for _, cb := range c.policyCallbacks {
 				cb(MatchStopped, s, e)
 			}
-		case queryId:
+		case policyQueryId:
 			// noop required - this occurs when the query is deleted.
 		default:
 			log.WithFields(log.Fields{

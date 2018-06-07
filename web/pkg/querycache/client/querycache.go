@@ -27,6 +27,7 @@ func NewQueryInterface(ci clientv3.Interface) QueryInterface {
 		policies:          cache.NewPoliciesCache(),
 		endpoints:         cache.NewEndpointsCache(),
 		nodes:             cache.NewNodeCache(),
+		networksets:       cache.NewNetworkSetCache(),
 		polEplabelHandler: labelhandler.NewLabelHandler(),
 		wepConverter: dispatcherv1v3.NewConverterFromSyncerUpdateProcessor(
 			updateprocessors.NewWorkloadEndpointUpdateProcessor(),
@@ -79,6 +80,9 @@ func NewQueryInterface(ci clientv3.Interface) QueryInterface {
 			// We don't need these to be converted.
 			Kind: v3.KindNode,
 		},
+		{
+			Kind: v3.KindGlobalNetworkSet,
+		},
 	}
 	dispatcher := dispatcherv1v3.New(dispatcherTypes)
 
@@ -86,6 +90,7 @@ func NewQueryInterface(ci clientv3.Interface) QueryInterface {
 	cq.endpoints.RegisterWithDispatcher(dispatcher)
 	cq.policies.RegisterWithDispatcher(dispatcher)
 	cq.nodes.RegisterWithDispatcher(dispatcher)
+	cq.networksets.RegisterWithDispatcher(dispatcher)
 
 	// Register the label handlers *after* the actual resource caches (since the
 	// resource caches register for updates from the label handler)
@@ -138,7 +143,11 @@ type cachedQuery struct {
 	// well as those configured indirectly via WEPs and HEPs.
 	nodes cache.NodeCache
 
-	// polEplabelHandler handles the relationship between policy and rule selectors and endpoint labels.
+	// A cache of all loaded networksets.
+	networksets cache.NetworkSetCache
+
+	// polEplabelHandler handles the relationship between policy and rule selectors
+	// and endpoint and networkset labels.
 	polEplabelHandler labelhandler.Interface
 
 	// Converters for some of the resources.
@@ -304,9 +313,9 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		}, nil
 	}
 
-	// If an endpoint has been specified, determine the labels on the endpoint.
 	var policySet set.Set
 
+	// If an endpoint has been specified, determine the labels on the endpoint.
 	if req.Endpoint != nil {
 		// Endpoint is requested, get the labels and profiles and calculate the matching
 		// policies.
@@ -316,6 +325,19 @@ func (c *cachedQuery) runQueryPolicies(cxt context.Context, req QueryPoliciesReq
 		}
 		policySet = c.queryPoliciesByLabel(labels, profiles, nil)
 		log.WithField("policySet", policySet).Debug("Endpoint query")
+	}
+
+	// If a networkset has been specified, determine the labels on the networkset.
+	if req.NetworkSet != nil {
+		// NetworkSet is requested, get the labels and calculate the matching
+		// policies.
+		labels, err := c.getNetworkSetLabels(req.NetworkSet)
+		if err != nil {
+			return nil, err
+		}
+		// Query policies for the rule selectors matching the networkset labels.
+		policySet = c.queryPoliciesByLabelMatchingRule(labels, nil, policySet)
+		log.WithField("policySet", policySet).Debug("NetworkSet query")
 	}
 
 	if len(req.Labels) > 0 {
@@ -532,6 +554,17 @@ func (c *cachedQuery) getEndpointLabelsAndProfiles(key model.Key) (map[string]st
 	return labels, profiles, nil
 }
 
+func (c *cachedQuery) getNetworkSetLabels(key model.Key) (map[string]string, error) {
+	netset := c.networksets.GetNetworkSet(key)
+	if netset == nil {
+		return nil, errors.ErrorResourceDoesNotExist{
+			Identifier: key,
+		}
+	}
+
+	return netset.GetObjectMeta().GetLabels(), nil
+}
+
 func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []string, filterIn set.Set) set.Set {
 	policies := c.polEplabelHandler.QueryPolicies(labels, profiles)
 
@@ -544,6 +577,33 @@ func (c *cachedQuery) queryPoliciesByLabel(labels map[string]string, profiles []
 		results.Add(p)
 	}
 	log.WithField("NumResults", results.Len()).Info("Returning policies from label query")
+	return results
+}
+
+func (c *cachedQuery) queryPoliciesByLabelMatchingRule(labels map[string]string, profiles []string, filterIn set.Set) set.Set {
+	selectors := c.polEplabelHandler.QueryRuleSelectors(labels, profiles)
+
+	// Convert the selectors to a set of the policy matches.
+	results := set.New()
+	// Iterate over all the selectors and join the sets
+	for _, selector := range selectors {
+		matching := c.policies.GetPolicyKeySetByRuleSelector(selector)
+		matching.Iter(func(item interface{}) error {
+			converted, ok := item.(model.Key)
+			if !ok {
+				return fmt.Errorf("object: %v stored against selector: %s is not a policy key", item, selector)
+			}
+
+			// Only filter policies in if they are in the supplied set (if supplied).
+			if filterIn != nil && !filterIn.Contains(converted) {
+				return nil
+			}
+
+			results.Add(converted)
+			return nil
+		})
+	}
+	log.WithField("NumResults", results.Len()).Info("Returning policies from label query against rule selectors")
 	return results
 }
 

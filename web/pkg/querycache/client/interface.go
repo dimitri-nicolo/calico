@@ -63,9 +63,10 @@ type Node struct {
 
 type QueryPoliciesReq struct {
 	// Queries (select one)
-	Endpoint model.Key
-	Labels   map[string]string
-	Policy   model.Key
+	Endpoint   model.Key
+	Labels     map[string]string
+	Policy     model.Key
+	NetworkSet model.Key
 
 	// Filters
 	Unmatched bool

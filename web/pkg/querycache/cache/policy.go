@@ -24,6 +24,7 @@ type PoliciesCache interface {
 	GetOrderedPolicies(set.Set) []api.Tier
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 	RegisterWithLabelHandler(handler labelhandler.Interface)
+	GetPolicyKeySetByRuleSelector(string) set.Set
 }
 
 func NewPoliciesCache() PoliciesCache {
@@ -123,6 +124,10 @@ func (c *policiesCache) GetOrderedPolicies(keys set.Set) []api.Tier {
 	return tiers
 }
 
+func (c *policiesCache) GetPolicyKeySetByRuleSelector(selector string) set.Set {
+	return c.ruleSelectors[selector].policies
+}
+
 func (c *policiesCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
 	dispatcher.RegisterHandler(v3.KindGlobalNetworkPolicy, c.onUpdate)
 	dispatcher.RegisterHandler(v3.KindNetworkPolicy, c.onUpdate)
@@ -212,20 +217,27 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 			pc.policies[uv3.Key] = pd
 			pc.unmatchedPolicies.Add(uv3.Key)
 			// Add rule selectors for this new policy
-			c.addPolicyRuleSelectors(pv1)
+			c.addPolicyRuleSelectors(pv1, uv3.Key)
 		case bapi.UpdateTypeKVUpdated:
 			pv1 := uv1.Value.(*model.Policy)
 			existing := pc.policies[uv3.Key]
 			existing.resource = uv3.Value.(api.Resource)
+			// Remove references to the policy from its current set of rule selectors.
+			// We have to remove these references since they are possibly outdated with
+			// any changes to the rule selectors. The policy references will be added
+			// back to all applicable rule selectors in addPolicyRuleSelectors.
+			c.deleteRuleSelectorPolicyReferences(existing.v1Policy, uv3.Key)
 			// Update rule selectors for this policy. We add the new ones first and then unregister
 			// the old ones - that prevents us potentially removing and adding back in a selector.
-			c.addPolicyRuleSelectors(pv1)
+			c.addPolicyRuleSelectors(pv1, uv3.Key)
 			c.deletePolicyRuleSelectors(existing.v1Policy)
 			existing.v1Policy = pv1
 		case bapi.UpdateTypeKVDeleted:
 			existing := pc.policies[uv3.Key]
 			delete(pc.policies, uv3.Key)
 			pc.unmatchedPolicies.Discard(uv3.Key)
+			// Remove references to this policy from rule selectors
+			c.deleteRuleSelectorPolicyReferences(existing.v1Policy, uv3.Key)
 			// Remove the rule selectors for this policy.
 			c.deletePolicyRuleSelectors(existing.v1Policy)
 		}
@@ -240,17 +252,20 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 
 // addPolicyRuleSelectors ensures we are tracking the rule selectors in the policy. This tracks
 // based on the selector string and ensures we track identical selectors only once.
-func (c *policiesCache) addPolicyRuleSelectors(p *model.Policy) {
+func (c *policiesCache) addPolicyRuleSelectors(p *model.Policy, polKey model.Key) {
 	add := func(s string) {
 		rsi := c.ruleSelectors[s]
 		if rsi == nil {
-			rsi = &ruleSelectorInfo{}
+			rsi = &ruleSelectorInfo{
+				policies: set.New(),
+			}
 			c.ruleSelectors[s] = rsi
 		}
 		rsi.numRuleRefs++
 		if rsi.numRuleRefs == 1 {
 			c.ruleRegistration.AddRuleSelector(s)
 		}
+		rsi.policies.Add(polKey)
 	}
 
 	for i := range p.InboundRules {
@@ -274,6 +289,26 @@ func (c *policiesCache) deletePolicyRuleSelectors(p *model.Policy) {
 			delete(c.ruleSelectors, s)
 			c.ruleRegistration.RemoveRuleSelector(s)
 		}
+	}
+
+	for i := range p.InboundRules {
+		r := &p.InboundRules[i]
+		del(c.getSrcSelector(r))
+		del(c.getDstSelector(r))
+	}
+	for i := range p.OutboundRules {
+		r := &p.OutboundRules[i]
+		del(c.getSrcSelector(r))
+		del(c.getDstSelector(r))
+	}
+}
+
+// deleteRuleSelectorPolicyReferences deletes the policy references that denote which policies
+// contain a rule selector on the rule selector info.
+func (c *policiesCache) deleteRuleSelectorPolicyReferences(p *model.Policy, polKey model.Key) {
+	del := func(s string) {
+		rsi := c.ruleSelectors[s]
+		rsi.policies.Discard(polKey)
 	}
 
 	for i := range p.InboundRules {
@@ -477,6 +512,7 @@ func (d *tierData) GetResource() api.Resource {
 type ruleSelectorInfo struct {
 	numRuleRefs int
 	endpoints   api.EndpointCounts
+	policies    set.Set
 }
 
 // policyDataWithRuleData is a non-cached version of the policy data, but it includes
