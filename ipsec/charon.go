@@ -44,10 +44,11 @@ type Uri struct {
 type CharonIKEDaemon struct {
 	viciUri     Uri
 	espProposal string
+	ikeProposal string
 	ctx         context.Context
 }
 
-func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal string) (*CharonIKEDaemon, error) {
+func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ikeProposal string) (*CharonIKEDaemon, error) {
 	// FIXME: Reevaluate directory permissions.
 	os.MkdirAll("/var/run/", 0700)
 	if f, err := os.Open("/var/run/charon.pid"); err == nil {
@@ -72,7 +73,11 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal str
 		os.Remove("/var/run/charon.pid")
 	}
 
-	charon := &CharonIKEDaemon{ctx: ctx, espProposal: espProposal}
+	charon := &CharonIKEDaemon{
+		ctx:         ctx,
+		espProposal: espProposal,
+		ikeProposal: ikeProposal,
+	}
 	charon.viciUri = Uri{"unix", "/var/run/charon.vici"}
 
 	cmd, err := charon.runAndCaptureLogs("/usr/lib/strongswan/charon")
@@ -183,7 +188,7 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 	return nil
 }
 
-func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP, ikeProposal string) error {
+func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
 	var err error
 	var client *goStrongswanVici.ClientConn
 
@@ -209,7 +214,7 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP, ikeProposal str
 		StartAction:  "start",
 		CloseAction:  "none",
 		Mode:         "tunnel",
-		ReqID:        "50",
+		ReqID:        fmt.Sprint(ReqID),
 		//RekeyTime:     "5", //Can set this to a low time to check that rekeys are handled properly
 		InstallPolicy: "no",
 	}
@@ -227,7 +232,7 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP, ikeProposal str
 	ikeConf := goStrongswanVici.IKEConf{
 		LocalAddrs:  []string{localIP},
 		RemoteAddrs: []string{remoteIP},
-		Proposals:   []string{ikeProposal},
+		Proposals:   []string{charon.ikeProposal},
 		Version:     "2",
 		KeyingTries: "0", //continues to retry
 		LocalAuth:   localAuthConf,

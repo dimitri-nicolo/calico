@@ -3,10 +3,6 @@
 package ipsec
 
 import (
-	"context"
-	"fmt"
-	"sync"
-
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -21,60 +17,69 @@ const (
 	ReqID      = 50 // Used to correlate between the policy and state tables.
 )
 
-func NewDataplane(localTunnelAddr string, preSharedKey, ikeProposal, espProposal, logLevel string, forwardMark uint32, polTable *PolicyTable) *Dataplane { // Start the charon
+type ikeDaemon interface {
+	LoadSharedKey(remoteIP, password string) error
+	LoadConnection(localIP, remoteIP string) error
+	UnloadCharonConnection(localIP, remoteIP string) error
+}
 
+type polTable interface {
+	SetRule(sel PolicySelector, rule *PolicyRule)
+	DeleteRule(sel PolicySelector)
+}
+
+func NewDataplane(
+	localTunnelAddr string,
+	preSharedKey string,
+	forwardMark uint32,
+	polTable polTable,
+	ikeDaemon ikeDaemon,
+) *Dataplane {
 	if forwardMark == 0 {
-		log.Panic("IPsec forward mark is 0")
+		log.Panic("IPsec forward mark shouldn't be 0")
 	}
 
 	d := &Dataplane{
-		preSharedKey:     preSharedKey,
-		localTunnelAddr:  localTunnelAddr,
+		preSharedKey:    preSharedKey,
+		localTunnelAddr: localTunnelAddr,
+		forwardMark:     forwardMark,
+
 		bindingsByTunnel: map[string]set.Set{},
-		ikeProposal:      ikeProposal,
-		forwardMark:      forwardMark,
-		config:           NewCharonConfig(charonConfigRootDir, charonMainConfigFile),
-		polTable:         polTable,
+
+		polTable:  polTable,
+		ikeDaemon: ikeDaemon,
 	}
 
-	// Initialise charon main config file.
-	d.config.SetLogLevel(logLevel)
-	d.config.SetBooleanOption(CharonFollowRedirects, false)
-	d.config.SetBooleanOption(CharonMakeBeforeBreak, true)
-	d.config.RenderToFile()
-	log.Infof("Initialising charon config %+v", d.config)
-
-	ikeDaemon, err := NewCharonIKEDaemon(context.Background(), &d.wg, espProposal)
-	if err != nil {
-		panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
-	}
-	d.ikeDaemon = ikeDaemon
-
-	// FIXME The following LoadSharedKey call fails if we don't wait for the Charon to start first.
 	time.Sleep(1 * time.Second)
 
-	err = ikeDaemon.LoadSharedKey(localTunnelAddr, preSharedKey)
-	if err != nil {
-		panic(err)
+	// Load the shared key into the charon for our end of the tunnels.
+	tries := 10
+	for {
+		err := d.ikeDaemon.LoadSharedKey(localTunnelAddr, preSharedKey)
+		if err != nil {
+			log.WithError(err).Info("Failed to load our shared key into the Charon")
+			if tries == 0 {
+				log.WithError(err).Panic("Failed to load our shared key into the Charon after retries")
+			}
+			tries--
+			time.Sleep(time.Second)
+			continue
+		}
+		break
 	}
 
 	return d
 }
 
 type Dataplane struct {
-	preSharedKey string
-	ikeProposal  string
-	ikeDaemon    *CharonIKEDaemon
+	preSharedKey    string
+	forwardMark     uint32
+	localTunnelAddr string
 
-	forwardMark      uint32
-	localTunnelAddr  string
 	bindingsByTunnel map[string]set.Set
 
-	config *CharonConfig
-
-	wg sync.WaitGroup
-
-	polTable *PolicyTable
+	ikeDaemon ikeDaemon
+	polTable  polTable
 }
 
 func (d *Dataplane) AddBlacklist(workloadAddress string) {
@@ -243,7 +248,7 @@ func (d *Dataplane) configureTunnel(tunnelAddr string) {
 		return
 	}
 	panicIfErr(d.ikeDaemon.LoadSharedKey(tunnelAddr, d.preSharedKey))
-	panicIfErr(d.ikeDaemon.LoadConnection(d.localTunnelAddr, tunnelAddr, d.ikeProposal))
+	panicIfErr(d.ikeDaemon.LoadConnection(d.localTunnelAddr, tunnelAddr))
 }
 
 func (d *Dataplane) removeTunnel(tunnelAddr string) {

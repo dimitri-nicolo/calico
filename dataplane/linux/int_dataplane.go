@@ -15,6 +15,8 @@
 package intdataplane
 
 import (
+	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -461,14 +463,26 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 			if strings.Contains(ip, ":") {
 				continue
 			}
+
+			// Initialise charon main config file.
+			charonConfig := ipsec.NewCharonConfig(ipsec.CharonConfigRootDir, ipsec.CharonMainConfigFile)
+			charonConfig.SetLogLevel(config.IPSecLogLevel)
+			charonConfig.SetBooleanOption(ipsec.CharonFollowRedirects, false)
+			charonConfig.SetBooleanOption(ipsec.CharonMakeBeforeBreak, true)
+			log.Infof("Initialising charon config %+v", charonConfig)
+			charonConfig.RenderToFile()
+			var charonWG sync.WaitGroup
+			ikeDaemon, err := ipsec.NewCharonIKEDaemon(context.Background(), &charonWG, config.IPSecESPProposal, config.IPSecIKEProposal)
+			if err != nil {
+				panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
+			}
+
 			dp.ipSecDataplane = ipsec.NewDataplane(
 				ip,
 				config.IPSecPSK,
-				config.IPSecIKEProposal,
-				config.IPSecESPProposal,
-				config.IPSecLogLevel,
 				config.RulesConfig.IptablesMarkIPsec,
 				dp.ipSecPolTable,
+				ikeDaemon,
 			)
 			ipSecManager := newIPSecManager(dp.ipSecDataplane)
 			dp.allManagers = append(dp.allManagers, ipSecManager)

@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	charonConfigRootDir  = "/etc/strongswan.d"
-	charonMainConfigFile = "charon.conf"
+	CharonConfigRootDir  = "/etc/strongswan.d"
+	CharonMainConfigFile = "charon.conf"
 
 	CharonFollowRedirects          = "charon.follow_redirects"
 	CharonMakeBeforeBreak          = "charon.make_before_break"
