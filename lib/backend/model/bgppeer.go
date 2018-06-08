@@ -183,4 +183,7 @@ type BGPPeer struct {
 	// converts large uints to float e notation which breaks the BIRD
 	// configuration.
 	ASNum numorstring.ASNumber `json:"as_num,string"`
+
+	// Extensions is a mapping of keys to values that can be used in custom BGP templates
+	Extensions map[string]string
 }

@@ -15,6 +15,7 @@
 package updateprocessors
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 
@@ -32,8 +33,9 @@ func NewBGPConfigUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
 		func(node, name string) model.Key { return model.NodeBGPConfigKey{Nodename: node, Name: name} },
 		func(name string) model.Key { return model.GlobalBGPConfigKey{Name: name} },
 		map[string]ConfigFieldValueToV1ModelValue{
-			"loglevel":  logLevelToBirdLogLevel,
-			"node_mesh": nodeMeshToString,
+			"loglevel":   logLevelToBirdLogLevel,
+			"node_mesh":  nodeMeshToString,
+			"extensions": extensionsToJSON,
 		},
 	)
 }
@@ -61,4 +63,14 @@ var nodeMeshToString = func(value interface{}) interface{} {
 		return nodeToNodeMeshEnabled
 	}
 	return nodeToNodeMeshDisabled
+}
+
+var extensionsToJSON = func(value interface{}) interface{} {
+	mapping := value.(map[string]string)
+	if mapping == nil {
+		return "{}"
+	} else {
+		vb, _ := json.Marshal(mapping)
+		return string(vb)
+	}
 }

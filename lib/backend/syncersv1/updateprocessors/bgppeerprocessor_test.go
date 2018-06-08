@@ -66,8 +66,9 @@ var _ = Describe("Test the BGPPeer update processor", func() {
 		Expect(kvps[0]).To(Equal(&model.KVPair{
 			Key: v1GlobalPeerKeyIP1,
 			Value: &model.BGPPeer{
-				PeerIP: v1GlobalPeerKeyIP1.PeerIP,
-				ASNum:  11111,
+				PeerIP:     v1GlobalPeerKeyIP1.PeerIP,
+				ASNum:      11111,
+				Extensions: map[string]string{},
 			},
 			Revision: "abcde",
 		}))
@@ -124,16 +125,49 @@ var _ = Describe("Test the BGPPeer update processor", func() {
 			{
 				Key: v1GlobalPeerKeyIP1,
 				Value: &model.BGPPeer{
-					PeerIP: v1GlobalPeerKeyIP1.PeerIP,
-					ASNum:  1234,
+					PeerIP:     v1GlobalPeerKeyIP1.PeerIP,
+					ASNum:      1234,
+					Extensions: map[string]string{},
 				},
 				Revision: "1239",
 			},
 			{
 				Key: v1Node1PeerKeyIP2,
 				Value: &model.BGPPeer{
+					PeerIP:     v1GlobalPeerKeyIP2.PeerIP,
+					ASNum:      11111,
+					Extensions: map[string]string{},
+				},
+				Revision: "abcdef",
+			},
+		}))
+
+		By("updating the first BGPPeer to include extensions fields - expect update for only the first BGPPeer")
+		res = apiv3.NewBGPPeer()
+		res.Name = v3PeerKey1.Name
+		res.Spec.PeerIP = ip2str
+		res.Spec.ASNumber = 11111
+		res.Spec.Node = node1
+		res.Spec.Extensions = map[string]string{
+			"testKey":  "testValue",
+			"testKey2": "testValue2",
+		}
+		kvps, err = up.Process(&model.KVPair{
+			Key:      v3PeerKey1,
+			Value:    res,
+			Revision: "abcdef",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kvps).To(Equal([]*model.KVPair{
+			{
+				Key: v1Node1PeerKeyIP2,
+				Value: &model.BGPPeer{
 					PeerIP: v1GlobalPeerKeyIP2.PeerIP,
 					ASNum:  11111,
+					Extensions: map[string]string{
+						"testKey":  "testValue",
+						"testKey2": "testValue2",
+					},
 				},
 				Revision: "abcdef",
 			},
@@ -176,8 +210,9 @@ var _ = Describe("Test the BGPPeer update processor", func() {
 		Expect(kvps[0]).To(Equal(&model.KVPair{
 			Key: v1GlobalPeerKeyIP2,
 			Value: &model.BGPPeer{
-				PeerIP: v1GlobalPeerKeyIP2.PeerIP,
-				ASNum:  11111,
+				PeerIP:     v1GlobalPeerKeyIP2.PeerIP,
+				ASNum:      11111,
+				Extensions: map[string]string{},
 			},
 			Revision: "00000",
 		}))
@@ -198,8 +233,9 @@ var _ = Describe("Test the BGPPeer update processor", func() {
 		Expect(kvps[0]).To(Equal(&model.KVPair{
 			Key: v1Node1PeerKeyIP2,
 			Value: &model.BGPPeer{
-				PeerIP: v1GlobalPeerKeyIP2.PeerIP,
-				ASNum:  22222,
+				PeerIP:     v1GlobalPeerKeyIP2.PeerIP,
+				ASNum:      22222,
+				Extensions: map[string]string{},
 			},
 			Revision: "00001",
 		}))
@@ -267,8 +303,9 @@ var _ = Describe("Test the BGPPeer update processor", func() {
 		Expect(kvps[0]).To(Equal(&model.KVPair{
 			Key: v1GlobalPeerKeyIP1,
 			Value: &model.BGPPeer{
-				PeerIP: v1GlobalPeerKeyIP1.PeerIP,
-				ASNum:  11111,
+				PeerIP:     v1GlobalPeerKeyIP1.PeerIP,
+				ASNum:      11111,
+				Extensions: map[string]string{},
 			},
 			Revision: "abcde",
 		}))
