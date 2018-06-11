@@ -1,16 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 package updateprocessors
 
@@ -48,7 +36,12 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 	// v1 model.  For a delete these will all be nil.  If we fail to convert any value then
 	// just treat that as a delete on the underlying key and return the error alongside
 	// the updates.
-	var ipv4, ipv4Tunl interface{}
+	//
+	// Note: it's important that these variables are type interface{} because we use them directly in the
+	// KVPair{} literals below.  If we used non-interface types here then we'd end up with zero values for
+	// the non=interface types in the KVPair.Value field instead of nil interface{} values (and we want nil
+	// interface{} values).
+	var ipv4, ipv4Tunl, ipv4Str interface{}
 	if kvp.Value != nil {
 		node, ok := kvp.Value.(*apiv3.Node)
 		if !ok {
@@ -66,6 +59,7 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 				if err == nil {
 					log.WithFields(log.Fields{"ip": ip, "cidr": cidr}).Debug("Parsed IPv4 address")
 					ipv4 = ip
+					ipv4Str = ip.String()
 				} else {
 					log.WithError(err).WithField("IPv4Address", bgp.IPv4Address).Warn("Failed to parse IPv4Address")
 				}
@@ -93,6 +87,14 @@ func (c *FelixNodeUpdateProcessor) Process(kvp *model.KVPair) ([]*model.KVPair, 
 				Hostname: name,
 			},
 			Value:    ipv4,
+			Revision: kvp.Revision,
+		},
+		{
+			Key: model.HostConfigKey{
+				Hostname: name,
+				Name:     "NodeIP",
+			},
+			Value:    ipv4Str,
 			Revision: kvp.Revision,
 		},
 		{

@@ -329,7 +329,7 @@ func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder
 		copy(updates, st.updates)
 		return updates
 	}
-	Eventually(gu, "2s", "100ms").Should(HaveLen(len(expected)))
+	EventuallyWithOffset(1, gu, "2s", "100ms").Should(HaveLen(len(expected)))
 
 	// Extract the updates and remove the updates and onUpdates from our cache.
 	st.lock.Lock()

@@ -1,16 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 package updateprocessors_test
 
@@ -29,7 +17,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		Kind: apiv3.KindNode,
 		Name: "mynode",
 	}
-	numFelixConfigs := 2
+	numFelixConfigs := 3
 	up := updateprocessors.NewFelixNodeUpdateProcessor()
 
 	BeforeEach(func() {
@@ -47,6 +35,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		expected := map[string]interface{}{
 			hostIPMarker:       nil,
 			"IpInIpTunnelAddr": nil,
+			"NodeIP":           nil,
 		}
 		kvps, err := up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -87,6 +76,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		expected = map[string]interface{}{
 			hostIPMarker:       &ip,
 			"IpInIpTunnelAddr": nil,
+			"NodeIP":           "1.2.3.4",
 		}
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -111,6 +101,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		expected = map[string]interface{}{
 			hostIPMarker:       &ip,
 			"IpInIpTunnelAddr": nil,
+			"NodeIP":           "100.200.100.200",
 		}
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -134,6 +125,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		expected = map[string]interface{}{
 			hostIPMarker:       nil,
 			"IpInIpTunnelAddr": "192.100.100.100",
+			"NodeIP":           nil,
 		}
 		kvps, err = up.Process(&model.KVPair{
 			Key:   v3NodeKey1,
@@ -185,6 +177,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		expected := map[string]interface{}{
 			hostIPMarker:       nil,
 			"IpInIpTunnelAddr": "192.100.100.100",
+			"NodeIP":           nil,
 		}
 		checkExpectedConfigs(
 			kvps,
@@ -209,6 +202,7 @@ var _ = Describe("Test the (Felix) Node update processor", func() {
 		expected = map[string]interface{}{
 			hostIPMarker:       &ip,
 			"IpInIpTunnelAddr": nil,
+			"NodeIP":           "1.2.3.4",
 		}
 		checkExpectedConfigs(
 			kvps,

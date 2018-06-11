@@ -182,11 +182,15 @@ var _ = testutils.E2eDatastoreDescribe("Felix syncer tests", testutils.Datastore
 			}
 
 			// The HostIP will be added for the IPv4 address
-			expectedCacheSize += 1
+			expectedCacheSize += 2
 			ip := net.MustParseIP("1.2.3.4")
 			syncTester.ExpectData(model.KVPair{
 				Key:   model.HostIPKey{Hostname: "127.0.0.1"},
 				Value: &ip,
+			})
+			syncTester.ExpectData(model.KVPair{
+				Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "NodeIP"},
+				Value: "1.2.3.4",
 			})
 			syncTester.ExpectCacheSize(expectedCacheSize)
 
