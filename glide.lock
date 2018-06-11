@@ -1,5 +1,5 @@
-hash: d3ecc5a2865cd1c9acc181501d5b40f3cb4d3419672d9761b50e9616c41c10ab
-updated: 2018-06-05T14:04:25.350229562Z
+hash: 3c2e1d3f26dce44061f74e4c7d61a0917784f5f46d598aaa5d1c8ff7c3c510e6
+updated: 2018-06-11T14:07:04.685695681Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -121,7 +121,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
-  version: b9df188d0fae32d69c1a519fa81741668a12f55a
+  version: 3411630489cb83289a0151db270334f054ebaf82
   subpackages:
   - tracer
   - tracer/wire
@@ -200,7 +200,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: 6c572c00d1830223701e155de97408483dfcd14a
+  version: bd9c3193394760d98b2fa6ebb2291f0cd1d06a7d
   subpackages:
   - ext
   - log
@@ -217,7 +217,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e633cdfd7e6c096ca893a876ad6a80b661e0a4b4
+  version: da9083d92c46e554ba2cba74cec9f92ac510a85a
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib

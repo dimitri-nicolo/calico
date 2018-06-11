@@ -226,7 +226,8 @@ type Config struct {
 	IPSecIKEAlgorithm string `config:"string;aes128gcm16-prfsha256-ecp256"`
 	IPSecESPAlgorithm string `config:"string;aes128gcm16-ecp256"`
 	// IPSecLogLevel controls log level for IPSec components. [Default: Info]
-	IPSecLogLevel string `config:"oneof(NOTICE,INFO,DEBUG,VERBOSE);INFO"`
+	IPSecLogLevel              string        `config:"oneof(NOTICE,INFO,DEBUG,VERBOSE);INFO"`
+	IPSecPolicyRefreshInterval time.Duration `config:"seconds;600"`
 
 	// This MUST be ignored if set using config/env var, so DO NOT add
 	// the `config` struct tag to this.

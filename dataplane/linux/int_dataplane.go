@@ -122,6 +122,7 @@ type Config struct {
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
 	IptablesRefreshInterval        time.Duration
+	IPSecPolicyRefreshInterval     time.Duration
 	IptablesPostWriteCheckInterval time.Duration
 	IptablesInsertMode             string
 	IptablesLockFilePath           string
@@ -729,6 +730,16 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		)
 		routeRefreshC = refreshTicker.C
 	}
+	var ipSecRefreshC <-chan time.Time
+	if d.config.IPSecPolicyRefreshInterval > 0 {
+		log.WithField("interval", d.config.IPSecPolicyRefreshInterval).Info(
+			"Will recheck IPsec policy on timer")
+		refreshTicker := jitter.NewTicker(
+			d.config.IPSecPolicyRefreshInterval,
+			d.config.IPSecPolicyRefreshInterval/10,
+		)
+		ipSecRefreshC = refreshTicker.C
+	}
 
 	// Fill the apply throttle leaky bucket.
 	throttleC := jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond).C
@@ -835,6 +846,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			log.Debug("Refreshing routes")
 			d.forceRouteRefresh = true
 			d.dataplaneNeedsSync = true
+		case <-ipSecRefreshC:
+			d.ipSecPolTable.QueueResync()
 		case <-d.reschedC:
 			log.Debug("Reschedule kick received")
 			d.dataplaneNeedsSync = true
