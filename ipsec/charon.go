@@ -177,6 +177,7 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 	defer client.Close()
 
 	sharedKey := &goStrongswanVici.Key{
+		ID:     remoteIP,
 		Typ:    "IKE",
 		Data:   password,
 		Owners: []string{remoteIP},
@@ -186,6 +187,36 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 		err = client.LoadShared(sharedKey)
 		if err != nil {
 			log.Errorf("Failed to load key for %v. Retrying. %v", remoteIP, err)
+			time.Sleep(time.Second)
+			continue
+		}
+		break
+	}
+
+	log.Infof("Loaded shared key for: %v", remoteIP)
+	return nil
+}
+
+func (charon *CharonIKEDaemon) UnloadSharedKey(remoteIP string) error {
+	var err error
+	var client *goStrongswanVici.ClientConn
+
+	client, err = charon.getClient(true)
+	if err != nil {
+		log.Errorf("Failed to acquire Vici client: %v", err)
+		return err
+	}
+
+	defer client.Close()
+
+	sharedKey := &goStrongswanVici.UnloadKeyRequest{
+		ID: remoteIP,
+	}
+
+	for {
+		err = client.UnloadShared(sharedKey)
+		if err != nil {
+			log.Errorf("Failed to unload key for %v. Retrying. %v", remoteIP, err)
 			time.Sleep(time.Second)
 			continue
 		}

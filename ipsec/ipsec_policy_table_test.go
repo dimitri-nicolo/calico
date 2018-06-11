@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/felix/ip"
 	. "github.com/projectcalico/felix/ipsec"
+	"github.com/projectcalico/felix/testutils"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -238,10 +239,8 @@ var _ = Describe("IpsecPolicyTable", func() {
 		failureType := failureType // Create a fresh copy for each loop.
 		Describe("with some "+failureType+" errors queued up", func() {
 			BeforeEach(func() {
-				mockDataplane.errorsByType[failureType] = []error{
-					errors.New("dummy error"),
-					errors.New("dummy error"),
-				}
+				mockDataplane.Errors.QueueError(failureType)
+				mockDataplane.Errors.QueueError(failureType)
 			})
 
 			It("should succeed in applying an update and deletion (retrying if needed)", func() {
@@ -262,12 +261,11 @@ var _ = Describe("IpsecPolicyTable", func() {
 				polTable.Apply()
 
 				for i := 0; i < 20; i++ {
-					mockDataplane.errorsByType[failureType] = append(mockDataplane.errorsByType[failureType],
-						errors.New("dummy error"))
+					mockDataplane.Errors.QueueError(failureType)
 				}
 				if failureType == "newNetlinkHandle" {
 					// queue up a single failure of an update to trigger a netlink reconnect
-					mockDataplane.errorsByType["XfrmPolicyUpdate"] = []error{errors.New("dummy error")}
+					mockDataplane.Errors.QueueError("XfrmPolicyUpdate")
 				}
 				if failureType == "XfrmPolicyList" {
 					// Make sure the apply() does a list operation.
@@ -454,7 +452,7 @@ var _ = Describe("IpsecPolicyTable", func() {
 })
 
 type mockIPSecDataplane struct {
-	errorsByType map[string][]error
+	Errors testutils.ErrorProducer
 
 	netlinkHandleOpen bool
 	cumulativeSleep   time.Duration
@@ -465,7 +463,7 @@ type mockIPSecDataplane struct {
 }
 
 func newMockIPSecDataplane() *mockIPSecDataplane {
-	return &mockIPSecDataplane{errorsByType: map[string][]error{}}
+	return &mockIPSecDataplane{Errors: testutils.NewErrorQueue()}
 }
 
 func (m *mockIPSecDataplane) addPolicy(pol *netlink.XfrmPolicy) {
@@ -473,7 +471,7 @@ func (m *mockIPSecDataplane) addPolicy(pol *netlink.XfrmPolicy) {
 }
 
 func (m *mockIPSecDataplane) newNetlinkHandle() (NetlinkXFRMIface, error) {
-	err := m.nextErr("newNetlinkHandle")
+	err := m.Errors.NextError("newNetlinkHandle")
 	if err != nil {
 		return nil, err
 	}
@@ -493,7 +491,7 @@ func (m *mockIPSecDataplane) sleep(duration time.Duration) {
 func (m *mockIPSecDataplane) XfrmPolicyList(family int) ([]netlink.XfrmPolicy, error) {
 	m.NumListCalls++
 	Expect(family).To(Equal(netlink.FAMILY_V4))
-	err := m.nextErr("XfrmPolicyList")
+	err := m.Errors.NextError("XfrmPolicyList")
 	if err != nil {
 		return nil, err
 	}
@@ -507,7 +505,7 @@ func (m *mockIPSecDataplane) XfrmPolicyList(family int) ([]netlink.XfrmPolicy, e
 func (m *mockIPSecDataplane) XfrmPolicyUpdate(updatedPolicy *netlink.XfrmPolicy) error {
 	m.NumUpdateCalls++
 
-	err := m.nextErr("XfrmPolicyUpdate")
+	err := m.Errors.NextError("XfrmPolicyUpdate")
 	if err != nil {
 		return err
 	}
@@ -541,7 +539,7 @@ func (m *mockIPSecDataplane) XfrmPolicyUpdate(updatedPolicy *netlink.XfrmPolicy)
 
 func (m *mockIPSecDataplane) XfrmPolicyDel(policyToDelete *netlink.XfrmPolicy) error {
 	m.NumDeleteCalls++
-	err := m.nextErr("XfrmPolicyDel")
+	err := m.Errors.NextError("XfrmPolicyDel")
 	if err != nil {
 		return err
 	}
@@ -568,19 +566,6 @@ func (m *mockIPSecDataplane) Delete() {
 		Fail("Netlink handle closed while not open")
 	}
 	m.netlinkHandleOpen = false
-}
-
-func (m *mockIPSecDataplane) nextErr(errType string) error {
-	errs := m.errorsByType[errType]
-	if len(errs) > 0 {
-		err := errs[0]
-		m.errorsByType[errType] = errs[1:]
-		if err != nil {
-			logrus.WithError(err).WithField("type", errType).Warn("Simulating error")
-			return err
-		}
-	}
-	return nil
 }
 
 func netsEqual(a, b *net.IPNet) bool {

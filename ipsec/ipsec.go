@@ -17,15 +17,16 @@ const (
 	ReqID      = 50 // Used to correlate between the policy and state tables.
 )
 
-type ikeDaemon interface {
-	LoadSharedKey(remoteIP, password string) error
-	LoadConnection(localIP, remoteIP string) error
-	UnloadCharonConnection(localIP, remoteIP string) error
-}
-
 type polTable interface {
 	SetRule(sel PolicySelector, rule *PolicyRule)
 	DeleteRule(sel PolicySelector)
+}
+
+type ikeDaemon interface {
+	LoadSharedKey(remoteIP, password string) error
+	UnloadSharedKey(remoteIP string) error
+	LoadConnection(localIP, remoteIP string) error
+	UnloadCharonConnection(localIP, remoteIP string) error
 }
 
 func NewDataplane(
@@ -34,6 +35,17 @@ func NewDataplane(
 	forwardMark uint32,
 	polTable polTable,
 	ikeDaemon ikeDaemon,
+) *Dataplane {
+	return NewDataplaneWithShims(localTunnelAddr, preSharedKey, forwardMark, polTable, ikeDaemon, time.Sleep)
+}
+
+func NewDataplaneWithShims(
+	localTunnelAddr string,
+	preSharedKey string,
+	forwardMark uint32,
+	polTable polTable,
+	ikeDaemon ikeDaemon,
+	sleep func(duration time.Duration),
 ) *Dataplane {
 	if forwardMark == 0 {
 		log.Panic("IPsec forward mark shouldn't be 0")
@@ -48,19 +60,20 @@ func NewDataplane(
 
 		polTable:  polTable,
 		ikeDaemon: ikeDaemon,
+		sleep:     sleep,
 	}
 
 	// Load the shared key into the charon for our end of the tunnels.
-	tries := 10
+	attempts := 10
 	for {
 		err := d.ikeDaemon.LoadSharedKey(localTunnelAddr, preSharedKey)
 		if err != nil {
 			log.WithError(err).Info("Failed to load our shared key into the Charon")
-			if tries == 0 {
+			attempts--
+			if attempts == 0 {
 				log.WithError(err).Panic("Failed to load our shared key into the Charon after retries")
 			}
-			tries--
-			time.Sleep(time.Second)
+			sleep(time.Second)
 			continue
 		}
 		break
@@ -78,39 +91,53 @@ type Dataplane struct {
 
 	ikeDaemon ikeDaemon
 	polTable  polTable
+
+	sleep func(duration time.Duration)
 }
 
 func (d *Dataplane) AddBlacklist(workloadAddress string) {
 	log.Warningf("Adding IPsec blacklist for %v", workloadAddress)
 
 	cidr := ip.FromString(workloadAddress).AsCIDR().(ip.V4CIDR)
-	fwdSel := PolicySelector{
-		TrafficDst: cidr,
+
+	d.polTable.SetRule(PolicySelector{
+		TrafficSrc: cidr,
+		Dir:        netlink.XFRM_DIR_IN,
+	}, &blockRule)
+	d.polTable.SetRule(PolicySelector{
+		TrafficSrc: cidr,
 		Dir:        netlink.XFRM_DIR_FWD,
-	}
-	outSel := PolicySelector{
+	}, &blockRule)
+	d.polTable.SetRule(PolicySelector{
 		TrafficDst: cidr,
 		Dir:        netlink.XFRM_DIR_OUT,
-	}
-
-	d.polTable.SetRule(fwdSel, &blockRule)
-	d.polTable.SetRule(outSel, &blockRule)
+	}, &blockRule)
+	d.polTable.SetRule(PolicySelector{
+		TrafficDst: cidr,
+		Dir:        netlink.XFRM_DIR_FWD,
+	}, &blockRule)
 }
 
 func (d *Dataplane) RemoveBlacklist(workloadAddress string) {
 	log.Warningf("Removing IPsec blacklist for %v", workloadAddress)
 	cidr := stringToV4CIDR(workloadAddress)
-	fwdSel := PolicySelector{
-		TrafficDst: cidr,
+
+	d.polTable.DeleteRule(PolicySelector{
+		TrafficSrc: cidr,
+		Dir:        netlink.XFRM_DIR_IN,
+	})
+	d.polTable.DeleteRule(PolicySelector{
+		TrafficSrc: cidr,
 		Dir:        netlink.XFRM_DIR_FWD,
-	}
-	outSel := PolicySelector{
+	})
+	d.polTable.DeleteRule(PolicySelector{
 		TrafficDst: cidr,
 		Dir:        netlink.XFRM_DIR_OUT,
-	}
-
-	d.polTable.DeleteRule(fwdSel)
-	d.polTable.DeleteRule(outSel)
+	})
+	d.polTable.DeleteRule(PolicySelector{
+		TrafficDst: cidr,
+		Dir:        netlink.XFRM_DIR_FWD,
+	})
 }
 
 func stringToV4CIDR(addr string) (cidr ip.V4CIDR) {
@@ -168,6 +195,8 @@ func (d *Dataplane) RemoveBinding(remoteTunnelAddr, workloadAddress string) {
 			d.polTable.DeleteRule(PolicySelector{
 				TrafficDst: stringToV4CIDR(remoteTunnelAddr),
 				Dir:        netlink.XFRM_DIR_OUT,
+				Mark:       d.forwardMark,
+				MarkMask:   d.forwardMark,
 			})
 		}
 
@@ -255,4 +284,5 @@ func (d *Dataplane) removeTunnel(tunnelAddr string) {
 		return
 	}
 	panicIfErr(d.ikeDaemon.UnloadCharonConnection(d.localTunnelAddr, tunnelAddr))
+	panicIfErr(d.ikeDaemon.UnloadSharedKey(tunnelAddr))
 }
