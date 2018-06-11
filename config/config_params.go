@@ -191,20 +191,21 @@ type Config struct {
 
 	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
-	PrometheusReporterEnabled     bool          `config:"bool;false"`
-	PrometheusReporterPort        int           `config:"int(0,65535);9092"`
-	PrometheusReporterCertFile    string        `config:"file(must-exist);"`
-	PrometheusReporterKeyFile     string        `config:"file(must-exist);"`
-	PrometheusReporterCAFile      string        `config:"file(must-exist);"`
-	SyslogReporterNetwork         string        `config:"string;"`
-	SyslogReporterAddress         string        `config:"string;"`
-	DeletedMetricsRetentionSecs   time.Duration `config:"seconds;30"`
+	PrometheusReporterEnabled   bool          `config:"bool;false"`
+	PrometheusReporterPort      int           `config:"int(0,65535);9092"`
+	PrometheusReporterCertFile  string        `config:"file(must-exist);"`
+	PrometheusReporterKeyFile   string        `config:"file(must-exist);"`
+	PrometheusReporterCAFile    string        `config:"file(must-exist);"`
+	SyslogReporterNetwork       string        `config:"string;"`
+	SyslogReporterAddress       string        `config:"string;"`
+	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
 	CloudWatchLogsReporterEnabled bool          `config:"bool;false"`
 	CloudWatchLogsFlushInterval   time.Duration `config:"seconds;60"`
 	CloudWatchLogsLogGroupName    string        `config:"string;"`
 	CloudWatchLogsLogStreamName   string        `config:"string;"`
 	CloudWatchLogsIncludeLabels   bool          `config:"bool;false"`
+	CloudWatchLogsAggregationKind int           `config:"int(0,2);0"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 

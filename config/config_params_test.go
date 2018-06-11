@@ -63,6 +63,7 @@ var _ = PDescribe("FelixConfig vs ConfigParams parity", func() {
 		"CloudWatchLogsLogGroupName",
 		"CloudWatchLogsLogStreamName",
 		"CloudWatchLogsIncludeLabels",
+		"CloudWatchLogsAggregationKind",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",

@@ -119,6 +119,7 @@ type Config struct {
 	CloudWatchLogsLogGroupName    string
 	CloudWatchLogsLogStreamName   string
 	CloudWatchLogsIncludeLabels   bool
+	CloudWatchLogsAggregationKind int
 
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
@@ -568,7 +569,7 @@ func (d *InternalDataplane) Start() {
 		rm.RegisterMetricsReporter(pr)
 	}
 	// TODO: Pass in the the necessary AWS client config.
-	log.Infof("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
+	log.Debugf("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
 	if d.config.CloudWatchLogsReporterEnabled {
 		logGroupName := "/sample-infra-org/anx/flowlogs/"
 		if d.config.CloudWatchLogsLogGroupName != "" {
@@ -580,7 +581,10 @@ func (d *InternalDataplane) Start() {
 		}
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, nil)
 		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval)
-		cw.AddAggregator(collector.NewCloudWatchAggregator(d.config.CloudWatchLogsIncludeLabels))
+		ca := collector.NewCloudWatchAggregator().
+			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKind)).
+			IncludeLabels(d.config.CloudWatchLogsIncludeLabels)
+		cw.AddAggregator(ca)
 		rm.RegisterMetricsReporter(cw)
 	}
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)

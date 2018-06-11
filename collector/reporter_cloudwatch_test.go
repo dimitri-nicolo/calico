@@ -34,7 +34,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 	BeforeEach(func() {
 		cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 		cd = NewCloudWatchDispatcher(logGroupName, logStreamName, cl)
-		ca = NewCloudWatchAggregator(includeLabels)
+		ca = NewCloudWatchAggregator()
 		cr = NewCloudWatchReporter(cd, flushInterval)
 		cr.AddAggregator(ca)
 		cr.timeNowFn = mt.getMockTime
