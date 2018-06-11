@@ -1048,6 +1048,15 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
+	if in.IPSecPolicyRefreshInterval != nil {
+		in, out := &in.IPSecPolicyRefreshInterval, &out.IPSecPolicyRefreshInterval
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(v1.Duration)
+			**out = **in
+		}
+	}
 	return
 }
 

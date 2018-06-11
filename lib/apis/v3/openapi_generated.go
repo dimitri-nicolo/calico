@@ -2773,6 +2773,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"ipsecPolicyRefreshInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecPolicyRefreshInterval is the interval at which Felix will check the kernel's IPsec policy tables and repair any inconsistencies. [Default: 600s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
 					},
 				},
 			},

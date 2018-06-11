@@ -238,6 +238,9 @@ type FelixConfigurationSpec struct {
 	// A generic log level terminology is used [None, Notice, Info, Debug, Verbose].
 	// [Default: Info]
 	IPSecLogLevel string `json:"ipsecLogLevel,omitempty" validate:"omitempty,ipsecLogLevel"`
+	// IPSecPolicyRefreshInterval is the interval at which Felix will check the kernel's IPsec policy tables and
+	// repair any inconsistencies. [Default: 600s]
+	IPSecPolicyRefreshInterval *metav1.Duration `json:"ipsecPolicyRefreshInterval,omitempty" configv1timescale:"seconds"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.
