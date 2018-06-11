@@ -50,8 +50,6 @@ func NewDataplane(
 		ikeDaemon: ikeDaemon,
 	}
 
-	time.Sleep(1 * time.Second)
-
 	// Load the shared key into the charon for our end of the tunnels.
 	tries := 10
 	for {

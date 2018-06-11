@@ -17,21 +17,18 @@ package ipsec
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
-
-	"context"
-
-	"io/ioutil"
-	"strconv"
-
-	"strings"
 
 	"github.com/bronze1man/goStrongswanVici"
 	log "github.com/sirupsen/logrus"
@@ -51,7 +48,8 @@ type CharonIKEDaemon struct {
 func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ikeProposal string) (*CharonIKEDaemon, error) {
 	// FIXME: Reevaluate directory permissions.
 	os.MkdirAll("/var/run/", 0700)
-	if f, err := os.Open("/var/run/charon.pid"); err == nil {
+	const pidfilePath = "/var/run/charon.pid"
+	if f, err := os.Open(pidfilePath); err == nil {
 		defer f.Close()
 		bs, err := ioutil.ReadAll(f)
 		if err != nil {
@@ -70,7 +68,17 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ik
 				return nil, err
 			}
 		}
-		os.Remove("/var/run/charon.pid")
+		os.Remove(pidfilePath)
+	}
+
+	// Clean up any old socket.  Without this, the VICI client can try to connect to the old socket
+	// rather than waiting for the new.
+	const viciSocketPath = "/var/run/charon.vici"
+	if _, err := os.Stat(viciSocketPath); err == nil {
+		err := os.Remove(viciSocketPath)
+		if err != nil {
+			log.WithError(err).Error("Failed to remove old VICI socket.")
+		}
 	}
 
 	charon := &CharonIKEDaemon{
@@ -78,7 +86,7 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ik
 		espProposal: espProposal,
 		ikeProposal: ikeProposal,
 	}
-	charon.viciUri = Uri{"unix", "/var/run/charon.vici"}
+	charon.viciUri = Uri{"unix", viciSocketPath}
 
 	cmd, err := charon.runAndCaptureLogs("/usr/lib/strongswan/charon")
 
@@ -117,8 +125,8 @@ func (charon *CharonIKEDaemon) getClient(wait bool) (client *goStrongswanVici.Cl
 					log.Errorf("ClientConnection failed: %v", err)
 				}
 
-				log.Info("Retrying in a second ...")
-				time.Sleep(time.Second)
+				log.Info("Retrying shortly...")
+				time.Sleep(100 * time.Millisecond)
 			} else {
 				return nil, err
 			}
