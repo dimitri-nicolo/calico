@@ -6,9 +6,7 @@ import (
 
 type Company struct {
 	ID   int64
-	UUID string
 	Name string
-	Key  string
 }
 
 func (db *DB) AllCompanies() ([]*Company, error) {
@@ -33,7 +31,7 @@ func (db *DB) AllCompanies() ([]*Company, error) {
 	return companies, nil
 }
 
-func (db *DB) GetCompanyByName(name string) (int64, error) {
+func (db *DB) GetCompanyIdByName(name string) (int64, error) {
 	var companyID int64
 	row := db.QueryRow("SELECT id FROM companies WHERE name = ?", name)
 	err := row.Scan(&companyID)
@@ -47,16 +45,6 @@ func (db *DB) GetCompanyById(id int64) (*Company, error) {
 	cmp := &Company{}
 	row := db.QueryRow("SELECT id, name FROM companies WHERE id = ?", id)
 	err := row.Scan(&cmp.ID, &cmp.Name)
-	if err != nil {
-		return nil, err
-	}
-	return cmp, nil
-}
-
-func (db *DB) GetCompanyByUuid(uuid string) (*Company, error) {
-	cmp := &Company{}
-	row := db.QueryRow("SELECT id, uuid, ckey, name FROM companies WHERE uuid = ?", uuid)
-	err := row.Scan(&cmp.ID, &cmp.UUID, &cmp.Key, &cmp.Name)
 	if err != nil {
 		return nil, err
 	}

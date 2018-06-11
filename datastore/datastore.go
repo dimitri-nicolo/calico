@@ -31,9 +31,8 @@ func init() {
 
 type Datastore interface {
 	AllCompanies() ([]*Company, error)
-	GetCompanyByName(name string) (int64, error)
+	GetCompanyIdByName(name string) (int64, error)
 	GetCompanyById(id int) (*Company, error)
-	GetCompanyByUuid(uuid string) (*Company, error)
 	CreateCompany(name string) (int64, error)
 	DeleteCompanyById(id int64) error
 

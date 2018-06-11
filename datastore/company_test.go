@@ -14,6 +14,7 @@ const (
 
 func TestInsertGetDeleteCompany(t *testing.T) {
 	t.Run("Test Insert Company", func(t *testing.T) {
+
 		req := require.New(t)
 		dsn := os.Getenv("TEST_DSN")
 		if dsn == "" {
@@ -27,7 +28,7 @@ func TestInsertGetDeleteCompany(t *testing.T) {
 		id, err := db.CreateCompany(testName)
 		req.Nil(err, "error creating company: %s", err)
 
-		cid, err := db.GetCompanyByName(testName)
+		cid, err := db.GetCompanyIdByName(testName)
 		req.Nil(err, "error getting company: %s", err)
 		req.Equal(id, cid)
 
