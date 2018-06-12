@@ -50,7 +50,7 @@ var ListLicensesCmd = &cobra.Command{
 
 		if customerListFlag.Changed("customer") {
 			// Find the Company entry for the license.
-			companyID, err := db.GetCompanyByName(customerListName)
+			companyID, err := db.GetCompanyIdByName(customerListName)
 			if err == sql.ErrNoRows {
 				// Confirm creation of company with the user in case they mistyped.
 				log.Fatalf("company %s not found in license database", customerListName)

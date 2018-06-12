@@ -23,8 +23,8 @@ func e2eFlow() {
 
 	claims := client.LicenseClaims{
 		LicenseID:   customerID,
-		Nodes:       numNodes,
-		Name:        "MyFavCustomer99",
+		Nodes:       &numNodes,
+		Customer:    "MyFavCustomer99",
 		Features:    []string{"everything", "for", "you"},
 		GracePeriod: 90,
 		Claims: jwt.Claims{

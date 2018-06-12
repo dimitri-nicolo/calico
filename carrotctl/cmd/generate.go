@@ -172,7 +172,7 @@ var GenerateLicenseCmd = &cobra.Command{
 		}
 
 		// Find or create the Company entry for the license.
-		companyID, err := db.GetCompanyByName(claims.Customer)
+		companyID, err := db.GetCompanyIdByName(claims.Customer)
 		if err == sql.ErrNoRows {
 			// Confirm creation of company with the user in case they mistyped.
 			fmt.Printf("Customer '%s' not found in company database.  Create new company? [y/N]\n", claims.Customer)
