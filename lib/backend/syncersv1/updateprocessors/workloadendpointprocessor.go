@@ -17,6 +17,7 @@ package updateprocessors
 import (
 	"errors"
 	"net"
+	"os"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -29,9 +30,12 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
+var defaultPodSecurityGroup string
+
 // Create a new SyncerUpdateProcessor to sync WorkloadEndpoint data in v1 format for
 // consumption by Felix.
 func NewWorkloadEndpointUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
+	defaultPodSecurityGroup = os.Getenv("TIGERA_POD_SECURITY_GROUP")
 	return NewSimpleUpdateProcessor(apiv3.KindWorkloadEndpoint, convertWorkloadEndpointV2ToV1Key, convertWorkloadEndpointV2ToV1Value)
 }
 
@@ -137,6 +141,11 @@ func convertWorkloadEndpointV2ToV1Value(val interface{}) (interface{}, error) {
 			!strings.HasPrefix(k, conversion.ServiceAccountLabelPrefix) {
 			labels[k] = v
 		}
+	}
+
+	if defaultPodSecurityGroup != "" {
+		label := conversion.SecurityGroupLabelPrefix + "/" + defaultPodSecurityGroup
+		labels[label] = ""
 	}
 
 	v1value := &model.WorkloadEndpoint{
