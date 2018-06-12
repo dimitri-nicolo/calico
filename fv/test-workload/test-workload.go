@@ -267,7 +267,11 @@ func main() {
 						n, addr, err := p.ReadFrom(buffer)
 						panicIfError(err)
 						_, err = p.WriteTo(buffer[:n], addr)
-						logCxt.WithError(err).WithField("remoteAddr", addr).Info("Responded")
+
+						if !utils.IsMessagePartOfStream(string(buffer[:n])) {
+							// Only print when packet is not part of stream.
+							logCxt.WithError(err).WithField("remoteAddr", addr).Info("Responded")
+						}
 					}
 				}()
 			} else {
