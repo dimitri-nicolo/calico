@@ -3,6 +3,7 @@
 package ipsec
 
 import (
+	"net"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -30,7 +31,7 @@ type ikeDaemon interface {
 }
 
 func NewDataplane(
-	localTunnelAddr string,
+	localTunnelAddr net.IP,
 	preSharedKey string,
 	forwardMark uint32,
 	polTable polTable,
@@ -40,7 +41,7 @@ func NewDataplane(
 }
 
 func NewDataplaneWithShims(
-	localTunnelAddr string,
+	localTunnelAddr net.IP,
 	preSharedKey string,
 	forwardMark uint32,
 	polTable polTable,
@@ -53,7 +54,7 @@ func NewDataplaneWithShims(
 
 	d := &Dataplane{
 		preSharedKey:    preSharedKey,
-		localTunnelAddr: localTunnelAddr,
+		localTunnelAddr: localTunnelAddr.String(),
 		forwardMark:     forwardMark,
 
 		bindingsByTunnel: map[string]set.Set{},
@@ -66,7 +67,7 @@ func NewDataplaneWithShims(
 	// Load the shared key into the charon for our end of the tunnels.
 	attempts := 10
 	for {
-		err := d.ikeDaemon.LoadSharedKey(localTunnelAddr, preSharedKey)
+		err := d.ikeDaemon.LoadSharedKey(d.localTunnelAddr, preSharedKey)
 		if err != nil {
 			log.WithError(err).Info("Failed to load our shared key into the Charon")
 			attempts--
