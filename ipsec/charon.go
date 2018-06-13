@@ -17,21 +17,18 @@ package ipsec
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
-
-	"context"
-
-	"io/ioutil"
-	"strconv"
-
-	"strings"
 
 	"github.com/bronze1man/goStrongswanVici"
 	log "github.com/sirupsen/logrus"
@@ -44,13 +41,15 @@ type Uri struct {
 type CharonIKEDaemon struct {
 	viciUri     Uri
 	espProposal string
+	ikeProposal string
 	ctx         context.Context
 }
 
-func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal string) (*CharonIKEDaemon, error) {
+func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ikeProposal string) (*CharonIKEDaemon, error) {
 	// FIXME: Reevaluate directory permissions.
 	os.MkdirAll("/var/run/", 0700)
-	if f, err := os.Open("/var/run/charon.pid"); err == nil {
+	const pidfilePath = "/var/run/charon.pid"
+	if f, err := os.Open(pidfilePath); err == nil {
 		defer f.Close()
 		bs, err := ioutil.ReadAll(f)
 		if err != nil {
@@ -69,11 +68,25 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal str
 				return nil, err
 			}
 		}
-		os.Remove("/var/run/charon.pid")
+		os.Remove(pidfilePath)
 	}
 
-	charon := &CharonIKEDaemon{ctx: ctx, espProposal: espProposal}
-	charon.viciUri = Uri{"unix", "/var/run/charon.vici"}
+	// Clean up any old socket.  Without this, the VICI client can try to connect to the old socket
+	// rather than waiting for the new.
+	const viciSocketPath = "/var/run/charon.vici"
+	if _, err := os.Stat(viciSocketPath); err == nil {
+		err := os.Remove(viciSocketPath)
+		if err != nil {
+			log.WithError(err).Error("Failed to remove old VICI socket.")
+		}
+	}
+
+	charon := &CharonIKEDaemon{
+		ctx:         ctx,
+		espProposal: espProposal,
+		ikeProposal: ikeProposal,
+	}
+	charon.viciUri = Uri{"unix", viciSocketPath}
 
 	cmd, err := charon.runAndCaptureLogs("/usr/lib/strongswan/charon")
 
@@ -112,8 +125,8 @@ func (charon *CharonIKEDaemon) getClient(wait bool) (client *goStrongswanVici.Cl
 					log.Errorf("ClientConnection failed: %v", err)
 				}
 
-				log.Info("Retrying in a second ...")
-				time.Sleep(time.Second)
+				log.Info("Retrying shortly...")
+				time.Sleep(100 * time.Millisecond)
 			} else {
 				return nil, err
 			}
@@ -164,6 +177,7 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 	defer client.Close()
 
 	sharedKey := &goStrongswanVici.Key{
+		ID:     remoteIP,
 		Typ:    "IKE",
 		Data:   password,
 		Owners: []string{remoteIP},
@@ -183,7 +197,37 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 	return nil
 }
 
-func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP, ikeProposal string) error {
+func (charon *CharonIKEDaemon) UnloadSharedKey(remoteIP string) error {
+	var err error
+	var client *goStrongswanVici.ClientConn
+
+	client, err = charon.getClient(true)
+	if err != nil {
+		log.Errorf("Failed to acquire Vici client: %v", err)
+		return err
+	}
+
+	defer client.Close()
+
+	sharedKey := &goStrongswanVici.UnloadKeyRequest{
+		ID: remoteIP,
+	}
+
+	for {
+		err = client.UnloadShared(sharedKey)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to unload key for %v.  Retrying...", remoteIP)
+			time.Sleep(time.Second)
+			continue
+		}
+		break
+	}
+
+	log.Infof("Loaded shared key for: %v", remoteIP)
+	return nil
+}
+
+func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
 	var err error
 	var client *goStrongswanVici.ClientConn
 
@@ -209,7 +253,7 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP, ikeProposal str
 		StartAction:  "start",
 		CloseAction:  "none",
 		Mode:         "tunnel",
-		ReqID:        "50",
+		ReqID:        fmt.Sprint(ReqID),
 		//RekeyTime:     "5", //Can set this to a low time to check that rekeys are handled properly
 		InstallPolicy: "no",
 	}
@@ -227,7 +271,7 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP, ikeProposal str
 	ikeConf := goStrongswanVici.IKEConf{
 		LocalAddrs:  []string{localIP},
 		RemoteAddrs: []string{remoteIP},
-		Proposals:   []string{ikeProposal},
+		Proposals:   []string{charon.ikeProposal},
 		Version:     "2",
 		KeyingTries: "0", //continues to retry
 		LocalAuth:   localAuthConf,

@@ -351,6 +351,7 @@ var _ = DescribeTable("Config parsing",
 	Entry("IPSecPSKFile", "IPSecPSKFile", "/proc/1/cmdline", "/proc/1/cmdline"),
 	Entry("IPSecIKEAlgorithm", "IPSecIKEAlgorithm", "aes256gcm16-prfsha384-ecp384", "aes256gcm16-prfsha384-ecp384"),
 	Entry("IPSecESPAlgorithm", "IPSecESPAlgorithm", "aes256gcm16-ecp384", "aes256gcm16-ecp384"),
+	Entry("IPSecPolicyRefreshInterval", "IPSecPolicyRefreshInterval", "1.5", 1500*time.Millisecond),
 
 	Entry("IPSecLogLevel", "IPSecLogLevel", "none", ""),
 	Entry("IPSecLogLevel", "IPSecLogLevel", "notice", "NOTICE"),

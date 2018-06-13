@@ -15,6 +15,8 @@
 package intdataplane
 
 import (
+	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
@@ -120,6 +122,7 @@ type Config struct {
 	IPSetsRefreshInterval          time.Duration
 	RouteRefreshInterval           time.Duration
 	IptablesRefreshInterval        time.Duration
+	IPSecPolicyRefreshInterval     time.Duration
 	IptablesPostWriteCheckInterval time.Duration
 	IptablesInsertMode             string
 	IptablesLockFilePath           string
@@ -191,6 +194,7 @@ type InternalDataplane struct {
 	ipipManager          *ipipManager
 	allHostsIpsetManager *allHostsIpsetManager
 
+	ipSecPolTable  *ipsec.PolicyTable
 	ipSecDataplane ipSecDataplane
 
 	ifaceMonitor     *ifacemonitor.InterfaceMonitor
@@ -439,6 +443,10 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		dp.allIptablesTables = append(dp.allIptablesTables, t)
 	}
 
+	// We always create the IPsec policy table (the component that manipulates the IPsec dataplane).  That ensures
+	// that we clean up our old policies if IPsec is disabled.
+	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID)
+
 	if config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" {
 		// Set up IPsec.
 		// FIXME: use correct local tunnel address (the one from our HostIP?)
@@ -456,13 +464,26 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 			if strings.Contains(ip, ":") {
 				continue
 			}
+
+			// Initialise charon main config file.
+			charonConfig := ipsec.NewCharonConfig(ipsec.CharonConfigRootDir, ipsec.CharonMainConfigFile)
+			charonConfig.SetLogLevel(config.IPSecLogLevel)
+			charonConfig.SetBooleanOption(ipsec.CharonFollowRedirects, false)
+			charonConfig.SetBooleanOption(ipsec.CharonMakeBeforeBreak, true)
+			log.Infof("Initialising charon config %+v", charonConfig)
+			charonConfig.RenderToFile()
+			var charonWG sync.WaitGroup
+			ikeDaemon, err := ipsec.NewCharonIKEDaemon(context.Background(), &charonWG, config.IPSecESPProposal, config.IPSecIKEProposal)
+			if err != nil {
+				panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
+			}
+
 			dp.ipSecDataplane = ipsec.NewDataplane(
 				ip,
 				config.IPSecPSK,
-				config.IPSecIKEProposal,
-				config.IPSecESPProposal,
-				config.IPSecLogLevel,
 				config.RulesConfig.IptablesMarkIPsec,
+				dp.ipSecPolTable,
+				ikeDaemon,
 			)
 			ipSecManager := newIPSecManager(dp.ipSecDataplane)
 			dp.allManagers = append(dp.allManagers, ipSecManager)
@@ -709,6 +730,16 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 		)
 		routeRefreshC = refreshTicker.C
 	}
+	var ipSecRefreshC <-chan time.Time
+	if d.config.IPSecPolicyRefreshInterval > 0 {
+		log.WithField("interval", d.config.IPSecPolicyRefreshInterval).Info(
+			"Will recheck IPsec policy on timer")
+		refreshTicker := jitter.NewTicker(
+			d.config.IPSecPolicyRefreshInterval,
+			d.config.IPSecPolicyRefreshInterval/10,
+		)
+		ipSecRefreshC = refreshTicker.C
+	}
 
 	// Fill the apply throttle leaky bucket.
 	throttleC := jitter.NewTicker(100*time.Millisecond, 10*time.Millisecond).C
@@ -815,6 +846,8 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			log.Debug("Refreshing routes")
 			d.forceRouteRefresh = true
 			d.dataplaneNeedsSync = true
+		case <-ipSecRefreshC:
+			d.ipSecPolTable.QueueResync()
 		case <-d.reschedC:
 			log.Debug("Reschedule kick received")
 			d.dataplaneNeedsSync = true
@@ -959,6 +992,8 @@ func (d *InternalDataplane) apply() {
 			d.dataplaneNeedsSync = true
 		}
 	}
+
+	d.ipSecPolTable.Apply()
 
 	if d.forceRouteRefresh {
 		// Refresh timer popped.

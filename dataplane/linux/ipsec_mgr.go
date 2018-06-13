@@ -5,18 +5,11 @@ package intdataplane
 import (
 	log "github.com/sirupsen/logrus"
 
-	"os/exec"
-
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 func newIPSecManager(ipSecDataplane ipSecDataplane) *ipsecManager {
-	// FIXME Until we have resync, need to flush the policy table on each restart.
-	err := exec.Command("ip", "xfrm", "policy", "flush").Run()
-	if err != nil {
-		log.WithError(err).Panic("Failed to flush")
-	}
 	return &ipsecManager{
 		dataplane: ipSecDataplane,
 	}

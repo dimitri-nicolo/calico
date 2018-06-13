@@ -1,5 +1,5 @@
-hash: 1a1e74d104afc7294c0cc3a5c0ea602d022891a09fb552070d7be61482bbbfdb
-updated: 2018-06-11T10:29:48.573044711-07:00
+hash: 0ce6bbc47f37860a69a86c0b38d5976af78c2d9c4b0b35a71df7e3c939a5e7b7
+updated: 2018-06-13T14:43:27.281629792Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -65,7 +65,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -121,7 +121,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
-  version: 3411630489cb83289a0151db270334f054ebaf82
+  version: 5dc2060baaf8db344f31dafd852340b93811d03f
   subpackages:
   - tracer
   - tracer/wire
@@ -217,7 +217,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 6803188e1a4fa43de9844d964c664ae9aceae44d
+  version: bc0a758a52b1e189fd2b086c78027f2acea33ff9
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -258,7 +258,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 422579fb7918f81557205cef83523455f863c973
+  version: efb5870027bc7fceb5e2d77f70631e502c594746
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -271,11 +271,11 @@ imports:
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
+  version: 7600349dcfe1abd18d72d3a1770870d9800a7801
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -313,7 +313,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
+  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -374,7 +374,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 0a24098c0ec68416ec050f567f75df563d6b231e
+  version: b1f26356af11148e710935ed1ac8a7f5702c7612
   subpackages:
   - internal
   - internal/app_identity
@@ -548,7 +548,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 0c329704159e3b051aafac400b15baacf2a94a04
+  version: bf40560368791a7dddfeea9b3cfcf89b34139f44
   subpackages:
   - pkg/common
 testImports: []
