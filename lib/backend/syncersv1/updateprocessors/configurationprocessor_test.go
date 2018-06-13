@@ -70,7 +70,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		Kind: apiv3.KindBGPConfiguration,
 		Name: "node.bgpnode1",
 	}
-	numFelixConfigs := 71
+	numFelixConfigs := 72
 	numClusterConfigs := 5
 	numNodeClusterConfigs := 4
 	numBgpConfigs := 3
@@ -189,12 +189,14 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		duration2 := metav1.Duration{Duration: time.Duration(54.321 * float64(time.Millisecond))}
 		duration3 := metav1.Duration{Duration: time.Duration(0)}
 		duration4 := metav1.Duration{Duration: time.Duration(0.1 * float64(time.Second))}
+		duration5 := metav1.Duration{Duration: time.Duration(30 * time.Second)}
 		bool1 := false
 		uint1 := uint32(1313)
 		res.Spec.RouteRefreshInterval = &duration1
 		res.Spec.IptablesLockProbeInterval = &duration2
 		res.Spec.EndpointReportingDelay = &duration3
 		res.Spec.IpsetsRefreshInterval = &duration4
+		res.Spec.IPSecPolicyRefreshInterval = &duration5
 		res.Spec.InterfacePrefix = "califoobar"
 		res.Spec.IPIPEnabled = &bool1
 		res.Spec.IptablesMarkMask = &uint1
@@ -218,6 +220,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			"IptablesLockProbeIntervalMillis": "54.321",
 			"EndpointReportingDelaySecs":      "0",
 			"IpsetsRefreshInterval":           "0.1",
+			"IPSecPolicyRefreshInterval":      "30",
 			"InterfacePrefix":                 "califoobar",
 			"IpInIpEnabled":                   "false",
 			"IptablesMarkMask":                "1313",
