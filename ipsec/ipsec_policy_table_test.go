@@ -163,7 +163,7 @@ var _ = Describe("IpsecPolicyTable", func() {
 	})
 
 	It("should be constructable", func() {
-		_ = NewPolicyTable(50) // For coverage's sake.
+		_ = NewPolicyTable(ReqID) // For coverage's sake.
 	})
 
 	Context("with empty dataplane, no pending updates", func() {
@@ -518,7 +518,8 @@ func (m *mockIPSecDataplane) XfrmPolicyUpdate(updatedPolicy *netlink.XfrmPolicy)
 	Expect(updatedPolicy.Index).To(BeZero(), "mock dataplane doesn't support this field")
 	Expect(updatedPolicy.Priority).To(BeZero(), "mock dataplane doesn't support this field")
 	Expect(updatedPolicy.Tmpls).To(HaveLen(1))
-	Expect(updatedPolicy.Tmpls[0].Reqid).To(Equal(50), "policy was missing req ID")
+	Expect(updatedPolicy.Tmpls[0].Reqid).NotTo(BeZero(), "policy was missing req ID")
+	Expect(updatedPolicy.Tmpls[0].Reqid).To(Equal(ReqID), "policy was missing req ID")
 
 	for i, x := range m.ActivePolicies {
 		if netsEqual(x.Src, updatedPolicy.Src) &&
