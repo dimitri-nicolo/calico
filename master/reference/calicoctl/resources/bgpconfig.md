@@ -38,6 +38,7 @@ spec:
 | logSeverityScreen | Global log level | Debug, Info, Warning, Error, Fatal | string | `Info` |
 | nodeToNodeMeshEnabled | Full BGP node-to-node mesh | true, false  | string | true |
 | asNumber | The AS Number of this peer. | A valid AS Number, may be specified in dotted notation. | integer/string | 64512 |
+| extensions | Additional mapping of keys and values. Used for setting values in custom BGP configurations. | valid strings for both keys and values | map | |
 
 ### Supported operations
 

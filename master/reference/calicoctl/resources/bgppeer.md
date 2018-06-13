@@ -40,6 +40,7 @@ spec:
 | node     | If specified, the scope is node level, otherwise the scope is global. | The hostname of the node to which this peer applies. | string | |
 | peerIP   | The IP address of this peer. | Valid IPv4 or IPv6 address.  | string | |
 | asNumber | The AS Number of this peer. | A valid AS Number, may be specified in dotted notation. | integer/string |
+| extensions | Additional mapping of keys and values. Used for setting values in custom BGP configurations. | valid strings for both keys and values | map | |
 
 ### Peer Scopes
 
