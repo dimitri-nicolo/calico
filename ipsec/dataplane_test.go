@@ -204,7 +204,7 @@ var _ = Describe("Dataplane", func() {
 				Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload))
 			})
 
-			Context("after removing the second workload", func() {
+			Context("after removing the local binding", func() {
 				BeforeEach(func() {
 					dataplane.RemoveBinding(localHostIP, localWorkloadIP)
 				})

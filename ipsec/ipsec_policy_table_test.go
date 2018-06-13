@@ -19,8 +19,6 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const calicoReqID = 50
-
 var (
 	zeroIP   = net.ParseIP("0.0.0.0").To4()
 	zeroCIDR = cnet.MustParseCIDR("0.0.0.0/0").IPNet
@@ -61,7 +59,7 @@ var (
 			{
 				Src:   hostIP1,
 				Dst:   hostIP2,
-				Reqid: calicoReqID,
+				Reqid: ReqID,
 				Mode:  netlink.XFRM_MODE_TUNNEL,
 				Proto: netlink.XFRM_PROTO_ESP,
 			},
@@ -84,7 +82,7 @@ var (
 			{
 				Src:   zeroIP,
 				Dst:   zeroIP,
-				Reqid: calicoReqID,
+				Reqid: ReqID,
 				Mode:  netlink.XFRM_MODE_TUNNEL,
 				Proto: netlink.XFRM_PROTO_ESP,
 			},
@@ -113,7 +111,7 @@ var (
 			{
 				Src:   hostIP1,
 				Dst:   hostIP2,
-				Reqid: calicoReqID,
+				Reqid: ReqID,
 				Mode:  netlink.XFRM_MODE_TUNNEL,
 				Proto: netlink.XFRM_PROTO_ESP,
 			},
@@ -128,7 +126,7 @@ var (
 			{
 				Src:   hostIP1,
 				Dst:   hostIP2,
-				Reqid: calicoReqID,
+				Reqid: ReqID,
 				Mode:  netlink.XFRM_MODE_TUNNEL,
 				Proto: netlink.XFRM_PROTO_ESP,
 			},
@@ -161,7 +159,7 @@ var _ = Describe("IpsecPolicyTable", func() {
 
 	BeforeEach(func() {
 		mockDataplane = newMockIPSecDataplane()
-		polTable = NewPolicyTableWithShims(calicoReqID, mockDataplane.newNetlinkHandle, mockDataplane.sleep)
+		polTable = NewPolicyTableWithShims(ReqID, mockDataplane.newNetlinkHandle, mockDataplane.sleep)
 	})
 
 	It("should be constructable", func() {

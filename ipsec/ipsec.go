@@ -14,7 +14,7 @@ import (
 
 const (
 	anyAddress = ""
-	ReqID      = 50 // Used to correlate between the policy and state tables.
+	ReqID      = 0xca11c0 // Used to correlate between the policy and state tables.
 )
 
 type polTable interface {
@@ -179,7 +179,7 @@ func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
 		}
 	}
 	d.bindingsByTunnel[remoteTunnelAddr].Add(workloadAddress)
-	d.configureXfrm(remoteTunnelAddr, workloadAddress)
+	d.addXfrm(remoteTunnelAddr, workloadAddress)
 }
 
 func (d *Dataplane) RemoveBinding(remoteTunnelAddr, workloadAddress string) {
@@ -205,7 +205,7 @@ func (d *Dataplane) RemoveBinding(remoteTunnelAddr, workloadAddress string) {
 	}
 }
 
-func (d *Dataplane) configureXfrm(remoteTunnelAddr, workloadAddr string) {
+func (d *Dataplane) addXfrm(remoteTunnelAddr, workloadAddr string) {
 	if remoteTunnelAddr == d.localTunnelAddr {
 		return
 	}

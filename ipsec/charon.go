@@ -216,7 +216,7 @@ func (charon *CharonIKEDaemon) UnloadSharedKey(remoteIP string) error {
 	for {
 		err = client.UnloadShared(sharedKey)
 		if err != nil {
-			log.Errorf("Failed to unload key for %v. Retrying. %v", remoteIP, err)
+			log.WithError(err).Errorf("Failed to unload key for %v.  Retrying...", remoteIP, err)
 			time.Sleep(time.Second)
 			continue
 		}

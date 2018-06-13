@@ -16,12 +16,12 @@ func NewErrorQueue() ErrorProducer {
 	return ErrorProducer{}
 }
 
-// QueueError adds an error the sequence of errors with the given name.
+// QueueError adds an error to the sequence of errors with the given name.
 func (e ErrorProducer) QueueError(queueName string) {
 	e[queueName] = append(e[queueName], fmt.Errorf("dummy ErrorQueue %s error", queueName))
 }
 
-// QueueError adds an error the sequence of errors with the given name.
+// QueueError adds an error to the sequence of errors with the given name.
 func (e ErrorProducer) QueueNErrors(queueName string, n int) {
 	for i := 0; i < n; i++ {
 		e[queueName] = append(e[queueName], fmt.Errorf("dummy ErrorQueue %s error", queueName))
