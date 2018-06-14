@@ -77,10 +77,13 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 		LogEvents:     constructInputEvents(inputLogs),
 		LogGroupName:  aws.String(c.logGroupName),
 		LogStreamName: aws.String(c.logStreamName),
-		SequenceToken: aws.String(c.seqToken),
+	}
+	if c.seqToken != "" {
+		params.SequenceToken = aws.String(c.seqToken)
 	}
 	resp, err := c.cwl.PutLogEvents(params)
 	if err != nil {
+		log.WithFields(log.Fields{"LogGroupName": c.logGroupName, "LogStreamName": c.logStreamName}).WithError(err).Error("PutLogevents")
 		return err
 	}
 	if resp.RejectedLogEventsInfo != nil {
