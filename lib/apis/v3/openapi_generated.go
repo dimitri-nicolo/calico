@@ -2779,6 +2779,60 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 							},
 						},
+						"cloudWatchLogsReporterEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Enable Flow logs reporting to AWS CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsFlushInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsFlushInterval configures the interval at which Felix exports flow logs to CloudWatch Logs.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
+						"cloudWatchLogGroupName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to \"/tigera/flowlogs/<cluster-id>\".",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogStreamName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to \"<hostname>_Flowlog\".",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsIncludeLabels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsAggregationKind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsAggregationKind is used to choose the type of aggregation of flow log entries. [Default: 0 - no aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"cloudWatchMetricsReporterEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Enable reporting metrics to CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchMetricsPushIntervalSecs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchMetricsPushInterval configures the interval at which Felix exports metrics to CloudWatch.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
 					},
 				},
 			},
