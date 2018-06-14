@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Flow log aggregator verification", func() {
+var _ = FDescribe("Flow log aggregator verification", func() {
 	It("aggregates the fed metric updates", func() {
 		expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection) {
 			fl, err := getFlowLog(msg)
@@ -24,6 +24,7 @@ var _ = Describe("Flow log aggregator verification", func() {
 		ca := NewCloudWatchAggregator()
 		ca.FeedUpdate(muNoConn1Rule1AllowUpdate)
 		messages := ca.Get()
+		Expect(len(messages)).Should(Equal(1))
 		message := *(messages[0])
 
 		expectedNumFlows := 1

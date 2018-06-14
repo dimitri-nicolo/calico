@@ -93,11 +93,11 @@ func (c *cloudWatchAggregator) Get() []*string {
 	resp := make([]*string, 0, len(c.flowLogs))
 	aggregationEndTime := time.Now()
 	c.flMutex.Lock()
+	defer c.flMutex.Unlock()
 	for k, flowLog := range c.flowLogs {
 		resp = append(resp, aws.String(flowLog.ToString(c.aggregationStartTime, aggregationEndTime, c.includeLabels)))
 		delete(c.flowLogs, k)
 	}
-	c.flMutex.Unlock()
 	c.aggregationStartTime = aggregationEndTime
 	return resp
 }
