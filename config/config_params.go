@@ -184,7 +184,7 @@ type Config struct {
 	PrometheusMetricsKeyFile        string `config:"file(must-exist);"`
 	PrometheusMetricsCAFile         string `config:"file(must-exist);"`
 
-	CloudWatchMetricsReporterEnabled  bool          `config:"bool;true"`
+	CloudWatchMetricsReporterEnabled  bool          `config:"bool;false"`
 	CloudWatchMetricsPushIntervalSecs time.Duration `config:"seconds(60,65535);60"`
 
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
