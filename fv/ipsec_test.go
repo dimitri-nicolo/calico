@@ -238,6 +238,14 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		expectNoESP()
 	})
 
+	It("should have host to local workload connectivity", func() {
+		cc.ExpectSome(felixes[0], w[0])
+		cc.ExpectSome(felixes[1], w[1])
+		cc.ExpectSome(felixes[0], hostW[0])
+		cc.ExpectSome(felixes[1], hostW[1])
+		cc.CheckConnectivity()
+	})
+
 	Context("with host protection policy in place", func() {
 		BeforeEach(func() {
 			// Make sure host endpoints don't block IPSec traffic (since they deny all traffic by default)
@@ -406,10 +414,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
-			cc.ExpectSome(hostW[0], w[1])
-			cc.ExpectSome(hostW[1], w[0])
-			cc.ExpectSome(hostW[0], w[0])
-			cc.ExpectSome(hostW[1], w[1])
+			cc.ExpectSome(felixes[0], w[1])
+			cc.ExpectSome(felixes[1], w[0])
+			cc.ExpectSome(felixes[0], w[0])
+			cc.ExpectSome(felixes[1], w[1])
 			cc.CheckConnectivity()
 		})
 	})
