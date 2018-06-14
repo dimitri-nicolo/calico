@@ -573,14 +573,14 @@ func (d *InternalDataplane) Start() {
 		pr.AddAggregator(collector.NewDeniedPacketsAggregator(d.config.DeletedMetricsRetentionSecs, d.config.FelixHostname))
 		rm.RegisterMetricsReporter(pr)
 	}
-	// TODO: Pass in the the necessary AWS client config.
 	log.Debugf("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
 	if d.config.CloudWatchLogsReporterEnabled {
-		logGroupName := "/sample-infra-org/anx/flowlogs/"
+		logGroupName := fmt.Sprintf("%s/%s", collector.LogGroupNamePrefix, d.config.ClusterGUID)
 		if d.config.CloudWatchLogsLogGroupName != "" {
 			logGroupName = d.config.CloudWatchLogsLogGroupName
 		}
-		logStreamName := d.config.FelixHostname + "_FlowLogs"
+		logStreamName := fmt.Sprintf("%s_%s", d.config.FelixHostname, collector.LogStreamNameSuffix)
+		// If explicitly specified, use a log stream instead.
 		if d.config.CloudWatchLogsLogStreamName != "" {
 			logStreamName = d.config.CloudWatchLogsLogStreamName
 		}
