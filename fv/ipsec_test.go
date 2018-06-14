@@ -261,29 +261,43 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 	})
 
+	var savedBGPSpec api.NodeBGPSpec
+	var node *api.Node
+
+	restoreBGPSpec := func() {
+		felixPID := felixes[0].GetFelixPID()
+		node.Spec.BGP = &savedBGPSpec
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		var err error
+		node, err = client.Nodes().Update(ctx, node, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		// Wait for felix to restart.
+		Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
+	}
+
 	Context("after removing host address from nodes", func() {
 		// In this scenario, we remove the host IP from one of the nodes, this should trigger Felix to
 		// blacklist the workload IPs on the remote host.
 
-		var node *api.Node
-		var savedBGPSpec *api.NodeBGPSpec
-
 		BeforeEach(func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
-			l, err := client.Nodes().List(ctx, options.ListOptions{})
+
+			felixPID := felixes[0].GetFelixPID()
+
+			l, err := client.Nodes().List(ctx, options.ListOptions{Name: felixes[0].Hostname})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(l.Items).To(HaveLen(1))
+			n := l.Items[0]
+			log.WithField("node", n).Info("Removing BGP state from node")
+			savedBGPSpec = *n.Spec.BGP
+			n.Spec.BGP = nil
+			node, err = client.Nodes().Update(ctx, &n, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			for _, n := range l.Items {
-				log.WithField("node", n).Info("Removing BGP state from node")
-				savedBGPSpec = n.Spec.BGP
-				n.Spec.BGP = nil
-				node, err = client.Nodes().Update(ctx, &n, options.SetOptions{})
-				Expect(err).NotTo(HaveOccurred())
-				break // Removing the IP from one node should be enough.
-			}
-
-			time.Sleep(3 * time.Second) // Felix takes 2 seconds to restart after a config change.
+			// Wait for felix to restart.
+			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
 		})
 
 		It("should have no workload to workload connectivity until we restore the host IP", func() {
@@ -293,13 +307,59 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			cc.CheckConnectivity()
 
 			By("Having connectivity after we restore the host IP")
-			node.Spec.BGP = savedBGPSpec
+			restoreBGPSpec()
+
+			cc.ResetExpectations()
+			cc.ExpectSome(w[0], w[1])
+			cc.ExpectSome(w[1], w[0])
+			cc.CheckConnectivity()
+		})
+	})
+
+	Context("after changing the host address on a node to a bad value", func() {
+		// In this scenario, we remove the host IP from one of the nodes, this should trigger Felix to
+		// blacklist the workload IPs on the remote host.
+
+		var felixPID int
+
+		BeforeEach(func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
-			_, err := client.Nodes().Update(ctx, node, options.SetOptions{})
-			Expect(err).NotTo(HaveOccurred())
 
-			time.Sleep(3 * time.Second) // Felix takes 2 seconds to restart after a config change.
+			felixPID = felixes[0].GetFelixPID()
+
+			l, err := client.Nodes().List(ctx, options.ListOptions{Name: felixes[0].Hostname})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(l.Items).To(HaveLen(1))
+			n := l.Items[0]
+			log.WithField("node", n).Info("Replacing BGP IP with garbage")
+			savedBGPSpec = *n.Spec.BGP
+			Expect(n.Spec.BGP.IPv4Address).To(Equal(felixes[0].IP))
+			n.Spec.BGP.IPv4Address = "10.65.0.100" // Unused workload IP.
+			node, err = client.Nodes().Update(ctx, &n, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("felix should program bad policies and then restore the policies once we restore the IP", func() {
+			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
+			polCount := func(ip string) int {
+				out, err := felixes[0].ExecOutput("ip", "xfrm", "policy")
+				Expect(err).NotTo(HaveOccurred())
+				return strings.Count(out, ip)
+			}
+
+			Eventually(func() int { return polCount(felixes[0].IP) }, "5s", "100ms").Should(BeZero())
+			Eventually(func() int { return polCount("10.65.0.100") }, "5s", "100ms").ShouldNot(BeZero())
+
+			// Should have no connectivity with broken config.
+			cc.ExpectNone(w[0], w[1])
+			cc.ExpectNone(w[1], w[0])
+			cc.CheckConnectivity()
+
+			restoreBGPSpec()
+
+			Eventually(func() int { return polCount(felixes[0].IP) }, "5s", "100ms").ShouldNot(BeZero())
+			Eventually(func() int { return polCount("10.65.0.100") }, "5s", "100ms").Should(BeZero())
 
 			cc.ResetExpectations()
 			cc.ExpectSome(w[0], w[1])

@@ -413,6 +413,11 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 				Expect(addr).NotTo(Equal(a), "Binding added but still have an active blacklist")
 				return nil
 			})
+			d.activeIPSecBindings.Iter(func(item interface{}) error {
+				a := item.(IPSecBinding)
+				Expect(addr).NotTo(Equal(a), "already have a binding for this IP")
+				return nil
+			})
 			d.activeIPSecBindings.Add(b)
 		}
 	case *proto.IPSecBlacklistAdd:

@@ -19,6 +19,7 @@ import (
 var (
 	localHostIP     = "10.0.0.1"
 	localHostV4Addr = ip.FromString(localHostIP).(ip.V4Addr)
+	localHostNetIP  = localHostV4Addr.AsNetIP()
 	localHostCIDR   = ip.MustParseCIDROrIP(localHostIP).(ip.V4CIDR)
 
 	localWorkloadIP   = "10.0.0.2"
@@ -103,7 +104,7 @@ var _ = Describe("Dataplane", func() {
 
 	newDataplane := func() *Dataplane {
 		return NewDataplaneWithShims(
-			localHostIP,
+			localHostNetIP,
 			"my-key",
 			0x8,
 			mPolTable,

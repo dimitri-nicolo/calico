@@ -720,7 +720,7 @@ func (buf *EventSequencer) flushIPSecBindings() {
 		buf.Callback(upd)
 	}
 
-	// Then, flush the bindings add/removes.
+	// Then, flush the bindings removes and adds.
 	updatesByTunnel := map[ip.Addr]*proto.IPSecBindingUpdate{}
 
 	getOrCreateUpd := func(tunnelAddr ip.Addr) *proto.IPSecBindingUpdate {
@@ -732,16 +732,27 @@ func (buf *EventSequencer) flushIPSecBindings() {
 		}
 		return upd
 	}
-	buf.pendingIPSecBindingAdds.Iter(func(item interface{}) error {
-		b := item.(IPSecBinding)
-		upd := getOrCreateUpd(b.TunnelAddr)
-		upd.AddedAddrs = append(upd.AddedAddrs, b.WorkloadAddr.String())
-		return set.RemoveItem
-	})
+
+	// Send the removes first in a separate sequence of updates.  If we allow removes to be re-ordered with adds
+	// then we can change "add, remove, add" into "add, update, remove" and accidentally remove the updated policy.
+	// This is because the dataplane indexes policies on the policy selector (i.e. the match criteria for the
+	// rule) rather than the whole rule, in order to match the kernel behaviour.
 	buf.pendingIPSecBindingRemoves.Iter(func(item interface{}) error {
 		b := item.(IPSecBinding)
 		upd := getOrCreateUpd(b.TunnelAddr)
 		upd.RemovedAddrs = append(upd.RemovedAddrs, b.WorkloadAddr.String())
+		return set.RemoveItem
+	})
+	for k, upd := range updatesByTunnel {
+		buf.Callback(upd)
+		delete(updatesByTunnel, k)
+	}
+
+	// Now send the adds.
+	buf.pendingIPSecBindingAdds.Iter(func(item interface{}) error {
+		b := item.(IPSecBinding)
+		upd := getOrCreateUpd(b.TunnelAddr)
+		upd.AddedAddrs = append(upd.AddedAddrs, b.WorkloadAddr.String())
 		return set.RemoveItem
 	})
 
