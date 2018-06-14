@@ -3,8 +3,12 @@
 package testutil
 
 import (
+	"errors"
 	"strconv"
+	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	log "github.com/sirupsen/logrus"
@@ -17,15 +21,18 @@ type logEvent struct {
 
 type mockedCloudWatchLogsClient struct {
 	cloudwatchlogsiface.CloudWatchLogsAPI
+	logGroupName     string
+	logStreamName    string
 	sequenceToken    int
 	logGroupedEvents map[string]map[string][]logEvent
 }
 
 // NewMockedCloudWatchLogsClient simulates a very basic aws cloudwatchlogs
 // client thats capable of setting and returning stored messages and timestamps.
-func NewMockedCloudWatchLogsClient() cloudwatchlogsiface.CloudWatchLogsAPI {
+func NewMockedCloudWatchLogsClient(logGroupName string) cloudwatchlogsiface.CloudWatchLogsAPI {
 	return &mockedCloudWatchLogsClient{
 		logGroupedEvents: map[string]map[string][]logEvent{},
+		logGroupName:     logGroupName,
 	}
 }
 
@@ -75,7 +82,41 @@ func (m *mockedCloudWatchLogsClient) PutLogEvents(input *cloudwatchlogs.PutLogEv
 	}, nil
 }
 
+func (m *mockedCloudWatchLogsClient) DescribeLogGroups(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+	if !strings.HasPrefix(m.logGroupName, *input.LogGroupNamePrefix) {
+		return nil, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log stream resource not found", errors.New("Log stream res not found"))
+	}
+	// For now always no next token indicating a newly created log stream
+	dlgo := &cloudwatchlogs.DescribeLogGroupsOutput{
+		LogGroups: []*cloudwatchlogs.LogGroup{
+			&cloudwatchlogs.LogGroup{LogGroupName: aws.String(m.logGroupName)},
+		},
+	}
+	return dlgo, nil
+}
+
 func (m *mockedCloudWatchLogsClient) DeleteLogGroup(input *cloudwatchlogs.DeleteLogGroupInput) (*cloudwatchlogs.DeleteLogGroupOutput, error) {
 	delete(m.logGroupedEvents, *input.LogGroupName)
 	return nil, nil
+}
+
+func (m *mockedCloudWatchLogsClient) CreateLogStream(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+	m.logStreamName = *input.LogStreamName
+	return &cloudwatchlogs.CreateLogStreamOutput{}, nil
+}
+
+func (m *mockedCloudWatchLogsClient) DescribeLogStreams(input *cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+	if m.logGroupName != *input.LogGroupName {
+		return nil, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log group Resource not found", errors.New("Log group res not found"))
+	}
+	if !strings.HasPrefix(m.logStreamName, *input.LogStreamNamePrefix) {
+		return nil, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log stream resource not found", errors.New("Log stream res not found"))
+	}
+	// For now always no next token indicating a newly created log stream
+	dlso := &cloudwatchlogs.DescribeLogStreamsOutput{
+		LogStreams: []*cloudwatchlogs.LogStream{
+			&cloudwatchlogs.LogStream{LogStreamName: aws.String(m.logStreamName)},
+		},
+	}
+	return dlso, nil
 }

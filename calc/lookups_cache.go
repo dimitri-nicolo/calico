@@ -36,7 +36,7 @@ func (lc *LookupsCache) IsEndpoint(addr [16]byte) bool {
 }
 
 // GetEndpoint returns the ordered list of tiers for a particular endpoint.
-func (lc *LookupsCache) GetEndpoint(addr [16]byte) (EndpointData, bool) {
+func (lc *LookupsCache) GetEndpoint(addr [16]byte) (*EndpointData, bool) {
 	return lc.epCache.GetEndpoint(addr)
 }
 
@@ -48,17 +48,12 @@ func (lc *LookupsCache) GetRuleIDFromNFLOGPrefix(prefix [64]byte) *RuleID {
 // SetMockData fills in some of the data structures for use in the test code. This should not
 // be called from any mainline code.
 func (lc *LookupsCache) SetMockData(
-	em map[[16]byte]*model.WorkloadEndpointKey,
+	em map[[16]byte]*EndpointData,
 	nm map[[64]byte]*RuleID,
 ) {
 	lc.polCache.nflogPrefixHash = nm
-	for ip, wep := range em {
-		ep := EndpointData{
-			Key:          wep,
-			Endpoint:     wep,
-			OrderedTiers: []string{"default"},
-		}
-		lc.epCache.ipToEndpoints[ip] = []EndpointData{ep}
+	for ip, ed := range em {
+		lc.epCache.ipToEndpoints[ip] = []*EndpointData{ed}
 	}
 }
 
@@ -76,11 +71,11 @@ func (lc *LookupsCache) GetEndpointKeys() []model.Key {
 
 // GetEndpointData returns all endpoint data that the cache is tracking.
 // Convenience method only used for testing purposes.
-func (lc *LookupsCache) GetAllEndpointData() []EndpointData {
+func (lc *LookupsCache) GetAllEndpointData() []*EndpointData {
 	lc.epCache.epMutex.RLock()
 	defer lc.epCache.epMutex.RUnlock()
 	uniq := set.New()
-	allEds := []EndpointData{}
+	allEds := []*EndpointData{}
 	for _, eds := range lc.epCache.ipToEndpoints {
 		for _, ed := range eds {
 			if uniq.Contains(ed.Key) {

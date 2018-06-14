@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -22,9 +23,25 @@ const (
 	UpdateTypeExpire
 )
 
+const (
+	UpdateTypeReportStr = "report"
+	UpdateTypeExpireStr = "expire"
+)
+
+func (ut UpdateType) String() string {
+	if ut == UpdateTypeReport {
+		return UpdateTypeReportStr
+	}
+	return UpdateTypeExpireStr
+}
+
 type MetricValue struct {
 	deltaPackets int
 	deltaBytes   int
+}
+
+func (mv MetricValue) String() string {
+	return fmt.Sprintf("deltaPackets=%v deltaBytes=%v", mv.deltaPackets, mv.deltaBytes)
 }
 
 type MetricUpdate struct {
@@ -32,6 +49,10 @@ type MetricUpdate struct {
 
 	// Tuple key
 	tuple Tuple
+
+	// Endpoint information.
+	srcEp *calc.EndpointData
+	dstEp *calc.EndpointData
 
 	// isConnection is true if this update is from an active connection.
 	isConnection bool
@@ -41,6 +62,22 @@ type MetricUpdate struct {
 
 	inMetric  MetricValue
 	outMetric MetricValue
+}
+
+func (mu MetricUpdate) String() string {
+	var srcName, dstName string
+	if mu.srcEp != nil {
+		srcName = endpointName(mu.srcEp.Key)
+	} else {
+		srcName = "<unknown>"
+	}
+	if mu.dstEp != nil {
+		dstName = endpointName(mu.dstEp.Key)
+	} else {
+		dstName = "<unknown>"
+	}
+	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, inMetric={%s} outMetric={%s}",
+		&(mu.tuple), mu.updateType, srcName, dstName, mu.isConnection, mu.ruleID, mu.inMetric, mu.outMetric)
 }
 
 type MetricsReporter interface {

@@ -20,7 +20,6 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
 var (
@@ -137,11 +136,11 @@ func (c *Collector) setupStatsDumping() {
 
 // getData returns a pointer to the data structure keyed off the supplied tuple.  If there
 // is no entry one is created.
-func (c *Collector) getData(tuple Tuple, key model.Key) *Data {
+func (c *Collector) getData(tuple Tuple, srcEp, dstEp *calc.EndpointData) *Data {
 	data, ok := c.epStats[tuple]
 	if !ok {
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
-		data = NewData(tuple, key, c.config.AgeTimeout)
+		data = NewData(tuple, srcEp, dstEp, c.config.AgeTimeout)
 		c.epStats[tuple] = data
 	}
 	return data
@@ -153,15 +152,15 @@ func (c *Collector) applyConnTrackStatUpdate(
 ) {
 	// Update the counters for the entry.  Since data is a pointer, we are updating the map
 	// entry in situ.
-	data := c.getData(tuple, nil)
+	data := c.getData(tuple, nil, nil)
 	data.SetCounters(packets, bytes)
 	data.SetCountersReverse(reversePackets, reverseBytes)
 }
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
-func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, key model.Key, tierIdx, numPkts, numBytes int) {
+func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, srcEp, dstEp *calc.EndpointData, tierIdx, numPkts, numBytes int) {
 	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
-	data := c.getData(tuple, key)
+	data := c.getData(tuple, srcEp, dstEp)
 	if ok := data.AddRuleID(ruleID, tierIdx, numPkts, numBytes); !ok {
 		// When a RuleTrace RuleID is replaced, we have to do some housekeeping
 		// before we can replace it, the first of which is to remove references
@@ -263,18 +262,22 @@ func (c *Collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 
 func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *nfnetlink.NflogPacketAggregate) error {
 	var (
-		numPkts, numBytes int
-		ep                calc.EndpointData
-		ok                bool
+		numPkts, numBytes     int
+		localEp, srcEp, dstEp *calc.EndpointData
+		ok                    bool
 	)
 	nflogTuple := nPktAggr.Tuple
 
 	// Determine the endpoint that this packet hit a rule for. This depends on the Direction
 	// because local -> local packets will be NFLOGed twice.
 	if dir == rules.RuleDirIngress {
-		ep, ok = c.luc.GetEndpoint(nflogTuple.Dst)
+		dstEp, ok = c.luc.GetEndpoint(nflogTuple.Dst)
+		srcEp, _ = c.luc.GetEndpoint(nflogTuple.Src)
+		localEp = dstEp
 	} else {
-		ep, ok = c.luc.GetEndpoint(nflogTuple.Src)
+		srcEp, ok = c.luc.GetEndpoint(nflogTuple.Src)
+		dstEp, _ = c.luc.GetEndpoint(nflogTuple.Dst)
+		localEp = srcEp
 	}
 
 	if !ok {
@@ -303,16 +306,16 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 			}
 
 			tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
-			c.applyNflogStatUpdate(tuple, ruleID, ep.Key, tierIdx, numPkts, numBytes)
+			c.applyNflogStatUpdate(tuple, ruleID, srcEp, dstEp, tierIdx, numPkts, numBytes)
 		}
 
 		// A blank tier indicates a profile match. This should be directly after the last tier.
 		if len(ruleID.Tier) == 0 {
-			apply(len(ep.OrderedTiers))
+			apply(len(localEp.OrderedTiers))
 			continue
 		}
 
-		for tierIdx, tier := range ep.OrderedTiers {
+		for tierIdx, tier := range localEp.OrderedTiers {
 			if tier == ruleID.Tier {
 				apply(tierIdx)
 				break

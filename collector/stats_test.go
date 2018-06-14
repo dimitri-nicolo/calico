@@ -130,7 +130,7 @@ var _ = Describe("Rule Trace", func() {
 		copy(src[:], net.ParseIP("127.0.0.1").To16())
 		copy(dst[:], net.ParseIP("127.1.1.1").To16())
 		tuple = NewTuple(src, dst, 6, 12345, 80)
-		data = NewData(*tuple, nil, time.Duration(10)*time.Second)
+		data = NewData(*tuple, nil, nil, time.Duration(10)*time.Second)
 	})
 
 	Describe("Data with no ingress or egress rule trace ", func() {

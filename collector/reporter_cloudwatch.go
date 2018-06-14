@@ -16,6 +16,8 @@ type FlowLogGetter interface {
 
 type FlowLogAggregator interface {
 	FlowLogGetter
+	IncludeLabels(bool) FlowLogAggregator
+	AggregateOver(AggregationKind) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error
 }
 
@@ -25,10 +27,10 @@ type FlowLogDispatcher interface {
 
 // cloudWatchReporter implements the MetricsReporter interface.
 type cloudWatchReporter struct {
-	dispatcher      FlowLogDispatcher
-	aggregator      FlowLogAggregator
-	retentionTime   time.Duration
-	retentionTicker *jitter.Ticker
+	dispatcher    FlowLogDispatcher
+	aggregators   []FlowLogAggregator
+	flushInterval time.Duration
+	flushTicker   *jitter.Ticker
 
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
@@ -36,25 +38,23 @@ type cloudWatchReporter struct {
 
 // NewCloudWatchReporter constructs a FlowLogs MetricsReporter using
 // a cloudwatch dispatcher and aggregator.
-func NewCloudWatchReporter(retentionTime time.Duration) MetricsReporter {
-	return newCloudWatchReporter(NewCloudWatchDispatcher(nil),
-		NewCloudWatchAggregator(), retentionTime)
-}
-
-func newCloudWatchReporter(d FlowLogDispatcher, a FlowLogAggregator, retentionTime time.Duration) *cloudWatchReporter {
-	// Set the ticker interval appropriately, we should be checking at least half of the rention time,
+func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration) *cloudWatchReporter {
+	// Set the ticker interval appropriately, we should be checking at least half of the flush time,
 	// or the hard-coded check interval (whichever is smaller).
-	tickerInterval := retentionTime / 2
+	tickerInterval := flushInterval / 2
 	if checkInterval < tickerInterval {
 		tickerInterval = checkInterval
 	}
 	return &cloudWatchReporter{
-		dispatcher:      d,
-		aggregator:      a,
-		retentionTicker: jitter.NewTicker(tickerInterval, tickerInterval/10),
-		retentionTime:   retentionTime,
-		timeNowFn:       monotime.Now,
+		dispatcher:    dispatcher,
+		flushTicker:   jitter.NewTicker(tickerInterval, tickerInterval/10),
+		flushInterval: flushInterval,
+		timeNowFn:     monotime.Now,
 	}
+}
+
+func (c *cloudWatchReporter) AddAggregator(agg FlowLogAggregator) {
+	c.aggregators = append(c.aggregators, agg)
 }
 
 func (c *cloudWatchReporter) Start() {
@@ -63,18 +63,25 @@ func (c *cloudWatchReporter) Start() {
 }
 
 func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
-	c.aggregator.FeedUpdate(mu)
+	for _, agg := range c.aggregators {
+		agg.FeedUpdate(mu)
+	}
 	return nil
 }
 
 func (c *cloudWatchReporter) run() {
 	for {
+		// TODO(doublek): Stop and flush cases.
 		select {
-		case <-c.retentionTicker.C:
-			fl := c.aggregator.Get()
-			if len(fl) > 0 {
-				log.Infof("Dispatching log buffer of size: %d", len(fl))
-				c.dispatcher.Dispatch(fl)
+		case <-c.flushTicker.C:
+			// Fetch from different aggregators and then dispatch them to wherever
+			// the flow logs need to end up.
+			for _, agg := range c.aggregators {
+				fl := agg.Get()
+				if len(fl) > 0 {
+					log.Debugf("Dispatching log buffer of size: %d", len(fl))
+					c.dispatcher.Dispatch(fl)
+				}
 			}
 		}
 	}
