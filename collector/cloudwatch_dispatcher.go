@@ -19,6 +19,9 @@ type FlowLogFormat string
 const (
 	FlowLogFormatJSON FlowLogFormat = "json"
 	FlowLogFormatFlat FlowLogFormat = "flat"
+
+	LogGroupNamePrefix  = "/tigera/flowlogs"
+	LogStreamNameSuffix = "Flowlogs"
 )
 
 // cloudWatchDispatcher implements the FlowLogDispatcher interface.
@@ -33,7 +36,6 @@ type cloudWatchDispatcher struct {
 // to load credentials from the shared credentials file ~/.aws/credentials,
 // load your configuration from the shared configuration file ~/.aws/config,
 // and create a CloudWatch Logs client.
-// TODO: Update to process aws.Config as a param
 func NewCloudWatchDispatcher(logGroupName, logStreamName string, cwl cloudwatchlogsiface.CloudWatchLogsAPI) FlowLogDispatcher {
 	if cwl == nil {
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
@@ -75,10 +77,13 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 		LogEvents:     constructInputEvents(inputLogs),
 		LogGroupName:  aws.String(c.logGroupName),
 		LogStreamName: aws.String(c.logStreamName),
-		SequenceToken: aws.String(c.seqToken),
+	}
+	if c.seqToken != "" {
+		params.SequenceToken = aws.String(c.seqToken)
 	}
 	resp, err := c.cwl.PutLogEvents(params)
 	if err != nil {
+		log.WithFields(log.Fields{"LogGroupName": c.logGroupName, "LogStreamName": c.logStreamName}).WithError(err).Error("PutLogevents")
 		return err
 	}
 	if resp.RejectedLogEventsInfo != nil {
@@ -97,9 +102,9 @@ func (c *cloudWatchDispatcher) init() error {
 		log.Debugf("Cloudwatch logs client not initialied")
 		return errors.New("Cloudwatch logs client not initialied")
 	}
-	err := c.verifyLogGroup()
+	err := c.verifyOrCreateLogGroup()
 	if err != nil {
-		log.WithError(err).Error("Error when verifying log group")
+		log.WithError(err).Error("Error when verifying/creating log group")
 		return err
 	}
 	ls, err := c.verifyOrCreateLogStream()
@@ -130,10 +135,10 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogStream() (*cloudwatchlogs.LogStr
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Creating Log stream %v\n", c.logStreamName)
+	log.WithField("LogStreamName", c.logStreamName).Info("Creating Log stream")
 	_, err = c.cwl.CreateLogStream(createLSInp)
 	if err != nil {
-		log.Debugf("Error when DescribeLogStreams %v\n", err)
+		log.Debugf("Error when CreateLogStream %v\n", err)
 		return nil, err
 	}
 
@@ -168,6 +173,30 @@ func (c *cloudWatchDispatcher) verifyLogStream() (*cloudwatchlogs.LogStream, err
 		}
 	}
 	return nil, fmt.Errorf("Cannot find log stream %v in log group %v", c.logStreamName, c.logGroupName)
+}
+
+func (c *cloudWatchDispatcher) verifyOrCreateLogGroup() error {
+
+	err := c.verifyLogGroup()
+	if err == nil {
+		return nil
+	}
+
+	// LogGroup doesn't exist. Time to create it.
+	createLGInp := &cloudwatchlogs.CreateLogGroupInput{
+		LogGroupName: aws.String(c.logGroupName),
+	}
+	err = createLGInp.Validate()
+	if err != nil {
+		return err
+	}
+	log.WithField("LogGroupName", c.logGroupName).Info("Creating Log group")
+	_, err = c.cwl.CreateLogGroup(createLGInp)
+	if err != nil {
+		log.WithField("LogGroupName", c.logGroupName).WithError(err).Error("Error creating Log group")
+		return err
+	}
+	return nil
 }
 
 func (c *cloudWatchDispatcher) verifyLogGroup() error {
