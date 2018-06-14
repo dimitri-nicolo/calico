@@ -1803,6 +1803,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int64",
 							},
 						},
+						"extensions": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -1912,6 +1926,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Description: "The AS Number of the peer.",
 								Type:        []string{"integer"},
 								Format:      "int64",
+							},
+						},
+						"extensions": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
 							},
 						},
 					},

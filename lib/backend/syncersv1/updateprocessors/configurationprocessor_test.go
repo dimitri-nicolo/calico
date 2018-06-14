@@ -73,7 +73,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 	numFelixConfigs := 72
 	numClusterConfigs := 5
 	numNodeClusterConfigs := 4
-	numBgpConfigs := 3
+	numBgpConfigs := 4
 	felixMappedNames := map[string]interface{}{
 		"RouteRefreshInterval":    nil,
 		"IptablesRefreshInterval": nil,
@@ -307,6 +307,34 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		)
 	})
 
+	It("should expand mappings to the proper key value pairs", func() {
+		cc := updateprocessors.NewBGPConfigUpdateProcessor()
+		res := apiv3.NewBGPConfiguration()
+		asNum := numorstring.ASNumber(12345)
+		res.Spec.ASNumber = &asNum
+		res.Spec.LogSeverityScreen = "debug"
+		res.Spec.Extensions = map[string]string{
+			"testKey":  "testValue",
+			"testKey2": "testValue2",
+		}
+		expected := map[string]interface{}{
+			"loglevel":   "debug",
+			"as_num":     "12345",
+			"extensions": "{\"testKey\":\"testValue\",\"testKey2\":\"testValue2\"}",
+		}
+		kvps, err := cc.Process(&model.KVPair{
+			Key:   globalBgpConfigKey,
+			Value: res,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		checkExpectedConfigs(
+			kvps,
+			isGlobalBgpConfig,
+			numBgpConfigs,
+			expected,
+		)
+	})
+
 	It("should allow setting of a known field through an annotation to override validation", func() {
 		cc := updateprocessors.NewBGPConfigUpdateProcessor()
 		res := apiv3.NewBGPConfiguration()
@@ -314,7 +342,8 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			"config.projectcalico.org/loglevel": "this is not validated!",
 		}
 		expected := map[string]interface{}{
-			"loglevel": "this is not validated!",
+			"loglevel":   "this is not validated!",
+			"extensions": "{}",
 		}
 		kvps, err := cc.Process(&model.KVPair{
 			Key:   globalBgpConfigKey,
@@ -340,8 +369,9 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		res.Spec.ASNumber = &asNum
 		res.Spec.LogSeverityScreen = "debug"
 		expected := map[string]interface{}{
-			"loglevel": "this is not validated!",
-			"as_num":   "asnum foobar",
+			"loglevel":   "this is not validated!",
+			"as_num":     "asnum foobar",
+			"extensions": "{}",
 		}
 		kvps, err := cc.Process(&model.KVPair{
 			Key:   globalBgpConfigKey,
@@ -372,6 +402,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			"as_num":               "12345",
 			"NewConfigType":        "newFieldValue",
 			"AnotherNewConfigType": "newFieldValue2",
+			"extensions":           "{}",
 		}
 		kvps, err := cc.Process(&model.KVPair{
 			Key:   globalBgpConfigKey,
@@ -391,6 +422,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			"as_num":               "12345",
 			"NewConfigType":        nil,
 			"AnotherNewConfigType": nil,
+			"extensions":           "{}",
 		}
 		kvps, err = cc.Process(&model.KVPair{
 			Key:   globalBgpConfigKey,
@@ -429,6 +461,7 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			"NewConfigType":           "foobar",
 			"AnotherNewConfigType":    nil,
 			"YetAnotherNewConfigType": "foobarbaz",
+			"extensions":              "{}",
 		}
 		kvps, err = cc.Process(&model.KVPair{
 			Key:   globalBgpConfigKey,
@@ -470,7 +503,9 @@ var _ = Describe("Test the generic configuration update processor and the concre
 			kvps,
 			isGlobalBgpConfig,
 			numBgpConfigs,
-			nil,
+			map[string]interface{}{
+				"extensions": "{}",
+			},
 		)
 
 		By("validating the delete keys are also back to original")
@@ -491,9 +526,10 @@ var _ = Describe("Test the generic configuration update processor and the concre
 
 		By("validating an empty configuration")
 		expected := map[string]interface{}{
-			"loglevel":  nil,
-			"as_num":    nil,
-			"node_mesh": nil,
+			"loglevel":   nil,
+			"as_num":     nil,
+			"node_mesh":  nil,
+			"extensions": "{}",
 		}
 		kvps, err := cc.Process(&model.KVPair{
 			Key:   globalBgpConfigKey,
@@ -514,9 +550,10 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		res.Spec.ASNumber = &asNum
 		res.Spec.NodeToNodeMeshEnabled = &n2n
 		expected = map[string]interface{}{
-			"loglevel":  "none",
-			"as_num":    "12345",
-			"node_mesh": "{\"enabled\":true}",
+			"loglevel":   "none",
+			"as_num":     "12345",
+			"node_mesh":  "{\"enabled\":true}",
+			"extensions": "{}",
 		}
 		kvps, err = cc.Process(&model.KVPair{
 			Key:   globalBgpConfigKey,
@@ -536,9 +573,10 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		res.Spec.ASNumber = nil
 		res.Spec.NodeToNodeMeshEnabled = &n2n
 		expected = map[string]interface{}{
-			"loglevel":  "debug",
-			"as_num":    nil,
-			"node_mesh": "{\"enabled\":false}",
+			"loglevel":   "debug",
+			"as_num":     nil,
+			"node_mesh":  "{\"enabled\":false}",
+			"extensions": "{}",
 		}
 		kvps, err = cc.Process(&model.KVPair{
 			Key:   globalBgpConfigKey,
@@ -558,9 +596,10 @@ var _ = Describe("Test the generic configuration update processor and the concre
 		res.Spec.ASNumber = nil
 		res.Spec.NodeToNodeMeshEnabled = nil
 		expected = map[string]interface{}{
-			"loglevel":  "debug",
-			"as_num":    nil,
-			"node_mesh": nil,
+			"loglevel":   "debug",
+			"as_num":     nil,
+			"node_mesh":  nil,
+			"extensions": "{}",
 		}
 		kvps, err = cc.Process(&model.KVPair{
 			Key:   nodeBgpConfigKey,

@@ -48,6 +48,8 @@ type BGPPeerSpec struct {
 	PeerIP string `json:"peerIP" validate:"omitempty,ip"`
 	// The AS Number of the peer.
 	ASNumber numorstring.ASNumber `json:"asNumber"`
+	// Extensions is a mapping of keys to values that can be used in custom BGP templates
+	Extensions map[string]string `json:"extensions,omitempty" validate:"omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -45,6 +45,8 @@ type BGPConfigurationSpec struct {
 	NodeToNodeMeshEnabled *bool `json:"nodeToNodeMeshEnabled,omitempty" validate:"omitempty" confignamev1:"node_mesh"`
 	// ASNumber is the default AS number used by a node. [Default: 64512]
 	ASNumber *numorstring.ASNumber `json:"asNumber,omitempty" validate:"omitempty" confignamev1:"as_num"`
+	// Extensions is a mapping of keys to values that can be used in custom BGP templates
+	Extensions map[string]string `json:"extensions,omitempty" validate:"omitempty" confignamev1:"extensions"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

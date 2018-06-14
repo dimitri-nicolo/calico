@@ -109,9 +109,9 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 				options.SetOptions{},
 			)
 			Expect(err).NotTo(HaveOccurred())
-			expectedCacheSize += 2
+			expectedCacheSize += 3
 
-			// We should have entries for each config option (i.e. 2)
+			// We should have entries for each config option that was set (i.e. 2) and the default extensions field
 			syncTester.ExpectCacheSize(expectedCacheSize)
 			syncTester.ExpectData(model.KVPair{
 				Key:      model.GlobalBGPConfigKey{"as_num"},
@@ -121,6 +121,11 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			syncTester.ExpectData(model.KVPair{
 				Key:      model.GlobalBGPConfigKey{"node_mesh"},
 				Value:    "{\"enabled\":false}",
+				Revision: bgpCfg.ResourceVersion,
+			})
+			syncTester.ExpectData(model.KVPair{
+				Key:      model.GlobalBGPConfigKey{"extensions"},
+				Value:    "{}",
 				Revision: bgpCfg.ResourceVersion,
 			})
 
@@ -237,8 +242,9 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			peer1kvp := model.KVPair{
 				Key: model.GlobalBGPPeerKey{PeerIP: net.MustParseIP("192.124.10.20")},
 				Value: &model.BGPPeer{
-					PeerIP: net.MustParseIP("192.124.10.20"),
-					ASNum:  numorstring.ASNumber(75758),
+					PeerIP:     net.MustParseIP("192.124.10.20"),
+					ASNum:      numorstring.ASNumber(75758),
+					Extensions: map[string]string{},
 				},
 				Revision: peer1.ResourceVersion,
 			}
@@ -263,8 +269,9 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			peer2kvp := model.KVPair{
 				Key: model.GlobalBGPPeerKey{PeerIP: net.MustParseIP("192.124.10.20")},
 				Value: &model.BGPPeer{
-					PeerIP: net.MustParseIP("192.124.10.20"),
-					ASNum:  numorstring.ASNumber(99999),
+					PeerIP:     net.MustParseIP("192.124.10.20"),
+					ASNum:      numorstring.ASNumber(99999),
+					Extensions: map[string]string{},
 				},
 				Revision: peer2.ResourceVersion,
 			}
@@ -280,8 +287,9 @@ var _ = testutils.E2eDatastoreDescribe("BGP syncer tests", testutils.DatastoreAl
 			peer1kvp = model.KVPair{
 				Key: model.NodeBGPPeerKey{Nodename: "127.0.0.1", PeerIP: net.MustParseIP("192.124.10.20")},
 				Value: &model.BGPPeer{
-					PeerIP: net.MustParseIP("192.124.10.20"),
-					ASNum:  numorstring.ASNumber(75758),
+					PeerIP:     net.MustParseIP("192.124.10.20"),
+					ASNum:      numorstring.ASNumber(75758),
+					Extensions: map[string]string{},
 				},
 				Revision: peer1.ResourceVersion,
 			}

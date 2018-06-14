@@ -61,11 +61,18 @@ func convertBGPPeerV2ToV1(kvp *model.KVPair) (*model.KVPair, error) {
 		}
 	}
 
+	// Handle the extensions field being nil (uninstantiated). Provide an empty map if it is nil.
+	extensions := v3res.Spec.Extensions
+	if extensions == nil {
+		extensions = make(map[string]string)
+	}
+
 	return &model.KVPair{
 		Key: v1key,
 		Value: &model.BGPPeer{
-			PeerIP: *ip,
-			ASNum:  v3res.Spec.ASNumber,
+			PeerIP:     *ip,
+			ASNum:      v3res.Spec.ASNumber,
+			Extensions: extensions,
 		},
 		Revision: kvp.Revision,
 	}, nil
