@@ -12,7 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 
-	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -30,7 +30,7 @@ var (
 
 // Common RuleID definitions
 var (
-	ingressRule1Allow = &lookup.RuleID{
+	ingressRule1Allow = &calc.RuleID{
 		Action:    rules.RuleActionAllow,
 		Index:     0,
 		IndexStr:  "0",

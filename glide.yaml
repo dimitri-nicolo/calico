@@ -93,9 +93,15 @@ import:
   version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis
+- package: github.com/aws/aws-sdk-go
+  version: v1.13.54
 - package: github.com/prometheus/procfs
   version: f98634e408857669d61064b283c4cde240622865
   subpackages:
   - xfs
 - package: github.com/bronze1man/goStrongswanVici
   repo:    git@github.com:tigera/goStrongswanVici
+- package: github.com/aws/aws-sdk-go
+  version: v1.13.54
+- package: github.com/jmespath/go-jmespath
+  version: 0.2.2

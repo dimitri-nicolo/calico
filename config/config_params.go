@@ -184,6 +184,9 @@ type Config struct {
 	PrometheusMetricsKeyFile        string `config:"file(must-exist);"`
 	PrometheusMetricsCAFile         string `config:"file(must-exist);"`
 
+	CloudWatchMetricsReporterEnabled  bool          `config:"bool;false"`
+	CloudWatchMetricsPushIntervalSecs time.Duration `config:"seconds(60,65535);60"`
+
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
 
@@ -199,6 +202,13 @@ type Config struct {
 	SyslogReporterNetwork       string        `config:"string;"`
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
+
+	CloudWatchLogsReporterEnabled bool          `config:"bool;false"`
+	CloudWatchLogsFlushInterval   time.Duration `config:"seconds;60"`
+	CloudWatchLogsLogGroupName    string        `config:"string;"`
+	CloudWatchLogsLogStreamName   string        `config:"string;"`
+	CloudWatchLogsIncludeLabels   bool          `config:"bool;false"`
+	CloudWatchLogsAggregationKind int           `config:"int(0,2);0"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 
@@ -563,7 +573,20 @@ func loadParams() {
 		case "float":
 			param = &FloatParam{}
 		case "seconds":
-			param = &SecondsParam{}
+			min := minInt
+			max := maxInt
+			if kindParams != "" {
+				minAndMax := strings.Split(kindParams, ",")
+				min, err = strconv.Atoi(minAndMax[0])
+				if err != nil {
+					log.Panicf("Failed to parse min value for %v", field.Name)
+				}
+				max, err = strconv.Atoi(minAndMax[1])
+				if err != nil {
+					log.Panicf("Failed to parse max value for %v", field.Name)
+				}
+			}
+			param = &SecondsParam{Min: min, Max: max}
 		case "millis":
 			param = &MillisParam{}
 		case "iface-list":

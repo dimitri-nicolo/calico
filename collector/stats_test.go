@@ -9,12 +9,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 )
 
 var (
-	allowIngressRid0 = &lookup.RuleID{
+	allowIngressRid0 = &calc.RuleID{
 		Action:    rules.RuleActionAllow,
 		Index:     1,
 		IndexStr:  "1",
@@ -22,7 +22,7 @@ var (
 		Tier:      "T1",
 		Direction: rules.RuleDirIngress,
 	}
-	denyIngressRid0 = &lookup.RuleID{
+	denyIngressRid0 = &calc.RuleID{
 		Action:    rules.RuleActionDeny,
 		Index:     2,
 		IndexStr:  "2",
@@ -30,7 +30,7 @@ var (
 		Tier:      "T1",
 		Direction: rules.RuleDirIngress,
 	}
-	allowIngressRid1 = &lookup.RuleID{
+	allowIngressRid1 = &calc.RuleID{
 		Action:    rules.RuleActionAllow,
 		Index:     1,
 		IndexStr:  "1",
@@ -38,7 +38,7 @@ var (
 		Tier:      "T1",
 		Direction: rules.RuleDirIngress,
 	}
-	denyIngressRid1 = &lookup.RuleID{
+	denyIngressRid1 = &calc.RuleID{
 		Action:    rules.RuleActionDeny,
 		Index:     2,
 		IndexStr:  "2",
@@ -46,7 +46,7 @@ var (
 		Tier:      "T1",
 		Direction: rules.RuleDirIngress,
 	}
-	allowIngressRid2 = &lookup.RuleID{
+	allowIngressRid2 = &calc.RuleID{
 		Action:    rules.RuleActionAllow,
 		Index:     1,
 		IndexStr:  "1",
@@ -54,7 +54,7 @@ var (
 		Tier:      "T2",
 		Direction: rules.RuleDirIngress,
 	}
-	nextTierIngressRid0 = &lookup.RuleID{
+	nextTierIngressRid0 = &calc.RuleID{
 		Action:    rules.RuleActionNextTier,
 		Index:     3,
 		IndexStr:  "3",
@@ -62,7 +62,7 @@ var (
 		Tier:      "T1",
 		Direction: rules.RuleDirIngress,
 	}
-	nextTierIngressRid1 = &lookup.RuleID{
+	nextTierIngressRid1 = &calc.RuleID{
 		Action:    rules.RuleActionNextTier,
 		Index:     4,
 		IndexStr:  "4",
@@ -70,7 +70,7 @@ var (
 		Tier:      "T2",
 		Direction: rules.RuleDirIngress,
 	}
-	allowIngressRid11 = &lookup.RuleID{
+	allowIngressRid11 = &calc.RuleID{
 		Action:    rules.RuleActionAllow,
 		Index:     1,
 		IndexStr:  "1",
@@ -78,7 +78,7 @@ var (
 		Tier:      "T1",
 		Direction: rules.RuleDirIngress,
 	}
-	denyIngressRid21 = &lookup.RuleID{
+	denyIngressRid21 = &calc.RuleID{
 		Action:    rules.RuleActionDeny,
 		Index:     1,
 		IndexStr:  "1",
@@ -87,7 +87,7 @@ var (
 		Direction: rules.RuleDirIngress,
 	}
 
-	nextTierEgressRid0 = &lookup.RuleID{
+	nextTierEgressRid0 = &calc.RuleID{
 		Action:    rules.RuleActionNextTier,
 		Index:     2,
 		IndexStr:  "2",
@@ -95,7 +95,7 @@ var (
 		Tier:      "T1",
 		Direction: rules.RuleDirEgress,
 	}
-	allowEgressRid2 = &lookup.RuleID{
+	allowEgressRid2 = &calc.RuleID{
 		Action:    rules.RuleActionAllow,
 		Index:     3,
 		IndexStr:  "3",
@@ -130,7 +130,7 @@ var _ = Describe("Rule Trace", func() {
 		copy(src[:], net.ParseIP("127.0.0.1").To16())
 		copy(dst[:], net.ParseIP("127.1.1.1").To16())
 		tuple = NewTuple(src, dst, 6, 12345, 80)
-		data = NewData(*tuple, "", time.Duration(10)*time.Second)
+		data = NewData(*tuple, nil, nil, time.Duration(10)*time.Second)
 	})
 
 	Describe("Data with no ingress or egress rule trace ", func() {

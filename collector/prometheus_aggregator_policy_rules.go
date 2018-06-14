@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 )
 
@@ -48,7 +48,7 @@ var (
 )
 
 type RuleAggregateKey struct {
-	ruleID lookup.RuleID
+	ruleID calc.RuleID
 }
 
 // getRuleAggregateKey returns a hashable key identifying a rule aggregation key.

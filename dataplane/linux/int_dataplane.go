@@ -30,13 +30,13 @@ import (
 
 	"net"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
 	"github.com/projectcalico/felix/iptables"
 	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/felix/lookup"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/felix/routetable"
 	"github.com/projectcalico/felix/rules"
@@ -113,6 +113,18 @@ type Config struct {
 	PrometheusReporterCertFile string
 	PrometheusReporterKeyFile  string
 	PrometheusReporterCAFile   string
+
+	CloudWatchLogsReporterEnabled bool
+	CloudWatchLogsFlushInterval   time.Duration
+	CloudWatchLogsLogGroupName    string
+	CloudWatchLogsLogStreamName   string
+	CloudWatchLogsIncludeLabels   bool
+	CloudWatchLogsAggregationKind int
+
+	CloudWatchMetricsReporterEnabled  bool
+	CloudWatchMetricsPushIntervalSecs time.Duration
+
+	ClusterGUID string
 
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
@@ -207,7 +219,7 @@ type InternalDataplane struct {
 
 	ruleRenderer rules.RuleRenderer
 
-	lookupManager *lookup.LookupManager
+	lookupCache *calc.LookupsCache
 
 	interfacePrefixes []string
 
@@ -241,7 +253,7 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-func NewIntDataplaneDriver(config Config) *InternalDataplane {
+func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDataplane {
 	log.WithField("config", config).Info("Creating internal dataplane driver.")
 	ruleRenderer := config.RuleRendererOverride
 	if ruleRenderer == nil {
@@ -353,8 +365,7 @@ func NewIntDataplaneDriver(config Config) *InternalDataplane {
 		config.RulesConfig.WorkloadIfacePrefixes,
 		dp.endpointStatusCombiner.OnEndpointStatusUpdate))
 	dp.RegisterManager(newFloatingIPManager(natTableV4, ruleRenderer, 4))
-	dp.lookupManager = lookup.NewLookupManager()
-	dp.RegisterManager(dp.lookupManager)
+	dp.lookupCache = cache
 	dp.RegisterManager(newMasqManager(ipSetsV4, natTableV4, ruleRenderer, config.MaxIPSetSize, 4))
 	if config.RulesConfig.IPIPEnabled {
 		// Create and maintain the IPIP tunnel device
@@ -562,12 +573,37 @@ func (d *InternalDataplane) Start() {
 		pr.AddAggregator(collector.NewDeniedPacketsAggregator(d.config.DeletedMetricsRetentionSecs, d.config.FelixHostname))
 		rm.RegisterMetricsReporter(pr)
 	}
+	// TODO: Pass in the the necessary AWS client config.
+	log.Debugf("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
+	if d.config.CloudWatchLogsReporterEnabled {
+		logGroupName := "/sample-infra-org/anx/flowlogs/"
+		if d.config.CloudWatchLogsLogGroupName != "" {
+			logGroupName = d.config.CloudWatchLogsLogGroupName
+		}
+		logStreamName := d.config.FelixHostname + "_FlowLogs"
+		if d.config.CloudWatchLogsLogStreamName != "" {
+			logStreamName = d.config.CloudWatchLogsLogStreamName
+		}
+		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, nil)
+		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval)
+		ca := collector.NewCloudWatchAggregator().
+			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKind)).
+			IncludeLabels(d.config.CloudWatchLogsIncludeLabels)
+		cw.AddAggregator(ca)
+		rm.RegisterMetricsReporter(cw)
+	}
+
+	if d.config.CloudWatchMetricsReporterEnabled {
+		cwm := collector.NewCloudWatchMetricsReporter(d.config.CloudWatchMetricsPushIntervalSecs, d.config.ClusterGUID)
+		rm.RegisterMetricsReporter(cwm)
+	}
+
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
 	if syslogReporter != nil {
 		rm.RegisterMetricsReporter(syslogReporter)
 	}
 	rm.Start()
-	statsCollector := collector.NewCollector(d.lookupManager, rm, collectorConfig)
+	statsCollector := collector.NewCollector(d.lookupCache, rm, collectorConfig)
 	statsCollector.Start()
 }
 
