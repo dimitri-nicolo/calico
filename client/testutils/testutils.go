@@ -12,7 +12,7 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-var Cert = `-----BEGIN CERTIFICATE-----
+const IntermediateCert = `-----BEGIN CERTIFICATE-----
 MIID4DCCAsigAwIBAgIRAP8sPcS0yV6BQiQ6KnHlTyAwDQYJKoZIhvcNAQELBQAw
 dTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDVNh
 biBGcmFuY2lzY28xFDASBgNVBAoTC1RpZ2VyYSBJbmMuMSMwIQYDVQQDExpUaWdl
@@ -36,7 +36,7 @@ TxA0EwUL8NOBHWeVY3sraVHUusOFgMiBr/pdChToD4AJ0jX5a4DzsCRSyMRVz6Dq
 pdDGllpqsFfAEMF4hv4A5jhQLPk5Oz5azkoCJ0vcFCtj3nnh
 -----END CERTIFICATE-----`
 
-var Key = `-----BEGIN RSA PRIVATE KEY-----
+const PrivateKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEpQIBAAKCAQEAxitlRhYjC/RFzL9xDEFkStoysmqxI5Z+ey3bQMVlrHUUSpAO
 WsHHBOjhdS7KhsURiMV2W43doQYvtO1lM3/4JuEEbZjFv9AUck5JKG51sTRpU8i/
 m79L1w4qCoT3tHx2/JLbvNMTgmbohTwDDKq1Lf7OkG+dADAFecd8TOrDlx4JqmRG
@@ -64,7 +64,7 @@ QMXdVemezHvB3+ZhdjOlzAAvVjB0V/A7ClDkSK1dTm3Wq+3WEQaRgaXMrKFqhvUg
 Uii6FtF23mzT1OStrJ++Cl+wLpZ1kb8OuO3B1dETj/S6Ro9JP1OoZiY=
 -----END RSA PRIVATE KEY-----`
 
-var Root = `-----BEGIN CERTIFICATE-----
+const RootCert = `-----BEGIN CERTIFICATE-----
 MIID1zCCAr+gAwIBAgIQLq4dtj0XmIrPqYb8CN7yoTANBgkqhkiG9w0BAQsFADB1
 MQswCQYDVQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2Fu
 IEZyYW5jaXNjbzEUMBIGA1UEChMLVGlnZXJhIEluYy4xIzAhBgNVBAMTGlRpZ2Vy
@@ -98,7 +98,7 @@ func (e *IsDevLicense) Error() string {
 	return e.s
 }
 
-// DecodeDevLicense takes a license resource and decodes the claims using the provided Root.
+// DecodeDevLicense takes a license resource and decodes the claims using the dev root cert.
 //
 // DO NOT USE THIS IN ANY PRODUCTION CODE SHIPPED IN ANY BINARIES!!
 //
@@ -121,7 +121,7 @@ func DecodeDevLicense(lic api.LicenseKey) (client.LicenseClaims, error) {
 		return client.LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
 	}
 
-	rootCert, err := cryptolicensing.LoadCertFromPEM([]byte(Root))
+	rootCert, err := cryptolicensing.LoadCertFromPEM([]byte(RootCert))
 	if err != nil {
 		return client.LicenseClaims{}, fmt.Errorf("error loading license certificate: %s", err)
 	}
