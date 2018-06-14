@@ -115,6 +115,14 @@ func StartDataplaneDriver(configParams *config.Config,
 			configParams.DropActionOverride = "DROP"
 		}
 
+		// If CloudWatchLogsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
+		if configParams.CloudWatchLogsReporterEnabled && !configParams.LicenseValid {
+			log.Warn("Not licensed for CloudWatch flow logs feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
+
+			// Set Cloudwatch flow logs reporting configs to false.
+			configParams.CloudWatchLogsReporterEnabled = false
+		}
+
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExcludes(),
