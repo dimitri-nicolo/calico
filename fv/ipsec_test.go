@@ -201,6 +201,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	It("host-to-workload connections should be encrypted", func() {
 		cc.ExpectSome(felixes[0], w[1])
 		cc.ExpectSome(felixes[1], w[0])
+		cc.ExpectSome(w[0], hostW[1])
+		cc.ExpectSome(w[1], hostW[0])
 		cc.CheckConnectivity()
 
 		expectIKEAndESP()
@@ -217,6 +219,42 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 					tcpdumpMatches(i, "numInboundESPPackets")()
 			}).Should(BeZero(), "Number of inbound unencrypted packets didn't match number of inbound ESP packets")
 		}
+	})
+
+	Describe("with a NAT rule in place", func() {
+		// This mimics the NAT rule used by kube-proxy to expose teh kube API server, i.e. a NAT rule from a service IP
+		// to a remote host port.
+		BeforeEach(func() {
+			for i, f := range felixes {
+				for j := range felixes {
+					if i == j {
+						continue
+					}
+					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+						"-p", "tcp",
+						"-d", fmt.Sprintf("10.66.%d.1", j),
+						"-m", "tcp", "--dport", "8080",
+						"-j", "DNAT", "--to-destination",
+						felixes[j].IP+":8055")
+					f.Exec("iptables", "-t", "nat", "-A", "PREROUTING",
+						"-p", "tcp",
+						"-d", fmt.Sprintf("10.66.%d.2", j),
+						"-m", "tcp", "--dport", "8080",
+						"-j", "DNAT", "--to-destination",
+						w[j].IP+":8055")
+				}
+			}
+		})
+
+		It("should have connectivity via NAT entries", func() {
+			// NAT to remote host
+			cc.ExpectSome(w[0], workload.IP("10.66.1.1"), 8080)
+			cc.ExpectSome(w[1], workload.IP("10.66.0.1"), 8080)
+			// NAT to remote workload
+			cc.ExpectSome(w[0], workload.IP("10.66.1.2"), 8080)
+			cc.ExpectSome(w[1], workload.IP("10.66.0.2"), 8080)
+			cc.CheckConnectivity()
+		})
 	})
 
 	It("should have unencrypted host to host connectivity", func() {
