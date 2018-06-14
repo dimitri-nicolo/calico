@@ -81,7 +81,7 @@ func getMetricNumber(m prometheus.Gauge) int {
 	return int(math.Float64frombits(valBits.Uint()))
 }
 
-var _ = Describe("Denied packets Prometheus Aggregator", func() {
+var _ = Describe("Denied packets Prometheus PromAggregator", func() {
 	var da *DeniedPacketsAggregator
 	BeforeEach(func() {
 		registry := prometheus.NewRegistry()

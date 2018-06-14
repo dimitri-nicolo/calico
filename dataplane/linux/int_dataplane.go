@@ -121,6 +121,11 @@ type Config struct {
 	CloudWatchLogsIncludeLabels   bool
 	CloudWatchLogsAggregationKind int
 
+	CloudWatchMetricsReporterEnabled  bool
+	CloudWatchMetricsPushIntervalSecs time.Duration
+
+	ClusterGUID string
+
 	SyslogReporterNetwork string
 	SyslogReporterAddress string
 
@@ -587,6 +592,12 @@ func (d *InternalDataplane) Start() {
 		cw.AddAggregator(ca)
 		rm.RegisterMetricsReporter(cw)
 	}
+
+	if d.config.CloudWatchMetricsReporterEnabled {
+		cwm := collector.NewCloudWatchMetricsReporter(d.config.CloudWatchMetricsPushIntervalSecs, d.config.ClusterGUID)
+		rm.RegisterMetricsReporter(cwm)
+	}
+
 	syslogReporter := collector.NewSyslogReporter(d.config.SyslogReporterNetwork, d.config.SyslogReporterAddress)
 	if syslogReporter != nil {
 		rm.RegisterMetricsReporter(syslogReporter)

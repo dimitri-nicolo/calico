@@ -15,10 +15,10 @@ import (
 
 const checkInterval = 5 * time.Second
 
-type Aggregator interface {
+type PromAggregator interface {
 	// Register Metrics that should be reported with a prometheus registry
 	RegisterMetrics(registry *prometheus.Registry)
-	// OnUpdate is called everytime a new MetricUpdate is received by the
+	// OnUpdate is called every time a new MetricUpdate is received by the
 	// PrometheusReporter.
 	OnUpdate(mu MetricUpdate)
 	// CheckRetainedMetrics is called everytime the aggregator should check if a retained
@@ -36,7 +36,7 @@ type PrometheusReporter struct {
 	reportChan      chan MetricUpdate
 	retentionTime   time.Duration
 	retentionTicker *jitter.Ticker
-	aggregators     []Aggregator
+	aggregators     []PromAggregator
 
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
@@ -64,7 +64,7 @@ func NewPrometheusReporter(port int, retentionTime time.Duration, certFile, keyF
 	}
 }
 
-func (pr *PrometheusReporter) AddAggregator(agg Aggregator) {
+func (pr *PrometheusReporter) AddAggregator(agg PromAggregator) {
 	agg.RegisterMetrics(pr.registry)
 	pr.aggregators = append(pr.aggregators, agg)
 }

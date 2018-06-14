@@ -130,6 +130,8 @@ func (p *FloatParam) Parse(raw string) (result interface{}, err error) {
 
 type SecondsParam struct {
 	Metadata
+	Min int
+	Max int
 }
 
 func (p *SecondsParam) Parse(raw string) (result interface{}, err error) {
@@ -139,6 +141,12 @@ func (p *SecondsParam) Parse(raw string) (result interface{}, err error) {
 		return
 	}
 	result = time.Duration(seconds * float64(time.Second))
+	if int(seconds) < p.Min {
+		err = p.parseFailed(raw, fmt.Sprintf("value must be at least %v", p.Min))
+	} else if int(seconds) > p.Max {
+		err = p.parseFailed(raw, fmt.Sprintf("value must be at most %v", p.Max))
+	}
+	return result, err
 	return
 }
 

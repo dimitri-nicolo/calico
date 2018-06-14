@@ -145,6 +145,11 @@ var _ = DescribeTable("Config parsing",
 		}
 	},
 
+	Entry("CloudWatch Metrics update interval - in range", "CloudWatchMetricsPushIntervalSecs", "90", time.Duration(90*time.Second), false),
+	Entry("CloudWatch Metrics update interval - out of range should be converted to default", "CloudWatchMetricsPushIntervalSecs", "5", time.Duration(60*time.Second), false),
+	Entry("CloudWatch Metrics update interval - default value", "CloudWatchMetricsPushIntervalSecs", "", time.Duration(60*time.Second), false),
+	Entry("Netlink Timeout - default value", "NetlinkTimeoutSecs", "", time.Duration(10*time.Second), false),
+
 	Entry("FelixHostname", "FelixHostname", "hostname", "hostname"),
 	Entry("FelixHostname FQDN", "FelixHostname", "hostname.foo.bar.com", "hostname.foo.bar.com"),
 	Entry("FelixHostname as IP", "FelixHostname", "1.2.3.4", "1.2.3.4"),
