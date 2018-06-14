@@ -193,12 +193,10 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogGroup() error {
 	log.WithField("LogGroupName", c.logGroupName).Info("Creating Log group")
 	_, err = c.cwl.CreateLogGroup(createLGInp)
 	if err != nil {
-		log.Debugf("Error when CreateLogGroup %v\n", err)
+		log.WithField("LogGroupName", c.logGroupName).WithError(err).Error("Error creating Log group")
 		return err
 	}
-
-	err = c.verifyLogGroup()
-	return err
+	return nil
 }
 
 func (c *cloudWatchDispatcher) verifyLogGroup() error {
