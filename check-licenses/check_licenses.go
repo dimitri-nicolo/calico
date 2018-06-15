@@ -100,6 +100,8 @@ var (
 			license: "Apache License 2.0 (96%)"},
 		{pkgName: "github.com/projectcalico/felix/vendor/github.com/vishvananda/netns",
 			license: "Apache License 2.0 (96%)"},
+		{pkgName: "github.com/projectcalico/felix/vendor/github.com/jmespath/go-jmespath",
+			license: "? (The Unlicense, 35%)"},
 
 		// Mozilla Public License.  Note, would prohibit us from ever releasing our code
 		// under a *GPL license (if we wanted to do that).

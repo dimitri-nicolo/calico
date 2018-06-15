@@ -86,7 +86,8 @@ func run(checkNoError bool, command string, args ...string) error {
 			"output":  string(outputBytes)}).WithError(err).Warning("Command failed")
 	}
 	if checkNoError {
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Command failed\nCommand: %v args: %v\nOutput:\n\n%v",
+			command, args, string(outputBytes)))
 	}
 	return err
 }

@@ -305,6 +305,10 @@ configRetry:
 	buildInfoLogCxt.WithField("config", configParams).Info(
 		"Successfully loaded configuration.")
 
+	// Initialzed the lookup cache here and pass it along to both the calc_graph
+	// as well as dataplane driver, which actually uses this for lookups.
+	lookupsCache := calc.NewLookupsCache()
+
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
 	// one.
 	var dpDriver dp.DataplaneDriver
@@ -313,7 +317,7 @@ configRetry:
 	failureReportChan := make(chan string)
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
 
-	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(configParams, healthAggregator, configChangedRestartCallback)
+	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(configParams, healthAggregator, lookupsCache, configChangedRestartCallback)
 
 	// Initialise the glue logic that connects the calculation graph to/from the dataplane driver.
 	log.Info("Connect to the dataplane driver.")
@@ -397,6 +401,7 @@ configRetry:
 		configParams,
 		calcGraphClientChannels,
 		healthAggregator,
+		lookupsCache,
 	)
 
 	if configParams.UsageReportingEnabled {

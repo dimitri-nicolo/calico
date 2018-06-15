@@ -3,6 +3,7 @@ package collector
 
 import (
 	"fmt"
+	net2 "net"
 	"strings"
 	"testing"
 	"time"
@@ -13,9 +14,10 @@ import (
 	"github.com/tigera/nfnetlink"
 	"github.com/tigera/nfnetlink/nfnl"
 
-	"github.com/projectcalico/felix/lookup"
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/net"
 )
 
 const (
@@ -25,13 +27,20 @@ const (
 	proto_udp  = 17
 )
 
+func ipStrTo16Byte(ipStr string) [16]byte {
+	addr := net.ParseIP(ipStr)
+	var addrB [16]byte
+	copy(addrB[:], addr.To16()[:16])
+	return addrB
+}
+
 var (
-	localIp1     = [16]byte{10, 0, 0, 1}
-	localIp2     = [16]byte{10, 0, 0, 2}
-	remoteIp1    = [16]byte{20, 0, 0, 1}
-	remoteIp2    = [16]byte{20, 0, 0, 2}
-	localIp1DNAT = [16]byte{192, 168, 0, 1}
-	localIp2DNAT = [16]byte{192, 168, 0, 2}
+	localIp1     = ipStrTo16Byte("10.0.0.1")
+	localIp2     = ipStrTo16Byte("10.0.0.2")
+	remoteIp1    = ipStrTo16Byte("20.0.0.1")
+	remoteIp2    = ipStrTo16Byte("20.0.0.2")
+	localIp1DNAT = ipStrTo16Byte("192.168.0.1")
+	localIp2DNAT = ipStrTo16Byte("192.168.0.2")
 )
 
 var (
@@ -40,26 +49,94 @@ var (
 	dstPortDNAT = 8080
 )
 
-var localWlEPKey1 = &model.WorkloadEndpointKey{
-	Hostname:       "localhost",
-	OrchestratorID: "orchestrator",
-	WorkloadID:     "localworkloadid1",
-	EndpointID:     "localepid1",
-}
+var (
+	localWlEPKey1 = model.WorkloadEndpointKey{
+		Hostname:       "localhost",
+		OrchestratorID: "orchestrator",
+		WorkloadID:     "localworkloadid1",
+		EndpointID:     "localepid1",
+	}
 
-var localWlEPKey2 = &model.WorkloadEndpointKey{
-	Hostname:       "localhost",
-	OrchestratorID: "orchestrator",
-	WorkloadID:     "localworkloadid2",
-	EndpointID:     "localepid2",
-}
+	localWlEPKey2 = model.WorkloadEndpointKey{
+		Hostname:       "localhost",
+		OrchestratorID: "orchestrator",
+		WorkloadID:     "localworkloadid2",
+		EndpointID:     "localepid2",
+	}
+
+	remoteWlEpKey1 = model.WorkloadEndpointKey{
+		OrchestratorID: "orchestrator",
+		WorkloadID:     "remoteworkloadid1",
+		EndpointID:     "remoteepid1",
+	}
+	remoteWlEpKey2 = model.WorkloadEndpointKey{
+		OrchestratorID: "orchestrator",
+		WorkloadID:     "remoteworkloadid2",
+		EndpointID:     "remoteepid2",
+	}
+
+	localWlEp1 = &model.WorkloadEndpoint{
+		State:    "active",
+		Name:     "cali1",
+		Mac:      mustParseMac("01:02:03:04:05:06"),
+		IPv4Nets: []net.IPNet{mustParseNet("10.0.0.1/32")},
+		Labels: map[string]string{
+			"id": "local-ep-1",
+		},
+	}
+	localWlEp2 = &model.WorkloadEndpoint{
+		State:    "active",
+		Name:     "cali2",
+		Mac:      mustParseMac("01:02:03:04:05:07"),
+		IPv4Nets: []net.IPNet{mustParseNet("10.0.0.2/32")},
+		Labels: map[string]string{
+			"id": "local-ep-2",
+		},
+	}
+	remoteWlEp1 = &model.WorkloadEndpoint{
+		State:    "active",
+		Name:     "cali3",
+		Mac:      mustParseMac("02:02:03:04:05:06"),
+		IPv4Nets: []net.IPNet{mustParseNet("20.0.0.1/32")},
+		Labels: map[string]string{
+			"id": "remote-ep-1",
+		},
+	}
+	remoteWlEp2 = &model.WorkloadEndpoint{
+		State:    "active",
+		Name:     "cali4",
+		Mac:      mustParseMac("02:03:03:04:05:06"),
+		IPv4Nets: []net.IPNet{mustParseNet("20.0.0.2/32")},
+		Labels: map[string]string{
+			"id": "remote-ep-2",
+		},
+	}
+	localEd1 = &calc.EndpointData{
+		Key:          localWlEPKey1,
+		Endpoint:     localWlEp1,
+		OrderedTiers: []string{"default"},
+	}
+	localEd2 = &calc.EndpointData{
+		Key:          localWlEPKey2,
+		Endpoint:     localWlEp2,
+		OrderedTiers: []string{"default"},
+	}
+	remoteEd1 = &calc.EndpointData{
+		Key:      remoteWlEpKey1,
+		Endpoint: remoteWlEp1,
+	}
+	remoteEd2 = &calc.EndpointData{
+		Key:      remoteWlEpKey2,
+		Endpoint: remoteWlEp2,
+	}
+)
 
 // Nflog prefix test parameters
 var (
 	defTierAllowIngressNFLOGPrefix   = [64]byte{'A', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierAllowEgressNFLOGPrefix    = [64]byte{'A', 'P', 'E', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '1'}
 	defTierDenyIngressNFLOGPrefix    = [64]byte{'D', 'P', 'I', '0', '|', 'd', 'e', 'f', 'a', 'u', 'l', 't', '.', 'p', 'o', 'l', 'i', 'c', 'y', '2'}
-	defTierPolicy1AllowIngressRuleID = &lookup.RuleID{
+	defTierPolicy1AllowIngressRuleID = &calc.RuleID{
 		Tier:      "default",
 		Name:      "policy1",
 		Namespace: "",
@@ -68,7 +145,7 @@ var (
 		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirIngress,
 	}
-	defTierPolicy1AllowEgressRuleID = &lookup.RuleID{
+	defTierPolicy1AllowEgressRuleID = &calc.RuleID{
 		Tier:      "default",
 		Name:      "policy1",
 		Namespace: "",
@@ -77,7 +154,7 @@ var (
 		Action:    rules.RuleActionAllow,
 		Direction: rules.RuleDirEgress,
 	}
-	defTierPolicy2DenyIngressRuleID = &lookup.RuleID{
+	defTierPolicy2DenyIngressRuleID = &calc.RuleID{
 		Tier:      "default",
 		Name:      "policy2",
 		Namespace: "",
@@ -86,11 +163,6 @@ var (
 		Action:    rules.RuleActionDeny,
 		Direction: rules.RuleDirIngress,
 	}
-)
-
-var (
-	wl1Ep1 = "WEP(orchestrator/localworkloadid1/localepid1)"
-	wl2Ep2 = "WEP(orchestrator/localworkloadid2/localepid2)"
 )
 
 var ingressPktAllow = &nfnetlink.NflogPacketAggregate{
@@ -185,17 +257,18 @@ var _ = Describe("NFLOG Datasource", func() {
 		}
 		rm := NewReporterManager()
 		BeforeEach(func() {
-			epMap := map[[16]byte]*model.WorkloadEndpointKey{
-				localIp1: localWlEPKey1,
-				localIp2: localWlEPKey2,
+			epMap := map[[16]byte]*calc.EndpointData{
+				localIp1:  localEd1,
+				localIp2:  localEd2,
+				remoteIp1: remoteEd1,
 			}
-			nflogMap := map[[64]byte]*lookup.RuleID{}
+			nflogMap := map[[64]byte]*calc.RuleID{}
 
-			for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+			for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 				nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 			}
 
-			lm := newMockLookupManager(epMap, nflogMap)
+			lm := newMockLookupsCache(epMap, nflogMap)
 			c = NewCollector(lm, rm, conf)
 			go c.startStatsCollectionAndReporting()
 		})
@@ -341,18 +414,19 @@ var _ = Describe("Conntrack Datasource", func() {
 	}
 	rm := NewReporterManager()
 	BeforeEach(func() {
-		epMap := map[[16]byte]*model.WorkloadEndpointKey{
-			localIp1: localWlEPKey1,
-			localIp2: localWlEPKey2,
+		epMap := map[[16]byte]*calc.EndpointData{
+			localIp1:  localEd1,
+			localIp2:  localEd2,
+			remoteIp1: remoteEd1,
 		}
 
-		nflogMap := map[[64]byte]*lookup.RuleID{}
+		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupManager(epMap, nflogMap)
+		lm := newMockLookupsCache(epMap, nflogMap)
 		c = NewCollector(lm, rm, conf)
 		go c.startStatsCollectionAndReporting()
 	})
@@ -409,7 +483,7 @@ var _ = Describe("Conntrack Datasource", func() {
 
 })
 
-func policyIDStrToRuleIDParts(r *lookup.RuleID) [64]byte {
+func policyIDStrToRuleIDParts(r *calc.RuleID) [64]byte {
 	var (
 		name  string
 		byt64 [64]byte
@@ -452,18 +526,19 @@ var _ = Describe("Reporting Metrics", func() {
 	mockReporter := newMockReporter()
 	rm.RegisterMetricsReporter(mockReporter)
 	BeforeEach(func() {
-		epMap := map[[16]byte]*model.WorkloadEndpointKey{
-			localIp1: localWlEPKey1,
-			localIp2: localWlEPKey2,
+		epMap := map[[16]byte]*calc.EndpointData{
+			localIp1:  localEd1,
+			localIp2:  localEd2,
+			remoteIp1: remoteEd1,
 		}
 
-		nflogMap := map[[64]byte]*lookup.RuleID{}
+		nflogMap := map[[64]byte]*calc.RuleID{}
 
-		for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+		for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 			nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 		}
 
-		lm := newMockLookupManager(epMap, nflogMap)
+		lm := newMockLookupsCache(epMap, nflogMap)
 		rm.Start()
 		c = NewCollector(lm, rm, conf)
 		go c.startStatsCollectionAndReporting()
@@ -477,6 +552,8 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktDenyTuple,
+					srcEp:        remoteEd1,
+					dstEp:        localEd1,
 					ruleID:       defTierPolicy2DenyIngressRuleID,
 					isConnection: false,
 				}
@@ -493,6 +570,8 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktAllowTuple,
+					srcEp:        remoteEd1,
+					dstEp:        localEd1,
 					ruleID:       defTierPolicy1AllowIngressRuleID,
 					isConnection: false,
 				}
@@ -511,6 +590,8 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *ingressPktAllowTuple,
+					srcEp:        remoteEd1,
+					dstEp:        localEd1,
 					ruleID:       defTierPolicy1AllowIngressRuleID,
 					isConnection: false,
 				}
@@ -527,6 +608,8 @@ var _ = Describe("Reporting Metrics", func() {
 				tmu := testMetricUpdate{
 					updateType:   UpdateTypeReport,
 					tuple:        *egressPktAllowTuple,
+					srcEp:        localEd1,
+					dstEp:        remoteEd1,
 					ruleID:       defTierPolicy1AllowEgressRuleID,
 					isConnection: false,
 				}
@@ -536,10 +619,10 @@ var _ = Describe("Reporting Metrics", func() {
 	})
 })
 
-func newMockLookupManager(
-	em map[[16]byte]*model.WorkloadEndpointKey, nm map[[64]byte]*lookup.RuleID,
-) *lookup.LookupManager {
-	l := lookup.NewLookupManager()
+func newMockLookupsCache(
+	em map[[16]byte]*calc.EndpointData, nm map[[64]byte]*calc.RuleID,
+) *calc.LookupsCache {
+	l := calc.NewLookupsCache()
 	l.SetMockData(em, nm)
 	return l
 }
@@ -552,8 +635,12 @@ type testMetricUpdate struct {
 	// Tuple key
 	tuple Tuple
 
+	// Endpoint information.
+	srcEp *calc.EndpointData
+	dstEp *calc.EndpointData
+
 	// Rule identification
-	ruleID *lookup.RuleID
+	ruleID *calc.RuleID
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
@@ -579,21 +666,40 @@ func (mr *mockReporter) Report(mu MetricUpdate) error {
 	mr.reportChan <- testMetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        mu.tuple,
+		srcEp:        mu.srcEp,
+		dstEp:        mu.dstEp,
 		ruleID:       mu.ruleID,
 		isConnection: mu.isConnection,
 	}
 	return nil
 }
 
+func mustParseMac(m string) *net.MAC {
+	hwAddr, err := net2.ParseMAC(m)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to parse MAC: %v; %v", m, err))
+	}
+	return &net.MAC{hwAddr}
+}
+
+func mustParseNet(n string) net.IPNet {
+	_, cidr, err := net.ParseCIDR(n)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to parse CIDR %v; %v", n, err))
+	}
+	return *cidr
+}
+
 func BenchmarkNflogPktToStat(b *testing.B) {
-	epMap := map[[16]byte]*model.WorkloadEndpointKey{
-		localIp1: localWlEPKey1,
-		localIp2: localWlEPKey2,
+	epMap := map[[16]byte]*calc.EndpointData{
+		localIp1:  localEd1,
+		localIp2:  localEd2,
+		remoteIp1: remoteEd1,
 	}
 
-	nflogMap := map[[64]byte]*lookup.RuleID{}
+	nflogMap := map[[64]byte]*calc.RuleID{}
 
-	for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+	for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 		nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 	}
 
@@ -608,7 +714,7 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 		ExportingInterval:        time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupManager(epMap, nflogMap)
+	lm := newMockLookupsCache(epMap, nflogMap)
 	c := NewCollector(lm, rm, conf)
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -618,13 +724,14 @@ func BenchmarkNflogPktToStat(b *testing.B) {
 }
 
 func BenchmarkApplyStatUpdate(b *testing.B) {
-	epMap := map[[16]byte]*model.WorkloadEndpointKey{
-		localIp1: localWlEPKey1,
-		localIp2: localWlEPKey2,
+	epMap := map[[16]byte]*calc.EndpointData{
+		localIp1:  localEd1,
+		localIp2:  localEd2,
+		remoteIp1: remoteEd1,
 	}
 
-	nflogMap := map[[64]byte]*lookup.RuleID{}
-	for _, rid := range []*lookup.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
+	nflogMap := map[[64]byte]*calc.RuleID{}
+	for _, rid := range []*calc.RuleID{defTierPolicy1AllowEgressRuleID, defTierPolicy1AllowIngressRuleID, defTierPolicy2DenyIngressRuleID} {
 		nflogMap[policyIDStrToRuleIDParts(rid)] = rid
 	}
 
@@ -639,7 +746,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 		ExportingInterval:        time.Duration(1) * time.Second,
 	}
 	rm := NewReporterManager()
-	lm := newMockLookupManager(epMap, nflogMap)
+	lm := newMockLookupsCache(epMap, nflogMap)
 	c := NewCollector(lm, rm, conf)
 	var tuples []Tuple
 	MaxSrcPort := 1000
@@ -650,7 +757,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 			tuples = append(tuples, *t)
 		}
 	}
-	var rids []*lookup.RuleID
+	var rids []*calc.RuleID
 	MaxEntries := 10000
 	for i := 0; i < MaxEntries; i++ {
 		rid := defTierPolicy1AllowIngressRuleID
@@ -660,7 +767,7 @@ func BenchmarkApplyStatUpdate(b *testing.B) {
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
 		for i := 0; i < MaxEntries; i++ {
-			c.applyNflogStatUpdate(tuples[i], rids[i], wl1Ep1, 0, 1, 2)
+			c.applyNflogStatUpdate(tuples[i], rids[i], localEd1, remoteEd1, 0, 1, 2)
 		}
 	}
 }

@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/linux"
 	"github.com/projectcalico/felix/ifacemonitor"
@@ -32,6 +33,7 @@ var _ = Describe("Constructor test", func() {
 	var configParams *config.Config
 	var dpConfig intdataplane.Config
 	var healthAggregator *health.HealthAggregator
+	var lookupsCache *calc.LookupsCache
 
 	JustBeforeEach(func() {
 		configParams = config.New()
@@ -78,10 +80,11 @@ var _ = Describe("Constructor test", func() {
 			IPIPMTU:          configParams.IpInIpMtu,
 			HealthAggregator: healthAggregator,
 		}
+		lookupsCache = calc.NewLookupsCache()
 	})
 
 	It("should be constructable", func() {
-		var dp = intdataplane.NewIntDataplaneDriver(dpConfig)
+		var dp = intdataplane.NewIntDataplaneDriver(lookupsCache, dpConfig)
 		Expect(dp).ToNot(BeNil())
 	})
 
@@ -92,7 +95,7 @@ var _ = Describe("Constructor test", func() {
 		})
 
 		It("should be constructable", func() {
-			var dp = intdataplane.NewIntDataplaneDriver(dpConfig)
+			var dp = intdataplane.NewIntDataplaneDriver(lookupsCache, dpConfig)
 			Expect(dp).ToNot(BeNil())
 		})
 	})

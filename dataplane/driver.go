@@ -25,6 +25,7 @@ import (
 
 	"runtime/debug"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/external"
 	"github.com/projectcalico/felix/dataplane/linux"
@@ -38,6 +39,7 @@ import (
 
 func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
+	cache *calc.LookupsCache,
 	configChangedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
 	if configParams.UseInternalDataplaneDriver {
 		log.Info("Using internal (linux) dataplane driver.")
@@ -113,6 +115,22 @@ func StartDataplaneDriver(configParams *config.Config,
 			configParams.DropActionOverride = "DROP"
 		}
 
+		// If CloudWatchLogsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
+		if configParams.CloudWatchLogsReporterEnabled && !configParams.LicenseValid {
+			log.Warn("Not licensed for CloudWatch flow logs feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
+
+			// Set Cloudwatch flow logs reporting configs to false.
+			configParams.CloudWatchLogsReporterEnabled = false
+		}
+
+		// If CloudWatchMetricsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
+		if configParams.CloudWatchMetricsReporterEnabled && !configParams.LicenseValid {
+			log.Warn("Not licensed for CloudWatch Metrics feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
+
+			// Set CloudWatchMetricsReporterEnabled to false.
+			configParams.CloudWatchMetricsReporterEnabled = false
+		}
+
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExcludes(),
@@ -168,29 +186,38 @@ func StartDataplaneDriver(configParams *config.Config,
 
 				EnableNflogSize: configParams.EnableNflogSize,
 			},
-			NfNetlinkBufSize:               configParams.NfNetlinkBufSize,
-			StatsDumpFilePath:              configParams.StatsDumpFilePath,
-			PrometheusReporterEnabled:      configParams.PrometheusReporterEnabled,
-			PrometheusReporterPort:         configParams.PrometheusReporterPort,
-			PrometheusReporterCertFile:     configParams.PrometheusReporterCertFile,
-			PrometheusReporterKeyFile:      configParams.PrometheusReporterKeyFile,
-			PrometheusReporterCAFile:       configParams.PrometheusReporterCAFile,
-			SyslogReporterNetwork:          configParams.SyslogReporterNetwork,
-			SyslogReporterAddress:          configParams.SyslogReporterAddress,
-			DeletedMetricsRetentionSecs:    configParams.DeletedMetricsRetentionSecs,
-			IPIPMTU:                        configParams.IpInIpMtu,
-			IptablesRefreshInterval:        configParams.IptablesRefreshInterval,
-			RouteRefreshInterval:           configParams.RouteRefreshInterval,
-			IPSetsRefreshInterval:          configParams.IpsetsRefreshInterval,
-			IptablesPostWriteCheckInterval: configParams.IptablesPostWriteCheckIntervalSecs,
-			IptablesInsertMode:             configParams.ChainInsertMode,
-			IptablesLockFilePath:           configParams.IptablesLockFilePath,
-			IptablesLockTimeout:            configParams.IptablesLockTimeoutSecs,
-			IptablesLockProbeInterval:      configParams.IptablesLockProbeIntervalMillis,
-			MaxIPSetSize:                   configParams.MaxIpsetSize,
-			IgnoreLooseRPF:                 configParams.IgnoreLooseRPF,
-			IPv6Enabled:                    configParams.Ipv6Support,
-			StatusReportingInterval:        configParams.ReportingIntervalSecs,
+
+			NfNetlinkBufSize:              configParams.NfNetlinkBufSize,
+			StatsDumpFilePath:             configParams.StatsDumpFilePath,
+			PrometheusReporterEnabled:     configParams.PrometheusReporterEnabled,
+			PrometheusReporterPort:        configParams.PrometheusReporterPort,
+			PrometheusReporterCertFile:    configParams.PrometheusReporterCertFile,
+			PrometheusReporterKeyFile:     configParams.PrometheusReporterKeyFile,
+			PrometheusReporterCAFile:      configParams.PrometheusReporterCAFile,
+			SyslogReporterNetwork:         configParams.SyslogReporterNetwork,
+			SyslogReporterAddress:         configParams.SyslogReporterAddress,
+			DeletedMetricsRetentionSecs:   configParams.DeletedMetricsRetentionSecs,
+			CloudWatchLogsReporterEnabled: configParams.CloudWatchLogsReporterEnabled,
+			CloudWatchLogsFlushInterval:   configParams.CloudWatchLogsFlushInterval,
+			CloudWatchLogsLogGroupName:    configParams.CloudWatchLogsLogGroupName,
+			CloudWatchLogsLogStreamName:   configParams.CloudWatchLogsLogStreamName,
+			CloudWatchLogsAggregationKind: configParams.CloudWatchLogsAggregationKind,
+			IPIPMTU:                           configParams.IpInIpMtu,
+			IptablesRefreshInterval:           configParams.IptablesRefreshInterval,
+			RouteRefreshInterval:              configParams.RouteRefreshInterval,
+			IPSetsRefreshInterval:             configParams.IpsetsRefreshInterval,
+			IptablesPostWriteCheckInterval:    configParams.IptablesPostWriteCheckIntervalSecs,
+			IptablesInsertMode:                configParams.ChainInsertMode,
+			IptablesLockFilePath:              configParams.IptablesLockFilePath,
+			IptablesLockTimeout:               configParams.IptablesLockTimeoutSecs,
+			IptablesLockProbeInterval:         configParams.IptablesLockProbeIntervalMillis,
+			MaxIPSetSize:                      configParams.MaxIpsetSize,
+			IgnoreLooseRPF:                    configParams.IgnoreLooseRPF,
+			IPv6Enabled:                       configParams.Ipv6Support,
+			StatusReportingInterval:           configParams.ReportingIntervalSecs,
+			CloudWatchMetricsReporterEnabled:  configParams.CloudWatchMetricsReporterEnabled,
+			CloudWatchMetricsPushIntervalSecs: configParams.CloudWatchMetricsPushIntervalSecs,
+			ClusterGUID:                       configParams.ClusterGUID,
 
 			NetlinkTimeout: configParams.NetlinkTimeoutSecs,
 
@@ -217,7 +244,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			DebugSimulateDataplaneHangAfter: configParams.DebugSimulateDataplaneHangAfter,
 			FelixHostname:                   configParams.FelixHostname,
 		}
-		intDP := intdataplane.NewIntDataplaneDriver(dpConfig)
+		intDP := intdataplane.NewIntDataplaneDriver(cache, dpConfig)
 		intDP.Start()
 
 		return intDP, nil

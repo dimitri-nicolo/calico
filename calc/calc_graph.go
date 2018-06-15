@@ -95,13 +95,18 @@ type PipelineCallbacks interface {
 	ipsecCallbacks
 }
 
+type endpointPolicyCache interface {
+	endpointCallbacks
+	ruleScanner
+}
+
 type CalcGraph struct {
 	// AllUpdDispatcher is the input node to the calculation graph.
 	AllUpdDispatcher      *dispatcher.Dispatcher
 	activeRulesCalculator *ActiveRulesCalculator
 }
 
-func NewCalculationGraph(callbacks PipelineCallbacks, hostname string) *CalcGraph {
+func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostname string) *CalcGraph {
 	log.Infof("Creating calculation graph, filtered to hostname %v", hostname)
 
 	// The source of the processing graph, this dispatcher will be fed all the updates from the
@@ -274,7 +279,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, hostname string) *CalcGrap
 	activeRulesCalc.PolicyMatchListener = polResolver
 	polResolver.RegisterWith(allUpdDispatcher, localEndpointDispatcher)
 	// And hook its output to the callbacks.
-	polResolver.Callbacks = callbacks
+	polResolver.RegisterCallback(callbacks)
 
 	// Register for host IP updates.
 	//
@@ -324,6 +329,39 @@ func NewCalculationGraph(callbacks PipelineCallbacks, hostname string) *CalcGrap
 	//
 	profileDecoder := NewProfileDecoder(callbacks)
 	profileDecoder.RegisterWith(allUpdDispatcher)
+
+	// The remote endpoint reverse lookup receiver only need to know about non-local endpoints.
+	// Create another dispatcher that will filter out non-local endpoints.
+	//
+	//          ...
+	//       Dispatcher (all updates)
+	//         / ...
+	//        / All Host/Workload Endpoints
+	//       /
+	//   Dispatcher (remote updates)
+	//     <filter>
+	remoteEndpointDispatcher := dispatcher.NewDispatcher()
+	(*remoteEndpointDispatcherReg)(remoteEndpointDispatcher).RegisterWith(allUpdDispatcher)
+	remoteEndpointFilter := &remoteEndpointFilter{hostname: hostname}
+	remoteEndpointFilter.RegisterWith(remoteEndpointDispatcher)
+
+	// The lookup cache, caches endpoint and policy information.
+	//        ...
+	//     Dispatcher (remote updates)
+	//         |
+	//         | Workload and host endpoints
+	//         |
+	//       lookup cache
+	//
+	cache.epCache.RegisterWith(remoteEndpointDispatcher)
+
+	// The lookup cache, caches policy information for prefix lookups. Hook into the
+	// ActiveRulesCalculator to receive local active policy/profile information.
+	activeRulesCalc.PolicyLookupCache = cache.polCache
+
+	// The lookup cache, also provides local endpoint lookups and corresponding tier information.
+	// Hook into the PolicyResolver to receive this information.
+	polResolver.RegisterCallback(cache.epCache)
 
 	return &CalcGraph{
 		AllUpdDispatcher:      allUpdDispatcher,
@@ -378,6 +416,47 @@ func (f *endpointHostnameFilter) OnUpdate(update api.Update) (filterOut bool) {
 			log.WithField("id", update.Key).Info("Local endpoint deleted")
 		} else {
 			log.WithField("id", update.Key).Info("Local endpoint updated")
+		}
+	}
+	return
+}
+
+type remoteEndpointDispatcherReg dispatcher.Dispatcher
+
+func (l *remoteEndpointDispatcherReg) RegisterWith(disp *dispatcher.Dispatcher) {
+	red := (*dispatcher.Dispatcher)(l)
+	disp.Register(model.WorkloadEndpointKey{}, red.OnUpdate)
+	disp.Register(model.HostEndpointKey{}, red.OnUpdate)
+	disp.RegisterStatusHandler(red.OnDatamodelStatus)
+}
+
+// remoteEndpointFilter provides an UpdateHandler that filters out endpoints
+// that are on the given host.
+type remoteEndpointFilter struct {
+	hostname string
+}
+
+func (f *remoteEndpointFilter) RegisterWith(remoteEndpointDisp *dispatcher.Dispatcher) {
+	remoteEndpointDisp.Register(model.WorkloadEndpointKey{}, f.OnUpdate)
+	remoteEndpointDisp.Register(model.HostEndpointKey{}, f.OnUpdate)
+}
+
+func (f *remoteEndpointFilter) OnUpdate(update api.Update) (filterOut bool) {
+	switch key := update.Key.(type) {
+	case model.WorkloadEndpointKey:
+		if key.Hostname == f.hostname {
+			filterOut = true
+		}
+	case model.HostEndpointKey:
+		if key.Hostname == f.hostname {
+			filterOut = true
+		}
+	}
+	if !filterOut {
+		if update.Value == nil {
+			log.WithField("id", update.Key).Info("Remote endpoint deleted")
+		} else {
+			log.WithField("id", update.Key).Info("Remote endpoint updated")
 		}
 	}
 	return

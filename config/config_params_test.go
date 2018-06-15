@@ -56,6 +56,14 @@ var _ = PDescribe("FelixConfig vs ConfigParams parity", func() {
 		"IpInIpTunnelAddr",
 
 		"EnableNflogSize",
+
+		// Until libcalico-go-private gets Cloudwatch logs config
+		"CloudWatchLogsReporterEnabled",
+		"CloudWatchLogsFlushInterval",
+		"CloudWatchLogsLogGroupName",
+		"CloudWatchLogsLogStreamName",
+		"CloudWatchLogsIncludeLabels",
+		"CloudWatchLogsAggregationKind",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",
@@ -136,6 +144,11 @@ var _ = DescribeTable("Config parsing",
 			Expect(config.Err).NotTo(HaveOccurred())
 		}
 	},
+
+	Entry("CloudWatch Metrics update interval - in range", "CloudWatchMetricsPushIntervalSecs", "90", time.Duration(90*time.Second), false),
+	Entry("CloudWatch Metrics update interval - out of range should be converted to default", "CloudWatchMetricsPushIntervalSecs", "5", time.Duration(60*time.Second), false),
+	Entry("CloudWatch Metrics update interval - default value", "CloudWatchMetricsPushIntervalSecs", "", time.Duration(60*time.Second), false),
+	Entry("Netlink Timeout - default value", "NetlinkTimeoutSecs", "", time.Duration(10*time.Second), false),
 
 	Entry("FelixHostname", "FelixHostname", "hostname", "hostname"),
 	Entry("FelixHostname FQDN", "FelixHostname", "hostname.foo.bar.com", "hostname.foo.bar.com"),

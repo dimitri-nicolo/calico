@@ -57,7 +57,7 @@ type PolicyResolver struct {
 	dirtyEndpoints        set.Set
 	sortRequired          bool
 	policySorter          *PolicySorter
-	Callbacks             PolicyResolverCallbacks
+	Callbacks             []PolicyResolverCallbacks
 	InSync                bool
 }
 
@@ -72,6 +72,7 @@ func NewPolicyResolver() *PolicyResolver {
 		endpoints:             make(map[model.Key]interface{}),
 		dirtyEndpoints:        set.New(),
 		policySorter:          NewPolicySorter(),
+		Callbacks:             []PolicyResolverCallbacks{},
 	}
 }
 
@@ -81,6 +82,10 @@ func (pr *PolicyResolver) RegisterWith(allUpdDispatcher, localEndpointDispatcher
 	localEndpointDispatcher.Register(model.WorkloadEndpointKey{}, pr.OnUpdate)
 	localEndpointDispatcher.Register(model.HostEndpointKey{}, pr.OnUpdate)
 	localEndpointDispatcher.RegisterStatusHandler(pr.OnDatamodelStatus)
+}
+
+func (pr *PolicyResolver) RegisterCallback(cb PolicyResolverCallbacks) {
+	pr.Callbacks = append(pr.Callbacks, cb)
 }
 
 func (pr *PolicyResolver) OnUpdate(update api.Update) (filterOut bool) {
@@ -171,8 +176,10 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 	endpoint, ok := pr.endpoints[endpointID.(model.Key)]
 	if !ok {
 		log.Debugf("Endpoint is unknown, sending nil update")
-		pr.Callbacks.OnEndpointTierUpdate(endpointID.(model.Key),
-			nil, []tierInfo{})
+		for _, cb := range pr.Callbacks {
+			cb.OnEndpointTierUpdate(endpointID.(model.Key),
+				nil, []tierInfo{})
+		}
 		return nil
 	}
 
@@ -203,7 +210,9 @@ func (pr *PolicyResolver) sendEndpointUpdate(endpointID interface{}) error {
 	}
 
 	log.Debugf("Endpoint tier update: %v -> %v", endpointID, applicableTiers)
-	pr.Callbacks.OnEndpointTierUpdate(endpointID.(model.Key),
-		endpoint, applicableTiers)
+	for _, cb := range pr.Callbacks {
+		cb.OnEndpointTierUpdate(endpointID.(model.Key),
+			endpoint, applicableTiers)
+	}
 	return nil
 }

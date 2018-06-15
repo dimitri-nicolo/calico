@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
@@ -39,6 +40,7 @@ type State struct {
 	ExpectedProfileIDs                   set.Set
 	ExpectedIPSecBindings                set.Set
 	ExpectedIPSecBlacklist               set.Set
+	ExpectedCachedRemoteEndpoints        []*calc.EndpointData
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
@@ -61,6 +63,7 @@ func NewState() State {
 		ExpectedProfileIDs:                   set.New(),
 		ExpectedIPSecBindings:                set.New(),
 		ExpectedIPSecBlacklist:               nil, // Created on demand, nil means "ignore"
+		ExpectedCachedRemoteEndpoints:        []*calc.EndpointData{},
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
@@ -92,6 +95,8 @@ func (s State) Copy() State {
 	if s.ExpectedIPSecBlacklist != nil {
 		cpy.ExpectedIPSecBlacklist = s.ExpectedIPSecBlacklist.Copy()
 	}
+
+	cpy.ExpectedCachedRemoteEndpoints = append(cpy.ExpectedCachedRemoteEndpoints, s.ExpectedCachedRemoteEndpoints...)
 
 	cpy.Name = s.Name
 	return cpy
@@ -157,6 +162,12 @@ func (s State) withEndpointUntracked(id string, tiers, untrackedTiers, preDNATTi
 		newState.ExpectedUntrackedEndpointPolicyOrder[id] = untrackedTiers
 		newState.ExpectedPreDNATEndpointPolicyOrder[id] = preDNATTiers
 	}
+	return newState
+}
+
+func (s State) withRemoteEndpoint(ed *calc.EndpointData) State {
+	newState := s.Copy()
+	newState.ExpectedCachedRemoteEndpoints = append(newState.ExpectedCachedRemoteEndpoints, ed)
 	return newState
 }
 

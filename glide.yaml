@@ -38,7 +38,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: bc0a758a52b1e189fd2b086c78027f2acea33ff9
+  version: c586ae70eb809b746d121efe46ac663d05e30ed5
   subpackages:
   - lib
 - package: github.com/tigera/licensing
@@ -69,7 +69,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: efb5870027bc7fceb5e2d77f70631e502c594746
+  version: b1bffe0aaa1ec22fa65cd24f5108d1276e907b4b
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
@@ -93,9 +93,15 @@ import:
   version: 09f6ed296fc66555a25fe4ce95173148778dfa85
   subpackages:
   - googleapis
+- package: github.com/aws/aws-sdk-go
+  version: v1.13.54
 - package: github.com/prometheus/procfs
   version: f98634e408857669d61064b283c4cde240622865
   subpackages:
   - xfs
 - package: github.com/bronze1man/goStrongswanVici
   repo:    git@github.com:tigera/goStrongswanVici
+- package: github.com/aws/aws-sdk-go
+  version: v1.13.54
+- package: github.com/jmespath/go-jmespath
+  version: 0.2.2
