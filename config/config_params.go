@@ -239,6 +239,8 @@ type Config struct {
 	IPSecLogLevel              string        `config:"oneof(NOTICE,INFO,DEBUG,VERBOSE);INFO"`
 	IPSecPolicyRefreshInterval time.Duration `config:"seconds;600"`
 
+	IPSecRekeyTime time.Duration `config:"seconds;3600"`
+
 	// This MUST be ignored if set using config/env var, so DO NOT add
 	// the `config` struct tag to this.
 	LicenseValid bool // Don't add config tag here!

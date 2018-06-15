@@ -83,9 +83,15 @@ const (
 	// String sent on the failure report channel to indicate we're shutting down for config
 	// change.
 	reasonConfigChanged = "config changed"
+	// String sent on the failure report channel to indicate we're shutting down for a child
+	// process exited. e.g. charon daemon.
+	reasonChildExited = "child exit"
 	// Process return code used to report a config change.  This is the same as the code used
 	// by SIGHUP, which means that the wrapper script also restarts Felix on a SIGHUP.
 	configChangedRC = 129
+	// Process return code used to report a child exit.  This is the same as the code used
+	// by SIGHUP, which means that the wrapper script also restarts Felix on a SIGHUP.
+	childExitedRC = 129
 )
 
 // main is the entry point to the calico-felix binary.
@@ -316,8 +322,9 @@ configRetry:
 
 	failureReportChan := make(chan string)
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
+	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
-	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(configParams, healthAggregator, lookupsCache, configChangedRestartCallback)
+	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(configParams, healthAggregator, lookupsCache, configChangedRestartCallback, childExitedRestartCallback)
 
 	// Initialise the glue logic that connects the calculation graph to/from the dataplane driver.
 	log.Info("Connect to the dataplane driver.")
@@ -696,6 +703,11 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 
 			if reason == reasonConfigChanged {
 				exitWithCustomRC(configChangedRC, "Exiting for config change")
+				return
+			}
+
+			if reason == reasonChildExited {
+				exitWithCustomRC(childExitedRC, "Exiting for child process exit")
 				return
 			}
 
