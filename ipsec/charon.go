@@ -34,6 +34,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const viciSocketPath = "/var/run/charon.vici"
+
 type Uri struct {
 	network, address string
 }
@@ -44,118 +46,134 @@ type CharonIKEDaemon struct {
 	ikeProposal string
 	rekeyTime   time.Duration
 	ctx         context.Context
+
+	firstConnSucceeded bool
+	cachedClient       viciClient
+
+	runAndCaptureLogs func(execPath string, doneWG *sync.WaitGroup) (command, error)
+	newClient         viciClientFactory
+	sleep             func(duration time.Duration)
+
+	childExitedCallback func()
 }
 
-func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ikeProposal string, rekeyTime time.Duration, childExitedCallback func()) (*CharonIKEDaemon, error) {
-	// FIXME: Reevaluate directory permissions.
-	os.MkdirAll("/var/run/", 0700)
-	const pidfilePath = "/var/run/charon.pid"
-	if f, err := os.Open(pidfilePath); err == nil {
-		defer f.Close()
-		bs, err := ioutil.ReadAll(f)
-		if err != nil {
-			return nil, err
-		}
-		pid, err := strconv.Atoi(strings.TrimSpace(string(bs)))
-		if err != nil {
-			return nil, err
-		}
+type viciClient interface {
+	io.Closer
+	LoadConn(conn *map[string]goStrongswanVici.IKEConf) error
+	UnloadConn(r *goStrongswanVici.UnloadConnRequest) error
+	LoadShared(key *goStrongswanVici.Key) error
+	UnloadShared(key *goStrongswanVici.UnloadKeyRequest) error
+}
 
-		// check if process do exist.
-		// os.FindProcess() always succeeds.
-		killErr := syscall.Kill(pid, syscall.Signal(0))
-		procExists := killErr == nil
-		if procExists {
-			log.WithField("pid", pid).Info("charon already running, killing it")
-			proc, err := os.FindProcess(pid)
-			if err == nil {
-				err = proc.Kill()
-				if err != nil {
-					log.WithError(err).Error("Failed to kill old Charon")
-					return nil, err
-				}
-			}
-		} else {
-			log.WithField("pid", pid).Info("charon is not running, but pid file exists")
-		}
-		os.Remove(pidfilePath)
-	}
+type viciClientFactory func(ctx context.Context, viciUri Uri) (client viciClient, err error)
 
-	// Clean up any old socket.  Without this, the VICI client can try to connect to the old socket
-	// rather than waiting for the new.
-	const viciSocketPath = "/var/run/charon.vici"
-	if _, err := os.Stat(viciSocketPath); err == nil {
-		err := os.Remove(viciSocketPath)
-		if err != nil {
-			log.WithError(err).Error("Failed to remove old VICI socket.")
-		}
-	}
+func NewCharonIKEDaemon(
+	espProposal,
+	ikeProposal string,
+	rekeyTime time.Duration,
+	childExitedCallback func()) *CharonIKEDaemon {
+	return NewCharonWithShims(
+		espProposal, ikeProposal, rekeyTime, childExitedCallback,
+		runAndCaptureLogs, getRealVICIClient, time.Sleep,
+	)
+}
 
+func NewCharonWithShims(
+	espProposal,
+	ikeProposal string,
+	rekeyTime time.Duration,
+	childExitedCallback func(),
+
+	runAndCaptureLogs func(execPath string, doneWG *sync.WaitGroup) (command, error),
+	newClient viciClientFactory,
+	sleep func(duration time.Duration),
+) *CharonIKEDaemon {
 	charon := &CharonIKEDaemon{
-		ctx:         ctx,
 		espProposal: espProposal,
 		ikeProposal: ikeProposal,
+		viciUri:     Uri{"unix", viciSocketPath},
 		rekeyTime:   rekeyTime,
-	}
-	charon.viciUri = Uri{"unix", viciSocketPath}
 
-	cmd, err := charon.runAndCaptureLogs("/usr/lib/strongswan/charon")
+		runAndCaptureLogs: runAndCaptureLogs,
+		newClient:         newClient,
+		sleep:             sleep,
+
+		childExitedCallback: childExitedCallback,
+	}
+
+	return charon
+}
+
+type command interface {
+	Wait() error
+	Signal(signal os.Signal) error
+	Kill() error
+}
+
+func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup) error {
+	charon.ctx = ctx
+
+	err := os.MkdirAll("/var/run/", 0755 /* rwxr-xr-x (matches value on my test system) */)
+	if err != nil {
+		log.WithError(err).Error("Failed to ensure /var/run directory exists")
+		return err
+	}
+
+	err = CleanUpOldCharon()
+	if err != nil {
+		log.WithError(err).Error("Failed to clean up old charon")
+		return err
+	}
+
+	cmd, err := charon.runAndCaptureLogs("/usr/lib/strongswan/charon", doneWG)
 
 	if err != nil {
 		log.Errorf("Error starting charon daemon: %v", err)
-		return nil, err
+		return err
 	} else {
 		log.Info("Charon daemon started")
 	}
 
-	wg.Add(1)
+	// Convert cmd.Wait() into a channel close event that we can select on.
+	processExited := make(chan struct{}) // closed when the process exits.
 	go func() {
+		log.Info("Started charon process monitor goroutine.")
+		cmd.Wait()
+		log.Info("Charon exited, signaling to monitor goroutine.")
+		close(processExited)
+	}()
+
+	doneWG.Add(1)
+	go func() {
+		defer doneWG.Done()
+		log.Info("Started charon shutdown management goroutine.")
+
 		select {
 		case <-ctx.Done():
-			cmd.Process.Signal(syscall.SIGTERM)
-			cmd.Wait()
-			log.Infof("Stopped charon daemon as expected")
-			wg.Done()
-		}
-	}()
-	go func() {
-		cmd.Wait()
-		log.Infof("Stopped charon daemon unexpected, restart felix")
-		childExitedCallback()
-	}()
-	return charon, nil
-}
-
-func (charon *CharonIKEDaemon) getClient(wait bool) (client *goStrongswanVici.ClientConn, err error) {
-	for {
-		socket_conn, err := net.Dial(charon.viciUri.network, charon.viciUri.address)
-		if err == nil {
-			return goStrongswanVici.NewClientConn(socket_conn), nil
-		} else {
-			if wait {
-				select {
-				case <-charon.ctx.Done():
-					log.Error("Cancel waiting for charon")
-					return nil, err
-				default:
-					log.Errorf("ClientConnection failed: %v", err)
-				}
-
-				log.Info("Retrying shortly...")
-				time.Sleep(100 * time.Millisecond)
-			} else {
-				return nil, err
+			log.Info("Context finished, shutting down charon.")
+			cmd.Signal(syscall.SIGTERM)
+			select {
+			case <-time.After(5 * time.Second):
+				log.Error("charon didn't exit, killing it")
+				cmd.Kill()
+			case <-processExited:
+				log.Info("Charon exited.")
 			}
+		case <-processExited:
+			log.Error("Charon exited unexpectedly.  Reporting the failure.")
+			charon.childExitedCallback()
 		}
-	}
+	}()
+
+	return nil
 }
 
-func (charon *CharonIKEDaemon) runAndCaptureLogs(execPath string) (cmd *exec.Cmd, err error) {
+func runAndCaptureLogs(execPath string, doneWG *sync.WaitGroup) (command, error) {
 	path, err := exec.LookPath(execPath)
 	if err != nil {
 		return nil, err
 	}
-	cmd = &exec.Cmd{
+	cmd := &exec.Cmd{
 		Path: path,
 		SysProcAttr: &syscall.SysProcAttr{
 			Pdeathsig: syscall.SIGTERM,
@@ -170,169 +188,207 @@ func (charon *CharonIKEDaemon) runAndCaptureLogs(execPath string) (cmd *exec.Cmd
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		log.Errorf("Error get sterr pipe: %v", err)
+		log.Errorf("Error get stderr pipe: %v", err)
 		return nil, err
 	}
-	go copyOutputToLog("stdout", stdout)
-	go copyOutputToLog("stderr", stderr)
+	doneWG.Add(2)
+	go copyOutputToLog("stdout", stdout, doneWG)
+	go copyOutputToLog("stderr", stderr, doneWG)
 
 	err = cmd.Start()
-	return
+
+	return (*cmdAdapter)(cmd), err
 }
 
-func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
-	var err error
-	var client *goStrongswanVici.ClientConn
+type cmdAdapter exec.Cmd
 
-	client, err = charon.getClient(true)
-	if err != nil {
-		log.Errorf("Failed to acquire Vici client: %v", err)
-		return err
-	}
-
-	defer client.Close()
-
-	sharedKey := &goStrongswanVici.Key{
-		ID:     remoteIP,
-		Typ:    "IKE",
-		Data:   password,
-		Owners: []string{remoteIP},
-	}
-
-	for {
-		err = client.LoadShared(sharedKey)
-		if err != nil {
-			log.Errorf("Failed to load key for %v. Retrying. %v", remoteIP, err)
-			time.Sleep(time.Second)
-			continue
-		}
-		break
-	}
-
-	log.Infof("Loaded shared key for: %v", remoteIP)
-	return nil
+func (c *cmdAdapter) Wait() error {
+	return (*exec.Cmd)(c).Wait()
 }
 
-func (charon *CharonIKEDaemon) UnloadSharedKey(remoteIP string) error {
-	var err error
-	var client *goStrongswanVici.ClientConn
+func (c *cmdAdapter) Signal(s os.Signal) error {
+	return c.Process.Signal(s)
+}
 
-	client, err = charon.getClient(true)
-	if err != nil {
-		log.Errorf("Failed to acquire Vici client: %v", err)
-		return err
-	}
-
-	defer client.Close()
-
-	sharedKey := &goStrongswanVici.UnloadKeyRequest{
-		ID: remoteIP,
-	}
-
-	for {
-		err = client.UnloadShared(sharedKey)
-		if err != nil {
-			log.WithError(err).Errorf("Failed to unload key for %v.  Retrying...", remoteIP)
-			time.Sleep(time.Second)
-			continue
-		}
-		break
-	}
-
-	log.Infof("Loaded shared key for: %v", remoteIP)
-	return nil
+func (c *cmdAdapter) Kill() error {
+	return c.Process.Kill()
 }
 
 func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
-	var err error
-	var client *goStrongswanVici.ClientConn
+	return charon.withClientRetry("LoadConnection", func(c viciClient) error {
+		if localIP == "" || remoteIP == "" {
+			log.WithFields(log.Fields{
+				"localIP":  localIP,
+				"remoteIP": remoteIP,
+			}).Panic("Missing local or remote address")
+		}
 
-	if localIP == "" || remoteIP == "" {
-		log.WithFields(log.Fields{
-			"localIP":  localIP,
-			"remoteIP": remoteIP,
-		}).Panic("Missing local or remote address")
-	}
+		childConfMap := make(map[string]goStrongswanVici.ChildSAConf)
+		childSAConf := goStrongswanVici.ChildSAConf{
+			Local_ts:      []string{"0.0.0.0/0"},
+			Remote_ts:     []string{"0.0.0.0/0"},
+			ESPProposals:  []string{charon.espProposal},
+			StartAction:   "start",
+			CloseAction:   "none",
+			Mode:          "tunnel",
+			ReqID:         fmt.Sprint(ReqID),
+			RekeyTime:     fmt.Sprintf("%ds", int(charon.rekeyTime.Seconds())), //Can set this to a low time to check that rekeys are handled properly
+			InstallPolicy: "no",
+		}
 
-	client, err = charon.getClient(true)
-	if err != nil {
-		log.Errorf("Failed to acquire Vici client: %s", err)
-		return err
-	}
-	defer client.Close()
+		childSAConfName := formatName(localIP, remoteIP)
+		childConfMap[childSAConfName] = childSAConf
 
-	childConfMap := make(map[string]goStrongswanVici.ChildSAConf)
-	childSAConf := goStrongswanVici.ChildSAConf{
-		Local_ts:      []string{"0.0.0.0/0"},
-		Remote_ts:     []string{"0.0.0.0/0"},
-		ESPProposals:  []string{charon.espProposal},
-		StartAction:   "start",
-		CloseAction:   "none",
-		Mode:          "tunnel",
-		ReqID:         fmt.Sprint(ReqID),
-		RekeyTime:     fmt.Sprintf("%ds", int(charon.rekeyTime.Seconds())), //Can set this to a low time to check that rekeys are handled properly
-		InstallPolicy: "no",
-	}
+		localAuthConf := goStrongswanVici.AuthConf{
+			AuthMethod: "psk",
+		}
+		remoteAuthConf := goStrongswanVici.AuthConf{
+			AuthMethod: "psk",
+		}
 
-	childSAConfName := formatName(localIP, remoteIP)
-	childConfMap[childSAConfName] = childSAConf
+		ikeConf := goStrongswanVici.IKEConf{
+			LocalAddrs:  []string{localIP},
+			RemoteAddrs: []string{remoteIP},
+			Proposals:   []string{charon.ikeProposal},
+			Version:     "2",
+			KeyingTries: "0", //continues to retry
+			LocalAuth:   localAuthConf,
+			RemoteAuth:  remoteAuthConf,
+			Children:    childConfMap,
+			Encap:       "no",
+			Mobike:      "no",
+		}
+		ikeConfMap := make(map[string]goStrongswanVici.IKEConf)
 
-	localAuthConf := goStrongswanVici.AuthConf{
-		AuthMethod: "psk",
-	}
-	remoteAuthConf := goStrongswanVici.AuthConf{
-		AuthMethod: "psk",
-	}
+		connectionName := formatName(localIP, remoteIP)
+		ikeConfMap[connectionName] = ikeConf
 
-	ikeConf := goStrongswanVici.IKEConf{
-		LocalAddrs:  []string{localIP},
-		RemoteAddrs: []string{remoteIP},
-		Proposals:   []string{charon.ikeProposal},
-		Version:     "2",
-		KeyingTries: "0", //continues to retry
-		LocalAuth:   localAuthConf,
-		RemoteAuth:  remoteAuthConf,
-		Children:    childConfMap,
-		Encap:       "no",
-		Mobike:      "no",
-	}
-	ikeConfMap := make(map[string]goStrongswanVici.IKEConf)
+		err := c.LoadConn(&ikeConfMap)
+		if err != nil {
+			return err
+		}
 
-	connectionName := formatName(localIP, remoteIP)
-	ikeConfMap[connectionName] = ikeConf
-
-	err = client.LoadConn(&ikeConfMap)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Loaded connection: %v", connectionName)
-	return nil
+		log.Infof("Loaded connection: %v", connectionName)
+		return nil
+	})
 }
 
 func (charon *CharonIKEDaemon) UnloadCharonConnection(localIP, remoteIP string) error {
-	client, err := charon.getClient(false)
-	if err != nil {
-		log.Errorf("Failed to acquire Vici client: %s", err)
-		return err
-	}
-	defer client.Close()
+	return charon.withClientRetry("UnloadCharonConnection", func(c viciClient) error {
+		connectionName := formatName(localIP, remoteIP)
+		unloadConnRequest := &goStrongswanVici.UnloadConnRequest{
+			Name: connectionName,
+		}
 
-	connectionName := formatName(localIP, remoteIP)
-	unloadConnRequest := &goStrongswanVici.UnloadConnRequest{
-		Name: connectionName,
-	}
+		err := c.UnloadConn(unloadConnRequest)
+		if err != nil {
+			return err
+		}
 
-	err = client.UnloadConn(unloadConnRequest)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Unloaded connection: %v", connectionName)
-	return nil
+		log.Infof("Unloaded connection: %v", connectionName)
+		return nil
+	})
 }
 
-func copyOutputToLog(streamName string, stream io.Reader) {
+func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
+	return charon.withClientRetry("LoadSharedKey", func(c viciClient) error {
+		sharedKey := &goStrongswanVici.Key{
+			ID:     remoteIP,
+			Typ:    "IKE",
+			Data:   password,
+			Owners: []string{remoteIP},
+		}
+		err := c.LoadShared(sharedKey)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to load key for %v", remoteIP)
+			return err
+		}
+		log.Infof("Loaded shared key for: %v", remoteIP)
+		return nil
+	})
+}
+
+func (charon *CharonIKEDaemon) UnloadSharedKey(remoteIP string) error {
+	return charon.withClientRetry("UnloadSharedKey", func(c viciClient) error {
+		sharedKey := &goStrongswanVici.UnloadKeyRequest{
+			ID: remoteIP,
+		}
+		err := c.UnloadShared(sharedKey)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to unload key for %v.", remoteIP)
+			return err
+		}
+		log.Infof("Unloaded shared key for: %v", remoteIP)
+		return nil
+	})
+}
+
+func (charon *CharonIKEDaemon) client() viciClient {
+	attempts := 3
+	if !charon.firstConnSucceeded {
+		attempts = 100
+	}
+	if charon.cachedClient == nil {
+		var err error
+		for attempt := 0; attempt < attempts; attempt++ {
+			log.WithError(err).Info("Attempting to connect to IPsec IKE daemon...")
+			c, err := charon.newClient(charon.ctx, charon.viciUri)
+			if err == nil {
+				log.Info("Connected to IPsec IKE daemon.")
+				charon.cachedClient = c
+				break
+			}
+			charon.sleep(100 * time.Millisecond)
+		}
+		if charon.cachedClient == nil {
+			log.WithError(err).Panic("Failed to connect to charon after multiple retries")
+		}
+		charon.firstConnSucceeded = true
+	}
+	return charon.cachedClient
+}
+
+func (charon *CharonIKEDaemon) discardClient() {
+	err := charon.cachedClient.Close()
+	if err != nil {
+		log.WithError(err).Error("Closing the VICI client returned error")
+	}
+}
+
+func (charon *CharonIKEDaemon) withClientRetry(opName string, f func(c viciClient) error) error {
+	debug := log.GetLevel() >= log.DebugLevel
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		if debug {
+			log.WithField("operation", opName).Debug("Attempting VICI operation")
+		}
+		c := charon.client()
+		err = f(c)
+		if err == nil {
+			if debug {
+				log.WithField("operation", opName).Debug("VICI operation succeeded")
+			}
+			return nil
+		}
+		log.WithField("operation", opName).WithError(err).Warn("VICI operation failed")
+		charon.discardClient()
+		time.Sleep(100 * time.Millisecond)
+	}
+	log.WithField("operation", opName).WithError(err).Error("VICI operation consistently failed")
+	return err
+}
+
+func getRealVICIClient(ctx context.Context, viciUri Uri) (client viciClient, err error) {
+	socketConn, err := net.Dial(viciUri.network, viciUri.address)
+	if err != nil {
+		return nil, err
+	}
+	return goStrongswanVici.NewClientConn(socketConn), nil
+}
+
+func copyOutputToLog(streamName string, stream io.Reader, doneWG *sync.WaitGroup) {
+	defer doneWG.Done()
+
 	scanner := bufio.NewScanner(stream)
 	scanner.Buffer(nil, 4*1024*1024) // Increase maximum buffer size (but don't pre-alloc).
 	for scanner.Scan() {
@@ -351,4 +407,49 @@ func copyOutputToLog(streamName string, stream io.Reader) {
 
 func formatName(local, remote string) string {
 	return fmt.Sprintf("%s-%s", local, remote)
+}
+
+func CleanUpOldCharon() error {
+	const pidfilePath = "/var/run/charon.pid"
+	if f, err := os.Open(pidfilePath); err == nil {
+		defer f.Close()
+		bs, err := ioutil.ReadAll(f)
+		if err != nil {
+			return err
+		}
+		pid, err := strconv.Atoi(strings.TrimSpace(string(bs)))
+		if err != nil {
+			return err
+		}
+
+		// check if process do exist.
+		// os.FindProcess() always succeeds.
+		killErr := syscall.Kill(pid, syscall.Signal(0))
+		procExists := killErr == nil
+		if procExists {
+			log.WithField("pid", pid).Info("charon already running, killing it")
+			proc, err := os.FindProcess(pid)
+			if err == nil {
+				err = proc.Kill()
+				if err != nil {
+					log.WithError(err).Error("Failed to kill old Charon")
+					return err
+				}
+			}
+		} else {
+			log.WithField("pid", pid).Info("charon is not running, but pid file exists")
+		}
+		os.Remove(pidfilePath)
+	}
+
+	// Clean up any old socket.  Without this, the VICI client can try to connect to the old socket
+	// rather than waiting for the new.
+	if _, err := os.Stat(viciSocketPath); err == nil {
+		err := os.Remove(viciSocketPath)
+		if err != nil {
+			log.WithError(err).Error("Failed to remove old VICI socket.")
+		}
+	}
+
+	return nil
 }

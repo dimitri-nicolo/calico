@@ -470,14 +470,17 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 		charonConfig.SetBooleanOption(ipsec.CharonMakeBeforeBreak, true)
 		log.Infof("Initialising charon config %+v", charonConfig)
 		charonConfig.RenderToFile()
-		var charonWG sync.WaitGroup
-		ikeDaemon, err := ipsec.NewCharonIKEDaemon(context.Background(),
-			&charonWG, config.IPSecESPProposal,
+		// TODO shut down charon when doing graceful stopvar charonWG sync.WaitGroup
+		ikeDaemon := ipsec.NewCharonIKEDaemon(
+			config.IPSecESPProposal,
 			config.IPSecIKEProposal,
 			config.IPSecRekeyTime,
-			config.ChildExitedRestartCallback)
+			config.ChildExitedRestartCallback,
+		)
+		var charonWG sync.WaitGroup
+		err := ikeDaemon.Start(context.Background(), &charonWG)
 		if err != nil {
-			panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
+			log.WithError(err).Panic("error starting Charon.")
 		}
 
 		dp.ipSecDataplane = ipsec.NewDataplane(
