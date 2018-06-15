@@ -77,7 +77,8 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 		cwAPI cloudwatchiface.CloudWatchAPI
 	)
 	BeforeEach(func() {
-		dis = NewCloudWatchMetricsDispatcher(nil)
+		cwAPI = testutil.NewMockCloudWatchMetricsClient(dpMetricName, cwCustomNamespace)
+		dis = NewCloudWatchMetricsDispatcher(cwAPI)
 		agg = NewCloudWatchMetricsAggregator(clusterID)
 		rep = newCloudWatchMetricReporter(dis, agg, updateFreq)
 
@@ -97,7 +98,6 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 		//	},
 		//)
 
-		cwAPI = testutil.NewMockCloudWatchMetricsClient(dpMetricName, cwCustomNamespace)
 		go rep.run()
 	})
 	It("report one denied packet metric update with 5 denied packet count", func() {
