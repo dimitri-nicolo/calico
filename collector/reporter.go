@@ -77,7 +77,7 @@ func (mu MetricUpdate) String() string {
 		dstName = "<unknown>"
 	}
 	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, inMetric={%s} outMetric={%s}",
-		&(mu.tuple), mu.updateType, srcName, dstName, mu.isConnection, mu.ruleID, mu.inMetric, mu.outMetric)
+		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleID, mu.inMetric, mu.outMetric)
 }
 
 type MetricsReporter interface {

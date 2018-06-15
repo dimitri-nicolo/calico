@@ -39,6 +39,16 @@ var (
 		Tier:      "default",
 		Direction: rules.RuleDirIngress,
 	}
+
+	egressRule2Deny = &calc.RuleID{
+		Action:    rules.RuleActionDeny,
+		Index:     0,
+		IndexStr:  "0",
+		Name:      "policy2",
+		Namespace: "",
+		Tier:      "default",
+		Direction: rules.RuleDirEgress,
+	}
 )
 
 // Common MetricUpdate definitions
@@ -102,6 +112,26 @@ var (
 		inMetric: MetricValue{
 			deltaPackets: 8,
 			deltaBytes:   88,
+		},
+	}
+	muNoConn1Rule2DenyUpdate = MetricUpdate{
+		updateType:   UpdateTypeReport,
+		tuple:        tuple3,
+		ruleID:       egressRule2Deny,
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 2,
+			deltaBytes:   40,
+		},
+	}
+	muNoConn1Rule2DenyExpire = MetricUpdate{
+		updateType:   UpdateTypeExpire,
+		tuple:        tuple3,
+		ruleID:       egressRule2Deny,
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 0,
+			deltaBytes:   0,
 		},
 	}
 )

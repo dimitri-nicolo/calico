@@ -31,64 +31,131 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
 	)
 	mt := &mockTime{}
-	BeforeEach(func() {
-		cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
-		cd = NewCloudWatchDispatcher(logGroupName, logStreamName, cl)
-		ca = NewCloudWatchAggregator()
-		cr = NewCloudWatchReporter(cd, flushInterval)
-		cr.AddAggregator(ca)
-		cr.timeNowFn = mt.getMockTime
-		cr.Start()
-	})
-	It("reports the given metric update in form of a flow to cloudwatchlogs", func() {
-		getEventsFromLogStream := func() []*cloudwatchlogs.OutputLogEvent {
-			logEventsInput := &cloudwatchlogs.GetLogEventsInput{
-				LogGroupName:  &logGroupName,
-				LogStreamName: &logStreamName,
-			}
-			logEventsOutput, _ := cl.GetLogEvents(logEventsInput)
-			return logEventsOutput.Events
+	getEventsFromLogStream := func() []*cloudwatchlogs.OutputLogEvent {
+		logEventsInput := &cloudwatchlogs.GetLogEventsInput{
+			LogGroupName:  &logGroupName,
+			LogStreamName: &logStreamName,
 		}
-		expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection) {
-			fl, err := getFlowLog(msg)
-			Expect(err).To(BeNil())
-			Expect(fl.Tuple).Should(Equal(tuple1))
-			Expect(fl.NumFlows).Should(Equal(nf))
-			Expect(fl.NumFlowsStarted).Should(Equal(nfs))
-			Expect(fl.NumFlowsCompleted).Should(Equal(nfc))
-			Expect(fl.Action).Should(Equal(a))
-			Expect(fl.FlowDirection).Should(Equal(fd))
-		}
-
-		By("reporting the first MetricUpdate")
-		cr.Report(muNoConn1Rule1AllowUpdate)
-		// Wait for aggregation and export to happen.
-		time.Sleep(1 * time.Second)
+		logEventsOutput, _ := cl.GetLogEvents(logEventsInput)
+		return logEventsOutput.Events
+	}
+	getLastMessageFromLogStream := func() string {
 		events := getEventsFromLogStream()
-		message := *(events[0].Message)
-		expectedNumFlows := 1
-		expectedNumFlowsStarted := 1
-		expectedNumFlowsCompleted := 0
-		expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+		return *(events[len(events)-1].Message)
+	}
+	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection) {
+		fl, err := getFlowLog(msg)
+		Expect(err).To(BeNil())
+		Expect(fl.Tuple).Should(Equal(t))
+		Expect(fl.NumFlows).Should(Equal(nf))
+		Expect(fl.NumFlowsStarted).Should(Equal(nfs))
+		Expect(fl.NumFlowsCompleted).Should(Equal(nfc))
+		Expect(fl.Action).Should(Equal(a))
+		Expect(fl.FlowDirection).Should(Equal(fd))
+	}
+	Context("No Aggregation", func() {
+		BeforeEach(func() {
+			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
+			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, cl)
+			ca = NewCloudWatchAggregator()
+			cr = NewCloudWatchReporter(cd, flushInterval)
+			cr.AddAggregator(ca)
+			cr.timeNowFn = mt.getMockTime
+			cr.Start()
+		})
+		It("reports the given metric update in form of a flow to cloudwatchlogs", func() {
+			By("reporting the first MetricUpdate")
+			cr.Report(muNoConn1Rule1AllowUpdate)
+			// Wait for aggregation and export to happen.
+			time.Sleep(1 * time.Second)
+			message := getLastMessageFromLogStream()
+			expectedNumFlows := 1
+			expectedNumFlowsStarted := 1
+			expectedNumFlowsCompleted := 0
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
 
-		By("reporting the same MetricUpdate with metrics in both directions")
-		cr.Report(muConn1Rule1AllowUpdate)
-		// Wait for aggregation and export to happen.
-		time.Sleep(1 * time.Second)
-		events = getEventsFromLogStream()
-		message = *(events[0].Message)
-		expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			By("reporting the same MetricUpdate with metrics in both directions")
+			cr.Report(muConn1Rule1AllowUpdate)
+			// Wait for aggregation and export to happen.
+			time.Sleep(1 * time.Second)
+			message = getLastMessageFromLogStream()
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
 
-		By("reporting a expired MetricUpdate for the same tuple")
-		cr.Report(muConn1Rule1AllowExpire)
-		// Wait for aggregation and export to happen.
-		time.Sleep(1 * time.Second)
-		events = getEventsFromLogStream()
-		message = *(events[0].Message)
-		expectedNumFlowsStarted = 0
-		expectedNumFlowsCompleted = 1
-		expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			By("reporting a expired MetricUpdate for the same tuple")
+			cr.Report(muConn1Rule1AllowExpire)
+			// Wait for aggregation and export to happen.
+			time.Sleep(1 * time.Second)
+			message = getLastMessageFromLogStream()
+			expectedNumFlowsStarted = 0
+			expectedNumFlowsCompleted = 1
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
 
+			By("reporting a MetricUpdate for denied packets")
+			cr.Report(muNoConn1Rule2DenyUpdate)
+			// Wait for aggregation and export to happen.
+			time.Sleep(1 * time.Second)
+			message = getLastMessageFromLogStream()
+			expectedNumFlows = 1
+			expectedNumFlowsStarted = 1
+			expectedNumFlowsCompleted = 0
+			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut)
+
+			By("reporting a expired denied packet MetricUpdate for the same tuple")
+			cr.Report(muNoConn1Rule2DenyExpire)
+			// Wait for aggregation and export to happen.
+			time.Sleep(1 * time.Second)
+			message = getLastMessageFromLogStream()
+			expectedNumFlowsStarted = 0
+			expectedNumFlowsCompleted = 1
+			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut)
+
+		})
+		It("aggregates metric updates for the duration of aggregation when reporting to cloudwatch logs", func() {
+
+			By("reporting the same MetricUpdate twice and expiring it immediately")
+			cr.Report(muConn1Rule1AllowUpdate)
+			cr.Report(muConn1Rule1AllowUpdate)
+			cr.Report(muConn1Rule1AllowExpire)
+			// Wait for aggregation and export to happen.
+			time.Sleep(1 * time.Second)
+			message := getLastMessageFromLogStream()
+			expectedNumFlows := 1
+			expectedNumFlowsStarted := 1
+			expectedNumFlowsCompleted := 1
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+		})
+
+		It("aggregates metric updates from multiple tuples", func() {
+
+			By("report different connections")
+			cr.Report(muConn1Rule1AllowUpdate)
+			cr.Report(muConn2Rule1AllowUpdate)
+			// Wait for aggregation and export to happen.
+			time.Sleep(1 * time.Second)
+			events := getEventsFromLogStream()
+			message1 := *(events[0].Message)
+			message2 := *(events[1].Message)
+			expectedNumFlows := 1
+			expectedNumFlowsStarted := 1
+			expectedNumFlowsCompleted := 0
+			expectFlowLog(message1, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			expectFlowLog(message2, tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+
+			By("report expirations of the same connections")
+			cr.Report(muConn1Rule1AllowExpire)
+			cr.Report(muConn2Rule1AllowExpire)
+			// Wait for aggregation and export to happen.
+			time.Sleep(1 * time.Second)
+			events = getEventsFromLogStream()
+			message1 = *(events[len(events)-2].Message)
+			message2 = *(events[len(events)-1].Message)
+			expectedNumFlows = 1
+			expectedNumFlowsStarted = 0
+			expectedNumFlowsCompleted = 1
+			expectFlowLog(message1, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			expectFlowLog(message2, tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+
+		})
 	})
 })
 
@@ -144,12 +211,15 @@ func getFlowLog(fl string) (FlowLog, error) {
 	_ = json.Unmarshal([]byte(parts[9]), &dstLabels)
 	dstMeta.Labels = srcLabels
 
-	lip := ipStrTo16Byte(parts[10])
-	rip := ipStrTo16Byte(parts[11])
+	var sip [16]byte
+	if parts[10] != "-" {
+		sip = ipStrTo16Byte(parts[10])
+	}
+	dip := ipStrTo16Byte(parts[11])
 	p, _ := strconv.Atoi(parts[12])
 	sp, _ := strconv.Atoi(parts[13])
 	dp, _ := strconv.Atoi(parts[14])
-	tuple := *NewTuple(lip, rip, p, sp, dp)
+	tuple := *NewTuple(sip, dip, p, sp, dp)
 
 	nf, _ := strconv.Atoi(parts[15])
 	nfs, _ := strconv.Atoi(parts[16])
