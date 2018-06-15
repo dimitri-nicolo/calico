@@ -13,7 +13,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/containers"
@@ -51,6 +50,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		topologyOptions.ExtraEnvVars["FELIX_IPSECIKEAlGORITHM"] = "aes128gcm16-prfsha256-ecp256"
 		topologyOptions.ExtraEnvVars["FELIX_IPSECESPAlGORITHM"] = "aes128gcm16-ecp256"
 		topologyOptions.IPIPEnabled = false
+		// Turn on NAT outgoing because it interacts with IPsec; when a workload connects to a remote host with IPsec
+		// then we _do not_ SNAT the traffic because it is tunneled.  Otherwise, we _do_ NAT such traffic because
+		// we can't guarantee that the traffic won't get dropped by the fabric due to RPF.
+		topologyOptions.NATOutgoingEnabled = true
 		topologyOptions.FelixLogSeverity = "debug"
 
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
@@ -221,7 +224,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		}
 	})
 
-	Describe("with a NAT rule in place", func() {
+	Describe("with a DNAT rule in place", func() {
 		// This mimics the NAT rule used by kube-proxy to expose teh kube API server, i.e. a NAT rule from a service IP
 		// to a remote host port.
 		BeforeEach(func() {
