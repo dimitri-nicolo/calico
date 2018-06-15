@@ -241,6 +241,28 @@ type FelixConfigurationSpec struct {
 	// IPSecPolicyRefreshInterval is the interval at which Felix will check the kernel's IPsec policy tables and
 	// repair any inconsistencies. [Default: 600s]
 	IPSecPolicyRefreshInterval *metav1.Duration `json:"ipsecPolicyRefreshInterval,omitempty" configv1timescale:"seconds"`
+
+	// Enable Flow logs reporting to AWS CloudWatch.
+	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`
+	// CloudWatchLogsFlushInterval configures the interval at which Felix exports flow logs to CloudWatch Logs.
+	CloudWatchLogsFlushInterval *metav1.Duration `json:"cloudWatchLogsFlushInterval,omitempty configv1timescale:"seconds"`
+	// CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to "/tigera/flowlogs/<cluster-id>".
+	CloudWatchLogsLogGroupName string `json:"cloudWatchLogGroupName,omitempty"`
+	// CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to "<hostname>_Flowlog".
+	CloudWatchLogsLogStreamName string `json:"cloudWatchLogStreamName,omitempty"`
+	// CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.
+	CloudWatchLogsIncludeLabels *bool `json:"cloudWatchLogsIncludeLabels,omitempty"`
+	// CloudWatchLogsAggregationKind is used to choose the type of aggregation of flow log entries. [Default: 0 - no aggregation].
+	// Accepted values are 0, 1 and 2.
+	// 0 - No aggregation
+	// 1 - Source port based aggregation
+	// 2 - Pod prefix name based aggreagation.
+	CloudWatchLogsAggregationKind *int `json:"cloudWatchLogsAggregationKind,omitempty"`
+
+	// Enable reporting metrics to CloudWatch.
+	CloudWatchMetricsReporterEnabled *bool `json:"cloudWatchMetricsReporterEnabled,omitempty"`
+	// CloudWatchMetricsPushInterval configures the interval at which Felix exports metrics to CloudWatch.
+	CloudWatchMetricsPushInterval *metav1.Duration `json:"cloudWatchMetricsPushIntervalSecs,omitempty" configv1timescale:"seconds" confignamev1:"CloudWatchMetricsPushIntervalSecs"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.

@@ -19,12 +19,13 @@
 package v3
 
 import (
+	reflect "reflect"
+
 	apis_v1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	reflect "reflect"
 )
 
 func init() {
@@ -1064,6 +1065,60 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.IPSecPolicyRefreshInterval != nil {
 		in, out := &in.IPSecPolicyRefreshInterval, &out.IPSecPolicyRefreshInterval
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(v1.Duration)
+			**out = **in
+		}
+	}
+	if in.CloudWatchLogsReporterEnabled != nil {
+		in, out := &in.CloudWatchLogsReporterEnabled, &out.CloudWatchLogsReporterEnabled
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
+	if in.CloudWatchLogsFlushInterval != nil {
+		in, out := &in.CloudWatchLogsFlushInterval, &out.CloudWatchLogsFlushInterval
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(v1.Duration)
+			**out = **in
+		}
+	}
+	if in.CloudWatchLogsIncludeLabels != nil {
+		in, out := &in.CloudWatchLogsIncludeLabels, &out.CloudWatchLogsIncludeLabels
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
+	if in.CloudWatchLogsAggregationKind != nil {
+		in, out := &in.CloudWatchLogsAggregationKind, &out.CloudWatchLogsAggregationKind
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int)
+			**out = **in
+		}
+	}
+	if in.CloudWatchMetricsReporterEnabled != nil {
+		in, out := &in.CloudWatchMetricsReporterEnabled, &out.CloudWatchMetricsReporterEnabled
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
+	if in.CloudWatchMetricsPushInterval != nil {
+		in, out := &in.CloudWatchMetricsPushInterval, &out.CloudWatchMetricsPushInterval
 		if *in == nil {
 			*out = nil
 		} else {
