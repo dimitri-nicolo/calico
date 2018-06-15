@@ -39,15 +39,9 @@ type cloudWatchReporter struct {
 // NewCloudWatchReporter constructs a FlowLogs MetricsReporter using
 // a cloudwatch dispatcher and aggregator.
 func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration) *cloudWatchReporter {
-	// Set the ticker interval appropriately, we should be checking at least half of the flush time,
-	// or the hard-coded check interval (whichever is smaller).
-	tickerInterval := flushInterval / 2
-	if checkInterval < tickerInterval {
-		tickerInterval = checkInterval
-	}
 	return &cloudWatchReporter{
 		dispatcher:    dispatcher,
-		flushTicker:   jitter.NewTicker(tickerInterval, tickerInterval/10),
+		flushTicker:   jitter.NewTicker(flushInterval, flushInterval/10),
 		flushInterval: flushInterval,
 		timeNowFn:     monotime.Now,
 	}

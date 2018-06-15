@@ -5,15 +5,10 @@ package collector
 import (
 	"fmt"
 	"net"
-	"reflect"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/rules"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -76,111 +71,6 @@ func (c *cloudWatchAggregator) IncludeLabels(b bool) FlowLogAggregator {
 	return c
 }
 
-func deconstructNameAndNamespaceFromWepName(wepName string) (string, string, error) {
-	parts := strings.Split(wepName, "/")
-	if len(parts) == 2 {
-		return parts[0], parts[1], nil
-	}
-	return "", "", fmt.Errorf("Could not parse name %v", wepName)
-}
-
-func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error) {
-	var (
-		em  EndpointMetadata
-		err error
-	)
-	switch k := ed.Key.(type) {
-	case model.WorkloadEndpointKey:
-		name, ns, err := deconstructNameAndNamespaceFromWepName(k.WorkloadID)
-		if err != nil {
-			return EndpointMetadata{}, err
-		}
-		v := ed.Endpoint.(*model.WorkloadEndpoint)
-		em = EndpointMetadata{
-			Type:      FlowLogEndpointTypeWep,
-			Name:      name,
-			Namespace: ns,
-			Labels:    v.Labels,
-		}
-	case model.HostEndpointKey:
-		v := ed.Endpoint.(*model.HostEndpoint)
-		em = EndpointMetadata{
-			Type:      FlowLogEndpointTypeHep,
-			Name:      k.EndpointID,
-			Namespace: flowLogNamespaceGlobal,
-			Labels:    v.Labels,
-		}
-	default:
-		err = fmt.Errorf("Unknown key %#v of type %v", ed.Key, reflect.TypeOf(ed.Key))
-	}
-	return em, err
-}
-
-func getFlowLogFromMetricUpdate(mu MetricUpdate) (FlowLog, error) {
-	var (
-		srcMeta, dstMeta EndpointMetadata
-		err              error
-	)
-	if mu.srcEp != nil {
-		srcMeta, err = getFlowLogEndpointMetadata(mu.srcEp)
-		if err != nil {
-			log.WithError(err).Errorf("Could not extract metadata for source %v", mu.srcEp)
-			return FlowLog{}, err
-		}
-	}
-	if mu.dstEp != nil {
-		dstMeta, err = getFlowLogEndpointMetadata(mu.dstEp)
-		if err != nil {
-			log.WithError(err).Errorf("Could not extract metadata for destination %v", mu.dstEp)
-			return FlowLog{}, err
-		}
-	}
-
-	var nf, nfs, nfc int
-	switch mu.updateType {
-	case UpdateTypeReport:
-		nfs = 1
-	case UpdateTypeExpire:
-		nfc = 1
-	}
-	// 1 always when we create the flow
-	nf = 1
-
-	action, flowDir := getFlowLogActionAndDirFromRuleID(mu.ruleID)
-
-	return FlowLog{
-		Tuple:             mu.tuple,
-		SrcMeta:           srcMeta,
-		DstMeta:           dstMeta,
-		NumFlows:          nf,
-		NumFlowsStarted:   nfs,
-		NumFlowsCompleted: nfc,
-		PacketsIn:         mu.inMetric.deltaPackets,
-		BytesIn:           mu.inMetric.deltaBytes,
-		PacketsOut:        mu.outMetric.deltaPackets,
-		BytesOut:          mu.outMetric.deltaBytes,
-		Action:            action,
-		FlowDirection:     flowDir,
-	}, nil
-}
-
-// getFlowLogActionAndDirFromRuleID converts the action to a string value.
-func getFlowLogActionAndDirFromRuleID(r *calc.RuleID) (fla FlowLogAction, fld FlowLogDirection) {
-	switch r.Action {
-	case rules.RuleActionDeny:
-		fla = FlowLogActionDeny
-	case rules.RuleActionAllow:
-		fla = FlowLogActionAllow
-	}
-	switch r.Direction {
-	case rules.RuleDirIngress:
-		fld = FlowLogDirectionIn
-	case rules.RuleDirEgress:
-		fld = FlowLogDirectionOut
-	}
-	return
-}
-
 // FeedUpdate will be responsible for doing aggregation.
 func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 	c.flMutex.Lock()
@@ -202,6 +92,7 @@ func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 			log.WithError(err).Errorf("Could not aggregated MetricUpdate %v to Flow log %v", mu, fl)
 			return err
 		}
+		c.flowLogs[flKey] = fl
 	}
 	return nil
 }
