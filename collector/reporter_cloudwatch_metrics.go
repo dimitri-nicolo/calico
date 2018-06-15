@@ -5,6 +5,7 @@ package collector
 import (
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/gavv/monotime"
 	log "github.com/sirupsen/logrus"
 
@@ -13,7 +14,7 @@ import (
 
 const (
 	dpMetricName      = "Denied Packets"
-	defaultDPUnit     = "Number of Packets"
+	defaultDPUnit     = cloudwatch.StandardUnitCount
 	cwCustomNamespace = "Tigera Metrics"
 )
 
