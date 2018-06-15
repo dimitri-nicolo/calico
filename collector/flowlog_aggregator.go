@@ -3,8 +3,6 @@
 package collector
 
 import (
-	"fmt"
-	"net"
 	"sync"
 	"time"
 
@@ -25,27 +23,17 @@ const (
 )
 
 type FlowLogKey struct {
-	tuple Tuple
-	kind  AggregationKind
-}
-
-func (f FlowLogKey) String() string {
-	switch f.kind {
-	case Default:
-		return f.tuple.String()
-	case SourcePort:
-		return fmt.Sprintf("src=%v dst=%v proto=%v dport=%v", net.IP(f.tuple.src[:16]).String(), net.IP(f.tuple.dst[:16]).String(), f.tuple.proto, f.tuple.l4Dst)
-	case PrefixName:
-		return "todo" //TODO
-	}
-	return ""
+	tuple     Tuple
+	action    FlowLogAction
+	direction FlowLogDirection
+	kind      AggregationKind
 }
 
 // cloudWatchAggregator builds and implements the FlowLogAggregator and
 // FlowLogGetter interfaces.
 type cloudWatchAggregator struct {
 	kind                 AggregationKind
-	flowLogs             map[string]FlowLog
+	flowLogs             map[FlowLogKey]FlowLog
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	aggregationStartTime time.Time
@@ -55,7 +43,7 @@ type cloudWatchAggregator struct {
 func NewCloudWatchAggregator() FlowLogAggregator {
 	return &cloudWatchAggregator{
 		kind:                 Default,
-		flowLogs:             make(map[string]FlowLog),
+		flowLogs:             make(map[FlowLogKey]FlowLog),
 		flMutex:              sync.RWMutex{},
 		aggregationStartTime: time.Now(),
 	}
@@ -73,27 +61,36 @@ func (c *cloudWatchAggregator) IncludeLabels(b bool) FlowLogAggregator {
 
 // FeedUpdate will be responsible for doing aggregation.
 func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
+	var err error
+
+	// TODO: Key construction isn't the most optimal. Revisit.
+	fla, fld := getFlowLogActionAndDirFromRuleID(mu.ruleID)
+	flKey := FlowLogKey{
+		tuple:     mu.tuple,
+		action:    fla,
+		direction: fld,
+		kind:      c.kind,
+	}
+
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
-	var err error
-	// TODO: Key construction isn't the most optimal. Revisit.
-	flKey := FlowLogKey{mu.tuple, c.kind}.String()
 	fl, ok := c.flowLogs[flKey]
 	if !ok {
+		log.Infof("New Key %+v", flKey)
 		fl, err = getFlowLogFromMetricUpdate(mu)
 		if err != nil {
 			log.WithError(err).Errorf("Could not convert MetricUpdate %v to Flow log", mu)
 			return err
 		}
-		c.flowLogs[flKey] = fl
 	} else {
+		log.Infof("Existing Key %+v", flKey)
 		err = fl.aggregateMetricUpdate(mu)
 		if err != nil {
 			log.WithError(err).Errorf("Could not aggregated MetricUpdate %v to Flow log %v", mu, fl)
 			return err
 		}
-		c.flowLogs[flKey] = fl
 	}
+	c.flowLogs[flKey] = fl
 	return nil
 }
 

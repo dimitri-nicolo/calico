@@ -108,11 +108,13 @@ func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) stri
 
 func (f *FlowLog) aggregateMetricUpdate(mu MetricUpdate) error {
 	// TODO(doublek): Handle metadata updates.
-	var nfc int
 	if mu.updateType == UpdateTypeExpire {
-		nfc = 1
+		f.NumFlowsCompleted++
 	}
-	f.NumFlowsCompleted += nfc
+	if mu.isInitialReport {
+		f.NumFlows++
+		f.NumFlowsStarted++
+	}
 	f.PacketsIn += mu.inMetric.deltaPackets
 	f.BytesIn += mu.inMetric.deltaBytes
 	f.PacketsOut += mu.outMetric.deltaPackets

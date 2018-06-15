@@ -278,7 +278,7 @@ func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes i
 }
 
 // ToMetricUpdate converts the RuleTrace to a MetricUpdate used by the reporter.
-func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, srcEp, dstEp *calc.EndpointData, td TrafficDirection, ctr *Counter, ctrRev *Counter) MetricUpdate {
+func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, firstReport bool, srcEp, dstEp *calc.EndpointData, td TrafficDirection, ctr *Counter, ctrRev *Counter) MetricUpdate {
 	var (
 		dp, db, dpRev, dbRev int
 		isConn               bool
@@ -292,12 +292,13 @@ func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, srcEp, dstEp *calc.E
 		isConn = false
 	}
 	mu := MetricUpdate{
-		updateType:   ut,
-		tuple:        t,
-		srcEp:        srcEp,
-		dstEp:        dstEp,
-		ruleID:       rt.VerdictRuleID(),
-		isConnection: isConn,
+		updateType:      ut,
+		tuple:           t,
+		srcEp:           srcEp,
+		dstEp:           dstEp,
+		ruleID:          rt.VerdictRuleID(),
+		isConnection:    isConn,
+		isInitialReport: firstReport,
 	}
 	switch td {
 	case TrafficDirInbound:
@@ -369,10 +370,11 @@ type Data struct {
 	IngressRuleTrace RuleTrace
 	EgressRuleTrace  RuleTrace
 
-	createdAt  time.Duration
-	updatedAt  time.Duration
-	ageTimeout time.Duration
-	dirty      bool
+	createdAt   time.Duration
+	updatedAt   time.Duration
+	ageTimeout  time.Duration
+	dirty       bool
+	firstReport bool
 }
 
 func NewData(tuple Tuple, sep, dep *calc.EndpointData, duration time.Duration) *Data {
@@ -387,6 +389,7 @@ func NewData(tuple Tuple, sep, dep *calc.EndpointData, duration time.Duration) *
 		updatedAt:        now,
 		ageTimeout:       duration,
 		dirty:            true,
+		firstReport:      true,
 	}
 }
 
@@ -543,17 +546,17 @@ func (d *Data) Report(c chan<- MetricUpdate, expired bool) {
 	if ((d.EgressRuleTrace.Action() == rules.RuleActionDeny || d.EgressRuleTrace.Action() == rules.RuleActionAllow) && (expired || d.EgressRuleTrace.IsDirty())) ||
 		(!expired && d.EgressRuleTrace.Action() == rules.RuleActionAllow && d.isConnection && d.IsDirty()) {
 		if d.isConnection {
-			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirOutbound, &d.connTrackCtr, &d.connTrackCtrReverse)
+			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.firstReport, d.srcEp, d.dstEp, TrafficDirOutbound, &d.connTrackCtr, &d.connTrackCtrReverse)
 		} else {
-			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirOutbound, nil, nil)
+			c <- d.EgressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.firstReport, d.srcEp, d.dstEp, TrafficDirOutbound, nil, nil)
 		}
 	}
 	if ((d.IngressRuleTrace.Action() == rules.RuleActionDeny || d.IngressRuleTrace.Action() == rules.RuleActionAllow) && (expired || d.IngressRuleTrace.IsDirty())) ||
 		(!expired && d.IngressRuleTrace.Action() == rules.RuleActionAllow && d.isConnection && d.IsDirty()) {
 		if d.isConnection {
-			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirInbound, &d.connTrackCtr, &d.connTrackCtrReverse)
+			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.firstReport, d.srcEp, d.dstEp, TrafficDirInbound, &d.connTrackCtr, &d.connTrackCtrReverse)
 		} else {
-			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.srcEp, d.dstEp, TrafficDirInbound, nil, nil)
+			c <- d.IngressRuleTrace.ToMetricUpdate(ut, d.Tuple, d.firstReport, d.srcEp, d.dstEp, TrafficDirInbound, nil, nil)
 		}
 	}
 
