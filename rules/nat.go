@@ -26,12 +26,22 @@ func (r *DefaultRuleRenderer) NATOutgoingChain(natOutgoingActive bool, ipVersion
 		ipConf := r.ipSetConfig(ipVersion)
 		allIPsSetName := ipConf.NameForMainIPSet(IPSetIDNATOutgoingAllPools)
 		masqIPsSetName := ipConf.NameForMainIPSet(IPSetIDNATOutgoingMasqPools)
+
+		match := iptables.Match().
+			SourceIPSet(masqIPsSetName).
+			NotDestIPSet(allIPsSetName)
+
+		if r.Config.IPSecEnabled && ipVersion == 4 {
+			// When IPsec is enabled, workload to remote host traffic is tunneled so there is no need
+			// to SNAT it.  In addition, the IPsec policy rules at the destination are not expecting
+			// tunneled traffic from the host itself so the SNATted traffic would be blocked.
+			allHostsIPSetName := ipConf.NameForMainIPSet(IPSetIDAllHostIPs)
+			match = match.NotDestIPSet(allHostsIPSetName)
+		}
 		rules = []iptables.Rule{
 			{
 				Action: iptables.MasqAction{},
-				Match: iptables.Match().
-					SourceIPSet(masqIPsSetName).
-					NotDestIPSet(allIPsSetName),
+				Match:  match,
 			},
 		}
 	}

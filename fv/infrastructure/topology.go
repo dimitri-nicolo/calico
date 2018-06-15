@@ -41,6 +41,7 @@ type TopologyOptions struct {
 	TyphaLogSeverity      string
 	WithPrometheusPortTLS bool
 	IPIPEnabled           bool
+	NATOutgoingEnabled    bool
 }
 
 func DefaultTopologyOptions() TopologyOptions {
@@ -128,6 +129,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			ipPool := api.NewIPPool()
 			ipPool.Name = "test-pool"
 			ipPool.Spec.CIDR = "10.65.0.0/16"
+			ipPool.Spec.NATOutgoing = opts.NATOutgoingEnabled
 			if opts.IPIPEnabled {
 				ipPool.Spec.IPIPMode = api.IPIPModeAlways
 			}
