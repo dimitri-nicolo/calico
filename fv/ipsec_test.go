@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/felix/ipsec"
-
+	"github.com/projectcalico/libcalico-go/lib/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/containers"
@@ -59,11 +59,29 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		// Enable IPsec.  We do this via the datastore so we can disable it again later...
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		felixConfig = api.NewFelixConfiguration()
-		felixConfig.Name = "default"
-		felixConfig.Spec.IPSecMode = "PSK"
-		felixConfig, err = client.FelixConfigurations().Create(ctx, felixConfig, options.SetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+
+		for {
+			felixConfig, err = client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
+			if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
+				felixConfig = api.NewFelixConfiguration()
+				felixConfig.Name = "default"
+				felixConfig.Spec.IPSecMode = "PSK"
+				felixConfig, err = client.FelixConfigurations().Create(ctx, felixConfig, options.SetOptions{})
+				if _, ok := err.(errors.ErrorResourceAlreadyExists); ok {
+					continue
+				}
+				Expect(err).NotTo(HaveOccurred())
+				break
+			}
+			if err != nil {
+				Fail(fmt.Sprintf("Unexpected error when trying to set up FelixConfig: %v", err))
+			}
+
+			felixConfig.Spec.IPSecMode = "PSK"
+			felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			break
+		}
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		err = infra.AddDefaultAllow()
@@ -144,6 +162,16 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		for _, felix := range felixes {
 			felix.Stop()
+		}
+
+		// KDD infra keeps the API server running, make sure we remove our config changes.
+		if felixConfig != nil {
+			felixConfig.Spec.IPSecMode = ""
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_, err := client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred(),
+				"Failed to back out FelixConfiguration changes during teardown")
 		}
 
 		if CurrentGinkgoTestDescription().Failed {
