@@ -87,7 +87,11 @@ func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) stri
 	dstIP := net.IP(f.Tuple.dst[:16]).String()
 
 	if f.Tuple.proto != 1 {
-		l4Src = fmt.Sprintf("%d", f.Tuple.l4Src)
+		if f.Tuple.l4Src == 0 {
+			l4Src = flowLogFieldNotIncluded
+		} else {
+			l4Src = fmt.Sprintf("%d", f.Tuple.l4Src)
+		}
 		l4Dst = fmt.Sprintf("%d", f.Tuple.l4Dst)
 	} else {
 		l4Src = flowLogFieldNotIncluded

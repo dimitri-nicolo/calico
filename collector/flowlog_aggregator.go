@@ -26,7 +26,6 @@ type FlowLogKey struct {
 	tuple     Tuple
 	action    FlowLogAction
 	direction FlowLogDirection
-	kind      AggregationKind
 }
 
 // cloudWatchAggregator builds and implements the FlowLogAggregator and
@@ -63,13 +62,11 @@ func (c *cloudWatchAggregator) IncludeLabels(b bool) FlowLogAggregator {
 func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 	var err error
 
-	// TODO: Key construction isn't the most optimal. Revisit.
 	fla, fld := getFlowLogActionAndDirFromRuleID(mu.ruleID)
 	flKey := FlowLogKey{
-		tuple:     mu.tuple,
+		tuple:     getTupleForAggreagation(mu.tuple, c.kind),
 		action:    fla,
 		direction: fld,
-		kind:      c.kind,
 	}
 
 	c.flMutex.Lock()
@@ -105,4 +102,26 @@ func (c *cloudWatchAggregator) Get() []*string {
 	c.flMutex.Unlock()
 	c.aggregationStartTime = aggregationEndTime
 	return resp
+}
+
+func getTupleForAggreagation(orig Tuple, kind AggregationKind) Tuple {
+	var aggTuple Tuple
+	switch kind {
+	case Default:
+		aggTuple = orig
+	case SourcePort:
+		// "4-tuple"
+		aggTuple = Tuple{
+			src:   orig.src,
+			dst:   orig.dst,
+			proto: orig.proto,
+			l4Dst: orig.l4Dst,
+		}
+	case PrefixName:
+		// only destination port survives the aggregation.
+		aggTuple = Tuple{
+			l4Dst: orig.l4Dst,
+		}
+	}
+	return aggTuple
 }
