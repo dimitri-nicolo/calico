@@ -73,14 +73,12 @@ func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 	defer c.flMutex.Unlock()
 	fl, ok := c.flowLogs[flKey]
 	if !ok {
-		log.Infof("New Key %+v", flKey)
-		fl, err = getFlowLogFromMetricUpdate(mu)
+		fl, err = getFlowLogFromMetricUpdate(mu, c.kind)
 		if err != nil {
 			log.WithError(err).Errorf("Could not convert MetricUpdate %v to Flow log", mu)
 			return err
 		}
 	} else {
-		log.Infof("Existing Key %+v", flKey)
 		err = fl.aggregateMetricUpdate(mu)
 		if err != nil {
 			log.WithError(err).Errorf("Could not aggregated MetricUpdate %v to Flow log %v", mu, fl)
@@ -102,26 +100,4 @@ func (c *cloudWatchAggregator) Get() []*string {
 	c.flMutex.Unlock()
 	c.aggregationStartTime = aggregationEndTime
 	return resp
-}
-
-func getTupleForAggreagation(orig Tuple, kind AggregationKind) Tuple {
-	var aggTuple Tuple
-	switch kind {
-	case Default:
-		aggTuple = orig
-	case SourcePort:
-		// "4-tuple"
-		aggTuple = Tuple{
-			src:   orig.src,
-			dst:   orig.dst,
-			proto: orig.proto,
-			l4Dst: orig.l4Dst,
-		}
-	case PrefixName:
-		// only destination port survives the aggregation.
-		aggTuple = Tuple{
-			l4Dst: orig.l4Dst,
-		}
-	}
-	return aggTuple
 }

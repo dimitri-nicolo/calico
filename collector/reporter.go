@@ -57,9 +57,6 @@ type MetricUpdate struct {
 	// isConnection is true if this update is from an active connection.
 	isConnection bool
 
-	// Initial report for this tuple.
-	isInitialReport bool
-
 	// Rule identification
 	ruleID *calc.RuleID
 

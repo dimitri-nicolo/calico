@@ -49,18 +49,21 @@ type EndpointMetadata struct {
 // FlowLog captures the context and information associated with
 // 5-tuple update.
 type FlowLog struct {
-	Tuple             Tuple            `json:"srcType"`
-	SrcMeta           EndpointMetadata `json:"srcMeta"`
-	DstMeta           EndpointMetadata `json:"dstMeta"`
-	NumFlows          int              `json:"numFlows"`
-	NumFlowsStarted   int              `json:"numFlowsStarted"`
-	NumFlowsCompleted int              `json:"numFlowsCompleted"`
-	PacketsIn         int              `json:"packetsIn"`
-	PacketsOut        int              `json:"packetsOut"`
-	BytesIn           int              `json:"bytesIn"`
-	BytesOut          int              `json:"bytesOut"`
-	Action            FlowLogAction    `json:"action"`
-	FlowDirection     FlowLogDirection `json:"flowDirection"`
+	Tuple              Tuple            `json:"tuple"`
+	SrcMeta            EndpointMetadata `json:"srcMeta"`
+	DstMeta            EndpointMetadata `json:"dstMeta"`
+	PacketsIn          int              `json:"packetsIn"`
+	PacketsOut         int              `json:"packetsOut"`
+	BytesIn            int              `json:"bytesIn"`
+	BytesOut           int              `json:"bytesOut"`
+	Action             FlowLogAction    `json:"action"`
+	FlowDirection      FlowLogDirection `json:"flowDirection"`
+	NumFlows           int              `json:"numFlows"`
+	NumFlowsStarted    int              `json:"numFlowsStarted"`
+	NumFlowsCompleted  int              `json:"numFlowsCompleted"`
+	flowsRefs          tupleSet
+	flowsStartedRefs   tupleSet
+	flowsCompletedRefs tupleSet
 }
 
 func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) string {
@@ -112,13 +115,19 @@ func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) stri
 
 func (f *FlowLog) aggregateMetricUpdate(mu MetricUpdate) error {
 	// TODO(doublek): Handle metadata updates.
-	if mu.updateType == UpdateTypeExpire {
-		f.NumFlowsCompleted++
+	switch {
+	case mu.updateType == UpdateTypeReport && !f.flowsStartedRefs.Contains(mu.tuple):
+		f.flowsStartedRefs.Add(mu.tuple)
+	case mu.updateType == UpdateTypeExpire && !f.flowsCompletedRefs.Contains(mu.tuple):
+		f.flowsCompletedRefs.Add(mu.tuple)
 	}
-	if mu.isInitialReport {
-		f.NumFlows++
-		f.NumFlowsStarted++
+	// If this is the first time we are seeing this tuple.
+	if !f.flowsRefs.Contains(mu.tuple) || (mu.updateType == UpdateTypeReport && f.flowsCompletedRefs.Contains(mu.tuple)) {
+		f.flowsRefs.Add(mu.tuple)
 	}
+	f.NumFlows = f.flowsRefs.Len()
+	f.NumFlowsStarted = f.flowsStartedRefs.Len()
+	f.NumFlowsCompleted = f.flowsCompletedRefs.Len()
 	f.PacketsIn += mu.inMetric.deltaPackets
 	f.BytesIn += mu.inMetric.deltaBytes
 	f.PacketsOut += mu.outMetric.deltaPackets
@@ -166,7 +175,7 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 	return em, err
 }
 
-func getFlowLogFromMetricUpdate(mu MetricUpdate) (FlowLog, error) {
+func getFlowLogFromMetricUpdate(mu MetricUpdate, kind AggregationKind) (FlowLog, error) {
 	var (
 		srcMeta, dstMeta EndpointMetadata
 		err              error
@@ -186,32 +195,61 @@ func getFlowLogFromMetricUpdate(mu MetricUpdate) (FlowLog, error) {
 		}
 	}
 
-	var nf, nfs, nfc int
+	flowsRefs := NewTupleSet()
+	flowsRefs.Add(mu.tuple)
+	flowsStartedRefs := NewTupleSet()
+	flowsCompletedRefs := NewTupleSet()
+
 	switch mu.updateType {
 	case UpdateTypeReport:
-		nfs = 1
+		flowsStartedRefs.Add(mu.tuple)
 	case UpdateTypeExpire:
-		nfc = 1
+		flowsCompletedRefs.Add(mu.tuple)
 	}
-	// 1 always when we create the flow
-	nf = 1
 
 	action, flowDir := getFlowLogActionAndDirFromRuleID(mu.ruleID)
 
+	aggTuple := getTupleForAggreagation(mu.tuple, kind)
+
 	return FlowLog{
-		Tuple:             mu.tuple,
-		SrcMeta:           srcMeta,
-		DstMeta:           dstMeta,
-		NumFlows:          nf,
-		NumFlowsStarted:   nfs,
-		NumFlowsCompleted: nfc,
-		PacketsIn:         mu.inMetric.deltaPackets,
-		BytesIn:           mu.inMetric.deltaBytes,
-		PacketsOut:        mu.outMetric.deltaPackets,
-		BytesOut:          mu.outMetric.deltaBytes,
-		Action:            action,
-		FlowDirection:     flowDir,
+		Tuple:              aggTuple,
+		SrcMeta:            srcMeta,
+		DstMeta:            dstMeta,
+		NumFlows:           flowsRefs.Len(),
+		NumFlowsStarted:    flowsStartedRefs.Len(),
+		NumFlowsCompleted:  flowsCompletedRefs.Len(),
+		PacketsIn:          mu.inMetric.deltaPackets,
+		BytesIn:            mu.inMetric.deltaBytes,
+		PacketsOut:         mu.outMetric.deltaPackets,
+		BytesOut:           mu.outMetric.deltaBytes,
+		Action:             action,
+		FlowDirection:      flowDir,
+		flowsRefs:          flowsRefs,
+		flowsStartedRefs:   flowsStartedRefs,
+		flowsCompletedRefs: flowsCompletedRefs,
 	}, nil
+}
+
+func getTupleForAggreagation(orig Tuple, kind AggregationKind) Tuple {
+	var aggTuple Tuple
+	switch kind {
+	case Default:
+		aggTuple = orig
+	case SourcePort:
+		// "4-tuple"
+		aggTuple = Tuple{
+			src:   orig.src,
+			dst:   orig.dst,
+			proto: orig.proto,
+			l4Dst: orig.l4Dst,
+		}
+	case PrefixName:
+		// only destination port survives the aggregation.
+		aggTuple = Tuple{
+			l4Dst: orig.l4Dst,
+		}
+	}
+	return aggTuple
 }
 
 // getFlowLogActionAndDirFromRuleID converts the action to a string value.

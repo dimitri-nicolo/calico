@@ -141,23 +141,6 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
 
-			By("reporting the same MetricUpdate twice and expiring it immediately")
-			cr.Report(muConn1Rule1AllowUpdate)
-			cr.Report(muConn1Rule1AllowUpdate)
-			cr.Report(muConn1Rule1AllowExpire)
-			muConn1Rule1AllowUpdateNew := muConn1Rule1AllowUpdate
-			muConn1Rule1AllowUpdateNew.isInitialReport = true
-			cr.Report(muConn1Rule1AllowUpdateNew)
-			// Wait for aggregation and export to happen.
-			time.Sleep(1 * time.Second)
-			message = getLastMessageFromLogStream()
-			expectedNumFlows = 2
-			expectedNumFlowsStarted = 2
-			expectedNumFlowsCompleted = 1
-			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdate, muConn1Rule1AllowUpdate, muConn1Rule1AllowExpire, muConn1Rule1AllowUpdateNew)
-			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
-
 			By("reporting the same tuple different policies should be reported as separate flow logs")
 			cr.Report(muConn1Rule1AllowUpdate)
 			cr.Report(muNoConn1Rule2DenyUpdate)
@@ -180,7 +163,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			Expect([]FlowLog{flow1, flow2}).Should(ConsistOf(
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
 					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1),
-				newExpectedFlowLog(tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut,
+				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut,
 					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2),
 			))
 		})
