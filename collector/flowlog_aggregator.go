@@ -22,7 +22,7 @@ const (
 	PrefixName
 )
 
-type FlowLogKey struct {
+type FlowLogMeta struct {
 	tuple     Tuple
 	action    FlowLogAction
 	direction FlowLogDirection
@@ -32,7 +32,7 @@ type FlowLogKey struct {
 // FlowLogGetter interfaces.
 type cloudWatchAggregator struct {
 	kind                 AggregationKind
-	flowLogs             map[FlowLogKey]FlowLog
+	flowLogs             map[FlowLogMeta]FlowLog
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	aggregationStartTime time.Time
@@ -42,7 +42,7 @@ type cloudWatchAggregator struct {
 func NewCloudWatchAggregator() FlowLogAggregator {
 	return &cloudWatchAggregator{
 		kind:                 Default,
-		flowLogs:             make(map[FlowLogKey]FlowLog),
+		flowLogs:             make(map[FlowLogMeta]FlowLog),
 		flMutex:              sync.RWMutex{},
 		aggregationStartTime: time.Now(),
 	}
@@ -63,7 +63,7 @@ func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 	var err error
 
 	fla, fld := getFlowLogActionAndDirFromRuleID(mu.ruleID)
-	flKey := FlowLogKey{
+	flKey := FlowLogMeta{
 		tuple:     getTupleForAggreagation(mu.tuple, c.kind),
 		action:    fla,
 		direction: fld,

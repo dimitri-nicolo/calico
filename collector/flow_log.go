@@ -61,16 +61,13 @@ type FlowLog struct {
 	NumFlows           int              `json:"numFlows"`
 	NumFlowsStarted    int              `json:"numFlowsStarted"`
 	NumFlowsCompleted  int              `json:"numFlowsCompleted"`
-	flowsRefs          tupleSet
-	flowsStartedRefs   tupleSet
-	flowsCompletedRefs tupleSet
+	flowsRefs          tupleSet         `json:"-"`
+	flowsStartedRefs   tupleSet         `json:"-"`
+	flowsCompletedRefs tupleSet         `json:"-"`
 }
 
 func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) string {
-	var (
-		srcLabels, dstLabels string
-		l4Src, l4Dst         string
-	)
+	var srcLabels, dstLabels string
 
 	if includeLabels {
 		sl, err := json.Marshal(f.SrcMeta.Labels)
@@ -86,20 +83,7 @@ func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) stri
 		dstLabels = flowLogFieldNotIncluded
 	}
 
-	srcIP := net.IP(f.Tuple.src[:16]).String()
-	dstIP := net.IP(f.Tuple.dst[:16]).String()
-
-	if f.Tuple.proto != 1 {
-		if f.Tuple.l4Src == 0 {
-			l4Src = flowLogFieldNotIncluded
-		} else {
-			l4Src = fmt.Sprintf("%d", f.Tuple.l4Src)
-		}
-		l4Dst = fmt.Sprintf("%d", f.Tuple.l4Dst)
-	} else {
-		l4Src = flowLogFieldNotIncluded
-		l4Dst = flowLogFieldNotIncluded
-	}
+	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(f.Tuple)
 
 	// Format is
 	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowDirection packetsIn packetsOut bytesIn bytesOut action
@@ -107,7 +91,7 @@ func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) stri
 		startTime.Unix(), endTime.Unix(),
 		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, srcLabels,
 		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, dstLabels,
-		srcIP, dstIP, f.Tuple.proto, l4Src, l4Dst,
+		srcIP, dstIP, proto, l4Src, l4Dst,
 		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.FlowDirection,
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
 		f.Action)
@@ -265,6 +249,45 @@ func getFlowLogActionAndDirFromRuleID(r *calc.RuleID) (fla FlowLogAction, fld Fl
 		fld = FlowLogDirectionIn
 	case rules.RuleDirEgress:
 		fld = FlowLogDirectionOut
+	}
+	return
+}
+
+// extractPartsFromAggregatedTuple converts and returns each field of a tuple to a string.
+// If a field is missing a "-" is used in it's place. This can happen if:
+// - This field has been aggregated over.
+// - This is a ICMP flow in which case it is a "3-tuple" where only source ip,
+//   destination IP and protocol makes sense.
+func extractPartsFromAggregatedTuple(t Tuple) (srcIP, dstIP, proto, l4Src, l4Dst string) {
+	// Try to extract source and destination IP address.
+	// This field is aggregated over when using PrefixName aggregation.
+	sip := net.IP(t.src[:16])
+	if sip.IsUnspecified() {
+		srcIP = flowLogFieldNotIncluded
+	} else {
+		srcIP = sip.String()
+	}
+	dip := net.IP(t.dst[:16])
+	if dip.IsUnspecified() {
+		dstIP = flowLogFieldNotIncluded
+	} else {
+		dstIP = dip.String()
+	}
+
+	proto = fmt.Sprintf("%d", t.proto)
+
+	if t.proto != 1 {
+		// Check if SourcePort has been aggregated over.
+		if t.l4Src == 0 {
+			l4Src = flowLogFieldNotIncluded
+		} else {
+			l4Src = fmt.Sprintf("%d", t.l4Src)
+		}
+		l4Dst = fmt.Sprintf("%d", t.l4Dst)
+	} else {
+		// ICMP has no l4 fields.
+		l4Src = flowLogFieldNotIncluded
+		l4Dst = flowLogFieldNotIncluded
 	}
 	return
 }
