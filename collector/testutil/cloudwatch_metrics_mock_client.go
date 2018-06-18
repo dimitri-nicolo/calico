@@ -11,7 +11,10 @@ import (
 )
 
 var (
-	fakeToken = "somerandom-token"
+	fakeToken         = "somerandom-token"
+	emptyStr          = ""
+	lastMetricPutTime time.Time
+	updateFreq        time.Duration
 )
 
 type mockCloudWatchMetricsClient struct {
@@ -19,15 +22,14 @@ type mockCloudWatchMetricsClient struct {
 	name       string
 	namespace  string
 	dimensions []*cloudwatch.Dimension
-	metrics    map[time.Time]float64
 }
 
-func NewMockCloudWatchMetricsClient(cmName, cmNamespace string) cloudwatchiface.CloudWatchAPI {
+func NewMockCloudWatchMetricsClient(cmName, cmNamespace string, uf time.Duration) cloudwatchiface.CloudWatchAPI {
+	updateFreq = uf
 	return &mockCloudWatchMetricsClient{
 		name:       cmName,
 		namespace:  cmNamespace,
 		dimensions: []*cloudwatch.Dimension{},
-		metrics:    map[time.Time]float64{},
 	}
 }
 
@@ -36,26 +38,20 @@ func (m *mockCloudWatchMetricsClient) PutMetricData(input *cloudwatch.PutMetricD
 	m.name = *input.Namespace
 	m.dimensions = input.MetricData[0].Dimensions
 
-	now := time.Now().UTC()
-	m.metrics[now] = *input.MetricData[0].Value
-
-	log.Infof("CloudWatch metrics PutMetricData for namespace: %s and metric name: %s. Data: %v, timestamp: %v", m.namespace, m.name, *input.MetricData[0].Value, now)
+	log.Infof("CloudWatch metrics PutMetricData for namespace: %s and metric name: %s. Data: %v", m.namespace, m.name, *input.MetricData[0].Value)
 	return &cloudwatch.PutMetricDataOutput{}, nil
 }
 
 func (m *mockCloudWatchMetricsClient) ListMetrics(input *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
-	resp := &cloudwatch.ListMetricsOutput{}
+	log.Infof("CloudWatch metrics ListMetrics for namespace: %s and metric name: %s", m.namespace, m.name)
 
-	idx := 0
-	for range m.metrics {
-		resp.Metrics[idx].Dimensions = m.dimensions
-		resp.Metrics[idx].Namespace = &m.namespace
-		resp.Metrics[idx].MetricName = &m.name
-		resp.NextToken = &fakeToken
-
-		idx++
-	}
-
-	log.Infof("CloudWatch metrics ListMetrics for namespace: %s and metric name: %s. DataList: %v", m.namespace, m.name, m.metrics)
-	return resp, nil
+	return &cloudwatch.ListMetricsOutput{
+		Metrics: []*cloudwatch.Metric{&cloudwatch.Metric{
+			Dimensions: m.dimensions,
+			Namespace:  &m.namespace,
+			MetricName: &m.name,
+		},
+		},
+		NextToken: &fakeToken,
+	}, nil
 }

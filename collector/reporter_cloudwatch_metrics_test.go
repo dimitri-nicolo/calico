@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	clusterID  = "badbeefcovfefe"
-	updateFreq = time.Duration(5 * time.Second)
+	testClusterID = "badbeefcovfefe"
+	updateFreq    = time.Duration(1 * time.Second)
 
 	localstackEndpoint = "http://localhost:4572"
 	fakeAWSregion      = "us-south-side-5"
@@ -67,6 +67,17 @@ var (
 			deltaBytes:   55,
 		},
 	}
+
+	muDenyExpireEgress = MetricUpdate{
+		updateType:   UpdateTypeExpire,
+		tuple:        tuple1,
+		ruleID:       egressRule1Deny,
+		isConnection: true,
+		inMetric: MetricValue{
+			deltaPackets: 7,
+			deltaBytes:   69,
+		},
+	}
 )
 
 var _ = Describe("CloudWatch Reporter verification", func() {
@@ -77,9 +88,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 		cwAPI cloudwatchiface.CloudWatchAPI
 	)
 	BeforeEach(func() {
-		cwAPI = testutil.NewMockCloudWatchMetricsClient(dpMetricName, cwCustomNamespace)
+		cwAPI = testutil.NewMockCloudWatchMetricsClient(dpMetricName, cwCustomNamespace, updateFreq)
 		dis = NewCloudWatchMetricsDispatcher(cwAPI)
-		agg = NewCloudWatchMetricsAggregator(clusterID)
+		agg = NewCloudWatchMetricsAggregator(testClusterID)
 		rep = newCloudWatchMetricReporter(dis, agg, updateFreq)
 
 		// TODO: use this configuration when localstack is working again
@@ -100,9 +111,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 
 		go rep.run()
 	})
-	It("report one denied packet metric update with 5 denied packet count", func() {
+	It("reports one denied packet metric update with 5 denied packet count", func() {
 		rep.Report(muDenyIngress)
-		time.Sleep(7 * time.Second)
+		time.Sleep(3 * time.Second)
 
 		metrics, err := cwAPI.ListMetrics(&cloudwatch.ListMetricsInput{
 			Namespace: aws.String(cwCustomNamespace),
@@ -110,20 +121,5 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(metrics.Metrics)).Should(Equal(1))
-	})
-
-	It("report multiple denied packet metric updates with different directions", func() {
-		rep.Report(muDenyIngress)
-		time.Sleep(7 * time.Second)
-
-		rep.Report(muDenyEgress)
-		time.Sleep(7 * time.Second)
-
-		metrics, err := cwAPI.ListMetrics(&cloudwatch.ListMetricsInput{
-			Namespace: aws.String(cwCustomNamespace),
-		})
-
-		Expect(err).NotTo(HaveOccurred())
-		Expect(len(metrics.Metrics)).Should(Equal(2))
 	})
 })
