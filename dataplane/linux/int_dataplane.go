@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"reflect"
 	"strconv"
@@ -27,8 +28,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-
-	"net"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
@@ -158,6 +157,7 @@ type Config struct {
 	DebugSimulateDataplaneHangAfter time.Duration
 
 	FelixHostname string
+	NodeIP        net.IP
 
 	IPSecPSK         string
 	IPSecIKEProposal string
@@ -460,52 +460,35 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 	// that we clean up our old policies if IPsec is disabled.
 	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID)
 
-	if config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" {
+	if config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" && config.NodeIP != nil {
 		// Set up IPsec.
-		// FIXME: use correct local tunnel address (the one from our HostIP?)
-		addrs, _ := net.InterfaceAddrs()
-		for _, a := range addrs {
-			ipNet, ok := a.(*net.IPNet)
-			if !ok {
-				continue
-			}
 
-			ip := ipNet.IP.String()
-			if strings.HasPrefix(ip, "127.") {
-				continue
-			}
-			if strings.Contains(ip, ":") {
-				continue
-			}
-
-			// Initialise charon main config file.
-			charonConfig := ipsec.NewCharonConfig(ipsec.CharonConfigRootDir, ipsec.CharonMainConfigFile)
-			charonConfig.SetLogLevel(config.IPSecLogLevel)
-			charonConfig.SetBooleanOption(ipsec.CharonFollowRedirects, false)
-			charonConfig.SetBooleanOption(ipsec.CharonMakeBeforeBreak, true)
-			log.Infof("Initialising charon config %+v", charonConfig)
-			charonConfig.RenderToFile()
-			var charonWG sync.WaitGroup
-			ikeDaemon, err := ipsec.NewCharonIKEDaemon(context.Background(),
-				&charonWG, config.IPSecESPProposal,
-				config.IPSecIKEProposal,
-				config.IPSecRekeyTime,
-				config.ChildExitedRestartCallback)
-			if err != nil {
-				panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
-			}
-
-			dp.ipSecDataplane = ipsec.NewDataplane(
-				ip,
-				config.IPSecPSK,
-				config.RulesConfig.IptablesMarkIPsec,
-				dp.ipSecPolTable,
-				ikeDaemon,
-			)
-			ipSecManager := newIPSecManager(dp.ipSecDataplane)
-			dp.allManagers = append(dp.allManagers, ipSecManager)
-			break
+		// Initialise charon main config file.
+		charonConfig := ipsec.NewCharonConfig(ipsec.CharonConfigRootDir, ipsec.CharonMainConfigFile)
+		charonConfig.SetLogLevel(config.IPSecLogLevel)
+		charonConfig.SetBooleanOption(ipsec.CharonFollowRedirects, false)
+		charonConfig.SetBooleanOption(ipsec.CharonMakeBeforeBreak, true)
+		log.Infof("Initialising charon config %+v", charonConfig)
+		charonConfig.RenderToFile()
+		var charonWG sync.WaitGroup
+		ikeDaemon, err := ipsec.NewCharonIKEDaemon(context.Background(),
+			&charonWG, config.IPSecESPProposal,
+			config.IPSecIKEProposal,
+			config.IPSecRekeyTime,
+			config.ChildExitedRestartCallback)
+		if err != nil {
+			panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
 		}
+
+		dp.ipSecDataplane = ipsec.NewDataplane(
+			config.NodeIP,
+			config.IPSecPSK,
+			config.RulesConfig.IptablesMarkIPsec,
+			dp.ipSecPolTable,
+			ikeDaemon,
+		)
+		ipSecManager := newIPSecManager(dp.ipSecDataplane)
+		dp.allManagers = append(dp.allManagers, ipSecManager)
 	}
 
 	// Register that we will report liveness and readiness.

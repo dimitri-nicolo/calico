@@ -96,6 +96,7 @@ type Config struct {
 	DatastoreType string `config:"oneof(kubernetes,etcdv3);etcdv3;non-zero,die-on-fail,local"`
 
 	FelixHostname string `config:"hostname;;local,non-zero"`
+	NodeIP        net.IP `config:"ipv4;;"`
 
 	EtcdAddr      string   `config:"authority;127.0.0.1:2379;local"`
 	EtcdScheme    string   `config:"oneof(http,https);http;local"`
@@ -515,6 +516,25 @@ func (config *Config) Validate() (err error) {
 			err = errors.New("If any Felix-Typha TLS config parameters are specified," +
 				" they _all_ must be" +
 				" - except that either TyphaCN or TyphaURISAN may be left unset.")
+		}
+	}
+
+	if config.IPSecMode != "" {
+		var problems []string
+		if config.IPSecPSKFile == "" {
+			problems = append(problems, "IPSecPSKFile is not set")
+		}
+		if config.IPSecIKEAlgorithm == "" {
+			problems = append(problems, "IPSecIKEAlgorithm is not set")
+		}
+		if config.IPSecESPAlgorithm == "" {
+			problems = append(problems, "IPSecESPAlgorithm is not set")
+		}
+		if len(config.NodeIP) == 0 {
+			problems = append(problems, "Node resource for this node is missing its IP")
+		}
+		if problems != nil {
+			err = errors.New("IPsec is misconfigured: " + strings.Join(problems, "; "))
 		}
 	}
 
