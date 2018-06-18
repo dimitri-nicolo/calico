@@ -8,8 +8,8 @@ title: System requirements
 
 {{site.prodname}} {{page.version}} supports:
 
-- OpenShift Origin 3.6 and 3.7
-- OpenShift Container Platform 3.6 and 3.7
+- OpenShift Origin 3.7 and 3.9
+- OpenShift Container Platform 3.7 and 3.9
 
 Refer to the OpenShift documentation for additional requirements.
 
