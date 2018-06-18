@@ -60,27 +60,16 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 
-		for {
+		felixConfig = api.NewFelixConfiguration()
+		felixConfig.Name = "default"
+		felixConfig.Spec.IPSecMode = "PSK"
+		felixConfig, err = client.FelixConfigurations().Create(ctx, felixConfig, options.SetOptions{})
+		if _, ok := err.(errors.ErrorResourceAlreadyExists); ok {
 			felixConfig, err = client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
-			if _, ok := err.(errors.ErrorResourceDoesNotExist); ok {
-				felixConfig = api.NewFelixConfiguration()
-				felixConfig.Name = "default"
-				felixConfig.Spec.IPSecMode = "PSK"
-				felixConfig, err = client.FelixConfigurations().Create(ctx, felixConfig, options.SetOptions{})
-				if _, ok := err.(errors.ErrorResourceAlreadyExists); ok {
-					continue
-				}
-				Expect(err).NotTo(HaveOccurred())
-				break
-			}
-			if err != nil {
-				Fail(fmt.Sprintf("Unexpected error when trying to set up FelixConfig: %v", err))
-			}
-
+			Expect(err).NotTo(HaveOccurred())
 			felixConfig.Spec.IPSecMode = "PSK"
 			felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			break
 		}
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
