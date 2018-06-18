@@ -204,7 +204,7 @@ type Config struct {
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
 	CloudWatchLogsReporterEnabled bool          `config:"bool;false"`
-	CloudWatchLogsFlushInterval   time.Duration `config:"seconds;60"`
+	CloudWatchLogsFlushInterval   time.Duration `config:"seconds;300"`
 	CloudWatchLogsLogGroupName    string        `config:"string;"`
 	CloudWatchLogsLogStreamName   string        `config:"string;"`
 	CloudWatchLogsIncludeLabels   bool          `config:"bool;false"`
