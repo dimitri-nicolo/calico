@@ -42,10 +42,11 @@ type CharonIKEDaemon struct {
 	viciUri     Uri
 	espProposal string
 	ikeProposal string
+	rekeyTime   time.Duration
 	ctx         context.Context
 }
 
-func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ikeProposal string) (*CharonIKEDaemon, error) {
+func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ikeProposal string, rekeyTime time.Duration, childExitedCallback func()) (*CharonIKEDaemon, error) {
 	// FIXME: Reevaluate directory permissions.
 	os.MkdirAll("/var/run/", 0700)
 	const pidfilePath = "/var/run/charon.pid"
@@ -59,14 +60,23 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ik
 		if err != nil {
 			return nil, err
 		}
-		log.WithField("pid", pid).Info("charon already running, killing it")
-		proc, err := os.FindProcess(pid)
-		if err == nil {
-			err = proc.Kill()
-			if err != nil {
-				log.WithError(err).Error("Failed to kill old Charon")
-				return nil, err
+
+		// check if process do exist.
+		// os.FindProcess() always succeeds.
+		killErr := syscall.Kill(pid, syscall.Signal(0))
+		procExists := killErr == nil
+		if procExists {
+			log.WithField("pid", pid).Info("charon already running, killing it")
+			proc, err := os.FindProcess(pid)
+			if err == nil {
+				err = proc.Kill()
+				if err != nil {
+					log.WithError(err).Error("Failed to kill old Charon")
+					return nil, err
+				}
 			}
+		} else {
+			log.WithField("pid", pid).Info("charon is not running, but pid file exists")
 		}
 		os.Remove(pidfilePath)
 	}
@@ -85,6 +95,7 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ik
 		ctx:         ctx,
 		espProposal: espProposal,
 		ikeProposal: ikeProposal,
+		rekeyTime:   rekeyTime,
 	}
 	charon.viciUri = Uri{"unix", viciSocketPath}
 
@@ -103,9 +114,14 @@ func NewCharonIKEDaemon(ctx context.Context, wg *sync.WaitGroup, espProposal, ik
 		case <-ctx.Done():
 			cmd.Process.Signal(syscall.SIGTERM)
 			cmd.Wait()
-			log.Infof("Stopped charon daemon")
+			log.Infof("Stopped charon daemon as expected")
 			wg.Done()
 		}
+	}()
+	go func() {
+		cmd.Wait()
+		log.Infof("Stopped charon daemon unexpected, restart felix")
+		childExitedCallback()
 	}()
 	return charon, nil
 }
@@ -247,14 +263,14 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
 
 	childConfMap := make(map[string]goStrongswanVici.ChildSAConf)
 	childSAConf := goStrongswanVici.ChildSAConf{
-		Local_ts:     []string{"0.0.0.0/0"},
-		Remote_ts:    []string{"0.0.0.0/0"},
-		ESPProposals: []string{charon.espProposal},
-		StartAction:  "start",
-		CloseAction:  "none",
-		Mode:         "tunnel",
-		ReqID:        fmt.Sprint(ReqID),
-		//RekeyTime:     "5", //Can set this to a low time to check that rekeys are handled properly
+		Local_ts:      []string{"0.0.0.0/0"},
+		Remote_ts:     []string{"0.0.0.0/0"},
+		ESPProposals:  []string{charon.espProposal},
+		StartAction:   "start",
+		CloseAction:   "none",
+		Mode:          "tunnel",
+		ReqID:         fmt.Sprint(ReqID),
+		RekeyTime:     fmt.Sprintf("%ds", int(charon.rekeyTime.Seconds())), //Can set this to a low time to check that rekeys are handled properly
 		InstallPolicy: "no",
 	}
 

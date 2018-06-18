@@ -228,7 +228,7 @@ func (w *Workload) SourceName() string {
 	return w.Name
 }
 
-func (w *Workload) CanConnectTo(ip, port, protocol string, duration uint) (bool, string) {
+func (w *Workload) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
 	anyPort := Port{
 		Workload: w,
 	}
@@ -313,7 +313,7 @@ func (w *Workload) SendPacketsTo(ip string, count int, size int) (error, string)
 // Return if a connection is good and packet loss string "PacketLoss[xx]".
 // If it is not a packet loss test, packet loss string is "".
 
-func (p *Port) CanConnectTo(ip, port, protocol string, duration uint) (bool, string) {
+func (p *Port) CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string) {
 
 	// Ensure that the host has the 'test-connection' binary.
 	p.C.EnsureBinary("test-connection")
@@ -327,7 +327,7 @@ func (p *Port) CanConnectTo(ip, port, protocol string, duration uint) (bool, str
 
 	// Run 'test-connection' to the target.
 	args := []string{
-		"exec", p.C.Name, "/test-connection", p.namespacePath, ip, port, "--protocol=" + protocol, fmt.Sprintf("--duration=%d", duration),
+		"exec", p.C.Name, "/test-connection", p.namespacePath, ip, port, "--protocol=" + protocol, fmt.Sprintf("--duration=%d", int(duration.Seconds())),
 	}
 	if p.Port != 0 {
 		// If we are using a particular source port, fill it in.
@@ -398,12 +398,12 @@ type connectivityMatcher struct {
 }
 
 type connectionSource interface {
-	CanConnectTo(ip, port, protocol string, duration uint) (bool, string)
+	CanConnectTo(ip, port, protocol string, duration time.Duration) (bool, string)
 	SourceName() string
 }
 
 func (m *connectivityMatcher) Match(actual interface{}) (success bool, err error) {
-	success, _ = actual.(connectionSource).CanConnectTo(m.ip, m.port, m.protocol, 0)
+	success, _ = actual.(connectionSource).CanConnectTo(m.ip, m.port, m.protocol, time.Duration(0))
 	return
 }
 
@@ -420,8 +420,9 @@ func (m *connectivityMatcher) NegatedFailureMessage(actual interface{}) (message
 }
 
 type expPacketLoss struct {
-	duration      uint // how many seconds test will run
-	maxPacketLoss uint // 10 means 10%
+	duration   time.Duration // how long test will run
+	maxPercent int           // 10 means 10%. -1 means field not valid.
+	maxNumber  int           // 10 means 10 packets. -1 means field not valid.
 }
 
 type expectation struct {
@@ -465,16 +466,21 @@ func (c *ConnectivityChecker) ExpectNone(from connectionSource, to connectionTar
 	c.expectations = append(c.expectations, expectation{from: from, to: to.ToMatcher(explicitPort...), expected: false})
 }
 
-func (c *ConnectivityChecker) ExpectLoss(from connectionSource, to connectionTarget, duration uint, maxPacketLoss uint, explicitPort ...uint16) {
-	Expect(duration).NotTo(BeZero())
-	Expect(maxPacketLoss).To(BeNumerically("<", 100))
+func (c *ConnectivityChecker) ExpectLoss(from connectionSource, to connectionTarget,
+	duration time.Duration, maxPacketLossPercent, maxPacketLossNumber int, explicitPort ...uint16) {
+
+	Expect(duration.Seconds()).NotTo(BeZero())
+	Expect(maxPacketLossPercent).To(BeNumerically(">=", -1))
+	Expect(maxPacketLossPercent).To(BeNumerically("<=", 100))
+	Expect(maxPacketLossNumber).To(BeNumerically(">=", -1))
+	Expect(maxPacketLossPercent + maxPacketLossNumber).NotTo(Equal(-2)) // Do not set both value to -1
 
 	UnactivatedConnectivityCheckers.Add(c)
 	if c.ReverseDirection {
 		from, to = to.(connectionSource), from.(connectionTarget)
 	}
 	c.expectations = append(c.expectations, expectation{from, to.ToMatcher(explicitPort...), true,
-		expPacketLoss{duration: duration, maxPacketLoss: maxPacketLoss}})
+		expPacketLoss{duration: duration, maxPercent: maxPacketLossPercent, maxNumber: maxPacketLossNumber}})
 }
 
 func (c *ConnectivityChecker) ResetExpectations() {
@@ -517,7 +523,7 @@ func (c *ConnectivityChecker) ExpectedConnectivity() ([]string, int) {
 	for i, exp := range c.expectations {
 		result[i] = fmt.Sprintf("%s -> %s = %v ", exp.from.SourceName(), exp.to.targetName, exp.expected)
 		if exp.expectedPacketLoss.duration != 0 {
-			result[i] += utils.FormPacketLossString(exp.expectedPacketLoss.maxPacketLoss)
+			result[i] += utils.FormPacketLossString(exp.expectedPacketLoss.maxPercent, exp.expectedPacketLoss.maxNumber)
 			minRetries = 0 // Never retry for packet loss test.
 		}
 	}
@@ -598,11 +604,11 @@ func actualSatisfyExpected(actual, expected []string) string {
 			Expect(strings.Contains(actual[i], utils.PacketTotalReqPrefix)).To(BeTrue())
 
 			// Check packet loss.
-			actualLoss, diff := utils.GetPacketLossFromStat(actual[i])
-			expectLoss := utils.GetPacketLossDirect(expected[i])
+			actualPercent, actualNumber := utils.GetPacketLossFromStat(actual[i])
+			expPercent, expNumber := utils.GetPacketLossDirect(expected[i])
 
-			if actualLoss > expectLoss {
-				actual[i] += " <---- WRONG:" + utils.FormPacketLossString(actualLoss) + fmt.Sprintf(" TotalPacketLost<%d>", diff)
+			if (expPercent >= 0 && actualPercent > expPercent) || (expNumber >= 0 && actualNumber > expNumber) {
+				actual[i] += " <---- WRONG:" + utils.FormPacketLossString(actualPercent, actualNumber)
 				expMsgs[i] += " <----"
 				good = false
 			}

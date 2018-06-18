@@ -45,8 +45,8 @@ func (m *mockedCloudWatchLogsClient) GetLogEvents(input *cloudwatchlogs.GetLogEv
 	outputEvents := m.logGroupedEvents[logGroupName][logStreamName]
 	for _, o := range outputEvents {
 		resp.Events = append(resp.Events, &cloudwatchlogs.OutputLogEvent{
-			Message:   &o.message,
-			Timestamp: &o.timestamp,
+			Message:   aws.String(o.message),
+			Timestamp: aws.Int64(o.timestamp),
 		})
 	}
 

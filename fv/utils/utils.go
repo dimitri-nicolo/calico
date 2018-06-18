@@ -230,9 +230,11 @@ func IsMessagePartOfStream(msg string) bool {
 }
 
 const (
-	PacketLossPrefix       = "PacketLossPercent"
-	PacketTotalReqPrefix   = "TotalReq"
-	PacketTotalReplyPrefix = "TotalReply"
+	PacketLossPrefix        = "PacketLoss"
+	PacketLossPercentPrefix = PacketLossPrefix + "Percent"
+	PacketLossNumberPrefix  = PacketLossPrefix + "Number"
+	PacketTotalReqPrefix    = "TotalReq"
+	PacketTotalReplyPrefix  = "TotalReply"
 )
 
 // extract packet stat string from an output.
@@ -247,28 +249,40 @@ func FormPacketStatString(totalReq, totalReply int) string {
 	return fmt.Sprintf("%s<%d>,%s<%d>", PacketTotalReqPrefix, totalReq, PacketTotalReplyPrefix, totalReply)
 }
 
-// extract packet loss string from an output.
-// The format of packet loss string should be the same as the output of test-connection binary.
-func extractPacketLossString(s string) string {
-	re := regexp.MustCompile(PacketLossPrefix + `<\d+>`)
+// extract one packet loss measurement from string. Return -1 if measurement not found.
+func extractPacketLoss(prefix string, s string) int {
+	var number int
+	re := regexp.MustCompile(prefix + `<\d+>`)
 	lossString := re.FindString(s)
 
-	return lossString
+	re = regexp.MustCompile(`\d+`)
+	substring := re.FindString(lossString)
+	if substring != "" {
+		var err error
+		number, err = strconv.Atoi(substring)
+		Expect(err).NotTo(HaveOccurred())
+	} else {
+		number = -1
+	}
+
+	return number
 }
 
-// Form a packet loss string from a uint.
-func FormPacketLossString(u uint) string {
-	return fmt.Sprintf("%s<%d>", PacketLossPrefix, u)
+// Form a packet loss string from a maxPercent and maxNumber.
+func FormPacketLossString(maxPercent, maxNumber int) string {
+	var ps, ns string
+	if maxPercent >= 0 {
+		ps = fmt.Sprintf("%s<%d>", PacketLossPercentPrefix, maxPercent)
+	}
+	if maxNumber >= 0 {
+		ns = fmt.Sprintf("%s<%d>", PacketLossNumberPrefix, maxNumber)
+	}
+
+	return fmt.Sprintf("%s%s", ps, ns)
 }
 
-func GetPacketLossDirect(s string) uint {
-	re := regexp.MustCompile(`\d+`)
-	number := re.FindString(extractPacketLossString(s))
-	Expect(number).NotTo(BeEmpty())
-
-	loss, err := strconv.Atoi(number)
-	Expect(err).NotTo(HaveOccurred())
-	return uint(loss)
+func GetPacketLossDirect(s string) (int, int) {
+	return extractPacketLoss(PacketLossPercentPrefix, s), extractPacketLoss(PacketLossNumberPrefix, s)
 }
 
 func extractPacketNumbers(s string) (int, int) {
@@ -285,9 +299,10 @@ func extractPacketNumbers(s string) (int, int) {
 	return totalReq, totalReply
 }
 
-func GetPacketLossFromStat(s string) (uint, int) {
+func GetPacketLossFromStat(s string) (int, int) {
 	totalReq, totalReply := extractPacketNumbers(s)
 	diff := totalReq - totalReply
+	Expect(diff).To(BeNumerically(">=", 0))
 
 	// Calculate packet loss and print out result.
 	loss := float64(diff) / float64(totalReq) * 100
@@ -295,6 +310,6 @@ func GetPacketLossFromStat(s string) (uint, int) {
 		// Set minimal loss to 1 percent.
 		return 1, diff
 	} else {
-		return uint(loss), diff
+		return int(loss), diff
 	}
 }

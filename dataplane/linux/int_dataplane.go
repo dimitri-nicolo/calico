@@ -149,6 +149,7 @@ type Config struct {
 	StatusReportingInterval time.Duration
 
 	ConfigChangedRestartCallback func()
+	ChildExitedRestartCallback   func()
 
 	PostInSyncCallback func()
 	HealthAggregator   *health.HealthAggregator
@@ -162,6 +163,7 @@ type Config struct {
 	IPSecIKEProposal string
 	IPSecESPProposal string
 	IPSecLogLevel    string
+	IPSecRekeyTime   time.Duration
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -469,7 +471,11 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 		log.Infof("Initialising charon config %+v", charonConfig)
 		charonConfig.RenderToFile()
 		var charonWG sync.WaitGroup
-		ikeDaemon, err := ipsec.NewCharonIKEDaemon(context.Background(), &charonWG, config.IPSecESPProposal, config.IPSecIKEProposal)
+		ikeDaemon, err := ipsec.NewCharonIKEDaemon(context.Background(),
+			&charonWG, config.IPSecESPProposal,
+			config.IPSecIKEProposal,
+			config.IPSecRekeyTime,
+			config.ChildExitedRestartCallback)
 		if err != nil {
 			panic(fmt.Errorf("error creating CharonIKEDaemon struct: %v", err))
 		}

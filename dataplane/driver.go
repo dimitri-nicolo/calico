@@ -40,7 +40,8 @@ import (
 func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
 	cache *calc.LookupsCache,
-	configChangedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
+	configChangedRestartCallback func(),
+	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
 	if configParams.UseInternalDataplaneDriver {
 		log.Info("Using internal (linux) dataplane driver.")
 		// If kube ipvs interface is present, enable ipvs support.
@@ -226,9 +227,11 @@ func StartDataplaneDriver(configParams *config.Config,
 			IPSecIKEProposal:           configParams.IPSecIKEAlgorithm,
 			IPSecESPProposal:           configParams.IPSecESPAlgorithm,
 			IPSecLogLevel:              configParams.IPSecLogLevel,
+			IPSecRekeyTime:             configParams.IPSecRekeyTime,
 			IPSecPolicyRefreshInterval: configParams.IPSecPolicyRefreshInterval,
 
 			ConfigChangedRestartCallback: configChangedRestartCallback,
+			ChildExitedRestartCallback:   childExitedRestartCallback,
 
 			PostInSyncCallback: func() {
 				// The initial resync uses a lot of scratch space so now is
