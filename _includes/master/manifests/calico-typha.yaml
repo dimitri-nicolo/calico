@@ -1,5 +1,16 @@
+{% comment %}
+calico-typha.yaml acccepts the following include flags:
+
+| Name         | Accepted Values          |
+|--------------|--------------------------|
+| datastore    | kdd, etcd                |
+| variant_name | Calico, Canal            |
+
+{% endcomment -%}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
 # Typha sits in between Felix and the API server, reducing Calico's load on the API server.
+# It is a requirement when using Kubernetes API datastore with more than 50 nodes, or when
+# using the Federated Identity feature with any datastore type.
 
 apiVersion: v1
 kind: Service
@@ -32,9 +43,9 @@ spec:
   # Number of Typha replicas.  To enable Typha, set this to a non-zero value *and* set the
   # typha_service_name variable in the calico-config ConfigMap above.
   #
-  # We recommend using Typha if you have more than 50 nodes.  Above 100 nodes it is essential
-  # (when using the Kubernetes datastore).  Use one replica for every 100-200 nodes.  In
-  # production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
+  # We recommend using Typha if you have more than 50 nodes or if you are using Federated Endpoint Identity.
+  # Above 100 nodes it is essential (when using the Kubernetes datastore).  Use one replica for every 100-200
+  # nodes.  In production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
   replicas: 0
   revisionHistoryLimit: 2
   template:
@@ -82,8 +93,38 @@ spec:
           # connections.
           - name: TYPHA_CONNECTIONREBALANCINGMODE
             value: "kubernetes"
+{%- if include.datastore == "etcd" %}
+          - name: TYPHA_DATASTORETYPE
+            value: "etcdv3"
+          # The location of the {{site.prodname}} etcd cluster.
+          - name: TYPHA_ETCDENDPOINTS
+            valueFrom:
+              configMapKeyRef:
+                name: {{include.variant_name | downcase}}-config
+                key: etcd_endpoints
+          # Location of the CA certificate for etcd.
+          - name: TYPHA_ETCDCAFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include.variant_name | downcase}}-config
+                key: etcd_ca
+          # Location of the client key for etcd.
+          - name: TYPHA_ETCDKEYFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include.variant_name | downcase}}-config
+                key: etcd_key
+          # Location of the client certificate for etcd.
+          - name: TYPHA_ETCDCERTFILE
+            valueFrom:
+              configMapKeyRef:
+                name: {{include.variant_name | downcase}}-config
+                key: etcd_cert
+{%- elsif include.datastore == "kdd" %}
+          # Use Kubernetes API as the backing datastore.
           - name: TYPHA_DATASTORETYPE
             value: "kubernetes"
+{%- endif %}
           - name: TYPHA_HEALTHENABLED
             value: "true"
           # Uncomment these lines to enable prometheus metrics.  Since Typha is host-networked,
@@ -96,12 +137,14 @@ spec:
           httpGet:
             path: /liveness
             port: 9098
+            host: localhost
           periodSeconds: 30
           initialDelaySeconds: 30
         readinessProbe:
           httpGet:
             path: /readiness
             port: 9098
+            host: localhost
           periodSeconds: 10
       # Uncomment these lines to enable a secrets volume for use with federated endpoint identity.
       # The secret should be created with kubectl create secret generic federated-calico-secret --from-file=...
