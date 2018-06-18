@@ -12,7 +12,7 @@ import (
 // ErrorProducer produces a sequence of previously-queued errors from its NextError method.
 type ErrorProducer map[string][]error
 
-func NewErrorQueue() ErrorProducer {
+func NewErrorProducer() ErrorProducer {
 	return ErrorProducer{}
 }
 

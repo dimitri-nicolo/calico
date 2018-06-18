@@ -37,7 +37,7 @@ import (
 const viciSocketPath = "/var/run/charon.vici"
 
 type Uri struct {
-	network, address string
+	Network, Address string
 }
 
 type CharonIKEDaemon struct {
@@ -48,16 +48,18 @@ type CharonIKEDaemon struct {
 	ctx         context.Context
 
 	firstConnSucceeded bool
-	cachedClient       viciClient
+	cachedClient       VICIClient
 
-	runAndCaptureLogs func(execPath string, doneWG *sync.WaitGroup) (command, error)
+	runAndCaptureLogs func(execPath string, doneWG *sync.WaitGroup) (CharonCommand, error)
 	newClient         viciClientFactory
 	sleep             func(duration time.Duration)
+	after             func(duration time.Duration) <-chan time.Time
+	cleanUpOldCharon  func() error
 
 	childExitedCallback func()
 }
 
-type viciClient interface {
+type VICIClient interface {
 	io.Closer
 	LoadConn(conn *map[string]goStrongswanVici.IKEConf) error
 	UnloadConn(r *goStrongswanVici.UnloadConnRequest) error
@@ -65,7 +67,7 @@ type viciClient interface {
 	UnloadShared(key *goStrongswanVici.UnloadKeyRequest) error
 }
 
-type viciClientFactory func(ctx context.Context, viciUri Uri) (client viciClient, err error)
+type viciClientFactory func(ctx context.Context, viciUri Uri) (client VICIClient, err error)
 
 func NewCharonIKEDaemon(
 	espProposal,
@@ -74,7 +76,7 @@ func NewCharonIKEDaemon(
 	childExitedCallback func()) *CharonIKEDaemon {
 	return NewCharonWithShims(
 		espProposal, ikeProposal, rekeyTime, childExitedCallback,
-		runAndCaptureLogs, getRealVICIClient, time.Sleep,
+		runAndCaptureLogs, getRealVICIClient, time.Sleep, time.After, CleanUpOldCharon,
 	)
 }
 
@@ -84,9 +86,11 @@ func NewCharonWithShims(
 	rekeyTime time.Duration,
 	childExitedCallback func(),
 
-	runAndCaptureLogs func(execPath string, doneWG *sync.WaitGroup) (command, error),
+	runAndCaptureLogs func(execPath string, doneWG *sync.WaitGroup) (CharonCommand, error),
 	newClient viciClientFactory,
 	sleep func(duration time.Duration),
+	after func(duration time.Duration) <-chan time.Time,
+	cleanUpOldCharon func() error,
 ) *CharonIKEDaemon {
 	charon := &CharonIKEDaemon{
 		espProposal: espProposal,
@@ -97,6 +101,8 @@ func NewCharonWithShims(
 		runAndCaptureLogs: runAndCaptureLogs,
 		newClient:         newClient,
 		sleep:             sleep,
+		after:             after,
+		cleanUpOldCharon:  cleanUpOldCharon,
 
 		childExitedCallback: childExitedCallback,
 	}
@@ -104,7 +110,8 @@ func NewCharonWithShims(
 	return charon
 }
 
-type command interface {
+// CharonCommand interface for the parts of exec.Cmd that we use.  Intended for mocking.
+type CharonCommand interface {
 	Wait() error
 	Signal(signal os.Signal) error
 	Kill() error
@@ -119,7 +126,7 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 		return err
 	}
 
-	err = CleanUpOldCharon()
+	err = charon.cleanUpOldCharon()
 	if err != nil {
 		log.WithError(err).Error("Failed to clean up old charon")
 		return err
@@ -138,8 +145,8 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 	processExited := make(chan struct{}) // closed when the process exits.
 	go func() {
 		log.Info("Started charon process monitor goroutine.")
-		cmd.Wait()
-		log.Info("Charon exited, signaling to monitor goroutine.")
+		err := cmd.Wait()
+		log.Infof("Charon exited, signaling to monitor goroutine.  Exit error details: %v", err)
 		close(processExited)
 	}()
 
@@ -153,7 +160,7 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 			log.Info("Context finished, shutting down charon.")
 			cmd.Signal(syscall.SIGTERM)
 			select {
-			case <-time.After(5 * time.Second):
+			case <-charon.after(5 * time.Second):
 				log.Error("charon didn't exit, killing it")
 				cmd.Kill()
 			case <-processExited:
@@ -168,7 +175,7 @@ func (charon *CharonIKEDaemon) Start(ctx context.Context, doneWG *sync.WaitGroup
 	return nil
 }
 
-func runAndCaptureLogs(execPath string, doneWG *sync.WaitGroup) (command, error) {
+func runAndCaptureLogs(execPath string, doneWG *sync.WaitGroup) (CharonCommand, error) {
 	path, err := exec.LookPath(execPath)
 	if err != nil {
 		return nil, err
@@ -192,8 +199,8 @@ func runAndCaptureLogs(execPath string, doneWG *sync.WaitGroup) (command, error)
 		return nil, err
 	}
 	doneWG.Add(2)
-	go copyOutputToLog("stdout", stdout, doneWG)
-	go copyOutputToLog("stderr", stderr, doneWG)
+	go CopyOutputToLog("stdout", stdout, doneWG)
+	go CopyOutputToLog("stderr", stderr, doneWG)
 
 	err = cmd.Start()
 
@@ -215,12 +222,12 @@ func (c *cmdAdapter) Kill() error {
 }
 
 func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
-	return charon.withClientRetry("LoadConnection", func(c viciClient) error {
+	return charon.withClientRetry("LoadConnection", func(c VICIClient) error {
 		if localIP == "" || remoteIP == "" {
 			log.WithFields(log.Fields{
 				"localIP":  localIP,
 				"remoteIP": remoteIP,
-			}).Panic("Missing local or remote address")
+			}).Panic("Missing local or remote Address")
 		}
 
 		childConfMap := make(map[string]goStrongswanVici.ChildSAConf)
@@ -274,7 +281,7 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
 }
 
 func (charon *CharonIKEDaemon) UnloadCharonConnection(localIP, remoteIP string) error {
-	return charon.withClientRetry("UnloadCharonConnection", func(c viciClient) error {
+	return charon.withClientRetry("UnloadCharonConnection", func(c VICIClient) error {
 		connectionName := formatName(localIP, remoteIP)
 		unloadConnRequest := &goStrongswanVici.UnloadConnRequest{
 			Name: connectionName,
@@ -291,7 +298,7 @@ func (charon *CharonIKEDaemon) UnloadCharonConnection(localIP, remoteIP string) 
 }
 
 func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
-	return charon.withClientRetry("LoadSharedKey", func(c viciClient) error {
+	return charon.withClientRetry("LoadSharedKey", func(c VICIClient) error {
 		sharedKey := &goStrongswanVici.Key{
 			ID:     remoteIP,
 			Typ:    "IKE",
@@ -309,7 +316,7 @@ func (charon *CharonIKEDaemon) LoadSharedKey(remoteIP, password string) error {
 }
 
 func (charon *CharonIKEDaemon) UnloadSharedKey(remoteIP string) error {
-	return charon.withClientRetry("UnloadSharedKey", func(c viciClient) error {
+	return charon.withClientRetry("UnloadSharedKey", func(c VICIClient) error {
 		sharedKey := &goStrongswanVici.UnloadKeyRequest{
 			ID: remoteIP,
 		}
@@ -323,7 +330,7 @@ func (charon *CharonIKEDaemon) UnloadSharedKey(remoteIP string) error {
 	})
 }
 
-func (charon *CharonIKEDaemon) client() viciClient {
+func (charon *CharonIKEDaemon) client() VICIClient {
 	attempts := 3
 	if !charon.firstConnSucceeded {
 		attempts = 100
@@ -351,11 +358,14 @@ func (charon *CharonIKEDaemon) client() viciClient {
 func (charon *CharonIKEDaemon) discardClient() {
 	err := charon.cachedClient.Close()
 	if err != nil {
+		// This generally means that a deferred socket operation (i.e. flushing the buffer) failed.
+		// We're about to reconnect or give up so we ignore.
 		log.WithError(err).Error("Closing the VICI client returned error")
 	}
+	charon.cachedClient = nil
 }
 
-func (charon *CharonIKEDaemon) withClientRetry(opName string, f func(c viciClient) error) error {
+func (charon *CharonIKEDaemon) withClientRetry(opName string, f func(c VICIClient) error) error {
 	debug := log.GetLevel() >= log.DebugLevel
 	var err error
 	for attempt := 0; attempt < 3; attempt++ {
@@ -378,15 +388,15 @@ func (charon *CharonIKEDaemon) withClientRetry(opName string, f func(c viciClien
 	return err
 }
 
-func getRealVICIClient(ctx context.Context, viciUri Uri) (client viciClient, err error) {
-	socketConn, err := net.Dial(viciUri.network, viciUri.address)
+func getRealVICIClient(ctx context.Context, viciUri Uri) (client VICIClient, err error) {
+	socketConn, err := net.Dial(viciUri.Network, viciUri.Address)
 	if err != nil {
 		return nil, err
 	}
 	return goStrongswanVici.NewClientConn(socketConn), nil
 }
 
-func copyOutputToLog(streamName string, stream io.Reader, doneWG *sync.WaitGroup) {
+func CopyOutputToLog(streamName string, stream io.Reader, doneWG *sync.WaitGroup) {
 	defer doneWG.Done()
 
 	scanner := bufio.NewScanner(stream)
