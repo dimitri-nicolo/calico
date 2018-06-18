@@ -76,6 +76,7 @@ rules:
       - clusterinformations
       - licensekeys
       - hostendpoints
+      - profiles
     verbs:
       - create
       - get
