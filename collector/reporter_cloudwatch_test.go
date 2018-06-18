@@ -43,17 +43,22 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 		events := getEventsFromLogStream()
 		return *(events[len(events)-1].Message)
 	}
-	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection) {
+	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int) {
 		fl, err := getFlowLog(msg)
 		Expect(err).To(BeNil())
-		Expect(fl.Tuple).Should(Equal(t))
-		Expect(fl.NumFlows).Should(Equal(nf))
-		Expect(fl.NumFlowsStarted).Should(Equal(nfs))
-		Expect(fl.NumFlowsCompleted).Should(Equal(nfc))
-		Expect(fl.Action).Should(Equal(a))
-		Expect(fl.FlowDirection).Should(Equal(fd))
+		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fd, pi, po, bi, bo)
+		Expect(fl).Should(Equal(expectedFlow))
 	}
-	Context("No Aggregation", func() {
+	calculatePacketStats := func(mus ...MetricUpdate) (epi, epo, ebi, ebo int) {
+		for _, mu := range mus {
+			epi += mu.inMetric.deltaPackets
+			epo += mu.outMetric.deltaPackets
+			ebi += mu.inMetric.deltaBytes
+			ebo += mu.outMetric.deltaBytes
+		}
+		return
+	}
+	Context("No Aggregation kind specified", func() {
 		BeforeEach(func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, cl)
@@ -72,14 +77,18 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlows := 1
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 0
-			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
 
 			By("reporting the same MetricUpdate with metrics in both directions")
 			cr.Report(muConn1Rule1AllowUpdate)
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			message = getLastMessageFromLogStream()
-			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muConn1Rule1AllowUpdate)
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
 
 			By("reporting a expired MetricUpdate for the same tuple")
 			cr.Report(muConn1Rule1AllowExpire)
@@ -88,7 +97,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			message = getLastMessageFromLogStream()
 			expectedNumFlowsStarted = 0
 			expectedNumFlowsCompleted = 1
-			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muConn1Rule1AllowExpire)
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
 
 			By("reporting a MetricUpdate for denied packets")
 			cr.Report(muNoConn1Rule2DenyUpdate)
@@ -98,7 +109,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlows = 1
 			expectedNumFlowsStarted = 1
 			expectedNumFlowsCompleted = 0
-			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut)
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule2DenyUpdate)
+			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
 
 			By("reporting a expired denied packet MetricUpdate for the same tuple")
 			cr.Report(muNoConn1Rule2DenyExpire)
@@ -107,7 +120,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			message = getLastMessageFromLogStream()
 			expectedNumFlowsStarted = 0
 			expectedNumFlowsCompleted = 1
-			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut)
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule2DenyExpire)
+			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
 
 		})
 		It("aggregates metric updates for the duration of aggregation when reporting to cloudwatch logs", func() {
@@ -122,7 +137,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlows := 1
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 1
-			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdate, muConn1Rule1AllowUpdate, muConn1Rule1AllowExpire)
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
 		})
 
 		It("aggregates metric updates from multiple tuples", func() {
@@ -134,12 +151,24 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			time.Sleep(1 * time.Second)
 			events := getEventsFromLogStream()
 			message1 := *(events[0].Message)
+			flow1, err := getFlowLog(message1)
+			Expect(err).To(BeNil())
 			message2 := *(events[1].Message)
+			flow2, err := getFlowLog(message2)
+			Expect(err).To(BeNil())
+
 			expectedNumFlows := 1
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 0
-			expectFlowLog(message1, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
-			expectFlowLog(message2, tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1 := calculatePacketStats(muConn1Rule1AllowUpdate)
+			expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2 := calculatePacketStats(muConn2Rule1AllowUpdate)
+			// We only care about the flow log entry to exist and don't care about the actual order.
+			Expect([]FlowLog{flow1, flow2}).Should(ConsistOf(
+				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1),
+				newExpectedFlowLog(tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2),
+			))
 
 			By("report expirations of the same connections")
 			cr.Report(muConn1Rule1AllowExpire)
@@ -148,12 +177,24 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			time.Sleep(1 * time.Second)
 			events = getEventsFromLogStream()
 			message1 = *(events[len(events)-2].Message)
+			flow1, err = getFlowLog(message1)
+			Expect(err).To(BeNil())
 			message2 = *(events[len(events)-1].Message)
+			flow2, err = getFlowLog(message2)
+			Expect(err).To(BeNil())
+
 			expectedNumFlows = 1
 			expectedNumFlowsStarted = 0
 			expectedNumFlowsCompleted = 1
-			expectFlowLog(message1, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
-			expectFlowLog(message2, tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+			expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1 = calculatePacketStats(muConn1Rule1AllowExpire)
+			expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2 = calculatePacketStats(muConn2Rule1AllowExpire)
+			// We only care about the flow log entry to exist and don't care about the actual order.
+			Expect([]FlowLog{flow1, flow2}).Should(ConsistOf(
+				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1),
+				newExpectedFlowLog(tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2),
+			))
 
 		})
 	})
@@ -260,4 +301,19 @@ func getFlowLog(fl string) (FlowLog, error) {
 		BytesOut:          bo,
 		Action:            a,
 	}, nil
+}
+
+func newExpectedFlowLog(t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int) FlowLog {
+	return FlowLog{
+		Tuple:             t,
+		NumFlows:          nf,
+		NumFlowsStarted:   nfs,
+		NumFlowsCompleted: nfc,
+		FlowDirection:     fd,
+		Action:            a,
+		PacketsIn:         pi,
+		PacketsOut:        po,
+		BytesIn:           bi,
+		BytesOut:          bo,
+	}
 }
