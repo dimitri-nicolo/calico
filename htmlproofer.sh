@@ -18,7 +18,7 @@ JEKYLL_UID=${JEKYLL_UID:=`id -u`}
 echo "Running a hard URL check against recent releases"
 for i in `seq 1 3`; do
 	echo "htmlproofer attempt #${i}"
-	docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS}
+	docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS} --internal_domains "docs.tigera.io"
 
 	# Store the RC for future use.
 	rc=$?
