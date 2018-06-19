@@ -1,5 +1,5 @@
-hash: 57934c7f3e97bd1b4c81e17a55aa346ec514a52c02121ca214aa1f9577df6524
-updated: 2018-06-07T16:49:08.267365853-07:00
+hash: d9f38f3b28562c4ff2f0728b98ba5aa369acb82e100a75d3243f8d0fb9967da4
+updated: 2018-06-19T16:18:45.752490912Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/containernetworking/cni
@@ -131,7 +131,7 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
   - pbutil
 - name: github.com/mcuadros/go-version
@@ -191,7 +191,8 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 6b28e7cc060a90b5a96582b03cf42521abc39347
+  version: 675b87245a587f603504836f5533f222571f1eec
+  repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
@@ -253,11 +254,11 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/vishvananda/netlink
-  version: fe3b5664d23a11b52ba59bece4ff29c52772a56b
+  version: 6e453822d85ef5721799774b654d4d02fed62afb
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: 54f0e4339ce73702a0607f49922aaa1e749b418d
 - name: golang.org/x/crypto
   version: 1351f936d976c60a0a48d728281922cf63eafb8d
   subpackages:
