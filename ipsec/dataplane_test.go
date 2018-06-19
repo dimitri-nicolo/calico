@@ -121,7 +121,7 @@ var _ = Describe("Dataplane", func() {
 		mIKEDaemon = &mockIKEDaemon{
 			Keys:       map[string]string{},
 			Conns:      set.New(),
-			ErrorQueue: testutils.NewErrorQueue(),
+			ErrorQueue: testutils.NewErrorProducer(),
 		}
 		dataplane = newDataplane()
 	})

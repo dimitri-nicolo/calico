@@ -461,7 +461,7 @@ type mockIPSecDataplane struct {
 }
 
 func newMockIPSecDataplane() *mockIPSecDataplane {
-	return &mockIPSecDataplane{Errors: testutils.NewErrorQueue()}
+	return &mockIPSecDataplane{Errors: testutils.NewErrorProducer()}
 }
 
 func (m *mockIPSecDataplane) addPolicy(pol *netlink.XfrmPolicy) {
