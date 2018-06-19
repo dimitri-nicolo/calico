@@ -417,6 +417,10 @@ func CopyOutputToLog(streamName string, stream io.Reader, doneWG *sync.WaitGroup
 		"stream": stream,
 	})
 	if err := scanner.Err(); err != nil {
+		log.Warn("Non-EOF error reading charon [%s], err %v; will pause and then exit...", streamName, err)
+		// Very likely that the charon exited.  The charon process watch goroutine should shut felix down cleanly.
+		// give it a chance to do that before we panic.
+		time.Sleep(10 * time.Second)
 		log.Panicf("Non-EOF error reading charon [%s], err %v", streamName, err)
 	}
 	logCxt.Info("Stream finished")
