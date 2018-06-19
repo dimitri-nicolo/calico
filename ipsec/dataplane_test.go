@@ -159,6 +159,7 @@ var _ = Describe("Dataplane", func() {
 
 	Context("with a binding", func() {
 		BeforeEach(func() {
+			dataplane.AddTunnel(remoteHostIP)
 			dataplane.AddBinding(remoteHostIP, "10.0.1.2")
 		})
 
@@ -198,6 +199,7 @@ var _ = Describe("Dataplane", func() {
 
 		Context("after adding a local binding", func() {
 			BeforeEach(func() {
+				dataplane.AddTunnel(localHostIP)
 				dataplane.AddBinding(localHostIP, localWorkloadIP)
 			})
 
@@ -217,6 +219,7 @@ var _ = Describe("Dataplane", func() {
 			Context("after removing the remote workload", func() {
 				BeforeEach(func() {
 					dataplane.RemoveBinding(remoteHostIP, remoteWorkloadIP)
+					dataplane.RemoveTunnel(remoteHostIP)
 				})
 
 				It("should clean up", func() {
@@ -253,6 +256,7 @@ var _ = Describe("Dataplane", func() {
 				Context("after removing the first workload", func() {
 					BeforeEach(func() {
 						dataplane.RemoveBinding(remoteHostIP, "10.0.1.2")
+						dataplane.RemoveTunnel(remoteHostIP)
 					})
 
 					It("should unload the key for the host", func() {
@@ -271,6 +275,7 @@ var _ = Describe("Dataplane", func() {
 		Context("after removing the binding again", func() {
 			BeforeEach(func() {
 				dataplane.RemoveBinding(remoteHostIP, "10.0.1.2")
+				dataplane.RemoveTunnel(remoteHostIP)
 			})
 
 			It("should unload the key for the host", func() {

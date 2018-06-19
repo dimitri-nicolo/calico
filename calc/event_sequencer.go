@@ -67,6 +67,8 @@ type EventSequencer struct {
 	pendingServiceAccountDeletes set.Set
 	pendingNamespaceUpdates      map[proto.NamespaceID]*proto.NamespaceUpdate
 	pendingNamespaceDeletes      set.Set
+	pendingIPSecTunnelAdds       set.Set
+	pendingIPSecTunnelRemoves    set.Set
 	pendingIPSecBindingAdds      set.Set
 	pendingIPSecBindingRemoves   set.Set
 	pendingIPSecBlacklistAdds    set.Set
@@ -118,6 +120,8 @@ func NewEventSequencer(conf configInterface) *EventSequencer {
 		pendingServiceAccountDeletes: set.New(),
 		pendingNamespaceUpdates:      map[proto.NamespaceID]*proto.NamespaceUpdate{},
 		pendingNamespaceDeletes:      set.New(),
+		pendingIPSecTunnelAdds:       set.New(),
+		pendingIPSecTunnelRemoves:    set.New(),
 		pendingIPSecBindingAdds:      set.New(),
 		pendingIPSecBindingRemoves:   set.New(),
 		pendingIPSecBlacklistAdds:    set.New(),
@@ -669,6 +673,24 @@ func (buf *EventSequencer) flushServiceAccounts() {
 	log.Debug("Done flushing Service Accounts")
 }
 
+func (buf *EventSequencer) OnIPSecTunnelAdded(tunnelAddr ip.Addr) {
+	if buf.pendingIPSecTunnelRemoves.Contains(tunnelAddr) {
+		// We haven't sent this remove through to the dataplane yet so we can squash it here...
+		buf.pendingIPSecTunnelRemoves.Discard(tunnelAddr)
+	} else {
+		buf.pendingIPSecTunnelAdds.Add(tunnelAddr)
+	}
+}
+
+func (buf *EventSequencer) OnIPSecTunnelRemoved(tunnelAddr ip.Addr) {
+	if buf.pendingIPSecTunnelAdds.Contains(tunnelAddr) {
+		// We haven't sent this add through to the dataplane yet so we can squash it here...
+		buf.pendingIPSecTunnelAdds.Discard(tunnelAddr)
+	} else {
+		buf.pendingIPSecTunnelRemoves.Add(tunnelAddr)
+	}
+}
+
 func (buf *EventSequencer) OnIPSecBindingAdded(b IPSecBinding) {
 	if buf.pendingIPSecBindingRemoves.Contains(b) {
 		// We haven't sent this remove through to the dataplane yet so we can squash it here...
@@ -747,6 +769,24 @@ func (buf *EventSequencer) flushIPSecBindings() {
 		buf.Callback(upd)
 		delete(updatesByTunnel, k)
 	}
+
+	// Now we've removed all the individual bindings, clean up any tunnels that are no longer present.
+	buf.pendingIPSecTunnelRemoves.Iter(func(item interface{}) error {
+		addr := item.(ip.Addr)
+		buf.Callback(&proto.IPSecTunnelRemove{
+			TunnelAddr: addr.String(),
+		})
+		return set.RemoveItem
+	})
+
+	// Then create any new tunnels.
+	buf.pendingIPSecTunnelAdds.Iter(func(item interface{}) error {
+		addr := item.(ip.Addr)
+		buf.Callback(&proto.IPSecTunnelAdd{
+			TunnelAddr: addr.String(),
+		})
+		return set.RemoveItem
+	})
 
 	// Now send the adds.
 	buf.pendingIPSecBindingAdds.Iter(func(item interface{}) error {

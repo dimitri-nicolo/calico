@@ -20,6 +20,8 @@ type ipSecDataplane interface {
 	RemoveBinding(tunnelAddress, workloadAddress string)
 	AddBlacklist(workloadAddress string)
 	RemoveBlacklist(workloadAddress string)
+	AddTunnel(remoteAddr string)
+	RemoveTunnel(remoteAddr string)
 }
 
 type ipsecManager struct {
@@ -33,6 +35,16 @@ type ipsecManager struct {
 
 func (d *ipsecManager) OnUpdate(msg interface{}) {
 	switch msg := msg.(type) {
+	case *proto.IPSecTunnelAdd:
+		log.WithFields(log.Fields{
+			"remoteAddr": msg.TunnelAddr,
+		}).Debug("Adding IPsec tunnel")
+		d.dataplane.AddTunnel(msg.TunnelAddr)
+	case *proto.IPSecTunnelRemove:
+		log.WithFields(log.Fields{
+			"remoteAddr": msg.TunnelAddr,
+		}).Debug("Removing IPsec tunnel")
+		d.dataplane.RemoveTunnel(msg.TunnelAddr)
 	case *proto.IPSecBindingUpdate:
 		log.WithFields(log.Fields{
 			"tunnelAddr": msg.TunnelAddr,
