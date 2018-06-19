@@ -157,10 +157,9 @@ var _ = Describe("Dataplane", func() {
 		})
 	})
 
-	Context("with a binding", func() {
+	Context("with a tunnel", func() {
 		BeforeEach(func() {
 			dataplane.AddTunnel(remoteHostIP)
-			dataplane.AddBinding(remoteHostIP, "10.0.1.2")
 		})
 
 		It("should load the key for the host", func() {
@@ -169,123 +168,148 @@ var _ = Describe("Dataplane", func() {
 				remoteHostIP: "my-key",
 			}))
 		})
-		var (
-			expectedRulesForRemoteWorkload = map[PolicySelector]*PolicyRule{
-				trafficFromRemoteHostToLocalWorkload: &tunnelFromRemote,
-				trafficFromLocalWorkloadToRemoteHost: &tunnelToRemote,
 
-				trafficFromRemoteWorkloadToLocalWorkload: &tunnelFromRemote,
-				trafficFromRemoteWorkloadToLocalHost:     &tunnelFromRemote,
-				trafficToRemoteWorkload:                  &tunnelToRemote,
-			}
-
-			expectedRulesForRemoteWorkload2 = map[PolicySelector]*PolicyRule{
-				trafficFromRemoteHostToLocalWorkload: &tunnelFromRemote,
-				trafficFromLocalWorkloadToRemoteHost: &tunnelToRemote,
-
-				trafficFromRemoteWorkloadToLocalWorkload: &tunnelFromRemote,
-				trafficFromRemoteWorkloadToLocalHost:     &tunnelFromRemote,
-				trafficToRemoteWorkload:                  &tunnelToRemote,
-
-				trafficFromRemoteWorkload2ToLocalWorkload: &tunnelFromRemote,
-				trafficFromRemoteWorkload2ToLocalHost:     &tunnelFromRemote,
-				trafficToRemoteWorkload2:                  &tunnelToRemote,
-			}
-		)
+		expectedRulesForRemoteHost := map[PolicySelector]*PolicyRule{
+			trafficFromRemoteHostToLocalWorkload: &tunnelFromRemote,
+			trafficFromLocalWorkloadToRemoteHost: &tunnelToRemote,
+		}
 
 		It("should add the right rules", func() {
-			Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload))
+			Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteHost))
 		})
 
-		Context("after adding a local binding", func() {
+		Context("with a binding", func() {
 			BeforeEach(func() {
-				dataplane.AddTunnel(localHostIP)
-				dataplane.AddBinding(localHostIP, localWorkloadIP)
+				dataplane.AddBinding(remoteHostIP, "10.0.1.2")
 			})
 
-			It("shouldn't add any new rules", func() {
+			var (
+				expectedRulesForRemoteWorkload = map[PolicySelector]*PolicyRule{
+					trafficFromRemoteHostToLocalWorkload: &tunnelFromRemote,
+					trafficFromLocalWorkloadToRemoteHost: &tunnelToRemote,
+
+					trafficFromRemoteWorkloadToLocalWorkload: &tunnelFromRemote,
+					trafficFromRemoteWorkloadToLocalHost:     &tunnelFromRemote,
+					trafficToRemoteWorkload:                  &tunnelToRemote,
+				}
+
+				expectedRulesForRemoteWorkload2 = map[PolicySelector]*PolicyRule{
+					trafficFromRemoteHostToLocalWorkload: &tunnelFromRemote,
+					trafficFromLocalWorkloadToRemoteHost: &tunnelToRemote,
+
+					trafficFromRemoteWorkloadToLocalWorkload: &tunnelFromRemote,
+					trafficFromRemoteWorkloadToLocalHost:     &tunnelFromRemote,
+					trafficToRemoteWorkload:                  &tunnelToRemote,
+
+					trafficFromRemoteWorkload2ToLocalWorkload: &tunnelFromRemote,
+					trafficFromRemoteWorkload2ToLocalHost:     &tunnelFromRemote,
+					trafficToRemoteWorkload2:                  &tunnelToRemote,
+				}
+			)
+
+			It("should add the right rules", func() {
 				Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload))
 			})
 
-			Context("after removing the local binding", func() {
+			Context("after adding a local tunnel and  binding", func() {
 				BeforeEach(func() {
-					dataplane.RemoveBinding(localHostIP, localWorkloadIP)
+					dataplane.AddTunnel(localHostIP)
+					dataplane.AddBinding(localHostIP, localWorkloadIP)
 				})
 
-				It("shouldn't make any changes", func() {
+				It("shouldn't add any new rules", func() {
 					Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload))
 				})
+
+				Context("after removing the local binding", func() {
+					BeforeEach(func() {
+						dataplane.RemoveBinding(localHostIP, localWorkloadIP)
+					})
+
+					It("shouldn't make any changes", func() {
+						Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload))
+					})
+				})
+				Context("after removing the remote workload", func() {
+					BeforeEach(func() {
+						dataplane.RemoveBinding(remoteHostIP, remoteWorkloadIP)
+					})
+
+					It("should clean up", func() {
+						Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteHost))
+					})
+
+					Context("after removing the remote tunnel", func() {
+						BeforeEach(func() {
+							dataplane.RemoveTunnel(remoteHostIP)
+						})
+
+						It("should clean up", func() {
+							Expect(mPolTable.Rules).To(BeEmpty())
+						})
+					})
+				})
 			})
-			Context("after removing the remote workload", func() {
+
+			Context("after adding a second remote workload", func() {
 				BeforeEach(func() {
-					dataplane.RemoveBinding(remoteHostIP, remoteWorkloadIP)
+					dataplane.AddBinding(remoteHostIP, remoteWorkload2IP)
+				})
+
+				It("should add the right rules", func() {
+					Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload2))
+				})
+
+				It("should not unload the key for the host", func() {
+					Expect(mIKEDaemon.Keys).To(Equal(map[string]string{
+						localHostIP:  "my-key",
+						remoteHostIP: "my-key",
+					}))
+				})
+
+				Context("after removing the second workload", func() {
+					BeforeEach(func() {
+						dataplane.RemoveBinding(remoteHostIP, remoteWorkload2IP)
+					})
+
+					It("should add go back to the single-workload state", func() {
+						Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload))
+					})
+
+					Context("after removing the first workload and tunnel", func() {
+						BeforeEach(func() {
+							dataplane.RemoveBinding(remoteHostIP, "10.0.1.2")
+							dataplane.RemoveTunnel(remoteHostIP)
+						})
+
+						It("should unload the key for the host", func() {
+							Expect(mIKEDaemon.Keys).To(Equal(map[string]string{
+								localHostIP: "my-key",
+							}))
+						})
+
+						It("should remove its rules", func() {
+							Expect(mPolTable.Rules).To(Equal(map[PolicySelector]*PolicyRule{}))
+						})
+					})
+				})
+			})
+
+			Context("after removing the binding and tunnel again", func() {
+				BeforeEach(func() {
+					dataplane.RemoveBinding(remoteHostIP, "10.0.1.2")
 					dataplane.RemoveTunnel(remoteHostIP)
 				})
 
-				It("should clean up", func() {
-					Expect(mPolTable.Rules).To(BeEmpty())
-				})
-			})
-		})
-
-		Context("after adding a second remote workload", func() {
-			BeforeEach(func() {
-				dataplane.AddBinding(remoteHostIP, remoteWorkload2IP)
-			})
-
-			It("should add the right rules", func() {
-				Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload2))
-			})
-
-			It("should not unload the key for the host", func() {
-				Expect(mIKEDaemon.Keys).To(Equal(map[string]string{
-					localHostIP:  "my-key",
-					remoteHostIP: "my-key",
-				}))
-			})
-
-			Context("after removing the second workload", func() {
-				BeforeEach(func() {
-					dataplane.RemoveBinding(remoteHostIP, remoteWorkload2IP)
+				It("should unload the key for the host", func() {
+					Expect(mIKEDaemon.Keys).To(Equal(map[string]string{
+						localHostIP: "my-key",
+					}))
 				})
 
-				It("should add go back to the single-workload state", func() {
-					Expect(mPolTable.Rules).To(Equal(expectedRulesForRemoteWorkload))
+				It("should remove its rules", func() {
+					Expect(mPolTable.Rules).To(Equal(map[PolicySelector]*PolicyRule{}))
 				})
-
-				Context("after removing the first workload", func() {
-					BeforeEach(func() {
-						dataplane.RemoveBinding(remoteHostIP, "10.0.1.2")
-						dataplane.RemoveTunnel(remoteHostIP)
-					})
-
-					It("should unload the key for the host", func() {
-						Expect(mIKEDaemon.Keys).To(Equal(map[string]string{
-							localHostIP: "my-key",
-						}))
-					})
-
-					It("should remove its rules", func() {
-						Expect(mPolTable.Rules).To(Equal(map[PolicySelector]*PolicyRule{}))
-					})
-				})
-			})
-		})
-
-		Context("after removing the binding again", func() {
-			BeforeEach(func() {
-				dataplane.RemoveBinding(remoteHostIP, "10.0.1.2")
-				dataplane.RemoveTunnel(remoteHostIP)
-			})
-
-			It("should unload the key for the host", func() {
-				Expect(mIKEDaemon.Keys).To(Equal(map[string]string{
-					localHostIP: "my-key",
-				}))
-			})
-
-			It("should remove its rules", func() {
-				Expect(mPolTable.Rules).To(Equal(map[PolicySelector]*PolicyRule{}))
 			})
 		})
 	})
