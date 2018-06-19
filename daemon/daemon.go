@@ -523,11 +523,22 @@ configRetry:
 
 	go watchLicenseChanges(backendClient, configParams, bootupLicenseKey)
 
+	if configParams.CloudWatchNodeHealthStatusEnabled {
+		go pushFelixHealthToCloudWatch(configParams.CloudWatchNodeHealthPushIntervalSecs, configParams.ClusterGUID, healthAggregator)
+	}
+
 	// Now monitor the worker process and our worker threads and shut
 	// down the process gracefully if they fail.
 	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
 }
 
+
+func pushFelixHealthToCloudWatch (pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator) {
+	if healthAgg.Summary().Live {
+
+	}
+
+}
 func watchLicenseChanges(client bapi.Client, configParams *config.Config, bootupLicense *apiv3.LicenseKey) {
 	for {
 
