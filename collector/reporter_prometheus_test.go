@@ -94,6 +94,26 @@ var (
 			deltaBytes:   24,
 		},
 	}
+	muNoConn1Rule2DenyUpdate = MetricUpdate{
+		updateType:   UpdateTypeReport,
+		tuple:        tuple1,
+		ruleID:       egressRule2Deny,
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 2,
+			deltaBytes:   40,
+		},
+	}
+	muNoConn1Rule2DenyExpire = MetricUpdate{
+		updateType:   UpdateTypeExpire,
+		tuple:        tuple1,
+		ruleID:       egressRule2Deny,
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 0,
+			deltaBytes:   0,
+		},
+	}
 	muConn2Rule1AllowUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
@@ -114,7 +134,7 @@ var (
 			deltaBytes:   88,
 		},
 	}
-	muNoConn1Rule2DenyUpdate = MetricUpdate{
+	muNoConn3Rule2DenyUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple3,
 		ruleID:       egressRule2Deny,
@@ -124,7 +144,7 @@ var (
 			deltaBytes:   40,
 		},
 	}
-	muNoConn1Rule2DenyExpire = MetricUpdate{
+	muNoConn3Rule2DenyExpire = MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple3,
 		ruleID:       egressRule2Deny,
