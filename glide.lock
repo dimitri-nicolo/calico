@@ -1,5 +1,5 @@
-hash: cd4f25ffc884b62ffc34e6beee9ec27797d822f714387e9a7019eca108d7e142
-updated: 2018-06-07T17:16:12.481844939-07:00
+hash: 6c7ceb4d3939313902b7a1b0c28182262bf67a81d93fda1b3fb6276284685429
+updated: 2018-06-19T11:44:49.983989091-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -16,11 +16,11 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
-  version: 56536de5511128d0c7997aa2b792a4de575da536
+  version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
   - auth/authpb
   - client
@@ -38,7 +38,7 @@ imports:
 - name: github.com/dgrijalva/jwt-go
   version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
 - name: github.com/docopt/docopt-go
-  version: 784ddc588536785e7299f7272f39101f7faccc3f
+  version: ee0de3bc6815ee19d4a46c7eb90f829db0e014b1
 - name: github.com/eapache/channels
   version: 47238d5aae8c0fefd518ef2bee46290909cf8263
 - name: github.com/eapache/queue
@@ -58,7 +58,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -122,7 +122,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/influxdata/influxdb
-  version: 2dde4e6174c6ec75d2cd293e655add419687d601
+  version: 439bb435ea7ce4ba51b7e65889c0d1fbabf4f21d
   subpackages:
   - client/v2
   - models
@@ -148,7 +148,7 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/mcuadros/go-version
-  version: 88e56e02bea1c203c99222c365fa52a69996ccac
+  version: 6d5863ca60fa6fe914b5fd43ed8533d7567c5b0b
 - name: github.com/mitchellh/go-ps
   version: 4fdf99ab29366514c69ccccddab5dc58b8d84062
 - name: github.com/mitchellh/mapstructure
@@ -177,7 +177,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 1eecca0ba8e6f5ea5a431ce21d3aee2af0b4c90b
+  version: dcabb60a477c2b6f456df65037cb6708210fbb02
   subpackages:
   - format
   - internal/assertion
@@ -206,7 +206,7 @@ imports:
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/pelletier/go-toml
-  version: 66540cf1fcd2c3aee6f6787dfa32a6ae9a870f12
+  version: c01d1270ff3e442a8a57cddc1c92dc1138598194
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/go-json
@@ -218,7 +218,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 6803188e1a4fa43de9844d964c664ae9aceae44d
+  version: c586ae70eb809b746d121efe46ac663d05e30ed5
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -261,7 +261,7 @@ imports:
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
@@ -283,7 +283,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/afero
-  version: 63644898a8da0bc22138abf860edaf5277b6102e
+  version: 787d034dfe70e44075ccc060d346146ef53270ad
   subpackages:
   - mem
 - name: github.com/spf13/cast
@@ -297,18 +297,18 @@ imports:
 - name: github.com/termie/go-shutil
   version: bcacb06fecaeec8dc42af03c87c6949f4a05c74c
 - name: github.com/tigera/licensing
-  version: 55a808c36b11f26f665027eed5bc7c03d67dd1ae
+  version: dbaa48ceef2b82d07b531bcf46f8d5e30552dfd9
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
   - client
   - crypto
 - name: github.com/vishvananda/netlink
-  version: fe3b5664d23a11b52ba59bece4ff29c52772a56b
+  version: ee06b1df73a4d5a0620c75fa6ee071b870965017
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
 - name: golang.org/x/crypto
   version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
   subpackages:
@@ -367,7 +367,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 9d8544a6b2c7df9cff240fcf92d7b2f59bc13416
+  version: b1f26356af11148e710935ed1ac8a7f5702c7612
   subpackages:
   - internal
   - internal/app_identity
@@ -542,7 +542,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 0c329704159e3b051aafac400b15baacf2a94a04
+  version: bf40560368791a7dddfeea9b3cfcf89b34139f44
   subpackages:
   - pkg/common
 testImports: []
