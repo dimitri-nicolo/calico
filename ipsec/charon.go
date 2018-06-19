@@ -34,7 +34,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const viciSocketPath = "/var/run/charon.vici"
+const (
+	viciSocketPath = "/var/run/charon.vici"
+
+	defaultRetryCount   = 3
+	firstConnRetrycount = 100
+)
 
 type Uri struct {
 	Network, Address string
@@ -331,9 +336,11 @@ func (charon *CharonIKEDaemon) UnloadSharedKey(remoteIP string) error {
 }
 
 func (charon *CharonIKEDaemon) client() VICIClient {
-	attempts := 3
+	attempts := defaultRetryCount
 	if !charon.firstConnSucceeded {
-		attempts = 100
+		// The Charon takes a while to accept connections at start of day, give it a substantially longer time for the
+		// first connection.
+		attempts = firstConnRetrycount
 	}
 	if charon.cachedClient == nil {
 		var err error
@@ -368,7 +375,7 @@ func (charon *CharonIKEDaemon) discardClient() {
 func (charon *CharonIKEDaemon) withClientRetry(opName string, f func(c VICIClient) error) error {
 	debug := log.GetLevel() >= log.DebugLevel
 	var err error
-	for attempt := 0; attempt < 3; attempt++ {
+	for attempt := 0; attempt < defaultRetryCount; attempt++ {
 		if debug {
 			log.WithField("operation", opName).Debug("Attempting VICI operation")
 		}

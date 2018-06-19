@@ -379,6 +379,8 @@ func (c *mockCharon) LoadShared(key *goStrongswanVici.Key) error {
 }
 
 func (c *mockCharon) UnloadShared(key *goStrongswanVici.UnloadKeyRequest) error {
+	Expect(key).NotTo(BeNil())
+
 	if err := c.Errors.NextError("UnloadShared"); err != nil {
 		return err
 	}
@@ -386,6 +388,5 @@ func (c *mockCharon) UnloadShared(key *goStrongswanVici.UnloadKeyRequest) error 
 	Expect(c.Keys).To(HaveKey(key.ID))
 	delete(c.Keys, key.ID)
 
-	Expect(key).NotTo(BeNil())
 	return nil
 }
