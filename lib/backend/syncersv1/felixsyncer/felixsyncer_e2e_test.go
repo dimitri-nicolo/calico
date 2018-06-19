@@ -74,6 +74,13 @@ var defaultKubernetesResource = []model.KVPair{
 		},
 	},
 	{
+		Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "default"}},
+		Value: &model.ProfileRules{
+			InboundRules:  []model.Rule{{Action: "allow"}},
+			OutboundRules: []model.Rule{{Action: "allow"}},
+		},
+	},
+	{
 		Key:   model.HostConfigKey{Hostname: "127.0.0.1", Name: "IpInIpTunnelAddr"},
 		Value: "10.10.10.1",
 	},
