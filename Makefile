@@ -63,7 +63,9 @@ CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 
 PACKAGE_NAME?=github.com/projectcalico/cni-plugin
 
-CONTAINER_NAME=calico/cni
+CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
+
+CONTAINER_NAME=tigera/cni
 DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
 
 ETCD_VER=v3.3.7
@@ -100,7 +102,11 @@ vendor: glide.yaml
 	if [ "$(LIBCALICOGO_PATH)" != "none" ]; then \
           EXTRA_DOCKER_BIND="-v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro"; \
 	fi; \
+	if [ -n "$(SSH_AUTH_SOCK)" ]; then \
+		EXTRA_DOCKER_ARGS="-v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
+	fi; \
     docker run --rm -i \
+	  $$EXTRA_DOCKER_ARGS \
       -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
       -v $(HOME)/.glide:/home/user/.glide:rw \
       -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
@@ -139,23 +145,9 @@ endif
 
 ## push one arch
 push: imagetag
-	docker push $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker push quay.io/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-
-	# Push images to gcr.io, used by GKE.
-	docker push gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker push eu.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker push asia.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker push us.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+	docker push $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
 ifeq ($(ARCH),amd64)
-	docker push $(CONTAINER_NAME):$(IMAGETAG)
-	docker push quay.io/$(CONTAINER_NAME):$(IMAGETAG)
-
-	# Push images to gcr.io, used by GKE.
-	docker push gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)
-	docker push eu.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)
-	docker push asia.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)
-	docker push us.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)
+	docker push $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)
 endif
 
 ## push all archs
@@ -165,23 +157,9 @@ sub-push-%:
 
 ## tag images of one arch
 tag-images: imagetag
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-
-	# Tag images for gcr.io, used by GKE.
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) eu.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) asia.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) us.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
 ifeq ($(ARCH),amd64)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):$(IMAGETAG)
-
-	# Tag images for gcr.io, used by GKE.
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) eu.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) asia.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) us.gcr.io/projectcalico-org/$(CONTAINER_NAME):$(IMAGETAG)
+	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)
 endif
 
 ## tag images of all archs
@@ -361,8 +339,8 @@ release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
 	docker run --rm calico/cni:$(VERSION)-$(ARCH) calico -v | grep -x $(VERSION) || ( echo "Reported version:" `docker run --rm calico/cni:$(VERSION)-$(ARCH) calico -v` "\nExpected version: $(VERSION)" && exit 1 )
 	docker run --rm calico/cni:$(VERSION)-$(ARCH) calico-ipam -v | grep -x $(VERSION) || ( echo "Reported version:" `docker run --rm calico/cni:$(VERSION)-$(ARCH) calico-ipam -v | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/calico/cni:$(VERSION)-$(ARCH) calico -v | grep -x $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/calico/cni:$(VERSION)-$(ARCH) calico -v | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
-	docker run --rm quay.io/calico/cni:$(VERSION)-$(ARCH) calico-ipam -v | grep -x $(VERSION) || ( echo "Reported version:" `docker run --rm quay.io/calico/cni:$(VERSION)-$(ARCH) calico-ipam -v | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
+	docker run --rm $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(VERSION)-$(ARCH) calico -v | grep -x $(VERSION) || ( echo "Reported version:" `docker run --rm $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(VERSION)-$(ARCH) calico -v | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
+	docker run --rm $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(VERSION)-$(ARCH) calico-ipam -v | grep -x $(VERSION) || ( echo "Reported version:" `docker run --rm $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(VERSION)-$(ARCH) calico-ipam -v | grep -x $(VERSION)` "\nExpected version: $(VERSION)" && exit 1 )
 
 	# TODO: Some sort of quick validation of the produced binaries.
 
@@ -383,7 +361,7 @@ release-publish: release-prereqs
 	@echo "Finalize the GitHub release based on the pushed tag."
 	@echo "Attach the $(BIN)/calico and $(BIN)/calico-ipam binaries."
 	@echo ""
-	@echo "  https://$(PACKAGE_NAME)/releases/tag/$(VERSION)"
+	@echo "  https://github.com/tigera/cni-plugin/releases/tag/$(VERSION)"
 	@echo ""
 	@echo "If this is the latest stable release, then run the following to push 'latest' images."
 	@echo ""
@@ -396,7 +374,7 @@ release-publish: release-prereqs
 release-publish-latest: release-prereqs
 	# Check latest versions match.
 	if ! docker run $(CONTAINER_NAME):latest-$(ARCH) calico -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(CONTAINER_NAME):latest-$(ARCH) calico -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(CONTAINER_NAME):latest-$(ARCH) calico -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run quay.io/$(CONTAINER_NAME):latest-$(ARCH) calico -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+	if ! docker run $(CNX_REPOSITORY)/$(CONTAINER_NAME):latest-$(ARCH) calico -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(CNX_REPOSITORY)/$(CONTAINER_NAME):latest-$(ARCH) calico -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
 	$(MAKE) push IMAGETAG=latest ARCH=$(ARCH)
 
