@@ -1,5 +1,5 @@
-hash: efea5c227a2056d221163ac4e00b0344a07616cd0c6158fa0ddfb2a91ee62fa6
-updated: 2018-05-29T16:00:57.310344806Z
+hash: 7d1b597257acb562eb75a27950a30a2bda8291fa7441b1aeafb908b26a6af1be
+updated: 2018-06-19T19:27:32.406040121Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -50,6 +50,8 @@ imports:
   version: dcef7f55730566d41eae5db10e7d6981829720f6
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
+- name: github.com/go-ini/ini
+  version: 06f5f3d67269ccec1fe5fe4134ba6e982984f7f5
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
@@ -111,6 +113,8 @@ imports:
   version: 36b14963da70d11297d313183d7e6388c8510e1e
 - name: github.com/juju/ratelimit
   version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
+- name: github.com/kardianos/osext
+  version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/envconfig
   version: f611eb38b3875cc3bd991ca91c51d06446afa14c
 - name: github.com/mailru/easyjson
@@ -164,12 +168,26 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 518dbc352494a962e46d50f8bfe72a70c86951bf
+  version: 06a4cf35b59da953833a6055fd0f03acf63d8f71
+  repo: git@github.com:tigera/felix-private
   subpackages:
+  - calc
+  - config
+  - dispatcher
   - fv
   - fv.containers
   - fv/containers
   - fv/utils
+  - hashutils
+  - ip
+  - ipsets
+  - iptables
+  - labelindex
+  - markbits
+  - multidict
+  - proto
+  - rules
+  - stringutils
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -179,7 +197,8 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: d6aff54dc3527357f016c0cd5c5364f21a15e9b4
+  version: 675b87245a587f603504836f5533f222571f1eec
+  repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
   - lib/apis/v1
@@ -195,6 +214,7 @@ imports:
   - lib/clientv3
   - lib/errors
   - lib/hash
+  - lib/health
   - lib/ipam
   - lib/ipip
   - lib/logutils
@@ -209,6 +229,7 @@ imports:
   - lib/selector/tokenizer
   - lib/set
   - lib/testutils
+  - lib/validator/v1
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
@@ -302,7 +323,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 0a24098c0ec68416ec050f567f75df563d6b231e
   subpackages:
   - internal
   - internal/app_identity
@@ -502,8 +523,5 @@ imports:
 - name: k8s.io/kube-openapi
   version: 61b46af70dfed79c6d24530cd23b41440a7f22a5
   subpackages:
-  - pkg/builder
   - pkg/common
-  - pkg/handler
-  - pkg/util
 testImports: []

@@ -91,7 +91,7 @@ func main() {
 	log.Info("Ensuring Calico datastore is initialized")
 	initCtx, cancelInit := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelInit()
-	err = calicoClient.EnsureInitialized(initCtx, "", "k8s")
+	err = calicoClient.EnsureInitialized(initCtx, "", "", "k8s")
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize Calico datastore")
 	}

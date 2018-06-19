@@ -89,7 +89,7 @@ sub-build-%:
 	$(MAKE) build ARCH=$*
 
 # Populates the vendor directory.
-vendor: glide.lock
+vendor: glide.yaml
 	# Ensure that the glide cache directory exists.
 	mkdir -p $(HOME)/.glide
 
