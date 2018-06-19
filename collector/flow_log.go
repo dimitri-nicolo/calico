@@ -49,25 +49,25 @@ type EndpointMetadata struct {
 // FlowLog captures the context and information associated with
 // 5-tuple update.
 type FlowLog struct {
-	Tuple             Tuple            `json:"srcType"`
-	SrcMeta           EndpointMetadata `json:"srcMeta"`
-	DstMeta           EndpointMetadata `json:"dstMeta"`
-	NumFlows          int              `json:"numFlows"`
-	NumFlowsStarted   int              `json:"numFlowsStarted"`
-	NumFlowsCompleted int              `json:"numFlowsCompleted"`
-	PacketsIn         int              `json:"packetsIn"`
-	PacketsOut        int              `json:"packetsOut"`
-	BytesIn           int              `json:"bytesIn"`
-	BytesOut          int              `json:"bytesOut"`
-	Action            FlowLogAction    `json:"action"`
-	FlowDirection     FlowLogDirection `json:"flowDirection"`
+	Tuple              Tuple            `json:"tuple"`
+	SrcMeta            EndpointMetadata `json:"srcMeta"`
+	DstMeta            EndpointMetadata `json:"dstMeta"`
+	PacketsIn          int              `json:"packetsIn"`
+	PacketsOut         int              `json:"packetsOut"`
+	BytesIn            int              `json:"bytesIn"`
+	BytesOut           int              `json:"bytesOut"`
+	Action             FlowLogAction    `json:"action"`
+	FlowDirection      FlowLogDirection `json:"flowDirection"`
+	NumFlows           int              `json:"numFlows"`
+	NumFlowsStarted    int              `json:"numFlowsStarted"`
+	NumFlowsCompleted  int              `json:"numFlowsCompleted"`
+	flowsRefs          tupleSet         `json:"-"`
+	flowsStartedRefs   tupleSet         `json:"-"`
+	flowsCompletedRefs tupleSet         `json:"-"`
 }
 
 func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) string {
-	var (
-		srcLabels, dstLabels string
-		l4Src, l4Dst         string
-	)
+	var srcLabels, dstLabels string
 
 	if includeLabels {
 		sl, err := json.Marshal(f.SrcMeta.Labels)
@@ -83,16 +83,7 @@ func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) stri
 		dstLabels = flowLogFieldNotIncluded
 	}
 
-	srcIP := net.IP(f.Tuple.src[:16]).String()
-	dstIP := net.IP(f.Tuple.dst[:16]).String()
-
-	if f.Tuple.proto != 1 {
-		l4Src = fmt.Sprintf("%d", f.Tuple.l4Src)
-		l4Dst = fmt.Sprintf("%d", f.Tuple.l4Dst)
-	} else {
-		l4Src = flowLogFieldNotIncluded
-		l4Dst = flowLogFieldNotIncluded
-	}
+	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(f.Tuple)
 
 	// Format is
 	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowDirection packetsIn packetsOut bytesIn bytesOut action
@@ -100,7 +91,7 @@ func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) stri
 		startTime.Unix(), endTime.Unix(),
 		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, srcLabels,
 		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, dstLabels,
-		srcIP, dstIP, f.Tuple.proto, l4Src, l4Dst,
+		srcIP, dstIP, proto, l4Src, l4Dst,
 		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.FlowDirection,
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
 		f.Action)
@@ -108,11 +99,19 @@ func (f FlowLog) ToString(startTime, endTime time.Time, includeLabels bool) stri
 
 func (f *FlowLog) aggregateMetricUpdate(mu MetricUpdate) error {
 	// TODO(doublek): Handle metadata updates.
-	var nfc int
-	if mu.updateType == UpdateTypeExpire {
-		nfc = 1
+	switch {
+	case mu.updateType == UpdateTypeReport && !f.flowsStartedRefs.Contains(mu.tuple):
+		f.flowsStartedRefs.Add(mu.tuple)
+	case mu.updateType == UpdateTypeExpire && !f.flowsCompletedRefs.Contains(mu.tuple):
+		f.flowsCompletedRefs.Add(mu.tuple)
 	}
-	f.NumFlowsCompleted += nfc
+	// If this is the first time we are seeing this tuple.
+	if !f.flowsRefs.Contains(mu.tuple) || (mu.updateType == UpdateTypeReport && f.flowsCompletedRefs.Contains(mu.tuple)) {
+		f.flowsRefs.Add(mu.tuple)
+	}
+	f.NumFlows = f.flowsRefs.Len()
+	f.NumFlowsStarted = f.flowsStartedRefs.Len()
+	f.NumFlowsCompleted = f.flowsCompletedRefs.Len()
 	f.PacketsIn += mu.inMetric.deltaPackets
 	f.BytesIn += mu.inMetric.deltaBytes
 	f.PacketsOut += mu.outMetric.deltaPackets
@@ -160,7 +159,7 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 	return em, err
 }
 
-func getFlowLogFromMetricUpdate(mu MetricUpdate) (FlowLog, error) {
+func getFlowLogFromMetricUpdate(mu MetricUpdate, kind AggregationKind) (FlowLog, error) {
 	var (
 		srcMeta, dstMeta EndpointMetadata
 		err              error
@@ -180,32 +179,61 @@ func getFlowLogFromMetricUpdate(mu MetricUpdate) (FlowLog, error) {
 		}
 	}
 
-	var nf, nfs, nfc int
+	flowsRefs := NewTupleSet()
+	flowsRefs.Add(mu.tuple)
+	flowsStartedRefs := NewTupleSet()
+	flowsCompletedRefs := NewTupleSet()
+
 	switch mu.updateType {
 	case UpdateTypeReport:
-		nfs = 1
+		flowsStartedRefs.Add(mu.tuple)
 	case UpdateTypeExpire:
-		nfc = 1
+		flowsCompletedRefs.Add(mu.tuple)
 	}
-	// 1 always when we create the flow
-	nf = 1
 
 	action, flowDir := getFlowLogActionAndDirFromRuleID(mu.ruleID)
 
+	aggTuple := getTupleForAggreagation(mu.tuple, kind)
+
 	return FlowLog{
-		Tuple:             mu.tuple,
-		SrcMeta:           srcMeta,
-		DstMeta:           dstMeta,
-		NumFlows:          nf,
-		NumFlowsStarted:   nfs,
-		NumFlowsCompleted: nfc,
-		PacketsIn:         mu.inMetric.deltaPackets,
-		BytesIn:           mu.inMetric.deltaBytes,
-		PacketsOut:        mu.outMetric.deltaPackets,
-		BytesOut:          mu.outMetric.deltaBytes,
-		Action:            action,
-		FlowDirection:     flowDir,
+		Tuple:              aggTuple,
+		SrcMeta:            srcMeta,
+		DstMeta:            dstMeta,
+		NumFlows:           flowsRefs.Len(),
+		NumFlowsStarted:    flowsStartedRefs.Len(),
+		NumFlowsCompleted:  flowsCompletedRefs.Len(),
+		PacketsIn:          mu.inMetric.deltaPackets,
+		BytesIn:            mu.inMetric.deltaBytes,
+		PacketsOut:         mu.outMetric.deltaPackets,
+		BytesOut:           mu.outMetric.deltaBytes,
+		Action:             action,
+		FlowDirection:      flowDir,
+		flowsRefs:          flowsRefs,
+		flowsStartedRefs:   flowsStartedRefs,
+		flowsCompletedRefs: flowsCompletedRefs,
 	}, nil
+}
+
+func getTupleForAggreagation(orig Tuple, kind AggregationKind) Tuple {
+	var aggTuple Tuple
+	switch kind {
+	case Default:
+		aggTuple = orig
+	case SourcePort:
+		// "4-tuple"
+		aggTuple = Tuple{
+			src:   orig.src,
+			dst:   orig.dst,
+			proto: orig.proto,
+			l4Dst: orig.l4Dst,
+		}
+	case PrefixName:
+		// only destination port survives the aggregation.
+		aggTuple = Tuple{
+			l4Dst: orig.l4Dst,
+		}
+	}
+	return aggTuple
 }
 
 // getFlowLogActionAndDirFromRuleID converts the action to a string value.
@@ -221,6 +249,45 @@ func getFlowLogActionAndDirFromRuleID(r *calc.RuleID) (fla FlowLogAction, fld Fl
 		fld = FlowLogDirectionIn
 	case rules.RuleDirEgress:
 		fld = FlowLogDirectionOut
+	}
+	return
+}
+
+// extractPartsFromAggregatedTuple converts and returns each field of a tuple to a string.
+// If a field is missing a "-" is used in it's place. This can happen if:
+// - This field has been aggregated over.
+// - This is a ICMP flow in which case it is a "3-tuple" where only source ip,
+//   destination IP and protocol makes sense.
+func extractPartsFromAggregatedTuple(t Tuple) (srcIP, dstIP, proto, l4Src, l4Dst string) {
+	// Try to extract source and destination IP address.
+	// This field is aggregated over when using PrefixName aggregation.
+	sip := net.IP(t.src[:16])
+	if sip.IsUnspecified() {
+		srcIP = flowLogFieldNotIncluded
+	} else {
+		srcIP = sip.String()
+	}
+	dip := net.IP(t.dst[:16])
+	if dip.IsUnspecified() {
+		dstIP = flowLogFieldNotIncluded
+	} else {
+		dstIP = dip.String()
+	}
+
+	proto = fmt.Sprintf("%d", t.proto)
+
+	if t.proto != 1 {
+		// Check if SourcePort has been aggregated over.
+		if t.l4Src == 0 {
+			l4Src = flowLogFieldNotIncluded
+		} else {
+			l4Src = fmt.Sprintf("%d", t.l4Src)
+		}
+		l4Dst = fmt.Sprintf("%d", t.l4Dst)
+	} else {
+		// ICMP has no l4 fields.
+		l4Src = flowLogFieldNotIncluded
+		l4Dst = flowLogFieldNotIncluded
 	}
 	return
 }

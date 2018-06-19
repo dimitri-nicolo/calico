@@ -12,7 +12,7 @@ var _ = Describe("Flow log aggregator verification", func() {
 		expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection) {
 			fl, err := getFlowLog(msg)
 			Expect(err).To(BeNil())
-			Expect(fl.Tuple).Should(Equal(tuple1))
+			Expect(fl.Tuple).Should(Equal(t))
 			Expect(fl.NumFlows).Should(Equal(nf))
 			Expect(fl.NumFlowsStarted).Should(Equal(nfs))
 			Expect(fl.NumFlowsCompleted).Should(Equal(nfc))
@@ -43,8 +43,12 @@ var _ = Describe("Flow log aggregator verification", func() {
 		messages = ca.Get()
 		Expect(len(messages)).Should(Equal(1))
 		message = *(messages[0])
+		expectedTuple := tuple1Copy
+		expectedTuple.l4Src = 0
+		expectedNumFlows++
+		expectedNumFlowsStarted++
 
-		expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+		expectFlowLog(message, expectedTuple, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
 
 	})
 })
