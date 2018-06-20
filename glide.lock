@@ -1,5 +1,5 @@
-hash: 14816e834afa5459b07b36f60f5990617ecac64b838f50746cebfab36af497ca
-updated: 2018-06-04T14:47:57.826765407-07:00
+hash: a0bcda1031720f4f0e8184d9563f2859ce72ca04a58e3b15711585c6d72610c9
+updated: 2018-06-19T17:43:39.414178276-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -52,7 +52,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -134,7 +134,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: b95d12c63b408a5ecced3e5ae34db59db37f167e
+  version: c586ae70eb809b746d121efe46ac663d05e30ed5
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -174,11 +174,11 @@ imports:
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
+  version: 7600349dcfe1abd18d72d3a1770870d9800a7801
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -220,7 +220,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 88d2dcc510266da9f7f8c7f34e1940716cab5f5c
+  version: bb24a47a89eac6c1227fbcb2ae37a8b9ed323366
   subpackages:
   - unix
   - windows
@@ -407,7 +407,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 0c329704159e3b051aafac400b15baacf2a94a04
+  version: bf40560368791a7dddfeea9b3cfcf89b34139f44
   subpackages:
   - pkg/common
 testImports: []
