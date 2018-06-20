@@ -121,6 +121,10 @@ func (c *profileClient) Get(ctx context.Context, key model.Key, revision string)
 	rk := key.(model.ResourceKey)
 	if rk.Name == "" {
 		return nil, fmt.Errorf("Profile key missing name: %+v", rk)
+	} else if rk.Name == "default" {
+		// Asked for the "default" profile. This is hard-coded, so we don't
+		// need to query the datastore.
+		return DefaultProfile(), nil
 	}
 
 	nsRev, saRev, err := c.SplitProfileRevision(revision)
@@ -206,6 +210,10 @@ func (c *profileClient) List(ctx context.Context, list model.ListInterface, revi
 		log.Debug("Converted k8s sa to Calico profile ", sa.Name)
 		kvps = append(kvps, kvp)
 	}
+
+	// Add a default profile which allows traffic. Can be used for host endpoints.
+	kvps = append(kvps, DefaultProfile())
+
 	return &model.KVPairList{
 		KVPairs:  kvps,
 		Revision: c.JoinProfileRevisions(namespaces.ResourceVersion, serviceaccounts.ResourceVersion),
