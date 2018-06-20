@@ -33,6 +33,9 @@ endif
 # Select which release branch to test.
 RELEASE_BRANCH?=master
 
+# Select which registry to push image to.
+REGISTRY?=gcr.io/unique-caldron-775/cnx
+
 # Disable make's implicit rules, which are not useful for golang, and slow down the build
 # considerably.
 .SUFFIXES:
@@ -42,10 +45,10 @@ all: clean test
 GO_BUILD_VER?=latest
 GO_BUILD_CONTAINER = calico/go-build:$(GO_BUILD_VER)-$(BUILDARCH)
 
-CONTAINER_NAME=calico/confd
+CONTAINER_NAME=tigera/confd
 
 CALICOCTL_VER=master
-CALICOCTL_CONTAINER_NAME=calico/ctl:$(CALICOCTL_VER)-$(ARCH)
+CALICOCTL_CONTAINER_NAME=$(REGISTRY)/tigera/calicoctl:$(CALICOCTL_VER)
 K8S_VERSION=v1.8.1
 ETCD_VER=v3.2.5
 BIRD_VER=v0.3.1
@@ -73,6 +76,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -e GOARCH=$(ARCH) \
                               -v ${CURDIR}:/go/src/github.com/kelseyhightower/confd:rw \
                               -v ${CURDIR}/.go-pkg-cache:/go/pkg:rw \
+                              -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
                               -w /go/src/github.com/kelseyhightower/confd \
                               $(GO_BUILD_CONTAINER)
 
@@ -146,11 +150,9 @@ endif
 
 ## push one arch
 push: imagetag
-	docker push $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker push quay.io/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+	docker push $(REGISTRY)/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
 ifeq ($(ARCH),amd64)
-	docker push $(CONTAINER_NAME):$(IMAGETAG)
-	docker push quay.io/$(CONTAINER_NAME):$(IMAGETAG)
+	docker push $(REGISTRY)/$(CONTAINER_NAME):$(IMAGETAG)
 endif
 
 ## push all archs
@@ -162,10 +164,10 @@ sub-push-%:
 ## tag images of one arch
 tag-images: imagetag
 	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(REGISTRY)/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
 ifeq ($(ARCH),amd64)
 	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):$(IMAGETAG)
+	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(REGISTRY)/$(CONTAINER_NAME):$(IMAGETAG)
 endif
 
 ## tag images of all archs
@@ -361,11 +363,11 @@ clean:
 	rm -rf tests/logs
 	-docker rmi -f $(CONTAINER_NAME):latest-$(ARCH)
 	-docker rmi -f $(CONTAINER_NAME):$(VERSION)-$(ARCH)
-	-docker rmi -f quay.io/$(CONTAINER_NAME):latest-$(ARCH)
-	-docker rmi -f quay.io/$(CONTAINER_NAME):$(VERSION)-$(ARCH)
+	-docker rmi -f $(REGISTRY)/$(CONTAINER_NAME):latest-$(ARCH)
+	-docker rmi -f $(REGISTRY)/$(CONTAINER_NAME):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
 	-docker rmi -f $(CONTAINER_NAME):latest
 	-docker rmi -f $(CONTAINER_NAME):$(VERSION)
-	-docker rmi -f quay.io/$(CONTAINER_NAME):latest
-	-docker rmi -f quay.io/$(CONTAINER_NAME):$(VERSION)
+	-docker rmi -f $(REGISTRY)/$(CONTAINER_NAME):latest
+	-docker rmi -f $(REGISTRY)/$(CONTAINER_NAME):$(VERSION)
 endif
