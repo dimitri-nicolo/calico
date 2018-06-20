@@ -523,10 +523,8 @@ func (config *Config) Validate() (err error) {
 		var problems []string
 		if config.IPSecPSKFile == "" {
 			problems = append(problems, "IPSecPSKFile is not set")
-		} else {
-			if _, err := os.Stat(config.IPSecPSKFile); os.IsNotExist(err) {
-				problems = append(problems, "IPSecPSKFile not found")
-			}
+		} else if _, err := os.Stat(config.IPSecPSKFile); os.IsNotExist(err) {
+			problems = append(problems, "IPSecPSKFile not found")
 		}
 		if config.IPSecIKEAlgorithm == "" {
 			problems = append(problems, "IPSecIKEAlgorithm is not set")
