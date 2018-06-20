@@ -15,9 +15,13 @@
 package felixsyncer
 
 import (
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
+	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/remotecluster"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/updateprocessors"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 )
@@ -87,6 +91,107 @@ func New(client api.Client, callbacks api.SyncerCallbacks) api.Syncer {
 	return watchersyncer.New(
 		client,
 		resourceTypes,
-		NewWrappedCallbacks(callbacks),
+		remotecluster.NewWrappedCallbacks(callbacks, felixRemoteClusterProcessor{}),
 	)
+}
+
+// felixRemoteClusterProcessor provides the Felix syncer specific remote cluster processing.
+type felixRemoteClusterProcessor struct{}
+
+func (_ felixRemoteClusterProcessor) CreateResourceTypes() []watchersyncer.ResourceType {
+	return []watchersyncer.ResourceType{
+		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindWorkloadEndpoint},
+			UpdateProcessor: updateprocessors.NewWorkloadEndpointUpdateProcessor(),
+		},
+		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindHostEndpoint},
+			UpdateProcessor: updateprocessors.NewHostEndpointUpdateProcessor(),
+		},
+		{
+			ListInterface:   model.ResourceListOptions{Kind: apiv3.KindProfile},
+			UpdateProcessor: updateprocessors.NewProfileUpdateProcessor(),
+		},
+	}
+}
+
+func (_ felixRemoteClusterProcessor) ConvertUpdates(clusterName string, updates []api.Update) []api.Update {
+	for i, update := range updates {
+		if update.UpdateType == api.UpdateTypeKVUpdated || update.UpdateType == api.UpdateTypeKVNew {
+			switch t := update.Key.(type) {
+			default:
+				log.Warnf("unexpected type %T\n", t)
+			case model.HostEndpointKey:
+				t.Hostname = clusterName + "/" + t.Hostname
+				updates[i].Key = t
+				for profileIndex, profile := range updates[i].Value.(*model.HostEndpoint).ProfileIDs {
+					updates[i].Value.(*model.HostEndpoint).ProfileIDs[profileIndex] = clusterName + "/" + profile
+				}
+			case model.WorkloadEndpointKey:
+				t.Hostname = clusterName + "/" + t.Hostname
+				updates[i].Key = t
+				for profileIndex, profile := range updates[i].Value.(*model.WorkloadEndpoint).ProfileIDs {
+					updates[i].Value.(*model.WorkloadEndpoint).ProfileIDs[profileIndex] = clusterName + "/" + profile
+				}
+			case model.ProfileRulesKey:
+				t.Name = clusterName + "/" + t.Name
+				updates[i].Value.(*model.ProfileRules).InboundRules = []model.Rule{}
+				updates[i].Value.(*model.ProfileRules).OutboundRules = []model.Rule{}
+				updates[i].Key = t
+			case model.ProfileLabelsKey:
+				t.Name = clusterName + "/" + t.Name
+				updates[i].Key = t
+			case model.ProfileTagsKey:
+				t.Name = clusterName + "/" + t.Name
+				updates[i].Key = t
+			}
+		} else if update.UpdateType == api.UpdateTypeKVDeleted {
+			switch t := update.Key.(type) {
+			default:
+				log.Warnf("unexpected type %T\n", t)
+			case model.HostEndpointKey:
+				t.Hostname = clusterName + "/" + t.Hostname
+				updates[i].Key = t
+			case model.WorkloadEndpointKey:
+				t.Hostname = clusterName + "/" + t.Hostname
+				updates[i].Key = t
+			case model.ProfileRulesKey:
+				t.Name = clusterName + "/" + t.Name
+				updates[i].Key = t
+			case model.ProfileLabelsKey:
+				t.Name = clusterName + "/" + t.Name
+				updates[i].Key = t
+			case model.ProfileTagsKey:
+				t.Name = clusterName + "/" + t.Name
+				updates[i].Key = t
+			}
+		}
+	}
+
+	return updates
+}
+
+func (_ felixRemoteClusterProcessor) GetCalicoAPIConfig(config *apiv3.RemoteClusterConfiguration) *apiconfig.CalicoAPIConfig {
+	datastoreConfig := apiconfig.NewCalicoAPIConfig()
+	datastoreConfig.Spec.DatastoreType = apiconfig.DatastoreType(config.Spec.DatastoreType)
+	switch datastoreConfig.Spec.DatastoreType {
+	case apiconfig.EtcdV3:
+		datastoreConfig.Spec.EtcdEndpoints = config.Spec.EtcdEndpoints
+		datastoreConfig.Spec.EtcdUsername = config.Spec.EtcdUsername
+		datastoreConfig.Spec.EtcdPassword = config.Spec.EtcdPassword
+		datastoreConfig.Spec.EtcdKeyFile = config.Spec.EtcdKeyFile
+		datastoreConfig.Spec.EtcdCertFile = config.Spec.EtcdCertFile
+		datastoreConfig.Spec.EtcdCACertFile = config.Spec.EtcdCACertFile
+		return datastoreConfig
+	case apiconfig.Kubernetes:
+		datastoreConfig.Spec.Kubeconfig = config.Spec.Kubeconfig
+		datastoreConfig.Spec.K8sAPIEndpoint = config.Spec.K8sAPIEndpoint
+		datastoreConfig.Spec.K8sKeyFile = config.Spec.K8sKeyFile
+		datastoreConfig.Spec.K8sCertFile = config.Spec.K8sCertFile
+		datastoreConfig.Spec.K8sCAFile = config.Spec.K8sCAFile
+		datastoreConfig.Spec.K8sAPIToken = config.Spec.K8sAPIToken
+		datastoreConfig.Spec.K8sInsecureSkipTLSVerify = config.Spec.K8sInsecureSkipTLSVerify
+		return datastoreConfig
+	}
+	return nil
 }
