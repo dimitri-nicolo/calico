@@ -80,6 +80,7 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	if err != nil {
 		return FlowMeta{}, err
 	}
+
 	f.Tuple.src = [16]byte{}
 	f.Tuple.l4Src = unsetIntField
 	f.Tuple.dst = [16]byte{}

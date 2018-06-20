@@ -27,13 +27,6 @@ const (
 	proto_udp  = 17
 )
 
-func ipStrTo16Byte(ipStr string) [16]byte {
-	addr := net.ParseIP(ipStr)
-	var addrB [16]byte
-	copy(addrB[:], addr.To16()[:16])
-	return addrB
-}
-
 var (
 	localIp1     = ipStrTo16Byte("10.0.0.1")
 	localIp2     = ipStrTo16Byte("10.0.0.2")

@@ -144,3 +144,10 @@ func getFlowLogActionAndDirFromRuleID(r *calc.RuleID) (fla FlowLogAction, fld Fl
 	}
 	return
 }
+
+func ipStrTo16Byte(ipStr string) [16]byte {
+	addr := net.ParseIP(ipStr)
+	var addrB [16]byte
+	copy(addrB[:], addr.To16()[:16])
+	return addrB
+}
