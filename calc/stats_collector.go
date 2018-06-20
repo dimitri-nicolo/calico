@@ -67,6 +67,7 @@ type StatsCollector struct {
 	numTiers             int
 	numPolicies          int
 	numProfiles          int
+	numALPPolicies       int
 
 	lastUpdate StatsUpdate
 	inSync     bool
@@ -81,6 +82,7 @@ type StatsUpdate struct {
 	NumTiers             int
 	NumPolicies          int
 	NumProfiles          int
+	NumALPPolicies       int
 }
 
 func (s StatsUpdate) String() string {
@@ -160,19 +162,21 @@ func (s *StatsCollector) OnUpdate(update api.Update) (filterOut bool) {
 	return
 }
 
-func (s *StatsCollector) UpdatePolicyCounts(numTiers, numPolicies, numProfiles int) {
-	if numTiers == s.numTiers && numPolicies == s.numPolicies && numProfiles == s.numProfiles {
+func (s *StatsCollector) UpdatePolicyCounts(numTiers, numPolicies, numProfiles, numALPPolicies int) {
+	if numTiers == s.numTiers && numPolicies == s.numPolicies && numProfiles == s.numProfiles && numALPPolicies == s.numALPPolicies {
 		return
 	}
 
 	log.WithFields(log.Fields{
-		"numTiers":    numTiers,
-		"numPolicies": numPolicies,
-		"numProfiles": numProfiles,
+		"numTiers":       numTiers,
+		"numPolicies":    numPolicies,
+		"numProfiles":    numProfiles,
+		"numALPPolicies": numALPPolicies,
 	}).Debug("Number of tiers/policies/profiles changed")
 	s.numTiers = numTiers
 	s.numPolicies = numPolicies
 	s.numProfiles = numProfiles
+	s.numALPPolicies = numALPPolicies
 	s.sendUpdate()
 }
 
@@ -185,6 +189,7 @@ func (s *StatsCollector) sendUpdate() {
 		NumTiers:             s.numTiers,
 		NumPolicies:          s.numPolicies,
 		NumProfiles:          s.numProfiles,
+		NumALPPolicies:       s.numALPPolicies,
 	}
 	gaugeClusNumHosts.Set(float64(len(s.keyCountByHost)))
 	gaugeClusNumWorkloadEndpoints.Set(float64(s.numWorkloadEndpoints))
