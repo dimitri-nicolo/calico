@@ -209,7 +209,7 @@ type Config struct {
 	CloudWatchLogsLogGroupName    string        `config:"string;"`
 	CloudWatchLogsLogStreamName   string        `config:"string;"`
 	CloudWatchLogsIncludeLabels   bool          `config:"bool;false"`
-	CloudWatchLogsAggregationKind int           `config:"int(0,2);0"`
+	CloudWatchLogsAggregationKind int           `config:"int(0,2);1"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 
