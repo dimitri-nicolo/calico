@@ -334,7 +334,7 @@ func (c *Config) GetPSKFromFile() string {
 	}
 
 	if _, err := os.Stat(c.IPSecPSKFile); os.IsNotExist(err) {
-		log.Panicf("error file not exists for PSK: %s", c.IPSecPSKFile)
+		log.Panicf("error file does not exist for PSK: %s", c.IPSecPSKFile)
 	}
 
 	data, err := ioutil.ReadFile(c.IPSecPSKFile)
@@ -523,6 +523,8 @@ func (config *Config) Validate() (err error) {
 		var problems []string
 		if config.IPSecPSKFile == "" {
 			problems = append(problems, "IPSecPSKFile is not set")
+		} else if _, err := os.Stat(config.IPSecPSKFile); os.IsNotExist(err) {
+			problems = append(problems, "IPSecPSKFile not found")
 		}
 		if config.IPSecIKEAlgorithm == "" {
 			problems = append(problems, "IPSecIKEAlgorithm is not set")
