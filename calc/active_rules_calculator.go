@@ -62,6 +62,9 @@ type ActiveRulesCalculator struct {
 	allPolicies     map[model.PolicyKey]*model.Policy
 	allProfileRules map[string]*model.ProfileRules
 
+	// Caches for ALP policies for stat collector.
+	allALPPolicies set.Set
+
 	// Policy/profile ID to matching endpoint sets.
 	policyIDToEndpointKeys  multidict.IfaceToIface
 	profileIDToEndpointKeys multidict.IfaceToIface
@@ -82,7 +85,7 @@ type ActiveRulesCalculator struct {
 	RuleScanner           ruleScanner
 	PolicyMatchListener   PolicyMatchListener
 	PolicyLookupCache     ruleScanner
-	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles int)
+	OnPolicyCountsChanged func(numTiers, numPolicies, numProfiles, numALPPolicies int)
 }
 
 func NewActiveRulesCalculator() *ActiveRulesCalculator {
@@ -91,6 +94,8 @@ func NewActiveRulesCalculator() *ActiveRulesCalculator {
 		allPolicies:     make(map[model.PolicyKey]*model.Policy),
 		allProfileRules: make(map[string]*model.ProfileRules),
 		allTiers:        make(map[string]*model.Tier),
+
+		allALPPolicies: set.New(),
 
 		// Policy/profile ID to matching endpoint sets.
 		policyIDToEndpointKeys:  multidict.NewIfaceToIface(),
@@ -195,12 +200,24 @@ func (arc *ActiveRulesCalculator) OnUpdate(update api.Update) (_ bool) {
 				log.Debug("Policy updated while active, telling listener")
 				arc.sendPolicyUpdate(key)
 			}
+
+			// update ALP policies set.
+			if arc.isALPPolicy(policy) {
+				arc.allALPPolicies.Add(key)
+			} else if arc.allALPPolicies.Contains(key) {
+				arc.allALPPolicies.Discard(key)
+			}
 		} else {
 			log.Debugf("Removing policy %v from ARC", key)
 			delete(arc.allPolicies, key)
 			arc.labelIndex.DeleteSelector(key)
 			// No need to call updatePolicy() because we'll have got a matchStopped
 			// callback.
+
+			// update ALP policies set.
+			if arc.allALPPolicies.Contains(key) {
+				arc.allALPPolicies.Discard(key)
+			}
 		}
 		// Update the tier/policy/profile counts.
 		arc.updateStats()
@@ -227,7 +244,7 @@ func (arc *ActiveRulesCalculator) updateStats() {
 	if arc.OnPolicyCountsChanged == nil {
 		return
 	}
-	arc.OnPolicyCountsChanged(len(arc.allTiers), len(arc.allPolicies), len(arc.allProfileRules))
+	arc.OnPolicyCountsChanged(len(arc.allTiers), len(arc.allPolicies), len(arc.allProfileRules), arc.allALPPolicies.Len())
 }
 
 func (arc *ActiveRulesCalculator) OnStatusUpdate(status api.SyncStatus) {
@@ -359,6 +376,19 @@ func (arc *ActiveRulesCalculator) sendPolicyUpdate(policyKey model.PolicyKey) {
 		arc.RuleScanner.OnPolicyInactive(policyKey)
 		arc.PolicyLookupCache.OnPolicyInactive(policyKey)
 	}
+}
+
+func (arc *ActiveRulesCalculator) isALPPolicy(policy *model.Policy) bool {
+	// Policy is a ALP policy if HTTPMatch rule or service account selector exists.
+	checkRules := func(rules []model.Rule) bool {
+		for _, rule := range rules {
+			if rule.HTTPMatch != nil || rule.OriginalSrcServiceAccountSelector != "" || rule.OriginalDstServiceAccountSelector != "" {
+				return true
+			}
+		}
+		return false
+	}
+	return checkRules(policy.InboundRules) || checkRules(policy.OutboundRules)
 }
 
 // EndpointKeyToProfileIDMap is a specialised map that calculates the deltas to the profile IDs

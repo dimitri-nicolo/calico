@@ -44,6 +44,7 @@ type State struct {
 	ExpectedEndpointPolicyOrder          map[string][]mock.TierInfo
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
+	ExpectedNumberOfALPPolicies          int
 }
 
 func (s State) String() string {
@@ -91,6 +92,7 @@ func (s State) Copy() State {
 	cpy.ExpectedUntrackedPolicyIDs = s.ExpectedUntrackedPolicyIDs.Copy()
 	cpy.ExpectedPreDNATPolicyIDs = s.ExpectedPreDNATPolicyIDs.Copy()
 	cpy.ExpectedProfileIDs = s.ExpectedProfileIDs.Copy()
+	cpy.ExpectedNumberOfALPPolicies = s.ExpectedNumberOfALPPolicies
 	cpy.ExpectedIPSecBindings = s.ExpectedIPSecBindings.Copy()
 	if s.ExpectedIPSecBlacklist != nil {
 		cpy.ExpectedIPSecBlacklist = s.ExpectedIPSecBlacklist.Copy()
@@ -183,6 +185,12 @@ func (s State) withActivePolicies(ids ...proto.PolicyID) (newState State) {
 	for _, id := range ids {
 		newState.ExpectedPolicyIDs.Add(id)
 	}
+	return newState
+}
+
+func (s State) withTotalALPPolicies(count int) (newState State) {
+	newState = s.Copy()
+	newState.ExpectedNumberOfALPPolicies = count
 	return newState
 }
 
@@ -304,6 +312,10 @@ func (s State) NumPolicies() int {
 
 func (s State) NumProfileRules() int {
 	return s.ActiveKeys(model.ProfileRulesKey{}).Len()
+}
+
+func (s State) NumALPPolicies() int {
+	return s.ExpectedNumberOfALPPolicies
 }
 
 func (s State) ActiveKeys(keyTypeExample interface{}) set.Set {
