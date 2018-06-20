@@ -39,8 +39,8 @@ type TopologyOptions struct {
 	WithTypha             bool
 	WithFelixTyphaTLS     bool
 	TyphaLogSeverity      string
-	WithPrometheusPortTLS bool
 	IPIPEnabled           bool
+	WithPrometheusPortTLS bool
 	NATOutgoingEnabled    bool
 }
 
@@ -132,6 +132,8 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			ipPool.Spec.NATOutgoing = opts.NATOutgoingEnabled
 			if opts.IPIPEnabled {
 				ipPool.Spec.IPIPMode = api.IPIPModeAlways
+			} else {
+				ipPool.Spec.IPIPMode = api.IPIPModeNever
 			}
 			_, err = client.IPPools().Create(ctx, ipPool, options.SetOptions{})
 			return err
@@ -149,7 +151,9 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		// Then start Felix and create a node for it.
 		felix := RunFelix(infra, opts)
 		felix.TyphaIP = typhaIP
-		infra.SetExpectedIPIPTunnelAddr(felix, i, bool(n > 1))
+		if opts.IPIPEnabled {
+			infra.SetExpectedIPIPTunnelAddr(felix, i, bool(n > 1))
+		}
 
 		var w chan struct{}
 		if felix.ExpectedIPIPTunnelAddr != "" {
@@ -181,7 +185,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP, "dev", "tunl0", "onlink")
 				Expect(err).ToNot(HaveOccurred())
 			} else {
-				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP)
+				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP, "dev", "eth0")
 				Expect(err).ToNot(HaveOccurred())
 			}
 		}
