@@ -7,17 +7,22 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("Flow log aggregator verification", func() {
+var _ = Describe("Flow log aggregator verification", func() {
 	It("aggregates the fed metric updates", func() {
-		expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection) {
+		expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int) {
 			fl, err := getFlowLog(msg)
 			Expect(err).To(BeNil())
-			Expect(fl.Tuple).Should(Equal(t))
-			Expect(fl.NumFlows).Should(Equal(nf))
-			Expect(fl.NumFlowsStarted).Should(Equal(nfs))
-			Expect(fl.NumFlowsCompleted).Should(Equal(nfc))
-			Expect(fl.Action).Should(Equal(a))
-			Expect(fl.FlowDirection).Should(Equal(fd))
+			expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fd, pi, po, bi, bo)
+			Expect(fl).Should(Equal(expectedFlow))
+		}
+		calculatePacketStats := func(mus ...MetricUpdate) (epi, epo, ebi, ebo int) {
+			for _, mu := range mus {
+				epi += mu.inMetric.deltaPackets
+				epo += mu.outMetric.deltaPackets
+				ebi += mu.inMetric.deltaBytes
+				ebo += mu.outMetric.deltaBytes
+			}
+			return
 		}
 
 		By("defalt duration")
@@ -30,7 +35,10 @@ var _ = FDescribe("Flow log aggregator verification", func() {
 		expectedNumFlows := 1
 		expectedNumFlowsStarted := 1
 		expectedNumFlowsCompleted := 0
-		expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
+
+		expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
+		expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
 
 		By("source port")
 		ca = NewCloudWatchAggregator().AggregateOver(SourcePort)
@@ -42,14 +50,7 @@ var _ = FDescribe("Flow log aggregator verification", func() {
 		muNoConn1Rule1AllowUpdateCopy.tuple = tuple1Copy
 		ca.FeedUpdate(muNoConn1Rule1AllowUpdateCopy)
 		messages = ca.Get()
+		// Two updates should still result in 1 flow
 		Expect(len(messages)).Should(Equal(1))
-		message = *(messages[0])
-		expectedTuple := tuple1Copy
-		expectedTuple.l4Src = 0
-		expectedNumFlows++
-		expectedNumFlowsStarted++
-
-		expectFlowLog(message, expectedTuple, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn)
-
 	})
 })
