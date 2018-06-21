@@ -31,7 +31,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 )
 
-const expectedNumberOfURLParams = 12
+const expectedNumberOfURLParams = 14
 
 // These tests start a local HTTP server on a random port and tell the usage reporter to
 // connect to it.  Then we can check that it correctly makes HTTP requests at the right times.
@@ -104,6 +104,7 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					NumTiers:             4,
 					NumPolicies:          4,
 					NumProfiles:          5,
+					NumALPPolicies:       6,
 				}
 			}
 
@@ -129,12 +130,14 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 				Expect(q.Get("type")).To(Equal("openstack,k8s,kdd,cnx"))
 				Expect(q.Get("cal_ver")).To(Equal("v2.6.3"))
 				Expect(q.Get("cnx_ver")).To(Equal("v2.0.1"))
+				Expect(q.Get("alp")).To(Equal("false"))
 				Expect(q.Get("size")).To(Equal("1"))
 				Expect(q.Get("heps")).To(Equal("2"))
 				Expect(q.Get("weps")).To(Equal("3"))
 				Expect(q.Get("tiers")).To(Equal("4"))
 				Expect(q.Get("policies")).To(Equal("4"))
 				Expect(q.Get("profiles")).To(Equal("5"))
+				Expect(q.Get("alp_policies")).To(Equal("6"))
 
 				By("checking in again")
 				Eventually(httpHandler.GetRequestURIs, "2s", "100ms").Should(HaveLen(2))
@@ -165,12 +168,14 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 						NumTiers:             35,
 						NumPolicies:          40,
 						NumProfiles:          50,
+						NumALPPolicies:       60,
 					}
 					configUpdateC <- map[string]string{
-						"ClusterGUID":   "someguid2",
-						"ClusterType":   "openstack,k8s,kdd,typha",
-						"CalicoVersion": "v3.0.0",
-						"CNXVersion":    "v2.0.1",
+						"ClusterGUID":          "someguid2",
+						"ClusterType":          "openstack,k8s,kdd,typha",
+						"CalicoVersion":        "v3.0.0",
+						"CNXVersion":           "v2.0.1",
+						"PolicySyncPathPrefix": "/var/run/nodeagent",
 					}
 				})
 
@@ -188,12 +193,14 @@ var _ = Describe("UsageReporter with mocked URL and short interval", func() {
 					Expect(q.Get("type")).To(Equal("openstack,k8s,kdd,typha,cnx"))
 					Expect(q.Get("cal_ver")).To(Equal("v3.0.0"))
 					Expect(q.Get("cnx_ver")).To(Equal("v2.0.1"))
+					Expect(q.Get("alp")).To(Equal("true"))
 					Expect(q.Get("size")).To(Equal("10"))
 					Expect(q.Get("heps")).To(Equal("20"))
 					Expect(q.Get("weps")).To(Equal("30"))
 					Expect(q.Get("tiers")).To(Equal("35"))
 					Expect(q.Get("policies")).To(Equal("40"))
 					Expect(q.Get("profiles")).To(Equal("50"))
+					Expect(q.Get("alp_policies")).To(Equal("60"))
 				})
 			})
 		})
@@ -233,7 +240,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 	})
 
 	It("should calculate correct URL mainline", func() {
-		rawURL := u.calculateURL("theguid", "atype", "testVer", "testCNXVer", calc.StatsUpdate{
+		rawURL := u.calculateURL("theguid", "atype", "testVer", "testCNXVer", true, calc.StatsUpdate{
 			NumHostEndpoints:     123,
 			NumWorkloadEndpoints: 234,
 			NumHosts:             10,
@@ -246,6 +253,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 		Expect(q.Get("type")).To(Equal("atype,cnx"))
 		Expect(q.Get("cal_ver")).To(Equal("testVer"))
 		Expect(q.Get("cnx_ver")).To(Equal("testCNXVer"))
+		Expect(q.Get("alp")).To(Equal("true"))
 		Expect(q.Get("size")).To(Equal("10"))
 		Expect(q.Get("weps")).To(Equal("234"))
 		Expect(q.Get("heps")).To(Equal("123"))
@@ -257,7 +265,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 		Expect(url.Path).To(Equal("/UsageCheck/calicoVersionCheck"))
 	})
 	It("should default cluster type, GUID, and Calico Version", func() {
-		rawURL := u.calculateURL("", "", "", "", calc.StatsUpdate{
+		rawURL := u.calculateURL("", "", "", "", false, calc.StatsUpdate{
 			NumHostEndpoints:     123,
 			NumWorkloadEndpoints: 234,
 			NumHosts:             10,
@@ -270,6 +278,7 @@ var _ = Describe("UsageReporter with default URL", func() {
 		Expect(q.Get("type")).To(Equal("unknown,cnx"))
 		Expect(q.Get("cal_ver")).To(Equal("unknown"))
 		Expect(q.Get("cnx_ver")).To(Equal("unknown"))
+		Expect(q.Get("alp")).To(Equal("false"))
 	})
 	It("should delay at least 5 minutes", func() {
 		Expect(u.calculateInitialDelay(0)).To(BeNumerically(">=", 5*time.Minute))

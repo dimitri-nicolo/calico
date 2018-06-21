@@ -88,7 +88,8 @@ func (u *UsageReporter) PeriodicallyReportUsage(ctx context.Context) {
 	}
 
 	doReport := func() {
-		u.ReportUsage(config["ClusterGUID"], config["ClusterType"], config["CalicoVersion"], config["CNXVersion"], stats)
+		alpEnabled := (config["PolicySyncPathPrefix"] != "")
+		u.reportUsage(config["ClusterGUID"], config["ClusterType"], config["CalicoVersion"], config["CNXVersion"], alpEnabled, stats)
 	}
 
 	var ticker *jitter.Ticker
@@ -140,8 +141,8 @@ func (u *UsageReporter) calculateInitialDelay(numHosts int) time.Duration {
 	return initialDelay
 }
 
-func (u *UsageReporter) ReportUsage(clusterGUID, clusterType, calicoVersion, cnxVersion string, stats calc.StatsUpdate) {
-	fullURL := u.calculateURL(clusterGUID, clusterType, calicoVersion, cnxVersion, stats)
+func (u *UsageReporter) reportUsage(clusterGUID, clusterType, calicoVersion, cnxVersion string, alpEnabled bool, stats calc.StatsUpdate) {
+	fullURL := u.calculateURL(clusterGUID, clusterType, calicoVersion, cnxVersion, alpEnabled, stats)
 	resp, err := u.httpClient.Get(fullURL)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -163,7 +164,7 @@ func (u *UsageReporter) ReportUsage(clusterGUID, clusterType, calicoVersion, cnx
 	}
 }
 
-func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion, cnxVersion string, stats calc.StatsUpdate) string {
+func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion, cnxVersion string, alpEnabled bool, stats calc.StatsUpdate) string {
 	if clusterType == "" {
 		clusterType = "unknown"
 	}
@@ -183,23 +184,26 @@ func (u *UsageReporter) calculateURL(clusterGUID, clusterType, calicoVersion, cn
 		"clusterType":   clusterType,
 		"calicoVersion": calicoVersion,
 		"cnxVersion":    cnxVersion,
+		"alpEnabled":    alpEnabled,
 		"stats":         stats,
 		"version":       buildinfo.GitVersion,
 		"gitRevision":   buildinfo.GitRevision,
 	}).Info("Reporting cluster usage/checking for deprecation warnings.")
 	queryParams := url.Values{
-		"guid":     {clusterGUID},
-		"type":     {clusterType},
-		"cal_ver":  {calicoVersion},
-		"cnx_ver":  {cnxVersion},
-		"size":     {fmt.Sprint(stats.NumHosts)},
-		"weps":     {fmt.Sprint(stats.NumWorkloadEndpoints)},
-		"heps":     {fmt.Sprint(stats.NumHostEndpoints)},
-		"version":  {buildinfo.GitVersion},
-		"rev":      {buildinfo.GitRevision},
-		"tiers":    {fmt.Sprint(stats.NumTiers)},
-		"policies": {fmt.Sprint(stats.NumPolicies)},
-		"profiles": {fmt.Sprint(stats.NumProfiles)},
+		"guid":         {clusterGUID},
+		"type":         {clusterType},
+		"cal_ver":      {calicoVersion},
+		"cnx_ver":      {cnxVersion},
+		"alp":          {fmt.Sprint(alpEnabled)},
+		"size":         {fmt.Sprint(stats.NumHosts)},
+		"weps":         {fmt.Sprint(stats.NumWorkloadEndpoints)},
+		"heps":         {fmt.Sprint(stats.NumHostEndpoints)},
+		"version":      {buildinfo.GitVersion},
+		"rev":          {buildinfo.GitRevision},
+		"tiers":        {fmt.Sprint(stats.NumTiers)},
+		"policies":     {fmt.Sprint(stats.NumPolicies)},
+		"profiles":     {fmt.Sprint(stats.NumProfiles)},
+		"alp_policies": {fmt.Sprint(stats.NumALPPolicies)},
 	}
 	fullURL := u.BaseURL + queryParams.Encode()
 	log.WithField("url", fullURL).Debug("Calculated URL.")
