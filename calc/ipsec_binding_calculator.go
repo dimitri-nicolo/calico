@@ -44,6 +44,8 @@ type IPSecBindingCalculator struct {
 	ipToEndpointKeys  map[ip.Addr][]model.WorkloadEndpointKey
 	endpointKeysToIPs map[model.WorkloadEndpointKey][]ip.Addr
 
+	OnTunnelAdded      func(tunnelAddr ip.Addr)
+	OnTunnelRemoved    func(tunnelAddr ip.Addr)
 	OnBindingAdded     func(b IPSecBinding)
 	OnBindingRemoved   func(b IPSecBinding)
 	OnBlacklistAdded   func(workloadAddr ip.Addr)
@@ -100,8 +102,10 @@ func (c *IPSecBindingCalculator) OnHostIPUpdate(update api.Update) (_ bool) {
 			c.nodeNameToNodeInfo[nodeName] = newNodeInfo
 		}
 		updatedNodeNames := filterOutString(c.addressToNodeNames[oldIP], nodeName)
+		deactivateTunnel := false
 		if len(updatedNodeNames) == 0 {
 			delete(c.addressToNodeNames, oldIP)
+			deactivateTunnel = true
 		} else {
 			c.addressToNodeNames[oldIP] = updatedNodeNames
 		}
@@ -118,6 +122,10 @@ func (c *IPSecBindingCalculator) OnHostIPUpdate(update api.Update) (_ bool) {
 			logCxt.Debug("IP was unique before, removing bindings")
 			c.deactivateBindingsForNode(nodeName, oldIP)
 		}
+
+		if deactivateTunnel {
+			c.OnTunnelRemoved(oldIP)
+		}
 	}
 
 	if newIP != nil {
@@ -129,7 +137,12 @@ func (c *IPSecBindingCalculator) OnHostIPUpdate(update api.Update) (_ bool) {
 		newNodeInfo := oldNodeInfo
 		newNodeInfo.addr = newIP
 		c.nodeNameToNodeInfo[nodeName] = newNodeInfo
-		c.addressToNodeNames[newIP] = append(c.addressToNodeNames[newIP], nodeName)
+
+		addrToNodeNames := c.addressToNodeNames[newIP]
+		if len(addrToNodeNames) == 0 {
+			c.OnTunnelAdded(newIP)
+		}
+		c.addressToNodeNames[newIP] = append(addrToNodeNames, nodeName)
 
 		newNumNodesSharingIP := c.numActiveNodesSharingIP(newIP)
 

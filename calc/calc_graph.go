@@ -84,6 +84,8 @@ type ipsecCallbacks interface {
 	OnIPSecBindingRemoved(b IPSecBinding)
 	OnIPSecBlacklistAdded(workloadAddr ip.Addr)
 	OnIPSecBlacklistRemoved(workloadAddr ip.Addr)
+	OnIPSecTunnelAdded(tunnelAddr ip.Addr)
+	OnIPSecTunnelRemoved(tunnelAddr ip.Addr)
 }
 
 type PipelineCallbacks interface {
@@ -373,6 +375,8 @@ func (c *CalcGraph) EnableIPSec(callbacks ipsecCallbacks) {
 	// The IPSecBindingCalculator calculates the bindings between IPsec tunnels and workload IPs.
 	ipSecBindingCalc := NewIPSecBindingCalculator()
 	ipSecBindingCalc.RegisterWith(c.AllUpdDispatcher)
+	ipSecBindingCalc.OnTunnelAdded = callbacks.OnIPSecTunnelAdded
+	ipSecBindingCalc.OnTunnelRemoved = callbacks.OnIPSecTunnelRemoved
 	ipSecBindingCalc.OnBindingAdded = callbacks.OnIPSecBindingAdded
 	ipSecBindingCalc.OnBindingRemoved = callbacks.OnIPSecBindingRemoved
 	ipSecBindingCalc.OnBlacklistAdded = callbacks.OnIPSecBlacklistAdded

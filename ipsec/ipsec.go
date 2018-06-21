@@ -96,6 +96,62 @@ type Dataplane struct {
 	sleep func(duration time.Duration)
 }
 
+func (d *Dataplane) AddTunnel(remoteTunnelAddr string) {
+	log.Infof("Adding IPsec tunnel to %v", remoteTunnelAddr)
+	if d.bindingsByTunnel[remoteTunnelAddr] != nil {
+		log.WithField("addr", remoteTunnelAddr).Panic("IPsec tunnel already exists")
+	}
+
+	d.configureTunnel(remoteTunnelAddr)
+	d.bindingsByTunnel[remoteTunnelAddr] = set.New()
+
+	if remoteTunnelAddr != d.localTunnelAddr {
+		// Allow the remote host to send encrypted traffic to our local workloads.  This balances the OUT rule
+		// that will get programmed on the remote host in order to send traffic to our workloads.
+		d.polTable.SetRule(PolicySelector{
+			TrafficSrc: stringToV4CIDR(remoteTunnelAddr),
+			Dir:        netlink.XFRM_DIR_FWD,
+		}, &PolicyRule{
+			TunnelSrc: stringToV4IP(remoteTunnelAddr),
+			TunnelDst: stringToV4IP(d.localTunnelAddr),
+		})
+
+		// Allow iptables to selectively encrypt packets to the host itself.  This allows us to encrypt traffic
+		// from local workloads to the remote host.
+		d.polTable.SetRule(PolicySelector{
+			TrafficDst: stringToV4CIDR(remoteTunnelAddr),
+			Dir:        netlink.XFRM_DIR_OUT,
+			Mark:       d.forwardMark,
+			MarkMask:   d.forwardMark,
+		}, &PolicyRule{
+			TunnelSrc: stringToV4IP(d.localTunnelAddr),
+			TunnelDst: stringToV4IP(remoteTunnelAddr),
+		})
+	}
+}
+
+func (d *Dataplane) RemoveTunnel(remoteTunnelAddr string) {
+	log.Infof("Removing IPsec tunnel to %v", remoteTunnelAddr)
+	if d.bindingsByTunnel[remoteTunnelAddr].Len() != 0 {
+		log.WithField("tunnelAddr", remoteTunnelAddr).Panic("IPsec tunnel deleted while in use")
+	}
+
+	delete(d.bindingsByTunnel, remoteTunnelAddr)
+	if remoteTunnelAddr != d.localTunnelAddr {
+		d.polTable.DeleteRule(PolicySelector{
+			TrafficSrc: stringToV4CIDR(remoteTunnelAddr),
+			Dir:        netlink.XFRM_DIR_FWD,
+		})
+		d.polTable.DeleteRule(PolicySelector{
+			TrafficDst: stringToV4CIDR(remoteTunnelAddr),
+			Dir:        netlink.XFRM_DIR_OUT,
+			Mark:       d.forwardMark,
+			MarkMask:   d.forwardMark,
+		})
+	}
+	d.removeTunnel(remoteTunnelAddr)
+}
+
 func (d *Dataplane) AddBlacklist(workloadAddress string) {
 	log.Warningf("Adding IPsec blacklist for %v", workloadAddress)
 
@@ -151,34 +207,6 @@ func stringToV4IP(addr string) ip.V4Addr {
 
 func (d *Dataplane) AddBinding(remoteTunnelAddr, workloadAddress string) {
 	log.Debug("Adding IPsec binding ", workloadAddress, " via tunnel ", remoteTunnelAddr)
-	if _, ok := d.bindingsByTunnel[remoteTunnelAddr]; !ok {
-		d.configureTunnel(remoteTunnelAddr)
-		d.bindingsByTunnel[remoteTunnelAddr] = set.New()
-
-		if remoteTunnelAddr != d.localTunnelAddr {
-			// Allow the remote host to send encrypted traffic to our local workloads.  This balances the OUT rule
-			// that will get programmed on the remote host in order to send traffic to our workloads.
-			d.polTable.SetRule(PolicySelector{
-				TrafficSrc: stringToV4CIDR(remoteTunnelAddr),
-				Dir:        netlink.XFRM_DIR_FWD,
-			}, &PolicyRule{
-				TunnelSrc: stringToV4IP(remoteTunnelAddr),
-				TunnelDst: stringToV4IP(d.localTunnelAddr),
-			})
-
-			// Allow iptables to selectively encrypt packets to the host itself.  This allows us to encrypt traffic
-			// from local workloads to the remote host.
-			d.polTable.SetRule(PolicySelector{
-				TrafficDst: stringToV4CIDR(remoteTunnelAddr),
-				Dir:        netlink.XFRM_DIR_OUT,
-				Mark:       d.forwardMark,
-				MarkMask:   d.forwardMark,
-			}, &PolicyRule{
-				TunnelSrc: stringToV4IP(d.localTunnelAddr),
-				TunnelDst: stringToV4IP(remoteTunnelAddr),
-			})
-		}
-	}
 	d.bindingsByTunnel[remoteTunnelAddr].Add(workloadAddress)
 	d.addXfrm(remoteTunnelAddr, workloadAddress)
 }
@@ -187,23 +215,6 @@ func (d *Dataplane) RemoveBinding(remoteTunnelAddr, workloadAddress string) {
 	log.Debug("Removing IPsec binding ", workloadAddress, " via tunnel ", remoteTunnelAddr)
 	d.removeXfrm(remoteTunnelAddr, workloadAddress)
 	d.bindingsByTunnel[remoteTunnelAddr].Discard(workloadAddress)
-	if d.bindingsByTunnel[remoteTunnelAddr].Len() == 0 {
-		if remoteTunnelAddr != d.localTunnelAddr {
-			d.polTable.DeleteRule(PolicySelector{
-				TrafficSrc: stringToV4CIDR(remoteTunnelAddr),
-				Dir:        netlink.XFRM_DIR_FWD,
-			})
-			d.polTable.DeleteRule(PolicySelector{
-				TrafficDst: stringToV4CIDR(remoteTunnelAddr),
-				Dir:        netlink.XFRM_DIR_OUT,
-				Mark:       d.forwardMark,
-				MarkMask:   d.forwardMark,
-			})
-		}
-
-		d.removeTunnel(remoteTunnelAddr)
-		delete(d.bindingsByTunnel, remoteTunnelAddr)
-	}
 }
 
 func (d *Dataplane) addXfrm(remoteTunnelAddr, workloadAddr string) {

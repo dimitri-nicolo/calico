@@ -99,6 +99,8 @@ message ToDataplane {
     NamespaceRemove namespace_remove = 22;
 
     // Sent when the set of IPs behind one of our IPsec tunnels changes.
+    IPSecTunnelAdd ipsec_tunnel_add = 26;
+    IPSecTunnelRemove ipsec_tunnel_remove = 27;
     IPSecBindingUpdate ipsec_binding_update = 23;
 
     // Send when one or more IPs is blacklisted.
@@ -408,6 +410,16 @@ message HostMetadataUpdate {
 message HostMetadataRemove {
   string hostname = 1;
   string ipv4_addr = 2;
+}
+
+message IPSecTunnelAdd {
+  // The address of the host's tunnel.
+  string tunnel_addr = 1;
+}
+
+message IPSecTunnelRemove {
+  // The address of the host's tunnel.
+  string tunnel_addr = 1;
 }
 
 message IPSecBindingUpdate {

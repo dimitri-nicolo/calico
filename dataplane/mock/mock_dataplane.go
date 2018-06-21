@@ -36,6 +36,7 @@ type MockDataplane struct {
 	activeUntrackedPolicies        set.Set
 	activePreDNATPolicies          set.Set
 	activeProfiles                 set.Set
+	activeIPSecTunnels             set.Set
 	activeIPSecBindings            set.Set
 	activeIPSecBlacklist           set.Set
 	endpointToPolicyOrder          map[string][]TierInfo
@@ -215,6 +216,7 @@ func NewMockDataplane() *MockDataplane {
 		activeProfiles:                 set.New(),
 		activeUntrackedPolicies:        set.New(),
 		activePreDNATPolicies:          set.New(),
+		activeIPSecTunnels:             set.New(),
 		activeIPSecBindings:            set.New(),
 		activeIPSecBlacklist:           set.New(),
 		endpointToPolicyOrder:          make(map[string][]TierInfo),
@@ -397,7 +399,17 @@ func (d *MockDataplane) OnEvent(event interface{}) {
 		id := *event.Id
 		Expect(d.namespaces).To(HaveKey(id))
 		delete(d.namespaces, id)
+	case *proto.IPSecTunnelAdd:
+		Expect(d.activeIPSecTunnels.Contains(event.TunnelAddr)).To(BeFalse(),
+			"Received IPSecTunnelAdd for already-existing tunnel")
+		d.activeIPSecTunnels.Add(event.TunnelAddr)
+	case *proto.IPSecTunnelRemove:
+		Expect(d.activeIPSecTunnels.Contains(event.TunnelAddr)).To(BeTrue(),
+			"Received IPSecTunnelRemove for non-existent tunnel")
+		d.activeIPSecTunnels.Discard(event.TunnelAddr)
 	case *proto.IPSecBindingUpdate:
+		Expect(d.activeIPSecTunnels.Contains(event.TunnelAddr)).To(BeTrue(),
+			"Received IPSecBindingUpdate for non-existent tunnel")
 		for _, addr := range event.RemovedAddrs {
 			b := IPSecBinding{event.TunnelAddr, addr}
 			Expect(d.activeIPSecBindings.Contains(b)).To(BeTrue(),
