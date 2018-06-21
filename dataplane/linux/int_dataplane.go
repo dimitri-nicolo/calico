@@ -566,7 +566,7 @@ func (d *InternalDataplane) Start() {
 	}
 	log.Debugf("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
 	if d.config.CloudWatchLogsReporterEnabled {
-		logGroupName := fmt.Sprintf("%s/%s", collector.LogGroupNamePrefix, d.config.ClusterGUID)
+		logGroupName := fmt.Sprintf("%s-%s", collector.LogGroupNamePrefix, d.config.ClusterGUID)
 		if d.config.CloudWatchLogsLogGroupName != "" {
 			logGroupName = d.config.CloudWatchLogsLogGroupName
 		}

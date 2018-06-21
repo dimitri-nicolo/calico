@@ -20,7 +20,7 @@ const (
 	FlowLogFormatJSON FlowLogFormat = "json"
 	FlowLogFormatFlat FlowLogFormat = "flat"
 
-	LogGroupNamePrefix  = "/tigera/flowlogs"
+	LogGroupNamePrefix  = "tigera-flowlogs"
 	LogStreamNameSuffix = "Flowlogs"
 )
 
