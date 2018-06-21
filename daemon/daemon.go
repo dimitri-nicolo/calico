@@ -27,6 +27,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,6 +95,16 @@ const (
 	// Process return code used to report a child exit.  This is the same as the code used
 	// by SIGHUP, which means that the wrapper script also restarts Felix on a SIGHUP.
 	childExitedRC = 129
+
+	// CloudWatch Health metrics names.
+	healthyNodeMetricName   = "Healthy Nodes"
+	unHealthyNodeMetricName = "Unhealthy Nodes"
+
+	// CloudWatch Health metrics namespace.
+	namespace = "Tigera Metrics"
+
+	// CloudWatch Health metrics unit.
+	cwUnit = cloudwatch.StandardUnitCount
 )
 
 // Run is the entry point to run a Felix instance.
@@ -523,8 +537,10 @@ configRetry:
 
 	go watchLicenseChanges(backendClient, configParams, bootupLicenseKey)
 
+	// If CloudWatch node health reporting is enabled then start a goroutine to monitor
+	// Felix health and report to CloudWatch.
 	if configParams.CloudWatchNodeHealthStatusEnabled {
-		go pushFelixHealthToCloudWatch(configParams.CloudWatchNodeHealthPushIntervalSecs, configParams.ClusterGUID, healthAggregator)
+		go felixHealthToCloudWatchReporter(configParams.CloudWatchNodeHealthPushIntervalSecs, configParams.ClusterGUID, healthAggregator)
 	}
 
 	// Now monitor the worker process and our worker threads and shut
@@ -532,13 +548,97 @@ configRetry:
 	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
 }
 
+func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator) {
+	cwClient := newCloudWatchMetricsClient(nil)
+	var err error
 
-func pushFelixHealthToCloudWatch (pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator) {
-	if healthAgg.Summary().Live {
+	for {
+		select {
+		case <-jitter.NewTicker(pushInterval, pushInterval/10).C:
+			if healthAgg.Summary().Live {
+				// push 1 to healthy nodes
+				// push 0 to unhealthy nodes
+				err = pushHealthMetrics(cwClient, 1.0, 0.0, clusterID)
+			} else {
+				// push 1 to unhealthy nodes
+				// push 0 to healthy nodes
+				err = pushHealthMetrics(cwClient, 0.0, 1.0, clusterID)
+			}
 
+			if err != nil {
+				log.WithError(err).Error("error pushing health status to CloudWatch")
+			}
+		}
+	}
+}
+
+func pushHealthMetrics(cwClient *cloudWatchMetricsClient, healthy, unhealthy float64, clusterID string) error {
+	var err error
+
+	for retry := 0; retry < 5; retry++ {
+		result, err := cwClient.cwAPI.PutMetricData(&cloudwatch.PutMetricDataInput{
+			MetricData: []*cloudwatch.MetricDatum{
+				&cloudwatch.MetricDatum{
+					MetricName: aws.String(healthyNodeMetricName),
+					Unit:       aws.String(cwUnit),
+					Value:      aws.Float64(healthy),
+					Dimensions: []*cloudwatch.Dimension{
+						&cloudwatch.Dimension{
+							Name:  aws.String("ClusterID"),
+							Value: aws.String(clusterID),
+						},
+					},
+				},
+				&cloudwatch.MetricDatum{
+					MetricName: aws.String(unHealthyNodeMetricName),
+					Unit:       aws.String(cwUnit),
+					Value:      aws.Float64(unhealthy),
+					Dimensions: []*cloudwatch.Dimension{
+						&cloudwatch.Dimension{
+							Name:  aws.String("ClusterID"),
+							Value: aws.String(clusterID),
+						},
+					},
+				},
+			},
+			Namespace: aws.String(namespace),
+		})
+
+		if err != nil {
+			// Failed to push metric data, so sleep for a second and retry.
+			log.WithFields(log.Fields{"Healthy": healthy, "Unhealthy": unhealthy, "Result": result}).Errorf("failed to push health metrics to CloudWatch: %s. Retry: %d", err, retry)
+			time.Sleep(time.Second)
+		} else {
+			log.WithFields(log.Fields{"Healthy": healthy, "Unhealthy": unhealthy, "Result": result}).Debug("successfully pushed health metric data to CloudWatch")
+			break
+		}
 	}
 
+	return err
 }
+
+type cloudWatchMetricsClient struct {
+	cwAPI cloudwatchiface.CloudWatchAPI
+}
+
+func newCloudWatchMetricsClient(cwAPI cloudwatchiface.CloudWatchAPI) *cloudWatchMetricsClient {
+	if cwAPI == nil {
+		// Initialize a session that the SDK uses to load
+		// credentials from the shared credentials file ~/.aws/credentials
+		// and configuration from the shared configuration file ~/.aws/config.
+		sess := session.Must(session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+		}))
+
+		// Create new cloudwatch client.
+		cwAPI = cloudwatch.New(sess)
+	}
+
+	return &cloudWatchMetricsClient{
+		cwAPI: cwAPI,
+	}
+}
+
 func watchLicenseChanges(client bapi.Client, configParams *config.Config, bootupLicense *apiv3.LicenseKey) {
 	for {
 
