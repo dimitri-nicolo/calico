@@ -20,7 +20,7 @@ var (
 			Key: model.WorkloadEndpointKey{
 				Hostname:       "node-01",
 				OrchestratorID: "k8s",
-				WorkloadID:     "iperf-4235-5623461/kube-system",
+				WorkloadID:     "kube-system/iperf-4235-5623461",
 				EndpointID:     "4352",
 			},
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
@@ -30,7 +30,7 @@ var (
 			Key: model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
-				WorkloadID:     "nginx-412354-5123451/default",
+				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "true"}},
@@ -110,7 +110,7 @@ var _ = Describe("Flow log aggregator verification", func() {
 			Key: model.WorkloadEndpointKey{
 				Hostname:       "node-01",
 				OrchestratorID: "k8s",
-				WorkloadID:     "iperf-4235-5434134/kube-system",
+				WorkloadID:     "kube-system/iperf-4235-5434134",
 				EndpointID:     "23456",
 			},
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
@@ -120,7 +120,7 @@ var _ = Describe("Flow log aggregator verification", func() {
 			Key: model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
-				WorkloadID:     "nginx-412354-6543645/default",
+				WorkloadID:     "default/nginx-412354-6543645",
 				EndpointID:     "256267",
 			},
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "true"}},
@@ -136,7 +136,7 @@ var _ = Describe("Flow log aggregator verification", func() {
 			Key: model.WorkloadEndpointKey{
 				Hostname:       "node-01",
 				OrchestratorID: "k8s",
-				WorkloadID:     "iperf-4235-5434134/kube-system",
+				WorkloadID:     "kube-system/iperf-4235-5434134",
 				EndpointID:     "23456",
 			},
 			// this new MetricUpdates src endpointMeta has a different label than one currently being tracked.
@@ -147,7 +147,7 @@ var _ = Describe("Flow log aggregator verification", func() {
 			Key: model.WorkloadEndpointKey{
 				Hostname:       "node-02",
 				OrchestratorID: "k8s",
-				WorkloadID:     "nginx-412354-6543645/default",
+				WorkloadID:     "default/nginx-412354-6543645",
 				EndpointID:     "256267",
 			},
 			// different label on the destination workload than one being tracked.
