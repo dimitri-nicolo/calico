@@ -84,7 +84,7 @@ NODE_CONTAINER_BINARIES=startup readiness allocate-ipip-addr calico-felix bird c
 
 FELIX_REPO?=tigera/felix
 FELIX_CONTAINER_NAME?=$(FELIX_REPO)$(ARCHTAG):$(FELIX_VER)
-CONFD_REPO?=calico/confd
+CONFD_REPO?=tigera/confd
 CONFD_CONTAINER_NAME?=$(CONFD_REPO)$(ARCHTAG):$(CONFD_VER)
 
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
@@ -169,7 +169,12 @@ $(NODE_CONTAINER_BIN_DIR)/confd:
 	-docker rm -f calico-confd
 	# Latest confd binaries are stored in automated builds of calico/confd.
 	# To get them, we create (but don't start) a container from that image.
-	docker pull $(CONFD_CONTAINER_NAME)
+	# Check if need to pull tigera/confd from private repo or if it was built locally
+	if ["$(docker images -q $$(CONFD_CONTAINER_NAME))" = ""]; then \
+	  gcloud auth configure-docker; \
+	  docker pull $(CNX_REPOSITORY)/$(CONFD_CONTAINER_NAME); \
+	  docker tag $(CNX_REPOSITORY)/$(CONFD_CONTAINER_NAME) $(CONFD_CONTAINER_NAME); \
+	fi;
 	docker create --name calico-confd $(CONFD_CONTAINER_NAME)
 	# Then we copy the files out of the container.  Since docker preserves
 	# mtimes on its copy, check the file really did appear, then touch it
