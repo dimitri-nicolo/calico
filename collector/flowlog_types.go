@@ -206,6 +206,9 @@ func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool, kin
 func (f *FlowLog) Deserialize(fl string) error {
 	// Format is
 	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowDirection packetsIn packetsOut bytesIn bytesOut action
+	// Sample entry with no aggregation and no labels.
+	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 - wep kube-system kube-dns-7cc87d595-pxvxb - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow
+
 	var (
 		srcType, dstType FlowLogEndpointType
 	)
@@ -277,9 +280,9 @@ func (f *FlowLog) Deserialize(fl string) error {
 
 	var fd FlowLogDirection
 	switch parts[18] {
-	case "I":
+	case "in":
 		fd = FlowLogDirectionIn
-	case "O":
+	case "out":
 		fd = FlowLogDirectionOut
 	}
 
@@ -290,9 +293,9 @@ func (f *FlowLog) Deserialize(fl string) error {
 
 	var a FlowLogAction
 	switch parts[23] {
-	case "A":
+	case "allow":
 		a = FlowLogActionAllow
-	case "D":
+	case "deny":
 		a = FlowLogActionDeny
 	}
 

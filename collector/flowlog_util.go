@@ -17,14 +17,14 @@ import (
 const (
 	flowLogBufferSize = 1000
 
-	flowLogNamespaceGlobal  = "_G_"
+	flowLogNamespaceGlobal  = "-"
 	flowLogFieldNotIncluded = "-"
 
-	FlowLogActionAllow FlowLogAction = "A"
-	FlowLogActionDeny  FlowLogAction = "D"
+	FlowLogActionAllow FlowLogAction = "allow"
+	FlowLogActionDeny  FlowLogAction = "deny"
 
-	FlowLogDirectionIn  FlowLogDirection = "I"
-	FlowLogDirectionOut FlowLogDirection = "O"
+	FlowLogDirectionIn  FlowLogDirection = "in"
+	FlowLogDirectionOut FlowLogDirection = "out"
 
 	FlowLogEndpointTypeWep FlowLogEndpointType = "wep"
 	FlowLogEndpointTypeHep FlowLogEndpointType = "hep"
