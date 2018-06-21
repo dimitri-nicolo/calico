@@ -5,9 +5,6 @@ package collector
 import (
 	"sync"
 	"time"
-
-	"github.com/aws/aws-sdk-go/aws"
-	log "github.com/sirupsen/logrus"
 )
 
 // AggregationKind determines the flow log key
@@ -22,17 +19,11 @@ const (
 	PrefixName
 )
 
-type FlowLogMeta struct {
-	tuple     Tuple
-	action    FlowLogAction
-	direction FlowLogDirection
-}
-
 // cloudWatchAggregator builds and implements the FlowLogAggregator and
 // FlowLogGetter interfaces.
 type cloudWatchAggregator struct {
 	kind                 AggregationKind
-	flowLogs             map[FlowLogMeta]FlowLog
+	flowStore            map[FlowMeta]FlowStats // TODO(SS): Abstract the storage.
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	aggregationStartTime time.Time
@@ -42,7 +33,7 @@ type cloudWatchAggregator struct {
 func NewCloudWatchAggregator() FlowLogAggregator {
 	return &cloudWatchAggregator{
 		kind:                 Default,
-		flowLogs:             make(map[FlowLogMeta]FlowLog),
+		flowStore:            make(map[FlowMeta]FlowStats),
 		flMutex:              sync.RWMutex{},
 		aggregationStartTime: time.Now(),
 	}
@@ -62,42 +53,32 @@ func (c *cloudWatchAggregator) IncludeLabels(b bool) FlowLogAggregator {
 func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 	var err error
 
-	fla, fld := getFlowLogActionAndDirFromRuleID(mu.ruleID)
-	flKey := FlowLogMeta{
-		tuple:     getTupleForAggreagation(mu.tuple, c.kind),
-		action:    fla,
-		direction: fld,
+	flowMeta, err := NewFlowMeta(mu, c.kind)
+	if err != nil {
+		return err
 	}
-
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
-	fl, ok := c.flowLogs[flKey]
+	fl, ok := c.flowStore[flowMeta]
 	if !ok {
-		fl, err = getFlowLogFromMetricUpdate(mu, c.kind)
-		if err != nil {
-			log.WithError(err).Errorf("Could not convert MetricUpdate %v to Flow log", mu)
-			return err
-		}
+		fl = NewFlowStats(mu)
 	} else {
-		err = fl.aggregateMetricUpdate(mu)
-		if err != nil {
-			log.WithError(err).Errorf("Could not aggregated MetricUpdate %v to Flow log %v", mu, fl)
-			return err
-		}
+		fl.aggregateMetricUpdate(mu)
 	}
-	c.flowLogs[flKey] = fl
+	c.flowStore[flowMeta] = fl
 	return nil
 }
 
 func (c *cloudWatchAggregator) Get() []*string {
-	resp := make([]*string, 0, len(c.flowLogs))
+	resp := make([]*string, 0, len(c.flowStore))
 	aggregationEndTime := time.Now()
 	c.flMutex.Lock()
-	for k, flowLog := range c.flowLogs {
-		resp = append(resp, aws.String(flowLog.ToString(c.aggregationStartTime, aggregationEndTime, c.includeLabels)))
-		delete(c.flowLogs, k)
+	defer c.flMutex.Unlock()
+	for flowMeta, flowStats := range c.flowStore {
+		flowLog := FlowLog{flowMeta, flowStats}.Serialize(c.aggregationStartTime, aggregationEndTime, c.includeLabels, c.kind)
+		resp = append(resp, &flowLog)
+		delete(c.flowStore, flowMeta)
 	}
-	c.flMutex.Unlock()
 	c.aggregationStartTime = aggregationEndTime
 	return resp
 }

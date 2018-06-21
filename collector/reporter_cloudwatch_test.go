@@ -3,9 +3,6 @@
 package collector
 
 import (
-	"encoding/json"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/projectcalico/felix/collector/testutil"
@@ -227,119 +224,26 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 })
 
 func getFlowLog(fl string) (FlowLog, error) {
-	// Format is
-	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowDirection packetsIn packetsOut bytesIn bytesOut action
-	var (
-		srcLabels, dstLabels map[string]string
-		srcType, dstType     FlowLogEndpointType
-	)
-
-	parts := strings.Split(fl, " ")
-
-	switch parts[2] {
-	case "wep":
-		srcType = FlowLogEndpointTypeWep
-	case "hep":
-		srcType = FlowLogEndpointTypeHep
-	case "ns":
-		srcType = FlowLogEndpointTypeNs
-	case "pvt":
-		srcType = FlowLogEndpointTypePvt
-	case "pub":
-		srcType = FlowLogEndpointTypePub
-	}
-
-	srcMeta := EndpointMetadata{
-		Type:      srcType,
-		Namespace: parts[3],
-		Name:      parts[4],
-	}
-	_ = json.Unmarshal([]byte(parts[5]), &srcLabels)
-	srcMeta.Labels = srcLabels
-
-	switch parts[6] {
-	case "wep":
-		dstType = FlowLogEndpointTypeWep
-	case "hep":
-		dstType = FlowLogEndpointTypeHep
-	case "ns":
-		dstType = FlowLogEndpointTypeNs
-	case "pvt":
-		dstType = FlowLogEndpointTypePvt
-	case "pub":
-		dstType = FlowLogEndpointTypePub
-	}
-
-	dstMeta := EndpointMetadata{
-		Type:      dstType,
-		Namespace: parts[7],
-		Name:      parts[8],
-	}
-	_ = json.Unmarshal([]byte(parts[9]), &dstLabels)
-	dstMeta.Labels = srcLabels
-
-	var sip [16]byte
-	if parts[10] != "-" {
-		sip = ipStrTo16Byte(parts[10])
-	}
-	dip := ipStrTo16Byte(parts[11])
-	p, _ := strconv.Atoi(parts[12])
-	sp, _ := strconv.Atoi(parts[13])
-	dp, _ := strconv.Atoi(parts[14])
-	tuple := *NewTuple(sip, dip, p, sp, dp)
-
-	nf, _ := strconv.Atoi(parts[15])
-	nfs, _ := strconv.Atoi(parts[16])
-	nfc, _ := strconv.Atoi(parts[17])
-
-	var fd FlowLogDirection
-	switch parts[18] {
-	case "I":
-		fd = FlowLogDirectionIn
-	case "O":
-		fd = FlowLogDirectionOut
-	}
-
-	pi, _ := strconv.Atoi(parts[19])
-	po, _ := strconv.Atoi(parts[20])
-	bi, _ := strconv.Atoi(parts[21])
-	bo, _ := strconv.Atoi(parts[22])
-
-	var a FlowLogAction
-	switch parts[23] {
-	case "A":
-		a = FlowLogActionAllow
-	case "D":
-		a = FlowLogActionDeny
-	}
-
-	return FlowLog{
-		Tuple:             tuple,
-		SrcMeta:           srcMeta,
-		DstMeta:           dstMeta,
-		NumFlows:          nf,
-		NumFlowsStarted:   nfs,
-		NumFlowsCompleted: nfc,
-		FlowDirection:     fd,
-		PacketsIn:         pi,
-		PacketsOut:        po,
-		BytesIn:           bi,
-		BytesOut:          bo,
-		Action:            a,
-	}, nil
+	flowLog := &FlowLog{}
+	err := flowLog.Deserialize(fl)
+	return *flowLog, err
 }
 
 func newExpectedFlowLog(t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int) FlowLog {
 	return FlowLog{
-		Tuple:             t,
-		NumFlows:          nf,
-		NumFlowsStarted:   nfs,
-		NumFlowsCompleted: nfc,
-		FlowDirection:     fd,
-		Action:            a,
-		PacketsIn:         pi,
-		PacketsOut:        po,
-		BytesIn:           bi,
-		BytesOut:          bo,
+		FlowMeta{
+			Tuple:     t,
+			Action:    a,
+			Direction: fd,
+		},
+		FlowStats{
+			NumFlows:          nf,
+			NumFlowsStarted:   nfs,
+			NumFlowsCompleted: nfc,
+			PacketsIn:         pi,
+			PacketsOut:        po,
+			BytesIn:           bi,
+			BytesOut:          bo,
+		},
 	}
 }
