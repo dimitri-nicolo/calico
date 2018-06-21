@@ -365,14 +365,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		It("felix should program bad policies and then restore the policies once we restore the IP", func() {
 			Eventually(felixes[0].GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID))
-			polCount := func(ip string) int {
-				out, err := felixes[0].ExecOutput("ip", "xfrm", "policy")
-				Expect(err).NotTo(HaveOccurred())
-				return strings.Count(out, ip)
-			}
 
-			Eventually(func() int { return polCount(felixes[0].IP) }, "5s", "100ms").Should(BeZero())
-			Eventually(func() int { return polCount("10.65.0.100") }, "5s", "100ms").ShouldNot(BeZero())
+			Eventually(func() int { return policyCount(felixes[0], felixes[0].IP) }, "5s", "100ms").Should(BeZero())
+			Eventually(func() int { return policyCount(felixes[0], "10.65.0.100") }, "5s", "100ms").ShouldNot(BeZero())
 
 			// Should have no connectivity with broken config.
 			cc.ExpectNone(w[0], w[1])
@@ -381,8 +376,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 			restoreBGPSpec()
 
-			Eventually(func() int { return polCount(felixes[0].IP) }, "5s", "100ms").ShouldNot(BeZero())
-			Eventually(func() int { return polCount("10.65.0.100") }, "5s", "100ms").Should(BeZero())
+			Eventually(func() int { return policyCount(felixes[0], felixes[0].IP) }, "5s", "100ms").ShouldNot(BeZero())
+			Eventually(func() int { return policyCount(felixes[0], "10.65.0.100") }, "5s", "100ms").Should(BeZero())
 
 			cc.ResetExpectations()
 			cc.ExpectSome(w[0], w[1])
@@ -392,19 +387,16 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 	})
 
 	Context("after disabling IPsec", func() {
-		polCount := func() int {
-			count := 0
+		totalPolCount := func() (count int) {
 			for _, f := range felixes {
-				out, err := f.ExecOutput("ip", "xfrm", "policy")
-				Expect(err).NotTo(HaveOccurred())
-				count += strings.Count(out, fmt.Sprint(ipsec.ReqID))
+				count += policyCount(f, fmt.Sprint(ipsec.ReqID))
 			}
-			return count
+			return
 		}
 
 		BeforeEach(func() {
 			// Check that our policy counting function does pick up our policies before we use it in anger below.
-			Eventually(polCount, "5s", "100ms").Should(BeNumerically(">", 0))
+			Eventually(totalPolCount, "5s", "100ms").Should(BeNumerically(">", 0))
 
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
@@ -415,7 +407,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 
 		It("should remove the IPsec policy and have connectivity", func() {
-			Eventually(polCount, "5s", "100ms").Should(BeZero())
+			Eventually(totalPolCount, "5s", "100ms").Should(BeZero())
 
 			cc.ExpectSome(w[0], w[1])
 			cc.ExpectSome(w[1], w[0])
@@ -538,19 +530,16 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	})
 
 	Context("after disabling IPsec", func() {
-		polCount := func() int {
-			count := 0
+		totalPolCount := func() (count int) {
 			for _, f := range felixes {
-				out, err := f.ExecOutput("ip", "xfrm", "policy")
-				Expect(err).NotTo(HaveOccurred())
-				count += strings.Count(out, fmt.Sprint(ipsec.ReqID))
+				count += policyCount(f, fmt.Sprint(ipsec.ReqID))
 			}
-			return count
+			return
 		}
 
 		BeforeEach(func() {
 			// Check that our policy counting function does pick up our policies before we use it in anger below.
-			Eventually(polCount, "5s", "100ms").Should(BeNumerically(">", 0))
+			Eventually(totalPolCount, "5s", "100ms").Should(BeNumerically(">", 0))
 
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
@@ -561,7 +550,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		})
 
 		It("should remove the IPsec policy and have connectivity", func() {
-			Eventually(polCount, "5s", "100ms").Should(BeZero())
+			Eventually(totalPolCount, "5s", "100ms").Should(BeZero())
 
 			cc.ExpectSome(felixes[2], w[0])
 			cc.ExpectSome(felixes[2], w[1])
@@ -634,15 +623,17 @@ func startWorkloadsandWaitForPolicy(infra infrastructure.DatastoreInfra, felixes
 				continue
 			}
 
-			polCount := func() int {
-				out, err := f.ExecOutput("ip", "xfrm", "policy")
-				Expect(err).NotTo(HaveOccurred())
-				return strings.Count(out, w[j].IP)
-			}
 			// Felix might restart during set up, causing a 2s delay here.
-			Eventually(polCount, "5s", "100ms").Should(Equal(numPoliciesPerWep),
+			Eventually(func() int { return policyCount(f, w[j].IP) }, "5s", "100ms").Should(
+				Equal(numPoliciesPerWep),
 				fmt.Sprintf("Expected to see %d IPsec policies for workload IP %s in felix container %s",
 					numPoliciesPerWep, w[j].IP, f.Name))
 		}
 	}
+}
+
+func policyCount(felix *infrastructure.Felix, needle string) int {
+	out, err := felix.ExecOutput("ip", "xfrm", "policy")
+	Expect(err).NotTo(HaveOccurred())
+	return strings.Count(out, needle)
 }
