@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -24,7 +23,7 @@ const (
 // FlowLogGetter interfaces.
 type cloudWatchAggregator struct {
 	kind                 AggregationKind
-	flowStore            map[FlowMeta]FlowStats // TODO: Abstract the storage.
+	flowStore            map[FlowMeta]FlowStats // TODO(SS): Abstract the storage.
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	aggregationStartTime time.Time
@@ -76,7 +75,7 @@ func (c *cloudWatchAggregator) Get() []*string {
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
 	for flowMeta, flowStats := range c.flowStore {
-		flowLog := fmt.Sprintf("%v %v %v", c.aggregationStartTime.Unix(), aggregationEndTime.Unix(), FlowLog{flowMeta, flowStats}.Serialize(c.includeLabels))
+		flowLog := FlowLog{flowMeta, flowStats}.Serialize(c.aggregationStartTime, aggregationEndTime, c.includeLabels, c.kind)
 		resp = append(resp, &flowLog)
 		delete(c.flowStore, flowMeta)
 	}

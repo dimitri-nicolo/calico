@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	unsetIntField = 0
+	unsetIntField = -1
 )
 
 type FlowLogEndpointType string
@@ -88,6 +89,10 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	f.SrcMeta.Name = getEndpointGenerateName(mu.srcEp)
 	f.DstMeta.Name = getEndpointGenerateName(mu.dstEp)
 
+	// Ignoring Labels.
+	f.SrcMeta.Labels = flowLogFieldNotIncluded
+	f.DstMeta.Labels = flowLogFieldNotIncluded
+
 	return f, nil
 }
 
@@ -104,8 +109,7 @@ func NewFlowMeta(mu MetricUpdate, kind AggregationKind) (FlowMeta, error) {
 	return FlowMeta{}, fmt.Errorf("aggregation kind %s not recognized", kind)
 }
 
-// FlowStats captures the context and information associated with
-// 5-tuple update.
+// FlowStats captures stats associated with a given FlowMeta
 type FlowStats struct {
 	PacketsIn          int `json:"packetsIn"`
 	PacketsOut         int `json:"packetsOut"`
@@ -168,32 +172,35 @@ func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 }
 
 type FlowLog struct {
-	fm FlowMeta
-	fs FlowStats
+	FlowMeta
+	FlowStats
 }
 
-func (f FlowLog) Serialize(includeLabels bool) string {
+func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool, kind AggregationKind) string {
 	var srcLabels, dstLabels string
-	fm := f.fm
-	fs := f.fs
 
 	if includeLabels {
-		srcLabels = fm.SrcMeta.Labels
-		dstLabels = fm.DstMeta.Labels
+		srcLabels = f.SrcMeta.Labels
+		dstLabels = f.DstMeta.Labels
 	} else {
 		srcLabels = flowLogFieldNotIncluded
 		dstLabels = flowLogFieldNotIncluded
 	}
 
-	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(fm.Tuple)
-
-	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
-		fm.SrcMeta.Type, fm.SrcMeta.Namespace, fm.SrcMeta.Name, srcLabels,
-		fm.DstMeta.Type, fm.DstMeta.Namespace, fm.DstMeta.Name, dstLabels,
+	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(f.Tuple)
+	var srcName, dstName string
+	if kind == PrefixName {
+		srcName = f.SrcMeta.Name + "-*"
+		dstName = f.DstMeta.Name + "-*"
+	}
+	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
+		startTime.Unix(), endTime.Unix(),
+		f.SrcMeta.Type, f.SrcMeta.Namespace, srcName, srcLabels,
+		f.DstMeta.Type, f.DstMeta.Namespace, dstName, dstLabels,
 		srcIP, dstIP, proto, l4Src, l4Dst,
-		fs.NumFlows, fs.NumFlowsStarted, fs.NumFlowsCompleted, fm.Direction,
-		fs.PacketsIn, fs.PacketsOut, fs.BytesIn, fs.BytesOut,
-		fm.Action)
+		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Direction,
+		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
+		f.Action)
 }
 
 func (f *FlowLog) Deserialize(fl string) error {
@@ -227,7 +234,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Name:      parts[4],
 		Labels:    parts[5],
 	}
-	if strings.Compare(parts[5], "-") == 0 {
+	if parts[5] == "-" {
 		srcMeta.Labels = ""
 	}
 
@@ -250,7 +257,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Name:      parts[8],
 		Labels:    parts[9],
 	}
-	if strings.Compare(parts[9], "-") == 0 {
+	if parts[9] == "-" {
 		dstMeta.Labels = ""
 	}
 
