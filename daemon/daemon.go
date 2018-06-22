@@ -101,7 +101,7 @@ const (
 	unHealthyNodeMetricName = "Unhealthy Nodes"
 
 	// CloudWatch Health metrics namespace.
-	namespace = "Tigera Metrics"
+	cloudWatchHealthMetricNamespace = "Tigera Metrics"
 
 	// CloudWatch Health metrics unit.
 	cwUnit = cloudwatch.StandardUnitCount
@@ -549,20 +549,18 @@ configRetry:
 }
 
 func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator) {
-	cwClient := newCloudWatchMetricsClient(nil)
+	cwClient := newCloudWatchMetricsClient(nil, healthAgg)
 	var err error
 
 	for {
 		select {
 		case <-jitter.NewTicker(pushInterval, pushInterval/10).C:
 			if healthAgg.Summary().Live {
-				// push 1 to healthy nodes
-				// push 0 to unhealthy nodes
-				err = pushHealthMetrics(cwClient, 1.0, 0.0, clusterID)
+
+				err = cwClient.pushHealthMetrics(true, clusterID)
 			} else {
-				// push 1 to unhealthy nodes
-				// push 0 to healthy nodes
-				err = pushHealthMetrics(cwClient, 0.0, 1.0, clusterID)
+
+				err = cwClient.pushHealthMetrics(false, clusterID)
 			}
 
 			if err != nil {
@@ -572,11 +570,34 @@ func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID strin
 	}
 }
 
-func pushHealthMetrics(cwClient *cloudWatchMetricsClient, healthy, unhealthy float64, clusterID string) error {
+func (cw *cloudWatchHealthClient) pushHealthMetrics(isHealthy bool, clusterID string) error {
+
+	// For unhealthy node,
+	// push +1 to unhealthy nodes
+	// push +0 to healthy nodes
+	healthy := 0.0
+	unhealthy := 1.0
+
+	if isHealthy {
+		// Node is healthy
+		// push +1 to healthy nodes
+		// push +0 to unhealthy nodes
+		healthy = 1.0
+		unhealthy = 0.0
+	}
+
 	var err error
 
+	// Create a context with a timeout that will abort the put metrics operation
+	// if it takes more than the timeout.
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 1*time.Minute)
+
+	// Ensure the context is canceled to prevent leaking.
+	defer cancelFn()
+
 	for retry := 0; retry < 5; retry++ {
-		result, err := cwClient.cwAPI.PutMetricData(&cloudwatch.PutMetricDataInput{
+		result, err := cw.cwAPI.PutMetricDataWithContext(ctx, &cloudwatch.PutMetricDataInput{
 			MetricData: []*cloudwatch.MetricDatum{
 				&cloudwatch.MetricDatum{
 					MetricName: aws.String(healthyNodeMetricName),
@@ -601,7 +622,7 @@ func pushHealthMetrics(cwClient *cloudWatchMetricsClient, healthy, unhealthy flo
 					},
 				},
 			},
-			Namespace: aws.String(namespace),
+			Namespace: aws.String(cloudWatchHealthMetricNamespace),
 		})
 
 		if err != nil {
@@ -617,11 +638,12 @@ func pushHealthMetrics(cwClient *cloudWatchMetricsClient, healthy, unhealthy flo
 	return err
 }
 
-type cloudWatchMetricsClient struct {
-	cwAPI cloudwatchiface.CloudWatchAPI
+type cloudWatchHealthClient struct {
+	cwAPI            cloudwatchiface.CloudWatchAPI
+	healthAggregator *health.HealthAggregator
 }
 
-func newCloudWatchMetricsClient(cwAPI cloudwatchiface.CloudWatchAPI) *cloudWatchMetricsClient {
+func newCloudWatchMetricsClient(cwAPI cloudwatchiface.CloudWatchAPI, healthAgg *health.HealthAggregator) *cloudWatchHealthClient {
 	if cwAPI == nil {
 		// Initialize a session that the SDK uses to load
 		// credentials from the shared credentials file ~/.aws/credentials
@@ -634,8 +656,9 @@ func newCloudWatchMetricsClient(cwAPI cloudwatchiface.CloudWatchAPI) *cloudWatch
 		cwAPI = cloudwatch.New(sess)
 	}
 
-	return &cloudWatchMetricsClient{
-		cwAPI: cwAPI,
+	return &cloudWatchHealthClient{
+		cwAPI:            cwAPI,
+		healthAggregator: healthAgg,
 	}
 }
 
