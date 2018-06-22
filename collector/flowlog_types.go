@@ -48,11 +48,19 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 		if err != nil {
 			return FlowMeta{}, fmt.Errorf("Could not extract metadata for source %v", mu.srcEp)
 		}
+	} else {
+		if isClassified(mu.tuple.src) {
+			srcMeta = EndpointMetadata{Name: "classified"}
+		}
 	}
 	if mu.dstEp != nil {
 		dstMeta, err = getFlowLogEndpointMetadata(mu.dstEp)
 		if err != nil {
 			return FlowMeta{}, fmt.Errorf("Could not extract metadata for destination %v", mu.dstEp)
+		}
+	} else {
+		if isClassified(mu.tuple.dst) {
+			dstMeta = EndpointMetadata{Name: "classified"}
 		}
 	}
 

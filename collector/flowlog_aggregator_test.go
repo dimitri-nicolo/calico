@@ -10,6 +10,10 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
+var (
+	tuple4 = *NewTuple(localIp2, localIp1DNAT, proto_tcp, srcPort1, dstPort)
+)
+
 // Common MetricUpdate definitions
 var (
 	// Metric update without a connection (ingress stats match those of muConn1Rule1AllowUpdate).
@@ -35,6 +39,28 @@ var (
 				EndpointID:     "4352",
 			},
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "true"}},
+		},
+
+		ruleID:       ingressRule1Allow,
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 1,
+			deltaBytes:   20,
+		},
+	}
+
+	muNoConn1Rule1AllowUpdateWithEndpointIPClassified = MetricUpdate{
+		updateType: UpdateTypeReport,
+		tuple:      tuple4,
+
+		srcEp: &calc.EndpointData{
+			Key: model.WorkloadEndpointKey{
+				Hostname:       "node-01",
+				OrchestratorID: "k8s",
+				WorkloadID:     "iperf-4235-5623461/kube-system",
+				EndpointID:     "4352",
+			},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
 		},
 
 		ruleID:       ingressRule1Allow,
@@ -159,6 +185,17 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages = ca.Get()
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
+
+			By("prefix name with IP classification")
+			ca = NewCloudWatchAggregator().AggregateOver(PrefixName)
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointIPClassified)
+
+			muNoConn1Rule1AllowUpdateWithEndpointIPClassifiedCopy := muNoConn1Rule1AllowUpdateWithEndpointIPClassified
+			muNoConn1Rule1AllowUpdateWithEndpointIPClassifiedCopy.tuple.dst = localIp2DNAT
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointIPClassified)
+			messages = ca.Get()
+			// Two updates should still result in 1 flow
+			Expect(len(messages)).Should(Equal(1))
 		})
 	})
 	Context("Flow log aggregator filter verification", func() {
@@ -183,5 +220,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages = cad.Get()
 			Expect(len(messages)).Should(Equal(0))
 		})
+
 	})
 })

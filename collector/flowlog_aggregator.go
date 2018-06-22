@@ -18,7 +18,7 @@ const (
 	Default AggregationKind = iota
 	// SourcePort accumulates tuples with everything same but the source port
 	SourcePort
-	// PrefixName accumulates tuples with exeverything same but the prefix name
+	// PrefixName accumulates tuples with everything same but the prefix name
 	PrefixName
 )
 

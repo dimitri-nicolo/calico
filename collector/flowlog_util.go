@@ -154,3 +154,15 @@ func ipStrTo16Byte(ipStr string) [16]byte {
 	copy(addrB[:], addr.To16()[:16])
 	return addrB
 }
+
+func isClassified(addrBytes [16]byte) bool {
+	IP := net.IP(addrBytes[:16])
+
+	// Currently checking for only private blocks
+	_, private24BitBlock, _ := net.ParseCIDR("10.0.0.0/8")
+	_, private20BitBlock, _ := net.ParseCIDR("172.16.0.0/12")
+	_, private16BitBlock, _ := net.ParseCIDR("192.168.0.0/16")
+	classified := private24BitBlock.Contains(IP) || private20BitBlock.Contains(IP) || private16BitBlock.Contains(IP)
+
+	return classified
+}
