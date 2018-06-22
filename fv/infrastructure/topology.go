@@ -44,6 +44,7 @@ type TopologyOptions struct {
 	WithPrometheusPortTLS     bool
 	NATOutgoingEnabled        bool
 	InitialFelixConfiguration *api.FelixConfiguration
+	DelayFelixStart           bool
 }
 
 func DefaultTopologyOptions() TopologyOptions {
@@ -177,7 +178,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 		}
 
 		var w chan struct{}
-		if felix.ExpectedIPIPTunnelAddr != "" {
+		if !opts.DelayFelixStart && felix.ExpectedIPIPTunnelAddr != "" {
 			// If felix has an IPIP tunnel address defined, Felix may restart after loading its config.
 			// Handle that here by monitoring the log and waiting for the correct tunnel IP to show up
 			// before we return.

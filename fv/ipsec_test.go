@@ -66,6 +66,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 				regexp.MustCompile(`.*10\.65\.\d+\.2.\d+ `+regexp.QuoteMeta("> "+f.IP)))
 			tcpdump.Start()
 			tcpdumps = append(tcpdumps, tcpdump)
+
+			f.TriggerDelayedStart()
 		}
 
 		startWorkloadsandWaitForPolicy(infra, felixes, w[:], hostW[:])
@@ -450,6 +452,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 				regexp.MustCompile(`.*10\.65\.\d+\.2.\d+ `+regexp.QuoteMeta("> "+f.IP)))
 			tcpdump.Start()
 			tcpdumps = append(tcpdumps, tcpdump)
+
+			f.TriggerDelayedStart()
 		}
 
 		startWorkloadsandWaitForPolicy(infra, felixes, w[:], hostW[:])
@@ -542,6 +546,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 
 func ipSecTopologyOptions() infrastructure.TopologyOptions {
 	topologyOptions := infrastructure.DefaultTopologyOptions()
+	// Delay Felix startup until we trigger it so that we can attach tcpdump first.
+	topologyOptions.DelayFelixStart = true
 	// Set up IPsec.
 	topologyOptions.ExtraEnvVars["FELIX_IPSECPSKFILE"] = "/proc/1/cmdline"
 
