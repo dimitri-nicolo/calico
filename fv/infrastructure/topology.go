@@ -32,16 +32,18 @@ import (
 )
 
 type TopologyOptions struct {
-	FelixLogSeverity      string
-	EnableIPv6            bool
-	ExtraEnvVars          map[string]string
-	ExtraVolumes          map[string]string
-	WithTypha             bool
-	WithFelixTyphaTLS     bool
-	TyphaLogSeverity      string
-	IPIPEnabled           bool
-	WithPrometheusPortTLS bool
-	NATOutgoingEnabled    bool
+	FelixLogSeverity          string
+	EnableIPv6                bool
+	ExtraEnvVars              map[string]string
+	ExtraVolumes              map[string]string
+	WithTypha                 bool
+	WithFelixTyphaTLS         bool
+	TyphaLogSeverity          string
+	IPIPEnabled               bool
+	IPIPRoutesEnabled         bool
+	WithPrometheusPortTLS     bool
+	NATOutgoingEnabled        bool
+	InitialFelixConfiguration *api.FelixConfiguration
 }
 
 func DefaultTopologyOptions() TopologyOptions {
@@ -54,6 +56,7 @@ func DefaultTopologyOptions() TopologyOptions {
 		WithFelixTyphaTLS: false,
 		TyphaLogSeverity:  "info",
 		IPIPEnabled:       true,
+		IPIPRoutesEnabled: true,
 	}
 }
 
@@ -122,6 +125,24 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 	// Add a CNX license.
 	applyCNXLicense(client)
 
+	// If asked to, pre-create a felix configuration.  We do this before enabling IPIP because IPIP set-up can
+	// create/update a FelixConfiguration as a side-effect.
+	if opts.InitialFelixConfiguration != nil {
+		log.WithField("config", opts.InitialFelixConfiguration).Info(
+			"Installing initial FelixConfiguration")
+		Eventually(func() error {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_, err = client.FelixConfigurations().Create(ctx, opts.InitialFelixConfiguration, options.SetOptions{})
+			if _, ok := err.(errors.ErrorResourceAlreadyExists); ok {
+				// Try to delete the unexpected config, then, if there's still time in the Eventually loop,
+				// we'll try to recreate
+				_, _ = client.FelixConfigurations().Delete(ctx, "default", options.DeleteOptions{})
+			}
+			return err
+		}, "10s").ShouldNot(HaveOccurred())
+	}
+
 	if n > 1 {
 		Eventually(func() error {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -181,7 +202,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			}
 
 			jBlock := fmt.Sprintf("10.65.%d.0/24", j)
-			if opts.IPIPEnabled {
+			if opts.IPIPEnabled && opts.IPIPRoutesEnabled {
 				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP, "dev", "tunl0", "onlink")
 				Expect(err).ToNot(HaveOccurred())
 			} else {
