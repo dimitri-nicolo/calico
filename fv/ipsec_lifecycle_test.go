@@ -167,20 +167,18 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 		Expect(saExists(felixes[1], startSPI)).To(BeFalse())
 	})
 
-	It("Felix should reboot if charon daemon exits", func() {
+	It("Felix should restart if charon daemon exits", func() {
 		felix := felixes[0]
 
-		// There could be multiple cali-felix processes at start or reboot.
-		Eventually(len(felix.GetFelixPIDs()), "5s", "100ms").Should(Equal(1))
-
+		// Get felix/charon's PID so we can check that it restarts...
 		felixPID := felix.GetFelixPID()
 		charonPID := felix.GetSinglePID("/usr/lib/strongswan/charon")
 
 		// Kill charon daemon
 		killProcess(felix, fmt.Sprint(charonPID))
 
-		Eventually(len(felix.GetFelixPIDs()), "5s", "100ms").Should(Equal(1))
-		Eventually(felix.GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID), "New felix process")
+		Eventually(felix.GetFelixPID, "5s", "100ms").ShouldNot(Equal(felixPID),
+			"Felix failed to restart after killing the charon")
 
 		Eventually(func() int {
 			return felix.GetSinglePID("/usr/lib/strongswan/charon")
