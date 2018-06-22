@@ -30,12 +30,9 @@ import (
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
 
-var defaultPodSecurityGroup string
-
 // Create a new SyncerUpdateProcessor to sync WorkloadEndpoint data in v1 format for
 // consumption by Felix.
 func NewWorkloadEndpointUpdateProcessor() watchersyncer.SyncerUpdateProcessor {
-	defaultPodSecurityGroup = os.Getenv("TIGERA_POD_SECURITY_GROUP")
 	return NewSimpleUpdateProcessor(apiv3.KindWorkloadEndpoint, convertWorkloadEndpointV2ToV1Key, convertWorkloadEndpointV2ToV1Value)
 }
 
@@ -135,17 +132,35 @@ func convertWorkloadEndpointV2ToV1Value(val interface{}) (interface{}, error) {
 	// Make sure there are no "namespace" or "serviceaccount" labels on the wep
 	// we pass to felix. This prevents a wep from pretending it is
 	// in another namespace.
+	hasSecurityGroup := false
 	labels := map[string]string{}
 	for k, v := range v3res.GetLabels() {
 		if !strings.HasPrefix(k, conversion.NamespaceLabelPrefix) &&
 			!strings.HasPrefix(k, conversion.ServiceAccountLabelPrefix) {
 			labels[k] = v
 		}
+
+		// If the pod has at least one security group defined, make a note of it. We'll
+		// use this below to determine if we need to apply security groups from the node.
+		if strings.HasPrefix(k, conversion.SecurityGroupLabelPrefix) {
+			hasSecurityGroup = true
+		}
 	}
 
-	if defaultPodSecurityGroup != "" {
-		label := conversion.SecurityGroupLabelPrefix + "/" + defaultPodSecurityGroup
+	// We always add pods to the pod security group if it is specified.
+	tigeraPodSG := os.Getenv("TIGERA_POD_SECURITY_GROUP")
+	if tigeraPodSG != "" {
+		label := conversion.SecurityGroupLabelPrefix + "/" + tigeraPodSG
 		labels[label] = ""
+	}
+
+	// We only add pods to the default security groups if no other security groups are specified.
+	if !hasSecurityGroup {
+		nodeSGs := getDefaultSecurityGroups()
+		for _, sg := range nodeSGs {
+			label := conversion.SecurityGroupLabelPrefix + "/" + sg
+			labels[label] = ""
+		}
 	}
 
 	v1value := &model.WorkloadEndpoint{
@@ -177,4 +192,15 @@ func ConvertV2ToV1IPNAT(ipnat apiv3.IPNAT) *model.IPNAT {
 		}
 	}
 	return nil
+}
+
+// getDefaultSecurityGroups returns a list of security group IDs to apply as
+// labels to the workload endpoint if no other security groups are specified
+// via the annotation.
+func getDefaultSecurityGroups() (groups []string) {
+	s := os.Getenv("TIGERA_DEFAULT_SECURITY_GROUPS")
+	if s != "" {
+		groups = strings.Split(s, ",")
+	}
+	return
 }
