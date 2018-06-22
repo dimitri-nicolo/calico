@@ -17,6 +17,7 @@ package updateprocessors_test
 import (
 	"net"
 	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -202,7 +203,7 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 		}))
 	})
 
-	It("should add a SG label if the environment variable is set", func() {
+	It("should add the pod SG label if the environment variable is set", func() {
 		envName := "TIGERA_POD_SECURITY_GROUP"
 		testSG := "sg-test"
 		expectedSGLabel := conversion.SecurityGroupLabelPrefix + "/" + testSG
@@ -246,6 +247,110 @@ var _ = Describe("Test the WorkloadEndpoint update processor", func() {
 					"projectcalico.org/namespace":    ns1,
 					"projectcalico.org/orchestrator": oid1,
 					expectedSGLabel:                  "",
+				},
+				IPv4Nets: []cnet.IPNet{expectedIPv4Net},
+			},
+			Revision: "abcde",
+		}))
+	})
+
+	It("should add default SGs if no others are specified", func() {
+		envName := "TIGERA_DEFAULT_SECURITY_GROUPS"
+		defaultSGs := []string{"sg-one", "sg-two"}
+		err := os.Setenv(envName, strings.Join(defaultSGs, ","))
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { os.Unsetenv(envName) }()
+
+		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
+
+		By("converting a WorkloadEndpoint with minimum configuration")
+		res := apiv3.NewWorkloadEndpoint()
+		res.Namespace = ns1
+		res.Labels = map[string]string{
+			"projectcalico.org/namespace":    ns1,
+			"projectcalico.org/orchestrator": oid1,
+		}
+		res.Spec.Node = hn1
+		res.Spec.Orchestrator = oid1
+		res.Spec.Workload = wid1
+		res.Spec.Endpoint = eid1
+		res.Spec.InterfaceName = iface1
+		res.Spec.IPNetworks = []string{"10.100.10.1"}
+
+		kvps, err := up.Process(&model.KVPair{
+			Key:      v3WorkloadEndpointKey1,
+			Value:    res,
+			Revision: "abcde",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kvps).To(HaveLen(1))
+		_, ipn, err := cnet.ParseCIDROrIP("10.100.10.1")
+		Expect(err).NotTo(HaveOccurred())
+		expectedIPv4Net := *(ipn.Network())
+		Expect(kvps[0]).To(Equal(&model.KVPair{
+			Key: v1WorkloadEndpointKey1,
+			Value: &model.WorkloadEndpoint{
+				State: "active",
+				Name:  iface1,
+				Ports: []model.EndpointPort{},
+				Labels: map[string]string{
+					"projectcalico.org/namespace":    ns1,
+					"projectcalico.org/orchestrator": oid1,
+
+					// The default labels.
+					"sg.aws.tigera.io/sg-one": "",
+					"sg.aws.tigera.io/sg-two": "",
+				},
+				IPv4Nets: []cnet.IPNet{expectedIPv4Net},
+			},
+			Revision: "abcde",
+		}))
+	})
+
+	It("should not add default SGs if others are specified", func() {
+		envName := "TIGERA_DEFAULT_SECURITY_GROUPS"
+		defaultSGs := []string{"sg-one", "sg-two"}
+		err := os.Setenv(envName, strings.Join(defaultSGs, ","))
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { os.Unsetenv(envName) }()
+
+		up := updateprocessors.NewWorkloadEndpointUpdateProcessor()
+
+		By("converting a WorkloadEndpoint with minimum configuration")
+		res := apiv3.NewWorkloadEndpoint()
+		res.Namespace = ns1
+		res.Labels = map[string]string{
+			"projectcalico.org/namespace":    ns1,
+			"projectcalico.org/orchestrator": oid1,
+			"sg.aws.tigera.io/sg-foo":        "",
+		}
+		res.Spec.Node = hn1
+		res.Spec.Orchestrator = oid1
+		res.Spec.Workload = wid1
+		res.Spec.Endpoint = eid1
+		res.Spec.InterfaceName = iface1
+		res.Spec.IPNetworks = []string{"10.100.10.1"}
+
+		kvps, err := up.Process(&model.KVPair{
+			Key:      v3WorkloadEndpointKey1,
+			Value:    res,
+			Revision: "abcde",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kvps).To(HaveLen(1))
+		_, ipn, err := cnet.ParseCIDROrIP("10.100.10.1")
+		Expect(err).NotTo(HaveOccurred())
+		expectedIPv4Net := *(ipn.Network())
+		Expect(kvps[0]).To(Equal(&model.KVPair{
+			Key: v1WorkloadEndpointKey1,
+			Value: &model.WorkloadEndpoint{
+				State: "active",
+				Name:  iface1,
+				Ports: []model.EndpointPort{},
+				Labels: map[string]string{
+					"projectcalico.org/namespace":    ns1,
+					"projectcalico.org/orchestrator": oid1,
+					"sg.aws.tigera.io/sg-foo":        "",
 				},
 				IPv4Nets: []cnet.IPNet{expectedIPv4Net},
 			},
