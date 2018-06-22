@@ -185,5 +185,5 @@ type BGPPeer struct {
 	ASNum numorstring.ASNumber `json:"as_num,string"`
 
 	// Extensions is a mapping of keys to values that can be used in custom BGP templates
-	Extensions map[string]string
+	Extensions map[string]string `json:"extensions"`
 }
