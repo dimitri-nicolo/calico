@@ -17,14 +17,14 @@ import (
 const (
 	flowLogBufferSize = 1000
 
-	flowLogNamespaceGlobal  = "_G_"
+	flowLogNamespaceGlobal  = "-"
 	flowLogFieldNotIncluded = "-"
 
-	FlowLogActionAllow FlowLogAction = "A"
-	FlowLogActionDeny  FlowLogAction = "D"
+	FlowLogActionAllow FlowLogAction = "allow"
+	FlowLogActionDeny  FlowLogAction = "deny"
 
-	FlowLogDirectionIn  FlowLogDirection = "I"
-	FlowLogDirectionOut FlowLogDirection = "O"
+	FlowLogDirectionIn  FlowLogDirection = "in"
+	FlowLogDirectionOut FlowLogDirection = "out"
 
 	FlowLogEndpointTypeWep FlowLogEndpointType = "wep"
 	FlowLogEndpointTypeHep FlowLogEndpointType = "hep"
@@ -72,7 +72,7 @@ func extractPartsFromAggregatedTuple(t Tuple) (srcIP, dstIP, proto, l4Src, l4Dst
 	return
 }
 
-func deconstructNameAndNamespaceFromWepName(wepName string) (string, string, error) {
+func deconstructNamespaceAndNameFromWepName(wepName string) (string, string, error) {
 	parts := strings.Split(wepName, "/")
 	if len(parts) == 2 {
 		return parts[0], parts[1], nil
@@ -94,7 +94,7 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 
 	switch k := ed.Key.(type) {
 	case model.WorkloadEndpointKey:
-		name, ns, err := deconstructNameAndNamespaceFromWepName(k.WorkloadID)
+		ns, name, err := deconstructNamespaceAndNameFromWepName(k.WorkloadID)
 		if err != nil {
 			return EndpointMetadata{}, err
 		}
