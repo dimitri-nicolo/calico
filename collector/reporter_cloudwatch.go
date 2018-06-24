@@ -18,6 +18,7 @@ type FlowLogAggregator interface {
 	FlowLogGetter
 	IncludeLabels(bool) FlowLogAggregator
 	AggregateOver(AggregationKind) FlowLogAggregator
+	WithFilter(MetricUpdateFilter) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error
 }
 
