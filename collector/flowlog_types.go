@@ -86,8 +86,12 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	f.Tuple.l4Src = unsetIntField
 	f.Tuple.dst = [16]byte{}
 
-	f.SrcMeta.Name = getEndpointGenerateName(mu.srcEp)
-	f.DstMeta.Name = getEndpointGenerateName(mu.dstEp)
+	if mu.srcEp != nil {
+		f.SrcMeta.Name = getEndpointNamePrefix(mu.srcEp)
+	}
+	if mu.dstEp != nil {
+		f.DstMeta.Name = getEndpointNamePrefix(mu.dstEp)
+	}
 
 	// Ignoring Labels.
 	f.SrcMeta.Labels = flowLogFieldNotIncluded

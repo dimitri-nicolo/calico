@@ -58,6 +58,14 @@ func (c *cloudWatchReporter) Start() {
 }
 
 func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
+	// We only produce Flow logs when we know that at least one of the endpoints
+	// is a WorkloadEndpoint. Otherwise skip processing.
+	if mu.srcEp != nil && mu.dstEp != nil {
+		if mu.srcEp.IsHostEndpoint() && mu.dstEp.IsHostEndpoint() {
+			log.Infof("Skipping HEP only update: %v", mu)
+			return nil
+		}
+	}
 	for _, agg := range c.aggregators {
 		agg.FeedUpdate(mu)
 	}
