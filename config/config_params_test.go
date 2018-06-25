@@ -527,6 +527,8 @@ var _ = Describe("IPSec PSK parameters test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cfg.IpInIpTunnelAddr.String()).To(Equal("10.0.0.1"))
 		Expect(cfg.IpInIpEnabled).To(BeTrue())
+		Expect(cfg.IPSecEnabled()).To(BeFalse())
+		Expect(cfg.IPSecMode).To(Equal(""))
 
 		_, err = cfg.UpdateFrom(map[string]string{
 			"IPSecMode": "PSK",
@@ -534,6 +536,7 @@ var _ = Describe("IPSec PSK parameters test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cfg.IpInIpTunnelAddr).To(BeNil())
 		Expect(cfg.IpInIpEnabled).To(BeFalse())
+		Expect(cfg.IPSecEnabled()).To(BeTrue())
 		Expect(cfg.IPSecMode).To(Equal("PSK"))
 	})
 })
