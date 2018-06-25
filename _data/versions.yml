@@ -715,6 +715,9 @@ master:
     cnx-queryserver:
       version: master
       url: ""
+    cnx-kube-controllers:
+      version: master
+      url: ""
     calicoq:
       version: master
       url: ""
@@ -733,9 +736,6 @@ master:
       url: ""
       download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico
       download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v2.0.1/calico-ipam
-    calico/kube-controllers:
-      version: master
-      url: ""
     calico/routereflector:
       version: v0.6.1
       url: ""

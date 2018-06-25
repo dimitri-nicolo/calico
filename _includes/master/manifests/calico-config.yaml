@@ -1,13 +1,13 @@
 {% comment %}
 calico-config.yaml acccepts the following include flags:
 
-| Name         | Accepted Values          |
-|--------------|--------------------------|
-| datastore    | kdd, etcd                |
-| typha        | true, false              |
-| network      | calico, flannel, <unset> |
-| calico_ipam  | true, false              |
-| variant_name | Calico, Canal            |
+| Name         | Accepted Values               |
+|--------------|-------------------------------|
+| datastore    | kdd, etcd                     |
+| typha        | true, false                   |
+| network      | calico, flannel, ecs, <unset> |
+| calico_ipam  | true, false                   |
+| variant_name | Calico, Canal                 |
 
 {% endcomment -%}
 # This ConfigMap is used to configure a self-hosted {{include.variant_name}} installation.
@@ -49,6 +49,7 @@ data:
   # the pod network.
   masquerade: "true"
 {%- endif %}
+{%- if include.network != "ecs" %}
   # The CNI network configuration to install on each node.  The special
   # values in this config will be automatically populated.
 {%- if include.datastore == "etcd"  and include.network == "flannel" %}
@@ -130,6 +131,7 @@ data:
         }
       ]
     }
+{%- endif %}
 {%- endif %}
 {%- if include.network == "flannel" and include.datastore == "kdd" %}
   # Flannel network configuration. Mounted into the flannel container.

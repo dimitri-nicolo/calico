@@ -1,9 +1,9 @@
 {% comment %}
 kdd-crds.yaml acccepts the following include flags:
 
-| Name             | Accepted Values          |
-|------------------|--------------------------|
-| network          | calico, flannel, <unset> |
+| Name             | Accepted Values               |
+|------------------|-------------------------------|
+| network          | calico, flannel, ecs, <unset> |
 
 {% endcomment -%}
 # Create all the CustomResourceDefinitions needed for

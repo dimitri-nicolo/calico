@@ -50,17 +50,27 @@ complete the following steps.
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
 
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore.
+1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore, selecting the mainfest dependent 
+   on your installation environment.
    
-   ```bash
-   curl \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml \
-   -O
-   ```
+   - If you are installing on AWS using the AWS VPC CNI plugin, then download the manifest as follows:
+     ```bash
+     curl \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only-ecs/1.7/calico.yaml \
+     -O
+     ```
+
+   - Otherwise, download as follows:
+     ```bash
+     curl \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml \
+     -O
+     ```
    
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
    
-1. If your cluster contains more than 50 nodes:
+1. If your cluster contains more than 50 nodes, or if you are using the Federated Endpoint Identity feature
+   then install the Typha component using the following instructions:
 
    - In the `ConfigMap` named `calico-config`, locate the `typha_service_name`,
      delete the `none` value, and replace it with `calico-typha`.
@@ -87,6 +97,14 @@ complete the following steps.
      > count from its default of `0` Felix will try to connect to Typha, find no 
      > Typha instances to connect to, and fail to start.
      {: .alert .alert-success}
+
+1. If you have created some secrets for Federation, then modify the manifest to mount the secrets into the 
+   container.  For details see [Configuring a Remote Cluster for Federation](/{{page.version}}/usage/federation/configure-rcc).
+
+   > **Warning**: If you are upgrading from a previous release and previously had secrets mounted in for 
+   > federation, then failure to include these secrets in this manifest will result in loss of federation
+   > functionality, which may include loss of service between clusters.
+   {: .alert .alert-danger}
 
 1. Apply the manifest using the following command.
 

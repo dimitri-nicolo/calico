@@ -20,6 +20,8 @@ toc:
       path: /getting-started/kubernetes/installation/calico
     - title: Installing CNX for policy (advanced)
       path: /getting-started/kubernetes/installation/other
+    - title: Installing the Federated Services Controller
+      path: /getting-started/kubernetes/installation/fed-controller
     - title: Customizing the manifests (advanced)
       path: /getting-started/kubernetes/installation/config-options
     - title: Customizing the CNX manifests (advanced)

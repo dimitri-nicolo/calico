@@ -98,3 +98,105 @@ subjects:
 - kind: ServiceAccount
   name: calico-node
   namespace: kube-system
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-federation-controller
+rules:
+- apiGroups:
+  - ""
+  - extensions
+  resources:
+  - services
+  - endpoints
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  - extensions
+  resources:
+  - endpoints
+  verbs:
+  - create
+  - update
+  - delete
+- apiGroups: ["crd.projectcalico.org"]
+  resources:
+  - remoteclusterconfigurations
+  - licensekeys
+  verbs:
+  - get
+  - list
+  - watch
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-federation-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-federation-controller
+subjects:
+- kind: ServiceAccount
+  name: tigera-federation-controller
+  namespace: kube-system
+
+---
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: tigera-federation-remote-cluster
+rules:
+  - apiGroups: [""]
+    resources:
+      - namespaces
+      - serviceaccounts
+      - services
+      - endpoints
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - hostendpoints
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - tiers
+      - clusterinformations
+    verbs:
+      - create
+      - get
+      - list
+      - update
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-federation-remote-cluster
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-federation-remote-cluster
+subjects:
+- kind: ServiceAccount
+  name: tigera-federation-remote-cluster
+  namespace: kube-system
+
