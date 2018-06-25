@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/felix/ipsec"
-	"github.com/projectcalico/libcalico-go/lib/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/fv/containers"
@@ -36,9 +35,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
-		hostW       [2]*workload.Workload
-		cc          *workload.ConnectivityChecker
-		felixConfig *api.FelixConfiguration
+		hostW [2]*workload.Workload
+		cc    *workload.ConnectivityChecker
 	)
 
 	BeforeEach(func() {
@@ -47,10 +45,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		infra, err = getInfra()
 		Expect(err).NotTo(HaveOccurred())
 
-		felixes, client = infrastructure.StartNNodeTopology(2, ipSecTopologyOptions(), infra)
-
-		// Enable IPsec.  We do this via the datastore so we can disable it again later...
-		felixConfig = enableIPSec(client)
+		topologyOptions := ipSecTopologyOptions()
+		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		err = infra.AddDefaultAllow()
@@ -70,6 +66,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 				regexp.MustCompile(`.*10\.65\.\d+\.2.\d+ `+regexp.QuoteMeta("> "+f.IP)))
 			tcpdump.Start()
 			tcpdumps = append(tcpdumps, tcpdump)
+
+			f.TriggerDelayedStart()
 		}
 
 		startWorkloadsandWaitForPolicy(infra, felixes, w[:], hostW[:])
@@ -101,16 +99,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 
 		for _, felix := range felixes {
 			felix.Stop()
-		}
-
-		// KDD infra keeps the API server running, make sure we remove our config changes.
-		if felixConfig != nil {
-			felixConfig.Spec.IPSecMode = ""
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			_, err := client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
-			Expect(err).NotTo(HaveOccurred(),
-				"Failed to back out FelixConfiguration changes during teardown")
 		}
 
 		if CurrentGinkgoTestDescription().Failed {
@@ -173,6 +161,15 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 					tcpdumpMatches(i, "numInboundESPPackets")()
 			}).Should(BeZero(), "Number of inbound unencrypted packets didn't match number of inbound ESP packets")
 		}
+	})
+
+	felixTunnelAddr := func() string {
+		output, _ := felixes[0].ExecOutput("ip", "addr", "show", "tunl0")
+		return output
+	}
+
+	It("should not enable the IPIP tunnel", func() {
+		Consistently(felixTunnelAddr, "5s").ShouldNot(ContainSubstring(felixes[0].ExpectedIPIPTunnelAddr))
 	})
 
 	It("host-to-workload connections should be encrypted", func() {
@@ -397,13 +394,11 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		BeforeEach(func() {
 			// Check that our policy counting function does pick up our policies before we use it in anger below.
 			Eventually(totalPolCount, "5s", "100ms").Should(BeNumerically(">", 0))
+			disableIPSec(client)
+		})
 
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			defer cancel()
-			felixConfig.Spec.IPSecMode = ""
-			var err error
-			felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
-			Expect(err).NotTo(HaveOccurred())
+		It("should enable the IPIP tunnel", func() {
+			Eventually(felixTunnelAddr, "5s").Should(ContainSubstring(felixes[0].ExpectedIPIPTunnelAddr))
 		})
 
 		It("should remove the IPsec policy and have connectivity", func() {
@@ -430,9 +425,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
-		hostW       [3]*workload.Workload
-		cc          *workload.ConnectivityChecker
-		felixConfig *api.FelixConfiguration
+		hostW [3]*workload.Workload
+		cc    *workload.ConnectivityChecker
 	)
 
 	BeforeEach(func() {
@@ -442,9 +436,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		Expect(err).NotTo(HaveOccurred())
 
 		felixes, client = infrastructure.StartNNodeTopology(3, ipSecTopologyOptions(), infra)
-
-		// Enable IPsec.  We do this via the datastore so we can disable it again later...
-		felixConfig = enableIPSec(client)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		err = infra.AddDefaultAllow()
@@ -461,6 +452,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 				regexp.MustCompile(`.*10\.65\.\d+\.2.\d+ `+regexp.QuoteMeta("> "+f.IP)))
 			tcpdump.Start()
 			tcpdumps = append(tcpdumps, tcpdump)
+
+			f.TriggerDelayedStart()
 		}
 
 		startWorkloadsandWaitForPolicy(infra, felixes, w[:], hostW[:])
@@ -492,16 +485,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 
 		for _, felix := range felixes {
 			felix.Stop()
-		}
-
-		// KDD infra keeps the API server running, make sure we remove our config changes.
-		if felixConfig != nil {
-			felixConfig.Spec.IPSecMode = ""
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			_, err := client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
-			Expect(err).NotTo(HaveOccurred(),
-				"Failed to back out FelixConfiguration changes during teardown")
 		}
 
 		if CurrentGinkgoTestDescription().Failed {
@@ -540,13 +523,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		BeforeEach(func() {
 			// Check that our policy counting function does pick up our policies before we use it in anger below.
 			Eventually(totalPolCount, "5s", "100ms").Should(BeNumerically(">", 0))
-
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			defer cancel()
-			felixConfig.Spec.IPSecMode = ""
-			var err error
-			felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
-			Expect(err).NotTo(HaveOccurred())
+			disableIPSec(client)
 		})
 
 		It("should remove the IPsec policy and have connectivity", func() {
@@ -567,37 +544,38 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 	})
 })
 
-func enableIPSec(client client.Interface) (felixConfig *api.FelixConfiguration) {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	felixConfig = api.NewFelixConfiguration()
-	felixConfig.Name = "default"
-	felixConfig.Spec.IPSecMode = "PSK"
-	var err error
-	felixConfig, err = client.FelixConfigurations().Create(ctx, felixConfig, options.SetOptions{})
-	if _, ok := err.(errors.ErrorResourceAlreadyExists); ok {
-		felixConfig, err = client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-		felixConfig.Spec.IPSecMode = "PSK"
-		felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-	}
-	return
-}
-
 func ipSecTopologyOptions() infrastructure.TopologyOptions {
 	topologyOptions := infrastructure.DefaultTopologyOptions()
+	// Delay Felix startup until we trigger it so that we can attach tcpdump first.
+	topologyOptions.DelayFelixStart = true
 	// Set up IPsec.
 	topologyOptions.ExtraEnvVars["FELIX_IPSECPSKFILE"] = "/proc/1/cmdline"
-	topologyOptions.ExtraEnvVars["FELIX_IPSECIKEAlGORITHM"] = "aes128gcm16-prfsha256-ecp256"
-	topologyOptions.ExtraEnvVars["FELIX_IPSECESPAlGORITHM"] = "aes128gcm16-ecp256"
-	topologyOptions.IPIPEnabled = false
+
+	felixConfig := api.NewFelixConfiguration()
+	felixConfig.SetName("default")
+	felixConfig.Spec.IPSecMode = "PSK"
+	topologyOptions.InitialFelixConfiguration = felixConfig
+
+	// Set up IPIP configuration but routes as if IPIP was disabled.  This allows us to check that Felix correctly
+	// ignores IPIP configuration when IPsec is enabled.
+	topologyOptions.IPIPEnabled = true
+	topologyOptions.AlwaysProgramNonIPIPRoutes = true
 	// Turn on NAT outgoing because it interacts with IPsec; when a workload connects to a remote host with IPsec
 	// then we _do not_ SNAT the traffic because it is tunneled.  Otherwise, we _do_ NAT such traffic because
 	// we can't guarantee that the traffic won't get dropped by the fabric due to RPF.
 	topologyOptions.NATOutgoingEnabled = true
 	topologyOptions.FelixLogSeverity = "debug"
 	return topologyOptions
+}
+
+func disableIPSec(client client.Interface) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	felixConfig, err := client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
+	Expect(err).NotTo(HaveOccurred())
+	felixConfig.Spec.IPSecMode = ""
+	felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
+	Expect(err).NotTo(HaveOccurred())
 }
 
 func startWorkloadsandWaitForPolicy(infra infrastructure.DatastoreInfra, felixes []*infrastructure.Felix, w []*workload.Workload, hostW []*workload.Workload) {

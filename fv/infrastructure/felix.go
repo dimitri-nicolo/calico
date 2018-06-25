@@ -33,14 +33,30 @@ type Felix struct {
 
 	// IP of the Typha that this Felix is using (if any).
 	TyphaIP string
+
+	startupDelayed bool
 }
 
 func (f *Felix) GetFelixPID() int {
+	if f.startupDelayed {
+		log.Panic("GetFelixPID() called but startup is delayed")
+	}
 	return f.GetSinglePID("calico-felix")
 }
 
 func (f *Felix) GetFelixPIDs() []int {
+	if f.startupDelayed {
+		log.Panic("GetFelixPIDs() called but startup is delayed")
+	}
 	return f.GetPIDs("calico-felix")
+}
+
+func (f *Felix) TriggerDelayedStart() {
+	if !f.startupDelayed {
+		log.Panic("TriggerDelayedStart() called but startup wasn't delayed")
+	}
+	f.Exec("touch", "/start-trigger")
+	f.startupDelayed = false
 }
 
 func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
@@ -67,6 +83,10 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSCAFILE"] = filepath.Join(CertDir, "ca.crt")
 		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSKEYFILE"] = filepath.Join(CertDir, "server.key")
 		options.ExtraEnvVars["FELIX_PROMETHEUSMETRICSCERTFILE"] = filepath.Join(CertDir, "server.crt")
+	}
+
+	if options.DelayFelixStart {
+		args = append(args, "-e", "DELAY_FELIX_START=true")
 	}
 
 	for k, v := range options.ExtraEnvVars {
@@ -107,6 +127,7 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 	c.Exec("iptables", "-P", "FORWARD", "DROP")
 
 	return &Felix{
-		Container: c,
+		Container:      c,
+		startupDelayed: options.DelayFelixStart,
 	}
 }

@@ -426,6 +426,15 @@ func (config *Config) resolve() (changed bool, err error) {
 			nameToSource[name] = source
 		}
 	}
+
+	if config.IPSecMode != "" && config.IpInIpEnabled {
+		log.Info("IPsec is enabled, ignoring IPIP configuration")
+		config.IpInIpEnabled = false
+		delete(newRawValues, "IpInIpEnabled")
+		config.IpInIpTunnelAddr = nil
+		delete(newRawValues, "IpInIpTunnelAddr")
+	}
+
 	changed = !reflect.DeepEqual(newRawValues, config.rawValues)
 	config.rawValues = newRawValues
 	return

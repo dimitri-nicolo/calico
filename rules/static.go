@@ -230,7 +230,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 	}
 
 	if ipVersion == 4 && r.IPSecEnabled {
-		// IPIP is enabled, filter incoming IPSec IKE and ESP packets to ensure they come from a
+		// IPsec is enabled, filter incoming IPSec IKE and ESP packets to ensure they come from a
 		// recognised host and are going to a local address on the host.  We use the protocol
 		// number for ESP packets rather than its name because the name is not guaranteed to be known by the kernel.
 		// For IKE packets, only port 500 is used since there can be no NAT between the hosts.

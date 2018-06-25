@@ -517,4 +517,26 @@ var _ = Describe("IPSec PSK parameters test", func() {
 			Expect(panicWrapper).To(Panic())
 		})
 	})
+
+	It("should ignore IPIP params if IPsec is turned on", func() {
+		cfg := New()
+		_, err := cfg.UpdateFrom(map[string]string{
+			"IpInIpEnabled":    "true",
+			"IpInIpTunnelAddr": "10.0.0.1",
+		}, EnvironmentVariable)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cfg.IpInIpTunnelAddr.String()).To(Equal("10.0.0.1"))
+		Expect(cfg.IpInIpEnabled).To(BeTrue())
+		Expect(cfg.IPSecEnabled()).To(BeFalse())
+		Expect(cfg.IPSecMode).To(Equal(""))
+
+		_, err = cfg.UpdateFrom(map[string]string{
+			"IPSecMode": "PSK",
+		}, DatastoreGlobal)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cfg.IpInIpTunnelAddr).To(BeNil())
+		Expect(cfg.IpInIpEnabled).To(BeFalse())
+		Expect(cfg.IPSecEnabled()).To(BeTrue())
+		Expect(cfg.IPSecMode).To(Equal("PSK"))
+	})
 })
