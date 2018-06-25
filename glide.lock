@@ -1,5 +1,5 @@
-hash: 33f242fdcbf7874d5041a75b48e876d6f3aac1a9a520c4ce79650f76aeedaa10
-updated: 2018-06-20T14:04:49.452912471-07:00
+hash: 10b09f3ebda496c03f09fe8b5d5b1774c2f736dfa3e712a8832fe258dfc8dc7d
+updated: 2018-06-22T15:26:31.297195793-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -48,7 +48,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
@@ -253,7 +253,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 51531de3e48bba46cb9b4b840d2f864c89d0a424
+  version: 89aecc064e17ecba080788ccc93589bdcd777b42
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -294,7 +294,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: af5a22966d07fb15de34c83e16c9129ec072ae79
+  version: 6b3f8be0e084471ea6d67f7d577700545e6b83a0
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -307,11 +307,11 @@ imports:
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
-  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7600349dcfe1abd18d72d3a1770870d9800a7801
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -410,7 +410,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 9d8544a6b2c7df9cff240fcf92d7b2f59bc13416
   subpackages:
   - internal
   - internal/app_identity
