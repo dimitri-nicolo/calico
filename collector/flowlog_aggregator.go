@@ -71,7 +71,7 @@ func (c *cloudWatchAggregator) WithFilter(f MetricUpdateFilter) FlowLogAggregato
 // FeedUpdate will be responsible for doing aggregation.
 func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 	if c.filter != nil && c.filter(mu) {
-		log.Infof("update %v filtered out", mu)
+		log.Debugf("Update %v filtered out", mu)
 		return nil
 	}
 

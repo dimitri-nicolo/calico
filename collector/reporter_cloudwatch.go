@@ -62,7 +62,7 @@ func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
 	// is a WorkloadEndpoint. Otherwise skip processing.
 	if mu.srcEp != nil && mu.dstEp != nil {
 		if mu.srcEp.IsHostEndpoint() && mu.dstEp.IsHostEndpoint() {
-			log.Infof("Skipping HEP only update: %v", mu)
+			log.Debugf("Skipping HEP only update: %v", mu)
 			return nil
 		}
 	}

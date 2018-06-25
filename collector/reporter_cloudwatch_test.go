@@ -220,6 +220,17 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			))
 
 		})
+		It("Doesn't process flows from Hostendoint to Hostendpoint", func() {
+			By("Reporting a update with host endpoint to host endpoint")
+			muConn1Rule1AllowUpdateCopy := muConn1Rule1AllowUpdate
+			muConn1Rule1AllowUpdateCopy.srcEp = localHostEd1
+			muConn1Rule1AllowUpdateCopy.dstEp = remoteHostEd1
+			cr.Report(muConn1Rule1AllowUpdateCopy)
+
+			By("Verifying that no flow logs are logged")
+			events := getEventsFromLogStream()
+			Expect(len(events)).Should(Equal(0))
+		})
 	})
 })
 
