@@ -114,9 +114,8 @@ func main() {
 	// updated IP data and use the full list of nodes for validation.
 	node := getNode(ctx, cli, nodeName)
 
-	// If Calico is running in policy only mode we don't need to write
-	// BGP related details to the Node.
-	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
+	// Write BGP related details to the Node if BGP is enabled or environment variable IP is used (for ipsec support).
+	if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" || (os.Getenv("IP") != "none" && os.Getenv("IP") != "") {
 		// Configure and verify the node IP addresses and subnets.
 		checkConflicts, err := configureIPsAndSubnets(node)
 		if err != nil {
@@ -147,8 +146,10 @@ func main() {
 			}
 		}
 
-		// Configure the node AS number.
-		configureASNumber(node)
+		// Configure the node AS number if BGP is enabled.
+		if os.Getenv("CALICO_NETWORKING_BACKEND") != "none" {
+			configureASNumber(node)
+		}
 	}
 
 	configureNodeRef(node)
