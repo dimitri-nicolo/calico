@@ -28,14 +28,14 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/selector/parser"
 )
 
-func RulesAPIV2ToBackend(ars []apiv3.Rule, ns string) []model.Rule {
+func RulesAPIV2ToBackend(ars []apiv3.Rule, ns string, matchSGs bool) []model.Rule {
 	if len(ars) == 0 {
 		return nil
 	}
 
 	brs := make([]model.Rule, len(ars))
 	for idx, ar := range ars {
-		brs[idx] = RuleAPIV2ToBackend(ar, ns)
+		brs[idx] = RuleAPIV2ToBackend(ar, ns, matchSGs)
 	}
 	return brs
 }
@@ -93,7 +93,7 @@ func entityRuleAPIV2TOBackend(er *apiv3.EntityRule, ns string) (nsSelector, sele
 }
 
 // RuleAPIToBackend converts an API Rule structure to a Backend Rule structure.
-func RuleAPIV2ToBackend(ar apiv3.Rule, ns string) model.Rule {
+func RuleAPIV2ToBackend(ar apiv3.Rule, ns string, matchSGs bool) model.Rule {
 	var icmpCode, icmpType, notICMPCode, notICMPType *int
 	if ar.ICMP != nil {
 		icmpCode = ar.ICMP.Code
@@ -106,6 +106,17 @@ func RuleAPIV2ToBackend(ar apiv3.Rule, ns string) model.Rule {
 	}
 
 	sourceNSSelector, sourceSelector := entityRuleAPIV2TOBackend(&ar.Source, ns)
+
+	// If configured to also allow from security groups and the selector selects a security group, then
+	// generate a selector clause that allows from that security group.
+	var srcSGSelector string
+	if matchSGs && strings.Contains(sourceSelector, conversion.SecurityGroupLabelPrefix) {
+		// Build an additional selector clause which matches the given source selector for non-k8s
+		// things in security groups. To do that, we need to remove the orchestrator limitation from the selector.
+		orchMatch := "projectcalico.org/orchestrator == 'k8s' && "
+		s := strings.Replace(sourceSelector, orchMatch, "", 1)
+		srcSGSelector = fmt.Sprintf("(%s)", s)
+	}
 
 	// We need to namespace the rule's selector when converting to a v1 object.
 	// This occurs when the selector (and/or SA Selector), NotSelector, or NamespaceSelector
@@ -126,7 +137,22 @@ func RuleAPIV2ToBackend(ar apiv3.Rule, ns string) model.Rule {
 		}
 	}
 
+	// If a SG selector is enabled, then add it in for the source selector.
+	if srcSGSelector != "" {
+		log.Debug("Including security group selector in source selector.")
+		sourceSelector = fmt.Sprintf("%s || %s", sourceSelector, srcSGSelector)
+	}
+
+	// Do the same as above but for the destination selector.
 	destNSSelector, destSelector := entityRuleAPIV2TOBackend(&ar.Destination, ns)
+	var destSGSelector string
+	if matchSGs && strings.Contains(destSelector, conversion.SecurityGroupLabelPrefix) {
+		// Build an additional selector clause which matches the given dest selector for non-k8s
+		// things in security groups. To do that, we need to remove the orchestrator limitation from the selector.
+		orchMatch := "projectcalico.org/orchestrator == 'k8s' && "
+		s := strings.Replace(destSelector, orchMatch, "", 1)
+		destSGSelector = fmt.Sprintf("(%s)", s)
+	}
 	if destNSSelector != "" && (destSelector != "" || ar.Destination.NotSelector != "" || ar.Destination.NamespaceSelector != "") {
 		logCxt := log.WithFields(log.Fields{
 			"Namespace":         ns,
@@ -140,6 +166,11 @@ func RuleAPIV2ToBackend(ar apiv3.Rule, ns string) model.Rule {
 		} else {
 			destSelector = destNSSelector
 		}
+	}
+	// If a SG selector is enabled, then add it in for the destination selector.
+	if destSGSelector != "" {
+		log.Debug("Including security group selector in destination selector.")
+		destSelector = fmt.Sprintf("%s || %s", destSelector, destSGSelector)
 	}
 
 	var srcServiceAcctMatch, dstServiceAcctMatch apiv3.ServiceAccountMatch

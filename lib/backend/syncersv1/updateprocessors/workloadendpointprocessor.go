@@ -145,7 +145,6 @@ func convertWorkloadEndpointV2ToV1Value(val interface{}) (interface{}, error) {
 			hasSecurityGroup = true
 		}
 	}
-	logCtx.Debugf("Determined pod labels: %v", labels)
 
 	// We always add pods to the pod security group if it is specified.
 	tigeraPodSG := os.Getenv("TIGERA_POD_SECURITY_GROUP")
@@ -164,6 +163,7 @@ func convertWorkloadEndpointV2ToV1Value(val interface{}) (interface{}, error) {
 			labels[label] = ""
 		}
 	}
+	logCtx.Debugf("Determined pod labels: %v", labels)
 
 	v1value := &model.WorkloadEndpoint{
 		State:        "active",

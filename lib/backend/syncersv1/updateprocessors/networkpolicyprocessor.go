@@ -64,11 +64,13 @@ func convertNetworkPolicyV2ToV1Value(val interface{}) (interface{}, error) {
 		}
 	}
 
+	// Determine if this NP is configured to match security groups or not.
+	matchSGs := v3res.Annotations["rules.networkpolicy.tigera.io/match-security-groups"] == "true"
 	v1value := &model.Policy{
 		Namespace:      v3res.Namespace,
 		Order:          spec.Order,
-		InboundRules:   RulesAPIV2ToBackend(spec.Ingress, v3res.Namespace),
-		OutboundRules:  RulesAPIV2ToBackend(spec.Egress, v3res.Namespace),
+		InboundRules:   RulesAPIV2ToBackend(spec.Ingress, v3res.Namespace, matchSGs),
+		OutboundRules:  RulesAPIV2ToBackend(spec.Egress, v3res.Namespace, matchSGs),
 		Selector:       selector,
 		Types:          policyTypesAPIV2ToBackend(spec.Types),
 		ApplyOnForward: true,

@@ -177,8 +177,8 @@ var _ = Describe("Test the GlobalNetworkPolicy update processor", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		v1irule := updateprocessors.RuleAPIV2ToBackend(irule, "")
-		v1erule := updateprocessors.RuleAPIV2ToBackend(erule, "")
+		v1irule := updateprocessors.RuleAPIV2ToBackend(irule, "", false)
+		v1erule := updateprocessors.RuleAPIV2ToBackend(erule, "", false)
 		Expect(kvps).To(Equal([]*model.KVPair{
 			{
 				Key: v1GlobalNetworkPolicyKey2,
