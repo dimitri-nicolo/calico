@@ -70,6 +70,13 @@ func init() {
 	// Max name length
 	maxNameLength := 253
 
+	// CloudWatch Flow logs aggregation settings
+	noAggKind := 0
+	srcPortAggKind := 1
+	podPfxAddKind := 2
+	invalidAggKind := 3
+	invalidAggKindNegative := -1
+
 	// Perform validation on error messages from validator
 	DescribeTable("Validator errors",
 		func(input interface{}, e string) {
@@ -507,6 +514,12 @@ func init() {
 		Entry("should accept an valid IPSecLogLevel value 'Debug'", api.FelixConfigurationSpec{IPSecLogLevel: "Debug"}, true),
 		Entry("should accept an valid IPSecLogLevel value 'Verbose'", api.FelixConfigurationSpec{IPSecLogLevel: "Verbose"}, true),
 		Entry("should reject an invalid IPSecLogLevel value 'Warning'", api.FelixConfigurationSpec{IPSecLogLevel: "Warning"}, false),
+
+		Entry("should accept an valid CloudWatchAggregationKind value '0'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &noAggKind}, true),
+		Entry("should accept an valid CloudWatchAggregationKind value '1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &srcPortAggKind}, true),
+		Entry("should accept an valid CloudWatchAggregationKind value '2'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &podPfxAddKind}, true),
+		Entry("should reject an invalid CloudWatchAggregationKind value '3'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &invalidAggKind}, false),
+		Entry("should reject an invalid CloudWatchAggregationKind value '-1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &invalidAggKindNegative}, false),
 
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),

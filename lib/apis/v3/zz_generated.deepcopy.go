@@ -19,13 +19,12 @@
 package v3
 
 import (
-	reflect "reflect"
-
 	apis_v1 "github.com/projectcalico/libcalico-go/lib/apis/v1"
 	numorstring "github.com/projectcalico/libcalico-go/lib/numorstring"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	reflect "reflect"
 )
 
 func init() {
@@ -1099,8 +1098,17 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
-	if in.CloudWatchLogsAggregationKind != nil {
-		in, out := &in.CloudWatchLogsAggregationKind, &out.CloudWatchLogsAggregationKind
+	if in.CloudWatchLogsAggregationKindForAllowed != nil {
+		in, out := &in.CloudWatchLogsAggregationKindForAllowed, &out.CloudWatchLogsAggregationKindForAllowed
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int)
+			**out = **in
+		}
+	}
+	if in.CloudWatchLogsAggregationKindForDenied != nil {
+		in, out := &in.CloudWatchLogsAggregationKindForDenied, &out.CloudWatchLogsAggregationKindForDenied
 		if *in == nil {
 			*out = nil
 		} else {

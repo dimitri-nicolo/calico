@@ -94,6 +94,9 @@ var (
 
 	dropActionOverrideRegex = regexp.MustCompile("^(Drop|Accept|LogAndDrop|LogAndAccept)$")
 
+	minAggregationKindValue = 0
+	maxAggregationKindValue = 2
+
 	ipv4LinkLocalNet = net.IPNet{
 		IP:   net.ParseIP("169.254.0.0"),
 		Mask: net.CIDRMask(16, 32),
@@ -166,6 +169,7 @@ func init() {
 	registerFieldValidator("dropActionOverride", validateDropActionOverride)
 	registerFieldValidator("mustBeNil", validateMustBeNil)
 	registerFieldValidator("mustBeFalse", validateMustBeFalse)
+	registerFieldValidator("cloudWatchAggregationKind", validateCloudWatchAggregationKind)
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -331,6 +335,12 @@ func validateDropActionOverride(v *validator.Validate, topStruct reflect.Value, 
 	s := field.String()
 	log.Debugf("Validate DropActionOverride: %s", s)
 	return dropActionOverrideRegex.MatchString(s)
+}
+
+func validateCloudWatchAggregationKind(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	kind := int(field.Int())
+	log.Debugf("Validate CloudWatch FlowLogs aggregation kind: %d", kind)
+	return kind >= minAggregationKindValue && kind <= maxAggregationKindValue
 }
 
 func validateSelector(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
