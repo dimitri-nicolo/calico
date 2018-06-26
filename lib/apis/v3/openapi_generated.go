@@ -2841,9 +2841,16 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
-						"cloudWatchLogsAggregationKind": {
+						"cloudWatchLogsAggregationKindForAllowed": {
 							SchemaProps: spec.SchemaProps{
-								Description: "CloudWatchLogsAggregationKind is used to choose the type of aggregation of flow log entries. [Default: 0 - no aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Description: "CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for allowed connections. [Default: 2 - pod prefix name based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"cloudWatchLogsAggregationKindForDenied": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},

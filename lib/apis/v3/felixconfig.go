@@ -252,12 +252,20 @@ type FelixConfigurationSpec struct {
 	CloudWatchLogsLogStreamName string `json:"cloudWatchLogStreamName,omitempty"`
 	// CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.
 	CloudWatchLogsIncludeLabels *bool `json:"cloudWatchLogsIncludeLabels,omitempty"`
-	// CloudWatchLogsAggregationKind is used to choose the type of aggregation of flow log entries. [Default: 0 - no aggregation].
+	// CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for
+	// allowed connections. [Default: 2 - pod prefix name based aggregation].
 	// Accepted values are 0, 1 and 2.
 	// 0 - No aggregation
 	// 1 - Source port based aggregation
 	// 2 - Pod prefix name based aggreagation.
-	CloudWatchLogsAggregationKind *int `json:"cloudWatchLogsAggregationKind,omitempty"`
+	CloudWatchLogsAggregationKindForAllowed *int `json:"cloudWatchLogsAggregationKindForAllowed,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
+	// CloudWatchLogsAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for
+	// denied connections. [Default: 1 - source port based aggregation].
+	// Accepted values are 0, 1 and 2.
+	// 0 - No aggregation
+	// 1 - Source port based aggregation
+	// 2 - Pod prefix name based aggreagation.
+	CloudWatchLogsAggregationKindForDenied *int `json:"cloudWatchLogsAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
 
 	// Enable reporting metrics to CloudWatch.
 	CloudWatchMetricsReporterEnabled *bool `json:"cloudWatchMetricsReporterEnabled,omitempty"`
