@@ -7,6 +7,7 @@ import (
 
 	"github.com/gavv/monotime"
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/rules"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,7 +19,7 @@ type FlowLogAggregator interface {
 	FlowLogGetter
 	IncludeLabels(bool) FlowLogAggregator
 	AggregateOver(AggregationKind) FlowLogAggregator
-	WithFilter(MetricUpdateFilter) FlowLogAggregator
+	ForAction(rules.RuleAction) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error
 }
 

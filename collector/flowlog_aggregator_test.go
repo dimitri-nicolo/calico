@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/projectcalico/felix/calc"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
@@ -163,8 +164,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 	Context("Flow log aggregator filter verification", func() {
 		It("Filters out MetricUpdate based on filter applied", func() {
 			By("Creating 2 aggregators - one for denied packets, and one for allowed packets")
-			caa := NewCloudWatchAggregator().WithFilter(AllowActionMetricUpdateFilter)
-			cad := NewCloudWatchAggregator().WithFilter(DenyActionMetricUpdateFilter)
+			caa := NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
+			cad := NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
 
 			By("Checking that the MetricUpdate with deny action is only processed by the aggregator with the deny filter")
 			caa.FeedUpdate(muNoConn1Rule2DenyUpdate)

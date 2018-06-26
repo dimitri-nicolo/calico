@@ -22,25 +22,19 @@ const (
 	PrefixName
 )
 
-type MetricUpdateFilter func(mu MetricUpdate) bool
-
-func AllowActionMetricUpdateFilter(mu MetricUpdate) bool {
-	return mu.ruleID.Action != rules.RuleActionAllow
-}
-
-func DenyActionMetricUpdateFilter(mu MetricUpdate) bool {
-	return mu.ruleID.Action != rules.RuleActionDeny
-}
+const noRuleActionDefined = 0
 
 // cloudWatchAggregator builds and implements the FlowLogAggregator and
 // FlowLogGetter interfaces.
+// The cloudWatchAggregator is responsible for creating, aggregating, and storing
+// aggregated flow logs until the flow logs are exported.
 type cloudWatchAggregator struct {
 	kind                 AggregationKind
 	flowStore            map[FlowMeta]FlowStats // TODO(SS): Abstract the storage.
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	aggregationStartTime time.Time
-	filter               MetricUpdateFilter
+	handledAction        rules.RuleAction
 }
 
 // NewCloudWatchAggregator constructs a FlowLogAggregator
@@ -63,15 +57,16 @@ func (c *cloudWatchAggregator) IncludeLabels(b bool) FlowLogAggregator {
 	return c
 }
 
-func (c *cloudWatchAggregator) WithFilter(f MetricUpdateFilter) FlowLogAggregator {
-	c.filter = f
+func (c *cloudWatchAggregator) ForAction(ra rules.RuleAction) FlowLogAggregator {
+	c.handledAction = ra
 	return c
 }
 
-// FeedUpdate will be responsible for doing aggregation.
+// FeedUpdate constructs and aggregates flow logs from MetricUpdates.
 func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
-	if c.filter != nil && c.filter(mu) {
-		log.Debugf("Update %v filtered out", mu)
+	// Filter out any action that we aren't configured to handle.
+	if c.handledAction != noRuleActionDefined && c.handledAction != mu.ruleID.Action {
+		log.Debugf("Update %v not handled", mu)
 		return nil
 	}
 
@@ -91,6 +86,8 @@ func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 	return nil
 }
 
+// Get returns all aggregated flow logs, as a list of string pointers, since the last time a Get
+// was called. Calling Get will also clear the stored flow logs once the flow logs are returned.
 func (c *cloudWatchAggregator) Get() []*string {
 	resp := make([]*string, 0, len(c.flowStore))
 	aggregationEndTime := time.Now()
