@@ -211,6 +211,7 @@ type Config struct {
 	CloudWatchLogsIncludeLabels             bool          `config:"bool;false"`
 	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0,2);2"`
 	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0,2);1"`
+	CloudWatchLogsRetentionDays             int           `config:"int;7"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 

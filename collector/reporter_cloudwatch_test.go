@@ -58,7 +58,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 	Context("No Aggregation kind specified", func() {
 		BeforeEach(func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
-			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, cl)
+			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewCloudWatchAggregator()
 			cr = NewCloudWatchReporter(cd, flushInterval)
 			cr.AddAggregator(ca)

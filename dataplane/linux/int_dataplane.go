@@ -120,6 +120,7 @@ type Config struct {
 	CloudWatchLogsIncludeLabels             bool
 	CloudWatchLogsAggregationKindForAllowed int
 	CloudWatchLogsAggregationKindForDenied  int
+	CloudWatchLogsRetentionDays             int
 
 	CloudWatchMetricsReporterEnabled  bool
 	CloudWatchMetricsPushIntervalSecs time.Duration
@@ -576,7 +577,7 @@ func (d *InternalDataplane) Start() {
 		if d.config.CloudWatchLogsLogStreamName != "" {
 			logStreamName = d.config.CloudWatchLogsLogStreamName
 		}
-		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, nil)
+		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, nil)
 		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval)
 		caa := collector.NewCloudWatchAggregator().
 			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).
