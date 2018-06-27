@@ -2855,6 +2855,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int32",
 							},
 						},
+						"cloudWatchLogsRetentionDays": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Number of days for which to retain logs.  Only relevant when the log group is first created.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
 						"cloudWatchMetricsReporterEnabled": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Enable reporting metrics to CloudWatch.",
