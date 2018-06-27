@@ -57,6 +57,11 @@ var (
 		EndpointID:     "localepid2",
 	}
 
+	localHostEpKey1 = model.HostEndpointKey{
+		Hostname:   "localhost",
+		EndpointID: "eth1",
+	}
+
 	remoteWlEpKey1 = model.WorkloadEndpointKey{
 		OrchestratorID: "orchestrator",
 		WorkloadID:     "remoteworkloadid1",
@@ -66,6 +71,11 @@ var (
 		OrchestratorID: "orchestrator",
 		WorkloadID:     "remoteworkloadid2",
 		EndpointID:     "remoteepid2",
+	}
+
+	remoteHostEpKey1 = model.HostEndpointKey{
+		Hostname:   "remotehost",
+		EndpointID: "eth1",
 	}
 
 	localWlEp1 = &model.WorkloadEndpoint{
@@ -86,6 +96,13 @@ var (
 			"id": "local-ep-2",
 		},
 	}
+	localHostEp1 = &model.HostEndpoint{
+		Name:              "eth1",
+		ExpectedIPv4Addrs: []net.IP{mustParseIP("10.0.0.1")},
+		Labels: map[string]string{
+			"id": "loc-ep-1",
+		},
+	}
 	remoteWlEp1 = &model.WorkloadEndpoint{
 		State:    "active",
 		Name:     "cali3",
@@ -102,6 +119,13 @@ var (
 		IPv4Nets: []net.IPNet{mustParseNet("20.0.0.2/32")},
 		Labels: map[string]string{
 			"id": "remote-ep-2",
+		},
+	}
+	remoteHostEp1 = &model.HostEndpoint{
+		Name:              "eth1",
+		ExpectedIPv4Addrs: []net.IP{mustParseIP("20.0.0.1")},
+		Labels: map[string]string{
+			"id": "rem-ep-1",
 		},
 	}
 	localEd1 = &calc.EndpointData{
@@ -121,6 +145,15 @@ var (
 	remoteEd2 = &calc.EndpointData{
 		Key:      remoteWlEpKey2,
 		Endpoint: remoteWlEp2,
+	}
+	localHostEd1 = &calc.EndpointData{
+		Key:          localHostEpKey1,
+		Endpoint:     localHostEp1,
+		OrderedTiers: []string{"default"},
+	}
+	remoteHostEd1 = &calc.EndpointData{
+		Key:      remoteHostEpKey1,
+		Endpoint: remoteHostEp1,
 	}
 )
 
@@ -665,6 +698,11 @@ func (mr *mockReporter) Report(mu MetricUpdate) error {
 		isConnection: mu.isConnection,
 	}
 	return nil
+}
+
+func mustParseIP(s string) net.IP {
+	ip := net2.ParseIP(s)
+	return net.IP{ip}
 }
 
 func mustParseMac(m string) *net.MAC {

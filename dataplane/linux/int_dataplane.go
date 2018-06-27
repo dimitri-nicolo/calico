@@ -113,12 +113,13 @@ type Config struct {
 	PrometheusReporterKeyFile  string
 	PrometheusReporterCAFile   string
 
-	CloudWatchLogsReporterEnabled bool
-	CloudWatchLogsFlushInterval   time.Duration
-	CloudWatchLogsLogGroupName    string
-	CloudWatchLogsLogStreamName   string
-	CloudWatchLogsIncludeLabels   bool
-	CloudWatchLogsAggregationKind int
+	CloudWatchLogsReporterEnabled           bool
+	CloudWatchLogsFlushInterval             time.Duration
+	CloudWatchLogsLogGroupName              string
+	CloudWatchLogsLogStreamName             string
+	CloudWatchLogsIncludeLabels             bool
+	CloudWatchLogsAggregationKindForAllowed int
+	CloudWatchLogsAggregationKindForDenied  int
 
 	CloudWatchMetricsReporterEnabled  bool
 	CloudWatchMetricsPushIntervalSecs time.Duration
@@ -577,10 +578,16 @@ func (d *InternalDataplane) Start() {
 		}
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, nil)
 		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval)
-		ca := collector.NewCloudWatchAggregator().
-			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKind)).
-			IncludeLabels(d.config.CloudWatchLogsIncludeLabels)
-		cw.AddAggregator(ca)
+		caa := collector.NewCloudWatchAggregator().
+			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).
+			IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
+			ForAction(rules.RuleActionAllow)
+		cw.AddAggregator(caa)
+		cad := collector.NewCloudWatchAggregator().
+			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForDenied)).
+			IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
+			ForAction(rules.RuleActionDeny)
+		cw.AddAggregator(cad)
 		rm.RegisterMetricsReporter(cw)
 	}
 

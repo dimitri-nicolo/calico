@@ -204,12 +204,13 @@ type Config struct {
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
-	CloudWatchLogsReporterEnabled bool          `config:"bool;false"`
-	CloudWatchLogsFlushInterval   time.Duration `config:"seconds;300"`
-	CloudWatchLogsLogGroupName    string        `config:"string;"`
-	CloudWatchLogsLogStreamName   string        `config:"string;"`
-	CloudWatchLogsIncludeLabels   bool          `config:"bool;false"`
-	CloudWatchLogsAggregationKind int           `config:"int(0,2);1"`
+	CloudWatchLogsReporterEnabled           bool          `config:"bool;false"`
+	CloudWatchLogsFlushInterval             time.Duration `config:"seconds;300"`
+	CloudWatchLogsLogGroupName              string        `config:"string;"`
+	CloudWatchLogsLogStreamName             string        `config:"string;"`
+	CloudWatchLogsIncludeLabels             bool          `config:"bool;false"`
+	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0,2);2"`
+	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0,2);1"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gavv/monotime"
 	"github.com/projectcalico/felix/jitter"
+	"github.com/projectcalico/felix/rules"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,6 +19,7 @@ type FlowLogAggregator interface {
 	FlowLogGetter
 	IncludeLabels(bool) FlowLogAggregator
 	AggregateOver(AggregationKind) FlowLogAggregator
+	ForAction(rules.RuleAction) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error
 }
 
@@ -57,6 +59,14 @@ func (c *cloudWatchReporter) Start() {
 }
 
 func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
+	// We only produce Flow logs when we know that at least one of the endpoints
+	// is a WorkloadEndpoint. Otherwise skip processing.
+	if mu.srcEp != nil && mu.dstEp != nil {
+		if mu.srcEp.IsHostEndpoint() && mu.dstEp.IsHostEndpoint() {
+			log.Debugf("Skipping HEP only update: %v", mu)
+			return nil
+		}
+	}
 	for _, agg := range c.aggregators {
 		agg.FeedUpdate(mu)
 	}

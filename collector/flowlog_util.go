@@ -80,13 +80,16 @@ func deconstructNamespaceAndNameFromWepName(wepName string) (string, string, err
 	return "", "", fmt.Errorf("Could not parse name %v", wepName)
 }
 
-func getEndpointGenerateName(ed *calc.EndpointData) string {
+func getEndpointNamePrefix(ed *calc.EndpointData) (prefix string) {
 	switch ed.Key.(type) {
 	case model.WorkloadEndpointKey:
 		v := ed.Endpoint.(*model.WorkloadEndpoint)
-		return v.GenerateName
+		prefix = v.GenerateName
+	case model.HostEndpointKey:
+		v := ed.Endpoint.(*model.HostEndpoint)
+		prefix = v.Name
 	}
-	return ""
+	return
 }
 
 func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error) {
