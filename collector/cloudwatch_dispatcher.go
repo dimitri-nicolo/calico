@@ -180,6 +180,23 @@ func (c *cloudWatchDispatcher) verifyLogStream() (*cloudwatchlogs.LogStream, err
 	return nil, fmt.Errorf("Cannot find log stream %v in log group %v", c.logStreamName, c.logGroupName)
 }
 
+func (c *cloudWatchDispatcher) setLogGroupRetention() error {
+	putRetentionInp := &cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(c.logGroupName),
+		RetentionInDays: aws.Int64(int64(c.retentionDays)),
+	}
+	err := putRetentionInp.Validate()
+	if err != nil {
+		log.WithError(err).Warning("Invalid input for PutRetentionPolicy call")
+		return err
+	}
+	_, err = c.cwl.PutRetentionPolicy(putRetentionInp)
+	if err != nil {
+		log.WithError(err).Warning("Error in PutRetentionPolicy call")
+	}
+	return err
+}
+
 func (c *cloudWatchDispatcher) verifyOrCreateLogGroup() error {
 
 	err := c.verifyLogGroup()
@@ -199,25 +216,16 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogGroup() error {
 	_, err = c.cwl.CreateLogGroup(createLGInp)
 	if err == nil {
 		// LogGroup just created by us; set its retention time.
-		putRetentionInp := &cloudwatchlogs.PutRetentionPolicyInput{
-			LogGroupName:    aws.String(c.logGroupName),
-			RetentionInDays: aws.Int64(int64(c.retentionDays)),
-		}
-		err = putRetentionInp.Validate()
+		err = c.setLogGroupRetention()
 		if err != nil {
-			return err
-		}
-		_, err = c.cwl.PutRetentionPolicy(putRetentionInp)
-		if err != nil {
-			// FIXME Should we delete the log group again here, considering
-			// that we haven't been able to set the desired retention period,
-			// and that no one else will try to set the period if they haven't
-			// actually _created_ the log group?
 			return err
 		}
 	} else if isAWSError(err, cloudwatchlogs.ErrCodeResourceAlreadyExistsException) {
 		// LogGroup just created by another ANX node.  Don't set its retention
-		// time; there's no need for more than one node to do this.
+		// time; there's no need for more than one node to do this, and we can
+		// assume that the other node has (or will) set its retention time to
+		// whatever the current FelixConfiguration setting says.
+		log.Debug("Log group now exists; presume just created by another ANX node")
 	} else {
 		// Some error other than a creation race.
 		log.WithField("LogGroupName", c.logGroupName).WithError(err).Error("Error creating Log group")
@@ -259,6 +267,16 @@ func (c *cloudWatchDispatcher) verifyLogGroup() error {
 		log.Debugf(lg.GoString())
 		if *lg.LogGroupName == c.logGroupName {
 			log.Debugf("Found log group %v", c.logGroupName)
+			if lg.RetentionInDays == nil || *lg.RetentionInDays != int64(c.retentionDays) {
+				// Log group's retention period does not match the current
+				// FelixConfiguration setting, so try to change it to
+				// match.  If there is an error here,
+				// setLogGroupRetention() will log it, but we don't
+				// propagate it any further upwards from this point.  The
+				// next ANX node that starts up will try again to align
+				// the period with FelixConfiguration.
+				c.setLogGroupRetention()
+			}
 			return nil
 		}
 	}

@@ -65,6 +65,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
+		AfterEach(func() {
+			cl.(testutil.CloudWatchLogsExpectation).ExpectRetentionPeriod(7)
+		})
 		It("reports the given metric update in form of a flow to cloudwatchlogs", func() {
 			By("reporting the first MetricUpdate")
 			cr.Report(muNoConn1Rule1AllowUpdate)
