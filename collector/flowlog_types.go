@@ -87,14 +87,14 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	f.Tuple.dst = [16]byte{}
 
 	if mu.srcEp != nil {
-		f.SrcMeta.Name = getEndpointNamePrefix(mu.srcEp)
+		f.SrcMeta.Name = getEndpointNamePrefix(mu.srcEp) + "-*"
 	} else {
-		f.SrcMeta = EndpointMetadata{Name: string(classifyIPasPvtOrPub(mu.tuple.src))}
+		f.SrcMeta = EndpointMetadata{Type: classifyIPasPvtOrPub(mu.tuple.src), Namespace: "-", Name: "-", Labels: "-"}
 	}
 	if mu.dstEp != nil {
-		f.DstMeta.Name = getEndpointNamePrefix(mu.dstEp)
+		f.DstMeta.Name = getEndpointNamePrefix(mu.dstEp) + "-*"
 	} else {
-		f.DstMeta = EndpointMetadata{Name: string(classifyIPasPvtOrPub(mu.tuple.dst))}
+		f.DstMeta = EndpointMetadata{Type: classifyIPasPvtOrPub(mu.tuple.dst), Namespace: "-", Name: "-", Labels: "-"}
 	}
 
 	// Ignoring Labels.
@@ -184,7 +184,7 @@ type FlowLog struct {
 	FlowStats
 }
 
-func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool, kind AggregationKind) string {
+func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool) string {
 	var srcLabels, dstLabels string
 
 	if includeLabels {
@@ -196,15 +196,11 @@ func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool, kin
 	}
 
 	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(f.Tuple)
-	var srcName, dstName string
-	if kind == PrefixName {
-		srcName = f.SrcMeta.Name + "-*"
-		dstName = f.DstMeta.Name + "-*"
-	}
+
 	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
 		startTime.Unix(), endTime.Unix(),
-		f.SrcMeta.Type, f.SrcMeta.Namespace, srcName, srcLabels,
-		f.DstMeta.Type, f.DstMeta.Namespace, dstName, dstLabels,
+		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, srcLabels,
+		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, dstLabels,
 		srcIP, dstIP, proto, l4Src, l4Dst,
 		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Direction,
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
@@ -272,11 +268,13 @@ func (f *FlowLog) Deserialize(fl string) error {
 		dstMeta.Labels = ""
 	}
 
-	var sip [16]byte
+	var sip, dip [16]byte
 	if parts[10] != "-" {
 		sip = ipStrTo16Byte(parts[10])
 	}
-	dip := ipStrTo16Byte(parts[11])
+	if parts[11] != "-" {
+		dip = ipStrTo16Byte(parts[11])
+	}
 	p, _ := strconv.Atoi(parts[12])
 	sp, _ := strconv.Atoi(parts[13])
 	dp, _ := strconv.Atoi(parts[14])

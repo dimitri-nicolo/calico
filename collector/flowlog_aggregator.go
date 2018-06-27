@@ -83,6 +83,7 @@ func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 		fl.aggregateMetricUpdate(mu)
 	}
 	c.flowStore[flowMeta] = fl
+
 	return nil
 }
 
@@ -94,7 +95,7 @@ func (c *cloudWatchAggregator) Get() []*string {
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
 	for flowMeta, flowStats := range c.flowStore {
-		flowLog := FlowLog{flowMeta, flowStats}.Serialize(c.aggregationStartTime, aggregationEndTime, c.includeLabels, c.kind)
+		flowLog := FlowLog{flowMeta, flowStats}.Serialize(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
 		resp = append(resp, &flowLog)
 		delete(c.flowStore, flowMeta)
 	}

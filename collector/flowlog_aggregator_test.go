@@ -10,10 +10,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 )
 
-var (
-	tuple4 = *NewTuple(localIp2, localIp1DNAT, proto_tcp, srcPort1, dstPort)
-)
-
 // Common MetricUpdate definitions
 var (
 	// Metric update without a connection (ingress stats match those of muConn1Rule1AllowUpdate).
@@ -48,29 +44,8 @@ var (
 			deltaBytes:   20,
 		},
 	}
-
-	muNoConn1Rule1AllowUpdateWithEndpointIPClassified = MetricUpdate{
-		updateType: UpdateTypeReport,
-		tuple:      tuple4,
-
-		srcEp: &calc.EndpointData{
-			Key: model.WorkloadEndpointKey{
-				Hostname:       "node-01",
-				OrchestratorID: "k8s",
-				WorkloadID:     "kube-system/iperf-4235-5623461",
-				EndpointID:     "4352",
-			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
-		},
-
-		ruleID:       ingressRule1Allow,
-		isConnection: false,
-		inMetric: MetricValue{
-			deltaPackets: 1,
-			deltaBytes:   20,
-		},
-	}
 )
+
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
 	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int) {
@@ -186,18 +161,71 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
 
-			By("by endpoint IP type")
+			By("by endpoint IP classification as the meta name when meta info is missing")
 			ca = NewCloudWatchAggregator().AggregateOver(PrefixName)
-			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointIPClassified)
+			endpointMeta := calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-01",
+					OrchestratorID: "k8s",
+					WorkloadID:     "kube-system/iperf-4235-5623461",
+					EndpointID:     "4352",
+				},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
+			}
 
-			muNoConn1Rule1AllowUpdateWithEndpointIPClassifiedCopy := muNoConn1Rule1AllowUpdateWithEndpointIPClassified
-			muNoConn1Rule1AllowUpdateWithEndpointIPClassifiedCopy.tuple.dst = localIp2DNAT
-			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointIPClassified)
+			muWithoutDstEndpointMeta := MetricUpdate{
+				updateType: UpdateTypeReport,
+				tuple:      *NewTuple(ipStrTo16Byte("192.168.0.4"), ipStrTo16Byte("192.168.0.14"), proto_tcp, srcPort1, dstPort),
+
+				// src endpoint meta info available
+				srcEp: &endpointMeta,
+
+				// dst endpoint meta info not available
+				dstEp: nil,
+
+				ruleID:       ingressRule1Allow,
+				isConnection: false,
+				inMetric: MetricValue{
+					deltaPackets: 1,
+					deltaBytes:   20,
+				},
+			}
+			ca.FeedUpdate(muWithoutDstEndpointMeta)
+
+			// Another metric update comes in. This time on a different dst private IP
+			muWithoutDstEndpointMetaCopy := muWithoutDstEndpointMeta
+			muWithoutDstEndpointMetaCopy.tuple.dst = ipStrTo16Byte("192.168.0.17")
+			ca.FeedUpdate(muWithoutDstEndpointMetaCopy)
 			messages = ca.Get()
+			// One flow expected: srcMeta.GenerateName -> pvt
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
+
+			// Initial Update
+			ca.FeedUpdate(muWithoutDstEndpointMeta)
+			// + metric update comes in. This time on a non-private dst IP
+			muWithoutDstEndpointMetaCopy.tuple.dst = ipStrTo16Byte("198.17.8.43")
+			ca.FeedUpdate(muWithoutDstEndpointMetaCopy)
+			messages = ca.Get()
+			// 2nd flow expected: srcMeta.GenerateName -> pub
+			// Three updates so far should result in 2 flows
+			Expect(len(messages)).Should(Equal(2)) // Metric Update comes in with a non private as the dst IP
+
+			// Initial Updates
+			ca.FeedUpdate(muWithoutDstEndpointMeta)
+			ca.FeedUpdate(muWithoutDstEndpointMetaCopy)
+			// + metric update comes in. This time with missing src endpointMeta
+			muWithoutDstEndpointMetaCopy.srcEp = nil
+			muWithoutDstEndpointMetaCopy.dstEp = &endpointMeta
+			ca.FeedUpdate(muWithoutDstEndpointMetaCopy)
+			messages = ca.Get()
+
+			// 3rd flow expected: pvt -> dst.GenerateName
+			// Four updates so far should result in 3 flows
+			Expect(len(messages)).Should(Equal(3)) // Metric Update comes in with a non private as the dst IP
 		})
 	})
+
 	Context("Flow log aggregator filter verification", func() {
 		It("Filters out MetricUpdate based on filter applied", func() {
 			By("Creating 2 aggregators - one for denied packets, and one for allowed packets")
