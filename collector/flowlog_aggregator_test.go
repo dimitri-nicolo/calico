@@ -57,7 +57,7 @@ var (
 			Key: model.WorkloadEndpointKey{
 				Hostname:       "node-01",
 				OrchestratorID: "k8s",
-				WorkloadID:     "iperf-4235-5623461/kube-system",
+				WorkloadID:     "kube-system/iperf-4235-5623461",
 				EndpointID:     "4352",
 			},
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
@@ -118,7 +118,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
 
-			By("prefix name")
+			By("endpoint prefix names")
 			ca = NewCloudWatchAggregator().AggregateOver(PrefixName)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
 			// Construct a similar update; same tuple but diff src ports.
@@ -186,7 +186,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
 
-			By("prefix name with IP classification")
+			By("by endpoint IP type")
 			ca = NewCloudWatchAggregator().AggregateOver(PrefixName)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointIPClassified)
 

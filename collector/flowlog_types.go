@@ -48,19 +48,11 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 		if err != nil {
 			return FlowMeta{}, fmt.Errorf("Could not extract metadata for source %v", mu.srcEp)
 		}
-	} else {
-		if isClassified(mu.tuple.src) {
-			srcMeta = EndpointMetadata{Name: "classified"}
-		}
 	}
 	if mu.dstEp != nil {
 		dstMeta, err = getFlowLogEndpointMetadata(mu.dstEp)
 		if err != nil {
 			return FlowMeta{}, fmt.Errorf("Could not extract metadata for destination %v", mu.dstEp)
-		}
-	} else {
-		if isClassified(mu.tuple.dst) {
-			dstMeta = EndpointMetadata{Name: "classified"}
 		}
 	}
 
@@ -96,9 +88,13 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 
 	if mu.srcEp != nil {
 		f.SrcMeta.Name = getEndpointNamePrefix(mu.srcEp)
+	} else {
+		f.SrcMeta = EndpointMetadata{Name: string(classifyIPasPvtOrPub(mu.tuple.src))}
 	}
 	if mu.dstEp != nil {
 		f.DstMeta.Name = getEndpointNamePrefix(mu.dstEp)
+	} else {
+		f.DstMeta = EndpointMetadata{Name: string(classifyIPasPvtOrPub(mu.tuple.dst))}
 	}
 
 	// Ignoring Labels.
