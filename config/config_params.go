@@ -139,7 +139,7 @@ type Config struct {
 	NetlinkTimeoutSecs time.Duration `config:"seconds;10"`
 
 	MetadataAddr string `config:"hostname;127.0.0.1;die-on-fail"`
-	MetadataPort int    `config:"int(0,65535);8775;die-on-fail"`
+	MetadataPort int    `config:"int(0:65535);8775;die-on-fail"`
 
 	InterfacePrefix  string `config:"iface-list;cali;non-zero,die-on-fail"`
 	InterfaceExclude string `config:"iface-list;kube-ipvs0"`
@@ -175,10 +175,10 @@ type Config struct {
 	EnableNflogSize bool `config:"bool;false"`
 
 	HealthEnabled                   bool   `config:"bool;false"`
-	HealthPort                      int    `config:"int(0,65535);9099"`
+	HealthPort                      int    `config:"int(0:65535);9099"`
 	HealthHost                      string `config:"string;localhost"`
 	PrometheusMetricsEnabled        bool   `config:"bool;false"`
-	PrometheusMetricsPort           int    `config:"int(0,65535);9091"`
+	PrometheusMetricsPort           int    `config:"int(0:65535);9091"`
 	PrometheusGoMetricsEnabled      bool   `config:"bool;true"`
 	PrometheusProcessMetricsEnabled bool   `config:"bool;true"`
 	PrometheusMetricsCertFile       string `config:"file(must-exist);"`
@@ -186,7 +186,7 @@ type Config struct {
 	PrometheusMetricsCAFile         string `config:"file(must-exist);"`
 
 	CloudWatchMetricsReporterEnabled  bool          `config:"bool;false"`
-	CloudWatchMetricsPushIntervalSecs time.Duration `config:"seconds(60,65535);60"`
+	CloudWatchMetricsPushIntervalSecs time.Duration `config:"seconds(60:65535);60"`
 
 	FailsafeInboundHostPorts  []ProtoPort `config:"port-list;tcp:22,udp:68,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
 	FailsafeOutboundHostPorts []ProtoPort `config:"port-list;udp:53,udp:67,tcp:179,tcp:2379,tcp:2380,tcp:6666,tcp:6667;die-on-fail"`
@@ -196,7 +196,7 @@ type Config struct {
 	StatsDumpFilePath string `config:"file;/var/log/calico/stats/dump;die-on-fail"`
 
 	PrometheusReporterEnabled   bool          `config:"bool;false"`
-	PrometheusReporterPort      int           `config:"int(0,65535);9092"`
+	PrometheusReporterPort      int           `config:"int(0:65535);9092"`
 	PrometheusReporterCertFile  string        `config:"file(must-exist);"`
 	PrometheusReporterKeyFile   string        `config:"file(must-exist);"`
 	PrometheusReporterCAFile    string        `config:"file(must-exist);"`
@@ -209,9 +209,9 @@ type Config struct {
 	CloudWatchLogsLogGroupName              string        `config:"string;"`
 	CloudWatchLogsLogStreamName             string        `config:"string;"`
 	CloudWatchLogsIncludeLabels             bool          `config:"bool;false"`
-	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0,2);2"`
-	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0,2);1"`
-	CloudWatchLogsRetentionDays             int           `config:"int;7"`
+	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0:2);2"`
+	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0:2);1"`
+	CloudWatchLogsRetentionDays             int           `config:"int(1,3,5,7,14,30,60,90,120,150,180,365,400,545,731,1827,3653);7;die-on-fail"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 
@@ -587,20 +587,29 @@ func loadParams() {
 		case "bool":
 			param = &BoolParam{}
 		case "int":
-			min := minInt
-			max := maxInt
+			intParam := &IntParam{}
 			if kindParams != "" {
-				minAndMax := strings.Split(kindParams, ",")
-				min, err = strconv.Atoi(minAndMax[0])
-				if err != nil {
-					log.Panicf("Failed to parse min value for %v", field.Name)
+				var min, max int
+				for _, r := range strings.Split(kindParams, ",") {
+					minAndMax := strings.Split(r, ":")
+					min, err = strconv.Atoi(minAndMax[0])
+					if err != nil {
+						log.Panicf("Failed to parse min value for %v", field.Name)
+					}
+					if len(minAndMax) == 2 {
+						max, err = strconv.Atoi(minAndMax[1])
+						if err != nil {
+							log.Panicf("Failed to parse max value for %v", field.Name)
+						}
+					} else {
+						max = min
+					}
+					intParam.Ranges = append(intParam.Ranges, MinMax{Min: min, Max: max})
 				}
-				max, err = strconv.Atoi(minAndMax[1])
-				if err != nil {
-					log.Panicf("Failed to parse max value for %v", field.Name)
-				}
+			} else {
+				intParam.Ranges = []MinMax{{Min: minInt, Max: maxInt}}
 			}
-			param = &IntParam{Min: min, Max: max}
+			param = intParam
 		case "int32":
 			param = &Int32Param{}
 		case "mark-bitmask":
@@ -611,7 +620,7 @@ func loadParams() {
 			min := minInt
 			max := maxInt
 			if kindParams != "" {
-				minAndMax := strings.Split(kindParams, ",")
+				minAndMax := strings.Split(kindParams, ":")
 				min, err = strconv.Atoi(minAndMax[0])
 				if err != nil {
 					log.Panicf("Failed to parse min value for %v", field.Name)

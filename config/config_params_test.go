@@ -137,6 +137,9 @@ var _ = DescribeTable("Config parsing",
 		}
 	},
 
+	Entry("CloudWatchLogsRetentionDays - good", "CloudWatchLogsRetentionDays", "30", 30),
+	Entry("CloudWatchLogsRetentionDays - bad", "CloudWatchLogsRetentionDays", "31", 7, true),
+
 	Entry("CloudWatch Metrics update interval - in range", "CloudWatchMetricsPushIntervalSecs", "90", time.Duration(90*time.Second), false),
 	Entry("CloudWatch Metrics update interval - out of range should be converted to default", "CloudWatchMetricsPushIntervalSecs", "5", time.Duration(60*time.Second), false),
 	Entry("CloudWatch Metrics update interval - default value", "CloudWatchMetricsPushIntervalSecs", "", time.Duration(60*time.Second), false),

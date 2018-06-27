@@ -78,10 +78,14 @@ func (p *BoolParam) Parse(raw string) (interface{}, error) {
 	return nil, p.parseFailed(raw, "invalid boolean")
 }
 
-type IntParam struct {
-	Metadata
+type MinMax struct {
 	Min int
 	Max int
+}
+
+type IntParam struct {
+	Metadata
+	Ranges []MinMax
 }
 
 func (p *IntParam) Parse(raw string) (interface{}, error) {
@@ -91,12 +95,33 @@ func (p *IntParam) Parse(raw string) (interface{}, error) {
 		return nil, err
 	}
 	result := int(value)
-	if result < p.Min {
-		err = p.parseFailed(raw,
-			fmt.Sprintf("value must be at least %v", p.Min))
-	} else if result > p.Max {
-		err = p.parseFailed(raw,
-			fmt.Sprintf("value must be at most %v", p.Max))
+	if len(p.Ranges) == 1 {
+		if result < p.Ranges[0].Min {
+			err = p.parseFailed(raw,
+				fmt.Sprintf("value must be at least %v", p.Ranges[0].Min))
+		} else if result > p.Ranges[0].Max {
+			err = p.parseFailed(raw,
+				fmt.Sprintf("value must be at most %v", p.Ranges[0].Max))
+		}
+	} else {
+		good := false
+		for _, r := range p.Ranges {
+			if result >= r.Min && result <= r.Max {
+				good = true
+				break
+			}
+		}
+		if !good {
+			msg := "value must be one of"
+			for _, r := range p.Ranges {
+				if r.Min == r.Max {
+					msg = msg + fmt.Sprintf(" %v", r.Min)
+				} else {
+					msg = msg + fmt.Sprintf(" %v-%v", r.Min, r.Max)
+				}
+			}
+			err = p.parseFailed(raw, msg)
+		}
 	}
 	return result, err
 }
