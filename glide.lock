@@ -1,5 +1,5 @@
-hash: ea7c2803a190a070e3c8bc89d68808619af66ec1f8b3f80e405d2e619e473300
-updated: 2018-06-27T13:27:18.045287244Z
+hash: c654c0533eebb15f9305746f34ddd46742a17a2410a3fa386bd5f5fcd21bdb75
+updated: 2018-06-27T16:12:17.844443369Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -290,7 +290,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 74a831af18835ab2e08bfb79c7d4e6d8815e98bd
+  version: 1cc224748d050c040983a3c40eb88d1be99254ee
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -340,7 +340,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: 791a9e9d9b790967fed2b77fbb1ddf99bc299326
+  version: 71cfab7357367b9c97c1926ae56490bcf1f6a7de
   repo: git@github.com:tigera/netlink.git
   subpackages:
   - nl

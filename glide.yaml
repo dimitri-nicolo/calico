@@ -59,7 +59,7 @@ import:
 - package: github.com/gogo/protobuf
   version: ^0.5.0
 - package: github.com/vishvananda/netlink
-  version: xfrm-action
+  version: 71cfab7357367b9c97c1926ae56490bcf1f6a7de
   repo: git@github.com:tigera/netlink.git
 - package: github.com/onsi/ginkgo
   version: ^1.4.0
@@ -69,7 +69,7 @@ import:
   version: 82aa063804cf055e16e8911250f888bc216e8b61
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 74a831af18835ab2e08bfb79c7d4e6d8815e98bd
+  version: 1cc224748d050c040983a3c40eb88d1be99254ee
   subpackages:
   - pkg/syncclient
 - package: github.com/emicklei/go-restful
