@@ -170,6 +170,7 @@ func init() {
 	registerFieldValidator("mustBeNil", validateMustBeNil)
 	registerFieldValidator("mustBeFalse", validateMustBeFalse)
 	registerFieldValidator("cloudWatchAggregationKind", validateCloudWatchAggregationKind)
+	registerFieldValidator("cloudWatchRetentionDays", validateCloudWatchRetentionDays)
 
 	// Register network validators (i.e. validating a correctly masked CIDR).  Also
 	// accepts an IP address without a mask (assumes a full mask).
@@ -341,6 +342,18 @@ func validateCloudWatchAggregationKind(v *validator.Validate, topStruct reflect.
 	kind := int(field.Int())
 	log.Debugf("Validate CloudWatch FlowLogs aggregation kind: %d", kind)
 	return kind >= minAggregationKindValue && kind <= maxAggregationKindValue
+}
+
+// Ref. https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html
+func validateCloudWatchRetentionDays(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {
+	days := int(field.Int())
+	log.Debugf("Validate CloudWatch FlowLogs retention days: %d", days)
+	switch days {
+	case 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653:
+		return true
+	default:
+		return false
+	}
 }
 
 func validateSelector(v *validator.Validate, topStruct reflect.Value, currentStructOrField reflect.Value, field reflect.Value, fieldType reflect.Type, fieldKind reflect.Kind, param string) bool {

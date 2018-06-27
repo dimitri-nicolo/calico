@@ -26,6 +26,10 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/validator/v3"
 )
 
+func intptr(num int) *int {
+	return &num
+}
+
 func init() {
 	// We need some pointers to ints, so just define as values here.
 	var V0 = 0
@@ -520,6 +524,11 @@ func init() {
 		Entry("should accept an valid CloudWatchAggregationKind value '2'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &podPfxAddKind}, true),
 		Entry("should reject an invalid CloudWatchAggregationKind value '3'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &invalidAggKind}, false),
 		Entry("should reject an invalid CloudWatchAggregationKind value '-1'", api.FelixConfigurationSpec{CloudWatchLogsAggregationKindForAllowed: &invalidAggKindNegative}, false),
+
+		Entry("should accept valid CloudWatchLogsRetentionDays value '7'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(7)}, true),
+		Entry("should accept valid CloudWatchLogsRetentionDays value '365'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(365)}, true),
+		Entry("should accept valid CloudWatchLogsRetentionDays value '30'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(30)}, true),
+		Entry("should reject invalid CloudWatchLogsRetentionDays value '31'", api.FelixConfigurationSpec{CloudWatchLogsRetentionDays: intptr(31)}, false),
 
 		// (API) Protocol
 		Entry("should accept protocol TCP", protocolFromString("TCP"), true),
