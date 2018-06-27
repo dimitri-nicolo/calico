@@ -267,7 +267,9 @@ type FelixConfigurationSpec struct {
 	// 2 - Pod prefix name based aggreagation.
 	CloudWatchLogsAggregationKindForDenied *int `json:"cloudWatchLogsAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
 	// Number of days for which to retain logs.  Only relevant when the log group is first created.
-	CloudWatchLogsRetentionDays *int `json:"cloudWatchLogsRetentionDays,omitempty"`
+	// See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html
+	// for allowed values.
+	CloudWatchLogsRetentionDays *int `json:"cloudWatchLogsRetentionDays,omitempty" validate:"omitempty,cloudWatchRetentionDays"`
 
 	// Enable reporting metrics to CloudWatch.
 	CloudWatchMetricsReporterEnabled *bool `json:"cloudWatchMetricsReporterEnabled,omitempty"`
