@@ -20,6 +20,11 @@ var (
 	includeLabels = false
 )
 
+var (
+	pvtMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "pvt", Labels: "-"}
+	pubMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "pub", Labels: "-"}
+)
+
 var _ = Describe("CloudWatch Reporter verification", func() {
 	var (
 		cr *cloudWatchReporter
@@ -27,6 +32,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 		ca FlowLogAggregator
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
 	)
+
 	mt := &mockTime{}
 	getEventsFromLogStream := func() []*cloudwatchlogs.OutputLogEvent {
 		logEventsInput := &cloudwatchlogs.GetLogEventsInput{
@@ -40,10 +46,10 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 		events := getEventsFromLogStream()
 		return *(events[len(events)-1].Message)
 	}
-	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int) {
+	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int, srcMeta, dstMeta EndpointMetadata) {
 		fl, err := getFlowLog(msg)
 		Expect(err).To(BeNil())
-		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fd, pi, po, bi, bo)
+		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fd, pi, po, bi, bo, srcMeta, dstMeta)
 		Expect(fl).Should(Equal(expectedFlow))
 	}
 	calculatePacketStats := func(mus ...MetricUpdate) (epi, epo, ebi, ebo int) {
@@ -76,7 +82,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlowsCompleted := 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 			By("reporting the same MetricUpdate with metrics in both directions")
 			cr.Report(muConn1Rule1AllowUpdate)
@@ -85,7 +91,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			message = getLastMessageFromLogStream()
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muConn1Rule1AllowUpdate)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 			By("reporting a expired MetricUpdate for the same tuple")
 			cr.Report(muConn1Rule1AllowExpire)
@@ -96,7 +102,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlowsCompleted = 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muConn1Rule1AllowExpire)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 			By("reporting a MetricUpdate for denied packets")
 			cr.Report(muNoConn3Rule2DenyUpdate)
@@ -108,7 +114,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlowsCompleted = 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule2DenyUpdate)
 			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 			By("reporting a expired denied packet MetricUpdate for the same tuple")
 			cr.Report(muNoConn3Rule2DenyExpire)
@@ -119,7 +125,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlowsCompleted = 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule2DenyExpire)
 			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 		})
 		It("aggregates metric updates for the duration of aggregation when reporting to cloudwatch logs", func() {
@@ -136,7 +142,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlowsCompleted := 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdate, muConn1Rule1AllowUpdate, muConn1Rule1AllowExpire)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 			By("reporting the same tuple different policies should be reported as separate flow logs")
 			cr.Report(muConn1Rule1AllowUpdate)
@@ -159,9 +165,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			// We only care about the flow log entry to exist and don't care about the actual order.
 			Expect([]FlowLog{flow1, flow2}).Should(ConsistOf(
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1),
+					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta),
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut,
-					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2),
+					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta),
 			))
 		})
 
@@ -188,9 +194,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			// We only care about the flow log entry to exist and don't care about the actual order.
 			Expect([]FlowLog{flow1, flow2}).Should(ConsistOf(
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1),
+					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta),
 				newExpectedFlowLog(tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2),
+					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta),
 			))
 
 			By("report expirations of the same connections")
@@ -214,9 +220,9 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			// We only care about the flow log entry to exist and don't care about the actual order.
 			Expect([]FlowLog{flow1, flow2}).Should(ConsistOf(
 				newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1),
+					expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1, pvtMeta, pubMeta),
 				newExpectedFlowLog(tuple2, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2),
+					expectedPacketsIn2, expectedPacketsOut2, expectedBytesIn2, expectedBytesOut2, pvtMeta, pubMeta),
 			))
 
 		})
@@ -240,12 +246,14 @@ func getFlowLog(fl string) (FlowLog, error) {
 	return *flowLog, err
 }
 
-func newExpectedFlowLog(t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int) FlowLog {
+func newExpectedFlowLog(t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int, srcMeta, dstMeta EndpointMetadata) FlowLog {
 	return FlowLog{
 		FlowMeta{
 			Tuple:     t,
 			Action:    a,
 			Direction: fd,
+			SrcMeta:   srcMeta,
+			DstMeta:   dstMeta,
 		},
 		FlowStats{
 			NumFlows:          nf,
