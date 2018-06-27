@@ -38,7 +38,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: c8c67ef9b22f42eb405ff5ce8522348c242616ce
+  version: 257f8faa626f1c360559a06e129562fb47342630
   subpackages:
   - lib
 - package: github.com/tigera/licensing
@@ -59,7 +59,7 @@ import:
 - package: github.com/gogo/protobuf
   version: ^0.5.0
 - package: github.com/vishvananda/netlink
-  version: xfrm-action
+  version: e447d51ba3c6d2a991f16f4155958ec044f8e00e
   repo: git@github.com:tigera/netlink.git
 - package: github.com/onsi/ginkgo
   version: ^1.4.0

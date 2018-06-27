@@ -7,11 +7,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/felix/testutils"
 	"github.com/projectcalico/libcalico-go/lib/set"
-	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 
 	. "github.com/projectcalico/felix/ipsec"
 )
@@ -91,7 +92,15 @@ var (
 	}
 )
 
-var _ = Describe("Dataplane", func() {
+var _ = Describe("IPsec dataplane tests with IPSecAllowUnsecuredTraffic=true", func() {
+	describeIPSecDataplaneTests(true)
+})
+
+var _ = Describe("IPsec dataplane tests with IPSecAllowUnsecuredTraffic=false", func() {
+	describeIPSecDataplaneTests(false)
+})
+
+func describeIPSecDataplaneTests(allowUnsecured bool) {
 	var dataplane *Dataplane
 	var mPolTable *mockPolicyTable
 	var mIKEDaemon *mockIKEDaemon
@@ -109,6 +118,7 @@ var _ = Describe("Dataplane", func() {
 			0x8,
 			mPolTable,
 			mIKEDaemon,
+			allowUnsecured,
 			mSleep,
 		)
 	}
@@ -116,7 +126,8 @@ var _ = Describe("Dataplane", func() {
 	BeforeEach(func() {
 		totalSleep = 0
 		mPolTable = &mockPolicyTable{
-			Rules: map[PolicySelector]*PolicyRule{},
+			ExpectOptionalRules: allowUnsecured,
+			Rules:               map[PolicySelector]*PolicyRule{},
 		}
 		mIKEDaemon = &mockIKEDaemon{
 			Keys:       map[string]string{},
@@ -319,26 +330,32 @@ var _ = Describe("Dataplane", func() {
 			dataplane.AddBlacklist(remoteWorkloadIP)
 		})
 
-		It("should add the right rules", func() {
-			Expect(mPolTable.Rules).To(Equal(map[PolicySelector]*PolicyRule{
-				PolicySelector{
-					TrafficSrc: remoteWorkloadCIDR,
-					Dir:        netlink.XFRM_DIR_IN,
-				}: &block,
-				PolicySelector{
-					TrafficSrc: remoteWorkloadCIDR,
-					Dir:        netlink.XFRM_DIR_FWD,
-				}: &block,
-				PolicySelector{
-					TrafficDst: remoteWorkloadCIDR,
-					Dir:        netlink.XFRM_DIR_OUT,
-				}: &block,
-				PolicySelector{
-					TrafficDst: remoteWorkloadCIDR,
-					Dir:        netlink.XFRM_DIR_FWD,
-				}: &block,
-			}))
-		})
+		if allowUnsecured {
+			It("should be ignored", func() {
+				Expect(mPolTable.Rules).To(BeEmpty())
+			})
+		} else {
+			It("should add the right rules", func() {
+				Expect(mPolTable.Rules).To(Equal(map[PolicySelector]*PolicyRule{
+					PolicySelector{
+						TrafficSrc: remoteWorkloadCIDR,
+						Dir:        netlink.XFRM_DIR_IN,
+					}: &block,
+					PolicySelector{
+						TrafficSrc: remoteWorkloadCIDR,
+						Dir:        netlink.XFRM_DIR_FWD,
+					}: &block,
+					PolicySelector{
+						TrafficDst: remoteWorkloadCIDR,
+						Dir:        netlink.XFRM_DIR_OUT,
+					}: &block,
+					PolicySelector{
+						TrafficDst: remoteWorkloadCIDR,
+						Dir:        netlink.XFRM_DIR_FWD,
+					}: &block,
+				}))
+			})
+		}
 
 		Context("with a blacklist entry removed", func() {
 			BeforeEach(func() {
@@ -350,15 +367,30 @@ var _ = Describe("Dataplane", func() {
 			})
 		})
 	})
-})
+}
 
 type mockPolicyTable struct {
-	Rules map[PolicySelector]*PolicyRule
+	ExpectOptionalRules bool
+	Rules               map[PolicySelector]*PolicyRule
 }
 
 func (p *mockPolicyTable) SetRule(sel PolicySelector, rule *PolicyRule) {
 	Expect(rule).NotTo(BeNil())
-	p.Rules[sel] = rule
+
+	// If the dataplane is in allow-unsecured mode then we expect all policies to be marked
+	// optional.
+	if p.ExpectOptionalRules {
+		Expect(rule.Optional).To(BeTrue(),
+			"dataplane programmed a non-optional rule in allow-unsecured mode")
+	} else {
+		Expect(rule.Optional).To(BeFalse(),
+			"dataplane programmed an optional rule but allow-unsecured is false")
+	}
+	// However, for ease of re-using tests, we store a copy of the rules with Optional forced to false.
+	ruleCopy := *rule
+	ruleCopy.Optional = false
+
+	p.Rules[sel] = &ruleCopy
 }
 
 func (p *mockPolicyTable) DeleteRule(sel PolicySelector) {

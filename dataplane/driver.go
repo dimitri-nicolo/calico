@@ -225,6 +225,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			NodeIP:                     configParams.NodeIP,
 			IPSecPSK:                   configParams.GetPSKFromFile(),
+			IPSecAllowUnsecuredTraffic: configParams.IPSecAllowUnsecuredTraffic,
 			IPSecIKEProposal:           configParams.IPSecIKEAlgorithm,
 			IPSecESPProposal:           configParams.IPSecESPAlgorithm,
 			IPSecLogLevel:              configParams.IPSecLogLevel,

@@ -160,11 +160,15 @@ type Config struct {
 	FelixHostname string
 	NodeIP        net.IP
 
-	IPSecPSK         string
-	IPSecIKEProposal string
-	IPSecESPProposal string
-	IPSecLogLevel    string
-	IPSecRekeyTime   time.Duration
+	IPSecPSK string
+	// IPSecAllowUnsecuredTraffic controls whether
+	// - IPsec is required for every packet (on a supported path), or
+	// - IPsec is used opportunistically but unsecured traffic is still allowed.
+	IPSecAllowUnsecuredTraffic bool
+	IPSecIKEProposal           string
+	IPSecESPProposal           string
+	IPSecLogLevel              string
+	IPSecRekeyTime             time.Duration
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -489,6 +493,7 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 			config.RulesConfig.IptablesMarkIPsec,
 			dp.ipSecPolTable,
 			ikeDaemon,
+			config.IPSecAllowUnsecuredTraffic,
 		)
 		ipSecManager := newIPSecManager(dp.ipSecDataplane)
 		dp.allManagers = append(dp.allManagers, ipSecManager)

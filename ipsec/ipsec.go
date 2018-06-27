@@ -36,8 +36,9 @@ func NewDataplane(
 	forwardMark uint32,
 	polTable polTable,
 	ikeDaemon ikeDaemon,
+	allowUnsecuredTraffic bool,
 ) *Dataplane {
-	return NewDataplaneWithShims(localTunnelAddr, preSharedKey, forwardMark, polTable, ikeDaemon, time.Sleep)
+	return NewDataplaneWithShims(localTunnelAddr, preSharedKey, forwardMark, polTable, ikeDaemon, allowUnsecuredTraffic, time.Sleep)
 }
 
 func NewDataplaneWithShims(
@@ -46,6 +47,7 @@ func NewDataplaneWithShims(
 	forwardMark uint32,
 	polTable polTable,
 	ikeDaemon ikeDaemon,
+	allowUnsecuredTraffic bool,
 	sleep func(duration time.Duration),
 ) *Dataplane {
 	if forwardMark == 0 {
@@ -53,9 +55,10 @@ func NewDataplaneWithShims(
 	}
 
 	d := &Dataplane{
-		preSharedKey:    preSharedKey,
-		localTunnelAddr: localTunnelAddr.String(),
-		forwardMark:     forwardMark,
+		preSharedKey:          preSharedKey,
+		localTunnelAddr:       localTunnelAddr.String(),
+		forwardMark:           forwardMark,
+		allowUnsecuredTraffic: allowUnsecuredTraffic,
 
 		bindingsByTunnel: map[string]set.Set{},
 
@@ -84,9 +87,10 @@ func NewDataplaneWithShims(
 }
 
 type Dataplane struct {
-	preSharedKey    string
-	forwardMark     uint32
-	localTunnelAddr string
+	preSharedKey          string
+	forwardMark           uint32
+	localTunnelAddr       string
+	allowUnsecuredTraffic bool
 
 	bindingsByTunnel map[string]set.Set
 
@@ -114,6 +118,7 @@ func (d *Dataplane) AddTunnel(remoteTunnelAddr string) {
 		}, &PolicyRule{
 			TunnelSrc: stringToV4IP(remoteTunnelAddr),
 			TunnelDst: stringToV4IP(d.localTunnelAddr),
+			Optional:  d.allowUnsecuredTraffic,
 		})
 
 		// Allow iptables to selectively encrypt packets to the host itself.  This allows us to encrypt traffic
@@ -126,6 +131,7 @@ func (d *Dataplane) AddTunnel(remoteTunnelAddr string) {
 		}, &PolicyRule{
 			TunnelSrc: stringToV4IP(d.localTunnelAddr),
 			TunnelDst: stringToV4IP(remoteTunnelAddr),
+			Optional:  d.allowUnsecuredTraffic,
 		})
 	}
 }
@@ -153,6 +159,10 @@ func (d *Dataplane) RemoveTunnel(remoteTunnelAddr string) {
 }
 
 func (d *Dataplane) AddBlacklist(workloadAddress string) {
+	if d.allowUnsecuredTraffic {
+		log.Debug("Unsecured IPsec traffic allowed, not populating the blacklist")
+		return
+	}
 	log.Warningf("Adding IPsec blacklist for %v", workloadAddress)
 
 	cidr := ip.FromString(workloadAddress).AsCIDR().(ip.V4CIDR)
@@ -176,6 +186,9 @@ func (d *Dataplane) AddBlacklist(workloadAddress string) {
 }
 
 func (d *Dataplane) RemoveBlacklist(workloadAddress string) {
+	if d.allowUnsecuredTraffic {
+		return
+	}
 	log.Warningf("Removing IPsec blacklist for %v", workloadAddress)
 	cidr := stringToV4CIDR(workloadAddress)
 
@@ -229,6 +242,7 @@ func (d *Dataplane) addXfrm(remoteTunnelAddr, workloadAddr string) {
 	}, &PolicyRule{
 		TunnelSrc: stringToV4IP(remoteTunnelAddr),
 		TunnelDst: stringToV4IP(d.localTunnelAddr),
+		Optional:  d.allowUnsecuredTraffic,
 	})
 	// Remote workload to local host, hits the IN xfrm policy.
 	d.polTable.SetRule(PolicySelector{
@@ -238,6 +252,7 @@ func (d *Dataplane) addXfrm(remoteTunnelAddr, workloadAddr string) {
 	}, &PolicyRule{
 		TunnelSrc: stringToV4IP(remoteTunnelAddr),
 		TunnelDst: stringToV4IP(d.localTunnelAddr),
+		Optional:  d.allowUnsecuredTraffic,
 	})
 	// Local traffic to remote workload.
 	d.polTable.SetRule(PolicySelector{
@@ -246,6 +261,7 @@ func (d *Dataplane) addXfrm(remoteTunnelAddr, workloadAddr string) {
 	}, &PolicyRule{
 		TunnelSrc: stringToV4IP(d.localTunnelAddr),
 		TunnelDst: stringToV4IP(remoteTunnelAddr),
+		Optional:  d.allowUnsecuredTraffic,
 	})
 	log.Debugf("Added IPsec policy: %s %s %s %s", anyAddress, workloadAddr, d.localTunnelAddr, remoteTunnelAddr)
 }
