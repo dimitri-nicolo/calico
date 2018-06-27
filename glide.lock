@@ -1,5 +1,5 @@
-hash: 9580fe38f536b0e90e8fb78763f390542ee185a2146866e7d99a74504c1ffe56
-updated: 2018-06-26T16:49:06.208239-07:00
+hash: c654c0533eebb15f9305746f34ddd46742a17a2410a3fa386bd5f5fcd21bdb75
+updated: 2018-06-27T16:12:17.844443369Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -249,7 +249,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: c8c67ef9b22f42eb405ff5ce8522348c242616ce
+  version: c0e4dcb45e10367c2db2b3af6197c869ca71ad99
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -290,7 +290,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 74a831af18835ab2e08bfb79c7d4e6d8815e98bd
+  version: 1cc224748d050c040983a3c40eb88d1be99254ee
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -340,7 +340,7 @@ imports:
   - nfnl
   - pkt
 - name: github.com/vishvananda/netlink
-  version: 791a9e9d9b790967fed2b77fbb1ddf99bc299326
+  version: 71cfab7357367b9c97c1926ae56490bcf1f6a7de
   repo: git@github.com:tigera/netlink.git
   subpackages:
   - nl
