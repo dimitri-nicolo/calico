@@ -2857,7 +2857,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"cloudWatchLogsRetentionDays": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Number of days for which to retain logs.  Only relevant when the log group is first created.",
+								Description: "Number of days for which to retain logs.  Only relevant when the log group is first created. See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html for allowed values.",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},
