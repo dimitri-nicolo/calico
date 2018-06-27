@@ -14,7 +14,9 @@
 import logging
 import json
 import os
+import random
 import re
+import string
 import tempfile
 import uuid
 import yaml
@@ -525,12 +527,14 @@ class DockerHost(object):
         """
         assert self._cleaned
 
-    def create_workload(self, name,
+    def create_workload(self, base_name,
                         image="busybox", network="bridge",
                         ip=None, labels=[], namespace=None):
         """
         Create a workload container inside this host container.
         """
+        name = base_name + "_" + \
+            ''.join([random.choice(string.ascii_letters) for ii in range(6)])
         workload = Workload(self, name, image=image, network=network,
                             ip=ip, labels=labels, namespace=namespace)
         self.workloads.add(workload)
