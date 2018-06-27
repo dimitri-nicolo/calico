@@ -2780,6 +2780,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"ipsecAllowUnsecuredTraffic": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecAllowUnsecuredTraffic controls whether non-IPsec traffic is allowed in addition to IPsec traffic. Enabling this negates the anti-spoofing protections of IPsec but it is useful when migrating to/from IPsec. [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
 						"ipsecIKEAlgorithm": {
 							SchemaProps: spec.SchemaProps{
 								Description: "IPSecIKEAlgorithm sets IPSec IKE algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-prfsha256-ecp256]",
