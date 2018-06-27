@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -317,6 +318,16 @@ func (kds *K8sDatastoreInfra) GetBadEndpointDockerArgs() []string {
 
 func (kds *K8sDatastoreInfra) GetCalicoClient() client.Interface {
 	return kds.calicoClient
+}
+
+func (kds *K8sDatastoreInfra) GetClusterGUID() string {
+	ci, err := kds.GetCalicoClient().ClusterInformation().Get(
+		context.Background(),
+		"default",
+		options.GetOptions{},
+	)
+	Expect(err).NotTo(HaveOccurred())
+	return ci.Spec.ClusterGUID
 }
 
 func (kds *K8sDatastoreInfra) SetExpectedIPIPTunnelAddr(felix *Felix, idx int, needBGP bool) {

@@ -149,7 +149,10 @@ func (c *Collector) getData(tuple Tuple) *Data {
 // applyConnTrackStatUpdate applies a stats update from a conn track poll.
 func (c *Collector) applyConnTrackStatUpdate(
 	tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int,
+	timeout int,
 ) {
+	log.WithField("tuple", tuple).Infof("(%v) Conntrack stats update in %v/%v out %v/%v", timeout, packets, bytes, reversePackets, reverseBytes)
+
 	// Update the counters for the entry.  Since data is a pointer, we are updating the map
 	// entry in situ.
 	data := c.getData(tuple)
@@ -159,6 +162,9 @@ func (c *Collector) applyConnTrackStatUpdate(
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
 func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, srcEp, dstEp *calc.EndpointData, tierIdx, numPkts, numBytes int) {
+
+	log.WithField("tuple", tuple).Info("NFLOG stats update")
+
 	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
 	data := c.getData(tuple)
 	if srcEp != nil {
@@ -262,7 +268,8 @@ func (c *Collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	tuple := extractTupleFromCtEntryTuple(ctTuple)
 	c.applyConnTrackStatUpdate(tuple,
 		ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes)
+		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
+		ctEntry.Timeout)
 	return
 }
 

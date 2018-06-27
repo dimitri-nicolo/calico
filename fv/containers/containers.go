@@ -150,6 +150,10 @@ type RunOpts struct {
 	AutoRemove bool
 }
 
+func NextContainerIndex() int {
+	return containerIdx + 1
+}
+
 func Run(namePrefix string, opts RunOpts, args ...string) (c *Container) {
 
 	// Build unique container name and struct.
