@@ -417,6 +417,35 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 	})
 
+	Context("after switching to allow-unsecured mode IPsec", func() {
+		BeforeEach(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			felixConfig, err := client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			t := true
+			felixConfig.Spec.IPSecAllowUnsecuredTraffic = &t
+			felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, f := range felixes {
+				Eventually(func() int { return policyCount(f, "level use") }, "5s").Should(BeNumerically(">", numPoliciesPerWep))
+			}
+		})
+
+		It("should have connectivity", func() {
+			cc.ExpectSome(w[0], w[1])
+			cc.ExpectSome(w[1], w[0])
+			cc.ExpectSome(felixes[0], w[1])
+			cc.ExpectSome(felixes[1], w[0])
+			cc.ExpectSome(felixes[0], w[0])
+			cc.ExpectSome(felixes[1], w[1])
+			cc.ExpectSome(w[0], hostW[1])
+			cc.ExpectSome(w[1], hostW[0])
+			cc.CheckConnectivity()
+		})
+	})
+
 	Context("after flushing IPsec policy on one host", func() {
 		BeforeEach(func() {
 			// Felix will spot this eventually, but its default refresh time is several minutes...
@@ -455,7 +484,13 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 		Expect(err).NotTo(HaveOccurred())
 
 		topologyOptions := ipSecTopologyOptions()
-		topologyOptions.InitialFelixConfiguration = nil
+
+		fc := api.NewFelixConfiguration()
+		fc.SetName("default")
+		t := true
+		fc.Spec.IPSecAllowUnsecuredTraffic = &t
+
+		topologyOptions.InitialFelixConfiguration = fc
 		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
@@ -474,18 +509,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 		defer cancel()
 
 		// Enable IPsec at node scope on one host.
-		fc := api.NewFelixConfiguration()
+		fc = api.NewFelixConfiguration()
 		fc.Name = "node." + felixes[1].Hostname
 		fc.Spec.IPSecMode = "PSK"
 		_, err = client.FelixConfigurations().Create(ctx, fc, options.SetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-
-		// Enable unsecured traffic.
-		fc, err = client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
-		t := true
-		fc.Spec.IPSecAllowUnsecuredTraffic = &t
-		fc, err = client.FelixConfigurations().Update(ctx, fc, options.SetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Turning on the option should make felix switch to "use"-level policy.
