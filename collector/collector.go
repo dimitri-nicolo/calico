@@ -136,11 +136,11 @@ func (c *Collector) setupStatsDumping() {
 
 // getData returns a pointer to the data structure keyed off the supplied tuple.  If there
 // is no entry one is created.
-func (c *Collector) getData(tuple Tuple, srcEp, dstEp *calc.EndpointData) *Data {
+func (c *Collector) getData(tuple Tuple) *Data {
 	data, ok := c.epStats[tuple]
 	if !ok {
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
-		data = NewData(tuple, srcEp, dstEp, c.config.AgeTimeout)
+		data = NewData(tuple, c.config.AgeTimeout)
 		c.epStats[tuple] = data
 	}
 	return data
@@ -152,7 +152,7 @@ func (c *Collector) applyConnTrackStatUpdate(
 ) {
 	// Update the counters for the entry.  Since data is a pointer, we are updating the map
 	// entry in situ.
-	data := c.getData(tuple, nil, nil)
+	data := c.getData(tuple)
 	data.SetCounters(packets, bytes)
 	data.SetCountersReverse(reversePackets, reverseBytes)
 }
@@ -160,7 +160,13 @@ func (c *Collector) applyConnTrackStatUpdate(
 // applyNflogStatUpdate applies a stats update from an NFLOG.
 func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, srcEp, dstEp *calc.EndpointData, tierIdx, numPkts, numBytes int) {
 	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
-	data := c.getData(tuple, srcEp, dstEp)
+	data := c.getData(tuple)
+	if srcEp != nil {
+		data.SetSourceEndpointData(srcEp)
+	}
+	if dstEp != nil {
+		data.SetDestinationEndpointData(dstEp)
+	}
 	if ok := data.AddRuleID(ruleID, tierIdx, numPkts, numBytes); !ok {
 		// When a RuleTrace RuleID is replaced, we have to do some housekeeping
 		// before we can replace it, the first of which is to remove references
