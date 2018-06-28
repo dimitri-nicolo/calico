@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
+	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -25,6 +26,11 @@ type mockedCloudWatchLogsClient struct {
 	logStreamName    string
 	sequenceToken    int
 	logGroupedEvents map[string]map[string][]logEvent
+	retentionInDays  *int64
+}
+
+type CloudWatchLogsExpectation interface {
+	ExpectRetentionPeriod(days int64)
 }
 
 // NewMockedCloudWatchLogsClient simulates a very basic aws cloudwatchlogs
@@ -119,4 +125,15 @@ func (m *mockedCloudWatchLogsClient) DescribeLogStreams(input *cloudwatchlogs.De
 		},
 	}
 	return dlso, nil
+}
+
+func (m *mockedCloudWatchLogsClient) PutRetentionPolicy(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+	log.Infof("Retention period for log group %v is now %v days", *input.LogGroupName, *input.RetentionInDays)
+	m.retentionInDays = input.RetentionInDays
+	return nil, nil
+}
+
+func (m *mockedCloudWatchLogsClient) ExpectRetentionPeriod(days int64) {
+	Expect(m.retentionInDays).NotTo(BeNil())
+	Expect(*m.retentionInDays).To(Equal(days))
 }

@@ -29,8 +29,10 @@ const (
 	FlowLogEndpointTypeWep FlowLogEndpointType = "wep"
 	FlowLogEndpointTypeHep FlowLogEndpointType = "hep"
 	FlowLogEndpointTypeNs  FlowLogEndpointType = "ns"
-	FlowLogEndpointTypePvt FlowLogEndpointType = "pvt"
-	FlowLogEndpointTypePub FlowLogEndpointType = "pub"
+	FlowLogEndpointTypeNet FlowLogEndpointType = "net"
+
+	FlowLogPrivateEndpoint string = "pvt"
+	FlowLogPublicEndpoint  string = "pub"
 )
 
 // extractPartsFromAggregatedTuple converts and returns each field of a tuple to a string.
@@ -153,4 +155,19 @@ func ipStrTo16Byte(ipStr string) [16]byte {
 	var addrB [16]byte
 	copy(addrB[:], addr.To16()[:16])
 	return addrB
+}
+
+func classifyIPasPvtOrPub(addrBytes [16]byte) string {
+	IP := net.IP(addrBytes[:16])
+
+	// Currently checking for only private blocks
+	_, private24BitBlock, _ := net.ParseCIDR("10.0.0.0/8")
+	_, private20BitBlock, _ := net.ParseCIDR("172.16.0.0/12")
+	_, private16BitBlock, _ := net.ParseCIDR("192.168.0.0/16")
+	isPrivateIP := private24BitBlock.Contains(IP) || private20BitBlock.Contains(IP) || private16BitBlock.Contains(IP)
+
+	if isPrivateIP {
+		return FlowLogPrivateEndpoint
+	}
+	return FlowLogPublicEndpoint
 }

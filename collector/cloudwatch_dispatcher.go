@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
@@ -26,17 +27,20 @@ const (
 
 // cloudWatchDispatcher implements the FlowLogDispatcher interface.
 type cloudWatchDispatcher struct {
+	cwl           cloudwatchlogsiface.CloudWatchLogsAPI
 	logGroupName  string
 	logStreamName string
+	retentionDays int
 	seqToken      string
-	cwl           cloudwatchlogsiface.CloudWatchLogsAPI
 }
 
 // NewCloudWatchDispatcher will initialize a session that the aws SDK will use
 // to load credentials from the shared credentials file ~/.aws/credentials,
 // load your configuration from the shared configuration file ~/.aws/config,
 // and create a CloudWatch Logs client.
-func NewCloudWatchDispatcher(logGroupName, logStreamName string, cwl cloudwatchlogsiface.CloudWatchLogsAPI) FlowLogDispatcher {
+func NewCloudWatchDispatcher(
+	logGroupName, logStreamName string, retentionDays int, cwl cloudwatchlogsiface.CloudWatchLogsAPI,
+) FlowLogDispatcher {
 	if cwl == nil {
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
@@ -48,6 +52,7 @@ func NewCloudWatchDispatcher(logGroupName, logStreamName string, cwl cloudwatchl
 		cwl:           cwl,
 		logGroupName:  logGroupName,
 		logStreamName: logStreamName,
+		retentionDays: retentionDays,
 	}
 
 	// TODO(doublek): Add some retries before bailing.
@@ -175,6 +180,23 @@ func (c *cloudWatchDispatcher) verifyLogStream() (*cloudwatchlogs.LogStream, err
 	return nil, fmt.Errorf("Cannot find log stream %v in log group %v", c.logStreamName, c.logGroupName)
 }
 
+func (c *cloudWatchDispatcher) setLogGroupRetention() error {
+	putRetentionInp := &cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(c.logGroupName),
+		RetentionInDays: aws.Int64(int64(c.retentionDays)),
+	}
+	err := putRetentionInp.Validate()
+	if err != nil {
+		log.WithError(err).Warning("Invalid input for PutRetentionPolicy call")
+		return err
+	}
+	_, err = c.cwl.PutRetentionPolicy(putRetentionInp)
+	if err != nil {
+		log.WithError(err).Warning("Error in PutRetentionPolicy call")
+	}
+	return err
+}
+
 func (c *cloudWatchDispatcher) verifyOrCreateLogGroup() error {
 
 	err := c.verifyLogGroup()
@@ -192,11 +214,38 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogGroup() error {
 	}
 	log.WithField("LogGroupName", c.logGroupName).Info("Creating Log group")
 	_, err = c.cwl.CreateLogGroup(createLGInp)
-	if err != nil {
+	if err == nil {
+		// LogGroup just created by us; set its retention time.
+		err = c.setLogGroupRetention()
+		if err != nil {
+			return err
+		}
+	} else if isAWSError(err, cloudwatchlogs.ErrCodeResourceAlreadyExistsException) {
+		// LogGroup just created by another ANX node.  Don't set its retention
+		// time; there's no need for more than one node to do this, and we can
+		// assume that the other node has (or will) set its retention time to
+		// whatever the current FelixConfiguration setting says.
+		log.Debug("Log group now exists; presume just created by another ANX node")
+	} else {
+		// Some error other than a creation race.
 		log.WithField("LogGroupName", c.logGroupName).WithError(err).Error("Error creating Log group")
 		return err
 	}
 	return nil
+}
+
+func isAWSError(err error, codes ...string) bool {
+	matched := false
+	if aerr, ok := err.(awserr.Error); ok {
+		errCode := aerr.Code()
+		for _, code := range codes {
+			if code == errCode {
+				matched = true
+				break
+			}
+		}
+	}
+	return matched
 }
 
 func (c *cloudWatchDispatcher) verifyLogGroup() error {
@@ -218,6 +267,16 @@ func (c *cloudWatchDispatcher) verifyLogGroup() error {
 		log.Debugf(lg.GoString())
 		if *lg.LogGroupName == c.logGroupName {
 			log.Debugf("Found log group %v", c.logGroupName)
+			if lg.RetentionInDays == nil || *lg.RetentionInDays != int64(c.retentionDays) {
+				// Log group's retention period does not match the current
+				// FelixConfiguration setting, so try to change it to
+				// match.  If there is an error here,
+				// setLogGroupRetention() will log it, but we don't
+				// propagate it any further upwards from this point.  The
+				// next ANX node that starts up will try again to align
+				// the period with FelixConfiguration.
+				c.setLogGroupRetention()
+			}
 			return nil
 		}
 	}

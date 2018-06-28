@@ -45,12 +45,13 @@ var (
 		},
 	}
 )
+
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
-	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int) {
+	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int, sm, dm EndpointMetadata) {
 		fl, err := getFlowLog(msg)
 		Expect(err).To(BeNil())
-		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fd, pi, po, bi, bo)
+		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fd, pi, po, bi, bo, sm, dm)
 		Expect(fl).Should(Equal(expectedFlow))
 	}
 	calculatePacketStats := func(mus ...MetricUpdate) (epi, epo, ebi, ebo int) {
@@ -77,7 +78,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 			By("source port")
 			ca = NewCloudWatchAggregator().AggregateOver(SourcePort)
@@ -92,7 +93,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
 
-			By("prefix name")
+			By("endpoint prefix names")
 			ca = NewCloudWatchAggregator().AggregateOver(PrefixName)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
 			// Construct a similar update; same tuple but diff src ports.
@@ -159,8 +160,155 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages = ca.Get()
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
+
+			By("by endpoint IP classification as the meta name when meta info is missing")
+			ca = NewCloudWatchAggregator().AggregateOver(PrefixName)
+			endpointMeta := calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-01",
+					OrchestratorID: "k8s",
+					WorkloadID:     "kube-system/iperf-4235-5623461",
+					EndpointID:     "4352",
+				},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
+			}
+
+			muWithoutDstEndpointMeta := MetricUpdate{
+				updateType: UpdateTypeReport,
+				tuple:      *NewTuple(ipStrTo16Byte("192.168.0.4"), ipStrTo16Byte("192.168.0.14"), proto_tcp, srcPort1, dstPort),
+
+				// src endpoint meta info available
+				srcEp: &endpointMeta,
+
+				// dst endpoint meta info not available
+				dstEp: nil,
+
+				ruleID:       ingressRule1Allow,
+				isConnection: false,
+				inMetric: MetricValue{
+					deltaPackets: 1,
+					deltaBytes:   20,
+				},
+			}
+			ca.FeedUpdate(muWithoutDstEndpointMeta)
+
+			// Another metric update comes in. This time on a different dst private IP
+			muWithoutDstEndpointMetaCopy := muWithoutDstEndpointMeta
+			muWithoutDstEndpointMetaCopy.tuple.dst = ipStrTo16Byte("192.168.0.17")
+			ca.FeedUpdate(muWithoutDstEndpointMetaCopy)
+			messages = ca.Get()
+			// One flow expected: srcMeta.GenerateName -> pvt
+			// Two updates should still result in 1 flow
+			Expect(len(messages)).Should(Equal(1))
+
+			// Initial Update
+			ca.FeedUpdate(muWithoutDstEndpointMeta)
+			// + metric update comes in. This time on a non-private dst IP
+			muWithoutDstEndpointMetaCopy.tuple.dst = ipStrTo16Byte("198.17.8.43")
+			ca.FeedUpdate(muWithoutDstEndpointMetaCopy)
+			messages = ca.Get()
+			// 2nd flow expected: srcMeta.GenerateName -> pub
+			// Three updates so far should result in 2 flows
+			Expect(len(messages)).Should(Equal(2)) // Metric Update comes in with a non private as the dst IP
+
+			// Initial Updates
+			ca.FeedUpdate(muWithoutDstEndpointMeta)
+			ca.FeedUpdate(muWithoutDstEndpointMetaCopy)
+			// + metric update comes in. This time with missing src endpointMeta
+			muWithoutDstEndpointMetaCopy.srcEp = nil
+			muWithoutDstEndpointMetaCopy.dstEp = &endpointMeta
+			ca.FeedUpdate(muWithoutDstEndpointMetaCopy)
+			messages = ca.Get()
+
+			// 3rd flow expected: pvt -> dst.GenerateName
+			// Four updates so far should result in 3 flows
+			Expect(len(messages)).Should(Equal(3)) // Metric Update comes in with a non private as the dst IP
+
+			// Deserialize the messages and confirm the expected flow metas
+			fm1 := FlowMeta{
+				Tuple: Tuple{
+					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					proto: 6,
+					l4Src: 0,
+					l4Dst: 80,
+				},
+				SrcMeta: EndpointMetadata{
+					Type:      "wep",
+					Namespace: "kube-system",
+					Name:      "iperf-4235*",
+					Labels:    "-",
+				},
+				DstMeta: EndpointMetadata{
+					Type:      "net",
+					Namespace: "-",
+					Name:      "pub",
+					Labels:    "-",
+				},
+				Action:    "allow",
+				Direction: "in",
+			}
+
+			fm2 := FlowMeta{
+				Tuple: Tuple{
+					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					proto: 6,
+					l4Src: 0,
+					l4Dst: 80,
+				},
+				SrcMeta: EndpointMetadata{
+					Type:      "net",
+					Namespace: "-",
+					Name:      "pvt",
+					Labels:    "-",
+				},
+				DstMeta: EndpointMetadata{
+					Type:      "wep",
+					Namespace: "kube-system",
+					Name:      "iperf-4235*",
+					Labels:    "-",
+				},
+				Action:    "allow",
+				Direction: "in",
+			}
+
+			fm3 := FlowMeta{
+				Tuple: Tuple{
+					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					proto: 6,
+					l4Src: 0,
+					l4Dst: 80,
+				},
+				SrcMeta: EndpointMetadata{
+					Type:      "wep",
+					Namespace: "kube-system",
+					Name:      "iperf-4235*",
+					Labels:    "-",
+				},
+				DstMeta: EndpointMetadata{
+					Type:      "net",
+					Namespace: "-",
+					Name:      "pvt",
+					Labels:    "-",
+				},
+				Action:    "allow",
+				Direction: "in",
+			}
+
+			flowLogMetas := []FlowMeta{}
+			for _, m := range messages {
+				fl := &FlowLog{}
+				fl.Deserialize(*m)
+
+				flowLogMetas = append(flowLogMetas, fl.FlowMeta)
+			}
+
+			Expect(flowLogMetas).Should(ConsistOf(fm1, fm2, fm3))
 		})
 	})
+
 	Context("Flow log aggregator filter verification", func() {
 		It("Filters out MetricUpdate based on filter applied", func() {
 			By("Creating 2 aggregators - one for denied packets, and one for allowed packets")
@@ -183,5 +331,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages = cad.Get()
 			Expect(len(messages)).Should(Equal(0))
 		})
+
 	})
 })

@@ -48,11 +48,23 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 		if err != nil {
 			return FlowMeta{}, fmt.Errorf("Could not extract metadata for source %v", mu.srcEp)
 		}
+	} else {
+		srcMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
+			Namespace: flowLogFieldNotIncluded,
+			Name:      classifyIPasPvtOrPub(mu.tuple.src),
+			Labels:    flowLogFieldNotIncluded,
+		}
 	}
 	if mu.dstEp != nil {
 		dstMeta, err = getFlowLogEndpointMetadata(mu.dstEp)
 		if err != nil {
 			return FlowMeta{}, fmt.Errorf("Could not extract metadata for destination %v", mu.dstEp)
+		}
+	} else {
+		dstMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
+			Namespace: flowLogFieldNotIncluded,
+			Name:      classifyIPasPvtOrPub(mu.tuple.dst),
+			Labels:    flowLogFieldNotIncluded,
 		}
 	}
 
@@ -87,13 +99,13 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	f.Tuple.dst = [16]byte{}
 
 	if mu.srcEp != nil {
-		f.SrcMeta.Name = getEndpointNamePrefix(mu.srcEp)
+		f.SrcMeta.Name = getEndpointNamePrefix(mu.srcEp) + "*"
 	}
 	if mu.dstEp != nil {
-		f.DstMeta.Name = getEndpointNamePrefix(mu.dstEp)
+		f.DstMeta.Name = getEndpointNamePrefix(mu.dstEp) + "*"
 	}
 
-	// Ignoring Labels.
+	// Disregard labels
 	f.SrcMeta.Labels = flowLogFieldNotIncluded
 	f.DstMeta.Labels = flowLogFieldNotIncluded
 
@@ -180,7 +192,7 @@ type FlowLog struct {
 	FlowStats
 }
 
-func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool, kind AggregationKind) string {
+func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool) string {
 	var srcLabels, dstLabels string
 
 	if includeLabels {
@@ -192,15 +204,11 @@ func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool, kin
 	}
 
 	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(f.Tuple)
-	var srcName, dstName string
-	if kind == PrefixName {
-		srcName = f.SrcMeta.Name + "-*"
-		dstName = f.DstMeta.Name + "-*"
-	}
+
 	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
 		startTime.Unix(), endTime.Unix(),
-		f.SrcMeta.Type, f.SrcMeta.Namespace, srcName, srcLabels,
-		f.DstMeta.Type, f.DstMeta.Namespace, dstName, dstLabels,
+		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, srcLabels,
+		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, dstLabels,
 		srcIP, dstIP, proto, l4Src, l4Dst,
 		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Direction,
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
@@ -229,10 +237,8 @@ func (f *FlowLog) Deserialize(fl string) error {
 		srcType = FlowLogEndpointTypeHep
 	case "ns":
 		srcType = FlowLogEndpointTypeNs
-	case "pvt":
-		srcType = FlowLogEndpointTypePvt
-	case "pub":
-		srcType = FlowLogEndpointTypePub
+	case "net":
+		srcType = FlowLogEndpointTypeNet
 	}
 
 	srcMeta := EndpointMetadata{
@@ -240,9 +246,6 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Namespace: parts[3],
 		Name:      parts[4],
 		Labels:    parts[5],
-	}
-	if parts[5] == "-" {
-		srcMeta.Labels = ""
 	}
 
 	switch parts[6] {
@@ -252,10 +255,8 @@ func (f *FlowLog) Deserialize(fl string) error {
 		dstType = FlowLogEndpointTypeHep
 	case "ns":
 		dstType = FlowLogEndpointTypeNs
-	case "pvt":
-		dstType = FlowLogEndpointTypePvt
-	case "pub":
-		dstType = FlowLogEndpointTypePub
+	case "net":
+		dstType = FlowLogEndpointTypeNet
 	}
 
 	dstMeta := EndpointMetadata{
@@ -264,15 +265,14 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Name:      parts[8],
 		Labels:    parts[9],
 	}
-	if parts[9] == "-" {
-		dstMeta.Labels = ""
-	}
 
-	var sip [16]byte
+	var sip, dip [16]byte
 	if parts[10] != "-" {
 		sip = ipStrTo16Byte(parts[10])
 	}
-	dip := ipStrTo16Byte(parts[11])
+	if parts[11] != "-" {
+		dip = ipStrTo16Byte(parts[11])
+	}
 	p, _ := strconv.Atoi(parts[12])
 	sp, _ := strconv.Atoi(parts[13])
 	dp, _ := strconv.Atoi(parts[14])
