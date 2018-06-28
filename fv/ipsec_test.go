@@ -13,8 +13,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/projectcalico/felix/ipsec"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/ipsec"
 
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
@@ -24,6 +25,8 @@ import (
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
+
+const numPoliciesPerWep = 3
 
 var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
 
@@ -413,6 +416,150 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 			cc.CheckConnectivity()
 		})
 	})
+
+	Context("after switching to allow-unsecured mode IPsec", func() {
+		BeforeEach(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			felixConfig, err := client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			t := true
+			felixConfig.Spec.IPSecAllowUnsecuredTraffic = &t
+			felixConfig, err = client.FelixConfigurations().Update(ctx, felixConfig, options.SetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			for _, f := range felixes {
+				Eventually(func() int { return policyCount(f, "level use") }, "5s").Should(BeNumerically(">", numPoliciesPerWep))
+			}
+		})
+
+		It("should have connectivity", func() {
+			cc.ExpectSome(w[0], w[1])
+			cc.ExpectSome(w[1], w[0])
+			cc.ExpectSome(felixes[0], w[1])
+			cc.ExpectSome(felixes[1], w[0])
+			cc.ExpectSome(felixes[0], w[0])
+			cc.ExpectSome(felixes[1], w[1])
+			cc.ExpectSome(w[0], hostW[1])
+			cc.ExpectSome(w[1], hostW[0])
+			cc.CheckConnectivity()
+		})
+	})
+
+	Context("after flushing IPsec policy on one host", func() {
+		BeforeEach(func() {
+			// Felix will spot this eventually, but its default refresh time is several minutes...
+			felixes[0].Exec("ip", "xfrm", "policy", "flush")
+		})
+
+		It("should have no workload connectivity", func() {
+			cc.ExpectNone(w[0], w[1])
+			cc.ExpectNone(w[1], w[0])
+			cc.ExpectNone(w[0], hostW[1])
+			cc.ExpectNone(w[1], hostW[0])
+			cc.ExpectNone(felixes[0], w[1])
+			cc.ExpectNone(felixes[1], w[0])
+			cc.CheckConnectivity()
+		})
+	})
+})
+
+var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
+
+	var (
+		infra   infrastructure.DatastoreInfra
+		felixes []*infrastructure.Felix
+		client  client.Interface
+		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
+		w [2]*workload.Workload
+		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
+		hostW [2]*workload.Workload
+		cc    *workload.ConnectivityChecker
+	)
+
+	BeforeEach(func() {
+		var err error
+
+		infra, err = getInfra()
+		Expect(err).NotTo(HaveOccurred())
+
+		topologyOptions := ipSecTopologyOptions()
+
+		fc := api.NewFelixConfiguration()
+		fc.SetName("default")
+		t := true
+		fc.Spec.IPSecAllowUnsecuredTraffic = &t
+
+		topologyOptions.InitialFelixConfiguration = fc
+		felixes, client = infrastructure.StartNNodeTopology(2, topologyOptions, infra)
+
+		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
+		err = infra.AddDefaultAllow()
+		Expect(err).NotTo(HaveOccurred())
+
+		for _, f := range felixes {
+			f.TriggerDelayedStart()
+		}
+
+		createWorkloads(infra, felixes, w[:], hostW[:])
+
+		cc = &workload.ConnectivityChecker{}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// Enable IPsec at node scope on one host.
+		fc = api.NewFelixConfiguration()
+		fc.Name = "node." + felixes[1].Hostname
+		fc.Spec.IPSecMode = "PSK"
+		_, err = client.FelixConfigurations().Create(ctx, fc, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Turning on the option should make felix switch to "use"-level policy.
+		Eventually(func() int { return policyCount(felixes[1], "level use") }, "5s").ShouldNot(BeZero())
+		Eventually(func() int { return policyCount(felixes[1], w[0].IP) }, "5s", "100ms").Should(
+			Equal(numPoliciesPerWep),
+			fmt.Sprintf("Expected to see %d IPsec policies for workload IP %s in felix container %s",
+				numPoliciesPerWep, w[0].IP, felixes[1].Name))
+	})
+
+	AfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			for _, felix := range felixes {
+				felix.Exec("iptables-save", "-c")
+				felix.Exec("ipset", "list")
+				felix.Exec("ip", "r")
+				felix.Exec("ip", "a")
+				felix.Exec("ip", "xfrm", "state")
+				felix.Exec("ip", "xfrm", "policy")
+			}
+		}
+
+		for _, wl := range w {
+			wl.Stop()
+		}
+		for _, wl := range hostW {
+			wl.Stop()
+		}
+		for _, felix := range felixes {
+			felix.Stop()
+		}
+
+		if CurrentGinkgoTestDescription().Failed {
+			infra.DumpErrorData()
+		}
+		infra.Stop()
+	})
+
+	It("should still have workload connectivity", func() {
+		cc.ExpectSome(w[0], w[1])
+		cc.ExpectSome(w[1], w[0])
+		cc.ExpectSome(w[0], hostW[1])
+		cc.ExpectSome(w[1], hostW[0])
+		cc.ExpectSome(felixes[0], w[1])
+		cc.ExpectSome(felixes[1], w[0])
+		cc.CheckConnectivity()
+	})
 })
 
 var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.DatastoreType{apiconfig.EtcdV3, apiconfig.Kubernetes}, func(getInfra infrastructure.InfraFactory) {
@@ -579,7 +726,11 @@ func disableIPSec(client client.Interface) {
 }
 
 func startWorkloadsandWaitForPolicy(infra infrastructure.DatastoreInfra, felixes []*infrastructure.Felix, w []*workload.Workload, hostW []*workload.Workload) {
+	createWorkloads(infra, felixes, w, hostW)
+	waitForPolicy(felixes, w)
+}
 
+func createWorkloads(infra infrastructure.DatastoreInfra, felixes []*infrastructure.Felix, w []*workload.Workload, hostW []*workload.Workload) {
 	// Create workloads, using the default profile.  One on each "host".
 	for ii := range w {
 		wIP := fmt.Sprintf("10.65.%d.2", ii)
@@ -590,11 +741,12 @@ func startWorkloadsandWaitForPolicy(infra infrastructure.DatastoreInfra, felixes
 	for ii := range hostW {
 		hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", "tcp")
 	}
+}
 
+func waitForPolicy(felixes []*infrastructure.Felix, w []*workload.Workload) {
 	// Wait for Felix to program the IPsec policy.  Otherwise, we might see some unencrypted traffic at
 	// start-of-day.  There's not much we can do about that in general since we don't know the workload's IP
 	// to blacklist it until we hear about the workload.
-	const numPoliciesPerWep = 3
 	for i, f := range felixes {
 		for j := range w {
 			if i == j {

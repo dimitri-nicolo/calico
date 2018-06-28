@@ -9,11 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/projectcalico/felix/ip"
-	"github.com/projectcalico/libcalico-go/lib/set"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+
+	"github.com/projectcalico/felix/ip"
+	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
 var (
@@ -483,6 +484,8 @@ type PolicyRule struct {
 
 	TunnelSrc ip.V4Addr
 	TunnelDst ip.V4Addr
+
+	Optional bool
 }
 
 func (r PolicyRule) String() string {
@@ -502,10 +505,11 @@ func (r *PolicyRule) Populate(pol *netlink.XfrmPolicy, ourReqID int) {
 	// Note: for a block action, the template doesn't get used.  However, we include it because it allows us
 	// to include a ReqID, which we use to match our policies during resync.
 	pol.Tmpls = append(pol.Tmpls, netlink.XfrmPolicyTmpl{
-		Src:   r.TunnelSrc.AsNetIP(),
-		Dst:   r.TunnelDst.AsNetIP(),
-		Proto: netlink.XFRM_PROTO_ESP,
-		Mode:  netlink.XFRM_MODE_TUNNEL,
-		Reqid: ourReqID,
+		Src:      r.TunnelSrc.AsNetIP(),
+		Dst:      r.TunnelDst.AsNetIP(),
+		Proto:    netlink.XFRM_PROTO_ESP,
+		Mode:     netlink.XFRM_MODE_TUNNEL,
+		Reqid:    ourReqID,
+		Optional: r.Optional,
 	})
 }

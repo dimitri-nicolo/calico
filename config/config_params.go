@@ -232,6 +232,12 @@ type Config struct {
 	// IPSecMode controls which mode IPSec is operating on.
 	// Default value means IPSec is not enabled.
 	IPSecMode string `config:"string;"`
+	// IPSecAllowUnsecuredTraffic, when set to true, IPsec will be used opportunistically on packet paths where it is
+	// supported but non-IPsec traffic will still be allowed.  This setting is useful for transitioning to/from IPsec
+	// since it allows traffic to keep flowing while the IPsec peerings are being set up or torn down.  However,
+	// it allows an attacker who has penetrated the network to inject packets and, if they can disrupt the IPsec
+	// peerings, they may be able to force user traffic to be sent unencrypted.
+	IPSecAllowUnsecuredTraffic bool `config:"bool;false"`
 	// File contains PSK.
 	IPSecPSKFile string `config:"file(must-exist);;local"`
 	// Defaults are the RFC 6379 Suite B recommendations:
