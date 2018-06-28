@@ -230,6 +230,9 @@ type FelixConfigurationSpec struct {
 	// IPSecMode controls which mode IPSec is operating on.
 	// Default value means IPSec is not enabled. [Default: ""]
 	IPSecMode string `json:"ipsecMode,omitempty" validate:"omitempty,ipsecMode"`
+	// IPSecAllowUnsecuredTraffic controls whether non-IPsec traffic is allowed in addition to IPsec traffic. Enabling this
+	// negates the anti-spoofing protections of IPsec but it is useful when migrating to/from IPsec. [Default: false]
+	IPSecAllowUnsecuredTraffic *bool `json:"ipsecAllowUnsecuredTraffic,omitempty"`
 	// IPSecIKEAlgorithm sets IPSec IKE algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-prfsha256-ecp256]
 	IPSecIKEAlgorithm string `json:"ipsecIKEAlgorithm,omitempty"`
 	// IPSecESAlgorithm sets IPSec ESP algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-ecp256]

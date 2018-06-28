@@ -1062,6 +1062,15 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 			**out = **in
 		}
 	}
+	if in.IPSecAllowUnsecuredTraffic != nil {
+		in, out := &in.IPSecAllowUnsecuredTraffic, &out.IPSecAllowUnsecuredTraffic
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
 	if in.IPSecPolicyRefreshInterval != nil {
 		in, out := &in.IPSecPolicyRefreshInterval, &out.IPSecPolicyRefreshInterval
 		if *in == nil {
