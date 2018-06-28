@@ -126,11 +126,12 @@ The Kubernetes API datastore driver reads its configuration from Kubernetes-prov
 | `PrometheusMetricsCertFile`  | `FELIX_PROMETHEUSMETRICSCERTFILE`  | None    | Certificate for encrypting general Felix Prometheus metrics.  |
 | `PrometheusMetricsKeyFile`   | `FELIX_PROMETHEUSMETRICSKEYFILE`   | None    | Private key for encrypting general Felix Prometheus metrics.  |
 | `PrometheusMetricsCAFile`    | `FELIX_PROMETHEUSMETRICSCAFILE`    | None    | Trusted CA file for clients attempting to read general Felix Prometheus metrics.  |
-| `IPSecMode`                  | `FELIX_IPSECMODE`                  | ``      | Controls which mode IPSec is operating on. The only supported value is `PSK`. An empty value means IPSec is not enabled. |
-| `IPSecIKEAlgorithm`          | `FELIX_IPSECIKEALGORITHM`          | `aes128gcm16-prfsha256-ecp256`   | IPSec IKE algorithm. Default is NIST suite B recommendation.|
-| `IPSecESPAlgorithm`          | `FELIX_IPSECESPALGORITHM`          | `aes128gcm16-ecp256`             | IPSec ESP algorithm. Default is NIST suite B recommendation.|
-| `IPSecLogLevel`              | `FELIX_IPSECLOGLEVEL`              | `Info`  | Controls log level for IPSec components. Set to `None` for no logging. Other valid values are `Notice`, `Info`, `Debug` and `Verbose`. |
-| `IPSecPSKFile`               | `FELIX_IPSECPSKFILE`               | ``      | The path to the pre shared key file for IPSec. |
+| `IPSecMode`                  | `FELIX_IPSECMODE`                  | None    | Controls which mode IPsec is operating on. The only supported value is `PSK`. An empty value means IPsec is not enabled. |
+| `IPSecAllowUnsecuredTraffic` | `FELIX_IPSECALLOWUNSECUREDTRAFFIC` | `false` | When set to false, only IPsec-protected traffic will be allowed on the packet paths where IPsec is supported.  When set to true, IPsec will be used but non-IPsec traffic will be accepted.  In general, setting this to `true` is less safe since it allows an attacker to inject packets.  However, it is useful when transitioning from non-IPsec to IPsec since it allows traffic to flow while the cluster negotiates the IPsec mesh.  |
+| `IPSecIKEAlgorithm`          | `FELIX_IPSECIKEALGORITHM`          | `aes128gcm16-prfsha256-ecp256`   | IPsec IKE algorithm. Default is NIST suite B recommendation.|
+| `IPSecESPAlgorithm`          | `FELIX_IPSECESPALGORITHM`          | `aes128gcm16-ecp256`             | IPsec ESP algorithm. Default is NIST suite B recommendation.|
+| `IPSecLogLevel`              | `FELIX_IPSECLOGLEVEL`              | `Info`  | Controls log level for IPsec components. Set to `None` for no logging. Other valid values are `Notice`, `Info`, `Debug` and `Verbose`. |
+| `IPSecPSKFile`               | `FELIX_IPSECPSKFILE`               | None    | The path to the pre shared key file for IPsec. |
 
 DropActionOverride controls what happens to each packet that is denied by
 the current Calico policy - i.e. by the ordered combination of all the
