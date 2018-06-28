@@ -31,9 +31,9 @@ const (
 	FlowLogEndpointTypeNs  FlowLogEndpointType = "ns"
 	FlowLogEndpointTypeNet FlowLogEndpointType = "net"
 
-	PrivateNet       IPClass = "pvt"
-	AWSMetaServerNet IPClass = "aws"
-	PublicNet        IPClass = "pub"
+	PrivateNet       FlowLogSubnetType = "pvt"
+	AWSMetaServerNet FlowLogSubnetType = "aws"
+	PublicNet        FlowLogSubnetType = "pub"
 )
 
 // extractPartsFromAggregatedTuple converts and returns each field of a tuple to a string.
@@ -158,7 +158,7 @@ func ipStrTo16Byte(ipStr string) [16]byte {
 	return addrB
 }
 
-func getIPClassification(addrBytes [16]byte) IPClass {
+func getSubnetType(addrBytes [16]byte) FlowLogSubnetType {
 	IP := net.IP(addrBytes[:16])
 
 	// Currently checking for only private blocks

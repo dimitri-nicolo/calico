@@ -24,7 +24,7 @@ var (
 				WorkloadID:     "kube-system/iperf-4235-5623461",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"test-app": "true"}},
 		},
 
 		dstEp: &calc.EndpointData{
@@ -34,7 +34,7 @@ var (
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "true"}},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 		},
 
 		ruleID:       ingressRule1Allow,
@@ -115,7 +115,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					WorkloadID:     "kube-system/iperf-4235-5434134",
 					EndpointID:     "23456",
 				},
-				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"test-app": "true"}},
 			}
 
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.dstEp = &calc.EndpointData{
@@ -125,7 +125,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					WorkloadID:     "default/nginx-412354-6543645",
 					EndpointID:     "256267",
 				},
-				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "true"}},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 			}
 
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
@@ -170,7 +170,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					WorkloadID:     "kube-system/iperf-4235-5623461",
 					EndpointID:     "4352",
 				},
-				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"test-app": "true"}},
 			}
 
 			muWithoutDstEndpointMeta := MetricUpdate{
@@ -236,7 +236,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				SrcMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "kube-system",
-					Name:      "iperf-4235*",
+					Name:      "iperf-4235-*",
 					Labels:    "-",
 				},
 				DstMeta: EndpointMetadata{
@@ -266,7 +266,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "kube-system",
-					Name:      "iperf-4235*",
+					Name:      "iperf-4235-*",
 					Labels:    "-",
 				},
 				Action:    "allow",
@@ -284,7 +284,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				SrcMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "kube-system",
-					Name:      "iperf-4235*",
+					Name:      "iperf-4235-*",
 					Labels:    "-",
 				},
 				DstMeta: EndpointMetadata{
