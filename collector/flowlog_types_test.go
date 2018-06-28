@@ -25,7 +25,7 @@ var (
 				WorkloadID:     "kube-system/iperf-4235-5623461",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"test-app": "true"}},
 		},
 
 		dstEp: &calc.EndpointData{
@@ -35,7 +35,7 @@ var (
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "true"}},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 		},
 
 		ruleID:       ingressRule1Allow,
@@ -59,7 +59,7 @@ var (
 				WorkloadID:     "default/nginx-412354-5123451",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "true"}},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 		},
 
 		ruleID:       ingressRule1Allow,
@@ -81,7 +81,7 @@ var (
 				WorkloadID:     "kube-system/iperf-4235-5623461",
 				EndpointID:     "4352",
 			},
-			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"test-app": "true"}},
+			Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"test-app": "true"}},
 		},
 
 		dstEp: nil,
@@ -226,13 +226,13 @@ var _ = Describe("Flow log types tests", func() {
 				SrcMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "kube-system",
-					Name:      "iperf-4235*", // Keeping just the Generate Name
-					Labels:    "-",           // Disregarding the labels
+					Name:      "iperf-4235-*", // Keeping just the Generate Name
+					Labels:    "-",            // Disregarding the labels
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "default",
-					Name:      "nginx-412354*",
+					Name:      "nginx-412354-*",
 					Labels:    "-",
 				},
 				Action:    "allow",
@@ -259,7 +259,7 @@ var _ = Describe("Flow log types tests", func() {
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "default",
-					Name:      "nginx-412354*",
+					Name:      "nginx-412354-*",
 					Labels:    "-",
 				},
 				Action:    "allow",
@@ -276,19 +276,48 @@ var _ = Describe("Flow log types tests", func() {
 					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					proto: 6,
+					l4Src: -1,
+					l4Dst: 80,
+				},
+				SrcMeta: EndpointMetadata{
+					Type:      "wep",
+					Namespace: "kube-system",
+					Name:      "iperf-4235-*", // Keeping just the Generate Name
+					Labels:    "-",            // Disregarding the labels
+				},
+				DstMeta: EndpointMetadata{
+					Type:      "net", // No EndpointMeta associated but Dst IP Public
+					Namespace: "-",
+					Name:      "pub",
+					Labels:    "-",
+				},
+				Action:    "allow",
+				Direction: "in",
+			}
+			Expect(flowMeta).Should(Equal(expectedFlowMeta))
+
+			muWithoutAWSMetaDstEndpointMeta := muWithoutDstEndpointMeta
+			muWithoutAWSMetaDstEndpointMeta.tuple.dst = ipStrTo16Byte("169.254.169.254")
+			flowMeta, err = NewFlowMeta(muWithoutAWSMetaDstEndpointMeta, PrefixName)
+			Expect(err).To(BeNil())
+			expectedFlowMeta = FlowMeta{
+				Tuple: Tuple{
+					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					proto: 6,
 					l4Src: -1, // Is the only attribute that gets disregarded.
 					l4Dst: 80,
 				},
 				SrcMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "kube-system",
-					Name:      "iperf-4235*", // Keeping just the Generate Name
-					Labels:    "-",           // Disregarding the labels
+					Name:      "iperf-4235-*", // Keeping just the Generate Name
+					Labels:    "-",            // Disregarding the labels
 				},
 				DstMeta: EndpointMetadata{
-					Type:      "net", // No EndpointMeta associated but Dst IP Public
+					Type:      "net", // No EndpointMeta associated but Dst IP AWS Metadata Server
 					Namespace: "-",
-					Name:      "pub",
+					Name:      "aws", // <-- AWS MetaServer Endpoint
 					Labels:    "-",
 				},
 				Action:    "allow",
@@ -330,13 +359,13 @@ var _ = Describe("Flow log types tests", func() {
 			flowMeta, err = NewFlowMeta(muWithEndpointMeta, PrefixName)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235* - wep default nginx-412354* - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - wep default nginx-412354-* - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, PrefixName)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 net - pvt - wep default nginx-412354* - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 net - pvt - wep default nginx-412354-* - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			muWithoutPublicDstEndpointMeta := muWithoutDstEndpointMeta
@@ -344,7 +373,15 @@ var _ = Describe("Flow log types tests", func() {
 			flowMeta, err = NewFlowMeta(muWithoutPublicDstEndpointMeta, PrefixName)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235* - net - pub - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - net - pub - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
+			Expect(flowLog).Should(Equal(expectedFlowLog))
+
+			muWithoutAWSMetaDstEndpointMeta := muWithoutDstEndpointMeta
+			muWithoutAWSMetaDstEndpointMeta.tuple.dst = ipStrTo16Byte("169.254.169.254")
+			flowMeta, err = NewFlowMeta(muWithoutAWSMetaDstEndpointMeta, PrefixName)
+			Expect(err).To(BeNil())
+			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - net - aws - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 		})
