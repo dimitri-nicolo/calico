@@ -375,12 +375,10 @@ type Data struct {
 	dirty      bool
 }
 
-func NewData(tuple Tuple, sep, dep *calc.EndpointData, duration time.Duration) *Data {
+func NewData(tuple Tuple, duration time.Duration) *Data {
 	now := monotime.Now()
 	return &Data{
 		Tuple:            tuple,
-		srcEp:            sep,
-		dstEp:            dep,
 		IngressRuleTrace: NewRuleTrace(),
 		EgressRuleTrace:  NewRuleTrace(),
 		createdAt:        now,
@@ -504,6 +502,14 @@ func (d *Data) ResetConntrackCounters() {
 	d.isConnection = false
 	d.connTrackCtr.Reset()
 	d.connTrackCtrReverse.Reset()
+}
+
+func (d *Data) SetSourceEndpointData(sep *calc.EndpointData) {
+	d.srcEp = sep
+}
+
+func (d *Data) SetDestinationEndpointData(dep *calc.EndpointData) {
+	d.dstEp = dep
 }
 
 func (d *Data) AddRuleID(ruleID *calc.RuleID, tierIdx, numPkts, numBytes int) bool {
