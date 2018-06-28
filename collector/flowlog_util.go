@@ -31,8 +31,9 @@ const (
 	FlowLogEndpointTypeNs  FlowLogEndpointType = "ns"
 	FlowLogEndpointTypeNet FlowLogEndpointType = "net"
 
-	FlowLogPrivateEndpoint string = "pvt"
-	FlowLogPublicEndpoint  string = "pub"
+	PrivateNet       IPClass = "pvt"
+	AWSMetaServerNet IPClass = "aws"
+	PublicNet        IPClass = "pub"
 )
 
 // extractPartsFromAggregatedTuple converts and returns each field of a tuple to a string.
@@ -157,7 +158,7 @@ func ipStrTo16Byte(ipStr string) [16]byte {
 	return addrB
 }
 
-func classifyIPasPvtOrPub(addrBytes [16]byte) string {
+func getIPClassification(addrBytes [16]byte) IPClass {
 	IP := net.IP(addrBytes[:16])
 
 	// Currently checking for only private blocks
@@ -165,9 +166,16 @@ func classifyIPasPvtOrPub(addrBytes [16]byte) string {
 	_, private20BitBlock, _ := net.ParseCIDR("172.16.0.0/12")
 	_, private16BitBlock, _ := net.ParseCIDR("192.168.0.0/16")
 	isPrivateIP := private24BitBlock.Contains(IP) || private20BitBlock.Contains(IP) || private16BitBlock.Contains(IP)
-
 	if isPrivateIP {
-		return FlowLogPrivateEndpoint
+		return PrivateNet
 	}
-	return FlowLogPublicEndpoint
+
+	// Based on https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
+	_, awsMetaBlock, _ := net.ParseCIDR("169.254.169.254/32")
+	isAWSMeta := awsMetaBlock.Contains(IP)
+	if isAWSMeta {
+		return AWSMetaServerNet
+	}
+
+	return PublicNet
 }

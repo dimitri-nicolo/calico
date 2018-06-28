@@ -16,6 +16,7 @@ const (
 type FlowLogEndpointType string
 type FlowLogAction string
 type FlowLogDirection string
+type IPClass string
 
 type EndpointMetadata struct {
 	Type      FlowLogEndpointType `json:"type"`
@@ -51,7 +52,7 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 	} else {
 		srcMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
 			Namespace: flowLogFieldNotIncluded,
-			Name:      classifyIPasPvtOrPub(mu.tuple.src),
+			Name:      string(getIPClassification(mu.tuple.src)),
 			Labels:    flowLogFieldNotIncluded,
 		}
 	}
@@ -63,7 +64,7 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 	} else {
 		dstMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
 			Namespace: flowLogFieldNotIncluded,
-			Name:      classifyIPasPvtOrPub(mu.tuple.dst),
+			Name:      string(getIPClassification(mu.tuple.dst)),
 			Labels:    flowLogFieldNotIncluded,
 		}
 	}
