@@ -555,15 +555,7 @@ func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID strin
 	for {
 		select {
 		case <-jitter.NewTicker(pushInterval, pushInterval/10).C:
-			if healthAgg.Summary().Live {
-
-				err = cwClient.pushHealthMetrics(true, clusterID)
-			} else {
-
-				err = cwClient.pushHealthMetrics(false, clusterID)
-			}
-
-			if err != nil {
+			if err = cwClient.pushHealthMetrics(healthAgg.Summary().Live, clusterID); err != nil {
 				log.WithError(err).Error("error pushing health status to CloudWatch")
 			}
 		}
@@ -652,7 +644,7 @@ func newCloudWatchMetricsClient(cwAPI cloudwatchiface.CloudWatchAPI, healthAgg *
 			SharedConfigState: session.SharedConfigEnable,
 		}))
 
-		// Create new cloudwatch client.
+		// Create a new CloudWatch client.
 		cwAPI = cloudwatch.New(sess)
 	}
 
