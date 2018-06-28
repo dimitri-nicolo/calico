@@ -16,6 +16,7 @@ package config_test
 
 import (
 	. "github.com/projectcalico/felix/config"
+	"github.com/projectcalico/libcalico-go/lib/set"
 
 	"io/ioutil"
 	"net"
@@ -35,7 +36,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/numorstring"
 )
 
-var _ = PDescribe("FelixConfig vs ConfigParams parity", func() {
+var _ = Describe("FelixConfig vs ConfigParams parity", func() {
 	var fcFields map[string]reflect.StructField
 	var cpFields map[string]reflect.StructField
 	cpFieldsToIgnore := []string{
@@ -54,6 +55,10 @@ var _ = PDescribe("FelixConfig vs ConfigParams parity", func() {
 
 		// Moved to Node.
 		"IpInIpTunnelAddr",
+		"NodeIP",
+
+		// The rekey time is used by the IPsec tests but it isn't exposed in FelixConfiguration.
+		"IPSecRekeyTime",
 
 		"EnableNflogSize",
 	}
@@ -70,6 +75,7 @@ var _ = PDescribe("FelixConfig vs ConfigParams parity", func() {
 		"UsageReportingInitialDelaySecs":     "UsageReportingInitialDelay",
 		"UsageReportingIntervalSecs":         "UsageReportingInterval",
 		"EndpointReportingDelaySecs":         "EndpointReportingDelay",
+		"CloudWatchMetricsPushIntervalSecs":  "CloudWatchMetricsPushInterval",
 	}
 	fcFieldNameToCP := map[string]string{}
 	for k, v := range cpFieldNameToFC {
@@ -85,6 +91,7 @@ var _ = PDescribe("FelixConfig vs ConfigParams parity", func() {
 	})
 
 	It("FelixConfigurationSpec should contain all Config fields", func() {
+		missingFields := set.New()
 		for n, f := range cpFields {
 			mappedName := cpFieldNameToFC[n]
 			if mappedName != "" {
@@ -96,17 +103,24 @@ var _ = PDescribe("FelixConfig vs ConfigParams parity", func() {
 			if strings.Contains(string(f.Tag), "local") {
 				continue
 			}
-			Expect(fcFields).To(HaveKey(n))
+			if _, ok := fcFields[n]; !ok {
+				missingFields.Add(n)
+			}
 		}
+		Expect(missingFields).To(BeEmpty())
 	})
 	It("Config should contain all FelixConfigurationSpec fields", func() {
+		missingFields := set.New()
 		for n := range fcFields {
 			mappedName := fcFieldNameToCP[n]
 			if mappedName != "" {
 				n = mappedName
 			}
-			Expect(cpFields).To(HaveKey(n))
+			if _, ok := cpFields[n]; !ok {
+				missingFields.Add(n)
+			}
 		}
+		Expect(missingFields).To(BeEmpty())
 	})
 })
 
