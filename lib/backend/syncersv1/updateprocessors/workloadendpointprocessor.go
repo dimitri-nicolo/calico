@@ -56,12 +56,11 @@ func convertWorkloadEndpointV2ToV1Value(val interface{}) (interface{}, error) {
 		return nil, errors.New("Value is not a valid WorkloadEndpoint resource value")
 	}
 
+	logCtx := log.WithFields(log.Fields{"name": v3res.Name, "namespace": v3res.Namespace})
+
 	// If the WEP has no IPNetworks assigned then filter out since we can't yet render the rules.
 	if len(v3res.Spec.IPNetworks) == 0 {
-		log.WithFields(log.Fields{
-			"name":      v3res.Name,
-			"namespace": v3res.Namespace,
-		}).Debug("Filtering out WEP with no IPNetworks")
+		logCtx.Debug("Filtering out WEP with no IPNetworks")
 		return nil, nil
 	}
 
@@ -146,10 +145,12 @@ func convertWorkloadEndpointV2ToV1Value(val interface{}) (interface{}, error) {
 			hasSecurityGroup = true
 		}
 	}
+	logCtx.Debugf("Determined pod labels: %v", labels)
 
 	// We always add pods to the pod security group if it is specified.
 	tigeraPodSG := os.Getenv("TIGERA_POD_SECURITY_GROUP")
 	if tigeraPodSG != "" {
+		logCtx.Debugf("Adding to Tigera pod security group: %s", tigeraPodSG)
 		label := conversion.SecurityGroupLabelPrefix + "/" + tigeraPodSG
 		labels[label] = ""
 	}
@@ -157,6 +158,7 @@ func convertWorkloadEndpointV2ToV1Value(val interface{}) (interface{}, error) {
 	// We only add pods to the default security groups if no other security groups are specified.
 	if !hasSecurityGroup {
 		nodeSGs := getDefaultSecurityGroups()
+		logCtx.Debugf("Adding to default security groups: %s", nodeSGs)
 		for _, sg := range nodeSGs {
 			label := conversion.SecurityGroupLabelPrefix + "/" + sg
 			labels[label] = ""
