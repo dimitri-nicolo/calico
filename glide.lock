@@ -1,5 +1,5 @@
-hash: a0bcda1031720f4f0e8184d9563f2859ce72ca04a58e3b15711585c6d72610c9
-updated: 2018-06-19T17:43:39.414178276-07:00
+hash: 27567815a8cb6711d04cd5237679cb0313e3d5cf72cb1b44071ff6b1df5121b1
+updated: 2018-06-22T16:44:08.871222287-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -134,7 +134,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: c586ae70eb809b746d121efe46ac663d05e30ed5
+  version: 5b183bee3a7c4e6ac50ded871465ce8b0be01080
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -239,7 +239,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 0a24098c0ec68416ec050f567f75df563d6b231e
+  version: b1f26356af11148e710935ed1ac8a7f5702c7612
   subpackages:
   - internal
   - internal/app_identity
@@ -407,7 +407,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: bf40560368791a7dddfeea9b3cfcf89b34139f44
+  version: 4cac20de16b951c103aa40c4bafbc8cefdd18a12
   subpackages:
   - pkg/common
 testImports: []
