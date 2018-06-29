@@ -2884,6 +2884,19 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 							},
 						},
+						"cloudWatchNodeHealthStatusEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchNodeHealthStatusEnabled enables pushing node health data to CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchNodeHealthPushIntervalSecs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchNodeHealthPushIntervalSecs configures the frequency of pushing the node health metrics to CloudWatch.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
 					},
 				},
 			},
