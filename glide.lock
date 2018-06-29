@@ -1,5 +1,5 @@
-hash: 7cf40f872c33c9b8e3680ba541bee2f9b49abff019c17a4d1ea5b194da40bdaa
-updated: 2018-06-28T15:33:37.243770666+01:00
+hash: 3f3de4e3684cbb35333ad2021c728e0a353a65bae07e3bf03687b40bbcce9195
+updated: 2018-06-29T15:16:32.426460537-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -99,7 +99,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -257,7 +257,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 0292c0f537fa4418dbfbb46d8e031493971489f6
+  version: 6882342ebb1f981936e8a14788bac7fb53574f4f
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -298,7 +298,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 11a7bb4d089775ac7619f0725c46b536403cabe4
+  version: 0271491a076107c5b82f9139f4ad5e3ada133d71
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -353,7 +353,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
+  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -463,7 +463,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: a315a049e7a93e5455f7fefce1ba136d85054687
+  version: cadaf100c0a3dd6b254f320d6d651df079ec8e0a
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -588,7 +588,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: bf40560368791a7dddfeea9b3cfcf89b34139f44
+  version: 0c329704159e3b051aafac400b15baacf2a94a04
   subpackages:
   - pkg/common
 testImports: []
