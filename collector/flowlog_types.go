@@ -100,10 +100,16 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	f.Tuple.dst = [16]byte{}
 
 	if mu.srcEp != nil {
-		f.SrcMeta.Name = getEndpointNamePrefix(mu.srcEp) + "*"
+		prefixName := getEndpointNamePrefix(mu.srcEp)
+		if prefixName != "" {
+			f.SrcMeta.Name = prefixName + "*"
+		}
 	}
 	if mu.dstEp != nil {
-		f.DstMeta.Name = getEndpointNamePrefix(mu.dstEp) + "*"
+		prefixName := getEndpointNamePrefix(mu.dstEp)
+		if prefixName != "" {
+			f.DstMeta.Name = prefixName + "*"
+		}
 	}
 
 	// Disregard labels

@@ -324,6 +324,43 @@ var _ = Describe("Flow log types tests", func() {
 				Direction: "in",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
+
+			muWithEndpointMetaWithoutGenerateName := muWithEndpointMeta
+			muWithEndpointMetaWithoutGenerateName.dstEp = &calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-02",
+					OrchestratorID: "k8s",
+					WorkloadID:     "default/manually-created-pod",
+					EndpointID:     "4352",
+				},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "", Labels: map[string]string{"k8s-app": "true"}},
+			}
+			flowMeta, err = NewFlowMeta(muWithEndpointMetaWithoutGenerateName, PrefixName)
+			Expect(err).To(BeNil())
+			expectedFlowMeta = FlowMeta{
+				Tuple: Tuple{
+					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					proto: 6,
+					l4Src: -1,
+					l4Dst: 80,
+				},
+				SrcMeta: EndpointMetadata{
+					Type:      "wep",
+					Namespace: "kube-system",
+					Name:      "iperf-4235-*", // Keeping just the Generate Name
+					Labels:    "-",
+				},
+				DstMeta: EndpointMetadata{
+					Type:      "wep",
+					Namespace: "default",
+					Name:      "manually-created-pod", // Keeping the Name. No Generatename.
+					Labels:    "-",
+				},
+				Action:    "allow",
+				Direction: "in",
+			}
+			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 		})
 	})
 
