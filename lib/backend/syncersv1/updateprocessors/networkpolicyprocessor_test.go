@@ -15,6 +15,8 @@
 package updateprocessors_test
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -196,8 +198,8 @@ var _ = Describe("Test the NetworkPolicy update processor", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		namespacedSelector := "(" + selector + ") && projectcalico.org/namespace == '" + ns2 + "'"
-		v1irule := updateprocessors.RuleAPIV2ToBackend(irule, ns2)
-		v1erule := updateprocessors.RuleAPIV2ToBackend(erule, ns2)
+		v1irule := updateprocessors.RuleAPIV2ToBackend(irule, ns2, false)
+		v1erule := updateprocessors.RuleAPIV2ToBackend(erule, ns2, false)
 		Expect(kvps).To(Equal([]*model.KVPair{
 			{
 				Key: v1NetworkPolicyKey2,
@@ -410,6 +412,62 @@ var expected2 = []*model.KVPair{
 	},
 }
 
+// np3 is a NetworkPolicy set to allow to a selection of security groups.
+var np3 = networkingv1.NetworkPolicy{
+	ObjectMeta: metav1.ObjectMeta{
+		Name:      "test.policy",
+		Namespace: "default",
+		Annotations: map[string]string{
+			"rules.networkpolicy.tigera.io/match-security-groups": "true",
+		},
+	},
+	Spec: networkingv1.NetworkPolicySpec{
+		PodSelector: metav1.LabelSelector{},
+		Egress: []networkingv1.NetworkPolicyEgressRule{
+			networkingv1.NetworkPolicyEgressRule{
+				To: []networkingv1.NetworkPolicyPeer{
+					{
+						PodSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"sg.aws.tigera.io/sg-12345": "",
+								"sg.aws.tigera.io/sg-other": "",
+							},
+						},
+					},
+				},
+			},
+		},
+		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+	},
+}
+
+// expected3 is the expected v1 KVPair representation of np3 from above.
+var originalSelector = "projectcalico.org/orchestrator == 'k8s' && sg.aws.tigera.io/sg-12345 == '' && sg.aws.tigera.io/sg-other == ''"
+var sgSelector = "sg.aws.tigera.io/sg-12345 == '' && sg.aws.tigera.io/sg-other == ''"
+var nsSelector = "projectcalico.org/namespace == 'default'"
+var expectedSelector = fmt.Sprintf("(%s) && (%s) || (%s)", nsSelector, originalSelector, sgSelector)
+var expected3 = []*model.KVPair{
+	&model.KVPair{
+		Key: model.PolicyKey{Name: "default/knp.default.test.policy", Tier: "default"},
+		Value: &model.Policy{
+			Namespace:      "default",
+			Order:          &order,
+			Selector:       "(projectcalico.org/orchestrator == 'k8s') && projectcalico.org/namespace == 'default'",
+			Types:          []string{"egress"},
+			ApplyOnForward: true,
+			OutboundRules: []model.Rule{
+				{
+					Action:      "allow",
+					SrcSelector: "",
+					// The selector includes the original namespaced selector, as well as one that allows traffic from the matchin security groups.
+					DstSelector:         expectedSelector,
+					OriginalDstSelector: originalSelector,
+				},
+			},
+		},
+	},
+}
+
 var _ = Describe("Test the NetworkPolicy update processor + conversion", func() {
 	up := updateprocessors.NewNetworkPolicyUpdateProcessor()
 
@@ -430,6 +488,7 @@ var _ = Describe("Test the NetworkPolicy update processor + conversion", func() 
 
 		Entry("should handle a NetworkPolicy with no rule selectors", np1, expected1),
 		Entry("should handle a NetworkPolicy with an empty ns selector", np2, expected2),
+		Entry("should handle a NetworkPolicy with annotation overrides", np3, expected3),
 	)
 
 })

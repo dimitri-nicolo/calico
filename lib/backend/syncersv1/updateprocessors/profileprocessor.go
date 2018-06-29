@@ -104,12 +104,12 @@ func convertProfileV2ToV1Value(val interface{}) (*model.Profile, error) {
 
 	var irules []model.Rule
 	for _, irule := range v3res.Spec.Ingress {
-		irules = append(irules, RuleAPIV2ToBackend(irule, ""))
+		irules = append(irules, RuleAPIV2ToBackend(irule, "", false))
 	}
 
 	var erules []model.Rule
 	for _, erule := range v3res.Spec.Egress {
-		erules = append(erules, RuleAPIV2ToBackend(erule, ""))
+		erules = append(erules, RuleAPIV2ToBackend(erule, "", false))
 	}
 
 	rules := model.ProfileRules{

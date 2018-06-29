@@ -237,7 +237,9 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 			log.WithError(err).Warnf("unable to parse %s annotation", AnnotationSecurityGroups)
 		} else {
 			for _, sg := range sgs {
-				labels[SecurityGroupLabelPrefix+"/"+sg] = ""
+				if sg != "" {
+					labels[SecurityGroupLabelPrefix+"/"+sg] = ""
+				}
 			}
 		}
 	}
@@ -374,6 +376,7 @@ func (c Converter) K8sNetworkPolicyToCalico(np *networkingv1.NetworkPolicy) (*mo
 		Namespace:         np.Namespace,
 		CreationTimestamp: np.CreationTimestamp,
 		UID:               np.UID,
+		Annotations:       np.Annotations,
 	}
 	policy.Spec = apiv3.NetworkPolicySpec{
 		Order:    &order,
