@@ -72,7 +72,7 @@ import:
 - package: k8s.io/code-generator
 # Version of k8s.io/kube-openapi needs to be set to track kubernetes 1.8 versions.
 - package: k8s.io/kube-openapi
-  version: release-1.8
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 - package: k8s.io/gengo

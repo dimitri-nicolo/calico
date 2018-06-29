@@ -1,5 +1,5 @@
-hash: 12130b7f2c31b5d77b7af35022947c1945a7efed63393e621b2376585702f238
-updated: 2018-06-29T12:59:11.024835334-07:00
+hash: 95e49e04b049d703aee366752d693cd717cbac9780b8ce6b06501f6938adc8b6
+updated: 2018-06-29T22:06:23.9927466Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -55,7 +55,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -438,7 +438,7 @@ imports:
 - name: k8s.io/gengo
   version: 5b57d243f2ca39dbbda758ee07b76b4d519f6dc7
 - name: k8s.io/kube-openapi
-  version: 0c329704159e3b051aafac400b15baacf2a94a04
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 testImports: []

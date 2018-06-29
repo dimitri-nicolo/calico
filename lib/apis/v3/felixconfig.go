@@ -250,9 +250,9 @@ type FelixConfigurationSpec struct {
 	// CloudWatchLogsFlushInterval configures the interval at which Felix exports flow logs to CloudWatch Logs.
 	CloudWatchLogsFlushInterval *metav1.Duration `json:"cloudWatchLogsFlushInterval,omitempty configv1timescale:"seconds"`
 	// CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to "/tigera/flowlogs/<cluster-id>".
-	CloudWatchLogsLogGroupName string `json:"cloudWatchLogGroupName,omitempty"`
+	CloudWatchLogsLogGroupName string `json:"cloudWatchLogsLogGroupName,omitempty"`
 	// CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to "<hostname>_Flowlog".
-	CloudWatchLogsLogStreamName string `json:"cloudWatchLogStreamName,omitempty"`
+	CloudWatchLogsLogStreamName string `json:"cloudWatchLogsLogStreamName,omitempty"`
 	// CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.
 	CloudWatchLogsIncludeLabels *bool `json:"cloudWatchLogsIncludeLabels,omitempty"`
 	// CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for
