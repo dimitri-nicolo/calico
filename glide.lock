@@ -1,5 +1,5 @@
-hash: 19255aa4fdd8261c2ea0d75e2f4fdb57d99799621605da42bced482c6ab05d85
-updated: 2018-06-28T14:13:15.884428124Z
+hash: 05fbf95876420fe4f4681965b499c38b1bd9cadea87c871246b0329cc30c017f
+updated: 2018-06-29T15:15:19.065014732-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -34,7 +34,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
+  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
@@ -159,7 +159,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 9be84105672ba4433a3b61f1b4d7f9ff8b022293
+  version: 62bff4df71bdbc266561a0caee19f0594b17c240
   subpackages:
   - format
   - internal/assertion
@@ -185,7 +185,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 0292c0f537fa4418dbfbb46d8e031493971489f6
+  version: 6882342ebb1f981936e8a14788bac7fb53574f4f
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -272,7 +272,7 @@ imports:
   - list
   - trie/ctrie
 - name: golang.org/x/crypto
-  version: a49355c7e3f8fe157a85be2f77e6e269a0f89602
+  version: 81e90905daefcd6fd217b62423c0908922eadb30
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
@@ -371,7 +371,7 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
 - name: k8s.io/api
-  version: a315a049e7a93e5455f7fefce1ba136d85054687
+  version: cadaf100c0a3dd6b254f320d6d651df079ec8e0a
   subpackages:
   - admissionregistration/v1alpha1
   - apps/v1beta1
@@ -388,6 +388,7 @@ imports:
   - certificates/v1beta1
   - core/v1
   - extensions/v1beta1
+  - imagepolicy/v1alpha1
   - networking/v1
   - policy/v1beta1
   - rbac/v1
