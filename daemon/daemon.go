@@ -540,7 +540,7 @@ configRetry:
 	// If CloudWatch node health reporting is enabled then start a goroutine to monitor
 	// Felix health and report to CloudWatch.
 	if configParams.CloudWatchNodeHealthStatusEnabled {
-		go felixHealthToCloudWatchReporter(configParams.CloudWatchNodeHealthPushIntervalSecs, configParams.ClusterGUID, healthAggregator)
+		go felixHealthToCloudWatchReporter(configParams.CloudWatchNodeHealthPushIntervalSecs, configParams.ClusterGUID, healthAggregator, ctx)
 	}
 
 	// Now monitor the worker process and our worker threads and shut
@@ -548,22 +548,24 @@ configRetry:
 	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
 }
 
-func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator) {
+func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator, ctx context.Context) {
 	cwClient := newCloudWatchMetricsClient(nil, healthAgg)
 	var err error
 
 	for {
 		select {
 		case <-jitter.NewTicker(pushInterval, pushInterval/10).C:
-			if err = cwClient.pushHealthMetrics(healthAgg.Summary().Live, clusterID); err != nil {
+			if err = cwClient.pushHealthMetrics(healthAgg.Summary().Live, clusterID, ctx); err != nil {
 				log.WithError(err).Error("error pushing health status to CloudWatch")
 			}
 		}
 	}
 }
 
-func (cw *cloudWatchHealthClient) pushHealthMetrics(isHealthy bool, clusterID string) error {
+func (cw *cloudWatchHealthClient) pushHealthMetrics(isHealthy bool, clusterID string, ctx context.Context) error {
 
+	cwPushRetries := 5
+	cwRetryWaitInterval := time.Second
 	// For unhealthy node,
 	// push +1 to unhealthy nodes
 	// push +0 to healthy nodes
@@ -582,13 +584,12 @@ func (cw *cloudWatchHealthClient) pushHealthMetrics(isHealthy bool, clusterID st
 
 	// Create a context with a timeout that will abort the put metrics operation
 	// if it takes more than the timeout.
-	ctx := context.Background()
 	ctx, cancelFn := context.WithTimeout(ctx, 1*time.Minute)
 
 	// Ensure the context is canceled to prevent leaking.
 	defer cancelFn()
 
-	for retry := 0; retry < 5; retry++ {
+	for retry := 0; retry < cwPushRetries; retry++ {
 		result, err := cw.cwAPI.PutMetricDataWithContext(ctx, &cloudwatch.PutMetricDataInput{
 			MetricData: []*cloudwatch.MetricDatum{
 				&cloudwatch.MetricDatum{
@@ -620,7 +621,7 @@ func (cw *cloudWatchHealthClient) pushHealthMetrics(isHealthy bool, clusterID st
 		if err != nil {
 			// Failed to push metric data, so sleep for a second and retry.
 			log.WithFields(log.Fields{"Healthy": healthy, "Unhealthy": unhealthy, "Result": result}).Errorf("failed to push health metrics to CloudWatch: %s. Retry: %d", err, retry)
-			time.Sleep(time.Second)
+			time.Sleep(cwRetryWaitInterval)
 		} else {
 			log.WithFields(log.Fields{"Healthy": healthy, "Unhealthy": unhealthy, "Result": result}).Debug("successfully pushed health metric data to CloudWatch")
 			break
