@@ -30,7 +30,7 @@ import:
   version: ^1.21.0
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private
-  version: 6882342ebb1f981936e8a14788bac7fb53574f4f
+  version: 06dbfea817498f9b0c62c566fe43d173b5605510
   subpackages:
   - lib
 - package: github.com/sirupsen/logrus
