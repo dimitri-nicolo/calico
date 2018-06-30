@@ -1,5 +1,5 @@
-hash: 3f3de4e3684cbb35333ad2021c728e0a353a65bae07e3bf03687b40bbcce9195
-updated: 2018-06-29T15:16:32.426460537-07:00
+hash: 9bec166f1b537e3bbf677eadcaca32c28bcd74967f51d178be7d17db824f0ab4
+updated: 2018-06-29T23:43:28.945907-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -155,7 +155,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/ipfs/go-log
-  version: b9df188d0fae32d69c1a519fa81741668a12f55a
+  version: 5dc2060baaf8db344f31dafd852340b93811d03f
   subpackages:
   - tracer
   - tracer/wire
@@ -240,7 +240,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: 6c572c00d1830223701e155de97408483dfcd14a
+  version: bd9c3193394760d98b2fa6ebb2291f0cd1d06a7d
   subpackages:
   - ext
   - log
@@ -257,7 +257,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 6882342ebb1f981936e8a14788bac7fb53574f4f
+  version: 06dbfea817498f9b0c62c566fe43d173b5605510
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -298,7 +298,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 0271491a076107c5b82f9139f4ad5e3ada133d71
+  version: 2120c2c42c9c08ce6dc9c3e25b9f0ba06044669e
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -353,7 +353,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -451,7 +451,7 @@ imports:
   - tap
   - transport
 - name: gopkg.in/go-playground/validator.v8
-  version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
+  version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/square/go-jose.v2
@@ -588,7 +588,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 0c329704159e3b051aafac400b15baacf2a94a04
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 testImports: []
