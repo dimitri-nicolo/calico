@@ -278,6 +278,11 @@ type FelixConfigurationSpec struct {
 	CloudWatchMetricsReporterEnabled *bool `json:"cloudWatchMetricsReporterEnabled,omitempty"`
 	// CloudWatchMetricsPushInterval configures the interval at which Felix exports metrics to CloudWatch.
 	CloudWatchMetricsPushInterval *metav1.Duration `json:"cloudWatchMetricsPushIntervalSecs,omitempty" configv1timescale:"seconds" confignamev1:"CloudWatchMetricsPushIntervalSecs"`
+
+	// CloudWatchNodeHealthStatusEnabled enables pushing node health data to CloudWatch.
+	CloudWatchNodeHealthStatusEnabled *bool `json:"cloudWatchNodeHealthStatusEnabled,omitempty"`
+	// CloudWatchNodeHealthPushIntervalSecs configures the frequency of pushing the node health metrics to CloudWatch.
+	CloudWatchNodeHealthPushIntervalSecs *metav1.Duration `json:"cloudWatchNodeHealthPushIntervalSecs,omitempty" configv1timescale:"seconds" confignamev1:"CloudWatchNodeHealthPushIntervalSecs"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.
