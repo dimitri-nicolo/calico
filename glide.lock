@@ -1,5 +1,5 @@
-hash: 27567815a8cb6711d04cd5237679cb0313e3d5cf72cb1b44071ff6b1df5121b1
-updated: 2018-06-22T16:44:08.871222287-07:00
+hash: e92d226edc43229419401eb376721c10f05ae57397350340c0dea23d9408bca6
+updated: 2018-07-02T14:42:55.507649949-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -14,7 +14,7 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/BurntSushi/toml
@@ -52,7 +52,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: bcff419492eeeb01f76e77d2ebc714dc97b607f5
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -104,7 +104,7 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/json-iterator/go
-  version: 36b14963da70d11297d313183d7e6388c8510e1e
+  version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/juju/ratelimit
   version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
 - name: github.com/kelseyhightower/envconfig
@@ -118,9 +118,13 @@ imports:
   - jlexer
   - jwriter
 - name: github.com/matttproud/golang_protobuf_extensions
-  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
   - pbutil
+- name: github.com/modern-go/concurrent
+  version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
+- name: github.com/modern-go/reflect2
+  version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
 - name: github.com/pborman/uuid
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
@@ -134,7 +138,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 5b183bee3a7c4e6ac50ded871465ce8b0be01080
+  version: 06dbfea817498f9b0c62c566fe43d173b5605510
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -170,15 +174,15 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: 967789050ba94deca04a5e84cce8ad472ce313c1
+  version: 5cec1d0429b02e4323e042eb04dafdb079ddf568
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
-  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7600349dcfe1abd18d72d3a1770870d9800a7801
+  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -220,7 +224,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: bb24a47a89eac6c1227fbcb2ae37a8b9ed323366
+  version: ebfc5b4631820b793c9010c87fd8fef0f39eb082
   subpackages:
   - unix
   - windows
@@ -239,7 +243,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 4f7eeb5305a4ba1966344836ba4af9996b7b4e05
   subpackages:
   - internal
   - internal/app_identity
@@ -309,7 +313,7 @@ imports:
   - storage/v1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 40eaf68ee1889b1da1c528b1a075ecfe94e66837
+  version: b593b18191da3eff9afdfd373da5f5e08fe5ac5f
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
@@ -353,7 +357,7 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
-  version: 82aa063804cf055e16e8911250f888bc216e8b61
+  version: 432cc9f726c477d8f9d39707b3f3238f679e1ed9
   subpackages:
   - discovery
   - kubernetes
@@ -407,7 +411,7 @@ imports:
   - util/integer
   - util/jsonpath
 - name: k8s.io/kube-openapi
-  version: 4cac20de16b951c103aa40c4bafbc8cefdd18a12
+  version: 868f2f29720b192240e18284659231b440f9cda5
   subpackages:
   - pkg/common
 testImports: []
