@@ -2,7 +2,7 @@ package: github.com/kelseyhightower/confd
 import:
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 5b183bee3a7c4e6ac50ded871465ce8b0be01080
+  version: 06dbfea817498f9b0c62c566fe43d173b5605510
 
 # v3.3.3 + our fixes.  Can be reverted back to upstream if 
 # https://github.com/coreos/etcd/pull/9614 is resolved.
