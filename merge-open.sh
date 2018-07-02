@@ -57,7 +57,7 @@ git mv _data/v2_0 _data/v3_0
 git commit -m "Merge prep: move CNX docs directories to Calico locations"
 
 echo "Merging open source docs"
-if [ ${MERGE_COMMIT} == "master"]
+if [ ${MERGE_COMMIT} == "master" ]
 then
     git merge --no-ff --no-commit ${OPEN_REMOTE}/master || true
 else
