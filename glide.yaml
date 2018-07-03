@@ -32,7 +32,7 @@ import:
   - tools/clientcmd
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: 675b87245a587f603504836f5533f222571f1eec
+  version: 06dbfea817498f9b0c62c566fe43d173b5605510
 - package: github.com/projectcalico/felix
   repo:    git@github.com:tigera/felix-private
   version: 06a4cf35b59da953833a6055fd0f03acf63d8f71
@@ -48,3 +48,5 @@ import:
   version: f98634e408857669d61064b283c4cde240622865
 - package: golang.org/x/net
   version: 66aacef3dd8a676686c7ae3716979581e8b03c47
+- package: github.com/json-iterator/go
+  version: ^1.1.4
