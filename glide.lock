@@ -1,5 +1,5 @@
-hash: 9bec166f1b537e3bbf677eadcaca32c28bcd74967f51d178be7d17db824f0ab4
-updated: 2018-06-29T23:43:28.945907-07:00
+hash: 65799f89a77344594f6580022522594a6369b87c78f4048684ec9dd4d2863542
+updated: 2018-07-04T14:18:50.964554753Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -52,7 +52,7 @@ imports:
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
-  version: 578ef71e1cb08a41ec11e8478a68a85af40b9afa
+  version: 9b6fdd821dbe2bc7fe167b1ad2af4bcd19975ada
   repo: git@github.com:tigera/goStrongswanVici
 - name: github.com/containernetworking/cni
   version: 137b4975ecab6e1f0c24c1e3c228a50a3cfba75e
@@ -99,7 +99,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: 16284f9da51d5a5b5dc67c8109a99b014c4b7f0a
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf

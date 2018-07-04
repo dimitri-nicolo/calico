@@ -246,6 +246,7 @@ func (charon *CharonIKEDaemon) LoadConnection(localIP, remoteIP string) error {
 			ReqID:         fmt.Sprint(ReqID),
 			RekeyTime:     fmt.Sprintf("%ds", int(charon.rekeyTime.Seconds())), //Can set this to a low time to check that rekeys are handled properly
 			InstallPolicy: "no",
+			HWOffload:     "auto",
 		}
 
 		childSAConfName := formatName(localIP, remoteIP)
