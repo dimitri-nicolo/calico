@@ -94,8 +94,8 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 			utils.Run("docker", "ps", "-a")
 			for _, felix := range felixes {
 				felix.Exec("swanctl", "--list-sas")
-				felix.Exec("ip", "xfrm", "state")
-				felix.Exec("ip", "xfrm", "policy")
+				felix.Exec("ip", "-s", "xfrm", "state")
+				felix.Exec("ip", "-s", "xfrm", "policy")
 			}
 		}
 
