@@ -101,6 +101,7 @@ import:
   - xfs
 - package: github.com/bronze1man/goStrongswanVici
   repo:    git@github.com:tigera/goStrongswanVici
+  version: 9b6fdd821dbe2bc7fe167b1ad2af4bcd19975ada
 - package: github.com/aws/aws-sdk-go
   version: v1.13.54
 - package: github.com/jmespath/go-jmespath
