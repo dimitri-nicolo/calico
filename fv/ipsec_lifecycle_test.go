@@ -116,55 +116,43 @@ var _ = infrastructure.DatastoreDescribe("IPsec lifecycle tests", []apiconfig.Da
 	})
 
 	// Function to get number of SAs for connection (src->dest) and SPI for first SA on destination workload.
-	getDestSaCountAndSPI := func(src, dest *infrastructure.Felix) (int, string) {
+	getDestSPIs := func(src, dest *infrastructure.Felix) []string {
 		output, err := dest.ExecOutput("ip", "xfrm", "state")
 		Expect(err).NotTo(HaveOccurred())
 
-		saDirectionInfo := fmt.Sprintf("src %s dst %s", src.IP, dest.IP)
-		count := strings.Count(output, saDirectionInfo)
-		Expect(count).NotTo(Equal(0))
-
-		i := strings.Index(output, saDirectionInfo)
-		spi := regexp.MustCompile(`0x[a-f0-9]+`).FindString(output[i:])
-		Expect(spi).NotTo(BeEmpty())
-
-		return count, spi
-	}
-
-	saExists := func(felix *infrastructure.Felix, sa string) bool {
-		output, err := felix.ExecOutput("ip", "xfrm", "state")
-		Expect(err).NotTo(HaveOccurred())
-
-		return strings.Contains(output, sa)
+		saDirectionInfo := regexp.QuoteMeta(fmt.Sprintf("src %s dst %s", src.IP, dest.IP))
+		matches := regexp.MustCompile(saDirectionInfo+`(?s:.*?)spi (0x[a-f0-9]+)`).FindAllStringSubmatch(output, -1)
+		var spis []string
+		for _, m := range matches {
+			spis = append(spis, m[1])
+		}
+		return spis
 	}
 
 	It("Should rekey properly and cause acceptable packet loss", func() {
 		// Start packet loss test and monitor SA changes of a destination workload.
 
-		// Start a connection test first.
+		// Do a simple connection test first.
 		// We do not want to spend time on packet loss test if a simple connection test fails.
 		cc.ExpectSome(w[0], w[1])
 		cc.CheckConnectivity()
 		cc.ResetExpectations()
 
-		var count int
-		var spi, startSPI string
-		Eventually(func() int {
-			count, spi = getDestSaCountAndSPI(felixes[0], felixes[1])
-			return count
-		}).Should(Equal(1), "Number of start SA")
-		startSPI = spi
+		// Get the starting set of SPIs.  Usually, there'll only be one SA but there can be 2 if both Charons
+		// happen to start their IKE exchange at the same time.
+		var startSPIs []string
+		Eventually(func() []string {
+			startSPIs = getDestSPIs(felixes[0], felixes[1])
+			return startSPIs
+		}, "10s").Should(Or(HaveLen(1), HaveLen(2)))
 
 		cc.ExpectLoss(w[0], w[1], 30*time.Second, -1, 20)
 		cc.CheckConnectivity()
 
-		// It is possible Felix got config update and restart itself. This is because of a race in the set-up logic;
-		// the Node resource gets set up at the same time that Felix is starting.
-		// We could have two IKEs setup both with one or two child SAs.
-		// It is not feasible to assert on number of child SAs we got at the end of the test.
-		// But we should not see the original SA on both hosts.
-		Expect(saExists(felixes[0], startSPI)).To(BeFalse())
-		Expect(saExists(felixes[1], startSPI)).To(BeFalse())
+		endSPIs := getDestSPIs(felixes[0], felixes[1])
+		for _, s := range startSPIs {
+			Expect(endSPIs).NotTo(ContainElement(s), fmt.Sprintf("Expected SA with SPI %s to have been removed after rekey", s))
+		}
 	})
 
 	It("Felix should restart if charon daemon exits", func() {
