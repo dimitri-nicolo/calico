@@ -20,9 +20,6 @@ type FlowLogFormat string
 const (
 	FlowLogFormatJSON FlowLogFormat = "json"
 	FlowLogFormatFlat FlowLogFormat = "flat"
-
-	LogGroupNamePrefix  = "tigera-flowlogs"
-	LogStreamNameSuffix = "Flowlogs"
 )
 
 // cloudWatchDispatcher implements the FlowLogDispatcher interface.

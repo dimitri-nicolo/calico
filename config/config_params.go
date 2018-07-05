@@ -209,8 +209,8 @@ type Config struct {
 
 	CloudWatchLogsReporterEnabled           bool          `config:"bool;false"`
 	CloudWatchLogsFlushInterval             time.Duration `config:"seconds;300"`
-	CloudWatchLogsLogGroupName              string        `config:"string;"`
-	CloudWatchLogsLogStreamName             string        `config:"string;"`
+	CloudWatchLogsLogGroupName              string        `config:"string;tigera-flowlogs-<cluster-guid>"`
+	CloudWatchLogsLogStreamName             string        `config:"string;<felix-hostname>_Flowlogs"`
 	CloudWatchLogsIncludeLabels             bool          `config:"bool;false"`
 	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0:2);2"`
 	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0:2);1"`
