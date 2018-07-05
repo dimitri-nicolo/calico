@@ -189,3 +189,50 @@ func (c LicenseClaims) Validate() error {
 	// the grace period.
 	return ErrExpiredButWithinGracePeriod{}
 }
+
+type FeatureStatus int
+
+const (
+	NoLicenseLoaded  FeatureStatus = iota
+	Allowed
+	NotAllowed
+	InGracePeriod
+	Expired
+)
+
+func (c *LicenseClaims) GetFeatureStatus(feature string) FeatureStatus {
+	if c == nil {
+		return NoLicenseLoaded
+	}
+
+	licenseAllowsFeature := false
+	for _, f := range c.Features {
+		if f == "all" {
+			licenseAllowsFeature = true
+			break
+		}
+		if f == feature {
+			licenseAllowsFeature = true
+			break
+		}
+	}
+	if !licenseAllowsFeature {
+		return NotAllowed
+	}
+
+	expiryTime := c.Claims.Expiry.Time()
+	licenseValid := expiryTime.After(time.Now().Local())
+
+	if licenseValid {
+		return Allowed
+	}
+
+	gracePeriodExpiryTime := expiryTime.Add(time.Duration(c.GracePeriod) * time.Hour * 24)
+	licenseInGracePeriod := gracePeriodExpiryTime.After(time.Now())
+
+	if licenseInGracePeriod {
+		return InGracePeriod
+	}
+
+	return Expired
+}
