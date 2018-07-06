@@ -16,7 +16,6 @@ package intdataplane
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -573,15 +572,18 @@ func (d *InternalDataplane) Start() {
 	}
 	log.Debugf("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
 	if d.config.CloudWatchLogsReporterEnabled {
-		logGroupName := fmt.Sprintf("%s-%s", collector.LogGroupNamePrefix, d.config.ClusterGUID)
-		if d.config.CloudWatchLogsLogGroupName != "" {
-			logGroupName = d.config.CloudWatchLogsLogGroupName
-		}
-		logStreamName := fmt.Sprintf("%s_%s", d.config.FelixHostname, collector.LogStreamNameSuffix)
-		// If explicitly specified, use a log stream instead.
-		if d.config.CloudWatchLogsLogStreamName != "" {
-			logStreamName = d.config.CloudWatchLogsLogStreamName
-		}
+		logGroupName := strings.Replace(
+			d.config.CloudWatchLogsLogGroupName,
+			"<cluster-guid>",
+			d.config.ClusterGUID,
+			1,
+		)
+		logStreamName := strings.Replace(
+			d.config.CloudWatchLogsLogStreamName,
+			"<felix-hostname>",
+			d.config.FelixHostname,
+			1,
+		)
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, nil)
 		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval)
 		caa := collector.NewCloudWatchAggregator().
