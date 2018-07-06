@@ -2831,14 +2831,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"cloudWatchLogsLogGroupName": {
 							SchemaProps: spec.SchemaProps{
-								Description: "CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to \"/tigera/flowlogs/<cluster-id>\".",
+								Description: "CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to \"tigera-flowlogs-<cluster-guid>\".",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"cloudWatchLogsLogStreamName": {
 							SchemaProps: spec.SchemaProps{
-								Description: "CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to \"<hostname>_Flowlog\".",
+								Description: "CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to \"<felix-hostname>_Flowlogs\".",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -2866,7 +2866,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"cloudWatchLogsRetentionDays": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Number of days for which to retain logs.  Only relevant when the log group is first created. See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html for allowed values.",
+								Description: "Number of days for which to retain logs. See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html for allowed values.",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},
