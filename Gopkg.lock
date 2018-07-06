@@ -145,6 +145,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/projectcalico/felix"
+  packages = ["jitter"]
+  revision = "4d7bb9ad6ff7b34d1a79531121bc9e48d1123652"
+  version = "3.1.3"
+
+[[projects]]
   branch = "calico"
   name = "github.com/projectcalico/go-json"
   packages = ["json"]
@@ -169,10 +175,15 @@
     "lib/apis/v1",
     "lib/apis/v1/unversioned",
     "lib/apis/v3",
+    "lib/backend/api",
+    "lib/backend/model",
+    "lib/errors",
     "lib/ipip",
+    "lib/namespace",
     "lib/net",
     "lib/numorstring",
-    "lib/scope"
+    "lib/scope",
+    "lib/set"
   ]
   revision = "06dbfea817498f9b0c62c566fe43d173b5605510"
   source = "github.com/tigera/libcalico-go-private"
@@ -182,6 +193,12 @@
   packages = ["."]
   revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
   version = "v1.2.0"
+
+[[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -207,7 +224,8 @@
   name = "golang.org/x/crypto"
   packages = [
     "ed25519",
-    "ed25519/internal/edwards25519"
+    "ed25519/internal/edwards25519",
+    "ssh/terminal"
   ]
   revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
@@ -224,6 +242,15 @@
     "idna"
   ]
   revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = [
+    "unix",
+    "windows"
+  ]
+  revision = "ce36f3865eeb42541ce3f87f32f8462c5687befa"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -323,6 +350,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "27a646d0c7a229ac214e4ce97aaf8a72d388796d5e971ae8fd7d425596860dfd"
+  inputs-digest = "58b9acefc921f6ca28a02bf6bd0c239e1c19dda7a112d3f308a6b1f99f59193c"
   solver-name = "gps-cdcl"
   solver-version = 1

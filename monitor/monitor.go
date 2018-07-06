@@ -40,13 +40,21 @@ func New(client bapi.Client) *LicenseMonitor {
 	}
 }
 
-func (l *LicenseMonitor) GetFeatureStatus(feature string) lclient.FeatureStatus {
+func (l *LicenseMonitor) GetFeatureStatus(feature string) bool {
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
-	return l.activeLicense.GetFeatureStatus(feature)
+	return l.activeLicense.ValidateFeature(feature)
+}
+
+func (l *LicenseMonitor) GetLicenseStatus() lclient.LicenseStatus {
+	l.activeLicenseLock.Lock()
+	defer l.activeLicenseLock.Unlock()
+	return l.activeLicense.Validate()
 }
 
 func (l *LicenseMonitor) MonitorForever(ctx context.Context) error {
+	// TODO: use jitter package in libcalico-go once it has been ported to
+	// libcalico-go-private.
 	t := jitter.NewTicker(l.PollInterval, l.PollInterval / 10)
 	defer t.Stop()
 
@@ -57,15 +65,15 @@ func (l *LicenseMonitor) MonitorForever(ctx context.Context) error {
 		case <-t.C:
 		}
 
-		l.RefreshLicense()
+		l.RefreshLicense(ctx)
 	}
 
 	return ctx.Err()
 }
 
-func (l *LicenseMonitor) RefreshLicense() error {
+func (l *LicenseMonitor) RefreshLicense(ctx context.Context) error {
 	log.Debug("Refreshing license from datastore")
-	lic, err := l.datastoreClient.Get(context.Background(), model.ResourceKey{
+	lic, err := l.datastoreClient.Get(ctx, model.ResourceKey{
 		Kind:      v3.KindLicenseKey,
 		Name:      "default",
 		Namespace: "",

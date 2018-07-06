@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	"github.com/tigera/licensing/client/features"
 	cryptolicensing "github.com/tigera/licensing/crypto"
 )
 
@@ -177,62 +178,52 @@ func (e ErrExpiredButWithinGracePeriod) Error() string {
 	return "license expired"
 }
 
-// Validate checks if the license is expired.
-func (c LicenseClaims) Validate() error {
-	if c.Claims.Expiry.Time().After(time.Now().Local()) {
-		return nil
-	}
-
-	// In v2.1, since we're not enforcing the licenses, we treat all the expired licenses as within the grace period
-	// making it an unlimited grace period.
-	// This will change post v2.1, and will return a non-nil error code if the license is expired and is not within
-	// the grace period.
-	return ErrExpiredButWithinGracePeriod{}
-}
-
-type FeatureStatus int
+type LicenseStatus int
 
 const (
-	NoLicenseLoaded  FeatureStatus = iota
-	Allowed
-	NotAllowed
+	Valid LicenseStatus = iota
 	InGracePeriod
 	Expired
+	NoLicenseLoaded
 )
 
-func (c *LicenseClaims) GetFeatureStatus(feature string) FeatureStatus {
+// Validate checks if the license is expired.
+func (c *LicenseClaims) Validate() LicenseStatus {
 	if c == nil {
 		return NoLicenseLoaded
 	}
 
-	licenseAllowsFeature := false
-	for _, f := range c.Features {
-		if f == "all" {
-			licenseAllowsFeature = true
-			break
-		}
-		if f == feature {
-			licenseAllowsFeature = true
-			break
-		}
-	}
-	if !licenseAllowsFeature {
-		return NotAllowed
-	}
-
 	expiryTime := c.Claims.Expiry.Time()
-	licenseValid := expiryTime.After(time.Now().Local())
-
-	if licenseValid {
-		return Allowed
+	if expiryTime.After(time.Now()) {
+		return Valid
 	}
 
 	gracePeriodExpiryTime := expiryTime.Add(time.Duration(c.GracePeriod) * time.Hour * 24)
-	licenseInGracePeriod := gracePeriodExpiryTime.After(time.Now())
-
-	if licenseInGracePeriod {
+	if gracePeriodExpiryTime.After(time.Now()) {
 		return InGracePeriod
 	}
 
 	return Expired
+}
+
+// ValidateFeature returns true if the feature is enabled, false if it is not.
+// False is returned if the license is invalid in any of the following ways:
+// - there isn't a license
+// - the license has expired and is no longer in its grace period.
+func (c *LicenseClaims) ValidateFeature(feature string) bool {
+	switch c.Validate() {
+	case NoLicenseLoaded, Expired:
+		return false
+	}
+
+	for _, f := range c.Features {
+		if f == features.All {
+			return true
+		}
+		if f == feature {
+			return true
+		}
+	}
+
+	return false
 }
