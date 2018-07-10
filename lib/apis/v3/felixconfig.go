@@ -249,9 +249,9 @@ type FelixConfigurationSpec struct {
 	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`
 	// CloudWatchLogsFlushInterval configures the interval at which Felix exports flow logs to CloudWatch Logs.
 	CloudWatchLogsFlushInterval *metav1.Duration `json:"cloudWatchLogsFlushInterval,omitempty configv1timescale:"seconds"`
-	// CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to "/tigera/flowlogs/<cluster-id>".
+	// CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to "tigera-flowlogs-<cluster-guid>".
 	CloudWatchLogsLogGroupName string `json:"cloudWatchLogsLogGroupName,omitempty"`
-	// CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to "<hostname>_Flowlog".
+	// CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to "<felix-hostname>_Flowlogs".
 	CloudWatchLogsLogStreamName string `json:"cloudWatchLogsLogStreamName,omitempty"`
 	// CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.
 	CloudWatchLogsIncludeLabels *bool `json:"cloudWatchLogsIncludeLabels,omitempty"`
@@ -269,7 +269,7 @@ type FelixConfigurationSpec struct {
 	// 1 - Source port based aggregation
 	// 2 - Pod prefix name based aggreagation.
 	CloudWatchLogsAggregationKindForDenied *int `json:"cloudWatchLogsAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
-	// Number of days for which to retain logs.  Only relevant when the log group is first created.
+	// Number of days for which to retain logs.
 	// See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html
 	// for allowed values.
 	CloudWatchLogsRetentionDays *int `json:"cloudWatchLogsRetentionDays,omitempty" validate:"omitempty,cloudWatchRetentionDays"`
