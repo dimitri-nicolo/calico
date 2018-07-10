@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	// Carefully selected key. It has to be 32-bit long.
+	// Carefully selected key. It has to be 32-bytes long.
 	symKey = []byte("i༒2ஹ阳0?!pᄚ3-)0$߷५ૠm")
 
 	// RandomGen is a crypto pseudo-random generator.

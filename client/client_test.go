@@ -10,9 +10,10 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/davecgh/go-spew/spew"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/tigera/licensing/client/features"
 )
 
 var (
@@ -386,4 +387,104 @@ func TestDecodeAndVerify(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFeatureFlags(t *testing.T) {
+	numNodes := 5
+	sampleClaims := client.LicenseClaims{
+		LicenseID:   "yaddayadda",
+		Nodes:       &numNodes,
+		Customer:    "MyFavCustomer99",
+		GracePeriod: 90,
+		Claims: jwt.Claims{
+			Expiry: jwt.NumericDate(time.Now().Add(72 * time.Hour).UTC().Unix()),
+			Issuer: "Gunjan's office number 5",
+		},
+	}
+
+	t.Run("a license with 'all' features states that each feature is enabled.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{features.All}
+		Expect(claims.ValidateFeature(features.AWSCloudwatchMetrics)).To(BeTrue())
+	})
+
+	t.Run("a license only valid for cloudwatch metrics is valid for cloudwatch metrics.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{features.AWSCloudwatchMetrics}
+		Expect(claims.ValidateFeature(features.AWSCloudwatchMetrics)).To(BeTrue())
+	})
+
+	t.Run("a license only valid for cloudwatch metrics is not valid for ipsec.", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := sampleClaims
+		claims.Features = []string{features.AWSCloudwatchMetrics}
+		Expect(claims.ValidateFeature(features.IPSec)).To(BeFalse())
+	})
+}
+
+func TestLicenseStatus(t *testing.T) {
+	t.Run("empty claims status is none", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		var claims *client.LicenseClaims
+		Expect(claims.Validate()).To(Equal(client.NoLicenseLoaded))
+	})
+
+	t.Run("valid claims are valid", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := client.LicenseClaims{
+			GracePeriod: 0,
+			Claims: jwt.Claims{
+				Expiry: jwt.NumericDate(time.Now().Add(72 * time.Hour).UTC().Unix()),
+			},
+		}
+
+		Expect(claims.Validate()).To(Equal(client.Valid))
+	})
+
+	t.Run("grace period claims are in grace period", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := client.LicenseClaims{
+			GracePeriod: 2,
+			Claims: jwt.Claims{
+				Expiry: jwt.NumericDate(time.Now().UTC().Unix()),
+			},
+		}
+
+		Expect(claims.Validate()).To(Equal(client.InGracePeriod))
+	})
+
+	t.Run("expired claims are expired", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := client.LicenseClaims{
+			GracePeriod: 0,
+			Claims: jwt.Claims{
+				Expiry: jwt.NumericDate(time.Now().UTC().Unix()),
+			},
+		}
+
+		Expect(claims.Validate()).To(Equal(client.Expired))
+	})
+
+	t.Run("expired claims are expired after grace period", func(t *testing.T) {
+		RegisterTestingT(t)
+
+		claims := client.LicenseClaims{
+			GracePeriod: 1,
+			Claims: jwt.Claims{
+				Expiry: jwt.NumericDate(time.Now().Add(-48*time.Hour).UTC().Unix()),
+			},
+		}
+
+		Expect(claims.Validate()).To(Equal(client.Expired))
+	})
+
 }
