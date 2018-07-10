@@ -224,7 +224,7 @@ func K8sNodeToCalico(k8sNode *kapiv1.Node) (*model.KVPair, error) {
 		}
 		calicoNode.Spec.BGP = bgpSpec
 	} else if bgpSpec.IPv4Address != "" || bgpSpec.IPv6Address != "" || bgpSpec.ASNumber != nil {
-		log.Warnf("Node %s does not have podCIDR to use to calculate the IPIP Tunnel Address", k8sNode.Name)
+		log.Debugf("Node %s does not have podCIDR to use to calculate the IPIP Tunnel Address", k8sNode.Name)
 		calicoNode.Spec.BGP = bgpSpec
 	}
 
