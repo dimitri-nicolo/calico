@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/fv/containers"
@@ -122,30 +123,33 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 		// interval.
 		Eventually(func() error {
 			expectedKeys := map[string]bool{
-				"start-w0-idx1--w2-idx5--in":  true,
-				"start-w0-idx1--w2-idx5--out": true,
-				"start-w2-idx5--w0-idx1--in":  true,
-				"start-w2-idx5--w0-idx1--out": true,
-				"start-w0-idx1--w1-idx3--in":  true,
-				"start-w0-idx1--w1-idx3--out": true,
-				"start-w1-idx3--w0-idx1--in":  true,
-				"start-w1-idx3--w0-idx1--out": true,
-				"end-w0-idx1--w2-idx5--in":    true,
-				"end-w0-idx1--w2-idx5--out":   true,
-				"end-w2-idx5--w0-idx1--in":    true,
-				"end-w2-idx5--w0-idx1--out":   true,
-				"end-w0-idx1--w1-idx3--in":    true,
-				"end-w0-idx1--w1-idx3--out":   true,
-				"end-w1-idx3--w0-idx1--in":    true,
-				"end-w1-idx3--w0-idx1--out":   true,
+				"start-" + w[0].Name + "--" + w[1].Name + "--in":  true,
+				"start-" + w[0].Name + "--" + w[1].Name + "--out": true,
+				"start-" + w[0].Name + "--" + w[2].Name + "--in":  true,
+				"start-" + w[0].Name + "--" + w[2].Name + "--out": true,
+				"start-" + w[1].Name + "--" + w[0].Name + "--in":  true,
+				"start-" + w[1].Name + "--" + w[0].Name + "--out": true,
+				"start-" + w[2].Name + "--" + w[0].Name + "--in":  true,
+				"start-" + w[2].Name + "--" + w[0].Name + "--out": true,
+				"end-" + w[0].Name + "--" + w[1].Name + "--in":    true,
+				"end-" + w[0].Name + "--" + w[1].Name + "--out":   true,
+				"end-" + w[0].Name + "--" + w[2].Name + "--in":    true,
+				"end-" + w[0].Name + "--" + w[2].Name + "--out":   true,
+				"end-" + w[1].Name + "--" + w[0].Name + "--in":    true,
+				"end-" + w[1].Name + "--" + w[0].Name + "--out":   true,
+				"end-" + w[2].Name + "--" + w[0].Name + "--in":    true,
+				"end-" + w[2].Name + "--" + w[0].Name + "--out":   true,
 			}
-			logs, err := felix.ReadCloudWatchLogs()
+			cwlogs, err := felix.ReadCloudWatchLogs()
 			if err != nil {
 				return err
 			}
-			for _, log := range logs {
+			for _, cwlog := range cwlogs {
 				fl := &collector.FlowLog{}
-				fl.Deserialize(log.Message)
+				fl.Deserialize(cwlog.Message)
+				if fl.FlowMeta.Action != collector.FlowLogActionAllow {
+					return errors.New("Unexpected non-allow flow log")
+				}
 				dir := "in"
 				if fl.Direction == collector.FlowLogDirectionOut {
 					dir = "out"
@@ -155,7 +159,8 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 					if _, ok := expectedKeys["start-"+key]; ok {
 						// Expected flow log seen.
 						delete(expectedKeys, "start-"+key)
-					} else {
+						log.Info("Deleted start-" + key)
+					} else if flowCountingBugFixed {
 						// Unexpected flow log.
 						return errors.New(fmt.Sprintf("Unexpected flow log: %v", fl))
 					}
@@ -164,6 +169,7 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 					if _, ok := expectedKeys["end-"+key]; ok {
 						// Expected flow log seen.
 						delete(expectedKeys, "end-"+key)
+						log.Info("Deleted end-" + key)
 					} else {
 						// Unexpected flow log.
 						return errors.New(fmt.Sprintf("Unexpected flow log: %v", fl))

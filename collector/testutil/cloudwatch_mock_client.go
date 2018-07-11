@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
-	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,7 +32,7 @@ type mockedCloudWatchLogsClient struct {
 }
 
 type CloudWatchLogsExpectation interface {
-	ExpectRetentionPeriod(days int64)
+	RetentionPeriod() (days int64)
 }
 
 // NewMockedCloudWatchLogsClient simulates a very basic aws cloudwatchlogs
@@ -149,9 +148,9 @@ func (m *mockedCloudWatchLogsClient) PutRetentionPolicy(input *cloudwatchlogs.Pu
 	return nil, nil
 }
 
-func (m *mockedCloudWatchLogsClient) ExpectRetentionPeriod(days int64) {
-	Expect(m.retentionInDays).NotTo(BeNil())
-	Expect(*m.retentionInDays).To(Equal(days))
+func (m *mockedCloudWatchLogsClient) RetentionPeriod() (days int64) {
+	days = *m.retentionInDays
+	return
 }
 
 func NewDebugCloudWatchLogsFile(logGroupName string, fileName string) cloudwatchlogsiface.CloudWatchLogsAPI {

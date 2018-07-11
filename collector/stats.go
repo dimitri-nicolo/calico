@@ -340,6 +340,14 @@ func (t *Tuple) String() string {
 	return fmt.Sprintf("src=%v dst=%v proto=%v sport=%v dport=%v", net.IP(t.src[:16]).String(), net.IP(t.dst[:16]).String(), t.proto, t.l4Src, t.l4Dst)
 }
 
+func (t *Tuple) GetSourcePort() int {
+	return t.l4Src
+}
+
+func (t *Tuple) SetSourcePort(port int) {
+	t.l4Src = port
+}
+
 // Data contains metadata and statistics such as rule counters and age of a
 // connection(Tuple). Each Data object contains:
 // - 2 RuleTrace's - Ingress and Egress - each providing information on the

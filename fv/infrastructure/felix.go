@@ -30,6 +30,8 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 )
 
+var cwLogDir = os.Getenv("FV_CWLOGDIR")
+
 type Felix struct {
 	*containers.Container
 
@@ -41,6 +43,7 @@ type Felix struct {
 	TyphaIP string
 
 	startupDelayed   bool
+	cwlCallsExpected bool
 	cwlFile          string
 	cwlGroupName     string
 	cwlStreamName    string
@@ -75,9 +78,9 @@ type CWLEvent struct {
 }
 
 func (f *Felix) ReadCloudWatchLogs() ([]CWLEvent, error) {
-	log.Infof("Read CloudWatchLogs file %v", f.cwlFile)
+	log.Infof("Read CloudWatchLogs file %v", cwLogDir+"/"+f.cwlFile)
 
-	file, err := os.Open(f.cwlFile)
+	file, err := os.Open(cwLogDir + "/" + f.cwlFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -108,6 +111,12 @@ func (f *Felix) ReadCloudWatchLogs() ([]CWLEvent, error) {
 			for scanner.Scan() {
 				line = strings.TrimSpace(scanner.Text())
 				if strings.Contains(line, "Message: \"") {
+					// Replace escaped double quotes, in the flow log
+					// message string, with single quotes.  (So as not
+					// to confuse the following line, which relies on
+					// double quotes to identify the complete
+					// message.)
+					line = strings.Replace(line, "\\\"", "'", -1)
 					message = strings.Split(line, "\"")[1]
 				} else if strings.Contains(line, "Timestamp: ") {
 					ts, err := strconv.ParseInt(strings.Split(line, " ")[1], 10, 64)
@@ -176,14 +185,21 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 	// AWS API.  Whether logs are actually generated, at all, still depends on
 	// FELIX_CLOUDWATCHLOGSREPORTERENABLED; tests that want that should call
 	// EnableCloudWatchLogs().
-	cwlFile := fmt.Sprintf("/tmp/cwl-%d-%d-felixfv.txt", os.Getpid(), containers.NextContainerIndex())
+	cwlFile := fmt.Sprintf("cwl-%d-%d-felixfv.txt", os.Getpid(), containers.NextContainerIndex())
 	args = append(args,
-		"-e", "FELIX_DEBUGCLOUDWATCHLOGSFILE="+cwlFile,
-		"-v", "/tmp:/tmp",
+		"-e", "FELIX_DEBUGCLOUDWATCHLOGSFILE=/cwlogs/"+cwlFile,
+		"-v", cwLogDir+":/cwlogs",
 	)
+	cwlCallsExpected := false
 	cwlGroupName := "tigera-flowlogs-<cluster-guid>"
 	cwlStreamName := "<felix-hostname>_Flowlogs"
 	cwlRetentionDays := int64(7)
+	if setting, ok := options.ExtraEnvVars["FELIX_CLOUDWATCHLOGSREPORTERENABLED"]; ok {
+		switch setting {
+		case "true", "1", "yes", "y", "t":
+			cwlCallsExpected = true
+		}
+	}
 	if setting, ok := options.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGGROUPNAME"]; ok {
 		cwlGroupName = setting
 	}
@@ -249,9 +265,10 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 	c.Exec("iptables", "-P", "FORWARD", "DROP")
 
 	return &Felix{
-		Container:      c,
-		startupDelayed: options.DelayFelixStart,
-		cwlFile:        cwlFile,
+		Container:        c,
+		startupDelayed:   options.DelayFelixStart,
+		cwlFile:          cwlFile,
+		cwlCallsExpected: cwlCallsExpected,
 		cwlGroupName: strings.Replace(
 			cwlGroupName,
 			"<cluster-guid>",
@@ -265,5 +282,14 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 			1,
 		),
 		cwlRetentionDays: cwlRetentionDays,
+	}
+}
+
+func (f *Felix) Stop() {
+	f.Container.Stop()
+	if f.cwlCallsExpected {
+		Expect(cwLogDir + "/" + f.cwlFile).To(BeAnExistingFile())
+	} else {
+		Expect(cwLogDir + "/" + f.cwlFile).NotTo(BeAnExistingFile())
 	}
 }
