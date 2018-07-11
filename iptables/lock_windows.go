@@ -2,9 +2,7 @@
 
 package iptables
 
-import (
-	"sync"
-)
+import "sync"
 
 func NewSharedLock() {
 	panic("iptables lock is not implemented for windows platform")
