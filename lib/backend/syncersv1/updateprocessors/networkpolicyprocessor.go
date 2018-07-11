@@ -23,6 +23,7 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/backend/watchersyncer"
 	"github.com/projectcalico/libcalico-go/lib/names"
+	"github.com/sirupsen/logrus"
 )
 
 // Create a new SyncerUpdateProcessor to sync NetworkPolicy data in v1 format for
@@ -51,6 +52,7 @@ func convertNetworkPolicyV2ToV1Value(val interface{}) (interface{}, error) {
 	if !ok {
 		return nil, errors.New("Value is not a valid NetworkPolicy resource value")
 	}
+	log := logrus.WithFields(logrus.Fields{"name": v3res.Name, "namespace": v3res.Namespace})
 
 	// If this policy is namespaced, then add a namespace selector.
 	spec := v3res.Spec
@@ -65,7 +67,19 @@ func convertNetworkPolicyV2ToV1Value(val interface{}) (interface{}, error) {
 	}
 
 	// Determine if this NP is configured to match security groups or not.
-	matchSGs := v3res.Annotations["rules.networkpolicy.tigera.io/match-security-groups"] == "true"
+	m, ok := v3res.Annotations["rules.networkpolicy.tigera.io/match-security-groups"]
+	if ok {
+		// The annotation is specified. Do some basic validation of the value and log a warning
+		// if it's something weird.
+		switch m {
+		case "true", "false", "":
+			// These are all normal / expected values.
+		default:
+			// The value is set but to something that isn't supported.
+			log.Warnf("Unsupported value provided for match-security-groups annotation: %s", m)
+		}
+	}
+	matchSGs := m == "true"
 	v1value := &model.Policy{
 		Namespace:      v3res.Namespace,
 		Order:          spec.Order,
