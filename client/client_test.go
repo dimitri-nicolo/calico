@@ -6,14 +6,13 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	"github.com/satori/go.uuid"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/davecgh/go-spew/spew"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
+	"github.com/satori/go.uuid"
+	"os"
 )
 
 var (
@@ -206,12 +205,21 @@ var claimToJWTTable = []struct {
 	},
 }
 
+// TestGetLicenseFromClaims requires a key / cert that can be decoded with the real public key, e.g. a real
+// valid leaf keys. Since those keys are extremely sensitive (if leaked, they can be used to furnish valid licenses)
+// we accept their location by env var, and only run these tests if that is specified.
 func TestGetLicenseFromClaims(t *testing.T) {
+	realKeyPath := os.Getenv("REAL_KEY_PATH")
+	realCertPath := os.Getenv("REAL_CERT_PATH")
+	if realKeyPath == "" || realCertPath == "" {
+		t.Skip("REAL_KEY_PATH / REAL_CERT_PATH not specified: skipping decode tests")
+	}
+
 	for _, entry := range claimToJWTTable {
 		t.Run(entry.description, func(t *testing.T) {
 			RegisterTestingT(t)
 
-			lic, err := client.GenerateLicenseFromClaims(entry.claim, absPkeyPath, absCertPath)
+			lic, err := client.GenerateLicenseFromClaims(entry.claim, realKeyPath, realCertPath)
 
 			spew.Dump(time.Now().Local())
 
@@ -234,32 +242,32 @@ var tokenToLicense = []struct {
 	claim       client.LicenseClaims
 	corrupt     bool
 }{
-	{
-		description: "fully populated uncorrupt claim",
-		license: api.LicenseKey{
-			ObjectMeta: v1.ObjectMeta{
-				Name: "default",
-			},
-			Spec: api.LicenseKeySpec{
-				Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJVWHdPUDdKa3RuOVhXRTMzIiwidGFnIjoiaEdWUk9FQW9GcmluNEN5V2ZyTFVfQSIsInR5cCI6IkpXVCJ9.fNrEWcFbBh1UxOvxQOmIzA.wG0JWHnG_Suc4APp.6zu2Uu4Sm2BjJSfU9F8FsJzYj7jz5Qs4tK0lG0X_hr1lro2KFa2QEKZ4iRHcrcp3MFvQjp8VV1LYjwVqzfwqVfKjxwBZxbtUvDtDbGz3p7UmlhHSGnHyW2O_CKbf1q-UWWsAU9HNKkKKSzPIuIjXSWs6YfaBhISqJ42dbJK4ORM_Me6DXvuP3FmxEvulKSUjn0g4iUmID159svJppryyebyiVwddY1-SHZmqzPPnh0X2FTv_H1gSPhInksCdZFbnIPNUFt1Y9ZSR1xlwm-tM4sISiIxhYhLbV3zRb4_o--XUZTbiSVMCiCL8gjwDSyx80APW6Hv4Fsa3wlML0tlSVvOunNQ46k2NIXfE1GXvXp4r47TgEnq5B_peasrldKL6RSILtkU0j-iIpnd-5avy_yh-Vv-Al7q548frudKilbcBE2JmXmdGTv4zXUMIgv-tzPjrnw5dYjcoYhJrQNX04UPXVMytP3gWkg1g1s30iVQi-4WowogUJNj-NzbYHfi32WYjYmFJ4XHAgcIc1Ji-RoyJSKcjEu2VlFKRzkOhf8ADGY9xLNfHtLLEEq8tlgo5dYa-MD0vd249P5bXp9ePBbh_WXBAiGeIjj26hxFJ0R1cYhG8PFZiMxrnJR2p3aHtVxQuH-scWq65Gagm_asHitgLd88CC2fa5JYuNFjCKYWcBk96NIi545mT7SaIOptcmh19CjPweZi5kAHK0NT2dkqY54wu0XQEtJj66DPSp4muU9p-fFbNK7NrfIMMuPUXJhUaLTebGCfWUzRG02KfIezVfTteB9dkByJx44579uhUmd6sd6kDNE3yAVXf7mBr2w7w-NVxgu-E64G9r-HBC5Z48iJp6zqqVyTBGKvuIzMlMbLX_J8KTGU--JE.F1Cq9fv-6aiOvGUidHaegQ",
-				Certificate: testCertExpired,
-			},
-		},
-
-		claim: client.LicenseClaims{
-			LicenseID:   "5fa38831-fca5-4ea1-9722-ac601aa6852a",
-			Nodes:       &numNodes2,
-			Customer:    "meepster-inc",
-			Features:    []string{"cnx", "all"},
-			GracePeriod: 88,
-			Claims: jwt.Claims{
-				Expiry:   jwt.NewNumericDate(time.Date(2022, 3, 14, 23, 59, 59, 59, time.Local)),
-				IssuedAt: 1521764255,
-			},
-		},
-
-		corrupt: false,
-	},
+	//{
+	//	description: "fully populated uncorrupt claim",
+	//	license: api.LicenseKey{
+	//		ObjectMeta: v1.ObjectMeta{
+	//			Name: "default",
+	//		},
+	//		Spec: api.LicenseKeySpec{
+	//			Token:       "eyJhbGciOiJBMTI4R0NNS1ciLCJjdHkiOiJKV1QiLCJlbmMiOiJBMTI4R0NNIiwiaXYiOiJVWHdPUDdKa3RuOVhXRTMzIiwidGFnIjoiaEdWUk9FQW9GcmluNEN5V2ZyTFVfQSIsInR5cCI6IkpXVCJ9.fNrEWcFbBh1UxOvxQOmIzA.wG0JWHnG_Suc4APp.6zu2Uu4Sm2BjJSfU9F8FsJzYj7jz5Qs4tK0lG0X_hr1lro2KFa2QEKZ4iRHcrcp3MFvQjp8VV1LYjwVqzfwqVfKjxwBZxbtUvDtDbGz3p7UmlhHSGnHyW2O_CKbf1q-UWWsAU9HNKkKKSzPIuIjXSWs6YfaBhISqJ42dbJK4ORM_Me6DXvuP3FmxEvulKSUjn0g4iUmID159svJppryyebyiVwddY1-SHZmqzPPnh0X2FTv_H1gSPhInksCdZFbnIPNUFt1Y9ZSR1xlwm-tM4sISiIxhYhLbV3zRb4_o--XUZTbiSVMCiCL8gjwDSyx80APW6Hv4Fsa3wlML0tlSVvOunNQ46k2NIXfE1GXvXp4r47TgEnq5B_peasrldKL6RSILtkU0j-iIpnd-5avy_yh-Vv-Al7q548frudKilbcBE2JmXmdGTv4zXUMIgv-tzPjrnw5dYjcoYhJrQNX04UPXVMytP3gWkg1g1s30iVQi-4WowogUJNj-NzbYHfi32WYjYmFJ4XHAgcIc1Ji-RoyJSKcjEu2VlFKRzkOhf8ADGY9xLNfHtLLEEq8tlgo5dYa-MD0vd249P5bXp9ePBbh_WXBAiGeIjj26hxFJ0R1cYhG8PFZiMxrnJR2p3aHtVxQuH-scWq65Gagm_asHitgLd88CC2fa5JYuNFjCKYWcBk96NIi545mT7SaIOptcmh19CjPweZi5kAHK0NT2dkqY54wu0XQEtJj66DPSp4muU9p-fFbNK7NrfIMMuPUXJhUaLTebGCfWUzRG02KfIezVfTteB9dkByJx44579uhUmd6sd6kDNE3yAVXf7mBr2w7w-NVxgu-E64G9r-HBC5Z48iJp6zqqVyTBGKvuIzMlMbLX_J8KTGU--JE.F1Cq9fv-6aiOvGUidHaegQ",
+	//			Certificate: testCertExpired,
+	//		},
+	//	},
+	//
+	//	claim: client.LicenseClaims{
+	//		LicenseID:   "5fa38831-fca5-4ea1-9722-ac601aa6852a",
+	//		Nodes:       &numNodes2,
+	//		Customer:    "meepster-inc",
+	//		Features:    []string{"cnx", "all"},
+	//		GracePeriod: 88,
+	//		Claims: jwt.Claims{
+	//			Expiry:   jwt.NewNumericDate(time.Date(2022, 3, 14, 23, 59, 59, 59, time.Local)),
+	//			IssuedAt: 1521764255,
+	//		},
+	//	},
+	//
+	//	corrupt: false,
+	//},
 	//{
 	//	description: "claim with the JWT header meddled with",
 	//	license: api.LicenseKey{
