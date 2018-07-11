@@ -3,6 +3,8 @@
 package calc
 
 import (
+	"runtime"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -21,6 +23,12 @@ type LookupsCache struct {
 }
 
 func NewLookupsCache() *LookupsCache {
+	if runtime.GOOS == "windows" {
+		// For windows OS, return nil lookupCache and rest of all lookupCache
+		// should handle the nil pointer
+		return nil
+	}
+
 	lc := &LookupsCache{
 		polCache: NewPolicyLookupsCache(),
 		epCache:  NewEndpointLookupsCache(),

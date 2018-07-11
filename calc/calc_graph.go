@@ -109,6 +109,11 @@ type CalcGraph struct {
 }
 
 func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostname string) *CalcGraph {
+	if cache == nil {
+		log.Infof("lookup cache is nil on windows platform")
+		return nil
+	}
+
 	log.Infof("Creating calculation graph, filtered to hostname %v", hostname)
 
 	// The source of the processing graph, this dispatcher will be fed all the updates from the
