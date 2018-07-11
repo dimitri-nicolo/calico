@@ -19,6 +19,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/windows"
 	"github.com/projectcalico/libcalico-go/lib/health"
@@ -26,7 +27,9 @@ import (
 
 func StartDataplaneDriver(configParams *config.Config,
 	healthAggregator *health.HealthAggregator,
-	configChangedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
+	cache *calc.LookupsCache,
+	configChangedRestartCallback func(),
+	childExitedRestartCallback func()) (DataplaneDriver, *exec.Cmd) {
 	log.Info("Using Windows dataplane driver.")
 
 	dpConfig := windataplane.Config{
