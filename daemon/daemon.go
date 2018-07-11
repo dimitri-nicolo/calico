@@ -317,6 +317,12 @@ configRetry:
 	// as well as dataplane driver, which actually uses this for lookups.
 	lookupsCache := calc.NewLookupsCache()
 
+	if runtime.GOOS == "windows" {
+		// For windows OS, make lookupsCache nil and rest of all lookupCache
+		// should handle the nil pointer
+		lookupsCache = nil
+	}
+
 	// Start up the dataplane driver.  This may be the internal go-based driver or an external
 	// one.
 	var dpDriver dp.DataplaneDriver

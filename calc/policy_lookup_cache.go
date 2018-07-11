@@ -57,7 +57,7 @@ func (pc *PolicyLookupsCache) OnPolicyInactive(key model.PolicyKey) {
 
 func (pc *PolicyLookupsCache) OnProfileActive(key model.ProfileRulesKey, profile *model.ProfileRules) {
 	if pc == nil {
-		log.Info("OnProfileActive : lookup cache nil on windows platform")
+		log.Debug("OnProfileActive : lookup cache nil on windows platform")
 		return
 	}
 
@@ -66,7 +66,7 @@ func (pc *PolicyLookupsCache) OnProfileActive(key model.ProfileRulesKey, profile
 
 func (pc *PolicyLookupsCache) OnProfileInactive(key model.ProfileRulesKey) {
 	if pc == nil {
-		log.Info("OnProfileInactive : lookup cache nil on windows platform")
+		log.Debug("OnProfileInactive : lookup cache nil on windows platform")
 		return
 	}
 
