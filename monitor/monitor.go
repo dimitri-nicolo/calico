@@ -1,61 +1,69 @@
 package monitor
 
 import (
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
-	lclient "github.com/tigera/licensing/client"
 	"context"
-	"time"
 	"github.com/projectcalico/felix/jitter"
-	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
+	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
+	lclient "github.com/tigera/licensing/client"
 	"reflect"
 	"sync"
-	"github.com/projectcalico/libcalico-go/lib/set"
+	"time"
 )
 
 const (
 	defaultPollInterval = 30 * time.Second
 )
 
-// LicenseMonitor uses a libcalico-go (backend) client to monitor the status of the active license.
+// LicenseMonitor is an interface which enables monitoring of license and feature enablement status.
+type LicenseMonitor interface {
+	GetFeatureStatus(string) bool
+	GetLicenseStatus() lclient.LicenseStatus
+	MonitorForever(context.Context) error
+	RefreshLicense(context.Context) error
+}
+
+// licenseMonitor uses a libcalico-go (backend) client to monitor the status of the active license.
 // It provides a thread-safe API for querying the current state of a feature.  Changes to the
 // license or its validity are reflected by the API.
-type LicenseMonitor struct {
-	PollInterval time.Duration
+type licenseMonitor struct {
+	PollInterval      time.Duration
 	OnFeaturesChanged func()
 
 	datastoreClient bapi.Client
 
 	activeLicenseLock sync.Mutex
-	activeRawLicense *v3.LicenseKey
-	activeLicense *lclient.LicenseClaims
+	activeRawLicense  *v3.LicenseKey
+	activeLicense     *lclient.LicenseClaims
 }
 
-func New(client bapi.Client) *LicenseMonitor {
-	return &LicenseMonitor{
-		PollInterval: defaultPollInterval,
+func New(client bapi.Client) LicenseMonitor {
+	return &licenseMonitor{
+		PollInterval:    defaultPollInterval,
 		datastoreClient: client,
 	}
 }
 
-func (l *LicenseMonitor) GetFeatureStatus(feature string) bool {
+func (l *licenseMonitor) GetFeatureStatus(feature string) bool {
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
 	return l.activeLicense.ValidateFeature(feature)
 }
 
-func (l *LicenseMonitor) GetLicenseStatus() lclient.LicenseStatus {
+func (l *licenseMonitor) GetLicenseStatus() lclient.LicenseStatus {
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
 	return l.activeLicense.Validate()
 }
 
-func (l *LicenseMonitor) MonitorForever(ctx context.Context) error {
+func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 	// TODO: use jitter package in libcalico-go once it has been ported to
 	// libcalico-go-private.
-	t := jitter.NewTicker(l.PollInterval, l.PollInterval / 10)
+	t := jitter.NewTicker(l.PollInterval, l.PollInterval/10)
 	defer t.Stop()
 
 	for ctx.Err() == nil {
@@ -71,7 +79,7 @@ func (l *LicenseMonitor) MonitorForever(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (l *LicenseMonitor) RefreshLicense(ctx context.Context) error {
+func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 	log.Debug("Refreshing license from datastore")
 	lic, err := l.datastoreClient.Get(ctx, model.ResourceKey{
 		Kind:      v3.KindLicenseKey,
@@ -94,7 +102,7 @@ func (l *LicenseMonitor) RefreshLicense(ctx context.Context) error {
 		switch err.(type) {
 		case cerrors.ErrorResourceDoesNotExist:
 			if ttl > 0 {
-				log.WithError(err).Error("No product license found in the datastore; please contact support; " +
+				log.WithError(err).Error("No product license found in the datastore; please contact support; "+
 					"already loaded license will expire after ", ttl, " or if component is restarted.")
 			} else {
 				log.WithError(err).Error("No product license found in the datastore; please install a license " +
@@ -103,7 +111,7 @@ func (l *LicenseMonitor) RefreshLicense(ctx context.Context) error {
 			return err
 		default:
 			if ttl > 0 {
-				log.WithError(err).Error("Failed to load product license from datastore; " +
+				log.WithError(err).Error("Failed to load product license from datastore; "+
 					"already loaded license will expire after ", ttl, " or if component is restarted.")
 			} else {
 				log.WithError(err).Error("Failed to load product license from datastore.")
@@ -123,7 +131,7 @@ func (l *LicenseMonitor) RefreshLicense(ctx context.Context) error {
 	newActiveLicense, err := lclient.Decode(*license)
 	if err != nil {
 		if ttl > 0 {
-			log.WithError(err).Error("Failed to decode license key; please contact support; " +
+			log.WithError(err).Error("Failed to decode license key; please contact support; "+
 				"already loaded license will expire after ", ttl, " or if component is restarted.")
 		} else {
 			log.WithError(err).Error("Failed to decode license key; please contact support.")
