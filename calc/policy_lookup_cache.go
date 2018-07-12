@@ -56,20 +56,10 @@ func (pc *PolicyLookupsCache) OnPolicyInactive(key model.PolicyKey) {
 }
 
 func (pc *PolicyLookupsCache) OnProfileActive(key model.ProfileRulesKey, profile *model.ProfileRules) {
-	if pc == nil {
-		log.Debug("OnProfileActive : lookup cache nil on windows platform")
-		return
-	}
-
 	pc.updateProfileRulesNFLOGPrefixes(key, profile)
 }
 
 func (pc *PolicyLookupsCache) OnProfileInactive(key model.ProfileRulesKey) {
-	if pc == nil {
-		log.Debug("OnProfileInactive : lookup cache nil on windows platform")
-		return
-	}
-
 	pc.removeProfileRulesNFLOGPrefixes(key)
 }
 

@@ -347,28 +347,29 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 	remoteEndpointFilter := &remoteEndpointFilter{hostname: hostname}
 	remoteEndpointFilter.RegisterWith(remoteEndpointDispatcher)
 
-	if cache == nil {
+	if cache != nil {
+
+		// The lookup cache, caches endpoint and policy information.
+		//        ...
+		//     Dispatcher (remote updates)
+		//         |
+		//         | Workload and host endpoints
+		//         |
+		//       lookup cache
+		//
+		cache.epCache.RegisterWith(remoteEndpointDispatcher)
+
+		// The lookup cache, caches policy information for prefix lookups. Hook into the
+		// ActiveRulesCalculator to receive local active policy/profile information.
+		activeRulesCalc.PolicyLookupCache = cache.polCache
+
+		// The lookup cache, also provides local endpoint lookups and corresponding tier information.
+		// Hook into the PolicyResolver to receive this information.
+		polResolver.RegisterCallback(cache.epCache)
+
+	} else {
 		log.Debug("lookup cache is nil on windows platform")
-		return nil
 	}
-
-	// The lookup cache, caches endpoint and policy information.
-	//        ...
-	//     Dispatcher (remote updates)
-	//         |
-	//         | Workload and host endpoints
-	//         |
-	//       lookup cache
-	//
-	cache.epCache.RegisterWith(remoteEndpointDispatcher)
-
-	// The lookup cache, caches policy information for prefix lookups. Hook into the
-	// ActiveRulesCalculator to receive local active policy/profile information.
-	activeRulesCalc.PolicyLookupCache = cache.polCache
-
-	// The lookup cache, also provides local endpoint lookups and corresponding tier information.
-	// Hook into the PolicyResolver to receive this information.
-	polResolver.RegisterCallback(cache.epCache)
 
 	return &CalcGraph{
 		AllUpdDispatcher:      allUpdDispatcher,

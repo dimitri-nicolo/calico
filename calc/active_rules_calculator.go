@@ -371,10 +371,18 @@ func (arc *ActiveRulesCalculator) sendPolicyUpdate(policyKey model.PolicyKey) {
 			log.WithField("policyKey", policyKey).Panic("Unknown policy became active!")
 		}
 		arc.RuleScanner.OnPolicyActive(policyKey, policy)
-		arc.PolicyLookupCache.OnPolicyActive(policyKey, policy)
+		if arc.PolicyLookupCache != nil {
+			arc.PolicyLookupCache.OnPolicyActive(policyKey, policy)
+		} else {
+			log.Debug("PolicyLookup OnPolicyActive : cache nil on windows platform")
+		}
 	} else {
 		arc.RuleScanner.OnPolicyInactive(policyKey)
-		arc.PolicyLookupCache.OnPolicyInactive(policyKey)
+		if arc.PolicyLookupCache != nil {
+			arc.PolicyLookupCache.OnPolicyInactive(policyKey)
+		} else {
+			log.Debug("PolicyLookup OnPolicyInactive : cache nil on windows platform")
+		}
 	}
 }
 
