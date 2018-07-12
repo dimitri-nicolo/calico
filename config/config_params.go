@@ -253,10 +253,6 @@ type Config struct {
 
 	IPSecRekeyTime time.Duration `config:"seconds;3600"`
 
-	// This MUST be ignored if set using config/env var, so DO NOT add
-	// the `config` struct tag to this.
-	LicenseValid bool // Don't add config tag here!
-
 	// LicensePollingIntervalSecs is how frequently we check for license update.
 	LicensePollingIntervalSecs time.Duration `config:"seconds;30"`
 

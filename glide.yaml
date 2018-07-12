@@ -44,9 +44,10 @@ import:
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: cb027c7c879597e0e02f2411c0c201752bab39c8
+  version: 2defba61f99127a5ce75eb9eb05a7323d7338fcd
   subpackages:
   - client
+  - monitor
 - package: github.com/tigera/nfnetlink
   repo:    git@github.com:tigera/nfnetlink
   version: 0c33d6eace301fb92cfd3e54c2109d97f463db17

@@ -1,5 +1,5 @@
-hash: 65799f89a77344594f6580022522594a6369b87c78f4048684ec9dd4d2863542
-updated: 2018-07-04T14:18:50.964554753Z
+hash: 78dea31f588b42485996a56319b64d7736d086cd88245aa369a485434959b07d
+updated: 2018-07-11T15:07:34.75110594Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -93,13 +93,13 @@ imports:
 - name: github.com/ghodss/yaml
   version: 0ca9ea5df5451ffdf184b4428c902747c2c11cd7
 - name: github.com/go-ini/ini
-  version: 06f5f3d67269ccec1fe5fe4134ba6e982984f7f5
+  version: af26abd521cd7697481572fdbc4a53cbea3dde1b
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 16284f9da51d5a5b5dc67c8109a99b014c4b7f0a
+  version: bce47c9386f9ecd6b86f450478a80103c3fe1402
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -335,12 +335,14 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: cb027c7c879597e0e02f2411c0c201752bab39c8
+  version: 2defba61f99127a5ce75eb9eb05a7323d7338fcd
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
   - client
+  - client/features
   - crypto
+  - monitor
 - name: github.com/tigera/nfnetlink
   version: 0c33d6eace301fb92cfd3e54c2109d97f463db17
   repo: git@github.com:tigera/nfnetlink

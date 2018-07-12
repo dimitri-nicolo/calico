@@ -20,10 +20,10 @@ import (
 	"math/bits"
 	"net"
 	"os/exec"
+	"runtime/debug"
 
 	log "github.com/sirupsen/logrus"
-
-	"runtime/debug"
+	lclient "github.com/tigera/licensing/client"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
@@ -37,7 +37,13 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
+type featureChecker interface {
+	GetFeatureStatus(feature string) bool
+	GetLicenseStatus() lclient.LicenseStatus
+}
+
 func StartDataplaneDriver(configParams *config.Config,
+	licenseMonitor featureChecker,
 	healthAggregator *health.HealthAggregator,
 	cache *calc.LookupsCache,
 	configChangedRestartCallback func(),
@@ -101,32 +107,39 @@ func StartDataplaneDriver(configParams *config.Config,
 		}).Info("Calculated iptables mark bits")
 
 		// If PrometheusMetricsEnabled is set to true and license isn't applied or valid then throw a warning message.
-		if configParams.PrometheusReporterEnabled && !configParams.LicenseValid {
-			log.Warn("Not licensed for Prometheus Metrics feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
+		licenseStatus := licenseMonitor.GetLicenseStatus()
+		licenseOK := licenseStatus == lclient.Valid || licenseStatus == lclient.InGracePeriod
+
+		if configParams.PrometheusReporterEnabled && !licenseOK {
+			log.Warn("Not licensed for Prometheus Metrics feature. No valid license was found for your environment. " +
+				"Contact Tigera support or email licensing@tigera.io")
 
 			// Set Prometheus metrics process and reporting configs to false.
 			configParams.PrometheusReporterEnabled = false
 		}
 
 		// If DropActionOverride is set to non-default "DROP" and license is not applied or valid then throw a warning message.
-		if configParams.DropActionOverride != "DROP" && !configParams.LicenseValid {
-			log.Warn("Not licensed for DropActionOverride feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
+		if configParams.DropActionOverride != "DROP" && !licenseOK {
+			log.Warn("Not licensed for DropActionOverride feature. No valid license was found for your environment. " +
+				"Contact Tigera support or email licensing@tigera.io")
 
 			// Set DropActionOverride to "DROP".
 			configParams.DropActionOverride = "DROP"
 		}
 
 		// If CloudWatchLogsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
-		if configParams.CloudWatchLogsReporterEnabled && !configParams.LicenseValid {
-			log.Warn("Not licensed for CloudWatch flow logs feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
+		if configParams.CloudWatchLogsReporterEnabled && !licenseOK {
+			log.Warn("Not licensed for CloudWatch flow logs feature. No valid license was found for your environment. " +
+				"Contact Tigera support or email licensing@tigera.io")
 
 			// Set Cloudwatch flow logs reporting configs to false.
 			configParams.CloudWatchLogsReporterEnabled = false
 		}
 
 		// If CloudWatchMetricsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
-		if configParams.CloudWatchMetricsReporterEnabled && !configParams.LicenseValid {
-			log.Warn("Not licensed for CloudWatch Metrics feature. No valid license was found for your environment. Contact Tigera support or email licensing@tigera.io")
+		if configParams.CloudWatchMetricsReporterEnabled && !licenseOK {
+			log.Warn("Not licensed for CloudWatch Metrics feature. No valid license was found for your environment. " +
+				"Contact Tigera support or email licensing@tigera.io")
 
 			// Set CloudWatchMetricsReporterEnabled to false.
 			configParams.CloudWatchMetricsReporterEnabled = false
