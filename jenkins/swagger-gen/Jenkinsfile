@@ -57,11 +57,11 @@ pipeline {
                     }
                 }
             }
-            //post {
-            //    failure {
-            //        slackSend message: "Failed during Terraform provisioning!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
-            //    }
-            //}
+            post {
+                failure {
+                    slackSend message: "Failed during Terraform provisioning!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
         }
         stage('Install CNX') {
             steps {
@@ -92,11 +92,11 @@ pipeline {
                     sh '$(terraform output master_connect_command) "DATASTORE=$DATASTORE ./install-cnx.sh -v master -q -l license.yaml"'
                 }
             }
-            //post {
-            //    failure {
-            //        slackSend message: "Failed to install CNX with quick-staller!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
-            //    }
-            //}
+            post {
+                failure {
+                    slackSend message: "Failed to install CNX with quick-staller!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
         }
         stage('Obtaining swagger.json') {
             steps {
@@ -108,21 +108,34 @@ pipeline {
                     }
                 }
             }
-            //post {
-            //    failure {
-            //        slackSend message: "Failed to create swagger.json with quick-staller!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
-            //    }
-            //}
+            post {
+                failure {
+                    slackSend message: "Failed to create swagger.json with quick-staller!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
         }
 
         stage('Create branch') {
             steps {
                 sh 'cp _crc/kubeadm/1.6/swagger.json _cp/_includes/master/swagger.json'
                 dir('_cp') {
-                    sh 'git branch -D JENKINS-master-swagger-build || true'
-                    sh 'git checkout -b JENKINS-master-swagger-build'
-                    sh 'git add .'
-                    sh 'git commit -m "Test, do not merge"'
+                    // Check if the branch exists, if it does, compare and push changes
+                    // If it does not, then create the branch and push it
+                    sh '''
+                        git config user.name "Marvin Robot"
+                        git config user.email "marvin@tigera.io"
+                        if [ -z "$(git ls-remote | grep JENKINS-master-swagger-build)" ]; then
+                            git checkout -b JENKINS-master-swagger-build;
+                            git add .;
+                            git commit -m "Test, do not merge";
+                        elif [ -z "$(git diff origin/JENKINS-master-swagger-build)" ]; then
+                            git checkout master && git pull;
+                            git merge JENKINS-master-swagger-build;
+                            git reset origin/master;
+                            git add . --all;
+                            git commit -m "Test, do not merge";
+                        fi
+                        '''
                 }
             }
         }
@@ -130,7 +143,28 @@ pipeline {
             steps{
                 dir('_cp') {
                     withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'KEY', passphraseVariable: 'PHRASE', usernameVariable: 'USER')]) {
-                        sh '''GIT_SSH_COMMAND="ssh -i ${KEY}" git push -f --set-upstream origin JENKINS-master-swagger-build'''
+                        // Only push the branch if there are changes to push
+                        // Check if the the Jenkins branch exists and if it does, check if there are differences that need to be pushed.
+                        // If the Jenkins branch does not exist, push the new branch if there are differences from the master branch.
+			script {
+                            env.BRANCH_EXISTS = sh(returnStdout: true, script: '''#!/bin/bash
+                                if [[ -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" ]]; then
+                                    echo "true";
+                                else
+                                    echo "false";
+                                fi''')
+
+                            env.SWAGGER_CHANGED = sh(returnStdout: true, script: '''#!/bin/bash
+                                if [[ -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" && -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git diff origin/JENKINS-master-swagger-build)" ]] || [[ -z "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" && -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git diff origin/master)" ]]; then
+				    echo "true";
+                                else
+                                    echo "false";
+                                fi''')
+
+                            if (env.SWAGGER_CHANGED) {
+                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git push -f --set-upstream origin JENKINS-master-swagger-build''')
+                            }
+                        }
                     }
                 }
             }
@@ -146,15 +180,20 @@ pipeline {
 
                 dir('_cp') {
                     withCredentials([usernamePassword(credentialsId: 'marvin-tigera', passwordVariable: 'TOKEN', usernameVariable: 'USER')]) {
-                        sh 'GITHUB_TOKEN=${TOKEN} ../_pr/hub-linux-amd64-2.4.0/bin/hub pull-request -b tigera/calico-private:master -F - <<EOF\nJENKINS master: automatic swagger update\n\nThis is a test of an automated PR generated by a Jenkins job.\nEOF'
+                        script {
+                            SHOULD_PUSH = "${env.SWAGGER_CHANGED} && !${env.BRANCH_EXISTS}"
+                            if (SHOULD_PUSH) {
+                                sh(script: "GITHUB_TOKEN=${TOKEN} ../_pr/hub-linux-amd64-2.4.0/bin/hub pull-request -b tigera/calico-private:master -F - <<EOF\nJENKINS master: automatic swagger update\n\nThis is a test of an automated PR generated by a Jenkins job.\nEOF")
+                            }
+                        }
                     }
                 }
             }
-            //post {
-            //    failure {
-            //        slackSend message: "Failed to create PR for updataed swagger!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
-            //    }
-            //}
+            post {
+                failure {
+                    slackSend message: "Failed to create PR for updated swagger!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
         }
     }
     post {
@@ -179,7 +218,7 @@ pipeline {
                     GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
                     if (currentBuild.currentResult == 'SUCCESS' && currentBuild.getPreviousBuild()?.result) {
                         msg = "Passing again ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
-                        //slackSend message: msg, color: "good", channel: "ci-notifications-cnx"
+                        slackSend message: msg, color: "good", channel: "${env.slack_alert_channel}"
                     }
                 }
            }
@@ -195,7 +234,7 @@ pipeline {
                     } else {
                         msg = "New failure ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
                     }
-                    //slackSend message: msg, color: "danger", channel: "ci-notifications-cnx"
+                    slackSend message: msg, color: "danger", channel: "${env.slack_alert_channel}"
                 }
             }
         }
