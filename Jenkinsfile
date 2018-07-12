@@ -59,6 +59,8 @@ pipeline {
             steps {
                 sh "echo 'Build Felix'"
                 sh "make tigera/felix"
+                sh "echo 'Build Felix for windows'"
+                sh "make bin/calico-felix.exe"
             }
         }
         stage('Unit Tests') {
