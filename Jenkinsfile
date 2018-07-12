@@ -57,10 +57,10 @@ pipeline {
         }
         stage('Build felix') {
             steps {
-                sh "echo 'Build Felix'"
-                sh "make tigera/felix"
                 sh "echo 'Build Felix for windows'"
                 sh "make bin/calico-felix.exe"
+                sh "echo 'Build Felix'"
+                sh "make tigera/felix"
             }
         }
         stage('Unit Tests') {
