@@ -101,6 +101,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			message = getLastMessageFromLogStream()
+			expectedNumFlows = 0
 			expectedNumFlowsStarted = 0
 			expectedNumFlowsCompleted = 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muConn1Rule1AllowExpire)
@@ -113,7 +114,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			time.Sleep(1 * time.Second)
 			message = getLastMessageFromLogStream()
 			expectedNumFlows = 1
-			expectedNumFlowsStarted = 1
+			expectedNumFlowsStarted = 0
 			expectedNumFlowsCompleted = 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule2DenyUpdate)
 			expectFlowLog(message, tuple3, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionDeny, FlowLogDirectionOut,
@@ -124,6 +125,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			message = getLastMessageFromLogStream()
+			expectedNumFlows = 0
 			expectedNumFlowsStarted = 0
 			expectedNumFlowsCompleted = 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule2DenyExpire)
@@ -140,7 +142,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			// Wait for aggregation and export to happen.
 			time.Sleep(1 * time.Second)
 			message := getLastMessageFromLogStream()
-			expectedNumFlows := 1
+			expectedNumFlows := 0
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 1
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdate, muConn1Rule1AllowUpdate, muConn1Rule1AllowExpire)
@@ -215,7 +217,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			flow2, err = getFlowLog(message2)
 			Expect(err).To(BeNil())
 
-			expectedNumFlows = 1
+			expectedNumFlows = 0
 			expectedNumFlowsStarted = 0
 			expectedNumFlowsCompleted = 1
 			expectedPacketsIn1, expectedPacketsOut1, expectedBytesIn1, expectedBytesOut1 = calculatePacketStats(muConn1Rule1AllowExpire)

@@ -176,15 +176,14 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 	// TODO(doublek): Handle metadata updates.
 	switch {
-	case mu.updateType == UpdateTypeReport && !f.flowsStartedRefs.Contains(mu.tuple):
+	case mu.updateType == UpdateTypeReport && !f.flowsRefs.Contains(mu.tuple):
 		f.flowsStartedRefs.Add(mu.tuple)
-	case mu.updateType == UpdateTypeExpire && !f.flowsCompletedRefs.Contains(mu.tuple):
-		f.flowsCompletedRefs.Add(mu.tuple)
-	}
-	// If this is the first time we are seeing this tuple.
-	if !f.flowsRefs.Contains(mu.tuple) || (mu.updateType == UpdateTypeReport && f.flowsCompletedRefs.Contains(mu.tuple)) {
 		f.flowsRefs.Add(mu.tuple)
+	case mu.updateType == UpdateTypeExpire:
+		f.flowsCompletedRefs.Add(mu.tuple)
+		f.flowsRefs.Discard(mu.tuple)
 	}
+
 	f.NumFlows = f.flowsRefs.Len()
 	f.NumFlowsStarted = f.flowsStartedRefs.Len()
 	f.NumFlowsCompleted = f.flowsCompletedRefs.Len()
@@ -192,6 +191,22 @@ func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 	f.BytesIn += mu.inMetric.deltaBytes
 	f.PacketsOut += mu.outMetric.deltaPackets
 	f.BytesOut += mu.outMetric.deltaBytes
+}
+
+func (f FlowStats) reset() FlowStats {
+	// Reset Started and Completed Refs sets
+	f.flowsStartedRefs = NewTupleSet()
+	f.flowsCompletedRefs = NewTupleSet()
+	f.PacketsIn = 0
+	f.BytesIn = 0
+	f.PacketsOut = 0
+	f.BytesOut = 0
+
+	return f
+}
+
+func (f FlowStats) getFlowsCount() int {
+	return len(f.flowsRefs)
 }
 
 type FlowLog struct {

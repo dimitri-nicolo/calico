@@ -132,7 +132,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages = ca.Get()
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
-
 			// Updating the Workload IDs and labels for src and dst.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.srcEp = &calc.EndpointData{
 				Key: model.WorkloadEndpointKey{
@@ -142,7 +141,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					EndpointID:     "23456",
 				},
 				// this new MetricUpdates src endpointMeta has a different label than one currently being tracked.
-				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"prod-app": "true"}},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"prod-app": "true"}},
 			}
 
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.dstEp = &calc.EndpointData{
@@ -153,7 +152,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					EndpointID:     "256267",
 				},
 				// different label on the destination workload than one being tracked.
-				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "false"}},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "false"}},
 			}
 
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
@@ -312,10 +311,12 @@ var _ = Describe("Flow log aggregator tests", func() {
 	Context("Flow log aggregator filter verification", func() {
 		It("Filters out MetricUpdate based on filter applied", func() {
 			By("Creating 2 aggregators - one for denied packets, and one for allowed packets")
-			caa := NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
-			cad := NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+			var caa, cad FlowLogAggregator
 
 			By("Checking that the MetricUpdate with deny action is only processed by the aggregator with the deny filter")
+			caa = NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
+			cad = NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+
 			caa.FeedUpdate(muNoConn1Rule2DenyUpdate)
 			messages := caa.Get()
 			Expect(len(messages)).Should(Equal(0))
@@ -324,6 +325,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(1))
 
 			By("Checking that the MetricUpdate with allow action is only processed by the aggregator with the allow filter")
+			caa = NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
+			cad = NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+
 			caa.FeedUpdate(muConn1Rule1AllowUpdate)
 			messages = caa.Get()
 			Expect(len(messages)).Should(Equal(1))
@@ -332,5 +336,30 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(0))
 		})
 
+	})
+
+	Context("Flow log aggregator purge verification", func() {
+		It("Purges the correct prefix aggregated flows", func() {
+			By("Accounting for only the completed 5-tuple refs when making a purging decision")
+			ca := NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+			ca.FeedUpdate(muNoConn1Rule2DenyUpdate)
+			messages := ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+
+			// StartedFlowRefs started should be 1
+			flowLog := &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.NumFlowsStarted).Should(Equal(1))
+
+			// Feeding an update again.
+			ca.FeedUpdate(muNoConn1Rule2DenyUpdate)
+			messages = ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+
+			// StartedFlowRefs started should be 0
+			flowLog = &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
+		})
 	})
 })

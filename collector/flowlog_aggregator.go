@@ -30,7 +30,7 @@ const noRuleActionDefined = 0
 // aggregated flow logs until the flow logs are exported.
 type cloudWatchAggregator struct {
 	kind                 AggregationKind
-	flowStore            map[FlowMeta]FlowStats // TODO(SS): Abstract the storage.
+	flowStore            map[FlowMeta]FlowStats
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	aggregationStartTime time.Time
@@ -97,8 +97,24 @@ func (c *cloudWatchAggregator) Get() []*string {
 	for flowMeta, flowStats := range c.flowStore {
 		flowLog := FlowLog{flowMeta, flowStats}.Serialize(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
 		resp = append(resp, &flowLog)
-		delete(c.flowStore, flowMeta)
+		c.purge(flowMeta)
 	}
 	c.aggregationStartTime = aggregationEndTime
 	return resp
+}
+
+/*func (c *cloudWatchAggregator) purge(flowMeta FlowMeta) {
+	delete(c.flowStore, flowMeta)
+}*/
+
+func (c *cloudWatchAggregator) purge(flowMeta FlowMeta) {
+	// reset flow stats for the next interval
+	resetFlowStats := c.flowStore[flowMeta].reset()
+	c.flowStore[flowMeta] = resetFlowStats
+
+	// discontinue tracking the stats associated with the
+	// flow meta if no more associated 5-tuples exist.
+	if resetFlowStats.getFlowsCount() == 0 {
+		delete(c.flowStore, flowMeta)
+	}
 }
