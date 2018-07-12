@@ -13,7 +13,7 @@ func NewSharedLock() {
 // they do not conflict.
 // This is just a stub placeholder for windows
 type SharedLock struct {
-	lock           sync.Mutex
+	lock sync.Mutex
 }
 
 func (l *SharedLock) Lock() {
