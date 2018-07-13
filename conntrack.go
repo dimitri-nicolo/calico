@@ -30,8 +30,6 @@ type CtL4Dst struct {
 	All  int // Others
 }
 
-// TODO(doublek): Methods to increment and reset packet counters
-
 type CtTuple struct {
 	Src        [16]byte
 	Dst        [16]byte
@@ -44,14 +42,9 @@ type CtTuple struct {
 
 var EmptyCtTuple = CtTuple{}
 
-type CtNat struct {
-	MinIp [16]byte
-	MaxIP [16]byte
-	L4Min CtL4Src
-	L4Max CtL4Src
+type CtProtoInfo struct {
+	State int
 }
-
-// TODO(doublek): Methods to compare conntrackTuple's
 
 type CtEntry struct {
 	OriginalTuple CtTuple
@@ -67,8 +60,7 @@ type CtEntry struct {
 	OriginalCounters CtCounters
 	ReplyCounters    CtCounters
 
-	//Snat		CtNat
-	//Dnat		CtNat
+	ProtoInfo CtProtoInfo
 }
 
 func (cte *CtEntry) IsNAT() bool {

@@ -86,6 +86,11 @@ func conntrackEntryFromNfAttrs(m []byte, family uint8) (CtEntry, error) {
 			ctentry.Use = int(native.Uint32(attr.Value[0:4]))
 		case nfnl.CTA_SECMARK:
 			ctentry.Secmark = int(native.Uint32(attr.Value[0:4]))
+		case nfnl.CTA_PROTOINFO:
+			if !isNestedAttr {
+				return ctentry, errors.New("Nested attribute value expected")
+			}
+			parseProtoInfo(&ctentry.ProtoInfo, attr.Value)
 		}
 	}
 	return ctentry, nil
@@ -189,4 +194,48 @@ func parseConntrackCounters(value []byte) (CtCounters, error) {
 		}
 	}
 	return counters, err
+}
+
+func parseProtoInfo(cpi *CtProtoInfo, value []byte) error {
+	var attrs [nfnl.CTA_PROTOINFO_MAX]nfnl.NetlinkNetfilterAttr
+	err := nfnl.ParseNetfilterAttr(value, attrs[:])
+	if err != nil {
+		return err
+	}
+
+	for _, attr := range attrs {
+		attrType := uint16(int(attr.Attr.Type) & nfnl.NLA_TYPE_MASK)
+		isNestedAttr := int(attr.Attr.Type)&syscall.NLA_F_NESTED == syscall.NLA_F_NESTED
+
+		switch attrType {
+		case nfnl.CTA_PROTOINFO_TCP:
+			if !isNestedAttr {
+				return errors.New("Nested attribute value expected")
+			}
+			parseProtoInfoTCP(cpi, attr.Value)
+			// We don't support other protoinfo protocols for now.
+			break
+		}
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func parseProtoInfoTCP(cpi *CtProtoInfo, value []byte) error {
+	var attrs [nfnl.CTA_PROTOINFO_TCP_MAX]nfnl.NetlinkNetfilterAttr
+	err := nfnl.ParseNetfilterAttr(value, attrs[:])
+	if err != nil {
+		return err
+	}
+	for _, attr := range attrs {
+		switch attr.Attr.Type {
+		case nfnl.CTA_PROTOINFO_TCP_STATE:
+			cpi.State = int(attr.Value[0])
+			// We don't support other TCP protoinfo parameters for now.
+			break
+		}
+	}
+	return nil
 }
