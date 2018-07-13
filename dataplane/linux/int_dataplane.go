@@ -463,9 +463,9 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 
 	// We always create the IPsec policy table (the component that manipulates the IPsec dataplane).  That ensures
 	// that we clean up our old policies if IPsec is disabled.
-	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID)
-
-	if config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" && config.NodeIP != nil {
+	ipsecEnabled := config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" && config.NodeIP != nil
+	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID, ipsecEnabled)
+	if ipsecEnabled {
 		// Set up IPsec.
 
 		// Initialise charon main config file.

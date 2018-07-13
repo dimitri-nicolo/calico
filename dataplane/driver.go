@@ -24,6 +24,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	lclient "github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/client/features"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
@@ -57,6 +58,19 @@ func StartDataplaneDriver(configParams *config.Config,
 		}
 		if configChangedRestartCallback == nil {
 			log.Panic("Starting dataplane with nil callback func.")
+		}
+
+		// Check license status of various features and disable them via config if they're not allowed.
+		if configParams.IPSecEnabled() {
+			if !licenseMonitor.GetFeatureStatus(features.IPSec) {
+				log.Warn("Not licensed for IPsec feature. License either invalid or expired. " +
+					"Contact Tigera support or email licensing@tigera.io")
+				configParams.IPSecMode = ""
+			} else if licenseMonitor.GetLicenseStatus() == lclient.InGracePeriod {
+				log.Warn("License for IPsec feature is in grace period, forcing IPsec into allow-unsecured " +
+					"traffic mode. Contact Tigera support or email licensing@tigera.io")
+				configParams.IPSecAllowUnsecuredTraffic = true
+			}
 		}
 
 		markBitsManager := markbits.NewMarkBitsManager(configParams.IptablesMarkMask, "felix-iptables")
@@ -106,12 +120,10 @@ func StartDataplaneDriver(configParams *config.Config,
 			"endpointMarkNonCali": markEndpointNonCaliEndpoint,
 		}).Info("Calculated iptables mark bits")
 
-		// If PrometheusMetricsEnabled is set to true and license isn't applied or valid then throw a warning message.
-		licenseStatus := licenseMonitor.GetLicenseStatus()
-		licenseOK := licenseStatus == lclient.Valid || licenseStatus == lclient.InGracePeriod
-
-		if configParams.PrometheusReporterEnabled && !licenseOK {
-			log.Warn("Not licensed for Prometheus Metrics feature. No valid license was found for your environment. " +
+		// Check license status of various features and disable them via config if they're not allowed.
+		if configParams.PrometheusReporterEnabled &&
+			!licenseMonitor.GetFeatureStatus(features.PrometheusMetrics) {
+			log.Warn("Not licensed for Prometheus Metrics feature. License either invalid or expired. " +
 				"Contact Tigera support or email licensing@tigera.io")
 
 			// Set Prometheus metrics process and reporting configs to false.
@@ -119,8 +131,9 @@ func StartDataplaneDriver(configParams *config.Config,
 		}
 
 		// If DropActionOverride is set to non-default "DROP" and license is not applied or valid then throw a warning message.
-		if configParams.DropActionOverride != "DROP" && !licenseOK {
-			log.Warn("Not licensed for DropActionOverride feature. No valid license was found for your environment. " +
+		if configParams.DropActionOverride != "DROP" &&
+			!licenseMonitor.GetFeatureStatus(features.DropActionOverride) {
+			log.Warn("Not licensed for DropActionOverride feature. License either invalid or expired. " +
 				"Contact Tigera support or email licensing@tigera.io")
 
 			// Set DropActionOverride to "DROP".
@@ -128,8 +141,9 @@ func StartDataplaneDriver(configParams *config.Config,
 		}
 
 		// If CloudWatchLogsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
-		if configParams.CloudWatchLogsReporterEnabled && !licenseOK {
-			log.Warn("Not licensed for CloudWatch flow logs feature. No valid license was found for your environment. " +
+		if configParams.CloudWatchLogsReporterEnabled &&
+			!licenseMonitor.GetFeatureStatus(features.AWSCloudwatchFlowLogs) {
+			log.Warn("Not licensed for CloudWatch flow logs feature. License either invalid or expired. " +
 				"Contact Tigera support or email licensing@tigera.io")
 
 			// Set Cloudwatch flow logs reporting configs to false.
@@ -137,8 +151,9 @@ func StartDataplaneDriver(configParams *config.Config,
 		}
 
 		// If CloudWatchMetricsReporterEnabled is set to true and license isn't applied or valid then throw a warning message.
-		if configParams.CloudWatchMetricsReporterEnabled && !licenseOK {
-			log.Warn("Not licensed for CloudWatch Metrics feature. No valid license was found for your environment. " +
+		if configParams.CloudWatchMetricsReporterEnabled &&
+			!licenseMonitor.GetFeatureStatus(features.AWSCloudwatchMetrics) {
+			log.Warn("Not licensed for CloudWatch Metrics feature. License either invalid or expired. " +
 				"Contact Tigera support or email licensing@tigera.io")
 
 			// Set CloudWatchMetricsReporterEnabled to false.

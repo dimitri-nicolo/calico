@@ -74,7 +74,10 @@ func ipNetPtrToCIDR(ipNet *net.IPNet) (c ip.V4CIDR) {
 }
 
 type PolicyTable struct {
-	ourReqID int
+	ourReqID       int
+	ipsecEnabled   bool
+	firstApplyTime time.Time
+	gracePhase     GracefulShutdownPhase
 
 	resyncRequired bool
 
@@ -90,9 +93,10 @@ type PolicyTable struct {
 	sleep func(time.Duration)
 }
 
-func NewPolicyTable(ourReqID int) *PolicyTable {
+func NewPolicyTable(ourReqID int, ipsecEnabled bool) *PolicyTable {
 	return NewPolicyTableWithShims(
 		ourReqID,
+		ipsecEnabled,
 		newRealNetlinkHandle,
 		time.Sleep,
 	)
@@ -102,9 +106,10 @@ func newRealNetlinkHandle() (NetlinkXFRMIface, error) {
 	return netlink.NewHandle(syscall.NETLINK_XFRM)
 }
 
-func NewPolicyTableWithShims(ourReqID int, nlHandleFactory func() (NetlinkXFRMIface, error), sleep func(time.Duration)) *PolicyTable {
+func NewPolicyTableWithShims(ourReqID int, ipsecEnabled bool, nlHandleFactory func() (NetlinkXFRMIface, error), sleep func(time.Duration)) *PolicyTable {
 	return &PolicyTable{
 		ourReqID:           ourReqID,
+		ipsecEnabled:       ipsecEnabled,
 		resyncRequired:     true,
 		pendingRuleUpdates: map[PolicySelector]*PolicyRule{},
 		pendingDeletions:   set.New(),
@@ -121,6 +126,10 @@ func (p *PolicyTable) QueueResync() {
 }
 
 func (p *PolicyTable) SetRule(sel PolicySelector, rule *PolicyRule) {
+	if !p.ipsecEnabled {
+		log.Error("Unexpected call to SetRule() when IPsec is disabled")
+		return
+	}
 	debug := log.GetLevel() >= log.DebugLevel
 	// Clear out any pending state and then recalculate.
 	p.pendingDeletions.Discard(sel)
@@ -148,6 +157,10 @@ func (p *PolicyTable) SetRule(sel PolicySelector, rule *PolicyRule) {
 }
 
 func (p *PolicyTable) DeleteRule(sel PolicySelector) {
+	if !p.ipsecEnabled {
+		log.Error("Unexpected call to DeleteRule() when IPsec is disabled")
+		return
+	}
 	// Clear out any pending state and then recalculate.
 	p.pendingDeletions.Discard(sel)
 	delete(p.pendingRuleUpdates, sel)
@@ -169,6 +182,21 @@ func (p *PolicyTable) DeleteRule(sel PolicySelector) {
 }
 
 func (p *PolicyTable) Apply() {
+	if p.firstApplyTime.IsZero() {
+		p.firstApplyTime = time.Now()
+	}
+
+	// Check if we're in a new phase of a graceful shutdown and if so force a resync.
+	gState := p.CalculateGracefulShutdownPhase()
+	if gState != p.gracePhase {
+		log.WithFields(log.Fields{
+			"oldPhase": p.gracePhase,
+			"newPhase": gState,
+		}).Info("Entering new phase of graceful IPsec shutdown")
+		p.resyncRequired = true
+		p.gracePhase = gState
+	}
+
 	success := false
 	retryDelay := 1 * time.Millisecond
 	backOff := func() {
@@ -216,6 +244,29 @@ func (p *PolicyTable) Apply() {
 	gaugeNumIPSecBindings.Set(float64(len(p.selectorToRule)))
 }
 
+type GracefulShutdownPhase string
+
+const (
+	GraceNone           GracefulShutdownPhase = ""
+	GraceAllOptional                          = "all-optional"
+	GraceRemoveOutbound                       = "remove-outbound"
+	GraceRemoveAll                            = "remove-all"
+)
+
+func (p *PolicyTable) CalculateGracefulShutdownPhase() GracefulShutdownPhase {
+	if p.ipsecEnabled {
+		return GraceNone
+	}
+
+	if time.Since(p.firstApplyTime) < time.Minute {
+		return GraceAllOptional
+	}
+	if time.Since(p.firstApplyTime) < 2*time.Minute {
+		return GraceRemoveOutbound
+	}
+	return GraceRemoveAll
+}
+
 func (p *PolicyTable) tryResync() (numProblems int, err error) {
 	log.Info("IPsec resync: starting")
 	defer log.Info("IPsec resync: finished")
@@ -226,7 +277,11 @@ func (p *PolicyTable) tryResync() (numProblems int, err error) {
 		return 1, err
 	}
 
-	expectedState := p.selectorToRule
+	var expectedState map[PolicySelector]*PolicyRule
+	if p.gracePhase == GraceNone {
+		// IPsec enabled, selectorToRule contains our desired state of the dataplane.
+		expectedState = p.selectorToRule
+	}
 	actualState := map[PolicySelector]*PolicyRule{}
 
 	// Look up the log level so we can avoid doing expensive log.WithField/Debug calls in the tight loop.
@@ -248,11 +303,33 @@ func (p *PolicyTable) tryResync() (numProblems int, err error) {
 
 		// Record the actual state of the dataplane.
 		actualState[sel] = pol
-		// Look up what we were expecting to be there.
-		expectedPol := expectedState[sel]
-		// Remove it from the old map; once we're done with this loop, the old map will contain any policies that
-		// are missing from the dataplane.
-		delete(expectedState, sel)
+		var expectedPol *PolicyRule
+
+		// Figure out what we want the state of the dataplane to be...
+		if p.gracePhase == GraceNone {
+			// IPsec is enabled as normal, look up what we're expecting to be there.
+			expectedPol = expectedState[sel]
+			// Remove it from the old map; once we're done with this loop, the old map will contain any policies that
+			// are missing from the dataplane.
+			delete(expectedState, sel)
+		} else {
+			// We're doing a graceful shutdown.  This consists of three phases:
+			// (1) GraceAllOptional: we make all policies optional.  In this stage, traffic will continue to be
+			//     encrypted until the sender enters the next phase (or an SA times out, for example).
+			// (2) GraceRemoveOutbound: we remove all outbound policies.  This disables sending of IPsec traffic.
+			// (3) GraceRemoveAll: we remove all policies.
+			makePolOptional := false
+			if p.gracePhase == GraceAllOptional {
+				makePolOptional = true
+			} else if p.gracePhase == GraceRemoveOutbound {
+				makePolOptional = sel.Dir != netlink.XFRM_DIR_OUT
+			}
+			if makePolOptional {
+				polCopy := *pol
+				polCopy.Optional = true
+				expectedPol = &polCopy
+			} /* else leave expectedPol as nil */
+		}
 
 		if pendingUpdate, ok := p.pendingRuleUpdates[sel]; ok {
 			if reflect.DeepEqual(pendingUpdate, pol) {
@@ -303,7 +380,7 @@ func (p *PolicyTable) tryResync() (numProblems int, err error) {
 		}
 
 		// Queue up a repair to bring us back into sync.
-		if debug || !loggedRepair {
+		if p.gracePhase == GraceNone && (debug || !loggedRepair) {
 			log.WithField("policy", xfrmPol).Warn(
 				"IPsec resync: found incorrect policy in dataplane, queueing a repair " +
 					"(skipping further logs of this type).")
