@@ -1,9 +1,11 @@
 package features
 
 const (
-	All                    = "all"
-	AWSCloudwawtchFlowLogs = "aws-cloudwatch-flow-logs"
-	AWSCloudwatchMetrics   = "aws-cloudwatch-metrics"
-	AWSSecurityGroups      = "aws-security-groups"
-	IPSec                  = "ipsec"
+	All                   = "all"
+	DropActionOverride    = "drop-action-override"
+	PrometheusMetrics     = "prometheus-metrics"
+	AWSCloudwatchFlowLogs = "aws-cloudwatch-flow-logs"
+	AWSCloudwatchMetrics  = "aws-cloudwatch-metrics"
+	AWSSecurityGroups     = "aws-security-groups"
+	IPSec                 = "ipsec"
 )
