@@ -144,6 +144,7 @@ type FlowStats struct {
 	flowsRefs          tupleSet
 	flowsStartedRefs   tupleSet
 	flowsCompletedRefs tupleSet
+	flowsRefsActive    tupleSet
 }
 
 func NewFlowStats(mu MetricUpdate) FlowStats {
@@ -151,6 +152,7 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	flowsRefs.Add(mu.tuple)
 	flowsStartedRefs := NewTupleSet()
 	flowsCompletedRefs := NewTupleSet()
+	flowsRefsActive := NewTupleSet()
 
 	switch mu.updateType {
 	case UpdateTypeReport:
@@ -170,18 +172,24 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 		flowsRefs:          flowsRefs,
 		flowsStartedRefs:   flowsStartedRefs,
 		flowsCompletedRefs: flowsCompletedRefs,
+		flowsRefsActive:    flowsRefsActive,
 	}
 }
 
 func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 	// TODO(doublek): Handle metadata updates.
 	switch {
-	case mu.updateType == UpdateTypeReport && !f.flowsRefs.Contains(mu.tuple):
+	case mu.updateType == UpdateTypeReport && !f.flowsRefsActive.Contains(mu.tuple):
 		f.flowsStartedRefs.Add(mu.tuple)
-		f.flowsRefs.Add(mu.tuple)
+		f.flowsRefsActive.Add(mu.tuple)
 	case mu.updateType == UpdateTypeExpire:
 		f.flowsCompletedRefs.Add(mu.tuple)
-		f.flowsRefs.Discard(mu.tuple)
+		f.flowsRefsActive.Discard(mu.tuple)
+	}
+
+	// If this is the first time we are seeing this tuple.
+	if !f.flowsRefs.Contains(mu.tuple) || (mu.updateType == UpdateTypeReport && f.flowsCompletedRefs.Contains(mu.tuple)) {
+		f.flowsRefs.Add(mu.tuple)
 	}
 
 	f.NumFlows = f.flowsRefs.Len()
@@ -206,7 +214,11 @@ func (f FlowStats) reset() FlowStats {
 }
 
 func (f FlowStats) getFlowsCount() int {
-	return len(f.flowsRefs)
+	return len(f.flowsRefsActive)
+}
+
+func (f FlowStats) wasInactive() bool {
+	return f.PacketsIn+f.PacketsOut+f.BytesIn+f.BytesOut == 0
 }
 
 type FlowLog struct {
