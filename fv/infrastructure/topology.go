@@ -17,6 +17,7 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -58,6 +59,27 @@ func DefaultTopologyOptions() TopologyOptions {
 		TyphaLogSeverity:           "info",
 		IPIPEnabled:                true,
 		AlwaysProgramNonIPIPRoutes: false,
+	}
+}
+
+func (opts TopologyOptions) EnableCloudWatchLogs(settings ...string) {
+
+	// Enable CloudWatch logs.
+	opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSREPORTERENABLED"] = "true"
+
+	// Set the defaults that we want for FV testing, when CloudWatch logs are enabled.
+	// Particular tests can override these.
+	opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSFLUSHINTERVAL"] = "120"
+
+	// Set particular settings for the calling test.
+	param := ""
+	for _, arg := range settings {
+		if param == "" {
+			param = "FELIX_CLOUDWATCHLOGS" + strings.ToUpper(arg)
+		} else {
+			opts.ExtraEnvVars[param] = arg
+			param = ""
+		}
 	}
 }
 

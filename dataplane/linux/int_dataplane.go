@@ -25,11 +25,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/felix/collector/testutil"
 	"github.com/projectcalico/felix/ifacemonitor"
 	"github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/ipsets"
@@ -120,6 +122,8 @@ type Config struct {
 	CloudWatchLogsAggregationKindForAllowed int
 	CloudWatchLogsAggregationKindForDenied  int
 	CloudWatchLogsRetentionDays             int
+
+	DebugCloudWatchLogsFile string
 
 	CloudWatchMetricsReporterEnabled  bool
 	CloudWatchMetricsPushIntervalSecs time.Duration
@@ -584,7 +588,13 @@ func (d *InternalDataplane) Start() {
 			d.config.FelixHostname,
 			1,
 		)
-		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, nil)
+		var cwl cloudwatchlogsiface.CloudWatchLogsAPI
+		if d.config.DebugCloudWatchLogsFile != "" {
+			// Allow CloudWatch logging to be FV tested without incurring AWS
+			// costs, by calling a mock AWS API instead of the real one.
+			cwl = testutil.NewDebugCloudWatchLogsFile(logGroupName, d.config.DebugCloudWatchLogsFile)
+		}
+		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, cwl)
 		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval)
 		caa := collector.NewCloudWatchAggregator().
 			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).

@@ -1,0 +1,797 @@
+// +build fvtests
+
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+
+package fv_test
+
+import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/felix/fv/utils"
+	"github.com/projectcalico/felix/fv/workload"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
+)
+
+// Config variations covered here:
+//
+// - Non-default group name.
+// - Non-default stream name.
+// - Include endpoint labels.
+// - CloudWatchLogsAggregationKindForAllowed
+// - CloudWatchLogsAggregationKindForDenied
+//
+// With those variations in place,
+//
+// - Generate denied flows, as well as allowed.
+// - Generate flows from multiple client pods, sharing a prefix, each
+//   of which makes multiple connections to an IP that matches a wep, hep
+//   or ns.
+//
+// Verifications:
+//
+// - group and stream names
+// - endpoint labels included or not
+// - aggregation as expected
+// - metrics are zero or non-zero as expected
+// - correct counts of flows started and completed
+// - action allow or deny as expected
+//
+// Still needed elsewhere:
+//
+// - Timing variations
+// - start_time and end_time fields
+//
+//             Host 1                              Host 2
+//
+//     wl-client-1                              wl-server-1 (allowed)
+//     wl-client-2                              wl-server-2 (denied)
+//     wl-client-3                              hep-IP
+//     wl-client-4
+//           ns-IP
+//
+type aggregation int
+
+const (
+	None         aggregation = 0
+	BySourcePort aggregation = 1
+	ByPodPrefix  aggregation = 2
+)
+
+type expectation struct {
+	group                 string
+	stream                string
+	labels                bool
+	aggregationForAllowed aggregation
+	aggregationForDenied  aggregation
+}
+
+// FIXME!
+var (
+	flowCountingBugFixed    = false
+	networkSetIPsSupported  = false
+	applyOnForwardSupported = false
+)
+
+// Flow logs have little to do with the backend, and these tests are relatively slow, so
+// better to run with one backend only.  etcdv3 is easier because we create a fresh
+// datastore for every test and so don't need to worry about cleaning resources up.
+var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+
+	var (
+		infra       infrastructure.DatastoreInfra
+		opts        infrastructure.TopologyOptions
+		expectation expectation
+		felixes     []*infrastructure.Felix
+		client      client.Interface
+		wlHost1     [4]*workload.Workload
+		wlHost2     [2]*workload.Workload
+		hostW       [2]*workload.Workload
+		cc          *workload.ConnectivityChecker
+	)
+
+	BeforeEach(func() {
+		var err error
+		infra, err = getInfra()
+		Expect(err).NotTo(HaveOccurred())
+		opts = infrastructure.DefaultTopologyOptions()
+		opts.IPIPEnabled = false
+		opts.EnableCloudWatchLogs("FLUSHINTERVAL", "10")
+
+		// Defaults for how we expect flow logs to be generated.
+		expectation.group = "tigera-flowlogs-<cluster-guid>"
+		expectation.stream = "<felix-hostname>_Flowlogs"
+		expectation.labels = false
+		expectation.aggregationForAllowed = ByPodPrefix
+		expectation.aggregationForDenied = BySourcePort
+	})
+
+	JustBeforeEach(func() {
+		felixes, client = infrastructure.StartNNodeTopology(2, opts, infra)
+
+		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
+		err := infra.AddDefaultAllow()
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create workloads on host 1.
+		for ii := range wlHost1 {
+			wIP := fmt.Sprintf("10.65.0.%d", ii)
+			wName := fmt.Sprintf("wl-host1-%d", ii)
+			wlHost1[ii] = workload.Run(felixes[0], wName, "default", wIP, "8055", "tcp")
+			wlHost1[ii].WorkloadEndpoint.GenerateName = "wl-host1-"
+			wlHost1[ii].ConfigureInDatastore(infra)
+		}
+
+		// Create workloads on host 2.
+		for ii := range wlHost2 {
+			wIP := fmt.Sprintf("10.65.1.%d", ii)
+			wName := fmt.Sprintf("wl-host2-%d", ii)
+			wlHost2[ii] = workload.Run(felixes[1], wName, "default", wIP, "8055", "tcp")
+			wlHost2[ii].WorkloadEndpoint.GenerateName = "wl-host2-"
+			wlHost2[ii].ConfigureInDatastore(infra)
+		}
+
+		// Create a non-workload server on each host.
+		for ii := range hostW {
+			hostW[ii] = workload.Run(felixes[ii], fmt.Sprintf("host%d", ii), "", felixes[ii].IP, "8055", "tcp")
+		}
+
+		// Create a GlobalNetworkSet that includes host 1's IP.
+		ns := api.NewGlobalNetworkSet()
+		ns.Name = "ns-1"
+		ns.Spec.Nets = []string{felixes[0].IP + "/32"}
+		ns.Labels = map[string]string{
+			"ips-for": "host1",
+		}
+		_, err = client.GlobalNetworkSets().Create(utils.Ctx, ns, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create a HostEndpoint for host 2, with apply-on-forward ingress policy
+		// that denies to the second workload on host 2, but allows everything
+		// else.
+		gnp := api.NewGlobalNetworkPolicy()
+		gnp.Name = "gnp-1"
+		gnp.Spec.Selector = "host-endpoint=='true'"
+		if applyOnForwardSupported {
+			// Use ApplyOnForward policy to generate deny flow logs for
+			// connection to wlHost2[1].
+			gnp.Spec.Ingress = []api.Rule{
+				{
+					Action: api.Deny,
+					Destination: api.EntityRule{
+						Selector: "name=='" + wlHost2[1].Name + "'",
+					},
+				},
+				{
+					Action: api.Allow,
+				},
+			}
+		} else {
+			// ApplyOnForward policy doesn't generate deny flow logs, so we'll
+			// use a regular NetworkPolicy below instead, and just allow
+			// through the HostEndpoint.
+			gnp.Spec.Ingress = []api.Rule{
+				{
+					Action: api.Allow,
+				},
+			}
+		}
+		gnp.Spec.Egress = []api.Rule{
+			{
+				Action: api.Allow,
+			},
+		}
+		gnp.Spec.ApplyOnForward = true
+		_, err = client.GlobalNetworkPolicies().Create(utils.Ctx, gnp, utils.NoOptions)
+		Expect(err).NotTo(HaveOccurred())
+
+		if !applyOnForwardSupported {
+			np := api.NewNetworkPolicy()
+			np.Name = "default.np-1"
+			np.Namespace = "default"
+			np.Spec.Selector = "name=='" + wlHost2[1].Name + "'"
+			np.Spec.Ingress = []api.Rule{
+				{
+					Action: api.Deny,
+				},
+			}
+			_, err = client.NetworkPolicies().Create(utils.Ctx, np, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		hep := api.NewHostEndpoint()
+		hep.Name = "host2-eth0"
+		hep.Labels = map[string]string{
+			"name":          hep.Name,
+			"host-endpoint": "true",
+		}
+		hep.Spec.Node = felixes[1].Hostname
+		hep.Spec.ExpectedIPs = []string{felixes[1].IP}
+		_, err = client.HostEndpoints().Create(utils.Ctx, hep, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Wait for felix to see and program that host endpoint.
+		hostEndpointProgrammed := func() bool {
+			out, err := felixes[1].ExecOutput("iptables-save", "-t", "filter")
+			Expect(err).NotTo(HaveOccurred())
+			return (strings.Count(out, "cali-thfw-eth0") > 0)
+		}
+		Eventually(hostEndpointProgrammed, "10s", "1s").Should(BeTrue(),
+			"Expected HostEndpoint iptables rules to appear")
+
+		// Describe the connectivity that we now expect.
+		cc = &workload.ConnectivityChecker{}
+		for _, source := range wlHost1 {
+			// Workloads on host 1 can connect to the first workload on host 2.
+			cc.ExpectSome(source, wlHost2[0])
+			// But not the second.
+			cc.ExpectNone(source, wlHost2[1])
+		}
+		// A workload on host 1 can connect to a non-workload server on host 2.
+		cc.ExpectSome(wlHost1[0], hostW[1])
+		// A workload on host 2 can connect to a non-workload server on host 1.
+		cc.ExpectSome(wlHost2[0], hostW[0])
+
+		// Do 3 rounds of connectivity checking.
+		cc.CheckConnectivity()
+		cc.CheckConnectivity()
+		cc.CheckConnectivity()
+	})
+
+	checkFlowLogs := func() {
+		// Allow 5 seconds for the Felixes to poll conntrack.
+		time.Sleep(5 * time.Second)
+
+		// Delete conntrack state so that we don't keep seeing 0-metric copies of the logs.
+		felixes[0].Exec("conntrack", "-F")
+		felixes[1].Exec("conntrack", "-F")
+
+		// Here, by way of illustrating what we need to check for, are the allow
+		// flow logs that we actually see for this test, as grouped and logged by
+		// the code below that includes "started:" and "completed:".
+		//
+		// With default aggregation:
+		// Host 1:
+		// started: 3 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {hep - host2-eth0 -} allow out}
+		// started: 24 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {wep default wl-host2-* -} allow out}
+		// completed: 24 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {wep default wl-host2-* -} allow out}
+		// completed: 3 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {hep - host2-eth0 -} allow out}
+		// Host 2:
+		// started: 12 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {wep default wl-host2-* -} allow in}
+		// started: 3 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {hep - host2-eth0 -} allow in}
+		// started: 3 {{[--] [--] 6 0 8055} {wep default wl-host2-* -} {net - pvt -} allow out}
+		// completed: 3 {{[--] [--] 6 0 8055} {wep default wl-host2-* -} {net - pvt -} allow out}
+		// completed: 12 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {wep default wl-host2-* -} allow in}
+		// completed: 3 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {hep - host2-eth0 -} allow in}
+		//
+		// With aggregation none:
+		// Host 1:
+		// started: 1 {{[10 65 0 3] [10 65 1 0] 6 40849 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 0] [10 65 1 0] 6 45549 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 0] [10 65 1 0] 6 46873 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 2] [10 65 1 1] 6 45995 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 2] [10 65 1 0] 6 33465 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 0] [172 17 0 19] 6 33615 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow out}
+		// started: 1 {{[10 65 0 1] [10 65 1 1] 6 38211 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 1] [10 65 1 0] 6 33455 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 0] [172 17 0 19] 6 40601 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow out}
+		// started: 1 {{[10 65 0 2] [10 65 1 0] 6 43601 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 2] [10 65 1 0] 6 46791 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 3] [10 65 1 0] 6 39177 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 3] [10 65 1 1] 6 41265 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 3] [10 65 1 1] 6 38243 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 1] [10 65 1 1] 6 35933 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 1] [10 65 1 1] 6 37573 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 2] [10 65 1 1] 6 38251 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 0] [172 17 0 19] 6 39371 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow out}
+		// started: 1 {{[10 65 0 3] [10 65 1 1] 6 41429 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 0] [10 65 1 1] 6 36303 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 3] [10 65 1 0] 6 42645 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 0] [10 65 1 0] 6 35515 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 1] [10 65 1 0] 6 43049 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 1] [10 65 1 0] 6 37091 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 1 {{[10 65 0 0] [10 65 1 1] 6 35479 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 2] [10 65 1 1] 6 43967 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 1 {{[10 65 0 0] [10 65 1 1] 6 40211 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 0] [10 65 1 0] 6 35515 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 3] [10 65 1 1] 6 41429 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 0] [172 17 0 19] 6 33615 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow out}
+		// completed: 1 {{[10 65 0 2] [10 65 1 1] 6 38251 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 3] [10 65 1 1] 6 41265 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 3] [10 65 1 0] 6 42645 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 1] [10 65 1 1] 6 35933 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 2] [10 65 1 1] 6 45995 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 0] [10 65 1 1] 6 36303 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 2] [10 65 1 1] 6 43967 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 0] [10 65 1 1] 6 40211 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 1] [10 65 1 1] 6 38211 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 2] [10 65 1 0] 6 43601 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 3] [10 65 1 1] 6 38243 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 1] [10 65 1 1] 6 37573 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 0] [172 17 0 19] 6 40601 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow out}
+		// completed: 1 {{[10 65 0 3] [10 65 1 0] 6 39177 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 2] [10 65 1 0] 6 33465 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 0] [10 65 1 0] 6 46873 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 0] [10 65 1 0] 6 45549 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 1] [10 65 1 0] 6 43049 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 0] [10 65 1 1] 6 35479 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 1 {{[10 65 0 1] [10 65 1 0] 6 33455 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 2] [10 65 1 0] 6 46791 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 1] [10 65 1 0] 6 37091 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 3] [10 65 1 0] 6 40849 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 1 {{[10 65 0 0] [172 17 0 19] 6 39371 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow out}
+		// Host 2:
+		// started: 1 {{[10 65 1 0] [172 17 0 3] 6 38445 8055} {wep default wl-host2-0-idx9 -} {net - pvt -} allow out}
+		// started: 1 {{[10 65 0 3] [10 65 1 0] 6 42645 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 0] [172 17 0 19] 6 40601 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow in}
+		// started: 1 {{[10 65 0 3] [10 65 1 0] 6 40849 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 0] [172 17 0 19] 6 33615 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow in}
+		// started: 1 {{[10 65 0 1] [10 65 1 0] 6 43049 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 0] [172 17 0 19] 6 39371 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow in}
+		// started: 1 {{[10 65 0 0] [10 65 1 0] 6 35515 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 0] [10 65 1 0] 6 46873 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 1 0] [172 17 0 3] 6 44977 8055} {wep default wl-host2-0-idx9 -} {net - pvt -} allow out}
+		// started: 1 {{[10 65 1 0] [172 17 0 3] 6 36887 8055} {wep default wl-host2-0-idx9 -} {net - pvt -} allow out}
+		// started: 1 {{[10 65 0 3] [10 65 1 0] 6 39177 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 0] [10 65 1 0] 6 45549 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 1] [10 65 1 0] 6 33455 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 2] [10 65 1 0] 6 43601 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 2] [10 65 1 0] 6 46791 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 1] [10 65 1 0] 6 37091 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 1 {{[10 65 0 2] [10 65 1 0] 6 33465 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 3] [10 65 1 0] 6 40849 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 3] [10 65 1 0] 6 39177 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 1 0] [172 17 0 3] 6 38445 8055} {wep default wl-host2-0-idx9 -} {net - pvt -} allow out}
+		// completed: 1 {{[10 65 0 1] [10 65 1 0] 6 33455 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 1] [10 65 1 0] 6 37091 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 0] [172 17 0 19] 6 40601 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow in}
+		// completed: 1 {{[10 65 0 0] [10 65 1 0] 6 45549 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 1] [10 65 1 0] 6 43049 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 0] [172 17 0 19] 6 39371 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow in}
+		// completed: 1 {{[10 65 1 0] [172 17 0 3] 6 44977 8055} {wep default wl-host2-0-idx9 -} {net - pvt -} allow out}
+		// completed: 1 {{[10 65 1 0] [172 17 0 3] 6 36887 8055} {wep default wl-host2-0-idx9 -} {net - pvt -} allow out}
+		// completed: 1 {{[10 65 0 2] [10 65 1 0] 6 33465 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 0] [172 17 0 19] 6 33615 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow in}
+		// completed: 1 {{[10 65 0 0] [10 65 1 0] 6 35515 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 0] [10 65 1 0] 6 46873 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 2] [10 65 1 0] 6 46791 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 2] [10 65 1 0] 6 43601 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 1 {{[10 65 0 3] [10 65 1 0] 6 42645 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow in}
+		//
+		// With aggregation by source port:
+		// Host 1:
+		// started: 3 {{[10 65 0 3] [10 65 1 1] 6 0 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 3 {{[10 65 0 0] [172 17 0 19] 6 0 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow out}
+		// started: 3 {{[10 65 0 3] [10 65 1 0] 6 0 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 3 {{[10 65 0 1] [10 65 1 1] 6 0 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 3 {{[10 65 0 1] [10 65 1 0] 6 0 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 3 {{[10 65 0 2] [10 65 1 1] 6 0 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 3 {{[10 65 0 0] [10 65 1 0] 6 0 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow out}
+		// started: 3 {{[10 65 0 0] [10 65 1 1] 6 0 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-1-idx11 -} allow out}
+		// started: 3 {{[10 65 0 2] [10 65 1 0] 6 0 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 3 {{[10 65 0 0] [10 65 1 1] 6 0 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 3 {{[10 65 0 3] [10 65 1 0] 6 0 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 3 {{[10 65 0 1] [10 65 1 1] 6 0 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 3 {{[10 65 0 1] [10 65 1 0] 6 0 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 3 {{[10 65 0 0] [10 65 1 0] 6 0 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 3 {{[10 65 0 2] [10 65 1 0] 6 0 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow out}
+		// completed: 3 {{[10 65 0 3] [10 65 1 1] 6 0 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-1-idx11 -} allow out}
+		// completed: 3 {{[10 65 0 0] [172 17 0 19] 6 0 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow out}
+		// completed: 3 {{[10 65 0 2] [10 65 1 1] 6 0 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-1-idx11 -} allow out}
+		// Host 2:
+		// started: 3 {{[10 65 0 0] [10 65 1 0] 6 0 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 3 {{[10 65 1 0] [172 17 0 3] 6 0 8055} {wep default wl-host2-0-idx9 -} {net - pvt -} allow out}
+		// started: 3 {{[10 65 0 0] [172 17 0 19] 6 0 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow in}
+		// started: 3 {{[10 65 0 1] [10 65 1 0] 6 0 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 3 {{[10 65 0 2] [10 65 1 0] 6 0 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow in}
+		// started: 3 {{[10 65 0 3] [10 65 1 0] 6 0 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 3 {{[10 65 0 2] [10 65 1 0] 6 0 8055} {wep default wl-host1-2-idx5 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 3 {{[10 65 0 3] [10 65 1 0] 6 0 8055} {wep default wl-host1-3-idx7 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 3 {{[10 65 0 0] [10 65 1 0] 6 0 8055} {wep default wl-host1-0-idx1 -} {wep default wl-host2-0-idx9 -} allow in}
+		// completed: 3 {{[10 65 1 0] [172 17 0 3] 6 0 8055} {wep default wl-host2-0-idx9 -} {net - pvt -} allow out}
+		// completed: 3 {{[10 65 0 0] [172 17 0 19] 6 0 8055} {wep default wl-host1-0-idx1 -} {hep - host2-eth0 -} allow in}
+		// completed: 3 {{[10 65 0 1] [10 65 1 0] 6 0 8055} {wep default wl-host1-1-idx3 -} {wep default wl-host2-0-idx9 -} allow in}
+		//
+		// With aggregation by pod prefix (same as default aggregation):
+		// Host 1:
+		// started: 48 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {wep default wl-host2-* -} allow out}
+		// started: 6 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {hep - host2-eth0 -} allow out}
+		// completed: 3 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {hep - host2-eth0 -} allow out}
+		// completed: 24 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {wep default wl-host2-* -} allow out}
+		// Host 2:
+		// started: 3 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {hep - host2-eth0 -} allow in}
+		// started: 12 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {wep default wl-host2-* -} allow in}
+		// started: 3 {{[--] [--] 6 0 8055} {wep default wl-host2-* -} {net - pvt -} allow out}
+		// completed: 3 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {hep - host2-eth0 -} allow in}
+		// completed: 12 {{[--] [--] 6 0 8055} {wep default wl-host1-* -} {wep default wl-host2-* -} allow in}
+		// completed: 3 {{[--] [--] 6 0 8055} {wep default wl-host2-* -} {net - pvt -} allow out}
+
+		// Within 30s we should see the complete set of expected allow and deny
+		// flow logs.
+		Eventually(func() error {
+			// Read flow logs from the two hosts and accumulate counts of
+			// flows started and completed for each distinct FlowMeta.
+			flowsStarted := [2]map[collector.FlowMeta]int{}
+			flowsCompleted := [2]map[collector.FlowMeta]int{}
+			packets := [2]map[collector.FlowMeta]int{}
+			for ii, f := range felixes {
+				flowsStarted[ii] = make(map[collector.FlowMeta]int)
+				flowsCompleted[ii] = make(map[collector.FlowMeta]int)
+				packets[ii] = make(map[collector.FlowMeta]int)
+
+				cwlogs, err := f.ReadCloudWatchLogs()
+				if err != nil {
+					return err
+				}
+				for _, cwl := range cwlogs {
+					// We only generate traffic to port 8055, so
+					// ignore logs that aren't to port 8055.
+					if !strings.Contains(cwl.Message, " 8055 ") {
+						continue
+					}
+
+					// Parse the log message.
+					fl := &collector.FlowLog{}
+					fl.Deserialize(cwl.Message)
+
+					// If endpoint labels are expected, and
+					// aggregation permits this, check that they are
+					// there.
+					labelsExpected := expectation.labels && ((fl.FlowMeta.Action == collector.FlowLogActionAllow && expectation.aggregationForAllowed != ByPodPrefix) ||
+						(fl.FlowMeta.Action == collector.FlowLogActionDeny && expectation.aggregationForDenied != ByPodPrefix))
+					if labelsExpected {
+						if fl.FlowMeta.SrcMeta.Labels == "-" {
+							return errors.New(fmt.Sprintf("Missing src labels in %v", fl.FlowMeta))
+						}
+						if fl.FlowMeta.DstMeta.Labels == "-" {
+							return errors.New(fmt.Sprintf("Missing dst labels in %v", fl.FlowMeta))
+						}
+					} else {
+						if fl.FlowMeta.SrcMeta.Labels != "-" {
+							return errors.New(fmt.Sprintf("Unexpected src labels in %v", fl.FlowMeta))
+						}
+						if fl.FlowMeta.DstMeta.Labels != "-" {
+							return errors.New(fmt.Sprintf("Unexpected dst labels in %v", fl.FlowMeta))
+						}
+					}
+
+					// Now discard labels so that our expectation code
+					// below doesn't ever have to specify them.
+					fl.FlowMeta.SrcMeta.Labels = "-"
+					fl.FlowMeta.DstMeta.Labels = "-"
+
+					// Accumulate flow and packet counts for this FlowMeta.
+					if _, ok := flowsStarted[ii][fl.FlowMeta]; !ok {
+						flowsStarted[ii][fl.FlowMeta] = 0
+					}
+					flowsStarted[ii][fl.FlowMeta] += fl.NumFlowsStarted
+
+					if _, ok := flowsCompleted[ii][fl.FlowMeta]; !ok {
+						flowsCompleted[ii][fl.FlowMeta] = 0
+					}
+					flowsCompleted[ii][fl.FlowMeta] += fl.NumFlowsCompleted
+
+					if _, ok := packets[ii][fl.FlowMeta]; !ok {
+						packets[ii][fl.FlowMeta] = 0
+					}
+					packets[ii][fl.FlowMeta] += fl.PacketsIn + fl.PacketsOut
+				}
+				for meta, count := range flowsStarted[ii] {
+					log.Infof("started: %d %v", count, meta)
+				}
+				for meta, count := range flowsCompleted[ii] {
+					log.Infof("completed: %d %v", count, meta)
+				}
+
+				// For each distinct FlowMeta, the counts of flows started
+				// and completed should be the same.
+				if flowCountingBugFixed {
+					for meta, count := range flowsCompleted[ii] {
+						if count != flowsStarted[ii][meta] {
+							return errors.New(fmt.Sprintf("Wrong started count (%d != %d) for %v",
+								flowsStarted[ii][meta], count, meta))
+						}
+					}
+				}
+
+				// Check that we have non-zero packets for each flow.
+				for meta, count := range packets[ii] {
+					if count == 0 {
+						return errors.New(fmt.Sprintf("No packets for %v", meta))
+					}
+				}
+			}
+
+			// Expect flow logs with the given src/dst metadata and IPs.
+			// Specifically there should be numMatchingMetas distinct
+			// FlowMetas that match those, and numFlowsPerMeta flows for each
+			// distinct FlowMeta.  actions indicates the expected handling on
+			// each host: "allow" or "deny"; or "" if the flow isn't
+			// explicitly allowed or denied on that host (which means that
+			// there won't be a flow log).
+			expect := func(srcMeta, srcIP, dstMeta, dstIP string, numMatchingMetas, numFlowsPerMeta int, actions ...string) error {
+
+				// Host loop.
+				for ii, handling := range actions {
+					// Skip if the handling for this host is "".
+					if handling == "" {
+						continue
+					}
+					parts := strings.Split(handling, "/")
+					direction := parts[0]
+					action := parts[1]
+
+					// Build a FlowMeta with the metadata and IPs that we are looking for.
+					var template string
+					if dstIP != "" {
+						template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 8055 1 1 0 " + direction + " 4 6 260 364 " + action
+					} else {
+						template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 8055 1 1 0 " + direction + " 4 6 260 364 " + action
+					}
+					fl := &collector.FlowLog{}
+					fl.Deserialize(template)
+					log.WithField("template", template).WithField("meta", fl.FlowMeta).Info("Looking for")
+
+					matchingMetas := 0
+					for meta, count := range flowsCompleted[ii] {
+						fl.FlowMeta.Tuple.SetSourcePort(meta.Tuple.GetSourcePort())
+						if meta == fl.FlowMeta {
+							// This flow log matches what
+							// we're looking for.
+							if count != numFlowsPerMeta {
+								return errors.New(fmt.Sprintf("Wrong flow count (%d != %d) for %v", count, numFlowsPerMeta, meta))
+							}
+							matchingMetas += 1
+							// Record that we've ticked off this flow.
+							flowsCompleted[ii][meta] = 0
+						}
+					}
+					fl.FlowMeta.Tuple.SetSourcePort(0)
+					if matchingMetas != numMatchingMetas {
+						return errors.New(fmt.Sprintf("Wrong log count (%d != %d) for %v", matchingMetas, numMatchingMetas, fl.FlowMeta))
+					}
+				}
+				return nil
+			}
+
+			var err error
+
+			// Now we tick off each FlowMeta that we expect, and check that
+			// the log(s) for each one are present and as expected.
+			switch expectation.aggregationForAllowed {
+			case None:
+				for _, source := range wlHost1 {
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[0].Name, wlHost2[0].IP, 3, 1, "out/allow", "in/allow")
+					if err != nil {
+						return err
+					}
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 3, 1, "out/allow", "")
+					if err != nil {
+						return err
+					}
+				}
+				err = expect("wep default "+wlHost1[0].Name, wlHost1[0].IP, "hep - host2-eth0", felixes[1].IP, 3, 1, "out/allow", "in/allow")
+				if err != nil {
+					return err
+				}
+				if networkSetIPsSupported {
+					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "ns - ns-1", felixes[0].IP, 3, 1, "", "out/allow")
+				} else {
+					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "net - pvt", felixes[0].IP, 3, 1, "", "out/allow")
+				}
+				if err != nil {
+					return err
+				}
+			case BySourcePort:
+				for _, source := range wlHost1 {
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[0].Name, wlHost2[0].IP, 1, 3, "out/allow", "in/allow")
+					if err != nil {
+						return err
+					}
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 1, 3, "out/allow", "")
+					if err != nil {
+						return err
+					}
+				}
+				err = expect("wep default "+wlHost1[0].Name, wlHost1[0].IP, "hep - host2-eth0", felixes[1].IP, 1, 3, "out/allow", "in/allow")
+				if err != nil {
+					return err
+				}
+				if networkSetIPsSupported {
+					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "ns - ns-1", felixes[0].IP, 1, 3, "", "out/allow")
+				} else {
+					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "net - pvt", felixes[0].IP, 1, 3, "", "out/allow")
+				}
+				if err != nil {
+					return err
+				}
+			case ByPodPrefix:
+				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 24, "out/allow", "")
+				if err != nil {
+					return err
+				}
+				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 12, "", "in/allow")
+				if err != nil {
+					return err
+				}
+				err = expect("wep default wl-host1-*", "", "hep - host2-eth0", "", 1, 3, "out/allow", "in/allow")
+				if err != nil {
+					return err
+				}
+				if networkSetIPsSupported {
+					err = expect("wep default wl-host2-*", "", "ns - ns-1", "", 1, 3, "", "out/allow")
+				} else {
+					err = expect("wep default wl-host2-*", "", "net - pvt", "", 1, 3, "", "out/allow")
+				}
+				if err != nil {
+					return err
+				}
+			}
+
+			switch expectation.aggregationForDenied {
+			case None:
+				for _, source := range wlHost1 {
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 3, 1, "", "in/deny")
+					if err != nil {
+						return err
+					}
+				}
+			case BySourcePort:
+				for _, source := range wlHost1 {
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 1, 3, "", "in/deny")
+					if err != nil {
+						return err
+					}
+				}
+			case ByPodPrefix:
+				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 12, "", "in/deny")
+				if err != nil {
+					return err
+				}
+			}
+
+			// Finally check that there are no remaining flow logs that we did not expect.
+			for ii := range felixes {
+				for meta, count := range flowsCompleted[ii] {
+					if count != 0 {
+						return errors.New(fmt.Sprintf("Unexpected flow logs (%d) for %v",
+							count, meta))
+					}
+				}
+			}
+
+			return nil
+		}, "30s", "3s").ShouldNot(HaveOccurred())
+	}
+
+	Context("with custom log group name", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGGROUPNAME"] = "fvtestg:<cluster-guid>"
+			expectation.group = "fvtestg:<cluster-guid>"
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with custom log stream name", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGSTREAMNAME"] = "fvtests:<cluster-guid>"
+			expectation.stream = "fvtests:<cluster-guid>"
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with endpoint labels", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSINCLUDELABELS"] = "true"
+			expectation.labels = true
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with allowed aggregation none", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(None))
+			expectation.aggregationForAllowed = None
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with allowed aggregation by source port", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(BySourcePort))
+			expectation.aggregationForAllowed = BySourcePort
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with allowed aggregation by pod prefix", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(ByPodPrefix))
+			expectation.aggregationForAllowed = ByPodPrefix
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with denied aggregation none", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(None))
+			expectation.aggregationForDenied = None
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with denied aggregation by source port", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(BySourcePort))
+			expectation.aggregationForDenied = BySourcePort
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with denied aggregation by pod prefix", func() {
+
+		BeforeEach(func() {
+			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(ByPodPrefix))
+			expectation.aggregationForDenied = ByPodPrefix
+		})
+
+		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	AfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			for _, felix := range felixes {
+				felix.Exec("iptables-save", "-c")
+				felix.Exec("ipset", "list")
+				felix.Exec("ip", "r")
+				felix.Exec("ip", "a")
+			}
+		}
+
+		for _, wl := range wlHost1 {
+			wl.Stop()
+		}
+		for _, wl := range wlHost2 {
+			wl.Stop()
+		}
+		for _, wl := range hostW {
+			wl.Stop()
+		}
+		for _, felix := range felixes {
+			felix.Stop()
+		}
+
+		if CurrentGinkgoTestDescription().Failed {
+			infra.DumpErrorData()
+		}
+		infra.Stop()
+	})
+})

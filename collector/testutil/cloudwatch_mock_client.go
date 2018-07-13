@@ -4,6 +4,8 @@ package testutil
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -11,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
-	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,10 +28,11 @@ type mockedCloudWatchLogsClient struct {
 	sequenceToken    int
 	logGroupedEvents map[string]map[string][]logEvent
 	retentionInDays  *int64
+	file             *os.File
 }
 
 type CloudWatchLogsExpectation interface {
-	ExpectRetentionPeriod(days int64)
+	RetentionPeriod() (days int64)
 }
 
 // NewMockedCloudWatchLogsClient simulates a very basic aws cloudwatchlogs
@@ -42,7 +44,14 @@ func NewMockedCloudWatchLogsClient(logGroupName string) cloudwatchlogsiface.Clou
 	}
 }
 
+func (m *mockedCloudWatchLogsClient) log(verb string, input interface{}) {
+	if m.file != nil {
+		m.file.WriteString(fmt.Sprintf("%v %#v\n", verb, input))
+	}
+}
+
 func (m *mockedCloudWatchLogsClient) GetLogEvents(input *cloudwatchlogs.GetLogEventsInput) (*cloudwatchlogs.GetLogEventsOutput, error) {
+	m.log("GetLogEvents", input)
 	logGroupName := *input.LogGroupName
 	logStreamName := *input.LogStreamName
 
@@ -60,6 +69,7 @@ func (m *mockedCloudWatchLogsClient) GetLogEvents(input *cloudwatchlogs.GetLogEv
 }
 
 func (m *mockedCloudWatchLogsClient) PutLogEvents(input *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	m.log("PutLogEvents", input)
 	log.Infof("Calling mocked cloudwatchlogs PutLogEvents")
 	inLogEvents := input.LogEvents
 	logGroupName := *input.LogGroupName
@@ -89,6 +99,7 @@ func (m *mockedCloudWatchLogsClient) PutLogEvents(input *cloudwatchlogs.PutLogEv
 }
 
 func (m *mockedCloudWatchLogsClient) DescribeLogGroups(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+	m.log("DescribeLogGroups", input)
 	if !strings.HasPrefix(m.logGroupName, *input.LogGroupNamePrefix) {
 		return nil, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log stream resource not found", errors.New("Log stream res not found"))
 	}
@@ -102,16 +113,19 @@ func (m *mockedCloudWatchLogsClient) DescribeLogGroups(input *cloudwatchlogs.Des
 }
 
 func (m *mockedCloudWatchLogsClient) DeleteLogGroup(input *cloudwatchlogs.DeleteLogGroupInput) (*cloudwatchlogs.DeleteLogGroupOutput, error) {
+	m.log("DeleteLogGroup", input)
 	delete(m.logGroupedEvents, *input.LogGroupName)
 	return nil, nil
 }
 
 func (m *mockedCloudWatchLogsClient) CreateLogStream(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+	m.log("CreateLogStream", input)
 	m.logStreamName = *input.LogStreamName
 	return &cloudwatchlogs.CreateLogStreamOutput{}, nil
 }
 
 func (m *mockedCloudWatchLogsClient) DescribeLogStreams(input *cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+	m.log("DescribeLogStreams", input)
 	if m.logGroupName != *input.LogGroupName {
 		return nil, awserr.New(cloudwatchlogs.ErrCodeResourceNotFoundException, "Log group Resource not found", errors.New("Log group res not found"))
 	}
@@ -128,12 +142,23 @@ func (m *mockedCloudWatchLogsClient) DescribeLogStreams(input *cloudwatchlogs.De
 }
 
 func (m *mockedCloudWatchLogsClient) PutRetentionPolicy(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+	m.log("PutRetentionPolicy", input)
 	log.Infof("Retention period for log group %v is now %v days", *input.LogGroupName, *input.RetentionInDays)
 	m.retentionInDays = input.RetentionInDays
 	return nil, nil
 }
 
-func (m *mockedCloudWatchLogsClient) ExpectRetentionPeriod(days int64) {
-	Expect(m.retentionInDays).NotTo(BeNil())
-	Expect(*m.retentionInDays).To(Equal(days))
+func (m *mockedCloudWatchLogsClient) RetentionPeriod() (days int64) {
+	days = *m.retentionInDays
+	return
+}
+
+func NewDebugCloudWatchLogsFile(logGroupName string, fileName string) cloudwatchlogsiface.CloudWatchLogsAPI {
+	m := NewMockedCloudWatchLogsClient(logGroupName)
+	var err error
+	m.(*mockedCloudWatchLogsClient).file, err = os.Create(fileName)
+	if err != nil {
+		panic(err)
+	}
+	return m
 }

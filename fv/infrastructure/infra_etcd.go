@@ -15,6 +15,7 @@
 package infrastructure
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/projectcalico/felix/fv/utils"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
 type EtcdDatastoreInfra struct {
@@ -75,6 +77,16 @@ func (eds *EtcdDatastoreInfra) GetBadEndpointDockerArgs() []string {
 
 func (eds *EtcdDatastoreInfra) GetCalicoClient() client.Interface {
 	return utils.GetEtcdClient(eds.etcdContainer.IP)
+}
+
+func (eds *EtcdDatastoreInfra) GetClusterGUID() string {
+	ci, err := eds.GetCalicoClient().ClusterInformation().Get(
+		context.Background(),
+		"default",
+		options.GetOptions{},
+	)
+	Expect(err).NotTo(HaveOccurred())
+	return ci.Spec.ClusterGUID
 }
 
 func (eds *EtcdDatastoreInfra) SetExpectedIPIPTunnelAddr(felix *Felix, idx int, needBGP bool) {

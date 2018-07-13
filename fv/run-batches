@@ -20,6 +20,9 @@
 : ${GINKGO_ARGS:=}
 : ${GINKGO_FOCUS:=.*}
 
+mkdir -p cwlogs
+export FV_CWLOGDIR=`pwd`/cwlogs
+
 for batch in ${FV_BATCHES_TO_RUN}; do
   (
      echo "Running FV batch ${batch}"

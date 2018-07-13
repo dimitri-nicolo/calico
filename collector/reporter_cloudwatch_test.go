@@ -72,7 +72,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			cr.Start()
 		})
 		AfterEach(func() {
-			cl.(testutil.CloudWatchLogsExpectation).ExpectRetentionPeriod(7)
+			Expect(cl.(testutil.CloudWatchLogsExpectation).RetentionPeriod()).To(BeNumerically("==", 7))
 		})
 		It("reports the given metric update in form of a flow to cloudwatchlogs", func() {
 			By("reporting the first MetricUpdate")
