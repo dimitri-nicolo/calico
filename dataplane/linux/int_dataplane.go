@@ -596,7 +596,7 @@ func (d *InternalDataplane) Start() {
 			cwl = testutil.NewDebugCloudWatchLogsFile(logGroupName, d.config.DebugCloudWatchLogsFile)
 		}
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, cwl)
-		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval)
+		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval, d.config.HealthAggregator)
 		caa := collector.NewCloudWatchAggregator().
 			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).
 			IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
