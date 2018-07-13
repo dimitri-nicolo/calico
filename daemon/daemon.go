@@ -313,11 +313,13 @@ configRetry:
 	buildInfoLogCxt.WithField("config", configParams).Info(
 		"Successfully loaded configuration.")
 
-	// Initialzed the lookup cache here and pass it along to both the calc_graph
-	// as well as dataplane driver, which actually uses this for lookups.
-	lookupsCache := calc.NewLookupsCache()
+	var lookupsCache *calc.LookupsCache
+	if runtime.GOOS != "windows" {
+		// Initialzed the lookup cache here and pass it along to both the calc_graph
+		// as well as dataplane driver, which actually uses this for lookups.
+		lookupsCache = calc.NewLookupsCache()
 
-	if runtime.GOOS == "windows" {
+	} else {
 		// For windows OS, make lookupsCache nil and rest of all lookupCache
 		// should handle the nil pointer
 		lookupsCache = nil
