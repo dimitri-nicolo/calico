@@ -32,13 +32,18 @@ type Config struct {
 	EnabledControllers string `default:"policy,namespace,workloadendpoint,serviceaccount" split_words:"true"`
 
 	// Number of workers to run for each controller.
-	WorkloadEndpointWorkers int `default:"1" split_words:"true"`
-	ProfileWorkers          int `default:"1" split_words:"true"`
-	PolicyWorkers           int `default:"1" split_words:"true"`
-	NodeWorkers             int `default:"1" split_words:"true"`
+	WorkloadEndpointWorkers  int `default:"1" split_words:"true"`
+	ProfileWorkers           int `default:"1" split_words:"true"`
+	PolicyWorkers            int `default:"1" split_words:"true"`
+	NodeWorkers              int `default:"1" split_words:"true"`
+	FederatedServicesWorkers int `default:"1" split_words:"true"`
 
 	// Path to a kubeconfig file to use for accessing the k8s API.
 	Kubeconfig string `default:"" split_words:"false"`
+
+	// Whether the controller should not initialize the Calico datastore (for controllers that do
+	// not require this, it allows the service account to access the minimal set of resources).
+	DoNotInitializeCalico bool `default:"false" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct
