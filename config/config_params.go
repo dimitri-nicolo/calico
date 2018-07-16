@@ -255,9 +255,6 @@ type Config struct {
 
 	IPSecRekeyTime time.Duration `config:"seconds;3600"`
 
-	// LicensePollingIntervalSecs is how frequently we check for license update.
-	LicensePollingIntervalSecs time.Duration `config:"seconds;30"`
-
 	// State tracking.
 
 	// nameToSource tracks where we loaded each config param from.
