@@ -90,8 +90,12 @@ type PolicyTable struct {
 	nlHandleFactory func() (NetlinkXFRMIface, error)
 	nlHndl          NetlinkXFRMIface
 
-	// Shim for time.Sleep()
+	// sleep is a shim for time.Sleep()
 	sleep func(time.Duration)
+	// timeNow is a shim for time.Now()
+	timeNow func() time.Time
+	// timeSince is a shim for time.Since()
+	timeSince func(time.Time) time.Duration
 }
 
 func NewPolicyTable(ourReqID int, ipsecEnabled bool, shortGraceTime bool) *PolicyTable {
@@ -101,6 +105,8 @@ func NewPolicyTable(ourReqID int, ipsecEnabled bool, shortGraceTime bool) *Polic
 		shortGraceTime,
 		newRealNetlinkHandle,
 		time.Sleep,
+		time.Now,
+		time.Since,
 	)
 }
 
@@ -108,7 +114,15 @@ func newRealNetlinkHandle() (NetlinkXFRMIface, error) {
 	return netlink.NewHandle(syscall.NETLINK_XFRM)
 }
 
-func NewPolicyTableWithShims(ourReqID int, ipsecEnabled bool, shortGraceTime bool, nlHandleFactory func() (NetlinkXFRMIface, error), sleep func(time.Duration)) *PolicyTable {
+func NewPolicyTableWithShims(
+	ourReqID int,
+	ipsecEnabled bool,
+	shortGraceTime bool,
+	nlHandleFactory func() (NetlinkXFRMIface, error),
+	sleep func(time.Duration),
+	timeNow func() time.Time,
+	timeSince func(time.Time) time.Duration,
+) *PolicyTable {
 	return &PolicyTable{
 		ourReqID:           ourReqID,
 		ipsecEnabled:       ipsecEnabled,
@@ -118,6 +132,8 @@ func NewPolicyTableWithShims(ourReqID int, ipsecEnabled bool, shortGraceTime boo
 		selectorToRule:     map[PolicySelector]*PolicyRule{},
 		nlHandleFactory:    nlHandleFactory,
 		sleep:              sleep,
+		timeNow:            timeNow,
+		timeSince:          timeSince,
 		useShortGraceTime:  shortGraceTime,
 	}
 }
@@ -186,7 +202,7 @@ func (p *PolicyTable) DeleteRule(sel PolicySelector) {
 
 func (p *PolicyTable) Apply() {
 	if p.firstApplyTime.IsZero() {
-		p.firstApplyTime = time.Now()
+		p.firstApplyTime = p.timeNow()
 	}
 
 	// Check if we're in a new phase of a graceful shutdown and if so force a resync.
@@ -272,10 +288,10 @@ func (p *PolicyTable) CalculateGracefulShutdownPhase() GracefulShutdownPhase {
 		removeOutboundGraceTime = 10 * time.Second
 	}
 
-	if time.Since(p.firstApplyTime) < allOptionalGraceTime {
+	if p.timeSince(p.firstApplyTime) < allOptionalGraceTime {
 		return GraceAllOptional
 	}
-	if time.Since(p.firstApplyTime) < removeOutboundGraceTime {
+	if p.timeSince(p.firstApplyTime) < removeOutboundGraceTime {
 		return GraceRemoveOutbound
 	}
 	return GraceRemoveAll

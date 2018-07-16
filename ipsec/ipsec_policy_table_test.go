@@ -69,6 +69,24 @@ var (
 			Mask:  0xf0,
 		},
 	}
+	caliXFRMPolicy1Optional = netlink.XfrmPolicy{
+		Dst: &hostCIDR1,
+		Dir: netlink.XFRM_DIR_OUT,
+		Tmpls: []netlink.XfrmPolicyTmpl{
+			{
+				Optional: true,
+				Src:      hostIP1,
+				Dst:      hostIP2,
+				Reqid:    ReqID,
+				Mode:     netlink.XFRM_MODE_TUNNEL,
+				Proto:    netlink.XFRM_PROTO_ESP,
+			},
+		},
+		Mark: &netlink.XfrmMark{
+			Value: 0x10,
+			Mask:  0xf0,
+		},
+	}
 	// Variant of the above
 	caliPol1b = PolicyRule{
 		Action: netlink.XFRM_POLICY_BLOCK,
@@ -117,6 +135,20 @@ var (
 			},
 		},
 	}
+	caliXFRMPolicy2Optional = netlink.XfrmPolicy{
+		Src: &workloadCIDR1,
+		Dir: netlink.XFRM_DIR_FWD,
+		Tmpls: []netlink.XfrmPolicyTmpl{
+			{
+				Optional: true,
+				Src:      hostIP1,
+				Dst:      hostIP2,
+				Reqid:    ReqID,
+				Mode:     netlink.XFRM_MODE_TUNNEL,
+				Proto:    netlink.XFRM_PROTO_ESP,
+			},
+		},
+	}
 	// Netlink version with a zero CIDR instead of a nil.
 	caliXFRMPolicy2b = netlink.XfrmPolicy{
 		Src: &workloadCIDR1,
@@ -153,17 +185,24 @@ var (
 	}
 )
 
-var _ = Describe("IpsecPolicyTable", func() {
+var _ = Describe("IpsecPolicyTable with IPsec enabled", func() {
 	var mockDataplane *mockIPSecDataplane
 	var polTable *PolicyTable
 
 	BeforeEach(func() {
 		mockDataplane = newMockIPSecDataplane()
-		polTable = NewPolicyTableWithShims(ReqID, mockDataplane.newNetlinkHandle, mockDataplane.sleep)
+		polTable = NewPolicyTableWithShims(
+			ReqID,
+			true,
+			false,
+			mockDataplane.newNetlinkHandle,
+			mockDataplane.sleep,
+			mockDataplane.timeNow,
+			mockDataplane.timeSince)
 	})
 
 	It("should be constructable", func() {
-		_ = NewPolicyTable(ReqID) // For coverage's sake.
+		_ = NewPolicyTable(ReqID, true, false) // For coverage's sake.
 	})
 
 	Context("with empty dataplane, no pending updates", func() {
@@ -449,10 +488,99 @@ var _ = Describe("IpsecPolicyTable", func() {
 	})
 })
 
+var _ = Describe("IpsecPolicyTable with IPsec disabled", func() {
+	var mockDataplane *mockIPSecDataplane
+	var polTable *PolicyTable
+
+	BeforeEach(func() {
+		mockDataplane = newMockIPSecDataplane()
+		polTable = NewPolicyTableWithShims(
+			ReqID,
+			false,
+			false,
+			mockDataplane.newNetlinkHandle,
+			mockDataplane.sleep,
+			mockDataplane.timeNow,
+			mockDataplane.timeSince)
+	})
+
+	Context("with empty dataplane, no pending updates", func() {
+		It("should resync and make no updates", func() {
+			polTable.Apply()
+			Expect(mockDataplane.ActivePolicies).To(BeEmpty())
+			Expect(mockDataplane.NumListCalls).To(Equal(1))
+		})
+		AfterEach(func() {
+			// None of these tests should trigger backoff.
+			Expect(mockDataplane.cumulativeSleep).To(BeZero())
+		})
+	})
+
+	Context("with some non-calico policy and an unexpected calico policy in the dataplane", func() {
+		BeforeEach(func() {
+			mockDataplane.addPolicy(&nonCaliPolicy1)
+			mockDataplane.addPolicy(&nonCaliPolicy2)
+			mockDataplane.addPolicy(&caliXFRMPolicy1)
+			mockDataplane.addPolicy(&caliXFRMPolicy2)
+			polTable.Apply()
+		})
+
+		It("should replace the calico policy with an optional version", func() {
+			Expect(mockDataplane.ActivePolicies).To(ConsistOf(nonCaliPolicy1, nonCaliPolicy2,
+				caliXFRMPolicy1Optional, caliXFRMPolicy2Optional))
+			Expect(mockDataplane.NumListCalls).To(Equal(1))
+		})
+		It("should only resync once", func() {
+			polTable.Apply()
+			Expect(mockDataplane.NumListCalls).To(Equal(1))
+		})
+
+		Context("after advancing time into the remove-out grace period", func() {
+			BeforeEach(func() {
+				mockDataplane.AdvanceTime(61 * time.Second)
+				polTable.Apply()
+			})
+
+			It("should remove the calico OUT policy ", func() {
+				Expect(mockDataplane.ActivePolicies).To(ConsistOf(nonCaliPolicy1, nonCaliPolicy2, caliXFRMPolicy2Optional))
+				Expect(mockDataplane.NumListCalls).To(Equal(2))
+			})
+			It("should only resync once per phase", func() {
+				polTable.Apply()
+				Expect(mockDataplane.NumListCalls).To(Equal(2))
+			})
+
+			Context("after advancing time into the remove-all grace period", func() {
+				BeforeEach(func() {
+					mockDataplane.AdvanceTime(61 * time.Second)
+					polTable.Apply()
+				})
+
+				It("should remove all calico policy ", func() {
+					Expect(mockDataplane.ActivePolicies).To(ConsistOf(nonCaliPolicy1, nonCaliPolicy2))
+					Expect(mockDataplane.NumListCalls).To(Equal(3))
+				})
+				It("should only resync once per phase", func() {
+					polTable.Apply()
+					Expect(mockDataplane.NumListCalls).To(Equal(3))
+				})
+			})
+		})
+	})
+
+	AfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			// Useful on failure.
+			polTable.DumpStateToLog()
+		}
+	})
+})
+
 type mockIPSecDataplane struct {
 	Errors testutils.ErrorProducer
 
 	netlinkHandleOpen bool
+	now               time.Time
 	cumulativeSleep   time.Duration
 
 	NumListCalls, NumUpdateCalls, NumDeleteCalls int
@@ -461,7 +589,18 @@ type mockIPSecDataplane struct {
 }
 
 func newMockIPSecDataplane() *mockIPSecDataplane {
-	return &mockIPSecDataplane{Errors: testutils.NewErrorProducer()}
+	return &mockIPSecDataplane{
+		Errors: testutils.NewErrorProducer(),
+		now:    theTime(), /* code under test uses Time.Zero() so we need a non-zero epoch */
+	}
+}
+
+func theTime() time.Time {
+	theTime, err := time.Parse("2006-01-02 15:04:05.000", "2018-07-16 16:33:33.123")
+	if err != nil {
+		panic(err)
+	}
+	return theTime
 }
 
 func (m *mockIPSecDataplane) addPolicy(pol *netlink.XfrmPolicy) {
@@ -482,6 +621,23 @@ func (m *mockIPSecDataplane) newNetlinkHandle() (NetlinkXFRMIface, error) {
 
 func (m *mockIPSecDataplane) sleep(duration time.Duration) {
 	m.cumulativeSleep += duration
+	m.AdvanceTime(duration)
+}
+
+func (m *mockIPSecDataplane) AdvanceTime(d time.Duration) {
+	m.now = m.now.Add(d)
+	logrus.Info("Advanced time to ", m.now)
+}
+
+func (m *mockIPSecDataplane) timeNow() time.Time {
+	logrus.Info("Time now: ", m.now)
+	return m.now
+}
+
+func (m *mockIPSecDataplane) timeSince(t time.Time) time.Duration {
+	d := m.now.Sub(t)
+	logrus.Info("Time since ", t, " = ", d)
+	return d
 }
 
 // NetlinkXFRMIface methods
