@@ -26,6 +26,7 @@ import (
 )
 
 func StartDataplaneDriver(configParams *config.Config,
+	licenseMonitor featureChecker,
 	healthAggregator *health.HealthAggregator,
 	cache *calc.LookupsCache,
 	configChangedRestartCallback func(),
@@ -42,3 +43,6 @@ func StartDataplaneDriver(configParams *config.Config,
 
 	return winDP, nil
 }
+
+// Windows doesn't currently require the license checker.
+type featureChecker interface{}
