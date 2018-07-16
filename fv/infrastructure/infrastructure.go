@@ -34,6 +34,8 @@ type DatastoreInfra interface {
 	// GetCalicoClient will return a client.Interface configured to access
 	// the datastore.
 	GetCalicoClient() client.Interface
+	// GetClusterGUID will return the cluster GUID.
+	GetClusterGUID() string
 	// SetExpectedIPIPTunnelAddr will set the Felix object's
 	// ExpectedIPIPTunnelAddr field, if we expect Felix to see that field being
 	// set after it has started up for the first time.

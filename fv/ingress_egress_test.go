@@ -17,12 +17,16 @@
 package fv_test
 
 import (
+	"errors"
+	"fmt"
 	"path/filepath"
 	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/felix/fv/metrics"
@@ -45,7 +49,9 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 	)
 
 	BeforeEach(func() {
-		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(infrastructure.DefaultTopologyOptions())
+		opts := infrastructure.DefaultTopologyOptions()
+		opts.EnableCloudWatchLogs()
+		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 
 		// Install a default profile that allows workloads with this profile to talk to each
 		// other, in the absence of any Policy.
@@ -91,6 +97,90 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 		Expect(w[2]).To(HaveConnectivityTo(w[0]))
 		Expect(w[0]).To(HaveConnectivityTo(w[1]))
 		Expect(w[0]).To(HaveConnectivityTo(w[2]))
+
+		// Expect flow logs that describe those 4 different flows starting and
+		// completing.  Note that each flow is reported twice, for egress from the
+		// source workload and for ingress to the destination workload.
+		//
+		// Timing-wise, there is an interplay between
+		//
+		// (a) when the conntrack state for a flow times out (120s)
+		//
+		// (b) how long after that Felix expires the flow (up to 10s)
+		//
+		// (c) when Felix decides to generate a round of flow logs (every 120s,
+		// but possibly offset from the previous timings).
+		//
+		// Therefore we could see 8 flow logs each saying that its flow both
+		// started and completed; or we could see 16 flow logs of which 8 say that
+		// the flow started, and the other 8 say that it completed.  The following
+		// code is written so as to allow for that variation.
+		//
+		// FIXME: This test currently fails, most of the time, because (1) we
+		// usually get the 16 flow logs case, where flow start and completion are
+		// reported separately, and (2) the completion flow logs also -
+		// incorrectly - report the flow as having started within the same time
+		// interval.
+		Eventually(func() error {
+			expectedKeys := map[string]bool{
+				"start-" + w[0].Name + "--" + w[1].Name + "--in":  true,
+				"start-" + w[0].Name + "--" + w[1].Name + "--out": true,
+				"start-" + w[0].Name + "--" + w[2].Name + "--in":  true,
+				"start-" + w[0].Name + "--" + w[2].Name + "--out": true,
+				"start-" + w[1].Name + "--" + w[0].Name + "--in":  true,
+				"start-" + w[1].Name + "--" + w[0].Name + "--out": true,
+				"start-" + w[2].Name + "--" + w[0].Name + "--in":  true,
+				"start-" + w[2].Name + "--" + w[0].Name + "--out": true,
+				"end-" + w[0].Name + "--" + w[1].Name + "--in":    true,
+				"end-" + w[0].Name + "--" + w[1].Name + "--out":   true,
+				"end-" + w[0].Name + "--" + w[2].Name + "--in":    true,
+				"end-" + w[0].Name + "--" + w[2].Name + "--out":   true,
+				"end-" + w[1].Name + "--" + w[0].Name + "--in":    true,
+				"end-" + w[1].Name + "--" + w[0].Name + "--out":   true,
+				"end-" + w[2].Name + "--" + w[0].Name + "--in":    true,
+				"end-" + w[2].Name + "--" + w[0].Name + "--out":   true,
+			}
+			cwlogs, err := felix.ReadCloudWatchLogs()
+			if err != nil {
+				return err
+			}
+			for _, cwlog := range cwlogs {
+				fl := &collector.FlowLog{}
+				fl.Deserialize(cwlog.Message)
+				if fl.FlowMeta.Action != collector.FlowLogActionAllow {
+					return errors.New("Unexpected non-allow flow log")
+				}
+				dir := "in"
+				if fl.Direction == collector.FlowLogDirectionOut {
+					dir = "out"
+				}
+				key := fl.SrcMeta.Name + "--" + fl.DstMeta.Name + "--" + dir
+				if fl.NumFlowsStarted == 1 {
+					if _, ok := expectedKeys["start-"+key]; ok {
+						// Expected flow log seen.
+						delete(expectedKeys, "start-"+key)
+						log.Info("Deleted start-" + key)
+					} else if flowCountingBugFixed {
+						// Unexpected flow log.
+						return errors.New(fmt.Sprintf("Unexpected flow log: %v", fl))
+					}
+				}
+				if fl.NumFlowsCompleted == 1 {
+					if _, ok := expectedKeys["end-"+key]; ok {
+						// Expected flow log seen.
+						delete(expectedKeys, "end-"+key)
+						log.Info("Deleted end-" + key)
+					} else {
+						// Unexpected flow log.
+						return errors.New(fmt.Sprintf("Unexpected flow log: %v", fl))
+					}
+				}
+			}
+			if len(expectedKeys) != 0 {
+				return errors.New(fmt.Sprintf("Expected flow logs not seen: %v", expectedKeys))
+			}
+			return nil
+		}, "300s", "15s").ShouldNot(HaveOccurred())
 	})
 
 	Context("with ingress-only restriction for workload 0", func() {
