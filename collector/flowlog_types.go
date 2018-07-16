@@ -217,10 +217,6 @@ func (f FlowStats) getFlowsCount() int {
 	return len(f.flowsRefsActive)
 }
 
-func (f FlowStats) wasInactive() bool {
-	return f.PacketsIn+f.PacketsOut+f.BytesIn+f.BytesOut == 0
-}
-
 type FlowLog struct {
 	FlowMeta
 	FlowStats

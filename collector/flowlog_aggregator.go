@@ -95,9 +95,6 @@ func (c *cloudWatchAggregator) Get() []*string {
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
 	for flowMeta, flowStats := range c.flowStore {
-		if flowStats.wasInactive() {
-			continue
-		}
 		flowLog := FlowLog{flowMeta, flowStats}.Serialize(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
 		resp = append(resp, &flowLog)
 		c.purge(flowMeta)
