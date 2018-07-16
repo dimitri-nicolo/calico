@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/tigera/nfnetlink"
+	"github.com/tigera/nfnetlink/nfnl"
 
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/jitter"
@@ -136,9 +137,9 @@ func (c *Collector) setupStatsDumping() {
 
 // getData returns a pointer to the data structure keyed off the supplied tuple.  If there
 // is no entry one is created.
-func (c *Collector) getData(tuple Tuple) *Data {
+func (c *Collector) getData(tuple Tuple, createIfMissing bool) *Data {
 	data, ok := c.epStats[tuple]
-	if !ok {
+	if !ok && createIfMissing {
 		// The entry does not exist. Go ahead and create a new one and add it to the map.
 		data = NewData(tuple, c.config.AgeTimeout)
 		c.epStats[tuple] = data
@@ -147,20 +148,43 @@ func (c *Collector) getData(tuple Tuple) *Data {
 }
 
 // applyConnTrackStatUpdate applies a stats update from a conn track poll.
+// If entryExpired is set then, this means that the update is for a recently
+// expired entry. One of the following will be done:
+// - If we already track the tuple, then the stats will be updated and will
+//   then be expired from epStats.
+// - If we don't track the tuple, this call will be a no-op as this update
+//   is just waiting for the conntrack entry to timeout.
 func (c *Collector) applyConnTrackStatUpdate(
-	tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int,
+	tuple Tuple, packets int, bytes int, reversePackets int, reverseBytes int, entryExpired bool,
 ) {
+	createIfMissing := true
+	if entryExpired {
+		createIfMissing = false
+	}
+
 	// Update the counters for the entry.  Since data is a pointer, we are updating the map
 	// entry in situ.
-	data := c.getData(tuple)
-	data.SetCounters(packets, bytes)
-	data.SetCountersReverse(reversePackets, reverseBytes)
+	data := c.getData(tuple, createIfMissing)
+
+	if entryExpired && data != nil {
+		// Try to report metrics first before trying to expire the data.
+		// This needs to be done in this order because if this is the
+		// first time we are seeing this connection then we'll have
+		// to report an update followed by expiring it signaling
+		// the completion.
+		c.reportMetrics(data)
+		c.expireData(data)
+	} else if data != nil {
+		data.SetCounters(packets, bytes)
+		data.SetCountersReverse(reversePackets, reverseBytes)
+	}
+
 }
 
 // applyNflogStatUpdate applies a stats update from an NFLOG.
 func (c *Collector) applyNflogStatUpdate(tuple Tuple, ruleID *calc.RuleID, srcEp, dstEp *calc.EndpointData, tierIdx, numPkts, numBytes int) {
 	//TODO: RLB: What happens if we get an NFLOG metric update while we *think* we have a connection up?
-	data := c.getData(tuple)
+	data := c.getData(tuple, true)
 	if srcEp != nil {
 		data.SetSourceEndpointData(srcEp)
 	}
@@ -260,9 +284,19 @@ func (c *Collector) handleCtEntry(ctEntry nfnetlink.CtEntry) {
 	// At this point either the source or destination IP address from the conntrack entry
 	// belongs to an endpoint i.e., the connection either begins or terminates locally.
 	tuple := extractTupleFromCtEntryTuple(ctTuple)
+
+	// In the case of TCP, check if we can expire the entry early. We try to expire
+	// entries early so that we don't send any spurious MetricUpdates for an expiring
+	// conntrack entry.
+	var entryExpired bool
+	if ctTuple.ProtoNum == nfnl.TCP_PROTO && ctEntry.ProtoInfo.State >= nfnl.TCP_CONNTRACK_TIME_WAIT {
+		entryExpired = true
+	}
+
 	c.applyConnTrackStatUpdate(tuple,
 		ctEntry.OriginalCounters.Packets, ctEntry.OriginalCounters.Bytes,
-		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes)
+		ctEntry.ReplyCounters.Packets, ctEntry.ReplyCounters.Bytes,
+		entryExpired)
 	return
 }
 
