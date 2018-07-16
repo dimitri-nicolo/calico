@@ -335,7 +335,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: aa1056dcd39412bbbd1b1bcc4ab70b01d79fcc0e
+  version: 925e0946ac5c49f90d7d227eb3752a812023053e
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:

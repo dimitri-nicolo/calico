@@ -182,7 +182,7 @@ func Run(configFile string) {
 	var configParams *config.Config
 	var typhaAddr string
 	var numClientsCreated int
-	var licenseMonitor *monitor.LicenseMonitor
+	var licenseMonitor monitor.LicenseMonitor
 configRetry:
 	for {
 		if numClientsCreated > 60 {
@@ -331,6 +331,10 @@ configRetry:
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
+	if configParams.DebugUseShortPollIntervals {
+		log.Info("Using short license poll interval for FV")
+		licenseMonitor.SetPollInterval(1 * time.Second)
+	}
 	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(
 		configParams,
 		licenseMonitor,
@@ -552,10 +556,10 @@ configRetry:
 	// - license feature updates (triggers OnFeaturesChanged and hence a restart)
 	// - license expiry (triggers a restart)
 	// - license renewal with no changes (no change).
-	licenseMonitor.OnFeaturesChanged = func() {
+	licenseMonitor.SetFeaturesChangedCallback(func() {
 		log.Info("Active license changed, restarting...")
 		failureReportChan <- reasonLicenseConfigChanged
-	}
+	})
 	doneInitialCheckC := make(chan struct{})
 	go func() {
 		// The goroutine restarts Felix if the license expires.  Individual features are responsible for any grace
@@ -563,7 +567,12 @@ configRetry:
 		// start up with an invalid license then we won't enable the features in the first place.
 		seenLicenseOK := false
 		doneInitialCheck := false
-		ticker := jitter.NewTicker(60*time.Second, 10*time.Second)
+		pollInterval := 30 * time.Second
+		if configParams.DebugUseShortPollIntervals {
+			log.Info("Using short license poll interval for test purposes")
+			pollInterval = 2 * time.Second
+		}
+		ticker := jitter.NewTicker(pollInterval, pollInterval/10)
 		for {
 			currentStatus := licenseMonitor.GetLicenseStatus()
 			if seenLicenseOK && (currentStatus == client.Expired || currentStatus == client.NoLicenseLoaded) {

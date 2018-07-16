@@ -156,6 +156,7 @@ type Config struct {
 	HealthAggregator   *health.HealthAggregator
 
 	DebugSimulateDataplaneHangAfter time.Duration
+	DebugUseShortPollIntervals      bool
 
 	FelixHostname string
 	NodeIP        net.IP
@@ -464,7 +465,7 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 	// We always create the IPsec policy table (the component that manipulates the IPsec dataplane).  That ensures
 	// that we clean up our old policies if IPsec is disabled.
 	ipsecEnabled := config.IPSecPSK != "" && config.IPSecESPProposal != "" && config.IPSecIKEProposal != "" && config.NodeIP != nil
-	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID, ipsecEnabled)
+	dp.ipSecPolTable = ipsec.NewPolicyTable(ipsec.ReqID, ipsecEnabled, config.DebugUseShortPollIntervals)
 	if ipsecEnabled {
 		// Set up IPsec.
 

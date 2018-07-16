@@ -231,6 +231,7 @@ type Config struct {
 	DebugDisableLogDropping         bool          `config:"bool;false"`
 	DebugSimulateCalcGraphHangAfter time.Duration `config:"seconds;0"`
 	DebugSimulateDataplaneHangAfter time.Duration `config:"seconds;0"`
+	DebugUseShortPollIntervals      bool          `config:"bool;false"`
 
 	// IPSecMode controls which mode IPSec is operating on.
 	// Default value means IPSec is not enabled.

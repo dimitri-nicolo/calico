@@ -601,7 +601,7 @@ func actualSatisfyExpected(actual, expected []string) string {
 			}
 		} else {
 			// expected got a packet loss string.
-			Expect(strings.Contains(actual[i], utils.PacketTotalReqPrefix)).To(BeTrue())
+			Expect(actual[i]).To(ContainSubstring(utils.PacketTotalReqPrefix))
 
 			// Check packet loss.
 			actualPercent, actualNumber := utils.GetPacketLossFromStat(actual[i])

@@ -74,10 +74,11 @@ func ipNetPtrToCIDR(ipNet *net.IPNet) (c ip.V4CIDR) {
 }
 
 type PolicyTable struct {
-	ourReqID       int
-	ipsecEnabled   bool
-	firstApplyTime time.Time
-	gracePhase     GracefulShutdownPhase
+	ourReqID          int
+	ipsecEnabled      bool
+	firstApplyTime    time.Time
+	gracePhase        GracefulShutdownPhase
+	useShortGraceTime bool
 
 	resyncRequired bool
 
@@ -93,10 +94,11 @@ type PolicyTable struct {
 	sleep func(time.Duration)
 }
 
-func NewPolicyTable(ourReqID int, ipsecEnabled bool) *PolicyTable {
+func NewPolicyTable(ourReqID int, ipsecEnabled bool, shortGraceTime bool) *PolicyTable {
 	return NewPolicyTableWithShims(
 		ourReqID,
 		ipsecEnabled,
+		shortGraceTime,
 		newRealNetlinkHandle,
 		time.Sleep,
 	)
@@ -106,7 +108,7 @@ func newRealNetlinkHandle() (NetlinkXFRMIface, error) {
 	return netlink.NewHandle(syscall.NETLINK_XFRM)
 }
 
-func NewPolicyTableWithShims(ourReqID int, ipsecEnabled bool, nlHandleFactory func() (NetlinkXFRMIface, error), sleep func(time.Duration)) *PolicyTable {
+func NewPolicyTableWithShims(ourReqID int, ipsecEnabled bool, shortGraceTime bool, nlHandleFactory func() (NetlinkXFRMIface, error), sleep func(time.Duration)) *PolicyTable {
 	return &PolicyTable{
 		ourReqID:           ourReqID,
 		ipsecEnabled:       ipsecEnabled,
@@ -116,6 +118,7 @@ func NewPolicyTableWithShims(ourReqID int, ipsecEnabled bool, nlHandleFactory fu
 		selectorToRule:     map[PolicySelector]*PolicyRule{},
 		nlHandleFactory:    nlHandleFactory,
 		sleep:              sleep,
+		useShortGraceTime:  shortGraceTime,
 	}
 }
 
@@ -192,7 +195,7 @@ func (p *PolicyTable) Apply() {
 		log.WithFields(log.Fields{
 			"oldPhase": p.gracePhase,
 			"newPhase": gState,
-		}).Info("Entering new phase of graceful IPsec shutdown")
+		}).Info("IPsec disabled, entering new cleanup phase")
 		p.resyncRequired = true
 		p.gracePhase = gState
 	}
@@ -258,10 +261,21 @@ func (p *PolicyTable) CalculateGracefulShutdownPhase() GracefulShutdownPhase {
 		return GraceNone
 	}
 
-	if time.Since(p.firstApplyTime) < time.Minute {
+	// The license polling interval is 30s by default so we give 60s of grace where we switch all our policy to
+	// optional.  After the 60s, we remove all the outbound policy.
+	allOptionalGraceTime := 60 * time.Second
+	// Then, after another 60s we remove all the policy.
+	removeOutboundGraceTime := 120 * time.Second
+	if p.useShortGraceTime {
+		// For FV testing, use a shorter grace period.
+		allOptionalGraceTime = 5 * time.Second
+		removeOutboundGraceTime = 10 * time.Second
+	}
+
+	if time.Since(p.firstApplyTime) < allOptionalGraceTime {
 		return GraceAllOptional
 	}
-	if time.Since(p.firstApplyTime) < 2*time.Minute {
+	if time.Since(p.firstApplyTime) < removeOutboundGraceTime {
 		return GraceRemoveOutbound
 	}
 	return GraceRemoveAll
