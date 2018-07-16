@@ -25,6 +25,7 @@ type LicenseMonitor interface {
 	GetLicenseStatus() lclient.LicenseStatus
 	MonitorForever(context.Context) error
 	RefreshLicense(context.Context) error
+	SetPollInterval(duration time.Duration)
 	SetFeaturesChangedCallback(func())
 }
 
@@ -59,6 +60,10 @@ func (l *licenseMonitor) GetLicenseStatus() lclient.LicenseStatus {
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
 	return l.activeLicense.Validate()
+}
+
+func (l *licenseMonitor) SetPollInterval(d time.Duration) {
+	l.PollInterval = d
 }
 
 func (l *licenseMonitor) SetFeaturesChangedCallback(f func()) {
