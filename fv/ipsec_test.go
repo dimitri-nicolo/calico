@@ -697,9 +697,9 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			}
 
 			cc.ResetExpectations()
-			cc.ExpectLoss(w[0], w[1], 30*time.Second, -1, 0)
-			cc.ExpectLoss(hostW[0], w[1], 30*time.Second, -1, 0)
-			cc.ExpectLoss(w[0], hostW[1], 30*time.Second, -1, 0)
+			cc.ExpectLoss(w[0], w[1], 20*time.Second, 2, -1)
+			cc.ExpectLoss(hostW[0], w[1], 20*time.Second, 2, -1)
+			cc.ExpectLoss(w[0], hostW[1], 20*time.Second, 2, -1)
 			cc.CheckConnectivity()
 
 			wg.Wait()
