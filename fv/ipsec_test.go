@@ -691,10 +691,15 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 				disableIPSec(client)
 			}()
 
+			// Since we're about to drop a lot of traffic, disable tcpdump logging.
+			for _, t := range tcpdumps {
+				t.SetLogEnabled(false)
+			}
+
 			cc.ResetExpectations()
-			cc.ExpectLoss(w[0], w[1], 30*time.Second, -1, 20)
-			cc.ExpectLoss(hostW[0], w[1], 30*time.Second, -1, 20)
-			cc.ExpectLoss(w[0], hostW[1], 30*time.Second, -1, 20)
+			cc.ExpectLoss(w[0], w[1], 30*time.Second, -1, 0)
+			cc.ExpectLoss(hostW[0], w[1], 30*time.Second, -1, 0)
+			cc.ExpectLoss(w[0], hostW[1], 30*time.Second, -1, 0)
 			cc.CheckConnectivity()
 
 			wg.Wait()

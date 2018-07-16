@@ -24,6 +24,7 @@ import (
 
 func AttachTCPDump(c *Container, iface string) *TCPDump {
 	t := &TCPDump{
+		logEnabled:       true,
 		containerID:      c.GetID(),
 		containerName:    c.Name,
 		iface:            iface,
@@ -45,6 +46,7 @@ type tcpDumpMatcher struct {
 type TCPDump struct {
 	lock sync.Mutex
 
+	logEnabled       bool
 	containerID      string
 	containerName    string
 	iface            string
@@ -53,6 +55,12 @@ type TCPDump struct {
 	listeningStarted chan struct{}
 
 	matchers map[string]*tcpDumpMatcher
+}
+
+func (t *TCPDump) SetLogEnabled(logEnabled bool) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.logEnabled = logEnabled
 }
 
 func (t *TCPDump) AddMatcher(name string, s stringMatcher) {
@@ -114,8 +122,14 @@ func (t *TCPDump) readStdout() {
 	s := bufio.NewScanner(t.out)
 	for s.Scan() {
 		line := s.Text()
-		logrus.Infof("[%s] %s", t.containerName, line)
 
+		t.lock.Lock()
+		logEnabled := t.logEnabled
+		t.lock.Unlock()
+
+		if logEnabled {
+			logrus.Infof("[%s] %s", t.containerName, line)
+		}
 		t.lock.Lock()
 		for _, m := range t.matchers {
 			if m.regex.MatchString(line) {
