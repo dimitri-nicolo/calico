@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"context"
 	"time"
 
 	"github.com/gavv/monotime"
@@ -25,7 +26,8 @@ type FlowLogAggregator interface {
 }
 
 type FlowLogDispatcher interface {
-	Dispatch([]*string) error
+	Initialize(context.Context) error
+	Dispatch(context.Context, []*string) error
 }
 
 // cloudWatchReporter implements the MetricsReporter interface.
@@ -34,6 +36,11 @@ type cloudWatchReporter struct {
 	aggregators   []FlowLogAggregator
 	flushInterval time.Duration
 	flushTicker   *jitter.Ticker
+
+	// Combined status based on CloudWatch resources being ready to use.
+	// Resources checked and combined are Log Group and Log Stream and sequence
+	// token number.
+	cloudWatchStatus bool
 
 	healthAggregator *health.HealthAggregator
 
@@ -44,6 +51,8 @@ type cloudWatchReporter struct {
 const (
 	healthName     = "cloud_watch_reporter"
 	healthInterval = 10 * time.Second
+
+	cwStatusInterval = 10 * time.Second
 )
 
 // NewCloudWatchReporter constructs a FlowLogs MetricsReporter using
@@ -66,7 +75,8 @@ func (c *cloudWatchReporter) AddAggregator(agg FlowLogAggregator) {
 
 func (c *cloudWatchReporter) Start() {
 	log.Infof("Starting CloudWatchReporter")
-	go c.run()
+	ctx := context.Background()
+	go c.run(ctx)
 }
 
 func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
@@ -84,14 +94,10 @@ func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
 	return nil
 }
 
-func (c *cloudWatchReporter) run() {
+func (c *cloudWatchReporter) run(ctx context.Context) {
+	cwStatusTicks := time.NewTicker(cwStatusInterval).C
 	healthTicks := time.NewTicker(healthInterval).C
 	c.reportHealth()
-	// TODO: Karthik, as well as reporting health initially (above) and periodically
-	// (below), you can also call reportHealth() when you know that the situation has
-	// just changed; e.g. when we know we've just connected to CloudWatch.  For an
-	// example of such extra calls, look for 'reportHealth' in
-	// calc/async_calc_graph.go.
 	for {
 		// TODO(doublek): Stop and flush cases.
 		select {
@@ -102,9 +108,14 @@ func (c *cloudWatchReporter) run() {
 				fl := agg.Get()
 				if len(fl) > 0 {
 					log.Debugf("Dispatching log buffer of size: %d", len(fl))
-					c.dispatcher.Dispatch(fl)
+					c.dispatcher.Dispatch(ctx, fl)
 				}
 			}
+		case <-cwStatusTicks:
+			// Periodically check CloudWatch resources' status. This is done as a via
+			// a separate event so that periodic checking happens even if Felix health
+			// is disabled.
+			c.canPublishFlowLogs(ctx)
 		case <-healthTicks:
 			// Periodically report current health.
 			c.reportHealth()
@@ -112,17 +123,22 @@ func (c *cloudWatchReporter) run() {
 	}
 }
 
-func (c *cloudWatchReporter) canPublishFlowLogs() bool {
-	// TODO: Karthik, here is where you implement whatever condition is wanted for
-	// "are we in the right (ready) state with respect to CloudWatch.
-	return true
+func (c *cloudWatchReporter) canPublishFlowLogs(ctx context.Context) {
+	err := c.dispatcher.Initialize(ctx)
+	if err != nil {
+		log.WithError(err).Error("Error when verifying/creating CloudWatch resources.")
+		c.cloudWatchStatus = false
+		return
+	}
+	c.cloudWatchStatus = true
+	return
 }
 
 func (c *cloudWatchReporter) reportHealth() {
 	if c.healthAggregator != nil {
 		c.healthAggregator.Report(healthName, &health.HealthReport{
 			Live:  true,
-			Ready: c.canPublishFlowLogs(),
+			Ready: c.cloudWatchStatus,
 		})
 	}
 }
