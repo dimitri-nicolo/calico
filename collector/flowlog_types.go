@@ -157,6 +157,7 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	switch mu.updateType {
 	case UpdateTypeReport:
 		flowsStartedRefs.Add(mu.tuple)
+		flowsRefsActive.Add(mu.tuple)
 	case UpdateTypeExpire:
 		flowsCompletedRefs.Add(mu.tuple)
 	}
@@ -201,8 +202,12 @@ func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 	f.BytesOut += mu.outMetric.deltaBytes
 }
 
+// FlowStats are stats assocated with a given FlowMeta
+// These stats are to be refreshed everytime the FlowLog
+// {FlowMeta->FlowStats} is published so as to account
+// for correct no. of started flows in a given aggregation
+// interval.
 func (f FlowStats) reset() FlowStats {
-	// Reset Started and Completed Refs sets
 	f.flowsStartedRefs = NewTupleSet()
 	f.flowsCompletedRefs = NewTupleSet()
 	f.PacketsIn = 0
