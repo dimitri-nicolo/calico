@@ -33,7 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	"github.com/tigera/licensing/client"
+	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/monitor"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -182,7 +182,6 @@ func Run(configFile string) {
 	var configParams *config.Config
 	var typhaAddr string
 	var numClientsCreated int
-	var licenseMonitor monitor.LicenseMonitor
 configRetry:
 	for {
 		if numClientsCreated > 60 {
@@ -256,14 +255,6 @@ configRetry:
 			}
 			configParams.UpdateFrom(globalConfig, config.DatastoreGlobal)
 			configParams.UpdateFrom(hostConfig, config.DatastorePerHost)
-
-			licenseMonitor = monitor.New(backendClient)
-			lCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			err = licenseMonitor.RefreshLicense(lCtx)
-			cancel()
-			if err != nil {
-				log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
-			}
 			break
 		}
 		configParams.Validate()
@@ -339,10 +330,23 @@ configRetry:
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
+	// Create the license monitor, which we'll use to monitor the state of the license.
+	licenseMonitor := monitor.New(backendClient)
+	lCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	err := licenseMonitor.RefreshLicense(lCtx)
+	cancel()
+	if err != nil {
+		log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
+	}
 	if configParams.DebugUseShortPollIntervals {
 		log.Info("Using short license poll interval for FV")
 		licenseMonitor.SetPollInterval(1 * time.Second)
 	}
+	// Get the license status before the dataplane driver does its checks so that we can spot if the license status
+	// changes below.  (If we did this read after the dataplane driver, we might read that the license was expired
+	// after the dataplane driver reads that it was valid and we'd miss the transition.)
+	licenseStatus := licenseMonitor.GetLicenseStatus()
+
 	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(
 		configParams,
 		licenseMonitor,
@@ -560,48 +564,31 @@ configRetry:
 	logutils.RegisterProfilingSignalHandlers(configParams)
 
 	// Monitor the license resource.  This allows us to spot
-	// - license creation after we start up (triggers OnFeaturesChanged and hence a restart)
+	// - license creation after we start up (triggers OnLicenseStatusChangedCallback and hence a restart)
 	// - license feature updates (triggers OnFeaturesChanged and hence a restart)
-	// - license expiry (triggers a restart)
-	// - license renewal with no changes (no change).
+	// - license expiry (triggers OnLicenseStatusChangedCallback and hence a restart)
+	// License renewal with no feature changes doesn't trigger either callback.
 	licenseMonitor.SetFeaturesChangedCallback(func() {
 		log.Info("Active license changed, restarting...")
 		failureReportChan <- reasonLicenseConfigChanged
 	})
-	doneInitialCheckC := make(chan struct{})
-	go func() {
-		// The goroutine restarts Felix if the license expires.  Individual features are responsible for any grace
-		// period logic.  We only restart if we've seen the license in a good state and then it becomes invalid; if we
-		// start up with an invalid license then we won't enable the features in the first place.
-		seenLicenseOK := false
-		doneInitialCheck := false
-		pollInterval := 30 * time.Second
-		if configParams.DebugUseShortPollIntervals {
-			log.Info("Using short license poll interval for test purposes")
-			pollInterval = 2 * time.Second
+
+	licenseMonitor.SetLicenseStatusChangedCallback(func(newLicenseStatus lclient.LicenseStatus) {
+		if licenseStatus != lclient.Unknown && licenseStatus != newLicenseStatus {
+			// Whenever we transition between Valid/InGracePeriod/Expired/NoLicense we need to restart to
+			// enable/disable features.
+			log.WithFields(log.Fields{
+				"oldStatus": licenseStatus,
+				"newStatus": newLicenseStatus,
+			}).Info("License status changed.  Restarting to enable/disable features.")
+			failureReportChan <- reasonLicenseConfigChanged
 		}
-		ticker := jitter.NewTicker(pollInterval, pollInterval/10)
-		for {
-			currentStatus := licenseMonitor.GetLicenseStatus()
-			if seenLicenseOK && (currentStatus == client.Expired || currentStatus == client.NoLicenseLoaded) {
-				log.Warn("License has expired, please contact Tigera support.")
-				failureReportChan <- reasonLicenseConfigChanged
-				return
-			}
-			if !seenLicenseOK && currentStatus == client.Valid || currentStatus == client.InGracePeriod {
-				log.Debug("License is valid or in grace period.")
-				seenLicenseOK = true
-			}
-			if !doneInitialCheck {
-				close(doneInitialCheckC)
-				doneInitialCheck = true
-			}
-			<-ticker.C
-		}
-	}()
-	// Avoid a very unlikely window where the license starts valid but then goes invalid before the first poll in the
-	// goroutine above.
-	<-doneInitialCheckC
+
+		licenseStatus = newLicenseStatus
+	})
+
+	// Start the license monitor, which will trigger the callback above at start of day and then whenever the license
+	// status changes.
 	go licenseMonitor.MonitorForever(context.Background())
 
 	// If CloudWatch node health reporting is enabled then start a goroutine to monitor
