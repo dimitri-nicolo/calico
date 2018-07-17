@@ -25,6 +25,8 @@ type LicenseMonitor interface {
 	GetLicenseStatus() lclient.LicenseStatus
 	MonitorForever(context.Context) error
 	RefreshLicense(context.Context) error
+	SetPollInterval(duration time.Duration)
+	SetFeaturesChangedCallback(func())
 }
 
 // licenseMonitor uses a libcalico-go (backend) client to monitor the status of the active license.
@@ -58,6 +60,14 @@ func (l *licenseMonitor) GetLicenseStatus() lclient.LicenseStatus {
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
 	return l.activeLicense.Validate()
+}
+
+func (l *licenseMonitor) SetPollInterval(d time.Duration) {
+	l.PollInterval = d
+}
+
+func (l *licenseMonitor) SetFeaturesChangedCallback(f func()) {
+	l.OnFeaturesChanged = f
 }
 
 func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
