@@ -181,7 +181,8 @@ func (e ErrExpiredButWithinGracePeriod) Error() string {
 type LicenseStatus int
 
 const (
-	Valid LicenseStatus = iota
+	Unknown LicenseStatus = iota
+	Valid
 	InGracePeriod
 	Expired
 	NoLicenseLoaded
