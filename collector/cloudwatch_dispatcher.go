@@ -60,13 +60,8 @@ func NewCloudWatchDispatcher(
 		logStreamName: logStreamName,
 		retentionDays: retentionDays,
 	}
-
 	ctx := context.Background()
-	err := cwd.Initialize(ctx)
-	if err != nil {
-		log.WithError(err).Fatal("Could not initialize sequence token")
-		return nil
-	}
+	cwd.Initialize(ctx)
 	return cwd
 }
 
@@ -315,7 +310,7 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogGroup(ctx context.Context) error
 		}
 		time.Sleep(cwRetryWaitInterval)
 	}
-	return nil
+	return err
 }
 
 func isAWSError(err error, codes ...string) bool {
