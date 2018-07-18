@@ -23,8 +23,8 @@ const (
 	FlowLogActionAllow FlowLogAction = "allow"
 	FlowLogActionDeny  FlowLogAction = "deny"
 
-	FlowLogDirectionIn  FlowLogDirection = "in"
-	FlowLogDirectionOut FlowLogDirection = "out"
+	FlowLogReporterSrc FlowLogReporter = "src"
+	FlowLogReporterDst FlowLogReporter = "dst"
 
 	FlowLogEndpointTypeWep FlowLogEndpointType = "wep"
 	FlowLogEndpointTypeHep FlowLogEndpointType = "hep"
@@ -135,7 +135,7 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 }
 
 // getFlowLogActionAndDirFromRuleID converts the action to a string value.
-func getFlowLogActionAndDirFromRuleID(r *calc.RuleID) (fla FlowLogAction, fld FlowLogDirection) {
+func getFlowLogActionAndDirFromRuleID(r *calc.RuleID) (fla FlowLogAction, flr FlowLogReporter) {
 	switch r.Action {
 	case rules.RuleActionDeny:
 		fla = FlowLogActionDeny
@@ -144,9 +144,9 @@ func getFlowLogActionAndDirFromRuleID(r *calc.RuleID) (fla FlowLogAction, fld Fl
 	}
 	switch r.Direction {
 	case rules.RuleDirIngress:
-		fld = FlowLogDirectionIn
+		flr = FlowLogReporterDst
 	case rules.RuleDirEgress:
-		fld = FlowLogDirectionOut
+		flr = FlowLogReporterSrc
 	}
 	return
 }
