@@ -32,12 +32,22 @@ const (
 // ResourceType groups together the watch and conversion information for a
 // specific resource type.
 type ResourceType struct {
-	// ListInterface specifies the resource type to watch\.
+	// ListInterface specifies the resource type to watch.
 	ListInterface model.ListInterface
 
 	// UpdateProcessor converts the raw KVPairs returned from the datastore into the appropriate
 	// KVPairs required for the syncer.  This is optional.
 	UpdateProcessor SyncerUpdateProcessor
+
+	// SendDeletesOnConnFail will send deletes for all resources (and therefore do a full resync) if
+	// the connection fails at any point.
+	SendDeletesOnConnFail bool
+
+	// Client identifier. If using a single client syncer, this should be blank. Otherwise this refers
+	// to the named client in the supplied map of clients. If a client is not in the supplied map, then
+	// the corresponding watcher will not be created (i.e. there will be no updates from that resource
+	// type).
+	ClientID string
 }
 
 // Error indicating a problem with a watcher communicating with the backend.
@@ -71,13 +81,25 @@ type SyncerUpdateProcessor interface {
 
 // New creates a new multiple Watcher-backed api.Syncer.
 func New(client api.Client, resourceTypes []ResourceType, callbacks api.SyncerCallbacks) api.Syncer {
+	return NewMultiClient(map[string]api.Client{"": client}, resourceTypes, callbacks)
+}
+
+// NewMultiClient creates a new multiple Watcher-backed api.Syncer with multiple backing clients.
+func NewMultiClient(clients map[string]api.Client, resourceTypes []ResourceType, callbacks api.SyncerCallbacks) api.Syncer {
 	rs := &watcherSyncer{
-		watcherCaches: make([]*watcherCache, len(resourceTypes)),
+		watcherCaches: make([]*watcherCache, 0, len(resourceTypes)),
 		results:       make(chan interface{}, 2000),
 		callbacks:     callbacks,
 	}
-	for i, r := range resourceTypes {
-		rs.watcherCaches[i] = newWatcherCache(client, r, rs.results)
+	for _, r := range resourceTypes {
+		if client, ok := clients[r.ClientID]; ok {
+			rs.watcherCaches = append(rs.watcherCaches, newWatcherCache(client, r, rs.results))
+		} else {
+			log.WithFields(log.Fields{
+				"ClientID":      r.ClientID,
+				"ListInterface": r.ListInterface,
+			}).Debug("Skipping syncer resource because no client has been specified that matches the associated clientID")
+		}
 	}
 	return rs
 }
