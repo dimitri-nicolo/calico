@@ -26,7 +26,7 @@ type LicenseMonitor interface {
 	RefreshLicense(context.Context) error
 	SetPollInterval(duration time.Duration)
 	SetFeaturesChangedCallback(func())
-	SetLicenseStatusChangedCallback(f func(newLicenseStatus lclient.LicenseStatus))
+	SetStatusChangedCallback(f func(newLicenseStatus lclient.LicenseStatus))
 }
 
 type bapiClient interface {
@@ -110,7 +110,7 @@ func (l *licenseMonitor) SetFeaturesChangedCallback(f func()) {
 
 // SetLicenseStatusChangedCallback sets a callback that will be called whenever the license transitions to a new
 // state.  Should be called before the monitoring loop is started.
-func (l *licenseMonitor) SetLicenseStatusChangedCallback(f func(newLicenseStatus lclient.LicenseStatus)) {
+func (l *licenseMonitor) SetStatusChangedCallback(f func(newLicenseStatus lclient.LicenseStatus)) {
 	l.OnLicenseStatusChanged = f
 }
 

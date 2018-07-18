@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"time"
-	"errors"
 	"gopkg.in/square/go-jose.v2/jwt"
 	log "github.com/sirupsen/logrus"
 	"sync"
@@ -41,7 +40,7 @@ func TestMonitorLoop(t *testing.T) {
 	// license transition timer.
 	m.SetPollInterval(11 * time.Minute)
 	defer h.cancel()
-	h.license = "good"
+	h.SetLicense("good", h.Now().Add(30*time.Minute))
 
 	go m.MonitorForever(h.ctx)
 
@@ -72,6 +71,19 @@ func TestMonitorLoop(t *testing.T) {
 	Consistently(h.GetSignalledLicenseStatus, "100ms", "10ms").Should(Equal(lclient.InGracePeriod))
 	h.AdvanceTime(1 * time.Hour)
 	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.Expired))
+
+	// Update the license and we should go back to valid again...
+	h.SetLicense("good2", h.Now().Add(30*time.Minute))
+	h.AdvanceTime(12 * time.Minute)
+	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.Valid))
+
+	// Then jump past 30 minutes...
+	numPops = h.AdvanceTime(31 * time.Minute)
+	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.InGracePeriod))
+
+	// Then jump past 24 hours...
+	numPops = h.AdvanceTime(24 * time.Hour)
+	Eventually(h.GetSignalledLicenseStatus).Should(Equal(lclient.Expired))
 }
 
 func TestRefreshLicense(t *testing.T) {
@@ -79,7 +91,7 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
-		h.license = "good"
+		h.SetLicense("good", h.Now().Add(30*time.Minute))
 
 		m.RefreshLicense(h.ctx)
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
@@ -96,19 +108,21 @@ func TestRefreshLicense(t *testing.T) {
 		Expect(h.OnFeaturesChangedCalled).To(BeFalse(), "expected feature change not to be signalled")
 
 		t.Log("After updating license with new features")
-		h.license = "good2" // Need to make some tweak to avoid "raw license hasn't changed" optimisation.
+		// Need to make some tweak to avoid "raw license hasn't changed" optimisation.
+		h.SetLicense("good2", h.Now().Add(30*time.Minute))
 		h.allowedFeatures = []string{"some", "new", "features"}
 		m.RefreshLicense(h.ctx)
 		Expect(h.OnFeaturesChangedCalled).To(BeTrue(), "expected new features to be signalled")
 
 		t.Log("Changing the license without changing the features")
-		h.license = "good" // Need to make some tweak to avoid "raw license hasn't changed" optimisation.
+		// Need to make some tweak to avoid "raw license hasn't changed" optimisation.
+		h.SetLicense("good", h.Now().Add(30*time.Minute))
 		h.OnFeaturesChangedCalled = false
 		m.RefreshLicense(h.ctx)
 		Expect(h.OnFeaturesChangedCalled).To(BeFalse(), "expected feature change not to be signalled")
 
 		t.Log("changing to a grace-period license")
-		h.license = "in-grace"
+		h.SetLicense("in-grace", h.Now().Add(-1*time.Minute))
 		m.RefreshLicense(h.ctx)
 		Expect(h.OnFeaturesChangedCalled).To(BeFalse(), "expected feature change not to be signalled")
 		Expect(m.GetLicenseStatus()).To(Equal(lclient.InGracePeriod))
@@ -117,7 +131,7 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
-		h.license = "in-grace"
+		h.SetLicense("in-grace", h.Now().Add(-1*time.Minute))
 
 		m.RefreshLicense(h.ctx)
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
@@ -130,7 +144,7 @@ func TestRefreshLicense(t *testing.T) {
 		RegisterTestingT(t)
 		m, h := setUpMonitorAndMocks()
 		defer h.cancel()
-		h.license = "expired"
+		h.SetLicense("expired", h.Now().Add(-25*time.Hour))
 
 		m.RefreshLicense(h.ctx)
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
@@ -161,7 +175,7 @@ func setUpMonitorAndMocks() (*licenseMonitor, *harness) {
 	}
 	m.decodeLicense = h.decodeMockLicense
 	m.SetFeaturesChangedCallback(h.OnFeaturesChanged)
-	m.SetLicenseStatusChangedCallback(h.OnLicenseStateChanged)
+	m.SetStatusChangedCallback(h.OnLicenseStateChanged)
 	m.PollInterval = 10 * time.Second
 	return m, h
 }
@@ -181,10 +195,24 @@ type harness struct {
 }
 
 type mockBapiClient struct {
-	license string
+	lock sync.Mutex
+
+	license     string
+	licenseTime time.Time
+}
+
+func (m *mockBapiClient) SetLicense(l string, licenseTime time.Time) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.license = l
+	m.licenseTime = licenseTime
 }
 
 func (m *mockBapiClient) Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	return &model.KVPair{Value: &v3.LicenseKey{Spec: v3.LicenseKeySpec{Token: m.license}}}, nil
 }
 
@@ -208,51 +236,29 @@ func (h *harness) GetSignalledLicenseStatus() lclient.LicenseStatus {
 
 func (h *harness) decodeMockLicense(lic v3.LicenseKey) (lclient.LicenseClaims, error) {
 	log.WithField("raw", lic).Debug("(Mock) decoding license")
-	switch lic.Spec.Token {
-	case "good", "good2":
-		log.Debug("Returning good license")
-		return lclient.LicenseClaims{
-			Features: h.allowedFeatures,
-			Claims: jwt.Claims{
-				Expiry: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
-			},
-			GracePeriod: 1,
-		}, nil
-	case "in-grace":
-		log.Debug("Returning grace period license")
-		return lclient.LicenseClaims{
-			Features: h.allowedFeatures,
-			Claims: jwt.Claims{
-				Expiry: jwt.NewNumericDate(time.Now().Add(-30 * time.Minute)),
-			},
-			GracePeriod: 1,
-		}, nil
-	case "expired":
-		log.Debug("Returning expired license")
-		return lclient.LicenseClaims{
-			Features: h.allowedFeatures,
-			Claims: jwt.Claims{
-				Expiry: jwt.NewNumericDate(time.Now().Add(-30 * time.Hour)),
-			},
-			GracePeriod: 1,
-		}, nil
-	}
-	return lclient.LicenseClaims{}, errors.New("bad license")
+
+	return lclient.LicenseClaims{
+		Features: h.allowedFeatures,
+		Claims: jwt.Claims{
+			Expiry: jwt.NewNumericDate(h.licenseTime),
+		},
+		GracePeriod: 1,
+	}, nil
 }
 
 type mockTime struct {
-	lock sync.Mutex
+	lock       sync.Mutex
 	now        time.Time
 	timerQueue []*queueEntry
 }
 
 type queueEntry struct {
-	PopTime time.Time
-	Timer   *time.Timer
-	Ticker  *jitter.Ticker
+	PopTime  time.Time
+	Timer    *time.Timer
+	Ticker   *jitter.Ticker
 	Duration time.Duration
-	Stopped chan struct{}
-	C chan time.Time
+	Stopped  chan struct{}
+	C        chan time.Time
 }
 
 func (q *queueEntry) Stop() bool {
@@ -278,7 +284,7 @@ func (t *mockTime) NewTimer(d time.Duration) timer {
 	queueEntry := queueEntry{
 		PopTime: t.now.Add(d),
 		Timer:   timer,
-		C: c,
+		C:       c,
 		Stopped: make(chan struct{}),
 	}
 	t.timerQueue = append(t.timerQueue, &queueEntry)
@@ -295,11 +301,11 @@ func (t *mockTime) NewJitteredTicker(d time.Duration, jit time.Duration) *jitter
 	c := make(chan time.Time)
 	timer := &jitter.Ticker{C: c}
 	queueEntry := queueEntry{
-		PopTime: t.now.Add(d),
-		Ticker: timer,
+		PopTime:  t.now.Add(d),
+		Ticker:   timer,
 		Duration: d,
-		C: c,
-		Stopped: make(chan struct{}),
+		C:        c,
+		Stopped:  make(chan struct{}),
 	}
 	t.timerQueue = append(t.timerQueue, &queueEntry)
 	return timer
@@ -356,7 +362,7 @@ func (t *mockTime) sortQueue() {
 	})
 }
 
-func (t *mockTime) GetNumTimers( ) int{
+func (t *mockTime) GetNumTimers() int {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	return len(t.timerQueue)
