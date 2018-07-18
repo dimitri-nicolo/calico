@@ -574,17 +574,16 @@ configRetry:
 	})
 
 	licenseMonitor.SetStatusChangedCallback(func(newLicenseStatus lclient.LicenseStatus) {
-		if licenseStatus != lclient.Unknown && licenseStatus != newLicenseStatus {
-			// Whenever we transition between Valid/InGracePeriod/Expired/NoLicense we need to restart to
-			// enable/disable features.
-			log.WithFields(log.Fields{
-				"oldStatus": licenseStatus,
-				"newStatus": newLicenseStatus,
-			}).Info("License status changed.  Restarting to enable/disable features.")
-			failureReportChan <- reasonLicenseConfigChanged
+		if licenseStatus == newLicenseStatus {
+			return
 		}
-
-		licenseStatus = newLicenseStatus
+		// Whenever we transition between Valid/InGracePeriod/Expired/NoLicense we need to restart to
+		// enable/disable features.
+		log.WithFields(log.Fields{
+			"oldStatus": licenseStatus,
+			"newStatus": newLicenseStatus,
+		}).Info("License status changed.  Restarting to enable/disable features.")
+		failureReportChan <- reasonLicenseConfigChanged
 	})
 
 	// Start the license monitor, which will trigger the callback above at start of day and then whenever the license
