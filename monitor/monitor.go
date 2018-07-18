@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
-	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cerrors "github.com/projectcalico/libcalico-go/lib/errors"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -30,42 +29,73 @@ type LicenseMonitor interface {
 	SetLicenseStatusChangedCallback(f func(newLicenseStatus lclient.LicenseStatus))
 }
 
+type bapiClient interface {
+	Get(ctx context.Context, key model.Key, revision string) (*model.KVPair, error)
+}
+
 // licenseMonitor uses a libcalico-go (backend) client to monitor the status of the active license.
 // It provides a thread-safe API for querying the current state of a feature.  Changes to the
 // license or its validity are reflected by the API.
 type licenseMonitor struct {
-	PollInterval      time.Duration
-	OnFeaturesChanged func()
+	PollInterval           time.Duration
+	OnFeaturesChanged      func()
 	OnLicenseStatusChanged func(newLicenseStatus lclient.LicenseStatus)
 
-	datastoreClient bapi.Client
+	datastoreClient bapiClient
 
 	activeLicenseLock sync.Mutex
 	activeRawLicense  *v3.LicenseKey
 	activeLicense     *lclient.LicenseClaims
 
-	licenseTransitionTimer    *time.Timer
+	licenseTransitionTimer    timer
 	licenseTransitionC        <-chan time.Time
 	lastNotifiedLicenseStatus lclient.LicenseStatus
+
+	// Shims for mocking...
+	decodeLicense     func(lic v3.LicenseKey) (lclient.LicenseClaims, error)
+	now               func() time.Time
+	newTimer          func(duration time.Duration) timer
+	newJitteredTicker func(minDuration time.Duration, maxJitter time.Duration) *jitter.Ticker
 }
 
-func New(client bapi.Client) LicenseMonitor {
+type timer interface {
+	Chan() <-chan time.Time
+	Stop() bool
+}
+type timerWrapper time.Timer
+
+func (w * timerWrapper) Stop() bool {
+	return (*time.Timer)(w).Stop()
+}
+
+func (w * timerWrapper) Chan() <-chan time.Time {
+	return (*time.Timer)(w).C
+}
+
+func New(client bapiClient) LicenseMonitor {
 	return &licenseMonitor{
 		PollInterval:    defaultPollInterval,
 		datastoreClient: client,
+
+		decodeLicense:     lclient.Decode,
+		now:               time.Now,
+		newTimer:          func(d time.Duration) timer { return (*timerWrapper)(time.NewTimer(d)) },
+		newJitteredTicker: jitter.NewTicker,
 	}
 }
 
 func (l *licenseMonitor) GetFeatureStatus(feature string) bool {
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
-	return l.activeLicense.ValidateFeature(feature)
+	// Use the ValidateFeatureAtTime variant so that we use mocked time in the UTs.
+	return l.activeLicense.ValidateFeatureAtTime(l.now(), feature)
 }
 
 func (l *licenseMonitor) GetLicenseStatus() lclient.LicenseStatus {
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
-	return l.activeLicense.Validate()
+	// Use the ValidateAtTime variant so that we use mocked time in the UTs.
+	return l.activeLicense.ValidateAtTime(l.now())
 }
 
 func (l *licenseMonitor) SetPollInterval(d time.Duration) {
@@ -87,7 +117,7 @@ func (l *licenseMonitor) SetLicenseStatusChangedCallback(f func(newLicenseStatus
 func (l *licenseMonitor) MonitorForever(ctx context.Context) error {
 	// TODO: use jitter package in libcalico-go once it has been ported to
 	// libcalico-go-private.
-	refreshTicker := jitter.NewTicker(l.PollInterval, l.PollInterval/10)
+	refreshTicker := l.newJitteredTicker(l.PollInterval, l.PollInterval/10)
 	defer refreshTicker.Stop()
 
 	for ctx.Err() == nil {
@@ -166,16 +196,16 @@ func (l *licenseMonitor) maybeStartTransitionTimer() {
 		return
 	}
 
-	timeToNextNotify := nextNotifyTime.Sub(time.Now())
+	timeToNextNotify := nextNotifyTime.Sub(l.now())
 	log.WithField("timeToNextNotification", timeToNextNotify).Debug(
 		"Calculated time to next license transition")
-	if timeToNextNotify < 1 * time.Second {
+	if timeToNextNotify < 1*time.Second {
 		// Step change in the system clock?  Just schedule a new check almost immediately.
 		log.Debug("Calculated very short/negative License transition interval; limiting rate to 1/s")
 		timeToNextNotify = 1 * time.Second
 	}
-	l.licenseTransitionTimer = time.NewTimer(timeToNextNotify)
-	l.licenseTransitionC = l.licenseTransitionTimer.C
+	l.licenseTransitionTimer = l.newTimer(timeToNextNotify)
+	l.licenseTransitionC = l.licenseTransitionTimer.Chan()
 }
 
 // RefreshLicense polls the datastore for a license and updates the active license field.  Typically called by
@@ -194,7 +224,7 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 	var ttl time.Duration
 	oldFeatures := set.New()
 	if l.activeLicense != nil {
-		ttl = time.Until(l.activeLicense.Expiry.Time())
+		ttl = l.activeLicense.Expiry.Time().Sub(l.now())
 		oldFeatures = set.FromArray(l.activeLicense.Features)
 		log.Debug("Existing license will expire after ", ttl)
 	}
@@ -229,7 +259,7 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 		return nil
 	}
 
-	newActiveLicense, err := lclient.Decode(*license)
+	newActiveLicense, err := l.decodeLicense(*license)
 	if err != nil {
 		if ttl > 0 {
 			log.WithError(err).Error("Failed to decode license key; please contact support; "+
@@ -241,6 +271,10 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 	}
 
 	newFeatures := set.FromArray(newActiveLicense.Features)
+	log.WithFields(log.Fields{
+		"oldFeatures": oldFeatures,
+		"newFeatures": newFeatures,
+	}).Debug("License features")
 	if !reflect.DeepEqual(oldFeatures, newFeatures) {
 		log.Info("Allowed product features have changed.")
 		if l.OnFeaturesChanged != nil {
