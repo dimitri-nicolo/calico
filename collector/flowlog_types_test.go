@@ -125,7 +125,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-5123451",
 					Labels:    "{\"k8s-app\":\"true\"}",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
@@ -152,7 +152,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-5123451",
 					Labels:    "{\"k8s-app\":\"true\"}",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
@@ -179,7 +179,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "pub",
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
@@ -207,7 +207,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-5123451",
 					Labels:    "{\"k8s-app\":\"true\"}",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
@@ -235,7 +235,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-*",
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
@@ -262,7 +262,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-*",
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
@@ -291,7 +291,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "pub",
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
@@ -320,7 +320,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "aws", // <-- AWS MetaServer Endpoint
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
@@ -357,7 +357,7 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "manually-created-pod", // Keeping the Name. No Generatename.
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))

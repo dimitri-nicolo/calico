@@ -123,21 +123,21 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 		// interval.
 		Eventually(func() error {
 			expectedKeys := map[string]bool{
-				"start-" + w[0].Name + "--" + w[1].Name + "--dst":  true,
+				"start-" + w[0].Name + "--" + w[1].Name + "--dst": true,
 				"start-" + w[0].Name + "--" + w[1].Name + "--src": true,
-				"start-" + w[0].Name + "--" + w[2].Name + "--dst":  true,
+				"start-" + w[0].Name + "--" + w[2].Name + "--dst": true,
 				"start-" + w[0].Name + "--" + w[2].Name + "--src": true,
-				"start-" + w[1].Name + "--" + w[0].Name + "--dst":  true,
+				"start-" + w[1].Name + "--" + w[0].Name + "--dst": true,
 				"start-" + w[1].Name + "--" + w[0].Name + "--src": true,
-				"start-" + w[2].Name + "--" + w[0].Name + "--dst":  true,
+				"start-" + w[2].Name + "--" + w[0].Name + "--dst": true,
 				"start-" + w[2].Name + "--" + w[0].Name + "--src": true,
-				"end-" + w[0].Name + "--" + w[1].Name + "--dst":    true,
+				"end-" + w[0].Name + "--" + w[1].Name + "--dst":   true,
 				"end-" + w[0].Name + "--" + w[1].Name + "--src":   true,
-				"end-" + w[0].Name + "--" + w[2].Name + "--dst":    true,
+				"end-" + w[0].Name + "--" + w[2].Name + "--dst":   true,
 				"end-" + w[0].Name + "--" + w[2].Name + "--src":   true,
-				"end-" + w[1].Name + "--" + w[0].Name + "--dst":    true,
+				"end-" + w[1].Name + "--" + w[0].Name + "--dst":   true,
 				"end-" + w[1].Name + "--" + w[0].Name + "--src":   true,
-				"end-" + w[2].Name + "--" + w[0].Name + "--dst":    true,
+				"end-" + w[2].Name + "--" + w[0].Name + "--dst":   true,
 				"end-" + w[2].Name + "--" + w[0].Name + "--src":   true,
 			}
 			cwlogs, err := felix.ReadCloudWatchLogs()

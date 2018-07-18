@@ -244,7 +244,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Name:      "pub",
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 
@@ -268,7 +268,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Name:      "iperf-4235-*",
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 
@@ -292,7 +292,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Name:      "pvt",
 					Labels:    "-",
 				},
-				Action:    "allow",
+				Action:   "allow",
 				Reporter: "dst",
 			}
 
