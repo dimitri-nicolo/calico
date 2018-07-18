@@ -122,6 +122,7 @@ type Config struct {
 	CloudWatchLogsAggregationKindForAllowed int
 	CloudWatchLogsAggregationKindForDenied  int
 	CloudWatchLogsRetentionDays             int
+	CloudWatchLogsEnableHostEndpoint        bool
 
 	DebugCloudWatchLogsFile string
 
@@ -596,7 +597,7 @@ func (d *InternalDataplane) Start() {
 			cwl = testutil.NewDebugCloudWatchLogsFile(logGroupName, d.config.DebugCloudWatchLogsFile)
 		}
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, cwl)
-		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval, d.config.HealthAggregator)
+		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval, d.config.HealthAggregator, d.config.CloudWatchLogsEnableHostEndpoint)
 		caa := collector.NewCloudWatchAggregator().
 			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).
 			IncludeLabels(d.config.CloudWatchLogsIncludeLabels).

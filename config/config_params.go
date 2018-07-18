@@ -215,6 +215,7 @@ type Config struct {
 	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0:2);2"`
 	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0:2);1"`
 	CloudWatchLogsRetentionDays             int           `config:"int(1,3,5,7,14,30,60,90,120,150,180,365,400,545,731,1827,3653);7;die-on-fail"`
+	CloudWatchLogsEnableHostEndpoint        bool          `config:"bool;false"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 
