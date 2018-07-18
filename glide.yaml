@@ -44,13 +44,13 @@ import:
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: f5ed453cef9288e46e25a5fe9587d1d1c0fdef44
+  version: 8569b77e35f5c0f7bf3798141c0f74f5cb0bf8eb
   subpackages:
   - client
   - monitor
 - package: github.com/tigera/nfnetlink
   repo:    git@github.com:tigera/nfnetlink
-  version: 0c33d6eace301fb92cfd3e54c2109d97f463db17
+  version: 6129e0f5c02789e10680b1d01fbb23cbe456331f
 - package: github.com/sirupsen/logrus
   version: v1.0.4
 - package: github.com/kardianos/osext

@@ -573,7 +573,7 @@ configRetry:
 		failureReportChan <- reasonLicenseConfigChanged
 	})
 
-	licenseMonitor.SetLicenseStatusChangedCallback(func(newLicenseStatus lclient.LicenseStatus) {
+	licenseMonitor.SetStatusChangedCallback(func(newLicenseStatus lclient.LicenseStatus) {
 		if licenseStatus != lclient.Unknown && licenseStatus != newLicenseStatus {
 			// Whenever we transition between Valid/InGracePeriod/Expired/NoLicense we need to restart to
 			// enable/disable features.
