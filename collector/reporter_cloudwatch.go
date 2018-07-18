@@ -52,9 +52,6 @@ const (
 // a cloudwatch dispatcher and aggregator.
 func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *cloudWatchReporter {
 	if healthAggregator != nil {
-		// Register with the health aggregator. We set readiness to false until we've
-		// created the necessary CloudWatch resources. This is done as part of starting
-		// the CloudWatchReporter.
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
 	return &cloudWatchReporter{
