@@ -77,6 +77,10 @@ type CWLEvent struct {
 	Timestamp int64
 }
 
+var (
+	ErrNoCloudwatchLogs = errors.New("No logs yet")
+)
+
 func (f *Felix) ReadCloudWatchLogs() ([]CWLEvent, error) {
 	log.Infof("Read CloudWatchLogs file %v", cwLogDir+"/"+f.cwlFile)
 
@@ -148,7 +152,7 @@ func (f *Felix) ReadCloudWatchLogs() ([]CWLEvent, error) {
 	log.WithFields(log.Fields{"retentionDays": retentionDays, "logs": logs}).Info("Data read")
 
 	if len(logs) == 0 {
-		return nil, errors.New("No logs yet")
+		return nil, ErrNoCloudwatchLogs
 	}
 
 	Expect(retentionDays).To(HaveLen(1))
