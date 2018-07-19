@@ -98,8 +98,8 @@ const (
 	childExitedRC = 129
 
 	// CloudWatch Health metrics names.
-	healthyNodeMetricName   = "Healthy Nodes"
-	unHealthyNodeMetricName = "Unhealthy Nodes"
+	healthyNodeMetricName   = "Nodes reporting healthy"
+	unHealthyNodeMetricName = "Nodes reporting unhealthy"
 
 	// CloudWatch Health metrics namespace.
 	cloudWatchHealthMetricNamespace = "Tigera Metrics"
