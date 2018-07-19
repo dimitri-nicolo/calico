@@ -604,13 +604,13 @@ configRetry:
 func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator, ctx context.Context) {
 	cwClient := newCloudWatchMetricsClient(nil, healthAgg)
 	var err error
+	ticker := jitter.NewTicker(pushInterval, pushInterval/10)
+	defer ticker.Stop()
 
 	for {
-		select {
-		case <-jitter.NewTicker(pushInterval, pushInterval/10).C:
-			if err = cwClient.pushHealthMetrics(healthAgg.Summary().Live, clusterID, ctx); err != nil {
-				log.WithError(err).Error("error pushing health status to CloudWatch")
-			}
+		<-ticker.C
+		if err = cwClient.pushHealthMetrics(healthAgg.Summary().Live, clusterID, ctx); err != nil {
+			log.WithError(err).Error("error pushing health status to CloudWatch")
 		}
 	}
 }
