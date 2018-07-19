@@ -181,25 +181,46 @@ func (e ErrExpiredButWithinGracePeriod) Error() string {
 type LicenseStatus int
 
 const (
-	Valid LicenseStatus = iota
+	Unknown LicenseStatus = iota
+	Valid
 	InGracePeriod
 	Expired
 	NoLicenseLoaded
 )
 
+func (s LicenseStatus) String() string {
+	switch s {
+	case Valid:
+		return "valid"
+	case InGracePeriod:
+		return "in-grace-period"
+	case Expired:
+		return "expired"
+	case NoLicenseLoaded:
+		return "no-license-loaded"
+	default:
+		return "unknown"
+	}
+}
+
 // Validate checks if the license is expired.
 func (c *LicenseClaims) Validate() LicenseStatus {
+	return c.ValidateAtTime(time.Now())
+}
+
+// Validate checks if the license is expired.
+func (c *LicenseClaims) ValidateAtTime(t time.Time) LicenseStatus {
 	if c == nil {
 		return NoLicenseLoaded
 	}
 
 	expiryTime := c.Claims.Expiry.Time()
-	if expiryTime.After(time.Now()) {
+	if expiryTime.After(t) {
 		return Valid
 	}
 
 	gracePeriodExpiryTime := expiryTime.Add(time.Duration(c.GracePeriod) * time.Hour * 24)
-	if gracePeriodExpiryTime.After(time.Now()) {
+	if gracePeriodExpiryTime.After(t) {
 		return InGracePeriod
 	}
 
@@ -211,7 +232,15 @@ func (c *LicenseClaims) Validate() LicenseStatus {
 // - there isn't a license
 // - the license has expired and is no longer in its grace period.
 func (c *LicenseClaims) ValidateFeature(feature string) bool {
-	switch c.Validate() {
+	return c.ValidateFeatureAtTime(time.Now(), feature)
+}
+
+// ValidateFeature returns true if the feature is enabled, false if it is not.
+// False is returned if the license is invalid in any of the following ways:
+// - there isn't a license
+// - the license has expired and is no longer in its grace period.
+func (c *LicenseClaims) ValidateFeatureAtTime(t time.Time, feature string) bool {
+	switch c.ValidateAtTime(t) {
 	case NoLicenseLoaded, Expired:
 		return false
 	}
