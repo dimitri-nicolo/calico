@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package namespace
+package federationsyncer
 
-import (
-	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
-)
+/*
+federationsyncer implements an api.Syncer for use with the Federated Services Controller.
 
-func IsNamespaced(kind string) bool {
-	switch kind {
-	case apiv3.KindWorkloadEndpoint, apiv3.KindNetworkPolicy, apiv3.KindK8sService, apiv3.KindK8sEndpoints:
-		return true
-	default:
-		return false
-	}
-}
+It consumes Calico RemoteClusterConfiguration, and also Kubernetes Service and Endpoints resources to
+provide a global view of Services and Endpoints across clusters.
+
+This implementation uses the watchersyncer and the remotecluster wrapper.
+*/

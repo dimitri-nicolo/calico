@@ -49,4 +49,9 @@ const (
 	// Label used to denote the Tier. This is added to policies by Calico so that label matches
 	// can be made for tiers.
 	LabelTier = "projectcalico.org/tier"
+
+	// Some internally defined resource types that map directly onto the kubernetes resources.  These are only
+	// available through the backend client.
+	KindK8sEndpoints = "K8sEndpoints"
+	KindK8sService   = "K8sService"
 )

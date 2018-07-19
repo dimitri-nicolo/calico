@@ -1609,14 +1609,14 @@ func init() {
 			}, false,
 		),
 
-		Entry("disallow k8s config if datastore type is etcd",
+		Entry("allow k8s config if datastore type is etcd",
 			&api.RemoteClusterConfiguration{
 				ObjectMeta: v1.ObjectMeta{Name: "thing"},
 				Spec: api.RemoteClusterConfigurationSpec{
 					DatastoreType: "etcdv3",
 					KubeConfig:    api.KubeConfig{Kubeconfig: "/a/b/c/kubeconfig"},
 				},
-			}, false,
+			}, true,
 		),
 
 		Entry("disallow etcd config if datastore type is k8s",

@@ -22,6 +22,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	kapiv1 "k8s.io/api/core/v1"
+
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/namespace"
 )
@@ -127,6 +129,17 @@ func init() {
 		apiv3.KindRemoteClusterConfiguration,
 		"remoteclusterconfigurations",
 		reflect.TypeOf(apiv3.RemoteClusterConfiguration{}),
+	)
+	// Resources internal to the backend.
+	registerResourceInfo(
+		apiv3.KindK8sService,
+		"k8s-service",
+		reflect.TypeOf(kapiv1.Service{}),
+	)
+	registerResourceInfo(
+		apiv3.KindK8sEndpoints,
+		"k8s-endpoints",
+		reflect.TypeOf(kapiv1.Endpoints{}),
 	)
 }
 
