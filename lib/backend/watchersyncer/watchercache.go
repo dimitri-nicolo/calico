@@ -132,13 +132,18 @@ mainLoop:
 
 	// The watcher cache has exited. This can only mean that it has been shutdown, so emit all updates in the cache as
 	// delete events.
-	for _, value := range wc.resources {
+	wc.sendDeletesForAllResources()
+}
+
+func (wc *watcherCache) sendDeletesForAllResources() {
+	for key, value := range wc.resources {
 		wc.results <- []api.Update{{
 			UpdateType: api.UpdateTypeKVDeleted,
 			KVPair: model.KVPair{
 				Key: value.key,
 			},
 		}}
+		delete(wc.resources, key)
 	}
 }
 
@@ -191,6 +196,14 @@ func (wc *watcherCache) resyncAndCreateWatcher(ctx context.Context) {
 					Err: err,
 				}
 
+				if wc.resourceType.SendDeletesOnConnFail {
+					// Unable to List, and we need to send deletes on connection failure. Send them now.
+					// Note: We do not need to check if the context is done since we will send deletes during exit
+					// processing anyway.
+					wc.logger.Info("Connection to datastore has failed - sending deletes for all resources")
+					wc.sendDeletesForAllResources()
+				}
+
 				select {
 				case <-time.After(ListRetryInterval):
 					continue
@@ -240,10 +253,9 @@ func (wc *watcherCache) resyncAndCreateWatcher(ctx context.Context) {
 				}
 			}
 
-			// Need to send back an error here for handling. Only connection errors on remote datastores should actually kick off any handling.
-			wc.results <- errorSyncBackendError{
-				Err: err,
-			}
+			// We don't send a connection failure event for watch failures since we can hit this issue if the watch
+			// failed and the revision is no longer stored. Allow the List to determine whether the connection has
+			// actually failed.
 
 			// We hit an error creating the Watch.  Trigger a full resync.
 			// TODO We should be able to improve this by handling specific error cases with another
