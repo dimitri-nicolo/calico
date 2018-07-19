@@ -33,11 +33,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	lclient "github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/monitor"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	licClient "github.com/tigera/licensing/client"
 
 	"github.com/projectcalico/felix/binder"
 	"github.com/projectcalico/felix/buildinfo"
@@ -85,7 +85,8 @@ const (
 
 	// String sent on the failure report channel to indicate we're shutting down for config
 	// change.
-	reasonConfigChanged = "config changed"
+	reasonConfigChanged        = "config changed"
+	reasonLicenseConfigChanged = "license config changed"
 	// String sent on the failure report channel to indicate we're shutting down for a child
 	// process exited. e.g. charon daemon.
 	reasonChildExited = "child exit"
@@ -181,7 +182,6 @@ func Run(configFile string) {
 	var configParams *config.Config
 	var typhaAddr string
 	var numClientsCreated int
-	var bootupLicenseKey *apiv3.LicenseKey
 configRetry:
 	for {
 		if numClientsCreated > 60 {
@@ -241,7 +241,7 @@ configRetry:
 		log.Info("Created datastore client")
 		numClientsCreated++
 		for {
-			globalConfig, hostConfig, licenseKey, licValid, err := loadConfigFromDatastore(
+			globalConfig, hostConfig, err := loadConfigFromDatastore(
 				ctx, backendClient, configParams.FelixHostname)
 			if err == ErrNotReady {
 				log.Warn("Waiting for datastore to be initialized (or migrated)")
@@ -255,10 +255,6 @@ configRetry:
 			}
 			configParams.UpdateFrom(globalConfig, config.DatastoreGlobal)
 			configParams.UpdateFrom(hostConfig, config.DatastorePerHost)
-			configParams.LicenseValid = licValid
-
-			// Set the global boot-up licenseKey to what we got.
-			bootupLicenseKey = licenseKey
 			break
 		}
 		configParams.Validate()
@@ -334,7 +330,31 @@ configRetry:
 	configChangedRestartCallback := func() { failureReportChan <- reasonConfigChanged }
 	childExitedRestartCallback := func() { failureReportChan <- reasonChildExited }
 
-	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(configParams, healthAggregator, lookupsCache, configChangedRestartCallback, childExitedRestartCallback)
+	// Create the license monitor, which we'll use to monitor the state of the license.
+	licenseMonitor := monitor.New(backendClient)
+	lCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	err := licenseMonitor.RefreshLicense(lCtx)
+	cancel()
+	if err != nil {
+		log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
+	}
+	if configParams.DebugUseShortPollIntervals {
+		log.Info("Using short license poll interval for FV")
+		licenseMonitor.SetPollInterval(1 * time.Second)
+	}
+	// Get the license status before the dataplane driver does its checks so that we can spot if the license status
+	// changes below.  (If we did this read after the dataplane driver, we might read that the license was expired
+	// after the dataplane driver reads that it was valid and we'd miss the transition.)
+	licenseStatus := licenseMonitor.GetLicenseStatus()
+
+	dpDriver, dpDriverCmd = dp.StartDataplaneDriver(
+		configParams,
+		licenseMonitor,
+		healthAggregator,
+		lookupsCache,
+		configChangedRestartCallback,
+		childExitedRestartCallback,
+	)
 
 	// Initialise the glue logic that connects the calculation graph to/from the dataplane driver.
 	log.Info("Connect to the dataplane driver.")
@@ -543,7 +563,32 @@ configRetry:
 	// Register signal handlers to dump memory/CPU profiles.
 	logutils.RegisterProfilingSignalHandlers(configParams)
 
-	go watchLicenseChanges(backendClient, configParams, bootupLicenseKey)
+	// Monitor the license resource.  This allows us to spot
+	// - license creation after we start up (triggers OnLicenseStatusChangedCallback and hence a restart)
+	// - license feature updates (triggers OnFeaturesChanged and hence a restart)
+	// - license expiry (triggers OnLicenseStatusChangedCallback and hence a restart)
+	// License renewal with no feature changes doesn't trigger either callback.
+	licenseMonitor.SetFeaturesChangedCallback(func() {
+		log.Info("Active license changed, restarting...")
+		failureReportChan <- reasonLicenseConfigChanged
+	})
+
+	licenseMonitor.SetStatusChangedCallback(func(newLicenseStatus lclient.LicenseStatus) {
+		if licenseStatus == newLicenseStatus {
+			return
+		}
+		// Whenever we transition between Valid/InGracePeriod/Expired/NoLicense we need to restart to
+		// enable/disable features.
+		log.WithFields(log.Fields{
+			"oldStatus": licenseStatus,
+			"newStatus": newLicenseStatus,
+		}).Info("License status changed.  Restarting to enable/disable features.")
+		failureReportChan <- reasonLicenseConfigChanged
+	})
+
+	// Start the license monitor, which will trigger the callback above at start of day and then whenever the license
+	// status changes.
+	go licenseMonitor.MonitorForever(context.Background())
 
 	// If CloudWatch node health reporting is enabled then start a goroutine to monitor
 	// Felix health and report to CloudWatch.
@@ -663,54 +708,6 @@ func newCloudWatchMetricsClient(cwAPI cloudwatchiface.CloudWatchAPI, healthAgg *
 	}
 }
 
-func watchLicenseChanges(client bapi.Client, configParams *config.Config, bootupLicense *apiv3.LicenseKey) {
-	for {
-
-		ticker := jitter.NewTicker(configParams.LicensePollingIntervalSecs, configParams.LicensePollingIntervalSecs/10)
-		<-ticker.C
-
-		// Get the LicenseKey resource directly from the backend datastore client.
-		lic, err := client.Get(context.Background(), model.ResourceKey{
-			Kind:      apiv3.KindLicenseKey,
-			Name:      "default",
-			Namespace: "",
-		}, "")
-		if err != nil {
-			switch err.(type) {
-			case cerrors.ErrorResourceDoesNotExist:
-				log.WithFields(log.Fields{
-					"kind": apiv3.KindLicenseKey,
-					"name": "default",
-				}).Debug("License not found.")
-				continue
-			default:
-				log.WithFields(log.Fields{
-					"kind": apiv3.KindLicenseKey,
-					"name": "default",
-				}).WithError(err).Info("Failed to load LicenseKey from datastore")
-				// For any other errors, we return the error, so the main retry loop can retry.
-				// We only hit this case when there is some datastore connection issue like etcd down or unreachable,
-				// so we want to retry.
-				continue
-			}
-		} else {
-			log.Debug("License resource found")
-			if bootupLicense != nil {
-				// We have a non-nil license upon boot-up, not check if the one we just polled is different from that before rebooting.
-				if lic.Value.(*apiv3.LicenseKey).Spec.Token != bootupLicense.Spec.Token || lic.Value.(*apiv3.LicenseKey).Spec.Certificate != bootupLicense.Spec.Certificate {
-					// Restart Felix to pickup the new license change.
-					exitWithCustomRC(configChangedRC, "Exiting for license config change")
-					continue
-				}
-			} else {
-				// We didn't boot-up with a license and now we have one so reboot to pickup the new license.
-				exitWithCustomRC(configChangedRC, "Exiting for license config change")
-				continue
-			}
-		}
-	}
-}
-
 func servePrometheusMetrics(configParams *config.Config) {
 	for {
 		log.WithField("port", configParams.PrometheusMetricsPort).Info("Starting prometheus metrics endpoint")
@@ -824,7 +821,7 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		go func() {
 			time.Sleep(2 * time.Second)
 
-			if reason == reasonConfigChanged {
+			if reason == reasonConfigChanged || reason == reasonLicenseConfigChanged {
 				exitWithCustomRC(configChangedRC, "Exiting for config change")
 				return
 			}
@@ -867,7 +864,7 @@ var (
 
 func loadConfigFromDatastore(
 	ctx context.Context, client bapi.Client, hostname string,
-) (globalConfig, hostConfig map[string]string, license *apiv3.LicenseKey, licenseValid bool, err error) {
+) (globalConfig, hostConfig map[string]string, err error) {
 
 	// The configuration is split over 3 different resource types and 4 different resource
 	// instances in the v3 data model:
@@ -921,61 +918,6 @@ func loadConfigFromDatastore(
 	if err != nil {
 		return
 	}
-
-	// Get the LicenseKey resource directly from the backend datastore client.
-	lic, errLic := client.Get(ctx, model.ResourceKey{
-		Kind:      apiv3.KindLicenseKey,
-		Name:      "default",
-		Namespace: "",
-	}, "")
-	if errLic != nil {
-		switch errLic.(type) {
-		case cerrors.ErrorResourceDoesNotExist:
-			log.WithFields(log.Fields{
-				"kind": apiv3.KindLicenseKey,
-				"name": "default",
-			}).Debug("License not found.")
-			return
-		default:
-			log.WithFields(log.Fields{
-				"kind": apiv3.KindLicenseKey,
-				"name": "default",
-			}).WithError(errLic).Info("Failed to load LicenseKey from datastore")
-			// For any other errors, we return the error, so the main retry loop can retry.
-			// We only hit this case when there is some datastore connection issue like etcd down or unreachable,
-			// so we want to retry.
-			err = errLic
-			return
-		}
-	} else {
-		log.Info("License resource found")
-	}
-
-	license, ok := lic.Value.(*apiv3.LicenseKey)
-	if !ok {
-		log.WithFields(log.Fields{"kind": apiv3.KindLicenseKey, "KVPair": lic}).Error("Error asserting LicenseKey")
-		return
-	}
-
-	// Decode the LicenseKey.
-	claims, errLic := licClient.Decode(*license)
-	if errLic != nil {
-		// We return at a corrupted LicenseKey because calicoctl validates the license key before letting a customer apply it
-		// so if a LicenseKey is corrupted then someone is trying to defraud us or etcd itself is corrupted,
-		// in that case license is the least of their concern.
-		log.WithError(errLic).Error("license is corrupted. Please contact Tigera support or email licensing@tigera.io")
-		return
-	}
-
-	// Check if the license is valid. In CNX v2.1, we continue to work even after the license expires and
-	// even after the end of the grace period, but we show this warning message and continue to work as licensed cluster.
-	if errLic = claims.Validate(); errLic != nil {
-		log.Errorf("Your license has expired. Please update your license to restore normal operations. Contact Tigera support or email licensing@tigera.io")
-	} else {
-		log.Info("License is valid")
-	}
-
-	licenseValid = true
 
 	return
 }
