@@ -28,3 +28,11 @@ func (set tupleSet) Contains(t Tuple) bool {
 	_, present := set[t]
 	return present
 }
+
+func (set tupleSet) Copy() tupleSet {
+	ts := NewTupleSet()
+	for tuple := range set {
+		ts.Add(tuple)
+	}
+	return ts
+}

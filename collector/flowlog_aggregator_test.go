@@ -132,7 +132,6 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages = ca.Get()
 			// Two updates should still result in 1 flow
 			Expect(len(messages)).Should(Equal(1))
-
 			// Updating the Workload IDs and labels for src and dst.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.srcEp = &calc.EndpointData{
 				Key: model.WorkloadEndpointKey{
@@ -142,7 +141,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					EndpointID:     "23456",
 				},
 				// this new MetricUpdates src endpointMeta has a different label than one currently being tracked.
-				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235", Labels: map[string]string{"prod-app": "true"}},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"prod-app": "true"}},
 			}
 
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.dstEp = &calc.EndpointData{
@@ -153,7 +152,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					EndpointID:     "256267",
 				},
 				// different label on the destination workload than one being tracked.
-				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354", Labels: map[string]string{"k8s-app": "false"}},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "false"}},
 			}
 
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
@@ -312,10 +311,12 @@ var _ = Describe("Flow log aggregator tests", func() {
 	Context("Flow log aggregator filter verification", func() {
 		It("Filters out MetricUpdate based on filter applied", func() {
 			By("Creating 2 aggregators - one for denied packets, and one for allowed packets")
-			caa := NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
-			cad := NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+			var caa, cad FlowLogAggregator
 
 			By("Checking that the MetricUpdate with deny action is only processed by the aggregator with the deny filter")
+			caa = NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
+			cad = NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+
 			caa.FeedUpdate(muNoConn1Rule2DenyUpdate)
 			messages := caa.Get()
 			Expect(len(messages)).Should(Equal(0))
@@ -324,12 +325,156 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(1))
 
 			By("Checking that the MetricUpdate with allow action is only processed by the aggregator with the allow filter")
+			caa = NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
+			cad = NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+
 			caa.FeedUpdate(muConn1Rule1AllowUpdate)
 			messages = caa.Get()
 			Expect(len(messages)).Should(Equal(1))
 			cad.FeedUpdate(muConn1Rule1AllowUpdate)
 			messages = cad.Get()
 			Expect(len(messages)).Should(Equal(0))
+		})
+
+	})
+
+	Context("Flow log aggregator flowstore lifecycle", func() {
+		It("Purges only the completed non-aggregated flowMetas", func() {
+			By("Accounting for only the completed 5-tuple refs when making a purging decision")
+			ca := NewCloudWatchAggregator().ForAction(rules.RuleActionDeny).(*cloudWatchAggregator)
+			ca.FeedUpdate(muNoConn1Rule2DenyUpdate)
+			messages := ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			// StartedFlowRefs count should be 1
+			flowLog := &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.NumFlowsStarted).Should(Equal(1))
+
+			// flowStore is not purged of the entry since the flowRef hasn't been expired
+			Expect(len(ca.flowStore)).Should(Equal(1))
+
+			// Feeding an update again. But StartedFlowRefs count should be 0
+			ca.FeedUpdate(muNoConn1Rule2DenyUpdate)
+			messages = ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			flowLog = &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
+
+			// Feeding an expiration of the conn.
+			ca.FeedUpdate(muNoConn1Rule2DenyExpire)
+			messages = ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			flowLog = &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.NumFlowsCompleted).Should(Equal(1))
+			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
+			Expect(flowLog.NumFlows).Should(Equal(1))
+
+			// flowStore is now purged of the entry since the flowRef has been expired
+			Expect(len(ca.flowStore)).Should(Equal(0))
+		})
+
+		It("Purges only the completed aggregated flowMetas", func() {
+			By("Accounting for only the completed 5-tuple refs when making a purging decision")
+			ca := NewCloudWatchAggregator().AggregateOver(PrefixName).(*cloudWatchAggregator)
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			// Construct a similar update; same tuple but diff src ports.
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
+			tuple1Copy := tuple1
+			// Everything can change in the 5-tuple except for the dst port.
+			tuple1Copy.l4Src = 44123
+			tuple1Copy.src = ipStrTo16Byte("10.0.0.3")
+			tuple1Copy.dst = ipStrTo16Byte("10.0.0.9")
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.tuple = tuple1Copy
+
+			// Updating the Workload IDs for src and dst.
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.srcEp = &calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-01",
+					OrchestratorID: "k8s",
+					WorkloadID:     "kube-system/iperf-4235-5434134",
+					EndpointID:     "23456",
+				},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "iperf-4235-", Labels: map[string]string{"test-app": "true"}},
+			}
+
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.dstEp = &calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-02",
+					OrchestratorID: "k8s",
+					WorkloadID:     "default/nginx-412354-6543645",
+					EndpointID:     "256267",
+				},
+				Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
+			}
+
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			messages := ca.Get()
+			// Two updates should still result in 1 flowMeta
+			Expect(len(messages)).Should(Equal(1))
+			// flowStore is not purged of the entry since the flowRefs havn't been expired
+			Expect(len(ca.flowStore)).Should(Equal(1))
+			// And the no. of Started Flows should be 2
+			flowLog := &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.NumFlowsStarted).Should(Equal(2))
+
+			// Update one of the two flows and expire the other.
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.updateType = UpdateTypeExpire
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			messages = ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			// flowStore still carries that 1 flowMeta
+			Expect(len(ca.flowStore)).Should(Equal(1))
+			flowLog = &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
+			Expect(flowLog.NumFlowsCompleted).Should(Equal(1))
+			Expect(flowLog.NumFlows).Should(Equal(2))
+
+			// Expire the sole flowRef
+			muNoConn1Rule1AllowUpdateWithEndpointMeta.updateType = UpdateTypeExpire
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
+			// Pre-purge/Dispatch the meta still lingers
+			Expect(len(ca.flowStore)).Should(Equal(1))
+			// On a dispatch the flowMeta is eventually purged
+			messages = ca.Get()
+			Expect(len(ca.flowStore)).Should(Equal(0))
+			flowLog = &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
+			Expect(flowLog.NumFlowsCompleted).Should(Equal(1))
+			Expect(flowLog.NumFlows).Should(Equal(1))
+		})
+
+		It("Updates the stats associated with the flows", func() {
+			By("Accounting for only the packet/byte counts as seen during the interval")
+			ca := NewCloudWatchAggregator().ForAction(rules.RuleActionAllow).(*cloudWatchAggregator)
+			ca.FeedUpdate(muConn1Rule1AllowUpdate)
+			messages := ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			// After the initial update the counts as expected.
+			flowLog := &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.PacketsIn).Should(Equal(2))
+			Expect(flowLog.BytesIn).Should(Equal(22))
+			Expect(flowLog.PacketsOut).Should(Equal(3))
+			Expect(flowLog.BytesOut).Should(Equal(33))
+
+			// The flow doesn't expire. But the Get should reset the stats.
+			// A new update on top, then, should result in the same counts
+			ca.FeedUpdate(muConn1Rule1AllowUpdate)
+			messages = ca.Get()
+			Expect(len(messages)).Should(Equal(1))
+			// After the initial update the counts as expected.
+			flowLog = &FlowLog{}
+			flowLog.Deserialize(*messages[0])
+			Expect(flowLog.PacketsIn).Should(Equal(2))
+			Expect(flowLog.BytesIn).Should(Equal(22))
+			Expect(flowLog.PacketsOut).Should(Equal(3))
+			Expect(flowLog.BytesOut).Should(Equal(33))
 		})
 
 	})

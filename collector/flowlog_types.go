@@ -144,6 +144,7 @@ type FlowStats struct {
 	flowsRefs          tupleSet
 	flowsStartedRefs   tupleSet
 	flowsCompletedRefs tupleSet
+	flowsRefsActive    tupleSet
 }
 
 func NewFlowStats(mu MetricUpdate) FlowStats {
@@ -151,40 +152,51 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	flowsRefs.Add(mu.tuple)
 	flowsStartedRefs := NewTupleSet()
 	flowsCompletedRefs := NewTupleSet()
+	flowsRefsActive := NewTupleSet()
 
 	switch mu.updateType {
 	case UpdateTypeReport:
 		flowsStartedRefs.Add(mu.tuple)
+		flowsRefsActive.Add(mu.tuple)
 	case UpdateTypeExpire:
 		flowsCompletedRefs.Add(mu.tuple)
 	}
 
 	return FlowStats{
-		NumFlows:           flowsRefs.Len(),
-		NumFlowsStarted:    flowsStartedRefs.Len(),
-		NumFlowsCompleted:  flowsCompletedRefs.Len(),
-		PacketsIn:          mu.inMetric.deltaPackets,
-		BytesIn:            mu.inMetric.deltaBytes,
-		PacketsOut:         mu.outMetric.deltaPackets,
-		BytesOut:           mu.outMetric.deltaBytes,
+		NumFlows:          flowsRefs.Len(),
+		NumFlowsStarted:   flowsStartedRefs.Len(),
+		NumFlowsCompleted: flowsCompletedRefs.Len(),
+		PacketsIn:         mu.inMetric.deltaPackets,
+		BytesIn:           mu.inMetric.deltaBytes,
+		PacketsOut:        mu.outMetric.deltaPackets,
+		BytesOut:          mu.outMetric.deltaBytes,
+		// flowsRefs track the flows that were tracked
+		// in the give interval
 		flowsRefs:          flowsRefs,
 		flowsStartedRefs:   flowsStartedRefs,
 		flowsCompletedRefs: flowsCompletedRefs,
+		// flowsRefsActive tracks the active (non-completed)
+		// flows associated with the flowMeta
+		flowsRefsActive: flowsRefsActive,
 	}
 }
 
 func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 	// TODO(doublek): Handle metadata updates.
 	switch {
-	case mu.updateType == UpdateTypeReport && !f.flowsStartedRefs.Contains(mu.tuple):
+	case mu.updateType == UpdateTypeReport && !f.flowsRefsActive.Contains(mu.tuple):
 		f.flowsStartedRefs.Add(mu.tuple)
-	case mu.updateType == UpdateTypeExpire && !f.flowsCompletedRefs.Contains(mu.tuple):
+		f.flowsRefsActive.Add(mu.tuple)
+	case mu.updateType == UpdateTypeExpire:
 		f.flowsCompletedRefs.Add(mu.tuple)
+		f.flowsRefsActive.Discard(mu.tuple)
 	}
+
 	// If this is the first time we are seeing this tuple.
 	if !f.flowsRefs.Contains(mu.tuple) || (mu.updateType == UpdateTypeReport && f.flowsCompletedRefs.Contains(mu.tuple)) {
 		f.flowsRefs.Add(mu.tuple)
 	}
+
 	f.NumFlows = f.flowsRefs.Len()
 	f.NumFlowsStarted = f.flowsStartedRefs.Len()
 	f.NumFlowsCompleted = f.flowsCompletedRefs.Len()
@@ -192,6 +204,27 @@ func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 	f.BytesIn += mu.inMetric.deltaBytes
 	f.PacketsOut += mu.outMetric.deltaPackets
 	f.BytesOut += mu.outMetric.deltaBytes
+}
+
+// FlowStats are stats assocated with a given FlowMeta
+// These stats are to be refreshed everytime the FlowLog
+// {FlowMeta->FlowStats} is published so as to account
+// for correct no. of started flows in a given aggregation
+// interval.
+func (f FlowStats) reset() FlowStats {
+	f.flowsStartedRefs = NewTupleSet()
+	f.flowsCompletedRefs = NewTupleSet()
+	f.flowsRefs = f.flowsRefsActive.Copy()
+	f.PacketsIn = 0
+	f.BytesIn = 0
+	f.PacketsOut = 0
+	f.BytesOut = 0
+
+	return f
+}
+
+func (f FlowStats) getActiveFlowsCount() int {
+	return len(f.flowsRefsActive)
 }
 
 type FlowLog struct {

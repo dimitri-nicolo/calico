@@ -80,7 +80,6 @@ type expectation struct {
 
 // FIXME!
 var (
-	flowCountingBugFixed    = false
 	networkSetIPsSupported  = false
 	applyOnForwardSupported = false
 )
@@ -497,12 +496,10 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 
 				// For each distinct FlowMeta, the counts of flows started
 				// and completed should be the same.
-				if flowCountingBugFixed {
-					for meta, count := range flowsCompleted[ii] {
-						if count != flowsStarted[ii][meta] {
-							return errors.New(fmt.Sprintf("Wrong started count (%d != %d) for %v",
-								flowsStarted[ii][meta], count, meta))
-						}
+				for meta, count := range flowsCompleted[ii] {
+					if count != flowsStarted[ii][meta] {
+						return errors.New(fmt.Sprintf("Wrong started count (%d != %d) for %v",
+							flowsStarted[ii][meta], count, meta))
 					}
 				}
 
