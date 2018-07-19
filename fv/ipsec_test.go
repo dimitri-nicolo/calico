@@ -23,7 +23,7 @@ import (
 	"github.com/projectcalico/felix/fv/workload"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/options"
 )
 
@@ -35,7 +35,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		infra    infrastructure.DatastoreInfra
 		felixes  []*infrastructure.Felix
 		tcpdumps []*containers.TCPDump
-		client   client.Interface
+		client   clientv3.Interface
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
@@ -448,6 +448,28 @@ var _ = infrastructure.DatastoreDescribe("IPsec tests", []apiconfig.DatastoreTyp
 		})
 	})
 
+	Context("after applying a grace-period license", func() {
+		BeforeEach(func() {
+			infrastructure.ApplyGracePeriodLicense(client)
+		})
+
+		It("should switch to optional policies and have connectivity", func() {
+			for _, f := range felixes {
+				Eventually(func() int { return policyCount(f, "level use") }, "5s").Should(BeNumerically(">", numPoliciesPerWep))
+			}
+
+			cc.ExpectSome(w[0], w[1])
+			cc.ExpectSome(w[1], w[0])
+			cc.ExpectSome(felixes[0], w[1])
+			cc.ExpectSome(felixes[1], w[0])
+			cc.ExpectSome(felixes[0], w[0])
+			cc.ExpectSome(felixes[1], w[1])
+			cc.ExpectSome(w[0], hostW[1])
+			cc.ExpectSome(w[1], hostW[0])
+			cc.CheckConnectivity()
+		})
+	})
+
 	Context("after flushing IPsec policy on one host", func() {
 		BeforeEach(func() {
 			// Felix will spot this eventually, but its default refresh time is several minutes...
@@ -471,7 +493,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec initially disabled tests", []api
 	var (
 		infra   infrastructure.DatastoreInfra
 		felixes []*infrastructure.Felix
-		client  client.Interface
+		client  clientv3.Interface
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
@@ -570,7 +592,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		infra    infrastructure.DatastoreInfra
 		felixes  []*infrastructure.Felix
 		tcpdumps []*containers.TCPDump
-		client   client.Interface
+		client   clientv3.Interface
 		// w[n] is a simulated workload for host n.  It has its own network namespace (as if it was a container).
 		w [2]*workload.Workload
 		// hostW[n] is a simulated host networked workload for host n.  It runs in felix's network namespace.
@@ -662,7 +684,7 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		}()).Should(BeZero(), "saw a difference between the number of encrypted and plaintext packets")
 	})
 
-	Context("after disabling IPsec", func() {
+	describeGracefulShutdownTest := func(disableFunc func(clientv3.Interface)) {
 		totalPolCount := func() (count int) {
 			for _, f := range felixes {
 				count += policyCount(f, fmt.Sprint(ipsec.ReqID))
@@ -673,7 +695,6 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 		BeforeEach(func() {
 			// Check that our policy counting function does pick up our policies before we use it in anger below.
 			Eventually(totalPolCount, "5s", "100ms").Should(BeNumerically(">", 0))
-			disableIPSec(client)
 		})
 
 		It("should remove the IPsec policy gracefully, maintaining connectivity", func() {
@@ -688,10 +709,10 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			go func() {
 				defer wg.Done()
 				time.Sleep(5 * time.Second)
-				disableIPSec(client)
+				disableFunc(client)
 			}()
 
-			// Since we're about to drop a lot of traffic, disable tcpdump logging.
+			// Since we're about to send a lot of traffic, disable tcpdump logging.
 			for _, t := range tcpdumps {
 				t.SetLogEnabled(false)
 			}
@@ -711,6 +732,12 @@ var _ = infrastructure.DatastoreDescribe("IPsec 3-node tests", []apiconfig.Datas
 			}).Should(BeNumerically(">", 0),
 				"expected plaintext outbound workload packets")
 		})
+	}
+	Context("after disabling IPsec", func() {
+		describeGracefulShutdownTest(disableIPSec)
+	})
+	Context("after license expires IPsec", func() {
+		describeGracefulShutdownTest(infrastructure.ApplyExpiredLicense)
 	})
 })
 
@@ -738,7 +765,7 @@ func ipSecTopologyOptions() infrastructure.TopologyOptions {
 	return topologyOptions
 }
 
-func disableIPSec(client client.Interface) {
+func disableIPSec(client clientv3.Interface) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	felixConfig, err := client.FelixConfigurations().Get(ctx, "default", options.GetOptions{})

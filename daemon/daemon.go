@@ -821,7 +821,7 @@ func monitorAndManageShutdown(failureReportChan <-chan string, driverCmd *exec.C
 		go func() {
 			time.Sleep(2 * time.Second)
 
-			if reason == reasonConfigChanged {
+			if reason == reasonConfigChanged || reason == reasonLicenseConfigChanged {
 				exitWithCustomRC(configChangedRC, "Exiting for config change")
 				return
 			}
