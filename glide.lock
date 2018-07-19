@@ -1,5 +1,5 @@
-hash: ce963690bb13ca0e2c53ba603a89d185f7c4dfa27ea12cc89aef50812f36e15f
-updated: 2018-07-18T15:43:44.325247417Z
+hash: 37bd451cbe4f20dde36239bbb567e5441f3dd0c9dfa69f29677502ec399ee98c
+updated: 2018-07-19T15:15:32.072525981Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -342,7 +342,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/tigera/licensing
-  version: 8569b77e35f5c0f7bf3798141c0f74f5cb0bf8eb
+  version: 6774d1fc844530dc7be7d766bc473d8bcc05409e
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -362,7 +362,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
+  version: ef6f981729d0289fb1807af9cda61577bdff8724
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
