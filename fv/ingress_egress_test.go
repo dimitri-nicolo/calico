@@ -150,7 +150,7 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 				if fl.FlowMeta.Action != collector.FlowLogActionAllow {
 					return errors.New("Unexpected non-allow flow log")
 				}
-				dir := "in"
+				dir := "dst"
 				if fl.Reporter == collector.FlowLogReporterSrc {
 					dir = "src"
 				}
