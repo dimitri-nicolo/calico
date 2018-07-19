@@ -457,13 +457,6 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			rcc.Spec.EtcdKeyFile = remoteConfig.Spec.EtcdKeyFile
 			rcc.Spec.EtcdCertFile = remoteConfig.Spec.EtcdCertFile
 			rcc.Spec.EtcdCACertFile = remoteConfig.Spec.EtcdCACertFile
-			rcc.Spec.Kubeconfig = remoteConfig.Spec.Kubeconfig
-			rcc.Spec.K8sAPIEndpoint = remoteConfig.Spec.K8sAPIEndpoint
-			rcc.Spec.K8sKeyFile = remoteConfig.Spec.K8sKeyFile
-			rcc.Spec.K8sCertFile = remoteConfig.Spec.K8sCertFile
-			rcc.Spec.K8sCAFile = remoteConfig.Spec.K8sCAFile
-			rcc.Spec.K8sAPIToken = remoteConfig.Spec.K8sAPIToken
-			rcc.Spec.K8sInsecureSkipTLSVerify = remoteConfig.Spec.K8sInsecureSkipTLSVerify
 			_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
 			Expect(outError).NotTo(HaveOccurred())
 
@@ -632,7 +625,7 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
 			syncTester.ExpectStatusUpdate(api.InSync)
 
-			By("Checking we received the expected events.")
+			By("Checking we received the expected events")
 			if localConfig.Spec.DatastoreType == apiconfig.Kubernetes {
 				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
 				// those events too.
@@ -661,6 +654,363 @@ var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.
 				u.Revision = ""
 				u.TTL = 0
 			})
+		})
+	})
+})
+
+// To test successful Remote Cluster connections, we use a local k8s cluster with a remote etcd cluster.
+var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.DatastoreK8s, func(localConfig apiconfig.CalicoAPIConfig) {
+	ctx := context.Background()
+	var err error
+	var localClient clientv3.Interface
+	var localBackend api.Client
+	var syncer api.Syncer
+	var syncTester *testutils.SyncerTester
+	var remoteClient clientv3.Interface
+
+	testutils.E2eDatastoreDescribe("Deletion of remote cluster", testutils.DatastoreEtcdV3, func(remoteConfig apiconfig.CalicoAPIConfig) {
+		BeforeEach(func() {
+			// Create the v3 clients for the local and remote clusters.
+			localClient, err = clientv3.New(localConfig)
+			Expect(err).NotTo(HaveOccurred())
+			remoteClient, err = clientv3.New(remoteConfig)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create the local backend client to clean the datastore and obtain a syncer interface.
+			localBackend, err = backend.NewClient(localConfig)
+			Expect(err).NotTo(HaveOccurred())
+			localBackend.Clean()
+
+			// Create the remote backend client to clean the datastore.
+			remoteBackend, err := backend.NewClient(remoteConfig)
+			Expect(err).NotTo(HaveOccurred())
+			remoteBackend.Clean()
+			err = remoteBackend.Close()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			if syncer != nil {
+				syncer.Stop()
+				syncer = nil
+			}
+			if localBackend != nil {
+				localBackend.Close()
+				localBackend = nil
+			}
+		})
+
+		It("Should connect to the remote cluster and sync the remote data", func() {
+			By("Configuring the RemoteClusterConfiguration for the remote")
+			rcc := &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "remote-cluster"}}
+			rcc.Spec.DatastoreType = string(remoteConfig.Spec.DatastoreType)
+			rcc.Spec.EtcdEndpoints = remoteConfig.Spec.EtcdEndpoints
+			rcc.Spec.EtcdUsername = remoteConfig.Spec.EtcdUsername
+			rcc.Spec.EtcdPassword = remoteConfig.Spec.EtcdPassword
+			rcc.Spec.EtcdKeyFile = remoteConfig.Spec.EtcdKeyFile
+			rcc.Spec.EtcdCertFile = remoteConfig.Spec.EtcdCertFile
+			rcc.Spec.EtcdCACertFile = remoteConfig.Spec.EtcdCACertFile
+			_, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			// Keep track of the set of events we will expect from the Felix syncer. Start with the remote
+			// cluster status updates as the connection succeeds.
+			expectedEvents := []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterConnecting,
+						},
+					},
+					UpdateType: api.UpdateTypeKVNew,
+				},
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterResyncInProgress,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterInSync,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+			}
+
+			By("Creating and starting a syncer")
+			syncTester = testutils.NewSyncerTester()
+			syncer = felixsyncer.New(localBackend, syncTester)
+			syncer.Start()
+
+			By("Checking status is updated to sync'd at start of day")
+			syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+			syncTester.ExpectStatusUpdate(api.InSync)
+
+			By("Checking we received the expected events")
+			if localConfig.Spec.DatastoreType == apiconfig.Kubernetes {
+				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
+				// those events too.
+				for _, r := range defaultKubernetesResource {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair:     r,
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
+							Value: &model.ProfileRules{
+								InboundRules:  nil,
+								OutboundRules: nil,
+							},
+						},
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+			}
+
+			// Sanitize the actual events received to remove revision info and compare against those expected.
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) {
+				u.Revision = ""
+				u.TTL = 0
+			})
+
+			By("Deleting the remote cluster configuration")
+			_, outError = localClient.RemoteClusterConfigurations().Delete(
+				ctx, rcc.Name, options.DeleteOptions{ResourceVersion: rcc.ResourceVersion},
+			)
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Checking we received the expected events")
+			expectedEvents = []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+					},
+					UpdateType: api.UpdateTypeKVDeleted,
+				},
+			}
+
+			// Sanitize the actual events received to remove revision info and compare against those expected.
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) {
+				u.Revision = ""
+				u.TTL = 0
+			})
+		})
+	})
+})
+
+// To test successful Remote Cluster connections, we use a local k8s cluster with a remote etcd cluster.
+var _ = testutils.E2eDatastoreDescribe("Remote cluster syncer tests", testutils.DatastoreK8s, func(localConfig apiconfig.CalicoAPIConfig) {
+	ctx := context.Background()
+	var err error
+	var localClient clientv3.Interface
+	var localBackend api.Client
+	var syncer api.Syncer
+	var syncTester *testutils.SyncerTester
+	var remoteClient clientv3.Interface
+
+	testutils.E2eDatastoreDescribe("Reconfiguration of remote cluster", testutils.DatastoreEtcdV3, func(remoteConfig apiconfig.CalicoAPIConfig) {
+		BeforeEach(func() {
+			// Create the v3 clients for the local and remote clusters.
+			localClient, err = clientv3.New(localConfig)
+			Expect(err).NotTo(HaveOccurred())
+			remoteClient, err = clientv3.New(remoteConfig)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Create the local backend client to clean the datastore and obtain a syncer interface.
+			localBackend, err = backend.NewClient(localConfig)
+			Expect(err).NotTo(HaveOccurred())
+			localBackend.Clean()
+
+			// Create the remote backend client to clean the datastore.
+			remoteBackend, err := backend.NewClient(remoteConfig)
+			Expect(err).NotTo(HaveOccurred())
+			remoteBackend.Clean()
+			err = remoteBackend.Close()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			if syncer != nil {
+				syncer.Stop()
+				syncer = nil
+			}
+			if localBackend != nil {
+				localBackend.Close()
+				localBackend = nil
+			}
+		})
+
+		It("Should send the correct status updates when the RCC config is modified", func() {
+			By("Configuring the RemoteClusterConfiguration for the remote")
+			rcc := &apiv3.RemoteClusterConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "remote-cluster"}}
+			rcc.Spec.DatastoreType = string(remoteConfig.Spec.DatastoreType)
+			rcc.Spec.EtcdEndpoints = remoteConfig.Spec.EtcdEndpoints
+			rcc.Spec.EtcdUsername = remoteConfig.Spec.EtcdUsername
+			rcc.Spec.EtcdPassword = remoteConfig.Spec.EtcdPassword
+			rcc.Spec.EtcdKeyFile = remoteConfig.Spec.EtcdKeyFile
+			rcc.Spec.EtcdCertFile = remoteConfig.Spec.EtcdCertFile
+			rcc.Spec.EtcdCACertFile = remoteConfig.Spec.EtcdCACertFile
+			rcc, outError := localClient.RemoteClusterConfigurations().Create(ctx, rcc, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			// Keep track of the set of events we will expect from the Felix syncer. Start with the remote
+			// cluster staus updates as the connection succeeds.
+			expectedEvents := []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterConnecting,
+						},
+					},
+					UpdateType: api.UpdateTypeKVNew,
+				},
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterResyncInProgress,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: "remote-cluster"},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterInSync,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+			}
+
+			By("Creating and starting a syncer")
+			syncTester = testutils.NewSyncerTester()
+			syncer = felixsyncer.New(localBackend, syncTester)
+			syncer.Start()
+
+			By("Checking status is updated to sync'd at start of day")
+			syncTester.ExpectStatusUpdate(api.WaitForDatastore)
+			syncTester.ExpectStatusUpdate(api.ResyncInProgress)
+			syncTester.ExpectStatusUpdate(api.InSync)
+
+			By("Checking we received the expected events")
+			if localConfig.Spec.DatastoreType == apiconfig.Kubernetes {
+				// Kubernetes will have a bunch of resources that are pre-programmed in our e2e environment, so include
+				// those events too.
+				for _, r := range defaultKubernetesResource {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair:     r,
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+				for _, n := range []string{"default", "kube-public", "kube-system", "namespace-1", "namespace-2"} {
+					expectedEvents = append(expectedEvents, api.Update{
+						KVPair: model.KVPair{
+							Key: model.ProfileRulesKey{ProfileKey: model.ProfileKey{Name: "ksa." + n + ".default"}},
+							Value: &model.ProfileRules{
+								InboundRules:  nil,
+								OutboundRules: nil,
+							},
+						},
+						UpdateType: api.UpdateTypeKVNew,
+					})
+				}
+			}
+
+			// Sanitize the actual events received to remove revision info and compare against those expected.
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) {
+				u.Revision = ""
+				u.TTL = 0
+			})
+
+			By("Updating the remote cluster config (but without changing the syncer connection config)")
+			// Just re-apply the last settings.
+			rcc, outError = localClient.RemoteClusterConfigurations().Update(ctx, rcc, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Checking we received no events")
+			syncTester.ExpectUpdates([]api.Update{}, false)
+
+			By("Updating the remote cluster config (changing the syncer connection config)")
+			rcc.Spec.EtcdUsername = "fakeusername"
+			rcc, outError = localClient.RemoteClusterConfigurations().Update(ctx, rcc, options.SetOptions{})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Checking we received a restart required event")
+			expectedEvents = []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: rcc.Name},
+						Value: &model.RemoteClusterStatus{
+							Status: model.RemoteClusterConfigChangeRestartRequired,
+						},
+					},
+					UpdateType: api.UpdateTypeKVUpdated,
+				},
+			}
+
+			// Sanitize the actual events received to remove revision info and compare against those expected.
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) {
+				u.Revision = ""
+				u.TTL = 0
+			})
+
+			By("Updating the remote cluster config so that it is not longer valid for the syncer")
+			// To update the RCC so that it is no longer valid, we access the backend client and set a rogue datastore
+			// type. The felix syncer will not recognize this and return the RCC as invalid. The remote cluster
+			// processing will treat this as a delete.
+			rcc.Spec.DatastoreType = "this-is-not-valid"
+			kvp, outError := localBackend.Update(ctx, &model.KVPair{
+				Key: model.ResourceKey{
+					Name: rcc.Name,
+					Kind: apiv3.KindRemoteClusterConfiguration,
+				},
+				Value:    rcc,
+				Revision: rcc.ResourceVersion,
+			})
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Checking we received a delete event")
+			expectedEvents = []api.Update{
+				{
+					KVPair: model.KVPair{
+						Key: model.RemoteClusterStatusKey{Name: rcc.Name},
+					},
+					UpdateType: api.UpdateTypeKVDeleted,
+				},
+			}
+
+			// Sanitize the actual events received to remove revision info and compare against those expected.
+			syncTester.ExpectUpdatesSanitized(expectedEvents, false, func(u *api.Update) {
+				u.Revision = ""
+				u.TTL = 0
+			})
+
+			By("Deleting the remote cluster")
+			// To update the RCC so that it is no longer valid, we access the backend client and set a rogue datastore
+			// type. The felix syncer will not recognize this and return the RCC as invalid. The remote cluster
+			// processing will treat this as a delete.
+			_, outError = localClient.RemoteClusterConfigurations().Delete(
+				ctx, rcc.Name, options.DeleteOptions{ResourceVersion: kvp.Revision},
+			)
+			Expect(outError).NotTo(HaveOccurred())
+
+			By("Checking we receive no events")
+			syncTester.ExpectUpdates([]api.Update{}, false)
 		})
 	})
 })

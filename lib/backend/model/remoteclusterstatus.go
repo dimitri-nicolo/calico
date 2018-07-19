@@ -52,6 +52,7 @@ const (
 	RemoteClusterConnectionFailed
 	RemoteClusterResyncInProgress
 	RemoteClusterInSync
+	RemoteClusterConfigChangeRestartRequired
 )
 
 func (r RemoteClusterStatusType) String() string {
@@ -64,6 +65,8 @@ func (r RemoteClusterStatusType) String() string {
 		return "ResyncInProgress"
 	case RemoteClusterInSync:
 		return "InSync"
+	case RemoteClusterConfigChangeRestartRequired:
+		return "ConfigChangeRestartRequired"
 	default:
 		return "Unknown"
 	}
