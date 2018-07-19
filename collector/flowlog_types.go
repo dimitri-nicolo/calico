@@ -163,17 +163,21 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	}
 
 	return FlowStats{
-		NumFlows:           flowsRefs.Len(),
-		NumFlowsStarted:    flowsStartedRefs.Len(),
-		NumFlowsCompleted:  flowsCompletedRefs.Len(),
-		PacketsIn:          mu.inMetric.deltaPackets,
-		BytesIn:            mu.inMetric.deltaBytes,
-		PacketsOut:         mu.outMetric.deltaPackets,
-		BytesOut:           mu.outMetric.deltaBytes,
+		NumFlows:          flowsRefs.Len(),
+		NumFlowsStarted:   flowsStartedRefs.Len(),
+		NumFlowsCompleted: flowsCompletedRefs.Len(),
+		PacketsIn:         mu.inMetric.deltaPackets,
+		BytesIn:           mu.inMetric.deltaBytes,
+		PacketsOut:        mu.outMetric.deltaPackets,
+		BytesOut:          mu.outMetric.deltaBytes,
+		// flowsRefs track the flows that were tracked
+		// in the give interval
 		flowsRefs:          flowsRefs,
 		flowsStartedRefs:   flowsStartedRefs,
 		flowsCompletedRefs: flowsCompletedRefs,
-		flowsRefsActive:    flowsRefsActive,
+		// flowsRefsActive tracks the active (non-completed)
+		// flows associated with the flowMeta
+		flowsRefsActive: flowsRefsActive,
 	}
 }
 
@@ -210,6 +214,7 @@ func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 func (f FlowStats) reset() FlowStats {
 	f.flowsStartedRefs = NewTupleSet()
 	f.flowsCompletedRefs = NewTupleSet()
+	f.flowsRefs = f.flowsRefsActive.Copy()
 	f.PacketsIn = 0
 	f.BytesIn = 0
 	f.PacketsOut = 0
@@ -218,7 +223,7 @@ func (f FlowStats) reset() FlowStats {
 	return f
 }
 
-func (f FlowStats) getFlowsCount() int {
+func (f FlowStats) getActiveFlowsCount() int {
 	return len(f.flowsRefsActive)
 }
 

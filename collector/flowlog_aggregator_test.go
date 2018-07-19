@@ -446,7 +446,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			flowLog.Deserialize(*messages[0])
 			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
 			Expect(flowLog.NumFlowsCompleted).Should(Equal(1))
-			Expect(flowLog.NumFlows).Should(Equal(2))
+			Expect(flowLog.NumFlows).Should(Equal(1))
 		})
 
 		It("Updates the stats associated with the flows", func() {
