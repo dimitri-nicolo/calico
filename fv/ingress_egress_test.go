@@ -160,7 +160,7 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 						// Expected flow log seen.
 						delete(expectedKeys, "start-"+key)
 						log.Info("Deleted start-" + key)
-					} else if flowCountingBugFixed {
+					} else {
 						// Unexpected flow log.
 						return errors.New(fmt.Sprintf("Unexpected flow log: %v", fl))
 					}
