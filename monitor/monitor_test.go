@@ -100,7 +100,6 @@ func TestRefreshLicense(t *testing.T) {
 		Expect(m.GetFeatureStatus("allowed")).To(BeTrue(), "expected feature to be allowed but it wasn't")
 		Expect(m.GetFeatureStatus("foobar")).To(BeFalse(), "expected feature to be disallowed but it wasn't")
 		Expect(h.OnFeaturesChangedCalled).To(BeTrue(), "expected feature change to be signalled")
-		Expect(m.GetLicenseStatus()).To(Equal(lclient.Valid))
 
 		t.Log("Second call with exactly the same license shouldn't trigger feature change")
 		h.OnFeaturesChangedCalled = false
@@ -150,13 +149,12 @@ func TestRefreshLicense(t *testing.T) {
 		log.WithField("status", m.GetLicenseStatus()).Info("License status")
 
 		Expect(m.GetLicenseStatus()).To(Equal(lclient.Expired))
-		Expect(m.GetFeatureStatus("allowed")).To(BeFalse(), "expected feature to be allowed but it wasn't")
+		Expect(m.GetFeatureStatus("allowed")).To(BeFalse(), "expected feature to be disallowed but it wasn't")
 		Expect(m.GetFeatureStatus("foobar")).To(BeFalse(), "expected feature to be disallowed but it wasn't")
 	})
 }
 
 func setUpMonitorAndMocks() (*licenseMonitor, *harness) {
-	log.SetLevel(log.DebugLevel)
 	mockBapiClient := &mockBapiClient{}
 	m := New(mockBapiClient).(*licenseMonitor)
 	mockTime := &mockTime{
@@ -288,9 +286,6 @@ func (t *mockTime) NewTimer(d time.Duration) timer {
 		Stopped: make(chan struct{}),
 	}
 	t.timerQueue = append(t.timerQueue, &queueEntry)
-	sort.Slice(t.timerQueue, func(i, j int) bool {
-		return t.timerQueue[i].PopTime.Before(t.timerQueue[j].PopTime)
-	})
 	return &queueEntry
 }
 
