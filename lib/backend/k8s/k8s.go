@@ -336,6 +336,7 @@ func (c *KubeClient) Clean() error {
 		apiv3.KindLicenseKey,
 		apiv3.KindFelixConfiguration,
 		apiv3.KindGlobalNetworkPolicy,
+		apiv3.KindNetworkPolicy,
 		apiv3.KindTier,
 		apiv3.KindGlobalNetworkSet,
 		apiv3.KindIPPool,
