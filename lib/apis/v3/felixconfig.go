@@ -273,6 +273,8 @@ type FelixConfigurationSpec struct {
 	// See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html
 	// for allowed values.
 	CloudWatchLogsRetentionDays *int `json:"cloudWatchLogsRetentionDays,omitempty" validate:"omitempty,cloudWatchRetentionDays"`
+	// Enable Flow logs reporting to AWS CloudWatch for HostEndpoints.
+	CloudWatchLogsEnableHostEndpoint *bool `json:"cloudWatchLogsEnableHostEndpoint,omitempty"`
 
 	// Enable reporting metrics to CloudWatch.
 	CloudWatchMetricsReporterEnabled *bool `json:"cloudWatchMetricsReporterEnabled,omitempty"`

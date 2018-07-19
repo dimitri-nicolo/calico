@@ -671,6 +671,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.CloudWatchLogsEnableHostEndpoint != nil {
+		in, out := &in.CloudWatchLogsEnableHostEndpoint, &out.CloudWatchLogsEnableHostEndpoint
+		*out = new(bool)
+		**out = **in
+	}
 	if in.CloudWatchMetricsReporterEnabled != nil {
 		in, out := &in.CloudWatchMetricsReporterEnabled, &out.CloudWatchMetricsReporterEnabled
 		*out = new(bool)

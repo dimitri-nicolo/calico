@@ -2871,6 +2871,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int32",
 							},
 						},
+						"cloudWatchLogsEnableHostEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Enable Flow logs reporting to AWS CloudWatch for HostEndpoints.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
 						"cloudWatchMetricsReporterEnabled": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Enable reporting metrics to CloudWatch.",
