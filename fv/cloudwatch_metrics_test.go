@@ -1,0 +1,73 @@
+// +build fvtests
+
+// Copyright (c) 2018 Tigera, Inc. All rights reserved.
+
+package fv_test
+
+import (
+	"context"
+	"regexp"
+	"time"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/projectcalico/felix/collector"
+	"github.com/projectcalico/felix/fv/infrastructure"
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	"github.com/projectcalico/libcalico-go/lib/apis/v3"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/options"
+)
+
+var _ = infrastructure.DatastoreDescribe("CloudWatch metrics tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
+
+	var (
+		infra     infrastructure.DatastoreInfra
+		felix     *infrastructure.Felix
+		client    client.Interface
+		opts      infrastructure.TopologyOptions
+		startLogC chan struct{}
+	)
+
+	BeforeEach(func() {
+		var err error
+		infra, err = getInfra()
+		Expect(err).NotTo(HaveOccurred())
+		opts = infrastructure.DefaultTopologyOptions()
+		felix, client = infrastructure.StartSingleNodeTopology(opts, infra)
+
+		// Watch the felix log to detect whether the reporter starts up.  Need to do this before we enable CloudWatch.
+		startLogC = felix.WatchStdoutFor(regexp.MustCompile(regexp.QuoteMeta(collector.StartupLog)))
+	})
+
+	enableCloudWatch := func() {
+		fc := v3.NewFelixConfiguration()
+		fc.Name = "default"
+		t := true
+		fc.Spec.CloudWatchMetricsReporterEnabled = &t
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		fc, err := client.FelixConfigurations().Create(ctx, fc, options.SetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	}
+
+	It("should enable CloudWatch metrics with valid license", func() {
+		enableCloudWatch()
+		Eventually(startLogC, "10s", "100ms").Should(BeClosed())
+	})
+
+	It("should not enable CloudWatch metrics with expired license", func() {
+		infrastructure.ApplyExpiredLicense(client)
+		enableCloudWatch()
+		Consistently(startLogC, "10s", "100ms").ShouldNot(BeClosed())
+	})
+
+	AfterEach(func() {
+		felix.Stop()
+
+		if CurrentGinkgoTestDescription().Failed {
+			infra.DumpErrorData()
+		}
+		infra.Stop()
+	})
+})
