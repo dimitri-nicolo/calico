@@ -284,6 +284,41 @@ func (st *SyncerTester) GetCacheEntries() []model.KVPair {
 	return es
 }
 
+// waitForNumUpdates waits up to 2s and exits if the number of stored updates is equal to
+// the number of expected updates.
+func (st *SyncerTester) waitForNumUpdates(expected []api.Update) {
+	// Poll until we have at least the correct number of updates to check.
+	nu := func() int {
+		st.lock.Lock()
+		defer st.lock.Unlock()
+		return len(st.updates)
+	}
+
+	for i := 0; i < 20; i++ {
+		if nu() == len(expected) {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// waitForNumOnUpdates waits up to 2s and exits if the number of stored OnUpdates is equal to
+// the number of expected OnUpdates.
+func (st *SyncerTester) waitForNumOnUpdates(expected [][]api.Update) {
+	// Poll until we have at least the correct number of updates to check.
+	nu := func() int {
+		st.lock.Lock()
+		defer st.lock.Unlock()
+		return len(st.onUpdates)
+	}
+	for i := 0; i < 20; i++ {
+		if nu() == len(expected) {
+			break
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
 // Call to test the onUpdate events (without worrying about which specific
 // OnUpdate events were received).
 // This removes all updates/onUpdate events from this receiver, so that the
@@ -291,13 +326,8 @@ func (st *SyncerTester) GetCacheEntries() []model.KVPair {
 func (st *SyncerTester) ExpectUpdates(expected []api.Update, checkOrder bool) {
 	log.Infof("Expecting updates of %v", expected)
 
-	// Poll until we have the correct number of updates to check.
-	nu := func() int {
-		st.lock.Lock()
-		defer st.lock.Unlock()
-		return len(st.updates)
-	}
-	Eventually(nu).Should(Equal(len(expected)))
+	// Wait for the correct number of updates. If we don't get them then the expect will fail below.
+	st.waitForNumUpdates(expected)
 
 	// Extract the updates and remove the updates and onUpdates from our cache.
 	st.lock.Lock()
@@ -318,18 +348,11 @@ func (st *SyncerTester) ExpectUpdates(expected []api.Update, checkOrder bool) {
 // information, UUIDs or other dynamic data that would otherwise make comparison difficult.
 // This removes all updates/onUpdate events from this receiver, so that the
 // next call to this just requires the next set of updates.
-func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder bool, sanitizer func(u *api.Update)) {
+func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder bool, sanitizer func(u *api.Update) *api.Update) {
 	log.Infof("Expecting updates of %v", expected)
 
-	// Poll until we have the correct number of updates to check.
-	gu := func() []api.Update {
-		st.lock.Lock()
-		defer st.lock.Unlock()
-		updates := make([]api.Update, len(st.updates))
-		copy(updates, st.updates)
-		return updates
-	}
-	EventuallyWithOffset(1, gu, "2s", "100ms").Should(HaveLen(len(expected)))
+	// Wait for the correct number of updates. If we don't get them then the expect will fail below.
+	st.waitForNumUpdates(expected)
 
 	// Extract the updates and remove the updates and onUpdates from our cache.
 	st.lock.Lock()
@@ -338,14 +361,18 @@ func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder
 	st.updates = nil
 	st.onUpdates = nil
 
+	sanitized := make([]api.Update, 0, len(expected))
 	for i := range updates {
-		sanitizer(&updates[i])
+		update := sanitizer(&updates[i])
+		if update != nil {
+			sanitized = append(sanitized, *update)
+		}
 	}
 
 	if checkOrder {
-		Expect(updates).To(Equal(expected))
+		Expect(sanitized).To(Equal(expected))
 	} else {
-		Expect(updates).To(ConsistOf(expected))
+		Expect(sanitized).To(ConsistOf(expected))
 	}
 }
 
@@ -358,13 +385,8 @@ func (st *SyncerTester) ExpectUpdatesSanitized(expected []api.Update, checkOrder
 func (st *SyncerTester) ExpectOnUpdates(expected [][]api.Update) {
 	log.Infof("Expecting OnUpdates of %v", expected)
 
-	// Poll until we have the correct number of updates to check.
-	nu := func() int {
-		st.lock.Lock()
-		defer st.lock.Unlock()
-		return len(st.onUpdates)
-	}
-	Eventually(nu).Should(Equal(len(expected)))
+	// Wait for the correct number of OnUpdates. If we don't get them then the expect will fail below.
+	st.waitForNumOnUpdates(expected)
 
 	// Extract the onUpdates and remove the updates and onUpdates from our cache.
 	st.lock.Lock()
