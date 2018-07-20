@@ -114,52 +114,10 @@ type KubeClient struct {
 }
 
 func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
-	// Use the kubernetes client code to load the kubeconfig file and combine it with the overrides.
-	log.Debugf("Building client for config: %+v", ca)
-	configOverrides := &clientcmd.ConfigOverrides{}
-	var overridesMap = []struct {
-		variable *string
-		value    string
-	}{
-		{&configOverrides.ClusterInfo.Server, ca.K8sAPIEndpoint},
-		{&configOverrides.AuthInfo.ClientCertificate, ca.K8sCertFile},
-		{&configOverrides.AuthInfo.ClientKey, ca.K8sKeyFile},
-		{&configOverrides.ClusterInfo.CertificateAuthority, ca.K8sCAFile},
-		{&configOverrides.AuthInfo.Token, ca.K8sAPIToken},
-	}
-
-	// Set an explicit path to the kubeconfig if one
-	// was provided.
-	loadingRules := clientcmd.ClientConfigLoadingRules{}
-	if ca.Kubeconfig != "" {
-		loadingRules.ExplicitPath = ca.Kubeconfig
-	}
-
-	// Using the override map above, populate any non-empty values.
-	for _, override := range overridesMap {
-		if override.value != "" {
-			*override.variable = override.value
-		}
-	}
-	if ca.K8sInsecureSkipTLSVerify {
-		configOverrides.ClusterInfo.InsecureSkipTLSVerify = true
-	}
-	log.Debugf("Config overrides: %+v", configOverrides)
-
-	// A kubeconfig file was provided.  Use it to load a config, passing through
-	// any overrides.
-	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&loadingRules, configOverrides).ClientConfig()
+	config, cs, err := CreateKubernetesClientset(ca)
 	if err != nil {
-		return nil, resources.K8sErrorToCalico(err, nil)
+		return nil, err
 	}
-
-	// Create the clientset
-	cs, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, resources.K8sErrorToCalico(err, nil)
-	}
-	log.Debugf("Created k8s ClientSet: %+v", cs)
 
 	crdClientV1, err := buildCRDClientV1(*config)
 	if err != nil {
@@ -274,6 +232,87 @@ func NewKubeClient(ca *apiconfig.CalicoAPIConfigSpec) (api.Client, error) {
 	)
 
 	return kubeClient, nil
+}
+
+func CreateKubernetesClientset(ca *apiconfig.CalicoAPIConfigSpec) (*rest.Config, *kubernetes.Clientset, error) {
+	// Use the kubernetes client code to load the kubeconfig file and combine it with the overrides.
+	log.Debugf("Building client for config: %+v", ca)
+	configOverrides := &clientcmd.ConfigOverrides{}
+	var overridesMap = []struct {
+		variable *string
+		value    string
+	}{
+		{&configOverrides.ClusterInfo.Server, ca.K8sAPIEndpoint},
+		{&configOverrides.AuthInfo.ClientCertificate, ca.K8sCertFile},
+		{&configOverrides.AuthInfo.ClientKey, ca.K8sKeyFile},
+		{&configOverrides.ClusterInfo.CertificateAuthority, ca.K8sCAFile},
+		{&configOverrides.AuthInfo.Token, ca.K8sAPIToken},
+	}
+
+	// Set an explicit path to the kubeconfig if one
+	// was provided.
+	loadingRules := clientcmd.ClientConfigLoadingRules{}
+	if ca.Kubeconfig != "" {
+		loadingRules.ExplicitPath = ca.Kubeconfig
+	}
+
+	// Using the override map above, populate any non-empty values.
+	for _, override := range overridesMap {
+		if override.value != "" {
+			*override.variable = override.value
+		}
+	}
+	if ca.K8sInsecureSkipTLSVerify {
+		configOverrides.ClusterInfo.InsecureSkipTLSVerify = true
+	}
+	log.Debugf("Config overrides: %+v", configOverrides)
+
+	// A kubeconfig file was provided.  Use it to load a config, passing through
+	// any overrides.
+	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&loadingRules, configOverrides).ClientConfig()
+	if err != nil {
+		return nil, nil, resources.K8sErrorToCalico(err, nil)
+	}
+
+	// Create the clientset
+	cs, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, nil, resources.K8sErrorToCalico(err, nil)
+	}
+	log.Debugf("Created k8s ClientSet: %+v", cs)
+	return config, cs, nil
+}
+
+// Create a new kubernetes-backed client that is a wrapper around the core kubernetes client to expose a
+// Calico backend client API. This allows us to use the syncer infrastructure to sync Kubernetes core
+// resource types. Only read actions are supported in this client.
+//
+// This is a separate client from the main Calico KubeClient because this is also used for etcd-backed Calico
+// in a Kubernetes deployment and is therefore a leaner client in that scenario.
+func NewK8sResourceWrapperClient(cs *kubernetes.Clientset) api.Client {
+
+	kubeClient := &KubeClient{
+		ClientSet:             cs,
+		clientsByResourceKind: make(map[string]resources.K8sResourceClient),
+		clientsByKeyType:      make(map[reflect.Type]resources.K8sResourceClient),
+		clientsByListType:     make(map[reflect.Type]resources.K8sResourceClient),
+	}
+
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindK8sEndpoints,
+		resources.NewEndpointsClient(cs),
+	)
+	kubeClient.registerResourceClient(
+		reflect.TypeOf(model.ResourceKey{}),
+		reflect.TypeOf(model.ResourceListOptions{}),
+		apiv3.KindK8sService,
+		resources.NewServiceClient(cs),
+	)
+
+	return kubeClient
 }
 
 // registerResourceClient registers a specific resource client with the associated

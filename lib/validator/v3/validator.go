@@ -721,38 +721,8 @@ func validateHostEndpointSpec(v *validator.Validate, structLevel *validator.Stru
 func validateRemoteClusterConfigSpec(v *validator.Validate, structLevel *validator.StructLevel) {
 	h := structLevel.CurrentStruct.Interface().(api.RemoteClusterConfigurationSpec)
 
-	// A remote cluster config must only have config that matches the datastore type
-	if h.DatastoreType == "etcdv3" {
-		if len(h.Kubeconfig) != 0 {
-			structLevel.ReportError(reflect.ValueOf(h.Kubeconfig),
-				"Kubeconfig", "", reason("Kubeconfig can't be specified if the datastore type is 'etcdv3'"))
-		}
-		if len(h.K8sAPIEndpoint) != 0 {
-			structLevel.ReportError(reflect.ValueOf(h.K8sAPIEndpoint),
-				"K8sAPIEndpoint", "", reason("K8sAPIEndpoint can't be specified if the datastore type is 'etcdv3'"))
-		}
-		if len(h.K8sAPIToken) != 0 {
-			structLevel.ReportError(reflect.ValueOf(h.K8sAPIToken),
-				"K8sAPIToken", "", reason("K8sAPIToken can't be specified if the datastore type is 'etcdv3'"))
-		}
-		if len(h.K8sCAFile) != 0 {
-			structLevel.ReportError(reflect.ValueOf(h.K8sCAFile),
-				"K8sCAFile", "", reason("K8sCAFile can't be specified if the datastore type is 'etcdv3'"))
-		}
-		if len(h.K8sCertFile) != 0 {
-			structLevel.ReportError(reflect.ValueOf(h.K8sCertFile),
-				"K8sCertFile", "", reason("K8sCertFile can't be specified if the datastore type is 'etcdv3'"))
-		}
-		if len(h.K8sKeyFile) != 0 {
-			structLevel.ReportError(reflect.ValueOf(h.K8sKeyFile),
-				"K8sKeyFile", "", reason("K8sKeyFile can't be specified if the datastore type is 'etcdv3'"))
-		}
-		if h.K8sInsecureSkipTLSVerify {
-			structLevel.ReportError(reflect.ValueOf(h.K8sInsecureSkipTLSVerify),
-				"K8sInsecureSkipTLSVerify", "", reason("K8sInsecureSkipTLSVerify can't be specified if the datastore type is 'etcdv3'"))
-		}
-
-	}
+	// An etcdv3 remote cluster may also have kubernetes datastore configuration for the federation
+	// controller.  However, a kubernetes datastore should not have etcdv3 configuration specified.
 	if h.DatastoreType == "kubernetes" {
 		if len(h.EtcdEndpoints) != 0 {
 			structLevel.ReportError(reflect.ValueOf(h.EtcdEndpoints),
@@ -778,7 +748,6 @@ func validateRemoteClusterConfigSpec(v *validator.Validate, structLevel *validat
 			structLevel.ReportError(reflect.ValueOf(h.EtcdPassword),
 				"EtcdPassword", "", reason("EtcdPassword can't be specified if the datastore type is 'kubernetes'"))
 		}
-
 	}
 }
 
