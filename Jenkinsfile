@@ -11,7 +11,7 @@ def AuthorizeGCR() {
 }
 
 pipeline {
-    agent { label 'slave' }
+    agent { label 'slave-large' }
     triggers{
         pollSCM('H/5 * * * *')
         cron('H H(0-7) * * 1-5')
