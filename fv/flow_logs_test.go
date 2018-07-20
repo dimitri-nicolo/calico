@@ -90,19 +90,21 @@ var (
 var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.DatastoreType{apiconfig.EtcdV3}, func(getInfra infrastructure.InfraFactory) {
 
 	var (
-		infra       infrastructure.DatastoreInfra
-		opts        infrastructure.TopologyOptions
-		expectation expectation
-		felixes     []*infrastructure.Felix
-		client      client.Interface
-		wlHost1     [4]*workload.Workload
-		wlHost2     [2]*workload.Workload
-		hostW       [2]*workload.Workload
-		cc          *workload.ConnectivityChecker
+		infra             infrastructure.DatastoreInfra
+		opts              infrastructure.TopologyOptions
+		useInvalidLicense bool
+		expectation       expectation
+		felixes           []*infrastructure.Felix
+		client            client.Interface
+		wlHost1           [4]*workload.Workload
+		wlHost2           [2]*workload.Workload
+		hostW             [2]*workload.Workload
+		cc                *workload.ConnectivityChecker
 	)
 
 	BeforeEach(func() {
 		var err error
+		useInvalidLicense = false
 		infra, err = getInfra()
 		Expect(err).NotTo(HaveOccurred())
 		opts = infrastructure.DefaultTopologyOptions()
@@ -119,6 +121,18 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 
 	JustBeforeEach(func() {
 		felixes, client = infrastructure.StartNNodeTopology(2, opts, infra)
+
+		if useInvalidLicense {
+			var felixPIDs []int
+			for _, f := range felixes {
+				felixPIDs = append(felixPIDs, f.GetFelixPID())
+			}
+			infrastructure.ApplyExpiredLicense(client)
+			// Wait for felix to restart so we don't accidentally generate a flow log before the license takes effect.
+			for i, f := range felixes {
+				Eventually(f.GetFelixPID, "10s", "100ms").ShouldNot(Equal(felixPIDs[i]))
+			}
+		}
 
 		// Install a default profile that allows all ingress and egress, in the absence of any Policy.
 		err := infra.AddDefaultAllow()
@@ -761,6 +775,28 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		})
 
 		It("should get expected flow logs", checkFlowLogs)
+	})
+
+	Context("with an expired license", func() {
+		BeforeEach(func() {
+			useInvalidLicense = true
+			// Reduce license poll interval so felix won't generate any flow logs before it spots the bad license.
+			opts.ExtraEnvVars["FELIX_DebugUseShortPollIntervals"] = "true"
+		})
+
+		It("should get no flow logs", func() {
+			endTime := time.Now().Add(30 * time.Second)
+			// Check at least twice and for at least 30s.
+			attempts := 0
+			for time.Now().Before(endTime) || attempts < 2 {
+				for _, f := range felixes {
+					_, err := f.ReadCloudWatchLogs()
+					Expect(err).To(Equal(infrastructure.ErrNoCloudwatchLogs))
+				}
+				time.Sleep(1 * time.Second)
+				attempts++
+			}
+		})
 	})
 
 	AfterEach(func() {

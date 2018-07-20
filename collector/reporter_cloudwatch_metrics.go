@@ -55,8 +55,11 @@ func newCloudWatchMetricReporter(dis MetricDispatcher, agg MetricAggregator, uf 
 	}
 }
 
+// StartupLog is looked for by the FVs to check that the reporter has started.
+const StartupLog = "starting CloudWatch metric reporter"
+
 func (c *cloudWatchMetricReporter) Start() {
-	log.Info("starting CloudWatch metric reporter")
+	log.Info(StartupLog)
 	go c.run()
 }
 
