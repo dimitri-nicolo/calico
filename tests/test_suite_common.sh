@@ -153,19 +153,10 @@ run_edited_individual_test() {
     # Edit the confd template for bird.cfg to add an extensions field that should be picked up by confd
     echo $testStatement >> ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
 
-    # Populate Calico using calicoctl to load the input.yaml test data.
-    echo "Populating calico with test data using calicoctl: " $testdir
-    calicoctl apply -f /tests/mock_data/calicoctl/${testdir}/input.yaml
+    run_individual_test $testdir
 
-    # Check the confd templates are updated.
-    test_select_confd_templates $testdir
-
-    # Remove any resource that does not need to be persisted due to test environment
-    # limitations.
-    echo "Preparing Calico data for next test"
+    # Unedit the template
     head -n -1 ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template > temp; mv temp ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
-    calicoctl apply -f /tests/mock_data/calicoctl/${testdir}/default.yaml
-    calicoctl delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
 }
 
 # Run an individual test using oneshot mode:
@@ -203,22 +194,10 @@ run_edited_individual_test_oneshot() {
     # Edit the confd template for bird.cfg to add an extensions field that should be picked up by confd
     echo $testStatement >> ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
 
-    # Populate Calico using calicoctl to load the input.yaml test data.
-    echo "Populating calico with test data using calicoctl: " $testdir
-    calicoctl apply -f /tests/mock_data/calicoctl/${testdir}/input.yaml
+    run_individual_test_oneshot $testdir
 
-    # Run confd in oneshot mode.
-    BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd -onetime >$LOGPATH/logss 2>&1 || true
-
-    # Check the confd templates are updated.
-    test_select_confd_templates $testdir
-
-    # Remove any resource that does not need to be persisted due to test environment
-    # limitations.
-    echo "Preparing Calico data for next test"
+    # Unedit the template
     head -n -1 ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template > temp; mv temp ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
-    calicoctl apply -f /tests/mock_data/calicoctl/${testdir}/default.yaml
-    calicoctl delete -f /tests/mock_data/calicoctl/${testdir}/delete.yaml
 }
 
 # get_templates attempts to grab the latest templates from the calico repo
@@ -266,31 +245,6 @@ test_confd_templates() {
     testdir=$1
     for i in $(seq 1 10); do echo "comparing templates attempt $i" && compare_templates $testdir 0 && break || sleep 1; done
     compare_templates $testdir 1
-}
-
-# Tests that confd generates the required set of templates for the test.
-# Also copies over all the templates that do not exist into the compiled_templates directory for trivial comparison.
-# $1 would be the tests you want to run e.g. mesh/global
-test_select_confd_templates() {
-    testdir=$1
-
-    # Copy over all the unchanged files into the compiled templates directory.
-    declare -a copiedFiles
-    for f in `ls /etc/calico/confd/config`; do
-        if [ ! -f /tests/compiled_templates/${DATASTORE_TYPE}/${testdir}/${f} ]; then
-            cp /etc/calico/confd/config/${f} /tests/compiled_templates/${DATASTORE_TYPE}/${testdir}/${f}
-	    copiedFiles=(${copiedFiles[@]} ${f})
-        fi
-    done
-
-    # Compare the templates until they match (for a max of 10s).
-    for i in $(seq 1 10); do echo "comparing templates attempt $i" && compare_templates $testdir 0 && break || sleep 1; done
-    compare_templates $testdir 1
-
-    # Remove the unnecessary templates
-    for f in ${copiedFiles[@]}; do
-        rm /tests/compiled_templates/${DATASTORE_TYPE}/${testdir}/${f}
-    done
 }
 
 # Compares the generated templates against the known good templates
