@@ -209,7 +209,7 @@ test: test-kdd test-etcd
 
 .PHONY: test-kdd
 ## Run template tests against KDD
-test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/allocate-ipip-addr bin/calicoctl run-k8s-apiserver
+test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl run-k8s-apiserver
 	docker run --rm --net=host \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
@@ -219,7 +219,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/allocate-ipip-addr bin/ca
 
 .PHONY: test-etcd
 ## Run template tests against etcd
-test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/allocate-ipip-addr bin/calicoctl run-etcd
+test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/calicoctl run-etcd
 	docker run --rm --net=host \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
@@ -284,7 +284,7 @@ bin/bird6:
 	curl -sSf -L --retry 5 https://github.com/projectcalico/bird/releases/download/$(BIRD_VER)/bird6 -o $@
 	chmod +x $@
 
-bin/allocate-ipip-addr:
+bin/calico-node:
 	cp fakebinary $@
 	chmod +x $@
 
