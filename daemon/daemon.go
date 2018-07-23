@@ -46,7 +46,6 @@ import (
 	"github.com/projectcalico/felix/config"
 	_ "github.com/projectcalico/felix/config"
 	dp "github.com/projectcalico/felix/dataplane"
-	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/logutils"
 	"github.com/projectcalico/felix/policysync"
 	"github.com/projectcalico/felix/proto"
@@ -615,11 +614,21 @@ const HealthReporterStartupLog = "Starting CloudWatch health reporter."
 func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator, ctx context.Context) {
 	cwClient := newCloudWatchMetricsClient(nil, healthAgg)
 	var err error
-	ticker := jitter.NewTicker(pushInterval, pushInterval/10)
-	defer ticker.Stop()
 
+	// To reduces the chance that we skip out on a minute interval.
+	// For example, a metric is posted at 20:57:57, then the next one at 20:59:02.
+	// In such a case cloudwatch indicates that we missed a metric for 20:58:00 minute interval.
 	for {
-		<-ticker.C
+		var u time.Time
+		n := time.Now()
+		// skewing to the far end of the minute boundary.
+		if n.Second() > 30 {
+			log.WithFields(log.Fields{"Now": n.UTC()}).Debug("Bring back to within the next minute")
+			u = n.Add(pushInterval - 30*time.Second)
+		} else {
+			u = n.Add(pushInterval)
+		}
+		time.Sleep(u.Sub(n))
 		if err = cwClient.pushHealthMetrics(healthAgg.Summary().Live, clusterID, ctx); err != nil {
 			log.WithError(err).Error("error pushing health status to CloudWatch")
 		}
