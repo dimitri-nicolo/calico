@@ -275,6 +275,12 @@ type FelixConfigurationSpec struct {
 	CloudWatchLogsRetentionDays *int `json:"cloudWatchLogsRetentionDays,omitempty" validate:"omitempty,cloudWatchRetentionDays"`
 	// Enable Flow logs reporting to AWS CloudWatch for HostEndpoints.
 	CloudWatchLogsEnableHostEndpoint *bool `json:"cloudWatchLogsEnableHostEndpoint,omitempty"`
+	// CloudWatchLogsEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
+	// This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.
+	CloudWatchLogsEnabledForAllowed *bool `json:"cloudWatchLogsEnabledForAllowed,omitempty"`
+	// CloudWatchLogsEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true.
+	// This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.
+	CloudWatchLogsEnabledForDenied *bool `json:"cloudWatchLogsEnabledForDenied,omitempty"`
 
 	// Enable reporting metrics to CloudWatch.
 	CloudWatchMetricsReporterEnabled *bool `json:"cloudWatchMetricsReporterEnabled,omitempty"`

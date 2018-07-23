@@ -2878,6 +2878,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"cloudWatchLogsEnabledForAllowed": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true. This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsEnabledForDenied": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
 						"cloudWatchMetricsReporterEnabled": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Enable reporting metrics to CloudWatch.",
