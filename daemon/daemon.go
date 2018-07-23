@@ -34,6 +34,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
 	lclient "github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -592,7 +593,13 @@ configRetry:
 
 	// If CloudWatch node health reporting is enabled then start a goroutine to monitor
 	// Felix health and report to CloudWatch.
+	if configParams.CloudWatchNodeHealthStatusEnabled && !licenseMonitor.GetFeatureStatus(features.AWSCloudwatchMetrics) {
+		log.Warn("Not licensed for CloudWatch Metrics feature. License either invalid or expired. " +
+			"Contact Tigera support or email licensing@tigera.io")
+		configParams.CloudWatchNodeHealthStatusEnabled = false
+	}
 	if configParams.CloudWatchNodeHealthStatusEnabled {
+		log.Info(HealthReporterStartupLog)
 		go felixHealthToCloudWatchReporter(configParams.CloudWatchNodeHealthPushIntervalSecs, configParams.ClusterGUID, healthAggregator, ctx)
 	}
 
@@ -600,6 +607,10 @@ configRetry:
 	// down the process gracefully if they fail.
 	monitorAndManageShutdown(failureReportChan, dpDriverCmd, stopSignalChans)
 }
+
+// HealthReporterStartupLog is a log we emit when starting the health reporter.  The FVs grep the log for this constant
+// to detect whether it started.
+const HealthReporterStartupLog = "Starting CloudWatch health reporter."
 
 func felixHealthToCloudWatchReporter(pushInterval time.Duration, clusterID string, healthAgg *health.HealthAggregator, ctx context.Context) {
 	cwClient := newCloudWatchMetricsClient(nil, healthAgg)
