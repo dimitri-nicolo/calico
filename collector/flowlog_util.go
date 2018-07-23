@@ -134,8 +134,8 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 	return em, nil
 }
 
-// getFlowLogActionAndDirFromRuleID converts the action to a string value.
-func getFlowLogActionAndDirFromRuleID(r *calc.RuleID) (fla FlowLogAction, flr FlowLogReporter) {
+// getFlowLogActionAndReporterFromRuleID converts the action to a string value.
+func getFlowLogActionAndReporterFromRuleID(r *calc.RuleID) (fla FlowLogAction, flr FlowLogReporter) {
 	switch r.Action {
 	case rules.RuleActionDeny:
 		fla = FlowLogActionDeny

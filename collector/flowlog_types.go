@@ -72,7 +72,7 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 	f.SrcMeta = srcMeta
 	f.DstMeta = dstMeta
 
-	action, direction := getFlowLogActionAndDirFromRuleID(mu.ruleID)
+	action, direction := getFlowLogActionAndReporterFromRuleID(mu.ruleID)
 	f.Action = action
 	f.Reporter = direction
 
