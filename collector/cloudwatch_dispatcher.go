@@ -87,7 +87,8 @@ func (c *cloudWatchDispatcher) Dispatch(ctx context.Context, inputLogs []*string
 	if c.seqToken != "" {
 		params.SequenceToken = aws.String(c.seqToken)
 	}
-	putLogEventsFunc := func(params *cloudwatchlogs.PutLogEventsInput) error {
+	putLogEventsFunc := func(ctx context.Context, inp interface{}) error {
+		params := inp.(*cloudwatchlogs.PutLogEventsInput)
 		ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
 		defer cancel()
 		resp, err := c.cwl.PutLogEventsWithContext(ctx, params)
@@ -104,15 +105,7 @@ func (c *cloudWatchDispatcher) Dispatch(ctx context.Context, inputLogs []*string
 		c.seqToken = *resp.NextSequenceToken
 		return nil
 	}
-	var err error
-	for retry := 0; retry < cwNumRetries; retry++ {
-		err = putLogEventsFunc(params)
-		if err == nil {
-			return nil
-		}
-		time.Sleep(cwRetryWaitInterval)
-	}
-	return fmt.Errorf("Retries exceeded when trying to PutLogEvents for LogGroup %v LogStream %v. Error: %v", c.logGroupName, c.logStreamName, err)
+	return retryUntil(ctx, putLogEventsFunc, nil, cwNumRetries, params)
 }
 
 func (c *cloudWatchDispatcher) Initialize(ctx context.Context) error {
@@ -158,24 +151,24 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogStream(ctx context.Context) erro
 		return err
 	}
 	log.WithField("LogStreamName", c.logStreamName).Info("Creating Log stream")
-	createLSFunc := func(createLSInp *cloudwatchlogs.CreateLogStreamInput) error {
+	createLSFunc := func(ctx context.Context, inp interface{}) error {
+		createLSInp := inp.(*cloudwatchlogs.CreateLogStreamInput)
 		ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
 		defer cancel()
 		_, err = c.cwl.CreateLogStreamWithContext(ctx, createLSInp)
 		return err
 	}
-	for retry := 0; retry < cwNumRetries; retry++ {
-		err = createLSFunc(createLSInp)
-		if err == nil {
-			break
-		} else if isAWSError(err, cloudwatchlogs.ErrCodeResourceAlreadyExistsException) {
+	onErr := func(err error) bool {
+		if isAWSError(err, cloudwatchlogs.ErrCodeResourceAlreadyExistsException) {
 			// LogStream exists already. This cannot happen unless someone manually
 			// created the log stream between us verifying if it exists (above) to
 			// trying to create it (here).
 			log.Debug("Log stream now exists")
+			return false
 		}
-		time.Sleep(cwRetryWaitInterval)
+		return true
 	}
+	err = retryUntil(ctx, createLSFunc, onErr, cwNumRetries, createLSInp)
 	if err != nil {
 		log.WithError(err).Error("Error when CreateLogStream")
 		return err
@@ -199,7 +192,8 @@ func (c *cloudWatchDispatcher) verifyLogStream(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	descLogStreamFunc := func(descLSInp *cloudwatchlogs.DescribeLogStreamsInput) error {
+	descLogStreamFunc := func(ctx context.Context, inp interface{}) error {
+		descLSInp := inp.(*cloudwatchlogs.DescribeLogStreamsInput)
 		ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
 		defer cancel()
 		resp, err := c.cwl.DescribeLogStreamsWithContext(ctx, descLSInp)
@@ -217,20 +211,17 @@ func (c *cloudWatchDispatcher) verifyLogStream(ctx context.Context) error {
 		}
 		return cwResourceNotFound
 	}
-	for retry := 0; retry < cwNumRetries; retry++ {
-		err = descLogStreamFunc(descLSInp)
-		if err == nil {
-			return nil
-		} else if isAWSError(err, cloudwatchlogs.ErrCodeResourceNotFoundException) || err == cwResourceNotFound {
+	onErr := func(err error) bool {
+		if isAWSError(err, cloudwatchlogs.ErrCodeResourceNotFoundException) || err == cwResourceNotFound {
 			// LogStream does not exist. We can stop retrying and return the error.
 			log.WithFields(log.Fields{"LogGroupName": c.logGroupName, "LogStreamName": c.logStreamName}).Debug("LogStream does not exist")
-			return err
+			return false
 		}
 		// For all other errors, try to retry.
 		log.WithFields(log.Fields{"LogGroupName": c.logGroupName, "LogStreamName": c.logStreamName}).WithError(err).Error("Error when DescribeLogStreams")
-		time.Sleep(cwRetryWaitInterval)
+		return true
 	}
-	return fmt.Errorf("Retries exceeded. Error: %v", err)
+	return retryUntil(ctx, descLogStreamFunc, onErr, cwNumRetries, descLSInp)
 }
 
 func (c *cloudWatchDispatcher) setLogGroupRetention(ctx context.Context) error {
@@ -244,7 +235,8 @@ func (c *cloudWatchDispatcher) setLogGroupRetention(ctx context.Context) error {
 		log.WithError(err).Warning("Invalid input for PutRetentionPolicy call")
 		return err
 	}
-	putRetPolFunc := func(putRetentionInp *cloudwatchlogs.PutRetentionPolicyInput) error {
+	putRetPolFunc := func(ctx context.Context, inp interface{}) error {
+		putRetentionInp := inp.(*cloudwatchlogs.PutRetentionPolicyInput)
 		ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
 		defer cancel()
 		_, err = c.cwl.PutRetentionPolicyWithContext(ctx, putRetentionInp)
@@ -254,14 +246,7 @@ func (c *cloudWatchDispatcher) setLogGroupRetention(ctx context.Context) error {
 		}
 		return nil
 	}
-	for retry := 0; retry < cwNumRetries; retry++ {
-		err = putRetPolFunc(putRetentionInp)
-		if err == nil {
-			return nil
-		}
-		time.Sleep(cwRetryWaitInterval)
-	}
-	return fmt.Errorf("Retries exceeded when trying to set retention time for LogGroup %v. Error: %v", c.logGroupName, err)
+	return retryUntil(ctx, putRetPolFunc, nil, cwNumRetries, putRetentionInp)
 }
 
 func (c *cloudWatchDispatcher) verifyOrCreateLogGroup(ctx context.Context) error {
@@ -280,7 +265,8 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogGroup(ctx context.Context) error
 		return err
 	}
 	log.WithField("LogGroupName", c.logGroupName).Info("Creating Log group")
-	createLGFunc := func(createLGInp *cloudwatchlogs.CreateLogGroupInput) error {
+	createLGFunc := func(ctx context.Context, inp interface{}) error {
+		createLGInp := inp.(*cloudwatchlogs.CreateLogGroupInput)
 		ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
 		defer cancel()
 		_, err = c.cwl.CreateLogGroupWithContext(ctx, createLGInp)
@@ -303,14 +289,7 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogGroup(ctx context.Context) error
 		}
 		return nil
 	}
-	for retry := 0; retry < cwNumRetries; retry++ {
-		err = createLGFunc(createLGInp)
-		if err == nil {
-			return nil
-		}
-		time.Sleep(cwRetryWaitInterval)
-	}
-	return err
+	return retryUntil(ctx, createLGFunc, nil, cwNumRetries, createLGInp)
 }
 
 func isAWSError(err error, codes ...string) bool {
@@ -336,7 +315,8 @@ func (c *cloudWatchDispatcher) verifyLogGroup(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	descLogGroupFunc := func(descLGInp *cloudwatchlogs.DescribeLogGroupsInput) error {
+	descLogGroupFunc := func(ctx context.Context, inp interface{}) error {
+		descLGInp := inp.(*cloudwatchlogs.DescribeLogGroupsInput)
 		ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
 		defer cancel()
 		log.Debugf("Describe %v\n", c.logGroupName)
@@ -364,17 +344,52 @@ func (c *cloudWatchDispatcher) verifyLogGroup(ctx context.Context) error {
 		}
 		return cwResourceNotFound
 	}
-	for retry := 0; retry < cwNumRetries; retry++ {
-		err = descLogGroupFunc(descLGInp)
-		if err == nil {
-			return nil
-		} else if isAWSError(err, cloudwatchlogs.ErrCodeResourceNotFoundException) || err == cwResourceNotFound {
+	onErr := func(err error) bool {
+		if isAWSError(err, cloudwatchlogs.ErrCodeResourceNotFoundException) || err == cwResourceNotFound {
 			// LogGroup does not exist. We can stop retrying and return the error.
 			log.WithField("LogGroupName", c.logGroupName).Debug("Log group does not exists")
-			return err
+			return false
 		}
-		log.WithField("LogGroupName", c.logGroupName).WithError(err).Error("Error when DescribeLogGroups")
-		time.Sleep(cwRetryWaitInterval)
+		return true
 	}
-	return fmt.Errorf("Retries exceeded. Error: %v", err)
+	return retryUntil(ctx, descLogGroupFunc, onErr, cwNumRetries, descLGInp)
+}
+
+type retryableFunc func(context.Context, interface{}) error
+
+type shouldRetryOnError func(error) bool
+
+type retriesExceeded struct {
+	origError error
+}
+
+func (e *retriesExceeded) Error() string {
+	return fmt.Sprintf("Retries exceeded. Last recorded error %v", e.origError)
+}
+
+func retryUntil(ctx context.Context, fn retryableFunc, shouldRetry shouldRetryOnError, maxRetries int, input interface{}) error {
+	var err error
+	// Initial attempt before we start retrying
+	err = fn(ctx, input)
+	if err == nil || (shouldRetry != nil && !shouldRetry(err)) {
+		return err
+	}
+	backoffChan := time.NewTicker(cwRetryWaitInterval).C
+	attempt := 1
+	for {
+		select {
+		case <-backoffChan:
+			err = fn(ctx, input)
+			if err == nil || (shouldRetry != nil && !shouldRetry(err)) {
+				break
+			}
+			attempt++
+			if attempt >= maxRetries {
+				return &retriesExceeded{origError: err}
+			}
+			log.WithError(err).Debugf("Retrying %v", fn)
+		}
+	}
+
+	return err
 }
