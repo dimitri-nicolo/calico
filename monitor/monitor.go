@@ -2,6 +2,10 @@ package monitor
 
 import (
 	"context"
+	"reflect"
+	"sync"
+	"time"
+
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
@@ -9,9 +13,6 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 	log "github.com/sirupsen/logrus"
 	lclient "github.com/tigera/licensing/client"
-	"reflect"
-	"sync"
-	"time"
 )
 
 const (
@@ -64,11 +65,11 @@ type timer interface {
 }
 type timerWrapper time.Timer
 
-func (w * timerWrapper) Stop() bool {
+func (w *timerWrapper) Stop() bool {
 	return (*time.Timer)(w).Stop()
 }
 
-func (w * timerWrapper) Chan() <-chan time.Time {
+func (w *timerWrapper) Chan() <-chan time.Time {
 	return (*time.Timer)(w).C
 }
 
@@ -218,6 +219,16 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 		Namespace: "",
 	}, "")
 
+	// invoke callback after the activeLicense is in place and the lock on activeLicense is done.
+	var invokeCb bool
+	defer func() {
+		if invokeCb {
+			if l.OnFeaturesChanged != nil {
+				l.OnFeaturesChanged()
+			}
+		}
+	}()
+
 	l.activeLicenseLock.Lock()
 	defer l.activeLicenseLock.Unlock()
 
@@ -277,9 +288,7 @@ func (l *licenseMonitor) RefreshLicense(ctx context.Context) error {
 	}).Debug("License features")
 	if !reflect.DeepEqual(oldFeatures, newFeatures) {
 		log.Info("Allowed product features have changed.")
-		if l.OnFeaturesChanged != nil {
-			l.OnFeaturesChanged()
-		}
+		invokeCb = true
 	}
 
 	l.activeRawLicense = license

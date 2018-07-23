@@ -218,13 +218,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6885ea3ab6cd492889dc9cea35ef87fe53c2ee170d99e79ace98d4261f77ffbc"
+  digest = "1:c5dc134dbc3acc08f0a334f2d35542f6b4b7f9ebd7ed8615dfdade438f89c012"
   name = "github.com/projectcalico/libcalico-go"
   packages = [
     "lib/apis/v1",
     "lib/apis/v1/unversioned",
     "lib/apis/v3",
-    "lib/backend/api",
     "lib/backend/model",
     "lib/errors",
     "lib/ipip",
@@ -438,7 +437,6 @@
     "github.com/projectcalico/felix/jitter",
     "github.com/projectcalico/go-yaml-wrapper",
     "github.com/projectcalico/libcalico-go/lib/apis/v3",
-    "github.com/projectcalico/libcalico-go/lib/backend/api",
     "github.com/projectcalico/libcalico-go/lib/backend/model",
     "github.com/projectcalico/libcalico-go/lib/errors",
     "github.com/projectcalico/libcalico-go/lib/set",
@@ -449,6 +447,7 @@
     "github.com/stretchr/testify/require",
     "gopkg.in/square/go-jose.v2",
     "gopkg.in/square/go-jose.v2/jwt",
+    "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
