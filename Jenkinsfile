@@ -41,6 +41,11 @@ pipeline {
                 sh 'make test'
             }
         }
+        stage('Build confd image') {
+             steps{
+                 sh 'make image'
+             }
+        }
         stage('Push image to GCR') {
             steps {
                 script{
