@@ -123,6 +123,8 @@ type Config struct {
 	CloudWatchLogsAggregationKindForDenied  int
 	CloudWatchLogsRetentionDays             int
 	CloudWatchLogsEnableHostEndpoint        bool
+	CloudWatchLogsEnabledForAllowed         bool
+	CloudWatchLogsEnabledForDenied          bool
 
 	DebugCloudWatchLogsFile string
 
@@ -598,16 +600,20 @@ func (d *InternalDataplane) Start() {
 		}
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, cwl)
 		cw := collector.NewCloudWatchReporter(cwd, d.config.CloudWatchLogsFlushInterval, d.config.HealthAggregator, d.config.CloudWatchLogsEnableHostEndpoint)
-		caa := collector.NewCloudWatchAggregator().
-			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).
-			IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
-			ForAction(rules.RuleActionAllow)
-		cw.AddAggregator(caa)
-		cad := collector.NewCloudWatchAggregator().
-			AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForDenied)).
-			IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
-			ForAction(rules.RuleActionDeny)
-		cw.AddAggregator(cad)
+		if d.config.CloudWatchLogsEnabledForAllowed {
+			caa := collector.NewCloudWatchAggregator().
+				AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).
+				IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
+				ForAction(rules.RuleActionAllow)
+			cw.AddAggregator(caa)
+		}
+		if d.config.CloudWatchLogsEnabledForDenied {
+			cad := collector.NewCloudWatchAggregator().
+				AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForDenied)).
+				IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
+				ForAction(rules.RuleActionDeny)
+			cw.AddAggregator(cad)
+		}
 		rm.RegisterMetricsReporter(cw)
 	}
 

@@ -1,5 +1,5 @@
-hash: 37bd451cbe4f20dde36239bbb567e5441f3dd0c9dfa69f29677502ec399ee98c
-updated: 2018-07-19T15:15:32.072525981Z
+hash: d8e994bb5b9b17201a381db4577071bb6c5e6f355b06520770f4632b6544691f
+updated: 2018-07-23T21:24:06.553225-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -99,7 +99,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: bce47c9386f9ecd6b86f450478a80103c3fe1402
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -264,7 +264,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 06dbfea817498f9b0c62c566fe43d173b5605510
+  version: 1b769d137fb876899b7fda435d7a8b234bce2984
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib
@@ -280,6 +280,7 @@ imports:
   - lib/backend/k8s/resources
   - lib/backend/model
   - lib/backend/syncersv1/felixsyncer
+  - lib/backend/syncersv1/remotecluster
   - lib/backend/syncersv1/updateprocessors
   - lib/backend/watchersyncer
   - lib/clientv3
@@ -305,7 +306,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 2120c2c42c9c08ce6dc9c3e25b9f0ba06044669e
+  version: 1ae7b3a56d975268866bafb86c066e71b5fbcf75
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
@@ -362,7 +363,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: ef6f981729d0289fb1807af9cda61577bdff8724
+  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto

@@ -549,3 +549,36 @@ var _ = Describe("IPSec PSK parameters test", func() {
 		Expect(cfg.IPSecMode).To(Equal("PSK"))
 	})
 })
+
+var _ = DescribeTable("CloudWatchLogs config validation",
+	func(settings map[string]string, ok bool) {
+		cfg := New()
+		cfg.UpdateFrom(settings, ConfigFile)
+		err := cfg.Validate()
+		log.WithError(err).Info("Validation result")
+		if !ok {
+			Expect(err).To(HaveOccurred())
+		} else {
+			Expect(err).NotTo(HaveOccurred())
+		}
+	},
+
+	Entry("reporter enabled", map[string]string{
+		"CloudWatchLogsReporterEnabled": "true",
+	}, true),
+	Entry("reporter enabled, allowed and denied disabled", map[string]string{
+		"CloudWatchLogsReporterEnabled":   "true",
+		"CloudWatchLogsEnabledForAllowed": "false",
+		"CloudWatchLogsEnabledForDenied":  "false",
+	}, false),
+	Entry("reporter enabled, allowed enabled and denied disabled", map[string]string{
+		"CloudWatchLogsReporterEnabled":   "true",
+		"CloudWatchLogsEnabledForAllowed": "true",
+		"CloudWatchLogsEnabledForDenied":  "false",
+	}, true),
+	Entry("reporter enabled, allowed disabled and denied enabled", map[string]string{
+		"CloudWatchLogsReporterEnabled":   "true",
+		"CloudWatchLogsEnabledForAllowed": "false",
+		"CloudWatchLogsEnabledForDenied":  "true",
+	}, true),
+)
