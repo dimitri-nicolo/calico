@@ -55,8 +55,6 @@ func NewCloudWatchDispatcher(
 		logStreamName: logStreamName,
 		retentionDays: retentionDays,
 	}
-	ctx := context.Background()
-	cwd.Initialize(ctx)
 	return cwd
 }
 

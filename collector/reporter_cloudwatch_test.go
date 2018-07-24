@@ -217,6 +217,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			muConn1Rule1AllowUpdateCopy.srcEp = localHostEd1
 			muConn1Rule1AllowUpdateCopy.dstEp = remoteHostEd1
 			cr.Report(muConn1Rule1AllowUpdateCopy)
+			time.Sleep(1 * time.Second)
 
 			By("Verifying that no flow logs are logged")
 			events := getEventsFromLogStream()
