@@ -26,18 +26,22 @@ permissions is [here](rbac-tiered-policies).
 
 ### UI minimum requirements
 
-All users who are going to use the Web UI need to be able to list and watch tiers.
+All users who are going to use the Web UI should be able to list and watch tiers,
+networksets and licenses.
 This is accomplished by applying (`kubectl apply`) the follow resources (this example
 gives the `webapp-user` group the basic permissions needed to use the Web UI.
 ```
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: list-tiers
+  name: list-cnx-ui
 rules:
 - apiGroups: ["projectcalico.org"]
-  resources: ["tiers"]
+  resources: ["tiers", "globalnetworksets", "licences"]
   verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources: ["services/proxy"]
+  verbs: ["get"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -49,7 +53,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: list-tiers
+  name: list-cnx-ui
   apiGroup: rbac.authorization.k8s.io
 ```
 
