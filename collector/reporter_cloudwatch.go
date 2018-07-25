@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"context"
 	"time"
 
 	"github.com/gavv/monotime"
@@ -26,8 +25,8 @@ type FlowLogAggregator interface {
 }
 
 type FlowLogDispatcher interface {
-	Initialize(context.Context) error
-	Dispatch(context.Context, []*string) error
+	Initialize() error
+	Dispatch([]*string) error
 }
 
 // cloudWatchReporter implements the MetricsReporter interface.
@@ -69,8 +68,7 @@ func (c *cloudWatchReporter) AddAggregator(agg FlowLogAggregator) {
 
 func (c *cloudWatchReporter) Start() {
 	log.Info("Starting CloudWatchReporter")
-	ctx := context.Background()
-	go c.run(ctx)
+	go c.run()
 }
 
 func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
@@ -88,9 +86,9 @@ func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
 	return nil
 }
 
-func (c *cloudWatchReporter) run(ctx context.Context) {
+func (c *cloudWatchReporter) run() {
 	healthTicks := time.NewTicker(healthInterval).C
-	c.reportHealth(ctx)
+	c.reportHealth()
 	for {
 		// TODO(doublek): Stop and flush cases.
 		select {
@@ -101,18 +99,18 @@ func (c *cloudWatchReporter) run(ctx context.Context) {
 				fl := agg.Get()
 				if len(fl) > 0 {
 					log.Debugf("Dispatching log buffer of size: %d", len(fl))
-					c.dispatcher.Dispatch(ctx, fl)
+					c.dispatcher.Dispatch(fl)
 				}
 			}
 		case <-healthTicks:
 			// Periodically report current health.
-			c.reportHealth(ctx)
+			c.reportHealth()
 		}
 	}
 }
 
-func (c *cloudWatchReporter) canPublishFlowLogs(ctx context.Context) bool {
-	err := c.dispatcher.Initialize(ctx)
+func (c *cloudWatchReporter) canPublishFlowLogs() bool {
+	err := c.dispatcher.Initialize()
 	if err != nil {
 		log.WithError(err).Error("Error when verifying/creating CloudWatch resources.")
 		return false
@@ -120,8 +118,8 @@ func (c *cloudWatchReporter) canPublishFlowLogs(ctx context.Context) bool {
 	return true
 }
 
-func (c *cloudWatchReporter) reportHealth(ctx context.Context) {
-	readiness := c.canPublishFlowLogs(ctx)
+func (c *cloudWatchReporter) reportHealth() {
+	readiness := c.canPublishFlowLogs()
 	if c.healthAggregator != nil {
 		c.healthAggregator.Report(healthName, &health.HealthReport{
 			Live:  true,

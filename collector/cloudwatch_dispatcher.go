@@ -71,7 +71,7 @@ func constructInputEvents(inputLogs []*string) []*cloudwatchlogs.InputLogEvent {
 	return inputEvents
 }
 
-func (c *cloudWatchDispatcher) Dispatch(ctx context.Context, inputLogs []*string) error {
+func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 	params := &cloudwatchlogs.PutLogEventsInput{
 		LogEvents:     constructInputEvents(inputLogs),
 		LogGroupName:  aws.String(c.logGroupName),
@@ -80,6 +80,7 @@ func (c *cloudWatchDispatcher) Dispatch(ctx context.Context, inputLogs []*string
 	if c.seqToken != "" {
 		params.SequenceToken = aws.String(c.seqToken)
 	}
+	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
 	defer cancel()
 	resp, err := c.cwl.PutLogEventsWithContext(ctx, params)
@@ -98,12 +99,13 @@ func (c *cloudWatchDispatcher) Dispatch(ctx context.Context, inputLogs []*string
 	return nil
 }
 
-func (c *cloudWatchDispatcher) Initialize(ctx context.Context) error {
+func (c *cloudWatchDispatcher) Initialize() error {
 	log.Debugf("Initializing seq token")
 	if c.cwl == nil {
 		log.Debugf("Cloudwatch logs client not initialied")
 		return errors.New("Cloudwatch logs client not initialied")
 	}
+	ctx := context.Background()
 	err := c.verifyOrCreateLogGroup(ctx)
 	if err != nil {
 		log.WithError(err).Error("Error when verifying/creating log group")
