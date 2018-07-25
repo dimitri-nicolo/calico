@@ -50,7 +50,7 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
-		opts.EnableCloudWatchLogs()
+		opts.EnableCloudWatchLogs("ENABLEHOSTENDPOINT", "true")
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 
 		// Install a default profile that allows workloads with this profile to talk to each

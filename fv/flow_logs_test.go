@@ -109,7 +109,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		Expect(err).NotTo(HaveOccurred())
 		opts = infrastructure.DefaultTopologyOptions()
 		opts.IPIPEnabled = false
-		opts.EnableCloudWatchLogs("FLUSHINTERVAL", "10")
+		opts.EnableCloudWatchLogs("FLUSHINTERVAL", "10", "ENABLEHOSTENDPOINT", "true")
 
 		// Defaults for how we expect flow logs to be generated.
 		expectation.group = "tigera-flowlogs-<cluster-guid>"

@@ -77,7 +77,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewCloudWatchAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, nil)
+			cr = NewCloudWatchReporter(cd, flushInterval, nil, false)
 			cr.AddAggregator(ca)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
@@ -219,9 +219,43 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			cr.Report(muConn1Rule1AllowUpdateCopy)
 			time.Sleep(1 * time.Second)
 
-			By("Verifying that no flow logs are logged")
-			events := getEventsFromLogStream()
-			Expect(len(events)).Should(Equal(0))
+			By("Verifying that flow logs are logged with pvt and pub metadata")
+			time.Sleep(1 * time.Second)
+			expectedNumFlows := 1
+			expectedNumFlowsStarted := 1
+			expectedNumFlowsCompleted := 0
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdateCopy)
+			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta))
+		})
+	})
+	Context("Enable Flowlogs for HEPs", func() {
+		BeforeEach(func() {
+			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
+			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			ca = NewCloudWatchAggregator()
+			cr = NewCloudWatchReporter(cd, flushInterval, nil, true)
+			cr.AddAggregator(ca)
+			cr.timeNowFn = mt.getMockTime
+			cr.Start()
+		})
+		It("processes flows from Hostendoint to Hostendpoint", func() {
+			By("Reporting a update with host endpoint to host endpoint")
+			muConn1Rule1AllowUpdateCopy := muConn1Rule1AllowUpdate
+			muConn1Rule1AllowUpdateCopy.srcEp = localHostEd1
+			muConn1Rule1AllowUpdateCopy.dstEp = remoteHostEd1
+			cr.Report(muConn1Rule1AllowUpdateCopy)
+
+			By("Verifying that flow logs are logged with HEP metadata")
+			time.Sleep(1 * time.Second)
+			expectedNumFlows := 1
+			expectedNumFlowsStarted := 1
+			expectedNumFlowsCompleted := 0
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdateCopy)
+			expectedSrcMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1", Labels: "-"}
+			expectedDstMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1", Labels: "-"}
+			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedSrcMeta, expectedDstMeta))
 		})
 	})
 })
@@ -240,7 +274,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, hr)
+			cr = NewCloudWatchReporter(cd, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -255,7 +289,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = &timingoutCWFLMockClient{timeout: time.Second}
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, hr)
+			cr = NewCloudWatchReporter(cd, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})

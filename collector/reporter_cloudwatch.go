@@ -35,6 +35,7 @@ type cloudWatchReporter struct {
 	aggregators   []FlowLogAggregator
 	flushInterval time.Duration
 	flushTicker   *jitter.Ticker
+	hepEnabled    bool
 
 	healthAggregator *health.HealthAggregator
 
@@ -49,7 +50,7 @@ const (
 
 // NewCloudWatchReporter constructs a FlowLogs MetricsReporter using
 // a cloudwatch dispatcher and aggregator.
-func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *cloudWatchReporter {
+func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *cloudWatchReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
@@ -59,6 +60,7 @@ func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Dura
 		flushInterval:    flushInterval,
 		timeNowFn:        monotime.Now,
 		healthAggregator: healthAggregator,
+		hepEnabled:       hepEnabled,
 	}
 }
 
@@ -72,12 +74,12 @@ func (c *cloudWatchReporter) Start() {
 }
 
 func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
-	// We only produce Flow logs when we know that at least one of the endpoints
-	// is a WorkloadEndpoint. Otherwise skip processing.
-	if mu.srcEp != nil && mu.dstEp != nil {
-		if mu.srcEp.IsHostEndpoint() && mu.dstEp.IsHostEndpoint() {
-			log.Debugf("Skipping HEP only update: %v", mu)
-			return nil
+	if !c.hepEnabled {
+		if mu.srcEp != nil && mu.srcEp.IsHostEndpoint() {
+			mu.srcEp = nil
+		}
+		if mu.dstEp != nil && mu.dstEp.IsHostEndpoint() {
+			mu.dstEp = nil
 		}
 	}
 	for _, agg := range c.aggregators {
