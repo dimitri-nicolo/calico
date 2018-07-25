@@ -221,15 +221,12 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 
 			By("Verifying that flow logs are logged with pvt and pub metadata")
 			time.Sleep(1 * time.Second)
-			events := getEventsFromLogStream()
-			Expect(len(events)).Should(BeNumerically(">", 0))
-			message := *(events[0].Message)
 			expectedNumFlows := 1
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdateCopy)
-			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
+			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta))
 		})
 	})
 	Context("Enable Flowlogs for HEPs", func() {
@@ -251,17 +248,14 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 
 			By("Verifying that flow logs are logged with HEP metadata")
 			time.Sleep(1 * time.Second)
-			events := getEventsFromLogStream()
-			Expect(len(events)).Should(BeNumerically(">", 0))
-			message := *(events[0].Message)
 			expectedNumFlows := 1
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdateCopy)
 			expectedSrcMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1", Labels: "-"}
 			expectedDstMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1", Labels: "-"}
-			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedSrcMeta, expectedDstMeta)
+			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedSrcMeta, expectedDstMeta))
 		})
 	})
 })
