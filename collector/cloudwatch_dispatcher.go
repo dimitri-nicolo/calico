@@ -20,8 +20,8 @@ const (
 	// max batch size limit associated with PutLogsEventsInput 1MB.
 	// setting the constant < 1MB, ~ 0.9MB to account
 	// for other attributes in the the inputlogevent & marshalled struct padding.
-	eventsBatchSize = 900 * 1024
-	maxRPS          = 5
+	eventsBatchSize       = 900 * 1024
+	eventsBatchBufferSize = 10
 )
 
 type FlowLogFormat string
@@ -49,6 +49,8 @@ func newCloudWatchEventsBatcher(size int, bChan chan eventsBatch) *cloudWatchEve
 }
 
 func (c *cloudWatchEventsBatcher) batch(inputLogs []*string) {
+	defer close(c.eventsBatchChan)
+
 	inputEventsSize := 0
 	inputEvents := []*cloudwatchlogs.InputLogEvent{}
 	inputEventsOffset := 0
@@ -72,7 +74,6 @@ func (c *cloudWatchEventsBatcher) batch(inputLogs []*string) {
 
 	// done, flush & closing the channel
 	c.eventsBatchChan <- inputEvents[inputEventsOffset:len(inputEvents)]
-	close(c.eventsBatchChan)
 }
 
 // cloudWatchDispatcher implements the FlowLogDispatcher interface.
@@ -136,16 +137,11 @@ func (c *cloudWatchDispatcher) uploadEventsBatch(inputLogEvents []*cloudwatchlog
 }
 
 func (c *cloudWatchDispatcher) uploadEventsBatches(eventsBatchChan chan eventsBatch) error {
-	// PutLogEvents API has a limit of 5 rps for a given logStream.
-	rate := time.Second / maxRPS
-	throttle := time.NewTicker(rate)
-	defer throttle.Stop()
-	for _ = range throttle.C {
+	for {
 		e, more := <-eventsBatchChan
 		if !more {
 			return nil
 		}
-		// TODO: Retry workflow in progress. Make sure to take account.
 		err := c.uploadEventsBatch(e)
 		if err != nil {
 			return err
@@ -159,7 +155,7 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 	// Keep pushing as many required <1MB sized inputLogs batches for putLogEvents.
 	// Refer: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
 	// eventsBatchChan with buffer in case of throttling.
-	eventsBatchChan := make(chan eventsBatch, 10)
+	eventsBatchChan := make(chan eventsBatch, eventsBatchBufferSize)
 	b := newCloudWatchEventsBatcher(eventsBatchSize, eventsBatchChan)
 	go b.batch(inputLogs)
 
