@@ -225,7 +225,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 0
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdateCopy)
-			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta))
 		})
 	})
@@ -234,7 +234,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewCloudWatchAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, true)
+			cr = NewCloudWatchReporter(cd, flushInterval, nil, true)
 			cr.AddAggregator(ca)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
@@ -254,7 +254,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muConn1Rule1AllowUpdateCopy)
 			expectedSrcMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1", Labels: "-"}
 			expectedDstMeta := EndpointMetadata{Type: FlowLogEndpointTypeHep, Namespace: "-", Name: "eth1", Labels: "-"}
-			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+			expectFlowLogsInEventStream(newExpectedFlowLog(tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, expectedSrcMeta, expectedDstMeta))
 		})
 	})
@@ -274,7 +274,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, hr)
+			cr = NewCloudWatchReporter(cd, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -289,7 +289,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = &timingoutCWFLMockClient{timeout: time.Second}
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, hr)
+			cr = NewCloudWatchReporter(cd, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
