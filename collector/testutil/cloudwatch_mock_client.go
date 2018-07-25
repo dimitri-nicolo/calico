@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	log "github.com/sirupsen/logrus"
@@ -68,6 +69,10 @@ func (m *mockedCloudWatchLogsClient) GetLogEvents(input *cloudwatchlogs.GetLogEv
 	return resp, nil
 }
 
+func (m *mockedCloudWatchLogsClient) PutLogEventsWithContext(ctx aws.Context, input *cloudwatchlogs.PutLogEventsInput, req ...request.Option) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	return m.PutLogEvents(input)
+}
+
 func (m *mockedCloudWatchLogsClient) PutLogEvents(input *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 	m.log("PutLogEvents", input)
 	log.Infof("Calling mocked cloudwatchlogs PutLogEvents")
@@ -98,6 +103,10 @@ func (m *mockedCloudWatchLogsClient) PutLogEvents(input *cloudwatchlogs.PutLogEv
 	}, nil
 }
 
+func (m *mockedCloudWatchLogsClient) DescribeLogGroupsWithContext(ctx aws.Context, input *cloudwatchlogs.DescribeLogGroupsInput, req ...request.Option) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+	return m.DescribeLogGroups(input)
+}
+
 func (m *mockedCloudWatchLogsClient) DescribeLogGroups(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
 	m.log("DescribeLogGroups", input)
 	if !strings.HasPrefix(m.logGroupName, *input.LogGroupNamePrefix) {
@@ -118,10 +127,18 @@ func (m *mockedCloudWatchLogsClient) DeleteLogGroup(input *cloudwatchlogs.Delete
 	return nil, nil
 }
 
+func (m *mockedCloudWatchLogsClient) CreateLogStreamWithContext(ctx aws.Context, input *cloudwatchlogs.CreateLogStreamInput, req ...request.Option) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+	return m.CreateLogStream(input)
+}
+
 func (m *mockedCloudWatchLogsClient) CreateLogStream(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 	m.log("CreateLogStream", input)
 	m.logStreamName = *input.LogStreamName
 	return &cloudwatchlogs.CreateLogStreamOutput{}, nil
+}
+
+func (m *mockedCloudWatchLogsClient) DescribeLogStreamsWithContext(ctx aws.Context, input *cloudwatchlogs.DescribeLogStreamsInput, req ...request.Option) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+	return m.DescribeLogStreams(input)
 }
 
 func (m *mockedCloudWatchLogsClient) DescribeLogStreams(input *cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
@@ -139,6 +156,10 @@ func (m *mockedCloudWatchLogsClient) DescribeLogStreams(input *cloudwatchlogs.De
 		},
 	}
 	return dlso, nil
+}
+
+func (m *mockedCloudWatchLogsClient) PutRetentionPolicyWithContext(ctx aws.Context, input *cloudwatchlogs.PutRetentionPolicyInput, req ...request.Option) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+	return m.PutRetentionPolicy(input)
 }
 
 func (m *mockedCloudWatchLogsClient) PutRetentionPolicy(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {

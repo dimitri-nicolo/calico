@@ -8,6 +8,7 @@ import (
 	"github.com/gavv/monotime"
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/rules"
+	"github.com/projectcalico/libcalico-go/lib/health"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,6 +25,7 @@ type FlowLogAggregator interface {
 }
 
 type FlowLogDispatcher interface {
+	Initialize() error
 	Dispatch([]*string) error
 }
 
@@ -34,18 +36,29 @@ type cloudWatchReporter struct {
 	flushInterval time.Duration
 	flushTicker   *jitter.Ticker
 
+	healthAggregator *health.HealthAggregator
+
 	// Allow the time function to be mocked for test purposes.
 	timeNowFn func() time.Duration
 }
 
+const (
+	healthName     = "cloud_watch_reporter"
+	healthInterval = 10 * time.Second
+)
+
 // NewCloudWatchReporter constructs a FlowLogs MetricsReporter using
 // a cloudwatch dispatcher and aggregator.
-func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration) *cloudWatchReporter {
+func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator) *cloudWatchReporter {
+	if healthAggregator != nil {
+		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
+	}
 	return &cloudWatchReporter{
-		dispatcher:    dispatcher,
-		flushTicker:   jitter.NewTicker(flushInterval, flushInterval/10),
-		flushInterval: flushInterval,
-		timeNowFn:     monotime.Now,
+		dispatcher:       dispatcher,
+		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
+		flushInterval:    flushInterval,
+		timeNowFn:        monotime.Now,
+		healthAggregator: healthAggregator,
 	}
 }
 
@@ -54,7 +67,7 @@ func (c *cloudWatchReporter) AddAggregator(agg FlowLogAggregator) {
 }
 
 func (c *cloudWatchReporter) Start() {
-	log.Infof("Starting CloudWatchReporter")
+	log.Info("Starting CloudWatchReporter")
 	go c.run()
 }
 
@@ -74,6 +87,8 @@ func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
 }
 
 func (c *cloudWatchReporter) run() {
+	healthTicks := time.NewTicker(healthInterval).C
+	c.reportHealth()
 	for {
 		// TODO(doublek): Stop and flush cases.
 		select {
@@ -87,6 +102,28 @@ func (c *cloudWatchReporter) run() {
 					c.dispatcher.Dispatch(fl)
 				}
 			}
+		case <-healthTicks:
+			// Periodically report current health.
+			c.reportHealth()
 		}
+	}
+}
+
+func (c *cloudWatchReporter) canPublishFlowLogs() bool {
+	err := c.dispatcher.Initialize()
+	if err != nil {
+		log.WithError(err).Error("Error when verifying/creating CloudWatch resources.")
+		return false
+	}
+	return true
+}
+
+func (c *cloudWatchReporter) reportHealth() {
+	readiness := c.canPublishFlowLogs()
+	if c.healthAggregator != nil {
+		c.healthAggregator.Report(healthName, &health.HealthReport{
+			Live:  true,
+			Ready: readiness,
+		})
 	}
 }

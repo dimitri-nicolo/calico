@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -20,6 +21,9 @@ type FlowLogFormat string
 const (
 	FlowLogFormatJSON FlowLogFormat = "json"
 	FlowLogFormatFlat FlowLogFormat = "flat"
+
+	cwAPITimeout = 5 * time.Second
+	cwNumRetries = 3
 )
 
 // cloudWatchDispatcher implements the FlowLogDispatcher interface.
@@ -42,7 +46,7 @@ func NewCloudWatchDispatcher(
 		sess := session.Must(session.NewSessionWithOptions(session.Options{
 			SharedConfigState: session.SharedConfigEnable,
 		}))
-		cwl = cloudwatchlogs.New(sess)
+		cwl = cloudwatchlogs.New(sess, aws.NewConfig().WithMaxRetries(cwNumRetries))
 	}
 
 	cwd := &cloudWatchDispatcher{
@@ -50,13 +54,6 @@ func NewCloudWatchDispatcher(
 		logGroupName:  logGroupName,
 		logStreamName: logStreamName,
 		retentionDays: retentionDays,
-	}
-
-	// TODO(doublek): Add some retries before bailing.
-	err := cwd.init()
-	if err != nil {
-		log.WithError(err).Fatal("Could not initialize sequence token")
-		return nil
 	}
 	return cwd
 }
@@ -83,7 +80,11 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 	if c.seqToken != "" {
 		params.SequenceToken = aws.String(c.seqToken)
 	}
-	resp, err := c.cwl.PutLogEvents(params)
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
+	defer cancel()
+	resp, err := c.cwl.PutLogEventsWithContext(ctx, params)
+
 	if err != nil {
 		log.WithFields(log.Fields{"LogGroupName": c.logGroupName, "LogStreamName": c.logStreamName}).WithError(err).Error("PutLogevents")
 		return err
@@ -98,34 +99,38 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 	return nil
 }
 
-func (c *cloudWatchDispatcher) init() error {
+func (c *cloudWatchDispatcher) Initialize() error {
 	log.Debugf("Initializing seq token")
 	if c.cwl == nil {
 		log.Debugf("Cloudwatch logs client not initialied")
 		return errors.New("Cloudwatch logs client not initialied")
 	}
-	err := c.verifyOrCreateLogGroup()
+	ctx := context.Background()
+	err := c.verifyOrCreateLogGroup(ctx)
 	if err != nil {
 		log.WithError(err).Error("Error when verifying/creating log group")
 		return err
 	}
-	ls, err := c.verifyOrCreateLogStream()
+	err = c.verifyOrCreateLogStream(ctx)
 	if err != nil {
 		log.WithError(err).Error("Error when verifying/creating log stream")
 		return err
 	}
+	return nil
+}
+
+func (c *cloudWatchDispatcher) setSeqToken(ls *cloudwatchlogs.LogStream) {
 	if ls.UploadSequenceToken != nil {
 		log.Debugf("LS Matched setting Token %v\n", *ls.UploadSequenceToken)
 		c.seqToken = *ls.UploadSequenceToken
 	}
-	return nil
 }
 
-func (c *cloudWatchDispatcher) verifyOrCreateLogStream() (*cloudwatchlogs.LogStream, error) {
-
-	ls, err := c.verifyLogStream()
+func (c *cloudWatchDispatcher) verifyOrCreateLogStream(ctx context.Context) error {
+	var err error
+	err = c.verifyLogStream(ctx)
 	if err == nil {
-		return ls, nil
+		return nil
 	}
 
 	// LogStream doesn't exist. Time to create it.
@@ -135,68 +140,78 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogStream() (*cloudwatchlogs.LogStr
 	}
 	err = createLSInp.Validate()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.WithField("LogStreamName", c.logStreamName).Info("Creating Log stream")
-	_, err = c.cwl.CreateLogStream(createLSInp)
-	if err != nil {
-		log.Debugf("Error when CreateLogStream %v\n", err)
-		return nil, err
+	ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
+	defer cancel()
+	_, err = c.cwl.CreateLogStreamWithContext(ctx, createLSInp)
+	return err
+	if isAWSError(err, cloudwatchlogs.ErrCodeResourceAlreadyExistsException) {
+		// LogStream exists already. This cannot happen unless someone manually
+		// created the log stream between us verifying if it exists (above) to
+		// trying to create it (here).
+		log.Debug("Log stream now exists")
+		return nil
 	}
 
-	ls, err = c.verifyLogStream()
+	err = c.verifyLogStream(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return ls, nil
+	return nil
 }
 
-func (c *cloudWatchDispatcher) verifyLogStream() (*cloudwatchlogs.LogStream, error) {
+func (c *cloudWatchDispatcher) verifyLogStream(ctx context.Context) error {
+	var err error
 	// Check if the log stream exists. If it does, return it.
 	descLSInp := &cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName:        aws.String(c.logGroupName),
 		LogStreamNamePrefix: aws.String(c.logStreamName),
 	}
-	err := descLSInp.Validate()
+	err = descLSInp.Validate()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	log.Debugf("Describe %v\n", c.logStreamName)
-	resp, err := c.cwl.DescribeLogStreams(descLSInp)
+	ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
+	defer cancel()
+	resp, err := c.cwl.DescribeLogStreamsWithContext(ctx, descLSInp)
 	if err != nil {
-		log.Debugf("Error when DescribeLogStreams %v\n", err)
-		return nil, err
+		log.WithError(err).Error("Error when DescribeLogStreams")
+		return err
 	}
 	log.Debugf(resp.GoString())
 	for _, ls := range resp.LogStreams {
 		log.Debugf(ls.GoString())
 		if *ls.LogStreamName == c.logStreamName {
-			return ls, nil
+			c.setSeqToken(ls)
+			return nil
 		}
 	}
-	return nil, fmt.Errorf("Cannot find log stream %v in log group %v", c.logStreamName, c.logGroupName)
+	return fmt.Errorf("Cannot find log stream %v in log group %v", c.logStreamName, c.logGroupName)
+
 }
 
-func (c *cloudWatchDispatcher) setLogGroupRetention() error {
+func (c *cloudWatchDispatcher) setLogGroupRetention(ctx context.Context) error {
+	var err error
 	putRetentionInp := &cloudwatchlogs.PutRetentionPolicyInput{
 		LogGroupName:    aws.String(c.logGroupName),
 		RetentionInDays: aws.Int64(int64(c.retentionDays)),
 	}
-	err := putRetentionInp.Validate()
+	err = putRetentionInp.Validate()
 	if err != nil {
 		log.WithError(err).Warning("Invalid input for PutRetentionPolicy call")
 		return err
 	}
-	_, err = c.cwl.PutRetentionPolicy(putRetentionInp)
-	if err != nil {
-		log.WithError(err).Warning("Error in PutRetentionPolicy call")
-	}
+	ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
+	defer cancel()
+	_, err = c.cwl.PutRetentionPolicyWithContext(ctx, putRetentionInp)
 	return err
 }
 
-func (c *cloudWatchDispatcher) verifyOrCreateLogGroup() error {
-
-	err := c.verifyLogGroup()
+func (c *cloudWatchDispatcher) verifyOrCreateLogGroup(ctx context.Context) error {
+	var err error
+	err = c.verifyLogGroup(ctx)
 	if err == nil {
 		return nil
 	}
@@ -210,10 +225,12 @@ func (c *cloudWatchDispatcher) verifyOrCreateLogGroup() error {
 		return err
 	}
 	log.WithField("LogGroupName", c.logGroupName).Info("Creating Log group")
-	_, err = c.cwl.CreateLogGroup(createLGInp)
+	ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
+	defer cancel()
+	_, err = c.cwl.CreateLogGroupWithContext(ctx, createLGInp)
 	if err == nil {
 		// LogGroup just created by us; set its retention time.
-		err = c.setLogGroupRetention()
+		err = c.setLogGroupRetention(ctx)
 		if err != nil {
 			return err
 		}
@@ -245,18 +262,21 @@ func isAWSError(err error, codes ...string) bool {
 	return matched
 }
 
-func (c *cloudWatchDispatcher) verifyLogGroup() error {
+func (c *cloudWatchDispatcher) verifyLogGroup(ctx context.Context) error {
+	var err error
 	descLGInp := &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(c.logGroupName),
 	}
-	err := descLGInp.Validate()
+	err = descLGInp.Validate()
 	if err != nil {
 		return err
 	}
+	ctx, cancel := context.WithTimeout(ctx, cwAPITimeout)
+	defer cancel()
 	log.Debugf("Describe %v\n", c.logGroupName)
-	resp, err := c.cwl.DescribeLogGroups(descLGInp)
+	resp, err := c.cwl.DescribeLogGroupsWithContext(ctx, descLGInp)
 	if err != nil {
-		log.Debugf("Error when DescribeLogGroups %v\n", err)
+		log.WithError(err).Errorf("Describe error %v\n", c.logGroupName)
 		return err
 	}
 	log.Debugf(resp.GoString())
@@ -272,7 +292,7 @@ func (c *cloudWatchDispatcher) verifyLogGroup() error {
 				// propagate it any further upwards from this point.  The
 				// next ANX node that starts up will try again to align
 				// the period with FelixConfiguration.
-				c.setLogGroupRetention()
+				c.setLogGroupRetention(ctx)
 			}
 			return nil
 		}

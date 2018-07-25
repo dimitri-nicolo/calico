@@ -7,7 +7,11 @@ import (
 	"time"
 
 	"github.com/projectcalico/felix/collector/testutil"
+	"github.com/projectcalico/libcalico-go/lib/health"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	. "github.com/onsi/ginkgo"
@@ -73,7 +77,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewCloudWatchAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval)
+			cr = NewCloudWatchReporter(cd, flushInterval, nil)
 			cr.AddAggregator(ca)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
@@ -213,6 +217,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			muConn1Rule1AllowUpdateCopy.srcEp = localHostEd1
 			muConn1Rule1AllowUpdateCopy.dstEp = remoteHostEd1
 			cr.Report(muConn1Rule1AllowUpdateCopy)
+			time.Sleep(1 * time.Second)
 
 			By("Verifying that no flow logs are logged")
 			events := getEventsFromLogStream()
@@ -220,6 +225,62 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 		})
 	})
 })
+
+var _ = Describe("CloudWatch Reporter health verification", func() {
+	var (
+		cr *cloudWatchReporter
+		cd FlowLogDispatcher
+		cl cloudwatchlogsiface.CloudWatchLogsAPI
+		hr *health.HealthAggregator
+	)
+
+	mt := &mockTime{}
+	Context("Test with no errors", func() {
+		BeforeEach(func() {
+			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
+			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			hr = health.NewHealthAggregator()
+			cr = NewCloudWatchReporter(cd, flushInterval, hr)
+			cr.timeNowFn = mt.getMockTime
+			cr.Start()
+		})
+		It("verify health reporting.", func() {
+			By("checking the Readiness flag in health aggregator")
+			expectedReport := health.HealthReport{Live: true, Ready: true}
+			Eventually(func() health.HealthReport { return *hr.Summary() }, 15, 1).Should(Equal(expectedReport))
+		})
+	})
+	Context("Test with client that times out requests", func() {
+		BeforeEach(func() {
+			cl = &timingoutCWFLMockClient{timeout: time.Second}
+			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
+			hr = health.NewHealthAggregator()
+			cr = NewCloudWatchReporter(cd, flushInterval, hr)
+			cr.timeNowFn = mt.getMockTime
+			cr.Start()
+		})
+		It("verify health reporting.", func() {
+			By("checking the Readiness flag in health aggregator")
+			expectedReport := health.HealthReport{Live: true, Ready: false}
+			Eventually(func() health.HealthReport { return *hr.Summary() }, 15, 1).Should(Equal(expectedReport))
+		})
+	})
+})
+
+type timingoutCWFLMockClient struct {
+	cloudwatchlogsiface.CloudWatchLogsAPI
+	timeout time.Duration
+}
+
+func (c *timingoutCWFLMockClient) DescribeLogGroupsWithContext(ctx aws.Context, input *cloudwatchlogs.DescribeLogGroupsInput, req ...request.Option) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+	time.Sleep(c.timeout)
+	return nil, awserr.New(cloudwatchlogs.ErrCodeServiceUnavailableException, "cloudwatch logs service not available", nil)
+}
+
+func (c *timingoutCWFLMockClient) CreateLogGroupWithContext(ctx aws.Context, input *cloudwatchlogs.CreateLogGroupInput, req ...request.Option) (*cloudwatchlogs.CreateLogGroupOutput, error) {
+	time.Sleep(c.timeout)
+	return nil, awserr.New(cloudwatchlogs.ErrCodeServiceUnavailableException, "cloudwatch logs service not available", nil)
+}
 
 func getFlowLog(fl string) (FlowLog, error) {
 	flowLog := &FlowLog{}
