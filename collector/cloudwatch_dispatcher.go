@@ -16,6 +16,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	// max batch size limit associated with PutLogsEventsInput 1MB.
+	// setting the constant < 1MB, ~ 0.9MB to account
+	// for other attributes in the the inputlogevent & marshalled struct padding.
+	eventsBatchSize       = 900 * 1024
+	eventsBatchBufferSize = 10
+)
+
 type FlowLogFormat string
 
 const (
@@ -25,6 +33,48 @@ const (
 	cwAPITimeout = 5 * time.Second
 	cwNumRetries = 3
 )
+
+type eventsBatch []*cloudwatchlogs.InputLogEvent
+
+type cloudWatchEventsBatcher struct {
+	size            int
+	eventsBatchChan chan eventsBatch
+}
+
+func newCloudWatchEventsBatcher(size int, bChan chan eventsBatch) *cloudWatchEventsBatcher {
+	return &cloudWatchEventsBatcher{
+		size:            size,
+		eventsBatchChan: bChan,
+	}
+}
+
+func (c *cloudWatchEventsBatcher) batch(inputLogs []*string) {
+	defer close(c.eventsBatchChan)
+
+	inputEventsSize := 0
+	inputEvents := []*cloudwatchlogs.InputLogEvent{}
+	inputEventsOffset := 0
+	for idx, s := range inputLogs {
+		inputEventsSize += len(*s)
+		// check against approximately 90% of size limit
+		// if greater than flush the batch to eventsBatch channel.
+		// and start over again.
+		if inputEventsSize > c.size {
+			c.eventsBatchChan <- inputEvents[inputEventsOffset:idx]
+			inputEventsOffset = idx
+			inputEventsSize = 0
+		}
+		log.Debugf("Constructing cloud watch log event for flowlog: %s", *s)
+		inputEvent := &cloudwatchlogs.InputLogEvent{
+			Message:   s,
+			Timestamp: aws.Int64(time.Now().Unix() * 1000),
+		}
+		inputEvents = append(inputEvents, inputEvent)
+	}
+
+	// done, flush & closing the channel
+	c.eventsBatchChan <- inputEvents[inputEventsOffset:len(inputEvents)]
+}
 
 // cloudWatchDispatcher implements the FlowLogDispatcher interface.
 type cloudWatchDispatcher struct {
@@ -58,22 +108,9 @@ func NewCloudWatchDispatcher(
 	return cwd
 }
 
-func constructInputEvents(inputLogs []*string) []*cloudwatchlogs.InputLogEvent {
-	inputEvents := []*cloudwatchlogs.InputLogEvent{}
-	for _, s := range inputLogs {
-		log.Debugf("Constructing cloud watch log event for flowlog: %s", *s)
-		inputEvent := &cloudwatchlogs.InputLogEvent{
-			Message:   s,
-			Timestamp: aws.Int64(time.Now().Unix() * 1000),
-		}
-		inputEvents = append(inputEvents, inputEvent)
-	}
-	return inputEvents
-}
-
-func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
+func (c *cloudWatchDispatcher) uploadEventsBatch(inputLogEvents []*cloudwatchlogs.InputLogEvent) error {
 	params := &cloudwatchlogs.PutLogEventsInput{
-		LogEvents:     constructInputEvents(inputLogs),
+		LogEvents:     inputLogEvents,
 		LogGroupName:  aws.String(c.logGroupName),
 		LogStreamName: aws.String(c.logStreamName),
 	}
@@ -96,6 +133,38 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 		return errors.New("Got rejected put log events")
 	}
 	c.seqToken = *resp.NextSequenceToken
+	return nil
+}
+
+func (c *cloudWatchDispatcher) uploadEventsBatches(eventsBatchChan chan eventsBatch) error {
+	for {
+		e, more := <-eventsBatchChan
+		if !more {
+			return nil
+		}
+		err := c.uploadEventsBatch(e)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
+	// Keep pushing as many required <1MB sized inputLogs batches for putLogEvents.
+	// Refer: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
+	// eventsBatchChan with buffer in case of throttling.
+	eventsBatchChan := make(chan eventsBatch, eventsBatchBufferSize)
+	b := newCloudWatchEventsBatcher(eventsBatchSize, eventsBatchChan)
+	go b.batch(inputLogs)
+
+	// Concurrently start uploading the batched events
+	err := c.uploadEventsBatches(eventsBatchChan)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -87,7 +87,8 @@ func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
 }
 
 func (c *cloudWatchReporter) run() {
-	healthTicks := time.NewTicker(healthInterval).C
+	healthTicks := time.NewTicker(healthInterval)
+	defer healthTicks.Stop()
 	c.reportHealth()
 	for {
 		// TODO(doublek): Stop and flush cases.
@@ -102,7 +103,7 @@ func (c *cloudWatchReporter) run() {
 					c.dispatcher.Dispatch(fl)
 				}
 			}
-		case <-healthTicks:
+		case <-healthTicks.C:
 			// Periodically report current health.
 			c.reportHealth()
 		}
