@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	// batch size associated with PutLogsEventsInput 1MB
 	eventsBatchSize = 1024 * 1024
 	maxRPS          = 5
 )
@@ -46,19 +47,17 @@ func newCloudWatchEventsBatcher(size float32, bChan chan eventsBatch) *cloudWatc
 }
 
 func (c *cloudWatchEventsBatcher) batch(inputLogs []*string) {
-	var inputEventsSize float32
-	inputEventsSize = 0
+	inputEventsSize := 0
 	inputEvents := []*cloudwatchlogs.InputLogEvent{}
+	inputEventsOffset := 0
 	for _, s := range inputLogs {
-		inputEventsSize += float32(len(*s))
+		inputEventsSize += len(*s)
 		// check against approximately 90% of size limit
 		// if greater than flush the batch to eventsBatch channel.
 		// and start over again.
-		if inputEventsSize > c.size*0.9 {
-			stashedInputLogEvents := make([]*cloudwatchlogs.InputLogEvent, len(inputEvents))
-			copy(stashedInputLogEvents, inputEvents)
-			c.eventsBatchChan <- stashedInputLogEvents
-			inputEvents = []*cloudwatchlogs.InputLogEvent{}
+		if inputEventsSize > int(c.size*0.9) {
+			c.eventsBatchChan <- inputEvents[inputEventsOffset : inputEventsOffset+inputEventsSize]
+			inputEventsOffset += inputEventsSize
 			inputEventsSize = 0
 		}
 		log.Debugf("Constructing cloud watch log event for flowlog: %s", *s)
@@ -76,12 +75,11 @@ func (c *cloudWatchEventsBatcher) batch(inputLogs []*string) {
 
 // cloudWatchDispatcher implements the FlowLogDispatcher interface.
 type cloudWatchDispatcher struct {
-	cwl             cloudwatchlogsiface.CloudWatchLogsAPI
-	logGroupName    string
-	logStreamName   string
-	retentionDays   int
-	seqToken        string
-	eventsBatchChan chan eventsBatch
+	cwl           cloudwatchlogsiface.CloudWatchLogsAPI
+	logGroupName  string
+	logStreamName string
+	retentionDays int
+	seqToken      string
 }
 
 // NewCloudWatchDispatcher will initialize a session that the aws SDK will use
@@ -99,11 +97,10 @@ func NewCloudWatchDispatcher(
 	}
 
 	cwd := &cloudWatchDispatcher{
-		cwl:             cwl,
-		logGroupName:    logGroupName,
-		logStreamName:   logStreamName,
-		retentionDays:   retentionDays,
-		eventsBatchChan: make(chan eventsBatch),
+		cwl:           cwl,
+		logGroupName:  logGroupName,
+		logStreamName: logStreamName,
+		retentionDays: retentionDays,
 	}
 	return cwd
 }
@@ -139,9 +136,9 @@ func (c *cloudWatchDispatcher) uploadEventsBatch(inputLogEvents []*cloudwatchlog
 func (c *cloudWatchDispatcher) uploadEventsBatches(eventsBatchChan chan eventsBatch) error {
 	// PutLogEvents API has a limit of 5 rps for a given logStream.
 	rate := time.Second / maxRPS
-	throttle := time.Tick(rate)
-	for {
-		<-throttle
+	throttle := time.NewTicker(rate)
+	defer throttle.Stop()
+	for _ = range throttle.C {
 		e, more := <-eventsBatchChan
 		if !more {
 			return nil
@@ -152,6 +149,8 @@ func (c *cloudWatchDispatcher) uploadEventsBatches(eventsBatchChan chan eventsBa
 			return err
 		}
 	}
+
+	return nil
 }
 
 func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
@@ -162,7 +161,7 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 	b := newCloudWatchEventsBatcher(eventsBatchSize, eventsBatchChan)
 	go b.batch(inputLogs)
 
-	// Concurrently start uploaded the batched events
+	// Concurrently start uploading the batched events
 	err := c.uploadEventsBatches(eventsBatchChan)
 	if err != nil {
 		return err
