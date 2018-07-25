@@ -125,8 +125,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-5123451",
 					Labels:    "{\"k8s-app\":\"true\"}",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
@@ -152,8 +152,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-5123451",
 					Labels:    "{\"k8s-app\":\"true\"}",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
@@ -179,8 +179,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "pub",
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
@@ -207,8 +207,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-5123451",
 					Labels:    "{\"k8s-app\":\"true\"}",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
@@ -235,8 +235,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-*",
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
@@ -262,8 +262,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "nginx-412354-*",
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
@@ -291,8 +291,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "pub",
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
@@ -320,8 +320,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "aws", // <-- AWS MetaServer Endpoint
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 
@@ -357,8 +357,8 @@ var _ = Describe("Flow log types tests", func() {
 					Name:      "manually-created-pod", // Keeping the Name. No Generatename.
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
 		})
@@ -374,35 +374,35 @@ var _ = Describe("Flow log types tests", func() {
 			flowMeta, err = NewFlowMeta(muWithEndpointMeta, Default)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 - wep default nginx-412354-5123451 - 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 - wep default nginx-412354-5123451 - 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, true)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 {\"test-app\":\"true\"} wep default nginx-412354-5123451 {\"k8s-app\":\"true\"} 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 {\"test-app\":\"true\"} wep default nginx-412354-5123451 {\"k8s-app\":\"true\"} 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			By("aggregating on source port")
 			flowMeta, err = NewFlowMeta(muWithEndpointMeta, SourcePort)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 - wep default nginx-412354-5123451 - 10.0.0.1 20.0.0.1 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 - wep default nginx-412354-5123451 - 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, true)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 {\"test-app\":\"true\"} wep default nginx-412354-5123451 {\"k8s-app\":\"true\"} 10.0.0.1 20.0.0.1 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 {\"test-app\":\"true\"} wep default nginx-412354-5123451 {\"k8s-app\":\"true\"} 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			By("aggregating on prefix name")
 			flowMeta, err = NewFlowMeta(muWithEndpointMeta, PrefixName)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - wep default nginx-412354-* - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - wep default nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, PrefixName)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 net - pvt - wep default nginx-412354-* - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 net - pvt - wep default nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			muWithoutPublicDstEndpointMeta := muWithoutDstEndpointMeta
@@ -410,7 +410,7 @@ var _ = Describe("Flow log types tests", func() {
 			flowMeta, err = NewFlowMeta(muWithoutPublicDstEndpointMeta, PrefixName)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - net - pub - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - net - pub - - - 6 - 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			muWithoutAWSMetaDstEndpointMeta := muWithoutDstEndpointMeta
@@ -418,7 +418,7 @@ var _ = Describe("Flow log types tests", func() {
 			flowMeta, err = NewFlowMeta(muWithoutAWSMetaDstEndpointMeta, PrefixName)
 			Expect(err).To(BeNil())
 			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - net - aws - - - 6 - 80 0 0 0 in 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - net - aws - - - 6 - 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 		})

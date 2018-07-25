@@ -48,10 +48,10 @@ var (
 
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
-	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fd FlowLogDirection, pi, po, bi, bo int, sm, dm EndpointMetadata) {
+	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata) {
 		fl, err := getFlowLog(msg)
 		Expect(err).To(BeNil())
-		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fd, pi, po, bi, bo, sm, dm)
+		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm)
 		Expect(fl).Should(Equal(expectedFlow))
 	}
 	calculatePacketStats := func(mus ...MetricUpdate) (epi, epo, ebi, ebo int) {
@@ -77,7 +77,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedNumFlowsCompleted := 0
 
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
-			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogDirectionIn,
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 			By("source port")
@@ -244,8 +244,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Name:      "pub",
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 
 			fm2 := FlowMeta{
@@ -268,8 +268,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Name:      "iperf-4235-*",
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 
 			fm3 := FlowMeta{
@@ -292,8 +292,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Name:      "pvt",
 					Labels:    "-",
 				},
-				Action:    "allow",
-				Direction: "in",
+				Action:   "allow",
+				Reporter: "dst",
 			}
 
 			flowLogMetas := []FlowMeta{}

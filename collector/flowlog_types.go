@@ -15,7 +15,7 @@ const (
 
 type FlowLogEndpointType string
 type FlowLogAction string
-type FlowLogDirection string
+type FlowLogReporter string
 type FlowLogSubnetType string
 
 type EndpointMetadata struct {
@@ -26,11 +26,11 @@ type EndpointMetadata struct {
 }
 
 type FlowMeta struct {
-	Tuple     Tuple            `json:"tuple"`
-	SrcMeta   EndpointMetadata `json:"sourceMeta"`
-	DstMeta   EndpointMetadata `json:"destinationMeta"`
-	Action    FlowLogAction    `json:"action"`
-	Direction FlowLogDirection `json:"flowDirection"`
+	Tuple    Tuple            `json:"tuple"`
+	SrcMeta  EndpointMetadata `json:"sourceMeta"`
+	DstMeta  EndpointMetadata `json:"destinationMeta"`
+	Action   FlowLogAction    `json:"action"`
+	Reporter FlowLogReporter  `json:"flowReporter"`
 }
 
 func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
@@ -72,9 +72,9 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 	f.SrcMeta = srcMeta
 	f.DstMeta = dstMeta
 
-	action, direction := getFlowLogActionAndDirFromRuleID(mu.ruleID)
+	action, direction := getFlowLogActionAndReporterFromRuleID(mu.ruleID)
 	f.Action = action
-	f.Direction = direction
+	f.Reporter = direction
 
 	return f, nil
 }
@@ -250,14 +250,14 @@ func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool) str
 		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, srcLabels,
 		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, dstLabels,
 		srcIP, dstIP, proto, l4Src, l4Dst,
-		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Direction,
+		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Reporter,
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
 		f.Action)
 }
 
 func (f *FlowLog) Deserialize(fl string) error {
 	// Format is
-	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowDirection packetsIn packetsOut bytesIn bytesOut action
+	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action
 	// Sample entry with no aggregation and no labels.
 	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 - wep kube-system kube-dns-7cc87d595-pxvxb - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow
 
@@ -322,12 +322,12 @@ func (f *FlowLog) Deserialize(fl string) error {
 	nfs, _ := strconv.Atoi(parts[16])
 	nfc, _ := strconv.Atoi(parts[17])
 
-	var fd FlowLogDirection
+	var fr FlowLogReporter
 	switch parts[18] {
-	case "in":
-		fd = FlowLogDirectionIn
-	case "out":
-		fd = FlowLogDirectionOut
+	case "src":
+		fr = FlowLogReporterSrc
+	case "dst":
+		fr = FlowLogReporterDst
 	}
 
 	pi, _ := strconv.Atoi(parts[19])
@@ -345,11 +345,11 @@ func (f *FlowLog) Deserialize(fl string) error {
 
 	*f = FlowLog{
 		FlowMeta{
-			Tuple:     tuple,
-			SrcMeta:   srcMeta,
-			DstMeta:   dstMeta,
-			Action:    a,
-			Direction: fd,
+			Tuple:    tuple,
+			SrcMeta:  srcMeta,
+			DstMeta:  dstMeta,
+			Action:   a,
+			Reporter: fr,
 		},
 		FlowStats{
 			NumFlows:          nf,
