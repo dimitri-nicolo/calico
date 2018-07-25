@@ -17,8 +17,10 @@ import (
 )
 
 const (
-	// batch size associated with PutLogsEventsInput 1MB
-	eventsBatchSize = 1024 * 1024
+	// max batch size limit associated with PutLogsEventsInput 1MB.
+	// setting the constant < 1MB, ~ 0.9MB to account
+	// for other attributes in the the inputlogevent & marshalled struct padding.
+	eventsBatchSize = 900 * 1024
 	maxRPS          = 5
 )
 
@@ -35,11 +37,11 @@ const (
 type eventsBatch []*cloudwatchlogs.InputLogEvent
 
 type cloudWatchEventsBatcher struct {
-	size            float32
+	size            int
 	eventsBatchChan chan eventsBatch
 }
 
-func newCloudWatchEventsBatcher(size float32, bChan chan eventsBatch) *cloudWatchEventsBatcher {
+func newCloudWatchEventsBatcher(size int, bChan chan eventsBatch) *cloudWatchEventsBatcher {
 	return &cloudWatchEventsBatcher{
 		size:            size,
 		eventsBatchChan: bChan,
@@ -50,14 +52,14 @@ func (c *cloudWatchEventsBatcher) batch(inputLogs []*string) {
 	inputEventsSize := 0
 	inputEvents := []*cloudwatchlogs.InputLogEvent{}
 	inputEventsOffset := 0
-	for _, s := range inputLogs {
+	for idx, s := range inputLogs {
 		inputEventsSize += len(*s)
 		// check against approximately 90% of size limit
 		// if greater than flush the batch to eventsBatch channel.
 		// and start over again.
-		if inputEventsSize > int(c.size*0.9) {
-			c.eventsBatchChan <- inputEvents[inputEventsOffset : inputEventsOffset+inputEventsSize]
-			inputEventsOffset += inputEventsSize
+		if inputEventsSize > c.size {
+			c.eventsBatchChan <- inputEvents[inputEventsOffset:idx]
+			inputEventsOffset = idx
 			inputEventsSize = 0
 		}
 		log.Debugf("Constructing cloud watch log event for flowlog: %s", *s)
@@ -69,7 +71,7 @@ func (c *cloudWatchEventsBatcher) batch(inputLogs []*string) {
 	}
 
 	// done, flush & closing the channel
-	c.eventsBatchChan <- inputEvents
+	c.eventsBatchChan <- inputEvents[inputEventsOffset:len(inputEvents)]
 	close(c.eventsBatchChan)
 }
 
