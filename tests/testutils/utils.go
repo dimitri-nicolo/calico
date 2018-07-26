@@ -83,6 +83,16 @@ func GetCalicoClient(etcdIP string) client.Interface {
 	return client
 }
 
+func GetCalicoKubernetesClient(kubeconfig string) client.Interface {
+	cfg := apiconfig.NewCalicoAPIConfig()
+	cfg.Spec.DatastoreType = apiconfig.Kubernetes
+	cfg.Spec.Kubeconfig = kubeconfig
+	client, err := client.New(*cfg)
+
+	Expect(err).NotTo(HaveOccurred())
+	return client
+}
+
 func GetBackendClient(etcdIP string) api.Client {
 	cfg := apiconfig.NewCalicoAPIConfig()
 	cfg.Spec.DatastoreType = apiconfig.EtcdV3

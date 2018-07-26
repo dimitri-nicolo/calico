@@ -24,20 +24,30 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/pkg/transport"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/kube-controllers/pkg/config"
+	"github.com/projectcalico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/namespace"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/networkpolicy"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/node"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/pod"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/serviceaccount"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
+	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
-	log "github.com/sirupsen/logrus"
+
 	"k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+// backendClientAccessor is an interface to access the backend client from the main v2 client.
+type backendClientAccessor interface {
+	Backend() bapi.Client
+}
 
 // VERSION is filled out during the build process (using git describe output)
 var VERSION string
@@ -88,12 +98,14 @@ func main() {
 	// Create the context.
 	ctx := context.Background()
 
-	log.Info("Ensuring Calico datastore is initialized")
-	initCtx, cancelInit := context.WithTimeout(ctx, 10*time.Second)
-	defer cancelInit()
-	err = calicoClient.EnsureInitialized(initCtx, "", "", "k8s")
-	if err != nil {
-		log.WithError(err).Fatal("Failed to initialize Calico datastore")
+	if !config.DoNotInitializeCalico {
+		log.Info("Ensuring Calico datastore is initialized")
+		initCtx, cancelInit := context.WithTimeout(ctx, 10*time.Second)
+		defer cancelInit()
+		err = calicoClient.EnsureInitialized(initCtx, "", "", "k8s")
+		if err != nil {
+			log.WithError(err).Fatal("Failed to initialize Calico datastore")
+		}
 	}
 
 	for _, controllerType := range strings.Split(config.EnabledControllers, ",") {
@@ -113,6 +125,9 @@ func main() {
 		case "serviceaccount":
 			serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, calicoClient)
 			go serviceAccountController.Run(config.ProfileWorkers, config.ReconcilerPeriod, stop)
+		case "federatedservices":
+			federatedEndpointsController := federatedservices.NewFederatedServicesController(ctx, k8sClientset, calicoClient)
+			go federatedEndpointsController.Run(config.FederatedServicesWorkers, config.ReconcilerPeriod, stop)
 		default:
 			log.Fatalf("Invalid controller '%s' provided. Valid options are workloadendpoint, profile, policy", controllerType)
 		}
@@ -153,6 +168,15 @@ func getClients(kubeconfig string) (*kubernetes.Clientset, client.Interface, err
 	calicoClient, err := client.NewFromEnv()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build Calico client: %s", err)
+	}
+
+	// If the calico client is actually a kubernetes backed client, just return the kubernetes
+	// clientset that is in that client. This is minor finesse that is only useful for controllers
+	// that may be run on clusters using Kubernetes API for the Calico datastore.
+	beca := calicoClient.(backendClientAccessor)
+	bec := beca.Backend()
+	if kc, ok := bec.(*k8s.KubeClient); ok {
+		return kc.ClientSet, calicoClient, err
 	}
 
 	// Now build the Kubernetes client, we support in-cluster config and kubeconfig
