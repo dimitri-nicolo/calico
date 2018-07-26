@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/fv/containers"
+	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
 	apiv3 "github.com/projectcalico/libcalico-go/lib/apis/v3"
@@ -227,6 +229,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		remoteApiserver      *containers.Container
 		remoteK8sClient      *kubernetes.Clientset
 		remoteKubeconfig     string
+		localKubeconfig      string
 	)
 
 	const (
@@ -259,16 +262,16 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		// Write out a kubeconfig file for the local API server, and create a k8s client.
 		lkubeconfig, err := ioutil.TempFile("", "ginkgo-localcluster")
 		Expect(err).NotTo(HaveOccurred())
-		defer os.Remove(lkubeconfig.Name())
+		localKubeconfig = lkubeconfig.Name()
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, localApiserver.IP)
 		lkubeconfig.Write([]byte(data))
-		localK8sClient, err = testutils.GetK8sClient(lkubeconfig.Name())
+		localK8sClient, err = testutils.GetK8sClient(localKubeconfig)
 
 		// Create the appropriate local Calico client depending on whether this is an etcd or kdd test.
 		if isCalicoEtcdDatastore {
 			localCalicoClient = testutils.GetCalicoClient(localEtcd.IP)
 		} else {
-			localCalicoClient = testutils.GetCalicoKubernetesClient(lkubeconfig.Name())
+			localCalicoClient = testutils.GetCalicoKubernetesClient(localKubeconfig)
 		}
 
 		// Create remote etcd and run the remote apiserver.
@@ -306,7 +309,7 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		// Run the federation controller on the local cluster.
 		federationController = testutils.RunFederationController(
 			localEtcd.IP,
-			lkubeconfig.Name(),
+			localKubeconfig,
 			[]string{remoteKubeconfig},
 			isCalicoEtcdDatastore,
 		)
@@ -355,12 +358,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 	}
 
 	AfterEach(func() {
+		By("Cleaning up after the test should complete")
 		federationController.Stop()
 		localApiserver.Stop()
 		localEtcd.Stop()
 		remoteApiserver.Stop()
 		remoteEtcd.Stop()
 		os.Remove(remoteKubeconfig)
+		os.Remove(localKubeconfig)
 	})
 
 	DescribeTable("Test with specific local Calico datastore type", func(isCalicoEtcdDatastore bool) {
@@ -414,8 +419,14 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 		})
 		Expect(err).NotTo(HaveOccurred())
 
+		By("Checking the federated endpoints have not been created without a license applied")
+		Consistently(getSubsetsFn(ns1Name, "federated"), consistentlyTimeout, consistentlyPoll).Should(BeNil())
+
+		By("Applying a valid license to enable the federated services controller")
+		infrastructure.ApplyValidLicense(localCalicoClient)
+
 		By("Checking the federated endpoints contain the expected set ips/ports")
-		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal([]v1.EndpointSubset{
+		eSubset := []v1.EndpointSubset{
 			{
 				Addresses: []v1.EndpointAddress{
 					{
@@ -465,7 +476,28 @@ var _ = Describe("[federation] kube-controllers Federated Services FV tests", fu
 					},
 				},
 			},
-		}))
+		}
+		Eventually(getSubsetsFn(ns1Name, "federated"), eventuallyTimeout, eventuallyPoll).Should(Equal(eSubset))
+
+		By("Updating the license to an invalid license")
+		infrastructure.ApplyExpiredLicense(localCalicoClient)
+		federationController.WaitNotRunning(60 * time.Second)
+		federationController = testutils.RunFederationController(
+			localEtcd.IP,
+			localKubeconfig,
+			[]string{remoteKubeconfig},
+			isCalicoEtcdDatastore,
+		)
+
+		By("Updating back2 to have a different set of endpoints while the controller should be stopped")
+		epsBacking2, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(makeEndpoints(eps2, "backing2", epsBacking2))
+		Expect(err).ShouldNot(HaveOccurred())
+
+		By("Checking the federated endpoints remain unchanged")
+		Consistently(getSubsetsFn(ns1Name, "federated"), consistentlyTimeout, consistentlyPoll).Should(Equal(eSubset))
+
+		By("Adding a valid license back")
+		infrastructure.ApplyValidLicense(localCalicoClient)
 
 		By("Updating backing2 to have a different set of endpoints")
 		epsBacking2, err = localK8sClient.CoreV1().Endpoints(ns1Name).Update(makeEndpoints(eps2, "backing2", epsBacking2))

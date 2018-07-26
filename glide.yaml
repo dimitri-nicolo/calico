@@ -35,10 +35,14 @@ import:
   version: dfe8e25489424c44f995576816abb8adc6d8010b
 - package: github.com/projectcalico/felix
   repo:    git@github.com:tigera/felix-private
-  version: 06a4cf35b59da953833a6055fd0f03acf63d8f71
+  version: baf6cc636d58614ff1b54ac819d8e85b676eb39b
   subpackages:
   - fv
   - fv.containers
+- package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  version: eaec5a48b41f4bd93f2d2e0da0a0af5e695c2a39
 - package: github.com/coreos/etcd
   version: v3.3.0
 # Version of pflag needed for k8s.io/release-1.8 series of pins.

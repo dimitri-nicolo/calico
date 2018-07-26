@@ -29,6 +29,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/projectcalico/felix/fv/containers"
+	"github.com/projectcalico/felix/fv/infrastructure"
 	"github.com/projectcalico/kube-controllers/tests/testutils"
 	api "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
@@ -43,10 +44,14 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		apiserver        *containers.Container
 		calicoClient     client.Interface
 		k8sClient        *kubernetes.Clientset
+		kfConfigFile     *os.File
 
 		policyName      string
 		genPolicyName   string
 		policyNamespace string
+
+		consistentlyTimeout = "2s"
+		consistentlyPoll    = "500ms"
 	)
 
 	BeforeEach(func() {
@@ -59,13 +64,13 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		apiserver = testutils.RunK8sApiserver(k8sEtcd.IP)
 
 		// Write out a kubeconfig file
-		kfconfigfile, err := ioutil.TempFile("", "ginkgo-policycontroller")
+		var err error
+		kfConfigFile, err = ioutil.TempFile("", "ginkgo-policycontroller")
 		Expect(err).NotTo(HaveOccurred())
-		defer os.Remove(kfconfigfile.Name())
 		data := fmt.Sprintf(testutils.KubeconfigTemplate, apiserver.IP)
-		kfconfigfile.Write([]byte(data))
+		kfConfigFile.Write([]byte(data))
 
-		k8sClient, err = testutils.GetK8sClient(kfconfigfile.Name())
+		k8sClient, err = testutils.GetK8sClient(kfConfigFile.Name())
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the apiserver to be available.
@@ -100,7 +105,7 @@ var _ = Describe("[Resilience] PolicyController", func() {
 			Do().Error()
 		Expect(err).NotTo(HaveOccurred())
 
-		policyController = testutils.RunPolicyController(calicoEtcd.IP, kfconfigfile.Name())
+		policyController = testutils.RunPolicyController(calicoEtcd.IP, kfConfigFile.Name())
 
 		// Wait for it to appear in Calico's etcd.
 		Eventually(func() *api.NetworkPolicy {
@@ -114,6 +119,7 @@ var _ = Describe("[Resilience] PolicyController", func() {
 		policyController.Stop()
 		k8sEtcd.Stop()
 		apiserver.Stop()
+		os.Remove(kfConfigFile.Name())
 	})
 
 	Context("when apiserver goes down momentarily and data is removed from calico's etcd", func() {
@@ -148,6 +154,26 @@ var _ = Describe("[Resilience] PolicyController", func() {
 				_, err := calicoClient.NetworkPolicies().Get(context.Background(), policyNamespace, genPolicyName, options.GetOptions{})
 				return err
 			}, time.Second*15, 500*time.Millisecond).Should(HaveOccurred())
+		})
+	})
+	Context("when licenses are applied for CNX controllers", func() {
+		It("should not exit for a license change that adds functionality", func() {
+			By("Applying a valid license")
+			infrastructure.ApplyValidLicense(calicoClient)
+			By("Checking that the controller continues to run")
+			Consistently(policyController.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
+		})
+
+		It("should not exit for a license change that removes functionality since the policy controller does not run licensed controllers by default", func() {
+			By("Applying a valid license")
+			infrastructure.ApplyValidLicense(calicoClient)
+			By("Checking the controller continues to run")
+			Consistently(policyController.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
+
+			By("Applying an invalid license")
+			infrastructure.ApplyExpiredLicense(calicoClient)
+			By("Checking the controller continues to run")
+			Consistently(policyController.ListedInDockerPS(), consistentlyTimeout, consistentlyPoll).Should(Equal(true))
 		})
 	})
 })

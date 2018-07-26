@@ -27,6 +27,7 @@ func RunFederationController(etcdIP string, localKubeconfig string, remoteKubeco
 		"-e", "DO_NOT_INITIALIZE_CALICO=true",
 		"-e", "COMPACTION_PERIOD=0s",
 		"-e", "RECONCILER_PERIOD=10s",
+		"-e", "DEBUG_USE_SHORT_POLL_INTERVALS=true",
 		"-e", fmt.Sprintf("KUBECONFIG=%s", localKubeconfig),
 		"-v", fmt.Sprintf("%s:%s", localKubeconfig, localKubeconfig),
 	}...)
