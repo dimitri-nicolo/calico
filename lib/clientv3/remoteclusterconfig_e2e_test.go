@@ -60,7 +60,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: RemoteClusterConfiguration(" + name1 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: RemoteClusterConfiguration(" + name1 + ") with error:"))
 
 			By("Attempting to creating a new RemoteClusterConfig with name1/spec1 and a non-empty ResourceVersion")
 			_, outError = c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
@@ -98,7 +98,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 			By("Getting RemoteClusterConfiguration (name2) before it is created")
 			_, outError = c.RemoteClusterConfigurations().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: RemoteClusterConfiguration(" + name2 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: RemoteClusterConfiguration(" + name2 + ") with error:"))
 
 			By("Listing all the RemoteClusterConfigurations, expecting a single result with name1/spec1")
 			outList, outError := c.RemoteClusterConfigurations().List(ctx, options.ListOptions{})
@@ -219,7 +219,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 				time.Sleep(2 * time.Second)
 				_, outError = c.RemoteClusterConfigurations().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: RemoteClusterConfiguration(" + name2 + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource does not exist: RemoteClusterConfiguration(" + name2 + ") with error:"))
 
 				By("Creating RemoteClusterConfiguration name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.RemoteClusterConfigurations().Create(ctx, &apiv3.RemoteClusterConfiguration{
@@ -233,7 +233,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 				time.Sleep(2 * time.Second)
 				_, outError = c.RemoteClusterConfigurations().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: RemoteClusterConfiguration(" + name2 + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource does not exist: RemoteClusterConfiguration(" + name2 + ") with error:"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
@@ -246,7 +246,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 			By("Attempting to deleting RemoteClusterConfiguration (name2) again")
 			_, outError = c.RemoteClusterConfigurations().Delete(ctx, name2, options.DeleteOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: RemoteClusterConfiguration(" + name2 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: RemoteClusterConfiguration(" + name2 + ") with error:"))
 
 			By("Listing all RemoteClusterConfigurations and expecting no items")
 			outList, outError = c.RemoteClusterConfigurations().List(ctx, options.ListOptions{})
@@ -256,7 +256,7 @@ var _ = testutils.E2eDatastoreDescribe("RemoteClusterConfig tests", testutils.Da
 			By("Getting RemoteClusterConfiguration (name2) and expecting an error")
 			_, outError = c.RemoteClusterConfigurations().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: RemoteClusterConfiguration(" + name2 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: RemoteClusterConfiguration(" + name2 + ") with error:"))
 		},
 
 		// Test 1: Pass two fully populated RemoteClusterConfigurationSpecs and expect the series of operations to succeed.

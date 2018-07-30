@@ -601,6 +601,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.NATPortRange != nil {
+		in, out := &in.NATPortRange, &out.NATPortRange
+		*out = new(numorstring.Port)
+		**out = **in
+	}
 	if in.PrometheusReporterEnabled != nil {
 		in, out := &in.PrometheusReporterEnabled, &out.PrometheusReporterEnabled
 		*out = new(bool)
