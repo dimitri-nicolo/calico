@@ -166,6 +166,11 @@ func (c *Collector) applyConnTrackStatUpdate(
 	// entry in situ.
 	data := c.getData(tuple, createIfMissing)
 
+	if data != nil {
+		data.SetCounters(packets, bytes)
+		data.SetCountersReverse(reversePackets, reverseBytes)
+	}
+
 	if entryExpired && data != nil {
 		// Try to report metrics first before trying to expire the data.
 		// This needs to be done in this order because if this is the
@@ -174,9 +179,6 @@ func (c *Collector) applyConnTrackStatUpdate(
 		// the completion.
 		c.reportMetrics(data)
 		c.expireData(data)
-	} else if data != nil {
-		data.SetCounters(packets, bytes)
-		data.SetCountersReverse(reversePackets, reverseBytes)
 	}
 
 }
