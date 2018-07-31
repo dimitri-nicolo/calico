@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/node"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/pod"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/serviceaccount"
+	"github.com/projectcalico/kube-controllers/pkg/status"
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
@@ -107,6 +109,12 @@ func main() {
 			log.WithError(err).Fatal("Failed to initialize Calico datastore")
 		}
 	}
+	// Initialize readiness to false if enabled
+	s := status.New(status.DefaultStatusFile)
+	if config.HealthEnabled {
+		s.SetReady("CalicoDatastore", false, "initialized to false")
+		s.SetReady("KubeAPIServer", false, "initialized to false")
+	}
 
 	for _, controllerType := range strings.Split(config.EnabledControllers, ",") {
 		switch controllerType {
@@ -136,8 +144,43 @@ func main() {
 	// If configured to do so, start an etcdv3 compaction.
 	startCompactor(ctx, config)
 
-	// Wait forever.
-	select {}
+	// Wait forever and perform healthchecks.
+	for {
+		// skip healthchecks if configured
+		if !config.HealthEnabled {
+			select {}
+		}
+		// Datastore HealthCheck
+		healthCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		err = calicoClient.EnsureInitialized(healthCtx, "", "", "k8s")
+		if err != nil {
+			log.WithError(err).Errorf("Failed to verify datastore")
+			s.SetReady(
+				"CalicoDatastore",
+				false,
+				fmt.Sprintf("Error verifying datastore: %v", err),
+			)
+		} else {
+			s.SetReady("CalicoDatastore", true, "")
+		}
+		cancel()
+
+		// Kube-apiserver HealthCheck
+		healthStatus := 0
+		k8sClientset.Discovery().RESTClient().Get().AbsPath("/healthz").Do().StatusCode(&healthStatus)
+		if healthStatus != http.StatusOK {
+			log.WithError(err).Errorf("Failed to reach apiserver")
+			s.SetReady(
+				"KubeAPIServer",
+				false,
+				fmt.Sprintf("Error reaching apiserver: %v with http status code: %d", err, healthStatus),
+			)
+		} else {
+			s.SetReady("KubeAPIServer", true, "")
+		}
+
+		time.Sleep(10 * time.Second)
+	}
 }
 
 // Starts an etcdv3 compaction goroutine with the given config.

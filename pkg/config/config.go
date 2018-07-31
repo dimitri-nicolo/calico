@@ -44,6 +44,9 @@ type Config struct {
 	// Whether the controller should not initialize the Calico datastore (for controllers that do
 	// not require this, it allows the service account to access the minimal set of resources).
 	DoNotInitializeCalico bool `default:"false" split_words:"true"`
+
+	// Enable healthchecks
+	HealthEnabled bool `default:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct
