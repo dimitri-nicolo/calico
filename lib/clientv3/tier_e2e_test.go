@@ -124,7 +124,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
 			Expect(res).To(BeNil())
-			Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name1 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: Tier(" + name1 + ") with error:"))
 
 			By("Attempting to create a new Tier with too long of a name")
 			longName := "thisisareallylongnamethatislongerthansixtythreecharactersthatwillnotfitinalabel"
@@ -173,7 +173,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Getting Tier (name2) before it is created")
 			_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: Tier(" + name2 + ") with error:"))
 
 			By("Listing all the Tiers, expecting a single result with name1/spec1")
 			outList, outError := c.Tiers().List(ctx, options.ListOptions{})
@@ -331,7 +331,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 				time.Sleep(2 * time.Second)
 				_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource does not exist: Tier(" + name2 + ") with error:"))
 
 				By("Creating Tier name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.Tiers().Create(ctx, &apiv3.Tier{
@@ -345,7 +345,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 				time.Sleep(2 * time.Second)
 				_, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource does not exist: Tier(" + name2 + ") with error:"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
@@ -358,7 +358,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Attempting to deleting Tier (name2) again")
 			_, outError = c.Tiers().Delete(ctx, name2, options.DeleteOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: Tier(" + name2 + ") with error:"))
 
 			By("Listing all Tiers and expecting only the default tier")
 			outList, outError = c.Tiers().List(ctx, options.ListOptions{})
@@ -369,7 +369,7 @@ var _ = testutils.E2eDatastoreDescribe("Tier tests", testutils.DatastoreAll, fun
 			By("Getting Tier (name2) and expecting an error")
 			res, outError = c.Tiers().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: Tier(" + name2 + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: Tier(" + name2 + ") with error:"))
 		},
 
 		// Test 1: Pass two fully populated TierSpecs and expect the series of operations to succeed.

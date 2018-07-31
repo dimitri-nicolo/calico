@@ -127,7 +127,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace1, name1, tier) + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace1, name1, tier) + ") with error:"))
 
 			By("Attempting to creating a new NetworkPolicy with name1/spec1 and a non-empty ResourceVersion")
 			_, outError = c.NetworkPolicies().Create(ctx, &apiv3.NetworkPolicy{
@@ -166,7 +166,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			By("Getting NetworkPolicy (name2) before it is created")
 			_, outError = c.NetworkPolicies().Get(ctx, namespace2, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ") with error:"))
 
 			By("Listing all the NetworkPolicies in namespace1, expecting a single result with name1/spec1")
 			outList, outError := c.NetworkPolicies().List(ctx, options.ListOptions{Namespace: namespace1})
@@ -294,7 +294,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				time.Sleep(2 * time.Second)
 				_, outError = c.NetworkPolicies().Get(ctx, namespace2, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ") with error:"))
 
 				By("Creating NetworkPolicy name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.NetworkPolicies().Create(ctx, &apiv3.NetworkPolicy{
@@ -308,7 +308,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 				time.Sleep(2 * time.Second)
 				_, outError = c.NetworkPolicies().Get(ctx, namespace2, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ") with error:"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
@@ -321,7 +321,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			By("Attempting to delete NetworkPolicy (name2) again")
 			_, outError = c.NetworkPolicies().Delete(ctx, namespace2, name2, options.DeleteOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ") with error:"))
 
 			By("Listing all NetworkPolicies and expecting no items")
 			outList, outError = c.NetworkPolicies().List(ctx, options.ListOptions{})
@@ -331,7 +331,7 @@ var _ = testutils.E2eDatastoreDescribe("NetworkPolicy tests", testutils.Datastor
 			By("Getting NetworkPolicy (name2) and expecting an error")
 			_, outError = c.NetworkPolicies().Get(ctx, namespace2, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: NetworkPolicy(" + tieredNetworkPolicyName(namespace2, name2, tier) + ") with error:"))
 		},
 
 		// Pass two fully populated PolicySpecs and expect the series of operations to succeed.

@@ -66,7 +66,7 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: LicenseKey(" + name + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: LicenseKey(" + name + ") with error:"))
 
 			By("Attempting to creating a new LicenseKey with name/spec1 and a non-empty ResourceVersion")
 			_, outError = c.LicenseKey().Create(ctx, &apiv3.LicenseKey{
@@ -79,7 +79,7 @@ var _ = testutils.E2eDatastoreDescribe("LicenseKey tests", testutils.DatastoreAl
 			By("Getting LicenseKey (name) before it is created")
 			_, outError = c.LicenseKey().Get(ctx, name, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: LicenseKey(" + name + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: LicenseKey(" + name + ") with error:"))
 
 			By("Attempting to create a new LicenseKey with a non-default name and spec1")
 			_, outError = c.LicenseKey().Create(ctx, &apiv3.LicenseKey{

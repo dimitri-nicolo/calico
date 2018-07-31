@@ -119,7 +119,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				Spec:       spec1,
 			}, options.SetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name1, tier) + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name1, tier) + ") with error:"))
 
 			By("Attempting to creating a new GlobalNetworkPolicy with name1/spec1 and a non-empty ResourceVersion")
 			polToCreate := &apiv3.GlobalNetworkPolicy{
@@ -164,7 +164,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			By("Getting GlobalNetworkPolicy (name2) before it is created")
 			_, outError = c.GlobalNetworkPolicies().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ") with error:"))
 
 			By("Listing all the GlobalNetworkPolicies, expecting a single result with name1/spec1")
 			outList, outError := c.GlobalNetworkPolicies().List(ctx, options.ListOptions{})
@@ -290,7 +290,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				time.Sleep(2 * time.Second)
 				_, outError = c.GlobalNetworkPolicies().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ") with error:"))
 
 				By("Creating GlobalNetworkPolicy name2 with a 2s TTL and waiting for the entry to be deleted")
 				_, outError = c.GlobalNetworkPolicies().Create(ctx, &apiv3.GlobalNetworkPolicy{
@@ -304,7 +304,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 				time.Sleep(2 * time.Second)
 				_, outError = c.GlobalNetworkPolicies().Get(ctx, name2, options.GetOptions{})
 				Expect(outError).To(HaveOccurred())
-				Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
+				Expect(outError.Error()).To(ContainSubstring("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ") with error:"))
 			}
 
 			if config.Spec.DatastoreType == apiconfig.Kubernetes {
@@ -318,7 +318,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			By("Attempting to delete GlobalNetworkPolicy (name2) again")
 			_, outError = c.GlobalNetworkPolicies().Delete(ctx, name2, options.DeleteOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ") with error:"))
 
 			By("Listing all GlobalNetworkPolicies and expecting no items")
 			outList, outError = c.GlobalNetworkPolicies().List(ctx, options.ListOptions{})
@@ -328,7 +328,7 @@ var _ = testutils.E2eDatastoreDescribe("GlobalNetworkPolicy tests", testutils.Da
 			By("Getting GlobalNetworkPolicy (name2) and expecting an error")
 			_, outError = c.GlobalNetworkPolicies().Get(ctx, name2, options.GetOptions{})
 			Expect(outError).To(HaveOccurred())
-			Expect(outError.Error()).To(Equal("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ")"))
+			Expect(outError.Error()).To(ContainSubstring("resource does not exist: GlobalNetworkPolicy(" + tieredGNPName(name2, tier) + ") with error:"))
 		},
 
 		// Pass two fully populated GlobalNetworkPolicySpecs in default tier and expect the series of operations to succeed.

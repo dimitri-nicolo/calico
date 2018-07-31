@@ -20,18 +20,12 @@ pipeline {
                 }
             }
         }
-        stage('Clean artifacts') {
-            steps {
-                sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add || true; fi && make clean'
-
-            }
-        }
-        stage('make test-containerized') {
+        stage('make ci') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
                     // Needed to allow checkout of private repos
                     ansiColor('xterm') {
-                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add SSH_KEY || true; fi && make vendor static-checks test-containerized'
+                        sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add SSH_KEY || true; fi && make ci'
                     }
                 }
             }
