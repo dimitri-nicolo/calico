@@ -9,7 +9,7 @@ import (
 	"github.com/projectcalico/felix/fv/containers"
 )
 
-func RunFederationController(etcdIP string, lkconfig string, rkconfig []string, isCalicoEtcdDatastore bool) *containers.Container {
+func RunFederationController(etcdIP string, localKubeconfig string, remoteKubeconfigs []string, isCalicoEtcdDatastore bool) *containers.Container {
 	args := []string{"--privileged"}
 	if isCalicoEtcdDatastore {
 		args = append(args, []string{
@@ -24,14 +24,16 @@ func RunFederationController(etcdIP string, lkconfig string, rkconfig []string, 
 	args = append(args, []string{
 		"-e", "ENABLED_CONTROLLERS=federatedservices",
 		"-e", "LOG_LEVEL=debug",
+		"-e", "DO_NOT_INITIALIZE_CALICO=true",
+		"-e", "COMPACTION_PERIOD=0s",
 		"-e", "RECONCILER_PERIOD=10s",
-		"-e", fmt.Sprintf("KUBECONFIG=%s", lkconfig),
-		"-v", fmt.Sprintf("%s:%s", lkconfig, lkconfig),
+		"-e", fmt.Sprintf("KUBECONFIG=%s", localKubeconfig),
+		"-v", fmt.Sprintf("%s:%s", localKubeconfig, localKubeconfig),
 	}...)
 
-	for _, kcf := range rkconfig {
+	for _, rkc := range remoteKubeconfigs {
 		args = append(args, []string{
-			"-v", fmt.Sprintf("%s:%s", kcf, kcf),
+			"-v", fmt.Sprintf("%s:%s", rkc, rkc),
 		}...)
 	}
 
