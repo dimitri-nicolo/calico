@@ -7,7 +7,7 @@ cnx.yaml acccepts the following include flags:
 | datastore        | kdd, etcd                |
 
 {% endcomment -%}
-{%- if datastore == "kdd" %}
+{%- if include.datastore == "kdd" %}
 # This manifest adds the additional CNX Manager components to a cluster
 # that has already had the Calico part of CNX deployed.
 # - It refers to the calico-config ConfigMap from that file, so if you are
@@ -20,7 +20,7 @@ cnx.yaml acccepts the following include flags:
 # - This manifest makes the CNX Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
-{%- if datastore == "etcd" %}
+{%- elsif include.datastore == "etcd" %}
 # This manifest adds the additional CNX Manager components to a cluster
 # that has already had the Calico part of CNX deployed.
 # - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
@@ -43,9 +43,9 @@ metadata:
   namespace: kube-system
 data:
   # Authentication type.  Must be set to "OIDC", "Basic", "Token", or "OAuth".
-{%- if install_type == "openshift" %}
+{%- if include.install_type == "openshift" %}
   tigera.cnx-manager.authentication-type: "OAuth"
-{%- else }
+{%- else %}
   tigera.cnx-manager.authentication-type: "Basic"
 {%- endif %}
   # The OIDC authority.  Required if authentication-type is OIDC, ignored otherwise.
@@ -55,7 +55,7 @@ data:
   tigera.cnx-manager.oidc-client-id: "<oidc-client-id>"
   # The OAuth endpoint. Required if authentication-type is OAuth, ignored otherwise.
   tigera.cnx-manager.oauth-authority: "https://<oauth-authority>/oauth/authorize"
-{%- if datastore == "etcd" %}
+{%- if include.datastore == "etcd" %}
   # The OAuth client id to use for OAuth login. Value is ignored if not using OAuth login.
   tigera.cnx-manager.oauth-client-id: "cnx-manager"
 {%- endif %}
@@ -174,7 +174,7 @@ metadata:
 
 ---
 
-{%- if datastore == "kdd" %}
+{%- if include.datastore == "kdd" %}
 # Give cnx-apiserver ServiceAccount permissions needed for
 # accessing various backing CRDs and K8s networkpolicies.
 kind: ClusterRole
@@ -276,8 +276,8 @@ spec:
         args:
         - "--secure-port=5443"
         env:
-{%- if datastore == "etcd" %}
-  {%- if install_type == "openshift" %}
+{%- if include.datastore == "etcd" %}
+  {%- if include.install_type == "openshift" %}
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
@@ -342,7 +342,7 @@ spec:
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
   {%- endif %}
-{% elsif datastore == "kdd" %}
+{%- elsif include.datastore == "kdd" %}
           - name: DATASTORE_TYPE
             value: "kubernetes"
         volumeMounts:
@@ -360,8 +360,8 @@ spec:
         image: quay.io/tigera/cnx-queryserver:v2.1.1
         env:
           # Set queryserver logging to "info"
-{%- if datastore == "etcd" %}
-  {%- if install_type == "openshift" %}
+{%- if include.datastore == "etcd" %}
+  {%- if include.install_type == "openshift" %}
           - name: LOGLEVEL
             value: "info"
           - name: ETCD_ENDPOINTS
@@ -426,7 +426,7 @@ spec:
           # - mountPath: /calico-secrets
           #   name: etcd-certs
   {%- endif %}
-{%- if datastore == "kdd" %}
+{%- elsif include.datastore == "kdd" %}
           - name: LOGLEVEL
             value: "info"
           - name: DATASTORE_TYPE
@@ -440,8 +440,8 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 3
       volumes:
-{%- if datastore == "etcd" %}
-  {%- if install_type == "openshift" %}
+{%- if include.datastore == "etcd" %}
+  {%- if include.install_type == "openshift" %}
         # If you're using TLS enabled etcd uncomment the following.
         # - name: etcd-certs
         #   secret:
@@ -462,7 +462,7 @@ spec:
         #   secret:
         #     secretName: cnx-apiserver-certs
   {%- endif %}
-{%- elsif datastore == "kdd" %}
+{%- elsif include.datastore == "kdd" %}
         # If you're using TLS with certificate verification then
         # uncomment the following.
         # - name: apiserver-certs
@@ -530,7 +530,7 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-authority
-{%- if datastore == "etcd" %}
+{%- if include.datastore == "etcd" %}
           - name: CNX_WEB_OIDC_CLIENT_ID
             valueFrom:
               configMapKeyRef:
@@ -559,7 +559,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
-{%- elsif datastore == "kdd" %}
+{%- elsif include.datastore == "kdd" %}
           - name: CNX_WEB_OIDC_CLIENT_ID
             valueFrom:
               configMapKeyRef:
@@ -601,7 +601,7 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-client-id
-{% if datastore == "etcd" %}
+{%- if include.datastore == "etcd" %}
           - name: CNX_WEB_OAUTH_AUTHORITY
             valueFrom:
               configMapKeyRef:
@@ -617,7 +617,7 @@ spec:
           name: cnx-manager-tls
         - mountPath: /cache
           name: cnx-cache-volume
-{% endif %}
+{%- endif %}
         livenessProbe:
           httpGet:
             path: /
@@ -632,7 +632,7 @@ spec:
         secret:
           secretName: cnx-manager-tls
 
-{%- if install_type == "openshift" %}
+{%- if include.install_type == "openshift" %}
 ---
 # This manifest creates a namespace for deploying prometheus-operator,
 # Prometheus and alertmanager.
