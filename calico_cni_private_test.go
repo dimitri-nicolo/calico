@@ -80,6 +80,7 @@ var _ = Describe("CalicoCni Private", func() {
 					panic(err)
 				}
 				clientset, err := kubernetes.NewForConfig(config)
+				ensureNamespace(clientset, "test2")
 
 				if err != nil {
 					panic(err)
@@ -88,7 +89,7 @@ var _ = Describe("CalicoCni Private", func() {
 				name := fmt.Sprintf("run%d", rand.Uint32())
 
 				// Create a K8s pod with AWS SG annotation
-				_, err = clientset.CoreV1().Pods(testutils.K8S_TEST_NS).Create(&v1.Pod{
+				_, err = clientset.CoreV1().Pods("test2").Create(&v1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        name,
 						Annotations: map[string]string{k8sconversion.AnnotationSecurityGroups: "[\"sg-test\"]"},
@@ -104,9 +105,9 @@ var _ = Describe("CalicoCni Private", func() {
 				if err != nil {
 					panic(err)
 				}
-				_, session, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, testutils.K8S_TEST_NS, "")
+				_, session, _, _, _, contNs, err := testutils.CreateContainer(netconf, name, "test2", "")
 				defer func() {
-					_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, testutils.K8S_TEST_NS)
+					_, err = testutils.DeleteContainer(netconf, contNs.Path(), name, "test2")
 					Expect(err).ShouldNot(HaveOccurred())
 				}()
 

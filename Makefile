@@ -38,7 +38,7 @@ ifeq ($(ARCH),x86_64)
         override ARCH=amd64
 endif
 ###############################################################################
-GO_BUILD_VER ?= v0.16
+GO_BUILD_VER ?= v0.17
 
 SRCFILES=calico.go $(wildcard utils/*.go) $(wildcard k8s/*.go) ipam/calico-ipam.go
 TEST_SRCFILES=$(wildcard test_utils/*.go) $(wildcard calico_cni_*.go)
@@ -47,11 +47,12 @@ LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 # fail if unable to download
 CURL=curl -sSf
 
-K8S_VERSION=1.6.1
+K8S_VERSION?=1.10.4
 CNI_VERSION=v0.6.0
 
 # Get version from git.
 GIT_VERSION?=$(shell git describe --tags --dirty)
+BUILD_IMAGE_ORG?=calico
 
 # By default set the CNI_SPEC_VERSION to 0.3.1 for tests.
 CNI_SPEC_VERSION?=0.3.1
@@ -59,14 +60,28 @@ CNI_SPEC_VERSION?=0.3.1
 BIN=bin/$(ARCH)
 # Ensure that the bin directory is always created
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p $(BIN))
-CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+CALICO_BUILD?=$(BUILD_IMAGE_ORG)/go-build:$(GO_BUILD_VER)
 
 PACKAGE_NAME?=github.com/projectcalico/cni-plugin
 
+# This variable shouldn't need to exist. All references to it should gradually be replaced by DOCKER_REPOS to match open source.
 CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
 
 CONTAINER_NAME=tigera/cni
 DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
+
+# Variables for controlling image tagging and pushing.
+DOCKER_REPOS=gcr.io/unique-caldron-775/cnx
+ifeq ($(RELEASE),true)
+# If this is a release, also tag and push GCR images.
+#DOCKER_REPOS+=
+endif
+
+# list of arches *not* to build when doing *-all
+#    until s390x works correctly
+EXCLUDEARCH ?= s390x
+VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
+
 
 ETCD_VER=v3.3.7
 ETCD_CONTAINER ?= quay.io/coreos/etcd:$(ETCD_VER)-$(BUILDARCH)
@@ -89,7 +104,7 @@ clean:
 # Building the binary
 ###############################################################################
 build: $(BIN)/calico $(BIN)/calico-ipam
-build-all: $(addprefix sub-build-,$(ARCHES))
+build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
@@ -110,9 +125,33 @@ vendor: glide.yaml
       -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
       -v $(HOME)/.glide:/home/user/.glide:rw \
       -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+      -w /go/src/$(PACKAGE_NAME) \
+      $(CALICO_BUILD) glide install -strip-vendor
+
+# Default the libcalico repo and version but allow them to be overridden
+LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go master 2>/dev/null | cut -f 1)
+
+## Update libcalico pin in glide.yaml
+update-libcalico:
+	docker run --rm -i \
+      -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
+      -v $(HOME)/.glide:/home/user/.glide:rw \
+      -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+      -w /go/src/$(PACKAGE_NAME) \
       $(CALICO_BUILD) /bin/sh -c ' \
-		  cd /go/src/$(PACKAGE_NAME) && \
-          glide install -strip-vendor'
+        echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
+        export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
+        echo "Old version: $$OLD_VER";\
+        if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
+            sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
+            if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
+              glide mirror set https://github.com/projectcalico/libcalico-go $(LIBCALICO_REPO) --vcs git; glide mirror list; \
+            fi;\
+          OUTPUT=`mktemp`;\
+          glide up --strip-vendor; glide up --strip-vendor 2>&1 | grep -v "golang.org/x/sys" | tee $$OUTPUT; \
+          if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
+        fi'
 
 ## Build the Calico network plugin and ipam plugins
 $(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
@@ -123,9 +162,10 @@ $(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
 	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
 	-v $(CURDIR)/$(BIN):/go/src/$(PACKAGE_NAME)/$(BIN) \
-	-v $(CURDIR)/.go-pkg-cache:/go/pkg/:rw \
+	-v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
+	-w /go/src/$(PACKAGE_NAME) \
+	-e GOCACHE=/go-cache \
 		$(CALICO_BUILD) sh -c '\
-			cd /go/src/$(PACKAGE_NAME) && \
 			go build -v -o $(BIN)/calico -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" calico.go ; \
             go build -v -o $(BIN)/calico-ipam -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" ipam/calico-ipam.go'
 
@@ -133,7 +173,7 @@ $(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
 # Building the image
 ###############################################################################
 image: $(DEPLOY_CONTAINER_MARKER)
-image-all: $(addprefix sub-image-,$(ARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
@@ -145,30 +185,29 @@ endif
 
 ## push one arch
 push: imagetag
-	docker push $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+	for r in $(DOCKER_REPOS); do docker push $$r/cni:$(IMAGETAG)-$(ARCH); done
 ifeq ($(ARCH),amd64)
-	docker push $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)
+	for r in $(DOCKER_REPOS); do docker push $$r/cni:$(IMAGETAG); done
 endif
 
-## push all archs
-push-all: imagetag $(addprefix sub-push-,$(ARCHES))
+push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
 ## tag images of one arch
 tag-images: imagetag
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+	for r in $(DOCKER_REPOS); do docker tag $(CONTAINER_NAME):latest-$(ARCH) $$r/cni:$(IMAGETAG)-$(ARCH); done
 ifeq ($(ARCH),amd64)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)
+	for r in $(DOCKER_REPOS); do docker tag $(CONTAINER_NAME):latest-$(ARCH) $$r/cni:$(IMAGETAG); done
 endif
 
 ## tag images of all archs
-tag-images-all: imagetag $(addprefix sub-tag-images-,$(ARCHES))
+tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
 $(DEPLOY_CONTAINER_MARKER): Dockerfile.$(ARCH) build fetch-cni-bins
-	docker build -f Dockerfile.$(ARCH) -t $(CONTAINER_NAME):latest-$(ARCH) .
+	docker build -t $(CONTAINER_NAME):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	# Need amd64 builds tagged as :latest because Semaphore depends on that
 	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):latest
@@ -210,7 +249,7 @@ GINKGO_FOCUS?=".*"
 # Unit Tests
 ###############################################################################
 ## Run the unit tests.
-ut: run-k8s-apiserver build $(BIN)/host-local
+ut: run-k8s-controller build $(BIN)/host-local
 	# The tests need to run as root
 	docker run --rm -t --privileged --net=host \
 	-e ETCD_IP=$(LOCAL_IP_ENV) \
@@ -239,13 +278,34 @@ test-cni-versions:
 run-k8s-apiserver: stop-k8s-apiserver run-etcd
 	docker run --detach --net=host \
 	  --name calico-k8s-apiserver \
-  	gcr.io/google_containers/hyperkube-$(ARCH):v$(K8S_VERSION) \
-		  /hyperkube apiserver --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
-		  --service-cluster-ip-range=10.101.0.0/16
+	  -v `pwd`/testutils/private.key:/private.key \
+	  gcr.io/google_containers/hyperkube-$(ARCH):v$(K8S_VERSION) \
+	  /hyperkube apiserver \
+            --etcd-servers=http://$(LOCAL_IP_ENV):2379 \
+	    --service-cluster-ip-range=10.101.0.0/16 \
+	    --service-account-key-file=/private.key
+
+## Kubernetes controller manager used for tests
+run-k8s-controller: stop-k8s-controller run-k8s-apiserver
+	docker run --detach --net=host \
+	  --name calico-k8s-controller \
+	  -v `pwd`/testutils/private.key:/private.key \
+	  gcr.io/google_containers/hyperkube-$(ARCH):v$(K8S_VERSION) \
+	  /hyperkube controller-manager \
+            --master=127.0.0.1:8080 \
+	    --min-resync-period=3m \
+	    --allocate-node-cidrs=true \
+	    --cluster-cidr=192.168.0.0/16 \
+	    --v=5 \
+	    --service-account-private-key-file=/private.key
 
 ## Stop Kubernetes apiserver
 stop-k8s-apiserver:
 	@-docker rm -f calico-k8s-apiserver
+
+## Stop Kubernetes controller manager
+stop-k8s-controller:
+	@-docker rm -f calico-k8s-controller
 
 ## Etcd is used by the tests
 run-etcd: stop-etcd
@@ -285,7 +345,7 @@ test-install-cni: image k8s-install/scripts/install_cni.test
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks test-cni-versions image test-install-cni
+ci: clean static-checks test-cni-versions image-all test-install-cni
 
 ## Deploys images to registry
 cd:
@@ -295,8 +355,8 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images push IMAGETAG=${BRANCH_NAME}
-	$(MAKE) tag-images push IMAGETAG=$(shell git describe --tags --dirty --always --long)
+	$(MAKE) tag-images-all push-all IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 
 ###############################################################################
