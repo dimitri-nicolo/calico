@@ -8,4 +8,5 @@ const (
 	AWSCloudwatchMetrics  = "aws-cloudwatch-metrics"
 	AWSSecurityGroups     = "aws-security-groups"
 	IPSec                 = "ipsec"
+	FederatedServices     = "federated-services"
 )
