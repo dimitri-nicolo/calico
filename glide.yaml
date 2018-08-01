@@ -1,13 +1,9 @@
 package: github.com/projectcalico/calicoctl
 homepage: https://projectcalico.org
 license: Apache-2.0
-owners:
-- name: Rob Brockbank
-  email: rob@tigera.io
 import:
 - package: github.com/docopt/docopt-go
 - package: github.com/mcuadros/go-version
-- package: github.com/mitchellh/go-ps
 - package: github.com/olekukonko/tablewriter
 - package: github.com/osrg/gobgp
   version: v1.22
@@ -17,22 +13,10 @@ import:
 - package: github.com/projectcalico/go-json
   subpackages:
   - json
-- package: golang.org/x/net
-  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
-- package: golang.org/x/sys
-  version: 88d2dcc510266da9f7f8c7f34e1940716cab5f5c
-  subpackages:
-  - unix
-  - windows
-- package: golang.org/x/crypto
-  version: 9419663f5a44be8b34ca85f08abc5fe1be11f8a3
-  subpackages:
-  - ssh/terminal
 - package: github.com/projectcalico/go-yaml-wrapper
-# v1.0.5 seems to have a bad interaction with our logging hooks.
-- package: github.com/sirupsen/logrus
-  version: v1.0.4
+# Pinning to old version until client code is updated.
 - package: github.com/tigera/licensing
+  version: dbaa48ceef2b82d07b531bcf46f8d5e30552dfd9
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
@@ -42,19 +26,35 @@ import:
   - jwt
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: c586ae70eb809b746d121efe46ac663d05e30ed5
+  version: 1130ede1859eb68c9a71a59844da72c07731cb34
   subpackages:
+  - lib/apiconfig
+  - lib/apis/v1
+  - lib/apis/v1/unversioned
   - lib/apis/v3
+  - lib/backend/k8s/conversion
   - lib/clientv3
-  - lib/backend
-  - lib/backend/api
-  - lib/backend/model
-  - lib/client
   - lib/errors
+  - lib/names
   - lib/net
   - lib/numorstring
-  - lib/scope
-  - lib/validator
-  - lib/upgrade
+  - lib/options
+  - lib/upgrade/converters
+  - lib/validator/v1
+  - lib/validator/v3
+- package: github.com/shirou/gopsutil
+  subpackages:
+  - process
+- package: github.com/sirupsen/logrus
 - package: github.com/termie/go-shutil
-- package: google.golang.org/grpc
+- package: k8s.io/apimachinery
+  subpackages:
+  - pkg/api/meta
+  - pkg/apis/meta/v1
+  - pkg/apis/meta/v1/unstructured
+  - pkg/runtime
+  - pkg/runtime/schema
+- package: github.com/onsi/ginkgo
+  subpackages:
+  - extensions/table
+- package: github.com/onsi/gomega
