@@ -5,6 +5,7 @@ package config
 import (
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,11 @@ import (
 )
 
 func isNflogSizeAvailable() bool {
+	// bail out immediately for windows
+	if runtime.GOOS == "windows" {
+		return false
+	}
+
 	f, err := os.Open("/proc/version")
 	if err != nil {
 		log.WithError(err).Errorf("Unable to determine kernel version: %v", err)

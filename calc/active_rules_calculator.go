@@ -352,10 +352,14 @@ func (arc *ActiveRulesCalculator) sendProfileUpdate(profileID string) {
 			rules = &DummyDropRules
 		}
 		arc.RuleScanner.OnProfileActive(key, rules)
-		arc.PolicyLookupCache.OnProfileActive(key, rules)
+		if arc.PolicyLookupCache != nil {
+			arc.PolicyLookupCache.OnProfileActive(key, rules)
+		}
 	} else {
 		arc.RuleScanner.OnProfileInactive(key)
-		arc.PolicyLookupCache.OnProfileInactive(key)
+		if arc.PolicyLookupCache != nil {
+			arc.PolicyLookupCache.OnProfileInactive(key)
+		}
 	}
 }
 
