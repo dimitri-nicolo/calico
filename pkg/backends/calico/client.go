@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	logutils "github.com/kelseyhightower/confd/log"
+	logutils "github.com/kelseyhightower/confd/pkg/log"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
@@ -332,7 +332,7 @@ func (c *client) WatchPrefix(prefix string, keys []string, lastRevision uint64, 
 		for _, key := range keys {
 			rev, ok := c.revisionsByPrefix[key]
 			if !ok {
-				log.Fatalf("Watch prefix check for unknown prefix: ", key)
+				log.Fatalf("Watch prefix check for unknown prefix: %s", key)
 			}
 			log.Debugf("Found key prefix %s at rev %d", key, rev)
 			if rev > lastRevision {
