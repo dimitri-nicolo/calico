@@ -3,7 +3,7 @@ cnx.yaml acccepts the following include flags:
 
 | Name             | Accepted Values          |
 |------------------|--------------------------|
-| install_type     | openshift, default       |
+| install_type     | openshift                |
 | datastore        | kdd, etcd                |
 
 {% endcomment -%}
@@ -272,7 +272,7 @@ spec:
         - name: cnx-pull-secret
       containers:
       - name: cnx-apiserver
-        image: quay.io/tigera/cnx-apiserver:v2.1.1
+        image: {{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
         args:
         - "--secure-port=5443"
         env:
@@ -356,7 +356,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 3
       - name: cnx-queryserver
-        image: quay.io/tigera/cnx-queryserver:v2.1.1
+        image: {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
           # Set queryserver logging to "info"
 {%- if include.datastore == "etcd" %}
@@ -517,7 +517,7 @@ spec:
           name: cnx-manager-tls
       containers:
       - name: cnx-manager
-        image: quay.io/tigera/cnx-manager:v2.1.1
+        image: {{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
@@ -583,7 +583,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 3
       - name: cnx-manager-proxy
-        image: quay.io/tigera/cnx-manager-proxy:v2.1.1
+        image: {{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
         env:
           - name: CNX_WEB_AUTHENTICATION_TYPE
             valueFrom:
