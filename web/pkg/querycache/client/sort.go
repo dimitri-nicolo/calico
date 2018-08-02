@@ -4,6 +4,7 @@ package client
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -21,6 +22,65 @@ func compareStringSlice(m, n []string) int {
 		}
 	}
 	return len(m) - len(n)
+}
+
+// compareIPv4StringSlice compares a slice of strings representing IPs. This differs from
+// compareStringSlice since it requires breaking up the IP to do comparisons on the separate
+// numbers that make it up. Ex: 10.10.1.1 should be larger than 10.9.1.1
+func compareIPv4StringSlice(m, n []string) int {
+	minLen := len(m)
+	if lm := len(n); lm < minLen {
+		minLen = lm
+	}
+	for i := 0; i < minLen; i++ {
+		mIP := convertIPv4ToInt64(m[i])
+		nIP := convertIPv4ToInt64(n[i])
+		diff := mIP - nIP
+		if diff != 0 {
+			return int(diff)
+		}
+	}
+	return len(m) - len(n)
+}
+
+// convertIPv4ToInt64 converts an IPv4 string into an int64 for easy comparison. This also
+// converts the bit mask to an int so that can also be compared if necessary.
+func convertIPv4ToInt64(ipString string) int64 {
+	ipNumStrs := strings.Split(ipString, ".")
+	if len(ipNumStrs) > 4 {
+		// IP address provided is invalid. Return nothing.
+		return 0
+	}
+	var ipInt int64
+	var mask int
+	for i := 0; i < 4; i++ {
+		ipNumStr := ipNumStrs[i]
+		if strings.Contains(ipNumStr, "/") {
+			split := strings.Split(ipNumStr, "/")
+			ipNumStr = split[0]
+			mask, _ = strconv.Atoi(split[1])
+		}
+		num, _ := strconv.ParseInt(ipNumStr, 10, 64)
+		// Shift the bit octets over by 1 since the last octet will hold the mask
+		ipInt = ipInt + (num * expBySquare64(int64(255), int64(4-i)))
+	}
+	// Add the mask value at the end of the int64
+	ipInt = ipInt + int64(mask)
+	return ipInt
+}
+
+// expBySquare64 gets the result of n to the exp power using exponentiation by squaring.
+func expBySquare64(n, exp int64) int64 {
+	base := int64(1)
+	if exp%2 != 0 {
+		base = base * n
+		exp = exp - 1
+	}
+	for exp > 1 {
+		base = base * base
+		exp = exp / 2
+	}
+	return base
 }
 
 // sortNodes sorts the nodes based on the order requirements specified in the Page request.
@@ -113,7 +173,7 @@ var endpointDiffFuncs = map[string]endpointDiffFunc{
 	"orchestrator":             func(p, q *Endpoint) int { return strings.Compare(p.Orchestrator, q.Orchestrator) },
 	"pod":                      func(p, q *Endpoint) int { return strings.Compare(p.Pod, q.Pod) },
 	"interfaceName":            func(p, q *Endpoint) int { return strings.Compare(p.InterfaceName, q.InterfaceName) },
-	"ipNetworks":               func(p, q *Endpoint) int { return compareStringSlice(p.IPNetworks, q.IPNetworks) },
+	"ipNetworks":               func(p, q *Endpoint) int { return compareIPv4StringSlice(p.IPNetworks, q.IPNetworks) },
 	"numGlobalNetworkPolicies": func(p, q *Endpoint) int { return p.NumGlobalNetworkPolicies - q.NumGlobalNetworkPolicies },
 	"numNetworkPolicies":       func(p, q *Endpoint) int { return p.NumNetworkPolicies - q.NumNetworkPolicies },
 	"numPolicies": func(p, q *Endpoint) int {
