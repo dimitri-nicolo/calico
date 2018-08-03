@@ -53,12 +53,10 @@ data:
   # The OIDC client id to use for OIDC login.  Kubelet must be configured accordingly.
   # Value is ignored if not using OIDC login.
   tigera.cnx-manager.oidc-client-id: "<oidc-client-id>"
-{%- if include.datastore == "etcd" %}
   # The OAuth endpoint. Required if authentication-type is OAuth, ignored otherwise.
   tigera.cnx-manager.oauth-authority: "https://<oauth-authority>/oauth/authorize"
   # The OAuth client id to use for OAuth login. Value is ignored if not using OAuth login.
   tigera.cnx-manager.oauth-client-id: "cnx-manager"
-{%- endif %}
   # Prometheus server resource path
   tigera.cnx-manager.prometheus-api-url: "/api/v1/namespaces/calico-monitoring/services/calico-node-prometheus:9090/proxy/api/v1"
   # Query api url
