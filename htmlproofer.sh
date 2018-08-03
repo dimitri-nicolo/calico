@@ -16,14 +16,21 @@ JEKYLL_UID=${JEKYLL_UID:=`id -u`}
 # The htmlproofer check is flaky, so we retry a number of times if we get a bad result.
 # If it doesn't pass once in 10 tries, we count it as a failed check.
 echo "Running a hard URL check against recent releases"
+echo > allstderr.out
 for i in `seq 1 3`; do
 	echo "htmlproofer attempt #${i}"
-	docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS} --internal_domains "docs.tigera.io"
+	docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS} --internal_domains "docs.tigera.io" 2>stderr.out
 
 	# Store the RC for future use.
 	rc=$?
 	echo "htmlproofer rc: $rc"
 
+	# Show the errors
+	cat stderr.out
+
+	# Extract all the unique failing links and append them to the errors file
+	grep -v "/_site" stderr.out | grep "*  " | awk '{print $4}' | sort | uniq >> allstderr.out
+	
 	# If the command executed successfully, break out. Otherwise, retry.
 	if [[ $rc == 0 ]]; then break; fi
 
@@ -36,5 +43,14 @@ done
 echo "Running a soft check across all files"
 docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
 
+# Find all links that failed all three times
+echo "Links that failed in each run"
+! cat allstderr.out | sort | uniq -c | grep "3 "
+let greprc=$?
+
+# Clean up output files
+rm stderr.out
+rm allstderr.out
+
 # Exit using the return code from the loop above.
-exit $rc
+exit $greprc
