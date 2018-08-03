@@ -31,15 +31,21 @@ import (
 type PolicySets struct {
 	policySetIdToPolicySet map[string]*policySet
 
+	supportedFeatures hns.HNSSupportedFeatures
+
 	IpSets []*ipsets.IPSets
 
 	resyncRequired bool
 }
 
 func NewPolicySets(ipsets []*ipsets.IPSets) *PolicySets {
+
+	supportedFeatures := hns.GetHNSSupportedFeatures()
+
 	return &PolicySets{
 		policySetIdToPolicySet: map[string]*policySet{},
 		IpSets:                 ipsets,
+		supportedFeatures:      supportedFeatures,
 	}
 }
 
@@ -533,9 +539,16 @@ func (s *PolicySets) NewRule(isInbound bool, priority uint16) *hns.ACLPolicy {
 // NewHostRule returns a new hns rule object scoped to the host. This is only
 // temporarily required for compatibility with RS3.
 func (s *PolicySets) NewHostRule(isInbound bool) *hns.ACLPolicy {
+	var priority uint16 = 0
+
 	direction := hns.Out
 	if isInbound {
 		direction = hns.In
+	}
+
+	if !s.supportedFeatures.Acl.AclNoHostRulePriority {
+		log.Debugf("This HNS version requires host rule priority to be specified. Adding priority=100 to Host rules.")
+		priority = 100
 	}
 
 	return &hns.ACLPolicy{
@@ -543,7 +556,7 @@ func (s *PolicySets) NewHostRule(isInbound bool) *hns.ACLPolicy {
 		RuleType:  hns.Host,
 		Action:    hns.Allow,
 		Direction: direction,
-		Priority:  100,
+		Priority:  priority,
 		Protocol:  256, // Any
 	}
 }

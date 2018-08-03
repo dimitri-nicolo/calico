@@ -1,5 +1,5 @@
-hash: d8e994bb5b9b17201a381db4577071bb6c5e6f355b06520770f4632b6544691f
-updated: 2018-07-23T21:24:06.553225-07:00
+hash: bb0455e35aa677a29cca45cfdfb08f3de3a076989cbefd3039326e084d6fa9d2
+updated: 2018-08-02T10:56:03.287675947Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -99,7 +99,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 6aced65f8501fe1217321abf0749d354824ba2ff
+  version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
   version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
 - name: github.com/gogo/protobuf
@@ -204,7 +204,18 @@ imports:
 - name: github.com/Microsoft/go-winio
   version: 78439966b38d69bf38227fbf57ac8a6fee70f69a
 - name: github.com/Microsoft/hcsshim
-  version: 34a629f78a5d50f7de07727e41a948685c45e026
+  version: 4a468a6f7ae547974bc32911395c51fb1862b7df
+  subpackages:
+  - internal/guid
+  - internal/hcs
+  - internal/hcserror
+  - internal/hns
+  - internal/interop
+  - internal/longpath
+  - internal/mergemaps
+  - internal/safefile
+  - internal/schema1
+  - internal/wclayer
 - name: github.com/mipearson/rfw
   version: 6f0a6f3266ba1058df9ef0c94cda1cecd2e62852
 - name: github.com/modern-go/concurrent
@@ -323,7 +334,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 7600349dcfe1abd18d72d3a1770870d9800a7801
+  version: c7de2306084e37d54b8be01f3541a8464345e9a5
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -363,7 +374,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
+  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -424,7 +435,7 @@ imports:
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: b1f26356af11148e710935ed1ac8a7f5702c7612
+  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
   subpackages:
   - internal
   - internal/app_identity
@@ -467,7 +478,7 @@ imports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/square/go-jose.v2
-  version: 76dd09796242edb5b897103a75df2645c028c960
+  version: 349dc03548930652802aadc09fb126e2b7cb6d80
   subpackages:
   - cipher
   - json
