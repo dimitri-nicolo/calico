@@ -73,6 +73,8 @@ toc:
   path: /usage/configuration/alertmanager
 - title: Federated Endpoint Identity for Kubernetes
   path: /usage/federation
+- title: Writing kubeconfig files to connect to your Kubernetes cluster
+  path: /usage/writing-kubeconfig
 - title: Troubleshooting
   path: /usage/troubleshooting/
 - title: Logging
