@@ -12,6 +12,7 @@ import:
 - package: github.com/patrickmn/go-cache
 - package: github.com/projectcalico/felix
   repo:    git@github.com:tigera/felix-private
+  version: baf6cc636d58614ff1b54ac819d8e85b676eb39b
   subpackages:
   - fv/containers
 - package: github.com/projectcalico/libcalico-go
@@ -48,3 +49,7 @@ import:
   - tools/clientcmd
   - util/workqueue
 - package: github.com/onsi/ginkgo
+- package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  version: eaec5a48b41f4bd93f2d2e0da0a0af5e695c2a39

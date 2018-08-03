@@ -47,6 +47,9 @@ type Config struct {
 
 	// Enable healthchecks
 	HealthEnabled bool `default:"true"`
+
+	// Option used for testing and debugging to set the license polling interval to a shorter period.
+	DebugUseShortPollIntervals bool `default:"false" split_words:"true"`
 }
 
 // Parse parses envconfig and stores in Config struct

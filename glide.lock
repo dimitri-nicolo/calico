@@ -1,5 +1,5 @@
-hash: a09840d2e9dfbbcdf2c402aa0786da237cef2ebc4389cef2e489aa7f48c8bb2d
-updated: 2018-07-31T15:53:59.383432642-07:00
+hash: 4ca0560f96ab8881a81d45309c5a47e99d32bcd24433e5e05b8fa06c25016577
+updated: 2018-08-03T12:29:00.802925099-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -55,7 +55,7 @@ imports:
 - name: github.com/go-openapi/jsonreference
   version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
-  version: 1de3e0542de65ad8d75452a595886fdd0befb363
+  version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
   version: f3f9494671f93fcff853e3c6e9e948b3eb71e590
 - name: github.com/gogo/protobuf
@@ -174,18 +174,20 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 72b7347a95acbf6c11ceddad7a6f96ca73c067b5
+  version: baf6cc636d58614ff1b54ac819d8e85b676eb39b
   repo: git@github.com:tigera/felix-private
   subpackages:
   - calc
   - config
   - dispatcher
   - fv/containers
+  - fv/infrastructure
   - fv/utils
   - hashutils
   - ip
   - ipsets
   - iptables
+  - jitter
   - labelindex
   - markbits
   - multidict
@@ -239,6 +241,12 @@ imports:
   - lib/validator/v1
   - lib/validator/v3
   - lib/watch
+- name: github.com/projectcalico/typha
+  version: 1ae7b3a56d975268866bafb86c066e71b5fbcf75
+  repo: git@github.com:tigera/typha-private
+  subpackages:
+  - pkg/syncclient
+  - pkg/tlsutils
 - name: github.com/prometheus/client_golang
   version: 5cec1d0429b02e4323e042eb04dafdb079ddf568
   subpackages:
@@ -268,6 +276,15 @@ imports:
   version: f006c2ac4710855cf0f916dd6b77acf6b048dc6e
 - name: github.com/spf13/pflag
   version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
+- name: github.com/tigera/licensing
+  version: eaec5a48b41f4bd93f2d2e0da0a0af5e695c2a39
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  subpackages:
+  - client
+  - client/features
+  - crypto
+  - monitor
 - name: github.com/ugorji/go
   version: bdcc60b419d136a85cdf2e7cbcac34b3f1cd6e57
   subpackages:
@@ -277,6 +294,8 @@ imports:
   subpackages:
   - bcrypt
   - blowfish
+  - ed25519
+  - ed25519/internal/edwards25519
   - ssh/terminal
 - name: golang.org/x/net
   version: 66aacef3dd8a676686c7ae3716979581e8b03c47
@@ -376,6 +395,12 @@ imports:
   version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/square/go-jose.v2
+  version: f8f38de21b4dcd69d0413faf231983f5fd6634b1
+  subpackages:
+  - cipher
+  - json
+  - jwt
 - name: gopkg.in/tomb.v1
   version: c131134a1947e9afd9cecfe11f4c6dff0732ae58
 - name: gopkg.in/yaml.v2
