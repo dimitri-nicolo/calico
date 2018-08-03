@@ -3,7 +3,7 @@ cnx.yaml acccepts the following include flags:
 
 | Name             | Accepted Values          |
 |------------------|--------------------------|
-| install_type     | openshift                |
+| orch     | openshift                |
 | datastore        | kdd, etcd                |
 
 {% endcomment -%}
@@ -43,7 +43,7 @@ metadata:
   namespace: kube-system
 data:
   # Authentication type.  Must be set to "OIDC", "Basic", "Token", or "OAuth".
-{%- if include.install_type == "openshift" %}
+{%- if include.orch == "openshift" %}
   tigera.cnx-manager.authentication-type: "OAuth"
 {%- else %}
   tigera.cnx-manager.authentication-type: "Basic"
@@ -277,7 +277,7 @@ spec:
         - "--secure-port=5443"
         env:
 {%- if include.datastore == "etcd" %}
-  {%- if include.install_type == "openshift" %}
+  {%- if include.orch == "openshift" %}
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
@@ -360,7 +360,7 @@ spec:
         env:
           # Set queryserver logging to "info"
 {%- if include.datastore == "etcd" %}
-  {%- if include.install_type == "openshift" %}
+  {%- if include.orch == "openshift" %}
           - name: LOGLEVEL
             value: "info"
           - name: ETCD_ENDPOINTS
@@ -440,7 +440,7 @@ spec:
           periodSeconds: 3
       volumes:
 {%- if include.datastore == "etcd" %}
-  {%- if include.install_type == "openshift" %}
+  {%- if include.orch == "openshift" %}
         # If you're using TLS enabled etcd uncomment the following.
          - name: etcd-certs
            secret:
@@ -631,7 +631,7 @@ spec:
         secret:
           secretName: cnx-manager-tls
 
-{%- if include.install_type == "openshift" %}
+{%- if include.orch == "openshift" %}
 ---
 # This manifest creates a namespace for deploying prometheus-operator,
 # Prometheus and alertmanager.
