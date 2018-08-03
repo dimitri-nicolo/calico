@@ -27,6 +27,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
+	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/federatedservices"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/namespace"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/networkpolicy"
@@ -38,10 +39,18 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
 	client "github.com/projectcalico/libcalico-go/lib/clientv3"
 	"github.com/projectcalico/libcalico-go/lib/logutils"
+	lclient "github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/client/features"
+	"github.com/tigera/licensing/monitor"
 
 	"k8s.io/apiserver/pkg/storage/etcd3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	// Same RC as the one used for a config change by Felix.
+	configChangedRC = 129
 )
 
 // backendClientAccessor is an interface to access the backend client from the main v2 client.
@@ -108,26 +117,54 @@ func main() {
 		}
 	}
 
+	controllerCtrl := &controllerControl{
+		ctx:              ctx,
+		controllerStates: make(map[string]*controllerState),
+		config:           config,
+		stop:             stop,
+		licenseMonitor:   monitor.New(calicoClient.(backendClientAccessor).Backend()),
+	}
+
 	for _, controllerType := range strings.Split(config.EnabledControllers, ",") {
 		switch controllerType {
 		case "workloadendpoint":
 			podController := pod.NewPodController(ctx, k8sClientset, calicoClient)
-			go podController.Run(config.WorkloadEndpointWorkers, config.ReconcilerPeriod, stop)
+			controllerCtrl.controllerStates[controllerType] = &controllerState{
+				controller:  podController,
+				threadiness: config.WorkloadEndpointWorkers,
+			}
 		case "profile", "namespace":
 			namespaceController := namespace.NewNamespaceController(ctx, k8sClientset, calicoClient)
-			go namespaceController.Run(config.ProfileWorkers, config.ReconcilerPeriod, stop)
+			controllerCtrl.controllerStates[controllerType] = &controllerState{
+				controller:  namespaceController,
+				threadiness: config.ProfileWorkers,
+			}
 		case "policy":
 			policyController := networkpolicy.NewPolicyController(ctx, k8sClientset, calicoClient)
-			go policyController.Run(config.PolicyWorkers, config.ReconcilerPeriod, stop)
+			controllerCtrl.controllerStates[controllerType] = &controllerState{
+				controller:  policyController,
+				threadiness: config.PolicyWorkers,
+			}
 		case "node":
 			nodeController := node.NewNodeController(ctx, k8sClientset, calicoClient)
-			go nodeController.Run(config.NodeWorkers, config.ReconcilerPeriod, stop)
+			controllerCtrl.controllerStates[controllerType] = &controllerState{
+				controller:  nodeController,
+				threadiness: config.NodeWorkers,
+			}
 		case "serviceaccount":
 			serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, calicoClient)
-			go serviceAccountController.Run(config.ProfileWorkers, config.ReconcilerPeriod, stop)
+			controllerCtrl.controllerStates[controllerType] = &controllerState{
+				controller:  serviceAccountController,
+				threadiness: config.ProfileWorkers,
+			}
 		case "federatedservices":
 			federatedEndpointsController := federatedservices.NewFederatedServicesController(ctx, k8sClientset, calicoClient)
-			go federatedEndpointsController.Run(config.FederatedServicesWorkers, config.ReconcilerPeriod, stop)
+			controllerCtrl.controllerStates[controllerType] = &controllerState{
+				controller:     federatedEndpointsController,
+				licenseFeature: features.FederatedServices,
+				threadiness:    config.FederatedServicesWorkers,
+			}
+			controllerCtrl.needLicenseMonitoring = true
 		default:
 			log.Fatalf("Invalid controller '%s' provided. Valid options are workloadendpoint, profile, policy", controllerType)
 		}
@@ -136,8 +173,8 @@ func main() {
 	// If configured to do so, start an etcdv3 compaction.
 	startCompactor(ctx, config)
 
-	// Wait forever.
-	select {}
+	// Run the controllers
+	controllerCtrl.RunControllers()
 }
 
 // Starts an etcdv3 compaction goroutine with the given config.
@@ -235,4 +272,82 @@ func newEtcdV3Client() (*clientv3.Client, error) {
 	}
 
 	return clientv3.New(cfg)
+}
+
+// Object for keeping track of controller states and statuses.
+type controllerControl struct {
+	ctx                   context.Context
+	controllerStates      map[string]*controllerState
+	config                *config.Config
+	stop                  chan struct{}
+	licenseMonitor        monitor.LicenseMonitor
+	needLicenseMonitoring bool
+}
+
+// Runs all the controllers. Calls a hard exit to restart the controller process if
+// a license change invalidates a running controller.
+func (cc *controllerControl) RunControllers() {
+	// Instantiate the license monitor values
+	lCtx, cancel := context.WithTimeout(cc.ctx, 10*time.Second)
+	err := cc.licenseMonitor.RefreshLicense(lCtx)
+	cancel()
+	if err != nil {
+		log.WithError(err).Error("Failed to get license from datastore; continuing without a license")
+	}
+
+	if cc.config.DebugUseShortPollIntervals {
+		log.Info("Using short license poll interval for FV")
+		cc.licenseMonitor.SetPollInterval(1 * time.Second)
+	}
+
+	licenseChangedChan := make(chan struct{})
+
+	// Define some of the callbacks for the license monitor. Any changes just send a signal back on the license changed channel.
+	cc.licenseMonitor.SetFeaturesChangedCallback(func() {
+		licenseChangedChan <- struct{}{}
+	})
+
+	cc.licenseMonitor.SetStatusChangedCallback(func(newLicenseStatus lclient.LicenseStatus) {
+		licenseChangedChan <- struct{}{}
+	})
+
+	if cc.needLicenseMonitoring {
+		// Start the license monitor, which will trigger the callback above at start of day and then whenever the license
+		// status changes.
+		// Need to wrap the call to MonitorForever in a function to pass static-checks.
+		go func() {
+			err := cc.licenseMonitor.MonitorForever(context.Background())
+			if err != nil {
+				log.WithError(err).Warn("Error while continuously monitoring the license.")
+			}
+		}()
+	}
+
+	// Start the controllers then wait indefinitely for license changes to come through to update the controllers as needed.
+	for {
+		for controllerType, cs := range cc.controllerStates {
+			missingLicense := cs.licenseFeature != "" && !cc.licenseMonitor.GetFeatureStatus(cs.licenseFeature)
+			if !cs.running && !missingLicense {
+				// Run the controller
+				log.Infof("Started the %s controller", controllerType)
+				go cs.controller.Run(cs.threadiness, cc.config.ReconcilerPeriod, cc.stop)
+				cs.running = true
+			} else if cs.running && missingLicense {
+				// Restart the controller since the updated license has less functionality than before.
+				log.Warn("License was changed, shutting down the controllers")
+				os.Exit(configChangedRC)
+			}
+		}
+
+		// Wait until an update is made to see if we need to make changes to the running sets of controllers.
+		<-licenseChangedChan
+	}
+}
+
+// Object for keeping track of Controller information.
+type controllerState struct {
+	controller     controller.Controller
+	running        bool
+	licenseFeature string
+	threadiness    int
 }
