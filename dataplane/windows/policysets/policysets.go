@@ -539,12 +539,12 @@ func (s *PolicySets) NewRule(isInbound bool, priority uint16) *hns.ACLPolicy {
 // NewHostRule returns a new hns rule object scoped to the host. This is only
 // temporarily required for compatibility with RS3.
 func (s *PolicySets) NewHostRule(isInbound bool) *hns.ACLPolicy {
+	var priority uint16 = 0
+
 	direction := hns.Out
 	if isInbound {
 		direction = hns.In
 	}
-
-	priority := 0
 
 	if !s.supportedFeatures.Acl.AclNoHostRulePriority {
 		log.Debugf("This HNS version requires host rule priority to be specified. Adding priority=100 to Host rules.")
@@ -556,7 +556,7 @@ func (s *PolicySets) NewHostRule(isInbound bool) *hns.ACLPolicy {
 		RuleType:  hns.Host,
 		Action:    hns.Allow,
 		Direction: direction,
-		Priority:  uint16(priority),
+		Priority:  priority,
 		Protocol:  256, // Any
 	}
 }
