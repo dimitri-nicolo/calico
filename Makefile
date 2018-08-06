@@ -629,7 +629,7 @@ bin/test-connection: $(SRC_FILES) vendor/.up-to-date
 .PHONY: ci cd
 
 ## run CI cycle - build, test, etc.
-ci: image-all bin/calico-felix.exe ut upload-to-coveralls static-checks
+ci: image-all bin/calico-felix.exe ut static-checks
 ifeq (,$(filter fv, $(EXCEPT)))
 	@$(MAKE) fv
 endif

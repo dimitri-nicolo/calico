@@ -36,7 +36,7 @@ func (r *DefaultRuleRenderer) NATOutgoingChain(natOutgoingActive bool, ipVersion
 			rules = []iptables.Rule{
 				{
 					Action: iptables.MasqAction{},
-					Match:  iptables.Match().NotDestIPSet(allHostsIPSetName),
+					Match:  iptables.Match().SourceIPSet(masqIPsSetName).NotDestIPSet(allIPsSetName).NotDestIPSet(allHostsIPSetName),
 				},
 			}
 		} else if r.Config.NATPortRange.MaxPort > 0 {
