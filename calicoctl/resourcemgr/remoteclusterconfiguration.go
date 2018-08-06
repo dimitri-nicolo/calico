@@ -17,12 +17,12 @@ func init() {
 		false,
 		[]string{"remoteclusterconfiguration", "remoteclusterconfig", "remoteclusterconfigurations", "remoteclusterconfigs", "rcc"},
 		[]string{"NAME"},
-		[]string{"NAME", "DATASTORETYPE","ETCDENDPOINTS", "K8SAPIENDPOINT"},
+		[]string{"NAME", "DATASTORETYPE", "ETCDENDPOINTS", "K8SAPIENDPOINT"},
 		map[string]string{
-			"NAME":   "{{.ObjectMeta.Name}}",
-			"ETCDENDPOINTS": "{{.Spec.EtcdEndpoints}}",
+			"NAME":           "{{.ObjectMeta.Name}}",
+			"ETCDENDPOINTS":  "{{.Spec.EtcdEndpoints}}",
 			"K8SAPIENDPOINT": "{{.Spec.K8sAPIEndpoint}}",
-			"DATASTORETYPE": "{{.Spec.DatastoreType}}",
+			"DATASTORETYPE":  "{{.Spec.DatastoreType}}",
 		},
 		func(ctx context.Context, client client.Interface, resource ResourceObject) (ResourceObject, error) {
 			r := resource.(*api.RemoteClusterConfiguration)
