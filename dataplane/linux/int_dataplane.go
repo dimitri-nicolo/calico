@@ -914,7 +914,6 @@ func (d *InternalDataplane) loopUpdatingDataplane() {
 			// nil out the channel to record that the timer is now inactive.
 			d.reschedC = nil
 		case <-throttleC:
-			log.Debug("Throttle kick received")
 			d.applyThrottle.Refill()
 		case <-healthTicks:
 			d.reportHealth()

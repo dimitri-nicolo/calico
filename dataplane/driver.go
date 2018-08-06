@@ -214,6 +214,8 @@ func StartDataplaneDriver(configParams *config.Config,
 				DisableConntrackInvalid: configParams.DisableConntrackInvalidCheck,
 
 				EnableNflogSize: configParams.EnableNflogSize,
+
+				NATPortRange: configParams.NATPortRange,
 			},
 
 			NfNetlinkBufSize:                        configParams.NfNetlinkBufSize,
