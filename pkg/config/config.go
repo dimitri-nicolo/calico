@@ -45,6 +45,9 @@ type Config struct {
 	// not require this, it allows the service account to access the minimal set of resources).
 	DoNotInitializeCalico bool `default:"false" split_words:"true"`
 
+	// Enable healthchecks
+	HealthEnabled bool `default:"true"`
+
 	// Option used for testing and debugging to set the license polling interval to a shorter period.
 	DebugUseShortPollIntervals bool `default:"false" split_words:"true"`
 }

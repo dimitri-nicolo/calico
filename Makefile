@@ -38,15 +38,20 @@ ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
+# list of arches *not* to build when doing *-all
+#    until s390x works correctly
+EXCLUDEARCH ?= s390x
+VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
+
 # Determine which OS.
 OS?=$(shell uname -s | tr A-Z a-z)
 ###############################################################################
-GO_BUILD_VER ?= v0.15
+GO_BUILD_VER?=v0.17
 
-K8S_VERSION=v1.8.1
+K8S_VERSION?=v1.10.4
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
-ETCD_VERSION=v3.2.5
-ETCD_IMAGE ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
+ETCD_VERSION?=v3.3.7
+ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 # If building on amd64 omit the arch in the container name.
 ifeq ($(BUILDARCH),amd64)
         ETCD_IMAGE=quay.io/coreos/etcd:$(ETCD_VERSION)
@@ -72,7 +77,7 @@ DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                               -v $${PWD}/.go-pkg-cache:/go/pkg:rw \
                               -w /go/src/$(PACKAGE_NAME) \
                               $(CALICO_BUILD)
-SRCFILES=main.go $(shell find pkg -name '*.go')
+SRCFILES=cmd/kube-controllers/main.go $(shell find pkg -name '*.go')
 
 ## Removes all build artifacts.
 clean:
@@ -83,8 +88,8 @@ clean:
 ###############################################################################
 # Building the binary
 ###############################################################################
-build: bin/kube-controllers-linux-$(ARCH)
-build-all: $(addprefix sub-build-,$(ARCHES))
+build: bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH)
+build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
@@ -105,8 +110,33 @@ vendor: glide.yaml
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
 		-v $(HOME)/.glide:/home/user/.glide:rw \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
-		$(CALICO_BUILD) \
-		/bin/sh -c 'cd /go/src/$(PACKAGE_NAME) && glide install -strip-vendor'
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) glide install -strip-vendor
+
+# Default the libcalico repo and version but allow them to be overridden
+LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go master 2>/dev/null | cut -f 1)
+
+## Update libcalico pin in glide.yaml
+update-libcalico:
+	docker run --rm \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
+		-v $(HOME)/.glide:/home/user/.glide:rw \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) sh -c '\
+        echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
+        export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
+        echo "Old version: $$OLD_VER";\
+        if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
+            sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
+            if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
+              glide mirror set https://github.com/projectcalico/libcalico-go $(LIBCALICO_REPO) --vcs git; glide mirror list; \
+            fi;\
+          OUTPUT=`mktemp`;\
+          glide up --strip-vendor; glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
+          if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
+        fi'
 
 bin/kube-controllers-linux-$(ARCH): vendor $(SRCFILES)
 	mkdir -p bin
@@ -119,20 +149,33 @@ bin/kube-controllers-linux-$(ARCH): vendor $(SRCFILES)
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
       -e GOCACHE=/go-cache \
-	  $(CALICO_BUILD) go build -v -o bin/kube-controllers-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./main.go
+	  $(CALICO_BUILD) go build -v -o bin/kube-controllers-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/kube-controllers/
+
+bin/check-status-linux-$(ARCH): vendor $(SRCFILES)
+	mkdir -p bin
+	-mkdir -p .go-pkg-cache
+	docker run --rm \
+	  -e GOOS=$(OS) -e GOARCH=$(ARCH) \
+	  -v $(CURDIR):/go/src/$(PACKAGE_NAME):ro \
+	  -v $(CURDIR)/bin:/go/src/$(PACKAGE_NAME)/bin \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
+      -e GOCACHE=/go-cache \
+	  $(CALICO_BUILD) go build -v -o bin/check-status-$(OS)-$(ARCH) -ldflags "-X main.VERSION=$(GIT_VERSION)" ./cmd/check-status/
 
 ###############################################################################
 # Building the image
 ###############################################################################
 ## Builds the controller binary and docker image.
 image: image.created-$(ARCH)
-image-all: $(addprefix sub-image-,$(ARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH)
+image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH)
 	# Build the docker image for the policy controller.
-	docker build -t $(CONTAINER_NAME):latest-$(ARCH) -f Dockerfile.$(ARCH) .
+	docker build -t $(CONTAINER_NAME):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	# Need amd64 builds tagged as :latest because Semaphore depends on that
 	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):latest
@@ -152,7 +195,7 @@ ifeq ($(ARCH),amd64)
 	docker push $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)
 endif
 
-push-all: imagetag $(addprefix sub-push-,$(ARCHES))
+push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
@@ -164,7 +207,7 @@ ifeq ($(ARCH),amd64)
 endif
 
 ## tag images of all archs
-tag-images-all: imagetag $(addprefix sub-tag-images-,$(ARCHES))
+tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
@@ -178,15 +221,15 @@ static-checks: vendor check-copyright
 	docker run --rm \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME) \
-		$(CALICO_BUILD) sh -c '\
-			cd  /go/src/$(PACKAGE_NAME) && \
-			gometalinter --deadline=300s --disable-all --enable=goimports --enable=vet --enable=errcheck --vendor -s test_utils ./...'
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) gometalinter --deadline=300s --disable-all --enable=goimports --enable=vet --enable=errcheck --vendor -s test_utils ./...
 
 .PHONY: fix
 ## Fix static checks
 fix goimports:
 	goimports -l -w ./pkg
-	goimports -l -w ./main.go
+	goimports -l -w ./cmd/kube-controllers/main.go
+	goimports -l -w ./cmd/check-status/main.go
 
 .PHONY: install-git-hooks
 ## Install Git hooks
@@ -206,14 +249,15 @@ ut: vendor
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-v $(CURDIR)/.go-pkg-cache:/go/pkg/:rw \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
-		$(CALICO_BUILD) sh -c 'cd /go/src/$(PACKAGE_NAME) && WHAT=$(WHAT) SKIP=$(SKIP) ./run-uts'
+		-w /go/src/$(PACKAGE_NAME) \
+		$(CALICO_BUILD) sh -c 'WHAT=$(WHAT) SKIP=$(SKIP) ./run-uts'
 
 .PHONY: fv
 ## Build and run the FV tests.
 GINKGO_FOCUS?=.*
 fv: tests/fv/fv.test image
 	@echo Running Go FVs.
-	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) CONTAINER_NAME=$(CONTAINER_NAME):latest-$(ARCH) ./fv.test -ginkgo.slowSpecThreshold 30 -ginkgo.focus "$(GINKGO_FOCUS)"
+	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) CONTAINER_NAME=$(CONTAINER_NAME):latest-$(ARCH) PRIVATE_KEY=`pwd`/private.key ./fv.test -ginkgo.slowSpecThreshold 30 -ginkgo.focus "$(GINKGO_FOCUS)"
 
 tests/fv/fv.test: $(shell find ./tests -type f -name '*.go' -print)
 	# We pre-build the test binary so that we can run it outside a container and allow it
@@ -224,7 +268,7 @@ tests/fv/fv.test: $(shell find ./tests -type f -name '*.go' -print)
 # CI
 ###############################################################################
 .PHONY: ci
-ci: clean image static-checks ut fv
+ci: clean image-all static-checks ut fv
 
 ###############################################################################
 # CD
@@ -238,8 +282,8 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images push IMAGETAG=${BRANCH_NAME}
-	$(MAKE) tag-images push IMAGETAG=$(shell git describe --tags --dirty --always --long)
+	$(MAKE) tag-images-all push-all IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
