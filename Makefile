@@ -96,19 +96,26 @@ register:
 ifneq ($(BUILDARCH),$(ARCH))
 	docker run --rm --privileged multiarch/qemu-user-static:register || true
 endif
+
+
+# list of arches *not* to build when doing *-all
+#    until s390x works correctly
+EXCLUDEARCH ?= s390x
+VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
+
 ###############################################################################
 CONTAINER_NAME=tigera/felix
 PACKAGE_NAME?=github.com/projectcalico/felix
 
-GO_BUILD_VER?=v0.16
+GO_BUILD_VER?=v0.17
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
-CALICO_BUILD = calico/go-build:$(GO_BUILD_VER)
-ETCD_VERSION?=v3.2.5
-K8S_VERSION?=v1.7.5
-PROTOC_VER ?= v0.1
-PROTOC_CONTAINER ?= calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
+CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
+ETCD_VERSION?=v3.3.7
+K8S_VERSION?=v1.10.4
+PROTOC_VER?=v0.1
+PROTOC_CONTAINER ?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
 FV_ETCDIMAGE ?= quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
 FV_K8SIMAGE ?= gcr.io/google_containers/hyperkube-$(BUILDARCH):$(K8S_VERSION)
@@ -207,7 +214,7 @@ clean:
 # Building the binary
 ###############################################################################
 build: bin/calico-felix
-build-all: $(addprefix sub-build-,$(ARCHES))
+build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
 
@@ -233,6 +240,23 @@ vendor vendor/.up-to-date: glide.lock
 	  $(DOCKER_GO_BUILD) glide install --strip-vendor && \
 	  touch vendor/.up-to-date; \
 	fi
+
+# Default the typha repo and version but allow them to be overridden
+TYPHA_REPO?=github.com/projectcalico/typha
+TYPHA_VERSION?=$(shell git ls-remote git@github.com:projectcalico/typha master 2>/dev/null | cut -f 1)
+
+## Update typha pin in glide.yaml
+update-typha:
+	    $(DOCKER_GO_BUILD) sh -c '\
+        echo "Updating typha to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
+        export OLD_VER=$$(grep --after 50 typha glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
+        echo "Old version: $$OLD_VER";\
+        if [ $(TYPHA_VERSION) != $$OLD_VER ]; then \
+          sed -i "s/$$OLD_VER/$(TYPHA_VERSION)/" glide.yaml && \
+          OUTPUT=`mktemp`;\
+          glide up --strip-vendor; glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
+          if ! grep -v "github.com/onsi/gomega" $$OUTPUT | grep -v "golang.org/x/sys" | grep -v "github.com/onsi/ginkgo" | grep "\[WARN\]"; then true; else false; fi; \
+        fi'
 
 bin/calico-felix: bin/calico-felix-$(ARCH)
 	ln -f bin/calico-felix-$(ARCH) bin/calico-felix
@@ -271,7 +295,7 @@ protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
 
 # by default, build the image for the target architecture
 .PHONY: image-all
-image-all: $(addprefix sub-image-,$(ARCHES))
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
@@ -281,7 +305,7 @@ tigera/felix-$(ARCH): bin/calico-felix-$(ARCH) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-felix-$(ARCH) docker-image/bin/
-	docker build --pull -t tigera/felix:latest-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
+	docker build --pull -t tigera/felix:latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
 	docker tag tigera/felix:latest-$(ARCH) tigera/felix:latest
 endif
@@ -292,7 +316,7 @@ ifndef IMAGETAG
 endif
 
 ## push all arches
-push-all: imagetag $(addprefix sub-push-,$(ARCHES))
+push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
@@ -315,7 +339,7 @@ ifeq ($(ARCH),amd64)
 endif
 
 ## tag images of all archs
-tag-images-all: imagetag $(addprefix sub-tag-images-,$(ARCHES))
+tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
@@ -330,6 +354,7 @@ ifeq ($(GIT_COMMIT),<unknown>)
 endif
 	$(MAKE) calico-build/trusty
 	$(MAKE) calico-build/xenial
+	$(MAKE) calico-build/bionic
 	utils/make-packages.sh deb
 
 # Build RPMs.
@@ -353,6 +378,11 @@ calico-build/trusty:
 .PHONY: calico-build/xenial
 calico-build/xenial:
 	cd docker-build-images && docker build -f ubuntu-xenial-build.Dockerfile.$(ARCH) -t calico-build/xenial .
+
+# Build a docker image used for building debs for bionic.
+.PHONY: calico-build/bionic
+calico-build/bionic:
+	cd docker-build-images && docker build -f ubuntu-bionic-build.Dockerfile.$(ARCH) -t calico-build/bionic .
 
 # Construct a docker image for building Centos 7 RPMs.
 .PHONY: calico-build/centos7
@@ -466,6 +496,19 @@ fv/fv.test: vendor/.up-to-date $(SRC_FILES)
 	$(DOCKER_GO_BUILD) go test ./$(shell dirname $@) -c --tags fvtests -o $@
 
 .PHONY: fv
+# runs all of the fv tests
+# to run it in parallel, decide how many parallel engines you will run, and in each one call:
+#         $(MAKE) fv FV_BATCHES_TO_RUN="<num>" FV_NUM_BATCHES=<num>
+# where
+#         FV_NUM_BATCHES = total parallel batches
+#         FV_BATCHES_TO_RUN = which number this is
+# e.g. to run it in 10 parallel runs:
+#         $(MAKE) fv FV_BATCHES_TO_RUN="1" FV_NUM_BATCHES=10     # the first 1/10
+#         $(MAKE) fv FV_BATCHES_TO_RUN="2" FV_NUM_BATCHES=10     # the second 1/10
+#         $(MAKE) fv FV_BATCHES_TO_RUN="3" FV_NUM_BATCHES=10     # the third 1/10
+#         ...
+#         $(MAKE) fv FV_BATCHES_TO_RUN="10" FV_NUM_BATCHES=10    # the tenth 1/10
+#         etc.
 fv fv/latency.log: tigera/felix bin/iptables-locker bin/test-workload bin/test-connection fv/fv.test
 	cd fv && \
 	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
@@ -474,6 +517,7 @@ fv fv/latency.log: tigera/felix bin/iptables-locker bin/test-workload bin/test-c
 	  FV_K8SIMAGE=$(FV_K8SIMAGE) \
 	  FV_NUM_BATCHES=$(FV_NUM_BATCHES) \
 	  FV_BATCHES_TO_RUN="$(FV_BATCHES_TO_RUN)" \
+	  PRIVATE_KEY=`pwd`/private.key \
 	  GINKGO_ARGS='$(GINKGO_ARGS)' \
 	  GINKGO_FOCUS="$(GINKGO_FOCUS)" \
 	  ./run-batches
@@ -505,6 +549,10 @@ K8SFV_GO_FILES:=$(shell find ./$(K8SFV_DIR) -name prometheus -prune -o -type f -
 
 .PHONY: k8sfv-test k8sfv-test-existing-felix
 # Run k8sfv test with Felix built from current code.
+# control whether or not we use typha with USE_TYPHA=true or USE_TYPHA=false
+# e.g.
+#       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
+#       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
 k8sfv-test: tigera/felix k8sfv-test-existing-felix
 # Run k8sfv test with whatever is the existing 'tigera/felix:latest'
 # container image.  To use some existing Felix version other than
@@ -514,6 +562,7 @@ k8sfv-test-existing-felix: bin/k8sfv.test
 	FV_TYPHAIMAGE=$(FV_TYPHAIMAGE) \
 	FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
 	FV_K8SIMAGE=$(FV_K8SIMAGE) \
+	PRIVATE_KEY=`pwd`/fv/private.key \
 	k8sfv/run-test
 
 bin/k8sfv.test: $(K8SFV_GO_FILES) vendor/.up-to-date
@@ -575,8 +624,30 @@ bin/test-connection: $(SRC_FILES) vendor/.up-to-date
 	    sh -c 'go build -v -i -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/fv/test-connection"'
 
 ###############################################################################
-# CI
+# CI/CD
 ###############################################################################
+.PHONY: ci cd
+
+## run CI cycle - build, test, etc.
+ci: image-all bin/calico-felix.exe ut static-checks
+ifeq (,$(filter fv, $(EXCEPT)))
+	@$(MAKE) fv
+endif
+ifeq (,$(filter k8sfv-test, $(EXCEPT)))
+	@$(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
+	@$(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
+endif
+
+## Deploy images to registry
+cd:
+ifndef CONFIRM
+	$(error CONFIRM is undefined - run using make <target> CONFIRM=true)
+endif
+ifndef BRANCH_NAME
+	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
+endif
+	$(MAKE) tag-images-all push-all IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 
 ###############################################################################

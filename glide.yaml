@@ -1,99 +1,119 @@
 package: github.com/projectcalico/felix
 homepage: https://projectcalico.org
 license: Apache-2.0
-owners:
-- name: Rob Brockbank
-  email: rob@tigera.io
 import:
-# v3.3.3 + our fixes.
-- package: github.com/coreos/etcd
-  version: e8287287893bd4080040e4fe68dae8a20476b095
-  repo: https://github.com/projectcalico/etcd.git
+- package: github.com/containernetworking/cni
+  version: v0.5.2
   subpackages:
-  - client
-  - pkg/transport
-# gRPC version that etcd requires.
-- package: google.golang.org/grpc
-  version: v1.7.5
+  - pkg/ns
+# Need to pin to an older version as our code uses code that is deprecated in newer versions.
 - package: github.com/docopt/docopt-go
   version: ^0.6.2
-- package: github.com/ghodss/yaml
-  version: ^1.0.0
-- package: github.com/golang/glog
-- package: github.com/kelseyhightower/envconfig
-  version: ^1.3.0
-- package: golang.org/x/net
-  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
-  subpackages:
-  - context
-- package: golang.org/x/sys
-  version: 88d2dcc510266da9f7f8c7f34e1940716cab5f5c
-  subpackages:
-  - unix
-  - windows
-- package: gopkg.in/go-playground/validator.v8
-- package: github.com/satori/go.uuid
-  version: ^1.1.0
 - package: github.com/go-ini/ini
-  version: ^1.21.0
-- package: github.com/projectcalico/libcalico-go
-  repo:    git@github.com:tigera/libcalico-go-private
-  version: 1b769d137fb876899b7fda435d7a8b234bce2984
-  subpackages:
-  - lib
-- package: github.com/tigera/licensing
-  repo: git@github.com:tigera/licensing
-  vcs: git
-  version: 6774d1fc844530dc7be7d766bc473d8bcc05409e
-  subpackages:
-  - client
-  - monitor
-- package: github.com/tigera/nfnetlink
-  repo:    git@github.com:tigera/nfnetlink
-  version: 6129e0f5c02789e10680b1d01fbb23cbe456331f
-- package: github.com/sirupsen/logrus
-  version: v1.0.4
-- package: github.com/kardianos/osext
-- package: github.com/mipearson/rfw
-- package: github.com/prometheus/client_golang
-  version: v0.9.0-pre1
 - package: github.com/gogo/protobuf
-  version: ^0.5.0
-- package: github.com/vishvananda/netlink
-  version: 3fd955dd632011983cd15e42663e1befa7929a15
-  repo: git@github.com:tigera/netlink.git
+  subpackages:
+  - proto
+- package: github.com/kardianos/osext
+- package: github.com/kelseyhightower/envconfig
+- package: github.com/mipearson/rfw
+  # containernetworkin/cni tries to pull in really old versions of ginkgo and gomega.
+  # Pin to get newer ones
 - package: github.com/onsi/ginkgo
   version: ^1.4.0
 - package: github.com/onsi/gomega
   version: ^1.1.0
-- package: k8s.io/client-go
-  version: 82aa063804cf055e16e8911250f888bc216e8b61
+  subpackages:
+  - types
+- package: github.com/projectcalico/libcalico-go
+  repo:    git@github.com:tigera/libcalico-go-private
+  subpackages:
+  - lib/apiconfig
+  - lib/apis/v3
+  - lib/backend
+  - lib/backend/api
+  - lib/backend/k8s/conversion
+  - lib/backend/model
+  - lib/backend/syncersv1/felixsyncer
+  - lib/backend/syncersv1/updateprocessors
+  - lib/backend/watchersyncer
+  - lib/clientv3
+  - lib/errors
+  - lib/hash
+  - lib/health
+  - lib/logutils
+  - lib/names
+  - lib/net
+  - lib/numorstring
+  - lib/options
+  - lib/selector
+  - lib/selector/parser
+  - lib/set
+  - lib/validator/v1
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 1ae7b3a56d975268866bafb86c066e71b5fbcf75
+  version: c8f11d3e22967fd1213bec19f2a5a1edb63e0f92
+  subpackages:
   subpackages:
   - pkg/syncclient
-- package: github.com/emicklei/go-restful
-  version: v1.2
-- package: github.com/containernetworking/cni
-  version: v0.5.2
-- package: github.com/jbenet/go-reuseport
-  repo: https://github.com/fasaxc/go-reuseport.git
-  version: disable-dial-check
-- package: github.com/jbenet/go-sockaddr
-  version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
+  - pkg/tlsutils
+- package: github.com/prometheus/client_golang
   subpackages:
-  - net
+  - prometheus
+  - prometheus/promhttp
+  - prometheus/push
+- package: github.com/satori/go.uuid
+- package: github.com/sirupsen/logrus
+  version: v1.0.4
+- package: github.com/vishvananda/netlink
+  version: 3fd955dd632011983cd15e42663e1befa7929a15
+  repo: git@github.com:tigera/netlink.git
+- package: golang.org/x/net
+  subpackages:
+  - context
+# A number of packages pull in x/sys but it's important that we get a recent one for the x/crypto package.
+# Most notably, containernetworking/plugins wants a version from ~2 years ago.
+# It should also be safe to take the latest here (it's generally just adding more symbols)
+- package: golang.org/x/sys
+  version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
+  subpackages:
+  - unix
+- package: google.golang.org/grpc
+  subpackages:
+  - credentials
+  - peer
+- package: k8s.io/api
+  subpackages:
+  - core/v1
+  - networking/v1
+- package: k8s.io/apimachinery
+  subpackages:
+  - pkg/api/errors
+  - pkg/apis/meta/v1
+- package: k8s.io/client-go
+  subpackages:
+  - kubernetes
+  - rest
+  - tools/clientcmd
+  - tools/clientcmd/api
+- package: github.com/davecgh/go-spew
+  subpackages:
+  - spew
 - package: github.com/Microsoft/go-winio
   version: 78439966b38d69bf38227fbf57ac8a6fee70f69a
 - package: github.com/Microsoft/hcsshim
   version: 4a468a6f7ae547974bc32911395c51fb1862b7df
-# Pinned due to error '.../genproto/googleapis/rpc/status/status.pb.go:111:28: undefined: proto.InternalMessageInfo'
-# If the pin can be removed and UTs run successfully then great.
-- package: google.golang.org/genproto
-  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
-  subpackages:
-  - googleapis
+# Everything above here should closely match open source - other than
+# 1) repo line for libcalico-go
+# 2) repo and version lines for typha
+# 3) repo and version lines vishvanada/netlink
+
+# prometheus/client_golang pulls in prometheus/client_model, which depends
+# on this version of golang/protobuf (but none of the prometheus repos provide
+# a dependency manifest). The genproto library (another indirect and unpinned
+# dependency) also depends on this version of protobuf.
+# This commit hash is v1.1.0 (but the hash is used because k8s also pulls in this version)
+- package: github.com/golang/protobuf
+  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
 - package: github.com/aws/aws-sdk-go
   version: v1.13.54
 - package: github.com/prometheus/procfs
@@ -107,3 +127,27 @@ import:
   version: v1.13.54
 - package: github.com/jmespath/go-jmespath
   version: 0.2.2
+- package: github.com/tigera/licensing
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  version: 6774d1fc844530dc7be7d766bc473d8bcc05409e
+  subpackages:
+  - client
+  - monitor
+- package: github.com/tigera/nfnetlink
+  repo:    git@github.com:tigera/nfnetlink
+  version: 6129e0f5c02789e10680b1d01fbb23cbe456331f
+- package: github.com/emicklei/go-restful
+#  version: v1.2
+- package: github.com/containernetworking/cni
+  version: v0.5.2
+- package: github.com/jbenet/go-reuseport
+  repo: https://github.com/fasaxc/go-reuseport.git
+  version: disable-dial-check
+- package: github.com/jbenet/go-sockaddr
+  version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
+  subpackages:
+  - net
+# Pin to an older version since it the latest master has problems with the commit of github.com/mailru/easyjson that gets picked
+- package: github.com/go-openapi/swag
+  version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72

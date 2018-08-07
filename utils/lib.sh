@@ -79,44 +79,44 @@ function test_validate_version {
     }
 
     # Test cases.
-    expect_valid 1.2.3
+    expect_valid v1.2.3
     expect_invalid 1.2.3.4
     expect_invalid .2.3.4
     expect_invalid abc
     expect_invalid 1.2.3.beta
-    expect_valid 1.2.3-beta.2
-    expect_valid 1.2.3-beta
-    expect_valid 1.2.3-alpha
-    expect_valid 1.2.3-rc2
+    expect_valid v1.2.3-beta.2
+    expect_valid v1.2.3-beta
+    expect_valid v1.2.3-alpha
+    expect_valid v1.2.3-rc2
     expect_invalid 1:2.3-rc2
     expect_invalid 1.2:3-rc2
     expect_invalid 1.2.3:rc2
 
-    # All Felix tags since 1.0.0:
-    expect_valid 1.0.0
-    expect_valid 1.1.0
-    expect_valid 1.2.0
-    expect_valid 1.2.0-pre2
-    expect_valid 1.2.1
-    expect_valid 1.2.2
-    expect_valid 1.3.0
-    expect_valid 1.3.0-pre5
-    expect_valid 1.3.0a5
-    expect_valid 1.3.0a6
-    expect_valid 1.3.1
-    expect_valid 1.4.0
-    expect_valid 1.4.0b1
-    expect_valid 1.4.0b2
-    expect_valid 1.4.0b3
-    expect_valid 1.4.1b1
-    expect_valid 1.4.1b2
-    expect_valid 1.4.2
-    expect_valid 1.4.3
-    expect_valid 1.4.4
-    expect_valid 2.0.0-beta
-    expect_valid 2.0.0-beta-rc2
-    expect_valid 2.0.0-beta.2
-    expect_valid 2.0.0-beta.3
+    # All Felix tags since 1.0.0 (with v prefixed):
+    expect_valid v1.0.0
+    expect_valid v1.1.0
+    expect_valid v1.2.0
+    expect_valid v1.2.0-pre2
+    expect_valid v1.2.1
+    expect_valid v1.2.2
+    expect_valid v1.3.0
+    expect_valid v1.3.0-pre5
+    expect_valid v1.3.0a5
+    expect_valid v1.3.0a6
+    expect_valid v1.3.1
+    expect_valid v1.4.0
+    expect_valid v1.4.0b1
+    expect_valid v1.4.0b2
+    expect_valid v1.4.0b3
+    expect_valid v1.4.1b1
+    expect_valid v1.4.1b2
+    expect_valid v1.4.2
+    expect_valid v1.4.3
+    expect_valid v1.4.4
+    expect_valid v2.0.0-beta
+    expect_valid v2.0.0-beta-rc2
+    expect_valid v2.0.0-beta.2
+    expect_valid v2.0.0-beta.3
     expect_valid v2.0.0-beta-rc1
 }
 

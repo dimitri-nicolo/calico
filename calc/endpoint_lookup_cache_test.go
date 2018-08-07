@@ -43,7 +43,7 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}
 			ec.OnUpdate(update)
-			ed, ok = ec.GetEndpoint(addrB)
+			_, ok = ec.GetEndpoint(addrB)
 			Expect(ok).To(BeFalse(), c)
 		},
 		Entry("remote WEP1 IPv4", remoteWlEpKey1, &remoteWlEp1, remoteWlEp1.IPv4Nets[0].IP),
@@ -76,7 +76,7 @@ var _ = Describe("EndpointLookupsCache tests", func() {
 				UpdateType: api.UpdateTypeKVDeleted,
 			}
 			ec.OnUpdate(update)
-			ed, ok = ec.GetEndpoint(addrB)
+			_, ok = ec.GetEndpoint(addrB)
 			Expect(ok).To(BeFalse(), c)
 		},
 		Entry("Host Endpoint IPv4", hostEpWithNameKey, &hostEpWithName, hostEpWithName.ExpectedIPv4Addrs[0].IP),

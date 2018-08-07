@@ -220,6 +220,7 @@ type Config struct {
 	CloudWatchLogsEnabledForDenied          bool          `config:"bool;true"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
+	NATPortRange       numorstring.Port   `config:"portrange;"`
 
 	UsageReportingEnabled          bool          `config:"bool;true"`
 	UsageReportingInitialDelaySecs time.Duration `config:"seconds;300"`
@@ -665,6 +666,8 @@ func loadParams() {
 			param = &EndpointListParam{}
 		case "port-list":
 			param = &PortListParam{}
+		case "portrange":
+			param = &PortRangeParam{}
 		case "portrange-list":
 			param = &PortRangeListParam{}
 		case "hostname":

@@ -317,6 +317,8 @@ type Config struct {
 
 	DisableConntrackInvalid bool
 
+	NATPortRange numorstring.Port
+
 	EnableNflogSize bool
 	IPSecEnabled    bool
 }
