@@ -71,7 +71,7 @@ CONTAINER_NAME=tigera/cni
 DEPLOY_CONTAINER_MARKER=cni_deploy_container-$(ARCH).created
 
 # Variables for controlling image tagging and pushing.
-DOCKER_REPOS=gcr.io/unique-caldron-775/cnx
+DOCKER_REPOS=gcr.io/unique-caldron-775/cnx/tigera
 ifeq ($(RELEASE),true)
 # If this is a release, also tag and push GCR images.
 #DOCKER_REPOS+=
