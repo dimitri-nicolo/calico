@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -117,12 +118,6 @@ func main() {
 			log.WithError(err).Fatal("Failed to initialize Calico datastore")
 		}
 	}
-	// Initialize readiness to false if enabled
-	s := status.New(status.DefaultStatusFile)
-	if config.HealthEnabled {
-		s.SetReady("CalicoDatastore", false, "initialized to false")
-		s.SetReady("KubeAPIServer", false, "initialized to false")
-	}
 
 	controllerCtrl := &controllerControl{
 		ctx:              ctx,
@@ -132,41 +127,44 @@ func main() {
 		licenseMonitor:   monitor.New(calicoClient.(backendClientAccessor).Backend()),
 	}
 
+	// Create the status file. We will only update it if we have healthchecks enabled.
+	s := status.New(status.DefaultStatusFile)
+
 	for _, controllerType := range strings.Split(config.EnabledControllers, ",") {
 		switch controllerType {
 		case "workloadendpoint":
 			podController := pod.NewPodController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates[controllerType] = &controllerState{
+			controllerCtrl.controllerStates["Pod"] = &controllerState{
 				controller:  podController,
 				threadiness: config.WorkloadEndpointWorkers,
 			}
 		case "profile", "namespace":
 			namespaceController := namespace.NewNamespaceController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates[controllerType] = &controllerState{
+			controllerCtrl.controllerStates["Namespace"] = &controllerState{
 				controller:  namespaceController,
 				threadiness: config.ProfileWorkers,
 			}
 		case "policy":
 			policyController := networkpolicy.NewPolicyController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates[controllerType] = &controllerState{
+			controllerCtrl.controllerStates["NetworkPolicy"] = &controllerState{
 				controller:  policyController,
 				threadiness: config.PolicyWorkers,
 			}
 		case "node":
 			nodeController := node.NewNodeController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates[controllerType] = &controllerState{
+			controllerCtrl.controllerStates["Node"] = &controllerState{
 				controller:  nodeController,
 				threadiness: config.NodeWorkers,
 			}
 		case "serviceaccount":
 			serviceAccountController := serviceaccount.NewServiceAccountController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates[controllerType] = &controllerState{
+			controllerCtrl.controllerStates["ServiceAccount"] = &controllerState{
 				controller:  serviceAccountController,
 				threadiness: config.ProfileWorkers,
 			}
 		case "federatedservices":
 			federatedEndpointsController := federatedservices.NewFederatedServicesController(ctx, k8sClientset, calicoClient)
-			controllerCtrl.controllerStates[controllerType] = &controllerState{
+			controllerCtrl.controllerStates["FederatedServices"] = &controllerState{
 				controller:     federatedEndpointsController,
 				licenseFeature: features.FederatedServices,
 				threadiness:    config.FederatedServicesWorkers,
@@ -180,48 +178,54 @@ func main() {
 	// If configured to do so, start an etcdv3 compaction.
 	startCompactor(ctx, config)
 
-	// Run the controllers
-	controllerCtrl.RunControllers()
+	// Run the health checks on a separate goroutine.
+	if config.HealthEnabled {
+		go runHealthChecks(ctx, s, k8sClientset, calicoClient)
+	}
 
-	//TODO: This needs merging into RunControllers()
-	//TODO: Also see the commented out tests in fv_test.go
-	//// Wait forever and perform healthchecks.53z9
-	//for {
-	//	// skip healthchecks if configured
-	//	if !config.HealthEnabled {
-	//		select {}
-	//	}
-	//	// Datastore HealthCheck
-	//	healthCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	//	err = calicoClient.EnsureInitialized(healthCtx, "", "", "k8s")
-	//	if err != nil {
-	//		log.WithError(err).Errorf("Failed to verify datastore")
-	//		s.SetReady(
-	//			"CalicoDatastore",
-	//			false,
-	//			fmt.Sprintf("Error verifying datastore: %v", err),
-	//		)
-	//	} else {
-	//		s.SetReady("CalicoDatastore", true, "")
-	//	}
-	//	cancel()
-	//
-	//	// Kube-apiserver HealthCheck
-	//	healthStatus := 0
-	//	k8sClientset.Discovery().RESTClient().Get().AbsPath("/healthz").Do().StatusCode(&healthStatus)
-	//	if healthStatus != http.StatusOK {
-	//		log.WithError(err).Errorf("Failed to reach apiserver")
-	//		s.SetReady(
-	//			"KubeAPIServer",
-	//			false,
-	//			fmt.Sprintf("Error reaching apiserver: %v with http status code: %d", err, healthStatus),
-	//		)
-	//	} else {
-	//		s.SetReady("KubeAPIServer", true, "")
-	//	}
-	//
-	//	time.Sleep(10 * time.Second)
-	//}
+	// Run the controllers. This runs indefinitely.
+	controllerCtrl.RunControllers()
+}
+
+// Run the controller health checks.
+func runHealthChecks(ctx context.Context, s *status.Status, k8sClientset *kubernetes.Clientset, calicoClient client.Interface) {
+	s.SetReady("CalicoDatastore", false, "initialized to false")
+	s.SetReady("KubeAPIServer", false, "initialized to false")
+
+	// Loop forever and perform healthchecks.
+	for {
+		// skip healthchecks if configured
+		// Datastore HealthCheck
+		healthCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		err := calicoClient.EnsureInitialized(healthCtx, "", "", "k8s")
+		if err != nil {
+			log.WithError(err).Errorf("Failed to verify datastore")
+			s.SetReady(
+				"CalicoDatastore",
+				false,
+				fmt.Sprintf("Error verifying datastore: %v", err),
+			)
+		} else {
+			s.SetReady("CalicoDatastore", true, "")
+		}
+		cancel()
+
+		// Kube-apiserver HealthCheck
+		healthStatus := 0
+		k8sClientset.Discovery().RESTClient().Get().AbsPath("/healthz").Do().StatusCode(&healthStatus)
+		if healthStatus != http.StatusOK {
+			log.WithError(err).Errorf("Failed to reach apiserver")
+			s.SetReady(
+				"KubeAPIServer",
+				false,
+				fmt.Sprintf("Error reaching apiserver: %v with http status code: %d", err, healthStatus),
+			)
+		} else {
+			s.SetReady("KubeAPIServer", true, "")
+		}
+
+		time.Sleep(10 * time.Second)
+	}
 }
 
 // Starts an etcdv3 compaction goroutine with the given config.
