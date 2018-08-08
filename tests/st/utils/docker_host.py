@@ -192,11 +192,11 @@ class DockerHost(object):
             self.start_calico_node(env_options=' -e FELIX_HEALTHENABLED=true ')
 
     def assert_is_ready(self, bird=True, felix=True):
-        cmd = "docker exec cnx-node /bin/readiness"
+        cmd = "docker exec cnx-node /bin/calico-node"
         if bird:
-            cmd += " -bird"
+            cmd += " -bird-ready"
         if felix:
-            cmd += " -felix"
+            cmd += " -felix-ready"
 
         self.execute(cmd)
 
