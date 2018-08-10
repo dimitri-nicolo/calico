@@ -71,8 +71,16 @@ toc:
   path: /usage/configuration/prometheus
 - title: Configuring Alertmanager
   path: /usage/configuration/alertmanager
-- title: Federated Endpoint Identity for Kubernetes
-  path: /usage/federation
+- title: Federation for Kubernetes
+  section:
+  - title: Overview
+    path: /usage/federation/index
+  - title: AWS requirements
+    path: /usage/federation/aws
+  - title: Configuring a Remote Cluster for Federation
+    path: /usage/federation/configure-rcc
+  - title: Federated Services
+    path: /usage/federation/services-controller
 - title: Writing kubeconfig files to connect to your Kubernetes cluster
   path: /usage/writing-kubeconfig
 - title: Troubleshooting

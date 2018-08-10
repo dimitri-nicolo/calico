@@ -1,0 +1,17 @@
+{% comment %}
+calico-typha.yaml contains the federation specific service accounts:
+{% endcomment -%}
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tigera-federation-controller
+  namespace: kube-system
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tigera-federation-remote-cluster
+  namespace: kube-system

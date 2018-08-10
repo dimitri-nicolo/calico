@@ -71,16 +71,21 @@ spec:
       containers:
       - image: {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
         name: calico-typha
-        # Uncomment these lines to enable a secrets volume for use with federated endpoint identity.
+        # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+        # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
         #volumeMounts:
-        #- name: federation-secret-volume
-        #  mountPath: "/etc/calico-federation"
+        #- name: tigera-federation-remotecluster
+        #  mountPath: "/etc/tigera-federation-remotecluster"
         #  readOnly: true
         ports:
         - containerPort: 5473
           name: calico-typha
           protocol: TCP
         env:
+{%- if include.network == "ecs" %}
+            - name: FELIX_INTERFACEPREFIX
+              value: "eni"
+{%- endif %}
           # Enable "info" logging by default.  Can be set to "debug" to increase verbosity.
           - name: TYPHA_LOGSEVERITYSCREEN
             value: "info"
@@ -146,9 +151,11 @@ spec:
             port: 9098
             host: localhost
           periodSeconds: 10
-      # Uncomment these lines to enable a secrets volume for use with federated endpoint identity.
-      # The secret should be created with kubectl create secret generic federated-calico-secret --from-file=...
+      # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+      # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
+      # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
       #volumes:
-      #  - name: federation-secret-volume
-      #    secret:
-      #      secretName: federated-calico-secret
+      #- name: tigera-federation-remotecluster
+      #  secret:
+      #    secretName: tigera-federation-remotecluster
+      #    defaultMode: 0400

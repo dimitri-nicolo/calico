@@ -8,6 +8,10 @@ title: Installing CNX for policy and networking (recommended)
   [system requirements](../requirements). If you don't, follow the steps in 
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
   
+- If you are planning to federate multiple clusters using the Federated Endpoint Identity feature, please read the 
+  [Federated Identity Overview](../../../usage/federation/index) to understand additional installation requirements
+  for each of your clusters.
+  
 - Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials) 
   and a [license key](../../../getting-started/#obtain-a-license-key).
 
@@ -22,8 +26,8 @@ title: Installing CNX for policy and networking (recommended)
 ### Selecting your datastore type and number of nodes
 
 The procedure differs according to the type of datastore you want {{site.prodname}}
-to use, the number of nodes and whether you will be using [federated endpoint identity](../../../usage/federation). Refer to the 
-section that matches your desired datastore type, number of nodes and use case.
+to use, the number of nodes and whether you will be using [federated endpoint identity](../../../usage/federation/index). Refer to the 
+section that matches your use case.
 
 - [etcd datastore without federation](#installing-for-etcd-datastore-without-federation)
 
@@ -130,6 +134,14 @@ section that matches your desired datastore type, number of nodes and use case.
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
    
+1. If you have created some secrets for Federation, then modify the manifest to mount the secrets into the 
+   container.  For details see [Configuring a Remote Cluster for Federation](/{{page.version}}/usage/federation/configure-rcc).
+
+   > **Warning**: If you are upgrading from a previous release and previously had secrets mounted in for 
+   > federation, then failure to include these secrets in this manifest will result in loss of federation
+   > functionality, which may include loss of service between clusters.
+   {: .alert .alert-danger}
+
 1. Apply the manifest using the following command.
 
    ```bash
@@ -232,6 +244,14 @@ section that matches your desired datastore type, number of nodes and use case.
    {: .alert .alert-danger}
    
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
+
+1. If you have created some secrets for Federation, then modify the manifest to mount the secrets into the 
+   container.  For details see [Configuring a Remote Cluster for Federation](/{{page.version}}/usage/federation/configure-rcc).
+
+   > **Warning**: If you are upgrading from a previous release and previously had secrets mounted in for 
+   > federation, then failure to include these secrets in this manifest will result in loss of federation
+   > functionality, which may include loss of service between clusters.
+   {: .alert .alert-danger}
 
 1. Apply the manifest.
 

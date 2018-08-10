@@ -1,15 +1,15 @@
 {% comment %}
 calico.yaml acccepts the following include flags:
 
-| Name             | Accepted Values          |
-|------------------|--------------------------|
-| datastore        | kdd, etcd                |
-| typha            | true, false              |
-| network          | calico, flannel, <unset> |
-| calico_ipam      | true, false              |
-| ipip             | true, false              |
-| variant_name     | Calico, Canal            |
-| app_layer_policy | true, false              |
+| Name             | Accepted Values               |
+|------------------|-------------------------------|
+| datastore        | kdd, etcd                     |
+| typha            | true, false                   |
+| network          | calico, flannel, ecs, <unset> |
+| calico_ipam      | true, false                   |
+| ipip             | true, false                   |
+| variant_name     | Calico, Canal                 |
+| app_layer_policy | true, false                   |
 
 {% endcomment -%}
 {% capture variant_name %}{% if include.network == "flannel" %}Canal{% else %}Calico{% endif %}{% endcapture -%}
@@ -38,6 +38,9 @@ calico.yaml acccepts the following include flags:
 ---
 
 {%- endif %}
+{% include {{page.version}}/manifests/tigera-federation-sa.yaml %}
+---
+
 {% include {{page.version}}/manifests/calico-node.yaml datastore=include.datastore network=include.network ipip=include.ipip variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}
 ---
 

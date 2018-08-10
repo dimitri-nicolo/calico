@@ -4,6 +4,7 @@ Consult the {{site.prodname}} for Kubernetes [demo]({{site.baseurl}}/{{page.vers
 demonstrates the main features.
 
 For more detailed documentation on {{site.prodname}} features, see here:
+- [Install the Federated Services Controller](/{{page.version}}/getting-started/kubernetes/installation/fed-controller)
 - [Install calicoq]({{site.baseurl}}/{{page.version}}/usage/calicoq/)
 - [Denied Packet Notifications]({{site.baseurl}}/{{page.version}}/reference/cnx/policy-violations)
 - [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)

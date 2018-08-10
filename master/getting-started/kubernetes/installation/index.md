@@ -6,6 +6,11 @@ We provide a number of manifests to get you up and running with {{site.prodname}
 just a few steps. Refer to the section that corresponds to your desired networking
 for instructions.
 
+If you are planning to use {{site.prodname}} Federated Endpoint Identity, please read the
+[Federated Endpoint Identity Overview](/{{page.version}}/usage/federation/index) for additional 
+installation requirements. Some of the cluster configuration requirements for {{site.prodname}} Federation
+cannot be easily changed on a running cluster.
+
 - [Installing {{site.prodname}} for policy and networking (recommended)](calico)
 
 - [Installing {{site.prodname}} for policy (advanced)](other)
