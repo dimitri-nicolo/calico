@@ -4,8 +4,10 @@
     "title": "",
     "version": "v2.2"
   },
+  "host": "https://<kubernetes-master>",
+  "basePath": "/apis/projectcalico.org/v3",
   "paths": {
-    "/apis/projectcalico.org/v3/": {
+    "/": {
       "get": {
         "consumes": [
           "application/json",
@@ -34,11 +36,11 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ]
       }
     },
-    "/apis/projectcalico.org/v3/globalnetworkpolicies": {
+    "/globalnetworkpolicies": {
       "delete": {
         "consumes": [
           "*/*"
@@ -123,7 +125,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "deletecollection",
         "x-kubernetes-group-version-kind": {
@@ -218,7 +220,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "list",
         "x-kubernetes-group-version-kind": {
@@ -272,7 +274,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "post",
         "x-kubernetes-group-version-kind": {
@@ -282,7 +284,7 @@
         }
       }
     },
-    "/apis/projectcalico.org/v3/globalnetworkpolicies/{name}": {
+    "/globalnetworkpolicies/{name}": {
       "delete": {
         "consumes": [
           "*/*"
@@ -340,7 +342,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "delete",
         "x-kubernetes-group-version-kind": {
@@ -391,7 +393,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "get",
         "x-kubernetes-group-version-kind": {
@@ -455,7 +457,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "patch",
         "x-kubernetes-group-version-kind": {
@@ -500,7 +502,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "put",
         "x-kubernetes-group-version-kind": {
@@ -510,7 +512,7 @@
         }
       }
     },
-    "/apis/projectcalico.org/v3/globalnetworksets": {
+    "/globalnetworksets": {
       "delete": {
         "consumes": [
           "*/*"
@@ -595,7 +597,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "deletecollection",
         "x-kubernetes-group-version-kind": {
@@ -690,7 +692,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "list",
         "x-kubernetes-group-version-kind": {
@@ -744,7 +746,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "post",
         "x-kubernetes-group-version-kind": {
@@ -754,7 +756,7 @@
         }
       }
     },
-    "/apis/projectcalico.org/v3/globalnetworksets/{name}": {
+    "/globalnetworksets/{name}": {
       "delete": {
         "consumes": [
           "*/*"
@@ -812,7 +814,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "delete",
         "x-kubernetes-group-version-kind": {
@@ -863,7 +865,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "get",
         "x-kubernetes-group-version-kind": {
@@ -927,7 +929,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "patch",
         "x-kubernetes-group-version-kind": {
@@ -972,7 +974,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "put",
         "x-kubernetes-group-version-kind": {
@@ -982,7 +984,7 @@
         }
       }
     },
-    "/apis/projectcalico.org/v3/namespaces/{namespace}/networkpolicies": {
+    "/namespaces/{namespace}/networkpolicies": {
       "delete": {
         "consumes": [
           "*/*"
@@ -1067,7 +1069,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "deletecollection",
         "x-kubernetes-group-version-kind": {
@@ -1162,7 +1164,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "list",
         "x-kubernetes-group-version-kind": {
@@ -1224,7 +1226,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "post",
         "x-kubernetes-group-version-kind": {
@@ -1234,7 +1236,7 @@
         }
       }
     },
-    "/apis/projectcalico.org/v3/namespaces/{namespace}/networkpolicies/{name}": {
+    "/namespaces/{namespace}/networkpolicies/{name}": {
       "delete": {
         "consumes": [
           "*/*"
@@ -1292,7 +1294,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "delete",
         "x-kubernetes-group-version-kind": {
@@ -1343,7 +1345,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "get",
         "x-kubernetes-group-version-kind": {
@@ -1415,7 +1417,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "patch",
         "x-kubernetes-group-version-kind": {
@@ -1460,7 +1462,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "put",
         "x-kubernetes-group-version-kind": {
@@ -1470,7 +1472,7 @@
         }
       }
     },
-    "/apis/projectcalico.org/v3/networkpolicies": {
+    "/networkpolicies": {
       "get": {
         "consumes": [
           "*/*"
@@ -1499,7 +1501,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "list",
         "x-kubernetes-group-version-kind": {
@@ -1574,7 +1576,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/tiers": {
+    "/tiers": {
       "delete": {
         "consumes": [
           "*/*"
@@ -1659,7 +1661,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "deletecollection",
         "x-kubernetes-group-version-kind": {
@@ -1754,7 +1756,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "list",
         "x-kubernetes-group-version-kind": {
@@ -1808,7 +1810,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "post",
         "x-kubernetes-group-version-kind": {
@@ -1818,7 +1820,7 @@
         }
       }
     },
-    "/apis/projectcalico.org/v3/tiers/{name}": {
+    "/tiers/{name}": {
       "delete": {
         "consumes": [
           "*/*"
@@ -1876,7 +1878,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "delete",
         "x-kubernetes-group-version-kind": {
@@ -1927,7 +1929,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "get",
         "x-kubernetes-group-version-kind": {
@@ -1991,7 +1993,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "patch",
         "x-kubernetes-group-version-kind": {
@@ -2036,7 +2038,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "put",
         "x-kubernetes-group-version-kind": {
@@ -2046,7 +2048,7 @@
         }
       }
     },
-    "/apis/projectcalico.org/v3/watch/globalnetworkpolicies": {
+    "/watch/globalnetworkpolicies": {
       "get": {
         "consumes": [
           "*/*"
@@ -2075,7 +2077,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watchlist",
         "x-kubernetes-group-version-kind": {
@@ -2150,7 +2152,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/watch/globalnetworkpolicies/{name}": {
+    "/watch/globalnetworkpolicies/{name}": {
       "get": {
         "consumes": [
           "*/*"
@@ -2179,7 +2181,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watch",
         "x-kubernetes-group-version-kind": {
@@ -2262,7 +2264,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/watch/globalnetworksets": {
+    "/watch/globalnetworksets": {
       "get": {
         "consumes": [
           "*/*"
@@ -2291,7 +2293,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watchlist",
         "x-kubernetes-group-version-kind": {
@@ -2366,7 +2368,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/watch/globalnetworksets/{name}": {
+    "/watch/globalnetworksets/{name}": {
       "get": {
         "consumes": [
           "*/*"
@@ -2395,7 +2397,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watch",
         "x-kubernetes-group-version-kind": {
@@ -2478,7 +2480,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/watch/namespaces/{namespace}/networkpolicies": {
+    "/watch/namespaces/{namespace}/networkpolicies": {
       "get": {
         "consumes": [
           "*/*"
@@ -2507,7 +2509,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watchlist",
         "x-kubernetes-group-version-kind": {
@@ -2590,7 +2592,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/watch/namespaces/{namespace}/networkpolicies/{name}": {
+    "/watch/namespaces/{namespace}/networkpolicies/{name}": {
       "get": {
         "consumes": [
           "*/*"
@@ -2619,7 +2621,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watch",
         "x-kubernetes-group-version-kind": {
@@ -2710,7 +2712,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/watch/networkpolicies": {
+    "/watch/networkpolicies": {
       "get": {
         "consumes": [
           "*/*"
@@ -2739,7 +2741,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watchlist",
         "x-kubernetes-group-version-kind": {
@@ -2814,7 +2816,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/watch/tiers": {
+    "/watch/tiers": {
       "get": {
         "consumes": [
           "*/*"
@@ -2843,7 +2845,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watchlist",
         "x-kubernetes-group-version-kind": {
@@ -2918,7 +2920,7 @@
         }
       ]
     },
-    "/apis/projectcalico.org/v3/watch/tiers/{name}": {
+    "/watch/tiers/{name}": {
       "get": {
         "consumes": [
           "*/*"
@@ -2947,7 +2949,7 @@
           "https"
         ],
         "tags": [
-          "projectcalicoOrg_v3"
+          ""
         ],
         "x-kubernetes-action": "watch",
         "x-kubernetes-group-version-kind": {

@@ -113,5 +113,3 @@ equipped with {{site.prodname}}.
 **[Create a user interface that shows blocked and allowed connections in real time](tutorials/stars-policy/)**
 
 **[Install and configure calicoctl](/{{page.version}}/usage/calicoctl/install)**
-
-**[API Reference](/{{page.version}}/reference/cnx/apidocs)**
