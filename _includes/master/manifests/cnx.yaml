@@ -275,7 +275,6 @@ spec:
         - "--secure-port=5443"
         env:
 {%- if include.datastore == "etcd" %}
-  {%- if include.orch == "openshift" %}
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
@@ -283,6 +282,7 @@ spec:
                 key: etcd_endpoints
           - name: DATASTORE_TYPE
             value: "etcdv3"
+  {%- if include.orch == "openshift" %}
           # Location of the CA certificate for etcd.
            - name: ETCD_CA_CERT_FILE
              valueFrom:
@@ -307,13 +307,6 @@ spec:
            - mountPath: /code/apiserver.local.config/certificates
              name: apiserver-certs
   {%- else %}
-          - name: ETCD_ENDPOINTS
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: etcd_endpoints
-          - name: DATASTORE_TYPE
-            value: "etcdv3"
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
           # - name: ETCD_CA_CERT_FILE
@@ -360,7 +353,6 @@ spec:
           - name: LOGLEVEL
             value: "info"
 {%- if include.datastore == "etcd" %}
-  {%- if include.orch == "openshift" %}
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
@@ -368,6 +360,7 @@ spec:
                 key: etcd_endpoints
           - name: DATASTORE_TYPE
             value: "etcdv3"
+  {%- if include.orch == "openshift" %}
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
            - name: ETCD_CA_CERT_FILE
@@ -391,13 +384,6 @@ spec:
            - mountPath: /calico-secrets
              name: etcd-certs
   {%- else %}
-          - name: ETCD_ENDPOINTS
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: etcd_endpoints
-          - name: DATASTORE_TYPE
-            value: "etcdv3"
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
           # - name: ETCD_CA_CERT_FILE
