@@ -7,54 +7,106 @@ all: build
 ## Run the tests for the current platform/architecture
 test: fv st
 
-##############################################################################
-# The build architecture is select by setting the ARCH variable.
-# # For example: When building on ppc64le you could use ARCH=ppc64le make <....>.
-# # When ARCH is undefined it defaults to amd64.
-ARCH?=amd64
-ifeq ($(ARCH),amd64)
-	ARCHTAG?=
-endif
-
-ifeq ($(ARCH),ppc64le)
-	ARCHTAG:=-ppc64le
-endif
-
-ifeq ($(ARCH),s390x)
-	ARCHTAG:=-s390x
-endif
 ###############################################################################
+# Both native and cross architecture builds are supported.
+# The target architecture is select by setting the ARCH variable.
+# When ARCH is undefined it is set to the detected host architecture.
+# When ARCH differs from the host architecture a crossbuild will be performed.
+ARCHES=$(patsubst Dockerfile.%,%,$(wildcard Dockerfile.*))
+
+# BUILDARCH is the host architecture
+# ARCH is the target architecture
+# we need to keep track of them separately
+BUILDARCH ?= $(shell uname -m)
+BUILDOS ?= $(shell uname -s | tr A-Z a-z)
+
+# canonicalized names for host architecture
+ifeq ($(BUILDARCH),aarch64)
+        BUILDARCH=arm64
+endif
+ifeq ($(BUILDARCH),x86_64)
+        BUILDARCH=amd64
+endif
+
+# unless otherwise set, I am building for my own architecture, i.e. not cross-compiling
+ARCH ?= $(BUILDARCH)
+
+# canonicalized names for target architecture
+ifeq ($(ARCH),aarch64)
+        override ARCH=arm64
+endif
+ifeq ($(ARCH),x86_64)
+    override ARCH=amd64
+endif
+
+# we want to be able to run the same recipe on multiple targets keyed on the image name
+# to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
+# however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
+# to get around that, we "escape" those characters by converting all : to --- and all / to ___ , so that we can use them
+# in the target, we then unescape them back
+escapefs = $(subst :,---,$(subst /,___,$(1)))
+unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
+
+# Targets used when cross building.
+.PHONY: register
+# Enable binfmt adding support for miscellaneous binary formats.
+# This is only needed when running non-native binaries.
+register:
+ifneq ($(BUILDARCH),$(ARCH))
+	docker run --rm --privileged multiarch/qemu-user-static:register || true
+endif
+
+# list of arches *not* to build when doing *-all
+#    until s390x works correctly
+EXCLUDEARCH ?= s390x
+VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
+
+###############################################################################
+CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
+
+BUILD_IMAGE?=tigera/cnx-node
+PUSH_IMAGES?=$(CNX_REPOSITORY)/cnx-node
+RELEASE_IMAGES?=
+
+ifeq ($(RELEASE),true)
+# If this is a release, also tag and push additional images.
+PUSH_IMAGES+=$(RELEASE_IMAGES)
+endif
+
 GO_BUILD_VER?=v0.17
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 
-# CNX specific variables
-CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
-CALICO_GIT_VER?=v3.1.1
-
 # Version of this repository as reported by git.
+CALICO_GIT_VER=v3.2.0
 CNX_GIT_VER := $(shell git describe --tags --dirty --always)
 
-# Versions and locationof dependencies used in the build.
-
-BIRD_VER?=v0.3.2
-BIRD_URL?=https://github.com/projectcalico/calico-bird/releases/download/$(BIRD_VER)/bird
-BIRD6_URL?=https://github.com/projectcalico/calico-bird/releases/download/$(BIRD_VER)/bird6
-BIRDCL_URL?=https://github.com/projectcalico/calico-bird/releases/download/$(BIRD_VER)/birdcl
+# Versions and location of dependencies used in the build.
+BIRD_VER?=v0.3.2-13-g17d14e60
+BIRD_IMAGE ?= calico/bird:$(BIRD_VER)-$(ARCH)
 
 # Versions and locations of dependencies used in tests.
-CALICOQ_VER?=master
 CALICOCTL_VER?=master
 CNI_VER?=master
 RR_VER?=master
 TEST_CONTAINER_NAME_VER?=latest
-CTL_CONTAINER_NAME?=calico/ctl$(ARCHTAG):$(CALICOCTL_VER)
-RR_CONTAINER_NAME?=calico/routereflector$(ARCHTAG)
-TEST_CONTAINER_NAME?=calico/test$(ARCHTAG):$(TEST_CONTAINER_NAME_VER)
+CTL_CONTAINER_NAME?=$(CNX_REPOSITORY)/tigera/calicoctl:$(CALICOCTL_VER)-$(ARCH)
+RR_CONTAINER_NAME ?= calico/routereflector:$(RR_VER)
+TEST_CONTAINER_NAME?=calico/test:$(TEST_CONTAINER_NAME_VER)-$(ARCH)
 ETCD_VERSION?=v3.3.7
-ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)$(ARCHTAG)
+# If building on amd64 omit the arch in the container name.  Fixme!
+ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)
+ifneq ($(BUILDARCH),amd64)
+        ETCD_IMAGE=$(ETCD_IMAGE)-$(ARCH)
+endif
+
 K8S_VERSION?=v1.10.4
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 TEST_CONTAINER_FILES=$(shell find tests/ -type f ! -name '*.created')
+
+# Variables controlling the image
+NODE_CONTAINER_CREATED=.calico_node.created-$(ARCH)
+NODE_CONTAINER_BIN_DIR=./dist/bin/
+NODE_CONTAINER_BINARY = $(NODE_CONTAINER_BIN_DIR)/calico-node-$(ARCH)
 
 # Variables used by the tests
 CRD_PATH=$(CURDIR)/vendor/github.com/projectcalico/libcalico-go/test/
@@ -62,30 +114,15 @@ LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 ST_TO_RUN?=tests/st/
 # Can exclude the slower tests with "-a '!slow'"
 ST_OPTIONS?=
-# curl should failed on 404
-CURL=curl -sSf
 
-# Variables controlling the calico/node image
-NODE_CONTAINER_NAME?=tigera/cnx-node$(ARCHTAG)
-NODE_CONTAINER_CREATED=.cnx_node.created
-NODE_CONTAINER_BIN_DIR=./filesystem/bin
-NODE_CONTAINER_BINARIES=bird bird6 birdcl calico-node
-
-# Variables for building the local binaries that go into calico/node
+# Variables for building the local binaries that go into the image
 MAKE_SURE_BIN_EXIST := $(shell mkdir -p dist .go-pkg-cache $(NODE_CONTAINER_BIN_DIR))
 NODE_CONTAINER_FILES=$(shell find ./filesystem -type f)
 SRCFILES=$(shell find ./pkg -name '*.go')
 LOCAL_USER_ID?=$(shell id -u $$USER)
-LDFLAGS=-ldflags "-X main.CNXVERSION=$(CNX_GIT_VER) -X main.CALICOVERSION=$(CALICO_GIT_VER)"
+LDFLAGS=-ldflags "-X github.com/projectcalico/node/pkg/startup.CNXVERSION=$(CNX_GIT_VER) -X github.com/projectcalico/node/pkg/startup.CALICOVERSION=$(CALICO_GIT_VER)"
 PACKAGE_NAME?=github.com/projectcalico/node
 LIBCALICOGO_PATH?=none
-
-# Variables for controlling image tagging and pushing.
-DOCKER_REPOS=calico quay.io/calico
-ifeq ($(RELEASE),true)
-# If this is a release, also tag and push GCR images.
-DOCKER_REPOS+=gcr.io/projectcalico-org eu.gcr.io/projectcalico-org asia.gcr.io/projectcalico.org us.gcr.io/projectcalico.org
-endif
 
 ## Clean enough that a new release build will be clean
 clean:
@@ -94,17 +131,17 @@ clean:
 	rm -rf certs *.tar vendor $(NODE_CONTAINER_BIN_DIR)
 
 	# Delete images that we built in this repo
-	docker rmi $(NODE_CONTAINER_NAME):latest-$(ARCH) || true
+	docker rmi $(BUILD_IMAGE):latest-$(ARCH) || true
 	docker rmi $(TEST_CONTAINER_NAME) || true
 ifeq ($(ARCH),amd64)
-	docker rmi $(NODE_CONTAINER_NAME):latest || true
-	docker rmi $(NODE_CONTAINER_NAME):$(VERSION) || true
+	docker rmi $(BUILD_IMAGE):latest || true
+	docker rmi $(BUILD_IMAGE):$(VERSION) || true
 endif
 
 ###############################################################################
 # Building the binary
 ###############################################################################
-build:  $(NODE_CONTAINER_BIN_DIR)/calico-node
+build:  $(NODE_CONTAINER_BINARY)
 # Use this to populate the vendor directory after checking out the repository.
 # To update upstream dependencies, delete the glide.lock file first.
 vendor: glide.lock
@@ -159,7 +196,7 @@ update-felix-confd-libcalico:
             if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
           fi'
 
-$(NODE_CONTAINER_BIN_DIR)/calico-node: vendor
+$(NODE_CONTAINER_BINARY): vendor
 	docker run --rm \
 		-e GOARCH=$(ARCH) \
 		-e GOOS=linux \
@@ -173,34 +210,27 @@ $(NODE_CONTAINER_BIN_DIR)/calico-node: vendor
 ###############################################################################
 # Building the image
 ###############################################################################
-## Create the calico/node image.
-tigera/cnx-node: $(NODE_CONTAINER_NAME)
-image: $(NODE_CONTAINER_NAME)
-$(NODE_CONTAINER_NAME): $(NODE_CONTAINER_CREATED)
-$(NODE_CONTAINER_CREATED): ./Dockerfile$(ARCHTAG) $(NODE_CONTAINER_FILES) $(addprefix $(NODE_CONTAINER_BIN_DIR)/,$(NODE_CONTAINER_BINARIES))
-	# Check versions of the binaries that we're going to use to build calico/node.
+## Create the image for the current ARCH
+image: $(BUILD_IMAGE)
+## Create the images for all supported ARCHes
+image-all: $(addprefix sub-image-,$(VALIDARCHES))
+sub-image-%:
+	$(MAKE) image ARCH=$*
+
+$(BUILD_IMAGE): $(NODE_CONTAINER_CREATED)
+$(NODE_CONTAINER_CREATED): ./Dockerfile.$(ARCH) $(NODE_CONTAINER_FILES) $(NODE_CONTAINER_BINARY)
+	$(MAKE) register
+	# Check versions of the binaries that we're going to use to build the image.
 	# Since the binaries are built for Linux, run them in a container to allow the
 	# make target to be run on different platforms (e.g. MacOS).
-	docker run --rm -v $(CURDIR)/$(NODE_CONTAINER_BIN_DIR):/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
-	  echo; echo calico-node -v;         /go/bin/calico-node -v; \
-	  echo; echo bird --version;         /go/bin/bird --version; \
+	docker run --rm -v $(CURDIR)/dist/bin:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
+	  echo; echo calico-node-$(ARCH) -v;         /go/bin/calico-node-$(ARCH) -v; \
 	"
-	docker build --pull -t $(NODE_CONTAINER_NAME):latest-$(ARCH) . --build-arg ver=$(CALICO_GIT_VER) -f ./Dockerfile$(ARCHTAG)
+	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) . --build-arg BIRD_IMAGE=$(BIRD_IMAGE) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --build-arg ver=$(CALICO_GIT_VER) -f ./Dockerfile.$(ARCH)
 ifeq ($(ARCH),amd64)
-	docker tag $(NODE_CONTAINER_NAME):latest-$(ARCH) $(NODE_CONTAINER_NAME):latest
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif
 	touch $@
-
-# Get bird binaries
-$(NODE_CONTAINER_BIN_DIR)/bird:
-	$(CURL) -L $(BIRD_URL) -o $@
-	chmod +x $(@D)/*
-$(NODE_CONTAINER_BIN_DIR)/bird6:
-	$(CURL) -L $(BIRD6_URL) -o $(@D)/bird6
-	chmod +x $(@D)/*
-$(NODE_CONTAINER_BIN_DIR)/birdcl:
-	$(CURL) -L $(BIRDCL_URL) -o $(@D)/birdcl
-	chmod +x $(@D)/*
 
 # ensure we have a real imagetag
 imagetag:
@@ -209,25 +239,30 @@ ifndef IMAGETAG
 endif
 
 ## push one arch
-push: imagetag
-	for r in $(DOCKER_REPOS); do docker push $$r/node:$(IMAGETAG)-$(ARCH); done
+push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGES)))
+
+sub-single-push-%:
+	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
 ifeq ($(ARCH),amd64)
-	for r in $(DOCKER_REPOS); do docker push $$r/node:$(IMAGETAG); done
+	docker push $(call unescapefs,$*:$(IMAGETAG))
 endif
 
-push-all: imagetag $(addprefix sub-push-,$(ARCHES))
+## push all supported arches
+push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
 ## tag images of one arch
-tag-images: imagetag
-	for r in $(DOCKER_REPOS); do docker tag $(NODE_CONTAINER_NAME):latest-$(ARCH) $$r/node:$(IMAGETAG)-$(ARCH); done
+tag-images: imagetag $(addprefix sub-single-tag-images-,$(call escapefs,$(PUSH_IMAGES)))
+
+sub-single-tag-images-%:
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
 ifeq ($(ARCH),amd64)
-	for r in $(DOCKER_REPOS); do docker tag $(NODE_CONTAINER_NAME):latest-$(ARCH) $$r/node:$(IMAGETAG); done
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
 endif
 
 ## tag images of all archs
-tag-images-all: imagetag $(addprefix sub-tag-images-,$(ARCHES))
+tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
 sub-tag-images-%:
 	$(MAKE) tag-images ARCH=$* IMAGETAG=$(IMAGETAG)
 
@@ -318,11 +353,7 @@ stop-k8s-apiserver:
 # variables.  These are used for the STs.
 dist/calicoctl:
 	-docker rm -f calicoctl
-	if [ "$(docker images -q $$(CTL_CONTAINER_NAME))" = "" ]; then \
-	  gcloud auth configure-docker; \
-	  docker pull $(CTL_PRIVATE_IMAGE); \
-	  docker tag $(CTL_PRIVATE_IMAGE) $(CTL_CONTAINER_NAME); \
-	fi;
+	docker pull $(CTL_CONTAINER_NAME)
 	docker create --name calicoctl $(CTL_CONTAINER_NAME)
 	docker cp calicoctl:calicoctl dist/calicoctl && \
 	  test -e dist/calicoctl && \
@@ -331,8 +362,8 @@ dist/calicoctl:
 
 dist/calico-cni-plugin dist/calico-ipam-plugin:
 	-docker rm -f calico-cni
-	docker pull calico/cni:$(CNI_VER)
-	docker create --name calico-cni calico/cni:$(CNI_VER)
+	docker pull $(CNX_REPOSITORY)/tigera/cni:$(CNI_VER)
+	docker create --name calico-cni $(CNX_REPOSITORY)/tigera/cni:$(CNI_VER)
 	docker cp calico-cni:/opt/cni/bin/calico dist/calico-cni-plugin && \
 	  test -e dist/calico-cni-plugin && \
 	  touch dist/calico-cni-plugin
@@ -340,19 +371,6 @@ dist/calico-cni-plugin dist/calico-ipam-plugin:
 	  test -e dist/calico-ipam-plugin && \
 	  touch dist/calico-ipam-plugin
 	-docker rm -f calico-cni
-# Pull the latest calicoq binary. Not used for STs yet.
-dist/calicoq:
-	-docker rm -f calicoq
-	if [ "$(docker images -q $$(CALICOQ_CONTAINER_NAME))" = "" ]; then \
-	  gcloud auth configure-docker; \
-	  docker pull $(CALICOQ_PRIVATE_IMAGE); \
-	  docker tag $(CALICOQ_PRIVATE_IMAGE) $(CALICOQ_CONTAINER_NAME); \
-	fi;
-	docker create --name calicoq $(CALICOQ_CONTAINER_NAME)
-	docker cp calicoq:calicoq dist/calicoq && \
-	  test -e dist/calicoq && \
-	  touch dist/calicoq
-	-docker rm -f calicoq
 
 # Create images for containers used in the tests
 busybox.tar:
@@ -360,11 +378,11 @@ busybox.tar:
 	docker save --output busybox.tar $(ARCH)/busybox:latest
 
 routereflector.tar:
-	-docker pull calico/routereflector$(ARCHTAG):$(RR_VER)
-	docker save --output routereflector.tar calico/routereflector$(ARCHTAG):$(RR_VER)
+	-docker pull $(RR_CONTAINER_NAME)
+	docker save --output routereflector.tar $(RR_CONTAINER_NAME)
 
 workload.tar:
-	cd workload && docker build -t workload -f Dockerfile$(ARCHTAG) .
+	cd workload && docker build -t workload --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 	docker save --output workload.tar workload
 
 stop-etcd:
@@ -373,19 +391,19 @@ stop-etcd:
 IPT_ALLOW_ETCD:=-A INPUT -i docker0 -p tcp --dport 2379 -m comment --comment "calico-st-allow-etcd" -j ACCEPT
 
 # Create the calico/test image
-test_image: calico_test.created
+test_image: calico_test.created 
 calico_test.created: $(TEST_CONTAINER_FILES)
-	cd calico_test && docker build -f Dockerfile$(ARCHTAG).calico_test -t $(TEST_CONTAINER_NAME) .
+	cd calico_test && docker build --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH).calico_test -t $(TEST_CONTAINER_NAME) .
 	touch calico_test.created
 
 cnx-node.tar: $(NODE_CONTAINER_CREATED)
 	# Check versions of the Calico binaries that will be in cnx-node.tar.
 	# Since the binaries are built for Linux, run them in a container to allow the
 	# make target to be run on different platforms (e.g. MacOS).
-	docker run --rm $(NODE_CONTAINER_NAME):latest-$(ARCH) /bin/sh -c "\
+	docker run --rm $(BUILD_IMAGE):latest-$(ARCH) /bin/sh -c "\
 	  echo bird --version;         /bin/bird --version; \
 	"
-	docker save --output $@ $(NODE_CONTAINER_NAME):latest-$(ARCH)
+	docker save --output $@ $(BUILD_IMAGE):latest-$(ARCH)
 
 .PHONY: st-checks
 st-checks:
@@ -398,7 +416,7 @@ st-checks:
 
 .PHONY: st
 ## Run the system tests
-st: dist/calicoq dist/calicoctl busybox.tar routereflector.tar cnx-node.tar workload.tar run-etcd calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
+st: dist/calicoctl busybox.tar routereflector.tar cnx-node.tar workload.tar run-etcd calico_test.created dist/calico-cni-plugin dist/calico-ipam-plugin
 	# Check versions of Calico binaries that ST execution will use.
 	docker run --rm -v $(CURDIR)/dist:/go/bin:rw $(CALICO_BUILD) /bin/sh -c "\
 	  echo; echo calicoctl --version;        /go/bin/calicoctl --version; \
@@ -420,8 +438,8 @@ st: dist/calicoq dist/calicoctl busybox.tar routereflector.tar cnx-node.tar work
 	           -e HOST_CHECKOUT_DIR=$(CURDIR) \
 	           -e DEBUG_FAILURES=$(DEBUG_FAILURES) \
 	           -e MY_IP=$(LOCAL_IP_ENV) \
-	           -e NODE_CONTAINER_NAME=$(NODE_CONTAINER_NAME):latest-$(ARCH) \
-	           -e RR_CONTAINER_NAME=$(RR_CONTAINER_NAME):$(RR_VER) \
+	           -e NODE_CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) \
+	           -e RR_CONTAINER_NAME=$(RR_CONTAINER_NAME) \
 	           --rm -t \
 	           -v /var/run/docker.sock:/var/run/docker.sock \
 	           $(TEST_CONTAINER_NAME) \
@@ -433,7 +451,7 @@ st: dist/calicoq dist/calicoctl busybox.tar routereflector.tar cnx-node.tar work
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: static-checks fv $(NODE_CONTAINER_NAME) st
+ci: static-checks fv image-all st
 
 ## Deploys images to registry
 cd:
@@ -443,8 +461,8 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images push IMAGETAG=${BRANCH_NAME}
-	$(MAKE) tag-images push IMAGETAG=$(shell git describe --tags --dirty --always --long)
+	$(MAKE) tag-images-all push-all IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
@@ -488,8 +506,7 @@ endif
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(NODE_CONTAINER_NAME):$(VERSION) versions | grep '^calico\/node $(VERSION)'; then echo "Reported version:" `docker run $(NODE_CONTAINER_NAME):$(VERSION) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(NODE_CONTAINER_NAME):$(VERSION) versions | grep '^calico\/node $(VERSION)'; then echo "Reported version:" `docker run quay.io/$(NODE_CONTAINER_NAME):$(VERSION) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+	if ! docker run $(BUILD_IMAGE):$(VERSION) versions | grep 'node $(VERSION)'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
@@ -518,22 +535,18 @@ release-publish: release-prereqs
 # WARNING: Only run this target if this release is the latest stable release. Do NOT
 # run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
 ## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
-release-publish-latest: release-prereqs
-	# Check latest versions match.
-	if ! docker run $(NODE_CONTAINER_NAME):latest-$(ARCH) versions | grep '^calico\/node $(VERSION)'; then echo "Reported version:" `docker run $(NODE_CONTAINER_NAME):latest-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run quay.io/$(NODE_CONTAINER_NAME):latest-$(ARCH) versions | grep '^calico\/node $(VERSION)'; then echo "Reported version:" `docker run quay.io/$(NODE_CONTAINER_NAME):latest-$(ARCH) versions` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
+release-publish-latest: release-verify
 	$(MAKE) push RELEASE=true IMAGETAG=latest ARCH=$(ARCH)
 
 .PHONY: node-test-at
-# Run calico/node docker-image acceptance tests
+# Run docker-image acceptance tests
 node-test-at: release-prereqs
 	docker run -v $(PWD)/tests/at/calico_node_goss.yaml:/tmp/goss.yaml \
-	tigera/cnx-node:$(VERSION) /bin/sh -c 'apk --no-cache add wget ca-certificates && \
-	wget -q -O /tmp/goss \
-	https://github.com/aelsabbahy/goss/releases/download/v0.3.4/goss-linux-amd64 && \
-	chmod +rx /tmp/goss && \
-	/tmp/goss --gossfile /tmp/goss.yaml validate'
+	  $(BUILD_IMAGE):$(VERSION) /bin/sh -c ' \
+	   apk --no-cache add wget ca-certificates && \
+	   wget -q -O /tmp/goss https://github.com/aelsabbahy/goss/releases/download/v0.3.4/goss-linux-amd64 && \
+	   chmod +rx /tmp/goss && \
+	   /tmp/goss --gossfile /tmp/goss.yaml validate'
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
@@ -542,7 +555,7 @@ ifndef VERSION
 endif
 
 ###############################################################################
-# Utilities
+# Utilities 
 ###############################################################################
 .PHONY: help
 ## Display this help text

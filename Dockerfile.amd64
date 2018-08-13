@@ -1,5 +1,4 @@
 # Copyright (c) 2015-2016 Tigera, Inc. All rights reserved.
-# Copyright IBM Corp. 2017
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM ppc64le/alpine:3.8
-MAINTAINER David Wilder <wilder@us.ibm.com>
+ARG BIRD_IMAGE=calico/bird:latest
+FROM ${BIRD_IMAGE} as bird
+
+FROM alpine:3.8
+MAINTAINER Tom Denham <tom@projectcalico.org>
+
+# Populated by build with the git version.
+ARG ver="n/a"
+ARG ARCH=amd64
+ENV NODE_VERSION=$ver
 
 # Install remaining runtime deps required for felix from the global repository
-RUN apk add --no-cache ip6tables ipset iputils iproute2 conntrack-tools runit file strongswan
+RUN apk add --no-cache ip6tables ipset iputils iproute2 conntrack-tools runit
 
-# Copy in the filesystem - this contains felix, bird, gobgp etc...
-COPY filesystem /
+# Copy our bird binaries in
+COPY --from=bird /bird* /bin/
+
+# Copy in the filesystem - this contains felix, calico-bgp-daemon etc...
+COPY filesystem/ /
+# Copy in the calico-node binary
+COPY dist/bin/calico-node-${ARCH} /bin/calico-node
 
 CMD ["start_runit"]
