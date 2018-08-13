@@ -1806,6 +1806,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int64",
 							},
 						},
+						"extensions": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -1915,6 +1929,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Description: "The AS Number of the peer.",
 								Type:        []string{"integer"},
 								Format:      "int64",
+							},
+						},
+						"extensions": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Extensions is a mapping of keys to values that can be used in custom BGP templates",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
 							},
 						},
 					},
@@ -2420,7 +2448,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"defaultEndpointToHostAction": {
 							SchemaProps: spec.SchemaProps{
-								Description: "DefaultEndpointToHostAction controls what happens to traffic that goes from a workload endpoint to the host itself (after the traffic hits the endpoint egress policy). By default Calico blocks traffic from workload endpoints to the host itself with an iptables “DROP” action. If you want to allow some or all traffic from endpoint to host, set this parameter to RETURN or ACCEPT. Use RETURN if you have your own rules in the iptables “INPUT” chain; Calico will insert its rules at the top of that chain, then “RETURN” packets to the “INPUT” chain once it has completed processing workload endpoint egress policy. Use ACCEPT to unconditionally accept packets from workloads after processing workload endpoint egress policy. [Default: DROP]",
+								Description: "DefaultEndpointToHostAction controls what happens to traffic that goes from a workload endpoint to the host itself (after the traffic hits the endpoint egress policy). By default Calico blocks traffic from workload endpoints to the host itself with an iptables “DROP” action. If you want to allow some or all traffic from endpoint to host, set this parameter to RETURN or ACCEPT. Use RETURN if you have your own rules in the iptables “INPUT” chain; Calico will insert its rules at the top of that chain, then “RETURN” packets to the “INPUT” chain once it has completed processing workload endpoint egress policy. Use ACCEPT to unconditionally accept packets from workloads after processing workload endpoint egress policy. [Default: Drop]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -2444,6 +2472,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"logDropActionOverride": {
+							SchemaProps: spec.SchemaProps{
+								Description: "LogDropActionOverride specifies whether or not to include the DropActionOverride in the logs when it is triggered.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
 						"logFilePath": {
 							SchemaProps: spec.SchemaProps{
 								Description: "LogFilePath is the full path to the Felix log. Set to none to disable file logging. [Default: /var/log/calico/felix.log]",
@@ -2453,21 +2488,21 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"logSeverityFile": {
 							SchemaProps: spec.SchemaProps{
-								Description: "LogSeverityFile is the log severity above which logs are sent to the log file. [Default: INFO]",
+								Description: "LogSeverityFile is the log severity above which logs are sent to the log file. [Default: Info]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"logSeverityScreen": {
 							SchemaProps: spec.SchemaProps{
-								Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: INFO]",
+								Description: "LogSeverityScreen is the log severity above which logs are sent to the stdout. [Default: Info]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"logSeveritySys": {
 							SchemaProps: spec.SchemaProps{
-								Description: "LogSeveritySys is the log severity above which logs are sent to the syslog. Set to NONE for no logging to syslog. [Default: INFO]",
+								Description: "LogSeveritySys is the log severity above which logs are sent to the syslog. Set to None for no logging to syslog. [Default: Info]",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -2527,6 +2562,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "",
 							},
 						},
+						"healthHost": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
 						"healthPort": {
 							SchemaProps: spec.SchemaProps{
 								Type:   []string{"integer"},
@@ -2559,6 +2600,25 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Description: "PrometheusProcessMetricsEnabled disables process metrics collection, which the Prometheus client does by default, when set to false. This reduces the number of metrics reported, reducing Prometheus load. [Default: true]",
 								Type:        []string{"boolean"},
 								Format:      "",
+							},
+						},
+						"prometheusMetricsCertFile": {
+							SchemaProps: spec.SchemaProps{
+								Description: "TLS credentials for this port.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"prometheusMetricsKeyFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"prometheusMetricsCAFile": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
 							},
 						},
 						"failsafeInboundHostPorts": {
@@ -2600,6 +2660,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"policySyncPathPrefix": {
+							SchemaProps: spec.SchemaProps{
+								Description: "PolicySyncPathPrefix is used to by Felix to communicate policy changes to external services, like Application layer policy. [Default: Empty]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 						"usageReportingEnabled": {
 							SchemaProps: spec.SchemaProps{
 								Description: "UsageReportingEnabled reports anonymous Calico version number and cluster size to projectcalico.org. Logs warnings returned by the usage server. For example, if a significant security vulnerability has been discovered in the version of Calico being used. [Default: true]",
@@ -2617,6 +2684,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Description: "UsageReportingInterval controls the interval at which Felix makes reports. [Default: 86400s]",
 								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
+						"NATPortRange": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NATPortRange specifies the range of ports that is used for port mapping when doing outgoing NAT. When unset the default behavior of the network stack is used.",
+								Ref:         ref("github.com/projectcalico/libcalico-go/lib/numorstring.Port"),
 							},
 						},
 						"nfNetlinkBufSize": {
@@ -2709,7 +2782,151 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format: "",
 							},
 						},
+						"ipsecMode": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecMode controls which mode IPSec is operating on. Default value means IPSec is not enabled. [Default: \"\"]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ipsecAllowUnsecuredTraffic": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecAllowUnsecuredTraffic controls whether non-IPsec traffic is allowed in addition to IPsec traffic. Enabling this negates the anti-spoofing protections of IPsec but it is useful when migrating to/from IPsec. [Default: false]",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"ipsecIKEAlgorithm": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecIKEAlgorithm sets IPSec IKE algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-prfsha256-ecp256]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ipsecESPAlgorithm": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecESAlgorithm sets IPSec ESP algorithm. Default is NIST suite B recommendation. [Default: aes128gcm16-ecp256]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ipsecLogLevel": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecLogLevel controls log level for IPSec components. Set to None for no logging. A generic log level terminology is used [None, Notice, Info, Debug, Verbose]. [Default: Info]",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ipsecPolicyRefreshInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "IPSecPolicyRefreshInterval is the interval at which Felix will check the kernel's IPsec policy tables and repair any inconsistencies. [Default: 600s]",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
+						"cloudWatchLogsReporterEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Enable Flow logs reporting to AWS CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsFlushInterval": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsFlushInterval configures the interval at which Felix exports flow logs to CloudWatch Logs.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
+						"cloudWatchLogsLogGroupName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to \"tigera-flowlogs-<cluster-guid>\".",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsLogStreamName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to \"<felix-hostname>_Flowlogs\".",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsIncludeLabels": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsAggregationKindForAllowed": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for allowed connections. [Default: 2 - pod prefix name based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"cloudWatchLogsAggregationKindForDenied": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"cloudWatchLogsRetentionDays": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Number of days for which to retain logs. See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html for allowed values.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"cloudWatchLogsEnableHostEndpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Enable Flow logs reporting to AWS CloudWatch for HostEndpoints.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsEnabledForAllowed": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true. This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchLogsEnabledForDenied": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchLogsEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true. This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchMetricsReporterEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Enable reporting metrics to CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchMetricsPushIntervalSecs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchMetricsPushInterval configures the interval at which Felix exports metrics to CloudWatch.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
+						"cloudWatchNodeHealthStatusEnabled": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchNodeHealthStatusEnabled enables pushing node health data to CloudWatch.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"cloudWatchNodeHealthPushIntervalSecs": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CloudWatchNodeHealthPushIntervalSecs configures the frequency of pushing the node health metrics to CloudWatch.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+							},
+						},
 					},
+					Required: []string{"NATPortRange"},
 				},
 			},
 			Dependencies: []string{
@@ -2995,10 +3212,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPMatch": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
+					Description: "HTTPMatch is an optional field that apply only to HTTP requests The Methods and Path fields are joined with AND",
 					Properties: map[string]spec.Schema{
 						"methods": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Methods is an optional field that restricts the rule to apply only to HTTP requests that use one of the listed HTTP Methods (e.g. GET, PUT, etc.)",
+								Description: "Methods is an optional field that restricts the rule to apply only to HTTP requests that use one of the listed HTTP Methods (e.g. GET, PUT, etc.) Multiple methods are OR'd together.",
 								Type:        []string{"array"},
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
@@ -3008,6 +3226,42 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 										},
 									},
 								},
+							},
+						},
+						"paths": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Paths is an optional field that restricts the rule to apply to HTTP requests that use one of the listed HTTP Paths. Multiple paths are OR'd together. e.g: - exact: /foo - prefix: /bar NOTE: Each entry may ONLY specify either a `exact` or a `prefix` match. The validator will check for it.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath"},
+		},
+		"github.com/projectcalico/libcalico-go/lib/apis/v3.HTTPPath": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "HTTPPath specifies an HTTP path to match. It may be either of the form: exact: <path>: which matches the path exactly or prefix: <path-prefix>: which matches the path prefix",
+					Properties: map[string]spec.Schema{
+						"exact": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
+							},
+						},
+						"prefix": {
+							SchemaProps: spec.SchemaProps{
+								Type:   []string{"string"},
+								Format: "",
 							},
 						},
 					},

@@ -9,7 +9,7 @@ import:
   - pkg/transport
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: f879bb285561f028ed592e09da7928babd85186e
+  version: 1130ede1859eb68c9a71a59844da72c07731cb34
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
@@ -32,8 +32,9 @@ import:
   version: release-1.8
 - package: k8s.io/gengo
   version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
+## Pin to a compiling version of grpc.
 - package: google.golang.org/grpc
-  version: ^1.10.0
+  version: 1.11.3
 - package: github.com/spf13/cobra
   version: f62e98d28ab7ad31d707ba837a966378465c7b57
 - package: github.com/spf13/pflag
