@@ -3,7 +3,7 @@ cnx.yaml acccepts the following include flags:
 
 | Name             | Accepted Values          |
 |------------------|--------------------------|
-| orch     | openshift                |
+| orch             | openshift                |
 | datastore        | kdd, etcd                |
 
 {% endcomment -%}
@@ -357,10 +357,10 @@ spec:
         image: {{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
           # Set queryserver logging to "info"
-{%- if include.datastore == "etcd" %}
-  {%- if include.orch == "openshift" %}
           - name: LOGLEVEL
             value: "info"
+{%- if include.datastore == "etcd" %}
+  {%- if include.orch == "openshift" %}
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
@@ -391,8 +391,6 @@ spec:
            - mountPath: /calico-secrets
              name: etcd-certs
   {%- else %}
-          - name: LOGLEVEL
-            value: "info"
           - name: ETCD_ENDPOINTS
             valueFrom:
               configMapKeyRef:
@@ -424,8 +422,6 @@ spec:
           #   name: etcd-certs
   {%- endif %}
 {%- elsif include.datastore == "kdd" %}
-          - name: LOGLEVEL
-            value: "info"
           - name: DATASTORE_TYPE
             value: "kubernetes"
 {%- endif %}
@@ -527,12 +523,22 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-authority
-{%- if include.datastore == "etcd" %}
           - name: CNX_WEB_OIDC_CLIENT_ID
             valueFrom:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oidc-client-id
+          - name: CNX_PROMETHEUS_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.prometheus-api-url
+          - name: CNX_QUERY_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.query-api-url
+{%- if include.datastore == "etcd" %}
           - name: CNX_WEB_OAUTH_AUTHORITY
             valueFrom:
               configMapKeyRef:
@@ -543,32 +549,6 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.oauth-client-id
-          - name: CNX_PROMETHEUS_API_URL
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.prometheus-api-url
-          - name: CNX_QUERY_API_URL
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.query-api-url
-{%- elsif include.datastore == "kdd" %}
-          - name: CNX_WEB_OIDC_CLIENT_ID
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.oidc-client-id
-          - name: CNX_PROMETHEUS_API_URL
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.prometheus-api-url
-          - name: CNX_QUERY_API_URL
-            valueFrom:
-              configMapKeyRef:
-                name: tigera-cnx-manager-config
-                key: tigera.cnx-manager.query-api-url
 {%- endif %}
         livenessProbe:
           httpGet:
