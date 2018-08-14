@@ -57,14 +57,25 @@ PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 LOCAL_USER_ID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
-PACKAGE_NAME?=github.com/projectcalico/app-policy
 SRC_FILES=$(shell find -name '*.go' |grep -v vendor)
-CONTAINER_NAME?=calico/dikastes
 
+############################################################################
+CONTAINER_NAME?=tigera/dikastes
+PACKAGE_NAME?=github.com/projectcalico/app-policy
+
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+endif
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
 # Pre-configured docker run command that runs as this user with the repo
 # checked out to /code, uses the --rm flag to avoid leaving the container
 # around afterwards.
-DOCKER_RUN_RM:=docker run --rm --user $(MY_UID):$(MY_GID) -v ${CURDIR}:/code
+DOCKER_RUN_RM:=docker run --rm \
+		$(EXTRA_DOCKER_ARGS) \
+		--user $(LOCAL_USER_ID):$(MY_GID) -v $(CURDIR):/code
 
 ENVOY_API=vendor/github.com/envoyproxy/data-plane-api
 EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
@@ -110,8 +121,8 @@ vendor: glide.yaml
       $(GO_BUILD_CONTAINER) glide install -strip-vendor
 
 # Default the libcalico repo and version but allow them to be overridden
-LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go master 2>/dev/null | cut -f 1)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private master 2>/dev/null | cut -f 1)
 
 ## Update libcalico pin in glide.yaml
 update-libcalico:
@@ -126,8 +137,8 @@ update-libcalico:
         echo "Old version: $$OLD_VER";\
         if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
             sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
-              glide mirror set https://github.com/projectcalico/libcalico-go $(LIBCALICO_REPO) --vcs git; glide mirror list; \
+            if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
+              glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
             fi;\
           OUTPUT=`mktemp`;\
           glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
@@ -148,6 +159,7 @@ bin/dikastes-%: vendor proto $(SRC_FILES)
       -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
       -e GOCACHE=/go-cache \
       -w /go/src/$(PACKAGE_NAME) \
+      $(EXTRA_DOCKER_ARGS) \
 	    $(GO_BUILD_CONTAINER) go build -v -o bin/dikastes-$(ARCH)
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with

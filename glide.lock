@@ -1,5 +1,5 @@
-hash: 05b0c74a9d2c23fbffe41c1963636d598351018fac7597ccdc24f992d5645343
-updated: 2018-08-10T04:06:15.01198048Z
+hash: 16985a6eb3b7c40f785ab4aaeee74d0c129b2cadb1ba776d692517b2dc411cec
+updated: 2018-08-14T11:47:51.591585794-07:00
 imports:
 - name: github.com/docopt/docopt-go
   version: 784ddc588536785e7299f7272f39101f7faccc3f
@@ -9,17 +9,17 @@ imports:
   - envoy/api/v2/core
   - envoy/service/auth/v2alpha
 - name: github.com/gogo/googleapis
-  version: b23578765ee54ff6bceff57f397d833bf4ca6869
+  version: 08a7655d27152912db7aaf4f983275eaf8d128ef
   subpackages:
   - google/rpc
 - name: github.com/gogo/protobuf
-  version: 636bf0302bc95575d69441b25a2603156ffdddf1
+  version: c0656edd0d9eab7c66d1eb0c568f9039345796f7
   subpackages:
   - proto
   - sortkeys
   - types
 - name: github.com/golang/protobuf
-  version: 427e165155e0a4ff5993a36657c1f733f5b0f782
+  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
 - name: github.com/lyft/protoc-gen-validate
@@ -39,7 +39,8 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/projectcalico/libcalico-go
-  version: cac4ce6d0f2f1fdcaac2dcbe613374465cfd4953
+  version: 7a59700fd067ea4ff1423b33f2516bf3bff5dcdb
+  repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apis/v3
   - lib/client
@@ -50,29 +51,29 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 3e01752db0189b9157070a0e1668a620f9a85da2
 - name: golang.org/x/crypto
-  version: c126467f60eb25f8f27e5a981f32a87e3965053f
+  version: a49355c7e3f8fe157a85be2f77e6e269a0f89602
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
-  version: a680a1efc54dd51c040b3b5ce4939ea3cf2ea0d1
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
   - html
   - html/atom
   - html/charset
-  - http/httpguts
   - http2
   - http2/hpack
   - idna
   - internal/timeseries
+  - lex/httplex
   - trace
 - name: golang.org/x/sys
-  version: ac767d655b305d4e9612f5f6e33120b9176c4ad4
+  version: ebfc5b4631820b793c9010c87fd8fef0f39eb082
   subpackages:
   - unix
   - windows
 - name: golang.org/x/text
-  version: 0605a8320aceb4207a5fb3521281e17ec2075476
+  version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
   - encoding
   - encoding/charmap
@@ -84,8 +85,6 @@ imports:
   - encoding/simplifiedchinese
   - encoding/traditionalchinese
   - encoding/unicode
-  - internal/language
-  - internal/language/compact
   - internal/tag
   - internal/utf8internal
   - language
@@ -115,4 +114,4 @@ imports:
   - pkg/util/validation
 testImports:
 - name: gopkg.in/yaml.v2
-  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
+  version: 670d4cfef0544295bc27a114dbac37980d83185a
