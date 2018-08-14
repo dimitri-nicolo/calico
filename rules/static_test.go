@@ -478,7 +478,7 @@ var _ = Describe("Static", func() {
 					// IPIP rules
 					{Match: Match().
 						ProtocolNum(4).
-						SourceIPSet("cali40all-hosts").
+						SourceIPSet("cali40all-hosts-net").
 						DestAddrType("LOCAL"),
 
 						Action:  AcceptAction{},
@@ -520,7 +520,7 @@ var _ = Describe("Static", func() {
 					// IPIP rules
 					{Match: Match().
 						ProtocolNum(4).
-						SourceIPSet("cali40all-hosts").
+						SourceIPSet("cali40all-hosts-net").
 						DestAddrType("LOCAL"),
 
 						Action:  AcceptAction{},
@@ -616,7 +616,7 @@ var _ = Describe("Static", func() {
 					// Auto-allow IPIP traffic to other Calico hosts.
 					{
 						Match: Match().ProtocolNum(4).
-							DestIPSet("cali40all-hosts").
+							DestIPSet("cali40all-hosts-net").
 							SrcAddrType(AddrTypeLocal, false),
 						Action:  AcceptAction{},
 						Comment: "Allow IPIP packets to other Calico hosts",
@@ -646,7 +646,7 @@ var _ = Describe("Static", func() {
 					// Auto-allow IPIP traffic to other Calico hosts.
 					{
 						Match: Match().ProtocolNum(4).
-							DestIPSet("cali40all-hosts").
+							DestIPSet("cali40all-hosts-net").
 							SrcAddrType(AddrTypeLocal, false),
 						Action:  AcceptAction{},
 						Comment: "Allow IPIP packets to other Calico hosts",

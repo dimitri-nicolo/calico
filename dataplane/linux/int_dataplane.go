@@ -162,6 +162,8 @@ type Config struct {
 	PostInSyncCallback func()
 	HealthAggregator   *health.HealthAggregator
 
+	ExternalNodesCidrs []string
+
 	DebugSimulateDataplaneHangAfter time.Duration
 	DebugUseShortPollIntervals      bool
 
@@ -389,7 +391,7 @@ func NewIntDataplaneDriver(cache *calc.LookupsCache, config Config) *InternalDat
 
 	if config.RulesConfig.IPIPEnabled || config.RulesConfig.IPSecEnabled {
 		// Add a manger to keep the all-hosts IP set up to date.
-		dp.allHostsIpsetManager = newAllHostsIpsetManager(ipSetsV4, config.MaxIPSetSize)
+		dp.allHostsIpsetManager = newAllHostsIpsetManager(ipSetsV4, config.MaxIPSetSize, config.ExternalNodesCidrs)
 		dp.RegisterManager(dp.allHostsIpsetManager) // IPv4-only
 	}
 

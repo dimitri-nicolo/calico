@@ -32,32 +32,32 @@ import (
 )
 
 type TopologyOptions struct {
-	FelixLogSeverity           string
-	EnableIPv6                 bool
-	ExtraEnvVars               map[string]string
-	ExtraVolumes               map[string]string
-	WithTypha                  bool
-	WithFelixTyphaTLS          bool
-	TyphaLogSeverity           string
-	IPIPEnabled                bool
-	AlwaysProgramNonIPIPRoutes bool
-	WithPrometheusPortTLS      bool
-	NATOutgoingEnabled         bool
-	InitialFelixConfiguration  *api.FelixConfiguration
-	DelayFelixStart            bool
+	FelixLogSeverity          string
+	EnableIPv6                bool
+	ExtraEnvVars              map[string]string
+	ExtraVolumes              map[string]string
+	WithTypha                 bool
+	WithFelixTyphaTLS         bool
+	TyphaLogSeverity          string
+	IPIPEnabled               bool
+	IPIPRoutesEnabled         bool
+	InitialFelixConfiguration *api.FelixConfiguration
+	WithPrometheusPortTLS     bool
+	NATOutgoingEnabled        bool
+	DelayFelixStart           bool
 }
 
 func DefaultTopologyOptions() TopologyOptions {
 	return TopologyOptions{
-		FelixLogSeverity:           "info",
-		EnableIPv6:                 true,
-		ExtraEnvVars:               map[string]string{},
-		ExtraVolumes:               map[string]string{},
-		WithTypha:                  false,
-		WithFelixTyphaTLS:          false,
-		TyphaLogSeverity:           "info",
-		IPIPEnabled:                true,
-		AlwaysProgramNonIPIPRoutes: false,
+		FelixLogSeverity:  "info",
+		EnableIPv6:        true,
+		ExtraEnvVars:      map[string]string{},
+		ExtraVolumes:      map[string]string{},
+		WithTypha:         false,
+		WithFelixTyphaTLS: false,
+		TyphaLogSeverity:  "info",
+		IPIPEnabled:       true,
+		IPIPRoutesEnabled: true,
 	}
 }
 
@@ -224,7 +224,7 @@ func StartNNodeTopology(n int, opts TopologyOptions, infra DatastoreInfra) (feli
 			}
 
 			jBlock := fmt.Sprintf("10.65.%d.0/24", j)
-			if opts.IPIPEnabled && !opts.AlwaysProgramNonIPIPRoutes {
+			if opts.IPIPEnabled && opts.IPIPRoutesEnabled {
 				err := iFelix.ExecMayFail("ip", "route", "add", jBlock, "via", jFelix.IP, "dev", "tunl0", "onlink")
 				Expect(err).ToNot(HaveOccurred())
 			} else {

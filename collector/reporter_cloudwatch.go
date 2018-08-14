@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/gavv/monotime"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/jitter"
 	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/health"
-	log "github.com/sirupsen/logrus"
 )
 
 type FlowLogGetter interface {

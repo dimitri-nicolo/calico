@@ -15,9 +15,10 @@ import (
 	"github.com/bronze1man/goStrongswanVici"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
+
 	. "github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/testutils"
-	log "github.com/sirupsen/logrus"
 )
 
 const TestPSK = "top-secret"

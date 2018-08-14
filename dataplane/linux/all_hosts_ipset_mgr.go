@@ -20,18 +20,22 @@ type allHostsIpsetManager struct {
 	activeHostnameToIP map[string]string
 	ipSetInSync        bool
 
+	// Configured list of external node ip cidr's to be added to the ipset.
+	externalNodeCIDRs []string
+
 	// Config for creating/refreshing the IP set.
 	ipSetMetadata ipsets.IPSetMetadata
 }
 
-func newAllHostsIpsetManager(ipsetsDataplane ipsetsDataplane, maxIPSetSize int) *allHostsIpsetManager {
+func newAllHostsIpsetManager(ipsetsDataplane ipsetsDataplane, maxIPSetSize int, externalNodeCIDRs []string) *allHostsIpsetManager {
 	return &allHostsIpsetManager{
 		ipsetsDataplane:    ipsetsDataplane,
 		activeHostnameToIP: map[string]string{},
+		externalNodeCIDRs:  externalNodeCIDRs,
 		ipSetMetadata: ipsets.IPSetMetadata{
 			MaxSize: maxIPSetSize,
-			SetID:   rules.IPSetIDAllHostIPs,
-			Type:    ipsets.IPSetTypeHashIP,
+			SetID:   rules.IPSetIDAllHostNets,
+			Type:    ipsets.IPSetTypeHashNet,
 		},
 	}
 }
@@ -57,8 +61,11 @@ func (m *allHostsIpsetManager) CompleteDeferredWork() error {
 		// to (at least transiently) share an IP.  That would add occupancy and make the
 		// code more complex.
 		log.Info("All-hosts IP set out-of sync, refreshing it.")
-		members := make([]string, 0, len(m.activeHostnameToIP))
+		members := make([]string, 0, len(m.activeHostnameToIP)+len(m.externalNodeCIDRs))
 		for _, ip := range m.activeHostnameToIP {
+			members = append(members, ip)
+		}
+		for _, ip := range m.externalNodeCIDRs {
 			members = append(members, ip)
 		}
 		m.ipsetsDataplane.AddOrReplaceIPSet(m.ipSetMetadata, members)

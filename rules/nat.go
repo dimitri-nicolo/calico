@@ -31,7 +31,7 @@ func (r *DefaultRuleRenderer) NATOutgoingChain(natOutgoingActive bool, ipVersion
 			// When IPsec is enabled, workload to remote host traffic is tunneled so there is no need
 			// to SNAT it.  In addition, the IPsec policy rules at the destination are not expecting
 			// tunneled traffic from the host itself so the SNATted traffic would be blocked.
-			allHostsIPSetName := ipConf.NameForMainIPSet(IPSetIDAllHostIPs)
+			allHostsIPSetName := ipConf.NameForMainIPSet(IPSetIDAllHostNets)
 
 			rules = []iptables.Rule{
 				{
