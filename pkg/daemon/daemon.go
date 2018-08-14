@@ -32,6 +32,9 @@ import (
 
 	"strconv"
 
+	"fmt"
+	"net/http"
+
 	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/syncersv1/felixsyncer"
@@ -48,8 +51,6 @@ import (
 	"github.com/projectcalico/typha/pkg/logutils"
 	"github.com/projectcalico/typha/pkg/snapcache"
 	"github.com/projectcalico/typha/pkg/syncserver"
-	"net/http"
-	"fmt"
 )
 
 const usage = `Typha, Calico's fan-out proxy.
