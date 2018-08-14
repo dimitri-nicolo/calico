@@ -11,12 +11,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
+
 	"github.com/projectcalico/felix/ip"
 	. "github.com/projectcalico/felix/ipsec"
 	"github.com/projectcalico/felix/testutils"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
-	"github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 )
 
 var (

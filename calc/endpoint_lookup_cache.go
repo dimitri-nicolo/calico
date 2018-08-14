@@ -8,11 +8,12 @@ import (
 	"strings"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/projectcalico/felix/dispatcher"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
-	log "github.com/sirupsen/logrus"
 )
 
 type EndpointData struct {

@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/collector/testutil"
 )
 

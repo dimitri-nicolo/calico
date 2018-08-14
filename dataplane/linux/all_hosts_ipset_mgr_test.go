@@ -16,9 +16,13 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 		ipSets      *mockIPSets
 	)
 
+	const (
+		externalCIDR = "11.0.0.1/32"
+	)
+
 	BeforeEach(func() {
 		ipSets = newMockIPSets()
-		allHostsMgr = newAllHostsIpsetManager(ipSets, 1024)
+		allHostsMgr = newAllHostsIpsetManager(ipSets, 1024, []string{externalCIDR})
 	})
 
 	It("should not create the IP set until first call to CompleteDeferredWork()", func() {
@@ -42,7 +46,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 		})
 
 		It("should add host1's IP to the IP set", func() {
-			Expect(allHostsSet()).To(Equal(set.From("10.0.0.1")))
+			Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
 		})
 
 		Describe("after adding an IP for host2", func() {
@@ -54,7 +58,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 				allHostsMgr.CompleteDeferredWork()
 			})
 			It("should add the IP to the IP set", func() {
-				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", "10.0.0.2")))
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", "10.0.0.2", externalCIDR)))
 			})
 		})
 
@@ -67,7 +71,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 				allHostsMgr.CompleteDeferredWork()
 			})
 			It("should tolerate the duplicate", func() {
-				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1")))
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
 			})
 
 			Describe("after removing a duplicate IP", func() {
@@ -78,7 +82,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 					allHostsMgr.CompleteDeferredWork()
 				})
 				It("should keep the IP in the IP set", func() {
-					Expect(allHostsSet()).To(Equal(set.From("10.0.0.1")))
+					Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
 				})
 
 				Describe("after removing initial copy of IP", func() {
@@ -89,7 +93,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 						allHostsMgr.CompleteDeferredWork()
 					})
 					It("should remove the IP", func() {
-						Expect(allHostsSet().Len()).To(BeZero())
+						Expect(allHostsSet()).To(Equal(set.From(externalCIDR)))
 					})
 				})
 			})
@@ -107,7 +111,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 				allHostsMgr.CompleteDeferredWork()
 			})
 			It("should keep the IP in the IP set", func() {
-				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1")))
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.1", externalCIDR)))
 			})
 		})
 
@@ -120,7 +124,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 				allHostsMgr.CompleteDeferredWork()
 			})
 			It("should update the IP set", func() {
-				Expect(allHostsSet()).To(Equal(set.From("10.0.0.2")))
+				Expect(allHostsSet()).To(Equal(set.From("10.0.0.2", externalCIDR)))
 			})
 		})
 

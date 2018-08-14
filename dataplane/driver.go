@@ -285,6 +285,7 @@ func StartDataplaneDriver(configParams *config.Config,
 			DebugSimulateDataplaneHangAfter: configParams.DebugSimulateDataplaneHangAfter,
 			DebugUseShortPollIntervals:      configParams.DebugUseShortPollIntervals,
 			FelixHostname:                   configParams.FelixHostname,
+			ExternalNodesCidrs:              configParams.ExternalNodesCIDRList,
 		}
 		intDP := intdataplane.NewIntDataplaneDriver(cache, dpConfig)
 		intDP.Start()

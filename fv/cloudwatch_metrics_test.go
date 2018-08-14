@@ -11,6 +11,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/daemon"
 	"github.com/projectcalico/felix/fv/infrastructure"

@@ -218,7 +218,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		inputRules = append(inputRules,
 			Rule{
 				Match: Match().ProtocolNum(ProtoIPIP).
-					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
 					DestAddrType(AddrTypeLocal),
 				Action:  r.filterAllowAction,
 				Comment: "Allow IPIP packets from Calico hosts",
@@ -237,7 +237,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 		inputRules = append(inputRules,
 			Rule{
 				Match: Match().ProtocolNum(ProtoESP).
-					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
 					DestAddrType(AddrTypeLocal),
 				Action:  r.filterAllowAction,
 				Comment: "Allow IPSec ESP packets from Calico hosts",
@@ -247,7 +247,7 @@ func (r *DefaultRuleRenderer) filterInputChain(ipVersion uint8) *Chain {
 			Rule{
 				Match: Match().ProtocolNum(ProtoUDP).
 					DestPorts(PortIKE).
-					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					SourceIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
 					DestAddrType(AddrTypeLocal),
 				Action:  r.filterAllowAction,
 				Comment: "Allow IPSec IKEv2 packets from Calico hosts",
@@ -604,7 +604,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 		rules = append(rules,
 			Rule{
 				Match: Match().ProtocolNum(ProtoIPIP).
-					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
 					SrcAddrType(AddrTypeLocal, false),
 				Action:  r.filterAllowAction,
 				Comment: "Allow IPIP packets to other Calico hosts",
@@ -619,7 +619,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 		rules = append(rules,
 			Rule{
 				Match: Match().ProtocolNum(ProtoESP).
-					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
 					SrcAddrType(AddrTypeLocal, false),
 				Action:  r.filterAllowAction,
 				Comment: "Allow IPSec ESP packets to other Calico hosts",
@@ -630,7 +630,7 @@ func (r *DefaultRuleRenderer) filterOutputChain(ipVersion uint8) *Chain {
 			Rule{
 				Match: Match().ProtocolNum(ProtoUDP).
 					DestPorts(PortIKE).
-					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostIPs)).
+					DestIPSet(r.IPSetConfigV4.NameForMainIPSet(IPSetIDAllHostNets)).
 					SrcAddrType(AddrTypeLocal, false),
 				Action:  r.filterAllowAction,
 				Comment: "Allow IPSec IKE packets to other Calico hosts",

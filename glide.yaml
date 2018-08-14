@@ -13,6 +13,20 @@ import:
 - package: github.com/gogo/protobuf
   subpackages:
   - proto
+# prometheus/client_golang pulls in prometheus/client_model, which depends
+# on this version of golang/protobuf (but none of the prometheus repos provide
+# a dependency manifest). The genproto library (another indirect and unpinned
+# dependency) also depends on this version of protobuf.
+# This commit hash is v1.1.0 (but the hash is used because k8s also pulls in this version)
+- package: github.com/golang/protobuf
+  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
+  subpackages:
+  - proto
+- package: github.com/jbenet/go-reuseport
+# go-reuseport pulls in go-log without a pin and master is now incompatible with the
+# version of gogo/protobuf that we are using.  Pin to most recent working master revision.
+- package: github.com/ipfs/go-log
+  version: 5dc2060baaf8db344f31dafd852340b93811d03f
 - package: github.com/kardianos/osext
 - package: github.com/kelseyhightower/envconfig
 - package: github.com/mipearson/rfw
@@ -51,8 +65,7 @@ import:
   - lib/validator/v1
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: c8f11d3e22967fd1213bec19f2a5a1edb63e0f92
-  subpackages:
+  version: 38aefeb8b5caacb7fd4a9f2c6b6a9f01d4e3a105
   subpackages:
   - pkg/syncclient
   - pkg/tlsutils
@@ -61,6 +74,10 @@ import:
   - prometheus
   - prometheus/promhttp
   - prometheus/push
+- package: github.com/prometheus/procfs
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
+  subpackages:
+  - xfs
 - package: github.com/satori/go.uuid
 - package: github.com/sirupsen/logrus
   version: v1.0.4
@@ -90,36 +107,24 @@ import:
   - pkg/api/errors
   - pkg/apis/meta/v1
 - package: k8s.io/client-go
+  version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
   - kubernetes
   - rest
   - tools/clientcmd
   - tools/clientcmd/api
-- package: github.com/davecgh/go-spew
-  subpackages:
-  - spew
 - package: github.com/Microsoft/go-winio
-  version: 78439966b38d69bf38227fbf57ac8a6fee70f69a
+  version: a6d595ae73cf27a1b8fc32930668708f45ce1c85
 - package: github.com/Microsoft/hcsshim
   version: 4a468a6f7ae547974bc32911395c51fb1862b7df
+- package: github.com/davecgh/go-spew
 # Everything above here should closely match open source - other than
 # 1) repo line for libcalico-go
 # 2) repo and version lines for typha
 # 3) repo and version lines vishvanada/netlink
 
-# prometheus/client_golang pulls in prometheus/client_model, which depends
-# on this version of golang/protobuf (but none of the prometheus repos provide
-# a dependency manifest). The genproto library (another indirect and unpinned
-# dependency) also depends on this version of protobuf.
-# This commit hash is v1.1.0 (but the hash is used because k8s also pulls in this version)
-- package: github.com/golang/protobuf
-  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
 - package: github.com/aws/aws-sdk-go
   version: v1.13.54
-- package: github.com/prometheus/procfs
-  version: f98634e408857669d61064b283c4cde240622865
-  subpackages:
-  - xfs
 - package: github.com/bronze1man/goStrongswanVici
   repo:    git@github.com:tigera/goStrongswanVici
   version: 9b6fdd821dbe2bc7fe167b1ad2af4bcd19975ada
@@ -141,9 +146,6 @@ import:
 #  version: v1.2
 - package: github.com/containernetworking/cni
   version: v0.5.2
-- package: github.com/jbenet/go-reuseport
-  repo: https://github.com/fasaxc/go-reuseport.git
-  version: disable-dial-check
 - package: github.com/jbenet/go-sockaddr
   version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
   subpackages:

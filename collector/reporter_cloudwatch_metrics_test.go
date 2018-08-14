@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
 
 	"github.com/aws/aws-sdk-go/aws"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/collector/testutil"
 	"github.com/projectcalico/felix/rules"

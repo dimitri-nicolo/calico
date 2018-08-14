@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/projectcalico/felix/rules"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/rules"
 )
 
 // AggregationKind determines the flow log key
