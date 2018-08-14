@@ -206,7 +206,11 @@ type FelixConfigurationSpec struct {
 
 	// NATPortRange specifies the range of ports that is used for port mapping when doing outgoing NAT. When unset the default behavior of the
 	// network stack is used.
-	NATPortRange *numorstring.Port `json: natPortRange,omitempty`
+	NATPortRange *numorstring.Port `json:"natPortRange,omitempty"`
+
+	// ExternalNodesCIDRList is a list of CIDR's of external-non-calico-nodes which may source tunnel traffic and have
+	// the tunneled traffic be accepted at calico nodes.
+	ExternalNodesCIDRList *[]string `json:"externalNodesList,omitempty"`
 
 	NfNetlinkBufSize  string `json:"nfNetlinkBufSize,omitempty"`
 	StatsDumpFilePath string `json:"statsDumpFilePath,omitempty"`
