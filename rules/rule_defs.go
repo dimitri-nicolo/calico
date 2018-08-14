@@ -120,9 +120,10 @@ type RuleAction byte
 const (
 	// We define these with specific byte values as we write this value directly into the NFLOG
 	// prefix.
-	RuleActionAllow    RuleAction = 'A'
-	RuleActionDeny     RuleAction = 'D'
-	RuleActionNextTier RuleAction = 'N'
+	RuleActionAllow RuleAction = 'A'
+	RuleActionDeny  RuleAction = 'D'
+	// Pass onto the next tier
+	RuleActionPass RuleAction = 'P'
 )
 
 func (r RuleAction) String() string {
@@ -131,7 +132,7 @@ func (r RuleAction) String() string {
 		return "Allow"
 	case RuleActionDeny:
 		return "Deny"
-	case RuleActionNextTier:
+	case RuleActionPass:
 		return "Pass"
 	}
 	return ""

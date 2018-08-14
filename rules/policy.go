@@ -525,7 +525,7 @@ func (r *DefaultRuleRenderer) CalculateActions(pRule *proto.Rule, ipVersion uint
 		if !untracked {
 			actions = append(actions, iptables.NflogAction{
 				Group:       nflogGroup,
-				Prefix:      CalculateNFLOGPrefixStr(RuleActionNextTier, owner, dir, idx, name),
+				Prefix:      CalculateNFLOGPrefixStr(RuleActionPass, owner, dir, idx, name),
 				SizeEnabled: r.EnableNflogSize,
 			})
 		}

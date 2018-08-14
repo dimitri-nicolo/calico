@@ -42,7 +42,7 @@ var _ = Describe("NFLOG prefix construction tests", func() {
 		),
 		Entry(
 			"Short profile name - will not hash",
-			RuleActionNextTier, RuleOwnerTypeProfile, RuleDirEgress, 999,
+			RuleActionPass, RuleOwnerTypeProfile, RuleDirEgress, 999,
 			"short.profile.name",
 			"NRE999|short.profile.name", false,
 		),

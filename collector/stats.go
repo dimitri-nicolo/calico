@@ -210,7 +210,7 @@ func (t *RuleTrace) Action() rules.RuleAction {
 	ruleID := t.VerdictRuleID()
 	if ruleID == nil {
 		// We don't know the verdict RuleID yet.
-		return rules.RuleActionNextTier
+		return rules.RuleActionPass
 	}
 	return ruleID.Action
 }
@@ -257,7 +257,7 @@ func (t *RuleTrace) addRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) 
 			return false
 		}
 	}
-	if rid.Action != rules.RuleActionNextTier {
+	if rid.Action != rules.RuleActionPass {
 		t.ctr.Increase(numPkts, numBytes)
 		t.verdictIdx = tierIdx
 	}
@@ -266,7 +266,7 @@ func (t *RuleTrace) addRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) 
 }
 
 func (t *RuleTrace) replaceRuleID(rid *calc.RuleID, tierIdx, numPkts, numBytes int) {
-	if rid.Action == rules.RuleActionNextTier {
+	if rid.Action == rules.RuleActionPass {
 		t.path[tierIdx] = rid
 		return
 	}
