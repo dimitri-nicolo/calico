@@ -33,7 +33,7 @@ var _ = Describe("allHostsIpsetManager IP set updates", func() {
 
 	allHostsSet := func() set.Set {
 		Expect(ipSets.Members).To(HaveLen(1))
-		return ipSets.Members["all-hosts"]
+		return ipSets.Members["all-hosts-net"]
 	}
 
 	Describe("after adding an IP for host1", func() {

@@ -123,7 +123,7 @@ var _ = Describe("NAT", func() {
 						Match: Match().
 							SourceIPSet("cali40masq-ipam-pools").
 							NotDestIPSet("cali40all-ipam-pools").
-							NotDestIPSet("cali40all-hosts"),
+							NotDestIPSet("cali40all-hosts-net"),
 					},
 				},
 			}))

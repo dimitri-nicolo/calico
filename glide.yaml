@@ -65,7 +65,7 @@ import:
   - lib/validator/v1
 - package: github.com/projectcalico/typha
   repo:    git@github.com:tigera/typha-private
-  version: 38aefeb8b5caacb7fd4a9f2c6b6a9f01d4e3a105
+  version: e0864c00f325eb65cdf6f93e7cb18301f8125155
   subpackages:
   - pkg/syncclient
   - pkg/tlsutils
@@ -150,6 +150,3 @@ import:
   version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
   subpackages:
   - net
-# Pin to an older version since it the latest master has problems with the commit of github.com/mailru/easyjson that gets picked
-- package: github.com/go-openapi/swag
-  version: 1d0bd113de87027671077d3c71eb3ac5d7dbba72
