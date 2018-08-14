@@ -38,6 +38,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/names"
 	"github.com/projectcalico/libcalico-go/lib/options"
 
+	"os/exec"
+
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	cnet "github.com/projectcalico/libcalico-go/lib/net"
 )
@@ -108,59 +110,59 @@ var _ = Describe("kube-controllers FV tests", func() {
 		Expect(*info.Spec.DatastoreReady).To(BeTrue())
 	})
 
-	//Context("Healthcheck FV tests", func() {
-	//	It("should pass health check", func() {
-	//		// wait for a health check cycle to pass
-	//		Eventually(func() []byte {
-	//			cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
-	//			stdoutStderr, _ := cmd.CombinedOutput()
-	//
-	//			return stdoutStderr
-	//		}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
-	//		Eventually(func() []byte {
-	//			cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
-	//			stdoutStderr, _ := cmd.CombinedOutput()
-	//
-	//			return stdoutStderr
-	//		}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("Error"))
-	//	})
-	//
-	//	It("should fail health check if apiserver is not running", func() {
-	//		// wait for a health check cycle to pass
-	//		Eventually(func() []byte {
-	//			cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
-	//			stdoutStderr, _ := cmd.CombinedOutput()
-	//
-	//			return stdoutStderr
-	//		}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
-	//
-	//		apiserver.Stop()
-	//		Eventually(func() []byte {
-	//			cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
-	//			stdoutStderr, _ := cmd.CombinedOutput()
-	//
-	//			return stdoutStderr
-	//		}, 20*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error reaching apiserver"))
-	//	})
-	//
-	//	It("should fail health check if etcd not running", func() {
-	//		// wait for a health check cycle to pass
-	//		Eventually(func() []byte {
-	//			cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
-	//			stdoutStderr, _ := cmd.CombinedOutput()
-	//
-	//			return stdoutStderr
-	//		}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
-	//
-	//		etcd.Stop()
-	//		Eventually(func() []byte {
-	//			cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
-	//			stdoutStderr, _ := cmd.CombinedOutput()
-	//
-	//			return stdoutStderr
-	//		}, 20*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error verifying datastore"))
-	//	})
-	//})
+	Context("Healthcheck FV tests", func() {
+		It("should pass health check", func() {
+			// wait for a health check cycle to pass
+			Eventually(func() []byte {
+				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				stdoutStderr, _ := cmd.CombinedOutput()
+
+				return stdoutStderr
+			}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
+			Eventually(func() []byte {
+				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				stdoutStderr, _ := cmd.CombinedOutput()
+
+				return stdoutStderr
+			}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("Error"))
+		})
+
+		It("should fail health check if apiserver is not running", func() {
+			// wait for a health check cycle to pass
+			Eventually(func() []byte {
+				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				stdoutStderr, _ := cmd.CombinedOutput()
+
+				return stdoutStderr
+			}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
+
+			apiserver.Stop()
+			Eventually(func() []byte {
+				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				stdoutStderr, _ := cmd.CombinedOutput()
+
+				return stdoutStderr
+			}, 20*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error reaching apiserver"))
+		})
+
+		It("should fail health check if etcd not running", func() {
+			// wait for a health check cycle to pass
+			Eventually(func() []byte {
+				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				stdoutStderr, _ := cmd.CombinedOutput()
+
+				return stdoutStderr
+			}, 20*time.Second, 500*time.Millisecond).ShouldNot(ContainSubstring("initialized to false"))
+
+			etcd.Stop()
+			Eventually(func() []byte {
+				cmd := exec.Command("docker", "exec", policyController.Name, "/usr/bin/check-status", "-r")
+				stdoutStderr, _ := cmd.CombinedOutput()
+
+				return stdoutStderr
+			}, 20*time.Second, 500*time.Millisecond).Should(ContainSubstring("Error verifying datastore"))
+		})
+	})
 
 	Context("Node FV tests", func() {
 		It("should be removed in response to a k8s node delete [Release]", func() {
