@@ -237,14 +237,13 @@ static-checks: vendor
 .PHONY: fix
 ## Fix static checks
 fix:
-	goimports -w $(SRCFILES)
+	goimports -w $(SRCFILES) $(TEST_SRCFILES)
 
 .PHONY: install-git-hooks
 ## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
 
-GINKGO_FOCUS?=".*"
 ###############################################################################
 # Unit Tests
 ###############################################################################
@@ -263,7 +262,7 @@ ut: run-k8s-controller build $(BIN)/host-local
 	-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 	$(CALICO_BUILD) sh -c '\
 			cd  /go/src/$(PACKAGE_NAME) && \
-			ginkgo -cover -r -skipPackage vendor -skipPackage k8s-install -focus "$(GINKGO_FOCUS)"'
+			ginkgo -cover -r -skipPackage vendor -skipPackage k8s-install $(GINKGO_ARGS)'
 	make stop-etcd
 
 ## Run the tests in a container (as root) for different CNI spec versions
@@ -325,7 +324,7 @@ stop-etcd:
 ###############################################################################
 # We pre-build the test binary so that we can run it outside a container and allow it
 # to interact with docker.
-k8s-install/scripts/install_cni.test: vendor
+k8s-install/scripts/install_cni.test: vendor k8s-install/scripts/*.go
 	-mkdir -p .go-pkg-cache
 	docker run --rm \
 	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
