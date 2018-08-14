@@ -30,8 +30,8 @@ type FlowLogDispatcher interface {
 	Dispatch([]*FlowLog) error
 }
 
-// cloudWatchReporter implements the MetricsReporter interface.
-type cloudWatchReporter struct {
+// flowLogsReporter implements the MetricsReporter interface.
+type flowLogsReporter struct {
 	dispatcher    FlowLogDispatcher
 	aggregators   []FlowLogAggregator
 	flushInterval time.Duration
@@ -49,13 +49,13 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-// NewCloudWatchReporter constructs a FlowLogs MetricsReporter using
-// a cloudwatch dispatcher and aggregator.
-func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *cloudWatchReporter {
+// NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
+// a dispatcher and aggregator.
+func NewFlowLogsReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *flowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
-	return &cloudWatchReporter{
+	return &flowLogsReporter{
 		dispatcher:       dispatcher,
 		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
 		flushInterval:    flushInterval,
@@ -65,16 +65,16 @@ func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Dura
 	}
 }
 
-func (c *cloudWatchReporter) AddAggregator(agg FlowLogAggregator) {
+func (c *flowLogsReporter) AddAggregator(agg FlowLogAggregator) {
 	c.aggregators = append(c.aggregators, agg)
 }
 
-func (c *cloudWatchReporter) Start() {
+func (c *flowLogsReporter) Start() {
 	log.Info("Starting CloudWatchReporter")
 	go c.run()
 }
 
-func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
+func (c *flowLogsReporter) Report(mu MetricUpdate) error {
 	if !c.hepEnabled {
 		if mu.srcEp != nil && mu.srcEp.IsHostEndpoint() {
 			mu.srcEp = nil
@@ -89,7 +89,7 @@ func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
 	return nil
 }
 
-func (c *cloudWatchReporter) run() {
+func (c *flowLogsReporter) run() {
 	healthTicks := time.NewTicker(healthInterval)
 	defer healthTicks.Stop()
 	c.reportHealth()
@@ -113,7 +113,7 @@ func (c *cloudWatchReporter) run() {
 	}
 }
 
-func (c *cloudWatchReporter) canPublishFlowLogs() bool {
+func (c *flowLogsReporter) canPublishFlowLogs() bool {
 	err := c.dispatcher.Initialize()
 	if err != nil {
 		log.WithError(err).Error("Error when verifying/creating CloudWatch resources.")
@@ -122,7 +122,7 @@ func (c *cloudWatchReporter) canPublishFlowLogs() bool {
 	return true
 }
 
-func (c *cloudWatchReporter) reportHealth() {
+func (c *flowLogsReporter) reportHealth() {
 	readiness := c.canPublishFlowLogs()
 	if c.healthAggregator != nil {
 		c.healthAggregator.Report(healthName, &health.HealthReport{

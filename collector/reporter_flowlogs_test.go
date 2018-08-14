@@ -30,9 +30,9 @@ var (
 	pubMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "pub", Labels: "-"}
 )
 
-var _ = Describe("CloudWatch Reporter verification", func() {
+var _ = Describe("FlowLog Reporter verification", func() {
 	var (
-		cr *cloudWatchReporter
+		cr *flowLogsReporter
 		cd FlowLogDispatcher
 		ca FlowLogAggregator
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
@@ -77,7 +77,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewCloudWatchAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, nil, false)
+			cr = NewFlowLogsReporter(cd, flushInterval, nil, false)
 			cr.AddAggregator(ca)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
@@ -234,7 +234,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			ca = NewCloudWatchAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, nil, true)
+			cr = NewFlowLogsReporter(cd, flushInterval, nil, true)
 			cr.AddAggregator(ca)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
@@ -262,7 +262,7 @@ var _ = Describe("CloudWatch Reporter verification", func() {
 
 var _ = Describe("CloudWatch Reporter health verification", func() {
 	var (
-		cr *cloudWatchReporter
+		cr *flowLogsReporter
 		cd FlowLogDispatcher
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
 		hr *health.HealthAggregator
@@ -274,7 +274,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, hr, false)
+			cr = NewFlowLogsReporter(cd, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -289,7 +289,7 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = &timingoutCWFLMockClient{timeout: time.Second}
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			cr = NewCloudWatchReporter(cd, flushInterval, hr, false)
+			cr = NewFlowLogsReporter(cd, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
