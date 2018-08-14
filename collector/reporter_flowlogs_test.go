@@ -30,6 +30,8 @@ var (
 	pubMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet, Namespace: "-", Name: "pub", Labels: "-"}
 )
 
+const CWDispatcher = "cloudwatch"
+
 var _ = Describe("FlowLog Reporter verification", func() {
 	var (
 		cr *flowLogsReporter
@@ -76,9 +78,10 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		BeforeEach(func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
-			ca = NewCloudWatchAggregator()
-			cr = NewFlowLogsReporter(cd, flushInterval, nil, false)
-			cr.AddAggregator(ca)
+			ca = NewFlowLogAggregator()
+			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			cr = NewFlowLogsReporter(ds, flushInterval, nil, false)
+			cr.AddAggregator(ca, []string{CWDispatcher})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -233,9 +236,10 @@ var _ = Describe("FlowLog Reporter verification", func() {
 		BeforeEach(func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
-			ca = NewCloudWatchAggregator()
-			cr = NewFlowLogsReporter(cd, flushInterval, nil, true)
-			cr.AddAggregator(ca)
+			ca = NewFlowLogAggregator()
+			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			cr = NewFlowLogsReporter(ds, flushInterval, nil, true)
+			cr.AddAggregator(ca, []string{CWDispatcher})
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -274,7 +278,8 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = testutil.NewMockedCloudWatchLogsClient(logGroupName)
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			cr = NewFlowLogsReporter(cd, flushInterval, hr, false)
+			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			cr = NewFlowLogsReporter(ds, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})
@@ -289,7 +294,8 @@ var _ = Describe("CloudWatch Reporter health verification", func() {
 			cl = &timingoutCWFLMockClient{timeout: time.Second}
 			cd = NewCloudWatchDispatcher(logGroupName, logStreamName, 7, cl)
 			hr = health.NewHealthAggregator()
-			cr = NewFlowLogsReporter(cd, flushInterval, hr, false)
+			ds := map[string]FlowLogDispatcher{CWDispatcher: cd}
+			cr = NewFlowLogsReporter(ds, flushInterval, hr, false)
 			cr.timeNowFn = mt.getMockTime
 			cr.Start()
 		})

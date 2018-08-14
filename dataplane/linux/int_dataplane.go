@@ -53,6 +53,8 @@ const (
 
 	// Interface name used by kube-proxy to bind service ips.
 	KubeIPVSInterface = "kube-ipvs0"
+
+	CloudWatchLogsDispatcherName = "cloudwatch"
 )
 
 var (
@@ -601,20 +603,21 @@ func (d *InternalDataplane) Start() {
 			cwl = testutil.NewDebugCloudWatchLogsFile(logGroupName, d.config.DebugCloudWatchLogsFile)
 		}
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, cwl)
-		cw := collector.NewFlowLogsReporter(cwd, d.config.CloudWatchLogsFlushInterval, d.config.HealthAggregator, d.config.CloudWatchLogsEnableHostEndpoint)
+		dispatchers := map[string]collector.FlowLogDispatcher{CloudWatchLogsDispatcherName: cwd}
+		cw := collector.NewFlowLogsReporter(dispatchers, d.config.CloudWatchLogsFlushInterval, d.config.HealthAggregator, d.config.CloudWatchLogsEnableHostEndpoint)
 		if d.config.CloudWatchLogsEnabledForAllowed {
-			caa := collector.NewCloudWatchAggregator().
+			caa := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).
 				IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
 				ForAction(rules.RuleActionAllow)
-			cw.AddAggregator(caa)
+			cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName})
 		}
 		if d.config.CloudWatchLogsEnabledForDenied {
-			cad := collector.NewCloudWatchAggregator().
+			cad := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForDenied)).
 				IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
 				ForAction(rules.RuleActionDeny)
-			cw.AddAggregator(cad)
+			cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName})
 		}
 		rm.RegisterMetricsReporter(cw)
 	}

@@ -5,6 +5,8 @@ package collector
 import (
 	"time"
 
+	"fmt"
+
 	"github.com/gavv/monotime"
 	log "github.com/sirupsen/logrus"
 
@@ -30,10 +32,15 @@ type FlowLogDispatcher interface {
 	Dispatch([]*FlowLog) error
 }
 
+type aggregatorRef struct {
+	a FlowLogAggregator
+	d []FlowLogDispatcher
+}
+
 // flowLogsReporter implements the MetricsReporter interface.
 type flowLogsReporter struct {
-	dispatcher    FlowLogDispatcher
-	aggregators   []FlowLogAggregator
+	dispatchers   map[string]FlowLogDispatcher
+	aggregators   []aggregatorRef
 	flushInterval time.Duration
 	flushTicker   *jitter.Ticker
 	hepEnabled    bool
@@ -51,12 +58,12 @@ const (
 
 // NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
 // a dispatcher and aggregator.
-func NewFlowLogsReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *flowLogsReporter {
+func NewFlowLogsReporter(dispatchers map[string]FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *flowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
 	return &flowLogsReporter{
-		dispatcher:       dispatcher,
+		dispatchers:      dispatchers,
 		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
 		flushInterval:    flushInterval,
 		timeNowFn:        monotime.Now,
@@ -65,8 +72,18 @@ func NewFlowLogsReporter(dispatcher FlowLogDispatcher, flushInterval time.Durati
 	}
 }
 
-func (c *flowLogsReporter) AddAggregator(agg FlowLogAggregator) {
-	c.aggregators = append(c.aggregators, agg)
+func (c *flowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []string) {
+	var ref aggregatorRef
+	ref.a = agg
+	for _, d := range dispatchers {
+		dis, ok := c.dispatchers[d]
+		if !ok {
+			// This is a code error and is unrecoverable.
+			log.Panic(fmt.Sprintf("unknown dispatcher \"%s\"", d))
+		}
+		ref.d = append(ref.d, dis)
+	}
+	c.aggregators = append(c.aggregators, ref)
 }
 
 func (c *flowLogsReporter) Start() {
@@ -84,7 +101,7 @@ func (c *flowLogsReporter) Report(mu MetricUpdate) error {
 		}
 	}
 	for _, agg := range c.aggregators {
-		agg.FeedUpdate(mu)
+		agg.a.FeedUpdate(mu)
 	}
 	return nil
 }
@@ -100,10 +117,15 @@ func (c *flowLogsReporter) run() {
 			// Fetch from different aggregators and then dispatch them to wherever
 			// the flow logs need to end up.
 			for _, agg := range c.aggregators {
-				fl := agg.Get()
+				fl := agg.a.Get()
 				if len(fl) > 0 {
-					log.Debugf("Dispatching log buffer of size: %d", len(fl))
-					c.dispatcher.Dispatch(fl)
+					for _, d := range agg.d {
+						log.WithFields(log.Fields{
+							"size":       len(fl),
+							"dispatcher": d,
+						}).Debug("Dispatching log buffer")
+						d.Dispatch(fl)
+					}
 				}
 			}
 		case <-healthTicks.C:
@@ -114,10 +136,15 @@ func (c *flowLogsReporter) run() {
 }
 
 func (c *flowLogsReporter) canPublishFlowLogs() bool {
-	err := c.dispatcher.Initialize()
-	if err != nil {
-		log.WithError(err).Error("Error when verifying/creating CloudWatch resources.")
-		return false
+	for name, d := range c.dispatchers {
+		err := d.Initialize()
+		if err != nil {
+			log.
+				WithError(err).
+				WithField("name", name).
+				Error("dispatcher unable to initialize")
+			return false
+		}
 	}
 	return true
 }
