@@ -606,6 +606,15 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(numorstring.Port)
 		**out = **in
 	}
+	if in.ExternalNodesCIDRList != nil {
+		in, out := &in.ExternalNodesCIDRList, &out.ExternalNodesCIDRList
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
+		}
+	}
 	if in.PrometheusReporterEnabled != nil {
 		in, out := &in.PrometheusReporterEnabled, &out.PrometheusReporterEnabled
 		*out = new(bool)

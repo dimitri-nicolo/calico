@@ -13,7 +13,17 @@ import:
 - package: github.com/coreos/go-semver
   subpackages:
   - semver
+# OpenAPI doesn't pin its dependencies but it does provide versions.
 - package: github.com/go-openapi/spec
+  version: 0.16.0
+- package: github.com/go-openapi/swag
+  version: 0.16.0
+- package: github.com/go-openapi/runtime
+  version: 0.16.0
+# OpenAPI pulls in easyjson, this version is consistent with the above pins.
+# It seems to get pinned to an older incompatible version if left to float.
+- package: github.com/mailru/easyjson
+  version: 03f2033d19d5860aef995fe360ac7d395cd8ce65
 - package: github.com/kelseyhightower/envconfig
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
