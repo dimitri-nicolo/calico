@@ -11,9 +11,12 @@ import (
 )
 
 type SwaggerDoc struct {
-	Version string                 `json:"swagger"`
-	Info    SwaggerDocInfo         `json:"info"`
-	Paths   map[string]interface{} `json:"paths"`
+	Version     string                 `json:"swagger"`
+	Info        SwaggerDocInfo         `json:"info"`
+	Host        string                 `json:"host"`
+	BasePath    string                 `json:"basePath"`
+	Paths       map[string]interface{} `json:"paths"`
+	Definitions map[string]interface{} `json:"definitions"`
 }
 
 type SwaggerDocInfo struct {
@@ -73,6 +76,22 @@ func main() {
 		fmt.Printf("Failed at Marshalling: %s\n", err)
 		os.Exit(1)
 	}
+
+	// Modify the swaggerDoc for better rendering
+	// 1. Remove the "/apis/projectcalico.org/v3" as the prefix from the paths
+	//    Include that in the basePath instead.
+	// 2. Remove the tag "projectcalicoOrg_v3". To remove the tag from rendering.
+	//    Its redunant info.
+	newSwaggerDoc := &SwaggerDoc{}
+	calicoSwagger = []byte(strings.Replace(string(calicoSwagger), "/apis/projectcalico.org/v3", "", -1))
+	calicoSwagger = []byte(strings.Replace(string(calicoSwagger), "\"projectcalicoOrg_v3\"", "\"\"", -1))
+
+	err = json.Unmarshal(calicoSwagger, newSwaggerDoc)
+	newSwaggerDoc.BasePath = "/apis/projectcalico.org/v3"
+	newSwaggerDoc.Host = "https://kubernetes-master"
+	newSwaggerDoc.Info.Title = ""
+	newSwaggerDoc.Info.Version = "v3"
+	calicoSwagger, err = json.MarshalIndent(newSwaggerDoc, "", "  ")
 
 	mode := int(0644)
 	err = ioutil.WriteFile(args[1], calicoSwagger, os.FileMode(mode))
