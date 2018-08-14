@@ -3,8 +3,6 @@
 package collector
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -98,9 +96,8 @@ var (
 
 var _ = Describe("Flow log types tests", func() {
 	var flowMeta, expectedFlowMeta FlowMeta
-	var flowStats FlowStats
-	var flowLog, expectedFlowLog string
 	var err error
+
 	Context("FlowMeta construction from MetricUpdate", func() {
 		It("generates the correct FlowMeta", func() {
 			By("aggregating on duration")
@@ -362,66 +359,6 @@ var _ = Describe("Flow log types tests", func() {
 				Reporter: "dst",
 			}
 			Expect(flowMeta).Should(Equal(expectedFlowMeta))
-		})
-	})
-
-	Context("FlowLog Serialization", func() {
-		It("generates the correct FlowLog string", func() {
-			flowStats = FlowStats{}
-			startTime := time.Date(2017, 11, 17, 20, 1, 0, 0, time.UTC)
-			endTime := time.Date(2017, 11, 17, 20, 2, 0, 0, time.UTC)
-
-			By("skipping aggergation")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, Default)
-			Expect(err).To(BeNil())
-			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 - wep default nginx-412354-5123451 - 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
-			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, true)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 {\"test-app\":\"true\"} wep default nginx-412354-5123451 {\"k8s-app\":\"true\"} 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
-			By("aggregating on source port")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, SourcePort)
-			Expect(err).To(BeNil())
-			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 - wep default nginx-412354-5123451 - 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
-			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, true)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 {\"test-app\":\"true\"} wep default nginx-412354-5123451 {\"k8s-app\":\"true\"} 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
-			By("aggregating on prefix name")
-			flowMeta, err = NewFlowMeta(muWithEndpointMeta, PrefixName)
-			Expect(err).To(BeNil())
-			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - wep default nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
-			flowMeta, err = NewFlowMeta(muWithoutSrcEndpointMeta, PrefixName)
-			Expect(err).To(BeNil())
-			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 net - pvt - wep default nginx-412354-* - - - 6 - 80 0 0 0 dst 0 0 0 0 allow"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
-			muWithoutPublicDstEndpointMeta := muWithoutDstEndpointMeta
-			muWithoutPublicDstEndpointMeta.tuple.dst = ipStrTo16Byte("198.17.8.43")
-			flowMeta, err = NewFlowMeta(muWithoutPublicDstEndpointMeta, PrefixName)
-			Expect(err).To(BeNil())
-			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - net - pub - - - 6 - 80 0 0 0 dst 0 0 0 0 allow"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
-			muWithoutAWSMetaDstEndpointMeta := muWithoutDstEndpointMeta
-			muWithoutAWSMetaDstEndpointMeta.tuple.dst = ipStrTo16Byte("169.254.169.254")
-			flowMeta, err = NewFlowMeta(muWithoutAWSMetaDstEndpointMeta, PrefixName)
-			Expect(err).To(BeNil())
-			flowLog = FlowLog{flowMeta, flowStats}.Serialize(startTime, endTime, false)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-* - net - aws - - - 6 - 80 0 0 0 dst 0 0 0 0 allow"
-			Expect(flowLog).Should(Equal(expectedFlowLog))
-
 		})
 	})
 

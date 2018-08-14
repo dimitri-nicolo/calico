@@ -134,13 +134,23 @@ func NewFlowMeta(mu MetricUpdate, kind AggregationKind) (FlowMeta, error) {
 
 // FlowStats captures stats associated with a given FlowMeta
 type FlowStats struct {
-	PacketsIn          int `json:"packetsIn"`
-	PacketsOut         int `json:"packetsOut"`
-	BytesIn            int `json:"bytesIn"`
-	BytesOut           int `json:"bytesOut"`
-	NumFlows           int `json:"numFlows"`
-	NumFlowsStarted    int `json:"numFlowsStarted"`
-	NumFlowsCompleted  int `json:"numFlowsCompleted"`
+	FlowReportedStats
+	flowReferences
+}
+
+// FlowReportedStats are the statistics we actually report out in flow logs.
+type FlowReportedStats struct {
+	PacketsIn         int `json:"packetsIn"`
+	PacketsOut        int `json:"packetsOut"`
+	BytesIn           int `json:"bytesIn"`
+	BytesOut          int `json:"bytesOut"`
+	NumFlows          int `json:"numFlows"`
+	NumFlowsStarted   int `json:"numFlowsStarted"`
+	NumFlowsCompleted int `json:"numFlowsCompleted"`
+}
+
+// flowReferences are internal only stats used for computing numbers of flows
+type flowReferences struct {
 	flowsRefs          tupleSet
 	flowsStartedRefs   tupleSet
 	flowsCompletedRefs tupleSet
@@ -163,21 +173,25 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	}
 
 	return FlowStats{
-		NumFlows:          flowsRefs.Len(),
-		NumFlowsStarted:   flowsStartedRefs.Len(),
-		NumFlowsCompleted: flowsCompletedRefs.Len(),
-		PacketsIn:         mu.inMetric.deltaPackets,
-		BytesIn:           mu.inMetric.deltaBytes,
-		PacketsOut:        mu.outMetric.deltaPackets,
-		BytesOut:          mu.outMetric.deltaBytes,
-		// flowsRefs track the flows that were tracked
-		// in the give interval
-		flowsRefs:          flowsRefs,
-		flowsStartedRefs:   flowsStartedRefs,
-		flowsCompletedRefs: flowsCompletedRefs,
-		// flowsRefsActive tracks the active (non-completed)
-		// flows associated with the flowMeta
-		flowsRefsActive: flowsRefsActive,
+		FlowReportedStats: FlowReportedStats{
+			NumFlows:          flowsRefs.Len(),
+			NumFlowsStarted:   flowsStartedRefs.Len(),
+			NumFlowsCompleted: flowsCompletedRefs.Len(),
+			PacketsIn:         mu.inMetric.deltaPackets,
+			BytesIn:           mu.inMetric.deltaBytes,
+			PacketsOut:        mu.outMetric.deltaPackets,
+			BytesOut:          mu.outMetric.deltaBytes,
+		},
+		flowReferences: flowReferences{
+			// flowsRefs track the flows that were tracked
+			// in the give interval
+			flowsRefs:          flowsRefs,
+			flowsStartedRefs:   flowsStartedRefs,
+			flowsCompletedRefs: flowsCompletedRefs,
+			// flowsRefsActive tracks the active (non-completed)
+			// flows associated with the flowMeta
+			flowsRefsActive: flowsRefsActive,
+		},
 	}
 }
 
@@ -207,7 +221,7 @@ func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 }
 
 // FlowStats are stats assocated with a given FlowMeta
-// These stats are to be refreshed everytime the FlowLog
+// These stats are to be refreshed everytime the FlowData
 // {FlowMeta->FlowStats} is published so as to account
 // for correct no. of started flows in a given aggregation
 // interval.
@@ -227,32 +241,35 @@ func (f FlowStats) getActiveFlowsCount() int {
 	return len(f.flowsRefsActive)
 }
 
-type FlowLog struct {
+// FlowData is metadata and stats about a flow (or aggregated group of flows).
+// This is an internal structure for book keeping; FlowLog is what actually gets
+// passed to dispatchers or serialized.
+type FlowData struct {
 	FlowMeta
 	FlowStats
 }
 
-func (f FlowLog) Serialize(startTime, endTime time.Time, includeLabels bool) string {
-	var srcLabels, dstLabels string
+// FlowLog is a record of flow data (metadata & reported stats) including
+// timestamps. A FlowLog is ready to be serialized to an output format.
+type FlowLog struct {
+	StartTime, EndTime time.Time
+	FlowMeta
+	FlowReportedStats
+}
 
-	if includeLabels {
-		srcLabels = f.SrcMeta.Labels
-		dstLabels = f.DstMeta.Labels
-	} else {
-		srcLabels = flowLogFieldNotIncluded
-		dstLabels = flowLogFieldNotIncluded
+// ToFlowLog converts a FlowData to a FlowLog
+func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool) FlowLog {
+	var fl FlowLog
+	fl.FlowMeta = f.FlowMeta
+	fl.FlowReportedStats = f.FlowReportedStats
+	fl.StartTime = startTime
+	fl.EndTime = endTime
+
+	if !includeLabels {
+		fl.SrcMeta.Labels = flowLogFieldNotIncluded
+		fl.DstMeta.Labels = flowLogFieldNotIncluded
 	}
-
-	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(f.Tuple)
-
-	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
-		startTime.Unix(), endTime.Unix(),
-		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, srcLabels,
-		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, dstLabels,
-		srcIP, dstIP, proto, l4Src, l4Dst,
-		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Reporter,
-		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
-		f.Action)
+	return fl
 }
 
 func (f *FlowLog) Deserialize(fl string) error {
@@ -281,7 +298,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		srcType = FlowLogEndpointTypeNet
 	}
 
-	srcMeta := EndpointMetadata{
+	f.SrcMeta = EndpointMetadata{
 		Type:      srcType,
 		Namespace: parts[3],
 		Name:      parts[4],
@@ -299,7 +316,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		dstType = FlowLogEndpointTypeNet
 	}
 
-	dstMeta := EndpointMetadata{
+	f.DstMeta = EndpointMetadata{
 		Type:      dstType,
 		Namespace: parts[7],
 		Name:      parts[8],
@@ -316,50 +333,29 @@ func (f *FlowLog) Deserialize(fl string) error {
 	p, _ := strconv.Atoi(parts[12])
 	sp, _ := strconv.Atoi(parts[13])
 	dp, _ := strconv.Atoi(parts[14])
-	tuple := *NewTuple(sip, dip, p, sp, dp)
+	f.Tuple = *NewTuple(sip, dip, p, sp, dp)
 
-	nf, _ := strconv.Atoi(parts[15])
-	nfs, _ := strconv.Atoi(parts[16])
-	nfc, _ := strconv.Atoi(parts[17])
+	f.NumFlows, _ = strconv.Atoi(parts[15])
+	f.NumFlowsStarted, _ = strconv.Atoi(parts[16])
+	f.NumFlowsCompleted, _ = strconv.Atoi(parts[17])
 
-	var fr FlowLogReporter
 	switch parts[18] {
 	case "src":
-		fr = FlowLogReporterSrc
+		f.Reporter = FlowLogReporterSrc
 	case "dst":
-		fr = FlowLogReporterDst
+		f.Reporter = FlowLogReporterDst
 	}
 
-	pi, _ := strconv.Atoi(parts[19])
-	po, _ := strconv.Atoi(parts[20])
-	bi, _ := strconv.Atoi(parts[21])
-	bo, _ := strconv.Atoi(parts[22])
+	f.PacketsIn, _ = strconv.Atoi(parts[19])
+	f.PacketsOut, _ = strconv.Atoi(parts[20])
+	f.BytesIn, _ = strconv.Atoi(parts[21])
+	f.BytesOut, _ = strconv.Atoi(parts[22])
 
-	var a FlowLogAction
 	switch parts[23] {
 	case "allow":
-		a = FlowLogActionAllow
+		f.Action = FlowLogActionAllow
 	case "deny":
-		a = FlowLogActionDeny
-	}
-
-	*f = FlowLog{
-		FlowMeta{
-			Tuple:    tuple,
-			SrcMeta:  srcMeta,
-			DstMeta:  dstMeta,
-			Action:   a,
-			Reporter: fr,
-		},
-		FlowStats{
-			NumFlows:          nf,
-			NumFlowsStarted:   nfs,
-			NumFlowsCompleted: nfc,
-			PacketsIn:         pi,
-			PacketsOut:        po,
-			BytesIn:           bi,
-			BytesOut:          bo,
-		},
+		f.Action = FlowLogActionDeny
 	}
 
 	return nil

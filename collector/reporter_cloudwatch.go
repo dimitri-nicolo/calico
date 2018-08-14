@@ -14,7 +14,7 @@ import (
 )
 
 type FlowLogGetter interface {
-	Get() []*string
+	Get() []*FlowLog
 }
 
 type FlowLogAggregator interface {
@@ -27,7 +27,7 @@ type FlowLogAggregator interface {
 
 type FlowLogDispatcher interface {
 	Initialize() error
-	Dispatch([]*string) error
+	Dispatch([]*FlowLog) error
 }
 
 // cloudWatchReporter implements the MetricsReporter interface.

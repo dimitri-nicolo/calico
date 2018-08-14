@@ -151,13 +151,21 @@ func (c *cloudWatchDispatcher) uploadEventsBatches(eventsBatchChan chan eventsBa
 	return nil
 }
 
-func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
+func (c *cloudWatchDispatcher) Dispatch(inputLogs []*FlowLog) error {
 	// Keep pushing as many required <1MB sized inputLogs batches for putLogEvents.
 	// Refer: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch_limits_cwl.html
 	// eventsBatchChan with buffer in case of throttling.
 	eventsBatchChan := make(chan eventsBatch, eventsBatchBufferSize)
+
+	// Serialize the logs
+	strBatch := make([]*string, len(inputLogs))
+	for idx, f := range inputLogs {
+		s := serializeCloudWatchFlowLog(f)
+		strBatch[idx] = &s
+	}
+
 	b := newCloudWatchEventsBatcher(eventsBatchSize, eventsBatchChan)
-	go b.batch(inputLogs)
+	go b.batch(strBatch)
 
 	// Concurrently start uploading the batched events
 	err := c.uploadEventsBatches(eventsBatchChan)
@@ -166,6 +174,20 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*string) error {
 	}
 
 	return nil
+}
+
+// serializeCloudWatchFlowLog converts FlowLog to a string in our CloudWatch format
+func serializeCloudWatchFlowLog(f *FlowLog) string {
+	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(f.Tuple)
+
+	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
+		f.StartTime.Unix(), f.EndTime.Unix(),
+		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, f.SrcMeta.Labels,
+		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, f.DstMeta.Labels,
+		srcIP, dstIP, proto, l4Src, l4Dst,
+		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Reporter,
+		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
+		f.Action)
 }
 
 func (c *cloudWatchDispatcher) Initialize() error {
