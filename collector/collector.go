@@ -363,12 +363,12 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 				if ruleID.IsNoMatchRule() && ruleID.Action == rules.RuleActionDeny {
 					switch ruleID.Direction {
 					case rules.RuleDirIngress:
-						implicitDropRid, ok := localEp.TieredImplicitDropIngressRuleID[ruleID.Tier]
+						implicitDropRid, ok := localEp.ImplicitDropIngressRuleID[ruleID.Tier]
 						if ok {
 							rid = implicitDropRid
 						}
 					case rules.RuleDirEgress:
-						implicitDropRid, ok := localEp.TieredImplicitDropEgressRuleID[ruleID.Tier]
+						implicitDropRid, ok := localEp.ImplicitDropEgressRuleID[ruleID.Tier]
 						if ok {
 							rid = implicitDropRid
 						}

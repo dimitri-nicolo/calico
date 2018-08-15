@@ -22,8 +22,8 @@ type EndpointData struct {
 	Endpoint     interface{}
 	OrderedTiers []string
 
-	TieredImplicitDropIngressRuleID map[string]*RuleID
-	TieredImplicitDropEgressRuleID  map[string]*RuleID
+	ImplicitDropIngressRuleID map[string]*RuleID
+	ImplicitDropEgressRuleID  map[string]*RuleID
 }
 
 // IsLocal returns if this EndpointData corresponds to a local endpoint or not.
@@ -78,33 +78,49 @@ func (ec *EndpointLookupsCache) RegisterWith(remoteEndpointDispatcher *dispatche
 // handler (below) is this method records tier information for local endpoints while this information
 // is ignored for remote endpoints.
 func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface{}, filteredTiers []tierInfo) {
+	createEndpointData := func() *EndpointData {
+		ed := &EndpointData{
+			Key:                       key,
+			Endpoint:                  ep,
+			OrderedTiers:              make([]string, len(filteredTiers)),
+			ImplicitDropIngressRuleID: map[string]*RuleID{},
+			ImplicitDropEgressRuleID:  map[string]*RuleID{},
+		}
+		for i := range filteredTiers {
+			ti := filteredTiers[i]
+			ed.OrderedTiers[i] = ti.Name
+			if len(ti.OrderedPolicies) == 0 {
+				continue
+			}
+			var ingressAssigned, egressAssigned bool
+			for j := len(ti.OrderedPolicies) - 1; j >= 0; j-- {
+				pol := ti.OrderedPolicies[j]
+				namespace, tier, name, err := deconstructPolicyName(pol.Key.Name)
+				if err != nil {
+					log.WithError(err).Error("Unable to parse policy name")
+					continue
+				}
+				if pol.GovernsIngress() && !ingressAssigned {
+					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop, rules.RuleDirIngress, rules.RuleActionDeny)
+					ed.ImplicitDropIngressRuleID[ti.Name] = rid
+					ingressAssigned = true
+				}
+				if pol.GovernsEgress() && !egressAssigned {
+					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop, rules.RuleDirEgress, rules.RuleActionDeny)
+					ed.ImplicitDropEgressRuleID[ti.Name] = rid
+					egressAssigned = true
+				}
+			}
+		}
+		return ed
+	}
 	switch k := key.(type) {
 	case model.WorkloadEndpointKey:
 		if ep == nil {
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := ep.(*model.WorkloadEndpoint)
-			ed := &EndpointData{
-				Key:                             k,
-				Endpoint:                        ep,
-				OrderedTiers:                    make([]string, len(filteredTiers)),
-				TieredImplicitDropIngressRuleID: map[string]*RuleID{},
-				TieredImplicitDropEgressRuleID:  map[string]*RuleID{},
-			}
-			for i := range filteredTiers {
-				ti := filteredTiers[i]
-				ed.OrderedTiers[i] = ti.Name
-				if len(ti.OrderedPolicies) == 0 {
-					ed.TieredImplicitDropIngressRuleID[ti.Name] = nil
-					ed.TieredImplicitDropEgressRuleID[ti.Name] = nil
-					continue
-				}
-				pol := ti.OrderedPolicies[len(ti.OrderedPolicies)-1]
-				rid := NewRuleID(ti.Name, pol.Key.Name, pol.Value.Namespace, RuleIDIndexImplicitDrop, rules.RuleDirIngress, rules.RuleActionDeny)
-				ed.TieredImplicitDropIngressRuleID[ti.Name] = rid
-				rid = NewRuleID(ti.Name, pol.Key.Name, pol.Value.Namespace, RuleIDIndexImplicitDrop, rules.RuleDirEgress, rules.RuleActionDeny)
-				ed.TieredImplicitDropEgressRuleID[ti.Name] = rid
-			}
+			ed := createEndpointData()
 			ec.addOrUpdateEndpoint(k, ed, extractIPsFromWorkloadEndpoint(endpoint))
 		}
 	case model.HostEndpointKey:
@@ -112,27 +128,7 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := ep.(*model.HostEndpoint)
-			ed := &EndpointData{
-				Key:                             k,
-				Endpoint:                        ep,
-				OrderedTiers:                    make([]string, len(filteredTiers)),
-				TieredImplicitDropIngressRuleID: map[string]*RuleID{},
-				TieredImplicitDropEgressRuleID:  map[string]*RuleID{},
-			}
-			for i := range filteredTiers {
-				ti := filteredTiers[i]
-				ed.OrderedTiers[i] = ti.Name
-				if len(ti.OrderedPolicies) == 0 {
-					ed.TieredImplicitDropIngressRuleID[ti.Name] = nil
-					ed.TieredImplicitDropEgressRuleID[ti.Name] = nil
-					continue
-				}
-				pol := ti.OrderedPolicies[len(ti.OrderedPolicies)-1]
-				rid := NewRuleID(ti.Name, pol.Key.Name, pol.Value.Namespace, RuleIDIndexImplicitDrop, rules.RuleDirIngress, rules.RuleActionDeny)
-				ed.TieredImplicitDropIngressRuleID[ti.Name] = rid
-				rid = NewRuleID(ti.Name, pol.Key.Name, pol.Value.Namespace, RuleIDIndexImplicitDrop, rules.RuleDirEgress, rules.RuleActionDeny)
-				ed.TieredImplicitDropEgressRuleID[ti.Name] = rid
-			}
+			ed := createEndpointData()
 			ec.addOrUpdateEndpoint(k, ed, extractIPsFromHostEndpoint(endpoint))
 		}
 	}
