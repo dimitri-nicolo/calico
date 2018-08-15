@@ -97,7 +97,7 @@ func GetCNXConnectionMetricsIntForPolicy(felixIP, tierName, policyName, trafficD
 		"policy":           policyName,
 		"trafficDirection": trafficDirection,
 		"sum":              sum,
-	}).Info("GetCNXConnectionMetricsIntForPolicy")
+	}).Debug("cnx_policy_rule_connections")
 	return
 }
 
