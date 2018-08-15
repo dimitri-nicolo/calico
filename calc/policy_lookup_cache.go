@@ -177,7 +177,7 @@ func (pc *PolicyLookupsCache) updateRulesNFLOGPrefixes(
 		case "deny":
 			return rules.RuleActionDeny
 		case "pass", "next-tier":
-			return rules.RuleActionNextTier
+			return rules.RuleActionPass
 		}
 		return rules.RuleActionDeny
 	}
@@ -345,7 +345,7 @@ func (r *RuleID) ActionString() string {
 		return ActionDenyStr
 	case rules.RuleActionAllow:
 		return ActionAllowStr
-	case rules.RuleActionNextTier:
+	case rules.RuleActionPass:
 		return ActionNextTierStr
 	}
 	return ""

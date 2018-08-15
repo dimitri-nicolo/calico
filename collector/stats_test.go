@@ -55,7 +55,7 @@ var (
 		Direction: rules.RuleDirIngress,
 	}
 	nextTierIngressRid0 = &calc.RuleID{
-		Action:    rules.RuleActionNextTier,
+		Action:    rules.RuleActionPass,
 		Index:     3,
 		IndexStr:  "3",
 		Name:      "P1",
@@ -63,7 +63,7 @@ var (
 		Direction: rules.RuleDirIngress,
 	}
 	nextTierIngressRid1 = &calc.RuleID{
-		Action:    rules.RuleActionNextTier,
+		Action:    rules.RuleActionPass,
 		Index:     4,
 		IndexStr:  "4",
 		Name:      "P2",
@@ -88,7 +88,7 @@ var (
 	}
 
 	nextTierEgressRid0 = &calc.RuleID{
-		Action:    rules.RuleActionNextTier,
+		Action:    rules.RuleActionPass,
 		Index:     2,
 		IndexStr:  "2",
 		Name:      "P4",
@@ -252,7 +252,7 @@ var _ = Describe("Rule Trace", func() {
 			It("should have not have action set", func() {
 				Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionAllow))
 				Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionDeny))
-				//Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionNextTier))
+				//Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionPass))
 			})
 		})
 		Context("Replacing a rule tracepoint that was conflicting", func() {

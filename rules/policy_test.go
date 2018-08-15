@@ -246,7 +246,7 @@ var _ = Describe("Protobuf rule to iptables rule conversion", func() {
 					Match: iptables.Match().MarkSingleBitSet(0x100),
 					Action: iptables.NflogAction{
 						Group:  1,
-						Prefix: "NPI0|default.foo",
+						Prefix: "PPI0|default.foo",
 					},
 				}))
 				Expect(rules[2]).To(Equal(iptables.Rule{
