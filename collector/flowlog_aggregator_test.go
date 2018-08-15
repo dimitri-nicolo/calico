@@ -49,11 +49,14 @@ var (
 
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
-	expectFlowLog := func(msg string, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata) {
-		fl, err := getFlowLog(msg)
-		Expect(err).To(BeNil())
+	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata) {
 		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm)
-		Expect(fl).Should(Equal(expectedFlow))
+
+		// We don't include the start and end time in the comparison, so copy to a new log without these
+		var flNoTime FlowLog
+		flNoTime.FlowMeta = fl.FlowMeta
+		flNoTime.FlowReportedStats = fl.FlowReportedStats
+		Expect(flNoTime).Should(Equal(expectedFlow))
 	}
 	calculatePacketStats := func(mus ...MetricUpdate) (epi, epo, ebi, ebo int) {
 		for _, mu := range mus {
@@ -224,13 +227,13 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// Four updates so far should result in 3 flows
 			Expect(len(messages)).Should(Equal(3)) // Metric Update comes in with a non private as the dst IP
 
-			// Deserialize the messages and confirm the expected flow metas
+			// Confirm the expected flow metas
 			fm1 := FlowMeta{
 				Tuple: Tuple{
 					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					proto: 6,
-					l4Src: 0,
+					l4Src: unsetIntField,
 					l4Dst: 80,
 				},
 				SrcMeta: EndpointMetadata{
@@ -254,7 +257,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					proto: 6,
-					l4Src: 0,
+					l4Src: unsetIntField,
 					l4Dst: 80,
 				},
 				SrcMeta: EndpointMetadata{
@@ -278,7 +281,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 					src:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					dst:   [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 					proto: 6,
-					l4Src: 0,
+					l4Src: unsetIntField,
 					l4Dst: 80,
 				},
 				SrcMeta: EndpointMetadata{
@@ -298,10 +301,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			}
 
 			flowLogMetas := []FlowMeta{}
-			for _, m := range messages {
-				fl := &FlowLog{}
-				fl.Deserialize(*m)
-
+			for _, fl := range messages {
 				flowLogMetas = append(flowLogMetas, fl.FlowMeta)
 			}
 
@@ -347,8 +347,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages := ca.Get()
 			Expect(len(messages)).Should(Equal(1))
 			// StartedFlowRefs count should be 1
-			flowLog := &FlowLog{}
-			flowLog.Deserialize(*messages[0])
+			flowLog := messages[0]
 			Expect(flowLog.NumFlowsStarted).Should(Equal(1))
 
 			// flowStore is not purged of the entry since the flowRef hasn't been expired
@@ -358,16 +357,14 @@ var _ = Describe("Flow log aggregator tests", func() {
 			ca.FeedUpdate(muNoConn1Rule2DenyUpdate)
 			messages = ca.Get()
 			Expect(len(messages)).Should(Equal(1))
-			flowLog = &FlowLog{}
-			flowLog.Deserialize(*messages[0])
+			flowLog = messages[0]
 			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
 
 			// Feeding an expiration of the conn.
 			ca.FeedUpdate(muNoConn1Rule2DenyExpire)
 			messages = ca.Get()
 			Expect(len(messages)).Should(Equal(1))
-			flowLog = &FlowLog{}
-			flowLog.Deserialize(*messages[0])
+			flowLog = messages[0]
 			Expect(flowLog.NumFlowsCompleted).Should(Equal(1))
 			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
 			Expect(flowLog.NumFlows).Should(Equal(1))
@@ -417,8 +414,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// flowStore is not purged of the entry since the flowRefs havn't been expired
 			Expect(len(ca.flowStore)).Should(Equal(1))
 			// And the no. of Started Flows should be 2
-			flowLog := &FlowLog{}
-			flowLog.Deserialize(*messages[0])
+			flowLog := messages[0]
 			Expect(flowLog.NumFlowsStarted).Should(Equal(2))
 
 			// Update one of the two flows and expire the other.
@@ -429,8 +425,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(1))
 			// flowStore still carries that 1 flowMeta
 			Expect(len(ca.flowStore)).Should(Equal(1))
-			flowLog = &FlowLog{}
-			flowLog.Deserialize(*messages[0])
+			flowLog = messages[0]
 			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
 			Expect(flowLog.NumFlowsCompleted).Should(Equal(1))
 			Expect(flowLog.NumFlows).Should(Equal(2))
@@ -443,8 +438,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// On a dispatch the flowMeta is eventually purged
 			messages = ca.Get()
 			Expect(len(ca.flowStore)).Should(Equal(0))
-			flowLog = &FlowLog{}
-			flowLog.Deserialize(*messages[0])
+			flowLog = messages[0]
 			Expect(flowLog.NumFlowsStarted).Should(Equal(0))
 			Expect(flowLog.NumFlowsCompleted).Should(Equal(1))
 			Expect(flowLog.NumFlows).Should(Equal(1))
@@ -457,8 +451,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages := ca.Get()
 			Expect(len(messages)).Should(Equal(1))
 			// After the initial update the counts as expected.
-			flowLog := &FlowLog{}
-			flowLog.Deserialize(*messages[0])
+			flowLog := messages[0]
 			Expect(flowLog.PacketsIn).Should(Equal(2))
 			Expect(flowLog.BytesIn).Should(Equal(22))
 			Expect(flowLog.PacketsOut).Should(Equal(3))
@@ -470,8 +463,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			messages = ca.Get()
 			Expect(len(messages)).Should(Equal(1))
 			// After the initial update the counts as expected.
-			flowLog = &FlowLog{}
-			flowLog.Deserialize(*messages[0])
+			flowLog = messages[0]
 			Expect(flowLog.PacketsIn).Should(Equal(2))
 			Expect(flowLog.BytesIn).Should(Equal(22))
 			Expect(flowLog.PacketsOut).Should(Equal(3))

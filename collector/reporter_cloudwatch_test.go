@@ -324,14 +324,14 @@ func getFlowLog(fl string) (FlowLog, error) {
 
 func newExpectedFlowLog(t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, srcMeta, dstMeta EndpointMetadata) FlowLog {
 	return FlowLog{
-		FlowMeta{
+		FlowMeta: FlowMeta{
 			Tuple:    t,
 			Action:   a,
 			Reporter: fr,
 			SrcMeta:  srcMeta,
 			DstMeta:  dstMeta,
 		},
-		FlowStats{
+		FlowReportedStats: FlowReportedStats{
 			NumFlows:          nf,
 			NumFlowsStarted:   nfs,
 			NumFlowsCompleted: nfc,

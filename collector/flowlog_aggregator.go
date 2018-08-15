@@ -90,13 +90,13 @@ func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 
 // Get returns all aggregated flow logs, as a list of string pointers, since the last time a Get
 // was called. Calling Get will also clear the stored flow logs once the flow logs are returned.
-func (c *cloudWatchAggregator) Get() []*string {
-	resp := make([]*string, 0, len(c.flowStore))
+func (c *cloudWatchAggregator) Get() []*FlowLog {
+	resp := make([]*FlowLog, 0, len(c.flowStore))
 	aggregationEndTime := time.Now()
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
 	for flowMeta, flowStats := range c.flowStore {
-		flowLog := FlowLog{flowMeta, flowStats}.Serialize(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
+		flowLog := FlowData{flowMeta, flowStats}.ToFlowLog(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
 		resp = append(resp, &flowLog)
 		c.calibrateFlowStore(flowMeta)
 	}
