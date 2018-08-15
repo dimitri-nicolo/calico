@@ -44,7 +44,7 @@ var _ = Describe("NFLOG prefix construction tests", func() {
 			"Short profile name - will not hash",
 			RuleActionPass, RuleOwnerTypeProfile, RuleDirEgress, 999,
 			"short.profile.name",
-			"NRE999|short.profile.name", false,
+			"PRE999|short.profile.name", false,
 		),
 		Entry(
 			"Policy name makes raw prefix 62 bytes - will not hash",
