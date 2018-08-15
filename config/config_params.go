@@ -219,6 +219,17 @@ type Config struct {
 	CloudWatchLogsEnabledForAllowed         bool          `config:"bool;true"`
 	CloudWatchLogsEnabledForDenied          bool          `config:"bool;true"`
 
+	FlowLogsFileEnabled                   bool   `config:"bool;false"`
+	FlowLogsFileDirectory                 string `config:"string;/var/log/calico/flowlogs"`
+	FlowLogsFileMaxFiles                  int    `config:"int;5"`
+	FlowLogsFileMaxFileSizeMB             int    `config:"int;100"`
+	FlowLogsFileAggregationKindForAllowed int    `config:"int(0:2);2"`
+	FlowLogsFileAggregationKindForDenied  int    `config:"int(0:2);1"`
+	FlowLogsFileIncludeLabels             bool   `config:"bool;false"`
+	FlowLogsFileEnableHostEndpoint        bool   `config:"bool;false"`
+	FlowLogsFileEnabledForAllowed         bool   `config:"bool;true"`
+	FlowLogsFileEnabledForDenied          bool   `config:"bool;true"`
+
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
 
@@ -566,6 +577,14 @@ func (config *Config) Validate() (err error) {
 			err = errors.New("CloudWatchLogsReporterEnabled is set to true. " +
 				"Enable at least one of CloudWatchLogsEnabledForAllowed or " +
 				"CloudWatchLogsEnabledForDenied")
+		}
+	}
+
+	if config.FlowLogsFileEnabled {
+		if !config.FlowLogsFileEnabledForAllowed && !config.FlowLogsFileEnabledForDenied {
+			err = errors.New("FlowLogsFileEnabled is set to true. " +
+				"Enable at least one of FlowLogsFileEnabledForAllowed or " +
+				"FlowLogsFileEnabledForDenied")
 		}
 	}
 

@@ -37,8 +37,8 @@ type aggregatorRef struct {
 	d []FlowLogDispatcher
 }
 
-// flowLogsReporter implements the MetricsReporter interface.
-type flowLogsReporter struct {
+// FlowLogsReporter implements the MetricsReporter interface.
+type FlowLogsReporter struct {
 	dispatchers   map[string]FlowLogDispatcher
 	aggregators   []aggregatorRef
 	flushInterval time.Duration
@@ -58,11 +58,11 @@ const (
 
 // NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
 // a dispatcher and aggregator.
-func NewFlowLogsReporter(dispatchers map[string]FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *flowLogsReporter {
+func NewFlowLogsReporter(dispatchers map[string]FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *FlowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
-	return &flowLogsReporter{
+	return &FlowLogsReporter{
 		dispatchers:      dispatchers,
 		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
 		flushInterval:    flushInterval,
@@ -72,7 +72,7 @@ func NewFlowLogsReporter(dispatchers map[string]FlowLogDispatcher, flushInterval
 	}
 }
 
-func (c *flowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []string) {
+func (c *FlowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []string) {
 	var ref aggregatorRef
 	ref.a = agg
 	for _, d := range dispatchers {
@@ -86,12 +86,12 @@ func (c *flowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []st
 	c.aggregators = append(c.aggregators, ref)
 }
 
-func (c *flowLogsReporter) Start() {
+func (c *FlowLogsReporter) Start() {
 	log.Info("Starting CloudWatchReporter")
 	go c.run()
 }
 
-func (c *flowLogsReporter) Report(mu MetricUpdate) error {
+func (c *FlowLogsReporter) Report(mu MetricUpdate) error {
 	if !c.hepEnabled {
 		if mu.srcEp != nil && mu.srcEp.IsHostEndpoint() {
 			mu.srcEp = nil
@@ -106,7 +106,7 @@ func (c *flowLogsReporter) Report(mu MetricUpdate) error {
 	return nil
 }
 
-func (c *flowLogsReporter) run() {
+func (c *FlowLogsReporter) run() {
 	healthTicks := time.NewTicker(healthInterval)
 	defer healthTicks.Stop()
 	c.reportHealth()
@@ -135,7 +135,7 @@ func (c *flowLogsReporter) run() {
 	}
 }
 
-func (c *flowLogsReporter) canPublishFlowLogs() bool {
+func (c *FlowLogsReporter) canPublishFlowLogs() bool {
 	for name, d := range c.dispatchers {
 		err := d.Initialize()
 		if err != nil {
@@ -149,7 +149,7 @@ func (c *flowLogsReporter) canPublishFlowLogs() bool {
 	return true
 }
 
-func (c *flowLogsReporter) reportHealth() {
+func (c *FlowLogsReporter) reportHealth() {
 	readiness := c.canPublishFlowLogs()
 	if c.healthAggregator != nil {
 		c.healthAggregator.Report(healthName, &health.HealthReport{

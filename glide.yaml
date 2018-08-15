@@ -150,3 +150,5 @@ import:
   version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
   subpackages:
   - net
+- package: gopkg.in/natefinch/lumberjack.v2
+  version: ~2.1.0

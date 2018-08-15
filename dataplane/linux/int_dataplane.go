@@ -55,6 +55,7 @@ const (
 	KubeIPVSInterface = "kube-ipvs0"
 
 	CloudWatchLogsDispatcherName = "cloudwatch"
+	FlowLogsFileDispatcherName   = "file"
 )
 
 var (
@@ -132,6 +133,17 @@ type Config struct {
 
 	CloudWatchMetricsReporterEnabled  bool
 	CloudWatchMetricsPushIntervalSecs time.Duration
+
+	FlowLogsFileEnabled                   bool
+	FlowLogsFileDirectory                 string
+	FlowLogsFileMaxFiles                  int
+	FlowLogsFileMaxFileSizeMB             int
+	FlowLogsFileAggregationKindForAllowed int
+	FlowLogsFileAggregationKindForDenied  int
+	FlowLogsFileIncludeLabels             bool
+	FlowLogsFileEnableHostEndpoint        bool
+	FlowLogsFileEnabledForAllowed         bool
+	FlowLogsFileEnabledForDenied          bool
 
 	ClusterGUID string
 
@@ -583,6 +595,7 @@ func (d *InternalDataplane) Start() {
 		rm.RegisterMetricsReporter(pr)
 	}
 	log.Debugf("CloudWatchLogsReporterEnabled %v", d.config.CloudWatchLogsReporterEnabled)
+	dispatchers := map[string]collector.FlowLogDispatcher{}
 	if d.config.CloudWatchLogsReporterEnabled {
 		logGroupName := strings.Replace(
 			d.config.CloudWatchLogsLogGroupName,
@@ -603,22 +616,19 @@ func (d *InternalDataplane) Start() {
 			cwl = testutil.NewDebugCloudWatchLogsFile(logGroupName, d.config.DebugCloudWatchLogsFile)
 		}
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, cwl)
-		dispatchers := map[string]collector.FlowLogDispatcher{CloudWatchLogsDispatcherName: cwd}
+		dispatchers[CloudWatchLogsDispatcherName] = cwd
+	}
+	if d.config.FlowLogsFileEnabled {
+		fd := collector.NewFileDispatcher(
+			d.config.FlowLogsFileDirectory,
+			d.config.FlowLogsFileMaxFileSizeMB,
+			d.config.FlowLogsFileMaxFiles,
+		)
+		dispatchers[FlowLogsFileDispatcherName] = fd
+	}
+	if len(dispatchers) > 0 {
 		cw := collector.NewFlowLogsReporter(dispatchers, d.config.CloudWatchLogsFlushInterval, d.config.HealthAggregator, d.config.CloudWatchLogsEnableHostEndpoint)
-		if d.config.CloudWatchLogsEnabledForAllowed {
-			caa := collector.NewFlowLogAggregator().
-				AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForAllowed)).
-				IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
-				ForAction(rules.RuleActionAllow)
-			cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName})
-		}
-		if d.config.CloudWatchLogsEnabledForDenied {
-			cad := collector.NewFlowLogAggregator().
-				AggregateOver(collector.AggregationKind(d.config.CloudWatchLogsAggregationKindForDenied)).
-				IncludeLabels(d.config.CloudWatchLogsIncludeLabels).
-				ForAction(rules.RuleActionDeny)
-			cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName})
-		}
+		configureFlowAggregation(d.config, cw)
 		rm.RegisterMetricsReporter(cw)
 	}
 
@@ -634,6 +644,64 @@ func (d *InternalDataplane) Start() {
 	rm.Start()
 	statsCollector := collector.NewCollector(d.lookupCache, rm, collectorConfig)
 	statsCollector.Start()
+}
+
+// configureFlowAggregation adds appropriate aggregators to the FlowLogsReporter, depending on configuration.
+func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
+	addedFileAllow := false
+	addedFileDeny := false
+	if config.CloudWatchLogsReporterEnabled {
+		if config.CloudWatchLogsEnabledForAllowed {
+			caa := collector.NewFlowLogAggregator().
+				AggregateOver(collector.AggregationKind(config.CloudWatchLogsAggregationKindForAllowed)).
+				IncludeLabels(config.CloudWatchLogsIncludeLabels).
+				ForAction(rules.RuleActionAllow)
+
+			// Can we use the same aggregator for file logging?
+			if config.FlowLogsFileEnabled &&
+				config.FlowLogsFileEnabledForAllowed &&
+				config.FlowLogsFileAggregationKindForAllowed == config.CloudWatchLogsAggregationKindForAllowed &&
+				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels {
+				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
+				addedFileAllow = true
+			} else {
+				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName})
+			}
+		}
+		if config.CloudWatchLogsEnabledForDenied {
+			cad := collector.NewFlowLogAggregator().
+				AggregateOver(collector.AggregationKind(config.CloudWatchLogsAggregationKindForDenied)).
+				IncludeLabels(config.CloudWatchLogsIncludeLabels).
+				ForAction(rules.RuleActionDeny)
+			// Can we use the same aggregator for file logging?
+			if config.FlowLogsFileEnabled &&
+				config.FlowLogsFileEnabledForDenied &&
+				config.FlowLogsFileAggregationKindForDenied == config.CloudWatchLogsAggregationKindForDenied &&
+				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels {
+				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
+				addedFileDeny = true
+			} else {
+				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName})
+			}
+		}
+	}
+
+	if config.FlowLogsFileEnabled {
+		if !addedFileAllow && config.FlowLogsFileEnabledForAllowed {
+			caa := collector.NewFlowLogAggregator().
+				AggregateOver(collector.AggregationKind(config.FlowLogsFileAggregationKindForAllowed)).
+				IncludeLabels(config.FlowLogsFileIncludeLabels).
+				ForAction(rules.RuleActionAllow)
+			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
+		}
+		if !addedFileDeny && config.FlowLogsFileEnabledForDenied {
+			cad := collector.NewFlowLogAggregator().
+				AggregateOver(collector.AggregationKind(config.FlowLogsFileAggregationKindForDenied)).
+				IncludeLabels(config.FlowLogsFileIncludeLabels).
+				ForAction(rules.RuleActionDeny)
+			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})
+		}
+	}
 }
 
 // onIfaceStateChange is our interface monitor callback.  It gets called from the monitor's thread.

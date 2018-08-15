@@ -34,7 +34,7 @@ const CWDispatcher = "cloudwatch"
 
 var _ = Describe("FlowLog Reporter verification", func() {
 	var (
-		cr *flowLogsReporter
+		cr *FlowLogsReporter
 		cd FlowLogDispatcher
 		ca FlowLogAggregator
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
@@ -266,7 +266,7 @@ var _ = Describe("FlowLog Reporter verification", func() {
 
 var _ = Describe("CloudWatch Reporter health verification", func() {
 	var (
-		cr *flowLogsReporter
+		cr *FlowLogsReporter
 		cd FlowLogDispatcher
 		cl cloudwatchlogsiface.CloudWatchLogsAPI
 		hr *health.HealthAggregator
