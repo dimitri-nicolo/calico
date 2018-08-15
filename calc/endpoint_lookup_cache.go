@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dispatcher"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -20,6 +21,9 @@ type EndpointData struct {
 	Key          model.Key
 	Endpoint     interface{}
 	OrderedTiers []string
+
+	TieredImplicitDropIngressRuleID map[string]*RuleID
+	TieredImplicitDropEgressRuleID  map[string]*RuleID
 }
 
 // IsLocal returns if this EndpointData corresponds to a local endpoint or not.
@@ -81,13 +85,25 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 		} else {
 			endpoint := ep.(*model.WorkloadEndpoint)
 			ed := &EndpointData{
-				Key:          k,
-				Endpoint:     ep,
-				OrderedTiers: make([]string, len(filteredTiers)),
+				Key:                             k,
+				Endpoint:                        ep,
+				OrderedTiers:                    make([]string, len(filteredTiers)),
+				TieredImplicitDropIngressRuleID: map[string]*RuleID{},
+				TieredImplicitDropEgressRuleID:  map[string]*RuleID{},
 			}
-			// We only need the tier names so copy them out.
 			for i := range filteredTiers {
-				ed.OrderedTiers[i] = filteredTiers[i].Name
+				ti := filteredTiers[i]
+				ed.OrderedTiers[i] = ti.Name
+				if len(ti.OrderedPolicies) == 0 {
+					ed.TieredImplicitDropIngressRuleID[ti.Name] = nil
+					ed.TieredImplicitDropEgressRuleID[ti.Name] = nil
+					continue
+				}
+				pol := ti.OrderedPolicies[len(ti.OrderedPolicies)-1]
+				rid := NewRuleID(ti.Name, pol.Key.Name, pol.Value.Namespace, RuleIDIndexImplicitDrop, rules.RuleDirIngress, rules.RuleActionDeny)
+				ed.TieredImplicitDropIngressRuleID[ti.Name] = rid
+				rid = NewRuleID(ti.Name, pol.Key.Name, pol.Value.Namespace, RuleIDIndexImplicitDrop, rules.RuleDirEgress, rules.RuleActionDeny)
+				ed.TieredImplicitDropEgressRuleID[ti.Name] = rid
 			}
 			ec.addOrUpdateEndpoint(k, ed, extractIPsFromWorkloadEndpoint(endpoint))
 		}
@@ -97,13 +113,25 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 		} else {
 			endpoint := ep.(*model.HostEndpoint)
 			ed := &EndpointData{
-				Key:          k,
-				Endpoint:     ep,
-				OrderedTiers: make([]string, len(filteredTiers)),
+				Key:                             k,
+				Endpoint:                        ep,
+				OrderedTiers:                    make([]string, len(filteredTiers)),
+				TieredImplicitDropIngressRuleID: map[string]*RuleID{},
+				TieredImplicitDropEgressRuleID:  map[string]*RuleID{},
 			}
-			// We only need the tier names so copy them out.
 			for i := range filteredTiers {
-				ed.OrderedTiers[i] = filteredTiers[i].Name
+				ti := filteredTiers[i]
+				ed.OrderedTiers[i] = ti.Name
+				if len(ti.OrderedPolicies) == 0 {
+					ed.TieredImplicitDropIngressRuleID[ti.Name] = nil
+					ed.TieredImplicitDropEgressRuleID[ti.Name] = nil
+					continue
+				}
+				pol := ti.OrderedPolicies[len(ti.OrderedPolicies)-1]
+				rid := NewRuleID(ti.Name, pol.Key.Name, pol.Value.Namespace, RuleIDIndexImplicitDrop, rules.RuleDirIngress, rules.RuleActionDeny)
+				ed.TieredImplicitDropIngressRuleID[ti.Name] = rid
+				rid = NewRuleID(ti.Name, pol.Key.Name, pol.Value.Namespace, RuleIDIndexImplicitDrop, rules.RuleDirEgress, rules.RuleActionDeny)
+				ed.TieredImplicitDropEgressRuleID[ti.Name] = rid
 			}
 			ec.addOrUpdateEndpoint(k, ed, extractIPsFromHostEndpoint(endpoint))
 		}

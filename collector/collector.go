@@ -333,9 +333,9 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 			continue
 		}
 
-		apply := func(tierIdx int) {
+		apply := func(tierIdx int, rid *calc.RuleID) {
 			// Determine the starting number of packets and bytes.
-			if ruleID.Action == rules.RuleActionDeny || ruleID.Action == rules.RuleActionAllow {
+			if rid.Action == rules.RuleActionDeny || rid.Action == rules.RuleActionAllow {
 				// NFLog based counters make sense only for denied packets or allowed packets
 				// under NOTRACK. When NOTRACK is not enabled, the conntrack based absolute
 				// counters will overwrite these values anyway.
@@ -348,18 +348,33 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 			}
 
 			tuple := extractTupleFromNflogTuple(nPktAggr.Tuple)
-			c.applyNflogStatUpdate(tuple, ruleID, srcEp, dstEp, tierIdx, numPkts, numBytes)
+			c.applyNflogStatUpdate(tuple, rid, srcEp, dstEp, tierIdx, numPkts, numBytes)
 		}
 
 		// A blank tier indicates a profile match. This should be directly after the last tier.
 		if len(ruleID.Tier) == 0 {
-			apply(len(localEp.OrderedTiers))
+			apply(len(localEp.OrderedTiers), ruleID)
 			continue
 		}
 
 		for tierIdx, tier := range localEp.OrderedTiers {
 			if tier == ruleID.Tier {
-				apply(tierIdx)
+				rid := ruleID
+				if ruleID.IsNoMatchRule() && ruleID.Action == rules.RuleActionDeny {
+					switch ruleID.Direction {
+					case rules.RuleDirIngress:
+						implicitDropRid, ok := localEp.TieredImplicitDropIngressRuleID[ruleID.Tier]
+						if ok {
+							rid = implicitDropRid
+						}
+					case rules.RuleDirEgress:
+						implicitDropRid, ok := localEp.TieredImplicitDropEgressRuleID[ruleID.Tier]
+						if ok {
+							rid = implicitDropRid
+						}
+					}
+				}
+				apply(tierIdx, rid)
 				break
 			}
 		}

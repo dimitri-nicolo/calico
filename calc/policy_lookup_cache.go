@@ -245,6 +245,10 @@ const (
 	GlobalNamespaceStr        = "__GLOBAL__"
 	ProfileTierStr            = "__PROFILE__"
 	NoMatchNameStr            = "__NO_MATCH__"
+
+	// Special rule index that specifies that a policy has selected traffic that
+	// has implicitly denied traffic.
+	RuleIDIndexImplicitDrop int = -1
 )
 
 // RuleID contains the complete identifiers for a particular rule. This is a breakdown of the
@@ -312,6 +316,10 @@ func (r *RuleID) IsProfile() bool {
 
 func (r *RuleID) IsNoMatchRule() bool {
 	return len(r.Name) == 0
+}
+
+func (r *RuleID) IsImplicitDropRule() bool {
+	return r.Index == RuleIDIndexImplicitDrop
 }
 
 // TierString returns either the Tier name or the Profile indication string.
