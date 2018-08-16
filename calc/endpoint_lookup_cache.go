@@ -22,6 +22,11 @@ type EndpointData struct {
 	Endpoint     interface{}
 	OrderedTiers []string
 
+	// ImplicitDrop*RuleID is used to track the last policy in each tier that
+	// selected this endpoint in the Ingress or Egress rule directions. These
+	// special RuleIDs are created so that implictly dropped packets in each
+	// tier can be counted against these policies as being responsible for
+	// denying the packet.
 	ImplicitDropIngressRuleID map[string]*RuleID
 	ImplicitDropEgressRuleID  map[string]*RuleID
 }
@@ -86,13 +91,15 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 			ImplicitDropIngressRuleID: map[string]*RuleID{},
 			ImplicitDropEgressRuleID:  map[string]*RuleID{},
 		}
+	processTiers:
 		for i := range filteredTiers {
 			ti := filteredTiers[i]
 			ed.OrderedTiers[i] = ti.Name
 			if len(ti.OrderedPolicies) == 0 {
 				continue
 			}
-			var ingressAssigned, egressAssigned bool
+			ingressAssigned := false
+			egressAssigned := false
 			for j := len(ti.OrderedPolicies) - 1; j >= 0; j-- {
 				pol := ti.OrderedPolicies[j]
 				namespace, tier, name, err := deconstructPolicyName(pol.Key.Name)
@@ -101,14 +108,19 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 					continue
 				}
 				if pol.GovernsIngress() && !ingressAssigned {
-					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop, rules.RuleDirIngress, rules.RuleActionDeny)
+					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop,
+						rules.RuleDirIngress, rules.RuleActionDeny)
 					ed.ImplicitDropIngressRuleID[ti.Name] = rid
 					ingressAssigned = true
 				}
 				if pol.GovernsEgress() && !egressAssigned {
-					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop, rules.RuleDirEgress, rules.RuleActionDeny)
+					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop,
+						rules.RuleDirEgress, rules.RuleActionDeny)
 					ed.ImplicitDropEgressRuleID[ti.Name] = rid
 					egressAssigned = true
+				}
+				if ingressAssigned && egressAssigned {
+					continue processTiers
 				}
 			}
 		}
