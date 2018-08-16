@@ -22,7 +22,7 @@ endif
 CALICO_BUILD?=calico/go-build$(ARCHTAG):$(GO_BUILD_VER)
 CALICO_DIR=$(shell git rev-parse --show-toplevel)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
-JEKYLL_VERSION=pages
+JEKYLL_VERSION=3.8
 JEKYLL_UID?=`id -u`
 DEV?=false
 CONFIG=--config _config.yml
