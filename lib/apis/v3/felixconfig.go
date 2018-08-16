@@ -256,7 +256,7 @@ type FelixConfigurationSpec struct {
 	// Enable Flow logs reporting to AWS CloudWatch.
 	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`
 	// CloudWatchLogsFlushInterval configures the interval at which Felix exports flow logs to CloudWatch Logs.
-	CloudWatchLogsFlushInterval *metav1.Duration `json:"cloudWatchLogsFlushInterval,omitempty configv1timescale:"seconds"`
+	CloudWatchLogsFlushInterval *metav1.Duration `json:"cloudWatchLogsFlushInterval,omitempty" configv1timescale:"seconds"`
 	// CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to "tigera-flowlogs-<cluster-guid>".
 	CloudWatchLogsLogGroupName string `json:"cloudWatchLogsLogGroupName,omitempty"`
 	// CloudWatchLogsLogStreamName configures the Log stream to use for exporting flow logs. Defaults to "<felix-hostname>_Flowlogs".
@@ -299,6 +299,39 @@ type FelixConfigurationSpec struct {
 	CloudWatchNodeHealthStatusEnabled *bool `json:"cloudWatchNodeHealthStatusEnabled,omitempty"`
 	// CloudWatchNodeHealthPushIntervalSecs configures the frequency of pushing the node health metrics to CloudWatch.
 	CloudWatchNodeHealthPushIntervalSecs *metav1.Duration `json:"cloudWatchNodeHealthPushIntervalSecs,omitempty" configv1timescale:"seconds" confignamev1:"CloudWatchNodeHealthPushIntervalSecs"`
+
+	// FlowLogsFileEnabled when set to true, enables logging flow logs to a file. If false no flow logging to file will occur.
+	FlowLogsFileEnabled *bool `json:"flowLogsFileEnabled,omitempty"`
+	// FlowLogsFileMaxFiles sets the number of log files to keep.
+	FlowLogsFileMaxFiles *int `json:"flowLogsFileMaxFiles,omitempty"`
+	// FlowLogsFileMaxFileSizeMB sets the max size in MB of flow logs files before rotation.
+	FlowLogsFileMaxFileSizeMB *int `json:"flowLogsFileMaxFileSizeMB,omitempty"`
+	// FlowLogsFileDirectory sets the directory where flow logs files are stored.
+	FlowLogsFileDirectory *string `json:"flowLogsFileDirectory,omitempty"`
+	// FlowLogsFileIncludeLabels is used to configure if endpoint labels are included in a Flow log entry written to file.
+	FlowLogsFileIncludeLabels *bool `json:"flowLogsFileIncludeLabels,omitempty"`
+	// FlowLogsFileAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for
+	// allowed connections. [Default: 2 - pod prefix name based aggregation].
+	// Accepted values are 0, 1 and 2.
+	// 0 - No aggregation
+	// 1 - Source port based aggregation
+	// 2 - Pod prefix name based aggreagation.
+	FlowLogsFileAggregationKindForAllowed *int `json:"flowLogsFileAggregationKindForAllowed,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
+	// FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for
+	// denied connections. [Default: 1 - source port based aggregation].
+	// Accepted values are 0, 1 and 2.
+	// 0 - No aggregation
+	// 1 - Source port based aggregation
+	// 2 - Pod prefix name based aggreagation.
+	FlowLogsFileAggregationKindForDenied *int `json:"flowLogsFileAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
+	// FlowLogsFileEnableHostEndpoint enables logging of host endpoint flows to file.
+	FlowLogsFileEnableHostEndpoint *bool `json:"flowLogsFileEnableHostEndpoint,omitempty"`
+	// FlowLogsFileEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
+	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
+	FlowLogsFileEnabledForAllowed *bool `json:"flowLogsFileEnabledForAllowed,omitempty"`
+	// FlowLogsFileEnabledForDenied is used to enable/disable flow logs entries created for denied flows. Default is true.
+	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
+	FlowLogsFileEnabledForDenied *bool `json:"flowLogsFileEnabledForDenied,omitempty"`
 }
 
 // ProtoPort is combination of protocol and port, both must be specified.

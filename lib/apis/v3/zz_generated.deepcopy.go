@@ -720,6 +720,56 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.FlowLogsFileEnabled != nil {
+		in, out := &in.FlowLogsFileEnabled, &out.FlowLogsFileEnabled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.FlowLogsFileMaxFiles != nil {
+		in, out := &in.FlowLogsFileMaxFiles, &out.FlowLogsFileMaxFiles
+		*out = new(int)
+		**out = **in
+	}
+	if in.FlowLogsFileMaxFileSizeMB != nil {
+		in, out := &in.FlowLogsFileMaxFileSizeMB, &out.FlowLogsFileMaxFileSizeMB
+		*out = new(int)
+		**out = **in
+	}
+	if in.FlowLogsFileDirectory != nil {
+		in, out := &in.FlowLogsFileDirectory, &out.FlowLogsFileDirectory
+		*out = new(string)
+		**out = **in
+	}
+	if in.FlowLogsFileIncludeLabels != nil {
+		in, out := &in.FlowLogsFileIncludeLabels, &out.FlowLogsFileIncludeLabels
+		*out = new(bool)
+		**out = **in
+	}
+	if in.FlowLogsFileAggregationKindForAllowed != nil {
+		in, out := &in.FlowLogsFileAggregationKindForAllowed, &out.FlowLogsFileAggregationKindForAllowed
+		*out = new(int)
+		**out = **in
+	}
+	if in.FlowLogsFileAggregationKindForDenied != nil {
+		in, out := &in.FlowLogsFileAggregationKindForDenied, &out.FlowLogsFileAggregationKindForDenied
+		*out = new(int)
+		**out = **in
+	}
+	if in.FlowLogsFileEnableHostEndpoint != nil {
+		in, out := &in.FlowLogsFileEnableHostEndpoint, &out.FlowLogsFileEnableHostEndpoint
+		*out = new(bool)
+		**out = **in
+	}
+	if in.FlowLogsFileEnabledForAllowed != nil {
+		in, out := &in.FlowLogsFileEnabledForAllowed, &out.FlowLogsFileEnabledForAllowed
+		*out = new(bool)
+		**out = **in
+	}
+	if in.FlowLogsFileEnabledForDenied != nil {
+		in, out := &in.FlowLogsFileEnabledForDenied, &out.FlowLogsFileEnabledForDenied
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
