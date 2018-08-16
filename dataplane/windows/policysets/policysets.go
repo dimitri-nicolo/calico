@@ -1,18 +1,6 @@
 //+build windows
 
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 package policysets
 
@@ -21,6 +9,8 @@ import (
 
 	hns "github.com/Microsoft/hcsshim"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/iputils"
 
 	"github.com/projectcalico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/felix/proto"
@@ -389,7 +379,19 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 			logCxt.Info("SrcIpSetIds could not be resolved, rule will be skipped")
 			return nil, SkipRule
 		}
-		srcAddresses = append(srcAddresses, ipsetAddresses...)
+
+		if len(srcAddresses) > 0 {
+			// We have both CIDRs in the rule and an IPset.  Our model is that each match criteria should be ANDed
+			// together so that means that we need to intersect the CIDRs with the IP set addresses.
+			logCxt.Debug("Both source CIDRs and IPsets in rule, intersecting them")
+			srcAddresses = iputils.IntersectCIDRs(srcAddresses, ipsetAddresses)
+			if len(srcAddresses) == 0 {
+				logCxt.Debug("No overlap between source CIDRs and IPsets, skipping rule")
+				return nil, SkipRule
+			}
+		} else {
+			srcAddresses = ipsetAddresses
+		}
 	}
 
 	if len(srcAddresses) > 0 {
@@ -413,7 +415,19 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 			logCxt.Info("DstIpSetIds could not be resolved, rule will be skipped")
 			return nil, SkipRule
 		}
-		dstAddresses = append(dstAddresses, ipsetAddresses...)
+
+		if len(dstAddresses) > 0 {
+			// We have both CIDRs in the rule and an IPset.  Our model is that each match criteria should be ANDed
+			// together so that means that we need to intersect the CIDRs with the IP set addresses.
+			logCxt.Debug("Both dest CIDRs and IPsets in rule, intersecting them")
+			dstAddresses = iputils.IntersectCIDRs(dstAddresses, ipsetAddresses)
+			if len(dstAddresses) == 0 {
+				logCxt.Debug("No overlap between dest CIDRs and IPsets, skipping rule")
+				return nil, SkipRule
+			}
+		} else {
+			dstAddresses = ipsetAddresses
+		}
 	}
 
 	if len(dstAddresses) > 0 {
