@@ -1,24 +1,63 @@
-hash: d01ae0c670b71b4e451d4243ab13fbd729b6683301d0ccba4d05fe261fe4d333
-updated: 2018-07-02T14:14:36.029117351-07:00
+hash: 6a361dc4f6e07234b2970ed029db8d430ee2766ca2a80a2355c23fb8b2870716
+updated: 2018-08-13T15:29:43.427012444-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
   subpackages:
   - compute/metadata
   - internal
+- name: github.com/aws/aws-sdk-go
+  version: fad131ddc707880428615dc8bc1587b55fb46d74
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/awsutil
+  - aws/client
+  - aws/client/metadata
+  - aws/corehandlers
+  - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/credentials/stscreds
+  - aws/defaults
+  - aws/ec2metadata
+  - aws/endpoints
+  - aws/request
+  - aws/session
+  - aws/signer/v4
+  - internal/sdkio
+  - internal/sdkrand
+  - internal/shareddefaults
+  - private/protocol
+  - private/protocol/json/jsonutil
+  - private/protocol/jsonrpc
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/rest
+  - private/protocol/xml/xmlutil
+  - service/cloudwatch
+  - service/cloudwatch/cloudwatchiface
+  - service/cloudwatchlogs
+  - service/cloudwatchlogs/cloudwatchlogsiface
+  - service/sts
 - name: github.com/Azure/go-autorest
-  version: 58f6f26e200fa5dfb40c9cd1c83f3e2c860d779d
+  version: 1ff28809256a84bb6966640ff3d0371af82ccba4
   subpackages:
   - autorest
   - autorest/adal
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
+- name: github.com/bronze1man/goStrongswanVici
+  version: 9b6fdd821dbe2bc7fe167b1ad2af4bcd19975ada
+  repo: git@github.com:tigera/goStrongswanVici
+- name: github.com/BurntSushi/toml
+  version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
 - name: github.com/coreos/etcd
-  version: c23606781f63d09917a1e7abfcefeb337a9608ea
+  version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
   - auth/authpb
   - client
@@ -33,7 +72,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
+  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
@@ -41,19 +80,21 @@ imports:
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
-  version: d2709f9f1f31ebcda9651b03077758c1f3a0018c
+  version: 01aeca54ebda6e0fbfafd0a524d234159c05ec20
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
   subpackages:
   - log
-- name: github.com/emicklei/go-restful-swagger12
-  version: dcef7f55730566d41eae5db10e7d6981829720f6
+- name: github.com/gavv/monotime
+  version: 6f8212e8d10df7383609d3c377ca08884d8f3ec0
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
+- name: github.com/go-ini/ini
+  version: d58d458bec3cb5adec4b7ddb41131855eac0b33f
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
+  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
 - name: github.com/go-openapi/spec
   version: 6aced65f8501fe1217321abf0749d354824ba2ff
 - name: github.com/go-openapi/swag
@@ -68,7 +109,7 @@ imports:
 - name: github.com/golang/glog
   version: 44145f04b68cf362d9c4df2182967c2275eaefed
 - name: github.com/golang/protobuf
-  version: 4bd1920723d7b7c925de087aa32e2187708897f7
+  version: b4deda0973fb4c70b50d226b1af49f3da59f5265
   subpackages:
   - proto
   - ptypes
@@ -76,17 +117,17 @@ imports:
   - ptypes/duration
   - ptypes/timestamp
 - name: github.com/google/btree
-  version: 925471ac9e2131377a91e1595defec898166fe49
+  version: 7d79101e329e5a3adf994758c578dab82b90c017
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
 - name: github.com/googleapis/gnostic
-  version: 68f4ded48ba9414dab2ae69b3f0d69971da73aa5
+  version: 0c5108395e2debce0d731cf0287ddf7242066aba
   subpackages:
   - OpenAPIv2
   - compiler
   - extensions
 - name: github.com/gophercloud/gophercloud
-  version: 2bf16b94fdd9b01557c4d076e567fe5cbbe5a961
+  version: 781450b3c4fcb4f5182bcc5133adb4b2e4a09d1d
   subpackages:
   - openstack
   - openstack/identity/v2/tenants
@@ -102,16 +143,35 @@ imports:
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
   - simplelru
-- name: github.com/howeyc/gopass
-  version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
+- name: github.com/hpcloud/tail
+  version: a1dbeea552b7c8df4b542c66073e393de198a800
+  subpackages:
+  - ratelimiter
+  - util
+  - watch
+  - winfile
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
+- name: github.com/jmespath/go-jmespath
+  version: 3433f3ea46d9f8019119e7dd41274e112a2359a9
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
-- name: github.com/juju/ratelimit
-  version: 5b9ff866471762aa2ab2dced63c9fb6f53921342
+- name: github.com/kardianos/osext
+  version: ae77be60afb1dcacde03767a8c37337fad28ac14
+- name: github.com/kelseyhightower/confd
+  version: 33b424d71ccf95983cff983298294293fc20a2ee
+  repo: git@github.com:tigera/confd-private.git
+  subpackages:
+  - pkg/backends
+  - pkg/backends/calico
+  - pkg/config
+  - pkg/log
+  - pkg/resource/template
+  - pkg/run
 - name: github.com/kelseyhightower/envconfig
-  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+  version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
+- name: github.com/kelseyhightower/memkv
+  version: 892bfd468afa0fa476556e7bd7734a087cda08b3
 - name: github.com/mailru/easyjson
   version: d5b7844b561a7bc640052f1b935f7b800330d7e0
   subpackages:
@@ -122,12 +182,29 @@ imports:
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
+- name: github.com/Microsoft/go-winio
+  version: 78439966b38d69bf38227fbf57ac8a6fee70f69a
+- name: github.com/Microsoft/hcsshim
+  version: 4a468a6f7ae547974bc32911395c51fb1862b7df
+  subpackages:
+  - internal/guid
+  - internal/hcs
+  - internal/hcserror
+  - internal/hns
+  - internal/interop
+  - internal/longpath
+  - internal/mergemaps
+  - internal/safefile
+  - internal/schema1
+  - internal/wclayer
+- name: github.com/mipearson/rfw
+  version: 6f0a6f3266ba1058df9ef0c94cda1cecd2e62852
 - name: github.com/modern-go/concurrent
   version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
 - name: github.com/modern-go/reflect2
   version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
 - name: github.com/onsi/ginkgo
-  version: fa5fabab2a1bfbd924faf4c067d07ae414e2aedf
+  version: 3774a09d95489ccaa16032e0770d08ea77ba6184
   subpackages:
   - config
   - extensions/table
@@ -148,7 +225,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: c893efa28eb45626cdaa76c9f653b62488858837
+  version: b6ea1ea48f981d0f615a154a45eabb9dd466556d
   subpackages:
   - format
   - internal/assertion
@@ -165,6 +242,44 @@ imports:
   version: ca53cad383cad2479bbba7f7a1a05797ec1386e4
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/projectcalico/felix
+  version: c77749635b6ea5da7dc163e92236febb38d19d2a
+  repo: git@github.com:tigera/felix-private.git
+  subpackages:
+  - binder
+  - buildinfo
+  - calc
+  - collector
+  - collector/testutil
+  - config
+  - conntrack
+  - daemon
+  - dataplane
+  - dataplane/external
+  - dataplane/linux
+  - dataplane/windows
+  - dataplane/windows/ipsets
+  - dataplane/windows/policysets
+  - dispatcher
+  - hashutils
+  - ifacemonitor
+  - ip
+  - ipsec
+  - ipsets
+  - iptables
+  - jitter
+  - labelindex
+  - logutils
+  - markbits
+  - multidict
+  - policysync
+  - proto
+  - routetable
+  - rules
+  - statusrep
+  - stringutils
+  - throttle
+  - usagerep
 - name: github.com/projectcalico/go-json
   version: 6219dc7339ba20ee4c57df0a8baac62317d19cb1
   subpackages:
@@ -174,10 +289,9 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 06dbfea817498f9b0c62c566fe43d173b5605510
+  version: 1130ede1859eb68c9a71a59844da72c07731cb34
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
-  - lib/api
   - lib/apiconfig
   - lib/apis/v1
   - lib/apis/v1/unversioned
@@ -189,10 +303,15 @@ imports:
   - lib/backend/k8s/conversion
   - lib/backend/k8s/resources
   - lib/backend/model
-  - lib/client
+  - lib/backend/syncersv1/bgpsyncer
+  - lib/backend/syncersv1/felixsyncer
+  - lib/backend/syncersv1/remotecluster
+  - lib/backend/syncersv1/updateprocessors
+  - lib/backend/watchersyncer
   - lib/clientv3
   - lib/errors
   - lib/hash
+  - lib/health
   - lib/ipam
   - lib/ipip
   - lib/logutils
@@ -202,6 +321,7 @@ imports:
   - lib/numorstring
   - lib/options
   - lib/scope
+  - lib/security
   - lib/selector
   - lib/selector/parser
   - lib/selector/tokenizer
@@ -215,18 +335,27 @@ imports:
   - lib/upgrade/migrator/clients/v1/k8s
   - lib/upgrade/migrator/clients/v1/k8s/custom
   - lib/upgrade/migrator/clients/v1/k8s/resources
+  - lib/validator/v1
   - lib/validator/v3
   - lib/watch
+- name: github.com/projectcalico/typha
+  version: c8f11d3e22967fd1213bec19f2a5a1edb63e0f92
+  repo: git@github.com:tigera/typha-private
+  subpackages:
+  - pkg/syncclient
+  - pkg/syncproto
+  - pkg/tlsutils
 - name: github.com/prometheus/client_golang
-  version: 967789050ba94deca04a5e84cce8ad472ce313c1
+  version: 5b23715facdef1452016bae512489c3cdf82458c
   subpackages:
   - prometheus
+  - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 61f87aac8082fa8c3c5655c7608d7478d46ac2ad
+  version: c7de2306084e37d54b8be01f3541a8464345e9a5
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -244,17 +373,42 @@ imports:
 - name: github.com/sirupsen/logrus
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/pflag
-  version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
+  version: 583c0c0531f06d5278b7d917446061adc344b5cd
+- name: github.com/tigera/licensing
+  version: 6774d1fc844530dc7be7d766bc473d8bcc05409e
+  repo: git@github.com:tigera/licensing
+  vcs: git
+  subpackages:
+  - client
+  - client/features
+  - crypto
+  - monitor
+- name: github.com/tigera/nfnetlink
+  version: 6129e0f5c02789e10680b1d01fbb23cbe456331f
+  repo: git@github.com:tigera/nfnetlink
+  subpackages:
+  - nfnl
+  - pkt
 - name: github.com/ugorji/go
   version: bdcc60b419d136a85cdf2e7cbcac34b3f1cd6e57
   subpackages:
   - codec
-- name: golang.org/x/crypto
-  version: 1351f936d976c60a0a48d728281922cf63eafb8d
+- name: github.com/vishvananda/netlink
+  version: 3fd955dd632011983cd15e42663e1befa7929a15
+  repo: git@github.com:tigera/netlink.git
   subpackages:
+  - nl
+- name: github.com/vishvananda/netns
+  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
+- name: golang.org/x/crypto
+  version: 49796115aa4b964c318aad4f3084fdb41e9aa067
+  subpackages:
+  - ed25519
+  - ed25519/internal/edwards25519
+  - pbkdf2
   - ssh/terminal
 - name: golang.org/x/net
-  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
+  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
   - context/ctxhttp
@@ -267,6 +421,7 @@ imports:
   - internal/timeseries
   - lex/httplex
   - trace
+  - websocket
 - name: golang.org/x/oauth2
   version: a6bd8cefa1811bd24b86f8902872e4e8225f74c4
   subpackages:
@@ -275,9 +430,10 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: ebfc5b4631820b793c9010c87fd8fef0f39eb082
+  version: 1b2967e3c290b7c545b3db0deeda16e9be4f98a2
   subpackages:
   - unix
+  - windows
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
@@ -303,8 +459,12 @@ imports:
   - unicode/bidi
   - unicode/norm
   - width
+- name: golang.org/x/time
+  version: f51c12702a4d776e4c1fa9b0fabab841babae631
+  subpackages:
+  - rate
 - name: google.golang.org/appengine
-  version: 4f7eeb5305a4ba1966344836ba4af9996b7b4e05
+  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
   subpackages:
   - internal
   - internal/app_identity
@@ -328,7 +488,6 @@ imports:
   - credentials
   - grpclb/grpc_lb_v1/messages
   - grpclog
-  - health
   - health/grpc_health_v1
   - internal
   - keepalive
@@ -340,16 +499,28 @@ imports:
   - status
   - tap
   - transport
+- name: gopkg.in/fsnotify/fsnotify.v1
+  version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v8
-  version: 5f57d2222ad794d0dffb07e664ea05e2ee07d60c
+  version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/square/go-jose.v2
+  version: 8254d6c783765f38c8675fae4427a1fe73fbd09d
+  subpackages:
+  - cipher
+  - json
+  - jwt
+- name: gopkg.in/tomb.v1
+  version: c131134a1947e9afd9cecfe11f4c6dff0732ae58
 - name: gopkg.in/yaml.v2
-  version: 53feefa2559fb8dfa8d81baad31be332c97d6c77
+  version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api
-  version: a315a049e7a93e5455f7fefce1ba136d85054687
+  version: 072894a440bdee3a891dea811fe42902311cd2a3
   subpackages:
   - admissionregistration/v1alpha1
+  - admissionregistration/v1beta1
+  - apps/v1
   - apps/v1beta1
   - apps/v1beta2
   - authentication/v1
@@ -363,6 +534,7 @@ imports:
   - batch/v2alpha1
   - certificates/v1beta1
   - core/v1
+  - events/v1beta1
   - extensions/v1beta1
   - networking/v1
   - policy/v1beta1
@@ -370,23 +542,23 @@ imports:
   - rbac/v1alpha1
   - rbac/v1beta1
   - scheduling/v1alpha1
+  - scheduling/v1beta1
   - settings/v1alpha1
   - storage/v1
+  - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: b593b18191da3eff9afdfd373da5f5e08fe5ac5f
+  version: 103fd098999dc9c0c88536f5c9ad2e5da39373ae
   subpackages:
-  - pkg/api/equality
   - pkg/api/errors
   - pkg/api/meta
   - pkg/api/resource
   - pkg/apis/meta/internalversion
   - pkg/apis/meta/v1
   - pkg/apis/meta/v1/unstructured
-  - pkg/apis/meta/v1alpha1
+  - pkg/apis/meta/v1beta1
   - pkg/conversion
   - pkg/conversion/queryparams
-  - pkg/conversion/unstructured
   - pkg/fields
   - pkg/labels
   - pkg/runtime
@@ -418,12 +590,14 @@ imports:
   - pkg/watch
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
-  version: 432cc9f726c477d8f9d39707b3f3238f679e1ed9
+  version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
   - discovery
   - kubernetes
   - kubernetes/scheme
   - kubernetes/typed/admissionregistration/v1alpha1
+  - kubernetes/typed/admissionregistration/v1beta1
+  - kubernetes/typed/apps/v1
   - kubernetes/typed/apps/v1beta1
   - kubernetes/typed/apps/v1beta2
   - kubernetes/typed/authentication/v1
@@ -437,6 +611,7 @@ imports:
   - kubernetes/typed/batch/v2alpha1
   - kubernetes/typed/certificates/v1beta1
   - kubernetes/typed/core/v1
+  - kubernetes/typed/events/v1beta1
   - kubernetes/typed/extensions/v1beta1
   - kubernetes/typed/networking/v1
   - kubernetes/typed/policy/v1beta1
@@ -444,12 +619,18 @@ imports:
   - kubernetes/typed/rbac/v1alpha1
   - kubernetes/typed/rbac/v1beta1
   - kubernetes/typed/scheduling/v1alpha1
+  - kubernetes/typed/scheduling/v1beta1
   - kubernetes/typed/settings/v1alpha1
   - kubernetes/typed/storage/v1
+  - kubernetes/typed/storage/v1alpha1
   - kubernetes/typed/storage/v1beta1
+  - pkg/apis/clientauthentication
+  - pkg/apis/clientauthentication/v1alpha1
+  - pkg/apis/clientauthentication/v1beta1
   - pkg/version
   - plugin/pkg/client/auth
   - plugin/pkg/client/auth/azure
+  - plugin/pkg/client/auth/exec
   - plugin/pkg/client/auth/gcp
   - plugin/pkg/client/auth/oidc
   - plugin/pkg/client/auth/openstack
@@ -466,13 +647,16 @@ imports:
   - tools/pager
   - tools/reference
   - transport
+  - util/buffer
   - util/cert
+  - util/connrotation
   - util/flowcontrol
   - util/homedir
   - util/integer
   - util/jsonpath
+  - util/retry
 - name: k8s.io/kube-openapi
-  version: 868f2f29720b192240e18284659231b440f9cda5
+  version: e3762e86a74c878ffed47484592986685639c2cd
   subpackages:
   - pkg/common
 testImports: []

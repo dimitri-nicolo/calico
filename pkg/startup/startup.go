@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package main
+package startup
 
 import (
 	"context"
@@ -83,7 +83,7 @@ var (
 // -  Configuring the node resource with IP/AS information provided in the
 //    environment, or autodetected.
 // -  Creating default IP Pools for quick-start use
-func main() {
+func Run() {
 	// Check $CALICO_STARTUP_LOGLEVEL to capture early log statements
 	configureLogging()
 
@@ -153,7 +153,7 @@ func main() {
 	}
 
 	configureNodeRef(node)
-	configureCloudOrchRef(node)
+	//configureCloudOrchRef(node)
 
 	// Check expected filesystem
 	ensureFilesystemAsExpected()
@@ -943,7 +943,9 @@ func ensureDefaultConfig(ctx context.Context, cfg *apiconfig.CalicoAPIConfig, c 
 	// Ensure the ClusterInformation is populated.
 	// Get the ClusterType from ENV var. This is set from the manifest.
 	clusterType := os.Getenv("CLUSTER_TYPE")
-	c.EnsureInitialized(ctx, CALICOVERSION, CNXVERSION, clusterType)
+	if err := c.EnsureInitialized(ctx, CALICOVERSION, CNXVERSION, clusterType); err != nil {
+		return nil
+	}
 
 	// By default we set the global reporting interval to 0 - this is
 	// different from the defaults defined in Felix.
