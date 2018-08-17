@@ -45,6 +45,8 @@ type State struct {
 	ExpectedUntrackedEndpointPolicyOrder map[string][]mock.TierInfo
 	ExpectedPreDNATEndpointPolicyOrder   map[string][]mock.TierInfo
 	ExpectedNumberOfALPPolicies          int
+	ExpectedNumberOfTiers                int
+	ExpectedNumberOfPolicies             int
 }
 
 func (s State) String() string {
@@ -68,6 +70,8 @@ func NewState() State {
 		ExpectedEndpointPolicyOrder:          make(map[string][]mock.TierInfo),
 		ExpectedUntrackedEndpointPolicyOrder: make(map[string][]mock.TierInfo),
 		ExpectedPreDNATEndpointPolicyOrder:   make(map[string][]mock.TierInfo),
+		ExpectedNumberOfPolicies:             -1,
+		ExpectedNumberOfTiers:                -1,
 	}
 }
 
@@ -93,6 +97,8 @@ func (s State) Copy() State {
 	cpy.ExpectedPreDNATPolicyIDs = s.ExpectedPreDNATPolicyIDs.Copy()
 	cpy.ExpectedProfileIDs = s.ExpectedProfileIDs.Copy()
 	cpy.ExpectedNumberOfALPPolicies = s.ExpectedNumberOfALPPolicies
+	cpy.ExpectedNumberOfTiers = s.ExpectedNumberOfTiers
+	cpy.ExpectedNumberOfPolicies = s.ExpectedNumberOfPolicies
 	cpy.ExpectedIPSecBindings = s.ExpectedIPSecBindings.Copy()
 	if s.ExpectedIPSecBlacklist != nil {
 		cpy.ExpectedIPSecBlacklist = s.ExpectedIPSecBlacklist.Copy()
@@ -191,6 +197,18 @@ func (s State) withActivePolicies(ids ...proto.PolicyID) (newState State) {
 func (s State) withTotalALPPolicies(count int) (newState State) {
 	newState = s.Copy()
 	newState.ExpectedNumberOfALPPolicies = count
+	return newState
+}
+
+func (s State) withTotalTiers(count int) (newState State) {
+	newState = s.Copy()
+	newState.ExpectedNumberOfTiers = count
+	return newState
+}
+
+func (s State) withTotalActivePolicies(count int) (newState State) {
+	newState = s.Copy()
+	newState.ExpectedNumberOfPolicies = count
 	return newState
 }
 
@@ -303,11 +321,19 @@ func (s State) KVDeltas(prev State) []api.Update {
 }
 
 func (s State) NumTiers() int {
-	return s.ActiveKeys(model.TierKey{}).Len()
+	if s.ExpectedNumberOfTiers == -1 {
+		return s.ActiveKeys(model.TierKey{}).Len()
+	} else {
+		return s.ExpectedNumberOfTiers
+	}
 }
 
 func (s State) NumPolicies() int {
-	return s.ActiveKeys(model.PolicyKey{}).Len()
+	if s.ExpectedNumberOfPolicies == -1 {
+		return s.ActiveKeys(model.PolicyKey{}).Len()
+	} else {
+		return s.ExpectedNumberOfPolicies
+	}
 }
 
 func (s State) NumProfileRules() int {

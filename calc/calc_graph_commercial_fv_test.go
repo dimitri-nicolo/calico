@@ -226,6 +226,65 @@ func tierOrderState(tierOrders [3]float64, expectedOrder [3]string) State {
 	return state
 }
 
+var localEp1WithDefaultTiers = tierDisabledOrderState(
+	[3]float64{order10, order20, order30},
+	[3]string{"tier-1", "default", "sg-remote"},
+	[3]bool{false, true, true},
+)
+var localEp1WithOverlappingDefaultTiers = tierDisabledOrderState(
+	[3]float64{order20, order20, order10},
+	[3]string{"tier-1", "sg-remote", "default"},
+	[3]bool{false, true, true},
+)
+
+func tierDisabledOrderState(tierOrders [3]float64, expectedOrder [3]string, tierExists [3]bool) State {
+	var activeTiers int
+	tiers := [3]Tier{}
+	for i := range tiers {
+		tiers[i] = Tier{
+			Order: &tierOrders[i],
+		}
+	}
+	ti := []mock.TierInfo{}
+	for n := range tierExists {
+		if tierExists[n] {
+			ti = append(ti,
+				mock.TierInfo{Name: expectedOrder[n],
+					IngressPolicyNames: []string{expectedOrder[n] + "-pol"}, EgressPolicyNames: []string{expectedOrder[n] + "-pol"}})
+			activeTiers++
+		}
+	}
+	state := initialisedStore.withKVUpdates(
+		KVPair{Key: localWlEpKey1, Value: &localWlEp1},
+		KVPair{Key: TierKey{"tier-1"}, Value: &tiers[0]},
+		KVPair{Key: PolicyKey{Tier: "tier-1", Name: "tier-1-pol"}, Value: &policy1_order20},
+		KVPair{Key: TierKey{"default"}, Value: &tiers[1]},
+		KVPair{Key: PolicyKey{Tier: "default", Name: "default-pol"}, Value: &policy1_order20},
+		KVPair{Key: TierKey{"sg-remote"}, Value: &tiers[2]},
+		KVPair{Key: PolicyKey{Tier: "sg-remote", Name: "sg-remote-pol"}, Value: &policy1_order20},
+	).withIPSet(
+		allSelectorId, ep1IPs,
+	).withIPSet(
+		bEqBSelectorId, ep1IPs,
+	).withActivePolicies(
+		// expect to NOT see "tier-1" and "tier-1-pol"
+		proto.PolicyID{"default", "default-pol"},
+		proto.PolicyID{"sg-remote", "sg-remote-pol"},
+	).withActiveProfiles(
+		proto.ProfileID{"prof-1"},
+		proto.ProfileID{"prof-2"},
+		proto.ProfileID{"prof-missing"},
+	).withEndpoint(
+		localWlEp1Id,
+		ti,
+	).withTotalTiers(
+		activeTiers,
+	).withTotalActivePolicies(
+		activeTiers,
+	).withName(fmt.Sprintf("tier-order-state%v", expectedOrder[:]))
+	return state
+}
+
 // localEp2WithPolicyAndTier adds a different endpoint that doesn't match b=="b".
 // This tests an empty IP set.
 var localEp2WithPolicyAndTier = withPolicyAndTier.withKVUpdates(
@@ -753,10 +812,25 @@ var commercialTests = []StateList{
 }
 
 var _ = Describe("COMMERCIAL: Calculation graph state sequencing tests:", func() {
-	describeSyncTests(commercialTests)
+	describeSyncTests(commercialTests, licenseTiersEnabled{})
 })
 var _ = Describe("COMMERCIAL: Async calculation graph state sequencing tests:", func() {
-	describeAsyncTests(commercialTests)
+	describeAsyncTests(commercialTests, licenseTiersEnabled{})
+})
+
+var commercialTestsDisabledTiers = []StateList{
+	// Empty should be empty!
+	{},
+	// Tests of policy ordering and filtering. Confirm that non-licensed tiers and policies
+	// associated with those non-licensed tiers are removed. Non-licensed tiers are tiers
+	// other than "default", "sg-remote", "sg-local", "metadata.
+	{localEp1WithDefaultTiers, localEp1WithOverlappingDefaultTiers},
+}
+var _ = Describe("COMMERCIAL: Calculation graph state sequencing tests with tier feature disabled:", func() {
+	describeSyncTests(commercialTestsDisabledTiers, licenseTiersDisabled{})
+})
+var _ = Describe("COMMERCIAL: Async calculation graph state sequencing tests with tier feature disabled:", func() {
+	describeAsyncTests(commercialTestsDisabledTiers, licenseTiersDisabled{})
 })
 
 type tierInfo struct {

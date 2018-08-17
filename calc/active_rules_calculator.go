@@ -109,17 +109,17 @@ func NewActiveRulesCalculator() *ActiveRulesCalculator {
 	return arc
 }
 
-func (arc *ActiveRulesCalculator) RegisterWith(localEndpointDispatcher, allUpdDispatcher *dispatcher.Dispatcher) {
+func (arc *ActiveRulesCalculator) RegisterWith(localEndpointDispatcher, allUpdDispatcher, tierDispatcher *dispatcher.Dispatcher) {
 	// It needs the filtered endpoints...
 	localEndpointDispatcher.Register(model.WorkloadEndpointKey{}, arc.OnUpdate)
 	localEndpointDispatcher.Register(model.HostEndpointKey{}, arc.OnUpdate)
 	// ...as well as all the policies and profiles.
-	allUpdDispatcher.Register(model.PolicyKey{}, arc.OnUpdate)
+	tierDispatcher.Register(model.PolicyKey{}, arc.OnUpdate)
 	allUpdDispatcher.Register(model.ProfileRulesKey{}, arc.OnUpdate)
 	allUpdDispatcher.Register(model.ProfileLabelsKey{}, arc.OnUpdate)
 	allUpdDispatcher.Register(model.ProfileTagsKey{}, arc.OnUpdate)
 	// ... and tiers as well. only required for stats update.
-	allUpdDispatcher.Register(model.TierKey{}, arc.OnUpdate)
+	tierDispatcher.Register(model.TierKey{}, arc.OnUpdate)
 	allUpdDispatcher.RegisterStatusHandler(arc.OnStatusUpdate)
 }
 

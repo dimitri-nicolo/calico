@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/felix/proto"
 )

@@ -20,6 +20,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+	lclient "github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/client/features"
 
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/proto"
@@ -90,14 +92,25 @@ const (
 	healthInterval = 10 * time.Second
 )
 
+type featureChecker interface {
+	GetFeatureStatus(feature string) bool
+	GetLicenseStatus() lclient.LicenseStatus
+}
+
 func NewAsyncCalcGraph(
 	conf *config.Config,
+	licenseMonitor featureChecker,
 	outputChannels []chan<- interface{},
 	healthAggregator *health.HealthAggregator,
 	lookupCache *LookupsCache,
 ) *AsyncCalcGraph {
+	tierSupportEnabled := licenseMonitor.GetFeatureStatus(features.Tiers)
+	if !tierSupportEnabled {
+		log.Warning("Not licensed for Tiers feature. " +
+			"If this is unexpected, contact Tigera support or email licensing@tigera.io")
+	}
 	eventBuffer := NewEventSequencer(conf)
-	calcGraph := NewCalculationGraph(eventBuffer, lookupCache, conf.FelixHostname)
+	calcGraph := NewCalculationGraph(eventBuffer, lookupCache, conf.FelixHostname, tierSupportEnabled)
 	if conf.IPSecEnabled() {
 		log.Info("IPsec enabled, adding the binding calculator to calculation graph")
 		calcGraph.EnableIPSec(eventBuffer)

@@ -108,7 +108,7 @@ type CalcGraph struct {
 	activeRulesCalculator *ActiveRulesCalculator
 }
 
-func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostname string) *CalcGraph {
+func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostname string, tiersEnabled bool) *CalcGraph {
 	log.Infof("Creating calculation graph, filtered to hostname %v", hostname)
 
 	// The source of the processing graph, this dispatcher will be fed all the updates from the
@@ -146,28 +146,43 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 	localEndpointFilter := &endpointHostnameFilter{hostname: hostname}
 	localEndpointFilter.RegisterWith(localEndpointDispatcher)
 
+	// The tier filter examines tier and policy updates, potentially filtering out tiers and policies
+	// associated with unlicensed tiers. When tiersEnabled is true, all policies and tiers are allowed.
+	// When tiersEnabled is false, only licensed tiers are allowed, i.e. "default", "sg-remote",
+	// "sg-local", and "metadata".
+	tierDispatcher := dispatcher.NewDispatcher()
+	(*tierDispatcherReg)(tierDispatcher).RegisterWith(allUpdDispatcher)
+	tierFilter := &tierFilter{tiersEnabled}
+	tierFilter.RegisterWith(tierDispatcher)
+
 	// The active rules calculator matches local endpoints against policies and profiles to figure
 	// out which policies/profiles are active on this host.  Limiting to policies that apply to
 	// local endpoints significantly cuts down the number of policies that Felix has to
 	// render into the dataplane.
-	//
-	//           ...
-	//        Dispatcher (all updates)
-	//           /   \
-	//          /     \  All Host/Workload Endpoints
-	//         /       \
-	//        /      Dispatcher (local updates)
-	//       /            |
-	//       | Policies   | Local Host/Workload Endpoints only
-	//       | Profiles   |
-	//       |            |
-	//     Active Rules Calculator
-	//              |
-	//              | Locally active policies/profiles
-	//             ...
+	//           Dispatcher (all updates)
+	//                /         \
+	//               /           \  All Host/Workload Endpoints
+	//              /             \
+	//             /            Dispatcher (local updates)
+	//            /                      |
+	//            |                       \  Local Host/Workload
+	//            |                        \ Endpoints only
+	//           / \                        \
+	// Profiles /   \ All Policies           \
+	//         /     \                        \
+	//         \      \                        \
+	//          \   Dispatcher (tier updates)  |
+	//           \       |                     /
+	//            \      | Policies for       /
+	//             \     | licensed tiers    /
+	//              \    |                  /
+	//              Active Rules Calculator
+	//                   |
+	//                   | Locally active policies/profiles
+	//                  ...
 	//
 	activeRulesCalc := NewActiveRulesCalculator()
-	activeRulesCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher)
+	activeRulesCalc.RegisterWith(localEndpointDispatcher, allUpdDispatcher, tierDispatcher)
 
 	// The active rules calculator only figures out which rules are active, it doesn't extract
 	// any information from the rules.  The rule scanner takes the output from the active rules
@@ -261,7 +276,9 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 	//        ...
 	//     Dispatcher (all updates)
 	//      |
-	//      | All policies
+	//     Tier Dispatcher
+	//      |
+	//      | All policies (with licensed tiers)
 	//      |
 	//      |       ...
 	//       \   Active rules calculator
@@ -279,7 +296,7 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 	polResolver := NewPolicyResolver()
 	// Hook up the inputs to the policy resolver.
 	activeRulesCalc.PolicyMatchListener = polResolver
-	polResolver.RegisterWith(allUpdDispatcher, localEndpointDispatcher)
+	polResolver.RegisterWith(allUpdDispatcher, localEndpointDispatcher, tierDispatcher)
 	// And hook its output to the callbacks.
 	polResolver.RegisterCallback(callbacks)
 
@@ -468,6 +485,59 @@ func (f *remoteEndpointFilter) OnUpdate(update api.Update) (filterOut bool) {
 		} else {
 			log.WithField("id", update.Key).Info("Remote endpoint updated")
 		}
+	}
+	return
+}
+
+// tierFilter provides an UpdateHandler that optionally filters out unlicensed tiers.
+type tierDispatcherReg dispatcher.Dispatcher
+
+func (l *tierDispatcherReg) RegisterWith(disp *dispatcher.Dispatcher) {
+	td := (*dispatcher.Dispatcher)(l)
+	disp.Register(model.TierKey{}, td.OnUpdate)
+	disp.Register(model.PolicyKey{}, td.OnUpdate)
+	disp.RegisterStatusHandler(td.OnDatamodelStatus)
+}
+
+// tierFilter provides an UpdateHandler that filters out unlicensed tiers. When tiersEnabled is true
+// all tiers are considered licensed. When tiersEnabled is false, only the following tiers are considered
+// licensed: "metadata", "sg-remote", "sg-local", and "default".
+type tierFilter struct {
+	tiersEnabled bool
+}
+
+// Filter out tiers as well as policies that are associated with unlicensed tiers
+func (f *tierFilter) RegisterWith(tierDisp *dispatcher.Dispatcher) {
+	tierDisp.Register(model.TierKey{}, f.OnUpdate)
+	tierDisp.Register(model.PolicyKey{}, f.OnUpdate)
+}
+
+func (f *tierFilter) OnUpdate(update api.Update) (filterOut bool) {
+	if f.tiersEnabled {
+		return
+	}
+
+	// Tier names which are always considered "licensed", even when the license feature is disabled
+	const (
+		metaBlockerTier = "metadata"
+		remoteTier      = "sg-remote"
+		localTier       = "sg-local"
+		defaultTier     = "default"
+	)
+	var tierName string
+	switch key := update.Key.(type) {
+	case model.PolicyKey:
+		tierName = key.Tier
+	case model.TierKey:
+		tierName = key.Name
+	default: // ignore any (unintentional) non-policy/tier updates
+		return
+	}
+	if tierName == metaBlockerTier || tierName == remoteTier || tierName == localTier || tierName == defaultTier {
+		return
+	} else {
+		filterOut = true
+		log.Warn("Tier/policy deleted: ", tierName)
 	}
 	return
 }
