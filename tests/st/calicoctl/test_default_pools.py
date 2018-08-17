@@ -161,4 +161,4 @@ class TestDefaultPools(TestBase):
 
     def wait_for_node_log(self, expected_log):
         check = functools.partial(self.assert_calico_node_log_contains, expected_log)
-        retry_until_success(check, 1000, ex_class=AssertionError)
+        retry_until_success(check, 10, ex_class=AssertionError)

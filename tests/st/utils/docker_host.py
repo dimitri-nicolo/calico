@@ -370,18 +370,6 @@ class DockerHost(object):
             self.calicoctl(cmd)
 
         self.attach_log_analyzer()
-        self.wait_for_node_log("Calico node started successfully")
-
-
-
-    def assert_calico_node_log_contains(self, expected_string):
-        assert expected_string in self.execute("docker logs cnx-node"), \
-            "Didn't find %s in start log" % expected_string
-
-    def wait_for_node_log(self, expected_log):
-        check = functools.partial(self.assert_calico_node_log_contains, expected_log)
-        retry_until_success(check, 1000, ex_class=AssertionError)
-
 
     def set_ipip_enabled(self, enabled):
         pools_output = self.calicoctl("get ippool -o yaml")
