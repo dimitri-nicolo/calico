@@ -26,10 +26,12 @@ toc:
       path: /getting-started/kubernetes/installation/config-options
     - title: Customizing the CNX manifests (advanced)
       path: /getting-started/kubernetes/installation/hosted/cnx/cnx
+    - title: Enabling application layer policy (optional)
+      path: /getting-started/kubernetes/installation/app-layer-policy
+    - title: Customizing the manifests (advanced)
+      path: /getting-started/kubernetes/installation/config-options
     - title: Integration guide (advanced)
       path: /getting-started/kubernetes/installation/integration
-    - title: Enabling Application Layer Policy
-      path: /getting-started/kubernetes/installation/app-layer-policy
   - title: Tutorials
     section:
     - title: CNX for Kubernetes Demo
@@ -42,6 +44,8 @@ toc:
       path: /getting-started/kubernetes/tutorials/advanced-policy
     - title: Tiered Policy Demo
       path: /getting-started/cnx/tiered-policy-cnx/
+    - title: Application layer policy
+      path: /getting-started/kubernetes/tutorials/app-layer-policy/
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
   - title: Upgrade to CNX

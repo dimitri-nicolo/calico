@@ -1,25 +1,3 @@
-##############################################################################
-# The build architecture is select by setting the ARCH variable.
-# # For example: When building on ppc64le you could use ARCH=ppc64le make <....>.
-# # When ARCH is undefined it defaults to amd64.
-ARCH?=amd64
-ifeq ($(ARCH),amd64)
-	ARCHTAG?=
-	GO_BUILD_VER?=v0.12
-endif
-
-ifeq ($(ARCH),ppc64le)
-	ARCHTAG:=-ppc64le
-	GO_BUILD_VER?=latest
-endif
-
-ifeq ($(ARCH),s390x)
-	ARCHTAG:=-s390x
-	GO_BUILD_VER?=latest
-endif
-##############################################################################
-
-CALICO_BUILD?=calico/go-build$(ARCHTAG):$(GO_BUILD_VER)
 CALICO_DIR=$(shell git rev-parse --show-toplevel)
 VERSIONS_FILE?=$(CALICO_DIR)/_data/versions.yml
 JEKYLL_VERSION=3.8
@@ -32,7 +10,7 @@ endif
 
 # Determine whether there's a local yaml installed or use dockerized version.
 # Note in order to install local (faster) yaml: "go get github.com/mikefarah/yaml"
-YAML_CMD:=$(shell which yaml || echo docker run --rm -i $(CALICO_BUILD) yaml)
+YAML_CMD:=$(shell which yaml || echo docker run --rm -i calico/yaml)
 
 ##############################################################################
 # Version information used for cutting a release.
@@ -40,7 +18,7 @@ RELEASE_STREAM?=
 
 # Use := so that these V_ variables are computed only once per make run.
 CALICO_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
-NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].title')
+NODE_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/node.version')
 CTL_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calicoctl.version')
 CNI_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/cni.version')
 KUBE_CONTROLLERS_VER := $(shell cat $(VERSIONS_FILE) | $(YAML_CMD) read - '"$(RELEASE_STREAM)".[0].components.calico/kube-controllers.version')
@@ -62,11 +40,7 @@ _site build:
 
 ## Clean enough that a new release build will be clean
 clean:
-	docker run --rm -e JEKYLL_UID=$(JEKYLL_UID) -v $$PWD:/srv/jekyll jekyll/jekyll:$(JEKYLL_VERSION) jekyll clean
-	@rm -f publish-cnx-docs.yaml
-
-	# Remove any release directories
-	rm -rf _output
+	rm -rf _output _site .jekyll-metadata
 
 ###############################################################################
 # CI / test targets
@@ -77,8 +51,14 @@ htmlproofer: clean _site
 	# Run htmlproofer, failing if we hit any errors.
 	./htmlproofer.sh
 
+kubeval:
 	# Run kubeval to check master manifests are valid Kubernetes resources.
-	docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.1.1 -c 'find /calico/_site/master -name "*.yaml" |grep -v "\(config\|allow-istio-pilot\|cnx-policy\).yaml" | xargs /kubeval'
+	docker run -v $$PWD:/calico --entrypoint /bin/sh -ti garethr/kubeval:0.1.1 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(config\|allow-istio-pilot\|30-policy\|istio-app-layer-policy\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok'
+
+htmlproofer-all:
+	# Run htmlproofer across _all_ files. This is not part of CI.
+	echo "Running a soft check across all files"
+	docker run -ti -e JEKYLL_UID=`id -u` --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
 
 ###############################################################################
 # Docs automation

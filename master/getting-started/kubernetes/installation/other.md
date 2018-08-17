@@ -4,19 +4,19 @@ title: Installing CNX for policy (advanced)
 
 ## About installing {{site.prodname}} for policy
 
-You can also use {{site.prodname}} just for policy enforcement and achieve networking 
-with another solution, such as static routes or a Kubernetes cloud provider integration. 
+You can also use {{site.prodname}} just for policy enforcement and achieve networking
+with another solution, such as static routes or a Kubernetes cloud provider integration.
 
 To install {{site.prodname}} in this mode using the Kubernetes API datastore,
 complete the following steps.
 
 ## Before you begin
 
-- Ensure that you have a Kubernetes cluster that meets the {{site.prodname}} 
-  [system requirements](../requirements). If you don't, follow the steps in 
+- Ensure that you have a Kubernetes cluster that meets the {{site.prodname}}
+  [system requirements](../requirements). If you don't, follow the steps in
   [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials) 
+- Ensure that you have the [private registry credentials](../../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../../getting-started/#obtain-a-license-key).
 
 {% include {{page.version}}/load-docker-intro.md %}
@@ -27,32 +27,32 @@ complete the following steps.
 
 ## <a name="install-cnx"></a>Installing {{site.prodname}} for policy
 
-1. Ensure that you have a Kubernetes cluster that meets the 
-   {{site.prodname}} [system requirements](../requirements). If you don't, 
+1. Ensure that you have a Kubernetes cluster that meets the
+   {{site.prodname}} [system requirements](../requirements). If you don't,
    follow the steps in [Using kubeadm to create a cluster](http://kubernetes.io/docs/getting-started-guides/kubeadm/).
 
-1. If your cluster has RBAC enabled, issue the following command to 
+1. If your cluster has RBAC enabled, issue the following command to
    configure the roles and bindings that {{site.prodname}} requires.
 
    ```
    kubectl apply -f \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
    ```
-   > **Note**: You can also 
+   > **Note**: You can also
    > [view the manifest in your browser](hosted/rbac-kdd.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>
-   `--cluster-cidr=192.168.0.0/16` and `--allocate-node-cidrs=true`. 
+   `--cluster-cidr=192.168.0.0/16` and `--allocate-node-cidrs=true`.
 
-   > **Tip**: On kubeadm, you can pass `--pod-network-cidr=192.168.0.0/16` 
+   > **Tip**: On kubeadm, you can pass `--pod-network-cidr=192.168.0.0/16`
    > to kubeadm to set both Kubernetes controller flags.
    {: .alert .alert-success}
 
-1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore, selecting the mainfest dependent 
+1. Download the {{site.prodname}} policy-only manifest for the Kubernetes API datastore, selecting the mainfest dependent
    on your installation environment.
-   
+
    - If you are installing on AWS using the AWS VPC CNI plugin, then download the manifest as follows:
      ```bash
      curl \
@@ -66,9 +66,9 @@ complete the following steps.
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml \
      -O
      ```
-   
+
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
-   
+
 1. If your cluster contains more than 50 nodes, or if you are using the Federated Endpoint Identity feature
    then install the Typha component using the following instructions:
 
@@ -77,7 +77,7 @@ complete the following steps.
 
    - Modify the replica count in the`Deployment` named `calico-typha`
      to the desired number of replicas.
-    
+
      ```
      apiVersion: apps/v1beta1
      kind: Deployment
@@ -88,20 +88,20 @@ complete the following steps.
        ...
        replicas: <number of replicas>
      ```
-   
-     We recommend at least one replica for every 200 nodes and no more than 
-     20 replicas. In production, we recommend a minimum of three replicas to reduce 
+
+     We recommend at least one replica for every 200 nodes and no more than
+     20 replicas. In production, we recommend a minimum of three replicas to reduce
      the impact of rolling upgrades and failures.
 
-     > **Tip**: If you set `typha_service_name` without increasing the replica 
-     > count from its default of `0` Felix will try to connect to Typha, find no 
+     > **Tip**: If you set `typha_service_name` without increasing the replica
+     > count from its default of `0` Felix will try to connect to Typha, find no
      > Typha instances to connect to, and fail to start.
      {: .alert .alert-success}
 
-1. If you have created some secrets for Federation, then modify the manifest to mount the secrets into the 
+1. If you have created some secrets for Federation, then modify the manifest to mount the secrets into the
    container.  For details see [Configuring a Remote Cluster for Federation](/{{page.version}}/usage/federation/configure-rcc).
 
-   > **Warning**: If you are upgrading from a previous release and previously had secrets mounted in for 
+   > **Warning**: If you are upgrading from a previous release and previously had secrets mounted in for
    > federation, then failure to include these secrets in this manifest will result in loss of federation
    > functionality, which may include loss of service between clusters.
    {: .alert .alert-danger}
@@ -115,9 +115,12 @@ complete the following steps.
 1. Continue to [Applying your license key](#applying-your-license-key).
 
 {% include {{page.version}}/apply-license.md %}
-   
+
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
 
 {% include {{page.version}}/cnx-monitor-install.md %}
 
 {% include {{page.version}}/gs-next-steps.md %}
+
+1. If you wish to enforce application layer policies and secure workload-to-workload
+   communications with mutual TLS authentication, continue to [Enabling application layer policy](app-layer-policy) (optional).

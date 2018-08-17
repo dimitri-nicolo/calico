@@ -35,11 +35,10 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
 
 - [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
 
-  > **Note**: After installing kubeadm, do not power down or restart
-  > the host. Instead, continue directly to the
-  > [next section to create your cluster](#create-a-single-host-kubernetes-cluster).
-  {: .alert .alert-info}
-
+> **Note**: After installing kubeadm, do not power down or restart
+the host. Instead, continue directly to the
+[next section to create your cluster](#create-a-single-host-kubernetes-cluster).
+{: .alert .alert-info}
 
 ### Create a single-host Kubernetes cluster
 
@@ -53,6 +52,9 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    --apiserver-cert-extra-sans=127.0.0.1
    ```
 
+1. Execute the following commands to configure kubectl (also returned by
+   `kubeadm init`).
+
 1. Execute the commands to configure kubectl as returned by
    `kubeadm init`. Most likely they will be as follows:
 
@@ -61,6 +63,16 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
+1. Install an etcd instance with the following command.
+
+   ```bash
+   kubectl apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/etcd.yaml
+   ```
+
+   > **Note**: You can also
+   > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/etcd.yaml){:target="_blank"}.
+   {: .alert .alert-info}
 
 1. Download the installation script.
 
@@ -74,7 +86,6 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    ```bash
    chmod +x install-cnx.sh
    ```
-
 1. Use the following command to execute the script, replacing `<customer-name>`
    with your customer name.
 
