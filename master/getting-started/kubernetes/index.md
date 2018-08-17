@@ -52,9 +52,6 @@ the host. Instead, continue directly to the
    --apiserver-cert-extra-sans=127.0.0.1
    ```
 
-1. Execute the following commands to configure kubectl (also returned by
-   `kubeadm init`).
-
 1. Execute the commands to configure kubectl as returned by
    `kubeadm init`. Most likely they will be as follows:
 
