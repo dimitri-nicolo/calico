@@ -3,6 +3,7 @@
 package policysets
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -10,27 +11,33 @@ import (
 	"github.com/projectcalico/felix/iputils"
 
 	"github.com/projectcalico/felix/dataplane/windows/hns"
-	"github.com/projectcalico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+// IPSetCache is our interface to the IP sets tracker.
+type IPSetCache interface {
+	GetIPSetMembers(ipsetID string) []string
+}
+
+// HNSAPI in an interface containing only the parts of the HNS API that we use here.
+type HNSAPI interface {
+	GetHNSSupportedFeatures() hns.HNSSupportedFeatures
+}
+
 // PolicySets manages a whole plane of policies/profiles
 type PolicySets struct {
-	hns                    hns.API
+	IpSets []IPSetCache
+
+	supportedFeatures      hns.HNSSupportedFeatures
 	policySetIdToPolicySet map[string]*policySet
-
-	IpSets []*ipsets.IPSets
-
-	supportedFeatures hns.HNSSupportedFeatures
 
 	resyncRequired bool
 }
 
-func NewPolicySets(hns hns.API, ipsets []*ipsets.IPSets) *PolicySets {
+func NewPolicySets(hns HNSAPI, ipsets []IPSetCache) *PolicySets {
 	supportedFeatures := hns.GetHNSSupportedFeatures()
 	return &PolicySets{
-		hns: hns,
 		policySetIdToPolicySet: map[string]*policySet{},
 
 		IpSets:            ipsets,
@@ -314,13 +321,6 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	aclPolicy := s.NewRule(isInbound, rulePriority)
 
 	//
-	// Id
-	//
-	if s.supportedFeatures.Acl.AclRuleId {
-		aclPolicy.Id = (policyId + "-" + ruleCopy.RuleId)
-	}
-
-	//
 	// Action
 	//
 	switch strings.ToLower(ruleCopy.Action) {
@@ -460,9 +460,17 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	// source or destination condition. The behavior below will be removed in
 	// the next iteration, but for now we have to break up the source and destination
 	// ip address combinations and represent them using multiple rules
+	i := 0
 	for _, localAddr := range localAddresses {
 		for _, remoteAddr := range remoteAddresses {
 			newPolicy := *aclPolicy
+
+			// Give each sub-rule a unique ID.
+			if s.supportedFeatures.Acl.AclRuleId {
+				newPolicy.Id = fmt.Sprintf("%s-%s-%d", policyId, ruleCopy.RuleId, i)
+				i++
+			}
+
 			newPolicy.LocalAddresses = localAddr
 			newPolicy.RemoteAddresses = remoteAddr
 			// Add this rule to the rules being returned
