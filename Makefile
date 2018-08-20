@@ -38,12 +38,10 @@ ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
-
 # list of arches *not* to build when doing *-all
 #    until s390x works correctly
 EXCLUDEARCH ?= s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
-
 
 ###############################################################################
 GO_BUILD_VER?=v0.17
@@ -51,20 +49,36 @@ GO_BUILD_CONTAINER?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
+# Get version from git - used for releases.
+GIT_VERSION?=$(shell git describe --tags --dirty)
+
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
 # owned by the current user.
 LOCAL_USER_ID:=$(shell id -u)
 MY_GID:=$(shell id -g)
 
-PACKAGE_NAME?=github.com/projectcalico/app-policy
 SRC_FILES=$(shell find -name '*.go' |grep -v vendor)
-CONTAINER_NAME?=calico/dikastes
 
-# Pre-configured docker run command that runs as this user with the repo
-# checked out to /code, uses the --rm flag to avoid leaving the container
-# around afterwards.
-DOCKER_RUN_RM:=docker run --rm --user $(MY_UID):$(MY_GID) -v ${CURDIR}:/code
+############################################################################
+CONTAINER_NAME?=calico/dikastes
+PACKAGE_NAME?=github.com/projectcalico/app-policy
+
+# Allow libcalico-go and the ssh auth sock to be mapped into the build container.
+ifdef LIBCALICOGO_PATH
+  EXTRA_DOCKER_ARGS += -v $(LIBCALICOGO_PATH):/go/src/github.com/projectcalico/libcalico-go:ro
+endif
+ifdef SSH_AUTH_SOCK
+  EXTRA_DOCKER_ARGS += -v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent
+endif
+
+ # Pre-configured docker run command that runs as this user with the repo
+ # checked out to /code, uses the --rm flag to avoid leaving the container
+ # around afterwards.
+DOCKER_RUN_RM:=docker run --rm \
+               $(EXTRA_DOCKER_ARGS) \
+               --user $(LOCAL_USER_ID):$(MY_GID) -v $(CURDIR):/code
+
 
 ENVOY_API=vendor/github.com/envoyproxy/data-plane-api
 EXT_AUTH=$(ENVOY_API)/envoy/service/auth/v2alpha/
@@ -79,11 +93,11 @@ clean:
 
 	# Only one pb.go file exists outside the vendor dir
 	rm -rf bin vendor proto/felixbackend.pb.go
-	docker rmi $(CONTAINER_NAME):latest-$(ARCH) || true
-	docker rmi $(CONTAINER_NAME):$(VERSION)-$(ARCH) || true
+	-docker rmi $(CONTAINER_NAME):latest-$(ARCH)
+	-docker rmi $(CONTAINER_NAME):$(VERSION)-$(ARCH)
 ifeq ($(ARCH),amd64)
-	docker rmi $(CONTAINER_NAME):latest || true
-	docker rmi $(CONTAINER_NAME):$(VERSION) || true
+	-docker rmi $(CONTAINER_NAME):latest
+	-docker rmi $(CONTAINER_NAME):$(VERSION)
 endif
 ###############################################################################
 # Building the binary
@@ -148,7 +162,7 @@ bin/dikastes-%: vendor proto $(SRC_FILES)
       -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
       -e GOCACHE=/go-cache \
       -w /go/src/$(PACKAGE_NAME) \
-	    $(GO_BUILD_CONTAINER) go build -v -o bin/dikastes-$(ARCH)
+	    $(GO_BUILD_CONTAINER) go build -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" -v -o bin/dikastes-$(ARCH)
 
 # We use gogofast for protobuf compilation.  Regular gogo is incompatible with
 # gRPC, since gRPC uses golang/protobuf for marshalling/unmarshalling in that
@@ -333,16 +347,16 @@ ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
-	$(MAKE) image
-	$(MAKE) tag-images IMAGETAG=$(VERSION)
+	$(MAKE) image-all
+	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
 	# Generate the `latest` images.
-	$(MAKE) tag-images IMAGETAG=latest
+	$(MAKE) tag-images-all IMAGETAG=latest
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(CONTAINER_NAME):$(VERSION)-$(ARCH) version | grep 'Version:\s*$(VERSION)$$'; then \
-	  echo "Reported version:" `docker run $(CONTAINER_NAME):$(VERSION)-$(ARCH) version` "\nExpected version: $(VERSION)"; \
+	if ! docker run $(CONTAINER_NAME):$(VERSION)-$(ARCH) /dikastes --version | grep 'Version:\s*$(VERSION)$$'; then \
+	  echo "Reported version:" `docker run $(CONTAINER_NAME):$(VERSION)-$(ARCH) /dikastes --version` "\nExpected version: $(VERSION)"; \
 	  false; \
 	else \
 	  echo "Version check passed\n"; \
@@ -360,7 +374,7 @@ release-publish: release-prereqs
 	git push origin $(VERSION)
 
 	# Push images.
-	$(MAKE) push IMAGETAG=$(VERSION) ARCH=$(ARCH)
+	$(MAKE) push-all IMAGETAG=$(VERSION)
 
 	@echo "Finalize the GitHub release based on the pushed tag."
 	@echo ""
@@ -375,7 +389,7 @@ release-publish: release-prereqs
 # run this target for alpha / beta / release candidate builds, or patches to earlier Calico versions.
 ## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
 release-publish-latest: release-prereqs
-	$(MAKE) push IMAGETAG=latest ARCH=$(ARCH)
+	$(MAKE) push-all IMAGETAG=latest
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
