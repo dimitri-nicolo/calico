@@ -7,6 +7,28 @@ import (
 	"net"
 )
 
+// This file contains stub/mock versions of the hcsshim API, which compile on Linux.  When ading new
+// shims to hns_windows.go, add stubbed versions of the types and structs here so that the HNS code can
+// be compiled and tested on Windows. Since we can't import hcsshim here we have to make reasonable
+// type substitutes.  For upstream types that are typedeffed strings, simply repeat the typedef here.
+// For upstream types that are structs, createa  compatible type definiiton including at least the
+// fields we use.
+
+// Types from hnssupport.go.
+
+type HNSSupportedFeatures struct {
+	Acl HNSAclFeatures
+}
+
+type HNSAclFeatures struct {
+	AclAddressLists       bool
+	AclNoHostRulePriority bool
+	AclPortRanges         bool
+	AclRuleId             bool
+}
+
+// Types from hnspolicy.go.
+
 // Type of Request Support in ModifySystem
 type PolicyType string
 
@@ -26,6 +48,7 @@ const (
 	Route                PolicyType = "Route"
 )
 
+// Not currently used on Linux...
 //
 //type NatPolicy = hcsshim.NatPolicy
 //
@@ -57,20 +80,20 @@ const (
 )
 
 type ACLPolicy struct {
-	Type            PolicyType `json:"Type"`
-	Id              string     `json:"Id,omitempty"`
+	Type            PolicyType
+	Id              string
 	Protocol        uint16
-	Protocols       string `json:"Protocols,omitempty"`
+	Protocols       string
 	InternalPort    uint16
 	Action          ActionType
 	Direction       DirectionType
 	LocalAddresses  string
 	RemoteAddresses string
-	LocalPorts      string `json:"LocalPorts,omitempty"`
+	LocalPorts      string
 	LocalPort       uint16
-	RemotePorts     string `json:"RemotePorts,omitempty"`
+	RemotePorts     string
 	RemotePort      uint16
-	RuleType        RuleType `json:"RuleType,omitempty"`
+	RuleType        RuleType
 	Priority        uint16
 	ServiceName     string
 }
@@ -78,39 +101,30 @@ type ACLPolicy struct {
 type Policy struct {
 }
 
+// Types from hnsendpoint.go.
+
 // HNSEndpoint represents a network endpoint in HNS
 type HNSEndpoint struct {
-	Id                 string            `json:"ID,omitempty"`
-	Name               string            `json:",omitempty"`
-	VirtualNetwork     string            `json:",omitempty"`
-	VirtualNetworkName string            `json:",omitempty"`
-	Policies           []json.RawMessage `json:",omitempty"`
-	MacAddress         string            `json:",omitempty"`
-	IPAddress          net.IP            `json:",omitempty"`
-	DNSSuffix          string            `json:",omitempty"`
-	DNSServerList      string            `json:",omitempty"`
-	GatewayAddress     string            `json:",omitempty"`
-	EnableInternalDNS  bool              `json:",omitempty"`
-	DisableICC         bool              `json:",omitempty"`
-	PrefixLength       uint8             `json:",omitempty"`
-	IsRemoteEndpoint   bool              `json:",omitempty"`
-	// Namespace          *Namespace        `json:",omitempty"`
+	Id                 string
+	Name               string
+	VirtualNetwork     string
+	VirtualNetworkName string
+	Policies           []json.RawMessage
+	MacAddress         string
+	IPAddress          net.IP
+	DNSSuffix          string
+	DNSServerList      string
+	GatewayAddress     string
+	EnableInternalDNS  bool
+	DisableICC         bool
+	PrefixLength       uint8
+	IsRemoteEndpoint   bool
+	// Namespace          *Namespace
 }
 
 // ApplyACLPolicy applies a set of ACL Policies on the Endpoint
 func (endpoint *HNSEndpoint) ApplyACLPolicy(policies ...*ACLPolicy) error {
 	return nil
-}
-
-type HNSSupportedFeatures struct {
-	Acl HNSAclFeatures
-}
-
-type HNSAclFeatures struct {
-	AclAddressLists       bool
-	AclNoHostRulePriority bool
-	AclPortRanges         bool
-	AclRuleId             bool
 }
 
 type API struct{}

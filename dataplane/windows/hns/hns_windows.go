@@ -1,10 +1,30 @@
 // Copyright (c) 2018 Tigera, Inc. All rights reserved.
 
+// This package is a shim for the hcsshim API.  Packages in Felix should import this package instead
+// of importing hcsshim directly.  This file is only compiled on Windows and it should use the
+// real hcsshim API.
 package hns
 
 import "github.com/Microsoft/hcsshim"
 
+// Adding to the file
+//
+// To shim a type from the hcsshim package, use a type alias, which re-exports the real type:
+//
+//     type HNSSupportedFeatures = hcsshim.HNSSupportedFeatures
+//
+// note the "=", which causes the exported type to be the exact same type as the one from hcsshim.
+//
+// To shim a function, define a wrapper method on the API struct. Using a struct allows for easier
+// mocking in UT.
+//
+// Remember to add equivalent mock function to hns_linux.go.
+
+// Types from hnssupport.go.
+
 type HNSSupportedFeatures = hcsshim.HNSSupportedFeatures
+
+// Types from hnspolicy.go.
 
 // Type of Request Support in ModifySystem
 type PolicyType = hcsshim.PolicyType
@@ -58,8 +78,11 @@ type ACLPolicy = hcsshim.ACLPolicy
 
 type Policy = hcsshim.Policy
 
+// Types from hnsendpoint.go.
+
 type HNSEndpoint = hcsshim.HNSEndpoint
 
+// API is our shim for the hcsshim.<Name> functions.
 type API struct{}
 
 func (_ API) GetHNSSupportedFeatures() HNSSupportedFeatures {
