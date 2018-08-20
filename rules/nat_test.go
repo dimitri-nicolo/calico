@@ -147,5 +147,53 @@ var _ = Describe("NAT", func() {
 				Rules: nil,
 			}))
 		})
+		It("should render rules when active with explicit port range", func() {
+
+			//copy struct
+			localConfig := rrConfigNormal
+			localConfig.NATPortRange, _ = numorstring.PortFromRange(99, 100)
+			renderer = NewRenderer(localConfig)
+
+			Expect(renderer.NATOutgoingChain(true, 4)).To(Equal(&Chain{
+				Name: "cali-nat-outgoing",
+				Rules: []Rule{
+					{
+						Action: MasqAction{ToPorts: "99-100"},
+						Match: Match().
+							SourceIPSet("cali40masq-ipam-pools").
+							NotDestIPSet("cali40all-ipam-pools").
+							NotDestIPSet("cali40all-hosts-net").Protocol("tcp"),
+					},
+					{
+						Action: ReturnAction{},
+						Match: Match().
+							SourceIPSet("cali40masq-ipam-pools").
+							NotDestIPSet("cali40all-ipam-pools").
+							NotDestIPSet("cali40all-hosts-net").Protocol("tcp"),
+					},
+					{
+						Action: MasqAction{ToPorts: "99-100"},
+						Match: Match().
+							SourceIPSet("cali40masq-ipam-pools").
+							NotDestIPSet("cali40all-ipam-pools").
+							NotDestIPSet("cali40all-hosts-net").Protocol("udp"),
+					},
+					{
+						Action: ReturnAction{},
+						Match: Match().
+							SourceIPSet("cali40masq-ipam-pools").
+							NotDestIPSet("cali40all-ipam-pools").
+							NotDestIPSet("cali40all-hosts-net").Protocol("udp"),
+					},
+					{
+						Action: MasqAction{},
+						Match: Match().
+							SourceIPSet("cali40masq-ipam-pools").
+							NotDestIPSet("cali40all-ipam-pools").
+							NotDestIPSet("cali40all-hosts-net"),
+					},
+				},
+			}))
+		})
 	})
 })
