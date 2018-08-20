@@ -24,7 +24,7 @@ if [ -z $WHAT ]
 then
     echo "Calculating packages to cover..."
     go_dirs=$(find -type f -name '*.go' | \
-              grep -vE '/vendor/|\./proto/|.glide|/k8sfv/|/fv/|/dataplane/windows/' | \
+              grep -vE '/vendor/|\./proto/|.glide|/k8sfv/|/fv/' | \
               xargs -n 1 dirname | \
               sort | uniq | \
               tr '\n' ',' | \
@@ -40,7 +40,7 @@ else
     echo "Running the following tests: $WHAT"
 fi
 
-ginkgo -cover -covermode=count -coverpkg=${go_dirs} -r -skipPackage fv,k8sfv,windows $WHAT
+ginkgo -cover -covermode=count -coverpkg=${go_dirs} -r -skipPackage fv,k8sfv $WHAT
 
 gocovmerge $(find . -name '*.coverprofile') > combined.coverprofile
 
