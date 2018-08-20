@@ -1,6 +1,5 @@
 ---
 title: Logging
-canonical_url: 'https://docs.projectcalico.org/v3.2/usage/troubleshooting/logging'
 ---
 
 ## The {{site.nodecontainer}} container

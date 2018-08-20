@@ -60,17 +60,6 @@ the host. Instead, continue directly to the
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
-1. Install an etcd instance with the following command.
-
-   ```bash
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/etcd.yaml
-   ```
-
-   > **Note**: You can also
-   > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/etcd.yaml){:target="_blank"}.
-   {: .alert .alert-info}
-
 1. Download the installation script.
 
    ```bash

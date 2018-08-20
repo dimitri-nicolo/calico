@@ -1,6 +1,5 @@
 ---
 title: Frequently Asked Questions
-canonical_url: 'https://docs.projectcalico.org/v3.2/usage/troubleshooting/faq'
 ---
 
 * TOC
