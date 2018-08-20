@@ -1,6 +1,4 @@
-//+build windows
-
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +18,8 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/dataplane/windows/hns"
 
 	"github.com/projectcalico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
@@ -137,7 +137,7 @@ func (d *WindowsDataplane) RegisterManager(mgr Manager) {
 
 // NewWinDataplaneDriver creates and initializes a new dataplane driver using the provided
 // configuration.
-func NewWinDataplaneDriver(config Config) *WindowsDataplane {
+func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 	log.WithField("config", config).Info("Creating Windows dataplane driver.")
 
 	ipSetsConfigV4 := ipsets.NewIPVersionConfig(
@@ -156,11 +156,11 @@ func NewWinDataplaneDriver(config Config) *WindowsDataplane {
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
 
 	dp.ipSets = append(dp.ipSets, ipSetsV4)
-	dp.policySets = policysets.NewPolicySets(dp.ipSets)
+	dp.policySets = policysets.NewPolicySets(hns, dp.ipSets)
 
 	dp.RegisterManager(newIPSetsManager(ipSetsV4))
 	dp.RegisterManager(newPolicyManager(dp.policySets))
-	dp.RegisterManager(newEndpointManager(dp.policySets))
+	dp.RegisterManager(newEndpointManager(hns, dp.policySets))
 
 	// Register that we will report liveness and readiness.
 	if config.HealthAggregator != nil {

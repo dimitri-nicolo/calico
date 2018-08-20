@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/windows"
+	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/libcalico-go/lib/health"
 )
 
@@ -38,7 +39,7 @@ func StartDataplaneDriver(configParams *config.Config,
 		HealthAggregator: healthAggregator,
 	}
 
-	winDP := windataplane.NewWinDataplaneDriver(dpConfig)
+	winDP := windataplane.NewWinDataplaneDriver(hns.API{}, dpConfig)
 	winDP.Start()
 
 	return winDP, nil

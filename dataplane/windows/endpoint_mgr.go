@@ -1,6 +1,4 @@
-//+build windows
-
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +20,9 @@ import (
 	"strings"
 	"time"
 
-	hns "github.com/Microsoft/hcsshim"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/projectcalico/felix/dataplane/windows/hns"
 
 	"github.com/projectcalico/felix/dataplane/windows/policysets"
 	"github.com/projectcalico/felix/proto"
@@ -66,9 +65,10 @@ type endpointManager struct {
 	addressToEndpointId map[string]string
 	// lastCacheUpdate records the last time that the addressToEndpointId map was refreshed.
 	lastCacheUpdate time.Time
+	hns             hns.API
 }
 
-func newEndpointManager(policysets policysets.PolicySetsDataplane) *endpointManager {
+func newEndpointManager(hns hns.API, policysets policysets.PolicySetsDataplane) *endpointManager {
 	var networkName string
 	if os.Getenv(envNetworkName) != "" {
 		networkName = os.Getenv(envNetworkName)
@@ -79,6 +79,7 @@ func newEndpointManager(policysets policysets.PolicySetsDataplane) *endpointMana
 	}
 
 	return &endpointManager{
+		hns:                 hns,
 		hnsNetworkName:      networkName,
 		policysetsDataplane: policysets,
 		addressToEndpointId: make(map[string]string),
@@ -115,7 +116,7 @@ func (m *endpointManager) RefreshHnsEndpointCache(forceRefresh bool) error {
 	}
 
 	log.Info("Refreshing the endpoint cache")
-	endpoints, err := hns.HNSListEndpointRequest()
+	endpoints, err := m.hns.HNSListEndpointRequest()
 	if err != nil {
 		log.Infof("Failed to obtain HNS endpoints: %v", err)
 		return err

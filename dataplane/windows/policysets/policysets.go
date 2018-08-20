@@ -1,5 +1,3 @@
-//+build windows
-
 // Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 
 package policysets
@@ -7,11 +5,11 @@ package policysets
 import (
 	"strings"
 
-	hns "github.com/Microsoft/hcsshim"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/iputils"
 
+	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -19,6 +17,7 @@ import (
 
 // PolicySets manages a whole plane of policies/profiles
 type PolicySets struct {
+	hns                    hns.API
 	policySetIdToPolicySet map[string]*policySet
 
 	IpSets []*ipsets.IPSets
@@ -28,9 +27,10 @@ type PolicySets struct {
 	resyncRequired bool
 }
 
-func NewPolicySets(ipsets []*ipsets.IPSets) *PolicySets {
+func NewPolicySets(hns hns.API, ipsets []*ipsets.IPSets) *PolicySets {
 	supportedFeatures := hns.GetHNSSupportedFeatures()
 	return &PolicySets{
+		hns: hns,
 		policySetIdToPolicySet: map[string]*policySet{},
 
 		IpSets:            ipsets,

@@ -1,6 +1,4 @@
-//+build windows
-
-// Copyright (c) 2017 Tigera, Inc. All rights reserved.
+// Copyright (c) 2017-2018 Tigera, Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +17,7 @@ package policysets
 import (
 	"errors"
 
-	hns "github.com/Microsoft/hcsshim"
-
+	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
