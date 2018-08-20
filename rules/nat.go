@@ -27,66 +27,49 @@ func (r *DefaultRuleRenderer) NATOutgoingChain(natOutgoingActive bool, ipVersion
 		ipConf := r.ipSetConfig(ipVersion)
 		allIPsSetName := ipConf.NameForMainIPSet(IPSetIDNATOutgoingAllPools)
 		masqIPsSetName := ipConf.NameForMainIPSet(IPSetIDNATOutgoingMasqPools)
-		if r.Config.IPSecEnabled && ipVersion == 4 {
-			// When IPsec is enabled, workload to remote host traffic is tunneled so there is no need
-			// to SNAT it.  In addition, the IPsec policy rules at the destination are not expecting
-			// tunneled traffic from the host itself so the SNATted traffic would be blocked.
-			allHostsIPSetName := ipConf.NameForMainIPSet(IPSetIDAllHostNets)
 
-			rules = []iptables.Rule{
-				{
-					Action: iptables.MasqAction{},
-					Match:  iptables.Match().SourceIPSet(masqIPsSetName).NotDestIPSet(allIPsSetName).NotDestIPSet(allHostsIPSetName),
-				},
+		baseMatch := func() iptables.MatchCriteria {
+			match := iptables.Match().
+				SourceIPSet(masqIPsSetName).
+				NotDestIPSet(allIPsSetName)
+
+			if r.Config.IPSecEnabled && ipVersion == 4 {
+				// When IPsec is enabled, workload to remote host traffic is tunneled so there is no need
+				// to SNAT it.  In addition, the IPsec policy rules at the destination are not expecting
+				// tunneled traffic from the host itself so the SNATted traffic would be blocked.
+				allHostsIPSetName := ipConf.NameForMainIPSet(IPSetIDAllHostNets)
+				match = match.NotDestIPSet(allHostsIPSetName)
 			}
-		} else if r.Config.NATPortRange.MaxPort > 0 {
+			return match
+		}
+
+		if r.Config.NATPortRange.MaxPort > 0 {
 			toPorts := fmt.Sprintf("%d-%d", r.Config.NATPortRange.MinPort, r.Config.NATPortRange.MaxPort)
 			rules = []iptables.Rule{
 				{
 					Action: iptables.MasqAction{ToPorts: toPorts},
-					Match: iptables.Match().
-						SourceIPSet(masqIPsSetName).
-						NotDestIPSet(allIPsSetName).
-						Protocol("tcp"),
+					Match:  baseMatch().Protocol("tcp"),
 				},
 				{
 					Action: iptables.ReturnAction{},
-					Match: iptables.Match().
-						SourceIPSet(masqIPsSetName).
-						NotDestIPSet(allIPsSetName).
-						Protocol("tcp"),
+					Match:  baseMatch().Protocol("tcp"),
 				},
 				{
 					Action: iptables.MasqAction{ToPorts: toPorts},
-					Match: iptables.Match().
-						SourceIPSet(masqIPsSetName).
-						NotDestIPSet(allIPsSetName).
-						Protocol("udp"),
+					Match:  baseMatch().Protocol("udp"),
 				},
 				{
 					Action: iptables.ReturnAction{},
-					Match: iptables.Match().
-						SourceIPSet(masqIPsSetName).
-						NotDestIPSet(allIPsSetName).
-						Protocol("udp"),
-				},
-				{
-					Action: iptables.MasqAction{},
-					Match: iptables.Match().
-						SourceIPSet(masqIPsSetName).
-						NotDestIPSet(allIPsSetName),
-				},
-			}
-		} else {
-			rules = []iptables.Rule{
-				{
-					Action: iptables.MasqAction{},
-					Match: iptables.Match().
-						SourceIPSet(masqIPsSetName).
-						NotDestIPSet(allIPsSetName),
+					Match:  baseMatch().Protocol("udp"),
 				},
 			}
 		}
+
+		rules = append(rules, iptables.Rule{
+			Action: iptables.MasqAction{},
+			Match:  baseMatch(),
+		})
+
 	}
 	return &iptables.Chain{
 		Name:  ChainNATOutgoing,
