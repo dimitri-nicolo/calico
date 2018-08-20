@@ -5,6 +5,7 @@ calico-typha.yaml acccepts the following include flags:
 |--------------|--------------------------|
 | datastore    | kdd, etcd                |
 | variant_name | Calico, Canal            |
+| network      | calico, flannel, ecs, <unset> |
 
 {% endcomment -%}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
@@ -83,8 +84,8 @@ spec:
           protocol: TCP
         env:
 {%- if include.network == "ecs" %}
-            - name: FELIX_INTERFACEPREFIX
-              value: "eni"
+          - name: FELIX_INTERFACEPREFIX
+            value: "eni"
 {%- endif %}
           # Enable "info" logging by default.  Can be set to "debug" to increase verbosity.
           - name: TYPHA_LOGSEVERITYSCREEN

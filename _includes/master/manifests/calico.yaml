@@ -34,7 +34,7 @@ calico.yaml acccepts the following include flags:
 
 {%- endif -%}
 {%- if include.typha == "true" %}
-{% include {{page.version}}/manifests/calico-typha.yaml datastore=include.datastore variant_name=variant_name %}
+{% include {{page.version}}/manifests/calico-typha.yaml datastore=include.datastore variant_name=variant_name network=include.network %}
 ---
 
 {%- endif %}
