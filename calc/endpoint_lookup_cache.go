@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/projectcalico/felix/dispatcher"
+	"github.com/projectcalico/felix/rules"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/model"
 	"github.com/projectcalico/libcalico-go/lib/set"
@@ -20,6 +21,14 @@ type EndpointData struct {
 	Key          model.Key
 	Endpoint     interface{}
 	OrderedTiers []string
+
+	// ImplicitDrop*RuleID is used to track the last policy in each tier that
+	// selected this endpoint in the Ingress or Egress rule directions. These
+	// special RuleIDs are created so that implictly dropped packets in each
+	// tier can be counted against these policies as being responsible for
+	// denying the packet.
+	ImplicitDropIngressRuleID map[string]*RuleID
+	ImplicitDropEgressRuleID  map[string]*RuleID
 }
 
 // IsLocal returns if this EndpointData corresponds to a local endpoint or not.
@@ -74,21 +83,56 @@ func (ec *EndpointLookupsCache) RegisterWith(remoteEndpointDispatcher *dispatche
 // handler (below) is this method records tier information for local endpoints while this information
 // is ignored for remote endpoints.
 func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface{}, filteredTiers []tierInfo) {
+	createEndpointData := func() *EndpointData {
+		ed := &EndpointData{
+			Key:                       key,
+			Endpoint:                  ep,
+			OrderedTiers:              make([]string, len(filteredTiers)),
+			ImplicitDropIngressRuleID: map[string]*RuleID{},
+			ImplicitDropEgressRuleID:  map[string]*RuleID{},
+		}
+	processTiers:
+		for i := range filteredTiers {
+			ti := filteredTiers[i]
+			ed.OrderedTiers[i] = ti.Name
+			if len(ti.OrderedPolicies) == 0 {
+				continue
+			}
+			ingressAssigned := false
+			egressAssigned := false
+			for j := len(ti.OrderedPolicies) - 1; j >= 0; j-- {
+				pol := ti.OrderedPolicies[j]
+				namespace, tier, name, err := deconstructPolicyName(pol.Key.Name)
+				if err != nil {
+					log.WithError(err).Error("Unable to parse policy name")
+					continue
+				}
+				if pol.GovernsIngress() && !ingressAssigned {
+					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop,
+						rules.RuleDirIngress, rules.RuleActionDeny)
+					ed.ImplicitDropIngressRuleID[ti.Name] = rid
+					ingressAssigned = true
+				}
+				if pol.GovernsEgress() && !egressAssigned {
+					rid := NewRuleID(tier, name, namespace, RuleIDIndexImplicitDrop,
+						rules.RuleDirEgress, rules.RuleActionDeny)
+					ed.ImplicitDropEgressRuleID[ti.Name] = rid
+					egressAssigned = true
+				}
+				if ingressAssigned && egressAssigned {
+					continue processTiers
+				}
+			}
+		}
+		return ed
+	}
 	switch k := key.(type) {
 	case model.WorkloadEndpointKey:
 		if ep == nil {
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := ep.(*model.WorkloadEndpoint)
-			ed := &EndpointData{
-				Key:          k,
-				Endpoint:     ep,
-				OrderedTiers: make([]string, len(filteredTiers)),
-			}
-			// We only need the tier names so copy them out.
-			for i := range filteredTiers {
-				ed.OrderedTiers[i] = filteredTiers[i].Name
-			}
+			ed := createEndpointData()
 			ec.addOrUpdateEndpoint(k, ed, extractIPsFromWorkloadEndpoint(endpoint))
 		}
 	case model.HostEndpointKey:
@@ -96,15 +140,7 @@ func (ec *EndpointLookupsCache) OnEndpointTierUpdate(key model.Key, ep interface
 			ec.removeEndpoint(k)
 		} else {
 			endpoint := ep.(*model.HostEndpoint)
-			ed := &EndpointData{
-				Key:          k,
-				Endpoint:     ep,
-				OrderedTiers: make([]string, len(filteredTiers)),
-			}
-			// We only need the tier names so copy them out.
-			for i := range filteredTiers {
-				ed.OrderedTiers[i] = filteredTiers[i].Name
-			}
+			ed := createEndpointData()
 			ec.addOrUpdateEndpoint(k, ed, extractIPsFromHostEndpoint(endpoint))
 		}
 	}
