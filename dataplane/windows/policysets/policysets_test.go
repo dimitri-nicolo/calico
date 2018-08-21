@@ -225,6 +225,12 @@ func TestRuleRendering(t *testing.T) {
 				SrcNet:      []string{"10.0.0.0/24", "10.1.0.0/24"},
 				RuleId:      "rule-3",
 			},
+			{
+				Action:      "Allow",
+				SrcIpSetIds: []string{"a", "f"},
+				SrcNet:      []string{"12.0.0.0/24"},
+				RuleId:      "rule-4",
+			},
 		},
 		OutboundRules: []*proto.Rule{},
 	})
@@ -267,6 +273,8 @@ func TestRuleRendering(t *testing.T) {
 			Type: hns.ACL, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000, Protocol: 256,
 			Id: "selector-cidr-rule-3-3", RemoteAddresses: "10.1.0.1/32",
 		},
+
+		// Rule 4 becomes a no-op since intersection is empty.
 
 		// Default deny rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
