@@ -117,15 +117,16 @@ type Config struct {
 	PrometheusReporterKeyFile  string
 	PrometheusReporterCAFile   string
 
+	FlowLogsFlushInterval      time.Duration
+	FlowLogsEnableHostEndpoint bool
+
 	CloudWatchLogsReporterEnabled           bool
-	CloudWatchLogsFlushInterval             time.Duration
 	CloudWatchLogsLogGroupName              string
 	CloudWatchLogsLogStreamName             string
 	CloudWatchLogsIncludeLabels             bool
 	CloudWatchLogsAggregationKindForAllowed int
 	CloudWatchLogsAggregationKindForDenied  int
 	CloudWatchLogsRetentionDays             int
-	CloudWatchLogsEnableHostEndpoint        bool
 	CloudWatchLogsEnabledForAllowed         bool
 	CloudWatchLogsEnabledForDenied          bool
 
@@ -141,7 +142,6 @@ type Config struct {
 	FlowLogsFileAggregationKindForAllowed int
 	FlowLogsFileAggregationKindForDenied  int
 	FlowLogsFileIncludeLabels             bool
-	FlowLogsFileEnableHostEndpoint        bool
 	FlowLogsFileEnabledForAllowed         bool
 	FlowLogsFileEnabledForDenied          bool
 
@@ -611,14 +611,21 @@ func (d *InternalDataplane) Start() {
 		)
 		var cwl cloudwatchlogsiface.CloudWatchLogsAPI
 		if d.config.DebugCloudWatchLogsFile != "" {
+			log.Info("Creating Debug CloudWatchLogsAPI")
 			// Allow CloudWatch logging to be FV tested without incurring AWS
 			// costs, by calling a mock AWS API instead of the real one.
 			cwl = testutil.NewDebugCloudWatchLogsFile(logGroupName, d.config.DebugCloudWatchLogsFile)
 		}
+		log.Info("Creating Flow Logs CloudWatchDispatcher")
 		cwd := collector.NewCloudWatchDispatcher(logGroupName, logStreamName, d.config.CloudWatchLogsRetentionDays, cwl)
 		dispatchers[CloudWatchLogsDispatcherName] = cwd
 	}
 	if d.config.FlowLogsFileEnabled {
+		log.WithFields(log.Fields{
+			"directory": d.config.FlowLogsFileDirectory,
+			"max_size":  d.config.FlowLogsFileMaxFileSizeMB,
+			"max_files": d.config.FlowLogsFileMaxFiles,
+		}).Info("Creating Flow Logs FileDispatcher")
 		fd := collector.NewFileDispatcher(
 			d.config.FlowLogsFileDirectory,
 			d.config.FlowLogsFileMaxFileSizeMB,
@@ -627,7 +634,8 @@ func (d *InternalDataplane) Start() {
 		dispatchers[FlowLogsFileDispatcherName] = fd
 	}
 	if len(dispatchers) > 0 {
-		cw := collector.NewFlowLogsReporter(dispatchers, d.config.CloudWatchLogsFlushInterval, d.config.HealthAggregator, d.config.CloudWatchLogsEnableHostEndpoint)
+		log.Info("Creating Flow Logs Reporter")
+		cw := collector.NewFlowLogsReporter(dispatchers, d.config.FlowLogsFlushInterval, d.config.HealthAggregator, d.config.FlowLogsEnableHostEndpoint)
 		configureFlowAggregation(d.config, cw)
 		rm.RegisterMetricsReporter(cw)
 	}
@@ -652,6 +660,7 @@ func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
 	addedFileDeny := false
 	if config.CloudWatchLogsReporterEnabled {
 		if config.CloudWatchLogsEnabledForAllowed {
+			log.Info("Creating Flow Logs Aggregator for allowed")
 			caa := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(config.CloudWatchLogsAggregationKindForAllowed)).
 				IncludeLabels(config.CloudWatchLogsIncludeLabels).
@@ -662,13 +671,16 @@ func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
 				config.FlowLogsFileEnabledForAllowed &&
 				config.FlowLogsFileAggregationKindForAllowed == config.CloudWatchLogsAggregationKindForAllowed &&
 				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels {
+				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch and File logs")
 				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
 				addedFileAllow = true
 			} else {
+				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch logs")
 				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName})
 			}
 		}
 		if config.CloudWatchLogsEnabledForDenied {
+			log.Info("Creating Flow Logs Aggregator for denied")
 			cad := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(config.CloudWatchLogsAggregationKindForDenied)).
 				IncludeLabels(config.CloudWatchLogsIncludeLabels).
@@ -678,9 +690,11 @@ func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
 				config.FlowLogsFileEnabledForDenied &&
 				config.FlowLogsFileAggregationKindForDenied == config.CloudWatchLogsAggregationKindForDenied &&
 				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels {
+				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch and File logs")
 				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
 				addedFileDeny = true
 			} else {
+				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch logs")
 				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName})
 			}
 		}
@@ -688,17 +702,21 @@ func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
 
 	if config.FlowLogsFileEnabled {
 		if !addedFileAllow && config.FlowLogsFileEnabledForAllowed {
+			log.Info("Creating Flow Logs Aggregator for allowed")
 			caa := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(config.FlowLogsFileAggregationKindForAllowed)).
 				IncludeLabels(config.FlowLogsFileIncludeLabels).
 				ForAction(rules.RuleActionAllow)
+			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
 			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
 		}
 		if !addedFileDeny && config.FlowLogsFileEnabledForDenied {
+			log.Info("Creating Flow Logs Aggregator for denied")
 			cad := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(config.FlowLogsFileAggregationKindForDenied)).
 				IncludeLabels(config.FlowLogsFileIncludeLabels).
 				ForAction(rules.RuleActionDeny)
+			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
 			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})
 		}
 	}

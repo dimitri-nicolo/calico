@@ -77,6 +77,7 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 		return nil
 	}
 
+	log.Debug("Flow Log Aggregator got Metric Update")
 	flowMeta, err := NewFlowMeta(mu, c.kind)
 	if err != nil {
 		return err
@@ -97,6 +98,7 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 // Get returns all aggregated flow logs, as a list of string pointers, since the last time a Get
 // was called. Calling Get will also clear the stored flow logs once the flow logs are returned.
 func (c *flowLogAggregator) Get() []*FlowLog {
+	log.Debug("Get from flow log aggregator")
 	resp := make([]*FlowLog, 0, len(c.flowStore))
 	aggregationEndTime := time.Now()
 	c.flMutex.Lock()

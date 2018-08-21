@@ -40,6 +40,7 @@ func (d *fileDispatcher) Initialize() error {
 }
 
 func (d *fileDispatcher) Dispatch(fl []*FlowLog) error {
+	log.Debug("Dispatching flow logs to file")
 	for _, l := range fl {
 		o := toOutput(l)
 		b, err := json.Marshal(o)

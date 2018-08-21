@@ -92,6 +92,7 @@ func (c *FlowLogsReporter) Start() {
 }
 
 func (c *FlowLogsReporter) Report(mu MetricUpdate) error {
+	log.Debug("Flow Logs Report got Metric Update")
 	if !c.hepEnabled {
 		if mu.srcEp != nil && mu.srcEp.IsHostEndpoint() {
 			mu.srcEp = nil
@@ -116,6 +117,7 @@ func (c *FlowLogsReporter) run() {
 		case <-c.flushTicker.C:
 			// Fetch from different aggregators and then dispatch them to wherever
 			// the flow logs need to end up.
+			log.Debug("Flow log flush tick")
 			for _, agg := range c.aggregators {
 				fl := agg.a.Get()
 				if len(fl) > 0 {

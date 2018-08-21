@@ -271,7 +271,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 2f855c5b9bdf1b607ade4b34d9b7b43aa22b44ea
+  version: 7a59700fd067ea4ff1423b33f2516bf3bff5dcdb
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -349,7 +349,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
-  version: eaec5a48b41f4bd93f2d2e0da0a0af5e695c2a39
+  version: b5920cbad881b570f83bcc563b99b91c4607cca3
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:

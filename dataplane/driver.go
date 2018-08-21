@@ -26,6 +26,8 @@ import (
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 
+	"time"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/external"
@@ -218,25 +220,30 @@ func StartDataplaneDriver(configParams *config.Config,
 				NATPortRange: configParams.NATPortRange,
 			},
 
-			NfNetlinkBufSize:                        configParams.NfNetlinkBufSize,
-			StatsDumpFilePath:                       configParams.StatsDumpFilePath,
-			PrometheusReporterEnabled:               configParams.PrometheusReporterEnabled,
-			PrometheusReporterPort:                  configParams.PrometheusReporterPort,
-			PrometheusReporterCertFile:              configParams.PrometheusReporterCertFile,
-			PrometheusReporterKeyFile:               configParams.PrometheusReporterKeyFile,
-			PrometheusReporterCAFile:                configParams.PrometheusReporterCAFile,
-			SyslogReporterNetwork:                   configParams.SyslogReporterNetwork,
-			SyslogReporterAddress:                   configParams.SyslogReporterAddress,
-			DeletedMetricsRetentionSecs:             configParams.DeletedMetricsRetentionSecs,
+			NfNetlinkBufSize:            configParams.NfNetlinkBufSize,
+			StatsDumpFilePath:           configParams.StatsDumpFilePath,
+			PrometheusReporterEnabled:   configParams.PrometheusReporterEnabled,
+			PrometheusReporterPort:      configParams.PrometheusReporterPort,
+			PrometheusReporterCertFile:  configParams.PrometheusReporterCertFile,
+			PrometheusReporterKeyFile:   configParams.PrometheusReporterKeyFile,
+			PrometheusReporterCAFile:    configParams.PrometheusReporterCAFile,
+			SyslogReporterNetwork:       configParams.SyslogReporterNetwork,
+			SyslogReporterAddress:       configParams.SyslogReporterAddress,
+			DeletedMetricsRetentionSecs: configParams.DeletedMetricsRetentionSecs,
+
+			// Deal with deprecated CloudWatchLogsFlushInterval by taking max
+			FlowLogsFlushInterval: maxDuration(configParams.CloudWatchLogsFlushInterval, configParams.FlowLogsFlushInterval),
+
+			// Deal with deprecated CloudWatchLogsEnableHostEndpoint by combining with new field name.
+			FlowLogsEnableHostEndpoint: configParams.CloudWatchLogsEnableHostEndpoint || configParams.FlowLogsEnableHostEndpoint,
+
 			CloudWatchLogsReporterEnabled:           configParams.CloudWatchLogsReporterEnabled,
-			CloudWatchLogsFlushInterval:             configParams.CloudWatchLogsFlushInterval,
 			CloudWatchLogsLogGroupName:              configParams.CloudWatchLogsLogGroupName,
 			CloudWatchLogsLogStreamName:             configParams.CloudWatchLogsLogStreamName,
 			CloudWatchLogsAggregationKindForAllowed: configParams.CloudWatchLogsAggregationKindForAllowed,
 			CloudWatchLogsAggregationKindForDenied:  configParams.CloudWatchLogsAggregationKindForDenied,
 			CloudWatchLogsRetentionDays:             configParams.CloudWatchLogsRetentionDays,
 			CloudWatchLogsIncludeLabels:             configParams.CloudWatchLogsIncludeLabels,
-			CloudWatchLogsEnableHostEndpoint:        configParams.CloudWatchLogsEnableHostEndpoint,
 			CloudWatchLogsEnabledForAllowed:         configParams.CloudWatchLogsEnabledForAllowed,
 			CloudWatchLogsEnabledForDenied:          configParams.CloudWatchLogsEnabledForDenied,
 			DebugCloudWatchLogsFile:                 configParams.DebugCloudWatchLogsFile,
@@ -248,7 +255,6 @@ func StartDataplaneDriver(configParams *config.Config,
 			FlowLogsFileAggregationKindForAllowed: configParams.FlowLogsFileAggregationKindForAllowed,
 			FlowLogsFileAggregationKindForDenied:  configParams.FlowLogsFileAggregationKindForDenied,
 			FlowLogsFileIncludeLabels:             configParams.FlowLogsFileIncludeLabels,
-			FlowLogsFileEnableHostEndpoint:        configParams.FlowLogsFileEnableHostEndpoint,
 			FlowLogsFileEnabledForAllowed:         configParams.FlowLogsFileEnabledForAllowed,
 			FlowLogsFileEnabledForDenied:          configParams.FlowLogsFileEnabledForDenied,
 
@@ -309,4 +315,12 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		return extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
 	}
+}
+
+// maxDuration returns the maximum between to durations
+func maxDuration(d1, d2 time.Duration) time.Duration {
+	if d1 > d2 {
+		return d1
+	}
+	return d2
 }

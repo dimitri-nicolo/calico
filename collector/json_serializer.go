@@ -26,11 +26,13 @@ type FlowLogJSONOutput struct {
 	SourceNamespace string `json:"source_namespace"`
 	SourcePort      int64  `json:"source_port"`
 	SourceType      string `json:"source_type"`
+	SourceLabels    string `json:"source_labels,omitempty"`
 	DestIP          string `json:"dest_ip"`
 	DestName        string `json:"dest_name"`
 	DestNamespace   string `json:"dest_namespace"`
 	DestPort        int64  `json:"dest_port"`
 	DestType        string `json:"dest_type"`
+	DestLabels      string `json:"dest_labels,omitempty"`
 	Proto           string `json:"proto"`
 
 	Action   string `json:"action"`
@@ -61,6 +63,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.SourceName = l.SrcMeta.Name
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
+	out.SourceLabels = l.SrcMeta.Labels
 
 	ip = net.IP(l.Tuple.dst[:16])
 	if !ip.IsUnspecified() {
@@ -72,6 +75,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.DestName = l.DstMeta.Name
 	out.DestNamespace = l.DstMeta.Namespace
 	out.DestType = string(l.DstMeta.Type)
+	out.DestLabels = l.DstMeta.Labels
 
 	out.Proto = protoToString(l.Tuple.proto)
 
