@@ -62,10 +62,10 @@ EXCLUDEARCH ?= s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 ###############################################################################
-CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx/tigera
+CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
 
 BUILD_IMAGE?=tigera/cnx-node
-PUSH_IMAGES?=$(CNX_REPOSITORY)/cnx-node
+PUSH_IMAGES?=$(CNX_REPOSITORY)/tigera/cnx-node
 RELEASE_IMAGES?=
 
 ifeq ($(RELEASE),true)
