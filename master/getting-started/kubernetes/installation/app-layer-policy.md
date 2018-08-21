@@ -8,6 +8,10 @@ Application layer policy for {{site.prodname}} allows you to write policies that
 enforce against application layer attributes like HTTP methods or paths as well as
 against cryptographically secure identities.
 
+> **Note**: Application layer policy is a beta feature of this release and not
+> recommended for production use.
+{: .alert .alert-info}
+
 Support for application layer policy is not enabled by default in
 {{site.prodname}} installs, since it requires extra CPU and memory resources to
 operate.
@@ -39,17 +43,6 @@ kubectl apply -f \
 
 	> **Note**: You can also
 	> [view the manifest in your browser]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/calico-networking/calico-node.yaml){:target="_blank"}.
-	{: .alert .alert-info}
-
-- **{{site.prodname}} for policy and flannel for networking with the Kubernetes API datastore**:
-
-  ```bash
-kubectl apply -f \
-{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/flannel/calico-node.yaml
-	```
-
-	> **Note**: You can also
-	> [view the manifest in your browser](manifests/app-layer-policy/kubernetes-datastore/flannel/calico-node.yaml){:target="_blank"}.
 	{: .alert .alert-info}
 
 - **{{site.prodname}} for policy only**:
