@@ -415,3 +415,138 @@ func TestCheckStoreWithInvalidData(t *testing.T) {
 	status := checkStore(store, req)
 	Expect(status.Code).To(Equal(INVALID_ARGUMENT))
 }
+
+// Check multiple tiers with pass to next tier and match the action on the matched rule in the next tier is the result.
+func TestCheckStorePolicyMultiTierMatch(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+	store.Endpoint = &proto.WorkloadEndpoint{
+		Tiers: []*proto.TierInfo{
+			{
+				Name:            "tier1",
+				IngressPolicies: []string{"policy1"},
+			},
+			{
+				Name:            "tier2",
+				IngressPolicies: []string{"policy2", "policy3"},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:    "pass",
+				HttpMatch: &proto.HTTPMatch{Methods: []string{"GET", "HEAD"}},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier2", Name: "policy2"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action: "deny",
+				HttpMatch: &proto.HTTPMatch{
+					Paths: []*proto.HTTPMatch_PathMatch{{&proto.HTTPMatch_PathMatch_Exact{"/bad"}}},
+				},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier2", Name: "policy3"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+				HttpMatch: &proto.HTTPMatch{
+					Paths: []*proto.HTTPMatch_PathMatch{{&proto.HTTPMatch_PathMatch_Exact{"/foo"}}},
+				},
+			},
+		},
+	}
+
+	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
+		Source: &authz.AttributeContext_Peer{
+			Principal: "spiffe://cluster.local/ns/default/sa/steve",
+		},
+		Destination: &authz.AttributeContext_Peer{
+			Principal: "spiffe://cluster.local/ns/default/sa/sally",
+		},
+		Request: &authz.AttributeContext_Request{
+			Http: &authz.AttributeContext_HttpRequest{Method: "GET", Path: "/foo"},
+		},
+	}}
+
+	status := checkStore(store, req)
+	Expect(status.Code).To(Equal(OK))
+
+	http := req.GetAttributes().GetRequest().GetHttp()
+	http.Path = "/bad"
+
+	status = checkStore(store, req)
+	Expect(status.Code).To(Equal(PERMISSION_DENIED))
+}
+
+// Check multiple tiers with pass or deny in first tier and an allow in next tier.
+func TestCheckStorePolicyMultiTierDiffTierMatch(t *testing.T) {
+	RegisterTestingT(t)
+
+	store := policystore.NewPolicyStore()
+	store.Endpoint = &proto.WorkloadEndpoint{
+		Tiers: []*proto.TierInfo{
+			{
+				Name:            "tier1",
+				IngressPolicies: []string{"policy1", "policy2"},
+			},
+			{
+				Name:            "tier2",
+				IngressPolicies: []string{"policy3"},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy1"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:    "deny",
+				HttpMatch: &proto.HTTPMatch{Methods: []string{"HEAD"}},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier1", Name: "policy2"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action:    "pass",
+				HttpMatch: &proto.HTTPMatch{Methods: []string{"GET"}},
+			},
+		},
+	}
+	store.PolicyByID[proto.PolicyID{Tier: "tier2", Name: "policy3"}] = &proto.Policy{
+		InboundRules: []*proto.Rule{
+			{
+				Action: "allow",
+				HttpMatch: &proto.HTTPMatch{
+					Methods: []string{"GET"},
+					Paths:   []*proto.HTTPMatch_PathMatch{{&proto.HTTPMatch_PathMatch_Exact{"/foo"}}},
+				},
+			},
+		},
+	}
+
+	req := &authz.CheckRequest{Attributes: &authz.AttributeContext{
+		Source: &authz.AttributeContext_Peer{
+			Principal: "spiffe://cluster.local/ns/default/sa/steve",
+		},
+		Destination: &authz.AttributeContext_Peer{
+			Principal: "spiffe://cluster.local/ns/default/sa/sally",
+		},
+		Request: &authz.AttributeContext_Request{
+			Http: &authz.AttributeContext_HttpRequest{Method: "HEAD", Path: "/foo"},
+		},
+	}}
+
+	status := checkStore(store, req)
+	Expect(status.Code).To(Equal(PERMISSION_DENIED))
+
+	http := req.GetAttributes().GetRequest().GetHttp()
+	http.Method = "GET"
+
+	status = checkStore(store, req)
+	Expect(status.Code).To(Equal(OK))
+}

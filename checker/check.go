@@ -66,11 +66,8 @@ func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.
 			}
 		}
 	}()
-	if len(ep.Tiers) > 0 {
-		// We only support a single tier.
-		log.Debug("Checking policy tier 1.")
-
-		tier := ep.Tiers[0]
+	for _, tier := range ep.Tiers {
+		log.WithField("tier", tier.GetName()).Debug("Checking policy tier")
 		policies := tier.IngressPolicies
 		action := NO_MATCH
 	Policy:
@@ -94,7 +91,7 @@ func checkStore(store *policystore.PolicyStore, req *authz.CheckRequest) (s rpc.
 				s.Code = PERMISSION_DENIED
 				return
 			case PASS:
-				// Pass means end evaluation of policies and proceed to profiles, if any.
+				// Pass means end evaluation of policies and proceed to next tier (or profiles), if any.
 				break Policy
 			case LOG:
 				panic("policy should never return LOG action")
