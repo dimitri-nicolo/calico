@@ -17,7 +17,7 @@ JEKYLL_UID=${JEKYLL_UID:=`id -u`}
 # If it doesn't pass once in 10 tries, we count it as a failed check.
 echo "Running a hard URL check against recent releases"
 echo > allstderr.out
-for i in `seq 1 3`; do
+for i in `seq 1 10`; do
 	echo "htmlproofer attempt #${i}"
 	docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS} --internal_domains "docs.tigera.io" 2>stderr.out
 
@@ -34,6 +34,10 @@ for i in `seq 1 3`; do
 	# If the command executed successfully, break out. Otherwise, retry.
 	if [[ $rc == 0 ]]; then break; fi
 
+	# Break if there are no links that have failed every time.
+	! cat allstderr.out | sort | uniq -c | grep "$i "
+	if [[ $? == 0 ]]; then break; fi
+
 	# Otherwise, sleep a short period and then retry.
 	echo "htmlproofer failed, retry in 10s"
 	sleep 10
@@ -43,9 +47,9 @@ done
 echo "Running a soft check across all files"
 docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --assume-extension --check-html --empty-alt-ignore --url-ignore "#"
 
-# Find all links that failed all three times
+# Find all links that failed all ten times
 echo "Links that failed in each run"
-! cat allstderr.out | sort | uniq -c | grep "3 "
+! cat allstderr.out | sort | uniq -c | grep "10 "
 let greprc=$?
 
 # Clean up output files
