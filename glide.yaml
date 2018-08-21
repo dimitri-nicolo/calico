@@ -3,7 +3,8 @@ import:
 - package: github.com/docopt/docopt-go
   version: ^0.6.2
 - package: github.com/projectcalico/libcalico-go
-  version: cac4ce6d0f2f1fdcaac2dcbe613374465cfd4953
+  version: 7a59700fd067ea4ff1423b33f2516bf3bff5dcdb
+  repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apis/v3
   - lib/client
@@ -26,6 +27,7 @@ import:
 - package: github.com/lyft/protoc-gen-validate
   version: v0.0.6
 - package: github.com/gogo/googleapis
+  version: 1.0.0
 - package: github.com/onsi/gomega
   version: ^1.1.0
 - package: github.com/gogo/protobuf
