@@ -253,9 +253,14 @@ type FelixConfigurationSpec struct {
 	// repair any inconsistencies. [Default: 600s]
 	IPSecPolicyRefreshInterval *metav1.Duration `json:"ipsecPolicyRefreshInterval,omitempty" configv1timescale:"seconds"`
 
+	// FlowLogsFlushInterval configures the interval at which Felix exports flow logs.
+	FlowLogsFlushInterval *metav1.Duration `json:"flowLogsFlushInterval,omitempty" configv1timescale:"seconds"`
+	// FlowLogsEnableHostEndpoint enables Flow logs reporting for HostEndpoints.
+	FlowLogsEnableHostEndpoint *bool `json:"flowLogsEnableHostEndpoint,omitempty"`
+
 	// Enable Flow logs reporting to AWS CloudWatch.
 	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`
-	// CloudWatchLogsFlushInterval configures the interval at which Felix exports flow logs to CloudWatch Logs.
+	// Deprecated: Use FlowLogsFlushInterval instead.
 	CloudWatchLogsFlushInterval *metav1.Duration `json:"cloudWatchLogsFlushInterval,omitempty" configv1timescale:"seconds"`
 	// CloudWatchLogsLogGroupName configures the Log group to use for exporting flow logs. Defaults to "tigera-flowlogs-<cluster-guid>".
 	CloudWatchLogsLogGroupName string `json:"cloudWatchLogsLogGroupName,omitempty"`
@@ -281,7 +286,7 @@ type FelixConfigurationSpec struct {
 	// See https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutRetentionPolicy.html
 	// for allowed values.
 	CloudWatchLogsRetentionDays *int `json:"cloudWatchLogsRetentionDays,omitempty" validate:"omitempty,cloudWatchRetentionDays"`
-	// Enable Flow logs reporting to AWS CloudWatch for HostEndpoints.
+	// Deprecated: Use FlowLogsEnableHostEndpoint.
 	CloudWatchLogsEnableHostEndpoint *bool `json:"cloudWatchLogsEnableHostEndpoint,omitempty"`
 	// CloudWatchLogsEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
 	// This parameter only takes effect when CloudWatchLogsReporterEnabled is set to true.
@@ -324,8 +329,6 @@ type FelixConfigurationSpec struct {
 	// 1 - Source port based aggregation
 	// 2 - Pod prefix name based aggreagation.
 	FlowLogsFileAggregationKindForDenied *int `json:"flowLogsFileAggregationKindForDenied,omitempty" validate:"omitempty,cloudWatchAggregationKind"`
-	// FlowLogsFileEnableHostEndpoint enables logging of host endpoint flows to file.
-	FlowLogsFileEnableHostEndpoint *bool `json:"flowLogsFileEnableHostEndpoint,omitempty"`
 	// FlowLogsFileEnabledForAllowed is used to enable/disable flow logs entries created for allowed connections. Default is true.
 	// This parameter only takes effect when FlowLogsFileReporterEnabled is set to true.
 	FlowLogsFileEnabledForAllowed *bool `json:"flowLogsFileEnabledForAllowed,omitempty"`
