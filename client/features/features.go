@@ -9,4 +9,5 @@ const (
 	AWSSecurityGroups     = "aws-security-groups"
 	IPSec                 = "ipsec"
 	FederatedServices     = "federated-services"
+	FileOutputFlowLogs    = "file-output-flow-logs"
 )
