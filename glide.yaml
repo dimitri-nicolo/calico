@@ -135,7 +135,7 @@ import:
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: 6774d1fc844530dc7be7d766bc473d8bcc05409e
+  version: eaec5a48b41f4bd93f2d2e0da0a0af5e695c2a39
   subpackages:
   - client
   - monitor
