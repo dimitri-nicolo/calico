@@ -3,6 +3,7 @@
 package policysets
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -10,27 +11,33 @@ import (
 	"github.com/projectcalico/felix/iputils"
 
 	"github.com/projectcalico/felix/dataplane/windows/hns"
-	"github.com/projectcalico/felix/dataplane/windows/ipsets"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+// IPSetCache is our interface to the IP sets tracker.
+type IPSetCache interface {
+	GetIPSetMembers(ipsetID string) []string
+}
+
+// HNSAPI in an interface containing only the parts of the HNS API that we use here.
+type HNSAPI interface {
+	GetHNSSupportedFeatures() hns.HNSSupportedFeatures
+}
+
 // PolicySets manages a whole plane of policies/profiles
 type PolicySets struct {
-	hns                    hns.API
+	IpSets []IPSetCache
+
+	supportedFeatures      hns.HNSSupportedFeatures
 	policySetIdToPolicySet map[string]*policySet
-
-	IpSets []*ipsets.IPSets
-
-	supportedFeatures hns.HNSSupportedFeatures
 
 	resyncRequired bool
 }
 
-func NewPolicySets(hns hns.API, ipsets []*ipsets.IPSets) *PolicySets {
+func NewPolicySets(hns HNSAPI, ipsets []IPSetCache) *PolicySets {
 	supportedFeatures := hns.GetHNSSupportedFeatures()
 	return &PolicySets{
-		hns: hns,
 		policySetIdToPolicySet: map[string]*policySet{},
 
 		IpSets:            ipsets,
@@ -44,7 +51,7 @@ func (s *PolicySets) AddOrReplacePolicySet(setId string, policy interface{}) {
 	log.WithField("setID", setId).Info("Processing add/replace of Policy set")
 
 	// Process the policy/profile from the datastore and convert it into
-	// equivalent rules which can be communicated to hns for enforcement in the
+	// equivalent rules which can be communicated to HNS for enforcement in the
 	// dataplane. We compute these rules up front and cache them to avoid needing
 	// to recompute them each time the policy is applied to an endpoint. We also
 	// keep track of any IP sets which were referenced by the policy/profile so that
@@ -73,7 +80,7 @@ func (s *PolicySets) AddOrReplacePolicySet(setId string, policy interface{}) {
 	policySet := &policySet{
 		PolicySetMetadata: setMetadata,
 		Policy:            policy,
-		Members:           set.FromArray(rules),
+		Members:           rules,
 		IpSetIds:          policyIpSetIds,
 	}
 	s.policySetIdToPolicySet[setMetadata.SetId] = policySet
@@ -86,12 +93,8 @@ func (s *PolicySets) RemovePolicySet(setId string) {
 }
 
 // GetPolicySetRules receives a list of Policy set ids and it computes the complete
-// set of resultant hns rules which are needed to enforce all of the Policy sets for the
-// specified direction. As the Policy sets are processed, we increment a priority number
-// and assign it to each rule from the current set. By incremening the rule priority for
-// each set, we ensure that all of the sets will be enforced and considered by the dataplane
-// in the order intended by felix. Once all rules are gathered, we add a final pair of rules
-// to default deny any traffic which has not matched any rules from any Policy sets.
+// set of resultant HNS rules that are needed to enforce all of the Policy sets for the
+// specified direction.
 func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules []*hns.ACLPolicy) {
 	// Rules from the first set will receive the default rule priority
 	currentPriority := rulePriority
@@ -101,30 +104,50 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 		direction = hns.In
 	}
 
+	debug := log.GetLevel() >= log.DebugLevel
+
 	for _, setId := range setIds {
-		log.WithFields(log.Fields{"setId": setId, "isInbound": isInbound}).Debug("Gathering per-direction rules for policy set")
+		if debug {
+			log.WithFields(log.Fields{"setId": setId, "isInbound": isInbound}).Debug(
+				"Gathering per-direction rules for policy set")
+		}
 
 		policySet := s.policySetIdToPolicySet[setId]
 		if policySet == nil {
-			log.WithField("setId", setId).Error("Unable to find Policy set, this set will be skipped")
-			continue
+			log.WithField("setId", setId).Error("Unable to find Policy set, replacing with a deny rule")
+			break
 		}
 
-		policySet.Members.Iter(func(item interface{}) error {
-			member := item.(*hns.ACLPolicy)
-			if member.Direction == direction {
-				member.Priority = currentPriority
-				rules = append(rules, member)
-			}
-			return nil
-		})
+		var lastRule *hns.ACLPolicy
 
-		// Increment the priority so that rules from the next set will be 'weaker' priority
-		// and therefore considered only after this current set of rules has failed to match.
-		currentPriority += 1
+		for _, member := range policySet.Members {
+			if member.Direction != direction {
+				continue
+			}
+
+			if lastRule != nil && lastRule.Action != member.Action {
+				// If we write two HNS rules at the same priority, HNS has a different tie-break algorithm
+				// to Calico.  Hence, to get Calico's first-rule-wins behaviour we need to increment the priority
+				// between rules that it's not safe to re-order.  It's certainly not safe to re-order rules
+				// that have different actions.
+				currentPriority += 1
+				if debug {
+					log.Debugf("Switching from %v to %v, incremented priority to %v",
+						lastRule.Action, member.Action, currentPriority)
+				}
+			}
+
+			// Take a copy so we can mutate the priority.
+			memberCopy := *member
+			memberCopy.Priority = currentPriority
+			rules = append(rules, &memberCopy)
+
+			lastRule = &memberCopy
+		}
 	}
 
 	// Apply a default block rule for this direction at the end of the policy
+	currentPriority++
 	rules = append(rules, s.NewRule(isInbound, currentPriority))
 
 	// Finally, for RS3 only, add default allow rule with a host-scope to allow traffic through
@@ -136,7 +159,7 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 
 // ProcessIpSetUpdate locates any Policy set(s) which reference the provided IP set, and causes
 // those Policy sets to be recomputed (to ensure any rule address conditions are using the latest
-// addres values from the IP set). A list of the Policy sets which were found and recomputed are
+// address values from the IP set). A list of the Policy sets which were found and recomputed are
 // is returned to the caller.
 func (s *PolicySets) ProcessIpSetUpdate(ipSetId string) []string {
 	log.WithField("IPSetId", ipSetId).Info("IP set has changed, looking for associated policies")
@@ -298,13 +321,6 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	aclPolicy := s.NewRule(isInbound, rulePriority)
 
 	//
-	// Id
-	//
-	if s.supportedFeatures.Acl.AclRuleId {
-		aclPolicy.Id = (policyId + "-" + ruleCopy.RuleId)
-	}
-
-	//
 	// Action
 	//
 	switch strings.ToLower(ruleCopy.Action) {
@@ -444,9 +460,17 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	// source or destination condition. The behavior below will be removed in
 	// the next iteration, but for now we have to break up the source and destination
 	// ip address combinations and represent them using multiple rules
+	i := 0
 	for _, localAddr := range localAddresses {
 		for _, remoteAddr := range remoteAddresses {
 			newPolicy := *aclPolicy
+
+			// Give each sub-rule a unique ID.
+			if s.supportedFeatures.Acl.AclRuleId {
+				newPolicy.Id = fmt.Sprintf("%s-%s-%d", policyId, ruleCopy.RuleId, i)
+				i++
+			}
+
 			newPolicy.LocalAddresses = localAddr
 			newPolicy.RemoteAddresses = remoteAddr
 			// Add this rule to the rules being returned

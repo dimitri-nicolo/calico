@@ -3,6 +3,8 @@
 package iputils
 
 import (
+	"sort"
+
 	"github.com/projectcalico/felix/ip"
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
@@ -42,6 +44,10 @@ func IntersectCIDRs(aStrs []string, bStrs []string) (out []string) {
 		out = append(out, item.(ip.CIDR).String())
 		return set.RemoveItem
 	})
+
+	// Sort the output for determinism both in testing and in rule generation.
+	sort.Strings(out)
+
 	return
 }
 

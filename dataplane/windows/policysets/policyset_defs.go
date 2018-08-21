@@ -76,7 +76,7 @@ type policySet struct {
 	// Each member of the Policy set is a hns ACLRule computed from the
 	// Policy. When this Policy set needs to be applied, this set of
 	// rules is what will be sent to hns for enforcement.
-	Members set.Set
+	Members []*hns.ACLPolicy
 	// The set of IP set ids which are referenced by this Policy set. We
 	// maintain this to make it easier to look up which Policy sets are
 	// impacted (in need of recomputation) after a IP set update occurs.

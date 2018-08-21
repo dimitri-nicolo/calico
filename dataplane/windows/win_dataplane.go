@@ -156,7 +156,12 @@ func NewWinDataplaneDriver(hns hns.API, config Config) *WindowsDataplane {
 	dp.applyThrottle.Refill() // Allow the first apply() immediately.
 
 	dp.ipSets = append(dp.ipSets, ipSetsV4)
-	dp.policySets = policysets.NewPolicySets(hns, dp.ipSets)
+
+	var ipsc []policysets.IPSetCache
+	for _, i := range dp.ipSets {
+		ipsc = append(ipsc, i)
+	}
+	dp.policySets = policysets.NewPolicySets(hns, ipsc)
 
 	dp.RegisterManager(newIPSetsManager(ipSetsV4))
 	dp.RegisterManager(newPolicyManager(dp.policySets))

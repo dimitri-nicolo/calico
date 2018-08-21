@@ -129,10 +129,10 @@ func (endpoint *HNSEndpoint) ApplyACLPolicy(policies ...*ACLPolicy) error {
 
 type API struct{}
 
-func (_ API) GetHNSSupportedFeatures() HNSSupportedFeatures {
+func (a API) GetHNSSupportedFeatures() HNSSupportedFeatures {
 	return HNSSupportedFeatures{}
 }
 
-func (_ API) HNSListEndpointRequest() ([]HNSEndpoint, error) {
+func (a API) HNSListEndpointRequest() ([]HNSEndpoint, error) {
 	return nil, nil
 }
