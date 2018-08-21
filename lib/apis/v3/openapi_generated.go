@@ -3123,6 +3123,19 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"flowLogsFlushInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsFlushInterval configures the interval at which Felix exports flow logs.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"flowLogsEnableHostEndpoint": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsEnableHostEndpoint enables Flow logs reporting for HostEndpoints.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"cloudWatchLogsReporterEnabled": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Enable Flow logs reporting to AWS CloudWatch.",
@@ -3132,7 +3145,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"cloudWatchLogsFlushInterval": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CloudWatchLogsFlushInterval configures the interval at which Felix exports flow logs to CloudWatch Logs.",
+							Description: "Deprecated: Use FlowLogsFlushInterval instead.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -3180,7 +3193,7 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					},
 					"cloudWatchLogsEnableHostEndpoint": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Enable Flow logs reporting to AWS CloudWatch for HostEndpoints.",
+							Description: "Deprecated: Use FlowLogsEnableHostEndpoint.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -3272,13 +3285,6 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Description: "FlowLogsFileAggregationKindForDenied is used to choose the type of aggregation for flow log entries created for denied connections. [Default: 1 - source port based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
 							Type:        []string{"integer"},
 							Format:      "int32",
-						},
-					},
-					"flowLogsFileEnableHostEndpoint": {
-						SchemaProps: spec.SchemaProps{
-							Description: "FlowLogsFileEnableHostEndpoint enables logging of host endpoint flows to file.",
-							Type:        []string{"boolean"},
-							Format:      "",
 						},
 					},
 					"flowLogsFileEnabledForAllowed": {
