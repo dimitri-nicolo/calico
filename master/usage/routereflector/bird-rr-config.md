@@ -35,13 +35,19 @@ PPA, run:
 
     sudo add-apt-repository ppa:cz.nic-labs/bird
 
+    > **Tip**: If the above command fails with error
+    > `'ascii' codec can't decode byte`, try running the command with a
+    > UTF-8 enabled locale:
+    > `LC_ALL=en_US.UTF-8 add-apt-repository ppa:cz.nic-labs/bird`.
+    {: .alert .alert-success}
+
 Once that's done, update your package manager and install BIRD (the
 single `bird` package installs both IPv4 and IPv6 BIRD):
 
     sudo apt-get update
     sudo apt-get install bird
 
-#### RHEL
+#### RHEL / CentOS 7
 
 > **Note**: The following commands require root privileges. You can either open a root shell
 > or prefix them with `sudo`.
@@ -59,7 +65,7 @@ single `bird` package installs both IPv4 and IPv6 BIRD):
    ```
    [bird]
    name=Network.CZ Repository
-   baseurl=ftp://repo.network.cz/pub/redhat/
+   baseurl=ftp://repo.network.cz/pub/bird/centos/7/x86_64/
    enabled=1
    gpgcheck=0
    gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-network.cz

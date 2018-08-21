@@ -24,7 +24,7 @@ However, it comes with some limitations.  In IPVS mode:
   are implemented via an external load balancer.
 - {{site.prodname}} has not yet been scale tested with `ipvs`.
 
- {{site.prodname}} will detect if you change `kube-proxy`'s proxy mode after 
- {{site.prodname}} has been deployed. Any Kubernetes `ipvs`-specific configuration 
- needs to be [configured](../reference/felix/configuration#ipvs-portranges) 
+ {{site.prodname}} will detect if you change `kube-proxy`'s proxy mode after
+ {{site.prodname}} has been deployed. Any Kubernetes `ipvs`-specific configuration
+ needs to be [configured](../reference/felix/configuration#ipvs-portranges)
  before changing the `kube-proxy` proxy mode to `ipvs`.

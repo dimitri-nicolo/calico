@@ -135,6 +135,8 @@ toc:
       path: /reference/public-cloud/azure
     - title: GCE
       path: /reference/public-cloud/gce
+    - title: IBM Cloud
+      path: /reference/public-cloud/ibm
 - title: Deploying on Private Cloud
   section:
     - title: CNX Over Ethernet Fabrics

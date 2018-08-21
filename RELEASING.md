@@ -28,11 +28,13 @@ Before attempting to create a Calico release you must do the following.
    - [calico/cni](https://github.com/projectcalico/cni-plugin/releases)
    - [calico/kube-controllers](https://github.com/projectcalico/kube-controllers/releases)
    - [calico/felix](https://github.com/projectcalico/felix/releases)
+   - [calico/typha](https://github.com/projectcalico/typha/releases)
+   - [calico/dikastes](https://github.com/projectcalico/app-policy/releases)
+   - [calico/pod2daemon-flexvol](https://github.com/projectcalico/pod2daemon/releases)
 
    The following components do not yet use the same versioning as the Calico repo, and
    so the version to include may differ.
 
-   - [calico/typha](https://github.com/projectcalico/typha/releases)
    - [networking-calico](https://github.com/projectcalico/networking-calico)
 
    The following components do not share a version with the Calico release, but are included in the documentation.
@@ -150,7 +152,7 @@ release in the documentation. Perform these steps on a branch off of master.
 
 ### Promoting to the latest release
 
-1. Add a new `<option>` entry to the `<span class="dropdown">` in `_layouts/docwithnav.html` file.
+1. Add TWO new `<option>` entries to the `<span class="dropdown">` in `_layouts/docwithnav.html` file.
 
 1. Modify the redirect in `/index.html` to point to your new release.
 

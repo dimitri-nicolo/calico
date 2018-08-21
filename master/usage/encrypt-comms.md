@@ -1,8 +1,7 @@
----
 title: Configuring encryption and authentication
 ---
 
-## etcd connections
+## Connections from {{site.prodname}} components to etcd
 
 If you are using the etcd datastore, we recommend enabling mutual TLS authentication on
 its connections as follows.
@@ -15,74 +14,100 @@ its connections as follows.
   a certificate to the etcd server that is signed by the etcd certificate authority.
   - [{{site.nodecontainer}}](../reference/node/configuration)
   - [`calicoctl`](./calicoctl/configure/etcd)
-  - [CNI plugin](../reference/cni-plugin/configuration#etcd-location)
-  - [Felix](../reference/felix/configuration#etcd-datastore-configuration) (on
-    [bare metal hosts](../getting-started/bare-metal/installation/))
-  - {{site.prodname}} API Server
-  - {{site.prodname}} Query Server
+  - [CNI plugin](../reference/cni-plugin/configuration#etcd-location) (Kubernetes and OpenShift only)
+  - [Kubernetes controllers](../reference/kube-controllers/configuration#configuring-etcd-access) (Kubernetes and OpenShift only)
+  - [Felix](../reference/felix/configuration#etcd-datastore-configuration) (on [bare metal hosts](../getting-started/bare-metal/installation/))
+  - [Typha](../reference/typha/configuration#etcd-datastore-configuration) (often deployed in
+    larger Kubernetes deployments)
 
-## kube-apiserver communications (Kubernetes and OpenShift)
+### Connections from {{site.prodname}} components to kube-apiserver (Kubernetes and OpenShift)
 
-### Unidirectional communications
+We recommend enabling TLS on kube-apiserver, as well as the client certificate and JSON web token (JWT)
+authentication modules. This ensures that all of its communications with {{site.prodname}} components occur
+over TLS. The {{site.prodname}} components present either an X.509 certificate or a JWT to kube-apiserver
+so that kube-apiserver can verify their identities.
 
-All communications with kube-apiserver occur over TLS 1.2 with client authentication by
-default. The {{site.prodname}} components authenticate to kube-apiserver with either an x.509 certificate
-or a [JSON web token (JWT)](https://jwt.io/). You do not need to take action to secure these
-communications.
+### Connections from Felix to Typha (Kubernetes)
 
-### Bidirectional communications
+We recommend enabling mutual TLS authentication on connections from Felix to Typha.
+To do so, you must provision Typha with a server certificate and Felix with a client
+certificate. Each service will need the private key associated with their certificate.
+In addition, you must configure one of the following.
 
-The {{site.prodname}} API Server requires a bidirectional connection to kube-apiserver. By default,
-the {{site.prodname}} API Server uses a self-signed TLS certificate and the kube-apiserver does not
-verify the signature. We recommend replacing the self-signed TLS certificate with one signed by a
-certificate authority and configuring kube-apiserver to verify the signature.
+- **SPIFFE identifiers** (recommended): Generate a [SPIFFE](https://github.com/spiffe/spiffe) identifier for Felix,
+  set `ClientURISAN` on Typha to Felix's SPIFFE ID, and include Felix's SPIFFE ID in the `URI SAN` field
+  of its certificate. Similarly, generate a [SPIFFE](https://github.com/spiffe/spiffe) identifier for Typha,
+  set `TyphaURISAN` on Felix to Typha's SPIFFE ID, and include Typha's SPIFFE ID in the `URI SAN` field
+  of its certificate.
 
-To do so, you must download the manifest that corresponds to your datastore:
-**[cnx-etcd.yaml](../../getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml){:target="_blank"}**
-or **[cnx-kdd.yaml](../../getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml){:target="_blank"}**.
-Make the following changes and then reapply the manifest.
+- **Common Name identifiers**: Configure `ClientCN` on Typha to the value in the `Common Name` of Felix's
+  certificate. Configure `ClientCN` on Felix to the value in the `Common Name` of Typha's
+  certificate.
 
-1. Remove the line `insecureSkipTLSVerify: true` from the `APIService` section.
-1. Uncomment the line `caBundle:` in the `APIService` and append the base64-encoded CA file contents.
-1. Uncomment the line `apiserver.key:` in the `cnx-apiserver-certs` `Secret` and append the
-   base64-encoded key file contents.
-1. Uncomment the line `apiserver.crt:` in the `cnx-apiserver-certs` `Secret` and append the
-   base64-encoded certificate file contents.
-1. Uncomment the lines associated with `volumeMounts` and `volumes` named `apiserver-certs`.
+> **Tip**: If you are migrating from Common Name to SPIFFE identifiers, you can set both values.
+> If either matches, the communication succeeds.
+{: .alert .alert-success}
 
-## Typha connections (Kubernetes)
+Here is an example of how you can secure the Felix-Typha communications in your
+cluster:
 
-{% include {{page.version}}/felix-typha-tls-intro.md %}
+1.  Choose a certificate authority, or set up your own.
 
-To use TLS, each Typha instance must have a certificate and key pair signed by
-a trusted CA. Typha then only accepts TLS connections, and requires each
-connecting client to present a certificate that is signed by a trusted CA and
-has an expected identity in its Common Name or URI SAN field.  Either
-`ClientCN` or `ClientURISAN` must be configured, and Typha will check the
-presented certificate accordingly.
+1.  Obtain or generate the following leaf certificates, signed by that
+    authority, and corresponding keys:
 
--  For a [SPIFFE](https://github.com/spiffe/spiffe)-compliant deployment you
-   should configure `ClientURISAN` with a [SPIFFE
-   Identity](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#2-spiffe-identity)
-   and provision client certificates with the same identity in their URI SAN
-   field.
+    -  A certificate for each Felix with Common Name `typha-client` and
+       extended key usage `ClientAuth`.
 
--  Alternatively you can configure `ClientCN` and provision client certificates
-   with that `ClientCN` value in their Common Name field.
+    -  A certificate for each Typha with Common Name `typha-server` and
+       extended key usage `ServerAuth`.
 
-If both those parameters are set, a client certificate only has to match one of
-them; this is intended for when a deployment is migrating from using Common
-Name to using a URI SAN, to express identity.
+1.  Configure each Typha with:
 
-| Configuration parameter | Environment variable   | Description | Schema |
-| ----------------------- | ---------------------- | ----------- | ------ |
-| `CAFile`                | `TYPHA_CAFILE`         | The full path to the certificate file for the Certificate Authorities that Typha trusts for Felix-Typha communications. | string |
-| `ClientCN`              | `TYPHA_CLIENTCN`       | If set, the Common Name that each connecting client certificate must have. [Default: not set] | string |
-| `ClientURISAN`          | `TYPHA_CLIENTURISAN`   | If set, a URI SAN that each connecting client certificate must have. [Default: not set] | string |
-| `ServerCertFile`        | `TYPHA_SERVERCERTFILE` | The full path to the certificate file for this Typha instance. | string |
-| `ServerKeyFile`         | `TYPHA_SERVERKEYFILE`  | The full path to the private key file for this Typha instance. | string |
+    -  `CAFile` pointing to the certificate authority certificate
 
-{% include {{page.version}}/felix-typha-tls-howto.md %}
+    -  `ServerCertFile` pointing to that Typha's certificate
+
+    -  `ServerKeyFile` pointing to that Typha's key
+
+    -  `ClientCN` set to `typha-client`
+
+    -  `ClientURISAN` unset.
+
+1.  Configure each Felix with:
+
+    -  `TyphaCAFile` pointing to the Certificate Authority certificate
+
+    -  `TyphaCertFile` pointing to that Felix's certificate
+
+    -  `TyphaKeyFile` pointing to that Felix's key
+
+    -  `TyphaCN` set to `typha-server`
+
+    -  `TyphaURISAN` unset.
+
+For a [SPIFFE](https://github.com/spiffe/spiffe)-compliant deployment you can
+follow the same procedure as above, except:
+
+1.  Choose [SPIFFE
+    Identities](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#2-spiffe-identity)
+    to represent Felix and Typha.
+
+1.  When generating leaf certificates for Felix and Typha, put the relevant
+    SPIFFE Identity in the certificate as a URI SAN.
+
+1.  Leave `ClientCN` and `TyphaCN` unset.
+
+1.  Set Typha's `ClientURISAN` parameter to the SPIFFE Identity for Felix that
+    you use in each Felix certificate.
+
+1.  Set Felix's `TyphaURISAN` parameter to the SPIFFE Identity for Typha.
+
+For detailed reference information on these parameters, refer to:
+
+- **Typha**: [Felix-Typha TLS configuration](../reference/typha/configuration#felix-typha-tls-configuration)
+
+- **Felix**: [Felix-Typha TLS configuration](../reference/felix/configuration#felix-typha-tls-configuration)
 
 ## {{site.prodname}} Manager connections
 

@@ -36,7 +36,7 @@ mesh topology).
 
 For large-scale deployments, or for deployments where you require a more specific
 BGP topology (e.g. peering with ToR switches) the full node-to-node mesh should be
-disabled and explicit BGP peers configured for your {{site.prodname}} nodes.  A BGP peer may 
+disabled and explicit BGP peers configured for your {{site.prodname}} nodes.  A BGP peer may
 be configured in your {{site.prodname}} network as a Global BGP Peer or a Per-Node BGP Peer.
 
 **Global BGP Peers**
@@ -83,7 +83,7 @@ not necessary.
 
 If you are explicitly configuring the BGP topology for your {{site.prodname}} network,
 you may wish to disable the full node-to-node mesh. See
-[Example](#example) 
+[Example](#example)
 for instructions to change the `nodeToNodeMesh` global BGP setting.
 
 If you are building your network from scratch and do not need the full

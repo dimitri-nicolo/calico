@@ -2,11 +2,11 @@
 title: BGP Peer Resource (BGPPeer)
 ---
 
-A BGP peer resource (`BGPPeer`) represents a remote BGP peer with 
-which the node(s) in a {{site.prodname}} cluster will peer.  
-Configuring BGP peers allows you to peer a {{site.prodname}} network 
-with your datacenter fabric (e.g. ToR). For more 
-information on cluster layouts, see {{site.prodname}}'s documentation on 
+A BGP peer resource (`BGPPeer`) represents a remote BGP peer with
+which the node(s) in a {{site.prodname}} cluster will peer.
+Configuring BGP peers allows you to peer a {{site.prodname}} network
+with your datacenter fabric (e.g. ToR). For more
+information on cluster layouts, see {{site.prodname}}'s documentation on
 [L3 Topologies]({{site.baseurl}}/{{page.version}}/reference/private-cloud/l3-interconnect-fabric).
 
 For `calicoctl` [commands]({{site.baseurl}}/{{page.version}}/reference/calicoctl/commands/) that specify a resource type on the CLI, the following
@@ -39,16 +39,21 @@ spec:
 |-------------|-----------------------------|-------------------|--------|------------|
 | node     | If specified, the scope is node level, otherwise the scope is global. | The hostname of the node to which this peer applies. | string | |
 | peerIP   | The IP address of this peer. | Valid IPv4 or IPv6 address.  | string | |
-| asNumber | The AS Number of this peer. | A valid AS Number, may be specified in dotted notation. | integer/string |
+| asNumber | The remote AS Number of the peer. | A valid AS Number, may be specified in dotted notation. | integer/string | |
+
+> **Tip**: the cluster-wide default local AS number used when speaking with a peer is controlled by the
+> [BGPConfiguration resource](./bgpconfig).  That value can be overriden per-node by using the `bgp` field of
+> the [Node resource](./node).
+{: .alert .alert-success}
 
 ### Peer Scopes
 
-BGP Peers can exist at either a global scope or a node scope. A peer's scope 
+BGP Peers can exist at either a global scope or a node scope. A peer's scope
 determines which `{{site.nodecontainer}}` will attempt to establish a BGP session with that peer.
 
 #### Global Peer
 
-To assign a BGP peer a global scope, omit the `node` field. All nodes in 
+To assign a BGP peer a global scope, omit the `node` field. All nodes in
 the cluster will attempt to establish BGP connections with it
 
 #### Node Peer

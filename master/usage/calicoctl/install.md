@@ -9,7 +9,7 @@ from the command line. These objects represent the networking and policy
 of your cluster.
 
 You should limit access to `calicoctl` and your {{site.prodname}} datastore to
-trusted administrators. We discuss methods of limiting access to the 
+trusted administrators. We discuss methods of limiting access to the
 {{site.prodname}} datastore in the [configuration section](/{{page.version}}/usage/calicoctl/configure/).
 
 You can run `calicoctl` on any host with network access to the

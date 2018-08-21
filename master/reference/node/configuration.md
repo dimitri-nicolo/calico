@@ -11,12 +11,13 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 | ------------- | ----------- | ------ |
 | NODENAME | A unique identifier for this host.  See [node name determination](#node-name-determination) for more details. | lowercase string |
 | NO_DEFAULT_POOLS | Prevents  {{site.prodname}} from creating a default pool if one does not exist. [Default: `false`] | boolean |
-| IP | The IPv4 address to assign this host. When specified, the address is saved in the [node resource configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node) for this host, overriding any previously configured value. When omitted, if an address **has** been saved in the node resource, then that value will be used. When omitted, if an address **has not** yet been configured in the node resource, the node will auto-detect an IPv4 address and configure the node resource with that address. This autodetection can be forced (even if a value has already been set in the node resource) by setting IP to "autodetect". Doing so will overwrite any value configured in the node resource. | IPv4 |
-| IP6 | The IPv6 address for {{site.prodname}} will bind to. When specified, the address is saved in the  [node resource configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node) for this host, overriding any previously configured value. When omitted, if an address has not yet been configured in the node resource, IPv6 routing is not enabled. When omitted, if an IPv6 address has been previously configured in the node resource, IPv6 is enabled using the already configured address. | IPv6 |
+| IP | The IPv4 address to assign this host or detection behavior at startup. Refer to [IP setting](#ip-setting) for the details of the behavior possible with this field. | IPv4 |
+| IP6 | The IPv6 address to assign this host or detection behavior at startup. Refer to [IP setting](#ip-setting) for the details of the behavior possible with this field. | IPv6 |
 | IP_AUTODETECTION_METHOD | The method to use to autodetect the IPv4 address for this host. This is only used when the IPv4 address is being autodetected. See [IP Autodetection methods](#ip-autodetection-methods) for details of the valid methods. [Default: `first-found`] | string |
 | IP6_AUTODETECTION_METHOD | The method to use to autodetect the IPv6 address for this host. This is only used when the IPv6 address is being autodetected. See [IP Autodetection methods](#ip-autodetection-methods) for details of the valid methods. [Default: `first-found`] | string |
 | DISABLE_NODE_IP_CHECK | Skips checks for duplicate Node IPs. This can reduce the load on the cluster when a large number of Nodes are restarting. [Default: `false`] | boolean |
 | AS | The AS number for this node. When specified, the value is saved in the node resource configuration for this host, overriding any previously configured value. When omitted, if an AS number has been previously configured in the node resource, that AS number is used for the peering.  When omitted, if an AS number has not yet been configured in the node resource, the node will use the global value (see [example modifying Global BGP settings](/{{page.version}}/usage/configuration/bgp#example) for details.) | int |
+| CALICO_ROUTER_ID | Sets the `router id` to use for BGP if no IPv4 address is set on the node. [Default: ``] | string |
 | DATASTORE_TYPE | Type of datastore. [Default: `etcdv3`] | kubernetes, etcdv3 |
 | WAIT_FOR_DATASTORE | Wait for connection to datastore before starting. If a successful connection is not made, node will shutdown. [Default: `false`] | boolean |
 | CALICO_NETWORKING_BACKEND | Describes which BGP networking backend to use [Default: `bird`] | gobgp, bird, none |
@@ -28,9 +29,9 @@ The `{{site.nodecontainer}}` container is primarily configured through environme
 | CALICO_STARTUP_LOGLEVEL      | The log severity above which startup `{{site.nodecontainer}}` logs are sent to the stdout. [Default: `ERROR`] | DEBUG, INFO, WARNING, ERROR, CRITICAL, or NONE (case-insensitive) |
 | CLUSTER_TYPE | Contains comma delimited list of indicators about this cluster.  e.g. k8s, mesos, kubeadm, canal, bgp | string |
 | ETCD_ENDPOINTS    | A comma separated list of etcd endpoints [Example: `http://127.0.0.1:2379,http://127.0.0.2:2379`] (required) | string |
-| ETCD_KEY_FILE     | Path to the file containing the private key of the `{{site.nodecontainer}}` client certificate. Enables `{{site.nodecontainer}}` to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/node/key.pem` (optional) | string |
+| ETCD_KEY_FILE     | Path to the file containing the private key matching the `{{site.nodecontainer}}` client certificate. Enables `{{site.nodecontainer}}` to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/node/key.pem` (optional) | string |
 | ETCD_CERT_FILE    | Path to the file containing the client certificate issued to `{{site.nodecontainer}}`. Enables `{{site.nodecontainer}}` to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/node/cert.pem` (optional) | string |
-| ETCD_CA_CERT_FILE | Unnecessary if the CA that issued the etcd server certificate is in the list of trusted root CAs on the `{{site.nodecontainer}}` host. Otherwise, use this parameter to supply `{{site.nodecontainer}}` with the path to the file containing the root certificate of the CA that issued the etcd server certificate. Configures `{{site.nodecontainer}}` to trust the signature on the certificates provided by the etcd server. Example: `/etc/node/ca.pem` | string |
+| ETCD_CA_CERT_FILE | Path to the file containing the root certificate of the certificate authority (CA) that issued the etcd server certificate. Configures `{{site.nodecontainer}}` to trust the CA that signed the root certificate. The file may contain multiple root certificates, causing `{{site.nodecontainer}}` to trust each of the CAs included. Example: `/etc/node/ca.pem` | string |
 | KUBECONFIG | When using the Kubernetes datastore, the location of a kubeconfig file to use. | string |
 | K8S_API_ENDPOINT | Location of the Kubernetes API.  Not required if using kubeconfig.       | string |
 | K8S_CERT_FILE | Location of a client certificate for accessing the Kubernetes API.          | string |
@@ -71,10 +72,35 @@ For example, if given the following conditions:
 {{site.nodecontainer}} will use "host-a" for its name and will write the value in `/var/lib/calico/nodename`. If {{site.nodecontainer}}
 is then restarted, it will use the cached value of "host-a" read from the file on disk.
 
+### IP setting
+
+The IP (for IPv4) and IP6 (for IPv6) environment variables are used to set,
+force autodetection, or disable auto detection of the address for the
+appropriate IP version for the node. When the environment variable is set,
+the address is saved in the
+[node resource configuration]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/node)
+for this host, overriding any previously configured value.
+
+#### IP setting special case values
+
+There are several special case values that can be set in the IP(6) environemnt
+variables, they are:
+
+- Not set or empty string: Any previously set address on the node
+  resource will be used. If no previous address is set on the node resource
+  the two versions behave differently:
+  - IP will do autodetection of the IPv4 address and set it on the node
+    resource.
+  - IP6 will not do autodetection.
+- `autodetect`: Autodetection will always be performed for the IP address and
+  the detected address will overwrite any value configured in the node
+  resource.
+- `none`: Autodetection will not be performed (this is useful to disable IPv4).
+
 ### IP Autodetection methods
 
-When {{site.prodname}} is used for routing, each node must be configured with the IPv4
-address (and IPv6 address if using IPv6) that would be used to route between
+When {{site.prodname}} is used for routing, each node must be configured with an IPv4
+address and/or an IPv6 address that will be used to route between
 nodes. To eliminate node specific IP address configuration, the `{{site.nodecontainer}}`
 container can be configured to autodetect these IP addresses. In many systems,
 there might be multiple physical interfaces on a host, or possibly multiple IP

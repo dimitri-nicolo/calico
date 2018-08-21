@@ -19,7 +19,7 @@ metadata:
 data:
 {%- if include.datastore == "etcd" %}
   # Configure this with the location of your etcd cluster.
-  etcd_endpoints: "http://127.0.0.1:2379"
+  etcd_endpoints: "http://10.96.232.136:6666"
 
   # If you're using TLS enabled etcd uncomment the following.
   # You must also populate the Secret below with these files.
@@ -32,6 +32,7 @@ data:
   # below.  We recommend using Typha if you have more than 50 nodes. Above 100 nodes it is
   # essential.
   typha_service_name: "none"
+
 {%- endif %}
 {%- if include.network == "calico" %}
   # Configure the {{site.prodname}} backend to use.
@@ -134,6 +135,7 @@ data:
 {%- endif %}
 {%- endif %}
 {%- if include.network == "flannel" and include.datastore == "kdd" %}
+
   # Flannel network configuration. Mounted into the flannel container.
   net-conf.json: |
     {

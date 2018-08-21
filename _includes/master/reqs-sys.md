@@ -41,21 +41,21 @@ to connect to, we provide instructions in the [installation documentation](./ins
 
 ## Network requirements
 
-Ensure that your hosts and firewalls allow the following traffic.
+Ensure that your hosts and firewalls allow the necessary traffic based on your configuration.
 
-| Configuration                                                | Host                | Connection type | Port/protocol |
-|--------------------------------------------------------------|---------------------|-----------------|---------------|
+| Configuration                                                | Host(s)              | Connection type | Port/protocol |
+|--------------------------------------------------------------|----------------------|-----------------|---------------|
 | {{site.prodname}} networking (BGP)                           | All                 | Bidirectional   | TCP 179 |
 | {{site.prodname}} networking in IP-in-IP mode (default mode) | All                 | Bidirectional   | IP-in-IP, often represented by its protocol number `4` |
 {%- if include.orch == "Kubernetes" %}
 | etcd datastore                                               | etcd hosts          | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary |
-| {{site.prodname}} networking, cluster of more than 50 nodes  | Typha agent hosts   | Incoming        | TCP 5473 (default) |
-| All                                                          | kube-apiserver host | Incoming        | Often TCP 443 or 6443: check the `port` value returned by `kubectl get svc kubernetes -o yaml` |
+| {{site.prodname}} networking with Typha enabled              | Typha agent hosts    | Incoming        | TCP 5473 (default) |
+| All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 6443\* |
 {%- else %}
 | All                                                          | etcd hosts          | Incoming        | [Officially](http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.txt) TCP 2379 but can vary |
 {%- endif %}
 {%- if include.orch == "OpenShift" %}
-| All                                                          | kube-apiserver host | Incoming        | Often TCP 443 or 8443: check the `port` value returned by `kubectl get svc kubernetes -o yaml` |
+| All                                                          | kube-apiserver host  | Incoming        | Often TCP 443 or 8443\* |
 {%- endif %}
 {%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
 | All                                                          | {{site.prodname}} API server hosts | Incoming | TCP 8080 and 5443 (default)                           |
@@ -64,6 +64,12 @@ Ensure that your hosts and firewalls allow the following traffic.
 | All                                                          | Alertmanager hosts  | Incoming        | TCP 9093 (default)                                            |
 | All                                                          | {{site.prodname}} Manager host | Incoming | TCP 30003 and 9443 (defaults)                             |
 {%- endif %}
+
+{%- if include.orch == "Kubernetes" or include.orch == "OpenShift" %}
+
+\* _The value passed to kube-apiserver using the `--secure-port` flag. If you cannot locate this, check the `targetPort` value returned by `kubectl get svc kubernetes -o yaml`._
+{% endif -%}
+
 {%- if include.orch == "OpenStack" %}
 
 \* _If your compute hosts connect directly and don't use IP-in-IP, you don't need to allow IP-in-IP traffic._

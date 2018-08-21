@@ -55,10 +55,10 @@ Configure access to your etcd cluster using the following options.
 
 | Option name         | Default | Description
 |---------------------|---------|-------------
-| `etcd_endpoints`    | None    | Comma-separated list of etcd servers e.g. `http://1.2.3.4:2379,http://5.6.7.8:2379`
-| `etcd_key_file`     | None    | Absolute path to the file containing the private key of the CNI plugin's client certificate. Enables the CNI plugin to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/calico-cni/key.pem` (optional) | string
-| `etcd_cert_file`    | None    | Absolute path to the file containing the client certificate issued to the CNI plugin. Enables the CNI plugin to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/calico-cni/cert.pem` (optional) | string
-| `etcd_ca_cert_file` | None    | Unnecessary if the CA that issued the etcd server certificate is in the list of trusted root CAs on the CNI plugin host. Otherwise, use this parameter to supply the CNI plugin with the absolute path to the file containing the root certificate of the CA that issued the etcd server certificate. Configures the CNI plugin to trust the signature on the certificates provided by the etcd server. Example: `/etc/calico-cni/ca.pem` (optional) | string
+| `etcd_endpoints`    | None    | Comma-separated list of endpoints. Example: `http://127.0.0.1:2379,http://127.0.0.2:2379` | string
+| `etcd_key_file`     | None    | Path to the file containing the private key matching the CNI plugin's client certificate. Enables the CNI plugin to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/calico-cni/key.pem` (optional) | string
+| `etcd_cert_file`    | None    | Path to the file containing the client certificate issued to the CNI plugin. Enables the CNI plugin to participate in mutual TLS authentication and identify itself to the etcd server. Example: `/etc/calico-cni/cert.pem` (optional) | string
+| `etcd_ca_cert_file` | None    | Path to the file containing the root certificate of the certificate authority (CA) that issued the etcd server certificate. Configures the CNI plugin to trust the CA that signed the root certificate. The file may contain multiple root certificates, causing the CNI plugin to trust each of the CAs included. | string
 
 The following options are deprecated.
 
@@ -205,7 +205,19 @@ When using `type: k8s`, the Calico CNI plugin requires read-only Kubernetes API 
 
 ## IPAM
 
-When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is allowed for the subnet field.  This tells the plugin to determine the subnet to use from the Kubernetes API based on the Node.podCIDR field.
+When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is allowed for the subnet field (either at the top-level, or in a "range").  This tells the plugin to determine the subnet to use from the Kubernetes API based on the Node.podCIDR field.  Calico does not use the `gateway` field of a range so that field is not required and it will be ignored if present.
+
+> **Note**: `usePodCidr` can only be used as the value of the `subnet` field, it cannot be used in
+> `rangeStart` or `rangeEnd` so those values are not useful if `subnet` is set to `usePodCidr`.
+{: .alert .alert-info}
+
+Calico supports the host-local IPAM plugin's `routes` field as follows:
+
+* If there is no `routes` field, Calico will install a default `0.0.0.0/0`, and/or `::/0` route into the pod (depending on whether the pod has an IPv4 and/or IPv6 address).
+
+* If there is a `routes` field then Calico will program *only* the routes in the routes field into the pod.  Since Calico implements a point-to-point link into the pod, the `gw` field is not required and it will be ignored if present.  All routes that Calico installs will have Calico's link-local IP as the next hop.
+
+Calico CNI plugin configuration:
 
 * `node_name`
     * The node name to use when looking up the `usePodCidr` value (defaults to current hostname)
@@ -221,7 +233,18 @@ When using the CNI `host-local` IPAM plugin, a special value `usePodCidr` is all
     },
     "ipam": {
         "type": "host-local",
-        "subnet": "usePodCidr"
+        "ranges": [
+            [
+                { "subnet": "usePodCidr" }
+            ],
+            [
+                { "subnet": "2001:db8::/96" }
+            ]
+        ],
+        "routes": [
+            { "dst": "0.0.0.0/0" },
+            { "dst": "2001:db8::/96" }
+        ]
     }
 }
 ```

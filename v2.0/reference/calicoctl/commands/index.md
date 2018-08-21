@@ -5,12 +5,12 @@ title: Command Reference
 The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}} network
 and security policy.
 
-This section is a command line reference for calicoctl, organized based on 
+This section is a command line reference for calicoctl, organized based on
 the command hierarchy.
 
 ## Top level help
 
-Run `calicoctl --help` to display the following help menu for the top level 
+Run `calicoctl --help` to display the following help menu for the top level
 calicoctl commands.
 
 ```
@@ -19,11 +19,11 @@ Usage:
 
     create    Create a resource by filename or stdin.
     replace   Replace a resource by filename or stdin.
-    apply     Apply a resource by filename or stdin.  This creates a resource 
+    apply     Apply a resource by filename or stdin.  This creates a resource
               if it does not exist, and replaces a resource if it does exists.
     delete    Delete a resource identified by file, stdin or resource type and
               name.
-    get       Get a resource identified by file, stdin or resource type and 
+    get       Get a resource identified by file, stdin or resource type and
               name.
     ipam      IP address management.
     node      Calico node management.
@@ -36,7 +36,7 @@ Options:
 
 Description:
   The calicoctl command line tool is used to manage Calico network and security
-  policy, to view and manage endpoint configuration, and to manage a Calico 
+  policy, to view and manage endpoint configuration, and to manage a Calico
   node instance.
 
   See 'calicoctl <command> --help' to read about a specific subcommand.

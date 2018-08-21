@@ -13,9 +13,9 @@ export TOP_PID=$$
 #   VERSION=v2.1 ./install-cnx.sh
 #
 # VERSION is used to retrieve manifests, e.g.
-#   ${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+#   ${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calico.yaml
 #      - resolves to -
-#   https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+#   https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/hosted/calico.yaml
 VERSION=${VERSION:="{{page.version}}"}
 
 # Override DOCS_LOCATION to point to alternate CNX docs location, e.g.
@@ -754,7 +754,8 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
 
   if [ "$DATASTORE" == "etcdv3" ]; then
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/etcd.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calico.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
 
     # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
@@ -784,6 +785,37 @@ applyKddRbacManifest() {
   if [ "$DATASTORE" == "kubernetes" ]; then
     run kubectl apply -f rbac-kdd.yaml
     countDownSecs 5 "Applying \"rbac-kdd.yaml\" manifest: "
+  fi
+}
+
+#
+# deleteKddRbacManifest() - kdd-only, delete kdd-rbac.yaml
+#
+deleteKddRbacManifest() {
+  # Apply rbac for kdd datastore
+  if [ "$DATASTORE" == "kubernetes" ]; then
+    runIgnoreErrors kubectl delete -f rbac-kdd.yaml
+    countDownSecs 5 "Deleting \"rbac-kdd.yaml\" manifest: "
+  fi
+}
+
+#
+# applyEtcdDeployment() - etcd-only, apply etcd.yaml 
+#
+applyEtcdDeployment() {
+  if [ "$DATASTORE" == "etcdv3" ]; then
+    run kubectl apply -f etcd.yaml 
+    countDownSecs 5 "Applying \"etcd.yaml\" manifest: "
+  fi
+}
+
+#
+# deleteEtcdDeployment() - etcd-only, delete etcd.yaml 
+#
+deleteEtcdDeployment() {
+  if [ "$DATASTORE" == "etcdv3" ]; then
+    runIgnoreErrors kubectl delete -f etcd.yaml 
+    countDownSecs 5 "Deleting \"etcd.yaml\" manifest: "
   fi
 }
 
@@ -1044,6 +1076,7 @@ installCNX() {
   installCalicoBinary "calicoq"   # Install quay.io/tigera/calicoq binary
 
   applyKddRbacManifest            # Apply "rbac-kdd.yaml" (kdd datastore only)
+  applyEtcdDeployment             # Install a single-node etcd (etcd datastore only)
   applyCalicoManifest             # Apply calico.yaml
 
   applyLicenseManifest            # If the user specified a license file, apply it
@@ -1080,6 +1113,8 @@ uninstallCNX() {
 
   deleteCNXManifest             # Delete cnx-[etcd|kdd].yaml
   deleteCalicoManifest          # Delete calico.yaml
+  deleteKddRbacManifest         # Delete rbac-kdd.yaml (kdd datastore only)
+  deleteEtcdDeployment          # Delete etcd.yaml (etcd datatstore only)
   deleteCNXManagerSecret        # Delete TLS secret
   deleteImagePullSecret         # Delete pull secret
   deleteBasicAuth               # Remove basic auth updates, restart kubelet

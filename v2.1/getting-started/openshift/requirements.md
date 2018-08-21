@@ -14,6 +14,6 @@ title: System requirements
 Refer to the OpenShift documentation for additional requirements.
 
 - [OpenShift Origin](https://docs.openshift.org/latest/install/prerequisites.html)
-- [OpenShift Container Platform](https://docs.openshift.com/container-platform/latest/getting_started/install_openshift.html#install-prerequisites)
+- [OpenShift Container Platform](https://docs.openshift.com/container-platform/latest/install/prerequisites.html)
 
 {% include {{page.version}}/reqs-kernel.md %}

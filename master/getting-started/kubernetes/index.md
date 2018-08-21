@@ -35,11 +35,10 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
 
 - [Follow the Kubernetes instructions to install kubeadm](https://kubernetes.io/docs/setup/independent/install-kubeadm/){:target="_blank"}.
 
-  > **Note**: After installing kubeadm, do not power down or restart
-  > the host. Instead, continue directly to the
-  > [next section to create your cluster](#create-a-single-host-kubernetes-cluster).
-  {: .alert .alert-info}
-
+> **Note**: After installing kubeadm, do not power down or restart
+the host. Instead, continue directly to the
+[next section to create your cluster](#create-a-single-host-kubernetes-cluster).
+{: .alert .alert-info}
 
 ### Create a single-host Kubernetes cluster
 
@@ -61,7 +60,6 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
    sudo chown $(id -u):$(id -g) $HOME/.kube/config
    ```
-
 1. Download the installation script.
 
    ```bash
@@ -74,7 +72,6 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
    ```bash
    chmod +x install-cnx.sh
    ```
-
 1. Use the following command to execute the script, replacing `<customer-name>`
    with your customer name.
 
