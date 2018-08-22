@@ -27,6 +27,8 @@ import (
 	"github.com/projectcalico/libcalico-go/lib/set"
 )
 
+const ActionPass hns.ActionType = "pass"
+
 // IPSetCache is our interface to the IP sets tracker.
 type IPSetCache interface {
 	GetIPSetMembers(ipsetID string) []string
@@ -120,11 +122,12 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 	}
 
 	debug := log.GetLevel() >= log.DebugLevel
+        debug = true
 
 	var lastRule *hns.ACLPolicy
 	for _, setId := range setIds {
 		if debug {
-			log.WithFields(log.Fields{"setId": setId, "isInbound": isInbound}).Debug(
+			log.WithFields(log.Fields{"setId": setId, "isInbound": isInbound}).Warn(
 				"Gathering per-direction rules for policy set")
 		}
 
@@ -155,6 +158,7 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 			memberCopy := *member
 			memberCopy.Priority = currentPriority
 			rules = append(rules, &memberCopy)
+                        log.Warnf("song get %+v", memberCopy)
 
 			lastRule = &memberCopy
 		}
@@ -163,10 +167,6 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 	// Apply a default block rule for this direction at the end of the policy
 	currentPriority++
 	rules = append(rules, s.NewRule(isInbound, currentPriority))
-
-	// Finally, for RS3 only, add default allow rule with a host-scope to allow traffic through
-	// the host windows firewall
-	rules = append(rules, s.NewHostRule(isInbound))
 
 	return
 }
@@ -228,7 +228,7 @@ func getReferencedIpSetIds(inboundRules []*proto.Rule, outboundRules []*proto.Ru
 
 // convertPolicyToRules converts the provided inbound and outbound proto rules into hns rules.
 func (s *PolicySets) convertPolicyToRules(policyId string, inboundRules []*proto.Rule, outboundRules []*proto.Rule) (hnsRules []*hns.ACLPolicy) {
-	log.WithField("policyId", policyId).Debug("Converting policy to HNS rules.")
+	log.WithField("policyId", policyId).Warn("song Converting policy to HNS rules.")
 
 	inbound := s.protoRulesToHnsRules(policyId, inboundRules, true)
 	hnsRules = append(hnsRules, inbound...)
@@ -277,7 +277,7 @@ func (s *PolicySets) protoRulesToHnsRules(policyId string, protoRules []*proto.R
 // Rules with: Negative match criteria, Actions other than 'allow' or 'deny'and ICMP type/codes.
 //
 func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isInbound bool, ipPortsPerRule int) ([]*hns.ACLPolicy, error) {
-	log.WithField("policyId", policyId).Debug("protoRuleToHnsRules")
+	log.WithField("policyId", policyId).Warn("song protoRuleToHnsRules")
 
 	// Check IpVersion
 	if pRule.IpVersion != 0 && pRule.IpVersion != proto.IPVersion(ipVersion) {
@@ -343,11 +343,12 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	case "deny":
 		aclPolicy.Action = hns.Block
 	case "next-tier", "pass", "log":
-		logCxt.WithField("action", ruleCopy.Action).Info("This rule action is not supported, rule will be skipped")
-		return nil, ErrNotSupported
+		logCxt.WithField("action", ruleCopy.Action).Warnf("song rule with pass action. %+v", ruleCopy)
+		aclPolicy.Action = ActionPass
 	default:
 		logCxt.WithField("action", ruleCopy.Action).Panic("Unknown rule action")
 	}
+       logCxt.WithField("action", ruleCopy.Action).Warnf("song rule action. action string %s, %+v", strings.ToLower(ruleCopy.Action), aclPolicy)
 
 	// Protocol
 	//
@@ -363,7 +364,7 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 	}
 
 	//
-	// Source Neworks and IPSets
+	// Source Networks and IPSets
 	//
 	var localAddresses []string
 	var remoteAddresses []string
@@ -491,6 +492,9 @@ func (s *PolicySets) protoRuleToHnsRules(policyId string, pRule *proto.Rule, isI
 			}
 		}
 	}
+        for i, rule := range aclPolicies {
+            logCxt.Warnf("song final acl policy %d rule : %+v", i, *rule)
+        }
 
 	return aclPolicies, nil
 }

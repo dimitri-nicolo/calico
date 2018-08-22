@@ -322,9 +322,6 @@ func (m *endpointManager) CompleteDeferredWork() error {
 	var missingEndpoints bool
 	for id, workload := range m.pendingWlEpUpdates {
 		logCxt := log.WithField("id", id)
-
-		var inboundPolicyIds []string
-		var outboundPolicyIds []string
 		var endpointId string
 
 		// A non-nil workload indicates this is a pending add or update operation
@@ -347,23 +344,61 @@ func (m *endpointManager) CompleteDeferredWork() error {
 
 			logCxt.Info("Processing endpoint add/update")
 
-			if len(workload.Tiers) > 0 && len(workload.Tiers[0].IngressPolicies) > 0 {
-				logCxt.Debug("Workload Tier Policies will be applied Inbound")
-				inboundPolicyIds = append(inboundPolicyIds, prependAll(policysets.PolicyNamePrefix, workload.Tiers[0].IngressPolicies)...)
-			} else if len(workload.ProfileIds) > 0 {
-				logCxt.Debug("Profiles will be applied Inbound")
-				inboundPolicyIds = append(inboundPolicyIds, prependAll(policysets.ProfileNamePrefix, workload.ProfileIds)...)
+			// Figure out which tiers apply in the ingress/egress direction.  We skip any tiers that have no policies
+			// that apply to this endpoint.  At this point we're working with policy names only.
+			var ingressPolNames, egressPolNames [][]string
+			for _, t := range workload.Tiers {
+				if len(t.IngressPolicies) > 0 {
+					ingressPolNames = append(ingressPolNames, prependAll(policysets.PolicyNamePrefix, t.IngressPolicies))
+				}
+				if len(t.EgressPolicies) > 0 {
+					egressPolNames = append(egressPolNames, prependAll(policysets.PolicyNamePrefix, t.EgressPolicies))
+				}
 			}
 
-			if len(workload.Tiers) > 0 && len(workload.Tiers[0].EgressPolicies) > 0 {
-				logCxt.Debug("Workload Tier Policies will be applied Outbound")
-				outboundPolicyIds = append(outboundPolicyIds, prependAll(policysets.PolicyNamePrefix, workload.Tiers[0].EgressPolicies)...)
-			} else if len(workload.ProfileIds) > 0 {
-				logCxt.Debug("Profiles will be applied Outbound")
-				outboundPolicyIds = append(outboundPolicyIds, prependAll(policysets.ProfileNamePrefix, workload.ProfileIds)...)
+			// If _no_ policies apply at all, then we fall through to the profiles.  Otherwise, there's no way to get
+			// from policies to profiles.
+			if len(ingressPolNames) == 0 {
+				ingressPolNames = append(ingressPolNames, prependAll(policysets.ProfileNamePrefix, workload.ProfileIds))
 			}
 
-			err := m.applyRules(id, endpointId, inboundPolicyIds, outboundPolicyIds)
+			if len(egressPolNames) == 0 {
+				egressPolNames = append(egressPolNames, prependAll(policysets.ProfileNamePrefix, workload.ProfileIds))
+			}
+
+			// Expand the policies into rules.
+			var ingressRules, egressRules [][]*hns.ACLPolicy
+			for _, t := range ingressPolNames {
+				ingressRules = append(ingressRules, m.policysetsDataplane.GetPolicySetRules(t, true))
+			}
+			for _, t := range egressPolNames {
+				egressRules = append(egressRules, m.policysetsDataplane.GetPolicySetRules(t, false))
+			}
+			logCxt.Warnf("song 01  before flatten %+v", ingressRules)
+	                for i, rules := range ingressRules {
+                          for j, rule := range rules {
+		            logCxt.Warnf("hns ingress rule %d,%d : %+v", i, j, *rule)
+                          }
+	                }
+
+			// Flatten any tiers.
+			flatIngressRules := flattenTiers(ingressRules)
+			flatEgressRules := flattenTiers(egressRules)
+			logCxt.Warnf("song after flatten %+v", ingressRules)
+	                for i, rule := range flatIngressRules {
+		            logCxt.Warnf("hns ingress rule %d : %+v", i, *rule)
+	                }
+
+			// Finally, for RS3 only, add default allow rule with a host-scope to allow traffic through
+			// the host windows firewall
+			flatIngressRules = append(flatIngressRules, m.policysetsDataplane.NewHostRule(true))
+			flatEgressRules = append(flatEgressRules, m.policysetsDataplane.NewHostRule(false))
+
+			// Make sure priorities are ascending.
+			rewritePriorities(flatIngressRules)
+			rewritePriorities(flatEgressRules)
+
+			err := m.applyRules(id, endpointId, flatIngressRules, flatEgressRules)
 			if err != nil {
 				// Failed to apply, this will be rescheduled and retried
 				log.WithError(err).Error("Failed to apply rules update")
@@ -387,6 +422,22 @@ func (m *endpointManager) CompleteDeferredWork() error {
 	}
 
 	return nil
+}
+
+func rewritePriorities(policies []*hns.ACLPolicy) {
+	if len(policies) <= 1 {
+		return
+	}
+	priority := policies[0].Priority
+	lastRule := policies[0]
+
+	for i := 1; i < len(policies); i++ {
+		if lastRule.Action != policies[i].Action {
+			priority++
+			policies[i].Priority = priority
+		}
+		lastRule = policies[i]
+	}
 }
 
 // extractUnicastIPv4Addrs examines the raw input addresses and returns any IPv4 addresses found.
@@ -430,21 +481,21 @@ func (m *endpointManager) markAllEndpointForRefresh() {
 
 // applyRules gathers all of the rules for the specified policies and sends them to hns
 // as an endpoint policy update (this actually applies the rules to the dataplane).
-func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpointId string, inboundPolicyIds []string, outboundPolicyIds []string) error {
+func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpointId string, inboundRules, outboundRules []*hns.ACLPolicy) error {
 	logCxt := log.WithFields(log.Fields{"id": workloadId, "endpointId": endpointId})
-	logCxt.WithFields(log.Fields{
-		"inboundPolicyIds":  inboundPolicyIds,
-		"outboundPolicyIds": outboundPolicyIds,
-	}).Info("Applying endpoint rules")
+	// logCxt.WithFields(log.Fields{
+	// 	"inboundPolicyIds":  inboundPolicyIds,
+	// 	"outboundPolicyIds": outboundPolicyIds,
+	// }).Info("Applying endpoint rules")
 
-	var rules []*hns.ACLPolicy
+	rules := make([]*hns.ACLPolicy, 0, len(inboundRules)+len(outboundRules)+1)
 
 	if nodeToEp := m.nodeToEndpointRule(); nodeToEp != nil {
 		log.WithField("hostAddrs", m.hostAddrs).Debug("Adding node->endpoint allow rule")
 		rules = append(rules, nodeToEp)
 	}
-	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(inboundPolicyIds, true)...)
-	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(outboundPolicyIds, false)...)
+	rules = append(rules, inboundRules...)
+	rules = append(rules, outboundRules...)
 
 	if len(rules) > 0 {
 		if log.GetLevel() >= log.DebugLevel {
@@ -460,6 +511,10 @@ func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpoi
 
 	endpoint := &hns.HNSEndpoint{}
 	endpoint.Id = endpointId
+
+	for i, rule := range rules {
+		logCxt.Warnf("hns rule %d : %+v", i, *rule)
+	}
 
 	if err := endpoint.ApplyACLPolicy(rules...); err != nil {
 		logCxt.WithError(err).Warning("Failed to apply rules. This operation will be retried.")
