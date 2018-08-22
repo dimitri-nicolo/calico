@@ -16,18 +16,20 @@ repository: projectcalico/calico
 noderunning: calico-node
 
 # Image names in case the host changes
+# Some of these omit the repo: when used they must be prefixed with the repo path
+# like site.data.versions[page.version].first.dockerRepo/site.imageNames[component]:version.
 imageNames:
-  node: quay.io/tigera/cnx-node
-  calicoctl: quay.io/tigera/calicoctl
-  typha: quay.io/tigera/typha
-  cnxManager: quay.io/tigera/cnx-manager
-  cnxManagerProxy: quay.io/tigera/cnx-manager-proxy
-  cnxApiserver: quay.io/tigera/cnx-apiserver
-  cnxQueryserver: quay.io/tigera/cnx-queryserver
-  felix: quay.io/tigera/felix
-  calicoq: quay.io/tigera/calicoq
+  node: tigera/cnx-node
+  calicoctl: tigera/calicoctl
+  typha: tigera/typha
+  cnxManager: tigera/cnx-manager
+  cnxManagerProxy: tigera/cnx-manager-proxy
+  cnxApiserver: tigera/cnx-apiserver
+  cnxQueryserver: tigera/cnx-queryserver
+  felix: tigera/felix
+  calicoq: tigera/calicoq
   cni: quay.io/calico/cni
-  kubeControllers: quay.io/tigera/kube-controllers
+  kubeControllers: tigera/kube-controllers
   calico-upgrade: quay.io/calico/upgrade
   flannel: quay.io/coreos/flannel
   dikastes: quay.io/calico/dikastes
