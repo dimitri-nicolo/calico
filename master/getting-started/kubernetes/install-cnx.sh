@@ -831,7 +831,9 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
 
   if [ "$DATASTORE" == "etcdv3" ]; then
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/etcd.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/rbac.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calico.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
 
     # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
@@ -862,24 +864,32 @@ downloadManifests() {
 }
 
 #
-# applyKddRbacManifest() - kdd-only, apply kdd-rbac.yaml
+# applyRbacManifest() - apply appropriate rbac manifest based on datastore. 
 #
-applyKddRbacManifest() {
-  # Apply rbac for kdd datastore
+applyRbacManifest() {
   if [ "$DATASTORE" == "kubernetes" ]; then
+    # Apply rbac for kdd datastore
     run kubectl apply -f rbac-kdd.yaml
     countDownSecs 5 "Applying \"rbac-kdd.yaml\" manifest: "
+  elif [ "$DATASTORE" == "etcdv3" ]; then
+    # Apply rbac for etcdv3 datastore
+    run kubectl apply -f rbac.yaml
+    countDownSecs 5 "Applying \"rbac.yaml\" manifest: "
   fi
 }
 
 #
-# deleteKddRbacManifest() - kdd-only, delete kdd-rbac.yaml
+# deleteRbacManifest() - delete appropriate rbac manifest based on datastore. 
 #
-deleteKddRbacManifest() {
-  # Apply rbac for kdd datastore
+deleteRbacManifest() {
   if [ "$DATASTORE" == "kubernetes" ]; then
+    # Delete rbac for kdd datastore
     runIgnoreErrors kubectl delete -f rbac-kdd.yaml
     countDownSecs 5 "Deleting \"rbac-kdd.yaml\" manifest: "
+  elif [ "$DATASTORE" == "etcdv3" ]; then
+    # Delete rbac for etcdv3 datastore
+    runIgnoreErrors kubectl delete -f rbac.yaml
+    countDownSecs 5 "Deleting \"rbac.yaml\" manifest: "
   fi
 }
 
@@ -1162,7 +1172,7 @@ installCNX() {
   installCalicoBinary "calicoctl" # Install quay.io/tigera/calicoctl binary, create "/etc/calico/calicoctl.cfg"
   installCalicoBinary "calicoq"   # Install quay.io/tigera/calicoq binary
 
-  applyKddRbacManifest            # Apply "rbac-kdd.yaml" (kdd datastore only)
+  applyRbacManifest               # Apply RBAC resources based on the configured datastore type. 
   applyEtcdDeployment             # Install a single-node etcd (etcd datastore only)
   applyCalicoManifest             # Apply calico.yaml
 
