@@ -262,6 +262,8 @@ spec:
         apiserver: "true"
         k8s-app: cnx-apiserver
     spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
       serviceAccountName: cnx-apiserver
       tolerations:
         - key: node-role.kubernetes.io/master
@@ -474,6 +476,8 @@ spec:
         # a failure.  This annotation works in tandem with the toleration below.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
       serviceAccountName: cnx-manager
       tolerations:
       - key: node-role.kubernetes.io/master
