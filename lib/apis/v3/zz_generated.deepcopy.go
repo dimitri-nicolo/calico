@@ -655,6 +655,16 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.FlowLogsFlushInterval != nil {
+		in, out := &in.FlowLogsFlushInterval, &out.FlowLogsFlushInterval
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.FlowLogsEnableHostEndpoint != nil {
+		in, out := &in.FlowLogsEnableHostEndpoint, &out.FlowLogsEnableHostEndpoint
+		*out = new(bool)
+		**out = **in
+	}
 	if in.CloudWatchLogsReporterEnabled != nil {
 		in, out := &in.CloudWatchLogsReporterEnabled, &out.CloudWatchLogsReporterEnabled
 		*out = new(bool)
@@ -753,11 +763,6 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	if in.FlowLogsFileAggregationKindForDenied != nil {
 		in, out := &in.FlowLogsFileAggregationKindForDenied, &out.FlowLogsFileAggregationKindForDenied
 		*out = new(int)
-		**out = **in
-	}
-	if in.FlowLogsFileEnableHostEndpoint != nil {
-		in, out := &in.FlowLogsFileEnableHostEndpoint, &out.FlowLogsFileEnableHostEndpoint
-		*out = new(bool)
 		**out = **in
 	}
 	if in.FlowLogsFileEnabledForAllowed != nil {
