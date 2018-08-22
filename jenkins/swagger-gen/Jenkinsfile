@@ -1,0 +1,244 @@
+#!groovy
+pipeline {
+    agent { label 'slave'}
+    environment {
+        IMAGE_NAME = "gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver"
+        WAVETANK_SERVICE_ACCT = "wavetank@unique-caldron-775.iam.gserviceaccount.com"
+
+        // ----- CNX installer data follows (used for obtaining the swager API) -----
+        GOOGLE_APPLICATION_CREDENTIALS = "/etc/secrets/account.json"
+
+        // Jenkins job info
+        SANE_JOB_NAME = "${env.JOB_BASE_NAME}".replace('.', '-').toLowerCase()
+
+        // Terraform base settings
+        TF_VAR_google_project = 'unique-caldron-775'
+        TF_VAR_google_region = 'us-central1'
+        TF_VAR_zone = 'us-central1-f'
+        TF_VAR_prefix = "wt-${SANE_JOB_NAME}-${env.BUILD_NUMBER}"
+        TF_VAR_node_preemptible = 'false'
+        TF_VAR_master_disk_size = '20'
+
+        // Terraform kubernetes settings
+        TF_VAR_kubernetes_version = "stable-1.9"
+        USE_EXTERNAL_ETCD = ""
+
+        // Slack message params
+        BUILD_INFO = "https://wavetank.tigera.io/blue/organizations/jenkins/${env.JOB_NAME}/detail/${env.JOB_NAME}/${env.BUILD_NUMBER}/pipeline"
+        SLACK_MSG = "${BUILD_INFO}\n- *k8s-version:* ${TF_VAR_kubernetes_version}\n"
+        slack_alert_channel = 'ci-notifications-cnx'
+
+        // install-cnx.sh settings
+        DATASTORE = "kubernetes"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                dir('_cp') {
+                  git(url: 'git@github.com:tigera/calico-private.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
+                }
+            }
+        }
+
+        stage('Provision Cluster') {
+            steps {
+                dir('_crc') {
+                  git(url: 'git@github.com:tigera/calico-ready-clusters.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
+                  dir('kubeadm/1.6/') {
+                      withCredentials([file(credentialsId: 'registry-viewer-account-json', variable: 'DOCKER_AUTH')]) {
+                          sh "cp $DOCKER_AUTH docker_auth.json"
+                          sh "terraform init"
+                          sh "make master_ssh_key"
+                          sh "terraform apply"
+                          // Remove the taint from master, but expect an error as this command tries to remove the taint from nodes (which do not have it).
+                          sh '$(terraform output master_connect_command) /usr/bin/kubectl taint nodes --all node-role.kubernetes.io/master- || true'
+                        }
+                    }
+                }
+            }
+            post {
+                failure {
+                    slackSend message: "Failed during Terraform provisioning!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+        stage('Install CNX') {
+            steps {
+                dir('_crc/kubeadm/1.6') {
+                    // install script requires 'jq'
+                    sh '$(terraform output master_connect_command) "sudo apt-get install -y jq"'
+
+                    // download the installer script fromm docs in master branch
+                    sh '$(terraform output master_connect_command) "curl --compressed -O https://docs.tigera.io/master/getting-started/kubernetes/install-cnx.sh"'
+
+                    sh '$(terraform output master_connect_command) "chmod +x ./install-cnx.sh"'
+
+                    // Create docker auth file to allow pulls from quay.io/tigera
+                    withCredentials([file(credentialsId: 'quay-read-json', variable: 'KEY')]) {
+                        sh "cp $KEY config.json"
+                        sh "scp -i master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no config.json \$(terraform output master_connect):~/config.json"
+                        sh "rm -f config.json"
+                    }
+
+                    // Create a CNX license file
+                    withCredentials([file(credentialsId: 'cnx-license-key', variable: 'KEY')]) {
+                        sh "cp $KEY license.yaml"
+                        sh "scp -i master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no license.yaml \$(terraform output master_connect):~/license.yaml"
+                        sh "rm -f license.yaml"
+                    }
+
+                    // Start installation process of 'master' branch, don't prompt the user
+                    sh '$(terraform output master_connect_command) "DATASTORE=$DATASTORE ./install-cnx.sh -v master -q -l license.yaml"'
+                }
+            }
+            post {
+                failure {
+                    slackSend message: "Failed to install CNX with quick-staller!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+        stage('Obtaining swagger.json') {
+            steps {
+                dir('_crc/kubeadm/1.6') {
+                    withCredentials([file(credentialsId: 'quay-read-json', variable: 'KEY')]) {
+                        // CNX is installed and running. Pull the swagger.json file.
+                        sh '$(terraform output master_connect_command) "curl -k https://127.0.0.1:6443/swagger.json -O"'  // Pull full swagger.json from APIS.
+                        sh "scp -i master_ssh_key -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no \$(terraform output master_connect):~/swagger.json swagger.json"
+                    }
+                }
+            }
+            post {
+                failure {
+                    slackSend message: "Failed to create swagger.json with quick-staller!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+
+        stage('Create branch') {
+            steps {
+                sh 'cp _crc/kubeadm/1.6/swagger.json _cp/calico-swagger.json'
+
+                dir('_cp') {
+                    sh 'docker build -t swagger-gen:latest $PWD/jenkins/swagger-gen/ && docker run -v $PWD/calico-swagger.json:/tmp/calico-swagger.json:rw swagger-gen:latest app /tmp/calico-swagger.json /tmp/calico-swagger.json '
+
+                    // Check if the branch exists, if it does, compare and push changes
+                    // If it does not, then create the branch and push it
+                    sh '''
+                        git config user.name "Marvin Robot"
+                        git config user.email "marvin@tigera.io"
+                        if [ -z "$(git ls-remote | grep JENKINS-master-swagger-build)" ]; then
+                            git checkout -b JENKINS-master-swagger-build;
+                            git add .;
+                            git commit -m "calico-swagger.json update";
+                        elif [ -z "$(git diff origin/JENKINS-master-swagger-build)" ]; then
+                            git checkout master && git pull;
+                            git merge JENKINS-master-swagger-build;
+                            git reset origin/master;
+                            git add . --all;
+                            git commit -m "calico-swagger.json update";
+                        fi
+                        '''
+                }
+            }
+        }
+        stage('Push branch'){
+            steps{
+                dir('_cp') {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'KEY', passphraseVariable: 'PHRASE', usernameVariable: 'USER')]) {
+                        // Only push the branch if there are changes to push
+                        // Check if the the Jenkins branch exists and if it does, check if there are differences that need to be pushed.
+                        // If the Jenkins branch does not exist, push the new branch if there are differences from the master branch.
+			script {
+                            env.BRANCH_EXISTS = sh(returnStdout: true, script: '''#!/bin/bash
+                                if [[ -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" ]]; then
+                                    echo "true";
+                                else
+                                    echo "false";
+                                fi''')
+
+                            env.SWAGGER_CHANGED = sh(returnStdout: true, script: '''#!/bin/bash
+                                if [[ -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" && -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git diff origin/JENKINS-master-swagger-build)" ]] || [[ -z "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" && -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git diff origin/master)" ]]; then
+				    echo "true";
+                                else
+                                    echo "false";
+                                fi''')
+
+                            if (env.SWAGGER_CHANGED) {
+                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git push -f --set-upstream origin JENKINS-master-swagger-build''')
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        stage('Create PR') {
+            steps {
+                dir('_pr') {
+                    withCredentials([usernamePassword(credentialsId: 'marvin-tigera', passwordVariable: 'TOKEN', usernameVariable: 'USER')]) {
+                        sh 'wget https://github.com/github/hub/releases/download/v2.4.0/hub-linux-amd64-2.4.0.tgz'
+                        sh 'tar -xvzf hub-linux-amd64-2.4.0.tgz'
+                    }
+                }
+
+                dir('_cp') {
+                    withCredentials([usernamePassword(credentialsId: 'marvin-tigera', passwordVariable: 'TOKEN', usernameVariable: 'USER')]) {
+                        script {
+                            SHOULD_PUSH = "${env.SWAGGER_CHANGED} && !${env.BRANCH_EXISTS}"
+                            if (SHOULD_PUSH) {
+                                sh(script: "GITHUB_TOKEN=${TOKEN} ../_pr/hub-linux-amd64-2.4.0/bin/hub pull-request -b tigera/calico-private:master -F - <<EOF\nJENKINS master: automatic swagger update\n\nThis is an automated PR generated by a Jenkins job.\nEOF")
+                            }
+                        }
+                    }
+                }
+            }
+            post {
+                failure {
+                    slackSend message: "Failed to create PR for updated swagger!\n${env.SLACK_MSG}", color: "warning", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+    }
+    post {
+        always {
+            dir('_crc/kubeadm/1.6') {
+                sh '$(terraform output master_connect_command) "kubectl get po -n kube-system -o wide"'
+                sh '$(terraform output master_connect_command) "kubectl logs -n kube-system -l k8s-app=cnx-manager --container=cnx-manager"'
+                sh '$(terraform output master_connect_command) "kubectl describe po -n kube-system -l k8s-app=cnx-manager"'
+                sh 'terraform destroy -force'
+            }
+            echo "Removing checked-out sub-directories"
+            sh 'rm -rf _crc'
+            sh 'rm -rf _cp'
+        }
+        success {
+            echo "Yay, we passed."
+        }
+        changed { // Notify only on change to success
+            script {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
+                    GIT_HASH = env.GIT_COMMIT[0..6]
+                    GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
+                    if (currentBuild.currentResult == 'SUCCESS' && currentBuild.getPreviousBuild()?.result) {
+                        msg = "Passing again ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                        slackSend message: msg, color: "good", channel: "${env.slack_alert_channel}"
+                    }
+                }
+           }
+        }
+        failure {
+            echo "Boo, we failed."
+            script {
+                if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
+                    GIT_HASH = env.GIT_COMMIT[0..6]
+                    GIT_AUTHOR = sh(returnStdout: true, script: "git show -s --format='%an' ${env.GIT_COMMIT}").trim()
+                    if (currentBuild.getPreviousBuild()?.result == 'FAILURE') {
+                        msg = "Still failing ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                    } else {
+                        msg = "New failure ${env.JOB_NAME}\n${GIT_AUTHOR} ${GIT_HASH}\n${env.RUN_DISPLAY_URL}"
+                    }
+                    slackSend message: msg, color: "danger", channel: "${env.slack_alert_channel}"
+                }
+            }
+        }
+    }
+}
