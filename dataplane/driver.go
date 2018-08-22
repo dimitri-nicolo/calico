@@ -162,6 +162,12 @@ func StartDataplaneDriver(configParams *config.Config,
 			configParams.CloudWatchMetricsReporterEnabled = false
 		}
 
+		if configParams.FlowLogsFileEnabled && !licenseMonitor.GetFeatureStatus(features.FileOutputFlowLogs) {
+			log.Warn("Not licensed for Flow Logs File Output feature. License either invalid or expired. " +
+				"Contact Tigera support or email licensing@tigera.io")
+			configParams.FlowLogsFileEnabled = false
+		}
+
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExcludes(),
