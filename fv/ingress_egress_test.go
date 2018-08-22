@@ -52,6 +52,7 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 		opts := infrastructure.DefaultTopologyOptions()
 		opts.EnableCloudWatchLogs()
 		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 
 		// Install a default profile that allows workloads with this profile to talk to each
