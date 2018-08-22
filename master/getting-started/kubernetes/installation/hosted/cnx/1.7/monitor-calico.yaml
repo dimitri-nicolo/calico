@@ -223,9 +223,9 @@ metadata:
 spec:
   version: {{site.data.versions[page.version].first.components["alertmanager"].version}}
   baseImage: quay.io/prometheus/alertmanager
-  # If necessary, uncomment the 2 lines below and edit the nodeSelector
-  # key:value pair with appropriate values for your environment.
-  #nodeSelector:
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+    # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
     #node.role: infrastructure
   replicas: 3
 ---
@@ -258,9 +258,9 @@ metadata:
   namespace: calico-monitoring
 spec:
   baseImage: quay.io/prometheus/prometheus
-  # If necessary, uncomment the 2 lines below and edit the nodeSelector
-  # key:value pair with appropriate values for your environment.
-  #nodeSelector:
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+    # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
     #node.role: infrastructure
   serviceAccountName: prometheus
   serviceMonitorSelector:

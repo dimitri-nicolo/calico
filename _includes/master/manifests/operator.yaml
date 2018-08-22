@@ -99,9 +99,9 @@ spec:
       labels:
         operator: prometheus
     spec:
-      # If necessary, uncomment the 2 lines below and edit the nodeSelector
-      # key:value pair with appropriate values for your environment.
-      #nodeSelector:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
         #node.role: infrastructure
       serviceAccountName: calico-prometheus-operator
       containers:
