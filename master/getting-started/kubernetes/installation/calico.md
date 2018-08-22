@@ -33,9 +33,9 @@ section that matches your use case.
 
 - [etcd datastore with federation](#installing-for-etcd-datastore-with-federation)
 
-- [Kubernetes API datastore, 50 nodes or less and without federation](#installing-for-kubernetes-api-datastore-50-nodes-or-less-and-without-federation) (beta)
+- [Kubernetes API datastore, 50 nodes or less and without federation](#50-nodes-or-less)
 
-- [Kubernetes API datastore, more than 50 nodes and/or with federation](#installing-for-kubernetes-api-datastore-more-than-50-nodes-or-with-federation) (beta)
+- [Kubernetes API datastore, more than 50 nodes and/or with federation](#installing-for-kubernetes-api-datastore-more-than-50-nodes-or-with-federation)
 
 > **Note**: {{site.prodname}} networking with the Kubernetes API datastore
 > is beta because it does not yet support {{site.prodname}} IPAM. It uses
@@ -157,7 +157,7 @@ section that matches your use case.
 1. If you wish to enforce application layer policies and secure workload-to-workload
    communications with mutual TLS authentication, continue to [Enabling application layer policy](app-layer-policy) (optional).
 
-### Installing with the Kubernetes API datastore—50 nodes or less
+### <a name="50-nodes-or-less"></a> Installing with the Kubernetes API datastore—50 nodes or less
 
 1. Ensure that the Kubernetes controller manager has the following flags
    set: <br>

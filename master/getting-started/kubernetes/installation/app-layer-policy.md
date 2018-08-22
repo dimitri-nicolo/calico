@@ -41,17 +41,6 @@ kubectl apply -f \
 	> [view the manifest in your browser]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/calico-networking/calico-node.yaml){:target="_blank"}.
 	{: .alert .alert-info}
 
-- **{{site.prodname}} for policy and flannel for networking with the Kubernetes API datastore**:
-
-  ```bash
-kubectl apply -f \
-{{site.url}}/{{page.version}}/getting-started/kubernetes/installation/manifests/app-layer-policy/kubernetes-datastore/flannel/calico-node.yaml
-	```
-
-	> **Note**: You can also
-	> [view the manifest in your browser](manifests/app-layer-policy/kubernetes-datastore/flannel/calico-node.yaml){:target="_blank"}.
-	{: .alert .alert-info}
-
 - **{{site.prodname}} for policy only**:
 
   ```bash

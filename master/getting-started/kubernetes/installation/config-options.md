@@ -10,7 +10,7 @@ settings as needed.
 
 Refer to the section that corresponds to the manifest you wish to modify for more details.
 
-- [Customizing {{site.prodname}} manifests](#customizing-calico-manifests)
+- [Customizing {{site.prodname}} manifests](#customizing-cnx-manifests)
 
 - [Customizing application layer policy manifests](#customizing-application-layer-policy-manifests)
 
