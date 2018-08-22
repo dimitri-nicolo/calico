@@ -117,8 +117,11 @@ pipeline {
 
         stage('Create branch') {
             steps {
-                sh 'cp _crc/kubeadm/1.6/swagger.json _cp/_includes/master/swagger.json'
+                sh 'cp _crc/kubeadm/1.6/swagger.json _cp/calico-swagger.json'
+
                 dir('_cp') {
+                    sh 'docker build -t swagger-gen:latest $PWD/jenkins/swagger-gen/ && docker run -v $PWD/calico-swagger.json:/tmp/calico-swagger.json:rw swagger-gen:latest app /tmp/calico-swagger.json /tmp/calico-swagger.json '
+
                     // Check if the branch exists, if it does, compare and push changes
                     // If it does not, then create the branch and push it
                     sh '''
