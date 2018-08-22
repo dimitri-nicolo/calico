@@ -3,11 +3,9 @@
 package collector
 
 import (
-	"io"
-
-	"path"
-
 	"encoding/json"
+	"io"
+	"path"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
