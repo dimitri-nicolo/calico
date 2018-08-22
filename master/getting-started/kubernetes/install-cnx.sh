@@ -53,6 +53,9 @@ SKIP_PROMETHEUS=${SKIP_PROMETHEUS:=0}
 # when set to 1, download the manifests, then quit
 DOWNLOAD_MANIFESTS_ONLY=${DOWNLOAD_MANIFESTS_ONLY:=0}
 
+# when set to 1, install policy-only manifest
+POLICY_ONLY=${POLICY_ONLY:=0}
+
 # cleanup CNX installation
 CLEANUP=0
 
@@ -67,6 +70,9 @@ CALICO_UTILS_INSTALL_DIR=${CALICO_UTILS_INSTALL_DIR:="/usr/local/bin"}
 
 # Location of kube-apiserver manifest
 KUBE_APISERVER_MANIFEST=${KUBE_APISERVER_MANIFEST:="/etc/kubernetes/manifests/kube-apiserver.yaml"}
+
+# Location of kube-controller-manager manifest
+KUBE_CONTROLLER_MANIFEST=${KUBE_CONTROLLER_MANIFEST:="/etc/kubernetes/manifests/kube-controller-manager.yaml"}
 
 # Kubernetes installer type - "KOPS" or "KUBEADM"
 INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
@@ -169,8 +175,8 @@ validateSettings() {
   # Validate $DATASTORE is either "kubernetes" or "etcdv3"
   [ "$DATASTORE" == "etcdv3" ] || [ "$DATASTORE" == "kubernetes" ] || fatalError "Datastore \"$DATASTORE\" is not valid, must be either \"etcdv3\" or \"kubernetes\"."
 
-  # Validate $INSTALL_TYPE is either "KOPS" or "KUBEADM"
-  [ "$INSTALL_TYPE" == "KOPS" ] || [ "$INSTALL_TYPE" == "KUBEADM" ] || fatalError "Installation type \"$INSTALL_TYPE\" is not valid, must be either \"KOPS\" or \"KUBEADM\"."
+  # Validate $INSTALL_TYPE is either "KOPS" or "KUBEADM" or "ACS-ENGINE"
+  [ "$INSTALL_TYPE" == "KOPS" ] || [ "$INSTALL_TYPE" == "KUBEADM" ] || [ "$INSTALL_TYPE" == "ACS-ENGINE" ] || fatalError "Installation type \"$INSTALL_TYPE\" is not valid, must be either \"KOPS\" or \"KUBEADM\" or \"ACS-ENGINE\"."
 
   # If we're installing, confirm user specified a readable license file
   if [ "$CLEANUP" -eq 0 ]; then
@@ -291,18 +297,25 @@ programIsInstalled() {
 
 #
 # determineInstallerType()
-# Determine whether this cluster was installed by one of the two supported
-# kubernetes installers - "KOPS" or "KUBEADM"
-# Set INSTALL_TYPE to "KOPS" or "KUBEADM"
+# Determine whether this cluster was installed by one of the three supported
+# kubernetes installers - "KOPS" or "KUBEADM" or "ACS-ENGINE"
+# Set INSTALL_TYPE to "KOPS" or "ACS-ENGINE" or "KUBEADM"
 #
 determineInstallerType() {
   # Assume Kubeadm by default. Check for directories and files used by Kops and override if necessary
-  if [[ -z "$INSTALL_TYPE" && -d "/srv/kubernetes/" && -e "/etc/kubernetes/manifests/kube-apiserver.manifest" ]]; then
+  if [[ -d "/srv/kubernetes/" && -e "/etc/kubernetes/manifests/kube-apiserver.manifest" ]]; then
     INSTALL_TYPE="KOPS"
     KUBE_APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.manifest"
 
     # give kops clusters a working default etcd endpoint, if not already set
     [ -z "$ETCD_ENDPOINTS" ] && ETCD_ENDPOINTS="http://100.64.1.5:6666"
+  fi
+
+  # Assume Kubeadm by default. Check for directories and files used by acs-engine and override if necessary
+  if [[ -d "/etc/kubernetes/" && -e "/etc/kubernetes/azure.json" ]]; then
+    INSTALL_TYPE="ACS-ENGINE"
+    DATASTORE="kubernetes"
+    POLICY_ONLY=1
   fi
 }
 
@@ -511,6 +524,39 @@ EOF
 }
 
 #
+# setupBasicAuthAcsEngine() - specialized function for acs-engine-based kubernetes
+# clusters
+#
+setupBasicAuthAcsEngine() {
+
+  # Create basic auth csv file
+    cat > basic_auth.csv <<EOF
+welc0me,jane,1
+EOF
+
+  runAsRoot mkdir -p /etc/kubernetes/pki
+  runAsRoot mv basic_auth.csv /etc/kubernetes/pki/basic_auth.csv
+  runAsRoot chown root /etc/kubernetes/pki/basic_auth.csv
+  runAsRoot chmod 600 /etc/kubernetes/pki/basic_auth.csv
+
+  # Append basic auth setting into kube-apiserver command line
+  cat > sedcmd.txt <<EOF
+s?\"--cloud-provider=azure\"?\"--cloud-provider=azure\", \"--basic-auth-file=/etc/kubernetes/pki/basic_auth.csv\"?g
+EOF
+
+  # Insert basic-auth option into kube-apiserver manifest
+  runAsRoot sed -i -f sedcmd.txt "$KUBE_APISERVER_MANIFEST"
+  run rm -f sedcmd.txt
+
+  # Restart kubelet in order to make basic_auth settings take effect
+  runAsRoot systemctl restart kubelet
+  blockUntilSuccess "kubectl get nodes" 60
+
+  # Give user "Jane" cluster admin permissions
+  runAsRoot kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --user=jane
+}
+
+#
 # setupBasicAuthKops() - currently a no-op
 # because Kops preprovisions an "admin" user and the
 # /srv/kubernetes/basic_auth.csv is not modifiable.
@@ -528,6 +574,8 @@ setupBasicAuth() {
     setupBasicAuthKubeadm
   elif [ "$INSTALL_TYPE" == "KOPS" ]; then
     setupBasicAuthKops
+  elif [ "$INSTALL_TYPE" == "ACS-ENGINE" ]; then
+    setupBasicAuthAcsEngine
   fi
 }
 
@@ -536,21 +584,31 @@ setupBasicAuth() {
 # delete cluster admin role for user=jane.
 #
 deleteBasicAuth() {
+  if [ "$INSTALL_TYPE" == "KOPS" ]; then
+    return
+  fi
+
+  runAsRoot rm -f /etc/kubernetes/pki/basic_auth.csv
+
   if [ "$INSTALL_TYPE" == "KUBEADM" ]; then
-    runAsRoot rm -f /etc/kubernetes/pki/basic_auth.csv
     cat > sedcmd.txt <<EOF
 /    - --basic-auth-file=\/etc\/kubernetes\/pki\/basic_auth.csv/d
 EOF
-    runAsRoot sed -i -f sedcmd.txt "$KUBE_APISERVER_MANIFEST"
-    run rm -f sedcmd.txt
-
-    # Restart kubelet in order to make basic_auth settings take effect
-    runAsRoot systemctl restart kubelet
-    blockUntilSuccess "kubectl get nodes" 60
-
-    # Cleanup permissive-binding role
-    runAsRootIgnoreErrors kubectl delete clusterrolebinding permissive-binding
+  elif [ "$INSTALL_TYPE" == "ACS-ENGINE" ]; then
+    cat > sedcmd.txt <<EOF
+s? \"--basic-auth-file=/etc/kubernetes/pki/basic_auth.csv\",??g
+EOF
   fi
+
+  runAsRoot sed -i -f sedcmd.txt "$KUBE_APISERVER_MANIFEST"
+  run rm -f sedcmd.txt
+
+  # Restart kubelet in order to make basic_auth settings take effect
+  runAsRoot systemctl restart kubelet
+  blockUntilSuccess "kubectl get nodes" 60
+
+  # Cleanup permissive-binding role
+  runAsRootIgnoreErrors kubectl delete clusterrolebinding permissive-binding
 }
 
 #
@@ -744,6 +802,25 @@ downloadManifest() {
 }
 
 #
+# setPodCIDR()
+# Read pod cidr from kube-controller-manager manifest and replace default 192.168.0.0/16
+#
+setPodCIDR() {
+  local filename="$1"
+  local cidrMatch="[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[0-9]\{1,\}"
+  
+  podCIDR=`grep -o "\--cluster-cidr=$cidrMatch" $KUBE_CONTROLLER_MANIFEST | grep -o $cidrMatch`
+
+  cat > sedcmd.txt <<EOF
+s?192.168.0.0/16?$podCIDR?g
+EOF
+ 
+  sed -i -f sedcmd.txt "$filename"
+
+  echo "Set pod CIDR $podCIDR for $filename"
+}
+
+#
 # downloadManifests() - download all required manifests. Note
 # that if a particular manifest exists already in current dir,
 # do not download/overwrite that manifest.
@@ -754,21 +831,28 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
 
   if [ "$DATASTORE" == "etcdv3" ]; then
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/etcd.yaml"
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calico.yaml"
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
 
     # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calicoctl.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calicoq.yaml"
   else
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
+    if [ "${POLICY_ONLY}" -eq 1 ]; then
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml"
+    else
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
+    fi
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml"
 
     # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoctl.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calicoq.yaml"
+  fi
+
+  if [ "$INSTALL_TYPE" == "ACS-ENGINE" ] && [ "$CLEANUP" -eq 0 ]; then
+    setPodCIDR "calico.yaml"
   fi
 
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
@@ -1022,6 +1106,9 @@ createCNXManagerSecret() {
   elif [ "$INSTALL_TYPE" == "KOPS" ]; then
     local API_SERVER_CRT="/srv/kubernetes/server.cert"
     local API_SERVER_KEY="/srv/kubernetes/server.key"
+  elif [ "$INSTALL_TYPE" == "ACS-ENGINE" ]; then
+    local API_SERVER_CRT="/etc/kubernetes/certs/apiserver.crt"
+    local API_SERVER_KEY="/etc/kubernetes/certs/apiserver.key"
   fi
 
   runAsRoot kubectl create secret generic cnx-manager-tls --from-file=cert="$API_SERVER_CRT" --from-file=key="$API_SERVER_KEY" -n kube-system
