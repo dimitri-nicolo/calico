@@ -7,6 +7,7 @@ package fv_test
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -109,14 +110,8 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		Expect(err).NotTo(HaveOccurred())
 		opts = infrastructure.DefaultTopologyOptions()
 		opts.IPIPEnabled = false
-		opts.EnableCloudWatchLogs("FLUSHINTERVAL", "10", "ENABLEHOSTENDPOINT", "true")
 
-		// Defaults for how we expect flow logs to be generated.
-		expectation.group = "tigera-flowlogs-<cluster-guid>"
-		expectation.stream = "<felix-hostname>_Flowlogs"
-		expectation.labels = false
-		expectation.aggregationForAllowed = ByPodPrefix
-		expectation.aggregationForDenied = BySourcePort
+		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
 	})
 
 	JustBeforeEach(func() {
@@ -263,7 +258,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		cc.CheckConnectivity()
 	})
 
-	checkFlowLogs := func() {
+	checkFlowLogs := func(flowLogsOutput string) {
 		// Allow 5 seconds for the Felixes to poll conntrack.
 		time.Sleep(5 * time.Second)
 
@@ -444,20 +439,16 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				flowsCompleted[ii] = make(map[collector.FlowMeta]int)
 				packets[ii] = make(map[collector.FlowMeta]int)
 
-				cwlogs, err := f.ReadCloudWatchLogs()
+				cwlogs, err := f.ReadFlowLogs(flowLogsOutput)
 				if err != nil {
 					return err
 				}
-				for _, cwl := range cwlogs {
+				for _, fl := range cwlogs {
 					// We only generate traffic to port 8055, so
 					// ignore logs that aren't to port 8055.
-					if !strings.Contains(cwl.Message, " 8055 ") {
+					if fl.Tuple.GetDestPort() != 8055 {
 						continue
 					}
-
-					// Parse the log message.
-					fl := &collector.FlowLog{}
-					fl.Deserialize(cwl.Message)
 
 					// If endpoint labels are expected, and
 					// aggregation permits this, check that they are
@@ -687,115 +678,223 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		}, "30s", "3s").ShouldNot(HaveOccurred())
 	}
 
-	Context("with custom log group name", func() {
+	Context("CloudWatch flow logs", func() {
 
 		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGGROUPNAME"] = "fvtestg:<cluster-guid>"
-			expectation.group = "fvtestg:<cluster-guid>"
-		})
+			opts.EnableCloudWatchLogs()
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 
-		It("should get expected flow logs", checkFlowLogs)
-	})
-
-	Context("with custom log stream name", func() {
-
-		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGSTREAMNAME"] = "fvtests:<cluster-guid>"
-			expectation.stream = "fvtests:<cluster-guid>"
-		})
-
-		It("should get expected flow logs", checkFlowLogs)
-	})
-
-	Context("with endpoint labels", func() {
-
-		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSINCLUDELABELS"] = "true"
-			expectation.labels = true
-		})
-
-		It("should get expected flow logs", checkFlowLogs)
-	})
-
-	Context("with allowed aggregation none", func() {
-
-		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(None))
-			expectation.aggregationForAllowed = None
-		})
-
-		It("should get expected flow logs", checkFlowLogs)
-	})
-
-	Context("with allowed aggregation by source port", func() {
-
-		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(BySourcePort))
-			expectation.aggregationForAllowed = BySourcePort
-		})
-
-		It("should get expected flow logs", checkFlowLogs)
-	})
-
-	Context("with allowed aggregation by pod prefix", func() {
-
-		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(ByPodPrefix))
+			// Defaults for how we expect flow logs to be generated.
+			expectation.group = "tigera-flowlogs-<cluster-guid>"
+			expectation.stream = "<felix-hostname>_Flowlogs"
+			expectation.labels = false
 			expectation.aggregationForAllowed = ByPodPrefix
-		})
-
-		It("should get expected flow logs", checkFlowLogs)
-	})
-
-	Context("with denied aggregation none", func() {
-
-		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(None))
-			expectation.aggregationForDenied = None
-		})
-
-		It("should get expected flow logs", checkFlowLogs)
-	})
-
-	Context("with denied aggregation by source port", func() {
-
-		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(BySourcePort))
 			expectation.aggregationForDenied = BySourcePort
 		})
 
-		It("should get expected flow logs", checkFlowLogs)
-	})
+		Context("with custom log group name", func() {
 
-	Context("with denied aggregation by pod prefix", func() {
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGGROUPNAME"] = "fvtestg:<cluster-guid>"
+				expectation.group = "fvtestg:<cluster-guid>"
+			})
 
-		BeforeEach(func() {
-			opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(ByPodPrefix))
-			expectation.aggregationForDenied = ByPodPrefix
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+			})
 		})
 
-		It("should get expected flow logs", checkFlowLogs)
-	})
+		Context("with custom log stream name", func() {
 
-	Context("with an expired license", func() {
-		BeforeEach(func() {
-			useInvalidLicense = true
-			// Reduce license poll interval so felix won't generate any flow logs before it spots the bad license.
-			opts.ExtraEnvVars["FELIX_DebugUseShortPollIntervals"] = "true"
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSLOGSTREAMNAME"] = "fvtests:<cluster-guid>"
+				expectation.stream = "fvtests:<cluster-guid>"
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+			})
 		})
 
-		It("should get no flow logs", func() {
-			endTime := time.Now().Add(30 * time.Second)
-			// Check at least twice and for at least 30s.
-			attempts := 0
-			for time.Now().Before(endTime) || attempts < 2 {
-				for _, f := range felixes {
-					_, err := f.ReadCloudWatchLogs()
-					Expect(err).To(Equal(infrastructure.ErrNoCloudwatchLogs))
+		Context("with an expired license", func() {
+			BeforeEach(func() {
+				useInvalidLicense = true
+				// Reduce license poll interval so felix won't generate any flow logs before it spots the bad license.
+				opts.ExtraEnvVars["FELIX_DebugUseShortPollIntervals"] = "true"
+			})
+
+			It("should get no flow logs", func() {
+				endTime := time.Now().Add(30 * time.Second)
+				// Check at least twice and for at least 30s.
+				attempts := 0
+				for time.Now().Before(endTime) || attempts < 2 {
+					for _, f := range felixes {
+						_, err := f.ReadCloudWatchLogs()
+						Expect(err).To(Equal(infrastructure.ErrNoCloudwatchLogs))
+					}
+					time.Sleep(1 * time.Second)
+					attempts++
 				}
-				time.Sleep(1 * time.Second)
-				attempts++
-			}
+			})
+		})
+
+	})
+
+	Context("CloudWatch and File flow logs", func() {
+
+		BeforeEach(func() {
+			opts.EnableCloudWatchLogs()
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+
+			// Defaults for how we expect flow logs to be generated.
+			expectation.group = "tigera-flowlogs-<cluster-guid>"
+			expectation.stream = "<felix-hostname>_Flowlogs"
+			expectation.labels = false
+			expectation.aggregationForAllowed = ByPodPrefix
+			expectation.aggregationForDenied = BySourcePort
+
+			opts.EnableFlowLogsFile()
+		})
+
+		Context("with endpoint labels", func() {
+
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSINCLUDELABELS"] = "true"
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDELABELS"] = "true"
+				expectation.labels = true
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+				checkFlowLogs("file")
+			})
+		})
+
+		Context("with allowed aggregation none", func() {
+
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(None))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(None))
+				expectation.aggregationForAllowed = None
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+				checkFlowLogs("file")
+			})
+		})
+
+		Context("with allowed aggregation by source port", func() {
+
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(BySourcePort))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(BySourcePort))
+				expectation.aggregationForAllowed = BySourcePort
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+				checkFlowLogs("file")
+			})
+		})
+
+		Context("with allowed aggregation by pod prefix", func() {
+
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(ByPodPrefix))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORALLOWED"] = strconv.Itoa(int(ByPodPrefix))
+				expectation.aggregationForAllowed = ByPodPrefix
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+				checkFlowLogs("file")
+			})
+		})
+
+		Context("with denied aggregation none", func() {
+
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(None))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(None))
+				expectation.aggregationForDenied = None
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+				checkFlowLogs("file")
+			})
+		})
+
+		Context("with denied aggregation by source port", func() {
+
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(BySourcePort))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(BySourcePort))
+				expectation.aggregationForDenied = BySourcePort
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+				checkFlowLogs("file")
+			})
+		})
+
+		Context("with denied aggregation by pod prefix", func() {
+
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(ByPodPrefix))
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEAGGREGATIONKINDFORDENIED"] = strconv.Itoa(int(ByPodPrefix))
+				expectation.aggregationForDenied = ByPodPrefix
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+				checkFlowLogs("file")
+			})
+		})
+
+	})
+
+	Context("File flow logs only", func() {
+
+		BeforeEach(func() {
+			// Defaults for how we expect flow logs to be generated.
+			expectation.labels = false
+			expectation.aggregationForAllowed = ByPodPrefix
+			expectation.aggregationForDenied = BySourcePort
+			opts.EnableFlowLogsFile()
+
+			opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "10"
+			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
+		})
+
+		It("should get expected flow logs", func() {
+			checkFlowLogs("file")
+		})
+
+		Context("with an expired license", func() {
+			BeforeEach(func() {
+				useInvalidLicense = true
+				// Reduce license poll interval so felix won't generate any flow logs before it spots the bad license.
+				opts.ExtraEnvVars["FELIX_DebugUseShortPollIntervals"] = "true"
+			})
+
+			It("should get no flow logs", func() {
+				endTime := time.Now().Add(30 * time.Second)
+				// Check at least twice and for at least 30s.
+				attempts := 0
+				for time.Now().Before(endTime) || attempts < 2 {
+					for _, f := range felixes {
+						_, err := f.ReadFlowLogsFile()
+						Expect(err).To(BeAssignableToTypeOf(&os.PathError{}))
+					}
+					time.Sleep(1 * time.Second)
+					attempts++
+				}
+			})
 		})
 	})
 

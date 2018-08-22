@@ -50,7 +50,8 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 
 	BeforeEach(func() {
 		opts := infrastructure.DefaultTopologyOptions()
-		opts.EnableCloudWatchLogs("ENABLEHOSTENDPOINT", "true")
+		opts.EnableCloudWatchLogs()
+		opts.ExtraEnvVars["FELIX_FLOWLOGSENABLEHOSTENDPOINT"] = "true"
 		felix, etcd, client = infrastructure.StartSingleNodeEtcdTopology(opts)
 
 		// Install a default profile that allows workloads with this profile to talk to each
@@ -144,9 +145,7 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 			if err != nil {
 				return err
 			}
-			for _, cwlog := range cwlogs {
-				fl := &collector.FlowLog{}
-				fl.Deserialize(cwlog.Message)
+			for _, fl := range cwlogs {
 				if fl.FlowMeta.Action != collector.FlowLogActionAllow {
 					return errors.New("Unexpected non-allow flow log")
 				}

@@ -5,6 +5,7 @@ package collector
 import (
 	"net"
 	"strconv"
+	"time"
 )
 
 var protoNames = map[int]string{
@@ -98,4 +99,79 @@ func protoToString(p int) string {
 		return s
 	}
 	return strconv.Itoa(p)
+}
+
+func stringToProto(s string) int {
+	for i, st := range protoNames {
+		if s == st {
+			return i
+		}
+	}
+	p, _ := strconv.Atoi(s)
+	return p
+}
+
+func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
+	fl := FlowLog{}
+	fl.StartTime = time.Unix(o.StartTime, 0)
+	fl.EndTime = time.Unix(o.EndTime, 0)
+
+	var sip, dip [16]byte
+	if o.SourceIP != "" {
+		sip = ipStrTo16Byte(o.SourceIP)
+	}
+	if o.DestIP != "" {
+		dip = ipStrTo16Byte(o.DestIP)
+	}
+	p := stringToProto(o.Proto)
+	fl.Tuple = *NewTuple(sip, dip, p, int(o.SourcePort), int(o.DestPort))
+
+	var srcType, dstType FlowLogEndpointType
+	switch o.SourceType {
+	case "wep":
+		srcType = FlowLogEndpointTypeWep
+	case "hep":
+		srcType = FlowLogEndpointTypeHep
+	case "ns":
+		srcType = FlowLogEndpointTypeNs
+	case "net":
+		srcType = FlowLogEndpointTypeNet
+	}
+
+	fl.SrcMeta = EndpointMetadata{
+		Type:      srcType,
+		Namespace: o.SourceNamespace,
+		Name:      o.SourceName,
+		Labels:    o.SourceLabels,
+	}
+
+	switch o.DestType {
+	case "wep":
+		dstType = FlowLogEndpointTypeWep
+	case "hep":
+		dstType = FlowLogEndpointTypeHep
+	case "ns":
+		dstType = FlowLogEndpointTypeNs
+	case "net":
+		dstType = FlowLogEndpointTypeNet
+	}
+
+	fl.DstMeta = EndpointMetadata{
+		Type:      dstType,
+		Namespace: o.DestNamespace,
+		Name:      o.DestName,
+		Labels:    o.DestLabels,
+	}
+
+	fl.Action = FlowLogAction(o.Action)
+	fl.Reporter = FlowLogReporter(o.Reporter)
+	fl.BytesIn = int(o.BytesIn)
+	fl.BytesOut = int(o.BytesOut)
+	fl.PacketsIn = int(o.PacketsIn)
+	fl.PacketsOut = int(o.PacketsOut)
+	fl.NumFlows = int(o.NumFlows)
+	fl.NumFlowsStarted = int(o.NumFlowsStarted)
+	fl.NumFlowsCompleted = int(o.NumFlowsCompleted)
+
+	return fl, nil
 }

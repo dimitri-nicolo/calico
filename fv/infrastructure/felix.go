@@ -26,6 +26,11 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
+	"path"
+
+	"encoding/json"
+
+	"github.com/projectcalico/felix/collector"
 	"github.com/projectcalico/felix/fv/containers"
 	"github.com/projectcalico/felix/fv/utils"
 )
@@ -48,6 +53,7 @@ type Felix struct {
 	cwlGroupName     string
 	cwlStreamName    string
 	cwlRetentionDays int64
+	uniqueName       string
 }
 
 func (f *Felix) GetFelixPID() int {
@@ -72,16 +78,48 @@ func (f *Felix) TriggerDelayedStart() {
 	f.startupDelayed = false
 }
 
-type CWLEvent struct {
-	Message   string
-	Timestamp int64
-}
-
 var (
 	ErrNoCloudwatchLogs = errors.New("No logs yet")
 )
 
-func (f *Felix) ReadCloudWatchLogs() ([]CWLEvent, error) {
+func (f *Felix) ReadFlowLogs(output string) ([]collector.FlowLog, error) {
+	switch output {
+	case "cloudwatch":
+		return f.ReadCloudWatchLogs()
+	case "file":
+		return f.ReadFlowLogsFile()
+	default:
+		panic("unrecognized flow log output")
+	}
+}
+
+func (f *Felix) ReadFlowLogsFile() ([]collector.FlowLog, error) {
+	var flowLogs []collector.FlowLog
+	logDir := path.Join(cwLogDir, f.uniqueName)
+	log.WithField("dir", logDir).Info("Reading Flow Logs from file")
+	logFile, err := os.Open(path.Join(logDir, collector.FlowLogFilename))
+	if err != nil {
+		return flowLogs, err
+	}
+	defer logFile.Close()
+
+	s := bufio.NewScanner(logFile)
+	for s.Scan() {
+		var fljo collector.FlowLogJSONOutput
+		err = json.Unmarshal(s.Bytes(), &fljo)
+		if err != nil {
+			return flowLogs, err
+		}
+		fl, err := fljo.ToFlowLog()
+		if err != nil {
+			return flowLogs, err
+		}
+		flowLogs = append(flowLogs, fl)
+	}
+	return flowLogs, nil
+}
+
+func (f *Felix) ReadCloudWatchLogs() ([]collector.FlowLog, error) {
 	log.Infof("Read CloudWatchLogs file %v", cwLogDir+"/"+f.cwlFile)
 
 	file, err := os.Open(cwLogDir + "/" + f.cwlFile)
@@ -91,7 +129,7 @@ func (f *Felix) ReadCloudWatchLogs() ([]CWLEvent, error) {
 	defer file.Close()
 
 	retentionDays := make(map[string]int64)
-	logs := make(map[string][]CWLEvent)
+	logs := make(map[string][]collector.FlowLog)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -106,7 +144,7 @@ func (f *Felix) ReadCloudWatchLogs() ([]CWLEvent, error) {
 			// Store this policy.
 			retentionDays[lgName] = days
 		} else if strings.Contains(line, "PutLogEvents") {
-			var events []CWLEvent
+			var events []collector.FlowLog
 			message := ""
 			groupName := ""
 			streamName := ""
@@ -123,9 +161,12 @@ func (f *Felix) ReadCloudWatchLogs() ([]CWLEvent, error) {
 					line = strings.Replace(line, "\\\"", "'", -1)
 					message = strings.Split(line, "\"")[1]
 				} else if strings.Contains(line, "Timestamp: ") {
-					ts, err := strconv.ParseInt(strings.Split(line, " ")[1], 10, 64)
+					_, err := strconv.ParseInt(strings.Split(line, " ")[1], 10, 64)
 					Expect(err).NotTo(HaveOccurred())
-					events = append(events, CWLEvent{Message: message, Timestamp: ts})
+					// Parse the log message.
+					fl := collector.FlowLog{}
+					fl.Deserialize(message)
+					events = append(events, fl)
 				} else if strings.Contains(line, "LogGroupName: \"") {
 					groupName = strings.Split(line, "\"")[1]
 				} else if strings.Contains(line, "LogStreamName: \"") {
@@ -189,7 +230,8 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 	// AWS API.  Whether logs are actually generated, at all, still depends on
 	// FELIX_CLOUDWATCHLOGSREPORTERENABLED; tests that want that should call
 	// EnableCloudWatchLogs().
-	cwlFile := fmt.Sprintf("cwl-%d-%d-felixfv.txt", os.Getpid(), containers.NextContainerIndex())
+	uniqueName := fmt.Sprintf("%d-%d", os.Getpid(), containers.NextContainerIndex())
+	cwlFile := "cwl-" + uniqueName + "-felixfv.txt"
 	args = append(args,
 		"-e", "FELIX_DEBUGCLOUDWATCHLOGSFILE=/cwlogs/"+cwlFile,
 		"-v", cwLogDir+":/cwlogs",
@@ -215,6 +257,12 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 		cwlRetentionDays, err = strconv.ParseInt(setting, 10, 64)
 		Expect(err).NotTo(HaveOccurred())
 	}
+
+	// It's fine to always create the directory for felix flow logs, if they
+	// aren't enabled the directory will just stay empty.
+	logDir := path.Join(cwLogDir, uniqueName)
+	os.MkdirAll(logDir, 0777)
+	args = append(args, "-v", logDir+":/var/log/calico/flowlogs")
 
 	if options.WithPrometheusPortTLS {
 		EnsureTLSCredentials()
@@ -286,6 +334,7 @@ func RunFelix(infra DatastoreInfra, options TopologyOptions) *Felix {
 			1,
 		),
 		cwlRetentionDays: cwlRetentionDays,
+		uniqueName:       uniqueName,
 	}
 }
 
