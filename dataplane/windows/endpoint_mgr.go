@@ -112,6 +112,7 @@ func (m *endpointManager) OnUpdate(msg interface{}) {
 // a required endpoint id is not present in the cache).
 func (m *endpointManager) RefreshHnsEndpointCache(forceRefresh bool) error {
 	if !forceRefresh && (time.Since(m.lastCacheUpdate) < cacheTimeout) {
+		log.Debug("Skipping HNS endpoint cache update; cache is recent.")
 		return nil
 	}
 
@@ -123,14 +124,41 @@ func (m *endpointManager) RefreshHnsEndpointCache(forceRefresh bool) error {
 	}
 
 	log.Debug("Clearing the endpoint cache")
+	oldCache := m.addressToEndpointId
 	m.addressToEndpointId = make(map[string]string)
 
+	debug := log.GetLevel() >= log.DebugLevel
 	for _, endpoint := range endpoints {
-		if strings.ToLower(endpoint.VirtualNetworkName) == strings.ToLower(m.hnsNetworkName) {
-			ip := endpoint.IPAddress.String() + ipv4AddrSuffix
-			log.WithFields(log.Fields{"IPAddress": ip, "EndpointId": endpoint.Id}).Debug("Adding HNS Endpoint Id entry to cache")
-			m.addressToEndpointId[ip] = endpoint.Id
+		if endpoint.IsRemoteEndpoint {
+			if debug {
+				log.WithField("id", endpoint.Id).Debug("Skipping remote endpoint")
+			}
+			continue
 		}
+		if strings.ToLower(endpoint.VirtualNetworkName) != strings.ToLower(m.hnsNetworkName) {
+			if debug {
+				log.WithFields(log.Fields{
+					"id":          endpoint.Id,
+					"ourNet":      m.hnsNetworkName,
+					"endpointNet": endpoint.VirtualNetworkName,
+				}).Debug("Skipping endpoint on other HNS network")
+			}
+			continue
+		}
+		ip := endpoint.IPAddress.String() + ipv4AddrSuffix
+		logCxt := log.WithFields(log.Fields{"IPAddress": ip, "EndpointId": endpoint.Id})
+		logCxt.Debug("Adding HNS Endpoint Id entry to cache")
+		m.addressToEndpointId[ip] = endpoint.Id
+		if _, prs := oldCache[ip]; !prs {
+			logCxt.Info("Found new HNS endpoint")
+		} else {
+			logCxt.Debug("Endpoint already cached.")
+			delete(oldCache, ip)
+		}
+	}
+
+	for id := range oldCache {
+		log.WithField("id", id).Info("HNS endpoint removed from cache")
 	}
 
 	log.Infof("Cache refresh is complete. %v endpoints were cached", len(m.addressToEndpointId))
@@ -197,6 +225,7 @@ func (m *endpointManager) CompleteDeferredWork() error {
 	}
 
 	// Loop through each pending update
+	var missingEndpoints bool
 	for id, workload := range m.pendingWlEpUpdates {
 		logCxt := log.WithField("id", id)
 
@@ -217,7 +246,9 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			}
 			if endpointId == "" {
 				// Failed to find the associated hns endpoint id
-				return ErrorUnknownEndpoint
+				logCxt.Warn("Failed to look up HNS endpoint for workload")
+				missingEndpoints = true
+				continue
 			}
 
 			logCxt.Info("Processing endpoint add/update")
@@ -241,6 +272,7 @@ func (m *endpointManager) CompleteDeferredWork() error {
 			err := m.applyRules(id, endpointId, inboundPolicyIds, outboundPolicyIds)
 			if err != nil {
 				// Failed to apply, this will be rescheduled and retried
+				log.WithError(err).Error("Failed to apply rules update")
 				return err
 			}
 
@@ -255,6 +287,11 @@ func (m *endpointManager) CompleteDeferredWork() error {
 		}
 	}
 
+	if missingEndpoints {
+		log.Warn("Failed to look up one or more HNS endpoints; will schedule a retry")
+		return ErrorUnknownEndpoint
+	}
+
 	return nil
 }
 
@@ -262,7 +299,10 @@ func (m *endpointManager) CompleteDeferredWork() error {
 // as an endpoint policy update (this actually applies the rules to the dataplane).
 func (m *endpointManager) applyRules(workloadId proto.WorkloadEndpointID, endpointId string, inboundPolicyIds []string, outboundPolicyIds []string) error {
 	logCxt := log.WithFields(log.Fields{"id": workloadId, "endpointId": endpointId})
-	logCxt.WithFields(log.Fields{"inboundPolicyIds": inboundPolicyIds, "outboundPolicyIds": outboundPolicyIds}).Info("Applying endpoint rules")
+	logCxt.WithFields(log.Fields{
+		"inboundPolicyIds":  inboundPolicyIds,
+		"outboundPolicyIds": outboundPolicyIds,
+	}).Info("Applying endpoint rules")
 
 	var rules []*hns.ACLPolicy
 	rules = append(rules, m.policysetsDataplane.GetPolicySetRules(inboundPolicyIds, true)...)

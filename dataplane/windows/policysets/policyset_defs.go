@@ -35,8 +35,9 @@ const (
 )
 
 var (
-	SkipRule   = errors.New("Rule skipped")
-	MissingSet = errors.New("Missing IPSet")
+	ErrNotSupported = errors.New("rule contained unsupported feature")
+	ErrRuleIsNoOp   = errors.New("rule is a no-op")
+	ErrMissingIPSet = errors.New("rule referenced a missing IP set")
 )
 
 // PolicySetType constants for the different kinds of Policy set.
