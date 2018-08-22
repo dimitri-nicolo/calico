@@ -69,6 +69,8 @@ section that matches your use case.
    > **Tip**: You can specify more than one using commas as delimiters.
    {: .alert .alert-success}
 
+{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
+
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
 1. Apply the manifest using the following command.
@@ -132,6 +134,8 @@ section that matches your use case.
    > Typha instances to connect to, and fail to start.
    {: .alert .alert-danger}
 
+{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
+
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
 1. If you have created some secrets for Federation, then modify the manifest to mount the secrets into the
@@ -181,6 +185,8 @@ section that matches your use case.
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml \
    -O
    ```
+
+{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
@@ -252,6 +258,8 @@ section that matches your use case.
    > count from its default of `0` Felix will try to connect to Typha, find no
    > Typha instances to connect to, and fail to start.
    {: .alert .alert-danger}
+
+{% include {{page.version}}/cnx-pod-cidr-sed.md yaml="calico" %}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml="calico" %}
 
