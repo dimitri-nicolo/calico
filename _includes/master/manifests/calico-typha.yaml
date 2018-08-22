@@ -70,7 +70,7 @@ spec:
       imagePullSecrets:
         - name: cnx-pull-secret
       containers:
-      - image: {{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
+      - image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
         name: calico-typha
         # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
         # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
