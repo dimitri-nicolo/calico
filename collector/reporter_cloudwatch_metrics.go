@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -64,7 +65,12 @@ func (c *cloudWatchMetricReporter) Start() {
 }
 
 func (c *cloudWatchMetricReporter) Report(mu MetricUpdate) error {
-	log.WithField("MetricUpdate", mu).Debugf("feeding metric update for action: %s", mu.ruleID.Action)
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("MetricUpdate", mu).Error("no rule id present")
+		return fmt.Errorf("invalid metric update")
+	}
+	log.WithField("MetricUpdate", mu).Debugf("feeding metric update for action: %s", lastRuleID.Action)
 	c.aggregator.FeedUpdate(mu)
 	return nil
 }

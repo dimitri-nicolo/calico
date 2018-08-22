@@ -80,18 +80,23 @@ func (sr *SyslogReporter) Report(mu MetricUpdate) error {
 		// No update. It isn't an error.
 		return nil
 	}
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("metric update", mu).Error("no rule id present")
+		return fmt.Errorf("Invalid metric update")
+	}
 	f := log.Fields{
 		"proto":      strconv.Itoa(mu.tuple.proto),
 		"srcIP":      net.IP(mu.tuple.src[:16]).String(),
 		"srcPort":    strconv.Itoa(mu.tuple.l4Src),
 		"dstIP":      net.IP(mu.tuple.dst[:16]).String(),
 		"dstPort":    strconv.Itoa(mu.tuple.l4Dst),
-		"tier":       mu.ruleID.TierString(),
-		"policy":     mu.ruleID.NameString(),
-		"rule":       mu.ruleID.IndexStr,
-		"action":     mu.ruleID.ActionString(),
-		"ruleDir":    mu.ruleID.DirectionString(),
-		"trafficDir": ruleDirToTrafficDir(mu.ruleID.Direction).String(),
+		"tier":       lastRuleID.TierString(),
+		"policy":     lastRuleID.NameString(),
+		"rule":       lastRuleID.IndexStr,
+		"action":     lastRuleID.ActionString(),
+		"ruleDir":    lastRuleID.DirectionString(),
+		"trafficDir": ruleDirToTrafficDir(lastRuleID.Direction).String(),
 		"inPackets":  mu.inMetric.deltaPackets,
 		"inBytes":    mu.inMetric.deltaBytes,
 		"outPackets": mu.outMetric.deltaPackets,

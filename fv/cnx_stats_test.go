@@ -744,6 +744,149 @@ var _ = Context("CNX Metrics, etcd datastore, 4 workloads", func() {
 			}()).Should(BeNumerically("==", bytes))
 		})
 	})
+
+	Context("should generate pass action metrics with rule in multiple tiers", func() {
+		BeforeEach(func() {
+			tier := api.NewTier()
+			tier.Name = "tier1"
+			o := 10.00
+			tier.Spec.Order = &o
+			_, err := client.Tiers().Create(utils.Ctx, tier, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			policy := api.NewNetworkPolicy()
+			policy.Namespace = "fv"
+			policy.Name = "tier1.policy-1"
+			policy.Spec.Tier = "tier1"
+			policy.Spec.Types = []api.PolicyType{api.PolicyTypeIngress}
+			policy.Spec.Ingress = []api.Rule{{Action: api.Pass}}
+			policy.Spec.Egress = []api.Rule{{Action: api.Allow}}
+			policy.Spec.Selector = w[1].NameSelector()
+			_, err = client.NetworkPolicies().Create(utils.Ctx, policy, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("w0 cannot connect to w1 and pass and denied action packet metrics are generated at appropriate tier", func() {
+			var bytes, packets int
+			incCounts := func(numPackets, packetSize int) {
+				packets += numPackets
+				bytes += calculateBytesForPacket("ICMP", numPackets, packetSize)
+			}
+			expectCounts := func() {
+				// Pause to allow felix to export metrics.
+				time.Sleep(pollingInterval)
+				Expect(func() (int, error) {
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier2", "policy-1", "inbound")
+				}()).Should(BeNumerically("==", 0))
+				Expect(func() (int, error) {
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "deny", "tier2", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", packets))
+				Expect(func() (int, error) {
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "deny", "tier2", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", bytes))
+				Expect(func() (int, error) {
+					return metrics.GetCalicoDeniedPacketMetrics(felix.IP, "tier2", "policy-1")
+				}()).Should(BeNumerically("==", packets))
+
+				// And check that the pass action metrics are incremented equally
+				Expect(func() (int, error) {
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier1", "policy-1", "inbound")
+				}()).Should(BeNumerically("==", 0))
+				Expect(func() (int, error) {
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "pass", "tier1", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", packets))
+				Expect(func() (int, error) {
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "pass", "tier1", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", bytes))
+			}
+
+			By("Creating a deny policy at next tier")
+			tier2 := api.NewTier()
+			tier2.Name = "tier2"
+			o2 := 20.00
+			tier2.Spec.Order = &o2
+			_, err2 := client.Tiers().Create(utils.Ctx, tier2, utils.NoOptions)
+			Expect(err2).NotTo(HaveOccurred())
+
+			policy2 := api.NewNetworkPolicy()
+			policy2.Namespace = "fv"
+			policy2.Name = "tier2.policy-1"
+			policy2.Spec.Tier = "tier2"
+			policy2.Spec.Types = []api.PolicyType{api.PolicyTypeIngress}
+			policy2.Spec.Ingress = []api.Rule{{Action: api.Deny}}
+			policy2.Spec.Egress = []api.Rule{{Action: api.Allow}}
+			policy2.Spec.Selector = w[1].NameSelector()
+			_, err = client.NetworkPolicies().Create(utils.Ctx, policy2, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Verifying that w0 cannot reach w1")
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, stderr := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			Expect(err).To(HaveOccurred(), stderr)
+			incCounts(1, 2)
+			expectCounts()
+		})
+
+		It("w0 can connect to w1 and pass and allow action packet metrics are generated at appropriate tier", func() {
+			var bytes, packets int
+			incCounts := func(numPackets, packetSize int) {
+				packets += numPackets
+				bytes += calculateBytesForPacket("ICMP", numPackets, packetSize)
+			}
+			expectCounts := func() {
+				// Pause to allow felix to export metrics.
+				time.Sleep(pollingInterval)
+				Expect(func() (int, error) {
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier2", "policy-1", "inbound")
+				}()).Should(BeNumerically("==", 1))
+				Expect(func() (int, error) {
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "allow", "tier2", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", packets))
+				Expect(func() (int, error) {
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "allow", "tier2", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", bytes))
+
+				// And check that the pass action metrics are incremented equally
+				Expect(func() (int, error) {
+					return metrics.GetCNXConnectionMetricsIntForPolicy(felix.IP, "tier1", "policy-1", "inbound")
+				}()).Should(BeNumerically("==", 0))
+				Expect(func() (int, error) {
+					return metrics.GetCNXPacketMetricsIntForPolicy(felix.IP, "pass", "tier1", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", packets))
+				Expect(func() (int, error) {
+					return metrics.GetCNXByteMetricsIntForPolicy(felix.IP, "pass", "tier1", "policy-1", "inbound", "ingress")
+				}()).Should(BeNumerically("==", bytes))
+			}
+
+			By("Creating a allow policy at next tier")
+			tier2 := api.NewTier()
+			tier2.Name = "tier2"
+			o2 := 20.00
+			tier2.Spec.Order = &o2
+			_, err2 := client.Tiers().Create(utils.Ctx, tier2, utils.NoOptions)
+			Expect(err2).NotTo(HaveOccurred())
+
+			policy2 := api.NewNetworkPolicy()
+			policy2.Namespace = "fv"
+			policy2.Name = "tier2.policy-1"
+			policy2.Spec.Tier = "tier2"
+			policy2.Spec.Types = []api.PolicyType{api.PolicyTypeIngress}
+			policy2.Spec.Ingress = []api.Rule{{Action: api.Allow}}
+			policy2.Spec.Egress = []api.Rule{{Action: api.Allow}}
+			policy2.Spec.Selector = w[1].NameSelector()
+			_, err = client.NetworkPolicies().Create(utils.Ctx, policy2, utils.NoOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Verifying that w0 can reach w1")
+			// Wait a bit for policy to be programmed.
+			time.Sleep(pollingInterval)
+			err, _ := w[0].SendPacketsTo(w[1].IP, 1, 2)
+			Expect(err).ToNot(HaveOccurred())
+			incCounts(1, 2)
+			expectCounts()
+		})
+	})
 })
 
 func calculateBytesForPacket(proto string, pktCount, packetSize int) int {

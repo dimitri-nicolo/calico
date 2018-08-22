@@ -37,7 +37,7 @@ var (
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 		},
 
-		ruleID:       ingressRule1Allow,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 1,
@@ -61,7 +61,7 @@ var (
 			Endpoint: &model.WorkloadEndpoint{GenerateName: "nginx-412354-", Labels: map[string]string{"k8s-app": "true"}},
 		},
 
-		ruleID:       ingressRule1Allow,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 1,
@@ -85,7 +85,7 @@ var (
 
 		dstEp: nil,
 
-		ruleID:       ingressRule1Allow,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 1,

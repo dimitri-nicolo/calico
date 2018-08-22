@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"fmt"
 	"net"
 	"time"
 
@@ -34,11 +35,16 @@ type DeniedPacketsAggregateKey struct {
 	srcIP  [16]byte
 }
 
-func getDeniedPacketsAggregateKey(mu MetricUpdate) DeniedPacketsAggregateKey {
-	return DeniedPacketsAggregateKey{
-		policy: mu.ruleID.GetDeniedPacketRuleName(),
-		srcIP:  mu.tuple.src,
+func getDeniedPacketsAggregateKey(mu MetricUpdate) (DeniedPacketsAggregateKey, error) {
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("metric update", mu).Error("no rule id present")
+		return DeniedPacketsAggregateKey{}, fmt.Errorf("invalid metric update")
 	}
+	return DeniedPacketsAggregateKey{
+		policy: lastRuleID.GetDeniedPacketRuleName(),
+		srcIP:  mu.tuple.src,
+	}, nil
 }
 
 type DeniedPacketsAggregateValue struct {
@@ -74,7 +80,12 @@ func (dp *DeniedPacketsAggregator) RegisterMetrics(registry *prometheus.Registry
 }
 
 func (dp *DeniedPacketsAggregator) OnUpdate(mu MetricUpdate) {
-	if mu.ruleID.Action != rules.RuleActionDeny {
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("metric update", mu).Error("no rule id present")
+		return
+	}
+	if lastRuleID.Action != rules.RuleActionDeny {
 		// We only want denied packets. Skip the rest of them.
 		return
 	}
@@ -96,7 +107,10 @@ func (dp *DeniedPacketsAggregator) CheckRetainedMetrics(now time.Duration) {
 }
 
 func (dp *DeniedPacketsAggregator) reportMetric(mu MetricUpdate) {
-	key := getDeniedPacketsAggregateKey(mu)
+	key, e := getDeniedPacketsAggregateKey(mu)
+	if e != nil {
+		return
+	}
 	value, ok := dp.aggStats[key]
 	if ok {
 		_, exists := dp.retainedMetrics[key]
@@ -118,7 +132,12 @@ func (dp *DeniedPacketsAggregator) reportMetric(mu MetricUpdate) {
 		}
 		value.refs.Add(mu.tuple)
 	}
-	switch mu.ruleID.Direction {
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("metric update", mu).Error("no rule id present")
+		return
+	}
+	switch lastRuleID.Direction {
 	case rules.RuleDirIngress:
 		value.packets.Add(float64(mu.inMetric.deltaPackets))
 		value.bytes.Add(float64(mu.inMetric.deltaBytes))
@@ -133,16 +152,24 @@ func (dp *DeniedPacketsAggregator) reportMetric(mu MetricUpdate) {
 }
 
 func (dp *DeniedPacketsAggregator) expireMetric(mu MetricUpdate) {
-	key := getDeniedPacketsAggregateKey(mu)
+	key, e := getDeniedPacketsAggregateKey(mu)
+	if e != nil {
+		return
+	}
 	value, ok := dp.aggStats[key]
 	if !ok || !value.refs.Contains(mu.tuple) {
+		return
+	}
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("metric update", mu).Error("no rule id present")
 		return
 	}
 	// If the metric update has updated counters this is the time to update our counters.
 	// We retain deleted metric for a little bit so that prometheus can get a chance
 	// to scrape the metric.
 	var deltaPackets, deltaBytes int
-	switch mu.ruleID.Direction {
+	switch lastRuleID.Direction {
 	case rules.RuleDirIngress:
 		deltaPackets = mu.inMetric.deltaPackets
 		deltaBytes = mu.inMetric.deltaBytes

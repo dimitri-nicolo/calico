@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -72,7 +74,13 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 	f.SrcMeta = srcMeta
 	f.DstMeta = dstMeta
 
-	action, direction := getFlowLogActionAndReporterFromRuleID(mu.ruleID)
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("metric update", mu).Error("no rule id present")
+		return f, fmt.Errorf("Invalid metric update")
+	}
+
+	action, direction := getFlowLogActionAndReporterFromRuleID(lastRuleID)
 	f.Action = action
 	f.Reporter = direction
 
@@ -129,7 +137,7 @@ func NewFlowMeta(mu MetricUpdate, kind AggregationKind) (FlowMeta, error) {
 		return newFlowMetaWithPrefixNameAggregation(mu)
 	}
 
-	return FlowMeta{}, fmt.Errorf("aggregation kind %s not recognized", kind)
+	return FlowMeta{}, fmt.Errorf("aggregation kind %v not recognized", kind)
 }
 
 // FlowStats captures stats associated with a given FlowMeta

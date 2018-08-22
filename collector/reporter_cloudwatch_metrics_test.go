@@ -50,7 +50,7 @@ var (
 	muDenyIngress = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
-		ruleID:       ingressRule1Deny,
+		ruleIDs:      []*calc.RuleID{ingressRule1Deny},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 5,
@@ -61,7 +61,7 @@ var (
 	muDenyEgress = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
-		ruleID:       egressRule1Deny,
+		ruleIDs:      []*calc.RuleID{egressRule1Deny},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 10,
@@ -72,7 +72,7 @@ var (
 	muDenyExpireEgress = MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
-		ruleID:       egressRule1Deny,
+		ruleIDs:      []*calc.RuleID{egressRule1Deny},
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 7,

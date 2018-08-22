@@ -57,8 +57,8 @@ type MetricUpdate struct {
 	// isConnection is true if this update is from an active connection.
 	isConnection bool
 
-	// Rule identification
-	ruleID *calc.RuleID
+	// Rules identification
+	ruleIDs []*calc.RuleID
 
 	inMetric  MetricValue
 	outMetric MetricValue
@@ -77,7 +77,14 @@ func (mu MetricUpdate) String() string {
 		dstName = "<unknown>"
 	}
 	return fmt.Sprintf("MetricUpdate: type=%s tuple={%v}, srcEp={%v} dstEp={%v} isConnection={%v}, ruleID={%v}, inMetric={%s} outMetric={%s}",
-		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleID, mu.inMetric, mu.outMetric)
+		mu.updateType, &(mu.tuple), srcName, dstName, mu.isConnection, mu.ruleIDs, mu.inMetric, mu.outMetric)
+}
+
+func (mu MetricUpdate) GetLastRuleID() *calc.RuleID {
+	if len(mu.ruleIDs) == 0 {
+		return nil
+	}
+	return mu.ruleIDs[len(mu.ruleIDs)-1]
 }
 
 type MetricsReporter interface {

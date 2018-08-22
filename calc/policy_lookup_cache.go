@@ -394,6 +394,9 @@ func (r *RuleID) setDeniedPacketRuleName() {
 }
 
 func (r *RuleID) GetDeniedPacketRuleName() string {
+	if r == nil {
+		return ""
+	}
 	return r.dpName
 }
 

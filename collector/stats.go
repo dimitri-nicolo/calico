@@ -163,7 +163,7 @@ func (t *RuleTrace) String() string {
 		}
 		rtParts = append(rtParts, fmt.Sprintf("(%s)", tp))
 	}
-	return fmt.Sprintf("path=[%v], action=%v ctr={%v} %s", strings.Join(rtParts, ", "), t.Action(), t.ctr.String())
+	return fmt.Sprintf("path=[%v], action=%v ctr={%v}", strings.Join(rtParts, ", "), t.Action(), t.ctr.String())
 }
 
 func (t *RuleTrace) Len() int {
@@ -203,7 +203,7 @@ func (t *RuleTrace) ToString() string {
 	if ruleID == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s/%s/%s/%v", ruleID.Tier, ruleID.Name, ruleID.Index, ruleID.Action)
+	return fmt.Sprintf("%s/%s/%d/%v", ruleID.Tier, ruleID.Name, ruleID.Index, ruleID.Action)
 }
 
 func (t *RuleTrace) Action() rules.RuleAction {
@@ -296,7 +296,7 @@ func (rt *RuleTrace) ToMetricUpdate(ut UpdateType, t Tuple, srcEp, dstEp *calc.E
 		tuple:        t,
 		srcEp:        srcEp,
 		dstEp:        dstEp,
-		ruleID:       rt.VerdictRuleID(),
+		ruleIDs:      rt.Path(),
 		isConnection: isConn,
 	}
 	switch td {

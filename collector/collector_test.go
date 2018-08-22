@@ -624,7 +624,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktDenyTuple,
 					srcEp:        remoteEd1,
 					dstEp:        localEd1,
-					ruleID:       defTierPolicy2DenyIngressRuleID,
+					ruleIDs:      []*calc.RuleID{defTierPolicy2DenyIngressRuleID},
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -642,7 +642,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktAllowTuple,
 					srcEp:        remoteEd1,
 					dstEp:        localEd1,
-					ruleID:       defTierPolicy1AllowIngressRuleID,
+					ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -662,7 +662,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *ingressPktAllowTuple,
 					srcEp:        remoteEd1,
 					dstEp:        localEd1,
-					ruleID:       defTierPolicy1AllowIngressRuleID,
+					ruleIDs:      []*calc.RuleID{defTierPolicy1AllowIngressRuleID},
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -680,7 +680,7 @@ var _ = Describe("Reporting Metrics", func() {
 					tuple:        *egressPktAllowTuple,
 					srcEp:        localEd1,
 					dstEp:        remoteEd1,
-					ruleID:       defTierPolicy1AllowEgressRuleID,
+					ruleIDs:      []*calc.RuleID{defTierPolicy1AllowEgressRuleID},
 					isConnection: false,
 				}
 				Eventually(mockReporter.reportChan, reportingDelay*2).Should(Receive(Equal(tmu)))
@@ -709,8 +709,8 @@ type testMetricUpdate struct {
 	srcEp *calc.EndpointData
 	dstEp *calc.EndpointData
 
-	// Rule identification
-	ruleID *calc.RuleID
+	// Rules identification
+	ruleIDs []*calc.RuleID
 
 	// isConnection is true if this update is from an active connection (i.e. a conntrack
 	// update compared to an NFLOG update).
@@ -738,7 +738,7 @@ func (mr *mockReporter) Report(mu MetricUpdate) error {
 		tuple:        mu.tuple,
 		srcEp:        mu.srcEp,
 		dstEp:        mu.dstEp,
-		ruleID:       mu.ruleID,
+		ruleIDs:      mu.ruleIDs,
 		isConnection: mu.isConnection,
 	}
 	return nil

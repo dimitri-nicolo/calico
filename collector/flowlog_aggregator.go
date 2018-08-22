@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -65,8 +66,13 @@ func (c *cloudWatchAggregator) ForAction(ra rules.RuleAction) FlowLogAggregator 
 
 // FeedUpdate constructs and aggregates flow logs from MetricUpdates.
 func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("metric update", mu).Error("no last rule id present")
+		return fmt.Errorf("Invalid metric update")
+	}
 	// Filter out any action that we aren't configured to handle.
-	if c.handledAction != noRuleActionDefined && c.handledAction != mu.ruleID.Action {
+	if c.handledAction != noRuleActionDefined && c.handledAction != lastRuleID.Action {
 		log.Debugf("Update %v not handled", mu)
 		return nil
 	}

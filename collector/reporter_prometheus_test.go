@@ -49,6 +49,26 @@ var (
 		Tier:      "default",
 		Direction: rules.RuleDirEgress,
 	}
+
+	ingressRule3Pass = &calc.RuleID{
+		Action:    rules.RuleActionPass,
+		Index:     0,
+		IndexStr:  "0",
+		Name:      "policy3",
+		Namespace: "",
+		Tier:      "bar",
+		Direction: rules.RuleDirIngress,
+	}
+
+	egressRule3Pass = &calc.RuleID{
+		Action:    rules.RuleActionPass,
+		Index:     0,
+		IndexStr:  "0",
+		Name:      "policy3",
+		Namespace: "",
+		Tier:      "bar",
+		Direction: rules.RuleDirEgress,
+	}
 )
 
 // Common MetricUpdate definitions
@@ -57,7 +77,7 @@ var (
 	muNoConn1Rule1AllowUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
-		ruleID:       ingressRule1Allow,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 1,
@@ -69,7 +89,7 @@ var (
 	muConn1Rule1AllowUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
-		ruleID:       ingressRule1Allow,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 2,
@@ -83,7 +103,7 @@ var (
 	muConn1Rule1AllowExpire = MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
-		ruleID:       ingressRule1Allow,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 4,
@@ -97,7 +117,7 @@ var (
 	muNoConn1Rule2DenyUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
-		ruleID:       egressRule2Deny,
+		ruleIDs:      []*calc.RuleID{egressRule2Deny},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 2,
@@ -107,7 +127,7 @@ var (
 	muNoConn1Rule2DenyExpire = MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple1,
-		ruleID:       egressRule2Deny,
+		ruleIDs:      []*calc.RuleID{egressRule2Deny},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 0,
@@ -117,7 +137,7 @@ var (
 	muConn2Rule1AllowUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
-		ruleID:       ingressRule1Allow,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 7,
@@ -127,7 +147,7 @@ var (
 	muConn2Rule1AllowExpire = MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple2,
-		ruleID:       ingressRule1Allow,
+		ruleIDs:      []*calc.RuleID{ingressRule1Allow},
 		isConnection: true,
 		inMetric: MetricValue{
 			deltaPackets: 8,
@@ -137,7 +157,7 @@ var (
 	muNoConn3Rule2DenyUpdate = MetricUpdate{
 		updateType:   UpdateTypeReport,
 		tuple:        tuple3,
-		ruleID:       egressRule2Deny,
+		ruleIDs:      []*calc.RuleID{egressRule2Deny},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 2,
@@ -147,7 +167,55 @@ var (
 	muNoConn3Rule2DenyExpire = MetricUpdate{
 		updateType:   UpdateTypeExpire,
 		tuple:        tuple3,
-		ruleID:       egressRule2Deny,
+		ruleIDs:      []*calc.RuleID{egressRule2Deny},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 0,
+			deltaBytes:   0,
+		},
+	}
+	muConn1Rule3AllowUpdate = MetricUpdate{
+		updateType:   UpdateTypeReport,
+		tuple:        tuple1,
+		ruleIDs:      []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
+		isConnection: true,
+		inMetric: MetricValue{
+			deltaPackets: 2,
+			deltaBytes:   22,
+		},
+		outMetric: MetricValue{
+			deltaPackets: 3,
+			deltaBytes:   33,
+		},
+	}
+	muConn1Rule3AllowExpire = MetricUpdate{
+		updateType:   UpdateTypeExpire,
+		tuple:        tuple1,
+		ruleIDs:      []*calc.RuleID{ingressRule3Pass, ingressRule1Allow},
+		isConnection: true,
+		inMetric: MetricValue{
+			deltaPackets: 4,
+			deltaBytes:   44,
+		},
+		outMetric: MetricValue{
+			deltaPackets: 3,
+			deltaBytes:   24,
+		},
+	}
+	muNoConn1Rule4DenyUpdate = MetricUpdate{
+		updateType:   UpdateTypeReport,
+		tuple:        tuple1,
+		ruleIDs:      []*calc.RuleID{egressRule3Pass, egressRule2Deny},
+		isConnection: false,
+		inMetric: MetricValue{
+			deltaPackets: 2,
+			deltaBytes:   40,
+		},
+	}
+	muNoConn1Rule4DenyExpire = MetricUpdate{
+		updateType:   UpdateTypeExpire,
+		tuple:        tuple1,
+		ruleIDs:      []*calc.RuleID{egressRule3Pass, egressRule2Deny},
 		isConnection: false,
 		inMetric: MetricValue{
 			deltaPackets: 0,
@@ -160,6 +228,18 @@ var (
 var (
 	keyRule1Allow = RuleAggregateKey{
 		ruleID: *ingressRule1Allow,
+	}
+
+	keyRule2Deny = RuleAggregateKey{
+		ruleID: *egressRule2Deny,
+	}
+
+	keyRule3Pass = RuleAggregateKey{
+		ruleID: *ingressRule3Pass,
+	}
+
+	keyEgressRule3Pass = RuleAggregateKey{
+		ruleID: *egressRule3Pass,
 	}
 )
 
@@ -192,19 +272,6 @@ func getMetricCount(m prometheus.Counter) int {
 		panic(err)
 	}
 	return int(*dtoMetric.Counter.Value)
-}
-
-func getMetricGauge(m prometheus.Gauge) int {
-	// The get the actual number stored inside a prometheus metric we need to convert
-	// into protobuf format which then has publicly available accessors.
-	if m == nil {
-		return -1
-	}
-	dtoMetric := &dto.Metric{}
-	if err := m.Write(dtoMetric); err != nil {
-		panic(err)
-	}
-	return int(*dtoMetric.Gauge.Value)
 }
 
 func getDirectionalPackets(dir TrafficDirection, v *RuleAggregateValue) (ret prometheus.Counter) {
@@ -388,5 +455,71 @@ var _ = Describe("Prometheus Reporter verification", func() {
 		By("incrementing time by the retention time - inbound rule should be expunged")
 		mt.incMockTime(retentionTime)
 		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{})
+	})
+	It("handles multiple rules within the metric update and in both directions", func() {
+		var expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound, expectedPassConns int
+		var expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound int
+
+		By("reporting ingress direction metrics with multiple rules")
+		pr.Report(muConn1Rule3AllowUpdate)
+		expectedPacketsInbound += muConn1Rule3AllowUpdate.inMetric.deltaPackets
+		expectedBytesInbound += muConn1Rule3AllowUpdate.inMetric.deltaBytes
+		expectedPacketsOutbound += muConn1Rule3AllowUpdate.outMetric.deltaPackets
+		expectedBytesOutbound += muConn1Rule3AllowUpdate.outMetric.deltaBytes
+		expectedConnsInbound += 1
+		By("checking for the correct number of aggregated statistics")
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule3Pass, keyRule1Allow})
+
+		By("checking for the correct packet and byte counts")
+		eventuallyExpectRuleAggregates(pa, TrafficDirInbound, keyRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, TrafficDirOutbound, keyRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+
+		By("expiring one of the metric updates for Rule1 Inbound and one for Outbound")
+		pr.Report(muConn1Rule3AllowExpire)
+		expectedPacketsInbound += muConn1Rule3AllowExpire.inMetric.deltaPackets
+		expectedBytesInbound += muConn1Rule3AllowExpire.inMetric.deltaBytes
+		expectedPacketsOutbound += muConn1Rule3AllowExpire.outMetric.deltaPackets
+		expectedBytesOutbound += muConn1Rule3AllowExpire.outMetric.deltaBytes
+		// Adjust the clock, but not past the retention period, the outbound rule aggregate should
+		// not yet be expunged.
+		mt.incMockTime(retentionTime / 2)
+
+		By("checking for the correct number of aggregated statistics: outbound rule should be present for retention time")
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyRule3Pass, keyRule1Allow})
+
+		By("checking for the correct packet and byte counts")
+		eventuallyExpectRuleAggregates(pa, TrafficDirInbound, keyRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, TrafficDirOutbound, keyRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, TrafficDirInbound, keyRule1Allow, expectedPacketsInbound, expectedBytesInbound, expectedConnsInbound)
+		eventuallyExpectRuleAggregates(pa, TrafficDirOutbound, keyRule1Allow, expectedPacketsOutbound, expectedBytesOutbound, expectedConnsOutbound)
+	})
+	It("handles multiple rules within the metric update which is a deny", func() {
+		var expectedPacketsInbound, expectedBytesInbound, expectedPassConns int
+		var expectedPacketsOutbound, expectedBytesOutbound int
+
+		By("reporting ingress direction metrics with multiple rules")
+		pr.Report(muNoConn1Rule4DenyUpdate)
+		expectedPacketsInbound += muNoConn1Rule4DenyUpdate.inMetric.deltaPackets
+		expectedBytesInbound += muNoConn1Rule4DenyUpdate.inMetric.deltaBytes
+		expectedPacketsOutbound += muNoConn1Rule4DenyUpdate.outMetric.deltaPackets
+		expectedBytesOutbound += muNoConn1Rule4DenyUpdate.outMetric.deltaBytes
+
+		By("checking for the correct number of aggregated statistics")
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyEgressRule3Pass, keyRule2Deny})
+
+		By("checking for the correct packet and byte counts")
+		eventuallyExpectRuleAggregates(pa, TrafficDirInbound, keyEgressRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, TrafficDirOutbound, keyEgressRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, TrafficDirInbound, keyEgressRule3Pass, expectedPacketsInbound, expectedBytesInbound, expectedPassConns)
+		eventuallyExpectRuleAggregates(pa, TrafficDirOutbound, keyEgressRule3Pass, expectedPacketsOutbound, expectedBytesOutbound, expectedPassConns)
+
+		By("expiring the deny metric")
+		pr.Report(muNoConn1Rule4DenyExpire)
+		// no counters should change.
+		mt.incMockTime(retentionTime / 2)
+		By("checking for the correct number of aggregated statistics: ")
+		eventuallyExpectRuleAggregateKeys(pa, []RuleAggregateKey{keyEgressRule3Pass, keyRule2Deny})
 	})
 })

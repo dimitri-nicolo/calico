@@ -42,7 +42,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		isConnection: true,
-		ruleID:       ingressRulePolicy3Deny,
+		ruleIDs:      []*calc.RuleID{ingressRulePolicy3Deny},
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -52,7 +52,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple2,
 		isConnection: true,
-		ruleID:       ingressRulePolicy3Deny,
+		ruleIDs:      []*calc.RuleID{ingressRulePolicy3Deny},
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -62,7 +62,7 @@ var (
 		updateType:   UpdateTypeReport,
 		tuple:        tuple3,
 		isConnection: true,
-		ruleID:       ingressRulePolicy4Deny,
+		ruleIDs:      []*calc.RuleID{ingressRulePolicy4Deny},
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -424,7 +424,7 @@ func BenchmarkCalicoDeniedPacketPolicyAggregateKey(b *testing.B) {
 		updateType:   UpdateTypeReport,
 		tuple:        tuple1,
 		isConnection: true,
-		ruleID:       rid,
+		ruleIDs:      []*calc.RuleID{rid},
 		inMetric: MetricValue{
 			deltaPackets: 1,
 			deltaBytes:   1,
@@ -433,7 +433,7 @@ func BenchmarkCalicoDeniedPacketPolicyAggregateKey(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		key = getDeniedPacketsAggregateKey(mu)
+		key, _ = getDeniedPacketsAggregateKey(mu)
 	}
 	resKey = key
 }

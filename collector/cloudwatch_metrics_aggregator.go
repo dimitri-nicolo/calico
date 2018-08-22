@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"fmt"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -40,7 +41,12 @@ func (c *cloudWatchMetricsAggregator) FeedUpdate(mu MetricUpdate) error {
 
 	// For now, we only support denied packets, but when we need to do the other
 	// metrics, we need to add cases for other actions.
-	switch mu.ruleID.Action {
+	lastRuleID := mu.GetLastRuleID()
+	if lastRuleID == nil {
+		log.WithField("metric update", mu).Error("no last rule id present")
+		return fmt.Errorf("Invalid metric update")
+	}
+	switch lastRuleID.Action {
 	case rules.RuleActionDeny:
 		dpm.Name = dpMetricName
 		dpm.Dimensions = map[string]string{"ClusterID": c.clusterGUID}
@@ -65,7 +71,7 @@ func (c *cloudWatchMetricsAggregator) FeedUpdate(mu MetricUpdate) error {
 	}
 	resultMetrics.mu.Unlock()
 
-	log.WithField("Metric value", resultMetrics.mMap[dpm.Name].Value).Debugf("current aggregated packet count for action: %s", mu.ruleID.Action)
+	log.WithField("Metric value", resultMetrics.mMap[dpm.Name].Value).Debugf("current aggregated packet count for action: %s", lastRuleID.Action)
 	return nil
 }
 

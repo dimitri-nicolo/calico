@@ -47,15 +47,9 @@ var (
 	)
 )
 
+// RuleAggregateKey is a hashable key identifying a rule aggregation key.
 type RuleAggregateKey struct {
 	ruleID calc.RuleID
-}
-
-// getRuleAggregateKey returns a hashable key identifying a rule aggregation key.
-func getRuleAggregateKey(mu MetricUpdate) RuleAggregateKey {
-	return RuleAggregateKey{
-		ruleID: *mu.ruleID,
-	}
 }
 
 // PacketByteLabels returns the Prometheus packet/byte counter labels associated
@@ -152,7 +146,12 @@ func (pa *PolicyRulesAggregator) RegisterMetrics(registry *prometheus.Registry) 
 // and no activity within the retention period. Unlike reportMetric, if there is no cached
 // entry for this metric one is not created and therefore the metric will not be reported.
 func (pa *PolicyRulesAggregator) OnUpdate(mu MetricUpdate) {
-	key := getRuleAggregateKey(mu)
+	for _, rID := range mu.ruleIDs {
+		pa.updateRuleKey(RuleAggregateKey{ruleID: *rID}, mu)
+	}
+}
+
+func (pa *PolicyRulesAggregator) updateRuleKey(key RuleAggregateKey, mu MetricUpdate) {
 	value, ok := pa.ruleAggStats[key]
 	if !ok {
 		value = newRuleAggregateValue(key, pa.felixHostname)
@@ -175,7 +174,10 @@ func (pa *PolicyRulesAggregator) OnUpdate(mu MetricUpdate) {
 	if mu.isConnection && mu.updateType == UpdateTypeReport {
 		if !value.tuples.Contains(mu.tuple) {
 			value.tuples.Add(mu.tuple)
-			value.numConnections.Inc()
+			// Update the numConnections only if the action is not a `pass`.
+			if key.ruleID.Action != rules.RuleActionPass {
+				value.numConnections.Inc()
+			}
 		}
 	} else {
 		value.tuples.Discard(mu.tuple)
