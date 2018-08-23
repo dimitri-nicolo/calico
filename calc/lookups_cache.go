@@ -18,12 +18,14 @@ import (
 type LookupsCache struct {
 	polCache *PolicyLookupsCache
 	epCache  *EndpointLookupsCache
+	nsCache  *NetworksetLookupsCache
 }
 
 func NewLookupsCache() *LookupsCache {
 	lc := &LookupsCache{
 		polCache: NewPolicyLookupsCache(),
 		epCache:  NewEndpointLookupsCache(),
+		nsCache:  NewNetworksetLookupsCache(),
 	}
 	return lc
 }
@@ -38,6 +40,12 @@ func (lc *LookupsCache) IsEndpoint(addr [16]byte) bool {
 // GetEndpoint returns the ordered list of tiers for a particular endpoint.
 func (lc *LookupsCache) GetEndpoint(addr [16]byte) (*EndpointData, bool) {
 	return lc.epCache.GetEndpoint(addr)
+}
+
+// GetNetworkset returns the networkset information for an address.
+// It returns the first networkset it finds that contains the given address.
+func (lc *LookupsCache) GetNetworkset(addr [16]byte) (*EndpointData, bool) {
+	return lc.nsCache.GetNetworkset(addr)
 }
 
 // GetRuleIDFromNFLOGPrefix returns the RuleID associated with the supplied NFLOG prefix.

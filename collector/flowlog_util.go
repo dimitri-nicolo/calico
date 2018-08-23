@@ -127,6 +127,19 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 			Namespace: flowLogNamespaceGlobal,
 			Labels:    string(labels),
 		}
+	case model.NetworkSetKey:
+		// No Endpoint was found so instead, a NetworkSet was returned.
+		v := ed.Networkset.(*model.NetworkSet)
+		labels, err := json.Marshal(v.Labels)
+		if err != nil {
+			return EndpointMetadata{}, err
+		}
+		em = EndpointMetadata{
+			Type:      FlowLogEndpointTypeNs,
+			Namespace: flowLogFieldNotIncluded,
+			Name:      k.Name,
+			Labels:    string(labels),
+		}
 	default:
 		return EndpointMetadata{}, fmt.Errorf("Unknown key %#v of type %v", ed.Key, reflect.TypeOf(ed.Key))
 	}

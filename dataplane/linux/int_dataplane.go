@@ -193,6 +193,9 @@ type Config struct {
 	IPSecESPProposal           string
 	IPSecLogLevel              string
 	IPSecRekeyTime             time.Duration
+
+	// FlowLogsEnableNetworkSets controls whether network sets appear in flow log reporting.
+	FlowLogsEnableNetworkSets bool
 }
 
 // InternalDataplane implements an in-process Felix dataplane driver based on iptables
@@ -582,6 +585,7 @@ func (d *InternalDataplane) Start() {
 		InitialReportingDelay:    DefaultInitialReportingDelay,
 		ExportingInterval:        DefaultExportingInterval,
 		ConntrackPollingInterval: DefaultConntrackPollingInterval,
+		EnableNetworkSets:        d.config.FlowLogsEnableNetworkSets,
 	}
 	rm := collector.NewReporterManager()
 	if d.config.PrometheusReporterEnabled {

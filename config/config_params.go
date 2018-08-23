@@ -209,6 +209,7 @@ type Config struct {
 
 	FlowLogsEnableHostEndpoint bool          `config:"bool;false"`
 	FlowLogsFlushInterval      time.Duration `config:"seconds;300"`
+	FlowLogsEnableNetworkSets  bool          `config:"bool;false"`
 
 	CloudWatchLogsReporterEnabled           bool          `config:"bool;false"`
 	CloudWatchLogsFlushInterval             time.Duration `config:"seconds;0"` // Deprecated

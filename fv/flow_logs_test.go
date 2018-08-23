@@ -81,7 +81,7 @@ type expectation struct {
 
 // FIXME!
 var (
-	networkSetIPsSupported  = false
+	networkSetIPsSupported  = true
 	applyOnForwardSupported = false
 )
 
@@ -112,6 +112,10 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		opts.IPIPEnabled = false
 
 		opts.ExtraEnvVars["FELIX_FLOWLOGSFLUSHINTERVAL"] = "120"
+
+		if networkSetIPsSupported {
+			opts.ExtraEnvVars["FELIX_FLOWLOGSENABLENETWORKSETS"] = "true"
+		}
 	})
 
 	JustBeforeEach(func() {

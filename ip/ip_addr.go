@@ -184,6 +184,14 @@ func CIDRFromCalicoNet(ipNet calinet.IPNet) CIDR {
 	return CIDRFromIPNet(&ipNet.IPNet)
 }
 
+func CIDRsFromCalicoNets(ipNets []calinet.IPNet) []CIDR {
+	cidrs := make([]CIDR, 0, len(ipNets))
+	for _, ipNet := range ipNets {
+		cidrs = append(cidrs, CIDRFromCalicoNet(ipNet))
+	}
+	return cidrs
+}
+
 func CIDRFromIPNet(ipNet *net.IPNet) CIDR {
 	ones, _ := ipNet.Mask.Size()
 	// Mask the IP before creating the CIDR so that we have it in canonical format.
