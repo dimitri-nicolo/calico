@@ -152,6 +152,9 @@ GlobalNetworkSets - APIVersion: projectcalico.org/v3 Kind: GlobalNetworkSet
 17. Getting a globalnetworkset: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets/sample-global-network-set
 18. Posting a globalnetworkset: -XPOST -d @globalnetworkset.yaml  -H "Content-type:application/yaml"  https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets
 19. Watching a globalnetworkset: https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworksets/sample-global-network-set?watch=true
+
+GlobalNetworkPolicies with Application Layer rules
+20. Create globalnetworkpolicies with application layer rule: -XPOST -d @app-policy.yaml -H "Content-type:application/yaml" https://10.0.2.15:6443/apis/projectcalico.org/v3/globalnetworkpolicies
 ``` 
 
 ## Testing
