@@ -77,7 +77,7 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 		return nil
 	}
 
-	log.Debug("Flow Log Aggregator got Metric Update")
+	log.WithField("update", mu).Debug("Flow Log Aggregator got Metric Update")
 	flowMeta, err := NewFlowMeta(mu, c.kind)
 	if err != nil {
 		return err

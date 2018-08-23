@@ -13,6 +13,8 @@ import (
 
 const FlowLogFilename = "flows.log"
 
+// fileDispatcher is a FlowLogDispatcher that writes the flow logs to a local,
+// auto-rotated log file.  We write one JSON-encoded flow log per line.
 type fileDispatcher struct {
 	directory string
 	maxMB     int
