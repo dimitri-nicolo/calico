@@ -32,8 +32,7 @@ imageNames:
   kubeControllers: tigera/kube-controllers
   calico-upgrade: quay.io/calico/upgrade
   flannel: quay.io/coreos/flannel
-  dikastes: quay.io/calico/dikastes
-  pilot-webhook: quay.io/calico/pilot-webhook
+  dikastes: tigera/dikastes
   flexvol: quay.io/calico/pod2daemon-flexvol
 
 exclude:
