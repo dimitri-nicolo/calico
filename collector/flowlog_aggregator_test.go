@@ -70,7 +70,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 	Context("Flow log aggregator aggregation verification", func() {
 		It("aggregates the fed metric updates", func() {
 			By("defalt duration")
-			ca := NewCloudWatchAggregator()
+			ca := NewFlowLogAggregator()
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdate)
 			messages := ca.Get()
 			Expect(len(messages)).Should(Equal(1))
@@ -85,7 +85,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
 
 			By("source port")
-			ca = NewCloudWatchAggregator().AggregateOver(SourcePort)
+			ca = NewFlowLogAggregator().AggregateOver(SourcePort)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdate)
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateCopy := muNoConn1Rule1AllowUpdate
@@ -98,7 +98,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(1))
 
 			By("endpoint prefix names")
-			ca = NewCloudWatchAggregator().AggregateOver(PrefixName)
+			ca = NewFlowLogAggregator().AggregateOver(PrefixName)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
@@ -165,7 +165,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(1))
 
 			By("by endpoint IP classification as the meta name when meta info is missing")
-			ca = NewCloudWatchAggregator().AggregateOver(PrefixName)
+			ca = NewFlowLogAggregator().AggregateOver(PrefixName)
 			endpointMeta := calc.EndpointData{
 				Key: model.WorkloadEndpointKey{
 					Hostname:       "node-01",
@@ -315,8 +315,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 			var caa, cad FlowLogAggregator
 
 			By("Checking that the MetricUpdate with deny action is only processed by the aggregator with the deny filter")
-			caa = NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
-			cad = NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+			caa = NewFlowLogAggregator().ForAction(rules.RuleActionAllow)
+			cad = NewFlowLogAggregator().ForAction(rules.RuleActionDeny)
 
 			caa.FeedUpdate(muNoConn1Rule2DenyUpdate)
 			messages := caa.Get()
@@ -326,8 +326,8 @@ var _ = Describe("Flow log aggregator tests", func() {
 			Expect(len(messages)).Should(Equal(1))
 
 			By("Checking that the MetricUpdate with allow action is only processed by the aggregator with the allow filter")
-			caa = NewCloudWatchAggregator().ForAction(rules.RuleActionAllow)
-			cad = NewCloudWatchAggregator().ForAction(rules.RuleActionDeny)
+			caa = NewFlowLogAggregator().ForAction(rules.RuleActionAllow)
+			cad = NewFlowLogAggregator().ForAction(rules.RuleActionDeny)
 
 			caa.FeedUpdate(muConn1Rule1AllowUpdate)
 			messages = caa.Get()
@@ -342,7 +342,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 	Context("Flow log aggregator flowstore lifecycle", func() {
 		It("Purges only the completed non-aggregated flowMetas", func() {
 			By("Accounting for only the completed 5-tuple refs when making a purging decision")
-			ca := NewCloudWatchAggregator().ForAction(rules.RuleActionDeny).(*cloudWatchAggregator)
+			ca := NewFlowLogAggregator().ForAction(rules.RuleActionDeny).(*flowLogAggregator)
 			ca.FeedUpdate(muNoConn1Rule2DenyUpdate)
 			messages := ca.Get()
 			Expect(len(messages)).Should(Equal(1))
@@ -375,7 +375,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 		It("Purges only the completed aggregated flowMetas", func() {
 			By("Accounting for only the completed 5-tuple refs when making a purging decision")
-			ca := NewCloudWatchAggregator().AggregateOver(PrefixName).(*cloudWatchAggregator)
+			ca := NewFlowLogAggregator().AggregateOver(PrefixName).(*flowLogAggregator)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
 			// Construct a similar update; same tuple but diff src ports.
 			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
@@ -446,7 +446,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 		It("Updates the stats associated with the flows", func() {
 			By("Accounting for only the packet/byte counts as seen during the interval")
-			ca := NewCloudWatchAggregator().ForAction(rules.RuleActionAllow).(*cloudWatchAggregator)
+			ca := NewFlowLogAggregator().ForAction(rules.RuleActionAllow).(*flowLogAggregator)
 			ca.FeedUpdate(muConn1Rule1AllowUpdate)
 			messages := ca.Get()
 			Expect(len(messages)).Should(Equal(1))

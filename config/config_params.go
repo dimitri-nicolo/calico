@@ -207,17 +207,30 @@ type Config struct {
 	SyslogReporterAddress       string        `config:"string;"`
 	DeletedMetricsRetentionSecs time.Duration `config:"seconds;30"`
 
+	FlowLogsEnableHostEndpoint bool          `config:"bool;false"`
+	FlowLogsFlushInterval      time.Duration `config:"seconds;300"`
+
 	CloudWatchLogsReporterEnabled           bool          `config:"bool;false"`
-	CloudWatchLogsFlushInterval             time.Duration `config:"seconds;300"`
+	CloudWatchLogsFlushInterval             time.Duration `config:"seconds;0"` // Deprecated
 	CloudWatchLogsLogGroupName              string        `config:"string;tigera-flowlogs-<cluster-guid>"`
 	CloudWatchLogsLogStreamName             string        `config:"string;<felix-hostname>_Flowlogs"`
 	CloudWatchLogsIncludeLabels             bool          `config:"bool;false"`
 	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0:2);2"`
 	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0:2);1"`
 	CloudWatchLogsRetentionDays             int           `config:"int(1,3,5,7,14,30,60,90,120,150,180,365,400,545,731,1827,3653);7;die-on-fail"`
-	CloudWatchLogsEnableHostEndpoint        bool          `config:"bool;false"`
+	CloudWatchLogsEnableHostEndpoint        bool          `config:"bool;false"` // Deprecated
 	CloudWatchLogsEnabledForAllowed         bool          `config:"bool;true"`
 	CloudWatchLogsEnabledForDenied          bool          `config:"bool;true"`
+
+	FlowLogsFileEnabled                   bool   `config:"bool;false"`
+	FlowLogsFileDirectory                 string `config:"string;/var/log/calico/flowlogs"`
+	FlowLogsFileMaxFiles                  int    `config:"int;5"`
+	FlowLogsFileMaxFileSizeMB             int    `config:"int;100"`
+	FlowLogsFileAggregationKindForAllowed int    `config:"int(0:2);2"`
+	FlowLogsFileAggregationKindForDenied  int    `config:"int(0:2);1"`
+	FlowLogsFileIncludeLabels             bool   `config:"bool;false"`
+	FlowLogsFileEnabledForAllowed         bool   `config:"bool;true"`
+	FlowLogsFileEnabledForDenied          bool   `config:"bool;true"`
 
 	KubeNodePortRanges []numorstring.Port `config:"portrange-list;30000:32767"`
 	NATPortRange       numorstring.Port   `config:"portrange;"`
@@ -566,6 +579,14 @@ func (config *Config) Validate() (err error) {
 			err = errors.New("CloudWatchLogsReporterEnabled is set to true. " +
 				"Enable at least one of CloudWatchLogsEnabledForAllowed or " +
 				"CloudWatchLogsEnabledForDenied")
+		}
+	}
+
+	if config.FlowLogsFileEnabled {
+		if !config.FlowLogsFileEnabledForAllowed && !config.FlowLogsFileEnabledForDenied {
+			err = errors.New("FlowLogsFileEnabled is set to true. " +
+				"Enable at least one of FlowLogsFileEnabledForAllowed or " +
+				"FlowLogsFileEnabledForDenied")
 		}
 	}
 

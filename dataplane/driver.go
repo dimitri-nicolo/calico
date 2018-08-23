@@ -26,6 +26,8 @@ import (
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 
+	"time"
+
 	"github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
 	"github.com/projectcalico/felix/dataplane/external"
@@ -160,6 +162,12 @@ func StartDataplaneDriver(configParams *config.Config,
 			configParams.CloudWatchMetricsReporterEnabled = false
 		}
 
+		if configParams.FlowLogsFileEnabled && !licenseMonitor.GetFeatureStatus(features.FileOutputFlowLogs) {
+			log.Warn("Not licensed for Flow Logs File Output feature. License either invalid or expired. " +
+				"Contact Tigera support or email licensing@tigera.io")
+			configParams.FlowLogsFileEnabled = false
+		}
+
 		dpConfig := intdataplane.Config{
 			IfaceMonitorConfig: ifacemonitor.Config{
 				InterfaceExcludes: configParams.InterfaceExcludes(),
@@ -218,44 +226,60 @@ func StartDataplaneDriver(configParams *config.Config,
 				NATPortRange: configParams.NATPortRange,
 			},
 
-			NfNetlinkBufSize:                        configParams.NfNetlinkBufSize,
-			StatsDumpFilePath:                       configParams.StatsDumpFilePath,
-			PrometheusReporterEnabled:               configParams.PrometheusReporterEnabled,
-			PrometheusReporterPort:                  configParams.PrometheusReporterPort,
-			PrometheusReporterCertFile:              configParams.PrometheusReporterCertFile,
-			PrometheusReporterKeyFile:               configParams.PrometheusReporterKeyFile,
-			PrometheusReporterCAFile:                configParams.PrometheusReporterCAFile,
-			SyslogReporterNetwork:                   configParams.SyslogReporterNetwork,
-			SyslogReporterAddress:                   configParams.SyslogReporterAddress,
-			DeletedMetricsRetentionSecs:             configParams.DeletedMetricsRetentionSecs,
+			NfNetlinkBufSize:            configParams.NfNetlinkBufSize,
+			StatsDumpFilePath:           configParams.StatsDumpFilePath,
+			PrometheusReporterEnabled:   configParams.PrometheusReporterEnabled,
+			PrometheusReporterPort:      configParams.PrometheusReporterPort,
+			PrometheusReporterCertFile:  configParams.PrometheusReporterCertFile,
+			PrometheusReporterKeyFile:   configParams.PrometheusReporterKeyFile,
+			PrometheusReporterCAFile:    configParams.PrometheusReporterCAFile,
+			SyslogReporterNetwork:       configParams.SyslogReporterNetwork,
+			SyslogReporterAddress:       configParams.SyslogReporterAddress,
+			DeletedMetricsRetentionSecs: configParams.DeletedMetricsRetentionSecs,
+
+			// Deal with deprecated CloudWatchLogsFlushInterval by taking max
+			FlowLogsFlushInterval: maxDuration(configParams.CloudWatchLogsFlushInterval, configParams.FlowLogsFlushInterval),
+
+			// Deal with deprecated CloudWatchLogsEnableHostEndpoint by combining with new field name.
+			FlowLogsEnableHostEndpoint: configParams.CloudWatchLogsEnableHostEndpoint || configParams.FlowLogsEnableHostEndpoint,
+
 			CloudWatchLogsReporterEnabled:           configParams.CloudWatchLogsReporterEnabled,
-			CloudWatchLogsFlushInterval:             configParams.CloudWatchLogsFlushInterval,
 			CloudWatchLogsLogGroupName:              configParams.CloudWatchLogsLogGroupName,
 			CloudWatchLogsLogStreamName:             configParams.CloudWatchLogsLogStreamName,
 			CloudWatchLogsAggregationKindForAllowed: configParams.CloudWatchLogsAggregationKindForAllowed,
 			CloudWatchLogsAggregationKindForDenied:  configParams.CloudWatchLogsAggregationKindForDenied,
 			CloudWatchLogsRetentionDays:             configParams.CloudWatchLogsRetentionDays,
 			CloudWatchLogsIncludeLabels:             configParams.CloudWatchLogsIncludeLabels,
-			CloudWatchLogsEnableHostEndpoint:        configParams.CloudWatchLogsEnableHostEndpoint,
 			CloudWatchLogsEnabledForAllowed:         configParams.CloudWatchLogsEnabledForAllowed,
 			CloudWatchLogsEnabledForDenied:          configParams.CloudWatchLogsEnabledForDenied,
 			DebugCloudWatchLogsFile:                 configParams.DebugCloudWatchLogsFile,
-			IPIPMTU:                                 configParams.IpInIpMtu,
-			IptablesRefreshInterval:                 configParams.IptablesRefreshInterval,
-			RouteRefreshInterval:                    configParams.RouteRefreshInterval,
-			IPSetsRefreshInterval:                   configParams.IpsetsRefreshInterval,
-			IptablesPostWriteCheckInterval:          configParams.IptablesPostWriteCheckIntervalSecs,
-			IptablesInsertMode:                      configParams.ChainInsertMode,
-			IptablesLockFilePath:                    configParams.IptablesLockFilePath,
-			IptablesLockTimeout:                     configParams.IptablesLockTimeoutSecs,
-			IptablesLockProbeInterval:               configParams.IptablesLockProbeIntervalMillis,
-			MaxIPSetSize:                            configParams.MaxIpsetSize,
-			IgnoreLooseRPF:                          configParams.IgnoreLooseRPF,
-			IPv6Enabled:                             configParams.Ipv6Support,
-			StatusReportingInterval:                 configParams.ReportingIntervalSecs,
-			CloudWatchMetricsReporterEnabled:        configParams.CloudWatchMetricsReporterEnabled,
-			CloudWatchMetricsPushIntervalSecs:       configParams.CloudWatchMetricsPushIntervalSecs,
-			ClusterGUID:                             configParams.ClusterGUID,
+
+			FlowLogsFileEnabled:                   configParams.FlowLogsFileEnabled,
+			FlowLogsFileDirectory:                 configParams.FlowLogsFileDirectory,
+			FlowLogsFileMaxFiles:                  configParams.FlowLogsFileMaxFiles,
+			FlowLogsFileMaxFileSizeMB:             configParams.FlowLogsFileMaxFileSizeMB,
+			FlowLogsFileAggregationKindForAllowed: configParams.FlowLogsFileAggregationKindForAllowed,
+			FlowLogsFileAggregationKindForDenied:  configParams.FlowLogsFileAggregationKindForDenied,
+			FlowLogsFileIncludeLabels:             configParams.FlowLogsFileIncludeLabels,
+			FlowLogsFileEnabledForAllowed:         configParams.FlowLogsFileEnabledForAllowed,
+			FlowLogsFileEnabledForDenied:          configParams.FlowLogsFileEnabledForDenied,
+
+			IPIPMTU:                           configParams.IpInIpMtu,
+			IptablesRefreshInterval:           configParams.IptablesRefreshInterval,
+			RouteRefreshInterval:              configParams.RouteRefreshInterval,
+			IPSetsRefreshInterval:             configParams.IpsetsRefreshInterval,
+			IptablesPostWriteCheckInterval:    configParams.IptablesPostWriteCheckIntervalSecs,
+			IptablesInsertMode:                configParams.ChainInsertMode,
+			IptablesLockFilePath:              configParams.IptablesLockFilePath,
+			IptablesLockTimeout:               configParams.IptablesLockTimeoutSecs,
+			IptablesLockProbeInterval:         configParams.IptablesLockProbeIntervalMillis,
+			MaxIPSetSize:                      configParams.MaxIpsetSize,
+			IgnoreLooseRPF:                    configParams.IgnoreLooseRPF,
+			IPv6Enabled:                       configParams.Ipv6Support,
+			StatusReportingInterval:           configParams.ReportingIntervalSecs,
+			CloudWatchMetricsReporterEnabled:  configParams.CloudWatchMetricsReporterEnabled,
+			CloudWatchMetricsPushIntervalSecs: configParams.CloudWatchMetricsPushIntervalSecs,
+			ClusterGUID:                       configParams.ClusterGUID,
 
 			NetlinkTimeout: configParams.NetlinkTimeoutSecs,
 
@@ -297,4 +321,12 @@ func StartDataplaneDriver(configParams *config.Config,
 
 		return extdataplane.StartExtDataplaneDriver(configParams.DataplaneDriver)
 	}
+}
+
+// maxDuration returns the maximum between to durations
+func maxDuration(d1, d2 time.Duration) time.Duration {
+	if d1 > d2 {
+		return d1
+	}
+	return d2
 }

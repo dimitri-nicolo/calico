@@ -26,11 +26,11 @@ const (
 
 const noRuleActionDefined = 0
 
-// cloudWatchAggregator builds and implements the FlowLogAggregator and
+// flowLogAggregator builds and implements the FlowLogAggregator and
 // FlowLogGetter interfaces.
-// The cloudWatchAggregator is responsible for creating, aggregating, and storing
+// The flowLogAggregator is responsible for creating, aggregating, and storing
 // aggregated flow logs until the flow logs are exported.
-type cloudWatchAggregator struct {
+type flowLogAggregator struct {
 	kind                 AggregationKind
 	flowStore            map[FlowMeta]FlowStats
 	flMutex              sync.RWMutex
@@ -39,9 +39,9 @@ type cloudWatchAggregator struct {
 	handledAction        rules.RuleAction
 }
 
-// NewCloudWatchAggregator constructs a FlowLogAggregator
-func NewCloudWatchAggregator() FlowLogAggregator {
-	return &cloudWatchAggregator{
+// NewFlowLogAggregator constructs a FlowLogAggregator
+func NewFlowLogAggregator() FlowLogAggregator {
+	return &flowLogAggregator{
 		kind:                 Default,
 		flowStore:            make(map[FlowMeta]FlowStats),
 		flMutex:              sync.RWMutex{},
@@ -49,23 +49,23 @@ func NewCloudWatchAggregator() FlowLogAggregator {
 	}
 }
 
-func (c *cloudWatchAggregator) AggregateOver(kind AggregationKind) FlowLogAggregator {
+func (c *flowLogAggregator) AggregateOver(kind AggregationKind) FlowLogAggregator {
 	c.kind = kind
 	return c
 }
 
-func (c *cloudWatchAggregator) IncludeLabels(b bool) FlowLogAggregator {
+func (c *flowLogAggregator) IncludeLabels(b bool) FlowLogAggregator {
 	c.includeLabels = b
 	return c
 }
 
-func (c *cloudWatchAggregator) ForAction(ra rules.RuleAction) FlowLogAggregator {
+func (c *flowLogAggregator) ForAction(ra rules.RuleAction) FlowLogAggregator {
 	c.handledAction = ra
 	return c
 }
 
 // FeedUpdate constructs and aggregates flow logs from MetricUpdates.
-func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
+func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 	lastRuleID := mu.GetLastRuleID()
 	if lastRuleID == nil {
 		log.WithField("metric update", mu).Error("no last rule id present")
@@ -77,6 +77,7 @@ func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 		return nil
 	}
 
+	log.WithField("update", mu).Debug("Flow Log Aggregator got Metric Update")
 	flowMeta, err := NewFlowMeta(mu, c.kind)
 	if err != nil {
 		return err
@@ -96,7 +97,8 @@ func (c *cloudWatchAggregator) FeedUpdate(mu MetricUpdate) error {
 
 // Get returns all aggregated flow logs, as a list of string pointers, since the last time a Get
 // was called. Calling Get will also clear the stored flow logs once the flow logs are returned.
-func (c *cloudWatchAggregator) Get() []*FlowLog {
+func (c *flowLogAggregator) Get() []*FlowLog {
+	log.Debug("Get from flow log aggregator")
 	resp := make([]*FlowLog, 0, len(c.flowStore))
 	aggregationEndTime := time.Now()
 	c.flMutex.Lock()
@@ -110,7 +112,7 @@ func (c *cloudWatchAggregator) Get() []*FlowLog {
 	return resp
 }
 
-func (c *cloudWatchAggregator) calibrateFlowStore(flowMeta FlowMeta) {
+func (c *flowLogAggregator) calibrateFlowStore(flowMeta FlowMeta) {
 	// discontinue tracking the stats associated with the
 	// flow meta if no more associated 5-tuples exist.
 	if c.flowStore[flowMeta].getActiveFlowsCount() == 0 {

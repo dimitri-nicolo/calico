@@ -348,6 +348,10 @@ func (t *Tuple) SetSourcePort(port int) {
 	t.l4Src = port
 }
 
+func (t *Tuple) GetDestPort() int {
+	return t.l4Dst
+}
+
 // Data contains metadata and statistics such as rule counters and age of a
 // connection(Tuple). Each Data object contains:
 // - 2 RuleTrace's - Ingress and Egress - each providing information on the

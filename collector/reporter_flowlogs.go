@@ -5,6 +5,8 @@ package collector
 import (
 	"time"
 
+	"fmt"
+
 	"github.com/gavv/monotime"
 	log "github.com/sirupsen/logrus"
 
@@ -30,10 +32,15 @@ type FlowLogDispatcher interface {
 	Dispatch([]*FlowLog) error
 }
 
-// cloudWatchReporter implements the MetricsReporter interface.
-type cloudWatchReporter struct {
-	dispatcher    FlowLogDispatcher
-	aggregators   []FlowLogAggregator
+type aggregatorRef struct {
+	a FlowLogAggregator
+	d []FlowLogDispatcher
+}
+
+// FlowLogsReporter implements the MetricsReporter interface.
+type FlowLogsReporter struct {
+	dispatchers   map[string]FlowLogDispatcher
+	aggregators   []aggregatorRef
 	flushInterval time.Duration
 	flushTicker   *jitter.Ticker
 	hepEnabled    bool
@@ -49,14 +56,14 @@ const (
 	healthInterval = 10 * time.Second
 )
 
-// NewCloudWatchReporter constructs a FlowLogs MetricsReporter using
-// a cloudwatch dispatcher and aggregator.
-func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *cloudWatchReporter {
+// NewFlowLogsReporter constructs a FlowLogs MetricsReporter using
+// a dispatcher and aggregator.
+func NewFlowLogsReporter(dispatchers map[string]FlowLogDispatcher, flushInterval time.Duration, healthAggregator *health.HealthAggregator, hepEnabled bool) *FlowLogsReporter {
 	if healthAggregator != nil {
 		healthAggregator.RegisterReporter(healthName, &health.HealthReport{Live: true, Ready: true}, healthInterval*2)
 	}
-	return &cloudWatchReporter{
-		dispatcher:       dispatcher,
+	return &FlowLogsReporter{
+		dispatchers:      dispatchers,
 		flushTicker:      jitter.NewTicker(flushInterval, flushInterval/10),
 		flushInterval:    flushInterval,
 		timeNowFn:        monotime.Now,
@@ -65,16 +72,27 @@ func NewCloudWatchReporter(dispatcher FlowLogDispatcher, flushInterval time.Dura
 	}
 }
 
-func (c *cloudWatchReporter) AddAggregator(agg FlowLogAggregator) {
-	c.aggregators = append(c.aggregators, agg)
+func (c *FlowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []string) {
+	var ref aggregatorRef
+	ref.a = agg
+	for _, d := range dispatchers {
+		dis, ok := c.dispatchers[d]
+		if !ok {
+			// This is a code error and is unrecoverable.
+			log.Panic(fmt.Sprintf("unknown dispatcher \"%s\"", d))
+		}
+		ref.d = append(ref.d, dis)
+	}
+	c.aggregators = append(c.aggregators, ref)
 }
 
-func (c *cloudWatchReporter) Start() {
+func (c *FlowLogsReporter) Start() {
 	log.Info("Starting CloudWatchReporter")
 	go c.run()
 }
 
-func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
+func (c *FlowLogsReporter) Report(mu MetricUpdate) error {
+	log.Debug("Flow Logs Report got Metric Update")
 	if !c.hepEnabled {
 		if mu.srcEp != nil && mu.srcEp.IsHostEndpoint() {
 			mu.srcEp = nil
@@ -84,12 +102,12 @@ func (c *cloudWatchReporter) Report(mu MetricUpdate) error {
 		}
 	}
 	for _, agg := range c.aggregators {
-		agg.FeedUpdate(mu)
+		agg.a.FeedUpdate(mu)
 	}
 	return nil
 }
 
-func (c *cloudWatchReporter) run() {
+func (c *FlowLogsReporter) run() {
 	healthTicks := time.NewTicker(healthInterval)
 	defer healthTicks.Stop()
 	c.reportHealth()
@@ -99,11 +117,17 @@ func (c *cloudWatchReporter) run() {
 		case <-c.flushTicker.C:
 			// Fetch from different aggregators and then dispatch them to wherever
 			// the flow logs need to end up.
+			log.Debug("Flow log flush tick")
 			for _, agg := range c.aggregators {
-				fl := agg.Get()
+				fl := agg.a.Get()
 				if len(fl) > 0 {
-					log.Debugf("Dispatching log buffer of size: %d", len(fl))
-					c.dispatcher.Dispatch(fl)
+					for _, d := range agg.d {
+						log.WithFields(log.Fields{
+							"size":       len(fl),
+							"dispatcher": d,
+						}).Debug("Dispatching log buffer")
+						d.Dispatch(fl)
+					}
 				}
 			}
 		case <-healthTicks.C:
@@ -113,16 +137,21 @@ func (c *cloudWatchReporter) run() {
 	}
 }
 
-func (c *cloudWatchReporter) canPublishFlowLogs() bool {
-	err := c.dispatcher.Initialize()
-	if err != nil {
-		log.WithError(err).Error("Error when verifying/creating CloudWatch resources.")
-		return false
+func (c *FlowLogsReporter) canPublishFlowLogs() bool {
+	for name, d := range c.dispatchers {
+		err := d.Initialize()
+		if err != nil {
+			log.
+				WithError(err).
+				WithField("name", name).
+				Error("dispatcher unable to initialize")
+			return false
+		}
 	}
 	return true
 }
 
-func (c *cloudWatchReporter) reportHealth() {
+func (c *FlowLogsReporter) reportHealth() {
 	readiness := c.canPublishFlowLogs()
 	if c.healthAggregator != nil {
 		c.healthAggregator.Report(healthName, &health.HealthReport{
