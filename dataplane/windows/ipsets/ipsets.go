@@ -41,6 +41,10 @@ func NewIPSets(ipVersionConfig *IPVersionConfig) *IPSets {
 
 // AddOrReplaceIPSet is responsible for the creation (or replacement) of an IP set in the store
 func (s *IPSets) AddOrReplaceIPSet(setMetadata IPSetMetadata, members []string) {
+	log.WithFields(log.Fields{
+		"metadata":   setMetadata,
+		"numMembers": len(members),
+	}).Info("Adding IP set to cache")
 	s.logCxt.WithFields(log.Fields{
 		"setID":   setMetadata.SetID,
 		"setType": setMetadata.Type,
@@ -76,7 +80,7 @@ func (s *IPSets) AddMembers(setID string, newMembers []string) {
 	s.logCxt.WithFields(log.Fields{
 		"setID":           setID,
 		"filteredMembers": filteredMembers,
-	}).Info("Adding new members to IP set")
+	}).Debug("Adding new members to IP set")
 	filteredMembers.Iter(func(m interface{}) error {
 		ipSet.Members.Add(m)
 		return nil
@@ -97,7 +101,7 @@ func (s *IPSets) RemoveMembers(setID string, removedMembers []string) {
 	s.logCxt.WithFields(log.Fields{
 		"setID":           setID,
 		"filteredMembers": filteredMembers,
-	}).Info("Removing members from IP set")
+	}).Debug("Removing members from IP set")
 
 	filteredMembers.Iter(func(m interface{}) error {
 		ipSet.Members.Discard(m)
