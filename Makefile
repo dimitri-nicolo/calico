@@ -140,6 +140,7 @@ FV_SLOW_SPEC_THRESH=90
 # Figure out version information.  To support builds from release tarballs, we default to
 # <unknown> if this isn't a git checkout.
 GIT_COMMIT:=$(shell git rev-parse HEAD || echo '<unknown>')
+GIT_SHORT_COMMIT:=$(shell git rev-parse --short HEAD || echo '<unknown>')
 BUILD_ID:=$(shell git rev-parse HEAD || uuidgen | sed 's/-//g')
 GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
 
@@ -279,6 +280,19 @@ bin/calico-felix.exe: $(SRC_FILES) vendor/.up-to-date
            sh -c 'GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)/cmd/calico-felix" && \
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
+
+bin/calico-felix.exe.url: bin/calico-felix.exe utils/make-azure-blob.sh
+	utils/make-azure-blob.sh bin/calico-felix.exe calico-felix-$(GIT_SHORT_COMMIT).exe \
+	    felix-test-uploads felixtestuploads felixtestuploads > $@.tmp
+	mv $@.tmp $@
+
+windows-felix-url: bin/calico-felix.exe.url
+	@echo
+	@echo calico-felix.exe download link:
+	@cat bin/calico-felix.exe.url
+	@echo
+	@echo Powershell download command:
+	@echo "Invoke-WebRequest '`cat bin/calico-felix.exe.url`' -O calico-felix-$(GIT_SHORT_COMMIT).exe"
 
 # Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
 protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
