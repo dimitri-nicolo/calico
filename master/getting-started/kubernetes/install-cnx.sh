@@ -63,7 +63,7 @@ CLEANUP=0
 CNX_PULL_SECRET_FILENAME=${CNX_PULL_SECRET_FILENAME:="cnx-pull-secret.yml"}
 
 # Registry to pull calicoctl and calicoq from
-CALICO_UTILS_REGISTRY=${CALICO_UTILS_REGISTRY:="quay.io/tigera"}
+CALICO_REGISTRY=${CALICO_REGISTRY:="quay.io/tigera"}
 
 # Calicoctl and calicoq binary install directory
 CALICO_UTILS_INSTALL_DIR=${CALICO_UTILS_INSTALL_DIR:="/usr/local/bin"}
@@ -94,13 +94,26 @@ promptToContinue() {
 }
 
 #
+# checkRegistry()  default is quay.io
+#
+checkRegistry() {
+ local IMAGE_REPO="{{site.data.versions[page.version].first.dockerRepo}}"
+ if [[ "$IMAGE_REPO" == "gcr.io/"* ]]; then
+   CALICO_REGISTRY="gcr.io"
+ fi
+}
+
+#
 # checkSettings()
 #
 checkSettings() {
+  checkRegistry
+
   echo Settings:
   echo '  CREDENTIALS_FILE='${CREDENTIALS_FILE}
   echo '  DOCS_LOCATION='${DOCS_LOCATION}
   echo '  VERSION='${VERSION}
+  echo '  REGISTRY='${CALICO_REGISTRY}
   echo '  DATASTORE='${DATASTORE}
   echo '  LICENSE_FILE='${LICENSE_FILE}
   echo '  INSTALL_TYPE='${INSTALL_TYPE}
@@ -448,8 +461,14 @@ getAuthToken() {
     fatalError Please verify \'"$CREDENTIALS_FILE"\' contains valid json credentials.
   fi
 
-  # Base64-encode the auth credentials file, removing newlines and whitespace first.
-  SECRET_TOKEN=$(cat "$CREDENTIALS_FILE" | tr -d '\n\r\t ' | base64 -w 0)
+  if [ $CALICO_REGISTRY == "gcr.io" ]; then
+    # Get token for gcr.io
+    SECRET_TOKEN=$(kubectl create secret docker-registry cnx-pull-secret --namespace=kube-system --docker-server=https://gcr.io --docker-username=_json_key --docker-email=user@example.com --docker-password="$(cat $CREDENTIALS_FILE)" --dry-run -o json | jq '.data[".dockerconfigjson"]')
+  else
+    # Base64-encode the auth credentials file, removing newlines and whitespace first.
+    SECRET_TOKEN=$(cat "$CREDENTIALS_FILE" | tr -d '\n\r\t ' | base64 -w 0)
+  fi
+
   if [ $? -ne 0 ]; then
     fatalError Unable to base64 encode \'"$CREDENTIALS_FILE"\'. Please verify contains valid json credentials.
   fi
@@ -629,12 +648,17 @@ dockerLogin() {
     fatalError "$CREDENTIALS_FILE" does not exist.
   fi
 
-  dockerCredentials=$(cat "${CREDENTIALS_FILE}" | jq --raw-output '.auths[].auth' | base64 -d)
-  username=$(echo -n $dockerCredentials | awk -F ":" '{print $1}')
-  token=$(echo -n $dockerCredentials | awk -F ":" '{print $2}')
+  if [ $CALICO_REGISTRY == "gcr.io" ]; then
+    username="_json_key"
+    token=$(cat "${CREDENTIALS_FILE}")
+  else  
+    dockerCredentials=$(cat "${CREDENTIALS_FILE}" | jq --raw-output '.auths[].auth' | base64 -d)
+    username=$(echo -n $dockerCredentials | awk -F ":" '{print $1}')
+    token=$(echo -n $dockerCredentials | awk -F ":" '{print $2}')
+  fi
 
-  echo -n "Logging in to ${CALICO_UTILS_REGISTRY} ... "
-  runAsRoot "docker login --username=${username} --password=${token} ${CALICO_UTILS_REGISTRY}"
+  echo -n "Logging in to ${CALICO_REGISTRY} ... "
+  docker login --username=${username} --password="${token}" ${CALICO_REGISTRY}
   echo "done."
 }
 
@@ -736,7 +760,7 @@ deleteCalicoBinaries() {
 # config file.
 #
 installCalicoBinary() {
-  dockerLogin             # login to quay.io/tigera
+  dockerLogin             # login to quay.io/tigera or gcr.io
 
   local utilityName=$1    # either "calicoctl" or "calicoq"
 
