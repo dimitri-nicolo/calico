@@ -8,6 +8,10 @@ Application layer policy for {{site.prodname}} allows you to write policies that
 enforce against application layer attributes like HTTP methods or paths as well as
 against cryptographically secure identities.
 
+> **Note**: Application layer policy is a beta feature of this release and not
+> recommended for production use.
+{: .alert .alert-info}
+
 Support for application layer policy is not enabled by default in
 {{site.prodname}} installs, since it requires extra CPU and memory resources to
 operate.
