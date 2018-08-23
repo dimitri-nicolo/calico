@@ -467,3 +467,5 @@ master:
       version: master
     flexvol:
       version: master
+    fluentd:
+      version: master

@@ -34,6 +34,7 @@ imageNames:
   flannel: quay.io/coreos/flannel
   dikastes: tigera/dikastes
   flexvol: quay.io/calico/pod2daemon-flexvol
+  fluentd: quay.io/tigera/fluentd
 
 exclude:
   - htmlproofer.sh
