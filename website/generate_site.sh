@@ -104,6 +104,7 @@ cat <<EOF
 #
 skip_files:
   - calico_node/filesystem/bin/
+  - .git/
 
 libraries:
 - name: webapp2
