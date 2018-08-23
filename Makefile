@@ -61,7 +61,7 @@ MY_GID:=$(shell id -g)
 SRC_FILES=$(shell find -name '*.go' |grep -v vendor)
 
 ############################################################################
-CONTAINER_NAME?=tigera/dikastes
+CONTAINER_NAME?=gcr.io/unique-caldron-775/cnx/tigera/dikastes
 PACKAGE_NAME?=github.com/projectcalico/app-policy
 
 # Allow libcalico-go and the ssh auth sock to be mapped into the build container.
@@ -241,10 +241,9 @@ endif
 ## push one arch
 push: imagetag
 	docker push $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker push quay.io/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+
 ifeq ($(ARCH),amd64)
 	docker push $(CONTAINER_NAME):$(IMAGETAG)
-	docker push quay.io/$(CONTAINER_NAME):$(IMAGETAG)
 endif
 
 push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
@@ -254,10 +253,8 @@ sub-push-%:
 ## tag images of one arch
 tag-images: imagetag
 	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
 ifeq ($(ARCH),amd64)
 	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):$(IMAGETAG)
 endif
 
 ## tag images of all archs
