@@ -39,6 +39,8 @@ spec:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
       serviceAccountName: calico-kube-controllers
+      imagePullSecrets:
+        - name: cnx-pull-secret
       containers:
         - name: calico-kube-controllers
           image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
