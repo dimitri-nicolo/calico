@@ -121,6 +121,7 @@ vendor: glide.yaml
       -v $(HOME)/.glide:/home/user/.glide:rw \
       -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
       -w /go/src/$(PACKAGE_NAME) \
+      $(EXTRA_DOCKER_ARGS) \
       $(GO_BUILD_CONTAINER) glide install -strip-vendor
 
 # Default the libcalico repo and version but allow them to be overridden
@@ -134,6 +135,7 @@ update-libcalico:
           -v $(HOME)/.glide:/home/user/.glide:rw \
           -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
           -w /go/src/$(PACKAGE_NAME) \
+          $(EXTRA_DOCKER_ARGS) \
           $(GO_BUILD_CONTAINER) sh -c '\
         echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
         export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
