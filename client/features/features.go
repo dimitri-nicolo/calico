@@ -10,4 +10,5 @@ const (
 	IPSec                 = "ipsec"
 	FederatedServices     = "federated-services"
 	FileOutputFlowLogs    = "file-output-flow-logs"
+	Tiers                 = "tiers"
 )
