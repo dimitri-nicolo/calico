@@ -1,0 +1,17 @@
+FROM fluent/fluentd:v1.2-onbuild
+MAINTAINER YOUR_NAME spike@tigera.io
+
+RUN apk add --update --virtual .build-deps \
+        sudo build-base ruby-dev \
+ && sudo gem install \
+        fluent-plugin-elasticsearch \
+ && sudo gem sources --clear-all \
+ && apk del .build-deps \
+ && rm -rf /var/cache/apk/* \
+           /home/fluent/.gem/ruby/2.3.0/cache/*.gem
+
+ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
+ENV ELASTIC_HOST=elasticsearch
+ENV ELASTIC_PORT=80
+
+EXPOSE 24284
