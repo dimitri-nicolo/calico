@@ -469,3 +469,6 @@ master:
       version: master
     fluentd:
       version: master
+    elasticsearch-operator:
+      version: v0.2.0
+      url: ""
