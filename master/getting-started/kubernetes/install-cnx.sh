@@ -39,6 +39,10 @@ DATASTORE=${DATASTORE:="etcdv3"}
 #
 LICENSE_FILE=${LICENSE_FILE:="license.yaml"}
 
+# Specify the type of elasticsearch storage to use
+#   ELASTIC_STORAGE="local" ./install-cnx.sh
+ELASTIC_STORAGE=${ELASTIC_STORAGE:="local"}
+
 # Specify an external etcd endpoint(s), e.g.
 #   ETCD_ENDPOINTS=https://192.168.0.1:2379 ./install-cnx.sh
 # Default is to pull the endpoint(s) from calico.yaml
@@ -117,6 +121,7 @@ checkSettings() {
   echo '  DATASTORE='${DATASTORE}
   echo '  LICENSE_FILE='${LICENSE_FILE}
   echo '  INSTALL_TYPE='${INSTALL_TYPE}
+  echo '  ELASTIC_STORAGE='${ELASTIC_STORAGE}
   [ "$DOWNLOAD_MANIFESTS_ONLY" == 1 ] && echo '  DOWNLOAD_MANIFESTS_ONLY='${DOWNLOAD_MANIFESTS_ONLY}
   [ "$ETCD_ENDPOINTS" ] && echo '  ETCD_ENDPOINTS='${ETCD_ENDPOINTS}
 
@@ -143,30 +148,32 @@ parseOptions() {
   usage() {
     cat <<HELP_USAGE
 Usage: $(basename "$0")
-          [-l license.yaml]   # Specify the path to the Tigera Secure EE license file; default "license.yaml". Note license is required.
-          [-c config.json]    # Docker authentication config file (from Tigera); default: "config.json"
-          [-d docs_location]  # Tigera Secure EE documentation location; default: "https://docs.tigera.io"
-          [-e etcd_endpoints] # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
-          [-k datastore]      # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
-          [-v version]        # Tigera Secure EE version; default: "v2.1"
-          [-u]                # Uninstall Tigera Secure EE
-          [-q]                # Quiet (don't prompt)
-          [-m]                # Download manifests (then quit)
-          [-h]                # Print usage
-          [-x]                # Enable verbose mode
+          [-l license.yaml]    # Specify the path to the Tigera Secure EE license file; default "license.yaml". Note license is required.
+          [-c config.json]     # Docker authentication config file (from Tigera); default: "config.json"
+          [-d docs_location]   # Tigera Secure EE documentation location; default: "https://docs.tigera.io"
+          [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
+          [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
+          [-s elastic_storage] # Specify the elasticsearch storage to use ("local"|"gce"); default: "local"
+          [-v version]         # Tigera Secure EE version; default: "v2.1"
+          [-u]                 # Uninstall Tigera Secure EE
+          [-q]                 # Quiet (don't prompt)
+          [-m]                 # Download manifests (then quit)
+          [-h]                 # Print usage
+          [-x]                 # Enable verbose mode
 
 HELP_USAGE
     exit 1
   }
 
   local OPTIND
-  while getopts "c:d:e:hk:l:mpqv:ux" opt; do
+  while getopts "c:d:e:hk:l:mpqs:v:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
       e )  ETCD_ENDPOINTS=$OPTARG;;
       k )  DATASTORE=$OPTARG;;
       l )  LICENSE_FILE=$OPTARG;;
+      s )  ELASTIC_STORAGE=$OPTARG;;
       v )  VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
@@ -190,6 +197,9 @@ validateSettings() {
 
   # Validate $INSTALL_TYPE is either "KOPS" or "KUBEADM" or "ACS-ENGINE"
   [ "$INSTALL_TYPE" == "KOPS" ] || [ "$INSTALL_TYPE" == "KUBEADM" ] || [ "$INSTALL_TYPE" == "ACS-ENGINE" ] || fatalError "Installation type \"$INSTALL_TYPE\" is not valid, must be either \"KOPS\" or \"KUBEADM\" or \"ACS-ENGINE\"."
+
+  # Validate $ELASTIC_STORAGE is either "local" or "gce"
+  [ "$ELASTIC_STORAGE" == "local" ] || [ "$ELASTIC_STORAGE" == "gce" ] || fatalError "Elasticsearch storage \"$ELASTIC_STORAGE\" is not valid, must be either \"local\" or \"gce\"."
 
   # If we're installing, confirm user specified a readable license file
   if [ "$CLEANUP" -eq 0 ]; then
@@ -888,6 +898,15 @@ downloadManifests() {
     setPodCIDR "calico.yaml"
   fi
 
+  # Download appropriate elasticsearch storage manifest
+  if [ "${ELASTIC_STORAGE}" == "local" ]; then
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml"
+    mv elastic-storage-local.yaml elastic-storage.yaml
+  elif "${ELASTIC_STORAGE}" == "gce" ]; then
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-gce.yaml"
+    mv elastic-storage-gce.yaml elastic-storage.yaml
+  fi
+  
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
     echo "Tigera Secure EE manifests downloaded."
     kill -s TERM $TOP_PID   # quit
@@ -1064,6 +1083,22 @@ deleteCNXPolicyManifest() {
 }
 
 #
+# applyElasticStorageManifest()
+#
+applyElasticStorageManifest() {
+  run kubectl apply -f elastic-storage.yaml
+  countDownSecs 10 "Applying \"elastic-storage.yaml\" manifest"
+}
+
+#
+# deleteElasticStorageManifest()
+#
+deleteElasticStorageManifest() {
+  runIgnoreErrors kubectl delete -f elastic-storage.yaml
+  countDownSecs 20 "Deleting \"elastic-storage.yaml\" manifest"
+}
+
+#
 # doesCRDExist() - return 1 exit code if the CRD exists
 #
 doesCRDExist() {
@@ -1084,6 +1119,7 @@ checkCRDs() {
   alertCRD="alertmanagers.monitoring.coreos.com"
   promCRD="prometheuses.monitoring.coreos.com"
   svcCRD="servicemonitors.monitoring.coreos.com"
+  # MATT TODO: When I have internet access, check the elasticsearch name and add it here
 
   echo -n "waiting for Custom Resource Defintions to be created: "
 
@@ -1213,9 +1249,11 @@ installCNX() {
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest                # Apply cnx-[etcd|kdd].yaml
 
+  # MATT TODO: Rename this variable to include elasticsearch
   if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
     applyCNXPolicyManifest        # Apply cnx-policy.yaml
     applyOperatorManifest         # Apply operator.yaml
+    applyElasticStorageManifest   # Apply elastic-storage.yaml
     applyMonitorCalicoManifest    # Apply monitor-calico.yaml
   fi
 
@@ -1227,26 +1265,27 @@ installCNX() {
 # Ignore errors.
 #
 uninstallCNX() {
-  checkSettings uninstall       # Verify settings are correct with user
-  validateDatastore uninstall   # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
-  deleteCalicoBinaries          # delete /etc/calico/calicoct.cfg, calicoctl, and calicoq
+  checkSettings uninstall        # Verify settings are correct with user
+  validateDatastore uninstall    # Warn if there's etcd manifest, but we're doing kdd uninstall (and vice versa)
+  deleteCalicoBinaries           # delete /etc/calico/calicoct.cfg, calicoctl, and calicoq
 
-  downloadManifests             # Download all manifests
+  downloadManifests              # Download all manifests
 
   if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
-    deleteMonitorCalicoManifest # Delete monitor-calico.yaml
-    deleteOperatorManifest      # Delete operator.yaml
-    deleteCNXPolicyManifest     # Delete cnx-policy.yaml
+    deleteMonitorCalicoManifest  # Delete monitor-calico.yaml
+    deleteElasticStorageManifest # Delete elastic-storage.yaml
+    deleteOperatorManifest       # Delete operator.yaml
+    deleteCNXPolicyManifest      # Delete cnx-policy.yaml
   fi
 
-  deleteCNXManifest             # Delete cnx-[etcd|kdd].yaml
-  deleteCalicoManifest          # Delete calico.yaml
-  deleteKddRbacManifest         # Delete rbac-kdd.yaml (kdd datastore only)
-  deleteEtcdDeployment          # Delete etcd.yaml (etcd datatstore only)
-  deleteCNXManagerSecret        # Delete TLS secret
-  deleteImagePullSecret         # Delete pull secret
-  deleteBasicAuth               # Remove basic auth updates, restart kubelet
-  deleteKubeDnsPod              # Return kube-dns pod to "pending" state
+  deleteCNXManifest              # Delete cnx-[etcd|kdd].yaml
+  deleteCalicoManifest           # Delete calico.yaml
+  deleteKddRbacManifest          # Delete rbac-kdd.yaml (kdd datastore only)
+  deleteEtcdDeployment           # Delete etcd.yaml (etcd datatstore only)
+  deleteCNXManagerSecret         # Delete TLS secret
+  deleteImagePullSecret          # Delete pull secret
+  deleteBasicAuth                # Remove basic auth updates, restart kubelet
+  deleteKubeDnsPod               # Return kube-dns pod to "pending" state
 }
 
 #
