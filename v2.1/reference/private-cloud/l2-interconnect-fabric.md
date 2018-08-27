@@ -1,6 +1,6 @@
 ---
 subtitle: 'At scale, and no, we''re not joking'
-title: CNX over an Ethernet interconnect fabric
+title: Tigera Secure EE over an Ethernet interconnect fabric
 ---
 
 

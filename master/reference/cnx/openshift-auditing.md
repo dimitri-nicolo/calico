@@ -1,5 +1,5 @@
 ---
-title: CNX Resource Auditing in OpenShift
+title: Tigera Secure EE Resource Auditing in OpenShift
 ---
 
 This document describes how to set up audit logging for {{site.prodname}}
@@ -62,7 +62,7 @@ for better insights into the request life cycle.
 ### Kubernetes API server policy
 
 Configure the Kubernetes API Server with the following audit policy to log changes to the
-Kubernetes objects involved in CNX Policy.
+Kubernetes objects involved in {{site.prodname}} Policy.
 
 ```yaml
 apiVersion: audit.k8s.io/v1beta1
@@ -93,10 +93,10 @@ rules:
 > **Note**: For OpenShift version 3.7 clusters, the `apiVersion` needs to be changed from `audit.k8s.io/v1beta1` to `audit.k8s.io/v1alpha1`.
 {: .alert .alert-info}
 
-### CNX API server policy
+### {{site.prodname}} API server policy
 
-The CNX API Server is configured the same as the Kubernetes API Server.  Use the following policy file to
-log the CNX resources.
+The {{site.prodname}} API Server is configured the same as the Kubernetes API Server.  Use the following policy file to
+log the {{site.prodname}} resources.
 
 ```yaml
 apiVersion: audit.k8s.io/v1beta1

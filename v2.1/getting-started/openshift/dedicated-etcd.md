@@ -1,5 +1,5 @@
 ---
-title: Installing CNX on OpenShift with a dedicated etcd cluster
+title: Installing Tigera Secure EE on OpenShift with a dedicated etcd cluster
 ---
 
 {{site.prodname}}'s OpenShift-ansible integration supports connection to a custom etcd which

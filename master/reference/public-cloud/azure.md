@@ -1,5 +1,5 @@
 ---
-title: Deploying CNX on Azure
+title: Deploying Tigera Secure EE on Azure
 ---
 
 ## About {{site.prodname}} on Azure

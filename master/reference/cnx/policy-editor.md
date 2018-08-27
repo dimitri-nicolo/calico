@@ -1,8 +1,8 @@
 ---
-title: Tigera CNX Manager Policy Editor
+title: Tigera Secure EE Manager Policy Editor
 ---
 
-Tigera CNX Manager includes a web client for viewing and editing
+{{site.prodname}} Manager includes a web client for viewing and editing
 [tiered security policy]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/tier)
 
 ## Policy Authentication
@@ -112,9 +112,9 @@ orchestrator integration, and it is best to edit the original Kubernetes
 
 ## Secure HTTPS
 
-The CNX Manager Web UI uses HTTPS to securely access the CNX Manager and
-Kubernetes and CNX API servers over TLS - where 'securely' means that these
+The {{site.prodname}} Manager Web UI uses HTTPS to securely access the {{site.prodname}} Manager and
+Kubernetes and {{site.prodname}} API servers over TLS - where 'securely' means that these
 communications are encrypted and that the browser can be sure that it is
 speaking to those servers.  The web browser should display `Secure` in the
-address bar, to indicate this. See [CNX Manager connections](../../usage/encrypt-comms#cnx-manager-connections)
+address bar, to indicate this. See [{{site.prodname}} Manager connections](../../usage/encrypt-comms#cnx-manager-connections)
 for more information.

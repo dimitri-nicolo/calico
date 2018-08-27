@@ -8,29 +8,29 @@ cnx.yaml acccepts the following include flags:
 
 {% endcomment -%}
 {%- if include.datastore == "kdd" %}
-# This manifest adds the additional CNX Manager components to a cluster
-# that has already had the Calico part of CNX deployed.
+# This manifest adds the additional {{site.prodname}} Manager components to a cluster
+# that has already had the Calico part of {{site.prodname}} deployed.
 # - It refers to the calico-config ConfigMap from that file, so if you are
 #   not using the provided hosted Calico manifest you must update
 #   references to that resource in this file.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the CNX API server and Kubernetes API server.
-# - This manifest makes the CNX Manager web server available via a NodePort
+#   between the {{site.prodname}} API server and Kubernetes API server.
+# - This manifest makes the {{site.prodname}} Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the tigera-cnx-manager-access Service below.
 {%- elsif include.datastore == "etcd" %}
-# This manifest adds the additional CNX Manager components to a cluster
-# that has already had the Calico part of CNX deployed.
+# This manifest adds the additional {{site.prodname}} Manager components to a cluster
+# that has already had the Calico part of {{site.prodname}} deployed.
 # - It refers to the calico-config ConfigMap and calico-etcd-secrets Secret
 #   from that file, so if you are not using the provided hosted Calico
 #   manifest you must update references to those resources in this file.
 # - Update the tigera-cnx-manager-config ConfigMap below before use.
 # - Optionally update the cnx-apiserver-certs ConfigMap and caBundle in the
 #   apiregistration section below to use your TLS certs for secure communication
-#   between the CNX API server and Kubernetes API server.
-# - This manifest makes the CNX Manager web server available via a NodePort
+#   between the {{site.prodname}} API server and Kubernetes API server.
+# - This manifest makes the {{site.prodname}} Manager web server available via a NodePort
 #   serving on port 30003.  You may wish to update how this is exposed; do
 #   so by editing the cnx-manager Service below.
 {%- endif %}
@@ -64,7 +64,7 @@ data:
 
 ---
 
-# Optionally update this ConfigMap to enable TLS with certificate verification when CNX API
+# Optionally update this ConfigMap to enable TLS with certificate verification when {{site.prodname}} API
 # server communicates with the Kubernetes API server.
 apiVersion: v1
 kind: Secret
@@ -82,7 +82,7 @@ data:
 
 ---
 
-# Optionally update this Service to change how CNX Manager is accessed.
+# Optionally update this Service to change how {{site.prodname}} Manager is accessed.
 # If using Google login, the URL for the web server must be configured
 # as a redirect URI in the Google project.  If the web server will be
 # accessed at https://<host>:<port>, add https://<host>:<port>/login/oidc/callback

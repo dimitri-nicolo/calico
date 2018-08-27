@@ -1,5 +1,5 @@
 ---
-title: CNX Architecture
+title: Tigera Secure EE Architecture
 ---
 
 This document discusses the various pieces of {{site.prodname}}'s architecture,

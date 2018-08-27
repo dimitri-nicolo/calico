@@ -1,5 +1,5 @@
 ---
-title: Installing CNX on Kubernetes
+title: Installing Tigera Secure EE on Kubernetes
 ---
 
 We provide a number of manifests to get you up and running with {{site.prodname}} in

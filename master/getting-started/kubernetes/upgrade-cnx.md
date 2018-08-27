@@ -1,5 +1,5 @@
 ---
-title: Upgrading a Kubernetes cluster with Calico to CNX 
+title: Upgrading a Kubernetes cluster with Calico to Tigera Secure EE
 ---
 
 ## Prerequisite

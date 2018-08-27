@@ -1,5 +1,5 @@
 ---
-title: IP Interconnect Fabrics in CNX
+title: IP Interconnect Fabrics in Tigera Secure EE
 lead_text: 'Where large-scale IP networks and hardware collide'
 ---
 

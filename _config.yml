@@ -10,7 +10,7 @@ plugins:
 
 url: https://docs.tigera.io
 
-prodname: CNX
+prodname: Tigera Secure EE
 nodecontainer: cnx-node
 repository: projectcalico/calico
 noderunning: calico-node

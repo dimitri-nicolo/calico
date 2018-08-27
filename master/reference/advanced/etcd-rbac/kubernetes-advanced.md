@@ -1,5 +1,5 @@
 ---
-title: Advanced etcd segmentation for CNX
+title: Advanced etcd segmentation for Tigera Secure EE
 ---
 
 This document describes advanced segmentation of the etcd roles to limit

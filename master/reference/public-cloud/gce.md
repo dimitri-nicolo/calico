@@ -1,5 +1,5 @@
 ---
-title: Deploying CNX on GCE
+title: Deploying Tigera Secure EE on GCE
 ---
 
 To deploy {{site.prodname}} in [Google Compute Engine][GCE], you must ensure

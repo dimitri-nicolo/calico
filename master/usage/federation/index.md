@@ -82,7 +82,7 @@ The `calicoq` command line tool will display the endpoints from remote clusters 
 in the Remote Cluster Configuration resources are also accessible to calicoq, using the same file path. Running 
 calicoq as a Pod on the local cluster is the simplest way to ensure it has access to the correct configuration.
 
-At this time, neither CNX manager nor `calicoctl` can be used to view endpoints from remote clusters.
+At this time, neither {{site.prodname}} manager nor `calicoctl` can be used to view endpoints from remote clusters.
 
 ## More information and next steps
 

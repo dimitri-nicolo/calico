@@ -1,5 +1,5 @@
 ---
-title: CNX for Kubernetes Demo
+title: Tigera Secure EE for Kubernetes Demo
 ---
 
 This guide is a variation of the simple policy demo intended to introduce the extra features of {{site.prodname}} to people already familiar with Project Calico for Kubernetes.
@@ -12,7 +12,7 @@ or by [upgrading an existing cluster]({{site.baseurl}}/{{page.version}}/getting-
 
 The key steps in moving to {{site.prodname}} are to change to the {{site.prodname}} version of calico-node, update its configuration, download calicoq and deploy Prometheus.
 
-This guide assumes that you have installed all the CNX components from the
+This guide assumes that you have installed all the {{site.prodname}} components from the
 guides above and that your cluster consists of the following nodes:
   * k8s-node1
   * k8s-node2
