@@ -163,12 +163,12 @@ vendor: glide.lock
 
 
 ## Default the repos and versions but allow them to be overridden
-LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go master 2>/dev/null | cut -f 1)
-FELIX_REPO?=github.com/projectcalico/felix
-FELIX_VERSION?=$(shell git ls-remote git@github.com:projectcalico/felix master 2>/dev/null | cut -f 1)
-CONFD_REPO?=github.com/projectcalico/confd
-CONFD_VERSION?=$(shell git ls-remote git@github.com:projectcalico/confd master 2>/dev/null | cut -f 1)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private master 2>/dev/null | cut -f 1)
+FELIX_REPO?=github.com/tigera/felix-private
+FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private master 2>/dev/null | cut -f 1)
+CONFD_REPO?=github.com/tigera/confd-private
+CONFD_VERSION?=$(shell git ls-remote git@github.com:tigera/confd-private master 2>/dev/null | cut -f 1)
 
 ### Update pins in glide.yaml
 update-felix-confd-libcalico:
@@ -176,6 +176,7 @@ update-felix-confd-libcalico:
         -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
         -v $(HOME)/.glide:/home/user/.glide:rw \
         -w /go/src/$(PACKAGE_NAME) \
+        -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
         -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
         $(CALICO_BUILD) sh -c '\
           echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
