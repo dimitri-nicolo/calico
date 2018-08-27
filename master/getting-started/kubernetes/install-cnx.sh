@@ -1280,7 +1280,7 @@ uninstallCNX() {
 
   deleteCNXManifest              # Delete cnx-[etcd|kdd].yaml
   deleteCalicoManifest           # Delete calico.yaml
-  deleteKddRbacManifest          # Delete rbac-kdd.yaml (kdd datastore only)
+  deleteRbacManifest             # Delete rbac.yaml
   deleteEtcdDeployment           # Delete etcd.yaml (etcd datatstore only)
   deleteCNXManagerSecret         # Delete TLS secret
   deleteImagePullSecret          # Delete pull secret
