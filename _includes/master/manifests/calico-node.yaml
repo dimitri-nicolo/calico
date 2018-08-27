@@ -498,6 +498,11 @@ spec:
             type: DirectoryOrCreate
             path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec/nodeagent~uds
 {%- endif %}
+        # Used for calico logs
+        - name: var-log-calico
+          hostPath:
+            type: DirectoryOrCreate
+            path: /var/log/calico
 ---
 
 apiVersion: v1
