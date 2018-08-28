@@ -50,7 +50,7 @@ file:
     [Service]
     User=root
     ExecStartPre=/usr/bin/mkdir -p /var/run/calico
-    ExecStart=/usr/local/bin/calico-node -felix
+    ExecStart=/usr/local/bin/cnx-node -felix
     KillMode=process
     Restart=on-failure
     LimitNOFILE=32000
@@ -78,7 +78,7 @@ Or, for upstart:
       chown root:root /var/run/calico
     end script
 
-    exec /usr/local/bin/calico-node -felix
+    exec /usr/local/bin/cnx-node -felix
 
 ## Configure Felix
 
