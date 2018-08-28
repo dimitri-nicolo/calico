@@ -4,7 +4,6 @@ layout: null
 # This manifest implements elasticsearch-storage using local host-path volumes.
 # It is not suitable for production use; and only works on single node clusters.
 # For production or multinode clusters, use a different elasticsearch-storage implementation.
----
 
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
@@ -42,4 +41,4 @@ spec:
   hostPath:
     path: /var/tigera/elastic-data/2
   persistentVolumeReclaimPolicy: Recycle
-  storageClassName: elastic-storage
+  storageClassName: elasticsearch-storage

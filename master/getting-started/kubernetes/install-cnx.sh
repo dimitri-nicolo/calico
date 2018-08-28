@@ -39,8 +39,8 @@ DATASTORE=${DATASTORE:="etcdv3"}
 #
 LICENSE_FILE=${LICENSE_FILE:="license.yaml"}
 
-# Specify the type of elasticsearch storage to use
-#   ELASTIC_STORAGE="local" ./install-cnx.sh
+# Specify the type of elasticsearch storage to use: "none", "local", "gce" or "aws".
+#   ELASTIC_STORAGE="none" ./install-cnx.sh
 ELASTIC_STORAGE=${ELASTIC_STORAGE:="local"}
 
 # Specify an external etcd endpoint(s), e.g.
@@ -51,8 +51,8 @@ ETCD_ENDPOINTS=${ETCD_ENDPOINTS:=""}
 # when set to 1, don't prompt for agreement to proceed
 QUIET=${QUIET:=0}
 
-# when set to 1, don't install prometheus components
-SKIP_PROMETHEUS=${SKIP_PROMETHEUS:=0}
+# when set to 1, don't install monitoring components
+SKIP_MONITORING=${SKIP_MONITORING:=0}
 
 # when set to 1, download the manifests, then quit
 DOWNLOAD_MANIFESTS_ONLY=${DOWNLOAD_MANIFESTS_ONLY:=0}
@@ -153,7 +153,7 @@ Usage: $(basename "$0")
           [-d docs_location]   # Tigera Secure EE documentation location; default: "https://docs.tigera.io"
           [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
-          [-s elastic_storage] # Specify the elasticsearch storage to use ("local"|"gce"); default: "local"
+          [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"|"gce"|"aws"); default: "local"
           [-v version]         # Tigera Secure EE version; default: "v2.1"
           [-u]                 # Uninstall Tigera Secure EE
           [-q]                 # Quiet (don't prompt)
@@ -177,7 +177,7 @@ HELP_USAGE
       v )  VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
-      p )  SKIP_PROMETHEUS=1;;
+      p )  SKIP_MONITORING=1;;
       m )  DOWNLOAD_MANIFESTS_ONLY=1;;
       u )  CLEANUP=1;;
       h )  usage;;
@@ -198,8 +198,8 @@ validateSettings() {
   # Validate $INSTALL_TYPE is either "KOPS" or "KUBEADM" or "ACS-ENGINE"
   [ "$INSTALL_TYPE" == "KOPS" ] || [ "$INSTALL_TYPE" == "KUBEADM" ] || [ "$INSTALL_TYPE" == "ACS-ENGINE" ] || fatalError "Installation type \"$INSTALL_TYPE\" is not valid, must be either \"KOPS\" or \"KUBEADM\" or \"ACS-ENGINE\"."
 
-  # Validate $ELASTIC_STORAGE is either "local" or "gce"
-  [ "$ELASTIC_STORAGE" == "local" ] || [ "$ELASTIC_STORAGE" == "gce" ] || fatalError "Elasticsearch storage \"$ELASTIC_STORAGE\" is not valid, must be either \"local\" or \"gce\"."
+  # Validate $ELASTIC_STORAGE is either "none", "aws", "local" or "gce"
+  [ "$ELASTIC_STORAGE" == "local" ] || [ "$ELASTIC_STORAGE" == "gce" ] || [ "$ELASTIC_STORAGE" == "aws" ] || [ "$ELASTIC_STORAGE" == "aws" ] || fatalError "Elasticsearch storage \"$ELASTIC_STORAGE\" is not valid, must be either \"local\" or \"gce\" or \"aws\"."
 
   # If we're installing, confirm user specified a readable license file
   if [ "$CLEANUP" -eq 0 ]; then
@@ -899,12 +899,9 @@ downloadManifests() {
   fi
 
   # Download appropriate elasticsearch storage manifest
-  if [ "${ELASTIC_STORAGE}" == "local" ]; then
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml"
-    mv elastic-storage-local.yaml elastic-storage.yaml
-  elif "${ELASTIC_STORAGE}" == "gce" ]; then
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-gce.yaml"
-    mv elastic-storage-gce.yaml elastic-storage.yaml
+  if [ "${ELASTIC_STORAGE}" != "none" ]; then
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-${ELASTIC_STORAGE}.yaml"
+    mv elastic-storage-${ELASTIC_STORAGE}.yaml elastic-storage.yaml
   fi
   
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
@@ -1119,13 +1116,13 @@ checkCRDs() {
   alertCRD="alertmanagers.monitoring.coreos.com"
   promCRD="prometheuses.monitoring.coreos.com"
   svcCRD="servicemonitors.monitoring.coreos.com"
-  # MATT TODO: When I have internet access, check the elasticsearch name and add it here
+  elasticCRD="elasticsearchclusters.enterprises.upmc.com"
 
   echo -n "waiting for Custom Resource Defintions to be created: "
 
   count=30
   while [[ $count -ne 0 ]]; do
-    if (doesCRDExist $alertCRD) && (doesCRDExist $promCRD) && (doesCRDExist $svcCRD); then
+    if (doesCRDExist $alertCRD) && (doesCRDExist $promCRD) && (doesCRDExist $svcCRD) && (doesCRDExist $elasticCRD); then
         echo "all CRDs exist!"
         return
     fi
@@ -1249,8 +1246,7 @@ installCNX() {
   createCNXManagerSecret          # Create cnx-manager-tls to enable manager/apiserver communication
   applyCNXManifest                # Apply cnx-[etcd|kdd].yaml
 
-  # MATT TODO: Rename this variable to include elasticsearch
-  if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
+  if [ "${SKIP_MONITORING}" -eq 0 ]; then
     applyCNXPolicyManifest        # Apply cnx-policy.yaml
     applyOperatorManifest         # Apply operator.yaml
     applyElasticStorageManifest   # Apply elastic-storage.yaml
@@ -1271,7 +1267,7 @@ uninstallCNX() {
 
   downloadManifests              # Download all manifests
 
-  if [ "${SKIP_PROMETHEUS}" -eq 0 ]; then
+  if [ "${SKIP_MONITORING}" -eq 0 ]; then
     deleteMonitorCalicoManifest  # Delete monitor-calico.yaml
     deleteElasticStorageManifest # Delete elastic-storage.yaml
     deleteOperatorManifest       # Delete operator.yaml

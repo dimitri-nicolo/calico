@@ -196,6 +196,10 @@ spec:
       labels:
         name: elasticsearch-operator
     spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+        # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
+        #node.role: infrastructure
       containers:
       - name: operator
         image: upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
