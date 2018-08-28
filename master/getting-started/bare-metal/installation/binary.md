@@ -111,5 +111,5 @@ For debugging, it's sometimes useful to run Felix manually and tell it
 to emit its logs to screen. You can do that with the following command.
 
 ```bash
-FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/calico-felix
+FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/cnx-node -felix
 ```
