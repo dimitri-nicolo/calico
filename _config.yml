@@ -20,6 +20,7 @@ noderunning: calico-node
 # like site.data.versions[page.version].first.dockerRepo/site.imageNames[component]:version.
 imageNames:
   node: tigera/cnx-node
+  cnx-node: tigera/cnx-node
   calicoctl: tigera/calicoctl
   typha: tigera/typha
   cnxManager: tigera/cnx-manager
