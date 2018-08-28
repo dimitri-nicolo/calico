@@ -106,7 +106,7 @@ For example, suppose both your local cluster and a remote cluster have the follo
 
 ```$yaml
 apiVersion: v1
-Kind: Service
+kind: Service
 metadata:
   labels:
     run: my-app
@@ -141,7 +141,7 @@ metadata:
   name: my-app-federated
   namespace: default
   annotations:
-    federation.tigera.io/selector: run == “my-app”
+    federation.tigera.io/selector: run == "my-app"
 spec:
   ports:
   - name: my-app-ui
