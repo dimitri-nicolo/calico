@@ -37,7 +37,7 @@ data:
   # Query api url
   tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/https:cnx-api:8080/proxy"
   # Enable ALP support in the UI
-  tigera.cnx-manager.alp-support: "true"
+  tigera.cnx-manager.alp-support: "false"
 
 ---
 
