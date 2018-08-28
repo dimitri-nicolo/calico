@@ -20,7 +20,9 @@ metadata:
   name: calicoq
   namespace: kube-system
 spec:
-  hostNetwork: false
+  hostNetwork: true
+  imagePullSecrets:
+  - name: cnx-pull-secret
   serviceAccountName: calicoq
   containers:
   - name: calicoq
@@ -29,6 +31,21 @@ spec:
     env:
     - name: DATASTORE_TYPE
       value: kubernetes
+    volumeMounts:
+    # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+    # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
+    #- name: tigera-federation-remotecluster
+    #  mountPath: "/etc/tigera-federation-remotecluster"
+    #  readOnly: true
+  volumes:
+  # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+  # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
+  # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
+  # These are the same secrets as configured in the calico-typha manifest.
+  #- name: tigera-federation-remotecluster
+  #  secret:
+  #    secretName: tigera-federation-remotecluster
+  #    defaultMode: 0400
 
 ---
 
@@ -40,39 +57,48 @@ rules:
   - apiGroups: [""]
     resources:
       - namespaces
+      - serviceaccounts
+      - pods
       - nodes
     verbs:
       - get
       - list
-      - update
-  - apiGroups: [""]
+      - watch
+  - apiGroups: ["extensions"]
     resources:
-      - pods
+      - networkpolicies
     verbs:
       - get
       - list
-  - apiGroups: [""]
+      - watch
+  - apiGroups: ["networking.k8s.io"]
     resources:
-      - pods/status
+      - networkpolicies
     verbs:
-      - update
+      - get
+      - list
+      - watch
   - apiGroups: ["crd.projectcalico.org"]
     resources:
-      - bgppeers
-      - bgpconfigurations
-      - clusterinformations
-      - licensekeys
+      - globalfelixconfigs
       - felixconfigurations
-      - globalnetworkpolicies
+      - bgppeers
+      - globalbgpconfigs
+      - bgpconfigurations
       - ippools
+      - globalnetworkpolicies
+      - globalnetworksets
+      - remoteclusterconfigurations
       - networkpolicies
       - tiers
+      - clusterinformations
+      - licensekeys
+      - hostendpoints
+      - profiles
     verbs:
-      - create
       - get
       - list
-      - update
-      - delete
+      - watch
 
 ---
 

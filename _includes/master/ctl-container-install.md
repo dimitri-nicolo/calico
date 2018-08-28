@@ -47,10 +47,7 @@
 **Next step**:
 [Configure `{{include.cli}}` to connect to your datastore](/{{page.version}}/usage/{{include.cli}}/configure/).
 
-
 ## Installing {{include.cli}} as a Kubernetes pod
-
-### About installing {{include.cli}} as a Kubernetes pod
 
 The steps to install `{{include.cli}}` as a container on each node vary according to where you
 want to pull the image from. Refer to the section that corresponds to your preferred
@@ -63,16 +60,12 @@ private repository.
 
 {% include {{page.version}}/load-docker-our-reg.md yaml=include.cli %}
 
+**Next step**:
+[Executing a {{include.cli}} command in the pod](#executing-a-{{include.cli}}-command-in-the-pod).
+
 ### Pulling the image from another private registry
 
 {% include {{page.version}}/load-docker.md yaml=include.cli %}
 
-You can then run commands using kubectl as shown below.
-
-```
-kubectl exec -ti -n kube-system calicoctl -- /calicoctl get profiles -o wide
-
-NAME                 TAGS
-kns.default          kns.default
-kns.kube-system      kns.kube-system
-```
+**Next step**:
+[Executing a {{include.cli}} command in the pod](#executing-a-{{include.cli}}-command-in-the-pod).

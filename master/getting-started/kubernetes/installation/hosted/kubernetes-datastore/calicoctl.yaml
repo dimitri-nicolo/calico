@@ -21,6 +21,8 @@ metadata:
   namespace: kube-system
 spec:
   hostNetwork: true
+  imagePullSecrets:
+  - name: cnx-pull-secret
   serviceAccountName: calicoctl
   containers:
   - name: calicoctl
