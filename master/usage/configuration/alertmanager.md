@@ -77,7 +77,7 @@ simply defining a Prometheus alerting rule would mean that you will get an
 page (if so defined in your alertmanager configuration) for every policy on
 every node for every Source IP. All these alerts can be combined into a single
 alert by configuring grouping. The Alertmanager configuration file that is
-provided with the {{site.prodname}} by default, groups alerts on a
+provided with {{site.prodname}} by default, groups alerts on a
 per-node basis. Instead, if the goal is to group all alerts with the same
 name, edit (and apply) the alertmanager configuration file like so:
 
