@@ -11,7 +11,7 @@ alerts when it exceeds configured thresholds.
 ```
                                       +------------+
                                       |            |
-                                      |    CNX     |
+                                      |    TSEE    |
                                       |   Manager  |
                                       |            |
                                       |            |

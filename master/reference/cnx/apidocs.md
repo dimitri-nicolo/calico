@@ -1,5 +1,5 @@
 ---
-title: CNX API endpoints
+title: Tigera Secure EE API endpoints
 layout: swagger
 ---
 

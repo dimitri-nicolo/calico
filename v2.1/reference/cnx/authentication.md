@@ -1,5 +1,5 @@
 ---
-title: Configuring user authentication to CNX Manager
+title: Configuring user authentication to Tigera Secure EE Manager
 ---
 
 This document describes the authentication methods supported by {{site.prodname}}
@@ -28,7 +28,7 @@ manifests in this documentation create a `NodePort` for the web server
 serving on port 30003, but you may wish to set up connectivity differently.
 
 1. [Setup Google OAuth 2.0](https://developers.google.com/identity/protocols/OpenIDConnect).
-   - Ensure the redirect URIs are set to `https://<CNX Manager name>:<port>/login/oidc/callback`.
+   - Ensure the redirect URIs are set to `https://<{{site.prodname}} Manager name>:<port>/login/oidc/callback`.
    - Note down the client ID.
 
 2. [Configure the Kubernetes API server to use it](https://kubernetes.io/docs/admin/authentication/#configuring-the-api-server).
@@ -38,7 +38,7 @@ serving on port 30003, but you may wish to set up connectivity differently.
    - Set the client ID in the `tigera-cnx-manager-config` ConfigMap (referenced
      in the installation instructions).
 
-4. If CNX Manager has already been deployed, restart the web server (achieved by deleting the pod).
+4. If {{site.prodname}} Manager has already been deployed, restart the web server (achieved by deleting the pod).
 
    ```
    kubectl delete pod cnx-manager-<hash> -n kube-system

@@ -1,13 +1,13 @@
 ---
-title: Customizing the CNX manifests (advanced)
+title: Customizing the Tigera Secure EE manifests (advanced)
 ---
 
 ## About the manifests
 
 The **[cnx-etcd.yaml](1.7/cnx-etcd.yaml)** and **[cnx-kdd.yaml](1.7/cnx-kdd.yaml)** manifests do the following:
-  - Installs the CNX API server, and configures the APIService to tell
+  - Installs the {{site.prodname}} API server, and configures the APIService to tell
     the Kubernetes API server to delegate to it.
-  - Installs the CNX Manager web server, and configures it with the location
+  - Installs the {{site.prodname}} Manager web server, and configures it with the location
     of the Kubernetes API, login methods and SSL certificates.
 
 The **[operator.yaml](1.7/operator.yaml)** manifest does the following:

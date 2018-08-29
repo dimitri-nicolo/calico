@@ -1,5 +1,5 @@
 ---
-title: Getting started with CNX
+title: Getting started with Tigera Secure EE
 ---
 
 ## Obtain the private registry credentials

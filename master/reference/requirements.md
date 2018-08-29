@@ -1,5 +1,5 @@
 ---
-title: CNX System Requirements
+title: Tigera Secure EE System Requirements
 ---
 
 Depending on the {{site.prodname}} functionality you are using, there are some requirements your system needs to meet in order for {{site.prodname}} to work properly.

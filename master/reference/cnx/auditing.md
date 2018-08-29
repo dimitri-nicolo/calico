@@ -1,5 +1,5 @@
 ---
-title: CNX Resource Auditing with Kubernetes
+title: Tigera Secure EE Resource Auditing with Kubernetes
 ---
 
 This document describes how to set up audit logging for {{site.prodname}}
@@ -13,7 +13,7 @@ At minimum you need the `--audit-log-path` and `--audit-policy-file` [kube-apise
 specified, with the former one being the path to a file to output the audit logs and the
 later one being the audit policy configuration.
 
-In order to get full detailed information (e.g. responseObjects) in the audit logs, the CNX
+In order to get full detailed information (e.g. responseObjects) in the audit logs, the {{site.prodname}}
 specific logs must be logged via the cnx-apiserver (which understands how to crack the 
 objects out) rather than the kube-apiserver.  The sample policy here is split into two
 accordingly.
@@ -83,8 +83,8 @@ rules:
 
 ### cnx-apiserver policy
 
-The CNX API Server is configured the same as the Kubernetes API Server.  Use the following policy file to
-log the CNX resources.
+The {{site.prodname}} API Server is configured the same as the Kubernetes API Server.  Use the following policy file to
+log the {{site.prodname}} resources.
 
 ```yaml
 apiVersion: audit.k8s.io/v1beta1

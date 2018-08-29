@@ -1,5 +1,5 @@
 ---
-title: Using etcd RBAC to segment Kubernetes and CNX
+title: Using etcd RBAC to segment Kubernetes and Tigera Secure EE
 ---
 
 When using etcd with RBAC, all components that access etcd must be configured

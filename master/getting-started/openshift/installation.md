@@ -1,5 +1,5 @@
 ---
-title: Installing CNX on OpenShift
+title: Installing Tigera Secure EE on OpenShift
 ---
 
 Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.

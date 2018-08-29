@@ -3,7 +3,7 @@ abstract: "All you need to know to get started with Calico"
 path: /getting-started
 order: 1
 toc:
-- title: Getting Started with CNX
+- title: Getting Started with Tigera Secure EE
   path: /getting-started/
 
 - title: Kubernetes
@@ -16,15 +16,15 @@ toc:
     section:
     - title: Introduction
       path: /getting-started/kubernetes/installation/
-    - title: Installing CNX for policy and networking (recommended)
+    - title: Installing Tigera Secure EE for policy and networking (recommended)
       path: /getting-started/kubernetes/installation/calico
-    - title: Installing CNX for policy (advanced)
+    - title: Installing Tigera Secure EE for policy (advanced)
       path: /getting-started/kubernetes/installation/other
     - title: Installing the Federated Services Controller
       path: /getting-started/kubernetes/installation/fed-controller
     - title: Customizing the manifests (advanced)
       path: /getting-started/kubernetes/installation/config-options
-    - title: Customizing the CNX manifests (advanced)
+    - title: Customizing the Tigera Secure EE manifests (advanced)
       path: /getting-started/kubernetes/installation/hosted/cnx/cnx
     - title: Enabling application layer policy (optional)
       path: /getting-started/kubernetes/installation/app-layer-policy
@@ -34,7 +34,7 @@ toc:
       path: /getting-started/kubernetes/installation/integration
   - title: Tutorials
     section:
-    - title: CNX for Kubernetes Demo
+    - title: Tigera Secure EE for Kubernetes Demo
       path: /getting-started/cnx/simple-policy-cnx/
     - title: Simple Policy Demo
       path: /getting-started/kubernetes/tutorials/simple-policy
@@ -48,7 +48,7 @@ toc:
       path: /getting-started/kubernetes/tutorials/app-layer-policy/
   - title: Troubleshooting / FAQ
     path: /getting-started/kubernetes/troubleshooting
-  - title: Upgrade to CNX
+  - title: Upgrade to Tigera Secure EE
     path: /getting-started/kubernetes/upgrade-cnx
 
 - title: OpenShift

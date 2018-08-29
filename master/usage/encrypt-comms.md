@@ -1,3 +1,4 @@
+---
 title: Configuring encryption and authentication
 ---
 

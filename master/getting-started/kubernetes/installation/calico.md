@@ -1,5 +1,5 @@
 ---
-title: Installing CNX for policy and networking (recommended)
+title: Installing Tigera Secure EE for policy and networking (recommended)
 ---
 
 ## Before you begin

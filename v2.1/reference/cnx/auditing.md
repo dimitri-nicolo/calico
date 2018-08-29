@@ -1,5 +1,5 @@
 ---
-title: CNX Resource Auditing with Kubernetes
+title: Tigera Secure EE Resource Auditing with Kubernetes
 ---
 
 This document describes how to set up audit logging for {{site.prodname}}

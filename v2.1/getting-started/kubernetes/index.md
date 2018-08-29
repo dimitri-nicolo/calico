@@ -1,5 +1,5 @@
 ---
-title: Quickstart for Tigera CNX on Kubernetes
+title: Quickstart for Tigera Tigera Secure EE on Kubernetes
 ---
 
 

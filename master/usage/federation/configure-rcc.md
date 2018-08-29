@@ -35,7 +35,7 @@ to `kubernetes`, and populate as appropriate the `kubeconfig` and/or other `k8s*
 
 ### Creating a Kubeconfig for a remote cluster
 
-The {{site.prodname}} installation manifests (see [Installing CNX on Kubernetes](/{{page.version}}/getting-started/kubernetes/installation/index))
+The {{site.prodname}} installation manifests (see [Installing {{site.prodname}} on Kubernetes](/{{page.version}}/getting-started/kubernetes/installation/index))
 contain a Service Account specifically for use as a remote cluster. This is true for both Kubernetes API and etcdv3 Calico 
 deployments.
 
@@ -43,14 +43,14 @@ If your remote cluster has the `tigera-federation-remote-cluster` service accoun
 specifically for this service account. The local cluster can use this to access the Kubernetes API on the remote 
 cluster.
 
-Furthermore, if your remote cluster has RBAC enabled and you have applied the appropriate RBAC manifest for your CNX 
+Furthermore, if your remote cluster has RBAC enabled and you have applied the appropriate RBAC manifest for your {{site.prodname}}
 deployment type, then access via this service account is limited to read only access of the minimal required set of 
-resource types for CNX federated endpoint identity and service federation.
+resource types for {{site.prodname}} federated endpoint identity and service federation.
 
 See the [Writing kubeconfig files](/{{page.version}}/usage/writing-kubeconfig) guide for details on creating a Kubeconfig for a Service Account.
 
 > **Tips**
-> * If you are running CNX in an AWS EKS deployment then it will be necessary to create a Kubeconfig as described since
+> * If you are running {{site.prodname}} in an AWS EKS deployment then it will be necessary to create a Kubeconfig as described since
 >   the admin kubeconfig uses heptio authentication which is currently not supported by Calico.
 > * If your remote cluster uses etcdv3 for the Calico datastore, and you do not require the Federated Services Controller,
 >   it is not necessary to specify any Kubernetes access information for the remote cluster.
@@ -68,7 +68,7 @@ contains the connection details for remote clusters and some fields in this reso
 recommended that the files are backed by a Kubernetes secret so that they can easily be mapped into the Typha and Federated
 Services Controller containers.
 
-Both the Typha section of the main CNX manifest file and the Federated Services Controller manifest file contains 
+Both the Typha section of the main {{site.prodname}} manifest file and the Federated Services Controller manifest file contains
 commented out configuration templates to create a secrets volume.
 
 The templates in the manifests refer to a single secret and a volume mount called `tigera-federation-remotecluster`. It is 

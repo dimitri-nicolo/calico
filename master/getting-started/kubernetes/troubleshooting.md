@@ -1,5 +1,5 @@
 ---
-title: Troubleshooting CNX for Kubernetes
+title: Troubleshooting Tigera Secure EE for Kubernetes
 ---
 
 This article contains Kubernetes specific troubleshooting advice for {{site.prodname}} and

@@ -57,7 +57,7 @@ The full list of parameters which can be set is as follows.
 
 The Kubernetes API datastore driver reads its configuration from Kubernetes-provided environment variables.
 
-#### Tigera CNX specific configuration
+#### {{site.prodname}} specific configuration
 
 | Setting                      | Environment variable               | Default | Meaning                                 |
 |------------------------------|------------------------------------|---------|-----------------------------------------|

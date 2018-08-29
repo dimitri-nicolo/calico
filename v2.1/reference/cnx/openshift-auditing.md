@@ -1,5 +1,5 @@
 ---
-title: CNX Resource Auditing in OpenShift
+title: {{site.prodname}} Resource Auditing in OpenShift
 ---
 
 This document describes how to set up audit logging for {{site.prodname}}

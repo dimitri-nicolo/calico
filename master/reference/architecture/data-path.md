@@ -1,5 +1,5 @@
 ---
-title: 'The CNX Data Path: IP Routing and iptables'
+title: 'The Tigera Secure EE Data Path: IP Routing and iptables'
 ---
 
 

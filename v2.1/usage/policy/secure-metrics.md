@@ -1,5 +1,5 @@
 ---
-title: Securing CNX's Prometheus endpoints
+title: Securing Tigera Secure EE's Prometheus endpoints
 ---
 
 ## About securing access to {{site.prodname}}'s metrics endpoints

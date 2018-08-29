@@ -8,7 +8,7 @@ It is assumed you have a Kubernetes cluster with a {{site.prodname}} installatio
 Identity. In addition, you should have the {{site.prodname}} license applied and the {{site.prodname}} Docker images 
 available.
  
-Refer to the [Installing CNX on Kubernetes](./index) guide for more details on installation of {{site.prodname}}.
+Refer to the [Installing {{site.prodname}} on Kubernetes](./index) guide for more details on installation of {{site.prodname}}.
 
 It is only necessary to install the Federated Services Controller if you intend to use [Federated Services](/{{page.version}}/usage/federation/services-controller)
 as your cross-cluster service discovery mechanism.

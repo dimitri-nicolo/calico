@@ -1,5 +1,5 @@
 ---
-title: Installing CNX for policy (advanced)
+title: Installing Tigera Secure EE for policy (advanced)
 ---
 
 ## About installing {{site.prodname}} for policy

@@ -21,7 +21,7 @@ first use case.
 - [calicoctl installed and set up]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure/) to work properly with your cluster
 - [calicoq installed and set up]({{site.baseurl}}/{{page.version}}/reference/calicoq/) to work with your cluster
 
-> **Note**: Commands using calicoctl can be replaced with kubectl if the CNX Manager and CNX API server are installed.
+> **Note**: Commands using calicoctl can be replaced with kubectl if the {{site.prodname}} Manager and {{site.prodname}} API server are installed.
 {: .alert .alert-info}
 
 ### Create Namespace and Enable Isolation
