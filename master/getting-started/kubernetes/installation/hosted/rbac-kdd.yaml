@@ -133,6 +133,16 @@ rules:
   - get
   - list
   - watch
+- apiGroups: ["crd.projectcalico.org"]
+  resources:
+  - tiers
+  - clusterinformations
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
 
 ---
 
@@ -156,34 +166,24 @@ apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: tigera-federation-remote-cluster
 rules:
-  - apiGroups: [""]
-    resources:
-      - namespaces
-      - serviceaccounts
-      - services
-      - endpoints
-      - pods
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups: ["crd.projectcalico.org"]
-    resources:
-      - hostendpoints
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups: ["crd.projectcalico.org"]
-    resources:
-      - tiers
-      - clusterinformations
-    verbs:
-      - create
-      - get
-      - list
-      - update
-      - watch
+- apiGroups: [""]
+  resources:
+  - namespaces
+  - serviceaccounts
+  - services
+  - endpoints
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: ["crd.projectcalico.org"]
+  resources:
+  - hostendpoints
+  verbs:
+  - get
+  - list
+  - watch
 
 ---
 

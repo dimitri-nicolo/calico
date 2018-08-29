@@ -43,7 +43,7 @@ spec:
       initContainers: []
       containers:
         - name: fluentd
-          image: {{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
+          image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["fluentd"]}}:{{site.data.versions[page.version].first.components["fluentd"].version}}
           volumeMounts:
             - name: var-log-calico
               mountPath: /var/log/calico

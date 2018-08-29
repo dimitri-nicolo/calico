@@ -34,8 +34,13 @@ imageNames:
   flannel: quay.io/coreos/flannel
   dikastes: tigera/dikastes
   flexvol: quay.io/calico/pod2daemon-flexvol
-  fluentd: quay.io/tigera/fluentd
+  fluentd: tigera/fluentd
 
+# List of files to explicitly include. Jekyll ignore some files by default (such as those starting with . or _)  
+include:
+  - _headers
+
+# List of files to exclude. These files won't get included in the deployed site.
 exclude:
   - htmlproofer.sh
   - v2.0

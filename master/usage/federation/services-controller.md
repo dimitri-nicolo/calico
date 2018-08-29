@@ -90,7 +90,7 @@ As an operator, the expected flow of configuration would be as follows:
    annotation to be a Calico selector which selects the previously configured services using the chosen label match
    (e.g. `run == "my-app"`).
     - {{site.prodname}} Federated Services Controller will manage this service, populating the service endpoints from 
-      all of the services that match the selector configured in the annotation.
+      all of the services that match the service selector configured in the annotation.
 1. Any application can access the federated service using the local DNS name for that service.
 
 > **Reminder**:
@@ -106,7 +106,7 @@ For example, suppose both your local cluster and a remote cluster have the follo
 
 ```$yaml
 apiVersion: v1
-Kind: Service
+kind: Service
 metadata:
   labels:
     run: my-app
@@ -141,7 +141,7 @@ metadata:
   name: my-app-federated
   namespace: default
   annotations:
-    federation.tigera.io/selector: run == “my-app”
+    federation.tigera.io/serviceSelector: run == "my-app"
 spec:
   ports:
   - name: my-app-ui
@@ -164,8 +164,8 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   creationTimestamp: 2018-07-03T19:41:38Z
-  labels:
-    run: my-app
+  annotations:
+    federation.tigera.io/serviceSelector: run == "my-app"
   name: my-app-federated
   namespace: default
   resourceVersion: "701812"
