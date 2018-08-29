@@ -115,13 +115,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-5623461",
-					Labels:    "{\"test-app\":\"true\"}",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "default",
 					Name:      "nginx-412354-5123451",
-					Labels:    "{\"k8s-app\":\"true\"}",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -142,13 +140,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "net",
 					Namespace: "-",
 					Name:      "pvt",
-					Labels:    "-",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "default",
 					Name:      "nginx-412354-5123451",
-					Labels:    "{\"k8s-app\":\"true\"}",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -169,13 +165,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-5623461",
-					Labels:    "{\"test-app\":\"true\"}",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "net",
 					Namespace: "-",
 					Name:      "pub",
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -197,13 +191,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-5623461",
-					Labels:    "{\"test-app\":\"true\"}",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "default",
 					Name:      "nginx-412354-5123451",
-					Labels:    "{\"k8s-app\":\"true\"}",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -225,13 +217,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-*", // Keeping just the Generate Name
-					Labels:    "-",            // Disregarding the labels
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "default",
 					Name:      "nginx-412354-*",
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -252,13 +242,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "net", // No EndpointMeta associated but Src IP Private
 					Namespace: "-",
 					Name:      "pvt",
-					Labels:    "-",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "default",
 					Name:      "nginx-412354-*",
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -281,13 +269,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-*", // Keeping just the Generate Name
-					Labels:    "-",            // Disregarding the labels
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "net", // No EndpointMeta associated but Dst IP Public
 					Namespace: "-",
 					Name:      "pub",
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -310,13 +296,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-*", // Keeping just the Generate Name
-					Labels:    "-",            // Disregarding the labels
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "net", // No EndpointMeta associated but Dst IP AWS Metadata Server
 					Namespace: "-",
 					Name:      "aws", // <-- AWS MetaServer Endpoint
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -347,13 +331,11 @@ var _ = Describe("Flow log types tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-*", // Keeping just the Generate Name
-					Labels:    "-",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "default",
 					Name:      "manually-created-pod", // Keeping the Name. No Generatename.
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",

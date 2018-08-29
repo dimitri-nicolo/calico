@@ -30,13 +30,11 @@ var _ = Describe("FlowLog JSON serialization", func() {
 					Type:      "wep",
 					Namespace: "test",
 					Name:      "test",
-					Labels:    "foo=bar",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "test",
 					Name:      "test",
-					Labels:    "foo=bar",
 				},
 				Action:   "allow",
 				Reporter: "src",

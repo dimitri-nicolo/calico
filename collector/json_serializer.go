@@ -69,7 +69,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.SourceName = l.SrcMeta.Name
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
-	out.SourceLabels = l.SrcMeta.Labels
+	out.SourceLabels = labelsToString(l.SrcLabels)
 
 	ip = net.IP(l.Tuple.dst[:16])
 	if !ip.IsUnspecified() {
@@ -82,7 +82,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.DestName = l.DstMeta.Name
 	out.DestNamespace = l.DstMeta.Namespace
 	out.DestType = string(l.DstMeta.Type)
-	out.DestLabels = l.DstMeta.Labels
+	out.DestLabels = labelsToString(l.DstLabels)
 
 	out.Proto = protoToString(l.Tuple.proto)
 
@@ -152,7 +152,6 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Type:      srcType,
 		Namespace: o.SourceNamespace,
 		Name:      o.SourceName,
-		Labels:    o.SourceLabels,
 	}
 
 	switch o.DestType {
@@ -170,7 +169,6 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Type:      dstType,
 		Namespace: o.DestNamespace,
 		Name:      o.DestName,
-		Labels:    o.DestLabels,
 	}
 
 	fl.Action = FlowLogAction(o.Action)

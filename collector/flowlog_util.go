@@ -104,28 +104,16 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 		if err != nil {
 			return EndpointMetadata{}, err
 		}
-		v := ed.Endpoint.(*model.WorkloadEndpoint)
-		labels, err := json.Marshal(v.Labels)
-		if err != nil {
-			return EndpointMetadata{}, err
-		}
 		em = EndpointMetadata{
 			Type:      FlowLogEndpointTypeWep,
 			Name:      name,
 			Namespace: ns,
-			Labels:    string(labels),
 		}
 	case model.HostEndpointKey:
-		v := ed.Endpoint.(*model.HostEndpoint)
-		labels, err := json.Marshal(v.Labels)
-		if err != nil {
-			return EndpointMetadata{}, err
-		}
 		em = EndpointMetadata{
 			Type:      FlowLogEndpointTypeHep,
 			Name:      k.EndpointID,
 			Namespace: flowLogNamespaceGlobal,
-			Labels:    string(labels),
 		}
 	case model.NetworkSetKey:
 		// No Endpoint was found so instead, a NetworkSet was returned.
@@ -145,6 +133,18 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 	}
 
 	return em, nil
+}
+
+func getFlowLogEndpointLabels(ed *calc.EndpointData) map[string]string {
+	labels := map[string]string{}
+	switch ed.Key.(type) {
+	case model.WorkloadEndpointKey:
+		labels = ed.Endpoint.(*model.WorkloadEndpoint).Labels
+	case model.HostEndpointKey:
+		labels = ed.Endpoint.(*model.HostEndpoint).Labels
+	}
+
+	return labels
 }
 
 // getFlowLogActionAndReporterFromRuleID converts the action to a string value.
@@ -191,4 +191,13 @@ func getSubnetType(addrBytes [16]byte) FlowLogSubnetType {
 	}
 
 	return PublicNet
+}
+
+func labelsToString(labels map[string]string) string {
+	if len(labels) == 0 {
+		return "-"
+	}
+
+	respStr, _ := json.Marshal(labels)
+	return string(respStr)
 }

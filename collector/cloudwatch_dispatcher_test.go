@@ -163,6 +163,6 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 })
 
 func testSerialize(fm FlowMeta, fs FlowStats, st, et time.Time, labels bool) string {
-	fl := FlowData{fm, fs}.ToFlowLog(st, et, labels)
+	fl := FlowData{fm, FlowSpec{FlowLabels{}, fs}}.ToFlowLog(st, et, labels)
 	return serializeCloudWatchFlowLog(&fl)
 }
