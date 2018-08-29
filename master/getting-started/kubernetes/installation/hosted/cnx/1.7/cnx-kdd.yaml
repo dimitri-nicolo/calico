@@ -360,6 +360,7 @@ spec:
                 key: tigera.cnx-manager.query-api-url
           - name: CNX_ALP_SUPPORT
             valueFrom:
+              configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.alp-support
         livenessProbe:
