@@ -461,13 +461,8 @@ getAuthToken() {
     fatalError Please verify \'"$CREDENTIALS_FILE"\' contains valid json credentials.
   fi
 
-  if [ $CALICO_REGISTRY == "gcr.io" ]; then
-    # Get token for gcr.io
-    SECRET_TOKEN=$(kubectl create secret docker-registry cnx-pull-secret --namespace=kube-system --docker-server=https://gcr.io --docker-username=_json_key --docker-email=user@example.com --docker-password="$(cat $CREDENTIALS_FILE)" --dry-run -o json | jq '.data[".dockerconfigjson"]')
-  else
-    # Base64-encode the auth credentials file, removing newlines and whitespace first.
-    SECRET_TOKEN=$(cat "$CREDENTIALS_FILE" | tr -d '\n\r\t ' | base64 -w 0)
-  fi
+  # Base64-encode the auth credentials file, removing newlines and whitespace first.
+  SECRET_TOKEN=$(cat "$CREDENTIALS_FILE" | tr -d '\n\r\t ' | base64 -w 0)
 
   if [ $? -ne 0 ]; then
     fatalError Unable to base64 encode \'"$CREDENTIALS_FILE"\'. Please verify contains valid json credentials.
@@ -498,6 +493,12 @@ EOF
 # createImagePullSecret() {
 #
 createImagePullSecret() {
+  if [ $CALICO_REGISTRY == "gcr.io" ]; then
+    kubectl create secret docker-registry cnx-pull-secret --namespace=kube-system --docker-server=https://gcr.io --docker-username=_json_key --docker-email=user@example.com --docker-password="$(cat $CREDENTIALS_FILE)"
+
+    return
+  fi
+
   createImagePullSecretYaml       # always recreate the pull secret
   run kubectl create -f "${CNX_PULL_SECRET_FILENAME}"
 }
@@ -506,6 +507,12 @@ createImagePullSecret() {
 # deleteImagePullSecret() {
 #
 deleteImagePullSecret() {
+  if [ $CALICO_REGISTRY == "gcr.io" ]; then
+    runIgnoreErrors kubectl delete secret cnx-pull-secret --namespace=kube-system
+
+    return
+  fi
+
   createImagePullSecretYaml       # always recreate the pull secret
   runIgnoreErrors kubectl delete -f "${CNX_PULL_SECRET_FILENAME}"
 }
