@@ -32,7 +32,7 @@ Felix has the following pre-requisites:
 
 ## Download and install the binary
 
-{% include {{page.version}}/ctl-binary-install.md cli="felix" codepath="/code/calico-felix" %}
+{% include {{page.version}}/ctl-binary-install.md cli="cnx-node" codepath="/code/calico-node" %}
 
 ## Create a start-up script
 
@@ -50,7 +50,7 @@ file:
     [Service]
     User=root
     ExecStartPre=/usr/bin/mkdir -p /var/run/calico
-    ExecStart=/usr/local/bin/felix-{{site.data.versions[page.version].first.components["felix"].version}}
+    ExecStart=/usr/local/bin/cnx-node -felix
     KillMode=process
     Restart=on-failure
     LimitNOFILE=32000
@@ -78,7 +78,7 @@ Or, for upstart:
       chown root:root /var/run/calico
     end script
 
-    exec /usr/local/bin/felix-{{site.data.versions[page.version].first.components["felix"].version}}
+    exec /usr/local/bin/cnx-node -felix
 
 ## Configure Felix
 
@@ -111,5 +111,5 @@ For debugging, it's sometimes useful to run Felix manually and tell it
 to emit its logs to screen. You can do that with the following command.
 
 ```bash
-FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/calico-felix
+FELIX_LOGSEVERITYSCREEN=INFO /usr/local/bin/cnx-node -felix
 ```

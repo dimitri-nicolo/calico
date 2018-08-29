@@ -18,8 +18,10 @@ noderunning: calico-node
 # Image names in case the host changes
 # Some of these omit the repo: when used they must be prefixed with the repo path
 # like site.data.versions[page.version].first.dockerRepo/site.imageNames[component]:version.
+# Node is duplicated because documentation refers to it using both names. At least one needs to match the version in versions.yaml
 imageNames:
   node: tigera/cnx-node
+  cnx-node: tigera/cnx-node
   calicoctl: tigera/calicoctl
   typha: tigera/typha
   cnxManager: tigera/cnx-manager
