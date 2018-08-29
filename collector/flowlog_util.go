@@ -137,6 +137,9 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 
 func getFlowLogEndpointLabels(ed *calc.EndpointData) map[string]string {
 	labels := map[string]string{}
+	if ed == nil {
+		return labels
+	}
 	switch ed.Key.(type) {
 	case model.WorkloadEndpointKey:
 		labels = ed.Endpoint.(*model.WorkloadEndpoint).Labels

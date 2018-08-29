@@ -315,10 +315,11 @@ func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool) Fl
 	fl.StartTime = startTime
 	fl.EndTime = endTime
 
-	if !includeLabels {
-		fl.SrcLabels = map[string]string{}
-		fl.DstLabels = map[string]string{}
+	if includeLabels {
+		fl.SrcLabels = f.SrcLabels
+		fl.DstLabels = f.DstLabels
 	}
+
 	return fl
 }
 
@@ -355,9 +356,11 @@ func (f *FlowLog) Deserialize(fl string) error {
 	}
 
 	srcLabels := map[string]string{}
-	err := json.Unmarshal([]byte(parts[5]), &srcLabels)
-	if err != nil {
-		return fmt.Errorf("Failed parsing source labels. %f", err)
+	if parts[5] != "-" {
+		err := json.Unmarshal([]byte(parts[5]), &srcLabels)
+		if err != nil {
+			return fmt.Errorf("Failed parsing source labels. %f", err)
+		}
 	}
 	f.SrcLabels = srcLabels
 
@@ -379,9 +382,11 @@ func (f *FlowLog) Deserialize(fl string) error {
 	}
 
 	dstLabels := map[string]string{}
-	err = json.Unmarshal([]byte(parts[9]), &dstLabels)
-	if err != nil {
-		return fmt.Errorf("Failed parsing destination labels. %f", err)
+	if parts[9] != "-" {
+		err := json.Unmarshal([]byte(parts[9]), &dstLabels)
+		if err != nil {
+			return fmt.Errorf("Failed parsing destination labels. %f", err)
+		}
 	}
 	f.DstLabels = dstLabels
 

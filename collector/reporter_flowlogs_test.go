@@ -337,6 +337,10 @@ func newExpectedFlowLog(t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogRe
 			SrcMeta:  srcMeta,
 			DstMeta:  dstMeta,
 		},
+		FlowLabels: FlowLabels{
+			SrcLabels: map[string]string{},
+			DstLabels: map[string]string{},
+		},
 		FlowReportedStats: FlowReportedStats{
 			NumFlows:          nf,
 			NumFlowsStarted:   nfs,

@@ -55,6 +55,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		// We don't include the start and end time in the comparison, so copy to a new log without these
 		var flNoTime FlowLog
 		flNoTime.FlowMeta = fl.FlowMeta
+		flNoTime.FlowLabels = FlowLabels{SrcLabels: map[string]string{}, DstLabels: map[string]string{}}
 		flNoTime.FlowReportedStats = fl.FlowReportedStats
 		Expect(flNoTime).Should(Equal(expectedFlow))
 	}
