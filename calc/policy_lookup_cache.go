@@ -374,7 +374,7 @@ func (r *RuleID) setDeniedPacketRuleName() {
 	if r.Action != rules.RuleActionDeny {
 		return
 	}
-	if r.IsNamespaced() {
+	if !r.IsNamespaced() {
 		r.dpName = fmt.Sprintf(
 			"%s|%s|%s|%s",
 			r.TierString(),
@@ -382,6 +382,7 @@ func (r *RuleID) setDeniedPacketRuleName() {
 			r.IndexStr,
 			r.ActionString(),
 		)
+		return
 	}
 	r.dpName = fmt.Sprintf(
 		"%s|%s/%s|%s|%s",
