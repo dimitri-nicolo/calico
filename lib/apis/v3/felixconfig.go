@@ -257,6 +257,8 @@ type FelixConfigurationSpec struct {
 	FlowLogsFlushInterval *metav1.Duration `json:"flowLogsFlushInterval,omitempty" configv1timescale:"seconds"`
 	// FlowLogsEnableHostEndpoint enables Flow logs reporting for HostEndpoints.
 	FlowLogsEnableHostEndpoint *bool `json:"flowLogsEnableHostEndpoint,omitempty"`
+	// FlowLogsEnableNetworkSets enables Flow logs reporting for GlobalNetworkSets.
+	FlowLogsEnableNetworkSets *bool `json:"flowLogsEnableNetworkSets, omitempty"`
 
 	// Enable Flow logs reporting to AWS CloudWatch.
 	CloudWatchLogsReporterEnabled *bool `json:"cloudWatchLogsReporterEnabled,omitempty"`

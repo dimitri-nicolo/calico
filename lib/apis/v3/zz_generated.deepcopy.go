@@ -665,6 +665,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.FlowLogsEnableNetworkSets != nil {
+		in, out := &in.FlowLogsEnableNetworkSets, &out.FlowLogsEnableNetworkSets
+		*out = new(bool)
+		**out = **in
+	}
 	if in.CloudWatchLogsReporterEnabled != nil {
 		in, out := &in.CloudWatchLogsReporterEnabled, &out.CloudWatchLogsReporterEnabled
 		*out = new(bool)
