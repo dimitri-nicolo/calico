@@ -151,7 +151,7 @@ func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
 	f.aggregateFlowStats(mu)
 }
 
-// FlowStats are stats assocated with a given FlowMeta
+// FlowSpec has FlowStats that are stats assocated with a given FlowMeta
 // These stats are to be refreshed everytime the FlowData
 // {FlowMeta->FlowStats} is published so as to account
 // for correct no. of started flows in a given aggregation
@@ -183,7 +183,7 @@ func NewFlowLabels(mu MetricUpdate) FlowLabels {
 func intersectLabels(in, out map[string]string) map[string]string {
 	common := map[string]string{}
 	for k := range out {
-		if v, ok := in[k]; ok {
+		if v, ok := in[k]; ok && v == out[k] {
 			common[k] = v
 		}
 	}

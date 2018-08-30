@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -201,6 +200,14 @@ func labelsToString(labels map[string]string) string {
 		return "-"
 	}
 
-	respStr, _ := json.Marshal(labels)
-	return string(respStr)
+	resp := ""
+	for k, v := range labels {
+		l := fmt.Sprintf("%v=%v", k, v)
+		if len(resp) > 0 {
+			resp = resp + ", " + l
+		} else {
+			resp = l
+		}
+	}
+	return resp
 }
