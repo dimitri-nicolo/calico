@@ -216,6 +216,7 @@ type Config struct {
 	CloudWatchLogsLogGroupName              string        `config:"string;tigera-flowlogs-<cluster-guid>"`
 	CloudWatchLogsLogStreamName             string        `config:"string;<felix-hostname>_Flowlogs"`
 	CloudWatchLogsIncludeLabels             bool          `config:"bool;false"`
+	CloudWatchLogsIncludePolicies           bool          `config:"bool;false"`
 	CloudWatchLogsAggregationKindForAllowed int           `config:"int(0:2);2"`
 	CloudWatchLogsAggregationKindForDenied  int           `config:"int(0:2);1"`
 	CloudWatchLogsRetentionDays             int           `config:"int(1,3,5,7,14,30,60,90,120,150,180,365,400,545,731,1827,3653);7;die-on-fail"`
@@ -230,6 +231,7 @@ type Config struct {
 	FlowLogsFileAggregationKindForAllowed int    `config:"int(0:2);2"`
 	FlowLogsFileAggregationKindForDenied  int    `config:"int(0:2);1"`
 	FlowLogsFileIncludeLabels             bool   `config:"bool;false"`
+	FlowLogsFileIncludePolicies           bool   `config:"bool;false"`
 	FlowLogsFileEnabledForAllowed         bool   `config:"bool;true"`
 	FlowLogsFileEnabledForDenied          bool   `config:"bool;true"`
 

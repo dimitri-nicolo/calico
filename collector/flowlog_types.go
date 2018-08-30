@@ -135,18 +135,21 @@ func NewFlowMeta(mu MetricUpdate, kind AggregationKind) (FlowMeta, error) {
 
 type FlowSpec struct {
 	FlowLabels
+	FlowPolicies
 	FlowStats
 }
 
 func NewFlowSpec(mu MetricUpdate) FlowSpec {
 	return FlowSpec{
-		FlowLabels: NewFlowLabels(mu),
-		FlowStats:  NewFlowStats(mu),
+		FlowLabels:   NewFlowLabels(mu),
+		FlowPolicies: NewFlowPolicies(mu),
+		FlowStats:    NewFlowStats(mu),
 	}
 }
 
 func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
 	f.aggregateFlowLabels(mu)
+	f.FlowPolicies.aggregateMetricUpdate(mu)
 	f.aggregateFlowStats(mu)
 }
 
@@ -200,6 +203,22 @@ func (f *FlowLabels) aggregateFlowLabels(mu MetricUpdate) {
 
 	f.SrcLabels = intersectLabels(srcLabels, f.SrcLabels)
 	f.DstLabels = intersectLabels(dstLabels, f.DstLabels)
+}
+
+type FlowPolicies map[string]empty
+
+func NewFlowPolicies(mu MetricUpdate) FlowPolicies {
+	fp := make(FlowPolicies)
+	for idx, rid := range mu.ruleIDs {
+		fp[fmt.Sprintf("%d|%s", idx, rid.GetFlowLogPolicyName())] = emptyValue
+	}
+	return fp
+}
+
+func (fp FlowPolicies) aggregateMetricUpdate(mu MetricUpdate) {
+	for idx, rid := range mu.ruleIDs {
+		fp[fmt.Sprintf("%d|%s", idx, rid.GetFlowLogPolicyName())] = emptyValue
+	}
 }
 
 // FlowStats captures stats associated with a given FlowMeta
@@ -308,11 +327,12 @@ type FlowLog struct {
 	StartTime, EndTime time.Time
 	FlowMeta
 	FlowLabels
+	FlowPolicies
 	FlowReportedStats
 }
 
 // ToFlowLog converts a FlowData to a FlowLog
-func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool) FlowLog {
+func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool, includePolicies bool) FlowLog {
 	var fl FlowLog
 	fl.FlowMeta = f.FlowMeta
 	fl.FlowReportedStats = f.FlowReportedStats
@@ -321,6 +341,12 @@ func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool) Fl
 
 	if includeLabels {
 		fl.FlowLabels = f.FlowLabels
+	}
+
+	if !includePolicies {
+		fl.FlowPolicies = make(FlowPolicies)
+	} else {
+		fl.FlowPolicies = f.FlowPolicies
 	}
 
 	return fl

@@ -124,6 +124,7 @@ type Config struct {
 	CloudWatchLogsLogGroupName              string
 	CloudWatchLogsLogStreamName             string
 	CloudWatchLogsIncludeLabels             bool
+	CloudWatchLogsIncludePolicies           bool
 	CloudWatchLogsAggregationKindForAllowed int
 	CloudWatchLogsAggregationKindForDenied  int
 	CloudWatchLogsRetentionDays             int
@@ -142,6 +143,7 @@ type Config struct {
 	FlowLogsFileAggregationKindForAllowed int
 	FlowLogsFileAggregationKindForDenied  int
 	FlowLogsFileIncludeLabels             bool
+	FlowLogsFileIncludePolicies           bool
 	FlowLogsFileEnabledForAllowed         bool
 	FlowLogsFileEnabledForDenied          bool
 
@@ -668,13 +670,15 @@ func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
 			caa := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(config.CloudWatchLogsAggregationKindForAllowed)).
 				IncludeLabels(config.CloudWatchLogsIncludeLabels).
+				IncludePolicies(config.CloudWatchLogsIncludePolicies).
 				ForAction(rules.RuleActionAllow)
 
 			// Can we use the same aggregator for file logging?
 			if config.FlowLogsFileEnabled &&
 				config.FlowLogsFileEnabledForAllowed &&
 				config.FlowLogsFileAggregationKindForAllowed == config.CloudWatchLogsAggregationKindForAllowed &&
-				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels {
+				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels &&
+				config.FlowLogsFileIncludePolicies == config.CloudWatchLogsIncludePolicies {
 				log.Info("Adding Flow Logs Aggregator (allowed) for CloudWatch and File logs")
 				cw.AddAggregator(caa, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
 				addedFileAllow = true
@@ -688,12 +692,14 @@ func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
 			cad := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(config.CloudWatchLogsAggregationKindForDenied)).
 				IncludeLabels(config.CloudWatchLogsIncludeLabels).
+				IncludePolicies(config.CloudWatchLogsIncludePolicies).
 				ForAction(rules.RuleActionDeny)
 			// Can we use the same aggregator for file logging?
 			if config.FlowLogsFileEnabled &&
 				config.FlowLogsFileEnabledForDenied &&
 				config.FlowLogsFileAggregationKindForDenied == config.CloudWatchLogsAggregationKindForDenied &&
-				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels {
+				config.FlowLogsFileIncludeLabels == config.CloudWatchLogsIncludeLabels &&
+				config.FlowLogsFileIncludePolicies == config.CloudWatchLogsIncludePolicies {
 				log.Info("Adding Flow Logs Aggregator (denied) for CloudWatch and File logs")
 				cw.AddAggregator(cad, []string{CloudWatchLogsDispatcherName, FlowLogsFileDispatcherName})
 				addedFileDeny = true
@@ -710,6 +716,7 @@ func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
 			caa := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(config.FlowLogsFileAggregationKindForAllowed)).
 				IncludeLabels(config.FlowLogsFileIncludeLabels).
+				IncludePolicies(config.FlowLogsFileIncludePolicies).
 				ForAction(rules.RuleActionAllow)
 			log.Info("Adding Flow Logs Aggregator (allowed) for File logs")
 			cw.AddAggregator(caa, []string{FlowLogsFileDispatcherName})
@@ -719,6 +726,7 @@ func configureFlowAggregation(config Config, cw *collector.FlowLogsReporter) {
 			cad := collector.NewFlowLogAggregator().
 				AggregateOver(collector.AggregationKind(config.FlowLogsFileAggregationKindForDenied)).
 				IncludeLabels(config.FlowLogsFileIncludeLabels).
+				IncludePolicies(config.FlowLogsFileIncludePolicies).
 				ForAction(rules.RuleActionDeny)
 			log.Info("Adding Flow Logs Aggregator (denied) for File logs")
 			cw.AddAggregator(cad, []string{FlowLogsFileDispatcherName})

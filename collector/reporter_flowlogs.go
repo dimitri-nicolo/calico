@@ -22,6 +22,7 @@ type FlowLogGetter interface {
 type FlowLogAggregator interface {
 	FlowLogGetter
 	IncludeLabels(bool) FlowLogAggregator
+	IncludePolicies(bool) FlowLogAggregator
 	AggregateOver(AggregationKind) FlowLogAggregator
 	ForAction(rules.RuleAction) FlowLogAggregator
 	FeedUpdate(MetricUpdate) error
@@ -87,7 +88,7 @@ func (c *FlowLogsReporter) AddAggregator(agg FlowLogAggregator, dispatchers []st
 }
 
 func (c *FlowLogsReporter) Start() {
-	log.Info("Starting CloudWatchReporter")
+	log.Info("Starting FlowLogReporter")
 	go c.run()
 }
 
