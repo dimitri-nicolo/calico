@@ -61,6 +61,9 @@ var _ = Describe("FelixConfig vs ConfigParams parity", func() {
 		"IPSecRekeyTime",
 
 		"EnableNflogSize",
+
+		"FlowLogsFileIncludePolicies",
+		"CloudWatchLogsIncludePolicies",
 	}
 	cpFieldNameToFC := map[string]string{
 		"IpInIpEnabled":                      "IPIPEnabled",
