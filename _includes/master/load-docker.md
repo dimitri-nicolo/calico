@@ -136,15 +136,42 @@ named `cnx-pull-secret` in the `kube-system` namespace.
 
 {% if include.yaml != "calico" %}
 
-1. Open the YAML that matches your datastore type in a new tab.
+1. Use the YAML that matches your datastore type to download the `{{include.yaml}}` manifest.
 
-   - [etcd]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml){:target="_blank"}
+   - **etcd**
 
-   - [Kubernetes API datastore]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}
+     ```
+     curl \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml \
+     -O
+     ```
 
-1. Copy the contents, paste them into a new file, and save the file as {{include.yaml}}.yaml. This is what subsequent instructions will refer to.
+     > **Note**: You can also
+     > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml){:target="_blank"}.
+     {: .alert .alert-info}
+
+   - **Kubernetes API datastore**
+
+     ```
+     curl \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
+     -O
+     ```
+
+     > **Note**: You can also
+     > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}.
+     {: .alert .alert-info}
 
 {% include {{page.version}}/cnx-cred-sed.md yaml=include.yaml %}
+
+{% if include.yaml == "calicoq" %}
+1. The manifest will need to be modified if you are using a TLS-enabled etcd datastore and/or you are using {{site.prodname}} 
+   Federation and need to mount in secrets to access the remote cluster datastores. Follow the instructions in the manifest
+   to enable these features.
+{% else %}
+1. The manifest will need to be modified if you are using a TLS-enabled etcd datastore. Follow the instructions in the manifest
+   to enable this feature.
+{% endif %}
 
 1. Apply the YAML file.
 

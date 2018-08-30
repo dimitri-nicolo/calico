@@ -56,13 +56,14 @@
 
 {% if include.yaml != "calico" %}
 
-1. Use the YAML that matches your datastore type to deploy the `{{include.yaml}}` container to your nodes.
+1. Use the YAML that matches your datastore type to download the `{{include.yaml}}` manifest.
 
    - **etcd**
 
      ```
-     kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml
+     curl \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/{{include.yaml}}.yaml \
+     -O
      ```
 
      > **Note**: You can also
@@ -72,16 +73,28 @@
    - **Kubernetes API datastore**
 
      ```
-     kubectl apply -f \
+     curl \
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml
+     -O
      ```
 
      > **Note**: You can also
      > [view the YAML in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/{{include.yaml}}.yaml){:target="_blank"}.
      {: .alert .alert-info}
 
-**Next step**:
+{% if include.yaml == "calicoq" %}
+1. The manifest will need to be modified if you are using a TLS-enabled etcd datastore and/or you are using {{site.prodname}} 
+   Federation and need to mount in secrets to access the remote cluster datastores. Follow the instructions in the manifest
+   to enable these features.
+{% else %}
+1. The manifest will need to be modified if you are using a TLS-enabled etcd datastore. Follow the instructions in the manifest
+   to enable this feature.
+{% endif %}
 
-[Configure `{{include.yaml}}` to connect to your datastore](/{{page.version}}/usage/{{include.yaml}}/configure/).
+1. Apply the YAML file.
 
+   ```bash
+   kubectl apply -f {{include.yaml}}.yaml
+   ```
+     
 {% endif %}
