@@ -77,13 +77,18 @@ the host. Instead, continue directly to the
 
    **Command**
    ```
-   ./install-cnx.sh -l <customer-name>-license.yaml
+   ./install-cnx.sh -l <customer-name>-license.yaml -s local
    ```
 
    **Example**
    ```
-   ./install-cnx.sh -l awesome-corp-license.yaml
+   ./install-cnx.sh -l awesome-corp-license.yaml -s local
    ```
+
+   > **Note**: The `-s local` parameter tells the installer to use local storage for ElasticSearch.
+   > This will only work on a single node cluster: for multi node clusters, a different
+   > storage class must be selected.
+   {: .alert .alert-info}
 
 1. Launch a browser and type `https://127.0.0.1:30003` in the address bar.
 
