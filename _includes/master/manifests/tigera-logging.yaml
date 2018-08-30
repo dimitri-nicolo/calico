@@ -47,16 +47,8 @@ spec:
           volumeMounts:
             - name: var-log-calico
               mountPath: /var/log/calico
-            - name: config
-              mountPath: /fluentd/etc
       volumes:
         - name: var-log-calico
           hostPath:
             type: DirectoryOrCreate
             path: /var/log/calico
-        - name: config
-          configMap:
-            name: tigera-logging
-
-
-
