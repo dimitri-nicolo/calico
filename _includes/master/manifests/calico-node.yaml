@@ -258,6 +258,9 @@ spec:
             - mountPath: /var/lib/calico
               name: var-lib-calico
               readOnly: false
+            - mountPath: /var/log/calico
+              name: var-log-calico
+              readOnly: false
 {%- if include.datastore == "etcd" %}
             - mountPath: /calico-secrets
               name: etcd-certs
