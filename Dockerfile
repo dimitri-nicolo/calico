@@ -12,6 +12,6 @@ RUN apk add --update --virtual .build-deps \
 
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV ELASTIC_HOST=elasticsearch
-ENV ELASTIC_PORT=80
+ENV ELASTIC_PORT=9200
 
 EXPOSE 24284
