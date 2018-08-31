@@ -86,3 +86,6 @@
    >    ```
    >    kubectl apply -f monitor-calico.yaml
    >    ```
+
+1. If you wish to enforce application layer policies and secure workload-to-workload
+   communications with mutual TLS authentication, continue to [Enabling application layer policy](app-layer-policy) (optional).

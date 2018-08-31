@@ -319,7 +319,6 @@ spec:
                 key: etcd_endpoints
           - name: DATASTORE_TYPE
             value: "etcdv3"
-  {%- if include.orch == "openshift" %}
           # Location of the CA certificate for etcd.
           - name: ETCD_CA_CERT_FILE
             valueFrom:
@@ -345,35 +344,10 @@ spec:
             name: audit-policy-ee
           - mountPath: /calico-secrets
             name: etcd-certs
+  {%- if include.orch == "openshift" %}
           - mountPath: /code/apiserver.local.config/certificates
             name: apiserver-certs
   {%- else %}
-          # If you're using TLS enabled etcd uncomment the following.
-          # Location of the CA certificate for etcd.
-          # - name: ETCD_CA_CERT_FILE
-          #   valueFrom:
-          #     configMapKeyRef:
-          #       name: calico-config
-          #       key: etcd_ca
-          # Location of the client key for etcd.
-          # - name: ETCD_KEY_FILE
-          #   valueFrom:
-          #     configMapKeyRef:
-          #       name: calico-config
-          #       key: etcd_key
-          # Location of the client certificate for etcd.
-          # - name: ETCD_CERT_FILE
-          #   valueFrom:
-          #     configMapKeyRef:
-          #       name: calico-config
-          #       key: etcd_cert
-        volumeMounts:
-          - mountPath: /var/log/calico/audit
-            name: var-log-calico-audit
-          - mountPath: /etc/tigera/audit
-            name: audit-policy-ee
-          # - mountPath: /calico-secrets
-          #   name: etcd-certs
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
   {%- endif %}
@@ -409,7 +383,6 @@ spec:
                 key: etcd_endpoints
           - name: DATASTORE_TYPE
             value: "etcdv3"
-  {%- if include.orch == "openshift" %}
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
           - name: ETCD_CA_CERT_FILE
@@ -432,30 +405,6 @@ spec:
         volumeMounts:
           - mountPath: /calico-secrets
             name: etcd-certs
-  {%- else %}
-          # If you're using TLS enabled etcd uncomment the following.
-          # Location of the CA certificate for etcd.
-          # - name: ETCD_CA_CERT_FILE
-          #   valueFrom:
-          #     configMapKeyRef:
-          #       name: calico-config
-          #       key: etcd_ca
-          # Location of the client key for etcd.
-          # - name: ETCD_KEY_FILE
-          #   valueFrom:
-          #     configMapKeyRef:
-          #       name: calico-config
-          #       key: etcd_key
-          # Location of the client certificate for etcd.
-          # - name: ETCD_CERT_FILE
-          #   valueFrom:
-          #     configMapKeyRef:
-          #       name: calico-config
-          #       key: etcd_cert
-        volumeMounts:
-          # - mountPath: /calico-secrets
-          #   name: etcd-certs
-  {%- endif %}
 {%- elsif include.datastore == "kdd" %}
           - name: DATASTORE_TYPE
             value: "kubernetes"
@@ -480,21 +429,18 @@ spec:
             - key: config
               path: policy.conf
 {%- if include.datastore == "etcd" %}
-  {%- if include.orch == "openshift" %}
-        # If you're using TLS enabled etcd uncomment the following.
+        # Mount in the etcd TLS secrets with mode 400.
+        # See https://kubernetes.io/docs/concepts/configuration/secret/
         - name: etcd-certs
           secret:
             secretName: calico-etcd-secrets
+  {%- if include.orch == "openshift" %}
         # If you're using TLS with certificate verification then
         # uncomment the following.
         # - name: apiserver-certs
         #   secret:
         #     secretName: cnx-apiserver-certs
   {%- else %}
-        # If you're using TLS enabled etcd uncomment the following.
-        # - name: etcd-certs
-        #   secret:
-        #     secretName: calico-etcd-secrets
         # If you're using TLS with certificate verification then
         # uncomment the following.
         # - name: apiserver-certs

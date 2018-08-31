@@ -4,7 +4,6 @@ Consult the {{site.prodname}} for Kubernetes [demo]({{site.baseurl}}/{{page.vers
 demonstrates the main features.
 
 For more detailed documentation on {{site.prodname}} features, see here:
-- [Install the Federated Services Controller](/{{page.version}}/getting-started/kubernetes/installation/fed-controller)
 - [Install calicoq]({{site.baseurl}}/{{page.version}}/usage/calicoq/)
 - [Denied Packet Notifications]({{site.baseurl}}/{{page.version}}/reference/cnx/policy-violations)
 - [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)
@@ -12,3 +11,5 @@ For more detailed documentation on {{site.prodname}} features, see here:
 - [Configuring Alertmanager]({{site.baseurl}}/{{page.version}}/usage/configuration/alertmanager)
 - [Configuring Audit Logging]({{site.baseurl}}/{{page.version}}/reference/cnx/auditing)
 - [Configuring RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
+- [Configuring remote clusters]({{site.baseurl}}/{{page.version}}/usage/federation/configure-rcc) (federation only)
+- [Configuring federated services]({{site.baseurl}}/{{page.version}}/usage/federation/services-controller) (federation only)

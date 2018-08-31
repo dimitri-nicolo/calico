@@ -1,11 +1,12 @@
 {% comment %}
 calico-typha.yaml acccepts the following include flags:
 
-| Name         | Accepted Values          |
-|--------------|--------------------------|
-| datastore    | kdd, etcd                |
-| variant_name | Calico, Canal            |
+| Name         | Accepted Values               |
+|--------------|-------------------------------|
+| datastore    | kdd, etcd                     |
+| variant_name | Calico, Canal                 |
 | network      | calico, flannel, ecs, <unset> |
+| federation   | true, false                   |
 
 {% endcomment -%}
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
@@ -75,15 +76,18 @@ spec:
       - image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["typha"]}}:{{site.data.versions[page.version].first.components["typha"].version}}
         name: calico-typha
         volumeMounts:
-        # If you're using TLS enabled etcd uncomment the following.
-        #- mountPath: /calico-secrets
-        #  name: etcd-certs
-        #
-        # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+{%- if include.federation == "true" %}
+        # These lines enable a secrets volume for use with federated endpoint identity. Add
         # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
-        #- name: tigera-federation-remotecluster
-        #  mountPath: "/etc/tigera-federation-remotecluster"
-        #  readOnly: true
+        - name: tigera-federation-remotecluster
+          mountPath: "/etc/tigera-federation-remotecluster"
+          readOnly: true
+{%- endif -%}
+{%- if include.datastore == "etcd" %}
+        - name: etcd-certs
+           mountPath:  "/calico-secrets"
+           readOnly: true
+{%- endif -%}
         ports:
         - containerPort: 5473
           name: calico-typha
@@ -160,16 +164,22 @@ spec:
             - check
             - readiness
           periodSeconds: 10
+{%- if include.federation == "true" or include.datastore == "etcd" %}
       volumes:
-      # If you're using TLS enabled etcd uncomment the following.
-      #- name: etcd-certs
-      #  secret:
-      #    secretName: calico-etcd-secrets
-      #
-      # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+{%- endif -%}
+{%- if include.federation == "true" %}
+      # These lines enable a secrets volume for use with federated endpoint identity. Add
       # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
       # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
-      #- name: tigera-federation-remotecluster
-      #  secret:
-      #    secretName: tigera-federation-remotecluster
-      #    defaultMode: 0400
+      - name: tigera-federation-remotecluster
+        secret:
+          secretName: tigera-federation-remotecluster
+          defaultMode: 0400
+{%- endif -%}
+{%- if include.datastore == "etcd" %}
+      # Mount in the etcd TLS secrets with mode 400.
+      # See https://kubernetes.io/docs/concepts/configuration/secret/
+      - name: etcd-certs
+        secret:
+          secretName: calico-etcd-secrets
+{%- endif -%}

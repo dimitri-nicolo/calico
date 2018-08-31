@@ -16,20 +16,16 @@ toc:
     section:
     - title: Introduction
       path: /getting-started/kubernetes/installation/
-    - title: Installing Tigera Secure EE for policy and networking (recommended)
+    - title: Installing Tigera Secure EE for policy and networking
       path: /getting-started/kubernetes/installation/calico
-    - title: Installing Tigera Secure EE for policy (advanced)
+    - title: Installing Tigera Secure EE for policy only
       path: /getting-started/kubernetes/installation/other
-    - title: Installing the Federated Services Controller
-      path: /getting-started/kubernetes/installation/fed-controller
-    - title: Customizing the manifests (advanced)
+    - title: Enabling application layer policy (optional)
+      path: /getting-started/kubernetes/installation/app-layer-policy
+    - title: Customizing the Calico manifests (advanced)
       path: /getting-started/kubernetes/installation/config-options
     - title: Customizing the Tigera Secure EE manifests (advanced)
       path: /getting-started/kubernetes/installation/hosted/cnx/cnx
-    - title: Enabling application layer policy (optional)
-      path: /getting-started/kubernetes/installation/app-layer-policy
-    - title: Customizing the manifests (advanced)
-      path: /getting-started/kubernetes/installation/config-options
     - title: Integration guide (advanced)
       path: /getting-started/kubernetes/installation/integration
   - title: Tutorials

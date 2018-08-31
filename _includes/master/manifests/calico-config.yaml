@@ -28,10 +28,9 @@ data:
   etcd_key: ""  # "/calico-secrets/etcd-key"
 {%- endif %}
 {%- if include.typha == "true" %}
-  # To enable Typha, set this to "calico-typha" *and* set a non-zero value for Typha replicas
-  # below.  We recommend using Typha if you have more than 50 nodes. Above 100 nodes it is
-  # essential.
-  typha_service_name: "none"
+  # To install Typha, this must be set to "calico-typha" AND you must set a non-zero value for Typha replicas
+  # below.
+  typha_service_name: "calico-typha"
 
 {%- endif %}
 {%- if include.network == "calico" %}
