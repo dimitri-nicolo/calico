@@ -21,7 +21,8 @@
             "type": "long"
         },
         "dest_ip": {
-            "type": "keyword" /* Workaround: should be ip */
+            "type": "ip",
+            "null_value": "0.0.0.0"
         },
         "dest_name": {
             "type": "keyword"
@@ -58,7 +59,8 @@
             "type": "keyword"
         },
         "source_ip": {
-            "type": "keyword" /* workaround: should be ip */
+            "type": "ip",
+            "null_value": "0.0.0.0",
         },
         "source_name": {
             "type": "keyword"
