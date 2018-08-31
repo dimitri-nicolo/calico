@@ -183,7 +183,7 @@ func intersectLabels(in, out map[string]string) map[string]string {
 	common := map[string]string{}
 	for k := range out {
 		// Skip Calico labels from the logs
-		if strings.Contains(k, "projectcalico.org/") {
+		if strings.HasPrefix(k, "projectcalico.org/") {
 			continue
 		}
 		if v, ok := in[k]; ok && v == out[k] {

@@ -3,6 +3,7 @@
 package collector
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -200,23 +201,33 @@ func getSubnetType(addrBytes [16]byte) FlowLogSubnetType {
 	return PublicNet
 }
 
+func flattenLabels(labels map[string]string) []string {
+	respSlice := []string{}
+	for k, v := range labels {
+		l := fmt.Sprintf("%v=%v", k, v)
+		respSlice = append(respSlice, l)
+	}
+
+	return respSlice
+}
+
+func unflattenLabels(labelSlice []string) map[string]string {
+	resp := map[string]string{}
+	for _, label := range labelSlice {
+		labelKV := strings.Split(label, "=")
+		resp[labelKV[0]] = labelKV[1]
+	}
+
+	return resp
+}
+
 func labelsToString(labels map[string]string) string {
 	if labels == nil {
 		return "-"
 	}
 
-	resp := "{"
-	for k, v := range labels {
-		l := fmt.Sprintf("%v=%v", k, v)
-		if len(resp) > 1 {
-			resp += ", " + l
-		} else {
-			resp += l
-		}
-	}
-	resp += "}"
-
-	return resp
+	resp, _ := json.Marshal(flattenLabels(labels))
+	return string(resp)
 }
 
 func stringToLabels(labelStr string) map[string]string {
@@ -224,13 +235,7 @@ func stringToLabels(labelStr string) map[string]string {
 		return nil
 	}
 
-	resp := map[string]string{}
-	labelStr = labelStr[1 : len(labelStr)-1] // getting rid of '{' & '}'
-	labelStrArr := strings.Split(labelStr, ", ")
-	for _, labelKVStr := range labelStrArr {
-		labelKV := strings.Split(labelKVStr, "=")
-		resp[labelKV[0]] = labelKV[1]
-	}
-
-	return resp
+	labels := []string{}
+	json.Unmarshal([]byte(labelStr), labels)
+	return unflattenLabels(labels)
 }

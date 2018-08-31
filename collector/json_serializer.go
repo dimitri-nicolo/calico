@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"encoding/json"
 	"net"
 	"strconv"
 	"time"
@@ -70,8 +69,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.SourceName = l.SrcMeta.Name
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
-	srcLabels, _ := json.Marshal(l.SrcLabels)
-	out.SourceLabels = string(srcLabels)
+	out.SourceLabels = flattenLabels(l.SrcLabels)
 
 	ip = net.IP(l.Tuple.dst[:16])
 	if !ip.IsUnspecified() {
@@ -84,8 +82,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.DestName = l.DstMeta.Name
 	out.DestNamespace = l.DstMeta.Namespace
 	out.DestType = string(l.DstMeta.Type)
-	dstLabels, _ := json.Marshal(l.DstLabels)
-	out.DestLabels = string(dstLabels)
+	out.DestLabels = flattenLabels(l.DstLabels)
 
 	out.Proto = protoToString(l.Tuple.proto)
 
