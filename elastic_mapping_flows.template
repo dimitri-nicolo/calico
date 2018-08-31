@@ -1,0 +1,80 @@
+{
+  "template": "tigera_secure_ee_flows*",
+  "mappings": {
+    "_default_": {
+      "properties" : {
+        "start_time": {
+            "type": "date",
+            "format": "epoch_second"
+        },
+        "end_time": {
+            "type": "date",
+            "format": "epoch_second"
+        },
+        "action": {
+            "type": "keyword"
+        },
+        "bytes_in": {
+            "type": "long"
+        },
+        "bytes_out": {
+            "type": "long"
+        },
+        "dest_ip": {
+            "type": "keyword" /* Workaround: should be ip */
+        },
+        "dest_name": {
+            "type": "keyword"
+        },
+        "dest_namespace": {
+            "type": "keyword"
+        },
+        "dest_port": {
+            "type": "long",
+            "null_value": "0"
+        },
+        "dest_type": {
+            "type": "keyword"
+        },
+        "reporter": {
+            "type": "keyword"
+        },
+        "num_flows": {
+            "type": "long"
+        },
+        "num_flows_completed": {
+            "type": "long"
+        },
+        "num_flows_started": {
+            "type": "long"
+        },
+        "packets_in": {
+            "type": "long"
+        },
+        "packets_out": {
+            "type": "long"
+        },
+        "proto": {
+            "type": "keyword"
+        },
+        "source_ip": {
+            "type": "keyword" /* workaround: should be ip */
+        },
+        "source_name": {
+            "type": "keyword"
+        },
+        "source_namespace": {
+            "type": "keyword"
+        },
+        "source_port": {
+            "type": "long",
+            "null_value": "0"
+        },
+        "source_type": {
+            "type": "keyword"
+        }
+        /* Both labels fields and the policies field are omitted for now */
+      }   
+    }
+  }
+}
