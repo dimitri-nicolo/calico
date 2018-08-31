@@ -139,13 +139,18 @@ func getFlowLogEndpointLabels(ed *calc.EndpointData) map[string]string {
 	if ed == nil {
 		return labels
 	}
+
+	var v map[string]string
 	switch ed.Key.(type) {
 	case model.WorkloadEndpointKey:
-		labels = ed.Endpoint.(*model.WorkloadEndpoint).Labels
+		v = ed.Endpoint.(*model.WorkloadEndpoint).Labels
 	case model.HostEndpointKey:
-		labels = ed.Endpoint.(*model.HostEndpoint).Labels
+		v = ed.Endpoint.(*model.HostEndpoint).Labels
 	}
 
+	if v != nil {
+		labels = v
+	}
 	return labels
 }
 
@@ -196,18 +201,36 @@ func getSubnetType(addrBytes [16]byte) FlowLogSubnetType {
 }
 
 func labelsToString(labels map[string]string) string {
-	if len(labels) == 0 {
+	if labels == nil {
 		return "-"
 	}
 
-	resp := ""
+	resp := "{"
 	for k, v := range labels {
 		l := fmt.Sprintf("%v=%v", k, v)
-		if len(resp) > 0 {
-			resp = resp + ", " + l
+		if len(resp) > 1 {
+			resp += ", " + l
 		} else {
-			resp = l
+			resp += l
 		}
 	}
+	resp += "}"
+
+	return resp
+}
+
+func stringToLabels(labelStr string) map[string]string {
+	if labelStr == "-" {
+		return nil
+	}
+
+	resp := map[string]string{}
+	labelStr = labelStr[1 : len(labelStr)-1] // getting rid of '{' & '}'
+	labelStrArr := strings.Split(labelStr, ", ")
+	for _, labelKVStr := range labelStrArr {
+		labelKV := strings.Split(labelKVStr, "=")
+		resp[labelKV[0]] = labelKV[1]
+	}
+
 	return resp
 }

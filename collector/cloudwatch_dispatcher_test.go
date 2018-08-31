@@ -119,7 +119,7 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 
 			flowLabels = FlowLabels{SrcLabels: map[string]string{"test-app": "true"}, DstLabels: map[string]string{"k8s-app": "true"}}
 			flowLog = testSerialize(flowMeta, flowLabels, flowStats, startTime, endTime, true)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 test-app=true wep default nginx-412354-5123451 k8s-app=true 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 {test-app=true} wep default nginx-412354-5123451 {k8s-app=true} 10.0.0.1 20.0.0.1 6 54123 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			By("aggregating on source port")
@@ -132,7 +132,7 @@ var _ = Describe("CloudWatch Dispatcher verification", func() {
 
 			flowLabels = FlowLabels{SrcLabels: map[string]string{"test-app": "true"}, DstLabels: map[string]string{"k8s-app": "true"}}
 			flowLog = testSerialize(flowMeta, flowLabels, flowStats, startTime, endTime, true)
-			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 test-app=true wep default nginx-412354-5123451 k8s-app=true 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow"
+			expectedFlowLog = "1510948860 1510948920 wep kube-system iperf-4235-5623461 {test-app=true} wep default nginx-412354-5123451 {k8s-app=true} 10.0.0.1 20.0.0.1 6 - 80 0 0 0 dst 0 0 0 0 allow"
 			Expect(flowLog).Should(Equal(expectedFlowLog))
 
 			By("aggregating on prefix name")

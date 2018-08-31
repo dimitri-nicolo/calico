@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -183,10 +182,15 @@ func NewFlowLabels(mu MetricUpdate) FlowLabels {
 func intersectLabels(in, out map[string]string) map[string]string {
 	common := map[string]string{}
 	for k := range out {
+		// Skip Calico labels from the logs
+		if strings.Contains(k, "projectcalico.org/") {
+			continue
+		}
 		if v, ok := in[k]; ok && v == out[k] {
 			common[k] = v
 		}
 	}
+
 	return common
 }
 
@@ -316,8 +320,7 @@ func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool) Fl
 	fl.EndTime = endTime
 
 	if includeLabels {
-		fl.SrcLabels = f.SrcLabels
-		fl.DstLabels = f.DstLabels
+		fl.FlowLabels = f.FlowLabels
 	}
 
 	return fl
@@ -354,15 +357,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Namespace: parts[3],
 		Name:      parts[4],
 	}
-
-	srcLabels := map[string]string{}
-	if parts[5] != "-" {
-		err := json.Unmarshal([]byte(parts[5]), &srcLabels)
-		if err != nil {
-			return fmt.Errorf("Failed parsing source labels. %f", err)
-		}
-	}
-	f.SrcLabels = srcLabels
+	f.SrcLabels = stringToLabels(parts[5])
 
 	switch parts[6] {
 	case "wep":
@@ -380,15 +375,7 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Namespace: parts[7],
 		Name:      parts[8],
 	}
-
-	dstLabels := map[string]string{}
-	if parts[9] != "-" {
-		err := json.Unmarshal([]byte(parts[9]), &dstLabels)
-		if err != nil {
-			return fmt.Errorf("Failed parsing destination labels. %f", err)
-		}
-	}
-	f.DstLabels = dstLabels
+	f.DstLabels = stringToLabels(parts[9])
 
 	var sip, dip [16]byte
 	if parts[10] != "-" {

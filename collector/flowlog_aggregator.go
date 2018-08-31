@@ -103,8 +103,8 @@ func (c *flowLogAggregator) Get() []*FlowLog {
 	aggregationEndTime := time.Now()
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
-	for flowMeta, flowStats := range c.flowStore {
-		flowLog := FlowData{flowMeta, flowStats}.ToFlowLog(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
+	for flowMeta, flowSpecs := range c.flowStore {
+		flowLog := FlowData{flowMeta, flowSpecs}.ToFlowLog(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
 		resp = append(resp, &flowLog)
 		c.calibrateFlowStore(flowMeta)
 	}
