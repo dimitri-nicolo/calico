@@ -10,6 +10,8 @@ RUN apk add --update --virtual .build-deps \
  && rm -rf /var/cache/apk/* \
            /home/fluent/.gem/ruby/2.3.0/cache/*.gem
 
+ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
+
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200
