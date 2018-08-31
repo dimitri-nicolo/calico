@@ -22,19 +22,22 @@ type FlowLogJSONOutput struct {
 	StartTime int64 `json:"start_time"`
 	EndTime   int64 `json:"end_time"`
 
-	SourceIP        string `json:"source_ip"`
-	SourceName      string `json:"source_name"`
-	SourceNamespace string `json:"source_namespace"`
-	SourcePort      int64  `json:"source_port"`
-	SourceType      string `json:"source_type"`
-	SourceLabels    string `json:"source_labels,omitempty"`
-	DestIP          string `json:"dest_ip"`
-	DestName        string `json:"dest_name"`
-	DestNamespace   string `json:"dest_namespace"`
-	DestPort        int64  `json:"dest_port"`
-	DestType        string `json:"dest_type"`
-	DestLabels      string `json:"dest_labels,omitempty"`
-	Proto           string `json:"proto"`
+	// Some empty values should be json marshalled as null and NOT with golang null values such as "" for
+	// a empty string
+	// Having such values as pointers ensures that json marshalling will render it as such.
+	SourceIP        *string `json:"source_ip"`
+	SourceName      string  `json:"source_name"`
+	SourceNamespace string  `json:"source_namespace"`
+	SourcePort      *int64  `json:"source_port"`
+	SourceType      string  `json:"source_type"`
+	SourceLabels    string  `json:"source_labels,omitempty"`
+	DestIP          *string `json:"dest_ip"`
+	DestName        string  `json:"dest_name"`
+	DestNamespace   string  `json:"dest_namespace"`
+	DestPort        int64   `json:"dest_port"`
+	DestType        string  `json:"dest_type"`
+	DestLabels      string  `json:"dest_labels,omitempty"`
+	Proto           string  `json:"proto"`
 
 	Action   string `json:"action"`
 	Reporter string `json:"reporter"`
@@ -56,10 +59,12 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 
 	ip := net.IP(l.Tuple.src[:16])
 	if !ip.IsUnspecified() {
-		out.SourceIP = ip.String()
+		s := ip.String()
+		out.SourceIP = &s
 	}
 	if l.Tuple.l4Src != unsetIntField {
-		out.SourcePort = int64(l.Tuple.l4Src)
+		t := int64(l.Tuple.l4Src)
+		out.SourcePort = &t
 	}
 	out.SourceName = l.SrcMeta.Name
 	out.SourceNamespace = l.SrcMeta.Namespace
@@ -68,7 +73,8 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 
 	ip = net.IP(l.Tuple.dst[:16])
 	if !ip.IsUnspecified() {
-		out.DestIP = ip.String()
+		s := ip.String()
+		out.DestIP = &s
 	}
 	if l.Tuple.l4Dst != unsetIntField {
 		out.DestPort = int64(l.Tuple.l4Dst)
@@ -117,14 +123,18 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.EndTime = time.Unix(o.EndTime, 0)
 
 	var sip, dip [16]byte
-	if o.SourceIP != "" {
-		sip = ipStrTo16Byte(o.SourceIP)
+	if o.SourceIP != nil && *o.SourceIP != "" {
+		sip = ipStrTo16Byte(*o.SourceIP)
 	}
-	if o.DestIP != "" {
-		dip = ipStrTo16Byte(o.DestIP)
+	if o.DestIP != nil && *o.DestIP != "" {
+		dip = ipStrTo16Byte(*o.DestIP)
 	}
 	p := stringToProto(o.Proto)
-	fl.Tuple = *NewTuple(sip, dip, p, int(o.SourcePort), int(o.DestPort))
+	var sPort int
+	if o.SourcePort != nil {
+		sPort = int(*o.SourcePort)
+	}
+	fl.Tuple = *NewTuple(sip, dip, p, sPort, int(o.DestPort))
 
 	var srcType, dstType FlowLogEndpointType
 	switch o.SourceType {
