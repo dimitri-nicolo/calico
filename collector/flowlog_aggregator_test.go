@@ -304,7 +304,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 		})
 
 		It("aggregates labels from metric updates", func() {
-			By("interescting labels in FlowSpec when IncludeLabels configured")
+			By("intersecting labels in FlowSpec when IncludeLabels configured")
 			ca := NewFlowLogAggregator().IncludeLabels(true)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
 
@@ -355,7 +355,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 				Namespace: "default",
 				Name:      "nginx-412354-5123451",
 			}
-			// The labels should have beein intersected right.
+			// The labels should have been intersected right.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
 				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, map[string]string{"test-app": "true"}, map[string]string{})

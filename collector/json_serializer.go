@@ -25,19 +25,19 @@ type FlowLogJSONOutput struct {
 	// Some empty values should be json marshalled as null and NOT with golang null values such as "" for
 	// a empty string
 	// Having such values as pointers ensures that json marshalling will render it as such.
-	SourceIP        *string `json:"source_ip"`
-	SourceName      string  `json:"source_name"`
-	SourceNamespace string  `json:"source_namespace"`
-	SourcePort      *int64  `json:"source_port"`
-	SourceType      string  `json:"source_type"`
-	SourceLabels    string  `json:"source_labels,omitempty"`
-	DestIP          *string `json:"dest_ip"`
-	DestName        string  `json:"dest_name"`
-	DestNamespace   string  `json:"dest_namespace"`
-	DestPort        int64   `json:"dest_port"`
-	DestType        string  `json:"dest_type"`
-	DestLabels      string  `json:"dest_labels,omitempty"`
-	Proto           string  `json:"proto"`
+	SourceIP        *string  `json:"source_ip"`
+	SourceName      string   `json:"source_name"`
+	SourceNamespace string   `json:"source_namespace"`
+	SourcePort      *int64   `json:"source_port"`
+	SourceType      string   `json:"source_type"`
+	SourceLabels    []string `json:"source_labels,omitempty"`
+	DestIP          *string  `json:"dest_ip"`
+	DestName        string   `json:"dest_name"`
+	DestNamespace   string   `json:"dest_namespace"`
+	DestPort        int64    `json:"dest_port"`
+	DestType        string   `json:"dest_type"`
+	DestLabels      []string `json:"dest_labels,omitempty"`
+	Proto           string   `json:"proto"`
 
 	Action   string `json:"action"`
 	Reporter string `json:"reporter"`
