@@ -330,3 +330,23 @@ spec:
   java-options: "-Xms512m -Xmx512m"
   storage:
     storage-class: elasticsearch-storage
+
+---
+
+# Add a NodePort for access to Kibana on port 30601.
+# This can be customized if you would like to expose Kibana in a different way.
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: kibana-tigera-elasticsearch
+  name: tigera-kibana
+  namespace: calico-monitoring
+spec:
+  selector:
+    name: kibana-tigera-elasticsearch
+  ports:
+    - port: 5601
+      targetPort: 5601
+      nodePort: 30601
+  type: NodePort
