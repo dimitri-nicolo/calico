@@ -460,25 +460,25 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					labelsExpected := expectation.labels && ((fl.FlowMeta.Action == collector.FlowLogActionAllow && expectation.aggregationForAllowed != ByPodPrefix) ||
 						(fl.FlowMeta.Action == collector.FlowLogActionDeny && expectation.aggregationForDenied != ByPodPrefix))
 					if labelsExpected {
-						if fl.FlowMeta.SrcMeta.Labels == "-" {
+						if fl.FlowLabels.SrcLabels == "-" {
 							return errors.New(fmt.Sprintf("Missing src labels in %v", fl.FlowMeta))
 						}
-						if fl.FlowMeta.DstMeta.Labels == "-" {
+						if fl.FlowLabels.DstLabels == "-" {
 							return errors.New(fmt.Sprintf("Missing dst labels in %v", fl.FlowMeta))
 						}
 					} else {
-						if fl.FlowMeta.SrcMeta.Labels != "-" {
+						if fl.FlowLabels.SrcLabels != "-" {
 							return errors.New(fmt.Sprintf("Unexpected src labels in %v", fl.FlowMeta))
 						}
-						if fl.FlowMeta.DstMeta.Labels != "-" {
+						if fl.FlowLabels.DstLabels != "-" {
 							return errors.New(fmt.Sprintf("Unexpected dst labels in %v", fl.FlowMeta))
 						}
 					}
 
 					// Now discard labels so that our expectation code
 					// below doesn't ever have to specify them.
-					fl.FlowMeta.SrcMeta.Labels = "-"
-					fl.FlowMeta.DstMeta.Labels = "-"
+					fl.FlowLabels.SrcLabels = "-"
+					fl.FlowLabels.DstLabels = "-"
 
 					// Accumulate flow and packet counts for this FlowMeta.
 					if _, ok := flowsStarted[ii][fl.FlowMeta]; !ok {
