@@ -454,12 +454,9 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						continue
 					}
 
-					// If endpoint labels are expected, and
-					// aggregation permits this, check that they are
+					// If endpoint labels are expected, check that they are
 					// there.
-					labelsExpected := expectation.labels && ((fl.FlowMeta.Action == collector.FlowLogActionAllow && expectation.aggregationForAllowed != ByPodPrefix) ||
-						(fl.FlowMeta.Action == collector.FlowLogActionDeny && expectation.aggregationForDenied != ByPodPrefix))
-					if labelsExpected {
+					if expectation.labels {
 						if fl.FlowLabels.SrcLabels == nil {
 							return errors.New(fmt.Sprintf("Missing src labels in %v", fl.FlowMeta))
 						}

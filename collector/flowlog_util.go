@@ -117,16 +117,10 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 		}
 	case model.NetworkSetKey:
 		// No Endpoint was found so instead, a NetworkSet was returned.
-		v := ed.Networkset.(*model.NetworkSet)
-		labels, err := json.Marshal(v.Labels)
-		if err != nil {
-			return EndpointMetadata{}, err
-		}
 		em = EndpointMetadata{
 			Type:      FlowLogEndpointTypeNs,
 			Namespace: flowLogFieldNotIncluded,
 			Name:      k.Name,
-			Labels:    string(labels),
 		}
 	default:
 		return EndpointMetadata{}, fmt.Errorf("Unknown key %#v of type %v", ed.Key, reflect.TypeOf(ed.Key))
@@ -147,6 +141,8 @@ func getFlowLogEndpointLabels(ed *calc.EndpointData) map[string]string {
 		v = ed.Endpoint.(*model.WorkloadEndpoint).Labels
 	case model.HostEndpointKey:
 		v = ed.Endpoint.(*model.HostEndpoint).Labels
+	case model.NetworkSetKey:
+		v = ed.Networkset.(*model.NetworkSet).Labels
 	}
 
 	if v != nil {
@@ -235,7 +231,7 @@ func stringToLabels(labelStr string) map[string]string {
 		return nil
 	}
 
-	labels := []string{}
-	json.Unmarshal([]byte(labelStr), labels)
+	var labels []string
+	json.Unmarshal([]byte(labelStr), &labels)
 	return unflattenLabels(labels)
 }
