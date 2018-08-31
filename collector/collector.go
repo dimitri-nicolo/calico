@@ -39,6 +39,7 @@ type Config struct {
 	AgeTimeout            time.Duration
 	InitialReportingDelay time.Duration
 	ExportingInterval     time.Duration
+	EnableNetworkSets     bool
 }
 
 // A Collector (a StatsManager really) collects StatUpdates from data sources
@@ -320,6 +321,14 @@ func (c *Collector) convertNflogPktAndApplyUpdate(dir rules.RuleDir, nPktAggr *n
 		srcEp, ok = c.luc.GetEndpoint(nflogTuple.Src)
 		dstEp, _ = c.luc.GetEndpoint(nflogTuple.Dst)
 		localEp = srcEp
+	}
+
+	if c.config.EnableNetworkSets && srcEp == nil {
+		srcEp, _ = c.luc.GetNetworkset(nflogTuple.Src)
+	}
+
+	if c.config.EnableNetworkSets && dstEp == nil {
+		dstEp, _ = c.luc.GetNetworkset(nflogTuple.Dst)
 	}
 
 	if !ok {

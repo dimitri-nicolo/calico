@@ -19,8 +19,13 @@ import (
 
 type EndpointData struct {
 	Key          model.Key
-	Endpoint     interface{}
 	OrderedTiers []string
+
+	// EndpointData will have either an Endpoint OR a Networkset.
+	// The networkset will only be set in the EndpointData if an
+	// endpoint for the IP is not found.
+	Endpoint   interface{}
+	Networkset interface{}
 
 	// ImplicitDrop*RuleID is used to track the last policy in each tier that
 	// selected this endpoint in the Ingress or Egress rule directions. These
@@ -258,7 +263,7 @@ func (ec *EndpointLookupsCache) addOrUpdateEndpoint(key model.Key, ed *EndpointD
 // This method isn't safe to be used concurrently and the caller should acquire the
 // EndpointLookupsCache.epMutex before calling this method.
 func (ec *EndpointLookupsCache) updateIPToEndpointMapping(ip [16]byte, ed *EndpointData) {
-	// Check if this IP is already has a corresponding endpoint.
+	// Check if this IP already has a corresponding endpoint.
 	// If it has one, then append the endpoint to it. This is
 	// expected to happen if an IP address is reused in a very
 	// short interval. Otherwise, create a new IP to endpoint

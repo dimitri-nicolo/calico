@@ -367,6 +367,8 @@ func NewCalculationGraph(callbacks PipelineCallbacks, cache *LookupsCache, hostn
 		// Hook into the PolicyResolver to receive this information.
 		polResolver.RegisterCallback(cache.epCache)
 
+		// The lookup cache also caches networkset information for flow log reporting.
+		cache.nsCache.RegisterWith(allUpdDispatcher)
 	} else {
 		log.Debug("lookup cache is nil on windows platform")
 	}

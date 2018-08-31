@@ -242,6 +242,7 @@ func StartDataplaneDriver(configParams *config.Config,
 
 			// Deal with deprecated CloudWatchLogsEnableHostEndpoint by combining with new field name.
 			FlowLogsEnableHostEndpoint: configParams.CloudWatchLogsEnableHostEndpoint || configParams.FlowLogsEnableHostEndpoint,
+			FlowLogsEnableNetworkSets:  configParams.FlowLogsEnableNetworkSets,
 
 			CloudWatchLogsReporterEnabled:           configParams.CloudWatchLogsReporterEnabled,
 			CloudWatchLogsLogGroupName:              configParams.CloudWatchLogsLogGroupName,
