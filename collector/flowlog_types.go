@@ -354,9 +354,9 @@ func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool, in
 
 func (f *FlowLog) Deserialize(fl string) error {
 	// Format is
-	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action
+	// startTime endTime srcType srcNamespace srcName srcLabels dstType dstNamespace dstName dstLabels srcIP dstIP proto srcPort dstPort numFlows numFlowsStarted numFlowsCompleted flowReporter packetsIn packetsOut bytesIn bytesOut action policies
 	// Sample entry with no aggregation and no labels.
-	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 - wep kube-system kube-dns-7cc87d595-pxvxb - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow
+	// 1529529591 1529529892 wep policy-demo nginx-7d98456675-2mcs4 - wep kube-system kube-dns-7cc87d595-pxvxb - 192.168.224.225 192.168.135.53 17 36486 53 1 1 1 in 1 1 73 119 allow ["0|tier|namespace/tier.policy|allow"]
 
 	var (
 		srcType, dstType FlowLogEndpointType
@@ -436,6 +436,15 @@ func (f *FlowLog) Deserialize(fl string) error {
 		f.Action = FlowLogActionAllow
 	case "deny":
 		f.Action = FlowLogActionDeny
+	}
+
+	// Parse policies, empty ones are just -
+	if len(parts[24]) > 1 {
+		f.FlowPolicies = make(FlowPolicies)
+		polParts := strings.Split(parts[24][1:len(parts[24])-1], ",")
+		for _, p := range polParts {
+			f.FlowPolicies[p] = emptyValue
+		}
 	}
 
 	return nil
