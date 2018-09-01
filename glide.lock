@@ -1,5 +1,5 @@
-hash: 2be5e0d266db2a912a2cf1a3cd2d498fcae4ec0bfa33afe02b41704b4073ae21
-updated: 2018-08-31T05:11:12.800354597Z
+hash: 9997667d7ae8b3b0fe46e68be1449b26cbda6818fbdc51fda88633578b9d149b
+updated: 2018-09-01T05:03:57.714827539Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -243,7 +243,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 7143bc6cd13d4b80e93886c3caf873ae723a7f13
+  version: f2dce045307e3c6c5363081b756099a2dad561bb
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - binder
@@ -341,7 +341,7 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/projectcalico/typha
-  version: 398a7a0219ee5268c3feb4bc2e94ab755b7cee8c
+  version: 2686eb7eb71df88f7dd37912ea3b9b11ab52de5d
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
