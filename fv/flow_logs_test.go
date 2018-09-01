@@ -75,8 +75,15 @@ type expectation struct {
 	group                 string
 	stream                string
 	labels                bool
+	policies              bool
 	aggregationForAllowed aggregation
 	aggregationForDenied  aggregation
+}
+
+type expectedPolicy struct {
+	reporter string
+	action   string
+	policies []string
 }
 
 // FIXME!
@@ -438,10 +445,12 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			flowsStarted := [2]map[collector.FlowMeta]int{}
 			flowsCompleted := [2]map[collector.FlowMeta]int{}
 			packets := [2]map[collector.FlowMeta]int{}
+			policies := [2]map[collector.FlowMeta][]string{}
 			for ii, f := range felixes {
 				flowsStarted[ii] = make(map[collector.FlowMeta]int)
 				flowsCompleted[ii] = make(map[collector.FlowMeta]int)
 				packets[ii] = make(map[collector.FlowMeta]int)
+				policies[ii] = make(map[collector.FlowMeta][]string)
 
 				cwlogs, err := f.ReadFlowLogs(flowLogsOutput)
 				if err != nil {
@@ -480,6 +489,19 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					fl.FlowLabels.SrcLabels = nil
 					fl.FlowLabels.DstLabels = nil
 
+					if expectation.policies {
+						if len(fl.FlowPolicies) == 0 {
+							return errors.New(fmt.Sprintf("Missing policies in %v", fl.FlowMeta))
+						}
+						pols := []string{}
+						for p := range fl.FlowPolicies {
+							pols = append(pols, p)
+						}
+						policies[ii][fl.FlowMeta] = pols
+					} else if len(fl.FlowPolicies) != 0 {
+						return errors.New(fmt.Sprintf("Unexpected policies in %v", fl.FlowMeta))
+					}
+
 					// Accumulate flow and packet counts for this FlowMeta.
 					if _, ok := flowsStarted[ii][fl.FlowMeta]; !ok {
 						flowsStarted[ii][fl.FlowMeta] = 0
@@ -501,6 +523,10 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				}
 				for meta, count := range flowsCompleted[ii] {
 					log.Infof("completed: %d %v", count, meta)
+				}
+
+				for meta, pols := range policies[ii] {
+					log.Infof("policies: %v %v", pols, meta)
 				}
 
 				// For each distinct FlowMeta, the counts of flows started
@@ -527,28 +553,47 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			// each host: "allow" or "deny"; or "" if the flow isn't
 			// explicitly allowed or denied on that host (which means that
 			// there won't be a flow log).
-			expect := func(srcMeta, srcIP, dstMeta, dstIP string, numMatchingMetas, numFlowsPerMeta int, actions ...string) error {
+			expect := func(srcMeta, srcIP, dstMeta, dstIP string, numMatchingMetas, numFlowsPerMeta int, actionsPolicies []expectedPolicy) error {
 
 				// Host loop.
-				for ii, handling := range actions {
+				for ii, handling := range actionsPolicies {
 					// Skip if the handling for this host is "".
-					if handling == "" {
+					if handling.action == "" && handling.reporter == "" {
 						continue
 					}
-					parts := strings.Split(handling, "/")
-					reporter := parts[0]
-					action := parts[1]
+					reporter := handling.reporter
+					action := handling.action
+					expectedPolicies := []string{"-"}
+					if expectation.policies {
+						expectedPolicies = handling.policies
+					}
 
 					// Build a FlowMeta with the metadata and IPs that we are looking for.
 					var template string
 					if dstIP != "" {
-						template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action
+						template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " [" + strings.Join(expectedPolicies, ",") + "]"
 					} else {
-						template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action
+						template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " [" + strings.Join(expectedPolicies, ",") + "]"
 					}
 					fl := &collector.FlowLog{}
 					fl.Deserialize(template)
 					log.WithField("template", template).WithField("meta", fl.FlowMeta).Info("Looking for")
+					if expectation.policies {
+						for meta, actualPolicies := range policies[ii] {
+							fl.FlowMeta.Tuple.SetSourcePort(meta.Tuple.GetSourcePort())
+							if meta != fl.FlowMeta {
+								continue
+							}
+							for polIdx, p := range expectedPolicies {
+								if p != actualPolicies[polIdx] {
+									return errors.New(fmt.Sprintf("Expected policies %v to be present in %v", expectedPolicies, actualPolicies))
+								}
+							}
+							// Record that we've ticked off this flow.
+							policies[ii][meta] = []string{}
+						}
+						fl.FlowMeta.Tuple.SetSourcePort(0)
+					}
 
 					matchingMetas := 0
 					for meta, count := range flowsCompleted[ii] {
@@ -579,67 +624,127 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			switch expectation.aggregationForAllowed {
 			case None:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[0].Name, wlHost2[0].IP, 3, 1, "src/allow", "dst/allow")
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[0].Name, wlHost2[0].IP, 3, 1,
+						[]expectedPolicy{
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						})
 					if err != nil {
 						return err
 					}
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 3, 1, "src/allow", "")
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 3, 1,
+						[]expectedPolicy{
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+							{}, // ""
+						})
 					if err != nil {
 						return err
 					}
 				}
-				err = expect("wep default "+wlHost1[0].Name, wlHost1[0].IP, "hep - host2-eth0", felixes[1].IP, 3, 1, "src/allow", "dst/allow")
+				err = expect("wep default "+wlHost1[0].Name, wlHost1[0].IP, "hep - host2-eth0", felixes[1].IP, 3, 1,
+					[]expectedPolicy{
+						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
+					})
 				if err != nil {
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "ns - ns-1", felixes[0].IP, 3, 1, "", "src/allow")
+					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "ns - ns-1", felixes[0].IP, 3, 1,
+						[]expectedPolicy{
+							{}, // ""
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						})
 				} else {
-					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "net - pvt", felixes[0].IP, 3, 1, "", "src/allow")
+					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "net - pvt", felixes[0].IP, 3, 1,
+						[]expectedPolicy{
+							{}, // ""
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						})
 				}
 				if err != nil {
 					return err
 				}
 			case BySourcePort:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[0].Name, wlHost2[0].IP, 1, 3, "src/allow", "dst/allow")
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[0].Name, wlHost2[0].IP, 1, 3,
+						[]expectedPolicy{
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+							{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						})
 					if err != nil {
 						return err
 					}
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 1, 3, "src/allow", "")
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 1, 3,
+						[]expectedPolicy{
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+							{},
+						})
 					if err != nil {
 						return err
 					}
 				}
-				err = expect("wep default "+wlHost1[0].Name, wlHost1[0].IP, "hep - host2-eth0", felixes[1].IP, 1, 3, "src/allow", "dst/allow")
+				err = expect("wep default "+wlHost1[0].Name, wlHost1[0].IP, "hep - host2-eth0", felixes[1].IP, 1, 3,
+					[]expectedPolicy{
+						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
+					})
 				if err != nil {
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "ns - ns-1", felixes[0].IP, 1, 3, "", "src/allow")
+					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "ns - ns-1", felixes[0].IP, 1, 3,
+						[]expectedPolicy{
+							{}, // ""
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						})
 				} else {
-					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "net - pvt", felixes[0].IP, 1, 3, "", "src/allow")
+					err = expect("wep default "+wlHost2[0].Name, wlHost2[0].IP, "net - pvt", felixes[0].IP, 1, 3,
+						[]expectedPolicy{
+							{}, // ""
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						})
 				}
 				if err != nil {
 					return err
 				}
 			case ByPodPrefix:
-				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 24, "src/allow", "")
+				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 24,
+					[]expectedPolicy{
+						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						{}, // ""
+					})
 				if err != nil {
 					return err
 				}
-				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 12, "", "dst/allow")
+				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 12,
+					[]expectedPolicy{
+						{}, // ""
+						{"dst", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+					})
 				if err != nil {
 					return err
 				}
-				err = expect("wep default wl-host1-*", "", "hep - host2-eth0", "", 1, 3, "src/allow", "dst/allow")
+				err = expect("wep default wl-host1-*", "", "hep - host2-eth0", "", 1, 3,
+					[]expectedPolicy{
+						{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						{"dst", "allow", []string{"0|default|default.gnp-1|allow"}},
+					})
 				if err != nil {
 					return err
 				}
 				if networkSetIPsSupported {
-					err = expect("wep default wl-host2-*", "", "ns - ns-1", "", 1, 3, "", "src/allow")
+					err = expect("wep default wl-host2-*", "", "ns - ns-1", "", 1, 3,
+						[]expectedPolicy{
+							{}, // ""
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						})
 				} else {
-					err = expect("wep default wl-host2-*", "", "net - pvt", "", 1, 3, "", "src/allow")
+					err = expect("wep default wl-host2-*", "", "net - pvt", "", 1, 3,
+						[]expectedPolicy{
+							{}, // ""
+							{"src", "allow", []string{"0|__PROFILE__|__PROFILE__.default|allow"}},
+						})
 				}
 				if err != nil {
 					return err
@@ -649,20 +754,32 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			switch expectation.aggregationForDenied {
 			case None:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 3, 1, "", "dst/deny")
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 3, 1,
+						[]expectedPolicy{
+							{}, // ""
+							{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
+						})
 					if err != nil {
 						return err
 					}
 				}
 			case BySourcePort:
 				for _, source := range wlHost1 {
-					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 1, 3, "", "dst/deny")
+					err = expect("wep default "+source.Name, source.IP, "wep default "+wlHost2[1].Name, wlHost2[1].IP, 1, 3,
+						[]expectedPolicy{
+							{}, // ""
+							{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
+						})
 					if err != nil {
 						return err
 					}
 				}
 			case ByPodPrefix:
-				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 12, "", "dst/deny")
+				err = expect("wep default wl-host1-*", "", "wep default wl-host2-*", "", 1, 12,
+					[]expectedPolicy{
+						{}, // ""
+						{"dst", "deny", []string{"0|default|default/default.np-1|deny"}},
+					})
 				if err != nil {
 					return err
 				}
@@ -756,6 +873,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			expectation.group = "tigera-flowlogs-<cluster-guid>"
 			expectation.stream = "<felix-hostname>_Flowlogs"
 			expectation.labels = false
+			expectation.policies = false
 			expectation.aggregationForAllowed = ByPodPrefix
 			expectation.aggregationForDenied = BySourcePort
 
@@ -860,6 +978,20 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 			})
 		})
 
+		Context("with policies", func() {
+
+			BeforeEach(func() {
+				opts.ExtraEnvVars["FELIX_CLOUDWATCHLOGSINCLUDEPOLICIES"] = "true"
+				opts.ExtraEnvVars["FELIX_FLOWLOGSFILEINCLUDEPOLICIES"] = "true"
+				expectation.policies = true
+			})
+
+			It("should get expected flow logs", func() {
+				checkFlowLogs("cloudwatch")
+				checkFlowLogs("file")
+			})
+		})
+
 	})
 
 	Context("File flow logs only", func() {
@@ -867,6 +999,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 		BeforeEach(func() {
 			// Defaults for how we expect flow logs to be generated.
 			expectation.labels = false
+			expectation.policies = false
 			expectation.aggregationForAllowed = ByPodPrefix
 			expectation.aggregationForDenied = BySourcePort
 			opts.EnableFlowLogsFile()
