@@ -344,7 +344,7 @@ func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool, in
 	}
 
 	if !includePolicies {
-		fl.FlowPolicies = make(FlowPolicies)
+		fl.FlowPolicies = nil
 	} else {
 		fl.FlowPolicies = f.FlowPolicies
 	}
@@ -439,7 +439,9 @@ func (f *FlowLog) Deserialize(fl string) error {
 	}
 
 	// Parse policies, empty ones are just -
-	if len(parts[24]) > 1 {
+	if parts[24] == "-" {
+		f.FlowPolicies = make(FlowPolicies)
+	} else if len(parts[24]) > 1 {
 		f.FlowPolicies = make(FlowPolicies)
 		polParts := strings.Split(parts[24][1:len(parts[24])-1], ",")
 		for _, p := range polParts {

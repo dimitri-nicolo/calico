@@ -499,7 +499,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						}
 						policies[ii][fl.FlowMeta] = pols
 					} else if len(fl.FlowPolicies) != 0 {
-						return errors.New(fmt.Sprintf("Unexpected policies in %v", fl.FlowMeta))
+						return errors.New(fmt.Sprintf("Unexpected policies %v in %v", fl.FlowPolicies, fl.FlowMeta))
 					}
 
 					// Accumulate flow and packet counts for this FlowMeta.
@@ -563,17 +563,19 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					}
 					reporter := handling.reporter
 					action := handling.action
-					expectedPolicies := []string{"-"}
+					expectedPolicies := []string{}
+					expectedPoliciesStr := "-"
 					if expectation.policies {
 						expectedPolicies = handling.policies
+						expectedPoliciesStr = "[" + strings.Join(expectedPolicies, ",") + "]"
 					}
 
 					// Build a FlowMeta with the metadata and IPs that we are looking for.
 					var template string
 					if dstIP != "" {
-						template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " [" + strings.Join(expectedPolicies, ",") + "]"
+						template = "1 2 " + srcMeta + " - " + dstMeta + " - " + srcIP + " " + dstIP + " 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr
 					} else {
-						template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " [" + strings.Join(expectedPolicies, ",") + "]"
+						template = "1 2 " + srcMeta + " - " + dstMeta + " - - - 6 0 8055 1 1 0 " + reporter + " 4 6 260 364 " + action + " " + expectedPoliciesStr
 					}
 					fl := &collector.FlowLog{}
 					fl.Deserialize(template)

@@ -99,8 +99,12 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.Action = string(l.Action)
 	out.Reporter = string(l.Reporter)
 
-	for pol, _ := range l.FlowPolicies {
-		out.Policies = append(out.Policies, pol)
+	if l.FlowPolicies == nil {
+		out.Policies = nil
+	} else {
+		for pol := range l.FlowPolicies {
+			out.Policies = append(out.Policies, pol)
+		}
 	}
 
 	out.BytesIn = int64(l.BytesIn)
