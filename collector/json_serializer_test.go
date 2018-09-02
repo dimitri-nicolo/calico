@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("FlowLog JSON serialization", func() {
 
-	FDescribe("should set every field", func() {
+	Describe("should set every field", func() {
 		flowLog := FlowLog{
 			StartTime: time.Now(),
 			EndTime:   time.Now(),

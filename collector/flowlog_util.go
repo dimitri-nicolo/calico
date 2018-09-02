@@ -231,6 +231,7 @@ func stringToLabels(labelStr string) map[string]string {
 		return nil
 	}
 
+	labelStr = strings.Replace(labelStr, "'", "\"", -1)
 	var labels []string
 	json.Unmarshal([]byte(labelStr), &labels)
 	return unflattenLabels(labels)

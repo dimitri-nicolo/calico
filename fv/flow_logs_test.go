@@ -447,6 +447,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				if err != nil {
 					return err
 				}
+
 				for _, fl := range cwlogs {
 					// We only generate traffic to port 8055, so
 					// ignore logs that aren't to port 8055.
@@ -454,21 +455,24 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 						continue
 					}
 
-					// If endpoint labels are expected, check that they are
+					// If endpoint labels are expected, and
+					// aggregation permits this, check that they are
 					// there.
-					if expectation.labels {
+					labelsExpected := expectation.labels && ((fl.FlowMeta.Action == collector.FlowLogActionAllow) ||
+						(fl.FlowMeta.Action == collector.FlowLogActionDeny))
+					if labelsExpected {
 						if fl.FlowLabels.SrcLabels == nil {
-							return errors.New(fmt.Sprintf("Missing src labels in %v", fl.FlowMeta))
+							return errors.New(fmt.Sprintf("Missing src labels in %v", fl.FlowLabels))
 						}
 						if fl.FlowLabels.DstLabels == nil {
-							return errors.New(fmt.Sprintf("Missing dst labels in %v", fl.FlowMeta))
+							return errors.New(fmt.Sprintf("Missing dst labels in %v", fl.FlowLabels))
 						}
 					} else {
 						if fl.FlowLabels.SrcLabels != nil {
-							return errors.New(fmt.Sprintf("Unexpected src labels in %v", fl.FlowMeta))
+							return errors.New(fmt.Sprintf("Unexpected src labels in %v", fl.FlowLabels))
 						}
 						if fl.FlowLabels.DstLabels != nil {
-							return errors.New(fmt.Sprintf("Unexpected dst labels in %v", fl.FlowMeta))
+							return errors.New(fmt.Sprintf("Unexpected dst labels in %v", fl.FlowLabels))
 						}
 					}
 
