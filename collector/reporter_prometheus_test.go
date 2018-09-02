@@ -30,45 +30,41 @@ var (
 
 // Common RuleID definitions
 var (
-	ingressRule1Allow = &calc.RuleID{
-		Action:    rules.RuleActionAllow,
-		Index:     0,
-		IndexStr:  "0",
-		Name:      "policy1",
-		Namespace: "",
-		Tier:      "default",
-		Direction: rules.RuleDirIngress,
-	}
+	ingressRule1Allow = calc.NewRuleID(
+		"default",
+		"policy1",
+		"",
+		0,
+		rules.RuleDirIngress,
+		rules.RuleActionAllow,
+	)
 
-	egressRule2Deny = &calc.RuleID{
-		Action:    rules.RuleActionDeny,
-		Index:     0,
-		IndexStr:  "0",
-		Name:      "policy2",
-		Namespace: "",
-		Tier:      "default",
-		Direction: rules.RuleDirEgress,
-	}
+	egressRule2Deny = calc.NewRuleID(
+		"default",
+		"policy2",
+		"",
+		0,
+		rules.RuleDirEgress,
+		rules.RuleActionDeny,
+	)
 
-	ingressRule3Pass = &calc.RuleID{
-		Action:    rules.RuleActionPass,
-		Index:     0,
-		IndexStr:  "0",
-		Name:      "policy3",
-		Namespace: "",
-		Tier:      "bar",
-		Direction: rules.RuleDirIngress,
-	}
+	ingressRule3Pass = calc.NewRuleID(
+		"bar",
+		"policy3",
+		"",
+		0,
+		rules.RuleDirIngress,
+		rules.RuleActionPass,
+	)
 
-	egressRule3Pass = &calc.RuleID{
-		Action:    rules.RuleActionPass,
-		Index:     0,
-		IndexStr:  "0",
-		Name:      "policy3",
-		Namespace: "",
-		Tier:      "bar",
-		Direction: rules.RuleDirEgress,
-	}
+	egressRule3Pass = calc.NewRuleID(
+		"bar",
+		"policy3",
+		"",
+		0,
+		rules.RuleDirEgress,
+		rules.RuleActionPass,
+	)
 )
 
 // Common MetricUpdate definitions

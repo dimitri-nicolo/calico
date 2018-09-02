@@ -121,6 +121,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"SourcePort":   nil,
 			"SourceLabels": nil,
 			"DestLabels":   nil,
+			"Policies":     nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values

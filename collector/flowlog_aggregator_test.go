@@ -3,6 +3,8 @@
 package collector
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -49,13 +51,14 @@ var (
 
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
-	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata, sl, dl map[string]string) {
-		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, sl, dl)
+	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata, sl, dl map[string]string, fp FlowPolicies) {
+		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, sl, dl, fp)
 
 		// We don't include the start and end time in the comparison, so copy to a new log without these
 		var flNoTime FlowLog
 		flNoTime.FlowMeta = fl.FlowMeta
 		flNoTime.FlowLabels = fl.FlowLabels
+		flNoTime.FlowPolicies = fl.FlowPolicies
 		flNoTime.FlowReportedStats = fl.FlowReportedStats
 		Expect(flNoTime).Should(Equal(expectedFlow))
 	}
@@ -68,10 +71,25 @@ var _ = Describe("Flow log aggregator tests", func() {
 		}
 		return
 	}
+	extractFlowPolicies := func(mus ...MetricUpdate) FlowPolicies {
+		fp := make(FlowPolicies)
+		for _, mu := range mus {
+			for idx, r := range mu.ruleIDs {
+				name := fmt.Sprintf("%d|%s|%s.%s|%s", idx,
+					r.TierString(),
+					r.TierString(),
+					r.NameString(),
+					r.ActionString())
+				fp[name] = emptyValue
+			}
+		}
+		return fp
+	}
 	Context("Flow log aggregator aggregation verification", func() {
 		It("aggregates the fed metric updates", func() {
-			By("defalt duration")
+			By("default duration")
 			ca := NewFlowLogAggregator()
+			ca.IncludePolicies(true)
 			ca.FeedUpdate(muNoConn1Rule1AllowUpdate)
 			messages := ca.Get()
 			Expect(len(messages)).Should(Equal(1))
@@ -82,8 +100,9 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedNumFlowsCompleted := 0
 
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
+			expectedFP := extractFlowPolicies(muNoConn1Rule1AllowUpdate)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, nil, nil)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, nil, nil, expectedFP)
 
 			By("source port")
 			ca = NewFlowLogAggregator().AggregateOver(SourcePort)
