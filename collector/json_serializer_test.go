@@ -14,7 +14,7 @@ import (
 
 var _ = Describe("FlowLog JSON serialization", func() {
 
-	Describe("should set every field", func() {
+	FDescribe("should set every field", func() {
 		flowLog := FlowLog{
 			StartTime: time.Now(),
 			EndTime:   time.Now(),
@@ -39,6 +39,10 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				Action:   "allow",
 				Reporter: "src",
 			},
+			FlowLabels: FlowLabels{
+				SrcLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
+				DstLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
+			},
 			FlowReportedStats: FlowReportedStats{
 				PacketsIn:         1,
 				PacketsOut:        2,
@@ -51,7 +55,6 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		}
 
 		out := toOutput(&flowLog)
-
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
 		oType := reflect.TypeOf(out)
@@ -90,6 +93,10 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				},
 				Action:   "allow",
 				Reporter: "src",
+			},
+			FlowLabels: FlowLabels{
+				SrcLabels: nil,
+				DstLabels: nil,
 			},
 			FlowReportedStats: FlowReportedStats{
 				PacketsIn:         1,
