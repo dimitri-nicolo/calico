@@ -74,7 +74,7 @@
         },
         "source_ip": {
             "type": "ip",
-            "null_value": "0.0.0.0",
+            "null_value": "0.0.0.0"
         },
         "source_name": {
             "type": "keyword"
