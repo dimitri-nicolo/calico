@@ -32,7 +32,7 @@ const noRuleActionDefined = 0
 // aggregated flow logs until the flow logs are exported.
 type flowLogAggregator struct {
 	kind                 AggregationKind
-	flowStore            map[FlowMeta]FlowStats
+	flowStore            map[FlowMeta]FlowSpec
 	flMutex              sync.RWMutex
 	includeLabels        bool
 	aggregationStartTime time.Time
@@ -43,7 +43,7 @@ type flowLogAggregator struct {
 func NewFlowLogAggregator() FlowLogAggregator {
 	return &flowLogAggregator{
 		kind:                 Default,
-		flowStore:            make(map[FlowMeta]FlowStats),
+		flowStore:            make(map[FlowMeta]FlowSpec),
 		flMutex:              sync.RWMutex{},
 		aggregationStartTime: time.Now(),
 	}
@@ -86,7 +86,7 @@ func (c *flowLogAggregator) FeedUpdate(mu MetricUpdate) error {
 	defer c.flMutex.Unlock()
 	fl, ok := c.flowStore[flowMeta]
 	if !ok {
-		fl = NewFlowStats(mu)
+		fl = NewFlowSpec(mu)
 	} else {
 		fl.aggregateMetricUpdate(mu)
 	}
@@ -103,8 +103,8 @@ func (c *flowLogAggregator) Get() []*FlowLog {
 	aggregationEndTime := time.Now()
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
-	for flowMeta, flowStats := range c.flowStore {
-		flowLog := FlowData{flowMeta, flowStats}.ToFlowLog(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
+	for flowMeta, flowSpecs := range c.flowStore {
+		flowLog := FlowData{flowMeta, flowSpecs}.ToFlowLog(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
 		resp = append(resp, &flowLog)
 		c.calibrateFlowStore(flowMeta)
 	}

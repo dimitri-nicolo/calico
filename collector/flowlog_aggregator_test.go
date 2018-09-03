@@ -49,12 +49,13 @@ var (
 
 var _ = Describe("Flow log aggregator tests", func() {
 	// TODO(SS): Pull out the convenience functions for re-use.
-	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata) {
-		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm)
+	expectFlowLog := func(fl FlowLog, t Tuple, nf, nfs, nfc int, a FlowLogAction, fr FlowLogReporter, pi, po, bi, bo int, sm, dm EndpointMetadata, sl, dl map[string]string) {
+		expectedFlow := newExpectedFlowLog(t, nf, nfs, nfc, a, fr, pi, po, bi, bo, sm, dm, sl, dl)
 
 		// We don't include the start and end time in the comparison, so copy to a new log without these
 		var flNoTime FlowLog
 		flNoTime.FlowMeta = fl.FlowMeta
+		flNoTime.FlowLabels = fl.FlowLabels
 		flNoTime.FlowReportedStats = fl.FlowReportedStats
 		Expect(flNoTime).Should(Equal(expectedFlow))
 	}
@@ -82,7 +83,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdate)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta)
+				expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut, pvtMeta, pubMeta, nil, nil)
 
 			By("source port")
 			ca = NewFlowLogAggregator().AggregateOver(SourcePort)
@@ -240,13 +241,11 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-*",
-					Labels:    "-",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "net",
 					Namespace: "-",
 					Name:      "pub",
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -264,13 +263,11 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Type:      "net",
 					Namespace: "-",
 					Name:      "pvt",
-					Labels:    "-",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-*",
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -288,13 +285,11 @@ var _ = Describe("Flow log aggregator tests", func() {
 					Type:      "wep",
 					Namespace: "kube-system",
 					Name:      "iperf-4235-*",
-					Labels:    "-",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "net",
 					Namespace: "-",
 					Name:      "pvt",
-					Labels:    "-",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -306,6 +301,120 @@ var _ = Describe("Flow log aggregator tests", func() {
 			}
 
 			Expect(flowLogMetas).Should(ConsistOf(fm1, fm2, fm3))
+		})
+
+		It("aggregates labels from metric updates", func() {
+			By("intersecting labels in FlowSpec when IncludeLabels configured")
+			ca := NewFlowLogAggregator().IncludeLabels(true)
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
+
+			// Construct a similar update; but the endpoints have different labels
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy := muNoConn1Rule1AllowUpdateWithEndpointMeta
+			// Updating the Workload IDs for src and dst.
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.srcEp = &calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-01",
+					OrchestratorID: "k8s",
+					WorkloadID:     "kube-system/iperf-4235-5623461",
+					EndpointID:     "4352",
+				},
+				Endpoint: &model.WorkloadEndpoint{
+					GenerateName: "iperf-4235-",
+					Labels:       map[string]string{"test-app": "true", "new-label": "true"}, // "new-label" appended
+				},
+			}
+
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.dstEp = &calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-02",
+					OrchestratorID: "k8s",
+					WorkloadID:     "default/nginx-412354-5123451",
+					EndpointID:     "4352",
+				},
+				Endpoint: &model.WorkloadEndpoint{
+					GenerateName: "nginx-412354-",
+					Labels:       map[string]string{"k8s-app": "false"}, // conflicting labels; originally "k8s-app": "true"
+				},
+			}
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			messages := ca.Get()
+			// Since the FlowMeta remains the same it should still equal 1.
+			Expect(len(messages)).Should(Equal(1))
+			message := *(messages[0])
+
+			expectedNumFlows := 1
+			expectedNumFlowsStarted := 1
+			expectedNumFlowsCompleted := 0
+			srcMeta := EndpointMetadata{
+				Type:      "wep",
+				Namespace: "kube-system",
+				Name:      "iperf-4235-5623461",
+			}
+			dstMeta := EndpointMetadata{
+				Type:      "wep",
+				Namespace: "default",
+				Name:      "nginx-412354-5123451",
+			}
+			// The labels should have been intersected right.
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
+				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, map[string]string{"test-app": "true"}, map[string]string{})
+
+			By("not affecting flow logs when IncludeLabels is disabled")
+			ca = NewFlowLogAggregator().IncludeLabels(false)
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMeta)
+
+			// Construct a similar update; but the endpoints have different labels
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy = muNoConn1Rule1AllowUpdateWithEndpointMeta
+			// Updating the Workload IDs for src and dst.
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.srcEp = &calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-01",
+					OrchestratorID: "k8s",
+					WorkloadID:     "kube-system/iperf-4235-5623461",
+					EndpointID:     "4352",
+				},
+				Endpoint: &model.WorkloadEndpoint{
+					GenerateName: "iperf-4235-",
+					Labels:       map[string]string{"test-app": "true", "new-label": "true"}, // "new-label" appended
+				},
+			}
+
+			muNoConn1Rule1AllowUpdateWithEndpointMetaCopy.dstEp = &calc.EndpointData{
+				Key: model.WorkloadEndpointKey{
+					Hostname:       "node-02",
+					OrchestratorID: "k8s",
+					WorkloadID:     "default/nginx-412354-5123451",
+					EndpointID:     "4352",
+				},
+				Endpoint: &model.WorkloadEndpoint{
+					GenerateName: "nginx-412354-",
+					Labels:       map[string]string{"k8s-app": "false"}, // conflicting labels; originally "k8s-app": "true"
+				},
+			}
+			ca.FeedUpdate(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			messages = ca.Get()
+			// Since the FlowMeta remains the same it should still equal 1.
+			Expect(len(messages)).Should(Equal(1))
+			message = *(messages[0])
+
+			expectedNumFlows = 1
+			expectedNumFlowsStarted = 1
+			expectedNumFlowsCompleted = 0
+			srcMeta = EndpointMetadata{
+				Type:      "wep",
+				Namespace: "kube-system",
+				Name:      "iperf-4235-5623461",
+			}
+			dstMeta = EndpointMetadata{
+				Type:      "wep",
+				Namespace: "default",
+				Name:      "nginx-412354-5123451",
+			}
+			// The labels should have beein intersected right.
+			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
+			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
+				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, nil, nil) // nil & nil for Src and Dst Labels respectively.
 		})
 	})
 

@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -104,47 +103,51 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 		if err != nil {
 			return EndpointMetadata{}, err
 		}
-		v := ed.Endpoint.(*model.WorkloadEndpoint)
-		labels, err := json.Marshal(v.Labels)
-		if err != nil {
-			return EndpointMetadata{}, err
-		}
 		em = EndpointMetadata{
 			Type:      FlowLogEndpointTypeWep,
 			Name:      name,
 			Namespace: ns,
-			Labels:    string(labels),
 		}
 	case model.HostEndpointKey:
-		v := ed.Endpoint.(*model.HostEndpoint)
-		labels, err := json.Marshal(v.Labels)
-		if err != nil {
-			return EndpointMetadata{}, err
-		}
 		em = EndpointMetadata{
 			Type:      FlowLogEndpointTypeHep,
 			Name:      k.EndpointID,
 			Namespace: flowLogNamespaceGlobal,
-			Labels:    string(labels),
 		}
 	case model.NetworkSetKey:
 		// No Endpoint was found so instead, a NetworkSet was returned.
-		v := ed.Networkset.(*model.NetworkSet)
-		labels, err := json.Marshal(v.Labels)
-		if err != nil {
-			return EndpointMetadata{}, err
-		}
 		em = EndpointMetadata{
 			Type:      FlowLogEndpointTypeNs,
 			Namespace: flowLogFieldNotIncluded,
 			Name:      k.Name,
-			Labels:    string(labels),
 		}
 	default:
 		return EndpointMetadata{}, fmt.Errorf("Unknown key %#v of type %v", ed.Key, reflect.TypeOf(ed.Key))
 	}
 
 	return em, nil
+}
+
+func getFlowLogEndpointLabels(ed *calc.EndpointData) map[string]string {
+	labels := map[string]string{}
+	if ed == nil {
+		return labels
+	}
+
+	var v map[string]string
+	switch ed.Key.(type) {
+	case model.WorkloadEndpointKey:
+		v = ed.Endpoint.(*model.WorkloadEndpoint).Labels
+	case model.HostEndpointKey:
+		v = ed.Endpoint.(*model.HostEndpoint).Labels
+	case model.NetworkSetKey:
+		v = ed.Networkset.(*model.NetworkSet).Labels
+	}
+
+	if v != nil {
+		labels = v
+	}
+	return labels
 }
 
 // getFlowLogActionAndReporterFromRuleID converts the action to a string value.
@@ -191,4 +194,44 @@ func getSubnetType(addrBytes [16]byte) FlowLogSubnetType {
 	}
 
 	return PublicNet
+}
+
+func flattenLabels(labels map[string]string) []string {
+	respSlice := []string{}
+	for k, v := range labels {
+		l := fmt.Sprintf("%v=%v", k, v)
+		respSlice = append(respSlice, l)
+	}
+
+	return respSlice
+}
+
+func unflattenLabels(labelSlice []string) map[string]string {
+	resp := map[string]string{}
+	for _, label := range labelSlice {
+		labelKV := strings.Split(label, "=")
+		if len(labelKV) != 2 {
+			continue
+		}
+		resp[labelKV[0]] = labelKV[1]
+	}
+
+	return resp
+}
+
+func labelsToString(labels map[string]string) string {
+	if labels == nil {
+		return "-"
+	}
+
+	return fmt.Sprintf("[%v]", strings.Join(flattenLabels(labels), ","))
+}
+
+func stringToLabels(labelStr string) map[string]string {
+	if labelStr == "-" {
+		return nil
+	}
+
+	labels := strings.Split(labelStr[1:len(labelStr)-1], ",")
+	return unflattenLabels(labels)
 }

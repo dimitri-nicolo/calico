@@ -179,11 +179,13 @@ func (c *cloudWatchDispatcher) Dispatch(inputLogs []*FlowLog) error {
 // serializeCloudWatchFlowLog converts FlowLog to a string in our CloudWatch format
 func serializeCloudWatchFlowLog(f *FlowLog) string {
 	srcIP, dstIP, proto, l4Src, l4Dst := extractPartsFromAggregatedTuple(f.Tuple)
+	srcLabels := labelsToString(f.SrcLabels)
+	dstLabels := labelsToString(f.DstLabels)
 
 	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
 		f.StartTime.Unix(), f.EndTime.Unix(),
-		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, f.SrcMeta.Labels,
-		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, f.DstMeta.Labels,
+		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, srcLabels,
+		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, dstLabels,
 		srcIP, dstIP, proto, l4Src, l4Dst,
 		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Reporter,
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,

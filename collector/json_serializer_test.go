@@ -30,16 +30,18 @@ var _ = Describe("FlowLog JSON serialization", func() {
 					Type:      "wep",
 					Namespace: "test",
 					Name:      "test",
-					Labels:    "foo=bar",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "test",
 					Name:      "test",
-					Labels:    "foo=bar",
 				},
 				Action:   "allow",
 				Reporter: "src",
+			},
+			FlowLabels: FlowLabels{
+				SrcLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
+				DstLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 			},
 			FlowReportedStats: FlowReportedStats{
 				PacketsIn:         1,
@@ -53,7 +55,6 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		}
 
 		out := toOutput(&flowLog)
-
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values
 		oType := reflect.TypeOf(out)
@@ -84,16 +85,18 @@ var _ = Describe("FlowLog JSON serialization", func() {
 					Type:      "wep",
 					Namespace: "test",
 					Name:      "test",
-					Labels:    "foo=bar",
 				},
 				DstMeta: EndpointMetadata{
 					Type:      "wep",
 					Namespace: "test",
 					Name:      "test",
-					Labels:    "foo=bar",
 				},
 				Action:   "allow",
 				Reporter: "src",
+			},
+			FlowLabels: FlowLabels{
+				SrcLabels: nil,
+				DstLabels: nil,
 			},
 			FlowReportedStats: FlowReportedStats{
 				PacketsIn:         1,
@@ -109,9 +112,11 @@ var _ = Describe("FlowLog JSON serialization", func() {
 		out := toOutput(&flowLog)
 
 		zeroFieldNames := map[string]interface{}{
-			"SourceIP":   nil,
-			"DestIP":     nil,
-			"SourcePort": nil,
+			"SourceIP":     nil,
+			"DestIP":       nil,
+			"SourcePort":   nil,
+			"SourceLabels": nil,
+			"DestLabels":   nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values

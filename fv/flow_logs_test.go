@@ -447,6 +447,7 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 				if err != nil {
 					return err
 				}
+
 				for _, fl := range cwlogs {
 					// We only generate traffic to port 8055, so
 					// ignore logs that aren't to port 8055.
@@ -457,28 +458,27 @@ var _ = infrastructure.DatastoreDescribe("flow log tests", []apiconfig.Datastore
 					// If endpoint labels are expected, and
 					// aggregation permits this, check that they are
 					// there.
-					labelsExpected := expectation.labels && ((fl.FlowMeta.Action == collector.FlowLogActionAllow && expectation.aggregationForAllowed != ByPodPrefix) ||
-						(fl.FlowMeta.Action == collector.FlowLogActionDeny && expectation.aggregationForDenied != ByPodPrefix))
+					labelsExpected := expectation.labels
 					if labelsExpected {
-						if fl.FlowMeta.SrcMeta.Labels == "-" {
-							return errors.New(fmt.Sprintf("Missing src labels in %v", fl.FlowMeta))
+						if fl.FlowLabels.SrcLabels == nil {
+							return errors.New(fmt.Sprintf("Missing src labels in %v: Meta %v", fl.FlowLabels, fl.FlowMeta))
 						}
-						if fl.FlowMeta.DstMeta.Labels == "-" {
-							return errors.New(fmt.Sprintf("Missing dst labels in %v", fl.FlowMeta))
+						if fl.FlowLabels.DstLabels == nil {
+							return errors.New(fmt.Sprintf("Missing dst labels in %v", fl.FlowLabels))
 						}
 					} else {
-						if fl.FlowMeta.SrcMeta.Labels != "-" {
-							return errors.New(fmt.Sprintf("Unexpected src labels in %v", fl.FlowMeta))
+						if fl.FlowLabels.SrcLabels != nil {
+							return errors.New(fmt.Sprintf("Unexpected src labels in %v", fl.FlowLabels))
 						}
-						if fl.FlowMeta.DstMeta.Labels != "-" {
-							return errors.New(fmt.Sprintf("Unexpected dst labels in %v", fl.FlowMeta))
+						if fl.FlowLabels.DstLabels != nil {
+							return errors.New(fmt.Sprintf("Unexpected dst labels in %v", fl.FlowLabels))
 						}
 					}
 
 					// Now discard labels so that our expectation code
 					// below doesn't ever have to specify them.
-					fl.FlowMeta.SrcMeta.Labels = "-"
-					fl.FlowMeta.DstMeta.Labels = "-"
+					fl.FlowLabels.SrcLabels = nil
+					fl.FlowLabels.DstLabels = nil
 
 					// Accumulate flow and packet counts for this FlowMeta.
 					if _, ok := flowsStarted[ii][fl.FlowMeta]; !ok {

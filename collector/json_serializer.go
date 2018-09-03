@@ -25,19 +25,19 @@ type FlowLogJSONOutput struct {
 	// Some empty values should be json marshalled as null and NOT with golang null values such as "" for
 	// a empty string
 	// Having such values as pointers ensures that json marshalling will render it as such.
-	SourceIP        *string `json:"source_ip"`
-	SourceName      string  `json:"source_name"`
-	SourceNamespace string  `json:"source_namespace"`
-	SourcePort      *int64  `json:"source_port"`
-	SourceType      string  `json:"source_type"`
-	SourceLabels    string  `json:"source_labels,omitempty"`
-	DestIP          *string `json:"dest_ip"`
-	DestName        string  `json:"dest_name"`
-	DestNamespace   string  `json:"dest_namespace"`
-	DestPort        int64   `json:"dest_port"`
-	DestType        string  `json:"dest_type"`
-	DestLabels      string  `json:"dest_labels,omitempty"`
-	Proto           string  `json:"proto"`
+	SourceIP        *string  `json:"source_ip"`
+	SourceName      string   `json:"source_name"`
+	SourceNamespace string   `json:"source_namespace"`
+	SourcePort      *int64   `json:"source_port"`
+	SourceType      string   `json:"source_type"`
+	SourceLabels    []string `json:"source_labels"`
+	DestIP          *string  `json:"dest_ip"`
+	DestName        string   `json:"dest_name"`
+	DestNamespace   string   `json:"dest_namespace"`
+	DestPort        int64    `json:"dest_port"`
+	DestType        string   `json:"dest_type"`
+	DestLabels      []string `json:"dest_labels"`
+	Proto           string   `json:"proto"`
 
 	Action   string `json:"action"`
 	Reporter string `json:"reporter"`
@@ -69,7 +69,11 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.SourceName = l.SrcMeta.Name
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
-	out.SourceLabels = l.SrcMeta.Labels
+	if l.SrcLabels == nil {
+		out.SourceLabels = nil
+	} else {
+		out.SourceLabels = flattenLabels(l.SrcLabels)
+	}
 
 	ip = net.IP(l.Tuple.dst[:16])
 	if !ip.IsUnspecified() {
@@ -82,7 +86,11 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.DestName = l.DstMeta.Name
 	out.DestNamespace = l.DstMeta.Namespace
 	out.DestType = string(l.DstMeta.Type)
-	out.DestLabels = l.DstMeta.Labels
+	if l.DstLabels == nil {
+		out.DestLabels = nil
+	} else {
+		out.DestLabels = flattenLabels(l.DstLabels)
+	}
 
 	out.Proto = protoToString(l.Tuple.proto)
 
@@ -152,7 +160,11 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Type:      srcType,
 		Namespace: o.SourceNamespace,
 		Name:      o.SourceName,
-		Labels:    o.SourceLabels,
+	}
+	if o.SourceLabels == nil {
+		fl.SrcLabels = nil
+	} else {
+		fl.SrcLabels = unflattenLabels(o.SourceLabels)
 	}
 
 	switch o.DestType {
@@ -170,7 +182,11 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Type:      dstType,
 		Namespace: o.DestNamespace,
 		Name:      o.DestName,
-		Labels:    o.DestLabels,
+	}
+	if o.DestLabels == nil {
+		fl.DstLabels = nil
+	} else {
+		fl.DstLabels = unflattenLabels(o.DestLabels)
 	}
 
 	fl.Action = FlowLogAction(o.Action)

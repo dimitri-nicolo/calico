@@ -24,7 +24,6 @@ type EndpointMetadata struct {
 	Type      FlowLogEndpointType `json:"type"`
 	Namespace string              `json:"namespace"`
 	Name      string              `json:"name"`
-	Labels    string              `json:"labels"`
 }
 
 type FlowMeta struct {
@@ -55,7 +54,6 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 		srcMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
 			Namespace: flowLogFieldNotIncluded,
 			Name:      string(getSubnetType(mu.tuple.src)),
-			Labels:    flowLogFieldNotIncluded,
 		}
 	}
 	if mu.dstEp != nil {
@@ -67,7 +65,6 @@ func newFlowMeta(mu MetricUpdate) (FlowMeta, error) {
 		dstMeta = EndpointMetadata{Type: FlowLogEndpointTypeNet,
 			Namespace: flowLogFieldNotIncluded,
 			Name:      string(getSubnetType(mu.tuple.dst)),
-			Labels:    flowLogFieldNotIncluded,
 		}
 	}
 
@@ -120,10 +117,6 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 		}
 	}
 
-	// Disregard labels
-	f.SrcMeta.Labels = flowLogFieldNotIncluded
-	f.DstMeta.Labels = flowLogFieldNotIncluded
-
 	return f, nil
 }
 
@@ -138,6 +131,75 @@ func NewFlowMeta(mu MetricUpdate, kind AggregationKind) (FlowMeta, error) {
 	}
 
 	return FlowMeta{}, fmt.Errorf("aggregation kind %v not recognized", kind)
+}
+
+type FlowSpec struct {
+	FlowLabels
+	FlowStats
+}
+
+func NewFlowSpec(mu MetricUpdate) FlowSpec {
+	return FlowSpec{
+		FlowLabels: NewFlowLabels(mu),
+		FlowStats:  NewFlowStats(mu),
+	}
+}
+
+func (f *FlowSpec) aggregateMetricUpdate(mu MetricUpdate) {
+	f.aggregateFlowLabels(mu)
+	f.aggregateFlowStats(mu)
+}
+
+// FlowSpec has FlowStats that are stats assocated with a given FlowMeta
+// These stats are to be refreshed everytime the FlowData
+// {FlowMeta->FlowStats} is published so as to account
+// for correct no. of started flows in a given aggregation
+// interval.
+func (f FlowSpec) reset() FlowSpec {
+	f.flowsStartedRefs = NewTupleSet()
+	f.flowsCompletedRefs = NewTupleSet()
+	f.flowsRefs = f.flowsRefsActive.Copy()
+	f.PacketsIn = 0
+	f.BytesIn = 0
+	f.PacketsOut = 0
+	f.BytesOut = 0
+
+	return f
+}
+
+type FlowLabels struct {
+	SrcLabels map[string]string
+	DstLabels map[string]string
+}
+
+func NewFlowLabels(mu MetricUpdate) FlowLabels {
+	return FlowLabels{
+		SrcLabels: getFlowLogEndpointLabels(mu.srcEp),
+		DstLabels: getFlowLogEndpointLabels(mu.dstEp),
+	}
+}
+
+func intersectLabels(in, out map[string]string) map[string]string {
+	common := map[string]string{}
+	for k := range out {
+		// Skip Calico labels from the logs
+		if strings.HasPrefix(k, "projectcalico.org/") {
+			continue
+		}
+		if v, ok := in[k]; ok && v == out[k] {
+			common[k] = v
+		}
+	}
+
+	return common
+}
+
+func (f *FlowLabels) aggregateFlowLabels(mu MetricUpdate) {
+	srcLabels := getFlowLogEndpointLabels(mu.srcEp)
+	dstLabels := getFlowLogEndpointLabels(mu.dstEp)
+
+	f.SrcLabels = intersectLabels(srcLabels, f.SrcLabels)
+	f.DstLabels = intersectLabels(dstLabels, f.DstLabels)
 }
 
 // FlowStats captures stats associated with a given FlowMeta
@@ -203,7 +265,7 @@ func NewFlowStats(mu MetricUpdate) FlowStats {
 	}
 }
 
-func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
+func (f *FlowStats) aggregateFlowStats(mu MetricUpdate) {
 	// TODO(doublek): Handle metadata updates.
 	switch {
 	case mu.updateType == UpdateTypeReport && !f.flowsRefsActive.Contains(mu.tuple):
@@ -228,23 +290,6 @@ func (f *FlowStats) aggregateMetricUpdate(mu MetricUpdate) {
 	f.BytesOut += mu.outMetric.deltaBytes
 }
 
-// FlowStats are stats assocated with a given FlowMeta
-// These stats are to be refreshed everytime the FlowData
-// {FlowMeta->FlowStats} is published so as to account
-// for correct no. of started flows in a given aggregation
-// interval.
-func (f FlowStats) reset() FlowStats {
-	f.flowsStartedRefs = NewTupleSet()
-	f.flowsCompletedRefs = NewTupleSet()
-	f.flowsRefs = f.flowsRefsActive.Copy()
-	f.PacketsIn = 0
-	f.BytesIn = 0
-	f.PacketsOut = 0
-	f.BytesOut = 0
-
-	return f
-}
-
 func (f FlowStats) getActiveFlowsCount() int {
 	return len(f.flowsRefsActive)
 }
@@ -254,7 +299,7 @@ func (f FlowStats) getActiveFlowsCount() int {
 // passed to dispatchers or serialized.
 type FlowData struct {
 	FlowMeta
-	FlowStats
+	FlowSpec
 }
 
 // FlowLog is a record of flow data (metadata & reported stats) including
@@ -262,6 +307,7 @@ type FlowData struct {
 type FlowLog struct {
 	StartTime, EndTime time.Time
 	FlowMeta
+	FlowLabels
 	FlowReportedStats
 }
 
@@ -273,10 +319,10 @@ func (f FlowData) ToFlowLog(startTime, endTime time.Time, includeLabels bool) Fl
 	fl.StartTime = startTime
 	fl.EndTime = endTime
 
-	if !includeLabels {
-		fl.SrcMeta.Labels = flowLogFieldNotIncluded
-		fl.DstMeta.Labels = flowLogFieldNotIncluded
+	if includeLabels {
+		fl.FlowLabels = f.FlowLabels
 	}
+
 	return fl
 }
 
@@ -310,8 +356,8 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Type:      srcType,
 		Namespace: parts[3],
 		Name:      parts[4],
-		Labels:    parts[5],
 	}
+	f.SrcLabels = stringToLabels(parts[5])
 
 	switch parts[6] {
 	case "wep":
@@ -328,8 +374,8 @@ func (f *FlowLog) Deserialize(fl string) error {
 		Type:      dstType,
 		Namespace: parts[7],
 		Name:      parts[8],
-		Labels:    parts[9],
 	}
+	f.DstLabels = stringToLabels(parts[9])
 
 	var sip, dip [16]byte
 	if parts[10] != "-" {
