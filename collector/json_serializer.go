@@ -25,24 +25,24 @@ type FlowLogJSONOutput struct {
 	// Some empty values should be json marshalled as null and NOT with golang null values such as "" for
 	// a empty string
 	// Having such values as pointers ensures that json marshalling will render it as such.
-	SourceIP        *string  `json:"source_ip"`
-	SourceName      string   `json:"source_name"`
-	SourceNamespace string   `json:"source_namespace"`
-	SourcePort      *int64   `json:"source_port"`
-	SourceType      string   `json:"source_type"`
-	SourceLabels    []string `json:"source_labels"`
-	DestIP          *string  `json:"dest_ip"`
-	DestName        string   `json:"dest_name"`
-	DestNamespace   string   `json:"dest_namespace"`
-	DestPort        int64    `json:"dest_port"`
-	DestType        string   `json:"dest_type"`
-	DestLabels      []string `json:"dest_labels"`
-	Proto           string   `json:"proto"`
+	SourceIP        *string                  `json:"source_ip"`
+	SourceName      string                   `json:"source_name"`
+	SourceNamespace string                   `json:"source_namespace"`
+	SourcePort      *int64                   `json:"source_port"`
+	SourceType      string                   `json:"source_type"`
+	SourceLabels    *FlowLogLabelsJSONOutput `json:"source_labels"`
+	DestIP          *string                  `json:"dest_ip"`
+	DestName        string                   `json:"dest_name"`
+	DestNamespace   string                   `json:"dest_namespace"`
+	DestPort        int64                    `json:"dest_port"`
+	DestType        string                   `json:"dest_type"`
+	DestLabels      *FlowLogLabelsJSONOutput `json:"dest_labels"`
+	Proto           string                   `json:"proto"`
 
 	Action   string `json:"action"`
 	Reporter string `json:"reporter"`
 
-	Policies []string `json:"policies"`
+	Policies *FlowLogPoliciesJSONOutput `json:"policies"`
 
 	BytesIn           int64 `json:"bytes_in"`
 	BytesOut          int64 `json:"bytes_out"`
@@ -51,6 +51,14 @@ type FlowLogJSONOutput struct {
 	NumFlowsCompleted int64 `json:"num_flows_completed"`
 	PacketsIn         int64 `json:"packets_in"`
 	PacketsOut        int64 `json:"packets_out"`
+}
+
+type FlowLogLabelsJSONOutput struct {
+	Labels []string `json:"labels"`
+}
+
+type FlowLogPoliciesJSONOutput struct {
+	AllPolicies []string `json:"all_policies"`
 }
 
 func toOutput(l *FlowLog) FlowLogJSONOutput {
@@ -74,7 +82,9 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	if l.SrcLabels == nil {
 		out.SourceLabels = nil
 	} else {
-		out.SourceLabels = flattenLabels(l.SrcLabels)
+		out.SourceLabels = &FlowLogLabelsJSONOutput{
+			Labels: flattenLabels(l.SrcLabels),
+		}
 	}
 
 	ip = net.IP(l.Tuple.dst[:16])
@@ -91,7 +101,9 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	if l.DstLabels == nil {
 		out.DestLabels = nil
 	} else {
-		out.DestLabels = flattenLabels(l.DstLabels)
+		out.DestLabels = &FlowLogLabelsJSONOutput{
+			Labels: flattenLabels(l.DstLabels),
+		}
 	}
 
 	out.Proto = protoToString(l.Tuple.proto)
@@ -102,8 +114,12 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	if l.FlowPolicies == nil {
 		out.Policies = nil
 	} else {
+		all_p := make([]string, 0, len(l.FlowPolicies))
 		for pol := range l.FlowPolicies {
-			out.Policies = append(out.Policies, pol)
+			all_p = append(all_p, pol)
+		}
+		out.Policies = &FlowLogPoliciesJSONOutput{
+			AllPolicies: all_p,
 		}
 	}
 
@@ -174,7 +190,7 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	if o.SourceLabels == nil {
 		fl.SrcLabels = nil
 	} else {
-		fl.SrcLabels = unflattenLabels(o.SourceLabels)
+		fl.SrcLabels = unflattenLabels(o.SourceLabels.Labels)
 	}
 
 	switch o.DestType {
@@ -196,7 +212,7 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	if o.DestLabels == nil {
 		fl.DstLabels = nil
 	} else {
-		fl.DstLabels = unflattenLabels(o.DestLabels)
+		fl.DstLabels = unflattenLabels(o.DestLabels.Labels)
 	}
 
 	fl.Action = FlowLogAction(o.Action)
@@ -209,9 +225,13 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.NumFlowsStarted = int(o.NumFlowsStarted)
 	fl.NumFlowsCompleted = int(o.NumFlowsCompleted)
 
-	fl.FlowPolicies = make(FlowPolicies)
-	for _, pol := range o.Policies {
-		fl.FlowPolicies[pol] = emptyValue
+	if o.Policies == nil {
+		fl.FlowPolicies = nil
+	} else {
+		fl.FlowPolicies = make(FlowPolicies)
+		for _, pol := range o.Policies.AllPolicies {
+			fl.FlowPolicies[pol] = emptyValue
+		}
 	}
 
 	return fl, nil
