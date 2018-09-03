@@ -37,6 +37,13 @@
         "dest_type": {
             "type": "keyword"
         },
+        "dest_labels": {
+                /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
+                "type": "nested",
+                "properties": {
+                        "labels": {"type": "keyword"}
+                }
+	},
         "reporter": {
             "type": "keyword"
         },
@@ -58,6 +65,13 @@
         "proto": {
             "type": "keyword"
         },
+        "policies": {
+                /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
+                "type": "nested",
+                "properties": {
+                        "all_policies": {"type": "keyword"}
+                }
+        },
         "source_ip": {
             "type": "ip",
             "null_value": "0.0.0.0",
@@ -74,8 +88,14 @@
         },
         "source_type": {
             "type": "keyword"
-        }
-        /* Both labels fields and the policies field are omitted for now */
+        },
+        "source_labels": {
+                /* This is an array of keywords. It is not necessary to declare this as an array. Elastic will automatically accept a list of strings here */
+                "type": "nested",
+                "properties": {
+                        "labels": {"type": "keyword"}
+                }
+	}
       }   
     }
   }
