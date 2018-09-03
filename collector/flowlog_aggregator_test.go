@@ -377,7 +377,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// The labels should have been intersected right.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, map[string]string{"test-app": "true"}, map[string]string{})
+				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, map[string]string{"test-app": "true"}, map[string]string{}, nil)
 
 			By("not affecting flow logs when IncludeLabels is disabled")
 			ca = NewFlowLogAggregator().IncludeLabels(false)
@@ -433,7 +433,7 @@ var _ = Describe("Flow log aggregator tests", func() {
 			// The labels should have beein intersected right.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
 			expectFlowLog(message, tuple1, expectedNumFlows, expectedNumFlowsStarted, expectedNumFlowsCompleted, FlowLogActionAllow, FlowLogReporterDst,
-				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, nil, nil) // nil & nil for Src and Dst Labels respectively.
+				expectedPacketsIn*2, expectedPacketsOut, expectedBytesIn*2, expectedBytesOut, srcMeta, dstMeta, nil, nil, nil) // nil & nil for Src and Dst Labels respectively.
 		})
 	})
 
