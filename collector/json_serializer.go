@@ -30,13 +30,13 @@ type FlowLogJSONOutput struct {
 	SourceNamespace string   `json:"source_namespace"`
 	SourcePort      *int64   `json:"source_port"`
 	SourceType      string   `json:"source_type"`
-	SourceLabels    []string `json:"source_labels,omitempty"`
+	SourceLabels    []string `json:"source_labels"`
 	DestIP          *string  `json:"dest_ip"`
 	DestName        string   `json:"dest_name"`
 	DestNamespace   string   `json:"dest_namespace"`
 	DestPort        int64    `json:"dest_port"`
 	DestType        string   `json:"dest_type"`
-	DestLabels      []string `json:"dest_labels,omitempty"`
+	DestLabels      []string `json:"dest_labels"`
 	Proto           string   `json:"proto"`
 
 	Action   string `json:"action"`
@@ -69,7 +69,11 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.SourceName = l.SrcMeta.Name
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
-	out.SourceLabels = flattenLabels(l.SrcLabels)
+	if l.SrcLabels == nil {
+		out.SourceLabels = nil
+	} else {
+		out.SourceLabels = flattenLabels(l.SrcLabels)
+	}
 
 	ip = net.IP(l.Tuple.dst[:16])
 	if !ip.IsUnspecified() {
@@ -82,7 +86,11 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 	out.DestName = l.DstMeta.Name
 	out.DestNamespace = l.DstMeta.Namespace
 	out.DestType = string(l.DstMeta.Type)
-	out.DestLabels = flattenLabels(l.DstLabels)
+	if l.DstLabels == nil {
+		out.DestLabels = nil
+	} else {
+		out.DestLabels = flattenLabels(l.DstLabels)
+	}
 
 	out.Proto = protoToString(l.Tuple.proto)
 
@@ -153,6 +161,11 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Namespace: o.SourceNamespace,
 		Name:      o.SourceName,
 	}
+	if o.SourceLabels == nil {
+		fl.SrcLabels = nil
+	} else {
+		fl.SrcLabels = unflattenLabels(o.SourceLabels)
+	}
 
 	switch o.DestType {
 	case "wep":
@@ -169,6 +182,11 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Type:      dstType,
 		Namespace: o.DestNamespace,
 		Name:      o.DestName,
+	}
+	if o.DestLabels == nil {
+		fl.DstLabels = nil
+	} else {
+		fl.DstLabels = unflattenLabels(o.DestLabels)
 	}
 
 	fl.Action = FlowLogAction(o.Action)

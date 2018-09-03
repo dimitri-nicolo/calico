@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
@@ -211,6 +210,9 @@ func unflattenLabels(labelSlice []string) map[string]string {
 	resp := map[string]string{}
 	for _, label := range labelSlice {
 		labelKV := strings.Split(label, "=")
+		if len(labelKV) != 2 {
+			continue
+		}
 		resp[labelKV[0]] = labelKV[1]
 	}
 
@@ -222,8 +224,7 @@ func labelsToString(labels map[string]string) string {
 		return "-"
 	}
 
-	resp, _ := json.Marshal(flattenLabels(labels))
-	return string(resp)
+	return fmt.Sprintf("[%v]", strings.Join(flattenLabels(labels), ","))
 }
 
 func stringToLabels(labelStr string) map[string]string {
@@ -231,8 +232,6 @@ func stringToLabels(labelStr string) map[string]string {
 		return nil
 	}
 
-	labelStr = strings.Replace(labelStr, "'", "\"", -1)
-	var labels []string
-	json.Unmarshal([]byte(labelStr), &labels)
+	labels := strings.Split(labelStr[1:len(labelStr)-1], ",")
 	return unflattenLabels(labels)
 }
