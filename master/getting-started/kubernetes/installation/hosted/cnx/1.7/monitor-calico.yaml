@@ -325,6 +325,7 @@ spec:
   data-node-replicas: 1
   network-host: 0.0.0.0
   zones: []
+  use-ssl: false
   # For production volumes, consider increasing volume sizes, memory and adding backups
   data-volume-size: 5Gi
   java-options: "-Xms512m -Xmx512m"
