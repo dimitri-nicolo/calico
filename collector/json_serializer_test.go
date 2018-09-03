@@ -3,10 +3,9 @@
 package collector
 
 import (
+	"fmt"
 	"reflect"
 	"time"
-
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,6 +14,10 @@ import (
 var _ = Describe("FlowLog JSON serialization", func() {
 
 	Describe("should set every field", func() {
+		policies := FlowPolicies{
+			"0|tier.policy|pass":                      emptyValue,
+			"1|default.knp.default.default-deny|deny": emptyValue,
+		}
 		flowLog := FlowLog{
 			StartTime: time.Now(),
 			EndTime:   time.Now(),
@@ -43,6 +46,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 				SrcLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 				DstLabels: map[string]string{"foo": "bar", "foo2": "bar2"},
 			},
+			FlowPolicies: policies,
 			FlowReportedStats: FlowReportedStats{
 				PacketsIn:         1,
 				PacketsOut:        2,
@@ -117,6 +121,7 @@ var _ = Describe("FlowLog JSON serialization", func() {
 			"SourcePort":   nil,
 			"SourceLabels": nil,
 			"DestLabels":   nil,
+			"Policies":     nil,
 		}
 		// Use reflection to loop over the fields and ensure they all have non
 		// zero values

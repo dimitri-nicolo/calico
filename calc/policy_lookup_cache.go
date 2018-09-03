@@ -274,6 +274,7 @@ type RuleID struct {
 
 	// Optimization so that the hot path doesn't need to create strings.
 	dpName string
+	fpName string
 }
 
 func NewRuleID(tier, policy, namespace string, ruleIndex int, ruleDirection rules.RuleDir, ruleAction rules.RuleAction) *RuleID {
@@ -287,6 +288,7 @@ func NewRuleID(tier, policy, namespace string, ruleIndex int, ruleDirection rule
 		Action:    ruleAction,
 	}
 	rid.setDeniedPacketRuleName()
+	rid.setFlowLogPolicyName()
 	return rid
 }
 
@@ -374,7 +376,7 @@ func (r *RuleID) setDeniedPacketRuleName() {
 	if r.Action != rules.RuleActionDeny {
 		return
 	}
-	if r.IsNamespaced() {
+	if !r.IsNamespaced() {
 		r.dpName = fmt.Sprintf(
 			"%s|%s|%s|%s",
 			r.TierString(),
@@ -382,6 +384,7 @@ func (r *RuleID) setDeniedPacketRuleName() {
 			r.IndexStr,
 			r.ActionString(),
 		)
+		return
 	}
 	r.dpName = fmt.Sprintf(
 		"%s|%s/%s|%s|%s",
@@ -398,6 +401,34 @@ func (r *RuleID) GetDeniedPacketRuleName() string {
 		return ""
 	}
 	return r.dpName
+}
+
+func (r *RuleID) setFlowLogPolicyName() {
+	if !r.IsNamespaced() {
+		r.fpName = fmt.Sprintf(
+			"%s|%s.%s|%s",
+			r.TierString(),
+			r.TierString(),
+			r.NameString(),
+			r.ActionString(),
+		)
+		return
+	}
+	r.fpName = fmt.Sprintf(
+		"%s|%s/%s.%s|%s",
+		r.TierString(),
+		r.Namespace,
+		r.TierString(),
+		r.NameString(),
+		r.ActionString(),
+	)
+}
+
+func (r *RuleID) GetFlowLogPolicyName() string {
+	if r == nil {
+		return ""
+	}
+	return r.fpName
 }
 
 // deconstructPolicyName deconstructs the v1 policy name that is constructed by the SyncerUpdateProcessors in

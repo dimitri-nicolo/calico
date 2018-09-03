@@ -35,6 +35,7 @@ type flowLogAggregator struct {
 	flowStore            map[FlowMeta]FlowSpec
 	flMutex              sync.RWMutex
 	includeLabels        bool
+	includePolicies      bool
 	aggregationStartTime time.Time
 	handledAction        rules.RuleAction
 }
@@ -56,6 +57,11 @@ func (c *flowLogAggregator) AggregateOver(kind AggregationKind) FlowLogAggregato
 
 func (c *flowLogAggregator) IncludeLabels(b bool) FlowLogAggregator {
 	c.includeLabels = b
+	return c
+}
+
+func (c *flowLogAggregator) IncludePolicies(b bool) FlowLogAggregator {
+	c.includePolicies = b
 	return c
 }
 
@@ -104,7 +110,7 @@ func (c *flowLogAggregator) Get() []*FlowLog {
 	c.flMutex.Lock()
 	defer c.flMutex.Unlock()
 	for flowMeta, flowSpecs := range c.flowStore {
-		flowLog := FlowData{flowMeta, flowSpecs}.ToFlowLog(c.aggregationStartTime, aggregationEndTime, c.includeLabels)
+		flowLog := FlowData{flowMeta, flowSpecs}.ToFlowLog(c.aggregationStartTime, aggregationEndTime, c.includeLabels, c.includePolicies)
 		resp = append(resp, &flowLog)
 		c.calibrateFlowStore(flowMeta)
 	}

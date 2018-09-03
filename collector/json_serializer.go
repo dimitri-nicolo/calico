@@ -42,6 +42,8 @@ type FlowLogJSONOutput struct {
 	Action   string `json:"action"`
 	Reporter string `json:"reporter"`
 
+	Policies []string `json:"policies"`
+
 	BytesIn           int64 `json:"bytes_in"`
 	BytesOut          int64 `json:"bytes_out"`
 	NumFlows          int64 `json:"num_flows"`
@@ -96,6 +98,14 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 
 	out.Action = string(l.Action)
 	out.Reporter = string(l.Reporter)
+
+	if l.FlowPolicies == nil {
+		out.Policies = nil
+	} else {
+		for pol := range l.FlowPolicies {
+			out.Policies = append(out.Policies, pol)
+		}
+	}
 
 	out.BytesIn = int64(l.BytesIn)
 	out.BytesOut = int64(l.BytesOut)
@@ -198,6 +208,11 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 	fl.NumFlows = int(o.NumFlows)
 	fl.NumFlowsStarted = int(o.NumFlowsStarted)
 	fl.NumFlowsCompleted = int(o.NumFlowsCompleted)
+
+	fl.FlowPolicies = make(FlowPolicies)
+	for _, pol := range o.Policies {
+		fl.FlowPolicies[pol] = emptyValue
+	}
 
 	return fl, nil
 }

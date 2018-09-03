@@ -182,14 +182,22 @@ func serializeCloudWatchFlowLog(f *FlowLog) string {
 	srcLabels := labelsToString(f.SrcLabels)
 	dstLabels := labelsToString(f.DstLabels)
 
-	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
+	policyStr := flowLogFieldNotIncluded
+	if f.FlowPolicies != nil {
+		policies := []string{}
+		for p := range f.FlowPolicies {
+			policies = append(policies, p)
+		}
+		policyStr = fmt.Sprintf("%v", policies)
+	}
+	return fmt.Sprintf("%v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v %v",
 		f.StartTime.Unix(), f.EndTime.Unix(),
 		f.SrcMeta.Type, f.SrcMeta.Namespace, f.SrcMeta.Name, srcLabels,
 		f.DstMeta.Type, f.DstMeta.Namespace, f.DstMeta.Name, dstLabels,
 		srcIP, dstIP, proto, l4Src, l4Dst,
 		f.NumFlows, f.NumFlowsStarted, f.NumFlowsCompleted, f.Reporter,
 		f.PacketsIn, f.PacketsOut, f.BytesIn, f.BytesOut,
-		f.Action)
+		f.Action, policyStr)
 }
 
 func (c *cloudWatchDispatcher) Initialize() error {
