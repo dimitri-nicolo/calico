@@ -167,6 +167,11 @@ GENERATED_GO_FILES:=proto/felixbackend.pb.go
 # All Felix go files.
 SRC_FILES:=$(shell find . $(foreach dir,$(NON_FELIX_DIRS),-path ./$(dir) -prune -o) -type f -name '*.go' -print) $(GENERATED_GO_FILES)
 
+# Files to include in the Windows ZIP archive.
+WINDOWS_ARCHIVE_FILES := bin/tigera-felix.exe windows-packaging/README.txt windows-packaging/*.ps1
+# Name of the Windows release ZIP archive.
+WINDOWS_ARCHIVE := dist/tigera-felix-windows-$(VERSION).zip
+
 # Figure out the users UID/GID.  These are needed to run docker containers
 # as the current user and ensure that files built inside containers are
 # owned by the current user.
@@ -281,18 +286,34 @@ bin/calico-felix.exe: $(SRC_FILES) vendor/.up-to-date
 		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
 		( echo "Error: $@ was not statically linked"; false ) )'
 
-bin/calico-felix.exe.url: bin/calico-felix.exe utils/make-azure-blob.sh
-	utils/make-azure-blob.sh bin/calico-felix.exe calico-felix-$(GIT_SHORT_COMMIT).exe \
+bin/tigera-felix.exe: bin/calico-felix.exe
+	cp $< $@
+
+%.url: % utils/make-azure-blob.sh
+	utils/make-azure-blob.sh $< $(notdir $(basename $<))-$(GIT_SHORT_COMMIT)$(suffix $<) \
 	    felix-test-uploads felixtestuploads felixtestuploads > $@.tmp
 	mv $@.tmp $@
 
-windows-felix-url: bin/calico-felix.exe.url
+windows-felix-url: bin/tigera-felix.exe.url
 	@echo
 	@echo calico-felix.exe download link:
-	@cat bin/calico-felix.exe.url
+	@cat $<
 	@echo
 	@echo Powershell download command:
-	@echo "Invoke-WebRequest '`cat bin/calico-felix.exe.url`' -O calico-felix-$(GIT_SHORT_COMMIT).exe"
+	@echo "Invoke-WebRequest '`cat $<`' -O tigera-felix-$(GIT_SHORT_COMMIT).exe"
+
+windows-zip-url:
+ifndef VERSION
+	$(MAKE) windows-zip-url VERSION=dev
+else
+	$(MAKE) $(WINDOWS_ARCHIVE).url VERSION=dev
+	@echo
+	@echo $(WINDOWS_ARCHIVE) download link:
+	@cat $(WINDOWS_ARCHIVE).url
+	@echo
+	@echo Powershell download command:
+	@echo "Invoke-WebRequest '`cat $(WINDOWS_ARCHIVE).url`' -O tigera-felix.zip"
+endif
 
 # Generate the protobuf bindings for go. The proto/felixbackend.pb.go file is included in SRC_FILES
 protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
@@ -675,6 +696,7 @@ GIT_VERSION?=$(shell git describe --tags --dirty)
 release: release-prereqs
 	$(MAKE) VERSION=$(VERSION) release-tag
 	$(MAKE) VERSION=$(VERSION) release-build
+	$(MAKE) VERSION=$(VERSION) release-windows-archive
 	$(MAKE) VERSION=$(VERSION) release-verify
 
 	@echo ""
@@ -682,6 +704,7 @@ release: release-prereqs
 	@echo ""
 	@echo "  make VERSION=$(VERSION) release-publish"
 	@echo ""
+	@echo "Then, archive the Windows ZIP file, created at $(WINDOWS_ARCHIVE)."
 
 ## Produces a git tag for the release.
 release-tag: release-prereqs release-notes
@@ -703,6 +726,12 @@ endif
 	$(MAKE) tag-images IMAGETAG=$(VERSION)
 	# Generate the `latest` images.
 	$(MAKE) tag-images IMAGETAG=latest
+
+## Produces the Windows ZIP archive for the release.
+release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs $(WINDOWS_ARCHIVE_FILES)
+	-rm -f "$(WINDOWS_ARCHIVE)"
+	mkdir -p dist
+	zip --junk-paths "$(WINDOWS_ARCHIVE)" $(WINDOWS_ARCHIVE_FILES)
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
