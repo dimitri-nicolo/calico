@@ -241,6 +241,35 @@ spec:
 
 ---
 
+# Audit policy for the {{site.prodname}} API Server.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-policy-ee
+  namespace: kube-system
+data:
+  config: |-
+    apiVersion: audit.k8s.io/v1beta1
+    kind: Policy
+    rules:
+    - level: RequestResponse
+      omitStages:
+      - RequestReceived
+      verbs:
+      - create
+      - patch
+      - update
+      - delete
+      resources:
+      - group: projectcalico.org
+        resources:
+        - globalnetworkpolicies
+        - networkpolicies
+        - globalnetworksets
+        - tiers
+
+---
+
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -276,7 +305,9 @@ spec:
       - name: cnx-apiserver
         image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
         args:
-        - "--secure-port=5443"
+          - "--secure-port=5443"
+          - "--audit-policy-file=/etc/tigera/audit/policy.conf"
+          - "--audit-log-path=/var/log/calico/audit/tsee-audit.log"
         env:
 {%- if include.datastore == "etcd" %}
           - name: ETCD_ENDPOINTS
@@ -306,10 +337,14 @@ spec:
                 name: calico-config
                 key: etcd_cert
         volumeMounts:
-           - mountPath: /calico-secrets
-             name: etcd-certs
-           - mountPath: /code/apiserver.local.config/certificates
-             name: apiserver-certs
+          - mountPath: /var/log/calico/audit
+            name: var-log-calico-audit
+          - mountPath: /etc/tigera/audit
+            name: audit-policy-ee
+          - mountPath: /calico-secrets
+            name: etcd-certs
+          - mountPath: /code/apiserver.local.config/certificates
+            name: apiserver-certs
   {%- else %}
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
@@ -331,6 +366,10 @@ spec:
           #       name: calico-config
           #       key: etcd_cert
         volumeMounts:
+          - mountPath: /var/log/calico/audit
+            name: var-log-calico-audit
+          - mountPath: /etc/tigera/audit
+            name: audit-policy-ee
           # - mountPath: /calico-secrets
           #   name: etcd-certs
           # - mountPath: /code/apiserver.local.config/certificates
@@ -340,6 +379,10 @@ spec:
           - name: DATASTORE_TYPE
             value: "kubernetes"
         volumeMounts:
+          - mountPath: /var/log/calico/audit
+            name: var-log-calico-audit
+          - mountPath: /etc/tigera/audit
+            name: audit-policy-ee
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
 {%- endif %}
@@ -385,8 +428,8 @@ spec:
                 name: calico-config
                 key: etcd_cert
         volumeMounts:
-           - mountPath: /calico-secrets
-             name: etcd-certs
+          - mountPath: /calico-secrets
+            name: etcd-certs
   {%- else %}
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
@@ -423,6 +466,17 @@ spec:
           initialDelaySeconds: 90
           periodSeconds: 10
       volumes:
+        # Volume for audit logs output
+        - name: var-log-calico-audit
+          hostPath:
+            path: /var/log/calico/audit
+            type: DirectoryOrCreate
+        - name: audit-policy
+          configMap:
+            name: audit-policy-ee
+            items:
+            - key: config
+              path: policy.conf
 {%- if include.datastore == "etcd" %}
   {%- if include.orch == "openshift" %}
         # If you're using TLS enabled etcd uncomment the following.
