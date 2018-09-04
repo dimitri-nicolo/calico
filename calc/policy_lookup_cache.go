@@ -412,16 +412,24 @@ func (r *RuleID) setFlowLogPolicyName() {
 			r.NameString(),
 			r.ActionString(),
 		)
-		return
+	} else if strings.HasPrefix(r.Name, "knp.default") {
+		r.fpName = fmt.Sprintf(
+			"%s|%s/%s|%s",
+			r.TierString(),
+			r.Namespace,
+			r.NameString(),
+			r.ActionString(),
+		)
+	} else {
+		r.fpName = fmt.Sprintf(
+			"%s|%s/%s.%s|%s",
+			r.TierString(),
+			r.Namespace,
+			r.TierString(),
+			r.NameString(),
+			r.ActionString(),
+		)
 	}
-	r.fpName = fmt.Sprintf(
-		"%s|%s/%s.%s|%s",
-		r.TierString(),
-		r.Namespace,
-		r.TierString(),
-		r.NameString(),
-		r.ActionString(),
-	)
 }
 
 func (r *RuleID) GetFlowLogPolicyName() string {
