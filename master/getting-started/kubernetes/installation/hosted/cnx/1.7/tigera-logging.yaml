@@ -1,6 +1,0 @@
----
-layout: null
----
-{% include {{page.version}}/manifests/tigera-logging.yaml %}
-
-

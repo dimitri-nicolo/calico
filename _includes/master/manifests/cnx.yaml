@@ -660,5 +660,3 @@ spec:
         secret:
           secretName: cnx-manager-tls
 ---
-{% include {{page.version}}/manifests/tigera-logging.yaml %}
-

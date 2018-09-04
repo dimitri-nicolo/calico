@@ -60,16 +60,6 @@ spec:
       ports: [443, 5443, 8080, 10443]
 
 ---
-
-# Add a label to the kube-system namespace so it can be referenced in network policy
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kube-system
-  labels:
-    name: kube-system
-
----
     
 # Allow access to Elasticsearch client nodes from Kibana and fluentd
 apiVersion: projectcalico.org/v3
@@ -88,7 +78,6 @@ spec:
     protocol: TCP
     source:
       selector: k8s-app == 'tigera-fluentd-node'
-      namespaceSelector: name == 'kube-system'
     destination:
       ports: [9200]
   - action: Allow
