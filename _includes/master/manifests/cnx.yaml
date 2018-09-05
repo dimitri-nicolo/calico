@@ -61,6 +61,8 @@ data:
   tigera.cnx-manager.prometheus-api-url: "/api/v1/namespaces/calico-monitoring/services/calico-node-prometheus:9090/proxy/api/v1"
   # Query api url
   tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/https:cnx-api:8080/proxy"
+  # Elasticsearch service resource path
+  tigera.cnx-manager.elasticsearch-api-url: "/api/v1/namespaces/calico-monitoring/services/elasticsearch-tigera-elasticsearch:9200/proxy"
   # Enable ALP support in the UI
   tigera.cnx-manager.alp-support: "false"
 
@@ -584,6 +586,11 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.query-api-url
+          - name: CNX_ELASTICSEARCH_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.elasticsearch-api-url
           - name: CNX_ALP_SUPPORT
             valueFrom:
               configMapKeyRef:
