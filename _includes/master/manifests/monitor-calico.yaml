@@ -411,3 +411,76 @@ spec:
           hostPath:
             type: DirectoryOrCreate
             path: /var/log/calico
+---
+# Allow access to Elasticsearch client nodes from Kibana and fluentd
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-cnx.elasticsearch-access
+  namespace: calico-monitoring
+spec:
+  order: 1
+  tier: allow-cnx
+  selector: name == 'es-client-tigera-elasticsearch'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: k8s-app == 'tigera-fluentd-node'
+    destination:
+      ports: [9200]
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: name == 'kibana-tigera-elasticsearch'
+    destination:
+      ports: [9200]
+
+---
+
+# Allow internal communication within the ElasticSearch cluster
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-cnx.elasticsearch-internal
+  namespace: calico-monitoring
+spec:
+  order: 1
+  tier: allow-cnx
+  selector: cluster == 'tigera-elasticsearch'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      selector: cluster == 'tigera-elasticsearch'
+    destination:
+      ports: [9300]
+
+---
+
+# Allow access to Kibana
+apiVersion: projectcalico.org/v3
+kind: NetworkPolicy
+metadata:
+  name: allow-cnx.kibana-access
+  namespace: calico-monitoring
+spec:
+  order: 1
+  tier: allow-cnx
+  selector: name == 'kibana-tigera-elasticsearch'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      # This policy allows access to Kibana from anywhere.
+      # Narrow this down to your management network or remove this
+      # policy to block access to Kibana.
+      nets: ["0.0.0.0/0"]
+    destination:
+      ports: [5601]
