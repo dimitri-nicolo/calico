@@ -14,3 +14,6 @@
             # Include policies in Tigera Secure EE Flow Log
             - name: FELIX_FLOWLOGSFILEINCLUDEPOLICIES
               value: "true"
+            # Enable processing network sets in EE Flow Logs
+            - name: FELIX_FLOWLOGSENABLENETWORKSETS
+              value: "true"
