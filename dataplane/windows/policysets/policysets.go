@@ -111,6 +111,7 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 
 	debug := log.GetLevel() >= log.DebugLevel
 
+	var lastRule *hns.ACLPolicy
 	for _, setId := range setIds {
 		if debug {
 			log.WithFields(log.Fields{"setId": setId, "isInbound": isInbound}).Debug(
@@ -122,8 +123,6 @@ func (s *PolicySets) GetPolicySetRules(setIds []string, isInbound bool) (rules [
 			log.WithField("setId", setId).Error("Unable to find Policy set, replacing with a deny rule")
 			break
 		}
-
-		var lastRule *hns.ACLPolicy
 
 		for _, member := range policySet.Members {
 			if member.Direction != direction {
