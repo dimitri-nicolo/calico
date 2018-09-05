@@ -40,7 +40,7 @@ you want to install the binary.
    registry.
 
    ```bash
-   docker pull {{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
+   docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
    ```
 
 1. Confirm that the image has loaded by typing `docker images`.

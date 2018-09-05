@@ -8,12 +8,12 @@ title: System requirements
 
 {{site.prodname}} {{page.version}} supports:
 
-- OpenShift Origin 3.7 and 3.9
-- OpenShift Container Platform 3.7 and 3.9
+- OpenShift Kubernetes Distribution 3.10
+- OpenShift Container Platform 3.10
 
 Refer to the OpenShift documentation for additional requirements.
 
-- [OpenShift Origin](https://docs.openshift.org/latest/install/prerequisites.html)
+- [OpenShift Kubernetes Distribution](https://docs.openshift.org/latest/install/prerequisites.html)
 - [OpenShift Container Platform](https://docs.openshift.com/container-platform/latest/install/prerequisites.html)
 
 {% include {{page.version}}/reqs-kernel.md %}

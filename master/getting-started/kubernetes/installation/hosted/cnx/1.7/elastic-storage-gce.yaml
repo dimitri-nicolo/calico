@@ -1,0 +1,16 @@
+---
+layout: null
+---
+# This manifest implements elasticsearch-storage using GCE PD-SSD disks.
+# The cluster will need to be able to create those disks (e.g. be in GCE with a suitable service account).
+# Modify the parameters as needed for your deployment.
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: elasticsearch-storage
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+  zones: us-central1-f
+  replication-type: none

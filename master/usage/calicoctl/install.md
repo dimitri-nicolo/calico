@@ -34,6 +34,14 @@ corresponds to your desired deployment.
 
 {% include {{page.version}}/ctl-container-install.md cli="calicoctl" %}
 
-**Next step**:
+### Executing a calicoctl command in the pod
 
-[Configure `calicoctl` to connect to your datastore](/{{page.version}}/usage/calicoctl/configure/).
+You can run calicoctl commands in the calicoctl pod using kubectl as shown below.
+
+```
+kubectl exec -ti -n kube-system calicoctl -- /calicoctl get profiles -o wide
+
+NAME                 TAGS
+kns.default          kns.default
+kns.kube-system      kns.kube-system
+```

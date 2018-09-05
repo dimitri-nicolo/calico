@@ -61,6 +61,8 @@ data:
   tigera.cnx-manager.prometheus-api-url: "/api/v1/namespaces/calico-monitoring/services/calico-node-prometheus:9090/proxy/api/v1"
   # Query api url
   tigera.cnx-manager.query-api-url: "/api/v1/namespaces/kube-system/services/https:cnx-api:8080/proxy"
+  # Elasticsearch service resource path
+  tigera.cnx-manager.elasticsearch-api-url: "/api/v1/namespaces/calico-monitoring/services/elasticsearch-tigera-elasticsearch:9200/proxy"
   # Enable ALP support in the UI
   tigera.cnx-manager.alp-support: "false"
 
@@ -241,6 +243,35 @@ spec:
 
 ---
 
+# Audit policy for the {{site.prodname}} API Server.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit-policy-ee
+  namespace: kube-system
+data:
+  config: |-
+    apiVersion: audit.k8s.io/v1beta1
+    kind: Policy
+    rules:
+    - level: RequestResponse
+      omitStages:
+      - RequestReceived
+      verbs:
+      - create
+      - patch
+      - update
+      - delete
+      resources:
+      - group: projectcalico.org
+        resources:
+        - globalnetworkpolicies
+        - networkpolicies
+        - globalnetworksets
+        - tiers
+
+---
+
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
@@ -276,7 +307,9 @@ spec:
       - name: cnx-apiserver
         image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
         args:
-        - "--secure-port=5443"
+          - "--secure-port=5443"
+          - "--audit-policy-file=/etc/tigera/audit/policy.conf"
+          - "--audit-log-path=/var/log/calico/audit/tsee-audit.log"
         env:
 {%- if include.datastore == "etcd" %}
           - name: ETCD_ENDPOINTS
@@ -288,28 +321,32 @@ spec:
             value: "etcdv3"
   {%- if include.orch == "openshift" %}
           # Location of the CA certificate for etcd.
-           - name: ETCD_CA_CERT_FILE
-             valueFrom:
-               configMapKeyRef:
-                 name: calico-config
-                 key: etcd_ca
+          - name: ETCD_CA_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_ca
           # Location of the client key for etcd.
-           - name: ETCD_KEY_FILE
-             valueFrom:
-               configMapKeyRef:
-                 name: calico-config
-                 key: etcd_key
+          - name: ETCD_KEY_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_key
           # Location of the client certificate for etcd.
-           - name: ETCD_CERT_FILE
-             valueFrom:
-               configMapKeyRef:
-                 name: calico-config
-                 key: etcd_cert
+          - name: ETCD_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_cert
         volumeMounts:
-           - mountPath: /calico-secrets
-             name: etcd-certs
-           - mountPath: /code/apiserver.local.config/certificates
-             name: apiserver-certs
+          - mountPath: /var/log/calico/audit
+            name: var-log-calico-audit
+          - mountPath: /etc/tigera/audit
+            name: audit-policy-ee
+          - mountPath: /calico-secrets
+            name: etcd-certs
+          - mountPath: /code/apiserver.local.config/certificates
+            name: apiserver-certs
   {%- else %}
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
@@ -331,6 +368,10 @@ spec:
           #       name: calico-config
           #       key: etcd_cert
         volumeMounts:
+          - mountPath: /var/log/calico/audit
+            name: var-log-calico-audit
+          - mountPath: /etc/tigera/audit
+            name: audit-policy-ee
           # - mountPath: /calico-secrets
           #   name: etcd-certs
           # - mountPath: /code/apiserver.local.config/certificates
@@ -340,6 +381,10 @@ spec:
           - name: DATASTORE_TYPE
             value: "kubernetes"
         volumeMounts:
+          - mountPath: /var/log/calico/audit
+            name: var-log-calico-audit
+          - mountPath: /etc/tigera/audit
+            name: audit-policy-ee
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
 {%- endif %}
@@ -348,8 +393,8 @@ spec:
             path: /apis/
             port: 5443
             scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 3
+          initialDelaySeconds: 90
+          periodSeconds: 10
       - name: cnx-queryserver
         image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
@@ -367,26 +412,26 @@ spec:
   {%- if include.orch == "openshift" %}
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
-           - name: ETCD_CA_CERT_FILE
-             valueFrom:
-               configMapKeyRef:
-                 name: calico-config
-                 key: etcd_ca
+          - name: ETCD_CA_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_ca
           # Location of the client key for etcd.
-           - name: ETCD_KEY_FILE
-             valueFrom:
-               configMapKeyRef:
-                 name: calico-config
-                 key: etcd_key
+          - name: ETCD_KEY_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_key
           # Location of the client certificate for etcd.
-           - name: ETCD_CERT_FILE
-             valueFrom:
-               configMapKeyRef:
-                 name: calico-config
-                 key: etcd_cert
+          - name: ETCD_CERT_FILE
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: etcd_cert
         volumeMounts:
-           - mountPath: /calico-secrets
-             name: etcd-certs
+          - mountPath: /calico-secrets
+            name: etcd-certs
   {%- else %}
           # If you're using TLS enabled etcd uncomment the following.
           # Location of the CA certificate for etcd.
@@ -420,15 +465,26 @@ spec:
             path: /version
             port: 8080
             scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 3
+          initialDelaySeconds: 90
+          periodSeconds: 10
       volumes:
+        # Volume for audit logs output
+        - name: var-log-calico-audit
+          hostPath:
+            path: /var/log/calico/audit
+            type: DirectoryOrCreate
+        - name: audit-policy-ee
+          configMap:
+            name: audit-policy-ee
+            items:
+            - key: config
+              path: policy.conf
 {%- if include.datastore == "etcd" %}
   {%- if include.orch == "openshift" %}
         # If you're using TLS enabled etcd uncomment the following.
-         - name: etcd-certs
-           secret:
-             secretName: calico-etcd-secrets
+        - name: etcd-certs
+          secret:
+            secretName: calico-etcd-secrets
         # If you're using TLS with certificate verification then
         # uncomment the following.
         # - name: apiserver-certs
@@ -530,6 +586,11 @@ spec:
               configMapKeyRef:
                 name: tigera-cnx-manager-config
                 key: tigera.cnx-manager.query-api-url
+          - name: CNX_ELASTICSEARCH_API_URL
+            valueFrom:
+              configMapKeyRef:
+                name: tigera-cnx-manager-config
+                key: tigera.cnx-manager.elasticsearch-api-url
           - name: CNX_ALP_SUPPORT
             valueFrom:
               configMapKeyRef:
@@ -552,8 +613,8 @@ spec:
             path: /
             port: 8443
             scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 3
+          initialDelaySeconds: 90
+          periodSeconds: 10
         volumeMounts:
         - mountPath: /etc/cnx-manager-web-tls
           name: cnx-manager-tls
@@ -597,8 +658,8 @@ spec:
             path: /
             port: 9443
             scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 3
+          initialDelaySeconds: 90
+          periodSeconds: 10
       volumes:
       - name: cnx-cache-volume
         emptyDir: {}
@@ -606,5 +667,3 @@ spec:
         secret:
           secretName: cnx-manager-tls
 ---
-{% include {{page.version}}/manifests/tigera-logging.yaml %}
-

@@ -58,3 +58,5 @@ spec:
     destination:
       # The ports Tigera Secure EE API Server and Tigera Secure EE Query Server are configured to listen on.
       ports: [443, 5443, 8080, 10443]
+
+---
