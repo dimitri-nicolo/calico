@@ -471,7 +471,7 @@ spec:
           hostPath:
             path: /var/log/calico/audit
             type: DirectoryOrCreate
-        - name: audit-policy
+        - name: audit-policy-ee
           configMap:
             name: audit-policy-ee
             items:
