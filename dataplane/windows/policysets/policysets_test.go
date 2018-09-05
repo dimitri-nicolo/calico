@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+
 	"github.com/projectcalico/felix/dataplane/windows/hns"
 	"github.com/projectcalico/felix/proto"
 )
@@ -281,6 +282,63 @@ func TestRuleRendering(t *testing.T) {
 		// Default host/pod rule.
 		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
 	}), "unexpected rules returned for selector CIDR filtering policy")
+}
+
+func TestPolicyOrdering(t *testing.T) {
+	RegisterTestingT(t)
+
+	h := mockHNS{}
+
+	// Windows 1803/RS4
+	h.SupportedFeatures.Acl.AclRuleId = true
+	h.SupportedFeatures.Acl.AclNoHostRulePriority = true
+
+	ipsc := mockIPSetCache{
+		IPSets: map[string][]string{},
+	}
+
+	ps := NewPolicySets(&h, []IPSetCache{&ipsc})
+
+	// Empty policy should return no rules (apart from the default drop).
+	ps.AddOrReplacePolicySet("allow", &proto.Policy{
+		InboundRules: []*proto.Rule{{Action: "Allow"}},
+	})
+	ps.AddOrReplacePolicySet("deny", &proto.Policy{
+		InboundRules: []*proto.Rule{{Action: "Deny"}},
+	})
+
+	Expect(ps.GetPolicySetRules([]string{"allow", "deny"}, true)).To(Equal([]*hns.ACLPolicy{
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000,
+			Id: "allow--0"},
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001,
+			Id: "deny--0"},
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1002},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "incorrect rules returned for allow,deny")
+
+	Expect(ps.GetPolicySetRules([]string{"allow", "allow"}, true)).To(Equal([]*hns.ACLPolicy{
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000,
+			Id: "allow--0"},
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1000,
+			Id: "allow--0"},
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1001},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "incorrect rules returned for allow,allow")
+
+	Expect(ps.GetPolicySetRules([]string{"deny", "allow"}, true)).To(Equal([]*hns.ACLPolicy{
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1000,
+			Id: "deny--0"},
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Switch, Priority: 1001,
+			Id: "allow--0"},
+		// Default deny rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Block, Direction: hns.In, RuleType: hns.Switch, Priority: 1002},
+		// Default host/pod rule.
+		{Type: hns.ACL, Protocol: 256, Action: hns.Allow, Direction: hns.In, RuleType: hns.Host},
+	}), "incorrect rules returned for deny,allow")
 }
 
 type mockHNS struct {
