@@ -1,5 +1,5 @@
-1. If your cluster is connected to the Internet, use the following command to apply the Prometheus
-   operator manifest.
+1. If your cluster is connected to the internet, use the following command to apply the Prometheus
+   and ElasticSearch operator manifest.
 
    ```
    kubectl apply -f \
@@ -38,14 +38,17 @@
    >    kubectl apply -f operator.yaml
    >    ```
 
-1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com` and `servicemonitors.monitoring.coreos.com` custom resource definitions to be created. Check by running:
+1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `servicemonitors.monitoring.coreos.com` and
+   `elasticsearchclusters.enterprises.upmc.com` custom resource definitions to be created. Check by running:
 
    ```
    kubectl get customresourcedefinitions
    ```
 
-1. If your cluster is connected to the Internet, use the following command to install Prometheus
-   and Alertmanager.
+{% include {{page.version}}/elastic-storage.md %}
+
+1. If your cluster is connected to the internet, use the following command to install Prometheus,
+   Alertmanager and ElasticSearch.
 
    ```
    kubectl apply -f \

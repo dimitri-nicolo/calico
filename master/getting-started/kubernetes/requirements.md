@@ -9,9 +9,9 @@ title: System requirements
 #### Supported versions
 
 We test {{site.prodname}} {{page.version}} against the following Kubernetes versions.
-- 1.8
 - 1.9
 - 1.10
+- 1.11
 
 Other versions are likely to work, but we do not actively test {{site.prodname}}
 {{page.version}} against them.
@@ -34,8 +34,6 @@ use {{site.prodname}} networking.
 
 {{site.prodname}} supports the following kube-proxy modes:
 - `iptables` (default)
-- `ipvs` Requires Kubernetes >=v1.9.3. Refer to
-  [Enabling IPVS in Kubernetes](../../usage/enabling-ipvs) for more details.
 
 #### IP pool configuration
 

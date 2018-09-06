@@ -81,6 +81,12 @@ toc:
     path: /usage/federation/configure-rcc
   - title: Federated Services
     path: /usage/federation/services-controller
+- title: Logging and ElasticSearch
+  section:
+  - title: Configuring ElasticSearch
+    path: /usage/logs/configure-elastic
+  - title: Using your own ElasticSearch cluster
+    path: /usage/logs/byo-elastic
 - title: Writing kubeconfig files to connect to your Kubernetes cluster
   path: /usage/writing-kubeconfig
 - title: Troubleshooting

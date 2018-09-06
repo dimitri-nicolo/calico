@@ -119,8 +119,10 @@ toc:
   path: /reference/cni-plugin/configuration
 - title: Calico Kubernetes Controllers
   path: /reference/kube-controllers/configuration
-- title: Auditing and Reporting
+- title: Logging, Auditing and Reporting
   section:
+    - title: CNX Log Management
+      path: /reference/cnx/logs
     - title: Kubernetes Audit Logging
       path: /reference/cnx/auditing
     - title: OpenShift Audit Logging
