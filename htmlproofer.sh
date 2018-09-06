@@ -19,7 +19,9 @@ echo "Running a hard URL check against recent releases"
 echo > allstderr.out
 for i in `seq 1 10`; do
 	echo "htmlproofer attempt #${i}"
-	docker run -ti -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS} --internal_domains "docs.tigera.io" 2>stderr.out
+	
+	# This docker run command MUST NOT USE -ti, or the stderr redirect will fail and the script will ignore all errors.
+	docker run -e JEKYLL_UID=${JEKYLL_UID} --rm -v $(pwd)/_site:/_site/ quay.io/calico/htmlproofer:${HP_VERSION} /_site --file-ignore ${HP_IGNORE_LOCAL_DIRS} --assume-extension --check-html --empty-alt-ignore --url-ignore ${HP_IGNORE_URLS} --internal_domains "docs.tigera.io" 2>stderr.out
 
 	# Store the RC for future use.
 	rc=$?
@@ -29,7 +31,7 @@ for i in `seq 1 10`; do
 	cat stderr.out
 
 	# Extract all the unique failing links and append them to the errors file
-	grep -v "/_site" stderr.out | grep "*  " | awk '{print $4}' | sort | uniq >> allstderr.out
+	grep -v "/_site" stderr.out | grep "*  " | sort | uniq >> allstderr.out
 	
 	# If the command executed successfully, break out. Otherwise, retry.
 	if [[ $rc == 0 ]]; then break; fi
