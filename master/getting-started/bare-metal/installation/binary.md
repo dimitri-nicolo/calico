@@ -1,5 +1,5 @@
 ---
-title: Binary install without package manager
+title: Binary install
 ---
 
 ## Prerequisites
