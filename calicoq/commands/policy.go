@@ -263,8 +263,8 @@ func EvalPolicySelectorsPrint(output OutputList) {
 func convertGlobalPolicyV2ToV1Spec(spec apiv3.GlobalNetworkPolicySpec) *model.Policy {
 	v1value := &model.Policy{
 		Order:          spec.Order,
-		InboundRules:   updateprocessors.RulesAPIV2ToBackend(spec.Ingress, ""),
-		OutboundRules:  updateprocessors.RulesAPIV2ToBackend(spec.Egress, ""),
+		InboundRules:   updateprocessors.RulesAPIV2ToBackend(spec.Ingress, "", false),
+		OutboundRules:  updateprocessors.RulesAPIV2ToBackend(spec.Egress, "", false),
 		Selector:       spec.Selector,
 		Types:          policyTypesAPIV2ToBackend(spec.Types),
 		DoNotTrack:     spec.DoNotTrack,
@@ -289,8 +289,8 @@ func convertNetworkPolicyV2ToV1Value(spec apiv3.NetworkPolicySpec, ns string) *m
 
 	v1value := &model.Policy{
 		Order:          spec.Order,
-		InboundRules:   updateprocessors.RulesAPIV2ToBackend(spec.Ingress, ns),
-		OutboundRules:  updateprocessors.RulesAPIV2ToBackend(spec.Egress, ns),
+		InboundRules:   updateprocessors.RulesAPIV2ToBackend(spec.Ingress, ns, false),
+		OutboundRules:  updateprocessors.RulesAPIV2ToBackend(spec.Egress, ns, false),
 		Selector:       selector,
 		Types:          policyTypesAPIV2ToBackend(spec.Types),
 		ApplyOnForward: true,
