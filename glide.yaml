@@ -4,16 +4,16 @@ import:
 - package: github.com/docopt/docopt-go
 - package: github.com/projectcalico/felix
   vcs: git
-  version: release-v2.2
+  version: 993b702fdfb62341cf593ffd490a2a1076aab6d2
   repo: git@github.com:tigera/felix-private.git
 - package: github.com/projectcalico/libcalico-go
   vcs: git
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: release-v2.2
+  version: e4e192845ab7f6f1e9ece73b5c5ba0be08804b39
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: c044b7de7791b933d70320b2106ef9dd433928c9
+  version: 871d880429a77ff359fb3f9f09e09422ff474f32
   subpackages:
   - client
 - package: github.com/projectcalico/go-yaml-wrapper

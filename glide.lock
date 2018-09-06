@@ -1,5 +1,5 @@
-hash: a672abbb792733557158f855a4d45f0022f8f9fdf5e9cb243bddb2be73c3afd5
-updated: 2018-09-06T08:58:59.122799261-07:00
+hash: fe16755f5efc6566ccb3b56ca3ac4a5c6757122a7cb41088c1711a0620ede706
+updated: 2018-09-06T15:45:15.765240439-07:00
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -268,7 +268,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
-  version: c044b7de7791b933d70320b2106ef9dd433928c9
+  version: 871d880429a77ff359fb3f9f09e09422ff474f32
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
