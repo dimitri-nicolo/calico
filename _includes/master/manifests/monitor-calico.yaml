@@ -440,6 +440,30 @@ spec:
 
 ---
 
+# Allow access to Elasticsearch client nodes from kube-apiserver
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkPolicy
+metadata:
+  name: allow-cnx.elasticsearch-access
+spec:
+  order: 1
+  tier: allow-cnx
+  selector: name == 'es-client-tigera-elasticsearch'
+  types:
+  - Ingress
+  ingress:
+  - action: Allow
+    protocol: TCP
+    source:
+      # Replace this subnet with a list of the IP addresses of all your Kubernetes nodes.
+      # It must be all nodes because kube-proxy SNATs traffic from host networked pods
+      # on the receiving node.
+      nets: ["0.0.0.0/0"]
+    destination:
+      ports: [9200]
+
+---
+
 # Allow internal communication within the ElasticSearch cluster
 apiVersion: projectcalico.org/v3
 kind: NetworkPolicy
