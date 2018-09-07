@@ -18,19 +18,19 @@
 package calc_test
 
 import (
-	. "github.com/projectcalico/felix/calc"
-	"github.com/projectcalico/felix/dataplane/mock"
-
 	"fmt"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	lclient "github.com/tigera/licensing/client"
+	"github.com/tigera/licensing/client/features"
 
-	"github.com/davecgh/go-spew/spew"
-
+	. "github.com/projectcalico/felix/calc"
 	"github.com/projectcalico/felix/config"
+	"github.com/projectcalico/felix/dataplane/mock"
 	"github.com/projectcalico/felix/proto"
 	"github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/health"
@@ -248,6 +248,37 @@ var baseTests = []StateList{
 	// TODO(smc): Test rule conversions
 }
 
+// license is a mocked-up interface which provides a simple version of the licensing repo's
+// "monitor" interface. There are two concrete instances of the interface: licenseTiersEnabled
+// enables all licensing features, licenseTiersDisabled disables Tiers feature and enables
+// all remaining features.
+type license interface {
+	GetFeatureStatus(string) bool
+	GetLicenseStatus() lclient.LicenseStatus
+}
+type licenseTiersEnabled struct {
+}
+
+func (l licenseTiersEnabled) GetFeatureStatus(feature string) bool {
+	return true // all license features enabled by default
+}
+func (l licenseTiersEnabled) GetLicenseStatus() lclient.LicenseStatus {
+	return lclient.Valid
+}
+
+type licenseTiersDisabled struct {
+}
+
+func (l licenseTiersDisabled) GetFeatureStatus(feature string) bool {
+	if feature == features.Tiers {
+		return false
+	}
+	return true // all other license features enabled by default
+}
+func (l licenseTiersDisabled) GetLicenseStatus() lclient.LicenseStatus {
+	return lclient.Valid
+}
+
 var testExpanders = []func(baseTest StateList) (desc string, mappedTests []StateList){
 	identity,
 	reverseKVOrder,
@@ -269,10 +300,10 @@ var testExpanders = []func(baseTest StateList) (desc string, mappedTests []State
 // is also likely to fail.  A good strategy for debugging is to focus on the
 // base tests first.
 var _ = Describe("Calculation graph state sequencing tests:", func() {
-	describeSyncTests(baseTests)
+	describeSyncTests(baseTests, licenseTiersEnabled{})
 })
 
-func describeSyncTests(baseTests []StateList) {
+func describeSyncTests(baseTests []StateList, l license) {
 	for _, test := range baseTests {
 		baseTest := test
 		for _, expander := range testExpanders {
@@ -282,16 +313,16 @@ func describeSyncTests(baseTests []StateList) {
 				expandedTest = append(expandedTest, empty)
 				desc := fmt.Sprintf("with input states %v %v", baseTest, expanderDesc)
 				Describe(desc+" flushing after each KV", func() {
-					doStateSequenceTest(expandedTest, afterEachKV)
+					doStateSequenceTest(expandedTest, l, afterEachKV)
 				})
 				Describe(desc+" flushing after each KV and duplicating each update", func() {
-					doStateSequenceTest(expandedTest, afterEachKVAndDupe)
+					doStateSequenceTest(expandedTest, l, afterEachKVAndDupe)
 				})
 				Describe(desc+" flushing after each state", func() {
-					doStateSequenceTest(expandedTest, afterEachState)
+					doStateSequenceTest(expandedTest, l, afterEachState)
 				})
 				Describe(desc+" flushing at end only", func() {
-					doStateSequenceTest(expandedTest, atEnd)
+					doStateSequenceTest(expandedTest, l, atEnd)
 				})
 			}
 		}
@@ -308,10 +339,10 @@ func describeSyncTests(baseTests []StateList) {
 // synchronous test above is passing.  It's much easier to debug a
 // deterministic test!
 var _ = Describe("Async calculation graph state sequencing tests:", func() {
-	//describeAsyncTests(baseTests)
+	//describeAsyncTests(baseTests, licenseTiersEnabled{})
 })
 
-func describeAsyncTests(baseTests []StateList) {
+func describeAsyncTests(baseTests []StateList, l license) {
 	for _, test := range baseTests {
 		if len(test) == 0 {
 			continue
@@ -332,7 +363,7 @@ func describeAsyncTests(baseTests []StateList) {
 					conf.IPSecESPAlgorithm = "somealgo"
 					outputChan := make(chan interface{})
 					lookupsCache := NewLookupsCache()
-					asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, nil, lookupsCache)
+					asyncGraph := NewAsyncCalcGraph(conf, l, []chan<- interface{}{outputChan}, nil, lookupsCache)
 					// And a validation filter, with a channel between it
 					// and the async graph.
 					validator := NewValidationFilter(asyncGraph)
@@ -455,7 +486,12 @@ const (
 	atEnd
 )
 
-func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
+type featureChecker interface {
+	GetFeatureStatus(feature string) bool
+	GetLicenseStatus() lclient.LicenseStatus
+}
+
+func doStateSequenceTest(expandedTest StateList, licenseMonitor featureChecker, flushStrategy flushStrategy) {
 	var validationFilter *ValidationFilter
 	var lookupsCache *LookupsCache
 	var calcGraph *CalcGraph
@@ -466,12 +502,13 @@ func doStateSequenceTest(expandedTest StateList, flushStrategy flushStrategy) {
 	var sentInSync bool
 	var lastStats StatsUpdate
 
+	tierSupportEnabled := licenseMonitor.GetFeatureStatus(features.Tiers)
 	BeforeEach(func() {
 		mockDataplane = mock.NewMockDataplane()
 		lookupsCache = NewLookupsCache()
 		eventBuf = NewEventSequencer(mockDataplane)
 		eventBuf.Callback = mockDataplane.OnEvent
-		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, localHostname)
+		calcGraph = NewCalculationGraph(eventBuf, lookupsCache, localHostname, tierSupportEnabled)
 		calcGraph.EnableIPSec(eventBuf)
 		statsCollector := NewStatsCollector(func(stats StatsUpdate) error {
 			log.WithField("stats", stats).Info("Stats update")
@@ -605,7 +642,7 @@ var _ = Describe("calc graph with health state", func() {
 		outputChan := make(chan interface{})
 		healthAggregator := health.NewHealthAggregator()
 		lookupsCache := NewLookupsCache()
-		asyncGraph := NewAsyncCalcGraph(conf, []chan<- interface{}{outputChan}, healthAggregator, lookupsCache)
+		asyncGraph := NewAsyncCalcGraph(conf, licenseTiersEnabled{}, []chan<- interface{}{outputChan}, healthAggregator, lookupsCache)
 		Expect(asyncGraph).NotTo(BeNil())
 	})
 })

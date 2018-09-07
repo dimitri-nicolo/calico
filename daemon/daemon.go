@@ -436,6 +436,7 @@ configRetry:
 	// etc.
 	asyncCalcGraph := calc.NewAsyncCalcGraph(
 		configParams,
+		licenseMonitor,
 		calcGraphClientChannels,
 		healthAggregator,
 		lookupsCache,
