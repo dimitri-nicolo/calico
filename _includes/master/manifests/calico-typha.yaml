@@ -89,7 +89,7 @@ spec:
         - name: etcd-certs
            mountPath:  "/calico-secrets"
            readOnly: true
-{%- endif -%}
+{%- endif %}
         ports:
         - containerPort: 5473
           name: calico-typha
