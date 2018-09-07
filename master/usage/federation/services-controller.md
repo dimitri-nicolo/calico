@@ -1,5 +1,5 @@
 ---
-title: Federated Services
+title: Configuring federated services
 ---
 
 Federated Services is a feature that provides cross-cluster service discovery for your local cluster. It uses the
@@ -8,28 +8,28 @@ to provides a cross-cluster service discovery. It is expected that this will be 
 endpoint identity, although this controller is optional if you have an alternative service discovery mechanism.
 
 The Federated Services Controller populates the endpoints of a local service from the endpoints of the set of selected
-services across all clusters (local and remote). Unlike Kubernetes federation, the endpoint addresses for the remote Pods 
-are the Pod IPs rather than the service IPs. The conservation of the pod IP in the federated service allows fine grained 
+services across all clusters (local and remote). Unlike Kubernetes federation, the endpoint addresses for the remote pods
+are the pod IPs rather than the service IPs. The conservation of the pod IP in the federated service allows fine-grained
 policy to be applied between the clusters.
 
-The Federated Services Controller accesses service and endpoints data in the remote clusters directly through the 
-Kubernetes API. This means that if the remote cluster is using etcd for the Calico datastore, it is necessary to configure 
-both etcd access details and Kubernetes API access details in the same Remote Cluster Configuration resource. See
+The Federated Services Controller accesses service and endpoints data in the remote clusters directly through the
+Kubernetes API. This means that if the remote cluster is using etcd for the {{site.prodname}} datastore, it is necessary to configure
+both etcd access details and Kubernetes API datastore access details in the same Remote Cluster Configuration resource. See
 [Configuring a Remote Cluster Configuration resource](./configure-rcc) for more details.
 
 ## Configuring a federated service
 
-A federated service is created as a standard Kubernetes service exposing a ClusterIP and with no pod selector. Rather 
-than specifying a pod selector, annotations are used to specify the set of services (referred to as the backing 
+A federated service is created as a standard Kubernetes service exposing a ClusterIP and with no pod selector. Rather
+than specifying a pod selector, annotations are used to specify the set of services (referred to as the backing
 services) whose endpoints will be consolidated into the endpoints of the federated service.
 
-The following configuration options are valid through the annotations: 
+The following configuration options are valid through the annotations:
 
 | Annotation | Description |
 | --- | --- |
-| federation.tigera.io/serviceSelector | {::nomarkdown}<p>This option is used to specify which services are used in the federated service. This field must be specified for the service to be federated. If the value is incorrectly specified, the service will not be federated and endpoint data will be removed from the service. Warning logs will be output in the controller indicating any issues processing this value.</p><p>The format is a standard Calico selector (i.e. the same as Calico policy resources) and selects services based on their labels.</p><p>Only services in the same namespace as the federated service will be included. This implies namespace names across clusters are linked (this is a basic premise of Federated Endpoint Identity).</p>{:/} |
+| federation.tigera.io/serviceSelector | {::nomarkdown}<p>This option is used to specify which services are used in the federated service. This field must be specified for the service to be federated. If the value is incorrectly specified, the service will not be federated and endpoint data will be removed from the service. Warning logs will be output in the controller indicating any issues processing this value.</p><p>The format is a standard {{site.prodname}} selector (i.e. the same as {{site.prodname}} policy resources) and selects services based on their labels.</p><p>Only services in the same namespace as the federated service will be included. This implies namespace names across clusters are linked (this is a basic premise of Federated Endpoint Identity).</p>{:/} |
 
-The Federated Services Controller uses the serviceSelector annotation to select the backing services in the same 
+The Federated Services Controller uses the serviceSelector annotation to select the backing services in the same
 namespace whose labels match the specified selector. Services are selected from the local and remote clusters.
 The controller consolidates the service endpoints from the selected services whose port name and protocol match those
 configured on the federated service. The consolidated set of endpoints is then configured in the endpoints resource for
@@ -46,17 +46,17 @@ The controller monitors any changes to the endpoints for the backings services a
 each locally federated service. The controller makes no configuration changes to any remote cluster.
 
 The endpoints data configured in the federated service is slightly modified from the original data of the backing service:
--  For backing services on remote clusters, the `targetRef.name` field in the federated service will be updated to the 
+-  For backing services on remote clusters, the `targetRef.name` field in the federated service will be updated to the
    form `<Remote Cluster Configuration name>/<original name>`.
 
 > **Please note**:
 > -  If a spec.Selector is also specified, the Federated Services Controller will not federate the service.
-> -  A service is not included as a backing service of a federated service if that service has any federated services 
+> -  A service is not included as a backing service of a federated service if that service has any federated services
 >    annotations. This means it is not possible to federate another federated service.
-> -  The corresponding endpoints resource should not be created by the user. The endpoints resource will be created and 
+> -  The corresponding endpoints resource should not be created by the user. The endpoints resource will be created and
 >    managed by the controller. The Federated Services Controller will not update an endpoints resource that does appear to have
 >    been created by the controller.
-> -  Endpoints will only be selected when the service port name and protocol in the federated service matches the port name 
+> -  Endpoints will only be selected when the service port name and protocol in the federated service matches the port name
 >    and protocol in the backing service.
 > -  The target port number in the federated service ports is not used.
 > -  The selector annotation used for federation selects services, not pods.
@@ -66,7 +66,7 @@ The endpoints data configured in the federated service is slightly modified from
 
 To access a federated service, the simplest approach is through its corresponding DNS name.
 
-By default, Kubernetes adds DNS entries to access a service locally. For a service called `my-svc` in the namespace 
+By default, Kubernetes adds DNS entries to access a service locally. For a service called `my-svc` in the namespace
 `my-namespace`, the following DNS entry would be added to access the service within the local cluster:
 
 ```
@@ -79,25 +79,25 @@ in iptables to one of the federated service endpoint IPs (it will be load balanc
 ## Operational flow
 
 As an operator, the expected flow of configuration would be as follows:
-1. On each cluster that is providing a particular service, e.g. a set of pods running an application called `my-app`, 
-   create your service resources as per normal. Configure each service with a common label key and value that can be 
+1. On each cluster that is providing a particular service, e.g. a set of pods running an application called `my-app`,
+   create your service resources as per normal. Configure each service with a common label key and value that can be
    used to identify the common set of services across your clusters (e.g. `run=my-app`). These services should all be in
    the same namespace.
-   -  Kubernetes will manage that service, populating the service endpoints from the Pods that match the selector 
+   -  Kubernetes will manage that service, populating the service endpoints from the Pods that match the selector
       configured in the service spec.
-1. On a cluster that needs to access the federated set of Pods that are running the application `my-app`, create a 
-   service on that cluster leaving the spec selector blank and setting the `federation.tigera.io/serviceSelector` 
-   annotation to be a Calico selector which selects the previously configured services using the chosen label match
+1. On a cluster that needs to access the federated set of Pods that are running the application `my-app`, create a
+   service on that cluster leaving the spec selector blank and setting the `federation.tigera.io/serviceSelector`
+   annotation to be a {{site.prodname}} selector which selects the previously configured services using the chosen label match
    (e.g. `run == "my-app"`).
-    - {{site.prodname}} Federated Services Controller will manage this service, populating the service endpoints from 
+    - {{site.prodname}} Federated Services Controller will manage this service, populating the service endpoints from
       all of the services that match the service selector configured in the annotation.
 1. Any application can access the federated service using the local DNS name for that service.
 
 > **Reminder**:
-> -  The spec selector field in the service is used by Kubernetes to select *pods* in the local cluster. This is a 
+> -  The spec selector field in the service is used by Kubernetes to select *pods* in the local cluster. This is a
 >    Kubernetes style selector.
 > -  The spec selector field in the annotation is used by {{site.prodname}} Federated Services Controller to select
->    *services* across the federated set of clusters. This is a Calico style selector.
+>    *services* across the federated set of clusters. This is a {{site.prodname}} style selector.
 {: .alert .alert-success}
 
 ### Example
@@ -127,11 +127,11 @@ spec:
   type: ClusterIP
 ```
 
-This service definition exposes two ports for the application `my-app`. One port for accessing a UI and the other for 
-accesing a management console. The service has a kubernetes selector specified in the spec, which implies the endpoints 
+This service definition exposes two ports for the application `my-app`. One port for accessing a UI and the other for
+accesing a management console. The service has a kubernetes selector specified in the spec, which implies the endpoints
 for this service will be automatically populated by kubernetes from matching pods within the services own cluster.
 
-To define a federated service on your local cluster that federates the web access port for both the local and remote 
+To define a federated service on your local cluster that federates the web access port for both the local and remote
 service, you would create a service resource on your local cluster as follows:
 
 ```$yaml
@@ -152,11 +152,11 @@ spec:
 
 There is no `spec.selector` specified so Kubernetes will not manage this service. Instead, there is a `federation.tigera.io/selector`
 annotation which instructs the Federated Services Controller to manage this service. The controller will match the my-app
-services (matching the run label) on both the local and remote clusters, consolidate the endpoints from the my-app-ui TCP 
+services (matching the run label) on both the local and remote clusters, consolidate the endpoints from the my-app-ui TCP
 port for both of those services. Since the federated service does not specify the my-app-console port, the controller will not
 include those endpoints in the federated service.
 
-The endpoints data for the federated service would be similar to the following (noting the name of the remote cluster is 
+The endpoints data for the federated service would be similar to the following (noting the name of the remote cluster is
 included in `targetRef.name`).
 
 ```$yaml

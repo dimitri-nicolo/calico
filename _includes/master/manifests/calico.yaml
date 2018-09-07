@@ -10,6 +10,7 @@ calico.yaml acccepts the following include flags:
 | ipip             | true, false                   |
 | variant_name     | Calico, Canal                 |
 | app_layer_policy | true, false                   |
+| federation       | true, false                   |
 
 {% endcomment -%}
 {% capture variant_name %}{% if include.network == "flannel" %}Canal{% else %}Calico{% endif %}{% endcapture -%}
@@ -34,11 +35,14 @@ calico.yaml acccepts the following include flags:
 
 {%- endif -%}
 {%- if include.typha == "true" %}
-{% include {{page.version}}/manifests/calico-typha.yaml datastore=include.datastore variant_name=variant_name network=include.network %}
+{% include {{page.version}}/manifests/calico-typha.yaml datastore=include.datastore variant_name=variant_name network=include.network federation=include.federation %}
 ---
 
 {%- endif %}
+{%- if include.federation == "true" %}
 {% include {{page.version}}/manifests/tigera-federation-sa.yaml %}
+{% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore=include.datastore %}
+{%- endif -%}
 ---
 
 {% include {{page.version}}/manifests/calico-node.yaml datastore=include.datastore network=include.network ipip=include.ipip variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}

@@ -37,6 +37,18 @@ toc:
     path: /usage/encrypt-comms
   - title: Securing endpoints with Tigera Secure EE policy
     path: /usage/policy/secure-metrics
+- title: Federation (Kubernetes only)
+  section:
+  - title: Overview
+    path: /usage/federation/index
+  - title: Creating kubeconfig files
+    path: /usage/federation/kubeconfig
+  - title: Configuring remote clusters
+    path: /usage/federation/configure-rcc
+  - title: Configuring federated services
+    path: /usage/federation/services-controller
+  - title: Example AWS configuration
+    path: /usage/federation/aws
 - title: Running cnx-node with an init system
   path: /usage/configuration/as-service
 - title: Configuring BGP Peers
@@ -71,24 +83,12 @@ toc:
   path: /usage/configuration/prometheus
 - title: Configuring Alertmanager
   path: /usage/configuration/alertmanager
-- title: Federation for Kubernetes
-  section:
-  - title: Overview
-    path: /usage/federation/index
-  - title: AWS requirements
-    path: /usage/federation/aws
-  - title: Configuring a Remote Cluster for Federation
-    path: /usage/federation/configure-rcc
-  - title: Federated Services
-    path: /usage/federation/services-controller
 - title: Logging and ElasticSearch
   section:
   - title: Configuring ElasticSearch
     path: /usage/logs/configure-elastic
   - title: Using your own ElasticSearch cluster
     path: /usage/logs/byo-elastic
-- title: Writing kubeconfig files to connect to your Kubernetes cluster
-  path: /usage/writing-kubeconfig
 - title: Troubleshooting
   path: /usage/troubleshooting/
 - title: Logging

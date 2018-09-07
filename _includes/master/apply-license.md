@@ -13,7 +13,7 @@
    rm /etc/calico/calicoctl.cfg
    ```
    {: .alert .alert-info}
-   
+
 {% else %}
 
 1. [Install calicoctl]({{site.baseurl}}/{{page.version}}/usage/calicoctl/install).
@@ -39,3 +39,5 @@
    ```
    calicoctl get license
    ```
+
+1. Continue to [Installing the {{site.prodname}} Manager](#install-cnx-mgr).

@@ -143,13 +143,17 @@ spec:
             # Auto-detect the BGP IP address.
             - name: IP
               value: "autodetect"
+  {%- if include.ipip == "true" %}
             # Enable IPIP
             - name: CALICO_IPV4POOL_IPIP
               value: "Always"
-  {%- if include.ipip == "true" %}
             # Enable IP-in-IP within Felix.
             - name: FELIX_IPINIPENABLED
               value: "true"
+  {%- else %}
+            # Enable IPIP
+            - name: CALICO_IPV4POOL_IPIP
+              value: "Never"
   {%- endif %}
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU

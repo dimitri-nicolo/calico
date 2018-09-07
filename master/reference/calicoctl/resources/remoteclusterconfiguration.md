@@ -4,20 +4,21 @@ title: Remote Cluster Configuration Resource (RemoteClusterConfiguration)
 
 A remote cluster configuration resource (RemoteClusterConfiguration) represents a cluster in a federation of clusters.
 Each remote cluster needs a configuration to be specified to allow the local cluster to access resources on the remote
-cluster. The connection is one-way, the information flows only one way from the remote to the local cluster. To share
+cluster. The connection is one-way: the information flows only from the remote to the local cluster. To share
 information from the local cluster to the remote one a remote cluster configuration resource must be created on the
 remote cluster.
 
-A remote cluster configuration causes Typha and calicoq to retrieve the following resources from a remote cluster
+A remote cluster configuration causes Typha and `calicoq` to retrieve the following resources from a remote cluster:
 * [Workload endpoints](workloadendpoint)
 * [Host endpoints](hostendpoint)
-* [Profiles](profile) Rules are not retrieved from remote profiles, only the `LabelsToApply` field is used.
+* [Profiles](profile) (rules are not retrieved from remote profiles, only the `LabelsToApply` field is used)
 
-When using the kubernetes datastore with RBAC enabled on the remote cluster, the RBAC rules must be configured to allow access to these resources.
+When using the Kubernetes API datastore with RBAC enabled on the remote cluster, the RBAC rules must be configured to
+allow access to these resources.
 
-For more details on the federation feature see [here](/{{page.version}}/usage/federation)
+For more details on the federation feature refer to the [Overview](/{{page.version}}/usage/federation).
 
-The meaning of the fields matches the configuration used for configuring calicoctl, see the [etcd](../../../usage/calicoctl/configure/etcd) and [kubernetes](../../../usage/calicoctl/configure/kdd) instructions for more details.
+The meaning of the fields matches the configuration used for configuring `calicoctl`, see the [etcd](../../../usage/calicoctl/configure/etcd) and [kubernetes](../../../usage/calicoctl/configure/kdd) instructions for more details.
 
 For `calicoctl` commands that specify a resource type on the CLI, the following aliases are supported
 (all case insensitive): `remoteclusterconfiguration`, `remoteclusterconfigurations`, `remoteclusterconfig`,
@@ -25,7 +26,7 @@ For `calicoctl` commands that specify a resource type on the CLI, the following 
 
 ### Sample YAML
 
-For a remote KDD cluster
+For a remote KDD cluster:
 ```yaml
 apiVersion: projectcalico.org/v3
 kind: RemoteClusterConfiguration
@@ -33,10 +34,10 @@ metadata:
   name: cluster1
 spec:
   datastoreType: kubernetes
-  kubeconfig: /etc/calico-federation/kubeconfig-cluster1
+  kubeconfig: /etc/tigera-federation-remotecluster/kubeconfig-rem-cluster-1
 ```
 
-For a remote etcdv3 cluster
+For a remote etcdv3 cluster:
 ```yaml
 apiVersion: projectcalico.org/v3
 kind: RemoteClusterConfiguration

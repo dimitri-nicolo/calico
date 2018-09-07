@@ -97,11 +97,11 @@ spec:
               mountPath: /calico-secrets
               readOnly: true
 {%- endif %}
-            # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
-            # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
-            #- name: tigera-federation-remotecluster
-            #  mountPath: "/etc/tigera-federation-remotecluster"
-            #  readOnly: true
+            # These lines enable a secrets volume for use with federated endpoint identity. Add
+            # multiple entries if you are mounting in multiple secrets (e.g. one for each remote cluster)
+            - name: tigera-federation-remotecluster
+              mountPath: "/etc/tigera-federation-remotecluster"
+              readOnly: true
       volumes:
 {%- if include.datastore == "etcd" %}
         # Mount in the etcd TLS secrets with mode 400.
@@ -111,11 +111,11 @@ spec:
             secretName: calico-etcd-secrets
             defaultMode: 0400
 {%- endif %}
-        # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
+        # These lines enable a secrets volume for use with federated endpoint identity. Add
         # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
         # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
         # These are the same secrets as configured in the calico-typha manifest.
-        #- name: tigera-federation-remotecluster
-        #  secret:
-        #    secretName: tigera-federation-remotecluster
-        #    defaultMode: 0400
+        - name: tigera-federation-remotecluster
+          secret:
+            secretName: tigera-federation-remotecluster
+            defaultMode: 0400

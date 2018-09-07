@@ -134,7 +134,7 @@ sudo systemctl restart origin-node
 
 {% include {{page.version}}/apply-license.md init="openshift" %}
 
-## Installing {{site.prodname}} Manager
+## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
 
 1. Create a Kubernetes secret from your etcd certificates. Example command:
 

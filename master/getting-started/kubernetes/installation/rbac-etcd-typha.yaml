@@ -93,7 +93,6 @@ subjects:
   namespace: kube-system
 
 ---
-
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
@@ -139,28 +138,39 @@ subjects:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: tigera-federation-remote-cluster
+  name: tigera-federation-controller
 rules:
-  - apiGroups: [""]
-    resources:
-      - services
-      - endpoints
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups:
+  - ""
+  - extensions
+  resources:
+  - services
+  - endpoints
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  - extensions
+  resources:
+  - endpoints
+  verbs:
+  - create
+  - update
+  - delete
 
 ---
-
-apiVersion: rbac.authorization.k8s.io/v1beta1
+  
 kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: tigera-federation-remote-cluster
+  name: tigera-federation-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: tigera-federation-remote-cluster
+  name: tigera-federation-controller
 subjects:
 - kind: ServiceAccount
-  name: tigera-federation-remote-cluster
+  name: tigera-federation-controller
   namespace: kube-system
