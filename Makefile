@@ -40,7 +40,7 @@ _site build:
 
 ## Clean enough that a new release build will be clean
 clean:
-	rm -rf _output _site .jekyll-metadata
+	rm -rf _output _site .jekyll-metadata stderr.out filtered.out
 
 ###############################################################################
 # CI / test targets
@@ -51,9 +51,18 @@ htmlproofer: clean _site
 	# Run htmlproofer, failing if we hit any errors.
 	./htmlproofer.sh
 
-kubeval: clean _site
+kubeval: #clean _site
 	# Run kubeval to check master manifests are valid Kubernetes resources.
-	docker run -v $$PWD:/calico --entrypoint /bin/sh -ti garethr/kubeval:0.1.1 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok'
+	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
+	
+	# Filter out error loading schema for non-standard resources.
+	# Filter out error reading empty secrets (which we use for e.g. etcd secrets and seem to work).
+	-grep -v "Could not read schema from HTTP, response status is 404 Not Found" stderr.out | grep -v "invalid Secret" > filtered.out
+
+	# Display the errors with context and fail if there were any.
+	-rm stderr.out
+	! grep -C3 -P "invalid|\t\*" filtered.out
+	rm filtered.out
 
 htmlproofer-all:
 	# Run htmlproofer across _all_ files. This is not part of CI.
