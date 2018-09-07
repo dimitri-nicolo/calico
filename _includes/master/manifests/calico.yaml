@@ -42,8 +42,9 @@ calico.yaml acccepts the following include flags:
 {%- if include.federation == "true" %}
 {% include {{page.version}}/manifests/tigera-federation-sa.yaml %}
 {% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore=include.datastore %}
-{%- endif -%}
 ---
+
+{%- endif -%}
 
 {% include {{page.version}}/manifests/calico-node.yaml datastore=include.datastore network=include.network disable_ipip=include.disable_ipip variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}
 ---
