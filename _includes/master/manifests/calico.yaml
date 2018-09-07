@@ -7,7 +7,7 @@ calico.yaml acccepts the following include flags:
 | typha            | true, false                   |
 | network          | calico, flannel, ecs, <unset> |
 | calico_ipam      | true, false                   |
-| ipip             | true, false                   |
+| disable_ipip     | true, false                   |
 | variant_name     | Calico, Canal                 |
 | app_layer_policy | true, false                   |
 | federation       | true, false                   |
@@ -45,7 +45,7 @@ calico.yaml acccepts the following include flags:
 {%- endif -%}
 ---
 
-{% include {{page.version}}/manifests/calico-node.yaml datastore=include.datastore network=include.network ipip=include.ipip variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}
+{% include {{page.version}}/manifests/calico-node.yaml datastore=include.datastore network=include.network disable_ipip=include.disable_ipip variant_name=variant_name typha=include.typha app_layer_policy=include.app_layer_policy %}
 ---
 
 {%- if include.datastore == "etcd" and include.network == "flannel" %}
