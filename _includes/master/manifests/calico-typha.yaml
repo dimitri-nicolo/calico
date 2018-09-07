@@ -87,9 +87,9 @@ spec:
 {%- endif -%}
 {%- if include.datastore == "etcd" %}
         - name: etcd-certs
-           mountPath:  "/calico-secrets"
-           readOnly: true
-{%- endif -%}
+          mountPath:  "/calico-secrets"
+          readOnly: true
+{%- endif %}
         ports:
         - containerPort: 5473
           name: calico-typha
