@@ -51,7 +51,7 @@ htmlproofer: clean _site
 	# Run htmlproofer, failing if we hit any errors.
 	./htmlproofer.sh
 
-kubeval: #clean _site
+kubeval: clean _site
 	# Run kubeval to check master manifests are valid Kubernetes resources.
 	-docker run -v $$PWD:/calico --entrypoint /bin/sh garethr/kubeval:0.7.3 -c 'ok=true; for f in `find /calico/_site/master -name "*.yaml" |grep -v "\(kube-controllers-patch\|config\|allow-istio-pilot\|30-policy\|cnx-policy\|crds-only\|istio-app-layer-policy\).yaml"`; do echo Running kubeval on $$f; /kubeval $$f || ok=false; done; $$ok' 1>stderr.out 2>&1
 	
