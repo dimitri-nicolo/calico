@@ -52,7 +52,7 @@ component type listed above (cni-plugin, {{site.prodname}} Kubernetes controller
 `{{site.nodecontainer}}`).
 
 This setup needs similar updates to the manifest like what is described in
-[Using etcd RBAC to segment Kubernetes and {{site.prodname}}: Updating a hosted {{site.prodname}} manifest](kubernetes#updating-a-hosted-cnx-manifest),
+[Using etcd RBAC to segment Kubernetes and {{site.prodname}}: Updating a hosted {{site.prodname}} manifest](kubernetes#updating-a-hosted-{{site.prodnamedash}}-manifest),
 with the in addition to those updates a separate Secret for *each* component
 must be created which holds the CA, certificate, and key data base64 encoded.
 Then the specific Secret for each component must be in the `volumes` list

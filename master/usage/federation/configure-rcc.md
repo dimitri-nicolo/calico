@@ -35,8 +35,8 @@ information. The local cluster can talk to multiple remote clusters.
 
 The resource definition varies according to your datastore type. Refer to the section that corresponds to your datastore
 type for instructions.
-- [etcd](#etcd-datastore)
-- [Kubernetes API datastore](#kubernetes-api-datastore)
+- [etcd](#adding-a-remote-cluster-configuration-resource-with-the-etcd-datastore)
+- [Kubernetes API datastore](#remote-cluster-configuration-resource-with-the-kubernetes-api-datastore)
 
 ### Adding a Remote Cluster Configuration resource with the etcd datastore
 
@@ -69,7 +69,7 @@ set the `datastoreType` in the `RemoteClusterConfiguration`
 to `kubernetes` and populate the `kubeconfig` or `k8s*` fields.
 
 As long as you followed the installation instructions, the files in the
-[`tigera-federation-remotecluster` secret created during installation]({{page.version}}/getting-started/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
+[`tigera-federation-remotecluster` secret created during installation](/{{page.version}}/getting-started/kubernetes/installation/calico#installing-with-federation-using-kubernetes-api-datastore)
 will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and the [RemoteClusterConfiguration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
 can reference the files using this path.
 

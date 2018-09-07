@@ -36,8 +36,8 @@ These instructions are focused on container-based deployments that use the
 Follow the appropriate section to start and configure your route reflectors depending on
 the datastore you are using for {{site.prodname}}:
 
--  [Using etcdv3 as the {{site.prodname}} datastore](#using-etcdv3-as-the-cnx-datastore)
--  [Using the Kubernetes API as the {{site.prodname}} datastore](#using-the-kubernetes-api-as-the-cnx-datastore)
+-  [Using etcdv3 as the {{site.prodname}} datastore](#using-etcdv3-as-the-{{site.prodnamedash}}-datastore)
+-  [Using the Kubernetes API as the {{site.prodname}} datastore](#using-the-kubernetes-api-as-the-{{site.prodnamedash}}-datastore)
 
 ### Using etcdv3 as the {{site.prodname}} datastore
 

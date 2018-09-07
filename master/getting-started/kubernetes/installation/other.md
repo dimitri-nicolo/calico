@@ -38,7 +38,7 @@ configuration.
 
 - [Without federation](#install-ee-nofed)
 
-- [With federation](#installing-for-policy-only-with-federation)
+- [With federation](#install-ee-fed)
 
 > **Important**: At this time, we include steps for Kubernetes API datastore only. Should you wish
 > to install {{site.prodname}} for policy only using the etcd datastore type, contact Tigera support.
@@ -115,7 +115,7 @@ configuration.
 
 1. Continue to [Applying your license key](#applying-your-license-key).
 
-### <a name="install-ee-nofed"></a>Installing {{site.prodname}} for policy only with federation
+### <a name="install-ee-fed"></a>Installing {{site.prodname}} for policy only with federation
 
 The following procedure describes how to install {{site.prodname}} on a single cluster that uses the
 Kubernetes API datastore.

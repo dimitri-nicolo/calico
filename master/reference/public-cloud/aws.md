@@ -8,7 +8,7 @@ title: Amazon Web Services (AWS)
 
 For networking, you can use:
 
-- [{{site.prodname}} networking](#using-{{site.prodname}}-networking)
+- [{{site.prodname}} networking](#using-{{site.prodnamedash}}-networking)
 
 - [AWS networking](#using-aws-networking) (recommended with federation)
 
@@ -99,7 +99,7 @@ EOF
 {{site.prodname}} supports the AWS VPC CNI plugin, which creates ENI interfaces for the pods that fall within the VPC of
 the cluster. Routing to these pods is automatically handled by AWS.
 
-We recommend using the AWS VPC CNI plugin with [federation](../usage/federation/index) as it provides seamless IP connectivity
+We recommend using the AWS VPC CNI plugin with [federation](../../usage/federation/index) as it provides seamless IP connectivity
 between your AWS cluster and a remote cluster.
 
 Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.

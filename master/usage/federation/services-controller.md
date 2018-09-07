@@ -3,8 +3,8 @@ title: Configuring federated services
 ---
 
 Federated Services is a feature that provides cross-cluster service discovery for your local cluster. It uses the
-separately installable [Federated Services Controller](/{{page.version}}/getting-started/kubernetes/installation/fed-controller)
-to provides a cross-cluster service discovery. It is expected that this will be used in conjunction with federated
+separately installable Federated Services Controller
+to provide cross-cluster service discovery. It is expected that this will be used in conjunction with federated
 endpoint identity, although this controller is optional if you have an alternative service discovery mechanism.
 
 The Federated Services Controller populates the endpoints of a local service from the endpoints of the set of selected
