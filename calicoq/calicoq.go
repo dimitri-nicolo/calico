@@ -191,15 +191,22 @@ func checkLicense(configFile string) error {
 	}
 
 	// Check if the license is valid.
-	if err := claims.Validate(); err != nil {
-		// If the license is expired (but within grace period) then show this warning banner, but continue to work.
-		// in CNX v2.1, grace period is infinite.
-		fmt.Println("[WARNING] Your license has expired. Please update your license to restore normal operations.")
-		fmt.Println("Contact Tigera support or email licensing@tigera.io")
-		fmt.Println()
-	} else {
+	status := claims.Validate()
+	if status == licClient.Valid {
 		log.Info("License is valid")
+		return nil
 	}
-
-	return nil
+	fmt.Println("[WARNING] Your license has expired. Please update your license to restore normal operations.")
+	fmt.Println("Contact Tigera support or email licensing@tigera.io")
+	fmt.Println()
+	if status == licClient.Expired {
+		return fmt.Errorf("license expired")
+	}
+	if status == licClient.InGracePeriod {
+		// Still in grace period, so don't return an error. We have already printed a message to the console.
+		return nil
+	}
+	// If we get here, it means the license status was not one we understand how to handle.
+	// Unknown should never be returned, and NoLicenseLoaded should already be handled above.
+	return fmt.Errorf("unhandled license status: %f", status)
 }
