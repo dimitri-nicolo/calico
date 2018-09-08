@@ -1,5 +1,5 @@
-hash: e6e3aeec1d54f27afa3d6c3b6992f553ca09794b0f136e80db7c3948721a975a
-updated: 2018-09-06T05:14:54.88310644Z
+hash: 0760336ed289baf6849c7e0b9d3bd24a02b3cb5b2a0fe595acc0f504b41e5b57
+updated: 2018-09-08T04:58:39.394247838Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -243,7 +243,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 993b702fdfb62341cf593ffd490a2a1076aab6d2
+  version: 019041c8cbac2c39b082628f50a7976f5ef45e76
   repo: git@github.com:tigera/felix-private.git
   subpackages:
   - binder
@@ -291,7 +291,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e4e192845ab7f6f1e9ece73b5c5ba0be08804b39
+  version: 6fc286ed3a3f9689b9f29c62fdc471ca6689c1ba
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -377,7 +377,7 @@ imports:
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/tigera/licensing
-  version: b5920cbad881b570f83bcc563b99b91c4607cca3
+  version: 0714653ec934efb83bff337b8afb3d3269d85fef
   repo: git@github.com:tigera/licensing
   vcs: git
   subpackages:
