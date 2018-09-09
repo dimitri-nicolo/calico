@@ -19,35 +19,6 @@ The information below explains the variables which must be set during the standa
 
 ## Installation
 
-Before we begin, apply the following two patches to your OpenShift install:
-
-1. Add `"nodename_file_optional": true` to {{site.prodname}}'s CNI config:
-
-   ```
-   sed -i 's/"name": "calico",$/"name": "calico",\n  "nodename_file_optional": true,/g' /usr/share/ansible/openshift-ansible/roles/calico/templates/10-calico.conf.j2
-   ```
-
-1. Configure NetworkManager to not manage calico interfaces. On each host in your cluster, run:
-   ```
-   cat << EOF | sudo tee /etc/NetworkManager/conf.d/calico.conf
-   [keyfile]
-   unmanaged-devices=interface-name:cali*;interface-name:tunl0
-   EOF
-   ```
-
-   Then restart NetworkManager to uptake the changes:
-
-   ```
-   sudo systemctl daemon-reload
-   sudo systemctl restart NetworkManager
-   ```
-
-1. **For users running OpenShift v3.9.0 only**: apply the container_runtime hotfix for OpenShift:
-
-   ```
-   echo "- role: container_runtime" >> /usr/share/ansible/openshift-ansible/roles/calico/meta/main.yml
-   ```
-
 To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
 inventory file:
 
@@ -55,6 +26,8 @@ inventory file:
   - `openshift_use_calico=true`
   - `openshift_use_openshift_sdn=false`
   - `calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
+  - `calico_url_policy_controller=quay.io/calico/kubeControllers:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}`
+  - `calico_cni_image="quay.io/calico/cni:v3.1.2"`
 
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
 
@@ -67,19 +40,25 @@ nodes
 etcd
 
 [OSEv3:vars]
+ansible_become=true
+deployment_type=openshift-enterprise
 os_sdn_network_plugin_name=cni
-openshift_use_calico=true
 openshift_use_openshift_sdn=false
+openshift_use_calico=true
+openshift_disable_check=memory_availability,docker_storage
+osm_cluster_network_cidr=10.128.0.0/14
+calico_ipv4pool_cidr=10.128.0.0/14
 calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
-calico_url_policy_controller={{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
+calico_url_policy_controller=quay.io/calico/kubeControllers:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
 calico_url_ipam={{site.data.versions[page.version].first.components["calico/cni"].download_calico_ipam_url}}
 calico_url_cni={{site.data.versions[page.version].first.components["calico/cni"].download_calico_url}}
+openshift_enable_docker_excluder=False
 
 [masters]
-master1
+master1 ansible_host=127.0.0.1
 
 [nodes]
-node1
+node1 ansible_host=127.0.0.1 openshift_schedulable=true openshift_node_group_name='node-config-master-infra'
 
 [etcd]
 etcd1
@@ -90,98 +69,9 @@ You are now ready to execute the ansible provision which will install {{site.pro
 certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
 such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
-Once execution is complete, apply the OpenShift patches for {{site.prodname}}'s kube-controllers:
-
-```
-oc apply -f kube-controllers-patch.yaml
-```
-
->[Click here to view kube-controllers-patch.yaml](kube-controllers-patch.yaml)
-
-Now, configure kube-proxy to forward traffic between hosts. On each node in your cluster, open `/etc/origin/node/node-config.yaml` and add a `cluster-cidr` under `proxyArguments`.
-You want to populate `cluster-cidr` with the value of `osm_cluster_network_cidr` that you may have set in your ansible inventory file.
-
-```
-cluster-cidr:
-- <osm_cluster_network_cidr value>
-```
-
-If you have not explicitly set `osm_cluster_network_cidr`, the default value is `10.128.0.0/14`. Your `node-config.yaml` should look similar to:
-
-```
-...
-proxyArguments:
-  cluster-cidr:
-  - 10.128.0.0/14
-  proxy-mode:
-     - iptables
-...
-```
-
-Once you have set the correct kube-proxy arguments, restart the OpenShift node service. This command will differ depending on if your cluster is running OpenShift Origin or OpenShift Container Platform.
-
-OpenShift Container Platform (OCP):
-
-```
-sudo systemctl restart atomic-openshift-node
-```
-
-OpenShift Origin:
-
-```
-sudo systemctl restart origin-node
-```
-
 {% include {{page.version}}/apply-license.md init="openshift" %}
 
 ## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
-
-1. Create a Kubernetes secret from your etcd certificates. Example command:
-
-   ```
-   kubectl create -n kube-system secret generic calico-etcd-secrets \
-   --from-file=etcd-ca=/etc/origin/calico/calico.etcd-ca.crt \
-   --from-file=etcd-cert=/etc/origin/calico/calico.etcd-client.crt \
-   --from-file=etcd-key=/etc/origin/calico/calico.etcd-client.key
-   ```
-
-   >{{site.prodname}} APIServer and Manager require etcd connection information and
-   >certificates to be stored in Kubernetes objects.
-   >The following preparation steps will upload this data.
-   {: .alert .alert-info}
-
-1. Download [calico-config.yaml](calico-config.yaml).
-
-   ```bash
-   curl {{site.url}}/{{page.version}}/getting-started/openshift/calico-config.yaml -O
-   ```
-
-1. To make the following commands easier to copy and paste, set two environment variables
-   called `ETCD_ENDPOINTS` and `CNX_MANAGER_ADDR` containing the addresses of your etcd
-   cluster and {{site.prodname}} Manager web interface, respectively. An example follows.
-
-   ```bash
-   ETCD_ENDPOINTS=10.90.89.100:2379,10.90.89.101:2379 \
-   CNX_MANAGER_ADDR=127.0.0.1:30003
-   ```
-
-1. Use the following command to replace the value `<ETCD_ENDPOINTS>` in `calico-config.yaml`
-   with the address of your etcd cluster.
-
-   ```shell
-   sed -i -e "s?<ETCD_ENDPOINTS>?$ETCD_ENDPOINTS?g" calico-config.yaml
-   ```
-
-1. Use the following command to replace the value of `<CNX_MANAGER_ADDR>` in `calico-config.yaml`
-   with the address of your cnx-manager service.
-
-   ```shell
-   sed -i -e "s?<CNX_MANAGER_ADDR>?$CNX_MANAGER_ADDR?g" calico-config.yaml
-   ```
-
-1. Apply it:
-
-       oc apply -f ./calico-config.yaml
 
 {% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
@@ -227,39 +117,10 @@ Operator, Prometheus, and Alertmanager instances for you.
    oc adm policy add-scc-to-user --namespace=calico-monitoring hostnetwork -z default
    ```
 
-1. Apply the OpenShift patches for Prometheus Operator:
+1. Allow Prometheus to have pods in `kube-system` namespace one each node:
 
-   ```
-   oc apply -f operator-openshift-patch.yaml
-   ```
-
-   >[Click here to view operator-openshift-patch.yaml](operator-openshift-patch.yaml)
-
-   > **Note**: If you are installing on OpenShift v3.9.0, you will need to allow all pods in the `kube-system` namespace on each node.
-   This can be done by adding the `openshift.io/node-selector` annotation to the `kube-system` namespace. Add this annotation by running the following.
    ```
    oc annotate ns kube-system openshift.io/node-selector="" --overwrite
-   ```
-   {: .alert .alert-info}
-
-1. Configure calico-monitoring namespace and deploy Prometheus Operator by
-  applying the [operator.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml) manifest.
-
-   ```
-   oc apply -f operator.yaml
-   ```
-
-1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com` and `servicemonitors.monitoring.coreos.com` custom resource definitions to be created. Check by running:
-
-   ```
-   oc get customresourcedefinitions
-   ```
-
-1. Apply the [monitor-calico.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
-  install Prometheus and Alertmanager.
-
-   ```
-   oc apply -f monitor-calico.yaml
    ```
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.

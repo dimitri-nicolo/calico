@@ -98,7 +98,7 @@
 
    ```bash
    curl --compressed -o cnx.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+   {{site.url}}/{{page.version}}/getting-started/openshift/cnx.yaml
    ```
 
 {% endif %}
@@ -116,14 +116,6 @@
    Example: If OpenShift master were at `https://master.openshift.example.com:8443`, then the following command could be used to set up the parameter.
 
        sed -i -e 's?tigera.cnx-manager.oauth-authority:.*$?tigera.cnx-manager.oauth-authority: "https://master.openshift.example.com:8443/oauth/authorize"?g' cnx.yaml
-
-1. Open the file in a text editor, and make the following modifications:
-
-   In the `Deployment` named `cnx-apiserver`:
-
-   - Uncomment the `ETCD_CA_CERT_FILE`, `ETCD_KEY_FILE`, and `ETCD_CERT_FILE` environment variables in both the cnx-apiserver and cnx-queryserver containers.
-   - Uncomment the `volumeMount` named `etcd-certs`.
-   - Uncomment the `volume` named `etcd-certs`.
 
 {% else %}
 
