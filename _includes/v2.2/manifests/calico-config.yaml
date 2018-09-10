@@ -28,10 +28,11 @@ data:
   etcd_key: ""  # "/calico-secrets/etcd-key"
 {%- endif %}
 {%- if include.typha == "true" %}
-  # To install Typha, this must be set to "calico-typha" AND you must set a non-zero value for Typha replicas
-  # below.
+  # You must set a non-zero value for Typha replicas below.
   typha_service_name: "calico-typha"
-
+{%- else %}
+  # Typha is disabled.
+  typha_service_name: "none"
 {%- endif %}
 {%- if include.network == "calico" %}
   # Configure the {{site.prodname}} backend to use.
