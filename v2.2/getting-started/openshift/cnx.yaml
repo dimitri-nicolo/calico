@@ -1,0 +1,6 @@
+---
+layout: null
+---
+{% include {{page.version}}/manifests/cnx.yaml datastore="etcd" orch="openshift" %}
+{% include {{page.version}}/manifests/operator.yaml %}
+{% include {{page.version}}/manifests/monitor-calico.yaml %}

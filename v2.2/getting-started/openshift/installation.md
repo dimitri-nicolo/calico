@@ -1,0 +1,139 @@
+---
+title: Installing Tigera Secure EE on OpenShift
+---
+
+Installation of {{site.prodname}} in OpenShift is integrated in openshift-ansible.
+The information below explains the variables which must be set during the standard
+[Advanced Installation](https://docs.openshift.org/latest/install_config/install/advanced_install.html#configuring-cluster-variables).
+
+## Before you begin
+
+- Ensure that you meet the {{site.prodname}} [system requirements](requirements).
+
+- Ensure that you have the [private registry credentials](../../getting-started/#obtain-the-private-registry-credentials)
+  and a [license key](../../getting-started/#obtain-a-license-key).
+
+## Pulling the private {{site.prodname}} images
+
+{% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
+
+## Installation
+
+To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
+inventory file:
+
+  - `os_sdn_network_plugin_name=cni`
+  - `openshift_use_calico=true`
+  - `openshift_use_openshift_sdn=false`
+  - `calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
+  - `calico_url_policy_controller=quay.io/calico/kubeControllers:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}`
+  - `calico_cni_image="quay.io/calico/cni:v3.1.2"`
+
+Also ensure that you have an explicitly defined host in the `[etcd]` group.
+
+**Sample Inventory File:**
+
+```
+[OSEv3:children]
+masters
+nodes
+etcd
+
+[OSEv3:vars]
+ansible_become=true
+deployment_type=openshift-enterprise
+os_sdn_network_plugin_name=cni
+openshift_use_openshift_sdn=false
+openshift_use_calico=true
+openshift_disable_check=memory_availability,docker_storage
+osm_cluster_network_cidr=10.128.0.0/14
+calico_ipv4pool_cidr=10.128.0.0/14
+calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+calico_url_policy_controller=quay.io/calico/kubeControllers:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
+calico_url_ipam={{site.data.versions[page.version].first.components["calico/cni"].download_calico_ipam_url}}
+calico_url_cni={{site.data.versions[page.version].first.components["calico/cni"].download_calico_url}}
+openshift_enable_docker_excluder=False
+
+[masters]
+master1 ansible_host=127.0.0.1
+
+[nodes]
+node1 ansible_host=127.0.0.1 openshift_schedulable=true openshift_node_group_name='node-config-master-infra'
+
+[etcd]
+etcd1
+```
+
+You are now ready to execute the ansible provision which will install {{site.prodname}}. Note that by default,
+{{site.prodname}} will connect to the same etcd that OpenShift uses, and in order to do so, will distribute etcd's
+certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
+such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
+
+{% include {{page.version}}/apply-license.md init="openshift" %}
+
+## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
+
+{% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
+
+## Installing Policy Violation Alerting
+
+Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
+
+### Enable Metrics
+
+**Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
+
+Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixConfiguration` resource (`default`) and opening up the necessary port on the host.
+
+{% include {{page.version}}/enable-felix-prometheus-reporting.md %}
+
+1. Allow Prometheus to scrape the metrics by opening up the port on each host:
+
+   ```
+   iptables -I INPUT -p tcp --dport 9081 -j ACCEPT
+   ```
+
+#### Configure Prometheus
+
+With metrics enabled, you are ready to monitor `{{site.nodecontainer}}` by scraping the endpoint on each node
+in the cluster. If you do not have your own Prometheus, the following commands will launch a Prometheus
+Operator, Prometheus, and Alertmanager instances for you.
+
+1. Allow Prometheus to run as root:
+
+   ```
+   oc adm policy add-scc-to-user --namespace=calico-monitoring anyuid -z default
+   ```
+
+1. Allow Prometheus to configure and use a security context.
+
+   ```
+   oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:prometheus
+   ```
+
+1. Allow sleep pod to run with host networking:
+
+   ```
+   oc adm policy add-scc-to-user --namespace=calico-monitoring hostnetwork -z default
+   ```
+
+1. Allow Prometheus to have pods in `kube-system` namespace one each node:
+
+   ```
+   oc annotate ns kube-system openshift.io/node-selector="" --overwrite
+   ```
+
+Once running, access Prometheus and Alertmanager using the NodePort from the created service.
+See [Policy Violation Alerting](../../reference/cnx/policy-violations) for more information.
+
+### Policy query with calicoq
+
+Once {{site.prodname}} is installed in OpenShift, each node is automatically configured with
+a `calicoctl.cfg` (owned by the root user) which is used by {{site.prodname}} to locate and authenticate requests to etcd.
+
+We recommend installing `calicoq` as a container in OpenShift. Refer to [Installing calicoq as a container on a single host](../../usage/calicoq/#installing-calicoq-as-a-container-on-a-single-host) for instructions.
+
+> **Note**: Ensure that your configuration takes into account TLS-enabled etcd in OpenShift.
+{: .alert .alert-info}
+
+See the [calicoq reference section](../../reference/calicoq/) for more information on using `calicoq`.

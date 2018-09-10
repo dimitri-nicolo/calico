@@ -1,0 +1,4 @@
+---
+layout: null
+---
+{% include {{page.version}}/manifests/calico-kube-controllers.yaml variant="Calico" %}

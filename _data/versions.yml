@@ -1,3 +1,74 @@
+v2.2:
+- title: v2.2.0-rc1
+  note: |
+    10 September 2018
+
+  dockerRepo: gcr.io/unique-caldron-775/cnx
+  components:
+    cnx-manager:
+      version: master
+      url: ""
+    cnx-manager-proxy:
+      version: master
+      url: ""
+    cnx-apiserver:
+      version: master
+      url: ""
+    cnx-queryserver:
+      version: master
+      url: ""
+    cnx-kube-controllers:
+      version: master
+      url: ""
+    calicoq:
+      version: master
+      url: ""
+    typha:
+      version: master
+      url: ""
+    calicoctl:
+      version: master
+      url: ""
+      download_url: ""
+    cnx-node:
+      version: master
+      url: ""
+    calico/cni:
+      version: master
+      url: ""
+      download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.2.1/calico
+      download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.2.1/calico-ipam
+    calico/routereflector:
+      version: v0.6.3
+      url: ""
+    calico:
+      version: v3.2.1
+      url: https://github.com/projectcalico/calico/releases/tag/v3.2.1
+    prometheus-operator:
+      version: v0.18.1
+      url: ""
+    prometheus:
+      version: v2.2.1
+      url: ""
+    alertmanager:
+      version: v0.14.0
+      url: ""
+    prometheus-config-reloader:
+      version: v0.0.3
+      url: ""
+    configmap-reload:
+      version: v0.0.1
+      url: ""
+    dikastes:
+      version: master
+    flexvol:
+      version: master
+    fluentd:
+      version: master
+    elasticsearch-operator:
+      version: 0.2.0
+      url: ""
+
 v2.1:
 - title: v2.1.1
   note: |
