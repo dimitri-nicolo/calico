@@ -44,21 +44,17 @@ spec:
           name: calico-config
           key: etcd_cert
     volumeMounts:
-    # If you're using TLS enabled etcd uncomment the following.
-    #- mountPath: /calico-secrets
-    #  name: etcd-certs
-    #
+    - mountPath: /calico-secrets
+      name: etcd-certs
     # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
     # multiple entries to the volumeMounts if you are mounting in multiple secrets (e.g. one for each remote cluster)
     #- name: tigera-federation-remotecluster
     #  mountPath: "/etc/tigera-federation-remotecluster"
     #  readOnly: true
   volumes:
-  # If you're using TLS enabled etcd uncomment the following.
-  #- name: etcd-certs
-  #  secret:
-  #    secretName: calico-etcd-secrets
-  #
+  - name: etcd-certs
+    secret:
+      secretName: calico-etcd-secrets
   # Uncomment and edit these lines to enable a secrets volume for use with federated endpoint identity. Add
   # multiple entries to the volumes if you are mounting in multiple secrets (e.g. one for each remote cluster)
   # The secret should be created with: kubectl create secret generic tigera-federation-remotecluster --from-file=...
