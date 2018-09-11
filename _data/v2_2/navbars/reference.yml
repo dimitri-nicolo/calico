@@ -119,9 +119,9 @@ toc:
   path: /reference/cni-plugin/configuration
 - title: Calico Kubernetes Controllers
   path: /reference/kube-controllers/configuration
-- title: Logging, Auditing and Reporting
+- title: Logging and reporting
   section:
-    - title: CNX Log Management
+    - title: Tigera Secure EE Log Management
       path: /reference/cnx/logs
     - title: Kubernetes Audit Logging
       path: /reference/cnx/auditing
