@@ -6,35 +6,35 @@ v2.2:
   dockerRepo: gcr.io/unique-caldron-775/cnx
   components:
     cnx-manager:
-      version: master
+      version: release-v2.2
       url: ""
     cnx-manager-proxy:
-      version: master
+      version: release-v2.2
       url: ""
     cnx-apiserver:
-      version: master
+      version: release-v2.2
       url: ""
     cnx-queryserver:
-      version: master
+      version: release-v2.2
       url: ""
     cnx-kube-controllers:
-      version: master
+      version: release-v2.2
       url: ""
     calicoq:
-      version: master
+      version: release-v2.2
       url: ""
     typha:
-      version: master
+      version: release-v2.2
       url: ""
     calicoctl:
-      version: master
+      version: release-v2.2
       url: ""
       download_url: ""
     cnx-node:
-      version: master
+      version: release-v2.2
       url: ""
     calico/cni:
-      version: master
+      version: v3.2.1
       url: ""
       download_calico_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.2.1/calico
       download_calico_ipam_url: https://github.com/projectcalico/cni-plugin/releases/download/v3.2.1/calico-ipam
@@ -60,11 +60,11 @@ v2.2:
       version: v0.0.1
       url: ""
     dikastes:
-      version: master
+      version: release-v2.2
     flexvol:
-      version: master
+      version: v3.2.1
     fluentd:
-      version: master
+      version: release-v2.2
     elasticsearch-operator:
       version: 0.2.0
       url: ""
