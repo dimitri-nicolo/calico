@@ -390,6 +390,8 @@ spec:
         - name: chown-logs
           image: busybox
           command: ['sh', '-c', 'chown -R 1000:1000 /var/log/calico']
+          securityContext:
+            privileged: true
           volumeMounts:
             - name: var-log-calico
               mountPath: /var/log/calico

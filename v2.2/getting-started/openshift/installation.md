@@ -25,9 +25,9 @@ inventory file:
   - `os_sdn_network_plugin_name=cni`
   - `openshift_use_calico=true`
   - `openshift_use_openshift_sdn=false`
-  - `calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
+  - `calico_node_image=<YOUR-REGISTRY>/{{site.imageNames["cnx-node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
   - `calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}`
-  - `calico_cni_image="quay.io/calico/cni:v3.1.2"`
+  - `calico_cni_image="{{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}`
 
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
 
@@ -45,14 +45,9 @@ deployment_type=openshift-enterprise
 os_sdn_network_plugin_name=cni
 openshift_use_openshift_sdn=false
 openshift_use_calico=true
-openshift_disable_check=memory_availability,docker_storage
-osm_cluster_network_cidr=10.128.0.0/14
-calico_ipv4pool_cidr=10.128.0.0/14
-calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
+calico_node_image=<YOUR-REGISTRY>/{{site.imageNames["cnx-node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}
 calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
-calico_url_ipam={{site.data.versions[page.version].first.components["calico/cni"].download_calico_ipam_url}}
-calico_url_cni={{site.data.versions[page.version].first.components["calico/cni"].download_calico_url}}
-openshift_enable_docker_excluder=False
+calico_cni_image={{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}
 
 [masters]
 master1 ansible_host=127.0.0.1
@@ -72,6 +67,31 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 {% include {{page.version}}/apply-license.md init="openshift" %}
 
 ## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
+
+1. Download [oauth-client.yaml](oauth-client.yaml).
+
+   ```bash
+   curl {{site.url}}/{{page.version}}/getting-started/openshift/oauth-client.yaml -O
+   ```
+
+1. To make the following commands easier to copy and paste, set an environment variable called
+   `CNX_MANAGER_ADDR` containing the address of your {{site.prodname}} Manager web interface.
+   An example follows.
+
+   ```bash
+   CNX_MANAGER_ADDR=127.0.0.1:30003
+   ```
+
+1. Use the following command to replace the value of `<CNX_MANAGER_ADDR>` in `oauth-client.yaml`
+   with the address of your cnx-manager service.
+
+   ```shell
+   sed -i -e "s?<CNX_MANAGER_ADDR>?$CNX_MANAGER_ADDR?g" oauth-client.yaml
+   ```
+
+1. Apply it:
+
+       oc apply -f ./oauth-client.yaml
 
 {% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
@@ -117,10 +137,30 @@ Operator, Prometheus, and Alertmanager instances for you.
    oc adm policy add-scc-to-user --namespace=calico-monitoring hostnetwork -z default
    ```
 
-1. Allow Prometheus to have pods in `kube-system` namespace one each node:
+1. Allow Prometheus to have pods in `kube-system` namespace on each node:
 
    ```
    oc annotate ns kube-system openshift.io/node-selector="" --overwrite
+   ```
+
+1. Configure calico-monitoring namespace and deploy Prometheus Operator by
+  applying the [operator.yaml](operator.yaml) manifest.
+
+   ```
+   oc apply -f {{site.url}}/{{page.version}}/getting-started/openshift/operator.yaml
+   ```
+
+1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com` and `servicemonitors.monitoring.coreos.com` custom resource definitions to be created. Check by running:
+
+   ```
+   oc get customresourcedefinitions
+   ```
+
+1. Apply the [monitor-calico.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
+  install Prometheus and Alertmanager.
+
+   ```
+   oc apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
    ```
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.

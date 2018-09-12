@@ -344,13 +344,8 @@ spec:
             name: audit-policy-ee
           - mountPath: /calico-secrets
             name: etcd-certs
-  {%- if include.orch == "openshift" %}
-          - mountPath: /code/apiserver.local.config/certificates
-            name: apiserver-certs
-  {%- else %}
           # - mountPath: /code/apiserver.local.config/certificates
           #   name: apiserver-certs
-  {%- endif %}
 {%- elsif include.datastore == "kdd" %}
           - name: DATASTORE_TYPE
             value: "kubernetes"
