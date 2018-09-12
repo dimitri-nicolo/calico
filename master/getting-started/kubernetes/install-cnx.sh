@@ -57,7 +57,12 @@ SKIP_MONITORING=${SKIP_MONITORING:=0}
 # when set to 1, download the manifests, then quit
 DOWNLOAD_MANIFESTS_ONLY=${DOWNLOAD_MANIFESTS_ONLY:=0}
 
+# Deployment type of the tigera installation.  One of basic, typha or federation.
+# A deployment type of "typha" is only valid for kubernetes datastore.
+DEPLOYMENT_TYPE=${DEPLOYMENT_TYPE:="basic"}
+
 # when set to 1, install policy-only manifest
+# Only used for the kubernetes datastore.
 POLICY_ONLY=${POLICY_ONLY:=0}
 
 # cleanup Tigera Secure EE installation
@@ -78,7 +83,7 @@ KUBE_APISERVER_MANIFEST=${KUBE_APISERVER_MANIFEST:="/etc/kubernetes/manifests/ku
 # Location of kube-controller-manager manifest
 KUBE_CONTROLLER_MANIFEST=${KUBE_CONTROLLER_MANIFEST:="/etc/kubernetes/manifests/kube-controller-manager.yaml"}
 
-# Kubernetes installer type - "KOPS" or "KUBEADM"
+# Kubernetes installer type - "KOPS" or "KUBEADM" or "ACS-ENGINE"
 INSTALL_TYPE=${INSTALL_TYPE:="KUBEADM"}
 
 #
@@ -119,6 +124,7 @@ checkSettings() {
   echo '  VERSION='${VERSION}
   echo '  REGISTRY='${CALICO_REGISTRY}
   echo '  DATASTORE='${DATASTORE}
+  echo '  DEPLOYMENT_TYPE='${DEPLOYMENT_TYPE}
   echo '  LICENSE_FILE='${LICENSE_FILE}
   echo '  INSTALL_TYPE='${INSTALL_TYPE}
   echo '  ELASTIC_STORAGE='${ELASTIC_STORAGE}
@@ -154,6 +160,7 @@ Usage: $(basename "$0")
           [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
           [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"|"gce"|"aws"); default: "local"
+          [-t deployment_type] # Specify the deployment type ("basic"|"typha"|"federation"); default "basic"
           [-v version]         # Tigera Secure EE version; default: "v2.1"
           [-u]                 # Uninstall Tigera Secure EE
           [-q]                 # Quiet (don't prompt)
@@ -166,7 +173,7 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:e:hk:l:mpqs:v:ux" opt; do
+  while getopts "c:d:e:f:hk:l:mpqs:v:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
@@ -174,6 +181,7 @@ HELP_USAGE
       k )  DATASTORE=$OPTARG;;
       l )  LICENSE_FILE=$OPTARG;;
       s )  ELASTIC_STORAGE=$OPTARG;;
+      t )  DEPLOYMENT_TYPE=$OPTARG;;
       v )  VERSION=$OPTARG;;
       x )  set -x;;
       q )  QUIET=1;;
@@ -200,6 +208,12 @@ validateSettings() {
 
   # Validate $ELASTIC_STORAGE is either "none", "aws", "local" or "gce"
   [ "$ELASTIC_STORAGE" == "local" ] || [ "$ELASTIC_STORAGE" == "gce" ] || [ "$ELASTIC_STORAGE" == "aws" ] || [ "$ELASTIC_STORAGE" == "aws" ] || fatalError "Elasticsearch storage \"$ELASTIC_STORAGE\" is not valid, must be either \"local\" or \"gce\" or \"aws\"."
+
+  # Validate $DEPLOYMENT_TYPE is either "basic", "typha", or "federation"
+  [ "$DEPLOYMENT_TYPE" == "basic" ] || [ "$DEPLOYMENT_TYPE" == "typha" ] || [ "$DEPLOYMENT_TYPE" == "federation" ] || fatalError "Deployment type \"$DEPLOYMENT_TYPE\" is not valid, must be either \"basic\" or \"typha\" or \"federation\"."
+
+  # Validate $DEPLOYMENT_TYPE is not "typha" if datastore is "etcdv3"
+  [ "$DEPLOYMENT_TYPE" == "typha" ] && [ "$DATASTORE" == "etcdv3" ] && fatalError "Deployment type \"$DEPLOYMENT_TYPE\" is not valid for Datastore \"$DATASTORE\"."
 
   # If we're installing, confirm user specified a readable license file
   if [ "$CLEANUP" -eq 0 ]; then
@@ -668,7 +682,7 @@ dockerLogin() {
   if [ $CALICO_REGISTRY == "gcr.io" ]; then
     username="_json_key"
     token=$(cat "${CREDENTIALS_FILE}")
-  else  
+  else
     dockerCredentials=$(cat "${CREDENTIALS_FILE}" | jq --raw-output '.auths[].auth' | base64 -d)
     username=$(echo -n $dockerCredentials | awk -F ":" '{print $1}')
     token=$(echo -n $dockerCredentials | awk -F ":" '{print $2}')
@@ -849,13 +863,13 @@ downloadManifest() {
 setPodCIDR() {
   local filename="$1"
   local cidrMatch="[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[0-9]\{1,\}"
-  
+
   podCIDR=`grep -o "\--cluster-cidr=$cidrMatch" $KUBE_CONTROLLER_MANIFEST | grep -o $cidrMatch`
 
   cat > sedcmd.txt <<EOF
 s?192.168.0.0/16?$podCIDR?g
 EOF
- 
+
   sed -i -f sedcmd.txt "$filename"
 
   echo "Set pod CIDR $podCIDR for $filename"
@@ -871,21 +885,38 @@ downloadManifests() {
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml"
   downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml"
 
+  # Irrespective of datastore type, for federation we'll need to create a federation secret since the manifests assume
+  # this exists.
+  if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/tigera-federation-secret.yaml"
+  fi
+
   if [ "$DATASTORE" == "etcdv3" ]; then
+    if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/federation/calico.yaml"
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/rbac-etcd-typha.yaml"
+    else
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calico.yaml"
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/rbac.yaml"
+    fi
+
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/etcd.yaml"
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/rbac.yaml"
-    downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calico.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml"
 
     # Grab calicoctl and calicoq manifests in order to extract the container url when we install the binaries
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calicoctl.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/calicoq.yaml"
   else
-    if [ "${POLICY_ONLY}" -eq 1 ]; then
+    if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/federation/calico.yaml"
+    elif [ "$DEPLOYMENT_TYPE" == "typha" ]; then
+      downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/typha/calico.yaml"
+    elif [ "${POLICY_ONLY}" -eq 1 ]; then
       downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/policy-only/1.7/calico.yaml"
     else
       downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml"
     fi
+
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml"
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml"
 
@@ -901,9 +932,8 @@ downloadManifests() {
   # Download appropriate elasticsearch storage manifest
   if [ "${ELASTIC_STORAGE}" != "none" ]; then
     downloadManifest "${DOCS_LOCATION}/${VERSION}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-${ELASTIC_STORAGE}.yaml"
-    mv elastic-storage-${ELASTIC_STORAGE}.yaml elastic-storage.yaml
   fi
-  
+
   if [ "${DOWNLOAD_MANIFESTS_ONLY}" -eq 1 ]; then
     echo "Tigera Secure EE manifests downloaded."
     kill -s TERM $TOP_PID   # quit
@@ -911,7 +941,7 @@ downloadManifests() {
 }
 
 #
-# applyRbacManifest() - apply appropriate rbac manifest based on datastore. 
+# applyRbacManifest() - apply appropriate rbac manifest based on datastore.
 #
 applyRbacManifest() {
   if [ "$DATASTORE" == "kubernetes" ]; then
@@ -919,14 +949,20 @@ applyRbacManifest() {
     run kubectl apply -f rbac-kdd.yaml
     countDownSecs 5 "Applying \"rbac-kdd.yaml\" manifest: "
   elif [ "$DATASTORE" == "etcdv3" ]; then
-    # Apply rbac for etcdv3 datastore
-    run kubectl apply -f rbac.yaml
-    countDownSecs 5 "Applying \"rbac.yaml\" manifest: "
+    if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+      # Apply rbac for etcdv3 datastore with typha (currently only required for federation)
+      run kubectl apply -f rbac-etcd-typha.yaml
+      countDownSecs 5 "Applying \"rbac-etcd-typha.yaml\" manifest: "
+    else
+      # Apply rbac for etcdv3 datastore
+      run kubectl apply -f rbac.yaml
+      countDownSecs 5 "Applying \"rbac.yaml\" manifest: "
+    fi
   fi
 }
 
 #
-# deleteRbacManifest() - delete appropriate rbac manifest based on datastore. 
+# deleteRbacManifest() - delete appropriate rbac manifest based on datastore.
 #
 deleteRbacManifest() {
   if [ "$DATASTORE" == "kubernetes" ]; then
@@ -934,28 +970,34 @@ deleteRbacManifest() {
     runIgnoreErrors kubectl delete -f rbac-kdd.yaml
     countDownSecs 5 "Deleting \"rbac-kdd.yaml\" manifest: "
   elif [ "$DATASTORE" == "etcdv3" ]; then
-    # Delete rbac for etcdv3 datastore
-    runIgnoreErrors kubectl delete -f rbac.yaml
-    countDownSecs 5 "Deleting \"rbac.yaml\" manifest: "
+    if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+      # Delete rbac for etcdv3 datastore with typha (currently only required for federation)
+      runIgnoreErrors kubectl delete -f rbac-etcd-typha.yaml
+      countDownSecs 5 "Deleting \"rbac-etcd-typha.yaml\" manifest: "
+    else
+      # Delete rbac for etcdv3 datastore
+      runIgnoreErrors kubectl delete -f rbac.yaml
+      countDownSecs 5 "Deleting \"rbac.yaml\" manifest: "
+    fi
   fi
 }
 
 #
-# applyEtcdDeployment() - etcd-only, apply etcd.yaml 
+# applyEtcdDeployment() - etcd-only, apply etcd.yaml
 #
 applyEtcdDeployment() {
   if [ "$DATASTORE" == "etcdv3" ]; then
-    run kubectl apply -f etcd.yaml 
+    run kubectl apply -f etcd.yaml
     countDownSecs 5 "Applying \"etcd.yaml\" manifest: "
   fi
 }
 
 #
-# deleteEtcdDeployment() - etcd-only, delete etcd.yaml 
+# deleteEtcdDeployment() - etcd-only, delete etcd.yaml
 #
 deleteEtcdDeployment() {
   if [ "$DATASTORE" == "etcdv3" ]; then
-    runIgnoreErrors kubectl delete -f etcd.yaml 
+    runIgnoreErrors kubectl delete -f etcd.yaml
     countDownSecs 5 "Deleting \"etcd.yaml\" manifest: "
   fi
 }
@@ -973,6 +1015,22 @@ applyLicenseManifest() {
     run "${CALICO_UTILS_INSTALL_DIR}/calicoctl apply -f ${LICENSE_FILE}"
     echo "done."
   fi
+}
+
+#
+# applyTigeraFederationSecretManifest()
+#
+applyTigeraFederationSecretManifest() {
+  echo -n "Applying \"tigera-federation-secret.yaml\" ("$DATASTORE") manifest: "
+  run kubectl apply -f tigera-federation-secret.yaml
+}
+
+#
+# deleteTigeraFederationSecretManifest()
+#
+deleteTigeraFederationSecretManifest() {
+  echo -n "Deleting tigera-federation-secret.yaml manifest"
+  runIgnoreErrors kubectl delete -f tigera-federation-secret.yaml
 }
 
 #
@@ -1083,16 +1141,16 @@ deleteCNXPolicyManifest() {
 # applyElasticStorageManifest()
 #
 applyElasticStorageManifest() {
-  run kubectl apply -f elastic-storage.yaml
-  countDownSecs 10 "Applying \"elastic-storage.yaml\" manifest"
+  run kubectl apply -f elastic-storage-${ELASTIC_STORAGE}.yaml
+  countDownSecs 10 "Applying \"elastic-storage-${ELASTIC_STORAGE}.yaml\" manifest"
 }
 
 #
 # deleteElasticStorageManifest()
 #
 deleteElasticStorageManifest() {
-  runIgnoreErrors kubectl delete -f elastic-storage.yaml
-  countDownSecs 20 "Deleting \"elastic-storage.yaml\" manifest"
+  runIgnoreErrors kubectl delete -f elastic-storage-${ELASTIC_STORAGE}.yaml
+  countDownSecs 20 "Deleting \"elastic-storage-${ELASTIC_STORAGE}.yaml\" manifest"
 }
 
 #
@@ -1150,6 +1208,8 @@ applyOperatorManifest() {
 deleteOperatorManifest() {
   runIgnoreErrors kubectl delete -f operator.yaml
   countDownSecs 5 "Deleting \"operator.yaml\" manifest"
+  runIgnoreErrors kubectl delete daemonset elasticsearch-operator-sysctl
+  countDownSecs 5 "Deleting daemonset \"elasticsearch-operator-sysctl\" created by operator"
 }
 
 #
@@ -1236,7 +1296,11 @@ installCNX() {
   installCalicoBinary "calicoctl" # Install quay.io/tigera/calicoctl binary, create "/etc/calico/calicoctl.cfg"
   installCalicoBinary "calicoq"   # Install quay.io/tigera/calicoq binary
 
-  applyRbacManifest               # Apply RBAC resources based on the configured datastore type. 
+  if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+    applyTigeraFederationSecretManifest # Apply the tigera-federation-remotecluster secret
+  fi
+
+  applyRbacManifest               # Apply RBAC resources based on the configured datastore type.
   applyEtcdDeployment             # Install a single-node etcd (etcd datastore only)
   applyCalicoManifest             # Apply calico.yaml
 
@@ -1282,6 +1346,10 @@ uninstallCNX() {
   deleteImagePullSecret          # Delete pull secret
   deleteBasicAuth                # Remove basic auth updates, restart kubelet
   deleteKubeDnsPod               # Return kube-dns pod to "pending" state
+
+  if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+    deleteTigeraFederationSecretManifest # Delete the tigera-federation-remotecluster secret
+  fi
 }
 
 #
@@ -1289,7 +1357,7 @@ uninstallCNX() {
 #
 checkRequirementsInstalled      # Validate that all required programs are installed
 
-determineInstallerType          # Set INSTALL_TYPE to "KOPS" or "KUBEADM"
+determineInstallerType          # Set INSTALL_TYPE to "KOPS" or "KUBEADM" or "ACS-ENGINE"
 parseOptions "$@"               # Set up variables based on args
 validateSettings                # Check for missing files/dirs
 
