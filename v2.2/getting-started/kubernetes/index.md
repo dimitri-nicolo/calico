@@ -15,8 +15,8 @@ To deploy a cluster suitable for production, refer to [Installation](/{{page.ver
 
 - AMD64 processor
 - 2CPU
-- 4GB RAM
-- 10GB free disk space
+- 7.5GB RAM
+- 20GB free disk space
 - Ubuntu Server 16.04
 - [jq](https://stedolan.github.io/jq/download/){:target="_blank"}
 - Internet access
