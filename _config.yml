@@ -33,6 +33,7 @@ imageNames:
   calicoq: tigera/calicoq
   cni: quay.io/calico/cni
   kubeControllers: tigera/kube-controllers
+  calicoKubeControllers: calico/kube-controllers
   calico-upgrade: quay.io/calico/upgrade
   flannel: quay.io/coreos/flannel
   dikastes: tigera/dikastes
