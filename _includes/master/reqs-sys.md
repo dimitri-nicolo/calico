@@ -4,11 +4,9 @@
 
 - Linux kernel 3.10 or later with [required dependencies](#kernel-dependencies).
   The following distributions have the required kernel, its dependencies, and are
-  known to work well with {{site.prodname}} and {{include.orch}}.
-  - RedHat Linux 7{% if include.orch == "Kubernetes" or include.orch == "host protection" %}
+  known to work well with {{site.prodname}} and {{include.orch}}.{% if include.orch == "Kubernetes" or include.orch == "host protection" %}
   - CentOS 7
-  - CoreOS Container Linux stable
-  - Ubuntu 16.04
+  - Ubuntu Server 16.04
   - Debian 9
   {% endif %}{% if include.orch == "OpenShift" %}
   - CentOS 7
