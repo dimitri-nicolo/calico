@@ -162,11 +162,19 @@
 
 {% else %}
 
-   ```bash
-   kubectl create secret generic cnx-manager-tls \
-   --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
-   --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
-   ```
+  - **kubeadm deployments**
+    ```bash
+    kubectl create secret generic cnx-manager-tls \
+    --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
+    --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
+    ```
+
+  - **kops deployments**
+    ```bash
+    kubectl create secret generic cnx-manager-tls \
+    --from-file=cert=/srv/kubernetes/server.cert \
+    --from-file=key=/srv/kubernetes/server.key -n kube-system
+    ```
 
 {% endif %}
 
