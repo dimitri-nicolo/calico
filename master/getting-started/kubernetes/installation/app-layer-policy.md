@@ -56,8 +56,9 @@ kubectl apply -f \
 	> [view the manifest in your browser](manifests/app-layer-policy/kubernetes-datastore/policy-only/calico-node.yaml){:target="_blank"}.
 	{: .alert .alert-info}
 
-- **Enable it in the user interface**:
-	- By setting `tigera.cnx-manager.alp-support: "true"` in the configmap.
+Enable application layer policy in the {{site.prodname}} user interface
+
+- By setting `tigera.cnx-manager.alp-support: "true"` in the configmap.
 
     ```bash
 kubectl edit configmap -n kube-system tigera-cnx-manager-config
