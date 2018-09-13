@@ -297,7 +297,7 @@
             "name": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
             }
           },
           {
@@ -769,7 +769,7 @@
             "name": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
             }
           },
           {
@@ -1249,7 +1249,7 @@
             "name": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
             }
           },
           {
@@ -1833,7 +1833,7 @@
             "name": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
             }
           },
           {
@@ -2066,7 +2066,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -2170,7 +2170,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -2282,7 +2282,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -2386,7 +2386,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -2498,7 +2498,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -2610,7 +2610,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -2730,7 +2730,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -2834,7 +2834,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -2938,7 +2938,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2"
+              "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
             }
           },
           "401": {
@@ -16300,6 +16300,48 @@
           "description": "Must be fulfilled before a deletion is carried out. If not possible, a 409 Conflict status will be returned."
         },
         "propagationPolicy": {
+          "description": "Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy.",
+          "type": "string"
+        }
+      },
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "projectcalico.org",
+          "kind": "DeleteOptions",
+          "version": "v3"
+        }
+      ]
+    },
+    "io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions_v2": {
+      "description": "DeleteOptions may be provided when deleting an API object.",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+          "type": "string"
+        },
+        "gracePeriodSeconds": {
+          "description": "The duration in seconds before the object should be deleted. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period for the specified type will be used. Defaults to a per object value if not specified. zero means delete immediately.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+          "type": "string"
+        },
+        "orphanDependents": {
+          "description": "Deprecated: please use the PropagationPolicy, this field will be deprecated in 1.7. Should the dependent objects be orphaned. If true/false, the \"orphan\" finalizer will be added to/removed from the object's finalizers list. Either this field or PropagationPolicy may be set, but not both.",
+          "type": "boolean"
+        },
+        "preconditions": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Preconditions",
+          "description": "Must be fulfilled before a deletion is carried out. If not possible, a 409 Conflict status will be returned."
+        },
+        "propagationPolicy": {
           "description": "Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.",
           "type": "string"
         }
@@ -16457,7 +16499,7 @@
         }
       ]
     },
-    "io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions_v2": {
+    "io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions_v3": {
       "description": "DeleteOptions may be provided when deleting an API object.",
       "properties": {
         "apiVersion": {
@@ -16482,7 +16524,7 @@
           "description": "Must be fulfilled before a deletion is carried out. If not possible, a 409 Conflict status will be returned."
         },
         "propagationPolicy": {
-          "description": "Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy.",
+          "description": "Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.",
           "type": "string"
         }
       },
@@ -16493,9 +16535,331 @@
           "version": "v1"
         },
         {
-          "group": "projectcalico.org",
+          "group": "admission.k8s.io",
           "kind": "DeleteOptions",
-          "version": "v3"
+          "version": "v1beta1"
+        },
+        {
+          "group": "admissionregistration.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "admissionregistration.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "apps",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "apps",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "apps",
+          "kind": "DeleteOptions",
+          "version": "v1beta2"
+        },
+        {
+          "group": "authentication.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "authentication.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "autoscaling",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "autoscaling",
+          "kind": "DeleteOptions",
+          "version": "v2beta1"
+        },
+        {
+          "group": "batch",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "batch",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "batch",
+          "kind": "DeleteOptions",
+          "version": "v2alpha1"
+        },
+        {
+          "group": "certificates.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "events.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "extensions",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "imagepolicy.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "networking.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "policy",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "scheduling.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "settings.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        }
+      ]
+    },
+    "io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions_v4": {
+      "description": "DeleteOptions may be provided when deleting an API object.",
+      "properties": {
+        "apiVersion": {
+          "description": "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+          "type": "string"
+        },
+        "gracePeriodSeconds": {
+          "description": "The duration in seconds before the object should be deleted. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period for the specified type will be used. Defaults to a per object value if not specified. zero means delete immediately.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "kind": {
+          "description": "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+          "type": "string"
+        },
+        "orphanDependents": {
+          "description": "Deprecated: please use the PropagationPolicy, this field will be deprecated in 1.7. Should the dependent objects be orphaned. If true/false, the \"orphan\" finalizer will be added to/removed from the object's finalizers list. Either this field or PropagationPolicy may be set, but not both.",
+          "type": "boolean"
+        },
+        "preconditions": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Preconditions",
+          "description": "Must be fulfilled before a deletion is carried out. If not possible, a 409 Conflict status will be returned."
+        },
+        "propagationPolicy": {
+          "description": "Whether and how garbage collection will be performed. Either this field or OrphanDependents may be set, but not both. The default policy is decided by the existing finalizer set in the metadata.finalizers and the resource-specific default policy. Acceptable values are: 'Orphan' - orphan the dependents; 'Background' - allow the garbage collector to delete the dependents in the background; 'Foreground' - a cascading policy that deletes all dependents in the foreground.",
+          "type": "string"
+        }
+      },
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "admission.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "admissionregistration.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "admissionregistration.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "apps",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "apps",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "apps",
+          "kind": "DeleteOptions",
+          "version": "v1beta2"
+        },
+        {
+          "group": "authentication.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "authentication.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "autoscaling",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "autoscaling",
+          "kind": "DeleteOptions",
+          "version": "v2beta1"
+        },
+        {
+          "group": "batch",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "batch",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "batch",
+          "kind": "DeleteOptions",
+          "version": "v2alpha1"
+        },
+        {
+          "group": "certificates.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "events.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "extensions",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "imagepolicy.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "networking.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "policy",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
+        },
+        {
+          "group": "scheduling.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "settings.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "DeleteOptions",
+          "version": "v1beta1"
         }
       ]
     },
@@ -16640,7 +17004,7 @@
         },
         "deletionTimestamp": {
           "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Time",
-          "description": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This field is set by the server when a graceful deletion is requested by the user, and is not directly settable by a client. The resource is expected to be deleted (no longer visible from resource lists, and not reachable by name) after the time in this field, once the finalizers list is empty. As long as the finalizers list contains items, deletion is blocked. Once the deletionTimestamp is set, this value may not be unset or be set further into the future, although it may be shortened or the resource may be deleted prior to this time. For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react by sending a graceful termination signal to the containers in the pod. After that 30 seconds, the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup, remove the pod from the API. In the presence of network partitions, this object may still exist after this timestamp, until an administrator or automated process can determine the resource is fully terminated. If not set, graceful deletion of the object has not been requested.\n\nPopulated by the system when a graceful deletion is requested. Read-only. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+          "description": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This field is set by the server when a graceful deletion is requested by the user, and is not directly settable by a client. The resource is expected to be deleted (no longer visible from resource lists, and not reachable by name) after the time in this field. Once set, this value may not be unset or be set further into the future, although it may be shortened or the resource may be deleted prior to this time. For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react by sending a graceful termination signal to the containers in the pod. After that 30 seconds, the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup, remove the pod from the API. In the presence of network partitions, this object may still exist after this timestamp, until an administrator or automated process can determine the resource is fully terminated. If not set, graceful deletion of the object has not been requested.\n\nPopulated by the system when a graceful deletion is requested. Read-only. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
         },
         "finalizers": {
           "description": "Must be empty before the object is deleted from the registry. Each entry is an identifier for the responsible component that will remove the entry from the list. If the deletionTimestamp of the object is non-nil, entries in this list can only be removed.",
@@ -16726,7 +17090,179 @@
         },
         "deletionTimestamp": {
           "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Time",
-          "description": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This field is set by the server when a graceful deletion is requested by the user, and is not directly settable by a client. The resource is expected to be deleted (no longer visible from resource lists, and not reachable by name) after the time in this field. Once set, this value may not be unset or be set further into the future, although it may be shortened or the resource may be deleted prior to this time. For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react by sending a graceful termination signal to the containers in the pod. After that 30 seconds, the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup, remove the pod from the API. In the presence of network partitions, this object may still exist after this timestamp, until an administrator or automated process can determine the resource is fully terminated. If not set, graceful deletion of the object has not been requested.\n\nPopulated by the system when a graceful deletion is requested. Read-only. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+          "description": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This field is set by the server when a graceful deletion is requested by the user, and is not directly settable by a client. The resource is expected to be deleted (no longer visible from resource lists, and not reachable by name) after the time in this field, once the finalizers list is empty. As long as the finalizers list contains items, deletion is blocked. Once the deletionTimestamp is set, this value may not be unset or be set further into the future, although it may be shortened or the resource may be deleted prior to this time. For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react by sending a graceful termination signal to the containers in the pod. After that 30 seconds, the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup, remove the pod from the API. In the presence of network partitions, this object may still exist after this timestamp, until an administrator or automated process can determine the resource is fully terminated. If not set, graceful deletion of the object has not been requested.\n\nPopulated by the system when a graceful deletion is requested. Read-only. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+        },
+        "finalizers": {
+          "description": "Must be empty before the object is deleted from the registry. Each entry is an identifier for the responsible component that will remove the entry from the list. If the deletionTimestamp of the object is non-nil, entries in this list can only be removed.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "generateName": {
+          "description": "GenerateName is an optional prefix, used by the server, to generate a unique name ONLY IF the Name field has not been provided. If this field is used, the name returned to the client will be different than the name passed. This value will also be combined with a unique suffix. The provided value has the same validation rules as the Name field, and may be truncated by the length of the suffix required to make the value unique on the server.\n\nIf this field is specified and the generated name exists, the server will NOT return a 409 - instead, it will either return 201 Created or 500 with Reason ServerTimeout indicating a unique name could not be found in the time allotted, and the client should retry (optionally after the time indicated in the Retry-After header).\n\nApplied only if Name is not specified. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#idempotency",
+          "type": "string"
+        },
+        "generation": {
+          "description": "A sequence number representing a specific generation of the desired state. Populated by the system. Read-only.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "initializers": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Initializers",
+          "description": "An initializer is a controller which enforces some system invariant at object creation time. This field is a list of initializers that have not yet acted on this object. If nil or empty, this object has been completely initialized. Otherwise, the object is considered uninitialized and is hidden (in list/watch and get calls) from clients that haven't explicitly asked to observe uninitialized objects.\n\nWhen an object is created, the system will populate this list with the current set of initializers. Only privileged users may set or modify this list. Once it is empty, it may not be modified further by any user."
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels",
+          "type": "object"
+        },
+        "name": {
+          "description": "Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace defines the space within each name must be unique. An empty namespace is equivalent to the \"default\" namespace, but \"default\" is the canonical representation. Not all objects are required to be scoped to a namespace - the value of this field for those objects will be empty.\n\nMust be a DNS_LABEL. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/namespaces",
+          "type": "string"
+        },
+        "ownerReferences": {
+          "description": "List of objects depended by this object. If ALL objects in the list have been deleted, this object will be garbage collected. If this object is managed by a controller, then an entry in this list will point to this controller, with the controller field set to true. There cannot be more than one managing controller.",
+          "items": {
+            "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.OwnerReference"
+          },
+          "type": "array",
+          "x-kubernetes-patch-merge-key": "uid",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "resourceVersion": {
+          "description": "An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. May be used for optimistic concurrency, change detection, and the watch operation on a resource or set of resources. Clients must treat these values as opaque and passed unmodified back to the server. They may only be valid for a particular resource or set of resources.\n\nPopulated by the system. Read-only. Value must be treated as opaque by clients and . More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#concurrency-control-and-consistency",
+          "type": "string"
+        },
+        "selfLink": {
+          "description": "SelfLink is a URL representing this object. Populated by the system. Read-only.",
+          "type": "string"
+        },
+        "uid": {
+          "description": "UID is the unique in time and space value for this object. It is typically generated by the server on successful creation of a resource and is not allowed to change on PUT operations.\n\nPopulated by the system. Read-only. More info: http://kubernetes.io/docs/user-guide/identifiers#uids",
+          "type": "string"
+        }
+      }
+    },
+    "io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta_v3": {
+      "description": "ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations",
+          "type": "object"
+        },
+        "clusterName": {
+          "description": "The name of the cluster which the object belongs to. This is used to distinguish resources with same name and namespace in different clusters. This field is not set anywhere right now and apiserver is going to ignore it if set in create or update request.",
+          "type": "string"
+        },
+        "creationTimestamp": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Time",
+          "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+        },
+        "deletionGracePeriodSeconds": {
+          "description": "Number of seconds allowed for this object to gracefully terminate before it will be removed from the system. Only set when deletionTimestamp is also set. May only be shortened. Read-only.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "deletionTimestamp": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Time",
+          "description": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This field is set by the server when a graceful deletion is requested by the user, and is not directly settable by a client. The resource is expected to be deleted (no longer visible from resource lists, and not reachable by name) after the time in this field, once the finalizers list is empty. As long as the finalizers list contains items, deletion is blocked. Once the deletionTimestamp is set, this value may not be unset or be set further into the future, although it may be shortened or the resource may be deleted prior to this time. For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react by sending a graceful termination signal to the containers in the pod. After that 30 seconds, the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup, remove the pod from the API. In the presence of network partitions, this object may still exist after this timestamp, until an administrator or automated process can determine the resource is fully terminated. If not set, graceful deletion of the object has not been requested.\n\nPopulated by the system when a graceful deletion is requested. Read-only. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+        },
+        "finalizers": {
+          "description": "Must be empty before the object is deleted from the registry. Each entry is an identifier for the responsible component that will remove the entry from the list. If the deletionTimestamp of the object is non-nil, entries in this list can only be removed.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "generateName": {
+          "description": "GenerateName is an optional prefix, used by the server, to generate a unique name ONLY IF the Name field has not been provided. If this field is used, the name returned to the client will be different than the name passed. This value will also be combined with a unique suffix. The provided value has the same validation rules as the Name field, and may be truncated by the length of the suffix required to make the value unique on the server.\n\nIf this field is specified and the generated name exists, the server will NOT return a 409 - instead, it will either return 201 Created or 500 with Reason ServerTimeout indicating a unique name could not be found in the time allotted, and the client should retry (optionally after the time indicated in the Retry-After header).\n\nApplied only if Name is not specified. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#idempotency",
+          "type": "string"
+        },
+        "generation": {
+          "description": "A sequence number representing a specific generation of the desired state. Populated by the system. Read-only.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "initializers": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Initializers",
+          "description": "An initializer is a controller which enforces some system invariant at object creation time. This field is a list of initializers that have not yet acted on this object. If nil or empty, this object has been completely initialized. Otherwise, the object is considered uninitialized and is hidden (in list/watch and get calls) from clients that haven't explicitly asked to observe uninitialized objects.\n\nWhen an object is created, the system will populate this list with the current set of initializers. Only privileged users may set or modify this list. Once it is empty, it may not be modified further by any user."
+        },
+        "labels": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels",
+          "type": "object"
+        },
+        "name": {
+          "description": "Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace defines the space within each name must be unique. An empty namespace is equivalent to the \"default\" namespace, but \"default\" is the canonical representation. Not all objects are required to be scoped to a namespace - the value of this field for those objects will be empty.\n\nMust be a DNS_LABEL. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/namespaces",
+          "type": "string"
+        },
+        "ownerReferences": {
+          "description": "List of objects depended by this object. If ALL objects in the list have been deleted, this object will be garbage collected. If this object is managed by a controller, then an entry in this list will point to this controller, with the controller field set to true. There cannot be more than one managing controller.",
+          "items": {
+            "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.OwnerReference"
+          },
+          "type": "array",
+          "x-kubernetes-patch-merge-key": "uid",
+          "x-kubernetes-patch-strategy": "merge"
+        },
+        "resourceVersion": {
+          "description": "An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. May be used for optimistic concurrency, change detection, and the watch operation on a resource or set of resources. Clients must treat these values as opaque and passed unmodified back to the server. They may only be valid for a particular resource or set of resources.\n\nPopulated by the system. Read-only. Value must be treated as opaque by clients and . More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#concurrency-control-and-consistency",
+          "type": "string"
+        },
+        "selfLink": {
+          "description": "SelfLink is a URL representing this object. Populated by the system. Read-only.",
+          "type": "string"
+        },
+        "uid": {
+          "description": "UID is the unique in time and space value for this object. It is typically generated by the server on successful creation of a resource and is not allowed to change on PUT operations.\n\nPopulated by the system. Read-only. More info: http://kubernetes.io/docs/user-guide/identifiers#uids",
+          "type": "string"
+        }
+      }
+    },
+    "io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta_v4": {
+      "description": "ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.",
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations",
+          "type": "object"
+        },
+        "clusterName": {
+          "description": "The name of the cluster which the object belongs to. This is used to distinguish resources with same name and namespace in different clusters. This field is not set anywhere right now and apiserver is going to ignore it if set in create or update request.",
+          "type": "string"
+        },
+        "creationTimestamp": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Time",
+          "description": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\n\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
+        },
+        "deletionGracePeriodSeconds": {
+          "description": "Number of seconds allowed for this object to gracefully terminate before it will be removed from the system. Only set when deletionTimestamp is also set. May only be shortened. Read-only.",
+          "format": "int64",
+          "type": "integer"
+        },
+        "deletionTimestamp": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Time",
+          "description": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This field is set by the server when a graceful deletion is requested by the user, and is not directly settable by a client. The resource is expected to be deleted (no longer visible from resource lists, and not reachable by name) after the time in this field, once the finalizers list is empty. As long as the finalizers list contains items, deletion is blocked. Once the deletionTimestamp is set, this value may not be unset or be set further into the future, although it may be shortened or the resource may be deleted prior to this time. For example, a user may request that a pod is deleted in 30 seconds. The Kubelet will react by sending a graceful termination signal to the containers in the pod. After that 30 seconds, the Kubelet will send a hard termination signal (SIGKILL) to the container and after cleanup, remove the pod from the API. In the presence of network partitions, this object may still exist after this timestamp, until an administrator or automated process can determine the resource is fully terminated. If not set, graceful deletion of the object has not been requested.\n\nPopulated by the system when a graceful deletion is requested. Read-only. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
         },
         "finalizers": {
           "description": "Must be empty before the object is deleted from the registry. Each entry is an identifier for the responsible component that will remove the entry from the list. If the deletionTimestamp of the object is non-nil, entries in this list can only be removed.",
@@ -16972,6 +17508,34 @@
           "version": "v1"
         },
         {
+          "group": "projectcalico.org",
+          "kind": "WatchEvent",
+          "version": "v3"
+        }
+      ]
+    },
+    "io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2": {
+      "description": "Event represents a single event to a watched resource.",
+      "properties": {
+        "object": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.runtime.RawExtension",
+          "description": "Object is:\n * If Type is Added or Modified: the new state of the object.\n * If Type is Deleted: the state of the object immediately before deletion.\n * If Type is Error: *Status is recommended; other types may make sense\n   depending on context."
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "object"
+      ],
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
           "group": "admission.k8s.io",
           "kind": "WatchEvent",
           "version": "v1beta1"
@@ -17118,7 +17682,7 @@
         }
       ]
     },
-    "io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v2": {
+    "io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v3": {
       "description": "Event represents a single event to a watched resource.",
       "properties": {
         "object": {
@@ -17140,9 +17704,317 @@
           "version": "v1"
         },
         {
-          "group": "projectcalico.org",
+          "group": "admission.k8s.io",
           "kind": "WatchEvent",
-          "version": "v3"
+          "version": "v1beta1"
+        },
+        {
+          "group": "admissionregistration.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "admissionregistration.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "apps",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "apps",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "apps",
+          "kind": "WatchEvent",
+          "version": "v1beta2"
+        },
+        {
+          "group": "authentication.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "authentication.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "autoscaling",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "autoscaling",
+          "kind": "WatchEvent",
+          "version": "v2beta1"
+        },
+        {
+          "group": "batch",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "batch",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "batch",
+          "kind": "WatchEvent",
+          "version": "v2alpha1"
+        },
+        {
+          "group": "certificates.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "events.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "extensions",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "imagepolicy.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "networking.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "policy",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "scheduling.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "settings.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        }
+      ]
+    },
+    "io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent_v4": {
+      "description": "Event represents a single event to a watched resource.",
+      "properties": {
+        "object": {
+          "$ref": "#/definitions/io.k8s.apimachinery.pkg.runtime.RawExtension",
+          "description": "Object is:\n * If Type is Added or Modified: the new state of the object.\n * If Type is Deleted: the state of the object immediately before deletion.\n * If Type is Error: *Status is recommended; other types may make sense\n   depending on context."
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "object"
+      ],
+      "x-kubernetes-group-version-kind": [
+        {
+          "group": "",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "admission.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "admissionregistration.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "admissionregistration.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "apps",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "apps",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "apps",
+          "kind": "WatchEvent",
+          "version": "v1beta2"
+        },
+        {
+          "group": "authentication.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "authentication.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "autoscaling",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "autoscaling",
+          "kind": "WatchEvent",
+          "version": "v2beta1"
+        },
+        {
+          "group": "batch",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "batch",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "batch",
+          "kind": "WatchEvent",
+          "version": "v2alpha1"
+        },
+        {
+          "group": "certificates.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "events.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "extensions",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "imagepolicy.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "networking.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "policy",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "rbac.authorization.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
+        },
+        {
+          "group": "scheduling.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "settings.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1alpha1"
+        },
+        {
+          "group": "storage.k8s.io",
+          "kind": "WatchEvent",
+          "version": "v1beta1"
         }
       ]
     },
