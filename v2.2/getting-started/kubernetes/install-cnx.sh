@@ -173,7 +173,7 @@ HELP_USAGE
   }
 
   local OPTIND
-  while getopts "c:d:e:f:hk:l:mpqs:v:ux" opt; do
+  while getopts "c:d:e:hk:l:mpqs:t:v:ux" opt; do
     case ${opt} in
       c )  CREDENTIALS_FILE=$OPTARG;;
       d )  DOCS_LOCATION=$OPTARG;;
