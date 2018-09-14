@@ -37,6 +37,18 @@ toc:
     path: /usage/encrypt-comms
   - title: Securing endpoints with Tigera Secure EE policy
     path: /usage/policy/secure-metrics
+- title: Logging and Elasticsearch
+  section:
+  - title: Configuring Elasticsearch
+    path: /usage/logs/configure-elastic
+  - title: Using your own Elasticsearch cluster
+    path: /usage/logs/byo-elastic
+- title: Configuring Prometheus
+  path: /usage/configuration/prometheus
+- title: Configuring Alertmanager
+  path: /usage/configuration/alertmanager
+- title: Logging
+  path: /usage/troubleshooting/logging
 - title: Federation (Kubernetes only)
   section:
   - title: Overview
@@ -65,8 +77,6 @@ toc:
     path: /usage/routereflector/calico-routereflector
 - title: Enabling IPv6 Support
   path: /usage/ipv6
-- title: Enabling IPVS in Kubernetes
-  path: /usage/enabling-ipvs
 - title: External Connectivity
   path: /usage/external-connectivity
 - title: Configuring IP-in-IP
@@ -79,19 +89,7 @@ toc:
   path: /usage/decommissioning-a-node
 - title: Configuring Conntrack
   path: /usage/configuration/conntrack
-- title: Configuring Prometheus
-  path: /usage/configuration/prometheus
-- title: Configuring Alertmanager
-  path: /usage/configuration/alertmanager
-- title: Logging and ElasticSearch
-  section:
-  - title: Configuring ElasticSearch
-    path: /usage/logs/configure-elastic
-  - title: Using your own ElasticSearch cluster
-    path: /usage/logs/byo-elastic
 - title: Troubleshooting
   path: /usage/troubleshooting/
-- title: Logging
-  path: /usage/troubleshooting/logging
 - title: Frequently Asked Questions
   path: /usage/troubleshooting/faq

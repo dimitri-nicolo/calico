@@ -1,7 +1,7 @@
 1. If your cluster is connected to the internet, use the following command to apply the Prometheus
-   and ElasticSearch operator manifest.
+   and Elasticsearch operator manifest.
 
-   ```
+   ```bash
    kubectl apply -f \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/operator.yaml
    ```
@@ -12,7 +12,7 @@
 
    > For offline installs, complete the following steps instead.
    >
-   > 1. Download the Prometheus operator manifest.
+   > 1. Download the Prometheus and Elasticsearch operator manifest.
    >
    >    ```bash
    >    curl --compressed -o \
@@ -48,7 +48,7 @@
 {% include {{page.version}}/elastic-storage.md %}
 
 1. If your cluster is connected to the internet, use the following command to install Prometheus,
-   Alertmanager and ElasticSearch.
+   Alertmanager, and Elasticsearch.
 
    ```
    kubectl apply -f \

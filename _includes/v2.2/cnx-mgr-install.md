@@ -80,17 +80,17 @@
 1. Download the manifest that corresponds to your datastore type and save the file
    as cnx.yaml. That is how we will refer to it in later steps.
 
-   **etcd datastore**
-   ```bash
-   curl --compressed -o cnx.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
-   ```
+   - **etcd datastore**
+     ```bash
+     curl --compressed -o cnx.yaml \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-etcd.yaml
+     ```
 
-   **Kubernetes API datastore**
-   ```bash
-   curl --compressed -o cnx.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
-   ```
+   - **Kubernetes API datastore**
+     ```bash
+     curl --compressed -o cnx.yaml \
+     {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-kdd.yaml
+     ```
 
 {% else %}
 
@@ -149,8 +149,8 @@
    `Service` object named `cnx-manager` as needed.  
 
 1. Create a secret containing a TLS certificate and the private key used to
-   sign it. The following command uses a self-signed certificate and key that
-   should be present as part of your Kubernetes deployment to get you started.
+   sign it. The following commands use a self-signed certificate and key
+   found in many Kubernetes deployments for a quick start.
 
 {% if include.init == "openshift" %}
 
@@ -168,7 +168,7 @@
      --from-file=cert=/etc/kubernetes/pki/apiserver.crt \
      --from-file=key=/etc/kubernetes/pki/apiserver.key -n kube-system
      ```
-     
+
    - **kops deployments**
      ```bash
      kubectl create secret generic cnx-manager-tls \
@@ -178,10 +178,10 @@
 
 {% endif %}
 
-   > **Note**: Web browsers will warn end users about the self-signed certificate
-   > used in the above command. To stop the warnings by using valid certificates
-   > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#{{site.prodnamedash}}-manager-connections).
-   {: .alert .alert-info}
+     > **Note**: Web browsers will warn end users about self-signed certificates.
+     > To stop the warnings by using valid certificates
+     > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#{{site.prodnamedash}}-manager-connections).
+     {: .alert .alert-info}
 
 1. Apply the manifest to install {{site.prodname}} Manager and the {{site.prodname}} API server.
 
@@ -217,7 +217,7 @@
 
 1. Apply the following manifest to set network policy that permits requests to {{site.prodname}}.
 
-   ```
+   ```bash
    kubectl apply -f \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
