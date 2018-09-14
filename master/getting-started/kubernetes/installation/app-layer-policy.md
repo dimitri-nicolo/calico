@@ -58,7 +58,7 @@ kubectl apply -f \
 
 Enable application layer policy in the {{site.prodname}} user interface
 
-- By setting `tigera.cnx-manager.alp-support: "true"` in the configmap.
+- Set `tigera.cnx-manager.alp-support: "true"` in your `tigera-cnx-manager-config` ConfigMap
 
     ```bash
 kubectl edit configmap -n kube-system tigera-cnx-manager-config
