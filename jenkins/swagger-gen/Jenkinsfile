@@ -18,6 +18,7 @@ pipeline {
         TF_VAR_prefix = "wt-${SANE_JOB_NAME}-${env.BUILD_NUMBER}"
         TF_VAR_node_preemptible = 'false'
         TF_VAR_master_disk_size = '20'
+        TF_VAR_num_nodes = '0'
 
         // Terraform kubernetes settings
         TF_VAR_kubernetes_version = "stable-1.9"
@@ -31,6 +32,7 @@ pipeline {
         // install-cnx.sh settings
         DATASTORE = "kubernetes"
     }
+
     stages {
         stage('Checkout') {
             steps {
@@ -43,15 +45,15 @@ pipeline {
         stage('Provision Cluster') {
             steps {
                 dir('_crc') {
-                  git(url: 'git@github.com:tigera/calico-ready-clusters.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
-                  dir('kubeadm/1.6/') {
-                      withCredentials([file(credentialsId: 'registry-viewer-account-json', variable: 'DOCKER_AUTH')]) {
-                          sh "cp $DOCKER_AUTH docker_auth.json"
-                          sh "terraform init"
-                          sh "make master_ssh_key"
-                          sh "terraform apply"
-                          // Remove the taint from master, but expect an error as this command tries to remove the taint from nodes (which do not have it).
-                          sh '$(terraform output master_connect_command) /usr/bin/kubectl taint nodes --all node-role.kubernetes.io/master- || true'
+                    git(url: 'git@github.com:tigera/calico-ready-clusters.git', branch: 'master', credentialsId: 'marvin-tigera-ssh-key')
+                    dir('kubeadm/1.6/') {
+                        withCredentials([file(credentialsId: 'registry-viewer-account-json', variable: 'DOCKER_AUTH')]) {
+                            sh "cp $DOCKER_AUTH docker_auth.json"
+                            sh "terraform init"
+                            sh "make master_ssh_key"
+                            sh "terraform apply"
+                            // Remove the taint from master, but expect an error as this command tries to remove the taint from nodes (which do not have it).
+                            sh '$(terraform output master_connect_command) /usr/bin/kubectl taint nodes --all node-role.kubernetes.io/master- || true'
                         }
                     }
                 }
@@ -62,6 +64,7 @@ pipeline {
                 }
             }
         }
+
         stage('Install CNX') {
             steps {
                 dir('_crc/kubeadm/1.6') {
@@ -97,7 +100,8 @@ pipeline {
                 }
             }
         }
-        stage('Obtaining swagger.json') {
+
+        stage('Obtaining full swagger.json') {
             steps {
                 dir('_crc/kubeadm/1.6') {
                     withCredentials([file(credentialsId: 'quay-read-json', variable: 'KEY')]) {
@@ -114,77 +118,89 @@ pipeline {
             }
         }
 
-        stage('Create branch') {
-            steps {
-                sh 'cp _crc/kubeadm/1.6/swagger.json _cp/calico-swagger.json'
-
+        stage('Simplify swagger.json'){
+            steps{
+                // Build the container used to run the calico-swagger cleanup.
                 dir('_cp') {
-                    sh 'docker build -t swagger-gen:latest $PWD/jenkins/swagger-gen/ && docker run -v $PWD/calico-swagger.json:/tmp/calico-swagger.json:rw swagger-gen:latest app /tmp/calico-swagger.json /tmp/calico-swagger.json '
+                    sh 'docker build -t swagger-gen:latest $PWD/jenkins/swagger-gen/'
+                }
 
-                    // Check if the branch exists, if it does, compare and push changes
-                    // If it does not, then create the branch and push it
-                    sh '''
-                        git config user.name "Marvin Robot"
-                        git config user.email "marvin@tigera.io"
-                        if [ -z "$(git ls-remote | grep JENKINS-master-swagger-build)" ]; then
-                            git checkout -b JENKINS-master-swagger-build;
-                            git add .;
-                            git commit -m "calico-swagger.json update";
-                        elif [ -z "$(git diff origin/JENKINS-master-swagger-build)" ]; then
-                            git checkout master && git pull;
-                            git merge JENKINS-master-swagger-build;
-                            git reset origin/master;
-                            git add . --all;
-                            git commit -m "calico-swagger.json update";
-                        fi
-                        '''
+                // Run calico-swagger over the full swagger.json to clean up the swagger specifically for our docs.
+                dir('_crc/kubeadm/1.6') {
+                    sh 'docker run -v $PWD:/tmp:rw swagger-gen:latest app /tmp/swagger.json /tmp/calico-swagger.json'
                 }
             }
         }
-        stage('Push branch'){
+
+        stage('Create or checkout branch') {
             steps{
                 dir('_cp') {
                     withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'KEY', passphraseVariable: 'PHRASE', usernameVariable: 'USER')]) {
-                        // Only push the branch if there are changes to push
-                        // Check if the the Jenkins branch exists and if it does, check if there are differences that need to be pushed.
-                        // If the Jenkins branch does not exist, push the new branch if there are differences from the master branch.
-			script {
-                            env.BRANCH_EXISTS = sh(returnStdout: true, script: '''#!/bin/bash
-                                if [[ -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" ]]; then
-                                    echo "true";
-                                else
-                                    echo "false";
-                                fi''')
+                        // Check if the the Jenkins branch exists and if it does then check that branch out, otherwise
+                        // create a new branch.
+                        sh '''
+                            git config user.name "Marvin Robot"
+                            git config user.email "marvin@tigera.io"
+                        '''
 
-                            env.SWAGGER_CHANGED = sh(returnStdout: true, script: '''#!/bin/bash
-                                if [[ -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" && -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git diff origin/JENKINS-master-swagger-build)" ]] || [[ -z "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build)" && -n "$(GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git diff origin/master)" ]]; then
-				    echo "true";
-                                else
-                                    echo "false";
-                                fi''')
-
-                            if (env.SWAGGER_CHANGED) {
-                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git push -f --set-upstream origin JENKINS-master-swagger-build''')
+                        script {
+                            env.BRANCH_EXISTS = sh(returnStatus: true, script: 'GIT_SSH_COMMAND=\"ssh -i ${KEY}\" git ls-remote | grep JENKINS-master-swagger-build') == 0
+                            echo "Branch exists: ${env.BRANCH_EXISTS}"
+                            if (env.BRANCH_EXISTS == "true") {
+                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git checkout JENKINS-master-swagger-build''')
+                            } else {
+                                sh(script:'''GIT_SSH_COMMAND="ssh -i ${KEY}" git checkout -b JENKINS-master-swagger-build''')
                             }
                         }
                     }
                 }
             }
         }
-        stage('Create PR') {
+
+        stage('Push branch if updated'){
+            steps{
+                // Copy across the updated swagger file.
+                sh 'cp _crc/kubeadm/1.6/calico-swagger.json _cp/calico-swagger.json'
+
+                dir('_cp') {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'KEY', passphraseVariable: 'PHRASE', usernameVariable: 'USER')]) {
+                        // Only push the branch if there are changes to push.  Multiple changes may accumulate in a single
+                        // branch. Whoever is reviewing the PR can always squash the commits if they prefer, or if they delete
+                        // the PR and the branch then the next autogeneration will effectively squash the changes.
+                        script {
+                            env.SWAGGER_CHANGED = sh(returnStatus: true, script: 'git diff --exit-code') != 0
+                            echo "Swagger file modified: ${env.SWAGGER_CHANGED}"
+                            if (env.SWAGGER_CHANGED == "true") {
+                                sh(script:'''git add . && git commit -m "calico-swagger.json update" && GIT_SSH_COMMAND="ssh -i ${KEY}" git push -f --set-upstream origin JENKINS-master-swagger-build''')
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Create PR if required') {
             steps {
+                script {
+                    env.CREATE_PR = env.SWAGGER_CHANGED == "true" && env.BRANCH_EXISTS == "false"
+                    echo "Create PR: ${env.CREATE_PR}"
+                }
+
                 dir('_pr') {
-                    withCredentials([usernamePassword(credentialsId: 'marvin-tigera', passwordVariable: 'TOKEN', usernameVariable: 'USER')]) {
-                        sh 'wget https://github.com/github/hub/releases/download/v2.4.0/hub-linux-amd64-2.4.0.tgz'
-                        sh 'tar -xvzf hub-linux-amd64-2.4.0.tgz'
+                    // If creating a PR download hub to assist with the PR creation
+                    script {
+                        if (env.CREATE_PR == "true") {
+                            sh(script:'wget https://github.com/github/hub/releases/download/v2.4.0/hub-linux-amd64-2.4.0.tgz')
+                            sh(script:'tar -xvzf hub-linux-amd64-2.4.0.tgz')
+                        }
                     }
                 }
 
                 dir('_cp') {
                     withCredentials([usernamePassword(credentialsId: 'marvin-tigera', passwordVariable: 'TOKEN', usernameVariable: 'USER')]) {
+                        // If creating a PR use the downloaded hub binary to assist with the PR creation
                         script {
-                            SHOULD_PUSH = "${env.SWAGGER_CHANGED} && !${env.BRANCH_EXISTS}"
-                            if (SHOULD_PUSH) {
+                            if (env.CREATE_PR == "true") {
                                 sh(script: "GITHUB_TOKEN=${TOKEN} ../_pr/hub-linux-amd64-2.4.0/bin/hub pull-request -b tigera/calico-private:master -F - <<EOF\nJENKINS master: automatic swagger update\n\nThis is an automated PR generated by a Jenkins job.\nEOF")
                             }
                         }
@@ -198,6 +214,7 @@ pipeline {
             }
         }
     }
+
     post {
         always {
             dir('_crc/kubeadm/1.6') {
