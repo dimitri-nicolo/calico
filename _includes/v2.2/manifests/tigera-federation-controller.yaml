@@ -8,7 +8,6 @@ tigera-federation-controller.yaml acccepts the following include flags:
 | datastore        | kdd, etcd                     |
 
 {% endcomment -%}
-{% capture variant_name %}{% if include.network == "flannel" %}Canal{% else %}Calico{% endif %}{% endcapture -%}
 # This manifest deploys the {{site.prodname}} Federated Identity controller.
 apiVersion: extensions/v1beta1
 kind: Deployment

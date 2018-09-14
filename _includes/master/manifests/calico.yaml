@@ -42,7 +42,7 @@ calico.yaml acccepts the following include flags:
 {%- if include.federation == "true" %}
 {% include {{page.version}}/manifests/tigera-federation-sa.yaml %}
 ---
-{% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore=include.datastore %}
+{% include {{page.version}}/manifests/tigera-federation-controller.yaml datastore=include.datastore variant_name=variant_name %}
 ---
 
 {%- endif %}
