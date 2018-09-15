@@ -1105,6 +1105,9 @@ applyCNXManifest() {
   fi
   blockUntilPodIsReady "k8s-app=cnx-apiserver" 180 "cnx-apiserver"  # Block until cnx-apiserver pod is running & ready
   blockUntilPodIsReady "k8s-app=cnx-manager" 180 "cnx-manager"      # Block until cnx-manager pod is running & ready
+  if [ "$DEPLOYMENT_TYPE" == "federation" ]; then
+    blockUntilPodIsReady "k8s-app=tigera-federation-controller" 180 "tigera-federation-controller"  # Block until tigera-federation-controller pod is running & ready
+  fi
   countDownSecs 10 "Waiting for cnx-apiserver to stabilize"         # Wait until cnx-apiserver completes registration w/kube-apiserver
 }
 
