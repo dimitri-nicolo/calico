@@ -56,6 +56,17 @@ kubectl apply -f \
 	> [view the manifest in your browser](manifests/app-layer-policy/kubernetes-datastore/policy-only/calico-node.yaml){:target="_blank"}.
 	{: .alert .alert-info}
 
+Enable application layer policy in the {{site.prodname}} user interface
+
+- Set `tigera.cnx-manager.alp-support: "true"` in your `tigera-cnx-manager-config` ConfigMap
+
+    ```bash
+kubectl edit configmap -n kube-system tigera-cnx-manager-config
+## Restart the manager
+kubectl delete pod -n kube-system -l "k8s-app=cnx-manager"
+    ```
+
+
 
 ## Installing Istio
 
