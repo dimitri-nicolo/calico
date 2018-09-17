@@ -53,7 +53,7 @@ Start more nginx pods in a different namespace.
 kubectl run --namespace=external-demo nginx --replicas=2 --image=nginx
 ```
 
-Create a service to expose the nginx pods in a different namespace. 
+Create a service to expose the nginx pods in a different namespace.
 
 ```
 kubectl expose --namespace=external-demo deployment nginx --port=80
@@ -125,17 +125,17 @@ This should return the following output.
 
 ```
 NAMESPACE	NAME                                              TIER
-policy-demo	knp.default.default-deny                          default
+policy-demo	knp.default.default-deny                        default
 ```
 
 Note that there is a new `TIER` column. This means that the
 `default-deny` policy in the `policy-demo` namespace exists under the
 `default` tier. Also note that the name is in the form of `knp.<tier>.<policy name>`.
 The `knp` prefix is added because we created a Kubernetes NetworkPolicy resource using
-kubectl, whereas the NetworkPolicy created by calicoctl is the Calico-rendered equivalent
+kubectl, whereas the NetworkPolicy created by `calicoctl` is the {{site.prodname}}-rendered equivalent
 resource. This is dynamically calculated if you are using Kubernetes API Server as the
-datastore, or is created by the Calico Kubernetes Controller if you are using etcdv3 as
-the datastore. All Kubernetes-backed NetworkPolicy resources are added to the default Tier.
+datastore, or is created by the {{site.prodname}} Kubernetes Controller if you are using etcdv3 as
+the datastore. All Kubernetes-backed NetworkPolicy resources are added to the default tier.
 We can get the same information in YAML format as well by running:
 
 ```
@@ -272,10 +272,10 @@ To add a GlobalNetworkPolicy to a tier, specify the name of the tier you want to
 it to, under `metadata`. The YAML sample below adds the
 `netops.no-public-dns-for-policy-demo` policy to the `netops` tier. Note how we prefix
 `netops.`, which is the name of the tier, followed by a `.`. This is a requirement for
-tiered policy names and calicoctl will exit with an error message if this requirement
+tiered policy names and `calicoctl` will exit with an error message if this requirement
 isn't met.
 
-The following GlobalNetworkPolicy in the netops tier will prevent DNS requests to Google DNS
+The following `GlobalNetworkPolicy` in the `netops` tier will prevent DNS requests to Google DNS
 servers from pods in the policy-demo namespace. We use the "Pass" action to give the lower
 ordered tiers a chance to define policies. If a policy in a tier is applied to an endpoint but
 no policy in the tier acts on the traffic, it will be dropped at the end of the tier.
@@ -399,7 +399,7 @@ calicoctl create -f - <<EOF
 EOF
 ```
 
-The GlobalNetworkPolicy created above used a selector in the ingress and egress
+The `GlobalNetworkPolicy` created above used a selector in the ingress and egress
 rules to match only selected endpoints. We can use the `calicoq` command to query
 the set of endpoints that the the rule selector applies to.
 

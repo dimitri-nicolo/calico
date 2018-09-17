@@ -12,7 +12,7 @@ We recommend creating network policy to make it harder to accidentally lock your
 
 - An ingress policy to allow access to the {{site.prodname}} API Servers from the Kubernetes API Servers on ports 443 and 5443.
 
-- Egress policy to allow {{site.prodname}} API Server access to the Kubernetes API Server and Calico datastore.
+- Egress policy to allow {{site.prodname}} API Server access to the Kubernetes API Server and {{site.prodname}} datastore.
 
 
 ## Maximum number of browser sessions
@@ -42,13 +42,13 @@ spec:
   containers:
     - command:
       - kube-apiserver
-      - --enable-aggregator-routing=true 
+      - --enable-aggregator-routing=true
 ```
 
 The number of replicas best suited for a given deployment can be based on the following asymptotic formula.
 
 ```
-2st <= 250*r 
+2st <= 250*r
 ```
 where
 - `s` is the number of expected concurrent user sessions
@@ -56,4 +56,3 @@ where
 - `r` is the number of replicas
 
 For example, if you had 40 tiers and 10 concurrent users, you would need four replicas for full functionality.
-

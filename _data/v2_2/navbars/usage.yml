@@ -1,5 +1,5 @@
 bigheader: "Usage"
-abstract: "How to configure and troubleshoot Calico systems"
+abstract: "How to configure and troubleshoot Tigera Secure EE systems"
 path: /usage
 order: 2
 toc:
