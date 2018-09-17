@@ -1,5 +1,5 @@
 ---
-title: Calico key and path prefixes in etcd v3
+title: Tigera Secure EE key and path prefixes in etcd v3
 ---
 
 The paths listed here are the key or path prefixes that a particular {{site.prodname}}
@@ -32,7 +32,7 @@ component needs access to in etcd to function successfully.
 | /calico/ipam/v2/\*                        |   RW   |
 | /calico/resources/v3/projectcalico.org/\* |   RW   |
 
-## calico/kube-controllers
+## {{site.imageNames["kubeControllers"]}}
 
 | Path                                      | Access |
 |-------------------------------------------|--------|

@@ -34,7 +34,7 @@ and the Felix agent which programs network policy rules.
 The `cni-plugin` plugin integrates directly with the Kubernetes `kubelet` process
 on each node to discover which pods have been created, and adds them to {{site.prodname}} networking.
 
-The `calico/kube-controllers` container runs as a pod on top of Kubernetes and keeps {{site.prodname}}
+The `{{site.imageNames["kubeControllers"]}}` container runs as a pod on top of Kubernetes and keeps {{site.prodname}}
 in-sync with Kubernetes.
 
 ## Installing {{site.nodecontainer}}
@@ -125,7 +125,7 @@ chmod +x /opt/cni/bin/calico /opt/cni/bin/calico-ipam
 ```
 
 The {{site.prodname}} CNI plugins require a standard CNI config file.  The `policy` section is only required when
-running the `calico/kube-controllers` container .
+running the `{{site.imageNames["kubeControllers"]}}` container .
 
 ```bash
 mkdir -p /etc/cni/net.d
@@ -168,10 +168,10 @@ sudo cp loopback /opt/cni/bin/
 
 ## Installing the {{site.prodname}} Kubernetes controllers
 
-The `calico/kube-controllers` container keeps {{site.prodname}}'s datastore in-sync with Kubernetes.
+The `{{site.imageNames["kubeControllers"]}}` container keeps {{site.prodname}}'s datastore in-sync with Kubernetes.
 It runs as a single pod managed by a Deployment.
 
-> **Note**: The `calico/kube-controllers` container is required even if policy is not in use.
+> **Note**: The `{{site.imageNames["kubeControllers"]}}` container is required even if policy is not in use.
 {: .alert .alert-info}
 
 To install the controllers:

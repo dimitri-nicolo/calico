@@ -32,7 +32,7 @@ component needs access to in etcd to function successfully.
 | /calico/ipam/v2/\*                        |   RW   |
 | /calico/resources/v3/projectcalico.org/\* |   RW   |
 
-## calico/kube-controllers
+## {{site.imageNames["kubeControllers"]}}
 
 | Path                                      | Access |
 |-------------------------------------------|--------|

@@ -1,14 +1,14 @@
 ---
-title: Configuring the Calico Kubernetes controllers
+title: Configuring the Tigera Secure EE Kubernetes controllers
 ---
 
 The {{site.prodname}} Kubernetes controllers are primarily configured through environment variables. When running
 the controllers as a Kubernetes pod, this is accomplished through the pod manifest `env`
 section.
 
-## The calico/kube-controllers container
+## The {{site.imageNames["kubeControllers"]}} container
 
-The `calico/kube-controllers` container includes the following controllers:
+The `{{site.imageNames["kubeControllers"]}}` container includes the following controllers:
 
 1. policy controller: watches network policies and programs {{site.prodname}} policies.
 1. profile controller: watches namespaces and programs {{site.prodname}} profiles.

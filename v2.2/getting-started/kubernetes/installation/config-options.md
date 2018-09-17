@@ -27,7 +27,7 @@ It installs the following Kubernetes resources:
 - Installs the `{{site.nodecontainer}}` container on each host using a DaemonSet.
 - Installs the {{site.prodname}} CNI binaries and network config on each host using
   a DaemonSet.
-- Runs `calico/kube-controllers` as a deployment.
+- Runs `{{site.imageNames["kubeControllers"]}}` as a deployment.
 - The `calico-etcd-secrets` secret, which optionally allows for providing etcd
   TLS assets.
 - The `calico-config` ConfigMap, which contains parameters for configuring

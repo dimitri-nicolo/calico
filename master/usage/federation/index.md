@@ -66,7 +66,7 @@ resource. In addition, a
 
 > **Note**: The controller always uses the pod IP for the service endpoints even for pods in remote clusters,
 > thus if a pod on the local cluster uses a federated service to access a pod in a remote cluster, source and
-> destination IP addresses are preserved allowing Calico fine-grained policy to be applied.
+> destination IP addresses are preserved allowing {{site.prodname}} fine-grained policy to be applied.
 >
 > Contrast this to Kubernetes Federation, where federated services use the public service IP to access a remote service.
 > The use of the public IP requires NAT and is therefore not suitable for Federated Endpoint Identity.

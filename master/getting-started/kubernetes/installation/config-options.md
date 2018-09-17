@@ -27,7 +27,7 @@ It installs the following Kubernetes resources:
 - Installs the `{{site.nodecontainer}}` container on each host using a DaemonSet.
 - Installs the {{site.prodname}} CNI binaries and network config on each host using
   a DaemonSet.
-- Runs `calico/kube-controllers` as a deployment.
+- Runs `{{site.imageNames["kubeControllers"]}}` as a deployment.
 - The `calico-etcd-secrets` secret, which optionally allows for providing etcd
   TLS assets.
 - The `calico-config` ConfigMap, which contains parameters for configuring
@@ -232,5 +232,5 @@ Felix.  Once created, a Unix domain socket is an in-memory communications
 channel. The volumes are not used for any kind of stateful storage on disk.
 
 Refer to the
-[Calico ConfigMap manifest](./manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
+[{{site.prodname}} ConfigMap manifest](./manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
 example with the above changes.

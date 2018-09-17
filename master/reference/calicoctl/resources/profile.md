@@ -100,4 +100,4 @@ in order to use the following match criteria.
 | Datastore type        | Create/Delete | Update | Get/List | Notes
 |-----------------------|---------------|--------|----------|------
 | etcdv3                | Yes           | Yes    | Yes      |
-| Kubernetes API server | No            | No     | Yes      | Calico profiles are pre-assigned for each Namespace.
+| Kubernetes API server | No            | No     | Yes      | {{site.prodname}} profiles are pre-assigned for each Namespace.

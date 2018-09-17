@@ -16,7 +16,7 @@ aliases are supported (all case insensitive): `tier`, `tiers`.
 
 ### How Policy Is Evaluated
 
-When a new connection is processed by Calico, each tier that contains a policy that applies to the endpoint processes the packet.
+When a new connection is processed by {{site.prodname}}, each tier that contains a policy that applies to the endpoint processes the packet.
 Tiers are sorted by their `order` - smallest number first.
 
 Policies in each Tier are then processed in order.
