@@ -4,7 +4,9 @@ package collector
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
 	"path"
 
 	log "github.com/sirupsen/logrus"
@@ -30,6 +32,13 @@ func (d *fileDispatcher) Initialize() error {
 	if d.logger != nil {
 		// Already initialized; no-op
 		return nil
+	}
+	// Create the log directory before creating the logger.  If the logger creates it, it will do so
+	// with permission 0744, meaning that non-root users won't be able to "see" files in the
+	// directory, since "execute" permission on a directory needs to be granted.
+	err := os.MkdirAll(d.directory, 0755)
+	if err != nil {
+		return fmt.Errorf("can't make directories for new logfile: %s", err)
 	}
 	d.logger = &lumberjack.Logger{
 		Filename:   path.Join(d.directory, FlowLogFilename),
