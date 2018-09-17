@@ -204,8 +204,8 @@ run_edited_individual_test_oneshot() {
 download_templates_from_calico() {
     repo_dir="/node-repo"
     if [ ! -d ${repo_dir} ]; then
-        echo "Getting latest confd templates from calico repo, branch=${RELEASE_BRANCH}"
-        git clone https://github.com/projectcalico/node.git ${repo_dir} -b ${RELEASE_BRANCH}
+        echo "Getting latest confd templates from tigera/node-private, branch=${RELEASE_BRANCH}"
+        git clone git@github.com:tigera/node-private.git ${repo_dir} -b ${RELEASE_BRANCH}
         ln -s ${repo_dir}/filesystem/etc/calico/ /etc/calico
     fi
 }
