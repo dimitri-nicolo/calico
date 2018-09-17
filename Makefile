@@ -163,6 +163,7 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-e RELEASE_BRANCH=$(RELEASE_BRANCH) \
 		-e LOCAL_USER_ID=0 \
+		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		$(CALICO_BUILD) /tests/test_suite_kdd.sh
 
 .PHONY: test-etcd
@@ -173,6 +174,7 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/calicoct
 		-v $(CURDIR)/bin:/calico/bin/ \
 		-e RELEASE_BRANCH=$(RELEASE_BRANCH) \
 		-e LOCAL_USER_ID=0 \
+		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		$(CALICO_BUILD) /tests/test_suite_etcd.sh
 
 ## Etcd is used by the kubernetes
