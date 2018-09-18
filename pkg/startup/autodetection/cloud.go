@@ -17,6 +17,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -50,7 +51,10 @@ func GetCloudOrchRef() (api.OrchRef, error) {
 
 // GetOrchRef attempts to query the EC2 metadata service to determine the instance ID.
 func (a aws) GetOrchRef() (api.OrchRef, error) {
-	resp, err := http.Get(awsInstanceIDURL)
+	timeout := time.Duration(250 * time.Millisecond)
+	client := http.Client{Timeout: timeout}
+
+	resp, err := client.Get(awsInstanceIDURL)
 	if err != nil {
 		log.WithField("URL", awsInstanceIDURL).Infof("Unable to get AWS instance ID")
 		return api.OrchRef{}, err
@@ -60,7 +64,7 @@ func (a aws) GetOrchRef() (api.OrchRef, error) {
 		log.Error("Error while reading instance response body")
 		return api.OrchRef{}, err
 	}
-	resp, err = http.Get(awsZoneURL)
+	resp, err = client.Get(awsZoneURL)
 	if err != nil {
 		log.WithField("URL", awsZoneURL).Infof("Unable to get AWS zone")
 		return api.OrchRef{}, err
