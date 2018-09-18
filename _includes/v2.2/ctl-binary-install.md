@@ -53,7 +53,7 @@ you want to install the binary.
 1. Create a copy of the container.
 
    ```bash
-   docker create --name {{include.cli}}-copy {{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
+   docker create --name {{include.cli}}-copy {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames[include.cli]}}:{{site.data.versions[page.version].first.components[include.cli].version}}
    ```
 
 1. Copy the {{include.cli}} file from the container to the local file system. The following command copies it to a common `$PATH` location.
