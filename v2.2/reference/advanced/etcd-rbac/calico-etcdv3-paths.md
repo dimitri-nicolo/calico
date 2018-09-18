@@ -1,5 +1,5 @@
 ---
-title: Calico key and path prefixes in etcd v3
+title: Tigera Secure EE key and path prefixes in etcd v3
 ---
 
 The paths listed here are the key or path prefixes that a particular {{site.prodname}}

@@ -2,21 +2,21 @@
 title: calicoq
 ---
 
-`calicoq` is the {{site.prodname}} Policy Query Utility.  It is a command line tool that
+`calicoq` is the {{site.prodname}} policy query utility.  It is a command line tool that
 makes it easy to check your {{site.prodname}} security policies.
 See [Installing calicoq]({{site.baseurl}}/{{page.version}}/usage/calicoq/) for
 how to download and install `calicoq`.
 
 ## Datastore configuration
 
-calicoq works by querying the {{site.prodname}} datastore and needs configuration so that
+`calicoq` works by querying the {{site.prodname}} datastore and needs configuration so that
 it knows what type of datastore you are using - either etcdv2 or the Kubernetes
 API - and where that is.  For this configuration calicoq uses exactly the same
-setup as calicoctl, which means that:
+setup as `calicoctl`, which means that:
 
-- You can create a YAML or JSON config file, and specify that with calicoq's
+- You can create a YAML or JSON config file, and specify that with `calicoq`'s
   `-c` option.  This is the best option if you have already created that file
-  for use with calicoctl.
+  for use with `calicoctl`.
 
 - Or you can set environment variables to specify the datastore type and
   location: `DATASTORE_TYPE` and so on.
@@ -26,7 +26,7 @@ For more detail, see
 
 ## Commands
 
-The calicoq command line interface provides a number of policy inspection
+The `calicoq` command line interface provides a number of policy inspection
 commands to allow you to confirm that your security policies are configured
 as intended.
 

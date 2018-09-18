@@ -1,5 +1,5 @@
 ---
-title: Calico BIRD Route Reflector container
+title: Tigera Secure EE BIRD Route Reflector container
 ---
 
 For many {{site.prodname}} deployments, the use of a Route Reflector is not required.
@@ -7,7 +7,7 @@ However, for large scale deployments a full mesh of BGP peerings between each
 of your {{site.prodname}} nodes may become untenable.  In this case, route reflectors
 allow you to remove the full mesh and scale up the size of the cluster.
 
-This guide discusses the calico/routereflector image: a container image that
+This guide discusses the `calico/routereflector` image: a container image that
 packages up the `BIRD` BGP daemon along with the `confd` templating engine to
 provide a simple route reflector image which may be used for scaled-out {{site.prodname}}
 deployments.

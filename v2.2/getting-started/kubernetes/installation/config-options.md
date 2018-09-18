@@ -232,5 +232,5 @@ Felix.  Once created, a Unix domain socket is an in-memory communications
 channel. The volumes are not used for any kind of stateful storage on disk.
 
 Refer to the
-[Calico ConfigMap manifest](./manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
+[{{site.prodname}} ConfigMap manifest](./manifests/app-layer-policy/istio-inject-configmap.yaml){:target="_blank"} for an
 example with the above changes.

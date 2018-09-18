@@ -1,5 +1,5 @@
 ---
-title: Installing Calico on host endpoints
+title: Installing Tigera Secure EE on host endpoints
 ---
 
 You can use any of the following methods to install Felix on bare metal.

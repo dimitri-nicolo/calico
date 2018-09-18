@@ -5,13 +5,13 @@ title: Command Reference
 The command line tool, `calicoctl`, makes it easy to manage {{site.prodname}} network
 and security policy.
 
-This section is a command line reference for calicoctl, organized based on
+This section is a command line reference for `calicoctl`, organized based on
 the command hierarchy.
 
 ## Top level help
 
 Run `calicoctl --help` to display the following help menu for the top level
-calicoctl commands.
+`calicoctl` commands.
 
 ```
 Usage:

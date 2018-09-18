@@ -1,5 +1,5 @@
 bigheader: "Reference"
-abstract: "Reference Information for Calico"
+abstract: "Reference Information for Tigera Secure EE"
 path: /reference
 order: 3
 toc:
@@ -115,9 +115,9 @@ toc:
   section:
   - title: Configuration
     path: /reference/dikastes/configuration
-- title: Calico CNI Plugins
+- title: Tigera Secure EE CNI Plugins
   path: /reference/cni-plugin/configuration
-- title: Calico Kubernetes Controllers
+- title: Tigera Secure EE Kubernetes Controllers
   path: /reference/kube-controllers/configuration
 - title: Logging and reporting
   section:
@@ -149,8 +149,6 @@ toc:
       path: /reference/public-cloud/azure
     - title: Google Compute Engine
       path: /reference/public-cloud/gce
-    - title: IBM Cloud
-      path: /reference/public-cloud/ibm
 - title: Network design
   section:
     - title: Tigera Secure EE Over Ethernet Fabrics

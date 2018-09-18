@@ -1,5 +1,5 @@
 ---
-title: Configuring the Calico Kubernetes controllers
+title: Configuring the Tigera Secure EE Kubernetes controllers
 ---
 
 The {{site.prodname}} Kubernetes controllers are primarily configured through environment variables. When running

@@ -176,7 +176,7 @@ It runs as a single pod managed by a Deployment.
 
 To install the controllers:
 
-- Download the [Calico Kubernetes controllers manifest](calico-kube-controllers.yaml).
+- Download the [{{site.prodname}} Kubernetes controllers manifest](calico-kube-controllers.yaml).
 - Modify `<ETCD_ENDPOINTS>` to point to your etcd cluster.
 - Install it using `kubectl`.
 
