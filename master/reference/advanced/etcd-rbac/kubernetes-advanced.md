@@ -18,7 +18,7 @@ The following components need certificates with a Common Name that matches an
 etcd user that has been given appropriate roles allowing access to the key
 prefixes or paths listed or linked below.
 - [cni-plugin](calico-etcdv3-paths#cni-plugin)
-- [{{site.prodname}} Kubernetes controllers](calico-etcdv3-paths#calicokube-controllers)
+- [{{site.prodname}} Kubernetes controllers](calico-etcdv3-paths#tigerakube-controllers)
 - [{{site.nodecontainer}}](calico-etcdv3-paths#cnx-node)
 - It may also be useful to create a certificate key pair for use with
   calicoctl, even creating specific ones for

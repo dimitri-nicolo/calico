@@ -182,7 +182,7 @@ As a convenience, the API location location can also be configured directly, e.g
 
 If you wish to use the Kubernetes `NetworkPolicy` resource then you must set a policy type in the network config.
 There is a single supported policy type, `k8s`. When set,
-you must also run `calico/kube-controllers` with the policy, profile, and workloadendpoint controllers enabled.
+you must also run `{{site.imageNames["kubeControllers"]}}` with the policy, profile, and workloadendpoint controllers enabled.
 
 ```json
 {

@@ -76,7 +76,7 @@ the router in standard [docker](http://www.docker.io/) networking.
 
 The two approaches are outlined below, in this technical note, we will
 cover the second option, as it is more common in the scale-out world. If
-there is interest in the first approach, please contact Project Calico,
+there is interest in the first approach, please contact Tigera,
 and we can discuss, and if there is enough interest, maybe we will do
 another technical note on that approach. If you know of other approaches
 in use, we would be happy to host a guest technical note.
@@ -84,7 +84,7 @@ in use, we would be happy to host a guest technical note.
 1.  The routing infrastructure is based on some form of IGP. Due to the
     limitations in scale of IGP networks (see the [why BGP
     post](https://www.projectcalico.org/why-bgp/) for discussion of this
-    topic), the Project Calico team does not believe that using an IGP
+    topic), the Tigera team does not believe that using an IGP
     to distribute endpoint reachability information will adequately
     scale in a {{site.prodname}} environment. However, it is possible to use a
     combination of IGP and BGP in the interconnect fabric, where an IGP
@@ -365,7 +365,7 @@ total memory available on a modern compute server.
 
 ## Recommendation
 
-The Project Calico team recommends the use of the [AS per rack](#the-as-per-rack-model) model if
+We recommend the use of the [AS per rack](#the-as-per-rack-model) model if
 the resultant routing table size can be accommodated by the ToR and
 spine switches, remembering to account for projected growth.
 
@@ -377,8 +377,8 @@ capacity, or there is a desire to run a very simple L2 fabric to connect
 the {{site.prodname}} nodes, then the user should consider the Ethernet fabric as
 detailed in [this post]({{site.baseurl}}/{{page.version}}/reference/private-cloud/l2-interconnect-fabric).
 
-If a {{site.prodname}} user is interested in the AS per compute server, the Project
-Calico team would be very interested in discussing the deployment of
+If a {{site.prodname}} user is interested in the AS per compute server, we
+would be very interested in discussing the deployment of
 that model.
 
 ## Appendix
@@ -530,7 +530,7 @@ today of 128,000 endpoints.
     servers, border routers, and appliances).
 
 [^3]: If there is interest in a discussion of this approach, please let
-    us know. The Project Calico team could either arrange a discussion,
+    us know. We could either arrange a discussion,
     or if there was enough interest, publish a follow-up tech note.
 
 [^4]: However those tools are available if a given {{site.prodname}} instance needs

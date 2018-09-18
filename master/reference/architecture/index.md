@@ -141,7 +141,7 @@ always in a known-good state, while allowing for some number of the
 machines hosting etcd to fail or become unreachable.
 
 This distributed storage of {{site.prodname}} data also improves the ability of the
-Calico components to read from the database (which is their most common
+{{site.prodname}} components to read from the database (which is their most common
 operation), as they can distribute their reads around the cluster.
 
 #### Communication
@@ -160,7 +160,7 @@ into the network.
 {{site.prodname}} deploys a BGP client on every node that also hosts a [Felix](#felix). The role of the BGP client is to read routing state that [Felix](#felix) programs into the kernel and
 distribute it around the data center.
 
-In Calico, this BGP component is most commonly
+In {{site.prodname}}, this BGP component is most commonly
 [BIRD](http://bird.network.cz/), though any BGP client, such as [GoBGP](https://github.com/osrg/gobgp) that can draw
 routes from the kernel and distribute them is suitable in this role.
 
@@ -182,7 +182,7 @@ in a mesh topology. This requires an increasing number of connections
 that rapidly become tricky to maintain, due to the N^2 nature of the
 increase.
 
-For that reason, in larger deployments, Calico will deploy a BGP route
+For that reason, in larger deployments, {{site.prodname}} will deploy a BGP route
 reflector. This component, commonly used in the Internet, acts as a
 central point to which the BGP clients connect, preventing them from
 needing to talk to every single BGP client in the cluster.
@@ -191,7 +191,7 @@ For redundancy, multiple BGP route reflectors can be deployed
 seamlessly. The route reflectors are purely involved in the control of
 the network: no endpoint data passes through them.
 
-In Calico, this BGP component is also most commonly
+In {{site.prodname}}, this BGP component is also most commonly
 [BIRD](http://bird.network.cz/), configured as a route reflector rather
 than as a standard BGP client.
 
@@ -199,6 +199,6 @@ The BGP route reflector is responsible for the following task:
 
 #### Centralized Route Distribution
 
-When the [Calico BGP client](#bgp-client-bird) advertises routes
+When the [{{site.prodname}} BGP client](#bgp-client-bird) advertises routes
 from its FIB to the route reflector, the route reflector advertises
 those routes out to the other nodes in the deployment.

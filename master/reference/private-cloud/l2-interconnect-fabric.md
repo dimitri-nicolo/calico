@@ -21,7 +21,7 @@ network. Talking to most at-scale cloud operators, they have converted
 to IP fabrics, and as will cover in the next blog post that
 infrastructure will work for {{site.prodname}} as well. However, the concerns that
 drove most of those operators to IP as the interconnection network in
-their pods are largely ameliorated by Project Calico, allowing Ethernet
+their pods are largely ameliorated by {{site.prodname}}, allowing Ethernet
 to be viably considered as a {{site.prodname}} interconnect, even in large-scale
 deployments.
 
@@ -69,7 +69,7 @@ points that live for seconds, minutes, days).
 
 If you weren't ready to turn off your Ethernet data center network
 before this, I bet you are now. Before you do, however, let's look at
-how Project Calico can mitigate these issues, even in very large
+how {{site.prodname}} can mitigate these issues, even in very large
 deployments.
 
 ## How does {{site.prodname}} tame the Ethernet daemons?
@@ -241,5 +241,4 @@ that one plane would fail. The remaining planes would stay running.
     each physical switch).
 
 [^3]: We use IPv6 here purely as an example. IPv4 would be configured
-    similarly. I welcome your questions, either here on the blog, or via
-    the Project Calico mailing list.
+    similarly.

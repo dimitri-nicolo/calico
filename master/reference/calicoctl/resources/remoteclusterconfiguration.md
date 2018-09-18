@@ -75,7 +75,7 @@ spec:
 | k8sAPIToken    | Token to be used for accessing the Kubernetes API.                 |  | string   | none           |
 
 All of the fields that start with `etcd` are only valid when the DatastoreType is etcdv3 and the fields that start with `k8s` or `kube` are only valid when the datastore type is kubernetes.
-The `kubeconfig` field and the fields that end with `File` must be accessible to Typha and Calicoq.
+The `kubeconfig` field and the fields that end with `File` must be accessible to Typha and `calicoq`.
 
 When the DatastoreType is `kubernetes`, the `kubeconfig` file is optional but since it can contain all of the authentication information needed to access the Kubernetes API server it is generally easier to use than setting all the individual `k8s` fields. The other kubernetes fields can be used by themselves though or to override specific kubeconfig values.
 
