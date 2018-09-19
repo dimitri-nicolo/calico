@@ -1,3 +1,9 @@
+{% if include.orch != "openshift" %}
+  {% assign cli = "kubectl" %}
+{% else %} 
+  {% assign cli = "oc" %}
+{% endif %}
+
 1. {{site.prodname}} can send logs to Elasticsearch to provide easy to use auditing and compliance
    reports and enable certain UI functions.  Using this feature requires an Elasticsearch cluster, configured with suitable storage.
    {{site.prodname}} includes the [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator),
@@ -10,7 +16,7 @@
    Use the following command to apply the manifest.
 
    ```bash
-   kubectl apply -f elastic-storage-local.yaml \
+   {{cli}} apply -f elastic-storage-local.yaml \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml
    ```
 
@@ -21,5 +27,5 @@
    Kubernetes configuration: the others require a provisioner to be set up.
 
    ```
-   kubectl apply -f my-storage-class.yaml
+   {{cli}} apply -f my-storage-class.yaml
    ```

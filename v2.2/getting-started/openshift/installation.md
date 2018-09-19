@@ -113,55 +113,14 @@ Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixC
    iptables -I INPUT -p tcp --dport 9081 -j ACCEPT
    ```
 
-#### Configure Prometheus
+#### Configure Prometheus and Flow Logs
 
 With metrics enabled, you are ready to monitor `{{site.nodecontainer}}` by scraping the endpoint on each node
 in the cluster. If you do not have your own Prometheus, the following commands will launch a Prometheus
-Operator, Prometheus, and Alertmanager instances for you.
+Operator, Prometheus, and Alertmanager instances for you. They will also deploy Elasticsearch, Fluentd, and
+Kibana in order to enable flow logs.
 
-1. Allow Prometheus to run as root:
-
-   ```
-   oc adm policy add-scc-to-user --namespace=calico-monitoring anyuid -z default
-   ```
-
-1. Allow Prometheus to configure and use a security context.
-
-   ```
-   oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:prometheus
-   ```
-
-1. Allow sleep pod to run with host networking:
-
-   ```
-   oc adm policy add-scc-to-user --namespace=calico-monitoring hostnetwork -z default
-   ```
-
-1. Allow Prometheus to have pods in `kube-system` namespace on each node:
-
-   ```
-   oc annotate ns kube-system openshift.io/node-selector="" --overwrite
-   ```
-
-1. Configure calico-monitoring namespace and deploy Prometheus Operator by
-  applying the [operator.yaml](operator.yaml) manifest.
-
-   ```
-   oc apply -f {{site.url}}/{{page.version}}/getting-started/openshift/operator.yaml
-   ```
-
-1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com` and `servicemonitors.monitoring.coreos.com` custom resource definitions to be created. Check by running:
-
-   ```
-   oc get customresourcedefinitions
-   ```
-
-1. Apply the [monitor-calico.yaml]({{site.baseurl}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml) manifest which will
-  install Prometheus and Alertmanager.
-
-   ```
-   oc apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
-   ```
+{% include {{page.version}}/cnx-monitor-install.md orch="openshift" %}
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
 See [Policy Violation Alerting](../../reference/cnx/policy-violations) for more information.
