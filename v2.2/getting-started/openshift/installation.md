@@ -26,7 +26,7 @@ inventory file:
   - `openshift_use_calico=true`
   - `openshift_use_openshift_sdn=false`
   - `calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
-  - `calico_url_policy_controller=quay.io/calico/kubeControllers:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}`
+  - `calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}`
   - `calico_cni_image="quay.io/calico/cni:v3.1.2"`
 
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
@@ -49,7 +49,7 @@ openshift_disable_check=memory_availability,docker_storage
 osm_cluster_network_cidr=10.128.0.0/14
 calico_ipv4pool_cidr=10.128.0.0/14
 calico_node_image=<YOUR-REGISTRY>/tigera/cnx-node:{{site.data.versions[page.version].first.components["cnx-node"].version}}
-calico_url_policy_controller=quay.io/calico/kubeControllers:{{site.data.versions[page.version].first.components["calico/kube-controllers"].version}}
+calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}
 calico_url_ipam={{site.data.versions[page.version].first.components["calico/cni"].download_calico_ipam_url}}
 calico_url_cni={{site.data.versions[page.version].first.components["calico/cni"].download_calico_url}}
 openshift_enable_docker_excluder=False
