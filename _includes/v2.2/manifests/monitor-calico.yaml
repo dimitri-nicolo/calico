@@ -312,8 +312,8 @@ spec:
     # If necessary, uncomment the line below and edit key:value pair with appropriate value for your environment.
     #node.role: infrastructure
   kibana:
-    image: docker.elastic.co/kibana/kibana-oss:6.1.3
-  elastic-search-image: upmcenterprises/docker-elasticsearch-kubernetes:6.1.3_0
+    image: docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
+  elastic-search-image: upmcenterprises/docker-elasticsearch-kubernetes:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
   # For production deployments, modify the number of elasticsearch replicas accordingly
   client-node-replicas: 1
   master-node-replicas: 1

@@ -37,7 +37,7 @@
 1. Use the following commands to pull the required {{site.prodname}} images.
 
    ```bash
-   docker pull docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+   docker pull docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
@@ -58,7 +58,7 @@
 1. Retag the images with the name of your private registry.
 
    ```bash
-   docker tag docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+   docker tag docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
@@ -82,7 +82,7 @@
 1. Push the images to your private registry.
 
    ```bash
-   docker push <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
+   docker push <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-manager:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-manager-proxy:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
