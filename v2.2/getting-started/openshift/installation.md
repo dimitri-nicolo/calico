@@ -27,7 +27,7 @@ inventory file:
   - `openshift_use_openshift_sdn=false`
   - `calico_node_image=<YOUR-REGISTRY>/{{site.imageNames["cnx-node"]}}:{{site.data.versions[page.version].first.components["cnx-node"].version}}`
   - `calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}`
-  - `calico_cni_image="{{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}`
+  - `calico_cni_image={{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}`
 
 Also ensure that you have an explicitly defined host in the `[etcd]` group.
 
