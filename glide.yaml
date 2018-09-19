@@ -2,13 +2,13 @@ package: github.com/projectcalico/node
 import:
 - package: github.com/kelseyhightower/confd
   repo: git@github.com:tigera/confd-private.git
-  version: 53998f56d1e651d95bbec21222cfcbc9fdab0b91
+  version: 2f63ff1f34e6de3c04f5e0e67fd4eef20386fccf
   subpackages:
   - pkg/config
   - pkg/run
 - package: github.com/projectcalico/felix
   repo: git@github.com:tigera/felix-private.git
-  version: 019041c8cbac2c39b082628f50a7976f5ef45e76
+  version: 344a0601d8100c12f6796cb999f6d432e46c26c5
   subpackages:
   - daemon
 - package: github.com/projectcalico/libcalico-go
