@@ -225,3 +225,31 @@
    > **Note**: You can also
    > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml){:target="_blank"}.
    {: .alert .alert-info}
+
+{% if include.init == "openshift" %}
+
+1. Make sure that the OpenShift user you will log in with has the proper permissions in the `kube-system`
+   and `calico-monitoring` namespaces. You can find default OpenShift roles and their description in the
+   [OpenShift documentation](https://docs.openshift.com/container-platform/3.10/architecture/additional_concepts/authorization.html#roles){:target="_blank"}.
+   Example commands to set a user to the admin role in the `kube-system` and `calico-monitoring` namespaces
+   respectively follow.
+   ```
+   oc adm policy add-cluster-role-to-user --namespace=kube-system admin <USER>
+   oc adm policy add-cluster-role-to-user --namespace=calico-monitoring admin <USER>
+   ```
+   Additionally, you will need to set the appropriate permissions for your user to access {{site.prodname}}
+   resources via RBAC. Additional details can be found in [Configuring Tigera Secure EE RBAC]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies){:target="_blank"}.
+   > **Note**: The quickest way to test {{site.prodname}} is by using an admin user, who will have
+   > full access to everything in the cluster. We do not recommend using an admin account outside of
+   > testing, and proper access should be configured via RBAC as per the
+   > [RBAC documentation]({{site.url}}/{{page.version}}/reference/cnx/rbac-tiered-policies){:target="_blank"}
+   > The following command will provide your user with the role of `cluster-admin`.
+   > ```
+oc adm policy add-cluster-role-to-user cluster-admin <USER>
+     ```
+   > When finished with testing, the `cluster-admin` privileges can be removed from your user with the
+   > following command.
+   > ```
+oc adm policy remove-cluster-role-to-user cluster-admin <USER>
+     ```
+{% endif %}
