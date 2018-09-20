@@ -267,8 +267,6 @@ subjects:
   name: calico-prometheus-operator
   namespace: calico-monitoring
 
-{%- endif %}
-
 # This manifest adds an additional security context for
 # OpenShift so fluentd can ingest logs from the host.
 ---
@@ -291,3 +289,4 @@ users:
 - system:serviceaccount:calico-monitoring:tigera-fluentd
 groups:
 - system:authenticated
+{%- endif %}
