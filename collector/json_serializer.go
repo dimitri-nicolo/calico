@@ -25,21 +25,21 @@ type FlowLogJSONOutput struct {
 	// Some empty values should be json marshalled as null and NOT with golang null values such as "" for
 	// a empty string
 	// Having such values as pointers ensures that json marshalling will render it as such.
-	SourceIP             *string                  `json:"source_ip"`
-	SourceName           string                   `json:"source_name"`
-	SourceNameAggregated string                   `json:"source_name_aggregated"`
-	SourceNamespace      string                   `json:"source_namespace"`
-	SourcePort           *int64                   `json:"source_port"`
-	SourceType           string                   `json:"source_type"`
-	SourceLabels         *FlowLogLabelsJSONOutput `json:"source_labels"`
-	DestIP               *string                  `json:"dest_ip"`
-	DestName             string                   `json:"dest_name"`
-	DestNameAggregated   string                   `json:"dest_name_aggregated"`
-	DestNamespace        string                   `json:"dest_namespace"`
-	DestPort             *int64                   `json:"dest_port"`
-	DestType             string                   `json:"dest_type"`
-	DestLabels           *FlowLogLabelsJSONOutput `json:"dest_labels"`
-	Proto                string                   `json:"proto"`
+	SourceIP        *string                  `json:"source_ip"`
+	SourceName      string                   `json:"source_name"`
+	SourceNameAggr  string                   `json:"source_name_aggr"`
+	SourceNamespace string                   `json:"source_namespace"`
+	SourcePort      *int64                   `json:"source_port"`
+	SourceType      string                   `json:"source_type"`
+	SourceLabels    *FlowLogLabelsJSONOutput `json:"source_labels"`
+	DestIP          *string                  `json:"dest_ip"`
+	DestName        string                   `json:"dest_name"`
+	DestNameAggr    string                   `json:"dest_name_aggr"`
+	DestNamespace   string                   `json:"dest_namespace"`
+	DestPort        *int64                   `json:"dest_port"`
+	DestType        string                   `json:"dest_type"`
+	DestLabels      *FlowLogLabelsJSONOutput `json:"dest_labels"`
+	Proto           string                   `json:"proto"`
 
 	Action   string `json:"action"`
 	Reporter string `json:"reporter"`
@@ -83,7 +83,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.SourcePort = &t
 	}
 	out.SourceName = l.SrcMeta.Name
-	out.SourceNameAggregated = l.SrcMeta.AggregatedName
+	out.SourceNameAggr = l.SrcMeta.AggregatedName
 	out.SourceNamespace = l.SrcMeta.Namespace
 	out.SourceType = string(l.SrcMeta.Type)
 	if l.SrcLabels == nil {
@@ -106,7 +106,7 @@ func toOutput(l *FlowLog) FlowLogJSONOutput {
 		out.DestPort = &t
 	}
 	out.DestName = l.DstMeta.Name
-	out.DestNameAggregated = l.DstMeta.AggregatedName
+	out.DestNameAggr = l.DstMeta.AggregatedName
 	out.DestNamespace = l.DstMeta.Namespace
 	out.DestType = string(l.DstMeta.Type)
 	if l.DstLabels == nil {
@@ -202,7 +202,7 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Type:           srcType,
 		Namespace:      o.SourceNamespace,
 		Name:           o.SourceName,
-		AggregatedName: o.SourceNameAggregated,
+		AggregatedName: o.SourceNameAggr,
 	}
 	if o.SourceLabels == nil {
 		fl.SrcLabels = nil
@@ -225,7 +225,7 @@ func (o FlowLogJSONOutput) ToFlowLog() (FlowLog, error) {
 		Type:           dstType,
 		Namespace:      o.DestNamespace,
 		Name:           o.DestName,
-		AggregatedName: o.DestNameAggregated,
+		AggregatedName: o.DestNameAggr,
 	}
 	if o.DestLabels == nil {
 		fl.DstLabels = nil

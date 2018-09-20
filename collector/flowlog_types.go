@@ -106,13 +106,8 @@ func newFlowMetaWithPrefixNameAggregation(mu MetricUpdate) (FlowMeta, error) {
 	f.Tuple.src = [16]byte{}
 	f.Tuple.l4Src = unsetIntField
 	f.Tuple.dst = [16]byte{}
-
-	if mu.srcEp != nil && f.SrcMeta.AggregatedName != flowLogFieldNotIncluded {
-		f.SrcMeta.Name = flowLogFieldNotIncluded
-	}
-	if mu.dstEp != nil && f.DstMeta.AggregatedName != flowLogFieldNotIncluded {
-		f.DstMeta.Name = flowLogFieldNotIncluded
-	}
+	f.SrcMeta.Name = flowLogFieldNotIncluded
+	f.DstMeta.Name = flowLogFieldNotIncluded
 
 	return f, nil
 }

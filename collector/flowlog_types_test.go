@@ -352,8 +352,8 @@ var _ = Describe("Flow log types tests", func() {
 				DstMeta: EndpointMetadata{
 					Type:           "wep",
 					Namespace:      "default",
-					Name:           "manually-created-pod", // Keeping the Name. No Generatename.
-					AggregatedName: "-",
+					Name:           "-",
+					AggregatedName: "manually-created-pod", // Keeping the Name. No Generatename.
 				},
 				Action:   "allow",
 				Reporter: "dst",

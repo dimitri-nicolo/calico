@@ -108,7 +108,7 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 		if v.GenerateName != "" {
 			aggName = fmt.Sprintf("%s*", v.GenerateName)
 		} else {
-			aggName = flowLogFieldNotIncluded
+			aggName = name
 		}
 		em = EndpointMetadata{
 			Type:           FlowLogEndpointTypeWep,
@@ -120,7 +120,7 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 		em = EndpointMetadata{
 			Type:           FlowLogEndpointTypeHep,
 			Name:           k.EndpointID,
-			AggregatedName: flowLogFieldNotIncluded,
+			AggregatedName: k.Hostname,
 			Namespace:      flowLogNamespaceGlobal,
 		}
 	case model.NetworkSetKey:
@@ -128,7 +128,7 @@ func getFlowLogEndpointMetadata(ed *calc.EndpointData) (EndpointMetadata, error)
 		em = EndpointMetadata{
 			Type:           FlowLogEndpointTypeNs,
 			Namespace:      flowLogFieldNotIncluded,
-			AggregatedName: flowLogFieldNotIncluded,
+			AggregatedName: k.Name,
 			Name:           k.Name,
 		}
 	default:
