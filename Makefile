@@ -9,7 +9,7 @@ test: ut
 
 # Define some constants
 #######################
-K8S_VERSION      ?= v1.10.4
+K8S_VERSION      ?= v1.11.3
 ETCD_VERSION     ?= v3.3.7
 GO_BUILD_VER     ?= v0.17
 CALICO_BUILD     ?= calico/go-build:$(GO_BUILD_VER)
@@ -188,7 +188,7 @@ ut: vendor run-etcd run-kubernetes-master
     -v $(CURDIR):/go/src/github.com/$(PACKAGE_NAME):rw \
     -v $(CURDIR)/.go-pkg-cache:/go-cache/:rw \
     -e GOCACHE=/go-cache \
-    $(CALICO_BUILD) sh -c 'cd /go/src/github.com/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor .'
+    $(CALICO_BUILD) sh -c 'cd /go/src/github.com/$(PACKAGE_NAME) && ginkgo -r --skipPackage vendor $(GINKGO_ARGS) .'
 
 ## Run etcd as a container (calico-etcd)
 run-etcd: stop-etcd
@@ -236,7 +236,8 @@ run-kubernetes-master: stop-kubernetes-master
 	    --net=host \
 	    --rm \
 		-v  $(CURDIR):/manifests \
-		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube kubectl \
 		--server=http://127.0.0.1:8080 \
 		apply -f /manifests/test/crds.yaml
 
@@ -245,7 +246,8 @@ run-kubernetes-master: stop-kubernetes-master
 	    --net=host \
 	    --rm \
 		-v  $(CURDIR):/manifests \
-		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube kubectl \
 		--server=http://127.0.0.1:8080 \
 		apply -f /manifests/test/mock-node.yaml
 
@@ -255,7 +257,8 @@ run-kubernetes-master: stop-kubernetes-master
 	    --net=host \
 	    --rm \
 		-v  $(CURDIR):/manifests \
-		lachlanevenson/k8s-kubectl:${K8S_VERSION} \
+		gcr.io/google_containers/hyperkube-amd64:${K8S_VERSION} \
+		/hyperkube kubectl \
 		--server=http://localhost:8080 \
 		apply -f /manifests/test/namespaces.yaml
 
