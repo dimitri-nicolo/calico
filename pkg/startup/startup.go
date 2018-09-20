@@ -153,7 +153,7 @@ func Run() {
 	}
 
 	configureNodeRef(node)
-	//configureCloudOrchRef(node)
+	configureCloudOrchRef(node)
 
 	// Check expected filesystem
 	ensureFilesystemAsExpected()
