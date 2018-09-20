@@ -123,6 +123,23 @@
    >    {{cli}} apply -f monitor-calico.yaml
    >    ```
 
+1. Edit the `GlobalNetworkSet` named `k8sapi-endpoints` to specify the IP addresses of the hosts that are running the Kubernetes API server.
+
+   ```
+   apiVersion: projectcalico.org/v3
+kind: GlobalNetworkSet
+metadata:
+  name: k8sapi-endpoints
+  labels:
+    role: k8s-apiserver-endpoints
+spec:
+  nets:
+  - <Kubernetes API server IP address CIDR>
+   ```
+
+   > **NOTE**: You may need to list all the IP addresses on that host including the IP address of `tunl0`
+   > if running in IPIP mode.
+
 {% if include.orch == "openshift" %}
 
 1. Reconfigure the Elasticsearch deployment. The following command will save the current configuration

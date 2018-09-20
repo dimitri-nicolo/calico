@@ -1219,6 +1219,10 @@ deleteOperatorManifest() {
 # applyMonitorCalicoManifest()
 #
 applyMonitorCalicoManifest() {
+  # if given tighten the address used to allow access only to K8S API Server.
+  if [ -n "${REPLACE_K8S_CIDR}" ]; then
+    sed -i "s|\(.*\)- .* #K8S_API_SERVER_IP|\1- \"$REPLACE_K8S_CIDR\"|g" monitor-calico.yaml
+  fi
   echo -n "Applying \"monitor-calico.yaml\" manifest: "
   run kubectl apply -f monitor-calico.yaml
   blockUntilPodIsReady "app=prometheus" 180 "prometheus-calico-node"      # Block until prometheus-calico-nod pod is running & ready

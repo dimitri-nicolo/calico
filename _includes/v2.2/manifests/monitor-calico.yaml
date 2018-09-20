@@ -442,6 +442,20 @@ spec:
 
 ---
 
+# Network set for the K8s API Server's IP addresses.
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkSet
+metadata:
+  name: k8sapi-endpoints
+  labels:
+    role: k8s-apiserver-endpoints
+spec:
+  nets:
+  # List of IP addresses for the host K8s API server
+  - 0.0.0.0/0 #K8S_API_SERVER_IP
+
+---
+
 # Allow access to Elasticsearch client nodes from kube-apiserver
 apiVersion: projectcalico.org/v3
 kind: GlobalNetworkPolicy
@@ -457,10 +471,8 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      # Replace this subnet with a list of the IP addresses of all your Kubernetes nodes.
-      # It must be all nodes because kube-proxy SNATs traffic from host networked pods
-      # on the receiving node.
-      nets: ["0.0.0.0/0"]
+      matchLabels:
+      - role: k8s-apiserver-endpoints
     destination:
       ports: [9200]
 
