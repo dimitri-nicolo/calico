@@ -37,18 +37,45 @@ toc:
     path: /usage/encrypt-comms
   - title: Securing endpoints with Tigera Secure EE policy
     path: /usage/policy/secure-metrics
+
+- title: Logs
+  section:
+  - title: Elasticsearch
+    section:
+    - title: Overview
+      path: /usage/logs/elastic/
+    - title: Flow logs
+      path: /usage/logs/elastic/flow
+    - title: Audit logs
+      path: /usage/logs/elastic/ee-audit
+    - title: Configuring audit logs
+      path: /usage/logs/elastic/k8s-audit
+    - title: Accessing logs
+      path: /usage/logs/elastic/view
+  - title: iptables
+    path: /usage/logs/iptables
+  - title: Component
+    section:
+    - title: Overview
+      path: /usage/logs/component
+    - title: Logging
+      path: /usage/troubleshooting/logging
+- title: Metrics
+  section:
+  - title: Overview
+    path: /usage/metrics/
+  - title: Policy metrics in Prometheus
+    path: /usage/metrics/metrics
+  - title: Configuring Prometheus
+    path: /usage/configuration/prometheus
+  - title: Configuring Alertmanager
+    path: /usage/configuration/alertmanager
 - title: Logging and Elasticsearch
   section:
   - title: Configuring Elasticsearch
     path: /usage/logs/configure-elastic
   - title: Using your own Elasticsearch cluster
     path: /usage/logs/byo-elastic
-- title: Configuring Prometheus
-  path: /usage/configuration/prometheus
-- title: Configuring Alertmanager
-  path: /usage/configuration/alertmanager
-- title: Logging
-  path: /usage/troubleshooting/logging
 - title: Federation (Kubernetes only)
   section:
   - title: Overview
