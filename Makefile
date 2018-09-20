@@ -152,14 +152,15 @@ vendor: glide.yaml
           glide install -strip-vendor'
 
 # Default the libcalico repo and version but allow them to be overridden
-LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go master 2>/dev/null | cut -f 1)
+LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
+LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private master 2>/dev/null | cut -f 1)
 
 ## Update libcalico pin in glide.yaml
 update-libcalico:
 	docker run --rm -i \
       -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
       -v $(HOME)/.glide:/home/user/.glide:rw \
+      -v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
       -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
       $(CALICO_BUILD) /bin/sh -c ' \
         cd /go/src/$(PACKAGE_NAME); \
@@ -168,8 +169,8 @@ update-libcalico:
         echo "Old version: $$OLD_VER";\
         if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
             sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
-              glide mirror set https://github.com/projectcalico/libcalico-go $(LIBCALICO_REPO) --vcs git; glide mirror list; \
+            if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
+              glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
             fi;\
           OUTPUT=`mktemp`;\
           glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
