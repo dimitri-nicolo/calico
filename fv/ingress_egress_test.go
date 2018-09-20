@@ -154,7 +154,7 @@ var _ = Context("with initialized Felix, etcd datastore, 3 workloads", func() {
 				if fl.Reporter == collector.FlowLogReporterSrc {
 					dir = "src"
 				}
-				key := fl.SrcMeta.Name + "--" + fl.DstMeta.Name + "--" + dir
+				key := fl.SrcMeta.AggregatedName + "--" + fl.DstMeta.AggregatedName + "--" + dir
 				if fl.NumFlowsStarted == 1 {
 					if _, ok := expectedKeys["start-"+key]; ok {
 						// Expected flow log seen.
