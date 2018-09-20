@@ -264,14 +264,16 @@ var _ = Describe("Flow log aggregator tests", func() {
 					l4Dst: 80,
 				},
 				SrcMeta: EndpointMetadata{
-					Type:      "wep",
-					Namespace: "kube-system",
-					Name:      "iperf-4235-*",
+					Type:           "wep",
+					Namespace:      "kube-system",
+					Name:           "-",
+					AggregatedName: "iperf-4235-*",
 				},
 				DstMeta: EndpointMetadata{
-					Type:      "net",
-					Namespace: "-",
-					Name:      "pub",
+					Type:           "net",
+					Namespace:      "-",
+					Name:           "-",
+					AggregatedName: "pub",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -286,14 +288,16 @@ var _ = Describe("Flow log aggregator tests", func() {
 					l4Dst: 80,
 				},
 				SrcMeta: EndpointMetadata{
-					Type:      "net",
-					Namespace: "-",
-					Name:      "pvt",
+					Type:           "net",
+					Namespace:      "-",
+					Name:           "-",
+					AggregatedName: "pvt",
 				},
 				DstMeta: EndpointMetadata{
-					Type:      "wep",
-					Namespace: "kube-system",
-					Name:      "iperf-4235-*",
+					Type:           "wep",
+					Namespace:      "kube-system",
+					Name:           "-",
+					AggregatedName: "iperf-4235-*",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -308,14 +312,16 @@ var _ = Describe("Flow log aggregator tests", func() {
 					l4Dst: 80,
 				},
 				SrcMeta: EndpointMetadata{
-					Type:      "wep",
-					Namespace: "kube-system",
-					Name:      "iperf-4235-*",
+					Type:           "wep",
+					Namespace:      "kube-system",
+					Name:           "-",
+					AggregatedName: "iperf-4235-*",
 				},
 				DstMeta: EndpointMetadata{
-					Type:      "net",
-					Namespace: "-",
-					Name:      "pvt",
+					Type:           "net",
+					Namespace:      "-",
+					Name:           "-",
+					AggregatedName: "pvt",
 				},
 				Action:   "allow",
 				Reporter: "dst",
@@ -372,14 +378,16 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedNumFlowsStarted := 1
 			expectedNumFlowsCompleted := 0
 			srcMeta := EndpointMetadata{
-				Type:      "wep",
-				Namespace: "kube-system",
-				Name:      "iperf-4235-5623461",
+				Type:           "wep",
+				Namespace:      "kube-system",
+				Name:           "iperf-4235-5623461",
+				AggregatedName: "iperf-4235-*",
 			}
 			dstMeta := EndpointMetadata{
-				Type:      "wep",
-				Namespace: "default",
-				Name:      "nginx-412354-5123451",
+				Type:           "wep",
+				Namespace:      "default",
+				Name:           "nginx-412354-5123451",
+				AggregatedName: "nginx-412354-*",
 			}
 			// The labels should have been intersected correctly.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut := calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
@@ -428,14 +436,16 @@ var _ = Describe("Flow log aggregator tests", func() {
 			expectedNumFlowsStarted = 1
 			expectedNumFlowsCompleted = 0
 			srcMeta = EndpointMetadata{
-				Type:      "wep",
-				Namespace: "kube-system",
-				Name:      "iperf-4235-5623461",
+				Type:           "wep",
+				Namespace:      "kube-system",
+				Name:           "iperf-4235-5623461",
+				AggregatedName: "iperf-4235-*",
 			}
 			dstMeta = EndpointMetadata{
-				Type:      "wep",
-				Namespace: "default",
-				Name:      "nginx-412354-5123451",
+				Type:           "wep",
+				Namespace:      "default",
+				Name:           "nginx-412354-5123451",
+				AggregatedName: "nginx-412354-*",
 			}
 			// The labels should have been intersected right.
 			expectedPacketsIn, expectedPacketsOut, expectedBytesIn, expectedBytesOut = calculatePacketStats(muNoConn1Rule1AllowUpdateWithEndpointMetaCopy)
