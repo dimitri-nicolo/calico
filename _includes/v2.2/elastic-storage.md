@@ -13,12 +13,30 @@
    see the [documentation for using your own Elasticsearch]({{site.url}}/{{page.version}}/usage/logs/byo-elastic) and skip the next step.
 
 1. The bundled Elasticsearch operator is configured to use an `elasticsearch-storage` `StorageClass` and local storage.
-   Use the following command to apply the manifest.
+   If your cluster is connected to the internet, use the following command to apply the manifest.
 
    ```bash
-   {{cli}} apply -f elastic-storage-local.yaml \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml
+   {{cli}} apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml
    ```
+
+   > **Note**: You can also
+   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml){:target="_blank"}.
+   {: .alert .alert-info}
+
+   > For offline installs, complete the following steps instead.
+   >
+   > 1. Download the Elasticsearch local storage manifest.
+   >
+   >    ```bash
+   >    curl --compressed -O \
+   >    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml
+   >    ```
+   >
+   > 1. Apply the manifest.
+   >    
+   >    ```bash
+   >    {{cli}} apply -f elastic-storage-local.yaml
+   >
 
 1. To use a different StorageClass (e.g. Ceph RBD or NFS), create a `StorageClass` called `elasticsearch-storage`.
    The [Kubernetes documentation on StorageClasses](https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner)

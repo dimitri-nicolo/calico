@@ -51,7 +51,7 @@
    > 1. Download the Prometheus and Elasticsearch operator manifest.
    >
    >    ```bash
-   >    curl --compressed -o \
+   >    curl --compressed -O \
    >    {{docpath}}/operator.yaml
    >    ```
    >
@@ -100,7 +100,7 @@
    > 1. Download the Prometheus and Alertmanager manifest.
    >
    >    ```
-   >    curl --compressed -o \
+   >    curl --compressed -O \
    >    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
    >    ```
    >      
@@ -140,7 +140,7 @@
 
    Replace the running deployment.
    ```
-   oc replace -f tigera-elasticsearch.yaml
+   oc replace -n calico-monitoring -f tigera-elasticsearch.yaml
    ```
 
 1. Remove the ReplicaSet from the deployment we replaced. You can find this ReplicaSet with the following command.
