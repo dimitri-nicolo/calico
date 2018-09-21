@@ -471,8 +471,7 @@ spec:
   - action: Allow
     protocol: TCP
     source:
-      matchLabels:
-      - role: k8s-apiserver-endpoints
+      selector: role == 'k8s-apiserver-endpoints'
     destination:
       ports: [9200]
 
