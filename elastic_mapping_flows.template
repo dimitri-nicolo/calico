@@ -27,6 +27,9 @@
         "dest_name": {
             "type": "keyword"
         },
+        "dest_name_aggr": {
+            "type": "keyword"
+        },
         "dest_namespace": {
             "type": "keyword"
         },
@@ -77,6 +80,9 @@
             "null_value": "0.0.0.0"
         },
         "source_name": {
+            "type": "keyword"
+        },
+        "source_name_aggr": {
             "type": "keyword"
         },
         "source_namespace": {
