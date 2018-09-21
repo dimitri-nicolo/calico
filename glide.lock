@@ -1,5 +1,5 @@
-hash: e020ff5dfbd9444a07c91e0e89cf8c4a1ed6b91650441202695cd433dce74017
-updated: 2018-08-14T17:45:36.10933001+01:00
+hash: b6fa0266f16991fa87c1f4c8d028e0b3d0de8ce11aa807f1c62002261321542c
+updated: 2018-09-21T21:52:34.548131228Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -33,7 +33,7 @@ imports:
   - pkg/types
   - version
 - name: github.com/coreos/go-semver
-  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
+  version: 8ab6407b697782a06568d4b7f1db25550ec2e4c6
   subpackages:
   - semver
 - name: github.com/davecgh/go-spew
@@ -51,11 +51,11 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: d58d458bec3cb5adec4b7ddb41131855eac0b33f
+  version: fa25069db393aecc09b71267d0489b357781c860
 - name: github.com/go-openapi/jsonpointer
-  version: 3a0015ad55fa9873f41605d3e8f28cd279c32ab2
+  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
+  version: 1c6a3fa339f2743b7b0fd2b842fc455eca2fa9eb
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -176,7 +176,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e4e192845ab7f6f1e9ece73b5c5ba0be08804b39
+  version: ee5bbe1739c678367b21fbadd204473cf22b84b4
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -190,6 +190,7 @@ imports:
   - lib/backend/k8s/conversion
   - lib/backend/k8s/resources
   - lib/backend/model
+  - lib/backend/syncersv1/bgpsyncer
   - lib/backend/syncersv1/felixsyncer
   - lib/backend/syncersv1/remotecluster
   - lib/backend/syncersv1/updateprocessors
@@ -225,16 +226,17 @@ imports:
   - lib/validator/v3
   - lib/watch
 - name: github.com/prometheus/client_golang
-  version: 5b23715facdef1452016bae512489c3cdf82458c
+  version: e637cec7d9c8990247098639ebc6d43dd34ddd49
   subpackages:
   - prometheus
+  - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: e3fb1a1acd7605367a2b378bc2e2f893c05174b7
+  version: c7de2306084e37d54b8be01f3541a8464345e9a5
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -258,7 +260,7 @@ imports:
   subpackages:
   - codec
 - name: github.com/Workiva/go-datastructures
-  version: f338bf48899950e415caffa02222a7273fbdeaf6
+  version: f07cbe3f82ca2fd6e5ab94afce65fe43319f675f
   subpackages:
   - list
   - trie/ctrie
@@ -323,7 +325,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
+  version: ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06
   subpackages:
   - internal
   - internal/app_identity
@@ -510,5 +512,4 @@ imports:
   version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/common
-  - pkg/util/proto
 testImports: []
