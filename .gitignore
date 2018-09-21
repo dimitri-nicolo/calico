@@ -10,3 +10,5 @@ junit.xml
 .generate_files
 .code_gen_exes
 checkouts
+/report/*.xml
+/release

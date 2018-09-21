@@ -2204,6 +2204,20 @@ func schema_libcalico_go_lib_apis_v3_BGPPeerSpec(ref common.ReferenceCallback) c
 							},
 						},
 					},
+					"nodeSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selector for the nodes that should have this peering.  When this is set, the Node field must be empty.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"peerSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selector for the remote nodes to peer with.  When this is set, the PeerIP and ASNumber fields must be empty.  For each peering between the local node and selected remote nodes, we configure an IPv4 peering if both ends have NodeBGPSpec.IPv4Address specified, and an IPv6 peering if both ends have NodeBGPSpec.IPv6Address specified.  The remote AS number comes from the remote node’s NodeBGPSpec.ASNumber, or the global default if that is not set.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"peerIP", "asNumber"},
 			},
@@ -4434,6 +4448,13 @@ func schema_libcalico_go_lib_apis_v3_NodeBGPSpec(ref common.ReferenceCallback) c
 					"ipv4IPIPTunnelAddr": {
 						SchemaProps: spec.SchemaProps{
 							Description: "IPv4IPIPTunnelAddr is the IPv4 address of the IP in IP tunnel.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"routeReflectorClusterID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RouteReflectorClusterID enables this node as a route reflector within the given cluster.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

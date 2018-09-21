@@ -244,6 +244,37 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 		}
 	}
 
+	// Pull out floating IP annotation
+	var floatingIPs []apiv3.IPNAT
+	if annotation, ok := pod.Annotations["cni.projectcalico.org/floatingIPs"]; ok {
+
+		// Parse Annotation data
+		var ips []string
+		err := json.Unmarshal([]byte(annotation), &ips)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse '%s' as JSON: %s", annotation, err)
+		}
+
+		// Get target for NAT
+		podip, podnet, err := cnet.ParseCIDROrIP(ipNets[0])
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse pod IP: %s", err)
+		}
+
+		netmask, _ := podnet.Mask.Size()
+
+		if netmask != 32 && netmask != 128 {
+			return nil, fmt.Errorf("PodIP is not a valid IP: Mask size is %d, not 32 or 128", netmask)
+		}
+
+		for _, ip := range ips {
+			floatingIPs = append(floatingIPs, apiv3.IPNAT{
+				InternalIP: podip.String(),
+				ExternalIP: ip,
+			})
+		}
+	}
+
 	// Map any named ports through.
 	var endpointPorts []apiv3.EndpointPort
 	for _, container := range pod.Spec.Containers {
@@ -292,6 +323,7 @@ func (c Converter) PodToWorkloadEndpoint(pod *kapiv1.Pod) (*model.KVPair, error)
 		Profiles:      profiles,
 		IPNetworks:    ipNets,
 		Ports:         endpointPorts,
+		IPNATs:        floatingIPs,
 	}
 
 	// Embed the workload endpoint into a KVPair.
