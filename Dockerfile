@@ -1,5 +1,5 @@
 FROM fluent/fluentd:v1.2-onbuild
-MAINTAINER YOUR_NAME spike@tigera.io
+MAINTAINER spike@tigera.io
 
 RUN apk add --update --virtual .build-deps \
         sudo build-base ruby-dev \
@@ -16,4 +16,9 @@ ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200
 
+COPY ee_entrypoint.sh /bin/
+RUN chmod +x /bin/ee_entrypoint.sh
+
 EXPOSE 24284
+
+CMD exec /bin/ee_entrypoint.sh fluentd -c /fluentd/etc/${FLUENTD_CONF} -p /fluentd/plugins $FLUENTD_OPT
