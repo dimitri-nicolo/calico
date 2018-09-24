@@ -123,7 +123,7 @@ Kibana in order to enable flow logs.
 {% include {{page.version}}/cnx-monitor-install.md orch="openshift" %}
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
-See [Policy Violation Alerting](../../reference/cnx/policy-violations) for more information.
+See the [Metrics](../../usage/metrics/) section for more information.
 
 ### Policy query with calicoq
 

@@ -119,18 +119,6 @@ toc:
   path: /reference/cni-plugin/configuration
 - title: Tigera Secure EE Kubernetes Controllers
   path: /reference/kube-controllers/configuration
-- title: Logging and reporting
-  section:
-    - title: Tigera Secure EE Log Management
-      path: /reference/cnx/logs
-    - title: Kubernetes Audit Logging
-      path: /reference/cnx/auditing
-    - title: OpenShift Audit Logging
-      path: /reference/cnx/openshift-auditing
-    - title: Policy Violation Monitoring & Reporting
-      path: /reference/cnx/policy-violations
-    - title: Policy Audit Mode
-      path: /reference/cnx/policy-auditing
 - title: Tigera Secure EE Manager
   section:
     - title: Configuring user authentication
