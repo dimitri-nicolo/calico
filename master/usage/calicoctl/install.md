@@ -39,9 +39,20 @@ corresponds to your desired deployment.
 You can run calicoctl commands in the calicoctl pod using kubectl as shown below.
 
 ```
-kubectl exec -ti -n kube-system calicoctl -- /calicoctl get profiles -o wide
+kubectl exec -i -n kube-system calicoctl -- /calicoctl get nodes -o wide
+NAME                   ASN         IPV4             IPV6
+test-master            (unknown)   10.128.0.19/32
+test-node-0            (unknown)   10.128.0.20/32
+test-node-1            (unknown)   10.128.0.29/32
+```
 
-NAME                 TAGS
-kns.default          kns.default
-kns.kube-system      kns.kube-system
+Or to apply a file:
+```
+kubectl exec -i -n kube-system calicoctl /calicoctl -- apply -f - < myfile.yaml
+
+```
+
+You may find it helpful to create an alias:
+```
+alias calicoctl="kubectl exec -i -n kube-system calicoctl /calicoctl -- "
 ```
