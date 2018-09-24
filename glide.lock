@@ -1,5 +1,5 @@
-hash: 51170777667de72a78100d5f92730d545de34b29729e0bc4bce7cdad9295e38b
-updated: 2018-08-24T01:10:48.382568505Z
+hash: 0e45c657a815bc5b59b301fba228a8e22276bd799a9189fb783ed6fd665e5434
+updated: 2018-09-24T17:32:53.56050847Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -72,7 +72,7 @@ imports:
   - pkg/transport
   - pkg/types
 - name: github.com/davecgh/go-spew
-  version: 782f4967f2dc4564575ca782fe2d04090b5faca8
+  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/dgrijalva/jwt-go
@@ -88,11 +88,11 @@ imports:
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/go-ini/ini
-  version: 5cf292cae48347c2490ac1a58fe36735fb78df7e
+  version: fa25069db393aecc09b71267d0489b357781c860
 - name: github.com/go-openapi/jsonpointer
-  version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
+  version: 52eb3d4b47c6a51ce2693c8e614a15a07c1af435
 - name: github.com/go-openapi/jsonreference
-  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
+  version: 1c6a3fa339f2743b7b0fd2b842fc455eca2fa9eb
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -161,7 +161,7 @@ imports:
   - tracer/wire
   - writer
 - name: github.com/jbenet/go-reuseport
-  version: 562c3ba3003e80c9829992a6c1a760d51eb0792b
+  version: dd0c37d7767bc38280bd9813145b65f8bd560629
 - name: github.com/jbenet/go-sockaddr
   version: 2e7ea655c10e4d4d73365f0f073b81b39cb08ee1
   subpackages:
@@ -175,7 +175,7 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/libp2p/go-reuseport
-  version: e46628cb7483cfb92096837ad8f85e9b66f17fc1
+  version: dd0c37d7767bc38280bd9813145b65f8bd560629
   subpackages:
   - poll
   - singlepoll
@@ -271,7 +271,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: e4e192845ab7f6f1e9ece73b5c5ba0be08804b39
+  version: ee5bbe1739c678367b21fbadd204473cf22b84b4
   repo: git@github.com:tigera/libcalico-go-private
   subpackages:
   - lib/apiconfig
@@ -316,14 +316,14 @@ imports:
   subpackages:
   - binder
 - name: github.com/projectcalico/typha
-  version: 2686eb7eb71df88f7dd37912ea3b9b11ab52de5d
+  version: 9fcc9d66bbeea7938a3f0e204144cb2c1f324efe
   repo: git@github.com:tigera/typha-private
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
   - pkg/tlsutils
 - name: github.com/prometheus/client_golang
-  version: ebce7d0078c0109cbb4de5d50a2b799920b0f0d0
+  version: f69c853d21c15596929fa9126ba211247e7dca95
   subpackages:
   - prometheus
   - prometheus/internal
@@ -374,7 +374,7 @@ imports:
   subpackages:
   - nl
 - name: github.com/vishvananda/netns
-  version: 8ba1072b58e0c2a240eb5f6120165c7776c3e7b8
+  version: 13995c7128ccc8e51e9a6bd2b551020a27180abd
 - name: github.com/whyrusleeping/go-logging
   version: 0457bb6b88fc1973573aaf6b5145d8d3ae972390
 - name: golang.org/x/crypto
@@ -452,38 +452,29 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: c66870c02cf823ceb633bcd05be3c7cda29976f4
+  version: 221a8d4f74948678f06caaa13c9d41d22e069ae8
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
   version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
   subpackages:
   - balancer
-  - balancer/base
-  - balancer/roundrobin
   - codes
   - connectivity
   - credentials
-  - encoding
-  - encoding/proto
+  - grpclb/grpc_lb_v1/messages
   - grpclog
   - health/grpc_health_v1
   - internal
-  - internal/backoff
-  - internal/channelz
-  - internal/envconfig
-  - internal/grpcrand
-  - internal/transport
   - keepalive
   - metadata
   - naming
   - peer
   - resolver
-  - resolver/dns
-  - resolver/passthrough
   - stats
   - status
   - tap
+  - transport
 - name: gopkg.in/fsnotify/fsnotify.v1
   version: c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 - name: gopkg.in/go-playground/validator.v8
@@ -493,7 +484,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: 8254d6c783765f38c8675fae4427a1fe73fbd09d
+  version: ef984e69dd356202fd4e4910d4d9c24468bdf0b8
   subpackages:
   - cipher
   - json
@@ -643,7 +634,7 @@ imports:
   - util/jsonpath
   - util/retry
 - name: k8s.io/kube-openapi
-  version: 91cfa479c814065e420cee7ed227db0f63a5854e
+  version: e3762e86a74c878ffed47484592986685639c2cd
   subpackages:
   - pkg/common
 testImports: []
