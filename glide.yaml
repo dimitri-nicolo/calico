@@ -4,7 +4,6 @@ import:
 - package: github.com/kelseyhightower/memkv
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: 1130ede1859eb68c9a71a59844da72c07731cb34
   subpackages:
   - lib/apiconfig
   - lib/backend/api
@@ -17,4 +16,5 @@ import:
 - package: github.com/sirupsen/logrus
   version: v1.0.4
 - package: github.com/projectcalico/typha
+  repo: git@github.com:tigera/typha-private.git
   version: 6915c7a2b8d3d57b182da8d2c9cf811a7096da7a
