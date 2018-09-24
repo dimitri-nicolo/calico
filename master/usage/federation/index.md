@@ -8,7 +8,7 @@ Federation allows you to:
 
 - [Create policies that reference pods and host endpoints across multiple clusters](#federated-endpoint-identity).
 
-- [Create Kubernetes services that federate Kubernetes endpoints across multiple clusters](#federated-services).
+- [Create Kubernetes services that span multiple clusters while still keeping fine-grained policy](#federated-services).
 
 ## Terminology
 
