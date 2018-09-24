@@ -37,6 +37,7 @@
 1. Use the following commands to pull the required {{site.prodname}} images.
 
    ```bash
+   docker pull docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker pull docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
@@ -52,12 +53,12 @@
    docker pull quay.io/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
    docker pull quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    docker pull upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
-   docker pull upmcenterprises/docker-elasticsearch-kubernetes:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    ```
 
 1. Retag the images with the name of your private registry.
 
    ```bash
+   docker tag docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker tag docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
@@ -73,7 +74,6 @@
    docker tag quay.io/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}} <YOUR-REGISTRY>/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
    docker tag quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}} <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    docker tag upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}} <YOUR-REGISTRY>/upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
-   docker tag upmcenterprises/docker-elasticsearch-kubernetes:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/upmcenterprises/docker-elasticsearch-kubernetes:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    ```
    > **Note**: We recommend changing just the name of the registry (`<YOUR-REGISTRY>`)
    > when retagging the images, as shown above and below.
@@ -82,6 +82,7 @@
 1. Push the images to your private registry.
 
    ```bash
+   docker push <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker push <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-manager:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
@@ -97,7 +98,6 @@
    docker push <YOUR-REGISTRY>/prometheus/alertmanager:{{site.data.versions[page.version].first.components["alertmanager"].version}}
    docker push <YOUR-REGISTRY>/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
    docker push <YOUR-REGISTRY>/upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
-   docker push <YOUR-REGISTRY>/upmcenterprises/docker-elasticsearch-kubernetes:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    ```
 
    > **Important**: Do not push the private {{site.prodname}} images to a public registry.
