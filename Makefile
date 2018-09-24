@@ -83,6 +83,21 @@ ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
+# we want to be able to run the same recipe on multiple targets keyed on the image name
+# to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
+# however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
+# to get around that, we "escape" those characters by converting all : to --- and all / to ___ , so that we can use them
+# in the target, we then unescape them back
+escapefs = $(subst :,---,$(subst /,___,$(1)))
+unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
+
+# these macros create a list of valid architectures for pushing manifests
+space :=
+space +=
+comma := ,
+prefix_linux = $(addprefix linux/,$(strip $1))
+join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
+
 # Targets used when cross building.
 .PHONY: native register
 native:
@@ -104,8 +119,23 @@ EXCLUDEARCH ?= s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 ###############################################################################
-CONTAINER_NAME=tigera/felix
+BUILD_IMAGE?=tigera/felix
+PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
+RELEASE_IMAGES?=
 PACKAGE_NAME?=github.com/projectcalico/felix
+
+# If this is a release, also tag and push additional images.
+ifeq ($(RELEASE),true)
+PUSH_IMAGES+=$(RELEASE_IMAGES)
+endif
+
+# remove from the list to push to manifest any registries that do not support multi-arch
+EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
+PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
+PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
+
+# location of docker credentials to push manifests
+DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 GO_BUILD_VER?=v0.17
 # For building, we use the go-build image for the *host* architecture, even if the target is different
@@ -113,7 +143,7 @@ GO_BUILD_VER?=v0.17
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
 CALICO_BUILD=calico/go-build:$(GO_BUILD_VER)
 ETCD_VERSION?=v3.3.7
-K8S_VERSION?=v1.10.4
+K8S_VERSION?=v1.11.3
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER ?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
 
@@ -249,14 +279,14 @@ vendor vendor/.up-to-date: glide.lock
 	fi
 
 # Default the typha repo and version but allow them to be overridden
-TYPHA_REPO?=github.com/projectcalico/typha
-TYPHA_VERSION?=$(shell git ls-remote git@github.com:projectcalico/typha master 2>/dev/null | cut -f 1)
+TYPHA_REPO?=github.com/tigera/typha-private
+TYPHA_VERSION?=$(shell git ls-remote git@github.com:tigera/typha-private master 2>/dev/null | cut -f 1)
 
 ## Update typha pin in glide.yaml
 update-typha:
 	    $(DOCKER_GO_BUILD) sh -c '\
         echo "Updating typha to $(TYPHA_VERSION) from $(TYPHA_REPO)"; \
-        export OLD_VER=$$(grep --after 50 typha glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
+        export OLD_VER=$$(grep --after 50 typha glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
         echo "Old version: $$OLD_VER";\
         if [ $(TYPHA_VERSION) != $$OLD_VER ]; then \
           sed -i "s/$$OLD_VER/$(TYPHA_VERSION)/" glide.yaml && \
@@ -327,7 +357,7 @@ protobuf proto/felixbackend.pb.go: proto/felixbackend.proto
 # Building the image
 ###############################################################################
 # Build the tigera/felix docker image, which contains only Felix.
-.PHONY: tigera/felix tigera/felix-$(ARCH)
+.PHONY: $(BUILD_IMAGE) $(BUILD_IMAGE)-$(ARCH)
 
 # by default, build the image for the target architecture
 .PHONY: image-all
@@ -335,15 +365,15 @@ image-all: $(addprefix sub-image-,$(VALIDARCHES))
 sub-image-%:
 	$(MAKE) image ARCH=$*
 
-image: tigera/felix
-tigera/felix: tigera/felix-$(ARCH)
-tigera/felix-$(ARCH): bin/calico-felix-$(ARCH) register
+image: $(BUILD_IMAGE)
+$(BUILD_IMAGE): $(BUILD_IMAGE)-$(ARCH)
+$(BUILD_IMAGE)-$(ARCH): bin/calico-felix-$(ARCH) register
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp bin/calico-felix-$(ARCH) docker-image/bin/
-	docker build --pull -t tigera/felix:latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/Dockerfile.$(ARCH) docker-image
+	docker build --pull -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) --file ./docker-image/Dockerfile.$(ARCH) docker-image
 ifeq ($(ARCH),amd64)
-	docker tag tigera/felix:latest-$(ARCH) tigera/felix:latest
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif
 
 imagetag:
@@ -351,27 +381,45 @@ ifndef IMAGETAG
 	$(error IMAGETAG is undefined - run using make <target> IMAGETAG=X.Y.Z)
 endif
 
+## push one arch
+push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGES)))
+
+sub-single-push-%:
+	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+
 ## push all arches
 push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
-## push one arch
-push: imagetag
-	docker push $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker push quay.io/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+## push multi-arch manifest where supported
+push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
+sub-manifest-%:
+	# Docker login to hub.docker.com required before running this target as we are using $(DOCKER_CONFIG) holds the docker login credentials
+	# path to credentials based on manifest-tool's requirements here https://github.com/estesp/manifest-tool#sample-usage
+	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*:$(IMAGETAG))-ARCH --target $(call unescapefs,$*:$(IMAGETAG))"
+
+## push default amd64 arch where multi-arch manifest is not supported
+push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+sub-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker push $(CONTAINER_NAME):$(IMAGETAG)
-	docker push quay.io/$(CONTAINER_NAME):$(IMAGETAG)
+	docker push $(call unescapefs,$*:$(IMAGETAG))
+else
+	$(NOECHO) $(NOOP)
 endif
 
-## tag images of one arch
-tag-images: imagetag
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+## tag images of one arch for all supported registries
+tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+
+sub-single-tag-images-arch-%:
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+
+# because some still do not support multi-arch manifest
+sub-single-tag-images-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):$(IMAGETAG)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):$(IMAGETAG)
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
+else
+	$(NOECHO) $(NOOP)
 endif
 
 ## tag images of all archs
@@ -516,13 +564,6 @@ ut combined.coverprofile: vendor/.up-to-date $(SRC_FILES)
 	@echo Running Go UTs.
 	$(DOCKER_GO_BUILD) ./utils/run-coverage $(GINKGO_ARGS)
 
-.PHONY: upload-to-coveralls
-upload-to-coveralls: combined.coverprofile
-ifndef COVERALLS_REPO_TOKEN
-	$(error COVERALLS_REPO_TOKEN is undefined - run using make upload-to-coveralls COVERALLS_REPO_TOKEN=abcd)
-endif
-	$(DOCKER_GO_BUILD) goveralls -repotoken=$(COVERALLS_REPO_TOKEN) -coverprofile=combined.coverprofile
-
 ###############################################################################
 # FV Tests
 ###############################################################################
@@ -545,7 +586,7 @@ fv/fv.test: vendor/.up-to-date $(SRC_FILES)
 #         ...
 #         $(MAKE) fv FV_BATCHES_TO_RUN="10" FV_NUM_BATCHES=10    # the tenth 1/10
 #         etc.
-fv fv/latency.log: tigera/felix bin/iptables-locker bin/test-workload bin/test-connection fv/fv.test
+fv fv/latency.log: $(BUILD_IMAGE) bin/iptables-locker bin/test-workload bin/test-connection fv/fv.test
 	cd fv && \
 	  FV_FELIXIMAGE=$(FV_FELIXIMAGE) \
 	  FV_ETCDIMAGE=$(FV_ETCDIMAGE) \
@@ -589,7 +630,7 @@ K8SFV_GO_FILES:=$(shell find ./$(K8SFV_DIR) -name prometheus -prune -o -type f -
 # e.g.
 #       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=true
 #       $(MAKE) k8sfv-test JUST_A_MINUTE=true USE_TYPHA=false
-k8sfv-test: tigera/felix k8sfv-test-existing-felix
+k8sfv-test: $(BUILD_IMAGE) k8sfv-test-existing-felix
 # Run k8sfv test with whatever is the existing 'tigera/felix:latest'
 # container image.  To use some existing Felix version other than
 # 'latest', do 'FELIX_VERSION=<...> make k8sfv-test-existing-felix'.
@@ -682,8 +723,8 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images-all push-all IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(BRANCH_NAME) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 
 ###############################################################################
@@ -722,10 +763,10 @@ ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
-	$(MAKE) image
-	$(MAKE) tag-images IMAGETAG=$(VERSION)
+	$(MAKE) image-all
+	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
 	# Generate the `latest` images.
-	$(MAKE) tag-images IMAGETAG=latest
+	$(MAKE) tag-images-all IMAGETAG=latest
 
 ## Produces the Windows ZIP archive for the release.
 release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs $(WINDOWS_ARCHIVE_FILES)
@@ -736,7 +777,7 @@ release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs $(WINDOWS_ARCHIVE_FI
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	for img in $(CONTAINER_NAME):$(VERSION)-$(ARCH) quay.io/$(CONTAINER_NAME):$(VERSION)-$(ARCH); do \
+	for img in $(BUILD_IMAGE):$(VERSION)-$(ARCH) quay.io/$(BUILD_IMAGE):$(VERSION)-$(ARCH); do \
 	  if docker run $$img calico-felix --version | grep -q '$(VERSION)$$'; \
 	  then \
 	    echo "Check successful. ($$img)"; \
@@ -747,7 +788,7 @@ release-verify: release-prereqs
 	done; \
 
 	# Run FV tests against the produced image. We only run the subset tagged as release tests.
-	$(MAKE) CONTAINER_NAME=$(CONTAINER_NAME):$(VERSION) GINKGO_FOCUS="Release" fv
+	$(MAKE) BUILD_IMAGE=$(BUILD_IMAGE):$(VERSION) GINKGO_FOCUS="Release" fv
 
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
@@ -761,7 +802,8 @@ release-publish: release-prereqs
 	git push origin $(VERSION)
 
 	# Push images.
-	$(MAKE) push IMAGETAG=$(VERSION) ARCH=$(ARCH)
+	# Disabling for now since no-one is consuming the images.
+	# $(MAKE) push-all IMAGETAG=$(VERSION)
 
 	@echo "Finalize the GitHub release based on the pushed tag."
 	@echo ""
@@ -779,7 +821,7 @@ release-publish: release-prereqs
 ## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
 release-publish-latest: release-prereqs
 	# Check latest versions match.
-	for img in $(CONTAINER_NAME):latest-$(ARCH) quay.io/$(CONTAINER_NAME):latest-$(ARCH); do \
+	for img in $(BUILD_IMAGE):latest-$(ARCH) quay.io/$(BUILD_IMAGE):latest-$(ARCH); do \
 	  if docker run $$img calico-felix --version | grep -q '$(VERSION)$$'; \
 	  then \
 	    echo "Check successful. ($$img)"; \
@@ -789,7 +831,8 @@ release-publish-latest: release-prereqs
 	  fi \
 	done; \
 
-	$(MAKE) push IMAGETAG=latest ARCH=$(ARCH)
+	# Disabling for now since no-one is consuming the images.
+	# $(MAKE) push-all IMAGETAG=latest
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
@@ -884,7 +927,7 @@ help:
 	@echo "  make image                  Build docker image."
 	@echo "  make build-all              Build binary for all supported architectures."
 	@echo "  make image-all              Build docker images for all supported architectures."
-	@echo "  make push IMAGETAG=tag      Deploy docker image with the tag IMAGETAG for the given ARCH, e.g. tigera/felix:<IMAGETAG>-<ARCH>."
+	@echo "  make push IMAGETAG=tag      Deploy docker image with the tag IMAGETAG for the given ARCH, e.g. $(BUILD_IMAGE)<IMAGETAG>-<ARCH>."
 	@echo "  make push-all IMAGETAG=tag  Deploy docker images with the tag IMAGETAG all supported architectures"
 	@echo
 	@echo "Tests:"

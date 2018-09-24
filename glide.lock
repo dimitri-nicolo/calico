@@ -175,12 +175,12 @@ imports:
 - name: github.com/kelseyhightower/envconfig
   version: dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1
 - name: github.com/libp2p/go-reuseport
-  version: 562c3ba3003e80c9829992a6c1a760d51eb0792b
+  version: e46628cb7483cfb92096837ad8f85e9b66f17fc1
   subpackages:
   - poll
   - singlepoll
 - name: github.com/libp2p/go-sockaddr
-  version: 3c898fbfff40e5933d76362819727708dae6da97
+  version: a7494d4eefeb607c8bc491cf8850a6e8dbd41cab
   subpackages:
   - net
 - name: github.com/mailru/easyjson
@@ -192,7 +192,7 @@ imports:
 - name: github.com/mattn/go-colorable
   version: efa589957cd060542a26d2dd7832fd6a6c6c3ade
 - name: github.com/mattn/go-isatty
-  version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
+  version: 3fb116b820352b7f0c281308a4d6250c22d94e27
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
@@ -240,7 +240,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: b6ea1ea48f981d0f615a154a45eabb9dd466556d
+  version: 7615b9433f86a8bdf29709bf288bc4fd0636a369
   subpackages:
   - format
   - internal/assertion
@@ -254,7 +254,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/opentracing/opentracing-go
-  version: bd9c3193394760d98b2fa6ebb2291f0cd1d06a7d
+  version: 6aa6febac7b98f836100ecaea478c04f30b6dbd0
   subpackages:
   - ext
   - log
@@ -311,6 +311,10 @@ imports:
   - lib/validator/v1
   - lib/validator/v3
   - lib/watch
+- name: github.com/projectcalico/pod2daemon
+  version: df2b9c8d2744ebce544742f7f765b59c5e88db0d
+  subpackages:
+  - binder
 - name: github.com/projectcalico/typha
   version: 2686eb7eb71df88f7dd37912ea3b9b11ab52de5d
   repo: git@github.com:tigera/typha-private
@@ -322,6 +326,7 @@ imports:
   version: ebce7d0078c0109cbb4de5d50a2b799920b0f0d0
   subpackages:
   - prometheus
+  - prometheus/internal
   - prometheus/promhttp
   - prometheus/push
 - name: github.com/prometheus/client_model
@@ -435,7 +440,7 @@ imports:
   subpackages:
   - rate
 - name: google.golang.org/appengine
-  version: 4216e58b9158e5f1c906f1aca75162a46a2ec88a
+  version: ae0ab99deb4dc413a2b4bd6c8bdd0eb67f1e4d06
   subpackages:
   - internal
   - internal/app_identity
