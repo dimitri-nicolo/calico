@@ -1,3 +1,11 @@
+{% comment %}
+monitor-calico.yaml acccepts the following include flags:
+
+| Name         | Accepted Values               |
+|--------------|-------------------------------|
+| secure_es    | true, false                   |
+
+{% endcomment -%}
 ---
 # This manifest includes the following component versions:
 #   quay.io/prometheus/prometheus:{{site.data.versions[page.version].first.components["prometheus"].version}}
@@ -405,14 +413,44 @@ spec:
               value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
             - name: ELASTIC_PORT
               value: "9200"
+{%- if include.secure_es == "true" %}
+            - name: FLUENTD_ES_SECURE
+              value: "true"
+            - name: ELASTIC_SSL_VERIFY
+              value: "true" #ELASTIC_SSL_VERIFY
+            - name: ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-fluentd-user
+                  key: username
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-fluentd-user
+                  key: password
+{%- else %}
+            - name: FLUENTD_ES_SECURE
+              value: "false"
+{%- endif %}
           volumeMounts:
             - name: var-log-calico
               mountPath: /var/log/calico
+{%- if include.secure_es == "true" %}
+            - name: elastic-ca-cert-volume
+              mountPath: /etc/fluentd/elastic/ca.pem
+{%- endif %}
       volumes:
         - name: var-log-calico
           hostPath:
             type: DirectoryOrCreate
             path: /var/log/calico
+{%- if include.secure_es == "true" %}
+        # Should be created during installation process.
+        - name: elastic-ca-cert-volume
+          configMap:
+            name: elastic-ca-config
+{%- endif %}
+
 ---
 # Allow access to Elasticsearch client nodes from Kibana and fluentd
 apiVersion: projectcalico.org/v3

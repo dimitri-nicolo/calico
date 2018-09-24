@@ -42,3 +42,4 @@ spec:
 ```
 
 ### Configure authentication to your cluster
+{% include {{page.version}}/elastic-secure.md %}
