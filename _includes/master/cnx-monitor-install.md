@@ -149,7 +149,7 @@ spec:
    oc get deployment es-client-tigera-elasticsearch -n calico-monitoring -o yaml --export > tigera-elasticsearch.yaml
    ```
 
-   Now, run the following command which will fix the configuration for pods to start properly in OpenShift.
+   Run the following command which will fix the configuration for pods to start properly in OpenShift.
 
    ```
    sed -i '/capabilities/,+2 d' tigera-elasticsearch.yaml
@@ -182,6 +182,50 @@ spec:
 
    ```
    oc delete rs <YOUR-REPLICASET> -n calico-monitoring
+   ```
+
+1. Reconfigure the Elasticsearch data storage. The following will save the current configuration to
+   `data-tigera-elasticsearch-storage.yaml`.
+
+   ```
+   oc get statefulset es-data-tigera-elasticsearch-elasticsearch-storage -n calico-monitoring -o yaml --export > data-tigera-elasticsearch-storage.yaml
+   ```
+
+   Run the following command which will fix the configuration for pods to start properly in OpenShift.
+
+   ```
+   sed -i '/capabilities/,+2 d' data-tigera-elasticsearch-storage.yaml
+   ```
+
+   Replace the running StatefulSet.
+
+   ```
+   oc replace -n calico-monitoring -f data-tigera-elasticsearch-storage.yaml
+   ```
+
+1. Reconfigure the Elasticsearch master storage. The following will save the current configuration to
+   `master-tigera-elasticsearch-storage.yaml`.
+
+   ```
+   oc get statefulset es-master-tigera-elasticsearch-elasticsearch-storage -n calico-monitoring -o yaml --export > master-tigera-elasticsearch-storage.yaml
+   ```
+
+   Run the following command which will fix the configuration for pods to start properly in OpenShift.
+
+   ```
+   sed -i '/capabilities/,+2 d' master-tigera-elasticsearch-storage.yaml
+   ```
+
+   Replace the running StatefulSet.
+
+   ```
+   oc replace -n calico-monitoring -f master-tigera-elasticsearch-storage.yaml
+   ```
+
+1. Increase the maximum size of the virtual memory areas by running the following command on each node.
+
+   ```
+   sysctl -w vm.max_map_count=262166
    ```
 
 {% endif %}

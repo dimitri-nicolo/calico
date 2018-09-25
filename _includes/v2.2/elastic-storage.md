@@ -36,6 +36,7 @@
    >    
    >    ```bash
    >    {{cli}} apply -f elastic-storage-local.yaml
+   >    ```
    >
 
 1. To use a different StorageClass (e.g. Ceph RBD or NFS), create a `StorageClass` called `elasticsearch-storage`.

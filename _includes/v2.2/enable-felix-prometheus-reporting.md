@@ -44,5 +44,9 @@
 
    ```
    calicoctl replace -f default-felixconfig.yaml
+   ```
+
+   You should see the following response.
+   ```
    Successfully replaced 1 'FelixConfiguration' resource(s)
    ```
