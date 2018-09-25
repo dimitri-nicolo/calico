@@ -143,12 +143,15 @@ vendor: glide.yaml
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) glide install -strip-vendor
 
-# Default the libcalico repo and version but allow them to be overridden
-LIBCALICO_REPO?=github.com/tigera/libcalico-go-private
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:tigera/libcalico-go-private master 2>/dev/null | cut -f 1)
+# Default the felix repo and version but allow them to be overridden
+FELIX_REPO?=github.com/tigera/felix-private
+FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private master 2>/dev/null | cut -f 1)
 
-## Update libcalico pin in glide.yaml
-update-libcalico:
+## Update felix pin in glide.yaml.  That will also update the felix
+## and libcalico-go pins in glide.lock, so we also keep the
+## 'update-libcalico' name for this target.  (CI for the node repo
+## expects there to be an 'update-libcalico' target here.)
+update-felix update-libcalico:
 	if [ -n "$(SSH_AUTH_SOCK)" ]; then \
 		EXTRA_DOCKER_ARGS="-v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
 	fi; \
@@ -159,13 +162,13 @@ update-libcalico:
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) sh -c '\
-        echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-        export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
+        echo "Updating felix to $(FELIX_VERSION) from $(FELIX_REPO)"; \
+        export OLD_VER=$$(grep --after 50 felix glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
         echo "Old version: $$OLD_VER";\
-        if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
-            sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            if [ $(LIBCALICO_REPO) != "github.com/tigera/libcalico-go-private" ]; then \
-              glide mirror set https://github.com/tigera/libcalico-go-private $(LIBCALICO_REPO) --vcs git; glide mirror list; \
+        if [ $(FELIX_VERSION) != $$OLD_VER ]; then \
+            sed -i "s/$$OLD_VER/$(FELIX_VERSION)/" glide.yaml && \
+            if [ $(FELIX_REPO) != "github.com/tigera/felix-private" ]; then \
+              glide mirror set https://github.com/tigera/felix-private $(FELIX_REPO) --vcs git; glide mirror list; \
             fi;\
           OUTPUT=`mktemp`;\
           glide up --strip-vendor; glide up --strip-vendor 2>&1 | tee $$OUTPUT; \

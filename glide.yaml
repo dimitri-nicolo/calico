@@ -17,7 +17,6 @@ import:
   - fv/containers
 - package: github.com/projectcalico/libcalico-go
   repo:    git@github.com:tigera/libcalico-go-private
-  version: 1130ede1859eb68c9a71a59844da72c07731cb34
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
