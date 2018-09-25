@@ -1,3 +1,9 @@
+{% if include.init != "openshift" %}
+  {% assign cli = "kubectl" %}
+{% else %} 
+  {% assign cli = "oc" %}
+{% endif %}
+
 {% if include.init == "systemd" or include.init == "kubernetes" %}
 
 ## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager and API Server
@@ -210,7 +216,7 @@
 1. Confirm that all of the pods are running with the following command.
 
    ```
-   watch kubectl get pods --all-namespaces
+   watch {{cli}} get pods --all-namespaces
    ```
 
    Wait until each pod has the `STATUS` of `Running`.
@@ -218,7 +224,7 @@
 1. Apply the following manifest to set network policy that permits requests to {{site.prodname}}.
 
    ```bash
-   kubectl apply -f \
+   {{cli}} apply -f \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/cnx-policy.yaml
    ```
 
