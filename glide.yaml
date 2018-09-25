@@ -51,4 +51,3 @@ import:
 - package: github.com/tigera/licensing
   repo: git@github.com:tigera/licensing
   vcs: git
-  version: eaec5a48b41f4bd93f2d2e0da0a0af5e695c2a39
