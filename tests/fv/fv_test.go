@@ -22,6 +22,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/satori/go.uuid"
+
 	"k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -165,7 +167,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 	})
 
 	Context("Node FV tests", func() {
-		It("should be removed in response to a k8s node delete [Release]", func() {
+		It("should be removed in response to a k8s node delete", func() {
 			kn := &v1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: kNodeName,
@@ -424,7 +426,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 			}, time.Second*15, 500*time.Millisecond).ShouldNot(HaveOccurred())
 		})
 
-		It("should update existing profiles in etcd to match namespaces in k8s [Release]", func() {
+		It("should update existing profiles in etcd to match namespaces in k8s", func() {
 			profile, err := calicoClient.Profiles().Get(context.Background(), profName, options.GetOptions{})
 			By("getting the profile", func() {
 				Expect(err).ShouldNot(HaveOccurred())
@@ -566,7 +568,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 			}, time.Second*15, 500*time.Millisecond).ShouldNot(HaveOccurred())
 		})
 
-		It("should re-program policies that have changed in etcd [Release]", func() {
+		It("should re-program policies that have changed in etcd", func() {
 			p, err := calicoClient.NetworkPolicies().Get(context.Background(), policyNamespace, genPolicyName, options.GetOptions{})
 			By("getting the policy", func() {
 				Expect(err).ShouldNot(HaveOccurred())
@@ -693,7 +695,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 	Context("Pod FV tests", func() {
 		It("should not overwrite a workload endpoint's container ID", func() {
 			// Create a Pod
-			podName := "testpod"
+			podName := fmt.Sprintf("pod-fv-container-id-%s", uuid.NewV4())
 			podNamespace := "default"
 			nodeName := "127.0.0.1"
 			pod := v1.Pod{
@@ -731,8 +733,16 @@ var _ = Describe("kube-controllers FV tests", func() {
 			})
 
 			// Mock the job of the CNI plugin by creating the wep in etcd, providing a container ID.
+			wepIDs := names.WorkloadEndpointIdentifiers{
+				Node:         pod.Spec.NodeName,
+				Orchestrator: "k8s",
+				Endpoint:     "eth0",
+				Pod:          pod.Name,
+			}
+			wepName, err := wepIDs.CalculateWorkloadEndpointName(false)
+			Expect(err).NotTo(HaveOccurred())
 			wep := api.NewWorkloadEndpoint()
-			wep.Name = fmt.Sprintf("%s-k8s-%s-eth0", nodeName, podName)
+			wep.Name = wepName
 			wep.Namespace = podNamespace
 			wep.Labels = map[string]string{
 				"foo": "label1",
@@ -834,7 +844,7 @@ var _ = Describe("kube-controllers FV tests", func() {
 
 	It("should not create a workload endpoint when one does not already exist", func() {
 		// Create a Pod
-		podName := "testpod"
+		podName := fmt.Sprintf("pod-fv-no-create-wep-%s", uuid.NewV4())
 		pod := v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      podName,

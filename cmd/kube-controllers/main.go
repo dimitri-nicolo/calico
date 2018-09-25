@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,6 +25,14 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/pkg/transport"
 	log "github.com/sirupsen/logrus"
+	flag "github.com/spf13/pflag"
+	"k8s.io/apiserver/pkg/storage/etcd3"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/projectcalico/libcalico-go/lib/apiconfig"
+	client "github.com/projectcalico/libcalico-go/lib/clientv3"
+	"github.com/projectcalico/libcalico-go/lib/logutils"
 
 	"github.com/projectcalico/kube-controllers/pkg/config"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/controller"
@@ -36,18 +43,11 @@ import (
 	"github.com/projectcalico/kube-controllers/pkg/controllers/pod"
 	"github.com/projectcalico/kube-controllers/pkg/controllers/serviceaccount"
 	"github.com/projectcalico/kube-controllers/pkg/status"
-	"github.com/projectcalico/libcalico-go/lib/apiconfig"
 	bapi "github.com/projectcalico/libcalico-go/lib/backend/api"
 	"github.com/projectcalico/libcalico-go/lib/backend/k8s"
-	client "github.com/projectcalico/libcalico-go/lib/clientv3"
-	"github.com/projectcalico/libcalico-go/lib/logutils"
 	lclient "github.com/tigera/licensing/client"
 	"github.com/tigera/licensing/client/features"
 	"github.com/tigera/licensing/monitor"
-
-	"k8s.io/apiserver/pkg/storage/etcd3"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -73,7 +73,7 @@ func main() {
 	// If `-v` is passed, display the version and exit.
 	// Use a new flag set so as not to conflict with existing libraries which use "flag"
 	flagSet := flag.NewFlagSet("Calico", flag.ExitOnError)
-	version := flagSet.Bool("v", false, "Display version")
+	version := flagSet.BoolP("version", "v", false, "Display version")
 	err := flagSet.Parse(os.Args[1:])
 	if err != nil {
 		log.WithError(err).Fatal("Failed to parse flags")
@@ -176,7 +176,7 @@ func main() {
 	}
 
 	// If configured to do so, start an etcdv3 compaction.
-	startCompactor(ctx, config)
+	go startCompactor(ctx, config)
 
 	// Run the health checks on a separate goroutine.
 	if config.HealthEnabled {
@@ -240,13 +240,18 @@ func startCompactor(ctx context.Context, config *config.Config) {
 		return
 	}
 
-	// Kick off a periodic compaction of etcd.
-	etcdClient, err := newEtcdV3Client()
-	if err != nil {
-		log.WithError(err).Error("Failed to start etcd compaction routine")
-	} else {
+	// Kick off a periodic compaction of etcd, retry until success.
+	for {
+		etcdClient, err := newEtcdV3Client()
+		if err != nil {
+			log.WithError(err).Error("Failed to start etcd compaction routine, retry in 1m")
+			time.Sleep(1 * time.Minute)
+			continue
+		}
+
 		log.WithField("period", interval).Info("Starting periodic etcdv3 compaction")
 		etcd3.StartCompactor(ctx, etcdClient, interval)
+		break
 	}
 }
 

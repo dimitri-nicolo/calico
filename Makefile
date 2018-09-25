@@ -38,6 +38,22 @@ ifeq ($(ARCH),x86_64)
     override ARCH=amd64
 endif
 
+# we want to be able to run the same recipe on multiple targets keyed on the image name
+# to do that, we would use the entire image name, e.g. calico/node:abcdefg, as the stem, or '%', in the target
+# however, make does **not** allow the usage of invalid filename characters - like / and : - in a stem, and thus errors out
+# to get around that, we "escape" those characters by converting all : to --- and all / to ___ , so that we can use them
+# in the target, we then unescape them back
+escapefs = $(subst :,---,$(subst /,___,$(1)))
+unescapefs = $(subst ---,:,$(subst ___,/,$(1)))
+
+# these macros create a list of valid architectures for pushing manifests
+space :=
+space +=
+comma := ,
+prefix_linux = $(addprefix linux/,$(strip $1))
+join_platforms = $(subst $(space),$(comma),$(call prefix_linux,$(strip $1)))
+
+
 # list of arches *not* to build when doing *-all
 #    until s390x works correctly
 EXCLUDEARCH ?= s390x
@@ -48,7 +64,7 @@ OS?=$(shell uname -s | tr A-Z a-z)
 ###############################################################################
 GO_BUILD_VER?=v0.17
 
-K8S_VERSION?=v1.10.4
+K8S_VERSION?=v1.11.3
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
 ETCD_VERSION?=v3.3.7
 ETCD_IMAGE?=quay.io/coreos/etcd:$(ETCD_VERSION)-$(BUILDARCH)
@@ -57,10 +73,24 @@ ifeq ($(BUILDARCH),amd64)
         ETCD_IMAGE=quay.io/coreos/etcd:$(ETCD_VERSION)
 endif
 
-CNX_REPOSITORY?=gcr.io/unique-caldron-775/cnx
-
 # Makefile configuration options
-CONTAINER_NAME=tigera/kube-controllers
+BUILD_IMAGE?=tigera/kube-controllers
+PUSH_IMAGES?=gcr.io/unique-caldron-775/cnx/$(BUILD_IMAGE)
+RELEASE_IMAGES?=
+
+# If this is a release, also tag and push additional images.
+ifeq ($(RELEASE),true)
+PUSH_IMAGES+=$(RELEASE_IMAGES)
+endif
+
+# remove from the list to push to manifest any registries that do not support multi-arch
+EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
+PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
+PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
+
+# location of docker credentials to push manifests
+DOCKER_CONFIG ?= $(HOME)/.docker/config.json
+
 PACKAGE_NAME?=github.com/projectcalico/kube-controllers
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 LIBCALICOGO_PATH?=none
@@ -82,7 +112,7 @@ SRCFILES=cmd/kube-controllers/main.go $(shell find pkg -name '*.go')
 ## Removes all build artifacts.
 clean:
 	rm -rf bin image.created-$(ARCH)
-	-docker rmi $(CONTAINER_NAME)
+	-docker rmi $(BUILD_IMAGE)
 	rm -f tests/fv/fv.test
 
 ###############################################################################
@@ -113,25 +143,32 @@ vendor: glide.yaml
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) glide install -strip-vendor
 
-# Default the libcalico repo and version but allow them to be overridden
-LIBCALICO_REPO?=github.com/projectcalico/libcalico-go
-LIBCALICO_VERSION?=$(shell git ls-remote git@github.com:projectcalico/libcalico-go master 2>/dev/null | cut -f 1)
+# Default the felix repo and version but allow them to be overridden
+FELIX_REPO?=github.com/tigera/felix-private
+FELIX_VERSION?=$(shell git ls-remote git@github.com:tigera/felix-private master 2>/dev/null | cut -f 1)
 
-## Update libcalico pin in glide.yaml
-update-libcalico:
+## Update felix pin in glide.yaml.  That will also update the felix
+## and libcalico-go pins in glide.lock, so we also keep the
+## 'update-libcalico' name for this target.  (CI for the node repo
+## expects there to be an 'update-libcalico' target here.)
+update-felix update-libcalico:
+	if [ -n "$(SSH_AUTH_SOCK)" ]; then \
+		EXTRA_DOCKER_ARGS="-v $(SSH_AUTH_SOCK):/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent"; \
+	fi; \
 	docker run --rm \
+		$$EXTRA_DOCKER_ARGS \
 		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw $$EXTRA_DOCKER_BIND \
 		-v $(HOME)/.glide:/home/user/.glide:rw \
 		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
 		-w /go/src/$(PACKAGE_NAME) \
 		$(CALICO_BUILD) sh -c '\
-        echo "Updating libcalico to $(LIBCALICO_VERSION) from $(LIBCALICO_REPO)"; \
-        export OLD_VER=$$(grep --after 50 libcalico-go glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[\.0-9a-z]+") ;\
+        echo "Updating felix to $(FELIX_VERSION) from $(FELIX_REPO)"; \
+        export OLD_VER=$$(grep --after 50 felix glide.yaml |grep --max-count=1 --only-matching --perl-regexp "version:\s*\K[^\s]+") ;\
         echo "Old version: $$OLD_VER";\
-        if [ $(LIBCALICO_VERSION) != $$OLD_VER ]; then \
-            sed -i "s/$$OLD_VER/$(LIBCALICO_VERSION)/" glide.yaml && \
-            if [ $(LIBCALICO_REPO) != "github.com/projectcalico/libcalico-go" ]; then \
-              glide mirror set https://github.com/projectcalico/libcalico-go $(LIBCALICO_REPO) --vcs git; glide mirror list; \
+        if [ $(FELIX_VERSION) != $$OLD_VER ]; then \
+            sed -i "s/$$OLD_VER/$(FELIX_VERSION)/" glide.yaml && \
+            if [ $(FELIX_REPO) != "github.com/tigera/felix-private" ]; then \
+              glide mirror set https://github.com/tigera/felix-private $(FELIX_REPO) --vcs git; glide mirror list; \
             fi;\
           OUTPUT=`mktemp`;\
           glide up --strip-vendor; glide up --strip-vendor 2>&1 | tee $$OUTPUT; \
@@ -175,10 +212,10 @@ sub-image-%:
 
 image.created-$(ARCH): bin/kube-controllers-linux-$(ARCH) bin/check-status-linux-$(ARCH)
 	# Build the docker image for the policy controller.
-	docker build -t $(CONTAINER_NAME):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
+	docker build -t $(BUILD_IMAGE):latest-$(ARCH) --build-arg QEMU_IMAGE=$(CALICO_BUILD) -f Dockerfile.$(ARCH) .
 ifeq ($(ARCH),amd64)
 	# Need amd64 builds tagged as :latest because Semaphore depends on that
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CONTAINER_NAME):latest
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(BUILD_IMAGE):latest
 endif
 	touch $@
 
@@ -189,22 +226,45 @@ ifndef IMAGETAG
 endif
 
 ## push one arch
-push: imagetag
-	docker push $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
-ifeq ($(ARCH),amd64)
-	docker push $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)
-endif
+push: imagetag $(addprefix sub-single-push-,$(call escapefs,$(PUSH_IMAGES)))
+sub-single-push-%:
+	docker push $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
 
 push-all: imagetag $(addprefix sub-push-,$(VALIDARCHES))
 sub-push-%:
 	$(MAKE) push ARCH=$* IMAGETAG=$(IMAGETAG)
 
-## tag images of one arch
-tag-images: imagetag
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)-$(ARCH)
+## push multi-arch manifest where supported
+push-manifests: imagetag  $(addprefix sub-manifest-,$(call escapefs,$(PUSH_MANIFEST_IMAGES)))
+sub-manifest-%:
+	# Docker login to hub.docker.com required before running this target as we are using $(DOCKER_CONFIG) holds the docker login credentials
+	# path to credentials based on manifest-tool's requirements here https://github.com/estesp/manifest-tool#sample-usage
+	docker run -t --entrypoint /bin/sh -v $(DOCKER_CONFIG):/root/.docker/config.json $(CALICO_BUILD) -c "/usr/bin/manifest-tool push from-args --platforms $(call join_platforms,$(VALIDARCHES)) --template $(call unescapefs,$*:$(IMAGETAG))-ARCH --target $(call unescapefs,$*:$(IMAGETAG))"
+
+## push default amd64 arch where multi-arch manifest is not supported
+push-non-manifests: imagetag $(addprefix sub-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+sub-non-manifest-%:
 ifeq ($(ARCH),amd64)
-	docker tag $(CONTAINER_NAME):latest-$(ARCH) $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(IMAGETAG)
+	docker push $(call unescapefs,$*:$(IMAGETAG))
+else
+	$(NOECHO) $(NOOP)
 endif
+
+
+## tag images of one arch
+tag-images: imagetag $(addprefix sub-single-tag-images-arch-,$(call escapefs,$(PUSH_IMAGES))) $(addprefix sub-single-tag-images-non-manifest-,$(call escapefs,$(PUSH_NONMANIFEST_IMAGES)))
+sub-single-tag-images-arch-%:
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG)-$(ARCH))
+
+# because some still do not support multi-arch manifest
+sub-single-tag-images-non-manifest-%:
+ifeq ($(ARCH),amd64)
+	docker tag $(BUILD_IMAGE):latest-$(ARCH) $(call unescapefs,$*:$(IMAGETAG))
+else
+	$(NOECHO) $(NOOP)
+endif
+
+
 
 ## tag images of all archs
 tag-images-all: imagetag $(addprefix sub-tag-images-,$(VALIDARCHES))
@@ -257,7 +317,7 @@ ut: vendor
 GINKGO_FOCUS?=.*
 fv: tests/fv/fv.test image
 	@echo Running Go FVs.
-	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) CONTAINER_NAME=$(CONTAINER_NAME):latest-$(ARCH) PRIVATE_KEY=`pwd`/private.key ./fv.test -ginkgo.slowSpecThreshold 30 -ginkgo.focus "$(GINKGO_FOCUS)"
+	cd tests/fv && ETCD_IMAGE=$(ETCD_IMAGE) HYPERKUBE_IMAGE=$(HYPERKUBE_IMAGE) CONTAINER_NAME=$(BUILD_IMAGE):latest-$(ARCH) PRIVATE_KEY=`pwd`/private.key ./fv.test -ginkgo.slowSpecThreshold 30 -ginkgo.focus $(GINKGO_FOCUS)
 
 tests/fv/fv.test: $(shell find ./tests -type f -name '*.go' -print)
 	# We pre-build the test binary so that we can run it outside a container and allow it
@@ -282,8 +342,8 @@ endif
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined - run using make <target> BRANCH_NAME=var or set an environment variable)
 endif
-	$(MAKE) tag-images-all push-all IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
-	$(MAKE) tag-images-all push-all IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=${BRANCH_NAME} EXCLUDEARCH="$(EXCLUDEARCH)"
+	$(MAKE) tag-images-all push-all push-manifests push-non-manifests IMAGETAG=$(shell git describe --tags --dirty --always --long) EXCLUDEARCH="$(EXCLUDEARCH)"
 
 ###############################################################################
 # Release
@@ -318,19 +378,15 @@ ifneq ($(VERSION), $(GIT_VERSION))
 	$(error Attempt to build $(VERSION) from $(GIT_VERSION))
 endif
 
-	$(MAKE) image
-	$(MAKE) tag-images IMAGETAG=$(VERSION)
+	$(MAKE) image-all
+	$(MAKE) tag-images-all IMAGETAG=$(VERSION)
 	# Generate the `latest` images.
-	$(MAKE) tag-images IMAGETAG=latest
+	$(MAKE) tag-images-all IMAGETAG=latest
 
 ## Verifies the release artifacts produces by `make release-build` are correct.
 release-verify: release-prereqs
 	# Check the reported version is correct for each release artifact.
-	if ! docker run $(CONTAINER_NAME):$(VERSION) -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(CONTAINER_NAME):$(VERSION) -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(VERSION) -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(CNX_REPOSITORY)/$(CONTAINER_NAME):$(VERSION) -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-
-	# Run FV tests against the produced image. We only run the subset tagged as release tests.
-	$(MAKE) CONTAINER_NAME=$(CONTAINER_NAME):$(VERSION) GINKGO_FOCUS="Release" fv
+	if ! docker run $(BUILD_IMAGE):$(VERSION) -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):$(VERSION) -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
 ## Generates release notes based on commits in this version.
 release-notes: release-prereqs
@@ -344,7 +400,7 @@ release-publish: release-prereqs
 	git push origin $(VERSION)
 
 	# Push images.
-	$(MAKE) push IMAGETAG=$(VERSION) ARCH=$(ARCH)
+	$(MAKE) push-all IMAGETAG=$(VERSION)
 
 	@echo "Finalize the GitHub release based on the pushed tag."
 	@echo ""
@@ -360,10 +416,9 @@ release-publish: release-prereqs
 ## Pushes `latest` release images. WARNING: Only run this for latest stable releases.
 release-publish-latest: release-prereqs
 	# Check latest versions match.
-	if ! docker run $(CONTAINER_NAME):latest -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(CONTAINER_NAME):latest -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
-	if ! docker run $(CNX_REPOSITORY)/$(CONTAINER_NAME):latest -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(CNX_REPOSITORY)/$(CONTAINER_NAME):latest -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
+	if ! docker run $(BUILD_IMAGE):latest -v | grep '^$(VERSION)$$'; then echo "Reported version:" `docker run $(BUILD_IMAGE):latest -v` "\nExpected version: $(VERSION)"; false; else echo "\nVersion check passed\n"; fi
 
-	$(MAKE) push IMAGETAG=latest ARCH=$(ARCH)
+	$(MAKE) push-all IMAGETAG=latest
 
 # release-prereqs checks that the environment is configured properly to create a release.
 release-prereqs:
