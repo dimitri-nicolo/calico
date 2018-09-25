@@ -301,6 +301,7 @@ type bgpPeer struct {
 	PeerIP      net.IP               `json:"ip"`
 	ASNum       numorstring.ASNumber `json:"as_num,string"`
 	RRClusterID string               `json:"rr_cluster_id"`
+	Extensions  map[string]string    `json:"extensions"`
 }
 
 func (c *client) updatePeersV1() {
@@ -385,6 +386,7 @@ func (c *client) updatePeersV1() {
 		log.Debugf("Peers %#v", peers)
 
 		for _, peer := range peers {
+			peer.Extensions = v3res.Spec.Extensions
 			log.Debugf("Peer: %#v", peer)
 			if localNodeNames == nil {
 				key := model.GlobalBGPPeerKey{PeerIP: peer.PeerIP}
@@ -436,6 +438,7 @@ func (c *client) updatePeersV1() {
 				log.WithError(err).Errorf("Couldn't represent node %v as BGP peer", peerNodeName)
 				continue
 			}
+			peer.Extensions = v3res.Spec.Extensions
 			for _, localNodeName := range localNodeNames {
 				key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
 				emit(key, peer)
