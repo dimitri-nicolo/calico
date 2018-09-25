@@ -79,7 +79,7 @@ toc:
 - title: Federation (Kubernetes only)
   section:
   - title: Overview
-    path: /usage/federation/index
+    path: /usage/federation/
   - title: Creating kubeconfig files
     path: /usage/federation/kubeconfig
   - title: Configuring remote clusters
