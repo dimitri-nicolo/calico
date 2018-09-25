@@ -1,5 +1,5 @@
-hash: 6eadebda32422caadb2b70cde634964f55f4e46bb984ab13d98c4c6defbaf096
-updated: 2018-09-21T05:07:04.392918315Z
+hash: c73778902ec1768c05497b84245630ae5d6b6e9d75e81b5bed02d8380df2fb40
+updated: 2018-09-25T15:55:05.664903835Z
 imports:
 - name: cloud.google.com/go
   version: 3b1ae45394a234c385be014e9a488f2bb6eef821
@@ -48,14 +48,14 @@ imports:
   - autorest/azure
   - autorest/date
 - name: github.com/beorn7/perks
-  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
   subpackages:
   - quantile
 - name: github.com/bronze1man/goStrongswanVici
   version: 9b6fdd821dbe2bc7fe167b1ad2af4bcd19975ada
   repo: git@github.com:tigera/goStrongswanVici
 - name: github.com/BurntSushi/toml
-  version: 3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005
+  version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
 - name: github.com/coreos/etcd
   version: 33245c6b5b49130ca99280408fadfab01aac0e48
   subpackages:
@@ -94,7 +94,7 @@ imports:
 - name: github.com/go-openapi/jsonpointer
   version: 46af16f9f7b149af66e5d1bd010e3574dc06de98
 - name: github.com/go-openapi/jsonreference
-  version: 3fb327e6747da3043567ee86abd02bb6376b6be2
+  version: 13c6e3589ad90f49bd3e3bbe2c2cb3d7a4142272
 - name: github.com/go-openapi/spec
   version: 384415f06ee238aae1df5caad877de6ceac3a5c4
 - name: github.com/go-openapi/swag
@@ -159,11 +159,12 @@ imports:
 - name: github.com/kardianos/osext
   version: ae77be60afb1dcacde03767a8c37337fad28ac14
 - name: github.com/kelseyhightower/confd
-  version: 2f63ff1f34e6de3c04f5e0e67fd4eef20386fccf
+  version: 95ab1e06a4294fd09401febf36e92c4a937bffa5
   repo: git@github.com:tigera/confd-private.git
   subpackages:
   - pkg/backends
   - pkg/backends/calico
+  - pkg/buildinfo
   - pkg/config
   - pkg/log
   - pkg/resource/template
@@ -243,10 +244,9 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/projectcalico/felix
-  version: 3f843fcdf1ae2d6bcd64cb75422f0fa49d0a6d83
+  version: 513d4916a9ee9ec644c94d5ec5f58eb42cd9cc00
   repo: git@github.com:tigera/felix-private.git
   subpackages:
-  - binder
   - buildinfo
   - calc
   - collector
@@ -291,7 +291,7 @@ imports:
 - name: github.com/projectcalico/go-yaml-wrapper
   version: 598e54215bee41a19677faa4f0c32acd2a87eb56
 - name: github.com/projectcalico/libcalico-go
-  version: 6fc286ed3a3f9689b9f29c62fdc471ca6689c1ba
+  version: ee5bbe1739c678367b21fbadd204473cf22b84b4
   repo: git@github.com:tigera/libcalico-go-private.git
   subpackages:
   - lib/apiconfig
@@ -340,17 +340,22 @@ imports:
   - lib/validator/v1
   - lib/validator/v3
   - lib/watch
+- name: github.com/projectcalico/pod2daemon
+  version: df2b9c8d2744ebce544742f7f765b59c5e88db0d
+  subpackages:
+  - binder
 - name: github.com/projectcalico/typha
-  version: 2686eb7eb71df88f7dd37912ea3b9b11ab52de5d
-  repo: git@github.com:tigera/typha-private
+  version: 9fcc9d66bbeea7938a3f0e204144cb2c1f324efe
+  repo: git@github.com:tigera/typha-private.git
   subpackages:
   - pkg/syncclient
   - pkg/syncproto
   - pkg/tlsutils
 - name: github.com/prometheus/client_golang
-  version: bcbbc08eb2ddff3af83bbf11e7ec13b4fd730b6e
+  version: 773f5027234d0b08adf766be34f55df2f312abf7
   subpackages:
   - prometheus
+  - prometheus/internal
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
   version: 6f3806018612930941127f2a7c6c453ba2c527d2
@@ -509,7 +514,7 @@ imports:
 - name: gopkg.in/natefinch/lumberjack.v2
   version: a96e63847dc3c67d17befa69c303767e2f84e54f
 - name: gopkg.in/square/go-jose.v2
-  version: 349dc03548930652802aadc09fb126e2b7cb6d80
+  version: 89060dee6a84df9a4dae49f676f0c755037834f1
   subpackages:
   - cipher
   - json

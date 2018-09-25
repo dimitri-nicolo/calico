@@ -81,8 +81,8 @@ class TestNamespace(TestBase):
         for host in cls.hosts:
             host.start_calico_node(env_options=" -e FELIX_HEALTHENABLED=true ")
 
-        handle_failure(lambda: retry_until_success(cls.host1.assert_is_ready, retries=20))
-        handle_failure(lambda: retry_until_success(cls.host2.assert_is_ready, retries=20))
+        handle_failure(lambda: retry_until_success(cls.host1.assert_is_ready, retries=30))
+        handle_failure(lambda: retry_until_success(cls.host2.assert_is_ready, retries=30))
 
         # Prepare namespace profile so that we can use namespaceSelector for non-k8s deployment.
         # CNI will use the existing profile which is setup here instead of creating its own.
@@ -466,8 +466,7 @@ class TestNamespace(TestBase):
             del data['metadata']['creationTimestamp']
 
         # Use calicoctl with the modified data.
-        host.writefile("new_data",
-                       yaml.dump(data, default_flow_style=False))
+        host.writejson("new_data", data)
         host.calicoctl("%s -f new_data" % action)
 
     @classmethod
