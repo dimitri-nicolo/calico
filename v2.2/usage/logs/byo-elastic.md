@@ -6,6 +6,11 @@ This page describes how to use a separate Elasticsearch cluster for {{site.prodn
 It may be useful if you have an existing cluster you want to use, or if you want to provision
 it yourself instead of using the bundled [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator).
 
+### Requirements
+
+- Elasticsearch version {{site.data.versions[page.version].first.components["elasticsearch"].version}}
+- Kibana version {{site.data.versions[page.version].first.components["kibana"].version}}
+
 ### Remove the Elasticsearch operator
 
 1. Delete the Elasticsearch operator, or edit the `operator.yaml` manifest to remove it.
