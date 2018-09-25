@@ -10,7 +10,7 @@ execute_test_suite() {
     #    files and insert the node name.
     # -  for the confd Calico client to select which node to listen to for key events.
     export NODENAME="kube-master"
-    
+
     # Make sure the log and rendered templates paths are created and old test run data is
     # deleted.
     mkdir -p $LOGPATH
@@ -54,17 +54,9 @@ execute_tests_daemon() {
         run_individual_test 'mesh/ipip-off'
         run_edited_individual_test 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/global/extensions\")).testKey}}"
     done
-    
-    # Turn the node-mesh off.  This will cause confd to terminate through one of it's own
-    # template updates.  Check that it does.
-    turn_mesh_off
-    check_pid_exits $CONFD_PID
 
-    # Re-start a background confd.
-    echo "Restarting confd"
-    BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd2 2>&1 &
-    CONFD_PID=$!
-    ps
+    # Turn the node-mesh off.
+    turn_mesh_off
 
     # Run the explicit peering tests.
     for i in $(seq 1 5); do
@@ -72,12 +64,14 @@ execute_tests_daemon() {
         run_individual_test 'explicit_peering/specific_node'
         run_edited_individual_test 'extensions/bgppeer/global' "# Test Value: {{(json (getv \"/global/peer_v4/10.192.0.3\")).extensions.testKey}}"
         run_edited_individual_test 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
+        run_individual_test 'explicit_peering/selectors'
     done
 
-    # Turn the node-mesh back on.  This will cause confd to terminate through one of it's own
-    # template updates.  Check that it does.
+    # Turn the node-mesh back on.
     turn_mesh_on
-    check_pid_exits $CONFD_PID
+
+    # Kill confd.
+    kill -9 $CONFD_PID
 }
 
 # Execute a set of tests using oneshot mode.
@@ -95,6 +89,7 @@ execute_tests_oneshot() {
         run_edited_individual_test_oneshot 'extensions/bgpconfig' "# Test Value: {{(json (getv \"/global/extensions\")).testKey}}"
         run_edited_individual_test_oneshot 'extensions/bgppeer/global' "# Test Value: {{(json (getv \"/global/peer_v4/10.192.0.3\")).extensions.testKey}}"
         run_edited_individual_test_oneshot 'extensions/bgppeer/specific_node' "# Test Value: {{(json (getv \"/host/kube-master/peer_v4/10.192.0.3\")).extensions.testKey}}"
+        run_individual_test_oneshot 'explicit_peering/selectors'
     done
 }
 
@@ -220,22 +215,6 @@ build_tomls_for_node() {
 
     # Need to pause as running confd immediately after might result in files not being present.
     sync
-}
-
-# Check that the process with the specified pid exits.
-# $pid is process ID to monitor.
-check_pid_exits() {
-    # Compare the templates until they match (for a max of 10s).
-    pid=$1
-    echo "Checking confd exits (PID ${pid})"
-
-    for i in $(seq 1 10); do ps -o pid | grep -w $pid 1>/dev/null 2>&1 && sleep 1 || break; done
-
-    if ps -o pid | grep -w $pid 1>/dev/null 2>&1; then
-      echo "Failed: Expecting confd to have exited, but has not."
-      ps
-      exit 1
-    fi
 }
 
 # Tests that confd generates the required set of templates for the test.
