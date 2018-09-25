@@ -142,10 +142,17 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		}
 	}
 
+	// Determine which routes to program within the container. If no routes were provided in the CNI config,
+	// then use the Calico default routes. If routes were provided then program those instead.
 	if len(routes) == 0 {
 		logger.Debug("No routes specified in CNI configuration, using defaults.")
 		routes = utils.DefaultRoutes
 	} else {
+		if conf.IncludeDefaultRoutes {
+			// We're configured to also include our own default route, so do that here.
+			logger.Debug("Including Calico default routes in addition to routes from CNI config")
+			routes = append(utils.DefaultRoutes, routes...)
+		}
 		logger.WithField("routes", routes).Info("Using custom routes from CNI configuration.")
 	}
 
@@ -362,6 +369,23 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 	endpoint.Spec.InterfaceName = hostVethName
 	endpoint.Spec.ContainerID = epIDs.ContainerID
 	logger.WithField("endpoint", endpoint).Info("Added Mac, interface name, and active container ID to endpoint")
+	// List of DNAT ipaddrs to map to this workload endpoint
+	floatingIPs := annot["cni.projectcalico.org/floatingIPs"]
+
+	if floatingIPs != "" {
+		ips, err := parseIPAddrs(floatingIPs, logger)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, ip := range ips {
+			endpoint.Spec.IPNATs = append(endpoint.Spec.IPNATs, api.IPNAT{
+				InternalIP: result.IPs[0].Address.IP.String(),
+				ExternalIP: ip,
+			})
+		}
+		logger.WithField("endpoint", endpoint).Info("Added floatingIPs to endpoint")
+	}
 
 	// Write the endpoint object (either the newly created one, or the updated one)
 	if _, err := utils.CreateOrUpdate(ctx, calicoClient, endpoint); err != nil {
@@ -370,6 +394,11 @@ func CmdAddK8s(ctx context.Context, args *skel.CmdArgs, conf types.NetConf, epID
 		return nil, err
 	}
 	logger.Info("Wrote updated endpoint to datastore")
+
+	// Add the interface created above to the CNI result.
+	result.Interfaces = append(result.Interfaces, &current.Interface{
+		Name: endpoint.Spec.InterfaceName, Sandbox: endpoint.Spec.Endpoint},
+	)
 
 	return result, nil
 }
