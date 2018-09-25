@@ -164,6 +164,7 @@ imports:
   subpackages:
   - pkg/backends
   - pkg/backends/calico
+  - pkg/buildinfo
   - pkg/config
   - pkg/log
   - pkg/resource/template
@@ -246,7 +247,6 @@ imports:
   version: 3f843fcdf1ae2d6bcd64cb75422f0fa49d0a6d83
   repo: git@github.com:tigera/felix-private.git
   subpackages:
-  - binder
   - buildinfo
   - calc
   - collector
@@ -340,6 +340,10 @@ imports:
   - lib/validator/v1
   - lib/validator/v3
   - lib/watch
+- name: github.com/projectcalico/pod2daemon
+  version: df2b9c8d2744ebce544742f7f765b59c5e88db0d
+  subpackages:
+  - binder
 - name: github.com/projectcalico/typha
   version: 2686eb7eb71df88f7dd37912ea3b9b11ab52de5d
   repo: git@github.com:tigera/typha-private

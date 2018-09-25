@@ -150,8 +150,19 @@ class DockerHost(object):
 
             # Make sure docker is up
             docker_ps = partial(self.execute, "docker ps")
-            retry_until_success(docker_ps, ex_class=CalledProcessError,
-                                retries=10)
+            try:
+                # Retry the docker ps. If we fail, we'll gather some
+                # information and log it out.
+                retry_until_success(docker_ps, ex_class=CalledProcessError,
+                                    retries=10)
+            except CommandExecError:
+                # Hit a problem waiting for the docker host to have access
+                # to docker. Log out some information to help with diagnostics
+                # before re-raising the exception.
+                logger.error("Error waiting for docker to be ready in DockerHost")
+                log_and_run("docker ps -a")
+                log_and_run("docker logs %s" % self.name)
+                raise
 
             if simulate_gce_routing:
                 # Simulate addressing and routing setup as on a GCE instance:
@@ -380,8 +391,8 @@ class DockerHost(object):
                 pool['spec']['ipipMode'] = 'Always' if enabled else 'Never'
             if 'creationTimestamp' in pool['metadata']:
                 del pool['metadata']['creationTimestamp']
-        self.writefile("ippools.yaml", yaml.dump(pools_dict))
-        self.calicoctl("apply -f ippools.yaml")
+        self.writejson("ippools.json", pools_dict)
+        self.calicoctl("apply -f ippools.json")
 
     def attach_log_analyzer(self):
         self.log_analyzer = LogAnalyzer(self,
@@ -453,7 +464,7 @@ class DockerHost(object):
         Also, perform log analysis to check for any errors, raising an exception
         if any were found.
 
-        If log_extra_is set to True we will log some extra diagnostics (this is
+        If log_extra_diags is set to True we will log some extra diagnostics (this is
         set to True if the DockerHost context manager exits with an exception).
         Extra logs will also be output if the log analyzer detects any errors.
         """
@@ -610,7 +621,7 @@ class DockerHost(object):
 
     def writefile(self, filename, data):
         """
-        Writes a file on a host (e.g. a yaml file for loading into calicoctl).
+        Writes a file on a host (e.g. a JSON file for loading into calicoctl).
         :param filename: string, the filename to create
         :param data: string, the data to put inthe file
         :return: Return code of execute operation.
@@ -677,8 +688,7 @@ class DockerHost(object):
             del data['metadata']['creationTimestamp']
 
         # Use calicoctl with the modified data.
-        self.writefile("new_data",
-                       yaml.dump(data, default_flow_style=False))
+        self.writejson("new_data", data)
         self.calicoctl("%s -f new_data" % action)
 
     def log_extra_diags(self):
@@ -687,7 +697,7 @@ class DockerHost(object):
         self.execute("iptables-save -c", raise_exception_on_failure=False)
         self.execute("ip6tables-save -c", raise_exception_on_failure=False)
         self.execute("ipset save", raise_exception_on_failure=False)
-        self.execute("ps", raise_exception_on_failure=False)
+        self.execute("ps waux", raise_exception_on_failure=False)
         self.execute("docker logs cnx-node", raise_exception_on_failure=False)
         self.execute("docker exec cnx-node ls -l /var/log/calico/felix", raise_exception_on_failure=False)
         self.execute("docker exec cnx-node cat /var/log/calico/felix/*", raise_exception_on_failure=False)
@@ -695,6 +705,7 @@ class DockerHost(object):
         self.execute("docker exec cnx-node cat /var/log/calico/confd/*", raise_exception_on_failure=False)
         self.execute("docker exec cnx-node ls -l /var/log/calico/bird", raise_exception_on_failure=False)
         self.execute("docker exec cnx-node cat /var/log/calico/bird/*", raise_exception_on_failure=False)
+        self.execute("docker exec cnx-node cat /etc/calico/confd/config/bird.cfg", raise_exception_on_failure=False)
 
         self.execute("docker ps -a", raise_exception_on_failure=False)
         for wl in self.workloads:
