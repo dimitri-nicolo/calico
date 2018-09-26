@@ -64,6 +64,8 @@ gnp2_t1_o4_rack2_only        002               2         2          1
         egress;1;src;sel     002
         ingress;0;dest;sel   !=001
         ingress;1;dest;!sel  !=002
+gnp3_t2_o5_rack2_only        002               2         2          2
+        egress;0;src         002
 np1_t2_o1_ns1                001   2       1   1         1          2
 np2_t2_o2_ns2                              2   1         1          2
 np1_t2_o1_ns1_rack2_only     001   1       1   1         1          2
@@ -812,6 +814,29 @@ var (
 		},
 	}
 
+	gnp3_t2_o5_rack2_only = &apiv3.GlobalNetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindGlobalNetworkPolicy,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "aaa-tier2.gnp3-t2-o5-rack2-only",
+		},
+		Spec: apiv3.GlobalNetworkPolicySpec{
+			Tier:     "aaa-tier2",
+			Selector: "rack == '002'",
+			Order:    &order4,
+			Egress: []apiv3.Rule{
+				{
+					Action: "Allow",
+					Source: apiv3.EntityRule{
+						Selector: "rack == '002'",
+					},
+				},
+			},
+		},
+	}
+
 	np1_t2_o1_ns1 = &apiv3.NetworkPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: apiv3.GroupVersionCurrent,
@@ -1169,6 +1194,22 @@ var (
 		},
 		Spec: apiv3.GlobalNetworkSetSpec{
 			Nets: []string{"198.51.100.0/28"},
+		},
+	}
+
+	globalnetset2 = &apiv3.GlobalNetworkSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: apiv3.GroupVersionCurrent,
+			Kind:       apiv3.KindGlobalNetworkSet,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "globalnetset2",
+			Labels: map[string]string{
+				"rack": "002",
+			},
+		},
+		Spec: apiv3.GlobalNetworkSetSpec{
+			Nets: []string{"198.51.100.0/28", "199.51.100.0/24"},
 		},
 	}
 )

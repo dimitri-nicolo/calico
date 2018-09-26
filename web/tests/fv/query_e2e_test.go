@@ -32,7 +32,7 @@ import (
 
 var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3, func(config apiconfig.CalicoAPIConfig) {
 
-	DescribeTable("Query tests",
+	DescribeTable("Query tests (e2e with server)",
 		func(tqds []testQueryData, crossCheck func(tqd testQueryData, addr string, netClient *http.Client)) {
 			By("Creating a v3 client interface")
 			c, err := clientv3.New(config)
@@ -80,14 +80,14 @@ var _ = testutils.E2eDatastoreDescribe("Query tests", testutils.DatastoreEtcdV3,
 
 func getQueryFunction(tqd testQueryData, addr string, netClient *http.Client) func() interface{} {
 	By(fmt.Sprintf("Calculating the URL for the test: %s", tqd.description))
-	url := calculateQueryUrl(addr, tqd.query)
+	qurl := calculateQueryUrl(addr, tqd.query)
 
 	By(fmt.Sprintf("Creating the query function for test: %s", tqd.description))
 	return func() interface{} {
 		// Return the result if we have it, otherwise the error, this allows us to use Eventually to
 		// check both values and errors.
-		log.WithField("url", url).Debug("Running query")
-		r, err := netClient.Get(url)
+		log.WithField("url", qurl).Debug("Running query")
+		r, err := netClient.Get(qurl)
 		if err != nil {
 			return err
 		}
