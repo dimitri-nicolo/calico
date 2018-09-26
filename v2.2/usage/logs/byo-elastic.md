@@ -1,5 +1,6 @@
 ---
 title: Using your own Elasticsearch cluster
+canonical_url: https://docs.tigera.io/v2.2/usage/logs/byo-elastic
 ---
 
 This page describes how to use a separate Elasticsearch cluster for {{site.prodname}} logs.

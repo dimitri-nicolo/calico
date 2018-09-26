@@ -1,5 +1,7 @@
 ---
 title: calicoctl replace
+redirect_from: latest/reference/calicoctl/commands/replace
+canonical_url: https://docs.tigera.io/v2.1/reference/calicoctl/commands/replace
 ---
 
 This sections describes the `calicoctl replace` command.

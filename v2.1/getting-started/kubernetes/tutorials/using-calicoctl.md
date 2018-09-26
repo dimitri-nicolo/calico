@@ -1,5 +1,7 @@
 ---
 title: Using calicoctl in Kubernetes
+redirect_from: latest/getting-started/kubernetes/tutorials/using-calicoctl
+canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/tutorials/using-calicoctl
 ---
 
 `calicoctl` allows you to create, read, update, and delete {{site.prodname}} objects

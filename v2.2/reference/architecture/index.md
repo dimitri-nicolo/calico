@@ -1,5 +1,6 @@
 ---
 title: Tigera Secure EE Architecture
+canonical_url: https://docs.tigera.io/v2.1/reference/architecture/
 ---
 
 This document discusses the various pieces of {{site.prodname}}'s architecture,

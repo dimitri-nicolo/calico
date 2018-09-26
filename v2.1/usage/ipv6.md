@@ -1,5 +1,7 @@
 ---
 title: Enabling IPv6 Support
+redirect_from: latest/usage/ipv6
+canonical_url: https://docs.tigera.io/v2.1/usage/ipv6
 ---
 
 ### About enabling IPv6

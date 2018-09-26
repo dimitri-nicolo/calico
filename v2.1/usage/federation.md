@@ -1,5 +1,7 @@
 ---
 title: Federated Endpoint Identity for Kubernetes
+redirect_from: latest/usage/federation
+canonical_url: https://docs.tigera.io/v2.1/usage/federation
 ---
 
 Federated endpoint identity allows local policy rules to reference the labels on workload and host endpoints from a remote cluster. This means that the policies rendered on the local cluster can reference endpoints from remote clusters.

@@ -1,5 +1,6 @@
 ---
 title: Creating host endpoint objects
+canonical_url: https://docs.tigera.io/v2.1/getting-started/bare-metal/policy/objects
 ---
 
 

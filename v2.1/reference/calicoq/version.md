@@ -1,5 +1,7 @@
 ---
 title: calicoq version
+redirect_from: latest/reference/calicoq/version
+canonical_url: https://docs.tigera.io/v2.1/reference/calicoq/version
 ---
 
 `calicoq version` shows the version number of the calicoq tool, plus

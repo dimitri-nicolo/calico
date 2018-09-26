@@ -1,5 +1,6 @@
 ---
 title: Remote Cluster Configuration Resource (RemoteClusterConfiguration)
+canonical_url: https://docs.tigera.io/v2.1/reference/calicoctl/resources/remoteclusterconfiguration
 ---
 
 A remote cluster configuration resource (RemoteClusterConfiguration) represents a cluster in a federation of clusters.

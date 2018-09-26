@@ -1,5 +1,6 @@
 ---
 title: Getting started with Tigera Secure EE
+canonical_url: https://docs.tigera.io/v2.1/getting-started/
 ---
 
 ## Obtain the private registry credentials

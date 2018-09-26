@@ -1,5 +1,7 @@
 ---
 title: Pre-DNAT policy
+redirect_from: latest/getting-started/bare-metal/policy/pre-dnat
+canonical_url: https://docs.tigera.io/v2.1/getting-started/bare-metal/policy/pre-dnat
 ---
 
 

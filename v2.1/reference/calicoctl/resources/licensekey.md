@@ -1,5 +1,7 @@
 ---
 title: License Key (LicenseKey)
+redirect_from: latest/reference/calicoctl/resources/licensekey
+canonical_url: https://docs.tigera.io/v2.1/reference/calicoctl/resources/licensekey
 ---
 
 A License Key resource (`LicenseKey`) represents a user's license to use {{site.prodname}}. Keys are

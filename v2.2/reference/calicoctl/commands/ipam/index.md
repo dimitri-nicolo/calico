@@ -1,5 +1,6 @@
 ---
 title: calicoctl ipam
+canonical_url: https://docs.tigera.io/v2.1/reference/calicoctl/commands/ipam/
 ---
 
 This section describes the `calicoctl ipam` commands.

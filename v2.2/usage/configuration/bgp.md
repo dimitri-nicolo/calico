@@ -1,5 +1,6 @@
 ---
 title: Configuring BGP Peers
+canonical_url: https://docs.tigera.io/v2.1/usage/configuration/bgp
 ---
 
 This document describes the commands available in `calicoctl` for managing BGP.  It

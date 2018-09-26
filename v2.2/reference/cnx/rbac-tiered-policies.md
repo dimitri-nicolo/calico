@@ -1,5 +1,6 @@
 ---
 title: RBAC on tiered Policies
+canonical_url: https://docs.tigera.io/v2.1/reference/cnx/rbac-tiered-policies
 ---
 
 The {{site.prodname}} API server adds the ability to manage tiered
