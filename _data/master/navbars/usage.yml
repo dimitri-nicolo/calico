@@ -88,6 +88,8 @@ toc:
     path: /usage/federation/services-controller
   - title: Example AWS configuration
     path: /usage/federation/aws
+  - title: Querying remote clusters with calicoq
+    path: /usage/federation/calicoq
 - title: Running cnx-node with an init system
   path: /usage/configuration/as-service
 - title: Configuring BGP Peers
