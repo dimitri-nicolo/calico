@@ -80,10 +80,10 @@ func (o *CalicoServerOptions) Config() (*apiserver.Config, error) {
 		return nil, err
 	}
 	if !o.DisableAuth {
-		if err := o.RecommendedOptions.Authentication.ApplyTo(&serverConfig.Config); err != nil {
+		if err := o.RecommendedOptions.Authentication.ApplyTo(&serverConfig.Authentication, serverConfig.SecureServing, serverConfig.OpenAPIConfig); err != nil {
 			return nil, err
 		}
-		if err := o.RecommendedOptions.Authorization.ApplyTo(&serverConfig.Config); err != nil {
+		if err := o.RecommendedOptions.Authorization.ApplyTo(&serverConfig.Authorization); err != nil {
 			return nil, err
 		}
 	} else {

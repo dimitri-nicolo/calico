@@ -21,29 +21,29 @@ import (
 // NewTierStorage creates a new libcalico-based storage.Interface implementation for Tiers
 func NewTierStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	c := createClientFromConfig()
-	create := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.Tier)
 		return c.Tiers().Create(ctx, res, oso)
 	}
-	update := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.Tier)
 		return c.Tiers().Update(ctx, res, oso)
 	}
-	get := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		ogo := opts.(options.GetOptions)
 		return c.Tiers().Get(ctx, name, ogo)
 	}
-	delete := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	deleteFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		odo := opts.(options.DeleteOptions)
 		return c.Tiers().Delete(ctx, name, odo)
 	}
-	list := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
+	listFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
 		olo := opts.(options.ListOptions)
 		return c.Tiers().List(ctx, olo)
 	}
-	watch := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
+	watchFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
 		olo := opts.(options.ListOptions)
 		return c.Tiers().Watch(ctx, olo)
 	}
@@ -57,12 +57,12 @@ func NewTierStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 		libCalicoType:     reflect.TypeOf(libcalicoapi.Tier{}),
 		libCalicoListType: reflect.TypeOf(libcalicoapi.TierList{}),
 		isNamespaced:      false,
-		create:            create,
-		update:            update,
-		get:               get,
-		delete:            delete,
-		list:              list,
-		watch:             watch,
+		create:            createFn,
+		update:            updateFn,
+		get:               getFn,
+		delete:            deleteFn,
+		list:              listFn,
+		watch:             watchFn,
 		resourceName:      "Tier",
 		converter:         TierConverter{},
 	}, func() {}
@@ -88,7 +88,7 @@ func (tc TierConverter) convertToAAPI(libcalicoObject resourceObject, aapiObj ru
 	aapiTier.ObjectMeta = lcgTier.ObjectMeta
 }
 
-func (tc TierConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, filterFunc storage.FilterFunc) {
+func (tc TierConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
 	lcgTierList := libcalicoListObject.(*libcalicoapi.TierList)
 	aapiTierList := aapiListObj.(*aapi.TierList)
 	if libcalicoListObject == nil {
@@ -100,7 +100,7 @@ func (tc TierConverter) convertToAAPIList(libcalicoListObject resourceListObject
 	for _, item := range lcgTierList.Items {
 		aapiTier := aapi.Tier{}
 		tc.convertToAAPI(&item, &aapiTier)
-		if filterFunc != nil && filterFunc(&aapiTier) {
+		if matched, err := pred.Matches(&aapiTier); err == nil && matched {
 			aapiTierList.Items = append(aapiTierList.Items, aapiTier)
 		}
 	}

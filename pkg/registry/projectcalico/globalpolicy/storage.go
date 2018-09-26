@@ -114,7 +114,7 @@ func (r *REST) List(ctx genericapirequest.Context, options *metainternalversion.
 	return r.Store.List(ctx, options)
 }
 
-func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, includeUninitialized bool) (runtime.Object, error) {
+func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, val rest.ValidateObjectFunc, includeUninitialized bool) (runtime.Object, error) {
 	policy := obj.(*calico.GlobalNetworkPolicy)
 	// Is Tier prepended. If not prepend default?
 	tierName, _ := util.GetTierPolicy(policy.Name)
@@ -123,17 +123,17 @@ func (r *REST) Create(ctx genericapirequest.Context, obj runtime.Object, include
 		return nil, err
 	}
 
-	return r.Store.Create(ctx, obj, includeUninitialized)
+	return r.Store.Create(ctx, obj, val, includeUninitialized)
 }
 
-func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo) (runtime.Object, bool, error) {
+func (r *REST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo, val rest.ValidateObjectFunc, valUp rest.ValidateObjectUpdateFunc) (runtime.Object, bool, error) {
 	tierName, _ := util.GetTierPolicy(name)
 	err := util.AuthorizeTierOperation(ctx, r.authorizer, tierName)
 	if err != nil {
 		return nil, false, err
 	}
 
-	return r.Store.Update(ctx, name, objInfo)
+	return r.Store.Update(ctx, name, objInfo, val, valUp)
 }
 
 // Get retrieves the item from storage.

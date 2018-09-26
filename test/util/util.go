@@ -28,13 +28,13 @@ import (
 	v3calico "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset/typed/projectcalico/v3"
 )
 
-// WaitForPolicyToNotExist waits for the Policy with the given name to no
+// WaitForGlobalNetworkPoliciesToNotExist waits for the GlobalNetworkPolicy with the given name to no
 // longer exist.
-func WaitForPolicyToNotExist(client v3calico.ProjectcalicoV3Interface, name string) error {
+func WaitForGlobalNetworkPoliciesToNotExist(client v3calico.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			glog.V(5).Infof("Waiting for broker %v to not exist", name)
-			_, err := client.Policies().Get(name, metav1.GetOptions{})
+			_, err := client.GlobalNetworkPolicies().Get(name, metav1.GetOptions{})
 			if nil == err {
 				return false, nil
 			}
@@ -48,13 +48,13 @@ func WaitForPolicyToNotExist(client v3calico.ProjectcalicoV3Interface, name stri
 	)
 }
 
-// WaitForPolicyToExist waits for the Policy with the given name
+// WaitForGlobalNetworkPoliciesToExist waits for the GlobalNetworkPolicy with the given name
 // to exist.
-func WaitForPolicyToExist(client v3calico.ProjectcalicoV3Interface, name string) error {
+func WaitForGlobalNetworkPoliciesToExist(client v3calico.ProjectcalicoV3Interface, name string) error {
 	return wait.PollImmediate(500*time.Millisecond, wait.ForeverTestTimeout,
 		func() (bool, error) {
 			glog.V(5).Infof("Waiting for serviceClass %v to exist", name)
-			_, err := client.Policies().Get(name, metav1.GetOptions{})
+			_, err := client.GlobalNetworkPolicies().Get(name, metav1.GetOptions{})
 			if nil == err {
 				return true, nil
 			}

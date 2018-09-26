@@ -28,22 +28,18 @@ import (
 
 // watchChan implements watch.Interface.
 type watchChan struct {
-	resultChan     chan watch.Event
-	internalFilter storage.FilterFunc
-	watcher        cwatch.Interface
-	ctx            context.Context
-	cancel         context.CancelFunc
+	resultChan chan watch.Event
+	pred       storage.SelectionPredicate
+	watcher    cwatch.Interface
+	ctx        context.Context
+	cancel     context.CancelFunc
 }
 
 func createWatchChan(ctx context.Context, w cwatch.Interface, pred storage.SelectionPredicate) *watchChan {
 	wc := &watchChan{
-		resultChan:     make(chan watch.Event),
-		internalFilter: storage.SimpleFilter(pred),
-		watcher:        w,
-	}
-	if pred.Empty() {
-		// The filter doesn't filter out any object.
-		wc.internalFilter = nil
+		resultChan: make(chan watch.Event),
+		pred:       pred,
+		watcher:    w,
 	}
 	wc.ctx, wc.cancel = context.WithCancel(ctx)
 	return wc
@@ -122,15 +118,15 @@ func (wc *watchChan) run() {
 	close(wc.resultChan)
 }
 
+// filter returns whether a result should be filtered in (true) or filtered out (false).
 func (wc *watchChan) filter(obj runtime.Object) bool {
-	if wc.internalFilter == nil {
-		return true
-	}
-	return wc.internalFilter(obj)
+	matches, err := wc.pred.Matches(obj)
+	return matches && err == nil
 }
 
+// acceptAll returns true if all results should be filtered in.
 func (wc *watchChan) acceptAll() bool {
-	return wc.internalFilter == nil
+	return wc.pred.Empty()
 }
 
 func (wc *watchChan) Stop() {

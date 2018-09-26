@@ -21,29 +21,29 @@ import (
 // NewGlobalNetworkSetStorage creates a new libcalico-based storage.Interface implementation for GlobalNetworkSets
 func NewGlobalNetworkSetStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	c := createClientFromConfig()
-	create := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.GlobalNetworkSet)
 		return c.GlobalNetworkSets().Create(ctx, res, oso)
 	}
-	update := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.GlobalNetworkSet)
 		return c.GlobalNetworkSets().Update(ctx, res, oso)
 	}
-	get := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		ogo := opts.(options.GetOptions)
 		return c.GlobalNetworkSets().Get(ctx, name, ogo)
 	}
-	delete := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	deleteFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		odo := opts.(options.DeleteOptions)
 		return c.GlobalNetworkSets().Delete(ctx, name, odo)
 	}
-	list := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
+	listFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
 		olo := opts.(options.ListOptions)
 		return c.GlobalNetworkSets().List(ctx, olo)
 	}
-	watch := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
+	watchFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
 		olo := opts.(options.ListOptions)
 		return c.GlobalNetworkSets().Watch(ctx, olo)
 	}
@@ -57,12 +57,12 @@ func NewGlobalNetworkSetStorage(opts Options) (storage.Interface, factory.Destro
 		libCalicoType:     reflect.TypeOf(libcalicoapi.GlobalNetworkSet{}),
 		libCalicoListType: reflect.TypeOf(libcalicoapi.GlobalNetworkSetList{}),
 		isNamespaced:      false,
-		create:            create,
-		update:            update,
-		get:               get,
-		delete:            delete,
-		list:              list,
-		watch:             watch,
+		create:            createFn,
+		update:            updateFn,
+		get:               getFn,
+		delete:            deleteFn,
+		list:              listFn,
+		watch:             watchFn,
 		resourceName:      "GlobalNetworkSet",
 		converter:         GlobalNetworkSetConverter{},
 	}, func() {}
@@ -88,7 +88,7 @@ func (gc GlobalNetworkSetConverter) convertToAAPI(libcalicoObject resourceObject
 	aapiGlobalNetworkSet.ObjectMeta = lcgGlobalNetworkSet.ObjectMeta
 }
 
-func (gc GlobalNetworkSetConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, filterFunc storage.FilterFunc) {
+func (gc GlobalNetworkSetConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
 	lcgGlobalNetworkSetList := libcalicoListObject.(*libcalicoapi.GlobalNetworkSetList)
 	aapiGlobalNetworkSetList := aapiListObj.(*aapi.GlobalNetworkSetList)
 	if libcalicoListObject == nil {
@@ -100,7 +100,7 @@ func (gc GlobalNetworkSetConverter) convertToAAPIList(libcalicoListObject resour
 	for _, item := range lcgGlobalNetworkSetList.Items {
 		aapiGlobalNetworkSet := aapi.GlobalNetworkSet{}
 		gc.convertToAAPI(&item, &aapiGlobalNetworkSet)
-		if filterFunc != nil && filterFunc(&aapiGlobalNetworkSet) {
+		if matched, err := pred.Matches(&aapiGlobalNetworkSet); err == nil && matched {
 			aapiGlobalNetworkSetList.Items = append(aapiGlobalNetworkSetList.Items, aapiGlobalNetworkSet)
 		}
 	}
