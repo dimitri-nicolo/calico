@@ -17,7 +17,9 @@ The information below explains the variables which must be set during the standa
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
 
-## Installation
+## Installing {{site.prodname}} and OpenShift
+
+### Edit inventory file
 
 To install {{site.prodname}} in OpenShift, set the following `OSEv3:vars` in your
 inventory file:
@@ -59,6 +61,30 @@ node1 ansible_host=127.0.0.1 openshift_schedulable=true openshift_node_group_nam
 etcd1
 ```
 
+### Update ansible provisioning script
+
+> Note that the current ansible installation scripts for OpenShift v3.10 may require some additional changes when installing
+> {{site.prodname}} networking. These changes may not have not yet made it into the version of the packaged installer and so these additional
+> steps will allow you to check and update the packaged installation scripts if necessary. When these changes are in the upstream
+> packages, these steps can be ignored.
+
+To check if your ansible scripts include the required {{site.prodname}} changes, run the following:
+```bash
+grep -Fq "calico_binary_checks" /usr/share/ansible/openshift-ansible/roles/calico_master/templates/calicov3.yml.j2 && echo "updated" || echo "needs updates"
+```
+
+If the above command responds with `needs updates`, update the packaged installer by running the following:
+```bash
+git clone git@github.com:openshift/openshift-ansible.git -b release-3.10
+sudo cp -r openshift-ansible/* /usr/share/ansible/openshift-ansible/.
+```
+
+> **Note**: The commands given above assume that your OpenShift ansible scripts exist at `/usr/share/ansible/openshift-ansible/`. If your
+> scripts are stored elsewhere, replace that path in the above commands.
+{: .alert .alert-info}
+
+### Execute ansible provisioning script
+
 You are now ready to execute the ansible provision which will install {{site.prodname}}. Note that by default,
 {{site.prodname}} will connect to the same etcd that OpenShift uses, and in order to do so, will distribute etcd's
 certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
@@ -67,6 +93,8 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 {% include {{page.version}}/apply-license.md init="openshift" %}
 
 ## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
+
+{% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
 1. Download [oauth-client.yaml](oauth-client.yaml).
 
@@ -92,8 +120,6 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 1. Apply it:
 
        oc apply -f ./oauth-client.yaml
-
-{% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
 ## Installing Policy Violation Alerting
 
