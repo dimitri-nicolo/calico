@@ -100,7 +100,7 @@ EOF
 the cluster. Routing to these pods is automatically handled by AWS.
 
 We recommend using the AWS VPC CNI plugin with [federation](../../usage/federation/index) as it provides seamless IP connectivity
-between your AWS cluster and a remote cluster.
+between your AWS cluster and a remote cluster. Ensure that you use version 1.1 or later.
 
 Install the AWS VPC CNI plugin in your Kubernetes cluster as follows.
 
