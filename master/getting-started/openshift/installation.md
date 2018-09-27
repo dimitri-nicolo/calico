@@ -67,6 +67,7 @@ etcd1
 > {{site.prodname}} networking. These changes may not have not yet made it into the version of the packaged installer and so these additional
 > steps will allow you to check and update the packaged installation scripts if necessary. When these changes are in the upstream
 > packages, these steps can be ignored.
+{: .alert .alert-info}
 
 To check if your ansible scripts include the required {{site.prodname}} changes, run the following:
 ```bash

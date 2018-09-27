@@ -222,12 +222,6 @@ spec:
    oc replace -n calico-monitoring -f master-tigera-elasticsearch-storage.yaml
    ```
 
-1. Increase the maximum size of the virtual memory areas by running the following command on each node.
-
-   ```
-   sysctl -w vm.max_map_count=262166
-   ```
-
 {% endif %}
 
 1. If you wish to enforce application layer policies and secure workload-to-workload
