@@ -39,6 +39,8 @@
    ```bash
    docker pull docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker pull docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
+   docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
    docker pull {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
@@ -60,6 +62,8 @@
    ```bash
    docker tag docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}} <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker tag docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}} <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoctl"]}}:{{site.data.versions[page.version].first.components["calicoctl"].version}}
+   docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}} <YOUR-REGISTRY>/{{site.imageNames["calicoq"]}}:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxApiserver"]}}:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxManager"]}}:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
    docker tag {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}} <YOUR-REGISTRY>/{{site.imageNames["cnxManagerProxy"]}}:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
@@ -84,6 +88,8 @@
    ```bash
    docker push <YOUR-REGISTRY>/docker.elastic.co/elasticsearch/elasticsearch-oss:{{site.data.versions[page.version].first.components["elasticsearch"].version}}
    docker push <YOUR-REGISTRY>/docker.elastic.co/kibana/kibana-oss:{{site.data.versions[page.version].first.components["kibana"].version}}
+   docker push <YOUR-REGISTRY>/tigera/calicoctl:{{site.data.versions[page.version].first.components["calicoctl"].version}}
+   docker push <YOUR-REGISTRY>/tigera/calicoq:{{site.data.versions[page.version].first.components["calicoq"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-apiserver:{{site.data.versions[page.version].first.components["cnx-apiserver"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-manager:{{site.data.versions[page.version].first.components["cnx-manager"].version}}
    docker push <YOUR-REGISTRY>/tigera/cnx-manager-proxy:{{site.data.versions[page.version].first.components["cnx-manager-proxy"].version}}
@@ -176,12 +182,8 @@ named `cnx-pull-secret` in the `kube-system` namespace.
 {% include {{page.version}}/cnx-cred-sed.md yaml=include.yaml %}
 
 {% if include.yaml == "calicoq" %}
-1. The manifest will need to be modified if you are using a TLS-enabled etcd datastore and/or you are using {{site.prodname}}
-   Federation and need to mount in secrets to access the remote cluster datastores. Follow the instructions in the manifest
-   to enable these features.
-{% else %}
-1. The manifest will need to be modified if you are using a TLS-enabled etcd datastore. Follow the instructions in the manifest
-   to enable this feature.
+1. The manifest will need to be modified if you are using {{site.prodname}} federation and need to mount in secrets to
+   access the remote cluster datastores. Follow the instructions in the manifest to enable this feature.
 {% endif %}
 
 1. Apply the YAML file.
@@ -189,5 +191,12 @@ named `cnx-pull-secret` in the `kube-system` namespace.
    ```bash
    kubectl apply -f {{include.yaml}}.yaml
    ```
+{% if include.yaml == "calicoctl" or include.yaml == "calicoq" %}
+1. Create an alias.
+
+   ```bash
+   alias {{include.yaml}}="kubectl exec -i -n kube-system {{include.yaml}} /{{include.yaml}} -- "
+   ```
+{% endif %}
 
 {% endif %}

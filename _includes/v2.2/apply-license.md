@@ -20,18 +20,19 @@
 
 {% endif %}
 
-1. [Configure calicoctl to connect to your datastore]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure).
+1. If you are not running `calicoctl` as a pod,
+   [configure it to connect to your datastore]({{site.baseurl}}/{{page.version}}/usage/calicoctl/configure).
 
 1. Use the following command to apply your [license key]({{site.baseurl}}/{{page.version}}/reference/calicoctl/resources/licensekey).
 
    **Command**
    ```
-   calicoctl apply -f <customer-name>-license.yaml
+   calicoctl apply -f - < <customer-name>-license.yaml
    ```
 
    **Example**
    ```
-   calicoctl apply -f awesome-corp-license.yaml
+   calicoctl apply -f - < awesome-corp-license.yaml
    ```
 
 1. Confirm that the license was applied:

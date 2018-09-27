@@ -49,7 +49,7 @@
    ```bash
    secret "cnx-pull-secret" created
    ```
-   
+
 {% if include.yaml == "calico" %}
 1. Continue to [Installing {{site.prodname}}](#install-cnx).
 {% endif %}
@@ -83,9 +83,8 @@
      {: .alert .alert-info}
 
 {% if include.yaml == "calicoq" %}
-1. The manifest will need to be modified if you are using a TLS-enabled etcd datastore and/or you are using {{site.prodname}} 
-   Federation and need to mount in secrets to access the remote cluster datastores. Follow the instructions in the manifest
-   to enable these features.
+1. The manifest will need to be modified if you are using federation and need to mount in secrets to access the remote cluster
+   datastores. Follow the instructions in the manifest.
 {% else %}
 1. The manifest will need to be modified if you are using a TLS-enabled etcd datastore. Follow the instructions in the manifest
    to enable this feature.
@@ -96,5 +95,13 @@
    ```bash
    kubectl apply -f {{include.yaml}}.yaml
    ```
-     
+
+{% if include.yaml == "calicoctl" or include.yaml == "calicoq" %}
+1. Create an alias.
+
+   ```bash
+   alias {{include.yaml}}="kubectl exec -i -n kube-system {{include.yaml}} /{{include.yaml}} -- "
+   ```
+{% endif %}
+
 {% endif %}

@@ -60,12 +60,6 @@ private repository.
 
 {% include {{page.version}}/load-docker-our-reg.md yaml=include.cli %}
 
-**Next step**:
-[Executing a {{include.cli}} command in the pod](#executing-a-{{include.cli}}-command-in-the-pod).
-
 ### Pulling the image from another private registry
 
 {% include {{page.version}}/load-docker.md yaml=include.cli %}
-
-**Next step**:
-[Executing a {{include.cli}} command in the pod](#executing-a-{{include.cli}}-command-in-the-pod).
