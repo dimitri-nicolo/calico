@@ -432,6 +432,10 @@ spec:
             - name: FLUENTD_ES_SECURE
               value: "false"
 {%- endif %}
+{%- if include.orch == "openshift" %}
+          securityContext:
+            privileged: true
+{%- endif %}
           volumeMounts:
             - name: var-log-calico
               mountPath: /var/log/calico

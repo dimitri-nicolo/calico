@@ -8,6 +8,18 @@
 
 {% if include.orch == "openshift" %}
 
+1. Download the flow logs patch for {{site.prodname}} node.
+
+   ```
+   curl --compressed -O {{docpath}}/patch-flow-logs.yaml
+   ```
+
+1. Apply the flow logs patch.
+
+   ```
+   oc patch daemonset {{site.noderunning}} -n kube-system --patch "$(cat patch-flow-logs.yaml)"
+   ```
+
 1. Allow Prometheus to run as root:
 
    ```
@@ -88,11 +100,11 @@
 
    ```
    {{cli}} apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+   {{docpath}}/monitor-calico.yaml
    ```
 
    > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml){:target="_blank"}.
+   > [view the manifest in a new tab]({{docpath}}/monitor-calico.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
    > For offline installs, complete the following steps instead.
@@ -101,7 +113,7 @@
    >
    >    ```
    >    curl --compressed -O \
-   >    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/monitor-calico.yaml
+   >    {{docpath}}/monitor-calico.yaml
    >    ```
    >      
    > 1. Use the following commands to set an environment variable called `REGISTRY` containing the
