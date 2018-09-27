@@ -15,7 +15,7 @@ policy to be applied between the clusters.
 The Federated Services Controller accesses service and endpoints data in the remote clusters directly through the
 Kubernetes API. This means that if the remote cluster is using etcd for the {{site.prodname}} datastore, it is necessary to configure
 both etcd access details and Kubernetes API datastore access details in the same Remote Cluster Configuration resource. See
-[Configuring a Remote Cluster Configuration resource](./configure-rcc) for more details.
+[Configuring access to remote clusters](./configure-rcc) for more details.
 
 ## Configuring a federated service
 
@@ -27,7 +27,7 @@ The following configuration options are valid through the annotations:
 
 | Annotation | Description |
 | --- | --- |
-| federation.tigera.io/serviceSelector | {::nomarkdown}<p>This option is used to specify which services are used in the federated service. This field must be specified for the service to be federated. If the value is incorrectly specified, the service will not be federated and endpoint data will be removed from the service. Warning logs will be output in the controller indicating any issues processing this value.</p><p>The format is a standard {{site.prodname}} selector (i.e. the same as {{site.prodname}} policy resources) and selects services based on their labels.</p><p>Only services in the same namespace as the federated service will be included. This implies namespace names across clusters are linked (this is a basic premise of Federated Endpoint Identity).</p>{:/} |
+| `federation.tigera.io/serviceSelector` | {::nomarkdown}<p>This option is used to specify which services are used in the federated service. This field must be specified for the service to be federated. If the value is incorrectly specified, the service will not be federated and endpoint data will be removed from the service. Warning logs will be output in the controller indicating any issues processing this value.</p><p>The format is a standard {{site.prodname}} selector (i.e. the same as {{site.prodname}} policy resources) and selects services based on their labels.</p><p>Only services in the same namespace as the federated service will be included. This implies namespace names across clusters are linked (this is a basic premise of Federated Endpoint Identity).</p>{:/} |
 
 The Federated Services Controller uses the serviceSelector annotation to select the backing services in the same
 namespace whose labels match the specified selector. Services are selected from the local and remote clusters.
@@ -40,14 +40,14 @@ when viewing the service through `kubectl.`
 
 | Label | Description |
 | --- | --- |
-| federation.tigera.io/remoteClusterName | {::nomarkdown}<p>The label is added to all of the remote services, and the value corresponds to the name of the Remote Cluster Configuration that specifies the remote cluster. For services in the local cluster, this label is not added.</p><p>You may wish to use this label if you need to restrict which clusters the services are selected from.</p>{:/} |
+| `federation.tigera.io/remoteClusterName` | {::nomarkdown}<p>The label is added to all of the remote services, and the value corresponds to the name of the Remote Cluster Configuration that specifies the remote cluster. For services in the local cluster, this label is not added.</p><p>You may wish to use this label if you need to restrict which clusters the services are selected from.</p>{:/} |
 
 The controller monitors any changes to the endpoints for the backings services and maintains the set of endpoints for
 each locally federated service. The controller makes no configuration changes to any remote cluster.
 
-The endpoints data configured in the federated service is slightly modified from the original data of the backing service:
--  For backing services on remote clusters, the `targetRef.name` field in the federated service will be updated to the
-   form `<Remote Cluster Configuration name>/<original name>`.
+The endpoints data configured in the federated service is slightly modified from the original data of the backing service.
+For backing services on remote clusters, the `targetRef.name` field in the federated service will be updated to the
+form `<Remote Cluster Configuration name>/<original name>`.
 
 > **Please note**:
 > -  If a spec.Selector is also specified, the Federated Services Controller will not federate the service.
@@ -100,7 +100,7 @@ As an operator, the expected flow of configuration would be as follows:
 >    *services* across the federated set of clusters. This is a {{site.prodname}} style selector.
 {: .alert .alert-success}
 
-### Example
+## Example
 
 For example, suppose both your local cluster and a remote cluster have the following service defined:
 

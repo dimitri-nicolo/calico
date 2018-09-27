@@ -6,7 +6,7 @@ title: Example AWS configuration
 
 This section gives a brief overview of a example AWS cluster peered with an on-premise cluster running on physical hardware.
 Both clusters are running {{site.prodname}}. The clusters have federated identity configured, with each cluster
-referencing the other using the Remote Cluster Configuration resource. See the [Configuring remote clusters](./configure-rcc) guide for
+referencing the other using the Remote Cluster Configuration resource. See [Configuring access to remote clusters](./configure-rcc) for
 more details.
 
 The diagram below captures the main configuration details for this particular set up, which may be adapted for your specific
@@ -15,7 +15,7 @@ requirements. This is purely a guide for setting up one specific configuration.
 ![A diagram showing the key configuration requirements setting up an AWS cluster (using AWS VPN CNI) peering
 with an on-premise cluster.](/images/federation/aws-rcc.svg)
 
-#### AWS configuration:
+## AWS configuration
 - A VPC CIDR is chosen that does not overlap with the on-premise IP ranges.
 - There are 4 subnets within the VPC, split across two AZs (for availability) such that each AZ has a public and private subnet. In this
   particular example, the split of responsibility is:
@@ -58,7 +58,7 @@ spec:
   type: LoadBalancer
 ```
 
-#### On-premise configuration
+## On-premise configuration
 In this example the cluster is installed on real hardware and node and pod IPs are routable,
 using an edge VPN router to peer with the AWS cluster.
 

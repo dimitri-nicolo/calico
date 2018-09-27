@@ -11,5 +11,5 @@ For more detailed documentation on {{site.prodname}} features, see here:
 - [Configuring Alertmanager]({{site.baseurl}}/{{page.version}}/usage/configuration/alertmanager)
 - [Configuring Audit Logging]({{site.baseurl}}/{{page.version}}/usage/logs/elastic/k8s-audit)
 - [Configuring RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
-- [Configuring remote clusters]({{site.baseurl}}/{{page.version}}/usage/federation/configure-rcc) (federation only)
+- [Configuring access to remote clusters]({{site.baseurl}}/{{page.version}}/usage/federation/configure-rcc) (federation only)
 - [Configuring federated services]({{site.baseurl}}/{{page.version}}/usage/federation/services-controller) (federation only)

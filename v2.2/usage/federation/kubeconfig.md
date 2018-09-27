@@ -2,18 +2,11 @@
 title: Creating kubeconfig files
 ---
 
-The following procedure describes how to access a [remote cluster](index#terminology) create a service
-account with a minimal set of permissions, and generate a `kubeconfig` file that uses the service account.
-
-When installing {{site.prodname}} on a [local cluster](index#terminology), you must provision the necessary
-`kubeconfig` files to allow it to retrieve endpoint data from the remote cluster.
-
-Complete the following steps on each cluster that needs to share its endpoint data.
+Before installing {{site.prodname}}, you must complete the following steps on each cluster in the federation.
 
 1. Access the cluster using a `kubeconfig` with administrative privileges.
 
-1. If RBAC is enabled, apply the manifest that matches the remote cluster's datastore type. The manifest
-   creates the minimum set of permissions that the local cluster needs to retrieve the endpoint data for federation.
+1. If RBAC is enabled, apply the manifest that matches the cluster's datastore type.
 
    - **Kubernetes API datastore**
      ```bash
@@ -27,8 +20,7 @@ Complete the following steps on each cluster that needs to share its endpoint da
      {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/federation-rem-rbac-etcd.yaml
      ```
 
-1. Apply the following manifest to create a service account called `tigera-federation-remote-cluster`
-   on the remote cluster. The local cluster will use this account to access the remote cluster.
+1. Apply the following manifest to create a service account called `tigera-federation-remote-cluster`.
 
    ```bash
    kubectl apply -f \

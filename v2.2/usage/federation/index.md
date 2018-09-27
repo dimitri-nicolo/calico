@@ -14,13 +14,11 @@ Federation allows you to:
 
 When discussing federation, we use the following terms:
 
-- **Local clusters** can retrieve endpoint data from remote clusters and are equipped with an installation
-  of {{site.prodname}}.
+- **Local clusters** retrieve endpoint data from remote clusters.
 
-- **Remote clusters** send endpoint data to local clusters and do not require {{site.prodname}}
-  to be installed.
+- **Remote clusters** allow local clusters to retrieve endpoint data.
 
-Clusters can act both as local and remote clusters.
+Each cluster in the federation acts as both a local and remote cluster.
 
 ## Federated endpoint identity
 
@@ -48,7 +46,7 @@ resource. A Remote Cluster Configuration resource should be added for each remot
 Similar configuration should be applied on the remote clusters if you require Federated Endpoint Identity on those
 clusters.
 
-Refer to [Configuring remote clusters](./configure-rcc) for more information.
+Refer to [Configuring local clusters](./configure-rcc) for more information.
 
 ## Federated Services
 
@@ -58,11 +56,11 @@ then Kubernetes will manage that service, populating the service endpoints from 
 
 Tigera Federated Services Controller is used alongside Federated Endpoint
 Identity to provide discovery of remote pods. It extends the standard Kubernetes service and endpoints functionality to
-provide federation of [Kubernetes endpoints]() across all of the clusters.
+provide federation of [Kubernetes endpoints](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#endpoints-v1-core) across all of the clusters.
 
 Configuration for this feature is also through the [Remote Cluster Configuration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
-resource. In addition, a
-[service annotation](/{{page.version}}/usage/federation/services-controller) is used to configure a federated service.
+resource. In addition, a [service annotation](/{{page.version}}/usage/federation/services-controller) is used to configure
+a federated service.
 
 > **Note**: The controller always uses the pod IP for the service endpoints even for pods in remote clusters,
 > thus if a pod on the local cluster uses a federated service to access a pod in a remote cluster, source and
@@ -78,11 +76,3 @@ in the Remote Cluster Configuration resources are also accessible to `calicoq`, 
 is the simplest way to ensure it has access to the correct configuration.
 
 At this time, neither the {{site.prodname}} Manager nor `calicoctl` can be used to view endpoints from remote clusters.
-
-## More information and next steps
-
-To learn more and configure federation, see the following:
-- [Configuring remote clusters](/{{page.version}}/usage/federation/configure-rcc)
-- [Configuring federated services](/{{page.version}}/usage/federation/services-controller)
-- [Example AWS configuration](/{{page.version}}/usage/federation/aws)
-- [Installing and configuring calicoq as a pod](/{{page.version}}/usage/calicoq/#installing-calicoq-as-a-kubernetes-pod)
