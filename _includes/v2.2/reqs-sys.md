@@ -25,6 +25,9 @@
   > before installing {{site.prodname}}.
   {: .alert .alert-info}
 
+- In order to properly run Elasticsearch, nodes must be configured according to the
+  [Elasticsearch system configuration documentation.](https://www.elastic.co/guide/en/elasticsearch/reference/current/system-config.html){:target="_blank"}
+
 ## Key/value store
 
 {{site.prodname}} {{page.version}} requires a key/value store accessible by all
