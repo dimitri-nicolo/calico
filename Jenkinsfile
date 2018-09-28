@@ -72,6 +72,19 @@ pipeline {
                 }
             }
         }
+        stage('Run licensing checks') {
+	    steps {
+                script {
+                     withCredentials([string(credentialsId: 'fossa_api_key', variable: 'FOSSA_API_KEY')]) {
+                         withCredentials([sshUserPrivateKey(credentialsId: 'marvin-tigera-ssh-key', keyFileVariable: 'SSH_KEY', passphraseVariable: '', usernameVariable: '')]) {
+                             if (env.BRANCH_NAME ==~ /(master|release-.*)/) {
+                                 sh 'if [ -z "$SSH_AUTH_SOCK" ] ; then eval `ssh-agent -s`; ssh-add $SSH_KEY || true; fi && FOSSA_API_KEY=$FOSSA_API_KEY make foss-checks'
+                             }
+                         }
+                     }
+                }
+            }
+        }
     }
     post {
         success {

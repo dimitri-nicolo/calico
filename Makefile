@@ -49,7 +49,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 CONTAINER_NAME=gcr.io/unique-caldron-775/cnx/tigera/cnx-apiserver
 PACKAGE_NAME?=github.com/tigera/calico-k8sapiserver
 
-GO_BUILD_VER?=v0.17
+GO_BUILD_VER?=v0.18
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -443,3 +443,12 @@ kubeadm:
 	@echo "sudo chown \$$(id -u):\$$(id -g) \$$HOME/admin.conf"
 	@echo "export KUBECONFIG=\$$HOME/admin.conf"
 	@echo "kubectl get tiers"
+
+# Run fossa.io license checks
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(CAPI_PKG):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(CAPI_PKG) \
+	  $(GO_BUILD_CONTAINER) /usr/local/bin/fossa
