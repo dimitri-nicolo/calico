@@ -432,6 +432,10 @@ spec:
             - name: FLUENTD_ES_SECURE
               value: "false"
 {%- endif %}
+{%- if include.orch == "openshift" %}
+          securityContext:
+            privileged: true
+{%- endif %}
           volumeMounts:
             - name: var-log-calico
               mountPath: /var/log/calico
@@ -450,7 +454,6 @@ spec:
           configMap:
             name: elastic-ca-config
 {%- endif %}
-
 ---
 # Allow access to Elasticsearch client nodes from Kibana and fluentd
 apiVersion: projectcalico.org/v3
