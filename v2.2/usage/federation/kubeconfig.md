@@ -118,11 +118,11 @@ Complete the following steps on each cluster that needs to share its endpoint da
 
 1. Open a new file in your favorite editor.
 
-   > **Tip**: We recommend naming the file `kubeconfig-rem-cluster-n` where `n` is a number that
-   > identifies the remote cluster in relation to the other remote clusters. For example, if you have
-   > four remote clusters, you can name the files `kubeconfig-rem-cluster-1`, `kubeconfig-rem-cluster-2`,
-   > `kubeconfig-rem-cluster-3`, and `kubeconfig-rem-cluster-4`. This will make the installation
-   > procedure easier to follow.
+   > **Tip**: We recommend coming up with a naming scheme for your clusters that makes sense for your
+   > specific use case. For example, if you have four remote clusters that are similar except that they
+   > are serve web pages in different languages, you can name the files `kubeconfig-rem-cluster-en`,
+   > `kubeconfig-rem-cluster-es`, `kubeconfig-rem-cluster-ja`, and `kubeconfig-rem-cluster-sw`. This will
+   > make the installation procedure easier to follow.
    {: .alert .alert-success}
 
 1. Paste the following into your new file.
@@ -132,8 +132,8 @@ Complete the following steps on each cluster that needs to share its endpoint da
    kind: Config
    users:
    - name: tigera-federation-remote-cluster
-    user:
-      token: <YOUR-SERVICE-ACCOUNT-TOKEN>
+     user:
+       token: <YOUR-SERVICE-ACCOUNT-TOKEN>
    clusters:
    - name: tigera-federation-remote-cluster
      cluster:
@@ -153,7 +153,7 @@ Complete the following steps on each cluster that needs to share its endpoint da
 1. Verify that the `kubeconfig` file works by issuing the following command.
 
    ```bash
-   kubectl --kubeconfig=kubeconfig-rem-cluster-n get namespaces
+   kubectl --kubeconfig=kubeconfig-rem-cluster-n get services
    ```
 
    You should see your cluster listed.
