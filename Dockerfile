@@ -1,6 +1,6 @@
 # Copyright (c) 2018 Tigera, Inc. All rights reserved.
 #
-FROM haproxy:1.8.8-alpine
+FROM haproxy:1.8.14-alpine
 MAINTAINER Karthik Ramasubramanian <karthik@tigera.io>
 
 COPY haproxy.cfg /usr/local/etc/haproxy/haproxy.cfg
