@@ -5,6 +5,13 @@
   {% capture docpath %}{{site.url}}/{{page.version}}/getting-started/openshift{% endcapture %}
   {% assign cli = "oc" %}
 {% endif %}
+{% if include.elasticsearch == "operator" %}
+  {% assign operators = "Prometheus and Elasticsearch" %}
+  {% assign secure = "" %}
+{% else %}
+  {% assign operators = "Prometheus" %}
+  {% assign secure = "/secure-es" %}
+{% endif %}
 
 {% if include.orch == "openshift" %}
 
@@ -46,25 +53,25 @@
 
 {% endif %}
 
-1. If your cluster is connected to the internet, use the following command to apply the Prometheus
-   and Elasticsearch operator manifest.
 
+1. If your cluster is connected to the internet, use the following command to apply the {{operators}}
+   operator manifest.
    ```bash
    {{cli}} apply -f \
-   {{docpath}}/operator.yaml
+   {{docpath}}{{secure}}/operator.yaml
    ```
 
    > **Note**: You can also
-   > [view the manifest in a new tab]({{docpath}}/operator.yaml){:target="_blank"}.
+   > [view the manifest in a new tab]({{docpath}}{{secure}}/operator.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
    > For offline installs, complete the following steps instead.
    >
-   > 1. Download the Prometheus and Elasticsearch operator manifest.
+   > 1. Download the {{operators}} operator manifest.
    >
    >    ```bash
    >    curl --compressed -O \
-   >    {{docpath}}/operator.yaml
+   >    {{docpath}}{{secure}}/operator.yaml
    >    ```
    >
    > 1. Use the following commands to set an environment variable called `REGISTRY` containing the
@@ -86,17 +93,24 @@
    >    {{cli}} apply -f operator.yaml
    >    ```
 
-1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `servicemonitors.monitoring.coreos.com` and
-   `elasticsearchclusters.enterprises.upmc.com` custom resource definitions to be created. Check by running:
+{% if include.elasticsearch == "operator" %}
+1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `servicemonitors.monitoring.coreos.com`
+   and `elasticsearchclusters.enterprises.upmc.com` custom resource definitions to be created. Check by running:
+{% else %}
+1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com` and `servicemonitors.monitoring.coreos.com`
+   custom resource definitions to be created. Check by running:
+{% endif %}
 
    ```
    {{cli}} get customresourcedefinitions
    ```
 
+{% if include.elasticsearch == "operator" %}
 {% include {{page.version}}/elastic-storage.md orch=include.orch %}
+{% endif %}
 
-1. If your cluster is connected to the internet, use the following command to install Prometheus,
-   Alertmanager, and Elasticsearch.
+1. If your cluster is connected to the internet, use the following command to install Alertmanger,
+   {{operators}}.
 
    ```
    {{cli}} apply -f \
@@ -104,16 +118,16 @@
    ```
 
    > **Note**: You can also
-   > [view the manifest in a new tab]({{docpath}}/monitor-calico.yaml){:target="_blank"}.
+   > [view the manifest in a new tab]({{docpath}}{{secure}}/monitor-calico.yaml){:target="_blank"}.
    {: .alert .alert-info}
 
    > For offline installs, complete the following steps instead.
    >
-   > 1. Download the Prometheus and Alertmanager manifest.
+   > 1. Download the Alertmanager, {{operators}} manifest.
    >
    >    ```
    >    curl --compressed -O \
-   >    {{docpath}}/monitor-calico.yaml
+   >    {{docpath}}{{secure}}/monitor-calico.yaml
    >    ```
    >      
    > 1. Use the following commands to set an environment variable called `REGISTRY` containing the
@@ -153,6 +167,7 @@ spec:
    > if running in IPIP mode.
 
 {% if include.orch == "openshift" %}
+{% if include.elasticsearch == "operator" %}
 
 1. Reconfigure the Elasticsearch deployment. The following command will save the current configuration
    to `tigera-elasticsearch.yaml`.
@@ -233,7 +248,7 @@ spec:
    ```
    oc replace -n calico-monitoring -f master-tigera-elasticsearch-storage.yaml
    ```
-
+{% endif %}
 {% endif %}
 
 1. If you wish to enforce application layer policies and secure workload-to-workload

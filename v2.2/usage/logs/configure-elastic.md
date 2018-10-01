@@ -32,22 +32,6 @@ a Kubernetes `StorageClass`.  Three options are bundled with {{site.prodname}} -
 in manifests called `elastic-storage*.yaml`.  The installation options cover
 how to get these manifests - a few notes on each option follow.
 
-#### AWS
-
-The `aws` implementation creates AWS EBS volumes.  The exact parameters of those
-volumes (type, size, region etc.) can be configured in
-[elastic-storage-aws.yaml](../../getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-local.yaml).
-
-Kubernetes is able to provision these volumes as long as the cloud provider integration is set up.
-
-#### GCE
-
-The `gce` implementation creates GCE persistent disks.  The exact parameters of those
-volumes (type, size, region etc.) can be configured in
-[elastic-storage-gce.yaml](../../getting-started/kubernetes/installation/hosted/cnx/1.7/elastic-storage-gce.yaml).
-
-Kubernetes is able to provision these volumes as long as the cloud provider integration is set up.
-
 #### Local
 
 The `local` implementation creates two volumes using the host filesystem.

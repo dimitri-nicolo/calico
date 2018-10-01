@@ -5,6 +5,7 @@ cnx.yaml acccepts the following include flags:
 |------------------|--------------------------|
 | orch             | openshift                |
 | datastore        | kdd, etcd                |
+| elasticsearch    | operator, external       |
 
 {% endcomment -%}
 
@@ -129,6 +130,7 @@ spec:
             cpu: 200m
             memory: 100Mi
 
+{%- if include.elasticsearch == "operator" %}
 ---
 
 # Service account for the elasticsearch cluster
@@ -232,6 +234,7 @@ spec:
           initialDelaySeconds: 10
           timeoutSeconds: 5
       serviceAccount: elasticsearch-operator
+{%- endif %}
 
 {%- if include.orch == "openshift" %}
 

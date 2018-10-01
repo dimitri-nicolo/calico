@@ -28,6 +28,8 @@ toc:
       path: /getting-started/kubernetes/installation/hosted/cnx/cnx
     - title: Integration guide (advanced)
       path: /getting-started/kubernetes/installation/integration
+    - title: Using your own Elasticsearch for Tigera Secure EE monitoring
+      path: /getting-started/kubernetes/installation/byo-elasticsearch
   - title: Tutorials
     section:
     - title: Tigera Secure EE for Kubernetes Demo

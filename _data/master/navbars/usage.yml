@@ -52,6 +52,8 @@ toc:
       path: /usage/logs/elastic/k8s-audit
     - title: Accessing logs
       path: /usage/logs/elastic/view
+    - title: Configuring Elasticsearch
+      path: /usage/logs/configure-elastic
   - title: iptables
     path: /usage/logs/iptables
   - title: Component
@@ -70,12 +72,6 @@ toc:
     path: /usage/configuration/prometheus
   - title: Configuring Alertmanager
     path: /usage/configuration/alertmanager
-- title: Logging and Elasticsearch
-  section:
-  - title: Configuring Elasticsearch
-    path: /usage/logs/configure-elastic
-  - title: Using your own Elasticsearch cluster
-    path: /usage/logs/byo-elastic
 - title: Federation (Kubernetes only)
   section:
   - title: Overview

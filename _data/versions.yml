@@ -127,6 +127,8 @@ v2.2:
       version: v3.2.1
     fluentd:
       version: release-v2.2
+    es-proxy:
+      version: release-v2.2
     elasticsearch-operator:
       version: 0.2.0
       url: ""
@@ -545,6 +547,8 @@ master:
     flexvol:
       version: master
     fluentd:
+      version: master
+    es-proxy:
       version: master
     elasticsearch-operator:
       version: 0.2.0

@@ -39,7 +39,7 @@ DATASTORE=${DATASTORE:="etcdv3"}
 #
 LICENSE_FILE=${LICENSE_FILE:="license.yaml"}
 
-# Specify the type of elasticsearch storage to use: "none", "local", "gce" or "aws".
+# Specify the type of elasticsearch storage to use: "none" or "local".
 #   ELASTIC_STORAGE="none" ./install-cnx.sh
 ELASTIC_STORAGE=${ELASTIC_STORAGE:="local"}
 
@@ -159,7 +159,7 @@ Usage: $(basename "$0")
           [-d docs_location]   # Tigera Secure EE documentation location; default: "https://docs.tigera.io"
           [-e etcd_endpoints]  # etcd endpoint address, e.g. ("http://10.0.0.1:2379"); default: take from manifest automatically
           [-k datastore]       # Specify the datastore ("etcdv3"|"kubernetes"); default: "etcdv3"
-          [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"|"gce"|"aws"); default: "local"
+          [-s elastic_storage] # Specify the elasticsearch storage to use ("none"|"local"); default: "local"
           [-t deployment_type] # Specify the deployment type ("basic"|"typha"|"federation"); default "basic"
           [-v version]         # Tigera Secure EE version; default: "v2.1"
           [-u]                 # Uninstall Tigera Secure EE
@@ -206,8 +206,8 @@ validateSettings() {
   # Validate $INSTALL_TYPE is either "KOPS" or "KUBEADM" or "ACS-ENGINE"
   [ "$INSTALL_TYPE" == "KOPS" ] || [ "$INSTALL_TYPE" == "KUBEADM" ] || [ "$INSTALL_TYPE" == "ACS-ENGINE" ] || fatalError "Installation type \"$INSTALL_TYPE\" is not valid, must be either \"KOPS\" or \"KUBEADM\" or \"ACS-ENGINE\"."
 
-  # Validate $ELASTIC_STORAGE is either "none", "aws", "local" or "gce"
-  [ "$ELASTIC_STORAGE" == "local" ] || [ "$ELASTIC_STORAGE" == "gce" ] || [ "$ELASTIC_STORAGE" == "aws" ] || [ "$ELASTIC_STORAGE" == "aws" ] || fatalError "Elasticsearch storage \"$ELASTIC_STORAGE\" is not valid, must be either \"local\" or \"gce\" or \"aws\"."
+  # Validate $ELASTIC_STORAGE is either "none" or "local"
+  [ "$ELASTIC_STORAGE" == "local" ] || [ "$ELASTIC_STORAGE" == "none" ] || fatalError "Elasticsearch storage \"$ELASTIC_STORAGE\" is not valid, must be either \"local\" or \"none\"."
 
   # Validate $DEPLOYMENT_TYPE is either "basic", "typha", or "federation"
   [ "$DEPLOYMENT_TYPE" == "basic" ] || [ "$DEPLOYMENT_TYPE" == "typha" ] || [ "$DEPLOYMENT_TYPE" == "federation" ] || fatalError "Deployment type \"$DEPLOYMENT_TYPE\" is not valid, must be either \"basic\" or \"typha\" or \"federation\"."

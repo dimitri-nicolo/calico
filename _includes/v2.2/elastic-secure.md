@@ -21,42 +21,26 @@ EOF
    kubectl create configmap -n calico-monitoring elastic-ca-config --from-file=ca.pem
    ```
 
-1. If your cluster is connected to the internet, use the following command to install Prometheus,
-   Alertmanager, and Elasticsearch.
+1. Create a Secret containing
+   * TLS certificate and the private key used to sign it enable TLS connection from the kube-apiserver to the es-proxy
+   * certificate authority certificate to authenticate Elasticsearch backend
+   * Base64 encoded <username>:<password> for the es-proxy to authenticate with Elasticsearch
 
    ```
-   kubectl apply -f \
-   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/monitor-calico.yaml
+   kubectl create configmap -n calico-monitoring elastic-ca-config --from-file=ca.pem
+   kubectl create secret generic tigera-es-proxy \
+   --from-file=frontend.crt=frontend-server.crt \
+   --from-file=frontend.key=frontend-server.key \
+   --from-file=backend-ca.crt=ElasticSearchCA.pem \
+   --from-literal=backend.authHeader=authHeader=$(echo -n <username>:<password> | base64) \
+   -n calico-monitoring
    ```
 
-   > **Note**: You can also
-   > [view the manifest in a new tab]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/monitor-calico.yaml){:target="_blank"}.
-   {: .alert .alert-info}
-
-   > For offline installs, complete the following steps instead.
-   >
-   > 1. Download the Prometheus and Alertmanager manifest.
-   >
-   >    ```
-   >    curl --compressed -o \
-   >    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/monitor-calico.yaml
-   >    ```
-   >
-   > 1. Use the following commands to set an environment variable called `REGISTRY` containing the
-   >    location of the private registry and replace `quay.io` in the manifest with the location
-   >    of your private registry.
-   >
-   >    ```bash
-   >    REGISTRY=my-registry.com \
-   >    sed -i -e "s?quay.io?$REGISTRY?g" monitor-calico.yaml
-   >    ```
-   >
-   >    **Tip**: If you're hosting your own private registry, you may need to include
-   >    a port number. For example, `my-registry.com:5000`.
-   >    {: .alert .alert-success}
-   >
-   > 1. Apply the manifest.
-   >
-   >    ```
-   >    kubectl apply -f monitor-calico.yaml
-   >    ```
+1. Create a ConfigMap with information on how to reach the Elasticsearch cluster
+   ```
+   kubectl create configmap tigera-es-proxy \
+   --from-literal=elasticsearch.backend.host="elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local" \
+   --from-literal=elasticsearch.backend.port="9200" \
+   -n calico-monitoring
+   ```
+   

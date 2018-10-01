@@ -9,9 +9,6 @@
    {{site.prodname}} includes the [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator),
    which deploys and manages an Elasticsearch cluster inside Kubernetes / OpenShift for you.
 
-   If you don't want to deploy Elasticsearch inside your orchestrator or have an existing cluster,
-   see the [documentation for using your own Elasticsearch]({{site.url}}/{{page.version}}/usage/logs/byo-elastic) and skip the next step.
-
 1. The bundled Elasticsearch operator is configured to use an `elasticsearch-storage` `StorageClass` and local storage.
    If your cluster is connected to the internet, use the following command to apply the manifest.
 
@@ -41,9 +38,8 @@
 
 1. To use a different StorageClass (e.g. Ceph RBD or NFS), create a `StorageClass` called `elasticsearch-storage`.
    The [Kubernetes documentation on StorageClasses](https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner)
-   has a list of possible options and links to sample manifests.  The
-   ones with a tick under internal provisioner can be used without further
-   Kubernetes configuration: the others require a provisioner to be set up.
+   has a list of possible options and links to sample manifests.  You may need to configure
+   a provisioner or cloud provider integration.
 
    ```
    {{cli}} apply -f my-storage-class.yaml

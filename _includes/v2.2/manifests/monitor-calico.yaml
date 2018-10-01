@@ -1,9 +1,10 @@
 {% comment %}
 monitor-calico.yaml acccepts the following include flags:
 
-| Name         | Accepted Values               |
-|--------------|-------------------------------|
-| secure_es    | true, false                   |
+| Name          | Accepted Values             |
+|---------------|-----------------------------|
+| secure_es     | true, false                 |
+| elasticsearch | operator, external          |
 
 {% endcomment -%}
 ---
@@ -305,6 +306,8 @@ spec:
     targetPort: web
   selector:
     prometheus: calico-node-prometheus
+
+{%- if include.elasticsearch == "operator" %}
 ---
 
 # Set up the elasticsearch cluster parameters
@@ -353,6 +356,7 @@ spec:
       targetPort: 5601
       nodePort: 30601
   type: NodePort
+{%- endif %}
 ---
 
 apiVersion: v1
@@ -409,11 +413,17 @@ spec:
           env:
             - name: FLOW_LOG_FILE
               value: /var/log/calico/flowlogs/flows.log
-            - name: ELASTIC_HOST
-              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
-            - name: ELASTIC_PORT
-              value: "9200"
 {%- if include.secure_es == "true" %}
+            - name: ELASTIC_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-proxy
+                  key: elasticsearch.backend.host
+            - name: ELASTIC_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: tigera-es-proxy
+                  key: elasticsearch.backend.port
             - name: FLUENTD_ES_SECURE
               value: "true"
             - name: ELASTIC_SSL_VERIFY
@@ -429,6 +439,10 @@ spec:
                   name: elastic-fluentd-user
                   key: password
 {%- else %}
+            - name: ELASTIC_HOST
+              value: elasticsearch-tigera-elasticsearch.calico-monitoring.svc.cluster.local
+            - name: ELASTIC_PORT
+              value: "9200"
             - name: FLUENTD_ES_SECURE
               value: "false"
 {%- endif %}
@@ -454,6 +468,22 @@ spec:
           configMap:
             name: elastic-ca-config
 {%- endif %}
+
+---
+
+# Network set for the K8s API Server's IP addresses.
+apiVersion: projectcalico.org/v3
+kind: GlobalNetworkSet
+metadata:
+  name: k8sapi-endpoints
+  labels:
+    role: k8s-apiserver-endpoints
+spec:
+  nets:
+  # List of IP addresses for the host K8s API server
+  - 0.0.0.0/0 #K8S_API_SERVER_IP
+
+{%- if include.elasticsearch == "operator" %}
 ---
 # Allow access to Elasticsearch client nodes from Kibana and fluentd
 apiVersion: projectcalico.org/v3
@@ -480,20 +510,6 @@ spec:
       selector: name == 'kibana-tigera-elasticsearch'
     destination:
       ports: [9200]
-
----
-
-# Network set for the K8s API Server's IP addresses.
-apiVersion: projectcalico.org/v3
-kind: GlobalNetworkSet
-metadata:
-  name: k8sapi-endpoints
-  labels:
-    role: k8s-apiserver-endpoints
-spec:
-  nets:
-  # List of IP addresses for the host K8s API server
-  - 0.0.0.0/0 #K8S_API_SERVER_IP
 
 ---
 
@@ -562,3 +578,9 @@ spec:
       nets: ["0.0.0.0/0"]
     destination:
       ports: [5601]
+{%- endif %}
+
+{%- if include.secure_es == "true" %}
+---
+{% include {{page.version}}/manifests/es-proxy.yaml %}
+{%- endif %}

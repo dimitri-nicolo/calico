@@ -147,7 +147,7 @@ in the cluster. If you do not have your own Prometheus, the following commands w
 Operator, Prometheus, and Alertmanager instances for you. They will also deploy Elasticsearch, Fluentd, and
 Kibana in order to enable flow logs.
 
-{% include {{page.version}}/cnx-monitor-install.md orch="openshift" %}
+{% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="operator" %}
 
 Once running, access Prometheus and Alertmanager using the NodePort from the created service.
 See the [Metrics](../../usage/metrics/) section for more information.

@@ -1,4 +1,4 @@
 ---
 layout: null
 ---
-{% include {{page.version}}/manifests/operator.yaml %}
+{% include {{page.version}}/manifests/operator.yaml elasticsearch="operator" %}
