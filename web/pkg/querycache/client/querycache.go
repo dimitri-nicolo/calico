@@ -174,26 +174,54 @@ func (c *cachedQuery) RunQuery(cxt context.Context, req interface{}) (interface{
 }
 
 func (c *cachedQuery) runQuerySummary(cxt context.Context, req QueryClusterReq) (*QueryClusterResp, error) {
-	pols := c.policies.TotalPolicies()
-	eps := c.endpoints.TotalEndpoints()
-	uleps := c.endpoints.EndpointsWithNoLabels()
-	upeps := c.endpoints.EndpointsWithNoPolicies()
-	upols := c.policies.UnmatchedPolicies()
+	// Get the summary counts for the endpoints, summing up the per namespace counts.
+	hepSummary := c.endpoints.TotalHostEndpoints()
+	totWEP := 0
+	numUnlabelledWEP := 0
+	numUnprotectedWEP := 0
+	namespaceSummary := make(map[string]QueryClusterNamespaceCounts)
+	for ns, weps := range c.endpoints.TotalWorkloadEndpointsByNamespace() {
+		totWEP += weps.Total
+		numUnlabelledWEP += weps.NumWithNoLabels
+		numUnprotectedWEP += weps.NumWithNoPolicies
+		namespaceSummary[ns] = QueryClusterNamespaceCounts{
+			NumWorkloadEndpoints:            weps.Total,
+			NumUnlabelledWorkloadEndpoints:  weps.NumWithNoLabels,
+			NumUnprotectedWorkloadEndpoints: weps.NumWithNoPolicies,
+		}
+	}
+
+	// Get the summary counts for policies, summing up the per namespace counts.
+	gnpSummary := c.policies.TotalGlobalNetworkPolicies()
+	totNP := 0
+	numUnmatchedNP := 0
+	for ns, nps := range c.policies.TotalNetworkPoliciesByNamespace() {
+		totNP += nps.Total
+		numUnmatchedNP += nps.NumUnmatched
+
+		// Update the existing entry with the NP counts, or create a new one if it doesn't exist.
+		counts := namespaceSummary[ns]
+		counts.NumNetworkPolicies = nps.Total
+		counts.NumUnmatchedNetworkPolicies = nps.NumUnmatched
+		namespaceSummary[ns] = counts
+	}
+
 	resp := &QueryClusterResp{
-		NumGlobalNetworkPolicies:          pols.NumGlobalNetworkPolicies,
-		NumNetworkPolicies:                pols.NumNetworkPolicies,
-		NumHostEndpoints:                  eps.NumHostEndpoints,
-		NumWorkloadEndpoints:              eps.NumWorkloadEndpoints,
-		NumUnmatchedGlobalNetworkPolicies: upols.NumGlobalNetworkPolicies,
-		NumUnmatchedNetworkPolicies:       upols.NumNetworkPolicies,
-		NumUnlabelledHostEndpoints:        uleps.NumHostEndpoints,
-		NumUnlabelledWorkloadEndpoints:    uleps.NumWorkloadEndpoints,
-		NumUnprotectedHostEndpoints:       upeps.NumHostEndpoints,
-		NumUnprotectedWorkloadEndpoints:   upeps.NumWorkloadEndpoints,
+		NumGlobalNetworkPolicies:          gnpSummary.Total,
+		NumNetworkPolicies:                totNP,
+		NumHostEndpoints:                  hepSummary.Total,
+		NumWorkloadEndpoints:              totWEP,
+		NumUnmatchedGlobalNetworkPolicies: gnpSummary.NumUnmatched,
+		NumUnmatchedNetworkPolicies:       numUnmatchedNP,
+		NumUnlabelledHostEndpoints:        hepSummary.NumWithNoLabels,
+		NumUnlabelledWorkloadEndpoints:    numUnlabelledWEP,
+		NumUnprotectedHostEndpoints:       hepSummary.NumWithNoPolicies,
+		NumUnprotectedWorkloadEndpoints:   numUnprotectedWEP,
 		NumNodes:                          c.nodes.TotalNodes(),
 		NumNodesWithNoEndpoints:           c.nodes.TotalNodesWithNoEndpoints(),
 		NumNodesWithNoWorkloadEndpoints:   c.nodes.TotalNodesWithNoWorkloadEndpoints(),
 		NumNodesWithNoHostEndpoints:       c.nodes.TotalNodesWithNoHostEndpoints(),
+		NamespaceCounts:                   namespaceSummary,
 	}
 	return resp, nil
 }

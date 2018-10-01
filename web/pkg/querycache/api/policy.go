@@ -14,6 +14,11 @@ type PolicyCounts struct {
 	NumNetworkPolicies       int
 }
 
+type PolicySummary struct {
+	Total        int
+	NumUnmatched int
+}
+
 type Rule struct {
 	Ingress []RuleDirection
 	Egress  []RuleDirection

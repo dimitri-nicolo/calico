@@ -17,8 +17,8 @@ import (
 )
 
 type PoliciesCache interface {
-	TotalPolicies() api.PolicyCounts
-	UnmatchedPolicies() api.PolicyCounts
+	TotalGlobalNetworkPolicies() api.PolicySummary
+	TotalNetworkPoliciesByNamespace() map[string]api.PolicySummary
 	GetPolicy(model.Key) api.Policy
 	GetTier(model.Key) api.Tier
 	GetOrderedPolicies(set.Set) []api.Tier
@@ -29,20 +29,20 @@ type PoliciesCache interface {
 
 func NewPoliciesCache() PoliciesCache {
 	return &policiesCache{
-		globalNetworkPolicies: newPolicyCache(),
-		networkPolicies:       newPolicyCache(),
-		tiers:                 make(map[string]*tierData, 0),
-		policySorter:          calc.NewPolicySorter(),
-		ruleSelectors:         make(map[string]*ruleSelectorInfo),
+		globalNetworkPolicies:      newPolicyCache(),
+		networkPoliciesByNamespace: make(map[string]*policyCache),
+		tiers:         make(map[string]*tierData, 0),
+		policySorter:  calc.NewPolicySorter(),
+		ruleSelectors: make(map[string]*ruleSelectorInfo),
 	}
 }
 
 type policiesCache struct {
-	globalNetworkPolicies *policyCache
-	networkPolicies       *policyCache
-	tiers                 map[string]*tierData
-	policySorter          *calc.PolicySorter
-	orderedTiers          []*tierData
+	globalNetworkPolicies      *policyCache
+	networkPoliciesByNamespace map[string]*policyCache
+	tiers                      map[string]*tierData
+	policySorter               *calc.PolicySorter
+	orderedTiers               []*tierData
 
 	// Rule selectors are consolidated to reduce occupancy. We register with the label handler which
 	// selectors we require for the rules.
@@ -62,18 +62,22 @@ func newPolicyCache() *policyCache {
 	}
 }
 
-func (c *policiesCache) TotalPolicies() api.PolicyCounts {
-	return api.PolicyCounts{
-		NumGlobalNetworkPolicies: len(c.globalNetworkPolicies.policies),
-		NumNetworkPolicies:       len(c.networkPolicies.policies),
+func (c *policiesCache) TotalGlobalNetworkPolicies() api.PolicySummary {
+	return api.PolicySummary{
+		Total:        len(c.globalNetworkPolicies.policies),
+		NumUnmatched: c.globalNetworkPolicies.unmatchedPolicies.Len(),
 	}
 }
 
-func (c *policiesCache) UnmatchedPolicies() api.PolicyCounts {
-	return api.PolicyCounts{
-		NumGlobalNetworkPolicies: c.globalNetworkPolicies.unmatchedPolicies.Len(),
-		NumNetworkPolicies:       c.networkPolicies.unmatchedPolicies.Len(),
+func (c *policiesCache) TotalNetworkPoliciesByNamespace() map[string]api.PolicySummary {
+	nps := make(map[string]api.PolicySummary)
+	for ns, cache := range c.networkPoliciesByNamespace {
+		nps[ns] = api.PolicySummary{
+			Total:        len(cache.policies),
+			NumUnmatched: cache.unmatchedPolicies.Len(),
+		}
 	}
+	return nps
 }
 
 func (c *policiesCache) GetPolicy(key model.Key) api.Policy {
@@ -144,13 +148,22 @@ func (c *policiesCache) RegisterWithLabelHandler(handler labelhandler.Interface)
 
 func (c *policiesCache) policyEndpointMatch(matchType labelhandler.MatchType, polKey model.Key, epKey model.Key) {
 	erk := epKey.(model.ResourceKey)
-	pc := c.getPolicyCache(polKey)
+	// Get the policy cache. Don't create if it doesn't exist as this means the policy has been deleted. Since
+	// the policy cache is updated before the index handler is updated this is a valid scenario, and should be
+	// treated as a no-op.
+	pc := c.getPolicyCache(polKey, false)
+	if pc == nil {
+		// The policy has been deleted. Since the policy cache is updated before the index handler is updated this is
+		// a valid scenario, and should be treated as a no-op.
+		return
+	}
 	pd := pc.policies[polKey]
 	if pd == nil {
 		// The policy has been deleted. Since the policy cache is updated before the index handler is updated this is
 		// a valid scenario, and should be treated as a no-op.
 		return
 	}
+
 	switch erk.Kind {
 	case v3.KindHostEndpoint:
 		pd.endpoints.NumHostEndpoints += matchTypeToDelta[matchType]
@@ -206,7 +219,8 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 			delete(c.tiers, name)
 		}
 	case model.PolicyKey:
-		pc := c.getPolicyCache(uv3.Key)
+		// Get the policy cache, creating if necessary.
+		pc := c.getPolicyCache(uv3.Key, true)
 		if pc == nil {
 			return
 		}
@@ -243,6 +257,11 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 			c.deleteRuleSelectorPolicyReferences(existing.v1Policy, uv3.Key)
 			// Remove the rule selectors for this policy.
 			c.deletePolicyRuleSelectors(existing.v1Policy)
+		}
+
+		if uv3.Key.(model.ResourceKey).Kind == v3.KindNetworkPolicy && len(pc.policies) == 0 {
+			// Workload endpoints cache is empty for this namespace. Delete from the cache.
+			delete(c.networkPoliciesByNamespace, uv3.Key.(model.ResourceKey).Namespace)
 		}
 	}
 
@@ -452,7 +471,7 @@ func (c *policiesCache) getPolicyFromV1Key(key model.PolicyKey) *policyData {
 			Name: parts[0],
 		}]
 	}
-	return c.networkPolicies.policies[model.ResourceKey{
+	return c.networkPoliciesByNamespace[parts[0]].policies[model.ResourceKey{
 		Kind:      v3.KindNetworkPolicy,
 		Namespace: parts[0],
 		Name:      parts[1],
@@ -460,20 +479,27 @@ func (c *policiesCache) getPolicyFromV1Key(key model.PolicyKey) *policyData {
 }
 
 func (c *policiesCache) getPolicy(key model.Key) *policyData {
-	pc := c.getPolicyCache(key)
+	// Get the endpoint cache to update. Disallow creation of the cache if it doesn't exist and just return a nil
+	// result if it doesn't.
+	pc := c.getPolicyCache(key, false)
 	if pc == nil {
 		return nil
 	}
 	return pc.policies[key]
 }
 
-func (c *policiesCache) getPolicyCache(polKey model.Key) *policyCache {
+func (c *policiesCache) getPolicyCache(polKey model.Key, create bool) *policyCache {
 	if rKey, ok := polKey.(model.ResourceKey); ok {
 		switch rKey.Kind {
 		case v3.KindGlobalNetworkPolicy:
 			return c.globalNetworkPolicies
 		case v3.KindNetworkPolicy:
-			return c.networkPolicies
+			networkPolicies := c.networkPoliciesByNamespace[rKey.Namespace]
+			if networkPolicies == nil && create {
+				networkPolicies = newPolicyCache()
+				c.networkPoliciesByNamespace[rKey.Namespace] = networkPolicies
+			}
+			return networkPolicies
 		}
 	}
 	log.WithField("key", polKey).Error("Unexpected resource in event type, expecting a v3 policy type")

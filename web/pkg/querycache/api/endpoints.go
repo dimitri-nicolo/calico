@@ -13,3 +13,9 @@ type EndpointCounts struct {
 	NumWorkloadEndpoints int
 	NumHostEndpoints     int
 }
+
+type EndpointSummary struct {
+	Total             int
+	NumWithNoLabels   int
+	NumWithNoPolicies int
+}

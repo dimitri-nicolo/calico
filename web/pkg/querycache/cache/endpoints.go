@@ -23,9 +23,8 @@ var (
 // EndpointsCache implements the cache interface for both WorkloadEndpoint and HostEndpoint resource types collectively.
 // This interface consists of both the query and the event update interface.
 type EndpointsCache interface {
-	TotalEndpoints() api.EndpointCounts
-	EndpointsWithNoLabels() api.EndpointCounts
-	EndpointsWithNoPolicies() api.EndpointCounts
+	TotalWorkloadEndpointsByNamespace() map[string]api.EndpointSummary
+	TotalHostEndpoints() api.EndpointSummary
 	GetEndpoint(model.Key) api.Endpoint
 	RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface)
 	RegisterWithLabelHandler(handler labelhandler.Interface)
@@ -34,16 +33,16 @@ type EndpointsCache interface {
 // NewEndpointsCache creates a new instance of an EndpointsCache.
 func NewEndpointsCache() EndpointsCache {
 	return &endpointsCache{
-		workloadEndpoints: newEndpointCache(),
-		hostEndpoints:     newEndpointCache(),
+		workloadEndpointsByNamespace: make(map[string]*endpointCache),
+		hostEndpoints:                newEndpointCache(),
 	}
 }
 
 // endpointsCache implements the EndpointsCache interface.  It separates out the workload and host endpoints into
 // separate sub-caches. Events and requests are handled using the appropriate sub-cache.
 type endpointsCache struct {
-	workloadEndpoints *endpointCache
-	hostEndpoints     *endpointCache
+	workloadEndpointsByNamespace map[string]*endpointCache
+	hostEndpoints                *endpointCache
 }
 
 // newEndpointCache creates a new endpointCache.
@@ -67,30 +66,31 @@ type endpointCache struct {
 	unprotectedEndpoints set.Set
 }
 
-func (c *endpointsCache) TotalEndpoints() api.EndpointCounts {
-	return api.EndpointCounts{
-		NumWorkloadEndpoints: len(c.workloadEndpoints.endpoints),
-		NumHostEndpoints:     len(c.hostEndpoints.endpoints),
+func (c *endpointsCache) TotalHostEndpoints() api.EndpointSummary {
+	return api.EndpointSummary{
+		Total:             len(c.hostEndpoints.endpoints),
+		NumWithNoLabels:   c.hostEndpoints.numUnlabelled,
+		NumWithNoPolicies: c.hostEndpoints.unprotectedEndpoints.Len(),
 	}
 }
 
-func (c *endpointsCache) EndpointsWithNoLabels() api.EndpointCounts {
-	return api.EndpointCounts{
-		NumWorkloadEndpoints: c.workloadEndpoints.numUnlabelled,
-		NumHostEndpoints:     c.hostEndpoints.numUnlabelled,
+func (c *endpointsCache) TotalWorkloadEndpointsByNamespace() map[string]api.EndpointSummary {
+	weps := make(map[string]api.EndpointSummary)
+	for ns, cache := range c.workloadEndpointsByNamespace {
+		weps[ns] = api.EndpointSummary{
+			Total:             len(cache.endpoints),
+			NumWithNoLabels:   cache.numUnlabelled,
+			NumWithNoPolicies: cache.unprotectedEndpoints.Len(),
+		}
 	}
-}
-
-func (c *endpointsCache) EndpointsWithNoPolicies() api.EndpointCounts {
-	return api.EndpointCounts{
-		NumWorkloadEndpoints: c.workloadEndpoints.unprotectedEndpoints.Len(),
-		NumHostEndpoints:     c.hostEndpoints.unprotectedEndpoints.Len(),
-	}
+	return weps
 }
 
 func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 	uv3 := update.UpdateV3
-	ec := c.getEndpointCache(uv3.Key)
+
+	// Get the endpoint cache, creating if necessary.
+	ec := c.getEndpointCache(uv3.Key, true)
 	if ec == nil {
 		return
 	}
@@ -112,6 +112,11 @@ func (c *endpointsCache) onUpdate(update dispatcherv1v3.Update) {
 		ec.unprotectedEndpoints.Discard(uv3.Key)
 		ec.updateHasLabelsCounts(!ed.IsLabelled(), false)
 		delete(ec.endpoints, uv3.Key)
+	}
+
+	if uv3.Key.(model.ResourceKey).Kind == v3.KindWorkloadEndpoint && len(ec.endpoints) == 0 {
+		// Workload endpoints cache is empty for this namespace. Delete from the cache.
+		delete(c.workloadEndpointsByNamespace, uv3.Key.(model.ResourceKey).Namespace)
 	}
 }
 
@@ -148,7 +153,9 @@ func (c *endpointsCache) policyEndpointMatch(matchType labelhandler.MatchType, p
 		log.WithField("key", prk).Error("Unexpected resource in event type, expecting a v3 policy type")
 	}
 
-	ec := c.getEndpointCache(epKey)
+	// Get the endpoint cache to update. Disallow creation of the cache if it doesn't exist, however we know
+	// it exists since we successfully got the endpoint above.
+	ec := c.getEndpointCache(epKey, false)
 	if epd.IsProtected() {
 		ec.unprotectedEndpoints.Discard(epKey)
 	} else {
@@ -168,24 +175,34 @@ func (c *endpointCache) updateHasLabelsCounts(before, after bool) {
 }
 
 func (c *endpointsCache) getEndpoint(key model.Key) *endpointData {
-	ec := c.getEndpointCache(key)
+	// Get the endpoint cache to update. Disallow creation of the cache if it doesn't exist and just return a nil
+	// result if it doesn't.
+	ec := c.getEndpointCache(key, false)
 	if ec == nil {
 		return nil
 	}
 	return ec.endpoints[key]
 }
 
-func (c *endpointsCache) getEndpointCache(epKey model.Key) *endpointCache {
-	rKey := epKey.(model.ResourceKey)
-	switch rKey.Kind {
-	case v3.KindWorkloadEndpoint:
-		return c.workloadEndpoints
-	case v3.KindHostEndpoint:
-		return c.hostEndpoints
-	default:
-		log.WithField("kind", rKey.Kind).Fatal("unexpected resource kind")
-		return nil
+func (c *endpointsCache) getEndpointCache(epKey model.Key, create bool) *endpointCache {
+	if rKey, ok := epKey.(model.ResourceKey); ok {
+		switch rKey.Kind {
+		case v3.KindWorkloadEndpoint:
+			workloadEndpoints := c.workloadEndpointsByNamespace[rKey.Namespace]
+			if workloadEndpoints == nil && create {
+				workloadEndpoints = newEndpointCache()
+				c.workloadEndpointsByNamespace[rKey.Namespace] = workloadEndpoints
+			}
+			return workloadEndpoints
+		case v3.KindHostEndpoint:
+			return c.hostEndpoints
+		default:
+			log.WithField("kind", rKey.Kind).Fatal("unexpected resource kind")
+			return nil
+		}
 	}
+	log.WithField("key", epKey).Error("Unexpected resource, expecting a v3 endpoint type")
+	return nil
 }
 
 type endpointData struct {
