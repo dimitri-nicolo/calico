@@ -3191,6 +3191,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 							Format:      "",
 						},
 					},
+					"cloudWatchLogsIncludePolicies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CloudWatchLogsIncludePolicies is used to configure if policy information are included in a Flow log entry.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"cloudWatchLogsAggregationKindForAllowed": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for allowed connections. [Default: 2 - pod prefix name based aggregation]. Accepted values are 0, 1 and 2. 0 - No aggregation 1 - Source port based aggregation 2 - Pod prefix name based aggreagation.",
@@ -3290,6 +3297,13 @@ func schema_libcalico_go_lib_apis_v3_FelixConfigurationSpec(ref common.Reference
 					"flowLogsFileIncludeLabels": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FlowLogsFileIncludeLabels is used to configure if endpoint labels are included in a Flow log entry written to file.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"flowLogsFileIncludePolicies": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FlowLogsFileIncludePolicies is used to configure if policy information are included in a Flow log entry written to file.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

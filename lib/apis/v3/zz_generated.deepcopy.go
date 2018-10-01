@@ -685,6 +685,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.CloudWatchLogsIncludePolicies != nil {
+		in, out := &in.CloudWatchLogsIncludePolicies, &out.CloudWatchLogsIncludePolicies
+		*out = new(bool)
+		**out = **in
+	}
 	if in.CloudWatchLogsAggregationKindForAllowed != nil {
 		in, out := &in.CloudWatchLogsAggregationKindForAllowed, &out.CloudWatchLogsAggregationKindForAllowed
 		*out = new(int)
@@ -757,6 +762,11 @@ func (in *FelixConfigurationSpec) DeepCopyInto(out *FelixConfigurationSpec) {
 	}
 	if in.FlowLogsFileIncludeLabels != nil {
 		in, out := &in.FlowLogsFileIncludeLabels, &out.FlowLogsFileIncludeLabels
+		*out = new(bool)
+		**out = **in
+	}
+	if in.FlowLogsFileIncludePolicies != nil {
+		in, out := &in.FlowLogsFileIncludePolicies, &out.FlowLogsFileIncludePolicies
 		*out = new(bool)
 		**out = **in
 	}

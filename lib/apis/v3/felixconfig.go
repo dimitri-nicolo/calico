@@ -270,6 +270,8 @@ type FelixConfigurationSpec struct {
 	CloudWatchLogsLogStreamName string `json:"cloudWatchLogsLogStreamName,omitempty"`
 	// CloudWatchLogsIncludeLabels is used to configure if endpoint labels are included in a Flow log entry.
 	CloudWatchLogsIncludeLabels *bool `json:"cloudWatchLogsIncludeLabels,omitempty"`
+	// CloudWatchLogsIncludePolicies is used to configure if policy information are included in a Flow log entry.
+	CloudWatchLogsIncludePolicies *bool `json:"cloudWatchLogsIncludePolicies,omitempty"`
 	// CloudWatchLogsAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for
 	// allowed connections. [Default: 2 - pod prefix name based aggregation].
 	// Accepted values are 0, 1 and 2.
@@ -317,6 +319,8 @@ type FelixConfigurationSpec struct {
 	FlowLogsFileDirectory *string `json:"flowLogsFileDirectory,omitempty"`
 	// FlowLogsFileIncludeLabels is used to configure if endpoint labels are included in a Flow log entry written to file.
 	FlowLogsFileIncludeLabels *bool `json:"flowLogsFileIncludeLabels,omitempty"`
+	// FlowLogsFileIncludePolicies is used to configure if policy information are included in a Flow log entry written to file.
+	FlowLogsFileIncludePolicies *bool `json:"flowLogsFileIncludePolicies,omitempty"`
 	// FlowLogsFileAggregationKindForAllowed is used to choose the type of aggregation for flow log entries created for
 	// allowed connections. [Default: 2 - pod prefix name based aggregation].
 	// Accepted values are 0, 1 and 2.
