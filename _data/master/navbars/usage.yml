@@ -82,7 +82,7 @@ toc:
     path: /usage/federation/
   - title: Creating kubeconfig files
     path: /usage/federation/kubeconfig
-  - title: Configuring remote clusters
+  - title: Configuring access to remote clusters
     path: /usage/federation/configure-rcc
   - title: Configuring federated services
     path: /usage/federation/services-controller

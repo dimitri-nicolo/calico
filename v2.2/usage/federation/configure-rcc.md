@@ -1,22 +1,28 @@
 ---
-title: Configuring remote clusters
+title: Configuring access to remote clusters
 ---
 
-## About configuring remote clusters
+## About configuring access to remote clusters
 
-To create policies that reference endpoints across multiple clusters, you must allow the clusters to obtain endpoint information from
-each other by [adding Remote Cluster Configuration resources](#adding-a-remote-cluster-configuration-resource).
+To allow a local cluster to pull endpoint data from a remote cluster, you must add a Remote Cluster
+Configuration resource to the local cluster.
 
-For example, if you have two clusters and you want to create policies that reference endpoints on both, you would:
+For example, let's imagine that you want to federate three clusters named `cluster-a`, `cluster-b`,
+and `cluster-c`.
 
-- Add a Remote Cluster Configuration resource to cluster A that allows it to obtain endpoint information from cluster B.
-- Add a Remote Cluster Configuration resource to cluster B that allows it to obtain endpoint information from cluster A.
+After installing {{site.prodname}} on each of the clusters:
 
-You can add multiple Remote Cluster Configuration resources to a cluster, allowing it to obtain endpoint information
-from more than one cluster.
+- Add two Remote Cluster Configuration resources to `cluster-a`: one for `cluster-b` and another
+  for `cluster-c`.
+
+- Add two Remote Cluster Configuration resources to `cluster-b`: one for `cluster-a` and another
+  for `cluster-c`.
+
+- Add two Remote Cluster Configuration resources to `cluster-c`: one for `cluster-a` and another
+  for `cluster-b`.
 
 In addition to adding the necessary Remote Cluster Configuration resources, you may need to
-[modify your IP Pool configuration](#configuring-ip-pool-resources-for-federated-endpoint-identity).
+[modify the local cluster's IP pool configuration](#configuring-ip-pool-resources).
 
 ## Adding a Remote Cluster Configuration resource
 
@@ -30,8 +36,8 @@ cluster's datastore type.
 
 ### About adding a Remote Cluster Configuration resource
 
-Each instance of the [Remote Cluster Configuration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration) resource represents a single remote cluster from which the local cluster can retrieve endpoint
-information. The local cluster can talk to multiple remote clusters.
+Each instance of the [Remote Cluster Configuration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
+resource represents a single remote cluster from which the local cluster can retrieve endpoint information.
 
 The resource definition varies according to your datastore type. Refer to the section that corresponds to your datastore
 type for instructions.
@@ -40,15 +46,15 @@ type for instructions.
 
 ### Adding a Remote Cluster Configuration resource with the etcd datastore
 
-If the remote cluster uses etcd as the {{site.prodname}} datastore, set the `datastoreType` in the RemoteClusterConfiguration
-to `etcdv3` and populate the `etcd*` fields. You must also fill in either the `kubeconfig` or the `k8s*` fields.
+If the remote cluster uses etcd as the {{site.prodname}} datastore, set the `datastoreType` in the Remote Cluster Configuration
+resource to `etcdv3` and populate the `etcd*` fields. You must also fill in either the `kubeconfig` or the `k8s*` fields.
 
 As long as you followed the installation instructions, the files in the
 [`tigera-federation-remotecluster` secret created during installation](/{{page.version}}/getting-started/kubernetes/installation/calico#installing-with-federation-using-etcd)
-will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and the [RemoteClusterConfiguration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
-can reference the files using this path.
+will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and
+the Remote Cluster Configuration resource can reference the files using this path.
 
-An example Remote Configuration Resource for etcd follows.
+An example Remote Cluster Configuration resource for etcd follows.
 
 ```yaml
 apiVersion: projectcalico.org/v3
@@ -65,7 +71,7 @@ spec:
 ### Remote Cluster Configuration resource with the Kubernetes API datastore
 
 If the remote cluster uses the Kubernetes API datastore for {{site.prodname}} data,
-set the `datastoreType` in the `RemoteClusterConfiguration`
+set the `datastoreType` in the Remote Cluster Configuration resource
 to `kubernetes` and populate the `kubeconfig` or `k8s*` fields.
 
 As long as you followed the installation instructions, the files in the
@@ -73,7 +79,7 @@ As long as you followed the installation instructions, the files in the
 will appear in the Typha pod in the `/etc/tigera-federation-remotecluster` directory and the [RemoteClusterConfiguration](/{{page.version}}/reference/calicoctl/resources/remoteclusterconfiguration)
 can reference the files using this path.
 
-An example Remote Configuration Resource for the Kubernetes API datastore follows.
+An example Remote Cluster Configuration resource for the Kubernetes API datastore follows.
 
 ```yaml
 apiVersion: projectcalico.org/v3
@@ -85,13 +91,13 @@ spec:
   kubeconfig: /etc/tigera-federation-remotecluster/kubeconfig-rem-cluster-n
 ```
 
-## Configuring IP Pool resources for federated endpoint identity
+## Configuring IP pool resources
 
-If your local cluster has NATOutgoing configured on your IP Pools, it is necessary to configure IP Pools covering the IP ranges
-of your remote clusters. This ensures outgoing NAT is not performed on packets bound for the remote clusters. These additional
-IP Pools should have `disabled` set to `true` to ensure the pools are not used for IP assignment on the local cluster.
+If your local cluster has `NATOutgoing` configured on your IP pools, you must to configure IP pools covering the IP ranges
+of your remote clusters. This ensures that outgoing NAT is not performed on packets bound for the remote clusters. These additional
+IP pools should have `disabled` set to `true` to ensure the pools are not used for IP assignment on the local cluster.
 
-The IP Pool CIDR used for pod IP allocation should not overlap with any of the IP ranges used by the pods and nodes of any
+The IP pool CIDR used for pod IP allocation should not overlap with any of the IP ranges used by the pods and nodes of any
 other federated cluster.
 
 For example, you may configure the following on your local cluster, referring to the `IPPool` on a remote cluster:
