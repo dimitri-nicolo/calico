@@ -13,59 +13,77 @@ import (
 func policyTestQueryData() []testQueryData {
 	// Create the query Policy resources for the tier 1 policies that have some selectors in the rules.  We create them
 	// and tweak the rule counts to adjust for the selectors that are not all().
-	qcPolicy_gnp2_t1_all_res := qcPolicy(gnp2_t1_o4, 4, 4, 4, 4)
+	qcPolicy_gnp2_t1_all_res := qcPolicy(gnp2_t1_o4, 4, 4, 0, 0)
 	qcPolicy_gnp2_t1_all_res.Ingress[0].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_all_res.Ingress[0].Destination.NumWorkloadEndpoints = 0
 	qcPolicy_gnp2_t1_all_res.Ingress[1].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_all_res.Ingress[1].Destination.NumWorkloadEndpoints = 1
+	qcPolicy_gnp2_t1_all_res.Ingress[1].Source.NumHostEndpoints = 4
+	qcPolicy_gnp2_t1_all_res.Ingress[1].Source.NumWorkloadEndpoints = 4
 	qcPolicy_gnp2_t1_all_res.Egress[0].Source.NumHostEndpoints = 4
 	qcPolicy_gnp2_t1_all_res.Egress[0].Source.NumWorkloadEndpoints = 2
 	qcPolicy_gnp2_t1_all_res.Egress[1].Source.NumHostEndpoints = 1
 	qcPolicy_gnp2_t1_all_res.Egress[1].Source.NumWorkloadEndpoints = 1
 
-	qcPolicy_gnp1_t1_all_res_more := qcPolicy(gnp1_t1_o4_more_rules, 1, 3, 4, 4)
+	qcPolicy_gnp1_t1_all_res_more := qcPolicy(gnp1_t1_o4_more_rules, 1, 3, 0, 0)
 	qcPolicy_gnp1_t1_all_res_more.Ingress[0].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp1_t1_all_res_more.Ingress[0].Destination.NumWorkloadEndpoints = 0
+	//qcPolicy_gnp1_t1_all_res_more.Ingress[0].Source.NumHostEndpoints = 4
+	//qcPolicy_gnp1_t1_all_res_more.Ingress[0].Source.NumWorkloadEndpoints = 4
 	qcPolicy_gnp1_t1_all_res_more.Egress[0].Source.NumHostEndpoints = 4
 	qcPolicy_gnp1_t1_all_res_more.Egress[0].Source.NumWorkloadEndpoints = 2
 
-	qcPolicy_gnp2_t1_all_res_fewer := qcPolicy(gnp2_t1_o3_fewer_rules, 4, 4, 4, 4)
+	qcPolicy_gnp2_t1_all_res_fewer := qcPolicy(gnp2_t1_o3_fewer_rules, 4, 4, 0, 0)
 	qcPolicy_gnp2_t1_all_res_fewer.Ingress[0].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_all_res_fewer.Ingress[0].Destination.NumWorkloadEndpoints = 1
+	qcPolicy_gnp2_t1_all_res_fewer.Ingress[0].Source.NumHostEndpoints = 4
+	qcPolicy_gnp2_t1_all_res_fewer.Ingress[0].Source.NumWorkloadEndpoints = 4
 	qcPolicy_gnp2_t1_all_res_fewer.Egress[0].Source.NumHostEndpoints = 1
 	qcPolicy_gnp2_t1_all_res_fewer.Egress[0].Source.NumWorkloadEndpoints = 1
 
-	qcPolicy_gnp1_t1_all_res_more_updated_wep1 := qcPolicy(gnp1_t1_o4_more_rules, 1, 2, 4, 4)
+	qcPolicy_gnp1_t1_all_res_more_updated_wep1 := qcPolicy(gnp1_t1_o4_more_rules, 1, 2, 0, 0)
 	qcPolicy_gnp1_t1_all_res_more_updated_wep1.Ingress[0].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp1_t1_all_res_more_updated_wep1.Ingress[0].Destination.NumWorkloadEndpoints = 1
 	qcPolicy_gnp1_t1_all_res_more_updated_wep1.Egress[0].Source.NumHostEndpoints = 4
 	qcPolicy_gnp1_t1_all_res_more_updated_wep1.Egress[0].Source.NumWorkloadEndpoints = 3
 
-	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1 := qcPolicy(gnp2_t1_o3_fewer_rules, 4, 4, 4, 4)
+	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1 := qcPolicy(gnp2_t1_o3_fewer_rules, 4, 4, 0, 0)
 	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1.Ingress[0].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1.Ingress[0].Destination.NumWorkloadEndpoints = 1
+	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1.Ingress[0].Source.NumHostEndpoints = 4
+	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1.Ingress[0].Source.NumWorkloadEndpoints = 4
 	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1.Egress[0].Source.NumHostEndpoints = 1
 	qcPolicy_gnp2_t1_all_res_fewer_updated_wep1.Egress[0].Source.NumWorkloadEndpoints = 1
 
-	qcPolicy_gnp2_t1_no_ns2_no_rackless := qcPolicy(gnp2_t1_o4, 3, 2, 3, 2)
+	qcPolicy_gnp2_t1_no_ns2_no_rackless := qcPolicy(gnp2_t1_o4, 3, 2, 0, 0)
 	qcPolicy_gnp2_t1_no_ns2_no_rackless.Ingress[0].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_no_ns2_no_rackless.Ingress[0].Destination.NumWorkloadEndpoints = 0
 	qcPolicy_gnp2_t1_no_ns2_no_rackless.Ingress[1].Destination.NumHostEndpoints = 1
 	qcPolicy_gnp2_t1_no_ns2_no_rackless.Ingress[1].Destination.NumWorkloadEndpoints = 0
+	qcPolicy_gnp2_t1_no_ns2_no_rackless.Ingress[1].Source.NumHostEndpoints = 3
+	qcPolicy_gnp2_t1_no_ns2_no_rackless.Ingress[1].Source.NumWorkloadEndpoints = 2
 	qcPolicy_gnp2_t1_no_ns2_no_rackless.Egress[0].Source.NumHostEndpoints = 3
 	qcPolicy_gnp2_t1_no_ns2_no_rackless.Egress[0].Source.NumWorkloadEndpoints = 1
 	qcPolicy_gnp2_t1_no_ns2_no_rackless.Egress[1].Source.NumHostEndpoints = 1
 	qcPolicy_gnp2_t1_no_ns2_no_rackless.Egress[1].Source.NumWorkloadEndpoints = 1
 
-	qcPolicy_gnp2_t1_all_res_with_index := qcPolicyWithIdx(gnp2_t1_o4, 3, 4, 4, 4, 4)
+	qcPolicy_gnp2_t1_all_res_with_index := qcPolicyWithIdx(gnp2_t1_o4, 3, 4, 4, 0, 0)
 	qcPolicy_gnp2_t1_all_res_with_index.Ingress[0].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_all_res_with_index.Ingress[0].Destination.NumWorkloadEndpoints = 0
 	qcPolicy_gnp2_t1_all_res_with_index.Ingress[1].Destination.NumHostEndpoints = 2
 	qcPolicy_gnp2_t1_all_res_with_index.Ingress[1].Destination.NumWorkloadEndpoints = 1
+	qcPolicy_gnp2_t1_all_res_with_index.Ingress[1].Source.NumHostEndpoints = 4
+	qcPolicy_gnp2_t1_all_res_with_index.Ingress[1].Source.NumWorkloadEndpoints = 4
 	qcPolicy_gnp2_t1_all_res_with_index.Egress[0].Source.NumHostEndpoints = 4
 	qcPolicy_gnp2_t1_all_res_with_index.Egress[0].Source.NumWorkloadEndpoints = 2
 	qcPolicy_gnp2_t1_all_res_with_index.Egress[1].Source.NumHostEndpoints = 1
 	qcPolicy_gnp2_t1_all_res_with_index.Egress[1].Source.NumWorkloadEndpoints = 1
+
+	qcpolicy_gnp2_t1_o4_rack2_only_networkset := qcPolicy(gnp2_t1_o4_rack2_only, 1, 0, 1, 0)
+	qcpolicy_gnp2_t1_o4_rack2_only_networkset.Ingress[0].Source.NumHostEndpoints = 0
+	qcpolicy_gnp2_t1_o4_rack2_only_networkset.Ingress[0].Source.NumWorkloadEndpoints = 0
+	qcpolicy_gnp2_t1_o4_rack2_only_networkset.Egress[1].Destination.NumHostEndpoints = 0
+	qcpolicy_gnp2_t1_o4_rack2_only_networkset.Egress[1].Destination.NumWorkloadEndpoints = 0
 
 	// Define a bunch of test query data for policies that test results returned in the policy appication index order.
 	// We tweak this data after to assign the policy index so that we don't have to specify it in every test here.
@@ -270,8 +288,8 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 4,
 				Items: []client.Policy{
-					qcPolicy(np1_t2_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t2_o2_ns2, 0, 2, 4, 4),
-					qcPolicy(gnp1_t2_o3, 1, 1, 4, 4), qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t2_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t2_o3, 1, 1, 0, 0), qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -286,8 +304,8 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 4,
 				Items: []client.Policy{
-					qcPolicy(np1_t2_o1_ns1, 0, 1, 4, 5), qcPolicy(np2_t2_o2_ns2, 0, 2, 4, 5),
-					qcPolicy(gnp1_t2_o3, 1, 1, 4, 5), qcPolicy(gnp2_t2_o4, 4, 5, 4, 5),
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t2_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t2_o3, 1, 1, 0, 0), qcPolicy(gnp2_t2_o4, 4, 5, 0, 0),
 				},
 			},
 		},
@@ -303,10 +321,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicy(np1_t1_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t1_o2_ns2, 0, 2, 4, 4),
-					qcPolicy(gnp1_t1_o3, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res,
-					qcPolicy(np1_t2_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t2_o2_ns2, 0, 2, 4, 4),
-					qcPolicy(gnp1_t2_o3, 1, 1, 4, 4), qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(np1_t1_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t1_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t1_o3, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res,
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t2_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t2_o3, 1, 1, 0, 0), qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -324,8 +342,8 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 4,
 				Items: []client.Policy{
-					qcPolicy(np1_t2_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t2_o2_ns2, 0, 2, 4, 4),
-					qcPolicy(gnp1_t2_o3, 1, 1, 4, 4), qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t2_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t2_o3, 1, 1, 0, 0), qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -343,8 +361,8 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 4,
 				Items: []client.Policy{
-					qcPolicy(np1_t1_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t1_o2_ns2, 0, 2, 4, 4),
-					qcPolicy(gnp1_t1_o3, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res,
+					qcPolicy(np1_t1_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t1_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t1_o3, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res,
 				},
 			},
 		},
@@ -366,8 +384,8 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 4,
 				Items: []client.Policy{
-					qcPolicy(np1_t1_o1_ns1, 0, 1, 4, 4), qcPolicy(gnp1_t1_o3, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res,
-					qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(np1_t1_o1_ns1, 0, 1, 0, 0), qcPolicy(gnp1_t1_o3, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res,
+					qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -385,8 +403,8 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 4,
 				Items: []client.Policy{
-					qcPolicy(gnp1_t1_o3, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res,
-					qcPolicy(np1_t2_o1_ns1, 0, 1, 4, 4), qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(gnp1_t1_o3, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res,
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0), qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -469,8 +487,8 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 3,
 				Items: []client.Policy{
-					qcPolicy(gnp1_t1_o3, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res,
-					qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(gnp1_t1_o3, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res,
+					qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -494,7 +512,7 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 1,
 				Items: []client.Policy{
-					qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -510,10 +528,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicy(np1_t1_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t1_o2_ns2, 0, 2, 4, 4),
+					qcPolicy(np1_t1_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t1_o2_ns2, 0, 2, 0, 0),
 					qcPolicy_gnp2_t1_all_res_fewer, qcPolicy_gnp1_t1_all_res_more,
-					qcPolicy(np1_t2_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t2_o2_ns2, 0, 2, 4, 4),
-					qcPolicy(gnp1_t2_o3, 1, 1, 4, 4), qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t2_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t2_o3, 1, 1, 0, 0), qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -529,10 +547,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicy(np1_t1_o1_ns1, 0, 0, 4, 4), qcPolicy(np2_t1_o2_ns2, 0, 2, 4, 4),
+					qcPolicy(np1_t1_o1_ns1, 0, 0, 0, 0), qcPolicy(np2_t1_o2_ns2, 0, 2, 0, 0),
 					qcPolicy_gnp2_t1_all_res_fewer_updated_wep1, qcPolicy_gnp1_t1_all_res_more_updated_wep1,
-					qcPolicy(np1_t2_o1_ns1, 0, 1, 4, 4), qcPolicy(np2_t2_o2_ns2, 0, 2, 4, 4),
-					qcPolicy(gnp1_t2_o3, 1, 1, 4, 4), qcPolicy(gnp2_t2_o4, 4, 4, 4, 4),
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t2_o2_ns2, 0, 2, 0, 0),
+					qcPolicy(gnp1_t2_o3, 1, 1, 0, 0), qcPolicy(gnp2_t2_o4, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -548,10 +566,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicy(np1_t1_o1_ns1, 0, 1, 3, 2), qcPolicy(np2_t1_o2_ns2, 0, 0, 3, 2),
-					qcPolicy(gnp1_t1_o3, 1, 2, 3, 2), qcPolicy_gnp2_t1_no_ns2_no_rackless,
-					qcPolicy(np1_t2_o1_ns1, 0, 1, 3, 2), qcPolicy(np2_t2_o2_ns2, 0, 0, 3, 2),
-					qcPolicy(gnp1_t2_o3, 0, 0, 3, 2), qcPolicy(gnp2_t2_o4, 3, 2, 3, 2),
+					qcPolicy(np1_t1_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t1_o2_ns2, 0, 0, 0, 0),
+					qcPolicy(gnp1_t1_o3, 1, 2, 0, 0), qcPolicy_gnp2_t1_no_ns2_no_rackless,
+					qcPolicy(np1_t2_o1_ns1, 0, 1, 0, 0), qcPolicy(np2_t2_o2_ns2, 0, 0, 0, 0),
+					qcPolicy(gnp1_t2_o3, 0, 0, 0, 0), qcPolicy(gnp2_t2_o4, 3, 2, 0, 0),
 				},
 			},
 		},
@@ -569,56 +587,16 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 3,
 				Items: []client.Policy{
-					qcPolicy(np2_t1_o2_ns2, 0, 0, 3, 2), qcPolicy(np2_t2_o2_ns2, 0, 0, 3, 2),
-					qcPolicy(gnp1_t2_o3, 0, 0, 3, 2),
+					qcPolicy(np2_t1_o2_ns2, 0, 0, 0, 0), qcPolicy(np2_t2_o2_ns2, 0, 0, 0, 0),
+					qcPolicy(gnp1_t2_o3, 0, 0, 0, 0),
 				},
 			},
 		},
 		{
-			"tier1 and tier2 policies, query on a networkset",
+			"tier1 and tier2 policies, query on a networkset (matches multiple rules in same policy)",
 			[]resourcemgr.ResourceObject{
-				tier1, tier2, gnp2_t1_o4_rack2_only, globalnetset1,
+				tier1, tier2, gnp2_t1_o4_rack2_only, gnp3_t2_o5_rack2_only, globalnetset1,
 				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1, np1_t2_o1_ns1_rack2_only,
-			},
-			client.QueryPoliciesReq{
-				NetworkSet: model.ResourceKey{
-					Kind: v3.KindGlobalNetworkSet,
-					Name: "globalnetset1",
-				},
-			},
-			&client.QueryPoliciesResp{
-				Count: 2,
-				Items: []client.Policy{
-					qcPolicy(np1_t1_o1_ns1, 0, 0, 0, 0),
-					qcPolicy(gnp2_t1_o4_rack2_only, 0, 0, 0, 0),
-				},
-			},
-		},
-		{
-			"tier1 and tier2 policies that match on networksets on one less rule, query on a networkset",
-			[]resourcemgr.ResourceObject{
-				tier1, tier2, gnp2_t1_o4_rack2_only, globalnetset1,
-				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1_not_rack1_src, np1_t2_o1_ns1_rack2_only,
-			},
-			client.QueryPoliciesReq{
-				NetworkSet: model.ResourceKey{
-					Kind: v3.KindGlobalNetworkSet,
-					Name: "globalnetset1",
-				},
-			},
-			&client.QueryPoliciesResp{
-				Count: 2,
-				Items: []client.Policy{
-					qcPolicy(np1_t1_o1_ns1_not_rack1_src, 0, 0, 0, 0),
-					qcPolicy(gnp2_t1_o4_rack2_only, 0, 0, 0, 0),
-				},
-			},
-		},
-		{
-			"tier1 and tier2 policies, one policy has been changed to not match the networkset on any rules, query on a networkset",
-			[]resourcemgr.ResourceObject{
-				tier1, tier2, gnp2_t1_o4_rack2_only, globalnetset1,
-				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1_not_rack1, np1_t2_o1_ns1_rack2_only,
 			},
 			client.QueryPoliciesReq{
 				NetworkSet: model.ResourceKey{
@@ -634,9 +612,46 @@ func policyTestQueryData() []testQueryData {
 			},
 		},
 		{
+			"tier1 and tier2 policies, query on a networkset (matches multiple policies)",
+			[]resourcemgr.ResourceObject{
+				tier1, tier2, gnp2_t1_o4_rack2_only, gnp3_t2_o5_rack2_only, globalnetset2,
+				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1_not_rack1_src, np1_t2_o1_ns1_rack2_only,
+			},
+			client.QueryPoliciesReq{
+				NetworkSet: model.ResourceKey{
+					Kind: v3.KindGlobalNetworkSet,
+					Name: "globalnetset2",
+				},
+			},
+			&client.QueryPoliciesResp{
+				Count: 2,
+				Items: []client.Policy{
+					qcPolicy(gnp2_t1_o4_rack2_only, 0, 0, 0, 0),
+					qcPolicy(gnp3_t2_o5_rack2_only, 0, 0, 0, 0),
+				},
+			},
+		},
+		{
+			"tier1 and tier2 policies, query on a networkset (network set deleted, no match)",
+			[]resourcemgr.ResourceObject{
+				tier1, tier2, gnp2_t1_o4_rack2_only,
+				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1_not_rack1_src, np1_t2_o1_ns1_rack2_only,
+			},
+			client.QueryPoliciesReq{
+				NetworkSet: model.ResourceKey{
+					Kind: v3.KindGlobalNetworkSet,
+					Name: "globalnetset2",
+				},
+			},
+			errorResponse{
+				text: "Error: resource does not exist: GlobalNetworkSet(globalnetset2)",
+				code: http.StatusBadRequest,
+			},
+		},
+		{
 			"tier1 and tier2 policies, query on a networkset and endpoints, make sure only policies that match both are returned",
 			[]resourcemgr.ResourceObject{
-				tier1, tier2, gnp2_t1_o4_rack2_only, globalnetset1, hep2_n3,
+				tier1, tier2, gnp2_t1_o4_rack2_only, gnp3_t2_o5_rack2_only, globalnetset1, hep2_n3,
 				np1_t2_o1_ns1_rack2_only, np1_t1_o1_ns1, np1_t2_o1_ns1_rack2_only,
 				np1_t1_o1_ns1_not_rack1_2,
 			},
@@ -650,7 +665,7 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 1,
 				Items: []client.Policy{
-					qcPolicy(gnp2_t1_o4_rack2_only, 1, 0, 1, 0),
+					qcpolicy_gnp2_t1_o4_rack2_only_networkset,
 				},
 			},
 		},
@@ -699,10 +714,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4), qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4),
-					qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4),
-					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4),
-					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4), qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4),
+					qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0), qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0),
+					qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0),
+					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0),
+					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0), qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0),
 				},
 			},
 		},
@@ -722,10 +737,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
-					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
-					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
-					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -745,10 +760,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
-					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
-					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
-					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0),
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
 				},
 			},
 		},
@@ -768,10 +783,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
-					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
-					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
-					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0),
 				},
 			},
 		},
@@ -791,10 +806,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
-					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
-					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4),
-					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0),
+					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
 				},
 			},
 		},
@@ -814,10 +829,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
-					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
-					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
-					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicy_gnp2_t1_all_res_with_index,
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicy_gnp2_t1_all_res_with_index,
 				},
 			},
 		},
@@ -837,10 +852,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
-					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
-					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4), qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4),
-					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0),
+					qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0), qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0),
+					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -860,10 +875,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4),
-					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4),
-					qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4), qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4),
-					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0),
+					qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0), qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0),
+					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
 				},
 			},
 		},
@@ -883,10 +898,10 @@ func policyTestQueryData() []testQueryData {
 			&client.QueryPoliciesResp{
 				Count: 8,
 				Items: []client.Policy{
-					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 4, 4), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 4, 4),
-					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 4, 4), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 4, 4),
-					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 4, 4), qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 4, 4),
-					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 4, 4),
+					qcPolicyWithIdx(np1_t1_o1_ns1, 0, 0, 1, 0, 0), qcPolicyWithIdx(np1_t2_o1_ns1, 4, 0, 1, 0, 0),
+					qcPolicyWithIdx(np2_t1_o2_ns2, 1, 0, 2, 0, 0), qcPolicyWithIdx(np2_t2_o2_ns2, 5, 0, 2, 0, 0),
+					qcPolicyWithIdx(gnp1_t2_o3, 6, 1, 1, 0, 0), qcPolicyWithIdx(gnp1_t1_o3, 2, 1, 3, 0, 0),
+					qcPolicy_gnp2_t1_all_res_with_index, qcPolicyWithIdx(gnp2_t2_o4, 7, 4, 4, 0, 0),
 				},
 			},
 		},

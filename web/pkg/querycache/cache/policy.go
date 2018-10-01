@@ -125,7 +125,10 @@ func (c *policiesCache) GetOrderedPolicies(keys set.Set) []api.Tier {
 }
 
 func (c *policiesCache) GetPolicyKeySetByRuleSelector(selector string) set.Set {
-	return c.ruleSelectors[selector].policies
+	if rs := c.ruleSelectors[selector]; rs != nil {
+		return rs.policies
+	}
+	return set.New()
 }
 
 func (c *policiesCache) RegisterWithDispatcher(dispatcher dispatcherv1v3.Interface) {
@@ -254,6 +257,11 @@ func (c *policiesCache) onUpdate(update dispatcherv1v3.Update) {
 // based on the selector string and ensures we track identical selectors only once.
 func (c *policiesCache) addPolicyRuleSelectors(p *model.Policy, polKey model.Key) {
 	add := func(s string) {
+		if s == "" {
+			// Empty rule selectors are not tracked since we only care about endpoints and network sets that are
+			// explicitly selected rather than included in the "everywhere" empty selector.
+			return
+		}
 		rsi := c.ruleSelectors[s]
 		if rsi == nil {
 			rsi = &ruleSelectorInfo{
@@ -283,6 +291,11 @@ func (c *policiesCache) addPolicyRuleSelectors(p *model.Policy, polKey model.Key
 // deletePolicyRuleSelectors deletes the tracking of the rule selectors in the policy.
 func (c *policiesCache) deletePolicyRuleSelectors(p *model.Policy) {
 	del := func(s string) {
+		if s == "" {
+			// Empty rule selectors are not tracked since we only care about endpoints and network sets that are
+			// explicitly selected rather than included in the "everywhere" empty selector.
+			return
+		}
 		rsi := c.ruleSelectors[s]
 		rsi.numRuleRefs--
 		if rsi.numRuleRefs == 0 {
@@ -307,6 +320,11 @@ func (c *policiesCache) deletePolicyRuleSelectors(p *model.Policy) {
 // contain a rule selector on the rule selector info.
 func (c *policiesCache) deleteRuleSelectorPolicyReferences(p *model.Policy, polKey model.Key) {
 	del := func(s string) {
+		if s == "" {
+			// Empty rule selectors are not tracked since we only care about endpoints and network sets that are
+			// explicitly selected rather than included in the "everywhere" empty selector.
+			return
+		}
 		rsi := c.ruleSelectors[s]
 		rsi.policies.Discard(polKey)
 	}
@@ -324,7 +342,8 @@ func (c *policiesCache) deleteRuleSelectorPolicyReferences(p *model.Policy, polK
 }
 
 // combinePolicyDataWithRules combines the policyData with the cached rule data. The rule data
-// is looked up from the effective selector string for each rule.
+// is looked up from the effective selector string for each rule. An empty selector is not tracked
+// and any associated endpoint counts should be zeroed.
 func (c *policiesCache) combinePolicyDataWithRules(p *policyData) *policyDataWithRuleData {
 	prd := &policyDataWithRuleData{
 		policyData: p,
@@ -334,17 +353,24 @@ func (c *policiesCache) combinePolicyDataWithRules(p *policyData) *policyDataWit
 		},
 	}
 
+	setEndpoints := func(v1r *model.Rule, r *api.RuleDirection) {
+		if s := c.getDstSelector(v1r); s != "" {
+			r.Destination = c.ruleSelectors[s].endpoints
+		} else {
+			r.Destination = api.EndpointCounts{}
+		}
+		if s := c.getSrcSelector(v1r); s != "" {
+			r.Source = c.ruleSelectors[s].endpoints
+		} else {
+			r.Source = api.EndpointCounts{}
+		}
+	}
+
 	for i := range prd.ruleEndpoints.Ingress {
-		v1r := &p.v1Policy.InboundRules[i]
-		r := &prd.ruleEndpoints.Ingress[i]
-		r.Destination = c.ruleSelectors[c.getDstSelector(v1r)].endpoints
-		r.Source = c.ruleSelectors[c.getSrcSelector(v1r)].endpoints
+		setEndpoints(&p.v1Policy.InboundRules[i], &prd.ruleEndpoints.Ingress[i])
 	}
 	for i := range prd.ruleEndpoints.Egress {
-		v1r := &p.v1Policy.OutboundRules[i]
-		r := &prd.ruleEndpoints.Egress[i]
-		r.Destination = c.ruleSelectors[c.getDstSelector(v1r)].endpoints
-		r.Source = c.ruleSelectors[c.getSrcSelector(v1r)].endpoints
+		setEndpoints(&p.v1Policy.OutboundRules[i], &prd.ruleEndpoints.Egress[i])
 	}
 
 	return prd

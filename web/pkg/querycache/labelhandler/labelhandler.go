@@ -67,9 +67,10 @@ type labelHandler struct {
 // ignored for our cache, but will be included in the query responses.
 type policyQueryId uuid.UUID
 
-// A ruleQueryId is used to identify a networkset that has been injected in to the InheritIndex
+// A ruleQueryId is used to identify a rule selector that is injected in to the InheritIndex
 // helper when running a query. It is used exclusively for querying matches on the rule selectors
-// on a policy.
+// on a policy, and returns a set of matching rule selector IDs that can then be cross referenced using
+// the policy cache to locate the set of matching policy rules (since rule selectors are aggregated).
 type ruleQueryId uuid.UUID
 
 // The rule selector ID is simply the selector string.  To minimize occupancy and processing we consolidate
@@ -322,6 +323,8 @@ func (c *labelHandler) onMatchStarted(selId, epId interface{}) {
 			}
 		case policyQueryId:
 			c.results = append(c.results, s)
+		case ruleQueryId:
+			// Ignore rule queries that match endpoints.
 		default:
 			log.WithFields(log.Fields{
 				"selId": selId,
@@ -365,6 +368,8 @@ func (c *labelHandler) onMatchStopped(selId, epId interface{}) {
 				cb(MatchStopped, s, e)
 			}
 		case policyQueryId:
+			// noop required - this occurs when the query is deleted.
+		case ruleQueryId:
 			// noop required - this occurs when the query is deleted.
 		default:
 			log.WithFields(log.Fields{
