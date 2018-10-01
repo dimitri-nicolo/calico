@@ -21,29 +21,29 @@ import (
 // NewGlobalNetworkPolicyStorage creates a new libcalico-based storage.Interface implementation for GlobalNetworkPolicies
 func NewGlobalNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	c := createClientFromConfig()
-	create := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.GlobalNetworkPolicy)
 		return c.GlobalNetworkPolicies().Create(ctx, res, oso)
 	}
-	update := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.GlobalNetworkPolicy)
 		return c.GlobalNetworkPolicies().Update(ctx, res, oso)
 	}
-	get := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		ogo := opts.(options.GetOptions)
 		return c.GlobalNetworkPolicies().Get(ctx, name, ogo)
 	}
-	delete := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	deleteFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		odo := opts.(options.DeleteOptions)
 		return c.GlobalNetworkPolicies().Delete(ctx, name, odo)
 	}
-	list := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
+	listFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
 		olo := opts.(options.ListOptions)
 		return c.GlobalNetworkPolicies().List(ctx, olo)
 	}
-	watch := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
+	watchFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
 		olo := opts.(options.ListOptions)
 		return c.GlobalNetworkPolicies().Watch(ctx, olo)
 	}
@@ -57,12 +57,12 @@ func NewGlobalNetworkPolicyStorage(opts Options) (storage.Interface, factory.Des
 		libCalicoType:     reflect.TypeOf(libcalicoapi.GlobalNetworkPolicy{}),
 		libCalicoListType: reflect.TypeOf(libcalicoapi.GlobalNetworkPolicyList{}),
 		isNamespaced:      false,
-		create:            create,
-		update:            update,
-		get:               get,
-		delete:            delete,
-		list:              list,
-		watch:             watch,
+		create:            createFn,
+		update:            updateFn,
+		get:               getFn,
+		delete:            deleteFn,
+		list:              listFn,
+		watch:             watchFn,
 		resourceName:      "GlobalNetworkPolicy",
 		converter:         GlobalNetworkPolicyConverter{},
 	}, func() {}
@@ -100,7 +100,7 @@ func (gc GlobalNetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObj
 	aapiGlobalNetworkPolicy.Labels["projectcalico.org/tier"] = aapiGlobalNetworkPolicy.Spec.Tier
 }
 
-func (gc GlobalNetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, filterFunc storage.FilterFunc) {
+func (gc GlobalNetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
 	lcgGlobalNetworkPolicyList := libcalicoListObject.(*libcalicoapi.GlobalNetworkPolicyList)
 	aapiGlobalNetworkPolicyList := aapiListObj.(*aapi.GlobalNetworkPolicyList)
 	if libcalicoListObject == nil {
@@ -112,7 +112,7 @@ func (gc GlobalNetworkPolicyConverter) convertToAAPIList(libcalicoListObject res
 	for _, item := range lcgGlobalNetworkPolicyList.Items {
 		aapiGlobalNetworkPolicy := aapi.GlobalNetworkPolicy{}
 		gc.convertToAAPI(&item, &aapiGlobalNetworkPolicy)
-		if filterFunc != nil && filterFunc(&aapiGlobalNetworkPolicy) {
+		if matched, err := pred.Matches(&aapiGlobalNetworkPolicy); err == nil && matched {
 			aapiGlobalNetworkPolicyList.Items = append(aapiGlobalNetworkPolicyList.Items, aapiGlobalNetworkPolicy)
 		}
 	}

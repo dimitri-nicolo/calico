@@ -147,7 +147,6 @@ func (o Options) GetStorage(
 	if o.storageType == StorageTypeEtcd {
 		etcdRESTOpts := o.EtcdOptions.RESTOptions
 		return etcdRESTOpts.Decorator(
-			nil,
 			etcdRESTOpts.StorageConfig,
 			objectType,
 			resourcePrefix,

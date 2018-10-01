@@ -1,7 +1,8 @@
 package: github.com/tigera/calico-k8sapiserver
 import:
+# Pin to the version requested by the API server
 - package: github.com/coreos/etcd
-  version: c23606781f63d09917a1e7abfcefeb337a9608ea
+  version: 95a726a27e09030f9ccbd9982a1508f5a6d25ada
   subpackages:
   - client
   - clientv3
@@ -19,28 +20,41 @@ import:
   - lib/options
   - lib/watch
 - package: k8s.io/apiserver
-  version: kubernetes-1.8.2
+  version: kubernetes-1.10.0
 - package: k8s.io/kubernetes
-  version: release-1.8
+  version: v1.10.0
+# Pin to kubernetes 1.10.8.
+# k8s.io/client-go also imports this package and it complains if the version is
+# set to the tag name. To work around this the *EXACT* hash of the tag is used.
 - package: k8s.io/apimachinery
-  version: release-1.8
+  version: 302974c03f7e50f16561ba237db776ab93594ef6
+# Pin to kubernetes 1.10.8.
+# k8s.io/client-go also imports this package and it complains if the version is
+# set to the tag name. To work around this the *EXACT* hash of the tag is used.
 - package: k8s.io/api
-  version: release-1.8
+  version: 73d903622b7391f3312dcbac6483fed484e185f8
+# Pin client-go to the exact tag release for K8s 1.10.8
 - package: k8s.io/client-go
-  version: 82aa063804cf055e16e8911250f888bc216e8b61
+  version: 23781f4d6632d88e869066eaebb743857aa1ef9b
+# Pin to kubernetes 1.10.8.
+# k8s.io/client-go doesn't import this package so it's OK to use the tag name.
 - package: k8s.io/code-generator
-  version: release-1.8
+  version: kubernetes-1.10.0
+# Note: code-generator (deepcopy-gen) relies on this, but it isn't picked up
+# since we only reference it from out Makefile.
+- package: golang.org/x/tools/import
+# Pin to the version requested by the API server
 - package: k8s.io/gengo
-  version: 70ad626ed2d7a483d89d2c4c56364d60b48ee8fc
+  version: 4242d8e6c5dba56827bb7bcf14ad11cda38f3991
 ## Pin to a compiling version of grpc.
 - package: google.golang.org/grpc
-  version: 1.11.3
+  version: 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
 - package: github.com/spf13/cobra
   version: f62e98d28ab7ad31d707ba837a966378465c7b57
 - package: github.com/spf13/pflag
-  version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
+  version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - package: github.com/ugorji/go
-  version: bdcc60b419d136a85cdf2e7cbcac34b3f1cd6e57
+  version: ded73eae5db7e7a0ef6f55aace87a2873c5d2b74
   subpackages:
   - codec
 - package: github.com/kubernetes/repo-infra

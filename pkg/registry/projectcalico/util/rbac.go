@@ -103,7 +103,7 @@ func AuthorizeTierOperation(ctx genericapirequest.Context, authz authorizer.Auth
 	if err != nil {
 		return err
 	}
-	if !authorized {
+	if authorized == authorizer.DecisionDeny {
 		if reason == "" {
 			reason = fmt.Sprintf("(Forbidden) Policy operation is associated with tier %s. "+
 				"User \"%s\" cannot get tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)",

@@ -25,19 +25,17 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/tigera/calico-k8sapiserver/cmd/apiserver/server"
-	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
+
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
-
 	restclient "k8s.io/client-go/rest"
 
+	"github.com/tigera/calico-k8sapiserver/cmd/apiserver/server"
 	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	"github.com/tigera/calico-k8sapiserver/pkg/apiserver"
 	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
-	"k8s.io/apimachinery/pkg/runtime"
-	_ "k8s.io/kubernetes/pkg/api/install"
-	//_ "k8s.io/kubernetes/pkg/apis/extensions/install"
 )
 
 const defaultEtcdPathPrefix = ""
@@ -77,7 +75,7 @@ func withConfigGetFreshApiserverAndClient(
 	t.Logf("Starting server on port: %d", securePort)
 	// start the server in the background
 	go func() {
-		ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Scheme, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
+		ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
 		ro.Etcd.StorageConfig.ServerList = serverConfig.etcdServerList
 		options := &server.CalicoServerOptions{
 			RecommendedOptions: ro,

@@ -47,7 +47,8 @@ func NewCommandStartCalicoServer(out io.Writer) (*cobra.Command, error) {
 	flags.AddGoFlagSet(flag.CommandLine)
 
 	stopCh := make(chan struct{})
-	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Scheme, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
+
+	ro := genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix, apiserver.Codecs.LegacyCodec(v3.SchemeGroupVersion))
 	opts := &CalicoServerOptions{
 		RecommendedOptions: ro,
 		StopCh:             stopCh,

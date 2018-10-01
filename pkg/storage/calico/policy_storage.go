@@ -24,7 +24,7 @@ import (
 // NewNetworkPolicyStorage creates a new libcalico-based storage.Interface implementation for Policy
 func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFunc) {
 	c := createClientFromConfig()
-	create := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	createFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.NetworkPolicy)
 		if strings.HasPrefix(res.Name, conversion.K8sNetworkPolicyNamePrefix) {
@@ -36,7 +36,7 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 		}
 		return c.NetworkPolicies().Create(ctx, res, oso)
 	}
-	update := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
+	updateFn := func(ctx context.Context, c clientv3.Interface, obj resourceObject, opts clientOpts) (resourceObject, error) {
 		oso := opts.(options.SetOptions)
 		res := obj.(*libcalicoapi.NetworkPolicy)
 		if strings.HasPrefix(res.Name, conversion.K8sNetworkPolicyNamePrefix) {
@@ -48,11 +48,11 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 		}
 		return c.NetworkPolicies().Update(ctx, res, oso)
 	}
-	get := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	getFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		ogo := opts.(options.GetOptions)
 		return c.NetworkPolicies().Get(ctx, ns, name, ogo)
 	}
-	delete := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
+	deleteFn := func(ctx context.Context, c clientv3.Interface, ns string, name string, opts clientOpts) (resourceObject, error) {
 		odo := opts.(options.DeleteOptions)
 		if strings.HasPrefix(name, conversion.K8sNetworkPolicyNamePrefix) {
 			return nil, cerrors.ErrorOperationNotSupported{
@@ -63,11 +63,11 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 		}
 		return c.NetworkPolicies().Delete(ctx, ns, name, odo)
 	}
-	list := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
+	listFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (resourceListObject, error) {
 		olo := opts.(options.ListOptions)
 		return c.NetworkPolicies().List(ctx, olo)
 	}
-	watch := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
+	watchFn := func(ctx context.Context, c clientv3.Interface, opts clientOpts) (watch.Interface, error) {
 		olo := opts.(options.ListOptions)
 		return c.NetworkPolicies().Watch(ctx, olo)
 	}
@@ -81,12 +81,12 @@ func NewNetworkPolicyStorage(opts Options) (storage.Interface, factory.DestroyFu
 		libCalicoType:     reflect.TypeOf(libcalicoapi.NetworkPolicy{}),
 		libCalicoListType: reflect.TypeOf(libcalicoapi.NetworkPolicyList{}),
 		isNamespaced:      true,
-		create:            create,
-		update:            update,
-		get:               get,
-		delete:            delete,
-		list:              list,
-		watch:             watch,
+		create:            createFn,
+		update:            updateFn,
+		get:               getFn,
+		delete:            deleteFn,
+		list:              listFn,
+		watch:             watchFn,
 		resourceName:      "NetworkPolicy",
 		converter:         NetworkPolicyConverter{},
 	}, func() {}
@@ -124,7 +124,7 @@ func (rc NetworkPolicyConverter) convertToAAPI(libcalicoObject resourceObject, a
 	aapiPolicy.Labels["projectcalico.org/tier"] = aapiPolicy.Spec.Tier
 }
 
-func (rc NetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, filterFunc storage.FilterFunc) {
+func (rc NetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceListObject, aapiListObj runtime.Object, pred storage.SelectionPredicate) {
 	lcgPolicyList := libcalicoListObject.(*libcalicoapi.NetworkPolicyList)
 	aapiPolicyList := aapiListObj.(*aapi.NetworkPolicyList)
 	if libcalicoListObject == nil {
@@ -136,7 +136,7 @@ func (rc NetworkPolicyConverter) convertToAAPIList(libcalicoListObject resourceL
 	for _, item := range lcgPolicyList.Items {
 		aapiPolicy := aapi.NetworkPolicy{}
 		rc.convertToAAPI(&item, &aapiPolicy)
-		if filterFunc != nil && filterFunc(&aapiPolicy) {
+		if matched, err := pred.Matches(&aapiPolicy); err == nil && matched {
 			aapiPolicyList.Items = append(aapiPolicyList.Items, aapiPolicy)
 		}
 	}

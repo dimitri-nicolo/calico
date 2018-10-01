@@ -42,7 +42,7 @@ type resourceListObject interface {
 type resourceConverter interface {
 	convertToLibcalico(runtime.Object) resourceObject
 	convertToAAPI(resourceObject, runtime.Object)
-	convertToAAPIList(resourceListObject, runtime.Object, storage.FilterFunc)
+	convertToAAPIList(resourceListObject, runtime.Object, storage.SelectionPredicate)
 }
 
 type clientOpts interface{}
@@ -85,7 +85,7 @@ func createClientFromConfig() clientv3.Interface {
 		os.Exit(1)
 	}
 
-	err = c.EnsureInitialized(context.Background(), "", "","")
+	err = c.EnsureInitialized(context.Background(), "", "", "")
 	if err != nil {
 		glog.Errorf("Failed initializing client: %q", err)
 		os.Exit(1)
@@ -285,12 +285,12 @@ func (rs *resourceStore) List(ctx context.Context, key string, resourceVersion s
 	if err != nil {
 		e := aapiError(err, key)
 		if storage.IsNotFound(e) {
-			rs.converter.convertToAAPIList(libcalicoObjList, listObj, nil)
+			rs.converter.convertToAAPIList(libcalicoObjList, listObj, p)
 			return nil
 		}
 		return e
 	}
-	rs.converter.convertToAAPIList(libcalicoObjList, listObj, storage.SimpleFilter(p))
+	rs.converter.convertToAAPIList(libcalicoObjList, listObj, p)
 	return nil
 }
 
@@ -471,4 +471,9 @@ func (rs *resourceStore) GuaranteedUpdate(
 	}
 	glog.Errorf("GuaranteedUpdate failed.")
 	return nil
+}
+
+// Count returns number of different entries under the key (generally being path prefix).
+func (rs *resourceStore) Count(key string) (int64, error) {
+	return 0, fmt.Errorf("Count not supported for key: %s", key)
 }

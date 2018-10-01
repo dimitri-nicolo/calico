@@ -25,25 +25,15 @@ import (
 	"sync"
 	"testing"
 
-	// TODO: fix this upstream
-	// we shouldn't have to install things to use our own generated client.
-
-	// avoid error `servicecatalog/v1alpha1 is not enabled`
-
-	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
-	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
-	// avoid error `no kind is registered for the type metav1.ListOptions`
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	_ "k8s.io/kubernetes/pkg/api/install"
-	// our versioned types
-	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
-
-	// our versioned client
+	"k8s.io/apimachinery/pkg/runtime"
 
 	calico "github.com/projectcalico/libcalico-go/lib/apis/v3"
 	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	_ "github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/install"
+	"github.com/tigera/calico-k8sapiserver/pkg/apis/projectcalico/v3"
+	calicoclient "github.com/tigera/calico-k8sapiserver/pkg/client/clientset_generated/clientset"
 )
 
 // TestGroupVersion is trivial.
@@ -66,7 +56,7 @@ func TestGroupVersion(t *testing.T) {
 }
 
 func testGroupVersion(client calicoclient.Interface) error {
-	gv := client.Projectcalico().RESTClient().APIVersion()
+	gv := client.ProjectcalicoV3().RESTClient().APIVersion()
 	if gv.Group != projectcalico.GroupName {
 		return fmt.Errorf("we should be testing the servicecatalog group, not %s", gv.Group)
 	}
@@ -120,7 +110,7 @@ func TestNoName(t *testing.T) {
 }
 
 func testNoName(client calicoclient.Interface) error {
-	cClient := client.Projectcalico()
+	cClient := client.ProjectcalicoV3()
 
 	ns := "default"
 
@@ -155,7 +145,7 @@ func TestNetworkPolicyClient(t *testing.T) {
 func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	ns := "default"
 	defaultTierPolicyName := "default" + "." + name
-	policyClient := client.Projectcalico().NetworkPolicies(ns)
+	policyClient := client.ProjectcalicoV3().NetworkPolicies(ns)
 	policy := &v3.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName}}
 
 	// start from scratch
@@ -189,7 +179,7 @@ func testNetworkPolicyClient(client calicoclient.Interface, name string) error {
 	}
 
 	// For testing out Tiered Policy
-	tierClient := client.Projectcalico().Tiers()
+	tierClient := client.ProjectcalicoV3().Tiers()
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
@@ -297,7 +287,7 @@ func TestTierClient(t *testing.T) {
 }
 
 func testTierClient(client calicoclient.Interface, name string) error {
-	tierClient := client.Projectcalico().Tiers()
+	tierClient := client.ProjectcalicoV3().Tiers()
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
@@ -363,7 +353,7 @@ func TestGlobalNetworkPolicyClient(t *testing.T) {
 }
 
 func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) error {
-	globalNetworkPolicyClient := client.Projectcalico().GlobalNetworkPolicies()
+	globalNetworkPolicyClient := client.ProjectcalicoV3().GlobalNetworkPolicies()
 	defaultTierPolicyName := "default" + "." + name
 	globalNetworkPolicy := &v3.GlobalNetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: defaultTierPolicyName}}
 
@@ -385,7 +375,7 @@ func testGlobalNetworkPolicyClient(client calicoclient.Interface, name string) e
 	}
 
 	// For testing out Tiered Policy
-	tierClient := client.Projectcalico().Tiers()
+	tierClient := client.ProjectcalicoV3().Tiers()
 	tier := &v3.Tier{
 		ObjectMeta: metav1.ObjectMeta{Name: "net-sec"},
 	}
@@ -466,7 +456,7 @@ func TestGlobalNetworkSetClient(t *testing.T) {
 }
 
 func testGlobalNetworkSetClient(client calicoclient.Interface, name string) error {
-	globalNetworkSetClient := client.Projectcalico().GlobalNetworkSets()
+	globalNetworkSetClient := client.ProjectcalicoV3().GlobalNetworkSets()
 	globalNetworkSet := &v3.GlobalNetworkSet{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 	}
