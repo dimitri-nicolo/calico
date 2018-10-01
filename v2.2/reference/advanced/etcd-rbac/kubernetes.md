@@ -1,5 +1,6 @@
 ---
 title: Using etcd RBAC to segment Kubernetes and Tigera Secure EE
+canonical_url: https://docs.tigera.io/v2.1/reference/advanced/etcd-rbac/kubernetes
 ---
 
 When using etcd with RBAC, all components that access etcd must be configured

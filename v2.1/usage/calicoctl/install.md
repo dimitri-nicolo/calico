@@ -1,5 +1,7 @@
 ---
 title: Installing calicoctl
+redirect_from: latest/usage/calicoctl/install
+canonical_url: https://docs.tigera.io/v2.1/usage/calicoctl/install
 ---
 
 ## About installing calicoctl

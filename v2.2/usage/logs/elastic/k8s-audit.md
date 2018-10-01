@@ -1,5 +1,6 @@
 ---
 title: Configuring audit logs
+canonical_url: https://docs.tigera.io/v2.2/usage/logs/elastic/k8s-audit
 ---
 
 ## About configuring audit logs

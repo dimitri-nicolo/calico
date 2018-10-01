@@ -1,5 +1,6 @@
 ---
 title: Audit logs
+canonical_url: https://docs.tigera.io/v2.2/usage/logs/elastic/ee-audit
 ---
 
 ### About the audit logs sent to Elasticsearch by default

@@ -1,5 +1,7 @@
 ---
 title: Customizing the manifests
+redirect_from: latest/getting-started/kubernetes/installation/config-options
+canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/config-options
 ---
 
 Each manifest contains all the necessary resources for installing {{site.prodname}}

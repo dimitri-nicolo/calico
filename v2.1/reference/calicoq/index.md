@@ -1,5 +1,7 @@
 ---
 title: calicoq
+redirect_from: latest/reference/calicoq/
+canonical_url: https://docs.tigera.io/v2.1/reference/calicoq/
 ---
 
 `calicoq` is the {{site.prodname}} Policy Query Utility.  It is a command line tool that

@@ -1,5 +1,7 @@
 ---
 title: Installing Tigera Secure EE for policy (advanced)
+redirect_from: latest/getting-started/kubernetes/installation/other
+canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/other
 ---
 
 ## About installing {{site.prodname}} for policy

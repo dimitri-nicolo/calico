@@ -1,5 +1,7 @@
 ---
 title: Policy Audit Mode
+redirect_from: latest/reference/cnx/policy-auditing
+canonical_url: https://docs.tigera.io/v2.1/reference/cnx/policy-auditing
 ---
 
 {{site.prodname}} adds a Felix option DropActionOverride that configures how the

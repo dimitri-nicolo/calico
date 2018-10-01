@@ -1,5 +1,7 @@
 ---
 title: AWS
+redirect_from: latest/reference/public-cloud/aws
+canonical_url: https://docs.tigera.io/v2.1/reference/public-cloud/aws
 ---
 
 {{site.prodname}} provides the following advantages when running in AWS:
