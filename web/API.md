@@ -111,10 +111,21 @@ Returns a JSON object with the following fields.
 | numNodesWithNoEndpoints | Count of Nodes that do not have any HostEndpoint or WorkloadEndpoint resources configured | number |
 | numNodesWithNoWorkloadEndpoints | Count of Nodes that do not have any WorkloadEndpoint resources configured | number |
 | numNodesWithNoHostEndpoints | Count of Nodes that do not have any HostEndpoint resources configured | number |
+| namespaceCounts | Summary counts of namespaced resources grouped by namespace | [namespace summary](#namespace-summary) |
 
 NOTE:
 1. To get the total endpoint count to for this policy, sum `numWorkloadEndpoints` and `numHostEndpoints`.
 1. `numNodesWithNoHostEndpoints` is loosely equivalent to "Unprotected Nodes"
+
+##### Namespace summary
+
+| Field | Description | Scheme |
+| ----- | ----------- | ------ |
+| numNetworkPolicies | Count of NetworkPolicy resources in the namespace | number |
+| numWorkloadEndpoints | Count of WorkloadEndpoint resources in the namespace | number |
+| numUnmatchedNetworkPolicies | Count of NetworkPolicies in the namespace that do not match any endpoints | number |
+| numUnlabelledWorkloadEndpoints | Count of WorkloadEndpoint resources in the namespace that do not have any explicitly configured labels | number |
+| numUnprotectedWorkloadEndpoints | Count of WorkloadEndpoint resources in the namespace that do not have any policies applied on them | number |
 
 #### Examples Response
 
@@ -134,6 +145,22 @@ NOTE:
   "numNodesWithNoEndpoints": 1,
   "numNodesWithNoWorkloadEndpoints": 2,
   "numNodesWithNoHostEndpoints": 2
+  "namespaceCounts": {
+                  "namespace-1": {
+                      numNetworkPolicies: 1,
+                      numWorkloadEndpoints: 2,
+                      numUnmatchedNetworkPolicies: 1,
+                      numUnlabelledWorkloadEndpoints: 0,
+                      numUnprotectedWorkloadEndpoints: 2,
+                  },
+                  "namespace-2": {
+                      numNetworkPolicies: 1,
+                      numWorkloadEndpoints: 2,
+                      numUnmatchedNetworkPolicies: 0,
+                      numUnlabelledWorkloadEndpoints: 1,
+                      numUnprotectedWorkloadEndpoints: 0,
+                  },
+              },
 }
 ```
 

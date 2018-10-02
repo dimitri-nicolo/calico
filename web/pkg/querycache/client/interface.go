@@ -24,20 +24,29 @@ type QueryClusterReq struct {
 }
 
 type QueryClusterResp struct {
-	NumGlobalNetworkPolicies          int `json:"numGlobalNetworkPolicies"`
-	NumNetworkPolicies                int `json:"numNetworkPolicies"`
-	NumHostEndpoints                  int `json:"numHostEndpoints"`
-	NumWorkloadEndpoints              int `json:"numWorkloadEndpoints"`
-	NumUnmatchedGlobalNetworkPolicies int `json:"numUnmatchedGlobalNetworkPolicies"`
-	NumUnmatchedNetworkPolicies       int `json:"numUnmatchedNetworkPolicies"`
-	NumUnlabelledHostEndpoints        int `json:"numUnlabelledHostEndpoints"`
-	NumUnlabelledWorkloadEndpoints    int `json:"numUnlabelledWorkloadEndpoints"`
-	NumUnprotectedHostEndpoints       int `json:"numUnprotectedHostEndpoints"`
-	NumUnprotectedWorkloadEndpoints   int `json:"numUnprotectedWorkloadEndpoints"`
-	NumNodes                          int `json:"numNodes"`
-	NumNodesWithNoEndpoints           int `json:"numNodesWithNoEndpoints"`
-	NumNodesWithNoHostEndpoints       int `json:"numNodesWithNoHostEndpoints"`
-	NumNodesWithNoWorkloadEndpoints   int `json:"numNodesWithNoWorkloadEndpoints"`
+	NumGlobalNetworkPolicies          int                                    `json:"numGlobalNetworkPolicies"`
+	NumNetworkPolicies                int                                    `json:"numNetworkPolicies"`
+	NumHostEndpoints                  int                                    `json:"numHostEndpoints"`
+	NumWorkloadEndpoints              int                                    `json:"numWorkloadEndpoints"`
+	NumUnmatchedGlobalNetworkPolicies int                                    `json:"numUnmatchedGlobalNetworkPolicies"`
+	NumUnmatchedNetworkPolicies       int                                    `json:"numUnmatchedNetworkPolicies"`
+	NumUnlabelledHostEndpoints        int                                    `json:"numUnlabelledHostEndpoints"`
+	NumUnlabelledWorkloadEndpoints    int                                    `json:"numUnlabelledWorkloadEndpoints"`
+	NumUnprotectedHostEndpoints       int                                    `json:"numUnprotectedHostEndpoints"`
+	NumUnprotectedWorkloadEndpoints   int                                    `json:"numUnprotectedWorkloadEndpoints"`
+	NumNodes                          int                                    `json:"numNodes"`
+	NumNodesWithNoEndpoints           int                                    `json:"numNodesWithNoEndpoints"`
+	NumNodesWithNoHostEndpoints       int                                    `json:"numNodesWithNoHostEndpoints"`
+	NumNodesWithNoWorkloadEndpoints   int                                    `json:"numNodesWithNoWorkloadEndpoints"`
+	NamespaceCounts                   map[string]QueryClusterNamespaceCounts `json:"namespaceCounts"`
+}
+
+type QueryClusterNamespaceCounts struct {
+	NumNetworkPolicies              int `json:"numNetworkPolicies"`
+	NumWorkloadEndpoints            int `json:"numWorkloadEndpoints"`
+	NumUnmatchedNetworkPolicies     int `json:"numUnmatchedNetworkPolicies"`
+	NumUnlabelledWorkloadEndpoints  int `json:"numUnlabelledWorkloadEndpoints"`
+	NumUnprotectedWorkloadEndpoints int `json:"numUnprotectedWorkloadEndpoints"`
 }
 
 type QueryNodesReq struct {
