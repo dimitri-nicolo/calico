@@ -264,7 +264,7 @@ tigera/cnx-apiserver: vendor/.up-to-date .generate_files $(BINDIR)/calico-k8sapi
 	rm -rf docker-image/bin
 	mkdir -p docker-image/bin
 	cp $(BINDIR)/calico-k8sapiserver docker-image/bin/
-	docker build --pull -t tigera/cnx-apiserver-$(ARCH) --file ./docker-image/Dockerfile.$(ARCH) docker-image
+	docker build --pull -t tigera/cnx-apiserver --file ./docker-image/Dockerfile.$(ARCH) docker-image
 
 .PHONY: ut
 ut: vendor/.up-to-date run-etcd
