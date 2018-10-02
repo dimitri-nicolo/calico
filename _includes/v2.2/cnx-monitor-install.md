@@ -105,6 +105,15 @@
    {{cli}} get customresourcedefinitions
    ```
 
+{% if include.orch == "openshift" %}
+1. Allow the monitoring pods to be scheduled on the master node.
+
+   ```
+   {{cli}} annotate ns calico-monitoring openshift.io/node-selector="" --overwrite
+   ```
+
+{% endif %}
+
 {% if include.elasticsearch == "operator" %}
 {% include {{page.version}}/elastic-storage.md orch=include.orch %}
 {% endif %}
