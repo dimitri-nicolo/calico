@@ -81,13 +81,14 @@ func GetTierNameFromSelector(options *metainternalversion.ListOptions) (string, 
 // This is required to be allowed to perform actions on policies.
 func AuthorizeTierOperation(ctx genericapirequest.Context, authz authorizer.Authorizer, tierName string) error {
 	if authz == nil {
-		glog.Infof("Authorization disabled for testing purposes")
+		glog.Infof("Authorization disabled")
 		return nil
 	}
 	attributes, err := filters.GetAuthorizerAttributes(ctx)
 	if err != nil {
 		return err
 	}
+
 	attrs := authorizer.AttributesRecord{}
 	attrs.APIGroup = attributes.GetAPIGroup()
 	attrs.APIVersion = attributes.GetAPIVersion()
@@ -103,14 +104,13 @@ func AuthorizeTierOperation(ctx genericapirequest.Context, authz authorizer.Auth
 	if err != nil {
 		return err
 	}
-	if authorized == authorizer.DecisionDeny {
+	if authorized != authorizer.DecisionAllow {
 		if reason == "" {
 			reason = fmt.Sprintf("(Forbidden) Policy operation is associated with tier %s. "+
 				"User \"%s\" cannot get tiers.projectcalico.org at the cluster scope. (get tiers.projectcalico.org)",
 				tierName, attrs.User.GetName())
 		}
 		return errors.NewForbidden(calico.Resource("tiers"), tierName, fmt.Errorf(reason))
-
 	}
 	return nil
 }
