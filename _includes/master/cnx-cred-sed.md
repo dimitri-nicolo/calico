@@ -1,7 +1,8 @@
-1. If you are pulling from a quay.io registry, skip to the next step. If you
-   are not pulling from quay.io, use the following commands to: set an environment
+1. If you are pulling from Tigera's private registry, skip to the next step. If you
+   are pulling from another private registry, use the following commands to: set an environment
    variable called `REGISTRY` containing the location of the private registry and
-   replace `{{site.data.versions[page.version].first.dockerRepo}}` in the manifest with the location of your private registry.
+   replace `{{site.data.versions[page.version].first.dockerRepo}}` in the manifest with the location of
+   the private registry.
 
    ```bash
    REGISTRY=my-registry.com \

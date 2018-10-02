@@ -13,7 +13,9 @@ cnx.yaml acccepts the following include flags:
 #   quay.io/coreos/prometheus-operator:{{site.data.versions[page.version].first.components["prometheus-operator"].version}}
 #   quay.io/coreos/prometheus-config-reloader:{{site.data.versions[page.version].first.components["prometheus-config-reloader"].version}}
 #   quay.io/coreos/configmap-reload:{{site.data.versions[page.version].first.components["configmap-reload"].version}}
+{%- if include.elasticsearch == "operator" %}
 #   upmcenterprises/elasticsearch-operator:{{site.data.versions[page.version].first.components["elasticsearch-operator"].version}}
+{%- endif %}
 ---
 
 # This manifest creates a namespace for deploying prometheus-operator,
