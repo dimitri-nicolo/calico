@@ -22,6 +22,12 @@ execute_test_suite() {
     download_templates_from_calico
     build_tomls_for_node
 
+    if [ "$DATASTORE_TYPE" = etcdv3 ]; then
+	test_node_deletion
+	test_idle_peers
+	echo "Extra etcdv3 tests passed"
+    fi
+
     # Run the set of tests using confd in oneshot mode.
     echo "Execute oneshot-mode tests"
     execute_tests_oneshot
@@ -39,8 +45,198 @@ execute_test_suite() {
     echo "Daemon-mode tests passed"
 }
 
+test_node_deletion() {
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off.
+    turn_mesh_off
+
+    # Create 4 nodes with a mesh of peerings.
+    calicoctl apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node1
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.1/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node2
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.2/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node3
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.3/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node4
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.4/24
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: bgppeer-1
+spec:
+  nodeSelector: has(node)
+  peerSelector: has(node)
+EOF
+
+    # Expect 3 peerings.
+    expect_peerings 3
+
+    # Delete one of the nodes.
+    calicoctl delete node node3
+
+    # Expect just 2 peerings.
+    expect_peerings 2
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete remaining resources.
+    calicoctl delete node node1
+    calicoctl delete node node2
+    calicoctl delete node node4
+    calicoctl delete bgppeer bgppeer-1
+}
+
+# Test that when BGPPeers generate overlapping global and node-specific peerings, we reliably
+# only see the global peerings in the v1 data model.
+test_idle_peers() {
+    # Run confd as a background process.
+    echo "Running confd as background process"
+    NODENAME=node1 BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
+    CONFD_PID=$!
+    echo "Running with PID " $CONFD_PID
+
+    # Turn the node-mesh off.
+    turn_mesh_off
+
+    # Create 2 nodes, a global peering between them, and a node-specific peering between them.
+    calicoctl apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node1
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.1/24
+---
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node2
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.2/24
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node-specific
+spec:
+  node: node1
+  peerSelector: has(node)
+---
+kind: BGPPeer
+apiVersion: projectcalico.org/v3
+metadata:
+  name: global
+spec:
+  peerSelector: has(node)
+EOF
+
+    # Expect 1 peering.
+    expect_peerings 1
+
+    # 10 times, touch a Node resource to cause peerings to be recomputed, and check that we
+    # always see just one peering.
+    for n in `seq 1 10`; do
+	calicoctl apply -f - <<EOF
+kind: Node
+apiVersion: projectcalico.org/v3
+metadata:
+  name: node1
+  labels:
+    node: yes
+spec:
+  bgp:
+    ipv4Address: 10.24.0.1/24
+EOF
+	sleep 0.25
+	expect_peerings 1
+    done
+
+    # Kill confd.
+    kill -9 $CONFD_PID
+
+    # Turn the node-mesh back on.
+    turn_mesh_on
+
+    # Delete resources.  Note that deleting Node node1 also deletes the node-specific BGPPeer.
+    calicoctl delete node node1
+    calicoctl delete node node2
+    calicoctl delete bgppeer global
+}
+
+expect_peerings() {
+    expected_count=$1
+    attempts=0
+    while sleep 1; do
+	grep "protocol bgp" /etc/calico/confd/config/bird.cfg
+	count=`grep "protocol bgp" /etc/calico/confd/config/bird.cfg | wc -l`
+	if [ "$count" = "$expected_count" ]; then
+	    break
+	fi
+	let 'attempts += 1'
+	echo Failed attempts = $attempts
+	if [ "$attempts" -gt 5 ]; then
+	    echo Test failed
+	    cat /etc/calico/confd/config/bird.cfg
+	    return 2
+	fi
+    done
+}
+
 # Execute a set of tests using daemon mode.
 execute_tests_daemon() {
+    # For KDD, run Typha.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+	start_typha
+    fi
+
     # Run confd as a background process.
     echo "Running confd as background process"
     BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd >$LOGPATH/logd1 2>&1 &
@@ -72,6 +268,11 @@ execute_tests_daemon() {
 
     # Kill confd.
     kill -9 $CONFD_PID
+
+    # For KDD, kill Typha.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+	kill_typha
+    fi
 }
 
 # Execute a set of tests using oneshot mode.
@@ -165,11 +366,21 @@ run_individual_test_oneshot() {
     echo "Populating calico with test data using calicoctl: " $testdir
     calicoctl apply -f /tests/mock_data/calicoctl/${testdir}/input.yaml
 
+    # For KDD, run Typha.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+	start_typha
+    fi
+
     # Run confd in oneshot mode.
     BGP_LOGSEVERITYSCREEN="debug" confd -confdir=/etc/calico/confd -onetime >$LOGPATH/logss 2>&1 || true
 
     # Check the confd templates are updated.
     test_confd_templates $testdir
+
+    # For KDD, kill Typha.
+    if [ "$DATASTORE_TYPE" = kubernetes ]; then
+	kill_typha
+    fi
 
     # Remove any resource that does not need to be persisted due to test environment
     # limitations.
@@ -193,6 +404,35 @@ run_edited_individual_test_oneshot() {
 
     # Unedit the template
     head -n -1 ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template > temp; mv temp ${repo_dir}/filesystem/etc/calico/confd/templates/bird.cfg.template
+}
+
+start_typha() {
+    echo "Starting Typha"
+    TYPHA_DATASTORETYPE=kubernetes \
+        KUBECONFIG=/tests/confd_kubeconfig \
+        TYPHA_LOGSEVERITYSCREEN=debug \
+	typha >$LOGPATH/typha 2>&1 &
+    TYPHA_PID=$!
+
+    # Set variables needed for confd to connect to Typha.
+    export FELIX_TYPHAADDR=127.0.0.1:5473
+    export FELIX_TYPHAREADTIMEOUT=50
+
+    # Allow a little time for Typha to start up and start listening.
+    #
+    # If Typha isn't ready when confd tries to connect to it, confd drops a FATAL
+    # log and exits.  You might think that confd should retry, but our general
+    # design (e.g. what Felix also does) here is to exit and be restarted by the
+    # surrounding service framework.
+    sleep 0.25
+
+    # Avoid getting bash's "Killed" message in the output when we kill Typha.
+    disown %?typha
+}
+
+kill_typha() {
+    echo "Killing Typha"
+    kill -9 $TYPHA_PID 2>/dev/null
 }
 
 # get_templates attempts to grab the latest templates from the calico repo

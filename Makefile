@@ -158,13 +158,7 @@ fix:
 ###############################################################################
 .PHONY: test-kdd
 ## Run template tests against KDD
-test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl run-k8s-apiserver
-	-docker rm -f confd-typha
-	docker run -d --rm --net=host --name=confd-typha \
-		-v $(CURDIR)/tests/:/tests/ \
-		-e TYPHA_DATASTORETYPE=kubernetes \
-		-e KUBECONFIG=/tests/confd_kubeconfig \
-                 $(TYPHA_CONTAINER_NAME)
+test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl bin/typha run-k8s-apiserver
 	docker run --rm --net=host \
 		-v $(CURDIR)/tests/:/tests/ \
 		-v $(CURDIR)/bin:/calico/bin/ \
@@ -173,8 +167,20 @@ test-kdd: bin/confd bin/kubectl bin/bird bin/bird6 bin/calico-node bin/calicoctl
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		-e FELIX_TYPHAADDR=127.0.0.1:5473 \
 		-e FELIX_TYPHAREADTIMEOUT=50 \
-		$(CALICO_BUILD) /tests/test_suite_kdd.sh
-	docker rm -f confd-typha
+		$(CALICO_BUILD) /tests/test_suite_kdd.sh || \
+	{ \
+	    echo; \
+	    echo === confd single-shot log:; \
+	    cat tests/logs/kdd/logss || true; \
+	    echo; \
+	    echo === confd daemon log:; \
+	    cat tests/logs/kdd/logd1 || true; \
+	    echo; \
+	    echo === Typha log:; \
+	    cat tests/logs/kdd/typha || true; \
+	    echo; \
+            false; \
+        }
 
 .PHONY: test-etcd
 ## Run template tests against etcd
@@ -253,6 +259,18 @@ bin/calicoctl:
 	  test -e $@ && \
 	  touch $@
 	-docker rm -f calico-ctl
+
+bin/typha:
+	-docker rm -f confd-typha
+	docker pull $(TYPHA_CONTAINER_NAME)
+	docker create --name confd-typha $(TYPHA_CONTAINER_NAME)
+	# Then we copy the files out of the container.  Since docker preserves
+	# mtimes on its copy, check the file really did appear, then touch it
+	# to make sure that downstream targets get rebuilt.
+	docker cp confd-typha:/code/calico-typha $@ && \
+	  test -e $@ && \
+	  touch $@
+	-docker rm -f confd-typha
 
 ###############################################################################
 # CI
