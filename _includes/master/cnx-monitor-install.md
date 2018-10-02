@@ -227,10 +227,19 @@
 {% endif %}
 {% endif %}
 
+{% if include.elasticsearch == "operator" %}
 1. If you wish to use the preconfigured Kibana indexes, views and dashboards you can create a `configMap` and start a job that will install the dashboard when the Kibana service endpoints come up.
-       ```bash
-       {{cli}} apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml
-       ```
+
+   ```bash
+   {{cli}} apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml
+   ```
+{% else %}
+1. If you wish to use the preconfigured Kibana indexes, views and dashboards you can download the following json file, and [import it into Kibana](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects).
+
+   ```bash
+   curl --compressed -O {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
+   ```
+{% endif %}
 
 1. If you wish to enforce application layer policies and secure workload-to-workload
    communications with mutual TLS authentication, continue to [Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy) (optional).
