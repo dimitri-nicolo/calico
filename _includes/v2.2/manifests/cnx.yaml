@@ -364,6 +364,10 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 90
           periodSeconds: 10
+{%- if include.orch == "openshift" %}
+        securityContext:
+          privileged: true
+{%- endif %}
       - name: cnx-queryserver
         image: {{site.data.versions[page.version].first.dockerRepo}}/{{site.imageNames["cnxQueryserver"]}}:{{site.data.versions[page.version].first.components["cnx-queryserver"].version}}
         env:
