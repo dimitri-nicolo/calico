@@ -20,8 +20,8 @@ if (-Not (Get-Command $PowerShellPath -errorAction SilentlyContinue))
 & $NSSMPath install TigeraFelix $PowerShellPath
 & $NSSMPath set TigeraFelix AppParameters $PSScriptRoot\felix-service.ps1
 & $NSSMPath set TigeraFelix AppDirectory $PSScriptRoot
-& $NSSMPath set TigeraFelix DisplayName "Tigera Secure EE Agent"
-& $NSSMPath set TigeraFelix Description "Tigera Secure EE Per-host Agent, Felix, provides network policy enforcement for Kubernetes."
+& $NSSMPath set TigeraFelix DisplayName "Tigera Calico Agent"
+& $NSSMPath set TigeraFelix Description "Tigera Calico Per-host Agent, Felix, provides network policy enforcement for Kubernetes."
 
 # Configure it to auto-start by default.
 & $NSSMPath set TigeraFelix Start SERVICE_AUTO_START
