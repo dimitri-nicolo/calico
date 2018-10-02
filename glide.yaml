@@ -20,7 +20,7 @@ import:
   - daemon
 - package: github.com/projectcalico/libcalico-go
   repo: git@github.com:tigera/libcalico-go-private.git
-  version: ee5bbe1739c678367b21fbadd204473cf22b84b4
+  version: c884251be2b5c37f3abe7f0bfdf9933a408d1931
   subpackages:
   - lib/apiconfig
   - lib/apis/v3
