@@ -1,0 +1,95 @@
+---
+layout: null
+---
+#
+# Manifest to auto inject index, visualization and dashboards into Kibana
+#
+# This ConfigMap is used to configure a self-hosted Calico installation.
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: kibana-dashboards
+  namespace: calico-monitoring
+data:
+  kibana-dashboard.json: |
+{% include {{page.version}}/manifests/kibana-dashboard.json %}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tigera-kibana-job
+  namespace: calico-monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: tigera-kibana-job
+rules:
+- apiGroups: [""]
+  resources:
+  - endpoints
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tigera-kibana-job
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tigera-kibana-job
+subjects:
+- kind: ServiceAccount
+  name: tigera-kibana-job
+  namespace: calico-monitoring
+---
+# This batch job waits until Kibana is running,
+# then configures it's datasources and dashboards using the info defined in the
+# above configmap.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kibana-import
+  namespace: calico-monitoring
+  labels:
+    app: kibana-import
+    component: import-dashboards
+spec:
+  template:
+    metadata:
+      name: kibana-import
+      labels:
+        app: kibana-import
+    spec:
+      serviceAccountName: tigera-kibana-job 
+      initContainers:
+      - name: wait-for-endpoints
+        image: giantswarm/tiny-tools
+        imagePullPolicy: IfNotPresent
+        command: ["fish", "-c", "echo \"waiting for endpoints...\"; while true; set endpoints (curl -s --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt --header \"Authorization: Bearer \"(cat /var/run/secrets/kubernetes.io/serviceaccount/token) https://kubernetes.default.svc/api/v1/namespaces/calico-monitoring/endpoints/kibana-tigera-elasticsearch); echo $endpoints | jq \".\"; if test (echo $endpoints | jq -r \".subsets[].addresses | length\") -gt 0; exit 0; end; echo \"waiting...\";sleep 1; end"]
+        args: ["monitoring", "kibana"]
+      containers:
+      - name: kibana-import
+        image: giantswarm/tiny-tools
+        command: ["/bin/sh", "-c"]
+        args:
+          - >
+            for file in /opt/dashboards/*-dashboard.json ; do
+              if [ -e "$file" ] ; then
+                echo "importing $file" &&
+                curl --silent --fail --show-error \
+                  --request POST http://kibana-tigera-elasticsearch:5601/api/kibana/dashboards/import \
+                  --header "Content-Type: application/json" \
+                  --data-binary "@$file" ;
+                echo "" ;
+              fi
+            done;
+        volumeMounts:
+        - name: kibana-dashboards
+          mountPath: /opt/dashboards
+      restartPolicy: Never
+      volumes:
+      - name: kibana-dashboards
+        configMap:
+          name: kibana-dashboards
+
