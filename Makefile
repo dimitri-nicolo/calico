@@ -56,6 +56,7 @@ ETCD_VER?=v3.3.7
 BIRD_VER=v0.3.1
 LOCAL_IP_ENV?=$(shell ip route get 8.8.8.8 | head -1 | awk '{print $$7}')
 
+GIT_SHORT_COMMIT:=$(shell git rev-parse --short HEAD || echo '<unknown>')
 GIT_DESCRIPTION:=$(shell git describe --tags || echo '<unknown>')
 LDFLAGS=-ldflags "-X $(PACKAGE_NAME)/pkg/buildinfo.GitVersion=$(GIT_DESCRIPTION)"
 
@@ -71,6 +72,11 @@ PACKAGE_NAME?=github.com/kelseyhightower/confd
 
 # All go files.
 SRC_FILES:=$(shell find . -name '*.go' -not -path "./vendor/*" )
+
+# Files to include in the Windows ZIP archive.
+WINDOWS_BUILT_FILES := windows-packaging/tigera-confd.exe
+# Name of the Windows release ZIP archive.
+WINDOWS_ARCHIVE := dist/tigera-confd-windows-$(VERSION).zip
 
 DOCKER_GO_BUILD := mkdir -p .go-pkg-cache && \
                    docker run --rm \
@@ -135,6 +141,41 @@ ifeq ($(ARCH),amd64)
 	ln -f bin/confd-$(ARCH) bin/confd
 endif
 
+# Cross-compile confd for Windows
+windows-packaging/tigera-confd.exe: $(SRC_FILES) vendor
+	@echo Building confd for Windows...
+	mkdir -p bin
+	$(DOCKER_GO_BUILD) \
+           sh -c 'GOOS=windows go build -v -o $@ -v $(LDFLAGS) "$(PACKAGE_NAME)" && \
+		( ldd $@ 2>&1 | grep -q "Not a valid dynamic program" || \
+		( echo "Error: $@ was not statically linked"; false ) )'
+
+%.url: % utils/make-azure-blob.sh
+	utils/make-azure-blob.sh $< $(notdir $(basename $<))-$(GIT_SHORT_COMMIT)$(suffix $<) \
+	    felix-test-uploads felixtestuploads felixtestuploads > $@.tmp
+	mv $@.tmp $@
+
+windows-confd-url: bin/tigera-confd.exe.url
+	@echo
+	@echo tigera-confd.exe download link:
+	@cat $<
+	@echo
+	@echo Powershell download command:
+	@echo "Invoke-WebRequest '`cat $<`' -O tigera-confd-$(GIT_SHORT_COMMIT).exe"
+
+windows-zip-url:
+ifndef VERSION
+	$(MAKE) windows-zip-url VERSION=dev
+else
+	$(MAKE) $(WINDOWS_ARCHIVE).url VERSION=dev
+	@echo
+	@echo $(WINDOWS_ARCHIVE) download link:
+	@cat $(WINDOWS_ARCHIVE).url
+	@echo
+	@echo Powershell download command:
+	@echo "Invoke-WebRequest '`cat $(WINDOWS_ARCHIVE).url`' -O tigera-confd.zip"
+endif
+
 ###############################################################################
 # Static checks
 ###############################################################################
@@ -192,6 +233,12 @@ test-etcd: bin/confd bin/etcdctl bin/bird bin/bird6 bin/calico-node bin/calicoct
 		-e LOCAL_USER_ID=0 \
 		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
 		$(CALICO_BUILD) /tests/test_suite_etcd.sh
+
+.PHONY: test-windows
+## Test the Windows templates on Linux
+test-windows: bin/confd bin/etcdctl bin/calicoctl run-etcd
+	DATASTORE_TYPE=etcdv3 ETCD_ENDPOINTS=http://127.0.0.2:2379 \
+	    NODENAME=kube-master bin/confd -confdir=windows-packaging
 
 ## Etcd is used by the kubernetes
 # NOTE: https://quay.io/repository/coreos/etcd is available *only* for the following archs with the following tags:
@@ -288,6 +335,7 @@ GIT_VERSION?=$(shell git describe --tags --dirty)
 ## Tags and builds a release from start to finish.
 release: release-prereqs
 	$(MAKE) VERSION=$(VERSION) release-tag
+	$(MAKE) VERSION=$(VERSION) release-windows-archive
 
 ## Produces a git tag for the release.
 release-tag: release-prereqs release-notes
@@ -319,6 +367,12 @@ release-prereqs:
 ifndef VERSION
 	$(error VERSION is undefined - run using make release VERSION=vX.Y.Z)
 endif
+
+## Produces the Windows ZIP archive for the release.
+release-windows-archive $(WINDOWS_ARCHIVE): release-prereqs $(WINDOWS_BUILT_FILES)
+	-rm -f $(WINDOWS_ARCHIVE)
+	mkdir -p dist
+	cd windows-packaging && zip -r ../$(WINDOWS_ARCHIVE) .
 
 ###############################################################################
 # Developer helper scripts (not used by build or test)

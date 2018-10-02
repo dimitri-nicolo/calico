@@ -174,10 +174,12 @@ func (t *TemplateResource) createStageFile() error {
 		log.WithError(err).WithField("filename", temp.Name()).Error("error changing mode")
 		return err
 	}
-	if err := os.Chown(temp.Name(), t.Uid, t.Gid); err != nil {
-		log.WithError(err).WithField("filename", temp.Name()).Error("error changing ownership")
-		return err
-	}
+	// Windows doesn't support chown, apparently:
+	// resource.go 178: error changing ownership error=chown .peerings.ps1761844858: not supported by windows filename=".peerings.ps1761844858"
+	//if err := os.Chown(temp.Name(), t.Uid, t.Gid); err != nil {
+	//	log.WithError(err).WithField("filename", temp.Name()).Error("error changing ownership")
+	//	return err
+	//}
 	t.StageFile = temp
 	return nil
 }
@@ -279,7 +281,7 @@ func (t *TemplateResource) check() error {
 		return err
 	}
 	log.Debug("Running checkcmd: " + cmdBuffer.String())
-	c := exec.Command("/bin/sh", "-c", cmdBuffer.String())
+	c := exec.Command("powershell", "-c", cmdBuffer.String())
 	output, err := c.CombinedOutput()
 	if err != nil {
 		log.Error(fmt.Sprintf("Error from checkcmd: %q", string(output)))
@@ -293,7 +295,7 @@ func (t *TemplateResource) check() error {
 // It returns nil if the reload command returns 0.
 func (t *TemplateResource) reload() error {
 	log.Debug("Running reloadcmd: " + t.ReloadCmd)
-	c := exec.Command("/bin/sh", "-c", t.ReloadCmd)
+	c := exec.Command("powershell", "-c", t.ReloadCmd)
 	output, err := c.CombinedOutput()
 	if err != nil {
 		log.Error(fmt.Sprintf("Error from reloadcmd: %q", string(output)))
