@@ -143,6 +143,10 @@ clean:
 # Building the binary
 ###############################################################################
 build: $(BIN)/calico $(BIN)/calico-ipam
+ifeq ($(ARCH),amd64)
+# Go only supports amd64 for Windows builds.
+build: $(BIN)/calico.exe $(BIN)/calico-ipam.exe
+endif
 build-all: $(addprefix sub-build-,$(VALIDARCHES))
 sub-build-%:
 	$(MAKE) build ARCH=$*
@@ -197,10 +201,9 @@ update-libcalico:
           if ! grep "\[WARN\]" $$OUTPUT; then true; else false; fi; \
         fi'
 
-## Build the Calico network plugin and ipam plugins
-$(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
-	-mkdir -p .go-pkg-cache
-	docker run --rm \
+GO_BUILD_ARGS:=-ldflags "-X main.VERSION=$(GIT_VERSION) -s -w"
+DOCKER_BUILD_ARGS:= \
+	 --rm \
 	-e ARCH=$(ARCH) \
 	-e GOARCH=$(ARCH) \
 	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
@@ -210,9 +213,22 @@ $(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
 	$(LOCAL_BUILD_MOUNTS) \
 	-w /go/src/$(PACKAGE_NAME) \
 	-e GOCACHE=/go-cache \
-		$(CALICO_BUILD) sh -c '\
-			go build -v -o $(BIN)/calico -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" calico.go ; \
-            go build -v -o $(BIN)/calico-ipam -ldflags "-X main.VERSION=$(GIT_VERSION) -s -w" ipam/calico-ipam.go'
+
+## Build the Calico network plugin and ipam plugins
+$(BIN)/calico $(BIN)/calico-ipam: $(SRCFILES) vendor
+	-mkdir -p .go-pkg-cache
+	-mkdir -p $(BIN)
+	docker run $(DOCKER_BUILD_ARGS)$(CALICO_BUILD) sh -c '\
+			go build -v -o $(BIN)/calico $(GO_BUILD_ARGS) calico.go && \
+            go build -v -o $(BIN)/calico-ipam $(GO_BUILD_ARGS) ipam/calico-ipam.go'
+
+## Build the Calico network plugin and ipam plugins for Windows
+$(BIN)/calico.exe $(BIN)/calico-ipam.exe: $(SRCFILES) vendor
+	-mkdir -p .go-pkg-cache
+	-mkdir -p $(BIN)
+	docker run -e GOOS=windows $(DOCKER_BUILD_ARGS) $(CALICO_BUILD) sh -c '\
+	  go build -v -o $(BIN)/calico.exe $(GO_BUILD_ARGS) calico.go && \
+	  go build -v -o $(BIN)/calico-ipam.exe $(GO_BUILD_ARGS) ipam/calico-ipam.go'
 
 ###############################################################################
 # Building the image
@@ -419,7 +435,7 @@ test-install-cni: image k8s-install/scripts/install_cni.test
 ###############################################################################
 .PHONY: ci
 ## Run what CI runs
-ci: clean static-checks test-cni-versions image-all test-install-cni
+ci: clean static-checks build test-cni-versions image-all test-install-cni
 
 ## Deploys images to registry
 cd:
