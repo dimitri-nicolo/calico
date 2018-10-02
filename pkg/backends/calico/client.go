@@ -350,52 +350,56 @@ func (c *client) updatePeersV1() {
 		peersV1[k] = string(value)
 	}
 
-	// Loop through v3 BGPPeers.
-	for _, v3res := range c.bgpPeers {
-		log.WithField("peer", v3res).Debug("First pass with v3 BGPPeer")
-
-		var localNodeNames []string
-		if v3res.Spec.NodeSelector != "" {
-			localNodeNames = c.nodesMatching(v3res.Spec.NodeSelector)
-		} else if v3res.Spec.Node != "" {
-			localNodeNames = []string{v3res.Spec.Node}
-		}
-		log.Debugf("Local nodes %#v", localNodeNames)
-
-		var peers []*bgpPeer
-		if v3res.Spec.PeerSelector != "" {
-			for _, peerNodeName := range c.nodesMatching(v3res.Spec.PeerSelector) {
-				peer, err := c.nodeAsBGPPeer(peerNodeName)
-				if err != nil {
-					log.WithError(err).Errorf("Couldn't represent node %v as BGP peer", peerNodeName)
-					continue
-				}
-				peers = append(peers, peer)
-			}
-		} else {
-			ip := net.ParseIP(v3res.Spec.PeerIP)
-			if ip == nil {
-				log.Warning("PeerIP is not assigned or is malformed")
+	// Loop through v3 BGPPeers twice, first to emit global peerings, then for
+	// node-specific ones.  The point here is to emit all of the possible global peerings
+	// _first_, so that we can then skip emitting any node-specific peerings that would
+	// duplicate those on particular nodes.
+	for _, globalPass := range []bool{true, false} {
+		for _, v3res := range c.bgpPeers {
+			log.WithField("peer", v3res).Debug("Process v3 BGPPeer")
+			if globalPass != ((v3res.Spec.NodeSelector == "") && (v3res.Spec.Node == "")) {
+				log.WithField("globalPass", globalPass).Debug("Skip BGPPeer on this pass")
 				continue
 			}
-			peers = append(peers, &bgpPeer{
-				PeerIP: *ip,
-				ASNum:  v3res.Spec.ASNumber,
-			})
-		}
-		log.Debugf("Peers %#v", peers)
 
-		for _, peer := range peers {
-			peer.Extensions = v3res.Spec.Extensions
-			log.Debugf("Peer: %#v", peer)
-			if localNodeNames == nil {
-				key := model.GlobalBGPPeerKey{PeerIP: peer.PeerIP}
-				emit(key, peer)
+			var localNodeNames []string
+			if v3res.Spec.NodeSelector != "" {
+				localNodeNames = c.nodesMatching(v3res.Spec.NodeSelector)
+			} else if v3res.Spec.Node != "" {
+				localNodeNames = []string{v3res.Spec.Node}
+			}
+			log.Debugf("Local nodes %#v", localNodeNames)
+
+			var peers []*bgpPeer
+			if v3res.Spec.PeerSelector != "" {
+				for _, peerNodeName := range c.nodesMatching(v3res.Spec.PeerSelector) {
+					peers = append(peers, c.nodeAsBGPPeers(peerNodeName)...)
+				}
 			} else {
-				for _, localNodeName := range localNodeNames {
-					log.Debugf("Local node name: %#v", localNodeName)
-					key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
+				ip := net.ParseIP(v3res.Spec.PeerIP)
+				if ip == nil {
+					log.Warning("PeerIP is not assigned or is malformed")
+					continue
+				}
+				peers = append(peers, &bgpPeer{
+					PeerIP: *ip,
+					ASNum:  v3res.Spec.ASNumber,
+				})
+			}
+			log.Debugf("Peers %#v", peers)
+
+			for _, peer := range peers {
+				peer.Extensions = v3res.Spec.Extensions
+				log.Debugf("Peer: %#v", peer)
+				if globalPass {
+					key := model.GlobalBGPPeerKey{PeerIP: peer.PeerIP}
 					emit(key, peer)
+				} else {
+					for _, localNodeName := range localNodeNames {
+						log.Debugf("Local node name: %#v", localNodeName)
+						key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
+						emit(key, peer)
+					}
 				}
 			}
 		}
@@ -433,15 +437,12 @@ func (c *client) updatePeersV1() {
 		log.Debugf("Peers %#v", peerNodeNames)
 
 		for _, peerNodeName := range peerNodeNames {
-			peer, err := c.nodeAsBGPPeer(peerNodeName)
-			if err != nil {
-				log.WithError(err).Errorf("Couldn't represent node %v as BGP peer", peerNodeName)
-				continue
-			}
-			peer.Extensions = v3res.Spec.Extensions
-			for _, localNodeName := range localNodeNames {
-				key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
-				emit(key, peer)
+			for _, peer := range c.nodeAsBGPPeers(peerNodeName) {
+				peer.Extensions = v3res.Spec.Extensions
+				for _, localNodeName := range localNodeNames {
+					key := model.NodeBGPPeerKey{Nodename: localNodeName, PeerIP: peer.PeerIP}
+					emit(key, peer)
+				}
 			}
 		}
 	}
@@ -496,8 +497,8 @@ func (c *client) nodesWithIPAndAS(ip string, asNum numorstring.ASNumber) []strin
 	}
 	nodeNames := []string{}
 	for nodeName, _ := range c.nodeLabels {
-		nodeIP, nodeAS, _ := c.nodeToIPAndAS(nodeName)
-		if nodeIP != ip {
+		nodeIPv4, nodeIPv6, nodeAS, _ := c.nodeToBGPFields(nodeName)
+		if (nodeIPv4 != ip) && (nodeIPv6 != ip) {
 			continue
 		}
 		if nodeAS == "" {
@@ -511,11 +512,12 @@ func (c *client) nodesWithIPAndAS(ip string, asNum numorstring.ASNumber) []strin
 	return nodeNames
 }
 
-func (c *client) nodeToIPAndAS(nodeName string) (string, string, string) {
-	ipKey, _ := model.KeyToDefaultPath(model.NodeBGPConfigKey{Nodename: nodeName, Name: "ip_addr_v4"})
+func (c *client) nodeToBGPFields(nodeName string) (string, string, string, string) {
+	ipv4Key, _ := model.KeyToDefaultPath(model.NodeBGPConfigKey{Nodename: nodeName, Name: "ip_addr_v4"})
+	ipv6Key, _ := model.KeyToDefaultPath(model.NodeBGPConfigKey{Nodename: nodeName, Name: "ip_addr_v6"})
 	asKey, _ := model.KeyToDefaultPath(model.NodeBGPConfigKey{Nodename: nodeName, Name: "as_num"})
 	rrKey, _ := model.KeyToDefaultPath(model.NodeBGPConfigKey{Nodename: nodeName, Name: "rr_cluster_id"})
-	return c.cache[ipKey], c.cache[asKey], c.cache[rrKey]
+	return c.cache[ipv4Key], c.cache[ipv6Key], c.cache[asKey], c.cache[rrKey]
 }
 
 func (c *client) globalAS() string {
@@ -523,25 +525,42 @@ func (c *client) globalAS() string {
 	return c.cache[asKey]
 }
 
-func (c *client) nodeAsBGPPeer(nodeName string) (*bgpPeer, error) {
-	ipStr, asNum, rrClusterID := c.nodeToIPAndAS(nodeName)
-	peer := &bgpPeer{}
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return nil, fmt.Errorf("Couldn't parse IP %v for node %v", ipStr, nodeName)
+func (c *client) nodeAsBGPPeers(nodeName string) (peers []*bgpPeer) {
+	ipv4Str, ipv6Str, asNum, rrClusterID := c.nodeToBGPFields(nodeName)
+	for version, ipStr := range map[string]string{
+		"IPv4": ipv4Str,
+		"IPv6": ipv6Str,
+	} {
+		peer := &bgpPeer{}
+		if ipStr == "" {
+			log.Debugf("No %v for node %v", version, nodeName)
+			continue
+		}
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			log.Warningf("Couldn't parse %v %v for node %v", version, ipStr, nodeName)
+			continue
+		}
+		peer.PeerIP = *ip
+		var err error
+		if asNum != "" {
+			log.Debugf("ASNum for %v is %#v", nodeName, asNum)
+			peer.ASNum, err = numorstring.ASNumberFromString(asNum)
+			if err != nil {
+				log.WithError(err).Warningf("Problem parsing AS number %v for node %v", asNum, nodeName)
+			}
+		} else {
+			asNum = c.globalAS()
+			log.Debugf("Global ASNum for %v is %#v", nodeName, asNum)
+			peer.ASNum, err = numorstring.ASNumberFromString(asNum)
+			if err != nil {
+				log.WithError(err).Warningf("Problem parsing global AS number %v for node %v", asNum, nodeName)
+			}
+		}
+		peer.RRClusterID = rrClusterID
+		peers = append(peers, peer)
 	}
-	peer.PeerIP = *ip
-	var err error
-	if asNum != "" {
-		log.Debugf("ASNum for %v is %#v", nodeName, asNum)
-		peer.ASNum, err = numorstring.ASNumberFromString(asNum)
-	} else {
-		asNum = c.globalAS()
-		log.Debugf("Global ASNum for %v is %#v", nodeName, asNum)
-		peer.ASNum, err = numorstring.ASNumberFromString(asNum)
-	}
-	peer.RRClusterID = rrClusterID
-	return peer, err
+	return
 }
 
 // OnUpdates is called from the BGP syncer to indicate that new updates are available from the
@@ -608,15 +627,18 @@ func (c *client) OnUpdates(updates []api.Update) {
 			}
 
 			// Update our cache of node labels.
-			v3res, ok := u.Value.(*apiv3.Node)
-			if !ok {
-				log.Warning("Bad value for Node resource")
-				continue
-			}
-			if v3res != nil {
-				c.nodeLabels[v3key.Name] = v3res.Labels
-			} else {
+			if u.Value == nil {
+				// This was a delete - remove node labels.
 				delete(c.nodeLabels, v3key.Name)
+			} else {
+				// This was a create or update - update node labels.
+				v3res, ok := u.Value.(*apiv3.Node)
+				if !ok {
+					log.Warning("Bad value for Node resource")
+					continue
+				}
+
+				c.nodeLabels[v3key.Name] = v3res.Labels
 			}
 
 			// Note need to recompute BGP v1 peerings.
