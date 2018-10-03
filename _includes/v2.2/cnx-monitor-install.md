@@ -54,8 +54,8 @@
 {% endif %}
 
 
-1. If your cluster is connected to the internet, use the following command to apply the {{operators}}
-   operator manifest.
+1. If your cluster is connected to the internet, use the following command to apply the
+   `operator.yaml` manifest.
    ```bash
    {{cli}} apply -f \
    {{docpath}}{{secure}}/operator.yaml
@@ -67,7 +67,7 @@
 
    > For offline installs, complete the following steps instead.
    >
-   > 1. Download the {{operators}} operator manifest.
+   > 1. Download the `operator.yaml` manifest.
    >
    >    ```bash
    >    curl --compressed -O \
@@ -75,12 +75,13 @@
    >    ```
    >
    > 1. Use the following commands to set an environment variable called `REGISTRY` containing the
-   >    location of the private registry and replace `quay.io` in the manifest with the location
-   >    of your private registry.
+   >    location of the private registry and replace the paths in the manifest to refer to
+   >    the private registry.
    >
    >    ```bash
    >    REGISTRY=my-registry.com \
-   >    sed -i -e "s?quay.io?$REGISTRY?g" operator.yaml
+   >    sed -i -e "s?quay.io?$REGISTRY?g" operator.yaml {% if include.elasticsearch == "operator" %}\
+   >    sed -i -e "s?upmcenterprises?$REGISTRY/upmcenterprises?g" operator.yaml{% endif %}
    >    ```
    >
    >    **Tip**: If you're hosting your own private registry, you may need to include
@@ -94,10 +95,10 @@
    >    ```
 
 {% if include.elasticsearch == "operator" %}
-1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `servicemonitors.monitoring.coreos.com`
+1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, `servicemonitors.monitoring.coreos.com`,
    and `elasticsearchclusters.enterprises.upmc.com` custom resource definitions to be created. Check by running:
 {% else %}
-1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com` and `servicemonitors.monitoring.coreos.com`
+1. Wait for the `alertmanagers.monitoring.coreos.com`, `prometheuses.monitoring.coreos.com`, and `servicemonitors.monitoring.coreos.com`
    custom resource definitions to be created. Check by running:
 {% endif %}
 
@@ -118,7 +119,7 @@
 {% include {{page.version}}/elastic-storage.md orch=include.orch %}
 {% endif %}
 
-1.  Download the Alertmanager and {{operators}} manifest.
+1.  Download the `monitor-calico.yaml` manifest.
 
     ```bash
     curl --compressed -O \
@@ -237,16 +238,19 @@
 {% endif %}
 
 {% if include.elasticsearch == "operator" %}
-1. If you wish to use the preconfigured Kibana indexes, views and dashboards you can create a `configMap` and start a job that will install the dashboard when the Kibana service endpoints come up.
+1. If you wish to use the preconfigured Kibana indexes, views and dashboards you can create a `ConfigMap` and start a job that will install the dashboard when the Kibana service endpoints come up.
 
    ```bash
    {{cli}} apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml
    ```
 {% else %}
-1. If you wish to use the preconfigured Kibana indexes, views and dashboards you can download the following json file, and [import it into Kibana](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects).
+1. Download the following JSON file and
+   [import it into Kibana](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects)
+   for preconfigured Kibana indexes, views, and dashboards.
 
    ```bash
-   curl --compressed -O {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
+   curl --compressed -O \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
    ```
 {% endif %}
 

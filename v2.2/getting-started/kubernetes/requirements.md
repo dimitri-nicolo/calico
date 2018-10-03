@@ -61,9 +61,4 @@ Application Layer Policy requires the [MutatingAdmissionWebhook](https://kuberne
 
 {% include {{page.version}}/reqs-kernel.md %}
 
-## Elasticsearch requirements
-
-This section applies to production installs using your own separately installed Elasticsearch.
-You can ignore this section if you're using the bundled operator installed Elasticsearch.
-
 {% include {{page.version}}/reqs-byo-es.md %}

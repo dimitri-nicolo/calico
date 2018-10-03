@@ -185,7 +185,7 @@
      > instead, refer to [{{site.prodname}} Manager connections]({{site.url}}/{{page.version}}/usage/encrypt-comms#{{site.prodnamedash}}-manager-connections).
      {: .alert .alert-info}
 
-1. Apply the manifest to install {{site.prodname}} Manager and the {{site.prodname}} API server.
+1. Apply the manifest to install the {{site.prodname}} Manager and the {{site.prodname}} API server.
 
 {% if include.init == "openshift" %}
 
