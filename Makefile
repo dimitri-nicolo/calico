@@ -63,7 +63,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 OS := $(shell uname -s | tr A-Z a-z)
 
 ###############################################################################
-GO_BUILD_VER?=v0.17
+GO_BUILD_VER?=v0.18
 ETCD_VER?=v3.3.7
 
 BUILD_IMAGE?=tigera/calicoctl
@@ -358,6 +358,15 @@ run-etcd-host:
 .PHONY: stop-etcd
 stop-etcd:
 	@-docker rm -f calico-etcd
+
+# Run fossa.io license checks
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+        -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+        -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+        -w /go/src/$(PACKAGE_NAME) \
+        $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # CI
