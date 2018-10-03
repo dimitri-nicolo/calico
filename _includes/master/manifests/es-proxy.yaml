@@ -16,8 +16,8 @@ spec:
     app: es-proxy
   type: ClusterIP
   ports:
-  - port: 9200
-    targetPort: 9200
+  - port: 8443
+    targetPort: 8443
 
 ---
 

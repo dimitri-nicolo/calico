@@ -1,0 +1,2 @@
+data:
+  tigera.cnx-manager.elasticsearch-api-url: /api/v1/namespaces/calico-monitoring/services/https:elasticsearch-tigera-elasticsearch:8443/proxy
