@@ -1,6 +1,6 @@
 {% if include.init != "openshift" %}
   {% assign cli = "kubectl" %}
-{% else %} 
+{% else %}
   {% assign cli = "oc" %}
 {% endif %}
 
@@ -217,7 +217,8 @@
 
    Wait until each pod has the `STATUS` of `Running`.
 
-1. Apply the following manifest to set network policy that permits requests to {{site.prodname}}.
+1. Apply the following manifest to set network policy that allows users and the {{site.prodname}} API server
+   to access the {{site.prodname}} Manager.
 
    ```bash
    {{cli}} apply -f \

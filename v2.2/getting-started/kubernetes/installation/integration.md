@@ -227,6 +227,6 @@ kubectl apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/instal
    of logs or authenticate access to Kibana.
    {: .alert .alert-danger}
 
-{% include {{page.version}}/cnx-monitor-install.md %}
+{% include {{page.version}}/cnx-monitor-install.md elasticsearch="operator" %}
 
 {% include {{page.version}}/gs-next-steps.md %}
