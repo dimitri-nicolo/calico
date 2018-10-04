@@ -171,31 +171,11 @@ func (t *RuleTrace) Len() int {
 }
 
 func (t *RuleTrace) Path() []*calc.RuleID {
-	// Minor optimization where we only do a rebuild when we don't have the full
-	// path.
-	rebuild := false
-	idx := 0
-	for i, ruleID := range t.path {
-		if ruleID == nil {
-			rebuild = true
-			break
-		}
-		if ruleID.Action == rules.RuleActionAllow || ruleID.Action == rules.RuleActionDeny {
-			idx = i
-			break
-		}
+	if t.verdictIdx >= 0 {
+		return t.path[:t.verdictIdx+1]
+	} else {
+		return nil
 	}
-	if !rebuild {
-		return t.path[:idx+1]
-	}
-	path := make([]*calc.RuleID, 0, RuleTraceInitLen)
-	for _, tp := range t.path {
-		if tp == nil {
-			continue
-		}
-		path = append(path, tp)
-	}
-	return path
 }
 
 func (t *RuleTrace) ToString() string {

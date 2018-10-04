@@ -209,14 +209,26 @@ type FlowPolicies map[string]empty
 
 func NewFlowPolicies(mu MetricUpdate) FlowPolicies {
 	fp := make(FlowPolicies)
+	if mu.ruleIDs == nil {
+		return fp
+	}
 	for idx, rid := range mu.ruleIDs {
+		if rid == nil {
+			continue
+		}
 		fp[fmt.Sprintf("%d|%s", idx, rid.GetFlowLogPolicyName())] = emptyValue
 	}
 	return fp
 }
 
 func (fp FlowPolicies) aggregateMetricUpdate(mu MetricUpdate) {
+	if mu.ruleIDs == nil {
+		return
+	}
 	for idx, rid := range mu.ruleIDs {
+		if rid == nil {
+			continue
+		}
 		fp[fmt.Sprintf("%d|%s", idx, rid.GetFlowLogPolicyName())] = emptyValue
 	}
 }

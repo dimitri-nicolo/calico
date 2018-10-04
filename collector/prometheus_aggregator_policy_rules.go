@@ -146,7 +146,13 @@ func (pa *PolicyRulesAggregator) RegisterMetrics(registry *prometheus.Registry) 
 // and no activity within the retention period. Unlike reportMetric, if there is no cached
 // entry for this metric one is not created and therefore the metric will not be reported.
 func (pa *PolicyRulesAggregator) OnUpdate(mu MetricUpdate) {
+	if mu.ruleIDs == nil {
+		return
+	}
 	for _, rID := range mu.ruleIDs {
+		if rID == nil {
+			continue
+		}
 		pa.updateRuleKey(RuleAggregateKey{ruleID: *rID}, mu)
 	}
 }
