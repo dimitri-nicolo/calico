@@ -9,7 +9,7 @@ For more detailed documentation on {{site.prodname}} features, see here:
 - [Configuring Felix]({{site.baseurl}}/{{page.version}}/reference/felix/configuration)
 - [Configuring Prometheus]({{site.baseurl}}/{{page.version}}/usage/configuration/prometheus)
 - [Configuring Alertmanager]({{site.baseurl}}/{{page.version}}/usage/configuration/alertmanager)
-- [Configuring Audit Logging]({{site.baseurl}}/{{page.version}}/usage/logs/elastic/k8s-audit)
+- [Configuring Audit Logging]({{site.baseurl}}/{{page.version}}/usage/logs/elastic/ee-audit)
 - [Configuring RBAC]({{site.baseurl}}/{{page.version}}/reference/cnx/rbac-tiered-policies)
 - [Configuring access to remote clusters]({{site.baseurl}}/{{page.version}}/usage/federation/configure-rcc) (federation only)
 - [Configuring federated services]({{site.baseurl}}/{{page.version}}/usage/federation/services-controller) (federation only)

@@ -48,8 +48,6 @@ toc:
       path: /usage/logs/elastic/flow
     - title: Audit logs
       path: /usage/logs/elastic/ee-audit
-    - title: Configuring audit logs
-      path: /usage/logs/elastic/k8s-audit
     - title: Accessing logs
       path: /usage/logs/elastic/view
     - title: Configuring Elasticsearch
