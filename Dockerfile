@@ -15,6 +15,8 @@ ADD elastic_mapping_flows.template /fluentd/etc/elastic_mapping_flows.template
 ENV FLOW_LOG_FILE=/var/log/calico/flowlogs/flows.log
 ENV ELASTIC_HOST=elasticsearch
 ENV ELASTIC_PORT=9200
+ENV KUBE_AUDIT_LOG=/var/log/calico/audit/kube-audit.log
+ENV KUBE_AUDIT_POS=/var/log/calico/audit/kube-audit.log.pos
 
 COPY ee_entrypoint.sh /bin/
 RUN chmod +x /bin/ee_entrypoint.sh
