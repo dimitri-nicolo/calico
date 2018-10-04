@@ -84,7 +84,7 @@ EXCLUDE_MANIFEST_REGISTRIES ?= quay.io/
 PUSH_MANIFEST_IMAGES=$(PUSH_IMAGES:$(EXCLUDE_MANIFEST_REGISTRIES)%=)
 PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 
-GO_BUILD_VER?=v0.17
+GO_BUILD_VER?=v0.18
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
 
 # location of docker credentials to push manifests
@@ -307,6 +307,14 @@ static-checks: vendor
 ## Fix static checks
 fix:
 	goimports -w $(SRCFILES)
+
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # FV Tests
