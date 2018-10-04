@@ -1,11 +1,11 @@
 
-1. Set up secret with username and password for `Fluentd` to authenticate with ElasticSearch.
-    ```
-    kubectl create secret generic elastic-fluentd-user \
-    --from-literal=username=<elastic-search-user> \
-    --from-literal=password=<elastic-search-user-password> \
-    -n calico-monitoring
-    ```
+1. Set up secret with username and password for `Fluentd` to authenticate with Elasticsearch.
+   ```
+   kubectl create secret generic elastic-fluentd-user \
+   --from-literal=username=<elastic-search-user> \
+   --from-literal=password=<elastic-search-user-password> \
+   -n calico-monitoring
+   ```
 
 1. Set up configmap with the certificate authority certificate to authenticate Elasticsearch.
 
@@ -37,15 +37,11 @@
    ```
 
 1. Download the configmap patch for {{site.prodname}} Manager.
-
     ```
     curl --compressed -O {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/secure-es/patch-cnx-manager-configmap.yaml
     ```
-
 1. Apply the configmap patch.
-
    ```
    kubectl patch configmap tigera-cnx-manager-config -n kube-system -p "$(cat patch-cnx-manager-configmap.yaml)"
    ```
-
 1. Restart {{site.prodname}} Manager pod

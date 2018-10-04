@@ -17,6 +17,19 @@ which is not suitable for production use.
 
 ## Installing {{site.prodname}} monitoring with your own Elasticsearch
 
+### Set up namespace
+
+1. Create the `calico-monitoring` namespace to store configuration and set up other {{site.prodname}} components
+
+   ```
+   kubectl create -f - <<EOF
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: calico-monitoring
+   EOF
+   ```
+
 ### Set up access to your cluster from Kubernetes
 
 {% include {{page.version}}/elastic-secure.md %}
