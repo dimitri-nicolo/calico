@@ -4,7 +4,13 @@ layout: null
 #
 # Manifest to auto inject index, visualization and dashboards into Kibana
 #
-# This ConfigMap is used to configure a self-hosted Calico installation.
+# Note: to create the api-kibana-dashboard.json you must use the Kibana export API to extract the json
+# For example:  $curl -X GET \
+# 'http://192.168.189.183:5601/api/kibana/dashboards/export?dashboard=a2a864b0-c1c-11e8-b274-fbb68ba254a6&dashboard=c66e42c0-c11c-11e8-b274-fbb68ba254a6' \
+# -H 'kbn-xsrf: true' > api-kibana-dashboard.json
+#
+# One way to figure out the specific dashboard id's is to export the saved objects from Kibana UI and then look at the 'dashboards' id's in the json file.
+#
 kind: ConfigMap
 apiVersion: v1
 metadata:
@@ -12,7 +18,7 @@ metadata:
   namespace: calico-monitoring
 data:
   kibana-dashboard.json: |
-{% include {{page.version}}/manifests/kibana-dashboard.json %}
+{% include {{page.version}}/manifests/api-kibana-dashboard.json %}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -77,9 +83,10 @@ spec:
             for file in /opt/dashboards/*-dashboard.json ; do
               if [ -e "$file" ] ; then
                 echo "importing $file" &&
-                curl --silent --fail --show-error \
-                  --request POST http://kibana-tigera-elasticsearch:5601/api/kibana/dashboards/import \
+                curl -v \
+                  http://kibana-tigera-elasticsearch/api/kibana/dashboards/import \
                   --header "Content-Type: application/json" \
+                  --header 'kbn-xsrf: true' \
                   --data-binary "@$file" ;
                 echo "" ;
               fi
