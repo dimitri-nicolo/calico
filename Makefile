@@ -137,7 +137,7 @@ PUSH_NONMANIFEST_IMAGES=$(filter-out $(PUSH_MANIFEST_IMAGES),$(PUSH_IMAGES))
 # location of docker credentials to push manifests
 DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
-GO_BUILD_VER?=v0.17
+GO_BUILD_VER?=v0.18
 # For building, we use the go-build image for the *host* architecture, even if the target is different
 # the one for the host should contain all the necessary cross-compilation tools
 # we do not need to use the arch since go-build:v0.15 now is multi-arch manifest
@@ -555,6 +555,14 @@ pre-commit:
 ## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
+
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(CALICO_BUILD) /usr/local/bin/fossa
 
 ###############################################################################
 # Unit Tests
