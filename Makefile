@@ -14,6 +14,9 @@ QUERYSERVER_IMAGE:=tigera/cnx-queryserver
 
 GO_BUILD_VER?=latest
 GO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+# Specific version for fossa license checks
+FOSSA_GO_BUILD_VER?=v0.18
+FOSSA_GO_BUILD?=calico/go-build:$(FOSSA_GO_BUILD_VER)
 
 CALICOQ_VERSION?=$(shell git describe --tags --dirty --always)
 CALICOQ_BUILD_DATE?=$(shell date -u +'%FT%T%z')
@@ -33,6 +36,14 @@ vendor:
 .PHONY: update-vendor
 update-vendor:
 	glide up --strip-vendor
+
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(FOSSA_GO_BUILD) /usr/local/bin/fossa
 
 .PHONY: ut
 ut: bin/calicoq
