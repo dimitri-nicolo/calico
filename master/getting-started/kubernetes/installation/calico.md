@@ -357,9 +357,13 @@ for each [remote cluster](../../../usage/federation/index#terminology). Ensure t
 
 {% include {{page.version}}/cnx-mgr-install.md init="kubernetes" %}
 
-1. For production installs, follow the instructions [here](byo-elasticsearch) to configure {{site.prodname}}
-   to use your own Elasticsearch cluster.  For demo / proof of concept installs using the bundled Elasticsearch
-   operator continue to the next step instead.
+1. For production installs, we recommend using your own Elasticsearch cluster. If you are performing a
+   production install, do not complete any more steps on this page. Instead, refer to
+   [Using your own Elasticsearch for logs](byo-elasticsearch) for the final steps.
+
+   For demonstration or proof of concept installs, you can use the bundled
+   [Elasticsearch operator](https://github.com/upmc-enterprises/elasticsearch-operator). Continue to the
+   next step to complete a demonstration or proof of concept install.
 
    > **Important**: The bundled Elasticsearch operator does not provide reliable persistent storage
    of logs or authenticate access to Kibana.
