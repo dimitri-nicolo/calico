@@ -1,5 +1,6 @@
 ---
 title: Enabling application layer policy
+canonical_url: https://docs.tigera.io/v2.2/getting-started/kubernetes/installation/app-layer-policy
 ---
 
 ## About enabling application layer policy
@@ -64,14 +65,12 @@ Enable application layer policy in the {{site.prodname}} user interface
 kubectl edit configmap -n kube-system tigera-cnx-manager-config
 ## Restart the manager
 kubectl delete pod -n kube-system -l "k8s-app=cnx-manager"
-    ```
-
+	```
 
 
 ## Installing Istio
 
-Application layer policy requires you to use Istio in your cluster to function
-correctly. We support Istio version 1.0.0 or newer.
+Application layer policy [requires Istio](../requirements#application-layer-policy-requirements).
 
 Install Istio according to the [Istio project documentation](https://istio.io/docs/setup/kubernetes/), making sure to enable mutual TLS authentication. For example:
 
