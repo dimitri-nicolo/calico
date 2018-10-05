@@ -243,7 +243,9 @@
    ```bash
    {{cli}} apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml
    ```
+
 {% else %}
+
 1. Download the following JSON file and
    [import it into Kibana](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects)
    for preconfigured Kibana indexes, views, and dashboards.
@@ -252,7 +254,12 @@
    curl --compressed -O \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
    ```
+
+    1. Go to Management -> Saved Objects -> Import and then [import them into Kibana](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects).
+
 {% endif %}
+
+    1. Finally, make one of the index mappings the default. You may pick any one of the imported index patterns. You can do this by going to Management -> Index Patterns and then selecting one of the imported index pattern.
 
 1. If you wish to enforce application layer policies and secure workload-to-workload
    communications with mutual TLS authentication, continue to [Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy) (optional).
