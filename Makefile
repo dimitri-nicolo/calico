@@ -44,7 +44,7 @@ EXCLUDEARCH ?= s390x
 VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 
 ###############################################################################
-GO_BUILD_VER?=v0.17
+GO_BUILD_VER?=v0.18
 GO_BUILD_CONTAINER?=calico/go-build:$(GO_BUILD_VER)
 PROTOC_VER?=v0.1
 PROTOC_CONTAINER?=calico/protoc:$(PROTOC_VER)-$(BUILDARCH)
@@ -280,6 +280,14 @@ static-checks: vendor
 ## Fix static checks
 fix:
 	goimports -w $(SRC_FILES)
+
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(GO_BUILD_CONTAINER) /usr/local/bin/fossa
 
 ###############################################################################
 # UTs
