@@ -43,7 +43,7 @@ endif
 OS := $(shell uname -s | tr A-Z a-z)
 
 ###############################################################################
-GO_BUILD_VER?=v0.16
+GO_BUILD_VER?=v0.18
 ETCD_VER?=v3.3.7
 
 CARROTCTL_VERSION?=$(shell git describe --tags --dirty --always)
@@ -206,6 +206,14 @@ fix:
 ## Install Git hooks
 install-git-hooks:
 	./install-git-hooks
+
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(GO_BUILD_CONTAINER) /usr/local/bin/fossa
 
 ###############################################################################
 # UTs
