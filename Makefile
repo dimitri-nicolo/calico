@@ -37,7 +37,24 @@ vendor:
 update-vendor:
 	glide up --strip-vendor
 
-foss-checks: vendor
+foss-checks:
+	# TODO: create a "vendor-containerized" task
+	# Need to vendor in a container or wavetank tests will fail
+	mkdir -p bin
+	mkdir -p $(HOME)/.glide
+	# vendor in a container first
+	docker run --rm \
+		-v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+		-v $$SSH_AUTH_SOCK:/ssh-agent --env SSH_AUTH_SOCK=/ssh-agent \
+		-v $(HOME)/.glide:/home/user/.glide:rw \
+		-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+		-w /go/src/$(PACKAGE_NAME) \
+		calico/go-build \
+		sh -c 'glide install --strip-vendor'
+	# Generate the protobuf bindings for Felix
+	# Cannot do this together with vendoring since docker permissions in go-build are not perfect
+	$(MAKE) vendor/github.com/projectcalico/felix/proto/felixbackend.pb.go
+
 	@echo Running $@...
 	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
 	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
