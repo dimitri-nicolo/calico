@@ -4,11 +4,7 @@
   {% assign cli = "oc" %}
 {% endif %}
 
-{% if include.init == "systemd" or include.init == "kubernetes" %}
-
 ## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager and API Server
-
-{% endif %}
 
 {% if include.init == "systemd" %}
 
@@ -17,7 +13,7 @@
    deploys one pod on each host running {{site.prodname}} that you wish to
    monitor, adjusting the annotations and tolerations as needed.
 
-   ```
+   ```yaml
    apiVersion: extensions/v1beta1
    kind: DaemonSet
    metadata:
@@ -152,7 +148,7 @@
 
 1. Create a secret containing a TLS certificate and the private key used to
    sign it. The following commands use a self-signed certificate and key
-   found in many Kubernetes deployments for a quick start.
+   found in many deployments for a quick start.
 
 {% if include.init == "openshift" %}
 
@@ -255,4 +251,5 @@ oc adm policy add-cluster-role-to-user cluster-admin <USER>
    > ```
 oc adm policy remove-cluster-role-to-user cluster-admin <USER>
      ```
+   {: .alert .alert-info}
 {% endif %}

@@ -14,11 +14,13 @@ The information below explains the variables which must be set during the standa
 - Ensure that you have the [private registry credentials](../../getting-started/#obtain-the-private-registry-credentials)
   and a [license key](../../getting-started/#obtain-a-license-key).
 
-## Pulling the private {{site.prodname}} images
+{% include {{page.version}}/load-docker-intro.md %}
+
+{% include {{page.version}}/load-docker-our-reg.md yaml="calico" %}
 
 {% include {{page.version}}/load-docker.md orchestrator="openshift" yaml="calico" %}
 
-## Installing {{site.prodname}} and OpenShift
+## <a name="install-cnx"></a>Installing {{site.prodname}} and OpenShift
 
 ### Edit inventory file
 
@@ -32,9 +34,7 @@ inventory file:
   - `calico_url_policy_controller=<YOUR-REGISTRY>/{{site.imageNames["kubeControllers"]}}:{{site.data.versions[page.version].first.components["cnx-kube-controllers"].version}}`
   - `calico_cni_image={{site.imageNames["cni"]}}:{{site.data.versions[page.version].first.components["calico/cni"].version}}`
 
-Also ensure that you have an explicitly defined host in the `[etcd]` group.
-
-**Sample Inventory File:**
+Also ensure that you have an explicitly defined host in the `[etcd]` group. A sample inventory file follows.
 
 ```
 [OSEv3:children]
@@ -62,39 +62,39 @@ node1 ansible_host=127.0.0.1 openshift_schedulable=true openshift_node_group_nam
 etcd1
 ```
 
-### Update ansible provisioning script
+### Update Ansible provisioning script
 
-> Note that the current ansible installation scripts for OpenShift v3.10 may require some additional changes when installing
+> Note that the current Ansible installation scripts for OpenShift v3.10 may require some additional changes when installing
 > {{site.prodname}} networking. These changes may not have not yet made it into the version of the packaged installer and so these additional
 > steps will allow you to check and update the packaged installation scripts if necessary. When these changes are in the upstream
 > packages, these steps can be ignored.
 {: .alert .alert-info}
 
-To check if your ansible scripts include the required {{site.prodname}} changes, run the following:
+To check if your Ansible scripts include the required {{site.prodname}} changes, run the following.
+
 ```bash
 grep -Fq "calico_binary_checks" /usr/share/ansible/openshift-ansible/roles/calico_master/templates/calicov3.yml.j2 && echo "updated" || echo "needs updates"
 ```
 
-If the above command responds with `needs updates`, update the packaged installer by running the following:
+If the above command responds with `needs updates`, update the packaged installer by running the following.
+
 ```bash
 git clone git@github.com:openshift/openshift-ansible.git -b release-3.10
 sudo cp -r openshift-ansible/* /usr/share/ansible/openshift-ansible/.
 ```
 
-> **Note**: The commands given above assume that your OpenShift ansible scripts exist at `/usr/share/ansible/openshift-ansible/`. If your
+> **Note**: The commands given above assume that your OpenShift Ansible scripts exist at `/usr/share/ansible/openshift-ansible/`. If your
 > scripts are stored elsewhere, replace that path in the above commands.
 {: .alert .alert-info}
 
-### Execute ansible provisioning script
+### Execute Ansible provisioning script
 
-You are now ready to execute the ansible provision which will install {{site.prodname}}. Note that by default,
-{{site.prodname}} will connect to the same etcd that OpenShift uses, and in order to do so, will distribute etcd's
+You are now ready to execute the Ansible provision which will install {{site.prodname}}. Note that by default,
+{{site.prodname}} will connect to the same etcd that OpenShift uses and distribute etcd's
 certs to each node. If you would prefer {{site.prodname}} not connect to the same etcd as OpenShift, you may modify the install
 such that {{site.prodname}} connects to an etcd you have already set up by following the [dedicated etcd install guide](dedicated-etcd).
 
 {% include {{page.version}}/apply-license.md init="openshift" %}
-
-## <a name="install-cnx-mgr"></a>Installing the {{site.prodname}} Manager
 
 {% include {{page.version}}/cnx-mgr-install.md init="openshift" %}
 
@@ -123,11 +123,11 @@ such that {{site.prodname}} connects to an etcd you have already set up by follo
 
        oc apply -f ./oauth-client.yaml
 
-## Installing Policy Violation Alerting
-
-Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
+## Installing metrics and logs
 
 ### Enable Metrics
+
+Below, we'll cover how to enable metrics in {{site.prodname}} and how to launch Prometheus using Prometheus-Operator.
 
 **Prerequisite**: `calicoctl` [installed](../../usage/calicoctl/install) and [configured](../../usage/calicoctl/configure/). We recommend [installing](../../usage/calicoctl/install#installing-calicoctl-as-a-container-on-a-single-host) calicoctl as a container in OpenShift.
 
@@ -141,12 +141,12 @@ Enable metrics in {{site.prodname}} for OpenShift by updating the global `FelixC
    iptables -I INPUT -p tcp --dport 9081 -j ACCEPT
    ```
 
-#### Configure Prometheus and Flow Logs
+### Configure metrics and logs
 
 With metrics enabled, you are ready to monitor `{{site.nodecontainer}}` by scraping the endpoint on each node
 in the cluster. If you do not have your own Prometheus, the following commands will launch a Prometheus
 Operator, Prometheus, and Alertmanager instances for you. They will also deploy Elasticsearch, Fluentd, and
-Kibana in order to enable flow logs.
+Kibana in order to enable logs.
 
 {% include {{page.version}}/cnx-monitor-install.md orch="openshift" elasticsearch="operator" %}
 
