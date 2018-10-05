@@ -218,8 +218,8 @@ var _ = Describe("Rule Trace", func() {
 			BeforeEach(func() {
 				data.AddRuleID(allowIngressRid11, 11, 0, 0)
 			})
-			It("should have path length 2", func() {
-				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
+			It("should have path length 12", func() {
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(12))
 			})
 			It("should have length twice of initial length", func() {
 				Expect(data.IngressRuleTrace.Len()).To(Equal(RuleTraceInitLen * 2))
@@ -232,8 +232,8 @@ var _ = Describe("Rule Trace", func() {
 			BeforeEach(func() {
 				data.AddRuleID(denyIngressRid21, 21, 0, 0)
 			})
-			It("should have path length 2", func() {
-				Expect(data.IngressRuleTrace.Path()).To(HaveLen(2))
+			It("should have path length 22", func() {
+				Expect(data.IngressRuleTrace.Path()).To(HaveLen(22))
 			})
 			It("should have length thrice of initial length", func() {
 				Expect(data.IngressRuleTrace.Len()).To(Equal(RuleTraceInitLen * 3))
@@ -246,8 +246,8 @@ var _ = Describe("Rule Trace", func() {
 			BeforeEach(func() {
 				data.AddRuleID(allowIngressRid0, 0, 0, 0)
 			})
-			It("should have path length unchanged and equal to 1", func() {
-				Expect(data.IngressRuleTrace.Path()).To(HaveLen(1))
+			It("should return a nil path", func() {
+				Expect(data.IngressRuleTrace.Path()).To(BeNil())
 			})
 			It("should have not have action set", func() {
 				Expect(data.IngressAction()).NotTo(Equal(rules.RuleActionAllow))
@@ -285,8 +285,8 @@ var _ = Describe("Rule Trace", func() {
 		It("should have ingress path length equal to 3", func() {
 			Expect(data.IngressRuleTrace.Path()).To(HaveLen(3))
 		})
-		It("should have egress path length equal to 2", func() {
-			Expect(data.EgressRuleTrace.Path()).To(HaveLen(2))
+		It("should have egress path length equal to 3", func() {
+			Expect(data.EgressRuleTrace.Path()).To(HaveLen(3))
 		})
 		It("should have have ingress action set to allow", func() {
 			Expect(data.IngressAction()).To(Equal(rules.RuleActionAllow))

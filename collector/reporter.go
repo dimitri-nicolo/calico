@@ -81,7 +81,7 @@ func (mu MetricUpdate) String() string {
 }
 
 func (mu MetricUpdate) GetLastRuleID() *calc.RuleID {
-	if len(mu.ruleIDs) == 0 {
+	if mu.ruleIDs == nil || len(mu.ruleIDs) == 0 {
 		return nil
 	}
 	return mu.ruleIDs[len(mu.ruleIDs)-1]
