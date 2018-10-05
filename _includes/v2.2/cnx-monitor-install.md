@@ -27,7 +27,7 @@
    oc patch daemonset {{site.noderunning}} -n kube-system --patch "$(cat patch-flow-logs.yaml)"
    ```
 
-1. Allow Prometheus to run as root:
+1. Allow Prometheus to run as root.
 
    ```
    oc adm policy add-scc-to-user --namespace=calico-monitoring anyuid -z default
@@ -39,13 +39,13 @@
    oc adm policy add-scc-to-user anyuid system:serviceaccount:calico-monitoring:prometheus
    ```
 
-1. Allow sleep pod to run with host networking:
+1. Allow sleep pod to run with host networking.
 
    ```
    oc adm policy add-scc-to-user --namespace=calico-monitoring hostnetwork -z default
    ```
 
-1. Allow Prometheus to have pods in `kube-system` namespace on each node:
+1. Allow Prometheus to have pods in `kube-system` namespace on each node.
 
    ```
    oc annotate ns kube-system openshift.io/node-selector="" --overwrite
@@ -238,28 +238,31 @@
 {% endif %}
 
 {% if include.elasticsearch == "operator" %}
-1. If you wish to use the preconfigured Kibana indexes, views and dashboards you can create a `ConfigMap` and start a job that will install the dashboard when the Kibana service endpoints come up.
+1. Create a `ConfigMap` and start a job that will install the {{site.prodname}} Kibana indexes, views, and dashboards
+   when the Kibana service endpoints come up.
 
    ```bash
-   {{cli}} apply -f {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml
+   {{cli}} apply -f \
+   {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboards.yaml
    ```
 
 {% else %}
 
-1. Download the following JSON file and
-   [import it into Kibana](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects)
-   for preconfigured Kibana indexes, views, and dashboards.
+1. Download the following JSON file containing the {[site.prodname}} Kibana indexes, views, and dashboards.
 
    ```bash
    curl --compressed -O \
    {{site.url}}/{{page.version}}/getting-started/kubernetes/installation/hosted/cnx/1.7/kibana-dashboard.json
    ```
 
-    1. Go to Management -> Saved Objects -> Import and then [import them into Kibana](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects).
+1. Open the **Management** -> **Saved Objects** pane in Kibana and click **Import**. To complete the import, follow the
+   [Kibana documentation][](https://www.elastic.co/guide/en/kibana/current/managing-saved-objects.html#_import_objects).
 
 {% endif %}
 
-    1. Finally, make one of the index mappings the default. You may pick any one of the imported index patterns. You can do this by going to Management -> Index Patterns and selecting one of the imported index pattern.
+1. Open the **Management** -> **Index Patterns** pane in Kibana and select one of the imported index patterns to set it as the
+   default pattern. Refer to the [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/index-patterns.html#set-default-pattern)
+   for more details.
 
 1. If you wish to enforce application layer policies and secure workload-to-workload
-   communications with mutual TLS authentication, continue to [Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy) (optional).
+   communications with mutually-authenticated TLS, continue to [Enabling application layer policy]({{site.url}}/{{page.version}}/getting-started/kubernetes/installation/app-layer-policy) (optional).
