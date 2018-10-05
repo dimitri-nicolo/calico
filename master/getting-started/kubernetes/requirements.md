@@ -1,5 +1,6 @@
 ---
 title: System requirements
+canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/requirements
 ---
 
 {% include {{page.version}}/reqs-sys.md orch="Kubernetes" %}
@@ -54,9 +55,10 @@ for information on modifying the defaults.
 
 {% include {{page.version}}/cnx-k8s-apiserver-requirements.md %}
 
-#### Mutating webhooks
+## Application layer policy requirements
 
-Application Layer Policy requires the [MutatingAdmissionWebhook](https://kubernetes.io/docs/admin/admission-controllers/#mutatingadmissionwebhook) to be enabled.
+- [MutatingAdmissionWebhook](https://kubernetes.io/docs/admin/admission-controllers/#mutatingadmissionwebhook) enabled
+- [Istio v1.0](https://istio.io/about/notes/1.0/)
 
 {% include {{page.version}}/reqs-kernel.md %}
 
