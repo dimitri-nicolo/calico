@@ -63,6 +63,7 @@ VALIDARCHES = $(filter-out $(EXCLUDEARCH),$(ARCHES))
 OS?=$(shell uname -s | tr A-Z a-z)
 ###############################################################################
 GO_BUILD_VER?=v0.17
+FOSSA_GO_BUILD_VER?=v0.18
 
 K8S_VERSION?=v1.11.3
 HYPERKUBE_IMAGE?=gcr.io/google_containers/hyperkube-$(ARCH):$(K8S_VERSION)
@@ -93,6 +94,7 @@ DOCKER_CONFIG ?= $(HOME)/.docker/config.json
 
 PACKAGE_NAME?=github.com/projectcalico/kube-controllers
 CALICO_BUILD?=calico/go-build:$(GO_BUILD_VER)
+FOSSA_CALICO_BUILD?=calico/go-build:$(FOSSA_GO_BUILD_VER)
 LIBCALICOGO_PATH?=none
 LOCAL_USER_ID?=$(shell id -u $$USER)
 
@@ -299,6 +301,15 @@ install-git-hooks:
 # Make sure that a copyright statement exists on all go files.
 check-copyright:
 	./check-copyrights.sh
+
+foss-checks: vendor
+	@echo Running $@...
+	@docker run --rm -v $(CURDIR):/go/src/$(PACKAGE_NAME):rw \
+	  -e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	  -e FOSSA_API_KEY=$(FOSSA_API_KEY) \
+	  -w /go/src/$(PACKAGE_NAME) \
+	  $(FOSSA_CALICO_BUILD) /usr/local/bin/fossa
+
 ###############################################################################
 # Tests
 ###############################################################################
