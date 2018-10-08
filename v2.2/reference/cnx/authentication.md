@@ -45,7 +45,7 @@ serving on port 30003, but you may wish to set up connectivity differently.
    kubectl delete pod cnx-manager-<hash> -n kube-system
    ```
 
-Configure Kubernetes RBAC bindings depending on the settings used for `--oidc-username/groups-claim` and `--oidc-username/groups-prefix` on the API server.
+[Configure Kubernetes RBAC bindings](rbac-tiered-policies) depending on the settings used for `--oidc-username/groups-claim` and `--oidc-username/groups-prefix` on the API server.
 
 Or, as for a quickstart step for the email address you want to login with, bind the email address with the `cluster-admin` role to give full access.
    ```
@@ -93,7 +93,7 @@ On a kubeadm system, you can use the following steps to set up basic authenticat
 1. Select the **Login via username and password** option in the {{site.prodname}} 
    Manager web interface.
 
-1. Configure Kubernetes RBAC bindings using the username and groups defined in the
+1. [Configure Kubernetes RBAC bindings](rbac-tiered-policies) using the username and groups defined in the
    basic authentication CSV file.
 
 

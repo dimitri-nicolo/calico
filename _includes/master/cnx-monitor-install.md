@@ -260,7 +260,7 @@
 
 {% endif %}
 
-1. Open the **Management** -> **Index Patterns** pane in Kibana and select one of the imported index patterns to set it as the
+1. Open the **Management** -> **Index Patterns** pane in Kibana, select one of the imported index patterns and click the star to set it as the
    default pattern. Refer to the [Kibana documentation](https://www.elastic.co/guide/en/kibana/current/index-patterns.html#set-default-pattern)
    for more details.
 

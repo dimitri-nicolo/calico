@@ -87,7 +87,7 @@ spec:
                 key: backend.authHeader
         livenessProbe:
           httpGet:
-            path: /
+            path: /tigera_secure_ee_flows/_search?size=0
             port: 8443
             scheme: HTTPS
           initialDelaySeconds: 90
@@ -97,13 +97,6 @@ spec:
           name: es-proxy-tls
         - mountPath: /etc/es-proxy-tls-cache
           name: es-proxy-tls-cache
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 8443
-            scheme: HTTPS
-          initialDelaySeconds: 90
-          periodSeconds: 10
       volumes:
       - name: es-proxy-tls-cache
         emptyDir: {}
