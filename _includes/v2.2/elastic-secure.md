@@ -45,3 +45,6 @@
    kubectl patch configmap tigera-cnx-manager-config -n kube-system -p "$(cat patch-cnx-manager-configmap.yaml)"
    ```
 1. Restart {{site.prodname}} Manager pod
+   ```
+   kubectl delete po -n kube-system -l k8s-app=cnx-manager
+   ```
