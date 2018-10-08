@@ -1,5 +1,6 @@
 ---
 title: Deploying Tigera Secure EE on Azure
+canonical_url: https://docs.tigera.io/v2.1/reference/public-cloud/azure
 ---
 
 ## About {{site.prodname}} on Azure

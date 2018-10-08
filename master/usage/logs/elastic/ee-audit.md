@@ -1,5 +1,6 @@
 ---
 title: Audit logs
+canonical_url: https://docs.tigera.io/v2.2/usage/logs/elastic/ee-audit
 ---
 
 ### Default audit logs sent to Elasticsearch
@@ -32,7 +33,7 @@ follow these steps.
    kubectl apply -f cnx.yaml
    ```
 
-   Or 
+   Or
 
    ```
    kubectl edit configmap audit-policy-ee -n kube-system
@@ -102,7 +103,7 @@ advantage of the {{site.prodname}} Elasticsearch and Kibana dashboards, send you
 > is not provided, i.e., `--audit-policy-file`.
 {: .alert .alert-info}
 
-1. Configure the Kubernetes API server with the following arguments (see the 
+1. Configure the Kubernetes API server with the following arguments (see the
    [Kubernetes audit logging documentation](https://kubernetes.io/docs/tasks/debug-application-cluster/audit/){:target="_blank"} for more details).
 
    ```

@@ -1,5 +1,6 @@
 ---
 title: Advanced etcd segmentation for Tigera Secure EE
+canonical_url: https://docs.tigera.io/v2.1/reference/advanced/etcd-rbac/kubernetes-advanced
 ---
 
 This document describes advanced segmentation of the etcd roles to limit

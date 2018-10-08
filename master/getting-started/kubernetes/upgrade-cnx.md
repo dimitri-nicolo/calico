@@ -1,5 +1,6 @@
 ---
 title: Upgrading a Kubernetes cluster with Calico to Tigera Secure EE
+canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/upgrade-cnx
 ---
 
 ## Prerequisite

@@ -1,5 +1,6 @@
 ---
 title: Deploying Tigera Secure EE on GCE
+canonical_url: https://docs.tigera.io/v2.1/reference/public-cloud/gce
 ---
 
 To deploy {{site.prodname}} in [Google Compute Engine][GCE], you must ensure

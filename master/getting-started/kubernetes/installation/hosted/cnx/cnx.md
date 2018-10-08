@@ -1,5 +1,6 @@
 ---
 title: Customizing the Tigera Secure EE manifests (advanced)
+canonical_url: https://docs.tigera.io/v2.1/getting-started/kubernetes/installation/hosted/cnx/cnx
 ---
 
 ## About the manifests
