@@ -10,5 +10,5 @@ For production, you must set up your own Elasticsearch cluster before [installin
 
 {{site.prodname}} pushes detailed [flow logs](flow) as well as [audit logs](ee-audit) to Elasticsearch.
 The {{site.prodname}} Manager provides [flow log visualization](view#view-in-mgr). You can also use
-[either Kibana or the Elasticsearch API](view#accessing-logs-from-kibana-or-the-elasticsearch-api) to query
-both flow and audit logs.
+either [Kibana](view#accessing-logs-from-kibana) or [the Elasticsearch API](view#accessing-logs-from-the-elasticsearch-api)
+to query both flow and audit logs.
