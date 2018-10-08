@@ -1,6 +1,4 @@
-{% if include.yaml == "calico" and include.orchestrator == "kubernetes" %}
 ### Pulling the images from another private registry
-{% endif %}
 
 **Prerequisite**: Ensure that you have the [`config.json` file with the private Tigera registry credentials](/{{page.version}}/getting-started/#obtain-the-private-registry-credentials).
 

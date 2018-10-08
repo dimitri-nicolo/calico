@@ -2,7 +2,7 @@
 
 ### About setting up access to the private {{site.prodname}} images
 
-{{site.prodname}} includes several private images. You can access these
+{{site.prodname}} requires a number of images, some of which are private. You can access these
 in either of the following ways.
 
 - [Pull the images from Tigera's private registry](#pulling-the-images-from-tigeras-private-registry):
